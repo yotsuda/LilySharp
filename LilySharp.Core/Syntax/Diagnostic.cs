@@ -879,6 +879,11 @@ public static class DiagnosticCodes
     /// (owner's decision 2026-11-05; <c>Semantics.TupletVoiceValidator</c>).</summary>
     public const string VoiceInTuplet = "LYS1066";
 
+    /// <summary>A second <c>@figuredBass</c> on one note: the figures of a bass note are one
+    /// group, and a change of figure over a held bass is two tied notes with a figure each
+    /// (grammar evaluation 3, 2026-11-13; <c>Semantics.AnnotationNameValidator</c>).</summary>
+    public const string SecondFigureGroupOnANote = "LYS1067";
+
     /// <summary>Warning: a <c>chords</c> row entry that is no chord Lily# reads — <c>C7b9</c>,
     /// <c>C-5</c>, a misspelled quality. The row still prints it as written and plays only its
     /// root (a root that is no A–G is the parser's error); the message names the spelling's fix, as the

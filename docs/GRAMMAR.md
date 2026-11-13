@@ -477,7 +477,7 @@ ShiftDecl      = 'shift' , [ '+' | '-' ] , Integer ;
                     'capo N' line). '@chord' annotations are not moved. Top level
                     only; 12 or more is refused at the number (an octave is 'octave N'). *)
 
-TempoDecl      = 'tempo' , [ Marking ] , [ DurationBase , [ Dots ] , '=' ] , [ Integer ] ,
+TempoDecl      = 'tempo' , [ '!' ] , [ Marking ] , [ DurationBase , [ Dots ] , '=' ] , [ Integer ] ,
                  [ FeelWord , [ Integer ] ] , [ 'bare' ] ;
 Marking        = String | Identifier ;      (* a bare word only in the FIRST position *)
 FeelWord       = 'swing' | 'shuffle' ;      (* contextual, NOT reserved words *)
@@ -492,6 +492,11 @@ FeelWord       = 'swing' | 'shuffle' ;      (* contextual, NOT reserved words *)
                     shuffle') it prints alone or after the marking. A swung value other
                     than 8 or 16 is LYS0034 (a warning; drawn as the nearer of the two,
                     'swing 0' as none). *)
+                 (* A section HEADER's tempo that states again the tempo standing — the same
+                    words, count, unit, swing and 'bare' as the last tempo before it — draws
+                    nothing and sends nothing (LILYSHARP-OWN, 2026-11-13: a section with no
+                    tempo returns to the file's, so a tempo held over two sections is written
+                    in both). The '!' right after the keyword draws it all the same. *)
                  (* 'bare', the run's LAST word (owner's decision 2026-11-12, the word a tuplet
                     takes for no number and no bracket): the count is PLAYED and NOT PRINTED.
                     tempo "Tempo I" 4 = 92 bare sounds at 92 and prints the words alone, with no

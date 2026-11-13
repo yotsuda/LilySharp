@@ -75,10 +75,11 @@ public static class CompositionChecks
         // A part with no instrument plays a piano — fine for a piano's two hands, not for a player of something else.
         // A strokes part (slash heads under a chord row) names no instrument and plays no line: not a part these readings judge.
         var parts = root.DescendantNodes<PartDeclarationSyntax>().Where(p => !p.IsStrokes).GroupBy(p => p.Name.Text).Select(g => g.First()).ToList();
+        var asides = AsideParts(source, root);
         if (parts.Count >= 2)
         {
             // A drum part is written with `clef percussion` and plays the kit: it needs no instrument.
-            var bare = parts.Where(p => !braced.Contains(p.Name.Text) && !RoleOf(p).Drums && !p.Properties.Any(prop =>
+            var bare = parts.Where(p => !braced.Contains(p.Name.Text) && !RoleOf(p).Drums && !asides.Contains(p.Name.Text) && !p.Properties.Any(prop =>
                 prop.NameToken.Text is "instrument" or "midiInstrument")).Select(p => p.Name.Text).ToList();
             if (bare.Count > 0)
                 findings.Add(new("part.no-instrument", $"No instrument for {string.Join(", ", bare)}: a part without `instrument` sounds as a piano "
@@ -91,7 +92,9 @@ public static class CompositionChecks
         // carries them (a piano's dynamics stand between its staves), need none of their own.
         if (parts.Count >= 2 && DynamicLevelsByPart(root) is var levelled && levelled.Count > 0)
         {
+            // …nor does an aside (an ossia, a cue staff), nor a harpsichord, which has no levels to write.
             var silent = parts.Where(p => !levelled.Contains(p.Name.Text) && !RoleOf(p).Drums
+                    && !asides.Contains(p.Name.Text) && !PropOf(p, "midiInstrument").Contains("harpsichord")
                     && !(InstrumentOf(p) is "piano-left" or "piano-right" && parts.Any(o => o != p
                         && InstrumentOf(o) is "piano-left" or "piano-right" && levelled.Contains(o.Name.Text))))
                 .Select(p => p.Name.Text).ToList();
@@ -568,7 +571,7 @@ public static class CompositionChecks
         findings.AddRange(WideChords(source, root, midi, hands.Keys, barList, fifths));
 
         findings.AddRange(Clashes(midi, melodies, barList, fifths, SwungBlueNotes(root)));
-        findings.AddRange(LowChords(midi, barList, fifths));
+        findings.AddRange(LowChords(midi, barList, fifths, parts));
         findings.AddRange(ThickChordsOnADistortedSound(midi, parts, barList, fifths));
         findings.AddRange(BandChordsOnLowStrings(midi, parts, barList, fifths));
         // A band's part crowding its bass (owner's trial 2026-10-30: a rock guitar mostly D2–D3 over a
@@ -675,7 +678,7 @@ public static class CompositionChecks
                 + "earlier section under a new name with a few bars altered."));
         if (instrumentalLines == null && !root.DescendantNodes<LyricsBlockSyntax>().Any() && PlayedRound(midi) is { } round)
             findings.Add(round);
-        if (PlayedKeys(root) is { } inKeys && pitched.Count > 0)
+        if (PlayedKeys(root, midi) is { } inKeys && pitched.Count > 0)
         {
             var (home, end) = inKeys;
             int homeTonic = PitchClass(home.Tonic), endTonic = PitchClass(end.Tonic);
@@ -864,11 +867,21 @@ public static class CompositionChecks
     private const double NoChordsShare = 0.1;
 
     /// <summary>A part's chords with a third or a second under C3.</summary>
-    private static IEnumerable<CompositionFinding> LowChords(MidiFile midi, List<int> barList, int fifths)
+    private static IEnumerable<CompositionFinding> LowChords(MidiFile midi, List<int> barList, int fifths, IReadOnlyList<PartDeclarationSyntax> parts)
     {
+        // Not an acoustic guitar's (or a ukulele's, a banjo's, a mandolin's): its open-position
+        // shapes — G 320003, a B minor barre — put a third on the low strings and are how the
+        // instrument plays its chords; on a clean plucked sound they ring. The rule is a
+        // DISTORTED guitar's and a keyboard's (grammar evaluation 3, 2026-11-13: a fingerstyle
+        // piece's second guitar was told "62 chords … mud", a [mistake]).
+        var plucked = parts.Where(p => InstrumentOf(p) is var i && (i.StartsWith("guitar", System.StringComparison.Ordinal) || i is "ukulele" or "banjo" or "mandolin")
+                && !RoleOf(p).Electric)
+            .Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal);
         foreach (var part in midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9).Select(n => (Part: n.Part ?? t.Name, n.StartTick, n.Pitch)))
             .GroupBy(n => n.Part))
         {
+            if (plucked.Contains(part.Key))
+                continue;
             var muddy = part.GroupBy(n => n.StartTick).Select(g => (Tick: g.Key, Pitches: g.Select(n => n.Pitch).Distinct().OrderBy(p => p).ToList()))
                 .Where(c => c.Pitches.Count >= 2 && c.Pitches.Zip(c.Pitches.Skip(1)).Any(p => p.Second - p.First <= 4 && p.First < LowThirdCeiling))
                 .ToList();
@@ -949,6 +962,12 @@ public static class CompositionChecks
     private static bool IsVoicePreset(PartDeclarationSyntax part)
         => InstrumentOf(part) is "soprano" or "alto" or "tenor" or "baritone" or "voice-bass";
 
+    /// <summary>A voice preset's place in a choir, the higher voice the larger number.</summary>
+    private static int VoiceHeight(string preset) => preset switch
+    {
+        "soprano" => 4, "alto" => 3, "tenor" => 2, "baritone" => 1, _ => 0,
+    };
+
     // Two singers in octaves for this many moves, and this share of the moves they make together
     // (owner's review 2026-11-01: 風のひかり, alto and men, 17 times — three parts that sounded two).
     private const int ParallelOctavesFewest = 8;
@@ -1016,17 +1035,27 @@ public static class CompositionChecks
             yield break;
         var lines = singers.ToDictionary(s => s, s => midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9 && !n.IsGrace && (n.Part ?? t.Name) == s))
             .GroupBy(n => n.StartTick).OrderBy(g => g.Key).Select(g => (Start: g.Key, End: g.Max(n => n.StartTick + n.DurationTicks), Pitch: g.Max(n => n.Pitch))).ToList());
+        // The note a line sings at t: the LAST one begun by then that still sounds. The first
+        // was read until 2026-11-13, and a note held past the next one's start — a fermata's
+        // hold — stood in for it: a closing chord was reported by the chord before it ("D5 over
+        // D4" where the voices end on B♭4 and E♭4; grammar evaluation 3).
         static int? At(List<(int Start, int End, int Pitch)> line, int t)
         {
+            int? sounding = null;
             foreach (var n in line)
             {
                 if (n.Start > t)
                     break;
                 if (n.End > t)
-                    return n.Pitch;
+                    sounding = n.Pitch;
             }
-            return null;
+            return sounding;
         }
+        // Two parts the score stacks against their voices — a baritone soloist over the women's
+        // chorus — are no pair to cross: the lower staff's voice is the higher one by nature
+        // (the same finding: "women stands above bar at 28 of the 28 moments", a [mistake]).
+        var presetOf = parts.Where(IsVoicePreset).GroupBy(p => p.Name.Text).ToDictionary(g => g.Key, g => VoiceHeight(InstrumentOf(g.First())));
+        bool StackedByVoice(int upper, int lower) => presetOf[singers[upper]] >= presetOf[singers[lower]];
         for (int i = 0; i < singers.Count; i++)
             for (int j = i + 1; j < singers.Count; j++)
             {
@@ -1061,7 +1090,7 @@ public static class CompositionChecks
                     if (l > u)
                         crossed++;
                 }
-            if (crossed >= CrossingsFewest && crossed >= together * CrossingsShare)
+            if (crossed >= CrossingsFewest && crossed >= together * CrossingsShare && StackedByVoice(i, i + 1))
                 yield return new("singers.crossed", $"{singers[i + 1]} stands above {singers[i]} at {crossed} of the {together} moments they sing together — the parts cross, and neither "
                     + "is heard as its own line: keep each voice in its own register, the lower part below, with an instrument whose range lies there.") { Parts = [singers[i + 1], singers[i]] };
         }
@@ -1071,7 +1100,7 @@ public static class CompositionChecks
         {
             int lastOnset = lines.Values.Where(l => l.Count > 0).Max(l => l[^1].Start);
             for (int i = 0; i + 1 < singers.Count; i++)
-                if (At(lines[singers[i]], lastOnset) is { } u && At(lines[singers[i + 1]], lastOnset) is { } l && l > u)
+                if (At(lines[singers[i]], lastOnset) is { } u && At(lines[singers[i + 1]], lastOnset) is { } l && l > u && StackedByVoice(i, i + 1))
                     yield return new("singers.crossed-at-end", $"{singers[i + 1]} ends above {singers[i]} on the last chord ({PartRanges.SpelledFromPitch(l, fifths)} over "
                         + $"{PartRanges.SpelledFromPitch(u, fifths)}) — the closing chord is where the voices are heard most plainly: an octave mark "
                         + "slipped? Check the section's first note, which is read afresh, and give each part its place in the chord.") { Parts = [singers[i + 1], singers[i]] };
@@ -1708,6 +1737,10 @@ public static class CompositionChecks
         foreach (var part in parts.Where(p => RoleOf(p).Chords))
         {
             string name = part.Name.Text;
+            // Said to the player it is: a pianist was told what "a guitarist reads" and to write
+            // "a picking pattern" (grammar evaluation 3, 2026-11-13).
+            bool keys = InstrumentOf(part).StartsWith("piano", System.StringComparison.Ordinal)
+                || System.Text.RegularExpressions.Regex.IsMatch(PropOf(part, "midiInstrument"), "piano|organ|clavi|harpsichord");
             var notes = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9 && (n.Part ?? t.Name) == name)).ToList();
             int played = 0, restated = 0;
             for (int b = 0; b < barList.Count; b++)
@@ -1725,9 +1758,12 @@ public static class CompositionChecks
             }
             if (played >= RestatedRowFewestBars && restated >= played * RestatedRowShare)
                 yield return new("staff.restates-chords", $"{name}: its staff says what the chords row says — the row's chords struck as block chords in {restated} of its "
-                    + $"{played} bars: drop the staff (the chords row, with its diagrams, is what a guitarist reads), or write what the player "
-                    + "plays — a picking pattern, a bass note and then the chord, a riff — and keep the row for the names. A strum's rhythm "
-                    + "alone is a strokes part: `strokes rhythm { section A { 4 8 8 4 4 | % | % | % | } }`, placed by `chords NAME plays rhythm`.") { Parts = [name] };
+                    + $"{played} bars: " + (keys
+                        ? "write what the hand plays — the tune or a line over the chord, a broken figure, a rhythm of its own — and keep the row "
+                            + "for the names; where the chords alone are meant, the row says them."
+                        : "drop the staff (the chords row, with its diagrams, is what a guitarist reads), or write what the player "
+                            + "plays — a picking pattern, a bass note and then the chord, a riff — and keep the row for the names. A strum's rhythm "
+                            + "alone is a strokes part: `strokes rhythm { section A { 4 8 8 4 4 | % | % | % | } }`, placed by `chords NAME plays rhythm`.")) { Parts = [name] };
         }
     }
 
@@ -2456,14 +2492,50 @@ public static class CompositionChecks
         return marks;
     }
 
+    /// <summary>
+    /// The parts that are no player's own: one the scores place only as an <c>ossia</c>, and one
+    /// whose every block is a <c>cue { … }</c> — another part's notes, quoted small. Neither is
+    /// asked for an instrument or for dynamics of its own (grammar evaluation 3, 2026-11-13: a
+    /// cantata's ornamented ossia and a piano-conductor score's cue staff were each a [mistake]
+    /// twice over).
+    /// </summary>
+    private static HashSet<string> AsideParts(string source, SyntaxNode root)
+    {
+        var asides = new HashSet<string>(System.StringComparer.Ordinal);
+        foreach (var cells in root.DescendantNodes<PartBlockSyntax>().GroupBy(b => b.PartName.Text))
+        {
+            string name = System.Text.RegularExpressions.Regex.Escape(cells.Key);
+            bool ossiaOnly = System.Text.RegularExpressions.Regex.IsMatch(source, $@"\bossia\s+{name}\b")
+                && !System.Text.RegularExpressions.Regex.IsMatch(source, $@"\bstaff\s+{name}\b");
+            bool cuesOnly = cells.All(c => System.Text.RegularExpressions.Regex.IsMatch(c.ToFullString(), @"^\s*\w+\s*\{\s*cue\b[^{}]*\{[^{}]*\}\s*\}\s*$"));
+            if (ossiaOnly || cuesOnly)
+                asides.Add(cells.Key);
+        }
+        return asides;
+    }
+
     /// <summary>The sections as the form plays them; with no form, as written.</summary>
-    internal static List<string> PlayedSections(SyntaxNode root)
+    internal static List<string> PlayedSections(SyntaxNode root, MidiFile? midi = null)
     {
         var sections = root.DescendantNodes<SectionDeclarationSyntax>().Where(s => s.Parent is { Parent: null })
             .Select(s => s.SectionName).ToList();
         var form = root.DescendantNodes<FormDeclarationSyntax>().Where(f => !f.InScore).OrderBy(f => f.Name != null).FirstOrDefault();
-        return form == null ? sections : PlaysOf(form).Where(sections.Contains).ToList();
+        return form == null ? sections : (JumpedPlays(form, midi) ?? PlaysOf(form)).Where(sections.Contains).ToList();
     }
+
+    /// <summary>
+    /// The sections in the order a form with a jump plays them — <c>dc</c>, <c>ds</c>, to a
+    /// <c>fine</c> or a <c>coda</c> — as the exporter's own walk played them
+    /// (<see cref="MidiFile.SectionStarts"/>); null for a form with no jump, or with no walk to ask.
+    /// The names as written leave the jump out: a da capo aria, <c>form { Recit A fine B dc al fine }</c>,
+    /// was "Form: Recit A B" and told, as a mistake, that it "begins in D major and ends in B minor" —
+    /// it ends at the Fine, in D (grammar evaluation 3, 2026-11-13).
+    /// </summary>
+    private static List<string>? JumpedPlays(FormDeclarationSyntax form, MidiFile? midi)
+        => midi != null && midi.SectionStarts.Count > 0
+            && System.Text.RegularExpressions.Regex.IsMatch(form.ToFullString(), @"\b(dc|ds)\b")
+            ? [.. midi.SectionStarts.Values]
+            : null;
 
     /// <summary>The sections a form plays, in order, a `~A` as well as an `A` (owner's review
     /// 2026-11-02: 雨音の午後's `~Intro`, its label hidden, was left out of what the form plays).</summary>
@@ -2481,7 +2553,19 @@ public static class CompositionChecks
     /// </summary>
     private static IEnumerable<CompositionFinding> LateLevels(SyntaxNode root, HashSet<string> drums, HashSet<string> hands)
     {
-        static bool Plays(PartBlockSyntax cell) => !System.Text.RegularExpressions.Regex.IsMatch(cell.ToFullString(), @"^\s*\w+\s*\{[\s|Rrs\d.*]*\}\s*$");
+        // A cell of rests is not where a part begins — whatever stands on the rests: a `time`,
+        // a `clef`, a `tempo`, a mark (`r1@text("JON (spoken): …").up`, `R@fermata`). Until
+        // 2026-11-13 only bare rests and bar lines were rests, so a singer whose tacet bars
+        // carried a stage direction, or changed meter, "began" there and was told "no level
+        // until A" with `@mp` on her first note (grammar evaluation 3).
+        static bool Plays(PartBlockSyntax cell)
+        {
+            string music = System.Text.RegularExpressions.Regex.Replace(cell.ToFullString(), @"""(?:[^""\\]|\\.)*""", "");
+            music = System.Text.RegularExpressions.Regex.Replace(music, @"@!?\w+(\([^()]*\))?(\.\w+)*", "");
+            music = System.Text.RegularExpressions.Regex.Replace(music,
+                @"\b(time!?\s+(none|[\d+]+/\d+(\s*\([\d+]+\))?)|clef!?\s+\w+|partial\s+\d+\.*|tempo!?(\s+""[^""]*"")?(\s+\d+\.*\s*=\s*\d+|\s+\d+)?(\s+bare)?)", "");
+            return !System.Text.RegularExpressions.Regex.IsMatch(music, @"^\s*\w+\s*\{[\s|Rrs\d.*]*\}\s*$");
+        }
         var phrases = root.DescendantNodes<PhraseDeclarationSyntax>()
             .Where(p => p.DescendantNodes<DynamicSyntax>().Any(d => Levels.Contains(d.DynamicToken.Text)))
             .Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal);
@@ -2751,7 +2835,7 @@ public static class CompositionChecks
     /// major, the A after it and the coda back in G with no line of their own, was told it "ends in
     /// D major", and the chat wrote a `key g major` the coda did not need). Null with no key written.
     /// </summary>
-    internal static ((string Tonic, string Mode) Home, (string Tonic, string Mode) End)? PlayedKeys(SyntaxNode root)
+    internal static ((string Tonic, string Mode) Home, (string Tonic, string Mode) End)? PlayedKeys(SyntaxNode root, MidiFile? midi = null)
     {
         static (string, string)? Of(KeySignatureSyntax? k)
             => k is null || k.IsCustom ? null
@@ -2770,7 +2854,8 @@ public static class CompositionChecks
         (string, string)? KeyOf(string section)
             => sections.TryGetValue(section, out var s) ? Of(s.DescendantNodes<KeySignatureSyntax>().LastOrDefault()) ?? fileKey : fileKey;
         var form = root.DescendantNodes<FormDeclarationSyntax>().Where(f => !f.InScore).OrderBy(f => f.Name != null).FirstOrDefault();
-        var played = form == null ? [] : PlaysOf(form);
+        // (through the form's jumps, where the caller has the played walk: JumpedPlays)
+        var played = form == null ? [] : JumpedPlays(form, midi) ?? PlaysOf(form);
         if (played.Count > 0)
             return KeyOf(played[0]) is { } first && KeyOf(played[^1]) is { } last ? (first, last) : null;
         // No form: the keys as written.

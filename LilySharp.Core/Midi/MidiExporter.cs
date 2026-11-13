@@ -129,6 +129,9 @@ public sealed class MidiExporter
     // The file's own tempo (its top-level `tempo`, with a count), in quarters a minute: what a
     // section that states no tempo plays at (HomeTempo). Null: the file states none.
     private double? _homeTempo;
+    // The last tempo stated where the walk stands, and the file's own, as written: a section
+    // header that states the standing one again sends nothing (SectionHeaders.RestatesTempo).
+    private TempoValue? _tempoStanding, _homeTempoValue;
     /// <summary>The velocity a note sounds at when it carries no dynamic of its own — the
     /// last dynamic written in the PART being played, else <see cref="DefaultVelocity"/>.</summary>
     private int _velocity = DefaultVelocity;
@@ -1357,6 +1360,8 @@ public sealed class MidiExporter
             _tempo = (int)System.Math.Round(home);
             conductorTrack.SetTempo(_currentTick, BpmToMicroseconds(home));
         }
+        if (_homeTempo != null && !_sectionHeaders.Tempos.ContainsKey(section.SectionName))
+            _tempoStanding = _homeTempoValue;
 
         // A section's own header key — stated beside the part blocks (by-section) or
         // in a standalone by-part header — is not walked with the part cell's music,
@@ -2434,7 +2439,14 @@ public sealed class MidiExporter
                     AlignBarLine(track, items, i);
                 if (pairsHere && _currentTick <= boundaryTick && boundaryClaimed)
                 {
-                    _currentTick += MeasureTicks();  // the second of a `| |` pair
+                    // …worth a bar of the meter. Under `time none` a bar has no length but
+                    // its music's, and an empty one is as long as the part that writes the bar
+                    // makes it: it costs nothing here and the lane is held to the section's
+                    // longest. Until 2026-11-13 it cost a bar of the meter before — `vn1 { | }`
+                    // beside the cello's cadenza left a bar line two beats into the cadenza
+                    // (MidiFile.BarTicks; `lysc review` counted the bar twice, grammar evaluation 3).
+                    if (!_bars.SenzaMisura)
+                        _currentTick += MeasureTicks();  // the second of a `| |` pair
                 }
                 // The bar behind this barline is closed (time passed) or was the empty bar
                 // just paid for: either way a pending pickup is SPENT and the meter is back
@@ -3156,6 +3168,13 @@ public sealed class MidiExporter
         int durationTicks = (Music.BarRest.IsBare(rest)
             ? MeasureTicks()
             : ClockTicks(GetDuration(rest.Duration))) * rest.MeasureCount;
+        // …and N bars have N−1 bar lines inside them, which the page draws (or counts under
+        // one church rest) and MidiFile.BarTicks did not hold: `c''1 | R*3 | c''1 |` was three
+        // bars to everything that counts them — `lysc review` called a 61-bar quartet 78 and a
+        // 5-bar line 3 (grammar evaluation 3, 2026-11-13) — and the metronome's.
+        if (rest.MeasureCount > 1 && _barTicks != null && durationTicks > 0)
+            for (int bar = 1; bar < rest.MeasureCount; bar++)
+                _barTicks.Add(_currentTick + bar * (durationTicks / rest.MeasureCount));
         durationTicks -= ConsumeGraceSteal(durationTicks); // grace notes steal from this rest
         _currentTick += durationTicks;
     }
@@ -3638,10 +3657,18 @@ public sealed class MidiExporter
         // source states (TempoValue.QuarterBpm): `tempo 2 = 60` is 120 crotchets a minute,
         // `tempo 4. = 40` is 60. Until session 398 the unit was ignored and both played at
         // the written figure — half and two-thirds speed.
+        // A section's header tempo that restates the one standing — a tempo held over two
+        // sections, written in both since a section with none returns to the file's — changes
+        // nothing: no event (grammar evaluation 3, 2026-11-13; the page prints nothing for it).
+        if (tempo.Parent is SectionDeclarationSyntax section
+            && _sectionHeaders.Tempos.TryGetValue(section.SectionName, out var header) && header.Span == tempo.Span
+            && Semantics.SectionHeaders.RestatesTempo(tempo, _tempoStanding))
+            return;
+        _tempoStanding = tempo.Value;
         if (tempo.Value.QuarterBpm is double quarterBpm)
         {
             if (tempo.Parent?.Parent == null)
-                _homeTempo = quarterBpm;
+                (_homeTempo, _homeTempoValue) = (quarterBpm, tempo.Value);
             _tempo = (int)System.Math.Round(quarterBpm);
             conductorTrack.SetTempo(_currentTick, BpmToMicroseconds(quarterBpm));
         }

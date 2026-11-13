@@ -1207,6 +1207,10 @@ internal sealed partial class Parser
     private TempoDeclarationGreen ParseTempoDeclaration()
     {
         var tempoKeyword = Expect(SyntaxKind.TempoKeyword);
+        // `tempo! …`: print this even where it restates the tempo standing (a section's head —
+        // SectionHeaders.RestatesTempo), the mark `key!`, `time!` and `clef!` take. It leads
+        // the node's value run (TempoDeclarationSyntax.ForceMark; Values leaves it out).
+        var bang = ParseForceMark();
         SyntaxToken? colon = ConsumeRejectedColon();
         var valueTokens = new List<GreenNode?>();
 
@@ -1288,6 +1292,8 @@ internal sealed partial class Parser
             valueTokens.Add(Advance());
         }
 
+        if (bang != null)
+            valueTokens.Insert(0, bang);
         return new TempoDeclarationGreen(tempoKeyword, colon, [.. valueTokens]);
     }
 

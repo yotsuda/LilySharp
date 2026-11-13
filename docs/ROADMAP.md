@@ -9,6 +9,13 @@ to *Decided against* with the reason). What is being worked on now, and the next
 
 ## Proposed
 
+### A figure at the middle of a bass note (proposed 2026-11-13, grammar evaluation 3)
+
+`a2@figuredBass(4)@figuredBass(3)` — a change of figure over a held bass, the second at the
+middle of the note, as LilyPond's `<4>4 <3>4` against `a2`: on the page, in MusicXML
+(`<figured-bass>` with a `<duration>`), in the LilyPond twin and read back. Today a second group on
+one note is LYS1067, whose message says to write two tied notes with a figure each.
+
 ### Score review for people (proposed 2026-10-30, the owner's design)
 
 The composing checks, given a second entrance for a person's own piece: the AI tool

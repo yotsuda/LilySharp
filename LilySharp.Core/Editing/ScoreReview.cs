@@ -67,7 +67,10 @@ public static class ScoreReview
         {
             var about = new[] { "key", "meter", "tempo" }.Select(k => (string?)facts[k]).OfType<string>().ToList();
             if (facts["bars"] is { } bars)
-                about.Add($"{(int)bars} bars, about {(int)facts["seconds"]!} seconds");
+                // The bars PLAYED, which is what the seconds are of: said so where the form plays
+                // a section again, and the page has fewer (a reader counting the page's 38 bars
+                // was told 56 — grammar evaluation 3, 2026-11-13).
+                about.Add($"{(int)bars} bars{((bool?)facts["bars_with_repeats"] == true ? " as played (repeats counted)" : "")}, about {(int)facts["seconds"]!} seconds");
             text.AppendLine(string.Join(" - ", new[] { (string?)facts["title"] ?? "(no title)", string.Join(", ", about) }.Where(s => s.Length > 0)));
             if (facts["keyHeard"] is { } heard)
                 text.AppendLine($"Heard in: {(string?)heard}");
@@ -217,7 +220,7 @@ public static class ScoreReview
             facts["key"] = key;
         if (midi != null && KeyChecks.Heard(midi) is { Count: > 0 } heard)
             facts["keyHeard"] = string.Join(" / ", heard.Take(2).Select(k => $"{k.Name} ({k.Fit:0.00})"));
-        var form = CompositionChecks.PlayedSections(root);
+        var form = CompositionChecks.PlayedSections(root, midi);
         if (form.Count > 0)
             facts["form"] = Strings(form);
         var parts = root.DescendantNodes<PartDeclarationSyntax>().Where(p => !p.IsStrokes).GroupBy(p => p.Name.Text).Select(g => g.First()).ToList();
@@ -238,6 +241,8 @@ public static class ScoreReview
             facts["tempo"] = string.Join(", ", tempos);
         var (bars, seconds) = CompositionChecks.LengthOf(midi);
         facts["bars"] = bars;
+        if (midi.SectionStarts.Values.GroupBy(name => name).Any(plays => plays.Count() > 1))
+            facts["bars_with_repeats"] = true;
         facts["seconds"] = seconds;
         int fifths = PartRanges.KeyFifths(root);
         var ranges = PartRanges.Of(midi, source, fifths);
@@ -283,8 +288,8 @@ public static class ScoreReview
         return said;
     }
 
-    private static string? HomeKey(SyntaxNode root)
-        => CompositionChecks.PlayedKeys(root) is { } keys ? $"{CompositionChecks.TonicName(keys.Home.Tonic)} {keys.Home.Mode}" : null;
+    private static string? HomeKey(SyntaxNode root, MidiFile? midi = null)
+        => CompositionChecks.PlayedKeys(root, midi) is { } keys ? $"{CompositionChecks.TonicName(keys.Home.Tonic)} {keys.Home.Mode}" : null;
 
     /// <summary>What the piece does well (a beginner is told what to keep, not only what to change):
     /// each only where its check had music to read and said nothing.</summary>
@@ -297,7 +302,7 @@ public static class ScoreReview
 
         if (HomeKey(root) is { } key && !Said("form.ends-in-another-key", "form.final-bass", "key.relative"))
             yield return $"It ends where it began: in {key}, over its tonic.";
-        var form = CompositionChecks.PlayedSections(root);
+        var form = CompositionChecks.PlayedSections(root, midi);
         if (form.Distinct().Count() >= 2 && form.Distinct().Count() < form.Count && !Said("form.played-three-times"))
             yield return $"The form has a return: {string.Join(" ", form)}.";
         if (midi != null && !Said("form.length", "form.played-three-times"))

@@ -144,7 +144,7 @@
 "Svg/Layout/SkylineBuilder.cs","SkylineBuilder.BezierQuantizationUnit","0.2","private const double BezierQuantizationUnit = 0.2;","LILYPOND-REF: lily/stencil-integral.cc QUANTIZATION_UNIT = 0.2.</remarks>","Green"
 "Svg/Layout/SkylineBuilder.cs","SkylineBuilder.AddFingeringsToSkyline","2.0","double x0 = f.X - width / 2.0;","(file-level) LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline()","Yellow"
 "Svg/Layout/SkylineBuilder.cs","SkylineBuilder.SeedStaffSymbol","2.0","double halfLine = size.Span(EngravingDefaults.StaffLineThickness / 2.0);","(file-level) LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline()","Yellow"
-"Svg/Layout/SkylineBuilder.cs","SkylineBuilder.AddDynamicsToSkyline","1.0, 1.0","if (size.Span(1.0) == 1.0 && !dyn.IsExpressiveText)","(file-level) LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline()","Yellow"
+"Svg/Layout/SkylineBuilder.cs","SkylineBuilder.AddDynamicsToSkyline","1.0, 1.0","if (size.Span(1.0) == 1.0)","LILYPOND-REF: lily/axis-group-interface.cc:952-972 add_grobs_of_one_priority —","Green"
 "Svg/Layout/SkylineBuilder.cs","SkylineBuilder.AddDynamicsToSkyline","1.3","double dynamicWidth = size.Span(1.3);","(file-level) LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline()","Yellow"
 "Svg/Layout/SkylineBuilder.cs","SkylineBuilder.AddDynamicsToSkyline","0.5","topUp - size.Span(0.5), topUp, VerticalDirection.Up);","(file-level) LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline()","Yellow"
 "Svg/Layout/SkylineBuilder.cs","SkylineBuilder.AddDynamicsToSkyline","1.0, 1.0","if (size.Span(1.0) == 1.0)","LILYPOND-REF: lily/axis-group-interface.cc:648-676 avoid_outside_staff_collisions","Green"

@@ -277,8 +277,12 @@ internal sealed class SectionMeterPlan
     {
         if (!_changes.TryGetValue(section, out var c) || c.Count == 0)
             return items;
+        // (A `repeat tremolo` is notes inside one bar and hides no bar line: with it turning the
+        // stream away, a part with one tremolo was never told another part's `time` — its bars
+        // were cut to the old meter in the MIDI, and the bar lines it left there made
+        // `lysc review` count a 61-bar quartet as 70; grammar evaluation 3, 2026-11-13.)
         foreach (var item in items)
-            if (item is RepeatExpressionSyntax or PercentMarkSyntax
+            if (item is RepeatExpressionSyntax { RepeatType.Text: not "tremolo" } or PercentMarkSyntax
                 or ParallelExpressionSyntax or VariableReferenceSyntax)
                 return items;
         var result = new List<SyntaxNode>(items.Count + c.Count);

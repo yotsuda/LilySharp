@@ -208,6 +208,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             {
                 if (!mark.IsSpanEnd && AnnotationValues.Vibrato(mark) != null)
                     WarnVibratoNobodySings(mark);
+                if (mark is { Name: FiguredBassName, IsSpanEnd: false })
+                    RefuseSecondFigureGroup(mark);
                 // ⚠️ The dotted MarkName is BUILT on every read — it joins the name tokens
                 // through a list — and every branch below that needs it is a branch that is
                 // about to report something. On the settled-keystroke path almost no mark
@@ -755,6 +757,37 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     }
 
     private const string FiguredBassName = "figuredBass";
+
+    /// <summary>
+    /// <c>a2@figuredBass(4)@figuredBass(3)</c>: a second figure group on one note. Both were
+    /// drawn on one spot, and the LilyPond twin and MusicXML kept the first alone (grammar
+    /// evaluation 3, 2026-11-13). The writer meant a change of figure OVER the held bass — the
+    /// 4–3 of a cadence — which LilyPond writes as two figure events against one note
+    /// (<c>&lt;4&gt;4 &lt;3&gt;4</c> under <c>a2</c>).
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: a figure group here belongs to a NOTE (FiguredBassItem is addressed by
+    /// bar and item; so are its MusicXML element and its place in the twin's figure stream), so
+    /// a figure at the middle of a note has nowhere to stand yet. An error that names the form
+    /// that says it — two tied notes with a figure each — was chosen over the mid-note figure
+    /// (page, MusicXML <c>&lt;duration&gt;</c>, the twin and the reader back from each). The
+    /// first group stands, as it did in the exports.
+    /// </remarks>
+    private void RefuseSecondFigureGroup(MusicMarkSyntax mark)
+    {
+        if (mark.Parent is not { } owner)
+            return;
+        for (int i = 0; i < owner.SlotCount; i++)
+            if (owner.GetChild(i) is MusicMarkSyntax { Name: FiguredBassName, IsSpanEnd: false } earlier
+                && earlier.Span.Start < mark.Span.Start)
+            {
+                _diagnostics.Error(mark.Span, DiagnosticCodes.SecondFigureGroupOnANote,
+                    "a second @figuredBass on one note - the figures of one bass note are ONE group, top to bottom "
+                    + "(@figuredBass(6 4)). For a change of figure over a held bass (4 then 3), write the bass as two "
+                    + "tied notes with a figure each: a4@figuredBass(4)~ a4@figuredBass(3).");
+                return;
+            }
+    }
 
     /// <summary>What <c>@figuredBass(…)</c> reads, as an unknown figure group's diagnostic says it
     /// (and docs/GRAMMAR_FOR_LLM.md, word for word in substance).</summary>

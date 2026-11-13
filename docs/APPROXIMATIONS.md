@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 349 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **475** | |
+| `OWN` | 353 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **479** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -23,14 +23,14 @@
 |---|---:|
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 20 |
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 17 |
-| `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 15 |
+| `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 16 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 10 |
 | `LilySharp.Core/Midi/MidiExporter.cs` | 8 |
 | `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 8 |
+| `LilySharp.Core/Svg/Collector/MeasureCollector.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 8 |
-| `LilySharp.Core/Svg/Collector/MeasureCollector.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（349 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（353 件）
 
 ### `LilySharp.Core/Audio/SingerPlan.cs`
 - **`SingerPlan`** LILYSHARP-OWN.
@@ -401,6 +401,7 @@
 - **`TextRoles.TakesMusicCompanionFace`** LILYSHARP-OWN: LilyPond pairs no text face with its one music font.
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`
 - **`AnnotationNameValidator.WarnVibratoNobodySings`** vibrato is an everyday marking and the writer waited for a wavy line). LILYSHARP-OWN.
+- **`AnnotationNameValidator.RefuseSecondFigureGroup`** LILYSHARP-OWN: a figure group here belongs to a NOTE (FiguredBassItem is addressed by
 - **`AnnotationNameValidator.Written`** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
 ### `LilySharp.Core/Semantics/AnnotationValues.cs`
 - **`AnnotationValues.Sing`** LILYSHARP-OWN: LilyPond writes no sound; what is written here is heard from a
@@ -438,6 +439,8 @@
 - **`RepeatPasses.EndingFor`** LILYSHARP-OWN: a pass no ending names replays the LAST ending — |: A [1. B] :|*3 [2. C]
 ### `LilySharp.Core/Semantics/RestRunFractionValidator.cs`
 - **`RestRunFractionValidator`** gets no suggestion, only the reading. LILYSHARP-OWN: LilyPond reads *5/4 as a
+### `LilySharp.Core/Semantics/SectionHeaders.cs`
+- **`SectionHeaders.RestatesTempo`** LILYSHARP-OWN (grammar evaluation 3, 2026-11-13). Since 2026-11-12 a section with no
 ### `LilySharp.Core/Semantics/SpanNames.cs`
 - **`SpanNames`** LILYSHARP-OWN: LilyPond's \ottava #0 and \stopTextSpan carry no name.
 ### `LilySharp.Core/Semantics/TupletMeterValidator.cs`
@@ -469,6 +472,7 @@
 - **`MeasureCollector.ProcessParallelSpan`** (2026-11-12). LILYSHARP-OWN. ⚠️ A CHART ONLY: a `voice { … | } { … | } |` span's
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
 - **`MeasureCollector._staffDynamicsUp`** LILYSHARP-OWN (owner's decision 2026-11-11, docs/dynamics-above-lyrics-design.md
+- **`MeasureCollector.JunkCondensedStaffDuplicateDynamics`** a &gt; an X). LILYSHARP-OWN, after the reading LilyPond offers: its two voices' dynamics
 - **`MeasureCollector.JunkCondensedStaffDuplicateDynamics`** LILYSHARP-OWN: LilyPond's Dynamic_engraver stands in the Voice context
 - **`MeasureCollector.SolveCrossCollisions`** LILYSHARP-OWN: the moved voice's slot. LilyPond keeps the Voice's own horizontal-shift,
 - **`MeasureCollector.DefaultExpansionBudgetCap`** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
@@ -634,6 +638,7 @@
 - **`MultiStaffLayouter.LeadSheetFloorShare`** wide as its 3/4 bars for one beat). LILYSHARP-OWN like the floor itself: LilyPond has
 - **`MultiStaffLayouter.CollectAllTimingsForMeasure`** timing-placed chord symbol and a beat slash do. LILYSHARP-OWN: the filler-slot keep.
 - **`MultiStaffLayouter.StaffSkylineSet.Pure`** ⚠️ LILYSHARP-OWN, DECLARED: LilyPond's pure heights are BOXES — the begin-of-line
+- **`MultiStaffLayouter.StaffArticulationLayouts`** LILYSHARP-OWN, as the device is (LilyPond's BendSpanner is unported).
 - **`MultiStaffLayouter.ReserveChordRowBand`** LILYSHARP-OWN: the band is Lily#'s model of a line LilyPond walks as a loose line
 ### `LilySharp.Core/Svg/Layout/MusicFont.cs`
 - **`MusicFont.SetsDynamicsInItsOwnGlyphs`** drawn as, so no Emmentaler book moves. LILYSHARP-OWN.

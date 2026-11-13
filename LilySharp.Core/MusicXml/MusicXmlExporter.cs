@@ -1085,6 +1085,7 @@ public sealed class MusicXmlExporter
                     break;
                 case TempoDeclarationSyntax tempo:
                     if (!IsInsideMusicContent(tempo)) ProcessTempo(tempo);
+                    if (tempo.Parent?.Parent == null) _fileTempo = tempo.Value;
                     break;
                 case KeySignatureSyntax key:
                     if (!IsInsideMusicContent(key)) ProcessKeySignature(key);
@@ -2136,8 +2137,15 @@ public sealed class MusicXmlExporter
         // The bar the play opens in — what a split bar's two halves must add up to.
         int barTicksAtStart = _bars.SenzaMisura ? 0 : MeterTicks();
         StartNewMeasure(addAttributes: isFirst);
-        if (_sectionTempo is { } laterSectionTempo && !isFirst)
+        // …unless it restates the tempo standing: held over this section, it is no direction
+        // (SectionHeaders.RestatesTempo; grammar evaluation 3, 2026-11-13).
+        if (_sectionTempo is { } laterSectionTempo && !isFirst
+            && !Semantics.SectionHeaders.RestatesTempo(laterSectionTempo, _tempoStanding))
             ProcessTempo(laterSectionTempo);
+        // The page's standing tempo after a section's head (MeasureCollector._tempoStanding):
+        // the header's, else the file's where it states a count.
+        if (_sectionTempo == null && (isFirst || _fileTempo is { Bpm: not null }))
+            _tempoStanding = _fileTempo;
         // The section's header pickup shortens this part's first bar of the section — the
         // page applies its registry at the same spot, after the section meter, so the pickup
         // restores to the section's own time when it closes (MeasureCollector.Form.cs).
@@ -3183,9 +3191,13 @@ public sealed class MusicXmlExporter
         SyncAttributes();
     }
 
+    // The last tempo stated where the walk stands, and the file's own, as written.
+    private TempoValue? _tempoStanding, _fileTempo;
+
     private void ProcessTempo(TempoDeclarationSyntax tempo)
     {
         var value = tempo.Value;
+        _tempoStanding = value;
         if (value.Bpm is not int bpm)
         {
             // Words and no count — `tempo "Largo"`, `tempo "a tempo"`: the page prints them

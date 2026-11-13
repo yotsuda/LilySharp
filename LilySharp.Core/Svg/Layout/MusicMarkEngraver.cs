@@ -582,7 +582,10 @@ internal static class MusicMarkEngraver
         ImmutableArray<DynamicLayout> belowDynamics = default,
         // The pedal brackets as drawn (Y device-down from their system's top): a below-staff
         // text clears a bracket under it as it clears a dynamic — see BelowInkMarkUp.
-        ImmutableArray<PedalBracketLayout> belowPedalBrackets = default)
+        ImmutableArray<PedalBracketLayout> belowPedalBrackets = default,
+        // The figured bass as placed (YUp about its staff's middle): a below-staff text clears
+        // a figure column under it as it clears a dynamic — see BelowInkMarkUp.
+        ImmutableArray<FiguredBassLayout> belowFigures = default)
     {
         // Does THIS mark carry a frame? Only a SECTION label loses one, and only under
         // `plain`: a `@mark` rehearsal box is a different spelling with its own meaning,
@@ -836,6 +839,27 @@ internal static class MusicMarkEngraver
                         .MaxHeightInRange(range.X0, range.X1);
                     if (!double.IsInfinity(low))
                         systemUp = Math.Min(systemUp, bottomStaff.Y + wordYUp - EngravingDefaults.StaffMiddle + low);
+                }
+            // The continuo's figures under the text — grammar evaluation 3, 2026-11-13: a
+            // cantata's "D.C. al Fine" was printed through the 6/4 under the last bass note.
+            // The figures hang under the staff's finished profile (FiguredBassEngraver's skyline
+            // drop) and are in no profile this reads, so they are read as the dynamics are: the
+            // placed column's box, YUp about its staff's middle, down to its last row's ink.
+            // LILYPOND-REF: scm/define-grobs.scm:1898-1926 JumpScript's outside-staff-priority 1350 —
+            //   the FiguredBass line is an axis group of its own under the staff, so a jump
+            //   text under the system stands under that line.
+            if (!belowFigures.IsDefaultOrEmpty)
+                foreach (var f in belowFigures)
+                {
+                    if (f.FigureTexts.IsDefaultOrEmpty
+                        || !measureToSystemIdx.TryGetValue(f.MeasureIndex, out int fs) || fs != sysIdx
+                        || LayoutUtilities.ResolveScoreGrobStaff(systems[sysIdx], f.StaffIndex) != bottomStaff.StaffIndex)
+                        continue;
+                    var (fLeft, fRight) = FiguredBassEngraver.ColumnXExtent(fonts, f.X, f.FigureTexts);
+                    if (fRight < range.X0 || fLeft > range.X1)
+                        continue;
+                    systemUp = Math.Min(systemUp, bottomStaff.Y + f.YUp - EngravingDefaults.StaffMiddle
+                        - BassFigureAlignment.ColumnDepth(fonts, f.RowOffsets, f.FigureTexts));
                 }
             if (double.IsInfinity(systemUp))
                 return null;

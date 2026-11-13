@@ -502,6 +502,12 @@ public sealed partial class MeasureCollector
     /// <see cref="_musicMarks"/> (the second is append-only), left out of the score's content.</summary>
     private readonly HashSet<object> _condensedStaffDuplicateDynamics = new(ReferenceEqualityComparer.Instance);
 
+    /// <summary>The dynamics and hairpin starts of a condensed staff's parts that DIFFER at one
+    /// moment, with the side each takes — the upper part's above the staff (true), a lower
+    /// part's below (<see cref="JunkCondensedStaffDuplicateDynamics"/>): applied as a written
+    /// side where the score's content is captured.</summary>
+    private readonly Dictionary<object, bool> _condensedStaffDynamicSides = new(ReferenceEqualityComparer.Instance);
+
     /// <summary>
     /// Records, from the score this collect produced, every rehearsal mark that
     /// <c>Layout.MusicMarkEngraver.MergeSectionLabels</c> will leave out for a section label
@@ -896,11 +902,14 @@ public sealed partial class MeasureCollector
     {
         // The dynamics' and the hairpins' sides, by the line each rides (DynamicLineSides).
         // …less the ones a condensed staff's parts wrote twice (JunkCondensedStaffDuplicateDynamics).
-        var (dynamics, musicMarks) = _condensedStaffDuplicateDynamics.Count == 0
+        // …and with the sides its parts' DIFFERING ones take (_condensedStaffDynamicSides).
+        var (dynamics, musicMarks) = _condensedStaffDuplicateDynamics.Count == 0 && _condensedStaffDynamicSides.Count == 0
             ? DynamicLineSides.Resolve(_dynamics, _musicMarks)
             : DynamicLineSides.Resolve(
-                _dynamics.Where(d => !_condensedStaffDuplicateDynamics.Contains(d)).ToList(),
-                _musicMarks.Where(m => !_condensedStaffDuplicateDynamics.Contains(m)).ToList());
+                _dynamics.Where(d => !_condensedStaffDuplicateDynamics.Contains(d))
+                    .Select(d => _condensedStaffDynamicSides.TryGetValue(d, out bool up) ? d with { IsAbove = up, WrittenAbove = up } : d).ToList(),
+                _musicMarks.Where(m => !_condensedStaffDuplicateDynamics.Contains(m))
+                    .Select(m => _condensedStaffDynamicSides.TryGetValue(m, out bool up) ? m with { HairpinAbove = up, HairpinWritten = up } : m).ToList());
         return CaptureScoreContent(measureCount, dynamics, musicMarks);
     }
 
@@ -3448,7 +3457,17 @@ public sealed partial class MeasureCollector
     /// shared were drawn twice on one place (grammar evaluation 2, 2026-11-12,
     /// repro-condensed-dyn-lyrics.lys). The first part's stands; a later part's is left out of
     /// the score's content when it has the same level (or text), the same side and the same
-    /// moment. A dynamic only one part writes, or a different one, is kept as it is.
+    /// moment. A dynamic only one part writes is kept as it is.
+    /// <para>
+    /// Where the parts write DIFFERENT levels at one moment, or hairpins that are not one over
+    /// the same bars, the upper part's stands ABOVE the staff and the lower part's below
+    /// (grammar evaluation 3, 2026-11-13: <c>@mf</c> over <c>@p</c> read "mpf", a <c>&lt;</c> through
+    /// a <c>&gt;</c> an X). LILYSHARP-OWN, after the reading LilyPond offers: its two voices' dynamics
+    /// both go below, stacked (MEASURED 2.26.0, Lab sessions/p1226/md/eval3/fixC/a2lp.ly — legible,
+    /// and whose is whose is a guess), and <c>\dynamicUp</c> on the upper voice (ly/property-init.ly:
+    /// <c>\override DynamicLineSpanner.direction = #UP</c> and its text and hairpin) gives each
+    /// voice its side; <c>\partCombine</c> on the same music drops the upper part's first level.
+    /// </para>
     /// </summary>
     /// <remarks>
     /// LILYSHARP-OWN: LilyPond's Dynamic_engraver stands in the Voice context
@@ -3465,9 +3484,15 @@ public sealed partial class MeasureCollector
         List<StaffCollection> collections, Dictionary<string, ImmutableArray<Voice>> staffVoices)
     {
         _condensedStaffDuplicateDynamics.Clear();
+        _condensedStaffDynamicSides.Clear();
         foreach (int staff in collections.Where(c => c.Appended).Select(c => c.Staff).Distinct().ToList())
         {
             var parts = collections.Where(c => c.Staff == staff).ToList();
+            // A level that takes a side here: one that writes none itself.
+            static bool Sided(DynamicItem d) => !d.IsExpressiveText && !d.OnMultiMeasureRest
+                && d.WrittenAbove == null && d.Level != Syntax.DynamicLevel.Niente;
+            // The upper part's levels that stand against a lower part's different one.
+            var against = new HashSet<DynamicItem>();
             // The moment of a part's dynamic: the lengths before its item, in its own voice.
             Fraction? OnsetOf(StaffCollection part, DynamicItem d)
             {
@@ -3504,7 +3529,18 @@ public sealed partial class MeasureCollector
                     if (written)
                         _condensedStaffDuplicateDynamics.Add(d);
                     else
+                    {
+                        // A DIFFERENT level at the moment of an earlier part's: each on its own
+                        // side of the staff, where both were printed on one spot ("mpf").
+                        for (int s = 0; s < standingBefore && Sided(d); s++)
+                            if (standing[s] is var (e, eOnset) && e.MeasureIndex == d.MeasureIndex && eOnset == onset && Sided(e))
+                            {
+                                _condensedStaffDynamicSides[e] = true;
+                                _condensedStaffDynamicSides[d] = false;
+                                against.Add(e);
+                            }
                         standing.Add((d, onset));
+                    }
                 }
             }
 
@@ -3531,10 +3567,44 @@ public sealed partial class MeasureCollector
                         || earlier.Direction != later.Direction || earlier.IsAbove != later.IsAbove
                         || earlier.StartMeasureIndex != later.StartMeasureIndex || earlier.StartItemIndex != later.StartItemIndex
                         || earlier.EndMeasureIndex != later.EndMeasureIndex || earlier.EndItemIndex != later.EndItemIndex
-                        || earlier.EndsAtStop != later.EndsAtStop || earlier.CircledTip != later.CircledTip)
+                        || earlier.EndsAtStop != later.EndsAtStop || earlier.CircledTip != later.CircledTip
+                        // …and not from levels that differ: `@mf@decresc` over `@p@decresc` is two.
+                        || against.Any(e => e.MeasureIndex == earlier.StartMeasureIndex && e.ItemIndex == earlier.StartItemIndex))
                         continue;
                     _condensedStaffDuplicateDynamics.Add(marks[later.SourceIndex]);
                     break;
+                }
+            }
+
+            // Two parts' hairpins that are not one, over the same bars: the upper part's above
+            // the staff and the lower's below, each with the level it closes on (a `<` drawn
+            // through a `>` was an X). One that writes its own side keeps it.
+            void SideClosingLevel(StaffCollection part, HairpinItem hairpin, bool up)
+            {
+                for (int i = part.DynamicsFrom; i < part.DynamicsTo; i++)
+                    if (_dynamics[i] is var d && Sided(d) && d.MeasureIndex == hairpin.EndMeasureIndex && d.ItemIndex == hairpin.EndItemIndex)
+                    {
+                        // The level both hairpins closed on, printed once, is now each one's own.
+                        _condensedStaffDuplicateDynamics.Remove(d);
+                        _condensedStaffDynamicSides[d] = up;
+                    }
+            }
+            foreach (var later in hairpins)
+            {
+                if (later.StaffIndex != staff || later.SourceIndex < 0 || PartOfMark(later.SourceIndex) is not (> 0 and var laterPart)
+                    || marks[later.SourceIndex].HairpinWritten != null || _condensedStaffDuplicateDynamics.Contains(marks[later.SourceIndex]))
+                    continue;
+                foreach (var earlier in hairpins)
+                {
+                    if (earlier.StaffIndex != staff || earlier.SourceIndex < 0
+                        || PartOfMark(earlier.SourceIndex) is not (>= 0 and var earlierPart) || earlierPart >= laterPart
+                        || marks[earlier.SourceIndex].HairpinWritten != null
+                        || earlier.StartMeasureIndex > later.EndMeasureIndex || later.StartMeasureIndex > earlier.EndMeasureIndex)
+                        continue;
+                    _condensedStaffDynamicSides[marks[earlier.SourceIndex]] = true;
+                    _condensedStaffDynamicSides[marks[later.SourceIndex]] = false;
+                    SideClosingLevel(parts[earlierPart], earlier, true);
+                    SideClosingLevel(parts[laterPart], later, false);
                 }
             }
         }
@@ -4807,6 +4877,8 @@ public sealed partial class MeasureCollector
         _shadowedRehearsalMarks.Clear(); // refilled from the finished score (RecordShadowedRehearsalMarks)
         _condensedStaffChangeWarnings.Clear();
         _condensedStaffDuplicateDynamics.Clear();
+        _condensedStaffDynamicSides.Clear();
+        _tempoStanding = _fileTempo = null;
         _writtenOutPercents = null;
         _canonicalSectionBars.Clear();
         _canonicalByName = null;

@@ -70,6 +70,9 @@ public sealed partial class MeasureCollector
                         itemIndex,
                         markSyntax.SourceStart,
                         _v.Cursor.StaffIndex));
+                    // One group a note: a second one is refused (LYS1067) and was drawn on
+                    // the first; the first stands, as in the exports.
+                    break;
                 }
             }
         }

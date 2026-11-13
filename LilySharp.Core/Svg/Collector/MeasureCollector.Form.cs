@@ -615,14 +615,23 @@ public sealed partial class MeasureCollector
             {
                 // already emitted for an earlier staff of this section
             }
+            else if (_sectionHeaders.RestatesTempo(section.SectionName, _tempoStanding))
+            {
+                // The tempo already standing, held over this section: it changes nothing and
+                // draws nothing (SectionHeaders.RestatesTempo; `tempo!` draws it anyway).
+            }
             else if (SectionTempoMark(sectionTempo, builder.CurrentMeasureIndex, sectionPos,
                          builder.CurrentItemCount, builder.CurrentDuration) is { } tempoMark)
                 _musicMarks.Add(tempoMark);
             if (sectionTempo.Value.QuarterBpm is double stated)
                 _tempoInForce = stated;
+            _tempoStanding = sectionTempo.Value;
         }
         else
         {
+            // Every staff's walk starts from the file's own tempo.
+            if (builder.AtPieceOpening)
+                _tempoStanding = _fileTempo;
             // No tempo of its own: the file's, printed where the music before left another.
             bool homeAlready = false;
             foreach (var m in _musicMarks)
@@ -2002,10 +2011,15 @@ public sealed partial class MeasureCollector
                 // sent the mark past the bar's end through GetXForTiming.
                 if (cur == 0)
                     CollectTempo(sectionTempo);
+                else if (_sectionHeaders.RestatesTempo(name, _tempoStanding))
+                {
+                    // held over this section: nothing to draw (SectionHeaders.RestatesTempo)
+                }
                 else if (SectionTempoMark(sectionTempo, cur, pos, 0, Fraction.Zero) is { } tempoMark)
                     _musicMarks.Add(tempoMark);
                 if (sectionTempo.Value.QuarterBpm is double stated)
                     _tempoInForce = stated;
+                _tempoStanding = sectionTempo.Value;
             }
             else if (ReturnToHomeTempo(cur == 0, false, cur, pos, 0, Fraction.Zero) is { } homeMark)
                 _musicMarks.Add(homeMark);

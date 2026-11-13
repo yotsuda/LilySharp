@@ -122,6 +122,28 @@ public sealed class SectionHeaders
         return list;
     }
 
+    /// <summary>
+    /// True when the header <c>tempo</c> of <paramref name="name"/> changes nothing where
+    /// <paramref name="standing"/> is the last tempo stated before it: the same count in the
+    /// same unit, the same words, swing and <c>bare</c> (<see cref="TempoValue"/> is a record,
+    /// and its equality is exactly those). Such a header prints nothing and sends nothing —
+    /// the rule <c>key</c>, <c>time</c> and <c>clef</c> already had — unless written
+    /// <c>tempo!</c>. Words alone (<c>tempo "a tempo"</c>) state no count and always print.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN (grammar evaluation 3, 2026-11-13). Since 2026-11-12 a section with no
+    /// tempo of its own returns to the file's, so holding "Più mosso" over two sections means
+    /// writing it in both headers — and the second printed it again. The page, the MIDI, the
+    /// MusicXML and the LilyPond twin each ask this at a section's head with the tempo their
+    /// own walk last stated.
+    /// </remarks>
+    public bool RestatesTempo(string name, TempoValue? standing)
+        => Tempos.TryGetValue(name, out var tempo) && RestatesTempo(tempo, standing);
+
+    /// <summary>The same question of one header <c>tempo</c>.</summary>
+    public static bool RestatesTempo(TempoDeclarationSyntax tempo, TempoValue? standing)
+        => standing is not null && !tempo.IsForced && tempo.Value is { Bpm: not null } value && value == standing;
+
     /// <summary>The first direct child of <paramref name="section"/> of type
     /// <typeparamref name="T"/> — the section's own starting directive — or null.</summary>
     public static T? FirstDirect<T>(SectionDeclarationSyntax section) where T : SyntaxNode

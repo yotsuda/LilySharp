@@ -116,6 +116,18 @@ public sealed partial class LilyPondExporter
         }
 
         var result = new List<SyntaxNode>();
+        // The tempo standing where this voice's first play opens: the file's own.
+        SyntaxNode? top = allSections.FirstOrDefault();
+        while (top?.Parent != null)
+            top = top.Parent;
+        _fileTempo = null;
+        for (int i = 0; top != null && i < top.SlotCount; i++)
+            if (top.GetChild(i) is TempoDeclarationSyntax fileTempo)
+            {
+                _fileTempo = fileTempo.Value;
+                break;
+            }
+        _tempoStanding = _fileTempo;
         if (form != null)
         {
             var formItems = FormWalk.Read(form);
@@ -124,6 +136,9 @@ public sealed partial class LilyPondExporter
             _firstPlayRestatesTempo = FirstPlayedSection(formItems) is { } first
                 && _sectionHeaders.Tempos.ContainsKey(first);
             _firstPlayRestatesKey = OpensWithKey(FirstPlayedSection(formItems), byName);
+            // …whose tempo is then the opening one, and restates nothing.
+            if (_firstPlayRestatesTempo)
+                _tempoStanding = null;
             AppendFormItems(formItems, byName, result);
         }
         else
@@ -131,6 +146,8 @@ public sealed partial class LilyPondExporter
             _firstPlayRestatesTempo = inOrder.Count > 0
                 && _sectionHeaders.Tempos.ContainsKey(inOrder[0].Section.SectionName);
             _firstPlayRestatesKey = inOrder.Count > 0 && OpensWithKey(inOrder[0].Section.SectionName, byName);
+            if (_firstPlayRestatesTempo)
+                _tempoStanding = null;
             foreach (var entry in inOrder)
             {
                 // No form: sections play in declaration order and each is labelled with
@@ -143,7 +160,7 @@ public sealed partial class LilyPondExporter
                         sectionName: entry.Section.SectionName),
                     headerMusic.Any(h => h is KeySignatureSyntax),
                     headerMusic.Any(h => h is TimeSignatureSyntax)));
-                result.AddRange(headerMusic);
+                result.AddRange(WithoutRestatedTempo(headerMusic, entry.Container));
                 if (_meterPlan.IsEmpty)
                     result.AddRange(ContainerMusic(entry.Container));
                 else
@@ -164,6 +181,30 @@ public sealed partial class LilyPondExporter
     /// <see cref="EmitScoreSettings"/> then leaves the file's out (its remark says why).
     /// </summary>
     private bool _firstPlayRestatesTempo;
+
+    // The last tempo this voice's stream has stated, and the file's own (the page's
+    // MeasureCollector._tempoStanding).
+    private TempoValue? _tempoStanding, _fileTempo;
+
+    /// <summary>
+    /// A play's header directives, without a <c>tempo</c> that restates the one standing: the
+    /// page draws nothing for it (<see cref="Semantics.SectionHeaders.RestatesTempo(string, TempoValue?)"/>,
+    /// grammar evaluation 3, 2026-11-13), and a second <c>\tempo</c> would print it again.
+    /// Moves the standing tempo over the play: its header's, else the file's (a section with no
+    /// tempo of its own returns to it), then the last one its music writes.
+    /// </summary>
+    private IEnumerable<SyntaxNode> WithoutRestatedTempo(IReadOnlyList<SyntaxNode>? headers, SyntaxNode? container)
+    {
+        var own = headers?.OfType<TempoDeclarationSyntax>().FirstOrDefault();
+        bool restates = own != null && Semantics.SectionHeaders.RestatesTempo(own, _tempoStanding);
+        if (own != null)
+            _tempoStanding = own.Value;
+        else if (_fileTempo is { Bpm: not null })
+            _tempoStanding = _fileTempo;
+        if (container?.DescendantNodes<TempoDeclarationSyntax>().LastOrDefault(t => t != own) is { } inMusic)
+            _tempoStanding = inMusic.Value;
+        return headers == null ? [] : restates ? headers.Where(h => h != own) : headers;
+    }
 
     /// <summary>
     /// True when the first section the part plays opens on a <c>key</c> — in its header, or
@@ -421,8 +462,7 @@ public sealed partial class LilyPondExporter
             headers?.Any(h => h is KeySignatureSyntax) == true,
             headers?.Any(h => h is TimeSignatureSyntax) == true,
             octaveOffset));
-        if (headers != null)
-            result.AddRange(headers);
+        result.AddRange(WithoutRestatedTempo(headers, entry.Container));
         if (_repeatTiePlays.Contains(playIndex))
             result.Add(new RepeatTieMarker());
         // The score's meter (SectionMeterPlan): another part's `time` at a bar's start is written
@@ -490,8 +530,7 @@ public sealed partial class LilyPondExporter
             headers?.Any(h => h is KeySignatureSyntax) == true,
             headers?.Any(h => h is TimeSignatureSyntax) == true,
             octaveOffset));
-        if (headers != null)
-            result.AddRange(headers);
+        result.AddRange(WithoutRestatedTempo(headers, null));
         for (int i = 0; i < bars; i++)
         {
             // The score's meter there (SectionMeterPlan): a `time` another part writes at

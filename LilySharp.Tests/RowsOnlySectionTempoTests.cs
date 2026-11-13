@@ -147,12 +147,15 @@ public sealed class RowsOnlySectionTempoTests
     [Fact]
     public void ASectionPlayedTwice_PrintsItsTempoAtEachPass_OnARowsOnlySheet()
     {
-        // Every pass gets its mark, as every pass of the staff walk's ProcessSection does.
-        string book = Book("chords prog").Replace("form { ~A ~B }", "form { ~A ~B ~B }");
-        string staffBook = Book("chords prog  staff melody").Replace("form { ~A ~B }", "form { ~A ~B ~B }");
+        // Every pass gets its mark, as every pass of the staff walk's ProcessSection does —
+        // where the pass changes the tempo: B after A after B. (Until 2026-11-13 this book was
+        // `~A ~B ~B` and counted three; a header tempo that restates the one standing now draws
+        // nothing on either sheet, SectionHeaders.RestatesTempo — B straight after B is one mark.)
+        string book = Book("chords prog").Replace("form { ~A ~B }", "form { ~A ~B ~A ~B }");
+        string staffBook = Book("chords prog  staff melody").Replace("form { ~A ~B }", "form { ~A ~B ~A ~B }");
         Assert.Equal(
             Equations(RenderedGeometry.Render(staffBook)).Select(t => t.Text),
             Equations(RenderedGeometry.Render(book)).Select(t => t.Text));
-        Assert.Equal(3, Equations(RenderedGeometry.Render(book)).Count);
+        Assert.Equal(4, Equations(RenderedGeometry.Render(book)).Count);
     }
 }

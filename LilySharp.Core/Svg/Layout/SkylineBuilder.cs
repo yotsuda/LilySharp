@@ -2977,9 +2977,16 @@ internal sealed class SkylineBuilder
                 // its staff is the ordinary case on a staff with lyrics under it, where the
                 // old 1.3 × 0.5 box (kept for an ossia's mixed scale, as below) let the
                 // letters' real width and the pass's push go unreserved.
-                if (size.Span(1.0) == 1.0 && !dyn.IsExpressiveText)
+                // A WORD the same (`@text("…").up`), since 2026-11-13: it kept the old box — a
+                // level's width at its middle, at the quiet height — so a chords row over the
+                // staff was set where the words were then drawn, and "Vamp (repeat till
+                // ready)" was printed through the row's names (grammar evaluation 3).
+                // LILYPOND-REF: lily/axis-group-interface.cc:952-972 add_grobs_of_one_priority —
+                //   a placed TextScript's skyline joins the group's, which the ChordNames line
+                //   is then spaced off.
+                if (size.Span(1.0) == 1.0)
                 {
-                    var mine = DynamicEngraver.LabelSkylines(_fonts, dyn.Text, false, xLabel,
+                    var mine = DynamicEngraver.LabelSkylines(_fonts, dyn.Text, dyn.IsExpressiveText, xLabel,
                         baselineUp + staffMiddleUp, dyn.IsSubito);
                     double up = DynamicEngraver.AboveCollisionMove(
                         upSkyline, mine.Down, OutsideStaffPadding);

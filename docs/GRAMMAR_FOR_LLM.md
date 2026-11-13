@@ -234,7 +234,11 @@ not is warning LYS2023). All three go back to the file's at the next section: a 
 `tempo` of its own plays at the file's top-level tempo, and the mark is printed where that
 changes the tempo back (`form { A B A }` with `tempo 4 = 100` in B's header: the second A is at
 the file's tempo, marked). With no top-level `tempo` there is none to go back to, and a tempo
-holds until the next.
+holds until the next. So a tempo HELD over several sections is written in each one's header —
+and a header tempo that states again the tempo already standing (the same words, count, unit,
+swing and `bare` as the last tempo before it) **draws nothing** and changes nothing, like a
+restated `key`: `section B { tempo "Più mosso" 4 = 108 … }  section B2 { tempo "Più mosso" 4 = 108 … }`
+prints "Più mosso" once. `tempo! …` draws it anyway. Words alone (`tempo "a tempo"`) always print.
 
 **A mark on a phrase call** goes on an empty chord before it, which takes no time:
 `<>@mf theme`, `<>@p@text("dolce") theme` — the phrase's notes are the same at every call, so
@@ -540,7 +544,10 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   words set to it) it warns (LYS1008) and is ignored; for the word on the page write
   `@text("vib.")`
 - Figured bass: `c4@figuredBass(6)` , `d4@figuredBass(6 4)` — the figures of one bass note, top
-  to bottom, with spaces between them. The whole vocabulary:
+  to bottom, with spaces between them. ONE group a note: a second `@figuredBass` on the same
+  note is an error (LYS1067). A change of figure over a held bass — the 4–3 of a cadence — is
+  two tied notes with a figure each: `a4@figuredBass(4)~ a4@figuredBass(3)`, not
+  `a2@figuredBass(4)@figuredBass(3)`. The whole vocabulary:
   - a digit `0`–`9` is a figure (`6`, `6 4`, `7 5 3`; `0` is an empty row);
   - `s`, `f`, `n` AFTER a digit give it a sharp, a flat, a natural: `6 s` (6♯), `4 f` (4♭),
     `7 n` (7♮) — also written closed up, `6s`, `4f`;

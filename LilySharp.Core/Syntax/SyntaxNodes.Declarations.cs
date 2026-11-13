@@ -235,6 +235,15 @@ public sealed class TempoDeclarationSyntax : SyntaxNode
     /// <summary>The <c>:</c> in a part-header <c>tempo: 120</c>; null for the bare music command.</summary>
     public SyntaxTokenNode? Colon => GetChild(1) as SyntaxTokenNode;
 
+    /// <summary>The <c>!</c> right after the keyword (<c>tempo! "Più mosso" 4 = 108</c>), or
+    /// null: it leads the value run (slot 2), and <see cref="Values"/> leaves it out.</summary>
+    public SyntaxTokenNode? ForceMark
+        => GetChild(2) is SyntaxTokenNode { Kind: SyntaxKind.DashedBar } bang ? bang : null;
+
+    /// <summary>True for <c>tempo! …</c> — print it even where it restates the tempo standing
+    /// (<see cref="Semantics.SectionHeaders.RestatesTempo(TempoDeclarationSyntax, TempoValue?)"/>).</summary>
+    public bool IsForced => ForceMark is not null;
+
     /// <summary>
     /// Gets all value tokens after the keyword (and the optional header colon).
     /// </summary>
@@ -242,8 +251,9 @@ public sealed class TempoDeclarationSyntax : SyntaxNode
     {
         get
         {
-            // Slot 0 is the keyword, slot 1 is the optional colon; values follow.
-            for (int i = 2; i < SlotCount; i++)
+            // Slot 0 is the keyword, slot 1 is the optional colon; values follow — after the
+            // `!` of `tempo!`, which is no value.
+            for (int i = IsForced ? 3 : 2; i < SlotCount; i++)
             {
                 var child = GetChild(i);
                 if (child != null)

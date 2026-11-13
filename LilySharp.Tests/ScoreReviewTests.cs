@@ -735,7 +735,8 @@ public class ScoreReviewTests
     public void AsText_ThePieceThenWhatWorksThenThePoints()
     {
         string text = ScoreReview.Text(Piece).ReplaceLineEndings("\n");
-        Assert.StartsWith("A Short Air - G major, 4/4, ♩ = 96, 6 bars, about 15 seconds\n", text);
+        // (the form plays A again: the count is the played one, and says so — 2026-11-13)
+        Assert.StartsWith("A Short Air - G major, 4/4, ♩ = 96, 6 bars as played (repeats counted), about 15 seconds\n", text);
         Assert.Contains("Heard in: ", text);
         Assert.Contains("\nForm: A B A\n", text);
         Assert.Contains("\nWhat works:\n  It ends where it began: in G major, over its tonic.\n", text);

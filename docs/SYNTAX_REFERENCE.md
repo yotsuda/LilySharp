@@ -700,6 +700,12 @@ long rest — write `!` right after the keyword: `key! ees major`, `time! 3/4`, 
 goes after the keyword because after the value it is the dashed barline: `key ees major !` is
 a key followed by a dashed bar.
 
+A section's header `tempo` has the same rule: one that states again the tempo already standing —
+the same words, count, unit, swing and `bare` as the last tempo before it — draws nothing and
+sends nothing, so a tempo held over two sections (each must state it, since a section with no
+tempo returns to the file's) is printed once. `tempo! "Più mosso" 4 = 108` draws it anyway. A
+tempo of words alone (`tempo "a tempo"`) and a tempo in the music are always drawn.
+
 ```
 time 4/4
 part m { clef treble }

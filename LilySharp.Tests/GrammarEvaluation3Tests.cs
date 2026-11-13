@@ -601,4 +601,213 @@ public class GrammarEvaluation3Tests
             d => d.Code == DiagnosticCodes.ChordShapeMismatch);
         Assert.DoesNotContain("Tried on", one.Message);
     }
+
+    /// <summary>The tempo marks the page draws, as "words count" (a <c>bare</c> one is its words).</summary>
+    private static string[] TempoMarks(string source)
+    {
+        var page = Page(source);
+        return [.. page.MusicMarks.Where(m => m.Type == LilySharp.Core.Svg.Model.MusicMarkType.Tempo)
+            .OrderBy(m => m.MeasureIndex).Select(m => (m.TempoText + " " + m.Text).Trim())];
+    }
+
+    /// <summary>Since a section with no tempo of its own returns to the file's, a tempo held over
+    /// two sections is written in both headers — and the second printed "Più mosso" again. A
+    /// header tempo that restates the one standing draws nothing and sends nothing, as a
+    /// <c>key</c>, <c>time</c> or <c>clef</c> that changes nothing; <c>tempo!</c> draws it.</summary>
+    [Fact]
+    public void ATempoHeldOverTwoSections_IsPrintedOnce()
+    {
+        static string Book(string second = "tempo \"Piu mosso\" 4 = 108 bare", string form = "A B ~B2 ~B3")
+            => "octave absolute\ntempo \"Moderato\" 4 = 96\npart m { clef treble }\npart n { clef bass }\n"
+            + "section A { m { c'1 | c'1 | } n { c1 | c1 | } }\n"
+            + "section B { tempo \"Piu mosso\" 4 = 108 bare  m { d'1 | d'1 | } n { d1 | d1 | } }\n"
+            + "section B2 { " + second + "  m { e'1 | e'1 | } n { e1 | e1 | } }\n"
+            + "section B3 { m { f'1 | f'1 | } n { f1 | f1 | } }\n"
+            + "form { " + form + " }\nscore { staff m  staff n }\n";
+        static int[] Played(string source) => [.. Midi(source).Tracks[0].TempoChanges
+            .Select(t => (int)Math.Round(60_000_000.0 / t.MicrosecondsPerBeat))];
+        static int Count(string text, string word) => System.Text.RegularExpressions.Regex.Matches(text, word).Count;
+
+        Assert.Empty(Said(Book()).Select(d => d.Message));
+        Assert.Equal(["Piu mosso", "Moderato 96"], TempoMarks(Book()));
+        Assert.Equal([96, 108, 96], Played(Book()));
+        var tree = SyntaxTree.Parse(Book());
+        // (the twin writes a tempo in each of the two voices)
+        Assert.Equal(2, Count(new LilySharp.Core.LilyPond.LilyPondExporter().Export(tree), "Piu mosso"));
+        var spec = RenderSpecParser.FindFirst(tree);
+        Assert.Equal(1, Count(new LilySharp.Core.MusicXml.MusicXmlExporter { Form = spec?.Form, Score = spec }.Export(tree).ToXml().ToString(), "Piu mosso"));
+
+        // `tempo!` draws it anyway, in the twin and MusicXML too.
+        string forced = Book("tempo! \"Piu mosso\" 4 = 108 bare");
+        Assert.Empty(Said(forced).Select(d => d.Message));
+        Assert.Equal(["Piu mosso", "Piu mosso", "Moderato 96"], TempoMarks(forced));
+        Assert.Equal(4, Count(new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(forced)), "Piu mosso"));
+        Assert.Equal(forced, SyntaxTree.Parse(forced).Root.ToFullString());
+
+        // Anything that differs is a change: the count, the words, `bare`.
+        Assert.Equal(["Piu mosso", "Piu mosso 112", "Moderato 96"], TempoMarks(Book("tempo \"Piu mosso\" 4 = 112")));
+        Assert.Equal(["Piu mosso", "Ancora", "Moderato 96"], TempoMarks(Book("tempo \"Ancora\" 4 = 108 bare")));
+        Assert.Equal(["Piu mosso", "Piu mosso 108", "Moderato 96"], TempoMarks(Book("tempo \"Piu mosso\" 4 = 108")));
+        // Words alone state no count and are always printed.
+        Assert.Equal(["Piu mosso", "a tempo", "Moderato 96"], TempoMarks(Book("tempo \"a tempo\"")));
+        // A return to the same header after another tempo changes something, and a tempo in
+        // the music between two equal headers does.
+        Assert.Equal(["Piu mosso", "Moderato 96", "Piu mosso"], TempoMarks(Book(form: "A B ~B2 ~B3 ~B2")));
+        Assert.Equal(["Piu mosso", "80", "Piu mosso", "Moderato 96"],
+            TempoMarks(Book().Replace("m { d'1 | d'1 | }", "m { d'1 | tempo 4 = 80 d'1 | }")));
+    }
+
+    /// <summary>Two parts of a condensed staff wrote different levels at one moment and both were
+    /// printed on one spot under the staff ("mpf"), a crescendo through a diminuendo. The upper
+    /// part's stand above the staff and the lower part's below; what the two share is still
+    /// printed once, below.</summary>
+    [Fact]
+    public void TwoPartsDifferingDynamicsOnACondensedStaff_TakeASideEach()
+    {
+        static string Book(string a, string b, string score = "condensedStaff { a b }") => "octave absolute\n"
+            + "part a { instrument violin }\npart b { instrument violin }\n"
+            + "section S {\n  a { " + a + " }\n  b { " + b + " }\n}\nform { ~S }\nscore { " + score + " }\n";
+        static string[] Levels(LilySharp.Core.Svg.Model.MultiStaffScore page) => [.. page.Dynamics
+            .OrderBy(d => d.MeasureIndex).ThenByDescending(d => d.IsAbove).Select(d => d.Text + (d.IsAbove ? "^" : "_"))];
+        static string[] Hairpins(LilySharp.Core.Svg.Model.MultiStaffScore page) => [.. page.MusicMarks
+            .Where(m => m.Type is LilySharp.Core.Svg.Model.MusicMarkType.Cresc or LilySharp.Core.Svg.Model.MusicMarkType.Decresc)
+            .OrderByDescending(m => m.HairpinAbove).Select(m => m.Type + (m.HairpinAbove ? "^" : "_"))];
+
+        var page = Page(Book("c''1@mf | c''1@decresc~ | c''1@p | g''1@f |", "e'1@p | e'1@cresc~ | e'1@f | e'1@f |"));
+        Assert.Equal(["mf^", "p_", "p^", "f_", "f_"], Levels(page));
+        Assert.Equal(["Decresc^", "Cresc_"], Hairpins(page));
+
+        // The writer's own: two hairpins from two levels are two, each with its level.
+        var own = Page(Book("c''1@mf@decresc~ | c''1@pp |", "e'1@p@decresc~ | e'1@pp |"));
+        Assert.Equal(["mf^", "p_", "pp^", "pp_"], Levels(own));
+        Assert.Equal(["Decresc^", "Decresc_"], Hairpins(own));
+
+        // What both parts write, and what one part alone writes, stand as they did: once, below.
+        var shared = Page(Book("c''1@mf@cresc~ | c''1@f | c''1 |", "e'1@mf@cresc~ | e'1@f | e'1@p |"));
+        Assert.Equal(["mf_", "f_", "p_"], Levels(shared));
+        Assert.Equal(["Cresc_"], Hairpins(shared));
+        // A side the writer chose is kept, and staves of their own are untouched.
+        Assert.Equal(["mf_", "p_"], Levels(Page(Book("c''1@mf.down |", "e'1@p |"))));
+        Assert.Equal(["mf_", "p_"], Levels(Page(Book("c''1@mf |", "e'1@p |", "staff a  staff b"))));
+    }
+
+    /// <summary><c>a2@figuredBass(4)@figuredBass(3)</c> drew both groups on one spot, and the
+    /// LilyPond twin and MusicXML kept the first alone. A second group on one note is an error
+    /// that says how a change of figure over a held bass is written; that form is two figures.</summary>
+    [Fact]
+    public void ASecondFigureGroupOnOneNote_IsRefusedWithTheFormThatSaysIt()
+    {
+        static string Bass(string bar) => "octave absolute\ntime 4/4\nkey d major\npart bc { instrument cello }\n"
+            + "section A { bc { " + bar + " } }\nform { ~A }\nscore { staff bc }\n";
+        var said = Assert.Single(Said(Bass("a2@figuredBass(4)@figuredBass(3) a2 |")));
+        Assert.Equal(DiagnosticCodes.SecondFigureGroupOnANote, said.Code);
+        Assert.Equal(DiagnosticSeverity.Error, said.Severity);
+        Assert.Contains("a4@figuredBass(4)~ a4@figuredBass(3)", said.Message);
+        // The first stands alone on the page, as it did in the exports.
+        Assert.Single(Page(Bass("a2@figuredBass(4)@figuredBass(3) a2 |")).FiguredBasses);
+
+        // What the message says to write: clean, two groups, two figure events in the twin.
+        string tied = Bass("a4@figuredBass(4)~ a4@figuredBass(3) a2 |");
+        Assert.Empty(Said(tied).Select(d => d.Message));
+        Assert.Equal(2, Page(tied).FiguredBasses.Length);
+        Assert.Contains("<4>4 <3>", new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(tied)));
+        // One group of two figures is not two groups.
+        Assert.Empty(Said(Bass("a2@figuredBass(4 3) a2 |")).Select(d => d.Message));
+    }
+
+    private static string Review(string source) => LilySharp.Core.Editing.ScoreReview.Text(source);
+
+    /// <summary>A da capo piece was "Form: Recit A B" and told, as a mistake, that it "begins in D
+    /// major and ends in B minor": the review read the form's names as written, not as its jump
+    /// plays them. It ends at the Fine.</summary>
+    [Fact]
+    public void TheReview_FollowsTheFormsJumps()
+    {
+        string aria = "octave absolute\nkey d major\npart v { instrument violin }\npart c { instrument cello }\n"
+            + "section A { v { d''1@mf | a'1 | d''1 | } c { d1@mf | a,1 | d1 | } }\n"
+            + "section B { key b minor  v { b'1@p | fis''1 | b'1 | } c { b,1@p | fis1 | b,1 | } }\n"
+            + "form { A fine B dc al fine }\nscore { staff v staff c }\n";
+        string review = Review(aria);
+        Assert.Contains("Form: A B A", review);
+        Assert.DoesNotContain("ends in B minor", review);
+        Assert.Contains("It ends where it began: in D major", review);
+        // Without the jump it does end in B minor, and is told so.
+        Assert.Contains("ends in B minor", Review(aria.Replace("form { A fine B dc al fine }", "form { A B }")));
+    }
+
+    /// <summary>What the review said of a piano-vocal score and a guitar piece that the notes do
+    /// not say: a singer "began" in bars she rests through; the chorus "crossed" a soloist the
+    /// score stacks over it; a closing chord was read from the chord before it; an acoustic
+    /// guitar's open chords were "mud"; a cue staff had "no instrument".</summary>
+    [Fact]
+    public void TheReview_ReadsTheNotesAndAsksTheInstrument()
+    {
+        const string Head = "octave absolute\n";
+        // A level on a singer's first note, after bars of rest that carry a direction and a meter.
+        Assert.DoesNotContain("no level until", Review(Head + "part s { instrument soprano }\npart p { instrument violin }\n"
+            + "section I { s { r1@text(\"JON (spoken): Mara?\").up | time 2/4 R | time 4/4 R | } p { c''1@p | c''2 | c''1 | } }\n"
+            + "section A { s { a'1@mp | } p { c''1 | } }\nform { I A }\nscore { staff s staff p }\n"));
+
+        // A baritone soloist over the women's chorus: the women are the higher voice.
+        static string Voices(string upper, string lower, string upperNotes, string lowerNotes) => Head
+            + "part a { instrument " + upper + " }\npart b { instrument " + lower + " }\n"
+            + "section A { a { " + upperNotes + " } b { " + lowerNotes + " } }\nform { A }\nscore { staff a staff b }\n";
+        const string Low = "bes1 | bes1 | bes1 | bes1 | bes1 | bes1 | bes1 | bes1 | bes2 d'2@fermata | ees'1@fermata |";
+        const string High = "g'1 | g'1 | g'1 | g'1 | g'1 | g'1 | g'1 | g'1 | g'2 d''2@fermata | bes'1@fermata |";
+        string solo = Review(Voices("baritone", "alto", Low, High));
+        Assert.DoesNotContain("stands above", solo);
+        Assert.DoesNotContain("ends above", solo);
+        // Two voices stacked as a choir's still cross, and the closing chord is the last one.
+        string choir = Review(Voices("soprano", "alto", Low, High));
+        Assert.Contains("b stands above a", choir);
+        Assert.Contains("b ends above a on the last chord (B♭4 over E♭4)", choir);
+
+        // An acoustic guitar's open shapes are its chords; a distorted guitar's low thirds are mud.
+        static string Guitar(string sound) => Head + "part g { instrument guitar" + sound + " }\npart v { instrument violin }\n"
+            + "section A { g { <g, b, d g>1 | <g, b, d g>1 | <e, gis, b,>1 | <e, gis, b,>1 | <g, b, d g>1 | } v { d''1 | d''1 | e''1 | e''1 | d''1 | } }\n"
+            + "form { A }\nscore { staff g staff v }\n";
+        Assert.DoesNotContain("below C3", Review(Guitar("")));
+        Assert.DoesNotContain("below C3", Review(Guitar("  midiInstrument \"acoustic guitar (steel)\"")));
+        Assert.Contains("below C3", Review(Guitar("  midiInstrument \"overdriven guitar\"")));
+
+        // A staff of cues is no player's part.
+        Assert.DoesNotContain("No instrument for", Review(Head + "phrase h { c''1 | d''1 | }\npart s { instrument soprano }\npart q { clef treble }\n"
+            + "section A { s { h } q { cue { h } } }\nform { A }\nscore { staff s staff q }\n"));
+    }
+
+    /// <summary>The first line of <c>lysc review</c>: what the piece is.</summary>
+    private static string ReviewHead(string source)
+        => LilySharp.Core.Editing.ScoreReview.Text(source).Split('\n')[0].Trim();
+
+    /// <summary><c>lysc review</c> called a 61-bar quartet 78 bars and <c>c''1 | R*3 | c''1 |</c>
+    /// three: the bar lines it counts (<c>MidiFile.BarTicks</c>) lacked the ones inside an
+    /// <c>R*N</c>, and held ones no bar has — of a part with a <c>repeat tremolo</c> that was never
+    /// told another part's <c>time</c> (its bars were cut to the old meter in the sound too), and
+    /// of an empty bar beside another part's unmetered one.</summary>
+    [Fact]
+    public void TheReview_CountsTheBarsThePageHas()
+    {
+        const string Head = "octave absolute\npart a { instrument violin }\npart b { instrument violin }\n";
+        Assert.Contains(" 5 bars,", ReviewHead("octave absolute\npart a { instrument violin }\n"
+            + "section S { a { c''1 | R*3 | c''1 | } }\nform { ~S }\nscore { staff a }\n"));
+
+        string tremolo = Head + "time 5/8\nsection A {\n a { c''4. d''4 | c''4. d''4 | time 7/8\n c''2 d''4. | c''2 d''4. | time 4/4 c''1 | c''1 | }\n"
+            + " b { c'4. d'4 | c'4. d'4 | c'2 d'4. | c'2 d'4. | repeat tremolo 4 { d'16 f' } repeat tremolo 4 { e'16 g' } | c'1 | }\n}\n"
+            + "form { ~A }\nscore { staff a staff b }\n";
+        Assert.Contains(" 6 bars,", ReviewHead(tremolo));
+        Assert.Equal(6, Page(tremolo).EnumerateStaves().First().Staff.Voices[0].Measures.Length);
+        // …and b's bars sound where a's do: its 7/8 bars at beats 5 and 8.5, its last at 16.
+        var b = Beats(tremolo, "b");
+        Assert.Contains(8.5, b);
+        Assert.Equal(16.0, b[^1]);
+
+        // An empty bar beside another part's cadenza is that one bar.
+        Assert.Contains(" 3 bars,", ReviewHead(Head + "section A { a { c''1 | } b { c'1 | } }\n"
+            + "section Cad { time none  a { | } b { c'4 d' e' f' g' a' b'2 | } }\n"
+            + "section B { a { c''1 | } b { c'1 | } }\nform { ~A ~Cad ~B }\nscore { staff a staff b }\n"));
+
+        // A form that plays a section again says its count is the played one.
+        Assert.Contains(" 4 bars as played (repeats counted),", ReviewHead(Head + "section A { a { c''1 | } b { c'1 | } }\n"
+            + "section B { a { d''1 | d''1 | } b { d'1 | d'1 | } }\nform { ~A ~B ~A }\nscore { staff a staff b }\n"));
+    }
 }

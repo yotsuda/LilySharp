@@ -327,6 +327,8 @@ public sealed partial class MeasureCollector
                         // (ReturnToHomeTempo; MidiExporter plays the same).
                         if (tempoDecl.Parent?.Parent == null && tempoDecl.Value.QuarterBpm is double homeBpm)
                             (_homeTempo, _tempoInForce) = (tempoDecl, homeBpm);
+                        if (tempoDecl.Parent?.Parent == null)
+                            _fileTempo = _tempoStanding = tempoDecl.Value;
                     }
                     break;
 
@@ -787,6 +789,10 @@ public sealed partial class MeasureCollector
     // stands, in quarters a minute: a section that states no tempo returns to the file's.
     private TempoDeclarationSyntax? _homeTempo;
     private double? _tempoInForce;
+    // The last tempo STATED where the walk stands — words, count, unit, swing and `bare` — and
+    // the file's own: a section header that states the standing one again draws nothing
+    // (SectionHeaders.RestatesTempo; grammar evaluation 3, 2026-11-13).
+    private TempoValue? _tempoStanding, _fileTempo;
 
     /// <summary>
     /// The mark a section with no tempo of its own prints where the music before it left another
@@ -801,6 +807,7 @@ public sealed partial class MeasureCollector
             return null;
         bool changes = !atOpening && _tempoInForce != homeBpm;
         _tempoInForce = homeBpm;
+        _tempoStanding = home.Value;
         return changes && !already ? SectionTempoMark(home, measureIndex, sectionPos, anchorItemIndex, anchorTiming) : null;
     }
 

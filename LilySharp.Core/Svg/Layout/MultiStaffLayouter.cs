@@ -5074,8 +5074,15 @@ internal sealed class MultiStaffLayouter
         // while the measure/type filters stay per call: they depend on THIS system's
         // layouts, and they now scan only the staff's own items.
         var staffArticulations = ScoreSideTables.ArticulationsByStaff(score).At(staffIndex)
+            // …and the guitar BEND-UP, no Script but ink that rises out of the staff: its arrow
+            // and its "½" stand some three spaces over the note, and with no band reserved a
+            // chords row's diagram was set on the staff and the "½" printed inside its grid
+            // (grammar evaluation 3, 2026-11-13). The box is the one the marks above already
+            // clear (ArticulationEngraver.GuitarBendInkBox, the 2026-10-30 report).
+            // LILYSHARP-OWN, as the device is (LilyPond's BendSpanner is unported).
             .Where(a => systemMeasures.Contains(a.MeasureIndex)
-                        && ArticulationEngraver.IsSidePositionedScript(a.Type))
+                        && (ArticulationEngraver.IsSidePositionedScript(a.Type)
+                            || a.Type == Syntax.ArticulationType.Bend))
             .ToImmutableArray();
         if (staffArticulations.IsEmpty)
             return ImmutableArray<ArticulationLayout>.Empty;

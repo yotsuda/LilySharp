@@ -70,7 +70,7 @@ public static class ReviewNotes
             "A piano is meant."),
         ["staff.hand-label"] = new(N, H, "A score's labels name instruments. A pianist knows which staff is which hand, and a part in an ensemble is named once.",
             "It is teaching material for a beginner, where the labels are the point."),
-        ["staff.restates-chords"] = new(S, D, "A guitarist reads the chord row and its diagrams. Block chords under it say the same thing twice and fill the page.",
+        ["staff.restates-chords"] = new(S, D, "The chord row is what a player of chords reads (a guitarist with its diagrams). Block chords under it say the same thing twice and fill the page.",
             "The staff shows a voicing or a rhythm the player must play exactly."),
 
         // Dynamics

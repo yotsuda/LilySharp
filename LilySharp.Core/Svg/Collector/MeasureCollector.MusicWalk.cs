@@ -1759,6 +1759,7 @@ public sealed partial class MeasureCollector
                     // item index would point into the wrong staff's note list).
                     if (tempoChange.Value.QuarterBpm is double changed)
                         _tempoInForce = changed;
+                    _tempoStanding = tempoChange.Value;
                     // The PRINTED count: `tempo "Tempo I" 4 = 92 bare` is in force at 92
                     // (above) and its mark is the words alone (TempoValue.PrintedBpm).
                     if (tempoChange.PrintedBpm is int bpm)
