@@ -801,7 +801,7 @@ public static partial class NoteStepper
                 ? new Target(TargetKind.Dynamic, dynamic)
                 : CarrierOf(dynamic) ?? new Target(TargetKind.Dynamic, dynamic);
         if (ArticulationAt(tree, offset) is { } articulation)
-            return GroupOf(articulation.NameToken.Text) != null
+            return GroupOf(articulation.NameToken.Text) != null || IsBareBow(articulation)
                 ? new Target(TargetKind.Articulation, articulation)
                 : CarrierOf(articulation) ?? new Target(TargetKind.Articulation, articulation);
         // A mark with an argument whose spelling or argument steps (`@ottava(bassa)`,

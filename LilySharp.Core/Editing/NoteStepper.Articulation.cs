@@ -118,12 +118,14 @@ public static partial class NoteStepper
         // walks it; a figure written otherwise is not stepped.
         // (Its last row, the first here, is the comma form: 4 then 3 over one held note.)
         ["figuredBass"] = ["4, 3", "_", "#", "6 s", "2", "4", "9", "5 3", "4 2", "4 3", "6 5", "7", "6 4", "6"],
-        // A bow's two lines (owner's request 2026-11-13: "@slur の上で dashed と dotted を
-        // 切り替えられるように"): the completion's two rows, traded by either key's first press.
-        [Semantics.AnnotationValues.SlurLineName] = [.. Semantics.AnnotationValues.BowLineWords],
-        [Semantics.AnnotationValues.TieLineName] = [.. Semantics.AnnotationValues.BowLineWords],
+        // A bow's lines (owner's requests 2026-11-13: "@slur の上で dashed と dotted を
+        // 切り替えられるように", then "一番上を solid にして"): the completion's rows from the
+        // bottom, so Down walks the list as it is shown — solid, dashed, dotted — and solid
+        // is the top. A bare @slur stands at solid (BareBowEdit).
+        [Semantics.AnnotationValues.SlurLineName] = [.. Semantics.AnnotationValues.BowLineWords.Reverse()],
+        [Semantics.AnnotationValues.TieLineName] = [.. Semantics.AnnotationValues.BowLineWords.Reverse()],
         // …and a phrasing slur's, @phrasingSlur(dashed) (owner-approved 2026-11-13).
-        [Semantics.AnnotationValues.PhrasingSlurName] = [.. Semantics.AnnotationValues.BowLineWords],
+        [Semantics.AnnotationValues.PhrasingSlurName] = [.. Semantics.AnnotationValues.BowLineWords.Reverse()],
     };
 
     /// <summary>A name the step may write: one the registry draws, or a plain annotation the
@@ -132,6 +134,12 @@ public static partial class NoteStepper
     private static bool IsSteppable(string name)
         => ArticulationRegistry.IsKnown(name) || AnnotationNameValidator.PlainFeatureNames.Contains(name)
            || Svg.Model.MusicMarkItem.ParseMarkName(name) != null;
+
+    /// <summary>A slur's, a tie's or a phrasing slur's name written with no line word
+    /// (<c>@slur</c>, <c>@phrasingSlur</c>): the keys write the word out (<see cref="ArticulationEdit"/>).</summary>
+    private static bool IsBareBow(ArticulationSyntax articulation)
+        => articulation.Name is Semantics.AnnotationValues.SlurLineName or Semantics.AnnotationValues.TieLineName
+            or Semantics.AnnotationValues.PhrasingSlurName;
 
     /// <summary>The group a spelling is in, or null: a mark in no group has nothing of its own
     /// to step, so the keys step the note it is written on (<see cref="CarrierOf"/>).</summary>
@@ -339,6 +347,16 @@ public static partial class NoteStepper
                 return label == null
                     ? (null, $"@mark(\"{rehearsal.Label}\"): already the {(dir > 0 ? "last" : "first")}")
                     : (new Edit(rehearsal.Start, rehearsal.End, label), $"@mark(\"{label}\")");
+            }
+            // A bare @slur / @tie / @phrasingSlur (owner's request 2026-11-13: "@slur の上で
+            // ctrl+shift+up を押したら、@slur(solid) になるように"): it stands where the solid
+            // line does, so Up writes that word out — the top of the list — and Down the next
+            // one down, dashed. From there the argument steps (ArgumentSteps).
+            if (mark is ArticulationSyntax bare && IsBareBow(bare))
+            {
+                var lines = ArgumentSteps[bare.Name];
+                return (new Edit(spelling.End, spelling.End, $"({lines[dir > 0 ? ^1 : ^2]})"),
+                    $"@{bare.Name}(…): {string.Join(" / ", lines.Reverse())}");
             }
             string name = HeadOf(spelling.Spelling);
             return (null, IsSteppable(name)

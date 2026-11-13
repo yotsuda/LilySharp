@@ -2400,17 +2400,24 @@ public class StepRequestTests
     // A bow's line, from the name or the word (owner's request 2026-11-13).
     // …and the solid one is a word too, so the three can be compared in the preview
     // (owner's request 2026-11-13).
-    [InlineData("c'4@slur(so‸lid)( d' e' f') |", +1, "c'4@slur(dashed)( d' e' f') |")]
-    [InlineData("c'4@slur(‸dashed)( d' e' f') |", -1, "c'4@slur(solid)( d' e' f') |")]
-    [InlineData("c'2@tie(‸solid)~ c'2 |", +1, "c'2@tie(dashed)~ c'2 |")]
-    [InlineData("c'4@phrasingSlur(‸dashed) d' e' f'@!phrasingSlur |", -1, "c'4@phrasingSlur(solid) d' e' f'@!phrasingSlur |")]
-    [InlineData("c'4@sl‸ur(dashed)( d' e' f') |", +1, "c'4@slur(dotted)( d' e' f') |")]
-    [InlineData("c'4@slur(dot‸ted)( d' e' f') |", -1, "c'4@slur(dashed)( d' e' f') |")]
-    [InlineData("c'2@‸tie(dashed)~ c'2 |", +1, "c'2@tie(dotted)~ c'2 |")]
-    [InlineData("c'2@tie(‸dotted)~ c'2 |", -1, "c'2@tie(dashed)~ c'2 |")]
+    [InlineData("c'4@slur(so‸lid)( d' e' f') |", -1, "c'4@slur(dashed)( d' e' f') |")]
+    [InlineData("c'4@slur(‸dashed)( d' e' f') |", +1, "c'4@slur(solid)( d' e' f') |")]
+    [InlineData("c'2@tie(‸solid)~ c'2 |", -1, "c'2@tie(dashed)~ c'2 |")]
+    [InlineData("c'4@phrasingSlur(‸dashed) d' e' f'@!phrasingSlur |", +1, "c'4@phrasingSlur(solid) d' e' f'@!phrasingSlur |")]
+    [InlineData("c'4@sl‸ur(dashed)( d' e' f') |", -1, "c'4@slur(dotted)( d' e' f') |")]
+    [InlineData("c'4@slur(dot‸ted)( d' e' f') |", +1, "c'4@slur(dashed)( d' e' f') |")]
+    [InlineData("c'2@‸tie(dashed)~ c'2 |", -1, "c'2@tie(dotted)~ c'2 |")]
+    [InlineData("c'2@tie(‸dotted)~ c'2 |", +1, "c'2@tie(dashed)~ c'2 |")]
     // …and a phrasing slur's (owner-approved 2026-11-13).
-    [InlineData("c'4@phrasing‸Slur(dashed) d' e' f'@!phrasingSlur |", +1, "c'4@phrasingSlur(dotted) d' e' f'@!phrasingSlur |")]
-    [InlineData("c'4@phrasingSlur(dot‸ted).up d' e' f'@!phrasingSlur |", -1, "c'4@phrasingSlur(dashed).up d' e' f'@!phrasingSlur |")]
+    [InlineData("c'4@phrasing‸Slur(dashed) d' e' f'@!phrasingSlur |", -1, "c'4@phrasingSlur(dotted) d' e' f'@!phrasingSlur |")]
+    [InlineData("c'4@phrasingSlur(dot‸ted).up d' e' f'@!phrasingSlur |", +1, "c'4@phrasingSlur(dashed).up d' e' f'@!phrasingSlur |")]
+    // A bare one stands at solid: Up writes that word out, Down the next one down
+    // (owner's request 2026-11-13).
+    [InlineData("c'4@sl‸ur( d' e' f') |", +1, "c'4@slur(solid)( d' e' f') |")]
+    [InlineData("c'4@slur‸( d' e' f') |", -1, "c'4@slur(dashed)( d' e' f') |")]
+    [InlineData("c'2@ti‸e~ c'2 |", +1, "c'2@tie(solid)~ c'2 |")]
+    [InlineData("c'4@phrasing‸Slur d' e' f'@!phrasingSlur |", +1, "c'4@phrasingSlur(solid) d' e' f'@!phrasingSlur |")]
+    [InlineData("c'4@phrasing‸Slur d' e' f'@!phrasingSlur |", -1, "c'4@phrasingSlur(dashed) d' e' f'@!phrasingSlur |")]
     public void AnArgumentFromAList_StepsAlongIt(string from, int dir, string to)
         => Assert.Equal(Plain(to), Step(Plain(from), dir, semitone: true).After);
 
