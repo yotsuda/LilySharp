@@ -34,9 +34,11 @@ internal enum HeaderAlign
 internal sealed record HeaderLinePiece(string Text, FontStyle Style, double X);
 
 /// <summary>One line of a header line written as Markdown: its pieces, its advance width,
-/// and its baseline below the first line's.</summary>
+/// its baseline below the first line's, and its own ink about its own baseline (up-positive;
+/// 0 and 0 for a line with nothing to draw) — what a re-stepped set's ink is rebuilt from
+/// (<see cref="HeaderLineSet.Restepped"/>).</summary>
 internal sealed record HeaderTextLine(System.Collections.Immutable.ImmutableArray<HeaderLinePiece> Pieces,
-    double Width, double Baseline);
+    double Width, double Baseline, double InkBottom = 0, double InkTop = 0, bool HasInk = false);
 
 /// <summary>
 /// One of the two header lines of 2026-11-13 (owner's decision) as it is set: the
@@ -57,25 +59,102 @@ internal sealed record HeaderTextLine(System.Collections.Immutable.ImmutableArra
 /// <param name="Width">Its advance width (the widest line's).</param>
 /// <param name="Lines">Its lines, where it is written as Markdown (<c>```md title</c> …;
 /// owner's decision 2026-11-13): each in pieces of the weight and slant the Markdown asks for
-/// over the line's own, a baseline-skip at its size under the one before. Default for a plain
+/// over the line's own, <see cref="InnerStep"/> under the one before. Default for a plain
 /// string, drawn as <see cref="Text"/> alone.</param>
+/// <param name="NextRowTop">Where the ink top of the header row under this one stands, below
+/// this set's first baseline (y down), when this set has several lines and a row follows it
+/// in the header's column — null otherwise. Set by <see cref="HeaderBand.Build"/>; the twin
+/// writes it as the column's least depth so LilyPond stacks the next row where the page does.</param>
 internal sealed record HeaderLineSet(
     string Text, double Em, TextRole Role, FontStyle Style, HeaderAlign Align, int Position,
     double InkBottom, double InkTop, double Width,
-    System.Collections.Immutable.ImmutableArray<HeaderTextLine> Lines = default)
+    System.Collections.Immutable.ImmutableArray<HeaderTextLine> Lines = default,
+    double? NextRowTop = null)
 {
     /// <summary>Whether it is written as Markdown and drawn line by line, piece by piece.</summary>
     public bool IsMarkdown => !Lines.IsDefault;
 
+    /// <summary>The last line's baseline below the first's: 0 for one line or a plain string.</summary>
+    public double LastBaseline => IsMarkdown && Lines.Length > 0 ? Lines[^1].Baseline : 0;
+
+    /// <summary>The step between its lines (its second line's baseline under its first), or
+    /// null when it has one line.</summary>
+    public double? Step => IsMarkdown && Lines.Length > 1 ? Lines[1].Baseline - Lines[0].Baseline : null;
+
     /// <summary>
-    /// The step from one line of a header line written as Markdown to the next, at its size:
-    /// the page text's baseline-skip grown as the line is (3.0 at the text's 2.2; 4.76 for a
-    /// title at 3.49) — owner's decision 2026-11-13, "several lines step at that size's
-    /// baseline-skip".
+    /// The share of the row white that the white between a header line's OWN lines takes.
     /// </summary>
-    /// <remarks>LILYSHARP-OWN, as a heading's lines step (ProseBand, section 5.2). The twin
-    /// writes it as the <c>\column</c>'s <c>baseline-skip</c>, so LilyPond steps by it too.</remarks>
-    public static double LineStep(double em) => ProseBand.BaselineSkip * em / ProseBand.FontSize;
+    /// <remarks>
+    /// LILYSHARP-OWN (owner's decision 2026-11-14): "title 内の改行幅 y と、title と subtitle
+    /// の間の幅 y は、少しだけ差をつけたい" — the lines of one header line stand a little closer
+    /// than that line stands to the next row, so they read as one block and the next row as
+    /// the next thing. LilyPond has no step of its own for a header line of several lines
+    /// (a <c>\column</c> in a <c>\header</c> field takes the default baseline-skip); the twin
+    /// writes this one. 0.75 judged by eye on the showcase (LilySharp-Lab sessions/p1226/md/header2)
+    /// and on a two-line composer over an arranger.
+    /// </remarks>
+    public const double InnerWhiteShare = 0.75;
+
+    /// <summary>
+    /// The step between two lines of a header line written as Markdown, at its size: its
+    /// face's ascender and descender at <paramref name="em"/> and, between them,
+    /// <see cref="InnerWhiteShare"/> of the white LilyPond's 3.5 baseline-skip
+    /// (<see cref="HeaderBand.BaselineSkip"/>) leaves between this line's descender and the
+    /// next row's ascender (<paramref name="nextAscender"/>; this line's own ascender when no
+    /// row follows — a copyright at the foot, a title with nothing under it).
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN (owner's decision 2026-11-14, see <see cref="InnerWhiteShare"/>). The
+    /// white is measured between the faces' designed ascender and descender lines
+    /// (<see cref="TextFontMetrics.TypoExtents"/>: OS/2 typo, an em apart in the bundled
+    /// Schola), not the lines' own ink, so a line of lower-case letters steps as one with
+    /// capitals does.
+    /// Replaces the page text's 3.0 grown to the size (2026-11-13), which stood the title's
+    /// own lines 4.76 apart over a subtitle 3.26 under them — the reverse of the owner's picture.
+    /// </remarks>
+    public static double InnerStep(ScoreTextMetrics fonts, double em, TextRole role, FontStyle style,
+        double? nextAscender = null)
+    {
+        var (ascender, descender) = TextFontMetrics.TypoExtents(fonts.Face(role, style));
+        double up = ascender * em, down = -descender * em;
+        double rowWhite = HeaderBand.BaselineSkip - down - (nextAscender ?? up);
+        return up + down + InnerWhiteShare * rowWhite;
+    }
+
+    /// <summary>Its face's ascender at its size, in staff spaces: what a header line of
+    /// several lines above it measures its white against (<see cref="InnerStep"/>).</summary>
+    public double Ascender(ScoreTextMetrics fonts) => AscenderOf(fonts, Em, Role, Style);
+
+    /// <summary>The ascender of <paramref name="role"/>'s face in <paramref name="style"/> at
+    /// <paramref name="em"/>, in staff spaces.</summary>
+    public static double AscenderOf(ScoreTextMetrics fonts, double em, TextRole role, FontStyle style)
+        => TextFontMetrics.TypoExtents(fonts.Face(role, style)).Ascender * em;
+
+    /// <summary>
+    /// This set with its lines <paramref name="step"/> apart, its ink rebuilt from theirs —
+    /// itself when it is a plain string or one line.
+    /// </summary>
+    public HeaderLineSet Restepped(double step)
+    {
+        if (!IsMarkdown || Lines.Length < 2)
+            return this;
+        double inkTop = double.NegativeInfinity, inkBottom = double.PositiveInfinity;
+        var lines = System.Collections.Immutable.ImmutableArray.CreateBuilder<HeaderTextLine>(Lines.Length);
+        for (int k = 0; k < Lines.Length; k++)
+        {
+            double baseline = k * step;
+            var line = Lines[k] with { Baseline = baseline };
+            if (line.HasInk)
+            {
+                inkTop = Math.Max(inkTop, line.InkTop - baseline);
+                inkBottom = Math.Min(inkBottom, line.InkBottom - baseline);
+            }
+            lines.Add(line);
+        }
+        if (double.IsInfinity(inkTop))
+            (inkTop, inkBottom) = (0, 0);
+        return this with { Lines = lines.MoveToImmutable(), InkTop = inkTop, InkBottom = inkBottom };
+    }
 
     /// <summary>
     /// <paramref name="fence"/>'s Markdown set as a header line at <paramref name="em"/> in
@@ -89,7 +168,9 @@ internal sealed record HeaderLineSet(
         var prose = HeaderProse.Read(fence.Markdown);
         if (prose.Lines.IsEmpty)
             return null;
-        double step = LineStep(em);
+        // The step with no row under it (a copyright at the foot, the arranger, the last row);
+        // HeaderBand.Build re-steps a set a row follows (Restepped), measured against that row.
+        double step = InnerStep(fonts, em, role, style);
         double inkTop = double.NegativeInfinity, inkBottom = double.PositiveInfinity, width = 0;
         var lines = System.Collections.Immutable.ImmutableArray.CreateBuilder<HeaderTextLine>(prose.Lines.Length);
         for (int k = 0; k < prose.Lines.Length; k++)
@@ -97,6 +178,7 @@ internal sealed record HeaderLineSet(
             double baseline = k * step;
             var pieces = System.Collections.Immutable.ImmutableArray.CreateBuilder<HeaderLinePiece>();
             double x = 0;
+            double lineTop = double.NegativeInfinity, lineBottom = double.PositiveInfinity;
             foreach (var run in prose.Lines[k])
             {
                 var pieceStyle = style | run.Style;
@@ -106,13 +188,20 @@ internal sealed record HeaderLineSet(
                 var (bottom, top) = fonts.InkOrFallbackBox(run.Text, em, role, pieceStyle);
                 if (run.Text.Trim().Length > 0)
                 {
-                    inkTop = Math.Max(inkTop, top - baseline);
-                    inkBottom = Math.Min(inkBottom, bottom - baseline);
+                    lineTop = Math.Max(lineTop, top);
+                    lineBottom = Math.Min(lineBottom, bottom);
                 }
                 x += fonts.Advance(run.Text, em, role, pieceStyle);
             }
+            bool hasInk = !double.IsInfinity(lineTop);
+            if (hasInk)
+            {
+                inkTop = Math.Max(inkTop, lineTop - baseline);
+                inkBottom = Math.Min(inkBottom, lineBottom - baseline);
+            }
             width = Math.Max(width, x);
-            lines.Add(new HeaderTextLine(pieces.ToImmutable(), x, baseline));
+            lines.Add(new HeaderTextLine(pieces.ToImmutable(), x, baseline,
+                hasInk ? lineBottom : 0, hasInk ? lineTop : 0, hasInk));
         }
         if (double.IsInfinity(inkTop))
             (inkTop, inkBottom) = (0, 0);

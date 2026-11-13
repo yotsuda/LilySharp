@@ -158,7 +158,8 @@ public class MarkdownTextListTests
     // ---- headings on the page ----------------------------------------------------------
 
     /// <summary>LILYPOND-REF: \fontsize's step is 2^(1/6); +2 on the text's 2.2 is 2.7719
-    /// (measured), the piece's subtitle size — under the title's 3.49.</summary>
+    /// (measured) — under the title's 3.49. (Not the subtitle's: that is \large, one step,
+    /// 2.4694, since 2026-11-14; the heading keeps its own two steps.)</summary>
     [Fact]
     public void AHeadingIsBold_AndTwoStepsOrOneOverTheText()
     {
@@ -167,7 +168,7 @@ public class MarkdownTextListTests
         Assert.Equal(2.7718, Em * band.Lines[0].Scale, 4);       // LilyPond prints 2.7719 from its 11pt
         Assert.Equal(2.4694, Em * band.Lines[1].Scale, 4);
         Assert.True(Em * band.Lines[0].Scale < HeaderBand.TitleFontSize - 0.5);
-        Assert.Equal(HeaderBand.SubtitleFontSize, Em * band.Lines[0].Scale, 2);
+        Assert.Equal(2.2 * Math.Pow(2, 2 / 6.0), Em * band.Lines[0].Scale, 9);
         Assert.All(band.Lines.Take(2), l => Assert.All(l.Pieces, p => Assert.True((p.Style & FontStyle.Bold) != 0)));
         Assert.Equal(FontStyle.Regular, band.Lines[2].Pieces[0].Style);
         // Italic in a heading is bold italic.

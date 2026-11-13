@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 426 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **554** | |
+| `OWN` | 427 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **555** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -249,7 +249,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（426 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（427 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -638,7 +638,8 @@
 - **`HeaderBand.ChordListGap`** LILYSHARP-OWN: LilyPond has no chord list; the gap is Lily#'s, a little more
 - **`HeaderBand.RowPadding`** LILYSHARP-OWN (user decision 2026-09-26): LilyPond stacks the rows with ZERO padding
 ### `LilySharp.Core/Svg/Layout/HeaderLineSet.cs`
-- **`HeaderLineSet.LineStep`** LILYSHARP-OWN, as a heading's lines step (ProseBand, section 5.2). The twin
+- **`HeaderLineSet.InnerWhiteShare`** LILYSHARP-OWN (owner's decision 2026-11-14): "title 内の改行幅 y と、title と subtitle
+- **`HeaderLineSet.InnerStep`** LILYSHARP-OWN (owner's decision 2026-11-14, see ). The
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
 - **`ItemSkylineFactory.AddApproachGesture`** LILYSHARP-OWN: LilyPond has no scoop or plop; the default extra-spacing-width is what
 - **`ItemSkylineFactory.LeavingGestureClearance`** shortest. LILYSHARP-OWN ('s remarks carry the tag's
@@ -751,7 +752,7 @@
 - **`ProseBand.MaximumMargin`** LILYSHARP-OWN: 50 — about 88 mm, under a third of an A4 page's height at the
 - **`ProseBand.MinimumWidth`** LILYSHARP-OWN: ten staff spaces — four or five ems of the text, a short word
 - **`ProseBand.ParagraphGap`** LILYSHARP-OWN: half a line. LilyPond has no paragraph; the twin writes it as
-- **`ProseBand.HeadingSteps`** LILYSHARP-OWN: which steps. Bold at +2 is 2.77, the size (and weight) of the piece's
+- **`ProseBand.HeadingSteps`** LILYSHARP-OWN: which steps. Bold at +2 is 2.77, two steps over the text and clearly
 - **`ProseBand.HeadingGapAbove`** LILYSHARP-OWN: a whole line, twice a paragraph's — the heading belongs to
 - **`ProseBand.HeadingGapBelow`** LILYSHARP-OWN: a quarter of a line, half a paragraph's.
 - **`ProseBand.ListIndent`** LILYSHARP-OWN: 1.5 em (3.3 staff spaces at the text's 2.2).

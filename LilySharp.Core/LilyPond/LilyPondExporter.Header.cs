@@ -410,7 +410,9 @@ public sealed partial class LilyPondExporter
     /// <c>\markup</c>: one line as itself, several as a column aligned as the page aligns them
     /// (<c>\center-column</c> for the title, the subtitle and the copyright,
     /// <c>\right-column</c> for the composer and the arranger, the poet's column at the left)
-    /// stepping by the page's step (<see cref="Svg.Layout.HeaderLineSet.LineStep"/>) — and
+    /// stepping by the page's step (<see cref="Svg.Layout.HeaderLineSet.InnerStep"/>, read off
+    /// the page's own set) and, under a column a row follows, reaching down to that row's ink
+    /// top (<see cref="Svg.Layout.HeaderLineSet.NextRowTop"/>) — and
     /// in each line the emphasis the Markdown adds, <c>\italic</c> and <c>\bold</c>, inside the
     /// weight bookTitleMarkup gives the line. Null for a fence that writes nothing.
     /// </summary>
@@ -425,27 +427,67 @@ public sealed partial class LilyPondExporter
             body = "{ " + lines[0] + " }";
         else
         {
-            var fonts = _page?.TextMetrics ?? Rendering.ScoreTextMetrics.Bundled;
-            double em = field switch
-            {
-                "title" => Svg.Layout.HeaderBand.TitleEm(fonts),
-                "subtitle" => Svg.Layout.HeaderBand.SubtitleEm(fonts),
-                "poet" => Svg.Layout.HeaderBand.PoetEm(fonts),
-                "copyright" => Svg.Layout.HeaderBand.CopyrightEm(fonts),
-                _ => Svg.Layout.HeaderBand.ComposerEm(fonts),
-            };
+            // The page's own set (HeaderBand.Of: re-stepped against the row under it), so the
+            // twin steps by what the page steps by; with no page, the step with no row under it.
+            var set = SetOfHeaderLine(field);
+            double step = set?.Step ?? Svg.Layout.HeaderLineSet.InnerStep(
+                Rendering.ScoreTextMetrics.Bundled, HeaderEm(field, Rendering.ScoreTextMetrics.Bundled), role,
+                field switch
+                {
+                    "title" or "subtitle" => Rendering.FontStyle.Bold,
+                    _ => Rendering.FontStyle.Regular,
+                });
             string column = field switch
             {
                 "composer" or "arranger" => "\\right-column",
                 "poet" => "\\left-column",
                 _ => "\\center-column",
             };
-            body = "{ \\override #'(baseline-skip . "
-                + Svg.Layout.HeaderLineSet.LineStep(em).ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)
-                + ") " + column + " { " + string.Join(" ", lines) + " } }";
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            body = "\\override #'(baseline-skip . " + step.ToString("0.####", inv) + ") "
+                + column + " { " + string.Join(" ", lines) + " }";
+            // The row under a header line of several lines is skipped from its LAST line
+            // (owner's decision 2026-11-14; HeaderBand.Build); LilyPond's column skips from the
+            // reference point, the first line, and stacks the rest by extent with no padding
+            // (LILYPOND-REF: scm/stencil.scm stack-lines → ly:stencil-stack). So the column
+            // reaches down to where the page puts the next row's ink top, and LilyPond's
+            // extent rule sets that row where the page does.
+            if (set?.NextRowTop is { } reach)
+                body = "\\pad-to-box #'(0 . 0) #'(" + (-reach).ToString("0.####", inv) + " . 0) { " + body + " }";
+            body = "{ " + body + " }";
         }
         return MarkupForRole(role, body, "") ?? "\\markup " + body;
     }
+
+    /// <summary>The page's set of the header line <paramref name="field"/> as the layout
+    /// places it (<see cref="Svg.Layout.HeaderBand.Of"/>), or null with no page or no such line.</summary>
+    private Svg.Layout.HeaderLineSet? SetOfHeaderLine(string field)
+    {
+        if (_page is null)
+            return null;
+        if (field == "copyright")
+            return Svg.Layout.HeaderLineSet.Copyright(_page);
+        var band = Svg.Layout.HeaderBand.Of(_page);
+        return field switch
+        {
+            "title" => band?.TitleText,
+            "subtitle" => band?.SubtitleText,
+            "poet" => band?.PoetText,
+            "composer" => band?.ComposerText,
+            "arranger" => band?.Arranger,
+            _ => null,
+        };
+    }
+
+    /// <summary>The em the header line <paramref name="field"/> is set at.</summary>
+    private static double HeaderEm(string field, Rendering.ScoreTextMetrics fonts) => field switch
+    {
+        "title" => Svg.Layout.HeaderBand.TitleEm(fonts),
+        "subtitle" => Svg.Layout.HeaderBand.SubtitleEm(fonts),
+        "poet" => Svg.Layout.HeaderBand.PoetEm(fonts),
+        "copyright" => Svg.Layout.HeaderBand.CopyrightEm(fonts),
+        _ => Svg.Layout.HeaderBand.ComposerEm(fonts),
+    };
 
     /// <summary>One line of a header fence: a string, or its runs in their emphasis.</summary>
     private static string HeaderLineMarkup(System.Collections.Immutable.ImmutableArray<Rendering.ProseRun> runs)

@@ -785,6 +785,47 @@ public static class TextFontMetrics
     private static readonly ConcurrentDictionary<TextFace, (double Ascender, double Descender)>
         Extents = new();
 
+    /// <summary>
+    /// The FACE's designed ascender and descender per em — its OS/2 <c>sTypoAscender</c> and
+    /// <c>sTypoDescender</c>, up-positive (<c>Descender</c> negative) — or
+    /// <see cref="FontExtents"/> where the face has no OS/2 table or a zero ascender in it.
+    /// </summary>
+    /// <remarks>
+    /// The line the type designer draws the letters between (an em apart in TeX Gyre Schola:
+    /// 0.798 / −0.202), where the hhea pair carries the room for accents over capitals and
+    /// the lowest descender (1.173 / −0.372 in Schola Bold) — with those, the white LilyPond's
+    /// 3.5 skip leaves between a title and a subtitle under it is negative. Read by the white
+    /// between a header line's own lines (Svg.Layout.HeaderLineSet.InnerStep).
+    /// </remarks>
+    public static (double Ascender, double Descender) TypoExtents(TextFace face)
+        => TypoExtentsCache.GetOrAdd(face, static key =>
+        {
+            try
+            {
+                using var blob = ShapingBlob(key);
+                using var hbFace = new HarfBuzzSharp.Face(blob, 0);
+                using var os2 = hbFace.ReferenceTable(HarfBuzzSharp.Tag.Parse("OS/2"));
+                var table = os2.AsSpan();
+                double upem = hbFace.UnitsPerEm;
+                if (table.Length >= 72 && upem > 0)
+                {
+                    // OpenType OS/2: sTypoAscender at byte 68, sTypoDescender at 70, big-endian int16.
+                    short ascender = (short)((table[68] << 8) | table[69]);
+                    short descender = (short)((table[70] << 8) | table[71]);
+                    if (ascender > 0)
+                        return (ascender / upem, descender / upem);
+                }
+            }
+            catch (Exception)
+            {
+                // A face whose program cannot be read here: the hhea pair below.
+            }
+            return FontExtents(key);
+        });
+
+    private static readonly ConcurrentDictionary<TextFace, (double Ascender, double Descender)>
+        TypoExtentsCache = new();
+
     // ⚠️ NOT A TEXT STENCIL'S X EXTENT. That is the ADVANCE: a text stencil's box takes X
     // from Pango's LOGICAL rectangle and only Y from the ink one
     // (LILYPOND-REF: lily/pango-font.cc:351-362 Pango_font::pango_item_string_stencil) —

@@ -219,6 +219,12 @@ internal sealed record HeaderBand(
     /// title's baseline — measured on LilyPond 2.26.0 itself, the same picture. At the
     /// default sizes the 3.5 baseline-skip binds with room to spare and this changes nothing;
     /// it only moves a row whose own ink outgrows the skip.
+    /// The decision STANDS (owner, 2026-11-14, "その案で進めて"): from 2026-11-13 a header line
+    /// written as Markdown of several lines made the ink bind at the default sizes (the row
+    /// under it was skipped from its FIRST line, so its ink, not the skip, placed the next
+    /// row, and this padding with it — 0.5 off LilyPond on every such page). Now the row under
+    /// a fence is skipped from the fence's LAST line (<see cref="Build"/>), the 3.5 binds
+    /// again, and this padding is again only the safety for an enlarged <c>fonts { }</c> size.
     /// </remarks>
     public const double RowPadding = 0.5;
 
@@ -255,14 +261,18 @@ internal sealed record HeaderBand(
     public static FontStyle ComposerStyle(ScoreTextMetrics fonts) => fonts.Style(TextRole.Composer, FontStyle.Regular);
 
     /// <summary>
-    /// The subtitle's font size: two font-size steps over the 11pt text font, 2.2 × 2^(2/6).
+    /// The subtitle's font size: one font-size step over the 11pt text font, 2.2 × 2^(1/6).
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: ly/titling-init.ly bookTitleMarkup, lines 78-81 — the subtitle row,
-    /// <c>\large \bold \fromproperty #'header:subtitle</c>; large is font-size 2, each step a
-    /// magstep of 2^(1/6) — 11pt × 2^(2/6) = 13.86pt, 2.77 staff spaces at a 20pt staff.
+    /// <c>\large \bold \fromproperty #'header:subtitle</c>; scm/define-markup-commands.scm
+    /// large is font-size 1 (huge is 2), a step a magstep of 2^(1/6) — 11pt × 2^(1/6) =
+    /// 12.35pt, 2.4694 staff spaces at a 20pt staff. MEASURED 2026-11-13, LilyPond 2.26.0
+    /// (LilySharp-Lab sessions/p1226/md/header, md-showcase-lp and p1): font-size 2.4697.
+    /// It was 2.77 (font-size 2, \large read as two steps) from 2026-09-26 to 2026-11-14,
+    /// which stood the subtitle 0.72 lower under a two-line title than LilyPond does.
     /// </remarks>
-    public const double SubtitleFontSize = 2.77;
+    public const double SubtitleFontSize = 2.4694;
 
     /// <summary>The subtitle's em for THIS score — see <see cref="TitleEm"/>.</summary>
     public static double SubtitleEm(ScoreTextMetrics fonts) => fonts.Size(TextRole.Subtitle, SubtitleFontSize);
@@ -334,7 +344,37 @@ internal sealed record HeaderBand(
             && arranger is null && titleText is null && subtitleText is null && poetText is null && composerText is null)
             return null;
 
-        double? previousBaseline = null;
+        // A header line of several lines a row follows steps against THAT row (owner's
+        // decision 2026-11-14): its own lines stand HeaderLineSet.InnerWhiteShare of the white
+        // the 3.5 skip leaves between its last line and the next row's ascender. The rows, in
+        // the column's order: title, subtitle, the poet / composer line, the arranger.
+        double ascSubtitle = subtitleText?.Ascender(fonts)
+            ?? (subtitle is null ? double.NaN : HeaderLineSet.AscenderOf(fonts, SubtitleEm(fonts), TextRole.Subtitle, SubtitleStyle(fonts)));
+        double ascComposerRow = double.NaN;
+        void Taller(double a) => ascComposerRow = double.IsNaN(ascComposerRow) ? a : Math.Max(ascComposerRow, a);
+        if (poetText is not null) Taller(poetText.Ascender(fonts));
+        else if (poet is not null) Taller(HeaderLineSet.AscenderOf(fonts, PoetEm(fonts), TextRole.Poet, PoetStyle(fonts)));
+        if (instrument is not null) Taller(HeaderLineSet.AscenderOf(fonts, ComposerEm(fonts), TextRole.Composer, ComposerStyle(fonts)));
+        if (composerText is not null) Taller(composerText.Ascender(fonts));
+        else if (composer is not null) Taller(HeaderLineSet.AscenderOf(fonts, ComposerEm(fonts), TextRole.Composer, ComposerStyle(fonts)));
+        double ascArranger = arranger?.Ascender(fonts) ?? double.NaN;
+        double? NextAscender(params double[] below)
+        {
+            foreach (double a in below)
+                if (!double.IsNaN(a))
+                    return a;
+            return null;
+        }
+        HeaderLineSet? Restep(HeaderLineSet? set, double? nextAscender)
+            => set is null || nextAscender is null ? set
+                : set.Restepped(HeaderLineSet.InnerStep(fonts, set.Em, set.Role, set.Style, nextAscender));
+        titleText = Restep(titleText, NextAscender(ascSubtitle, ascComposerRow, ascArranger));
+        subtitleText = Restep(subtitleText, NextAscender(ascComposerRow, ascArranger));
+        poetText = Restep(poetText, NextAscender(ascArranger));
+        composerText = Restep(composerText, NextAscender(ascArranger));
+
+        double? previousLast = null;
+        var rowTops = new List<(double Baseline, double InkTop)>();
         double depth = 0;
         double width = 0;
 
@@ -343,12 +383,19 @@ internal sealed record HeaderBand(
         // previous baseline and at least its own ink top below the previous row's ink bottom —
         // plus RowPadding, which LilyPond does not add (LILYSHARP-OWN, see the constant).
         // A row is one or two strings on one baseline (\fill-line): its ink is their union.
-        double Stack(double inkBottom, double inkTop, double rowWidth)
+        // A header line of several lines is one row whose reference point is its FIRST line's
+        // baseline, but the row under it is skipped from its LAST line's (owner's decision
+        // 2026-11-14), so a single-line header row stands where LilyPond's does and the row
+        // after a fence as it would after a one-line row; the twin writes that as the fence's
+        // least depth (NextRowTop). Returns the row's baseline; lastOffset is its last line's
+        // baseline below it.
+        double Stack(double inkBottom, double inkTop, double rowWidth, double lastOffset = 0)
         {
-            double baseline = previousBaseline is { } prev
+            double baseline = previousLast is { } prev
                 ? Math.Max(prev + BaselineSkip, depth + RowPadding + inkTop)
                 : inkTop;
-            previousBaseline = baseline;
+            previousLast = baseline + lastOffset;
+            rowTops.Add((baseline, inkTop));
             depth = Math.Max(depth, baseline - inkBottom);
             width = Math.Max(width, rowWidth);
             return baseline;
@@ -370,7 +417,7 @@ internal sealed record HeaderBand(
         // A header line written as Markdown is ONE row of the column whatever its lines: its
         // reference point the first line's baseline, its ink every line's (HeaderLineSet), as
         // LilyPond stacks a \column markup in bookTitleMarkup's column.
-        double? StackSet(HeaderLineSet? set) => set is null ? null : Stack(set.InkBottom, set.InkTop, set.Width);
+        double? StackSet(HeaderLineSet? set) => set is null ? null : Stack(set.InkBottom, set.InkTop, set.Width, set.LastBaseline);
 
         double? titleBaseline = StackSet(titleText)
             ?? StackOne(title, TitleEm(fonts), TextRole.Title, TitleStyle(fonts));
@@ -409,7 +456,8 @@ internal sealed record HeaderBand(
                 + (composer is null && composerText is null ? 0 : 1);
             if (strings > 1)
                 rowWidth += FillLineWordSpace * (strings - 1);
-            composerBaseline = Stack(inkBottom, inkTop, rowWidth);
+            composerBaseline = Stack(inkBottom, inkTop, rowWidth,
+                Math.Max(poetText?.LastBaseline ?? 0, composerText?.LastBaseline ?? 0));
         }
 
         // The arranger's row, under the composer's: the right end of the meter / arranger
@@ -424,8 +472,35 @@ internal sealed record HeaderBand(
             ? null
             : Stack(arranger.InkBottom, arranger.InkTop, arranger.Width);
 
+        // Where the next row's ink top stands under each header line of several lines — what
+        // the twin writes as that column's least depth (HeaderLineSet.NextRowTop).
+        HeaderLineSet? Above(HeaderLineSet? set, double? baseline)
+        {
+            if (set is not { Step: not null } || baseline is not { } b)
+                return set;
+            int at = rowTops.FindIndex(r => r.Baseline == b);
+            return at >= 0 && at + 1 < rowTops.Count
+                ? set with { NextRowTop = rowTops[at + 1].Baseline - rowTops[at + 1].InkTop - b }
+                : set;
+        }
+        titleText = Above(titleText, titleBaseline);
+        subtitleText = Above(subtitleText, subtitleBaseline);
+        poetText = Above(poetText, composerBaseline);
+        composerText = Above(composerText, composerBaseline);
+
         return new HeaderBand(depth, titleBaseline, composerBaseline, width, subtitleBaseline,
             Arranger: arranger, ArrangerBaseline: arrangerBaseline,
             TitleText: titleText, SubtitleText: subtitleText, PoetText: poetText, ComposerText: composerText);
     }
+
+    /// <summary>
+    /// The column for <paramref name="score"/>'s header — its strings, its arranger and the
+    /// header lines it writes as Markdown — as the layout pages it and the twin writes it, or
+    /// null (see <see cref="Build"/>). Without the chord list and the page's text.
+    /// </summary>
+    public static HeaderBand? Of(Model.MultiStaffScore score)
+        => Build(score.Title, score.Composer, score.TextMetrics,
+            score.Subtitle, score.Poet, score.Instrument, HeaderLineSet.Arranger(score),
+            HeaderLineSet.TitleFence(score), HeaderLineSet.SubtitleFence(score),
+            HeaderLineSet.PoetFence(score), HeaderLineSet.ComposerFence(score));
 }

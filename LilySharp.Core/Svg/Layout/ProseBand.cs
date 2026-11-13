@@ -318,9 +318,10 @@ internal sealed record ProseBand(
     /// LILYPOND-REF: scm/define-markup-commands.scm fontsize — each step a magstep of
     /// 2^(1/6); MEASURED 2026-11-12 (docs/markdown-text-design.md section 6):
     /// <c>\fontsize #2</c> on the text's 2.2000 is 2.7719.
-    /// LILYSHARP-OWN: which steps. Bold at +2 is 2.77, the size (and weight) of the piece's
-    /// SUBTITLE (HeaderBand.SubtitleFontSize) and clearly under its title's 3.49; bold at +1
-    /// is 2.47, between that and the text. A heading in a page text never reaches the title.
+    /// LILYSHARP-OWN: which steps. Bold at +2 is 2.77, two steps over the text and clearly
+    /// under the title's 3.49; bold at +1 is 2.47, between that and the text (the size of the
+    /// piece's subtitle, HeaderBand.SubtitleFontSize, LilyPond's \large). A heading in a page
+    /// text never reaches the title.
     /// </remarks>
     public static int HeadingSteps(int level) => level switch { 1 => 2, 2 => 1, _ => 0 };
 

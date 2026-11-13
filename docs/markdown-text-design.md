@@ -864,14 +864,30 @@ The owner's decisions:
 3. **Size and face**: the line's own (`HeaderBand.TitleEm` and `TitleStyle` for a title…);
    Markdown adds emphasis within it as an OR over the line's style — `*…*` italic (bold italic
    in the title), `**…**` in an already-bold line stays bold, in the composer's line bold.
-   **Several lines step at that size's baseline-skip**: the page text's 3.0 grown as the line is
-   (`HeaderLineSet.LineStep` = 3.0 × em / 2.2: 4.7591 for the title, 3.7773 for the subtitle,
-   3.0 for the text size; LILYSHARP-OWN, as a heading's lines step), and the twin writes it as
-   the column's `baseline-skip`. The fence is ONE row of the header's column — its reference
-   point the first line's baseline, its ink every line's — so the rows under it stack on its
-   lowest ink and the band grows: the page's springs, the breaker's priced depth and the crop
-   width see it. A copyright fence is the first page's footer: its lowest line's ink on the
-   bottom margin, the footer that much taller, page 1 that much shorter (`footer_height_`).
+   **Several lines step a little closer than the next row** (the inner step rule; owner's
+   decision 2026-11-14, "title 内の改行幅 y と、title と subtitle の間の幅 y は、少しだけ差をつけたい";
+   LILYSHARP-OWN — LilyPond has no default for a header line of several lines). The WHITE
+   between two of its lines — the upper line's descender to the lower's ascender, the faces'
+   designed ones (OS/2 typo: 0.798 / −0.202 em in TeX Gyre Schola; `TextFontMetrics.TypoExtents`),
+   not the lines' ink — is `HeaderLineSet.InnerWhiteShare` = **0.75** of the white LilyPond's
+   3.5 skip leaves between its last line and the next row's ascender; a line with no row under
+   it (a copyright at the foot, the last row) takes the white 3.5 would leave between two rows
+   of its own size (`HeaderLineSet.InnerStep`; `HeaderBand.Build` re-steps a fence once it
+   knows the row under it). The steps at the default sizes: **title 4.1083** over a subtitle
+   (4.2695 over a composer line or an arranger, 3.4975 alone), **subtitle 3.4036** over a
+   composer line (3.2424 alone), **composer, poet, arranger and copyright 3.175** (over an
+   arranger or alone, all at 2.2). Until 2026-11-14 the step was the page text's 3.0 grown as
+   the line is (4.7591 for the title), which stood a title's own lines 4.76 apart over a
+   subtitle 3.26 under them — the reverse. The twin writes the step as the column's
+   `baseline-skip`. The fence is ONE row of the header's column — its reference point the
+   first line's baseline, its ink every line's — and **the row under it is skipped from its
+   LAST line** by LilyPond's 3.5 (owner's decision 2026-11-14), as under a one-line row; its
+   ink is the band's, so the page's springs, the breaker's priced depth and the crop width see
+   it. LilyPond's column skips from the reference point, so the twin wraps such a column in
+   `\pad-to-box` reaching down to the next row's ink top (`HeaderLineSet.NextRowTop`) and
+   LilyPond's extent rule sets that row where the page does. A copyright fence is the first
+   page's footer: its lowest line's ink on the bottom margin, the footer that much taller,
+   page 1 that much shorter (`footer_height_`).
 4. **Position**: the line's own — title and subtitle centred, composer and arranger at the
    right margin, poet at the left margin on the composer's line, copyright centred at the first
    page's foot — each LINE aligned so (a centred title centres each line; a composer's lines
@@ -889,7 +905,8 @@ The owner's decisions:
    does not leave the file's string in its MusicXML.
 6. **The twin** writes each as `\markup` in `\header` — one line as itself
    (`\concat { "Copyright 2026 " \bold "Somebody" }`), several as `\override #'(baseline-skip
-   . STEP) \center-column { … }` (`\right-column` for the composer and the arranger,
+   . STEP) \center-column { … }`, inside `\pad-to-box #'(0 . 0) #'(-REACH . 0) { … }` where a
+   row follows (`\right-column` for the composer and the arranger,
    `\left-column` for the poet), the emphasis the Markdown adds as `\italic` / `\bold` inside the
    weight bookTitleMarkup gives the line. It reads the page's model, so a score's own fence is
    that score's twin's.
@@ -903,6 +920,28 @@ No new block snippets. **Colours**: the TextMate rule's keyword list takes the s
 body stays embedded Markdown.
 
 Out of scope: a MusicXML title or creator of several lines is imported as a string, not a fence.
+
+MEASURED 2026-11-14 after the title block was placed as LilyPond places it (owner, 2026-11-14:
+"LilyPond と合わせられる部分は合わせて"; `LilySharp-Lab` `sessions/p1226/md/header2`, the
+same showcase and seven single-line books b1…b7, each twin engraved by LilyPond 2.26.0;
+`TitleBlockLilyPondTests` pins them all within 0.01):
+
+| What | Lily# | LilyPond |
+|---|---|---|
+| The title's two lines | 12.2627, 16.3710 | 12.2642, 16.3725 (the step 4.1083 the twin writes) |
+| The subtitle's baseline (now 2.4694, `\large`) | 19.8710 | 19.8727 |
+| The composer's two lines | 23.3710, 26.5460 | 23.3727, 26.5477 (3.1750 apart) |
+| The arranger's baseline | 30.0460 | 30.0478 |
+| The copyright's baseline | 162.8656 | 162.8656 |
+| The first staff's top line | 32.7686 | 32.7704 |
+
+Every single-line book: each baseline and the first staff within 0.0019 (the residual is the
+title string's ink height, Skia's outline against Pango's). `HeaderBand.RowPadding` (0.5,
+owner's decision 2026-09-26) STANDS (owner, 2026-11-14, "その案で進めて"): with the row under a
+fence skipped from the fence's last line the 3.5 binds again at the default sizes, and the
+padding is again only the safety for a row a `fonts { }` size makes taller than the skip.
+
+The table below is the state BEFORE that (kept for the record):
 
 MEASURED 2026-11-13, LilyPond 2.26.0 (`LilySharp-Lab` `sessions/p1226/md/header`:
 `md-showcase.lys`, its `lysc ly --pin-fonts` twin engraved as `md-showcase-lp.ly` / `.svg` /
@@ -927,3 +966,5 @@ ink to ink, LilyPond with no padding (2.5360 and 1.6523), Lily#'s column with it
 open: found here, and part A's own probe says the same — `p1.svg` sets "Sub" at font-size
 2.4697 too, where a plain header's baselines agree only because the 3.5 skip binds over a
 subtitle of either size. Not changed (it moves every subtitled page; for the owner).
+→ Changed 2026-11-14 (owner): the subtitle is 2.4694, and the rows under a fence are skipped
+from its last line — the table above.

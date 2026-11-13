@@ -46,12 +46,9 @@ namespace LilySharp.Tests;
 /// written too, serves everything that is not the page.
 /// </summary>
 /// <remarks>
-/// LilyPond 2.26.0 against the twin of LilySharp-Lab sessions/p1226/md/header/md-showcase.lys
-/// (md-showcase-lp.ly / .svg; a4, a 20 pt staff, staff spaces from the paper's top-left):
-/// the title's two lines at 12.2642 and 17.0233 (the step 4.7591 the twin writes), the
-/// composer's at 23.0593 and 26.0593 (3.0000), the subtitle at 19.5593 and the arranger at
-/// 27.7116 — each of those two stacked ink to ink on the line over it, with LilyPond's zero
-/// padding where Lily#'s column keeps its 0.5 (HeaderBand.RowPadding).
+/// The positions against LilyPond (the showcase's twin, and the single-line books) are
+/// TitleBlockLilyPondTests' since 2026-11-14 (owner: the title block placed as LilyPond places
+/// it; a header line's own lines a little closer than the next row — HeaderLineSet.InnerStep).
 /// </remarks>
 [Trait("Category", "Unit")]
 public sealed class MarkdownHeaderTests
@@ -126,34 +123,35 @@ public sealed class MarkdownHeaderTests
         Assert.Equal(["Morning Song", "for two flutes"], title.Lines.Select(TextOf));
         Assert.Equal(FontStyle.Bold, title.Lines[0].Pieces.Single().Style);
         Assert.Equal(FontStyle.Bold | FontStyle.Italic, title.Lines[1].Pieces.Single().Style);
-        // The second line a baseline-skip AT THE TITLE'S SIZE under the first (3.0 × 3.49 / 2.2),
-        // as the twin writes it and LilyPond stepped it (17.0233 − 12.2642).
-        Assert.Equal(4.7591, title.Lines[1].Baseline, 4);
+        // The second line a step AT THE TITLE'S SIZE under the first: its ascender and
+        // descender and 0.75 of the white the 3.5 skip leaves over the subtitle under it
+        // (HeaderLineSet.InnerStep; owner 2026-11-14). Moved from 4.7591 (the page text's 3.0
+        // grown to 3.49), which stood the title's own lines further apart than the subtitle
+        // stood under them; LilyPond steps by what the twin writes (16.3725 − 12.2642 = 4.1083).
+        Assert.Equal(4.1083, title.Lines[1].Baseline, 4);
         // The first line where the plain title stands (LilyPond 12.2642; Lily#'s face 0.0015 lower).
         Assert.True(Math.Abs(12.2642 - FromTop(page, page.Header.TitleBaseline)) < 0.002);
-        Assert.True(Math.Abs(17.0233 - FromTop(page, page.Header.TitleBaseline) - title.Lines[1].Baseline) < 0.002);
+        Assert.True(Math.Abs(16.3725 - FromTop(page, page.Header.TitleBaseline) - title.Lines[1].Baseline) < 0.002);
     }
 
     [Fact]
-    public void TheShowcase_AgainstLilyPondsEngravingOfItsTwin()
+    public void TheShowcase_TheRowsUnderAFence_StandTheSkipUnderItsLastLine()
     {
         var page = Laid(Book(Showcase)).Pages[0];
         var band = page.Header!;
         double title = FromTop(page, band.TitleBaseline), subtitle = FromTop(page, band.SubtitleBaseline);
         double composer = FromTop(page, band.ComposerBaseline), arranger = FromTop(page, band.ArrangerBaseline);
         double copyright = page.Height - LayoutOptions.Default.MarginBottom + page.Footer!.InkBottom;
-        // MEASURED 2026-11-13 (md-showcase-lp.svg): the title's lines 12.2642 / 17.0233.
+        // MEASURED 2026-11-14 (LilySharp-Lab sessions/p1226/md/header2, md-showcase-lp.svg).
         Assert.True(Math.Abs(12.2642 - title) < 0.002, $"{title:F4}");
-        Assert.True(Math.Abs(17.0233 - (title + band.TitleText!.Lines[1].Baseline)) < 0.002);
-        // The composer's two lines 3.0000 apart (23.0593 / 26.0593).
-        Assert.Equal(3.0, band.ComposerText!.Lines[1].Baseline, 9);
-        // The subtitle under the title's second line, and the arranger under the composer's,
-        // stack INK to ink — LilyPond with no padding (19.5593 − 17.0233 = 2.5360; 27.7116 −
-        // 26.0593 = 1.6523), Lily#'s column with its 0.5 (HeaderBand.RowPadding) and, under the
-        // title, the subtitle at 2.77 where this LilyPond set it at 2.4697 (its ink top 0.22
-        // taller): 3.2569 and 2.1522. Everything under the subtitle stands that 0.72 lower.
-        Assert.Equal(1.6523 + HeaderBand.RowPadding, arranger - composer - band.ComposerText.Lines[1].Baseline, 3);
-        Assert.Equal(3.2569, subtitle - title - band.TitleText.Lines[1].Baseline, 3);
+        // The subtitle and the arranger stand LilyPond's 3.5 under the LAST line of the fence
+        // over them (owner's decision 2026-11-14). They stood ink to ink until then — 3.2569
+        // and 2.1522 under it, Lily#'s 0.5 padding binding and the subtitle at 2.77; LilyPond's
+        // engraving of the twin (which writes the column's reach) puts them 3.5002 and 3.5001
+        // under: 19.8727 − 16.3725, 30.0478 − 26.5477.
+        Assert.Equal(HeaderBand.BaselineSkip, subtitle - title - band.TitleText!.LastBaseline, 9);
+        Assert.Equal(HeaderBand.BaselineSkip, arranger - composer - band.ComposerText!.LastBaseline, 9);
+        Assert.True(Math.Abs(30.0478 - arranger) < 0.01, $"{arranger:F4}");
         // The copyright's baseline: 162.8656, to the digit.
         Assert.True(Math.Abs(162.8656 - copyright) < 0.002, $"{copyright:F4}");
     }
@@ -184,7 +182,9 @@ public sealed class MarkdownHeaderTests
         Assert.Equal(["One two", "three"], set.Lines.Select(TextOf));
         Assert.Equal(style | FontStyle.Italic, set.Lines[0].Pieces[1].Style);
         Assert.Equal(style | FontStyle.Bold, set.Lines[1].Pieces[0].Style);
-        Assert.Equal(HeaderLineSet.LineStep(set.Em), set.Lines[1].Baseline, 9);
+        // The step at the line's size (HeaderLineSet.InnerStep): against the row under it where
+        // one follows (a subtitle under the title, …), else against a row of its own size.
+        Assert.True(set.Lines[1].Baseline > set.Em && set.Lines[1].Baseline < 1.6 * set.Em, $"{set.Lines[1].Baseline:F4}");
         // …and the row it stands in has a baseline (the poet's and the composer's share one).
         double? baseline = place switch
         {
@@ -373,8 +373,11 @@ public sealed class MarkdownHeaderTests
     public void TheTwin_WritesEachFenceAsMarkupInTheHeader()
     {
         string ly = new LilyPondExporter().Export(SyntaxTree.Parse(Book(Showcase)));
-        Assert.Contains("title = \\markup { \\override #'(baseline-skip . 4.7591) \\center-column { \"Morning Song\" \\concat { \\italic \"for two flutes\" } } }", ly);
-        Assert.Contains("composer = \\markup { \\override #'(baseline-skip . 3) \\right-column { \"A. Composer\" \"1902–1971\" } }", ly);
+        // The step the page steps by (HeaderLineSet.InnerStep; owner 2026-11-14) and the column's
+        // reach down to the next row's ink top (HeaderLineSet.NextRowTop), so LilyPond stacks
+        // the row under it where the page does (TitleBlockLilyPondTests).
+        Assert.Matches(@"title = \\markup \{ \\pad-to-box #'\(0 \. 0\) #'\(-[\d.]+ \. 0\) \{ \\override #'\(baseline-skip \. 4\.1083\) \\center-column \{ ""Morning Song"" \\concat \{ \\italic ""for two flutes"" \} \} \} \}", ly);
+        Assert.Matches(@"composer = \\markup \{ \\pad-to-box #'\(0 \. 0\) #'\(-[\d.]+ \. 0\) \{ \\override #'\(baseline-skip \. 3\.175\) \\right-column \{ ""A\. Composer"" ""1902–1971"" \} \} \}", ly);
         Assert.Contains("copyright = \\markup { \\concat { \"Copyright 2026 \" \\bold \"Somebody\" } }", ly);
         // The strings the fences do not replace stay strings.
         Assert.Contains("subtitle = \"A study in thirds\"", ly);
