@@ -62,7 +62,12 @@ internal static class BeamPairingScanner
                 if (!TryGetBeamFlags(items[ii], out bool hasStart, out bool hasEnd))
                     continue;
                 // A note carrying BOTH (`c8[]`) opens before it closes, the order the
-                // detector reads its markers in.
+                // detector reads its markers in — so its ']' closes its own '[': a group of
+                // one note, which beams nothing. It was accepted in silence (found 2026-11-13,
+                // grammar evaluation 3: a writer took `c8[]` for "this note alone, unbeamed"
+                // and the note was beamed to its neighbours all the same).
+                if (hasStart && hasEnd)
+                    sink.Add(new UnpairedBeamWarning(items[ii].SourcePosition, IsOpen: true, IsEmpty: true));
                 if (hasStart)
                     open.Push(items[ii].SourcePosition);
                 if (hasEnd)

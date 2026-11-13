@@ -327,7 +327,8 @@ public enum CueSpanCrossing
 /// </summary>
 public record UnpairedBeamWarning(
     int SourcePosition,
-    bool IsOpen       // true = an unclosed '['; false = a ']' with nothing open
+    bool IsOpen,      // true = an unclosed '['; false = a ']' with nothing open
+    bool IsEmpty = false  // '[]' on one note: its ']' closes its own '[' and groups nothing
 );
 
 /// <summary>

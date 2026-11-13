@@ -385,7 +385,10 @@ public sealed partial class MeasureCollector
     // Internal (was private) since finding 3-4: VoiceWalkRecording.ResolvedSpellings
     // carries these values across keystrokes for the resume's re-keyed replay.
     internal readonly record struct ResolvedChordMember(
-        int StaffPosition, int? Step, int? Alter, int? Octave, NoteheadStyle Notehead, int Midi)
+        int StaffPosition, int? Step, int? Alter, int? Octave, NoteheadStyle Notehead, int Midi,
+        // The member's OWN @dead (ChordNoteInfo.IsDead) — part of the note as its head style
+        // is, so a `q` repeats it. The chord's @dead is a post-event and is not copied.
+        bool IsDead = false)
     {
         /// <summary>
         /// The same member displaced by whole octaves — what <c>q'</c> repeats. A
@@ -508,6 +511,8 @@ public sealed partial class MeasureCollector
             ? NamedArticulationSourceOf(chord, "laissezVibrer") : MusicItem.NoSourcePosition;
         int chordRtSrc = chordRt
             ? NamedArticulationSourceOf(chord, "repeatTie") : MusicItem.NoSourcePosition;
+        // The chord's own @dead mutes every member (the member loop below says why).
+        bool chordDead = HasNamedArticulation(chord, "dead");
 
         // Octave marks AFTER the closing '>' (<1 3 5>' / <c e g>,,) shift the WHOLE
         // chord uniformly. Applying it to the root's resolved octave (and, for an
@@ -653,11 +658,20 @@ public sealed partial class MeasureCollector
             // `<c f@notehead(diamond)>2` — a touched fourth over a stopped note, a string
             // player's artificial harmonic — drew two ordinary heads, while a single note's
             // style was read). The chord's own `@notehead` still styles every member.
-            var memberHead = ExtractNoteheadStyle(pitch);
+            // A member's own `@dead`, and the chord's for every member (found 2026-11-13,
+            // grammar evaluation 3: `<c' e'@dead>4` and `<c' e'>4@dead` drew ordinary heads
+            // and ordinary fret numbers, with no warning). The dead note IS a cross head, and
+            // it wins over a `@notehead` as a single note's does (the note arm above).
+            // LILYPOND-REF: ly/property-init.ly deadNote / xNote — `\tweak style #'cross` on
+            //   each note event of the music it is given: one member (`<c \deadNote e>`) or
+            //   the whole chord (`\deadNote <c e>`).
+            bool memberDead = HasNamedArticulation(pitch, "dead");
+            var memberHead = memberDead ? NoteheadStyle.Cross : ExtractNoteheadStyle(pitch);
             notes.Add(new ChordNoteInfo(
                 staffPosition, accidental,
                 IsCourtesy: memberCourtesy || styleCourtesy,
-                Notehead: memberHead,
+                Notehead: chordDead ? NoteheadStyle.Cross : memberHead,
+                IsDead: chordDead || memberDead,
                 Fingering: pitchFingering,
                 StringNumber: pitch.Articulations.OfType<StringNumberAnnotationSyntax>().FirstOrDefault()?.StringNumber,
                 Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
@@ -677,7 +691,8 @@ public sealed partial class MeasureCollector
                 WrittenPitch: pitch.QuarterOffset != 0 ? 0
                     : WrittenPitch.Pack(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
             members.Add(new ResolvedChordMember(staffPosition, rp.DisplayStep, rp.DisplayAlteration,
-                rp.DisplayOctave, memberHead, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
+                rp.DisplayOctave, memberHead, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
+                IsDead: memberDead));
         }
 
         // diagram(SYMBOL SHAPE): the shape's strings on the part's tuning, ABSOLUTE and each with
@@ -1006,6 +1021,7 @@ public sealed partial class MeasureCollector
                 m.StaffPosition, accidental,
                 IsCourtesy: styleCourtesy,
                 Notehead: m.Notehead,
+                IsDead: m.IsDead,
                 Midi: m.Midi,
                 SourcePosition: rep.SourceStart,
                 LineStartAccidental: memberLineStart,
@@ -1145,6 +1161,7 @@ public sealed partial class MeasureCollector
                         m.StaffPosition, accidental,
                         IsCourtesy: styleCourtesy,
                         Notehead: m.Notehead,
+                        IsDead: m.IsDead,
                         Midi: m.Midi,
                         SourcePosition: bare.SourceStart,
                         WrittenPitch: m.Step is { } ps ? WrittenPitch.Pack(ps, m.Alter!.Value, m.Octave!.Value) : 0));

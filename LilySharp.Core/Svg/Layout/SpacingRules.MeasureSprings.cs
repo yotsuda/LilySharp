@@ -1038,7 +1038,8 @@ internal static partial class SpacingRules
         IReadOnlyList<Fraction> timings,
         Model.Measure tabMeasure,
         int[] tuning,
-        int octaveShift)
+        int octaveShift,
+        bool drawsRests = true)
     {
         if (springs.Length != timings.Count + 1)
             return springs;
@@ -1133,6 +1134,7 @@ internal static partial class SpacingRules
         for (int t = 0; t < timings.Count - 1; t++)
             Widen(t + 1, right[t] + left[t + 1] + tabGap);
         Widen(timings.Count, right[^1]);
+        WidenForArpeggios();
         if (anySlash)
         {
             // The slash group's ROD, LilyPond's own: the group's ink widened by its
@@ -1152,6 +1154,52 @@ internal static partial class SpacingRules
             }
         }
         return result.ToImmutable();
+
+        // A chord's ARPEGGIO line stands left of the column, where the notation frame puts it
+        // (ArpeggioEngraver: the support's left, the padding, the line's width), while the
+        // tab's own ink is set about the digit AXIS, half a head right of the column: a rest
+        // is drawn FROM the axis and a digit around it. So the room the notation frame keeps
+        // between the previous column and the line is short by that half head on a tab, and a
+        // quarter rest before `<e a d' g'>4@arpeggio` overlapped the line by 0.28 (found
+        // 2026-11-13, grammar evaluation 3, a tab alone with its rhythm). The rod out of the
+        // previous column is its tab ink's right reach, the gap, and the line's left reach —
+        // all about the axis, like the digit rods above.
+        // LILYPOND-REF: lily/separation-item.cc:120-148 Separation_item::boxes — the arpeggio
+        //   is a (conditional) element of its column's separation box, so the column before
+        //   clears it. MEASURED (2.26.0, the twin of that bar under \tabFullNotation): the
+        //   rest stands clear of the line.
+        void WidenForArpeggios()
+        {
+            Fraction at = Fraction.Zero;
+            Model.MusicItem? before = null;
+            foreach (var item in tabMeasure.Items)
+            {
+                var part = item is Model.ChordItem or Model.NoteItem && !item.GraceTime
+                    ? ArpeggioPartOf(item) : Model.SpanArpeggioPart.None;
+                if (part != Model.SpanArpeggioPart.None && before is not null)
+                {
+                    int t = -1;
+                    for (int k = 1; k < timings.Count; k++)
+                        if (timings[k] == at && timings[k - 1] == at - before.Duration)
+                            t = k;
+                    if (t > 0)
+                    {
+                        double lineLeft = EngravingDefaults.TabHeadCenterOffset + SupportLeftReach(item) + ArpeggioEngraver.Padding
+                            + (part == Model.SpanArpeggioPart.Bracket ? ArpeggioEngraver.BracketWidth : ArpeggioEngraver.WiggleWidth);
+                        double inkRight = before is Model.RestItem { IsSpacer: false, IsRepeatSlash: false } rest
+                            ? (drawsRests ? GlyphMetrics.GetRestBBox(rest, GlyphMetrics.NoteValueOf(rest.BaseDuration)).Right : 0)
+                            : reachScratch[columnCount + t - 1];   // right[t − 1]: a span cannot be captured
+                        if (inkRight > 0)
+                            Widen(t, inkRight + lineLeft + tabGap);
+                    }
+                }
+                if (!item.GraceTime)
+                {
+                    before = item;
+                    at += item.Duration;
+                }
+            }
+        }
     }
 
     /// <summary>

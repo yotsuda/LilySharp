@@ -1085,7 +1085,7 @@ public sealed class MusicXmlExporter
                     break;
                 case TempoDeclarationSyntax tempo:
                     if (!IsInsideMusicContent(tempo)) ProcessTempo(tempo);
-                    if (tempo.Parent?.Parent == null) _fileTempo = tempo.Value;
+                    if (tempo.Parent?.Parent == null) (_fileTempo, _fileTempoDeclaration) = (tempo.Value, tempo);
                     break;
                 case KeySignatureSyntax key:
                     if (!IsInsideMusicContent(key)) ProcessKeySignature(key);
@@ -2144,6 +2144,14 @@ public sealed class MusicXmlExporter
             ProcessTempo(laterSectionTempo);
         // The page's standing tempo after a section's head (MeasureCollector._tempoStanding):
         // the header's, else the file's where it states a count.
+        // …and where the music before left another count, that return is a direction: the
+        // file's tempo, back in force (the page's MeasureCollector.ReturnToHomeTempo and the
+        // MIDI's PlaySectionCore, 2026-11-12). The document wrote nothing there, so it kept
+        // the faster section's tempo to the end (found 2026-11-13, grammar evaluation 3).
+        if (_sectionTempo == null && !isFirst
+            && _fileTempoDeclaration is { Value.QuarterBpm: double homeBpm } home
+            && _tempoStanding is { QuarterBpm: double standingBpm } && standingBpm != homeBpm)
+            ProcessTempo(home);
         if (_sectionTempo == null && (isFirst || _fileTempo is { Bpm: not null }))
             _tempoStanding = _fileTempo;
         // The section's header pickup shortens this part's first bar of the section — the
@@ -3193,6 +3201,7 @@ public sealed class MusicXmlExporter
 
     // The last tempo stated where the walk stands, and the file's own, as written.
     private TempoValue? _tempoStanding, _fileTempo;
+    private TempoDeclarationSyntax? _fileTempoDeclaration;
 
     private void ProcessTempo(TempoDeclarationSyntax tempo)
     {

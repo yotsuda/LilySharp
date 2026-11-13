@@ -2042,7 +2042,12 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                                                         (LYS6011). Drawn small, with no clef
                                                         or meter, only over the bars where
                                                         the part has notes: its other bars
-                                                        are written empty.
+                                                        are written empty. The ClefName
+                                                        places the notes as a staff's does
+                                                        and is not drawn. An ossia is
+                                                        silent in MIDI (LILYSHARP-OWN,
+                                                        2026-11-13) unless the part is
+                                                        also a bare row of the score.
                                                         ⚠️ keep semicolons out of comments
                                                         inside this production — the doc
                                                         tests cut the block at the first *)
@@ -2135,7 +2140,8 @@ TabStyle       = 'numbers' | 'full' ;
                     or @slide where one string plays both notes. A slur does not. Under the
                     file's `capo N` the frets count FROM the capo (2026-11-13), a note below
                     the capo on every string is LYS5002 and left off, and the tab of a bass
-                    ignores the capo. @dead on a single note prints a cross for its number. *)
+                    ignores the capo. @dead prints a cross for the number - a note, one chord
+                    member, or every member when the chord carries it (2026-11-13). *)
 
 
 StaffGroupBody = '{' , { StaffRender | CondensedStaff | CombinedStaff

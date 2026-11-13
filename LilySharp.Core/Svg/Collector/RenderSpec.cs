@@ -426,11 +426,24 @@ public sealed record RenderSpec(
     /// this; owner decision 2026-09-25 for the rows, extended to the parts 2026-09-29 when the
     /// preview's Play of <c>score p2 { staff p2 }</c> sounded p1 as well).
     /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: a part the score shows ONLY as an <c>ossia</c> is silent. An ossia is
+    /// another reading of the bars under it, not a second player: until 2026-11-13 (grammar
+    /// evaluation 3) it sounded together with the staff it is an alternative to. The bare
+    /// MIDI-only row still plays it where that is wanted (<c>staff solo  ossia alt  alt</c>).
+    /// (LilyPond's twin of an ossia is a Staff like any other and does sound in its \midi.)
+    /// </remarks>
     public ImmutableArray<string> SoundingPartNames
     {
         get
         {
             var engraved = EngravedPartNames;
+            if (Items.Any(i => i is OssiaStaffSpec))
+            {
+                var ossiaOnly = Items.OfType<OssiaStaffSpec>().Select(o => o.Staff.VoiceName).ToHashSet(StringComparer.Ordinal);
+                ossiaOnly.ExceptWith((this with { Items = Items.RemoveAll(i => i is OssiaStaffSpec) }).EngravedPartNames);
+                engraved = engraved.RemoveAll(ossiaOnly.Contains);
+            }
             if (MidiOnlyParts.IsDefaultOrEmpty)
                 return engraved;
             var names = ImmutableArray.CreateBuilder<string>(engraved.Length + MidiOnlyParts.Length);
@@ -517,6 +530,11 @@ public sealed record RenderSpec(
                 case CombinedStaffSpec combined:
                     foreach (var _ in combined.PartNames)
                         clefs.Add((true, combined.Clef));
+                    break;
+                // An ossia that writes a clef word (`ossia bass alt`) is placed under it, as
+                // a staff is; one that writes none answers as before (2026-11-13).
+                case OssiaStaffSpec { Staff.WrittenClef: { } ossiaClef }:
+                    clefs.Add((true, ossiaClef));
                     break;
                 case TabStaffSpec or OssiaStaffSpec or ChordRowSpec or LyricsRowSpec:
                     clefs.Add((false, null));

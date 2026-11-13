@@ -873,7 +873,8 @@ internal sealed class MeasureBuilder
                     LaissezVibrerSourcePosition: m.LaissezVibrerSourcePosition,
                     RepeatTieSourcePosition: m.RepeatTieSourcePosition,
                     // The cross head and the parentheses (session 931), per member.
-                    Notehead: m.Notehead, Parenthesized: m.Parenthesized)).ToImmutableArray(),
+                    Notehead: m.Notehead, Parenthesized: m.Parenthesized,
+                    IsDead: m.IsDead)).ToImmutableArray(),
                 c.BaseDuration, c.Dots, c.SourcePosition, isCue: c.IsCue,
                 hasTieStart: c.HasTieStart,
                 hasSlurStart: c.HasSlurStart, hasSlurEnd: c.HasSlurEnd,

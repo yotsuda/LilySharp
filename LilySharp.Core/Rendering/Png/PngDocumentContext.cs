@@ -179,6 +179,12 @@ internal sealed class PngDocumentContext : IDocumentContext
             {
                 _bytes = System.Array.Empty<byte>();
             }
+            // …and the per-page form answers that same one blank page: GetPageBytes threw
+            // "Dispose first (with SeparatePages set)" on an empty file, which is what
+            // `lysc png` printed where every other export writes its empty file (found
+            // 2026-11-13, grammar evaluation 3).
+            if (_options.SeparatePages)
+                _pageBytes = new List<byte[]> { _bytes };
         }
         _disposed = true;
     }

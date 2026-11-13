@@ -1263,6 +1263,12 @@ public sealed partial class LilyPondExporter
             // member, so it stands before the pitch, not among the post-events.
             if (p.Articulations.Any(a => a is ArticulationSyntax pa && IsParenthesize(pa)))
                 sb.Append("\\parenthesize ");
+            // A member's own `@dead` (found 2026-11-13, grammar evaluation 3: it was written
+            // `<c' e'-\deadNote>`, a post-event LilyPond refuses).
+            // LILYPOND-REF: ly/property-init.ly deadNote — a music function, so it stands
+            //   before the member it mutes: `<c' \deadNote e'>4`.
+            if (p.Articulations.Any(a => a is ArticulationSyntax da && IsDeadNote(da)))
+                sb.Append("\\deadNote ");
             // A member's own `@notehead(diamond)` is a tweak of that one head (found 2026-11-13:
             // the twin, as the page, drew the member plain).
             // LILYPOND-REF: Notation Reference 5.3.4 "The \tweak command" — `<c \tweak style #'diamond f>`
@@ -1358,6 +1364,10 @@ public sealed partial class LilyPondExporter
                         break; // written on the pitch above
                     case ArticulationSyntax pa when IsParenthesize(pa):
                         break; // written before the pitch above
+                    case ArticulationSyntax da when IsDeadNote(da):
+                        break; // written before the pitch above
+                    case MusicMarkSyntax nh when Semantics.AnnotationValues.Notehead(nh) is not null:
+                        break; // the \tweak before the pitch above (it was also reported "dropped")
                     // A member's own script (`<c'@staccato e'>`, chord-scripts.ly) and string
                     // number (`<a,\2 d>`) take the note's spelling — a chord member takes
                     // post-events (chord_body_element). Until 2026-10-02 both were "dropped (out

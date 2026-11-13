@@ -73,6 +73,7 @@ internal sealed class ChordFingeringValidator : ISemanticValidator
         var played = PlayedNotes.Of(tree);
 
         var said = new HashSet<int>();
+        List<TextSpan>? notBowedAtOnce = null;
         var chords = played
             .Where(n => n.SourcePos >= 0 && n.Part is { } p && tunings.ContainsKey(p))
             .GroupBy(n => (n.Part!, n.At));
@@ -89,11 +90,14 @@ internal sealed class ChordFingeringValidator : ISemanticValidator
             {
                 if (pitches.Length == 2 && DoubleStop(pitches[0], pitches[1], strings))
                     continue;
+                // Plucked, or rolled: not bowed at once, and playable as written.
+                if (pitches.Length > 2 && (notBowedAtOnce ??= NotBowedAtOnce(tree, bowed)).Any(s => s.Start <= at && at < s.End))
+                    continue;
                 // ASCII punctuation only: the CLI prints this to legacy-codepage consoles.
                 _diagnostics.Warning(new TextSpan(at, 1), DiagnosticCodes.ChordNotFingerable,
                     $"this chord ({string.Join(" ", pitches.Select(Spell))}) cannot be bowed at once: "
                     + (pitches.Length > 2
-                        ? $"a bowed string sounds two strings together, not {pitches.Length} - keep two of its notes (a double stop), or break the chord, the low notes first"
+                        ? $"a bowed string sounds two strings together, not {pitches.Length} - keep two of its notes (a double stop), or break the chord, the low notes first (written out, or rolled: @arpeggio)"
                         : $"its two notes do not lie on neighbouring strings within the hand's reach ({Editing.ChordVoicingFinder.BowedReach} semitones) - move one by an octave, or choose another pair of the chord's notes"));
                 continue;
             }
@@ -109,6 +113,61 @@ internal sealed class ChordFingeringValidator : ISemanticValidator
                     : "spread it out, or leave notes out (the root and fifth below, the third above)"));
         }
         StaleDiagrams(tree, played, tunings, bowed);
+    }
+
+    /// <summary>
+    /// The chords of the bowed parts that are not bowed at once, where they are written: one
+    /// carrying <c>@arpeggio</c> (the wavy line: rolled, the low strings first), one carrying
+    /// <c>@snapPizz</c>, and every chord under a <c>@text("pizz.")</c> until the <c>@text("arco")</c>
+    /// that ends it. Three or four plucked or rolled notes are playable as written, and the "bowed
+    /// at once" warning was said of them all the same (found 2026-11-13, grammar evaluation 3).
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN. The pizzicato is read in the order the part is WRITTEN — its blocks down the
+    /// file, each from its first note — which is the played order of a piece written in order; a
+    /// phrase's body is read where it is written, without the state of the place that plays it.
+    /// A bracketed <c>@arpeggio(bracket)</c> says "not rolled" and quiets nothing. The reach of
+    /// the hand is not asked of a plucked or rolled chord.
+    /// </remarks>
+    private static List<TextSpan> NotBowedAtOnce(SyntaxTree tree, HashSet<string> bowed)
+    {
+        var spans = new List<TextSpan>();
+        var pizzicato = new HashSet<string>(System.StringComparer.Ordinal);
+        foreach (var node in tree.GetRoot().DescendantNodes())
+        {
+            IEnumerable<SyntaxNode>? marks = node switch
+            {
+                ChordSyntax c => c.Articulations,
+                NoteSyntax n => n.Articulations,
+                RestSyntax r => r.Articulations,
+                _ => null,
+            };
+            if (marks == null)
+                continue;
+            string? part = null;
+            for (var up = node.Parent; up != null && part == null; up = up.Parent)
+                part = up switch { PartBlockSyntax b => b.Name, PartDeclarationSyntax d => d.Name.Text, _ => null };
+            if (part == null || !bowed.Contains(part))
+                continue;
+            bool rolled = false;
+            foreach (var mark in marks)
+            {
+                if (mark is MusicMarkSyntax text && AnnotationValues.Text(text) is { } word)
+                {
+                    word = word.Trim().TrimEnd('.').ToLowerInvariant();
+                    if (word is "pizz" or "pizzicato")
+                        pizzicato.Add(part);
+                    else if (word is "arco")
+                        pizzicato.Remove(part);
+                }
+                else if (mark is ArticulationSyntax { Name: "arpeggio" or "snapPizz" }
+                    || (mark is MusicMarkSyntax { Name: "arpeggio" } wavy && !AnnotationValues.IsArpeggioBracket(wavy)))
+                    rolled = true;
+            }
+            if (node is ChordSyntax && (rolled || pizzicato.Contains(part)))
+                spans.Add(node.Span);
+        }
+        return spans;
     }
 
     /// <summary>

@@ -968,17 +968,31 @@ internal static partial class SharedRenderer
         // (assigned strings first, then highest pitch → highest free string),
         // ordered top string (1) → bottom for the offset pass.
         // LILYPOND-REF: scm/translation-functions.scm determine-frets-and-strings.
-        var notes = Tunings.CalculateChordFrets(
+        var alloc = Tunings.CalculateChordFrets(
                 chord.Notes.Select(cn => (cn.Midi + octaveShift, cn.StringNumber)).ToList(),
-                tuning)
+                tuning);
+        var notes = alloc
             .Select(p => (str: p.stringNum, fret: p.fret))
             .OrderBy(p => p.str)
             .ToList();
 
+        // A dead member shows the cross in place of its fret number, as a single dead note
+        // does (found 2026-11-13, grammar evaluation 3: a chord's @dead drew the numbers).
+        // The allocation answers in member order, so the strings of the dead ones are read
+        // off it before the sort. Each TabNoteHead answers for its own style.
+        // LILYPOND-REF: scm/tablature.scm:22-28 tab-note-head::calc-glyph-name
+        bool IsDeadString(int str)
+        {
+            for (int k = 0; k < alloc.Length; k++)
+                if (alloc[k].stringNum == str && chord.Notes[k].IsDead)
+                    return true;
+            return false;
+        }
+
         double[] dx = TabChordColumns.Offsets(fonts, tuning.Length, notes);
         for (int i = 0; i < notes.Count; i++)
             DrawTabFret(fonts, tuning.Length, notes[i].fret, notes[i].str, itemX + dx[i], staffY, stringSpace,
-                chord.SourcePosition, gc, digitGaps);
+                chord.SourcePosition, gc, digitGaps, IsDeadString(notes[i].str));
 
         // Augmentation dots sit to the right of the whole chord (its rightmost digit
         // edge), one per string row — the tab analogue of the notation dot column.

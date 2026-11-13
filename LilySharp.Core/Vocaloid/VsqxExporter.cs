@@ -172,7 +172,9 @@ public sealed class VsqxExporter
                 new XElement(ns + "dur", dur),
                 new XElement(ns + "n", pitch),
                 new XElement(ns + "v", 64),
-                new XElement(ns + "y", new XCData(lyric)),
+                // An elision (きょ~う) is the two syllables on the one note: the undertie is
+                // the page's sign, not a character VOCALOID reads.
+                new XElement(ns + "y", new XCData(lyric.Replace("‿", "").Replace("~", ""))),
                 new XElement(ns + "p", new XCData(Phoneme(lyric))),
                 NStyle(ns)));
         }
@@ -277,6 +279,16 @@ public sealed class VsqxExporter
     /// </summary>
     internal static string Phoneme(string lyric)
     {
+        // An ELISION — two syllables under one note, `きょ~う`, printed きょ‿う — is sung whole:
+        // the phonemes of each, in order, on the one note. Only the first was written (found
+        // 2026-11-13, grammar evaluation 3: `k' o` for きょ‿う), where the page, the MusicXML
+        // and the singer's voice (SungVoices hands it the pair as one syllable) keep both.
+        if (lyric.IndexOfAny(['‿', '~']) >= 0)
+        {
+            var parts = lyric.Split(['‿', '~'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (parts.Length > 1)
+                return string.Join(" ", parts.Select(Phoneme).Where(p => p != "-"));
+        }
         var s = lyric.Trim().TrimEnd('。', '、', ',', '.', '!', '?', '！', '？');
         if (s.Length == 0 || s == "-" || s == "ー" || s == "−")
             return "-";

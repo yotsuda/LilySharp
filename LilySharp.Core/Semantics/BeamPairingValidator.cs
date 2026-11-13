@@ -53,7 +53,12 @@ internal sealed class BeamPairingValidator : ISharedCollectValidator
             // ASCII punctuation only: these strings reach legacy-codepage consoles via the CLI.
             _diagnostics.Warning(new TextSpan(w.SourcePosition, 1),
                 DiagnosticCodes.UnpairedBeam,
-                w.IsOpen
+                w.IsEmpty
+                    ? "a manual beam '[]' opens and closes on the same note, so it groups nothing "
+                      + "and the note is beamed automatically with its neighbours; a manual beam "
+                      + "joins two or more notes - '[' after the first, ']' after the last "
+                      + "(c8[ d8 e8]) - so remove the '[]'"
+                : w.IsOpen
                     ? "a manual beam '[' is never closed, so the grouping is discarded and "
                       + "these notes are beamed automatically instead; add the matching ']' "
                       + "on the last note of the group - note that a beam does not carry into "

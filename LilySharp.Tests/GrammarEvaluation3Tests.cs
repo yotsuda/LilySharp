@@ -206,7 +206,9 @@ public class GrammarEvaluation3Tests
             Lengths(xml.Parts.First(p => !p.Name.Contains("alto", StringComparison.OrdinalIgnoreCase))));
         Assert.Contains("\\cadenzaOn s1*5/4", new LilySharp.Core.LilyPond.LilyPondExporter().Export(tree));
         // …and both parts play the ornament's bar together.
-        Assert.Equal(Beats(source, "orn")[0], Beats(source, "alto").Where(b => b > 15.5).First());
+        // (An ossia is silent since the same day — AnOssia_IsSilent — so it is named as a row to be heard.)
+        string heard = placed.StartsWith("ossia", StringComparison.Ordinal) ? source.Replace(placed, placed + "  orn") : source;
+        Assert.Equal(Beats(heard, "orn")[0], Beats(heard, "alto").Where(b => b > 15.5).First());
     }
 
     /// <summary>The file with its singers' parts written after it, as every output reads it.</summary>
@@ -537,6 +539,183 @@ public class GrammarEvaluation3Tests
         var notes = new LilySharp.Core.MusicXml.MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml().Descendants("note").ToArray();
         Assert.Equal([null, "diamond", "x", "x"], notes.Select(n => (string?)n.Element("notehead")));
         Assert.Contains("<c' \\tweak style #'diamond f'>2", new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(source)));
+    }
+
+    /// <summary><c>&lt;c' e'@dead&gt;4</c> and <c>&lt;c' e'&gt;4@dead</c> drew ordinary heads and
+    /// ordinary fret numbers, and said nothing: a member's <c>@dead</c> is that member's cross
+    /// (staff) and × (tab), the chord's is every member's. The LilyPond twin wrote the member's
+    /// as a post-event LilyPond refuses.</summary>
+    [Fact]
+    public void ADeadMarkOnAChord_IsTheCrossOfTheMembersItMutes()
+    {
+        string source = Guitar("<c' e'@dead>4 <c' e'>4@dead <c' e'>4 e'4@dead |");
+        Assert.Empty(Said(source).Select(d => d.Message));
+        var staves = Page(source).StaffGroups.SelectMany(g => g.Staves).ToArray();
+        foreach (var staff in staves)
+        {
+            var chords = staff.Voices[0].Measures.SelectMany(m => m.Items).OfType<LilySharp.Core.Svg.Model.ChordItem>().ToArray();
+            Assert.Equal([false, true], chords[0].Notes.Select(n => n.IsDead));
+            Assert.Equal([true, true], chords[1].Notes.Select(n => n.IsDead));
+            Assert.Equal([false, false], chords[2].Notes.Select(n => n.IsDead));
+            Assert.All(chords.SelectMany(c => c.Notes), n => Assert.Equal(
+                n.IsDead ? LilySharp.Core.Svg.Model.NoteheadStyle.Cross : LilySharp.Core.Svg.Model.NoteheadStyle.Default, n.Notehead));
+            Assert.Equal(LilySharp.Core.Svg.Model.NoteheadStyle.Cross, chords[1].Notehead);
+        }
+        // Drawn: four crosses on the staff at the head size, four on the tab at font-size −2
+        // (the single dead note's is the fourth of each).
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse(source), new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+        int Crosses(string size) => System.Text.RegularExpressions.Regex.Matches(svg,
+            @"<text class=""music"" x=""[\d.]+"" y=""[\d.]+"" font-size=""" + size + @"""[^>]*>" + EmmentalerGlyphs.NoteheadCrossBlack + "</text>").Count;
+        Assert.Equal(4, Crosses("4.00"));
+        Assert.Equal(4, Crosses("3.17"));
+        // A `q` repeats the member's own mark, as it does the member's head style.
+        var again = Page(Guitar("<c' e'@dead>4 q q2 |")).StaffGroups.SelectMany(g => g.Staves).Single(s => s.IsTab)
+            .Voices[0].Measures.SelectMany(m => m.Items).OfType<LilySharp.Core.Svg.Model.ChordItem>().ToArray();
+        Assert.All(again, c => Assert.Equal([false, true], c.Notes.Select(n => n.IsDead)));
+
+        string ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(source));
+        Assert.Contains("<c' \\deadNote e'>4 \\deadNote <c' e'>4 <c' e'>4 \\deadNote e'4", ly);
+        Assert.DoesNotContain("-\\deadNote", ly);
+    }
+
+    /// <summary>An elision — <c>きょ~う</c>, two syllables under one note — went to VOCALOID as
+    /// its first syllable alone (<c>k' o</c>): the note carries both syllables' phonemes.</summary>
+    [Fact]
+    public void AnElision_IsSungWholeInTheVocaloidFile()
+    {
+        string source = "octave absolute\npart m { instrument alto lyrics w }\nsection A {\n  m { c'4 d' e' f' | }\n"
+            + "  lyrics w { きょ~う は い~い て | }\n}\nform { ~A }\nscore { staff m  lyrics w }\n";
+        Assert.Empty(Said(source).Select(d => d.Message));
+        string vsqx = new LilySharp.Core.Vocaloid.VsqxExporter().Export(SyntaxTree.Parse(source)).ToString();
+        var phonemes = System.Text.RegularExpressions.Regex.Matches(vsqx, @"<p><!\[CDATA\[(.*?)\]\]></p>").Select(m => m.Groups[1].Value);
+        Assert.Equal(["k' o M", "h a", "i i", "t e"], phonemes);
+        Assert.Contains("<y><![CDATA[きょう]]></y>", vsqx);
+        Assert.Equal("w a o a", LilySharp.Core.Vocaloid.VsqxExporter.Phoneme("わ‿お‿あ"));
+    }
+
+    /// <summary><c>c''8[]</c> — a manual beam opened and closed on one note — was accepted and did
+    /// nothing: the note was beamed with its neighbours as if nothing were written. It is said
+    /// (LYS4016, the unpaired bracket's code), with what a manual beam is.</summary>
+    [Fact]
+    public void AnEmptyBeamOnOneNote_IsSaid()
+    {
+        static string Book(string music) => "octave absolute\npart a { clef treble }\nsection S { a { " + music + " } }\nform { ~S }\nscore { staff a }\n";
+        var said = Said(Book("c''8[] d'' e''[ f''] g''2 |"));
+        var only = Assert.Single(said);
+        Assert.Equal(DiagnosticCodes.UnpairedBeam, only.Code);
+        Assert.Contains("'[]' opens and closes on the same note", only.Message);
+        Assert.Contains("c8[ d8 e8]", only.Message);
+        // Inside an open group too, and a real pair says nothing.
+        Assert.Single(Said(Book("c''8[ d''[] e'' f''] g''2 |")));
+        Assert.Empty(Said(Book("c''8[ d''] e''[ f''] g''2 |")));
+    }
+
+    /// <summary>LYS1055 said "cannot be bowed at once" of a violin's three-note chord marked
+    /// <c>@arpeggio</c> and of one played pizzicato: neither is bowed at once, and both are
+    /// playable as written. A plain triple stop still warns, and so does one after <c>arco</c>.</summary>
+    [Fact]
+    public void ATripleStopThatIsRolledOrPlucked_IsNotWarned()
+    {
+        static string[] Warned(string music) => [.. Said("octave absolute\npart a { instrument violin }\nsection S { a { " + music
+            + " } }\nform { ~S }\nscore { staff a }\n").Where(d => d.Code == DiagnosticCodes.ChordNotFingerable).Select(d => d.Message)];
+        Assert.Single(Warned("<g d' b'>1 |"));
+        Assert.Empty(Warned("<g d' b'>1@arpeggio |"));
+        Assert.Empty(Warned("<g d' b'>2@text(\"pizz.\") <g d' b' g''>2 |"));
+        Assert.Empty(Warned("g4@text(\"pizz.\") r <g d' b'>2 |"));
+        Assert.Empty(Warned("<g d' b'>1@snapPizz |"));
+        // arco ends it; a bracket says "not rolled".
+        Assert.Single(Warned("<g d' b'>2@text(\"pizz.\") <g d' b'>2@text(\"arco\") |"));
+        Assert.Single(Warned("<g d' b'>1@arpeggio(bracket) |"));
+        Assert.Contains("@arpeggio", Warned("<g d' b'>1 |")[0]);
+    }
+
+    /// <summary><c>lysc png</c> on an empty file printed "Error: Dispose first (with SeparatePages
+    /// set)": the per-page PNG of a file with no page is the one blank image its joined form is,
+    /// as every other export writes its empty file.</summary>
+    [Fact]
+    public void AnEmptyFile_HasItsBlankPng()
+    {
+        var pages = LilySharp.Core.Png.PngGenerator.GenerateScorePages(SyntaxTree.Parse(""), null);
+        Assert.Equal(LilySharp.Core.Png.PngGenerator.Generate(SyntaxTree.Parse("")), Assert.Single(pages));
+        Assert.NotEmpty(pages[0]);
+    }
+
+    /// <summary>A section with no tempo of its own returns to the file's (2026-11-12): the page
+    /// prints it and the MIDI plays it, and MusicXML and the LilyPond twin wrote nothing there —
+    /// the faster section's tempo to the end. Both write the file's tempo at that section, and
+    /// nothing where the tempo in force is already the file's.</summary>
+    [Fact]
+    public void TheReturnToTheFilesTempo_IsWrittenInMusicXmlAndTheLilyPondTwin()
+    {
+        const string Source = "octave absolute\ntempo \"Moderato\" 4 = 96\npart m { clef treble }\n"
+            + "section A { m { c'1 | c'1 | } }\nsection B { tempo \"Piu mosso\" 4 = 108  m { d'1 | d'1 | } }\n"
+            + "section C { m { f'1 | f'1 | } }\nsection D { m { g'1 | } }\nform { ~A ~B ~C ~D }\nscore { staff m }\n";
+        var tree = SyntaxTree.Parse(Source);
+        var spec = RenderSpecParser.FindFirst(tree);
+        // The page: Moderato, Piu mosso, Moderato — and nothing at D.
+        Assert.StartsWith("Moderato", TempoMarks(Source)[^1]);
+        Assert.Single(TempoMarks(Source), m => m.StartsWith("Piu mosso", StringComparison.Ordinal));
+
+        var xml = new LilySharp.Core.MusicXml.MusicXmlExporter { Form = spec?.Form, Score = spec }.Export(tree).ToXml();
+        var words = xml.Descendants("measure").Select(m => (string?)m.Descendants("words").FirstOrDefault()).ToArray();
+        Assert.Equal(["Moderato", null, "Piu mosso", null, "Moderato", null, null], words);
+        Assert.Equal(["96", "108", "96"], xml.Descendants("sound").Select(s => (string?)s.Attribute("tempo")));
+
+        string ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(tree);
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(ly, "\\\\tempo \"Moderato\" 4 = 96").Count);
+        Assert.Contains("\\tempo \"Moderato\" 4 = 96 f'1", ly);
+    }
+
+    // ── The ossia ───────────────────────────────────────────────────────────────────────────
+
+    private static string Ossia(string alt, string item = "ossia alt", string header = "clef treble")
+        => "octave absolute\npart solo { instrument violin }\npart alt { " + header + " }\n"
+            + "section A {\n  solo { c''4 d'' e'' f'' | g''4 a'' b'' c''' | c'''1 | }\n  alt { " + alt + " }\n}\n"
+            + "form { ~A }\nscore { staff solo  " + item + " }\n";
+
+    private static int MusicGlyphs(string source)
+        => System.Text.RegularExpressions.Regex.Matches(
+            SvgGenerator.Generate(SyntaxTree.Parse(source), new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false }),
+            "<text class=\"music\"").Count;
+
+    /// <summary>An ossia is another reading of the bars under it, not a second player: it
+    /// sounded in the MIDI together with its staff. A part the score shows only as an ossia is
+    /// silent (Lily#'s own choice); the bare MIDI-only row plays it where that is wanted.</summary>
+    [Fact]
+    public void AnOssia_IsSilent()
+    {
+        string source = Ossia("| g''8 a'' b'' c''' d'''2 | |");
+        var midi = Midi(source);
+        Assert.Equal(["solo"], midi.Tracks.SelectMany(t => t.Notes).Select(n => n.Part).Distinct());
+        Assert.Equal(9, midi.Tracks.SelectMany(t => t.Notes).Count(n => n.DurationTicks > 0));
+        // Asked for by name, it plays; and a part that is a staff too plays as before.
+        Assert.Contains("alt", Midi(Ossia("| g''8 a'' b'' c''' d'''2 | |", "ossia alt  alt")).Tracks.SelectMany(t => t.Notes).Select(n => n.Part));
+        Assert.Contains("alt", Midi(Ossia("| g''8 a'' b'' c''' d'''2 | |", "ossia alt  staff alt")).Tracks.SelectMany(t => t.Notes).Select(n => n.Part));
+    }
+
+    /// <summary>A bare <c>R</c> in an ossia part drew its rest floating over the staff below,
+    /// with no lines under it: outside the bars the ossia prints, a whole-bar rest is the empty
+    /// bar it stands for. Between two bars of notes it is drawn, on the ossia's lines.</summary>
+    [Fact]
+    public void AWholeBarRestOutsideAnOssiasBars_IsNotDrawn()
+    {
+        Assert.Equal(MusicGlyphs(Ossia("| g''8 a'' b'' c''' d'''2 | |")), MusicGlyphs(Ossia("R | g''8 a'' b'' c''' d'''2 | R |")));
+        Assert.Equal(MusicGlyphs(Ossia("g''1 | | g''1 |")) + 1, MusicGlyphs(Ossia("g''1 | R | g''1 |")));
+    }
+
+    /// <summary><c>ossia bass alt</c> was <c>ossia alt</c>'s page: the clef word was read and
+    /// never asked. It places the ossia's notes, as a staff's does and as the part's own
+    /// <c>clef bass</c> does.</summary>
+    [Fact]
+    public void AnOssiasClefWord_PlacesItsNotes()
+    {
+        static int[] Positions(string source) => [.. Page(source).EnumerateStaves().Single(s => s.Staff.IsOssia).Staff
+            .Voices[0].Measures.SelectMany(m => m.Items).OfType<LilySharp.Core.Svg.Model.NoteItem>().Select(n => n.StaffPosition)];
+        const string Alt = "| g8 a b c' d'2 | |";
+        Assert.Empty(Said(Ossia(Alt, "ossia bass alt")).Select(d => d.Message));
+        int[] treble = Positions(Ossia(Alt)), bass = Positions(Ossia(Alt, "ossia bass alt"));
+        Assert.Equal(treble.Select(p => p + 12), bass);
+        Assert.Equal(Positions(Ossia(Alt, header: "clef bass")), bass);
     }
 
     /// <summary><c>chordShapes { A7(b9) x02323 }</c> was refused at the parentheses (LYS9103) that

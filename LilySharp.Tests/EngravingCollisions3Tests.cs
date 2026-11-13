@@ -164,4 +164,50 @@ public sealed class EngravingCollisions3Tests
             $"the bend's amount reaches up to {amountTop:F3} and the diagram's grid down to {gridBottom:F3}: "
             + "the diagram has to stand over the bend, not on it.");
     }
+
+    /// <summary>
+    /// fixC b5b — a text spanner's label ("CVII") stood 0.05 INTO the chord row over its staff
+    /// when the span ended on its highest note: the band reserved for it read the staff's ink
+    /// up to that note's left edge, the drawn line ends over its centre
+    /// (<c>TextSpannerEngraver.InkAboveStaff</c>). A span ending on a low note cleared the row.
+    /// </summary>
+    [Theory]
+    [InlineData("b'")]
+    [InlineData("d'")]
+    public void ATextSpannersLabel_StandsUnderTheChordRowOverIt(string last)
+    {
+        var g = RenderedGeometry.Render("octave absolute\npart g { instrument guitar }\n"
+            + "section A { chords h { Bm | D | } g { b4@textSpan(\"CVII\") d' fis' " + last + "@!textSpan | a'4 a' fis' cis' | } }\n"
+            + "form { ~A }\nscore { chords h staff g }\n");
+        var label = g.Texts.Single(t => t.Text == "CVII");
+        double rowBaseline = g.Texts.Where(t => t.Role == TextRole.ChordName).Max(t => t.Y);
+        // The label's ink top, over-read (0.8 em is above the capitals of any text face).
+        double top = label.Y - 0.8 * label.FontSize;
+        Assert.True(top > rowBaseline,
+            $"the label reaches up to {top:F3} and the chord row's names stand on {rowBaseline:F3}.");
+    }
+
+    /// <summary>
+    /// fixD tab8 — on a tab that draws its rhythm, a quarter rest ran into the arpeggio line of
+    /// the chord after it: the line stands where the notation frame puts it, the tab's rest half
+    /// a head right of there, and nothing kept the difference
+    /// (<c>SpacingRules.ApplyTabChordSpacing</c>). A digit before the line the same.
+    /// </summary>
+    [Theory]
+    [InlineData("e'4 b' r <e a d' g'>4@arpeggio |", true)]
+    [InlineData("e'4 b' <e' b'> <e a d' g'>4@arpeggio |", false)]
+    public void ATabsArpeggioLine_StandsClearOfTheRestOrDigitsBeforeIt(string bar, bool rest)
+    {
+        var g = RenderedGeometry.Render("octave absolute\npart g { instrument guitar }\nsection A { g { " + bar
+            + " } }\nform { ~A }\nscore { tab g }\n");
+        double lineLeft = g.Glyphs.Where(x => x.Glyph == EmmentalerGlyphs.Arpeggio).Min(x => x.X);
+        double inkRight = rest
+            ? g.Glyphs.Where(x => x.Glyph == EmmentalerGlyphs.RestQuarter)
+                .Max(x => x.X + GlyphMetrics.GetRestBBox(4).Right)
+            // The digits of the chord before the line: every fret number left of it, over-read
+            // by a whole em (a digit is narrower).
+            : g.Texts.Where(t => t.Role == TextRole.TabFret && t.X < lineLeft).Max(t => t.X + 0.5 * t.FontSize);
+        Assert.True(inkRight < lineLeft,
+            $"the ink before the chord reaches right to {inkRight:F3} and its arpeggio line starts at {lineLeft:F3}.");
+    }
 }

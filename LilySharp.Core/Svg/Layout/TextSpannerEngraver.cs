@@ -684,6 +684,24 @@ internal static class TextSpannerEngraver
                     spanner.EndMeasureIndex, spanner.EndItemIndex) is { } ex
                 ? endLayout.X + ex - BoundPadding
                 : endLayout.X + endLayout.Width - BoundPadding;
+            // ⚠️ THE RIGHT END IS THE CENTRE OF THE NOTE COLUMN IT STOPS ON, as the drawn line's
+            // has been since 2026-10-28 (Calculate, RightBoundCentre). This band kept the
+            // column's LEFT edge, so it read the staff's ink short of the note the line ends
+            // over: when that note is the high one (`b4@textSpan("CVII") d' fis' b'@!textSpan`)
+            // the stacker lifted the drawn line over its head and the band stayed down — the
+            // label 0.55 above its reservation, 0.05 INTO the chord row over the staff where a
+            // span ending on a low note clears the row by the usual 0.5 (found 2026-11-13,
+            // grammar evaluation 3, fixC b5b).
+            // LILYPOND-REF: lily/line-spanner.cc:155-175 Line_spanner::calc_bound_info —
+            //   attach-dir CENTER, the bound's generic_bound_extent.
+            if (endsHere && !voices.IsDefaultOrEmpty && spanner.VoiceIndex < voices.Length
+                && spanner.EndItemIndex >= 0
+                && (graceNotes.IsDefaultOrEmpty || ElementCoordinator.GraceColumnAt(voices[spanner.VoiceIndex], graceNotes,
+                    spanner.StaffIndex, spanner.VoiceIndex, spanner.EndMeasureIndex, spanner.EndItemIndex, endLayout,
+                    SpacingRules.VoiceCollisionShiftsOf(voices)) == null)
+                && HairpinEngraver.ColumnExtent(spanner.EndMeasureIndex, spanner.EndItemIndex,
+                    LayoutUtilities.ResolveVoiceMeasures(voices, spanner.VoiceIndex, default), endLayout) is { } endColumn)
+                endX = (endColumn.Left + endColumn.Right) / 2 - BoundPadding;
             if (endX <= startX)
                 continue;
 

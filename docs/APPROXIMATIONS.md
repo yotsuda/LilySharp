@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 353 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **479** | |
+| `OWN` | 355 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **481** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（353 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（355 件）
 
 ### `LilySharp.Core/Audio/SingerPlan.cs`
 - **`SingerPlan`** LILYSHARP-OWN.
@@ -413,6 +413,8 @@
 - **`CapoAdvisor`** the barres and before the fret itself in the ranking. LILYSHARP-OWN: LilyPond has nothing
 ### `LilySharp.Core/Semantics/ChordAnnotation.cs`
 - **`ChordAnnotation`** LILYSHARP-OWN: LilyPond names a chord in a ChordNames context and draws a diagram in a
+### `LilySharp.Core/Semantics/ChordFingeringValidator.cs`
+- **`ChordFingeringValidator.NotBowedAtOnce`** LILYSHARP-OWN. The pizzicato is read in the order the part is WRITTEN — its blocks down the
 ### `LilySharp.Core/Semantics/ChordShapesDirective.cs`
 - **`CapoDirective`** LILYSHARP-OWN: LilyPond 2.26 has no capo property; its \fret-diagram-verbose knows a
 ### `LilySharp.Core/Semantics/FileShift.cs`
@@ -496,6 +498,7 @@
 - **`PartCombiner.WithVoiceDirection`** the mark wrote .up (owner's decision 2026-10-17; LILYSHARP-OWN — the preview's ink).
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`
 - **`StaffSpec.MaxLines`** LILYSHARP-OWN: the DEFAULT five is LilyPond's (scm/define-grobs.scm:3396,
+- **`RenderSpec.SoundingPartNames`** LILYSHARP-OWN: a part the score shows ONLY as an ossia is silent. An ossia is
 ### `LilySharp.Core/Svg/Collector/RenderSpecParser.cs`
 - **`RenderSpecParser.ParseTab`** LILYSHARP-OWN: LilyPond's TabStaff has no capo; standard tablature counts from it.
 ### `LilySharp.Core/Svg/Collector/ScoreAssembler.cs`

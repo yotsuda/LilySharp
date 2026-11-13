@@ -282,8 +282,9 @@ Notes enclosed in angle brackets share a duration (written after the `>`):
 stop: two notes on neighbouring strings within the hand's reach. Three or four notes starting
 at one moment warn (**LYS1055**, "cannot be bowed at once … keep two of its notes (a double
 stop), or break the chord, the low notes first"), and so does a pair no two neighbouring
-strings hold; `@arpeggio` or a `@text("pizz.")` on the chord does not change that. A triple or
-quadruple stop is written broken, as it is played — `grace { <g d'>8 } <b' g''>2`,
+strings hold. A chord that is not bowed at once does not warn: one marked `@arpeggio` (rolled)
+or `@snapPizz`, and every chord from a `@text("pizz.")` to the next `@text("arco")`. A bowed
+triple or quadruple stop is otherwise written broken, as it is played — `grace { <g d'>8 } <b' g''>2`,
 `acciaccatura { g16 d' } <b' g''>2`, in time as `<g d'>8 <b' g''>4.`, or as the arpeggio group
 `<< g d' b' g'' >>2` — none of which warns.
 
@@ -1863,7 +1864,7 @@ score { staff gtr  tab gtr }
 | `\N` | Asks for string N (1 = the highest): `c'4\3`; on chord members, `<e'\1 b\2>`. Two members on one string are LYS1063, one pitch twice without two strings LYS1064. A string the tuning lacks (`\7`), or one that cannot play the note, warns and is chosen again (**LYS5003**). |
 | Out of the strings | A note below the lowest string or above fret 24 warns (**LYS5002**) and is left off the tab, in a chord too. A tab in another instrument's tuning names its octave: `tab bass5 melody as 8vb` (LYS5004 proposes it). |
 | Capo | Under the file's `capo N` the frets count from the capo; a note below the capo on every string is LYS5002 and left off. A bass's tab ignores the capo. See *Chord Diagrams*. |
-| Marks | Drawn on the tab: slurs, `@hammerOn` `@pullOff` `@tap`, `@bend(…)`, the `@glissando` / `@slide` line, `@arpeggio`, and `@dead` on a single note (a × for the number). `@notehead(…)` changes the staff's head only. `@dead` on a chord or a chord member draws nothing: write `<c e@notehead(cross)>4`. |
+| Marks | Drawn on the tab: slurs, `@hammerOn` `@pullOff` `@tap`, `@bend(…)`, the `@glissando` / `@slide` line, `@arpeggio`, and `@dead` (a × for the number: a note's, one chord member's — `<c e@dead>4` — or every member's, `<c e>4@dead`). `@notehead(…)` changes the staff's head only. |
 
 The tuning words are listed under `TuningName` in `GRAMMAR.md`.
 
@@ -1891,8 +1892,11 @@ staves; `staff ob  ossia orn  staff alto` is one over the oboe. Before any staff
 of the system. An ossia may not stand inside a group's braces (LYS6011); after the group, it
 is above the whole group. This is LilyPond's `alignAboveContext`, which the twin writes.
 
-A bar of the ossia part with only spacers or `r` rests is not drawn; a bar rest `R` is drawn
-with no staff under it, so the silent bars are left empty.
+A bar of the ossia part with only spacers, `r` rests or a bar rest `R` is not drawn (between
+two bars of notes the ossia is one piece, and the rest is drawn on its lines). A clef word
+places the notes — `ossia bass alt`, as `staff bass alt` — and no clef is drawn. **An ossia is
+silent** in MIDI and audio: it is another reading, not another player; name the part as a bare
+row as well (`staff solo  ossia alt  alt`) to hear it.
 
 ### Staff groups — `grandStaff`, `staffGroup`, `choirStaff`
 
@@ -2118,7 +2122,7 @@ An `@breath` on a sung note is a breath: the singer stops a little early, and th
 undertie (ri‿a); `wa~o~a` joins three. It counts as one syllable and may carry its hyphen
 (`ri~a-`). MusicXML writes it as two `<text>`s with an `<elision>` between them and reads
 it back; the LilyPond twin writes the undertie. A singing voice is given the pair as one
-syllable, and the VOCALOID export sings the first of the two. A `~` with a space on either
+syllable, and the VOCALOID export writes both syllables' phonemes on the note. A `~` with a space on either
 side is the melisma below.
 
 **Melismas** follow LilyPond's `\lyricsto`. A **slur** or a **tie** makes one on its own:

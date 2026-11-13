@@ -124,7 +124,7 @@ public sealed partial class LilyPondExporter
         for (int i = 0; top != null && i < top.SlotCount; i++)
             if (top.GetChild(i) is TempoDeclarationSyntax fileTempo)
             {
-                _fileTempo = fileTempo.Value;
+                (_fileTempo, _fileTempoDeclaration) = (fileTempo.Value, fileTempo);
                 break;
             }
         _tempoStanding = _fileTempo;
@@ -185,6 +185,7 @@ public sealed partial class LilyPondExporter
     // The last tempo this voice's stream has stated, and the file's own (the page's
     // MeasureCollector._tempoStanding).
     private TempoValue? _tempoStanding, _fileTempo;
+    private TempoDeclarationSyntax? _fileTempoDeclaration;
 
     /// <summary>
     /// A play's header directives, without a <c>tempo</c> that restates the one standing: the
@@ -197,13 +198,22 @@ public sealed partial class LilyPondExporter
     {
         var own = headers?.OfType<TempoDeclarationSyntax>().FirstOrDefault();
         bool restates = own != null && Semantics.SectionHeaders.RestatesTempo(own, _tempoStanding);
+        // A play with no tempo of its own, after music that left another count: the file's
+        // tempo is back in force and the page prints it there (MeasureCollector
+        // .ReturnToHomeTempo, 2026-11-12). The twin wrote nothing, so LilyPond kept the faster
+        // section's tempo to the end (found 2026-11-13, grammar evaluation 3).
+        TempoDeclarationSyntax? returns = own == null
+            && _fileTempoDeclaration is { Value.QuarterBpm: double homeBpm } home
+            && _tempoStanding is { QuarterBpm: double standingBpm } && standingBpm != homeBpm
+                ? home : null;
         if (own != null)
             _tempoStanding = own.Value;
         else if (_fileTempo is { Bpm: not null })
             _tempoStanding = _fileTempo;
         if (container?.DescendantNodes<TempoDeclarationSyntax>().LastOrDefault(t => t != own) is { } inMusic)
             _tempoStanding = inMusic.Value;
-        return headers == null ? [] : restates ? headers.Where(h => h != own) : headers;
+        var kept = headers == null ? [] : restates ? headers.Where(h => h != own) : headers;
+        return returns != null ? kept.Prepend(returns) : kept;
     }
 
     /// <summary>

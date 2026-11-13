@@ -1064,6 +1064,13 @@ internal static partial class SharedRenderer
             // measure's system-top page Y-up, so the middle's page Y-up is that minus
             // the offset (byte-identical to the former pageHeight - absoluteMiddle).
             double cy = syUp - mmr.Y;
+            // An ossia prints only over the bars where it has notes (OssiaFragment), and a
+            // whole-bar rest outside them is as silent as the empty bar beside it: `R` in an
+            // ossia part drew its rest floating over the staff below, with no lines under it
+            // (found 2026-11-13, grammar evaluation 3). Inside the fragment it is drawn, on
+            // the lines the fragment has there.
+            if (OssiaRestsOutsideItsFragment(score, layout, mmr))
+                continue;
             var lines = StaffLinePositionsAt(score, mmr.StaffIndex);
             using (mmr.TodoKey is { } todo ? gc.Todo(todo) : NullScope.Instance)
             {
@@ -1073,6 +1080,29 @@ internal static partial class SharedRenderer
                     DrawBigRest(mmr, cy, lines, gc);
             }
         }
+    }
+
+    /// <summary>True for a whole-bar rest of an ossia staff standing outside the bars the
+    /// ossia prints in its system (<see cref="OssiaFragment"/>) — nothing of it is drawn.</summary>
+    private static bool OssiaRestsOutsideItsFragment(MultiStaffScore score, ScoreLayout layout,
+        MultiMeasureRestLayout mmr)
+    {
+        foreach (var (_, staff, index) in score.EnumerateStaves())
+        {
+            if (index != mmr.StaffIndex)
+                continue;
+            if (!staff.IsOssia)
+                return false;
+            foreach (var system in layout.AllSystems)
+                foreach (var ml in system.Measures)
+                    if (ml.MeasureIndex == mmr.StartMeasureIndex)
+                    {
+                        var (from, to) = OssiaFragment(staff, system);
+                        return mmr.StartMeasureIndex < from || mmr.StartMeasureIndex > to;
+                    }
+            return false;
+        }
+        return false;
     }
 
     /// <summary>The DRAWN line positions of the staff at a GLOBAL staff index (the index

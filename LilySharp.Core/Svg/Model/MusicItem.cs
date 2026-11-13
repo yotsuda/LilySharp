@@ -1628,7 +1628,11 @@ public readonly record struct ChordNoteInfo(
     int WrittenPitch = 0,
     // A '~' is written on THIS member inside the brackets (<c f d~>), so the chord's tie is
     // this note's and not the others'. See ChordItem.Ties.
-    bool TiedAlone = false
+    bool TiedAlone = false,
+    // THIS member is a dead (muted) note — its own @dead inside the brackets, or the
+    // chord's for every member: a cross head on the staff (Notehead says that) and the
+    // cross in place of the fret number on a tab. See NoteItem.IsDead.
+    bool IsDead = false
 );
 
 /// <summary>

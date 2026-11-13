@@ -699,8 +699,18 @@ internal static class HairpinEngraver
         int measure, int item, ImmutableArray<Measure> staffMeasures,
         ImmutableArray<MeasureLayout> measureLayouts)
     {
+        if (measure >= measureLayouts.Length || measureLayouts[measure] is not { } layout)
+            return null;
+        return ColumnExtent(measure, item, staffMeasures, layout);
+    }
+
+    /// <summary><see cref="ColumnExtent(int, int, ImmutableArray{Measure}, ImmutableArray{MeasureLayout})"/>
+    /// with the measure's own layout in hand — for a caller holding one system's layouts,
+    /// which the score-wide measure index does not index.</summary>
+    internal static (double Left, double Right, bool IsRest)? ColumnExtent(
+        int measure, int item, ImmutableArray<Measure> staffMeasures, MeasureLayout layout)
+    {
         if (staffMeasures.IsDefaultOrEmpty || measure >= staffMeasures.Length
-            || measure >= measureLayouts.Length || measureLayouts[measure] is not { } layout
             || item < 0 || item >= staffMeasures[measure].Items.Length)
             return null;
         double x = layout.X + LayoutUtilities.GetItemXOffset(staffMeasures, measure, item, layout);

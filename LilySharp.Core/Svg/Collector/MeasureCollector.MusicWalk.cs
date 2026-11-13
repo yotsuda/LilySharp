@@ -2514,6 +2514,10 @@ public sealed partial class MeasureCollector
                     c = c with { BeginsCueRegion = true };
                 if (ExtractNoteheadStyle(node) is var style && style != NoteheadStyle.Default)
                     c = c with { Notehead = style };
+                // The chord's @dead is every member's cross head, and wins over the style
+                // as a note's does (CreateChordItem's member loop; 2026-11-13).
+                if (node is ChordSyntax && HasNamedArticulation(node, "dead"))
+                    c = c with { Notehead = NoteheadStyle.Cross };
                 // A merged drum chart's chord takes its parentheses hit by hit (EmitDrumPiece).
                 if (node is not DrumNoteSyntax)
                     c = WithParenthesizedMembers(c, node);

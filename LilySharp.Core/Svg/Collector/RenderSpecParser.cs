@@ -1365,8 +1365,11 @@ public static class RenderSpecParser
         ClefType? explicitClef = ClefOfKeyword(ossia.ClefToken);
 
         ClefType clef = explicitClef ?? GetPartClef(ossia, voiceName) ?? ClefType.Treble;
+        // The clef word places the notes, as a staff's does (found 2026-11-13, grammar
+        // evaluation 3: `ossia bass alt` was read, kept on the spec and never asked — the page
+        // was `ossia alt`'s). RenderSpec.GetBindingClefs hands it to the collector.
         return new OssiaStaffSpec(new StaffSpec(clef, voiceName,
-            Lines: ossiaLines ?? StaffSpec.MaxLines));
+            Lines: ossiaLines ?? StaffSpec.MaxLines, WrittenClef: explicitClef));
     }
 
     /// <summary>

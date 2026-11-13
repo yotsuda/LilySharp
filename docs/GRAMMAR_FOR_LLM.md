@@ -199,9 +199,14 @@ score { staff solo  ossia alt }                 // after its staff = drawn above
   staff it stands at the top of the system.
 - Not inside a group's braces (LYS6011): for a staff in a `staffGroup` the ossia goes after the
   group and stands above the whole group.
-- Silent bars are EMPTY bars (`|`). A bar of spacers or of `r` rests alone is not drawn
-  either; a bar rest `R` IS drawn, floating with no staff lines under it — do not write one.
-- The notes are read in the ossia part's own clef (`part alt { clef bass }`).
+- Silent bars are EMPTY bars (`|`). A bar of spacers, of `r` rests alone or a bar rest `R` is
+  not drawn either (until 2026-11-13 an `R` drew a rest floating with no staff lines). Between
+  two bars of notes the ossia is one piece, and a rest written there is drawn on its lines.
+- The notes are read in the ossia part's own clef (`part alt { clef bass }`), or in the clef
+  word the item writes (`ossia bass alt`, as `staff bass alt`). No clef is drawn either way.
+- **An ossia is silent** in MIDI and audio (LILYSHARP-OWN, 2026-11-13): it is another reading
+  of the bars under it, not a second player. To hear it, name the part as a bare row too
+  (`staff solo  ossia alt  alt`) or give it a score of its own.
 
 **A score's own header, and parts that only play** — `title` / `subtitle` / `composer` /
 `poet` written inside a score restate the file's metadata for that score alone, and a **bare part name** renders
@@ -659,9 +664,9 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
 - Half ties: `c4@laissezVibrer` (l.v. into silence), `c4@repeatTie` (resume from a repeat)
 - Effects: `@dead` (x notehead; `@notehead(cross)` is the same head — `@cross` is NOT: it moves the
   note to the other staff of a grand staff; on a part drawn with no staff beside it = warning
-  LYS4031 and the note stays). `@dead` is a SINGLE note's mark: on a chord or a chord member
-  (`<c e>4@dead`, `<c e@dead>4`) it draws nothing and says nothing — there write the head,
-  `<c e@notehead(cross)>4` (one member) or `<c e>4@notehead(cross)` (every head). Other heads the
+  LYS4031 and the note stays). In a chord, `<c e@dead>4` mutes that member and
+  `<c e>4@dead` every member (since 2026-11-13; before, both drew nothing). `@notehead(cross)`
+  is the head alone — `<c e@notehead(cross)>4`, `<c e>4@notehead(cross)`. Other heads the
   same way: `c2@notehead(diamond)`, `<c f@notehead(diamond)>2` (a stopped note and the touched
   fourth over it). Also `@parenthesize` (head in parentheses, a ghost note:
   `sn16@parenthesize`; `<c e g>2@parenthesize` = one pair round the chord), `@fall`/`@doit` (jazz bends), `@breath`/`@caesura`
@@ -703,7 +708,7 @@ r8[ c d e] |         // a manual beam may open or close on a rest, and reaches i
 ```
 
 A `[ … ]` only JOINS notes. There is no spelling that leaves a note unbeamed (a singer's
-syllabic flags): `c8[] d[] e[]` is accepted and beamed like `c8 d e`.
+syllabic flags): `c8[]` groups nothing — the note is beamed like `c8` — and warns (LYS4016).
 
 ## Hairpins (spanners over several notes)
 
@@ -912,9 +917,10 @@ Both hands write LilyPond's octaves: C3 is `c`, middle C `c'`, C5 `c''`.
 neighbouring strings at once, so only a DOUBLE STOP within the hand's reach is a chord there.
 Three or four notes struck at one moment warn — LYS1055, "this chord (G3 D4 B4) cannot be bowed
 at once … keep two of its notes (a double stop), or break the chord, the low notes first" — and
-so does a pair that is not on neighbouring strings. The warning counts the notes that START
-together, whatever is marked on them: `@arpeggio` and `@text("pizz.")` do not quiet it. A triple
-or quadruple stop is written the way it is played, BROKEN, the low strings first:
+so does a pair that is not on neighbouring strings. A chord that is not bowed at once does
+not warn (since 2026-11-13): one marked `@arpeggio` (rolled) or `@snapPizz`, and every chord
+after a `@text("pizz.")` until the `@text("arco")` that ends it. A bowed triple or quadruple
+stop is otherwise written the way it is played, BROKEN, the low strings first:
 
 ```
 octave absolute
@@ -988,9 +994,10 @@ score { staff gtr  tab gtr }
 - **What a tab shows of the marks**: slurs, ties (the held note's number is dropped),
   `@hammerOn` / `@pullOff` / `@tap` (the letters H P T — a slur is still written for the curve:
   `a'8@hammerOn( b')`), `@bend(half|full|N)` (the arrow), `@glissando` / `@slide` (the line
-  between two fret numbers), `@arpeggio`, and `@dead` on a single note (a × in place of the
-  number). `@notehead(cross)` / `@notehead(diamond)` change the STAFF's head only: the tab keeps
-  the number, so a dead note in a chord is × on the staff and a number on the tab. A slash `/`
+  between two fret numbers), `@arpeggio`, and `@dead` (a × in place of the number — a note's,
+  one chord member's `<c e@dead>4`, or every member's `<c e>4@dead`). `@notehead(cross)` /
+  `@notehead(diamond)` change the STAFF's head only: the tab keeps the number (as LilyPond's
+  `\override NoteHead.style` does), so for a muted string write `@dead`. A slash `/`
   has no number.
 - **Chord shapes are not tab**: `chord(C x32010)`, `diagram(…)`, `@diagram`, the top-level
   `chordShapes { A7(b9) x02323  G }` table (a name may carry its parenthesised alteration) and
@@ -1130,7 +1137,7 @@ extender line under it; a standalone `~` takes one note the same way with NO lin
 undertie, ri‿a (`e~il`, `de~i`, `きょ~う` the same; more than two: `wa~o~a`). It is one syllable
 to the count — one note — and may still take its hyphen (`ri~a-`). MusicXML writes an
 `<elision>`, the LilyPond twin the same undertie. A sung voice is handed the pair as one
-syllable; the VOCALOID export sings only the first of the two. With spaces (`ri ~ a`) the `~`
+syllable; the VOCALOID export writes both syllables' phonemes on the note. With spaces (`ri ~ a`) the `~`
 is the melisma above, a note of its own.
 
 **A reading for a kanji word** is glued to it in square brackets: `漢[かん]` prints 漢 and
