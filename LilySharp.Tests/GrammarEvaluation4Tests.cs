@@ -1178,4 +1178,65 @@ public class GrammarEvaluation4Tests
         Assert.Equal(DiagnosticCodes.KeyChangeInSomeParts, Assert.Single(Of("key b minor", "key b major b'1 | b'1 |")).Code);
         Assert.Equal(DiagnosticCodes.KeyChangeInSomeParts, Assert.Single(Of("", "key b minor b'1 | b'1 |")).Code);
     }
+
+    // ---- diagnostics that were unhelpful (second batch) ---------------------------------------
+
+    /// <summary>The big band's natural names — as1, a1, b1 — and the choir's s1 are a note or a
+    /// rest with a duration to the lexer: <c>part a1</c> said "Music cannot go at the top
+    /// level", <c>part as1</c> "Expected a name, found 'as', a reserved word" and twenty
+    /// more, <c>voice s1 {</c> "Expected 'OpenBrace', found 'RestS'". One error a name says
+    /// what it reads as (LYS0045), and the glued text is the name for the rest of the parse:
+    /// the part's cells and its staff follow it, and nothing else is said.</summary>
+    [Theory]
+    [InlineData("as1", "the note 'as'")]
+    [InlineData("a1", "the note 'a'")]
+    [InlineData("b2", "the note 'b'")]
+    [InlineData("r1", "the rest 'r'")]
+    [InlineData("hc1", "the drum 'hc'")]
+    public void APartNameThatLexesAsMusic_IsSaidOnce_AndReadAsTheName(string name, string reading)
+    {
+        string source = $"octave absolute\npart {name} \"Alto 1\" {{ clef treble }}\npart other {{ clef treble }}\n"
+            + $"section A {{ {name} {{ c'1 | a'1 | }} other {{ a1 | b2 r2 | }} }}\nform {{ ~A }}\nscore {{ staff {name} as lines 5  staff other }}\n";
+        var said = Assert.Single(Said(source));
+        Assert.Equal((DiagnosticCodes.NameReadsAsMusic, DiagnosticSeverity.Error), (said.Code, said.Severity));
+        Assert.Equal(new TextSpan(source.IndexOf(name, StringComparison.Ordinal), name.Length), said.Span);
+        Assert.Contains($"'{name}' cannot be a name: it reads as {reading} with the duration {name[^1]}", said.Message);
+        Assert.Contains("alto1", said.Message);
+        // Read as the name: the declaration, the cell and the staff are one part's, and the
+        // tree is still the text.
+        var tree = SyntaxTree.Parse(source);
+        Assert.Equal(source, tree.Root.ToFullString());
+        var staves = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)).StaffGroups.SelectMany(g => g.Staves).ToArray();
+        Assert.Equal(2, staves.Length);
+        Assert.Equal(2, staves[0].Voices[0].Measures.Count());
+        // In MUSIC the same letters are still the note: the other part's a1 is a whole note a.
+        var other = staves[1].Voices[0].Measures[0].Items.OfType<LilySharp.Core.Svg.Model.NoteItem>().Single();
+        Assert.Equal(57, other.Midi);
+    }
+
+    /// <summary>…the voices of a span, each said once; a phrase and a section; and what is
+    /// still said as before: a name that starts with a digit (LYS0017), a reserved word, and a
+    /// name that is one word — <c>alto1</c> — which was never refused.</summary>
+    [Fact]
+    public void VoiceAndPhraseNamesThatLexAsMusic_AreSaidOnceEach()
+    {
+        static string Book(string music, string top = "") => $"octave absolute\n{top}part sop {{ clef treble }}\n"
+            + $"section A {{ sop {{ {music} }} }}\nform {{ ~A }}\nscore {{ staff sop }}\n";
+
+        var voices = Said(Book("voice s1 { e''2 e'' | } s2 { c''2 c'' | }"));
+        Assert.Equal(new[] { "'s1' cannot be a name: it reads as the spacer rest 's' with the duration 1",
+            "'s2' cannot be a name: it reads as the spacer rest 's' with the duration 2" }, voices.Select(d => d.Message[..d.Message.IndexOf('.')]));
+        Assert.All(voices, d => Assert.Equal(DiagnosticCodes.NameReadsAsMusic, d.Code));
+
+        var phrase = Assert.Single(Said(Book("c'1 |", top: "phrase b1 { c'1 | }\n")), d => d.Severity == DiagnosticSeverity.Error);
+        Assert.Contains("'b1' cannot be a name", phrase.Message);
+        string sectioned = "octave absolute\npart m { clef treble }\nsection a1 { m { c'1 | } }\nform { ~a1 }\nscore { staff m }\n";
+        Assert.Contains("'a1' cannot be a name", Assert.Single(Said(sectioned)).Message);
+
+        Assert.Empty(Said(Book("voice sop1 { e''1 | } sop2 { c''1 | }")).Where(d => d.Severity == DiagnosticSeverity.Error));
+        Assert.Empty(Said("octave absolute\npart alto1 { clef treble }\nsection A { alto1 { a'1 | } }\nform { ~A }\nscore { staff alto1 }\n"));
+        Assert.Contains(Said("part 2foo { clef treble }\nsection A { c'1 | }\nform { ~A }\nscore { staff }\n"), d => d.Code == DiagnosticCodes.NameStartsWithDigit);
+        Assert.Contains(Said("part as { clef treble }\nsection A { as { c'1 | } }\nform { ~A }\nscore { staff as }\n"),
+            d => d.Message.StartsWith("Expected a name, found 'as', a reserved word", StringComparison.Ordinal));
+    }
 }

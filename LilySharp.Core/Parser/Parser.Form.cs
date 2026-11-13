@@ -750,6 +750,137 @@ internal sealed partial class Parser
         return new SyntaxToken(SyntaxKind.Identifier, "", null, null);
     }
 
+    /// <summary>
+    /// A NAME the lexer cannot read as one word — <c>part a1</c>, <c>part as1</c>,
+    /// <c>voice s1 { }</c>, <c>phrase hc1 { }</c> — is reported once, as what it is, and read as
+    /// the name for the rest of the parse (LYS0045). A pitch, a rest, a drum name and
+    /// <c>q</c> take a glued duration, so the lexer hands <c>a1</c> over as the note
+    /// <c>a</c> and the number <c>1</c>; until 2026-11-14 the declaration then said "Music
+    /// cannot go at the top level" or "Expected 'OpenBrace', found 'RestS'" with a cascade
+    /// behind it, and never that the name had been split (grammar evaluation 4).
+    /// </summary>
+    /// <remarks>
+    /// Done on the token stream before the parse (as <see cref="StrokesNamesOf"/> reads its
+    /// names), because the name is used far from where it is declared and each use would
+    /// cascade on its own. A glued word + number is taken for a name in three places, none of
+    /// which music can stand in: after a word that takes a name (<see cref="TakesAName"/>),
+    /// before a <c>{</c>, and — for a name already refused — anywhere inside a
+    /// <c>score</c> or <c>form</c>. In MUSIC the same letters stay the note they are: a
+    /// phrase named <c>b1</c> cannot be referred to, which the one error says.
+    /// The tree keeps the lexer's own tokens (<c>SyntaxTree.Tokens</c>), so an incremental
+    /// reparse runs this again and an adopted node is checked against the merged stream.
+    /// </remarks>
+    private void AdoptNamesThatLexAsMusic()
+    {
+        // Pass 1: the sites that can only be a name, and what they spell.
+        List<(int Start, int End)>? sites = null;
+        HashSet<string>? names = null;
+        for (int i = 0; i < _tokens.Count; i++)
+        {
+            int end = GluedNameRunEnd(i);
+            if (end < 0) continue;
+            if ((i > 0 && TakesAName(_tokens[i - 1].Kind)) || _tokens[end].Kind == SyntaxKind.OpenBrace)
+            {
+                (sites ??= []).Add((i, end));
+                (names ??= new HashSet<string>(StringComparer.Ordinal)).Add(GluedText(i, end));
+            }
+            i = end - 1;
+        }
+        if (sites is null || names is null) return;
+
+        // Pass 2: merge them, and the refused names where a score or a form uses them.
+        var merged = new List<SyntaxToken>(_tokens.Count);
+        var reported = new HashSet<string>(StringComparer.Ordinal);
+        int site = 0, depth = 0, textPosition = 0;
+        bool opener = false, inScoreOrForm = false;
+        for (int i = 0; i < _tokens.Count; i++)
+        {
+            var token = _tokens[i];
+            int end = GluedNameRunEnd(i);
+            bool isSite = site < sites.Count && sites[site].Start == i;
+            if (end >= 0 && (isSite || (inScoreOrForm && names.Contains(GluedText(i, end)))))
+            {
+                if (isSite) site++;
+                string name = GluedText(i, end);
+                if (reported.Add(name))
+                    _diagnostics.Error(new TextSpan(textPosition + token.LeadingTriviaWidth, name.Length),
+                        DiagnosticCodes.NameReadsAsMusic, NameReadsAsMusicMessage(name, token, _tokens[i + 1].Text));
+                merged.Add(new SyntaxToken(SyntaxKind.Identifier, name, token.LeadingTrivia, _tokens[end - 1].TrailingTrivia));
+                for (; i < end; i++) textPosition += _tokens[i].FullWidth;
+                i = end - 1;
+                continue;
+            }
+
+            switch (token.Kind)
+            {
+                case SyntaxKind.ScoreKeyword or SyntaxKind.FormKeyword when depth == 0: opener = true; break;
+                case SyntaxKind.OpenBrace:
+                    if (depth++ == 0) (inScoreOrForm, opener) = (opener, false);
+                    break;
+                case SyntaxKind.CloseBrace:
+                    depth = Math.Max(0, depth - 1);
+                    if (depth == 0) inScoreOrForm = false;
+                    break;
+            }
+            merged.Add(token);
+            textPosition += token.FullWidth;
+        }
+        _tokens.Clear();
+        _tokens.AddRange(merged);
+    }
+
+    /// <summary>The words a NAME follows, in a declaration or in a score's row.</summary>
+    private static bool TakesAName(SyntaxKind kind) => kind is SyntaxKind.PartKeyword or SyntaxKind.PhraseKeyword
+        or SyntaxKind.SectionKeyword or SyntaxKind.StrokesKeyword or SyntaxKind.VoiceKeyword or SyntaxKind.LyricsKeyword
+        or SyntaxKind.ChordsKeyword or SyntaxKind.StaffKeyword or SyntaxKind.TabKeyword or SyntaxKind.OssiaKeyword;
+
+    /// <summary>
+    /// Where the run of GLUED word and number tokens starting at <paramref name="start"/>
+    /// ends (exclusive), or -1 when the token there is not a word with a number glued to it.
+    /// An ordinary identifier keeps its digits (<c>alto1</c> is one token), so a word the
+    /// lexer split from its number is one that takes a duration: a pitch, a rest, a drum
+    /// name, <c>q</c>.
+    /// </summary>
+    private int GluedNameRunEnd(int start)
+    {
+        static bool IsNumber(SyntaxToken t) => t.Kind == SyntaxKind.IntegerLiteral && t.Text.All(char.IsDigit);
+        static bool IsWord(SyntaxToken t) => t.Kind != SyntaxKind.IntegerLiteral && SyntaxFacts.IsBareWord(t.Text) && char.IsLetter(t.Text[0]);
+        bool Glued(int i) => _tokens[i - 1].TrailingTriviaWidth == 0 && _tokens[i].LeadingTriviaWidth == 0;
+
+        if (start + 2 >= _tokens.Count || !IsWord(_tokens[start]) || !IsNumber(_tokens[start + 1]) || !Glued(start + 1))
+            return -1;
+        if (start > 0 && Glued(start) && (IsWord(_tokens[start - 1]) || IsNumber(_tokens[start - 1])))
+            return -1;   // the middle of a longer run
+        int end = start + 2;
+        while (end < _tokens.Count - 1 && Glued(end) && (IsWord(_tokens[end]) || IsNumber(_tokens[end])))
+            end++;
+        return end;
+    }
+
+    private string GluedText(int start, int end)
+    {
+        var text = new System.Text.StringBuilder();
+        for (int i = start; i < end; i++) text.Append(_tokens[i].Text);
+        return text.ToString();
+    }
+
+    private static string NameReadsAsMusicMessage(string name, SyntaxToken word, string number)
+    {
+        string reading = word.Kind switch
+        {
+            SyntaxKind.RestS => $"the spacer rest '{word.Text}'",
+            SyntaxKind.RestR => $"the rest '{word.Text}'",
+            SyntaxKind.RestR_Full => $"the whole-bar rest '{word.Text}'",
+            _ when SyntaxFacts.IsPitchKind(word.Kind) => $"the note '{word.Text}'",
+            _ when word.Text == "q" => "the chord repetition 'q'",
+            _ when Syntax.DrumNameRegistry.Contains(word.Text) => $"the drum '{word.Text}'",
+            _ => $"the word '{word.Text}'",
+        };
+        return $"'{name}' cannot be a name: it reads as {reading} with the duration {number}. A name may not be "
+            + "a note, a rest or a drum name followed by a number (a1, b1, as1, es2, s1, r2, hc1) - those are music "
+            + "wherever they stand. Spell the name out so that it is one word: alto1, bari1, sop1, tbn1.";
+    }
+
     private GreenNode? ParseRenderItem()
     {
         return Current.Kind switch

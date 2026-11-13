@@ -320,6 +320,14 @@ public static class DiagnosticCodes
     /// (<c>&lt;1 3 5&gt;</c>) in Lily#, so a name must start with a letter.</summary>
     public const string NameStartsWithDigit = "LYS0017";
 
+    /// <summary>Parse error: a declaration name the lexer reads as MUSIC — <c>part a1</c>
+    /// (the note a, a whole note), <c>part as1</c>, <c>voice s1</c> (a spacer rest),
+    /// <c>phrase hc1</c> (a drum). A pitch, a rest, a drum name and <c>q</c> take a glued
+    /// duration, so such a word cannot be a name. Said once a name, and the glued text is read
+    /// as the name from there on (<c>Parser.AdoptNamesThatLexAsMusic</c>; grammar evaluation
+    /// 4, 2026-11-14 — it was "Music cannot go at the top level" and a cascade).</summary>
+    public const string NameReadsAsMusic = "LYS0045";
+
     /// <summary>Lexer error: an unexpected character was encountered.</summary>
     /// <remarks>
     /// ⚠️ Was LYS0014, which <see cref="KeyModeAssumedMajor"/> already held — this and the

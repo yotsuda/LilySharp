@@ -77,6 +77,7 @@ internal sealed partial class Parser
         _reuse = reuse;
         _position = 0;
         _textPosition = 0;
+        AdoptNamesThatLexAsMusic();
         _strokesNames = StrokesNamesOf(_tokens);
 
         // Unknown characters lex to BadToken and no parse rule consumes them —

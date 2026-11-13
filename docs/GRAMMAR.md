@@ -70,6 +70,13 @@ IdentCont      = IdentStart | Digit ;
 (* A name may CONTAIN or END with digits (melody2, foo2bar) but must not START
    with one: a leading digit is a duration (c4) or scale degree (<1 3 5>), so
    'phrase 2foo { }' is rejected with LYS0017 "a name cannot start with a digit". *)
+(* ⚠️ A word that takes a glued DURATION is not an identifier once a number follows it:
+   a pitch (a1, b2, as1, es2, cis4), a rest (r1, s1, R1), a drum name (hc1, sn4) and the
+   chord repetition (q4) lex as that word and the number. So 'part a1', 'voice s1 { }' and
+   'phrase hc1 { }' are rejected with LYS0045 "'a1' cannot be a name: it reads as the note
+   'a' with the duration 1" — once a name; the glued text is then read as the name where
+   only a name can stand (after a declaring word, before a '{', in a score and a form), so
+   nothing else is said. alto1, sop1 and bari1 are one word each and legal. *)
 (* ⚠️ IdentCont listed '-' until 2026-08-19 and that was never true: the lexer scans
    letters, digits and '_' and stops at a hyphen (Lexer.ScanWord). Measured the same day —
    'part foo-bar { }' errors at every one of the four positions it is written in, so no
