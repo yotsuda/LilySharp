@@ -267,6 +267,21 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1225セッションの経緯
+
+### 1.1 第1225セッション（2026-11-11・YT-DELL2）
+
+設計 `docs/dynamics-above-lyrics-design.md` §5 の 3〜6（base `a36a9b749`）。OMR の `open` は 0。
+- **3（上側の配置・`b8c979fa5`）**: `HairpinEngraver` は `dir` をヘアピンの向きから渡す（span bar の隣の譜表も向きの側）。`DynamicAlignEngraver` の線は譜表と向きの組ごと（`DynamicLine.IsAbove`・`AlignedLineGroup.IsAbove`）。強弱記号の `IsAbove` は `DynamicSideAbove`（niente は書いた向きだけ＝TextScript）。`OutsideStaffStacker`: 下の積みは上向きの線・ヘアピンを通すだけ、上の 250 の番 `PlaceAboveDynamicLines` が線・単独の記号・単独のヘアピンを左端の順に置く。`AboveStackMemo` はヘアピンと上向きの組（システム内の序数）を鍵に持つ。
+- **LP の実測で直したもの**: ⑴ ヘアピンの X の端は向きの違う文字にも付く（`HairpinEngraver.BoundText`・LP は bound を向きを読まずに決める。今まで `@f.up@decresc` は文字を無視していた）。⑵ 同じ列の上向きの 2 声部は左端の順で詰めて積む＝上側に残っていた固定 2.0 段差（`StackStep`）を外した（`test/above-dynamics` の snapshot 1 枚・LP と一致）。
+- **4（場所取り・同 commit）**: 上向きのヘアピンと強弱記号を譜表の UP の輪郭へ字形どおりに（`SkylineBuilder.AddHairpinsToSkyline`・`AddDynamicsToSkyline`・`DynamicEngraver.AboveCollisionMove`）。直す前は上向きのヘアピンが*下*の輪郭に幻の場所を取り、合唱 4 段の段間が LP より 1.5〜1.9 広かった。
+- **5（書き出し・同 commit）**: `.ly` は `\new Staff \with { \dynamicUp }`（`StandsDynamicsUp`＝collector と同じ `GetVoiceBindings().WithLyrics`）。MusicXML は強弱記号とウェッジの placement を紙面の向きで書く（今まで `.up` も `below` だった）。
+- **照合**（Lab `sessions/p1225/dyn`・LP 2.26.0）: §6 の譜（ヘアピン中心 8.2608・ff 8.8608／8.9426）、強弱記号だけ 11 個、合唱 4 段（段の上端 11.9229／23.5426／35.6181／49.0212）、段またぎ（`brkup`）が 3 桁で一致。**D3 は LP の規則に替えた（オーナー決定「LP に合わせて」・`40f99e651`）**: 第1224 の読みは外れていて、LP は向きを書いた記号で線の向きを決め、後続の書いていない記号を従わせる（1 拍の中はヘアピン → 文字の順）。`Svg/Collector/DynamicLineSides`（collector の出口 `CaptureScoreContent` で解く＝歩きは状態を持たない・MusicXML も同じ部品）。ヘアピンが抜けた線に残る文字どうしもそろえる（`DynamicItem.LineId`）。`d3` の 3 小節が LP と 3 桁で一致（設計 §3.6）。
+- **6**: 全 svg の掃き 1038 冊 1264 枚で動いたのは 7 枚＝歌詞のある譜表に強弱記号がある本 6（`inporder` 2 冊は LP の双子なので `@f.down` に直した・`harbour-lights`・`morning-light`・`site/ode-to-joy`・Lab `がくふ`）と `test/above-dynamics`。文法書 3 つと CHANGELOG 2 つ。網 2 本（`LyricStaffOrderTests`・台帳 `lyrics.dynamic.staff-to-lyric` の本 PLYD）は「歌詞の上の譜表の*下*の強弱記号」を測る本なので `.down` を書いた。
+- 網は `DynamicsAboveLyricsTests`（LP の値で止める 3 本＝§6・単独のヘアピン 3.3666・合唱の段間、D3 と端、2 声部の積み順、歌詞の行の出し入れの増分＝フル、memo の再利用、双子、MusicXML）。毒は Lab `sessions/p1225/poisons.ps1`（結果は門の行）。
+- 7.6: 上下の配置は LP の aligned_side と skyline_spacing の移植の向き違い（REF は各所・`BoundText` は dynamic-engraver.cc:168-177）。向きの既定は LILYSHARP-OWN（オーナー決定）、線の規則は dynamic-align-engraver.cc:119-160・:194-235 の移植。7.7 の匂い: 2 声部の譜表で線が声部を見ない（上の行）／上の積みの順は「上向きは来た順」のまま場所取り側（`AddDynamicsToSkyline` の `InTurnOrder`）に残る＝絵の側は左端の順／増分描画の網は 1 段と 8 段の 2 形だけ／実機のプレビューは未確認。perf: 上向きの線が無いシステムでは走査 1 回（配列を読むだけ・複製なし）、memo の鍵にヘアピンの配列 1 本＝測っていない（オーナーの指示待ち）。拡張の npm テストは回していない（TS は不変）。
+- 門（`-End`、base `a36a9b749`）: 開始時 full 15196 合格 / 0 失敗 / skip 2 / 合計 15198、終了時 full 15217 合格 / 0 失敗 / skip 2 / 合計 15219（`p1225` の `run4.trx`・+21 は足した網）。台帳 1440 点 / ss 非ゼロ 302 総和 18.15959129 / OPEN 0。snapshot 251 枚（1 枚更新）。Core `+` 958 行 / LILYPOND-REF 8 / OWN 0。棚卸しの差分なし。毒: 配置の 15 本のうち 14 本が赤（`p1225/poisons.log`・P11 は網を足して別に赤を確認）、緑は P9（memo がヘアピンを比べない）＝観測者なし（ヘアピンが変わる編集はその段の輪郭の identity も変えるので memo はどのみち外れる）。線の規則の 7 本は全部赤（`poisons2.log`）。掃き 2 回目（`sweep2`）: 第1224 との差は 5 枚＝既定の向きで動いた本だけ（線の規則で動く本は 0）。未 push 81 件（この締めの commit を含む）。
+
 ## 以下は第1224セッションの経緯
 
 ### 1.1 第1224セッション（2026-11-11・YT-DELL2）

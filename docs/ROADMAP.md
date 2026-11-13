@@ -76,8 +76,9 @@ asked — none is decided.
 - **`@harmonic(N)` on a chord**: natural harmonics on several strings at once, today written
   in voices (LYS4072).
 - **Another part's marks in a part sheet's exports**: a part sheet's page prints the rehearsal
-  mark, tempo and rit. another part writes (2026-11-13); its LilyPond twin and MusicXML do
-  not yet carry the mark or the rit.
+  mark, tempo and rit. another part writes (2026-11-13). Its MusicXML carries the section
+  labels and the tempos since 2026-11-14; a `@mark` on another part's note and a rit. are not
+  yet in it, and the LilyPond twin carries neither.
 
 ### LilyPond's other header lines (listed 2026-11-13, the owner's decision)
 
