@@ -235,6 +235,9 @@ export class VoiceRenderer {
     /** Called when the engine begins on a voice, with its key (the host shows the bar by it). */
     onSinging: ((key: string) => void) | undefined;
 
+    /** Called with what the engine says of the voice of `key` as it sings it (SingProgress). */
+    onProgress: ((key: string, progress: SingProgress) => void) | undefined;
+
     /** True while the engine is singing the voice of `key`. */
     isSinging(key: string): boolean { return this.inFlight.has(key); }
 
@@ -261,7 +264,7 @@ export class VoiceRenderer {
             const heard = new Set<(progress: SingProgress) => void>();
             this.hearing.set(key, heard);
             this.onSinging?.(key);
-            const asked: Promise<RenderedVoice> = this.backend.sing(key, score, voice, signal, p => { for (const hear of heard) { hear(p); } })
+            const asked: Promise<RenderedVoice> = this.backend.sing(key, score, voice, signal, p => { this.onProgress?.(key, p); for (const hear of heard) { hear(p); } })
                 .then(v => { this.done.set(key, v); return v; });
             rendered = asked;
             this.inFlight.set(key, asked);

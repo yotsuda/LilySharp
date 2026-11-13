@@ -16,7 +16,7 @@
 
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { CantoriaApi, SungVoiceDto } from '../src/singerCore';
+import { CantoriaApi, SingProgress, SungVoiceDto } from '../src/singerCore';
 import { CantoriaExtensionBackend, VoiceRenderer } from '../src/singer';
 
 // Owner's report 2026-11-13 (kaze.lys): the microphone pulsed for 24 s with no bar under Play.
@@ -30,15 +30,18 @@ const alto: SungVoiceDto = { Part: 'alto', Language: 'ja', Notes: [{ T: 0, D: 1,
 describe('a renderer says which voice the engine is on', () => {
     it('when it begins on a key, once, and for as long as it sings it', async () => {
         let land: (v: { wav: string; duration: number }) => void = () => undefined;
+        let say: ((progress: SingProgress) => void) | undefined;
         const api: CantoriaApi = {
             version: '0.0.0', apiVersion: 1,
             status: async () => ({ ready: true, voice: 'neutrino/MERROW', problems: [] }),
-            sing: () => new Promise(resolve => { land = resolve; }),
+            sing: (_score, options) => { say = options?.onProgress; return new Promise(resolve => { land = resolve; }); },
             release: () => undefined,
         };
         const renderer = new VoiceRenderer(new CantoriaExtensionBackend(api));
         const begun: string[] = [];
         renderer.onSinging = key => begun.push(key);
+        const heard: { key: string; toSing: number; sung: number }[] = [];
+        renderer.onProgress = (key, p) => heard.push({ key, toSing: p.toSing, sung: p.sung });
 
         const first = await renderer.render(alto, 1);
         assert.equal(first.cached, false);
@@ -49,6 +52,11 @@ describe('a renderer says which voice the engine is on', () => {
         const second = await renderer.render(alto, 1);
         assert.equal(second.key, first.key);
         assert.deepEqual(begun, [first.key]);
+
+        // What the engine says of the render is heard by the key, whoever asked (owner's decision
+        // 2026-11-13): the job that asked may have been replaced, and the bar is still counted.
+        say?.({ toSing: 8, sung: 2 });
+        assert.deepEqual(heard, [{ key: first.key, toSing: 8, sung: 2 }]);
 
         land({ wav: __filename, duration: 1 });
         await first.rendered;

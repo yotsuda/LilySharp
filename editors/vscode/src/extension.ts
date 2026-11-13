@@ -4592,6 +4592,7 @@ async function renderer(): Promise<VoiceRenderer | undefined> {
     if (exe) {
         voiceRenderer = new VoiceRenderer(new SingerProcess(exe, line => outputChannel.appendLine(line)));
         voiceRenderer.onSinging = singingStarted;
+        voiceRenderer.onProgress = singingProgress;
     } else {
         const ext = vscode.extensions.getExtension(CANTORIA_EXTENSION_ID);
         if (!ext) { return undefined; }
@@ -4600,6 +4601,7 @@ async function renderer(): Promise<VoiceRenderer | undefined> {
             if (!api) { outputChannel.appendLine(`singer: ${CANTORIA_EXTENSION_ID} is installed but its API is not the shape Lily# reads`); return undefined; }
             voiceRenderer = new VoiceRenderer(new CantoriaExtensionBackend(api, tellSingerNote));
             voiceRenderer.onSinging = singingStarted;
+        voiceRenderer.onProgress = singingProgress;
         } catch (e) {
             outputChannel.appendLine(`singer: ${CANTORIA_EXTENSION_ID} did not activate: ${String(e)}`);
             return undefined;
@@ -4957,6 +4959,22 @@ function singingStarted(key: string): void {
 }
 
 /**
+ * What the engine says of the voice of `key` as it sings it (VoiceRenderer.onProgress): to every
+ * preview waiting for THAT voice, whichever job asked the engine (owner's decision 2026-11-13: the
+ * count went to the asking job's page only, and a job replaced meanwhile kept it to itself, so
+ * the bar ran on its estimate). A part that has since asked for another text waits under another
+ * key and hears nothing of this one.
+ */
+function singingProgress(key: string, p: SingProgress): void {
+    for (const a of askedVoices.get(key) ?? []) {
+        if (!(sungParts.get(a.panel)?.has(a.part) ?? true)) { continue; }
+        try {
+            void a.panel.webview.postMessage({ type: 'voiceProgress', part: a.part, key, toSing: p.toSing, sung: p.sung, msPerSecond: voiceRenderRate });
+        } catch { /* the preview is gone */ }
+    }
+}
+
+/**
  * One queued voice: rendered by the engine unless rendered before, and handed to the page as WAV
  * bytes (`voice`), with `preparing` on the badge while the engine sings and `failed` when it
  * cannot, or when it has not answered in PREPARE_TIMEOUT_MS. A voice whose preview turned to
@@ -4978,11 +4996,10 @@ async function renderVoice(job: PrepareJob): Promise<void> {
     // pace learnt so far, for the time before the first phrase is in. The key is the job's own,
     // which the page holds its count by.
     let told: SingProgress | undefined;
-    const onProgress = (p: SingProgress) => {
-        told = p;
-        if (!wanted()) { return; }
-        void panel.webview.postMessage({ type: 'voiceProgress', part: id, key: job.key, toSing: p.toSing, sung: p.sung, msPerSecond: voiceRenderRate });
-    };
+    // (The page hears it by the voice's key, from singingProgress: a job a newer prepare has
+    // replaced goes on being sung for the one that waits, and the bar must still be counted.
+    // Here it is kept for the pace learnt below.)
+    const onProgress = (p: SingProgress) => { told = p; };
     try {
         outputChannel.appendLine(`singer: ${clockNow()} ${id}: to the engine`);
         ({ key, rendered, cached } = await engine.render(voice, speed, job.letGo.signal, onProgress));

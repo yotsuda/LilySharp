@@ -840,8 +840,12 @@ describe('the voice bar counts what is sung anew', () => {
 
     it('is told by the engine through the host, the count held by the render\'s key', () => {
         const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
-        // The host: every word of the engine goes to the page with the job's key and the pace learnt.
-        assert.match(ext, /void panel\.webview\.postMessage\(\{ type: 'voiceProgress', part: id, key: job\.key, toSing: p\.toSing, sung: p\.sung, msPerSecond: voiceRenderRate \}\);/);
+        // The host: every word of the engine goes to the pages waiting for THAT voice, by its key,
+        // with the pace learnt - whichever job asked (owner's decision 2026-11-13: a job replaced
+        // meanwhile kept the count to itself, and the bar ran on its estimate).
+        assert.match(ext, /function singingProgress\(key: string, p: SingProgress\): void \{\s*for \(const a of askedVoices\.get\(key\) \?\? \[\]\) \{/);
+        assert.match(ext, /void a\.panel\.webview\.postMessage\(\{ type: 'voiceProgress', part: a\.part, key, toSing: p\.toSing, sung: p\.sung, msPerSecond: voiceRenderRate \}\);/);
+        assert.match(ext, /voiceRenderer\.onProgress = singingProgress;/);
         assert.match(ext, /await engine\.render\(voice, speed, job\.letGo\.signal, onProgress\)\);/);
         // The pace is learnt on the seconds sung anew, and not at all from next to nothing.
         assert.match(ext, /const sungSecondsNow = told \? told\.toSing : v\.duration;\s*if \(!told \|\| told\.toSing >= 1\) \{/);
