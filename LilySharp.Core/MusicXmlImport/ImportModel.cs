@@ -220,6 +220,10 @@ internal sealed class ImportNote : ImportItem
     public int Step { get; set; }
     /// <summary>Chromatic alteration in semitones (-2..+2).</summary>
     public int Alter { get; set; }
+    /// <summary>A quarter tone on top of <see cref="Alter"/>: +1 a quarter sharp higher
+    /// (<c>ih</c>, <c>isih</c>), −1 a quarter flat lower (<c>eh</c>, <c>eseh</c>), 0 none —
+    /// <c>PitchSyntax.QuarterOffset</c>, read off a half-integer <c>&lt;alter&gt;</c>.</summary>
+    public int Quarter { get; set; }
     /// <summary>MusicXML octave number (middle C = octave 4).</summary>
     public int Octave { get; set; }
     /// <summary>The written note value: 1=whole, 2=half, 4=quarter, 8, 16, ...</summary>
@@ -360,6 +364,8 @@ internal sealed class ImportGraceNote
 {
     public int Step { get; set; }
     public int Alter { get; set; }
+    /// <summary><see cref="ImportNote.Quarter"/>.</summary>
+    public int Quarter { get; set; }
     public int Octave { get; set; }
     public int NoteValue { get; set; } = 8;
     public int Dots { get; set; }

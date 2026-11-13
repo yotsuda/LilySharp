@@ -881,7 +881,8 @@ public sealed partial class MeasureCollector
             char name = pitch.PitchName.ToLowerInvariant()[0];
             int step = GetPitchIndex(name);
             int anchor = _v.Octave.Resolve(step, 0, name) + pitch.OctaveOffset + octaveShift;
-            rp = ResolveAbsolutePitch(step, pitch.AccidentalOffset, anchor, pitch.SourceStart);
+            rp = ResolveAbsolutePitch(step, pitch.AccidentalOffset, anchor, pitch.SourceStart,
+                quarterOffset: pitch.QuarterOffset);
             _v.Octave.CurrentOctave = rp.RelativeOctave; // the resolved (maybe forced) octave, as a chord's root
         }
         int staffPosition = rp.StaffPosition;

@@ -21,6 +21,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using LilySharp.Core.LilyPond;
 using LilySharp.Core.MusicXml;
+using LilySharp.Core.MusicXmlImport;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Syntax;
 using Xunit;
@@ -221,5 +222,67 @@ public class Session1228LeftoversTests
         Assert.Equal(element, Assert.Single(grace.Articulations));
         // The control: nothing else of the bar carries it.
         Assert.All(notes.Where(n => !ReferenceEquals(n, grace)), n => Assert.Empty(n.Articulations));
+    }
+
+    // ========== 4. Quarter tones in `check --pitches` and in `import` ==========
+
+    private static List<string> Resolved(string music)
+        => ResolvedPitches.ForFile(SyntaxTree.Parse(Book("", music)))!.Select(e => e.Pitch).ToList();
+
+    /// <summary>
+    /// The resolved pitch names its quarter tone: '+' a quarter sharp higher, 'd' a quarter
+    /// flat lower, after the accidental. It was dropped, and <c>cih'</c> read "C4".
+    /// </summary>
+    [Fact]
+    public void AResolvedPitch_NamesItsQuarterTone()
+    {
+        Assert.Equal(["C+4", "Cd4", "C#+4", "Cbd4"], Resolved("cih'4 ceh' cisih' ceseh' |"));
+        Assert.Equal(["Ed4", "Ad3", "B+5", "F+4"], Resolved("eeh'4 aeh bih'' fih' |"));
+        // The control: the whole-semitone names are as they were.
+        Assert.Equal(["C4", "C#4", "Cb4", "Cx4"], Resolved("c'4 cis' ces' cisis' |"));
+        // A chord's members too — and a note with its own quarter tone beside it is no unison.
+        Assert.Equal(["C4", "C+4"], Resolved("<c' cih'>1 |"));
+        Assert.DoesNotContain(Said(Book("", "<c' cih'>1 |")), d => d.Code == DiagnosticCodes.ChordSamePitchTwice);
+        Assert.Contains(Said(Book("", "<c' c'>1 |")), d => d.Code == DiagnosticCodes.ChordSamePitchTwice);
+    }
+
+    /// <summary>
+    /// <c>lysc xml</c> then <c>lysc import</c>: the four quarter-tone names come back as written
+    /// (0.5 was read as <c>c</c>, 1.5 as <c>cisis</c>), in either octave mode.
+    /// </summary>
+    [Fact]
+    public void Import_ReadsBackTheQuarterTonesTheExportWrote()
+    {
+        string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(
+            Book("", "cih'4 ceh' cisih' ceseh' | c'4 cis' ces' cisis' |"))).ToXml().ToString();
+        var (lys, report) = new MusicXmlImporter().Import(xml);
+        Assert.Matches(@"cih'4(@mark\(""Main""\))? ceh'4 cisih'4 ceseh'4 \| c'4 cis'4 ces'4 cisis'4 \|", lys);
+        Assert.False(report.HasWarnings, string.Join("\n", report.Warnings));
+
+        var (relative, _) = new MusicXmlImporter().Import(xml, relativeOctave: true);
+        Assert.Matches(@"cih'4(@mark\(""Main""\))? ceh4 cisih4 ceseh4 \|", relative);
+    }
+
+    /// <summary>
+    /// A chord's member and a grace note are read the same way, and an alteration the language
+    /// has no name for (a sixth tone, 0.25) is rounded WITH a warning that names it.
+    /// </summary>
+    [Fact]
+    public void Import_ReadsAQuarterToneInAChordAndAGrace_AndSaysWhatItCannotSpell()
+    {
+        static string Note(string step, string alter, string rest)
+            => $"<note>{rest}<pitch><step>{step}</step><alter>{alter}</alter><octave>4</octave></pitch>";
+        string xml = "<score-partwise version=\"4.0\"><part-list><score-part id=\"P1\"><part-name>m</part-name></score-part></part-list>"
+            + "<part id=\"P1\"><measure number=\"1\"><attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time>"
+            + "<clef><sign>G</sign><line>2</line></clef></attributes>"
+            + Note("C", "0.5", "") + "<duration>1</duration><type>quarter</type></note>"
+            + Note("E", "-0.5", "<chord/>") + "<duration>1</duration><type>quarter</type></note>"
+            + Note("A", "-1.5", "<grace/>") + "<type>16th</type></note>"
+            + Note("F", "1.5", "") + "<duration>1</duration><type>quarter</type></note>"
+            + Note("G", "0.25", "") + "<duration>2</duration><type>half</type></note>"
+            + "</measure></part></score-partwise>";
+        var (lys, report) = new MusicXmlImporter().Import(xml);
+        Assert.Contains("<cih' eeh'>4 grace { aeseh'16 } fisih'4 g'2 |", lys);
+        Assert.Contains("0.25", Assert.Single(report.Warnings));
     }
 }

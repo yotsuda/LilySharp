@@ -601,7 +601,7 @@ public sealed partial class MeasureCollector
                     int anchor = _v.Octave.Resolve(rootStepForStack, 0, firstPitchName)
                         + pitch.OctaveOffset + chordOctave;
                     rp = ResolveAbsolutePitch(rootStepForStack, pitch.AccidentalOffset,
-                        anchor, pitch.SourceStart);
+                        anchor, pitch.SourceStart, quarterOffset: pitch.QuarterOffset);
                     // The RESOLVED octave, not `anchor`: the octave-mode converter may have
                     // forced the root (OctaveOverride), and the members and the next note
                     // must follow the root it will write.
@@ -624,7 +624,8 @@ public sealed partial class MeasureCollector
                 // from LilyPond's per-member relative chain.)
                 int step = GetPitchIndex(pitch.PitchName.ToLowerInvariant()[0]);
                 int octave = firstOctave + (step >= rootStepForStack ? 0 : 1) + pitch.OctaveOffset;
-                rp = ResolveAbsolutePitch(step, pitch.AccidentalOffset, octave, pitch.SourceStart);
+                rp = ResolveAbsolutePitch(step, pitch.AccidentalOffset, octave, pitch.SourceStart,
+                    quarterOffset: pitch.QuarterOffset);
             }
             int staffPosition = rp.StaffPosition;
 
@@ -1395,7 +1396,8 @@ public sealed partial class MeasureCollector
         // afterwards, so a transposed part still resolves octaves from what the
         // user wrote.
         int actualOctave = _v.Octave.Resolve(step, pitch.OctaveOffset, pitchName) + groupOctaves;
-        return ResolveAbsolutePitch(step, pitch.AccidentalOffset, actualOctave, pitch.SourceStart);
+        return ResolveAbsolutePitch(step, pitch.AccidentalOffset, actualOctave, pitch.SourceStart,
+            quarterOffset: pitch.QuarterOffset);
     }
 
     /// <summary>
@@ -1407,8 +1409,11 @@ public sealed partial class MeasureCollector
     /// <param name="fixedOctave">The octave is not the writer's to convert — a <c>diagram(…)</c>
     /// item's note, where its string is — so the octave-mode converter neither records nor
     /// forces it (it has no pitch text to rewrite).</param>
+    /// <param name="quarterOffset">The written quarter tone on top of the accidental
+    /// (<c>PitchSyntax.QuarterOffset</c>: <c>cih</c> +1, <c>ceh</c> −1) — a transpose leaves it
+    /// as it is, and only the trace reads it here (the head's glyph is the caller's).</param>
     private ResolvedPitch ResolveAbsolutePitch(int step, int accidentalOffset, int actualOctave, int position,
-        bool fixedOctave = false)
+        bool fixedOctave = false, int quarterOffset = 0)
     {
         // Every written pitch passes here once per time the walk reads it — a note, a chord
         // or arpeggio member, a scale degree — so this is the one place the octave-mode
@@ -1433,13 +1438,17 @@ public sealed partial class MeasureCollector
 
         // RelativeOctave keeps the ORIGINAL octave for the next note's chain.
         if (RecordsPitchTrace)
-            _pitchTrace.Add(new PitchTraceEntry(position, FormatPitch(dStep, dAlt, dOctave)));
+            _pitchTrace.Add(new PitchTraceEntry(position, FormatPitch(dStep, dAlt, dOctave, quarterOffset)));
         return new ResolvedPitch(basePosition, actualOctave, dStep, dAlt, dOctave);
     }
 
     /// <summary>Formats a resolved pitch as a letter + accidental + octave number
-    /// (C4 = middle C), e.g. "C4", "F#5", "Bb3", "Cx4" (double sharp).</summary>
-    private static string FormatPitch(int step, int alteration, int octave)
+    /// (C4 = middle C), e.g. "C4", "F#5", "Bb3", "Cx4" (double sharp). A quarter tone is a
+    /// '+' (a quarter sharp higher) or a 'd' (a quarter flat lower) after the accidental:
+    /// <c>cih'</c> "C+4", <c>cisih'</c> "C#+4", <c>ceh'</c> "Cd4", <c>ceseh'</c> "Cbd4" — ASCII,
+    /// as the rest is (these strings reach legacy-codepage consoles). Until 2026-11-14 the
+    /// quarter was dropped and <c>cih'</c> was reported as C4 (leftover of session 1227).</summary>
+    private static string FormatPitch(int step, int alteration, int octave, int quarterOffset = 0)
     {
         char letter = "CDEFGAB"[((step % 7) + 7) % 7];
         string acc = alteration switch
@@ -1450,7 +1459,8 @@ public sealed partial class MeasureCollector
             <= -2 => "bb",
             _ => ""
         };
-        return $"{letter}{acc}{octave}";
+        string quarter = quarterOffset switch { > 0 => "+", < 0 => "d", _ => "" };
+        return $"{letter}{acc}{quarter}{octave}";
     }
 
     private static int GetPitchIndex(char pitch) => RelativeOctave.StepIndex(pitch);

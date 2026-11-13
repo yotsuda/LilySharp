@@ -1481,7 +1481,7 @@ internal static class LysWriter
             // A drum is a name, in either octave mode.
             var octaves = note.DrumName != null ? null : rel;
             string body = members.Count == 1
-                ? (octaves != null ? octaves.Note(note.Step, note.Alter, note.Octave) : Pitch(note))
+                ? (octaves != null ? octaves.Note(note.Step, note.Alter, note.Octave, note.Quarter) : Pitch(note))
                 : (octaves != null ? octaves.Chord(members)
                                : "<" + string.Join(" ", members.Select(m => Pitch(m) + MemberMarks(m))) + ">");
             string token = body + Value(note.NoteValue, note.Dots);
@@ -1556,7 +1556,7 @@ internal static class LysWriter
     }
 
     // A Lily# absolute-octave pitch token: letter + accidental + octave marks.
-    private static string Pitch(ImportNote note) => note.DrumName ?? PitchToken(note.Step, note.Alter, note.Octave);
+    private static string Pitch(ImportNote note) => note.DrumName ?? PitchToken(note.Step, note.Alter, note.Octave, note.Quarter);
 
     /// <summary>The marks a note carries on its own pitch: <c>\N</c>, <c>@finger(N)</c>, and the
     /// tie of a chord's head tied without the others.</summary>
@@ -1565,17 +1565,10 @@ internal static class LysWriter
            + (note.Fingering is { } f ? "@finger(" + f + ")" : "")
            + (note.TiedAlone ? "~" : "");
 
-    private static string PitchToken(int step, int alter, int octave)
+    private static string PitchToken(int step, int alter, int octave, int quarter = 0)
     {
         char letter = "cdefgab"[((step % 7) + 7) % 7];
-        string acc = alter switch
-        {
-            2 => "isis",
-            1 => "is",
-            -1 => "es",
-            -2 => "eses",
-            _ => "",
-        };
+        string acc = AlterSuffix(alter, quarter);
         // A bare c is C3 in Lily#'s absolute octaves, LilyPond's (owner's decision 2026-10-28).
         int marks = octave - Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
         string octaveMarks = marks > 0 ? new string('\'', marks)
@@ -1616,10 +1609,10 @@ internal static class LysWriter
         {
             var head = c[0];
             string body = c.Count == 1
-                ? (rel != null ? rel.Note(head.Step, head.Alter, head.Octave) : PitchToken(head.Step, head.Alter, head.Octave))
+                ? (rel != null ? rel.Note(head.Step, head.Alter, head.Octave, head.Quarter) : PitchToken(head.Step, head.Alter, head.Octave, head.Quarter))
                 : rel != null
-                    ? rel.Chord(c.Select(m => new ImportNote { Step = m.Step, Alter = m.Alter, Octave = m.Octave }).ToList())
-                    : "<" + string.Join(" ", c.Select(m => PitchToken(m.Step, m.Alter, m.Octave))) + ">";
+                    ? rel.Chord(c.Select(m => new ImportNote { Step = m.Step, Alter = m.Alter, Quarter = m.Quarter, Octave = m.Octave }).ToList())
+                    : "<" + string.Join(" ", c.Select(m => PitchToken(m.Step, m.Alter, m.Octave, m.Quarter))) + ">";
             return body + Value(head.NoteValue, head.Dots) + (i == columns.Count - 1 && groupSlur ? "(" : "");
         });
         return keyword + " { " + string.Join(" ", tokens) + " }";
@@ -1635,9 +1628,9 @@ internal static class LysWriter
         private int _ref = Svg.Model.InstrumentDefaults.DefaultAnchorOctave * 7 + Semantics.RelativeOctave.FrameStartStep; // F3, diatonic
 
         /// <summary>Spell one note and advance the reference to it.</summary>
-        public string Note(int step, int alter, int octave)
+        public string Note(int step, int alter, int octave, int quarter = 0)
         {
-            string token = Spell(_ref, step, alter, octave);
+            string token = Spell(_ref, step, alter, octave, quarter);
             _ref = octave * 7 + Mod7(step);
             return token;
         }
@@ -1663,7 +1656,7 @@ internal static class LysWriter
                 var m = members[i];
                 int letter = Mod7(m.Step);
                 int placed = i == 0 ? DefaultOctave(_ref, rootStep) : anchorOctave + (letter >= rootStep ? 0 : 1);
-                parts.Add(Format(letter, m.Alter, m.Octave - placed) + MemberMarks(m));
+                parts.Add(Format(letter, m.Alter, m.Octave - placed, m.Quarter) + MemberMarks(m));
             }
             _ref = anchorOctave * 7 + rootStep;
             return "<" + string.Join(" ", parts) + ">";
@@ -1673,16 +1666,16 @@ internal static class LysWriter
         private static int DefaultOctave(int refDiatonic, int letter)
             => (int)System.Math.Round((refDiatonic - letter) / 7.0, System.MidpointRounding.AwayFromZero);
 
-        private static string Spell(int refDiatonic, int step, int alter, int octave)
+        private static string Spell(int refDiatonic, int step, int alter, int octave, int quarter)
         {
             int letter = Mod7(step);
-            return Format(letter, alter, octave - DefaultOctave(refDiatonic, letter));
+            return Format(letter, alter, octave - DefaultOctave(refDiatonic, letter), quarter);
         }
 
-        private static string Format(int letter, int alter, int marks)
+        private static string Format(int letter, int alter, int marks, int quarter)
         {
             string oct = marks > 0 ? new string('\'', marks) : marks < 0 ? new string(',', -marks) : "";
-            return "cdefgab"[letter] + AlterSuffix(alter) + oct;
+            return "cdefgab"[letter] + AlterSuffix(alter, quarter) + oct;
         }
 
         private static int Mod7(int step) => ((step % 7) + 7) % 7;
@@ -1836,12 +1829,19 @@ internal static class LysWriter
         _ => null,
     };
 
-    private static string AlterSuffix(int alter) => alter switch
+    /// <summary>The accidental suffix of a note name; with a quarter tone
+    /// (<see cref="ImportNote.Quarter"/>) the four the language has: <c>ih</c>, <c>isih</c>,
+    /// <c>eh</c>, <c>eseh</c> (2026-11-14).</summary>
+    private static string AlterSuffix(int alter, int quarter = 0) => (alter, quarter) switch
     {
-        2 => "isis",
-        1 => "is",
-        -1 => "es",
-        -2 => "eses",
+        (0, 1) => "ih",
+        (1, 1) => "isih",
+        (0, -1) => "eh",
+        (-1, -1) => "eseh",
+        (2, _) => "isis",
+        (1, _) => "is",
+        (-1, _) => "es",
+        (-2, _) => "eses",
         _ => "",
     };
 

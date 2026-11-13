@@ -821,7 +821,7 @@ internal static class MusicXmlReader
                         ? $"runs from voice {start.Voice} to voice {voice} (bar {measure}); a Lily# tie stays in its voice"
                         : !Next(voice, (start.Measure, start.Onset), (measure, onset))
                             ? $"passes over other notes of its voice to bar {measure}; a Lily# tie joins a note to the next"
-                            : start.Note.Step != note.Step || start.Note.Alter != note.Alter
+                            : start.Note.Step != note.Step || start.Note.Alter != note.Alter || start.Note.Quarter != note.Quarter
                                 ? $"joins two spellings of a pitch (bar {measure}); a Lily# tie joins one written pitch"
                                 : null;
                     if (why != null)
@@ -1198,14 +1198,13 @@ internal static class MusicXmlReader
         string step = Local(pitch, "step")?.Value.Trim().ToUpperInvariant() ?? "C";
         note.Step = "CDEFGAB".IndexOf(step[0]);
         if (note.Step < 0) note.Step = 0;
-        note.Alter = (int)Math.Round(ParseDouble(Local(pitch, "alter")?.Value));
+        string? alterText = Local(pitch, "alter")?.Value;
+        (note.Alter, note.Quarter, bool alterSpelled) = ReadAlter(alterText);
         note.Octave = int.TryParse(Local(pitch, "octave")?.Value, out int oct) ? oct : 4;
 
-        if (Math.Abs(note.Alter) > 2)
-        {
-            report.Warn(measureNo, "quarter-tone / extreme accidental approximated.");
-            note.Alter = Math.Clamp(note.Alter, -2, 2);
-        }
+        if (!alterSpelled)
+            report.Warn(measureNo, $"an alteration of {alterText?.Trim()} semitones has no Lily# spelling (whole semitones "
+                + "to two, and the quarter tones 0.5 and 1.5 either way); the nearest is written.");
 
         // Ties: either the sounding <tie> or the notated <tied> marks a tie.
         foreach (var t in Els(el, "tie").Concat(
@@ -1383,6 +1382,25 @@ internal static class MusicXmlReader
             }
     }
 
+    /// <summary>
+    /// A <c>&lt;alter&gt;</c> as Lily# spells it: whole semitones, and a quarter tone on top for
+    /// the four half-integer values the language has names for — 0.5 <c>ih</c>, −0.5
+    /// <c>eh</c>, 1.5 <c>isih</c>, −1.5 <c>eseh</c> (what <c>MusicXmlExporter</c> writes for
+    /// them). Any other value is brought to the nearest whole one and <c>Spelled</c> is false.
+    /// </summary>
+    /// <remarks>Until 2026-11-14 every alter was rounded with no word: 0.5 came back as
+    /// <c>c</c> and 1.5 as <c>cisis</c> (leftover of session 1227).</remarks>
+    internal static (int Alter, int Quarter, bool Spelled) ReadAlter(string? text)
+    {
+        double alter = ParseDouble(text);
+        if (alter is 0.5 or 1.5)
+            return ((int)(alter - 0.5), 1, true);
+        if (alter is -0.5 or -1.5)
+            return ((int)(alter + 0.5), -1, true);
+        int whole = (int)Math.Round(alter, MidpointRounding.AwayFromZero);
+        return (Math.Clamp(whole, -2, 2), 0, whole == alter && Math.Abs(whole) <= 2);
+    }
+
     /// <summary>A grace &lt;note&gt; → an <see cref="ImportGraceNote"/> (pitch + written
     /// value + slash), or null for a rest/pitchless grace.</summary>
     private static ImportGraceNote? ReadGraceNote(XElement el)
@@ -1393,10 +1411,12 @@ internal static class MusicXmlReader
         string step = Local(pitch, "step")?.Value.Trim().ToUpperInvariant() ?? "C";
         int stepIdx = "CDEFGAB".IndexOf(step.Length > 0 ? step[0] : 'C');
         var (value, dots) = NoteValue(el, 1); // grace has no duration → use <type>
+        var graceAlter = ReadAlter(Local(pitch, "alter")?.Value);
         return new ImportGraceNote
         {
             Step = stepIdx < 0 ? 0 : stepIdx,
-            Alter = (int)Math.Round(ParseDouble(Local(pitch, "alter")?.Value)),
+            Alter = graceAlter.Alter,
+            Quarter = graceAlter.Quarter,
             Octave = int.TryParse(Local(pitch, "octave")?.Value, out int oct) ? oct : 4,
             NoteValue = value,
             Dots = dots,
