@@ -603,6 +603,42 @@ internal static class PedalEngraver
         ImmutableArray<MusicMarkItem> musicMarks, Collector.SectionPlays? plays = null)
         => PairPedalBrackets(musicMarks, plays).Brackets;
 
+    /// <summary>
+    /// The pedal marks of a whole collect that pair with nothing, asked STAFF BY STAFF — the
+    /// way the page pairs them (<c>LayoutEngine</c> and <see cref="SolveAndSeed"/> hand
+    /// <see cref="DetectPedalBrackets"/> one staff's marks at a time).
+    /// </summary>
+    /// <remarks>
+    /// Until 2026-11-14 the validators asked <see cref="PairPedalBrackets"/> over every staff's
+    /// marks at once, and that walk has no staff filter: with a pedal in two parts, the first
+    /// part's <c>@!sustain</c> lifted whichever part pressed last and every other part's release
+    /// was told "no pedal is down in this voice" — beside its own drawn, closed bracket (grammar
+    /// evaluation 4, 2026-11-13). One per (position, fault): a part engraved on two staves is
+    /// collected once per staff.
+    /// </remarks>
+    internal static ImmutableArray<UnpairedSpanWarning> UnpairedPedalMarks(
+        ImmutableArray<MusicMarkItem> musicMarks,
+        Collector.SectionPlays? plays = null, List<Collector.SectionCarryWarning>? carrySink = null)
+    {
+        if (musicMarks.IsDefaultOrEmpty)
+            return [];
+        List<int>? staves = null;
+        foreach (var m in musicMarks)
+            if (IsPedalMarkType(m.Type) && !(staves ??= []).Contains(m.StaffIndex))
+                staves.Add(m.StaffIndex);
+        if (staves == null)
+            return [];
+        if (staves.Count == 1)
+            return PairPedalBrackets(musicMarks, plays, carrySink).Unpaired;
+        var unpaired = new List<UnpairedSpanWarning>();
+        foreach (int staff in staves)
+            foreach (var w in PairPedalBrackets(
+                         musicMarks.Where(m => m.StaffIndex == staff).ToImmutableArray(), plays, carrySink).Unpaired)
+                if (!unpaired.Contains(w))
+                    unpaired.Add(w);
+        return [.. unpaired];
+    }
+
     private static void DetectBracketsForType(
         ImmutableArray<MusicMarkItem> musicMarks,
         MusicMarkType onType, MusicMarkType offType,

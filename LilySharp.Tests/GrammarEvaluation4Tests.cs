@@ -1068,4 +1068,38 @@ public class GrammarEvaluation4Tests
         Assert.Equal("k a t a", LilySharp.Core.Vocaloid.VsqxExporter.Phoneme("かった"));
         Assert.Equal("a", LilySharp.Core.Vocaloid.VsqxExporter.Phoneme("Lu"));
     }
+
+    // ---- diagnostics that were wrong ----------------------------------------------------------
+
+    private static string Staves(params string[] music) => "octave absolute\n"
+        + string.Concat(music.Select((_, i) => $"part p{i} {{ clef bass }}\n"))
+        + "section A {\n" + string.Concat(music.Select((m, i) => $"  p{i} {{ {m} }}\n")) + "}\nform { ~A }\n"
+        + "score { " + string.Join(" ", music.Select((_, i) => $"staff p{i}")) + " }\n";
+
+    /// <summary>Two staves, a pedal each, pressed twice and released: every bracket is drawn and
+    /// closed, and the second staff's <c>@!sustain</c> was told "closes nothing … no pedal is
+    /// down in this voice" (LYS4018). The page pairs a staff's pedal marks alone; the validator
+    /// asked over every staff's at once, where the first staff's release lifted whichever staff
+    /// pressed last.</summary>
+    [Fact]
+    public void APedalOnTwoStaves_IsPairedStaffByStaff_AsItIsDrawn()
+    {
+        const string closed = "c,1@sustain | c,1@sustain | R | r1@!sustain |";
+        string source = Staves(closed, closed, closed);
+        Assert.Empty(Said(source).Select(d => d.Message));
+        // What is drawn: two brackets a staff (the re-pedalling closes the first).
+        Assert.Equal(6, Laid(source).PedalBracketLayouts.Length);
+
+        // The true ones beside it, which the same walk hid or misplaced: a release on a staff
+        // where no pedal is down, said of that staff's mark…
+        string stray = Staves("c,1@sustain | c,1 | r1@!sustain |", "c,1 | c,1 | r1@!sustain |");
+        var closesNothing = Assert.Single(Said(stray));
+        Assert.Equal((DiagnosticCodes.UnpairedSpan, DiagnosticSeverity.Warning), (closesNothing.Code, closesNothing.Severity));
+        Assert.Equal(stray.LastIndexOf("@!sustain", StringComparison.Ordinal), closesNothing.Span.Start);
+        // …and a pedal one staff never releases, which the other staff's release used to lift.
+        string held = Staves("c,1@sustain | c,1 | r1@!sustain |", "c,1@sustain | c,1 | r1 |");
+        var neverReleased = Assert.Single(Said(held));
+        Assert.Equal((DiagnosticCodes.UnpairedSpan, DiagnosticSeverity.Error), (neverReleased.Code, neverReleased.Severity));
+        Assert.Equal(held.LastIndexOf("@sustain", StringComparison.Ordinal), neverReleased.Span.Start);
+    }
 }

@@ -426,7 +426,7 @@ public sealed partial class MeasureCollector
             [
                 .. Layout.TextSpannerEngraver.PairTextSpanners(marks, plays).Unpaired,
                 .. Layout.OttavaBracketEngraver.PairOttavaBrackets(marks, plays).Unpaired,
-                .. Layout.PedalEngraver.PairPedalBrackets(marks, plays).Unpaired,
+                .. Layout.PedalEngraver.UnpairedPedalMarks(marks, plays),
                 // One per (position, fault): a repeated section plays the same mark twice
                 // (UnpairedSpanWarning's remark).
                 .. phrasing.Distinct(),
@@ -466,7 +466,7 @@ public sealed partial class MeasureCollector
                 // The mark-paired families (2026-09-29), through the same calls their readers draw by.
                 Layout.TextSpannerEngraver.PairTextSpanners(marks, plays, carry);
                 Layout.OttavaBracketEngraver.PairOttavaBrackets(marks, plays, carry);
-                Layout.PedalEngraver.PairPedalBrackets(marks, plays, carry);
+                Layout.PedalEngraver.UnpairedPedalMarks(marks, plays, carry);
                 PairTrillSpannerEvents(
                     _sanityScannedVoiceList.Select(v => v.Measures.Length).DefaultIfEmpty(0).Max(), plays, carry);
             }
