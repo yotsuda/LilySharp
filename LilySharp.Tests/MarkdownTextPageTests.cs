@@ -270,12 +270,20 @@ public class MarkdownTextPageTests
         Assert.Equal(4.5, page.Header.Text.Lines[1].Baseline, 9);
     }
 
+    /// <summary>A text that writes no <c>xMargin</c> begins where the staff lines of the
+    /// system beside it begin — here the first system's indent, 15 mm right of the left margin
+    /// (8.5358 + 8.5358 = 17.07) — and <c>xMargin 0</c> is the page's left margin, 8.54.
+    /// The owner, 2026-11-13: "いま、```md box の既定の xMargin は五線と同じになっている。
+    /// box がつかない ```md の既定の xMargin も同じ値にして。" (Until then a text with no
+    /// frame began at the left margin, and this test was named …FromTheLeftMargin.)</summary>
     [Fact]
-    public void TheSvgSetsEachPiece_InItsStyle_FromTheLeftMargin()
+    public void TheSvgSetsEachPiece_InItsStyle_FromWhereTheStaffBegins()
     {
         string source = Book(top: $"{F}md\nPlain **bold** *slanted*.\n{F}");
         string svg = SvgGenerator.Generate(SyntaxTree.Parse(source));
-        Assert.Matches("<text x=\"8\\.54\" y=\"[\\d.]+\" font-size=\"2\\.20\" data-pos=\"\\d+\">Plain </text>", svg);
+        Assert.Matches("<text x=\"17\\.07\" y=\"[\\d.]+\" font-size=\"2\\.20\" data-pos=\"\\d+\">Plain </text>", svg);
+        Assert.Matches("<text x=\"8\\.54\" y=\"[\\d.]+\" font-size=\"2\\.20\" data-pos=\"\\d+\">Plain </text>",
+            SvgGenerator.Generate(SyntaxTree.Parse(Book(top: $"{F}md xMargin 0\nPlain **bold** *slanted*.\n{F}"))));
         Assert.Matches("font-weight=\"bold\" data-pos=\"\\d+\">bold</text>", svg);
         Assert.Matches("font-style=\"italic\" data-pos=\"\\d+\">slanted</text>", svg);
         // The click goes to the fence.
@@ -294,18 +302,27 @@ public class MarkdownTextPageTests
         int score = ly.IndexOf("\\score {", System.StringComparison.Ordinal);
         int after = ly.LastIndexOf("\\markuplist \\column-lines {", System.StringComparison.Ordinal);
         Assert.True(before >= 0 && before < score && score < after);
-        Assert.Contains("  \\with-dimension #Y #'(-1 . 3) \\concat { \"Plain \" \\bold \"bold\" \" and \" \\italic \"slanted\" \" \\\"quoted\\\".\" }\n", ly);
+        // Every line begins where the staff does (the owner, 2026-11-13: a text with no
+        // xMargin, boxed or not, is as wide as the staff): the white of the first system's
+        // indent, 15 mm = 8.5358, before its words — this piece's one system is its last too.
+        Assert.Contains("  \\with-dimension #Y #'(-1 . 3) \\concat { \\hspace #8.5358 \\concat { \"Plain \" \\bold \"bold\" \" and \" \\italic \"slanted\" \" \\\"quoted\\\".\" } }\n", ly);
         // The white over a paragraph is its first line's taller box: 2 + half a skip.
         // (…and the white under the text, its margin, is the last line's deeper one; the white
         // over it the first line's taller one.)
-        Assert.Contains("  \\with-dimension #Y #'(-2 . 3.5) \"Second.\"\n", ly);
-        Assert.Contains("  \\with-dimension #Y #'(-2 . 3) \"The end.\"\n}", ly);
-        // With `yMargin 0` the list is LilyPond's own lines, as measured (t1tw2.ly).
+        Assert.Contains("  \\with-dimension #Y #'(-2 . 3.5) \\concat { \\hspace #8.5358 \"Second.\" }\n", ly);
+        Assert.Contains("  \\with-dimension #Y #'(-2 . 3) \\concat { \\hspace #8.5358 \"The end.\" }\n}", ly);
+        // With `yMargin 0` the lines have LilyPond's own boxes…
         string tight = new LilyPondExporter().Export(SyntaxTree.Parse(
             Book(top: $"{F}md yMargin 0\nPlain **bold** and *slanted* \"quoted\".\n\nSecond.\n{F}\n{F}md end yMargin 0\nThe end.\n{F}")));
-        Assert.Contains("  \\concat { \"Plain \" \\bold \"bold\" \" and \" \\italic \"slanted\" \" \\\"quoted\\\".\" }\n", tight);
-        Assert.Contains("  \\with-dimension #Y #'(-1 . 3.5) \"Second.\"\n", tight);
-        Assert.Contains("  \"The end.\"\n}", tight);
+        Assert.Contains("  \\concat { \\hspace #8.5358 \\concat { \"Plain \" \\bold \"bold\" \" and \" \\italic \"slanted\" \" \\\"quoted\\\".\" } }\n", tight);
+        Assert.Contains("  \\with-dimension #Y #'(-1 . 3.5) \\concat { \\hspace #8.5358 \"Second.\" }\n", tight);
+        Assert.Contains("  \\concat { \\hspace #8.5358 \"The end.\" }\n}", tight);
+        // …and with `xMargin 0` too the list is LilyPond's own lines, as measured (t1tw2.ly).
+        string own = new LilyPondExporter().Export(SyntaxTree.Parse(
+            Book(top: $"{F}md xMargin 0 yMargin 0\nPlain **bold** and *slanted* \"quoted\".\n\nSecond.\n{F}\n{F}md end xMargin 0 yMargin 0\nThe end.\n{F}")));
+        Assert.Contains("  \\concat { \"Plain \" \\bold \"bold\" \" and \" \\italic \"slanted\" \" \\\"quoted\\\".\" }\n", own);
+        Assert.Contains("  \\with-dimension #Y #'(-1 . 3.5) \"Second.\"\n", own);
+        Assert.Contains("  \"The end.\"\n}", own);
         // A file with no fence writes none.
         Assert.DoesNotContain("\\markuplist", new LilyPondExporter().Export(SyntaxTree.Parse(Book())));
     }

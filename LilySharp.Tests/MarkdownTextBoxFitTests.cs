@@ -36,6 +36,9 @@ namespace LilySharp.Tests;
 /// and a frame that writes no <c>xMargin</c> is as wide as the staff it stands against ("the
 /// box's default xMargin should be the same width as the staff"). Both LILYSHARP-OWN;
 /// measured against the twin in LilyPond 2.26.0, LilySharp-Lab sessions/p1226/md/boxfit.
+/// And a text with NO frame takes the same default ("box がつかない ```md の既定の xMargin も
+/// 同じ値にして", the same day; sessions/p1226/md/plainfit): the tests after
+/// <see cref="AWrittenXMargin_IsFromThePagesMargins_BoxedOrPlain"/>.
 /// </summary>
 [Trait("Category", "Unit")]
 public class MarkdownTextBoxFitTests
@@ -280,10 +283,13 @@ public class MarkdownTextBoxFitTests
     }
 
     /// <summary>A written <c>xMargin</c> is measured from the page's margins, as it always
-    /// was: <c>xMargin 0</c> is the frame from margin to margin. A text with no frame begins
-    /// at the left margin, with or without names.</summary>
+    /// was: <c>xMargin 0</c> is the text — a boxed text's frame — from margin to margin, with
+    /// or without names. (Until the owner's "box がつかない ```md の既定の xMargin も同じ値にして",
+    /// 2026-11-13, a text with no frame began at the left margin written or not, and this test
+    /// was named …AndAPlainTextStaysAtTheMargin: it stays there now only where it WRITES
+    /// <c>xMargin 0</c>; the default is <see cref="APlainTextWithNoXMargin_IsAsWideAsTheStaffItStandsAgainst"/>.)</summary>
     [Fact]
-    public void AWrittenXMargin_IsFromThePagesMargins_AndAPlainTextStaysAtTheMargin()
+    public void AWrittenXMargin_IsFromThePagesMargins_BoxedOrPlain()
     {
         string book = Named(LongNames, "staff a staff b")
             + $"\n{F}md box xMargin 0\nA note.\n{F}\n{F}md end box xMargin 10 20\nA closing note.\n{F}\n";
@@ -293,9 +299,178 @@ public class MarkdownTextBoxFitTests
         Near(Margin + 10, frames[^1].Left);
         Near(Margin + LineWidth - 20, frames[^1].Right);
 
-        var plain = Laid(Named(LongNames, "staff a staff b") + $"\n{F}md\nA note.\n{F}\n{F}md end center\nThe end.\n{F}\n");
-        Assert.Equal(0.0, plain.Pages[0].Header!.Text!.Lines[0].Left);
-        Assert.Equal(LineWidth, plain.Pages[^1].EndText!.TextWidth, 9);
+        string plainBook = Named(LongNames, "staff a staff b")
+            + $"\n{F}md xMargin 0\nA note. {Long}\n{F}\n{F}md end center xMargin 0\nThe end.\n{F}\n{F}md end xMargin 10 20\nAfter it.\n{F}\n";
+        var plain = Laid(plainBook);
+        var top = plain.Pages[0].Header!.Text!;
+        Assert.Equal(0.0, top.Lines[0].Left);
+        Assert.Equal(LineWidth, top.TextWidth, 9);
+        Assert.True(top.Lines.Length > 1 && top.Lines[0].Width > LineWidth - 8, "broken at the line width");
+        var end = plain.Pages[^1].EndText!.Blocks.ToArray();
+        Assert.Equal(LineWidth, end[0].Block.TextWidth, 9);
+        Assert.Equal(LineWidth / 2, end[0].Block.Lines[0].Left + end[0].Block.Lines[0].Width / 2, 6);
+        Assert.Equal(10.0, end[1].Block.Lines[0].Left, 9);
+        Assert.Equal(LineWidth - 30, end[1].Block.TextWidth, 9);
+        // Drawn: at the page's left margin, left of the indented first staff.
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse(plainBook));
+        Near(Margin, TextLeft(svg, TextOf(top.Lines[0])));
+        Near(Margin + 10, TextLeft(svg, "After it."));
+    }
+
+    // ---- a text with no frame: the same default ---------------------------------------------
+
+    private static readonly string Long = string.Join(' ', Enumerable.Repeat("measure", 40));
+
+    private static string TextOf(ProseLine line) => string.Concat(line.Pieces.Select(p => p.Text));
+
+    /// <summary>Where the SVG begins the text piece <paramref name="words"/>, on the paper.</summary>
+    private static double TextLeft(string svg, string words)
+    {
+        var m = Regex.Match(svg, "<text x=\"([\\d.]+)\" y=\"[\\d.]+\"[^>]*>" + Regex.Escape(words) + "</text>");
+        Assert.True(m.Success, words);
+        return Num(m.Groups[1].Value);
+    }
+
+    /// <summary>
+    /// A text with NO frame and no <c>xMargin</c> stands on the staff as a boxed one does (the
+    /// owner, 2026-11-13: "いま、```md box の既定の xMargin は五線と同じになっている。box が
+    /// つかない ```md の既定の xMargin も同じ値にして。"): under the title its left edge is
+    /// where the FIRST system's staff lines begin — the indent, grown for the long name — and
+    /// its lines are broken where they end; the closing text begins where the LAST system's do,
+    /// the short indent. Until then both began at the page's left margin.
+    /// MEASURED 2026-11-13, LilyPond 2.26.0 (LilySharp-Lab sessions/p1226/md/plainfit, the
+    /// <c>lysc ly</c> twin of probe.lys): docs/markdown-text-design.md section 5.5.
+    /// </summary>
+    [Fact]
+    public void APlainTextWithNoXMargin_IsAsWideAsTheStaffItStandsAgainst()
+    {
+        string book = Named(LongNames, "staff a staff b", "paper { shortIndent 12mm }")
+            + $"\n{F}md\nUnder the title. {Long}\n{F}\n{F}md end\nA closing note. {Long}\n{F}\n";
+        var layout = Laid(book);
+        Assert.True(layout.Systems.Length > 1);
+        var (frames, staff) = Drawn(book);
+        Assert.Empty(frames);
+        var first = staff.MinBy(s => s.Y);
+        var last = staff.MaxBy(s => s.Y);
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse(book));
+
+        // Under the title: the first system's indent, more than the paper's 15 mm.
+        var top = layout.Pages[0].Header!.Text!;
+        double indent = layout.Systems[0].Indent;
+        Assert.True(indent > LayoutOptions.Default.Indent + 1);
+        Assert.Null(top.Frame);
+        Assert.Equal(indent, top.Left, 9);
+        Assert.Equal(LineWidth - indent, top.TextWidth, 9);
+        Assert.True(top.Lines.Length > 1);
+        Assert.All(top.Lines, l => Assert.Equal(indent, l.Left, 9));
+        // Broken at the staff's right end: no line past it, the full ones within a word of it.
+        Assert.All(top.Lines, l => Assert.True(l.Left + l.Width <= LineWidth + 1e-9));
+        Assert.True(top.Lines[0].Left + top.Lines[0].Width > LineWidth - 8);
+        Assert.InRange(top.Width, LineWidth - 8, LineWidth + 1e-9);      // the band reaches no further than the staff
+        Near(first.Left, TextLeft(svg, TextOf(top.Lines[0])));
+        Near(first.Left, TextLeft(svg, TextOf(top.Lines[1])));
+        Near(Margin + LineWidth, first.Right);
+
+        // After the last system: the short indent.
+        var end = layout.Pages[^1].EndText!;
+        Assert.Equal(12 * 72.27 / 127.0, layout.Systems[^1].Indent, 5);
+        Assert.Equal(layout.Systems[^1].Indent, end.Left, 9);
+        Assert.Equal(LineWidth - layout.Systems[^1].Indent, end.TextWidth, 9);
+        Assert.True(end.Lines.Length > 1);
+        Near(last.Left, TextLeft(svg, TextOf(end.Lines[0])));
+        // (More room than under the title, and broken to it.)
+        Assert.True(end.TextWidth > top.TextWidth + 1);
+        Assert.All(end.Lines, l => Assert.True(l.Left + l.Width <= LineWidth + 1e-9));
+        Assert.True(end.Lines[0].Left + end.Lines[0].Width > LineWidth - 8);
+    }
+
+    /// <summary><c>center</c> with no frame centres each line over the STAFF — the middle of
+    /// its lines — and not between the page's margins, under the title and after the last system.</summary>
+    [Fact]
+    public void ACentredPlainText_IsCentredOverTheStaff()
+    {
+        string book = Named(LongNames, "staff a staff b", "paper { shortIndent 12mm }")
+            + $"\n{F}md center\nfor my choir\n{F}\n{F}md end center\nThe end.\n{F}\n";
+        var layout = Laid(book);
+        var (_, staff) = Drawn(book);
+        var first = staff.MinBy(s => s.Y);
+        var last = staff.MaxBy(s => s.Y);
+        var top = layout.Pages[0].Header!.Text!.Lines[0];
+        var end = layout.Pages[^1].EndText!.Lines[0];
+        Assert.Equal((layout.Systems[0].Indent + LineWidth) / 2, top.Left + top.Width / 2, 9);
+        Assert.Equal((layout.Systems[^1].Indent + LineWidth) / 2, end.Left + end.Width / 2, 9);
+        // …which is the drawn staff's middle (both systems run to the line's end), and not the page's.
+        Near(Margin + LineWidth, first.Right);
+        Near((first.Left + first.Right) / 2, Margin + top.Left + top.Width / 2);
+        Near((last.Left + Margin + LineWidth) / 2, Margin + end.Left + end.Width / 2);
+        Assert.True(top.Left + top.Width / 2 > LineWidth / 2 + 4);
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse(book));
+        Near(Margin + top.Left, TextLeft(svg, "for my choir"));
+    }
+
+    /// <summary>A boxed block and a plain one after it share their left edge — the frame's
+    /// rule and the plain text's first letter — and their right one: the staff's.</summary>
+    [Fact]
+    public void ABoxedBlockAndAPlainOneUnderIt_ShareTheirLeftEdge()
+    {
+        string book = Named(LongNames, "staff a staff b")
+            + $"\n{F}md box\nA boxed note.\n{F}\n{F}md\nA plain one. {Long}\n{F}\n";
+        var blocks = Laid(book).Pages[0].Header!.Text!.Blocks.ToArray();
+        Assert.Equal(2, blocks.Length);
+        var (boxed, plain) = (blocks[0].Block, blocks[1].Block);
+        Assert.Null(plain.Frame);
+        Assert.Equal(boxed.Frame!.Left, plain.Left, 9);
+        Assert.Equal(boxed.Frame.Left, plain.Lines[0].Left, 9);
+        Assert.Equal(boxed.Frame.Right - boxed.Frame.Left, plain.TextWidth, 9);
+        var (frames, staff) = Drawn(book);
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse(book));
+        Near(frames[0].Left, TextLeft(svg, TextOf(plain.Lines[0])));
+        Near(staff.MinBy(s => s.Y).Left, TextLeft(svg, TextOf(plain.Lines[0])));
+        // (The boxed text's own words stand the frame's inset further right, as they did.)
+        Near(frames[0].Left + 1.1, TextLeft(svg, "A boxed note."));
+    }
+
+    /// <summary>A fence that writes nothing and one that writes <c>xMargin 0</c> are two
+    /// blocks, either way round — the first on the staff, the second from margin to margin —
+    /// where they were ONE text while both were drawn at the margin (TextShape.IsPlain); two
+    /// fences that write nothing are one text still.</summary>
+    [Fact]
+    public void AFenceThatWritesXMarginZero_IsABlockOfItsOwn_BesideOneThatWritesNothing()
+    {
+        string Top(string fences) => Named(NoNames, "staff a") + "\n" + fences + "\n";
+        double indent = LayoutOptions.Default.Indent;
+        var blocks = Laid(Top($"{F}md\nOn the staff.\n{F}\n{F}md xMargin 0\nAt the margin.\n{F}")).Pages[0].Header!.Text!.Blocks.ToArray();
+        Assert.Equal([indent, 0.0], blocks.Select(b => b.Block.Lines[0].Left));
+        var other = Laid(Top($"{F}md xMargin 0\nAt the margin.\n{F}\n{F}md\nOn the staff.\n{F}")).Pages[0].Header!.Text!.Blocks.ToArray();
+        Assert.Equal([0.0, indent], other.Select(b => b.Block.Lines[0].Left));
+        var one = Laid(Top($"{F}md\nOn the staff.\n{F}\n{F}md\nAnd under it.\n{F}")).Pages[0].Header!.Text!;
+        Assert.Single(one.Blocks);
+        Assert.Equal([indent, indent], one.Lines.Select(l => l.Left));
+    }
+
+    /// <summary>On a paper with no indent nothing moved: the text is at the left margin, as
+    /// wide as the line, to the last digit the band it was before it stood on the staff.</summary>
+    [Fact]
+    public void WithNoIndent_APlainTextIsWhereItWas()
+    {
+        string text = $"Under the title. {Long}";
+        string book = Named(NoNames, "staff a", "paper { indent 0 }") + $"\n{F}md\n{text}\n{F}\n{F}md end center\nThe end.\n{F}\n";
+        var layout = Laid(book);
+        Assert.Equal(0.0, layout.Systems[0].Indent);
+        var band = layout.Pages[0].Header!.Text!;
+        var before = ProseBand.Build(text, band.Position, Fonts, LineWidth)!;
+        Assert.True(band.Lines.Length > 1);
+        Assert.Equal(before.Lines.Select(l => (TextOf(l), l.Baseline, l.Left, l.Width)),
+            band.Lines.Select(l => (TextOf(l), l.Baseline, l.Left, l.Width)));
+        Assert.Equal((before.Up, before.Down, before.Width, before.Left, before.TextWidth),
+            (band.Up, band.Down, band.Width, band.Left, band.TextWidth));
+        Assert.Equal((0.0, LineWidth), (band.Left, band.TextWidth));
+        var end = layout.Pages[^1].EndText!.Lines[0];
+        Assert.Equal(LineWidth / 2, end.Left + end.Width / 2, 9);
+        var (_, staff) = Drawn(book);
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse(book));
+        Near(Margin, TextLeft(svg, TextOf(band.Lines[0])));
+        Near(staff.MinBy(s => s.Y).Left, TextLeft(svg, TextOf(band.Lines[0])));
     }
 
     /// <summary>A part sheet with no names is indented as LilyPond indents it, 15 mm, and its

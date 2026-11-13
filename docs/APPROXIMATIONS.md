@@ -740,7 +740,7 @@
 ### `LilySharp.Core/Svg/Layout/ProseBand.cs`
 - **`ProseBand`** LILYSHARP-OWN: the breaking itself (LilyPond's \wordwrap does not break a text
 - **`ProseBand.Stack`** LILYSHARP-OWN: the stacking. It is what LilyPond's \column-lines does with the
-- **`ProseBand.BoxedAtTheStaff`** LILYSHARP-OWN (LilyPond's \box hugs its words wherever the markup stands).
+- **`ProseBand.AtTheStaff`** LILYSHARP-OWN (LilyPond's \box hugs its words wherever the markup stands, and a
 - **`ProseBand.OpticalMiddle`** LILYSHARP-OWN: 0.37. MEASURED 2026-11-13 (LilySharp-Lab sessions/p1226/md/boxfit;
 - **`ProseBand.BoxShift`** LILYSHARP-OWN (LilyPond's \box pads the extent it is given; the twin gives it
 - **`ProseBand.BoxPadding`** LILYSHARP-OWN (owner-approved 2026-11-13: a ruled frame; the padding is this

@@ -137,8 +137,8 @@ internal sealed partial class LayoutEngine
         // system goes to the pages with the systems.
         // Each is set as its own opening line says (indent, center, box).
         // …and each of its blocks (a later fence for the place with a shape of its own).
-        // A boxed one that writes no xMargin is as wide as the staff it stands against (the
-        // owner, 2026-11-13; ProseBand.BoxedAtTheStaff): the first system's for this one —
+        // One that writes no xMargin — boxed or plain — is as wide as the staff it stands
+        // against (the owner, 2026-11-13; ProseBand.AtTheStaff): the first system's for this one —
         // its indent, a paper constant known before a line is broken — and the LAST system's
         // for the closing text, which is therefore set once the lines are (below).
         // LILYPOND-REF: ly/paper-defaults-init.ly — indent / short-indent
@@ -251,11 +251,11 @@ internal sealed partial class LayoutEngine
         var prelim = pass.Prelim;
         double systemHeight = pass.FirstSystemHeight;
 
-        // The closing text, against the LAST system as it was just placed: a boxed block with
-        // no xMargin begins where that system's staff lines do — the short indent, or the
-        // first system's own when the piece is one line (on a page of its own too: the left
-        // the last system has). A ragged last line changes nothing: the frame ends at the
-        // full line width.
+        // The closing text, against the LAST system as it was just placed: a block with no
+        // xMargin, boxed or plain, begins where that system's staff lines do — the short
+        // indent, or the first system's own when the piece is one line (on a page of its own
+        // too: the left the last system has). A ragged last line changes nothing: the text
+        // (a frame) ends at the full line width.
         var endText = ProseBand.Stack(
             score.Texts.Blocks(before: false), score.TextMetrics, _options.ContentWidth, _options.StaffSpaceMm,
             staffLeft: systems.Count > 0 ? systems[^1].Indent : indent);

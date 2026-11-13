@@ -395,14 +395,16 @@ public class MarkdownTextListTests
     {
         string source = Book(top: $"{F}md\n# Before you play\n\n- Tune first.\n{F}");
         string svg = SvgGenerator.Generate(SyntaxTree.Parse(source));
-        Assert.Matches("<text x=\"8\\.54\" y=\"[\\d.]+\" font-size=\"2\\.77\" font-weight=\"bold\" data-pos=\"\\d+\">Before you play</text>", svg);
-        // The item's words stand 3.3 right of the margin, the bullet before them.
-        Assert.Matches("<text x=\"11\\.84\" y=\"[\\d.]+\" font-size=\"2\\.20\" data-pos=\"\\d+\">Tune first\\.</text>", svg);
+        // (The text's left edge is the staff's: the margin 8.5358 and the first system's
+        // indent 8.5358 — the owner, 2026-11-13, a text with no xMargin is as wide as the staff.)
+        Assert.Matches("<text x=\"17\\.07\" y=\"[\\d.]+\" font-size=\"2\\.77\" font-weight=\"bold\" data-pos=\"\\d+\">Before you play</text>", svg);
+        // The item's words stand 3.3 right of the text's edge, the bullet before them.
+        Assert.Matches("<text x=\"20\\.37\" y=\"[\\d.]+\" font-size=\"2\\.20\" data-pos=\"\\d+\">Tune first\\.</text>", svg);
         var bullet = System.Text.RegularExpressions.Regex.Match(svg, "<text x=\"([\\d.]+)\" y=\"[\\d.]+\" font-size=\"2\\.20\" data-pos=\"\\d+\">\u2022</text>");
         Assert.True(bullet.Success);
         double x = double.Parse(bullet.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
         // (The SVG writes two places: within a hundredth.)
-        Assert.Equal(LayoutOptions.Default.MarginLeft + Indent - Gap - Advance("\u2022"), x, 1);
+        Assert.Equal(LayoutOptions.Default.MarginLeft + LayoutOptions.Default.Indent + Indent - Gap - Advance("\u2022"), x, 1);
     }
 
     // ---- the twin ----------------------------------------------------------------------
@@ -416,18 +418,24 @@ public class MarkdownTextListTests
     {
         string ly = new LilyPondExporter().Export(SyntaxTree.Parse(Book(top:
             $"{F}md\n# Head\n\nText.\n\n- one\n  - inner\n- two\n\n## Sub\n\n1. first\n{F}")));
-        Assert.Contains("  \\with-dimension #Y #'(-1.2599 . 3.5198) \\fontsize #2 \\concat { \\bold \"Head\" }\n", ly);
-        Assert.Contains("  \\with-dimension #Y #'(-1 . 2.75) \"Text.\"\n", ly);
-        Assert.Contains("  \\with-dimension #Y #'(-1 . 3.5) \\concat { \\with-dimension #X #'(0 . 3.3) \\translate #'(2.2 . 0) \\right-align \"\u2022\" \"one\" }\n", ly);
-        Assert.Contains("  \\concat { \\with-dimension #X #'(0 . 6.6) \\translate #'(5.5 . 0) \\right-align \"\u2013\" \"inner\" }\n", ly);
-        Assert.Contains("  \\concat { \\with-dimension #X #'(0 . 3.3) \\translate #'(2.2 . 0) \\right-align \"\u2022\" \"two\" }\n", ly);
-        Assert.Contains("  \\with-dimension #Y #'(-1.1225 . 5.2449) \\fontsize #1 \\concat { \\bold \"Sub\" }\n", ly);
-        Assert.Contains("  \\with-dimension #Y #'(-2 . 2.75) \\concat { \\with-dimension #X #'(0 . 3.3) \\translate #'(2.2 . 0) \\right-align \"1.\" \"first\" }\n", ly);
+        // (Every line after the white to the text's left edge \u2014 with no xMargin the staff's,
+        // the first system's indent 8.5358: the owner, 2026-11-13. The forms measured were
+        // written at the margin, as `xMargin 0` writes them still: below.)
+        const string S = "\\concat { \\hspace #8.5358 ";
+        Assert.Contains("  \\with-dimension #Y #'(-1.2599 . 3.5198) " + S + "\\fontsize #2 \\concat { \\bold \"Head\" } }\n", ly);
+        Assert.Contains("  \\with-dimension #Y #'(-1 . 2.75) " + S + "\"Text.\" }\n", ly);
+        Assert.Contains("  \\with-dimension #Y #'(-1 . 3.5) " + S + "\\with-dimension #X #'(0 . 3.3) \\translate #'(2.2 . 0) \\right-align \"\u2022\" \"one\" }\n", ly);
+        Assert.Contains("  " + S + "\\with-dimension #X #'(0 . 6.6) \\translate #'(5.5 . 0) \\right-align \"\u2013\" \"inner\" }\n", ly);
+        Assert.Contains("  " + S + "\\with-dimension #X #'(0 . 3.3) \\translate #'(2.2 . 0) \\right-align \"\u2022\" \"two\" }\n", ly);
+        Assert.Contains("  \\with-dimension #Y #'(-1.1225 . 5.2449) " + S + "\\fontsize #1 \\concat { \\bold \"Sub\" } }\n", ly);
+        Assert.Contains("  \\with-dimension #Y #'(-2 . 2.75) " + S + "\\with-dimension #X #'(0 . 3.3) \\translate #'(2.2 . 0) \\right-align \"1.\" \"first\" }\n", ly);
         // (The first line and the last carry the text's margin, the default 1.0: 2.5198 + 1 over
-        // the heading, 1 + 1 under the last item. With `yMargin 0` they are the lines' own boxes.)
+        // the heading, 1 + 1 under the last item. With `yMargin 0` they are the lines' own boxes
+        // \u2014 and with `xMargin 0` at the page's margin, the forms as they were measured.)
         string tight = new LilyPondExporter().Export(SyntaxTree.Parse(Book(top:
-            $"{F}md yMargin 0\n# Head\n\nText.\n\n1. first\n{F}")));
+            $"{F}md xMargin 0 yMargin 0\n# Head\n\nText.\n\n1. first\n{F}")));
         Assert.Contains("  \\with-dimension #Y #'(-1.2599 . 2.5198) \\fontsize #2 \\concat { \\bold \"Head\" }\n", tight);
+        Assert.Contains("  \\with-dimension #Y #'(-1 . 2.75) \"Text.\"\n", tight);
         Assert.Contains("  \\with-dimension #Y #'(-1 . 3.5) \\concat { \\with-dimension #X #'(0 . 3.3) \\translate #'(2.2 . 0) \\right-align \"1.\" \"first\" }\n", tight);
     }
 
@@ -435,8 +443,12 @@ public class MarkdownTextListTests
     public void TheTwin_WritesAWrappedItemsLaterLines_AfterTheIndent()
     {
         string words = string.Join(' ', Enumerable.Repeat("measure", 40));
+        // The white to the text's left edge (the staff's, 8.5358) and the list's indent, 3.3.
         string ly = new LilyPondExporter().Export(SyntaxTree.Parse(Book(top: $"{F}md\n- {words}\n{F}")));
-        Assert.Contains("  \\concat { \\hspace #3.3 \"measure", ly);
+        Assert.Contains("  \\concat { \\hspace #11.8358 \"measure", ly);
+        // At the page's margin, the indent alone.
+        string flat = new LilyPondExporter().Export(SyntaxTree.Parse(Book(top: $"{F}md xMargin 0\n- {words}\n{F}")));
+        Assert.Contains("  \\concat { \\hspace #3.3 \"measure", flat);
     }
 
     [Fact]

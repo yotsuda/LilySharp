@@ -85,9 +85,16 @@ public class GrammarEvaluation4Tests
         // The band the page spaces is the whole stack: the music stands under the last block.
         Assert.Equal(blocks[1].Offset + dedication.Down, place.Down, 9);
         Assert.True(page.Height - page.Systems[0].Y > page.HeaderTextY + place.Down);
-        // The centred line is centred in the line width, not in the box's narrower one.
-        double lineWidth = LayoutOptions.Default.ContentWidth;
-        Assert.Equal(lineWidth / 2, dedication.Lines[0].Left + dedication.Lines[0].Width / 2, 6);
+        // The centred line is centred in ITS block's width, not in the box's narrower text
+        // width: the staff's — from the first system's indent to the line's end — since a text
+        // with no xMargin stands on the staff with or without a frame (the owner, 2026-11-13:
+        // "box がつかない ```md の既定の xMargin も同じ値にして"; until then the line width's
+        // middle). So the two blocks share their left edge, and the line stands over the
+        // frame's own middle.
+        double lineWidth = LayoutOptions.Default.ContentWidth, staffLeft = LayoutOptions.Default.Indent;
+        Assert.Equal((staffLeft + lineWidth) / 2, dedication.Lines[0].Left + dedication.Lines[0].Width / 2, 6);
+        Assert.Equal(box.Frame!.Left, dedication.Left, 9);
+        Assert.Equal((box.Frame.Left + box.Frame.Right) / 2, dedication.Lines[0].Left + dedication.Lines[0].Width / 2, 6);
 
         // Drawn: the frame's four rules once, the dedication once, in its slant.
         string svg = SvgGenerator.Generate(SyntaxTree.Parse(source));

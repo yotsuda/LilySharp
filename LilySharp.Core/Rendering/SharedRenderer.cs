@@ -493,8 +493,8 @@ internal static partial class SharedRenderer
                 GetSystemEndTimeChange(score.PrimaryContentStaff, system));
 
     /// <summary>
-    /// A fenced text (docs/markdown-text-design.md): each line from the left margin — or
-    /// from where its shape puts it (<c>xMargin</c>, <c>center</c>; ProseLine.Left) — its
+    /// A fenced text (docs/markdown-text-design.md): each line from where its shape puts it
+    /// (the staff's left, or <c>xMargin</c> from the left margin; <c>center</c>; ProseLine.Left) — its
     /// pieces in their own weight and slant, about the reference point the page solved —
     /// <paramref name="referenceY"/> below the page's top edge, the first line's baseline;
     /// a list item's marker before its first line; and a boxed text's frame around them.

@@ -88,14 +88,18 @@ public readonly record struct TextLength(double Value, string? Unit)
 /// <param name="MarginBottom">The white below it (<c>yMargin</c>'s second length, or its
 /// first), or null likewise.</param>
 /// <param name="SidesWritten">Whether the line writes <c>xMargin</c> at all — <c>xMargin 0</c>
-/// too: a boxed text that writes none is as wide as the staff, one that writes it is measured
-/// from the page's margins (owner, 2026-11-13; Svg.Layout.ProseBand.BoxedAtTheStaff).</param>
+/// too: a text that writes none, boxed or plain, is as wide as the staff, one that writes it is
+/// measured from the page's margins (owner, 2026-11-13; Svg.Layout.ProseBand.AtTheStaff).</param>
 public readonly record struct TextShape(TextLength MarginLeft, TextLength MarginRight, bool Center, bool Box,
     TextLength? MarginTop = null, TextLength? MarginBottom = null, bool SidesWritten = false)
 {
-    /// <summary>Whether the opening line wrote none of the words that set a text apart: the
-    /// text as it has always been set (an <c>xMargin 0</c> alone is that too, as it was).</summary>
-    public bool IsPlain => this with { SidesWritten = false } == default;
+    /// <summary>Whether the opening line wrote none of the words that set a text apart: two
+    /// such fences in a row are one text.</summary>
+    /// <remarks>An <c>xMargin 0</c> alone is NOT that since a plain text stands on the staff
+    /// (owner, 2026-11-13): it is the text from margin to margin, a block of its own beside a
+    /// fence that writes nothing. (While only a boxed text stood on the staff the two were
+    /// drawn alike and were one text.)</remarks>
+    public bool IsPlain => this == default;
 }
 
 /// <summary>

@@ -1043,7 +1043,10 @@ Practise the right hand alone first.
 
 The text is printed under the title, above the first system; with `end` on the opening line,
 under the last system — of the last page, however many pages the score has; a text the last
-page has no room for takes a page of its own after it. Nothing between the two fence lines is
+page has no room for takes a page of its own after it. It is as wide as the staff beside it:
+it begins where the staff lines of the first system begin (for the `end` text, the last
+system's) — after the indent and the instrument names — and its lines are broken where a
+full line of music ends, unless the opening line writes an `xMargin` (below). Nothing between the two fence lines is
 Lily#. Inside `score { }` a fence is that score's own text and replaces the file's for the
 same place.
 
@@ -1062,7 +1065,8 @@ Sing the consonants early.
 ````
 
 is a boxed note with a centred dedication under it, both under the title. Two fences that
-write no shape word are simply one text, the second its next paragraph.
+write no shape word are simply one text, the second its next paragraph (`xMargin 0` is a
+shape word: such a fence is a block of its own, from margin to margin).
 
 In a Markdown document, a Lily# example that itself holds a page text is fenced with FOUR
 backticks, so that the three inside do not end it:
@@ -1115,12 +1119,12 @@ The opening line may go on to say how the text is set, in any order, each word o
 
 | Word | The text |
 |---|---|
-| `xMargin 20mm` | has that much white at its left and right, inside the line width: it is set narrower and begins further right |
+| `xMargin 20mm` | has that much white at its left and right, measured from the page's margins, inside the line width: it is set narrower and begins further right. `xMargin 0` is a text from margin to margin; with no `xMargin` at all a text, with a frame or without, is as wide as the staff |
 | `xMargin 20mm 10mm` | the same, 20 mm at the left and 10 mm at the right |
 | `yMargin 2` | has that much white above and below it — two staff spaces here. With no `yMargin` a text keeps 1; `yMargin 0` is LilyPond's own tight spacing |
 | `yMargin 3 1` | the same, 3 above and 1 below |
-| `center` | has each line centred in its width (the default is ragged right from the left edge); a heading is centred too, a list keeps its shape at the left edge |
-| `box` | has a thin ruled frame around it, and stands in the frame's middle; the white above and below is outside the frame. With no `xMargin` the frame is as wide as the staff: it begins where the staff lines of the first system begin (for the `end` text, the last system's) — after the indent and the instrument names — and ends where a full line ends. With an `xMargin` it stands on the side margins' edges, measured from the page's margins: `box xMargin 0` is a frame from margin to margin |
+| `center` | has each line centred in its width — over the staff, with no `xMargin` (the default is ragged right from the left edge); a heading is centred too, a list keeps its shape at the left edge |
+| `box` | has a thin ruled frame around it, and stands in the frame's middle; the white above and below is outside the frame. With no `xMargin` the frame is as wide as the staff, as a text with no frame is: it begins where the staff lines of the first system begin (for the `end` text, the last system's) and ends where a full line ends, so a boxed note and a plain paragraph share their edges. With an `xMargin` it stands on the side margins' edges, measured from the page's margins: `box xMargin 0` is a frame from margin to margin |
 
 A length is written as in `paper { }`: `20mm`, `2cm`, `0.5in`, or a bare number of staff
 spaces. The text under the title and the `end` text each have their own words. The white above
