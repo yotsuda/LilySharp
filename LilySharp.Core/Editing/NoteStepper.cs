@@ -309,6 +309,11 @@ public static partial class NoteStepper
         if (semitone && selections is [var (caretAt, caretTo)] && caretAt == caretTo
             && DiagramFingeringStep(text, tree, caretAt, -dir) is { } fingering)
             return fingering;
+        // On a length of a fenced text's `indent`, or on the word: that length (owner's request
+        // 2026-11-13). The fence is one token with no nodes inside, so no target names it.
+        if (selections is [var (indentFrom, indentTo)]
+            && FenceIndentStep(tree, Math.Min(indentFrom, indentTo), Math.Max(indentFrom, indentTo), dir, semitone) is { } indent)
+            return indent;
         var targets = new List<Target>();
         // A selected chord symbol's span, by its node (TargetKind.ChordQuality).
         var selectedSymbols = new Dictionary<int, (int Start, int End)>();

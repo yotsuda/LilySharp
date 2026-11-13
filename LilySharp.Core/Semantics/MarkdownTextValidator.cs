@@ -93,10 +93,7 @@ internal sealed class MarkdownTextValidator : ISemanticValidator
         // own when it is written in a score that names one, else the file's.
         if (problems.Count > 0 || shape.IndentLeft == default && shape.IndentRight == default)
             return;
-        var paper = PaperOf(tree.GetRoot(), text);
-        var set = Svg.Layout.ProseShape.Of(shape, paper.StaffSpaceMm);
-        double width = Svg.Layout.ProseBand.WidthLeft(set, paper.ContentWidth);
-        if (width < Svg.Layout.ProseBand.MinimumWidth - 1e-9)
+        if (LeavesTooLittle(tree.GetRoot(), text, shape, out double width, out var paper))
         {
             int indent = IndexOfWord(value, FencedText.IndentWord);
             int last = indent;
@@ -110,6 +107,26 @@ internal sealed class MarkdownTextValidator : ISemanticValidator
                 + (shape.Box ? " (the frame takes its padding too)" : "")
                 + $". A text keeps at least {Mm(Svg.Layout.ProseBand.MinimumWidth)} mm: write smaller indents.");
         }
+    }
+
+    /// <summary>
+    /// Whether <paramref name="shape"/> leaves <paramref name="text"/> less than its least
+    /// width (<see cref="Svg.Layout.ProseBand.MinimumWidth"/>) on the paper the fence stands
+    /// under: what this pass refuses, and what the step keys on an <c>indent</c>'s length stop
+    /// before (Editing.NoteStepper, owner's request 2026-11-13) — one reading for both.
+    /// </summary>
+    /// <param name="root">The file.</param>
+    /// <param name="text">The fence.</param>
+    /// <param name="shape">The shape to try: the fence's own, or the one a step would write.</param>
+    /// <param name="width">The width the shape leaves, in staff spaces (it may be negative).</param>
+    /// <param name="paper">The paper it was measured on.</param>
+    internal static bool LeavesTooLittle(SyntaxNode root, MarkdownTextSyntax text, TextShape shape,
+        out double width, out Svg.Layout.LayoutOptions paper)
+    {
+        paper = PaperOf(root, text);
+        var set = Svg.Layout.ProseShape.Of(shape, paper.StaffSpaceMm);
+        width = Svg.Layout.ProseBand.WidthLeft(set, paper.ContentWidth);
+        return width < Svg.Layout.ProseBand.MinimumWidth - 1e-9;
     }
 
     private static int IndexOfWord(FencedText value, string word)

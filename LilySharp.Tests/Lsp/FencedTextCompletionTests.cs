@@ -264,7 +264,8 @@ public class FencedTextCompletionTests
         var end = items.Single(i => i.Label == "end");
         Assert.Equal("end", end.TextEdit!.NewText);
         Assert.All(items, i => Assert.Equal((from, to), (i.TextEdit!.Range.Start.Character, i.TextEdit.Range.End.Character)));
-        Assert.All(items, i => Assert.Equal(i.Label, i.TextEdit!.NewText));
+        // Each word as it is, and `indent` with the space its length follows (below).
+        Assert.All(items, i => Assert.Equal(i.Label == "indent" ? "indent " : i.Label, i.TextEdit!.NewText));
         Assert.Contains("under", end.Detail);
         Assert.Contains("frame", items.Single(i => i.Label == "box").Detail);
         Assert.Contains("20mm", items.Single(i => i.Label == "indent").Detail);
@@ -274,19 +275,103 @@ public class FencedTextCompletionTests
     [InlineData("```md end ‸\n", "box center indent")]
     [InlineData("```md box ‸\n", "end center indent")]
     [InlineData("```md end center b‸\n", "box indent")]                  // the editor filters by the word
-    [InlineData("```md indent 20mm ‸\n", "end box center")]
+    [InlineData("```md indent 20mm box ‸\n", "end center")]
+    [InlineData("```md indent 20mm 10mm ‸\n", "end box center")]         // after two lengths, no third
     [InlineData("```md indent 20mm 10mm box ‸\n", "end center")]
     [InlineData("```md box center indent 2cm end ‸\n", "")]
     [InlineData("part p { }\nscore {\n  ```md box ‸\n  ```\n  staff p\n}\n", "end center indent")]
     public void AWordAlreadyWritten_IsNotOfferedAgain(string marked, string offered)
         => Assert.Equal(offered.Split(' ', StringSplitOptions.RemoveEmptyEntries), Labels(marked, " "));
 
+    // ----- the lengths after `indent` (owner's request 2026-11-13: "md indent を補完で入れたら、
+    //       数字を補完ウィンドウにリストして") -----
+
+    private const string Lengths = "5mm 10mm 15mm 20mm 25mm 30mm 40mm 50mm";
+
+    /// <summary>The labels at <c>‸</c> as the editor lists them: by sort text.</summary>
+    private static string Listed(string marked, string? trigger = null)
+        => string.Join(" ", (Ask(marked, trigger) ?? []).OrderBy(i => i.SortText, StringComparer.Ordinal).Select(i => i.Label));
+
     [Theory]
-    [InlineData("```md indent ‸\n")]                    // a length is typed, not chosen
-    [InlineData("```md indent 2‸\n")]
+    [InlineData("```md indent ‸\n")]
     [InlineData("```md box indent ‸\n")]
-    public void AfterIndent_NothingIsOffered(string marked)
-        => Assert.Empty(Ask(marked, marked.Contains(" ‸") ? " " : null)!);
+    [InlineData("```md indent ‸\nA note.\n```\ntitle \"T\"\n")]
+    [InlineData("part p { }\nscore {\n  ```md end indent ‸\n  ```\n  staff p\n}\n")]
+    public void AfterIndent_ItsLengthsAreOffered_SmallestFirst_AndNothingElse(string marked)
+    {
+        // By the sort text, not the label: "10mm" sorts before "5mm" as a word.
+        Assert.Equal(Lengths, Listed(marked, " "));
+        Assert.Equal(Lengths, Listed(marked));
+        var items = Ask(marked, " ")!;
+        Assert.All(items, i => Assert.Equal(CompletionItemKind.Value, i.Kind));
+        Assert.All(items, i => Assert.Equal(i.Label, i.TextEdit!.NewText));
+        Assert.All(items, i => Assert.Null(i.Command));
+        Assert.All(items, i => Assert.Contains("left and right", i.Detail));
+    }
+
+    [Fact]
+    public void TakingIndentFromTheList_WritesItsSpace_AndOpensTheLengthsAtOnce()
+    {
+        var items = Ask("```md ‸\n", " ")!;
+        var indent = items.Single(i => i.Label == "indent");
+        Assert.Equal("indent ", indent.TextEdit!.NewText);
+        Assert.Equal("editor.action.triggerSuggest", indent.Command!.CommandIdentifier);
+        // No other word asks for the list again.
+        Assert.All(items.Where(i => i.Label != "indent"), i => Assert.Null(i.Command));
+
+        // Through the request a plain text field completes by: the text taken, and the list
+        // it opens next at the caret it leaves.
+        var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
+        var taken = server.CompleteText(new CompleteTextParams { Text = "```md in\n", Offset = 8 })
+            .Items.Single(i => i.Label == "indent");
+        Assert.True(taken.Again);
+        string after = "```md in\n"[..taken.Start] + taken.Insert + "```md in\n"[taken.End..];
+        Assert.Equal("```md indent \n", after);
+        Assert.Equal(Lengths, Listed(after.Insert(taken.Start + taken.Caret, "‸")));
+    }
+
+    [Theory]
+    [InlineData("```md indent 20mm ‸\n", "end box center " + Lengths)]      // the words, then the second length
+    [InlineData("```md box indent 2cm ‸\n", "end center " + Lengths)]
+    [InlineData("```md indent 5 ‸\n", "end box center " + Lengths)]         // after a bare number of staff spaces
+    [InlineData("```md indent 20mm 1‸\n", "1mm 1cm 1in 10mm 15mm")]         // a number on its way: the lengths alone
+    [InlineData("```md indent 20mm b‸\n", "end box center")]                // a word on its way: the editor filters
+    public void AfterTheFirstLength_TheSecondIsOfferedBesideTheWords(string marked, string listed)
+    {
+        Assert.Equal(listed, Listed(marked, marked.Contains(" ‸") ? " " : null));
+        var second = Ask(marked)!.FirstOrDefault(i => i.Kind == CompletionItemKind.Value);
+        if (second != null)
+            Assert.Contains("right", second.Detail);
+    }
+
+    [Theory]
+    [InlineData("```md indent 2‸\n", "2mm 2cm 2in 20mm 25mm")]      // the number with each unit, then the list's
+    [InlineData("```md indent 20‸\n", "20mm 20cm 20in")]
+    [InlineData("```md indent 5‸\n", "5mm 5cm 5in 50mm")]
+    [InlineData("```md indent 0.5‸\n", "0.5mm 0.5cm 0.5in")]
+    [InlineData("```md indent 20m‸\n", "20mm")]                     // the unit on its way
+    [InlineData("```md indent 2c‸\n", "2cm")]
+    [InlineData("```md indent 1.‸\n", "")]                          // no number yet
+    [InlineData("```md indent x‸\n", "")]
+    public void WhileANumberIsTyped_ItsUnitsAndTheLengthsThatBeginSoAreOffered(string marked, string listed)
+    {
+        Assert.Equal(listed, Listed(marked));
+        // Each replaces the word typed, so the editor filters by it.
+        int word = marked.IndexOf("indent ", StringComparison.Ordinal) + 7, caret = marked.IndexOf('‸');
+        Assert.All(Ask(marked)!, i => Assert.Equal((word, caret), (i.TextEdit!.Range.Start.Character, i.TextEdit.Range.End.Character)));
+    }
+
+    [Fact]
+    public void EveryLengthOffered_IsOneTheCompilerTakes()
+    {
+        foreach (string marked in new[] { "```md indent ‸\n", "```md indent 12‸\n", "```md indent 20mm ‸\n" })
+            foreach (var item in Ask(marked)!.Where(i => i.Kind == CompletionItemKind.Value && !i.Label!.EndsWith("in") && !i.Label.EndsWith("cm")))
+            {
+                string line = marked[..marked.IndexOf("‸", StringComparison.Ordinal)];
+                line = line[..item.TextEdit!.Range.Start.Character] + item.TextEdit.NewText;
+                Assert.Empty(Said($"title \"T\"\n{line}\nA note.\n```\npart p {{ clef treble }}\nsection A {{ p {{ c'1 | }} }}\nscore {{ staff p }}\n"));
+            }
+    }
 
     [Theory]
     [InlineData("```md ‸ end\n")]                       // the line goes on after the caret

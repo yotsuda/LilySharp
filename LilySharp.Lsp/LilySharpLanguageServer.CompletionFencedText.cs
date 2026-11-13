@@ -30,7 +30,8 @@ namespace LilySharp.Lsp;
 //   1. An empty line there: the two blocks, low in the list of keywords.
 //   2. After the backticks (`, `` or ```), and on into the first word: the same two.
 //   3. After ```md and a space, and after each further word: `end`, `box`, `center`, `indent`
-//      (owner-approved 2026-11-13) — those not on the line yet.
+//      (owner-approved 2026-11-13) — those not on the line yet; and after `indent` its
+//      lengths, which taking `indent` from the list opens at once (owner's request, same day).
 // And between the fences nothing is Lily#, so nothing is offered there at all.
 public sealed partial class LilySharpLanguageServer
 {
@@ -124,8 +125,9 @@ public sealed partial class LilySharpLanguageServer
     /// caret, the closing fence — unless the fence already closes below, where it writes the
     /// opening line alone.</item>
     /// <item>After <c>```md</c> and a space, and after each word that follows: <c>end</c>,
-    /// <c>box</c>, <c>center</c>, <c>indent</c>, less those already on the line; nothing
-    /// straight after <c>indent</c>, where a length is typed.</item>
+    /// <c>box</c>, <c>center</c>, <c>indent</c>, less those already on the line; straight
+    /// after <c>indent</c> its lengths alone, and after its first length the second's beside
+    /// the words (<see cref="FenceLengthItems"/>).</item>
     /// <item>Between the fences, on the closing fence, and at a fence that stands where none is
     /// printed: an empty list. Nothing there is Lily#. ⚠️ Until this was written the body
     /// answered whatever list the text before the fence led to — the top level's keywords
@@ -216,11 +218,20 @@ public sealed partial class LilySharpLanguageServer
         // not printed yet.)
         if (before.Length >= 1 && before[0] is FencedText.MarkdownWord or FencedText.MarkdownLongWord)
         {
-            // After `indent` a length is typed, not chosen: no list of this language offers
-            // lengths, and any two or three here would be a guess at the paper.
-            if (before[^1] == FencedText.IndentWord)
-                return null;
             var range = RangeOf(text, wordStart, wordEnd);
+            // After `indent` its lengths (owner's request 2026-11-13: "md indent を補完で入れたら、
+            // 数字を補完ウィンドウにリストして"): the first, which it needs — nothing else belongs
+            // there — and after that one the second, which it may take, beside the words.
+            int indentAt = Array.LastIndexOf(before, FencedText.IndentWord);
+            int lengthsWritten = indentAt >= 0 && before.Skip(indentAt + 1).All(w => char.IsAsciiDigit(w[0]))
+                ? before.Length - indentAt - 1
+                : -1;
+            string typed = text[wordStart..offset];
+            var lengths = lengthsWritten is 0 or 1
+                ? FenceLengthItems(typed, range, second: lengthsWritten == 1)
+                : [];
+            if (lengthsWritten == 0 || (lengths.Length > 0 && typed.Length > 0 && char.IsAsciiDigit(typed[0])))
+                return new CompletionList { Items = lengths };
             (string Word, string Detail)[] words =
             [
                 (FencedText.EndWord, place == FencePlace.Score
@@ -233,17 +244,66 @@ public sealed partial class LilySharpLanguageServer
             ];
             return new CompletionList
             {
-                Items = [.. words.Where(w => !before.Contains(w.Word)).Select((w, i) => new CompletionItem
+                Items = [.. words.Where(w => !before.Contains(w.Word)).Select((w, i) =>
                 {
-                    Label = w.Word,
-                    Kind = CompletionItemKind.Keyword,
-                    Detail = w.Detail,
-                    SortText = "fence" + i,     // the place first, then the shape, as the sentence lists them
-                    TextEdit = new TextEdit { Range = range, NewText = w.Word },
-                })],
+                    // `indent` needs its length: it is written with the space after it and
+                    // opens the list again, on the lengths (the same request), as a singer
+                    // line's `up` opens its numbers.
+                    bool takesLength = w.Word == FencedText.IndentWord;
+                    return new CompletionItem
+                    {
+                        Label = w.Word,
+                        Kind = CompletionItemKind.Keyword,
+                        Detail = w.Detail,
+                        SortText = "fence" + i,     // the place first, then the shape, as the sentence lists them
+                        TextEdit = new TextEdit { Range = range, NewText = takesLength ? w.Word + " " : w.Word },
+                        Command = takesLength
+                            ? new Command { Title = "Suggest a length", CommandIdentifier = "editor.action.triggerSuggest" }
+                            : null,
+                    };
+                }), .. lengths],
             };
         }
         return null;
+    }
+
+    /// <summary>The lengths the list offers after <c>indent</c>, smallest first: Lily#'s
+    /// choice, the round millimetres a page's side white is commonly set to.</summary>
+    internal static readonly string[] FenceIndentLengths =
+        ["5mm", "10mm", "15mm", "20mm", "25mm", "30mm", "40mm", "50mm"];
+
+    /// <summary>
+    /// The list at a length of <c>indent</c> (owner's request 2026-11-13): the number being
+    /// typed with each unit (<c>20</c> → <c>20mm</c>, <c>20cm</c>, <c>20in</c>; a bare number
+    /// is staff spaces already), then those of <see cref="FenceIndentLengths"/> that begin as
+    /// typed — all of them where nothing is typed yet. Each replaces the word; the sort text
+    /// keeps them in this order (<c>10mm</c> would sort before <c>5mm</c> by its label).
+    /// </summary>
+    /// <param name="typed">The word from its start to the caret.</param>
+    /// <param name="range">The word, which an item replaces.</param>
+    /// <param name="second">Whether this is <c>indent</c>'s second length, the right side's.</param>
+    private static CompletionItem[] FenceLengthItems(string typed, LilySharp.Lsp.Protocol.Range range, bool second)
+    {
+        var offered = new List<string>();
+        int digits = 0;
+        while (digits < typed.Length && (char.IsAsciiDigit(typed[digits]) || typed[digits] == '.'))
+            digits++;
+        string number = typed[..digits], unit = typed[digits..];
+        if (number.Length > 0 && char.IsAsciiDigit(number[0]) && char.IsAsciiDigit(number[^1])
+            && number.Count(c => c == '.') <= 1)
+            offered.AddRange(FencedText.LengthUnits.Where(u => u.StartsWith(unit, StringComparison.Ordinal)).Select(u => number + u));
+        offered.AddRange(FenceIndentLengths.Where(l => l.StartsWith(typed, StringComparison.Ordinal) && !offered.Contains(l)));
+        string detail = second
+            ? "White at the text's right; the length before it is then the left's alone"
+            : "White at the text's left and right; a second length sets the right apart";
+        return [.. offered.Select((length, i) => new CompletionItem
+        {
+            Label = length,
+            Kind = CompletionItemKind.Value,
+            Detail = detail,
+            SortText = "length" + i.ToString("00", System.Globalization.CultureInfo.InvariantCulture),
+            TextEdit = new TextEdit { Range = range, NewText = length },
+        })];
     }
 
     private static LilySharp.Lsp.Protocol.Range RangeOf(string text, int start, int end)
