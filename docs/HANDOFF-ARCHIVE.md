@@ -267,6 +267,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1228セッションの経緯
+
+### 1.1 第1228セッション（2026-11-14・YT-DELL2）
+
+base `71d65e366`・6 commit（未 push）。評価 4 の残り ⑶ `lysc review` と、第1227 の積み残し 5 件。OMR の `open` は 0。
+- **⑶ `lysc review`（`729b5468e`）**: 衝突（`harmony.clash`）から外したもの＝`chords` 行が鳴らす和音の構成音（`ChordTone`・MIDI の ` (chords)` トラックの音高類）・経過音と刺繍音（1 拍以下で前後が順次、かつ前後の音が和声に乗っている＝`Passing`／`Sits`。F G A を F♯ のベースの上に書いたものは今も言う）・`@notehead(cross)`／`@dead` の音（`UnpitchedHeads`）。同じ小節・同じ音高類の衝突は 1 件にまとめる（4 本のサックスのユニゾンのリフ）。**3 本以上の線が衝突し、どの 1 パートもその全部の下にいないとき**（ピアノの両手と chords 行は 1 人と数える＝`Player`）は `harmony.dissonant`（`[style]`・1 件）＝無調・クラスター・コード行のないジャズの語法。band の判定: ベースも電気楽器もないとき、ドラムとコード楽器が band になるのは他のパートが 2 つまで（`BandOthersWithNoBass`）。`band.tempo-changes`: 16 小節以上の曲の最後の 4 小節で遅くなるテンポは終止の広がり（`BroadEndingBars`）。`unis.`（`@text("unis.")`・"unison"・"a 2"）の音から 2 声が離れるまでの同度・オクターブは `singers.octaves`／`singers.parallels` に数えない（`UnisonPassages`）。4 冊の `[mistake]` は 12→1・2→1・10→3・2→1（前後は Lab `p1228/review/*-before.txt`・`*-after.txt`）。網 `GrammarEvaluation4ReviewTests` 10 本（各本に対照入り）。**残したもの**: ビッグバンドの 13 本のホーンは今も全部「旋律」（`MelodiesOf` の「ピアノの横のパート」）＝リズムの指摘（`in D 6 of its 6 bars have the same rhythm`）は 4 本のトロンボーンに出る／F7 の上の B♭（サックスのリフ）は 1 件の `[mistake]` のまま（ブルースの 4 度を blue note に入れるかは未決）／"Heard in" は転調する曲で外れる（D→E の曲に A major）。閾値（3 本・2 パート・4 小節）は評価 4 の 4 冊と網の対照だけが根拠＝LILYSHARP-OWN の経験則。
+- **積み残し 4 件（補助 1 便・`694046224`〜`08c45148f`）**: フレーズ名 `eb`・`bb`・`cB` は宣言どおり呼べる（構文は常に参照として読み、「ees のつもり?」の LYS1012 は宣言がないときだけ `SymbolReferenceValidator` が言う）／双子は LilyPond にない強弱（`sffz`・`rf` の 2 つだけ）を `-#(make-dynamic-script "…")` で書く（LP 2.26.0 で実走）／休符の `@scoop`・`@plop`・`@fall`・`@doit`・`@bend` は新しいエラー LYS4079（`GestureHostValidator`・ページも XML も双子も描かない）・装飾音の `@scoop` は列の左の輪郭に場所を取る（`GraceColumnInfo.ApproachGesture`・LILYSHARP-OWN）・XML の装飾音に 4 つのジェスチャ／`check --pitches` は四分音を `C+4`・`Cd4` と言い、`lysc import` は `<alter>` ±0.5・±1.5 を `ih`・`eh`・`isih`・`eseh` に読む（ほかの値は丸めて警告）。
+- **アクセントの強弱（`4cbefaad0`）**: `@sf`・`@sfz`・`@fz`・`@sffz`・`@rf`・`@rfz` はその 1 音だけ（立っている水準 +12 以上・`@sf` は `@sfz` と同じ）で水準は元のまま、`@fp`・`@sfp` は打って p を残す＝`MidiExporter.Strike` の 1 か所（空の和音とグループの上は次の音へ＝`Hold`／`Standing`）。LP の Dynamic_performer は全部を水準として読む＝LILYSHARP-OWN（RULES §5.2 の音楽的妥当性）。
+- 7.7 の匂い: 補助の報告だけで自分の目で見ていないもの＝装飾音の scoop の絵・LP の PNG（Lab `p1228/a`）／`lysc review` の閾値は評価の 4 冊と網の対照だけが根拠／アクセントの耳の確認と VS Code の実機は未確認／毒は回していない（網は各本に対照入り）。
+- 門: 開始時 full 16570 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16573、終了時 full 16615 合格 / 1 失敗（同じ）/ skip 2 / 合計 16618（`p1228` の `run4.trx` ＋ 棚卸しの再生成・+45 は足した網）。全 svg の掃き 1041 冊 1268 枚で動いた svg 0（base `71d65e366`・head `08c45148f`・Lab `p1228/sweep`。その後の `4cbefaad0` は MIDI だけ）。
 ## 以下は第1227セッションの経緯
 
 ### 1.1 第1227セッション（2026-11-14・YT-DELL2）
