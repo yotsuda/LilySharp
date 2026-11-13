@@ -5245,12 +5245,21 @@ public sealed class MusicXmlExporter
         var first = _currentMeasure.Notes.Count > 0 && _currentMeasure.Notes[^1] == xmlNote
             ? _currentMeasure
             : _currentPart.Measures.Count > 0 ? _currentPart.Measures[^1] : null;
-        if (first != null)
+        // One <multiple-rest> run cannot hold a meter change: where another part's `time`
+        // lands inside the rest (StartNewMeasure writes it on that bar), the run ends before
+        // it and a new one starts there — `R*8` with a 3/4 at its fourth bar is 3 + 5. Until
+        // 2026-11-14 the first bar said 8 and a reader hid the change inside the rest.
+        var runFirst = first;
+        int runBars = 1;
+        void CloseRun()
         {
             // A mid-piece measure carries no <attributes> unless something changed; the
             // multiple-rest is such a change, and a change block repeats no <divisions>.
-            first.Attributes ??= new MusicXmlAttributes { Divisions = null };
-            first.Attributes.MultipleRest = bars;
+            // A run of one bar is a bar's rest, not a multiple rest.
+            if (runFirst == null || runBars < 2)
+                return;
+            runFirst.Attributes ??= new MusicXmlAttributes { Divisions = null };
+            runFirst.Attributes.MultipleRest = runBars;
         }
         // The bars after a bare `R*N`'s first are whole bars of the meter, a pickup's or not.
         var meter = _bars.MeterLength;
@@ -5266,7 +5275,14 @@ public sealed class MusicXmlExporter
             {
                 _currentPart.Measures.Add(_currentMeasure);
                 StartNewMeasure();
+                if (_currentMeasure!.Attributes is { } opened && (opened.TimeBeats.HasValue || opened.TimeSenzaMisura))
+                {
+                    CloseRun();
+                    runFirst = _currentMeasure;
+                    runBars = 0;
+                }
             }
+            runBars++;
             // …and of the meter THERE: StartNewMeasure has applied a `time` another part writes
             // at this bar (the score's meter), and the bar's rest lasts the new bar — it kept
             // the first bar's duration under a 7/8 or a 3/4 until 2026-11-14 (grammar evaluation 4).
@@ -5287,6 +5303,7 @@ public sealed class MusicXmlExporter
             });
             MaybeClosePickup(duration);
         }
+        CloseRun();
     }
 
     /// <summary>The chord symbol and the figured bass a grace note or chord carries (session 964;

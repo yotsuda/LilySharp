@@ -49,9 +49,14 @@ internal static class MeasureModel
     /// line), whether the bar was cut at the meter rather than written — one of the bars
     /// of an <c>R1*N</c> or of a <c>%N</c>, the two places a bar line cannot be written
     /// (<see cref="WrittenBar"/> holds every other bar to its bar lines) — and whether it holds
-    /// music inlined from a phrase body (whose text lies outside the scope).</summary>
+    /// music inlined from a phrase body (whose text lies outside the scope).
+    /// <see cref="RunCrossesMeter"/>: the bar is one of a VALUED run's (<c>R1*8</c>) from the bar
+    /// where the score's meter changes under it to a bar of another length — that bar's index,
+    /// the <c>time</c>, and the run's bar count; the bar's <see cref="Duration"/> is still the
+    /// value the run wrote.</summary>
     internal readonly record struct Bar(Fraction Duration, TextSpan Span, bool IsEmpty = false, int BarLineEnd = -1,
-        bool Flowed = false, bool HasPhrase = false, bool IsBareRest = false, Fraction? Meter = null);
+        bool Flowed = false, bool HasPhrase = false, bool IsBareRest = false, Fraction? Meter = null,
+        (int Bar, TimeSignatureSyntax Time, int Bars)? RunCrossesMeter = null);
 
     /// <summary>
     /// Flattens <paramref name="scope"/> (expanding phrase references via
@@ -115,6 +120,8 @@ internal static class MeasureModel
         var heldByRepeat = new Dictionary<PercentRepeatSyntax, int>();
         string chain = "";                // …as the index's address prefix
         var pendingKeys = new List<(string, int)>();
+        // The bar under construction is a valued run's past a meter change (Bar.RunCrossesMeter).
+        (int Bar, TimeSignatureSyntax Time, int Bars)? runCrosses = null;
 
         // The bar about to be added: the addresses of its music land in it.
         void IndexTheBar()
@@ -138,7 +145,8 @@ internal static class MeasureModel
                 IsBareRest: current is [RestSyntax { MeasureCount: <= 1 } only] && Music.BarRest.IsBare(only),
                 // The meter in force where the bar closed: a `time` written in the music is not
                 // the section header's (SectionBoundaryBars judges an edge bar by it).
-                Meter: senzaMisura ? null : meter));
+                Meter: senzaMisura ? null : meter, RunCrossesMeter: runCrosses));
+            runCrosses = null;
             current = new List<SyntaxNode>();
             total = Fraction.Zero;
             confirmable = false;
@@ -361,14 +369,27 @@ internal static class MeasureModel
             // 2026-11-14 all N bars kept the first one's length (grammar evaluation 4).
             bool bareRun = written > 1 && plannedMeterAt != null && !senzaMisura && current.Count == 1
                 && node is RestSyntax run && Music.BarRest.IsBare(run);
+            // A VALUED run (`R1*8`) says its bars' length itself, so its bars keep it — and where
+            // the score's meter changes under the run to a bar of another length, the bars from
+            // there on are marked (Bar.RunCrossesMeter) for the cross-part check to say so ONCE,
+            // at the rest, instead of once a bar (2026-11-14). The meter is adopted for the
+            // music after the run.
+            bool valuedRun = written > 1 && plannedMeterAt != null && !senzaMisura && current.Count == 1
+                && node is RestSyntax { RestText: "R" } valued && !Music.BarRest.IsBare(valued);
             for (int extra = 1; extra < written && (node is PercentMarkSyntax || budget.Charge(1)); extra++)
             {
-                bars.Add(new Bar(itemDuration, node.Span, Flowed: true));
+                bars.Add(new Bar(itemDuration, node.Span, Flowed: true, RunCrossesMeter: runCrosses));
                 if (bareRun && plannedMeterAt!(bars.Count) is { IsSenzaMisura: false } inside)
                 {
                     meter = DurationCalculator.ParseTimeSignature(inside.Beats, inside.BeatType);
                     itemDuration = meter;
                     total = meter;   // the bar left pending is the next of the run
+                }
+                else if (valuedRun && plannedMeterAt!(bars.Count) is { IsSenzaMisura: false } under)
+                {
+                    meter = DurationCalculator.ParseTimeSignature(under.Beats, under.BeatType);
+                    if (meter != itemDuration)
+                        runCrosses ??= (bars.Count, under, written);
                 }
             }
         }

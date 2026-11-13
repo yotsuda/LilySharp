@@ -365,7 +365,20 @@ internal sealed class CrossPartMeasureValidator
             // pickup the other parts play (until 2026-11-12 `partial 4 … b { R | … }` beside
             // `a { g'4 | … }` was told "lasts 1/4 but part 'b' has 1", against what the
             // grammar says of R; two of four writers trying the grammar met it).
-            var present = parts.Where(p => i < p.Measures.Count && !p.Measures[i].IsEmpty && !p.Measures[i].IsBareRest).ToList();
+            // A valued run (`R1*8`) the score's meter changes under: said ONCE, at the rest, with
+            // what to write — its bars past the change are then left out, as each would only
+            // repeat it ("Measure 4 … lasts 3/4 but part 'b' has 1", and again for 5, 6, 7, 8,
+            // until 2026-11-14). The run says "N bars of this value", and from the change on the
+            // bars are not that long; the bare `R*N` is the run that follows the meter.
+            foreach (var part in parts)
+                if (i < part.Measures.Count && part.Measures[i].RunCrossesMeter is { } crossed
+                    && _warnedSpans.Add((part.Measures[i].Span.Start, part.Measures[i].Span.Length)))
+                    _diagnostics.Warning(part.Measures[i].Span, DiagnosticCodes.MeasureDurationMismatch,
+                        $"Part '{part.Name}' rests {crossed.Bars} bars of {part.Measures[i].Duration} each here, but the meter changes to "
+                        + $"{crossed.Time.Beats}/{crossed.Time.BeatType} inside the rest, at measure {crossed.Bar + 1}: from there its bars are not "
+                        + $"{part.Measures[i].Duration} long — parts will not align. Write 'R*{crossed.Bars}', whose bars follow the meter");
+            var present = parts.Where(p => i < p.Measures.Count && !p.Measures[i].IsEmpty && !p.Measures[i].IsBareRest
+                && p.Measures[i].RunCrossesMeter == null).ToList();
             if (present.Count < 2)
                 continue;
 

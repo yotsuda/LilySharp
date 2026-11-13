@@ -569,24 +569,36 @@ internal sealed class MeasureValidator : ISemanticValidator
         var planBarOf = cell != null && cellContainer != null && !_meterPlan.IsEmpty
             ? _meterPlan.BarsOfItems(cell.Value.Section, cellContainer) : null;
         int planBar = -1;
+        // The bars INSIDE the run the bar before held (`R*N`, `%N`), after its first.
+        int insideFrom = 0, insideTo = -1;
 
         for (int i = 0; i < measures.Count; i++)
         {
             var measure = measures[i];
             var barItems = measure.Items;
+            // A `time` another part wrote inside that run is the meter from here on.
+            for (int inside = insideFrom; inside <= insideTo; inside++)
+                if (cell is { } runCell && cellContainer != null
+                    && _meterPlan.ForeignChangeAt(runCell.Section, inside, cellContainer) is { } insideTime)
+                    _bars.SetTime(insideTime);
             planBar++;
             if (planBarOf != null)
             {
                 foreach (var item in barItems)
                     if (planBarOf.TryGetValue(item.Span.Start, out int placed))
                     {
-                        planBar = placed;
+                        // A run is placed in the bar it CLOSES in (BarsOfItems), and this bar
+                        // is where it opens: asked for its last bar, `R2.*5` standing exactly on
+                        // another part's `time 3/4` never met it and was told "Measure duration
+                        // 3/4 is less than time signature 4/4" (2026-11-14).
+                        planBar = Math.Max(0, placed - Svg.Collector.SectionMeterPlan.BarsBeyondTheFirst(item));
                         break;
                     }
             }
             int planBarHere = planBar;
             foreach (var item in barItems)
                 planBar += Svg.Collector.SectionMeterPlan.BarsBeyondTheFirst(item);
+            (insideFrom, insideTo) = planBarOf != null ? (planBarHere + 1, planBar) : (0, -1);
 
             // A mid-piece \time takes effect at the bar it appears in
             // (LilyPond applies the new meter from that timestep), so adopt

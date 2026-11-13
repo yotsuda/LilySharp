@@ -170,4 +170,63 @@ public class Session1229LeftoversTests
             Assert.Equal(FullSvg(text), session.RenderIncremental(tree).Replace("\r\n", "\n"));
         }
     }
+
+    /// <summary>Part <c>a</c> changes to 3/4 at its fourth bar (or not); part <c>b</c> rests.</summary>
+    private static string RestBesideAMeterChange(string rest, bool change = true)
+        => "time 4/4\noctave absolute\npart a { }\npart b { }\nsection Main {\n"
+            + (change
+                ? "  a { c'1 | c'1 | c'1 | time 3/4 c'2. | c'2. | c'2. | c'2. | c'2. | }\n"
+                : "  a { c'1 | c'1 | c'1 | c'1 | c'1 | c'1 | c'1 | c'1 | }\n")
+            + "  b { " + rest + " }\n}\nform { Main }\nscore { staff a staff b }\n";
+
+    /// <summary>
+    /// <c>R1*8</c> says eight whole-note bars. Where another part's <c>time 3/4</c> lands inside
+    /// it, that was reported once a bar after the change (five LYS2004); it is said once, at the
+    /// rest, with the bare <c>R*8</c> that follows the meter.
+    /// </summary>
+    [Fact]
+    public void AValuedBarRestAcrossAMeterChange_IsToldOnce_AndWhatToWrite()
+    {
+        static System.Collections.Generic.List<Diagnostic> Warnings(string text)
+            => [.. LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(text))
+                .Where(d => d.Severity != DiagnosticSeverity.Info)];
+
+        string valued = RestBesideAMeterChange("R1*8");
+        var told = Assert.Single(Warnings(valued));
+        Assert.Equal(DiagnosticCodes.MeasureDurationMismatch, told.Code);
+        Assert.Equal(valued.IndexOf("R1*8", System.StringComparison.Ordinal), told.Span.Start);
+        Assert.Contains("3/4", told.Message);
+        Assert.Contains("at measure 4", told.Message);
+        Assert.Contains("'R*8'", told.Message);
+
+        // The controls: the bare run follows the meter, and a valued run under one meter is right.
+        Assert.Empty(Warnings(RestBesideAMeterChange("R*8")));
+        Assert.Empty(Warnings(RestBesideAMeterChange("R1*8", change: false)));
+        // A valued run that ends before the change, and the right value after it.
+        Assert.Empty(Warnings(RestBesideAMeterChange("R1*3 | R2.*5")));
+        // …which was told "Measure duration 3/4 is less than time signature 4/4" when written-out
+        // bars came before it; and the music after a run with the change inside is in the new meter.
+        Assert.Empty(Warnings(RestBesideAMeterChange("R1 | R1 | R1 | R2.*5")));
+        Assert.Empty(Warnings(RestBesideAMeterChange("R*5 | e'2. | e'2. | e'2. |")));
+    }
+
+    /// <summary>
+    /// MusicXML wrote one <c>&lt;multiple-rest&gt;8</c> on the first bar though the 3/4 stands on
+    /// the fourth: a multiple rest cannot hold a meter change, so the run is 3 + 5.
+    /// </summary>
+    [Fact]
+    public void MusicXml_SplitsAMultipleRest_AtAMeterChangeInsideIt()
+    {
+        static System.Collections.Generic.List<(int Bar, int Count)> Runs(string text)
+            => [.. new MusicXmlExporter().Export(SyntaxTree.Parse(text)).Parts[1].Measures
+                .Select((m, i) => (Bar: i + 1, Count: m.Attributes?.MultipleRest ?? 0)).Where(r => r.Count != 0)];
+
+        Assert.Equal([(1, 3), (4, 5)], Runs(RestBesideAMeterChange("R*8")));
+        Assert.Equal([(1, 3), (4, 5)], Runs(RestBesideAMeterChange("R1*8")));
+        // A change on the run's last bar leaves a bar's rest, which is no multiple rest.
+        Assert.Equal([(1, 3)], Runs(RestBesideAMeterChange("R*4 | R | R | R | R |")));
+        // The control: one meter, one run.
+        Assert.Equal([(1, 8)], Runs(RestBesideAMeterChange("R*8", change: false)));
+        Assert.Equal([(1, 8)], Runs(RestBesideAMeterChange("R1*8", change: false)));
+    }
 }
