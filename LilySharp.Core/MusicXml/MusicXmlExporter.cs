@@ -1836,6 +1836,9 @@ public sealed class MusicXmlExporter
                 {
                     p.Measures[startIdx.GetValueOrDefault(p)].RepeatForward = true;
                     p.Measures[^1].RepeatBackward = true;
+                    // `:|*4`: MusicXML's own count (the page prints "4×" over the bar). It was
+                    // left off, so a reader played the riff twice (grammar evaluation 4, 2026-11-13).
+                    p.Measures[^1].RepeatTimes = rb.ExplicitPlayCount ?? 0;
                 }
             }
         }
@@ -3909,7 +3912,10 @@ public sealed class MusicXmlExporter
             // The group octave shift applies to the ROOT member only; the stacked members
             // inherit it via the anchor octave the shifted root sets.
             bool isRoot = !rootSet && letter is not null;
-            if (rootSet && letter is { } l)
+            // Under `octave absolute` nothing stacks — every member is where it is written, and
+            // the marks after '>>' move each (MeasureCollector.MusicWalk ProcessArpeggio;
+            // grammar evaluation 4, 2026-11-13).
+            if (rootSet && letter is { } l && !savedAbsolute)
             {
                 _octaveAbsolute = true;
                 _octaveAnchor = anchorOctave + (RelativeOctave.StepIndex(l) >= rootStep ? 0 : 1);
@@ -3919,7 +3925,7 @@ public sealed class MusicXmlExporter
                 _octaveAbsolute = savedAbsolute; // the root, and any rest
             }
             if (member is PitchSyntax pitch)
-                EmitArpeggioXmlPitch(pitch, isRoot ? groupOctave : 0, parts, slurStart, slurEnd, groupString);
+                EmitArpeggioXmlPitch(pitch, isRoot || (savedAbsolute && spreadNote is null) ? groupOctave : 0, parts, slurStart, slurEnd, groupString);
             else if (member is ChordSyntax chord)
             {
                 // A second part re-reads the chord, so the frame is put back to what the
@@ -3933,7 +3939,7 @@ public sealed class MusicXmlExporter
                     if (!first)
                         (_octaveAbsolute, _octaveAnchor, _currentStep, _currentOctave) = frame;
                     _defaultDuration = Fraction.FromNoteValue(parts[k].Value).Dotted(parts[k].Dots);
-                    Stamped(chord, () => ProcessChord(chord, isRoot ? groupOctave : 0));
+                    Stamped(chord, () => ProcessChord(chord, isRoot || (savedAbsolute && spreadNote is null) ? groupOctave : 0));
                     if (first && slurStart)
                         foreach (var n in _chordMembers) n.SlurStart = true;
                     if (last && slurEnd)

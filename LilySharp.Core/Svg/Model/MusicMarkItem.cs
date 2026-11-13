@@ -141,6 +141,12 @@ public enum MusicMarkType
     /// <remarks>LILYPOND-REF: ly/declarations-init.ly:86 make-span-event — <c>"\\!" = #(make-span-event
     /// 'CrescendoEvent STOP)</c>, the event the dynamic engraver ends the open hairpin on.</remarks>
     HairpinStop,
+    /// <summary>How many times a repeat is played when that is more than twice
+    /// (<c>|: A :|*4</c>, an inline <c>:|*4</c>): "4×" over the closing repeat bar, its right
+    /// edge on the bar line. The text is the item's. LILYSHARP-OWN — LilyPond prints nothing
+    /// for <c>\repeat volta 4</c>; the convention is the player's (grammar evaluation 4,
+    /// 2026-11-13: a rock chart's four-times riff was engraved as an ordinary repeat).</summary>
+    RepeatCount,
 }
 
 /// <summary>

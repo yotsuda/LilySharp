@@ -343,7 +343,9 @@ internal static class TupletBracketEngraver
             // the wrong (upper) side. Single-voice staves keep the pitch/stem
             // majority (CalculateDirection).
             bool isStemUp = staffMultiVoice
-                ? (VoiceDefaults.GetDefaultStemUp(tuplet.VoiceIndex + 1)
+                ? (VoiceDefaults.GetDefaultStemUp(!tupVoices.IsDefaultOrEmpty && tuplet.VoiceIndex < tupVoices.Length
+                        ? VoiceDefaults.DirectionNumber(tupVoices, tuplet.VoiceIndex, tuplet.MeasureIndex)
+                        : tuplet.VoiceIndex + 1)
                     ?? CalculateDirection(tuplet, tupMeasures))
                 : CalculateDirection(tuplet, tupMeasures);
 

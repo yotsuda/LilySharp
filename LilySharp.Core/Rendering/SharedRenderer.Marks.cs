@@ -1018,9 +1018,12 @@ internal static partial class SharedRenderer
             // and the line starts past the text. LILYPOND-REF: piano-pedal-bracket.cc.
             const double flare = EngravingDefaults.PedalBracketFlare;
             double top = absY + b.EdgeHeight; // hooks/notch rise toward the staff
-            double lineStartX = b.IsMixed ? b.StartX + MixedPedalTextClearance
-                              : b.StartChange ? b.StartX + flare : b.StartX;
             double lineEndX = b.EndChange ? b.EndX - flare : b.EndX;
+            // …past ITS word: the layout says how far (PedalBracketLayout.MixedLineStart), and
+            // a word that reaches past the release leaves the hook alone.
+            double lineStartX = b.IsMixed
+                    ? Math.Min(b.StartX + (b.MixedLineStart > 0 ? b.MixedLineStart : MixedPedalTextClearance), lineEndX)
+                : b.StartChange ? b.StartX + flare : b.StartX;
             using (gc.Source(b.SourcePosition))
             {
                 gc.DrawLine(lineStartX, absY, lineEndX, absY, Color.Black, thickness);

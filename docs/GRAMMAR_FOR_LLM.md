@@ -134,8 +134,11 @@ score full  { condensedStaff { flute1 flute2 } }
 score parts { staff flute1  staff flute2 }
 ```
 
-This is plain condensation: unisons are not merged into one notehead and no "a2"/"Solo" is
-printed. One staff takes one key, meter and clef at a moment: a `time` both parts write is
+This is plain condensation: a unison keeps both stems (one head, a stem up and a stem down),
+every part's rests are drawn (two bar rests in a bar both rest — `combinedStaff` merges them)
+and no "a2"/"Solo" is printed. The parts are numbered as parts: the first has stems up and the
+second down for the whole piece, and a `voice { } { }` inside one part is voiced up/down
+again only for as long as it lasts. One staff takes one key, meter and clef at a moment: a `time` both parts write is
 drawn once, and a later part's `key` / `time` / `clef` that differs from the first part's at
 the same moment is not applied and warns (LYS4024) — write the same change in every part.
 The staff's clef is the first part's unless one is written before the brace:
@@ -507,7 +510,8 @@ diagram(C xx-10-12-13-12)4.~  // frets 10-15 in the dash form
 Members play in SEQUENCE and EQUALLY SUBDIVIDE the group's total (no per-member
 durations — a bare number is always a scale degree). Octaves follow the chord anchor
 model above — the next note reads the group's anchor, not its last member; a
-degrees-only group anchors on the tonic. NOT LilyPond's `<< >>`
+degrees-only group anchors on the tonic. Under `octave absolute` every member is where
+it is written, exactly as in a `<…>` chord (`<< fis' a' d'' >>` = `<fis' a' d''>`'s notes). NOT LilyPond's `<< >>`
 (parallel voices) — those are `voice { }` in Lily#; a `\\` inside is an error.
 
 ```
@@ -583,7 +587,7 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   same argument on `@turn`, `@reverseTurn`, `@mordent`, `@prall`, `@pralltriller`. Only these
   three words, glued: `@trill(sharp)`. (A slur starting on a trilled note is still
   `c4@trill( d e)`.)
-- Dynamics: `@ppp @pp @p @mp @mf @f @ff @fff` and the accent dynamics `@sfz @sf @fp @sfp @rfz @fz` (default below the staff, above it on a staff with a lyrics row directly under it; `.up` / `.down`
+- Dynamics: `@ppp @pp @p @mp @mf @f @ff @fff` and the accent dynamics `@sfz @sf @fp @sfp @rfz @fz` (default below the staff, above it on a `staff` with a lyrics row directly under it — not on a `condensedStaff` / `combinedStaff` or a tab, where you write `.up`; `.up` / `.down`
   forces the side, e.g. `@f.up`). Subito: `@p.subito` prints an italic "sub." before the p and plays as `@p`;
   a side goes after it (`@ff.subito.up`). Editorial (an editor's suggestion): `@p(editorial)` prints the
   level in parentheses, "(p)", and plays as `@p` — any level (`@mf(editorial)`, `@sfz(editorial)`), a side
@@ -831,7 +835,7 @@ after it on the same line (until the hairpin has ended) that write no side follo
   With endings the numbers are the passes: `|: A [1-2. B] :| [3. C]` plays A B A B A C, and
   every pass from 1 to the highest number must be named by exactly one ending (LYS1043); a
   `:|*N` beside endings is an error (LYS1042). Without endings the body plays twice, or
-  `|: A :|*N` N times. A bracket prints its passes as LilyPond does: `[1-2.` "1. 2.",
+  `|: A :|*N` N times — more than twice prints "N×" over the closing repeat bar. A bracket prints its passes as LilyPond does: `[1-2.` "1. 2.",
   `[1-3.` "1.–3.". The `]` ends the ending and hooks its bracket's right end
   down; `-]` ends it with a straight (open) right end: `|: A [1. B] :| [2. C D -]`. The
   `]` may be left off only right before a `:|` (`|: A [1. B C :| [2. D]` — the `:|` closes
@@ -1099,9 +1103,11 @@ score { staff gtr  tab gtr }
   warns, LYS4069). It is not printed: say it in the part's name
   (`instrument guitar "Guitar 1 (capo 2)"`). `staff gtr capo 2` is an ERROR (LYS4069): a
   staff shows notes as they sound and reads no capo.
-- **What a tab shows of the marks**: slurs, ties (the held note's number is dropped),
+- **What a tab shows of the marks**: slurs, ties (the held note's number is dropped — a held
+  chord's too; a `q` or a bare duration repeats a chord on the strings it was written on),
+  no `@finger` when the part's staff stands beside the tab (the staff carries it),
   `@hammerOn` / `@pullOff` / `@tap` (the letters H P T — a slur is still written for the curve:
-  `a'8@hammerOn( b')`), `@bend(half|full|N)` (the arrow) and its `@release`, `@vibrato` (the wavy
+  `a'8@hammerOn( b')`; the two notes under that slur are put on one string), `@bend(half|full|N)` (the arrow) and its `@release`, `@vibrato` (the wavy
   line), `@glissando` / `@slide` (the line
   between two fret numbers), `@arpeggio`, a harmonic's fret in angle brackets (`e,4@harmonic(12)`
   is `⟨12⟩` on its string; the touched member of `<c' f'@harmonic>4` is its fret in brackets),
@@ -1433,7 +1439,7 @@ A pedal CHANGE (release and re-press on the same note, LilyPond's `\sustainOff\s
 the start again while the pedal is down: `g,4@sustain` — the bracket draws its notch there, and
 the one `@!sustain` at the end closes the span. `g,4@!sustain@sustain` means the same. How the span is
 drawn is the PART's: `part lh { clef bass pedal text }` (`text` = "Ped. … *", `bracket` =
-what an unset part draws, or `mixed` = text at the start, bracket for the hold).
+what an unset part draws — the same plain bracket for all three pedals, as LilyPond's bracket style — or `mixed` = text at the start, bracket for the hold; `text` and `mixed` print "Sost. Ped." and "una corda" / "tre corde").
 
 ```
 d,4@sustain a, d a, | g,4@sustain d g d | a,1@!sustain |

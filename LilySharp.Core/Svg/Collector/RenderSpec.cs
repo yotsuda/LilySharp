@@ -858,6 +858,23 @@ public sealed record RenderSpec(
         }
     }
 
+    /// <summary>A condensed staff's voices: its parts' concatenated, each stamped with the
+    /// part it is of (<see cref="Voice.SharedPartNumber"/>) — the voice props go by PART there,
+    /// not by slot (<see cref="VoiceDefaults.DirectionNumber"/>; grammar evaluation 4,
+    /// 2026-11-13).</summary>
+    private static ImmutableArray<Voice> CondensedVoices(
+        CondensedStaffSpec condensed, Func<string, ImmutableArray<Voice>> getVoices)
+    {
+        var all = ImmutableArray.CreateBuilder<Voice>();
+        for (int p = 0; p < condensed.PartNames.Length; p++)
+        {
+            int first = all.Count;
+            foreach (var voice in getVoices(condensed.PartNames[p]))
+                all.Add(voice with { SharedPartNumber = p + 1, PartFirstVoice = first });
+        }
+        return all.ToImmutable();
+    }
+
     private IEnumerable<StaffGroup> BuildStaffGroups(
         Func<string, ImmutableArray<Voice>> getVoices,
         ICollection<CombinedStaffAddressing>? addressings)
@@ -925,9 +942,7 @@ public sealed record RenderSpec(
                 case CondensedStaffSpec condensed:
                     var condensedVoices = StaffAccidentalColumns.Resolve(
                         MeasureCollector.ResolveVoiceStemDirections(
-                            condensed.PartNames
-                                .SelectMany(name => (IEnumerable<Voice>)getVoices(name))
-                                .ToImmutableArray()));
+                            CondensedVoices(condensed, getVoices)));
                     return Staff.Create(condensed.Clef, condensedVoices, condensed.InstrumentName);
 
                 // TWO parts -> ONE staff, MERGED. Unlike the condensed staff above, the

@@ -49,7 +49,8 @@ public sealed partial class MeasureCollector
         {
             var resolvedSpelling = new ResolvedChordMember(
                 staffPosition, rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave,
-                NoteheadStyle.Default, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave));
+                NoteheadStyle.Default, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
+                StringNumber: ExtractStringNumber(note));
             _resolvedNotes[note] = resolvedSpelling;
             // Record mode (finding 3-4): log the write, so a resume can restore the adopted
             // prefix's entries. Order matters (a form replay's overwrite must land last).
@@ -420,7 +421,15 @@ public sealed partial class MeasureCollector
         int StaffPosition, int? Step, int? Alter, int? Octave, NoteheadStyle Notehead, int Midi,
         // The member's OWN @dead (ChordNoteInfo.IsDead) — part of the note as its head style
         // is, so a `q` repeats it. The chord's @dead is a post-event and is not copied.
-        bool IsDead = false)
+        bool IsDead = false,
+        // The STRING the member is written on (`f\5`, or the chord's `\6\5\4`): where the note
+        // is played, so a `q` and a bare duration repeat it. ⚠️ LILYSHARP-OWN, against the
+        // LILYPOND-REF on CreateChordRepetitionItem: LilyPond's `q` drops string numbers
+        // unless the music is wrapped in \tabChordRepeats, and Lily# did the same until
+        // grammar evaluation 4 (2026-11-13) — `<bes,\6 f\5 bes\4>4 q` was 8-8-8 and then
+        // x-1-3-3 on the tab, the same chord at another position (rock/r-05). Nothing is
+        // drawn on the staff from it; only the tab's fret choice reads it.
+        int? StringNumber = null)
     {
         /// <summary>
         /// The same member displaced by whole octaves — what <c>q'</c> repeats. A
@@ -870,6 +879,12 @@ public sealed partial class MeasureCollector
             members.Add(new ResolvedChordMember(dinfo.StaffPosition, null, null, null,
                 dinfo.Notehead, dinfo.GmKey));
         }
+        // The members a `q` copies carry their strings (ResolvedChordMember.StringNumber) —
+        // read here, after the chord's own `\6\5\4` has been dealt to them above. The two
+        // lists were filled side by side.
+        for (int i = 0; i < members.Count && i < notes.Count; i++)
+            if (notes[i].StringNumber is { } memberString)
+                members[i] = members[i] with { StringNumber = memberString };
         var memberArray = members.ToImmutableArray();
         _resolvedChordMembers[chord] = memberArray;
         // Record mode (finding 3-4): same log as CreateNoteItem's, for a chord some
@@ -1045,6 +1060,9 @@ public sealed partial class MeasureCollector
         // chain, so ChordRepetitions answers with the total rather than this node's marks.
         int displacement = Music.ChordRepetitions.DisplacementOf(rep);
 
+        // The repetition's OWN @dead mutes the copy, as a chord's own does its members
+        // (`q@dead` drew an ordinary chord: grammar evaluation 4, 2026-11-13, rock/r-03).
+        bool repDead = HasNamedArticulation(rep, "dead");
         var notes = new List<ChordNoteInfo>(members.Length);
         foreach (var written in members)
         {
@@ -1064,8 +1082,9 @@ public sealed partial class MeasureCollector
             notes.Add(new ChordNoteInfo(
                 m.StaffPosition, accidental,
                 IsCourtesy: styleCourtesy,
-                Notehead: m.Notehead,
-                IsDead: m.IsDead,
+                StringNumber: m.StringNumber,
+                Notehead: repDead ? NoteheadStyle.Cross : m.Notehead,
+                IsDead: repDead || m.IsDead,
                 Midi: m.Midi,
                 SourcePosition: rep.SourceStart,
                 LineStartAccidental: memberLineStart,
@@ -1194,6 +1213,7 @@ public sealed partial class MeasureCollector
                 // copied), displacement included: a run that reached here through
                 // a `q'` repeats the chord where that q left it.
                 int bareDisplacement = Music.BareDurations.DisplacementOf(bare);
+                bool bareDead = HasNamedArticulation(bare, "dead"); // its own @dead, as a q's
                 var notes = new List<ChordNoteInfo>(members.Length);
                 foreach (var writtenMember in members)
                 {
@@ -1204,8 +1224,9 @@ public sealed partial class MeasureCollector
                     notes.Add(new ChordNoteInfo(
                         m.StaffPosition, accidental,
                         IsCourtesy: styleCourtesy,
-                        Notehead: m.Notehead,
-                        IsDead: m.IsDead,
+                        StringNumber: m.StringNumber,
+                        Notehead: bareDead ? NoteheadStyle.Cross : m.Notehead,
+                        IsDead: bareDead || m.IsDead,
                         Midi: m.Midi,
                         SourcePosition: bare.SourceStart,
                         WrittenPitch: m.Step is { } ps ? WrittenPitch.Pack(ps, m.Alter!.Value, m.Octave!.Value) : 0));
@@ -1240,6 +1261,8 @@ public sealed partial class MeasureCollector
                     isCue: isCue)
                 {
                     Midi = m.Midi,
+                    // The string the original was written on (ResolvedChordMember.StringNumber).
+                    StringNumber = m.StringNumber,
                     ForcedStemUp = GetStemDirectionOverride(bare), ShiftOff = HasNamedArticulation(bare, "shiftOff"),
                     WrittenPitch = m.Step is { } ps ? WrittenPitch.Pack(ps, m.Alter!.Value, m.Octave!.Value) : 0,
                 };

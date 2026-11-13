@@ -58,7 +58,11 @@ public readonly record struct PedalBracketLayout(
     // A portion of a bracket broken across systems: the broken end is the system edge,
     // drawn with no hook (LilyPond's broken spanner). LILYPOND-REF: lily/piano-pedal-bracket.cc:55-72 Piano_pedal_bracket::print -- broken[d] drops that edge's height.
     bool BrokenLeft = false,
-    bool BrokenRight = false
+    bool BrokenRight = false,
+    // Mixed style: how far past StartX the line begins — past the leading word's right end
+    // and the bound's padding (PedalEngraver.MixedLineStartOffset). 0: the renderer's
+    // sustain clearance (a layout made with no fonts).
+    double MixedLineStart = 0
 );
 
 /// <summary>
@@ -685,7 +689,8 @@ internal static class PedalEngraver
         bool isMixed = false,
         Func<int, PedalType, double?>? solvedLineUpOf = null,
         Func<int, double?>? staffTopDownOf = null,
-        GraceAnchors? grace = null)
+        GraceAnchors? grace = null,
+        Rendering.ScoreTextMetrics? fonts = null)
     {
         if (brackets.IsDefaultOrEmpty)
             return ImmutableArray<PedalBracketLayout>.Empty;
@@ -810,8 +815,36 @@ internal static class PedalEngraver
                 EndChange: !brokenRight && endsAtChange[bi],
                 SourceIndex: bi,
                 BrokenLeft: brokenLeft,
-                BrokenRight: brokenRight));
+                BrokenRight: brokenRight,
+                MixedLineStart: isMixed && fonts != null ? MixedLineStartOffset(fonts, bracket.Type) : 0));
         }
+    }
+
+    /// <summary>
+    /// Mixed style: where the line begins, from the engaging note's column — the leading
+    /// word's right end (the word is centred on the column) plus the bound's padding.
+    /// </summary>
+    /// <remarks>
+    /// One clearance served all three pedals — the sustain's, 2.9 — so the line of a
+    /// <c>@sostenuto</c> and of an <c>@unaCorda</c> was drawn THROUGH the right half of
+    /// "Sost. Ped." and "una corda", which are twice as wide as the "Ped." glyphs (grammar
+    /// evaluation 4, 2026-11-13, chamber/r-14). MEASURED 2.26.0 (Lab
+    /// sessions/p1226/md/eval4/fixB/lp/r14.png): each line begins a staff space after its word.
+    /// The sustain's stays the constant it was (its glyphs' half width, 1.9, plus the padding).
+    /// LILYPOND-REF: lily/piano-pedal-bracket.cc Piano_pedal_bracket::print — the left
+    ///   edge is the pedal-text's right extent plus <c>bound-padding</c>.
+    /// LILYPOND-REF: scm/define-grobs.scm PianoPedalBracket — <c>(bound-padding . 1.0)</c>.
+    /// </remarks>
+    internal static double MixedLineStartOffset(Rendering.ScoreTextMetrics fonts, PedalType type)
+    {
+        const double boundPadding = 1.0;
+        if (type == PedalType.Sustain)
+            return 1.9 + boundPadding;
+        var on = type == PedalType.Sostenuto ? MusicMarkType.SostenutoOn : MusicMarkType.UnaCordaOn;
+        string word = type == PedalType.Sostenuto ? "Sost. Ped." : "una corda";
+        double width = fonts.Advance(word, MusicMarkEngraver.PlainMarkEm(fonts, on),
+            MusicMarkEngraver.TextRoleOf(on), MusicMarkEngraver.TextStyleOf(fonts, on));
+        return width / 2 + boundPadding;
     }
 
     /// <summary>

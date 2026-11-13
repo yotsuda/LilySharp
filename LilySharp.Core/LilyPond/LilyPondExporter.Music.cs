@@ -2207,8 +2207,12 @@ public sealed partial class LilyPondExporter
                     else
                     {
                         // Stacked on the root: the root's octave, bumped when the letter is
-                        // below the root's, plus its own marks.
-                        want = anchorOctave + (step >= rootStep ? 0 : 1) + p.OctaveOffset;
+                        // below the root's, plus its own marks. Under `octave absolute` nothing
+                        // stacks: where it is written, moved by the group's marks (the
+                        // collector's rule since grammar evaluation 4, 2026-11-13).
+                        want = _octaveAbsolute
+                            ? _absoluteBaseOctave + p.OctaveOffset + groupOctave
+                            : anchorOctave + (step >= rootStep ? 0 : 1) + p.OctaveOffset;
                     }
                     (prefix, suffix) = SplitAttachments(Semantics.ArticulationRuns.WithCovering(p, p.Articulations));
                     if (groupString != null && !p.Articulations.OfType<StringNumberAnnotationSyntax>().Any())
@@ -2367,7 +2371,8 @@ public sealed partial class LilyPondExporter
             }
             else
             {
-                stackedBase = anchorOctave + (chordRootStep >= rootStep ? 0 : 1);
+                stackedBase = _octaveAbsolute ? _absoluteBaseOctave + groupOctave // absolute: nothing stacks
+                    : anchorOctave + (chordRootStep >= rootStep ? 0 : 1);
                 chordRootOctave = firstPitchOctave = stackedBase + rootMarks + chordOff;
             }
         }
@@ -2386,7 +2391,8 @@ public sealed partial class LilyPondExporter
             }
             else
             {
-                stackedBase = anchorOctave + (chordRootStep >= rootStep ? 0 : 1);
+                stackedBase = _octaveAbsolute ? _absoluteBaseOctave + groupOctave // absolute: nothing stacks
+                    : anchorOctave + (chordRootStep >= rootStep ? 0 : 1);
                 chordRootOctave = stackedBase + chordOff;
             }
         }

@@ -323,13 +323,15 @@ public class LilyPondExporterTests
     }
 
     /// <summary>
-    /// Absolute mode: every mark is measured from the <c>\fixed c'</c> base. The stacked
-    /// <c>g,</c> is the G below the root's octave (stacked = same octave, then its own mark).
+    /// Absolute mode: every mark is measured from the <c>\fixed c'</c> base, and no member
+    /// stacks on the root — each is where it is written, as a chord's are (grammar evaluation
+    /// 4, 2026-11-13; until then the later members were stacked in both modes).
     /// </summary>
     [Fact]
-    public void Arpeggio_Absolute_WritesTheStackedOctavesFromTheBase()
+    public void Arpeggio_Absolute_WritesEachMemberFromTheBase()
     {
         Assert.Contains("\\tuplet 3/2 { c8 e8 g,8 }", Export(Score("c4 << c e g, >>")));
+        Assert.Contains("\\tuplet 3/2 { g8 c'8 e8 }", Export(Score("c4 << g c' e >>")));
     }
 
     /// <summary>

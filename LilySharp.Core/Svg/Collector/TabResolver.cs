@@ -113,7 +113,7 @@ internal sealed class TabResolver
     /// </summary>
     public Voice ResolveVoiceTabTies(Voice voice)
     {
-        bool anyTie = voice.Measures.Any(m => m.Items.Any(it => it is NoteItem { HasTieStart: true }));
+        bool anyTie = voice.Measures.Any(m => m.Items.Any(it => it is NoteItem { HasTieStart: true } or ChordItem { HasTieStart: true }));
         if (!anyTie)
             return voice;
 
@@ -162,6 +162,53 @@ internal sealed class TabResolver
                 pendingIi = ii;
             }
         }
+
+        // …and a tie into or out of a CHORD: every member the item before holds (the same
+        // pitch, tied) is a tie's destination too, on the string it is held on. Only
+        // note-to-note ties were followed until grammar evaluation 4 (2026-11-13, rock/r-03):
+        // `<f,\6 c\5 f\4>8~ q4.` printed 3-3-3 twice.
+        // LILYPOND-REF: scm/tablature.scm:186-224 tab-note-head::handle-ties — per note head.
+        MusicItem? before = null;
+        for (int mi = 0; mi < measures.Length; mi++)
+            for (int ii = 0; ii < measures[mi].Items.Length; ii++)
+            {
+                var item = ItemAt(mi, ii);
+                if (item is not (NoteItem or ChordItem) || item is NoteItem { IsPitchlessSlash: true })
+                    continue;
+                if (before is ChordItem { HasTieStart: true } held)
+                {
+                    if (item is ChordItem into)
+                    {
+                        var members = into.Notes.ToBuilder();
+                        for (int k = 0; k < members.Count; k++)
+                            foreach (var source in held.Notes)
+                                if (source.Midi == members[k].Midi && held.Ties(source))
+                                {
+                                    members[k] = members[k] with { IsTieTarget = true, StringNumber = members[k].StringNumber ?? source.StringNumber };
+                                    break;
+                                }
+                        Work(mi)[ii] = item = into with { Notes = members.ToImmutable() };
+                    }
+                    else if (item is NoteItem { IsTieTarget: false } single && held.Notes.Any(n => n.Midi == single.Midi))
+                        Work(mi)[ii] = item = single with
+                        {
+                            IsTieTarget = true,
+                            StringNumber = single.StringNumber ?? held.Notes.First(n => n.Midi == single.Midi).StringNumber,
+                        };
+                }
+                else if (before is NoteItem { HasTieStart: true } one && item is ChordItem onto)
+                {
+                    var members = onto.Notes.ToBuilder();
+                    for (int k = 0; k < members.Count; k++)
+                        if (members[k].Midi == one.Midi)
+                        {
+                            members[k] = members[k] with { IsTieTarget = true, StringNumber = members[k].StringNumber ?? one.StringNumber };
+                            break;
+                        }
+                    Work(mi)[ii] = item = onto with { Notes = members.ToImmutable() };
+                }
+                before = item;
+            }
 
         var rebuilt = ImmutableArray.CreateBuilder<Measure>(measures.Length);
         for (int mi = 0; mi < measures.Length; mi++)
@@ -287,6 +334,34 @@ internal sealed class TabResolver
         return rebuilt is not null ? voice with { Measures = rebuilt.MoveToImmutable() } : voice;
     }
 
+    /// <summary>The voice with no fingering on any note: a tab's copy of a part some notation
+    /// staff of the score also draws (the digits are the staff's; MeasureCollector's tab
+    /// pass says when).</summary>
+    public static Voice RemoveFingerings(Voice voice)
+    {
+        ImmutableArray<Measure>.Builder? rebuilt = null;
+        for (int mi = 0; mi < voice.Measures.Length; mi++)
+        {
+            var items = voice.Measures[mi].Items;
+            ImmutableArray<MusicItem>.Builder? changed = null;
+            for (int ii = 0; ii < items.Length; ii++)
+            {
+                MusicItem? plain = items[ii] switch
+                {
+                    NoteItem { Fingering: not null } note => note with { Fingering = null },
+                    ChordItem chord when chord.Notes.Any(n => n.Fingering != null)
+                        => chord with { Notes = ImmutableArray.CreateRange(chord.Notes, n => n with { Fingering = null }) },
+                    _ => null,
+                };
+                if (plain != null)
+                    (changed ??= items.ToBuilder())[ii] = plain;
+            }
+            if (changed != null)
+                (rebuilt ??= voice.Measures.ToBuilder())[mi] = voice.Measures[mi] with { Items = changed.ToImmutable() };
+        }
+        return rebuilt == null ? voice : voice with { Measures = rebuilt.ToImmutable() };
+    }
+
     /// <summary>One item without its accidentals, or the SAME instance when it had none —
     /// so a tab score that spells no accidental is not rebuilt at all.</summary>
     private static MusicItem WithoutAccidentals(MusicItem item) => item switch
@@ -372,7 +447,8 @@ internal sealed class TabResolver
     /// </para>
     /// </remarks>
     public Voice ResolveTabStrings(Voice voice, TuningType tuning, ClefType clef = ClefType.Treble,
-        int transposition = 0, IReadOnlySet<(int Measure, int Item)>? falls = null, int capo = 0)
+        int transposition = 0, IReadOnlySet<(int Measure, int Item)>? falls = null, int capo = 0,
+        IReadOnlySet<(int Measure, int Item)>? legatos = null)
     {
         // `capo` is for the WORDS of a range warning only: the frets already count from it,
         // through `transposition` (RenderSpecParser.ParseTab takes the capo off the shift).
@@ -405,14 +481,42 @@ internal sealed class TabResolver
         var barWritten = new Dictionary<int, int>(); // written MIDI -> its written string, this bar
         var sounding = new List<int>();
         _fits.Add(new TabFit(voice.Name, tuning, sounding));
+        // The events of the last bar that had any: what a `%` bar plays again (below).
+        int lastBarFirst = 0, lastBarEnd = 0;
         for (int mi = 0; mi < measures.Length; mi++)
         {
             barWritten.Clear();
+            int barFirst = events.Count;
             for (int ii = 0; ii < measures[mi].Items.Length; ii++)
             {
                 var item = ItemAt(mi, ii);
                 double onset = time;
                 time += item.Duration.ToDouble();
+
+                // ⚠️ A `%` BAR IS NOT A REST. Its bar is a spacer here (the sign stands for the
+                // music, RestItem.IsRepetitionSpacer), and the planner read that as silence: the
+                // hand "free" after the bar before, so that bar's last notes were planned with
+                // nothing after them — the same open-string bar came out 0 0 0 0 0 0 0 0 before
+                // a written bar and 0 0 0 0 0 5 2 5 before a `%` (grammar evaluation 4,
+                // 2026-11-13, rock/r-04; the `@mp` there was a bystander). The hand plays the
+                // bar again, so the planner is told the bar again: its events, with no item to
+                // write a string back to.
+                if (item is RestItem { IsRepetitionSpacer: true } && lastBarEnd > lastBarFirst)
+                {
+                    for (int k = lastBarFirst; k < lastBarEnd; k++)
+                    {
+                        var again = events[k];
+                        events.Add(k == lastBarFirst
+                            ? again with { TimeToMove = double.IsNaN(previousOnset) ? 1.0 : onset - previousOnset, HandFree = restSince, SlurFromPrevious = false, TiedFromPrevious = false, AfterFall = false, SlideFromPrevious = false }
+                            : again);
+                        refs.Add((-1, -1));
+                    }
+                    previousOnset = time - item.Duration.ToDouble() / (lastBarEnd - lastBarFirst);
+                    previousMidi = events[^1].Midi;
+                    previousSlurStart = previousSlide = previousFall = false;
+                    restSince = false;
+                    continue;
+                }
 
                 if (item is RestItem)
                 {
@@ -544,10 +648,23 @@ internal sealed class TabResolver
                 previousOnset = onset;
                 previousMidi = midi;
                 previousSlurStart = slurStart;
-                previousSlide = item is NoteItem { HasGlissando: true };
+                // …and a hammer-on or a pull-off is one string as a slide is: the finger hammers
+                // onto, or pulls off, the string the note before is sounding on (grammar
+                // evaluation 4, 2026-11-13, rock/r-06: `f'8@pullOff( d')` was the first string's
+                // 1 and the second string's 3). A plain slur stays the planner's to cross (the
+                // owner's decision on TabEvent.SlurFromPrevious).
+                previousSlide = item is NoteItem { HasGlissando: true }
+                    // ⚠️ Only under the slur that draws it (`f'8@pullOff( d')`): the letter alone,
+                    // on a note no curve leaves, names a technique and joins nothing
+                    // (test/tab-technique-letters).
+                    || (item is NoteItem { HasSlurStart: true } && legatos != null && legatos.Contains((mi, ii)));
                 previousFall = falls != null && falls.Contains((mi, ii));
                 restSince = false;
             }
+            // (A `%` bar's replayed events are not a bar to play again from: the bar it
+            // repeats stays the one.)
+            if (events.Count > barFirst && refs[barFirst].Measure >= 0)
+                (lastBarFirst, lastBarEnd) = (barFirst, events.Count);
         }
 
         // A bass plays by the planner fitted to the owner's bass books, frozen (BassFingeringPlanner);
@@ -558,6 +675,8 @@ internal sealed class TabResolver
         for (int k = 0; k < refs.Count; k++)
         {
             var (mi, ii) = refs[k];
+            if (mi < 0)
+                continue; // a `%` bar's replay: nothing drawn there
             if (ItemAt(mi, ii) is NoteItem note && !note.StringNumber.HasValue && strings[k] > 0)
                 Work(mi)[ii] = WithString(note, strings[k]);
         }

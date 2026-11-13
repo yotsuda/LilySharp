@@ -166,6 +166,18 @@ internal static partial class SharedRenderer
             }
             if (!anyNamed) continue;
 
+            // A group with no staff on this system has no name on it: the brace's one name was
+            // drawn regardless (at a brace of no height), on top of the neighbouring staff's —
+            // "Marimba" over "Flute" (grammar evaluation 4, 2026-11-13, chamber/r-09).
+            // LILYPOND-REF: lily/hara-kiri-group-spanner.cc — a GrandStaff whose staves are all
+            //   removed takes its InstrumentName with it (the name's Y-parent is the dead group).
+            bool anyShown = false;
+            foreach (var sl in staffGroup.Staves)
+            {
+                if (!sl.IsHidden) { anyShown = true; break; }
+            }
+            if (!anyShown) continue;
+
             // Single name spanning a delimited group: center vertically across the brace.
             if (staffGroup.HasDelimiter && staffGroup.GrandStaffLayout is { } gs)
             {

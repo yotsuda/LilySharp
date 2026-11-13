@@ -550,6 +550,14 @@ internal sealed partial class LayoutEngine
         return result.MoveToImmutable();
     }
 
+    /// <summary>The bars a compressed rest stops at, from the score the SPACING read its runs
+    /// off (<see cref="MultiMeasureRestEngraver.RunStops"/>): a multi-staff layout's per-pass
+    /// <see cref="Score"/> carries no marks. Null: that score's own.</summary>
+    private static HashSet<int>? MmrRunStops(AnnotationLayoutContext ctx)
+        => ctx.MultiScore is { } multi
+            ? MultiMeasureRestEngraver.RunStops(multi.MusicMarks, multi.VoltaBrackets) ?? []
+            : null;
+
     private AnnotationLayouts CalculateAnnotationLayouts(AnnotationLayoutContext ctx)
     {
         var score = ctx.Score;
@@ -698,7 +706,7 @@ internal sealed partial class LayoutEngine
         ImmutableArray<MultiMeasureRestLayout> PassMmrLayouts() =>
             passMmrLayouts ??= MultiMeasureRestEngraver.Calculate(score!, systems, _options.StaffHeight,
                 voicesByStaff: voicesByStaff, prebuiltMeasureMap: passMeasureMap,
-                staffByIndex: ctx.StaffByIndex);
+                staffByIndex: ctx.StaffByIndex, runStops: MmrRunStops(ctx));
         // A script on an R is LilyPond's MultiMeasureRestScript: centred on the rest and sided
         // off it and its count number, so it needs the rest laid out — BEFORE anything reads the
         // scripts' positions (the diagrams' pass, the support skylines, the movers).
@@ -907,6 +915,15 @@ internal sealed partial class LayoutEngine
                         foreach (var line in pl[si][sIdx])
                             if (line.StartMeasureIndex == startMeasure && line.Type == type)
                                 return line.LineYUp;
+                        // A portion CONTINUED from the system before: the solve keys its line by
+                        // the measure the bracket STARTS in, which is not on this system, and
+                        // the portion asks by this system's first measure — so it found nothing
+                        // and fell to the row under the WHOLE system, on the cello's hairpin
+                        // (grammar evaluation 4, 2026-11-13, chamber/r-11). A family has one
+                        // line a system (SolveAndSeed), so the family's line here is the answer.
+                        foreach (var line in pl[si][sIdx])
+                            if (line.Type == type)
+                                return line.LineYUp;
                         return null;
                     };
                 // The staff's top line on the system a bracket STARTS on — the same
@@ -930,7 +947,8 @@ internal sealed partial class LayoutEngine
                                 voicesByStaff != null && voicesByStaff.TryGetValue(staffIndex, out var pv) ? pv
                                 : score != null && staffVoices.IsDefaultOrEmpty ? ImmutableArray.Create(score.Voice)
                                 : staffVoices,
-                                ctx.GraceNotes, staffIndex)));
+                                ctx.GraceNotes, staffIndex),
+                            fonts: ctx.Fonts));
             }
         }
         var pedalBracketLayouts = pedalBracketBuilder?.ToImmutable() ?? [];
@@ -1415,7 +1433,7 @@ internal sealed partial class LayoutEngine
             MultiMeasureRests: score != null && drawn
                 ? MultiMeasureRestEngraver.Calculate(score, systems, _options.StaffHeight,
                     voicesByStaff: voicesByStaff, prebuiltMeasureMap: tailMeasureMap,
-                    staffByIndex: ctx.StaffByIndex)
+                    staffByIndex: ctx.StaffByIndex, runStops: MmrRunStops(ctx))
                 : ImmutableArray<MultiMeasureRestLayout>.Empty,
             // (The ledger-line spans — lily/ledger-line-spanner.cc's LedgerLineSpanner — were
             // computed here until session 523 and read by nobody: the notehead path draws its

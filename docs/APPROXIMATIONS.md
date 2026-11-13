@@ -14,22 +14,22 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 399 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **527** | |
+| `OWN` | 403 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **531** | |
 
 ## 密度の高いファイル（上位 12）
 
 | ファイル | 件数 |
 |---|---:|
-| `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 20 |
+| `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 21 |
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 18 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 16 |
 | `LilySharp.Core/Svg/Layout/ProseBand.cs` | 16 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
 | `LilySharp.Core/Midi/MidiExporter.cs` | 10 |
+| `LilySharp.Core/Svg/Collector/MeasureCollector.cs` | 10 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 10 |
 | `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 9 |
-| `LilySharp.Core/Svg/Collector/MeasureCollector.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 8 |
 | `LilySharp.Core/Tablature/Tunings.cs` | 8 |
@@ -249,7 +249,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（399 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（403 件）
 
 ### `LilySharp.Core/Audio/SingerPlan.cs`
 - **`SingerPlan`** LILYSHARP-OWN.
@@ -500,6 +500,7 @@
 - **`MeasureCollector.ProcessParallelSpan`** (2026-11-12). LILYSHARP-OWN. ⚠️ A CHART ONLY: a `voice { … | } { … | } |` span's
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
 - **`MeasureCollector._staffDynamicsUp`** LILYSHARP-OWN (owner's decision 2026-11-11, docs/dynamics-above-lyrics-design.md
+- **`MeasureCollector.CollectMultiStaffPass`** keeps it. LILYSHARP-OWN.
 - **`MeasureCollector.HarvestOmittedStructure`** LILYSHARP-OWN, it is printed on a part SHEET whose part does not write one in
 - **`MeasureCollector.JunkCondensedStaffDuplicateDynamics`** a &gt; an X). LILYSHARP-OWN, after the reading LilyPond offers: its two voices' dynamics
 - **`MeasureCollector.JunkCondensedStaffDuplicateDynamics`** LILYSHARP-OWN: LilyPond's Dynamic_engraver stands in the Voice context
@@ -516,6 +517,8 @@
 - **`MeasureCollector.ProcessSectionPrologue`** `time!` (MeasureBuilder.SectionHead, LILYSHARP-OWN): no reset stands here yet, so
 - **`MeasureCollector.ProcessSectionBody`** of the name, played q (grammar evaluation 3, 2026-11-13). LILYSHARP-OWN: the grid's
 - **`MeasureCollector.ApplyKeySignatureChange`** is not drawn unless written `key!` (MeasureBuilder.SectionHead, LILYSHARP-OWN). At a
+### `LilySharp.Core/Svg/Collector/MeasureCollector.ItemFactory.cs`
+- **`MeasureCollector.ResolvedChordMember`** is played, so a `q` and a bare duration repeat it. ⚠️ LILYSHARP-OWN, against the
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.MusicWalk.cs`
 - **`MeasureCollector.ProcessMusicNode`** not against the reset the head already stands on (LILYSHARP-OWN): a
 - **`MeasureCollector.ApplyMeterChange`** (MeasureBuilder.SectionHead, LILYSHARP-OWN).
@@ -685,6 +688,7 @@
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **`MusicMarkEngraver.PlainTextFontSize`** tagged LILYSHARP-OWN on 2026-08-18 (session 203) with the four things the tag owes,
 - **`MusicMarkEngraver.TextStyleOf`** ⚠️ IT USED TO ANSWER BoldItalic, and session 203 tagged that LILYSHARP-OWN
+- **`MusicMarkEngraver.IsJumpScript`** (LILYSHARP-OWN, MusicMarkType.RepeatCount).
 - **`MusicMarkEngraver.BesideTempoGap`** LILYSHARP-OWN: `markTempo beside` is a Lily#-own arrangement (user decision 2026-09-02,
 - **`MusicMarkEngraver.CoPlaceToCodaWithLabels`** side-by-side shared line itself is LILYSHARP-OWN: LilyPond prints a boundary
 - **`MusicMarkEngraver.ToCodaGlyphScale`** (a sign the player must not miss). LILYSHARP-OWN with the composition.
@@ -813,6 +817,7 @@
 ### `LilySharp.Core/Svg/Model/Measure.cs`
 - **`Measure.IsTrailingClefColumn`** ⚠️ LILYSHARP-OWN: THE FLAGGED ZERO-WIDTH MEASURE IS A TRANSLATION DEVICE. LilyPond
 ### `LilySharp.Core/Svg/Model/MusicMarkItem.cs`
+- **`MusicMarkType.RepeatCount`** edge on the bar line. The text is the item's. LILYSHARP-OWN — LilyPond prints nothing
 - **`MusicMarkItem..ctor`** coda itself (LILYSHARP-OWN, a Gould-style departure).
 - **`MusicMarkItem.BarreText`** LILYSHARP-OWN: LilyPond has no barre command; its manual writes the label as the
 ### `LilySharp.Core/Svg/Model/PercentRepeatItem.cs`

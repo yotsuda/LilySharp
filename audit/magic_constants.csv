@@ -1097,6 +1097,8 @@
 "Svg/Layout/PedalEngraver.cs","PedalEngraver.Calculate","2.0","y = topDown + 2.0 - lineYUp;","(file-level) LILYPOND-REF: define-grobs.scm:2855-2873 PianoPedalBracket grob","Yellow"
 "Svg/Layout/PedalEngraver.cs","PedalEngraver.Calculate","2.0","if (!brokenLeft && !brokenRight && endX - startX < 2.0)","(file-level) LILYPOND-REF: define-grobs.scm:2855-2873 PianoPedalBracket grob","Yellow"
 "Svg/Layout/PedalEngraver.cs","PedalEngraver.Calculate","2.0","endX = startX + 2.0;","(file-level) LILYPOND-REF: define-grobs.scm:2855-2873 PianoPedalBracket grob","Yellow"
+"Svg/Layout/PedalEngraver.cs","PedalEngraver.MixedLineStartOffset","1.0","const double boundPadding = 1.0;","LILYPOND-REF: scm/define-grobs.scm PianoPedalBracket — <c>(bound-padding . 1.0)</c>.","Green"
+"Svg/Layout/PedalEngraver.cs","PedalEngraver.MixedLineStartOffset","1.9","return 1.9 + boundPadding;","(file-level) LILYPOND-REF: define-grobs.scm:2855-2873 PianoPedalBracket grob","Yellow"
 "Svg/Layout/PedalEngraver.cs","PedalEngraver.SupportProfile","2.05, 0.0","-1e9, 1e9, -2.05, 0.0, VerticalDirection.Down);","(file-level) LILYPOND-REF: define-grobs.scm:2855-2873 PianoPedalBracket grob","Yellow"
 "Svg/EngravingDefaults.cs","EngravingDefaults.TabLinePositionTables","12","private static readonly double[]?[] TabLinePositionTables = new double[12][];","LILYPOND-REF: scm/define-grobs.scm:3396 StaffSymbol line-count 5, the staff-symbol-interface default.</remarks>","Green"
 "Svg/EngravingDefaults.cs","EngravingDefaults.OneLinePositions","0.0","private static readonly double[] OneLinePositions = { 0.0 };","(file-level) LILYPOND-REF: lily/spacing-options.cc:55-66 Spacing_options constructor (defaults)","Yellow"

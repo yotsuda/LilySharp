@@ -310,6 +310,9 @@ internal sealed class MusicXmlMeasure
     public bool RepeatForward { get; set; }
     /// <summary>Repeat sign closing this measure (<c>:|</c>).</summary>
     public bool RepeatBackward { get; set; }
+    /// <summary>How many times the repeat closing here is played, when more than twice
+    /// (<c>:|*4</c>): the backward repeat's <c>times</c>. 0: not said (twice).</summary>
+    public int RepeatTimes { get; set; }
     /// <summary>Closing bar style ("light-light" for <c>||</c>, "light-heavy"
     /// for <c>|.</c>, "dashed" for <c>!</c>); null = ordinary barline.</summary>
     public string? BarStyle { get; set; }
@@ -406,7 +409,9 @@ internal sealed class MusicXmlMeasure
                     new XAttribute("number", EndingStopNumbers),
                     new XAttribute("type", EndingStopType ?? "stop")));
             if (RepeatBackward)
-                barline.Add(new XElement("repeat", new XAttribute("direction", "backward")));
+                barline.Add(RepeatTimes > 2
+                    ? new XElement("repeat", new XAttribute("direction", "backward"), new XAttribute("times", RepeatTimes))
+                    : new XElement("repeat", new XAttribute("direction", "backward")));
             measure.Add(barline);
         }
 

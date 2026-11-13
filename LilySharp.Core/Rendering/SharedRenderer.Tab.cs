@@ -464,7 +464,11 @@ internal static partial class SharedRenderer
                     // NO GATE until 2026-09-02 and a dotted chord drew its dots on a numbers
                     // tab (owner report, tab-dot.lys — `<c e g>4.` printed "0·").
                     DrawTabChord(fonts, chord, itemX, staffY, tuning, octaveShift, stringSpace,
-                        numbersOnly ? 0 : chord.Dots, gc, digitGaps);
+                        numbersOnly ? 0 : chord.Dots, gc, digitGaps, opensLine: i == firstSoundingIndex,
+                        // ⚠️ On a NUMBERS tab only. A full tab draws the chord's tie bows from digit
+                        // to digit and keeps the held digits they end on (TabChordTieTests, the
+                        // test/tab-chord-tie fixture; LilyPond's \tabFullNotation prints them too).
+                        hideTied: numbersOnly);
                     if (!numbersOnly)
                         DrawUnbeamedTabStem(fonts, chord, chord.BaseDuration, dirGeom.TabStemUp(chord),
                             columnX, staffY, staff, isBeamed, gc, pageHeight);
@@ -1004,7 +1008,7 @@ internal static partial class SharedRenderer
     /// caller decides it (one gate, two item kinds).</param>
     private static void DrawTabChord(ScoreTextMetrics fonts, ChordItem chord, double itemX, double staffY,
         int[] tuning, int octaveShift, double stringSpace, int dots, IDrawingContext gc,
-        List<(int StringIndex, double Left, double Right)> digitGaps)
+        List<(int StringIndex, double Left, double Right)> digitGaps, bool opensLine = false, bool hideTied = false)
     {
         // LP-style exclusive allocation: each chord note gets its OWN string
         // (assigned strings first, then highest pitch → highest free string),
@@ -1041,11 +1045,27 @@ internal static partial class SharedRenderer
             return false;
         }
 
+        // …and a member a tie holds prints nothing on a numbers tab (hideTied) — in parentheses
+        // where the tie was split by the line break, as a single tied note does
+        // (ChordNoteInfo.IsTieTarget; grammar evaluation 4, 2026-11-13).
+        bool IsTiedString(int str)
+        {
+            for (int k = 0; k < alloc.Length; k++)
+                if (alloc[k].stringNum == str && chord.Notes[k].IsTieTarget)
+                    return true;
+            return false;
+        }
+
         double[] dx = TabChordColumns.Offsets(fonts, tuning.Length, notes);
         for (int i = 0; i < notes.Count; i++)
+        {
+            bool tied = hideTied && IsTiedString(notes[i].str);
+            if (tied && !opensLine)
+                continue;
             DrawTabFret(fonts, tuning.Length, notes[i].fret, notes[i].str, itemX + dx[i], staffY, stringSpace,
                 chord.SourcePosition, gc, digitGaps, IsDeadString(notes[i].str),
-                harmonic: IsHarmonicString(notes[i].str));
+                parenthesized: tied, harmonic: IsHarmonicString(notes[i].str));
+        }
 
         // Augmentation dots sit to the right of the whole chord (its rightmost digit
         // edge), one per string row — the tab analogue of the notation dot column.

@@ -2385,14 +2385,26 @@ public sealed partial class MeasureCollector
                                             && a.StaffIndex == staffIndex && a.VoiceIndex == 0)
                                 .Select(a => (a.MeasureIndex, a.ItemIndex))
                                 .ToHashSet();
+                            // The notes a hammer-on or a pull-off starts from: its two notes are
+                            // one string's (TabResolver.ResolveTabStrings, legatos).
+                            HashSet<(int, int)>? legatos = null;
+                            foreach (var a in _articulations)
+                                if (a.Type is ArticulationType.HammerOn or ArticulationType.PullOff
+                                    && a.StaffIndex == staffIndex && a.VoiceIndex == 0)
+                                    (legatos ??= []).Add((a.MeasureIndex, a.ItemIndex));
                             var resolved = st with { Voices = st.Voices.SetItem(0, TabResolver.RemoveAccidentals(
                                 _tabResolver.ResolveTabStrings(st.PrimaryVoice, st.Tuning.Value,
-                                    st.TabSourceClef, st.Transposition, falls, st.TabCapo))) };
+                                    st.TabSourceClef, st.Transposition, falls, st.TabCapo, legatos))) };
                             bool tabOnly = true;
                             foreach (var v in resolved.Voices)
                                 if (notationParts.Contains(v.Name))
                                     tabOnly = false;
-                            return tabOnly ? StampTabGraceDigits(resolved, staffIndex) : resolved;
+                            // A fingering belongs to the staff when one stands beside the tab: the
+                            // tab's copy of the part printed it a second time, over the fret
+                            // numbers (grammar evaluation 4, 2026-11-13, rock/r-06). A tab alone
+                            // keeps it. LILYSHARP-OWN.
+                            return tabOnly ? StampTabGraceDigits(resolved, staffIndex)
+                                : resolved with { Voices = resolved.Voices.SetItem(0, TabResolver.RemoveFingerings(resolved.Voices[0])) };
                         })
                         .ToImmutableArray()
                 })
@@ -5764,6 +5776,20 @@ public sealed partial class MeasureCollector
     // environment was built for EVERY node the form's DescendantNodes yields — its tokens
     // included — though only a navigation mark or a free text ever reaches a guard:
     // 1,725 B a keystroke over the tab corpus (session 469, A/B of this file alone).
+    /// <summary>
+    /// "N×" over the repeat bar just closed, for a repeat played more than twice
+    /// (<see cref="MusicMarkType.RepeatCount"/>). Once a score: the form is walked per part.
+    /// </summary>
+    private void AddRepeatCountMark(int count, int sourcePosition, MeasureBuilder builder)
+    {
+        if (count <= 2 || _resumePending != null || _suffixSpliced)
+            return;
+        int measure = NavigationMarkMeasure(MusicMarkType.RepeatCount, builder);
+        if (!HasMusicMark(MusicMarkType.RepeatCount, measure, sourcePosition))
+            _musicMarks.Add(new MusicMarkItem(MusicMarkType.RepeatCount,
+                count.ToString(System.Globalization.CultureInfo.InvariantCulture) + "×", measure, sourcePosition));
+    }
+
     private bool HasMusicMark(MusicMarkType type, int measureIndex, int sourcePosition)
     {
         foreach (var m in _musicMarks)

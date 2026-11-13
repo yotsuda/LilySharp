@@ -245,7 +245,8 @@ internal static class MultiMeasureRestEngraver
         int staffIndex = -1,
         IReadOnlyDictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
         IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)>? prebuiltMeasureMap = null,
-        IReadOnlyDictionary<int, Staff>? staffByIndex = null)
+        IReadOnlyDictionary<int, Staff>? staffByIndex = null,
+        HashSet<int>? runStops = null)
     {
         if (score.Voices.IsDefaultOrEmpty)
             return ImmutableArray<MultiMeasureRestLayout>.Empty;
@@ -301,7 +302,7 @@ internal static class MultiMeasureRestEngraver
             for (int m = pr.FirstCoveredMeasure; m <= pr.LastCoveredMeasure; m++)
                 (percentCovered ??= new()).Add((pr.StaffIndex, m));
 
-        var runs = FindRuns(score, voicesByStaff?.Values.ToArray());
+        var runs = FindRuns(score, voicesByStaff?.Values.ToArray(), runStops);
         foreach (var run in runs)
         {
             int runLast = run.StartMeasureIndex + run.Count - 1;
@@ -617,9 +618,13 @@ internal static class MultiMeasureRestEngraver
     /// per-measure approximation — and it is the same grouping the post-break
     /// drawing pass consumes, so spacing and drawing cannot disagree.
     /// </remarks>
+    /// <param name="runStops">The multi-staff score's <see cref="RunStops"/>, where the caller
+    /// lays one out: its per-pass <see cref="Score"/> carries no marks, and the runs drawn must
+    /// be the runs spaced (<see cref="FindRuns(MultiStaffScore)"/>). Null: this score's own.</param>
     internal static ImmutableArray<MmrRun> FindRuns(
         Score score,
-        IReadOnlyList<ImmutableArray<Voice>>? allStaffVoices = null)
+        IReadOnlyList<ImmutableArray<Voice>>? allStaffVoices = null,
+        HashSet<int>? runStops = null)
     {
         if (score.Voices.IsDefaultOrEmpty)
             return ImmutableArray<MmrRun>.Empty;
@@ -635,7 +640,43 @@ internal static class MultiMeasureRestEngraver
                 chordMeasures.Add(cn.MeasureIndex);
 
         return FindRuns(score.Voice.Measures, allStaffVoices ?? new[] { score.Voices },
-            chordMeasures, score.TimeSignature.MeasureDuration);
+            chordMeasures, score.TimeSignature.MeasureDuration,
+            runStops ?? RunStops(score.MusicMarks, score.VoltaBrackets));
+    }
+
+    /// <summary>
+    /// The bars a compressed rest may not run INTO, whoever wrote what stands there: a
+    /// rehearsal mark, a section label, a tempo, a segno / coda / D.S. family mark (one at a
+    /// bar's END stops the run after that bar), and a volta bracket's two ends. Null: none.
+    /// </summary>
+    /// <remarks>
+    /// A part sheet shows the marks every part wrote, so <c>R*8</c> in this part with another
+    /// part's <c>@mark("D")</c> at its fifth bar is "4", the mark, "4" — it was one "8" with D
+    /// printed at its END (grammar evaluation 4, 2026-11-13, chamber/r-16). The key, time and
+    /// clef changes already split it (<c>OpensNewRun</c>), and so does a bar line other than
+    /// the plain one (<c>FindRuns</c>).
+    /// LILYPOND-REF: lily/multi-measure-rest-engraver.cc Multi_measure_rest_engraver::start_translation_timestep
+    ///   — the rest is cut at a bar whose command column holds a break-aligned grob
+    ///   (<c>forbidBreak</c> off, <c>currentCommandColumn</c> "breakable"); MEASURED 2.26.0,
+    ///   Lab sessions/p1226/md/eval4/fixB/lp/r16b.ly: `R1*13` beside `s1*4 \mark \default s1*4 \tempo "Fast" s1*3 \bar "||" s1*2`
+    ///   under skipBars prints 4, A 4, Fast 3, || 2.
+    /// </remarks>
+    internal static HashSet<int>? RunStops(
+        ImmutableArray<MusicMarkItem> marks, ImmutableArray<VoltaBracketItem> voltas)
+    {
+        HashSet<int>? stops = null;
+        if (!marks.IsDefaultOrEmpty)
+            foreach (var mark in marks)
+                if (mark.Type is MusicMarkType.Rehearsal or MusicMarkType.SectionLabel or MusicMarkType.Tempo
+                    or (>= MusicMarkType.Segno and <= MusicMarkType.ToCoda))
+                    (stops ??= []).Add(mark.Position == MusicMarkPosition.End ? mark.MeasureIndex + 1 : mark.MeasureIndex);
+        if (!voltas.IsDefaultOrEmpty)
+            foreach (var volta in voltas)
+            {
+                (stops ??= []).Add(volta.StartMeasureIndex);
+                stops.Add(volta.EndMeasureIndex + 1);
+            }
+        return stops;
     }
 
     /// <summary>
@@ -663,7 +704,7 @@ internal static class MultiMeasureRestEngraver
                 chordMeasures.Add(cn.MeasureIndex);
 
         return FindRuns(staffVoices[0][0].Measures, staffVoices, chordMeasures,
-            score.TimeSignature.MeasureDuration);
+            score.TimeSignature.MeasureDuration, RunStops(score.MusicMarks, score.VoltaBrackets));
     }
 
     /// <summary>
@@ -674,7 +715,8 @@ internal static class MultiMeasureRestEngraver
         ImmutableArray<Measure> primaryMeasures,
         IReadOnlyList<ImmutableArray<Voice>> allStaffVoices,
         IReadOnlySet<int> chordMeasures,
-        Fraction initialMeasureDuration)
+        Fraction initialMeasureDuration,
+        HashSet<int>? stops = null)
     {
         if (primaryMeasures.IsDefaultOrEmpty)
             return ImmutableArray<MmrRun>.Empty;
@@ -780,6 +822,14 @@ internal static class MultiMeasureRestEngraver
         // run grouping saw only "every staff rests here" and merged the three into one.
         bool OpensNewRun(int m)
         {
+            // …and what another part wrote at the bar (RunStops), or a bar line other than
+            // the plain one on either side of it.
+            if (stops != null && stops.Contains(m))
+                return true;
+            if (m > 0 && m < primaryMeasures.Length
+                && (primaryMeasures[m - 1].EndBarline is not (BarlineType.Single or BarlineType.None)
+                    || primaryMeasures[m].StartBarline is not (BarlineType.Single or BarlineType.None)))
+                return true;
             if (m < primaryMeasures.Length &&
                 (HasLeadingBreakAlignedChange(primaryMeasures[m]) ||
                  StartsWrittenRest(primaryMeasures[m])))

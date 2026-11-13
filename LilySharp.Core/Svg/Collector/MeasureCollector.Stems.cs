@@ -102,18 +102,20 @@ public sealed partial class MeasureCollector
         var rebuilt = voices.ToBuilder();
         for (int vi = 0; vi < voices.Length; vi++)
         {
-            if (VoiceDefaults.GetDefaultStemUp(vi + 1) is not { } forced)
-                continue;
-
             var measures = voices[vi].Measures.ToBuilder();
             bool changed = false;
             // The beams whose members this pass turns round — their pure tips are baked
-            // again below, at the direction they now carry.
-            var turnedBeams = new HashSet<int>();
+            // again below, at the direction they now carry (up and down apart: a part of a
+            // shared staff is numbered by the bar, VoiceDefaults.DirectionNumber).
+            var turnedUp = new HashSet<int>();
+            var turnedDown = new HashSet<int>();
             for (int mi = 0; mi < measures.Count; mi++)
             {
                 if (!VoiceDefaults.IsPolyphonicAt(voices, mi))
                     continue;
+                if (VoiceDefaults.GetDefaultStemUp(VoiceDefaults.DirectionNumber(voices, vi, mi)) is not { } forced)
+                    continue;
+                var turnedBeams = forced ? turnedUp : turnedDown;
 
                 var measure = measures[mi];
                 var items = measure.Items.ToBuilder();
@@ -201,8 +203,10 @@ public sealed partial class MeasureCollector
                 changed = true;
             }
 
-            if (turnedBeams.Count > 0)
-                RebakePureBeamedTips(measures, turnedBeams, forced, WithItems);
+            if (turnedUp.Count > 0)
+                RebakePureBeamedTips(measures, turnedUp, true, WithItems);
+            if (turnedDown.Count > 0)
+                RebakePureBeamedTips(measures, turnedDown, false, WithItems);
 
             if (changed)
                 rebuilt[vi] = voices[vi] with { Measures = measures.ToImmutable() };

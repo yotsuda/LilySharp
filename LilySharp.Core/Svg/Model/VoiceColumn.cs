@@ -150,8 +150,40 @@ public static class VoiceDefaults
     public static bool? GetDefaultStemUpAt(
         ImmutableArray<Voice> voices, int voiceIndex, int measureIndex, int itemIndex)
         => CoversItem(voices, voiceIndex, measureIndex, itemIndex)
-            ? GetDefaultStemUp(voiceIndex + 1)
+            ? GetDefaultStemUp(DirectionNumber(voices, voiceIndex, measureIndex))
             : null;
+
+    /// <summary>
+    /// The voice number whose props (<see cref="GetDefaultStemUp"/>) voice
+    /// <paramref name="voiceIndex"/> (0-based) carries in measure <paramref name="measureIndex"/>:
+    /// its place among the staff's voices, plus one — except on a staff whole PARTS share
+    /// (<see cref="Voice.SharedPartNumber"/>), where it is the PART's place.
+    /// </summary>
+    /// <remarks>
+    /// <c>condensedStaff { sop alt }</c> is LilyPond's <c>&lt;&lt; \sop \\ \alt &gt;&gt;</c>:
+    /// the soprano is <c>\voiceOne</c> and the alto <c>\voiceTwo</c>, whatever either holds. A
+    /// <c>voice { } { }</c> inside a part is a nested <c>&lt;&lt; \\ &gt;&gt;</c>, numbered from
+    /// one again for as long as it lasts. The staff's voices are the parts' CONCATENATED, so
+    /// until grammar evaluation 4 (2026-11-13) one divisi bar anywhere in the soprano made the
+    /// alto the staff's THIRD voice for the whole piece: stems up with the soprano's, the
+    /// unison beams doubled, its rests above the staff (choral/r-05-c against r-05-a).
+    /// LILYPOND-REF: scm/music-functions.scm voicify-list — every list is numbered from one.
+    /// </remarks>
+    public static int DirectionNumber(ImmutableArray<Voice> voices, int voiceIndex, int measureIndex)
+    {
+        var voice = voices[voiceIndex];
+        if (voice.SharedPartNumber == 0)
+            return voiceIndex + 1;
+        int within = voiceIndex - voice.PartFirstVoice;
+        if (within > 0)
+            return within + 1;
+        // The part's first voice: the first of its own span where one is open, else the part.
+        for (int vi = voiceIndex + 1; vi < voices.Length && voices[vi].PartFirstVoice == voiceIndex
+            && voices[vi].SharedPartNumber == voice.SharedPartNumber; vi++)
+            if (measureIndex < voices[vi].Measures.Length && voices[vi].Measures[measureIndex].Items.Length > 0)
+                return 1;
+        return voice.SharedPartNumber;
+    }
 
     /// <summary>Whether the <c>voice { } { }</c> span covers item <paramref name="itemIndex"/>
     /// of voice <paramref name="voiceIndex"/> in measure <paramref name="measureIndex"/> (see

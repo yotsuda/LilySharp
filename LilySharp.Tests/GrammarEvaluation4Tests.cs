@@ -300,4 +300,346 @@ public class GrammarEvaluation4Tests
         Assert.Equal(0, tall.Pages[0].Overflow);
         Assert.Contains("`md end` text is taller than the page", Assert.Single(warnings));
     }
+
+    // ==== second batch: the engraving ========================================================
+
+    private static int[] MidiPitches(string source) => [.. new LilySharp.Core.Midi.MidiExporter()
+        .Export(SyntaxTree.Parse(source)).Tracks.SelectMany(t => t.Notes).OrderBy(n => n.StartTick).ThenBy(n => n.Pitch).Select(n => n.Pitch)];
+
+    private static string Twin(string source) => new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(source));
+
+    // ---- B1. `<< … >>` under `octave absolute` ----------------------------------------------
+
+    /// <summary><c>&lt;&lt; fis' a' d'' &gt;&gt;</c> under <c>octave absolute</c> drew fis' a''
+    /// d'''': the members after the first were STACKED on it (the relative rule) and their own
+    /// marks counted from there, where a <c>&lt;…&gt;</c> chord's members are where they are
+    /// written. Nothing stacks in absolute mode now, on the page, in the sound, in MusicXML and
+    /// in the twin; the marks after <c>&gt;&gt;</c> move every member; relative is as it was.</summary>
+    [Fact]
+    public void AnArpeggioGroupUnderOctaveAbsolute_IsAbsolute_AsAChordIs()
+    {
+        string Book(string music, string mode = "octave absolute\n") => mode
+            + $"part m {{ clef treble }}\nsection A {{ m {{ {music} | }} }}\nform {{ ~A }}\nscore {{ staff m }}\n";
+        int[] chord = [66, 69, 74];   // F#4 A4 D5
+        Assert.Equal(chord, MidiPitches(Book("<fis' a' d''>2.")));
+        Assert.Equal(chord, MidiPitches(Book("<< fis' a' d'' >>2.")));
+        // Written downwards, and a member below the first: no stacking either way.
+        Assert.Equal(new[] { 74, 69, 66 }, new LilySharp.Core.Midi.MidiExporter().Export(SyntaxTree.Parse(Book("<< d'' a' fis' >>2.")))
+            .Tracks.SelectMany(t => t.Notes).OrderBy(n => n.StartTick).Select(n => n.Pitch));
+        // The marks after '>>' move the whole group, a chord member inside included.
+        Assert.Equal(new[] { 54, 57, 62 }, MidiPitches(Book("<< fis' a' d'' >>,2.")));
+        Assert.Equal(new[] { 66, 69, 74, 78 }, MidiPitches(Book("<< fis <a d'> fis' >>'2.")));
+        // The page: the three heads of the group are the three of the chord before it.
+        var heads = LpFidelity.RenderedGeometry.Render(Book("<fis' a' d''>4 << fis' a' d'' >>2.")).Noteheads.Select(h => Math.Round(h.Y, 6)).ToArray();
+        Assert.Equal(6, heads.Length);
+        Assert.Equal(heads[..3].Order(), heads[3..].Order());
+        // MusicXML and the twin (three in a dotted half are plain quarters).
+        string xml = new LilySharp.Core.MusicXml.MusicXmlExporter().Export(SyntaxTree.Parse(Book("<< fis' a' d'' >>2."))).ToXml().ToString();
+        Assert.Equal(new[] { "4", "4", "5" }, Regex.Matches(xml, "<octave>(\\d)</octave>").Select(m => m.Groups[1].Value));
+        Assert.Contains("fis'4 a'4 d''4", Twin(Book("<< fis' a' d'' >>2.")));
+        // Relative mode still stacks on the root: c' then e and g above it.
+        Assert.Equal(new[] { 60, 64, 67 }, MidiPitches(Book("<< c' e g >>2.", mode: "")));
+    }
+
+    // ---- B2. a condensed staff whose first part has a `voice { } { }` somewhere --------------
+
+    /// <summary><c>condensedStaff { sop alt }</c>: one divisi bar in the soprano
+    /// (<c>voice { e''1 } { c''1 }</c>, a section away) made the alto the staff's THIRD voice
+    /// for the whole piece — stems up with the soprano's, the unison beams doubled, its rests
+    /// above the staff (choral/r-05-c against r-05-a). The voice props go by PART on a shared
+    /// staff (LilyPond's <c>&lt;&lt; \sop \\ \alt &gt;&gt;</c>), and a part's own span is
+    /// numbered from one again while it lasts.</summary>
+    [Fact]
+    public void ACondensedStaffsLowerPart_KeepsItsStemsDown_WhenTheUpperPartHasADivisi()
+    {
+        string Book(string sopB, string altB = "c'1 |") => "octave absolute\npart sop { clef treble }\npart alt { clef treble }\n"
+            + "section A { sop { a'4 d''8 cis'' b'4 a' | d''4 d''8 e'' fis''4 e'' | } alt { a'4 d''8 cis'' b'4 a' | fis'4 fis'8 g' a'4 r4 | } }\n"
+            + $"section B {{ sop {{ {sopB} }} alt {{ {altB} }} }}\nform {{ ~A ~B }}\nscore {{ condensedStaff {{ sop alt }} }}\n";
+        static LilySharp.Core.Svg.Model.Voice[] Voices(string source)
+        {
+            var tree = SyntaxTree.Parse(source);
+            return [.. SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)).StaffGroups.Single().Staves.Single().Voices];
+        }
+        static (bool? Stem, int RestSide)[] Sides(LilySharp.Core.Svg.Model.Voice voice, int bar)
+            => [.. voice.Measures[bar].Items.Select(i => i switch
+            {
+                LilySharp.Core.Svg.Model.NoteItem n => (n.StemUpOverride, 0),
+                LilySharp.Core.Svg.Model.RestItem r => ((bool?)null, r.VoiceDirection),
+                _ => ((bool?)null, 0),
+            })];
+
+        var plain = Voices(Book("e''1 |"));
+        var divisi = Voices(Book("voice { e''1 | } { c''1 | }"));
+        Assert.Equal(2, plain.Length);
+        Assert.Equal(3, divisi.Length);
+        // Bars 1 and 2 are the plain book's, part for part: soprano up, alto down, its rest below.
+        for (int bar = 0; bar < 2; bar++)
+        {
+            Assert.Equal(Sides(plain[0], bar), Sides(divisi[0], bar));
+            Assert.Equal(Sides(plain[1], bar), Sides(divisi[2], bar));
+            Assert.All(Sides(divisi[2], bar), s => Assert.True(s.Stem == false || s.RestSide == -1));
+        }
+        // …and the numbers the readers ask: the alto is voice two throughout; the soprano's
+        // second voice is voice two of its own span, the soprano voice one either way.
+        Assert.Equal(new[] { 1, 2, 2 }, Enumerable.Range(0, 3).Select(v => LilySharp.Core.Svg.Model.VoiceDefaults.DirectionNumber([.. divisi], v, 2)));
+        Assert.Equal(2, LilySharp.Core.Svg.Model.VoiceDefaults.DirectionNumber([.. divisi], 2, 0));
+        // The lower part's own divisi: up and down inside it, the part's side outside.
+        var lower = Voices(Book("e''1 |", altB: "voice { e'1 | } { c'1 | }"));
+        Assert.Equal(new[] { 1, 1, 2 }, Enumerable.Range(0, 3).Select(v => LilySharp.Core.Svg.Model.VoiceDefaults.DirectionNumber([.. lower], v, 2)));
+        Assert.Equal(new[] { 1, 2 }, Enumerable.Range(0, 2).Select(v => LilySharp.Core.Svg.Model.VoiceDefaults.DirectionNumber([.. lower], v, 0)));
+        // The page of the first two bars is the plain book's, glyph for glyph.
+        static (double X, double Y, string Glyph)[] Glyphs(string source) => [.. Regex.Matches(SvgGenerator.Generate(SyntaxTree.Parse(source)),
+                "<text class=\"music\" x=\"([-\\d.]+)\" y=\"([-\\d.]+)\"[^>]*>([^<]+)<")
+            .Select(m => (double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture),
+                double.Parse(m.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture), m.Groups[3].Value))
+            .OrderBy(g => g.Item1).ThenBy(g => g.Item2).ThenBy(g => g.Value, StringComparer.Ordinal)];
+        var (a, c) = (Glyphs(Book("e''1 |")), Glyphs(Book("voice { e''1 | } { c''1 | }")));
+        Assert.True(a.Length > 20);
+        Assert.Equal(a[..^2], c[..(a.Length - 2)]);
+    }
+
+    // ---- B3. a group with no staff on the system has no name there --------------------------
+
+    /// <summary>A <c>grandStaff</c> whose two staves are both hidden on a system
+    /// (<c>removeEmpty all</c>) still printed its name — at a brace of no height, on top of
+    /// the neighbouring staff's: "Marimba" over "Flute" (chamber/r-09). Where a staff of the
+    /// group is shown, the name is too.</summary>
+    [Fact]
+    public void AFullyHiddenGrandStaff_PrintsNoName()
+    {
+        string Book(string marimba) => "octave absolute\npart fl \"Flute\" \"Fl.\" { clef treble }\npart mR \"Marimba\" \"Mar.\" { clef treble }\npart mL { clef bass }\n"
+            + $"section A {{ fl {{ c''1 | d''1 | e''1 | f''1 break | g''1 | a''1 | }} mR {{ {marimba} }} mL {{ R*6 | }} }}\nform {{ ~A }}\n"
+            + "score { staff fl  grandStaff { staff mR as removeEmpty all  staff mL as removeEmpty all } }\n";
+        string hidden = SvgGenerator.Generate(SyntaxTree.Parse(Book("R*6 |")));
+        Assert.Equal(1, Count(hidden, ">Flute<"));
+        Assert.Equal(1, Count(hidden, ">Fl.<"));
+        Assert.Equal(0, Count(hidden, ">Marimba<"));
+        Assert.Equal(0, Count(hidden, ">Mar.<"));
+        // Playing on the second system only: its short name there, no long one on the first.
+        string second = SvgGenerator.Generate(SyntaxTree.Parse(Book("R*4 | c''1 | R1 |")));
+        Assert.Equal(0, Count(second, ">Marimba<"));
+        Assert.Equal(1, Count(second, ">Mar.<"));
+    }
+
+    // ---- B4. another part's mark splits a compressed rest -----------------------------------
+
+    /// <summary>On a part sheet <c>R*13</c> was one "13" with the rehearsal mark another part
+    /// wrote at its fifth bar printed at its END (chamber/r-16). A rehearsal mark, a tempo and
+    /// a double bar reached from another part each cut the rest, as LilyPond's do — MEASURED
+    /// 2.26.0 (Lab sessions/p1226/md/eval4/fixB/lp/r16b.ly): 4, A 4, Fast 3, || 2.</summary>
+    [Fact]
+    public void AnotherPartsMarkTempoAndDoubleBar_SplitACompressedRest()
+    {
+        string Book(string b) => "octave absolute\nlayout { compressRests true }\npart a { clef treble }\npart b { clef treble }\n"
+            + $"section A {{ a {{ R*13 | c'1 | }} b {{ {b} }} }}\nform {{ ~A }}\nscore {{ staff a }}\n";
+        static (int, int)[] Rests(string source) => [.. Laid(source).MultiMeasureRestLayouts
+            .Select(m => (m.StartMeasureIndex, m.MeasureCount)).OrderBy(t => t.StartMeasureIndex)];
+        Assert.Equal(new[] { (0, 13) }, Rests(Book(string.Join(" | ", Enumerable.Repeat("c'1", 14)) + " |")));
+        var cut = Book("c'1 | c'1 | c'1 | c'1 | c'1@mark(\"D\") | c'1 | c'1 | c'1 | tempo \"Fast\" 4 = 144 c'1 | c'1 | c'1 || c'1 | c'1 | c'1 |");
+        Assert.Equal(new[] { (0, 4), (4, 4), (8, 3), (11, 2) }, Rests(cut));
+        // The mark stands at the bar it was written at: the fifth bar's left bar line.
+        var layout = Laid(cut);
+        var mark = Assert.Single(layout.MusicMarkLayouts, m => m.MarkType == LilySharp.Core.Svg.Model.MusicMarkType.Rehearsal);
+        var bar5 = layout.Pages[0].Systems[0].Measures.Single(m => m.MeasureIndex == 4);
+        Assert.InRange(mark.X, bar5.X - 2.0, bar5.X + 2.0);
+        // The spacing and the drawing read the same runs: four bars' boxes hold the rests.
+        Assert.Equal(new[] { 0, 4, 8, 11, 13 }, layout.Pages[0].Systems[0].Measures.Where(m => m.Width > 1.0).Select(m => m.MeasureIndex));
+    }
+
+    // ---- B5. pedals: the continued bracket, the mixed style's words --------------------------
+
+    /// <summary>A pedal bracket continued after a system break was drawn under the WHOLE
+    /// system — on the cello's hairpin — where its first portion stands under its own staff
+    /// (chamber/r-11): the continued portion asked for its solved line by a measure the solve
+    /// did not key it with. Both portions stand between the left hand's staff and the staff
+    /// under it, as LilyPond's do (Lab sessions/p1226/md/eval4/fixB/lp/r11.png).</summary>
+    [Fact]
+    public void APedalBracketContinuedAfterABreak_StaysUnderItsOwnStaff()
+    {
+        string source = "octave absolute\npart rh { clef treble }\npart lh { clef bass }\npart vn { clef treble }\npart vc { clef bass }\n"
+            + "section A {\n rh { c''1 | d''1 | e''1 break | R | f''1 | }\n lh { c,1 | <c, g,>1@sostenuto | R | r2. r4@!sostenuto | c,1 | }\n"
+            + " vn { c''1 | c''1 | c''1 | c''1 | c''1 | }\n vc { c1 | c1 | c1 | c1@p@cresc | c1@f | }\n}\nform { ~A }\n"
+            + "score { grandStaff { staff rh staff lh } staffGroup { staff vn staff vc } }\n";
+        var layout = Laid(source);
+        Assert.Equal(2, layout.Pages[0].Systems.Length);
+        Assert.Equal(2, layout.PedalBracketLayouts.Length);
+        var continued = Assert.Single(layout.PedalBracketLayouts, b => b.BrokenLeft);
+        Assert.Equal(3, continued.StartMeasureIndex);
+        var staves = layout.Pages[0].Systems[1].StaffGroups.SelectMany(g => g.Staves).ToArray();
+        // Device offsets down from the system's top: the left hand's bottom line, the violin's top.
+        double leftHandBottom = staves[1].Height - staves[1].Y, violinTop = -staves[2].Y;
+        Assert.InRange(continued.Y, leftHandBottom + 0.5, violinTop - 0.5);
+        // …and clear of the cello's hairpin, which is under the whole system.
+        double celloBottom = staves[3].Height - staves[3].Y;
+        Assert.True(continued.Y < celloBottom - 4.0);
+    }
+
+    /// <summary><c>pedal mixed</c>: the line of a <c>@sostenuto</c> and of an
+    /// <c>@unaCorda</c> began 2.9 from the note — the sustain glyphs' clearance — inside
+    /// "Sost. Ped." and "una corda", which are twice as wide (chamber/r-14). Each line begins
+    /// its word's half width and the bound's padding (1.0) from the column, LilyPond's picture.
+    /// (In the bracket style all three pedals are the same plain bracket in LilyPond too.)</summary>
+    [Fact]
+    public void AMixedPedalsLine_BeginsAfterItsOwnWord()
+    {
+        string source = "part c { clef bass pedal mixed }\nsection A { c { c4@sustain d e f@!sustain | c4@sostenuto d e f@!sostenuto | c4@unaCorda d e f@treCorde | } }\n"
+            + "form { ~A }\nscore { staff c }\n";
+        var layout = Laid(source);
+        var lines = layout.PedalBracketLayouts.OrderBy(b => b.StartX).ToArray();
+        Assert.Equal(3, lines.Length);
+        Assert.All(lines, b => Assert.True(b.IsMixed));
+        Assert.Equal(2.9, lines[0].MixedLineStart, 9);
+        var fonts = LilySharp.Core.Rendering.ScoreTextMetrics.Bundled;
+        foreach (var (line, word, on) in new[] { (lines[1], "Sost. Ped.", LilySharp.Core.Svg.Model.MusicMarkType.SostenutoOn),
+                     (lines[2], "una corda", LilySharp.Core.Svg.Model.MusicMarkType.UnaCordaOn) })
+        {
+            var mark = Assert.Single(layout.MusicMarkLayouts, m => m.MarkType == on);
+            Assert.Equal(word, mark.Text);
+            double width = fonts.Advance(word, MusicMarkEngraver.PlainMarkEm(fonts, on), MusicMarkEngraver.TextRoleOf(on), MusicMarkEngraver.TextStyleOf(fonts, on));
+            Assert.True(width / 2 > 2.9, $"{word} is {width:F2} wide");
+            Assert.Equal(width / 2 + 1.0, line.MixedLineStart, 9);
+            // The word is centred on the column the line is measured from.
+            Assert.Equal(line.StartX, mark.X, 1);
+            Assert.True(line.StartX + line.MixedLineStart < line.EndX);
+        }
+    }
+
+    // ---- B6. a repeat played more than twice says so ----------------------------------------
+
+    /// <summary><c>|: A :|*4</c> was engraved as an ordinary repeat: nothing on the page said
+    /// four, and MusicXML's backward repeat had no <c>times</c> (rock/r-06). "4×" stands over
+    /// the closing repeat bar, its right edge on the bar line, once a score, placed with the
+    /// other marks above the staff (LILYSHARP-OWN: LilyPond prints nothing for
+    /// <c>\repeat volta 4</c>). A repeat played twice says nothing, as before.</summary>
+    [Fact]
+    public void ARepeatPlayedMoreThanTwice_PrintsItsCountOverTheClosingBar()
+    {
+        string Book(string form) => "octave absolute\npart g { clef treble }\npart b { clef bass }\n"
+            + "section A { g { c'4 d' e' f' | g'1@fermata | } b { c1 | c1 | } }\nsection B { g { g'1 | } b { c1 | } }\n"
+            + $"form {{ {form} }}\nscore {{ staff g staff b }}\n";
+        var layout = Laid(Book("|: A :|*4 B"));
+        var count = Assert.Single(layout.MusicMarkLayouts, m => m.MarkType == LilySharp.Core.Svg.Model.MusicMarkType.RepeatCount);
+        Assert.Equal("4×", count.Text);
+        var closing = layout.Pages[0].Systems[0].Measures.Single(m => m.MeasureIndex == 1);
+        Assert.InRange(count.X, closing.X + closing.Width - 1.5, closing.X + closing.Width + 0.01);
+        // Above the staff, and clear of the next section's label: no shared ink.
+        var label = Assert.Single(layout.MusicMarkLayouts, m => m.MarkType == LilySharp.Core.Svg.Model.MusicMarkType.SectionLabel && m.Text == "B");
+        Assert.True(label.YUp - count.YUp > 1.5 || label.X - 1.0 > count.X, $"label at ({label.X:F2}, {label.YUp:F2}), count ending at ({count.X:F2}, {count.YUp:F2})");
+        Assert.True(count.YUp > 2.0, $"{count.YUp}");
+        Assert.Equal(1, Count(SvgGenerator.Generate(SyntaxTree.Parse(Book("|: A :|*4 B"))), ">4×<"));
+
+        Assert.DoesNotContain(Laid(Book("|: A :| B")).MusicMarkLayouts, m => m.MarkType == LilySharp.Core.Svg.Model.MusicMarkType.RepeatCount);
+        Assert.DoesNotContain(Laid(Book("|: A :|*2 B")).MusicMarkLayouts, m => m.MarkType == LilySharp.Core.Svg.Model.MusicMarkType.RepeatCount);
+
+        string Xml(string form) => new LilySharp.Core.MusicXml.MusicXmlExporter().Export(SyntaxTree.Parse(Book(form))).ToXml().ToString();
+        Assert.Equal(2, Count(Xml("|: A :|*4 B"), "<repeat direction=\"backward\" times=\"4\" />"));
+        Assert.Equal(0, Count(Xml("|: A :| B"), "times="));
+        Assert.Contains("\\repeat volta 4", Twin(Book("|: A :|*4 B")));
+    }
+
+    // ---- B8. the tab: a repeated chord's strings, q@dead, a tie into a chord ----------------
+
+    private static LilySharp.Core.Svg.Model.ChordItem[] TabChords(string music)
+    {
+        var tree = SyntaxTree.Parse("octave absolute\npart g { instrument guitar  tuning guitarDropD }\n"
+            + $"section A {{ g {{ {music} }} }}\nform {{ ~A }}\nscore {{ staff g  tab g }}\n");
+        Assert.False(tree.HasErrors);
+        var staves = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)).StaffGroups.SelectMany(g => g.Staves).ToArray();
+        Assert.True(staves[1].IsTab);
+        return [.. staves[1].Voices[0].Measures.SelectMany(m => m.Items).OfType<LilySharp.Core.Svg.Model.ChordItem>()];
+    }
+
+    /// <summary><c>&lt;bes,\6 f\5 bes\4&gt;4 q</c> was 8-8-8 and then x-1-3-3 on the tab: a
+    /// <c>q</c> and a bare duration copied the chord's notes without the strings they are
+    /// written on, so the tab fretted the copy afresh (rock/r-05). The strings are part of
+    /// what is repeated (LILYSHARP-OWN: LilyPond wants <c>\tabChordRepeats</c> for it).</summary>
+    [Theory]
+    [InlineData("<bes,\\6 f\\5 bes\\4>4 q q q |")]
+    [InlineData("<bes,\\6 f\\5 bes\\4>4 4 4 4 |")]
+    [InlineData("<bes, f bes>4\\6\\5\\4 q 4 q |")]
+    public void ARepeatedChord_KeepsTheStringsItIsWrittenOn(string bar)
+    {
+        var chords = TabChords(bar);
+        Assert.Equal(4, chords.Length);
+        Assert.All(chords, c => Assert.Equal(new int?[] { 6, 5, 4 }, c.Notes.Select(n => n.StringNumber)));
+        // …so every chord is the same three frets: 8 on each string of drop D.
+        int[] tuning = [38, 45, 50, 55, 59, 64];   // d, a, d g b e'
+        Assert.All(chords, c => Assert.Equal(new[] { 8, 8, 8 }, LilySharp.Core.Tablature.Tunings
+            .CalculateChordFrets([.. c.Notes.Select(n => (n.Midi, n.StringNumber))], tuning).Select(p => p.fret)));
+    }
+
+    /// <summary><c>q@dead</c> drew an ordinary chord (and <c>4@dead</c> after a chord): the
+    /// repetition's own <c>@dead</c> mutes the copy, as a chord's own mutes its members. And a
+    /// tie into a chord printed the held numbers again: only note-to-note ties were followed
+    /// on a tab (rock/r-03).</summary>
+    [Fact]
+    public void ARepeatedChordsOwnDead_AndATieIntoAChord_ReachTheTab()
+    {
+        var dead = TabChords("<d, a, d g>4 q@dead 4@dead q |");
+        Assert.Equal(new[] { false, true, true, false }, dead.Select(c => c.Notes.All(n => n.IsDead)));
+        Assert.All(dead[1].Notes, n => Assert.Equal(LilySharp.Core.Svg.Model.NoteheadStyle.Cross, n.Notehead));
+
+        var tied = TabChords("<f,\\6 c\\5 f\\4>8~ q4. <f,\\6 c\\5 f\\4>8~ <f,\\6 c\\5 f\\4>4. |");
+        Assert.Equal(new[] { false, true, false, true }, tied.Select(c => c.Notes.All(n => n.IsTieTarget)));
+        Assert.All(tied, c => Assert.Equal(new int?[] { 6, 5, 4 }, c.Notes.Select(n => n.StringNumber)));
+        // One member tied: that one alone is held.
+        var one = TabChords("<f, c f~>2 <f, c f>2 |");
+        Assert.Equal(new[] { false, false, true }, one[1].Notes.Select(n => n.IsTieTarget));
+        // Drawn on a numbers tab (a tab beside its staff): the held chord's three 3s are not
+        // printed again — six digits, not twelve. (A full tab keeps them under its tie bows:
+        // TabChordTieTests.)
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse("octave absolute\npart g { instrument guitar  tuning guitarDropD }\n"
+            + "section A { g { <f,\\6 c\\5 f\\4>8~ q4. <f,\\6 c\\5 f\\4>8~ <f,\\6 c\\5 f\\4>4. | } }\nform { ~A }\nscore { staff g  tab g }\n"));
+        Assert.Equal(6, Regex.Matches(svg, ">3<").Count);
+    }
+
+    // ---- B9. the tab's fret choice ----------------------------------------------------------
+
+    private static int?[] TabStrings(string music, string part = "instrument guitar  tuning \"c, g, c f g c'\"", string score = "staff a  tab a capo 2")
+    {
+        var tree = SyntaxTree.Parse($"octave absolute\npart a {{ {part} }}\nsection A {{ a {{ {music} }} }}\nform {{ ~A }}\nscore {{ {score} }}\n");
+        Assert.False(tree.HasErrors);
+        var tab = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)).StaffGroups.SelectMany(g => g.Staves).Single(s => s.IsTab);
+        return [.. tab.Voices[0].Measures.SelectMany(m => m.Items).OfType<LilySharp.Core.Svg.Model.NoteItem>().Select(n => n.StringNumber)];
+    }
+
+    /// <summary>The same bar of open strings was 0 0 0 0 0 0 0 0 before a written bar and
+    /// 0 0 0 0 0 5 2 5 before a <c>%</c> (rock/r-04; the <c>@mp</c> the writer suspected was a
+    /// bystander): the <c>%</c> bar is a spacer in the model, and the fingering planner read
+    /// it as a rest — the hand free, the bar before planned with nothing after it. The planner
+    /// is told the bar again.</summary>
+    [Fact]
+    public void ABarBeforeAPercentRepeat_IsFrettedAsBeforeTheSameBarWrittenOut()
+    {
+        const string bar = "d,8 a, d g a d' a g |", next = "f,8 a, d g a d' a g |";
+        var written = TabStrings($"{bar} {bar} {next}");
+        var percent = TabStrings($"{bar} % | {next}");
+        Assert.Equal(new int?[] { 6, 5, 4, 3, 2, 1, 2, 3 }, written[..8]);
+        Assert.Equal(written[..8], percent[..8]);
+        Assert.Equal(written[16..], percent[8..]);
+        Assert.Equal(written[..8], TabStrings($"d,8@letRing@mp a, d g a d' a g@!letRing | % | {next}")[..8]);
+    }
+
+    /// <summary>A pull-off or a hammer-on is one string's: <c>f'8@pullOff( d')</c> was the
+    /// first string's 1 and the second string's 3 (rock/r-06). And a <c>@finger</c> was printed
+    /// twice, over the staff and over the tab beside it: the tab's copy carries none there (a
+    /// tab alone keeps it).</summary>
+    [Fact]
+    public void APullOffPairIsOneStrings_AndTheFingeringIsTheStaffs()
+    {
+        const string guitar = "instrument guitar";
+        var pair = TabStrings("e'2 f'8@pullOff( d') d'8@hammerOn( f') | a'2@finger(3) r2 |", guitar, "staff a  tab a");
+        Assert.Equal(pair[1], pair[2]);
+        Assert.Equal(pair[3], pair[4]);
+
+        static int Fingerings(string score)
+        {
+            var tree = SyntaxTree.Parse($"octave absolute\npart a {{ instrument guitar }}\nsection A {{ a {{ a'2@finger(3) <c' e'@finger(1)>2 | }} }}\nform {{ ~A }}\nscore {{ {score} }}\n");
+            return SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)).StaffGroups.SelectMany(g => g.Staves).Where(s => s.IsTab)
+                .SelectMany(s => s.Voices[0].Measures).SelectMany(m => m.Items)
+                .Sum(i => i switch { LilySharp.Core.Svg.Model.NoteItem { Fingering: not null } => 1, LilySharp.Core.Svg.Model.ChordItem c => c.Notes.Count(n => n.Fingering != null), _ => 0 });
+        }
+        Assert.Equal(0, Fingerings("staff a  tab a"));
+        Assert.Equal(2, Fingerings("tab a"));
+    }
 }

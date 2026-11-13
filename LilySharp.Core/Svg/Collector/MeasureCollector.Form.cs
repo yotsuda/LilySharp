@@ -119,6 +119,8 @@ public sealed partial class MeasureCollector
                 else if (token.Text == ":|")
                 {
                     await PushFormBarline(token.Text, token.SourceStart, token.Span);
+                    // `:|*4`: the count is printed over this bar (MusicMarkType.RepeatCount).
+                    AddRepeatCountMark(Syntax.FormWalk.ExplicitPlayCount(repeat) ?? 0, token.SourceStart, builder);
                 }
                 else if (token.Text == ":|:")
                 {

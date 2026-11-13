@@ -647,7 +647,12 @@ public sealed partial class MeasureCollector
             // The group octave shift applies to the ROOT member only; the stacked members
             // pick it up via the anchor octave (which the shifted root sets).
             bool isRoot = !rootSet && letter is not null;
-            if (rootSet && letter is { } l)
+            // ⚠️ Under `octave absolute` NOTHING stacks: every member says where it is, as a
+            // `<…>` chord's members do there (GRAMMAR "no stacking, no frame"), and the marks
+            // after '>>' move each of them. Until grammar evaluation 4 (2026-11-13) the later
+            // members were stacked on the root in both modes and their own marks counted from
+            // there, so `<< fis' a' d'' >>` drew fis' a'' d'''' beside `<fis' a' d''>`.
+            if (rootSet && letter is { } l && !savedAbsolute)
             {
                 _v.Octave.OctaveAbsolute = true;
                 _v.Octave.OctaveBase = anchorOctave + (GetPitchIndex(l) >= rootStep ? 0 : 1);
@@ -665,7 +670,7 @@ public sealed partial class MeasureCollector
             // string. The first one before any pitched member is the group's root — its lowest
             // note, as the item hands on (the marks after '>>' do not move it).
             _v.SpreadNote = spreadNote is { } sn ? (member.Green, sn) : null;
-            await EmitArpeggioMember(member, builder, parts, scale, isRoot ? groupOctave : 0, marks, groupString,
+            await EmitArpeggioMember(member, builder, parts, scale, isRoot || (savedAbsolute && spreadNote is null) ? groupOctave : 0, marks, groupString,
                 measureIndex, onset);
             _v.SpreadNote = null;
             if (!rootSet && spreadNote is { } rootNote)

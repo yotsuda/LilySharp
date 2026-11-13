@@ -484,7 +484,9 @@ internal static class MusicMarkEngraver
     ///   key-signature clef)), (self-alignment-X . RIGHT), X-offset self-aligned-on-breakable.
     /// </remarks>
     internal static bool IsJumpScript(MusicMarkType type)
-        => type == MusicMarkType.Fine || IsJumpInstruction(type);
+        // …and a repeat's count ("4×"), which stands over the closing repeat bar the same way
+        // (LILYSHARP-OWN, MusicMarkType.RepeatCount).
+        => type == MusicMarkType.Fine || type == MusicMarkType.RepeatCount || IsJumpInstruction(type);
 
     // Gap between stacked marks
     // LILYPOND-REF: axis-group-interface.cc:45 default_outside_staff_padding_ = 0.46

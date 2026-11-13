@@ -3011,7 +3011,10 @@ public sealed class MidiExporter
             // The group octave shift applies to the ROOT member only; the stacked members
             // inherit it via the anchor octave the shifted root sets.
             bool isRoot = !rootSet && letter is not null;
-            if (rootSet && letter is { } l)
+            // Under `octave absolute` nothing stacks — every member is where it is written, and
+            // the marks after '>>' move each (MeasureCollector.MusicWalk ProcessArpeggio;
+            // grammar evaluation 4, 2026-11-13).
+            if (rootSet && letter is { } l && !savedAbsolute)
             {
                 _octaveAbsolute = true;
                 _partAbsoluteBase = anchorOctave + (RelativeOctave.StepIndex(l) >= rootStep ? 0 : 1);
@@ -3021,12 +3024,12 @@ public sealed class MidiExporter
                 _octaveAbsolute = savedAbsolute; // the root, and any rest
             }
             if (member is PitchSyntax pitch)
-                EmitArpeggioMidiPitch(pitch, track, isRoot ? groupOctave : 0);
+                EmitArpeggioMidiPitch(pitch, track, isRoot || (savedAbsolute && spreadNote is null) ? groupOctave : 0);
             else if (member is ChordSyntax chord)
             {
                 // A spread note plays as its diagram(…) item narrowed to that note (the page's rule).
                 _spreadNote = spreadNote is { } sn ? (chord.Green, sn) : null;
-                ProcessChord(chord, track, isRoot ? groupOctave : 0);
+                ProcessChord(chord, track, isRoot || (savedAbsolute && spreadNote is null) ? groupOctave : 0);
                 _spreadNote = null;
             }
             else

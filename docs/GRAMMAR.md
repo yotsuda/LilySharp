@@ -2888,7 +2888,10 @@ ShapeChord     = ( 'chord' | 'diagram' ) , '(' , ChordArgument , ')'    (* Chord
    (above): the anchor is where the first pitched member sounds — or the key tonic when
    the group opens with degrees, so a descending figure needs no marks: << 8 5 3 1 >> =
    C4 G3 E3 C3. A later member's own marks shift that member from its stacked spot; the
-   root's, and marks after '>>', shift the whole group and propagate. Members may be
+   root's, and marks after '>>', shift the whole group and propagate. In 'octave absolute'
+   mode nothing stacks, as in a chord: every pitched member is a fixed pitch, and the marks
+   after '>>' shift each (until 2026-11-13 the later members were stacked there too, so
+   << fis' a' d'' >> was fis' a'' d''''). Members may be
    pitches, scale degrees, chords or rests.
    A bare pitch member carries post-events like a note ('<< c@accent e\3 g@finger(1) >>':
    scripts, fingering, a dynamic, a string number) and a slur mark after it ('<< c( e g) >>').

@@ -101,6 +101,18 @@ public sealed record Voice(
     /// </summary>
     public ImmutableArray<CrossCollisionMark> CrossCollisions { get; init; } = ImmutableArray<CrossCollisionMark>.Empty;
 
+    /// <summary>
+    /// On a staff several PARTS share whole (<c>condensedStaff { sop alt }</c>): which of
+    /// them this voice belongs to, 1-based in the staff's order — 0 on every other staff.
+    /// With <see cref="PartFirstVoice"/> it is what the voice props are numbered by there
+    /// (<see cref="VoiceDefaults.DirectionNumber"/>).
+    /// </summary>
+    public int SharedPartNumber { get; init; }
+
+    /// <summary>The slot in the staff's voices of the first voice of this voice's part (see
+    /// <see cref="SharedPartNumber"/>).</summary>
+    public int PartFirstVoice { get; init; }
+
     // Identity, not value equality: see ModelIdentity.
     public bool Equals(Voice? other) => ReferenceEquals(this, other);
 

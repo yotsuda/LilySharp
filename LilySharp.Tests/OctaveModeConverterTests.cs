@@ -113,10 +113,11 @@ public class OctaveModeConverterTests
         var absolute = Convert(src, OctaveMode.Absolute);
         // <c e g>' is C5 E5 G5 and leaves the frame at C5; << c e g >>, then reads C5 and
         // drops a whole octave — C4 E4 G4 — which absolute spells c' (bare c is C3 since the
-        // owner's decision 2026-10-28), its later members stacked on it. <c' 3 5> is read as
+        // owner's decision 2026-10-28), each later member where it sounds too (nothing stacks in
+        // absolute mode since grammar evaluation 4, 2026-11-13). <c' 3 5> is read as
         // its first note: C5, the degrees stacked on it (E5 G5), the frame left at C5, so
         // the e after it is E5 (session 914; the bare-letter anchor had E4 G4 and E4).
-        Assert.Contains("<c'' e'' g''>2 c'' | << c' e g >>4 c' <c'' 3 5> e'' |", absolute);
+        Assert.Contains("<c'' e'' g''>2 c'' | << c' e' g' >>4 c' <c'' 3 5> e'' |", absolute);
         Convert(absolute, OctaveMode.Relative);
     }
 

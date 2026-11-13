@@ -1073,7 +1073,11 @@ public sealed record NoteItem : MusicItem
     /// LilyPond syntax: <c>c4-1</c>; LilySharp surface: <c>c4@finger.1</c> via the
     /// existing compound-mark parser (no parser change required).
     /// </remarks>
-    public int? Fingering => _rare?.Fingering;
+    public int? Fingering
+    {
+        get => _rare?.Fingering;
+        init { if (value != Fingering) _rare = (_rare ?? NoteItemRare.Empty) with { Fingering = value }; }
+    }
 
     /// <summary>
     /// True when this note has a laissez-vibrer (l.v.) tie — a half-tie pointing
@@ -1719,7 +1723,10 @@ public readonly record struct ChordNoteInfo(
     // THIS member is a dead (muted) note — its own @dead inside the brackets, or the
     // chord's for every member: a cross head on the staff (Notehead says that) and the
     // cross in place of the fret number on a tab. See NoteItem.IsDead.
-    bool IsDead = false
+    bool IsDead = false,
+    // THIS member is held by a tie from the item before (TabResolver.ResolveVoiceTabTies):
+    // a tab hides its fret number, as it hides a single tied note's (NoteItem.IsTieTarget).
+    bool IsTieTarget = false
 );
 
 /// <summary>
