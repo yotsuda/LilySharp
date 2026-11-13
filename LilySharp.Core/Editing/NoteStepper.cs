@@ -810,6 +810,15 @@ public static partial class NoteStepper
             return new Target(TargetKind.Articulation, steppingMark);
         // An @! end steps the start it closes, and is renamed with it (owner's request
         // 2026-10-28: "@!accel も ctrl+shift+down で動くように").
+        // ⚠️ Not a phrasing slur's end (owner's request 2026-11-13: "@!phrasingSlur の上で
+        // ctrl+shift+up を押した場合には、直前の音符の音高が変わるように"): its start steps a LINE
+        // word (@phrasingSlur(dashed)) that the end does not carry, so from the end the keys
+        // would change something written bars away and nothing here. It steps the note it is
+        // written on, as a mark with nothing of its own does.
+        foreach (var end in tree.GetNodes<MusicMarkSyntax>())
+            if (end.IsSpanEnd && end.Name == Semantics.AnnotationValues.PhrasingSlurName
+                && end.Span.Start < offset && offset <= end.Span.End)
+                return CarrierOf(end);
         foreach (var end in tree.GetNodes<MusicMarkSyntax>())
             if (end.IsSpanEnd && end.Span.Start < offset && offset <= end.Span.End
                 && SpanNames.OpenerOf(end) is { } opener)

@@ -2418,6 +2418,10 @@ public class StepRequestTests
     [InlineData("c'2@ti‸e~ c'2 |", +1, "c'2@tie(solid)~ c'2 |")]
     [InlineData("c'4@phrasing‸Slur d' e' f'@!phrasingSlur |", +1, "c'4@phrasingSlur(solid) d' e' f'@!phrasingSlur |")]
     [InlineData("c'4@phrasing‸Slur d' e' f'@!phrasingSlur |", -1, "c'4@phrasingSlur(dashed) d' e' f'@!phrasingSlur |")]
+    // The END of one has nothing to step, so the keys step the note it is written on
+    // (owner's request 2026-11-13: "@!phrasingSlur の上で … 直前の音符の音高が変わるように").
+    [InlineData("c'4@phrasingSlur d' e' f'@!phrasing‸Slur |", +1, "c'4@phrasingSlur d' e' g'@!phrasingSlur |")]
+    [InlineData("c'4@phrasingSlur(dashed) d' e' f'@!phrasingSlur‸ |", -1, "c'4@phrasingSlur(dashed) d' e' e'@!phrasingSlur |")]
     public void AnArgumentFromAList_StepsAlongIt(string from, int dir, string to)
         => Assert.Equal(Plain(to), Step(Plain(from), dir, semitone: true).After);
 
