@@ -285,4 +285,63 @@ public class Session1228LeftoversTests
         Assert.Contains("<cih' eeh'>4 grace { aeseh'16 } fisih'4 g'2 |", lys);
         Assert.Contains("0.25", Assert.Single(report.Warnings));
     }
+
+    // ---- An accent dynamic is one note's (2026-11-14) ----
+
+    private static List<int> Velocities(string music)
+        => [.. new LilySharp.Core.Midi.MidiExporter().Export(SyntaxTree.Parse(Book("", music)))
+            .Tracks.SelectMany(t => t.Notes).OrderBy(n => n.StartTick).Select(n => n.Velocity)];
+
+    /// <summary>The notes after an <c>@sfz</c> played at the sforzato's 104 until the next mark, as
+    /// LilyPond's do; a sforzando is one note's, and the level stands as it stood.</summary>
+    [Theory]
+    [InlineData("sfz")]
+    [InlineData("sf")]
+    [InlineData("fz")]
+    [InlineData("rfz")]
+    public void AnAccentDynamic_LeavesTheLevelStanding(string accent)
+    {
+        var played = Velocities($"c'4@p d' e'@{accent} f' | g'1 |");
+        Assert.Equal(70, played[0]);
+        Assert.Equal(70, played[1]);
+        Assert.True(played[2] >= 100, $"the accent sounds at {played[2]}");
+        Assert.Equal(70, played[3]);
+        Assert.Equal(70, played[4]);
+        // The control: a level stands.
+        Assert.Equal([70, 70, 102, 102, 102], Velocities("c'4@p d' e'@ff f' | g'1 |"));
+    }
+
+    /// <summary><c>@sf</c> is <c>@sfz</c> written short (it was 127, over <c>@fffff</c>), and in a loud
+    /// passage an accent is still over the level.</summary>
+    [Fact]
+    public void AnAccentDynamic_IsOverTheLevelItIsWrittenIn()
+    {
+        Assert.Equal(Velocities("c'4@p d'@sfz e' f' |"), Velocities("c'4@p d'@sf e' f' |"));
+        var loud = Velocities("c'4@ff d'@sfz e' f' |");
+        Assert.Equal(102, loud[0]);
+        Assert.True(loud[1] > 102 && loud[1] <= 127, $"the accent sounds at {loud[1]}");
+        Assert.Equal(102, loud[2]);
+    }
+
+    /// <summary><c>@fp</c> strikes its note loud and leaves the level at piano.</summary>
+    [Fact]
+    public void FortePiano_LeavesPiano()
+    {
+        var played = Velocities("c'4@f d'@fp e' f' |");
+        Assert.Equal(95, played[0]);
+        Assert.True(played[1] >= 95, $"the attack sounds at {played[1]}");
+        Assert.Equal(70, played[2]);
+        Assert.Equal(70, played[3]);
+    }
+
+    /// <summary>An accent written on an empty chord is the next note's, once.</summary>
+    [Fact]
+    public void AnAccentOnAnEmptyChord_IsTheNextNotes()
+    {
+        var played = Velocities("c'4@p <>@sfz d' e' f' |");
+        Assert.Equal(70, played[0]);
+        Assert.True(played[1] >= 100, $"the accent sounds at {played[1]}");
+        Assert.Equal(70, played[2]);
+    }
+
 }

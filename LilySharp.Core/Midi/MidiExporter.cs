@@ -166,7 +166,69 @@ public sealed class MidiExporter
     private void SetLevel(int level, bool written, string? part = null)
     {
         _velocity = level;
+        // A lane or a turn reopening: an accent written on an empty chord before it is not this note's.
+        if (!written)
+            _accentPending = null;
         _levelLog.Add((part ?? _currentPart, _currentTick, level, written));
+    }
+
+    // An accent dynamic sounds at least this far over the level it is written in: `@sfz` in a
+    // passage at ff (102) is still an accent, where its own number (104) would be none.
+    private const int AccentOverStanding = 12;
+
+    // The velocity an accent dynamic written on an empty chord (`<>@sfz`) or on a `<< >>` group
+    // gives the next note struck (Hold, Standing).
+    private int? _accentPending;
+
+    /// <summary>
+    /// The velocity of the note a dynamic is written on, with the level standing after it set: a
+    /// level (<c>@p</c>, <c>@ff</c>) stands from here on; <c>@sf</c>, <c>@sfz</c>, <c>@fz</c>,
+    /// <c>@sffz</c>, <c>@rf</c> and <c>@rfz</c> are an accent on this one note, and the level
+    /// stands as it stood; <c>@fp</c> and <c>@sfp</c> strike this note loud and leave the level
+    /// at piano.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN (2026-11-14, a leftover of session 1227; musical validity is the judge of
+    /// what plays, RULES §5.2): LilyPond's Dynamic_performer reads every absolute dynamic as a
+    /// level, so its notes after an <c>\sfz</c> stay at the sforzato's volume until the next
+    /// mark, and its <c>\sf</c> (1.00) is louder than <c>\fffff</c>. Until this date Lily# did
+    /// the same: the notes after an <c>@sfz</c> in a piano passage played at 104. A sforzando is
+    /// one note's; <c>sf</c> is <c>sfz</c> written short and sounds as it does.
+    /// </remarks>
+    private int Strike(DynamicSyntax dynamic)
+    {
+        switch (dynamic.Level)
+        {
+            case DynamicLevel.SF or DynamicLevel.SFZ or DynamicLevel.FZ or DynamicLevel.SFFZ or DynamicLevel.RF or DynamicLevel.RFZ:
+                int own = dynamic.Level == DynamicLevel.SF ? (int)DynamicLevel.SFZ : dynamic.Velocity;
+                return Math.Min(127, Math.Max(own, _velocity + AccentOverStanding));
+            case DynamicLevel.FP or DynamicLevel.SFP:
+                // Struck no softer than the level it is written in (`@fp` in a forte passage).
+                int attack = Math.Max(dynamic.Velocity, _velocity);
+                SetLevel((int)DynamicLevel.P, written: true);
+                return attack;
+            default:
+                SetLevel(dynamic.Velocity, written: true);
+                return dynamic.Velocity;
+        }
+    }
+
+    /// <summary>A dynamic written where no note is struck — on an empty chord, on a group: a level
+    /// stands from here, and an accent's velocity waits for the next note (<see cref="Standing"/>).</summary>
+    private void Hold(DynamicSyntax dynamic)
+    {
+        int struck = Strike(dynamic);
+        if (struck != _velocity)
+            _accentPending = struck;
+    }
+
+    /// <summary>The velocity a note with no dynamic of its own is struck at: the standing level,
+    /// or the accent an empty chord before it wrote (<see cref="Hold"/>), once.</summary>
+    private int Standing()
+    {
+        int velocity = _accentPending ?? _velocity;
+        _accentPending = null;
+        return velocity;
     }
 
     /// <summary>
@@ -1958,8 +2020,7 @@ public sealed class MidiExporter
                 switch (child)
                 {
                     case DynamicSyntax { Level: not DynamicLevel.None } dynamic:
-                        level = dynamic.Velocity;
-                        SetLevel(level, written: true);
+                        level = Strike(dynamic);
                         break;
                     case ArticulationSyntax articulation:
                         (level, _) = ApplyArticulationType(articulation.Type, level, 100);
@@ -3112,7 +3173,7 @@ public sealed class MidiExporter
         // exactly as if written on the first member (running state thereafter).
         foreach (var a in arpeggio.Articulations)
             if (a is DynamicSyntax { Level: not DynamicLevel.None } dyn)
-                SetLevel(dyn.Velocity, written: true);
+                Hold(dyn);
 
         // The ROOT is the first PITCHED member (leading rests just advance time); it
         // resolves relatively and anchors the group. Every later PITCHED member STACKS
@@ -3228,15 +3289,14 @@ public sealed class MidiExporter
             _currentOctave = anchor;
         }
         // The member's own dynamic and scripts, read as a note's are (ProcessNote).
-        int velocity = _velocity;
+        int velocity = Standing();
         int durationPercent = 100;
         foreach (var child in pitch.Articulations)
         {
             switch (child)
             {
                 case DynamicSyntax { Level: not DynamicLevel.None } dynamic:
-                    velocity = dynamic.Velocity;
-                    SetLevel(velocity, written: true);
+                    velocity = Strike(dynamic);
                     break;
                 case ArticulationSyntax articulation:
                     (velocity, durationPercent) = ApplyArticulationType(articulation.Type, velocity, durationPercent);
@@ -3294,7 +3354,7 @@ public sealed class MidiExporter
         }
 
         // Process articulations and dynamics
-        int velocity = _velocity;
+        int velocity = Standing();
         int durationPercent = 100;
 
         foreach (var child in note.Articulations)
@@ -3304,8 +3364,7 @@ public sealed class MidiExporter
                 // A spanner (@cresc/@decresc/@dim) is a DynamicSyntax with no level; letting
                 // it through set velocity 0 and silenced the rest of the part (fantasia.lys L65).
                 case DynamicSyntax { Level: not DynamicLevel.None } dynamic:
-                    velocity = dynamic.Velocity;
-                    SetLevel(velocity, written: true); // Update default velocity for subsequent notes
+                    velocity = Strike(dynamic);
                     break;
 
                 case ArticulationSyntax articulation:
@@ -3368,15 +3427,14 @@ public sealed class MidiExporter
         int durationTicks = ClockTicks(duration);
         durationTicks -= ConsumeGraceSteal(durationTicks);
 
-        int velocity = _velocity;
+        int velocity = Standing();
         int durationPercent = 100;
         foreach (var child in drum.Articulations)
         {
             switch (child)
             {
                 case DynamicSyntax { Level: not DynamicLevel.None } dynamic:
-                    velocity = dynamic.Velocity;
-                    SetLevel(velocity, written: true);
+                    velocity = Strike(dynamic);
                     break;
                 case ArticulationSyntax articulation:
                     (velocity, durationPercent) = ApplyArticulationType(articulation.Type, velocity, durationPercent);
@@ -3478,15 +3536,14 @@ public sealed class MidiExporter
         durationTicks -= ConsumeGraceSteal(durationTicks);
         int startTick = _currentTick;
 
-        int velocity = _velocity;
+        int velocity = Standing();
         int durationPercent = 100;
         foreach (var child in bare.Articulations)
         {
             switch (child)
             {
                 case DynamicSyntax { Level: not DynamicLevel.None } dynamic:
-                    velocity = dynamic.Velocity;
-                    SetLevel(velocity, written: true);
+                    velocity = Strike(dynamic);
                     break;
                 case ArticulationSyntax articulation:
                     (velocity, durationPercent) = ApplyArticulationType(articulation.Type, velocity, durationPercent);
@@ -3672,7 +3729,7 @@ public sealed class MidiExporter
                 GetDuration(written);
             foreach (var child in chord.Articulations)
                 if (child is DynamicSyntax { Level: not DynamicLevel.None } dynamic)
-                    SetLevel(dynamic.Velocity, written: true);
+                    Hold(dynamic);
             return;
         }
 
@@ -3702,15 +3759,14 @@ public sealed class MidiExporter
 
         // The chord's own dynamic and scripts, read as a note's are (ProcessNote). Until
         // 2026-09-26 a chord ignored them and `<c e>4@f` played at the running level.
-        int velocity = _velocity;
+        int velocity = Standing();
         int durationPercent = 100;
         foreach (var child in chord.Articulations)
         {
             switch (child)
             {
                 case DynamicSyntax { Level: not DynamicLevel.None } dynamic:
-                    velocity = dynamic.Velocity;
-                    SetLevel(velocity, written: true);
+                    velocity = Strike(dynamic);
                     break;
                 case ArticulationSyntax articulation:
                     (velocity, durationPercent) = ApplyArticulationType(articulation.Type, velocity, durationPercent);

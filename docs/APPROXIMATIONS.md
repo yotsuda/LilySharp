@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 428 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **556** | |
+| `OWN` | 429 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **557** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -25,7 +25,7 @@
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 21 |
 | `LilySharp.Core/Svg/Layout/ProseBand.cs` | 18 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 16 |
-| `LilySharp.Core/Midi/MidiExporter.cs` | 12 |
+| `LilySharp.Core/Midi/MidiExporter.cs` | 13 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
 | `LilySharp.Core/Svg/Collector/MeasureCollector.cs` | 10 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 10 |
@@ -249,7 +249,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（428 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（429 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -304,6 +304,7 @@
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
 - **`GeneralMidi.PreviewTimbreFamily`** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`
+- **`MidiExporter.Strike`** LILYSHARP-OWN (2026-11-14, a leftover of session 1227; musical validity is the judge of
 - **`MidiExporter.ShareGrandStaffDynamics`** LILYSHARP-OWN: LilyPond's Dynamic_performer is consisted per Voice
 - **`MidiExporter.AddPedals`** LILYSHARP-OWN: LilyPond's Piano_pedal_performer is consisted per Voice
 - **`MidiExporter.SplitIntoPartTracks`** LILYSHARP-OWN: LilyPond's performer gives each staff its own channel in the same way
