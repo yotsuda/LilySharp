@@ -102,6 +102,46 @@ score clean {
 `md` and `md end` are replaced separately. A section's text is not replaced from a score; a
 layout switch takes every text off a score (its word is open).
 
+### 2.3 The shape: `indent`, `center`, `box`
+
+Owner-approved spelling, 2026-11-13. More words on the opening line, after `md` and the
+optional `end`, in any order, each once:
+
+````
+```md box
+```md end center
+```md indent 20mm
+```md indent 20mm 20mm box
+````
+
+| Word | The text |
+|---|---|
+| `indent LEFT [RIGHT]` | white at its left and right, INSIDE the line width: set that much narrower, beginning that much further right. One length is both sides |
+| `center` | each line centred in the text's width |
+| `box` | a ruled frame around the whole text |
+
+- A length is written as `paper { }` writes one — the number and its unit glued, `20mm`,
+  `2cm`, `0.5in`, or a bare number of staff spaces — and goes through the same conversion
+  (`PaperPlanReader.ToStaffSpaces`; the list of units is one list). There is no `pt`: the
+  language has none.
+- The three combine. The text under the title and the `end` text each read their own opening
+  line, at the top level and in a score's fence; a score's fence brings its own words with its
+  text (it does not inherit the file's shape).
+- Two fences for one place are ONE text, set as the first one says; a shape on the second is
+  an error.
+- Errors, all LYS4057 on the word: a word that is none of these (the message lists them), a
+  word twice, `indent` with no length or with three, a negative length, a unit that is not
+  `mm` / `cm` / `in`, and indents that leave the text less than 10 staff spaces — judged on the
+  paper the fence stands under (the file's `paper { }`, or the score's own when the fence is
+  in a score that names one). On any other paper the indents give way in proportion and the
+  text keeps the 10.
+- A section's text takes none of these: its opening line takes a printing, as before.
+
+**Decided 2026-11-13 (owner).** Margins, centring and a ruled frame are in. A frame IMAGE (a
+decorative border from a picture) was judged excessive and is not planned: for a text of any
+length it needs nine-slice scaling — the corners kept, the edges stretched or tiled — and that
+is a small layout engine for an ornament.
+
 ## 3. What is drawn
 
 The text is read as CommonMark, whole. Drawn:
@@ -130,10 +170,77 @@ Nothing is dropped in silence.
 
 - A text role of its own in the fonts block (`text`); by default the piece's text font at the
   size of the poet / composer line (section 6: that is LilyPond's markup size).
-- As wide as the line width, from the left margin, ragged right. Lines break by themselves:
-  between words, and between characters in Japanese, Chinese and Korean.
+- As wide as the line width, from the left margin, ragged right — unless its opening line
+  says otherwise (section 5.1). Lines break by themselves: between words, and between
+  characters in Japanese, Chinese and Korean.
 - A long text runs on to the next page between its lines.
 - Nothing here touches playback, MIDI or a voice.
+
+### 5.1 Indented, centred, boxed (built 2026-11-13)
+
+- **`indent`**: the text's left edge is the left margin plus the left indent; its width is
+  the line width less both. The lines are broken to that width.
+- **`center`**: each line stands in the middle of the text's width — a paragraph's lines and a
+  line ended by hand alike. The breaking is the ragged text's; a line wider than the text (one
+  long word) keeps the left edge and runs over as it always has. Headings and lists are not
+  drawn yet (section 8 step 2), so there was nothing to decide for them; proposed for that
+  step: a heading is centred as a paragraph is, a list keeps its hanging shape from the text's
+  left edge and is not centred.
+- **`box`**: LilyPond's `\box`. The rule is 0.1 thick (`thickness` 1 × the layout's
+  line-thickness) and is drawn OUTSIDE the extent widened by the padding (`scm/stencil.scm`
+  box-stencil). The padding is **1.0** on all four sides (LILYSHARP-OWN; LilyPond's
+  `box-padding` default is 0.2), around the lines' BOXES — 2.0 over the first baseline, 1.0
+  under the last — not around the ink. The frame's outer edge stands on the indent edges: with
+  no indent it is at the line width's edges, and the text inside is inset 1.1 a side and broken
+  to the narrower width. The frame's height is the band's (`ProseBand.Up` / `Down` reach its
+  outer edges), so the page's springs and the page breaker's priced depth see it and nothing
+  of the title, a system or the page's foot comes nearer than the paddings the chain keeps for
+  any markup.
+- Least width: 10 staff spaces (`ProseBand.MinimumWidth`, LILYSHARP-OWN).
+
+MEASURED 2026-11-13, LilyPond 2.26.0, `LilySharp-Lab` `sessions/p1226/md/fencelayout`.
+
+The padding (`box-pad.ly`: a two-line block given its line boxes, `\box` at four paddings; the
+frame's outer left edge from the text and its outer height):
+
+| `box-padding` | Left of the text | Height | Reads as |
+|---|---|---|---|
+| 0.2 (default) | 0.3 | 6.6 | the rule touches the eye: the first letter is a hair off it |
+| 0.5 | 0.6 | 7.2 | still tight at the sides |
+| **1.0** | 1.1 | 8.2 | about half the text's em at the sides, a line's own white above and below |
+| 1.5 | 1.6 | 9.2 | loose: the frame reads as a panel, not a rule round a note |
+| 0.2 on the bare ink | 0.3 | 5.6 | LilyPond's own picture: the rule on the ascenders |
+
+The twin against the page (`showcase.lys`, its `lysc ly` twins engraved; staff spaces, y down):
+
+| What | Lily# | LilyPond |
+|---|---|---|
+| Boxed text under the title: frame's outer left edge, width | 8.54, 102.43 | 8.5358, 102.4299 |
+| …its first line's left edge | 9.64 | 9.6358 |
+| …frame over the first baseline, under the last | 3.10, 2.10 | 3.1000, 2.1000 |
+| …composer's baseline to the first baseline | 4.05 | 4.0705 (the unboxed 2.95 / 2.9705 and 1.1) |
+| `end indent 30mm box`: first line's left edge | 26.71 | 26.7075 |
+| …the last staff's middle line to its first baseline | 12.00 | 12.0000 |
+| …line to line, paragraph to paragraph | 3.00, 4.50 | 3.0000, 4.5000 |
+| `center indent 40mm 40mm`: the text's width | 56.91 | `line-width` 56.9055 |
+| …a line's left edge ("For my teacher,") | 52.14 | 52.8026 |
+| …last baseline to the staff's top line | 5.09 | 4.93 (section 7.1: the book's own, with or without a text) |
+
+The twin's forms:
+
+- indent: `\concat { \hspace #LEFT … }` a line of the `\markuplist \column-lines`.
+- center: `\override #'(line-width . WIDTH) \fill-line { … }` — one markup in a `\fill-line`
+  is centred — so LilyPond centres by ITS measure of the words. The centred line's left edge
+  therefore differs by half the known difference of the two engines' text widths (section
+  7.1, open), and its middle does not.
+- box: one line of the list, `\concat { \hspace #TEXT-LEFT \override #'(box-padding . 1) \box
+  \with-dimension #X #'(0 . WIDTH) \with-dimension #Y #'(-DOWN . 2) \column { … } }`, the white
+  between paragraphs a `\vspace #0.5`. The column is given the page's extent, so the frame
+  stands where the page rules it whatever LilyPond measures the words. ⚠️ The `\hspace` is to
+  the TEXT's left edge: `\concat` sets the box's origin, not its left extent, after the white
+  (first written to the frame's edge, the whole box stood 1.1 left of the margin).
+- Found on the way: the twin of a score's OWN fence wrote the file's text (its page model was
+  collected without the score's fences). Mended with this.
 
 ## 6. Measured: LilyPond 2.26.0 (2026-11-12)
 
@@ -257,6 +364,8 @@ Lily#: a known difference, written into the twin as a comment where it happens.
 
 1. DONE (section 7.1). The fence, and paragraphs with bold and italic under the title and at
    the end: SVG, PDF, the preview, the twin. The page's chain learns a markup line.
+   DONE 2026-11-13 (sections 2.3, 5.1): `indent`, `center`, `box` on the opening line, and
+   their completion.
 2. Lists, headings, links; what is read and not drawn is said.
 3. A section's text (section 6.1).
 4. Images.

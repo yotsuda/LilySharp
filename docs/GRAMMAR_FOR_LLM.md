@@ -39,6 +39,10 @@ poet "Poet"             // optional: the left end of the composer's line (\heade
                         // lines between ```md and ``` are printed under the title (paragraphs, **bold**,
                         // *italic*); ```md end prints them under the last system. Nothing between the
                         // fences is Lily#. Inside score { } a fence replaces the file's for that score.
+                        // The opening line may go on, in any order, each word once: `box` (a ruled frame
+                        // around the text), `center` (each line centred), `indent 20mm` (white at both
+                        // sides, inside the line width) or `indent 20mm 10mm` (left, right) — e.g.
+                        // ```md end indent 30mm box. A length is 20mm, 2cm, 0.5in or bare staff spaces.
 tempo 120               // optional; also: tempo "a tempo" (words alone: printed, the speed unchanged — for "a tempo", "Tempo I", "Meno mosso"), tempo "Allegro" 120, tempo "Andante" 4 = 96 (text + beat unit), tempo "Lively" 4. = 116 (dotted unit), tempo Comodo 4 = 84 (a bare word is the marking); 'tempo 120 swing' adds a shuffle-feel equation, and plays it from there on ('swing 16' = 16th swing; only 8 or 16; 'tempo swing' = the equation alone); a last word 'bare' PLAYS the count and does NOT PRINT it: tempo "Tempo I" 4 = 92 bare sounds at 92 and prints only the words — for a "Tempo I", "Più mosso", "a tempo" that must change the speed without a metronome mark (anywhere a tempo goes; it needs both words and a count, LYS0044 otherwise)
 time 4/4                // optional (default 4/4); 4/4 engraves as the C
                         // An ADDITIVE numerator groups the beats: 'time 3+2+2/8' prints 3+2+2 over 8

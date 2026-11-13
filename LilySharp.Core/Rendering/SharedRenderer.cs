@@ -486,9 +486,11 @@ internal static partial class SharedRenderer
                 GetSystemEndTimeChange(score.PrimaryContentStaff, system));
 
     /// <summary>
-    /// A fenced text (docs/markdown-text-design.md): each line from the left margin, its
+    /// A fenced text (docs/markdown-text-design.md): each line from the left margin — or
+    /// from where its shape puts it (<c>indent</c>, <c>center</c>; ProseLine.Left) — its
     /// pieces in their own weight and slant, about the reference point the page solved —
-    /// <paramref name="referenceY"/> below the page's top edge, the first line's baseline.
+    /// <paramref name="referenceY"/> below the page's top edge, the first line's baseline;
+    /// and a boxed text's frame around them.
     /// </summary>
     private static void DrawProse(
         MultiStaffScore score, ProseBand band, double referenceY, PageLayout page,
@@ -498,11 +500,24 @@ internal static partial class SharedRenderer
         double em = ProseBand.Em(fonts);
         using (SourceScope(gc, band.Position))
         {
+            if (band.Frame is { } frame)
+            {
+                // Four filled rules inside the outer edge, as LilyPond's box-stencil lays them
+                // (scm/stencil.scm): the two long ones the frame's whole width, the two
+                // upright ones between them.
+                double t = frame.Thickness;
+                double x0 = options.MarginLeft + frame.Left, x1 = options.MarginLeft + frame.Right;
+                double top = page.Height - (referenceY - band.Up), bottom = page.Height - (referenceY + band.Down);
+                gc.DrawRectangle(x0, top, x1 - x0, t, fill: Color.Black);
+                gc.DrawRectangle(x0, bottom + t, x1 - x0, t, fill: Color.Black);
+                gc.DrawRectangle(x0, top - t, t, top - bottom - 2 * t, fill: Color.Black);
+                gc.DrawRectangle(x1 - t, top - t, t, top - bottom - 2 * t, fill: Color.Black);
+            }
             foreach (var line in band.Lines)
             {
                 double y = page.Height - (referenceY + line.Baseline);
                 foreach (var piece in line.Pieces)
-                    gc.DrawText(piece.Text, options.MarginLeft + piece.X, y, em,
+                    gc.DrawText(piece.Text, options.MarginLeft + line.Left + piece.X, y, em,
                         TextRole.Markdown, ProseBand.StyleOf(fonts, piece.Style), TextAnchor.Start);
             }
         }

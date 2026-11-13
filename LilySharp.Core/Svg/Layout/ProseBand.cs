@@ -27,7 +27,30 @@ namespace LilySharp.Core.Svg.Layout;
 internal sealed record ProsePiece(string Text, double X, FontStyle Style, int Offset);
 
 /// <summary>One line as broken: its baseline below the band's reference point, and its pieces.</summary>
-internal sealed record ProseLine(double Baseline, ImmutableArray<ProsePiece> Pieces, double Width);
+/// <param name="Baseline">The baseline below the band's reference point.</param>
+/// <param name="Pieces">The pieces, each from the line's left end.</param>
+/// <param name="Width">The line's own width.</param>
+/// <param name="Left">The line's left end from the left margin: 0 for a text with no shape,
+/// else the indent, the frame's inset and, centred, half the white the line leaves.</param>
+internal sealed record ProseLine(double Baseline, ImmutableArray<ProsePiece> Pieces, double Width, double Left = 0);
+
+/// <summary>
+/// A fenced text's shape in staff spaces (owner-approved 2026-11-13): the opening line's
+/// <c>indent</c>, <c>center</c> and <c>box</c> on THIS paper's staff space.
+/// </summary>
+internal readonly record struct ProseShape(double IndentLeft, double IndentRight, bool Center, bool Box)
+{
+    /// <summary><paramref name="shape"/> on a staff space of <paramref name="staffSpaceMm"/>
+    /// millimetres, through the conversion <c>paper { }</c>'s lengths take.</summary>
+    public static ProseShape Of(Syntax.TextShape shape, double staffSpaceMm) => new(
+        Semantics.PaperPlanReader.ToStaffSpaces(shape.IndentLeft.Value, shape.IndentLeft.Unit, staffSpaceMm),
+        Semantics.PaperPlanReader.ToStaffSpaces(shape.IndentRight.Value, shape.IndentRight.Unit, staffSpaceMm),
+        shape.Center, shape.Box);
+}
+
+/// <summary>The frame ruled around a boxed text: its OUTER left and right edges from the left
+/// margin, and its rule. Its outer top and bottom are the band's own <c>Up</c> and <c>Down</c>.</summary>
+internal sealed record ProseFrame(double Left, double Right, double Thickness);
 
 /// <summary>
 /// A fenced text set for the page (docs/markdown-text-design.md): its lines, broken to the
@@ -49,11 +72,45 @@ internal sealed record ProseLine(double Baseline, ImmutableArray<ProsePiece> Pie
 /// <param name="Lines">The lines, top to bottom.</param>
 /// <param name="Up">How far the band reaches above its reference point.</param>
 /// <param name="Down">How far it reaches below it.</param>
-/// <param name="Width">Its widest line.</param>
+/// <param name="Width">How far it reaches right of the left margin: its widest line, or — with
+/// a shape — the frame's outer right edge or the furthest line's end.</param>
 /// <param name="Position">Where its fence begins in the file (data-pos), or 0.</param>
+/// <param name="Left">Where the text begins, from the left margin (the indent, and a frame's inset).</param>
+/// <param name="TextWidth">The width the lines were broken to.</param>
+/// <param name="Frame">The frame of a boxed text, or null. <paramref name="Up"/> and
+/// <paramref name="Down"/> reach its outer edges, so the page's springs see it.</param>
 internal sealed record ProseBand(
-    ImmutableArray<ProseLine> Lines, double Up, double Down, double Width, int Position)
+    ImmutableArray<ProseLine> Lines, double Up, double Down, double Width, int Position,
+    double Left = 0, double TextWidth = 0, ProseFrame? Frame = null)
 {
+    /// <summary>The rule of a boxed text's frame.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-markup-commands.scm box — <c>thickness</c> 1, times
+    /// the layout's line-thickness 0.1; scm/stencil.scm box-stencil rules it OUTSIDE the
+    /// padded extent.</remarks>
+    public const double BoxThickness = 0.1;
+
+    /// <summary>The white between a boxed text's line boxes and its frame's rule, on all four sides.</summary>
+    /// <remarks>LILYSHARP-OWN (owner-approved 2026-11-13: a ruled frame; the padding is this
+    /// choice). LilyPond's <c>box-padding</c> default 0.2 hugs a single word; a paragraph
+    /// block set at 2.2 wants about half its em. MEASURED 2026-11-13, LilyPond 2.26.0
+    /// (LilySharp-Lab sessions/p1226/md/fencelayout box-pad.ly): see docs/markdown-text-design.md
+    /// section 5.1 for the numbers.</remarks>
+    public const double BoxPadding = 1.0;
+
+    /// <summary>The least width a text keeps whatever its indents ask.</summary>
+    /// <remarks>LILYSHARP-OWN: ten staff spaces — four or five ems of the text, a short word
+    /// a line. MarkdownTextValidator refuses indents that leave less on the paper the fence
+    /// stands under; on another score's narrower paper the indents give way in proportion.</remarks>
+    public const double MinimumWidth = 10.0;
+
+    /// <summary>How far a boxed text stands inside its frame's outer edge: the padding and the rule.</summary>
+    public static double InsetOf(ProseShape shape) => shape.Box ? BoxPadding + BoxThickness : 0;
+
+    /// <summary>The width <paramref name="shape"/> leaves the text on a line of
+    /// <paramref name="lineWidth"/>, as written (it may be less than <see cref="MinimumWidth"/>).</summary>
+    public static double WidthLeft(ProseShape shape, double lineWidth)
+        => lineWidth - 2 * InsetOf(shape) - shape.IndentLeft - shape.IndentRight;
+
     /// <summary>The text's size: the 11pt text font at a 20pt staff, the poet / composer line's.</summary>
     /// <remarks>MEASURED: <c>e1.ly</c>, font-size 2.2000 on a top-level markup.</remarks>
     public const double FontSize = HeaderBand.ComposerFontSize;
@@ -88,13 +145,39 @@ internal sealed record ProseBand(
     /// Sets <paramref name="markdown"/> to <paramref name="lineWidth"/>, or null when it
     /// draws nothing (an empty fence, or one that writes only what is not drawn).
     /// </summary>
-    public static ProseBand? Build(string? markdown, int position, ScoreTextMetrics fonts, double lineWidth)
+    /// <remarks>
+    /// <paramref name="shape"/> (owner-approved 2026-11-13): the indents are white inside the
+    /// line width, so the text is broken that much narrower and begins that much further
+    /// right; a frame's OUTER edge stands on the indent edges and the text inside it is inset
+    /// by <see cref="BoxPadding"/> and the rule, broken narrower again; <c>center</c> sets each
+    /// line in the middle of the text's width (a line wider than it — one long word — keeps
+    /// the left edge). The frame's rule and padding are in <c>Up</c> and <c>Down</c>.
+    /// With no shape every number is what it was.
+    /// </remarks>
+    public static ProseBand? Build(string? markdown, int position, ScoreTextMetrics fonts, double lineWidth,
+        ProseShape shape = default)
     {
         if (string.IsNullOrWhiteSpace(markdown))
             return null;
         var prose = Prose.Read(markdown);
         if (prose.Blocks.IsEmpty)
             return null;
+
+        // The indents give way, in proportion, before the text is narrower than the minimum
+        // (or than the line itself, on a page narrower than that).
+        double inset = InsetOf(shape);
+        double indentLeft = Math.Max(0, shape.IndentLeft), indentRight = Math.Max(0, shape.IndentRight);
+        double room = Math.Max(0, lineWidth - 2 * inset);
+        double least = Math.Min(MinimumWidth, room);
+        if (indentLeft + indentRight > room - least)
+        {
+            double keep = indentLeft + indentRight > 0 ? (room - least) / (indentLeft + indentRight) : 0;
+            indentLeft *= keep;
+            indentRight *= keep;
+        }
+        bool shaped = shape != default;
+        double left = indentLeft + inset;
+        double textWidth = shaped ? room - indentLeft - indentRight : lineWidth;
 
         double em = Em(fonts);
         double skip = Skip(fonts);
@@ -104,19 +187,22 @@ internal sealed record ProseBand(
         double widest = 0;
         foreach (var block in prose.Blocks)
         {
-            var broken = Break(block, fonts, em, lineWidth);
+            var broken = Break(block, fonts, em, textWidth);
             for (int i = 0; i < broken.Count; i++)
             {
                 if (!first)
                     baseline += skip + (i == 0 ? ParagraphGap * skip : 0);
                 first = false;
-                lines.Add(broken[i] with { Baseline = baseline });
-                widest = Math.Max(widest, broken[i].Width);
+                double lineLeft = left + (shape.Center ? Math.Max(0, (textWidth - broken[i].Width) / 2) : 0);
+                lines.Add(broken[i] with { Baseline = baseline, Left = lineLeft });
+                widest = Math.Max(widest, lineLeft + broken[i].Width);
             }
         }
         if (lines.Count == 0)
             return null;
-        return new ProseBand(lines.ToImmutable(), LineUp(fonts), baseline + LineDown(fonts), widest, position);
+        var frame = shape.Box ? new ProseFrame(indentLeft, lineWidth - indentRight, BoxThickness) : null;
+        return new ProseBand(lines.ToImmutable(), LineUp(fonts) + inset, baseline + LineDown(fonts) + inset,
+            frame is null ? widest : Math.Max(widest, frame.Right), position, left, textWidth, frame);
     }
 
     /// <summary>One thing a line is made of: a word, a run of spaces, one wide character (with

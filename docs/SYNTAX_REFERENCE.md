@@ -1009,6 +1009,42 @@ where LilyPond's title block does: the title centred; the subtitle centred on th
 it, bold and a little smaller; the poet at the left end and the composer at the right end of
 the next line, at text size. Each is optional.
 
+### A text for the page
+
+A paragraph for the page — a performance note, a dedication, practice instructions — is written
+as Markdown between a line ```` ```md ```` and a line ```` ``` ````, at the top level:
+
+````
+title "Morning Song"
+
+```md
+Keep the tempo **slow**; the left hand never rises above *piano*.
+```
+
+```md end indent 30mm box
+Practise the right hand alone first.
+```
+````
+
+The text is printed under the title, above the first system; with `end` on the opening line,
+under the last system. Paragraphs, **bold**, *italic* and a line ended by hand are printed.
+Nothing between the two fence lines is Lily#. Inside `score { }` a fence is that score's own
+text and replaces the file's for the same place.
+
+The opening line may go on to say how the text is set, in any order, each word once:
+
+| Word | The text |
+|---|---|
+| `indent 20mm` | has that much white at its left and right, inside the line width: it is set narrower and begins further right |
+| `indent 20mm 10mm` | the same, 20 mm at the left and 10 mm at the right |
+| `center` | has each line centred in its width (the default is ragged right from the left edge) |
+| `box` | has a thin ruled frame around it; the frame stands on the indent edges and the text is set inside it |
+
+A length is written as in `paper { }`: `20mm`, `2cm`, `0.5in`, or a bare number of staff
+spaces. The text under the title and the `end` text each have their own words. A negative
+length, a word written twice, `indent` with no length, or indents that leave the text less
+than about 18 mm (10 staff spaces) are errors (LYS4057).
+
 ## Text Fonts
 
 The whole document in one face — that is the two generic families, bound together:

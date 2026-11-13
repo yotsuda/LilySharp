@@ -849,6 +849,8 @@ public sealed partial class MeasureCollector
             && _v.Meta.Poet == rec.Poet
             && _v.Meta.TextBefore == rec.TextBefore
             && _v.Meta.TextAfter == rec.TextAfter
+            && _v.Meta.TextBeforeShape == rec.TextBeforeShape
+            && _v.Meta.TextAfterShape == rec.TextAfterShape
             && _v.Meta.Fonts.Equals(rec.Fonts)
             && _v.Meta.Paper.Equals(rec.Paper)
             && _v.Meta.LayoutPlan.Equals(rec.LayoutPlan)

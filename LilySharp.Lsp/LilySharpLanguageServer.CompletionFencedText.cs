@@ -29,7 +29,8 @@ namespace LilySharp.Lsp;
 // comment.
 //   1. An empty line there: the two blocks, low in the list of keywords.
 //   2. After the backticks (`, `` or ```), and on into the first word: the same two.
-//   3. After ```md and a space: `end`.
+//   3. After ```md and a space, and after each further word: `end`, `box`, `center`, `indent`
+//      (owner-approved 2026-11-13) — those not on the line yet.
 // And between the fences nothing is Lily#, so nothing is offered there at all.
 public sealed partial class LilySharpLanguageServer
 {
@@ -122,7 +123,9 @@ public sealed partial class LilySharpLanguageServer
     /// <c>```md end</c>. Each writes the whole block — the opening line, an empty line with the
     /// caret, the closing fence — unless the fence already closes below, where it writes the
     /// opening line alone.</item>
-    /// <item>After <c>```md</c> and a space: <c>end</c>.</item>
+    /// <item>After <c>```md</c> and a space, and after each word that follows: <c>end</c>,
+    /// <c>box</c>, <c>center</c>, <c>indent</c>, less those already on the line; nothing
+    /// straight after <c>indent</c>, where a length is typed.</item>
     /// <item>Between the fences, on the closing fence, and at a fence that stands where none is
     /// printed: an empty list. Nothing there is Lily#. ⚠️ Until this was written the body
     /// answered whatever list the text before the fence led to — the top level's keywords
@@ -206,24 +209,38 @@ public sealed partial class LilySharpLanguageServer
             };
         }
 
-        // ```md ▮: the one word a text's place takes here. (A section's printings — `2`, `all` —
-        // are not offered: a section's text is not printed yet.)
-        if (before.Length == 1 && before[0] is FencedText.MarkdownWord or FencedText.MarkdownLongWord)
+        // ```md ▮ and on along the line: the words a text's place takes here — where it is
+        // printed (`end`) and how it is set (`box`, `center`, `indent`; owner-approved
+        // 2026-11-13) — in any order, each once, so a word already written is not offered
+        // again. (A section's printings — `2`, `all` — are not offered: a section's text is
+        // not printed yet.)
+        if (before.Length >= 1 && before[0] is FencedText.MarkdownWord or FencedText.MarkdownLongWord)
         {
+            // After `indent` a length is typed, not chosen: no list of this language offers
+            // lengths, and any two or three here would be a guess at the paper.
+            if (before[^1] == FencedText.IndentWord)
+                return null;
+            var range = RangeOf(text, wordStart, wordEnd);
+            (string Word, string Detail)[] words =
+            [
+                (FencedText.EndWord, place == FencePlace.Score
+                    ? "Print this score's text under its last system instead of under the title"
+                    : "Print the text under the last system instead of under the title"),
+                (FencedText.BoxWord, "Rule a frame around the text"),
+                (FencedText.CenterWord, "Centre each line in the text's width"),
+                (FencedText.IndentWord, "White at the text's left and right, inside the line width: "
+                    + "indent 20mm (both sides) or indent 20mm 10mm (left, right); mm, cm, in, or staff spaces"),
+            ];
             return new CompletionList
             {
-                Items =
-                [
-                    new CompletionItem
-                    {
-                        Label = FencedText.EndWord,
-                        Kind = CompletionItemKind.Keyword,
-                        Detail = place == FencePlace.Score
-                            ? "Print this score's text under its last system instead of under the title"
-                            : "Print the text under the last system instead of under the title",
-                        TextEdit = new TextEdit { Range = RangeOf(text, wordStart, wordEnd), NewText = FencedText.EndWord },
-                    },
-                ],
+                Items = [.. words.Where(w => !before.Contains(w.Word)).Select((w, i) => new CompletionItem
+                {
+                    Label = w.Word,
+                    Kind = CompletionItemKind.Keyword,
+                    Detail = w.Detail,
+                    SortText = "fence" + i,     // the place first, then the shape, as the sentence lists them
+                    TextEdit = new TextEdit { Range = range, NewText = w.Word },
+                })],
             };
         }
         return null;
@@ -258,7 +275,8 @@ public sealed partial class LilySharpLanguageServer
             ? "Inside `score { }` the text is this score's alone: it replaces the file's text for the same place. "
             : "Every score of the file prints it; a fence inside `score { }` replaces it for that score. ")
             + "Write Markdown between the two fence lines — paragraphs, **bold** and *italic* are printed. "
-            + "Nothing between them is Lily#.";
+            + "Nothing between them is Lily#. The opening line may go on to say how the text is set: "
+            + "`box` (a ruled frame), `center`, `indent 20mm` (white at the sides).";
         CompletionItem Item(string words, string detail, string sort) => new()
         {
             Label = ticks + words,

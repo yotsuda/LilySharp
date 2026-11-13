@@ -55,6 +55,9 @@ public sealed partial class LilyPondExporter
                     PaperOverride = spec.PaperRef,
                     LayoutOverride = spec.LayoutRef,
                     ScoreTranspose = spec.ScoreTranspose,
+                    // …and the score's own fenced texts (2026-11-13: without them the twin
+                    // of `score { ```md … }` wrote the FILE's text — the same two-plans fault).
+                    TextOverrides = spec.TextOverrides,
                 }.CollectMultiStaff(tree, spec);
         }
         catch (Exception e)

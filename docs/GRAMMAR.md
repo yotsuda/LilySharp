@@ -216,8 +216,13 @@ MetadataKey    = 'title' | 'subtitle' | 'composer' | 'poet' ;
    \large \bold; the poet at the left end and the composer at the right end of the next line,
    at text size. *)
 
-MarkdownText   = FenceOpen , [ 'end' ] , NewLine , { TextLine } , FenceClose ;
+MarkdownText   = FenceOpen , { FenceWord } , NewLine , { TextLine } , FenceClose ;
 FenceOpen      = '```' , { '`' } , ( 'md' | 'markdown' ) ;
+FenceWord      = 'end' | 'box' | 'center' | 'indent' , FenceLength , [ FenceLength ] ;
+                 (* in any order, each at most once — at the top level and in a score *)
+FenceLength    = Number , [ 'mm' | 'cm' | 'in' ] ;
+                 (* the unit glued to the number, as a paper block writes a length, and a bare
+                    number is staff spaces. Never negative. *)
 FenceClose     = (* a line that begins, after blanks, with as many backticks as the opening, and holds nothing else *) ;
                  (* A TEXT FOR THE PAGE (owner's idea and decisions 2026-11-12,
                     docs/markdown-text-design.md): the lines between the fences are read as
@@ -256,8 +261,31 @@ FenceClose     = (* a line that begins, after blanks, with as many backticks as 
                     machine's face drawing it unmeasured: under a face with narrower kana a line
                     ends short of the margin.
 
+                    THE SHAPE (owner-approved 2026-11-13). 'indent LEFT [RIGHT]' is white at the
+                    text's left and right INSIDE the line width — the text is broken that much
+                    narrower and begins that much further right, and one length is both sides.
+                    'center' sets each line in the middle of the text's width (a paragraph and a
+                    line ended by hand alike, and a line wider than the text keeps the left edge).
+                    'box' rules a frame around the whole text, LilyPond's \box — a rule 0.1 thick
+                    outside the padded extent (scm/stencil.scm box-stencil) — with a padding of
+                    1.0 around the lines' boxes (LILYSHARP-OWN: LilyPond's 0.2 hugs one word). The
+                    frame's outer edge stands on the indent edges, so the text inside is inset by
+                    1.1 and broken narrower again, and the frame's height is the text's height in
+                    the page's chain. The three combine, and the text under the title and the
+                    'end' text each read their own opening line. Two fences for one place are
+                    one text, set as the first says. The twin writes the indent as \hspace, the
+                    centring as \fill-line in an overridden line-width, and the frame as \box
+                    around a \column given the page's extent. MEASURED 2026-11-13 on LilyPond
+                    2.26.0: the frame at the left margin 8.5358 and 102.4299 wide, 3.1000 over
+                    the first baseline, the last staff's middle line to a boxed closing text's
+                    first baseline 12.0000.
+
                     Not in MusicXML or MIDI. An opening line that is not 'md', or a word that is
-                    not its place's, is LYS4057; a fence never closed is LYS0043. *)
+                    not its place's — also a word written twice, 'indent' with no length, a
+                    negative length, a unit that is not mm, cm or in, indents that leave the text
+                    less than 10 staff spaces of the line width where the fence stands, a shape
+                    on the second fence of one place — is LYS4057. A fence never closed is
+                    LYS0043. *)
 
 UsingDecl      = 'using' , String ;
                  (* 'using "other.lys"': the named file's declarations join this file's

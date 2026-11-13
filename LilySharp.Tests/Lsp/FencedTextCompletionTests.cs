@@ -256,23 +256,54 @@ public class FencedTextCompletionTests
     [InlineData("```markdown ‸\n", 12, 12)]
     [InlineData("```md ‸\nA note.\n```\ntitle \"T\"\n", 6, 6)]
     [InlineData("part p { }\nscore {\n```md ‸\n```\n  staff p\n}\n", 6, 6)]
-    public void AfterMdAndASpace_EndIsOffered(string marked, int from, int to)
+    public void AfterMdAndASpace_EndAndTheShapeWordsAreOffered(string marked, int from, int to)
     {
         var items = Ask(marked, marked.Contains(" ‸") ? " " : null)!;
-        var end = Assert.Single(items);
-        Assert.Equal("end", end.Label);
+        // The place, then the shape (owner-approved 2026-11-13), in that order.
+        Assert.Equal(["end", "box", "center", "indent"], items.OrderBy(i => i.SortText, StringComparer.Ordinal).Select(i => i.Label));
+        var end = items.Single(i => i.Label == "end");
         Assert.Equal("end", end.TextEdit!.NewText);
-        Assert.Equal((from, to), (end.TextEdit.Range.Start.Character, end.TextEdit.Range.End.Character));
+        Assert.All(items, i => Assert.Equal((from, to), (i.TextEdit!.Range.Start.Character, i.TextEdit.Range.End.Character)));
+        Assert.All(items, i => Assert.Equal(i.Label, i.TextEdit!.NewText));
         Assert.Contains("under", end.Detail);
+        Assert.Contains("frame", items.Single(i => i.Label == "box").Detail);
+        Assert.Contains("20mm", items.Single(i => i.Label == "indent").Detail);
     }
 
     [Theory]
-    [InlineData("```md end ‸\n")]                       // one place for one text
-    [InlineData("```md ‸ end\n")]
+    [InlineData("```md end ‸\n", "box center indent")]
+    [InlineData("```md box ‸\n", "end center indent")]
+    [InlineData("```md end center b‸\n", "box indent")]                  // the editor filters by the word
+    [InlineData("```md indent 20mm ‸\n", "end box center")]
+    [InlineData("```md indent 20mm 10mm box ‸\n", "end center")]
+    [InlineData("```md box center indent 2cm end ‸\n", "")]
+    [InlineData("part p { }\nscore {\n  ```md box ‸\n  ```\n  staff p\n}\n", "end center indent")]
+    public void AWordAlreadyWritten_IsNotOfferedAgain(string marked, string offered)
+        => Assert.Equal(offered.Split(' ', StringSplitOptions.RemoveEmptyEntries), Labels(marked, " "));
+
+    [Theory]
+    [InlineData("```md indent ‸\n")]                    // a length is typed, not chosen
+    [InlineData("```md indent 2‸\n")]
+    [InlineData("```md box indent ‸\n")]
+    public void AfterIndent_NothingIsOffered(string marked)
+        => Assert.Empty(Ask(marked, marked.Contains(" ‸") ? " " : null)!);
+
+    [Theory]
+    [InlineData("```md ‸ end\n")]                       // the line goes on after the caret
     [InlineData("```lys ‸\n")]                          // not a text Lily# reads (LYS4057)
     [InlineData("section A {\n  ```md ‸\n  ```\n}\n")]  // a section's text is not printed yet
-    public void WhereEndDoesNotBelong_NothingIsOffered(string marked)
+    public void WhereTheWordsDoNotBelong_NothingIsOffered(string marked)
         => Assert.Empty(Ask(marked, " ")!);
+
+    [Fact]
+    public void EveryWordOffered_IsOneTheCompilerTakes()
+    {
+        foreach (string word in Labels("```md ‸\n", " "))
+        {
+            string line = word == "indent" ? "```md indent 20mm" : "```md " + word;
+            Assert.Empty(Said($"title \"T\"\n{line}\nA note.\n```\npart p {{ clef treble }}\nsection A {{ p {{ c'1 | }} }}\nscore {{ staff p }}\n"));
+        }
+    }
 
     // ----- 4. between the fences -----
 

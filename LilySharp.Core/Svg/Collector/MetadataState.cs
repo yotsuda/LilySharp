@@ -36,6 +36,10 @@ internal sealed class MetadataState
     public string? TextAfter;
     public int TextBeforePosition;
     public int TextAfterPosition;
+    // How each is set (its opening line's indent / center / box; owner-approved 2026-11-13):
+    // the shape of the fence that begins the place.
+    public Syntax.TextShape TextBeforeShape;
+    public Syntax.TextShape TextAfterShape;
 
     // Which face each kind of non-music text is drawn in, from the top-level
     // `fonts { … }` directive. Never null: a score without
@@ -116,6 +120,8 @@ internal sealed class MetadataState
         TextAfter = other.TextAfter;
         TextBeforePosition = other.TextBeforePosition;
         TextAfterPosition = other.TextAfterPosition;
+        TextBeforeShape = other.TextBeforeShape;
+        TextAfterShape = other.TextAfterShape;
         Fonts = other.Fonts;
         Paper = other.Paper;
         LayoutPlan = other.LayoutPlan;
@@ -163,6 +169,8 @@ internal sealed class MetadataState
             && TextAfter == other.TextAfter
             && TextBeforePosition == other.TextBeforePosition
             && TextAfterPosition == other.TextAfterPosition
+            && TextBeforeShape == other.TextBeforeShape
+            && TextAfterShape == other.TextAfterShape
             && ReferenceEquals(Fonts, other.Fonts)
             && ReferenceEquals(Paper, other.Paper)
             && ReferenceEquals(LayoutPlan, other.LayoutPlan)
@@ -213,6 +221,8 @@ internal sealed class MetadataState
         TextAfter = null;
         TextBeforePosition = 0;
         TextAfterPosition = 0;
+        TextBeforeShape = default;
+        TextAfterShape = default;
         // (Fonts, Paper and LayoutPlan are deliberately NOT reset: they are resolved once by
         // CollectDefinitions and read at capture, and a per-pass reset here would drop
         // them before the score is assembled — measured 2026-09-09 on `markTempo beside`.)

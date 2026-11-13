@@ -665,7 +665,9 @@ public sealed partial class MeasureCollector
     /// <summary>
     /// A fenced text for the page (docs/markdown-text-design.md): under the title, or after
     /// the last system when its opening line says <c>end</c>. Two for one place print one
-    /// after the other, as two paragraphs.
+    /// after the other, as two paragraphs — ONE text, set as the first of them says
+    /// (<c>indent</c>, <c>center</c>, <c>box</c>; a later fence that writes a shape of its
+    /// own is refused by MarkdownTextValidator).
     /// </summary>
     private void CollectText(MarkdownTextSyntax text, bool replace)
     {
@@ -679,14 +681,20 @@ public sealed partial class MeasureCollector
             bool fresh = replace || string.IsNullOrEmpty(_v.Meta.TextAfter);
             _v.Meta.TextAfter = fresh ? body : _v.Meta.TextAfter + "\n\n" + body;
             if (fresh)
+            {
                 _v.Meta.TextAfterPosition = position;
+                _v.Meta.TextAfterShape = value.Shape;
+            }
         }
         else
         {
             bool fresh = replace || string.IsNullOrEmpty(_v.Meta.TextBefore);
             _v.Meta.TextBefore = fresh ? body : _v.Meta.TextBefore + "\n\n" + body;
             if (fresh)
+            {
                 _v.Meta.TextBeforePosition = position;
+                _v.Meta.TextBeforeShape = value.Shape;
+            }
         }
     }
 

@@ -148,7 +148,9 @@ internal static class PaperPlanReader
     /// </remarks>
     private static readonly string[] FlagKeys = ["raggedRight", "raggedBottom", "breaksOnly"];
 
-    private static readonly string[] Units = ["mm", "cm", "in"];
+    // ONE list of the language's physical units: a fenced text's `indent` reads the same
+    // (its words are text, not tokens, so the list lives with the syntax).
+    private static readonly string[] Units = [.. FencedText.LengthUnits];
 
     /// <summary>The one key that names a whole page (<c>size jisb5</c> / <c>size "…"</c>):
     /// neither a scalar, a flag nor a spacing block, so it stands outside the three tables.
@@ -746,13 +748,21 @@ internal static class PaperPlanReader
                       + "spaces; the physical units are mm, cm and in.", IsError: true));
             return false;
         }
-        value = u switch
-        {
-            "mm" => MmToSs(v, staffSpaceMm),
-            "cm" => MmToSs(v * MmPerCm, staffSpaceMm),
-            "in" => MmToSs(v * MmPerInch, staffSpaceMm),
-            _ => v,
-        };
+        value = ToStaffSpaces(v, u, staffSpaceMm);
         return true;
     }
+
+    /// <summary>
+    /// <paramref name="value"/> in <paramref name="unit"/> (<c>mm</c>, <c>cm</c>, <c>in</c>;
+    /// null or anything else = staff spaces already) as staff spaces on a staff space of
+    /// <paramref name="staffSpaceMm"/> millimetres — the ONE conversion a length of this
+    /// language goes through, a <c>paper { }</c> entry's and a fenced text's <c>indent</c> alike.
+    /// </summary>
+    internal static double ToStaffSpaces(double value, string? unit, double staffSpaceMm) => unit switch
+    {
+        "mm" => MmToSs(value, staffSpaceMm),
+        "cm" => MmToSs(value * MmPerCm, staffSpaceMm),
+        "in" => MmToSs(value * MmPerInch, staffSpaceMm),
+        _ => value,
+    };
 }

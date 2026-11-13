@@ -21,4 +21,13 @@ namespace LilySharp.Core.Svg.Model;
 /// title and the Markdown after its last system, each as written between the fences, with
 /// where its first fence begins in the file (0 = none) for the preview's click.
 /// </summary>
-public readonly record struct ScoreTexts(string? Before, int BeforePosition, string? After, int AfterPosition);
+/// <param name="Before">The Markdown under the title, or null.</param>
+/// <param name="BeforePosition">Where its first fence begins.</param>
+/// <param name="After">The Markdown after the last system, or null.</param>
+/// <param name="AfterPosition">Where its first fence begins.</param>
+/// <param name="BeforeShape">How the text under the title is set: its opening line's
+/// <c>indent</c>, <c>center</c>, <c>box</c> (owner-approved 2026-11-13).</param>
+/// <param name="AfterShape">The same for the text after the last system: each place has its own.</param>
+public readonly record struct ScoreTexts(
+    string? Before, int BeforePosition, string? After, int AfterPosition,
+    Syntax.TextShape BeforeShape = default, Syntax.TextShape AfterShape = default);

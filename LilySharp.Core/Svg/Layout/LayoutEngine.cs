@@ -135,10 +135,13 @@ internal sealed partial class LayoutEngine
         // …and the fenced texts (docs/markdown-text-design.md): the one under the title is a
         // line of the page's chain after the rows, carried by the band; the one after the last
         // system goes to the pages with the systems.
+        // Each is set as its own opening line says (indent, center, box).
         header = HeaderBand.WithText(header, ProseBand.Build(
-            score.Texts.Before, score.Texts.BeforePosition, score.TextMetrics, _options.ContentWidth));
+            score.Texts.Before, score.Texts.BeforePosition, score.TextMetrics, _options.ContentWidth,
+            ProseShape.Of(score.Texts.BeforeShape, _options.StaffSpaceMm)));
         var endText = ProseBand.Build(
-            score.Texts.After, score.Texts.AfterPosition, score.TextMetrics, _options.ContentWidth);
+            score.Texts.After, score.Texts.AfterPosition, score.TextMetrics, _options.ContentWidth,
+            ProseShape.Of(score.Texts.AfterShape, _options.StaffSpaceMm));
 
         // LILYPOND-REF: lily/page-layout-problem.cc:656-717 alignment_distances
         // Apply user overrides for StaffGrouper spacing before layout

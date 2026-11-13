@@ -956,7 +956,8 @@ public sealed partial class MeasureCollector
         // HANDOFF §2 K2; the row LilyPond's bookTitleMarkup gives header:instrument) — only where
         // the score prints diagrams or pressed names (LayoutPlan.PrintsCapoLine, 2026-10-31).
         _v.Meta.LayoutPlan.CapoLine,
-        new Model.ScoreTexts(_v.Meta.TextBefore, _v.Meta.TextBeforePosition, _v.Meta.TextAfter, _v.Meta.TextAfterPosition));
+        new Model.ScoreTexts(_v.Meta.TextBefore, _v.Meta.TextBeforePosition, _v.Meta.TextAfter, _v.Meta.TextAfterPosition,
+            _v.Meta.TextBeforeShape, _v.Meta.TextAfterShape));
 
     /// <summary>
     /// Collects a Score from a syntax tree.

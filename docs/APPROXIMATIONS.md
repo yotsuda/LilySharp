@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 379 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **507** | |
+| `OWN` | 381 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **509** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -249,7 +249,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（379 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（381 件）
 
 ### `LilySharp.Core/Audio/SingerPlan.cs`
 - **`SingerPlan`** LILYSHARP-OWN.
@@ -706,6 +706,8 @@
 - **`PageLayouter.PositionSystemsOnPage`** ⚠️ LILYSHARP-OWN: THE CHAIN'S LAST NODE, WHICH IS NOT ALWAYS THE LAST STAFF.
 ### `LilySharp.Core/Svg/Layout/ProseBand.cs`
 - **`ProseBand`** LILYSHARP-OWN: the breaking itself (LilyPond's \wordwrap does not break a text
+- **`ProseBand.BoxPadding`** LILYSHARP-OWN (owner-approved 2026-11-13: a ruled frame; the padding is this
+- **`ProseBand.MinimumWidth`** LILYSHARP-OWN: ten staff spaces — four or five ems of the text, a short word
 - **`ProseBand.ParagraphGap`** LILYSHARP-OWN: half a line. LilyPond has no paragraph; the twin writes it as
 - **`ProseBand.Break`** LILYSHARP-OWN. A line ends at a space, or between two wide characters (kana,
 ### `LilySharp.Core/Svg/Layout/ScoreSideTables.cs`
