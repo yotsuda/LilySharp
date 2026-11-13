@@ -1267,4 +1267,46 @@ public class GrammarEvaluation4Tests
         Assert.Empty(Said(Book("time 7/8 (2+2+3)").Replace(bar, "c'4 d' e'8 f' g'")).Select(d => d.Message));
         Assert.Contains(Said(Book("time 3/4")), d => d.Code is DiagnosticCodes.MeasureDurationMismatch or DiagnosticCodes.MeasureOverflow);
     }
+
+    /// <summary>An unknown <c>instrument</c> said "use a known preset (e.g. violin, cello,
+    /// piano-right)": no list and no nearest name for alto-flute, bass-clarinet, vibraphone,
+    /// marimba. It names the presets the word is a kind of (the last word's family), or says
+    /// none is near; it lists every preset and where they are described; and a preset in other
+    /// capitals is that preset, not its neighbour ("Violin" → "did you mean 'viola'?").</summary>
+    [Theory]
+    [InlineData("bass-clarinet", "The nearest presets are 'clarinet', 'clarinet-a'.", "instrument \"Bass Clarinet\"")]
+    [InlineData("alto-flute", "The nearest preset is 'flute'.", "instrument \"Alto Flute\"")]
+    [InlineData("english-horn", "The nearest preset is 'horn'.", "instrument \"English Horn\"")]
+    [InlineData("contrabassoon", "The nearest presets are 'bass', 'contrabass', 'bassoon'.", "instrument \"Contrabassoon\"")]
+    [InlineData("vibraphone", "No preset is near it.", "instrument \"Vibraphone\"")]
+    [InlineData("marimba", "No preset is near it.", "instrument \"Marimba\"")]
+    [InlineData("Violin", "Did you mean 'violin'?", null)]
+    [InlineData("voilin", "Did you mean 'violin'?", null)]
+    public void AnUnknownInstrumentPreset_NamesTheNearestOnes_AndListsThemAll(string preset, string nearest, string? quoted)
+    {
+        var said = Assert.Single(Said($"octave absolute\npart m {{ instrument {preset} }}\nsection A {{ m {{ c'1 | }} }}\nform {{ ~A }}\nscore {{ staff m }}\n"));
+        Assert.Equal(DiagnosticSeverity.Error, said.Severity);
+        Assert.StartsWith($"Unknown instrument preset '{preset}'. {nearest} The presets (case-sensitive): violin, viola, cello, ", said.Message);
+        // Every preset is in the list - it is the language's own, not a copy - and the place that describes them.
+        Assert.All(LilySharp.Core.Svg.Model.InstrumentDefaults.KnownInstruments, p => Assert.Matches($"[ ,]{Regex.Escape(p)}[, ]", said.Message));
+        Assert.Contains("docs/GRAMMAR_FOR_LLM.md, \"Instrument ranges\"", said.Message);
+        if (quoted is not null)
+            Assert.Contains(quoted, said.Message);
+        // The place it points at is there, and holds a row for every preset.
+        string docs = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "GRAMMAR_FOR_LLM.md"));
+        Assert.Contains("\n## Instrument ranges", docs);
+        Assert.All(LilySharp.Core.Svg.Model.InstrumentDefaults.KnownInstruments, p => Assert.Contains($"| `{p}` |", docs));
+        // A known preset, and a quoted name, say nothing.
+        Assert.Empty(Said("octave absolute\npart m { instrument clarinet }\nsection A { m { c'1 | } }\nform { ~A }\nscore { staff m }\n").Select(d => d.Message));
+        Assert.DoesNotContain(Said("octave absolute\npart m { instrument \"Bass Clarinet\" }\nsection A { m { c'1 | } }\nform { ~A }\nscore { staff m }\n"),
+            d => d.Message.StartsWith("Unknown instrument preset", StringComparison.Ordinal));
+    }
+
+    private static string RepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "CHANGELOG.md")))
+            dir = dir.Parent;
+        return dir!.FullName;
+    }
 }

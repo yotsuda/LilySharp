@@ -536,6 +536,34 @@ public static class InstrumentDefaults
         if (name.StartsWith(voicePrefix, StringComparison.OrdinalIgnoreCase)
             && KnownSet.Contains(name[voicePrefix.Length..]))
             return name[voicePrefix.Length..].ToLowerInvariant();
+        // A preset in other capitals is that preset: `Violin` answered "did you mean 'viola'?",
+        // the typo measure never suggesting a name back to itself (2026-11-14).
+        if (KnownSet.TryGetValue(name, out string? sameLetters))
+            return sameLetters;
         return Semantics.AnnotationNameValidator.ClosestTypo(name, KnownInstruments);
+    }
+
+    /// <summary>
+    /// The presets an unknown <paramref name="name"/> is a KIND of, when it is no typo of one
+    /// (<see cref="SuggestPreset"/>): those that share a word with it — <c>bass-clarinet</c> →
+    /// clarinet, clarinet-a; <c>alto-flute</c> → flute; <c>english-horn</c> → horn — or whose
+    /// whole name stands inside it (<c>contrabassoon</c> → contrabass, bassoon). The LAST word
+    /// decides when a preset shares it (an instrument's family is its last word: the flute of
+    /// <c>alto-flute</c>, not the alto); else any shared word. Empty when nothing is near
+    /// (<c>vibraphone</c>). Grammar evaluation 4, 2026-11-14: the message named no preset at all.
+    /// </summary>
+    public static IReadOnlyList<string> RelatedPresets(string name)
+    {
+        const int wordLength = 3;   // "a" and "c" (clarinet-a, trumpet-c) are keys, not families
+        string written = name.ToLowerInvariant();
+        string[] words = [.. written.Split('-').Where(w => w.Length >= wordLength)];
+        if (words.Length == 0)
+            return [];
+        static string[] WordsOf(string preset) => preset.Split('-');
+        var sharesLast = KnownInstruments.Where(p => WordsOf(p).Contains(words[^1])).ToList();
+        if (sharesLast.Count > 0)
+            return sharesLast;
+        return [.. KnownInstruments.Where(p => WordsOf(p).Any(w => w.Length >= wordLength && words.Contains(w))
+            || (p.Length > wordLength && written.Contains(p, StringComparison.Ordinal)))];
     }
 }
