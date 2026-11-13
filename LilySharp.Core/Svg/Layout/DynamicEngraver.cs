@@ -1172,21 +1172,22 @@ internal static class DynamicEngraver
 
     /// <summary>
     /// The em an editorial level's parentheses are set at (<c>@p(editorial)</c>, owner-approved
-    /// 2026-11-13, grammar evaluation 3): the text face two steps up, italic.
+    /// 2026-11-13, grammar evaluation 3): the text face at its own size, italic.
     /// </summary>
     /// <remarks>
     /// LilyPond has no editorial dynamic; of its two spellings the picture followed is the
-    /// manual's <c>make-dynamic-script</c> one — full-size italic text parentheses, the usual
+    /// manual's <c>make-dynamic-script</c> one — italic text parentheses, the usual
     /// editorial "(p)" — and not <c>\parenthesize</c>, whose Parentheses grob draws the small
     /// accidental parentheses, one staff space tall.
     /// LILYPOND-REF: Documentation/notation "New dynamic marks" — <c>\markup \concat { \normal-text \italic \fontsize #2 ( \pad-x #0.2 … \normal-text \italic \fontsize #2 ) }</c>.
-    /// MEASURED, 2.26.0 (LilySharp-Lab sessions/p1226/md/eval3/featI/f3.ly): the plain p is
-    /// 1.468162 wide and reaches 1.168008 above its baseline; "(p)" is 3.711901 wide — two
-    /// parentheses of 0.921869 and two pads — centred on the same head, and reaches 2.040133
-    /// above the baseline; \parenthesize's pair is 1.000000 tall.
+    /// LILYSHARP-OWN: without the example's <c>\fontsize #2</c>. MEASURED, 2.26.0
+    /// (LilySharp-Lab sessions/p1226/md/eval3/featI/f3.ly): the plain p reaches 1.168008 above
+    /// its baseline and the example's parenthesis 2.040133 — nearly twice the letter. The
+    /// owner on seeing it (2026-11-13): "the parentheses are too long for the p". At the text
+    /// size they are about the height of an f.
     /// </remarks>
     internal static double EditorialParenEm(Rendering.ScoreTextMetrics fonts)
-        => LabelEm(fonts, true) * Math.Pow(2.0, 2.0 / 6.0);
+        => LabelEm(fonts, true);
 
     /// <summary>How far an editorial level's parenthesis reaches past the level's own edge on
     /// one side: the pad and the parenthesis. The level stands where the plain one does — the

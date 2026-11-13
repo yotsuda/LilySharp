@@ -1631,8 +1631,8 @@ public class GrammarEvaluation3FeaturesTests
         Assert.Equal(now.X + half + LilySharp.Core.Svg.Layout.DynamicEngraver.EditorialPad, close.X, 6);
         Assert.Equal(now.Y, open.Y, 6);
         Assert.Equal(now.Y, close.Y, 6);
-        // Two steps above the text size, as the manual's \fontsize #2.
-        Assert.Equal(LilySharp.Core.Svg.Layout.DynamicEngraver.LabelEm(fonts, true) * Math.Pow(2, 1.0 / 3), open.FontSize, 6);
+        // At the text size: the manual's \fontsize #2 made them nearly twice a p (owner, 2026-11-13).
+        Assert.Equal(LilySharp.Core.Svg.Layout.DynamicEngraver.LabelEm(fonts, true), open.FontSize, 6);
         // The parentheses are taller than the letters: the mark stands no higher than the plain one.
         Assert.True(now.Y >= was.Y - 1e-9, $"{now.Y} against {was.Y}");
         // The notes did not move.
@@ -1696,9 +1696,9 @@ public class GrammarEvaluation3FeaturesTests
         Assert.DoesNotContain("other-dynamics", xml);
 
         string ly = Ly(source);
-        Assert.Contains("c'4-#(make-dynamic-script (markup #:concat (#:normal-text #:italic #:fontsize 2 \"(\" #:pad-x 0.2 #:dynamic \"p\" #:normal-text #:italic #:fontsize 2 \")\")))", ly);
+        Assert.Contains("c'4-#(make-dynamic-script (markup #:concat (#:normal-text #:italic \"(\" #:pad-x 0.2 #:dynamic \"p\" #:normal-text #:italic \")\")))", ly);
         Assert.Contains("c'4\\mf", ly);
-        Assert.Contains("c'4^#(make-dynamic-script (markup #:concat (#:normal-text #:italic #:fontsize 2 \"(\" #:pad-x 0.2 #:dynamic \"ff\"", ly);
+        Assert.Contains("c'4^#(make-dynamic-script (markup #:concat (#:normal-text #:italic \"(\" #:pad-x 0.2 #:dynamic \"ff\"", ly);
         Assert.Empty(TwinWarnings(source));
 
         var report = new LilySharp.Core.MusicXmlImport.ImportReport();

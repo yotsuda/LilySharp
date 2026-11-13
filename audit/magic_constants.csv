@@ -965,7 +965,6 @@
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.DynamicFontSize","2.0","private const double DynamicFontSize = 2.0;","(file-level) LILYPOND-REF: define-grobs.scm:1433-1460 DynamicText grob","Yellow"
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.SubitoGap","0.6","internal const double SubitoGap = 0.6;","LILYPOND-REF: scm/define-markup-commands.scm line — word-space 0.6.</summary>","Green"
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.EditorialPad","0.2","internal const double EditorialPad = 0.2;","LILYPOND-REF: Documentation/notation ""New dynamic marks"", the <c>\paren</c> example — <c>\pad-x #0.2</c> about the dynamic.</remarks>","Green"
-"Svg/Layout/DynamicEngraver.cs","DynamicEngraver.EditorialParenEm","2.0, 2.0, 6.0","=> LabelEm(fonts, true) * Math.Pow(2.0, 2.0 / 6.0);","(file-level) LILYPOND-REF: define-grobs.scm:1433-1460 DynamicText grob","Yellow"
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.LevelHalfWidth","2.0","return run.Width / 2.0;","(file-level) LILYPOND-REF: define-grobs.scm:1433-1460 DynamicText grob","Yellow"
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.LevelHalfWidth","2.0","? width / 2.0","(file-level) LILYPOND-REF: define-grobs.scm:1433-1460 DynamicText grob","Yellow"
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.LabelHalfWidth","2.0","return run.Width / 2.0;","(file-level) LILYPOND-REF: define-grobs.scm:1433-1460 DynamicText grob","Yellow"

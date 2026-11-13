@@ -1937,8 +1937,8 @@ public sealed partial class LilyPondExporter
         // \parenthesize draws the small accidental parentheses instead).
         // LILYPOND-REF: Documentation/notation "New dynamic marks", the \paren example.
         : d.IsEditorial && d.Level != DynamicLevel.None ? (d.ForcedAbove switch { true => "^", false => "_", null => "-" })
-            + "#(make-dynamic-script (markup #:concat (#:normal-text #:italic #:fontsize 2 \"(\" #:pad-x 0.2 #:dynamic \""
-            + d.DynamicToken.Text + "\" #:normal-text #:italic #:fontsize 2 \")\")))"
+            + "#(make-dynamic-script (markup #:concat (#:normal-text #:italic \"(\" #:pad-x 0.2 #:dynamic \""
+            + d.DynamicToken.Text + "\" #:normal-text #:italic \")\")))"
         : (d.ForcedAbove switch
         {
             true => "^",
