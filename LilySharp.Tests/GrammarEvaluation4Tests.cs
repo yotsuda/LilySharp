@@ -1153,4 +1153,29 @@ public class GrammarEvaluation4Tests
         Assert.Equal(36, FirstNote("pitch concert"));
         Assert.Equal(24, FirstNote(""));
     }
+
+    /// <summary>A section header's <c>key b minor</c> moves every part; one part restating
+    /// <c>key b minor</c> in its music was told "Part 'a' changes key here, and 'b' of this
+    /// section does not" (LYS2023). A key that restates the one in force is no change.</summary>
+    [Fact]
+    public void AKeyThatRestatesTheSectionHeaders_IsNoChangeTheOtherPartsLack()
+    {
+        static string Book(string header, string a) => "part a { clef treble }\npart b { clef treble }\n"
+            + "section A { a { c'1 | } b { e'1 | } }\n"
+            + $"section B {{\n  {header}\n  a {{ {a} }}\n  b {{ d'1 | d'1 | }}\n}}\nform {{ ~A ~B }}\nscore {{ staff a  staff b }}\n";
+        static List<Diagnostic> Of(string header, string a) => Said(Book(header, a));
+
+        Assert.Empty(Of("key b minor", "key b minor b'1 | b'1 |").Select(d => d.Message));
+        Assert.Empty(Of("key b minor", "key b minor b'1 | key! b minor b'1 |").Select(d => d.Message));
+
+        // Another key than the header's is a change, said at that key - also after a restatement.
+        string other = "key b minor b'1 | key d minor b'1 |";
+        var change = Assert.Single(Of("key b minor", other));
+        Assert.Equal(DiagnosticCodes.KeyChangeInSomeParts, change.Code);
+        Assert.Contains("Part 'a' changes key here, and 'b' of this section does not", change.Message);
+        Assert.Equal(Book("key b minor", other).IndexOf("key d minor", StringComparison.Ordinal), change.Span.Start);
+        // The same tonic in the other mode is another key; with no header key it is said as before.
+        Assert.Equal(DiagnosticCodes.KeyChangeInSomeParts, Assert.Single(Of("key b minor", "key b major b'1 | b'1 |")).Code);
+        Assert.Equal(DiagnosticCodes.KeyChangeInSomeParts, Assert.Single(Of("", "key b minor b'1 | b'1 |")).Code);
+    }
 }

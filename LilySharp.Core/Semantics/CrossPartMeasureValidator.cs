@@ -66,6 +66,8 @@ internal sealed class CrossPartMeasureValidator
         // Document-order walk: top-level time declarations update the score
         // time; each section validates with the time in force at its site.
         var time = new Fraction(4, 4);
+        _root = root;
+        _headers = null;
         WalkForSections(root, ref time);
 
         // By-part (`part X { section S { … } }`) sections are not visited above
@@ -314,7 +316,7 @@ internal sealed class CrossPartMeasureValidator
             }
         }
 
-        WarnOfAKeySomePartsChangeAlone(blocks.Select(b => b.Block).ToList());
+        WarnOfAKeySomePartsChangeAlone(section, blocks.Select(b => b.Block).ToList());
 
         if (blocks.Count + chordVoices.Count < 2)
             return time; // one voice has nothing to align with — and nothing to split for
@@ -402,16 +404,37 @@ internal sealed class CrossPartMeasureValidator
     /// once a section, at the first such key, where a pitched part of the section changes key
     /// nowhere in it. Two parts in two keys on purpose write a key each and are not told.
     /// </summary>
-    private void WarnOfAKeySomePartsChangeAlone(List<PartBlockSyntax> blocks)
+    /// <remarks>
+    /// A key that restates the one in force changes nothing and is not "a change": under a
+    /// header's <c>key b minor</c>, which moves every part, one part's own <c>key b minor</c>
+    /// was told the others "do not" change (grammar evaluation 4, 2026-11-13). The key in force
+    /// is known where the section's header states one (<see cref="SectionHeaders"/>); from there
+    /// each part's keys are read in order, and the first that differs is its change.
+    /// </remarks>
+    private void WarnOfAKeySomePartsChangeAlone(SectionDeclarationSyntax section, List<PartBlockSyntax> blocks)
     {
         if (blocks.Count < 2)
             return;
         KeySignatureSyntax? first = null;
         string? writer = null;
         var silent = new List<string>();
+        KeySignatureSyntax? header = null;
+        bool headerRead = false;
         foreach (var block in blocks)
         {
-            var key = block.DescendantNodes<KeySignatureSyntax>().FirstOrDefault();
+            KeySignatureSyntax? key = null;
+            foreach (var written in block.DescendantNodes<KeySignatureSyntax>())
+            {
+                if (!headerRead)
+                {
+                    headerRead = true;
+                    header = (_headers ??= SectionHeaders.Read(_root ?? section)).Keys.GetValueOrDefault(section.SectionName);
+                }
+                if (header != null && SameKey(header, written))
+                    continue;
+                key = written;
+                break;
+            }
             if (key != null)
             {
                 first ??= key;
@@ -427,6 +450,20 @@ internal sealed class CrossPartMeasureValidator
             $"Part '{writer}' changes key here, and {NameList(silent.Select(n => $"'{n}'").ToList())} of this section {(silent.Count == 1 ? "does" : "do")} not: "
             + "a 'key' written in the music is that part's alone (a 'time' or a 'tempo' is every part's). "
             + "Write it in each part at the same bar; where the section begins in the new key, write it once in the section header.");
+    }
+
+    // Every section header of the file, read once and only when a part block writes a key.
+    private SectionHeaders? _headers;
+    private SyntaxNode? _root;
+
+    /// <summary>Whether two <c>key</c> statements name one key: the same tonic and mode, or
+    /// the same custom signature.</summary>
+    private static bool SameKey(KeySignatureSyntax a, KeySignatureSyntax b)
+    {
+        if (a.IsCustom || b.IsCustom)
+            return a.IsCustom && b.IsCustom && a.CustomAlterations.SequenceEqual(b.CustomAlterations);
+        return KeyTonic.Of(a) == KeyTonic.Of(b)
+            && string.Equals(a.Mode.Text, b.Mode.Text, System.StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>The bar-count check of a by-section section over its part blocks AND
