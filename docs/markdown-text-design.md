@@ -51,7 +51,13 @@ section B {
   and `}` mean nothing there. A fence of four backticks holds a text that writes three
   (Markdown's own rule).
 - The CLOSING fence's indentation is taken off every line, so a fence may be indented in a
-  section (a C# raw string's rule: where the closing fence stands is the text's margin).
+  section (a C# raw string's rule: where the closing fence stands is the text's margin) — and
+  beyond it, the indentation every written line of the text shares (owner, 2026-11-14: a
+  text indented four spaces in a score, under a closing fence at the line's start, was one
+  Markdown code block, and a title fence said "not inline text"). A page text draws no code,
+  so indentation the whole text shares is the file's layout; a line indented four or more
+  beyond the text around it is still Markdown's code block, and the warning says so in those
+  words.
 - Two fences for one place print one after the other, in written order — each a block with
   its own shape (section 5.3).
 - The backtick is new to the lexer (nothing uses it today).

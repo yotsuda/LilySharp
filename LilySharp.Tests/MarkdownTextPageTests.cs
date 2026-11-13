@@ -78,7 +78,7 @@ public class MarkdownTextPageTests
 
     [Theory]
     [InlineData("> quoted", "A block quote")]
-    [InlineData("    indented code", "A code block")]
+    [InlineData("    indented code", "A line indented four spaces or more beyond the text around it (Markdown reads it as a code block)")]
     [InlineData("---", "A rule")]
     [InlineData("| a | b |\n|---|---|\n| 1 | 2 |", "A table")]
     [InlineData("<div>x</div>", "HTML")]

@@ -85,7 +85,8 @@ internal sealed record HeaderProse(ImmutableArray<ImmutableArray<ProseRun>> Line
                     break;
                 case CodeBlock code:
                     if (!noted)
-                        notes.Add(Note(block, "A code block"));
+                        notes.Add(Note(block, code is FencedCodeBlock ? "A code block"
+                            : "A line indented four spaces or more beyond the text around it (Markdown reads it as a code block)"));
                     foreach (var line in code.Lines.Lines.Take(code.Lines.Count))
                     {
                         string text = line.Slice.ToString().TrimEnd();

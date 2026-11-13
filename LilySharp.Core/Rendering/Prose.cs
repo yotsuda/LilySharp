@@ -180,7 +180,10 @@ internal sealed record Prose(ImmutableArray<ProseBlock> Blocks, ImmutableArray<P
     private static string NameOf(Block block) => block switch
     {
         QuoteBlock => "A block quote",
-        CodeBlock => "A code block",
+        FencedCodeBlock => "A code block",
+        // An INDENTED code block: lines four spaces in from the text around them, which is how
+        // Markdown writes code - and nearly always a slip in a page text (owner, 2026-11-14).
+        CodeBlock => "A line indented four spaces or more beyond the text around it (Markdown reads it as a code block)",
         ThematicBreakBlock => "A rule",
         Table => "A table",
         HtmlBlock => "HTML",

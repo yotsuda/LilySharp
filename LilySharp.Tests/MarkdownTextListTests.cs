@@ -377,12 +377,12 @@ public class MarkdownTextListTests
     [InlineData("> quoted", "A block quote")]
     [InlineData("> - a list in a quote\n> - is the quote's", "A block quote")]
     [InlineData("---", "A rule")]
-    [InlineData("    indented code", "A code block")]
+    [InlineData("    indented code", "A line indented four spaces or more beyond the text around it (Markdown reads it as a code block)")]
     [InlineData("| a | b |\n|---|---|\n| 1 | 2 |", "A table")]
     [InlineData("<div>x</div>", "HTML")]
     [InlineData("- see ![a hand](hand.png) here", "An image")]
     [InlineData("- press `c4` now", "Code")]
-    [InlineData("- item\n\n      code in an item", "A code block")]
+    [InlineData("- item\n\n      code in an item", "A line indented four spaces or more beyond the text around it (Markdown reads it as a code block)")]
     public void WhatIsStillNotDrawn_IsStillSaid_OnceAndWhereItIs(string markdown, string what)
     {
         var d = Assert.Single(NotDrawn("A paragraph.\n\n" + markdown));

@@ -98,8 +98,17 @@ public class MarkdownTextTests
         // off each line - a line further in keeps what is its own, a line less far in keeps none.
         var value = FencedText.Read("```md\n    one\n      two\n  \n   three\n    ```");
         Assert.Equal("one\n  two\n\nthree\n", value.Body);
-        // A fence at the margin takes nothing off.
-        Assert.Equal("  kept\n", FencedText.Read("```md\n  kept\n```").Body);
+        // …and beyond it, what every written line shares is the file's layout, not Markdown's
+        // (owner, 2026-11-14: a title indented four spaces in a score, under a closing fence at
+        // the line's start, was read as a Markdown code block and drawn as "not inline text").
+        Assert.Equal("kept\n", FencedText.Read("```md\n  kept\n```").Body);
+        var title = FencedText.Read("```md title\n    この score のタイトル\n```");
+        Assert.Equal("この score のタイトル\n", title.Body);
+        Assert.Empty(LilySharp.Core.Rendering.HeaderProse.Read(title.Body).NotInline);
+        // A line indented beyond the rest keeps what is its own: Markdown's code block, said in those words.
+        var code = FencedText.Read("```md\n    One line.\n\n        an indented one\n```");
+        Assert.Equal("One line.\n\n    an indented one\n", code.Body);
+        Assert.Contains(LilySharp.Core.Rendering.Prose.Read(code.Body).NotDrawn, n => n.What.Contains("indented four spaces"));
         // Carriage returns are not the text's.
         Assert.Equal("a\nb\n", FencedText.Read("```md\r\na\r\nb\r\n```").Body);
         // An empty fence: this score prints none.

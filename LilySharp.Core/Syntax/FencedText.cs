@@ -338,6 +338,29 @@ public sealed record FencedText(
             }
         }
 
+        // …and beyond it, the indentation every written line of the text shares (owner,
+        // 2026-11-14: a text indented in a score, under a closing fence at the line's start,
+        // was read as one Markdown CODE BLOCK - four spaces in is how Markdown writes code - and
+        // the title was "not inline text"). A page text draws no code, so indentation the whole
+        // text shares is the file's layout, not Markdown's; a line indented beyond the others
+        // still means what Markdown says.
+        {
+            int shared = int.MaxValue;
+            for (int at = lineEnd + 1; at < bodyEnd;)
+            {
+                int next = token.IndexOf('\n', at);
+                int end = next < 0 || next >= bodyEnd ? bodyEnd : next + 1;
+                int lead = 0;
+                while (at + lead < end && token[at + lead] is ' ' or '\t')
+                    lead++;
+                if (at + lead < end && token[at + lead] is not ('\r' or '\n'))
+                    shared = Math.Min(shared, lead);
+                at = end;
+            }
+            if (shared != int.MaxValue && shared > indent)
+                indent = shared;
+        }
+
         var body = new StringBuilder();
         var lines = new List<(int, int)>();
         for (int at = lineEnd + 1; at < bodyEnd;)
