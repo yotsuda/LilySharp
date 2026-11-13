@@ -125,9 +125,9 @@ public class ChordPartSectionsTests
         var byMeasure = score.ChordNames
             .OrderBy(c => c.MeasureIndex).ThenBy(c => c.Timing.ToDouble())
             .Select(c => $"{c.MeasureIndex}:{c.ChordText}").ToArray();
-        // `C△' is the DRAWN name — LilyPond's majorSevenSymbol is a triangle and its
+        // `C△7' is the DRAWN name — LilyPond's majorSevenSymbol is a triangle and its
         // vocabulary is Lily#'s default. What this asserts is which BAR each symbol lands in.
-        Assert.Equal(new[] { "0:Dm7", "1:G7", "2:C△" }, byMeasure);
+        Assert.Equal(new[] { "0:Dm7", "1:G7", "2:C△7" }, byMeasure);
         // A (2, the second a spacer bar) + B (1).
         Assert.Equal(3, score.Voice.Measures.Length);
     }
@@ -146,9 +146,9 @@ public class ChordPartSectionsTests
         var byMeasure = score.ChordNames
             .OrderBy(c => c.MeasureIndex).ThenBy(c => c.Timing.ToDouble())
             .Select(c => $"{c.MeasureIndex}:{c.ChordText}").ToArray();
-        // `C△' is the DRAWN name — LilyPond's majorSevenSymbol is a triangle and its
+        // `C△7' is the DRAWN name — LilyPond's majorSevenSymbol is a triangle and its
         // vocabulary is Lily#'s default. What this asserts is which BAR each symbol lands in.
-        Assert.Equal(new[] { "0:Dm7", "1:G7", "2:C△" }, byMeasure);
+        Assert.Equal(new[] { "0:Dm7", "1:G7", "2:C△7" }, byMeasure);
         Assert.Equal(3, score.Voice.Measures.Length);
     }
 

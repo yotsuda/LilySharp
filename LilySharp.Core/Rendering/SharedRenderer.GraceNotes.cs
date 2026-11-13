@@ -234,6 +234,14 @@ internal static partial class SharedRenderer
                 // the bite was booked by the tab staff pass (SharedRenderer.Tab —
                 // TabGraceDigits is the shared producer, so the hole and the glyph cannot
                 // disagree about where the digit is).
+                // A dead grace note: the cross in the number's place, as a full-size dead note's
+                // (DrawTabFret), at the grace digit's scale (2026-11-13, rock/r-06).
+                if (d.IsDead)
+                {
+                    gc.DrawGlyph(Music(MusicGlyph.NoteheadXBlack), d.CenterX - d.Width / 2, noteY,
+                        FontSize * TabDeadHeadScale * TabGraceFretScale, Color.Black);
+                    continue;
+                }
                 gc.DrawText(d.Text, d.CenterX,
                     noteY - LilySharp.Core.Svg.Layout.TabConstants.FretBaselineDrop(fonts, stringCount, d.Text, fontSize),
                     fontSize, TextRole.TabFret,
@@ -243,8 +251,10 @@ internal static partial class SharedRenderer
     }
 
     /// <summary>One tab grace digit: which string it sits on, its text, and its drawn span.</summary>
+    /// <param name="IsDead">The head is a dead note: the cross is drawn for the number, and
+    /// <paramref name="Width"/> is the cross's.</param>
     internal readonly record struct TabGraceDigit(
-        int StringNum, string Text, double CenterX, double Width);
+        int StringNum, string Text, double CenterX, double Width, bool IsDead = false);
 
     /// <summary>
     /// The fret digits a tab grace run draws — the ONE producer, read both by the renderer
@@ -288,7 +298,10 @@ internal static partial class SharedRenderer
                 string fretText = fret.ToString();
                 yield return new TabGraceDigit(
                     stringNum, fretText, currentX,
-                    LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(fonts, tuningArray.Length, fretText, fontSize));
+                    head.IsDead
+                        ? TabDeadHeadWidth * TabGraceFretScale
+                        : LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(fonts, tuningArray.Length, fretText, fontSize),
+                    head.IsDead);
             }
         }
     }

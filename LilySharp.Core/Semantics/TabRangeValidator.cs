@@ -43,12 +43,14 @@ internal sealed class TabRangeValidator : ISemanticValidator
         var seen = new HashSet<int>();
         var seenStrings = new HashSet<(int, int, int)>();
         var seenOneString = new HashSet<(int, int)>();
+        var seenSlides = new HashSet<int>();
         var advised = new HashSet<int>();
         foreach (var spec in RenderSpecParser.FindAll(tree).Where(s => s.HasTab))
         {
             IReadOnlyList<TabRangeWarning> warnings;
             IReadOnlyList<TabStringUnplayableWarning> stringWarnings;
             IReadOnlyList<TabChordOneStringWarning> oneStringWarnings;
+            IReadOnlyList<TabSlideAcrossStringsWarning> slideWarnings;
             IReadOnlyList<TabFit> fits;
             try
             {
@@ -57,6 +59,7 @@ internal sealed class TabRangeValidator : ISemanticValidator
                 warnings = collector.TabRangeWarnings;
                 stringWarnings = collector.TabStringWarnings;
                 oneStringWarnings = collector.TabChordOneStringWarnings;
+                slideWarnings = collector.TabSlideWarnings;
                 fits = collector.TabFits;
             }
             catch
@@ -105,6 +108,18 @@ internal sealed class TabRangeValidator : ISemanticValidator
                     $"string {w.StringNumber} cannot play this pitch (it would be fret {w.Fret}), "
                     + "so the string request is ignored and the string chosen again - "
                     + "check the \\" + w.StringNumber + " (LilyPond ignores it the same way)");
+            }
+
+            // LYS5005 — one a slide, however many times a repeat plays it (owner's decision
+            // 2026-11-13: a slide stays on one string; this is the slide no string can hold).
+            foreach (var w in slideWarnings)
+            {
+                if (!seenSlides.Add(w.SourcePosition)) continue;
+                _diagnostics.Warning(new TextSpan(w.SourcePosition, 1),
+                    DiagnosticCodes.TabSlideAcrossStrings,
+                    "no one string plays both notes of this slide (frets 0-24), so the tab shows it from "
+                    + $"string {w.FromString} to string {w.OntoString} - a slide runs along one string: "
+                    + "move one of the notes an octave, or mark the shift another way");
             }
 
             // LYS1063 — one a chord and string, however many times a repeat plays it.

@@ -855,6 +855,9 @@ internal sealed partial class LayoutEngine
         //                                        "*" text is suppressed (mixed keeps
         //                                        the leading "Ped." only);
         //   text                             -> keep "Ped." / "*", no bracket.
+        // ⚠️ PER PEDAL FAMILY since 2026-11-13 (PedalStyles, the owner's decision): under the
+        // bracket style the sostenuto is mixed and the una corda is text, so the three are
+        // never one unlabelled bracket; `text` and `mixed` style all three alike.
         // LILYPOND-REF: lily/piano-pedal-engraver.cc — pedalSustainStyle.
         PedalStyle StaffPedalStyle(int staffIndex) =>
             staffByIndex != null && staffByIndex.TryGetValue(staffIndex, out var st)
@@ -894,11 +897,12 @@ internal sealed partial class LayoutEngine
                     continue;
                 var staffMarks = musicMarks.Where(m => m.StaffIndex == staffIndex).ToImmutableArray();
                 var brackets = PedalEngraver.DetectPedalBrackets(staffMarks, sectionPlays);
-                if (style == PedalStyle.Mixed)
+                // Any staff may hold a mixed FAMILY now: the sostenuto is mixed under the bracket
+                // style (PedalStyles, owner's decision 2026-11-13).
                 {
                     var (_, startsAtChange) = PedalEngraver.ChangeEnds(brackets);
                     for (int b = 0; b < brackets.Length; b++)
-                        if (startsAtChange[b])
+                        if (startsAtChange[b] && PedalStyles.Of(style, brackets[b].Type) == PedalStyle.Mixed)
                             mixedChangeEngages.Add((staffIndex, brackets[b].SourcePosition));
                 }
                 // The line the staff's down profile was solved with -- null (fallback to
@@ -948,7 +952,7 @@ internal sealed partial class LayoutEngine
                                 : score != null && staffVoices.IsDefaultOrEmpty ? ImmutableArray.Create(score.Voice)
                                 : staffVoices,
                                 ctx.GraceNotes, staffIndex),
-                            fonts: ctx.Fonts));
+                            fonts: ctx.Fonts, partStyle: style));
             }
         }
         var pedalBracketLayouts = pedalBracketBuilder?.ToImmutable() ?? [];

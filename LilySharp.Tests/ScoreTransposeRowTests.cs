@@ -82,32 +82,32 @@ public class ScoreTransposeRowTests
         .Select(g => string.Join(",", g.Select(n => n.Pitch % 12).Distinct().Order()))];
 
     [Theory]
-    [InlineData("transpose d", "Em7 A7 D△")]
-    [InlineData("transpose bes,", "Cm7 F7 B♭△")]         // down: the octave says nothing of a name
-    [InlineData("transpose des", "E♭m7 A♭7 D♭△")]
-    [InlineData("transpose cis", "D♯m7 G♯7 C♯△")]        // as the notes spell it, not the flat side
-    [InlineData("transpose c'", "Dm7 G7 C△")]            // an octave moves no name
+    [InlineData("transpose d", "Em7 A7 D△7")]
+    [InlineData("transpose bes,", "Cm7 F7 B♭△7")]         // down: the octave says nothing of a name
+    [InlineData("transpose des", "E♭m7 A♭7 D♭△7")]
+    [InlineData("transpose cis", "D♯m7 G♯7 C♯△7")]        // as the notes spell it, not the flat side
+    [InlineData("transpose c'", "Dm7 G7 C△7")]            // an octave moves no name
     public void TheRowsNames_MoveAsTheNotesDo(string option, string names)
         => Assert.Equal(names, Names(Book(option)));
 
     [Fact]
     public void TheOtherScore_StaysAsWritten()
     {
-        Assert.Equal("Dm7 G7 C△", Names(Book("transpose d"), null));
+        Assert.Equal("Dm7 G7 C△7", Names(Book("transpose d"), null));
         Assert.Equal(Melody(Midi(Book("pitch transposed"))), Melody(Midi(Book("transpose d"), null)));
     }
 
     [Fact]
     public void ASlashBass_MovesWithItsChord()
-        => Assert.Equal("D/F♯ A7 D△", Names(Book("transpose d", row: "C/E | G7 | Cmaj7")));
+        => Assert.Equal("D/F♯ A7 D△7", Names(Book("transpose d", row: "C/E | G7 | Cmaj7")));
 
     [Fact]
     public void ADegreeOfTheKey_IsReadInTheWrittenKey_AndNamesTheMovedChord()
-        => Assert.Equal("Em7 A7 D△", Names(Book("transpose d", row: "IIm7 | V7 | Imaj7")));
+        => Assert.Equal("Em7 A7 D△7", Names(Book("transpose d", row: "IIm7 | V7 | Imaj7")));
 
     [Fact]
     public void AKeyWritten_TheNamesFollowIt()
-        => Assert.Equal("Am7 D7 G△", Names(Book("transpose d", "key f major\n", "Gm7 | C7 | Fmaj7")));
+        => Assert.Equal("Am7 D7 G△7", Names(Book("transpose d", "key f major\n", "Gm7 | C7 | Fmaj7")));
 
     [Fact]
     public void WhatItSounds_MovesToo()

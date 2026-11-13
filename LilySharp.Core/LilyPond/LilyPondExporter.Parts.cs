@@ -224,18 +224,30 @@ public sealed partial class LilyPondExporter
 
     /// <summary>
     /// The pedal-style <c>\set</c>s a pedalling part's staff opens with, or "" for a part that
-    /// never pedals. ALL THREE pedals take the part's one style: Lily#'s <c>pedal</c> property
-    /// is one value for sustain, sostenuto and una corda alike, where LilyPond defaults each
-    /// separately — sustain and una corda to <c>'text</c>, sostenuto to <c>'mixed</c>.
+    /// never pedals. Each pedal takes ITS style under the part's <c>pedal</c> word
+    /// (<see cref="Svg.Model.PedalStyles"/>, owner's decision 2026-11-13): <c>text</c> and
+    /// <c>mixed</c> style all three alike; under <c>bracket</c> (Lily#'s default) the bracket
+    /// is the sustain pedal's alone, and the sostenuto and the una corda are written with
+    /// LilyPond's own defaults for them, <c>'mixed</c> and <c>'text</c> — so the twin draws the
+    /// page's three pictures. Until that day all three took the one word.
     /// LILYPOND-REF: ly/engraver-init.ly, the Staff context — pedalSustainStyle (line 895),
     ///   pedalUnaCordaStyle (897), pedalSostenutoStyle (904): the defaults.
     /// </summary>
     private string PedalStyleSet(string? partName)
-        => partName != null && _pedalParts.TryGetValue(partName, out var style)
-            ? "\\set Staff.pedalSustainStyle = #'" + style
-              + " \\set Staff.pedalSostenutoStyle = #'" + style
-              + " \\set Staff.pedalUnaCordaStyle = #'" + style + " "
-            : "";
+    {
+        if (partName == null || !_pedalParts.TryGetValue(partName, out var style))
+            return "";
+        var part = Svg.Model.Staff.ParsePedalStyle(style);
+        static string Word(Svg.Model.PedalStyle s) => s switch
+        {
+            Svg.Model.PedalStyle.Text => "text",
+            Svg.Model.PedalStyle.Mixed => "mixed",
+            _ => "bracket",
+        };
+        return "\\set Staff.pedalSustainStyle = #'" + style
+            + " \\set Staff.pedalSostenutoStyle = #'" + Word(Svg.Model.PedalStyles.Of(part, Svg.Model.PedalType.Sostenuto))
+            + " \\set Staff.pedalUnaCordaStyle = #'" + Word(Svg.Model.PedalStyles.Of(part, Svg.Model.PedalType.UnaCorda)) + " ";
+    }
 
     /// <summary>
     /// The <c>\set</c> a plucking part's notation staff opens with, or "" for a part that

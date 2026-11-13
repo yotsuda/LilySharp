@@ -698,7 +698,16 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   list with spaces or commas inside — `C7(b9, #11)`, `Cm7(b5)`, `C(add9)`, `Cm(maj7)`,
   `C7(9)` (= C9), `C(9)` (= Cadd9). `C-5` is refused (write `C(b5)`), and so is a `b`/`#`
   glued after a letter inside the quality (`C7b9`: write `C7(b9)` or `C7-9`). The page prints
-  the canonical name whatever the spelling. The retired
+  the canonical name whatever the spelling, in the common jazz spelling (2026-11-13): the
+  highest unaltered extension names a seventh chord (`C7(13)` and `C7add13` print C13,
+  `C13(b9)` prints C13(♭9)); a major seventh is the triangle and its number (C△7, C△9, C△13;
+  `maj7` under `chordQualities words`); the alterations ♭5 ♯5 ♭9 ♯9 ♯11 ♭13 follow in one pair
+  of parentheses in ascending order (`C7(#9, b13)` → C7(♯9♭13), `Bbmaj7(#11)` → B♭△7(♯11),
+  `C7-9` → C7(♭9)); `add` is said only of a chord with no seventh (Cadd9, Cm(add9)); a sixth
+  with a ninth is the 6/9 chord (`F6(9)` and `F69` print F6/9 — and `F6/9` is read back; a
+  slash BASS is a note letter, `F6/9/A`). `C°`, `C+`, `Cø`, `C°7`, `Calt`, `C5` and the sus
+  names print as before; an omitted third or fifth prints nothing. The LilyPond twin prints
+  LilyPond's own names for the same tones (C7♯9add♭13, C6add9). The retired
   lowercase `:` entry (`@chord(a:m)`) is not recognised (LYS1008 warns, no symbol is
   engraved). A bare `@chord` derives it from the notes. The symbol is the FIRST word only:
   `@chord(C 7)` is C with a one-character shape (warns) — write `@chord(C7)` for C7; the
@@ -1078,7 +1087,8 @@ score { staff gtr  tab gtr }
 - **Strings and frets are chosen for you**: low positions first, the hand kept where it is, a
   chord's notes on a string each; frets 0–24. A TIE stays on its string (its second note prints
   no number), and a `@glissando` / `@slide` keeps both notes on one string where one string
-  plays both. A slur does not hold a string.
+  plays both — on a bass too (2026-11-13); where none does, the slide is drawn across two
+  strings and warns (**LYS5005**). A slur does not hold a string.
 - **`\N` after a note asks for string N** (1 = the highest): `c'4\3`. Write it only where the
   string matters. In a chord, on the members — `<e'\1 b\2>` — because `<e' g'>\1` numbers both
   (two notes on one string, LYS1063); one pitch twice needs two strings, `<e'\1 e'\2>`
@@ -1440,7 +1450,12 @@ A pedal CHANGE (release and re-press on the same note, LilyPond's `\sustainOff\s
 the start again while the pedal is down: `g,4@sustain` — the bracket draws its notch there, and
 the one `@!sustain` at the end closes the span. `g,4@!sustain@sustain` means the same. How the span is
 drawn is the PART's: `part lh { clef bass pedal text }` (`text` = "Ped. … *", `bracket` =
-what an unset part draws — the same plain bracket for all three pedals, as LilyPond's bracket style — or `mixed` = text at the start, bracket for the hold; `text` and `mixed` print "Sost. Ped." and "una corda" / "tre corde").
+what an unset part draws, or `mixed` = text at the start, bracket for the hold). The plain
+BRACKET is the sustain pedal's alone (2026-11-13): under `bracket` an `@unaCorda` span prints
+the words "una corda" … "tre corde" and a `@sostenuto` span "Sost. Ped." and then its line
+(LilyPond's own defaults for those two), so the three pedals are never the same unlabelled
+bracket. `text` and `mixed`, written, style all three alike ("Sost. Ped. … *", "una corda …
+tre corde"). All three sound in the MIDI: sustain CC 64, sostenuto CC 66, una corda CC 67.
 
 ```
 d,4@sustain a, d a, | g,4@sustain d g d | a,1@!sustain |
@@ -1604,7 +1619,8 @@ frets itself: write a string number (`\4`) only where a particular string is ask
 of a chord written on one string warn (LYS1063): `<e'\1 b\2>`, not `<e' g'>\1`, which numbers both.
 One pitch twice in a chord warns too (LYS1064), unless on two strings: `<e'\1 e\2>`.
 A `@glissando` / `@slide` keeps its two notes on one string where one string plays both (a
-written `\N` still decides); a slur does not. A string the tuning does not have (`\7` on a
+written `\N` still decides), on guitar and bass tabs; a slide no string can hold warns (LYS5005);
+a slur does not. A string the tuning does not have (`\7` on a
 guitar) warns and is chosen again (LYS5003). The tab's tuning is the part's (`part g { tuning
 guitarDropD }`, which also moves the part's range: its low D is in range) or the word BEFORE the
 part in the score — `tab guitarDropD g`, never `tab g tuning guitarDropD`. Under the file's
@@ -2042,8 +2058,9 @@ layout {
   itself is unchanged — this is the words, not the combining.
 - `chordQualities symbols` is the default and LilyPond's own picture: the four qualities its
   exception table names print `C°`, `C+`, `Cø`, `C°7`, and a major seventh prints its drawn
-  triangle. `words` spells them out instead — `Cdim`, `Caug`, `Cm7♭5`, `Cdim7`, `Cmaj7` — the
-  lead-sheet convention. Every other quality is the same word either way.
+  triangle with its number (C△7, C△9). `words` spells them out instead — `Cdim`, `Caug`,
+  `Cm7(♭5)`, `Cdim7`, `Cmaj7` — the lead-sheet convention. Every other quality is the same
+  word either way (how a name is built: `@chord` in *Annotations*).
 - `minorChords upper` is LilyPond's default: `Am`, `Am7`. `lower` lowercases the root of a
   chord with a MINOR THIRD and drops its `m` — `a`, `a7` — which is LilyPond's
   `chordNameLowercaseMinor`. The slash BASS keeps its capital

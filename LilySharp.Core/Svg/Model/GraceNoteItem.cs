@@ -69,7 +69,14 @@ public readonly record struct GraceHeadInfo(
     double HeadXOffset = 0,
     // The head's accidental is a COURTESY one, in parentheses (`@courtesy`, LilyPond's `?`) —
     // session 927: the column's packing and skylines read the parens as a full-size note's do.
-    bool IsCourtesy = false
+    bool IsCourtesy = false,
+    // The head is a DEAD note (`@dead`), as NoteItem.IsDead and ChordNoteInfo.IsDead say of a
+    // full-size one (grammar evaluation 4, 2026-11-13, rock/r-06). The column's HeadStyle
+    // carries the cross a notation staff draws, and that was all a grace carried — so a tab,
+    // which draws a dead note as a cross IN PLACE OF its fret number and a
+    // `@notehead(cross)` note as its number, could not tell the two apart and printed
+    // `grace { g16@dead b@dead }` as 0 0.
+    bool IsDead = false
 );
 
 /// <summary>

@@ -72,6 +72,52 @@ public enum PedalStyle
 }
 
 /// <summary>
+/// The style ONE pedal family is drawn in under a part's <c>pedal</c> style — the one home
+/// of "which pedal is drawn how" for the layout, the twin and MusicXML.
+/// </summary>
+/// <remarks>
+/// OWNER'S DECISION 2026-11-13 (grammar evaluation 4, the chamber writer's r-14; the proposal
+/// the owner approved): UNA CORDA AND SOSTENUTO ARE TOLD APART FROM THE SUSTAIN PEDAL IN THE
+/// BRACKET STYLE. It overrides what stood until then — one style for all three families, so
+/// under the default all three drew the same unlabelled bracket, and an unlabelled bracket
+/// reads as the damper pedal. The BRACKET is the sustain pedal's alone: under it (the default,
+/// or written <c>pedal bracket</c>) a <c>@unaCorda</c> span is the words "una corda" …
+/// "tre corde" and a <c>@sostenuto</c> span the word "Sost. Ped." and then the bracket line —
+/// LilyPond's own default pictures for those two.
+/// LILYPOND-REF: ly/engraver-init.ly — <c>pedalUnaCordaStyle = #'text</c>,
+///   <c>pedalSostenutoStyle = #'mixed</c>, <c>pedalUnaCordaStrings = #'("una corda" "" "tre corde")</c>,
+///   <c>pedalSostenutoStrings = #'("Sost. Ped." "*Sost. Ped." "*")</c>.
+/// LILYSHARP-OWN: <c>pedal text</c> and <c>pedal mixed</c>, written, are the writer's word
+/// for the whole part and style all three families alike, as they always did (the words tell
+/// the pedals apart there) — where LilyPond has three independent properties. Departs from
+/// LilyPond in having one key; goes away for a part with only a sustain pedal; observed by
+/// <c>GrammarEvaluation4Tests.UnaCordaAndSostenuto_AreToldApartFromTheSustainPedal</c>.
+/// </remarks>
+public static class PedalStyles
+{
+    /// <summary>The style <paramref name="family"/> is drawn in under the part's
+    /// <paramref name="part"/> style.</summary>
+    public static PedalStyle Of(PedalStyle part, PedalType family) => part != PedalStyle.Bracket
+        ? part
+        : family switch
+        {
+            PedalType.UnaCorda => PedalStyle.Text,
+            PedalType.Sostenuto => PedalStyle.Mixed,
+            _ => PedalStyle.Bracket,
+        };
+
+    /// <summary><see cref="Of(PedalStyle, PedalType)"/> for the family a pedal mark belongs
+    /// to; the part's style for a mark that is no pedal's.</summary>
+    public static PedalStyle Of(PedalStyle part, MusicMarkType mark) => mark switch
+    {
+        MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff => Of(part, PedalType.UnaCorda),
+        MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff => Of(part, PedalType.Sostenuto),
+        MusicMarkType.SustainOn or MusicMarkType.SustainOff => Of(part, PedalType.Sustain),
+        _ => part,
+    };
+}
+
+/// <summary>
 /// A single staff with its own clef and voices.
 /// </summary>
 /// <remarks>

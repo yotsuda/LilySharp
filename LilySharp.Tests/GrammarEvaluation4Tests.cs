@@ -478,7 +478,8 @@ public class GrammarEvaluation4Tests
     /// <c>@unaCorda</c> began 2.9 from the note — the sustain glyphs' clearance — inside
     /// "Sost. Ped." and "una corda", which are twice as wide (chamber/r-14). Each line begins
     /// its word's half width and the bound's padding (1.0) from the column, LilyPond's picture.
-    /// (In the bracket style all three pedals are the same plain bracket in LilyPond too.)</summary>
+    /// (Written the day the bracket style still drew all three pedals as one plain bracket; the
+    /// owner's decision of the same day told them apart — <see cref="UnaCordaAndSostenuto_AreToldApartFromTheSustainPedal"/>.)</summary>
     [Fact]
     public void AMixedPedalsLine_BeginsAfterItsOwnWord()
     {
@@ -641,5 +642,163 @@ public class GrammarEvaluation4Tests
         }
         Assert.Equal(0, Fingerings("staff a  tab a"));
         Assert.Equal(2, Fingerings("tab a"));
+    }
+
+    // ---- owner's decision 2026-11-13: a slide stays on one string ---------------------------
+
+    /// <summary>On a five-string bass <c>d,8@slide f,4</c> was the B string's 3 to the E
+    /// string's 1 in one bar and the B string's 3 to 6 in an identical one (rock/r-07). The
+    /// owner, 2026-11-13: 「@slide は同じ弦をスライドして弾くという指示だから、弦を跨がないよう
+    /// にして」— both ends of a <c>@slide</c> / <c>@glissando</c> between single notes are on
+    /// ONE string, on the bass's (frozen) planner as on the guitar's; where no string plays
+    /// both within the fretboard the plan is the one without the slide, and LYS5005 says so.</summary>
+    [Fact]
+    public void ASlide_StaysOnOneString_OnTheBassToo()
+    {
+        const string bass5 = "instrument bass5", score = "staff a  tab a";
+        const string bars = "d,8@text(\"S\").up d'@text(\"P\").up r d, f,@dead d,@slide f,4 | c8 c' r c e@dead c@slide a,4 | d,8 d' r d, f,@dead d,@slide f,4 |";
+        var strings = TabStrings(bars, bass5, score);
+        Assert.Equal(18, strings.Length);
+        foreach (int slideFrom in new[] { 4, 10, 16 })
+            Assert.Equal(strings[slideFrom], strings[slideFrom + 1]);
+        // The two identical bars are fretted alike.
+        Assert.Equal(strings[..6], strings[12..]);
+        Assert.DoesNotContain(Said($"octave absolute\npart a {{ {bass5} }}\nsection A {{ a {{ {bars} }} }}\nform {{ ~A }}\nscore {{ {score} }}\n"),
+            d => d.Code == DiagnosticCodes.TabSlideAcrossStrings);
+
+        // @glissando is drawn as the same slide on a tab, and is held the same way.
+        var gliss = TabStrings("d,8@glissando f,8 r4 g,4@glissando b,4 |", "instrument bass", score);
+        Assert.Equal(gliss[0], gliss[1]);
+        Assert.Equal(gliss[2], gliss[3]);
+
+        // Without the slide the same notes are the frozen planner's, whatever they are: the
+        // slide is the only thing read.
+        var plain = TabStrings("d,8 d' r d, f,@dead d, f,4 |", bass5, score);
+        Assert.Equal(TabStrings("d,8 d' r d, f,@dead d,@slide f,4 |", bass5, score)[..4], plain[..4]);
+
+        // No string holds both: today's strings, and the warning — once, on bass and guitar.
+        foreach (var (part, music) in new[] { ("instrument bass", "e,4@slide g''4 r2 |"), ("instrument guitar", "e4@slide e'''4 r2 |") })
+        {
+            string book = $"octave absolute\npart a {{ {part} }}\nsection A {{ a {{ {music} }} }}\nform {{ ~A }}\nscore {{ {score} }}\n";
+            var warning = Assert.Single(Said(book), d => d.Code == DiagnosticCodes.TabSlideAcrossStrings);
+            Assert.Equal(DiagnosticSeverity.Warning, warning.Severity);
+            Assert.Equal(TabStrings(music.Replace("@slide", ""), part, score), TabStrings(music, part, score));
+        }
+    }
+
+    // ---- owner's decision 2026-11-13: una corda and sostenuto are told apart ----------------
+
+    /// <summary>All three pedals drew the same unlabelled bracket under the default style
+    /// (chamber/r-14), and an unlabelled bracket reads as the damper pedal. The owner approved
+    /// (2026-11-13) telling them apart: the BRACKET is the sustain pedal's alone; under it an
+    /// <c>@unaCorda</c> span is the words "una corda" … "tre corde" and a <c>@sostenuto</c>
+    /// span the word "Sost. Ped." and then the bracket line — LilyPond's own default pictures
+    /// and strings for those two (<c>pedalUnaCordaStyle 'text</c>, <c>pedalSostenutoStyle
+    /// 'mixed</c>). A written <c>pedal text</c> / <c>pedal mixed</c> styles all three alike, as
+    /// before; a written <c>pedal bracket</c> is the default. With two or three pedals down at
+    /// once the words clear each other and the lines. And the MIDI plays each on its own
+    /// controller (64, 66, 67 — the last two were not played at all), MusicXML says the soft
+    /// pedal (<c>&lt;sound soft-pedal&gt;</c>: its <c>&lt;pedal&gt;</c> has no such type), and
+    /// the twin sets LilyPond's three styles to the page's.</summary>
+    [Fact]
+    public void UnaCordaAndSostenuto_AreToldApartFromTheSustainPedal()
+    {
+        static string Book(string pedal) => $"octave absolute\npart c {{ clef bass {pedal} }}\n"
+            + "section A { c { c4@sustain@unaCorda d4@sostenuto e4 f4@!sostenuto | c1@!sustain@treCorde | } }\nform { ~A }\nscore { staff c }\n";
+
+        foreach (string written in new[] { "", "pedal bracket" })
+        {
+            var layout = Laid(Book(written));
+            // Two lines: the sustain's plain bracket and the sostenuto's, begun by its word.
+            Assert.Equal(new[] { false, true }, layout.PedalBracketLayouts.OrderBy(b => b.IsMixed).Select(b => b.IsMixed));
+            var words = layout.MusicMarkLayouts.Where(m => m.MarkType is LilySharp.Core.Svg.Model.MusicMarkType.SustainOn or LilySharp.Core.Svg.Model.MusicMarkType.SustainOff
+                or LilySharp.Core.Svg.Model.MusicMarkType.SostenutoOn or LilySharp.Core.Svg.Model.MusicMarkType.SostenutoOff
+                or LilySharp.Core.Svg.Model.MusicMarkType.UnaCordaOn or LilySharp.Core.Svg.Model.MusicMarkType.UnaCordaOff).Select(m => m.Text).OrderBy(s => s, StringComparer.Ordinal);
+            Assert.Equal(new[] { "Sost. Ped.", "tre corde", "una corda" }, words);
+        }
+
+        // The drawn ink: device Y grows down. The staff's lines are the five longest rules.
+        var g = LilySharp.Tests.LpFidelity.RenderedGeometry.Render(Book(""));
+        var una = g.Texts.Single(t => t.Text == "una corda");
+        var tre = g.Texts.Single(t => t.Text == "tre corde");
+        var sost = g.Texts.Single(t => t.Text == "Sost. Ped.");
+        // "una corda" stands on the first note and "Sost. Ped." on the second, a few staff
+        // spaces on: the two words overlap in X, so they stand on two rows.
+        Assert.True(Math.Abs(una.X - sost.X) < 6.0, $"{una.X:F2} / {sost.X:F2}");
+        Assert.True(Math.Abs(una.Y - sost.Y) >= 0.9 * una.FontSize,
+            $"\"una corda\" on {una.Y:F3} and \"Sost. Ped.\" on {sost.Y:F3} overlap");
+        // The una corda is the family nearest the staff, then the sostenuto, then the sustain.
+        Assert.True(una.Y < sost.Y);
+        double staffBottom = g.Lines.Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9).OrderByDescending(l => l.X2 - l.X1).Take(5).Max(l => l.Y1);
+        var pedalLines = g.Lines.Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9 && l.Y1 > staffBottom + 0.5).Select(l => Math.Round(l.Y1, 6)).Distinct().OrderBy(y => y).ToArray();
+        Assert.Equal(2, pedalLines.Length);
+        // The sostenuto's line runs on its word's baseline, after the word…
+        Assert.Equal(sost.Y, pedalLines[0], 3);
+        // …and the sustain's bracket, hooks and all (edge-height 1.0), is under every word.
+        double hookTop = pedalLines[1] - 1.0;
+        foreach (var word in new[] { una, tre, sost })
+            Assert.True(hookTop > word.Y, $"the sustain bracket's hooks reach up to {hookTop:F3}, into \"{word.Text}\" on {word.Y:F3}");
+
+        // Written, text and mixed are the whole part's.
+        Assert.Empty(Laid(Book("pedal text")).PedalBracketLayouts);
+        Assert.Equal(3, Laid(Book("pedal mixed")).PedalBracketLayouts.Count(b => b.IsMixed));
+
+        // MIDI: each pedal on its own controller, down and up at its notes' onsets.
+        var track = new LilySharp.Core.Midi.MidiExporter().Export(SyntaxTree.Parse(Book(""))).Tracks.Single(t => t.Pedals.Count > 0);
+        Assert.Equal("64v0 67v0 66v480 66^1440 64^1920 67^1920",
+            string.Join(" ", track.Pedals.OrderBy(p => p.Tick).ThenBy(p => p.Controller == 66 ? 0 : p.Controller).Select(p => $"{p.Controller}{(p.Down ? "v" : "^")}{p.Tick}")));
+
+        // MusicXML: the soft pedal is said, the sostenuto is a pedal with its own picture.
+        var xml = new LilySharp.Core.MusicXml.MusicXmlExporter().Export(SyntaxTree.Parse(Book(""))).ToXml();
+        Assert.Equal(new[] { "yes", "no" }, xml.Descendants("sound").Select(s => (string?)s.Attribute("soft-pedal")).Where(a => a != null));
+        Assert.Equal(new[] { "una corda", "tre corde" }, xml.Descendants("words").Select(w => w.Value));
+        var pedals = xml.Descendants("pedal").Select(p => $"{(string?)p.Attribute("type")}:{(string?)p.Attribute("line")}:{(string?)p.Attribute("sign")}").ToArray();
+        Assert.Equal(new[] { "start:yes:no", "sostenuto:yes:yes", "stop:yes:yes", "stop:yes:no" }, pedals);
+
+        // The twin: LilyPond's three styles set to the page's.
+        string twin = Twin(Book(""));
+        Assert.Contains("\\set Staff.pedalSustainStyle = #'bracket \\set Staff.pedalSostenutoStyle = #'mixed \\set Staff.pedalUnaCordaStyle = #'text", twin);
+    }
+
+    // ---- a dead grace note on the tab --------------------------------------------------------
+
+    /// <summary><c>grace { g16@dead b@dead }</c> printed 0 0 on the tab (rock/r-06): a grace
+    /// carried only its column's head STYLE, the cross a notation staff draws, so the tab —
+    /// where a dead note is a cross in place of its number and a <c>@notehead(cross)</c> note
+    /// keeps its number — could not tell them apart. The grace head carries the dead mark as
+    /// a full-size note and a chord member do.</summary>
+    [Fact]
+    public void ADeadGraceNote_IsACrossOnTheTab_AndACrossHeadedOneKeepsItsNumber()
+    {
+        static string Book(string grace) => "octave absolute\npart g { instrument guitar }\n"
+            + $"section A {{ g {{ grace {{ {grace} }} e'2 r2 | }} }}\nform {{ ~A }}\nscore {{ staff g  tab g }}\n";
+
+        static (bool[] Dead, int Zeros, int Crosses) Read(string grace)
+        {
+            var tree = SyntaxTree.Parse(Book(grace));
+            Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.Message)));
+            var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+            var heads = score.GraceNotes.Where(g => g.StaffIndex == 1).SelectMany(g => g.Columns).SelectMany(c => c.Heads).Select(h => h.IsDead).ToArray();
+            var g = LilySharp.Tests.LpFidelity.RenderedGeometry.Render(Book(grace));
+            // The tab's numbers: the main note's 0 (the open first string) and the graces'.
+            int zeros = g.Texts.Count(t => t.Role == LilySharp.Core.Rendering.TextRole.TabFret && t.Text == "0");
+            char cross = LilySharp.Core.Svg.Layout.MusicFont.Current.Codepoint(LilySharp.Core.Svg.MusicGlyph.NoteheadXBlack);
+            return (heads, zeros, g.Glyphs.Count(x => x.Glyph == cross));
+        }
+
+        var dead = Read("g16@dead b@dead");
+        Assert.Equal(new[] { true, true }, dead.Dead);
+        // Open g and open b would be 0 0: only the main note's number is left, and the two
+        // crosses are drawn twice each — on the staff (the head) and on the tab.
+        Assert.Equal(1, dead.Zeros);
+        Assert.Equal(4, dead.Crosses);
+
+        var crossHeaded = Read("g16@notehead(cross) b@notehead(cross)");
+        Assert.Equal(new[] { false, false }, crossHeaded.Dead);
+        Assert.Equal(3, crossHeaded.Zeros);
+
+        // A dead member of a grace chord, and a chord dead as a whole.
+        Assert.Equal(new[] { true, false }, Read("<g@dead b>16").Dead);
+        Assert.Equal(new[] { true, true }, Read("<g b>16@dead").Dead);
     }
 }

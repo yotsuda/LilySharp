@@ -39,7 +39,9 @@ namespace LilySharp.Core.Music;
 /// the <c>(</c> is glued to the symbol as a shape group's is. ⑵ A BARE number in the
 /// parentheses is the EXTENSION when the quality already has a seventh (<c>C7(9)</c> = C9,
 /// <c>C7(13)</c> = C13, <c>Cmaj7(9)</c> = Cmaj9), else an ADDED tone (<c>C(9)</c> = Cadd9,
-/// <c>C6(9)</c> = C69). ⑶ The page prints the canonical Ignatzek name, not the spelling
+/// <c>C6(9)</c> = C69). ⑶ The page prints the canonical name — LilyPond's Ignatzek name
+/// until 2026-11-13, the common jazz spelling since (the owner's decision of that day,
+/// <see cref="ChordFormula.NameOf"/>: <c>C7(b9, #11)</c> prints <c>C7(♭9♯11)</c>) — not the spelling
 /// (<c>Cø7</c> prints as <c>Cm7♭5</c> under <c>chordQualities words</c>, <c>Cø7</c> under
 /// <c>symbols</c>, exactly as <c>Cm7-5</c> does). ⑷ <c>Δ</c>/<c>△</c> is the major seventh,
 /// <c>ø</c> the half-diminished seventh, <c>°</c> the diminished, <c>+</c> the augmented.

@@ -98,6 +98,12 @@ internal sealed class TabResolver
     /// <summary>Ties whose two ends carry conflicting explicit string numbers.</summary>
     public IReadOnlyList<TabTieStringWarning> TieWarnings => _tieWarnings;
 
+    private readonly List<TabSlideAcrossStringsWarning> _slideWarnings = new();
+
+    /// <summary>Slides (<c>@slide</c>, <c>@glissando</c>) whose two notes no one string of the
+    /// tuning plays, drawn across two strings (LYS5005).</summary>
+    public IReadOnlyList<TabSlideAcrossStringsWarning> SlideWarnings => _slideWarnings;
+
     /// <summary>
     /// Resolves ties for tab rendering across a single voice. The destination of a
     /// tie is flagged <see cref="NoteItem.IsTieTarget"/> (its fret number is hidden
@@ -476,7 +482,7 @@ internal sealed class TabResolver
 
         double time = 0, previousOnset = double.NaN;
         int? previousMidi = null;
-        bool restSince = false, previousSlurStart = false, previousFall = false, previousSlide = false;
+        bool restSince = false, previousSlurStart = false, previousFall = false, previousSlide = false, previousGlissando = false;
 
         var barWritten = new Dictionary<int, int>(); // written MIDI -> its written string, this bar
         var sounding = new List<int>();
@@ -507,13 +513,13 @@ internal sealed class TabResolver
                     {
                         var again = events[k];
                         events.Add(k == lastBarFirst
-                            ? again with { TimeToMove = double.IsNaN(previousOnset) ? 1.0 : onset - previousOnset, HandFree = restSince, SlurFromPrevious = false, TiedFromPrevious = false, AfterFall = false, SlideFromPrevious = false }
+                            ? again with { TimeToMove = double.IsNaN(previousOnset) ? 1.0 : onset - previousOnset, HandFree = restSince, SlurFromPrevious = false, TiedFromPrevious = false, AfterFall = false, SlideFromPrevious = false, GlissandoFromPrevious = false }
                             : again);
                         refs.Add((-1, -1));
                     }
                     previousOnset = time - item.Duration.ToDouble() / (lastBarEnd - lastBarFirst);
                     previousMidi = events[^1].Midi;
-                    previousSlurStart = previousSlide = previousFall = false;
+                    previousSlurStart = previousSlide = previousGlissando = previousFall = false;
                     restSince = false;
                     continue;
                 }
@@ -642,7 +648,8 @@ internal sealed class TabResolver
                     SlurFromPrevious: previousSlurStart && slurEnd && !leapt,
                     ChordLow: chordLow, ChordHigh: chordHigh,
                     TiedFromPrevious: tied, AfterFall: previousFall,
-                    SlideFromPrevious: previousSlide && item is NoteItem && !restSince));
+                    SlideFromPrevious: previousSlide && item is NoteItem && !restSince,
+                    GlissandoFromPrevious: previousGlissando && item is NoteItem && !restSince));
                 refs.Add((mi, ii));
 
                 previousOnset = onset;
@@ -653,6 +660,9 @@ internal sealed class TabResolver
                 // evaluation 4, 2026-11-13, rock/r-06: `f'8@pullOff( d')` was the first string's
                 // 1 and the second string's 3). A plain slur stays the planner's to cross (the
                 // owner's decision on TabEvent.SlurFromPrevious).
+                // The drawn slide alone (`@slide`, `@glissando`): what the bass planner keeps on
+                // one string (owner's decision 2026-11-13) and what LYS5005 is about.
+                previousGlissando = item is NoteItem { HasGlissando: true };
                 previousSlide = item is NoteItem { HasGlissando: true }
                     // ⚠️ Only under the slur that draws it (`f'8@pullOff( d')`): the letter alone,
                     // on a note no curve leaves, names a technique and joins nothing
@@ -679,6 +689,15 @@ internal sealed class TabResolver
                 continue; // a `%` bar's replay: nothing drawn there
             if (ItemAt(mi, ii) is NoteItem note && !note.StringNumber.HasValue && strings[k] > 0)
                 Work(mi)[ii] = WithString(note, strings[k]);
+            // A slide whose two notes no one string plays (LYS5005; owner's decision 2026-11-13,
+            // "@slide stays on one string"): the planners left both ends where they stand
+            // without the slide, and the writer is told, at the note the slide leaves.
+            if (k > 0 && events[k].GlissandoFromPrevious && refs[k - 1].Measure >= 0
+                && !TabEvent.ShareAString(events[k - 1].Midi, events[k].Midi, tun)
+                && ItemAt(mi, ii) is NoteItem { TabBelowRange: false, StringNumber: int to }
+                && ItemAt(refs[k - 1].Measure, refs[k - 1].Item) is NoteItem { TabBelowRange: false, StringNumber: int from } left
+                && from != to)
+                _slideWarnings.Add(new TabSlideAcrossStringsWarning(left.SourcePosition, from, to));
         }
         events.Clear();
         refs.Clear();

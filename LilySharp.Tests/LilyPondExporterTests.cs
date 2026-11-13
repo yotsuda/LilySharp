@@ -488,7 +488,8 @@ public class LilyPondExporterTests
     /// The pedals are LilyPond's span events on the note — <c>\sustainOn</c> / <c>\sustainOff</c>
     /// and their sostenuto and una corda siblings — and a pedalling part's staff states its
     /// <c>pedal</c> style for ALL THREE pedals, because LilyPond's defaults ('text, 'mixed,
-    /// 'text) are not Lily#'s (bracket for every pedal). Until 2026-09-23 every pedal was
+    /// 'text) are not Lily#'s (bracket for the sustain pedal; 'mixed and 'text for the other
+    /// two since the owner's decision of 2026-11-13, bracket for every pedal until then). Until 2026-09-23 every pedal was
     /// "dropped (out of scope)" and the twin of a piano book had no pedal line.
     /// LILYPOND-REF: ly/spanners-init.ly:94-101 make-span-event — sustainOn/Off,
     ///   unaCorda/treCorde, sostenutoOn/Off; ly/engraver-init.ly, the Staff context
@@ -508,12 +509,18 @@ public class LilyPondExporterTests
         Assert.Contains("f,4\\unaCorda", ly);
         Assert.Contains("c,1\\treCorde", ly);
         Assert.Contains("\\set Staff.pedalSustainStyle = #'bracket", ly);
-        Assert.Contains("\\set Staff.pedalSostenutoStyle = #'bracket", ly);
-        Assert.Contains("\\set Staff.pedalUnaCordaStyle = #'bracket", ly);
+        // The bracket is the sustain pedal's alone (owner's decision 2026-11-13,
+        // Svg.Model.PedalStyles): the other two are told apart by LilyPond's own defaults.
+        Assert.Contains("\\set Staff.pedalSostenutoStyle = #'mixed", ly);
+        Assert.Contains("\\set Staff.pedalUnaCordaStyle = #'text", ly);
         Assert.DoesNotContain(warnings, w => w.Contains("sustain") || w.Contains("sostenuto") || w.Contains("unaCorda") || w.Contains("treCorde"));
 
         var text = Export(PedalScore("c,4@sustain d,4@!sustain", "pedal text"));
         Assert.Contains("\\set Staff.pedalSustainStyle = #'text", text);
+        // A written `pedal text` / `pedal mixed` is the whole part's, all three alike.
+        Assert.Contains("\\set Staff.pedalSostenutoStyle = #'text", text);
+        var mixed = Export(PedalScore("c,4@sustain d,4@!sustain", "pedal mixed"));
+        Assert.Contains("\\set Staff.pedalUnaCordaStyle = #'mixed", mixed);
 
         // A part that never pedals says nothing about pedals.
         Assert.DoesNotContain("pedalSustainStyle", Export(PedalScore("c,4 d,4")));

@@ -1,7 +1,7 @@
 # Playing the pedal
 
 **Status: built for `@sustain`** (session 1041, 2026-11-02), the owner's three decisions as §3 recommends. Written
-in session 1040 after the review of 雨音の午後. `@sostenuto` and `@unaCorda` still only draw. What remains is the
+in session 1040 after the review of 雨音の午後. `@sostenuto` (CC 66) and `@unaCorda` … `@treCorde` (CC 67) are in the `.mid` since 2026-11-13 (grammar evaluation 4), each on its own controller in the same list; the editor's preview still plays the sustain pedal alone. What remains is the
 owner's ear (`editors/vscode/MANUAL-CHECKS.md` C57).
 
 ## 1. What happened before
@@ -40,7 +40,7 @@ owner's ear (`editors/vscode/MANUAL-CHECKS.md` C57).
    the onset of the note, chord or rest that carries it, in the played walk, so repeats and D.C. come with it, and
    `AddPedals` gives it to the tracks after the split. A re-press under the pedal (`g,4@sustain` with the pedal
    down) is up then down at one tick. A pedal the form leaves down lifts at the music's end. In a grace note a mark
-   is not read. `@sostenuto` (CC66) and `@unaCorda` (CC67) would be the same list with another controller.
+   is not read. `@sostenuto` (CC66) and `@unaCorda` (CC67) are the same list with another controller (`PedalChange.Controller`, 2026-11-13); each pedal pairs with itself only.
 2. **The `.mid`.** `MidiFile.WriteTrack` writes `0xB0`. Order at one tick: pedal up, note off, pedal down, note on,
    so a re-press catches the new chord and not the old one. MeltySynth reads the file, so `lysc wav` follows.
 3. **The note list.** A pedal change travels IN `lilysharp/playback`'s `Notes`, as a metronome click does: `P` is
@@ -67,4 +67,4 @@ owner's ear (`editors/vscode/MANUAL-CHECKS.md` C57).
 
 - **A check for a pedal held over a change of bass** (雨音の午後, bar 23: E♭ held into B♭, the `@sustain` lost in a
   revision). Its measure is easier once the events exist.
-- **`@sostenuto` and `@unaCorda`**, if the owner wants them.
+- **`@sostenuto` and `@unaCorda` in the editor's preview** (the `.mid` has them since 2026-11-13; the preview's players read CC 64 only).

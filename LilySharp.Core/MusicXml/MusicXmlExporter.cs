@@ -53,6 +53,9 @@ public sealed class MusicXmlExporter
     // rule — only an explicit `octave N` moves it.
     private int _partAnchorOctave = LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
     private string _partPedalStyle = "bracket";
+    // The sostenuto's own style under the part's (Svg.Model.PedalStyles, 2026-11-13): mixed
+    // under the bracket style, so its <pedal> says line and sign.
+    private string _partSostenutoStyle = "mixed";
     private int _partTransposeSemitones;
     // …and the share of it the document's <transpose> states: the instrument's alone, the
     // header clef's octave being in the pitches (MusicXmlPart.PitchOctaveShift).
@@ -3368,6 +3371,7 @@ public sealed class MusicXmlExporter
             Svg.Model.PedalStyle.Mixed => "mixed",
             _ => "bracket",
         };
+        _partSostenutoStyle = _partPedalStyle == "bracket" ? "mixed" : _partPedalStyle;
 
         _partAnchorOctave = header.AnchorOctave;
         _octaveAnchor = header.AbsoluteBaseOctave;
@@ -5997,7 +6001,7 @@ public sealed class MusicXmlExporter
             return;
         direction.Offset = CurrentMeasurePosition(_currentMeasure);
         if (direction.PedalType != null)
-            direction.PedalStyle = _partPedalStyle;
+            direction.PedalStyle ??= _partPedalStyle;
         _currentMeasure.Directions.Add(direction);
     }
 
@@ -6202,14 +6206,16 @@ public sealed class MusicXmlExporter
                     }
                     // MusicXML has ONE pedal stop for the sustain and the sostenuto.
                     case Svg.Model.MusicMarkType.SustainOff:
-                    case Svg.Model.MusicMarkType.SostenutoOff:
                         AddDirection(new MusicXmlDirection { PedalType = "stop", Placement = "below" });
+                        break;
+                    case Svg.Model.MusicMarkType.SostenutoOff:
+                        AddDirection(new MusicXmlDirection { PedalType = "stop", Placement = "below", PedalStyle = _partSostenutoStyle });
                         break;
                     // The una corda is no MusicXML pedal: its release is the words a score
                     // prints, as its start is (ProcessDirectionName; 2026-09-29 — it used to
                     // be a <pedal type="stop"> with no start before it).
                     case Svg.Model.MusicMarkType.UnaCordaOff:
-                        AddDirection(new MusicXmlDirection { Words = "tre corde", Placement = "below" });
+                        AddDirection(new MusicXmlDirection { Words = "tre corde", Placement = "below", SoftPedal = false });
                         break;
                     // '@!cresc' / '@!decresc' / '@!dim' (LilyPond's \!): the wedge runs to this
                     // note's right edge (SYNTAX_REFERENCE), so the stop stands where the note ends.
@@ -6264,16 +6270,18 @@ public sealed class MusicXmlExporter
                 AddDirection(new MusicXmlDirection { PedalType = "start", Placement = "below" });
                 break;
             case "sostenuto":
-                AddDirection(new MusicXmlDirection { PedalType = "sostenuto", Placement = "below" });
+                AddDirection(new MusicXmlDirection { PedalType = "sostenuto", Placement = "below", PedalStyle = _partSostenutoStyle });
                 break;
             // The una corda (2026-09-29, HANDOFF §1.1 第662 ⑴ — it wrote nothing): MusicXML
             // has no pedal type for it, so it is the words a score prints, and '@treCorde' —
             // its release written as a word rather than as '@!' — the same words as '@!unaCorda'.
+            // Since 2026-11-13 the direction also SAYS it: <sound soft-pedal="yes"/> … "no"
+            // (MusicXmlDirection.SoftPedal — there is no <pedal type="soft"> in MusicXML 4.0).
             case "unaCorda":
-                AddDirection(new MusicXmlDirection { Words = "una corda", Placement = "below" });
+                AddDirection(new MusicXmlDirection { Words = "una corda", Placement = "below", SoftPedal = true });
                 break;
             case "treCorde":
-                AddDirection(new MusicXmlDirection { Words = "tre corde", Placement = "below" });
+                AddDirection(new MusicXmlDirection { Words = "tre corde", Placement = "below", SoftPedal = false });
                 break;
             // The palm mute and the let ring (owner-approved 2026-11-13, grammar evaluation 3):
             // the word and a dashed bracket, closed by the stop '@!palmMute' / '@!letRing' writes.
@@ -6372,7 +6380,8 @@ public sealed class MusicXmlExporter
     {
         string text = chordText;
         string? bass = null;
-        int slash = text.IndexOf('/');
+        // The bass's slash, not a 6/9 chord's own (F6/9, 2026-11-13).
+        int slash = LilySharp.Core.Music.ChordSymbolText.BassSlash(text);
         if (slash > 0)
         {
             bass = text[(slash + 1)..];

@@ -852,7 +852,7 @@ public class LayoutBlockTests
         // quality is spelled the same in both — the minor seventh is here to say so rather
         // than to be assumed.
         Assert.Equal(
-            new[] { "Cdim", "Caug", "Cm7♭5", "Cdim7", "Am7/C" },
+            new[] { "Cdim", "Caug", "Cm7(♭5)", "Cdim7", "Am7/C" },   // m7♭5 until 2026-11-13: an alteration is parenthesized
             ChordTexts("layout { chordQualities words }\n"));
     }
 

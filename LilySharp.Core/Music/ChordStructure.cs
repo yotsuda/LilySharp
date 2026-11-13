@@ -151,6 +151,26 @@ public readonly record struct ChordSymbolText(string Text, int SuperFrom, int Br
 
     /// <summary>A symbol drawn on one baseline — free text, a Roman degree, "N.C.".</summary>
     public static ChordSymbolText Flat(string text) => new(text, NoSuperscript);
+
+    /// <summary>
+    /// Where a printed name's slash BASS begins at or after <paramref name="from"/> — the
+    /// first <c>/</c> that is not the one inside <c>6/9</c> — or −1.
+    /// </summary>
+    /// <remarks>
+    /// Grammar evaluation 4, 2026-11-13 (owner's decision, the common jazz spelling): the
+    /// 6/9 chord prints as <c>F6/9</c>, so "the first slash" stopped being the bass's. The
+    /// two are told apart by what follows: a bass is a NOTE LETTER (or, in a Roman degree, a
+    /// numeral, an accidental or a degree digit after a name that holds no <c>6/9</c>), the
+    /// six-nine's slash stands between its <c>6</c> and its <c>9</c>. The one reader, for the
+    /// glyph run, the MusicXML harmony and the entry parser (<c>F6/9/A</c>).
+    /// </remarks>
+    public static int BassSlash(string text, int from = 0)
+    {
+        for (int i = text.IndexOf('/', from); i >= 0; i = text.IndexOf('/', i + 1))
+            if (!(i > 0 && text[i - 1] == '6' && i + 1 < text.Length && text[i + 1] == '9'))
+                return i;
+        return -1;
+    }
 }
 
 /// <summary>One chord tone: a diatonic step above the root (0=root, 2=third,
@@ -206,38 +226,23 @@ public static class ChordQualityRegistry
         [ChordQuality.Major13] = [new(0, 0), new(2, 4), new(4, 7), new(6, 11), new(8, 14), new(12, 21)],
     };
 
-    private static readonly Dictionary<ChordQuality, string> Suffix = new()
+    // THE PRINTED SUFFIX OF A REGISTERED QUALITY IS NOT A TABLE: it is built from the tones
+    // above by the one name builder (ChordFormula.NameOf — the common jazz spelling, owner's
+    // decision 2026-11-13, grammar evaluation 4), so a registered quality and an assembled
+    // one with one more tone are spelled by the same rules: C7-9 is "7(♭9)" exactly as
+    // C7(b9, #11) is "7(♭9♯11)". Until that day two tables stood here — the words
+    // ("maj7", "7♭5", "m7♭5") and the symbols — and the assembled qualities went by
+    // LilyPond's Ignatzek rules beside them. Built once per quality and style.
+    private static readonly Dictionary<(ChordQuality, Semantics.ChordQualityStyle), (string Suffix, int Baseline)> Names = BuildNames();
+
+    private static Dictionary<(ChordQuality, Semantics.ChordQualityStyle), (string Suffix, int Baseline)> BuildNames()
     {
-        [ChordQuality.Major] = "",
-        [ChordQuality.Minor] = "m",
-        [ChordQuality.Diminished] = "dim",
-        [ChordQuality.Augmented] = "aug",
-        [ChordQuality.Dominant7] = "7",
-        [ChordQuality.Major7] = "maj7",
-        [ChordQuality.Minor7] = "m7",
-        [ChordQuality.MinorMajor7] = "m maj7",
-        [ChordQuality.Diminished7] = "dim7",
-        [ChordQuality.HalfDiminished7] = "m7♭5",
-        [ChordQuality.Major6] = "6",
-        [ChordQuality.Minor6] = "m6",
-        [ChordQuality.Dominant9] = "9",
-        [ChordQuality.Major9] = "maj9",
-        [ChordQuality.Minor9] = "m9",
-        [ChordQuality.Sus2] = "sus2",
-        [ChordQuality.Sus4] = "sus4",
-        [ChordQuality.Dominant7Sus4] = "7sus4",
-        [ChordQuality.Dominant7Flat5] = "7♭5",
-        [ChordQuality.Dominant7Sharp5] = "7♯5",
-        [ChordQuality.Dominant7Flat9] = "7♭9",
-        [ChordQuality.Dominant7Sharp9] = "7♯9",
-        [ChordQuality.Dominant7Sharp11] = "7♯11",
-        [ChordQuality.MajorAdd9] = "add9",
-        [ChordQuality.Dominant11] = "11",
-        [ChordQuality.Dominant13] = "13",
-        [ChordQuality.Minor11] = "m11",
-        [ChordQuality.Minor13] = "m13",
-        [ChordQuality.Major13] = "maj13",
-    };
+        var names = new Dictionary<(ChordQuality, Semantics.ChordQualityStyle), (string Suffix, int Baseline)>();
+        foreach (var (quality, tones) in Tones)
+            foreach (var style in new[] { Semantics.ChordQualityStyle.Symbols, Semantics.ChordQualityStyle.Words })
+                names[(quality, style)] = ChordFormula.NameOf(tones, style);
+        return names;
+    }
 
     // Entry tokens (after the ':') that select each quality. Several spellings map
     // to the same quality (m / min, maj7 / maj, m7b5 / m7.5-).
@@ -351,27 +356,21 @@ public static class ChordQualityRegistry
     // run (ChordNameGlyphRun's remark) — so these are the CHARACTERS LilyPond names the four
     // chords with, set on the baseline at the name's own size. The same four characters
     // RomanSuffix has always used for the same four qualities.
-    private static readonly Dictionary<ChordQuality, string> SymbolSuffix = new()
-    {
-        [ChordQuality.Diminished] = "°",
-        [ChordQuality.Augmented] = "+",
-        [ChordQuality.HalfDiminished7] = "ø",
-        [ChordQuality.Diminished7] = "°7",
-        // The major seventh: LilyPond's majorSevenSymbol, which is a DRAWN TRIANGLE and is a
-        // separate property from the exception table above — its default is the triangle, so
-        // both belong to the same "LilyPond's own picture" word. The character here only
-        // CARRIES it; Svg.Layout.ChordNameGlyphRun.TriangleCarrier is where it is drawn, and
-        // says why it is never set as text.
-        // LILYPOND-REF: ly/engraver-init.ly majorSevenSymbol (line 947) — the ChordNames
-        //   property, whiteTriangleMarkup by default;
-        // LILYPOND-REF: scm/chord-ignatzek-names.scm name-step (lines 162-177) — the symbol
-        //   replaces the number when the step is 7 and its alteration is 0, which is what
-        //   makes it the `maj` of every one of these four and of nothing else.
-        [ChordQuality.Major7] = "△",
-        [ChordQuality.Major9] = "△9",
-        [ChordQuality.Major13] = "△13",
-        [ChordQuality.MinorMajor7] = "m△",
-    };
+    // (ChordFormula.NameOf's exception arm holds those four signs — °, +, ø, °7 — since
+    // 2026-11-13; this remark is the table's that stood here.)
+    // The major seventh: LilyPond's majorSevenSymbol, which is a DRAWN TRIANGLE and is a
+    // separate property from the exception table above — its default is the triangle, so
+    // both belong to the same "LilyPond's own picture" word. The character the name carries
+    // only CARRIES it; Svg.Layout.ChordNameGlyphRun.TriangleCarrier is where it is drawn, and
+    // says why it is never set as text.
+    // LILYPOND-REF: ly/engraver-init.ly majorSevenSymbol (line 947) — the ChordNames
+    //   property, whiteTriangleMarkup by default;
+    // LILYPOND-REF: scm/chord-ignatzek-names.scm name-step (lines 162-177) — the symbol
+    //   REPLACES the number when the step is 7 and its alteration is 0 (LilyPond's C△).
+    // ⚠️ LILYSHARP-OWN since 2026-11-13 (owner's decision, the common jazz spelling): the
+    // number is printed AFTER the triangle — C△7, C△9, C△13, Cm△7 — where LilyPond prints
+    // C△ for the seventh alone. Departs from LilyPond in the one digit; goes away for a
+    // chord with no major seventh; observed by ChordFormulaTests.
 
     /// <summary>The tones (diatonic step + semitone above root) of a quality.</summary>
     public static IReadOnlyList<ChordToneSpec> GetTones(ChordQuality quality) => Tones[quality];
@@ -411,15 +410,10 @@ public static class ChordQualityRegistry
     /// </remarks>
     public static int BaselineSuffixLength(ChordQuality quality, Semantics.ChordQualityStyle style)
     {
-        string suffix = GetSuffix(quality, style);
-        if (suffix.Length == 0)
-            return 0;
-        // The exception table's two baseline symbols, whole or followed by a raised digit.
-        if (suffix[0] is '°' or '+')
-            return 1;
-        // The minor modifier — the same leading `m` DropMinorModifier removes, so the two
-        // cannot disagree about which character it is.
-        return HasMinorThird(quality) && suffix[0] == 'm' ? 1 : 0;
+        // The name builder says it with the name (ChordFormula.NameOf, since 2026-11-13): the
+        // exception table's two baseline symbols, whole or followed by a raised digit, and the
+        // minor modifier — the same leading `m` DropMinorModifier removes.
+        return Names[(quality, style)].Baseline;
     }
 
     /// <summary>
@@ -455,8 +449,7 @@ public static class ChordQualityRegistry
     /// vocabulary beside the one the score asked for, in silence (<see cref="Semantics.ChordSpelling"/>).
     /// </remarks>
     public static string GetSuffix(ChordQuality quality, Semantics.ChordQualityStyle style)
-        => style == Semantics.ChordQualityStyle.Symbols && SymbolSuffix.TryGetValue(quality, out var s)
-            ? s : Suffix[quality];
+        => Names[(quality, style)].Suffix;
 
     /// <summary>
     /// Resolves a quality token (text after the <c>:</c>, e.g. "m7"); returns false
@@ -1066,8 +1059,9 @@ public sealed record ChordStructure(
             return false;
 
         // DEGREE[/TARGET][/BASS]: a numeral after a '/' is the function's target (once, and
-        // before the bass), a digit is the bass (last). See ToRomanNumeral's remarks.
-        var parts = s.Split('/');
+        // before the bass), a digit is the bass (last). See ToRomanNumeral's remarks. The
+        // printed 6/9 (I6/9) is the quality `69` first, as in a name entry.
+        var parts = SixNineAsEntry(s).Split('/');
         if (parts.Length > 3)
             return false;
         (int Step, int Alter)? target = null;
@@ -1284,6 +1278,9 @@ public sealed record ChordStructure(
         s = ChordSymbolSpelling.Ascii(s);
         if (!ChordSymbolSpelling.SplitAlterations(s, out string symbol, out var alterations, out refusal))
             return false;
+        // The 6/9 chord as it prints (F6/9, owner's decision 2026-11-13): its slash is the
+        // quality's, the bass's is the next one (F6/9/A).
+        symbol = SixNineAsEntry(symbol);
         int slash = symbol.IndexOf('/');
         string main = slash >= 0 ? symbol.Substring(0, slash) : symbol;
         string? bass = slash >= 0 ? symbol.Substring(slash + 1) : null;
@@ -1310,6 +1307,13 @@ public sealed record ChordStructure(
         result = new ChordStructure(step, alter, quality, bassStep, bassAlter, BassIsAdded: added, Formula: formula);
         return true;
     }
+
+    /// <summary>A written symbol with the printed <c>6/9</c> as the entry grammar's <c>69</c>
+    /// (<see cref="ChordSymbolText.BassSlash"/> tells that slash from a bass's).</summary>
+    private static string SixNineAsEntry(string symbol)
+        => symbol.Contains("6/9", System.StringComparison.Ordinal)
+            ? symbol.Replace("6/9", "69", System.StringComparison.Ordinal)
+            : symbol;
 
     /// <summary>Whether the pitch class of <paramref name="bassStep"/>/<paramref name="bassAlter"/>
     /// is one of <paramref name="tones"/> above the root — the inversion test

@@ -40,12 +40,31 @@ namespace LilySharp.Core.Tablature;
 /// <param name="SlideFromPrevious">A glissando (<c>@glissando</c>, <c>@slide</c>) runs from the
 /// previous note to this one: a slide is one finger along one string, so the two stay on a
 /// string where one can play both (found 2026-11-13, grammar evaluation 3: its two ends were
-/// put on neighbouring strings, the line drawn between them). The general planner reads it;
-/// the bass's, frozen, does not.</param>
+/// put on neighbouring strings, the line drawn between them) — and a hammer-on or pull-off under
+/// its slur, which is one string for the same reason. The general planner reads it; the bass's,
+/// frozen, reads <see cref="GlissandoFromPrevious"/> alone.</param>
+/// <param name="GlissandoFromPrevious">The part of <see cref="SlideFromPrevious"/> that is a
+/// drawn SLIDE — <c>@slide</c> / <c>@glissando</c> on the previous note, not a hammer-on or a
+/// pull-off. The bass planner keeps its two ends on one string (owner's decision 2026-11-13,
+/// <see cref="BassFingeringPlanner"/>'s remark); its legato letters stay as the frozen planner
+/// plays them.</param>
 public readonly record struct TabEvent(
     int Midi, int FixedString, double TimeToMove, bool HandFree, bool SlurFromPrevious,
     int ChordLow = 0, int ChordHigh = 0, bool TiedFromPrevious = false, bool AfterFall = false,
-    bool SlideFromPrevious = false);
+    bool SlideFromPrevious = false, bool GlissandoFromPrevious = false)
+{
+    /// <summary>Whether one string of <paramref name="tuning"/> plays both pitches within the
+    /// fretboard (frets 0–24) — what a slide between them needs. When none does, the planners
+    /// leave the two ends where they would stand without the slide, and the tab says so
+    /// (LYS5005).</summary>
+    public static bool ShareAString(int midiA, int midiB, int[] tuning)
+    {
+        foreach (int open in tuning)
+            if (midiA - open is >= 0 and <= 24 && midiB - open is >= 0 and <= 24)
+                return true;
+        return false;
+    }
+}
 
 /// <summary>
 /// The costs the fingering planner weighs.

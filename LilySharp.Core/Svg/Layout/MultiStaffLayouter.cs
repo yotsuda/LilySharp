@@ -4436,17 +4436,23 @@ internal sealed class MultiStaffLayouter
                     // the INSIDE profile (its support), then the collision pass against the
                     // accumulated one. The solved lines and rows travel with the set so the
                     // draw uses the exact Y this profile reserved.
+                    // ⚠️ THE WORDS FIRST since 2026-11-13: under the bracket style the una corda
+                    // is words alone beside the other two families' lines (PedalStyles, the
+                    // owner's decision), and it is the family nearest the staff (pedal-three.ly's
+                    // order: una corda, sostenuto, sustain), so its rows are solved before the
+                    // lines that must clear them. Under `pedal text` and `pedal mixed` one of the
+                    // two solves is empty, as before, and the order says nothing.
+                    var textRows = PedalEngraver.SolveAndSeedText(
+                        score, staff, thisStaff, measureLayouts, inSky.Down, sky.Down);
                     var (bracketLines, mixedRows) = PedalEngraver.SolveAndSeed(
                         score, staff, thisStaff, measureLayouts, inSky.Down, sky.Down);
                     if (layoutPass)
                         pedalLines.Add(bracketLines);
-                    var textRows = PedalEngraver.SolveAndSeedText(
-                        score, staff, thisStaff, measureLayouts, inSky.Down, sky.Down);
-                    // Mutually exclusive by style (mixed emits mixedRows, text emits
-                    // textRows), so the union is whichever is non-empty.
+                    // A family's rows come from one solve or the other, never both.
                     if (layoutPass)
-                        pedalRows.Add(mixedRows.IsDefaultOrEmpty || mixedRows.Length == 0
-                            ? textRows : mixedRows);
+                        pedalRows.Add(mixedRows.IsDefaultOrEmpty || mixedRows.Length == 0 ? textRows
+                            : textRows.IsDefaultOrEmpty || textRows.Length == 0 ? mixedRows
+                            : textRows.AddRange(mixedRows));
 
                     // The preview's @todo memos of THIS staff that stand between it and a
                     // neighbour (LayoutOptions.TodoBands; the memos at the system's edge are

@@ -103,6 +103,11 @@ public readonly record struct TabFit(string Voice, TuningType Tuning, IReadOnlyL
 /// (<c>\7</c> on six strings), how many strings it has — the fret then says nothing.</param>
 public record TabStringUnplayableWarning(int SourcePosition, int StringNumber, int Fret, int StringCount = 0);
 
+/// <summary>A slide (<c>@slide</c>, <c>@glissando</c>) whose two notes no one string of the
+/// tuning plays (LYS5005): the tab shows them on <see cref="FromString"/> and
+/// <see cref="OntoString"/>. <see cref="SourcePosition"/> points at the note the slide leaves.</summary>
+public record TabSlideAcrossStringsWarning(int SourcePosition, int FromString, int OntoString);
+
 /// <summary>Two notes of a chord written on one string, both playable on it (LYS1063): both are
 /// kept there as written, so the tab draws two frets on one line. <see cref="SourcePosition"/>
 /// points at the chord.</summary>

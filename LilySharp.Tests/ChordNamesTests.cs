@@ -269,7 +269,7 @@ public sealed class ChordNamesTests
         Assert.Equal(2, chords.Count);
         // The DRAWN symbols: a major seventh is LilyPond's triangle under the default
         // vocabulary, and the bass keeps its own letter after the slash.
-        Assert.Equal(new[] { "F△/E", "F△/G" }, chords.Select(c => c.ChordText));
+        Assert.Equal(new[] { "F△7/E", "F△7/G" }, chords.Select(c => c.ChordText));
     }
 
     [Fact]

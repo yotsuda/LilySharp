@@ -53,7 +53,7 @@ public class ChordNameTests
     /// drawn triangle and Lily#'s default vocabulary is LilyPond's, so the symbol the page
     /// carries is the root plus the triangle's carrier character. Written from
     /// <c>ChordNameGlyphRun.TriangleCarrier</c> so the two cannot drift.</summary>
-    private static readonly string DrawnCmaj7 = "C" + ChordNameGlyphRun.TriangleCarrier;
+    private static readonly string DrawnCmaj7 = "C" + ChordNameGlyphRun.TriangleCarrier + "7";   // C△7 since 2026-11-13 (the number after the triangle)
 
     [Fact]
     public void ParseChordName_SimpleChord()
@@ -136,7 +136,7 @@ public class ChordNameTests
     {
         // @chord(F#m7-5) resolves to the half-diminished quality; the canonical
         // symbol spells both accidentals (root sharp, the b5 as flat).
-        Assert.Equal("F♯m7♭5", Chord("c4@chord(F#m7-5) |"));  // half-diminished
+        Assert.Equal("F♯m7(♭5)", Chord("c4@chord(F#m7-5) |"));  // half-diminished
     }
 
     [Theory]

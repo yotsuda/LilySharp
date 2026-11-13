@@ -547,7 +547,9 @@ internal sealed partial class LayoutEngine
     private static bool KeepPedalTextMark(MusicMarkItem m, PedalStyle style)
     {
         if (!IsPedalMark(m.Type)) return true;
-        return style switch
+        // The mark's own family's style (PedalStyles, owner's decision 2026-11-13): under the
+        // bracket style an una corda keeps both its words and a sostenuto its leading one.
+        return PedalStyles.Of(style, m.Type) switch
         {
             PedalStyle.Text => true,
             PedalStyle.Mixed => !IsPedalOffMark(m.Type),

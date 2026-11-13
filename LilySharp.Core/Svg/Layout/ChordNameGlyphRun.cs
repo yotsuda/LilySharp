@@ -503,7 +503,9 @@ internal static class ChordNameGlyphRun
         int superEnd = text.Length;
         if (superStart >= 0 && superStart < text.Length)
         {
-            int slash = text.IndexOf('/', superStart);
+            // The BASS's slash: a 6/9 chord's own stands inside the raised run (F6/9, owner's
+            // decision 2026-11-13 — Music.ChordSymbolText.BassSlash).
+            int slash = Music.ChordSymbolText.BassSlash(text, superStart);
             int bracket = text.IndexOf(" (", superStart, System.StringComparison.Ordinal);
             if (bracket >= 0 && (slash < 0 || bracket < slash)) slash = bracket;
             if (slash >= 0) superEnd = slash;
@@ -516,8 +518,12 @@ internal static class ChordNameGlyphRun
         int bracketEnd = text.Length;
         if (bracketStart >= 0 && bracketStart < text.Length)
         {
-            int end = text.IndexOfAny(['/', ')'], bracketStart);
-            if (end >= 0) bracketEnd = end;
+            // The bracketed name's run ends at ITS bass or at the bracket's own `)` — the last
+            // character, since a name holds parentheses of its own since 2026-11-13
+            // ("E♭7(♭9) (C7(♭9))": the first `)` after the start is the alteration list's).
+            int end = Music.ChordSymbolText.BassSlash(text, bracketStart);
+            if (end < 0) end = text.LastIndexOf(')');
+            if (end >= bracketStart) bracketEnd = end;
         }
         else
         {

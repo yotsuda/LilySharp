@@ -41,9 +41,11 @@ namespace LilySharp.Core.Music;
 /// so <c>C7-9</c> and its tables are unchanged and only a new tone set reaches this type.
 /// </para>
 /// <para>
-/// THE NAME is LilyPond's, computed from the tones the way LilyPond computes it
-/// (<see cref="Name"/>), and the twin hands the tones to LilyPond explicitly
-/// (<see cref="LilyPondModifier"/>), so LilyPond prints the same name for the same chord.
+/// THE NAME is the common jazz spelling, built from the tones by rule (<see cref="NameOf"/>
+/// — the owner's decision 2026-11-13, which overrides the 2026-10-06 approval of LilyPond's
+/// Ignatzek names recorded here until then). The twin hands the tones to LilyPond explicitly
+/// (<see cref="LilyPondModifier"/>) and LilyPond names them by ITS rules, so the twin's
+/// names are LilyPond's and differ from the page's wherever the two rule sets do.
 /// </para>
 /// </remarks>
 public sealed class ChordFormula : System.IEquatable<ChordFormula>
@@ -220,118 +222,175 @@ public sealed class ChordFormula : System.IEquatable<ChordFormula>
     /// <see cref="ChordQualityRegistry.HasMinorThird(ChordQuality)"/>).</summary>
     public bool HasMinorThird => Tones.Any(t => t.DiatonicStep == 2 && t.Semitone == 3);
 
-    // A tone's alteration as LilyPond's pitch has it: semitones from the major scale's step.
-    private static int Alteration(ChordToneSpec t) => t.Semitone - Major(t.DiatonicStep);
-
-    // LILYPOND-REF: scm/chord-name.scm natural-chord-alteration — FLAT for step 7, else 0.
-    private static int NaturalAlteration(ChordToneSpec t) => t.DiatonicStep == 6 ? -1 : 0;
-
-    private static bool IsNatural(ChordToneSpec t) => Alteration(t) == NaturalAlteration(t);
-
     /// <summary>
     /// The printed suffix (after the root) and how many of its leading characters stand on
     /// the root's baseline (the rest is the superscript), in <paramref name="style"/>.
     /// </summary>
+    public (string Suffix, int Baseline) Name(Semantics.ChordQualityStyle style) => NameOf(Tones, style);
+
+    /// <summary>
+    /// A tone set's printed suffix in THE COMMON JAZZ SPELLING, and how many of its leading
+    /// characters stand on the root's baseline — the one name builder, for an assembled
+    /// quality and for every registered one (<see cref="ChordQualityRegistry.GetSuffix"/>).
+    /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/chord-ignatzek-names.scm:227-301 ignatzek-chord-names — exceptions
-    ///   first; else sus2/sus4 suffixes (a third beside them becomes an addition), the minor
-    ///   third's prefix, the main name (the highest of 7 6 5 4 3), the stacked-thirds run from
-    ///   the fifth up split into alterations and additions, and a natural seventh with only
-    ///   natural extensions named by its top.
-    /// LILYPOND-REF: scm/chord-ignatzek-names.scm:103-209 ignatzek-format-chord-name — the
-    ///   raised group is main + alterations + suffixes + additions; filter-main-name drops a
-    ///   natural 5 or 3, filter-alterations keeps the altered ones and the highest natural one
-    ///   above the fifth, name-step draws majorSevenSymbol for a natural 7 (alteration 0).
-    /// LILYPOND-REF: ly/engraver-init.ly minorChordModifier, additionalPitchPrefix and
-    ///   majorSevenSymbol (lines 945-947) — "m", "add", the triangle.
+    /// <para>
+    /// OWNER'S DECISION 2026-11-13 (grammar evaluation 4; the owner's words: 「コード記号は、
+    /// ジャズの一般的な綴りにして」— "spell the chord symbols the way jazz commonly does"). It
+    /// OVERRIDES the approval of 2026-10-06 recorded on this type until today ("THE NAME is
+    /// LilyPond's, computed from the tones the way LilyPond computes it"): LilyPond's Ignatzek
+    /// rules named a chart's <c>C7(#9, b13)</c> "C7♯9add♭13", its <c>Bbmaj7(#11)</c>
+    /// "B♭△add♯11", its <c>F6(9)</c> "F6add9" and its <c>C13(b9)</c> "C7♭9add13" (the big
+    /// band writer's bigband/r-08), which no chart prints. THE RULES, in the order the name is
+    /// written:
+    /// </para>
+    /// <para>
+    /// ⑴ The minor third's <c>m</c>. ⑵ With a seventh, THE HIGHEST UNALTERED EXTENSION names
+    /// the chord — 7, 9, 11, 13 — whatever stands under it (a 13 over a ♭9 is still a 13:
+    /// <c>C13(♭9)</c>; a 7 with a 13 and no ninth is <c>C13</c>, since the number implies what
+    /// is below it and "add" is never said of a seventh chord); a MAJOR seventh keeps its
+    /// sign and takes the number after it: <c>C△7</c>, <c>C△9</c>, <c>C△13</c> (<c>maj7</c>,
+    /// <c>maj9</c> under <c>chordQualities words</c>). Without a seventh the sixth is
+    /// <c>6</c>, and with a ninth beside it the 6/9 chord, <c>F6/9</c>. ⑶ The suspension
+    /// (<c>sus2</c>, <c>sus4</c>). ⑷ THE ALTERATIONS — ♭5 ♯5 ♭9 ♯9 ♯11 ♭13 — in ascending
+    /// order in ONE pair of parentheses: <c>C7(♯9♭13)</c>, <c>B♭△7(♯11)</c>. ⑸ <c>add</c>
+    /// only for a tone the chain does not explain — a ninth, eleventh or thirteenth over a
+    /// chord with NO seventh, a second or fourth beside the third, a sixth beside a seventh:
+    /// <c>Cadd9</c> straight after the root, in the parentheses anywhere else
+    /// (<c>Cm(add9)</c>, <c>C6(add11)</c>).
+    /// </para>
+    /// <para>
+    /// WHAT STAYS (the same decision: "keep what the page prints today unless it contradicts
+    /// the rules"): the five tone sets with a sign or word of their own — <c>+</c>, <c>°</c>,
+    /// <c>ø</c>, <c>°7</c>, <c>alt</c> — and the power chord's <c>5</c>, matched exactly as
+    /// LilyPond's exception table matches them; the sus names; and an OMITTED third or fifth
+    /// prints nothing (<c>C7omit3</c> is <c>C7</c>), as LilyPond prints it. A natural eleventh
+    /// under a thirteenth is not printed either (<c>Cm13</c> with the eleventh is
+    /// <c>Cm13</c>, as before).
+    /// </para>
+    /// <para>
+    /// THE 6/9 IS WRITTEN WITH A SLASH and cannot be read for a slash chord: a slash BASS is a
+    /// note letter on the root's baseline at the root's size, the <c>6/9</c> is two digits in
+    /// the raised run, and every reader of a printed name finds the bass by that difference
+    /// (<see cref="ChordSymbolText.BassSlash"/>).
     /// LILYPOND-REF: ly/chord-modifiers-init.ly ignatzekExceptionMusic (lines 47-59) — +, °,
-    ///   ø, °7, alt, and the power chord's 5.
+    ///   ø, °7, alt, and the power chord's 5, the exact-match table kept from LilyPond.
+    /// LILYSHARP-OWN: everything else here. LilyPond's own names (scm/chord-ignatzek-names.scm
+    /// ignatzek-chord-names) are what the LilyPond twin still prints — LilyPond names the
+    /// twin's chords itself. Departs from LilyPond in: the number a seventh chord is named by,
+    /// the parentheses, the number after the triangle, 6/9, where "add" is said. Goes away
+    /// for: a triad, a plain 6, 7, 9, 11, 13, m7, sus chord and the six exception sets.
+    /// Observed by <c>ChordFormulaTests</c> (the names).
+    /// </para>
+    /// <para>
     /// ⚠️ The separator LilyPond puts between the raised pieces (chordNameSeparator, half a
-    /// space) is not drawn — the registered qualities' strings have never carried it either.
-    /// Under <c>words</c> the triangle is the word <c>maj</c> and the exception symbols the
-    /// words of the registered qualities (dim, aug, m7♭5, dim7): LILYSHARP-OWN, as for them.
+    /// space) is not drawn, as it never was. Under <c>words</c> the triangle is the word
+    /// <c>maj</c> (after a minor <c>m</c>, a space and the word: <c>Cm maj7</c>, the registered
+    /// quality's spelling since before the formula) and the exception signs are the words
+    /// dim, aug, m7(♭5), dim7.
+    /// </para>
     /// </remarks>
-    public (string Suffix, int Baseline) Name(Semantics.ChordQualityStyle style)
+    internal static (string Suffix, int Baseline) NameOf(
+        IReadOnlyList<ChordToneSpec> tones, Semantics.ChordQualityStyle style)
     {
         bool words = style == Semantics.ChordQualityStyle.Words;
-        var pitches = Tones.Where(t => t.DiatonicStep != 0).ToList();
-        // LilyPond's get-step: the first pitch on that (1-based) step, or none.
-        ChordToneSpec? Get(int step1)
-        {
-            foreach (var p in pitches)
-                if (p.DiatonicStep == step1 - 1)
-                    return p;
-            return null;
-        }
-        string Key() => string.Join(",", pitches.Select(p => p.DiatonicStep + ":" + p.Semitone));
+        var by = new SortedDictionary<int, int>();
+        foreach (var t in tones)
+            if (t.DiatonicStep != 0)
+                by[t.DiatonicStep] = t.Semitone;
 
-        switch (Key())
+        switch (string.Join(",", by.Select(p => p.Key + ":" + p.Value)))
         {
+            case "": return ("", 0);
             case "2:4,4:8": return words ? ("aug", 0) : ("+", 1);
             case "2:3,4:6": return words ? ("dim", 0) : ("°", 1);
-            case "2:3,4:6,6:10": return words ? ("m7♭5", 0) : ("ø", 0);
+            case "2:3,4:6,6:10": return words ? ("m7(♭5)", 1) : ("ø", 0);
             case "2:3,4:6,6:9": return words ? ("dim7", 0) : ("°7", 1);
             case "2:4,4:7,6:10,8:13,9:15,10:18,12:20": return ("alt", 0);
             case "4:7": return ("5", 0);
         }
 
-        var adds = new List<ChordToneSpec>();
-        var suffixes = new List<ChordToneSpec>();
-        foreach (int j in new[] { 2, 4 })
-            if (Get(j) is { } sj)
+        int? At(int step) => by.TryGetValue(step, out int s) ? s : null;
+        static string Spelled(int step, int semitone)
+        {
+            int a = semitone - Major(step);
+            return (a > 0 ? new string('♯', a) : a < 0 ? new string('♭', -a) : "") + (step + 1);
+        }
+
+        int? third = At(2), fifth = At(4), sixth = At(5), seventh = At(6);
+        bool minor = third == 3;
+        // A diminished seventh over its own triad carries the sign with a higher number
+        // (C°9); the exact four-note set was the exception above.
+        bool diminished = minor && fifth == 6 && seventh == 9;
+
+        var main = new StringBuilder();
+        var altered = new List<string>();
+        var added = new List<string>();
+
+        // ⑷ the fifth, when it is not the perfect one (the diminished sign already says its own).
+        if (fifth is int f && f != 7 && !diminished)
+            altered.Add(Spelled(4, f));
+        // A second or a fourth beside the third is an added tone; without one it is the
+        // suspension, below.
+        if (third != null)
+            foreach (int step in new[] { 1, 3 })
+                if (At(step) is int beside)
+                    added.Add("add" + Spelled(step, beside));
+
+        if (seventh is int sev)
+        {
+            // ⑵ the highest unaltered extension; the altered ones are ⑷'s.
+            int top = 7;
+            foreach (var (step, semitone) in by)
             {
-                if (Get(3) is { } third)
-                {
-                    adds.Insert(0, third);
-                    pitches.Remove(third);
-                }
-                suffixes.Insert(0, sj);
+                if (step <= 6)
+                    continue;
+                if (semitone == Major(step) && step is 8 or 10 or 12)
+                    top = step + 1;
+                else if (semitone != Major(step))
+                    altered.Add(Spelled(step, semitone));
             }
-        bool minorPrefix = Get(3) is { } m3 && Alteration(m3) == -1;
-        ChordToneSpec? main = Get(7) ?? Get(6) ?? Get(5) ?? Get(4) ?? Get(3);
-
-        // From the fifth up: the leading run of stacked thirds, and what follows it.
-        var upper = pitches.Where(p => p.DiatonicStep >= 4).ToList();
-        int split = upper.Count == 0 ? 0 : 1;
-        while (split < upper.Count && upper[split].DiatonicStep - upper[split - 1].DiatonicStep == 2)
-            split++;
-        var alterations = upper.Take(split).Where(p => p != main).ToList();
-        adds.AddRange(upper.Skip(split).Where(p => p != main));
-
-        if (main is { DiatonicStep: 6 } seventh && IsNatural(seventh)
-            && alterations.Any(a => a.DiatonicStep > 6) && alterations.All(IsNatural))
+            if (sev == 11)
+                main.Append(words ? (minor ? " maj" : "maj") : "△");
+            else if (sev != 10 && !diminished)
+                altered.Insert(altered.Count > 0 && altered[0].EndsWith('5') ? 1 : 0, Spelled(6, sev));
+            main.Append(top);
+            if (sixth is int six)
+                added.Add("add" + Spelled(5, six));
+        }
+        else
         {
-            main = alterations[^1];
-            alterations.Clear();
+            bool nineBeside = sixth == 9 && At(8) == 14;
+            if (sixth is int six)
+                main.Append(six == 9 ? (nineBeside ? "6/9" : "6") : Spelled(5, six));
+            foreach (var (step, semitone) in by)
+                if (step > 6 && !(nineBeside && step == 8))
+                    added.Add("add" + Spelled(step, semitone));
         }
 
-        string Step(ChordToneSpec p)
+        // ⑶ the suspension: no third, and the second or the fourth in its place.
+        if (third == null)
+            foreach (int step in new[] { 3, 1 })
+                if (At(step) is int sus)
+                    main.Append("sus").Append(Spelled(step, sus));
+
+        string prefix = diminished ? (words ? "dim" : "°") : minor ? "m" : "";
+        int baseline = diminished ? (words ? 0 : 1) : minor ? 1 : 0;
+        var name = new StringBuilder(prefix).Append(main);
+        // ⑸ `add` straight after the root, in the parentheses anywhere else.
+        if (name.Length == 0 && altered.Count == 0)
+            foreach (var a in added)
+                name.Append(a);
+        else if (altered.Count + added.Count > 0)
         {
-            if (Alteration(p) == 0 && p.DiatonicStep == 6)
-                return words ? "maj7" : "△";
-            int a = Alteration(p) - NaturalAlteration(p);
-            return (a > 0 ? new string('♯', a) : a < 0 ? new string('♭', -a) : "") + (p.DiatonicStep + 1);
+            name.Append('(');
+            foreach (var a in altered)
+                name.Append(a);
+            foreach (var a in added)
+                name.Append(a);
+            name.Append(')');
         }
-
-        var raised = new StringBuilder();
-        if (main is { } mn && !(IsNatural(mn) && mn.DiatonicStep is 4 or 2))
-            raised.Append(Step(mn));
-        var filtered = alterations.Where(a => !IsNatural(a)).ToList();
-        if (alterations.Count > 0 && IsNatural(alterations[^1]) && alterations[^1].DiatonicStep > 4)
-            filtered.Add(alterations[^1]);
-        foreach (var a in filtered)
-            raised.Append(Step(a));
-        foreach (var s in suffixes)
-            raised.Append("sus").Append(Step(s));
-        foreach (var a in adds)
-            raised.Append("add").Append(Step(a));
-
-        string text = raised.ToString();
-        // Under words the triangle's word stands before a number LilyPond's symbol carried:
-        // `△9` is `maj9`, as the registered maj9 prints.
-        if (words && text.StartsWith("maj7", System.StringComparison.Ordinal) && text.Length > 4 && char.IsDigit(text[4]))
-            text = "maj" + text.Substring(4);
-        return minorPrefix ? ("m" + text, 1) : (text, 0);
+        return (name.ToString(), baseline);
     }
 
     /// <summary>

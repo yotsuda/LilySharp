@@ -2041,7 +2041,7 @@ score { staff gtr  tab gtr }
 | Tuning | The part's `instrument` (`guitar` `bass` `bass5` `bass6` `ukulele` `mandolin` `banjo`, and the bowed strings), else the part's `tuning WORD`, else — for one score — the word before the part: `tab guitarDropD gtr`. No instrument: a guitar. `tab gtr tuning guitarDropD` is an error naming the two right spellings. |
 | Dropped tunings | `part gtr { instrument guitar  tuning guitarDropD }` also moves the part's range (LYS1052) to the tuning's strings: its low D is in range. |
 | A tuning of your own | The strings written out, quoted, where the tuning word stands: `part gtr { instrument guitar  tuning "d, a, d g a d'" }`, or for one tab `tab "d, a, d g a d'" gtr`. From the highest string number (normally the lowest string) to string 1, spaced; each an absolute pitch name as a note is written under `octave absolute`, at the pitch the string **sounds**; 4 to 8 strings; a re-entrant tuning as it is strung (`"g' c' e' a'"`). A bass part's strings are an octave below its written notes (`instrument bass  tuning "d,, a,, d, g,"`); a list with no string above `c` is fingered as a bass and wears no capo. The frets, `\N`, the range, the chord shapes and the diagrams follow the list. A list that spells no tuning is an error (**LYS4068**); a bass part's list written at its notes' pitch is warned with the list an octave down. LilyPond gets `stringTunings = \stringTuning <d, a, d g a d'>`. `layout { chordTuning … }` takes the words only. |
-| Strings and frets | Chosen by the tab: low positions, the hand kept where it is, one string a chord note, frets 0–24. A tie keeps its string (and the held note's number is dropped); a `@glissando` / `@slide` keeps both notes on one string where one can play both; a slur does not. |
+| Strings and frets | Chosen by the tab: low positions, the hand kept where it is, one string a chord note, frets 0–24. A tie keeps its string (and the held note's number is dropped); a `@glissando` / `@slide` keeps both notes on one string where one can play both — a slide is one finger along one string, on a bass as on a guitar (2026-11-13) — and warns where none can (**LYS5005**: the tab then shows the strings it would without the slide); a slur does not. |
 | `\N` | Asks for string N (1 = the highest): `c'4\3`; on chord members, `<e'\1 b\2>`. Two members on one string are LYS1063, one pitch twice without two strings LYS1064. A string the tuning lacks (`\7`), or one that cannot play the note, warns and is chosen again (**LYS5003**). |
 | Out of the strings | A note below the lowest string or above fret 24 warns (**LYS5002**) and is left off the tab, in a chord too. A tab in another instrument's tuning names its octave: `tab bass5 melody as 8vb` (LYS5004 proposes it). |
 | Capo | Under the file's `capo N` the frets count from the capo; a note below the capo on every string is LYS5002 and left off. A bass's tab ignores the capo. See *Chord Diagrams*. |
@@ -2438,7 +2438,7 @@ layout chart {
   sectionLabels plain      // the name with no frame (LilyPond's own picture)
   sectionLabelAlign left   // its left edge on the bar line, clear of the bar before
   partCombineText false    // no a2 / Solo words
-  chordQualities words     // Cdim, Caug, Cm7♭5, Cdim7 — spelled out
+  chordQualities words     // Cdim, Caug, Cm7(♭5), Cdim7, Cmaj7 — spelled out
   minorChords lower        // a, a7 — a lowercase root, no m
   chordDiagrams none       // no chord diagrams at all, even for written shapes
 }
@@ -2559,10 +2559,12 @@ is unchanged by it, since a Roman degree already spells those qualities its own 
 
 How a chord's **quality** is spelled after the root. `symbols` is the **default** and is
 LilyPond's own picture: the four qualities its exception table names print `C°`, `C+`,
-`Cø`, `C°7`, and a major seventh prints its drawn triangle. Every other quality keeps its
-word, because LilyPond spells the rest with digits too. `words` spells the qualities out
-instead — `Cdim`, `Caug`, `Cm7♭5`, `Cdim7`, `Cmaj7` — the lead-sheet convention, and what
-every Lily# book printed before 2026-09-12.
+`Cø`, `C°7`, and a major seventh prints its drawn triangle — with its number after it since
+2026-11-13 (`C△7`, `C△9`, `C△13`; LilyPond prints the triangle alone for the seventh). Every
+other quality keeps its word. `words` spells the qualities out
+instead — `Cdim`, `Caug`, `Cm7(♭5)`, `Cdim7`, `Cmaj7` — the lead-sheet convention, and what
+every Lily# book printed before 2026-09-12. How the rest of a name is built — the number, the
+parentheses, `add`, 6/9 — is the same under both words: see *Chord Names*.
 
 **`ottavaLine`** — how an ottava's line is drawn: `dashed` (the default and LilyPond's: dashes
 and a hook at its end) or `wave` (a wavy line with no hook, as in old prints; the twin writes
@@ -2710,6 +2712,24 @@ The drawing is a part property: `part lh { clef bass pedal text }` picks "Ped. �
 `pedal bracket` (what a part without the property draws) or `pedal mixed` (text at the
 start, bracket for the hold).
 
+The three pedals are told apart (2026-11-13). An unlabelled bracket reads as the damper pedal,
+so the plain bracket is the **sustain** pedal's alone:
+
+| part's `pedal` | `@sustain` | `@sostenuto` | `@unaCorda` |
+|---|---|---|---|
+| `bracket` (the default) | a bracket | "Sost. Ped." and then the bracket line | the words "una corda" … "tre corde" |
+| `text` | "Ped." … "*" | "Sost. Ped." … "*" | "una corda" … "tre corde" |
+| `mixed` | "Ped." and the line | "Sost. Ped." and the line | "una corda" and the line |
+
+The default row's last two are LilyPond's own defaults for those pedals (`pedalSostenutoStyle
+'mixed`, `pedalUnaCordaStyle 'text`) with LilyPond's strings; the twin sets the three styles so.
+With two pedals down at once the words stand on rows of their own, the una corda nearest the
+staff, clear of each other and of the lines. In the MIDI each pedal is its own controller —
+sustain 64, sostenuto 66, una corda (soft) 67 — down and up at the onset of the note that
+carries the mark. MusicXML writes `<pedal type="start|sostenuto|stop">` with the `line` / `sign`
+of the picture, and the una corda as its words with `<sound soft-pedal="yes|no"/>` (MusicXML's
+`<pedal>` has no soft type).
+
 ```
 c4@sustain d e f@!sustain |           // Sustain pedal
 c4@sustain d e f | g4@sustain a b c@!sustain |   // pedal change on g
@@ -2824,6 +2844,29 @@ C7omit3. Inside the parentheses spaces and commas both separate: `C7(b9, #11)`, 
 has a seventh (`C7(9)` = C9, `Cmaj7(9)` = Cmaj9) and an added tone otherwise (`C(9)` = Cadd9,
 `C6(9)` = C69). A `b`/`#` glued after a letter or digit inside the quality stays refused
 (`C7b9`, `Cm7b5`): write `C7(b9)` or `C7-9`.
+
+**How a symbol prints** — the common jazz spelling (owner's decision 2026-11-13; until then
+LilyPond's Ignatzek names, which printed a chart's `C7(#9, b13)` as C7♯9add♭13). However it was
+written, one tone set has one printed name, built by these rules:
+
+| rule | written | prints |
+|---|---|---|
+| the highest unaltered extension names a seventh chord | `C9`, `C7(13)`, `C7add13`, `Cm7add11` | C9, C13, C13, Cm11 |
+| …whatever is altered under it | `C13(b9)`, `C13(#11)`, `C9(#11)` | C13(♭9), C13(♯11), C9(♯11) |
+| a major seventh: the triangle, then the number | `Cmaj7`, `Cmaj9`, `Cmaj13`, `Cm(maj7)` | C△7, C△9, C△13, Cm△7 |
+| the alterations ♭5 ♯5 ♭9 ♯9 ♯11 ♭13, ascending, in one pair of parentheses | `C7(#9, b13)`, `C7-5`, `Bbmaj7(#11)`, `C7(b9, #11, b13)` | C7(♯9♭13), C7(♭5), B♭△7(♯11), C7(♭9♯11♭13) |
+| `add` only without a seventh: bare after the root, in the parentheses elsewhere | `Cadd9`, `Cm(add9)`, `Cadd11`, `Cadd2` | Cadd9, Cm(add9), Cadd11, Cadd2 |
+| a sixth with a ninth is the 6/9 chord | `F6(9)`, `F69`, `F6/9`, `F6/9/A` | F6/9, F6/9, F6/9, F6/9/A |
+| unchanged: the signs, `alt`, the power chord, the sus names; an omission prints nothing | `Cdim`, `Caug`, `Cm7-5`, `Cdim7`, `C7alt`, `C5`, `C7sus4`, `C13sus4`, `C7omit3` | C°, C+, Cø, C°7, Calt, C5, C7sus4, C13sus4, C7 |
+
+The 6/9's slash stands inside the raised run between two digits; a slash **bass** is a note
+letter on the root's line (`F6/9/A`), so the two cannot be read for each other, and `F6/9` is
+read back as `F69`. Under `chordQualities words` the triangle is the word (`Cmaj7`, `Cmaj9(♯11)`,
+`Cm maj7`) and the signs are `dim`, `aug`, `m7(♭5)`, `dim7`; everything else is the same. The
+notes a chord plays, its MusicXML `<harmony>` (kind and degrees) and its diagram are the tones'
+and did not change; the LilyPond twin hands LilyPond the tones, and LilyPond prints **its own**
+names there (C7♯9add♭13, C6add9, C△) — `chordNameExceptions` could carry the page's names only
+as one hand-set markup per tone set, which would not be LilyPond's picture either.
 
 A symbol that is no chord — refused, or a quality Lily# does not know — is warned wherever it
 is written, with the fix: in an `@chord` it names nothing and is ignored (LYS1008); in a

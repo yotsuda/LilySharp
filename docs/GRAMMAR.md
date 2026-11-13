@@ -1161,10 +1161,11 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
    How a chord's QUALITY is spelled after the root. 'symbols' is the DEFAULT and is
    LilyPond's own picture: the four qualities its exception table names print C°, C+, Cø,
    C°7 (ly/chord-modifiers-init.ly ignatzekExceptionMusic) and a major seventh prints its
-   drawn triangle (whiteTriangleMarkup), while every other quality keeps its word, because
-   LilyPond spells the rest with digits too. 'words' spells the qualities out instead —
-   Cdim, Caug, Cm7♭5, Cdim7, Cmaj7 — which is the lead-sheet convention, and what every
-   Lily# book printed before 2026-09-12.
+   drawn triangle (whiteTriangleMarkup) — with its number after it since 2026-11-13
+   (C△7, C△9, C△13), where LilyPond prints the triangle alone for the seventh. 'words'
+   spells the qualities out instead — Cdim, Caug, Cm7(♭5), Cdim7, Cmaj7 — which is the
+   lead-sheet convention, and what every Lily# book printed before 2026-09-12. How the rest
+   of a name is built is the same under both words (AssembledQuality's remark below).
 
    minorChords — whether a chord with a MINOR THIRD prints an uppercase root with its 'm'
    ('upper', the default and LilyPond's ##f) or a lowercase root with the 'm' dropped
@@ -1457,6 +1458,12 @@ TuningList     = String ;
 RemoveEmptyValue = 'true' | 'all' | 'false' ;
 
 PedalStyleName = 'bracket' | 'text' | 'mixed' ;
+                 (* 'bracket' (the default) is the SUSTAIN pedal's picture alone since 2026-11-13
+                    (owner's decision): under it a @sostenuto span is "Sost. Ped." and its line
+                    and an @unaCorda span the words "una corda" … "tre corde" — LilyPond's own
+                    defaults for the two (pedalSostenutoStyle 'mixed, pedalUnaCordaStyle 'text) —
+                    so no two pedals share an unlabelled bracket. 'text' and 'mixed' style all
+                    three alike. MIDI: sustain CC 64, sostenuto CC 66, una corda CC 67. *)
 
 TranspositionMarker = '8va' | '8vb' | '15ma' | '15mb' ;
 
@@ -1795,7 +1802,7 @@ Alteration     = ( 'b' | '#' | '♭' | '♯' | '-' | '+' ) , ( '5' | '9' | '11' 
 MajorWord      = 'maj' | 'Maj' | 'MAJ' | 'Ma' | 'MA' | 'M' | 'Δ' | '△' ;
 SpelledQuality = (* THE PRINTED SPELLINGS (owner's decisions 2026-10-23, HANDOFF §2 E ⑹ "a+e"),
                     each read as the canonical quality above — one tone set, one structure, one
-                    printed name (the Ignatzek name of the canonical form: Cø7 prints as Cm7♭5 or
+                    printed name (the name of the canonical form: Cø7 prints as Cm7(♭5) or
                     Cø by the chordQualities vocabulary, exactly as Cm7-5 does):
                     MajorWord [N]        the major seventh: CΔ, CΔ7, C△7, CM7, CMa7, CMaj7, CΔ9 (maj9)
                     'ø' | 'Ø' | '0' [7]  the half-diminished seventh: Cø, Cø7, CØ7, C07 (= Cm7-5)
@@ -1840,9 +1847,19 @@ AssembledQuality = [ 'm' | 'min' | 'dim' | 'aug' ] , [ 'maj' ]
                     'add11' asks; 'maj' alone is the major seventh; '-9' with '+9'
                     is 'alt''s (refused alone). A spelling whose tones are a
                     registered quality's IS that quality (C7+9 = the table's 7+9).
-                    The NAME is LilyPond's Ignatzek name computed from the tones
-                    (C9sus4 prints C⁹ˢᵘˢ⁴, Cadd2 prints Cˢᵘˢ²ᵃᵈᵈ³ as LilyPond does),
-                    and 'lysc ly' writes every tone explicitly (c:1.4.5.7.9). *)
+                    THE NAME is the common jazz spelling, built from the tones by rule
+                    (owner's decision 2026-11-13, overriding the Ignatzek names of
+                    2026-10-06 — LilyPond printed C7(#9, b13) as C7♯9add♭13 and Cadd2 as
+                    Csus2add3): the highest unaltered extension names a seventh chord
+                    (C13(♭9), C13 for C7add13); a major seventh is the triangle and its
+                    number (C△7, C△9); the alterations ♭5 ♯5 ♭9 ♯9 ♯11 ♭13 stand ascending
+                    in one pair of parentheses (C7(♯9♭13)); 'add' is said only without a
+                    seventh (Cadd9, Cm(add9)); a sixth with a ninth is C6/9, whose slash is
+                    not a bass's (a bass is a note letter: F6/9/A — and 'F6/9' is read back
+                    as F69); the signs ° + ø °7, 'alt', the power chord's 5 and the sus
+                    names are as before, and an omission prints nothing. 'lysc ly' writes
+                    every tone explicitly (c:1.4.5.7.9) and LilyPond names the twin by ITS
+                    rules, so the twin's names are LilyPond's, not the page's. *)
                  (* THE ENTRY IS THE SYMBOL AS IT PRINTS (decided 2026-08-21,
                     GRAMMAR_AUDIT 8.1): C, Am, G7, F#m, Bb7, Gm7-5, Cmaj7/E. The
                     case is the grammar — an UPPERCASE letter is a root, so 'R'
@@ -2242,7 +2259,8 @@ TabStyle       = 'numbers' | 'full' ;
                     the tab (frets 0-24). A written \N asks for string N, 1 the highest — one
                     the tuning lacks, or one that cannot play the note, is LYS5003 and the
                     string is chosen again. A tie keeps its string, and so does a @glissando
-                    or @slide where one string plays both notes. A slur does not. Under the
+                    or @slide where one string plays both notes, on a bass too (2026-11-13;
+                    where none does the slide crosses strings and is LYS5005). A slur does not. Under the
                     file's `capo N` the frets count FROM the capo (2026-11-13), a note below
                     the capo on every string is LYS5002 and left off, and the tab of a bass
                     ignores the capo. @dead prints a cross for the number - a note, one chord

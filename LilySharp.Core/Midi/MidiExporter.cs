@@ -741,14 +741,27 @@ public sealed class MidiExporter
 
     // Every pedal mark the walk plays, in the order it plays them: the part it is in, and where.
     // (The guitar lines' state is beside ProcessNode: PlayUnderGuitarLines.)
-    private readonly List<(string? Part, int Tick, bool Down)> _pedalLog = new();
+    private readonly List<(string? Part, int Tick, bool Down, int Controller)> _pedalLog = new();
     private bool _anyPedal;
 
-    /// <summary>Whether <paramref name="node"/> is a sustain mark: true `@sustain`, false `@!sustain`, null neither.</summary>
-    private static bool? PedalMark(SyntaxNode node) => node switch
+    /// <summary>Whether <paramref name="node"/> is a pedal mark, and which: the pedal's MIDI
+    /// controller and whether it goes down — `@sustain` / `@!sustain` (CC 64), `@sostenuto` /
+    /// `@!sostenuto` (CC 66), `@unaCorda` / `@!unaCorda` or `@treCorde` (CC 67); null for
+    /// anything else. The last two since 2026-11-13 (grammar evaluation 4): they were drawn
+    /// and exported to MusicXML and LilyPond, and the MIDI said nothing.</summary>
+    /// <remarks>LILYPOND-REF: lily/piano-pedal-performer.cc Piano_pedal_performer — the three
+    /// pedals are controllers 64 (sustain), 66 (sostenuto) and 67 (una corda).</remarks>
+    private static (int Controller, bool Down)? PedalMark(SyntaxNode node) => node switch
     {
-        ArticulationSyntax { Type: ArticulationType.None } a when a.NameToken.Text == "sustain" => true,
-        MusicMarkSyntax { Name: "sustain" } m => !m.IsSpanEnd,
+        // A start is a bare word (an articulation), a terminator a mark.
+        ArticulationSyntax { Type: ArticulationType.None } a when a.NameToken.Text == "sustain" => (PedalChange.Sustain, true),
+        ArticulationSyntax { Type: ArticulationType.None } a when a.NameToken.Text == "sostenuto" => (PedalChange.Sostenuto, true),
+        ArticulationSyntax { Type: ArticulationType.None } a when a.NameToken.Text == "unaCorda" => (PedalChange.Soft, true),
+        ArticulationSyntax { Type: ArticulationType.None } a when a.NameToken.Text == "treCorde" => (PedalChange.Soft, false),
+        MusicMarkSyntax { Name: "sustain" } m => (PedalChange.Sustain, !m.IsSpanEnd),
+        MusicMarkSyntax { Name: "sostenuto" } m => (PedalChange.Sostenuto, !m.IsSpanEnd),
+        MusicMarkSyntax { Name: "unaCorda" } m => (PedalChange.Soft, !m.IsSpanEnd),
+        MusicMarkSyntax { Name: "treCorde" } => (PedalChange.Soft, false),
         _ => null,
     };
 
@@ -767,7 +780,11 @@ public sealed class MidiExporter
         if (_pedalLog.Count == 0)
             return;
         var groups = _playedSpec == null ? [] : GrandStaffPartSets(_playedSpec.Items).Where(g => g.Count >= 2).ToList();
-        foreach (var marks in _pedalLog.GroupBy(e => e.Part is { } part ? groups.FirstOrDefault(g => g.Contains(part))?.Min(StringComparer.Ordinal) ?? part : unclaimedTrack))
+        // Each pedal is its own: a sustain is not lifted by a tre corde.
+        foreach (var byPedal in _pedalLog.GroupBy(e => e.Controller))
+        {
+        int controller = byPedal.Key;
+        foreach (var marks in byPedal.GroupBy(e => e.Part is { } part ? groups.FirstOrDefault(g => g.Contains(part))?.Min(StringComparer.Ordinal) ?? part : unclaimedTrack))
         {
             var members = marks.First().Part is { } one && groups.FirstOrDefault(g => g.Contains(one)) is { } group ? group : new HashSet<string> { marks.Key };
             var changes = new List<PedalChange>();
@@ -780,18 +797,27 @@ public sealed class MidiExporter
                     if (down && changes[^1].Tick == mark.Tick)
                         continue;
                     if (down)
-                        changes.Add(new PedalChange(mark.Tick, false));
-                    changes.Add(new PedalChange(mark.Tick, true));
+                        changes.Add(new PedalChange(mark.Tick, false, controller));
+                    changes.Add(new PedalChange(mark.Tick, true, controller));
                 }
                 else if (down)
-                    changes.Add(new PedalChange(mark.Tick, false));
+                    changes.Add(new PedalChange(mark.Tick, false, controller));
                 down = mark.Down;
             }
             if (down)
-                changes.Add(new PedalChange(midi.EndTick, false));
+                changes.Add(new PedalChange(midi.EndTick, false, controller));
             foreach (var track in midi.Tracks.Where(t => members.Contains(t.Name)))
                 track.Pedals.AddRange(changes);
+            }
         }
+        // One list a track, in tick order, whatever the pedal (a stable sort: a change stays up, then down).
+        foreach (var track in midi.Tracks)
+            if (track.Pedals.Count > 1)
+            {
+                var ordered = track.Pedals.Select((c, i) => (c, i)).OrderBy(x => x.c.Tick).ThenBy(x => x.i).Select(x => x.c).ToList();
+                track.Pedals.Clear();
+                track.Pedals.AddRange(ordered);
+            }
     }
 
     // One line per part the channel plan could not give a channel of its own or a same-sounding
@@ -1007,7 +1033,7 @@ public sealed class MidiExporter
         if (_anyPedal && node is NoteSyntax or ChordSyntax or RestSyntax or BareDurationSyntax or SlashNoteSyntax or ChordRepetitionSyntax or ArpeggioSyntax or DrumNoteSyntax)
             foreach (var child in node.DescendantNodes())
                 if (PedalMark(child) is { } pressed)
-                    _pedalLog.Add((_currentPart, _currentTick, pressed));
+                    _pedalLog.Add((_currentPart, _currentTick, pressed.Down, pressed.Controller));
 
         switch (node)
         {

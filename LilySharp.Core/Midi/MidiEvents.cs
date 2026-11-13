@@ -16,8 +16,23 @@
 
 namespace LilySharp.Core.Midi;
 
-/// <summary>The sustain pedal going down or up at a tick (`@sustain`, `@!sustain`; docs/pedal-playback-design.md).</summary>
-public readonly record struct PedalChange(int Tick, bool Down);
+/// <summary>A pedal going down or up at a tick (`@sustain`, `@!sustain`; docs/pedal-playback-design.md)
+/// — the sustain pedal, or since 2026-11-13 (grammar evaluation 4: the other two were printed and
+/// never played) the sostenuto (`@sostenuto`) or the soft pedal (`@unaCorda` … `@treCorde`), each
+/// on its own MIDI controller.</summary>
+/// <param name="Tick">Where.</param>
+/// <param name="Down">Pressed (127) or lifted (0).</param>
+/// <param name="Controller">The MIDI control change: <see cref="Sustain"/>, <see cref="Sostenuto"/>
+/// or <see cref="Soft"/>.</param>
+public readonly record struct PedalChange(int Tick, bool Down, int Controller = PedalChange.Sustain)
+{
+    /// <summary>CC 64, the damper pedal.</summary>
+    public const int Sustain = 64;
+    /// <summary>CC 66, the sostenuto pedal.</summary>
+    public const int Sostenuto = 66;
+    /// <summary>CC 67, the soft pedal (una corda).</summary>
+    public const int Soft = 67;
+}
 
 /// <summary>
 /// Represents a MIDI note event.

@@ -390,6 +390,11 @@ internal static class MusicXmlReader
                             && (d.Attribute("line") != null || d.Attribute("sign") != null)))
                         {
                             string style = PedalStyleOf(pedal);
+                            // A sostenuto drawn mixed says nothing about the part: it is what
+                            // the default (bracket) style draws for it (Svg.Model.PedalStyles,
+                            // 2026-11-13), and `lysc xml` writes it so.
+                            if ((string?)pedal.Attribute("type") == "sostenuto" && style == "mixed")
+                                continue;
                             pedalStyles[style] = pedalStyles.GetValueOrDefault(style) + 1;
                         }
                         break;

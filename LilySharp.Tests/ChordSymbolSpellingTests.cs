@@ -44,36 +44,39 @@ public sealed class ChordSymbolSpellingTests
 
     /// <summary>Every spelling of one tone set is that chord: the registered quality (its
     /// table name) or the same assembled formula — and prints the canonical name
-    /// (decision ⑶), the glyphs of LilyPond's default vocabulary.</summary>
+    /// (decision ⑶), the glyphs of LilyPond's default vocabulary. The NAMES are the common
+    /// jazz spelling since the owner's decision of 2026-11-13 (grammar evaluation 4,
+    /// <see cref="ChordFormula.NameOf"/>): <c>C△7</c> where LilyPond's rules printed
+    /// <c>C△</c>, <c>C7(♭9♯11)</c> for <c>C7♭9♯11</c>, <c>C6/9</c> for <c>C6add9</c>.</summary>
     [Theory]
     // (4) the glyphs
-    [InlineData("CΔ", "Cmaj7", "C△")]
-    [InlineData("CΔ7", "Cmaj7", "C△")]
-    [InlineData("C△7", "Cmaj7", "C△")]
+    [InlineData("CΔ", "Cmaj7", "C△7")]
+    [InlineData("CΔ7", "Cmaj7", "C△7")]
+    [InlineData("C△7", "Cmaj7", "C△7")]
     [InlineData("CΔ9", "Cmaj9", null)]
     [InlineData("Cø", "Cm7-5", "Cø")]
     [InlineData("Cø7", "Cm7-5", "Cø")]
     [InlineData("C°", "Cdim", "C°")]
     [InlineData("C°7", "Cdim7", "C°7")]
     [InlineData("C+", "Caug", "C+")]
-    [InlineData("C+7", "Caug7", "C7♯5")]
+    [InlineData("C+7", "Caug7", "C7(♯5)")]
     [InlineData("C+maj7", "Caugmaj7", null)]
     // (5) '-' after the root is the minor third
     [InlineData("C-", "Cm", "Cm")]
     [InlineData("C-7", "Cm7", "Cm7")]
     [InlineData("C-9", "Cm9", "Cm9")]
-    [InlineData("C-Δ7", "Cmmaj7", "Cm△")]
-    [InlineData("C-maj7", "Cmmaj7", "Cm△")]
+    [InlineData("C-Δ7", "Cmmaj7", "Cm△7")]
+    [InlineData("C-maj7", "Cmmaj7", "Cm△7")]
     // (6a) the letter aliases
-    [InlineData("CM7", "Cmaj7", "C△")]
-    [InlineData("CMa7", "Cmaj7", "C△")]
-    [InlineData("CMaj7", "Cmaj7", "C△")]
+    [InlineData("CM7", "Cmaj7", "C△7")]
+    [InlineData("CMa7", "Cmaj7", "C△7")]
+    [InlineData("CMaj7", "Cmaj7", "C△7")]
     [InlineData("CM9", "Cmaj9", null)]
     [InlineData("Cmi7", "Cm7", "Cm7")]
     [InlineData("CMi7", "Cm7", "Cm7")]
     [InlineData("CMI7", "Cm7", "Cm7")]
     [InlineData("Cmi", "Cm", "Cm")]
-    [InlineData("CmM7", "Cmmaj7", "Cm△")]
+    [InlineData("CmM7", "Cmmaj7", "Cm△7")]
     [InlineData("Co", "Cdim", "C°")]
     [InlineData("Co7", "Cdim7", "C°7")]
     [InlineData("C07", "Cm7-5", "Cø")]
@@ -85,23 +88,23 @@ public sealed class ChordSymbolSpellingTests
     [InlineData("F♯m7", "F#m7", "F♯m7")]
     [InlineData("C/E♭", "C/Eb", "C/E♭")]
     // The parenthesized list
-    [InlineData("C7(b9)", "C7-9", "C7♭9")]
-    [InlineData("C7(♭9)", "C7-9", "C7♭9")]
-    [InlineData("C7(#11)", "C7+11", "C7♯11")]
-    [InlineData("C7(b9,#11)", "C7-9+11", "C7♭9♯11")]
-    [InlineData("C7(b9, #11)", "C7-9+11", "C7♭9♯11")]
-    [InlineData("C7(b9 #11)", "C7-9+11", "C7♭9♯11")]
+    [InlineData("C7(b9)", "C7-9", "C7(♭9)")]
+    [InlineData("C7(♭9)", "C7-9", "C7(♭9)")]
+    [InlineData("C7(#11)", "C7+11", "C7(♯11)")]
+    [InlineData("C7(b9,#11)", "C7-9+11", "C7(♭9♯11)")]
+    [InlineData("C7(b9, #11)", "C7-9+11", "C7(♭9♯11)")]
+    [InlineData("C7(b9 #11)", "C7-9+11", "C7(♭9♯11)")]
     [InlineData("Cm7(b5)", "Cm7-5", "Cø")]
     [InlineData("C(#5)", "Caug", "C+")]
     [InlineData("C(add9)", "Cadd9", "Cadd9")]
     [InlineData("C7(omit3)", "C7omit3", "C7")]
     [InlineData("C7(no3)", "C7omit3", "C7")]
     [InlineData("C7(sus4)", "C7sus4", "C7sus4")]
-    [InlineData("Cm(maj7)", "Cmmaj7", "Cm△")]
-    [InlineData("Cm(M7)", "Cmmaj7", "Cm△")]
+    [InlineData("Cm(maj7)", "Cmmaj7", "Cm△7")]
+    [InlineData("Cm(M7)", "Cmmaj7", "Cm△7")]
     [InlineData("C(maj9)", "Cmaj9", null)]
     [InlineData("C7(alt)", "C7alt", "Calt")]
-    [InlineData("C7(b9)/E", "C7-9/E", "C7♭9/E")]
+    [InlineData("C7(b9)/E", "C7-9/E", "C7(♭9)/E")]
     [InlineData("C/E(9)", "Cadd9/E", "Cadd9/E")]
     // (2) a bare number: the extension when a seventh is there, else an added tone
     [InlineData("C7(9)", "C9", "C9")]
@@ -111,12 +114,12 @@ public sealed class ChordSymbolSpellingTests
     [InlineData("Cm7(9)", "Cm9", "Cm9")]
     [InlineData("Cm7(11)", "Cm11", "Cm11")]
     [InlineData("C(9)", "Cadd9", "Cadd9")]
-    [InlineData("C6(9)", "C69", "C6add9")]
-    [InlineData("Cm6(9)", "Cm69", "Cm6add9")]
+    [InlineData("C6(9)", "C69", "C6/9")]
+    [InlineData("Cm6(9)", "Cm69", "Cm6/9")]
     [InlineData("C(6)", "C6", "C6")]
     [InlineData("C(7)", "C7", "C7")]
     [InlineData("Cm(7)", "Cm7", "Cm7")]
-    [InlineData("C(2)", "Cadd2", "Csus2add3")]
+    [InlineData("C(2)", "Cadd2", "Cadd2")]
     public void ASpelling_IsTheCanonicalChord_AndPrintsItsName(string spelling, string canonical, string? printed)
     {
         var chord = Parse(spelling);
@@ -300,7 +303,7 @@ public sealed class ChordSymbolSpellingTests
         var spec = LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree)!;
         var score = new LilySharp.Core.Svg.Collector.MeasureCollector().CollectMultiStaff(tree, spec);
         var names = score.ChordNames.OrderBy(c => c.MeasureIndex).Select(c => c.ChordText).ToArray();
-        Assert.Equal(new[] { "C7♭9♯11", "Cø", "B♭△/D" }, names);
+        Assert.Equal(new[] { "C7(♭9♯11)", "Cø", "B♭△7/D" }, names);
         Assert.All(score.ChordNames, c => Assert.NotNull(c.Structure));
     }
 

@@ -87,6 +87,17 @@ public sealed record BassFingeringWeights
 /// over that corpus, and a change to a cost or to this code is a change to the language —
 /// it needs the owner's approval and a line in the changelog.
 /// <para>
+/// ★ ONE SUCH CHANGE, APPROVED 2026-11-13 (grammar evaluation 4), FOR SLIDES ONLY — the owner's
+/// words: 「@slide は同じ弦をスライドして弾くという指示だから、弦を跨がないようにして」("@slide
+/// says: play it by sliding along the same string — so do not let it cross strings"). The bass
+/// writer's rock/r-07: on a five-string bass <c>d,8@slide f,4</c> was the B string's 3 to the E
+/// string's 1 in one bar and the B string's 3 to 6 in an identical one. Both ends of a
+/// <c>@slide</c> / <c>@glissando</c> between single notes now stand on ONE string wherever a
+/// string plays both (<see cref="TabEvent.GlissandoFromPrevious"/>); where none does the
+/// plan is exactly the frozen one, and LYS5005 says so. Nothing else is read: a book with no
+/// slide plays as before, note for note (<c>BassFingeringGoldenTests</c> holds it).
+/// </para>
+/// <para>
 /// MEASURED (2026-10-25, 267 books, 111,068 notes aligned to LilyPond's own strings — read back
 /// note by note with LilySharp-Lab probes/bass-fingering-2026-10-25/probe.ly): the strings a user
 /// would write, first miss first, before the planner plays a book as fingered — 6,918 (median 19
@@ -130,6 +141,11 @@ public static class BassFingeringPlanner
             int prevStart = i == 0 ? 0 : start[i - 1], prevEnd = start[i];
             double timeScale = w.TimeExponent == 0 ? 1
                 : System.Math.Pow(0.25 / System.Math.Clamp(ev.TimeToMove, 1.0 / 32, 2), w.TimeExponent);
+            // A slide from the note before runs along one string (owner's decision 2026-11-13,
+            // the remark above) — asked only where a string plays both ends, so that a slide no
+            // string can hold adds nothing and the frozen plan stands to the last digit.
+            bool slid = i > 0 && ev.GlissandoFromPrevious
+                && TabEvent.ShareAString(events[i - 1].Midi, ev.Midi, tuning);
 
             bool any = false;
             for (int s = 1; s <= strings; s++)
@@ -196,6 +212,7 @@ public static class BassFingeringPlanner
                     int ds = System.Math.Abs(x.String - q.String);
                     if (ds > 1) e += w.Skip + w.SkipPerString * (ds - 2);
                     if (ev.TiedFromPrevious && ds != 0) e += 1_000_000;
+                    if (slid && ds != 0) e += 1_000_000;
                     if (pe.Midi == ev.Midi && ds != 0) e += w.RepeatAcross;
                     if (ds == 0 && x.Fret > 0 && q.Fret > 0 && x.Fret != q.Fret) e += w.SameStringStep;
                     if (q.Fret == 0 && x.Fret == 0 && x.String > q.String) e += w.OpenThenLowerOpen;

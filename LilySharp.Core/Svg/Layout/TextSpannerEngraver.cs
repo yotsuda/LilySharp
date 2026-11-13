@@ -719,6 +719,8 @@ internal static class TextSpannerEngraver
         int firstMeasure = measureLayouts[0].MeasureIndex;
         int lastMeasure = measureLayouts[^1].MeasureIndex;
         double lineHalf = EngravingDefaults.StaffLineThickness / 2.0;
+        // What the stacker's tracker will hold of the spanners placed so far (see Under).
+        var placed = new VerticalSkyline(VerticalDirection.Up);
 
         foreach (var spanner in spanners)
         {
@@ -785,20 +787,37 @@ internal static class TextSpannerEngraver
             // a top-line-frame number, so on a quiet staff the 0.46 term (2.56) won over the
             // 0.85 the floor read and the band stood 0.29 under the line the stacker draws
             // (ledger textspanner.{chord,lyric}-row.row-to-staff, session 573).
+            // ⚠️ OVER THE SPANNERS ALREADY RESERVED HERE TOO (grammar evaluation 4, 2026-11-13,
+            // rock/r-08): a barre and a let ring over the same notes are two lines, one over
+            // the other, and the stacker draws them so — but each was reserved against the
+            // staff alone, so the band was ONE line tall and the chords row over the staff
+            // was spaced onto the upper line ("C" printed through "CIII"). The stacker's
+            // tracker keeps what it places (PlaceTextSpanners, in this same order); so does
+            // this band.
+            // LILYPOND-REF: lily/axis-group-interface.cc:700-806 add_grobs_of_one_priority — each
+            //   grob placed is merged into the skylines the next is placed against.
+            // ⚠️ `placed` IS THE TRACKER'S BOX, NOT THE DRAWN SHAPE: the stacker registers a
+            // placed spanner as one box over its whole span, as tall as its text (its Place
+            // calls), and the next line clears THAT — so the band has to stack by the same
+            // box, or the upper line is drawn above what was reserved for it. The returned
+            // `ink` stays the drawn shape, which is what the row over the staff clears.
+            double Under(double x0, double x1) => placed.IsEmpty
+                ? accumulatedUp.MaxProtrusionInRange(x0, x1)
+                : Math.Max(accumulatedUp.MaxProtrusionInRange(x0, x1), placed.MaxProtrusionInRange(x0, x1));
             double y = Math.Max(
                 DynamicEngraver.StaffExtent + StaffPadding,
-                accumulatedUp.MaxProtrusionInRange(startX, endX)
-                    + OutsideStaffStacker.OutsideStaffPadding + bottom);
+                Under(startX, endX) + OutsideStaffStacker.OutsideStaffPadding + bottom);
             // The hook of a guitar line reaches HookDepth toward the staff at the line's end,
             // and clears what stands under it there (OutsideStaffStacker.PlaceTextSpanners).
             if (spanner.EndHook && endsHere)
-                y = Math.Max(y, accumulatedUp.MaxProtrusionInRange(endX - lineHalf, endX + lineHalf)
+                y = Math.Max(y, Under(endX - lineHalf, endX + lineHalf)
                     + OutsideStaffStacker.OutsideStaffPadding + HookDepth);
 
             // The DRAWN shape, not a flat band over the span: the rule is lineHalf thick
             // everywhere and the text stands only where the text is, which is what a row
             // whose symbols sit past the label has to clear (LilyPond reads the stencil's
             // own outline).
+            placed.MergeBox(startX, endX, y - bottom, y + top);
             if (spanner.Style != TextSpannerStyle.None)
                 ink.MergeBox(startX, endX, y - lineHalf, y + lineHalf);
             if (!string.IsNullOrEmpty(text))

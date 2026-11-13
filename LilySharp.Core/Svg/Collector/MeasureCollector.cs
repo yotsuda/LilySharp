@@ -335,6 +335,8 @@ public sealed partial class MeasureCollector
     /// <summary>Tied note pairs with conflicting explicit tab string numbers.
     /// Populated as a side effect of Collect.</summary>
     public IReadOnlyList<TabTieStringWarning> TabTieWarnings => _tabResolver.TieWarnings;
+    /// <summary>Slides no one string of the tab's tuning plays, drawn across two (LYS5005).</summary>
+    public IReadOnlyList<TabSlideAcrossStringsWarning> TabSlideWarnings => _tabResolver.SlideWarnings;
     // Voice names whose per-voice sanity scan has already run on THIS collector.
     // A part engraved on more than one staff (`score { staff bass  tab bass }`) is
     // collected once per staff, and the sanity scanners below append to collector-wide
@@ -8044,7 +8046,7 @@ public sealed partial class MeasureCollector
                         // The courtesy parens ride the head (session 927): the column's packing
                         // and skylines read them as a full-size note's do.
                         ImmutableArray.Create(new GraceHeadInfo(note.StaffPosition, note.Accidental,
-                            note.Midi, note.StringNumber, IsCourtesy: note.IsCourtesy)),
+                            note.Midi, note.StringNumber, IsCourtesy: note.IsCourtesy, IsDead: note.IsDead)),
                         note.BaseDuration, note.Dots)
                     {
                         ContextFontSizeStep = note.IsCue ? EngravingDefaults.CueFontSizeStep : 0,
@@ -8065,7 +8067,7 @@ public sealed partial class MeasureCollector
                         foreach (var member in chord.Notes)
                             heads.Add(new GraceHeadInfo(
                                 member.StaffPosition, member.Accidental,
-                                member.Midi, member.StringNumber, IsCourtesy: member.IsCourtesy));
+                                member.Midi, member.StringNumber, IsCourtesy: member.IsCourtesy, IsDead: member.IsDead));
                         heads.Sort(static (a, b) => a.StaffPosition.CompareTo(b.StaffPosition));
                         columns.Add(new GraceColumnInfo(
                             heads.ToImmutable(), chord.BaseDuration, chord.Dots,

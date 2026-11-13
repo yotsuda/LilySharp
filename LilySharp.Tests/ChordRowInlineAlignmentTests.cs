@@ -50,10 +50,10 @@ public class ChordRowInlineAlignmentTests
     /// <c>majorSevenSymbol</c> is a triangle and its vocabulary is Lily#'s default since
     /// 2026-09-12, so the symbol a page carries is the root plus the triangle's carrier —
     /// the string every lookup here keys on. The books still WRITE <c>Cmaj7</c>.</summary>
-    private static readonly string DrawnCmaj7 = "C" + ChordNameGlyphRun.TriangleCarrier;
+    private static readonly string DrawnCmaj7 = "C" + ChordNameGlyphRun.TriangleCarrier + "7";   // C△7 since 2026-11-13 (the number after the triangle)
 
     /// <inheritdoc cref="DrawnCmaj7"/>
-    private static readonly string DrawnFmaj7 = "F" + ChordNameGlyphRun.TriangleCarrier;
+    private static readonly string DrawnFmaj7 = "F" + ChordNameGlyphRun.TriangleCarrier + "7";   // C△7 since 2026-11-13 (the number after the triangle)
 
     /// <summary>Every chord symbol of a rendered two-bar score, by its printed text.</summary>
     private static Dictionary<string, ChordNameLayout> Chords(string source)

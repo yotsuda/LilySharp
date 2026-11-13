@@ -752,6 +752,12 @@ internal sealed class MusicXmlDirection
     /// <summary>The part's <c>pedal</c> style (<c>text</c>, <c>mixed</c>, <c>bracket</c>): the mark's
     /// <c>line</c> and <c>sign</c>, which MusicXML says on every &lt;pedal&gt;.</summary>
     public string? PedalStyle { get; set; }
+    /// <summary>The soft pedal going down (true) or up (false) with this direction:
+    /// <c>&lt;sound soft-pedal="yes|no"/&gt;</c>. MusicXML's <c>&lt;pedal&gt;</c> has no type for
+    /// the una corda (its types are the damper's and <c>sostenuto</c>), so the words carry the
+    /// picture and the sound element the meaning (grammar evaluation 4, 2026-11-13: the words
+    /// alone told a reading program nothing).</summary>
+    public bool? SoftPedal { get; set; }
     /// <summary>Ottava line: "down" (8va) / "up" (8vb) / "stop".</summary>
     public string? OctaveShiftType { get; set; }
     /// <summary>The octave line's size: 8 for an ottava, 15 for a quindicesima (2026-09-29;
@@ -882,6 +888,9 @@ internal sealed class MusicXmlDirection
             sound = new XElement("sound", new XAttribute("tempo",
                 System.Math.Round(value.QuarterBpm!.Value, 2).ToString(System.Globalization.CultureInfo.InvariantCulture)));
         }
+
+        if (SoftPedal is { } soft)
+            (sound ??= new XElement("sound")).Add(new XAttribute("soft-pedal", soft ? "yes" : "no"));
 
         // Schema order: direction-type+, offset?, …, staff?, sound?.
         if (Offset > 0)

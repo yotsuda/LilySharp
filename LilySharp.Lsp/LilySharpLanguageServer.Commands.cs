@@ -1373,7 +1373,7 @@ public sealed partial class LilySharpLanguageServer
                             ? lines.FirstOrDefault(r => n.StartTick >= r.From && n.StartTick < r.To).Keys : null,
                     };
                 })
-                .Concat(tracks.SelectMany((x, ti) => x.Track.Pedals.Select(c => new PlaybackNote
+                .Concat(tracks.SelectMany((x, ti) => x.Track.Pedals.Where(c => c.Controller == LilySharp.Core.Midi.PedalChange.Sustain).Select(c => new PlaybackNote
                 {
                     T = SecondsAt(c.Tick),
                     P = PlaybackNote.PedalPitch,

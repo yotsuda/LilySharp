@@ -1943,6 +1943,12 @@ public static class DiagnosticCodes
     /// written with the tab's octave word (<c>as 8vb</c>), offered as a quick fix (owner's
     /// decision 2026-10-28: the writer chooses; the tab never moves by itself).</summary>
     public const string TabOctaveAdvice = "LYS5004";
+    /// <summary>Tablature warning: a slide (<c>@slide</c>, <c>@glissando</c>) between two
+    /// single notes that no one string of the tuning plays within the fretboard, so the tab
+    /// shows its ends on two strings. A slide is one finger along one string (owner's decision
+    /// 2026-11-13, grammar evaluation 4): wherever a string plays both notes the tab keeps
+    /// them on it, guitar and bass; this is the case it cannot.</summary>
+    public const string TabSlideAcrossStrings = "LYS5005";
 
     // Render/score declaration errors (LYS6xxx)
 

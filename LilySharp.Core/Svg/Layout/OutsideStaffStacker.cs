@@ -2394,6 +2394,20 @@ internal static class OutsideStaffStacker
                 if (cn.RowStaffIndex >= 0
                     || !measureToSystem.TryGetValue(cn.MeasureIndex, out int sysIdx))
                     continue;
+                // ⚠️ …AND A `chords` ROW BETWEEN TWO STAVES IS A ROW TOO (grammar evaluation 4,
+                // 2026-11-13, rock/r-08). `score { staff v  chords h  staff g }` hangs the row
+                // on the staff under it — no band of its own, RowStaffIndex −1 — and its
+                // symbols were seeded here as that staff's own ink: the staff's let ring,
+                // barre and palm-mute lines, a `@rit`, a text and a fermata all climbed OVER
+                // the row, into the staff above, while the room reserved for them between the
+                // row and their staff stood empty. A row's symbol is placed by its moment
+                // (UseTiming), an inline `@chord` by its note; the row is LilyPond's ChordNames
+                // line either way, above the staff's finished skyline.
+                // LILYPOND-REF: lily/axis-group-interface.cc:860-985 skyline_spacing — a
+                //   staff's outside-staff grobs are placed against that staff's own axis
+                //   group; the ChordNames context is another group.
+                if (item.UseTiming)
+                    continue;
                 double staffTopUp = LayoutUtilities.StaffOffsetInSystemUp(
                     systems[sysIdx], item.StaffIndex);
                 // The name AND a chord diagram under it (a written shape, HANDOFF §2 K) — one box.

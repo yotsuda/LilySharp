@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 408 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **536** | |
+| `OWN` | 410 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **538** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -37,7 +37,7 @@
 ## APPROX — LP に対応物はあるが、形が違うと自認しているもの（63 件）
 
 ### `LilySharp.Core/Music/ChordStructure.cs`
-- **`ChordQualityRegistry.SymbolSuffix`** ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
+- **`ChordQualityRegistry.GetTones`** ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
 ### `LilySharp.Core/Rendering/Pdf/PdfDrawingContext.cs`
 - **`PdfDrawingContext.DrawShaped`** ⚠️ NOT PORTED — backend-blocked: CHARACTERS AT THE CLUSTERS' POSITIONS, not glyphs at
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
@@ -249,7 +249,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（408 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（410 件）
 
 ### `LilySharp.Core/Audio/SingerPlan.cs`
 - **`SingerPlan`** LILYSHARP-OWN.
@@ -325,7 +325,7 @@
 ### `LilySharp.Core/Music/BarRest.cs`
 - **`BarRest`** meter (owner's decision 2026-10-02, LILYSHARP-OWN): a whole-bar rest is one sign in every
 ### `LilySharp.Core/Music/ChordFormula.cs`
-- **`ChordFormula.Name`** words of the registered qualities (dim, aug, m7♭5, dim7): LILYSHARP-OWN, as for them.
+- **`ChordFormula.NameOf`** LILYSHARP-OWN: everything else here. LilyPond's own names (scm/chord-ignatzek-names.scm
 ### `LilySharp.Core/Music/ChordRepetitions.cs`
 - **`ChordRepetitions.DisplacementOf`** LILYSHARP-OWN: LilyPond's q takes no marks, so there is nothing to port.
 ### `LilySharp.Core/Music/ChordShapes.cs`
@@ -333,6 +333,7 @@
 ### `LilySharp.Core/Music/ChordShapeTable.cs`
 - **`ChordShapeTable`** LILYSHARP-OWN: LilyPond's FretBoards context draws every chord it is given, from its
 ### `LilySharp.Core/Music/ChordStructure.cs`
+- **`ChordQualityRegistry.GetTones`** ⚠️ LILYSHARP-OWN since 2026-11-13 (owner's decision, the common jazz spelling): the
 - **`ChordStructure.ToRomanNumeral`** LILYSHARP-OWN: LilyPond has no Roman-numeral chord names. Owner's decision
 ### `LilySharp.Core/Music/ChordSymbolSpelling.cs`
 - **`ChordSymbolSpelling`** LILYSHARP-OWN: LilyPond's chordmode reads c:m7.5- and names from the tones; it
@@ -827,6 +828,8 @@
 - **`MusicMarkItem.BarreText`** LILYSHARP-OWN: LilyPond has no barre command; its manual writes the label as the
 ### `LilySharp.Core/Svg/Model/PercentRepeatItem.cs`
 - **`PercentRepeatItem`** the count above it from 2 bars up. LILYSHARP-OWN (owner's decision 2026-10-14, session
+### `LilySharp.Core/Svg/Model/Staff.cs`
+- **`PedalStyles`** LILYSHARP-OWN: pedal text and pedal mixed, written, are the writer's word
 ### `LilySharp.Core/Svg/Model/TextSpannerItem.cs`
 - **`TextSpanFamily`** LILYSHARP-OWN: LilyPond has ONE text spanner per voice (lily/text-spanner-engraver.cc
 ### `LilySharp.Core/Syntax/StringLiteral.cs`

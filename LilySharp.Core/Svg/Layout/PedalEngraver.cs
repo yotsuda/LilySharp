@@ -76,7 +76,9 @@ public readonly record struct PedalBracketLayout(
 /// Style selection is per-part (Staff.PedalStyle, from the `pedal` part
 /// property). LayoutEngine runs this engraver for staves whose style is
 /// Bracket (Lily# default) or Mixed and suppresses the corresponding "Ped." /
-/// "*" text marks; the Text style keeps the marks and emits no bracket.
+/// "*" text marks; the Text style keeps the marks and emits no bracket. Each pedal FAMILY
+/// is drawn in its own style under the part's (<see cref="PedalStyles"/>, owner's decision
+/// 2026-11-13): the bracket is the sustain pedal's alone.
 /// </remarks>
 internal static class PedalEngraver
 {
@@ -230,7 +232,9 @@ internal static class PedalEngraver
         ImmutableArray<MeasureLayout> measureLayouts,
         VerticalSkyline insideDown, VerticalSkyline downProfile)
     {
-        if (staff.PedalStyle != PedalStyle.Text || score.MusicMarks.IsDefaultOrEmpty
+        // A staff with a text-style FAMILY: every family under `pedal text`, the una corda
+        // under the bracket style (PedalStyles, owner's decision 2026-11-13), none under mixed.
+        if (staff.PedalStyle == PedalStyle.Mixed || score.MusicMarks.IsDefaultOrEmpty
             || measureLayouts.IsDefaultOrEmpty
             || StaffSize.Of(staff).Span(1.0) != 1.0)
             return ImmutableArray<SolvedPedalRow>.Empty;
@@ -246,7 +250,8 @@ internal static class PedalEngraver
         foreach (var mark in score.MusicMarks)
         {
             order++;
-            if (mark.StaffIndex != staffIndex || !IsPedalMarkType(mark.Type))
+            if (mark.StaffIndex != staffIndex || !IsPedalMarkType(mark.Type)
+                || PedalStyles.Of(staff.PedalStyle, mark.Type) != PedalStyle.Text)
                 continue;
             MeasureLayout? ml = null;
             foreach (var m in measureLayouts)
@@ -346,8 +351,10 @@ internal static class PedalEngraver
         ImmutableArray<MeasureLayout> measureLayouts,
         VerticalSkyline insideDown, VerticalSkyline downProfile)
     {
-        bool mixed = staff.PedalStyle == PedalStyle.Mixed;
-        if ((staff.PedalStyle != PedalStyle.Bracket && !mixed)
+        // Per FAMILY since 2026-11-13 (PedalStyles, the owner's decision): under the bracket
+        // style the sostenuto is mixed and the una corda is words alone (SolveAndSeedText's).
+        bool Mixed(PedalType family) => PedalStyles.Of(staff.PedalStyle, family) == PedalStyle.Mixed;
+        if (staff.PedalStyle == PedalStyle.Text
             || score.MusicMarks.IsDefaultOrEmpty
             || measureLayouts.IsDefaultOrEmpty
             || StaffSize.Of(staff).Span(1.0) != 1.0)
@@ -387,6 +394,9 @@ internal static class PedalEngraver
         {
             if (bracket.EndMeasureIndex < loMeasure || bracket.StartMeasureIndex > hiMeasure)
                 continue; // not on this system
+            if (PedalStyles.Of(staff.PedalStyle, bracket.Type) == PedalStyle.Text)
+                continue; // a family of words alone: no line
+            bool mixed = Mixed(bracket.Type);
             var startLayout = LayoutOf(bracket.StartMeasureIndex);
             var endLayout = LayoutOf(bracket.EndMeasureIndex);
             // The portion on THIS system: a broken end runs to the system edge, hook-less,
@@ -445,7 +455,7 @@ internal static class PedalEngraver
                 if (up == null) up = one; else up.Merge(one);
                 supLeft = Math.Min(supLeft, p.SupportLeft);
                 supRight = Math.Max(supRight, p.SupportRight);
-                if (mixed && p.StartMeasureIndex >= loMeasure
+                if (Mixed(p.Type) && p.StartMeasureIndex >= loMeasure
                     && p.StartMeasureIndex <= hiMeasure)
                 {
                     foreach (var mark in staffMarks)
@@ -690,10 +700,17 @@ internal static class PedalEngraver
         Func<int, PedalType, double?>? solvedLineUpOf = null,
         Func<int, double?>? staffTopDownOf = null,
         GraceAnchors? grace = null,
-        Rendering.ScoreTextMetrics? fonts = null)
+        Rendering.ScoreTextMetrics? fonts = null,
+        PedalStyle? partStyle = null)
     {
         if (brackets.IsDefaultOrEmpty)
             return ImmutableArray<PedalBracketLayout>.Empty;
+
+        // The style of each bracket's own family under the part's style (PedalStyles, owner's
+        // decision 2026-11-13); a caller that gives none draws every family as `isMixed` says.
+        PedalStyle StyleOf(PedalType family) => partStyle is { } part
+            ? PedalStyles.Of(part, family)
+            : isMixed ? PedalStyle.Mixed : PedalStyle.Bracket;
 
         var layouts = ImmutableArray.CreateBuilder<PedalBracketLayout>(brackets.Length);
 
@@ -733,6 +750,8 @@ internal static class PedalEngraver
             if (bracket.StartMeasureIndex >= measureLayouts.Length ||
                 bracket.EndMeasureIndex >= measureLayouts.Length)
                 continue;
+            if (StyleOf(bracket.Type) == PedalStyle.Text)
+                continue; // words alone (the una corda under the bracket style): no line
 
             // ONE PORTION PER SYSTEM the bracket crosses, as LilyPond breaks the spanner:
             // the first runs from the engaging note to its system's end, hook-less there;
@@ -801,6 +820,7 @@ internal static class PedalEngraver
             // system's share (its broken end is the system edge, not a note).
             if (!brokenLeft && !brokenRight && endX - startX < 2.0)
                 endX = startX + 2.0;
+            bool mixed = StyleOf(bracket.Type) == PedalStyle.Mixed;
 
             layouts.Add(new PedalBracketLayout(
                 startX,
@@ -810,13 +830,13 @@ internal static class PedalEngraver
                 portionMeasure,
                 bracket.SourcePosition,
                 // Mixed style's leading word stands at the engage; a continuation has none.
-                isMixed && !brokenLeft && !startsAtChange[bi],
+                mixed && !brokenLeft && !startsAtChange[bi],
                 StartChange: !brokenLeft && startsAtChange[bi],
                 EndChange: !brokenRight && endsAtChange[bi],
                 SourceIndex: bi,
                 BrokenLeft: brokenLeft,
                 BrokenRight: brokenRight,
-                MixedLineStart: isMixed && fonts != null ? MixedLineStartOffset(fonts, bracket.Type) : 0));
+                MixedLineStart: mixed && fonts != null ? MixedLineStartOffset(fonts, bracket.Type) : 0));
         }
     }
 

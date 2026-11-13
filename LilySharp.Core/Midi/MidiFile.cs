@@ -43,7 +43,9 @@ public class MidiTrack
     public List<(int Tick, int Fifths)> KeySignatures { get; } = [];
     /// <summary>The lyric events on this track.</summary>
     public List<LyricEvent> Lyrics { get; } = [];
-    /// <summary>The sustain pedal's changes on this track's channel, in tick order. The notes keep
+    /// <summary>The pedals' changes on this track's channel, in tick order — the sustain pedal's,
+    /// and the sostenuto's and the soft pedal's on their own controllers
+    /// (<see cref="PedalChange.Controller"/>). The notes keep
     /// their written lengths: the checks read those, and a DAW edits the pedal as a pedal.</summary>
     public List<PedalChange> Pedals { get; } = [];
 
@@ -271,7 +273,8 @@ public class MidiFile
                 case MidiEventType.PedalUp:
                 case MidiEventType.PedalDown:
                     trackWriter.Write((byte)(0xB0 | (evt.Channel & 0x0F)));
-                    trackWriter.Write((byte)64);
+                    // The pedal's own controller: 64 sustain, 66 sostenuto, 67 soft (PedalChange).
+                    trackWriter.Write((byte)evt.Data1);
                     trackWriter.Write((byte)(evt.Type == MidiEventType.PedalDown ? 127 : 0));
                     break;
                 case MidiEventType.PitchBend:
@@ -385,7 +388,7 @@ public class MidiFile
             pedalled.Remove(9);
             foreach (var pedal in track.Pedals)
                 foreach (int ch in pedalled)
-                    events.Add(new MidiEvent(pedal.Tick, pedal.Down ? MidiEventType.PedalDown : MidiEventType.PedalUp, ch, 0, 0));
+                    events.Add(new MidiEvent(pedal.Tick, pedal.Down ? MidiEventType.PedalDown : MidiEventType.PedalUp, ch, pedal.Controller, 0));
         }
 
         foreach (var tempo in track.TempoChanges)
