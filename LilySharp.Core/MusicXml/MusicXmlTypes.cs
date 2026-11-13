@@ -1043,6 +1043,11 @@ internal sealed class MusicXmlNote
     /// <c>continue</c>, <c>end</c>, <c>forward hook</c> or <c>backward hook</c>.</summary>
     public List<(int Number, string Value)> Beams { get; } = new();
 
+    /// <summary>A feathered beam's <c>fan</c> — <c>accel</c> (the beams spread to the right,
+    /// <c>@feather(right)</c>) or <c>rit</c> — on the note its first beam begins on, or null.
+    /// Until 2026-11-14 a feathered beam was written as a plain one (grammar evaluation 4).</summary>
+    public string? BeamFan { get; set; }
+
     /// <summary>The string and fret the page's tab staff plays this note on, or null when the
     /// part has no tab staff (or the note is off the fretboard).</summary>
     public (int String, int Fret)? Tab { get; set; }
@@ -1179,7 +1184,8 @@ internal sealed class MusicXmlNote
             note.Add(new XElement("staff", staffNumber));
 
         foreach (var (number, value) in beams ?? Beams)
-            note.Add(new XElement("beam", new XAttribute("number", number), value));
+            note.Add(new XElement("beam", new XAttribute("number", number),
+                number == 1 && value == "begin" && BeamFan != null ? new XAttribute("fan", BeamFan) : null, value));
 
         var technicals = Technicals;
         if (tabStaff && Tab is { } tab)

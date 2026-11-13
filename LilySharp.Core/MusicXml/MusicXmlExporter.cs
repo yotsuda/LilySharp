@@ -389,6 +389,7 @@ public sealed class MusicXmlExporter
             // A section reverts to it before stating a key of its own, the way its
             // auto-transpose baseline reverts to _homeTonic just above.
             _homeKey = (_keyFifths, _keyMode, _keyCustomXml);
+            _openingTempo = (_tempo, _tempoStated, _tempoBeatUnit, _tempoBeatDots, _tempoHiddenWords, _tempoMarking, _tempoWordsAlone);
             _bars.CaptureHome();
             BuildSectionHeaderRegistry(root);
             ProcessSections(root);
@@ -402,10 +403,14 @@ public sealed class MusicXmlExporter
         WriteTab(tree);
         WriteStaffLines();
         WriteLyrics(tree);
+        // The score's parts in the score's order BEFORE what is written on "the first part":
+        // the section labels went to the book's first declared part, so a part sheet of any
+        // other part had none (grammar evaluation 4, 2026-11-13).
+        KeepTheScoresParts();
+        OrderThePartsAsTheScore();
         if (hasSections)
             WriteSectionLabels(tree);
         WritePartNames();
-        KeepTheScoresParts();
         MergeGrandStaves();
         WritePartGroups();
 
@@ -423,9 +428,55 @@ public sealed class MusicXmlExporter
             return;
         var kept = new HashSet<string>(Score.EngravedPartNames, StringComparer.Ordinal);
         kept.UnionWith(_placedChordRows.Select(RowsOwnPart));
+        var gone = new List<MusicXmlPart>();
         foreach (var (name, part) in _partsByName)
-            if (!kept.Contains(name))
-                Document.Parts.Remove(part);
+            if (!kept.Contains(name) && Document.Parts.Remove(part))
+                gone.Add(part);
+        CarryTheTemposOf(gone);
+    }
+
+    /// <summary>
+    /// A tempo is the score's, and the walk writes each one once — in the part that reaches it
+    /// first. When that part is not on this score (a part sheet), its tempo marks move to the
+    /// score's first part, bar for bar. Until 2026-11-14 they went with the part: the alto's
+    /// sheet lacked the "Broadly ♩ = 84" the trumpet's music states (grammar evaluation 4).
+    /// </summary>
+    private void CarryTheTemposOf(List<MusicXmlPart> gone)
+    {
+        if (Document.Parts.Count == 0)
+            return;
+        var lead = Document.Parts[0].Measures;
+        static bool IsTempo(MusicXmlDirection d) => d.Tempo != null || d.TempoWordsAlone != null;
+        foreach (var part in gone)
+            for (int i = 0; i < part.Measures.Count && i < lead.Count; i++)
+                foreach (var tempo in part.Measures[i].Directions.Where(IsTempo))
+                    if (!lead[i].Directions.Any(d => IsTempo(d) && d.Offset == tempo.Offset))
+                        lead[i].Directions.Add(tempo);
+    }
+
+    /// <summary>
+    /// The parts in the score's order — its staves from the top, a part on two staves where
+    /// its first stands — and the parts the score does not engrave after them, as declared.
+    /// Until 2026-11-14 the order was the book's declarations whatever the score said
+    /// (grammar evaluation 4: Flute, Clarinet, Percussion, Bass Cl. … for a score that
+    /// engraves Piccolo, Flute, Alto Flute …).
+    /// </summary>
+    private void OrderThePartsAsTheScore()
+    {
+        if (_playedSpec == null)
+            return;
+        var rank = new Dictionary<MusicXmlPart, int>();
+        foreach (var name in StaffNames(_playedSpec.Items))
+            if (_partsByName.TryGetValue(name, out var part))
+                rank.TryAdd(part, rank.Count);
+        if (rank.Count == 0)
+            return;
+        var ordered = Document.Parts
+            .Select((part, index) => (part, index))
+            .OrderBy(p => rank.GetValueOrDefault(p.part, int.MaxValue)).ThenBy(p => p.index)
+            .Select(p => p.part).ToList();
+        Document.Parts.Clear();
+        Document.Parts.AddRange(ordered);
     }
 
     /// <summary>The name of the part a lead sheet's chord row is written into.</summary>
@@ -1030,6 +1081,8 @@ public sealed class MusicXmlExporter
                         };
                         xmlNote.Beams.Add((level, value));
                     }
+                    if (i == 0 && group.GrowDirection != 0)
+                        xmlNote.BeamFan = group.GrowDirection > 0 ? "accel" : "rit";
                 }
             }
         }
@@ -2151,6 +2204,31 @@ public sealed class MusicXmlExporter
         // reached the document only because the header declaration was walked as music
         // (`section A { tempo 110 }` in the bass corpus's test.lys — 110 became 120 the
         // moment the header stopped being played).
+        // The tempo a play's music states stands when the play ends, whichever part states it:
+        // every part of the play starts from the section's head (the reset below), so the
+        // standing tempo was the LAST part's, and a `tempo "Slower" 4 = 80` in the first
+        // part's music was forgotten by the time the next section asked whether to write the
+        // return to the file's tempo — the page and the MIDI went back to 120, the document
+        // stayed at 80 (grammar evaluation 4, r-14, found 2026-11-14).
+        if (_tempoPlaySerial != _xmlPlaySerial)
+        {
+            if (_tempoStatedInThePlay is { } left)
+                _tempoStanding = left;
+            _tempoStatedInThePlay = null;
+            _tempoPlaySerial = _xmlPlaySerial;
+        }
+        else
+        {
+            // A later part of the same play asks the head's questions of the tempo the head
+            // left, not of one an earlier part's music stated since: it wrote the return to
+            // the file's tempo at the section's head, under the first part's new tempo.
+            _tempoStanding = _tempoAfterTheHead;
+        }
+        // A part opens at the piece's opening tempo, not at the one the parts walked before it
+        // left running: `tempo "Slower" 4 = 80` in the first part's second bar was the second
+        // part's opening tempo (grammar evaluation 4, 2026-11-13).
+        if (isFirst)
+            (_tempo, _tempoStated, _tempoBeatUnit, _tempoBeatDots, _tempoHiddenWords, _tempoMarking, _tempoWordsAlone) = _openingTempo;
         if (_sectionTempo is { } sectionTempo && isFirst)
             ProcessTempo(sectionTempo);
         // The bar the play opens in — what a split bar's two halves must add up to.
@@ -2173,6 +2251,7 @@ public sealed class MusicXmlExporter
             ProcessTempo(home);
         if (_sectionTempo == null && (isFirst || _fileTempo is { Bpm: not null }))
             _tempoStanding = _fileTempo;
+        _tempoAfterTheHead = _tempoStanding;
         // The section's header pickup shortens this part's first bar of the section — the
         // page applies its registry at the same spot, after the section meter, so the pickup
         // restores to the section's own time when it closes (MeasureCollector.Form.cs).
@@ -2183,8 +2262,10 @@ public sealed class MusicXmlExporter
         int measuresBefore = _currentPart!.Measures.Count;
         // Where this play's bars of the part start — the home of a chord row's harmonies.
         _playStartMeasure.TryAdd((partName, _xmlPlaySerial), measuresBefore);
+        _inPartMusic = true;
         foreach (var child in children)
             ProcessNode(child);
+        _inPartMusic = false;
 
         // A hairpin the carry rule cuts stops at this play's end, before the bar is flushed.
         CloseCutWedge();
@@ -3243,14 +3324,25 @@ public sealed class MusicXmlExporter
         SyncAttributes();
     }
 
+    /// <summary>The running tempo as the file's top level leaves it (CollectMetadata), which
+    /// every part opens at.</summary>
+    private (int Tempo, bool Stated, int BeatUnit, int BeatDots, string? HiddenWords, string? Marking, string? WordsAlone) _openingTempo;
+
     // The last tempo stated where the walk stands, and the file's own, as written.
     private TempoValue? _tempoStanding, _fileTempo;
+    // The play the standing tempo was last settled for, the tempo its head left standing, and
+    // the last one its parts' music stated (ProcessPartBlock).
+    private int _tempoPlaySerial = -1;
+    private TempoValue? _tempoAfterTheHead, _tempoStatedInThePlay;
+    private bool _inPartMusic;
     private TempoDeclarationSyntax? _fileTempoDeclaration;
 
     private void ProcessTempo(TempoDeclarationSyntax tempo)
     {
         var value = tempo.Value;
         _tempoStanding = value;
+        if (_inPartMusic)
+            _tempoStatedInThePlay = value;
         if (value.Bpm is not int bpm)
         {
             // Words and no count — `tempo "Largo"`, `tempo "a tempo"`: the page prints them
@@ -4603,6 +4695,20 @@ public sealed class MusicXmlExporter
             // before it (<>) closes the slur that opened two notes back).
             foreach (var postEvent in chord.Articulations)
                 ApplyMarkerToLastEmitted(postEvent);
+            // …and what stands at a moment stands at this one: a dynamic, a hairpin's end, words,
+            // a pedal, an octave line — the documented way to mark a phrase call
+            // (`<>@f@text("tutti") lick`). Until 2026-11-14 the document had none of them
+            // (grammar evaluation 4, Lab sessions/p1226/md/eval4/bigband r-14).
+            _markedNoteLength = 0;
+            foreach (var postEvent in chord.Articulations)
+            {
+                if (postEvent is DynamicSyntax dynamic)
+                    HandleDynamicText(dynamic.DynamicToken.Text, dynamic.SourceStart, dynamic.IsSubito, dynamic.ForcedAbove, dynamic.IsEditorial);
+                else if (postEvent is MusicMarkSyntax mark)
+                    ProcessDirectionMark(mark);
+                else if (postEvent is ArticulationSyntax { Type: ArticulationType.None } named)
+                    ProcessDirectionName(named.NameToken.Text);
+            }
             return;
         }
         var resolved = new List<(string Step, int Alter, int Octave)>();
@@ -5633,6 +5739,14 @@ public sealed class MusicXmlExporter
                         break;
                     case ArticulationType.Stopped:
                         xmlNote.Technicals.Add(new System.Xml.Linq.XElement("stopped"));
+                        break;
+                    // A bow's or a pick's stroke (2026-11-14, grammar evaluation 4: a guitar
+                    // part's pick strokes were in no <technical>).
+                    case ArticulationType.UpBow:
+                        xmlNote.Technicals.Add(new System.Xml.Linq.XElement("up-bow"));
+                        break;
+                    case ArticulationType.DownBow:
+                        xmlNote.Technicals.Add(new System.Xml.Linq.XElement("down-bow"));
                         break;
                     case ArticulationType.HammerOn:
                         // Proper paired form: start on the PREVIOUS note (the
@@ -7059,6 +7173,14 @@ public sealed class MusicXmlExporter
             ArticulationType.Staccato => "staccato",
             ArticulationType.Scoop => "scoop",
             ArticulationType.Plop => "plop",
+            // The jazz marks that leave a note, and the two breathing signs: all four are
+            // children of <articulations> in MusicXML 4.0. Until 2026-11-14 none was written
+            // (grammar evaluation 4: 40 '@breath' and 4 '@caesura' of a choral score, every
+            // '@fall' of a big-band chart).
+            ArticulationType.Fall => "falloff",
+            ArticulationType.Doit => "doit",
+            ArticulationType.Breath => "breath-mark",
+            ArticulationType.Caesura => "caesura",
             ArticulationType.Staccatissimo => "staccatissimo",
             ArticulationType.Accent => "accent",
             ArticulationType.Tenuto => "tenuto",

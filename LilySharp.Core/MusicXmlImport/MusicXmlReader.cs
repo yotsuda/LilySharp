@@ -1625,6 +1625,12 @@ internal static class MusicXmlReader
         "strong-accent" => "marcato",
         "staccatissimo" => "staccatissimo",
         "detached-legato" => "portato",
+        "scoop" => "scoop",
+        "plop" => "plop",
+        "falloff" => "fall",
+        "doit" => "doit",
+        "breath-mark" => "breath",
+        "caesura" => "caesura",
         "fermata" => "fermata",   // the Lily# exporter nests fermata here
         _ => null,
     };
