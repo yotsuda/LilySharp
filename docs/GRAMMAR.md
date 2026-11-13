@@ -3192,7 +3192,11 @@ Beam           = '[' | ']' ;      (* manual; beaming is automatic otherwise *)
    pass's ending), each of which must repeat the tied pitch (else LYS4007); an arc where that
    section is also printed next, else a hanging tie on the tied note and an automatic repeat tie
    on the target. A beam and every other span never cross a section boundary; the running state
-   (frame, value, meter, key, clef, overrides) still resets there. *)
+   (frame, value, meter, key, clef, overrides) still resets there.
+   ONE edge of a repeat is an ordinary boundary (owner's decision 2026-11-14): out of its LAST
+   ending, when that ending plays on the last pass only, into the section after the repeat
+   ('|: A [1. B] :| [2. C] D') — D follows C every time C is played, so a slur, a phrasing slur
+   or a hairpin open at C's end is carried into D as over any boundary. *)
 
 ### 8.4 Annotations (@name, glued to an item with a place in time)
 

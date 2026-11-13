@@ -57,7 +57,33 @@ public sealed partial class MeasureCollector
             _pendingRole = SectionRepeatRole.None;
             _pendingRunStart = false;
         }
-        MarkFormEdge(SectionPlayEdge.Repeat);
+        // …EXCEPT out of the block's LAST ending when it plays on the last pass only: the
+        // section after the block follows it once, linearly, as any section follows another —
+        // a crescendo in the second ending landing on the next letter's dynamic is everyday
+        // chart writing (owner's decision 2026-11-14, musical validity; grammar evaluation 4
+        // met it as LYS4023 "a hairpin may not cross there"). The run a form-level `:|:` opens
+        // already read it so (`A :|: B [1. C] :| [2. D] E`: no edge is raised after D). An
+        // ending that RETURNS (`[1,3. B] :| [2. C]`) raised its own Repeat edge above, and a
+        // block that closes on `:|` leaves its body two ways.
+        if (!ClosesOnItsLastPass(repeat))
+            MarkFormEdge(SectionPlayEdge.Repeat);
+    }
+
+    /// <summary>True when the block's last item is an ending that plays on the last pass alone
+    /// — what is played after it is the section after the block, every time it is played.</summary>
+    private static bool ClosesOnItsLastPass(FormRepeatBlockSyntax repeat)
+    {
+        for (int i = repeat.SlotCount - 1; i >= 0; i--)
+        {
+            if (repeat.GetChild(i) is not { } child)
+                continue;
+            if (child is FormAlternativeSyntax alt)
+                return IsLastWrittenEnding(repeat, i) && alt.Numbers.Any()
+                    && !Semantics.RepeatPasses.EndingReturns(alt.Numbers, HighestPass(repeat));
+            if (child is SyntaxTokenNode { Text: ":|" or ":|:" } or SectionReferenceSyntax || child.Kind == SyntaxKind.SilentSectionReference)
+                return false;
+        }
+        return false;
     }
 
     // What the NEXT section play is to a form repeat (MusicItem.SectionRepeatRole and its

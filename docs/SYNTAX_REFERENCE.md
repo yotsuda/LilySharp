@@ -727,7 +727,11 @@ rule is not drawn (a hairpin is cut at the end of its own section) and is report
 - carried into a section the part plays nothing in — its bars there are padding (warning);
 - a slur, phrasing slur or hairpin carried over a repeat sign (`|:` `:|` `:|:`), into or out
   of a volta ending, or over a jump mark (segno, coda, D.S., D.C., fine) — what is played before
-  that section differs from pass to pass, so this is **an error**.
+  that section differs from pass to pass, so this is **an error**. One edge of a repeat is an
+  ordinary boundary: out of its **last ending** into the section after the repeat
+  (`|: A [1. B] :| [2. C] D` — a crescendo in `C` may land on `D`'s dynamic), because `D`
+  follows `C` every time `C` is played. An ending that also plays on an earlier pass
+  (`[1,3. B] :| [2. C]`) goes back, and nothing is carried out of it.
 
 A **tie** may cross all of those. It is carried to the first note of every section that is
 *played* after the tied note's section — the way the MIDI plays the form: the body again at

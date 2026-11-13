@@ -1359,6 +1359,67 @@ public class GrammarEvaluation4Tests
             + "form { ~A }\nscore { staff a staff b }\n").Select(d => d.Message));
     }
 
+    /// <summary>A crescendo in the second (last) ending that lands on the next letter's
+    /// dynamic — everyday chart writing — was an ERROR: "a hairpin would be carried from
+    /// section E2 into section B over a repeat sign, a volta ending or a jump … a hairpin may
+    /// not cross there" (LYS4023). The last ending plays on the last pass only and the section
+    /// after the repeat follows it linearly (owner's decision 2026-11-14): that boundary is an
+    /// ordinary one — for the hairpin and for a slur — on the page and in the exports. Out of
+    /// an ending that goes back, and out of a body that closes on <c>:|</c>, it is still refused.</summary>
+    [Fact]
+    public void ASpanFromTheLastEndingIntoTheNextSection_IsCarried_AsOverAnOrdinaryBoundary()
+    {
+        static string Book(string form, string e1 = "d'1 |", string e2 = "c'4@f@cresc d' e' f' |", string b = "g'1@ff |", string a = "c'1 |",
+                string low2 = "c4( d e f |", string lowB = "g1) |")
+            => "octave absolute\npart m { clef treble }\npart n { clef bass }\n"
+            + $"section A {{ m {{ {a} }} n {{ c1 | }} }}\nsection E1 {{ m {{ {e1} }} n {{ c1 | }} }}\n"
+            + $"section E2 {{ m {{ {e2} }} n {{ {low2} }} }}\nsection B {{ m {{ {b} }} n {{ {lowB} }} }}\n"
+            + $"form {{ {form} }}\nscore {{ staff m staff n }}\n";
+        const string endings = "|: A [1. ~E1] :| [2. ~E2] B";
+        string source = Book(endings);
+        Assert.Empty(Said(source).Select(d => d.Message));
+
+        // Drawn: one hairpin over the ending's bar, as long as with no repeat at all; one slur.
+        var layout = Laid(source);
+        var plain = Laid(Book("A ~E1 ~E2 B"));
+        var hairpin = Assert.Single(layout.HairpinLayouts);
+        var unrepeated = Assert.Single(plain.HairpinLayouts);
+        Assert.Equal(2, hairpin.StartMeasureIndex);
+        Assert.Equal(unrepeated.EndX - unrepeated.StartX, hairpin.EndX - hairpin.StartX, 1);
+        Assert.True(hairpin.EndX - hairpin.StartX > 4.0, $"{hairpin.EndX - hairpin.StartX}");
+        Assert.Single(layout.SlurLayouts);
+
+        // Exported as drawn: the wedge stops in B's bar, the slur closes there, the twin
+        // writes both, and the sound is the unrepeated book's, level for level.
+        var tree = SyntaxTree.Parse(source);
+        string xml = new LilySharp.Core.MusicXml.MusicXmlExporter().Export(tree).ToXml().ToString();
+        Assert.Equal(1, Count(xml, "<wedge type=\"crescendo\""));
+        Assert.Equal(1, Count(xml, "<wedge type=\"stop\""));
+        Assert.Equal(1, Count(xml, "<slur type=\"stop\""));
+        string ly = Twin(source);
+        Assert.Contains("c'4\\f\\< d' e' f' |", ly);
+        Assert.Contains("g'1\\ff", ly);
+        Assert.Contains("g1 )", ly);
+        // (The MIDI ramps no hairpin whose target stands in the next section, over an ordinary
+        // boundary either: the ending's notes are at @f and B's at @ff in both books.)
+        static int[] Levels(string source) => [.. new LilySharp.Core.Midi.MidiExporter().Export(SyntaxTree.Parse(source)).Tracks
+            .SelectMany(t => t.Notes).Where(n => n.Pitch >= 60).OrderBy(n => n.StartTick).TakeLast(5).Select(n => n.Velocity)];
+        Assert.Equal(Levels(Book("A ~E1 ~E2 B")), Levels(source));
+        Assert.True(Levels(source)[^1] > Levels(source)[0]);
+
+        // Still refused: out of the first ending (it goes back to A), out of a body that ends
+        // in ':|', and out of a last ending when an earlier one plays after it.
+        static void Refused(string source)
+        {
+            var said = Assert.Single(Said(source), d => d.Code == DiagnosticCodes.SpanAcrossSectionBoundary && d.Message.Contains("a hairpin"));
+            Assert.Equal(DiagnosticSeverity.Error, said.Severity);
+            Assert.Contains("a hairpin may not cross there", said.Message);
+        }
+        Refused(Book(endings, e1: "d'4@f@cresc d' e' f' |", e2: "c'1@ff |", b: "g'1 |", low2: "c1 |", lowB: "g1 |"));
+        Refused(Book("|: A :| B ~E1 ~E2", a: "c'4@f@cresc d' e' f' |", e2: "c'1 |", low2: "c1 |", lowB: "g1 |"));
+        Refused(Book("|: A [1,3. ~E1] :| [2. ~E2] B", low2: "c1 |", lowB: "g1 |"));
+    }
+
     private static string RepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);

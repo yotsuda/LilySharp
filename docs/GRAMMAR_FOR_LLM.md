@@ -890,7 +890,9 @@ score { staff melody }
 - A slur, phrasing slur, tie or hairpin still open when a section ends is carried into the
   section the form plays NEXT and must end there (checked per form, per part, per play; LYS4023
   warns otherwise). A slur, phrasing slur or hairpin may NOT cross a repeat sign, a volta
-  ending's edge or a jump mark — an error. A TIE may: it reaches the first note of every section
+  ending's edge or a jump mark — an error (except out of a repeat's LAST ending into the section
+  after it, `|: A [1. B] :| [2. C] D`: D always follows C, so a crescendo in C may end on D's
+  dynamic). A TIE may: it reaches the first note of every section
   PLAYED next (the body again, the next ending), which must repeat its pitch (LYS4007); the page
   adds the repeat tie itself. A beam never crosses a section. A sustain pedal still down
   (`@sustain` with no `@!sustain` yet) is carried into the next section, as a slur is: do not
