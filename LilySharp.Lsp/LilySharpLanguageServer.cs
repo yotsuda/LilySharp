@@ -517,6 +517,97 @@ public sealed partial class LilySharpLanguageServer
             Uri = doc.Uri,
             Diagnostics = [.. diagnostics]
         });
+
+        SchedulePageChecks(doc, diagnostics, token);
+    }
+
+    /// <summary>How long the text must rest after the keystroke pass has published before the
+    /// page checks run (<see cref="SemanticValidation.RunPageChecks"/>).</summary>
+    internal const int PageChecksIdleMs = 1500;
+
+    /// <summary>How many page-check passes have run to their publish — for tests.</summary>
+    internal int PageCheckPasses => System.Threading.Volatile.Read(ref _pageCheckPasses);
+
+    private int _pageCheckPasses;
+
+    /// <summary>
+    /// The page checks' own pass: the warnings that need the score laid out (LYS4078, a
+    /// cross-staff note in the other staff's notes), published merged with what the keystroke
+    /// pass just published (<paramref name="published"/>).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ NOT IN THE KEYSTROKE PASS: a layout of the whole score per settled keystroke is what
+    /// sessions 1108-1110 took out of the editor. MEASURED 2026-11-13 (Lab
+    /// sessions/p1226/md/crosswarn, a four-page song with 129 moved notes): the page checks
+    /// cost about three times the whole keystroke pass. So they start only after the text has
+    /// rested <see cref="PageChecksIdleMs"/> past that pass, never while a preview render is
+    /// running or just answered (the same yield as the keystroke pass), and under that pass's
+    /// own token: the next edit cancels the wait, and a pass already running gives up between
+    /// its collect, its layout and its drawing and publishes nothing. A file with no
+    /// <c>@cross</c> schedules nothing.
+    /// <para>
+    /// Not taken from the preview's render, which would cost no layout: the SVG backend records
+    /// no ink boxes (the check reads the boxes backend's), the preview may be showing another
+    /// score of the file, and the music font the drawing reads is held per thread.
+    /// </para>
+    /// <para>
+    /// Until this pass publishes, the panel shows the keystroke pass's list alone: after an
+    /// edit a page warning is gone for the idle time and comes back.
+    /// </para>
+    /// </remarks>
+    private void SchedulePageChecks(Document doc, List<LilySharp.Lsp.Protocol.Diagnostic> published,
+        CancellationToken token)
+    {
+        if (!SemanticValidation.HasPageChecks(doc.Tree))
+            return;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(PageChecksIdleMs, token);
+                while (SvgActivityAgeMs() < SvgQuietMs)
+                    await Task.Delay(SvgQuietMs, token);
+                var current = _documentManager.GetDocument(doc.Uri);
+                if (current == null || current.Version != doc.Version)
+                    return;
+                var page = PageDiagnostics(doc, token);
+                if (page.Count == 0 || token.IsCancellationRequested)
+                    return;
+                var merged = new List<LilySharp.Lsp.Protocol.Diagnostic>(published);
+                foreach (var d in page)
+                    merged.Add(ConvertDiagnostic(d, doc.Text, doc.Uri));
+                System.Threading.Interlocked.Increment(ref _pageCheckPasses);
+                await _rpc.NotifyWithParameterObjectAsync(Methods.TextDocumentPublishDiagnosticsName, new PublishDiagnosticParams
+                {
+                    Uri = doc.Uri,
+                    Diagnostics = [.. merged]
+                });
+            }
+            catch (OperationCanceledException)
+            {
+                // Superseded by a newer change — its own passes publish.
+            }
+            catch
+            {
+                // A page check that throws is a Lily# bug, not the author's: the keystroke
+                // pass's list stays as published.
+            }
+        }, CancellationToken.None);
+    }
+
+    /// <summary>The page checks' diagnostics that belong to <paramref name="doc"/>, over the
+    /// tree with its <c>using</c> directives resolved, as the keystroke pass's are
+    /// (<see cref="DocumentDiagnostics(Document, CancellationToken, out bool)"/>).</summary>
+    internal static IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> PageDiagnostics(Document doc, CancellationToken token)
+    {
+        var (tree, _) = ExpandUsings(doc.Text, doc.Tree,
+            doc.Uri.IsFile ? doc.Uri.LocalPath : string.Empty,
+            p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null);
+        var result = new List<LilySharp.Core.Syntax.Diagnostic>();
+        foreach (var d in SemanticValidation.RunPageChecks(tree, token))
+            if (d.Span.Start < doc.Text.Length)
+                result.Add(d);
+        return result;
     }
 
     /// <summary>

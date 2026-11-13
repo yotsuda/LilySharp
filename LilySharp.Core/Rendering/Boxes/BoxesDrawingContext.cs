@@ -201,7 +201,24 @@ internal sealed class BoxesDrawingContext : IDrawingContext, IDisposable
 
     public void DrawFilledQuad((double X, double Y) p0, (double X, double Y) p1,
         (double X, double Y) p2, (double X, double Y) p3, Color fill)
-        => AddPoints("quad", [p0, p1, p2, p3], 0);
+    {
+        _quads[_symbols.Count] =
+        [
+            _t.Tx + _t.Sx * p0.X, _t.Ty + _t.Sy * p0.Y, _t.Tx + _t.Sx * p1.X, _t.Ty + _t.Sy * p1.Y,
+            _t.Tx + _t.Sx * p2.X, _t.Ty + _t.Sy * p2.Y, _t.Tx + _t.Sx * p3.X, _t.Ty + _t.Sy * p3.Y,
+        ];
+        AddPoints("quad", [p0, p1, p2, p3], 0);
+    }
+
+    // A quad's own four corners on the page (x, y four times, in drawing order), by the index
+    // of its symbol: a slanted beam's box holds far more than its ink, and the one reader that
+    // asks what a beam's ink TOUCHES (Semantics.CrossStaffCollisionValidator) needs the
+    // parallelogram. Not part of the boxes format.
+    private readonly Dictionary<int, double[]> _quads = new();
+
+    /// <summary>The page corners of the symbol at <paramref name="symbolIndex"/> when it was
+    /// drawn as a quad (a beam), else null.</summary>
+    internal double[]? QuadOf(int symbolIndex) => _quads.GetValueOrDefault(symbolIndex);
 
     public void DrawEllipse(double cx, double cy, double rx, double ry,
         Color? fill = null, Color? stroke = null, double strokeWidth = 0)
@@ -389,6 +406,11 @@ internal sealed class BoxesDocumentContext : IDocumentContext
         => [.. _pages.Select((p, i) => new BoxPage(i + 1, R(p.Width), R(p.Height), p.Symbols, p.Bars))];
 
     private static double R(double v) => Math.Round(v, 4);
+
+    /// <summary>The corners of page <paramref name="pageIndex"/>'s symbol
+    /// <paramref name="symbolIndex"/> when it was drawn as a quad
+    /// (<see cref="BoxesDrawingContext.QuadOf"/>), else null.</summary>
+    internal double[]? QuadOf(int pageIndex, int symbolIndex) => _pages[pageIndex].QuadOf(symbolIndex);
 
     public void Dispose()
     {

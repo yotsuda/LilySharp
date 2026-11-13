@@ -230,6 +230,35 @@ public static class SemanticValidation
     }
 
     /// <summary>
+    /// The PAGE checks: what is known only once a score is laid out and drawn. Not part of
+    /// <see cref="Run(SyntaxTree)"/>, which the language server runs after every settled
+    /// keystroke and which must not lay a score out (the keystroke's cost was audited in
+    /// sessions 1108-1110); <c>lysc check</c> runs them after it, and the language server on
+    /// its own pass once the text has rested. There is one: a note <c>@cross</c> moved into
+    /// the other staff's own notes (<see cref="CrossStaffCollisionValidator"/>, LYS4078).
+    /// </summary>
+    /// <remarks>
+    /// The cost is a collect, a layout and a paintless drawing of each score that needs one —
+    /// none for a file <see cref="HasPageChecks"/> answers false for. Given up between those
+    /// steps when <paramref name="token"/> is cancelled (throws
+    /// <see cref="OperationCanceledException"/>).
+    /// </remarks>
+    public static IReadOnlyList<Diagnostic> RunPageChecks(SyntaxTree tree,
+        System.Threading.CancellationToken token = default)
+    {
+        if (!HasPageChecks(tree))
+            return [];
+        var crossStaff = new CrossStaffCollisionValidator();
+        crossStaff.Validate(tree, token);
+        return crossStaff.Diagnostics;
+    }
+
+    /// <summary>Whether <see cref="RunPageChecks"/> has anything to ask of
+    /// <paramref name="tree"/> — a scan of its text, so a caller can skip scheduling the
+    /// pass.</summary>
+    public static bool HasPageChecks(SyntaxTree tree) => CrossStaffCollisionValidator.Concerns(tree);
+
+    /// <summary>
     /// Collects the score the way the RENDER path does, swallowing collector failures (a
     /// malformed score surfaces its real error through the parser / other validators).
     /// Returns null on failure.

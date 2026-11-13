@@ -2119,6 +2119,15 @@ score winds {
 Each is the LilyPond context of the same name, so a `.ly` export of the three is
 `\new GrandStaff` / `\new StaffGroup` / `\new ChoirStaff`.
 
+A note written `@cross` (`fis'8@cross`) is drawn on the **other** staff of its grand staff and
+stays in its own voice — its beam and stem reach across (with no staff beside the part it stays
+where it is: LYS4031). It is drawn where it is written, as LilyPond draws it: where it runs into
+the other staff's own notes — a notehead, a stem, a beam, a rest — nothing is moved and a warning
+at the note (**LYS4078**) names what it met; write the note on its own staff, turn the other
+hand's stems away (`@stemUp` / `@stemDown`), or change the clef for the passage. The warning is
+one a bar of the part (one for the whole part when more than five of its bars collide), comes
+from `lysc check` and, in the editor, once the text has rested; a moved grace note is not judged.
+
 ⚠️ `staffGroup` reads in the other order on purpose, and is **not** a slip for
 `groupStaff`. The other four `…Staff` items in a score body each *produce* a staff
 (`condensedStaff` and `combinedStaff` put several parts on one) or are the established

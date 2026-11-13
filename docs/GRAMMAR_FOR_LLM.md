@@ -748,7 +748,9 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
 - Half ties: `c4@laissezVibrer` (l.v. into silence), `c4@repeatTie` (resume from a repeat)
 - Effects: `@dead` (x notehead; `@notehead(cross)` is the same head — `@cross` is NOT: it moves the
   note to the other staff of a grand staff; on a part drawn with no staff beside it = warning
-  LYS4031 and the note stays). In a chord, `<c e@dead>4` mutes that member and
+  LYS4031 and the note stays; a moved note that runs into the other staff's own notes on the
+  page — a beam, a notehead, a stem, a rest — is drawn as written and warned by `lysc check`, LYS4078 (one a bar; grace notes not judged): drop the
+  `@cross`, turn the other hand's stems with `@stemUp` / `@stemDown`, or change the clef). In a chord, `<c e@dead>4` mutes that member and
   `<c e>4@dead` every member (since 2026-11-13; before, both drew nothing). `@notehead(cross)`
   is the head alone — `<c e@notehead(cross)>4`, `<c e>4@notehead(cross)`. Other heads the
   same way: `c2@notehead(diamond)`, `<c f@notehead(diamond)>2` (a stopped note and the touched

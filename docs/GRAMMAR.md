@@ -2334,7 +2334,13 @@ StaffGroupBody = '{' , { StaffRender | CondensedStaff | CombinedStaff
                     staves the next staff down, the last staff's the one above). It is a note annotation,
                     not a head style: `@cross` is NOT an x notehead (that is `@dead` or
                     `@notehead(cross)`). On a part that no score draws beside another staff it
-                    moves nothing and is a warning, LYS4031, naming those two spellings. *)
+                    moves nothing and is a warning, LYS4031, naming those two spellings. A moved
+                    note is drawn where it is written (as LilyPond draws it); where it runs into
+                    the other staff's own notes on the laid-out page - a notehead, a stem, a beam,
+                    a rest - nothing is moved and a warning says so, LYS4078: one a bar of the
+                    part, one for the part when more than five of its bars do. `lysc check` and
+                    the editor (once the text has rested) say it; a moved grace note is not
+                    judged. *)
 
 CondensedStaff = 'condensedStaff' , [ ClefName ] , '{' , PartRef , PartRef , { PartRef } , '}' ;
                  (* A CONDENSED score: the named parts, each of which would otherwise be its

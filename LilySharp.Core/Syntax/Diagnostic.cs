@@ -1687,6 +1687,14 @@ public static class DiagnosticCodes
     /// naming the other (read off the collect, <c>Semantics.BreakConflictValidator</c>).</summary>
     public const string BreakAgainstNoBreak = "LYS4077";
 
+    /// <summary>Warning: a note <c>@cross</c> moved to the other staff runs, on the laid-out
+    /// page, into that staff's own notes — a notehead, a stem, a beam, a rest (owner's decision
+    /// 2026-11-13, on a left hand whose moved notes met the right hand's beam and half note).
+    /// The page draws what is written, as LilyPond does, and this says so at the note, naming
+    /// what it met and the ways out (<c>Semantics.CrossStaffCollisionValidator</c>, which lays
+    /// the score out to know; LilyPond says nothing here).</summary>
+    public const string CrossStaffRunsIntoOtherStaff = "LYS4078";
+
     /// <summary>Error: a span end whose name is not the one the span was opened with —
     /// <c>@8va … @!15ma</c> (owner's decision 2026-10-28: a span is closed by its own name;
     /// <c>Semantics.SpanNames</c>). The quick fix writes the start's name.</summary>

@@ -1085,7 +1085,7 @@ static int ExecuteCheck(string inputPath, bool showPitches = false, TodoReport t
     try
     {
         var (source, tree, usingDiagnostics) = LoadAndParse(inputPath);
-        var allDiagnostics = CollectDiagnostics(tree, usingDiagnostics);
+        var allDiagnostics = CollectDiagnostics(tree, usingDiagnostics, pageChecks: true);
         // The @todo marks themselves (LYS4026), not a malformed or repeated one.
         if (todos == TodoReport.Silent)
             allDiagnostics = allDiagnostics.Where(d => d.Code != DiagnosticCodes.TodoMark).ToList();
@@ -1258,7 +1258,8 @@ static void PrintResolvedPitches(string source, SyntaxTree tree)
 /// (e.g. undefined variable / phrase / section references).
 /// </summary>
 static IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> CollectDiagnostics(
-    SyntaxTree tree, IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> usingDiagnostics)
+    SyntaxTree tree, IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> usingDiagnostics,
+    bool pageChecks = false)
 {
     // Include resolution first: `using "x.lys"` naming a file that cannot be read is the
     // CAUSE of the undefined-part and undefined-section errors the validators are about to
@@ -1268,6 +1269,10 @@ static IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> CollectDiagnostics(
     // the CLI and the LSP can never diverge on which validators run).
     combined.AddRange(tree.Diagnostics);
     combined.AddRange(LilySharp.Core.Semantics.SemanticValidation.Run(tree));
+    // The page checks (LYS4078) lay the score out, so `check` alone asks for them: an output
+    // command is about to lay it out itself and would pay twice.
+    if (pageChecks)
+        combined.AddRange(LilySharp.Core.Semantics.SemanticValidation.RunPageChecks(tree));
     // What was written after the file for its printed singers is not the writer's to mend.
     return LilySharp.Core.Editing.SingerParts.Wanted(tree)
         ? LilySharp.Core.Editing.SingerParts.OwnOf(combined, tree.Text, tree.GetRoot())

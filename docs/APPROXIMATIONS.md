@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 422 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **550** | |
+| `OWN` | 423 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **551** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -249,7 +249,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（422 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（423 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -445,6 +445,8 @@
 - **`ChordFingeringValidator.NotBowedAtOnce`** LILYSHARP-OWN. The pizzicato is read in the order the part is WRITTEN — its blocks down the
 ### `LilySharp.Core/Semantics/ChordShapesDirective.cs`
 - **`CapoDirective`** LILYSHARP-OWN: LilyPond 2.26 has no capo property; its \fret-diagram-verbose knows a
+### `LilySharp.Core/Semantics/CrossStaffCollisionValidator.cs`
+- **`CrossStaffCollisionValidator`** LILYSHARP-OWN: LilyPond says nothing here.
 ### `LilySharp.Core/Semantics/FileShift.cs`
 - **`FileShift`** LILYSHARP-OWN: LilyPond has \transpose FROM TO and no number of semitones.
 ### `LilySharp.Core/Semantics/FontPlanReader.cs`
