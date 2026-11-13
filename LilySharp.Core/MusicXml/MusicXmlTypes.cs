@@ -979,6 +979,11 @@ internal sealed class MusicXmlNote
     /// <summary>Direct &lt;notations&gt; children (arpeggiate, glissando, …).</summary>
     public List<XElement> ExtraNotations { get; } = new();
     public bool IsGrace { get; set; }
+    /// <summary>A note or a rest of a <c>cue { }</c>: <c>&lt;cue/&gt;</c> and
+    /// <c>&lt;type size="cue"&gt;</c> — printed small, and silent in a reader that plays the
+    /// file (grammar evaluation 4, 2026-11-13). MusicXML allows a cue no <c>&lt;tie&gt;</c>
+    /// (the sound's tie); its <c>&lt;tied&gt;</c>, the drawn one, stays.</summary>
+    public bool IsCue { get; set; }
     public bool IsSlash { get; set; }
     /// <summary>The grace's <c>steal-time-previous</c> percentage: an afterGrace's 25.</summary>
     public int? StealTimePrevious { get; set; }
@@ -1089,6 +1094,9 @@ internal sealed class MusicXmlNote
             note.Add(graceEl);
         }
 
+        if (IsCue)
+            note.Add(new XElement("cue"));
+
         if (IsChord)
             note.Add(new XElement("chord"));
 
@@ -1121,9 +1129,9 @@ internal sealed class MusicXmlNote
             note.Add(new XElement("duration", Duration));
 
         // Ties (before type)
-        if (TieStart)
+        if (TieStart && !IsCue)
             note.Add(new XElement("tie", new XAttribute("type", "start")));
-        if (TieStop)
+        if (TieStop && !IsCue)
             note.Add(new XElement("tie", new XAttribute("type", "stop")));
 
         // A note on a numbered staff always says its voice (2026-10-01, the Omr report #16):
@@ -1137,7 +1145,7 @@ internal sealed class MusicXmlNote
             note.Add(new XElement("voice", 1));
 
         if (Type != null)
-            note.Add(new XElement("type", Type));
+            note.Add(new XElement("type", IsCue ? new XAttribute("size", "cue") : null, Type));
 
         for (int i = 0; i < Dots; i++)
             note.Add(new XElement("dot"));

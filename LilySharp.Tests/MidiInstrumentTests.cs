@@ -184,8 +184,12 @@ public class MidiInstrumentTests
         var exporter = new MidiExporter();
         var midi = exporter.Export(Parse(SixteenParts(i => GeneralMidi.InstrumentNames[i])));
 
-        Assert.Equal(0, midi.Tracks[16].Channel);
-        Assert.Contains(exporter.Warnings, w => w.Contains("'inst15'"));
+        // Sixteen different sounds, programs 0-15: the nearest two of one family are one sound,
+        // the earlier part's — the last such pair, inst14 and inst15 (grammar evaluation 4,
+        // 2026-11-13; until then inst15 took channel 1 and the first part's sound).
+        Assert.Equal(midi.Tracks[15].Channel, midi.Tracks[16].Channel);
+        Assert.Equal(14, midi.Tracks[16].Program);
+        Assert.Contains("'inst15'", Assert.Single(exporter.Warnings));
     }
 
     [Theory]

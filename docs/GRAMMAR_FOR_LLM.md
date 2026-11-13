@@ -759,7 +759,10 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
 - Cue notes: `cue { … }` — a REGION, not an annotation, so there is no `@cue`:
   `c4 d cue { e4 f } g4 |` (it maps onto LilyPond's CueVoice context). Name the quoted
   instrument's clef to read the cue in it: `c4 d cue bass { e4 f } g4 |` — the staff's own
-  clef returns after the region. A slur or tie may NOT cross the region's edge (LYS4012):
+  clef returns after the region. A cue is SILENT — printed for orientation, never played
+  (not in the MIDI, the WAV or the preview; MusicXML marks its notes `<cue/>`); the part it
+  quotes plays those notes itself. In a drum part write the horn rhythm as a pitched cue
+  (`voice { cue { c''4 r c''2 } } { … }`): the kit stays a kit. A slur or tie may NOT cross the region's edge (LYS4012):
   a cue is a voice of its own, so close the span inside the cue or keep both ends outside.
   Two `cue` blocks side by side are two voices — a span may not run from one into the next
   either, even though both of its ends are cue notes.

@@ -3589,6 +3589,11 @@ Cue            = 'cue' , [ ClefName ] , MusicBlock ;
                     LilyPond's \cueClef / \cueClefUnset, which the twin emits as a pair.
                     Its notes are written in that clef and the staff's own clef returns
                     after the region. *)
+                 (* A cue is SILENT: it shows the player what another instrument plays, and
+                    that instrument plays it. Its notes take their time and sound nothing —
+                    in the MIDI, the WAV, the preview and a sung voice — its dynamics and
+                    pedals change nothing, and MusicXML writes them as cue notes (<cue/>,
+                    the cue size). A pitched cue in a drum part leaves the kit a kit. *)
                  (* ⚠️ A slur or tie may not cross the region's edge: a cue is a voice of
                     its own, so LilyPond drops such a span entirely (LYS4012). Close it
                     inside the cue, or keep both ends outside — a slur passing OVER a whole

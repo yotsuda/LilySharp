@@ -2267,7 +2267,7 @@ public sealed partial class MeasureCollector
         // phrase ("Failed to load phrase data"; owner, 2026-11-13, kaze.lys). The part's own
         // staff takes its voices as they stood before the junk (VoicesFor).
         var beforeTheJunk = new Dictionary<string, ImmutableArray<Voice>>(staffVoices);
-        JunkCondensedStaffDuplicateChanges(renderSpec, staffVoices, voiceKeyDict);
+        JunkCondensedStaffDuplicateChanges(renderSpec, staffVoices, voiceKeyDict, staffCollections);
         ImmutableArray<StaffGroup> staffGroups;
         // A condensed staff packs its parts' accidentals into one column as it is built
         // (RenderSpec.ToStaffGroups), under the same two scopes ResolveStaffColumns opens for
@@ -3878,16 +3878,143 @@ public sealed partial class MeasureCollector
     /// </remarks>
     private void JunkCondensedStaffDuplicateChanges(
         RenderSpec renderSpec, Dictionary<string, ImmutableArray<Voice>> staffVoices,
-        IReadOnlyDictionary<string, KeySignature> voiceKeyDict)
+        IReadOnlyDictionary<string, KeySignature> voiceKeyDict, List<StaffCollection> collections)
     {
         foreach (var item in renderSpec.Items)
         {
             if (item is CondensedStaffSpec condensed)
-                JunkOnOneCondensedStaff(condensed, staffVoices, voiceKeyDict);
+                JunkAndReaddress(condensed);
             else if (item is GrandStaffRenderSpec grand)
                 foreach (var member in grand.GrandStaff.Members)
                     if (member is CondensedStaffSpec nested)
-                        JunkOnOneCondensedStaff(nested, staffVoices, voiceKeyDict);
+                        JunkAndReaddress(nested);
+        }
+
+        void JunkAndReaddress(CondensedStaffSpec condensed)
+        {
+            _condensedChangeShifts.Clear();
+            JunkOnOneCondensedStaff(condensed, staffVoices, voiceKeyDict);
+            if (_condensedChangeShifts.Count > 0)
+                ReaddressAfterCondensedChanges(condensed, collections);
+        }
+    }
+
+    // Every item the junk below took out of a part's bar or put into one, in the order it did:
+    // the part, its voice, the bar, the item's index — as collected for one taken out, as the
+    // bar stood when it went in for one put in. Read by ReaddressAfterCondensedChanges.
+    private readonly List<(string Part, int Voice, int Measure, int Index, bool Inserted)> _condensedChangeShifts = new();
+
+    /// <summary>
+    /// The marks of a condensed staff's parts follow their notes when a change leaves a bar or
+    /// enters it (grammar evaluation 4, 2026-11-13). A mark is addressed by staff, voice, bar
+    /// and the ITEM INDEX it was collected at, and <see cref="JunkOnOneCondensedStaff"/> takes
+    /// a later part's key / time / clef change out of its bar — every item behind it one index
+    /// down — and puts a change only a later part writes into the first part's bar — every
+    /// item behind it one index up. Until then the marks kept their numbers: in a bar that
+    /// opens with a change (every section whose header states a key) the lower part's
+    /// <c>@p</c>, <c>@staccato</c> and <c>@text</c> stood one note late, and under a change only
+    /// the lower part wrote, the UPPER part's accent and hairpin one note early (Lab
+    /// sessions/p1226/md/eval4/fixS1/p3). The words under a part's own staff were the same
+    /// defect and are mended where that staff takes its voices (VoicesFor).
+    /// </summary>
+    /// <remarks>
+    /// The sinks are the collector's lists that carry a collected item index with their voice:
+    /// dynamics (and the free text riding them), articulations, music marks (a hairpin's ends,
+    /// a spanner's), tuplet brackets, arpeggios and grace runs. Ties, slurs and beams are
+    /// stamped by the layout on the staff's finished voices and were never wrong.
+    /// ⚠️ Not re-addressed, no book to read them on: grob overrides, figured bass, a beat
+    /// repeat's item — none carries a part's voice on a condensed staff today.
+    /// </remarks>
+    private void ReaddressAfterCondensedChanges(CondensedStaffSpec condensed, List<StaffCollection> collections)
+    {
+        // The staff: the one a later part of this spec was appended to.
+        int staff = -1;
+        foreach (var c in collections)
+            if (c.Appended && condensed.PartNames.Contains(c.Part))
+                staff = c.Staff;
+        if (staff < 0)
+            return;
+        var shifts = new Dictionary<(int Slot, int Measure), List<(int Index, bool Inserted)>>();
+        foreach (var (part, voice, measure, index, inserted) in _condensedChangeShifts)
+        {
+            int at = collections.FindLastIndex(c => c.Staff == staff && c.Part == part);
+            if (at < 0)
+                continue;
+            var key = (collections[at].FirstVoice + voice, measure);
+            if (!shifts.TryGetValue(key, out var list))
+                shifts[key] = list = new List<(int, bool)>();
+            list.Add((index, inserted));
+        }
+        if (shifts.Count == 0)
+            return;
+
+        int Moved(int onStaff, int slot, int measure, int index)
+        {
+            if (onStaff != staff || index < 0 || !shifts.TryGetValue((slot, measure), out var list))
+                return index;
+            int to = index;
+            foreach (var (changed, inserted) in list)
+                if (inserted) { if (to >= changed) to++; }      // in the order they went in
+                else if (changed < index) to--;                 // each counted as collected
+            return to;
+        }
+
+        for (int i = 0; i < _dynamics.Count; i++)
+        {
+            var d = _dynamics[i];
+            int to = Moved(d.StaffIndex, d.VoiceIndex, d.MeasureIndex, d.ItemIndex);
+            if (to != d.ItemIndex)
+                Rekey(d, _dynamics[i] = d with { ItemIndex = to });
+        }
+        for (int i = 0; i < _articulations.Count; i++)
+        {
+            var a = _articulations[i];
+            int to = Moved(a.StaffIndex, a.VoiceIndex, a.MeasureIndex, a.ItemIndex);
+            int last = Moved(a.StaffIndex, a.VoiceIndex, a.MeasureIndex, a.GroupLastItemIndex);
+            if (to != a.ItemIndex || last != a.GroupLastItemIndex)
+                _articulations[i] = a with { ItemIndex = to, GroupLastItemIndex = last };
+        }
+        for (int i = 0; i < _musicMarks.Count; i++)
+        {
+            var m = _musicMarks[i];
+            int to = Moved(m.StaffIndex, m.VoiceIndex, m.MeasureIndex, m.AnchorItemIndex);
+            if (to != m.AnchorItemIndex)
+                Rekey(m, _musicMarks[i] = m with { AnchorItemIndex = to });
+        }
+        for (int i = 0; i < _tupletBrackets.Count; i++)
+        {
+            var t = _tupletBrackets[i];
+            int from = Moved(t.StaffIndex, t.VoiceIndex, t.MeasureIndex, t.StartNoteIndex);
+            int to = Moved(t.StaffIndex, t.VoiceIndex, t.MeasureIndex, t.EndNoteIndex);
+            if (from != t.StartNoteIndex || to != t.EndNoteIndex)
+                _tupletBrackets[i] = t with { StartNoteIndex = from, EndNoteIndex = to };
+        }
+        for (int i = 0; i < _arpeggios.Count; i++)
+        {
+            var a = _arpeggios[i];
+            int to = Moved(a.StaffIndex, a.VoiceIndex, a.MeasureIndex, a.ItemIndex);
+            if (to != a.ItemIndex)
+                _arpeggios[i] = a with { ItemIndex = to };
+        }
+        for (int i = 0; i < _graceNotes.Count; i++)
+        {
+            var g = _graceNotes[i];
+            int to = Moved(g.StaffIndex, g.VoiceIndex, g.MeasureIndex, g.MainNoteItemIndex);
+            var columns = g.ColumnItemIndices.IsDefaultOrEmpty ? g.ColumnItemIndices
+                : g.ColumnItemIndices.Select(c => Moved(g.StaffIndex, g.VoiceIndex, g.MeasureIndex, c)).ToImmutableArray();
+            if (to != g.MainNoteItemIndex || (!columns.IsDefaultOrEmpty && !columns.SequenceEqual(g.ColumnItemIndices)))
+                _graceNotes[i] = new GraceNoteItem(g.Type, g.Columns, g.MeasureIndex, to, g.SourcePosition,
+                    g.StaffIndex, g.VoiceIndex, columns)
+                { IsAfterGrace = g.IsAfterGrace, CrossStaffIndex = g.CrossStaffIndex };
+        }
+
+        // What JunkCondensedStaffDuplicateDynamics said of a mark, by the object, goes with it.
+        void Rekey(object was, object now)
+        {
+            if (_condensedStaffDuplicateDynamics.Remove(was))
+                _condensedStaffDuplicateDynamics.Add(now);
+            if (_condensedStaffDynamicSides.Remove(was, out bool up))
+                _condensedStaffDynamicSides[now] = up;
         }
     }
 
@@ -3999,12 +4126,14 @@ public sealed partial class MeasureCollector
                             {
                                 // Only this part writes it: the staff takes it, on the voice the
                                 // break-align column reads.
-                                firstMeasures[m] = firstMeasures[m] with { Items = WithChangeAt(firstMeasures[m].Items, at, kind, it) };
+                                firstMeasures[m] = firstMeasures[m] with { Items = WithChangeAt(firstMeasures[m].Items, at, kind, it, out int wentIn) };
                                 firstChanged = true;
+                                _condensedChangeShifts.Add((firstPart, 0, m, wentIn, true));
                             }
                             else
                                 continue;   // past the first part's last bar: nothing to stand it on; left as it is
                             kept ??= new List<MusicItem>(items.Take(i));
+                            _condensedChangeShifts.Add((part, vi, m, i, false));
                             continue;
                         }
                         kept?.Add(it);
@@ -4058,10 +4187,10 @@ public sealed partial class MeasureCollector
 
         // `items` with `change` inserted at `onset`, behind the changes already standing there
         // (a clef before a key before a meter, as LilyPond's break-align order has them).
-        static ImmutableArray<MusicItem> WithChangeAt(ImmutableArray<MusicItem> items, Fraction onset, int kind, MusicItem change)
+        static ImmutableArray<MusicItem> WithChangeAt(ImmutableArray<MusicItem> items, Fraction onset, int kind, MusicItem change, out int index)
         {
             var at = Fraction.Zero;
-            int index = items.Length;
+            index = items.Length;
             for (int i = 0; i < items.Length; i++)
             {
                 if (at > onset || (at == onset && (KindOf(items[i]) == 0 || KindOf(items[i]) > kind)))
@@ -5106,6 +5235,7 @@ public sealed partial class MeasureCollector
         _midBarBreakConflicts.Clear();
         _breakConflicts.Clear();
         _breaksOffTheStaves.Clear();
+        _condensedChangeShifts.Clear();
         _harvestedVoices.Clear();
         _sectionResetOverrides.Clear();
         _sectionActiveGrobProps.Clear();

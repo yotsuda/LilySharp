@@ -109,8 +109,12 @@ public class ClefMovesNoPitchTests
     [Fact]
     public void ACueClef_MovesNoPitch()
     {
-        AllOutputsAre(Enumerable.Repeat(60, 12).ToArray(),
-            Book("clef treble", "c'4 c c c | voice { cue bass { c4 c c c } } { R1 } | c4 c c c |"));
+        // A cue is silent (grammar evaluation 4, 2026-11-13): the page and the MusicXML show its
+        // four notes, the MIDI plays the eight around it — at the pitch the cue's clef did not move.
+        string src = Book("clef treble", "c'4 c c c | voice { cue bass { c4 c c c } } { R1 } | c4 c c c |");
+        Assert.Equal(Enumerable.Repeat(60, 12), PagePitches(src));
+        Assert.Equal(Enumerable.Repeat(60, 12), XmlPitches(src));
+        Assert.Equal(Enumerable.Repeat(60, 8), MidiPitches(src));
     }
 
     [Fact]

@@ -829,8 +829,8 @@ public sealed class MidiExporter
             }
     }
 
-    // One line per part the channel plan could not give a channel of its own or a same-sounding
-    // channel to share (SplitIntoPartTracks), reported through Warnings.
+    // The one line that names the parts the channel plan gave another part's sound, when the
+    // score plays more than fifteen different programs (PlanChannels), reported through Warnings.
     private readonly List<string> _channelWarnings = new();
 
     /// <summary>
@@ -847,10 +847,10 @@ public sealed class MidiExporter
     /// <para>
     /// Tracks follow the order in which each part first sounds; music no part claims keeps the
     /// old "Track 1". A pitched part takes the next channel from 0, stepping over 9 (the GM
-    /// drum channel); drum notes keep channel 9 inside their part's track. Past the fifteen
-    /// pitched channels a part shares the channel of an earlier part with the same program —
-    /// a channel carries one sound — and when there is none it shares the first channel and
-    /// says so in <see cref="Warnings"/>. A drum-only track sends no program change.
+    /// drum channel); drum notes keep channel 9 inside their part's track. With more than
+    /// fifteen pitched parts the parts of one program share (<see cref="PlanChannels"/>) —
+    /// a channel carries one sound — and <see cref="Warnings"/> says so only when the programs
+    /// themselves do not fit. A drum-only track sends no program change.
     /// </para>
     /// <para>
     /// LILYSHARP-OWN: LilyPond's performer gives each staff its own channel in the same way
@@ -896,40 +896,25 @@ public sealed class MidiExporter
         var partSounds = _playedSpec is { } shownSpec ? Svg.Collector.SungStaves.Of(_root!, shownSpec) : null;
         var sungParts = partSounds == null ? new HashSet<string>(StringComparer.Ordinal)
             : partSounds.Sung.Except(partSounds.Played, StringComparer.Ordinal).ToHashSet(StringComparer.Ordinal);
-        var channelByProgram = new Dictionary<int, int>();
-        int nextChannel = 0;
-        bool first = true;
+        var programs = new List<int>(order.Count);
+        var pitchedParts = new List<bool>(order.Count);
         foreach (var part in order)
         {
-            var notes = part is null ? unclaimed! : byPart[part];
-            int program = part is null ? 0
+            programs.Add(part is null ? 0
                 : Header(part) is { MidiInstrument: null, Preset: null } && sungParts.Contains(part) ? GeneralMidi.ChoirAahs
-                : Header(part).MidiProgram;
-            bool pitched = notes.Any(n => n.Channel != 9);
+                : Header(part).MidiProgram);
+            pitchedParts.Add((part is null ? unclaimed! : byPart[part]).Any(n => n.Channel != 9));
+        }
+        var (channels, sounds) = PlanChannels(order.Select(p => p ?? mainTrack.Name).ToList(), programs, pitchedParts);
 
-            int channel = 9;
-            if (pitched)
-            {
-                if (nextChannel == 9)
-                    nextChannel++;
-                if (nextChannel <= 15)
-                {
-                    channel = nextChannel++;
-                    channelByProgram.TryAdd(program, channel);
-                }
-                else if (channelByProgram.TryGetValue(program, out int shared))
-                {
-                    channel = shared;
-                }
-                else
-                {
-                    channel = 0;
-                    _channelWarnings.Add(
-                        $"part '{part ?? mainTrack.Name}' has no MIDI channel of its own: sixteen channels "
-                        + $"hold at most fifteen pitched sounds, so it plays on channel 1 with that "
-                        + $"channel's sound instead of \"{GeneralMidi.InstrumentNames[program]}\"");
-                }
-            }
+        bool first = true;
+        for (int index = 0; index < order.Count; index++)
+        {
+            var part = order[index];
+            var notes = part is null ? unclaimed! : byPart[part];
+            int program = sounds[index];
+            bool pitched = pitchedParts[index];
+            int channel = channels[index];
 
             var track = new MidiTrack
             {
@@ -946,6 +931,105 @@ public sealed class MidiExporter
             }
             midi.Tracks.Add(track);
         }
+    }
+
+    /// <summary>
+    /// The channel each part plays on and the program it sounds there (grammar evaluation 4,
+    /// 2026-11-13): sixteen channels, one of them the kit's, hold fifteen pitched sounds.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Up to fifteen pitched parts: a channel each, in order, stepping over the kit's — as it
+    /// always was. More: every DIFFERENT program is promised a channel first, and the channels
+    /// left over go to the parts in order; a part that finds none left shares the first channel
+    /// of its own program, so no channel is ever given two sounds while the programs fit
+    /// (a big band's two altos, four trumpets, four trombones and the piano's two hands).
+    /// More than fifteen different programs: the two nearest by General MIDI number — the same
+    /// family first — become one sound, the earlier part's, until fifteen are left, and ONE
+    /// warning names the parts that play with another's sound.
+    /// </para>
+    /// <para>
+    /// ⚠️ Until then the sixteenth pitched part on took an earlier part's channel only when that
+    /// part happened to hold a channel by its own program, and otherwise channel 1 with a
+    /// warning — the seventeenth part of a big band, its bass, played with the first alto's
+    /// sound or gave the alto its own (Lab eval4 bigband r-05).
+    /// </para>
+    /// <para>
+    /// LILYSHARP-OWN: a second port (meta event 0x21, a port a track) would give sixteen more
+    /// channels, but a player that reads one port — most do — then plays both ports' channels
+    /// as one, with no part knowing; sharing within the sixteen sounds the same everywhere.
+    /// The preview plays these channels too (playbackCore.ts: one program a channel).
+    /// </para>
+    /// </remarks>
+    private (int[] Channels, int[] Programs) PlanChannels(
+        IReadOnlyList<string> names, IReadOnlyList<int> programs, IReadOnlyList<bool> pitched)
+    {
+        const int Kit = 9, Pitched = 15;
+        int count = names.Count;
+        var channels = new int[count];
+        var sounds = programs.ToArray();
+        Array.Fill(channels, Kit);
+        var parts = Enumerable.Range(0, count).Where(i => pitched[i]).ToList();
+
+        static int Nth(int n) => n < Kit ? n : n + 1;
+        if (parts.Count <= Pitched)
+        {
+            for (int k = 0; k < parts.Count; k++)
+                channels[parts[k]] = Nth(k);
+            return (channels, sounds);
+        }
+
+        // More than fifteen different programs: the nearest two become one, the earlier's.
+        var distinct = parts.Select(i => sounds[i]).Distinct().ToList();
+        var playsAs = new Dictionary<int, int>();
+        while (distinct.Count > Pitched)
+        {
+            (int Keep, int Give) best = (-1, -1);
+            (int Family, int Distance, int Latest) bestKey = (int.MaxValue, int.MaxValue, int.MinValue);
+            for (int a = 0; a < distinct.Count; a++)
+                for (int b = a + 1; b < distinct.Count; b++)
+                {
+                    var key = (distinct[a] / 8 == distinct[b] / 8 ? 0 : 1, Math.Abs(distinct[a] - distinct[b]), -b);
+                    if (key.CompareTo(bestKey) < 0)
+                        (best, bestKey) = ((a, b), key);
+                }
+            playsAs[distinct[best.Give]] = distinct[best.Keep];
+            distinct.RemoveAt(best.Give);
+        }
+        if (playsAs.Count > 0)
+        {
+            var shared = new List<string>();
+            foreach (int i in parts)
+            {
+                int sound = sounds[i];
+                while (playsAs.TryGetValue(sound, out int kept))
+                    sound = kept;
+                if (sound == sounds[i])
+                    continue;
+                shared.Add($"'{names[i]}' (\"{GeneralMidi.InstrumentNames[sounds[i]]}\") as \"{GeneralMidi.InstrumentNames[sound]}\"");
+                sounds[i] = sound;
+            }
+            _channelWarnings.Add(
+                "the score plays more than fifteen different instruments, and sixteen MIDI channels hold "
+                + "fifteen pitched sounds: " + string.Join(", ", shared.Select(s => "part " + s))
+                + " — each plays with the nearest sound another part has");
+        }
+
+        int spare = Pitched - distinct.Count, next = 0;
+        var channelOfProgram = new Dictionary<int, int>();
+        foreach (int i in parts)
+        {
+            if (!channelOfProgram.TryGetValue(sounds[i], out int own))
+                channelOfProgram[sounds[i]] = channels[i] = Nth(next++);
+            else if (spare > 0)
+            {
+                channels[i] = Nth(next++);
+                spare--;
+            }
+            else
+                channels[i] = own;
+        }
+        return (channels, sounds);
     }
 
     // The palm mute and the let ring running in each voice of each part, as the walk plays them.
@@ -1108,7 +1192,28 @@ public sealed class MidiExporter
             case CueExpressionSyntax cue:
                 // A cue clef is drawing only: the body plays in the running relative frame
                 // (LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave).
-                ProcessNode(cue.Body, track, conductorTrack);
+                // A cue is SILENT (grammar evaluation 4, 2026-11-13): it shows the player what
+                // another instrument plays, and that instrument plays it. Its body is walked as
+                // before — it takes its time, moves the relative frame and fills its bars — and
+                // the notes it wrote leave with the notes a bar line cut (DroppedNote), so they
+                // are in no track, no playback note, no sung voice. Its dynamics and pedals are
+                // the other player's too: the level and the pedal stand as they did before it.
+                // Until then the reading part played every cue with its own sound, and a pitched
+                // cue in a drum part made the kit's track a piano's (Lab eval4 bigband r-04, r-03b).
+                // LILYSHARP-OWN: LilyPond's \cueDuring quotes a voice into a CueVoice, which its
+                // MIDI plays again; a Lily# cue is typed in the reading part and is print only.
+                {
+                    int firstCued = track.Notes.Count, levels = _levelLog.Count, pedals = _pedalLog.Count, level = _velocity;
+                    ProcessNode(cue.Body, track, conductorTrack);
+                    for (int i = firstCued; i < track.Notes.Count; i++)
+                        track.Notes[i] = track.Notes[i] with { DurationTicks = DroppedNote };
+                    _velocity = level;
+                    _levelLog.RemoveRange(levels, _levelLog.Count - levels);
+                    _pedalLog.RemoveRange(pedals, _pedalLog.Count - pedals);
+                    // A tie out of the cue's last note has nothing sounding to extend.
+                    if (track.Notes.Count > firstCued)
+                        _tiePending = false;
+                }
                 break;
 
             case MusicBlockSyntax block:

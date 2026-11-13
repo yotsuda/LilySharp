@@ -843,4 +843,203 @@ public class GrammarEvaluation4Tests
         Assert.Equal(new[] { true, false }, Read("<g@dead b>16").Dead);
         Assert.Equal(new[] { true, true }, Read("<g b>16@dead").Dead);
     }
+
+    // ==== the sound of a big band =============================================================
+
+    private static LilySharp.Core.Midi.MidiFile Midi(string source, out IReadOnlyList<string> warnings)
+    {
+        var exporter = new LilySharp.Core.Midi.MidiExporter();
+        var midi = exporter.Export(SyntaxTree.Parse(source));
+        warnings = exporter.Warnings;
+        return midi;
+    }
+
+    // ---- a cue is silent ---------------------------------------------------------------------
+
+    /// <summary>A <c>cue { }</c> was PLAYED by the part that only reads it (bigband/r-04), and a
+    /// pitched cue in a kit part made the kit's track a piano's on channel 1 (r-03b). A cue
+    /// takes its time and sounds nothing — its notes, its dynamics — and the MusicXML says
+    /// which notes are the cue (<c>&lt;cue/&gt;</c>, the cue size), where it wrote the part's own.</summary>
+    [Fact]
+    public void ACue_IsSilent_AndMusicXmlSaysItIsACue()
+    {
+        string source = "octave absolute\npart tp { instrument trumpet }\npart sx { instrument alto-sax }\n"
+            + "section A {\n  tp { R | cue { c''4@ff d'' e'' f''~ } | f''1 | }\n  sx { R | c''4 d'' e'' f'' | R | }\n}\n"
+            + "form { ~A }\nscore { staff tp  staff sx }\n";
+        var midi = Midi(source, out _);
+        var trumpet = Assert.Single(midi.Tracks, t => t.Name == "tp").Notes;
+        // The one note after the cue, on its beat, at the level the part had before the cue's @ff
+        // (and not swallowed by the tie the cue ends on).
+        var own = Assert.Single(trumpet);
+        Assert.Equal((2 * 4 * midi.TicksPerQuarterNote, LilySharp.Core.Midi.MidiExporter.DefaultVelocity), (own.StartTick, own.Velocity));
+        Assert.Equal(4, Assert.Single(midi.Tracks, t => t.Name == "sx").Notes.Count);
+
+        // A kit part with a pitched cue beside its slashes: the kit alone, no program, channel 10.
+        var kit = Midi("part dr { clef percussion }\nsection A { dr { bd4 sn bd sn | voice { cue { c''4 r c''2 } } { bd4 sn bd sn } | } }\n"
+            + "form { ~A }\nscore { staff dr }\n", out _);
+        var drums = Assert.Single(kit.Tracks, t => t.Name == "dr");
+        Assert.Null(drums.Program);
+        Assert.Equal(8, drums.Notes.Count);
+        Assert.All(drums.Notes, n => Assert.Equal(9, n.Channel));
+
+        // MusicXML: four cue notes in the trumpet, none in the saxophone; a cue writes no <tie>.
+        var xml = new LilySharp.Core.MusicXml.MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml();
+        var parts = xml.Descendants("part").ToArray();
+        var cued = parts[0].Descendants("note").Where(n => n.Element("cue") != null).ToArray();
+        Assert.Equal(4, cued.Length);
+        Assert.All(cued, n => Assert.Equal("cue", n.Element("type")?.Attribute("size")?.Value));
+        Assert.All(cued, n => Assert.Null(n.Element("tie")));
+        Assert.All(cued, n => Assert.NotNull(n.Element("duration")));
+        Assert.Empty(parts[1].Descendants("cue"));
+        Assert.Equal(1, parts[0].Descendants("note").Count(n => n.Element("cue") == null && n.Element("pitch") != null));
+    }
+
+    // ---- more than fifteen pitched parts -----------------------------------------------------
+
+    /// <summary>The seventeenth pitched part took channel 1 again with its own program, so the
+    /// bass and the first alto played one sound (bigband/r-05). Nineteen parts of nine programs:
+    /// every part sounds its own program, no channel carries two, the kit's channel is left
+    /// alone, and nothing is warned. Fifteen parts are a channel each, as before. Sixteen
+    /// DIFFERENT programs cannot fit: the nearest two share, and one warning names the part.</summary>
+    [Fact]
+    public void MoreThanFifteenPitchedParts_ShareAChannelByProgram()
+    {
+        static string Book(params string[] instruments)
+        {
+            var names = instruments.Select((_, i) => $"p{(char)('a' + i)}").ToArray();
+            return "octave absolute\n"
+                + string.Concat(instruments.Select((ins, i) => $"part {names[i]} {{ instrument {ins} }}\n"))
+                + "section A { " + string.Concat(names.Select(n => $"{n} {{ c'1 | }} ")) + "}\nform { ~A }\n"
+                + "score { " + string.Concat(names.Select(n => $"staff {n} ")) + "}\n";
+        }
+        static LilySharp.Core.Midi.MidiTrack[] Sounding(LilySharp.Core.Midi.MidiFile midi) => [.. midi.Tracks.Where(t => t.Notes.Count > 0)];
+
+        string[] band = ["alto-sax", "alto-sax", "tenor-sax", "tenor-sax", "baritone-sax", "trumpet", "trumpet", "trumpet", "trumpet",
+            "trombone", "trombone", "trombone", "trombone", "guitar", "piano-right", "piano-left", "bass", "flute", "flute"];
+        Assert.Equal(19, band.Length);
+        var tree = SyntaxTree.Parse(Book(band));
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.Message)));
+
+        var tracks = Sounding(Midi(Book(band), out var warnings));
+        Assert.Equal(19, tracks.Length);
+        Assert.Empty(warnings);
+        // Each part its own instrument's program…
+        var solo = band.Select(ins => Sounding(Midi(Book(ins), out _)).Single().Program).ToArray();
+        Assert.Equal(solo, tracks.Select(t => t.Program));
+        Assert.Equal(9, solo.Distinct().Count());
+        // …on a channel that plays that program alone, never the kit's, every one of the fifteen used.
+        Assert.All(tracks.GroupBy(t => t.Channel), g => Assert.Single(g.Select(t => t.Program).Distinct()));
+        Assert.DoesNotContain(tracks, t => t.Channel == 9);
+        Assert.Equal(15, tracks.Select(t => t.Channel).Distinct().Count());
+        Assert.All(tracks, t => Assert.All(t.Notes, n => Assert.Equal(t.Channel, n.Channel)));
+
+        // Fifteen parts: a channel each, in order, as it always was.
+        Assert.Equal(new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15 }, Sounding(Midi(Book(band[..15]), out _)).Select(t => t.Channel));
+
+        // Sixteen different programs: the nearest pair is one sound, and it is said once.
+        string[] orchestra = ["flute", "oboe", "clarinet", "bassoon", "horn", "trumpet", "trombone", "tuba",
+            "violin", "viola", "cello", "contrabass", "harp", "piano", "guitar", "alto-sax", "bass"];
+        Assert.Equal(16, orchestra.Select(ins => Sounding(Midi(Book(ins), out _)).Single().Program).Distinct().Count());
+        var many = Sounding(Midi(Book(orchestra), out var said));
+        Assert.Equal(17, many.Length);
+        Assert.Equal(15, many.Select(t => t.Channel).Distinct().Count());
+        Assert.All(many.GroupBy(t => t.Channel), g => Assert.Single(g.Select(t => t.Program).Distinct()));
+        string warning = Assert.Single(said);
+        Assert.Contains("more than fifteen different instruments", warning);
+        Assert.Equal(1, Count(warning, "part '"));
+    }
+
+    // ---- a condensed staff's marks, where a change leaves the bar ----------------------------
+
+    /// <summary>On <c>condensedStaff { sop alt }</c> the staff takes ONE key at a moment: the
+    /// later part's is taken out of its bar, and one only the later part writes is put into
+    /// the first part's. The marks were addressed by item index before that, so the alto's
+    /// <c>@p</c>, <c>@staccato</c> and <c>@text</c> stood one note late in a section whose
+    /// header states a key, and the soprano's accent and hairpin one note early under a key
+    /// only the alto wrote (Lab sessions/p1226/md/eval4/fixS1/p3, the pictures). Each mark is
+    /// on the note it was written on, with the change and without.</summary>
+    [Fact]
+    public void ACondensedStaffsMarks_StayOnTheirNotes_WhereAChangeLeavesOrEntersTheBar()
+    {
+        static string Book(string header, string altoOpens) => "octave absolute\npart sop { clef treble }\npart alt { clef treble }\n"
+            + "section A { sop { c''4 d'' e'' f'' | } alt { e'4 f' g' a' | } }\n"
+            + $"section B {{ {header}\n  sop {{ g''4@f a''@accent b''4@cresc c'''@!cresc | g''1 | }}\n"
+            + $"  alt {{ {altoOpens} b'4@p c''@staccato d'' e''@text(\"hey\") | grace {{ a'8 }} b'1@pp | }} }}\n"
+            + "form { A B }\nscore { condensedStaff { sop alt } }\n";
+
+        static string[] Marks(string source)
+        {
+            var tree = SyntaxTree.Parse(source);
+            Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.Message)));
+            var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+            var staff = score.EnumerateStaves().First().Staff;
+            // The note a mark stands on, as it is written: the three characters at its place.
+            string On(int voice, int measure, int item)
+            {
+                var items = staff.Voices[voice].Measures[measure].Items;
+                Assert.InRange(item, 0, items.Length - 1);
+                return $"{voice}:{source.Substring(items[item].SourcePosition, 3).Trim()}";
+            }
+            return [
+                .. score.Dynamics.Select(d => $"dynamic {On(d.VoiceIndex, d.MeasureIndex, d.ItemIndex)}"),
+                .. score.Articulations.Select(a => $"script {On(a.VoiceIndex, a.MeasureIndex, a.ItemIndex)}"),
+                .. score.MusicMarks.Where(m => m.AnchorItemIndex >= 0 && m.Type is LilySharp.Core.Svg.Model.MusicMarkType.Cresc)
+                    .Select(m => $"hairpin {On(m.VoiceIndex, m.MeasureIndex, m.AnchorItemIndex)}"),
+                .. score.GraceNotes.Select(g => $"grace {On(g.VoiceIndex, g.MeasureIndex, g.MainNoteItemIndex)}"),
+            ];
+        }
+
+        string[] plain = Marks(Book("", ""));
+        Assert.Equal(new[]
+        {
+            "dynamic 0:g''", "dynamic 1:b'4", "dynamic 1:e''", "dynamic 1:b'1",
+            "script 0:a''", "script 1:c''", "hairpin 0:b''", "grace 1:b'1",
+        }, plain);
+        // The section's header key: the alto's copy of it is taken out of its bar.
+        Assert.Equal(plain, Marks(Book("key g major", "")));
+        // A key only the alto writes: it is put into the soprano's bar, the one the staff reads.
+        Assert.Equal(plain, Marks(Book("", "key g major")));
+        // Both, and a meter: two changes out of one bar.
+        Assert.Equal(plain, Marks(Book("key g major time 2/2", "")));
+    }
+
+    // ---- a tempo before the first note -------------------------------------------------------
+
+    /// <summary><c>tempo "Slower" 4 = 80</c> written in a part's music before the piece's first
+    /// note, under a file that says <c>tempo 120</c>: the MIDI started at 80 and the page
+    /// printed ♩ = 120 — the mark was a second one on the opening mark's place — and the
+    /// MusicXML opened at 120 and never said 80 (fixC1/t2-c.lys). It IS the opening tempo, as
+    /// a first section's header tempo is: one mark, its words and count, in all three.</summary>
+    [Fact]
+    public void ATempoBeforeTheFirstNote_IsThePiecesOpeningTempo()
+    {
+        static string Book(string top, string header, string music) => $"octave absolute\n{top}\npart m {{ clef treble }}\n"
+            + $"section A {{ {header} m {{ {music} c''1 | }} }}\nsection B {{ m {{ c''1 | }} }}\nform {{ A B }}\nscore {{ staff m }}\n";
+        const string slower = "tempo \"Slower\" 4 = 80";
+
+        foreach (string source in new[] { Book("tempo 120", "", slower), Book("tempo 120", slower, ""), Book("tempo \"Fast\" 120", "", slower) })
+        {
+            var tree = SyntaxTree.Parse(source);
+            var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+            Assert.Equal((80, "Slower"), (score.Tempo, score.TempoText));
+            // …and the file's tempo back at B, the one other mark.
+            var back = Assert.Single(score.MusicMarks, m => m.Type == LilySharp.Core.Svg.Model.MusicMarkType.Tempo);
+            Assert.Equal((1, "120"), (back.MeasureIndex, back.Text));
+
+            var tempos = Midi(source, out _).Tracks.SelectMany(t => t.TempoChanges).OrderBy(t => t.Tick).Select(t => 60_000_000 / t.MicrosecondsPerBeat);
+            Assert.Equal(new[] { 80, 120 }, tempos);
+
+            var first = new LilySharp.Core.MusicXml.MusicXmlExporter().Export(tree).ToXml().Descendants("measure").First();
+            Assert.Equal("80", Assert.Single(first.Descendants("per-minute")).Value);
+            Assert.Equal("Slower", Assert.Single(first.Descendants("words")).Value);
+        }
+
+        // A count alone takes the file's words off the opening mark: they were the other tempo's.
+        var plain = SyntaxTree.Parse(Book("tempo \"Fast\" 120", "", "tempo 4 = 80"));
+        var opening = SvgGenerator.CollectScore(plain, RenderSpecParser.FindFirst(plain));
+        Assert.Equal((80, (string?)null), (opening.Tempo, opening.TempoText));
+        // In the second bar it is a change, as it always was: the file's mark opens the piece.
+        var later = SyntaxTree.Parse(Book("tempo 120", "", "c''1 | " + slower));
+        Assert.Equal(120, SvgGenerator.CollectScore(later, RenderSpecParser.FindFirst(later)).Tempo);
+    }
 }

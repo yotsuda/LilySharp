@@ -1776,6 +1776,20 @@ public sealed partial class MeasureCollector
                     if (tempoChange.Value.QuarterBpm is double changed)
                         _tempoInForce = changed;
                     _tempoStanding = tempoChange.Value;
+                    // Before the piece's first note it IS the piece's opening tempo: it replaces
+                    // the file's mark, as a first section's header tempo does (ProcessSection),
+                    // words and all. Until then it was a second mark on the opening one's place,
+                    // and the page printed the file's `tempo 120` over music the MIDI started at
+                    // this one (grammar evaluation 4, 2026-11-13; Lab eval4 fixC1 t2-c.lys).
+                    // A file with no opening mark has nothing to replace: its mark is drawn
+                    // from here, as it always was.
+                    if (builder.AtPieceOpening && (_v.Meta.Tempo != null || _v.Meta.TempoText != null))
+                    {
+                        CollectTempo(tempoChange);
+                        if (tempoChange.Marking == null)
+                            _v.Meta.TempoText = null;
+                        break;
+                    }
                     // The PRINTED count: `tempo "Tempo I" 4 = 92 bare` is in force at 92
                     // (above) and its mark is the words alone (TempoValue.PrintedBpm).
                     if (tempoChange.PrintedBpm is int bpm)

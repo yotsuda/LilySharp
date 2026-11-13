@@ -3018,7 +3018,32 @@ public sealed class MusicXmlExporter
             case CueExpressionSyntax cue:
                 // A cue clef is drawing only: the body is read in the running relative frame
                 // (LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave).
-                ProcessNode(cue.Body);
+                // Every note and rest the body writes is MARKED as a cue (<cue/> and the cue
+                // size, MusicXmlNote.IsCue; grammar evaluation 4, 2026-11-13): until then they
+                // went out as the part's own notes, and another program printed them full size
+                // and played them (Lab eval4 chamber, bigband r-14). The body writes into the
+                // stream that is open here — the part's, or a later voice's scratch part — so
+                // what is new in it afterwards is the cue's.
+                {
+                    var before = new HashSet<MusicXmlNote>(ReferenceEqualityComparer.Instance);
+                    int firstMeasure = Math.Max(0, (_currentPart?.Measures.Count ?? 0) - 1);
+                    foreach (var m in OpenMeasures(firstMeasure))
+                        before.UnionWith(m.Notes);
+                    ProcessNode(cue.Body);
+                    foreach (var m in OpenMeasures(firstMeasure))
+                        foreach (var n in m.Notes)
+                            if (n.RawElement == null && !n.IsBackup && !before.Contains(n))
+                                n.IsCue = true;
+
+                    IEnumerable<MusicXmlMeasure> OpenMeasures(int from)
+                    {
+                        if (_currentPart != null)
+                            for (int i = from; i < _currentPart.Measures.Count; i++)
+                                yield return _currentPart.Measures[i];
+                        if (_currentMeasure != null && _currentPart?.Measures.Contains(_currentMeasure) != true)
+                            yield return _currentMeasure;
+                    }
+                }
                 break;
 
             case PartDeclarationSyntax:
@@ -3224,6 +3249,8 @@ public sealed class MusicXmlExporter
             _tempoWordsAlone = value.Marking;
             if (_currentMeasure != null && (_currentMeasure.Notes.Count > 0 || _currentMeasure.Number > 1))
                 AddDirection(new MusicXmlDirection { TempoWordsAlone = value.Marking });
+            else
+                RestateOpeningTempo();
             return;
         }
         _tempoWordsAlone = null;
@@ -3237,6 +3264,22 @@ public sealed class MusicXmlExporter
         // initial tempo is carried by the first measure's attributes direction.
         if (_currentMeasure != null && (_currentMeasure.Notes.Count > 0 || _currentMeasure.Number > 1))
             AddDirection(TempoDirection());
+        else
+            RestateOpeningTempo();
+
+        // A tempo written in the music before the part's first note is the opening tempo: the
+        // first measure was opened with the file's (SetOpeningTempo) and takes this one in
+        // its place. Until then it was dropped — the document opened at the file's `tempo 120`
+        // and never said the 80 the MIDI starts at (grammar evaluation 4, 2026-11-13).
+        void RestateOpeningTempo()
+        {
+            if (_currentMeasure is not { Notes.Count: 0, Number: <= 1 } opening
+                || (opening.Direction == null && opening.SoundTempo == null))
+                return;
+            opening.Direction = null;
+            opening.SoundTempo = null;
+            SetOpeningTempo(opening);
+        }
     }
 
     // The beat unit the running _tempo counts in (session 398): `tempo 2 = 60` is sixty
