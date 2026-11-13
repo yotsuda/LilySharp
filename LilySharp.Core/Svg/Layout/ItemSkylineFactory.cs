@@ -1336,7 +1336,7 @@ internal static class ItemSkylineFactory
         // LILYPOND-REF: lily/separation-item.cc:163-183 Separation_item::boxes — pure_y_extent
         //   widened by extra-spacing-height;
         // LILYPOND-REF: scm/define-grobs.scm:1277 Dots extra-spacing-height (-0.5 . 0.5).
-        var headRows = DotColumn.HeadPositions(item);
+        var headRows = DotColumn.DottedHeadPositions(item);
         for (int r = 0; r < rows.Length; r++)
         {
             // A rest has no head: its dots' pure row is the row the configuration gave them, the

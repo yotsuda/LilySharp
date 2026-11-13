@@ -744,6 +744,8 @@ internal sealed class EmmentalerMusicFont : MusicFont
         MusicGlyph.NoteheadDiamondWhole => new(d.NoteheadDiamondWhole, d.NoteheadDiamondWholeOutline, d.NoteheadDiamondWholeAdvance),
         MusicGlyph.NoteheadDiamondHalf => new(d.NoteheadDiamondHalf, d.NoteheadDiamondHalfOutline, d.NoteheadDiamondHalfAdvance, d.NoteheadDiamondHalfStemAttachment, d.NoteheadDiamondHalfStemAttachmentDown),
         MusicGlyph.NoteheadDiamondBlack => new(d.NoteheadDiamondBlack, d.NoteheadDiamondBlackOutline, d.NoteheadDiamondBlackAdvance, d.NoteheadDiamondBlackStemAttachment, d.NoteheadDiamondBlackStemAttachmentDown),
+        MusicGlyph.NoteheadDiamondWhite => new(d.NoteheadHarmonicWhite, d.NoteheadHarmonicWhiteOutline, d.NoteheadHarmonicWhiteAdvance, d.NoteheadHarmonicWhiteStemAttachment, d.NoteheadHarmonicWhiteStemAttachmentDown),
+        MusicGlyph.FetaNoteheadsS2harmonic => new(d.NoteheadHarmonicBlack, d.NoteheadHarmonicBlackOutline, d.NoteheadHarmonicBlackAdvance, d.NoteheadHarmonicBlackStemAttachment, d.NoteheadHarmonicBlackStemAttachmentDown),
         MusicGlyph.NoteheadTriangleUpWhole => new(d.NoteheadTriangleWhole, d.NoteheadTriangleWholeOutline, d.NoteheadTriangleWholeAdvance),
         MusicGlyph.NoteheadTriangleUpHalf => new(d.NoteheadTriangleHalf, d.NoteheadTriangleHalfOutline, d.NoteheadTriangleHalfAdvance, d.NoteheadTriangleHalfStemAttachment, d.NoteheadTriangleHalfStemAttachmentDown),
         MusicGlyph.NoteheadTriangleUpBlack => new(d.NoteheadTriangleBlack, d.NoteheadTriangleBlackOutline, d.NoteheadTriangleBlackAdvance, d.NoteheadTriangleBlackStemAttachment, d.NoteheadTriangleBlackStemAttachmentDown),

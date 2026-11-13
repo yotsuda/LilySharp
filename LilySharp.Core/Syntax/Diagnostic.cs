@@ -1624,6 +1624,31 @@ public static class DiagnosticCodes
     /// are pressed above the file's capo, so diagram and tab show different frets.</summary>
     public const string ItemCapo = "LYS4069";
 
+    /// <summary>Error: a <c>@harmonic(…)</c> that names no natural harmonic — its argument is
+    /// not one of the frets a harmonic is written at, 12, 7, 19, 5, 24, 4, 9, 16 or 3, as a plain
+    /// integer (owner-approved 2026-11-13, grammar evaluation 3: <c>e,4@harmonic(12)</c>;
+    /// <c>Music.Harmonics.Frets</c>, <c>Semantics.GuitarMarkValidator</c>). The note is drawn
+    /// and played as written.</summary>
+    public const string HarmonicFretMalformed = "LYS4070";
+
+    /// <summary>Error: a <c>@harmonic(12)</c> on a part that is no fretted instrument's: the
+    /// fret names a place on a string, and the part has no strings to read it on
+    /// (<c>Semantics.FrettedParts.Holds</c>). The note is drawn and played as written.</summary>
+    public const string HarmonicFretNotFretted = "LYS4071";
+
+    /// <summary>Error: a <c>@harmonic(12)</c> written on something other than a single note — a
+    /// chord, a member of one, a rest: a natural harmonic at a fret is one open string's, and
+    /// is written as that string's note. Nothing is changed by it.</summary>
+    public const string HarmonicFretNotOnANote = "LYS4072";
+
+    /// <summary>Error: a <c>@harmonic(12)</c> on a note that is not an open string of its part's
+    /// tuning. The writer writes the OPEN STRING the harmonic is played on
+    /// (<c>e,4@harmonic(12)</c> on a guitar's sixth string) and the page shows what it sounds;
+    /// read off the collect, where the note's pitch is known
+    /// (<c>Semantics.HarmonicOpenStringValidator</c>). The harmonic is drawn and sounded all
+    /// the same, the partial above the note written.</summary>
+    public const string HarmonicNotAnOpenString = "LYS4073";
+
     /// <summary>Error: a span end whose name is not the one the span was opened with —
     /// <c>@8va … @!15ma</c> (owner's decision 2026-10-28: a span is closed by its own name;
     /// <c>Semantics.SpanNames</c>). The quick fix writes the start's name.</summary>

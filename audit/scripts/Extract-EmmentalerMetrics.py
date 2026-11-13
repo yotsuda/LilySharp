@@ -122,6 +122,10 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     GlyphSpec("NoteheadDiamondWhole",  "noteheads.s0diamond",  "Whole diamond notehead",  "mf/feta-noteheads.mf — noteheads.s0diamond"),
     GlyphSpec("NoteheadDiamondHalf",   "noteheads.s1diamond",  "Half diamond notehead",   "mf/feta-noteheads.mf — noteheads.s1diamond"),
     GlyphSpec("NoteheadDiamondBlack",  "noteheads.s2diamond",  "Black diamond notehead",  "mf/feta-noteheads.mf — noteheads.s2diamond"),
+    # The harmonic heads (@harmonic on a chord member and @harmonic(12), owner-approved
+    # 2026-11-13) — the two glyphs the `harmonic` / `harmonic-mixed` styles draw.
+    GlyphSpec("NoteheadHarmonicWhite", "noteheads.s0harmonic", "Open harmonic notehead",  "mf/feta-noteheads.mf — noteheads.s0harmonic"),
+    GlyphSpec("NoteheadHarmonicBlack", "noteheads.s2harmonic", "Filled harmonic notehead", "mf/feta-noteheads.mf — noteheads.s2harmonic"),
     GlyphSpec("NoteheadTriangleWhole", "noteheads.s0triangle", "Whole triangle notehead", "mf/feta-noteheads.mf — noteheads.s0triangle"),
     GlyphSpec("NoteheadTriangleHalf",  "noteheads.s1triangle", "Half triangle notehead",  "mf/feta-noteheads.mf — noteheads.s1triangle"),
     GlyphSpec("NoteheadTriangleBlack", "noteheads.s2triangle", "Black triangle notehead", "mf/feta-noteheads.mf — noteheads.s2triangle"),
@@ -458,6 +462,10 @@ ATTACHMENT_GLYPHS: list[tuple[str, str, str]] = [
     ("NoteheadDiamondHalfStemAttachmentDown",   "noteheads.s1diamond",  "attachment-down"),
     ("NoteheadDiamondBlackStemAttachment",      "noteheads.s2diamond",  "attachment"),
     ("NoteheadDiamondBlackStemAttachmentDown",  "noteheads.s2diamond",  "attachment-down"),
+    ("NoteheadHarmonicWhiteStemAttachment",     "noteheads.s0harmonic", "attachment"),
+    ("NoteheadHarmonicWhiteStemAttachmentDown", "noteheads.s0harmonic", "attachment-down"),
+    ("NoteheadHarmonicBlackStemAttachment",     "noteheads.s2harmonic", "attachment"),
+    ("NoteheadHarmonicBlackStemAttachmentDown", "noteheads.s2harmonic", "attachment-down"),
     ("NoteheadCrossHalfStemAttachment",         "noteheads.s1cross",    "attachment"),
     ("NoteheadCrossHalfStemAttachmentDown",     "noteheads.s1cross",    "attachment-down"),
     ("NoteheadCrossBlackStemAttachment",        "noteheads.s2cross",    "attachment"),

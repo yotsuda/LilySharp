@@ -4377,6 +4377,10 @@ internal sealed class RenderedGeometry
     /// <summary>Filled quadrilaterals in drawing order — the beam lines.</summary>
     public IReadOnlyList<DrawnQuad> Quads => _page.Quads;
 
+    /// <summary>Every closed bow the first page drew — ties and slurs, and the brackets round a
+    /// tab fret (a tied fret's parentheses, a harmonic's angle brackets).</summary>
+    public IReadOnlyList<DrawnBezier> Beziers => _page.Beziers;
+
     /// <summary>Music glyphs in drawing order, left to right.</summary>
     public IReadOnlyList<DrawnGlyph> Glyphs =>
         _page.Glyphs.OrderBy(g => g.X).ToList();

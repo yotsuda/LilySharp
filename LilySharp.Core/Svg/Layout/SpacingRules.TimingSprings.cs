@@ -547,6 +547,15 @@ internal static partial class SpacingRules
         {
             case NoteItem n:
                 digits = FretDigits(Tablature.Tunings.CalculateFret(n.Midi + shift, tuning, n.StringNumber ?? 0).fret);
+                // A harmonic's TabNoteHead is its digits in angle brackets, and the brackets
+                // are in its extent (owner-approved 2026-11-13, grammar evaluation 3).
+                // LILYPOND-REF: scm/tablature.scm:255-260 tab-note-head::print — harmonic-proc
+                //   (parenthesize-stencil) round the digit stencil.
+                // MEASURED, 2.26.0 (Lab sessions/p1226/md/eval3/featH/lp4.ly, TabNoteHead's own
+                //   X extent): one digit 0.099016 … 1.089171 plain and −0.350984 … 1.539171 as a
+                //   harmonic, two digits −0.396062 … 1.584249 and −0.846062 … 2.034249: 0.45 a side.
+                if (n.HarmonicFret > 0)
+                    return digitCentre + digits * digitWidth / 2 + 0.45;
                 break;
             case ChordItem c when c.Notes.Length > 0:
                 var geom = TabGeometryOf(tab);

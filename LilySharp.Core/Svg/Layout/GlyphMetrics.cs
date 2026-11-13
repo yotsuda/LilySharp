@@ -805,6 +805,8 @@ internal static partial class GlyphMetrics
             0 or 1 => font.Box(MusicGlyph.NoteheadSlashWhiteWhole), 2 => font.Box(MusicGlyph.NoteheadSlashWhiteHalf), _ => font.Box(MusicGlyph.NoteheadSlashHorizontalEnds)
         },
         Model.NoteheadStyle.XCircle => font.Box(MusicGlyph.NoteheadCircleX),
+        Model.NoteheadStyle.Harmonic or Model.NoteheadStyle.HarmonicMixed
+            => font.Box(MusicGlyphs.Notehead(style, noteValue)),
         _ => GetNoteheadBBox(font, noteValue),
     };
 
@@ -1013,6 +1015,10 @@ internal static partial class GlyphMetrics
         // The xcircle is ONE glyph for every value (MusicGlyphs.Notehead).
         (Model.NoteheadStyle.XCircle, _) => up
             ? font.StemUpAttachment(MusicGlyph.NoteheadCircleX) : font.StemDownAttachment(MusicGlyph.NoteheadCircleX),
+        // The harmonic heads: the glyph the (style, value) pair draws, whichever it is.
+        (Model.NoteheadStyle.Harmonic or Model.NoteheadStyle.HarmonicMixed, _) => up
+            ? font.StemUpAttachment(MusicGlyphs.Notehead(style, noteValue))
+            : font.StemDownAttachment(MusicGlyphs.Notehead(style, noteValue)),
         (_, true) => up
             ? font.StemUpAttachment(MusicGlyph.NoteheadHalf) : font.StemDownAttachment(MusicGlyph.NoteheadHalf),
         (_, false) => up

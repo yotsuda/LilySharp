@@ -554,7 +554,15 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   before it there; an `@!staccato` with no `@staccato` before it is an error (LYS4018). Not
   covered: grace notes, and the notes of a phrase called inside the run (write the run inside
   the phrase). Use it for a passage marked throughout instead of a mark on every note.
-- String technique: `@upBow @downBow @flageolet` (`@harmonic` is the same mark) `@stopped` (+)
+- String technique: `@upBow @downBow @flageolet` (`@harmonic` on a note or a whole chord is the
+  same mark, the small circle) `@stopped` (+)
+- Artificial harmonic (strings): `@harmonic` on a MEMBER of a chord — `<c' f'@harmonic>4`, the
+  stopped note and the touched note above it. That member is drawn with the open diamond head
+  (at every duration, with no dot of its own and no circle); the other member is an ordinary
+  note. It SOUNDS one pitch for the three standard cases: the diamond a perfect fourth above the
+  stopped note sounds two octaves above the stopped note, a perfect fifth above an octave and a
+  fifth, a major third above two octaves and a third; any other interval sounds the two notes as
+  written. (`@notehead(diamond)` is another head — filled from the quarter — and changes no sound.)
 - A guitarist's pick strokes are the same two signs: a down-stroke is `@downBow`, an up-stroke
   `@upBow` (there is no `@downStroke` / `@upStroke`)
   `@snapPizz` (Bartók pizzicato) - always above
@@ -630,6 +638,21 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   arrow down from the bend's height to the note. "After" is the next note of the same voice; a
   rest or another note between them breaks the pair. A `@release` with no `@bend(…)` on its own
   note or on the note before it is an error (LYS4067). Silent in MIDI, as the bend is.
+- Natural harmonic at a fret (fretted parts): `e,4@harmonic(12)`. Write the OPEN STRING the
+  harmonic is played on — its own note, which names the string — and the fret the string is
+  touched at: 12, 7, 19, 5, 24, 4, 9, 16 or 3 (an integer; nothing else). The staff shows what
+  it SOUNDS, with the harmonic head (a diamond, open for a half note and longer): 12 an octave
+  above the open string, 7 and 19 an octave and a fifth, 5 and 24 two octaves, 4, 9 and 16 two
+  octaves and a major third, 3 two octaves and a fifth. The tab shows the fret in angle
+  brackets on that string, `⟨12⟩`, and MIDI plays the sounding pitch. On a guitar:
+  `e,4@harmonic(12) a,4@harmonic(7) d2@harmonic(5)` sounds E3 E4 D5. A relative-octave note
+  after it is read from the note written (the open string). Errors: a fret not in the list
+  (LYS4070); a part that is not a fretted instrument's (LYS4071); a chord or a chord member
+  instead of a single note (LYS4072 — write several strings' harmonics in voices); a note that
+  is not an open string of the part's tuning (LYS4073 — with a file `capo N` the open strings
+  are the capo's, written as they sound: `fis,4@harmonic(12)` under `capo 2`). Two strings open
+  at one pitch: add the string, `d'4\1@harmonic(12)`. Only a number glued inside the
+  parentheses is a fret: `e'4@harmonic(d' c')` is still the circle and a slur.
 - Guitar lines over a run of notes, each written on the first note and closed on the LAST note
   it covers (both included), as `@textSpan("…") … @!textSpan` is:
   - palm mute `e,8@palmMute e, e, e,@!palmMute` — "P.M.", a dashed line and a hook at its end;
@@ -1047,7 +1070,9 @@ score { staff gtr  tab gtr }
   `@hammerOn` / `@pullOff` / `@tap` (the letters H P T — a slur is still written for the curve:
   `a'8@hammerOn( b')`), `@bend(half|full|N)` (the arrow) and its `@release`, `@vibrato` (the wavy
   line), `@glissando` / `@slide` (the line
-  between two fret numbers), `@arpeggio`, and `@dead` (a × in place of the number — a note's,
+  between two fret numbers), `@arpeggio`, a harmonic's fret in angle brackets (`e,4@harmonic(12)`
+  is `⟨12⟩` on its string; the touched member of `<c' f'@harmonic>4` is its fret in brackets),
+  and `@dead` (a × in place of the number — a note's,
   one chord member's `<c e@dead>4`, or every member's `<c e>4@dead`). `@notehead(cross)` /
   `@notehead(diamond)` change the STAFF's head only: the tab keeps the number (as LilyPond's
   `\override NoteHead.style` does), so for a muted string write `@dead`. A slash `/`

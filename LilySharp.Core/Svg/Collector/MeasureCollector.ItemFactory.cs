@@ -57,6 +57,36 @@ public sealed partial class MeasureCollector
                 _resolvedSpellingLog.Add((note, ImmutableArray.Create(resolvedSpelling)));
         }
 
+        // A natural harmonic at a fret, `e,4@harmonic(12)` (owner-approved 2026-11-13, grammar
+        // evaluation 3): the note written is the OPEN STRING, which the relative frame and a
+        // following bare duration have just read above; what is drawn from here on — the staff
+        // position, the accidental, the MIDI — is what the harmonic sounds, the string's partial
+        // (Music.Harmonics.NaturalInterval), under the harmonic-mixed head. A tab staff's own
+        // copy goes back to the string (TabResolver). A note that is no open string of the
+        // part's tuning is said (LYS4073) and drawn the same way.
+        // LILYPOND-REF: ly/music-functions-init.ly harmonicByFret — calc-harmonic-pitch adds
+        //   the partial's pitch to the note's; NoteHead style harmonic-mixed.
+        int harmonicFret = Music.Harmonics.FretOn(note);
+        bool harmonicOffString = false;
+        if (harmonicFret > 0 && Music.Harmonics.NaturalInterval(harmonicFret) is { } partial)
+        {
+            // The open strings are the part's tuning, raised by the file's capo (a capo's
+            // notes are written as they sound, and its frets count from it).
+            harmonicOffString = _partFrettedTuning is { } frettedTuning
+                && Music.Harmonics.OpenString(
+                    PitchToMidi(GetPitchIndex(pitch.PitchName.ToLowerInvariant()[0]), pitch.AccidentalOffset, rp.RelativeOctave)
+                        + _partSoundingShift - _chordSpelling.Capo,
+                    Tablature.Tunings.GetTuning(frettedTuning)) == 0;
+            var (hStep, hAlt, hOctave) = PitchTransposer.Transpose(
+                rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave, partial.Step, partial.Alter, partial.Octave);
+            rp = rp with
+            {
+                StaffPosition = rp.StaffPosition + (hStep + 7 * hOctave) - (rp.DisplayStep + 7 * rp.DisplayOctave),
+                DisplayStep = hStep, DisplayAlteration = hAlt, DisplayOctave = hOctave,
+            };
+            staffPosition = rp.StaffPosition;
+        }
+
         var duration = note.DurationReading;
         int noteValue = duration.IsPresent ? duration.Value : (int)_v.DefaultDuration.Denominator;
         // An undurated note takes the whole default — dots included (`c8. c` is two
@@ -181,7 +211,9 @@ public sealed partial class MeasureCollector
             // style rides the item and every reader (the head glyph, the stem attachment,
             // the MusicXML notehead) answers as for any cross head. Session 562; the page
             // drew two strokes of its own until then.
-            Notehead = HasNamedArticulation(note, "dead") ? NoteheadStyle.Cross : NoteheadStyle.Default,
+            Notehead = HasNamedArticulation(note, "dead") ? NoteheadStyle.Cross
+                : harmonicFret > 0 ? NoteheadStyle.HarmonicMixed : NoteheadStyle.Default,
+            HarmonicFret = harmonicFret, HarmonicOffString = harmonicOffString,
             ForcedStemUp = GetStemDirectionOverride(note), ShiftOff = HasNamedArticulation(note, "shiftOff"),
             LaissezVibrerUp = hasLv ? LaissezVibrerUpOf(note) : null,
             RepeatTieUp = hasRepeatTie ? RepeatTieUpOf(note) : null,
@@ -665,8 +697,20 @@ public sealed partial class MeasureCollector
             // LILYPOND-REF: ly/property-init.ly deadNote / xNote — `\tweak style #'cross` on
             //   each note event of the music it is given: one member (`<c \deadNote e>`) or
             //   the whole chord (`\deadNote <c e>`).
+            // A member's own `@harmonic` (owner-approved 2026-11-13, grammar evaluation 3):
+            // `<c' f'@harmonic>4`, the touched note of an artificial harmonic, is the open
+            // diamond at every duration — this head only, and no flageolet circle over the
+            // chord (CollectArticulations leaves it out). On the whole chord, or on a single
+            // note, `@harmonic` stays the circle.
+            // LILYPOND-REF: ly/script-init.ly harmonic = #(make-music 'HarmonicEvent);
+            // LILYPOND-REF: lily/new-fingering-engraver.cc:119-121 acknowledge_rhythmic_head — a
+            //   head whose note event has a harmonic-event among its articulations gets
+            //   `style = harmonic` (the open diamond at every duration: scm/output-lib.scm
+            //   note-head::calc-glyph-name).
             bool memberDead = HasNamedArticulation(pitch, "dead");
-            var memberHead = memberDead ? NoteheadStyle.Cross : ExtractNoteheadStyle(pitch);
+            var memberHead = memberDead ? NoteheadStyle.Cross
+                : Music.Harmonics.IsTouchedMember(pitch) ? NoteheadStyle.Harmonic
+                : ExtractNoteheadStyle(pitch);
             notes.Add(new ChordNoteInfo(
                 staffPosition, accidental,
                 IsCourtesy: memberCourtesy || styleCourtesy,

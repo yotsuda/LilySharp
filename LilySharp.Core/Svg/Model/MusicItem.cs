@@ -37,6 +37,18 @@ public enum NoteheadStyle
     Slash,
     /// <summary>Crossed-circle notehead (<c>@notehead.xcircle</c>) for hi-hat and similar.</summary>
     XCircle,
+    /// <summary>The open harmonic diamond at every duration — <c>@harmonic</c> on a chord
+    /// member, the touched note of an artificial harmonic (owner-approved 2026-11-13, grammar
+    /// evaluation 3). No <c>@notehead(…)</c> argument names it.
+    /// LILYPOND-REF: ly/script-init.ly <c>harmonic = #(make-music 'HarmonicEvent)</c> —
+    /// lily/new-fingering-engraver.cc:119-121 sets the head's style to <c>harmonic</c>.</summary>
+    Harmonic,
+    /// <summary>The harmonic diamond, open down to the half note and filled from the quarter
+    /// on — the head of <c>@harmonic(12)</c>, a natural harmonic at a fret (owner-approved
+    /// 2026-11-13, grammar evaluation 3).
+    /// LILYPOND-REF: ly/music-functions-init.ly <c>harmonicByFret</c> — style
+    /// <c>harmonic-mixed</c>.</summary>
+    HarmonicMixed,
 }
 
 /// <summary>
@@ -814,6 +826,8 @@ internal sealed record NoteItemRare
     public bool TabBelowRange { get; init; }
     public string? LineStartAccidental { get; init; }
     public bool Parenthesized { get; init; }
+    public int HarmonicFret { get; init; }
+    public bool HarmonicOffString { get; init; }
 }
 
 /// <summary>
@@ -1254,6 +1268,35 @@ public sealed record NoteItem : MusicItem
     {
         get => _rare?.TabBelowRange ?? false;
         init { if (value != TabBelowRange) _rare = (_rare ?? NoteItemRare.Empty) with { TabBelowRange = value }; }
+    }
+
+    /// <summary>
+    /// The fret of a natural harmonic, <c>e,4@harmonic(12)</c> — one of
+    /// <see cref="Music.Harmonics.Frets"/> — or 0 for a note that is none (owner-approved
+    /// 2026-11-13, grammar evaluation 3). The note's own pitch (<see cref="Midi"/>, its staff
+    /// position, its accidental) is what the harmonic SOUNDS, the written open string raised by
+    /// <see cref="Music.Harmonics.NaturalInterval"/>, and its head is
+    /// <see cref="NoteheadStyle.HarmonicMixed"/>; a tab staff's own copy is put back on the
+    /// open string at this fret (<c>TabResolver.ResolveTabStrings</c>) and draws the number in
+    /// angle brackets.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: ly/music-functions-init.ly harmonicByFret — the pitch moved by
+    /// calc-harmonic-pitch, the head's style set to harmonic-mixed, TabNoteHead.stencil
+    /// overridden to print the fret.</remarks>
+    public int HarmonicFret
+    {
+        get => _rare?.HarmonicFret ?? 0;
+        init { if (value != HarmonicFret) _rare = (_rare ?? NoteItemRare.Empty) with { HarmonicFret = value }; }
+    }
+
+    /// <summary>A natural harmonic (<see cref="HarmonicFret"/>) whose written note is no open
+    /// string of its part's tuning: drawn and sounded all the same, and said
+    /// (<c>Semantics.HarmonicOpenStringValidator</c>, LYS4073), which reads this off the collect
+    /// — where the note's pitch is known.</summary>
+    public bool HarmonicOffString
+    {
+        get => _rare?.HarmonicOffString ?? false;
+        init { if (value != HarmonicOffString) _rare = (_rare ?? NoteItemRare.Empty) with { HarmonicOffString = value }; }
     }
 
     /// <summary>

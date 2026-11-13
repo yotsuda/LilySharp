@@ -88,6 +88,12 @@ GLYPHS: list[tuple[str, str, str]] = [
     ("NoteheadDiamondWhole", "noteheads.s0diamond", ""),
     ("NoteheadDiamondHalf", "noteheads.s1diamond", ""),
     ("NoteheadDiamondBlack", "noteheads.s2diamond", ""),
+    # The harmonic heads (@harmonic on a chord member and @harmonic(12), owner-approved
+    # 2026-11-13): style `harmonic` is s0harmonic at every duration, `harmonic-mixed` is
+    # s0harmonic down to the half note and s2harmonic from the quarter on
+    # (scm/output-lib.scm note-head::calc-glyph-name). There is no s1harmonic.
+    ("NoteheadHarmonicWhite", "noteheads.s0harmonic", "the open harmonic diamond"),
+    ("NoteheadHarmonicBlack", "noteheads.s2harmonic", "the filled harmonic diamond"),
     # The old comments said noteheads.s0do -- the Aiken/sacred-harp "do" head, which is
     # a real and DIFFERENT glyph (it sits elsewhere in the font). The code points were
     # always the .triangle family, which is what NoteheadStyle.Triangle means, so the

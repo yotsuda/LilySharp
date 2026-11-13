@@ -1008,4 +1008,337 @@ public class GrammarEvaluation3FeaturesTests
         Assert.True(Array.IndexOf(rows, "as numbers") < Array.IndexOf(rows, "capo"));
         Assert.True(Array.IndexOf(rows, "capo") < Array.IndexOf(rows, "staff"));
     }
+
+    // ───────────────────────── 9. <c' f'@harmonic>4 — an artificial harmonic ─────────────────────────
+
+    private static string Violin(string music)
+        => "octave absolute\ntime 4/4\npart vn \"Violin\" { instrument violin }\n"
+            + "section A { vn { " + music + " } }\nform { A }\nscore { staff vn }\n";
+
+    private static IEnumerable<int> Keys(LilySharp.Core.Midi.MidiFile midi)
+        => midi.Tracks.SelectMany(t => t.Notes).OrderBy(n => n.StartTick).ThenBy(n => n.Pitch).Select(n => n.Pitch);
+
+    /// <summary>A chord member's <c>@harmonic</c> is that member's head: the open diamond at
+    /// every duration, beside the stopped note's ordinary head, with no circle over the chord —
+    /// and <c>@harmonic</c> on a note or a whole chord is the circle it was.</summary>
+    [Fact]
+    public void AMembersHarmonic_IsTheOpenDiamondOnThatHead()
+    {
+        char open = GlyphOf(LilySharp.Core.Svg.MusicGlyph.NoteheadDiamondWhite);
+        char circle = GlyphOf(LilySharp.Core.Svg.MusicGlyph.StringsHarmonic);
+        char black = GlyphOf(LilySharp.Core.Svg.MusicGlyph.NoteheadBlack);
+        string source = Violin("<c' f'@harmonic>4 <c' f'@harmonic>2 <d' a'@harmonic>8 <d' a'@harmonic>8 | <c' f'@harmonic>1 |");
+        Clean(source);
+        RoundTrips(source);
+        var g = RenderedGeometry.Render(source);
+        // Five chords, five diamonds — the quarter's, the half's, the eighths' and the whole's
+        // all the open one — and no circle.
+        Assert.Equal(5, g.Glyphs.Count(x => x.Glyph == open));
+        Assert.DoesNotContain(g.Glyphs, x => x.Glyph == circle);
+        // The diamond stands a fourth above its stopped note: three staff positions, 1.5 spaces.
+        var first = g.Glyphs.Where(x => x.Glyph == open || x.Glyph == black).OrderBy(x => x.X).Take(2).OrderBy(x => x.Y).ToList();
+        Assert.Equal(open, first[0].Glyph);
+        Assert.Equal(1.5, first[1].Y - first[0].Y, 6);
+
+        // On a note, and on the whole chord, the circle — and ordinary heads.
+        foreach (string circled in new[] { "e''4@harmonic r4 r2 |", "<c' f'>4@harmonic r4 r2 |", "<c' f'@flageolet>4 r4 r2 |" })
+        {
+            Clean(Violin(circled));
+            var page = RenderedGeometry.Render(Violin(circled));
+            Assert.Single(page.Glyphs, x => x.Glyph == circle);
+            Assert.DoesNotContain(page.Glyphs, x => x.Glyph == open);
+        }
+    }
+
+    /// <summary>The heads stand as LilyPond's: at the stem's side on a stemmed chord, the
+    /// diamond centred on the whole note of a stemless one; and the diamond takes no dot.</summary>
+    /// <remarks>MEASURED, LilyPond 2.26.0 (Lab sessions/p1226/md/eval3/featH/lp3.ly): up-stem
+    /// quarter, plain 8.5850 … 9.8892 and diamond 8.5892 … 9.8892; whole, plain 29.415 … 31.377
+    /// and diamond 29.746 … 31.046; one Dots grob on the dotted chord.</remarks>
+    [Fact]
+    public void AMembersHarmonic_StandsAsLilyPondsHeadDoes()
+    {
+        char open = GlyphOf(LilySharp.Core.Svg.MusicGlyph.NoteheadDiamondWhite);
+        char black = GlyphOf(LilySharp.Core.Svg.MusicGlyph.NoteheadBlack);
+        char whole = GlyphOf(LilySharp.Core.Svg.MusicGlyph.NoteheadWhole);
+        char dot = GlyphOf(LilySharp.Core.Svg.MusicGlyph.AugmentationDot);
+
+        var up = RenderedGeometry.Render(Violin("<c' f'@harmonic>4 r4 r2 |"));
+        Assert.Equal(0.0042, up.Glyphs.Single(x => x.Glyph == open).X - up.Glyphs.Single(x => x.Glyph == black).X, 4);
+        var down = RenderedGeometry.Render(Violin("<c'' f''@harmonic>4 r4 r2 |"));
+        Assert.Equal(0.0, down.Glyphs.Single(x => x.Glyph == open).X - down.Glyphs.Single(x => x.Glyph == black).X, 4);
+        var stemless = RenderedGeometry.Render(Violin("<c' f'@harmonic>1 |"));
+        Assert.Equal(0.331, stemless.Glyphs.Single(x => x.Glyph == open).X - stemless.Glyphs.Single(x => x.Glyph == whole).X, 4);
+
+        var dotted = RenderedGeometry.Render(Violin("<c' f'@harmonic>4. r8 r2 |"));
+        Assert.Single(dotted.Glyphs, x => x.Glyph == dot);
+        Assert.Equal(2, RenderedGeometry.Render(Violin("<c' f'>4. r8 r2 |")).Glyphs.Count(x => x.Glyph == dot));
+    }
+
+    /// <summary>The three standard artificial harmonics sound one pitch for their two notes —
+    /// a fourth above the stopped note two octaves over it, a fifth an octave and a fifth, a
+    /// major third two octaves and a third — and any other pair sounds as written.</summary>
+    [Theory]
+    [InlineData("<c' f'@harmonic>4", new[] { 84 })]
+    [InlineData("<c' g'@harmonic>4", new[] { 79 })]
+    [InlineData("<c' e'@harmonic>4", new[] { 88 })]
+    [InlineData("<f'@harmonic c'>4", new[] { 84 })]
+    [InlineData("<c' a'@harmonic>4", new[] { 60, 69 })]
+    [InlineData("<c' f'>4@harmonic", new[] { 60, 65 })]
+    [InlineData("<g c' f'@harmonic>4", new[] { 55, 84 })]
+    [InlineData("<c' f'@harmonic g' c''@harmonic>4", new[] { 84, 91 })]
+    public void AnArtificialHarmonic_SoundsItsOnePitch(string chord, int[] keys)
+        => Assert.Equal(keys, Keys(Midi(Violin(chord + " r4 r2 |"))));
+
+    /// <summary>MusicXML writes the diamond and names the two notes; the twin is LilyPond's own
+    /// <c>\harmonic</c> on the member.</summary>
+    [Fact]
+    public void AnArtificialHarmonic_GoesToTheExports()
+    {
+        string xml = Xml(Violin("<c' f'@harmonic>4 r4 r2 |"));
+        Assert.Contains("<pitch><step>C</step><octave>4</octave></pitch>", xml);
+        Assert.Contains("<pitch><step>F</step><octave>4</octave></pitch>", xml);
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(xml, "<notehead>diamond</notehead>"));
+        Assert.Contains("<technical><harmonic><artificial /><base-pitch /></harmonic></technical>", xml);
+        Assert.Contains("<technical><harmonic><artificial /><touching-pitch /></harmonic></technical>", xml);
+        Assert.DoesNotContain("<harmonic", Xml(Violin("<c' f'>4 r4 r2 |")));
+
+        string ly = Ly(Violin("<c' f'@harmonic>4 r4 r2 |"));
+        Assert.Contains("<c' f'\\harmonic>4", ly);
+        Assert.DoesNotContain("flageolet", ly);
+        Assert.Contains("<c' f'>4-\\flageolet", Ly(Violin("<c' f'>4@harmonic r4 r2 |")));
+    }
+
+    /// <summary>On a tab the touched member's fret stands in angle brackets, the stopped one's
+    /// plain — two bows round one number.</summary>
+    [Fact]
+    public void AnArtificialHarmonic_OnATab_IsItsFretInAngleBrackets()
+    {
+        string source = Guitar("<c'\\3 f'\\2@harmonic>4 r4 r2 |", "tab gtr");
+        Clean(source);
+        var g = RenderedGeometry.Render(source);
+        Assert.Equal(["5", "6"], g.TabFrets.Select(f => f.Text).Order());
+        Assert.Equal(2, g.Beziers.Count);
+        var six = g.TabFrets.Single(f => f.Text == "6");
+        Assert.True(g.Beziers.Min(b => b.P0.X) < six.X && six.X < g.Beziers.Max(b => b.P0.X));
+        Assert.Equal(six.X, g.Beziers.Average(b => b.P0.X), 1);
+        Assert.Empty(RenderedGeometry.Render(Guitar("<c'\\3 f'\\2>4 r4 r2 |", "tab gtr")).Beziers);
+    }
+
+    // ───────────────────────── 10. e,4@harmonic(12) — a natural harmonic at a fret ─────────────────────────
+
+    private const string NaturalHarmonics = "e,4@harmonic(12) a,4@harmonic(7) d2@harmonic(5) | g8@harmonic(4) g8@harmonic(9) b4.@harmonic(3) e'8@harmonic(19) e'4@harmonic(24) |";
+
+    /// <summary>The note written is the open string; the staff shows what the harmonic sounds —
+    /// the heads where those pitches' heads stand, with their accidentals — under the harmonic
+    /// head: open down to the half note, filled from the quarter.</summary>
+    [Fact]
+    public void ANaturalHarmonic_ShowsWhatItSoundsUnderTheHarmonicHead()
+    {
+        char open = GlyphOf(LilySharp.Core.Svg.MusicGlyph.NoteheadDiamondWhite);
+        char filled = GlyphOf(LilySharp.Core.Svg.MusicGlyph.FetaNoteheadsS2harmonic);
+        string source = Guitar(NaturalHarmonics);
+        Clean(source);
+        RoundTrips(source);
+        var g = RenderedGeometry.Render(source);
+        var heads = g.Glyphs.Where(x => x.Glyph == open || x.Glyph == filled).OrderBy(x => x.X).ToList();
+        Assert.Equal([filled, filled, open, filled, filled, filled, filled, filled], heads.Select(h => h.Glyph));
+        // The sounding pitches written out: E3 E4 D5, B5 B5 F#6 B5 E6.
+        var sounding = RenderedGeometry.Render(Guitar("e4 e'4 d''2 | b''8 b''8 fis'''4. b''8 e'''4 |"));
+        Assert.Equal(sounding.Noteheads.OrderBy(h => h.X).Select(h => Math.Round(h.Y, 6)), heads.Select(h => Math.Round(h.Y, 6)));
+        Assert.Equal(sounding.Accidentals.Count, g.Accidentals.Count);
+        Assert.Single(g.Accidentals);
+        // A dotted harmonic keeps its dot (LilyPond sets harmonicDots round \harmonicByFret).
+        Assert.Single(g.Glyphs, x => x.Glyph == GlyphOf(LilySharp.Core.Svg.MusicGlyph.AugmentationDot));
+        // …and the relative frame goes on from the note WRITTEN, the open string.
+        const string relative = "time 4/4\npart gtr { instrument guitar }\nsection A { gtr { e,4@harmonic(12) a,4 r2 | } }\nform { A }\nscore { staff gtr }\n";
+        Assert.Equal(Keys(Midi(relative.Replace("@harmonic(12)", ""))).Last(), Keys(Midi(relative)).Last());
+        Assert.Equal(Keys(Midi(relative.Replace("@harmonic(12)", ""))).First() + 12, Keys(Midi(relative)).First());
+    }
+
+    /// <summary>The tab shows where it is played: the fret, in angle brackets, on the string of
+    /// the open note written — the line that string's 0 stands on.</summary>
+    [Fact]
+    public void ANaturalHarmonic_OnATab_IsItsFretInAngleBracketsOnItsString()
+    {
+        string source = Guitar(NaturalHarmonics, "tab gtr");
+        Clean(source);
+        var g = RenderedGeometry.Render(source);
+        // (A fret that begins with 1 is drawn as two runs, its 1 drawn closer: the numbers are
+        // read joined, and each run's line is asked for.)
+        var frets = g.TabFrets.OrderBy(f => f.X).ToList();
+        Assert.Equal("12" + "7" + "5" + "4" + "9" + "3" + "19" + "24", string.Concat(frets.Select(f => f.Text)));
+        var open = RenderedGeometry.Render(Guitar("e,4 a,4 d2 | g8 g8 b4. e'8 e'4 |", "tab gtr")).TabFrets.OrderBy(f => f.X).ToList();
+        Assert.All(open, f => Assert.Equal("0", f.Text));
+        int[] runs = [0, 0, 1, 2, 3, 4, 5, 6, 6, 7];
+        Assert.Equal(runs.Select(i => Math.Round(open[i].Y * 2)), frets.Select(f => Math.Round(f.Y * 2)));   // the line, whatever the digit's own baseline
+        // Two bows a number, one either side of it, pointed: the control points drawn past one another.
+        Assert.Equal(16, g.Beziers.Count);
+        Assert.All(g.Beziers, b => Assert.True(Math.Abs(b.C1.Y - b.P0.Y) > Math.Abs(b.C2.Y - b.P0.Y)));
+        foreach (var fret in frets.Where(f => f.Text is "7" or "5" or "4" or "9" or "3" or "24"))
+        {
+            var round = g.Beziers.OrderBy(b => Math.Abs(b.P0.X - fret.X)).Take(2).OrderBy(b => b.P0.X).ToList();
+            Assert.True(round[0].P0.X < fret.X && fret.X < round[1].P0.X);
+        }
+        // Neighbouring harmonics keep their brackets apart.
+        var xs = g.Beziers.Select(b => b.P0.X).Order().ToList();
+        for (int i = 2; i < xs.Count; i += 2)
+            Assert.True(xs[i] - xs[i - 1] > 0.9, $"brackets {xs[i - 1]} and {xs[i]}");
+        // Beside a staff the two agree: heads above, numbers below, the same count.
+        var both = RenderedGeometry.Render(Guitar(NaturalHarmonics, "staff gtr  tab gtr"));
+        Assert.Equal("127549319" + "24", string.Concat(both.TabFrets.OrderBy(f => f.X).Select(f => f.Text)));
+        Assert.Equal(16, both.Beziers.Count);
+    }
+
+    /// <summary>The harmonic sounds the string's partial: 12 an octave over the open string, 7
+    /// and 19 an octave and a fifth, 5 and 24 two octaves, 4, 9 and 16 two octaves and a major
+    /// third, 3 two octaves and a fifth.</summary>
+    [Theory]
+    [InlineData("e,4@harmonic(12)", 52)]
+    [InlineData("a,4@harmonic(7)", 64)]
+    [InlineData("a,4@harmonic(19)", 64)]
+    [InlineData("d4@harmonic(5)", 74)]
+    [InlineData("d4@harmonic(24)", 74)]
+    [InlineData("g4@harmonic(4)", 83)]
+    [InlineData("g4@harmonic(9)", 83)]
+    [InlineData("g4@harmonic(16)", 83)]
+    [InlineData("b4@harmonic(3)", 90)]
+    [InlineData("e'4@harmonic(12)", 76)]
+    public void ANaturalHarmonic_SoundsTheStringsPartial(string note, int key)
+    {
+        string source = Guitar(note + " r4 r2 |", "staff gtr  tab gtr");
+        Clean(source);
+        Assert.Equal([key], Keys(Midi(source)));
+    }
+
+    /// <summary>MusicXML: the sounding pitch, the diamond, a natural harmonic, and on the tab
+    /// staff its string and fret. The twin: LilyPond's own <c>\harmonicByFret</c> round the open
+    /// string's note, with its string.</summary>
+    [Fact]
+    public void ANaturalHarmonic_GoesToTheExports()
+    {
+        string xml = Xml(Guitar("e,4@harmonic(12) a,4@harmonic(7) r2 |", "staff gtr  tab gtr"));
+        Assert.Contains("<pitch><step>E</step><octave>3</octave></pitch>", xml);
+        Assert.Contains("<pitch><step>E</step><octave>4</octave></pitch>", xml);
+        Assert.Contains("<technical><harmonic><natural /><sounding-pitch /></harmonic><string>6</string><fret>12</fret></technical>", xml);
+        Assert.Contains("<technical><harmonic><natural /><sounding-pitch /></harmonic><string>5</string><fret>7</fret></technical>", xml);
+        Assert.Equal(4, System.Text.RegularExpressions.Regex.Matches(xml, "<notehead>diamond</notehead>").Count);
+
+        string ly = Ly(Guitar("e,4@harmonic(12) a,4@harmonic(7) b2\\2@harmonic(3) |", "staff gtr  tab gtr"));
+        Assert.Contains("\\harmonicByFret #12 e,4-\\tweak stencil ##f \\6 \\harmonicByFret #7 a,4-\\tweak stencil ##f \\5 \\harmonicByFret #3 b2\\2 |", ly);
+        Assert.DoesNotContain("dropped", string.Join("\n", TwinWarnings(Guitar("e,4@harmonic(12) r4 r2 |"))));
+    }
+
+    private static IReadOnlyList<string> TwinWarnings(string source)
+    {
+        var exporter = new LilySharp.Core.LilyPond.LilyPondExporter();
+        exporter.Export(SyntaxTree.Parse(source));
+        return [.. exporter.Warnings];
+    }
+
+    /// <summary>A written string chooses between two strings open at one pitch; a tuning written
+    /// out and a capo move the open strings with them.</summary>
+    [Fact]
+    public void ANaturalHarmonic_IsOnTheStringsOfThePartsTuning()
+    {
+        // DADGAD: the sixth string is D2, and its harmonic at 12 sounds D3.
+        string dadgad = Strung("instrument guitar  tuning \"d, a, d g a d'\"", "d,4@harmonic(12) a4@harmonic(7) r2 |");
+        Clean(dadgad);
+        Assert.Equal([50, 76], Keys(Midi(dadgad)));
+        Assert.Equal("127", string.Concat(Frets(dadgad).OrderBy(f => f.X).Select(f => f.Text)));
+        // A bass, written an octave above its sound: its open E string is written e,.
+        string bass = Strung("instrument bass", "e,4@harmonic(12) g4@harmonic(5) r2 |");
+        Clean(bass);
+        Assert.Equal("125", string.Concat(Frets(bass).OrderBy(f => f.X).Select(f => f.Text)));
+        // Under a capo the open strings are the capo's, written as they sound.
+        string capo = "octave absolute\ntime 4/4\ncapo 2\npart gtr { instrument guitar }\n"
+            + "section A { gtr { fis,4@harmonic(12) r4 r2 | } }\nform { A }\nscore { staff gtr  tab gtr }\n";
+        Clean(capo);
+        Assert.Equal("12", string.Concat(Frets(capo).OrderBy(f => f.X).Select(f => f.Text)));
+        Assert.Equal([54], Keys(Midi(capo)));
+        var off = Assert.Single(Said(capo.Replace("fis,4", "e,4")), d => d.Code == DiagnosticCodes.HarmonicNotAnOpenString);
+        Assert.Equal(DiagnosticSeverity.Error, off.Severity);
+    }
+
+    /// <summary>What is refused, each with its own word: a fret no harmonic is written at, a host
+    /// that is not a single note, a part with no strings, a note that is no open string.</summary>
+    [Fact]
+    public void ANaturalHarmonic_MiswrittenIsSaid()
+    {
+        foreach (string fret in new[] { "8", "0", "13", "2.7", "12,7" })
+        {
+            string source = Guitar($"e,4@harmonic({fret}) r4 r2 |", "staff gtr  tab gtr");
+            var said = Assert.Single(Said(source), d => d.Code == DiagnosticCodes.HarmonicFretMalformed);
+            Assert.Equal(DiagnosticSeverity.Error, said.Severity);
+            Assert.Contains("The frets are 12, 7, 19, 5, 24, 4, 9, 16, 3", said.Message);
+            RoundTrips(source);
+            // Drawn and played as the note written.
+            Assert.Equal([40], Keys(Midi(source)));
+            Assert.Equal(["0"], Frets(source).Select(f => f.Text));
+        }
+
+        var onChord = Assert.Single(Said(Guitar("<e, b,>4@harmonic(12) r4 r2 |")));
+        Assert.Equal((DiagnosticCodes.HarmonicFretNotOnANote, DiagnosticSeverity.Error), (onChord.Code, onChord.Severity));
+        var onMember = Assert.Single(Said(Guitar("<e, b,@harmonic(12)>4 r4 r2 |")));
+        Assert.Equal(DiagnosticCodes.HarmonicFretNotOnANote, onMember.Code);
+        Assert.Equal([40, 47], Keys(Midi(Guitar("<e, b,@harmonic(12)>4 r4 r2 |"))));
+
+        string violin = Violin("g4@harmonic(12) r4 r2 |");
+        var unfretted = Assert.Single(Said(violin));
+        Assert.Equal((DiagnosticCodes.HarmonicFretNotFretted, DiagnosticSeverity.Error), (unfretted.Code, unfretted.Severity));
+        Assert.Equal("@harmonic(12)", violin.Substring(unfretted.Span.Start, unfretted.Span.Length));
+        Assert.Equal([55], Keys(Midi(violin)));
+
+        string stopped = Guitar("f,4@harmonic(12) r4 r2 |", "staff gtr  tab gtr");
+        var offString = Assert.Single(Said(stopped));
+        Assert.Equal((DiagnosticCodes.HarmonicNotAnOpenString, DiagnosticSeverity.Error), (offString.Code, offString.Severity));
+        Assert.Equal("@harmonic(12)", stopped.Substring(offString.Span.Start, offString.Span.Length));
+        Assert.Contains("e,4@harmonic(12)", offString.Message);
+    }
+
+    /// <summary>The slur that starts on a note with the circle is still a slur: only a number
+    /// glued inside the parentheses is a fret.</summary>
+    [Fact]
+    public void AHarmonicBeforeASlur_IsStillTheCircleAndTheSlur()
+    {
+        foreach (string music in new[] { "e'4@harmonic(d' c') r4 |", "e'4@harmonic( d' c') r4 |", "e'4@harmonic (d' c') r4 |" })
+        {
+            string source = Guitar(music);
+            Clean(source);
+            Assert.Empty(SyntaxTree.Parse(source).GetRoot().DescendantNodes<MusicMarkSyntax>());
+            Assert.Equal([64, 62, 60], Keys(Midi(source)));
+        }
+    }
+
+    /// <summary>A harmonic above the fretted range is no slip of an octave: LYS1052 lets it be.</summary>
+    [Fact]
+    public void AHarmonicAboveTheFrettedRange_IsNotAnOctaveSlip()
+    {
+        Clean(Guitar("b4@harmonic(3) r4 r2 |"));
+        Assert.Contains(Said(Guitar("fis''''4 r4 r2 |")), d => d.Code == DiagnosticCodes.NoteOutsideInstrumentRange);
+    }
+
+    /// <summary>Inside <c>@harmonic(</c> the frets most written, in the order a guitarist meets them.</summary>
+    [Fact]
+    public void InsideAHarmonicsParentheses_TheFretsAreOffered()
+    {
+        Assert.Equal(["12", "7", "5", "4", "9", "3"], Offered(Guitar("e,4@harmonic(‸) r4 r2 |")));
+        Assert.Contains("harmonic", Offered(Guitar("e,4@‸ r4 r2 |")));
+    }
+
+    // ───────────────────────── 11. the twin says what it drops of a bend ─────────────────────────
+
+    /// <summary>LilyPond's bend spanner runs between two written notes, and Lily#'s bend is one
+    /// note and an amount: the twin writes the note plain and says so of the bend and of its
+    /// release, each by its own name.</summary>
+    [Fact]
+    public void TheTwin_SaysWhatItDropsOfABend()
+    {
+        var said = TwinWarnings(Guitar("a'4@bend(full)@release a'4@bend(half) a'4@release r4 |"));
+        Assert.Equal(2, said.Count(w => w.StartsWith("@release dropped with the @bend it lets back", StringComparison.Ordinal)));
+        Assert.Single(said, w => w.StartsWith("@bend(full) dropped: LilyPond's bend spanner", StringComparison.Ordinal));
+        Assert.Single(said, w => w.StartsWith("@bend(half) dropped: LilyPond's bend spanner", StringComparison.Ordinal));
+        Assert.DoesNotContain(said, w => w.Contains("out of scope") || w.Contains("not mapped"));
+        Assert.Contains("a'4 a'4 a'4 r4 |", Ly(Guitar("a'4@bend(full)@release a'4@bend(half) a'4@release r4 |")));
+    }
 }

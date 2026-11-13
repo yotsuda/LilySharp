@@ -62,6 +62,16 @@ internal sealed class InstrumentRangeValidator : ISemanticValidator
             return; // a book that cannot play surfaces its real error elsewhere
         }
 
+        // A harmonic sounds above what the instrument stops: `b4@harmonic(3)` on a guitar is
+        // F#6, over the top of its fretted range, and is no slip of an octave (owner-approved
+        // 2026-11-13, grammar evaluation 3). The notes that sound one — a natural harmonic's,
+        // a chord with a touched member — are not judged at the top.
+        HashSet<int>? harmonics = null;
+        foreach (var node in tree.GetRoot().DescendantNodes())
+            if (node is NoteSyntax note && Music.Harmonics.FretOn(note) > 0
+                || node is ChordSyntax chord && chord.Pitches.Any(Music.Harmonics.IsTouchedMember))
+                (harmonics ??= new()).Add(node.SourceStart);
+
         var seen = new HashSet<int>();
         foreach (var n in midi.Tracks.SelectMany(t => t.Notes))
         {
@@ -69,6 +79,8 @@ internal sealed class InstrumentRangeValidator : ISemanticValidator
                 continue;
             var (low, high) = ranges[part];
             if (n.Pitch >= low && n.Pitch <= high || !seen.Add(n.SourcePos))
+                continue;
+            if (n.Pitch > high && harmonics?.Contains(n.SourcePos) == true)
                 continue;
             string printed = InstrumentDefaults.PrintedName(preset) ?? preset;
             _diagnostics.Warning(new TextSpan(n.SourcePos, 1), DiagnosticCodes.NoteOutsideInstrumentRange,

@@ -292,6 +292,28 @@ public sealed partial class LilyPondExporter
                     string cm = EmitMark(mk);
                     if (cm.Length > 0) prefix.Append(cm).Append(' ');
                     break;
+                // A guitar bend, `@bend(full)`, and its `@release` are NOT WRITTEN, and the report
+                // says why in the reader's words (2026-11-13, grammar evaluation 3; until then
+                // "@bend.full dropped (out of scope)" and "articulation @release not mapped").
+                // LilyPond 2.26 has a bend spanner — `c'4\^ d'4`, with \bendHold and
+                // \bendStartLevel beside it — but it runs FROM one written note TO another and
+                // reads its amount off their pitches; Lily#'s bend is ONE note and an amount,
+                // let back on the same note or the next. A twin of it would have to invent the
+                // note bent to (and, for a release within the note, split the note in two),
+                // which is music the source does not write. So the twin's note is plain.
+                // LILYPOND-REF: ly/music-functions-init.ly bendHold, bendStartLevel;
+                //   scm/define-music-types.scm BendSpanEvent (`\^`), a span event between notes.
+                case MusicMarkSyntax bm when Semantics.AnnotationValues.Bend(bm) is not null:
+                    _warnings.Add($"@bend({string.Join(" ", bm.Arguments.Select(x => x.Text))}) dropped: LilyPond's bend spanner "
+                        + "(\\^) runs from one written note to another, and @bend bends one note by an amount - the twin's note is plain");
+                    break;
+                // A natural harmonic's fret, `@harmonic(12)`: LilyPond's \harmonicByFret is a
+                // function round the note, written by the note's own emitter (EmitNote's
+                // NaturalHarmonic) — nothing here.
+                case MusicMarkSyntax hm when Semantics.AnnotationValues.HarmonicFret(hm) is not null
+                                             && hm.Parent is NoteSyntax harmonicNote
+                                             && Music.Harmonics.FretOn(harmonicNote) > 0:
+                    break;
                 case MusicMarkSyntax mk:
                     string m = EmitMark(mk);
                     if (m.Length > 0) prefix.Append(m).Append(' ');
@@ -343,6 +365,12 @@ public sealed partial class LilyPondExporter
                     break;
                 case ArticulationSyntax art when IsDeadNote(art):
                     prefix.Append("\\deadNote ");
+                    break;
+                // `@release`: dropped with the bend it lets back (the @bend case above says why).
+                case ArticulationSyntax { Type: ArticulationType.None } rel
+                    when rel.NameToken.Text == Semantics.BendReleases.Name:
+                    _warnings.Add("@release dropped with the @bend it lets back: LilyPond's bend spanner (\\^) runs "
+                        + "between two written notes - the twin's note is plain");
                     break;
                 // `@parenthesize` is LilyPond's own \parenthesize, a music function on the event
                 // (a chord's: every head, as the page draws it).

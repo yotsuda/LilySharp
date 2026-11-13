@@ -3625,6 +3625,20 @@ public sealed class MusicXmlExporter
         // _resolvedChordXmlNotes): the spelling this walk resolved.
         _resolvedNoteXml[note] = (step, alter, targetOctave, quarter);
 
+        // A natural harmonic at a fret, `e,4@harmonic(12)` (owner-approved 2026-11-13, grammar
+        // evaluation 3): the note written is the open string, and the file's <pitch> is what
+        // the page's head shows — the pitch the harmonic sounds (MeasureCollector.CreateNoteItem;
+        // the one table, Music.Harmonics). Its <technical> says which it is:
+        // <harmonic><natural/><sounding-pitch/></harmonic>, beside the <string> and <fret>
+        // the tab pass writes (the tab staff's own copy stands on the open string at the fret).
+        int harmonicFret = Music.Harmonics.FretOn(note);
+        if (Music.Harmonics.NaturalInterval(harmonicFret) is { } partial)
+        {
+            var (hs, ha, ho) = Semantics.PitchTransposer.Transpose(
+                RelativeOctave.StepIndex(step[0]), alter, targetOctave, partial.Step, partial.Alter, partial.Octave);
+            (step, alter, targetOctave) = ("CDEFGAB"[hs].ToString(), ha, ho);
+        }
+
         // Emit pending dynamic as direction before the note
         EmitPendingDynamic();
 
@@ -3638,11 +3652,15 @@ public sealed class MusicXmlExporter
             Type = type,
             Dots = dots,
             AccidentalName = QuarterToneAccidentalName(alter, quarter),
-            Notehead = NoteheadFromMarks(note.Articulations),
+            Notehead = harmonicFret > 0 ? "diamond" : NoteheadFromMarks(note.Articulations),
             NoteheadParentheses = WritesParenthesize(note.Articulations),
             ActualNotes = tupletActual,
             NormalNotes = tupletNormal
         };
+
+        if (harmonicFret > 0)
+            xmlNote.Technicals.Add(new System.Xml.Linq.XElement("harmonic",
+                new System.Xml.Linq.XElement("natural"), new System.Xml.Linq.XElement("sounding-pitch")));
 
         WriteStemTremolo(note.Tremolo, xmlNote);
         // Process articulations and slurs
@@ -4583,8 +4601,21 @@ public sealed class MusicXmlExporter
                 NoteheadParentheses = WritesParenthesize(chord.Articulations) || WritesParenthesize(pitch.Articulations),
                 // A member's own head style, else the chord's (found 2026-11-13: neither was
                 // written — `<c f@notehead(diamond)>`, a harmonic's touched note, lost its diamond).
-                Notehead = NoteheadFromMarks(pitch.Articulations) ?? NoteheadFromMarks(chord.Articulations),
+                // …and the touched member of an artificial harmonic, `<c' f'@harmonic>`, is the
+                // diamond (owner-approved 2026-11-13, grammar evaluation 3).
+                Notehead = Music.Harmonics.IsTouchedMember(pitch) ? "diamond"
+                    : NoteheadFromMarks(pitch.Articulations) ?? NoteheadFromMarks(chord.Articulations),
             };
+
+            // An artificial harmonic's two notes say which they are: the touched one
+            // <harmonic><artificial/><touching-pitch/></harmonic>, the stopped one below it
+            // <harmonic><artificial/><base-pitch/></harmonic> (Music.Harmonics.IsStoppedMember).
+            if (Music.Harmonics.IsTouchedMember(pitch))
+                xmlNote.Technicals.Add(new System.Xml.Linq.XElement("harmonic",
+                    new System.Xml.Linq.XElement("artificial"), new System.Xml.Linq.XElement("touching-pitch")));
+            else if (Music.Harmonics.IsStoppedMember(pitch))
+                xmlNote.Technicals.Add(new System.Xml.Linq.XElement("harmonic",
+                    new System.Xml.Linq.XElement("artificial"), new System.Xml.Linq.XElement("base-pitch")));
 
             // The member's own <technical> marks: its fingering, and its string number
             // (own, else paired from the outside list).

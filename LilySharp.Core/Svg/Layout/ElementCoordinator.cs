@@ -456,7 +456,7 @@ internal sealed class ElementCoordinator
                         }
                         break;
                     case ChordItem chord:
-                        var heads = chord.Notes.Select(n => n.StaffPosition).ToList();
+                        var heads = DotColumn.DottedHeadPositions(chord).ToList();
                         // Stem::first_head: the head the stem starts from.
                         if (collided.Dot.DotWiped)
                             heads.Remove(voiceUp ? heads.Min() : heads.Max());

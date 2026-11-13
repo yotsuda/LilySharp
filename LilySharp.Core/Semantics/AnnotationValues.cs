@@ -325,6 +325,25 @@ public static class AnnotationValues
     }
 
     /// <summary>
+    /// The fret of a natural harmonic — <c>@harmonic(12)</c> (owner-approved 2026-11-13, grammar
+    /// evaluation 3) — or null: another annotation, or an argument that is not one of
+    /// <see cref="Music.Harmonics.Frets"/> written as a plain integer. The one reader, so the
+    /// page, the sound, the exports and the validator take the same.
+    /// </summary>
+    public static int? HarmonicFret(MusicMarkSyntax mark)
+        => IsFretHarmonic(mark) && mark.Arguments.Length == 1
+           && mark.Arguments[0].Value?.AsInt is { } fret && Music.Harmonics.Frets.Contains(fret)
+           && mark.Arguments[0].Text == fret.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            ? fret
+            : null;
+
+    /// <summary>Whether this is <c>@harmonic(…)</c> at all — a harmonic written with an argument,
+    /// read or not (<see cref="HarmonicFret"/>; <c>GuitarMarkValidator</c> says what a miswritten
+    /// one lacks). The bare <c>@harmonic</c> is an articulation, not this.</summary>
+    public static bool IsFretHarmonic(MusicMarkSyntax mark)
+        => Named(mark, Music.Harmonics.Name) && !mark.IsSpanEnd && mark.HasArgumentList;
+
+    /// <summary>
     /// Whether an annotation NAME is the phrasing slur's — <c>@phrasingSlur</c> or, with the
     /// terminator's <c>!</c> already stepped over, <c>@!phrasingSlur</c>. Matched as
     /// <see cref="Svg.Model.MusicMarkItem.ParseMarkName"/> matches, which is what makes the

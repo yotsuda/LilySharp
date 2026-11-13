@@ -970,9 +970,48 @@ public sealed partial class LilyPondExporter
     {
         var (prefix, suffix) = SplitAttachments(Semantics.ArticulationRuns.WithCovering(n, n.Articulations));
         string trem = n.Tremolo is { } t ? t.Text : "";
+        string pitch = EmitMusicPitch(n.Pitch);
+        var (harmonic, harmonicString) = NaturalHarmonic(n);
         // `cis?4` / `cis!4`: the accidental marks stand between the pitch and the duration.
-        return prefix + EmitMusicPitch(n.Pitch) + AccidentalMarks(n.Articulations)
-            + EmitEventDuration(n.Duration) + trem + ArpeggioFromAbove(n) + suffix;
+        return prefix + harmonic + pitch + AccidentalMarks(n.Articulations)
+            + EmitEventDuration(n.Duration) + trem + ArpeggioFromAbove(n) + harmonicString + suffix;
+    }
+
+    /// <summary>
+    /// A natural harmonic at a fret, <c>e,4@harmonic(12)</c> (owner-approved 2026-11-13, grammar
+    /// evaluation 3), as LilyPond's own <c>\harmonicByFret #12 e,4\6</c>: the function before the
+    /// note — which stays the open string, as the source writes it — and the string after it.
+    /// Both empty for any other note. Called right after the note's pitch is written, so the
+    /// frame holds the note's own octave.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE STRING IS WRITTEN EVEN WHEN THE SOURCE WRITES NONE: LilyPond frets the SOUNDING
+    /// pitch, so without it a TabStaff puts the twelfth-fret harmonic of the sixth string on
+    /// whichever string plays that pitch lowest. Lily# reads the string off the open note
+    /// (<see cref="Music.Harmonics.OpenString"/>); the one it adds is hidden on a notation staff
+    /// (<c>\tweak stencil ##f</c>), where the page draws no string number either.
+    /// LILYPOND-REF: ly/music-functions-init.ly:779-797 harmonicByFret (fret music) — calc-harmonic-pitch
+    ///   under make-harmonic, in the harmonic-mixed style.
+    /// </remarks>
+    private (string Prefix, string String) NaturalHarmonic(NoteSyntax n)
+    {
+        int fret = Music.Harmonics.FretOn(n);
+        if (fret == 0)
+            return ("", "");
+        string prefix = "\\harmonicByFret #" + fret.ToString(System.Globalization.CultureInfo.InvariantCulture) + " ";
+        if (n.Articulations.OfType<StringNumberAnnotationSyntax>().Any()
+            || _currentPartName == null || _shared.Root is not { } root)
+            return (prefix, "");
+        var header = Semantics.PartHeaderDefaults.Read(Semantics.ConcertPitch.FindPart(root, _currentPartName));
+        if (header.FrettedTuning is not { } tuning)
+            return (prefix, "");
+        int octave = _octaveAbsolute
+            ? _absoluteBaseOctave + n.Pitch.OctaveOffset + _sectionOctaveOffset
+            : _lysOctave;
+        int open = RelativeOctave.StepToMidi(RelativeOctave.StepIndex(n.Pitch.PitchName[0]), n.Pitch.AccidentalOffset, octave)
+            + header.SoundingShiftSemitones - _layoutPlan.Chords.Capo;
+        int onString = Music.Harmonics.OpenString(open, Tablature.Tunings.GetTuning(tuning));
+        return (prefix, onString == 0 ? "" : "-\\tweak stencil ##f \\" + onString.ToString(System.Globalization.CultureInfo.InvariantCulture));
     }
 
     /// <summary>
@@ -1374,6 +1413,15 @@ public sealed partial class LilyPondExporter
                     // of scope)": 65 warnings, three of the owner's tab books among them.
                     case StringNumberAnnotationSyntax msn:
                         sb.Append(msn.StringNumberToken.Text);
+                        break;
+                    // A member's own `@harmonic` (owner-approved 2026-11-13, grammar evaluation
+                    // 3): the touched note of an artificial harmonic is LilyPond's own
+                    // `<c' f'\harmonic>` — the open diamond on that head — and not the
+                    // flageolet circle a note's or a whole chord's `@harmonic` is.
+                    // LILYPOND-REF: ly/script-init.ly harmonic = #(make-music 'HarmonicEvent)
+                    case ArticulationSyntax ha when ha.Type == ArticulationType.Flageolet
+                                                    && Music.Harmonics.IsTouchedMember(p):
+                        sb.Append("\\harmonic");
                         break;
                     case ArticulationSyntax ma2 when MapArticulation(ma2) is { Length: > 0 } mev:
                         if (mev[0] == '\\')

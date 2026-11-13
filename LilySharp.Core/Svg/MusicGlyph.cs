@@ -44,6 +44,7 @@ internal enum MusicGlyph : ushort
     // ---- noteheads ----
     NoteheadDoubleWhole, NoteheadWhole, NoteheadHalf, NoteheadBlack,
     NoteheadDiamondWhole, NoteheadDiamondHalf, NoteheadDiamondBlack,
+    NoteheadDiamondWhite, FetaNoteheadsS2harmonic,
     NoteheadTriangleUpWhole, NoteheadTriangleUpHalf, NoteheadTriangleUpBlack,
     NoteheadSlashWhiteWhole, NoteheadSlashWhiteHalf, NoteheadSlashHorizontalEnds,
     NoteheadXWhole, NoteheadXHalf, NoteheadXBlack,
@@ -165,6 +166,16 @@ internal static class MusicGlyphs
         new(MusicGlyph.NoteheadDiamondWhole, "noteheadDiamondWhole", 0xE0D8, "noteheads.s0diamond", EmmentalerGlyphs.NoteheadDiamondWhole),
         new(MusicGlyph.NoteheadDiamondHalf, "noteheadDiamondHalf", 0xE0D9, "noteheads.s1diamond", EmmentalerGlyphs.NoteheadDiamondHalf),
         new(MusicGlyph.NoteheadDiamondBlack, "noteheadDiamondBlack", 0xE0DB, "noteheads.s2diamond", EmmentalerGlyphs.NoteheadDiamondBlack),
+        // The harmonic heads (owner-approved 2026-11-13, grammar evaluation 3): LilyPond's
+        // `harmonic` style is s0harmonic at every duration and `harmonic-mixed` adds s2harmonic
+        // from the quarter on. SMuFL's open one is noteheadDiamondWhite; its filled companion,
+        // noteheadDiamondBlack, is already the row of s2diamond above (one name, one row), so
+        // the filled harmonic is a feta. row, drawn under Emmentaler alone (a SMuFL font's
+        // filled harmonic is that noteheadDiamondBlack: MusicGlyphs.Notehead).
+        // LILYPOND-REF: scm/output-lib.scm note-head::calc-glyph-name — harmonic → "0harmonic",
+        //   harmonic-mixed → "0harmonic" for log <= 1, else "2harmonic".
+        new(MusicGlyph.NoteheadDiamondWhite, "noteheadDiamondWhite", 0xE0DD, "noteheads.s0harmonic", EmmentalerGlyphs.NoteheadHarmonicWhite),
+        new(MusicGlyph.FetaNoteheadsS2harmonic, "feta.noteheads.s2harmonic", 0, "noteheads.s2harmonic", EmmentalerGlyphs.NoteheadHarmonicBlack),
         new(MusicGlyph.NoteheadTriangleUpWhole, "noteheadTriangleUpWhole", 0xE0BB, "noteheads.s0triangle", EmmentalerGlyphs.NoteheadTriangleWhole),
         new(MusicGlyph.NoteheadTriangleUpHalf, "noteheadTriangleUpHalf", 0xE0BC, "noteheads.s1triangle", EmmentalerGlyphs.NoteheadTriangleHalf),
         new(MusicGlyph.NoteheadTriangleUpBlack, "noteheadTriangleUpBlack", 0xE0BE, "noteheads.s2triangle", EmmentalerGlyphs.NoteheadTriangleBlack),
@@ -497,6 +508,19 @@ internal static class MusicGlyphs
             0 or 1 => MusicGlyph.NoteheadSlashWhiteWhole, 2 => MusicGlyph.NoteheadSlashWhiteHalf, _ => MusicGlyph.NoteheadSlashHorizontalEnds
         },
         Model.NoteheadStyle.XCircle => MusicGlyph.NoteheadCircleX,
+        // LILYPOND-REF: scm/output-lib.scm note-head::calc-glyph-name — `harmonic` is the open
+        //   diamond at every duration; `harmonic-mixed` fills it from the quarter note on.
+        Model.NoteheadStyle.Harmonic => MusicGlyph.NoteheadDiamondWhite,
+        // ⚠️ The filled one is asked of the FONT IN FORCE: Emmentaler has a glyph of its own
+        // for it (s2harmonic, the s0harmonic's size), and a SMuFL font's filled harmonic is
+        // its noteheadDiamondBlack — the companion of the noteheadDiamondWhite it draws the
+        // open one with — which this table already holds as the row of s2diamond. Asking a
+        // SMuFL font for the feta. glyph would draw Emmentaler's beside its own open diamond
+        // (seen under Bravura, 2026-11-13: two sizes on one staff, and a fallback warning).
+        Model.NoteheadStyle.HarmonicMixed => noteValue <= 2 ? MusicGlyph.NoteheadDiamondWhite
+            : ReferenceEquals(Layout.MusicFont.Current, Layout.EmmentalerMusicFont.Instance)
+                ? MusicGlyph.FetaNoteheadsS2harmonic
+                : MusicGlyph.NoteheadDiamondBlack,
         _ => Notehead(noteValue),
     };
 

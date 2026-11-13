@@ -3301,10 +3301,11 @@ internal sealed class SkylineBuilder
                         + size.Span(Math.Max(0, chordHeadOffsets.Max()))
                         + size.Span(EngravingDefaults.DotPadding(MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Width));
                     int chordDotDir = forcedStemUp switch { true => 1, false => -1, null => 0 };
+                    int[] chordDotted = DotColumn.DottedHeadPositions(chord);
                     var chordDotPositions = DotConfiguration.Resolve(
-                        chord.Notes.Select(n => n.StaffPosition).ToArray(),
+                        chordDotted,
                         chordDotDir != 0
-                            ? Enumerable.Repeat(chordDotDir, chord.Notes.Length).ToArray()
+                            ? Enumerable.Repeat(chordDotDir, chordDotted.Length).ToArray()
                             : null);
                     foreach (int p in chordDotPositions)
                         MergeDotRow(chord.Dots, chordDotX,

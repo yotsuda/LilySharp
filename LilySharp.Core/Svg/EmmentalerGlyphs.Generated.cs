@@ -71,6 +71,10 @@ internal static partial class EmmentalerGlyphs
     public const char NoteheadDiamondHalf = '\uE100';
     /// <summary>noteheads.s2diamond</summary>
     public const char NoteheadDiamondBlack = '\uE101';
+    /// <summary>noteheads.s0harmonic (the open harmonic diamond)</summary>
+    public const char NoteheadHarmonicWhite = '\uE21B';
+    /// <summary>noteheads.s2harmonic (the filled harmonic diamond)</summary>
+    public const char NoteheadHarmonicBlack = '\uE21C';
     /// <summary>noteheads.s0triangle</summary>
     public const char NoteheadTriangleWhole = '\uE102';
     /// <summary>noteheads.s1triangle</summary>

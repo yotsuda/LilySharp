@@ -1645,7 +1645,19 @@ internal sealed partial class Parser
                              && (SyntaxFacts.AnnotationReadsAParenthesisedArgument(Current.Text)
                                  || (Semantics.AnnotationValues.IsOrnamentName(Current.Text)
                                      && Peek(2) is { Kind: SyntaxKind.Identifier } ornamentWord
-                                     && GluedToPrevious(openParen, ornamentWord)))
+                                     && GluedToPrevious(openParen, ornamentWord))
+                                 // ⚠️ A natural harmonic's fret, @harmonic(12) (owner-approved
+                                 // 2026-11-13, grammar evaluation 3), is read only where a NUMBER
+                                 // stands against the '(' with something glued after it — its ')':
+                                 // `e'4@harmonic(d' c')` is, as it always was, the circle and the
+                                 // slur that starts on its note, and so is `e'4@harmonic(8 8)`,
+                                 // a slur over two bare durations. (So @harmonic is NOT in
+                                 // SyntaxFacts' argument-taking list either.)
+                                 || (Current.Text == Music.Harmonics.Name
+                                     && Peek(2) is { Kind: SyntaxKind.IntegerLiteral or SyntaxKind.DecimalLiteral } fretNumber
+                                     && GluedToPrevious(openParen, fretNumber)
+                                     && Peek(3) is { } afterFret
+                                     && GluedToPrevious(fretNumber, afterFret)))
                              && !(SyntaxFacts.AnnotationArgumentIsOptional(Current.Text)
                                   && Peek(2) is { } afterParen
                                   && (!GluedToPrevious(openParen, afterParen)

@@ -123,7 +123,7 @@ public class MusicFontTests
             .ToList();
         // The stem anchors are the one tuple-typed family (§3 #2); a test that looked at boxes
         // and advances only would pass with every anchor dropped — the first version did.
-        Assert.Equal(22, props.Count(p => p.PropertyType == typeof((double, double))));
+        Assert.Equal(26, props.Count(p => p.PropertyType == typeof((double, double))));
         var glyphs = Enum.GetValues<MusicGlyph>();
         var answers = glyphs.ToDictionary(
             g => g, g => designs.Select(d => EmmentalerMusicFont.MetricsOf(g, d)).ToArray());

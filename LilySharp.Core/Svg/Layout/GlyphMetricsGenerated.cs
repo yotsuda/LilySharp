@@ -137,6 +137,24 @@ internal static partial class GlyphMetrics
     /// <summary>Black diamond notehead — advance width (next-glyph horizontal feed).</summary>
     public const double NoteheadDiamondBlackAdvance = 1.460000;
 
+    /// <summary>Open harmonic notehead — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf — noteheads.s0harmonic (noteheads.s0harmonic = U+E21B in this build)</remarks>
+    public static readonly BBox NoteheadHarmonicWhite = new(0.000000, -0.715000, 1.300000, 0.715000);
+    /// <summary>Open harmonic notehead — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox NoteheadHarmonicWhiteOutline = new(0.000000, -0.716000, 1.300000, 0.716000);
+    /// <summary>Open harmonic notehead — advance width (next-glyph horizontal feed).</summary>
+    public const double NoteheadHarmonicWhiteAdvance = 1.300000;
+
+    /// <summary>Filled harmonic notehead — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf — noteheads.s2harmonic (noteheads.s2harmonic = U+E21C in this build)</remarks>
+    public static readonly BBox NoteheadHarmonicBlack = new(0.000000, -0.715000, 1.300000, 0.715000);
+    /// <summary>Filled harmonic notehead — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox NoteheadHarmonicBlackOutline = new(0.000000, -0.716000, 1.300000, 0.716000);
+    /// <summary>Filled harmonic notehead — advance width (next-glyph horizontal feed).</summary>
+    public const double NoteheadHarmonicBlackAdvance = 1.300000;
+
     /// <summary>Whole triangle notehead — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-noteheads.mf — noteheads.s0triangle (noteheads.s0triangle = U+E102 in this build)</remarks>
     public static readonly BBox NoteheadTriangleWhole = new(0.000000, -0.868200, 2.295800, 0.726200);
@@ -1219,6 +1237,30 @@ internal static partial class GlyphMetrics
     /// attachment_point — the font's LILC attachment-down entry.</remarks>
     public static readonly (double X, double Y) NoteheadDiamondBlackStemAttachmentDown = (0.000000, -0.392600);
 
+    /// <summary>noteheads.s0harmonic up-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment entry.</remarks>
+    public static readonly (double X, double Y) NoteheadHarmonicWhiteStemAttachment = (1.300000, -0.022000);
+
+    /// <summary>noteheads.s0harmonic down-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment-down entry.</remarks>
+    public static readonly (double X, double Y) NoteheadHarmonicWhiteStemAttachmentDown = (0.000000, 0.022000);
+
+    /// <summary>noteheads.s2harmonic up-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment entry.</remarks>
+    public static readonly (double X, double Y) NoteheadHarmonicBlackStemAttachment = (1.300000, -0.022000);
+
+    /// <summary>noteheads.s2harmonic down-stem attachment point (staff spaces about the
+    /// glyph origin: X from the ink left, Y above the centre line).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
+    /// attachment_point — the font's LILC attachment-down entry.</remarks>
+    public static readonly (double X, double Y) NoteheadHarmonicBlackStemAttachmentDown = (0.000000, 0.022000);
+
     /// <summary>noteheads.s1cross up-stem attachment point (staff spaces about the
     /// glyph origin: X from the ink left, Y above the centre line).</summary>
     /// <remarks>LILYPOND-REF: lily/note-head.cc:164-196 get_stem_attachment,
@@ -1435,6 +1477,18 @@ internal static partial class GlyphMetrics
         public BBox NoteheadDiamondBlackOutline { get; init; }
         /// <summary>Black diamond notehead — advance width (next-glyph horizontal feed).</summary>
         public double NoteheadDiamondBlackAdvance { get; init; }
+        /// <summary>Open harmonic notehead — BBox (LILC bbox).</summary>
+        public BBox NoteheadHarmonicWhite { get; init; }
+        /// <summary>Open harmonic notehead — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox NoteheadHarmonicWhiteOutline { get; init; }
+        /// <summary>Open harmonic notehead — advance width (next-glyph horizontal feed).</summary>
+        public double NoteheadHarmonicWhiteAdvance { get; init; }
+        /// <summary>Filled harmonic notehead — BBox (LILC bbox).</summary>
+        public BBox NoteheadHarmonicBlack { get; init; }
+        /// <summary>Filled harmonic notehead — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox NoteheadHarmonicBlackOutline { get; init; }
+        /// <summary>Filled harmonic notehead — advance width (next-glyph horizontal feed).</summary>
+        public double NoteheadHarmonicBlackAdvance { get; init; }
         /// <summary>Whole triangle notehead — BBox (LILC bbox).</summary>
         public BBox NoteheadTriangleWhole { get; init; }
         /// <summary>Whole triangle notehead — the box its SKYLINE is built from (glyph outline).</summary>
@@ -2125,6 +2179,14 @@ internal static partial class GlyphMetrics
         public (double X, double Y) NoteheadDiamondBlackStemAttachment { get; init; }
         /// <summary>noteheads.s2diamond down-stem attachment point (staff spaces about the glyph origin).</summary>
         public (double X, double Y) NoteheadDiamondBlackStemAttachmentDown { get; init; }
+        /// <summary>noteheads.s0harmonic up-stem attachment point (staff spaces about the glyph origin).</summary>
+        public (double X, double Y) NoteheadHarmonicWhiteStemAttachment { get; init; }
+        /// <summary>noteheads.s0harmonic down-stem attachment point (staff spaces about the glyph origin).</summary>
+        public (double X, double Y) NoteheadHarmonicWhiteStemAttachmentDown { get; init; }
+        /// <summary>noteheads.s2harmonic up-stem attachment point (staff spaces about the glyph origin).</summary>
+        public (double X, double Y) NoteheadHarmonicBlackStemAttachment { get; init; }
+        /// <summary>noteheads.s2harmonic down-stem attachment point (staff spaces about the glyph origin).</summary>
+        public (double X, double Y) NoteheadHarmonicBlackStemAttachmentDown { get; init; }
         /// <summary>noteheads.s1cross up-stem attachment point (staff spaces about the glyph origin).</summary>
         public (double X, double Y) NoteheadCrossHalfStemAttachment { get; init; }
         /// <summary>noteheads.s1cross down-stem attachment point (staff spaces about the glyph origin).</summary>
@@ -2233,6 +2295,16 @@ internal static partial class GlyphMetrics
             NoteheadDiamondBlackOutline = new(NoteheadDiamondBlackOutline.Left * magnification, NoteheadDiamondBlackOutline.Bottom * magnification,
                 NoteheadDiamondBlackOutline.Right * magnification, NoteheadDiamondBlackOutline.Top * magnification),
             NoteheadDiamondBlackAdvance = NoteheadDiamondBlackAdvance * magnification,
+            NoteheadHarmonicWhite = new(NoteheadHarmonicWhite.Left * magnification, NoteheadHarmonicWhite.Bottom * magnification,
+                NoteheadHarmonicWhite.Right * magnification, NoteheadHarmonicWhite.Top * magnification),
+            NoteheadHarmonicWhiteOutline = new(NoteheadHarmonicWhiteOutline.Left * magnification, NoteheadHarmonicWhiteOutline.Bottom * magnification,
+                NoteheadHarmonicWhiteOutline.Right * magnification, NoteheadHarmonicWhiteOutline.Top * magnification),
+            NoteheadHarmonicWhiteAdvance = NoteheadHarmonicWhiteAdvance * magnification,
+            NoteheadHarmonicBlack = new(NoteheadHarmonicBlack.Left * magnification, NoteheadHarmonicBlack.Bottom * magnification,
+                NoteheadHarmonicBlack.Right * magnification, NoteheadHarmonicBlack.Top * magnification),
+            NoteheadHarmonicBlackOutline = new(NoteheadHarmonicBlackOutline.Left * magnification, NoteheadHarmonicBlackOutline.Bottom * magnification,
+                NoteheadHarmonicBlackOutline.Right * magnification, NoteheadHarmonicBlackOutline.Top * magnification),
+            NoteheadHarmonicBlackAdvance = NoteheadHarmonicBlackAdvance * magnification,
             NoteheadTriangleWhole = new(NoteheadTriangleWhole.Left * magnification, NoteheadTriangleWhole.Bottom * magnification,
                 NoteheadTriangleWhole.Right * magnification, NoteheadTriangleWhole.Top * magnification),
             NoteheadTriangleWholeOutline = new(NoteheadTriangleWholeOutline.Left * magnification, NoteheadTriangleWholeOutline.Bottom * magnification,
@@ -2800,6 +2872,10 @@ internal static partial class GlyphMetrics
             NoteheadDiamondHalfStemAttachmentDown = (NoteheadDiamondHalfStemAttachmentDown.X * magnification, NoteheadDiamondHalfStemAttachmentDown.Y * magnification),
             NoteheadDiamondBlackStemAttachment = (NoteheadDiamondBlackStemAttachment.X * magnification, NoteheadDiamondBlackStemAttachment.Y * magnification),
             NoteheadDiamondBlackStemAttachmentDown = (NoteheadDiamondBlackStemAttachmentDown.X * magnification, NoteheadDiamondBlackStemAttachmentDown.Y * magnification),
+            NoteheadHarmonicWhiteStemAttachment = (NoteheadHarmonicWhiteStemAttachment.X * magnification, NoteheadHarmonicWhiteStemAttachment.Y * magnification),
+            NoteheadHarmonicWhiteStemAttachmentDown = (NoteheadHarmonicWhiteStemAttachmentDown.X * magnification, NoteheadHarmonicWhiteStemAttachmentDown.Y * magnification),
+            NoteheadHarmonicBlackStemAttachment = (NoteheadHarmonicBlackStemAttachment.X * magnification, NoteheadHarmonicBlackStemAttachment.Y * magnification),
+            NoteheadHarmonicBlackStemAttachmentDown = (NoteheadHarmonicBlackStemAttachmentDown.X * magnification, NoteheadHarmonicBlackStemAttachmentDown.Y * magnification),
             NoteheadCrossHalfStemAttachment = (NoteheadCrossHalfStemAttachment.X * magnification, NoteheadCrossHalfStemAttachment.Y * magnification),
             NoteheadCrossHalfStemAttachmentDown = (NoteheadCrossHalfStemAttachmentDown.X * magnification, NoteheadCrossHalfStemAttachmentDown.Y * magnification),
             NoteheadCrossBlackStemAttachment = (NoteheadCrossBlackStemAttachment.X * magnification, NoteheadCrossBlackStemAttachment.Y * magnification),
@@ -2858,6 +2934,12 @@ internal static partial class GlyphMetrics
         NoteheadDiamondBlack = new(0.000000, -0.568269, 1.523702, 0.568269),
         NoteheadDiamondBlackOutline = new(0.000000, -0.568000, 1.524000, 0.568000),
         NoteheadDiamondBlackAdvance = 1.520000,
+        NoteheadHarmonicWhite = new(0.000000, -0.748304, 1.300174, 0.748304),
+        NoteheadHarmonicWhiteOutline = new(0.000000, -0.748000, 1.300000, 0.748000),
+        NoteheadHarmonicWhiteAdvance = 1.300000,
+        NoteheadHarmonicBlack = new(0.000000, -0.748304, 1.300174, 0.748304),
+        NoteheadHarmonicBlackOutline = new(0.000000, -0.748000, 1.300000, 0.748000),
+        NoteheadHarmonicBlackAdvance = 1.300000,
         NoteheadTriangleWhole = new(0.000000, -0.926556, 2.457745, 0.778607),
         NoteheadTriangleWholeOutline = new(0.000000, -0.928000, 2.456000, 0.780000),
         NoteheadTriangleWholeAdvance = 2.456000,
@@ -3203,6 +3285,10 @@ internal static partial class GlyphMetrics
         NoteheadDiamondHalfStemAttachmentDown = (0.000000, -0.401781),
         NoteheadDiamondBlackStemAttachment = (1.523702, 0.409268),
         NoteheadDiamondBlackStemAttachmentDown = (0.000000, -0.409268),
+        NoteheadHarmonicWhiteStemAttachment = (1.300174, -0.023173),
+        NoteheadHarmonicWhiteStemAttachmentDown = (0.000000, 0.023173),
+        NoteheadHarmonicBlackStemAttachment = (1.300174, -0.023173),
+        NoteheadHarmonicBlackStemAttachmentDown = (0.000000, 0.023173),
         NoteheadCrossHalfStemAttachment = (1.592151, 0.188591),
         NoteheadCrossHalfStemAttachmentDown = (0.000000, -0.188591),
         NoteheadCrossBlackStemAttachment = (1.289478, 0.331906),
@@ -3260,6 +3346,12 @@ internal static partial class GlyphMetrics
         NoteheadDiamondBlack = new(0.000000, -0.562220, 1.508249, 0.562220),
         NoteheadDiamondBlackOutline = new(0.000000, -0.564000, 1.508000, 0.564000),
         NoteheadDiamondBlackAdvance = 1.508000,
+        NoteheadHarmonicWhite = new(0.000000, -0.739998, 1.299996, 0.739998),
+        NoteheadHarmonicWhiteOutline = new(0.000000, -0.740000, 1.300000, 0.740000),
+        NoteheadHarmonicWhiteAdvance = 1.300000,
+        NoteheadHarmonicBlack = new(0.000000, -0.739998, 1.299996, 0.739998),
+        NoteheadHarmonicBlackOutline = new(0.000000, -0.740000, 1.300000, 0.740000),
+        NoteheadHarmonicBlackAdvance = 1.300000,
         NoteheadTriangleWhole = new(0.000000, -0.912061, 2.417453, 0.765394),
         NoteheadTriangleWholeOutline = new(0.000000, -0.916000, 2.416000, 0.768000),
         NoteheadTriangleWholeAdvance = 2.416000,
@@ -3605,6 +3697,10 @@ internal static partial class GlyphMetrics
         NoteheadDiamondHalfStemAttachmentDown = (0.000000, -0.397459),
         NoteheadDiamondBlackStemAttachment = (1.508249, 0.405078),
         NoteheadDiamondBlackStemAttachmentDown = (0.000000, -0.405078),
+        NoteheadHarmonicWhiteStemAttachment = (1.299996, -0.022857),
+        NoteheadHarmonicWhiteStemAttachmentDown = (0.000000, 0.022857),
+        NoteheadHarmonicBlackStemAttachment = (1.299996, -0.022857),
+        NoteheadHarmonicBlackStemAttachmentDown = (0.000000, 0.022857),
         NoteheadCrossHalfStemAttachment = (1.571424, 0.214602),
         NoteheadCrossHalfStemAttachmentDown = (0.000000, -0.214602),
         NoteheadCrossBlackStemAttachment = (1.294282, 0.346666),
@@ -3662,6 +3758,12 @@ internal static partial class GlyphMetrics
         NoteheadDiamondBlack = new(0.000000, -0.557284, 1.494484, 0.557284),
         NoteheadDiamondBlackOutline = new(0.000000, -0.556000, 1.496000, 0.556000),
         NoteheadDiamondBlackAdvance = 1.492000,
+        NoteheadHarmonicWhite = new(0.000000, -0.732673, 1.300141, 0.732673),
+        NoteheadHarmonicWhiteOutline = new(0.000000, -0.732000, 1.300000, 0.732000),
+        NoteheadHarmonicWhiteAdvance = 1.296000,
+        NoteheadHarmonicBlack = new(0.000000, -0.732673, 1.300141, 0.732673),
+        NoteheadHarmonicBlackOutline = new(0.000000, -0.732000, 1.300000, 0.732000),
+        NoteheadHarmonicBlackAdvance = 1.296000,
         NoteheadTriangleWhole = new(0.000000, -0.899010, 2.381612, 0.753890),
         NoteheadTriangleWholeOutline = new(0.000000, -0.900000, 2.380000, 0.756000),
         NoteheadTriangleWholeAdvance = 2.380000,
@@ -4007,6 +4109,10 @@ internal static partial class GlyphMetrics
         NoteheadDiamondHalfStemAttachmentDown = (0.000000, -0.394059),
         NoteheadDiamondBlackStemAttachment = (1.494484, 0.401414),
         NoteheadDiamondBlackStemAttachmentDown = (0.000000, -0.401414),
+        NoteheadHarmonicWhiteStemAttachment = (1.300141, -0.022631),
+        NoteheadHarmonicWhiteStemAttachmentDown = (0.000000, 0.022631),
+        NoteheadHarmonicBlackStemAttachment = (1.300141, -0.022631),
+        NoteheadHarmonicBlackStemAttachmentDown = (0.000000, 0.022631),
         NoteheadCrossHalfStemAttachment = (1.552475, 0.237907),
         NoteheadCrossHalfStemAttachmentDown = (0.000000, -0.237907),
         NoteheadCrossBlackStemAttachment = (1.298161, 0.359547),
@@ -4064,6 +4170,12 @@ internal static partial class GlyphMetrics
         NoteheadDiamondBlack = new(0.000000, -0.552741, 1.482294, 0.552741),
         NoteheadDiamondBlackOutline = new(0.000000, -0.552000, 1.484000, 0.552000),
         NoteheadDiamondBlackAdvance = 1.480000,
+        NoteheadHarmonicWhite = new(0.000000, -0.726150, 1.300063, 0.726150),
+        NoteheadHarmonicWhiteOutline = new(0.000000, -0.728000, 1.300000, 0.728000),
+        NoteheadHarmonicWhiteAdvance = 1.296000,
+        NoteheadHarmonicBlack = new(0.000000, -0.726150, 1.300063, 0.726150),
+        NoteheadHarmonicBlackOutline = new(0.000000, -0.728000, 1.300000, 0.728000),
+        NoteheadHarmonicBlackAdvance = 1.296000,
         NoteheadTriangleWhole = new(0.000000, -0.887713, 2.349590, 0.743541),
         NoteheadTriangleWholeOutline = new(0.000000, -0.888000, 2.348000, 0.744000),
         NoteheadTriangleWholeAdvance = 2.348000,
@@ -4409,6 +4521,10 @@ internal static partial class GlyphMetrics
         NoteheadDiamondHalfStemAttachmentDown = (0.000000, -0.390674),
         NoteheadDiamondBlackStemAttachment = (1.482294, 0.398236),
         NoteheadDiamondBlackStemAttachmentDown = (0.000000, -0.398236),
+        NoteheadHarmonicWhiteStemAttachment = (1.300063, -0.022432),
+        NoteheadHarmonicWhiteStemAttachmentDown = (0.000000, 0.022432),
+        NoteheadHarmonicBlackStemAttachment = (1.300063, -0.022432),
+        NoteheadHarmonicBlackStemAttachmentDown = (0.000000, 0.022432),
         NoteheadCrossHalfStemAttachment = (1.534972, 0.258601),
         NoteheadCrossHalfStemAttachmentDown = (0.000000, -0.258601),
         NoteheadCrossBlackStemAttachment = (1.300819, 0.371267),
@@ -4466,6 +4582,12 @@ internal static partial class GlyphMetrics
         NoteheadDiamondBlack = new(0.000000, -0.548597, 1.471380, 0.548597),
         NoteheadDiamondBlackOutline = new(0.000000, -0.548000, 1.472000, 0.548000),
         NoteheadDiamondBlackAdvance = 1.468000,
+        NoteheadHarmonicWhite = new(0.000000, -0.720314, 1.300112, 0.720314),
+        NoteheadHarmonicWhiteOutline = new(0.000000, -0.720000, 1.300000, 0.720000),
+        NoteheadHarmonicWhiteAdvance = 1.300000,
+        NoteheadHarmonicBlack = new(0.000000, -0.720314, 1.300112, 0.720314),
+        NoteheadHarmonicBlackOutline = new(0.000000, -0.720000, 1.300000, 0.720000),
+        NoteheadHarmonicBlackAdvance = 1.300000,
         NoteheadTriangleWhole = new(0.000000, -0.877441, 2.321212, 0.734456),
         NoteheadTriangleWholeOutline = new(0.000000, -0.880000, 2.320000, 0.736000),
         NoteheadTriangleWholeAdvance = 2.320000,
@@ -4811,6 +4933,10 @@ internal static partial class GlyphMetrics
         NoteheadDiamondHalfStemAttachmentDown = (0.000000, -0.387879),
         NoteheadDiamondBlackStemAttachment = (1.471380, 0.395286),
         NoteheadDiamondBlackStemAttachmentDown = (0.000000, -0.395286),
+        NoteheadHarmonicWhiteStemAttachment = (1.300112, -0.022222),
+        NoteheadHarmonicWhiteStemAttachmentDown = (0.000000, 0.022222),
+        NoteheadHarmonicBlackStemAttachment = (1.300112, -0.022222),
+        NoteheadHarmonicBlackStemAttachmentDown = (0.000000, 0.022222),
         NoteheadCrossHalfStemAttachment = (1.518967, 0.277217),
         NoteheadCrossHalfStemAttachmentDown = (0.000000, -0.277217),
         NoteheadCrossBlackStemAttachment = (1.302806, 0.381369),
@@ -4870,6 +4996,12 @@ internal static partial class GlyphMetrics
         NoteheadDiamondBlack = NoteheadDiamondBlack,
         NoteheadDiamondBlackOutline = NoteheadDiamondBlackOutline,
         NoteheadDiamondBlackAdvance = NoteheadDiamondBlackAdvance,
+        NoteheadHarmonicWhite = NoteheadHarmonicWhite,
+        NoteheadHarmonicWhiteOutline = NoteheadHarmonicWhiteOutline,
+        NoteheadHarmonicWhiteAdvance = NoteheadHarmonicWhiteAdvance,
+        NoteheadHarmonicBlack = NoteheadHarmonicBlack,
+        NoteheadHarmonicBlackOutline = NoteheadHarmonicBlackOutline,
+        NoteheadHarmonicBlackAdvance = NoteheadHarmonicBlackAdvance,
         NoteheadTriangleWhole = NoteheadTriangleWhole,
         NoteheadTriangleWholeOutline = NoteheadTriangleWholeOutline,
         NoteheadTriangleWholeAdvance = NoteheadTriangleWholeAdvance,
@@ -5215,6 +5347,10 @@ internal static partial class GlyphMetrics
         NoteheadDiamondHalfStemAttachmentDown = NoteheadDiamondHalfStemAttachmentDown,
         NoteheadDiamondBlackStemAttachment = NoteheadDiamondBlackStemAttachment,
         NoteheadDiamondBlackStemAttachmentDown = NoteheadDiamondBlackStemAttachmentDown,
+        NoteheadHarmonicWhiteStemAttachment = NoteheadHarmonicWhiteStemAttachment,
+        NoteheadHarmonicWhiteStemAttachmentDown = NoteheadHarmonicWhiteStemAttachmentDown,
+        NoteheadHarmonicBlackStemAttachment = NoteheadHarmonicBlackStemAttachment,
+        NoteheadHarmonicBlackStemAttachmentDown = NoteheadHarmonicBlackStemAttachmentDown,
         NoteheadCrossHalfStemAttachment = NoteheadCrossHalfStemAttachment,
         NoteheadCrossHalfStemAttachmentDown = NoteheadCrossHalfStemAttachmentDown,
         NoteheadCrossBlackStemAttachment = NoteheadCrossBlackStemAttachment,
@@ -5272,6 +5408,12 @@ internal static partial class GlyphMetrics
         NoteheadDiamondBlack = new(0.000000, -0.541826, 1.453007, 0.541826),
         NoteheadDiamondBlackOutline = new(0.000000, -0.540000, 1.452000, 0.540000),
         NoteheadDiamondBlackAdvance = 1.452000,
+        NoteheadHarmonicWhite = new(0.000000, -0.710379, 1.299955, 0.710379),
+        NoteheadHarmonicWhiteOutline = new(0.000000, -0.712000, 1.300000, 0.712000),
+        NoteheadHarmonicWhiteAdvance = 1.296000,
+        NoteheadHarmonicBlack = new(0.000000, -0.710379, 1.299955, 0.710379),
+        NoteheadHarmonicBlackOutline = new(0.000000, -0.712000, 1.300000, 0.712000),
+        NoteheadHarmonicBlackAdvance = 1.296000,
         NoteheadTriangleWhole = new(0.000000, -0.860045, 2.273318, 0.718931),
         NoteheadTriangleWholeOutline = new(0.000000, -0.868000, 2.272000, 0.724000),
         NoteheadTriangleWholeAdvance = 2.272000,
@@ -5617,6 +5759,10 @@ internal static partial class GlyphMetrics
         NoteheadDiamondHalfStemAttachmentDown = (0.000000, -0.383073),
         NoteheadDiamondBlackStemAttachment = (1.453007, 0.390379),
         NoteheadDiamondBlackStemAttachmentDown = (0.000000, -0.390379),
+        NoteheadHarmonicWhiteStemAttachment = (1.299955, -0.021915),
+        NoteheadHarmonicWhiteStemAttachmentDown = (0.000000, 0.021915),
+        NoteheadHarmonicBlackStemAttachment = (1.299955, -0.021915),
+        NoteheadHarmonicBlackStemAttachmentDown = (0.000000, 0.021915),
         NoteheadCrossHalfStemAttachment = (1.490958, 0.308241),
         NoteheadCrossHalfStemAttachmentDown = (0.000000, -0.308241),
         NoteheadCrossBlackStemAttachment = (1.305122, 0.398396),
@@ -5674,6 +5820,12 @@ internal static partial class GlyphMetrics
         NoteheadDiamondBlack = new(0.000000, -0.538889, 1.445238, 0.538889),
         NoteheadDiamondBlackOutline = new(0.000000, -0.540000, 1.444000, 0.540000),
         NoteheadDiamondBlackAdvance = 1.444000,
+        NoteheadHarmonicWhite = new(0.000000, -0.706190, 1.300000, 0.706190),
+        NoteheadHarmonicWhiteOutline = new(0.000000, -0.708000, 1.300000, 0.708000),
+        NoteheadHarmonicWhiteAdvance = 1.300000,
+        NoteheadHarmonicBlack = new(0.000000, -0.706190, 1.300000, 0.706190),
+        NoteheadHarmonicBlackOutline = new(0.000000, -0.708000, 1.300000, 0.708000),
+        NoteheadHarmonicBlackAdvance = 1.300000,
         NoteheadTriangleWhole = new(0.000000, -0.852857, 2.253175, 0.712540),
         NoteheadTriangleWholeOutline = new(0.000000, -0.860000, 2.252000, 0.720000),
         NoteheadTriangleWholeAdvance = 2.252000,
@@ -6019,6 +6171,10 @@ internal static partial class GlyphMetrics
         NoteheadDiamondHalfStemAttachmentDown = (0.000000, -0.380952),
         NoteheadDiamondBlackStemAttachment = (1.445238, 0.388254),
         NoteheadDiamondBlackStemAttachmentDown = (0.000000, -0.388254),
+        NoteheadHarmonicWhiteStemAttachment = (1.300000, -0.021746),
+        NoteheadHarmonicWhiteStemAttachmentDown = (0.000000, 0.021746),
+        NoteheadHarmonicBlackStemAttachment = (1.300000, -0.021746),
+        NoteheadHarmonicBlackStemAttachmentDown = (0.000000, 0.021746),
         NoteheadCrossHalfStemAttachment = (1.478730, 0.321429),
         NoteheadCrossHalfStemAttachmentDown = (0.000000, -0.321429),
         NoteheadCrossBlackStemAttachment = (1.305873, 0.405397),

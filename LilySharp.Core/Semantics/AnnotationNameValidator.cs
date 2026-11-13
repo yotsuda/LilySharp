@@ -441,6 +441,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             || AnnotationValues.IsTextSpanAnnotation(mark)
             // A barre, read or not: GuitarMarkValidator says what a miswritten one lacks (LYS4065).
             || mark is { Name: MusicMarkItem.BarreName, IsSpanEnd: false }
+            // A natural harmonic's fret, read or not: GuitarMarkValidator says why (LYS4070–4073).
+            || AnnotationValues.IsFretHarmonic(mark)
             || AnnotationValues.Feather(mark) != 0
             || AnnotationValues.ArpeggioWords(mark) is not null
             || AnnotationValues.OrnamentAccidental(mark) is not null

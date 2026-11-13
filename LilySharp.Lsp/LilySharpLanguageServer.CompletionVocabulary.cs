@@ -5219,7 +5219,7 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "staccatissimo", Kind = CompletionItemKind.Value, Detail = "Staccatissimo (wedge)", SortText = "0staccatissimo" },
                 new CompletionItem { Label = "upBow", Kind = CompletionItemKind.Value, Detail = "Up-bow (V, above)", SortText = "0upBow" },
                 new CompletionItem { Label = "downBow", Kind = CompletionItemKind.Value, Detail = "Down-bow (frog, above)", SortText = "0downBow" },
-                new CompletionItem { Label = "harmonic", Kind = CompletionItemKind.Value, Detail = "Harmonic circle ○ (a.k.a. @flageolet)", SortText = "0harmonic" },
+                new CompletionItem { Label = "harmonic", Kind = CompletionItemKind.Value, Detail = "Harmonic circle ○ (a.k.a. @flageolet); on a chord member the open diamond ◇ of an artificial harmonic — <c' f'@harmonic>; @harmonic(12) a natural harmonic at a fret, on the open string's note", SortText = "0harmonic" },
                 new CompletionItem { Label = "flageolet", Kind = CompletionItemKind.Value, Detail = "Harmonic circle ○ (a.k.a. @harmonic)", SortText = "0flageolet" },
                 new CompletionItem { Label = "shortFermata", Kind = CompletionItemKind.Value, Detail = "Short fermata (angular)", SortText = "0shortFermata" },
                 new CompletionItem { Label = "longFermata", Kind = CompletionItemKind.Value, Detail = "Long fermata (square)", SortText = "0longFermata" },
@@ -5448,6 +5448,7 @@ public sealed partial class LilySharpLanguageServer
             "figuredBass" => GetFiguredBassCompletions(),
             "arpeggio" => GetArpeggioCompletions(),
             "barre" => GetBarreCompletions(),
+            LilySharp.Core.Music.Harmonics.Name => GetHarmonicCompletions(),
             _ when AnnotationValues.IsOrnamentName(annotation) => GetOrnamentAccidentalCompletions(),
             _ => null
         };
@@ -5465,6 +5466,29 @@ public sealed partial class LilySharpLanguageServer
                 SortText = $"{fret:00}",
             }),
             new CompletionItem { Label = "half", Kind = CompletionItemKind.Value, Detail = "Half barre, after the fret — @barre(7 half) prints ½CVII", SortText = "99half" },
+        ],
+    };
+
+    /// <summary>Inside <c>@harmonic(…)</c>: the frets a natural harmonic is most often written
+    /// at — 12, 7, 5, 4, 9, 3, in that order (owner-approved 2026-11-13, grammar evaluation 3).
+    /// 19, 24 and 16, the same partials further up the string, are typed.</summary>
+    internal static CompletionList GetHarmonicCompletions() => new()
+    {
+        Items =
+        [
+            .. new[] { 12, 7, 5, 4, 9, 3 }.Select((fret, rank) => new CompletionItem
+            {
+                Label = fret.ToString(System.Globalization.CultureInfo.InvariantCulture), Kind = CompletionItemKind.Value,
+                Detail = "Natural harmonic at fret " + fret + " — sounds " + (LilySharp.Core.Music.Harmonics.NaturalSemitones(fret) switch
+                {
+                    12 => "an octave",
+                    19 => "an octave and a fifth",
+                    24 => "two octaves",
+                    28 => "two octaves and a major third",
+                    _ => "two octaves and a fifth",
+                }) + " above the open string written",
+                SortText = $"{rank:00}",
+            }),
         ],
     };
 

@@ -447,7 +447,8 @@ internal static partial class SharedRenderer
                     if (!note.IsTieTarget && !note.HasRepeatTie)
                         DrawTabNote(fonts, note.Midi, itemX, staffY,
                             tuning, note.StringNumber, octaveShift, stringSpace, note.SourcePosition,
-                            numbersOnly ? 0 : note.Dots, gc, digitGaps, note.IsDead);
+                            numbersOnly ? 0 : note.Dots, gc, digitGaps, note.IsDead,
+                            harmonic: note.HarmonicFret > 0);
                     else if (note.HasRepeatTie || (note.IsTieTarget && i == firstSoundingIndex))
                         DrawTabNote(fonts, note.Midi, itemX, staffY,
                             tuning, note.StringNumber, octaveShift, stringSpace, note.SourcePosition,
@@ -657,6 +658,11 @@ internal static partial class SharedRenderer
                 var (_, fret) = Tunings.CalculateFret(
                     n.Midi + octaveShift, tuning, n.StringNumber ?? 0);
                 double half = TabChordColumns.FretWidth(fonts, tuning.Length, fret) / 2;
+                // A harmonic's angle brackets are its glyph's reach too (DrawTabFret), or two
+                // neighbouring harmonics print bracket on bracket (owner-approved 2026-11-13,
+                // grammar evaluation 3).
+                if (n.HarmonicFret > 0)
+                    half += TabTieParenClearance;
                 return (half, half);
             }
             case ChordItem c when c.Notes.Length > 0:
@@ -673,8 +679,9 @@ internal static partial class SharedRenderer
     private static (double Left, double Right) TabChordHalfExtent(
         ScoreTextMetrics fonts, ChordItem c, int[] tuning, int octaveShift)
     {
-        var notes = Tunings.CalculateChordFrets(
-                c.Notes.Select(cn => (cn.Midi + octaveShift, cn.StringNumber)).ToList(), tuning)
+        var alloc = Tunings.CalculateChordFrets(
+                c.Notes.Select(cn => (cn.Midi + octaveShift, cn.StringNumber)).ToList(), tuning);
+        var notes = alloc
             .Select(p => (str: p.stringNum, fret: p.fret))
             .OrderBy(p => p.str)
             .ToList();
@@ -683,6 +690,13 @@ internal static partial class SharedRenderer
         for (int i = 0; i < notes.Count; i++)
         {
             double half = TabChordColumns.FretWidth(fonts, tuning.Length, notes[i].fret) / 2;
+            // The touched member of an artificial harmonic: its angle brackets (DrawTabChord).
+            for (int k = 0; k < alloc.Length; k++)
+                if (alloc[k].stringNum == notes[i].str && c.Notes[k].Notehead == NoteheadStyle.Harmonic)
+                {
+                    half += TabTieParenClearance;
+                    break;
+                }
             left = Math.Max(left, -dx[i] + half);
             right = Math.Max(right, dx[i] + half);
         }
@@ -693,17 +707,20 @@ internal static partial class SharedRenderer
         double x, double staffY, int[] tuning, int? stringNumber, int octaveShift,
         double stringSpace, int sourcePosition, int dots, IDrawingContext gc,
         List<(int StringIndex, double Left, double Right)> digitGaps, bool isDead = false,
-        bool parenthesized = false)
+        bool parenthesized = false, bool harmonic = false)
     {
         int midiPitch = midi + octaveShift;
         var (stringNum, fret) = Tunings.CalculateFret(midiPitch, tuning, stringNumber ?? 0);
         DrawTabFret(fonts, tuning.Length, fret, stringNum, x, staffY, stringSpace, sourcePosition, gc, digitGaps, isDead,
-            parenthesized);
+            parenthesized, harmonic);
         double noteY = staffY - (stringNum - 1) * stringSpace;
         double digitWidth = isDead
             ? TabDeadHeadWidth
             : LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(fonts, tuning.Length,
                 fret.ToString(System.Globalization.CultureInfo.InvariantCulture), TabFretEm(fonts, tuning.Length));
+        // A harmonic's dots stand past its right angle bracket, not in it.
+        if (harmonic)
+            digitWidth += 2 * TabTieParenClearance;
         DrawTabAugmentationDots(dots, x, digitWidth, noteY, stringSpace, sourcePosition, gc);
     }
 
@@ -827,7 +844,7 @@ internal static partial class SharedRenderer
     private static void DrawTabFret(ScoreTextMetrics fonts, int stringCount, int fret, int stringNum, double x, double staffY,
         double stringSpace, int sourcePosition, IDrawingContext gc,
         List<(int StringIndex, double Left, double Right)> digitGaps, bool isDead = false,
-        bool parenthesized = false)
+        bool parenthesized = false, bool harmonic = false)
     {
         // String 1 (highest pitch) is the TOP tab line; string N the bottom
         // (device down = smaller Y-up).
@@ -851,7 +868,7 @@ internal static partial class SharedRenderer
         // 2.08 is taller than the 1.5 string gap, so it blanked pieces of the NEIGHBOURING
         // lines too — the ceiling that stopped the digits growing. A gap has neither
         // problem: it spends no colour, and it is confined to the digit's own line.
-        double gapPad = parenthesized ? TabTieParenClearance : 0;
+        double gapPad = parenthesized || harmonic ? TabTieParenClearance : 0;
         digitGaps.Add((stringNum - 1, x - bgWidth / 2 - gapPad, x + bgWidth / 2 + gapPad));
 
         using (gc.Source(sourcePosition))
@@ -863,7 +880,9 @@ internal static partial class SharedRenderer
                 // string (the box measured in TabDeadHeadWidth's remarks).
                 gc.DrawGlyph(Music(MusicGlyph.NoteheadXBlack), x - TabDeadHeadWidth / 2, noteY,
                     FontSize * TabDeadHeadScale, Color.Black);
-                if (parenthesized)
+                if (harmonic)
+                    DrawTabFretParens(fonts, stringCount, x, noteY, bgWidth, gc, TabHarmonicAngularity);
+                else if (parenthesized)
                     DrawTabFretParens(fonts, stringCount, x, noteY, bgWidth, gc);
                 return;
             }
@@ -891,10 +910,33 @@ internal static partial class SharedRenderer
                 gc.DrawText(fretText, x, baseY, fretEm, TextRole.TabFret, fretStyle,
                     TextAnchor.Middle, Color.Black);
             }
-            if (parenthesized)
+            // A harmonic's fret stands in angle brackets (and a tied harmonic's keeps them:
+            // one pair is drawn, the harmonic's).
+            if (harmonic)
+                DrawTabFretParens(fonts, stringCount, x, noteY, bgWidth, gc, TabHarmonicAngularity);
+            else if (parenthesized)
                 DrawTabFretParens(fonts, stringCount, x, noteY, bgWidth, gc);
         }
     }
+
+    /// <summary>
+    /// The angularity of the brackets a HARMONIC's fret stands in — a natural harmonic at a
+    /// fret (<c>@harmonic(12)</c>) and the touched member of an artificial one
+    /// (<c>&lt;c' f'@harmonic&gt;</c>), owner-approved 2026-11-13 (grammar evaluation 3). The
+    /// same bow pair as a tied fret's parentheses with the control points drawn past one
+    /// another (0.1 + 0.3 × 2 = 0.7 of the way along, against 0.22), which is what turns the
+    /// round bow into the pointed ⟨ ⟩.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:3726-3730 TabNoteHead (tab-note-head-interface) details harmonic-properties —
+    ///   (angularity . 2) (half-thickness . 0.075) (padding . 0) (width . 0.25), the
+    ///   cautionary-properties' numbers but for the angularity;
+    /// LILYPOND-REF: scm/tablature.scm:225-271 tab-note-head::print — is-harmonic? (a
+    ///   harmonic-event among the note's articulations, or style harmonic) wraps the digit with
+    ///   parenthesize-stencil at those numbers, inside the cautionary pair.
+    /// MEASURED by eye against LilyPond 2.26.0 (Lab sessions/p1226/md/eval3/featH/lp2.ly).
+    /// </remarks>
+    private const double TabHarmonicAngularity = 2;
 
     // A split/repeat-tied fret's parentheses, sized to the digit box. LilyPond builds
     // them as two filled bow stencils; the bow's page-frame geometry reduces to: the
@@ -929,10 +971,10 @@ internal static partial class SharedRenderer
         TabTieParenLineWidth + 4.0 / 3 * TabTieParenWidth + TabTieParenLineWidth / 2;
 
     private static void DrawTabFretParens(ScoreTextMetrics fonts, int stringCount, double x, double noteY, double digitWidth,
-        IDrawingContext gc)
+        IDrawingContext gc, double angularity = TabTieParenAngularity)
     {
         double h = LilySharp.Core.Svg.Layout.TabConstants.FretDigitHeight(fonts, stringCount) / 2;
-        double control = 0.1 + 0.3 * TabTieParenAngularity;      // 0.22
+        double control = 0.1 + 0.3 * angularity;                 // 0.22; a harmonic's 0.7
         double outer = 4.0 / 3 * TabTieParenWidth;               // 0.3333
         double inner = outer - TabTieParenHalfThickness;         // 0.2583
         double c1Y = noteY + h - control * 2 * h;
@@ -989,10 +1031,21 @@ internal static partial class SharedRenderer
             return false;
         }
 
+        // …and the touched member of an artificial harmonic shows its fret in angle brackets.
+        // LILYPOND-REF: scm/tablature.scm:227-232 is-harmonic? of tab-note-head::print
+        bool IsHarmonicString(int str)
+        {
+            for (int k = 0; k < alloc.Length; k++)
+                if (alloc[k].stringNum == str && chord.Notes[k].Notehead == NoteheadStyle.Harmonic)
+                    return true;
+            return false;
+        }
+
         double[] dx = TabChordColumns.Offsets(fonts, tuning.Length, notes);
         for (int i = 0; i < notes.Count; i++)
             DrawTabFret(fonts, tuning.Length, notes[i].fret, notes[i].str, itemX + dx[i], staffY, stringSpace,
-                chord.SourcePosition, gc, digitGaps, IsDeadString(notes[i].str));
+                chord.SourcePosition, gc, digitGaps, IsDeadString(notes[i].str),
+                harmonic: IsHarmonicString(notes[i].str));
 
         // Augmentation dots sit to the right of the whole chord (its rightmost digit
         // edge), one per string row — the tab analogue of the notation dot column.

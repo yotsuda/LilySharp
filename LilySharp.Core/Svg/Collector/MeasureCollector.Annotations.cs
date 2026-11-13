@@ -917,6 +917,13 @@ public sealed partial class MeasureCollector
             if (articulation is ArticulationSyntax articulationSyntax)
             {
                 var type = articulationSyntax.Type;
+                // A chord member's `@harmonic` is that member's HEAD, the open diamond
+                // (CreateChordItem; owner-approved 2026-11-13, grammar evaluation 3), and draws
+                // no flageolet circle. `@flageolet` on a member stays the circle.
+                if (isChordMember && type == ArticulationType.Flageolet
+                    && articulationSyntax.Name == Music.Harmonics.Name
+                    && articulationSyntax.Parent is PitchSyntax { Parent: ChordSyntax })
+                    return;
                 if (type != ArticulationType.None)
                 {
                     // LILYPOND-REF: script-interface.cc:23-45 direction calculation

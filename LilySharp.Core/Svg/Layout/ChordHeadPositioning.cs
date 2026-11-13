@@ -77,8 +77,26 @@ public static class ChordHeadPositioning
         if (mixed)
         {
             double support = LayoutUtilities.StemAttachX(stemUp, noteValue, SupportStyle(notes, stemUp, noteValue, headFont), headFont);
+            var supportStyle = SupportStyle(notes, stemUp, noteValue, headFont);
+            var font = headFont ?? GlyphMetrics.StaffHeadFont;
             for (int i = 0; i < notes.Count; i++)
+            {
+                // A harmonic head of a STEMLESS chord (a whole note's, a breve's) is centred on
+                // the ordinary heads instead of standing at the stem's side: the touched note of
+                // `<c' f'@harmonic>1` (owner-approved 2026-11-13, grammar evaluation 3).
+                // LILYPOND-REF: lily/stem.cc:643-653 calc_positioning_done — `i_am_invisible` and
+                //   style harmonic: sup_extent.center () − h_extent.center ().
+                // MEASURED, 2.26.0 (Lab sessions/p1226/md/eval3/featH/lp3.ly): on `<c' f'\harmonic>1`
+                //   the whole head spans 29.415 … 31.377 and the diamond 29.746 … 31.046, 0.331 in.
+                if (noteValue <= 1 && notes[i].Notehead == NoteheadStyle.Harmonic && supportStyle != NoteheadStyle.Harmonic)
+                {
+                    var own = GlyphMetrics.GetNoteheadBBox(font, NoteheadStyle.Harmonic, noteValue);
+                    var sup = GlyphMetrics.GetNoteheadBBox(font, supportStyle, noteValue);
+                    offsets[i] += (sup.Left + sup.Right) / 2 - (own.Left + own.Right) / 2;
+                    continue;
+                }
                 offsets[i] += support - LayoutUtilities.StemAttachX(stemUp, noteValue, notes[i].Notehead, headFont);
+            }
         }
         return offsets;
     }

@@ -3237,12 +3237,67 @@ diagram(C xx-10-12-13-12)2.~ diagram(C xx-10-12-13-12)4 |  // frets 10-15 in the
   the notes and adds their shape instead (*Chord diagrams* above).
 - `chord` and `diagram` are reserved in music only: a phrase cannot be named either (a part can).
 
+## Harmonics
+
+`@harmonic` on a note or on a whole chord is the small circle over it (`@flageolet` is the same
+mark). Two more spellings write the two harmonics a player actually fingers.
+
+**Artificial harmonic** — `@harmonic` on a *member* of a chord. `<c' f'@harmonic>4` is the
+stopped note and the note touched above it: the touched member is drawn with the open diamond
+head (at every duration, with no dot of its own), the other member stays an ordinary note, and
+no circle is drawn. This is LilyPond's `<c' f'\harmonic>`. For the three standard harmonics the
+sound is one pitch — the diamond a perfect fourth above the stopped note sounds two octaves above
+it, a perfect fifth above sounds an octave and a fifth above it, a major third above two octaves
+and a third — and for any other interval the two notes sound as written. MusicXML writes the
+diamond and `<harmonic><artificial/>` with `<touching-pitch/>` and `<base-pitch/>` on the two
+notes. On a tab the touched note's fret stands in angle brackets.
+
+```
+<c' f'@harmonic>4  <d' a'@harmonic>4  <c' f'@harmonic>4. r8 |
+```
+
+**Natural harmonic at a fret** — `@harmonic(12)`, on a fretted instrument's part. Write the open
+string the harmonic is played on and the fret it is touched at; the staff shows what it sounds,
+with the harmonic head, and the tab shows the fret in angle brackets on that string.
+
+| Fret | Sounds, above the open string |
+|---|---|
+| 12 | an octave |
+| 7, 19 | an octave and a fifth |
+| 5, 24 | two octaves |
+| 4, 9, 16 | two octaves and a major third |
+| 3 | two octaves and a fifth |
+
+```
+octave absolute
+part gtr { instrument guitar }
+section A { gtr { e,4@harmonic(12) a,4@harmonic(7) d2@harmonic(5) | } }
+form { A }
+score { staff gtr  tab gtr }
+```
+
+On a guitar that line sounds E3, E4 and D5 and its tab reads ⟨12⟩ ⟨7⟩ ⟨5⟩ on strings 6, 5 and 4.
+The open string is the part's tuning's — a tuning written out included — and under a file
+`capo N` it is the capo's, written as it sounds (`fis,4@harmonic(12)` under `capo 2`). Where two
+strings are open at one pitch, write the string: `d'4\1@harmonic(12)`. A note after it in
+relative octave mode is read from the note written. MIDI plays the sounding pitch; the `.ly`
+twin writes LilyPond's `\harmonicByFret #12 e,4\6`; MusicXML writes the sounding pitch, the
+diamond, `<harmonic><natural/><sounding-pitch/>` and, on the tab staff, `<string>` and `<fret>`.
+
+Errors: a fret that is not one of the nine (LYS4070); a part that is not a fretted instrument's
+(LYS4071); a chord or a chord member instead of a single note (LYS4072 — harmonics on several
+strings at once are written in voices); a note that is not an open string (LYS4073). Only a
+number glued inside the parentheses is a fret: `e'4@harmonic(d' c')` is still the circle and a
+slur.
+
 ## Guitar Bends, Lines and Technique Letters
 
 `@bend(half|full|N)` draws a bend-up: a rising arrow off the note's right, labelled in
 steps. `half` is one semitone, `full` two, and `N` is 1–12 semitones (`@bend(3)` prints
 `1½`). It is drawn on the staff and on the tab and is silent in MIDI; MusicXML writes it as
-`<bend><bend-alter>`, and the `.ly` twin drops it with a warning.
+`<bend><bend-alter>`, and the `.ly` twin drops it with a warning that says why: LilyPond's bend
+spanner (`\^`) runs from one written note to another, and `@bend` is one note and an amount (the
+same for its `@release`).
 
 `@release` lets a bend back. On the bent note itself it is up and back within the note — the
 arrow up with its amount, then an arrow down; on the note right after a bent one it is the arrow

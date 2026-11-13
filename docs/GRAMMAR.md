@@ -3109,6 +3109,18 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
 
 (* - Articulations: @staccato @staccatissimo @accent @tenuto @marcato @fermata @portato  (.up/.down ok)
    - Strings:       @upBow @downBow @flageolet  (always above)
+                    (* @harmonic on a note or a whole chord is @flageolet, the small circle.
+                       On a MEMBER of a chord it is that head [owner-approved 2026-11-13,
+                       grammar evaluation 3]: <c f@harmonic>4 is an artificial harmonic, the
+                       touched note drawn with the open diamond at every duration, undotted,
+                       with no circle - LilyPond harmonic on a chord member. MIDI sounds one
+                       pitch for the pair where the diamond is a perfect fourth above the
+                       stopped note (two octaves above it), a perfect fifth (an octave and a
+                       fifth) or a major third (two octaves and a third), and the two written
+                       notes otherwise - LILYSHARP-OWN. MusicXML: notehead diamond and a
+                       harmonic element, artificial, touching-pitch on the touched note and
+                       base-pitch on the stopped one. On a tab the touched fret stands in
+                       angle brackets. *)
    - Ornaments:     @trill @mordent @prall @turn @reverseTurn
                     (* an ACCIDENTAL on the ornament, in parentheses glued to the name:
                        c2@trill(sharp) , @turn(flat) , @mordent(natural) — also @prall
@@ -3192,6 +3204,25 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                     the same voice: the arrow down to that note. With no bend on its own note
                     or the note before it is an error, LYS4067. MusicXML: a bend with a
                     release element. *)
+   - Natural harmonic:  e4@harmonic(12)
+                    (* owner-approved 2026-11-13, grammar evaluation 3. A natural harmonic at a
+                    fret, on a fretted part. The note written is the OPEN STRING it is played
+                    on, the argument the fret touched: 12 , 7 , 19 , 5 , 24 , 4 , 9 , 16 or 3,
+                    an integer. The staff shows what it sounds under the harmonic head (open
+                    down to the half note, filled from the quarter): 12 an octave above the
+                    open string, 7 and 19 an octave and a fifth, 5 and 24 two octaves, 4 9 and
+                    16 two octaves and a major third, 3 two octaves and a fifth. The tab shows
+                    the fret in angle brackets on that string, and MIDI plays the sounding
+                    pitch. The relative frame goes on from the note written. Only a NUMBER
+                    glued against the parenthesis, with its closing one glued after it, is the
+                    fret: e4@harmonic(d c) is the circle and a slur, as before. Errors: an
+                    argument that is no such fret LYS4070, a part that is not fretted LYS4071,
+                    a chord or a chord member LYS4072, a note that is not an open string of the
+                    part tuning LYS4073 (under a file capo the open strings are the capo ones,
+                    written as they sound). LilyPond: harmonicByFret round the open string
+                    note, with its string. MusicXML: the sounding pitch, notehead diamond, a
+                    harmonic element natural with sounding-pitch, and string and fret on the
+                    tab staff. *)
    - Guitar lines:  e8@palmMute e e e@!palmMute , e8@letRing b e g@!letRing ,
                     b8@barre(7) fis b d@!barre , b8@barre(7 half) … @!barre
                     (* owner-approved 2026-11-13. Text spanners of their own, each closed by

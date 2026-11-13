@@ -142,6 +142,9 @@ internal sealed class GuitarMarkValidator : ISemanticValidator
                     break;
                 // '@vibrato(60)' on a guitar: the numbers are a singing voice's depth and rate,
                 // and a fretted instrument's vibrato is the wavy line, which takes none.
+                case MusicMarkSyntax harmonic when AnnotationValues.IsFretHarmonic(harmonic):
+                    NaturalHarmonic(harmonic);
+                    break;
                 case MusicMarkSyntax { Name: "vibrato", IsSpanEnd: false, HasArgumentList: true } vibrato
                     when FrettedParts.Holds(vibrato):
                     _diagnostics.Error(vibrato.Span, DiagnosticCodes.VibratoNumbersOnAnInstrument,
@@ -150,6 +153,44 @@ internal sealed class GuitarMarkValidator : ISemanticValidator
                         + "how fast a singing voice swings (@vibrato(60, 6)); nothing is drawn for this one.");
                     break;
             }
+    }
+
+    /// <summary>
+    /// <c>@harmonic(12)</c>, a natural harmonic at a fret (owner-approved 2026-11-13, grammar
+    /// evaluation 3): what the text alone can refuse — an argument that is no harmonic's fret
+    /// (<see cref="DiagnosticCodes.HarmonicFretMalformed"/>), a host that is not a single note
+    /// (<see cref="DiagnosticCodes.HarmonicFretNotOnANote"/>), a part with no strings
+    /// (<see cref="DiagnosticCodes.HarmonicFretNotFretted"/>). One reason a mark, in that
+    /// order. Whether the note is an open string needs its pitch, and is
+    /// <see cref="HarmonicOpenStringValidator"/>'s.
+    /// </summary>
+    private void NaturalHarmonic(MusicMarkSyntax harmonic)
+    {
+        string frets = string.Join(", ", Music.Harmonics.Frets);
+        if (AnnotationValues.HarmonicFret(harmonic) is not { } fret)
+        {
+            string written = string.Join(" ", harmonic.Arguments.Select(a => a.Text));
+            _diagnostics.Error(harmonic.Span, DiagnosticCodes.HarmonicFretMalformed,
+                $"'{written}' is not a fret a natural harmonic is written at, so the note is drawn and played as written. "
+                + $"The frets are {frets}: write the open string's note and the fret the string is touched at "
+                + "(e,4@harmonic(12)). '@harmonic' alone is the small circle over a note.");
+            return;
+        }
+        if (harmonic.Parent is not NoteSyntax)
+        {
+            _diagnostics.Error(harmonic.Span, DiagnosticCodes.HarmonicFretNotOnANote,
+                $"'@harmonic({fret})' is written on a single note, the open string the harmonic is played on "
+                + $"(e,4@harmonic({fret})), and this is not one - so nothing is changed by it. Harmonics on several "
+                + "strings at once are written in voices, a string each; in a <...> chord, a "
+                + "member's '@harmonic' with no fret is the touched note of an artificial harmonic (<c' f'@harmonic>4).");
+            return;
+        }
+        if (!FrettedParts.Holds(harmonic))
+            _diagnostics.Error(harmonic.Span, DiagnosticCodes.HarmonicFretNotFretted,
+                $"'@harmonic({fret})' names a fret on a string, and this note is not in the music of a fretted "
+                + "instrument's part (a guitar, a bass, a ukulele, a banjo, a mandolin; a phrase's body is no part's) - "
+                + "so the note is drawn and played as written. Elsewhere '@harmonic' alone draws the small circle "
+                + "over the note, and <c' f'@harmonic>4 an artificial harmonic's diamond.");
     }
 
     private static string WhyNoBarre(MusicMarkSyntax barre)

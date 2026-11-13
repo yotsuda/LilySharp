@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 369 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **497** | |
+| `OWN` | 371 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **499** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -25,8 +25,8 @@
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 18 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 16 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
+| `LilySharp.Core/Midi/MidiExporter.cs` | 10 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 10 |
-| `LilySharp.Core/Midi/MidiExporter.cs` | 9 |
 | `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 9 |
 | `LilySharp.Core/Svg/Collector/MeasureCollector.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 8 |
@@ -249,7 +249,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（369 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（371 件）
 
 ### `LilySharp.Core/Audio/SingerPlan.cs`
 - **`SingerPlan`** LILYSHARP-OWN.
@@ -302,6 +302,7 @@
 - **`MidiExporter.PlayChordRow`** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
 - **`MidiExporter.RowsAndLanesEnd`** 0 1 2 4 5 for 0 1 2 3 4). LILYSHARP-OWN: LilyPond performs no ChordNames context. The parts
 - **`MidiExporter._sequenceClosedAt`** part's bar 3 at 3840 — a bar early from there on. LILYSHARP-OWN. ⚠️ Not a drum chart: the
+- **`MidiExporter.ProcessChord`** (Music.Harmonics.ArtificialSounds; LILYSHARP-OWN — LilyPond plays the two written).
 - **`MidiExporter.SwingNotes`** LILYSHARP-OWN: LilyPond's MIDI plays its swing equation straight unless the score asks for
 - **`MidiExporter.ProcessGrace`** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Midi/MidiForFile.cs`
@@ -333,6 +334,8 @@
 - **`ChordVoicings`** LILYSHARP-OWN, all of it: LilyPond has no voicing catalogue. Its predefined fret diagrams
 ### `LilySharp.Core/Music/DrumPatterns.cs`
 - **`DrumPatterns`** LILYSHARP-OWN (owner's request 2026-10-11): LilyPond ships no pattern library. Every body
+### `LilySharp.Core/Music/Harmonics.cs`
+- **`Harmonics.ArtificialSounding`** LILYSHARP-OWN: LilyPond's \harmonic changes the head and nothing else —
 ### `LilySharp.Core/Music/LyricReading.cs`
 - **`LyricReading`** that says how it is sung. LILYSHARP-OWN: LilyPond prints lyrics and sings nothing.
 ### `LilySharp.Core/Music/PhraseAnchor.cs`

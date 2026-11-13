@@ -464,6 +464,31 @@ internal sealed class TabResolver
                     slurEnd = chord.HasSlurEnd;
                     slurStart = chord.HasSlurStart;
                 }
+                else if (item is NoteItem harmonic && harmonic.HarmonicFret > 0)
+                {
+                    // A natural harmonic at a fret (owner-approved 2026-11-13, grammar evaluation
+                    // 3): the item carries what the harmonic SOUNDS, and the tab shows where it is
+                    // played — the fret, on the open string the writer wrote. This staff's own
+                    // copy is put back there: the string's open pitch plus the fret, on that
+                    // string, so the fret number, the stem and the beam all come out as for a
+                    // note stopped at the fret (and the page draws the number in angle brackets,
+                    // SharedRenderer.DrawTabFret). The string is the written `\N` when that string
+                    // is open at the note, else the lowest string that is; a note that is no open
+                    // string here (LYS4073) takes the string it would be fretted on.
+                    // LILYPOND-REF: ly/music-functions-init.ly harmonicByFret — TabNoteHead.stencil
+                    //   prints the fret given, on the string of the note written.
+                    int open = harmonic.Midi - Music.Harmonics.NaturalSemitones(harmonic.HarmonicFret) + shift;
+                    int onString = Music.Harmonics.OpenString(open, tun, harmonic.StringNumber);
+                    if (onString == 0)
+                        onString = Tunings.CalculateFret(open, tun, harmonic.StringNumber ?? 0).stringNum;
+                    midi = tun[tun.Length - onString] + harmonic.HarmonicFret;
+                    Work(mi)[ii] = harmonic with { Midi = midi - shift, StringNumber = onString };
+                    sounding.Add(open);
+                    fixedString = onString;
+                    slurEnd = harmonic.HasSlurEnd;
+                    slurStart = harmonic.HasSlurStart;
+                    tied = harmonic.IsTieTarget;
+                }
                 else if (item is NoteItem note)
                 {
                     midi = note.Midi + shift;

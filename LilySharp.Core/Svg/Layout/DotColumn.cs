@@ -280,7 +280,7 @@ internal static class DotColumn
         MusicItem item, int noteValue, double headInkRight, int[]? solvedRows = null)
     {
         double dotWidth = MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Width;
-        int[] headPositions = HeadPositions(item);
+        int[] headPositions = DottedHeadPositions(item);
         if (headPositions.Length == 0)
             // A rest's dots: one dot width past its glyph, in the space above the middle line
             // (a whole rest hangs one space up and its dot one row DOWN off that — the same
@@ -362,6 +362,29 @@ internal static class DotColumn
         ChordItem c when c.Notes.Length > 0 => c.Notes.Select(x => x.StaffPosition).ToArray(),
         _ => Array.Empty<int>(),
     };
+
+    /// <summary>
+    /// <see cref="HeadPositions"/> less the heads that carry no dot: the touched member of an
+    /// artificial harmonic, <c>&lt;c' f'@harmonic&gt;4.</c>, whose open diamond stands undotted
+    /// beside the dotted stopped note (owner-approved 2026-11-13, grammar evaluation 3). The same
+    /// array for every other item. A natural harmonic at a fret (<c>@harmonic(12)</c>, the
+    /// harmonic-mixed head) keeps its dot.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/new-fingering-engraver.cc:119-125 acknowledge_rhythmic_head — a head
+    ///   with a harmonic-event gets style harmonic and, unless <c>harmonicDots</c> is set, its
+    ///   Dots grob is killed (<c>d->suicide ()</c>);
+    /// LILYPOND-REF: ly/music-functions-init.ly harmonicByFret — <c>\set harmonicDots = ##t</c>
+    ///   around the music, which is why that one's dot stays.
+    /// MEASURED, 2.26.0 (Lab sessions/p1226/md/eval3/featH/lp3.ly): one Dots grob on
+    ///   <c>&lt;c' f'\harmonic&gt;4.</c>, on the c's row.
+    /// </remarks>
+    internal static int[] DottedHeadPositions(MusicItem item)
+    {
+        if (item is not ChordItem chord || !chord.Notes.Any(n => n.Notehead == NoteheadStyle.Harmonic))
+            return HeadPositions(item);
+        return chord.Notes.Where(n => n.Notehead != NoteheadStyle.Harmonic).Select(n => n.StaffPosition).ToArray();
+    }
 
     /// <summary>
     /// The same reservation for a GRACE column: where its first dot stands in the column's

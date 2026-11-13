@@ -3182,11 +3182,16 @@ public sealed class MidiExporter
         // ⚠️ Pinned to the range BEFORE the tie is matched: the notes already in the track
         // hold sounding keys, so comparing a written 134 against a stored 127 would refuse
         // to merge a tie the page draws.
-        midiPitch = SoundKey(midiPitch, note.SourceStart);
+        // A natural harmonic at a fret, `e,4@harmonic(12)` (owner-approved 2026-11-13, grammar
+        // evaluation 3): the note written is the open string and what sounds is its partial —
+        // the page's reading (MeasureCollector.CreateNoteItem), from the one table.
+        int harmonicSemitones = Music.Harmonics.NaturalSemitones(Music.Harmonics.FretOn(note));
+        midiPitch = SoundKey(midiPitch + harmonicSemitones, note.SourceStart);
 
         // What a following bare duration copies (same contract as
-        // _resolvedChordNotes): the SOUNDING key, resolved by this walk.
-        _resolvedNoteSound[note] = (midiPitch, note.Pitch.QuarterOffset);
+        // _resolvedChordNotes): the SOUNDING key, resolved by this walk — of the note
+        // written, so a bare duration after a harmonic is the open string, as on the page.
+        _resolvedNoteSound[note] = (midiPitch - harmonicSemitones, note.Pitch.QuarterOffset);
 
         // If the previous onset tied into this one (same pitch on the same track),
         // extend that note instead of emitting a new note-on/off pair.
@@ -3571,12 +3576,26 @@ public sealed class MidiExporter
         int firstNoteName = _currentNoteName;
         int firstOctave = _currentOctave;
 
-        foreach (var pitch in pitches)
+        // The members' written keys first, all of them: an ARTIFICIAL harmonic,
+        // `<c' f'@harmonic>4` (owner-approved 2026-11-13, grammar evaluation 3), sounds ONE
+        // pitch for its stopped and its touched note, and which one is read off the pair
+        // (Music.Harmonics.ArtificialSounds; LILYSHARP-OWN — LilyPond plays the two written).
+        var memberKeys = new int[pitches.Count];
+        for (int m = 0; m < pitches.Count; m++)
         {
-            int midiPitch = ResolveChordMemberPitch(
-                pitch, isFirst, chordOctave, chordShift, ref firstNoteName, ref firstOctave);
+            memberKeys[m] = ResolveChordMemberPitch(
+                pitches[m], isFirst, chordOctave, chordShift, ref firstNoteName, ref firstOctave);
             isFirst = false;
-            midiPitch = SoundKey(midiPitch, chord.SourceStart);
+        }
+        Music.Harmonics.ArtificialSounds(pitches, memberKeys);
+
+        for (int m = 0; m < pitches.Count; m++)
+        {
+            var pitch = pitches[m];
+            // The stopped note of an artificial harmonic: it sounds in the touched one's place.
+            if (memberKeys[m] == Music.Harmonics.Silent)
+                continue;
+            int midiPitch = SoundKey(memberKeys[m], chord.SourceStart);
             int tiedInto = ExtendTied(track, tieTargets, midiPitch, durationTicks);
             if (tiedInto >= 0)
                 onset.Add(tiedInto);

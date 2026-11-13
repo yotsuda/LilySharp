@@ -1280,7 +1280,7 @@ internal static partial class SharedRenderer
             // and the rest are configured without it.
             // LILYPOND-REF: lily/note-collision.cc:310-314 check_meshing_chords;
             // LILYPOND-REF: lily/stem.cc Stem::first_head — extremal_heads (me)[-d].
-            var dottedPositions = chord.Notes.Select(n => n.StaffPosition).ToList();
+            var dottedPositions = DotColumn.DottedHeadPositions(chord).ToList();
             if (dotAdjust.DotWiped)
                 dottedPositions.Remove((forcedStemUp ?? chord.StemUp)
                     ? dottedPositions.Min() : dottedPositions.Max());
