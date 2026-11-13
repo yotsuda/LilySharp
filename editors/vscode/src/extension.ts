@@ -4591,6 +4591,7 @@ async function renderer(): Promise<VoiceRenderer | undefined> {
     disposeSinger();
     if (exe) {
         voiceRenderer = new VoiceRenderer(new SingerProcess(exe, line => outputChannel.appendLine(line)));
+        voiceRenderer.onSinging = singingStarted;
     } else {
         const ext = vscode.extensions.getExtension(CANTORIA_EXTENSION_ID);
         if (!ext) { return undefined; }
@@ -4598,6 +4599,7 @@ async function renderer(): Promise<VoiceRenderer | undefined> {
             const api = cantoriaApiOf(ext.isActive ? ext.exports : await ext.activate());
             if (!api) { outputChannel.appendLine(`singer: ${CANTORIA_EXTENSION_ID} is installed but its API is not the shape Lily# reads`); return undefined; }
             voiceRenderer = new VoiceRenderer(new CantoriaExtensionBackend(api, tellSingerNote));
+            voiceRenderer.onSinging = singingStarted;
         } catch (e) {
             outputChannel.appendLine(`singer: ${CANTORIA_EXTENSION_ID} did not activate: ${String(e)}`);
             return undefined;
@@ -4705,6 +4707,7 @@ function tellSingerOnce(panel: vscode.WebviewPanel, text: string): void {
 /** The pane's voice badge (owner's request 2026-11-08): a voice that will not be sung, with the
  *  engine's sentence (`ready` is the page's own, when it has decoded the WAV). */
 function failVoice(panel: vscode.WebviewPanel, part: string, speed: number, why: string, voice?: SungVoiceDto): void {
+    forgetAskedVoice(panel, part);
     // The words themselves cannot be sung by what is installed (a language no voice sings): that
     // is the writer's to know, not a render gone wrong - said as tellUnsingable says it.
     const unsingable = unsingableReason(why);
@@ -4911,10 +4914,45 @@ async function prepareVoices(panel: vscode.WebviewPanel, uri: string, reason: Pr
             prepareQueue.cancelSlot(slot);
             continue;
         }
-        void panel.webview.postMessage({ type: 'voiceState', part: id, speed, state: rests ? 'waiting' : 'preparing', estimateMs: voiceEstimateMs(voice, speed), key });
+        // The engine may ALREADY be singing this very text for a job that a newer prepare has
+        // since replaced (the file opens, and a second prepare follows the first within a second):
+        // the replaced job says nothing more to the page, and the one that waits finds the voice
+        // sung and never says "singing" either - the microphone pulsed for 24 s with no bar
+        // (owner's report 2026-11-13, kaze.lys). So the page is told by the KEY: here if the
+        // engine is on it now, and by singingStarted when it begins.
+        askVoice(panel, id, key, speed, voiceEstimateMs(voice, speed));
+        void panel.webview.postMessage({ type: 'voiceState', part: id, speed, state: rests ? 'waiting' : 'preparing', estimateMs: voiceEstimateMs(voice, speed), key, singing: !rests && engine.isSinging(key) ? true : undefined });
         const busy = prepareQueue.busy(slot);
         prepareQueue.schedule(slot, { panel, voice, speed, mine, key, letGo: new AbortController() }, rests ? PREPARE_IDLE_MS : 0);
         log(`${id}: ${rests ? `waits for the text to rest ${PREPARE_IDLE_MS} ms` : 'goes now'}${busy ? ', after what is being sung lets go' : ''}`);
+    }
+}
+
+/** The voice each preview's part is waiting for, by the engine's key (askVoice): who to tell when the engine begins on it. */
+const askedVoices = new Map<string, { panel: vscode.WebviewPanel; part: string; speed: number; estimateMs: number }[]>();
+
+function askVoice(panel: vscode.WebviewPanel, part: string, key: string, speed: number, estimateMs: number): void {
+    forgetAskedVoice(panel, part);
+    const asked = askedVoices.get(key) ?? [];
+    asked.push({ panel, part, speed, estimateMs });
+    askedVoices.set(key, asked);
+}
+
+/** The part's voice has landed, failed, or is asked anew: nobody waits for the old key. */
+function forgetAskedVoice(panel: vscode.WebviewPanel, part: string): void {
+    for (const [key, asked] of askedVoices) {
+        const left = asked.filter(a => !(a.panel === panel && a.part === part));
+        if (left.length === 0) { askedVoices.delete(key); } else if (left.length !== asked.length) { askedVoices.set(key, left); }
+    }
+}
+
+/** The engine has begun on `key` (VoiceRenderer.onSinging): every preview waiting for that voice shows its bar. */
+function singingStarted(key: string): void {
+    for (const a of askedVoices.get(key) ?? []) {
+        if (!(sungParts.get(a.panel)?.has(a.part) ?? true)) { continue; }
+        try {
+            void a.panel.webview.postMessage({ type: 'voiceState', part: a.part, speed: a.speed, state: 'preparing', estimateMs: a.estimateMs, singing: true, key });
+        } catch { /* the preview is gone */ }
     }
 }
 
@@ -4988,6 +5026,7 @@ async function renderVoice(job: PrepareJob): Promise<void> {
             const sungUri = voiceDocs.get(panel)?.split('\n')[0];
             if (sungUri && voiceProblems.set(sungUri, 'engine', id, [])) { showVoiceProblems(sungUri); }
             // entries: where the voice may come in if its part is already playing (joinVoice).
+            forgetAskedVoice(panel, id);
             void panel.webview.postMessage({ type: 'voice', part: id, key, speed, lead: VOICE_LEAD_S, bytes: new Uint8Array(bytes), entries: voiceEntries(voice.Notes) });
             outputChannel.appendLine(`singer: ${clockNow()} ${id} ${cached ? 'from the cache' : 'sung'} (${v.duration.toFixed(1)} s at speed ${speed})`);
         } catch (e) {

@@ -232,6 +232,12 @@ export class VoiceRenderer {
     }
     private planned: { question: string; at: number; answer: Map<string, string> } | undefined;
 
+    /** Called when the engine begins on a voice, with its key (the host shows the bar by it). */
+    onSinging: ((key: string) => void) | undefined;
+
+    /** True while the engine is singing the voice of `key`. */
+    isSinging(key: string): boolean { return this.inFlight.has(key); }
+
     /** True when the voice of `key` was sung before and its WAV is still there. */
     has(key: string): boolean {
         const hit = this.done.get(key);
@@ -254,6 +260,7 @@ export class VoiceRenderer {
             // Whoever asks a render in flight hears how far it is too (hearing), from where it is.
             const heard = new Set<(progress: SingProgress) => void>();
             this.hearing.set(key, heard);
+            this.onSinging?.(key);
             const asked: Promise<RenderedVoice> = this.backend.sing(key, score, voice, signal, p => { for (const hear of heard) { hear(p); } })
                 .then(v => { this.done.set(key, v); return v; });
             rendered = asked;
