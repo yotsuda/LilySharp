@@ -119,6 +119,121 @@ public sealed class EngravingCollisions4Tests
         }
     }
 
+    // ---- harbour-lights line 28: a dynamic line above the staff and the slur under it ----------
+
+    private static string SungLine(string music) => """
+        tempo 72
+        time 4/4
+        key ees major
+        part singer "Voice" { clef treble_8  lyrics words }
+        section Song {
+          singer {
+        """ + "\n    " + music + "\n" + """
+          }
+          lyrics words language english {
+            Out on the tide I can hear | dis- tant sing- ing, | each bright |
+          }
+        }
+        form { ~Song }
+        score { staff singer  lyrics words }
+        """;
+
+    /// <summary>The page's one slur, as the curve of its OUTER edge sampled along its length
+    /// (the first of the sandwich's two beziers — the upper one of a slur over the notes).</summary>
+    private static (double X, double Y)[] SlurCurve(RenderedGeometry g)
+    {
+        var bow = g.Beziers.OrderByDescending(b => b.P1.X - b.P0.X).First();
+        var points = new (double X, double Y)[65];
+        for (int i = 0; i < points.Length; i++)
+        {
+            double t = i / 64.0, u = 1 - t;
+            // The higher of the two halves at this parameter (device Y grows down).
+            double x = u * u * u * bow.P0.X + 3 * u * u * t * bow.C1.X + 3 * u * t * t * bow.C2.X + t * t * t * bow.P1.X;
+            double front = u * u * u * bow.P0.Y + 3 * u * u * t * bow.C1.Y + 3 * u * t * t * bow.C2.Y + t * t * t * bow.P1.Y;
+            double back = u * u * u * bow.P0.Y + 3 * u * u * t * bow.C1Back.Y + 3 * u * t * t * bow.C2Back.Y + t * t * t * bow.P1.Y;
+            points[i] = (x, Math.Min(front, back));
+        }
+        return points;
+    }
+
+    /// <summary>A hairpin's two arms: the two long sloped rules over the staff that span the
+    /// same X (a staff line is level, a stem upright, and the recorder's one rule from a
+    /// bow's end to its other end has no twin).</summary>
+    private static DrawnLine[] HairpinArms(RenderedGeometry g)
+    {
+        double staffTop = StaffLineYs(g)[0];
+        DrawnLine[] sloped = [.. g.Lines.Where(l => !l.IsDashed && l.X2 - l.X1 > 20
+            && Math.Abs(l.Y1 - l.Y2) > 1e-6 && l.Y1 < staffTop && l.Y2 < staffTop)];
+        return [.. sloped.Where(a => sloped.Count(b => Math.Abs(a.X1 - b.X1) < 1e-9 && Math.Abs(a.X2 - b.X2) < 1e-9) == 2)];
+    }
+
+    /// <summary>How far the slur's highest ink stays under the hairpin's lower arm, at the
+    /// tightest of the sampled points under the hairpin (negative: the slur is through it).</summary>
+    private static double HairpinOverSlur(RenderedGeometry g)
+    {
+        var arms = HairpinArms(g);
+        Assert.Equal(2, arms.Length);
+        double gap = double.MaxValue;
+        foreach (var (x, y) in SlurCurve(g))
+        {
+            if (x < arms[0].X1 || x > arms[0].X2)
+                continue;
+            double lower = arms.Max(a => a.Y1 + (a.Y2 - a.Y1) * (x - a.X1) / (a.X2 - a.X1));
+            gap = Math.Min(gap, y - lower);
+        }
+        return gap;
+    }
+
+    /// <summary>
+    /// harbour-lights line 28 (owner, 2026-11-13) — on a sung part the dynamics stand above
+    /// the staff, and the crescendo over an up-stemmed triplet was drawn THROUGH the phrasing
+    /// slur: the slur passed between the hairpin's two lines. The drawn slur climbs over the
+    /// triplet's number; the slur the staff's skyline held was laid out on a score that
+    /// carried no tuplets and stayed 1.5 staff-spaces under it
+    /// (<c>MultiStaffLayouter.StaffSlurLayouts</c>), and the dynamic line was placed against
+    /// that one. A phrasing slur, a plain slur and a decrescendo alike: the whole wedge is
+    /// over the whole curve, by more than the two lines' own weight.
+    /// </summary>
+    [Theory]
+    [InlineData("tuplet 3/2 { aes8@cresc@phrasingSlur bes c@stemUp } ees4 d8 c bes4 | aes4. g8 f4 bes@!phrasingSlur | bes4@f g'2. |")]
+    [InlineData("tuplet 3/2 { aes8@cresc( bes c@stemUp } ees4 d8 c bes4 | aes4. g8 f4 bes) | bes4@f g'2. |")]
+    [InlineData("tuplet 3/2 { aes8@f@decresc@phrasingSlur bes c@stemUp } ees4 d8 c bes4 | aes4. g8 f4 bes@!phrasingSlur | bes4@p g'2. |")]
+    public void AHairpinAboveTheStaff_StandsClearOverAHighSlur(string music)
+    {
+        var g = RenderedGeometry.Render(SungLine(music));
+        double gap = HairpinOverSlur(g);
+        Assert.True(gap > 0.2, $"the hairpin's lower line is {gap:F3} over the slur's highest ink: it is drawn through the slur.");
+    }
+
+    /// <summary>The same slur and a dynamic TEXT over it: the letter's foot is over the curve
+    /// where it stands (it stood inside the bow).</summary>
+    [Fact]
+    public void ADynamicAboveTheStaff_StandsClearOverAHighSlur()
+    {
+        var g = RenderedGeometry.Render(SungLine(
+            "tuplet 3/2 { aes8@phrasingSlur bes c@stemUp } ees4@f d8 c bes4 | aes4. g8 f4 bes@!phrasingSlur | bes4 g'2. |"));
+        var forte = g.Texts.Single(t => t.Role == TextRole.Dynamics);
+        var curve = SlurCurve(g);
+        // The curve where the letter stands (the "f" is under an em wide).
+        double slurTop = curve.Where(p => p.X > forte.X - forte.FontSize && p.X < forte.X + forte.FontSize).Min(p => p.Y);
+        Assert.True(forte.Y < slurTop, $"the f's baseline is on {forte.Y:F3} and the slur under it reaches {slurTop:F3}.");
+    }
+
+    /// <summary>Without <c>@stemUp</c> the triplet's number is under the staff and the slur
+    /// never met it: that picture is the one it was — the wedge the same height over the
+    /// staff and over the slur as before the reserved slur was scored with the tuplets.</summary>
+    [Fact]
+    public void WithTheStemsDown_TheSlurAndTheHairpinStandWhereTheyDid()
+    {
+        var g = RenderedGeometry.Render(SungLine(
+            "tuplet 3/2 { aes8@cresc@phrasingSlur bes c } ees4 d8 c bes4 | aes4. g8 f4 bes@!phrasingSlur | bes4@f g'2. |"));
+        double staffTop = StaffLineYs(g)[0];
+        double wedgeLow = HairpinArms(g).Max(a => Math.Max(a.Y1, a.Y2));
+        double slurTop = SlurCurve(g).Min(p => p.Y);
+        Assert.Equal(1.910, staffTop - wedgeLow, 3);
+        Assert.Equal(1.543, staffTop - slurTop, 3);
+    }
+
     // ---- bigband/r-10: the jazz gestures and what stands beside them --------------------------
 
     private readonly record struct Ink(string Kind, int Pos, double Left, double Top, double Right, double Bottom);

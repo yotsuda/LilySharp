@@ -5212,7 +5212,8 @@ internal sealed class MultiStaffLayouter
     /// <c>TieDetector.DetectTies</c> reach the score through <c>VoiceScan.WalkVoiceItems</c>
     /// (<c>score.Voices[v].Measures</c>) and <c>score.Voices.Length</c> for the bow's
     /// direction, and through nothing else. The preliminary pass keeps laying its bows out
-    /// on its own score, which does carry the tuplets its scorers read.
+    /// on its own score, which does carry the tuplets its scorers read — and so does the
+    /// room's own layout of them (<see cref="StaffSlurLayouts"/>), since 2026-11-13.
     /// </remarks>
     internal (ImmutableArray<SlurItem> Slurs, ImmutableArray<TieItem> Ties) StaffBowItemsOf(
         MultiStaffScore score, Staff staff)
@@ -5359,11 +5360,42 @@ internal sealed class MultiStaffLayouter
         var localTies = tieLayouts.IsDefaultOrEmpty
             ? tieLayouts
             : tieLayouts.Select(t => t with { StaffIndex = staffIndex }).ToImmutableArray();
+        // ⚠️ THE BOW IS SCORED WITH THIS STAFF'S TUPLETS, as the drawn pass scores it. The
+        // detection score (StaffLocalScore) carries none — the detectors read none — and
+        // until 2026-11-13 the bow reserved here was laid out on that score too, so it never
+        // met a TupletNumber: over an up-stemmed triplet the drawn slur climbs over the "3"
+        // (an 'inside extra-encompass object) and the reserved one stayed under it, 1.5
+        // staff-spaces lower, and every outside-staff mover above the staff was stacked
+        // against the low one — a crescendo above a sung part ran THROUGH its phrasing slur
+        // (owner, 2026-11-13, harbour-lights line 28).
+        // The tuplets keep the score's staff index and the engraver pairs a number with its
+        // beam by that index (TupletBracketEngraver: beam.StaffIndex == tuplet.StaffIndex),
+        // so the beams go in restamped to it — the slur scorer itself reads a beam by
+        // (voice, measure, item) and never by its staff.
+        // LILYPOND-REF: lily/slur-engraver.cc:80 acknowledge_extra_object (tuplet_number) —
+        //   the number is in the Slur's encompass-objects before the Slur has a shape at all;
+        //   lily/axis-group-interface.cc:914-935 inside_staff_skylines takes that one shape.
+        var layoutScore = items.LocalScore;
+        var slurBeams = beamLayouts;
+        if (!items.Slurs.IsDefaultOrEmpty && !score.TupletBrackets.IsDefaultOrEmpty
+            && ScoreSideTables.TupletBracketsByStaff(score).At(staffIndex) is { IsEmpty: false } staffTuplets)
+        {
+            layoutScore = staff.Voices.Length > 1
+                ? new Score(
+                    staff.Voices, score.TimeSignature, score.KeySignature,
+                    LayoutEngine.ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
+                    tupletBrackets: staffTuplets)
+                : new Score(
+                    staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
+                    LayoutEngine.ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
+                    tupletBrackets: staffTuplets);
+            slurBeams = localBeams;
+        }
         return _elementCoordinator.LayoutSlurs(
-            score.TextMetrics, items.Slurs, items.LocalScore, ImmutableArray.Create(system),
+            score.TextMetrics, items.Slurs, layoutScore, ImmutableArray.Create(system),
             staffIndex: 0, staff, score.GraceNotes,
             graceStaffIndex: staffIndex,
-            beamLayouts: beamLayouts,
+            beamLayouts: slurBeams,
             insideScripts: staffScripts.IsEmpty ? null : () =>
                 ArticulationEngraver.InsideSlurScriptLayouts(
                     score.TextMetrics, items.LocalScore, staffScripts, measureLayouts,
