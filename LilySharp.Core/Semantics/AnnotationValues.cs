@@ -460,15 +460,31 @@ public static class AnnotationValues
     public static bool IsArpeggioCross(MusicMarkSyntax mark)
         => ArpeggioWords(mark) is { Cross: true };
 
+    /// <summary>
+    /// The arrow head <c>@arpeggio(up)</c> / <c>@arpeggio(down)</c> ends the wavy line with —
+    /// +1 at its top (roll upward), −1 at its bottom (roll downward) — or 0: no arrow, or
+    /// another annotation (owner-approved 2026-11-13, grammar evaluation 3). Also
+    /// <c>(cross up)</c> / <c>(cross down)</c>: the arrow of the one line through both staves.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/property-init.ly arpeggioArrowUp / arpeggioArrowDown — the
+    ///   <c>arpeggio-direction</c> of the Arpeggio grob, UP or DOWN.
+    /// </remarks>
+    public static int ArpeggioArrow(MusicMarkSyntax mark)
+        => ArpeggioWords(mark)?.Arrow ?? 0;
+
     /// <summary>The words <c>@arpeggio(…)</c> takes, in the order the editor offers them.</summary>
-    public static IReadOnlyList<string> ArpeggioArgumentWords { get; } = ["cross", "bracket"];
+    public static IReadOnlyList<string> ArpeggioArgumentWords { get; } = ["up", "down", "bracket", "cross"];
 
     /// <summary>
     /// What the words of <c>@arpeggio(…)</c> say — <c>bracket</c> (the chord is NOT rolled),
     /// <c>cross</c> (the line runs on to the staff below), or both in either order, spaced as
-    /// every several-word argument is — or null: another annotation, no words, a word that is
-    /// neither, or one written twice. The ONE reader of the family, so the page, the exports
-    /// and the validator cannot take different words.
+    /// every several-word argument is; <c>up</c> / <c>down</c> (the wavy line ends in an arrow
+    /// head: <c>Arrow</c> +1 / −1), alone or beside <c>cross</c> — or null: another annotation,
+    /// no words, a word that is none of them, one written twice, both directions, or a
+    /// direction on a <c>bracket</c> (a chord that is not rolled rolls neither way). The ONE
+    /// reader of the family, so the page, the exports and the validator cannot take different
+    /// words.
     /// </summary>
     /// <remarks>
     /// LILYSHARP-OWN: the two words combine because the two things do — LilyPond connects
@@ -476,21 +492,25 @@ public static class AnnotationValues
     /// (LILYPOND-REF: lily/span-arpeggio-engraver.cc:59-61 Chord_onset_info — "Arpeggio" /
     /// connectArpeggios, "ChordBracket" / connectChordBrackets).
     /// </remarks>
-    public static (bool Cross, bool Bracket)? ArpeggioWords(MusicMarkSyntax mark)
+    public static (bool Cross, bool Bracket, int Arrow)? ArpeggioWords(MusicMarkSyntax mark)
     {
         if (!Named(mark, "arpeggio") || mark.IsSpanEnd || mark.Arguments.Length is 0 or > 2)
             return null;
         bool cross = false, bracket = false;
+        int arrow = 0;
         foreach (var word in mark.Arguments)
         {
             if (word.Text == "cross" && !cross)
                 cross = true;
             else if (word.Text == "bracket" && !bracket)
                 bracket = true;
+            // The arrow head (owner-approved 2026-11-13, grammar evaluation 3).
+            else if (word.Text is "up" or "down" && arrow == 0)
+                arrow = word.Text == "up" ? 1 : -1;
             else
                 return null;
         }
-        return (cross, bracket);
+        return bracket && arrow != 0 ? null : (cross, bracket, arrow);
     }
 
     /// <summary>

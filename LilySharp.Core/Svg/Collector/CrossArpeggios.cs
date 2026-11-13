@@ -176,16 +176,20 @@ internal static class CrossArpeggios
     /// For the exports, which write from the source: the offsets of the notes and chords whose
     /// <c>@arpeggio(cross)</c> the page connected (<c>Uppers</c>), and of the ones those lines
     /// run down to with the kind of each (<c>Reached</c>) — the lower staff wrote nothing, and
-    /// LilyPond and MusicXML both want the arpeggio said on every chord of it.
+    /// LilyPond and MusicXML both want the arpeggio said on every chord of it — and, for the
+    /// ones an ARROWED line runs down to (<c>@arpeggio(cross up)</c>), its arrow
+    /// (<c>Arrows</c>, <see cref="ArpeggioItem.Arrow"/>): MusicXML says the direction on
+    /// every note of the line.
     /// </summary>
     /// <remarks>
     /// By written source position: a phrase's chord played twice is one written chord, and is
     /// written connected when ANY of its plays is.
     /// </remarks>
-    internal static (HashSet<int> Uppers, Dictionary<int, SpanArpeggioPart> Reached) Sources(MultiStaffScore score)
+    internal static (HashSet<int> Uppers, Dictionary<int, SpanArpeggioPart> Reached, Dictionary<int, int> Arrows) Sources(MultiStaffScore score)
     {
         var uppers = new HashSet<int>();
         var reached = new Dictionary<int, SpanArpeggioPart>();
+        var arrows = new Dictionary<int, int>();
         var staves = score.StaffGroups.SelectMany(g => g.Staves).ToArray();
         foreach (var a in score.Arpeggios)
         {
@@ -206,12 +210,16 @@ internal static class CrossArpeggios
                         break;
                     // A stamped item — one that wrote an arpeggio of its own says it itself.
                     if (at == onset && !item.GraceTime && item.SpanArpeggio != SpanArpeggioPart.None)
+                    {
                         reached[item.SourcePosition] = item.SpanArpeggio;
+                        if (a.Arrow != 0)
+                            arrows[item.SourcePosition] = a.Arrow;
+                    }
                     at += item.Duration;
                 }
             }
         }
-        return (uppers, reached);
+        return (uppers, reached, arrows);
     }
 
     /// <summary>The lowest head of a note or chord in its staff's positions, or null for

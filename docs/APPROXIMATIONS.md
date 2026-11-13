@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 364 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **492** | |
+| `OWN` | 369 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **497** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -31,8 +31,8 @@
 | `LilySharp.Core/Svg/Collector/MeasureCollector.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 8 |
+| `LilySharp.Core/Tablature/Tunings.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 7 |
-| `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
 
 ## APPROX — LP に対応物はあるが、形が違うと自認しているもの（63 件）
 
@@ -249,7 +249,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（364 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（369 件）
 
 ### `LilySharp.Core/Audio/SingerPlan.cs`
 - **`SingerPlan`** LILYSHARP-OWN.
@@ -276,6 +276,7 @@
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Form.cs`
 - **`LilyPondExporter.LooseSectionMusic`** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Marks.cs`
+- **`LilyPondExporter.SplitAttachments`** LILYSHARP-OWN: `\once \override` rather than LilyPond's \arpeggioArrowUp, which stays
 - **`LilyPondExporter.SplitAttachments`** LILYSHARP-OWN: written after its own hairpin's start on one note, it spans that
 - **`LilyPondExporter.SplitAttachments`** LILYSHARP-OWN: LilyPond has no vibrato mark; this is how its users draw one.
 - **`LilyPondExporter.TextSpanStart`** LILYSHARP-OWN: LilyPond has no spanner for these; this is how its users write them, and
@@ -438,6 +439,8 @@
 - **`BendReleases`** LILYSHARP-OWN, as the bend-up is (LilyPond's BendSpanner, \^ with
 ### `LilySharp.Core/Semantics/InstrumentRangeValidator.cs`
 - **`InstrumentRangeValidator.Retuned`** LILYSHARP-OWN.
+### `LilySharp.Core/Semantics/ItemCapoValidator.cs`
+- **`ItemCapoValidator`** LILYSHARP-OWN, as the file's capo is (LilyPond's TabStaff has none). WHAT AN ITEM'S CAPO IS
 ### `LilySharp.Core/Semantics/LayoutPlan.cs`
 - **`ChordNameMode`** LILYSHARP-OWN: LilyPond 2.26 has no capo property on its ChordNames context (its
 - **`ChordListKey`** LILYSHARP-OWN: LilyPond has no such list; the twin writes a \markup line of
@@ -529,6 +532,8 @@
 - **`EngravingDefaults.NoteheadHalfHeight`** ⚠️ LILYSHARP-OWN: A NOMINAL HALF-HEAD, NOT THE GLYPH'S. LilyPond has no such constant —
 - **`EngravingDefaults.RestHeight`** ⚠️ LILYSHARP-OWN: ONE NOMINAL BOX FOR EVERY REST, WHICH LILYPOND DOES NOT HAVE. There a
 - **`EngravingDefaults.RepeatDotRadius`** a LILYSHARP-OWN divergence that had been measured and left because closing it redraws
+### `LilySharp.Core/Svg/Layout/ArpeggioEngraver.cs`
+- **`ArpeggioEngraver.WigglesBesideArrow`** LILYSHARP-OWN for a font whose arrow is not a wiggle tall (SMuFL's
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
 - **`ArticulationEngraver.BendTabXOffset`** LILYSHARP-OWN: the bend-up is Lily#'s own arrow-and-label device — LilyPond's guitar
 - **`ArticulationEngraver.BendTabXOffset`** X offset of a bend-up's curve from the fret digit on a TAB staff. LILYSHARP-OWN (above).
@@ -790,6 +795,8 @@
 ### `LilySharp.Core/Tablature/TabFingeringPlanner.cs`
 - **`TabFingeringPlanner`** LILYSHARP-OWN, USER APPROVED (2026-09-14). A dynamic programme (Viterbi) over states
 ### `LilySharp.Core/Tablature/Tunings.cs`
+- **`Tunings.MinCustomStrings,MaxCustomStrings`** LILYSHARP-OWN. The tab staff draws one line a string whatever the count and the planner
+- **`Tunings.IsBass`** LILYSHARP-OWN (2026-11-13): the list is all a custom tuning says of its instrument, and a
 - **`Tunings.CapoOn`** the guitar's, and its bass tab still counts from the nut. LILYSHARP-OWN (2026-11-13,
 - **`Tunings.HandSpan`** LILYSHARP-OWN, USER SPECIFIED (2026-09-14). A bass — electric or double — is fingered
 - **`Tunings.OneFingerPerFretSpan`** LILYSHARP-OWN, USER SPECIFIED (2026-09-14): "on a guitar the four fingers play four

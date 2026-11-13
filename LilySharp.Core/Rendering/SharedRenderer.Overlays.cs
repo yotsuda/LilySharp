@@ -1644,10 +1644,37 @@ internal static partial class SharedRenderer
             double bottom = ArpeggioEngraver.WiggleBox.Bottom;
             using (gc.Source(a.SourcePosition))
             {
-                for (int i = 0; i < copies; i++)
+                // @arpeggio(up) / (down) (owner-approved 2026-11-13): the pile ends in the
+                // ARROW HEAD — at its top for up, at its bottom for down — and the wiggles
+                // fill what the arrow leaves.
+                // LILYPOND-REF: lily/arpeggio.cc:171-185 find_by_name, add_at_edge (Arpeggio::print) — the arrow's height
+                //   comes off the head interval at `dir` before the wiggles are counted, the
+                //   pile starts at the interval's (moved) lower end, and the arrow is laid at
+                //   the pile's `dir` edge, box to box (add_at_edge (Y_AXIS, dir, arrow, 0)).
+                //   Emmentaler's arrow has the wiggle's box, so that is the plain pile with
+                //   its end copy exchanged (MEASURED, ArpeggioEngraver.DrawnBox).
+                int wiggles = copies;
+                double wigglesFromYUp = 0;
+                if (a.Arrow != 0)
+                {
+                    var arrowGlyph = ArpeggioEngraver.ArrowGlyph(a.Arrow);
+                    var arrowBox = ArpeggioEngraver.DrawnBox(arrowGlyph);
+                    double arrowHeight = arrowBox.Top - arrowBox.Bottom;
+                    wiggles = ArpeggioEngraver.WigglesBesideArrow(copies, arrowHeight);
+                    double arrowBottomYUp = a.Arrow > 0 ? wiggles * ArpeggioEngraver.WiggleHeight : 0;
+                    if (a.Arrow < 0)
+                        wigglesFromYUp = arrowHeight;
+                    double arrowBaseline = os.YUp(midYUp + bottomOffsetYUp + arrowBottomYUp - arrowBox.Bottom,
+                        a.StaffIndex, a.MeasureIndex);
+                    if (MusicFont.Current.LiesDown(arrowGlyph))
+                        gc.DrawGlyphTurned(Music(arrowGlyph), a.X, arrowBaseline, glyphSize);
+                    else
+                        gc.DrawGlyph(Music(arrowGlyph), a.X, arrowBaseline, glyphSize);
+                }
+                for (int i = 0; i < wiggles; i++)
                 {
                     double baseline = os.YUp(
-                        midYUp + bottomOffsetYUp + i * ArpeggioEngraver.WiggleHeight - bottom,
+                        midYUp + bottomOffsetYUp + wigglesFromYUp + i * ArpeggioEngraver.WiggleHeight - bottom,
                         a.StaffIndex, a.MeasureIndex);
                     if (turned)
                         gc.DrawGlyphTurned(Music(MusicGlyph.WiggleArpeggiatoUp), a.X, baseline, glyphSize);

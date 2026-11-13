@@ -207,7 +207,8 @@ public static class ChordDiagramScores
         var part = PartHeaderDefaults.Read(ConcertPitch.FindPart(root, tab.Staff.VoiceName));
         if (part.FrettedTuningWord is { } w && Tablature.Tunings.Parse(w) == tab.Tuning)
             return w;
-        return Tablature.Tunings.Names.First(n => Tablature.Tunings.Parse(n) == tab.Tuning);
+        // (Spell: the first word naming it, or a custom tuning's quoted list — which is no word.)
+        return Tablature.Tunings.Spell(tab.Tuning);
     }
 
     // ---------------------------------------------------------------- per chord

@@ -142,7 +142,9 @@ public sealed class PartHeaderDefaults
     /// <summary>
     /// The tuning word of a FRETTED part — its <c>tuning</c> word, else its preset's (the tuning
     /// its tab staff would use) — or null for a part with no strings to fret: no tuning and no
-    /// string preset (a piano, a voice), or a bowed one.
+    /// string preset (a piano, a voice), or a bowed one. A tuning written out
+    /// (<c>tuning "d, a, d g a d'"</c>) is its quoted list, which is NOT one of
+    /// <c>Tunings.Names</c>: ask <c>Tunings.IsTuning</c> / <c>Tunings.Parse</c> of it.
     /// </summary>
     /// <remarks>
     /// What a chord diagram of the part draws on, whatever the score's <c>chordDiagrams</c> tuning
@@ -264,6 +266,10 @@ public sealed class PartHeaderDefaults
     /// <summary>The part's fretted tuning word (<see cref="FrettedTuningWord"/>).</summary>
     private static string? FrettedWord(string? tuningText, string? preset)
     {
+        // A tuning written out ("d, a, d g a d'", 2026-11-13) is a fretted instrument's: the
+        // list as written is its word, and Tunings.Parse reads it back.
+        if (tuningText != null && Tunings.IsStringList(tuningText))
+            return Tunings.IsTuning(tuningText) ? tuningText : null;
         if (tuningText != null)
             return Tunings.Names.Contains(tuningText) && !Unfretted.Contains(tuningText) ? tuningText : null;
         if (preset == null || Unfretted.Contains(preset))

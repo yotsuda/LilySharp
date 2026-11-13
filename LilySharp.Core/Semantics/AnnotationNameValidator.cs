@@ -284,17 +284,21 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                             $"'{string.Join(" ", mark.Arguments.Select(a => a.Text))}' is not a value of '@{mark.Name}' - the mark is ignored. "
                             + $"An ornament takes its accidental, the small sign drawn above it: '@{mark.Name}(sharp)', "
                             + $"'@{mark.Name}(flat)' or '@{mark.Name}(natural)'; '@{mark.Name}' alone is the plain ornament.");
-                    // An arpeggio's words that are not its two (or one of them twice): the mark
-                    // is dropped whole, and the reader is told what the parentheses take.
+                    // An arpeggio's words that are not its four (or one of them twice, both
+                    // directions, or a direction on a bracket): the mark is dropped whole, and the
+                    // reader is told what the parentheses take.
                     // (A word in the wrong case is WarnUnknown's: it names the spelling.)
                     else if (string.Equals(mark.Name, "arpeggio", StringComparison.Ordinal) && mark.HasArgumentList
                              && !mark.Arguments.Any(a => AnnotationValues.ArpeggioArgumentWords.Any(w =>
                                  w != a.Text && w.Equals(a.Text, StringComparison.OrdinalIgnoreCase))))
                         _diagnostics.Warning(mark.Span, DiagnosticCodes.UnknownAnnotation,
                             $"'{string.Join(" ", mark.Arguments.Select(a => a.Text))}' is not a value of '@arpeggio' - the mark is ignored. "
-                            + "An arpeggio takes 'bracket' (the chord is not rolled: '@arpeggio(bracket)'), 'cross' (one line "
-                            + "on through the chord of the staff below in a grand staff: '@arpeggio(cross)'), or both, each "
-                            + "once: '@arpeggio(cross bracket)'; '@arpeggio' alone is the wavy line on its own chord.");
+                            + "An arpeggio takes 'up' or 'down' (the wavy line ends in an arrow head, the way the chord is "
+                            + "rolled: '@arpeggio(up)', '@arpeggio(down)'), 'bracket' (the chord is not rolled: "
+                            + "'@arpeggio(bracket)'), 'cross' (one line on through the chord of the staff below in a grand "
+                            + "staff: '@arpeggio(cross)'), or 'cross' with one of the others: '@arpeggio(cross bracket)', "
+                            + "'@arpeggio(cross up)'. A bracket takes no direction; '@arpeggio' alone is the wavy line on "
+                            + "its own chord.");
                     else
                         WarnUnknown(mark, mark.MarkName);
                 }

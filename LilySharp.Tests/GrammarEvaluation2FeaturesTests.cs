@@ -685,7 +685,7 @@ public class GrammarEvaluation2FeaturesTests
         Clean(source);
         RoundTrips(source);
         var mark = SyntaxTree.Parse(source).GetRoot().DescendantNodes().OfType<MusicMarkSyntax>().Single();
-        Assert.Equal((cross, bracket), AnnotationValues.ArpeggioWords(mark));
+        Assert.Equal((cross, bracket, 0), AnnotationValues.ArpeggioWords(mark));
         Assert.Equal(cross, AnnotationValues.IsArpeggioCross(mark));
         Assert.Equal(bracket, AnnotationValues.IsArpeggioBracket(mark));
     }
@@ -828,7 +828,9 @@ public class GrammarEvaluation2FeaturesTests
     /// twice, is reported with what the parentheses take, and the mark is ignored.</summary>
     [Theory]
     [InlineData("cross cross")]
-    [InlineData("cross up")]
+    // ('cross up' stood here until 2026-11-13, when 'up' and 'down' became words: the arrowed
+    // arpeggio, GrammarEvaluation3FeaturesTests.)
+    [InlineData("cross sideways")]
     [InlineData("both")]
     [InlineData("cross bracket bracket")]
     public void AnArpeggiosWords_AreCrossAndBracket_EachOnce(string words)

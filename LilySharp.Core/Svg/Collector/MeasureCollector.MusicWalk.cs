@@ -1228,7 +1228,7 @@ public sealed partial class MeasureCollector
                         CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, hasGliss, featherDir, isCue, builder),
                         note, isCue), note);
                     await AddItemAsync(builder, WithBowSources(noteItem, m));
-                    AddNoteCrossArpeggio(noteItem, measureIndex, itemIndex, note.SourceStart, CrossArpeggioOf(note) != SpanArpeggioPart.None);
+                    AddNoteCrossArpeggio(noteItem, measureIndex, itemIndex, note.SourceStart, CrossArpeggioOf(note) != SpanArpeggioPart.None, ArpeggioArrowOf(note));
                     await AddBreathingSignColumn(note.Articulations, builder, measureIndex);
                     CollectDynamics(note, measureIndex, itemIndex);
                     CollectArticulations(note, measureIndex, itemIndex, noteItem.StemUp,
@@ -1471,7 +1471,7 @@ public sealed partial class MeasureCollector
                     CollectCrossStaff(chord, measureIndex, itemIndex);
                     // Collect arpeggio if present (bracket or wiggle — see arpBracket above).
                     AddArpeggio(chordItem, hasArpeggio, arpBracket, measureIndex, itemIndex, chord.SourceStart,
-                        cross: CrossArpeggioOf(chord) != SpanArpeggioPart.None);
+                        cross: CrossArpeggioOf(chord) != SpanArpeggioPart.None, arrow: ArpeggioArrowOf(chord));
                 }
                 break;
 
@@ -1507,7 +1507,7 @@ public sealed partial class MeasureCollector
                     CollectChordNames(rep, measureIndex, itemIndex, repAnchorTiming);
                     CollectCrossStaff(rep, measureIndex, itemIndex);
                     AddArpeggio(chordCopy, hasArpeggio, arpBracket, measureIndex, itemIndex, rep.SourceStart,
-                        cross: CrossArpeggioOf(rep) != SpanArpeggioPart.None);
+                        cross: CrossArpeggioOf(rep) != SpanArpeggioPart.None, arrow: ArpeggioArrowOf(rep));
                 }
                 break;
 
@@ -2591,14 +2591,14 @@ public sealed partial class MeasureCollector
     /// (OMR report 2026-10-20, item 3).
     /// </summary>
     private void AddArpeggio(ChordItem chordItem, bool hasArpeggio, bool bracket,
-        int measureIndex, int itemIndex, int sourceStart, bool cross = false)
+        int measureIndex, int itemIndex, int sourceStart, bool cross = false, int arrow = 0)
     {
         if (!(hasArpeggio || bracket) || chordItem.Notes.Length == 0)
             return;
         int minPos = chordItem.Notes.Min(n => n.StaffPosition);
         int maxPos = chordItem.Notes.Max(n => n.StaffPosition);
         _arpeggios.Add(new ArpeggioItem(measureIndex, itemIndex, minPos, maxPos, sourceStart, _v.Cursor.StaffIndex,
-            Bracket: bracket, VoiceIndex: _v.Cursor.VoiceIndex, Cross: cross));
+            Bracket: bracket, VoiceIndex: _v.Cursor.VoiceIndex, Cross: cross, Arrow: bracket ? 0 : arrow));
     }
 
     /// <summary>
@@ -2635,14 +2635,16 @@ public sealed partial class MeasureCollector
 
     /// <summary>Lists the line of a single note's arpeggio (<see cref="WithCrossArpeggio"/>):
     /// the note is its whole head interval. <paramref name="cross"/> is whether it is written
-    /// to run on to the staff below (CrossArpeggios.Connect).</summary>
-    private void AddNoteCrossArpeggio(NoteItem noteItem, int measureIndex, int itemIndex, int sourceStart, bool cross)
+    /// to run on to the staff below (CrossArpeggios.Connect), <paramref name="arrow"/> the
+    /// arrow head it ends with (<see cref="ArpeggioItem.Arrow"/>).</summary>
+    private void AddNoteCrossArpeggio(NoteItem noteItem, int measureIndex, int itemIndex, int sourceStart, bool cross, int arrow)
     {
         if (noteItem.SpanArpeggio == SpanArpeggioPart.None)
             return;
         _arpeggios.Add(new ArpeggioItem(measureIndex, itemIndex, noteItem.StaffPosition, noteItem.StaffPosition,
             sourceStart, _v.Cursor.StaffIndex, Bracket: noteItem.SpanArpeggio == SpanArpeggioPart.Bracket,
-            VoiceIndex: _v.Cursor.VoiceIndex, Cross: cross));
+            VoiceIndex: _v.Cursor.VoiceIndex, Cross: cross,
+            Arrow: noteItem.SpanArpeggio == SpanArpeggioPart.Bracket ? 0 : arrow));
     }
 
     /// <summary>
@@ -2720,7 +2722,7 @@ public sealed partial class MeasureCollector
                 Fraction written = noteItem.Duration;
                 noteItem = WithCrossArpeggio(DecorateSoundingItem(noteItem with { TimeScale = scale }, note, isCue), note);
                 await AddItemWithoutDurationAsync(builder, WithBowSources(noteItem, m));
-                AddNoteCrossArpeggio(noteItem, annMeasureIndex, annItemIndex, note.SourceStart, CrossArpeggioOf(note) != SpanArpeggioPart.None);
+                AddNoteCrossArpeggio(noteItem, annMeasureIndex, annItemIndex, note.SourceStart, CrossArpeggioOf(note) != SpanArpeggioPart.None, ArpeggioArrowOf(note));
                 CollectDynamics(note, annMeasureIndex, annItemIndex);
                 CollectArticulations(note, annMeasureIndex, annItemIndex, noteItem.StemUp,
                     noteItem.EditorialAccidental, annAnchor);
@@ -2781,7 +2783,7 @@ public sealed partial class MeasureCollector
                 CollectChordNames(chord, annMeasureIndex, annItemIndex, annAnchor);
                 CollectCrossStaff(chord, annMeasureIndex, annItemIndex);
                 AddArpeggio(chordItem, hasArpeggio, arpBracket, annMeasureIndex, annItemIndex, chord.SourceStart,
-                    cross: CrossArpeggioOf(chord) != SpanArpeggioPart.None);
+                    cross: CrossArpeggioOf(chord) != SpanArpeggioPart.None, arrow: ArpeggioArrowOf(chord));
                 return written;
             }
             case ChordRepetitionSyntax rep:
@@ -2805,7 +2807,7 @@ public sealed partial class MeasureCollector
                         chordCopy = chordCopy with { HasArpeggioBracket = true };
                     await AddItemWithoutDurationAsync(builder, WithBowSources(chordCopy, m));
                     AddArpeggio(chordCopy, hasArpeggio, arpBracket, annMeasureIndex, annItemIndex, rep.SourceStart,
-                        cross: CrossArpeggioOf(rep) != SpanArpeggioPart.None);
+                        cross: CrossArpeggioOf(rep) != SpanArpeggioPart.None, arrow: ArpeggioArrowOf(rep));
                     CollectDynamics(rep, annMeasureIndex, annItemIndex);
                     CollectArticulations(rep, annMeasureIndex, annItemIndex, chordCopy.StemUp, anchorTiming: annAnchor);
                     CollectFiguredBass(rep, annMeasureIndex, annItemIndex);

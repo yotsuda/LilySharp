@@ -1607,6 +1607,23 @@ public static class DiagnosticCodes
     /// evaluation 3; <c>Semantics.BendReleases</c>). Nothing is drawn for it.</summary>
     public const string ReleaseWithoutBend = "LYS4067";
 
+    /// <summary>Error: a tuning written out — the quoted list of open strings in a tuning word's
+    /// place, <c>tuning "d, a, d g a d'"</c> on a part or <c>tab "d, a, d g a d'" NAME</c> on a
+    /// tab item (owner-approved 2026-11-13, grammar evaluation 3) — that spells no tuning: a
+    /// word that is not a pitch name, fewer than three strings or more than eight
+    /// (<c>Tablature.Tunings.TryReadStrings</c>; <c>Semantics.CustomTuningValidator</c>). The
+    /// tab falls back to the guitar's strings. Warning, same code: a bass part's list written
+    /// an octave above its strings' sound.</summary>
+    public const string CustomTuningMalformed = "LYS4068";
+
+    /// <summary>A score item's own capo, <c>tab gtr capo 2</c> (owner-approved 2026-11-13,
+    /// grammar evaluation 3; <c>Semantics.ItemCapoValidator</c>). Error: the clause on a
+    /// <c>staff</c> item, which shows its notes as they sound and reads no capo (the message
+    /// names the tab's spelling and the file's); a tab's fret outside 0 to 11. Warning: a tab
+    /// whose own capo is not the file's, under a part that writes chord shapes — the shapes
+    /// are pressed above the file's capo, so diagram and tab show different frets.</summary>
+    public const string ItemCapo = "LYS4069";
+
     /// <summary>Error: a span end whose name is not the one the span was opened with —
     /// <c>@8va … @!15ma</c> (owner's decision 2026-10-28: a span is closed by its own name;
     /// <c>Semantics.SpanNames</c>). The quick fix writes the start's name.</summary>

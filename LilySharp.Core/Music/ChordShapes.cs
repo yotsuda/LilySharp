@@ -376,10 +376,13 @@ public static class ChordShapes
         return lowered != w && IsShape(lowered) ? lowered : null;
     }
 
-    /// <summary>The string counts the tuning vocabulary has (4, 5, 6, 7) — an unnamed shape of
-    /// any other length can be no instrument's.</summary>
+    /// <summary>The string counts a tuning can have — the tuning vocabulary's (4, 5, 6, 7) and
+    /// a tuning written out's (<c>tuning "…"</c>, 4 to 8 strings, 2026-11-13) — an unnamed shape
+    /// of any other length can be no instrument's.</summary>
     public static IReadOnlySet<int> StringCounts { get; } =
-        Tunings.Names.Select(n => Tunings.GetStringCount(Tunings.Parse(n))).ToHashSet();
+        Tunings.Names.Select(n => Tunings.GetStringCount(Tunings.Parse(n)))
+            .Concat(Enumerable.Range(Tunings.MinCustomStrings, Tunings.MaxCustomStrings - Tunings.MinCustomStrings + 1))
+            .ToHashSet();
 
     /// <summary>A problem with written shapes, and the word it concerns (for the span).</summary>
     public readonly record struct Problem(int WordIndex, string Message);

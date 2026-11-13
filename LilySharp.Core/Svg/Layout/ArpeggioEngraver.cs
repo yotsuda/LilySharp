@@ -69,7 +69,10 @@ public readonly record struct ArpeggioLayout(
     // between the staves is the page's (it stretches with the page), so the copies are
     // counted where it is known, at draw time (SharedRenderer.DrawArpeggios); Copies is then
     // ArpeggioEngraver.CountedWhenDrawn.
-    int BottomStaffIndex = -1);
+    int BottomStaffIndex = -1,
+    // @arpeggio(up) / (down): the pile's TOP copy (+1) or BOTTOM copy (−1) is the arrow head
+    // glyph instead of a wiggle; 0 = every copy a wiggle (ArpeggioItem.Arrow).
+    int Arrow = 0);
 
 /// <summary>
 /// Calculates arpeggio layouts from detected arpeggio items.
@@ -115,15 +118,37 @@ internal static class ArpeggioEngraver
     /// does; a SMuFL wiggle turned up has its origin at its RIGHT (the box's x is −top … −bottom)
     /// and its step is the font's <c>repeatOffset</c> (SmuflMusicFont's design box).
     /// </remarks>
-    internal static GlyphMetrics.BBox WiggleBox
+    internal static GlyphMetrics.BBox WiggleBox => DrawnBox(MusicGlyph.WiggleArpeggiatoUp);
+
+    /// <summary>
+    /// The glyph an arrowed arpeggio ends with — <c>@arpeggio(up)</c> (+1) the head pointing
+    /// up, <c>@arpeggio(down)</c> (−1) the one pointing down (owner-approved 2026-11-13,
+    /// grammar evaluation 3).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/arpeggio.cc:171-178 find_by_name (Arpeggio::print) —
+    ///   <c>find_by_name ("scripts.arpeggio.arrow." + std::to_string (dir))</c>.
+    /// </remarks>
+    internal static MusicGlyph ArrowGlyph(int arrow)
+        => arrow > 0 ? MusicGlyph.WiggleArpeggiatoUpArrow : MusicGlyph.WiggleArpeggiatoDownArrow;
+
+    /// <summary>
+    /// An arpeggio glyph's box AS DRAWN, about its origin — <see cref="WiggleBox"/>'s statement
+    /// for the wiggle and for the two arrow heads alike.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (2.26.0, Lab sessions/p1226/md/eval3/featG/lp/arp.ly): Emmentaler's arrow heads
+    /// have the wiggle's own box, (0 . 0.8) × (0 . 1.0) — mf/feta-scripts.mf:1974 "Make arrow
+    /// as tall as the arpeggio wiggle" — so <c>\arpeggioArrowUp</c> on a chord draws the glyphs
+    /// of the plain arpeggio at the same origins, the top one an arrow. That is why an arrow
+    /// changes neither the line's length nor the room the column keeps for it.
+    /// </remarks>
+    internal static GlyphMetrics.BBox DrawnBox(MusicGlyph glyph)
     {
-        get
-        {
-            var b = MusicFont.Current.FullSize.Box(MusicGlyph.WiggleArpeggiatoUp);
-            return MusicFont.Current.LiesDown(MusicGlyph.WiggleArpeggiatoUp)
-                ? new GlyphMetrics.BBox(-b.Top, b.Left, -b.Bottom, b.Right)
-                : b;
-        }
+        var b = MusicFont.Current.FullSize.Box(glyph);
+        return MusicFont.Current.LiesDown(glyph)
+            ? new GlyphMetrics.BBox(-b.Top, b.Left, -b.Bottom, b.Right)
+            : b;
     }
 
     /// <summary>
@@ -243,6 +268,31 @@ internal static class ArpeggioEngraver
         while (copies * WiggleHeight + StackEpsilon < wanted)
             copies++;
         return (lo, copies);
+    }
+
+    /// <summary>
+    /// How many wiggles an ARROWED pile of <paramref name="copies"/> plain copies keeps beside
+    /// its arrow head of <paramref name="arrowHeight"/> (<c>@arpeggio(up)</c> /
+    /// <c>@arpeggio(down)</c>, owner-approved 2026-11-13): as many as cover what the arrow
+    /// leaves of the pile.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/arpeggio.cc:171-181 add_at_edge (Arpeggio::print) —
+    ///   <c>heads[dir] -= dir * arrow.extent (Y_AXIS).length ()</c>, then the same stacking
+    ///   loop over the shortened interval. With Emmentaler's arrow (one wiggle tall) that is
+    ///   one copy fewer, whatever the interval.
+    /// LILYSHARP-OWN for a font whose arrow is not a wiggle tall (SMuFL's
+    /// <c>wiggleArpeggiatoUpArrow</c> carries a length of wiggle with its head): the arrow's
+    /// height is taken off the PILE rather than off the head interval, which the layout no
+    /// longer has at draw time; the pile then ends within a wiggle of where the plain one does.
+    /// </remarks>
+    internal static int WigglesBesideArrow(int copies, double arrowHeight)
+    {
+        double wanted = copies * WiggleHeight - arrowHeight;
+        int wiggles = 0;
+        while (wiggles * WiggleHeight + StackEpsilon < wanted)
+            wiggles++;
+        return wiggles;
     }
 
     /// <summary>
@@ -460,7 +510,8 @@ internal static class ArpeggioEngraver
                 MeasureIndex: arp.MeasureIndex,
                 StaffIndex: arp.StaffIndex,
                 Bracket: arp.Bracket,
-                BottomStaffIndex: bottomStaff));
+                BottomStaffIndex: bottomStaff,
+                Arrow: arp.Bracket ? 0 : arp.Arrow));
         }
 
         return layouts.ToImmutableArray();

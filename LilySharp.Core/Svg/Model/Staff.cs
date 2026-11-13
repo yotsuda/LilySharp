@@ -229,8 +229,8 @@ public sealed record Staff(
     public bool TabNumbersOnly { get; init; }
 
     /// <summary>
-    /// The fret a capo is on for this tab staff, 0 for none (the file's <c>capo N</c>;
-    /// <see cref="Tablature.Tunings.CapoOn"/>). The tab's fret numbers are counted FROM it —
+    /// The fret a capo is on for this tab staff, 0 for none (the item's own <c>capo N</c>, else
+    /// the file's; <see cref="Tablature.Tunings.CapoOn"/>). The tab's fret numbers are counted FROM it —
     /// that is already in <see cref="Transposition"/>, which every fret reader reads — and
     /// this says so to whoever words a message (a note below the capo).
     /// </summary>

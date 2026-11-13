@@ -61,7 +61,8 @@ internal sealed class CrossArpeggioValidator : ISharedCollectValidator
                 || !marks.TryGetValue(arpeggio.SourcePosition, out var mark))
                 continue;
             string written = "@arpeggio(" + string.Join(" ", mark.Arguments.Select(a => a.Text)) + ")";
-            string plain = AnnotationValues.IsArpeggioBracket(mark) ? "@arpeggio(bracket)" : "@arpeggio";
+            string plain = AnnotationValues.IsArpeggioBracket(mark) ? "@arpeggio(bracket)"
+                : AnnotationValues.ArpeggioArrow(mark) switch { > 0 => "@arpeggio(up)", < 0 => "@arpeggio(down)", _ => "@arpeggio" };
             // ASCII punctuation only: these strings reach legacy-codepage consoles via the CLI.
             string why = CrossArpeggios.WhyAlone(score, arpeggio) switch
             {

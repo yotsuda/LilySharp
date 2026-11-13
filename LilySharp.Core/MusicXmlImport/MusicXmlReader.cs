@@ -1259,8 +1259,19 @@ internal static class MusicXmlReader
                 && !note.Articulations.Contains("glissando"))
                 note.Articulations.Add("glissando");
             // An arpeggiated chord prints @arpeggio (on the head note).
-            if (Local(notations, "arpeggiate") != null && !note.Articulations.Contains("arpeggio"))
-                note.Articulations.Add("arpeggio");
+            // Its arrow, if the sign has one, is the direction attribute: @arpeggio(up) /
+            // @arpeggio(down) (owner-approved 2026-11-13, grammar evaluation 3).
+            if (Local(notations, "arpeggiate") is { } arpeggiate)
+            {
+                string spelled = (string?)arpeggiate.Attribute("direction") switch
+                {
+                    "up" => "arpeggio(up)",
+                    "down" => "arpeggio(down)",
+                    _ => "arpeggio",
+                };
+                if (!note.Articulations.Any(a => a.StartsWith("arpeggio", StringComparison.Ordinal)))
+                    note.Articulations.Add(spelled);
+            }
             // <technical>: the string number (\N) and a numeric fingering (@finger(N)).
             // Until 2026-09-08 nothing under <technical> was read, so a \N did not round trip.
             if (Local(notations, "technical") is { } technical)
@@ -1795,10 +1806,18 @@ internal static class MusicXmlReader
             int upper = line.Min(a => a.Staff);
             if (line.All(a => a.Staff == upper))
                 continue;
+            // The line's arrow is whichever its notes say (@arpeggio(cross up) / (cross down)).
+            string arrow = "";
             foreach (var a in line)
+            {
+                if (a.Note.Articulations.Remove("arpeggio(up)"))
+                    arrow = " up";
+                else if (a.Note.Articulations.Remove("arpeggio(down)"))
+                    arrow = " down";
                 a.Note.Articulations.Remove("arpeggio");
+            }
             foreach (var head in line.Where(a => a.Staff == upper).Select(a => a.Head).Distinct())
-                head.Articulations.Add("arpeggio(cross)");
+                head.Articulations.Add("arpeggio(cross" + arrow + ")");
         }
     }
 

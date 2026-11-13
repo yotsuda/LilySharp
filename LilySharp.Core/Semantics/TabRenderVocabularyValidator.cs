@@ -159,7 +159,8 @@ internal sealed class TabRenderVocabularyValidator : ISemanticValidator
                         $"'{extra.Text}': this tab already says " + (group == StyleVocabulary ? "its style" : "its octave")
                         + " - write one.");
 
-            if (tab.TuningToken is { } tuning && tuning.Text.Length > 0
+            // (A quoted list in the tuning's place is a tuning written out — CustomTuningValidator's.)
+            if (tab.TuningToken is { } tuning && tuning.Text.Length > 0 && tab.CustomTuningToken is null
                 && !LanguageVocabulary.TuningNames.Contains(tuning.Text, StringComparer.Ordinal))
             {
                 _diagnostics.Error(tuning.Span, DiagnosticCodes.UnknownTabRenderWord,

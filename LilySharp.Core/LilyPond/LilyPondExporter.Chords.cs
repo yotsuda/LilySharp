@@ -306,8 +306,8 @@ public sealed partial class LilyPondExporter
             _fretTables[tableKey] = name;
             _fretDefinitions.Append("#(define ").Append(name).Append(" (make-fretboard-table))\n")
                 .Append("\\storePredefinedDiagram #").Append(name)
-                .Append(" \\chordmode { ").Append(chordEntry).Append(" } #")
-                .Append(Tablature.Tunings.LilyPondName(tuningType))
+                .Append(" \\chordmode { ").Append(chordEntry).Append(" } ")
+                .Append(Tablature.Tunings.LilyPondValue(tuningType))
                 .Append(" \"").Append(terse).Append("\"\n");
         }
         return "\\once \\set predefinedDiagramTable = #" + name + " ";
@@ -334,7 +334,7 @@ public sealed partial class LilyPondExporter
         var tuningType = _fretTunings.GetValueOrDefault(rowName, TuningType.Guitar);
         return tuningType == TuningType.Guitar
             ? ""
-            : "\\with { stringTunings = #" + Tablature.Tunings.LilyPondName(tuningType) + " } ";
+            : "\\with { stringTunings = " + Tablature.Tunings.LilyPondValue(tuningType) + " } ";
     }
 
     /// <summary>

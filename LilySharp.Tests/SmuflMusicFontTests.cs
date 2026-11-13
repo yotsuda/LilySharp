@@ -80,7 +80,8 @@ public class SmuflMusicFontTests
             Assert.Equal(e.Glyph, font.GlyphOf(font.Codepoint(e.Glyph)));
             var m = full.Metrics(e.Glyph);
             Assert.NotNull(m.DesignBox);
-            if (e.Glyph is MusicGlyph.WiggleTrill or MusicGlyph.WiggleArpeggiatoUp)
+            if (e.Glyph is MusicGlyph.WiggleTrill or MusicGlyph.WiggleArpeggiatoUp
+                or MusicGlyph.WiggleArpeggiatoUpArrow or MusicGlyph.WiggleArpeggiatoDownArrow)
             {
                 // A wiggle's design box is one repetition (its repeatOffset) wide — LILC's
                 // trill element — and its outline overhangs it (SmuflPlacementTests).

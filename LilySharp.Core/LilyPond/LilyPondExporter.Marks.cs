@@ -68,7 +68,7 @@ public sealed partial class LilyPondExporter
             || !tree.GetRoot().DescendantNodes<MusicMarkSyntax>().Any(Semantics.AnnotationValues.IsArpeggioCross)
             || PageModel(tree, render) is not { } score)
             return;
-        (_shared.CrossArpeggioUppers, _shared.CrossArpeggioReached) = CrossArpeggios.Sources(score);
+        (_shared.CrossArpeggioUppers, _shared.CrossArpeggioReached, _) = CrossArpeggios.Sources(score);
     }
 
     /// <summary>
@@ -87,6 +87,16 @@ public sealed partial class LilyPondExporter
 
     private (string Prefix, string Suffix) SplitAttachments(IEnumerable<SyntaxNode> arts)
     {
+        // The arrow head of @arpeggio(up) / (down), for one moment, in the context that makes
+        // the grob ("" = the voice's own).
+        // LILYSHARP-OWN: `\once \override` rather than LilyPond's \arpeggioArrowUp, which stays
+        // set until \arpeggioNormal — Lily#'s arrow is one chord's.
+        // LILYPOND-REF: ly/property-init.ly arpeggioArrowUp / arpeggioArrowDown —
+        //   `\override Arpeggio.arpeggio-direction = #UP` (after reverting the stencil and
+        //   X-extent a preceding \arpeggioBracket may have set, which the twin never writes).
+        static string ArpeggioArrowOverride(int arrow, string context)
+            => "\\once \\override " + context + "Arpeggio.arpeggio-direction = #" + (arrow > 0 ? "UP" : "DOWN") + " ";
+
         var prefix = new StringBuilder();
         var suffix = new StringBuilder();
         // The ends that INCLUDE their note (owner's decision 2026-10-28: an @! is written on the
@@ -126,10 +136,23 @@ public sealed partial class LilyPondExporter
                 //   ly/engraver-init.ly:479 — the engraver is StaffGroup's, which GrandStaff and
                 //   PianoStaff are made from.
                 case MusicMarkSyntax mk when Semantics.AnnotationValues.ArpeggioWords(mk) is { Cross: true } crossed:
-                    if (mk.Parent is { } crossHost && _shared.CrossArpeggioUppers.Contains(crossHost.SourceStart))
+                    bool connected = mk.Parent is { } crossHost && _shared.CrossArpeggioUppers.Contains(crossHost.SourceStart);
+                    if (connected)
                         prefix.Append("\\once \\set GrandStaff.")
                             .Append(crossed.Bracket ? "connectChordBrackets" : "connectArpeggios").Append(" = ##t ");
+                    // (cross up) / (cross down): the SPAN arpeggio is the GrandStaff's grob, so
+                    // its arrow is set there; unconnected, the arrow is the chord's own.
+                    // LILYPOND-REF: lily/span-arpeggio-engraver.cc:94-109 process_acknowledged —
+                    //   `make_item (info->item_name_, SCM_EOL)` in the engraver's own context.
+                    if (crossed.Arrow != 0)
+                        prefix.Append(ArpeggioArrowOverride(crossed.Arrow, connected ? "GrandStaff." : ""));
                     suffix.Append(crossed.Bracket ? "\\nonArpeggiato" : "\\arpeggio");
+                    break;
+                // @arpeggio(up) / @arpeggio(down) (owner-approved 2026-11-13, grammar evaluation
+                // 3): the arpeggio, and its arrow for this chord only.
+                case MusicMarkSyntax mk when Semantics.AnnotationValues.ArpeggioArrow(mk) is not 0 and var arrow:
+                    prefix.Append(ArpeggioArrowOverride(arrow, ""));
+                    suffix.Append("\\arpeggio");
                     break;
                 // ⚠️ THE ONE MARK THAT TRAILS ITS NOTE. `\mark` is standalone music written
                 // BEFORE the note it stands over, which is why marks default to the prefix;

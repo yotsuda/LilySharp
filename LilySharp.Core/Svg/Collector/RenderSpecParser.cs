@@ -1001,7 +1001,9 @@ public static class RenderSpecParser
         // the validator.
         // A bare `tab` (only the keyword, perhaps an `as` selector) renders the file's unnamed
         // part (SyntaxFacts.UnnamedPartName, 2026-10-09).
-        bool bare = tab.SlotCount == 1 || tab.GetChild(1) is SyntaxTokenNode { Text: "as" };
+        // (…or the keyword and a custom tuning: `tab "d, a, d g a d'"`.)
+        bool bare = tab.SlotCount == 1 || tab.GetChild(1) is SyntaxTokenNode { Text: "as" }
+            || tab.PartToken is null && tab.CustomTuningToken is not null;
         if (tab.PartToken is not { } partToken && !bare) return null;
 
         // Trailing `as numbers | full` — the tab STYLE selector (parallel to the
@@ -1014,7 +1016,7 @@ public static class RenderSpecParser
             ? string.Equals(style.Text, "numbers", System.StringComparison.Ordinal)
             : null;
 
-        var tuningToken = bare ? null : tab.TuningToken;
+        var tuningToken = bare ? tab.CustomTuningToken : tab.TuningToken;
         string voiceName = bare ? SyntaxFacts.UnnamedPartName : tab.PartToken!.Text;
 
         // Explicit tuning override → the part's `tuning` property → the tuning
@@ -1047,7 +1049,13 @@ public static class RenderSpecParser
         var root = (SyntaxNode)tab;
         while (root.Parent != null)
             root = root.Parent;
-        int capo = Tablature.Tunings.CapoOn(tuning, Semantics.CapoDirective.CapoOf(root));
+        // …unless the ITEM says its own (`tab gtr capo 2`, owner-approved 2026-11-13, grammar
+        // evaluation 3): this tab is read with that capo — 0 for none — whatever the file's is,
+        // and whatever the instrument (a bass too: its writer said so). The notes, the sound
+        // and the chord diagrams do not move with it: an item is one edition's, and what a
+        // part SOUNDS must not change with the edition (CapoDirective's remarks).
+        int capo = Semantics.ItemCapoValidator.CapoOf(tab)
+            ?? Tablature.Tunings.CapoOn(tuning, Semantics.CapoDirective.CapoOf(root));
         transposition -= capo;
         var staffSpec = new StaffSpec(sourceClef, voiceName, Sounds: tab.SoundsToken?.Text);
         // The STYLE: an explicit `as` wins; otherwise the score answers. A tab beside a

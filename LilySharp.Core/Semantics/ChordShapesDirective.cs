@@ -468,7 +468,7 @@ public static class ChordShapesDirective
         foreach (var part in TopLevelNodes.OfRoot<PartDeclarationSyntax>(root))
             if (PartHeaderDefaults.Read(part) is { FrettedTuning: { } fretted, FrettedTuningWord: { } word } && fretted == tuning)
                 return (word, part.Name.Text);
-        return (Tablature.Tunings.Names.FirstOrDefault(n => Tablature.Tunings.Parse(n) == tuning) ?? "guitar", null);
+        return (Tablature.Tunings.Spell(tuning), null);
     }
 }
 

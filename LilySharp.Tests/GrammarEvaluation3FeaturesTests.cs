@@ -485,4 +485,527 @@ public class GrammarEvaluation3FeaturesTests
         Assert.Equal(["release", "!letRing", "!"], Offered(Guitar("a'4@letRing@bend(full) a'4@‸ r2 |")).Take(3));
         Assert.Equal(["half", "full"], Offered(Guitar("a'4@bend(‸) r4 r2 |")).Take(2));
     }
+
+    // ───────────────────────── 6. <c e g>2@arpeggio(up) / @arpeggio(down) ─────────────────────────
+
+    private const string GrandStaff = "grandStaff { staff rh  staff lh }";
+
+    /// <summary>A right hand and a left hand in a grand staff, one bar each.</summary>
+    private static string Piano(string rh, string lh, string score = GrandStaff)
+        => "octave absolute\ntime 4/4\npart rh { clef treble }\npart lh { clef bass }\n"
+           + $"section A {{\n  rh {{ {rh} }}\n  lh {{ {lh} }}\n}}\nform {{ A }}\nscore {{ {score} }}\n";
+
+    private static LilySharp.Core.Svg.Model.MultiStaffScore Collected(string source)
+    {
+        var tree = SyntaxTree.Parse(source);
+        return LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+    }
+
+    /// <summary>The glyphs of the page's arpeggios, bottom to top, as (glyph, x, y).</summary>
+    private static List<(char Glyph, double X, double Y)> ArpeggioGlyphs(RenderedGeometry g)
+    {
+        char wiggle = GlyphOf(LilySharp.Core.Svg.MusicGlyph.WiggleArpeggiatoUp);
+        char up = GlyphOf(LilySharp.Core.Svg.MusicGlyph.WiggleArpeggiatoUpArrow);
+        char down = GlyphOf(LilySharp.Core.Svg.MusicGlyph.WiggleArpeggiatoDownArrow);
+        return [.. g.Glyphs.Where(x => x.Glyph == wiggle || x.Glyph == up || x.Glyph == down)
+            .OrderBy(x => x.X).ThenByDescending(x => x.Y).Select(x => (x.Glyph, x.X, x.Y))];
+    }
+
+    /// <summary>An arrowed arpeggio is the plain one's pile with its end copy an arrow head —
+    /// the top one for <c>up</c>, the bottom one for <c>down</c> — at the same places, and the
+    /// bar is spaced as the plain one's (LilyPond 2.26's \arpeggioArrowUp / \arpeggioArrowDown:
+    /// the arrow glyph has the wiggle's box).</summary>
+    [Theory]
+    [InlineData("<c' e' g' c''>2")]
+    [InlineData("<c' e'>2")]
+    [InlineData("g'2")]
+    public void AnArrowedArpeggio_IsThePlainPileEndingInAnArrowHead(string chord)
+    {
+        char wiggle = GlyphOf(LilySharp.Core.Svg.MusicGlyph.WiggleArpeggiatoUp);
+        char upArrow = GlyphOf(LilySharp.Core.Svg.MusicGlyph.WiggleArpeggiatoUpArrow);
+        char downArrow = GlyphOf(LilySharp.Core.Svg.MusicGlyph.WiggleArpeggiatoDownArrow);
+        var plainPage = RenderedGeometry.Render(Guitar($"r2 {chord}@arpeggio |"));
+        var plain = ArpeggioGlyphs(plainPage);
+        Assert.True(plain.Count >= 2);
+        Assert.All(plain, p => Assert.Equal(wiggle, p.Glyph));
+
+        foreach (var (word, arrow, at) in new[] { ("up", upArrow, plain.Count - 1), ("down", downArrow, 0) })
+        {
+            string source = Guitar($"r2 {chord}@arpeggio({word}) |");
+            Clean(source);
+            RoundTrips(source);
+            var page = RenderedGeometry.Render(source);
+            var drawn = ArpeggioGlyphs(page);
+            Assert.Equal(plain.Count, drawn.Count);
+            for (int i = 0; i < plain.Count; i++)
+            {
+                Assert.Equal(i == at ? arrow : wiggle, drawn[i].Glyph);
+                Assert.Equal(plain[i].X, drawn[i].X, 9);
+                Assert.Equal(plain[i].Y, drawn[i].Y, 9);
+            }
+            // The room is the plain arpeggio's: every head stands where it stood.
+            Assert.Equal(plainPage.Noteheads.Select(h => (h.X, h.Y)), page.Noteheads.Select(h => (h.X, h.Y)));
+        }
+    }
+
+    /// <summary>The model says which: +1 up, −1 down, 0 for the plain line and for a bracket.</summary>
+    [Fact]
+    public void TheArrowOfAnArpeggio_IsReadByTheOneReader()
+    {
+        string source = Guitar("<c' e'>4@arpeggio(up) <c' e'>4@arpeggio(down) <c' e'>4@arpeggio <c' e'>4@arpeggio(bracket) |");
+        Clean(source);
+        Assert.Equal([(1, false), (-1, false), (0, false), (0, true)], Collected(source).Arpeggios.Select(a => (a.Arrow, a.Bracket)));
+        var marks = SyntaxTree.Parse(source).GetRoot().DescendantNodes().OfType<MusicMarkSyntax>().ToList();
+        Assert.Equal([1, -1, 0], marks.Select(AnnotationValues.ArpeggioArrow));
+        Assert.Equal((false, false, 1), AnnotationValues.ArpeggioWords(marks[0]));
+    }
+
+    /// <summary>On a tab the arrowed arpeggio is drawn as the plain one is: beside the staff
+    /// both carry it, and a tab alone carries it.</summary>
+    [Fact]
+    public void AnArrowedArpeggio_IsOnTheTabToo()
+    {
+        char upArrow = GlyphOf(LilySharp.Core.Svg.MusicGlyph.WiggleArpeggiatoUpArrow);
+        string music = "<e a d' g'>2@arpeggio(up) r2 |";
+        int plainBoth = ArpeggioGlyphs(RenderedGeometry.Render(Guitar(music.Replace("(up)", ""), "staff gtr  tab gtr"))).Count;
+        var both = ArpeggioGlyphs(RenderedGeometry.Render(Guitar(music, "staff gtr  tab gtr")));
+        Assert.Equal(plainBoth, both.Count);
+        Assert.Equal(2, both.Count(x => x.Glyph == upArrow));
+        Assert.Single(ArpeggioGlyphs(RenderedGeometry.Render(Guitar(music, "tab gtr"))), x => x.Glyph == upArrow);
+    }
+
+    /// <summary><c>(cross up)</c> / <c>(cross down)</c>: the one line through both staves ends
+    /// in the arrow — at the upper chord's top, or below the lower chord — and is as long as
+    /// the plain cross arpeggio.</summary>
+    [Fact]
+    public void ACrossArpeggio_TakesAnArrowToo()
+    {
+        char upArrow = GlyphOf(LilySharp.Core.Svg.MusicGlyph.WiggleArpeggiatoUpArrow);
+        char downArrow = GlyphOf(LilySharp.Core.Svg.MusicGlyph.WiggleArpeggiatoDownArrow);
+        var plain = ArpeggioGlyphs(RenderedGeometry.Render(Piano("<c' e' g'>1@arpeggio(cross) |", "<c e g>1 |")));
+        foreach (var (words, arrow, at, sign) in new[] { ("cross up", upArrow, plain.Count - 1, 1), ("up cross", upArrow, plain.Count - 1, 1), ("cross down", downArrow, 0, -1) })
+        {
+            string source = Piano($"<c' e' g'>1@arpeggio({words}) |", "<c e g>1 |");
+            Clean(source);
+            var line = Assert.Single(Collected(source).Arpeggios);
+            Assert.Equal((true, sign, 1), (line.Cross, line.Arrow, line.PartnerStaffIndex));
+            var drawn = ArpeggioGlyphs(RenderedGeometry.Render(source));
+            Assert.Equal(plain.Select(p => (p.X, p.Y)), drawn.Select(p => (p.X, p.Y)));
+            Assert.Equal(arrow, drawn[at].Glyph);
+            Assert.Single(drawn, x => x.Glyph == arrow);
+        }
+        // With nothing below it is drawn on its own chord, arrow and all, and said (LYS4064).
+        string alone = Guitar("<c' e' g'>1@arpeggio(cross up) |");
+        var warned = Assert.Single(Said(alone));
+        Assert.Equal(DiagnosticCodes.CrossArpeggioWithoutPartner, warned.Code);
+        Assert.Contains("or write '@arpeggio(up)'", warned.Message);
+        Assert.Single(ArpeggioGlyphs(RenderedGeometry.Render(alone)), x => x.Glyph == upArrow);
+    }
+
+    /// <summary>A bracket is not rolled and takes no direction; both directions, or one twice,
+    /// say nothing either. The mark is reported with what the parentheses take, and ignored.</summary>
+    [Theory]
+    [InlineData("bracket up")]
+    [InlineData("down bracket")]
+    [InlineData("up down")]
+    [InlineData("up up")]
+    [InlineData("Up")]
+    public void AnArrowOnABracket_OrTwoArrows_IsNotAValue(string words)
+    {
+        string source = Guitar($"<c' e' g'>1@arpeggio({words}) |");
+        var said = Assert.Single(Said(source));
+        Assert.Equal(DiagnosticCodes.UnknownAnnotation, said.Code);
+        if (words != "Up")
+        {
+            Assert.Contains($"'{words}' is not a value of '@arpeggio'", said.Message);
+            Assert.Contains("'@arpeggio(up)', '@arpeggio(down)'", said.Message);
+            Assert.Contains("A bracket takes no direction", said.Message);
+        }
+        RoundTrips(source);
+        Assert.Empty(Collected(source).Arpeggios);
+    }
+
+    /// <summary>The exports: MusicXML says the arrow as the direction of every arpeggiate of
+    /// the line — the staff below's too — and the LilyPond twin sets the grob's
+    /// arpeggio-direction for that chord alone, in the grand staff for a connected line. The
+    /// sound is the plain chord's (an <c>@arpeggio</c> is not rolled in the MIDI).</summary>
+    [Fact]
+    public void AnArrowedArpeggio_GoesToTheExports()
+    {
+        string source = Guitar("<c' e' g'>2@arpeggio(up) <c' e'>4@arpeggio(down) g'4@arpeggio(up) |");
+        string xml = Xml(source);
+        Assert.Equal(4, System.Text.RegularExpressions.Regex.Matches(xml, "<arpeggiate number=\"1\" direction=\"up\" />").Count);
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(xml, "<arpeggiate number=\"1\" direction=\"down\" />").Count);
+        string ly = Ly(source);
+        Assert.Contains("\\once \\override Arpeggio.arpeggio-direction = #UP <c' e' g'>2\\arpeggio", ly);
+        Assert.Contains("\\once \\override Arpeggio.arpeggio-direction = #DOWN <c' e'>4\\arpeggio", ly);
+        Assert.Contains("\\once \\override Arpeggio.arpeggio-direction = #UP g'4\\arpeggio", ly);
+        Assert.DoesNotContain("arpeggio-direction", Ly(Guitar("<c' e' g'>2@arpeggio <c' e'>2@arpeggio(bracket) |")));
+
+        string crossed = Piano("<c' e' g'>2@arpeggio(cross down) <c' e' g'>2@arpeggio(cross up) |", "<c e g>2 <c g>2 |");
+        var tree = SyntaxTree.Parse(crossed);
+        string crossedXml = new LilySharp.Core.MusicXml.MusicXmlExporter { Score = RenderSpecParser.FindFirst(tree) }
+            .Export(tree).ToXml().ToString(System.Xml.Linq.SaveOptions.DisableFormatting);
+        Assert.Equal(6, System.Text.RegularExpressions.Regex.Matches(crossedXml, "<arpeggiate number=\"2\" direction=\"down\" />").Count);
+        Assert.Equal(5, System.Text.RegularExpressions.Regex.Matches(crossedXml, "<arpeggiate number=\"2\" direction=\"up\" />").Count);
+        Assert.Contains("\\once \\set GrandStaff.connectArpeggios = ##t \\once \\override GrandStaff.Arpeggio.arpeggio-direction = #DOWN <c' e' g'>2\\arpeggio", Ly(crossed));
+
+        static IEnumerable<(int, int, int)> Notes(LilySharp.Core.Midi.MidiFile midi)
+            => midi.Tracks.SelectMany(t => t.Notes).Select(n => (n.Pitch, n.StartTick, n.DurationTicks));
+        Assert.Equal(Notes(Midi(Guitar("<c' e' g'>2@arpeggio <c' e'>4@arpeggio g'4@arpeggio |"))), Notes(Midi(source)));
+    }
+
+    /// <summary>MusicXML's direction comes back as the word, on one staff and through two.</summary>
+    [Fact]
+    public void AnArrowedArpeggio_ComesBackFromMusicXml()
+    {
+        string source = Piano("<c' e' g'>2@arpeggio(up) <d' f'>2@arpeggio(cross down) | g'2@arpeggio(down) <d' f'>2@arpeggio |", "<c e g>2 <d f>2 | <c g>1 |");
+        Clean(source);
+        var tree = SyntaxTree.Parse(source);
+        string xml = new LilySharp.Core.MusicXml.MusicXmlExporter { Score = RenderSpecParser.FindFirst(tree) }
+            .Export(tree).ToXml().ToString();
+        var (lys, _) = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(xml);
+        Assert.Contains("@arpeggio(up) <d' f'>2@arpeggio(cross down) | g'2@arpeggio(down) <d' f'>2@arpeggio |", lys);
+        Assert.Contains("<c e g>2 <d f>2 | <c g>1 |", lys);
+        Clean(lys);
+        var back = SyntaxTree.Parse(lys);
+        Assert.Equal(Collected(source).Arpeggios.Select(a => (a.Cross, a.Arrow, a.PartnerStaffIndex)),
+            LilySharp.Core.Svg.SvgGenerator.CollectScore(back, RenderSpecParser.FindFirst(back)).Arpeggios.Select(a => (a.Cross, a.Arrow, a.PartnerStaffIndex)));
+    }
+
+    /// <summary>Inside an arpeggio's parentheses: up, down, bracket, cross — in that order; and
+    /// the '@' list has the two arrowed rows.</summary>
+    [Fact]
+    public void InsideAnArpeggiosParentheses_UpAndDownAreOfferedFirst()
+    {
+        Assert.Equal(["up", "down", "bracket", "cross"], Offered(Guitar("<c' e' g'>2@arpeggio(‸) r2 |")));
+        var marks = Offered(Guitar("<c' e' g'>2@‸ r2 |"));
+        Assert.Contains("arpeggio(up)", marks);
+        Assert.Contains("arpeggio(down)", marks);
+    }
+
+    // ───────────────────────── 7. tuning "d, a, d g a d'" ─────────────────────────
+
+    /// <summary>One part of <paramref name="header"/> playing <paramref name="music"/>.</summary>
+    private static string Strung(string header, string music, string score = "staff gtr  tab gtr")
+        => "octave absolute\ntime 4/4\npart gtr { " + header + " }\n"
+            + "section A { gtr { " + music + " } }\nform { A }\nscore { " + score + " }\n";
+
+    private static List<(string Text, double X, double Y)> Frets(string source)
+        => [.. RenderedGeometry.Render(source).TabFrets.Select(f => (f.Text, f.X, f.Y))];
+
+    /// <summary>A tuning written out — the open strings from the highest string number to
+    /// string 1, as they sound — is the tuning of those strings: the page is the page of the
+    /// tuning word that names the same strings, to the last fret.</summary>
+    [Theory]
+    [InlineData("instrument guitar  tuning \"d, a, d g a d'\"", "instrument guitar  tuning guitarDadgad", "d,4 a, d g | a d' <d, a, d g a d'>2 |")]
+    [InlineData("tuning \"g' c' e' a'\"", "tuning ukulele", "g'4 c' e' a' | <g' c' e' a'>2 c''4 d'' |")]
+    [InlineData("instrument bass  tuning \"d,, a,, d, g,\"", "instrument bass  tuning bassDropD", "d,4 a, d g | d2 a, |")]
+    [InlineData("tuning \"e, a, d g b e'\"", "tuning guitar", "e,4 a, d g | b e' g'2 |")]
+    public void ATuningWrittenOut_IsTheTuningOfThoseStrings(string written, string named, string music)
+    {
+        string source = Strung(written, music);
+        Clean(source);
+        RoundTrips(source);
+        Assert.Equal(Frets(Strung(named, music)), Frets(source));
+        Assert.NotEmpty(Frets(source));
+
+        var tab = Collected(source).StaffGroups.SelectMany(g => g.Staves).Single(s => s.IsTab);
+        var namedTab = Collected(Strung(named, music)).StaffGroups.SelectMany(g => g.Staves).Single(s => s.IsTab);
+        Assert.Equal(LilySharp.Core.Tablature.Tunings.GetTuning(namedTab.Tuning!.Value), LilySharp.Core.Tablature.Tunings.GetTuning(tab.Tuning!.Value));
+        Assert.Equal(LilySharp.Core.Tablature.Tunings.IsBass(namedTab.Tuning!.Value), LilySharp.Core.Tablature.Tunings.IsBass(tab.Tuning!.Value));
+        // A list that spells a named tuning's strings is still its own handle: a custom tuning.
+        Assert.True(LilySharp.Core.Tablature.Tunings.IsCustom(tab.Tuning!.Value));
+        Assert.False(LilySharp.Core.Tablature.Tunings.IsCustom(namedTab.Tuning!.Value));
+    }
+
+    /// <summary>The same strings are the same tuning wherever they are written, and the list
+    /// reads back as it was spelled.</summary>
+    [Fact]
+    public void ACustomTuning_IsOneHandleForItsStrings()
+    {
+        var a = LilySharp.Core.Tablature.Tunings.Parse("\"d, a, d g a d'\"");
+        Assert.Equal(a, LilySharp.Core.Tablature.Tunings.Parse("d,  a, d g a d'"));          // a property's value: unquoted
+        Assert.Equal(a, LilySharp.Core.Tablature.Tunings.Custom([38, 45, 50, 55, 57, 62]));
+        Assert.NotEqual(a, LilySharp.Core.Tablature.Tunings.Parse("\"d, a, d g b e'\""));
+        Assert.Equal([38, 45, 50, 55, 57, 62], LilySharp.Core.Tablature.Tunings.GetTuning(a));
+        Assert.Equal("\"d, a, d g a d'\"", LilySharp.Core.Tablature.Tunings.Spell(a));
+        Assert.Equal("guitarDropD", LilySharp.Core.Tablature.Tunings.Spell(TuningType.GuitarDropD));
+        Assert.Equal("\\stringTuning <d, a, d g a d'>", LilySharp.Core.Tablature.Tunings.LilyPondValue(a));
+        Assert.Equal("#guitar-drop-d-tuning", LilySharp.Core.Tablature.Tunings.LilyPondValue(TuningType.GuitarDropD));
+        // Flats and sharps; a list that spells none is the guitar, as an unknown word is.
+        Assert.Equal([39, 44, 49, 54, 58, 63],
+            LilySharp.Core.Tablature.Tunings.GetTuning(LilySharp.Core.Tablature.Tunings.Parse("\"ees, aes, des ges bes ees'\"")));
+        Assert.Equal([39, 44, 49, 54, 58, 63],
+            LilySharp.Core.Tablature.Tunings.GetTuning(LilySharp.Core.Tablature.Tunings.Parse("\"dis, gis, cis fis ais dis'\"")));
+        Assert.Equal(TuningType.Guitar, LilySharp.Core.Tablature.Tunings.Parse("\"d, a, x\""));
+        Assert.DoesNotContain(a, Enum.GetValues<TuningType>());
+    }
+
+    /// <summary>On a tab item the list stands where the tuning word stands, before the part:
+    /// that tab is fretted on it, the part's own tab and range are not.</summary>
+    [Fact]
+    public void OnATabItem_TheListStandsWhereTheTuningWordStands()
+    {
+        const string music = "e,4 a, d g | a d' r2 |";
+        string source = Strung("instrument guitar", music, "tab gtr  tab \"d, a, d g a d'\" gtr");
+        Clean(source);
+        RoundTrips(source);
+        Assert.Equal(Frets(Strung("instrument guitar", music, "tab gtr  tab guitarDadgad gtr")), Frets(source));
+        var tabs = Collected(source).StaffGroups.SelectMany(g => g.Staves).Where(s => s.IsTab).ToList();
+        Assert.Equal(TuningType.Guitar, tabs[0].Tuning);
+        Assert.Equal([38, 45, 50, 55, 57, 62], LilySharp.Core.Tablature.Tunings.GetTuning(tabs[1].Tuning!.Value));
+        var item = SyntaxTree.Parse(source).GetRoot().DescendantNodes<TabRenderSyntax>().Last();
+        Assert.Equal("\"d, a, d g a d'\"", item.TuningToken!.Text);
+        Assert.Equal("gtr", item.PartToken!.Text);
+    }
+
+    /// <summary>Four to eight strings: the tab has a line for each, the string numbers run to
+    /// the count (LYS5003 beyond it), and a note under the lowest string is LYS5002.</summary>
+    [Theory]
+    [InlineData("\"g, d a e'\"", 4, "g,4 d a e' |")]
+    [InlineData("\"b,, e, a, d g b e'\"", 7, "b,,4 e, a, d |")]
+    [InlineData("\"fis,, b,, e, a, d g b e'\"", 8, "fis,,4 b,, e, e' |")]
+    public void ACustomTuning_HasFourToEightStrings(string list, int strings, string music)
+    {
+        string source = Strung("tuning " + list, music, "tab gtr");
+        Clean(source);
+        var page = RenderedGeometry.Render(source);
+        Assert.All(page.TabFrets, f => Assert.Equal("0", f.Text));
+        Assert.Equal(4, page.TabFrets.Count);
+        Assert.Equal(strings, LilySharp.Core.Tablature.Tunings.GetStringCount(Collected(source).StaffGroups.SelectMany(g => g.Staves).Single().Tuning!.Value));
+        // One staff line a string, each fret on its own: the four open strings stand on four heights.
+        Assert.Equal(4, page.TabFrets.Select(f => Math.Round(f.Y, 6)).Distinct().Count());
+        Assert.Contains($"<staff-lines>{strings}</staff-lines>", Xml(source));
+
+        var beyond = Assert.Single(Said(Strung("tuning " + list, $"c''4\\{strings + 1} r4 r2 |", "tab gtr")));
+        Assert.Equal(DiagnosticCodes.TabStringUnplayable, beyond.Code);
+        Assert.Contains($"this tab's tuning has {strings} strings", beyond.Message);
+        Assert.Contains(Said(Strung("tuning " + list, "c,,,4 r4 r2 |", "tab gtr")), d => d.Code == DiagnosticCodes.TabOutOfRange);
+    }
+
+    /// <summary>A list that spells no tuning is an error on the list that says what is wrong
+    /// and shows one that is right — on a part and on a tab item — and the tab is the guitar's.</summary>
+    [Theory]
+    [InlineData("\"d, a, x g a d'\"", "'x' is not a pitch name")]
+    [InlineData("\"D, A, D G A D'\"", "'D,' is not a pitch name")]
+    [InlineData("\"d2 a2 d3 g3\"", "'d2' is not a pitch name")]
+    [InlineData("\"d,a,d,g\"", "'d,a,d,g' is not a pitch name")]
+    [InlineData("\"d a d'\"", "it names 3 strings; a tuning has 4 to 8")]
+    [InlineData("\"e\"", "it names 1 string; a tuning has 4 to 8")]
+    [InlineData("\"c, d, e, f, g, a, b, c d\"", "it names 9 strings; a tuning has 4 to 8")]
+    [InlineData("\"\"", "it names no string")]
+    public void AListThatSpellsNoTuning_IsAnError(string list, string says)
+    {
+        foreach (string source in new[]
+                 {
+                     Strung("instrument guitar  tuning " + list, "e,4 a, d g |"),
+                     Strung("instrument guitar", "e,4 a, d g |", "staff gtr  tab " + list + " gtr"),
+                 })
+        {
+            var said = Assert.Single(Said(source));
+            Assert.Equal((DiagnosticCodes.CustomTuningMalformed, DiagnosticSeverity.Error), (said.Code, said.Severity));
+            Assert.Equal(list, source.Substring(said.Span.Start, said.Span.Length));
+            Assert.Contains($"{list} is not a tuning: {says}.", said.Message);
+            Assert.Contains("'tuning \"d, a, d g a d'\"' (DADGAD)", said.Message);
+            RoundTrips(source);
+            Assert.Equal(Frets(Strung("instrument guitar", "e,4 a, d g |")), Frets(source));
+        }
+    }
+
+    /// <summary>A bass is written an octave above its sound and a tuning names its strings as
+    /// they sound: a bass part's list at the pitch of its notes is warned, with the list an
+    /// octave down — which is a bass's tuning, fretted as one.</summary>
+    [Fact]
+    public void ABassPartsListWrittenAsItsNotes_IsWarnedWithTheListAnOctaveDown()
+    {
+        string source = Strung("instrument bass  tuning \"d, a, d g\"", "d4 a d' g' |");
+        var said = Assert.Single(Said(source));
+        Assert.Equal((DiagnosticCodes.CustomTuningMalformed, DiagnosticSeverity.Warning), (said.Code, said.Severity));
+        Assert.Contains("write \"d,, a,, d, g,\"", said.Message);
+        Clean(Strung("instrument bass  tuning \"d,, a,, d, g,\"", "d,4 a, d g |"));
+        // A custom tuning is a bass's when no string sounds above c: the six-string bass's top.
+        Assert.True(LilySharp.Core.Tablature.Tunings.IsBass(LilySharp.Core.Tablature.Tunings.Parse("\"b,,, e,, a,, d, g, c\"")));
+        Assert.False(LilySharp.Core.Tablature.Tunings.IsBass(LilySharp.Core.Tablature.Tunings.Parse("\"fis,, b,, e, a, d g b e'\"")));
+    }
+
+    /// <summary>The part's range moves with its strings, its chord shapes are read on them,
+    /// and a fretted mark knows the part is fretted.</summary>
+    [Fact]
+    public void ACustomTuning_IsThePartsInstrument()
+    {
+        // The open sixth string, D2, is in range (LYS1052 measures from the tuning's strings).
+        Clean(Strung("instrument guitar  tuning \"d, a, d g a d'\"", "d,1 |"));
+        Assert.Contains(Said(Strung("instrument guitar", "d,1 |")), d => d.Code == DiagnosticCodes.NoteOutsideInstrumentRange);
+        // A shape is the strings': 550000 on DADGAD sounds G D D G A D.
+        var shape = Assert.Single(Said(Strung("instrument guitar  tuning \"d, a, d g a d'\"", "diagram(G5 550000)1 |")));
+        Assert.Contains("'550000' sounds G A D", shape.Message);
+        Clean(Strung("instrument guitar  tuning \"d, a, d g a d'\"", "diagram(Dsus4 000000)1 |"));
+        // …and the shape's notes are on the tab, a string each.
+        Assert.Equal(["0", "0", "0", "0", "0", "0"], Frets(Strung("instrument guitar  tuning \"d, a, d g a d'\"", "diagram(Dsus4 000000)1 |")).Select(f => f.Text));
+        Clean(Strung("tuning \"d, a, d g a d'\"", "d'2@vibrato a2 |"));
+    }
+
+    /// <summary>The LilyPond twin writes the strings themselves, and MusicXML the staff's tuning.</summary>
+    [Fact]
+    public void ACustomTuning_GoesToTheExports()
+    {
+        string ly = Ly(Strung("instrument guitar  tuning \"d, a, d g a d'\"", "d,4 a, d g |"));
+        Assert.Contains("\\new TabStaff \\with { stringTunings = \\stringTuning <d, a, d g a d'> ", ly);
+        Assert.DoesNotContain("stringTunings = #", ly);
+        Assert.Contains("stringTunings = \\stringTuning <g' c' e' a'>", Ly(Strung("instrument guitar", "g'4 c' e' a' |", "tab \"g' c' e' a'\" gtr")));
+        Assert.Contains("stringTunings = #guitar-dadgad-tuning", Ly(Strung("instrument guitar  tuning guitarDadgad", "d,4 a, d g |")));
+
+        string xml = Xml(Strung("tuning \"d, a, d g a d'\"", "d,4 a, d g |", "tab gtr"));
+        Assert.Contains("<staff-lines>6</staff-lines>", xml);
+        Assert.Equal(["D2", "A2", "D3", "G3", "A3", "D4"],
+            System.Text.RegularExpressions.Regex.Matches(xml, "<tuning-step>(.)</tuning-step><tuning-octave>(.)</tuning-octave>")
+                .Select(m => m.Groups[1].Value + m.Groups[2].Value));
+        Assert.Equal(4, System.Text.RegularExpressions.Regex.Matches(xml, "<fret>0</fret>").Count);
+    }
+
+    /// <summary>After a part's <c>tuning</c> the last row writes a tuning out.</summary>
+    [Fact]
+    public void AfterTuning_TheLastRowWritesATuningOut()
+    {
+        var rows = Offered("part gtr { instrument guitar  tuning ‸ }\n");
+        Assert.Equal("guitar", rows[0]);
+        Assert.Equal("\"e, a, d g b e'\"", rows[^1]);
+    }
+
+    // ───────────────────────── 8. tab gtr capo 2 ─────────────────────────
+
+    /// <summary>Two guitars and a bass, each playing <paramref name="music"/>, under
+    /// <paramref name="top"/> (the file's own lines) on <paramref name="score"/>.</summary>
+    private static string Band(string music, string score, string top = "")
+        => "octave absolute\ntime 4/4\n" + top + "part lead { instrument guitar }\npart rhy { instrument guitar }\npart b { instrument bass }\n"
+            + "section A { lead { " + music + " } rhy { " + music + " } b { " + music + " } }\nform { A }\nscore { " + score + " }\n";
+
+    private static List<string> FretTexts(string source)
+    {
+        var page = RenderedGeometry.Render(source);
+        return [.. page.TabFrets.OrderBy(f => Math.Round(f.Y / 20)).ThenBy(f => f.X).Select(f => f.Text)];
+    }
+
+    /// <summary>A tab's own capo is where THAT tab counts its frets from: the page is the page
+    /// of the same tab under a file capo of that fret, and the tab beside it does not move.</summary>
+    [Fact]
+    public void ATabsOwnCapo_IsWhereThatTabCountsFrom()
+    {
+        const string music = "fis,4 a, d g | b e' fis'2 |";
+        string own = Band(music, "tab lead capo 2");
+        Clean(own);
+        RoundTrips(own);
+        Assert.Equal(Frets(Band(music, "tab lead", "capo 2\n")).Select(f => (f.Text, f.X)), Frets(own).Select(f => (f.Text, f.X)));
+        Assert.Equal("0", Frets(own)[0].Text);
+
+        // Two guitars, one capoed: each tab its own.
+        string two = Band(music, "tab lead capo 2  tab rhy");
+        Clean(two);
+        var tabs = Collected(two).StaffGroups.SelectMany(g => g.Staves).ToList();
+        Assert.Equal([2, 0], tabs.Select(t => t.TabCapo));
+        // …the capoed one's numbers and the other's, each as it is alone.
+        Assert.Equal(["0", "3", "3", "3", "2", "3", "0"], Frets(own).OrderBy(f => f.X).Select(f => f.Text));
+        Assert.Equal(Frets(own).Concat(Frets(Band(music, "tab rhy"))).Select(f => f.Text).Order(), Frets(two).Select(f => f.Text).Order());
+
+        // Beside the other words of the item, in their order.
+        Clean(Band(music, "staff lead  tab lead as numbers capo 2 sounds instrument"));
+        Clean(Band(music, "tab guitarDropD lead capo 2 hidden  tab rhy"));
+        Clean(Band(music, "tab \"d, a, d g a d'\" lead capo 2"));
+    }
+
+    /// <summary>The item's capo is over the file's: 0 is no capo on a tab of a capoed file,
+    /// another fret is that fret — and a bass's tab, which ignores the file's, takes its own.</summary>
+    [Fact]
+    public void ATabsOwnCapo_IsOverTheFiles()
+    {
+        const string music = "fis,4 a, d g | b e' fis'2 |";
+        Assert.Equal(Frets(Band(music, "tab lead")).Select(f => (f.Text, f.X)), Frets(Band(music, "tab lead capo 0", "capo 2\n")).Select(f => (f.Text, f.X)));
+        Assert.Equal(Frets(Band(music, "tab lead", "capo 2\n")).Select(f => (f.Text, f.X)), Frets(Band(music, "tab lead capo 2", "capo 4\n")).Select(f => (f.Text, f.X)));
+        var staves = Collected(Band(music, "tab lead  tab rhy capo 0  tab b  staff b", "capo 2\n")).StaffGroups.SelectMany(g => g.Staves).ToList();
+        Assert.Equal([2, 0, 0, 0], staves.Select(t => t.TabCapo));
+        Assert.Equal(1, Collected(Band(music, "tab b capo 1", "capo 2\n")).StaffGroups.SelectMany(g => g.Staves).Single().TabCapo);
+        // A note under the item's capo is said as the file's is (LYS5002 names the fret).
+        var below = Assert.Single(Said(Band("e,4 a, d g | b e' fis'2 |", "tab lead capo 2")));
+        Assert.Equal(DiagnosticCodes.TabOutOfRange, below.Code);
+        Assert.Contains("cannot be played with the capo on fret 2", below.Message);
+    }
+
+    /// <summary>Only the tab's numbers move: the staff, the sound and the head of the page are
+    /// the same with it and without.</summary>
+    [Fact]
+    public void ATabsOwnCapo_MovesNothingElse()
+    {
+        const string music = "fis,4 a, d g | b e' fis'2 |";
+        var with = RenderedGeometry.Render(Band(music, "staff lead  tab lead capo 2"));
+        var without = RenderedGeometry.Render(Band(music, "staff lead  tab lead"));
+        Assert.Equal(without.Noteheads.Select(h => h.Y), with.Noteheads.Select(h => h.Y));
+        Assert.DoesNotContain(with.Texts, t => t.Text.StartsWith("Capo", StringComparison.Ordinal));
+        static IEnumerable<(int, int, int)> Notes(LilySharp.Core.Midi.MidiFile midi)
+            => midi.Tracks.SelectMany(t => t.Notes).Select(n => (n.Pitch, n.StartTick, n.DurationTicks));
+        Assert.Equal(Notes(Midi(Band(music, "staff lead  tab lead"))), Notes(Midi(Band(music, "staff lead  tab lead capo 2"))));
+    }
+
+    /// <summary>MusicXML says the tab staff's capo and its frets from it; the LilyPond twin
+    /// frets the TabStaff from it.</summary>
+    [Fact]
+    public void ATabsOwnCapo_GoesToTheExports()
+    {
+        const string music = "fis,4 a, d g | b e' fis'2 |";
+        string source = Band(music, "tab lead capo 2  tab rhy");
+        string xml = Xml(source);
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(xml, "<capo>2</capo>"));
+        Assert.DoesNotContain("<capo>0</capo>", xml);
+        string ly = Ly(source);
+        Assert.Contains("\\transpose c bes, \\lead", ly);
+        Assert.DoesNotContain("\\transpose c bes, \\rhy", ly);
+    }
+
+    /// <summary>On a staff item the clause is an error that says a staff reads no capo and
+    /// names the tab's spelling and the file's; a fret past 11 is an error on the fret; and a
+    /// tab whose capo is not the file's under a part that writes shapes is warned.</summary>
+    [Fact]
+    public void ACapoOnAStaffItem_IsAnError_AndATabsApartFromItsShapesAWarning()
+    {
+        const string music = "fis,4 a, d g | b e' fis'2 |";
+        string onStaff = Band(music, "staff lead capo 2  tab lead");
+        var staff = Assert.Single(Said(onStaff));
+        Assert.Equal((DiagnosticCodes.ItemCapo, DiagnosticSeverity.Error), (staff.Code, staff.Severity));
+        Assert.Equal("capo 2", onStaff.Substring(staff.Span.Start, staff.Span.Length));
+        Assert.Contains("'tab lead capo 2'", staff.Message);
+        Assert.Contains("a top-level 'capo 2'", staff.Message);
+        RoundTrips(onStaff);
+        // The staff is drawn as it was, and the tab reads the file's capo (none).
+        Assert.Equal(Frets(Band(music, "staff lead  tab lead")), Frets(onStaff));
+
+        string past = Band(music, "tab lead capo 12");
+        var fret = Assert.Single(Said(past));
+        Assert.Equal((DiagnosticCodes.ItemCapo, DiagnosticSeverity.Error), (fret.Code, fret.Severity));
+        Assert.Equal("12", past.Substring(fret.Span.Start, fret.Span.Length));
+        Assert.Contains("0 (no capo, where the file has one) to 11", fret.Message);
+        Assert.Equal(Frets(Band(music, "tab lead")), Frets(past));
+
+        static string Shapes(string score)
+            => "octave absolute\ntime 4/4\ncapo 2\npart lead { instrument guitar }\n"
+                + "section A { lead { chord(F# 022100)2 e'2 | fis,1 | } }\nform { A }\nscore { " + score + " }\n";
+        var apart = Assert.Single(Said(Shapes("staff lead  tab lead capo 0")));
+        Assert.Equal((DiagnosticCodes.ItemCapo, DiagnosticSeverity.Warning), (apart.Code, apart.Severity));
+        Assert.Contains("its own capo (none)", apart.Message);
+        Assert.Contains("the file's (fret 2)", apart.Message);
+        Clean(Shapes("staff lead  tab lead capo 2"));
+        Clean(Shapes("staff lead  tab lead"));
+
+        // The word alone is still a part's name: `staff lead capo` is lead's staff and the part capo.
+        Assert.Contains(Said(Band(music, "staff lead capo")), d => d.Message.Contains("Undefined part: 'capo'"));
+    }
+
+    /// <summary>After a tab's part the list has the capo, after the style words.</summary>
+    [Fact]
+    public void AfterATabsPart_TheCapoIsOffered()
+    {
+        var rows = Offered(Band("e,1 |", "tab lead ‸"));
+        Assert.Contains("capo", rows);
+        Assert.True(Array.IndexOf(rows, "as numbers") < Array.IndexOf(rows, "capo"));
+        Assert.True(Array.IndexOf(rows, "capo") < Array.IndexOf(rows, "staff"));
+    }
 }

@@ -3680,9 +3680,10 @@ public sealed class MusicXmlExporter
         WriteCrossArpeggio(note, [xmlNote]);
         // A single note's own wavy line, drawn since 2026-11-12 (MeasureCollector.WithCrossArpeggio).
         if (!xmlNote.ExtraNotations.Any(n => n.Name.LocalName is "arpeggiate" or "non-arpeggiate")
-            && note.Articulations.Any(a => a is ArticulationSyntax { Name: "arpeggio" }))
+            && WritesOwnWavyLine(note.Articulations))
             xmlNote.ExtraNotations.Add(new System.Xml.Linq.XElement("arpeggiate",
                 new System.Xml.Linq.XAttribute("number", 1)));
+        StampArpeggioDirection(note, [xmlNote]);
         // …and its own bracket, one head tall on the page and in LilyPond 2.26: until 2026-11-12
         // `c'2@arpeggio(bracket)` wrote nothing, a bracket's two ends wanting two chord members
         // (Lab sessions/p1226/md/eval2/left3).
@@ -3699,7 +3700,7 @@ public sealed class MusicXmlExporter
     /// <summary>The page's connected cross-staff arpeggios by source offset
     /// (<see cref="Svg.Collector.CrossArpeggios.Sources"/>), the page collected only for a
     /// book that writes <c>@arpeggio(cross)</c>; null for every other book.</summary>
-    private (HashSet<int> Uppers, Dictionary<int, Svg.Model.SpanArpeggioPart> Reached)? CrossArpeggioSources()
+    private (HashSet<int> Uppers, Dictionary<int, Svg.Model.SpanArpeggioPart> Reached, Dictionary<int, int> Arrows)? CrossArpeggioSources()
     {
         if (!_crossArpeggiosRead)
         {
@@ -3712,7 +3713,7 @@ public sealed class MusicXmlExporter
         return _crossArpeggios;
     }
 
-    private (HashSet<int> Uppers, Dictionary<int, Svg.Model.SpanArpeggioPart> Reached)? _crossArpeggios;
+    private (HashSet<int> Uppers, Dictionary<int, Svg.Model.SpanArpeggioPart> Reached, Dictionary<int, int> Arrows)? _crossArpeggios;
     private bool _crossArpeggiosRead;
 
     /// <summary>
@@ -3755,6 +3756,38 @@ public sealed class MusicXmlExporter
         // drawn on its own single note has both ends on it — AddBracketEnds; until 2026-11-12
         // it was not written.)
         AddBracketEnds(!connected || !isUpper ? members[0] : null, !connected || isUpper ? members[^1] : null, number);
+    }
+
+    /// <summary>Whether the note or chord writes a wavy line of its own: <c>@arpeggio</c>, or
+    /// the arrowed <c>@arpeggio(up)</c> / <c>@arpeggio(down)</c> (owner-approved 2026-11-13).
+    /// The cross-staff spellings are <see cref="WriteCrossArpeggio"/>'s.</summary>
+    private static bool WritesOwnWavyLine(IEnumerable<SyntaxNode> articulations)
+        => articulations.Any(a => a is ArticulationSyntax { Type: ArticulationType.None } na
+                                  && na.NameToken.Text.Equals("arpeggio", StringComparison.Ordinal)
+                              || a is MusicMarkSyntax mm
+                                  && Semantics.AnnotationValues.ArpeggioWords(mm) is { Cross: false, Bracket: false });
+
+    /// <summary>
+    /// Says the arrow of an arrowed arpeggio — <c>@arpeggio(up)</c>, <c>(down)</c>,
+    /// <c>(cross up)</c>, <c>(cross down)</c> — on every <c>&lt;arpeggiate&gt;</c> already
+    /// written for <paramref name="host"/>: <c>direction="up"</c> or <c>"down"</c>
+    /// (owner-approved 2026-11-13, grammar evaluation 3). The notes a cross-staff line runs
+    /// down to wrote nothing; they take the line's arrow off the page
+    /// (<c>CrossArpeggios.Sources</c>).
+    /// </summary>
+    /// <remarks>MusicXML 4.0, <c>arpeggiate</c>: "The optional direction attribute is used
+    /// if there is an arrow on the arpeggio sign."</remarks>
+    private void StampArpeggioDirection(SyntaxNode host, IReadOnlyList<MusicXmlNote> members)
+    {
+        int arrow = 0;
+        foreach (var mark in host.ChildNodes().OfType<MusicMarkSyntax>())
+            if (Semantics.AnnotationValues.ArpeggioArrow(mark) is not 0 and var written)
+                arrow = written;
+        if (arrow == 0 && (CrossArpeggioSources() is not { } sources || !sources.Arrows.TryGetValue(host.SourceStart, out arrow)))
+            return;
+        foreach (var member in members)
+            foreach (var arpeggiate in member.ExtraNotations.Where(n => n.Name.LocalName == "arpeggiate"))
+                arpeggiate.SetAttributeValue("direction", arrow > 0 ? "up" : "down");
     }
 
     /// <summary>
@@ -4591,9 +4624,7 @@ public sealed class MusicXmlExporter
             if (isFirst)
             {
                 WriteStemTremolo(chord.Tremolo, xmlNote);
-                bool hasArp = chord.Articulations.Any(a2 =>
-                    a2 is ArticulationSyntax { Type: ArticulationType.None } na
-                    && na.NameToken.Text.Equals("arpeggio", StringComparison.Ordinal));
+                bool hasArp = WritesOwnWavyLine(chord.Articulations);
                 // (A cross-staff spelling is WriteCrossArpeggio's, once the members stand.)
                 bool hasBracket = chord.Articulations.Any(a2 =>
                     a2 is MusicMarkSyntax mm
@@ -4643,8 +4674,7 @@ public sealed class MusicXmlExporter
                 xmlNote.Technicals.Add(new System.Xml.Linq.XElement("string", sn.StringNumber));
             if (isFirst)
             {
-                if (chord.Articulations.Any(a2 => a2 is ArticulationSyntax { Type: ArticulationType.None } na
-                        && na.NameToken.Text.Equals("arpeggio", StringComparison.Ordinal)))
+                if (WritesOwnWavyLine(chord.Articulations))
                     _chordArpeggio = "arpeggiate";
                 else if (chord.Articulations.Any(a2 => a2 is MusicMarkSyntax mm
                              && Semantics.AnnotationValues.ArpeggioWords(mm) is { Bracket: true, Cross: false }))
@@ -4726,6 +4756,7 @@ public sealed class MusicXmlExporter
         }
 
         WriteCrossArpeggio(chord, _chordMembers);
+        StampArpeggioDirection(chord, _chordMembers);
         // (A chord of one member has both ends on it, as a single note has — AddBracketEnds.)
         if (_chordArpeggio == "non-arpeggiate" && _chordMembers.Count >= 1)
             AddBracketEnds(_chordMembers[0], _chordMembers[^1], 1);
@@ -4835,6 +4866,7 @@ public sealed class MusicXmlExporter
         }
 
         WriteCrossArpeggio(rep, _chordMembers);
+        StampArpeggioDirection(rep, _chordMembers);
         CloseTies(_chordMembers);
         if (rep.Articulations.OfType<TieSyntax>().Any()) OpenTies(_chordMembers);
 

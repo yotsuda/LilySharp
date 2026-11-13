@@ -1860,10 +1860,12 @@ score { staff gtr  tab gtr }
 | Style | Beside a notation staff of the same part: fret numbers only. Alone: stems, flags, rests and the meter. `as numbers` / `as full` decides by hand. |
 | Tuning | The part's `instrument` (`guitar` `bass` `bass5` `bass6` `ukulele` `mandolin` `banjo`, and the bowed strings), else the part's `tuning WORD`, else — for one score — the word before the part: `tab guitarDropD gtr`. No instrument: a guitar. `tab gtr tuning guitarDropD` is an error naming the two right spellings. |
 | Dropped tunings | `part gtr { instrument guitar  tuning guitarDropD }` also moves the part's range (LYS1052) to the tuning's strings: its low D is in range. |
+| A tuning of your own | The strings written out, quoted, where the tuning word stands: `part gtr { instrument guitar  tuning "d, a, d g a d'" }`, or for one tab `tab "d, a, d g a d'" gtr`. From the highest string number (normally the lowest string) to string 1, spaced; each an absolute pitch name as a note is written under `octave absolute`, at the pitch the string **sounds**; 4 to 8 strings; a re-entrant tuning as it is strung (`"g' c' e' a'"`). A bass part's strings are an octave below its written notes (`instrument bass  tuning "d,, a,, d, g,"`); a list with no string above `c` is fingered as a bass and wears no capo. The frets, `\N`, the range, the chord shapes and the diagrams follow the list. A list that spells no tuning is an error (**LYS4068**); a bass part's list written at its notes' pitch is warned with the list an octave down. LilyPond gets `stringTunings = \stringTuning <d, a, d g a d'>`. `layout { chordTuning … }` takes the words only. |
 | Strings and frets | Chosen by the tab: low positions, the hand kept where it is, one string a chord note, frets 0–24. A tie keeps its string (and the held note's number is dropped); a `@glissando` / `@slide` keeps both notes on one string where one can play both; a slur does not. |
 | `\N` | Asks for string N (1 = the highest): `c'4\3`; on chord members, `<e'\1 b\2>`. Two members on one string are LYS1063, one pitch twice without two strings LYS1064. A string the tuning lacks (`\7`), or one that cannot play the note, warns and is chosen again (**LYS5003**). |
 | Out of the strings | A note below the lowest string or above fret 24 warns (**LYS5002**) and is left off the tab, in a chord too. A tab in another instrument's tuning names its octave: `tab bass5 melody as 8vb` (LYS5004 proposes it). |
 | Capo | Under the file's `capo N` the frets count from the capo; a note below the capo on every string is LYS5002 and left off. A bass's tab ignores the capo. See *Chord Diagrams*. |
+| One tab's capo | `tab gtr capo 2` (after the part and any `as …`; before `hidden` / `sounds`): that tab counts its frets from fret 2 instead of from the file's capo — `capo 0` is no capo on a tab of a capoed file; 0 to 11; a bass's tab too when it says so. Two guitars, one capoed, are `tab g1 capo 2` and `tab g2`. Only the tab's numbers change: the notes are written as they sound, the MIDI is the same, and the chord diagrams, the pressed chord names and "Capo N" at the head read the **file's** `capo N` — a tab whose own capo is not the file's, under a part that writes chord shapes, warns (**LYS4069**), since diagram and tab then show different frets. The item's capo is not printed; say it in the part's name (`instrument guitar "Guitar 1 (capo 2)"`). MusicXML writes it as the tab staff's `<capo>`, the LilyPond twin frets the tab from it. `staff gtr capo 2` is an error (**LYS4069**): a staff shows its notes as they sound and reads no capo. |
 | Marks | Drawn on the tab: slurs, `@hammerOn` `@pullOff` `@tap`, `@bend(…)`, the `@glissando` / `@slide` line, `@arpeggio`, and `@dead` (a × for the number: a note's, one chord member's — `<c e@dead>4` — or every member's, `<c e>4@dead`). `@notehead(…)` changes the staff's head only. |
 
 The tuning words are listed under `TuningName` in `GRAMMAR.md`.
@@ -2538,7 +2540,17 @@ c4@glissando d |      // Glissando from C to D
 ```
 <c e g>4@arpeggio              // Arpeggiate chord: a wavy line left of it
 <c e g>4@arpeggio(bracket)     // A bracket instead: the notes together, not rolled
+<c e g>4@arpeggio(up)          // The wavy line with an arrow head at its top: roll upward
+<c e g>4@arpeggio(down)        // ...with the arrow head at its bottom: roll downward
 ```
+
+The arrowed arpeggio is the plain one with its top (or bottom) end an arrow head: the same
+length, the same place, the same room in the bar — on a staff, on a tab, and on a single note.
+A bracket is not rolled, so it takes no direction: `@arpeggio(bracket up)`, both directions, or
+one written twice is reported (LYS1008) and the mark is ignored. LilyPond gets
+`\once \override Arpeggio.arpeggio-direction = #UP` (what `\arpeggioArrowUp` sets, for that
+chord alone); MusicXML gets `<arpeggiate direction="up"/>` on every note of the chord, and the
+import reads it back.
 
 ### Across both staves of a grand staff
 
@@ -2557,13 +2569,14 @@ left of whichever of the two chords, with its accidentals, reaches further left,
 columns keep the room for it.
 
 `@arpeggio(cross bracket)` (the two words spaced, in either order) is one bracket across both
-staves.
+staves. `@arpeggio(cross up)` / `@arpeggio(cross down)` is the one wavy line with an arrow head
+at its top, on the upper staff, or at its bottom, on the lower.
 
 With nothing to run down to, the arpeggio is drawn on its own chord and a warning (LYS4064)
 says why: the part is not in a `grandStaff`, it is the grand staff's lowest staff, or the
 staff below begins nothing at that moment (a rest, a held note, another rhythm). A word other
-than `cross` and `bracket`, or one of them twice, is reported (LYS1008) and the mark is
-ignored.
+than `up`, `down`, `bracket` and `cross`, or one of them twice, is reported (LYS1008) and the
+mark is ignored.
 
 Arpeggios are not played as a roll. LilyPond gets `connectArpeggios` (or
 `connectChordBrackets`) set once at the chord with `\arpeggio` on both staves; MusicXML gets

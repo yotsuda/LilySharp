@@ -662,10 +662,14 @@ internal sealed partial class Parser
     /// ⚠️ The selector word <c>as</c> is excluded by TEXT: it lexes as the Dutch A-flat, which
     /// is a bare word and so a legal part name since 2026-10-03, and without the exclusion
     /// <c>staff bass as lines 1</c> would read <c>bass</c> as a clef and <c>as</c> as the part.
+    /// ⚠️ And <c>capo</c> with a number after it is the item's capo clause
+    /// (<see cref="ConsumeStaffSound"/>, 2026-11-13), not a part: without the exclusion
+    /// <c>tab gtr capo 2</c> would read <c>gtr</c> as a tuning and <c>capo</c> as the part.
     /// </remarks>
     private bool IsPartNameAhead() =>
         Peek(1) is { } next && IsPartNameToken(next)
-        && !string.Equals(next.Text, "as", System.StringComparison.Ordinal);
+        && !string.Equals(next.Text, "as", System.StringComparison.Ordinal)
+        && !(next.Text == Semantics.CapoDirective.Keyword && Peek(2) is { Kind: SyntaxKind.IntegerLiteral });
 
     /// <summary>
     /// The token after the <c>-</c> in a hyphenated part-header value (<c>instrument
@@ -1279,7 +1283,8 @@ internal sealed partial class Parser
     }
 
     /// <summary>
-    /// Parse tab render: <c>tab [tuning] part [as numbers|full]</c>.
+    /// Parse tab render: <c>tab [tuning] part [as numbers|full]</c>. The tuning is a word, or
+    /// a quoted list of open strings (<c>tab "d, a, d g a d'" gtr</c>, owner-approved 2026-11-13).
     /// </summary>
     /// <remarks>
     /// ⚠️ TWO WORDS BEFORE THE SELECTOR ARE KEPT AS WRITTEN AND NOT NAMED HERE. Which of
@@ -1300,6 +1305,12 @@ internal sealed partial class Parser
         // part (the node decides), the second the part or a MIDI-only part. A lone word is
         // the part and the tuning comes from the part definition.
         if (IsPartNameStart() && IsPartNameAhead())
+            tokens.Add(Advance());
+        // …or a CUSTOM tuning, in the tuning's place: a quoted list of the open strings
+        // (`tab "d, a, d g a d'" gtr`, owner-approved 2026-11-13, grammar evaluation 3). A
+        // quoted thing cannot be a part, so the node reads it as the tuning whatever the file
+        // declares (TabRenderSyntax.TuningToken); what it spells is CustomTuningValidator's.
+        else if (Current.Kind == SyntaxKind.StringLiteral)
             tokens.Add(Advance());
 
         // A bare `tab` renders the file's unnamed part (2026-10-09).

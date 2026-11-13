@@ -852,6 +852,8 @@ internal sealed class EmmentalerMusicFont : MusicFont
         MusicGlyph.OrnamentMordent => new(d.OrnMordentGlyph, d.OrnMordentGlyphOutline, d.OrnMordentGlyphAdvance),
         MusicGlyph.OrnamentTremblement => new(d.OrnPrallPrallGlyph, d.OrnPrallPrallGlyphOutline, d.OrnPrallPrallGlyphAdvance),
         MusicGlyph.WiggleArpeggiatoUp => new(d.Arpeggio, d.ArpeggioOutline, d.ArpeggioAdvance),
+        MusicGlyph.WiggleArpeggiatoUpArrow => new(d.ArpeggioArrowUp, d.ArpeggioArrowUpOutline, d.ArpeggioArrowUpAdvance),
+        MusicGlyph.WiggleArpeggiatoDownArrow => new(d.ArpeggioArrowDown, d.ArpeggioArrowDownOutline, d.ArpeggioArrowDownAdvance),
         MusicGlyph.Segno => new(d.MarkSegno, d.MarkSegnoOutline, d.MarkSegnoAdvance),
         MusicGlyph.Coda => new(d.MarkCoda, d.MarkCodaOutline, d.MarkCodaAdvance),
         MusicGlyph.BreathMarkComma => new(d.BreathComma, d.BreathCommaOutline, d.BreathCommaAdvance),

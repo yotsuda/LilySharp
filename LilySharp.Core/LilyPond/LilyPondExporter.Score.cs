@@ -624,10 +624,10 @@ public sealed partial class LilyPondExporter
         if (tab)
         {
             // The page's tuning: the item's own word (`tab bass5 melody`) over the part's.
-            string tuning = tabSpec != null ? Tablature.Tunings.LilyPondName(tabSpec.Tuning) : TabTuning(part);
+            string tuning = tabSpec != null ? Tablature.Tunings.LilyPondValue(tabSpec.Tuning) : TabTuning(part);
             sb.Append(indent).Append("\\new TabStaff");
             var tabWith = new List<string>(3);
-            if (tuning.Length > 0) tabWith.Add("stringTunings = #" + tuning);
+            if (tuning.Length > 0) tabWith.Add("stringTunings = " + tuning);
             if (InstrumentNameClause(partName) is { } tabName) tabWith.Add(tabName);
             if (MidiInstrumentClause(part) is { } tabMidi) tabWith.Add(tabMidi);
             if (tabWith.Count > 0)

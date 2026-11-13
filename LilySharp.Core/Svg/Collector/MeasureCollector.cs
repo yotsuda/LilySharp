@@ -6476,13 +6476,27 @@ public sealed partial class MeasureCollector
             if (art is ArticulationSyntax artSyntax &&
                 artSyntax.Name == "arpeggio")
                 return true;
-            // @arpeggio(cross) is the wavy line too — its own chord's part of it; the
-            // bracket spellings are the callers' arpBracket (IsArpeggioBracket).
+            // @arpeggio(cross) is the wavy line too — its own chord's part of it — and so are
+            // the arrowed @arpeggio(up) / (down) (owner-approved 2026-11-13); the bracket
+            // spellings are the callers' arpBracket (IsArpeggioBracket).
             if (art is MusicMarkSyntax mark
-                && Semantics.AnnotationValues.ArpeggioWords(mark) is { Cross: true, Bracket: false })
+                && Semantics.AnnotationValues.ArpeggioWords(mark) is { Bracket: false })
                 return true;
         }
         return false;
+    }
+
+    /// <summary>
+    /// The arrow head the note's or chord's arpeggio is written with — <c>@arpeggio(up)</c> +1,
+    /// <c>@arpeggio(down)</c> −1, also beside <c>cross</c> — or 0 (owner-approved 2026-11-13,
+    /// grammar evaluation 3; <see cref="Semantics.AnnotationValues.ArpeggioArrow"/>).
+    /// </summary>
+    private static int ArpeggioArrowOf(SyntaxNode node)
+    {
+        foreach (var art in ArticulationsOf(node))
+            if (art is MusicMarkSyntax mark && Semantics.AnnotationValues.ArpeggioArrow(mark) is not 0 and var arrow)
+                return arrow;
+        return 0;
     }
 
     /// <summary>

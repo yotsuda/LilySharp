@@ -305,6 +305,12 @@ GLYPHS: list[tuple[str, str, str]] = [
     # arpeggio's drawn length always comes out a whole number of spaces.
     ("#", "Arpeggio", ""),
     ("Arpeggio", "scripts.arpeggio", "one staff space tall; the stencil stacks whole copies"),
+    # The arrow heads of \arpeggioArrowUp / \arpeggioArrowDown (@arpeggio(up) / (down),
+    # owner-approved 2026-11-13): ONE of them is laid at the pile's upper or lower edge
+    # (lily/arpeggio.cc:171-185 — find_by_name ("scripts.arpeggio.arrow." + dir), then
+    # add_at_edge (Y_AXIS, dir, arrow, 0)), after the head interval gave up the arrow's height.
+    ("ArpeggioArrowUp", "scripts.arpeggio.arrow.1", "the head \\arpeggioArrowUp ends the pile with"),
+    ("ArpeggioArrowDown", "scripts.arpeggio.arrow.M1", "the head \\arpeggioArrowDown ends the pile with"),
 
     ("#", "Breathing signs", ""),
     ("BreathComma", "scripts.rcomma", "\\breathe"),

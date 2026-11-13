@@ -93,7 +93,7 @@ internal enum MusicGlyph : ushort
     // ---- ornaments, repeats, breaths ----
     OrnamentTrill, WiggleTrill, OrnamentTurn, OrnamentTurnInverted,
     OrnamentShortTrill, OrnamentMordent, OrnamentTremblement,
-    WiggleArpeggiatoUp, Segno, Coda, BreathMarkComma, Caesura,
+    WiggleArpeggiatoUp, WiggleArpeggiatoUpArrow, WiggleArpeggiatoDownArrow, Segno, Coda, BreathMarkComma, Caesura,
 
     // ---- system-start bracket ----
     BracketTop, BracketBottom,
@@ -305,6 +305,8 @@ internal static class MusicGlyphs
         new(MusicGlyph.OrnamentMordent, "ornamentMordent", 0xE56D, "scripts.mordent", EmmentalerGlyphs.OrnMordent),
         new(MusicGlyph.OrnamentTremblement, "ornamentTremblement", 0xE56E, "scripts.prallprall", EmmentalerGlyphs.OrnPrallPrall),
         new(MusicGlyph.WiggleArpeggiatoUp, "wiggleArpeggiatoUp", 0xEAA9, "scripts.arpeggio", EmmentalerGlyphs.Arpeggio),
+        new(MusicGlyph.WiggleArpeggiatoUpArrow, "wiggleArpeggiatoUpArrow", 0xEAAD, "scripts.arpeggio.arrow.1", EmmentalerGlyphs.ArpeggioArrowUp),
+        new(MusicGlyph.WiggleArpeggiatoDownArrow, "wiggleArpeggiatoDownArrow", 0xEAAE, "scripts.arpeggio.arrow.M1", EmmentalerGlyphs.ArpeggioArrowDown),
         new(MusicGlyph.Segno, "segno", 0xE047, "scripts.segno", EmmentalerGlyphs.MarkSegno),
         new(MusicGlyph.Coda, "coda", 0xE048, "scripts.coda", EmmentalerGlyphs.MarkCoda),
         new(MusicGlyph.BreathMarkComma, "breathMarkComma", 0xE4CE, "scripts.rcomma", EmmentalerGlyphs.BreathComma),

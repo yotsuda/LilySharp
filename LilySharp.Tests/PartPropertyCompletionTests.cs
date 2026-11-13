@@ -119,7 +119,13 @@ public class PartPropertyCompletionTests
     [Fact]
     public void TheTuningWords_AreTheCompilers_FamiliesTogether_WithTheirOpenStrings()
     {
-        var items = LilySharpLanguageServer.GetTuningCompletions().Items;
+        var all = LilySharpLanguageServer.GetTuningCompletions().Items;
+        // The last row writes a tuning out (2026-11-13): the open strings, quoted — not a word.
+        var custom = all.OrderBy(i => i.SortText, System.StringComparer.Ordinal).Last();
+        Assert.Equal(LilySharpLanguageServer.CustomTuningLabel, custom.Label);
+        Assert.Equal("\"${1:e, a, d g b e'}\"", custom.InsertText);
+        Assert.True(LilySharp.Core.Tablature.Tunings.IsTuning(custom.Label));
+        var items = all.Where(i => i != custom).ToArray();
         var labels = items.OrderBy(i => i.SortText, System.StringComparer.Ordinal).Select(i => i.Label).ToList();
         Assert.Equal(LilySharp.Core.Tablature.Tunings.Names.OrderBy(n => n), labels.OrderBy(n => n));
         Assert.Equal("guitar", labels[0]);

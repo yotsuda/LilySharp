@@ -844,16 +844,23 @@ public sealed partial class StaffRenderSyntax : SyntaxNode
 
     /// <summary>The word after <c>sounds</c> (<c>voice</c>, <c>instrument</c>, <c>both</c>), or null.</summary>
     public SyntaxTokenNode? SoundsToken => StaffSoundClause.Of(this).Sounds;
+
+    /// <summary>The fret of a <c>capo N</c> written on the item (<c>staff gtr capo 2</c>), or
+    /// null. A staff shows its notes as they sound and reads no capo: the clause is taken so
+    /// that it can be refused in its own words (LYS4069, Semantics.ItemCapoValidator) — the
+    /// capo of an item is a TAB's (<see cref="TabRenderSyntax.CapoToken"/>).</summary>
+    public SyntaxTokenNode? CapoToken => StaffSoundClause.Of(this).Capo;
 }
 
 /// <summary>
-/// The tail of a <c>staff</c> or <c>tab</c> item: <c>[hidden] [sounds WORD]</c>, the last tokens of
-/// the item (Parser.ConsumeStaffSound).
+/// The tail of a <c>staff</c> or <c>tab</c> item: <c>[capo N] [hidden] [sounds WORD]</c>, the last
+/// tokens of the item (Parser.ConsumeStaffSound).
 /// </summary>
 internal static class StaffSoundClause
 {
-    /// <summary>Whether it hides, the value token, and the first slot of the tail.</summary>
-    internal readonly record struct Reading(bool Hidden, SyntaxTokenNode? Sounds, int End);
+    /// <summary>Whether it hides, the value token, the first slot of the tail, and the fret
+    /// token of the item's own <c>capo N</c> (owner-approved 2026-11-13) or null.</summary>
+    internal readonly record struct Reading(bool Hidden, SyntaxTokenNode? Sounds, int End, SyntaxTokenNode? Capo = null);
 
     internal static Reading Of(SyntaxNode item)
     {
@@ -866,7 +873,17 @@ internal static class StaffSoundClause
         }
         // At slot 1 the word is the part: `staff hidden` is a part called hidden.
         bool hidden = end >= 3 && item.GetChild(end - 1) is SyntaxTokenNode { Text: "hidden" };
-        return new Reading(hidden, sounds, hidden ? end - 1 : end);
+        if (hidden)
+            end--;
+        // `capo N` stands before them, a word and a number (the parser takes no other shape).
+        SyntaxTokenNode? capo = null;
+        if (end >= 3 && item.GetChild(end - 2) is SyntaxTokenNode { Text: Semantics.CapoDirective.Keyword }
+            && item.GetChild(end - 1) is SyntaxTokenNode { Kind: SyntaxKind.IntegerLiteral } fret)
+        {
+            capo = fret;
+            end -= 2;
+        }
+        return new Reading(hidden, sounds, end, capo);
     }
 }
 
@@ -1329,6 +1346,11 @@ public sealed partial class TabRenderSyntax : SyntaxNode
     /// <summary>The <c>tab</c> keyword token.</summary>
     public SyntaxTokenNode TabKeyword => (SyntaxTokenNode)GetChild(0)!;
 
+    /// <summary>The fret of the item's own capo — <c>tab gtr capo 2</c> (owner-approved
+    /// 2026-11-13, grammar evaluation 3): this tab counts its frets from it instead of from the
+    /// file's <c>capo N</c> — or null when the item writes none.</summary>
+    public SyntaxTokenNode? CapoToken => StaffSoundClause.Of(this).Capo;
+
     /// <summary>The token carrying the tab STYLE selector (<c>as numbers|full</c>), or null
     /// when the item writes none — what a diagnostic about the selector underlines (the
     /// WORD, not the whole item).</summary>
@@ -1389,6 +1411,8 @@ public sealed partial class TabRenderSyntax : SyntaxNode
             {
                 if (GetChild(i) is not SyntaxTokenNode t) continue;
                 if (t.Kind is SyntaxKind.OpenBrace or SyntaxKind.CloseBrace) continue;
+                // A quoted list is the item's custom tuning (CustomTuningToken), never a name.
+                if (t.Kind is SyntaxKind.StringLiteral) continue;
                 if (string.Equals(t.Text, "as", System.StringComparison.Ordinal)) break;
                 targets.Add(t);
             }
@@ -1454,14 +1478,27 @@ public sealed partial class TabRenderSyntax : SyntaxNode
     /// <summary>The token naming an explicit TUNING override (<c>tab bass5 m</c>), or null
     /// when the tuning comes from the part definition — or when the first word is a declared
     /// part and so the part itself (<see cref="FirstTargetIsThePart"/>).</summary>
+    /// <remarks>A CUSTOM tuning — the quoted list in the tuning's place,
+    /// <c>tab "d, a, d g a d'" gtr</c> — is this token too, quotes and all
+    /// (<see cref="CustomTuningToken"/>; <c>Tablature.Tunings.Parse</c> reads both kinds).</remarks>
     public SyntaxTokenNode? TuningToken
     {
         get
         {
+            if (CustomTuningToken is { } custom)
+                return custom;
             var targets = TargetTokens;
             return targets.Count >= 2 && !FirstTargetIsThePart(targets) ? targets[0] : null;
         }
     }
+
+    /// <summary>
+    /// The quoted list of open strings written in the tuning's place
+    /// (<c>tab "d, a, d g a d'" gtr</c>, owner-approved 2026-11-13, grammar evaluation 3), or
+    /// null: the item's tuning is a word, or the part's.
+    /// </summary>
+    public SyntaxTokenNode? CustomTuningToken
+        => GetChild(1) is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral } list ? list : null;
 
     /// <summary>The token naming a part played to MIDI only — the bare word after the part
     /// (<c>tab bass click</c> with a part named bass; GRAMMAR §7's bare PartRef, which stands

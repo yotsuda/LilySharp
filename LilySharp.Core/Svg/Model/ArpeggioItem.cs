@@ -53,7 +53,15 @@ public readonly record struct ArpeggioItem(
     // its middle line) — the bottom of the head interval the span covers.
     // LILYPOND-REF: lily/arpeggio.cc:83-115 calc_positions — the stems' head positions of
     //   every staff, each about its own staff symbol, united in the common frame.
-    int PartnerLowestHead = 0);
+    int PartnerLowestHead = 0,
+    // Written @arpeggio(up) / @arpeggio(down) (owner-approved 2026-11-13, grammar evaluation
+    // 3): the wavy line ends in an ARROW HEAD at its top (+1) or its bottom (−1); 0 = none.
+    // Never on a bracket. The line's length and place do not change with it — the arrow
+    // glyph's box is the wiggle's, and it takes the place of the pile's end copy.
+    // LILYPOND-REF: lily/arpeggio.cc:153-185 get_property, add_at_edge (Arpeggio::print) — `arpeggio-direction`:
+    //   scripts.arpeggio.arrow.1 / .M1, its height taken off the head interval at that end
+    //   before the wiggles are counted, then laid at that edge of the pile.
+    int Arrow = 0);
 
 /// <summary>
 /// The part of an arpeggio a column holds without drawing it: the invisible Arpeggio (or

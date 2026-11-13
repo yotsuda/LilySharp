@@ -494,10 +494,11 @@ public sealed partial class LilyPondExporter
             (part != null ? PartProperty(part, "tuning") : null)
             ?? InstrumentDefaults.GetTuning(InstrumentPresetOf(part)));
 
-    // The LilyPond predefined tuning name for that tuning — read from the same table that
-    // holds the strings, so the twin cannot name one tuning and fret another.
+    // The LilyPond value of that tuning — a predefined tuning's `#name`, a custom one's
+    // `\stringTuning <…>` — read from the same table that holds the strings, so the twin
+    // cannot name one tuning and fret another.
     private static string TabTuning(PartDeclarationSyntax? part)
-        => Tablature.Tunings.LilyPondName(TabTuningType(part));
+        => Tablature.Tunings.LilyPondValue(TabTuningType(part));
 
     /// <summary>
     /// Writes the written→sounding transposition the tab frets against, so the twin's fret

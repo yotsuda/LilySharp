@@ -180,6 +180,12 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     # audit/lp-geometry/probes/arpeggio.ly: width 0.800000, and a chord spanning two spaces
     # draws 3.000000, i.e. three whole copies.
     GlyphSpec("Arpeggio", "scripts.arpeggio", "Arpeggio wiggle (the stencil's repeating unit)", "mf/feta-scripts.mf — scripts.arpeggio"),
+    # The arrow heads an arrowed arpeggio ends with (@arpeggio(up) / (down), owner-approved
+    # 2026-11-13). Their LILC HEIGHT is what the stencil is built from: lily/arpeggio.cc:171-185
+    # takes `arrow.extent (Y_AXIS).length ()` off the head interval before the wiggles are
+    # counted, then lays the arrow at that edge of the pile with add_at_edge (box to box).
+    GlyphSpec("ArpeggioArrowUp", "scripts.arpeggio.arrow.1", "Arpeggio arrow head, pointing up", "mf/feta-scripts.mf — scripts.arpeggio.arrow.1"),
+    GlyphSpec("ArpeggioArrowDown", "scripts.arpeggio.arrow.M1", "Arpeggio arrow head, pointing down", "mf/feta-scripts.mf — scripts.arpeggio.arrow.M1"),
     GlyphSpec("OrnTurnGlyph", "scripts.turn", "Turn ornament", "mf/feta-scripts.mf — scripts.turn"),
     GlyphSpec("OrnReverseTurnGlyph", "scripts.reverseturn", "Inverted (reverse) turn ornament", "mf/feta-scripts.mf — scripts.reverseturn"),
     GlyphSpec("OrnPrallGlyph", "scripts.prall", "Prall (upper mordent) ornament", "mf/feta-scripts.mf — scripts.prall"),

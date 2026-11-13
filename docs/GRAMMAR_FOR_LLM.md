@@ -572,6 +572,10 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   from nothing; never at a hairpin's loud end (LYS4029)
 - Accidental style: `@courtesy` (cautionary, parenthesized), `@editorial` (musica ficta)
 - Arpeggio: `<c e g>4@arpeggio` (wavy line), `<c e g>4@arpeggio(bracket)` (a bracket: not rolled)
+- **Arrowed arpeggio**: `<c e g>4@arpeggio(up)` — the wavy line with an arrow head at its TOP (roll
+  upward); `<c e g>4@arpeggio(down)` — the arrow head at its BOTTOM (roll downward). On a staff
+  and on a tab. Also across a grand staff: `@arpeggio(cross up)`, `@arpeggio(cross down)`. A
+  bracket takes no direction (`@arpeggio(bracket up)` is reported and ignored, LYS1008)
 - **Arpeggio across both staves** of a `grandStaff`: `<c' e' g'>2@arpeggio(cross)` on the UPPER
   staff's chord (or single note) — one line runs down through the chord or note that begins at
   the same moment on the staff directly below. The lower staff writes NOTHING (no `@arpeggio`
@@ -995,7 +999,19 @@ score { staff gtr  tab gtr }
   bass5 bass6 violin viola cello doubleBass mandolin banjoOpenG banjoC banjoModal banjoOpenD
   banjoOpenDm banjoDoubleC banjoDoubleD ukulele ukuleleD tenorUkulele baritoneUkulele` — exactly
   these (`dropD` is an unknown tuning; the error lists them).
-- **A dropped tuning is the part's**: `part gtr { instrument guitar  tuning guitarDropD }` frets
+- **A tuning of your own — write the strings out**, quoted, where the word stands:
+  `part gtr { instrument guitar  tuning "d, a, d g a d'" }` (DADGAD), or for one tab
+  `tab "d, a, d g a d'" gtr`. The list is the open strings from the HIGHEST STRING NUMBER
+  (normally the lowest string) to string 1, spaced, each an absolute pitch name exactly as a
+  note is written under `octave absolute` (`c` = the C below middle C; `'` up an octave, `,`
+  down; `fis`, `bes`), at the pitch the string SOUNDS. 4 to 8 strings. Re-entrant tunings are
+  written as strung: `tuning "g' c' e' a'"` is a ukulele. A BASS part writes its notes an
+  octave above their sound, so its strings are an octave below its notes:
+  `part b { instrument bass  tuning "d,, a,, d, g," }` (drop D by hand). A list that is not 4–8
+  pitch names is an error (LYS4068). Everything follows the list: the frets, `\N`, LYS5002 /
+  LYS5003, the part's range, its chord shapes and diagrams (one character per string of the
+  list). Not for `layout { chordTuning … }`, which takes the words only.
+- **A dropped tuning is the part's** (a word or a list): `part gtr { instrument guitar  tuning guitarDropD }` frets
   on D A D G B E and moves the part's RANGE with it — the low `d,` is in range (LYS1052 measures
   from the tuning's lowest string to its highest string's top).
 - **Strings and frets are chosen for you**: low positions first, the hand kept where it is, a
@@ -1017,6 +1033,16 @@ score { staff gtr  tab gtr }
   open low `e,` under `capo 2` — cannot be played: LYS5002 names it and it is left off the tab.
   One capo for every fretted part (`part g { capo 2 }` is refused); a BASS's tab ignores it and
   counts from the nut.
+- **One tab's own capo**: `tab gtr capo 2` in the score (after the part and any `as …`, before
+  `hidden` / `sounds`) — THAT tab counts its frets from fret 2, whatever the file's `capo` is;
+  `capo 0` = no capo on this tab of a capoed file; 0–11. Two guitars, one capoed:
+  `score { staff g1  tab g1 capo 2   staff g2  tab g2 }`. It changes the tab's numbers ONLY:
+  the notes are written as they sound, the sound is the same, and the chord diagrams, the
+  pressed chord names and "Capo N" at the head stay the FILE's `capo N` (so do not give a tab
+  another capo than the file's under a part that writes `chord(…)` shapes or diagrams — it
+  warns, LYS4069). It is not printed: say it in the part's name
+  (`instrument guitar "Guitar 1 (capo 2)"`). `staff gtr capo 2` is an ERROR (LYS4069): a
+  staff shows notes as they sound and reads no capo.
 - **What a tab shows of the marks**: slurs, ties (the held note's number is dropped),
   `@hammerOn` / `@pullOff` / `@tap` (the letters H P T — a slur is still written for the curve:
   `a'8@hammerOn( b')`), `@bend(half|full|N)` (the arrow) and its `@release`, `@vibrato` (the wavy

@@ -389,6 +389,24 @@ internal static partial class GlyphMetrics
     /// <summary>Arpeggio wiggle (the stencil's repeating unit) — advance width (next-glyph horizontal feed).</summary>
     public const double ArpeggioAdvance = 0.800000;
 
+    /// <summary>Arpeggio arrow head, pointing up — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.arpeggio.arrow.1 (scripts.arpeggio.arrow.1 = U+E072 in this build)</remarks>
+    public static readonly BBox ArpeggioArrowUp = new(0.000000, 0.000000, 0.800000, 1.000000);
+    /// <summary>Arpeggio arrow head, pointing up — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox ArpeggioArrowUpOutline = new(-0.244000, -0.224000, 1.040000, 1.224000);
+    /// <summary>Arpeggio arrow head, pointing up — advance width (next-glyph horizontal feed).</summary>
+    public const double ArpeggioArrowUpAdvance = 0.800000;
+
+    /// <summary>Arpeggio arrow head, pointing down — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.arpeggio.arrow.M1 (scripts.arpeggio.arrow.M1 = U+E071 in this build)</remarks>
+    public static readonly BBox ArpeggioArrowDown = new(0.000000, 0.000000, 0.800000, 1.000000);
+    /// <summary>Arpeggio arrow head, pointing down — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox ArpeggioArrowDownOutline = new(-0.240000, -0.224000, 1.044000, 1.224000);
+    /// <summary>Arpeggio arrow head, pointing down — advance width (next-glyph horizontal feed).</summary>
+    public const double ArpeggioArrowDownAdvance = 0.800000;
+
     /// <summary>Turn ornament — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.turn (scripts.turn = U+E05B in this build)</remarks>
     public static readonly BBox OrnTurnGlyph = new(-1.093800, -0.529400, 1.093800, 0.529400);
@@ -1585,6 +1603,18 @@ internal static partial class GlyphMetrics
         public BBox ArpeggioOutline { get; init; }
         /// <summary>Arpeggio wiggle (the stencil's repeating unit) — advance width (next-glyph horizontal feed).</summary>
         public double ArpeggioAdvance { get; init; }
+        /// <summary>Arpeggio arrow head, pointing up — BBox (LILC bbox).</summary>
+        public BBox ArpeggioArrowUp { get; init; }
+        /// <summary>Arpeggio arrow head, pointing up — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox ArpeggioArrowUpOutline { get; init; }
+        /// <summary>Arpeggio arrow head, pointing up — advance width (next-glyph horizontal feed).</summary>
+        public double ArpeggioArrowUpAdvance { get; init; }
+        /// <summary>Arpeggio arrow head, pointing down — BBox (LILC bbox).</summary>
+        public BBox ArpeggioArrowDown { get; init; }
+        /// <summary>Arpeggio arrow head, pointing down — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox ArpeggioArrowDownOutline { get; init; }
+        /// <summary>Arpeggio arrow head, pointing down — advance width (next-glyph horizontal feed).</summary>
+        public double ArpeggioArrowDownAdvance { get; init; }
         /// <summary>Turn ornament — BBox (LILC bbox).</summary>
         public BBox OrnTurnGlyph { get; init; }
         /// <summary>Turn ornament — the box its SKYLINE is built from (glyph outline).</summary>
@@ -2343,6 +2373,16 @@ internal static partial class GlyphMetrics
             ArpeggioOutline = new(ArpeggioOutline.Left * magnification, ArpeggioOutline.Bottom * magnification,
                 ArpeggioOutline.Right * magnification, ArpeggioOutline.Top * magnification),
             ArpeggioAdvance = ArpeggioAdvance * magnification,
+            ArpeggioArrowUp = new(ArpeggioArrowUp.Left * magnification, ArpeggioArrowUp.Bottom * magnification,
+                ArpeggioArrowUp.Right * magnification, ArpeggioArrowUp.Top * magnification),
+            ArpeggioArrowUpOutline = new(ArpeggioArrowUpOutline.Left * magnification, ArpeggioArrowUpOutline.Bottom * magnification,
+                ArpeggioArrowUpOutline.Right * magnification, ArpeggioArrowUpOutline.Top * magnification),
+            ArpeggioArrowUpAdvance = ArpeggioArrowUpAdvance * magnification,
+            ArpeggioArrowDown = new(ArpeggioArrowDown.Left * magnification, ArpeggioArrowDown.Bottom * magnification,
+                ArpeggioArrowDown.Right * magnification, ArpeggioArrowDown.Top * magnification),
+            ArpeggioArrowDownOutline = new(ArpeggioArrowDownOutline.Left * magnification, ArpeggioArrowDownOutline.Bottom * magnification,
+                ArpeggioArrowDownOutline.Right * magnification, ArpeggioArrowDownOutline.Top * magnification),
+            ArpeggioArrowDownAdvance = ArpeggioArrowDownAdvance * magnification,
             OrnTurnGlyph = new(OrnTurnGlyph.Left * magnification, OrnTurnGlyph.Bottom * magnification,
                 OrnTurnGlyph.Right * magnification, OrnTurnGlyph.Top * magnification),
             OrnTurnGlyphOutline = new(OrnTurnGlyphOutline.Left * magnification, OrnTurnGlyphOutline.Bottom * magnification,
@@ -2902,6 +2942,12 @@ internal static partial class GlyphMetrics
         Arpeggio = new(0.000000, 0.000000, 0.799997, 0.999996),
         ArpeggioOutline = new(-0.016000, -0.236000, 0.816000, 1.232000),
         ArpeggioAdvance = 0.800000,
+        ArpeggioArrowUp = new(0.000000, 0.000000, 0.799997, 0.999996),
+        ArpeggioArrowUpOutline = new(-0.244000, -0.236000, 1.040000, 1.236000),
+        ArpeggioArrowUpAdvance = 0.800000,
+        ArpeggioArrowDown = new(0.000000, 0.000000, 0.799997, 0.999996),
+        ArpeggioArrowDownOutline = new(-0.240000, -0.236000, 1.044000, 1.236000),
+        ArpeggioArrowDownAdvance = 0.800000,
         OrnTurnGlyph = new(-1.093757, -0.529410, 1.093757, 0.529410),
         OrnTurnGlyphOutline = new(-1.092000, -0.528000, 1.092000, 0.528000),
         OrnTurnGlyphAdvance = 1.092000,
@@ -3298,6 +3344,12 @@ internal static partial class GlyphMetrics
         Arpeggio = new(0.000000, 0.000000, 0.799997, 0.999997),
         ArpeggioOutline = new(-0.012000, -0.236000, 0.812000, 1.228000),
         ArpeggioAdvance = 0.800000,
+        ArpeggioArrowUp = new(0.000000, 0.000000, 0.799997, 0.999997),
+        ArpeggioArrowUpOutline = new(-0.244000, -0.232000, 1.040000, 1.232000),
+        ArpeggioArrowUpAdvance = 0.800000,
+        ArpeggioArrowDown = new(0.000000, 0.000000, 0.799997, 0.999997),
+        ArpeggioArrowDownOutline = new(-0.240000, -0.232000, 1.044000, 1.232000),
+        ArpeggioArrowDownAdvance = 0.800000,
         OrnTurnGlyph = new(-1.093647, -0.529522, 1.093647, 0.529522),
         OrnTurnGlyphOutline = new(-1.092000, -0.528000, 1.092000, 0.528000),
         OrnTurnGlyphAdvance = 1.092000,
@@ -3694,6 +3746,12 @@ internal static partial class GlyphMetrics
         Arpeggio = new(0.000000, 0.000000, 0.800000, 1.000000),
         ArpeggioOutline = new(-0.012000, -0.232000, 0.812000, 1.228000),
         ArpeggioAdvance = 0.800000,
+        ArpeggioArrowUp = new(0.000000, 0.000000, 0.800000, 1.000000),
+        ArpeggioArrowUpOutline = new(-0.244000, -0.232000, 1.040000, 1.232000),
+        ArpeggioArrowUpAdvance = 0.800000,
+        ArpeggioArrowDown = new(0.000000, 0.000000, 0.800000, 1.000000),
+        ArpeggioArrowDownOutline = new(-0.240000, -0.232000, 1.044000, 1.232000),
+        ArpeggioArrowDownAdvance = 0.800000,
         OrnTurnGlyph = new(-1.093635, -0.529279, 1.093635, 0.529279),
         OrnTurnGlyphOutline = new(-1.092000, -0.528000, 1.092000, 0.528000),
         OrnTurnGlyphAdvance = 1.092000,
@@ -4090,6 +4148,12 @@ internal static partial class GlyphMetrics
         Arpeggio = new(0.000000, 0.000000, 0.800000, 0.999874),
         ArpeggioOutline = new(-0.008000, -0.228000, 0.808000, 1.228000),
         ArpeggioAdvance = 0.796000,
+        ArpeggioArrowUp = new(0.000000, 0.000000, 0.800000, 0.999874),
+        ArpeggioArrowUpOutline = new(-0.244000, -0.228000, 1.040000, 1.228000),
+        ArpeggioArrowUpAdvance = 0.796000,
+        ArpeggioArrowDown = new(0.000000, 0.000000, 0.800000, 0.999874),
+        ArpeggioArrowDownOutline = new(-0.240000, -0.228000, 1.044000, 1.228000),
+        ArpeggioArrowDownAdvance = 0.796000,
         OrnTurnGlyph = new(-1.093636, -0.529301, 1.093636, 0.529301),
         OrnTurnGlyphOutline = new(-1.092000, -0.528000, 1.092000, 0.528000),
         OrnTurnGlyphAdvance = 1.092000,
@@ -4486,6 +4550,12 @@ internal static partial class GlyphMetrics
         Arpeggio = new(0.000000, 0.000000, 0.800000, 1.000000),
         ArpeggioOutline = new(-0.008000, -0.228000, 0.808000, 1.224000),
         ArpeggioAdvance = 0.800000,
+        ArpeggioArrowUp = new(0.000000, 0.000000, 0.800000, 1.000000),
+        ArpeggioArrowUpOutline = new(-0.244000, -0.228000, 1.040000, 1.228000),
+        ArpeggioArrowUpAdvance = 0.800000,
+        ArpeggioArrowDown = new(0.000000, 0.000000, 0.800000, 1.000000),
+        ArpeggioArrowDownOutline = new(-0.240000, -0.228000, 1.044000, 1.228000),
+        ArpeggioArrowDownAdvance = 0.800000,
         OrnTurnGlyph = new(-1.093827, -0.529517, 1.093827, 0.529517),
         OrnTurnGlyphOutline = new(-1.092000, -0.528000, 1.092000, 0.528000),
         OrnTurnGlyphAdvance = 1.092000,
@@ -4884,6 +4954,12 @@ internal static partial class GlyphMetrics
         Arpeggio = Arpeggio,
         ArpeggioOutline = ArpeggioOutline,
         ArpeggioAdvance = ArpeggioAdvance,
+        ArpeggioArrowUp = ArpeggioArrowUp,
+        ArpeggioArrowUpOutline = ArpeggioArrowUpOutline,
+        ArpeggioArrowUpAdvance = ArpeggioArrowUpAdvance,
+        ArpeggioArrowDown = ArpeggioArrowDown,
+        ArpeggioArrowDownOutline = ArpeggioArrowDownOutline,
+        ArpeggioArrowDownAdvance = ArpeggioArrowDownAdvance,
         OrnTurnGlyph = OrnTurnGlyph,
         OrnTurnGlyphOutline = OrnTurnGlyphOutline,
         OrnTurnGlyphAdvance = OrnTurnGlyphAdvance,
@@ -5280,6 +5356,12 @@ internal static partial class GlyphMetrics
         Arpeggio = new(0.000000, 0.000000, 0.800000, 0.999911),
         ArpeggioOutline = new(-0.004000, -0.224000, 0.804000, 1.224000),
         ArpeggioAdvance = 0.796000,
+        ArpeggioArrowUp = new(0.000000, 0.000000, 0.800000, 0.999911),
+        ArpeggioArrowUpOutline = new(-0.244000, -0.224000, 1.040000, 1.224000),
+        ArpeggioArrowUpAdvance = 0.796000,
+        ArpeggioArrowDown = new(0.000000, 0.000000, 0.800000, 0.999911),
+        ArpeggioArrowDownOutline = new(-0.240000, -0.224000, 1.044000, 1.224000),
+        ArpeggioArrowDownAdvance = 0.796000,
         OrnTurnGlyph = new(-1.093808, -0.529354, 1.093808, 0.529354),
         OrnTurnGlyphOutline = new(-1.092000, -0.528000, 1.092000, 0.528000),
         OrnTurnGlyphAdvance = 1.092000,
@@ -5676,6 +5758,12 @@ internal static partial class GlyphMetrics
         Arpeggio = new(0.000000, 0.000000, 0.800000, 1.000000),
         ArpeggioOutline = new(-0.004000, -0.220000, 0.804000, 1.224000),
         ArpeggioAdvance = 0.800000,
+        ArpeggioArrowUp = new(0.000000, 0.000000, 0.800000, 1.000000),
+        ArpeggioArrowUpOutline = new(-0.244000, -0.220000, 1.040000, 1.220000),
+        ArpeggioArrowUpAdvance = 0.800000,
+        ArpeggioArrowDown = new(0.000000, 0.000000, 0.800000, 1.000000),
+        ArpeggioArrowDownOutline = new(-0.240000, -0.220000, 1.044000, 1.220000),
+        ArpeggioArrowDownAdvance = 0.800000,
         OrnTurnGlyph = new(-1.093810, -0.529365, 1.093810, 0.529365),
         OrnTurnGlyphOutline = new(-1.092000, -0.528000, 1.092000, 0.528000),
         OrnTurnGlyphAdvance = 1.092000,

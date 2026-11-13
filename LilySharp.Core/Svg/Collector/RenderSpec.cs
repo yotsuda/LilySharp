@@ -255,7 +255,8 @@ public sealed record TabStaffSpec(StaffSpec Staff, TuningType Tuning, int Transp
     /// <summary>The folded chord row's own <c>for</c>, as <see cref="StaffSpec.ChordFor"/>.</summary>
     public string? ChordFor { get; init; }
 
-    /// <summary>The fret the capo is on for this tab (<see cref="Tablature.Tunings.CapoOn"/>), 0 for
+    /// <summary>The fret the capo is on for this tab — the item's own <c>capo N</c>
+    /// (<c>tab gtr capo 2</c>), else the file's (<see cref="Tablature.Tunings.CapoOn"/>) — 0 for
     /// none. Already taken off <see cref="Transposition"/>, the shift the frets are read with.</summary>
     public int Capo { get; init; }
 }

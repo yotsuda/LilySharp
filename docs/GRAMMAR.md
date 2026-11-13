@@ -1290,7 +1290,7 @@ PartProperty   = 'clef'          , PartClefName
                | 'instrument'    , ( InstrumentPreset , [ String ] | String )
                | 'transpose'     , PitchToken
                | 'transposition' , TranspositionMarker
-               | 'tuning'        , TuningName
+               | 'tuning'        , Tuning
                | 'octave'        , Integer
                | 'pitch'         , PitchMode        (* this part's convention — own wins
                                                        over the top-level PitchDecl, §2.3 *)
@@ -1352,6 +1352,25 @@ TuningName     = 'guitar' | 'guitar7' | 'guitarDropD' | 'guitarDropC'
                       `doubleBass` and `mandolin` are LilyPond's own second spellings of
                       tunings it also lists as `bass` and `violin`. Tablature.Tunings holds
                       the strings and is the one reader of these words. *)
+
+Tuning         = TuningName | TuningList ;
+
+TuningList     = String ;
+                   (* A tuning WRITTEN OUT [owner approved 2026-11-13, grammar evaluation 3],
+                      where a TuningName stands - a part header's `tuning` and a tab item:
+                      tuning "d, a, d g a d'"   and   tab "d, a, d g a d'" gtr   (DADGAD).
+                      The quoted list is the open strings from the HIGHEST STRING NUMBER
+                      (usually the lowest string) to string 1, spaced, each an absolute pitch
+                      name as a note is written under `octave absolute` - c is the C below
+                      middle C, a quote mark raises an octave, a comma lowers one, fis and bes
+                      are the black keys - at the pitch the string SOUNDS. Four to eight
+                      strings. The order is the strings' and not the pitches', so a re-entrant
+                      tuning is written as it is strung: "g' c' e' a'" is a ukulele. A bass
+                      part is written an octave above its sound, so its strings are an octave
+                      below its notes: "e,, a,, d, g," - a list with no string above c is a
+                      bass's (fingered as one, no capo). A list that spells no tuning is
+                      LYS4068, and the tab is the guitar's. Not a value of `chordTuning`.
+                      LilyPond: stringTunings = \stringTuning <d, a, d g a d'>. *)
 
 RemoveEmptyValue = 'true' | 'all' | 'false' ;
 
@@ -2008,10 +2027,14 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                | 'choirStaff' , StaffGroupBody      (* a BRACKET, bar lines NOT drawn through *)
                | CondensedStaff                     (* several parts on ONE staff *)
                | CombinedStaff                      (* two parts on one staff, MERGED *)
-               | 'tab' , [ [ TuningName ] , PartRef ] , [ 'as' , TabSelector , { TabSelector } ] , StaffSound
+               | 'tab' , [ [ Tuning ] , PartRef ] , [ 'as' , TabSelector , { TabSelector } ] , [ ItemCapo ] , StaffSound
                                                      (* tablature: tab partName, or
                                                         tab bass5 partName to override the
-                                                        part header's own `tuning`.
+                                                        part header's own `tuning`, or the
+                                                        strings written out in its place -
+                                                        Tuning is a TuningName or a
+                                                        TuningList, 2026-11-13. ItemCapo is
+                                                        this tab's own capo, below.
                                                         ⚠️ Of two words, the FIRST is the
                                                         part when the file declares a part
                                                         by that name, and the second is then
@@ -2266,6 +2289,18 @@ CombinedStaff  = 'combinedStaff' , [ ClefName ] , '{' , PartRef , PartRef , '}' 
 
 StaffRender    = 'staff' , [ [ ClefName ] , PartRef ] , [ DisplayName ] ,
                   [ 'as' , StaffSelector , { StaffSelector } ] , StaffSound ;
+ItemCapo       = 'capo' , Integer ;
+                 (* A TAB item's own capo [owner approved 2026-11-13, grammar evaluation 3]:
+                    tab gtr capo 2 counts that tab's frets from fret 2 instead of from the file's
+                    CapoDecl - 0 is no capo on a tab of a capoed file, 0 to 11, LYS4069 otherwise.
+                    Only the tab's numbers move: the notes are written as they sound, the sound
+                    is the same, and the chord diagrams, the pressed names and the Capo N line at
+                    the head read the file's capo - a tab whose own capo is not the file's under
+                    a part that writes chord shapes warns LYS4069. The word is taken only with a
+                    number after it, so a part may still be named capo. Written on a staff item
+                    - staff gtr capo 2 - it parses and is an ERROR, LYS4069: a staff shows its
+                    notes as they sound and reads no capo. MusicXML: the tab staff's capo. The
+                    twin frets the TabStaff from it. *)
 StaffSound     = [ 'hidden' ] , [ 'sounds' , ( 'voice' | 'instrument' | 'both' ) ] ;
                  (* How the part sounds in THIS score (docs/lyrics-singer-design.md §5). With no
                     'sounds', a part a SingerDecl sings is a voice and any other its instrument;
@@ -3020,7 +3055,7 @@ ShapeWords     = { [ TuningName ] , Shape } ;                    (* also a chord
 Shape          = OneCharShape | DashShape ;                      (* LOW string first; an unnamed
                                                                     Shape goes to the diagram tuning
                                                                     with as many strings as it has
-                                                                    characters / items (4, 5, 6, 7 —
+                                                                    characters / items (4 to 8 —
                                                                     any other count warns), a named
                                                                     one to its TuningName and must
                                                                     fit it *)
@@ -3098,7 +3133,8 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                     group's first slot instead of standing aside by its voice number; a third
                     voice's head can stand under the voice above. The twin writes \once \shiftOff)
    - Accidental:    @courtesy (cautionary) @editorial (musica ficta)
-   - Arpeggio:      <c e g>4@arpeggio , <c e g>4@arpeggio(bracket) , <c e g>4@arpeggio(cross)
+   - Arpeggio:      <c e g>4@arpeggio , <c e g>4@arpeggio(bracket) , <c e g>4@arpeggio(cross) ,
+                    <c e g>4@arpeggio(up) , <c e g>4@arpeggio(down)
                     (* (bracket) is the chord NOT rolled, a straight bracket. (cross) is ONE
                        line across both staves of a grandStaff [owner decision 2026-11-12]:
                        written on the UPPER staff chord or single note, it runs down through
@@ -3108,11 +3144,19 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                        bracket across both staves. With nothing to run down to - the part is in
                        no grandStaff, it is the lowest staff, or the staff below begins nothing
                        at that moment (a rest, a held note, another rhythm) - the arpeggio is
-                       drawn on its own chord and LYS4064 says which. Any other word, or one
-                       word twice, is LYS1008 and the mark is ignored. Not played as a roll
+                       drawn on its own chord and LYS4064 says which. (up) and (down) are the
+                       wavy line ending in an arrow head, at its top or at its bottom [owner
+                       approved 2026-11-13, grammar evaluation 3] - LilyPond arpeggioArrowUp and
+                       arpeggioArrowDown: @arpeggio(up) , @arpeggio(down) , and with cross
+                       @arpeggio(cross up) , @arpeggio(cross down). A bracket takes no
+                       direction. Any other word, one word twice, both directions, or a
+                       direction on a bracket is LYS1008 and the mark is ignored. Not played as a roll
                        (no arpeggio is). LilyPond: connectArpeggios or connectChordBrackets
                        set once at the chord, and the arpeggio written on both staves.
-                       MusicXML: arpeggiate on the notes of both staves with one number. *)
+                       MusicXML: arpeggiate on the notes of both staves with one number.
+                       An arrow is the Arpeggio grob arpeggio-direction set once for the chord
+                       - in the GrandStaff for a connected line - and direction=up or down on
+                       every arpeggiate of the line. *)
    - Glissando:     c4@glissando d
                     (* c4@slide d is the same line, a guitarist's name for it; MusicXML writes
                        <slide> for it. *)

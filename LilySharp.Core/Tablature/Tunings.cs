@@ -139,12 +139,201 @@ public static class Tunings
         [.. ByName.Keys.OrderBy(n => n, StringComparer.Ordinal)];
 
     /// <summary>A tuning word → its tuning; an unknown, differently-cased or absent word →
-    /// the guitar, which is what a tab with nothing said falls back to.</summary>
-    public static TuningType Parse(string? name) =>
-        name != null && ByName.TryGetValue(name, out var type) ? type : TuningType.Guitar;
+    /// the guitar, which is what a tab with nothing said falls back to. A QUOTED LIST of open
+    /// strings (<c>"d, a, d g a d'"</c>, quotes included, as its token is written) → the custom
+    /// tuning it spells (<see cref="Custom"/>), or the guitar when it spells none
+    /// (<see cref="TryReadStrings"/> — CustomTuningValidator says why).</summary>
+    public static TuningType Parse(string? name)
+    {
+        if (name is null)
+            return TuningType.Guitar;
+        if (ByName.TryGetValue(name, out var type))
+            return type;
+        return IsStringList(name) && TryReadStrings(name, out var strings, out _) ? Custom(strings) : TuningType.Guitar;
+    }
 
-    /// <summary>The LilyPond predefined-tuning symbol the twin writes for a tuning.</summary>
+    /// <summary>The LilyPond predefined-tuning symbol the twin writes for a NAMED tuning.
+    /// A custom one has no symbol: ask <see cref="LilyPondValue"/> for the value to write.</summary>
     public static string LilyPondName(TuningType type) => Table[type].LilyPondName;
+
+    /// <summary>
+    /// What the twin writes after <c>stringTunings = </c>: a named tuning's predefined symbol
+    /// (<c>#guitar-drop-d-tuning</c>), or — for a custom one — the strings themselves,
+    /// <c>\stringTuning &lt;d, a, d g a d'&gt;</c>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/string-tunings-init.ly stringTuning — "Convert chord to a string tuning.
+    ///   chord must be in absolute pitches and should have the highest string number (generally
+    ///   the lowest pitch) first", which is this table's order, and Lily#'s absolute octaves
+    ///   are LilyPond's (c = 48 in both).
+    /// </remarks>
+    public static string LilyPondValue(TuningType type)
+        => IsCustom(type)
+            ? "\\stringTuning <" + string.Join(" ", GetTuning(type).Select(SpellString)) + ">"
+            : "#" + LilyPondName(type);
+
+    // ───────────── custom tunings (owner-approved 2026-11-13, grammar evaluation 3) ─────────────
+
+    /// <summary>The fewest and the most strings a custom tuning may have.</summary>
+    /// <remarks>
+    /// LILYSHARP-OWN. The tab staff draws one line a string whatever the count and the planner
+    /// frets any count (tried 2026-11-13 with three strings and with nine); the bounds are the
+    /// chord shapes'. Four is the fewest strings a shape may have — a shape of three items is
+    /// refused as no instrument's (<c>Music.ChordShapes.StringCounts</c>, pinned by
+    /// ChordDiagramTests) — and eight is an eight-string guitar, one more than the named
+    /// tunings reach. LilyPond's <c>\stringTuning</c> takes any chord.
+    /// </remarks>
+    public const int MinCustomStrings = 4, MaxCustomStrings = 8;
+
+    /// <summary>The first handle a custom tuning is given. Every <see cref="TuningType"/> below
+    /// it is a member of the enumeration — a named tuning.</summary>
+    private const int FirstCustom = 1000;
+
+    private static readonly object CustomGate = new();
+    private static readonly Dictionary<string, TuningType> CustomByStrings = new(StringComparer.Ordinal);
+    private static readonly List<int[]> CustomStrings = [];
+
+    /// <summary>
+    /// Whether <paramref name="type"/> is a CUSTOM tuning — a list of open strings the file
+    /// wrote (<c>tuning "d, a, d g a d'"</c>) — rather than one of the named ones.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A CUSTOM TUNING IS A HANDLE, NOT A MEMBER. <see cref="TuningType"/> is the type every
+    /// reader of a tuning already takes — the staff, the tab spec, the planner, the diagrams,
+    /// the cache keys — so a custom tuning travels as a VALUE of it above the enumeration's
+    /// members, standing for its strings (<see cref="Custom"/>): the same strings are the same
+    /// handle for the life of the process, so equality, hashing and every cache keyed by a
+    /// tuning stay exactly what they were, and no reader had to learn a second way to carry
+    /// one. What a reader may NOT do with a handle is index a table of the named ones or print
+    /// it as a word; <see cref="GetTuning"/>, <see cref="LilyPondValue"/> and
+    /// <see cref="Spell"/> are the three that answer for both kinds.
+    /// <c>Enum.GetValues&lt;TuningType&gt;()</c> lists the named ones only, which is what its
+    /// callers (the editor's word lists, the table's tests) mean.
+    /// </remarks>
+    public static bool IsCustom(TuningType type) => (int)type >= FirstCustom;
+
+    /// <summary>The custom tuning of these open strings (MIDI numbers, from the highest string
+    /// number — <see cref="Spec"/>'s order): one handle per list, made on first sight.</summary>
+    public static TuningType Custom(IReadOnlyList<int> strings)
+    {
+        string key = string.Join(",", strings);
+        lock (CustomGate)
+        {
+            if (!CustomByStrings.TryGetValue(key, out var type))
+            {
+                type = (TuningType)(FirstCustom + CustomStrings.Count);
+                CustomStrings.Add([.. strings]);
+                CustomByStrings[key] = type;
+            }
+            return type;
+        }
+    }
+
+    /// <summary>Whether <paramref name="text"/> is written as a list of strings rather than as
+    /// a tuning word: a quoted token as written, or its value with the quotes taken off (a
+    /// part property's value arrives so) — a list of three strings has a space in it, which no
+    /// word has. It may still spell no tuning (<see cref="TryReadStrings"/>).</summary>
+    public static bool IsStringList(string? text)
+        => text is { Length: > 0 } && (text[0] == '"' || text.AsSpan().Trim().IndexOfAny(' ', '\t') >= 0);
+
+    /// <summary>Whether <paramref name="text"/> names a tuning: one of <see cref="Names"/>, or
+    /// a quoted list that spells one.</summary>
+    public static bool IsTuning(string? text)
+        => text != null && (ByName.ContainsKey(text) || IsStringList(text) && TryReadStrings(text, out _, out _));
+
+    private static readonly System.Text.RegularExpressions.Regex StringPitch = new(
+        @"^([a-g])(isis|eses|ses|is|es|s)?('+|,+)?$", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    private static readonly int[] StepSemitones = [0, 2, 4, 5, 7, 9, 11];
+
+    /// <summary>
+    /// Reads a custom tuning's list — <c>"d, a, d g a d'"</c>, with or without its quotes: the
+    /// open strings from the HIGHEST STRING NUMBER (generally the lowest pitch) to string 1,
+    /// spaced, each an absolute pitch name as a note is written under <c>octave absolute</c>
+    /// (<c>c</c> is the C below middle C; <c>'</c> an octave up, <c>,</c> an octave down;
+    /// <c>fis</c> / <c>bes</c>), at the pitch the string SOUNDS. A re-entrant list (a ukulele's
+    /// <c>"g' c' e' a'"</c>) is one: the order is the strings', not the pitches'.
+    /// </summary>
+    /// <param name="text">The list, quoted or bare.</param>
+    /// <param name="strings">The strings as MIDI numbers, in the order written.</param>
+    /// <param name="problem">What is wrong when the answer is false, as the clause of a
+    /// sentence ("'x' is not a pitch name"); null when it is true.</param>
+    /// <remarks>
+    /// Sounding pitch, as the named tunings' table is and as LilyPond's <c>\stringTuning</c>
+    /// takes them: for a guitar that is what its part writes; a BASS part writes an octave
+    /// above its sound, so its strings are an octave below its written notes
+    /// (<c>"e,, a,, d, g,"</c>).
+    /// </remarks>
+    public static bool TryReadStrings(string text, out int[] strings, out string? problem)
+    {
+        strings = [];
+        string body = text.Trim();
+        if (body.Length > 0 && body[0] == '"')
+        {
+            if (body.Length < 2 || body[^1] != '"')
+            {
+                problem = "its closing quote is missing";
+                return false;
+            }
+            body = body[1..^1];
+        }
+        var words = body.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length == 0)
+        {
+            problem = "it names no string";
+            return false;
+        }
+        var read = new int[words.Length];
+        for (int i = 0; i < words.Length; i++)
+        {
+            var m = StringPitch.Match(words[i]);
+            if (!m.Success)
+            {
+                problem = $"'{words[i]}' is not a pitch name";
+                return false;
+            }
+            int step = m.Groups[1].Value[0] - 'c';
+            if (step < 0)
+                step += 7;   // a, b
+            int alter = m.Groups[2].Value switch { "is" => 1, "isis" => 2, "es" or "s" => -1, "eses" or "ses" => -2, _ => 0 };
+            string marks = m.Groups[3].Value;
+            int octaves = marks.Length == 0 ? 0 : marks[0] == '\'' ? marks.Length : -marks.Length;
+            read[i] = 48 + StepSemitones[step] + alter + 12 * octaves;
+            if (read[i] is < 0 or > 127)
+            {
+                problem = $"'{words[i]}' is outside the pitches an instrument sounds";
+                return false;
+            }
+        }
+        if (words.Length is < MinCustomStrings or > MaxCustomStrings)
+        {
+            problem = $"it names {words.Length} string{(words.Length == 1 ? "" : "s")}; a tuning has {MinCustomStrings} to {MaxCustomStrings}";
+            return false;
+        }
+        strings = read;
+        problem = null;
+        return true;
+    }
+
+    private static readonly string[] SharpSpellings = ["c", "cis", "d", "dis", "e", "f", "fis", "g", "gis", "a", "ais", "b"];
+
+    /// <summary>One open string as an absolute pitch name (40 → <c>e,</c>), sharps for the
+    /// black keys — what the twin's <c>\stringTuning</c> and a message spell.</summary>
+    private static string SpellString(int midi)
+    {
+        int octaves = (int)Math.Floor((midi - 48) / 12.0);
+        return SharpSpellings[((midi % 12) + 12) % 12] + (octaves >= 0 ? new string('\'', octaves) : new string(',', -octaves));
+    }
+
+    /// <summary>
+    /// A tuning as a <c>.lys</c> writes it: a named one's first word (<c>guitarDropD</c>), a
+    /// custom one's quoted list (<c>"d, a, d g a d'"</c>) — for a message, and for a reader
+    /// that hands a tuning on as text.
+    /// </summary>
+    public static string Spell(TuningType type)
+        => IsCustom(type)
+            ? "\"" + string.Join(" ", GetTuning(type).Select(SpellString)) + "\""
+            : Names.FirstOrDefault(n => ByName[n] == type) ?? "guitar";
 
     /// <summary>Standard 6-string guitar tuning (MIDI notes, index 0 = lowest string).</summary>
     public static int[] Guitar => Table[TuningType.Guitar].Strings;
@@ -153,8 +342,16 @@ public static class Tunings
     public static int[] Bass => Table[TuningType.Bass].Strings;
 
     /// <summary>Returns the tuning array (index 0 = lowest string) for the given tuning type.</summary>
-    public static int[] GetTuning(TuningType type) =>
-        Table.TryGetValue(type, out var spec) ? spec.Strings : Guitar;
+    public static int[] GetTuning(TuningType type)
+    {
+        if (Table.TryGetValue(type, out var spec))
+            return spec.Strings;
+        if (IsCustom(type))
+            lock (CustomGate)
+                if ((int)type - FirstCustom < CustomStrings.Count)
+                    return CustomStrings[(int)type - FirstCustom];
+        return Guitar;
+    }
 
     /// <summary>Returns the number of strings for the given tuning type.</summary>
     public static int GetStringCount(TuningType type) => GetTuning(type).Length;
@@ -167,6 +364,8 @@ public static class Tunings
     /// </summary>
     public static int Family(TuningType type) => type switch
     {
+        // A custom tuning: a bass's (IsBass) or, for want of a word, a guitar's.
+        _ when IsCustom(type) => IsBass(type) ? 1 : 0,
         < TuningType.Bass => 0,
         < TuningType.Violin => 1,
         < TuningType.BanjoOpenG => 2,
@@ -181,9 +380,21 @@ public static class Tunings
     /// ⚠️ <see cref="TuningType.Bass"/> is the double bass's tuning too, and the double bass
     /// reads bass clef 8va for the same reason — so the one answer serves both.
     /// </summary>
+    /// <remarks>
+    /// A CUSTOM tuning (<see cref="IsCustom"/>) is a bass's when none of its strings sounds
+    /// above <c>c</c> (48) — the top string of the six-string bass, the highest any named bass
+    /// tuning reaches, and below the top string of every named guitar, banjo and ukulele.
+    /// LILYSHARP-OWN (2026-11-13): the list is all a custom tuning says of its instrument, and a
+    /// bass re-tuned by hand must stay a bass — fingered 1-2-4, wearing no capo, written an
+    /// octave above its sound when its part says nothing else.
+    /// </remarks>
     public static bool IsBass(TuningType type) =>
         type is TuningType.Bass or TuningType.BassDropD
-             or TuningType.Bass5 or TuningType.Bass6;
+             or TuningType.Bass5 or TuningType.Bass6
+        || IsCustom(type) && GetTuning(type).Max() <= CustomBassTop;
+
+    /// <summary>The highest open string a custom tuning may have and be a bass's (<see cref="IsBass"/>).</summary>
+    public const int CustomBassTop = 48;
 
     /// <summary>The DEFAULT sounding transposition (semitones) a tuning implies when a
     /// part gives no explicit <c>transposition</c> and no instrument preset: −12 for

@@ -335,6 +335,10 @@ internal static partial class EmmentalerGlyphs
     // === Arpeggio ===
     /// <summary>scripts.arpeggio (one staff space tall; the stencil stacks whole copies)</summary>
     public const char Arpeggio = '\uE06F';
+    /// <summary>scripts.arpeggio.arrow.1 (the head \arpeggioArrowUp ends the pile with)</summary>
+    public const char ArpeggioArrowUp = '\uE072';
+    /// <summary>scripts.arpeggio.arrow.M1 (the head \arpeggioArrowDown ends the pile with)</summary>
+    public const char ArpeggioArrowDown = '\uE071';
 
     // === Breathing signs ===
     /// <summary>scripts.rcomma (\breathe)</summary>

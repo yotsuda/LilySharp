@@ -583,6 +583,16 @@ internal sealed partial class Parser
     /// the score's say on how the part sounds (docs/lyrics-singer-design.md §5).</summary>
     private void ConsumeStaffSound(List<SyntaxToken> tokens)
     {
+        // `capo N` before them (owner-approved 2026-11-13, grammar evaluation 3): the capo this
+        // ITEM is read with, over the file's `capo N` — `tab gtr capo 2`. The word is taken
+        // only with a number after it, so a part named capo is still one (`staff gtr capo` is
+        // part gtr and the MIDI-only part capo, as before). What it means on which item is
+        // Semantics.ItemCapoValidator's.
+        if (Current.Text == Semantics.CapoDirective.Keyword && Peek(1) is { Kind: SyntaxKind.IntegerLiteral })
+        {
+            tokens.Add(Advance());
+            tokens.Add(Advance());
+        }
         if (Current.Text == "hidden")
             tokens.Add(Advance());
         if (Current.Text == "sounds" && Peek(1) is { Kind: not (SyntaxKind.CloseBrace or SyntaxKind.EndOfFile) })

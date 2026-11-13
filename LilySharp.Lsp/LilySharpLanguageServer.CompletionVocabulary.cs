@@ -346,6 +346,10 @@ public sealed partial class LilySharpLanguageServer
         }).ToArray()
     };
 
+    /// <summary>The row of <see cref="GetTuningCompletions"/> that writes a tuning out: the one
+    /// row there that is not a word of <c>Tunings.Names</c>.</summary>
+    internal const string CustomTuningLabel = "\"e, a, d g b e'\"";
+
     /// <summary>
     /// <c>tuning |</c> in a part header (owner's request 2026-10-24): every tuning word, the
     /// families together in <see cref="LilySharp.Core.Syntax.TuningType"/>'s order (guitars, basses, the orchestral
@@ -372,6 +376,18 @@ public sealed partial class LilySharpLanguageServer
                     Detail = first == name ? strings : $"{strings} - the same strings as {first}",
                     SortText = i.ToString("D2", System.Globalization.CultureInfo.InvariantCulture),
                 };
+            })
+            // …and last, a tuning of the writer's own: the open strings written out
+            // (owner-approved 2026-11-13, grammar evaluation 3; Tunings.TryReadStrings). The
+            // guitar's are the placeholder, to be typed over.
+            .Append(new CompletionItem
+            {
+                Label = CustomTuningLabel,
+                Kind = CompletionItemKind.Snippet,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = "\"${1:e, a, d g b e'}\"",
+                Detail = "A tuning of your own: the open strings written out, from the highest string number (usually the lowest string) to string 1, as they sound - 4 to 8 strings",
+                SortText = "99",
             }).ToArray(),
         };
 
@@ -2887,6 +2903,17 @@ public sealed partial class LilySharpLanguageServer
     internal static CompletionList GetTabAttachNameCompletions()
     {
         var items = new System.Collections.Generic.List<CompletionItem>(TabStyleSelectorItems("as "));
+        // The tab's own capo (owner-approved 2026-11-13, grammar evaluation 3;
+        // Semantics.ItemCapoValidator): after the style words, before the next item.
+        items.Add(new CompletionItem
+        {
+            Label = "capo",
+            Kind = CompletionItemKind.Keyword,
+            InsertTextFormat = InsertTextFormat.Snippet,
+            InsertText = "capo ${1:2}",
+            Detail = "This tab's own capo: its frets are counted from that fret (0 = none) instead of from the file's capo",
+            SortText = "5",
+        });
         foreach (var it in GetScoreBlockCompletions().Items)
         {
             it.SortText = "9" + (it.SortText ?? "");
@@ -5329,6 +5356,9 @@ public sealed partial class LilySharpLanguageServer
                 // \nonArpeggiato). The one argument the family takes, so a row rather than
                 // a stub — the `ottava(bassa)` shape.
                 new CompletionItem { Label = "arpeggio(bracket)", Kind = CompletionItemKind.Value, Detail = "Chord bracket — play the notes together, not arpeggiated (LilyPond \\nonArpeggiato)", SortText = "6arpeggio.bracket" },
+                // …the arrowed ones (AnnotationValues.ArpeggioArrow; owner-approved 2026-11-13, grammar evaluation 3)…
+                new CompletionItem { Label = "arpeggio(up)", Kind = CompletionItemKind.Value, Detail = "Arpeggio with an arrow head at its top — roll the chord upward (LilyPond \\arpeggioArrowUp)", SortText = "6arpeggio.up" },
+                new CompletionItem { Label = "arpeggio(down)", Kind = CompletionItemKind.Value, Detail = "Arpeggio with an arrow head at its bottom — roll the chord downward (LilyPond \\arpeggioArrowDown)", SortText = "6arpeggio.down" },
                 // …and the cross-staff one (AnnotationValues.IsArpeggioCross; owner's decision 2026-11-12).
                 new CompletionItem { Label = "arpeggio(cross)", Kind = CompletionItemKind.Value, Detail = "Arpeggio across both staves of a grand staff — written on the upper chord, one line down through the chord below", SortText = "6arpeggio.cross" },
                 new CompletionItem { Label = "courtesy", Kind = CompletionItemKind.Value, Detail = "Force courtesy accidental", SortText = "6courtesy" },
@@ -5540,15 +5570,21 @@ public sealed partial class LilySharpLanguageServer
     };
 
     /// <summary>
-    /// The words of an arpeggio, inside <c>@arpeggio(…)</c>: <c>cross</c> (owner's decision
-    /// 2026-11-12) and <c>bracket</c> — <c>AnnotationValues.ArpeggioArgumentWords</c>, in its
-    /// order. The two combine, spaced: <c>@arpeggio(cross bracket)</c>.
+    /// The words of an arpeggio, inside <c>@arpeggio(…)</c>: the arrows <c>up</c> and
+    /// <c>down</c> (owner-approved 2026-11-13, grammar evaluation 3), <c>bracket</c>, and
+    /// <c>cross</c> (owner's decision 2026-11-12) — <c>AnnotationValues.ArpeggioArgumentWords</c>,
+    /// in its order. <c>cross</c> combines with one of the others, spaced:
+    /// <c>@arpeggio(cross bracket)</c>, <c>@arpeggio(cross up)</c>.
     /// </summary>
     internal static CompletionList GetArpeggioCompletions() => new()
     {
-        Items = [.. AnnotationValues.ArpeggioArgumentWords.Select((word, rank) => Argument(word, word == "cross"
-            ? "One line on through the chord of the staff below in a grand staff (the lower staff writes nothing)"
-            : "A bracket instead of the wavy line: the notes are played together, not rolled", rank))]
+        Items = [.. AnnotationValues.ArpeggioArgumentWords.Select((word, rank) => Argument(word, word switch
+        {
+            "up" => "The wavy line with an arrow head at its top: roll the chord upward",
+            "down" => "The wavy line with an arrow head at its bottom: roll the chord downward, from its top note",
+            "cross" => "One line on through the chord of the staff below in a grand staff (the lower staff writes nothing)",
+            _ => "A bracket instead of the wavy line: the notes are played together, not rolled",
+        }, rank))]
     };
 
     /// <summary>

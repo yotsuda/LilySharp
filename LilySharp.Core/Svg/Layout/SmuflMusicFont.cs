@@ -382,7 +382,9 @@ internal sealed class SmuflMusicFont : MusicFont
     /// <remarks>The arpeggio wiggle: SMuFL designs <c>wiggleArpeggiatoUp</c> to run left to right
     /// and to be turned 90° for a vertical arpeggio (the specification's "Multi-segment lines"
     /// range).</remarks>
-    public override bool LiesDown(MusicGlyph glyph) => glyph == MusicGlyph.WiggleArpeggiatoUp && Has(glyph);
+    public override bool LiesDown(MusicGlyph glyph)
+        => glyph is MusicGlyph.WiggleArpeggiatoUp or MusicGlyph.WiggleArpeggiatoUpArrow or MusicGlyph.WiggleArpeggiatoDownArrow
+           && Has(glyph);
 
     /// <inheritdoc/>
     /// <remarks>The font's own size: SMuFL's fingering and figured-bass digits stand about one
