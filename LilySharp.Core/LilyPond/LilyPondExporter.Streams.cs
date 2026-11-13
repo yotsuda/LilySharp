@@ -175,7 +175,11 @@ public sealed partial class LilyPondExporter
                 AppendToken(line, silence + ChordModeDuration(length - at), "  ");
             // The two halves of a bar a line break splits (Measure.BreaksMidBar) are ONE
             // bar in LilyPond: no bar check between them — nor at the end of a cadenza bar.
-            bool noCheck = measures[m].BreaksMidBar || (senza != null && m < senza.Length && senza[m]);
+            // Nor after the short last bar of a section the next play's pickup completes
+            // (Measure.ContinuesBar on the bar after it): the music line writes none there
+            // either, and a `\skip 2. |` in 4/4 was "bar check failed at: 3/4".
+            bool noCheck = measures[m].BreaksMidBar || (senza != null && m < senza.Length && senza[m])
+                || (m + 1 < measures.Length && measures[m + 1].ContinuesBar);
             _sb.Append(line).Append(noCheck ? "\n" : " |\n");
         }
         // Entries the walk placed past the part's last bar (none in practice) are dropped.

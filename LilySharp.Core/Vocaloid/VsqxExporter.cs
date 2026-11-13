@@ -300,12 +300,25 @@ public sealed class VsqxExporter
                 chars[i] = (char)(chars[i] - 0x60);
         s = new string(chars);
 
-        // Digraphs (きゃ …) first, then single kana.
-        if (s.Length >= 2 && KanaPhonemes.TryGetValue(s[..2], out var ph2))
-            return ph2;
-        if (KanaPhonemes.TryGetValue(s[..1], out var ph1))
-            return ph1;
-        return "a";
+        // Every mora of the syllable, in order — digraphs (きゃ …) first, then single kana. A
+        // note may carry more than one: a word with a reading (`君[きみ]`, `は[わ]`), or kana
+        // written together under one note (`ゆめ`). Until 2026-11-14 only the first was
+        // written (`k' i` for きみ, `j M` for ゆめ: grammar evaluation 4), where the singer's
+        // voice sings them all. A sign the table does not hold (っ, ー) adds nothing.
+        var phonemes = new List<string>();
+        for (int i = 0; i < s.Length;)
+        {
+            if (i + 2 <= s.Length && KanaPhonemes.TryGetValue(s.Substring(i, 2), out var two))
+            {
+                phonemes.Add(two);
+                i += 2;
+                continue;
+            }
+            if (KanaPhonemes.TryGetValue(s.Substring(i, 1), out var one))
+                phonemes.Add(one);
+            i++;
+        }
+        return phonemes.Count > 0 ? string.Join(" ", phonemes) : "a";
     }
 
     /// <remarks>VOCALOID Japanese phoneme set (X-SAMPA-like).</remarks>

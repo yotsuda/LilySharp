@@ -426,6 +426,14 @@ public sealed partial class LilyPondExporter
         public readonly Dictionary<object, string> PaddingBarSections = new(ReferenceEqualityComparer.Instance);
         // The length of a padding bar under another part's `time none` (SectionMeterPlan.UnmeteredBarLength).
         public readonly Dictionary<object, Fraction> UnmeteredPaddingBars = new(ReferenceEqualityComparer.Instance);
+        // The padding bars that are the first half of a bar the next play's pickup completes
+        // (AppendSilentPlay): a spacer of the half's length and no bar check after it.
+        public readonly HashSet<object> OpenPaddingBars = new(ReferenceEqualityComparer.Instance);
+        // …and the bar lines a part writes after such a half (LilyPondExporter.AppendSection).
+        public readonly HashSet<SyntaxNode> OpenWrittenBars = new(ReferenceEqualityComparer.Instance);
+        // The bars a part writes empty under `time none`, by the written bar line: as long as
+        // the part that fills the bar makes it (LilyPondExporter.MeasureTheEmptyUnmeteredBars).
+        public readonly Dictionary<SyntaxNode, Fraction> UnmeteredWrittenBars = new(ReferenceEqualityComparer.Instance);
 
         /// <summary>What the page pairs with a <c>@niente</c> (<see cref="CollectNiente"/>), by
         /// source position: the hairpin marks whose tip is circled, the nientes such a circle
@@ -565,6 +573,7 @@ public sealed partial class LilyPondExporter
         // silent bars when its play is appended (PaddingBars), as the page pads its staff.
         _sectionBars = Svg.Collector.SectionBarCounts.BuildSemanticIndex(root);
         _phraseBodies = Svg.Collector.SectionBarCounts.PhraseBodies(root);
+        _headerUnmetered.Clear();
         // The meters other parts write into each section's bars (HANDOFF §2 F-partmeter ⒜):
         // a voice's silent bars are written in them (AppendSilentPlay, PaddingBars).
         _meterPlan = Svg.Collector.SectionMeterPlan.Build(root, _phraseBodies);

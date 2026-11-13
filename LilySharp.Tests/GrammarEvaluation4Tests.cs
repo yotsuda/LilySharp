@@ -1051,4 +1051,21 @@ public class GrammarEvaluation4Tests
         var later = SyntaxTree.Parse(Book("tempo 120", "", "c''1 | " + slower));
         Assert.Equal(120, SvgGenerator.CollectScore(later, RenderSpecParser.FindFirst(later)).Tempo);
     }
+
+    /// <summary>A note that carries more than one mora — a word with its reading
+    /// (<c>君[きみ]</c>), kana written together (<c>ゆめ</c>) — went to VOCALOID as its first mora
+    /// alone (<c>k' i</c>, <c>j M</c>): the note carries every mora's phonemes, as an elision's.</summary>
+    [Fact]
+    public void EveryMoraOfANote_IsInTheVocaloidFile()
+    {
+        string source = "octave absolute\npart m { instrument alto lyrics w }\nsection A {\n  m { c'4 d' e' f' | }\n"
+            + "  lyrics w { 君[きみ] ゆめ は[わ] きょう | }\n}\nform { ~A }\nscore { staff m  lyrics w }\n";
+        Assert.Empty(Said(source).Select(d => d.Message));
+        string vsqx = new LilySharp.Core.Vocaloid.VsqxExporter().Export(SyntaxTree.Parse(source)).ToString();
+        var phonemes = Regex.Matches(vsqx, @"<p><!\[CDATA\[(.*?)\]\]></p>").Select(m => m.Groups[1].Value);
+        Assert.Equal(["k' i m' i", "j M m e", "w a", "k' o M"], phonemes);
+        // A sign with no phoneme of its own adds nothing, and what is no kana is still "a".
+        Assert.Equal("k a t a", LilySharp.Core.Vocaloid.VsqxExporter.Phoneme("かった"));
+        Assert.Equal("a", LilySharp.Core.Vocaloid.VsqxExporter.Phoneme("Lu"));
+    }
 }

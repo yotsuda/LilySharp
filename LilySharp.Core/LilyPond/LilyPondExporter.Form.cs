@@ -478,12 +478,127 @@ public sealed partial class LilyPondExporter
         // The score's meter (SectionMeterPlan): another part's `time` at a bar's start is written
         // in this voice too. LilyPond would apply it anyway (Timing is the Score's); writing it
         // keeps this stream's own meter — the length of its padding and empty bars — right.
+        int playStart = result.Count;
         if (_meterPlan.IsEmpty)
             result.AddRange(ContainerMusic(entry.Container));
         else
             result.AddRange(_meterPlan.WithForeignChanges(name, entry.Container, ContainerMusic(entry.Container).ToList()));
+        MeasureTheEmptyUnmeteredBars(name, result, playStart);
+        // A play that ends on a short bar the next play's pickup completes (`… | r2. |` in 4/4,
+        // then a section under `partial 4`): the page joins the two halves into one bar, and
+        // the `|` written after the first half is no bar check in LilyPond — "bar check failed
+        // at: 3/4" on a correct score (grammar evaluation 4, 2026-11-13). That
+        // bar line is written as nothing (EmitBarline) — the piece's own last bar excepted,
+        // which nothing follows (ShortFinalBarOf has its rule).
+        if (_sectionHeaders.Partials.Count > 0 && result.Count > 0
+            && result[^1] is BarlineSyntax { BarToken.Kind: SyntaxKind.Bar } halfBarLine
+            && VoiceOf(entry.Container) is { } voice
+            && _sectionBars.Canonical.GetValueOrDefault(name) == voice.Bars
+            && ShortLastBar(name, voice) != null)
+            _shared.OpenWrittenBars.Add(halfBarLine);
         result.AddRange(PaddingBars(entry.Container));
     }
+
+    /// <summary>
+    /// How long the unmetered bar at <paramref name="bar"/> of <paramref name="name"/> is: what
+    /// the plan measured under a <c>time none</c> written in the music
+    /// (<see cref="Svg.Collector.SectionMeterPlan.UnmeteredBarLength"/>), else — under a
+    /// section HEADER's <c>time none</c>, which the plan does not walk — the longest any music
+    /// voice writes there; null for a metered bar.
+    /// </summary>
+    private Fraction? UnmeteredBarLength(string name, int bar)
+    {
+        if (_meterPlan.UnmeteredBarLength(name, bar) is { } planned)
+            return planned;
+        if (_sectionHeaders.Times.GetValueOrDefault(name) is not { IsSenzaMisura: true })
+            return null;
+        if (!_headerUnmetered.TryGetValue(name, out var lengths))
+        {
+            var longest = new List<Fraction>();
+            foreach (var voice in _sectionBars.ByContainer.Values)
+            {
+                if (voice.SectionName != name || voice.IsChords || voice.IsLyrics)
+                    continue;
+                var bars = MeasureModel.Split(voice.Container, _phraseBodies, _bars.HomeMeter.Length);
+                for (int i = 0; i < bars.Count; i++)
+                {
+                    if (i == longest.Count)
+                        longest.Add(Fraction.Zero);
+                    if (!bars[i].IsEmpty && bars[i].Duration > longest[i])
+                        longest[i] = bars[i].Duration;
+                }
+            }
+            _headerUnmetered[name] = lengths = longest.ToArray();
+        }
+        return bar < lengths.Length && lengths[bar] > Fraction.Zero ? lengths[bar] : null;
+    }
+
+    // Per section under a header `time none`: each bar's longest written length (UnmeteredBarLength).
+    private readonly Dictionary<string, Fraction[]> _headerUnmetered = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// A bar a part writes EMPTY under <c>time none</c> (<c>cl { | | }</c> beside a cadenza) is
+    /// as long as the part that fills it makes it — the answer a padding bar gets
+    /// (<see cref="AppendSilentPlay"/>), given to the written <c>|</c>. Until 2026-11-14 it was
+    /// a spacer of the last meter: under <c>\cadenzaOn</c> nothing evens the staves out, so
+    /// the staff reached the next <c>\time</c> early and LilyPond said "mid-measure time
+    /// signature" at every later change (grammar evaluation 4, a chamber score's senza misura).
+    /// </summary>
+    /// <remarks>Counted over this play's own items: music closes a bar at the bar line after
+    /// it (an <c>R*N</c> its N), a bare <c>|</c> with nothing before it is an empty bar. A
+    /// phrase reference may hold bar lines of its own, so the count stops at one.</remarks>
+    private void MeasureTheEmptyUnmeteredBars(string name, List<SyntaxNode> items, int from)
+    {
+        if (_sectionHeaders.Times.GetValueOrDefault(name) is not { IsSenzaMisura: true } && _meterPlan.IsEmpty)
+            return;
+        int closed = 0;
+        SyntaxNode? pending = null;
+        for (int i = from; i < items.Count; i++)
+        {
+            var item = items[i];
+            if (item is VariableReferenceSyntax)
+                return;
+            if (item is BarlineSyntax bar)
+            {
+                if (pending != null)
+                {
+                    closed += 1 + Svg.Collector.SectionMeterPlan.BarsBeyondTheFirst(pending);
+                    pending = null;
+                }
+                else if (bar.BarToken.Kind == SyntaxKind.Bar)
+                {
+                    if (UnmeteredBarLength(name, closed) is { } length)
+                        _shared.UnmeteredWrittenBars[bar] = length;
+                    closed++;
+                }
+            }
+            else if (TakesMeasureTime(item))
+                pending = item;
+        }
+    }
+
+    /// <summary>The index's voice for a voice container, or null.</summary>
+    private Svg.Collector.SectionBarCounts.SemanticVoice? VoiceOf(SyntaxNode container)
+    {
+        if (container is MusicBlockSyntax { Parent: PartBlockSyntax block })
+            container = block;
+        return _sectionBars.ByContainer.GetValueOrDefault(container);
+    }
+
+    /// <summary><see cref="Svg.Collector.SectionShortEnds.OfVoice"/> for this export: the
+    /// section's header meter, else the score's.</summary>
+    private Fraction? ShortLastBar(string name, Svg.Collector.SectionBarCounts.SemanticVoice voice)
+        => Svg.Collector.SectionShortEnds.OfVoice(voice, _phraseBodies, OpeningMeterOf(name), _meterPlan);
+
+    private Fraction OpeningMeterOf(string name)
+        => _sectionHeaders.Times.GetValueOrDefault(name) is { IsSenzaMisura: false } t
+            ? new Fraction(t.Beats, t.BeatType)
+            : _bars.HomeMeter.Length;
+
+    /// <summary><see cref="Svg.Collector.SectionShortEnds.OfSection"/> for this export.</summary>
+    private Fraction? ShortLastBarOfSection(string name, int bars)
+        => Svg.Collector.SectionShortEnds.OfSection(_sectionBars.ByContainer.Values, _phraseBodies, name, bars,
+            OpeningMeterOf(name), _meterPlan);
 
     /// <summary>
     /// A play of a section this voice writes NO block for: the section's canonical bars of
@@ -541,6 +656,13 @@ public sealed partial class LilyPondExporter
             headers?.Any(h => h is TimeSignatureSyntax) == true,
             octaveOffset));
         result.AddRange(WithoutRestatedTempo(headers, null));
+        // The section's last bar as the parts that write it leave it: short, when the next
+        // play's pickup completes it. A full spacer there put every later bar of this staff
+        // the difference late — and the Score's with it: "mid-measure time signature" at each
+        // later meter change of a choral score whose soloist rests through three such
+        // sections (grammar evaluation 4, 2026-11-13). The MusicXML export's
+        // FitSilentPlayToWrittenBars is the same rule.
+        var shortLast = _sectionHeaders.Partials.Count > 0 ? ShortLastBarOfSection(name, bars) : null;
         for (int i = 0; i < bars; i++)
         {
             // The score's meter there (SectionMeterPlan): a `time` another part writes at
@@ -552,8 +674,13 @@ public sealed partial class LilyPondExporter
             // An unmetered bar is as long as the part that writes it makes it: `\cadenzaOn s1`
             // beside five quarters put every later bar of this staff a quarter early
             // (grammar evaluation 3, 2026-11-13).
-            if (_meterPlan.UnmeteredBarLength(name, i) is { } unmetered && unmetered > Fraction.Zero)
+            if (UnmeteredBarLength(name, i) is { } unmetered && unmetered > Fraction.Zero)
                 _shared.UnmeteredPaddingBars[padding.Green] = unmetered;
+            else if (i == bars - 1 && shortLast is { } cut)
+            {
+                _shared.UnmeteredPaddingBars[padding.Green] = cut;
+                _shared.OpenPaddingBars.Add(padding.Green);
+            }
             result.Add(padding);
         }
     }

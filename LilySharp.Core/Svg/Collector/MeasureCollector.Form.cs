@@ -835,6 +835,12 @@ public sealed partial class MeasureCollector
             int canonical = ExpansionBudgetExceededAt == null ? GetCanonicalSectionBars(section) : 0;
             if (_probeRecording != null)
                 _walkCanonicalReads.Add((section.SectionName, canonical));
+            // The section's last bar as the parts that write it leave it: short, when the next
+            // play's pickup completes it (SectionShortEnds). Another value every part's music
+            // decides, recorded beside the count for the same reason.
+            var shortEnd = produced < canonical ? ShortEndOf(section.SectionName) : null;
+            if (_probeRecording != null && produced < canonical && _sectionHeaders.Partials.Count > 0)
+                _walkCanonicalReads.Add((section.SectionName + ShortEndRead, ShortEndCode(shortEnd)));
             for (int i = produced; i < canonical; i++)
             {
                 // A padding bar is a bar of the score's meter there (SectionMeterPlan).
@@ -850,10 +856,57 @@ public sealed partial class MeasureCollector
                     builder.HandleBarline(BarlineType.Single, section.SourceStart);
                     continue;
                 }
+                if (i == canonical - 1 && shortEnd is { } cut && cut < builder.CurrentMeasureLength)
+                {
+                    // Shorter than the bar's clock, so closed here, as the writing parts' own
+                    // bar line closes theirs.
+                    await AddItemAsync(builder, new RestItem(cut, 0, section.SourceStart) { IsSpacer = true });
+                    builder.HandleBarline(BarlineType.Single, section.SourceStart);
+                    continue;
+                }
                 await AddItemAsync(builder, new RestItem(builder.CurrentMeasureLength, 0, section.SourceStart) { IsSpacer = true });
             }
         }
         _meterCursor = null;
+    }
+
+    // The short last bar of each section a silent part was padded through (SectionShortEnds),
+    // and the book's semantic voices it is read from: built on first use per collect, cleared
+    // with _canonicalByName (Reset). Nothing is read unless some section's header has a
+    // `partial` — the only thing that completes a short bar.
+    private Dictionary<string, Fraction?>? _shortEnds;
+    private (List<SectionBarCounts.SemanticVoice> Voices, IReadOnlyDictionary<string, SyntaxNode> Phrases)? _shortEndVoices;
+
+    /// <summary>The suffix of a short-end read's name in <see cref="VoiceWalkRecording.CanonicalReads"/>
+    /// (no section is named with it).</summary>
+    private const string ShortEndRead = "\u0001end";
+
+    private static int ShortEndCode(Fraction? end)
+        => end is { } f ? checked((int)f.Numerator * 65536 + (int)f.Denominator) : 0;
+
+    private Fraction? ShortEndOf(string section)
+    {
+        if (_root == null || _sectionHeaders.Partials.Count == 0)
+            return null;
+        _shortEnds ??= new Dictionary<string, Fraction?>(StringComparer.Ordinal);
+        if (_shortEnds.TryGetValue(section, out var known))
+            return known;
+        if (_shortEndVoices == null)
+        {
+            var phraseBodies = SectionBarCounts.PhraseBodies(_root);
+            _shortEndVoices = (SectionBarCounts.SemanticVoices(_root, phraseBodies), phraseBodies);
+        }
+        var (voices, phrases) = _shortEndVoices.Value;
+        int most = 0;
+        foreach (var voice in voices)
+            if (voice.SectionName == section && !voice.IsChords && !voice.IsLyrics && voice.Bars > most)
+                most = voice.Bars;
+        var opening = _sectionHeaders.Times.TryGetValue(section, out var time) && !time.IsSenzaMisura
+            ? new Fraction(time.Beats, time.BeatType)
+            : SectionShortEnds.HomeMeter(_root);
+        return _shortEnds[section] = most == 0
+            ? null
+            : SectionShortEnds.OfSection(voices, phrases, section, most, opening, MeterPlan());
     }
 
     /// <summary>The voice's place in a section play under <see cref="SectionMeterPlan"/>: the
@@ -1132,7 +1185,9 @@ public sealed partial class MeasureCollector
         var counts = CanonicalByName();
         int stable = 0;
         while (stable < target.CanonicalReadCount && stable < reads.Count
-               && counts.GetValueOrDefault(reads[stable].Section) == reads[stable].Bars)
+               && (reads[stable].Section.EndsWith(ShortEndRead, StringComparison.Ordinal)
+                   ? ShortEndCode(ShortEndOf(reads[stable].Section[..^ShortEndRead.Length]))
+                   : counts.GetValueOrDefault(reads[stable].Section)) == reads[stable].Bars)
             stable++;
         if (stable >= target.CanonicalReadCount)
             return target;

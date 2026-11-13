@@ -338,7 +338,7 @@ public sealed partial class LilyPondExporter
                     string gracePad = EmptyBarGracePad(gapBar);
                     if (gracePad.Length > 0)
                         AppendToken(line, gracePad, indent);
-                    AppendToken(line, _shared.UnmeteredPaddingBars.TryGetValue(gapBar.Green, out var unmetered)
+                    AppendToken(line, _shared.UnmeteredPaddingBars.TryGetValue(gapBar.Green, out var unmetered) || _shared.UnmeteredWrittenBars.TryGetValue(gapBar, out unmetered)
                         ? $"s1*{unmetered.Numerator}/{unmetered.Denominator}" : "s" + ChordModeDuration(_bars.BarLength), indent);
                 }
                 // The bar behind this bar line closed (or was the empty bar just written), so
@@ -1701,6 +1701,11 @@ public sealed partial class LilyPondExporter
             // closes and draws the bar wherever it stands, so the twin writes the glyph. The
             // same at a short final bar completing the pickup (ShortFinalBarOf): LilyPond's
             // check would fail there, and the glyph draws the line the page draws.
+            SyntaxKind.Bar when _shared.OpenPaddingBars.Contains(b.Green) => "",
+            // The bar line after the first half of a bar the next play's pickup completes: no
+            // bar check in LilyPond (AppendSection). The piece's last bar line is not one.
+            SyntaxKind.Bar when !_bars.SenzaMisura && !ReferenceEquals(b, _shortFinalBar)
+                && _shared.OpenWrittenBars.Contains(b) => "",
             SyntaxKind.Bar => _bars.SenzaMisura || ClosesTheShortFinalBar(b) ? "\\bar \"|\"" : "|",
             SyntaxKind.DoubleBar => "\\bar \"||\"",
             SyntaxKind.FinalBar => "\\bar \"|.\"",

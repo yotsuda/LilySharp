@@ -5255,6 +5255,8 @@ public sealed partial class MeasureCollector
         _writtenBars.Clear();
         _writtenBarPhrases = null;
         _meterPlan = null;
+        _shortEnds = null;
+        _shortEndVoices = null;
         // The definitions walk's own gatherings (its fields say what for): cleared here as
         // every collection field is, and refilled by CollectDefinitions right after.
         _sectionDeclarationsInOrder.Clear();
