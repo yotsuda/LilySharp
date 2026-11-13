@@ -8320,6 +8320,9 @@ public sealed partial class MeasureCollector
                 if (Svg.Collector.SlurDetector.TryGetSlurFlags(items[i], out bool slurStart, out bool slurEnd)
                     && (slurStart || slurEnd))
                     columns[^1] = columns[^1] with { SlurStart = slurStart, SlurEnd = slurEnd };
+                // The scoop or plop the item carries: the column keeps the curve's room.
+                if (items[i].ApproachGesture != 0 && !columns[^1].IsRest)
+                    columns[^1] = columns[^1] with { ApproachGesture = items[i].ApproachGesture };
                 if (items[i].HasPhrasingSlurStart || items[i].HasPhrasingSlurEnd)
                     columns[^1] = columns[^1] with
                     {

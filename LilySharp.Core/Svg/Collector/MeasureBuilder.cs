@@ -859,6 +859,9 @@ internal sealed class MeasureBuilder
                 // moves to the other staff whole (MeasureCollector.MoveCrossStaffNotes reads the
                 // flag off the item, as off a full-size note's).
                 CrossWritten = n.CrossWritten,
+                // The scoop or plop SURVIVES (2026-11-14): the column keeps the curve's room
+                // (GraceColumnInfo.ApproachGesture, read off this item).
+                ApproachGesture = n.ApproachGesture,
             },
 
             ChordItem c => new ChordItem(
@@ -912,6 +915,8 @@ internal sealed class MeasureBuilder
                 TodoSideWritten = c.TodoSideWritten,
                 // The @cross (session 1122), as on the note above.
                 CrossWritten = c.CrossWritten,
+                // The scoop or plop (2026-11-14), as on the note above.
+                ApproachGesture = c.ApproachGesture,
             },
 
             // A REST TAKES NO SLASH: the stroke is the Flag's, and a rest has none.

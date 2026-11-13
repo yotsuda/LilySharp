@@ -3489,7 +3489,8 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                     a section's fall-off — where LilyPond draws none) , @scoop @plop (the
                     curves INTO the note from the left, rising from below / falling from
                     above; LILYSHARP-OWN — LilyPond has neither, its twin drops them with a
-                    warning; MusicXML writes all four) , @breath @caesura
+                    warning; MusicXML writes all four; any of the four, or a @bend(…),
+                    on a rest is LYS4079 and draws nothing) , @breath @caesura
                     (* a CUE is not an annotation — it is a region, 'cue { … }', below *)
    - Feathered beam: c16@feather(right) … (accel) / @feather(left) (rit)
                      (* sixteenths or shorter: one beam cannot fan; drawn only *)

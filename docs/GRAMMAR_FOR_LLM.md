@@ -798,7 +798,8 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   downward) and `@doit` (out of it, upward) — `c''4@scoop`, `<c'' e''>2@fall` (a chord takes one
   curve), `c''4@scoop@fall`. Drawn only: the sound is unchanged. MusicXML writes all four
   (`<scoop>` `<plop>` `<falloff>` `<doit>`); the LilyPond export writes `@fall` / `@doit` as
-  `\bendAfter` and drops `@scoop` / `@plop` with a warning — LilyPond has neither
+  `\bendAfter` and drops `@scoop` / `@plop` with a warning — LilyPond has neither. They need
+  a note: on a rest (`r4@scoop`) each is an error (LYS4079), as `@bend(…)` is
 - Cue notes: `cue { … }` — a REGION, not an annotation, so there is no `@cue`:
   `c4 d cue { e4 f } g4 |` (it maps onto LilyPond's CueVoice context). Name the quoted
   instrument's clef to read the cue in it: `c4 d cue bass { e4 f } g4 |` — the staff's own

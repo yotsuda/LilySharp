@@ -222,7 +222,13 @@ public readonly record struct GraceColumnInfo(
     // run's column offsets by SpacingRules.GraceColumns, so every reader of a column's X has it.
     // LILYPOND-REF: lily/note-collision.cc:424-468 calc_positioning_done — the shift in units of
     //   the support head's width (:427-437), translated less the leftmost (:441-468).
-    double CollisionShift = 0
+    double CollisionShift = 0,
+    // The SCOOP (+1) or PLOP (−1) written on this column, 0 for none — the curve stands at full
+    // size left of the grace head (ArticulationEngraver's gesture branch), and the column's left
+    // skylines and reach carry it so the run keeps its room (2026-11-14, leftover of session
+    // 1227: it was drawn through the time signature or the note before). MusicItem.ApproachGesture
+    // for a grace column (Lily#'s own device: ItemSkylineFactory.GraceApproachPart).
+    int ApproachGesture = 0
 )
 {
     /// <summary>Whether this column's stem points up — <c>!</c><see cref="StemDown"/>.</summary>
@@ -323,7 +329,8 @@ public readonly record struct GraceColumnInfo(
             || Arpeggio != other.Arpeggio || ArpeggioBracket != other.ArpeggioBracket
             || PhrasingSlurStart != other.PhrasingSlurStart || PhrasingSlurEnd != other.PhrasingSlurEnd
             || HeadStyle != other.HeadStyle
-            || BeamLeft != other.BeamLeft || BeamRight != other.BeamRight)
+            || BeamLeft != other.BeamLeft || BeamRight != other.BeamRight
+            || ApproachGesture != other.ApproachGesture)
             return false;
         if (SemiTieBoxes.IsDefaultOrEmpty || other.SemiTieBoxes.IsDefaultOrEmpty)
         {
@@ -361,6 +368,7 @@ public readonly record struct GraceColumnInfo(
         hc.Add(HeadStyle);
         hc.Add(BeamLeft);
         hc.Add(BeamRight);
+        hc.Add(ApproachGesture);
         if (!SemiTieBoxes.IsDefaultOrEmpty)
             foreach (var box in SemiTieBoxes)
                 hc.Add(box);

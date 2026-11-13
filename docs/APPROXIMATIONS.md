@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 427 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **555** | |
+| `OWN` | 428 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **556** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -249,7 +249,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（427 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（428 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -641,6 +641,7 @@
 - **`HeaderLineSet.InnerWhiteShare`** LILYSHARP-OWN (owner's decision 2026-11-14): "title 内の改行幅 y と、title と subtitle
 - **`HeaderLineSet.InnerStep`** LILYSHARP-OWN (owner's decision 2026-11-14, see ). The
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
+- **`ItemSkylineFactory.GraceApproachPart`** LILYSHARP-OWN: LilyPond has no scoop or plop
 - **`ItemSkylineFactory.AddApproachGesture`** LILYSHARP-OWN: LilyPond has no scoop or plop; the default extra-spacing-width is what
 - **`ItemSkylineFactory.LeavingGestureClearance`** shortest. LILYSHARP-OWN ('s remarks carry the tag's
 - **`ItemSkylineFactory.AddLeavingGesture`** LILYSHARP-OWN: LilyPond keeps NO room for a BendAfter. MEASURED (2.26.0, Lab

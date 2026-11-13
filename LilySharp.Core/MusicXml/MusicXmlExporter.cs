@@ -5298,6 +5298,20 @@ public sealed class MusicXmlExporter
                 ProcessDirectionMark(mark);
     }
 
+    /// <summary>The jazz gestures a grace note or chord carries on the page — scoop, plop, fall,
+    /// doit (GraceBodySupport.IsCarriedGesture / IsCarriedBendAfter) — as the children of
+    /// <c>&lt;articulations&gt;</c> a full-size note's are. Until 2026-11-14 a grace
+    /// <c>&lt;note&gt;</c> carried none (leftover of session 1227).</summary>
+    private static void AddGraceGestures(MusicXmlNote xmlNote, IEnumerable<SyntaxNode> annotations)
+    {
+        foreach (var annotation in annotations)
+            if (annotation is ArticulationSyntax articulation
+                && (Semantics.GraceBodySupport.IsCarriedGesture(articulation)
+                    || Semantics.GraceBodySupport.IsCarriedBendAfter(articulation))
+                && MapArticulation(articulation.Type) is { } name)
+                xmlNote.Articulations.Add(name);
+    }
+
     /// <summary>
     /// Writes the grace notes of a <c>grace { … }</c> body.
     /// </summary>
@@ -5485,6 +5499,7 @@ public sealed class MusicXmlExporter
                     // Its chord symbol and figures (session 964), as <harmony> / <figured-bass>
                     // before the grace <note>, exactly as before a full-size one.
                     EmitGraceDirectionMarks(note.Articulations);
+                    AddGraceGestures(xmlNote, note.Articulations);
                     _currentMeasure.Notes.Add(xmlNote);
                     (lastGrace, graceSlurOn) = (xmlNote, null);
                     break;
@@ -5595,6 +5610,9 @@ public sealed class MusicXmlExporter
                         });
                         firstMember = false;
                     }
+                    // The chord's gesture is written on its first member.
+                    if (_currentMeasure.Notes.Count > graceChordAt)
+                        AddGraceGestures(_currentMeasure.Notes[graceChordAt], chord.Articulations);
                     // A diagram(…) item in a grace body: its strings, as ProcessChord writes them.
                     var graceShape = chord.IsShapeChord ? ShapeNotesOf(chord) : [];
                     foreach (var sn in Music.ShapeChords.Ascending(graceShape))
@@ -5690,6 +5708,9 @@ public sealed class MusicXmlExporter
 
         foreach (var artic in articulations)
         {
+            // A gesture on a rest is refused (LYS4079) and written nowhere (2026-11-14).
+            if (Semantics.GestureHosts.IsOnARest(artic))
+                continue;
             if (artic is ArticulationSyntax articulation)
             {
                 // MergeGrandStaves reads it for the note's <staff>.

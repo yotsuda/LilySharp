@@ -591,6 +591,8 @@ internal static class ItemSkylineFactory
             }
             if (GraceArpeggioPart(column) is { } arpeggio)
                 parts.Add(arpeggio);
+            if (GraceApproachPart(column) is { } approach)
+                parts.Add(approach);
             // A repeat tie reaching left of the head (session 930; AddGraceSemiTieParts).
             AddGraceSemiTieParts(parts, column);
         }
@@ -656,6 +658,34 @@ internal static class ItemSkylineFactory
     }
 
     /// <summary>
+    /// A GRACE note's scoop or plop (<see cref="GraceColumnInfo.ApproachGesture"/>) as a
+    /// conditional part in the grace column's own frame, or null when it has none: the box
+    /// <see cref="AddApproachGesture"/> reserves for a full-size note, left of the grace head
+    /// at the row of its top head, where ArticulationEngraver draws the curve at full size.
+    /// </summary>
+    /// <remarks>
+    /// Until 2026-11-14 (leftover of session 1227) the curve was drawn and the run kept no room
+    /// for it: it lay on the time signature or on the head before the run.
+    /// LILYSHARP-OWN: LilyPond has no scoop or plop
+    ///   (<see cref="ArticulationEngraver.BendApproachLeftReach"/> carries the tag's fields).
+    /// </remarks>
+    private static ColumnPart? GraceApproachPart(GraceColumnInfo column)
+    {
+        if (column.ApproachGesture == 0 || column.Heads.IsDefaultOrEmpty)
+            return null;
+        double half = ArticulationEngraver.BendApproachThickness / 2;
+        double right = -ArticulationEngraver.BendApproachXOffset + half;
+        double left = -ArticulationEngraver.BendApproachLeftReach;
+        // y runs DOWN: a scoop starts below the row it arrives at, a plop above.
+        double arrival = -column.Highest.StaffPosition / 2.0;
+        double start = arrival + column.ApproachGesture * ArticulationEngraver.BendApproachDepth;
+        return new ColumnPart(Math.Min(arrival, start) - half, Math.Max(arrival, start) + half, left, right,
+                              -SpacingRules.DefaultExtraSpacingWidth,
+                              SpacingRules.DefaultExtraSpacingWidth,
+                              Conditional: true);
+    }
+
+    /// <summary>
     /// The WISH's view of a GRACE column — the skyline the spring between two grace columns
     /// (or the last grace and its main note) takes its minimum from: the note column's own
     /// elements (heads, stem, flag), the accidentals too on the LEFT side, out of the grace's
@@ -704,6 +734,8 @@ internal static class ItemSkylineFactory
                     parts.Add(Accidental(y - box.Top, y - box.Bottom, ax, ax + box.Width));
                 }
             }
+            if (direction == HorizontalDirection.Left && GraceApproachPart(column) is { } approach)
+                parts.Add(approach);
             if (direction == HorizontalDirection.Left && GraceArpeggioPart(column) is { } arpeggio)
                 parts.Add(arpeggio);
             if (SpacingRules.GraceStemBand(column, beamed) is { } stem)

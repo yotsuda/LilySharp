@@ -1103,7 +1103,8 @@ public sealed partial class LilyPondExporter
         SlurSyntax s => s.IsOpen ? "(" : ")",
         BeamMarkerSyntax bm => InSyllabicPart ? "" : bm.IsStart ? "[" : "]",
         DynamicSyntax d => EmitDynamic(d),
-        ArticulationSyntax art => MapArticulation(art),
+        // A fall or a doit on a rest is refused (LYS4079) and not written (2026-11-14).
+        ArticulationSyntax art => Semantics.GestureHosts.IsOnARest(art) ? "" : MapArticulation(art),
         MusicMarkSyntax mk => EmitMark(mk),
         _ => "",
     };

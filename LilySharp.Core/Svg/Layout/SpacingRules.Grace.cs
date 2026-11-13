@@ -930,7 +930,12 @@ internal static partial class SpacingRules
         // accidental, and for a chord it is whichever the stacking pushed out furthest. Both
         // answers come out of GraceColumnHeads, which is also what the renderer draws from.
         double ink = GraceColumnHeads.AccidentalInkLeft(column);
-        return ink > 0 ? ink + AccidentalExtraSpacingWidthLeft : DefaultExtraSpacingWidth;
+        double reach = ink > 0 ? ink + AccidentalExtraSpacingWidthLeft : DefaultExtraSpacingWidth;
+        // A scoop's or plop's curve stands further left than either (2026-11-14).
+        // Lily#'s own device, as the full-size column's room is (CalculateLeftExtent).
+        return column.ApproachGesture != 0
+            ? Math.Max(reach, ArticulationEngraver.BendApproachLeftReach + DefaultExtraSpacingWidth)
+            : reach;
     }
 
     /// <summary>The same reading for the MAIN note's column, which closes the run.</summary>

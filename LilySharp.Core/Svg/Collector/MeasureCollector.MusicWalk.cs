@@ -2528,11 +2528,15 @@ public sealed partial class MeasureCollector
         // A scoop or a plop arrives from the LEFT of the head and a fall or a doit leaves it
         // to the right: the column keeps their room (MusicItem.ApproachGesture /
         // LeavingGesture; grammar evaluation 4, 2026-11-13).
-        if (_v.GraceDepth == 0 && item is NoteItem or ChordItem)
+        // A GRACE note's scoop or plop is stamped too (2026-11-14, leftover of session 1227):
+        // its column reads it from the item (DeriveGraceColumns -> GraceColumnInfo.ApproachGesture).
+        // Its fall keeps the room the grace run's own spacing gives it.
+        if (item is NoteItem or ChordItem)
             foreach (var art in ArticulationsOf(node))
                 if (art is ArticulationSyntax { Type: ArticulationType.Scoop or ArticulationType.Plop } approach)
                     item = item with { ApproachGesture = approach.Type == ArticulationType.Scoop ? 1 : -1 };
-                else if (art is ArticulationSyntax { Type: ArticulationType.Fall or ArticulationType.Doit } leaving)
+                else if (_v.GraceDepth == 0
+                    && art is ArticulationSyntax { Type: ArticulationType.Fall or ArticulationType.Doit } leaving)
                     item = item with { LeavingGesture = leaving.Type == ArticulationType.Doit ? 1 : -1 };
         // How the slur and the tie that begin here are drawn: c4@slur(dashed)( d e),
         // c2@tie(dotted)~ c2 (owner-approved 2026-11-13, grammar evaluation 3). The detectors

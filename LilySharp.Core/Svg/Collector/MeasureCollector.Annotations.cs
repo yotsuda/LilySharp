@@ -900,7 +900,10 @@ public sealed partial class MeasureCollector
                 break;
             case RestSyntax rest:
                 foreach (var a in rest.Articulations)
-                    Collect(a, isChordMember: false);
+                    // A scoop, a fall, a bend on a rest has no pitch to bend: refused (LYS4079)
+                    // and not drawn (2026-11-14; it was drawn in front of the rest).
+                    if (!Semantics.GestureHosts.IsOnARest(a))
+                        Collect(a, isChordMember: false);
                 break;
             // A bare << >> member is a note of its own (one head, one column), so its
             // scripts are Script_engraver's like a note's, not a chord member's.

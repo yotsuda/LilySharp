@@ -479,7 +479,9 @@ A note may take one of each side (`c''4@scoop@fall`), and a chord takes one curv
 (`<c'' e''>2@fall`). They are drawn only — the sound is unchanged. MusicXML writes all four (`<scoop>`, `<plop>`, `<falloff>`, `<doit>`) and reads
 them back. The fall and the doit are LilyPond's `\bendAfter`, which the LilyPond export
 writes; LilyPond has no scoop and no plop, so those two are Lily#'s own drawing and the
-export drops them with a warning.
+export drops them with a warning. All four, and a guitar's `@bend(…)`, need a note: on a rest
+(`r4@scoop`) the mark is an error (**LYS4079**) and nothing is drawn. A grace note takes them
+as a full-size note does (`grace { d''16@scoop } e''4`).
 
 ### Left to check (`@todo`)
 

@@ -1712,6 +1712,12 @@ public static class DiagnosticCodes
     /// the score out to know; LilyPond says nothing here).</summary>
     public const string CrossStaffRunsIntoOtherStaff = "LYS4078";
 
+    /// <summary>Error: a gesture that bends a note's pitch — <c>@scoop</c>, <c>@plop</c>,
+    /// <c>@fall</c>, <c>@doit</c>, <c>@bend(…)</c> — written on a rest (<c>r4@scoop</c>;
+    /// 2026-11-14, <c>Semantics.GestureHostValidator</c>). Nothing is drawn or exported
+    /// for it.</summary>
+    public const string GestureNotOnANote = "LYS4079";
+
     /// <summary>Error: a span end whose name is not the one the span was opened with —
     /// <c>@8va … @!15ma</c> (owner's decision 2026-10-28: a span is closed by its own name;
     /// <c>Semantics.SpanNames</c>). The quick fix writes the start's name.</summary>
