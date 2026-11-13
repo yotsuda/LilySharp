@@ -507,7 +507,8 @@ internal static partial class SharedRenderer
                 // upright ones between them.
                 double t = frame.Thickness;
                 double x0 = options.MarginLeft + frame.Left, x1 = options.MarginLeft + frame.Right;
-                double top = page.Height - (referenceY - band.Up), bottom = page.Height - (referenceY + band.Down);
+                // (The band reaches BoxMargin past the rule above and below: the white the page keeps around a frame.)
+                double top = page.Height - (referenceY - band.Up + ProseBand.BoxMargin), bottom = page.Height - (referenceY + band.Down - ProseBand.BoxMargin);
                 gc.DrawRectangle(x0, top, x1 - x0, t, fill: Color.Black);
                 gc.DrawRectangle(x0, bottom + t, x1 - x0, t, fill: Color.Black);
                 gc.DrawRectangle(x0, top - t, t, top - bottom - 2 * t, fill: Color.Black);

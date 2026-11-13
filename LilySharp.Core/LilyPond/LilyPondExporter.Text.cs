@@ -133,7 +133,10 @@ public sealed partial class LilyPondExporter
         // markup's ORIGIN at the end of the one before, and the box reaches left of its
         // origin by its padding and rule (measured: with the frame's edge written here the
         // whole box stood 1.1 too far left, off the margin).
-        _sb.Append("  \\concat { \\hspace #").Append(Num(band.Left)).Append(' ');
+        // The white the page keeps above and below the frame (ProseBand.BoxMargin): the line's
+        // own extent, taller than the box by that much each way.
+        _sb.Append("  \\with-dimension #Y #'(").Append(Num(-band.Down)).Append(" . ").Append(Num(band.Up)).Append(") ");
+        _sb.Append("\\concat { \\hspace #").Append(Num(band.Left)).Append(' ');
         _sb.Append("\\override #'(box-padding . ").Append(Num(ProseBand.BoxPadding)).Append(") \\box\n");
         _sb.Append("    \\with-dimension #X #'(0 . ").Append(Num(band.TextWidth)).Append(") \\with-dimension #Y #'(")
             .Append(Num(-(band.Lines[^1].Baseline + down))).Append(" . ").Append(Num(up)).Append(") \\column {\n");

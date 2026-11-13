@@ -241,9 +241,11 @@ public class MarkdownTextShapeTests
         Assert.Equal(100.0 - 2.2, band.TextWidth, 12);
         Assert.All(band.Lines, l => Assert.True(l.Left + l.Width <= frame.Right - 1.1 + 1e-9));
         Assert.Equal(Words, string.Join(' ', band.Lines.Select(TextOf)));
-        // The frame's height is the band's: the lines' boxes, the padding and the rule.
-        Assert.Equal(2.0 + 1.1, band.Up, 12);
-        Assert.Equal(band.Lines[^1].Baseline + 1.0 + 1.1, band.Down, 12);
+        // The band is the frame and the white the page keeps over and under it (BoxMargin, the
+        // owner 2026-11-13: "the white above and below the box looks too tight"): the lines'
+        // boxes, the padding, the rule, the margin.
+        Assert.Equal(2.0 + 1.1 + ProseBand.BoxMargin, band.Up, 12);
+        Assert.Equal(band.Lines[^1].Baseline + 1.0 + 1.1 + ProseBand.BoxMargin, band.Down, 12);
         Assert.Equal(100.0, band.Width, 12);
         Assert.True(band.Lines.Length >= plain.Lines.Length);
 
@@ -290,11 +292,11 @@ public class MarkdownTextShapeTests
         var band = page.Header!.Text!;
         // The frame's top stands the padding 0.5 under the rows, where the plain line's box stood.
         Assert.Equal(page.HeaderTop + page.Header.Depth + 0.5, page.HeaderTextY - band.Up, 6);
-        Assert.Equal(plain.HeaderTextY + 1.1, page.HeaderTextY, 6);
+        Assert.Equal(plain.HeaderTextY + 1.1 + ProseBand.BoxMargin, page.HeaderTextY, 6);
         // The music moved down by the frame, top and bottom: it is as far under the frame's
         // bottom as it was under the plain line's box.
         double systemTop = page.Height - page.Systems[0].Y, plainSystemTop = plain.Height - plain.Systems[0].Y;
-        Assert.Equal(plainSystemTop + 2.2, systemTop, 6);
+        Assert.Equal(plainSystemTop + 2.2 + 2 * ProseBand.BoxMargin, systemTop, 6);
         Assert.True(systemTop > page.HeaderTextY + band.Down);
     }
 
@@ -383,7 +385,7 @@ public class MarkdownTextShapeTests
         string width = Math.Round(LineWidth - 40 - 2.2, 4).ToString("0.####", CultureInfo.InvariantCulture);
         Assert.Contains(
             "\\markuplist \\column-lines {\n"
-            + "  \\concat { \\hspace #11.1 \\override #'(box-padding . 1) \\box\n"
+            + "  \\with-dimension #Y #'(-7.6 . 4.1) \\concat { \\hspace #11.1 \\override #'(box-padding . 1) \\box\n"
             + $"    \\with-dimension #X #'(0 . {width}) \\with-dimension #Y #'(-5.5 . 2) \\column {{\n"
             + "      \"One.\"\n"
             + "      \\vspace #0.5\n"
@@ -394,7 +396,7 @@ public class MarkdownTextShapeTests
         Assert.Contains($"      \\override #'(line-width . {width}) \\fill-line {{ \"One.\" }}\n",
             Twin(Book(top: $"{F}md box center indent 10 30\nOne.\n{F}")));
         // The frame's edge is at the margin with no indent: the white is the inset alone.
-        Assert.Contains("  \\concat { \\hspace #1.1 \\override #'(box-padding . 1) \\box\n", Twin(Book(top: $"{F}md end box\nOne.\n{F}")));
+        Assert.Contains(") \\concat { \\hspace #1.1 \\override #'(box-padding . 1) \\box\n", Twin(Book(top: $"{F}md end box\nOne.\n{F}")));
     }
 
     [Fact]

@@ -97,6 +97,17 @@ internal sealed record ProseBand(
     /// section 5.1 for the numbers.</remarks>
     public const double BoxPadding = 1.0;
 
+    /// <summary>The white the page keeps above and below a boxed text's frame, beyond what it
+    /// keeps around a text with none.</summary>
+    /// <remarks>LILYSHARP-OWN. A text's line is spaced from its neighbours by its box of
+    /// letters, and that white reads as room because letters do not fill their box; a rule
+    /// drawn ON the box's edge fills it. With no margin the composer's line stood 0.95 over
+    /// the rule and a rehearsal mark as near under it (LilyPond's `\box` in a markup list does
+    /// the same: 4.0705 from the composer's baseline to the boxed first baseline). The owner
+    /// on seeing it (2026-11-13): "the white above and below the box looks too tight". One
+    /// staff space each way — the white the frame keeps inside.</remarks>
+    public const double BoxMargin = 1.0;
+
     /// <summary>The least width a text keeps whatever its indents ask.</summary>
     /// <remarks>LILYSHARP-OWN: ten staff spaces — four or five ems of the text, a short word
     /// a line. MarkdownTextValidator refuses indents that leave less on the paper the fence
@@ -201,7 +212,8 @@ internal sealed record ProseBand(
         if (lines.Count == 0)
             return null;
         var frame = shape.Box ? new ProseFrame(indentLeft, lineWidth - indentRight, BoxThickness) : null;
-        return new ProseBand(lines.ToImmutable(), LineUp(fonts) + inset, baseline + LineDown(fonts) + inset,
+        double around = inset + (shape.Box ? BoxMargin : 0);
+        return new ProseBand(lines.ToImmutable(), LineUp(fonts) + around, baseline + LineDown(fonts) + around,
             frame is null ? widest : Math.Max(widest, frame.Right), position, left, textWidth, frame);
     }
 

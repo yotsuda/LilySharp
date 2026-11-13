@@ -192,10 +192,15 @@ Nothing is dropped in silence.
   `box-padding` default is 0.2), around the lines' BOXES — 2.0 over the first baseline, 1.0
   under the last — not around the ink. The frame's outer edge stands on the indent edges: with
   no indent it is at the line width's edges, and the text inside is inset 1.1 a side and broken
-  to the narrower width. The frame's height is the band's (`ProseBand.Up` / `Down` reach its
-  outer edges), so the page's springs and the page breaker's priced depth see it and nothing
-  of the title, a system or the page's foot comes nearer than the paddings the chain keeps for
-  any markup.
+  to the narrower width. The band (`ProseBand.Up` / `Down`) reaches **1.0 past the frame's
+  outer edges** above and below (`ProseBand.BoxMargin`, LILYSHARP-OWN), so the page's springs
+  and the page breaker's priced depth see the frame and that white: a line of text is spaced
+  from its neighbours by its box of letters, which reads as room because letters do not fill
+  it, and a rule drawn on the box's edge does. Without the margin the composer's line stood
+  0.95 over the rule and a rehearsal mark as near under it — LilyPond's own `\box` in a markup
+  list does the same (4.0705 from the composer's baseline to the boxed first baseline). The
+  owner on seeing it, 2026-11-13: "the white above and below the box looks too tight". The
+  twin writes the line's taller extent as `\with-dimension #Y` around the box.
 - Least width: 10 staff spaces (`ProseBand.MinimumWidth`, LILYSHARP-OWN).
 
 MEASURED 2026-11-13, LilyPond 2.26.0, `LilySharp-Lab` `sessions/p1226/md/fencelayout`.
