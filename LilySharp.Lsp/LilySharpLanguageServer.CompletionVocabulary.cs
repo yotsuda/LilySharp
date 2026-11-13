@@ -2675,13 +2675,16 @@ public sealed partial class LilySharpLanguageServer
     };
 
     /// <summary>A score's list with <c>singer</c> where a line of its own can start: the word is not
-    /// reserved and is no render item, so it is offered only at the head of a line.</summary>
+    /// reserved and is no render item, so it is offered only at the head of a line.
+    /// <para>…and after it this score's own text, the two fences, where the line holds nothing
+    /// else (owner's request 2026-11-13, <see cref="WithFencedText"/>).</para></summary>
     private static CompletionList WithSingerOnAFreshLine(CompletionList list, string text, int offset)
     {
         int end = Math.Clamp(offset, 0, text.Length);
         while (end > 0 && (char.IsLetterOrDigit(text[end - 1]) || text[end - 1] is '_' or '-')) end--;
         int lineStart = end == 0 ? 0 : text.LastIndexOf('\n', end - 1) + 1;
-        return text[lineStart..end].Trim().Length > 0 ? list : new CompletionList { Items = [.. list.Items, SingerItem("~singer")] };
+        return text[lineStart..end].Trim().Length > 0 ? list
+            : WithFencedText(new CompletionList { Items = [.. list.Items, SingerItem("~singer")] }, text, offset);
     }
 
     /// <summary>Not yet written in the head, an item's first word being its clause (<c>singer male</c> is a <c>singer</c>).</summary>

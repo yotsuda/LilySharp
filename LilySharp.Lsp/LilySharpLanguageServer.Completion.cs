@@ -390,6 +390,22 @@ public sealed partial class LilySharpLanguageServer
         var position = @params.Position;
         var offset = GetOffset(doc.Text, position.Line, position.Character);
 
+        // A fenced text (owner's request 2026-11-13, docs/markdown-text-design.md): on its
+        // opening line the fence's own words, between the fences nothing — and for every list
+        // below, the text with its fences blank, a Markdown text's braces, quotes and words
+        // being none of this language's.
+        if (doc.Text.Contains('`'))
+        {
+            var fences = doc.Text.Contains("```", StringComparison.Ordinal) ? FencedTextSpans(doc.Tree) : [];
+            if (FencedTextCompletions(doc.Text, fences, offset, out string blanked) is { } fenced)
+                return fenced;
+            if (fences.Count > 0)
+                doc = new Document(doc.Uri, blanked, doc.Tree, doc.Version);
+        }
+        // '`' is a trigger for that ONE thing: a backtick anywhere else is text.
+        if (@params.Context is { TriggerKind: CompletionTriggerKindTriggerCharacter, TriggerCharacter: FenceTrigger })
+            return null;
+
         // Determine context
         var context = GetCompletionContext(doc.Text, offset);
 
@@ -493,7 +509,8 @@ public sealed partial class LilySharpLanguageServer
         {
             // The position goes with the text: the `template-…` items need a RANGE (not just
             // an offset) to re-type the word being completed without changing it.
-            CompletionContext.TopLevel => GetTopLevelCompletions(doc.Text, offset, position, _locale),
+            // …and on a line of its own the page's text, the two fences, after the keywords.
+            CompletionContext.TopLevel => WithFencedText(GetTopLevelCompletions(doc.Text, offset, position, _locale), doc.Text, offset),
             // A percussion part's music block offers the drum-kit vocabulary,
             // not pitch letters (LILYPOND-REF: \drummode note names).
             // The key's tonic travels with its signature: the pitch rows are spelled for the

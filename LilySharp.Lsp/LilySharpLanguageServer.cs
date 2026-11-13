@@ -171,7 +171,9 @@ public sealed partial class LilySharpLanguageServer
                 {
                     // '.' only for the placement qualifier (`@todo("memo").` → up/down);
                     // Completion answers nothing else a '.' triggers.
-                    TriggerCharacters = ["\\", "@", " ", ".", "!"],
+                    // '`' only where a fenced text may begin (```md, owner's request
+                    // 2026-11-13): Completion answers nothing else a backtick triggers.
+                    TriggerCharacters = ["\\", "@", " ", ".", "!", FenceTrigger],
                     ResolveProvider = false
                 },
                 HoverProvider = true,
