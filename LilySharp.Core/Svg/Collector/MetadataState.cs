@@ -36,7 +36,7 @@ internal sealed class MetadataState
     public string? TextAfter;
     public int TextBeforePosition;
     public int TextAfterPosition;
-    // How each is set (its opening line's indent / center / box; owner-approved 2026-11-13):
+    // How each is set (its opening line's xMargin / yMargin / center / box; owner-approved 2026-11-13):
     // the shape of the fence that begins the place.
     public Syntax.TextShape TextBeforeShape;
     public Syntax.TextShape TextAfterShape;

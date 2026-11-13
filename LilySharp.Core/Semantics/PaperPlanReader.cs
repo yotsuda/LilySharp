@@ -180,7 +180,7 @@ internal static class PaperPlanReader
     /// </remarks>
     private static readonly string[] FlagKeys = ["raggedRight", "raggedBottom", "breaksOnly"];
 
-    // ONE list of the language's physical units: a fenced text's `indent` reads the same
+    // ONE list of the language's physical units: a fenced text's `xMargin` and `yMargin` read the same
     // (its words are text, not tokens, so the list lives with the syntax).
     private static readonly string[] Units = [.. FencedText.LengthUnits];
 
@@ -788,7 +788,7 @@ internal static class PaperPlanReader
     /// <paramref name="value"/> in <paramref name="unit"/> (<c>mm</c>, <c>cm</c>, <c>in</c>;
     /// null or anything else = staff spaces already) as staff spaces on a staff space of
     /// <paramref name="staffSpaceMm"/> millimetres — the ONE conversion a length of this
-    /// language goes through, a <c>paper { }</c> entry's and a fenced text's <c>indent</c> alike.
+    /// language goes through, a <c>paper { }</c> entry's and a fenced text's <c>xMargin</c> and <c>yMargin</c> alike.
     /// </summary>
     internal static double ToStaffSpaces(double value, string? unit, double staffSpaceMm) => unit switch
     {

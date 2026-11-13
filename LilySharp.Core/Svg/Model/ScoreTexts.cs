@@ -26,7 +26,7 @@ namespace LilySharp.Core.Svg.Model;
 /// <param name="After">The Markdown after the last system, or null.</param>
 /// <param name="AfterPosition">Where its first fence begins.</param>
 /// <param name="BeforeShape">How the text under the title is set: its opening line's
-/// <c>indent</c>, <c>center</c>, <c>box</c> (owner-approved 2026-11-13).</param>
+/// <c>xMargin</c>, <c>yMargin</c>, <c>center</c>, <c>box</c> (owner-approved 2026-11-13).</param>
 /// <param name="AfterShape">The same for the text after the last system: each place has its own.</param>
 public readonly record struct ScoreTexts(
     string? Before, int BeforePosition, string? After, int AfterPosition,

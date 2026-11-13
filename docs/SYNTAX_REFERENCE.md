@@ -1021,7 +1021,7 @@ title "Morning Song"
 Keep the tempo **slow**; the left hand never rises above *piano*.
 ```
 
-```md end indent 30mm box
+```md end xMargin 30mm box
 Practise the right hand alone first.
 ```
 ````
@@ -1066,15 +1066,20 @@ The opening line may go on to say how the text is set, in any order, each word o
 
 | Word | The text |
 |---|---|
-| `indent 20mm` | has that much white at its left and right, inside the line width: it is set narrower and begins further right |
-| `indent 20mm 10mm` | the same, 20 mm at the left and 10 mm at the right |
+| `xMargin 20mm` | has that much white at its left and right, inside the line width: it is set narrower and begins further right |
+| `xMargin 20mm 10mm` | the same, 20 mm at the left and 10 mm at the right |
+| `yMargin 2` | has that much white above and below it — two staff spaces here. With no `yMargin` a text keeps 1; `yMargin 0` is LilyPond's own tight spacing |
+| `yMargin 3 1` | the same, 3 above and 1 below |
 | `center` | has each line centred in its width (the default is ragged right from the left edge); a heading is centred too, a list keeps its shape at the left edge |
-| `box` | has a thin ruled frame around it; the frame stands on the indent edges and the text is set inside it |
+| `box` | has a thin ruled frame around it; the frame stands on the side margins' edges and the text is set inside it, the white above and below outside it |
 
 A length is written as in `paper { }`: `20mm`, `2cm`, `0.5in`, or a bare number of staff
-spaces. The text under the title and the `end` text each have their own words. A negative
-length, a word written twice, `indent` with no length, or indents that leave the text less
-than about 18 mm (10 staff spaces) are errors (LYS4057).
+spaces. The text under the title and the `end` text each have their own words. The white above
+and below counts as part of the text's height: under the title it moves the text and the music
+by that much, and after the last system — where the page already keeps 12 staff spaces to the
+text — it shows only once it is larger than what is there. A negative length, a word written
+twice, a margin with no length, an `xMargin` that leaves the text less than about 18 mm
+(10 staff spaces) or a `yMargin` over 50 staff spaces (about 88 mm) are errors (LYS4057).
 
 ## Text Fonts
 

@@ -20,8 +20,8 @@ using System.Globalization;
 namespace LilySharp.Core.Editing;
 
 /// <summary>
-/// A length with a unit under the step keys — ONE HOME for what a fenced text's <c>indent</c>
-/// (NoteStepper.FenceIndent.cs) and a <c>paper { }</c> entry (NoteStepper.PaperLength.cs) share:
+/// A length with a unit under the step keys — ONE HOME for what a fenced text's <c>xMargin</c>
+/// and <c>yMargin</c> (NoteStepper.FenceMargin.cs) and a <c>paper { }</c> entry (NoteStepper.PaperLength.cs) share:
 /// the steps of each unit, the walk to the last value that is not refused, and the number's
 /// written form (owner's requests 2026-11-13).
 /// </summary>

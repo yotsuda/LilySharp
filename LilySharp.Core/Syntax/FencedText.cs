@@ -22,9 +22,9 @@ using System.Text;
 namespace LilySharp.Core.Syntax;
 
 /// <summary>
-/// A length as a fenced text's opening line writes it after <c>indent</c>: a number and the
-/// unit glued to it, as <c>paper { }</c> writes its own (<c>20mm</c>, <c>2cm</c>,
-/// <c>0.5in</c>), or a bare number of staff spaces.
+/// A length as a fenced text's opening line writes it after <c>xMargin</c> or <c>yMargin</c>:
+/// a number and the unit glued to it, as <c>paper { }</c> writes its own (<c>20mm</c>,
+/// <c>2cm</c>, <c>0.5in</c>), or a bare number of staff spaces.
 /// </summary>
 /// <param name="Value">The number, never negative.</param>
 /// <param name="Unit"><c>mm</c>, <c>cm</c>, <c>in</c>, or null for staff spaces.</param>
@@ -41,7 +41,7 @@ public readonly record struct TextLength(double Value, string? Unit)
         string number = word[..digits], unit = word[digits..];
         if (number.StartsWith('-'))
         {
-            why = $"'{word}' is negative. An indent is white inside the line width: write 0 or more.";
+            why = $"'{word}' is negative. A margin is white around the text: write 0 or more.";
             return false;
         }
         if (number.Length == 0 || !char.IsAsciiDigit(number[0]) || !char.IsAsciiDigit(number[^1])
@@ -71,13 +71,24 @@ public readonly record struct TextLength(double Value, string? Unit)
 /// <summary>
 /// How a fenced text is set on the page, from its opening line's words (owner-approved
 /// 2026-11-13; docs/markdown-text-design.md section 5): white at its left and right inside
-/// the line width, each line centred, a ruled frame around it. The default is none of them.
+/// the line width, white above and below it, each line centred, a ruled frame around it.
+/// The default is none of them.
 /// </summary>
-/// <param name="IndentLeft">The white at the text's left (<c>indent</c>'s first length).</param>
-/// <param name="IndentRight">The white at its right (<c>indent</c>'s second length, or its first).</param>
+/// <remarks>
+/// The two margins are named as a pair (owner's decision 2026-11-13: "<c>space</c> is the y
+/// margin and <c>indent</c> the x margin; the words do not match, which is hard to follow" —
+/// so <c>xMargin</c> and <c>yMargin</c>, as <c>paper { leftMargin … }</c> names its own).
+/// </remarks>
+/// <param name="MarginLeft">The white at the text's left (<c>xMargin</c>'s first length).</param>
+/// <param name="MarginRight">The white at its right (<c>xMargin</c>'s second length, or its first).</param>
 /// <param name="Center">Whether each line is centred in the text's width (<c>center</c>).</param>
 /// <param name="Box">Whether a frame is ruled around the text (<c>box</c>).</param>
-public readonly record struct TextShape(TextLength IndentLeft, TextLength IndentRight, bool Center, bool Box)
+/// <param name="MarginTop">The white above the text (<c>yMargin</c>'s first length), or null
+/// where the line writes no <c>yMargin</c>: the page's own default.</param>
+/// <param name="MarginBottom">The white below it (<c>yMargin</c>'s second length, or its
+/// first), or null likewise.</param>
+public readonly record struct TextShape(TextLength MarginLeft, TextLength MarginRight, bool Center, bool Box,
+    TextLength? MarginTop = null, TextLength? MarginBottom = null)
 {
     /// <summary>Whether the opening line wrote none of the words: the text as it has always been set.</summary>
     public bool IsPlain => this == default;
@@ -115,8 +126,18 @@ public sealed record FencedText(
     /// <summary>The word that prints a section's text at every printing of the section.</summary>
     public const string AllWord = "all";
 
-    /// <summary>The word that sets white at the text's left and right: <c>indent LEFT [RIGHT]</c>.</summary>
-    public const string IndentWord = "indent";
+    /// <summary>The word that sets white at the text's left and right: <c>xMargin LEFT [RIGHT]</c>.</summary>
+    public const string XMarginWord = "xMargin";
+
+    /// <summary>The word that sets the white above and below the text: <c>yMargin TOP [BOTTOM]</c>
+    /// (owner's request 2026-11-13: "the white above and below the md text is tight; widen it
+    /// a little, or make it settable" — both: the default is wider, and this sets it).</summary>
+    public const string YMarginWord = "yMargin";
+
+    /// <summary>What <see cref="XMarginWord"/> was called for the hours before it was paired
+    /// with <see cref="YMarginWord"/> (2026-11-13, never released). No word of the line now:
+    /// the validator's sentence for it alone says to write <c>xMargin</c>.</summary>
+    public const string FormerXMarginWord = "indent";
 
     /// <summary>The word that centres each line in the text's width.</summary>
     public const string CenterWord = "center";
@@ -126,10 +147,10 @@ public sealed record FencedText(
 
     /// <summary>The words that shape a top-level or a score's text on the page, in the order
     /// the sentences that list them say them (owner-approved 2026-11-13).</summary>
-    public static readonly IReadOnlyList<string> ShapeWords = [BoxWord, CenterWord, IndentWord];
+    public static readonly IReadOnlyList<string> ShapeWords = [BoxWord, CenterWord, XMarginWord, YMarginWord];
 
-    /// <summary>The units a length after <c>indent</c> is written in — <c>paper { }</c>'s own;
-    /// a bare number is staff spaces.</summary>
+    /// <summary>The units a length after <c>xMargin</c> or <c>yMargin</c> is written in —
+    /// <c>paper { }</c>'s own; a bare number is staff spaces.</summary>
     public static readonly IReadOnlyList<string> LengthUnits = ["mm", "cm", "in"];
 
     /// <summary>Whether the opening line begins with <c>md</c> or <c>markdown</c>.</summary>
@@ -142,8 +163,8 @@ public sealed record FencedText(
 
     /// <summary>
     /// Reads the opening line's words after <c>md</c> as a top-level or a score's text takes
-    /// them (owner-approved 2026-11-13): <c>end</c>, <c>box</c>, <c>center</c> and
-    /// <c>indent LEFT [RIGHT]</c>, in any order, each once.
+    /// them (owner-approved 2026-11-13): <c>end</c>, <c>box</c>, <c>center</c>,
+    /// <c>xMargin LEFT [RIGHT]</c> and <c>yMargin TOP [BOTTOM]</c>, in any order, each once.
     /// </summary>
     /// <param name="problems">Receives what is wrong, where: the word's offset in the token,
     /// its length, and the sentence — or a null sentence for a word that is none of these,
@@ -151,8 +172,9 @@ public sealed record FencedText(
     /// <returns>The shape, with every word that reads; a word that does not sets nothing.</returns>
     public TextShape ReadShape(List<(int Offset, int Length, string? Message)>? problems)
     {
-        bool box = false, center = false, indented = false;
+        bool box = false, center = false, xWritten = false, yWritten = false;
         TextLength left = default, right = default;
+        TextLength? top = null, bottom = null;
         for (int i = 1; i < Words.Count; i++)
         {
             var (word, offset) = Words[i];
@@ -170,53 +192,66 @@ public sealed record FencedText(
                         problems?.Add((offset, word.Length, "'center' is written twice. Write it once."));
                     center = true;
                     break;
-                case IndentWord:
-                {
-                    // One length, or two: the words that follow and begin as a number does.
-                    var lengths = new List<TextLength>();
-                    bool bad = false;
-                    while (i + 1 < Words.Count && LooksLikeLength(Words[i + 1].Text))
-                    {
-                        var (text, at) = Words[++i];
-                        if (lengths.Count == 2)
-                        {
-                            problems?.Add((at, text.Length,
-                                $"'{text}' is a third length. 'indent' takes one (both sides) or two (left, then right)."));
-                            bad = true;
-                        }
-                        else if (TextLength.TryRead(text, out var length, out string? why))
-                            lengths.Add(length);
-                        else
-                        {
-                            problems?.Add((at, text.Length, why));
-                            bad = true;
-                        }
-                    }
-                    if (indented)
-                    {
-                        problems?.Add((offset, word.Length,
-                            "'indent' is written twice. Write it once: one length for both sides, or two for left and right."));
-                    }
-                    else if (lengths.Count == 0 && !bad)
-                    {
-                        problems?.Add((offset, word.Length,
-                            "'indent' needs a length: ```md indent 20mm for both sides, or ```md indent 20mm 10mm "
-                            + "for left and right (mm, cm, in, or a bare number of staff spaces)."));
-                    }
-                    else if (!bad)
-                    {
-                        left = lengths[0];
-                        right = lengths[^1];
-                    }
-                    indented = true;
+                case XMarginWord:
+                    if (ReadLengths(ref i, offset, word, xWritten, "both sides", "left, then right",
+                            "```md xMargin 20mm for both sides, or ```md xMargin 20mm 10mm for left and right") is { } sides)
+                        (left, right) = sides;
+                    xWritten = true;
                     break;
-                }
+                case YMarginWord:
+                    if (ReadLengths(ref i, offset, word, yWritten, "above and below", "above, then below",
+                            "```md yMargin 2 for above and below, or ```md yMargin 3 1 for above and below apart") is { } ends)
+                        (top, bottom) = ends;
+                    yWritten = true;
+                    break;
                 default:
                     problems?.Add((offset, word.Length, null));
+                    // (The lengths after xMargin's first name go with it: one error, which
+                    // says the word to write, and none on each length.)
+                    while (word == FormerXMarginWord && i + 1 < Words.Count && LooksLikeLength(Words[i + 1].Text))
+                        i++;
                     break;
             }
         }
-        return new TextShape(left, right, center, box);
+        return new TextShape(left, right, center, box, top, bottom);
+
+        // One length, or two: the words that follow a margin's word and begin as a number does.
+        (TextLength First, TextLength Second)? ReadLengths(ref int i, int offset, string word, bool written,
+            string one, string two, string example)
+        {
+            var lengths = new List<TextLength>();
+            bool bad = false;
+            while (i + 1 < Words.Count && LooksLikeLength(Words[i + 1].Text))
+            {
+                var (text, at) = Words[++i];
+                if (lengths.Count == 2)
+                {
+                    problems?.Add((at, text.Length,
+                        $"'{text}' is a third length. '{word}' takes one ({one}) or two ({two})."));
+                    bad = true;
+                }
+                else if (TextLength.TryRead(text, out var length, out string? why))
+                    lengths.Add(length);
+                else
+                {
+                    problems?.Add((at, text.Length, why));
+                    bad = true;
+                }
+            }
+            if (written)
+            {
+                problems?.Add((offset, word.Length,
+                    $"'{word}' is written twice. Write it once: one length for {one}, or two for {two}."));
+                return null;
+            }
+            if (lengths.Count == 0 && !bad)
+            {
+                problems?.Add((offset, word.Length,
+                    $"'{word}' needs a length: {example} (mm, cm, in, or a bare number of staff spaces)."));
+                return null;
+            }
+            return bad ? null : (lengths[0], lengths[^1]);
+        }
 
         static bool LooksLikeLength(string word)
             => word.Length > 0 && (char.IsAsciiDigit(word[0]) || word[0] is '-' or '+' or '.');

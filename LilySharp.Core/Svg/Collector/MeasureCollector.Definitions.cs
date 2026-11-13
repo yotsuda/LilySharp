@@ -666,7 +666,7 @@ public sealed partial class MeasureCollector
     /// A fenced text for the page (docs/markdown-text-design.md): under the title, or after
     /// the last system when its opening line says <c>end</c>. Two for one place print one
     /// after the other, as two paragraphs — ONE text, set as the first of them says
-    /// (<c>indent</c>, <c>center</c>, <c>box</c>; a later fence that writes a shape of its
+    /// (<c>xMargin</c>, <c>yMargin</c>, <c>center</c>, <c>box</c>; a later fence that writes a shape of its
     /// own is refused by MarkdownTextValidator).
     /// </summary>
     private void CollectText(MarkdownTextSyntax text, bool replace)

@@ -102,7 +102,7 @@ score clean {
 `md` and `md end` are replaced separately. A section's text is not replaced from a score; a
 layout switch takes every text off a score (its word is open).
 
-### 2.3 The shape: `indent`, `center`, `box`
+### 2.3 The shape: `xMargin`, `yMargin`, `center`, `box`
 
 Owner-approved spelling, 2026-11-13. More words on the opening line, after `md` and the
 optional `end`, in any order, each once:
@@ -110,15 +110,24 @@ optional `end`, in any order, each once:
 ````
 ```md box
 ```md end center
-```md indent 20mm
-```md indent 20mm 20mm box
+```md xMargin 20mm
+```md xMargin 20mm 20mm yMargin 3 1 box
 ````
 
 | Word | The text |
 |---|---|
-| `indent LEFT [RIGHT]` | white at its left and right, INSIDE the line width: set that much narrower, beginning that much further right. One length is both sides |
+| `xMargin LEFT [RIGHT]` | white at its left and right, INSIDE the line width: set that much narrower, beginning that much further right. One length is both sides |
+| `yMargin TOP [BOTTOM]` | white above and below it, in place of the default (1.0 each way). One length is both. `yMargin 0` is LilyPond's own spacing (section 5.1) |
 | `center` | each line centred in the text's width |
 | `box` | a ruled frame around the whole text |
+
+**The two margins are a pair** (owner's decision 2026-11-13). The side white was first the
+word `indent`; the owner, when the white above and below came up: "`space` is the y
+margin and `indent` the x margin; the words do not match, which is hard to follow" — and
+chose `xMargin` / `yMargin`, named as `paper { leftMargin … }` names its own. `indent` was
+never released and is no alias: on a fence's line it is an unknown word (LYS4057) whose
+sentence says to write `xMargin`. (`paper { indent … }`, the first system's indent, is
+another thing and is as it was.)
 
 - A length is written as `paper { }` writes one — the number and its unit glued, `20mm`,
   `2cm`, `0.5in`, or a bare number of staff spaces — and goes through the same conversion
@@ -130,11 +139,11 @@ optional `end`, in any order, each once:
 - Two fences for one place are ONE text, set as the first one says; a shape on the second is
   an error.
 - Errors, all LYS4057 on the word: a word that is none of these (the message lists them), a
-  word twice, `indent` with no length or with three, a negative length, a unit that is not
-  `mm` / `cm` / `in`, and indents that leave the text less than 10 staff spaces — judged on the
-  paper the fence stands under (the file's `paper { }`, or the score's own when the fence is
-  in a score that names one). On any other paper the indents give way in proportion and the
-  text keeps the 10.
+  word twice, a margin with no length or with three, a negative length, a unit that is not
+  `mm` / `cm` / `in`, an `xMargin` that leaves the text less than 10 staff spaces — judged on
+  the paper the fence stands under (the file's `paper { }`, or the score's own when the fence
+  is in a score that names one); on any other paper the side margins give way in proportion
+  and the text keeps the 10 — and a `yMargin` over 50 staff spaces (section 5.1: the limit).
 - A section's text takes none of these: its opening line takes a printing, as before.
 
 **Decided 2026-11-13 (owner).** Margins, centring and a ruled frame are in. A frame IMAGE (a
@@ -183,10 +192,35 @@ without a word (open — the link itself was not nearly free, and is left for a 
 - A long text runs on to the next page between its lines.
 - Nothing here touches playback, MIDI or a voice.
 
-### 5.1 Indented, centred, boxed (built 2026-11-13)
+### 5.1 Margins, centred, boxed (built 2026-11-13)
 
-- **`indent`**: the text's left edge is the left margin plus the left indent; its width is
-  the line width less both. The lines are broken to that width.
+- **`xMargin`**: the text's left edge is the page's left margin plus the left length; its
+  width is the line width less both. The lines are broken to that width.
+- **`yMargin`, and the default.** Every text, boxed or not, keeps **1.0 of white above and
+  1.0 below** (`ProseBand.DefaultMargin`, LILYSHARP-OWN) beyond LilyPond's own spacing of a
+  markup; `yMargin T [B]` replaces it for that text, and `yMargin 0` is LilyPond's spacing
+  to the digit. The owner, 2026-11-13: "the white above and below the md text is tight;
+  widen it a little, or make it settable" — both. It began the same day as a boxed text's
+  alone (below); the two are ONE margin, so a box's frame stands where it stood.
+  - **It is extent, not distance.** The margin is in the band's `Up` and `Down`
+    (`ProseBand.MarginTop` / `MarginBottom` say how much), so the page's springs and the
+    breaker's priced depth see it, and the twin writes it as the first line's and the last
+    line's `\with-dimension #Y`. It therefore moves the text exactly where the chain's
+    PADDING rules — under the composer's line (2.95 → 3.95), over a system whose clef or
+    mark reaches up (5.09 → 6.09) — and is swallowed where a BASIC-DISTANCE already holds
+    more: the 12.0 from the last staff's middle line to an `end` text's first baseline
+    stays 12.0 at the default, in both engines, and grows only when the margin outgrows it
+    (`yMargin 8`: 14.05). ⚠️ So "1.0 further everywhere" is true under the title and NOT
+    after the last system. A margin that always moves the text would be a shift of the
+    band's reference point (in the twin: an empty line before the first), and a boxed
+    `end` text would then move too — **open, for the owner**.
+  - **The limit: 50 staff spaces** (`ProseBand.MaximumMargin`, about 88 mm at the default
+    staff), an error over it (LYS4057) and a clamp in the band. MEASURED 2026-11-13 with
+    the limit lifted (`md/margins/limit`): `yMargin 100`, under the title or on an `end`
+    text, drew an eight-bar piece's page with its one system pushed off the paper under
+    "page 1 is over-full by 68.5 staff spaces" — a text is not broken over a page and the
+    music does not leave it for the next. At 50 above and below the page is whole and
+    nothing warns.
 - **`center`**: each line stands in the middle of the text's width — a paragraph's lines and a
   line ended by hand alike. The breaking is the ragged text's; a line wider than the text (one
   long word) keeps the left edge and runs over as it always has. **A heading is centred as a
@@ -197,10 +231,11 @@ without a word (open — the link itself was not nearly free, and is left for a 
   line-thickness) and is drawn OUTSIDE the extent widened by the padding (`scm/stencil.scm`
   box-stencil). The padding is **1.0** on all four sides (LILYSHARP-OWN; LilyPond's
   `box-padding` default is 0.2), around the lines' BOXES — 2.0 over the first baseline, 1.0
-  under the last — not around the ink. The frame's outer edge stands on the indent edges: with
-  no indent it is at the line width's edges, and the text inside is inset 1.1 a side and broken
-  to the narrower width. The band (`ProseBand.Up` / `Down`) reaches **1.0 past the frame's
-  outer edges** above and below (`ProseBand.BoxMargin`, LILYSHARP-OWN), so the page's springs
+  under the last — not around the ink. The frame's outer edge stands on the side margins' edges: with
+  no `xMargin` it is at the line width's edges, and the text inside is inset 1.1 a side and broken
+  to the narrower width. The band (`ProseBand.Up` / `Down`) reaches **the text's margin past
+  the frame's outer edges** above and below (`yMargin`, or the default 1.0 — which was first
+  this frame's alone, `BoxMargin`), so the page's springs
   and the page breaker's priced depth see the frame and that white: a line of text is spaced
   from its neighbours by its box of letters, which reads as room because letters do not fill
   it, and a rule drawn on the box's edge does. Without the margin the composer's line stood
@@ -230,17 +265,39 @@ The twin against the page (`showcase.lys`, its `lysc ly` twins engraved; staff s
 | Boxed text under the title: frame's outer left edge, width | 8.54, 102.43 | 8.5358, 102.4299 |
 | …its first line's left edge | 9.64 | 9.6358 |
 | …frame over the first baseline, under the last | 3.10, 2.10 | 3.1000, 2.1000 |
-| …composer's baseline to the first baseline | 4.05 | 4.0705 (the unboxed 2.95 / 2.9705 and 1.1) |
-| `end indent 30mm box`: first line's left edge | 26.71 | 26.7075 |
+| …composer's baseline to the first baseline | 4.05 | 4.0705 (the unboxed 2.95 / 2.9705 and 1.1; measured before the margin — with it the page has 5.05) |
+| `end xMargin 30mm box`: first line's left edge | 26.71 | 26.7075 |
 | …the last staff's middle line to its first baseline | 12.00 | 12.0000 |
 | …line to line, paragraph to paragraph | 3.00, 4.50 | 3.0000, 4.5000 |
-| `center indent 40mm 40mm`: the text's width | 56.91 | `line-width` 56.9055 |
+| `center xMargin 40mm 40mm`: the text's width | 56.91 | `line-width` 56.9055 |
 | …a line's left edge ("For my teacher,") | 52.14 | 52.8026 |
-| …last baseline to the staff's top line | 5.09 | 4.93 (section 7.1: the book's own, with or without a text) |
+| …last baseline to the staff's top line | 5.09 | 4.93 (section 7.1: the book's own, with or without a text; today's `yMargin 0`) |
+
+The margin above and below (`md/margins`: `p-*.lys`, their `lysc ly` twins engraved in
+`lp/`; MEASURED 2026-11-13, LilyPond 2.26.0, staff spaces, y down):
+
+| What | Lily# | LilyPond |
+|---|---|---|
+| Plain text under the title, default: composer's baseline → first line | 3.95 | 3.9705 |
+| …last baseline → the staff's top line | 6.09 | 5.9312 |
+| `yMargin 0`: the same two | 2.95, 5.09 | 2.9705, 4.9312 |
+| `yMargin 3 1`: the same two | 5.95, 6.09 | 5.9705, 5.9312 |
+| Text that begins with a `#` heading, default: composer → heading | 4.47 | 4.4903 |
+| …heading → paragraph, paragraph → staff's top line | 4.01, 6.09 | 4.0099, 5.9312 |
+| Text that ends with a list, default: item → item, last item → staff's top line | 3.00, 6.09 | 3.0000, 5.9312 |
+| `md end`, default: last staff's middle line → first baseline | 12.00 | 12.0000 |
+| `md end box`, default: the same (the picture of before the margin) | 12.00 | 12.0000 |
+| `md end yMargin 8`: the same | 14.05 | 14.0450 |
+
+(The 0.16 between the engines under the text is the book's own 5.09 / 4.93, at every
+margin.)
 
 The twin's forms:
 
-- indent: `\concat { \hspace #LEFT … }` a line of the `\markuplist \column-lines`.
+- yMargin: `\with-dimension #Y #'(-(DOWN+BOTTOM) . UP+TOP)` on the list's first line (the
+  top) and its last (the bottom) — beside the white a paragraph or a heading already writes
+  there; nothing at `yMargin 0`. In a box, the boxed line's own extent (below).
+- xMargin: `\concat { \hspace #LEFT … }` a line of the `\markuplist \column-lines`.
 - center: `\override #'(line-width . WIDTH) \fill-line { … }` — one markup in a `\fill-line`
   is centred — so LilyPond centres by ITS measure of the words. The centred line's left edge
   therefore differs by half the known difference of the two engines' text widths (section
@@ -300,7 +357,7 @@ two engines can be compared.
 - A task item (`- [ ] todo`) is an item whose words begin with the brackets: the task-list
   extension is not switched on. A list inside a block quote is the quote's (LYS4058 once).
 
-**With the shape words.** `indent` and `box` narrow the width the items wrap to and move the
+**With the shape words.** `xMargin` and `box` narrow the width the items wrap to and move the
 list right with the text; the frame is around the lines' boxes, a heading's taller one
 included. `center`: section 5.1.
 
@@ -324,7 +381,7 @@ MEASURED 2026-11-13, LilyPond 2.26.0, `LilySharp-Lab` `sessions/p1226/md/lists`
 |---|---|---|
 | `#` heading: size, left edge | 2.77, 8.54 | 2.7719, 8.5358 |
 | `##` heading: size | 2.47 | 2.4697 |
-| Composer's baseline → a `#` heading first in the text | 3.47 | 3.4903 (the unboxed paragraph's 2.95 / 2.9705 and 0.52) |
+| Composer's baseline → a `#` heading first in the text | 3.47 | 3.4903 (the unboxed paragraph's 2.95 / 2.9705 and 0.52; measured before the margin of section 5.1 — with it 4.47 / 4.4903) |
 | `#` heading → the paragraph under it | 4.01 | 4.0099 |
 | Paragraph → the list's first item | 4.50 | 4.5000 |
 | Item → item (tight), a wrapped item's lines | 3.00 | 3.0000 |
@@ -448,7 +505,9 @@ Lily#: a known difference, written into the twin as a comment where it happens.
   own (`LayoutUtilities.HeaderSprings`: rows, text, system); the text after the last system is
   a node after it (`PageLayouter.PositionSystemsOnPage`), and `PageLayout` carries where both
   were solved to. `SharedRenderer.DrawProse` draws them, SVG, PDF and PNG alike.
-- MEASURED, `t1.lys` against `t1tw2.ly` / `t1auto.ly`: composer line to the first line 2.95
+- MEASURED, `t1.lys` against `t1tw2.ly` / `t1auto.ly` (a text had no margin then: these are
+  today's `yMargin 0`, held by `MarkdownTextShapeTests.YMarginZero_IsLilyPondsOwnSpacing_AsMeasured`;
+  the default adds section 5.1's 1.0 where the padding rules): composer line to the first line 2.95
   (LilyPond 2.9705), line to line 3.00 (3.0000), paragraph to paragraph 4.50 (4.5000), the
   last staff's middle line to the closing text 12.00 (12.0000). The text to the first staff is
   5.09 against 4.93, and the same book WITHOUT a text is 4.54 against 4.40 (`t0.lys`): the
@@ -472,7 +531,7 @@ what it does not bring is Lily#'s own code.
 **Colours** (`editors/vscode/syntaxes/lilysharp.tmLanguage.json`, `#fenced-text`).
 
 - The opening line: the backticks, `md` / `markdown`, the words `end` `box` `center`
-  `indent` (held to `FencedText` by `EditorColouringTests`), a length by `paper { }`'s own
+  `xMargin` `yMargin` (held to `FencedText` by `EditorColouringTests`), a length by `paper { }`'s own
   rule. The closing line: the backticks.
 - The body includes `text.html.markdown` — the grammar of VS Code's built-in
   markdown-basics — under `meta.embedded.block.markdown`, which `package.json`'s
@@ -557,8 +616,10 @@ surround. What only a person in VS Code can see is `editors/vscode/MANUAL-CHECKS
 
 1. DONE (section 7.1). The fence, and paragraphs with bold and italic under the title and at
    the end: SVG, PDF, the preview, the twin. The page's chain learns a markup line.
-   DONE 2026-11-13 (sections 2.3, 5.1): `indent`, `center`, `box` on the opening line, and
-   their completion.
+   DONE 2026-11-13 (sections 2.3, 5.1): `xMargin` (first named `indent`), `center`, `box` on
+   the opening line, and their completion; then `yMargin` and the default margin of 1.0
+   above and below every text, with its completion and the step keys on both margins'
+   lengths.
 2. DONE 2026-11-13 (section 5.2): headings (two levels) and bullet and numbered lists —
    `Prose` reads them into its flat blocks (`Heading`, `Lists`, `Marker`, `Tight`),
    `ProseBand` sets them (`ProseLine.Scale`, `Marker`, `Indent`), `SharedRenderer.DrawProse`

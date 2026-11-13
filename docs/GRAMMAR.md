@@ -218,7 +218,9 @@ MetadataKey    = 'title' | 'subtitle' | 'composer' | 'poet' ;
 
 MarkdownText   = FenceOpen , { FenceWord } , NewLine , { TextLine } , FenceClose ;
 FenceOpen      = '```' , { '`' } , ( 'md' | 'markdown' ) ;
-FenceWord      = 'end' | 'box' | 'center' | 'indent' , FenceLength , [ FenceLength ] ;
+FenceWord      = 'end' | 'box' | 'center'
+               | 'xMargin' , FenceLength , [ FenceLength ]      (* left, right — one is both *)
+               | 'yMargin' , FenceLength , [ FenceLength ] ;    (* above, below — one is both *)
                  (* in any order, each at most once — at the top level and in a score *)
 FenceLength    = Number , [ 'mm' | 'cm' | 'in' ] ;
                  (* the unit glued to the number, as a paper block writes a length, and a bare
@@ -260,38 +262,48 @@ FenceClose     = (* a line that begins, after blanks, with as many backticks as 
                     block's markupMarkupSpacing, markupSystemSpacing and scoreMarkupSpacing — each
                     line a box two thirds of the baseline-skip (3) over its baseline and one third
                     under; a paragraph stands half a skip further off (LILYSHARP-OWN). MEASURED
-                    2026-11-12 on LilyPond 2.26.0: the composer line to the first line 2.9705, the
+                    2026-11-12 on LilyPond 2.26.0 (with no margin, today's 'yMargin 0' — THE
+                    SHAPE, below): the composer line to the first line 2.9705, the
                     last system's middle line to the closing text 12.0000. The twin writes the
                     page's own lines as '\markuplist \column-lines { … }'.
                     A character the text's face does not have is reserved its em square, the
                     machine's face drawing it unmeasured: under a face with narrower kana a line
                     ends short of the margin.
 
-                    THE SHAPE (owner-approved 2026-11-13). 'indent LEFT [RIGHT]' is white at the
+                    THE SHAPE (owner-approved 2026-11-13). 'xMargin LEFT [RIGHT]' is white at the
                     text's left and right INSIDE the line width — the text is broken that much
                     narrower and begins that much further right, and one length is both sides.
+                    'yMargin TOP [BOTTOM]' is the white above and below the text, one length
+                    both; with none written a text keeps 1.0 each way (LILYSHARP-OWN), and
+                    'yMargin 0' is LilyPond's own spacing of a markup list. The margin is part
+                    of the text's extent in the page's chain: it moves the text where the
+                    chain's padding rules (under the composer's line, over a system whose clef
+                    reaches up) and is taken out of a basic-distance that already holds more
+                    (the 12.0 from the last staff's middle line to an 'end' text). At most 50.
                     'center' sets each line in the middle of the text's width (a paragraph and a
                     line ended by hand alike, and a line wider than the text keeps the left edge).
                     'box' rules a frame around the whole text, LilyPond's \box — a rule 0.1 thick
                     outside the padded extent (scm/stencil.scm box-stencil) — with a padding of
                     1.0 around the lines' boxes (LILYSHARP-OWN: LilyPond's 0.2 hugs one word). The
-                    frame's outer edge stands on the indent edges, so the text inside is inset by
-                    1.1 and broken narrower again, and the frame's height is the text's height in
-                    the page's chain. The three combine, and the text under the title and the
+                    frame's outer edge stands on the side margins' edges, so the text inside is
+                    inset by 1.1 and broken narrower again; the margin above and below is outside
+                    the frame. The words combine, and the text under the title and the
                     'end' text each read their own opening line. Two fences for one place are
-                    one text, set as the first says. The twin writes the indent as \hspace, the
-                    centring as \fill-line in an overridden line-width, and the frame as \box
-                    around a \column given the page's extent. MEASURED 2026-11-13 on LilyPond
+                    one text, set as the first says. The twin writes the side margin as \hspace,
+                    the centring as \fill-line in an overridden line-width, the frame as \box
+                    around a \column given the page's extent, and the margin above and below as
+                    the first and last lines' \with-dimension #Y. MEASURED 2026-11-13 on LilyPond
                     2.26.0: the frame at the left margin 8.5358 and 102.4299 wide, 3.1000 over
                     the first baseline, the last staff's middle line to a boxed closing text's
-                    first baseline 12.0000.
+                    first baseline 12.0000; the composer line to a plain text's first line
+                    3.9705 at the default, 2.9705 at 'yMargin 0', 5.9705 at 'yMargin 3 1'.
 
                     Not in MusicXML or MIDI. An opening line that is not 'md', or a word that is
-                    not its place's — also a word written twice, 'indent' with no length, a
-                    negative length, a unit that is not mm, cm or in, indents that leave the text
-                    less than 10 staff spaces of the line width where the fence stands, a shape
-                    on the second fence of one place — is LYS4057. A fence never closed is
-                    LYS0043. *)
+                    not its place's — also a word written twice, a margin with no length, a
+                    negative length, a unit that is not mm, cm or in, an xMargin that leaves the
+                    text less than 10 staff spaces of the line width where the fence stands, a
+                    yMargin over 50 staff spaces, a shape on the second fence of one place — is
+                    LYS4057. A fence never closed is LYS0043. *)
 
 UsingDecl      = 'using' , String ;
                  (* 'using "other.lys"': the named file's declarations join this file's

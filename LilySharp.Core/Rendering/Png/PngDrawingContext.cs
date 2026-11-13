@@ -529,7 +529,7 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
     /// that a generic family arriving here in future lands on the file the layout measured
     /// rather than on Times New Roman.
     /// </remarks>
-    private sealed class FontCache : IDisposable
+    internal sealed class FontCache : IDisposable
     {
         private readonly string? _fontDirectory;
         private readonly Dictionary<string, SKTypeface> _typefaces = new(StringComparer.OrdinalIgnoreCase);
@@ -648,9 +648,16 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
             return SKTypeface.FromFamilyName(actual, weight, SKFontStyleWidth.Normal, slant);
         }
 
-        // Per-codepoint fallback typefaces resolved via the system font
-        // manager (cached — CJK runs hit the same face repeatedly).
-        private readonly Dictionary<int, SKTypeface?> _fallbacks = new();
+        // Fallback typefaces resolved via the system font manager, per (codepoint, weight,
+        // slant) — cached because CJK runs hit the same face repeatedly.
+        // ⚠️ THE STYLE IS PART OF THE KEY. Keyed by the codepoint alone (until 2026-11-13),
+        // the face the FIRST sight of a character was matched to — with that run's weight
+        // and slant — drew it in every later style: after the bold heading 練習のしかた of a
+        // page text, the の and し of the regular list items under it came out bold, the
+        // only two characters the body shared with the heading (seen by the owner on
+        // LilySharp-Lab sessions/p1226/md/lists/showcase.png). PdfDrawingContext's
+        // FallbackFamilies has always been keyed by (codepoint, style).
+        private readonly Dictionary<(int Codepoint, bool Bold, bool Italic), SKTypeface?> _fallbacks = new();
 
         /// <summary>
         /// Splits <paramref name="text"/> into runs renderable by one typeface
@@ -695,13 +702,15 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
             if (baseTypeface.GetGlyph(codepoint) != 0)
                 return baseTypeface;
 
-            if (!_fallbacks.TryGetValue(codepoint, out var fallback))
+            bool bold = (style & FontStyle.Bold) != 0, italic = (style & FontStyle.Italic) != 0;
+            var key = (codepoint, bold, italic);
+            if (!_fallbacks.TryGetValue(key, out var fallback))
             {
-                var weight = (style & FontStyle.Bold) != 0 ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal;
-                var slant = (style & FontStyle.Italic) != 0 ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright;
+                var weight = bold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal;
+                var slant = italic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright;
                 fallback = SKFontManager.Default.MatchCharacter(
                     null, new SKFontStyle(weight, SKFontStyleWidth.Normal, slant), null, codepoint);
-                _fallbacks[codepoint] = fallback;
+                _fallbacks[key] = fallback;
             }
             return fallback ?? baseTypeface;
         }

@@ -2899,7 +2899,7 @@ public class StepRequestTests
         Assert.NotEqual(a, AuditionAt(Plain("cis'4 ‸d'4")).Key);
     }
 
-    // ---------------------------------------------------------------- a fenced text's indent
+    // ---------------------------------------------------------------- a fenced text's xMargin
 
     /// <summary>A piece under a fenced text whose opening line is <paramref name="opening"/>.</summary>
     private static string Fenced(string opening, string body = "A note of 12 words.", string paper = "")
@@ -2914,26 +2914,26 @@ public class StepRequestTests
     /// <summary>Owner's request 2026-11-13: "数字を入力した後は、その数字を ctrl+shift+up/down で
     /// 動かせるようにして" — Up is more white, Down less; the unit and the rest of the line stay.</summary>
     [Theory]
-    [InlineData("```md indent 20‸mm", +1, true, "```md indent 21mm")]
-    [InlineData("```md indent ‸20mm", -1, true, "```md indent 19mm")]
-    [InlineData("```md indent 20mm‸", +1, true, "```md indent 21mm")]            // touching its end
-    [InlineData("```md indent 20mm‸ box", +1, true, "```md indent 21mm box")]
-    [InlineData("```md end indent 20m‸m center", +1, false, "```md end indent 25mm center")]   // the large step: PageUp
-    [InlineData("```md indent 20‸mm", -1, false, "```md indent 15mm")]
-    [InlineData("```md indent 12.5‸mm", +1, true, "```md indent 13.5mm")]
-    [InlineData("```md indent 2‸cm", +1, true, "```md indent 2.1cm")]
-    [InlineData("```md indent 2.9‸cm", +1, true, "```md indent 3cm")]
-    [InlineData("```md indent 2‸cm", -1, false, "```md indent 1.5cm")]
-    [InlineData("```md indent 0.5‸in", +1, true, "```md indent 0.55in")]
-    [InlineData("```md indent 0.5‸in", +1, false, "```md indent 0.75in")]
+    [InlineData("```md xMargin 20‸mm", +1, true, "```md xMargin 21mm")]
+    [InlineData("```md xMargin ‸20mm", -1, true, "```md xMargin 19mm")]
+    [InlineData("```md xMargin 20mm‸", +1, true, "```md xMargin 21mm")]            // touching its end
+    [InlineData("```md xMargin 20mm‸ box", +1, true, "```md xMargin 21mm box")]
+    [InlineData("```md end xMargin 20m‸m center", +1, false, "```md end xMargin 25mm center")]   // the large step: PageUp
+    [InlineData("```md xMargin 20‸mm", -1, false, "```md xMargin 15mm")]
+    [InlineData("```md xMargin 12.5‸mm", +1, true, "```md xMargin 13.5mm")]
+    [InlineData("```md xMargin 2‸cm", +1, true, "```md xMargin 2.1cm")]
+    [InlineData("```md xMargin 2.9‸cm", +1, true, "```md xMargin 3cm")]
+    [InlineData("```md xMargin 2‸cm", -1, false, "```md xMargin 1.5cm")]
+    [InlineData("```md xMargin 0.5‸in", +1, true, "```md xMargin 0.55in")]
+    [InlineData("```md xMargin 0.5‸in", +1, false, "```md xMargin 0.75in")]
     // A bare number is staff spaces: a tenth and one, as a fonts entry's `size N`.
-    [InlineData("```md indent 5‸", +1, true, "```md indent 5.1")]
-    [InlineData("```md indent 5‸", +1, false, "```md indent 6")]
-    [InlineData("```md indent 5.1‸", -1, true, "```md indent 5")]
+    [InlineData("```md xMargin 5‸", +1, true, "```md xMargin 5.1")]
+    [InlineData("```md xMargin 5‸", +1, false, "```md xMargin 6")]
+    [InlineData("```md xMargin 5.1‸", -1, true, "```md xMargin 5")]
     // A selection within the one length (a double-clicked number) steps it too.
-    [InlineData("```md indent «20»mm", +1, true, "```md indent 21mm")]
-    [InlineData("```md indent «20mm»", -1, true, "```md indent 19mm")]
-    public void OnAnIndentsLength_TheKeysStepIt_KeepingItsUnit(string marked, int direction, bool semitone, string after)
+    [InlineData("```md xMargin «20»mm", +1, true, "```md xMargin 21mm")]
+    [InlineData("```md xMargin «20mm»", -1, true, "```md xMargin 19mm")]
+    public void OnAnXMarginsLength_TheKeysStepIt_KeepingItsUnit(string marked, int direction, bool semitone, string after)
     {
         var (response, stepped) = Step(Fenced(marked), direction, semitone: semitone);
         Assert.False(response.Fallback, response.Error);
@@ -2942,7 +2942,7 @@ public class StepRequestTests
         var edit = Assert.Single(response.Edits);
         string source = Fenced(marked).Replace("‸", "").Replace("«", "").Replace("»", "");
         Assert.Matches(@"^[\d.]+(mm|cm|in)?$", source[edit.Start..edit.End]);
-        Assert.StartsWith("indent ", response.Message);
+        Assert.StartsWith("xMargin ", response.Message);
         Assert.Contains("mm wide", response.Message);
         Assert.Empty(SaidOf(stepped));
     }
@@ -2950,46 +2950,46 @@ public class StepRequestTests
     [Fact]
     public void WithTwoLengths_TheOneUnderTheCaretSteps_WithOne_ItIsBothSides()
     {
-        Assert.Equal(Fenced("```md indent 21mm 10mm"), Step(Fenced("```md indent 20‸mm 10mm"), +1, semitone: true).After);
-        Assert.Equal(Fenced("```md indent 20mm 11mm"), Step(Fenced("```md indent 20mm 10‸mm"), +1, semitone: true).After);
-        Assert.Equal(Fenced("```md indent 21mm 10mm"), Step(Fenced("```md indent 20mm‸ 10mm"), +1, semitone: true).After);
-        Assert.Equal(Fenced("```md indent 20mm 9mm"), Step(Fenced("```md indent 20mm ‸10mm"), -1, semitone: true).After);
-        Assert.Contains("the left", Step(Fenced("```md indent 20‸mm 10mm"), +1, semitone: true).Response.Message);
-        Assert.Contains("the right", Step(Fenced("```md indent 20mm 10‸mm"), +1, semitone: true).Response.Message);
-        Assert.Contains("both sides", Step(Fenced("```md indent 20‸mm"), +1, semitone: true).Response.Message);
+        Assert.Equal(Fenced("```md xMargin 21mm 10mm"), Step(Fenced("```md xMargin 20‸mm 10mm"), +1, semitone: true).After);
+        Assert.Equal(Fenced("```md xMargin 20mm 11mm"), Step(Fenced("```md xMargin 20mm 10‸mm"), +1, semitone: true).After);
+        Assert.Equal(Fenced("```md xMargin 21mm 10mm"), Step(Fenced("```md xMargin 20mm‸ 10mm"), +1, semitone: true).After);
+        Assert.Equal(Fenced("```md xMargin 20mm 9mm"), Step(Fenced("```md xMargin 20mm ‸10mm"), -1, semitone: true).After);
+        Assert.Contains("the left", Step(Fenced("```md xMargin 20‸mm 10mm"), +1, semitone: true).Response.Message);
+        Assert.Contains("the right", Step(Fenced("```md xMargin 20mm 10‸mm"), +1, semitone: true).Response.Message);
+        Assert.Contains("both sides", Step(Fenced("```md xMargin 20‸mm"), +1, semitone: true).Response.Message);
         // Each keeps its own unit.
-        Assert.Equal(Fenced("```md indent 2cm 6"), Step(Fenced("```md indent 2cm 5‸"), +1).After);
+        Assert.Equal(Fenced("```md xMargin 2cm 6"), Step(Fenced("```md xMargin 2cm 5‸"), +1).After);
     }
 
     /// <summary>On the word itself the first length steps, as the word <c>tempo</c> steps its
     /// number and a fonts entry's <c>size</c> its own.</summary>
     [Fact]
-    public void OnTheWordIndent_ItsFirstLengthSteps()
+    public void OnTheWordXMargin_ItsFirstLengthSteps()
     {
-        Assert.Equal(Fenced("```md indent 21mm 10mm"), Step(Fenced("```md in‸dent 20mm 10mm"), +1, semitone: true).After);
-        Assert.Equal(Fenced("```md box indent 19mm"), Step(Fenced("```md box ‸indent 20mm"), -1, semitone: true).After);
-        Assert.Equal(Fenced("```md indent 21mm"), Step(Fenced("```md indent‸ 20mm"), +1, semitone: true).After);
-        var (bare, same) = Step(Fenced("```md inden‸t"), +1, semitone: true);
+        Assert.Equal(Fenced("```md xMargin 21mm 10mm"), Step(Fenced("```md xM‸argin 20mm 10mm"), +1, semitone: true).After);
+        Assert.Equal(Fenced("```md box xMargin 19mm"), Step(Fenced("```md box ‸xMargin 20mm"), -1, semitone: true).After);
+        Assert.Equal(Fenced("```md xMargin 21mm"), Step(Fenced("```md xMargin‸ 20mm"), +1, semitone: true).After);
+        var (bare, same) = Step(Fenced("```md xMargi‸n"), +1, semitone: true);
         Assert.False(bare.Fallback);
-        Assert.Equal(Fenced("```md indent"), same);
+        Assert.Equal(Fenced("```md xMargin"), same);
         Assert.Contains("write its length first", bare.Message);
     }
 
     [Fact]
-    public void AnIndent_StopsAtZero_AndBeforeTheWidthTheValidatorRefuses()
+    public void AnXMargin_StopsAtZero_AndBeforeTheWidthTheValidatorRefuses()
     {
         // The floor: the large step stops on it, and then the keys say so.
-        Assert.Equal(Fenced("```md indent 0mm"), Step(Fenced("```md indent 3‸mm"), -1, semitone: false).After);
-        var (least, kept) = Step(Fenced("```md indent 0‸mm"), -1, semitone: true);
+        Assert.Equal(Fenced("```md xMargin 0mm"), Step(Fenced("```md xMargin 3‸mm"), -1, semitone: false).After);
+        var (least, kept) = Step(Fenced("```md xMargin 0‸mm"), -1, semitone: true);
         Assert.False(least.Fallback);
-        Assert.Equal(Fenced("```md indent 0mm"), kept);
+        Assert.Equal(Fenced("```md xMargin 0mm"), kept);
         Assert.Contains("already the least", least.Message);
 
         // The ceiling, on the paper the fence stands under: Up until it stays.
         foreach (string paper in new[] { "", "paper { size a5 }\n" })
             foreach (string shape in new[] { "", " box" })
             {
-                string at = Fenced($"```md indent 30mm{shape}", paper: paper);
+                string at = Fenced($"```md xMargin 30mm{shape}", paper: paper);
                 string opening = "";
                 for (int presses = 0; presses < 200; presses++)
                 {
@@ -3015,20 +3015,50 @@ public class StepRequestTests
             }
     }
 
+    /// <summary>A <c>yMargin</c>'s lengths step as an <c>xMargin</c>'s do (owner's request
+    /// 2026-11-13: the white above and below settable): the same steps for each unit, the
+    /// length under the caret, the first on the word; never under 0, never over the most a
+    /// margin may be (50 staff spaces, LYS4057).</summary>
+    [Fact]
+    public void AYMarginsLengths_StepAsAnXMarginsDo_FromZeroToTheMost()
+    {
+        Assert.Equal(Fenced("```md yMargin 1.1"), Step(Fenced("```md yMargin 1‸"), +1, semitone: true).After);
+        Assert.Equal(Fenced("```md yMargin 2"), Step(Fenced("```md yMargin 1‸"), +1, semitone: false).After);
+        Assert.Equal(Fenced("```md yMargin 4mm box"), Step(Fenced("```md yMargin 5‸mm box"), -1, semitone: true).After);
+        Assert.Equal(Fenced("```md yMargin 3 2"), Step(Fenced("```md yMargin 3 1‸"), +1, semitone: false).After);
+        Assert.Equal(Fenced("```md xMargin 20mm yMargin 4 1"), Step(Fenced("```md xMargin 20mm yM‸argin 3 1"), +1, semitone: false).After);
+        Assert.Equal("yMargin 1.1: above and below", Step(Fenced("```md yMargin 1‸"), +1, semitone: true).Response.Message);
+        Assert.Equal("yMargin 4 1: above", Step(Fenced("```md yMargin 3‸ 1"), +1, semitone: false).Response.Message);
+        Assert.Equal("yMargin 3 0.9: below", Step(Fenced("```md yMargin 3 1‸"), -1, semitone: true).Response.Message);
+
+        // The floor, and the word with no length.
+        Assert.Equal(Fenced("```md yMargin 0"), Step(Fenced("```md yMargin 0.4‸"), -1, semitone: false).After);
+        Assert.Contains("already the least", Step(Fenced("```md yMargin 0‸"), -1, semitone: true).Response.Message);
+        Assert.Contains("write its length first (yMargin 2)", Step(Fenced("```md yMar‸gin"), +1, semitone: true).Response.Message);
+
+        // The ceiling: the large step stops on it, and then the keys say so.
+        Assert.Equal(Fenced("```md yMargin 50"), Step(Fenced("```md yMargin 49.5‸"), +1, semitone: false).After);
+        var (most, kept) = Step(Fenced("```md yMargin 50‸"), +1, semitone: true);
+        Assert.Equal(Fenced("```md yMargin 50"), kept);
+        Assert.Contains("already the most (a margin is at most 87.9 mm)", most.Message);
+        Assert.Empty(SaidOf(kept));
+        Assert.Contains(SaidOf(Fenced("```md yMargin 50.1")), s => s.StartsWith("LYS4057"));
+    }
+
     [Fact]
     public void InAFencesBody_AndOnItsOtherWords_TheKeysDoWhatTheyDid()
     {
         // A number in the text is prose: no step, and the editor runs the key's own command.
         foreach (string marked in new[]
                  {
-                     Fenced("```md indent 20mm", body: "Play 20‸mm from the edge."),
-                     Fenced("```md indent 20mm", body: "indent 20‸mm"),
-                     Fenced("```md indent 20mm", body: "in‸dent 20mm"),
-                     Fenced("```md", body: "```md indent 20‸mm".Replace("```", "~~~")),
-                     Fenced("```md bo‸x indent 20mm"),          // another word of the line
-                     Fenced("```m‸d indent 20mm"),
-                     Fenced("```md indent 20mm ‸ box"),         // between two words
-                     Fenced("```md indent 20mm").Replace("```\n", "``‸`\n"),   // the closing fence
+                     Fenced("```md xMargin 20mm", body: "Play 20‸mm from the edge."),
+                     Fenced("```md xMargin 20mm", body: "xMargin 20‸mm"),
+                     Fenced("```md xMargin 20mm", body: "xM‸argin 20mm"),
+                     Fenced("```md", body: "```md xMargin 20‸mm".Replace("```", "~~~")),
+                     Fenced("```md bo‸x xMargin 20mm"),          // another word of the line
+                     Fenced("```m‸d xMargin 20mm"),
+                     Fenced("```md xMargin 20mm ‸ box"),         // between two words
+                     Fenced("```md xMargin 20mm").Replace("```\n", "``‸`\n"),   // the closing fence
                  })
         {
             var (response, after) = Step(marked, +1, semitone: true);
@@ -3037,12 +3067,12 @@ public class StepRequestTests
             Assert.Equal(marked.Replace("‸", ""), after);
         }
         // A length that is none says why and changes nothing.
-        var (bad, kept) = Step(Fenced("```md indent 20‸MM"), +1, semitone: true);
+        var (bad, kept) = Step(Fenced("```md xMargin 20‸MM"), +1, semitone: true);
         Assert.False(bad.Fallback);
-        Assert.Equal(Fenced("```md indent 20MM"), kept);
+        Assert.Equal(Fenced("```md xMargin 20MM"), kept);
         Assert.Contains("case-sensitive", bad.Message);
         // A section's fence takes printings, not a shape.
-        string inSection = "part m { clef treble }\nsection A {\n```md indent 20‸mm\nA note.\n```\n  m { c'1 | }\n}\nscore { staff m }\n";
+        string inSection = "part m { clef treble }\nsection A {\n```md xMargin 20‸mm\nA note.\n```\n  m { c'1 | }\n}\nscore { staff m }\n";
         Assert.True(Step(inSection, +1, semitone: true).Response.Fallback);
     }
 
@@ -3053,7 +3083,7 @@ public class StepRequestTests
         => $"paper {{ {entry} }}\npart m {{ clef treble }}\nsection A {{ m {{ c'1 | }} }}\nscore {{ staff m }}\n";
 
     /// <summary>Owner's request 2026-11-13: "paper { margin xx } も動くようにして" — a length of a
-    /// paper block steps as a fenced text's indent does: the same steps for each unit, the unit
+    /// paper block steps as a fenced text's xMargin does: the same steps for each unit, the unit
     /// kept, a bare number as staff spaces.</summary>
     [Theory]
     [InlineData("leftMargin 15‸mm", +1, true, "leftMargin 16mm")]
@@ -3171,13 +3201,13 @@ public class StepRequestTests
         return at;
     }
 
-    /// <summary>A margin is not stepped into a page on which a fenced text's indents leave it
+    /// <summary>A margin is not stepped into a page on which a fenced text's xMargins leave it
     /// less than its least width — what LYS4057 refuses on the fence.</summary>
     [Fact]
-    public void APapersMargin_StopsBeforeTheWidthAFencedTextsIndentsNeed()
+    public void APapersMargin_StopsBeforeTheWidthAFencedTextsXMarginsNeed()
     {
-        string Book(string margin) => Fenced("```md indent 60mm", paper: $"paper {{ leftMargin {margin} }}\n");
-        string at = Pressed(Book("15‸mm"), +1, "already the most (a text's indents would leave");
+        string Book(string margin) => Fenced("```md xMargin 60mm", paper: $"paper {{ leftMargin {margin} }}\n");
+        string at = Pressed(Book("15‸mm"), +1, "already the most (a text's xMargin would leave");
         int reached = int.Parse(System.Text.RegularExpressions.Regex.Match(at, @"leftMargin (\d+)mm").Groups[1].Value);
         Assert.True(reached > 15 && reached < 194, at.Split('\n')[0]);
         Assert.Contains(SaidOf(Book($"{reached + 1}mm")), s => s.StartsWith("LYS4057"));

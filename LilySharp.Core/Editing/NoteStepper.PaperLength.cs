@@ -41,7 +41,7 @@ public static partial class NoteStepper
     /// "paper { margin xx } も動くようにして"): the page's lengths, the margins, the indents,
     /// <c>spacingIncrement</c>, <c>staffSpace</c>, and a spacing block's <c>basicDistance</c>,
     /// <c>minimumDistance</c> and <c>padding</c> — Up is more, Down less, by the steps a fenced
-    /// text's <c>indent</c> takes (<see cref="LengthSteps"/>); the unit stays, and a bare number
+    /// text's <c>xMargin</c> takes (<see cref="LengthSteps"/>); the unit stays, and a bare number
     /// is staff spaces (PaperPlanReader.TryReadLength).
     /// </summary>
     /// <remarks>
@@ -92,8 +92,8 @@ public static partial class NoteStepper
                 return written.Count switch
                 {
                     1 => PaperLengthEdit(text, tree, paper, written[0], dir, small),
-                    0 => IndentSays($"{entry.Key}: write a length in it first ({entry.Key} {{ basicDistance 12 }})"),
-                    _ => IndentSays($"{entry.Key}: {written.Count} lengths - put the caret on the one to step"),
+                    0 => LengthSays($"{entry.Key}: write a length in it first ({entry.Key} {{ basicDistance 12 }})"),
+                    _ => LengthSays($"{entry.Key}: {written.Count} lengths - put the caret on the one to step"),
                 };
             }
             return null;
@@ -107,15 +107,15 @@ public static partial class NoteStepper
     {
         bool staffSpace = length.Key == PaperPlanReader.StaffSpaceKey;
         if (length.Number is not { } number)
-            return IndentSays($"{length.Says}: write its length first ({length.Key} {(staffSpace ? "1.5mm" : "15mm")})");
+            return LengthSays($"{length.Says}: write its length first ({length.Key} {(staffSpace ? "1.5mm" : "15mm")})");
         string? unit = length.Unit?.Text;
         string was = (length.Minus != null ? "-" : "") + number.Text + unit;
         if (unit != null && !FencedText.LengthUnits.Contains(unit))
-            return IndentSays($"{length.Says} {was}: '{unit}' is not a unit of this language (mm, cm, in)");
+            return LengthSays($"{length.Says} {was}: '{unit}' is not a unit of this language (mm, cm, in)");
         if (staffSpace && unit == null)
-            return IndentSays($"{length.Says} {was}: write its unit (staffSpace 1.5mm)");
+            return LengthSays($"{length.Says} {was}: write its unit (staffSpace 1.5mm)");
         if (!double.TryParse(number.Text, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out double now))
-            return IndentSays($"{length.Says} {was}: write a number");
+            return LengthSays($"{length.Says} {was}: write a number");
         if (length.Minus != null)
             now = -now;
 
@@ -145,7 +145,7 @@ public static partial class NoteStepper
             return false;
         }, places);
         if (stepped is not { } next)
-            return IndentSays($"{length.Says} {was}: already the {(dir > 0 ? "most" : "least")} ({why ?? "0"})");
+            return LengthSays($"{length.Says} {was}: already the {(dir > 0 ? "most" : "least")} ({why ?? "0"})");
 
         string Mm(double staffSpaces) => (staffSpaces * after.Paper.StaffSpaceMm).ToString("0.#", CultureInfo.InvariantCulture);
         string said = $"{length.Says} {Spelled(next)}{unit}" + length.Key switch
@@ -180,7 +180,7 @@ public static partial class NoteStepper
     /// <summary>
     /// Why a step from <paramref name="before"/> to <paramref name="after"/> is not taken, or null:
     /// the validators refuse the stepped book where they accepted this one (a <c>staffSpace</c> of
-    /// 0; margins under which a fenced text's indents leave it less than its least width, LYS4057),
+    /// 0; margins under which a fenced text's own side margins leave it less than its least width, LYS4057),
     /// or the page is left no line or no height at all.
     /// LILYSHARP-OWN: the second — no diagnostic refuses margins wider than their paper, and the
     /// keys stop before them all the same.
@@ -192,7 +192,7 @@ public static partial class NoteStepper
             string raised = after.Errors.FirstOrDefault(e => !before.Errors.Contains(e)) ?? after.Errors[^1];
             // The sentence that says what is wrong, without the advice after it.
             int stop = raised.IndexOf(". ", StringComparison.Ordinal);
-            return (stop < 0 ? raised.TrimEnd('.') : raised[..stop]).Replace("These indents leave", "a text's indents would leave");
+            return (stop < 0 ? raised.TrimEnd('.') : raised[..stop]).Replace("These margins leave", "a text's xMargin would leave");
         }
         static double Height(LayoutOptions p) => p.PageHeight - p.MarginTop - p.MarginBottom;
         if (after.Paper.ContentWidth <= 0 && after.Paper.ContentWidth < before.Paper.ContentWidth)

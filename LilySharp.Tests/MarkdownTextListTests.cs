@@ -198,11 +198,11 @@ public class MarkdownTextListTests
     public void AHeadingFirstOrLast_GivesTheBandItsOwnBox()
     {
         var first = Band("# Head\n\nText.");
-        Assert.Equal(2.0 * H1, first.Up, 9);
-        Assert.Equal(first.Lines[^1].Baseline + 1.0, first.Down, 9);
+        Assert.Equal(2.0 * H1 + ProseBand.DefaultMargin, first.Up, 9);
+        Assert.Equal(first.Lines[^1].Baseline + 1.0 + ProseBand.DefaultMargin, first.Down, 9);
         var last = Band("Text.\n\n## Sub");
-        Assert.Equal(2.0, last.Up, 9);
-        Assert.Equal(last.Lines[^1].Baseline + 1.0 * H2, last.Down, 9);
+        Assert.Equal(2.0 + ProseBand.DefaultMargin, last.Up, 9);
+        Assert.Equal(last.Lines[^1].Baseline + 1.0 * H2 + ProseBand.DefaultMargin, last.Down, 9);
     }
 
     [Fact]
@@ -224,7 +224,7 @@ public class MarkdownTextListTests
     public void AHeadingFirstUnderTheTitle_StandsItsBoxUnderTheRows()
     {
         var page = Laid(Book(top: $"{F}md\n# Before you play\n\nSlowly.\n{F}")).Pages[0];
-        Assert.Equal(page.HeaderTop + page.Header!.Depth + 0.5 + 2.0 * H1, page.HeaderTextY, 6);
+        Assert.Equal(page.HeaderTop + page.Header!.Depth + 0.5 + ProseBand.DefaultMargin + 2.0 * H1, page.HeaderTextY, 6);
     }
 
     // ---- lists on the page -------------------------------------------------------------
@@ -241,7 +241,7 @@ public class MarkdownTextListTests
         Assert.All(band.Lines, l => Assert.True(l.Left + l.Marker!.X >= 0));       // inside the margin
         // A tight list's items step by the skip.
         Assert.Equal([0.0, 3.0], band.Lines.Select(l => l.Baseline));
-        Assert.Equal(2.0, band.Up, 9);
+        Assert.Equal(2.0 + ProseBand.DefaultMargin, band.Up, 9);
     }
 
     [Fact]
@@ -327,8 +327,8 @@ public class MarkdownTextListTests
         Assert.All(boxed.Lines.Skip(1), l => Assert.True(l.Width <= 100 - 2.2 - Indent + 1e-9));
         // The frame is around the heading's own box and the last item's.
         Assert.Equal(new ProseFrame(0, 100, ProseBand.BoxThickness), boxed.Frame);
-        Assert.Equal(2.0 * H2 + 1.1 + ProseBand.BoxMargin, boxed.Up, 9);
-        Assert.Equal(boxed.Lines[^1].Baseline + 1.0 + 1.1 + ProseBand.BoxMargin, boxed.Down, 9);
+        Assert.Equal(2.0 * H2 + 1.1 + ProseBand.DefaultMargin, boxed.Up, 9);
+        Assert.Equal(boxed.Lines[^1].Baseline + 1.0 + 1.1 + ProseBand.DefaultMargin, boxed.Down, 9);
     }
 
     /// <summary>LILYSHARP-OWN (docs/markdown-text-design.md section 5.1, for the owner to
@@ -353,8 +353,9 @@ public class MarkdownTextListTests
         var band = Band("One **bold** line.\n\nAnother.  \nBy hand.");
         Assert.All(band.Lines, l => Assert.Equal((1.0, null, 0.0, false), (l.Scale, l.Marker, l.Indent, l.InList)));
         Assert.Equal([0.0, 4.5, 7.5], band.Lines.Select(l => l.Baseline));
-        Assert.Equal(2.0, band.Up);
-        Assert.Equal(8.5, band.Down);
+        // …with the white every text keeps above and below (ProseBand.DefaultMargin).
+        Assert.Equal(2.0 + ProseBand.DefaultMargin, band.Up);
+        Assert.Equal(8.5 + ProseBand.DefaultMargin, band.Down);
     }
 
     // ---- the diagnostics ---------------------------------------------------------------
@@ -409,13 +410,19 @@ public class MarkdownTextListTests
     {
         string ly = new LilyPondExporter().Export(SyntaxTree.Parse(Book(top:
             $"{F}md\n# Head\n\nText.\n\n- one\n  - inner\n- two\n\n## Sub\n\n1. first\n{F}")));
-        Assert.Contains("  \\with-dimension #Y #'(-1.2599 . 2.5198) \\fontsize #2 \\concat { \\bold \"Head\" }\n", ly);
+        Assert.Contains("  \\with-dimension #Y #'(-1.2599 . 3.5198) \\fontsize #2 \\concat { \\bold \"Head\" }\n", ly);
         Assert.Contains("  \\with-dimension #Y #'(-1 . 2.75) \"Text.\"\n", ly);
         Assert.Contains("  \\with-dimension #Y #'(-1 . 3.5) \\concat { \\with-dimension #X #'(0 . 3.3) \\translate #'(2.2 . 0) \\right-align \"\u2022\" \"one\" }\n", ly);
         Assert.Contains("  \\concat { \\with-dimension #X #'(0 . 6.6) \\translate #'(5.5 . 0) \\right-align \"\u2013\" \"inner\" }\n", ly);
         Assert.Contains("  \\concat { \\with-dimension #X #'(0 . 3.3) \\translate #'(2.2 . 0) \\right-align \"\u2022\" \"two\" }\n", ly);
         Assert.Contains("  \\with-dimension #Y #'(-1.1225 . 5.2449) \\fontsize #1 \\concat { \\bold \"Sub\" }\n", ly);
-        Assert.Contains("  \\with-dimension #Y #'(-1 . 2.75) \\concat { \\with-dimension #X #'(0 . 3.3) \\translate #'(2.2 . 0) \\right-align \"1.\" \"first\" }\n", ly);
+        Assert.Contains("  \\with-dimension #Y #'(-2 . 2.75) \\concat { \\with-dimension #X #'(0 . 3.3) \\translate #'(2.2 . 0) \\right-align \"1.\" \"first\" }\n", ly);
+        // (The first line and the last carry the text's margin, the default 1.0: 2.5198 + 1 over
+        // the heading, 1 + 1 under the last item. With `yMargin 0` they are the lines' own boxes.)
+        string tight = new LilyPondExporter().Export(SyntaxTree.Parse(Book(top:
+            $"{F}md yMargin 0\n# Head\n\nText.\n\n1. first\n{F}")));
+        Assert.Contains("  \\with-dimension #Y #'(-1.2599 . 2.5198) \\fontsize #2 \\concat { \\bold \"Head\" }\n", tight);
+        Assert.Contains("  \\with-dimension #Y #'(-1 . 3.5) \\concat { \\with-dimension #X #'(0 . 3.3) \\translate #'(2.2 . 0) \\right-align \"1.\" \"first\" }\n", tight);
     }
 
     [Fact]

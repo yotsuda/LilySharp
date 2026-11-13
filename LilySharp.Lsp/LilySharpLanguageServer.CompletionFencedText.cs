@@ -29,9 +29,9 @@ namespace LilySharp.Lsp;
 // comment.
 //   1. An empty line there: the two blocks, low in the list of keywords.
 //   2. After the backticks (`, `` or ```), and on into the first word: the same two.
-//   3. After ```md and a space, and after each further word: `end`, `box`, `center`, `indent`
-//      (owner-approved 2026-11-13) — those not on the line yet; and after `indent` its
-//      lengths, which taking `indent` from the list opens at once (owner's request, same day).
+//   3. After ```md and a space, and after each further word: `end`, `box`, `center`, `xMargin`,
+//      `yMargin` (owner-approved 2026-11-13) — those not on the line yet; and after a margin
+//      its lengths, which taking the word from the list opens at once (owner's request, same day).
 // And between the fences nothing is Lily#, so nothing is offered there at all.
 public sealed partial class LilySharpLanguageServer
 {
@@ -125,9 +125,9 @@ public sealed partial class LilySharpLanguageServer
     /// caret, the closing fence — unless the fence already closes below, where it writes the
     /// opening line alone.</item>
     /// <item>After <c>```md</c> and a space, and after each word that follows: <c>end</c>,
-    /// <c>box</c>, <c>center</c>, <c>indent</c>, less those already on the line; straight
-    /// after <c>indent</c> its lengths alone, and after its first length the second's beside
-    /// the words (<see cref="FenceLengthItems"/>).</item>
+    /// <c>box</c>, <c>center</c>, <c>xMargin</c>, <c>yMargin</c>, less those already on the
+    /// line; straight after a margin its lengths alone, and after its first length the
+    /// second's beside the words (<see cref="FenceLengthItems"/>).</item>
     /// <item>Between the fences, on the closing fence, and at a fence that stands where none is
     /// printed: an empty list. Nothing there is Lily#. ⚠️ Until this was written the body
     /// answered whatever list the text before the fence led to — the top level's keywords
@@ -212,23 +212,24 @@ public sealed partial class LilySharpLanguageServer
         }
 
         // ```md ▮ and on along the line: the words a text's place takes here — where it is
-        // printed (`end`) and how it is set (`box`, `center`, `indent`; owner-approved
-        // 2026-11-13) — in any order, each once, so a word already written is not offered
-        // again. (A section's printings — `2`, `all` — are not offered: a section's text is
-        // not printed yet.)
+        // printed (`end`) and how it is set (`box`, `center`, `xMargin`, `yMargin`;
+        // owner-approved 2026-11-13) — in any order, each once, so a word already written is
+        // not offered again. (A section's printings — `2`, `all` — are not offered: a
+        // section's text is not printed yet.)
         if (before.Length >= 1 && before[0] is FencedText.MarkdownWord or FencedText.MarkdownLongWord)
         {
             var range = RangeOf(text, wordStart, wordEnd);
-            // After `indent` its lengths (owner's request 2026-11-13: "md indent を補完で入れたら、
-            // 数字を補完ウィンドウにリストして"): the first, which it needs — nothing else belongs
-            // there — and after that one the second, which it may take, beside the words.
-            int indentAt = Array.LastIndexOf(before, FencedText.IndentWord);
-            int lengthsWritten = indentAt >= 0 && before.Skip(indentAt + 1).All(w => char.IsAsciiDigit(w[0]))
-                ? before.Length - indentAt - 1
+            // After a margin its lengths (owner's request 2026-11-13: "md indent を補完で入れたら、
+            // 数字を補完ウィンドウにリストして" — said of xMargin under its first name, and
+            // yMargin's the same): the first, which it needs — nothing else belongs there —
+            // and after that one the second, which it may take, beside the words.
+            int marginAt = Array.FindLastIndex(before, w => w is FencedText.XMarginWord or FencedText.YMarginWord);
+            int lengthsWritten = marginAt >= 0 && before.Skip(marginAt + 1).All(w => char.IsAsciiDigit(w[0]))
+                ? before.Length - marginAt - 1
                 : -1;
             string typed = text[wordStart..offset];
             var lengths = lengthsWritten is 0 or 1
-                ? FenceLengthItems(typed, range, second: lengthsWritten == 1)
+                ? FenceLengthItems(typed, range, second: lengthsWritten == 1, sides: before[marginAt] == FencedText.XMarginWord)
                 : [];
             if (lengthsWritten == 0 || (lengths.Length > 0 && typed.Length > 0 && char.IsAsciiDigit(typed[0])))
                 return new CompletionList { Items = lengths };
@@ -239,17 +240,19 @@ public sealed partial class LilySharpLanguageServer
                     : "Print the text under the last system instead of under the title"),
                 (FencedText.BoxWord, "Rule a frame around the text"),
                 (FencedText.CenterWord, "Centre each line in the text's width"),
-                (FencedText.IndentWord, "White at the text's left and right, inside the line width: "
-                    + "indent 20mm (both sides) or indent 20mm 10mm (left, right); mm, cm, in, or staff spaces"),
+                (FencedText.XMarginWord, "White at the text's left and right, inside the line width: "
+                    + "xMargin 20mm (both sides) or xMargin 20mm 10mm (left, right); mm, cm, in, or staff spaces"),
+                (FencedText.YMarginWord, "White above and below the text, 1 staff space where nothing is written: "
+                    + "yMargin 2 (both) or yMargin 3 1 (above, below); staff spaces, or mm, cm, in"),
             ];
             return new CompletionList
             {
                 Items = [.. words.Where(w => !before.Contains(w.Word)).Select((w, i) =>
                 {
-                    // `indent` needs its length: it is written with the space after it and
+                    // A margin needs its length: it is written with the space after it and
                     // opens the list again, on the lengths (the same request), as a singer
                     // line's `up` opens its numbers.
-                    bool takesLength = w.Word == FencedText.IndentWord;
+                    bool takesLength = w.Word is FencedText.XMarginWord or FencedText.YMarginWord;
                     return new CompletionItem
                     {
                         Label = w.Word,
@@ -267,22 +270,30 @@ public sealed partial class LilySharpLanguageServer
         return null;
     }
 
-    /// <summary>The lengths the list offers after <c>indent</c>, smallest first: Lily#'s
+    /// <summary>The lengths the list offers after <c>xMargin</c>, smallest first: Lily#'s
     /// choice, the round millimetres a page's side white is commonly set to.</summary>
-    internal static readonly string[] FenceIndentLengths =
+    internal static readonly string[] FenceXMarginLengths =
         ["5mm", "10mm", "15mm", "20mm", "25mm", "30mm", "40mm", "50mm"];
 
+    /// <summary>The lengths the list offers after <c>yMargin</c>, smallest first: Lily#'s
+    /// choice. Staff spaces read naturally here — the page's own vertical distances are
+    /// written in them, and the default is 1 — then a few millimetres.</summary>
+    internal static readonly string[] FenceYMarginLengths =
+        ["0", "1", "2", "3", "4", "5mm", "10mm", "15mm"];
+
     /// <summary>
-    /// The list at a length of <c>indent</c> (owner's request 2026-11-13): the number being
-    /// typed with each unit (<c>20</c> → <c>20mm</c>, <c>20cm</c>, <c>20in</c>; a bare number
-    /// is staff spaces already), then those of <see cref="FenceIndentLengths"/> that begin as
+    /// The list at a length of <c>xMargin</c> or <c>yMargin</c> (owner's request 2026-11-13):
+    /// the number being typed with each unit (<c>20</c> → <c>20mm</c>, <c>20cm</c>,
+    /// <c>20in</c>; a bare number is staff spaces already), then those of
+    /// <see cref="FenceXMarginLengths"/> or <see cref="FenceYMarginLengths"/> that begin as
     /// typed — all of them where nothing is typed yet. Each replaces the word; the sort text
     /// keeps them in this order (<c>10mm</c> would sort before <c>5mm</c> by its label).
     /// </summary>
     /// <param name="typed">The word from its start to the caret.</param>
     /// <param name="range">The word, which an item replaces.</param>
-    /// <param name="second">Whether this is <c>indent</c>'s second length, the right side's.</param>
-    private static CompletionItem[] FenceLengthItems(string typed, LilySharp.Lsp.Protocol.Range range, bool second)
+    /// <param name="second">Whether this is the margin's second length: the right side's, or below's.</param>
+    /// <param name="sides">Whether the margin is <c>xMargin</c>; else <c>yMargin</c>.</param>
+    private static CompletionItem[] FenceLengthItems(string typed, LilySharp.Lsp.Protocol.Range range, bool second, bool sides)
     {
         var offered = new List<string>();
         int digits = 0;
@@ -292,10 +303,15 @@ public sealed partial class LilySharpLanguageServer
         if (number.Length > 0 && char.IsAsciiDigit(number[0]) && char.IsAsciiDigit(number[^1])
             && number.Count(c => c == '.') <= 1)
             offered.AddRange(FencedText.LengthUnits.Where(u => u.StartsWith(unit, StringComparison.Ordinal)).Select(u => number + u));
-        offered.AddRange(FenceIndentLengths.Where(l => l.StartsWith(typed, StringComparison.Ordinal) && !offered.Contains(l)));
-        string detail = second
-            ? "White at the text's right; the length before it is then the left's alone"
-            : "White at the text's left and right; a second length sets the right apart";
+        offered.AddRange((sides ? FenceXMarginLengths : FenceYMarginLengths)
+            .Where(l => l.StartsWith(typed, StringComparison.Ordinal) && !offered.Contains(l)));
+        string detail = (sides, second) switch
+        {
+            (true, false) => "White at the text's left and right; a second length sets the right apart",
+            (true, true) => "White at the text's right; the length before it is then the left's alone",
+            (false, false) => "White above and below the text; a second length sets the white below apart",
+            (false, true) => "White below the text; the length before it is then the white above alone",
+        };
         return [.. offered.Select((length, i) => new CompletionItem
         {
             Label = length,
@@ -336,7 +352,7 @@ public sealed partial class LilySharpLanguageServer
             : "Every score of the file prints it; a fence inside `score { }` replaces it for that score. ")
             + "Write Markdown between the two fence lines — paragraphs, **bold** and *italic* are printed. "
             + "Nothing between them is Lily#. The opening line may go on to say how the text is set: "
-            + "`box` (a ruled frame), `center`, `indent 20mm` (white at the sides).";
+            + "`box` (a ruled frame), `center`, `xMargin 20mm` (white at the sides), `yMargin 2` (white above and below).";
         CompletionItem Item(string words, string detail, string sort) => new()
         {
             Label = ticks + words,

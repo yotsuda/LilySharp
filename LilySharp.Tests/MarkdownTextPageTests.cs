@@ -121,9 +121,12 @@ public class MarkdownTextPageTests
         // The text's size is the composer line's, its lines step by the baseline-skip.
         Assert.Equal(2.2, ProseBand.Em(ScoreTextMetrics.Bundled), 6);
         Assert.Equal([0.0, 4.5, 9.0], band.Lines.Select(l => l.Baseline));
-        // Two thirds of the skip over the first baseline, one third under the last.
-        Assert.Equal(2.0, band.Up, 9);
-        Assert.Equal(9.0 + 1.0, band.Down, 9);
+        // Two thirds of the skip over the first baseline, one third under the last — and the
+        // white every text keeps above and below (ProseBand.DefaultMargin; `yMargin 0` has none).
+        Assert.Equal(2.0 + ProseBand.DefaultMargin, band.Up, 9);
+        Assert.Equal(9.0 + 1.0 + ProseBand.DefaultMargin, band.Down, 9);
+        var tight = ProseBand.Build("one\n\ntwo\n\nthree", 0, ScoreTextMetrics.Bundled, 100, new ProseShape(0, 0, false, false, 0, 0))!;
+        Assert.Equal((2.0, 9.0 + 1.0), (tight.Up, tight.Down));
     }
 
     [Fact]
@@ -208,8 +211,9 @@ public class MarkdownTextPageTests
         // The rows stand where they stood.
         Assert.Equal(plain.HeaderTop, page.HeaderTop, 9);
         Assert.Equal(plain.Header!.Depth, page.Header.Depth, 9);
-        // The first baseline: the rows' depth, markup-markup-spacing's padding, the box.
-        Assert.Equal(page.HeaderTop + page.Header.Depth + 0.5 + 2.0, page.HeaderTextY, 6);
+        // The first baseline: the rows' depth, markup-markup-spacing's padding, the text's
+        // margin (ProseBand.DefaultMargin), the box.
+        Assert.Equal(page.HeaderTop + page.Header.Depth + 0.5 + ProseBand.DefaultMargin + 2.0, page.HeaderTextY, 6);
         // The music moved down by what the text takes: its lines and the box, less nothing
         // the rows had (their own spring to the system was floored by the same ink).
         double textBottom = page.HeaderTextY + band.Down;
@@ -290,10 +294,18 @@ public class MarkdownTextPageTests
         int score = ly.IndexOf("\\score {", System.StringComparison.Ordinal);
         int after = ly.LastIndexOf("\\markuplist \\column-lines {", System.StringComparison.Ordinal);
         Assert.True(before >= 0 && before < score && score < after);
-        Assert.Contains("  \\concat { \"Plain \" \\bold \"bold\" \" and \" \\italic \"slanted\" \" \\\"quoted\\\".\" }\n", ly);
+        Assert.Contains("  \\with-dimension #Y #'(-1 . 3) \\concat { \"Plain \" \\bold \"bold\" \" and \" \\italic \"slanted\" \" \\\"quoted\\\".\" }\n", ly);
         // The white over a paragraph is its first line's taller box: 2 + half a skip.
-        Assert.Contains("  \\with-dimension #Y #'(-1 . 3.5) \"Second.\"\n", ly);
-        Assert.Contains("  \"The end.\"\n}", ly);
+        // (…and the white under the text, its margin, is the last line's deeper one; the white
+        // over it the first line's taller one.)
+        Assert.Contains("  \\with-dimension #Y #'(-2 . 3.5) \"Second.\"\n", ly);
+        Assert.Contains("  \\with-dimension #Y #'(-2 . 3) \"The end.\"\n}", ly);
+        // With `yMargin 0` the list is LilyPond's own lines, as measured (t1tw2.ly).
+        string tight = new LilyPondExporter().Export(SyntaxTree.Parse(
+            Book(top: $"{F}md yMargin 0\nPlain **bold** and *slanted* \"quoted\".\n\nSecond.\n{F}\n{F}md end yMargin 0\nThe end.\n{F}")));
+        Assert.Contains("  \\concat { \"Plain \" \\bold \"bold\" \" and \" \\italic \"slanted\" \" \\\"quoted\\\".\" }\n", tight);
+        Assert.Contains("  \\with-dimension #Y #'(-1 . 3.5) \"Second.\"\n", tight);
+        Assert.Contains("  \"The end.\"\n}", tight);
         // A file with no fence writes none.
         Assert.DoesNotContain("\\markuplist", new LilyPondExporter().Export(SyntaxTree.Parse(Book())));
     }

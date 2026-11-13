@@ -33,11 +33,12 @@ public sealed partial class LilyPondExporter
     /// <c>\column-lines</c> is what gives each line the box the page gives it — two thirds of
     /// the baseline-skip over the baseline, one third under (scm/markup.scm space-lines); a
     /// bare list of markups stands on its ink instead. A paragraph's first line carries the
-    /// white over it as a taller box.
+    /// white over it as a taller box; the first line and the last carry the text's margins
+    /// (<c>yMargin</c>, or ProseBand.DefaultMargin) the same way.
     /// MEASURED 2026-11-12, LilyPond 2.26.0 (LilySharp-Lab sessions/p1226/md, t1tw2.ly against
-    /// t1.lys): the composer's baseline to the first line 2.9705, a line to the next 3.0000,
-    /// a paragraph to the next 4.5000, the last system's middle line to the closing text
-    /// 12.0000 — the page's 2.95, 3.00, 4.50 and 12.00.
+    /// t1.lys), with no margin — today's <c>yMargin 0</c>: the composer's baseline to the
+    /// first line 2.9705, a line to the next 3.0000, a paragraph to the next 4.5000, the last
+    /// system's middle line to the closing text 12.0000 — the page's 2.95, 3.00, 4.50 and 12.00.
     /// LILYSHARP-OWN: the breaking, and the white between paragraphs. Not written yet: a
     /// size or a face the score gives the text (<c>fonts { md … }</c>).
     /// </remarks>
@@ -71,11 +72,18 @@ public sealed partial class LilyPondExporter
             double lineUp = up * line.Scale, lineDown = down * line.Scale;
             double step = previousScale == 1 && line.Scale == 1 ? skip : down * previousScale + lineUp;
             double white = i == 0 ? 0 : line.Baseline - previous - step;
-            if (white > 1e-9 || line.Scale != 1)
-                _sb.Append("\\with-dimension #Y #'(").Append(Num(-lineDown)).Append(" . ").Append(Num(lineUp + Math.Max(0, white))).Append(") ");
+            // …and the text's margins (yMargin, or the page's default): the white over the
+            // first line and under the last, part of those lines' extents as it is of the
+            // band's. With `yMargin 0` nothing is written and the list is LilyPond's own.
+            double over = i == 0 ? band.MarginTop : 0, under = i == band.Lines.Length - 1 ? band.MarginBottom : 0;
+            if (white > 1e-9 || line.Scale != 1 || over > 1e-9 || under > 1e-9)
+            {
+                _sb.Append("\\with-dimension #Y #'(").Append(Num(-lineDown - under)).Append(" . ")
+                    .Append(Num(lineUp + Math.Max(0, white) + over)).Append(") ");
+            }
             previous = line.Baseline;
             previousScale = line.Scale;
-            // An indented line begins after its white; a centred one is LilyPond's to centre
+            // A line with white at its left (xMargin, a list's indent) begins after it; a centred one is LilyPond's to centre
             // in the text's width (\fill-line of one markup), so that its own measure of the
             // words, not the page's, finds the middle. A list's line is not centred.
             bool centred = shape.Center && !line.InList;
@@ -169,8 +177,8 @@ public sealed partial class LilyPondExporter
         // markup's ORIGIN at the end of the one before, and the box reaches left of its
         // origin by its padding and rule (measured: with the frame's edge written here the
         // whole box stood 1.1 too far left, off the margin).
-        // The white the page keeps above and below the frame (ProseBand.BoxMargin): the line's
-        // own extent, taller than the box by that much each way.
+        // The white the page keeps above and below the frame (yMargin, or
+        // ProseBand.DefaultMargin): the line's own extent, taller than the box by that much.
         _sb.Append("  \\with-dimension #Y #'(").Append(Num(-band.Down)).Append(" . ").Append(Num(band.Up)).Append(") ");
         _sb.Append("\\concat { \\hspace #").Append(Num(band.Left)).Append(' ');
         _sb.Append("\\override #'(box-padding . ").Append(Num(ProseBand.BoxPadding)).Append(") \\box\n");

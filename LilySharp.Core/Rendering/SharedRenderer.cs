@@ -487,7 +487,7 @@ internal static partial class SharedRenderer
 
     /// <summary>
     /// A fenced text (docs/markdown-text-design.md): each line from the left margin — or
-    /// from where its shape puts it (<c>indent</c>, <c>center</c>; ProseLine.Left) — its
+    /// from where its shape puts it (<c>xMargin</c>, <c>center</c>; ProseLine.Left) — its
     /// pieces in their own weight and slant, about the reference point the page solved —
     /// <paramref name="referenceY"/> below the page's top edge, the first line's baseline;
     /// a list item's marker before its first line; and a boxed text's frame around them.
@@ -507,8 +507,10 @@ internal static partial class SharedRenderer
                 // upright ones between them.
                 double t = frame.Thickness;
                 double x0 = options.MarginLeft + frame.Left, x1 = options.MarginLeft + frame.Right;
-                // (The band reaches BoxMargin past the rule above and below: the white the page keeps around a frame.)
-                double top = page.Height - (referenceY - band.Up + ProseBand.BoxMargin), bottom = page.Height - (referenceY + band.Down - ProseBand.BoxMargin);
+                // (The band reaches the text's margin — yMargin, or ProseBand.DefaultMargin —
+                // past the rule above and below: the white the page keeps around a frame.)
+                double top = page.Height - (referenceY - band.Up + band.MarginTop);
+                double bottom = page.Height - (referenceY + band.Down - band.MarginBottom);
                 gc.DrawRectangle(x0, top, x1 - x0, t, fill: Color.Black);
                 gc.DrawRectangle(x0, bottom + t, x1 - x0, t, fill: Color.Black);
                 gc.DrawRectangle(x0, top - t, t, top - bottom - 2 * t, fill: Color.Black);

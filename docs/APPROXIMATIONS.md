@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 394 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **522** | |
+| `OWN` | 395 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **523** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -24,7 +24,7 @@
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 20 |
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 18 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 16 |
-| `LilySharp.Core/Svg/Layout/ProseBand.cs` | 13 |
+| `LilySharp.Core/Svg/Layout/ProseBand.cs` | 14 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
 | `LilySharp.Core/Midi/MidiExporter.cs` | 10 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 10 |
@@ -249,7 +249,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（394 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（395 件）
 
 ### `LilySharp.Core/Audio/SingerPlan.cs`
 - **`SingerPlan`** LILYSHARP-OWN.
@@ -714,7 +714,8 @@
 ### `LilySharp.Core/Svg/Layout/ProseBand.cs`
 - **`ProseBand`** LILYSHARP-OWN: the breaking itself (LilyPond's \wordwrap does not break a text
 - **`ProseBand.BoxPadding`** LILYSHARP-OWN (owner-approved 2026-11-13: a ruled frame; the padding is this
-- **`ProseBand.BoxMargin`** LILYSHARP-OWN. A text's line is spaced from its neighbours by its box of
+- **`ProseBand.DefaultMargin`** LILYSHARP-OWN: one staff space each way. LilyPond's own spacing is yMargin 0.
+- **`ProseBand.MaximumMargin`** LILYSHARP-OWN: 50 — about 88 mm, under a third of an A4 page's height at the
 - **`ProseBand.MinimumWidth`** LILYSHARP-OWN: ten staff spaces — four or five ems of the text, a short word
 - **`ProseBand.ParagraphGap`** LILYSHARP-OWN: half a line. LilyPond has no paragraph; the twin writes it as
 - **`ProseBand.HeadingSteps`** LILYSHARP-OWN: which steps. Bold at +2 is 2.77, the size (and weight) of the piece's

@@ -309,11 +309,12 @@ public static partial class NoteStepper
         if (semitone && selections is [var (caretAt, caretTo)] && caretAt == caretTo
             && DiagramFingeringStep(text, tree, caretAt, -dir) is { } fingering)
             return fingering;
-        // On a length of a fenced text's `indent`, or on the word: that length (owner's request
-        // 2026-11-13). The fence is one token with no nodes inside, so no target names it.
-        if (selections is [var (indentFrom, indentTo)]
-            && FenceIndentStep(tree, Math.Min(indentFrom, indentTo), Math.Max(indentFrom, indentTo), dir, semitone) is { } indent)
-            return indent;
+        // On a length of a fenced text's `xMargin` or `yMargin`, or on the word: that length
+        // (owner's request 2026-11-13). The fence is one token with no nodes inside, so no
+        // target names it.
+        if (selections is [var (marginFrom, marginTo)]
+            && FenceMarginStep(tree, Math.Min(marginFrom, marginTo), Math.Max(marginFrom, marginTo), dir, semitone) is { } margin)
+            return margin;
         // On a length of a paper { } block, or on its key: that length, the same way (owner's
         // request 2026-11-13). Nothing stepped there before but `size`, which is no length.
         if (selections is [var (paperFrom, paperTo)]

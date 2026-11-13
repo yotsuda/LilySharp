@@ -24,8 +24,9 @@ namespace LilySharp.Core.Semantics;
 /// <summary>
 /// The opening line of a fenced text (docs/markdown-text-design.md): it says <c>md</c>, and
 /// then only the words its place takes — <c>end</c> and the shape (<c>box</c>, <c>center</c>,
-/// <c>indent LEFT [RIGHT]</c>; owner-approved 2026-11-13) at the top level and in a score, a
-/// printing (<c>2</c>, <c>1,3</c>, <c>2-3</c>, <c>all</c>) directly in a top-level section.
+/// <c>xMargin LEFT [RIGHT]</c>, <c>yMargin TOP [BOTTOM]</c>; owner-approved 2026-11-13) at
+/// the top level and in a score, a printing (<c>2</c>, <c>1,3</c>, <c>2-3</c>, <c>all</c>)
+/// directly in a top-level section.
 /// </summary>
 internal sealed class MarkdownTextValidator : ISemanticValidator
 {
@@ -39,13 +40,15 @@ internal sealed class MarkdownTextValidator : ISemanticValidator
     /// <summary>The sentence's list of what a top-level or a score's opening line may say after <c>md</c>.</summary>
     internal const string PageWords =
         "end (under the last system), box (a ruled frame), center (each line centred), "
-        + "indent LEFT [RIGHT] (white at the sides: ```md indent 20mm)";
+        + "xMargin LEFT [RIGHT] (white at the sides: ```md xMargin 20mm), "
+        + "yMargin TOP [BOTTOM] (white above and below: ```md yMargin 2)";
 
     /// <summary>
     /// A top-level or a score's opening line (owner-approved 2026-11-13): <c>end</c> once,
-    /// and the shape — <c>box</c>, <c>center</c>, <c>indent LEFT [RIGHT]</c> — each once, in
-    /// any order; indents that leave the text its least width on the paper the fence stands
-    /// under; and one shape for one place.
+    /// and the shape — <c>box</c>, <c>center</c>, <c>xMargin LEFT [RIGHT]</c>,
+    /// <c>yMargin TOP [BOTTOM]</c> — each once, in any order; side margins that leave the text
+    /// its least width on the paper the fence stands under, a margin above or below no
+    /// more than the most one may be; and one shape for one place.
     /// </summary>
     private void ValidatePageWords(SyntaxTree tree, MarkdownTextSyntax text, FencedText value, int at,
         Dictionary<(SyntaxNode? Parent, bool End), bool> shapedPlaces)
@@ -68,9 +71,15 @@ internal sealed class MarkdownTextValidator : ISemanticValidator
         foreach (var (offset, length, message) in problems)
         {
             string word = text.Fence.Text.Substring(offset, length);
-            _diagnostics.Error(new TextSpan(at + offset, length), DiagnosticCodes.FencedTextWord,
-                message ?? $"'{word}' means nothing here. This text stands under the title; after ```md "
-                           + $"the opening line may say: {PageWords}.");
+            // `indent` was xMargin's name for the hours before it was paired with yMargin
+            // (owner's decision 2026-11-13, never released): no word now, and its sentence
+            // alone says what to write.
+            string unknown = word == FencedText.FormerXMarginWord
+                ? "'indent' is not a word of this line: the white at a text's sides is written 'xMargin' "
+                  + "(```md xMargin 20mm), as the white above and below it is 'yMargin'."
+                : $"'{word}' means nothing here. This text stands under the title; after ```md "
+                  + $"the opening line may say: {PageWords}.";
+            _diagnostics.Error(new TextSpan(at + offset, length), DiagnosticCodes.FencedTextWord, message ?? unknown);
         }
 
         // Two fences for one place are ONE text, set as the first says: a later one that
@@ -89,30 +98,48 @@ internal sealed class MarkdownTextValidator : ISemanticValidator
         if (!string.IsNullOrEmpty(value.Body))
             shapedPlaces.TryAdd(place, true);
 
-        // The width the indents leave, on the paper this fence stands under: the score's
-        // own when it is written in a score that names one, else the file's.
-        if (problems.Count > 0 || shape.IndentLeft == default && shape.IndentRight == default)
+        if (problems.Count > 0)
             return;
-        if (LeavesTooLittle(tree.GetRoot(), text, shape, out double width, out var paper))
+        string Mm(double ss, Svg.Layout.LayoutOptions on)
+            => (ss * on.StaffSpaceMm).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+
+        // The width the side margins leave, on the paper this fence stands under: the
+        // score's own when it is written in a score that names one, else the file's.
+        if ((shape.MarginLeft != default || shape.MarginRight != default)
+            && LeavesTooLittle(tree.GetRoot(), text, shape, out double width, out var paper))
         {
-            int indent = IndexOfWord(value, FencedText.IndentWord);
-            int last = indent;
-            while (last + 1 < value.Words.Count && TextLength.TryRead(value.Words[last + 1].Text, out _, out _))
-                last++;
-            int start = value.Words[indent].Offset;
-            int end = value.Words[last].Offset + value.Words[last].Text.Length;
-            string Mm(double ss) => (ss * paper.StaffSpaceMm).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+            var (start, end) = SpanOfMargin(value, FencedText.XMarginWord);
             _diagnostics.Error(new TextSpan(at + start, end - start), DiagnosticCodes.FencedTextWord,
-                $"These indents leave the text {Mm(Math.Max(0, width))} mm of a line width of {Mm(paper.ContentWidth)} mm"
+                $"These margins leave the text {Mm(Math.Max(0, width), paper)} mm of a line width of {Mm(paper.ContentWidth, paper)} mm"
                 + (shape.Box ? " (the frame takes its padding too)" : "")
-                + $". A text keeps at least {Mm(Svg.Layout.ProseBand.MinimumWidth)} mm: write smaller indents.");
+                + $". A text keeps at least {Mm(Svg.Layout.ProseBand.MinimumWidth, paper)} mm: write smaller margins.");
         }
+
+        // The white above and below: no more than the most a margin may be.
+        if (IsTooTall(tree.GetRoot(), text, shape, out var under))
+        {
+            var (start, end) = SpanOfMargin(value, FencedText.YMarginWord);
+            _diagnostics.Error(new TextSpan(at + start, end - start), DiagnosticCodes.FencedTextWord,
+                $"A margin above or below a text is at most {Mm(Svg.Layout.ProseBand.MaximumMargin, under)} mm "
+                + $"({Svg.Layout.ProseBand.MaximumMargin.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)} staff spaces): "
+                + "write a smaller one.");
+        }
+    }
+
+    /// <summary>The margin word <paramref name="word"/> and its lengths, as one span of the token.</summary>
+    private static (int Start, int End) SpanOfMargin(FencedText value, string word)
+    {
+        int first = IndexOfWord(value, word);
+        int last = first;
+        while (last + 1 < value.Words.Count && TextLength.TryRead(value.Words[last + 1].Text, out _, out _))
+            last++;
+        return (value.Words[first].Offset, value.Words[last].Offset + value.Words[last].Text.Length);
     }
 
     /// <summary>
     /// Whether <paramref name="shape"/> leaves <paramref name="text"/> less than its least
     /// width (<see cref="Svg.Layout.ProseBand.MinimumWidth"/>) on the paper the fence stands
-    /// under: what this pass refuses, and what the step keys on an <c>indent</c>'s length stop
+    /// under: what this pass refuses, and what the step keys on an <c>xMargin</c>'s length stop
     /// before (Editing.NoteStepper, owner's request 2026-11-13) — one reading for both.
     /// </summary>
     /// <param name="root">The file.</param>
@@ -127,6 +154,24 @@ internal sealed class MarkdownTextValidator : ISemanticValidator
         var set = Svg.Layout.ProseShape.Of(shape, paper.StaffSpaceMm);
         width = Svg.Layout.ProseBand.WidthLeft(set, paper.ContentWidth);
         return width < Svg.Layout.ProseBand.MinimumWidth - 1e-9;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="shape"/>'s <c>yMargin</c> asks more white above or below
+    /// <paramref name="text"/> than a margin may be
+    /// (<see cref="Svg.Layout.ProseBand.MaximumMargin"/>) on the paper the fence stands under:
+    /// what this pass refuses, and what the step keys on a <c>yMargin</c>'s length stop before.
+    /// </summary>
+    /// <param name="root">The file.</param>
+    /// <param name="text">The fence.</param>
+    /// <param name="shape">The shape to try: the fence's own, or the one a step would write.</param>
+    /// <param name="paper">The paper it was measured on.</param>
+    internal static bool IsTooTall(SyntaxNode root, MarkdownTextSyntax text, TextShape shape,
+        out Svg.Layout.LayoutOptions paper)
+    {
+        paper = PaperOf(root, text);
+        var set = Svg.Layout.ProseShape.Of(shape, paper.StaffSpaceMm);
+        return Math.Max(set.MarginTop ?? 0, set.MarginBottom ?? 0) > Svg.Layout.ProseBand.MaximumMargin + 1e-9;
     }
 
     private static int IndexOfWord(FencedText value, string word)

@@ -31,7 +31,7 @@ internal sealed record ProsePiece(string Text, double X, FontStyle Style, int Of
 /// <param name="Pieces">The pieces, each from the line's left end.</param>
 /// <param name="Width">The line's own width.</param>
 /// <param name="Left">The line's left end from the left margin: 0 for a text with no shape,
-/// else the indent, the frame's inset and, centred, half the white the line leaves.</param>
+/// else the left margin's white (<c>xMargin</c>), the frame's inset and, centred, half the white the line leaves.</param>
 /// <param name="Scale">The line's size over the text's: 1, or a heading's
 /// (<see cref="ProseBand.HeadingScale"/>). Its box grows with it.</param>
 /// <param name="Marker">The marker of the list item the line begins — its X from the line's
@@ -47,16 +47,27 @@ internal sealed record ProseLine(double Baseline, ImmutableArray<ProsePiece> Pie
 
 /// <summary>
 /// A fenced text's shape in staff spaces (owner-approved 2026-11-13): the opening line's
-/// <c>indent</c>, <c>center</c> and <c>box</c> on THIS paper's staff space.
+/// <c>xMargin</c>, <c>yMargin</c>, <c>center</c> and <c>box</c> on THIS paper's staff space.
 /// </summary>
-internal readonly record struct ProseShape(double IndentLeft, double IndentRight, bool Center, bool Box)
+/// <param name="MarginLeft">The white at the text's left, inside the line width.</param>
+/// <param name="MarginRight">The white at its right.</param>
+/// <param name="Center">Whether each line is centred.</param>
+/// <param name="Box">Whether a frame is ruled around the text.</param>
+/// <param name="MarginTop">The white above the text, or null for
+/// <see cref="ProseBand.DefaultMargin"/>: the line wrote no <c>yMargin</c>.</param>
+/// <param name="MarginBottom">The white below it, or null likewise.</param>
+internal readonly record struct ProseShape(double MarginLeft, double MarginRight, bool Center, bool Box,
+    double? MarginTop = null, double? MarginBottom = null)
 {
     /// <summary><paramref name="shape"/> on a staff space of <paramref name="staffSpaceMm"/>
     /// millimetres, through the conversion <c>paper { }</c>'s lengths take.</summary>
-    public static ProseShape Of(Syntax.TextShape shape, double staffSpaceMm) => new(
-        Semantics.PaperPlanReader.ToStaffSpaces(shape.IndentLeft.Value, shape.IndentLeft.Unit, staffSpaceMm),
-        Semantics.PaperPlanReader.ToStaffSpaces(shape.IndentRight.Value, shape.IndentRight.Unit, staffSpaceMm),
-        shape.Center, shape.Box);
+    public static ProseShape Of(Syntax.TextShape shape, double staffSpaceMm)
+    {
+        double In(Syntax.TextLength length)
+            => Semantics.PaperPlanReader.ToStaffSpaces(length.Value, length.Unit, staffSpaceMm);
+        return new(In(shape.MarginLeft), In(shape.MarginRight), shape.Center, shape.Box,
+            shape.MarginTop is { } top ? In(top) : null, shape.MarginBottom is { } bottom ? In(bottom) : null);
+    }
 }
 
 /// <summary>The frame ruled around a boxed text: its OUTER left and right edges from the left
@@ -89,13 +100,18 @@ internal sealed record ProseFrame(double Left, double Right, double Thickness);
 /// <param name="Width">How far it reaches right of the left margin: its widest line, or — with
 /// a shape — the frame's outer right edge or the furthest line's end.</param>
 /// <param name="Position">Where its fence begins in the file (data-pos), or 0.</param>
-/// <param name="Left">Where the text begins, from the left margin (the indent, and a frame's inset).</param>
+/// <param name="Left">Where the text begins, from the left margin (<c>xMargin</c>'s white, and a frame's inset).</param>
 /// <param name="TextWidth">The width the lines were broken to.</param>
-/// <param name="Frame">The frame of a boxed text, or null. <paramref name="Up"/> and
-/// <paramref name="Down"/> reach its outer edges, so the page's springs see it.</param>
+/// <param name="Frame">The frame of a boxed text, or null. Its outer top stands
+/// <paramref name="MarginTop"/> inside <paramref name="Up"/> and its outer bottom
+/// <paramref name="MarginBottom"/> inside <paramref name="Down"/>.</param>
+/// <param name="MarginTop">The white above the text (<c>yMargin</c>, or
+/// <see cref="DefaultMargin"/>), already in <paramref name="Up"/> — so the page's springs
+/// and the page breaker's priced depth see it.</param>
+/// <param name="MarginBottom">The white below it, already in <paramref name="Down"/>.</param>
 internal sealed record ProseBand(
     ImmutableArray<ProseLine> Lines, double Up, double Down, double Width, int Position,
-    double Left = 0, double TextWidth = 0, ProseFrame? Frame = null)
+    double Left = 0, double TextWidth = 0, ProseFrame? Frame = null, double MarginTop = 0, double MarginBottom = 0)
 {
     /// <summary>The rule of a boxed text's frame.</summary>
     /// <remarks>LILYPOND-REF: scm/define-markup-commands.scm box — <c>thickness</c> 1, times
@@ -111,21 +127,44 @@ internal sealed record ProseBand(
     /// section 5.1 for the numbers.</remarks>
     public const double BoxPadding = 1.0;
 
-    /// <summary>The white the page keeps above and below a boxed text's frame, beyond what it
-    /// keeps around a text with none.</summary>
-    /// <remarks>LILYSHARP-OWN. A text's line is spaced from its neighbours by its box of
-    /// letters, and that white reads as room because letters do not fill their box; a rule
-    /// drawn ON the box's edge fills it. With no margin the composer's line stood 0.95 over
-    /// the rule and a rehearsal mark as near under it (LilyPond's `\box` in a markup list does
-    /// the same: 4.0705 from the composer's baseline to the boxed first baseline). The owner
-    /// on seeing it (2026-11-13): "the white above and below the box looks too tight". One
-    /// staff space each way — the white the frame keeps inside.</remarks>
-    public const double BoxMargin = 1.0;
+    /// <summary>The white the page keeps above and below a text — a boxed text's frame, a
+    /// plain text's line boxes — beyond what its chain keeps around a markup, where the
+    /// opening line writes no <c>yMargin</c>.</summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: one staff space each way. LilyPond's own spacing is <c>yMargin 0</c>.
+    /// It began as a boxed text's alone (the owner on seeing the frame, 2026-11-13: "the white
+    /// above and below the box looks too tight" — a rule drawn ON the line box's edge fills
+    /// the white that letters leave in it; with no margin the composer's line stood 0.95 over
+    /// the rule and a rehearsal mark as near under it, as LilyPond's own <c>\box</c> in a
+    /// markup list stands: 4.0705 from the composer's baseline to the boxed first baseline).
+    /// Then every text's (the owner, the same day: "the white above and below the md text is
+    /// tight; widen it a little, or make it settable" — both: this, and <c>yMargin</c>). A
+    /// box's frame stands where it stood: the two are one margin, not added.
+    /// ⚠️ The margin is part of the band's EXTENT (<c>Up</c>, <c>Down</c>), as the twin's
+    /// <c>\with-dimension</c> is of its line's: it moves the text where the chain's PADDING
+    /// rules — under the composer's line, over a system whose clef or mark reaches up — and
+    /// is taken out of the distance where a basic-distance rules (the 12 from the last
+    /// staff's middle line to an <c>end</c> text's first baseline holds until the margin
+    /// and the padding outgrow it).
+    /// </remarks>
+    public const double DefaultMargin = 1.0;
 
-    /// <summary>The least width a text keeps whatever its indents ask.</summary>
+    /// <summary>The most a <c>yMargin</c> length may be, in staff spaces.</summary>
+    /// <remarks>LILYSHARP-OWN: 50 — about 88 mm, under a third of an A4 page's height at the
+    /// default staff; MarkdownTextValidator refuses more (LYS4057) and <see cref="Build"/>
+    /// clamps. Without a limit the page breaks: MEASURED 2026-11-13 (LilySharp-Lab
+    /// sessions/p1226/md/margins/limit, the limit lifted for the run), <c>yMargin 100</c>
+    /// under the title or on an <c>end</c> text of an eight-bar piece drew page 1 with its
+    /// one system pushed off the paper — the text is not broken over a page, and the music
+    /// does not leave it — under the warning "page 1 is over-full by 68.5 staff spaces"
+    /// (268.5 at <c>yMargin 200</c>). At 50 above and below the same piece is one whole page
+    /// with no warning. A mistyped unit (<c>20cm</c> for <c>20mm</c>) is the likely writer of more.</remarks>
+    public const double MaximumMargin = 50.0;
+
+    /// <summary>The least width a text keeps whatever its side margins ask.</summary>
     /// <remarks>LILYSHARP-OWN: ten staff spaces — four or five ems of the text, a short word
-    /// a line. MarkdownTextValidator refuses indents that leave less on the paper the fence
-    /// stands under; on another score's narrower paper the indents give way in proportion.</remarks>
+    /// a line. MarkdownTextValidator refuses margins that leave less on the paper the fence
+    /// stands under; on another score's narrower paper the margins give way in proportion.</remarks>
     public const double MinimumWidth = 10.0;
 
     /// <summary>How far a boxed text stands inside its frame's outer edge: the padding and the rule.</summary>
@@ -134,7 +173,7 @@ internal sealed record ProseBand(
     /// <summary>The width <paramref name="shape"/> leaves the text on a line of
     /// <paramref name="lineWidth"/>, as written (it may be less than <see cref="MinimumWidth"/>).</summary>
     public static double WidthLeft(ProseShape shape, double lineWidth)
-        => lineWidth - 2 * InsetOf(shape) - shape.IndentLeft - shape.IndentRight;
+        => lineWidth - 2 * InsetOf(shape) - shape.MarginLeft - shape.MarginRight;
 
     /// <summary>The text's size: the 11pt text font at a 20pt staff, the poet / composer line's.</summary>
     /// <remarks>MEASURED: <c>e1.ly</c>, font-size 2.2000 on a top-level markup.</remarks>
@@ -223,13 +262,14 @@ internal sealed record ProseBand(
     /// draws nothing (an empty fence, or one that writes only what is not drawn).
     /// </summary>
     /// <remarks>
-    /// <paramref name="shape"/> (owner-approved 2026-11-13): the indents are white inside the
-    /// line width, so the text is broken that much narrower and begins that much further
-    /// right; a frame's OUTER edge stands on the indent edges and the text inside it is inset
-    /// by <see cref="BoxPadding"/> and the rule, broken narrower again; <c>center</c> sets each
-    /// line in the middle of the text's width (a line wider than it — one long word — keeps
-    /// the left edge). The frame's rule and padding are in <c>Up</c> and <c>Down</c>.
-    /// With no shape every number is what it was.
+    /// <paramref name="shape"/> (owner-approved 2026-11-13): the side margins
+    /// (<c>xMargin</c>) are white inside the line width, so the text is broken that much
+    /// narrower and begins that much further right; a frame's OUTER edge stands on the
+    /// margins' edges and the text inside it is inset by <see cref="BoxPadding"/> and the
+    /// rule, broken narrower again; <c>center</c> sets each line in the middle of the text's
+    /// width (a line wider than it — one long word — keeps the left edge). The frame's rule
+    /// and padding, and the white above and below (<c>yMargin</c>, or
+    /// <see cref="DefaultMargin"/> — with no shape too), are in <c>Up</c> and <c>Down</c>.
     /// </remarks>
     public static ProseBand? Build(string? markdown, int position, ScoreTextMetrics fonts, double lineWidth,
         ProseShape shape = default)
@@ -240,21 +280,21 @@ internal sealed record ProseBand(
         if (prose.Blocks.IsEmpty)
             return null;
 
-        // The indents give way, in proportion, before the text is narrower than the minimum
+        // The side margins give way, in proportion, before the text is narrower than the minimum
         // (or than the line itself, on a page narrower than that).
         double inset = InsetOf(shape);
-        double indentLeft = Math.Max(0, shape.IndentLeft), indentRight = Math.Max(0, shape.IndentRight);
+        double marginLeft = Math.Max(0, shape.MarginLeft), marginRight = Math.Max(0, shape.MarginRight);
         double room = Math.Max(0, lineWidth - 2 * inset);
         double least = Math.Min(MinimumWidth, room);
-        if (indentLeft + indentRight > room - least)
+        if (marginLeft + marginRight > room - least)
         {
-            double keep = indentLeft + indentRight > 0 ? (room - least) / (indentLeft + indentRight) : 0;
-            indentLeft *= keep;
-            indentRight *= keep;
+            double keep = marginLeft + marginRight > 0 ? (room - least) / (marginLeft + marginRight) : 0;
+            marginLeft *= keep;
+            marginRight *= keep;
         }
         bool shaped = shape != default;
-        double left = indentLeft + inset;
-        double textWidth = shaped ? room - indentLeft - indentRight : lineWidth;
+        double left = marginLeft + inset;
+        double textWidth = shaped ? room - marginLeft - marginRight : lineWidth;
 
         double em = Em(fonts);
         double skip = Skip(fonts);
@@ -326,11 +366,15 @@ internal sealed record ProseBand(
         }
         if (lines.Count == 0)
             return null;
-        var frame = shape.Box ? new ProseFrame(indentLeft, lineWidth - indentRight, BoxThickness) : null;
-        double around = inset + (shape.Box ? BoxMargin : 0);
-        return new ProseBand(lines.ToImmutable(), LineUp(fonts) * lines[0].Scale + around,
-            baseline + LineDown(fonts) * lines[^1].Scale + around,
-            frame is null ? widest : Math.Max(widest, frame.Right), position, left, textWidth, frame);
+        var frame = shape.Box ? new ProseFrame(marginLeft, lineWidth - marginRight, BoxThickness) : null;
+        // The white above and below (yMargin, or the default): in the band's extent, outside
+        // a frame. Clamped, for a caller that did not come through the validator.
+        double marginTop = Math.Clamp(shape.MarginTop ?? DefaultMargin, 0, MaximumMargin);
+        double marginBottom = Math.Clamp(shape.MarginBottom ?? DefaultMargin, 0, MaximumMargin);
+        return new ProseBand(lines.ToImmutable(), LineUp(fonts) * lines[0].Scale + inset + marginTop,
+            baseline + LineDown(fonts) * lines[^1].Scale + inset + marginBottom,
+            frame is null ? widest : Math.Max(widest, frame.Right), position, left, textWidth, frame,
+            marginTop, marginBottom);
     }
 
     /// <summary>

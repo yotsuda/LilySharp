@@ -85,7 +85,7 @@ export function textBodies(lineCount: number, lineAt: (line: number) => string):
 }
 
 /** The text whose BODY holds `line` — not its opening line, where the words are Lily#'s
- * (`end`, `box`, `indent 20mm`, completed by the server), nor its closing one. */
+ * (`end`, `box`, `xMargin 20mm`, `yMargin 2`, completed by the server), nor its closing one. */
 export function textBodyAt(bodies: readonly TextBody[], line: number): TextBody | undefined {
     for (const b of bodies) {
         if (line <= b.open) { return undefined; }

@@ -455,7 +455,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 
 機械が見たもの: 文法の scope（`npm test` の `pageTextGrammar.test.ts` が VS Code 自身の tokenizer＝vscode-textmate で回す。Markdown 文法は代役、`LILYSHARP_VSCODE_REPO` を指せば本物）・Enter と囲みの規則（`pageTextCore.test.ts`）・semantic token が本文に乗らないこと（`DeclaredNameTokenTests`）。**実機でしか見られないのは下の全部**（色そのもの・`embeddedLanguages` が効いているか・キーの束縛）。
 
-- [ ] **色**: 最上位に ```` ```md box ```` … ```` ``` ```` を書き、本文に `# 見出し`、`**太字**`、`*斜体*`、`- 箇条書き`、`1. 番号`、`[link](x)`、`{ }`、`"引用符"`、`// これはコメントではない`、`a key c4` → 見出し・太字・斜体・リストの記号が `.md` と同じ色、波括弧・引用符・`//`・`a`/`key`/`c4` に Lily# の色が付かない。開きの行は backtick・`md`・`box`（`end` `center` `indent`）・`20mm` に色。閉じの ```` ``` ```` の次の行から Lily# の色に戻る。
+- [ ] **色**: 最上位に ```` ```md box ```` … ```` ``` ```` を書き、本文に `# 見出し`、`**太字**`、`*斜体*`、`- 箇条書き`、`1. 番号`、`[link](x)`、`{ }`、`"引用符"`、`// これはコメントではない`、`a key c4` → 見出し・太字・斜体・リストの記号が `.md` と同じ色、波括弧・引用符・`//`・`a`/`key`/`c4` に Lily# の色が付かない。開きの行は backtick・`md`・`box`（`end` `center` `xMargin` `yMargin`）・`20mm` に色。閉じの ```` ``` ```` の次の行から Lily# の色に戻る。
 - [ ] **score の中**: `score parts {` の中に 2 つ空白・4 つ空白で字下げした fence（箇条書きで終わる本文）→ 本文は Markdown の色、閉じの行の後の `staff piano` は Lily# の色（**4 つ空白でも全部がコードブロックの色にならない**）。`score` と `{` が別の行だと色が付かない（既知）。
 - [ ] **始まらない場所**: `section A { … }` の中・`score { staffGroup { … } }` の中の ```` ```md ```` は前と同じ色（本文が Lily# の色）。
 - [ ] **4 つの backtick**: ```` ````md ```` の中に ```` ```lilysharp ```` … ```` ``` ```` → 内側はコードブロックの色、外側は 4 つで閉じる。

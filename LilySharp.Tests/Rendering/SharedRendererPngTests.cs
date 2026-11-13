@@ -110,4 +110,43 @@ public sealed class SharedRendererPngTests
 
         Assert.NotEqual(HeadDrawnFrom(20), HeadDrawnFrom(14));
     }
+
+    /// <summary>
+    /// A character the text's face lacks is drawn from a system face matched to the run's
+    /// OWN weight and slant, whatever style the same character was first seen in.
+    /// </summary>
+    /// <remarks>
+    /// The fallback cache was keyed by the codepoint alone until 2026-11-13: the bold heading
+    /// 練習のしかた of a page text matched の and し to the machine's bold Japanese face, and
+    /// the regular list items under it drew those two characters — the only ones they shared
+    /// with the heading — bold (seen by the owner on a PNG). On a machine with no face for
+    /// the character, or with one face for both weights, there is nothing to tell apart and
+    /// the test says nothing.
+    /// </remarks>
+    [Fact]
+    public void AFallbackFace_IsTheRunsOwnStyle_NotTheStyleTheCharacterWasFirstSeenIn()
+    {
+        const string heading = "練習のしかた", body = "ゆっくりのテンポで";
+        static SkiaSharp.SKTypeface? Matched(SkiaSharp.SKFontStyleWeight weight) => SkiaSharp.SKFontManager.Default.MatchCharacter(
+            null, new SkiaSharp.SKFontStyle(weight, SkiaSharp.SKFontStyleWidth.Normal, SkiaSharp.SKFontStyleSlant.Upright),
+            null, 'の');
+        var regularFace = Matched(SkiaSharp.SKFontStyleWeight.Normal);
+        var boldFace = Matched(SkiaSharp.SKFontStyleWeight.Bold);
+        if (regularFace is null || boldFace is null)
+            return;     // no Japanese face on this machine
+
+        using var cache = new LilySharp.Core.Rendering.Png.PngDrawingContext.FontCache(null);
+        var bold = LilySharp.Core.Rendering.TextFontMetrics.Typeface(false, LilySharp.Core.Rendering.FontStyle.Bold);
+        var regular = LilySharp.Core.Rendering.TextFontMetrics.Typeface(false, LilySharp.Core.Rendering.FontStyle.Regular);
+
+        // The bold heading first, then the regular body that shares の with it.
+        var first = cache.SegmentByTypeface(heading, bold, LilySharp.Core.Rendering.FontStyle.Bold);
+        var second = cache.SegmentByTypeface(body, regular, LilySharp.Core.Rendering.FontStyle.Regular);
+
+        static string Describe(SkiaSharp.SKTypeface face) => $"{face.FamilyName} {face.FontWeight} {face.FontSlant}";
+        Assert.All(first, run => Assert.Equal(Describe(boldFace), Describe(run.Typeface)));
+        Assert.All(second, run => Assert.Equal(Describe(regularFace), Describe(run.Typeface)));
+        // One run: the の in the middle is not cut out of the body onto another face.
+        Assert.Single(second);
+    }
 }

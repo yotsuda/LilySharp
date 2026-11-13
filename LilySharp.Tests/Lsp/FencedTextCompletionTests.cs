@@ -260,30 +260,31 @@ public class FencedTextCompletionTests
     {
         var items = Ask(marked, marked.Contains(" ‸") ? " " : null)!;
         // The place, then the shape (owner-approved 2026-11-13), in that order.
-        Assert.Equal(["end", "box", "center", "indent"], items.OrderBy(i => i.SortText, StringComparer.Ordinal).Select(i => i.Label));
+        Assert.Equal(["end", "box", "center", "xMargin", "yMargin"], items.OrderBy(i => i.SortText, StringComparer.Ordinal).Select(i => i.Label));
         var end = items.Single(i => i.Label == "end");
         Assert.Equal("end", end.TextEdit!.NewText);
         Assert.All(items, i => Assert.Equal((from, to), (i.TextEdit!.Range.Start.Character, i.TextEdit.Range.End.Character)));
-        // Each word as it is, and `indent` with the space its length follows (below).
-        Assert.All(items, i => Assert.Equal(i.Label == "indent" ? "indent " : i.Label, i.TextEdit!.NewText));
+        // Each word as it is, and a margin with the space its length follows (below).
+        Assert.All(items, i => Assert.Equal(i.Label is "xMargin" or "yMargin" ? i.Label + " " : i.Label, i.TextEdit!.NewText));
         Assert.Contains("under", end.Detail);
         Assert.Contains("frame", items.Single(i => i.Label == "box").Detail);
-        Assert.Contains("20mm", items.Single(i => i.Label == "indent").Detail);
+        Assert.Contains("20mm", items.Single(i => i.Label == "xMargin").Detail);
     }
 
     [Theory]
-    [InlineData("```md end ‸\n", "box center indent")]
-    [InlineData("```md box ‸\n", "end center indent")]
-    [InlineData("```md end center b‸\n", "box indent")]                  // the editor filters by the word
-    [InlineData("```md indent 20mm box ‸\n", "end center")]
-    [InlineData("```md indent 20mm 10mm ‸\n", "end box center")]         // after two lengths, no third
-    [InlineData("```md indent 20mm 10mm box ‸\n", "end center")]
-    [InlineData("```md box center indent 2cm end ‸\n", "")]
-    [InlineData("part p { }\nscore {\n  ```md box ‸\n  ```\n  staff p\n}\n", "end center indent")]
+    [InlineData("```md end ‸\n", "box center xMargin yMargin")]
+    [InlineData("```md box ‸\n", "end center xMargin yMargin")]
+    [InlineData("```md end center b‸\n", "box xMargin yMargin")]                  // the editor filters by the word
+    [InlineData("```md xMargin 20mm box ‸\n", "end center yMargin")]
+    [InlineData("```md xMargin 20mm 10mm ‸\n", "end box center yMargin")]         // after two lengths, no third
+    [InlineData("```md xMargin 20mm 10mm box ‸\n", "end center yMargin")]
+    [InlineData("```md yMargin 2 1 xMargin 20mm 10mm box ‸\n", "end center")]
+    [InlineData("```md box center xMargin 2cm end ‸\n", "yMargin")]
+    [InlineData("part p { }\nscore {\n  ```md box ‸\n  ```\n  staff p\n}\n", "end center xMargin yMargin")]
     public void AWordAlreadyWritten_IsNotOfferedAgain(string marked, string offered)
         => Assert.Equal(offered.Split(' ', StringSplitOptions.RemoveEmptyEntries), Labels(marked, " "));
 
-    // ----- the lengths after `indent` (owner's request 2026-11-13: "md indent を補完で入れたら、
+    // ----- the lengths after `xMargin` (owner's request 2026-11-13: "md indent を補完で入れたら、
     //       数字を補完ウィンドウにリストして") -----
 
     private const string Lengths = "5mm 10mm 15mm 20mm 25mm 30mm 40mm 50mm";
@@ -293,11 +294,11 @@ public class FencedTextCompletionTests
         => string.Join(" ", (Ask(marked, trigger) ?? []).OrderBy(i => i.SortText, StringComparer.Ordinal).Select(i => i.Label));
 
     [Theory]
-    [InlineData("```md indent ‸\n")]
-    [InlineData("```md box indent ‸\n")]
-    [InlineData("```md indent ‸\nA note.\n```\ntitle \"T\"\n")]
-    [InlineData("part p { }\nscore {\n  ```md end indent ‸\n  ```\n  staff p\n}\n")]
-    public void AfterIndent_ItsLengthsAreOffered_SmallestFirst_AndNothingElse(string marked)
+    [InlineData("```md xMargin ‸\n")]
+    [InlineData("```md box xMargin ‸\n")]
+    [InlineData("```md xMargin ‸\nA note.\n```\ntitle \"T\"\n")]
+    [InlineData("part p { }\nscore {\n  ```md end xMargin ‸\n  ```\n  staff p\n}\n")]
+    public void AfterXMargin_ItsLengthsAreOffered_SmallestFirst_AndNothingElse(string marked)
     {
         // By the sort text, not the label: "10mm" sorts before "5mm" as a word.
         Assert.Equal(Lengths, Listed(marked, " "));
@@ -310,32 +311,32 @@ public class FencedTextCompletionTests
     }
 
     [Fact]
-    public void TakingIndentFromTheList_WritesItsSpace_AndOpensTheLengthsAtOnce()
+    public void TakingXMarginFromTheList_WritesItsSpace_AndOpensTheLengthsAtOnce()
     {
         var items = Ask("```md ‸\n", " ")!;
-        var indent = items.Single(i => i.Label == "indent");
-        Assert.Equal("indent ", indent.TextEdit!.NewText);
-        Assert.Equal("editor.action.triggerSuggest", indent.Command!.CommandIdentifier);
+        var xMargin = items.Single(i => i.Label == "xMargin");
+        Assert.Equal("xMargin ", xMargin.TextEdit!.NewText);
+        Assert.Equal("editor.action.triggerSuggest", xMargin.Command!.CommandIdentifier);
         // No other word asks for the list again.
-        Assert.All(items.Where(i => i.Label != "indent"), i => Assert.Null(i.Command));
+        Assert.All(items.Where(i => i.Label is not ("xMargin" or "yMargin")), i => Assert.Null(i.Command));
 
         // Through the request a plain text field completes by: the text taken, and the list
         // it opens next at the caret it leaves.
         var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
-        var taken = server.CompleteText(new CompleteTextParams { Text = "```md in\n", Offset = 8 })
-            .Items.Single(i => i.Label == "indent");
+        var taken = server.CompleteText(new CompleteTextParams { Text = "```md xM\n", Offset = 8 })
+            .Items.Single(i => i.Label == "xMargin");
         Assert.True(taken.Again);
-        string after = "```md in\n"[..taken.Start] + taken.Insert + "```md in\n"[taken.End..];
-        Assert.Equal("```md indent \n", after);
+        string after = "```md xM\n"[..taken.Start] + taken.Insert + "```md xM\n"[taken.End..];
+        Assert.Equal("```md xMargin \n", after);
         Assert.Equal(Lengths, Listed(after.Insert(taken.Start + taken.Caret, "‸")));
     }
 
     [Theory]
-    [InlineData("```md indent 20mm ‸\n", "end box center " + Lengths)]      // the words, then the second length
-    [InlineData("```md box indent 2cm ‸\n", "end center " + Lengths)]
-    [InlineData("```md indent 5 ‸\n", "end box center " + Lengths)]         // after a bare number of staff spaces
-    [InlineData("```md indent 20mm 1‸\n", "1mm 1cm 1in 10mm 15mm")]         // a number on its way: the lengths alone
-    [InlineData("```md indent 20mm b‸\n", "end box center")]                // a word on its way: the editor filters
+    [InlineData("```md xMargin 20mm ‸\n", "end box center yMargin " + Lengths)]      // the words, then the second length
+    [InlineData("```md box xMargin 2cm ‸\n", "end center yMargin " + Lengths)]
+    [InlineData("```md xMargin 5 ‸\n", "end box center yMargin " + Lengths)]         // after a bare number of staff spaces
+    [InlineData("```md xMargin 20mm 1‸\n", "1mm 1cm 1in 10mm 15mm")]         // a number on its way: the lengths alone
+    [InlineData("```md xMargin 20mm b‸\n", "end box center yMargin")]                // a word on its way: the editor filters
     public void AfterTheFirstLength_TheSecondIsOfferedBesideTheWords(string marked, string listed)
     {
         Assert.Equal(listed, Listed(marked, marked.Contains(" ‸") ? " " : null));
@@ -345,26 +346,58 @@ public class FencedTextCompletionTests
     }
 
     [Theory]
-    [InlineData("```md indent 2‸\n", "2mm 2cm 2in 20mm 25mm")]      // the number with each unit, then the list's
-    [InlineData("```md indent 20‸\n", "20mm 20cm 20in")]
-    [InlineData("```md indent 5‸\n", "5mm 5cm 5in 50mm")]
-    [InlineData("```md indent 0.5‸\n", "0.5mm 0.5cm 0.5in")]
-    [InlineData("```md indent 20m‸\n", "20mm")]                     // the unit on its way
-    [InlineData("```md indent 2c‸\n", "2cm")]
-    [InlineData("```md indent 1.‸\n", "")]                          // no number yet
-    [InlineData("```md indent x‸\n", "")]
+    [InlineData("```md xMargin 2‸\n", "2mm 2cm 2in 20mm 25mm")]      // the number with each unit, then the list's
+    [InlineData("```md xMargin 20‸\n", "20mm 20cm 20in")]
+    [InlineData("```md xMargin 5‸\n", "5mm 5cm 5in 50mm")]
+    [InlineData("```md xMargin 0.5‸\n", "0.5mm 0.5cm 0.5in")]
+    [InlineData("```md xMargin 20m‸\n", "20mm")]                     // the unit on its way
+    [InlineData("```md xMargin 2c‸\n", "2cm")]
+    [InlineData("```md xMargin 1.‸\n", "")]                          // no number yet
+    [InlineData("```md xMargin x‸\n", "")]
     public void WhileANumberIsTyped_ItsUnitsAndTheLengthsThatBeginSoAreOffered(string marked, string listed)
     {
         Assert.Equal(listed, Listed(marked));
         // Each replaces the word typed, so the editor filters by it.
-        int word = marked.IndexOf("indent ", StringComparison.Ordinal) + 7, caret = marked.IndexOf('‸');
+        int word = marked.IndexOf("xMargin ", StringComparison.Ordinal) + 8, caret = marked.IndexOf('‸');
         Assert.All(Ask(marked)!, i => Assert.Equal((word, caret), (i.TextEdit!.Range.Start.Character, i.TextEdit.Range.End.Character)));
     }
+    // ----- the lengths after `yMargin` (owner's request 2026-11-13: the white above and below
+    //       a text settable) -----
+
+    private const string YLengths = "0 1 2 3 4 5mm 10mm 15mm";
+
+    [Theory]
+    [InlineData("```md yMargin ‸\n", YLengths)]                              // staff spaces first, then a few mm
+    [InlineData("```md box yMargin ‸\n", YLengths)]
+    [InlineData("```md yMargin 3 ‸\n", "end box center xMargin " + YLengths)]   // the words, then the white below
+    [InlineData("```md xMargin 20mm yMargin ‸\n", YLengths)]                 // the margin the caret follows
+    [InlineData("```md yMargin 2 xMargin ‸\n", Lengths)]
+    [InlineData("```md yMargin 3 1 ‸\n", "end box center xMargin")]           // after two lengths, no third
+    [InlineData("```md yMargin 1‸\n", "1mm 1cm 1in 1 10mm 15mm")]
+    public void AfterYMargin_ItsLengthsAreOffered_AsXMarginsAre(string marked, string listed)
+    {
+        Assert.Equal(listed, Listed(marked, marked.Contains(" ‸") ? " " : null));
+        var length = Ask(marked)!.FirstOrDefault(i => i.Kind == CompletionItemKind.Value);
+        if (length != null && !marked.Contains("xMargin ‸"))
+            Assert.Contains(marked.Contains("yMargin 3 ‸") ? "White below" : "above and below", length.Detail);
+    }
+
+    [Fact]
+    public void TakingYMarginFromTheList_WritesItsSpace_AndOpensTheLengthsAtOnce()
+    {
+        var yMargin = Ask("```md ‸\n", " ")!.Single(i => i.Label == "yMargin");
+        Assert.Equal("yMargin ", yMargin.TextEdit!.NewText);
+        Assert.Equal("editor.action.triggerSuggest", yMargin.Command!.CommandIdentifier);
+        Assert.Contains("above and below", yMargin.Detail);
+        foreach (string length in YLengths.Split(' '))
+            Assert.Empty(Said($"title \"T\"\n```md yMargin {length}\nA note.\n```\npart p {{ clef treble }}\nsection A {{ p {{ c'1 | }} }}\nscore {{ staff p }}\n"));
+    }
+
 
     [Fact]
     public void EveryLengthOffered_IsOneTheCompilerTakes()
     {
-        foreach (string marked in new[] { "```md indent ‸\n", "```md indent 12‸\n", "```md indent 20mm ‸\n" })
+        foreach (string marked in new[] { "```md xMargin ‸\n", "```md xMargin 12‸\n", "```md xMargin 20mm ‸\n" })
             foreach (var item in Ask(marked)!.Where(i => i.Kind == CompletionItemKind.Value && !i.Label!.EndsWith("in") && !i.Label.EndsWith("cm")))
             {
                 string line = marked[..marked.IndexOf("‸", StringComparison.Ordinal)];
@@ -385,7 +418,7 @@ public class FencedTextCompletionTests
     {
         foreach (string word in Labels("```md ‸\n", " "))
         {
-            string line = word == "indent" ? "```md indent 20mm" : "```md " + word;
+            string line = word == "xMargin" ? "```md xMargin 20mm" : word == "yMargin" ? "```md yMargin 2" : "```md " + word;
             Assert.Empty(Said($"title \"T\"\n{line}\nA note.\n```\npart p {{ clef treble }}\nsection A {{ p {{ c'1 | }} }}\nscore {{ staff p }}\n"));
         }
     }

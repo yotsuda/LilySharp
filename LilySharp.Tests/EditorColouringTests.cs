@@ -1049,13 +1049,13 @@ public class EditorColouringTests
         var words = opening.GetProperty("beginCaptures").GetProperty("5").GetProperty("patterns");
         Assert.Equal(
             FencedText.ShapeWords.Append(FencedText.EndWord).OrderBy(w => w, StringComparer.Ordinal),
-            Regex.Match(words[0].GetProperty("match").GetString()!, @"\)\(([a-z|]+)\)\(").Groups[1].Value
+            Regex.Match(words[0].GetProperty("match").GetString()!, @"\)\(([A-Za-z|]+)\)\(").Groups[1].Value
                 .Split('|').OrderBy(w => w, StringComparer.Ordinal));
         //    …and a length is paper { }'s own, unit and all: one list of units, one rule.
         Assert.Equal("#paper-length", words[1].GetProperty("include").GetString());
         string length = repository.GetProperty("paper-length").GetProperty("match").GetString()!;
         foreach (string unit in FencedText.LengthUnits)
-            Assert.True(Covers(length, "20" + unit), $"the unit {unit} of an indent is left plain");
+            Assert.True(Covers(length, "20" + unit), $"the unit {unit} of a margin is left plain");
 
         // The body is Markdown's, by name: embedded, and the scope is the one the extension
         // declares as the language `markdown` (which is what makes a brace there Markdown's).

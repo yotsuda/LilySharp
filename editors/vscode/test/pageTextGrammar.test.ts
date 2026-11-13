@@ -107,13 +107,14 @@ describe('a page text\'s colours', () => {
     before(async () => { tokenize = await tokenizer(() => JSON.stringify(standInMarkdown)); });
 
     it('colours the opening line: the backticks, the tag, the words, a length with its unit', () => {
-        const [open] = tokenize([F + 'md end indent 20mm 0.5in box center', 'x', F]);
+        const [open] = tokenize([F + 'md end xMargin 20mm 0.5in yMargin 2 box center', 'x', F]);
         assert.deepEqual(lilysharp(scopesOf(open, F)), ['punctuation.definition.fenced-text.begin.lilysharp']);
         assert.deepEqual(lilysharp(scopesOf(open, 'md')), ['entity.name.tag.fenced-text.lilysharp']);
-        for (const word of ['end', 'indent', 'box', 'center']) {
+        for (const word of ['end', 'xMargin', 'yMargin', 'box', 'center']) {
             assert.deepEqual(lilysharp(scopesOf(open, word)), ['keyword.other.fenced-text.lilysharp'], word);
         }
         assert.deepEqual(lilysharp(scopesOf(open, '20')), ['constant.numeric.lilysharp']);
+        assert.deepEqual(lilysharp(scopesOf(open, '2')), ['constant.numeric.lilysharp']);
         assert.deepEqual(lilysharp(scopesOf(open, 'mm')), ['support.constant.paper-unit.lilysharp']);
         assert.deepEqual(lilysharp(scopesOf(open, '0.5')), ['constant.numeric.lilysharp']);
         assert.deepEqual(lilysharp(scopesOf(open, 'in')), ['support.constant.paper-unit.lilysharp']);
@@ -126,7 +127,7 @@ describe('a page text\'s colours', () => {
     });
 
     it('colours a word of the opening line only as a whole word', () => {
-        const [open] = tokenize([F + 'mdx boxed indent20mm', F]);
+        const [open] = tokenize([F + 'mdx boxed xMargin20mm yMargins indent', F]);
         assert.ok(open.every(t => !t.scopes.some(s => s.startsWith('keyword.') || s.startsWith('entity.'))),
             JSON.stringify(open));
     });
