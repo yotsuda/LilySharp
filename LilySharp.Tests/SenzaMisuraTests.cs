@@ -219,9 +219,12 @@ public class SenzaMisuraTests
         Assert.Equal(5, bars);
 
         var report = LayoutReport.Generate(TestPaper.ParseAtIndentZero(Fixture));
-        Assert.Contains("time 4/4 -> none (bar 2) -> 4/4 (bar 4)  |  2 systems, 5 bars", report);
-        Assert.Contains("system 1: bars 1-3", report);
-        Assert.Contains("system 2: bars 4-5", report);
+        // The bars are named by the numbers the page prints (2026-11-14): a bar under 	ime none is
+        // not counted, so the cadenza's two bars and the 4/4 bar after them are all bar 2 — the
+        // number LilyPond prints at the second line's head.
+        Assert.Contains("time 4/4 -> none (bar 2) -> 4/4 (bar 2)  |  2 systems, 5 bars", report);
+        Assert.Contains("system 1: bars 1-2", report);
+        Assert.Contains("system 2: bars 2-3", report);
     }
 
     /// <summary>

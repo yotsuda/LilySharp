@@ -107,8 +107,7 @@ public static class LayoutReport
         // a line break, so the run lines are the break map. Irregular systems (a different
         // bar count, e.g. a short final line) fall out as their own line.
         var systems = layout.AllSystems;
-        // The bar each model measure is labelled with: the count of bars begun before it,
-        // plus one — a split bar's two halves share a label.
+        // The bar each model measure is labelled with: the number the page prints for it.
         var barLabels = BarLabels(modelMeasures);   // (the time field above reads the same)
         int s = 0;
         while (s < systems.Length)
@@ -177,25 +176,16 @@ public static class LayoutReport
         return count;
     }
 
-    /// <summary>The 1-based bar label of each model measure: one more than the bars begun
-    /// before it, so the two halves of a split bar (<see cref="Measure.ContinuesBar"/>) share
-    /// one label and every other measure counts as before.</summary>
+    /// <summary>The bar label of each model measure: the number the page PRINTS for it
+    /// (<see cref="BarNumberEngraver.NumberMeasures"/>) — a leading pickup is bar 0, the two
+    /// halves of a split bar (<see cref="Measure.ContinuesBar"/>) share one number, and a bar
+    /// closed under <c>time none</c> takes the number of the bar after it.</summary>
+    /// <remarks>Until 2026-11-14 the report counted for itself, from 1: with a pickup every label
+    /// was one over the page's number, and a senza-misura passage pushed the labels after it
+    /// further (grammar evaluation 4: "IIC = bar 35" where the page prints 33). Owner's
+    /// instruction 2026-11-14.</remarks>
     private static int[] BarLabels(ImmutableArray<Measure> model)
-    {
-        var labels = new int[model.Length];
-        int begun = 0;
-        for (int i = 0; i < model.Length; i++)
-        {
-            // A later volta ending continuing the bar the body left short still begins a
-            // numbered bar — the ending before it closed on a bar line (LilyPond's count
-            // continues through alternatives); only continuing the measure BEFORE it
-            // shares that measure's number.
-            if (!model[i].ContinuesBar || model[i].ContinuedFromMeasure >= 0)
-                begun++;
-            labels[i] = begun;
-        }
-        return labels;
-    }
+        => model.IsDefaultOrEmpty ? [] : [.. BarNumberEngraver.NumberMeasures(model, model[0].IsPickup ? -1 : 0)];
 
     private static int BarLabel(int[] labels, int measureIndex)
         => measureIndex >= 0 && measureIndex < labels.Length ? labels[measureIndex] : measureIndex + 1;

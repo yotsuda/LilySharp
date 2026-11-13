@@ -290,4 +290,27 @@ public class Session1229LeftoversTests
         var said = Assert.Single(KeyWarnings("key g major", "key g major d'1 | key d major"));
         Assert.Contains("'a' changes key", said.Message);
     }
+
+    /// <summary>
+    /// <c>lysc layout</c> names every bar by the number the page prints: with a pickup (the
+    /// page's bar 0) each label was one over, and bars closed under <c>time none</c> pushed the
+    /// labels after them further (owner's instruction 2026-11-14).
+    /// </summary>
+    [Fact]
+    public void LayoutReport_NamesBarsByThePagesNumbers_AfterAPickup()
+    {
+        static string Report(string music)
+            => LilySharp.Core.Svg.LayoutReport.Generate(SyntaxTree.Parse(
+                "time 4/4\noctave absolute\npart m { }\nsection A { " + music + " }\nform { A }\nscore { staff m }\n"));
+
+        string pickup = Report("partial 4 m { g'4 | c'1 | d'1 | time 3/4 e'2. | f'2. | }");
+        Assert.Contains("time 4/4 -> 3/4 (bar 3)", pickup);
+        Assert.Contains("bars 0-4", pickup);
+        Assert.Contains("5 bars", pickup);
+        // The control: no pickup, and the first bar is bar 1.
+        string plain = Report("m { c'1 | d'1 | time 3/4 e'2. | f'2. | }");
+        Assert.Contains("time 4/4 -> 3/4 (bar 3)", plain);
+        Assert.Contains("bars 1-4", plain);
+    }
+
 }
