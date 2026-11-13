@@ -5,6 +5,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 ## Unreleased
 
 - **`layout { restStyle z }`** draws the quarter rest as an old French print does, a z with a knob at each end; `classical` draws a mirrored eighth rest. The key is in the `layout` list, its three words (`default`, `classical`, `z`) are offered after it, and both are coloured.
+- **Ctrl+Shift+Up / Down on `@slur(dashed)` or `@tie(dashed)`** trades the line: Up to `dotted`, Down to `dashed`, with the caret on the name or on the word.
+
 
 - **Notation the evaluation asked for is offered as you type**: inside `@figuredBass(` the last row is `4, 3`, the change of figure over one held note (a comma divides the note into equal parts); two `@figuredBass` on one note are underlined with that form. After `@` the list has `slur` and `tie`, and inside `@slur(` / `@tie(` the words `dashed` and `dotted`; one written where no slur or tie begins is underlined with where to write it. Inside a dynamic's parentheses (`@p(`) the word is `editorial`. A part header offers `beaming`, and after it `syllabic` — a sung part's beams.
 

@@ -2397,6 +2397,11 @@ public class StepRequestTests
     [InlineData("c'4@bend(‸full) d'2. |", +1, "c'4@bend(3) d'2. |")]
     [InlineData("c'4@bend(‸full) d'2. |", -1, "c'4@bend(half) d'2. |")]
     [InlineData("c'8@feather(‸left)[ d' e' f'] g'2 |", +1, "c'8@feather(right)[ d' e' f'] g'2 |")]
+    // A bow's line, from the name or the word (owner's request 2026-11-13).
+    [InlineData("c'4@sl‸ur(dashed)( d' e' f') |", +1, "c'4@slur(dotted)( d' e' f') |")]
+    [InlineData("c'4@slur(dot‸ted)( d' e' f') |", -1, "c'4@slur(dashed)( d' e' f') |")]
+    [InlineData("c'2@‸tie(dashed)~ c'2 |", +1, "c'2@tie(dotted)~ c'2 |")]
+    [InlineData("c'2@tie(‸dotted)~ c'2 |", -1, "c'2@tie(dashed)~ c'2 |")]
     public void AnArgumentFromAList_StepsAlongIt(string from, int dir, string to)
         => Assert.Equal(Plain(to), Step(Plain(from), dir, semitone: true).After);
 

@@ -118,6 +118,10 @@ public static partial class NoteStepper
         // walks it; a figure written otherwise is not stepped.
         // (Its last row, the first here, is the comma form: 4 then 3 over one held note.)
         ["figuredBass"] = ["4, 3", "_", "#", "6 s", "2", "4", "9", "5 3", "4 2", "4 3", "6 5", "7", "6 4", "6"],
+        // A bow's two lines (owner's request 2026-11-13: "@slur の上で dashed と dotted を
+        // 切り替えられるように"): the completion's two rows, traded by either key's first press.
+        [Semantics.AnnotationValues.SlurLineName] = [.. Semantics.AnnotationValues.BowLineWords],
+        [Semantics.AnnotationValues.TieLineName] = [.. Semantics.AnnotationValues.BowLineWords],
     };
 
     /// <summary>A name the step may write: one the registry draws, or a plain annotation the
