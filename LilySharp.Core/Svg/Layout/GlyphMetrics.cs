@@ -614,6 +614,11 @@ internal static partial class GlyphMetrics
     {
         "naturalSharp" => "sharp",
         "naturalFlat" => "flat",
+        // …and the quarter tones': `cis'4 cih'` steps down inside the sharps as 𝄪→♯ does.
+        "naturalQuarterSharp" => "quarterSharp",
+        "naturalQuarterFlat" => "quarterFlat",
+        "naturalThreeQuarterSharp" => "threeQuarterSharp",
+        "naturalThreeQuarterFlat" => "threeQuarterFlat",
         _ => null
     };
 

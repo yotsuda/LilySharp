@@ -980,6 +980,12 @@ public sealed partial class MeasureCollector
         >= 2 => "doubleSharp", 1 => "sharp", <= -2 => "doubleFlat", -1 => "flat", _ => "natural"
     };
 
+    /// <summary>The accidental forced onto a note that shows none (<c>@courtesy</c>,
+    /// <c>@editorial</c>): a quarter tone's own — it is in no key — else the key's.</summary>
+    private string ForcedAccidentalName(int step, int semitones, int quarterOffset)
+        => quarterOffset != 0 && AlterationName(2 * semitones + quarterOffset) is { } own
+            ? own : KeySignatureAccidentalName(step);
+
     /// <summary>Starts a music walk's accidental memory: empty, at its first bar.</summary>
     private void ResetAccidentalMemory()
     {
@@ -1060,6 +1066,8 @@ public sealed partial class MeasureCollector
     /// ⚠️ A mid-measure key change reaches the fallback live (GetKeySignatureAlteration
     /// reads the current key) without disturbing remembered alterations — the behaviour
     /// the default style had before the styles existed.
+    /// <paramref name="actual"/> and the memory are in QUARTER tones (a sharp is 2), as
+    /// LilyPond's alteration is a rational: <c>cih'4 c'</c> owes the natural (2026-11-14).
     /// </remarks>
     private AccidentalNeed CheckPitchAgainstSignature(
         int step, int actual, int octave, Semantics.AccidentalRule rule)
@@ -1081,7 +1089,7 @@ public sealed partial class MeasureCollector
         }
         else
         {
-            previous = GetKeySignatureAlteration(step);
+            previous = 2 * GetKeySignatureAlteration(step);
         }
 
         // A tied accidental's entry: invalid, so the next head needs one whatever it is,
@@ -1139,9 +1147,18 @@ public sealed partial class MeasureCollector
     /// reaches the same flag. Verified against LilyPond 2.24.4 (the default style).
     /// </remarks>
     // Takes the DISPLAY pitch (post-transpose): diatonic step (0–6), its
-    // accidental in semitones, and octave.
-    private (string? Name, bool Cautionary) GetDisplayAccidental(int step, int actual, int octave)
+    // accidental in semitones, its octave, and the quarter tone written on top (cih +1, ceh −1).
+    // ⚠️ THE QUARTER TONE IS PART OF THE ALTERATION (2026-11-14). Until then the memory held
+    // semitones and the quarter-tone glyph was laid over the answer afterwards: `cih'4 c'`
+    // printed no natural (the c' "matched" the c the memory held), a repeated `cih'` printed
+    // its sign again, and `cis'4 cih'` no restoring natural. LilyPond 2.26.0 prints ♮, nothing
+    // and ♮ + quarter sharp (Lab sessions/p1229/b/qt-ly).
+    // LILYPOND-REF: lily/accidental-engraver.cc:380-432 stop_translation_timestep — the entry is
+    //   the pitch's whole alteration, a Rational (get_alteration).
+    private (string? Name, bool Cautionary) GetDisplayAccidental(int step, int semitones, int octave,
+        int quarterOffset = 0)
     {
+        int actual = 2 * semitones + quarterOffset;
         var style = _accidentalStyle;
         var need = Fold(style.Accidentals);
         bool cautionary = false;
@@ -1163,16 +1180,7 @@ public sealed partial class MeasureCollector
         if (!need.NeedAcc)
             return (null, false);
 
-        bool restore = need.NeedRestore && style.ExtraNatural;
-        string? name = actual switch
-        {
-            2 => "doubleSharp",
-            1 => restore ? "naturalSharp" : "sharp",
-            0 => "natural",
-            -1 => restore ? "naturalFlat" : "flat",
-            -2 => "doubleFlat",
-            _ => null
-        };
+        string? name = AlterationName(actual, restore: need.NeedRestore && style.ExtraNatural);
         return (name, cautionary && name != null);
 
         AccidentalNeed Fold(IReadOnlyList<Semantics.AccidentalRule> rules)
@@ -1189,5 +1197,31 @@ public sealed partial class MeasureCollector
             return new AccidentalNeed(res, acc);
         }
     }
+
+    /// <summary>
+    /// The accidental an alteration prints, by name; with <paramref name="restore"/>, the
+    /// composite that puts a natural before it (GlyphMetrics.RestoreMainOf). Null past a
+    /// double sharp or flat.
+    /// </summary>
+    /// <param name="quarters">The alteration in quarter tones: a sharp is 2, <c>cih</c> 1.</param>
+    /// <remarks>
+    /// LILYPOND-REF: scm/output-lib.scm:1136-1149 standard-alteration-glyph-name-alist — one glyph
+    ///   for each quarter step from −1 to 1.
+    /// LILYPOND-REF: lily/accidental.cc:131-143 Accidental_interface::print — restore-first adds
+    ///   the natural at the left of whichever glyph the alteration has, a quarter tone's too.
+    /// </remarks>
+    private static string? AlterationName(int quarters, bool restore = false) => quarters switch
+    {
+        4 => "doubleSharp",
+        3 => restore ? "naturalThreeQuarterSharp" : "threeQuarterSharp",
+        2 => restore ? "naturalSharp" : "sharp",
+        1 => restore ? "naturalQuarterSharp" : "quarterSharp",
+        0 => "natural",
+        -1 => restore ? "naturalQuarterFlat" : "quarterFlat",
+        -2 => restore ? "naturalFlat" : "flat",
+        -3 => restore ? "naturalThreeQuarterFlat" : "threeQuarterFlat",
+        -4 => "doubleFlat",
+        _ => null
+    };
 
 }

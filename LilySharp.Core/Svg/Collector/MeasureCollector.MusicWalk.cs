@@ -887,9 +887,7 @@ public sealed partial class MeasureCollector
         }
         int staffPosition = rp.StaffPosition;
         var (accidental, styleCourtesy) =
-            GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
-        if (pitch.QuarterOffset != 0)
-            accidental = QuarterToneAccidental(pitch, accidental);
+            GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave, pitch.QuarterOffset);
         int midi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
         int? fingering = ExtractFingering(pitch);
         bool hasLv = HasLaissezVibrerAnnotation(pitch);

@@ -119,16 +119,12 @@ public sealed partial class MeasureCollector
             dots = pairDisp.Dots;
         }
 
+        // The quarter tone (ih/eh/isih/eseh) is part of the alteration the memory compares.
         var (accidental, styleCourtesy) =
-            GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
+            GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave, pitch.QuarterOffset);
         // A cautionary STYLE parenthesises what it asked for, as @courtesy does below
         // (Semantics.AccidentalStyles.ModernCautionary).
         bool isCourtesy = styleCourtesy;
-
-        // Quarter tones always print their own accidental (they are never in
-        // the key). LILYPOND-REF: quarter-tone note names ih/eh/isih/eseh.
-        if (pitch.QuarterOffset != 0)
-            accidental = QuarterToneAccidental(pitch.AccidentalOffset, pitch.QuarterOffset, accidental);
 
         // Explicit @courtesy annotation: print the pitch's accidental in parentheses.
         if (_courtesySourcePositions.Contains(note.SourceStart))
@@ -136,7 +132,7 @@ public sealed partial class MeasureCollector
             isCourtesy = true;
             // If no accidental shown, force the key-signature-matching accidental
             if (accidental == null)
-                accidental = KeySignatureAccidentalName(rp.DisplayStep);
+                accidental = ForcedAccidentalName(rp.DisplayStep, rp.DisplayAlteration, pitch.QuarterOffset);
         }
 
         // LILYPOND-REF: lily/fingering-engraver.cc — finger event lookup at note creation.
@@ -161,7 +157,7 @@ public sealed partial class MeasureCollector
             }
             else
             {
-                editorialAccidental = KeySignatureAccidentalName(rp.DisplayStep);
+                editorialAccidental = ForcedAccidentalName(rp.DisplayStep, rp.DisplayAlteration, pitch.QuarterOffset);
             }
             accidental = null; // suggestion replaces the left-of-note accidental
         }
@@ -629,12 +625,9 @@ public sealed partial class MeasureCollector
             }
             int staffPosition = rp.StaffPosition;
 
+            // The quarter tone is part of the alteration the memory compares (CreateNoteItem).
             var (accidental, styleCourtesy) =
-                GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
-
-            // Quarter tones always print their own accidental (never in the key).
-            if (pitch.QuarterOffset != 0)
-                accidental = QuarterToneAccidental(pitch, accidental);
+                GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave, pitch.QuarterOffset);
 
             // Per-pitch @courtesy (<f@courtesy a …> = LP's f?): the member's
             // accidental prints in parentheses, forcing the key-matching one
@@ -645,7 +638,7 @@ public sealed partial class MeasureCollector
                 a is ArticulationSyntax { Type: ArticulationType.None } ca
                 && ca.Name.Equals("courtesy", StringComparison.Ordinal));
             if (memberCourtesy && accidental == null)
-                accidental = KeySignatureAccidentalName(rp.DisplayStep);
+                accidental = ForcedAccidentalName(rp.DisplayStep, rp.DisplayAlteration, pitch.QuarterOffset);
 
             // Per-pitch @editorial (<d f@editorial>): the member's accidental becomes the
             // suggestion above the chord instead of the one at its left, the key-matching
@@ -659,7 +652,7 @@ public sealed partial class MeasureCollector
                     && ea.Name.Equals("editorial", StringComparison.Ordinal))
                 {
                     _memberEditorialBySource[ea.SourceStart] =
-                        accidental ?? KeySignatureAccidentalName(rp.DisplayStep);
+                        accidental ?? ForcedAccidentalName(rp.DisplayStep, rp.DisplayAlteration, pitch.QuarterOffset);
                     accidental = null;
                     break;
                 }

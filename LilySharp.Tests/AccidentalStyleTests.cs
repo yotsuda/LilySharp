@@ -157,6 +157,50 @@ public class AccidentalStyleTests
         Assert.Equal(new string?[] { "doubleSharp", "naturalSharp" }, Glyphs("cisis4 cis r2 |"));
     }
 
+    /// <summary>
+    /// A quarter tone is part of the alteration the memory holds. Until 2026-11-14 the memory
+    /// held semitones and the quarter-tone glyph was laid over its answer: the <c>c'</c> after
+    /// a <c>cih'</c> printed no natural. Each line is LilyPond 2.26.0's (Lab sessions/p1229/b/qt-ly).
+    /// </summary>
+    [Fact]
+    public void Default_RemembersAQuarterTone_AsTheAlterationItIs()
+    {
+        // The natural after a quarter tone, either way.
+        Assert.Equal(new string?[] { "quarterSharp", "natural", "quarterFlat", "natural" },
+            Glyphs("cih'4 c' ceh' c' |"));
+        // A sharp after a quarter sharp; stepping back down inside the sharps restores first.
+        Assert.Equal(new string?[] { "quarterSharp", "sharp", null, "naturalQuarterSharp" },
+            Glyphs("cih'4 cis' cis' cih' |"));
+        // A repeated quarter tone is remembered like any alteration.
+        Assert.Equal(new string?[] { "quarterSharp", null, "quarterFlat", null },
+            Glyphs("cih'4 cih' ceh' ceh' |"));
+        // Another octave is another memory.
+        Assert.Equal(new string?[] { "quarterSharp", null, "quarterSharp", "natural" },
+            Glyphs("cih'4 c'' cih'' c' |"));
+        Assert.Equal(new string?[] { "threeQuarterSharp", "naturalSharp", "threeQuarterSharp", "naturalQuarterSharp" },
+            Glyphs("cisih'4 cis' cisih' cih' |"));
+        Assert.Equal(new string?[] { "threeQuarterFlat", "naturalFlat", null, "naturalQuarterFlat" },
+            Glyphs("ceseh'4 ces' ces' ceh' |"));
+        // In a chord, and after a tie's right head (which leaves the memory invalid).
+        Assert.Equal(new string?[] { "quarterSharp", null, "natural", null, "quarterSharp", null, "natural" },
+            Glyphs("<cih' e'>4 <c' e'> cih'2~ | cih'4 c' r2 |"));
+        // The bar line forgets it.
+        Assert.Equal(new string?[] { "quarterSharp", null }, Glyphs("cih'1 | c'1 |"));
+        // A forced accidental on a quarter tone that shows none is its own, not the key's.
+        Assert.Equal(new (string?, bool)[] { ("quarterSharp", false), ("quarterSharp", true) },
+            Notes("cih'2 cih'@courtesy |"));
+        // The control: the plain alterations as they were.
+        Assert.Equal(new string?[] { "sharp", null, "natural", "sharp" }, Glyphs("cis'4 cis' c' cis' |"));
+
+        // The restoring natural stands left of the quarter tone's glyph, as it does of a sharp.
+        var plain = LilySharp.Core.Svg.Layout.GlyphMetrics.GetAccidentalBBox("quarterSharp");
+        var restored = LilySharp.Core.Svg.Layout.GlyphMetrics.GetAccidentalBBox("naturalQuarterSharp");
+        var sharpRestored = LilySharp.Core.Svg.Layout.GlyphMetrics.GetAccidentalBBox("naturalSharp");
+        var sharp = LilySharp.Core.Svg.Layout.GlyphMetrics.GetAccidentalBBox("sharp");
+        Assert.Equal(sharpRestored.Width - sharp.Width, restored.Width - plain.Width, 6);
+        Assert.True(restored.Width > plain.Width);
+    }
+
     // ================================================================================
     // modern — Kurt Stone's
     // ================================================================================
