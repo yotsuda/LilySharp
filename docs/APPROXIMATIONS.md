@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 378 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **506** | |
+| `OWN` | 379 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **507** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -249,7 +249,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（378 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（379 件）
 
 ### `LilySharp.Core/Audio/SingerPlan.cs`
 - **`SingerPlan`** LILYSHARP-OWN.
@@ -384,6 +384,7 @@
 - **`SharedRenderer.DrawSystem`** prefix — LILYSHARP-OWN, a decided divergence (user decision
 ### `LilySharp.Core/Rendering/SharedRenderer.Curves.cs`
 - **`SharedRenderer.DrawDashedCurve`** LILYSHARP-OWN: each dash is a QUAD — the two edges' points at its two parameter values,
+- **`SharedRenderer.DrawDashedCurve`** LILYSHARP-OWN: the pattern is laid along the bow's LENGTH, not its parameter. LilyPond
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **`SharedRenderer.DrawTabGraceNotes`** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`

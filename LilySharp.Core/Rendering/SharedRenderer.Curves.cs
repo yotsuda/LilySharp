@@ -300,8 +300,8 @@ internal static partial class SharedRenderer
     /// <summary>
     /// Draws a DASHED or DOTTED bow (<c>@slur(dashed)</c>, <c>@tie(dotted)</c>; owner-approved
     /// 2026-11-13, grammar evaluation 3): the same bezier sandwich as <see cref="DrawCurve"/>,
-    /// cut into dashes along the curve's parameter — each dash the piece of the sandwich
-    /// between two parameter values, filled and stroked with the same round pen.
+    /// cut into dashes evenly along the curve's length — each dash the piece of the sandwich
+    /// between two points of it, filled and stroked with the same round pen.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/lookup.cc Lookup::slur, the dash_details branch —
@@ -346,9 +346,37 @@ internal static partial class SharedRenderer
         int patternCount = (int)(len / dashPeriod);
         double patternLength = 1.0 / (patternCount + dashFraction);
         double grow = 0.5 * pen;
+        // LILYSHARP-OWN: the pattern is laid along the bow's LENGTH, not its parameter. LilyPond
+        // cuts at equal parameter steps (back.extract (t0, t1) above), and a bow's control
+        // points stand near its ends, so a step there is shorter than one in the middle: the
+        // dots crowd at the two ends and spread at the crown. The owner on seeing it
+        // (2026-11-13): "wide at the middle, narrow at the ends" — set evenly, as engraved
+        // dashes are. The count and the first and last pieces' ends are LilyPond's still.
+        //   departs from: lily/lookup.cc Lookup::slur — Bezier::extract by parameter.
+        //   goes away when: never (a choice, not an approximation).
+        //   observed by: GrammarEvaluation3FeaturesTests.ADashedBowsPieces_StandEvenlyAlongIt.
+        const int Steps = 128;
+        var lengthAt = new double[Steps + 1];
+        var before = p0;
+        for (int i = 1; i <= Steps; i++)
+        {
+            var at = BezierAt(p0, c1, c2, p3, (double)i / Steps);
+            lengthAt[i] = lengthAt[i - 1] + Math.Sqrt((at.X - before.X) * (at.X - before.X) + (at.Y - before.Y) * (at.Y - before.Y));
+            before = at;
+        }
+        double ParameterAt(double share)
+        {
+            double want = share * lengthAt[Steps];
+            int i = Array.BinarySearch(lengthAt, want);
+            if (i >= 0)
+                return (double)i / Steps;
+            i = Math.Clamp(~i, 1, Steps);
+            double span = lengthAt[i] - lengthAt[i - 1];
+            return (i - 1 + (span > 0 ? (want - lengthAt[i - 1]) / span : 0)) / Steps;
+        }
         for (int p = 0; p <= patternCount; p++)
         {
-            double t0 = p * patternLength, t1 = Math.Min(1.0, (p + dashFraction) * patternLength);
+            double t0 = ParameterAt(p * patternLength), t1 = ParameterAt(Math.Min(1.0, (p + dashFraction) * patternLength));
             var aStart = BezierAt(p0, a1, a2, p3, t0);
             var aEnd = BezierAt(p0, a1, a2, p3, t1);
             var bStart = BezierAt(p0, b1, b2, p3, t0);

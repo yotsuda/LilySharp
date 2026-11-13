@@ -1496,6 +1496,24 @@ public class GrammarEvaluation3FeaturesTests
         Assert.Equal(plain.Noteheads.Select(h => Math.Round(h.X, 6)), g.Noteheads.Select(h => Math.Round(h.X, 6)));
     }
 
+    /// <summary>The pieces of a dashed or dotted bow stand evenly ALONG it. LilyPond cuts at
+    /// equal steps of the curve's parameter, which crowds them at the two ends and spreads them
+    /// at the crown (the owner on seeing a dotted slur, 2026-11-13: "wide at the middle, narrow
+    /// at the ends"); cut that way every one of these bows fails the bound below.</summary>
+    [Theory]
+    [InlineData("c'4@slur(dotted)( d' e' f') |")]
+    [InlineData("c'4@slur(dashed)( d' e' f') |")]
+    [InlineData("c'4@slur(dotted)( e'') r2 |")]
+    [InlineData("c'1@tie(dotted)~ | c'1 |")]
+    public void ADashedBowsPieces_StandEvenlyAlongIt(string music)
+    {
+        var quads = RenderedGeometry.Render(Melody(music)).Quads;
+        var starts = quads.Select(q => (X: (q.X0 + q.X3) / 2, Y: (q.Y0 + q.Y3) / 2)).OrderBy(p => p.X).ToArray();
+        Assert.True(starts.Length >= 5, $"{starts.Length} pieces");
+        var steps = starts.Zip(starts.Skip(1), (a, b) => Math.Sqrt(Math.Pow(b.X - a.X, 2) + Math.Pow(b.Y - a.Y, 2))).ToArray();
+        Assert.True(steps.Max() / steps.Min() < 1.05, string.Join(" ", steps.Select(s => s.ToString("F3"))));
+    }
+
     /// <summary>One <c>@tie(dashed)</c> on a chord is all its ties; a slur and a tie on one note
     /// take a line each; a tuplet's and a chord's slur are dashed like a note's.</summary>
     [Fact]
