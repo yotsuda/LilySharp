@@ -752,8 +752,6 @@ internal sealed class PageLayouter
         // (SystemDetails.StaffCompression). The difference is invariant either way — body
         // and last refpoint move together — but the two terms must come from ONE frame.
         double DrawnBody(SystemDetails d) => d.StaffHeight + d.StaffCompression;
-        double InkBelowLastRefpoint(SystemDetails d, int sysIdx)
-            => DrawnBody(d) - originToLast[sysIdx - startIdx] + d.BottomExtent;
 
         for (int sysIdx = startIdx; sysIdx < endIdx; sysIdx++)
         {

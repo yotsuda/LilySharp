@@ -59,7 +59,7 @@ public static class PartWordsNamer
                 if (block.Span.Start <= offset && offset <= (brace < 0 ? block.Span.End : brace))
                 {
                     track = block.VoiceName;
-                    part = LyricBindings.TargetOf(root, track);
+                    part = track == null ? null : LyricBindings.TargetOf(root, track);
                     break;
                 }
             }

@@ -148,7 +148,7 @@ public static class Harmonics
     /// The string a natural harmonic is played on: the one <paramref name="written"/> names when
     /// it is open at <paramref name="openMidi"/>, else the highest-numbered (lowest) string open
     /// at that pitch — 0 when the pitch is no open string of <paramref name="tuning"/> (lowest
-    /// string first, as <see cref="Tablature.Tunings.GetTuning(Tablature.TuningType)"/> gives it).
+    /// string first, as <see cref="Tablature.Tunings.GetTuning"/> gives it).
     /// </summary>
     public static int OpenString(int openMidi, int[] tuning, int? written = null)
     {
