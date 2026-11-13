@@ -35,18 +35,25 @@ internal sealed class InstrumentPresetPropertyValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
-        foreach (var part in tree.GetRoot().DescendantNodes().OfType<PartDeclarationSyntax>())
+        var root = tree.GetRoot();
+        bool? fileIsConcert = null;
+        foreach (var part in root.DescendantNodes().OfType<PartDeclarationSyntax>())
         {
             var defaults = PartHeaderDefaults.Read(part);
             if (defaults.Preset is not { } preset || !InstrumentDefaults.IsKnownInstrument(preset))
                 continue;
-            CheckOctave(part, defaults, preset);
+            // Typed at concert pitch (the part's own `pitch`, else the file's), the letters are
+            // what sounds and the octave is the sounding register: `octave 2` on a bass is a bare
+            // c at C2, sounding C2. Until 2026-11-14 it was told "which sounds C1 ... written from
+            // octave 3" (grammar evaluation 4, a big-band chart under `pitch concert`).
+            if (!(ConcertPitch.PartMode(part) ?? (fileIsConcert ??= ConcertPitch.FileIsConcert(root))))
+                CheckOctave(part, defaults, preset);
             CheckTuning(part, preset);
         }
     }
 
     /// <summary>LYS1050: the octave's number, when it is below the preset's and the part sounds
-    /// an octave or more below the page.</summary>
+    /// an octave or more below the page. Asked of a part typed at written pitch only.</summary>
     private void CheckOctave(PartDeclarationSyntax part, PartHeaderDefaults defaults, string preset)
     {
         int presetOctave = InstrumentDefaults.GetDefaults(preset).Octave;

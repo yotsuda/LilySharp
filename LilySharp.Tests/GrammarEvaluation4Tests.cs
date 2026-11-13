@@ -1124,4 +1124,33 @@ public class GrammarEvaluation4Tests
         Assert.Equal(DiagnosticCodes.HairpinAgainstItsLevel, second.Code);
         Assert.Contains("@decresc leads to @f, louder than the @p it starts from", second.Message);
     }
+
+    /// <summary>Under <c>pitch concert</c> a bass is typed as it sounds, so <c>octave 2</c> makes a
+    /// bare c the C2 it sounds — and LYS1050 said "writes a bare c as C2, which sounds C1 …
+    /// written from octave 3". The warning is the written-pitch part's: the file's
+    /// <c>pitch</c>, or the part's own, decides.</summary>
+    [Fact]
+    public void AnOctaveBelowThePresets_IsNoSlip_WhereThePartIsTypedAsItSounds()
+    {
+        static IEnumerable<Diagnostic> Of(string top, string header) => Said($"octave absolute\n{top}\n"
+                + $"part ba {{ instrument bass  octave 2 {header} }}\nsection A {{ ba {{ c4 e, f, g, | }} }}\nform {{ ~A }}\nscore {{ staff ba }}\n")
+            .Where(d => d.Code == DiagnosticCodes.OctaveBelowTransposingPreset);
+
+        Assert.Empty(Of("pitch concert", ""));
+        Assert.Empty(Of("", "pitch concert"));
+        // Typed as the player reads — by default, or by the part's own word in a concert file —
+        // the octave is the written register and the part comes out an octave low.
+        Assert.Contains("which sounds C1", Assert.Single(Of("", "")).Message);
+        Assert.Contains("which sounds C1", Assert.Single(Of("pitch concert", "pitch written")).Message);
+
+        // What the warning would have denied: the bare c of the concert file sounds C2.
+        static int FirstNote(string top)
+        {
+            var tree = SyntaxTree.Parse($"octave absolute\n{top}\npart ba {{ instrument bass  octave 2 }}\n"
+                + "section A { ba { c4 e, f, g, | } }\nform { ~A }\nscore { staff ba }\n");
+            return new LilySharp.Core.Midi.MidiExporter().Export(tree).Tracks[1].Notes[0].Pitch;
+        }
+        Assert.Equal(36, FirstNote("pitch concert"));
+        Assert.Equal(24, FirstNote(""));
+    }
 }
