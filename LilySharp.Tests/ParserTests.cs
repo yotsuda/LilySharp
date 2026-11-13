@@ -1365,8 +1365,10 @@ theme");
     [InlineData("{ c4 gflat d4 }", "ges")]
     public void BareWord_EnglishAccidental_SuggestsDutchPitch(string source, string suggested)
     {
+        // Semantic validation says it (2026-11-14): only there is it known that no phrase
+        // of that name was declared (Session1228LeftoversTests).
         var tree = SyntaxTree.Parse(source);
-        var err = tree.Diagnostics.First(d => d.Code == DiagnosticCodes.BareReferenceRequiresDollar);
+        var err = SemanticValidation.Run(tree).First(d => d.Code == DiagnosticCodes.BareReferenceRequiresDollar);
         Assert.Contains($"'{suggested}'", err.Message);
     }
 

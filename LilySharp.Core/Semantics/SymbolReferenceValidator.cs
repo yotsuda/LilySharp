@@ -257,6 +257,15 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
                 var varName = varRef.Name.Text;
                 if (!_definedVariables.Contains(varName) && !_definedPhrases.Contains(varName))
                 {
+                    // `eb`, `bb`, `gflat`: an English accidental where no phrase of that name
+                    // exists is a mistyped pitch. Said here, not in the parser, so that a
+                    // declared `phrase eb { … }` is called (2026-11-14, leftover of session 1227).
+                    if (LilySharp.Core.Parser.Parser.PitchSuggestion(varName) is { } pitch)
+                    {
+                        _diagnostics.Error(varRef.Name.Span, DiagnosticCodes.BareReferenceRequiresDollar,
+                            $"'{varName}' is not a valid note — did you mean the pitch '{pitch}'?");
+                        break;
+                    }
                     _diagnostics.Error(
                         varRef.Name.Span,
                         DiagnosticCodes.UndefinedVariable,

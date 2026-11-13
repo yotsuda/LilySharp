@@ -929,7 +929,9 @@ public static class DiagnosticCodes
     /// information, not a warning (a voicing may hold a tension its name leaves out).</remarks>
     public const string ChordToneOutsideSymbol = "LYS1054";
 
-    /// <summary>Syntax error: a phrase reference needs a <c>$</c> — write <c>$name</c>.</summary>
+    /// <summary>Error: a bare word that reads like an English accidental (<c>eb</c>, <c>gflat</c>)
+    /// and names no declared phrase — a mistyped pitch (<c>SymbolReferenceValidator</c>). The
+    /// constant's name is from the days of the <c>$</c> sigil.</summary>
     public const string BareReferenceRequiresDollar = "LYS1012";
 
     /// <summary>Syntax error: a navigation mark was written with <c>@</c>

@@ -6,6 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **A phrase named `eb`, `bb` or `cB` can be called.** A word that looks like an English flat is no pitch here (the flats are `ees`, `bes`), yet a phrase declared under such a name was answered "'eb' is not a valid note — did you mean the pitch 'ees'?" at every call. The declared phrase is now played; the hint is kept for a word nothing declares, and is said once where there had been two errors.
 - **Evaluation 4, `lysc review` on jazz, choral and contemporary scores:** a big band chart had twelve of its horns told "a wrong note?", a chamber piece of seconds and clusters eight of its parts, and both were "a band piece" that should keep one tempo.
   - **A tone of the chord the row names is no wrong note.** The major seventh of `Fmaj7` over its root, the `#9` of `D7(#9)` over its third: where a `chords` row sounds, a melody note that is one of its chord's tones is not counted as standing a semitone from the harmony.
   - **A passing note is let pass.** A quarter come to by step and left by step, between two notes that sit in the harmony (B C♯ D over a held D), is the "passing one, short and moving on by step" the finding's own words allow.

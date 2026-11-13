@@ -1398,20 +1398,15 @@ internal sealed partial class Parser
 
 
     // A bare identifier in music is a PHRASE REFERENCE (the `$` sigil is gone —
-    // `Chorus` not `$Chorus`). A word that reads like an English-accidental note
-    // slip (eb, bb, fsharp) is almost certainly a mistyped pitch rather than a
-    // phrase, so keep the Dutch-spelling hint for that case; anything else is taken
-    // as a phrase reference and SymbolReferenceValidator reports it if undefined.
+    // `Chorus` not `$Chorus`), and SymbolReferenceValidator reports it if undefined.
+    // A word that reads like an English-accidental slip (eb, bb, cB, fsharp) is no
+    // pitch in this grammar (the flats are ees, bes), so it is a reference like any
+    // other: a phrase declared under that name is called, and only an UNDEFINED one
+    // gets the Dutch-spelling hint, from the validator (PitchSuggestion). Until
+    // 2026-11-14 the hint was given here, before anyone knew what was declared, so
+    // `phrase eb { … }` could be declared and never called (leftover of session 1227).
     private VariableReferenceGreen ParseBareVariableReference()
     {
-        if (PitchSuggestion(Current.Text) is { } pitch)
-        {
-            var span = new TextSpan(_textPosition, Current.FullWidth);
-            var bad = Advance();
-            _diagnostics.Error(span, DiagnosticCodes.BareReferenceRequiresDollar,
-                $"'{bad.Text}' is not a valid note — did you mean the pitch '{pitch}'?");
-            return new VariableReferenceGreen(bad);
-        }
         var name = Advance();
         var marks = ParsePhraseOctaveMarks();
         return marks.Length == 0
@@ -1422,7 +1417,7 @@ internal sealed partial class Parser
     // English-style accidental spellings map to Lily#'s Dutch note names:
     // eb -> ees, bb -> bes, gflat -> ges, fsharp -> fis. Returns null when the
     // word is not a plausible pitch typo.
-    private static string? PitchSuggestion(string word)
+    internal static string? PitchSuggestion(string word)
     {
         if (word.Length is < 2 or > 6)
             return null;
