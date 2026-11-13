@@ -1282,7 +1282,7 @@ notes' size, as LilyPond draws it.
 **So is a stem-side script** — `@staccato`, `@staccatissimo`, `@accent`, `@marcato`, `@tenuto`,
 `@portato` on a grace note is drawn small, on the grace note (`grace { d16@staccato } c4`),
 and so are a fermata and an ornament (`@trill`, `@prall`, `@mordent`, `@turn`, …) above it,
-and a bowing mark (`@upBow`, `@downBow`), `@flageolet` / `@harmonic`, `@stopped` and `@snapPizz`.
+and a bowing mark (`@upBow`, `@downBow` — a guitarist's up- and down-stroke are these two signs too; there is no `@upStroke` / `@downStroke`), `@flageolet` / `@harmonic`, `@stopped` and `@snapPizz`.
 A dynamic there is drawn too, at full size (`grace { d16@f } c4`), and a text
 (`@text("dolce")`), and a fingering (`grace { d16@finger(2) } c4`, small, as LilyPond
 sets it), and a hairpin that starts there (`grace { d16@cresc } c4 e4@f` — the wedge opens at
@@ -2463,7 +2463,9 @@ c4@textSpan d e f@!textSpan |                // no word: a bare dashed line
 nothing else about them differs. **A spanner is closed by the name it was opened with**:
 `@rit … @!rit`, `@textSpan("…") … @!textSpan` — `@rit … @!accel` is an error (LYS4032) whose
 quick fix writes the right name. One spanner is open at a time in a voice, and a spanner does
-not carry from one voice into another.
+not carry from one voice into another. (The guitar lines — `@palmMute`, `@letRing`, `@barre(N)`,
+under *Guitar Bends, Lines and Technique Letters* — are text spanners of their own: each runs
+beside the others and beside a `@rit`.)
 
 ### Ottava Brackets
 
@@ -3222,12 +3224,49 @@ diagram(C xx-10-12-13-12)2.~ diagram(C xx-10-12-13-12)4 |  // frets 10-15 in the
   the notes and adds their shape instead (*Chord diagrams* above).
 - `chord` and `diagram` are reserved in music only: a phrase cannot be named either (a part can).
 
-## Guitar Bends and Technique Letters
+## Guitar Bends, Lines and Technique Letters
 
 `@bend(half|full|N)` draws a bend-up: a rising arrow off the note's right, labelled in
 steps. `half` is one semitone, `full` two, and `N` is 1–12 semitones (`@bend(3)` prints
-`1½`). It is drawn on the page only — the `.ly` twin drops it with a warning, and MusicXML
-does not carry it.
+`1½`). It is drawn on the staff and on the tab and is silent in MIDI; MusicXML writes it as
+`<bend><bend-alter>`, and the `.ly` twin drops it with a warning.
+
+`@release` lets a bend back. On the bent note itself it is up and back within the note — the
+arrow up with its amount, then an arrow down; on the note right after a bent one it is the arrow
+down to that note (the next note of the same voice — a rest or another note between them breaks
+the pair). A `@release` with no bend before it is an error (LYS4067). MusicXML writes it as a
+`<bend>` with `<release/>`.
+
+```
+a'4@bend(full)@release r4  a'4@bend(full) a'4@release |
+```
+
+Three lines mark a run of a guitar's notes. Each is written on the first note and closed, by
+its own name, on the **last** note it covers:
+
+| Written | Printed | Played |
+|---|---|---|
+| `e,8@palmMute e, e, e,@!palmMute` | P.M. and a dashed line ending in a hook | each note half its length |
+| `e,8@letRing b, e g@!letRing` | *let ring* and the same line | each note sounds to the end of the run's last note (or until its pitch is struck again) |
+| `b,8@barre(7) fis b d'@!barre` | CVII and the same line — `@barre(7 half)` prints ½CVII | unchanged |
+
+The lines stand above the staff, and above a tab that stands alone; a tab beside its staff
+repeats none of them. They are independent: a palm mute runs under a barre, and either beside a
+`@rit`. A barre's fret is 1 to 24. A `@barre(N)` with no `@!barre` after it — or with another
+`@barre` before any end — is one note's barre: its label alone. A palm mute or a let ring that
+is never closed is an error (LYS4018); a barre with no fret, a fret out of range or another word
+is LYS4065. LilyPond has no command for any of the three: the `.ly` twin writes each as a text
+spanner with its word and a hook (one such spanner at a time in a LilyPond voice), and MusicXML
+as the word and a dashed `<bracket>`.
+
+`@vibrato` on a fretted instrument's note (a guitar, a bass, a ukulele, a banjo, a mandolin)
+draws the wavy line above the note, on the staff and the tab, for the note's length; the sound
+is unchanged. It takes no numbers there (LYS4066) — on any other part `@vibrato` is the singer's
+mark, heard and not drawn. MusicXML writes a `<wavy-line>`; the twin a trill spanner with no *tr*.
+
+```
+e'2@vibrato b4@vibrato g4 |
+```
 
 `@hammerOn`, `@pullOff` and `@tap` print the tab letters H, P and T, small and italic,
 opposite the stem; `.up` / `.down` force the side. They are drawn on a `tab` staff as well.

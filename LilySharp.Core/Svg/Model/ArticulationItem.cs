@@ -62,6 +62,10 @@ public sealed record ArticulationItem
     /// <see cref="ArticulationType.Bend"/>.</summary>
     public int BendSemitones { get; init; }
 
+    /// <summary>For a <see cref="ArticulationType.Bend"/>: how the bend is let back
+    /// (<c>@release</c>, owner-approved 2026-11-13, grammar evaluation 3).</summary>
+    public BendRelease BendRelease { get; init; }
+
     /// <summary>Fret-frame spec, low string first ("x32010": x = muted,
     /// 0 = open, digit = fret); only for <see cref="ArticulationType.FretFrame"/>.</summary>
     public string? FrameSpec { get; init; }
@@ -315,4 +319,18 @@ public sealed record ArticulationItem
         ArticulationType.EditorialDoubleFlat => "doubleFlat",
         _ => "natural"
     };
+}
+
+/// <summary>How a guitar bend is let back — <c>@release</c> (owner-approved 2026-11-13, grammar
+/// evaluation 3).</summary>
+public enum BendRelease
+{
+    /// <summary>A bend with no release: the arrow up and its amount.</summary>
+    None,
+    /// <summary><c>a'4@bend(full)@release</c>: bent up and let back within the one note — the
+    /// arrow up with the amount, then an arrow down.</summary>
+    WithinTheNote,
+    /// <summary><c>a'4@bend(full) a'4@release</c>: the note after a bent one — the arrow down
+    /// from the bend's height to this note. The item carries no amount.</summary>
+    ToTheNote,
 }

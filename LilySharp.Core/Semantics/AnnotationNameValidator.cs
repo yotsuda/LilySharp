@@ -53,6 +53,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             // A sung note's vibrato (a trial: heard from a DiffSinger voice, not drawn; AnnotationValues.Vibrato).
             "vibrato",
             "dead",
+            // A bend let back (2026-11-13; BendReleases, GuitarMarkValidator).
+            "release",
             // A head in parentheses — a drummer's ghost note (MeasureCollector.IsParenthesizeMark).
             "parenthesize",
             "rest",
@@ -99,6 +101,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         // TERMINATOR is not a separate candidate — '@!rit' reports the name "rit"
         // (MusicMarkSyntax.Name steps over the '!'), so one entry serves both ends.
         "rit", "accel", "rall", "textSpan",
+        // The guitar lines (2026-11-13): the barre is written with its fret.
+        "palmMute", "letRing", "barre.7",
         "cresc", "decresc", "dim",
         // Spelled exactly as they must be WRITTEN — names are case-sensitive. The typo
         // matcher still lowercases both sides, so '@hammron' finds '@hammerOn'.
@@ -258,7 +262,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                             DiagnosticCodes.UnknownAnnotation,
                             $"'@!{name}' is ignored: nothing of that name can be ended. "
                             + "The spans with a terminator: a text spanner ('@!rit', '@!accel', "
-                            + "'@!rall', '@!textSpan'), an ottava ('@!8va', '@!8vb', '@!15ma', '@!15mb'), "
+                            + "'@!rall', '@!textSpan'), a guitar line ('@!palmMute', '@!letRing', '@!barre'), "
+                            + "an ottava ('@!8va', '@!8vb', '@!15ma', '@!15mb'), "
                             + "a pedal ('@!sustain', '@!sostenuto', '@!unaCorda'), a phrasing "
                             + "slur ('@!phrasingSlur'), a trill span ('@!trillSpan'), a hairpin "
                             + "('@!cresc', '@!decresc', '@!dim') and a run of marks ('@!staccato', "
@@ -430,6 +435,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             || AnnotationValues.Notehead(mark) is not null
             || AnnotationValues.IsTextAnnotation(mark)
             || AnnotationValues.IsTextSpanAnnotation(mark)
+            // A barre, read or not: GuitarMarkValidator says what a miswritten one lacks (LYS4065).
+            || mark is { Name: MusicMarkItem.BarreName, IsSpanEnd: false }
             || AnnotationValues.Feather(mark) != 0
             || AnnotationValues.ArpeggioWords(mark) is not null
             || AnnotationValues.OrnamentAccidental(mark) is not null
@@ -722,7 +729,9 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     /// </remarks>
     private void WarnVibratoNobodySings(SyntaxNode mark)
     {
-        if (_root == null)
+        // On a fretted instrument it is the wavy line (2026-11-13; GuitarMarkValidator says a
+        // numbered one there).
+        if (_root == null || FrettedParts.Holds(mark))
             return;
         string? part = null;
         for (var p = mark.Parent; p != null && part == null; p = p.Parent)

@@ -207,7 +207,7 @@ internal static class CombinedStaffReaddress
                 a => a.IsChordMember
                     ? null
                     : (a.StaffIndex, a.VoiceIndex, a.MeasureIndex, a.ItemIndex, a.Type,
-                       a.IsAbove, a.DirectionForced, a.BendSemitones, a.FrameSpec, a.PluckLetter)),
+                       a.IsAbove, a.DirectionForced, a.BendSemitones, a.BendRelease, a.FrameSpec, a.PluckLetter)),
             TupletBrackets = MoveEachSpan(content.TupletBrackets, byStaff,
                 t => (new VoiceItemAddress(t.VoiceIndex, t.MeasureIndex, t.StartNoteIndex),
                       new VoiceItemAddress(t.VoiceIndex, t.MeasureIndex, t.EndNoteIndex)),

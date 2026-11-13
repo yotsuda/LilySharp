@@ -686,6 +686,9 @@ public sealed class MidiExporter
         _levelLog.Clear();
         _pedalLog.Clear();
         _anyPedal = tree.GetRoot().DescendantNodes().Any(n => PedalMark(n) != null);
+        _guitarLines.Clear();
+        _onGuitarLineCarrier = false;
+        _anyGuitarLine = tree.GetRoot().DescendantNodes().Any(n => GuitarLineMark(n) != null);
         ProcessNode(_root, mainTrack, conductorTrack);
         // A flat chord track's bars past the music go on (owner's decision 2026-11-07): bars of
         // the SCORE's meter in its home key — they stand after every section, and a section
@@ -737,6 +740,7 @@ public sealed class MidiExporter
     }
 
     // Every pedal mark the walk plays, in the order it plays them: the part it is in, and where.
+    // (The guitar lines' state is beside ProcessNode: PlayUnderGuitarLines.)
     private readonly List<(string? Part, int Tick, bool Down)> _pedalLog = new();
     private bool _anyPedal;
 
@@ -909,8 +913,96 @@ public sealed class MidiExporter
         }
     }
 
+    // The palm mute and the let ring running in each voice of each part, as the walk plays them.
+    private readonly Dictionary<(string? Part, int Voice), (bool Palm, List<int>? Ringing)> _guitarLines = new();
+    private bool _anyGuitarLine;
+    private bool _onGuitarLineCarrier;
+
+    /// <summary>Whether <paramref name="node"/> is a mark of a palm mute or a let ring: which
+    /// line, and whether it opens it (<c>@palmMute</c>) or ends it (<c>@!palmMute</c>); null for
+    /// every other node.</summary>
+    private static (bool Palm, bool Opens)? GuitarLineMark(SyntaxNode node) => node switch
+    {
+        ArticulationSyntax { Type: ArticulationType.None } a when a.NameToken.Text is "palmMute" or "letRing"
+            => (a.NameToken.Text == "palmMute", true),
+        MusicMarkSyntax { IsSpanEnd: true, Name: "palmMute" or "letRing" } m => (m.Name == "palmMute", false),
+        _ => null,
+    };
+
+    /// <summary>
+    /// Plays <paramref name="node"/> under the guitar lines of its voice (owner-approved
+    /// 2026-11-13, grammar evaluation 3): under a palm mute, <c>@palmMute … @!palmMute</c>, each
+    /// note sounds half its length — the damped string dies at once; under a let ring,
+    /// <c>@letRing … @!letRing</c>, each note sounds on to the end of the line's last note, or to
+    /// where its own pitch is struck again. Both ends are included, as the page draws them.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond plays neither (they are text spanners there). The half is the
+    /// staccato's factor (ApplyArticulationType), the nearest mechanism this exporter has: a
+    /// palm mute's darker tone is not something a MIDI note says. The barre changes no sound.
+    /// A line carries from section to section as it is played, as the page pairs it.
+    /// </remarks>
+    private void PlayUnderGuitarLines(SyntaxNode node, MidiTrack track, MidiTrack conductorTrack)
+    {
+        int voice = 0;
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (p is MusicBlockSyntax { Parent: ParallelExpressionSyntax parallel } branch)
+            {
+                voice = parallel.ChildNodes().OfType<MusicBlockSyntax>().TakeWhile(b => !ReferenceEquals(b, branch)).Count();
+                break;
+            }
+        var key = (_currentPart, voice);
+        var state = _guitarLines.GetValueOrDefault(key);
+        var marks = node.DescendantNodes().Select(GuitarLineMark).OfType<(bool Palm, bool Opens)>().ToList();
+        foreach (var mark in marks.Where(m => m.Opens))
+            state = mark.Palm ? (true, state.Ringing) : (state.Palm, state.Ringing ?? []);
+
+        int before = track.Notes.Count;
+        _onGuitarLineCarrier = true;
+        try { ProcessNode(node, track, conductorTrack); }
+        finally { _onGuitarLineCarrier = false; }
+
+        for (int i = before; i < track.Notes.Count; i++)
+        {
+            if (state.Palm && track.Notes[i].DurationTicks > 1)
+                track.Notes[i] = track.Notes[i] with { DurationTicks = Math.Max(1, track.Notes[i].DurationTicks / 2) };
+            state.Ringing?.Add(i);
+        }
+        foreach (var mark in marks.Where(m => !m.Opens))
+        {
+            if (mark.Palm)
+                state = (false, state.Ringing);
+            else if (state.Ringing is { } ringing)
+            {
+                foreach (int i in ringing)
+                {
+                    if (i >= track.Notes.Count || track.Notes[i].DurationTicks <= 0)
+                        continue;
+                    var note = track.Notes[i];
+                    int end = _currentTick;
+                    foreach (int j in ringing)
+                        if (j < track.Notes.Count && track.Notes[j].Pitch == note.Pitch && track.Notes[j].Channel == note.Channel
+                            && track.Notes[j].StartTick > note.StartTick)
+                            end = Math.Min(end, track.Notes[j].StartTick);
+                    if (end > note.StartTick + note.DurationTicks)
+                        track.Notes[i] = note with { DurationTicks = end - note.StartTick };
+                }
+                state = (state.Palm, null);
+            }
+        }
+        _guitarLines[key] = state;
+    }
+
     private void ProcessNode(SyntaxNode node, MidiTrack track, MidiTrack conductorTrack)
     {
+        if (_anyGuitarLine && !_onGuitarLineCarrier
+            && node is NoteSyntax or ChordSyntax or BareDurationSyntax or ChordRepetitionSyntax or ArpeggioSyntax
+            && (_guitarLines.Count > 0 || node.DescendantNodes().Any(n => GuitarLineMark(n) != null)))
+        {
+            PlayUnderGuitarLines(node, track, conductorTrack);
+            return;
+        }
+
         // The pedal goes down or up at the onset of what carries its mark, a rest as well as a note.
         if (_anyPedal && node is NoteSyntax or ChordSyntax or RestSyntax or BareDurationSyntax or SlashNoteSyntax or ChordRepetitionSyntax or ArpeggioSyntax or DrumNoteSyntax)
             foreach (var child in node.DescendantNodes())

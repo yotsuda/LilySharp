@@ -55,7 +55,11 @@ public readonly record struct TextSpannerLayout(
     // so a reused layout re-derives data-pos from the live score. -1 = unresolved.
     int SourceIndex = -1,
     // Which staff this spanner hangs under (per-staff stacking).
-    int StaffIndex = 0
+    int StaffIndex = 0,
+    // How far the hook at the line's right end reaches toward the staff, in staff spaces
+    // (TextSpannerEngraver.HookDepth on the last piece of a palm mute, a let ring or a barre);
+    // 0 for no hook.
+    double HookDepth = 0
 );
 
 /// <summary>
@@ -124,6 +128,25 @@ internal static class TextSpannerEngraver
     /// Minimum line length to be drawn.
     /// </summary>
     private const double MinimumLineLength = 1.0;
+
+    /// <summary>
+    /// The hook that ends a palm mute, a let ring and a barre (owner-approved 2026-11-13,
+    /// grammar evaluation 3): a stroke of the line's own thickness from the line's right end
+    /// one staff space toward the staff.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: the hook is the right bound's text, <c>\markup { \draw-line #'(0 . -1) }</c>
+    /// — what LilyPond's users override <c>TextSpanner.bound-details.right.text</c> with for these
+    /// lines (LilyPond has no palm-mute, let-ring or barre spanner), and what the twin writes.
+    /// How that markup is set is LilyPond's:
+    /// LILYPOND-REF: lily/line-spanner.cc:608-626 Line_spanner::print — the bound's text stencil is
+    ///   translated to the span point, and the line stops at the stencil's near X extent;
+    /// LILYPOND-REF: scm/define-markup-commands.scm (draw-line) — a stroke from (0 . 0) to the
+    ///   destination, <c>thickness</c> 1 × line-thickness.
+    /// MEASURED against 2.26.0 (featF/lp/spans.ly, read off the picture): the stroke hangs from
+    /// the line's end over the centre of the last note's column.
+    /// </remarks>
+    internal const double HookDepth = 1.0;
 
     // Staff geometry
     private const double StaffBottom = 4.0;
@@ -296,6 +319,13 @@ internal static class TextSpannerEngraver
 
                 if (lineStartX > endX - MinimumLineLength)
                     lineStartX = endX;
+                // A barre of one note is its label alone: the piece is as wide as the word,
+                // which is what the stacker and the paging silhouette read its ink over.
+                // …and a hooked line shorter than its word ends where the word does, so the
+                // hook is not struck through the letters.
+                double labelEndX = LineStartX(fonts ?? ScoreTextMetrics.Bundled, segText, startX);
+                if (spanner.Style == TextSpannerStyle.None || (spanner.EndHook && segment.IsLast && endX < labelEndX))
+                    endX = lineStartX = labelEndX;
 
                 // Below THIS spanner's staff, clear of the SAME staff's dynamics
                 // only. The staff's within-system offset moves the whole band down.
@@ -323,7 +353,9 @@ internal static class TextSpannerEngraver
                     DashFraction: DashFraction,
                     SourcePosition: spanner.SourcePosition,
                     SourceIndex: spanner.SourceIndex,
-                    StaffIndex: spanner.StaffIndex
+                    StaffIndex: spanner.StaffIndex,
+                    // The hook stands where the line ENDS: on the last piece of a broken line.
+                    HookDepth: spanner.EndHook && segment.IsLast ? HookDepth : 0
                 ));
             }
         }
@@ -522,10 +554,30 @@ internal static class TextSpannerEngraver
         var spanners = ImmutableArray.CreateBuilder<TextSpannerItem>();
         var unpaired = ImmutableArray.CreateBuilder<UnpairedSpanWarning>();
         var reported = new HashSet<(int Position, SpanPairingFault Fault)>();
-        var open = new Dictionary<(int Staff, int Voice), (MusicMarkItem Mark, int Index)>();
+        // ⚠️ …AND PER FAMILY (owner-approved 2026-11-13, grammar evaluation 3): the palm mute,
+        // the let ring and the barre are each a line of their own, so one runs under another
+        // and beside a rit. LILYSHARP-OWN — LilyPond's engraver holds one span_ per voice.
+        var open = new Dictionary<(int Staff, int Voice, TextSpanFamily Family), (MusicMarkItem Mark, int Index)>();
         // The plays a start opened in, per (staff, voice) — a stop with nothing open asks
         // whether its family opened in ITS play (else it was written to end a carried span).
-        var openedIn = plays != null ? new HashSet<((int, int) Key, int Play)>() : null;
+        var openedIn = plays != null ? new HashSet<((int, int, TextSpanFamily) Key, int Play)>() : null;
+
+        // A barre with no '@!barre' after it is ONE note's: its label alone, no line and no
+        // warning (owner-approved 2026-11-13: "single-note barre = label only"). So is one
+        // another '@barre' follows before any end — a hand moving from position to position.
+        void AddBarreLabel((MusicMarkItem Mark, int Index) start)
+            => spanners.Add(new TextSpannerItem(
+                Text: start.Mark.Text,
+                StartMeasureIndex: start.Mark.MeasureIndex,
+                StartItemIndex: Math.Max(start.Mark.AnchorItemIndex, 0),
+                EndMeasureIndex: start.Mark.MeasureIndex,
+                EndItemIndex: Math.Max(start.Mark.AnchorItemIndex, 0),
+                Style: TextSpannerStyle.None,
+                SourcePosition: start.Mark.SourcePosition,
+                SourceIndex: start.Index,
+                StaffIndex: start.Mark.StaffIndex,
+                VoiceIndex: start.Mark.VoiceIndex,
+                Family: TextSpanFamily.Barre));
 
         void Report(int sourcePosition, SpanPairingFault fault)
         {
@@ -535,7 +587,7 @@ internal static class TextSpannerEngraver
 
         foreach (var (mark, srcIndex) in spanMarks)
         {
-            var key = (mark.StaffIndex, mark.VoiceIndex);
+            var key = (mark.StaffIndex, mark.VoiceIndex, mark.SpanFamily);
 
             if (mark.Type == MusicMarkType.TextSpanStop)
             {
@@ -578,10 +630,13 @@ internal static class TextSpannerEngraver
                     SourcePosition: start.Mark.SourcePosition,
                     SourceIndex: start.Index,
                     StaffIndex: start.Mark.StaffIndex,
-                    VoiceIndex: start.Mark.VoiceIndex));
+                    VoiceIndex: start.Mark.VoiceIndex,
+                    Family: start.Mark.SpanFamily));
                 continue;
             }
 
+            if (mark.SpanFamily == TextSpanFamily.Barre && open.Remove(key, out var earlierBarre))
+                AddBarreLabel(earlierBarre);
             if (open.ContainsKey(key))
             {
                 // LilyPond warns on the NEW mark and keeps the open one; a second span does
@@ -593,8 +648,13 @@ internal static class TextSpannerEngraver
             openedIn?.Add((key, plays!.PlayAt(mark.MeasureIndex)));
         }
 
-        foreach (var (mark, _) in open.Values)
-            Report(mark.SourcePosition, SpanPairingFault.Unterminated);
+        foreach (var start in open.Values)
+        {
+            if (start.Mark.SpanFamily == TextSpanFamily.Barre)
+                AddBarreLabel(start);
+            else
+                Report(start.Mark.SourcePosition, SpanPairingFault.Unterminated);
+        }
 
         return (spanners.ToImmutable(), unpaired.ToImmutable());
     }
@@ -702,6 +762,10 @@ internal static class TextSpannerEngraver
                 && HairpinEngraver.ColumnExtent(spanner.EndMeasureIndex, spanner.EndItemIndex,
                     LayoutUtilities.ResolveVoiceMeasures(voices, spanner.VoiceIndex, default), endLayout) is { } endColumn)
                 endX = (endColumn.Left + endColumn.Right) / 2 - BoundPadding;
+            // A one-note barre's label, and a hooked line shorter than its word (Calculate).
+            if (startsHere && (spanner.Style == TextSpannerStyle.None || (spanner.EndHook && endsHere))
+                && LineStartX(fonts, spanner.Text, startX) is var labelEnd && (spanner.Style == TextSpannerStyle.None || endX < labelEnd))
+                endX = labelEnd;
             if (endX <= startX)
                 continue;
 
@@ -725,12 +789,18 @@ internal static class TextSpannerEngraver
                 DynamicEngraver.StaffExtent + StaffPadding,
                 accumulatedUp.MaxProtrusionInRange(startX, endX)
                     + OutsideStaffStacker.OutsideStaffPadding + bottom);
+            // The hook of a guitar line reaches HookDepth toward the staff at the line's end,
+            // and clears what stands under it there (OutsideStaffStacker.PlaceTextSpanners).
+            if (spanner.EndHook && endsHere)
+                y = Math.Max(y, accumulatedUp.MaxProtrusionInRange(endX - lineHalf, endX + lineHalf)
+                    + OutsideStaffStacker.OutsideStaffPadding + HookDepth);
 
             // The DRAWN shape, not a flat band over the span: the rule is lineHalf thick
             // everywhere and the text stands only where the text is, which is what a row
             // whose symbols sit past the label has to clear (LilyPond reads the stencil's
             // own outline).
-            ink.MergeBox(startX, endX, y - lineHalf, y + lineHalf);
+            if (spanner.Style != TextSpannerStyle.None)
+                ink.MergeBox(startX, endX, y - lineHalf, y + lineHalf);
             if (!string.IsNullOrEmpty(text))
                 ink.MergeBox(
                     startX, Math.Min(LineStartX(fonts, text, startX), endX),

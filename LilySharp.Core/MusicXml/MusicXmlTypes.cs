@@ -752,6 +752,17 @@ internal sealed class MusicXmlDirection
     /// <c>&lt;rehearsal&gt;</c> direction, which is a boxed label like the page's.</summary>
     public string? Rehearsal { get; set; }
 
+    /// <summary>A guitar line — a palm mute, a let ring, a barre (owner-approved 2026-11-13,
+    /// grammar evaluation 3) — as MusicXML has it: a dashed <c>&lt;bracket&gt;</c>, "start" with
+    /// no hook after its <see cref="Words"/> ("P.M.", "let ring", "CVII"), "stop" with the hook
+    /// turned down. MusicXML has no element for any of the three; this is how notation programs
+    /// write them. Null for no line.</summary>
+    public string? GuitarLineType { get; set; }
+
+    /// <summary>The line's <c>number</c> (1 a palm mute, 2 a let ring, 3 a barre), so the three
+    /// run beside one another.</summary>
+    public int GuitarLineNumber { get; set; }
+
     /// <summary>The rehearsal label's frame (<c>square</c>, <c>none</c>), or null for the
     /// reader's default.</summary>
     public string? RehearsalEnclosure { get; set; }
@@ -809,7 +820,14 @@ internal sealed class MusicXmlDirection
         }
 
         if (Words != null)
-            direction.Add(new XElement("direction-type", new XElement("words", Words)));
+            direction.Add(new XElement("direction-type", new XElement("words",
+                GuitarLineNumber > 0 ? new XAttribute("font-style", "italic") : null, Words)));
+
+        if (GuitarLineType != null)
+            direction.Add(new XElement("direction-type", new XElement("bracket",
+                new XAttribute("type", GuitarLineType), new XAttribute("number", GuitarLineNumber),
+                new XAttribute("line-end", GuitarLineType == "stop" ? "down" : "none"),
+                new XAttribute("line-type", "dashed"))));
 
         if (Rehearsal != null)
             direction.Add(new XElement("direction-type", new XElement("rehearsal",

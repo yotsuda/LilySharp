@@ -4993,12 +4993,24 @@ public sealed partial class LilySharpLanguageServer
     /// <c>!</c> and opens its names (owner's request 2026-10-28: the <c>!</c> was not in the list).
     /// Kept out of <see cref="GetArticulationCompletions"/>, whose every row is a whole annotation.
     /// </summary>
-    internal static CompletionList WithSpanEndOpener(CompletionList list, string partial)
+    /// <remarks>With <paramref name="open"/> — the spans open before the caret, innermost first
+    /// (<see cref="OpenSpansBefore"/>) — each one's end is a row of its own BEFORE everything
+    /// else, the innermost first and selected: inside <c>@palmMute …</c> an <c>@</c> offers
+    /// <c>!palmMute</c> at the top (owner's request 2026-11-13, grammar evaluation 3).</remarks>
+    internal static CompletionList WithSpanEndOpener(CompletionList list, string partial, IReadOnlyList<string>? open = null)
         => partial.Length > 0 ? list : new CompletionList
         {
             IsIncomplete = list.IsIncomplete,
             Items =
             [
+                .. (open ?? []).Select((name, rank) => new CompletionItem
+                {
+                    // A space sorts before the '!' row and every name.
+                    Label = "!" + name, Kind = CompletionItemKind.Value, InsertText = "!" + name,
+                    SortText = $" {rank:00}", FilterText = "!" + name,
+                    Detail = $"Ends the @{name} open here",
+                    Preselect = rank == 0 ? true : null,
+                }),
                 .. list.Items,
                 new CompletionItem
                 {
@@ -5008,6 +5020,47 @@ public sealed partial class LilySharpLanguageServer
                 },
             ],
         };
+
+    /// <summary>
+    /// Right after the <c>@</c> of a note that carries a <c>@bend(…)</c>, or of the note after a
+    /// bent one, <c>release</c> is the first row and selected (owner's request 2026-11-13,
+    /// grammar evaluation 3): there it is what the writer most likely types next. Read off the
+    /// text — the note's own run of characters, else the one before it (a bar line between them
+    /// stepped over).
+    /// </summary>
+    internal static CompletionList WithReleaseFirst(string text, int offset, CompletionList list)
+    {
+        if (!BendBefore(text, offset) || list.Items.FirstOrDefault(i => i.Label == LilySharp.Core.Semantics.BendReleases.Name) is not { } release)
+            return list;
+        release.SortText = " ";          // before the open spans' ends (" 00") and the '!' row
+        release.Preselect = true;
+        foreach (var item in list.Items)
+            if (!ReferenceEquals(item, release) && item.Preselect == true)
+                item.Preselect = null;
+        return list;
+    }
+
+    /// <summary>Whether the caret stands right after the <c>@</c> of a bent note with no
+    /// <c>@release</c> yet, or of the note after a bent one.</summary>
+    internal static bool BendBefore(string text, int offset)
+    {
+        int at = Math.Min(offset, text.Length) - 1;
+        if (at < 0 || text[at] != '@')
+            return false;
+        int start = at;
+        while (start > 0 && !char.IsWhiteSpace(text[start - 1]))
+            start--;
+        string own = text[start..at];
+        if (own.Contains("@bend(", StringComparison.Ordinal))
+            return !own.Contains("@release", StringComparison.Ordinal);
+        int end = start;
+        while (end > 0 && (char.IsWhiteSpace(text[end - 1]) || text[end - 1] == '|'))
+            end--;
+        int previous = end;
+        while (previous > 0 && !char.IsWhiteSpace(text[previous - 1]))
+            previous--;
+        return text[previous..end].Contains("@bend(", StringComparison.Ordinal);
+    }
 
     /// <summary>After <c>check</c>: the checks there are (Semantics.CheckPragma.Rules).</summary>
     internal static CompletionList GetCheckRuleCompletions() => new()
@@ -5042,21 +5095,23 @@ public sealed partial class LilySharpLanguageServer
     /// </summary>
     internal static CompletionList GetSpanEndCompletions(string text, int offset)
     {
-        string? open = OpenSpanBefore(text, offset);
+        // Every span open here comes first, the innermost before the ones around it
+        // (owner's request 2026-11-13: a palm mute inside a barre is closed first).
+        var open = OpenSpansBefore(text, offset);
         var items = new List<CompletionItem>();
         foreach (var item in GetArticulationCompletions().Items)
         {
             if (!LilySharp.Core.Svg.Model.MusicMarkItem.IsSpanEndName(item.Label))
                 continue;
-            bool isOpen = item.Label == open;
+            int depth = open.IndexOf(item.Label);
             items.Add(new CompletionItem
             {
                 Label = item.Label,
                 Kind = item.Kind,
-                Detail = isOpen ? $"Ends the @{open} open here" : $"Ends @{item.Label}",
+                Detail = depth >= 0 ? $"Ends the @{item.Label} open here" : $"Ends @{item.Label}",
                 FilterText = item.FilterText,
-                SortText = (isOpen ? "0" : "1") + item.Label.ToLowerInvariant(),
-                Preselect = isOpen ? true : null,
+                SortText = (depth >= 0 ? $"0{depth:00}" : "1") + item.Label.ToLowerInvariant(),
+                Preselect = depth == 0 ? true : null,
             });
         }
         return new CompletionList { Items = [.. items] };
@@ -5066,6 +5121,12 @@ public sealed partial class LilySharpLanguageServer
     /// (back to the unmatched '{') that no later <c>@!</c> of its family closed, or null. A
     /// hairpin is left out: the next dynamic ends it as well as an <c>@!</c>.</summary>
     internal static string? OpenSpanBefore(string text, int offset)
+        => OpenSpansBefore(text, offset).FirstOrDefault();
+
+    /// <summary>Every span open before <paramref name="offset"/> in its block, by the name it was
+    /// opened with, the one opened last first (<see cref="OpenSpanBefore"/>'s reading). The palm
+    /// mute, the let ring and the barre are each a line of their own beside the text spanner.</summary>
+    internal static List<string> OpenSpansBefore(string text, int offset)
     {
         int start = Math.Min(offset, text.Length);
         for (int depth = 0; start > 0; start--)
@@ -5086,10 +5147,12 @@ public sealed partial class LilySharpLanguageServer
                 : LilySharp.Core.Svg.Model.MusicMarkItem.ParseSpanEndName(name)?.ToString();
             if (end is null || end == nameof(LilySharp.Core.Svg.Model.MusicMarkType.HairpinStop))
                 continue;
+            if (end == nameof(LilySharp.Core.Svg.Model.MusicMarkType.TextSpanStop))
+                end += LilySharp.Core.Svg.Model.MusicMarkItem.TextSpanFamilyOf(name);
             if (m.Groups[1].Value == "!") open.Remove(end);
             else open[end] = (name, m.Index);
         }
-        return open.Count == 0 ? null : open.Values.MaxBy(v => v.At).Name;
+        return [.. open.Values.OrderByDescending(v => v.At).Select(v => v.Name)];
     }
 
     internal static CompletionList GetArticulationCompletions(bool afterChord = false)
@@ -5135,7 +5198,7 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "longFermata", Kind = CompletionItemKind.Value, Detail = "Long fermata (square)", SortText = "0longFermata" },
                 new CompletionItem { Label = "breath", Kind = CompletionItemKind.Value, Detail = "Breath mark after the note", SortText = "0breath" },
             new CompletionItem { Label = "sing", Kind = CompletionItemKind.Value, Detail = "How the voice sings from this note on, by its engine's own settings — @sing(breathiness 6), @sing(breathiness default), @sing(breathiness to 9)", SortText = "0sing", InsertTextFormat = InsertTextFormat.Snippet, InsertText = "sing($0)", Command = new Command { Title = "List the settings", CommandIdentifier = "editor.action.triggerSuggest" } },
-            new CompletionItem { Label = "vibrato", Kind = CompletionItemKind.Value, Detail = "A sung note's vibrato (a trial: a DiffSinger voice sings it; not drawn) — @vibrato(cents, swings a second)", SortText = "0vibrato" },
+            new CompletionItem { Label = "vibrato", Kind = CompletionItemKind.Value, Detail = "On a guitar, bass or ukulele: the wavy line over the note. On a sung part: the voice's vibrato (a trial: a DiffSinger voice sings it; not drawn) — @vibrato(cents, swings a second)", SortText = "0vibrato" },
                 new CompletionItem { Label = "caesura", Kind = CompletionItemKind.Value, Detail = "Caesura (railroad tracks) after the note", SortText = "0caesura" },
                 new CompletionItem { Label = "stopped", Kind = CompletionItemKind.Value, Detail = "Stopped note + (brass hand-stop / left-hand pizz.)", SortText = "0stopped" },
                 new CompletionItem { Label = "thumb", Kind = CompletionItemKind.Value, Detail = "Thumb position (cello)", SortText = "0thumb" },
@@ -5230,6 +5293,11 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "accel", Kind = CompletionItemKind.Value, Detail = "Accelerando text spanner (ends at @!accel)", SortText = "4accel" },
                 new CompletionItem { Label = "rall", Kind = CompletionItemKind.Value, Detail = "Rallentando text spanner (ends at @!rall)", SortText = "4rall" },
                 new CompletionItem { Label = "textSpan", Kind = CompletionItemKind.Value, InsertText = "textSpan(\"$0\")", InsertTextFormat = InsertTextFormat.Snippet, Detail = "Text spanner with your own word (ends at @!textSpan)", SortText = "4textSpan" },
+                // The guitar lines (owner-approved 2026-11-13, grammar evaluation 3): each a
+                // line of its own, closed by its own name; the barre takes its fret.
+                new CompletionItem { Label = "palmMute", Kind = CompletionItemKind.Value, Detail = "Palm mute: P.M. and a dashed line with a hook, to the note carrying @!palmMute", SortText = "4palmMute" },
+                new CompletionItem { Label = "letRing", Kind = CompletionItemKind.Value, Detail = "Let ring: the notes sound on, to the note carrying @!letRing", SortText = "4letRing" },
+                ArgumentStub("barre", "Barre at a fret — @barre(7) prints CVII, @barre(7 half) a half barre; a line to @!barre, or the label alone", "4barre"),
                 // The ottava lines, by the label they print — the one spelling since 2026-10-28
                 // (`8va` lexes as ONE identifier, Lexer.GluedOttavaSuffixLength).
                 new CompletionItem { Label = "8va", Kind = CompletionItemKind.Value, Detail = "Ottava: an octave higher - ends at @!8va", SortText = "4ottava.8va" },
@@ -5279,6 +5347,8 @@ public sealed partial class LilySharpLanguageServer
                 ArgumentStub("finger", "Left-hand fingering — offers 0-5", "6finger"),
                 ArgumentStub("pluck", "Right-hand (plucking) finger — offers p, i, m, a", "6pluck"),
                 ArgumentStub("bend", "String bend — offers half, full", "6bend"),
+                // The bend let back (owner-approved 2026-11-13, grammar evaluation 3).
+                new CompletionItem { Label = "release", Kind = CompletionItemKind.Value, Detail = "Bend release — on the bent note (a4@bend(full)@release) up and back within it; on the note after a bent one, the arrow down to it", SortText = "6release" },
 
                 // Guitar chord diagram. Bare, it draws the chord's (or the note's) own fingering;
                 // with a shape — one character per string, low to high, x = muted, o = open,
@@ -5347,9 +5417,26 @@ public sealed partial class LilySharpLanguageServer
             "feather" => GetFeatherCompletions(),
             "figuredBass" => GetFiguredBassCompletions(),
             "arpeggio" => GetArpeggioCompletions(),
+            "barre" => GetBarreCompletions(),
             _ when AnnotationValues.IsOrnamentName(annotation) => GetOrnamentAccidentalCompletions(),
             _ => null
         };
+
+    /// <summary>Inside <c>@barre(…)</c>: the frets, 1 to 12 in order (a barre above the twelfth
+    /// is typed), and <c>half</c>, which follows the fret — <c>@barre(7 half)</c>.</summary>
+    internal static CompletionList GetBarreCompletions() => new()
+    {
+        Items =
+        [
+            .. Enumerable.Range(1, 12).Select(fret => new CompletionItem
+            {
+                Label = fret.ToString(System.Globalization.CultureInfo.InvariantCulture), Kind = CompletionItemKind.Value,
+                Detail = "Barre at fret " + fret + " — prints " + LilySharp.Core.Svg.Model.MusicMarkItem.BarreText(fret, false),
+                SortText = $"{fret:00}",
+            }),
+            new CompletionItem { Label = "half", Kind = CompletionItemKind.Value, Detail = "Half barre, after the fret — @barre(7 half) prints ½CVII", SortText = "99half" },
+        ],
+    };
 
     /// <summary>One argument item; the list order is the order given.</summary>
     private static CompletionItem Argument(string label, string detail, int rank) => new()

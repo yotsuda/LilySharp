@@ -12,29 +12,29 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
+| `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 355 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **481** | |
+| `OWN` | 364 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **492** | |
 
 ## 密度の高いファイル（上位 12）
 
 | ファイル | 件数 |
 |---|---:|
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 20 |
-| `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 17 |
+| `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 18 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 16 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 10 |
-| `LilySharp.Core/Midi/MidiExporter.cs` | 8 |
-| `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 8 |
+| `LilySharp.Core/Midi/MidiExporter.cs` | 9 |
+| `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 9 |
 | `LilySharp.Core/Svg/Collector/MeasureCollector.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（61 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（63 件）
 
 ### `LilySharp.Core/Music/ChordStructure.cs`
 - **`ChordQualityRegistry.SymbolSuffix`** ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
@@ -53,7 +53,10 @@
 - **`SharedRenderer.DrawStemlessTremolo`** NOT ported; this takes the note's own stem direction. No book and
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
 - **`SharedRenderer.DrawGuitarBend`** Lily# has not ported; this arrow is its own device.
+- **`SharedRenderer.DrawGuitarBendRelease`** LILYSHARP-OWN: as (LilyPond's BendSpanner is not ported); the
 - **`SharedRenderer.DrawArpeggios`** ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
+### `LilySharp.Core/Semantics/GuitarMarkValidator.cs`
+- **`BendReleases`** \bendHold, is not ported: it bends BETWEEN two written pitches, where @bend(full)
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **`BeamingPattern.Beamify`** ⚠️ subdivide_beams (:186-188) is not ported: it is gated on
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.MusicWalk.cs`
@@ -246,7 +249,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（355 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（364 件）
 
 ### `LilySharp.Core/Audio/SingerPlan.cs`
 - **`SingerPlan`** LILYSHARP-OWN.
@@ -274,6 +277,8 @@
 - **`LilyPondExporter.LooseSectionMusic`** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Marks.cs`
 - **`LilyPondExporter.SplitAttachments`** LILYSHARP-OWN: written after its own hairpin's start on one note, it spans that
+- **`LilyPondExporter.SplitAttachments`** LILYSHARP-OWN: LilyPond has no vibrato mark; this is how its users draw one.
+- **`LilyPondExporter.TextSpanStart`** LILYSHARP-OWN: LilyPond has no spanner for these; this is how its users write them, and
 - **`LilyPondExporter.OnTheNewLine`** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Music.cs`
 - **`LilyPondExporter.EmitItem`** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision 2026-10-02). Any other
@@ -292,6 +297,7 @@
 - **`MidiExporter.ShareGrandStaffDynamics`** LILYSHARP-OWN: LilyPond's Dynamic_performer is consisted per Voice
 - **`MidiExporter.AddPedals`** LILYSHARP-OWN: LilyPond's Piano_pedal_performer is consisted per Voice
 - **`MidiExporter.SplitIntoPartTracks`** LILYSHARP-OWN: LilyPond's performer gives each staff its own channel in the same way
+- **`MidiExporter.PlayUnderGuitarLines`** LILYSHARP-OWN: LilyPond plays neither (they are text spanners there). The half is the
 - **`MidiExporter.PlayChordRow`** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
 - **`MidiExporter.RowsAndLanesEnd`** 0 1 2 4 5 for 0 1 2 3 4). LILYSHARP-OWN: LilyPond performs no ChordNames context. The parts
 - **`MidiExporter._sequenceClosedAt`** part's bar 3 at 3840 — a bar early from there on. LILYSHARP-OWN. ⚠️ Not a drum chart: the
@@ -428,6 +434,8 @@
 - **`GraceBodySupport.IsCarriedGesture`** LILYSHARP-OWN: LilyPond has no scoop or plop, and its guitar bend is the unported
 - **`GraceBodySupport.IsCarriedTabTechnique`** LILYSHARP-OWN: the letters are Lily#'s own tablature ink (LilyPond's \rightHandFinger is
 - **`GraceBodySupport.IsCarriedTodo`** LILYSHARP-OWN: an editor's mark with no LilyPond counterpart (docs/todo-memo-design.md);
+### `LilySharp.Core/Semantics/GuitarMarkValidator.cs`
+- **`BendReleases`** LILYSHARP-OWN, as the bend-up is (LilyPond's BendSpanner, \^ with
 ### `LilySharp.Core/Semantics/InstrumentRangeValidator.cs`
 - **`InstrumentRangeValidator.Retuned`** LILYSHARP-OWN.
 ### `LilySharp.Core/Semantics/LayoutPlan.cs`
@@ -527,6 +535,7 @@
 - **`ArticulationEngraver.BendHeadPadding`** X gap between a bend-up's curve and the notehead's right edge. LILYSHARP-OWN (above).
 - **`ArticulationEngraver.BendApproachXOffset`** X offset for a curve that arrives FROM THE LEFT (scoop/plop). LILYSHARP-OWN (above).
 - **`ArticulationEngraver.CalculateWithFingerings`** LILYSHARP-OWN: LilyPond draws NO fall or doit on a chord at all — its
+- **`ArticulationEngraver.CalculateWithFingerings`** to this note's left. LILYSHARP-OWN, as the bend-up is.
 - **`ArticulationEngraver.CalculateWithFingerings`** LILYSHARP-OWN: LilyPond prints the collision. Its Script_engraver acknowledges
 - **`ArticulationEngraver.OtherVoiceRestSupport`** The rule and its LILYSHARP-OWN declaration are at the one call site in
 - **`ArticulationEngraver.GuitarBendReach,GuitarBendRise,GuitarBendHeadHalfWidth,GuitarBendLabelGap`** ink box below read. LILYSHARP-OWN, as the device is.
@@ -731,6 +740,9 @@
 - **`TabStaffStencils.BlanksNoteAttachedChord`** ★ LILYSHARP-OWN, and it has to be: LilyPond names chords only through a
 ### `LilySharp.Core/Svg/Layout/TextOutlineSkylines.cs`
 - **`TextOutlineSkylines`** ⚠️ LILYSHARP-OWN, two declared substitutions inside the walk, neither of which changes
+### `LilySharp.Core/Svg/Layout/TextSpannerEngraver.cs`
+- **`TextSpannerEngraver.HookDepth`** LILYSHARP-OWN: the hook is the right bound's text, \markup { \draw-line #'(0 . -1) }
+- **`TextSpannerEngraver.PairTextSpanners`** and beside a rit. LILYSHARP-OWN — LilyPond's engraver holds one span_ per voice.
 ### `LilySharp.Core/Svg/Layout/TieFormattingProblem.cs`
 - **`TieFormattingProblem.BowHeight`** LILYSHARP-OWN "observed by nothing". The bow twin sweep (HANDOFF §2 S0) observed it:
 - **`TieFormattingProblem.IsUndrawnLedger`** LILYSHARP-OWN (the owner, session 905: "a tie on a ledger-line head need not be short").
@@ -761,8 +773,11 @@
 - **`Measure.IsTrailingClefColumn`** ⚠️ LILYSHARP-OWN: THE FLAGGED ZERO-WIDTH MEASURE IS A TRANSLATION DEVICE. LilyPond
 ### `LilySharp.Core/Svg/Model/MusicMarkItem.cs`
 - **`MusicMarkItem..ctor`** coda itself (LILYSHARP-OWN, a Gould-style departure).
+- **`MusicMarkItem.BarreText`** LILYSHARP-OWN: LilyPond has no barre command; its manual writes the label as the
 ### `LilySharp.Core/Svg/Model/PercentRepeatItem.cs`
 - **`PercentRepeatItem`** the count above it from 2 bars up. LILYSHARP-OWN (owner's decision 2026-10-14, session
+### `LilySharp.Core/Svg/Model/TextSpannerItem.cs`
+- **`TextSpanFamily`** LILYSHARP-OWN: LilyPond has ONE text spanner per voice (lily/text-spanner-engraver.cc
 ### `LilySharp.Core/Syntax/StringLiteral.cs`
 - **`StringLiteral`** LILYSHARP-OWN: the owner's decision (2026-09-30) — Lily#'s strings follow C#'s grammar:
 ### `LilySharp.Core/Syntax/SyntaxNodes.Attachments.cs`

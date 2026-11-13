@@ -1572,7 +1572,8 @@ internal static partial class SpacingRules
         var voices = staff.Voices;
         foreach (var art in articulations)
         {
-            if (art.Type != Syntax.ArticulationType.Bend || art.StaffIndex != staffIndex
+            // (A release TO a note arrives from its left and asks no room after it.)
+            if (art.Type != Syntax.ArticulationType.Bend || art.BendRelease == BendRelease.ToTheNote || art.StaffIndex != staffIndex
                 || art.MeasureIndex != measureIndex || art.VoiceIndex >= voices.Length
                 || measureIndex >= voices[art.VoiceIndex].Measures.Length)
                 continue;
@@ -1593,8 +1594,17 @@ internal static partial class SpacingRules
             // and amount's reach, and a script's gap to whatever stands next.
             double needed = CalculateNoteheadRightExtent(fonts, items[art.ItemIndex])
                 + ArticulationEngraver.BendHeadPadding
-                + ArticulationEngraver.GuitarBendInkBox(fonts, art.BendSemitones).Right
+                + ArticulationEngraver.GuitarBendInkBox(fonts, art.BendSemitones, art.BendRelease).Right
                 + ArticulationSpacing.ScriptToNeighbourGap;
+            // …and when the next note of the bar is the release (a'4@bend(full) a'4@release),
+            // the run of its curve down from the arrow's top: a second reach.
+            foreach (var next in articulations)
+                if (next.BendRelease == BendRelease.ToTheNote && next.StaffIndex == staffIndex && next.VoiceIndex == art.VoiceIndex
+                    && next.MeasureIndex == measureIndex && next.ItemIndex == art.ItemIndex + 1)
+                {
+                    needed += ArticulationEngraver.GuitarBendReach;
+                    break;
+                }
             // Before the bar line, room too for what stands over it: the bar's own reach and a
             // mark's outside-staff-horizontal-padding (MusicMarkEngraver, 0.2), so a section name
             // whose left edge is on the bar stands beside the amount, not over it.

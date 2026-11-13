@@ -75,6 +75,7 @@ public static class SemanticValidation
         new DrummapValidator(),             // drummap { } parts that are silently ignored
         new CrossStaffValidator(),          // an @cross on a part no score draws beside another staff
         new CrossArpeggioValidator(),       // an @arpeggio(cross) with no chord below it to run down to
+        new GuitarMarkValidator(),          // a @barre that names no barre
         new SymbolCaseValidator(),          // wrong-case / unknown header symbols
         new KeyTonicValidator(),            // `key WORD mode` where WORD is not a note
         new FormDeclarationValidator(),// at most one structure per scope

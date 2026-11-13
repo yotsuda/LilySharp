@@ -248,6 +248,14 @@ public sealed record MusicMarkItem
     public int VoiceIndex { get; init; }
 
     /// <summary>
+    /// For a text spanner's start or stop: which line of its voice it is — the general spanner,
+    /// or the palm mute, the let ring or the barre (owner-approved 2026-11-13, grammar
+    /// evaluation 3). A stop closes the open start of its own family, so the guitar lines run
+    /// under one another and beside a <c>rit.</c>.
+    /// </summary>
+    public TextSpanFamily SpanFamily { get; init; }
+
+    /// <summary>
     /// For a hairpin's start (<c>@cresc</c> / <c>@decresc</c> / <c>@dim</c>): the hairpin stands
     /// above its staff — written (<c>@cresc.up</c>), else the staff's own side, which is above
     /// on a staff with lyrics under it (docs/dynamics-above-lyrics-design.md, D1 and D2).
@@ -376,8 +384,43 @@ public sealed record MusicMarkItem
         "rit" => "rit.",
         "accel" => "accel.",
         "rall" => "rall.",
+        // The two guitar lines with a fixed word (owner-approved 2026-11-13, grammar
+        // evaluation 3); the barre's is made of its fret (BarreText).
+        "palmMute" => "P.M.",
+        "letRing" => "let ring",
         _ => null
     };
+
+    /// <summary>The line a text spanner's NAME opens and closes (<see cref="TextSpanFamily"/>):
+    /// <c>palmMute</c>, <c>letRing</c> and <c>barre</c> each their own, every other name the
+    /// general one.</summary>
+    public static TextSpanFamily TextSpanFamilyOf(string name) => name switch
+    {
+        "palmMute" => TextSpanFamily.PalmMute,
+        "letRing" => TextSpanFamily.LetRing,
+        BarreName => TextSpanFamily.Barre,
+        _ => TextSpanFamily.Text,
+    };
+
+    /// <summary>The barre's name, <c>@barre(7) … @!barre</c>.</summary>
+    public const string BarreName = "barre";
+
+    /// <summary>The highest fret a barre is written at; the lowest is 1.</summary>
+    public const int BarreMaxFret = 24;
+
+    /// <summary>
+    /// What a barre prints: "C" and the fret in Roman numerals — <c>@barre(7)</c> is "CVII" —
+    /// and a "½" before it for a half barre, <c>@barre(7 half)</c> "½CVII".
+    /// </summary>
+    /// <remarks>LILYSHARP-OWN: LilyPond has no barre command; its manual writes the label as the
+    /// text of a TextSpanner's left bound (Notation Reference 2.4.1, "Indicating position and
+    /// barring"), and "C" + Roman numeral is the classical guitar's convention (capotasto).</remarks>
+    public static string BarreText(int fret, bool half)
+    {
+        string[] tens = ["", "X", "XX"];
+        string[] ones = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"];
+        return (half ? "½C" : "C") + tens[Math.Clamp(fret, 0, 29) / 10] + ones[Math.Clamp(fret, 0, 29) % 10];
+    }
 
     /// <summary>Parses a mark NAME (e.g. <c>segno</c>, <c>ds.al.fine</c>,
     /// <c>ottava.bassa</c>) into a <see cref="MusicMarkType"/>, or null if
@@ -422,6 +465,12 @@ public sealed record MusicMarkItem
             ["rit"] = MusicMarkType.TextSpanStart,
             ["accel"] = MusicMarkType.TextSpanStart,
             ["rall"] = MusicMarkType.TextSpanStart,
+            // The guitar lines (owner-approved 2026-11-13, grammar evaluation 3): the same
+            // spanner again, each its own family (TextSpanFamilyOf) and ending in a hook.
+            // '@barre' is written with its fret, '@barre(7)' — the collector reads that form.
+            ["palmMute"] = MusicMarkType.TextSpanStart,
+            ["letRing"] = MusicMarkType.TextSpanStart,
+            [BarreName] = MusicMarkType.TextSpanStart,
             ["cresc"] = MusicMarkType.Cresc,
             ["decresc"] = MusicMarkType.Decresc,
             ["dim"] = MusicMarkType.Dim,
@@ -531,10 +580,17 @@ public sealed record MusicMarkItem
         if (type is null)
             return null;
         if (type == MusicMarkType.TextSpanStart)
+        {
+            // A barre with no fret names no barre: the validator says so, and nothing is drawn.
+            if (name == BarreName)
+                return null;
             return new MusicMarkItem(type.Value, TextSpanSugarText(name) ?? "",
-                measureIndex, sourcePosition, anchorItemIndex, anchorTiming);
-        return new MusicMarkItem(type.Value, measureIndex, sourcePosition,
+                measureIndex, sourcePosition, anchorItemIndex, anchorTiming)
+            { SpanFamily = TextSpanFamilyOf(name) };
+        }
+        var mark = new MusicMarkItem(type.Value, measureIndex, sourcePosition,
             anchorItemIndex, anchorTiming);
+        return type == MusicMarkType.TextSpanStop ? mark with { SpanFamily = TextSpanFamilyOf(name) } : mark;
     }
 
     private static string GetMarkText(MusicMarkType type) => type switch

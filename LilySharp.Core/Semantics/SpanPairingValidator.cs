@@ -106,6 +106,9 @@ internal sealed class SpanPairingValidator : ISharedCollectValidator
         if (position < 0 || position >= text.Length)
             return null;
         int at = text[position] == '@' ? position + 1 : position;
+        // …and the '!' of an end, so a stray '@!palmMute' is named as what it is.
+        if (at < text.Length && text[at] == '!')
+            at++;
         var m = System.Text.RegularExpressions.Regex.Match(text[at..], @"^[A-Za-z0-9]+");
         return m.Success ? m.Value : null;
     }
@@ -147,7 +150,14 @@ internal sealed class SpanPairingValidator : ISharedCollectValidator
                     + "voice - note that a span does not carry into another voice",
             };
         bool ottava = kind == SpanKind.Ottava;
-        string noun = ottava ? "an ottava bracket" : "a text spanner";
+        // The guitar lines are text spanners with a name of their own (2026-11-13).
+        string noun = ottava ? "an ottava bracket" : opened switch
+        {
+            "palmMute" => "a palm mute",
+            "letRing" => "a let ring",
+            Svg.Model.MusicMarkItem.BarreName => "a barre",
+            _ => "a text spanner",
+        };
         // A span is closed by the name it was opened with (owner's decision 2026-10-28, LYS4032).
         string ends = opened != null ? $"'@!{opened}'" : ottava ? "'@!8va'" : "'@!rit'";
         return fault switch
@@ -171,7 +181,7 @@ internal sealed class SpanPairingValidator : ISharedCollectValidator
             // means. The article is spelt per family rather than glued on, because "a ottava"
             // is what gluing gives.
             _ =>
-                "a text spanner is already open in this voice, so this one is ignored; "
+                noun + " is already open in this voice, so this one is ignored; "
                 + "close the first with '@!' before starting a second - spans do not nest",
         };
     }

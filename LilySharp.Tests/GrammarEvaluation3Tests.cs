@@ -371,17 +371,19 @@ public class GrammarEvaluation3Tests
             Assert.Empty(Said(Continuo(spelling)).Select(d => spelling + ": " + d.Message));
     }
 
-    /// <summary><c>@vibrato</c> is a singer's mark, performed by a singing voice: on a guitar it was
-    /// accepted, drew nothing and sounded nothing, in silence. It is said — with the way to print
-    /// the word — and a sung part's is left alone. <c>@slide</c>, reported beside it as unknown
+    /// <summary><c>@vibrato</c> is a singer's mark, performed by a singing voice: on an instrument it
+    /// was accepted, drew nothing and sounded nothing, in silence. It is said — with the way to print
+    /// the word — and a sung part's is left alone. (Found on a guitar; since the same day a FRETTED
+    /// instrument's <c>@vibrato</c> is the wavy line — GrammarEvaluation3FeaturesTests — so the
+    /// part here is a flute.) <c>@slide</c>, reported beside it as unknown
     /// ground, is the glissando line under another name.</summary>
     [Theory]
     [InlineData("@vibrato")]
     [InlineData("@vibrato(40)")]
     public void VibratoOnAPartNobodySings_IsSaid(string mark)
     {
-        string guitar = "octave absolute\npart g { instrument guitar }\nsection A { g { a'2" + mark + " a'4 b' | } }\n"
-            + "form { ~A }\nscore { staff g  tab g }\n";
+        string guitar = "octave absolute\npart g { instrument flute }\nsection A { g { a'2" + mark + " a'4 b' | } }\n"
+            + "form { ~A }\nscore { staff g }\n";
         var said = Assert.Single(Said(guitar));
         Assert.Equal(DiagnosticCodes.UnknownAnnotation, said.Code);
         Assert.Equal(DiagnosticSeverity.Warning, said.Severity);

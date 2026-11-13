@@ -136,7 +136,7 @@ public class VocabularyPerturbationTests
     /// </remarks>
     private static string SpanEnd(string name) => name switch
     {
-        "rit" or "accel" or "rall" or "textSpan" => "@!" + name,
+        "rit" or "accel" or "rall" or "textSpan" or "palmMute" or "letRing" => "@!" + name,
         "8va" or "8vb" or "15ma" or "15mb" => "@!" + name,
         "sustain" or "sostenuto" or "unaCorda" => "@!" + name,
         "phrasingSlur" => "@!" + name,
@@ -149,6 +149,17 @@ public class VocabularyPerturbationTests
     [MemberData(nameof(Articulations))]
     public void EveryArticulationMovesThePageOrThePlayback(string name)
     {
+        // A release lets a bend back: with none before it it is refused (LYS4067), so the
+        // book it is set against is the bent note's.
+        if (name == "release")
+        {
+            string bent = Plain.Replace("c'4 d' e' f' | c'4 d' e' f' |", "c'4 d'4@bend(full) e'4 f'4 |");
+            AssertMoves(bent, bent.Replace("@bend(full)", "@bend(full)@release"), "@release");
+            return;
+        }
+        // A barre is written with its fret: bare, it names none and is refused (LYS4065).
+        if (name == "barre")
+            name = "barre(7)";
         string end = SpanEnd(name);
         string music = end.Length > 0
             ? $"c'4 d'4@{name} e'4 f'4{end} |"

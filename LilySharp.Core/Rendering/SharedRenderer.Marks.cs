@@ -977,6 +977,11 @@ internal static partial class SharedRenderer
                     gc.DrawLine(s.LineStartX, absY, s.EndX, absY,
                         Color.Black, thickness, dash);
                 }
+                // The hook that ends a palm mute, a let ring and a barre: from the line's end
+                // toward the staff (TextSpannerEngraver.HookDepth).
+                if (s.HookDepth > 0)
+                    gc.DrawLine(s.EndX, absY, s.EndX, absY - os.Size(s.HookDepth, s.StaffIndex),
+                        Color.Black, thickness, null);
             }
         }
     }

@@ -62,7 +62,10 @@ public sealed record TrillSpannerItem(
     // or to the bar line when that note ends its bar: what LilyPond's \stopTrillSpan on the
     // next note draws. False when the end is the next note itself (a new start, a cut, the
     // score's end). TrillSpannerEngraver reads it; everything else reads the written note.
-    bool EndInclusive = false
+    bool EndInclusive = false,
+    // A fretted instrument's vibrato, `c4@vibrato` on a guitar's note (owner-approved 2026-11-13,
+    // grammar evaluation 3): the wavy line alone, with no "tr" before it, over its one note.
+    bool WaveOnly = false
 )
 {
     // Identity, not value equality: see ModelIdentity.

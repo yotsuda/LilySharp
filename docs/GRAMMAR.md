@@ -3140,8 +3140,27 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                     '@chord' on the same note. Sized by 'fonts { diagram … }'. *)
    - Guitar bend:   c4@bend(half) , c4@bend(full) , c4@bend(3)
                     (* a bend-up arrow labelled in steps: half = 1 semitone, full = 2, N =
-                    1..12 semitones. Page only: the twin drops it with a warning and
-                    MusicXML does not carry it. *)
+                    1..12 semitones. Silent in MIDI. The twin drops it with a warning,
+                    MusicXML writes bend and bend-alter. *)
+   - Bend release:  a4@bend(full)@release , a4@bend(full) a4@release
+                    (* owner-approved 2026-11-13. On the bent note: up and back within the
+                    note, the arrow up then an arrow down. On the note after a bent note of
+                    the same voice: the arrow down to that note. With no bend on its own note
+                    or the note before it is an error, LYS4067. MusicXML: a bend with a
+                    release element. *)
+   - Guitar lines:  e8@palmMute e e e@!palmMute , e8@letRing b e g@!letRing ,
+                    b8@barre(7) fis b d@!barre , b8@barre(7 half) … @!barre
+                    (* owner-approved 2026-11-13. Text spanners of their own, each closed by
+                    its own name on the LAST note it covers, each ending in a hook: P.M.,
+                    let ring, and C with the fret 1..24 as a Roman numeral (CVII, with half
+                    a leading one-half sign). They run under one another and beside @rit.
+                    A barre with no end is its label on its one note. Malformed barre:
+                    LYS4065. MIDI: a palm mute halves each note, a let ring holds each note
+                    to the end of the run. Above the staff, and above a tab standing alone. *)
+   - Vibrato:       c4@vibrato
+                    (* on a fretted instrument's part the wavy line over the note, on staff
+                    and tab, sound unchanged, no numbers (LYS4066). On any other part the
+                    singer's mark, @vibrato(depth, rate), heard and not drawn. *)
    - Tab letters:   @hammerOn (H) , @pullOff (P) , @tap (T)
                     (* small italic letters opposite the stem (.up/.down force), drawn on
                     a tab staff too; the twin writes a text script -\markup { \italic "H" },
@@ -3206,6 +3225,8 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                       opened with, LYS4032 otherwise; @ottava / @quindicesima are retired]
                      (* an end is REQUIRED here too; '@loco' is retired — it named a
                         mark nothing printed, and LilyPond has no such command either *)
+                     @palmMute … @!palmMute , @letRing … @!letRing , @barre(7) … @!barre
+                     [the guitar lines, see "Guitar lines" above]
                      @trillSpan … @!trillSpan ,
                      [an ottava's and a trill's end stands on the LAST note the line
                       covers: c4@8va d e f@!8va moves f too]

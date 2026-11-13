@@ -33,6 +33,33 @@ public enum TextSpannerStyle
 }
 
 /// <summary>
+/// Which line of its voice a text spanner is: the general one (<c>@rit</c>, <c>@accel</c>,
+/// <c>@rall</c>, <c>@textSpan("…")</c>), or one of the three guitar lines the owner approved on
+/// 2026-11-13 (grammar evaluation 3) — <c>@palmMute … @!palmMute</c> ("P.M."),
+/// <c>@letRing … @!letRing</c> ("let ring") and <c>@barre(7) … @!barre</c> ("CVII").
+/// </summary>
+/// <remarks>
+/// Each family is paired on its own (<c>TextSpannerEngraver.PairTextSpanners</c>): a palm mute
+/// runs under a barre and beside a <c>rit.</c>, where two general spanners in one voice cannot
+/// both be open.
+/// LILYSHARP-OWN: LilyPond has ONE text spanner per voice (lily/text-spanner-engraver.cc
+/// Text_spanner_engraver holds one <c>span_</c>) and no palm-mute, let-ring or barre spanner at
+/// all; its users write each with <c>\startTextSpan</c> and an override of the bound texts,
+/// which is the picture these follow (the LilyPond twin writes exactly that).
+/// </remarks>
+public enum TextSpanFamily
+{
+    /// <summary>The general text spanner.</summary>
+    Text,
+    /// <summary>"P.M." — the palm of the picking hand on the strings.</summary>
+    PalmMute,
+    /// <summary>"let ring" — the notes sound on to the end of the line.</summary>
+    LetRing,
+    /// <summary>"CVII" / "½CVII" — a finger laid across the strings at a fret.</summary>
+    Barre,
+}
+
+/// <summary>
 /// Represents a text spanner (text label with extending dashed/solid line).
 /// Used for rit., accel., and similar expression markings that span a duration.
 /// </summary>
@@ -70,9 +97,16 @@ public sealed record TextSpannerItem(
     // The voice of that staff the start mark was written in: the item indices count THAT
     // voice's items (Text_spanner_engraver is a Voice-context engraver), so both bounds are
     // resolved through it (see TextSpannerEngraver.BoundX).
-    int VoiceIndex = 0
+    int VoiceIndex = 0,
+    // Which line it is (TextSpanFamily): the guitar lines end in a hook, and a barre with no
+    // end is its label alone (Style None).
+    TextSpanFamily Family = TextSpanFamily.Text
 )
 {
+    /// <summary>Whether the line ends in a hook turned to the staff: the three guitar lines do
+    /// (owner-approved 2026-11-13, grammar evaluation 3), the general spanner does not.</summary>
+    public bool EndHook => Family != TextSpanFamily.Text && Style != TextSpannerStyle.None;
+
     // Identity, not value equality: see ModelIdentity.
     public bool Equals(TextSpannerItem? other) => ReferenceEquals(this, other);
 

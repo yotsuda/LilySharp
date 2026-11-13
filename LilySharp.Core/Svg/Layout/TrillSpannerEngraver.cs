@@ -248,7 +248,12 @@ internal static class TrillSpannerEngraver
                     glyphX = FirstColumnCentre(segment.StartMeasureIndex, spanner, measureLayouts,
                                  trillVoices, graceNotes)
                              ?? system.PrefixWidth + BoundPadding;
-                lineStartX = glyphX + MusicFont.Current.FullSize.Outline(MusicGlyph.OrnamentTrill).Right;
+                // A vibrato is the wave alone: it starts where the "tr" would have stood
+                // (GlyphX == LineStartX is the spelling every consumer reads as "no glyph",
+                // a broken trill's later pieces).
+                lineStartX = spanner.WaveOnly
+                    ? glyphX
+                    : glyphX + MusicFont.Current.FullSize.Outline(MusicGlyph.OrnamentTrill).Right;
 
                 double endX;
                 if (segment.IsLast)

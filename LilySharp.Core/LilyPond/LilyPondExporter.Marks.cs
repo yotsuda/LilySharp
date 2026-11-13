@@ -275,6 +275,17 @@ public sealed partial class LilyPondExporter
                     break;
                 // The same spanner opened by a WORD (`@rit`, `@accel`, `@rall`, a bare
                 // `@textSpan`), which the parser hands over as an articulation.
+                // A fretted instrument's vibrato (2026-11-13): the wavy line over its one note —
+                // a trill spanner with no "tr", stopped where the note ends (as '@!trillSpan' is).
+                // LILYSHARP-OWN: LilyPond has no vibrato mark; this is how its users draw one.
+                // LILYPOND-REF: scm/define-grobs.scm TrillSpanner — bound-details.left.text is the
+                //   "tr" (\musicglyph "scripts.trill").
+                case ArticulationSyntax { Type: ArticulationType.None } vib
+                    when vib.NameToken.Text == "vibrato" && Semantics.FrettedParts.Holds(vib):
+                    prefix.Append("\\once \\override TrillSpanner.bound-details.left.text = ##f ");
+                    suffix.Append("\\startTrillSpan");
+                    Trail("<>\\stopTrillSpan");
+                    break;
                 case ArticulationSyntax art when TextSpanEvents(art.NameToken.Text) is { } tsw:
                     if (tsw.Prefix is { } tswPrefix) prefix.Append(tswPrefix).Append(' ');
                     suffix.Append(tsw.Suffix);
@@ -972,21 +983,42 @@ public sealed partial class LilyPondExporter
             return null;
         if (mk.IsSpanEnd)
             return (null, "\\stopTextSpan");
+        // A barre (2026-11-13): its label is its fret's; one with no '@!barre' is the label on
+        // its one note — a markup, as LilyPond's spanner with no end draws nothing — and one
+        // that names no barre (LYS4065) is nothing.
+        if (mk.Name == Svg.Model.MusicMarkItem.BarreName)
+            return Semantics.AnnotationValues.Barre(mk) is not { } barre ? (null, "")
+                : Semantics.SpanNames.EndOf(mk) is null
+                    ? (null, "^\\markup { \\italic \"" + Escape(Svg.Model.MusicMarkItem.BarreText(barre.Fret, barre.Half)) + "\" }")
+                    : TextSpanStart(Svg.Model.MusicMarkItem.BarreText(barre.Fret, barre.Half), hook: true);
         return TextSpanStart(Semantics.AnnotationValues.TextSpan(mk)
             ?? Svg.Model.MusicMarkItem.TextSpanSugarText(mk.Name));
     }
 
     /// <summary>The START by its bare word — an articulation's name — or null when the word
-    /// opens no text spanner.</summary>
+    /// opens no text spanner. <c>@palmMute</c> and <c>@letRing</c> are among them.</summary>
     private static (string? Prefix, string Suffix)? TextSpanEvents(string word)
-        => Svg.Model.MusicMarkItem.ParseMarkName(word) == Svg.Model.MusicMarkType.TextSpanStart
-            ? TextSpanStart(Svg.Model.MusicMarkItem.TextSpanSugarText(word))
-            : null;
+        => Svg.Model.MusicMarkItem.ParseMarkName(word) != Svg.Model.MusicMarkType.TextSpanStart ? null
+            // A bare '@barre' names no barre (LYS4065): nothing.
+            : word == Svg.Model.MusicMarkItem.BarreName ? (null, "")
+            : TextSpanStart(Svg.Model.MusicMarkItem.TextSpanSugarText(word),
+                hook: Svg.Model.MusicMarkItem.TextSpanFamilyOf(word) != Svg.Model.TextSpanFamily.Text);
 
-    private static (string? Prefix, string Suffix) TextSpanStart(string? printed)
+    /// <remarks>
+    /// With <paramref name="hook"/> — a palm mute, a let ring, a barre (owner-approved 2026-11-13,
+    /// grammar evaluation 3) — the right bound's text is the stroke that ends the line.
+    /// LILYSHARP-OWN: LilyPond has no spanner for these; this is how its users write them, and
+    /// what the page follows (<c>TextSpannerEngraver.HookDepth</c>).
+    /// ⚠️ LilyPond holds ONE text spanner per voice (lily/text-spanner-engraver.cc
+    /// Text_spanner_engraver::process_music — "already have a text spanner"), so of two of these
+    /// lines open at once in one voice (a palm mute under a barre) its page keeps the first and
+    /// warns; Lily#'s page draws both.
+    /// </remarks>
+    private static (string? Prefix, string Suffix) TextSpanStart(string? printed, bool hook = false)
         => (printed is null
                 ? null
-                : "\\once \\override TextSpanner.bound-details.left.text = \"" + Escape(printed) + "\"",
+                : "\\once \\override TextSpanner.bound-details.left.text = \"" + Escape(printed) + "\""
+                    + (hook ? " \\once \\override TextSpanner.bound-details.right.text = \\markup { \\draw-line #'(0 . -1) }" : ""),
             "\\startTextSpan");
 
     private string EmitAttachment(SyntaxNode a) => a switch
@@ -1063,7 +1095,7 @@ public sealed partial class LilyPondExporter
             // A text spanner's START written as a word (`@rit`, a bare `@textSpan`): the span
             // event; the word it prints is set before the note by SplitAttachments
             // (TextSpanEvents), which catches these before they reach here.
-            case "rit" or "accel" or "rall" or "textSpan": return "\\startTextSpan";
+            case "rit" or "accel" or "rall" or "textSpan" or "palmMute" or "letRing": return "\\startTextSpan";
             // The phrasing slur's start; its end is a terminator (EmitMark). A forced side is
             // the event's direction, as for the half-ties below; unforced stays bare.
             // LILYPOND-REF: ly/declarations-init.ly:87-88 "\\(" / "\\)" = make-span-event

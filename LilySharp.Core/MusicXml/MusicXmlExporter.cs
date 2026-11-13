@@ -5444,6 +5444,21 @@ public sealed class MusicXmlExporter
                 // MergeGrandStaves reads it for the note's <staff>.
                 if (articulation.NameToken.Text == "cross")
                     xmlNote.CrossStaff = true;
+                // A bend let back (2026-11-13): MusicXML's <bend> with <release/>, the amount
+                // negative — after the bend's own on the bent note, alone on the note after it.
+                if (articulation.NameToken.Text == Semantics.BendReleases.Name
+                    && Semantics.BendReleases.Of(articulation, out int letBack) != Svg.Model.BendRelease.None)
+                    xmlNote.Technicals.Add(new System.Xml.Linq.XElement("bend",
+                        new System.Xml.Linq.XElement("bend-alter", -letBack), new System.Xml.Linq.XElement("release")));
+                // A fretted instrument's vibrato (owner-approved 2026-11-13, grammar evaluation
+                // 3): the wavy line over its one note — MusicXML's <wavy-line>, started and
+                // stopped on the note. (A sung part's '@vibrato' writes nothing: it is heard.)
+                if (articulation.NameToken.Text == "vibrato" && Semantics.FrettedParts.Holds(articulation))
+                    xmlNote.ExtraNotations.Add(new System.Xml.Linq.XElement("ornaments",
+                        new System.Xml.Linq.XElement("wavy-line", new System.Xml.Linq.XAttribute("type", "start"),
+                            new System.Xml.Linq.XAttribute("number", 1)),
+                        new System.Xml.Linq.XElement("wavy-line", new System.Xml.Linq.XAttribute("type", "stop"),
+                            new System.Xml.Linq.XAttribute("number", 1))));
                 // Single-word direction marks (@sustain, @sostenuto, @ottava, @loco)
                 // parse as name-only articulations, not compound marks.
                 if (articulation.Type == ArticulationType.None)
@@ -5528,6 +5543,19 @@ public sealed class MusicXmlExporter
                 // marks (pedal, ottava, chord symbol) go on to their own reader.
                 if (Semantics.AnnotationValues.Finger(mark) is { } finger)
                     xmlNote.Technicals.Add(new System.Xml.Linq.XElement("fingering", finger));
+                // @bend(full) is the note's <technical><bend>, its amount in semitones. Until
+                // 2026-11-13 no bend reached the MusicXML; it is written now that its release is
+                // (a <release/> with no bend before it says nothing). Inserted before a release
+                // written ahead of it on the note, so the pair reads up, then back.
+                if (Semantics.AnnotationValues.Bend(mark) is { } bendSemitones)
+                {
+                    var bend = new System.Xml.Linq.XElement("bend", new System.Xml.Linq.XElement("bend-alter", bendSemitones));
+                    int releaseAt = xmlNote.Technicals.FindIndex(t => t.Name.LocalName == "bend");
+                    if (releaseAt >= 0)
+                        xmlNote.Technicals.Insert(releaseAt, bend);
+                    else
+                        xmlNote.Technicals.Add(bend);
+                }
                 // @trill(sharp) (2026-11-12): the ornament and, after it, its accidental-mark —
                 // the pair MusicXML's <ornaments> holds (MusicXmlNote.ToXml splits the '=').
                 if (Semantics.AnnotationValues.OrnamentAccidental(mark) is { } ornament
@@ -6080,8 +6108,31 @@ public sealed class MusicXmlExporter
                         _wedgeOpen = false;
                         break;
                     }
+                    // The end of a palm mute, a let ring or a barre (2026-11-13): the bracket's
+                    // stop, where the note it is written on ends.
+                    case Svg.Model.MusicMarkType.TextSpanStop
+                        when Svg.Model.MusicMarkItem.TextSpanFamilyOf(mark.Name) is var line and not Svg.Model.TextSpanFamily.Text:
+                    {
+                        var stop = new MusicXmlDirection { GuitarLineType = "stop", GuitarLineNumber = (int)line };
+                        AddDirection(stop);
+                        stop.Offset += _markedNoteLength;
+                        break;
+                    }
                     // The text spanner has no stop spelling here — the silence '@rit' meets.
                 }
+            return;
+        }
+
+        // '@barre(7)': its label, and the line's start when an '@!barre' closes it — with none
+        // it is the label on its one note (TextSpannerEngraver.PairTextSpanners).
+        if (_currentMeasure != null && LilySharp.Core.Semantics.AnnotationValues.Barre(mark) is { } barre)
+        {
+            AddDirection(new MusicXmlDirection
+            {
+                Words = Svg.Model.MusicMarkItem.BarreText(barre.Fret, barre.Half),
+                GuitarLineNumber = (int)Svg.Model.TextSpanFamily.Barre,
+                GuitarLineType = LilySharp.Core.Semantics.SpanNames.EndOf(mark) != null ? "start" : null,
+            });
             return;
         }
 
@@ -6108,6 +6159,17 @@ public sealed class MusicXmlExporter
                 break;
             case "treCorde":
                 AddDirection(new MusicXmlDirection { Words = "tre corde", Placement = "below" });
+                break;
+            // The palm mute and the let ring (owner-approved 2026-11-13, grammar evaluation 3):
+            // the word and a dashed bracket, closed by the stop '@!palmMute' / '@!letRing' writes.
+            case "palmMute":
+            case "letRing":
+                AddDirection(new MusicXmlDirection
+                {
+                    Words = Svg.Model.MusicMarkItem.TextSpanSugarText(name),
+                    GuitarLineType = "start",
+                    GuitarLineNumber = (int)Svg.Model.MusicMarkItem.TextSpanFamilyOf(name),
+                });
                 break;
             case "8va":
                 // 8va above: MusicXML octave-shift "down" (written an octave

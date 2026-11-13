@@ -307,6 +307,24 @@ public static class AnnotationValues
     public static bool IsTextSpanAnnotation(MusicMarkSyntax mark) => Named(mark, "textSpan");
 
     /// <summary>
+    /// The fret of a barre and whether it is a half barre — <c>@barre(7)</c>,
+    /// <c>@barre(7 half)</c> (owner-approved 2026-11-13, grammar evaluation 3) — or null: another
+    /// annotation, the end <c>@!barre</c>, no fret, a fret outside 1 to
+    /// <see cref="Svg.Model.MusicMarkItem.BarreMaxFret"/>, or a second word that is not
+    /// <c>half</c>. The one reader, so the page, the exports and the validator take the same.
+    /// </summary>
+    public static (int Fret, bool Half)? Barre(MusicMarkSyntax mark)
+    {
+        if (!Named(mark, Svg.Model.MusicMarkItem.BarreName) || mark.IsSpanEnd || mark.Arguments.Length is 0 or > 2
+            || mark.Arguments[0].Value?.AsInt is not { } fret || fret < 1 || fret > Svg.Model.MusicMarkItem.BarreMaxFret
+            || mark.Arguments[0].Text != fret.ToString(System.Globalization.CultureInfo.InvariantCulture))
+            return null;
+        if (mark.Arguments.Length == 1)
+            return (fret, false);
+        return mark.Arguments[1].Text == "half" ? (fret, true) : null;
+    }
+
+    /// <summary>
     /// Whether an annotation NAME is the phrasing slur's — <c>@phrasingSlur</c> or, with the
     /// terminator's <c>!</c> already stepped over, <c>@!phrasingSlur</c>. Matched as
     /// <see cref="Svg.Model.MusicMarkItem.ParseMarkName"/> matches, which is what makes the

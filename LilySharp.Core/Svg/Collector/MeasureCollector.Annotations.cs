@@ -980,6 +980,27 @@ public sealed partial class MeasureCollector
                         };
                         _trillSpannerEvents.Add((true, measureIndex, itemIndex, articulationSyntax.SourceStart, _v.Cursor.StaffIndex, _v.Cursor.VoiceIndex, forcedDir));
                     }
+                    else if (nameText == Semantics.BendReleases.Name)
+                    {
+                        // '@release' (owner-approved 2026-11-13, grammar evaluation 3). On the
+                        // bent note itself the bend's own item draws it (the arm that reads
+                        // '@bend'); on the note AFTER a bent one it is the arrow down to this
+                        // note. With no bend before it it is an error and draws nothing.
+                        if (Semantics.BendReleases.Of(articulationSyntax) == BendRelease.ToTheNote)
+                            _articulations.Add(new ArticulationItem(
+                                ArticulationType.Bend, measureIndex, itemIndex, true,
+                                articulationSyntax.SourceStart, _v.Cursor.StaffIndex)
+                            { BendRelease = BendRelease.ToTheNote, VoiceIndex = _v.Cursor.VoiceIndex });
+                    }
+                    else if (nameText == "vibrato" && _partFrettedTuning != null && !graceTime)
+                    {
+                        // A fretted instrument's vibrato (owner-approved 2026-11-13, grammar
+                        // evaluation 3): the wavy line above the note, for the note's length —
+                        // an event of the trill pairing that is its own start and end
+                        // (VibratoEvent; PairTrillSpannerEvents). On any other part '@vibrato'
+                        // is a singer's mark and draws nothing (AnnotationValues.Vibrato).
+                        _trillSpannerEvents.Add((true, measureIndex, itemIndex, articulationSyntax.SourceStart, _v.Cursor.StaffIndex, _v.Cursor.VoiceIndex, VibratoEvent));
+                    }
                     else if (nameText == "courtesy")
                     {
                         // LILYPOND-REF: lily/accidental.cc:147-148 — parenthesized property
@@ -1064,6 +1085,10 @@ public sealed partial class MeasureCollector
                         {
                             StaffIndex = _v.Cursor.StaffIndex,
                             VoiceIndex = _v.Cursor.VoiceIndex,
+                            // '@!palmMute' / '@!letRing' / '@!barre' close their own line.
+                            SpanFamily = endType == MusicMarkType.TextSpanStop
+                                ? MusicMarkItem.TextSpanFamilyOf(markSyntax.Name)
+                                : TextSpanFamily.Text,
                         });
                     }
                 }
@@ -1142,7 +1167,13 @@ public sealed partial class MeasureCollector
                     _articulations.Add(new ArticulationItem(
                         ArticulationType.Bend, measureIndex, itemIndex, true,
                         markSyntax.SourceStart, _v.Cursor.StaffIndex)
-                    { BendSemitones = semitones, VoiceIndex = _v.Cursor.VoiceIndex });
+                    {
+                        BendSemitones = semitones,
+                        VoiceIndex = _v.Cursor.VoiceIndex,
+                        // 'a4@bend(full)@release': up and back within the note.
+                        BendRelease = node.DescendantNodes().OfType<ArticulationSyntax>().Any(a => a.Name == Semantics.BendReleases.Name)
+                            ? BendRelease.WithinTheNote : BendRelease.None,
+                    });
                 }
                 else if (Semantics.AnnotationValues.IsTextSpanAnnotation(markSyntax))
                 {
@@ -1157,6 +1188,21 @@ public sealed partial class MeasureCollector
                     {
                         StaffIndex = _v.Cursor.StaffIndex,
                         VoiceIndex = _v.Cursor.VoiceIndex,
+                    });
+                }
+                else if (Semantics.AnnotationValues.Barre(markSyntax) is { } barre)
+                {
+                    // '@barre(7)' / '@barre(7 half)' (owner-approved 2026-11-13, grammar
+                    // evaluation 3): a text spanner of its own family whose word is the fret,
+                    // "CVII" / "½CVII". With no '@!barre' after it it is the label alone
+                    // (TextSpannerEngraver.PairTextSpanners).
+                    _musicMarks.Add(new MusicMarkItem(
+                        MusicMarkType.TextSpanStart, MusicMarkItem.BarreText(barre.Fret, barre.Half),
+                        measureIndex, markSyntax.SourceStart, itemIndex, anchorTiming)
+                    {
+                        StaffIndex = _v.Cursor.StaffIndex,
+                        VoiceIndex = _v.Cursor.VoiceIndex,
+                        SpanFamily = TextSpanFamily.Barre,
                     });
                 }
                 else if (markSyntax.Name.Equals("notehead", StringComparison.Ordinal)
@@ -1286,6 +1332,11 @@ public sealed partial class MeasureCollector
         }
     }
 
+    /// <summary>The <c>forcedDir</c> of a trill event that is a fretted instrument's
+    /// <c>@vibrato</c> (2026-11-13): a wave over its one note, not a start or an end of a trill
+    /// span. Outside −1 / 0 / +1, the directions a <c>@trillSpan</c> is written with.</summary>
+    private const int VibratoEvent = 2;
+
     /// <summary>
     /// True for the pedal music marks that anchor to the host note's column
     /// (the engage/release marks, @sustain … @treCorde). They are plain
@@ -1354,6 +1405,14 @@ public sealed partial class MeasureCollector
 
         foreach (var evt in _trillSpannerEvents)
         {
+            if (evt.forcedDir == VibratoEvent)
+            {
+                // One note's wave: from its note to the next (EndInclusive), no "tr", and no
+                // part in the pairing of the trill spans around it.
+                items.Add(new TrillSpannerItem(evt.measureIndex, evt.itemIndex, evt.measureIndex, evt.itemIndex,
+                    evt.sourcePosition, evt.staffIndex, evt.voiceIndex, Direction: 1, EndInclusive: true, WaveOnly: true));
+                continue;
+            }
             if (evt.isStart)
             {
                 // A NEW START while a spanner runs ENDS the running one at the new

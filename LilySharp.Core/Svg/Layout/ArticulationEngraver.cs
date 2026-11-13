@@ -1081,13 +1081,45 @@ internal static class ArticulationEngraver
                     is ArticulationType.Scoop or ArticulationType.Plop;
                 if (approach)
                     fx = noteX - BendApproachXOffset; // the curve arrives FROM THE LEFT
+                if (articulation.BendRelease == BendRelease.ToTheNote)
+                {
+                    // '@release' on the note after a bent one (owner-approved 2026-11-13,
+                    // grammar evaluation 3): the arrow down TO this note, from the top of that
+                    // bend's arrow when it stands before this note in the same system (its
+                    // layout is the one made just before), else from a bend's reach and rise
+                    // to this note's left. LILYSHARP-OWN, as the bend-up is.
+                    fx = noteX - BendApproachXOffset;
+                    double fromDx = -GuitarBendReach, fromDy = GuitarBendRise;
+                    for (int k = layouts.Count - 1; k >= 0 && k >= layouts.Count - 4; k--)
+                    {
+                        var prior = layouts[k];
+                        if (prior.StaffIndex != articulation.StaffIndex || !prior.Glyph.StartsWith("bendUp:", StringComparison.Ordinal))
+                            continue;
+                        double topX = prior.X + GuitarBendReach, topY = prior.YUp + GuitarBendRise;
+                        // (At least a head's width of run, so the curve is a curve where the
+                        // bar line or a tight bar left the two notes close.)
+                        if (fx - topX < GuitarBendReleaseMaxSpan && topY > fyUp)
+                            (fromDx, fromDy) = (Math.Min(topX - fx, -2 * GuitarBendHeadHalfWidth), topY - fyUp);
+                        break;
+                    }
+                    layouts.Add(new ArticulationLayout(
+                        articulation.MeasureIndex, articulation.ItemIndex, fx, fyUp,
+                        string.Create(System.Globalization.CultureInfo.InvariantCulture, $"bendRelease:{fromDx:R}:{fromDy:R}"),
+                        true, articulation.SourcePosition, FontSizeStep: 0.0,
+                        Ink: new GlyphMetrics.BBox(fromDx, -0.08, GuitarBendHeadHalfWidth + 0.08, Math.Max(fromDy, 0) + 0.08),
+                        SourceIndex: arti, StaffIndex: articulation.StaffIndex));
+                    continue;
+                }
                 string bendGlyph = articulation.Type switch
                 {
                     ArticulationType.Scoop => "bendScoop",
                     ArticulationType.Plop => "bendPlop",
                     // Guitar bend-up: the renderer parses the amount off the
-                    // sentinel and draws arrow + label.
-                    _ => $"bendUp:{articulation.BendSemitones}",
+                    // sentinel and draws arrow + label; ":release" after it is the bend let
+                    // back within the note (a second arrow, down).
+                    _ => articulation.BendRelease == BendRelease.WithinTheNote
+                        ? $"bendUp:{articulation.BendSemitones}:release"
+                        : $"bendUp:{articulation.BendSemitones}",
                 };
                 // The bend-up's arrow and amount are ink the marks above must clear (owner's
                 // report 2026-10-30: a section name was drawn over the "full" of the solo's last
@@ -1095,7 +1127,7 @@ internal static class ArticulationEngraver
                 layouts.Add(new ArticulationLayout(
                     articulation.MeasureIndex, articulation.ItemIndex, fx, fyUp,
                     bendGlyph, true, articulation.SourcePosition, FontSizeStep: 0.0,
-                    Ink: approach ? default : GuitarBendInkBox(fonts, articulation.BendSemitones),
+                    Ink: approach ? default : GuitarBendInkBox(fonts, articulation.BendSemitones, articulation.BendRelease),
                     SourceIndex: arti, StaffIndex: articulation.StaffIndex));
                 continue;
             }
@@ -2578,6 +2610,26 @@ internal static class ArticulationEngraver
         2 => "full",
         _ => (semitones % 2 == 0) ? (semitones / 2).ToString() : $"{semitones / 2}½",
     };
+
+    /// <summary>
+    /// The bend-up's ink about its anchor (the curve's start, Y-up): the curve and arrowhead
+    /// up to the rise, and the amount centred over the arrowhead's tip — so that what stands
+    /// above the staff (a section name, a tempo) clears it.
+    /// </summary>
+    /// <remarks>Let back within the note (<see cref="BendRelease.WithinTheNote"/>), the box runs
+    /// on by a second reach: the curve down and its arrow head.</remarks>
+    internal static GlyphMetrics.BBox GuitarBendInkBox(ScoreTextMetrics fonts, int semitones, BendRelease release)
+    {
+        var up = GuitarBendInkBox(fonts, semitones);
+        return release == BendRelease.WithinTheNote
+            ? new GlyphMetrics.BBox(up.Left, up.Bottom,
+                System.Math.Max(up.Right, 2 * GuitarBendReach + GuitarBendHeadHalfWidth + 0.08), up.Top)
+            : up;
+    }
+
+    /// <summary>How far before its note a release may reach back to the bend it lets go: past
+    /// this the bend is not this system's neighbour and the arrow is drawn on its own.</summary>
+    internal const double GuitarBendReleaseMaxSpan = 30.0;
 
     /// <summary>
     /// The bend-up's ink about its anchor (the curve's start, Y-up): the curve and arrowhead

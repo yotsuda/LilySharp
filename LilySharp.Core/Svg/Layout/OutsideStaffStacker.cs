@@ -2960,9 +2960,26 @@ internal static class OutsideStaffStacker
                 top = Math.Max(top, ink.Top);
                 bottom = Math.Max(bottom, -ink.Bottom);
             }
-            double newRel = Place(trackers(sysIdx, ts.StaffIndex), ts.StartX, ts.EndX,
-                anchor,
-                topOffset: top, bottomOffset: bottom);
+            double newRel;
+            if (ts.HookDepth > 0)
+            {
+                // A palm mute, a let ring, a barre (owner-approved 2026-11-13, grammar
+                // evaluation 3): the same box and, at the line's end, the hook reaching toward
+                // the staff — its own narrow box, so the line stands a hook's depth over what
+                // is under the HOOK and no higher over the rest of its run.
+                // LILYPOND-REF: lily/axis-group-interface.cc:700-806 add_grobs_of_one_priority —
+                //   the grob is placed by its own vertical skylines, which a Line_spanner's
+                //   stencil (the right bound's markup included) gives box by box.
+                var up = VerticalSkyline.FromBox(ts.StartX, ts.EndX, anchor - bottom, anchor + top, VerticalDirection.Up);
+                var down = VerticalSkyline.FromBox(ts.StartX, ts.EndX, anchor - bottom, anchor + top, VerticalDirection.Down);
+                up.MergeBox(ts.EndX - lineHalf, ts.EndX + lineHalf, anchor - ts.HookDepth, anchor + lineHalf);
+                down.MergeBox(ts.EndX - lineHalf, ts.EndX + lineHalf, anchor - ts.HookDepth, anchor + lineHalf);
+                newRel = anchor + trackers(sysIdx, ts.StaffIndex).Place(up, down, OutsideStaffPadding);
+            }
+            else
+                newRel = Place(trackers(sysIdx, ts.StaffIndex), ts.StartX, ts.EndX,
+                    anchor,
+                    topOffset: top, bottomOffset: bottom);
             b[i] = ts with { YUp = newRel };
         }
         return b.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild

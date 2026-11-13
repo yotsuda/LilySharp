@@ -798,9 +798,33 @@ internal static partial class SharedRenderer
             // with the bend amount labelled above the arrowhead.
             if (a.Glyph.StartsWith("bendUp:", StringComparison.Ordinal))
             {
-                int semis = int.TryParse(a.Glyph.AsSpan(7), out int bs) ? bs : 2;
+                // "bendUp:N:release" is the bend let back within its note (2026-11-13).
+                var amount = a.Glyph.AsSpan(7);
+                bool released = amount.EndsWith(":release", StringComparison.Ordinal);
+                if (released)
+                    amount = amount[..^":release".Length];
+                int semis = int.TryParse(amount, out int bs) ? bs : 2;
                 using (gc.Source(a.SourcePosition))
+                {
                     DrawGuitarBend(fonts, a.X, y, semis, gc);
+                    if (released)
+                        DrawGuitarBendRelease(
+                            a.X + LilySharp.Core.Svg.Layout.ArticulationEngraver.GuitarBendReach,
+                            y + LilySharp.Core.Svg.Layout.ArticulationEngraver.GuitarBendRise,
+                            a.X + 2 * LilySharp.Core.Svg.Layout.ArticulationEngraver.GuitarBendReach, y, gc);
+                }
+                continue;
+            }
+            // A release TO this note ("bendRelease:dx:dy": where the curve comes from, about
+            // the layout's anchor — the arrow's tip at the note's left).
+            if (a.Glyph.StartsWith("bendRelease:", StringComparison.Ordinal))
+            {
+                var parts = a.Glyph.Split(':');
+                if (parts.Length == 3
+                    && double.TryParse(parts[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double fromDx)
+                    && double.TryParse(parts[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double fromDy))
+                    using (gc.Source(a.SourcePosition))
+                        DrawGuitarBendRelease(a.X + fromDx, y + fromDy, a.X, y, gc);
                 continue;
             }
             // TAB technique letters (H / P / T, and the pluck letters): small italic
@@ -1060,6 +1084,35 @@ internal static partial class SharedRenderer
             fonts.Size(TextRole.Bend, BendLabelEm),
             TextRole.Bend, fonts.Style(TextRole.Bend, FontStyle.Italic),
             TextAnchor.Middle, Color.Black);
+    }
+
+    /// <summary>
+    /// Draws a guitar bend's release (<c>@release</c>, owner-approved 2026-11-13, grammar
+    /// evaluation 3): a curve leaving (<paramref name="fromX"/>, <paramref name="fromY"/>) — the
+    /// top of the bend's arrow — nearly level, then falling steeply to the note, and an arrowhead
+    /// pointing down at its end. The bend-up's strokes and head, mirrored.
+    /// LILYSHARP-OWN: as <see cref="DrawGuitarBend"/> (LilyPond's BendSpanner is not ported); the
+    /// shape follows its picture of a release, a curve from the bend's height down to an arrow.
+    ///   departs from: scm/output-lib.scm:2844 bend-spanner::print (its geometry is not read here).
+    ///   goes away when: the bend spanner is ported.
+    ///   observed by: GrammarEvaluation3FeaturesTests (the drawn strokes; none against LilyPond).
+    /// </summary>
+    private static void DrawGuitarBendRelease(double fromX, double fromY, double toX, double toY, IDrawingContext gc)
+    {
+        double cx = fromX + (toX - fromX) * 0.95, cy = fromY + (toY - fromY) * 0.1; // level, then a late turn down
+        double px = fromX, py = fromY;
+        const int seg = 10;
+        for (int s = 1; s <= seg; s++)
+        {
+            double t = s / (double)seg, u = 1 - t;
+            double nx = u * u * fromX + 2 * u * t * cx + t * t * toX;
+            double ny = u * u * fromY + 2 * u * t * cy + t * t * toY;
+            gc.DrawLine(px, py, nx, ny, Color.Black, 0.13, cap: LineCap.Round);
+            px = nx; py = ny;
+        }
+        const double ah = 0.55, aw = LilySharp.Core.Svg.Layout.ArticulationEngraver.GuitarBendHeadHalfWidth;
+        gc.DrawLine(toX - aw, toY + ah, toX, toY, Color.Black, 0.16, cap: LineCap.Round);
+        gc.DrawLine(toX + aw, toY + ah, toX, toY, Color.Black, 0.16, cap: LineCap.Round);
     }
 
     // ---------- Lyrics ----------

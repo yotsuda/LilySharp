@@ -745,6 +745,9 @@ internal static class SyntaxFacts
             // @sing(breathiness 6 tension -2) — how the voice sings from this note on
             // (AnnotationValues.Sing): names and values, no commas.
             "sing",
+            // @barre(7) / @barre(7 half) — a barre at a fret (owner-approved 2026-11-13,
+            // grammar evaluation 3; AnnotationValues.Barre).
+            "barre",
         };
 
     /// <summary>

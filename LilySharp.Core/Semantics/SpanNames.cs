@@ -45,7 +45,11 @@ public static class SpanNames
 {
     /// <summary>A span mark: the node, the name written, the token that spells it, whether it
     /// ends a span, and its family (the end the family shares).</summary>
-    public readonly record struct Mark(SyntaxNode Node, string Name, SyntaxTokenNode NameToken, bool IsEnd, MusicMarkType Family);
+    /// <remarks><paramref name="Line"/> tells the text spanner's lines apart: a palm mute, a let ring
+    /// and a barre each close their own (2026-11-13), so <c>@palmMute @rit @!palmMute @!rit</c>
+    /// is two spans and neither end is misnamed.</remarks>
+    public readonly record struct Mark(SyntaxNode Node, string Name, SyntaxTokenNode NameToken, bool IsEnd, MusicMarkType Family,
+        TextSpanFamily Line = TextSpanFamily.Text);
 
     private static readonly HashSet<MusicMarkType> Families =
     [
@@ -69,7 +73,7 @@ public static class SpanNames
         };
         if (name == null || token == null || MusicMarkItem.ParseSpanEndName(name) is not { } family || !Families.Contains(family))
             return null;
-        return new Mark(node, name, token, end, family);
+        return new Mark(node, name, token, end, family, MusicMarkItem.TextSpanFamilyOf(name));
     }
 
     internal static SyntaxTokenNode? NameTokenOf(MusicMarkSyntax mark)
@@ -205,7 +209,7 @@ public static class SpanNames
         var marks = MarksBeside(start);
         int at = marks.FindIndex(m => ReferenceEquals(m.Node, start));
         for (int i = at + 1; i < marks.Count; i++)
-            if (marks[i].Family == open.Family)
+            if (marks[i].Family == open.Family && marks[i].Line == open.Line)
                 return marks[i].IsEnd ? marks[i] : null;
         return null;
     }
@@ -219,7 +223,7 @@ public static class SpanNames
         var marks = MarksBeside(end);
         int at = marks.FindIndex(m => ReferenceEquals(m.Node, end));
         for (int i = at - 1; i >= 0; i--)
-            if (marks[i].Family == close.Family)
+            if (marks[i].Family == close.Family && marks[i].Line == close.Line)
                 return marks[i].IsEnd ? null : marks[i];
         return null;
     }

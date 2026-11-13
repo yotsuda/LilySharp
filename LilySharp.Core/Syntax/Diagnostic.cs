@@ -1591,6 +1591,22 @@ public static class DiagnosticCodes
     /// grammar evaluation 2; read off the collected score, <c>CrossArpeggios.WhyAlone</c>).</summary>
     public const string CrossArpeggioWithoutPartner = "LYS4064";
 
+    /// <summary>Error: a <c>@barre</c> that names no barre — written with no fret
+    /// (<c>@barre</c>), with a fret outside 1 to 24, or with a second word that is not
+    /// <c>half</c> (owner-approved 2026-11-13, grammar evaluation 3: <c>@barre(7) … @!barre</c>,
+    /// <c>@barre(7 half)</c>; <c>Semantics.GuitarMarkValidator</c>). Nothing is drawn for it.</summary>
+    public const string BarreMalformed = "LYS4065";
+
+    /// <summary>Error: <c>@vibrato(…)</c> with numbers on a fretted instrument's note. There
+    /// <c>@vibrato</c> is the wavy line over the note (owner-approved 2026-11-13, grammar
+    /// evaluation 3) and takes none; the numbers are a sung note's depth and rate.</summary>
+    public const string VibratoNumbersOnAnInstrument = "LYS4066";
+
+    /// <summary>Error: a <c>@release</c> with no bend to let back — no <c>@bend(…)</c> on its own
+    /// note and none on the note before it in its voice (owner-approved 2026-11-13, grammar
+    /// evaluation 3; <c>Semantics.BendReleases</c>). Nothing is drawn for it.</summary>
+    public const string ReleaseWithoutBend = "LYS4067";
+
     /// <summary>Error: a span end whose name is not the one the span was opened with —
     /// <c>@8va … @!15ma</c> (owner's decision 2026-10-28: a span is closed by its own name;
     /// <c>Semantics.SpanNames</c>). The quick fix writes the start's name.</summary>

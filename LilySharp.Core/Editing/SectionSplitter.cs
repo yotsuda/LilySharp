@@ -781,6 +781,8 @@ public static class SectionSplitter
             ["cresc"] = "hairpin", ["decresc"] = "hairpin", ["dim"] = "hairpin",
             ["textSpan"] = "text spanner", ["rit"] = "text spanner", ["accel"] = "text spanner",
             ["rall"] = "text spanner",
+            // The guitar lines, each its own (2026-11-13; TextSpanFamily).
+            ["palmMute"] = "palm mute", ["letRing"] = "let ring", ["barre"] = "barre",
             ["8va"] = "ottava", ["8vb"] = "ottava", ["15ma"] = "ottava", ["15mb"] = "ottava",
             ["trillSpan"] = "trill span",
             ["sustain"] = "sustain pedal", ["sostenuto"] = "sostenuto pedal",

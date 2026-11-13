@@ -555,6 +555,8 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   covered: grace notes, and the notes of a phrase called inside the run (write the run inside
   the phrase). Use it for a passage marked throughout instead of a mark on every note.
 - String technique: `@upBow @downBow @flageolet` (`@harmonic` is the same mark) `@stopped` (+)
+- A guitarist's pick strokes are the same two signs: a down-stroke is `@downBow`, an up-stroke
+  `@upBow` (there is no `@downStroke` / `@upStroke`)
   `@snapPizz` (Bartók pizzicato) - always above
 - Right-hand finger (plucked strings): `c4@pluck(p)` — `p i m a`
 - Ornaments: `@trill @mordent @prall @turn @reverseTurn`
@@ -580,10 +582,14 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   under a guitarist's name for it — a straight line from this note to the next, short between
   neighbouring notes — and nothing more: no bend, no change to the sound; MusicXML writes it as
   `<slide>` where `@glissando` writes `<glissando>`
-- Vibrato is a SINGER's mark: `a'2@vibrato` (also `@vibrato(depth)`, `@vibrato(depth, rate)`) is
-  performed by a singing voice and draws nothing. On a part nobody sings (no `singer` line, no
-  words set to it) it warns (LYS1008) and is ignored; for the word on the page write
-  `@text("vib.")`
+- Vibrato is two marks by the part it is written in. On a FRETTED instrument's part (a guitar, a
+  bass, a ukulele, a banjo, a mandolin — a part whose `instrument` or `tuning` gives it strings
+  with frets) `a'2@vibrato` draws the wavy line above the note, from the note to the next one, on
+  the staff and on the tab; the sound is unchanged, and numbers there are an error (LYS4066).
+  On every other part it is a SINGER's mark: `a'2@vibrato` (also `@vibrato(depth)`,
+  `@vibrato(depth, rate)`) is performed by a singing voice and draws nothing. On a part nobody
+  sings (no `singer` line, no words set to it) and that is not fretted it warns (LYS1008) and
+  is ignored; for the word on the page write `@text("vib.")`
 - Figured bass: `c4@figuredBass(6)` , `d4@figuredBass(6 4)` — the figures of one bass note, top
   to bottom, with spaces between them. ONE group a note: a second `@figuredBass` on the same
   note is an error (LYS1067). A change of figure over a held bass — the 4–3 of a cadence — is
@@ -614,6 +620,26 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   warns: after editing the notes, rewrite the shape (or write a bare `@diagram`).
 - Guitar bend: `c4@bend(half)` (1 semitone), `@bend(full)` (2), `@bend(N)` (N = 1–12
   semitones) — an arrow labelled in steps.
+- Bend release: `@release`. On the SAME note as the bend, `a'4@bend(full)@release`, the string
+  is bent up and let back within the note — the arrow up with its amount, then an arrow down.
+  On the note AFTER a bent note, `a'4@bend(full) a'4@release`, it is let back to that note — an
+  arrow down from the bend's height to the note. "After" is the next note of the same voice; a
+  rest or another note between them breaks the pair. A `@release` with no `@bend(…)` on its own
+  note or on the note before it is an error (LYS4067). Silent in MIDI, as the bend is.
+- Guitar lines over a run of notes, each written on the first note and closed on the LAST note
+  it covers (both included), as `@textSpan("…") … @!textSpan` is:
+  - palm mute `e,8@palmMute e, e, e,@!palmMute` — "P.M.", a dashed line and a hook at its end;
+    played short (each note half its length).
+  - let ring `e,8@letRing b, e g@!letRing` — "let ring", the same line; each note sounds on to
+    the end of the run's last note (or until its own pitch is struck again).
+  - barre `b,8@barre(7) fis b d'@!barre` — "CVII" (C and the fret, 1–24, as a Roman numeral);
+    `@barre(7 half)` prints "½CVII". A `@barre(N)` with no `@!barre` after it is ONE note's: the
+    label alone, no line (so is one that another `@barre` follows before any end). A barre with
+    no fret, a fret outside 1–24 or another word is an error (LYS4065). No change to the sound.
+  They stand above the staff, and above a tab that stands alone (`tab g` with no `staff g`; a tab
+  beside its staff repeats none of them). The three are independent lines: a palm mute may run
+  under a barre and beside a `@rit`, each closed by its own name. A palm mute or a let ring
+  nobody closes is an error (LYS4018), as an unclosed `@rit` is.
 - Tab technique letters: `@hammerOn` (H), `@pullOff` (P), `@tap` (T) — small italic
   letters opposite the stem (`.up`/`.down` force), drawn on a `tab` staff too.
 - Chord names: `c4@chord(C)` , `d4@chord(Dm)` , `e4@chord(Am7)` — the SYMBOL as it
@@ -993,7 +1019,8 @@ score { staff gtr  tab gtr }
   counts from the nut.
 - **What a tab shows of the marks**: slurs, ties (the held note's number is dropped),
   `@hammerOn` / `@pullOff` / `@tap` (the letters H P T — a slur is still written for the curve:
-  `a'8@hammerOn( b')`), `@bend(half|full|N)` (the arrow), `@glissando` / `@slide` (the line
+  `a'8@hammerOn( b')`), `@bend(half|full|N)` (the arrow) and its `@release`, `@vibrato` (the wavy
+  line), `@glissando` / `@slide` (the line
   between two fret numbers), `@arpeggio`, and `@dead` (a × in place of the number — a note's,
   one chord member's `<c e@dead>4`, or every member's `<c e>4@dead`). `@notehead(cross)` /
   `@notehead(diamond)` change the STAFF's head only: the tab keeps the number (as LilyPond's
@@ -1306,6 +1333,8 @@ In-note marks: `c4@mark("A")` (rehearsal mark),
 text spanners `@textSpan("poco rit.")` ... `@!textSpan` (sugar: `@rit` / `@accel` / `@rall`,
 closed by `@!rit` / `@!accel` / `@!rall` — **the end is REQUIRED**: a spanner nobody closes
 draws nothing at all, its word included, and says so with LYS4018),
+the guitar lines `@palmMute` ... `@!palmMute`, `@letRing` ... `@!letRing`, `@barre(7)` ... `@!barre`
+(see the guitar marks above),
 ottava `@8va` / `@8vb` / `@15ma` / `@15mb` ... `@!8va` (the label the page prints; `@ottava` / `@quindicesima` are retired)
 (**the end is REQUIRED**, and **it repeats the name the span was opened with** — `@8va` ... `@!15ma` is
 an error; `@loco` is retired),
