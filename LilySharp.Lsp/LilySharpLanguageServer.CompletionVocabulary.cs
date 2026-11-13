@@ -5504,7 +5504,8 @@ public sealed partial class LilySharpLanguageServer
     internal static CompletionList GetBowLineCompletions(string what) => new()
     {
         Items = [.. AnnotationValues.BowLineWords.Select((word, rank) => Argument(word,
-            word == "dashed" ? $"A dashed {what} — an editor's suggestion, or one that holds for some verses only"
+            word == "solid" ? $"The plain {what}, as with no word — here so the keys that step this word (Ctrl+Shift+Up/Down) can show all three"
+            : word == "dashed" ? $"A dashed {what} — an editor's suggestion, or one that holds for some verses only"
                              : $"A dotted {what}", rank))],
     };
 

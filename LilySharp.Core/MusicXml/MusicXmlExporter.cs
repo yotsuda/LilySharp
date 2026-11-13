@@ -5611,9 +5611,9 @@ public sealed class MusicXmlExporter
                     xmlNote.Technicals.Add(new System.Xml.Linq.XElement("fingering", finger));
                 // @slur(dashed) / @tie(dotted) (owner-approved 2026-11-13): the line-type of the
                 // <slur> / <tied> that starts on this note. With none starting, nothing is written.
-                if (Semantics.AnnotationValues.BowLineOf(mark, Semantics.AnnotationValues.SlurLineName) is { } slurLine)
+                if (Semantics.AnnotationValues.BowLineOf(mark, Semantics.AnnotationValues.SlurLineName) is { } slurLine and not Svg.Model.BowLine.Solid)
                     xmlNote.SlurLineType = slurLine == Svg.Model.BowLine.Dotted ? "dotted" : "dashed";
-                if (Semantics.AnnotationValues.BowLineOf(mark, Semantics.AnnotationValues.TieLineName) is { } tieLine)
+                if (Semantics.AnnotationValues.BowLineOf(mark, Semantics.AnnotationValues.TieLineName) is { } tieLine and not Svg.Model.BowLine.Solid)
                     xmlNote.TiedLineType = tieLine == Svg.Model.BowLine.Dotted ? "dotted" : "dashed";
                 // @phrasingSlur(dashed) (owner-approved 2026-11-13): the phrasing slur's start as
                 // the bare mark writes it — the <slur> numbered 2, with its side — and the
@@ -5624,7 +5624,7 @@ public sealed class MusicXmlExporter
                     var start = PhrasingSlurNotation("start");
                     if (mark.ForcedAbove is { } above)
                         start.Add(new System.Xml.Linq.XAttribute("placement", above ? "above" : "below"));
-                    if (Semantics.AnnotationValues.BowLineOf(mark, Semantics.AnnotationValues.PhrasingSlurName) is { } phrasingLine)
+                    if (Semantics.AnnotationValues.BowLineOf(mark, Semantics.AnnotationValues.PhrasingSlurName) is { } phrasingLine and not Svg.Model.BowLine.Solid)
                         start.Add(new System.Xml.Linq.XAttribute("line-type", phrasingLine == Svg.Model.BowLine.Dotted ? "dotted" : "dashed"));
                     xmlNote.ExtraNotations.Add(start);
                 }

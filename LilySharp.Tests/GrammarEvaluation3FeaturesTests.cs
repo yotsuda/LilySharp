@@ -1578,7 +1578,7 @@ public class GrammarEvaluation3FeaturesTests
     /// a rest and one member of a chord among them. A bare <c>@slur</c> is told its parentheses.</summary>
     [Theory]
     [InlineData("c'4@slur(wavy)( d' e' f') |", "@slur(wavy)", DiagnosticCodes.BowLineMalformed, "'wavy' is not a line a slur is drawn with")]
-    [InlineData("c'2@tie(dashed dotted)~ c'2 |", "@tie(dashed dotted)", DiagnosticCodes.BowLineMalformed, "write '@tie(dashed)' or '@tie(dotted)'")]
+    [InlineData("c'2@tie(dashed dotted)~ c'2 |", "@tie(dashed dotted)", DiagnosticCodes.BowLineMalformed, "write '@tie(solid)', '@tie(dashed)' or '@tie(dotted)'")]
     [InlineData("c'4@slur(dashed) d' e' f' |", "@slur(dashed)", DiagnosticCodes.BowLineWithoutBow, "no '(' opens a slur on this note")]
     [InlineData("c'4( d'@slur(dashed) e' f') |", "@slur(dashed)", DiagnosticCodes.BowLineWithoutBow, "no '(' opens a slur on this note")]
     [InlineData("c'2@tie(dashed) c'2 |", "@tie(dashed)", DiagnosticCodes.BowLineWithoutBow, "no '~' ties this note on")]
@@ -1587,7 +1587,7 @@ public class GrammarEvaluation3FeaturesTests
     [InlineData("<c' e'@tie(dashed)~ g'>2 <c' e' g'>2 |", "@tie(dashed)", DiagnosticCodes.BowLineWithoutBow, "write it after the chord")]
     // A phrasing slur's line (2026-11-13): the curve is drawn all the same, solid.
     [InlineData("c'4@phrasingSlur(wavy) d' e' f'@!phrasingSlur |", "@phrasingSlur(wavy)", DiagnosticCodes.BowLineMalformed, "'wavy' is not a line a phrasing slur is drawn with")]
-    [InlineData("c'4@phrasingSlur(dashed dotted) d' e' f'@!phrasingSlur |", "@phrasingSlur(dashed dotted)", DiagnosticCodes.BowLineMalformed, "write '@phrasingSlur(dashed)' or '@phrasingSlur(dotted)'")]
+    [InlineData("c'4@phrasingSlur(dashed dotted) d' e' f'@!phrasingSlur |", "@phrasingSlur(dashed dotted)", DiagnosticCodes.BowLineMalformed, "write '@phrasingSlur(solid)', '@phrasingSlur(dashed)' or '@phrasingSlur(dotted)'")]
     public void ABowLine_MiswrittenIsSaid(string music, string at, string code, string says)
     {
         string source = Melody(music);
@@ -1614,8 +1614,8 @@ public class GrammarEvaluation3FeaturesTests
         var offered = Offered(Melody("c'4@‸( d' e' f') |"));
         Assert.Contains("slur", offered);
         Assert.Contains("tie", offered);
-        Assert.Equal(["dashed", "dotted"], Offered(Melody("c'4@slur(‸)( d' e' f') |")));
-        Assert.Equal(["dashed", "dotted"], Offered(Melody("c'2@tie(‸)~ c'2 |")));
+        Assert.Equal(["solid", "dashed", "dotted"], Offered(Melody("c'4@slur(‸)( d' e' f') |")));
+        Assert.Equal(["solid", "dashed", "dotted"], Offered(Melody("c'2@tie(‸)~ c'2 |")));
     }
 
     /// <summary>A dashed or dotted PHRASING slur, <c>@phrasingSlur(dashed)</c> (owner-approved
@@ -1741,8 +1741,8 @@ public class GrammarEvaluation3FeaturesTests
     [Fact]
     public void APhrasingSlursLine_IsOffered()
     {
-        Assert.Equal(["dashed", "dotted"], Offered(Melody("c'4@phrasingSlur(‸) d' e' f'@!phrasingSlur |")));
-        Assert.Equal(["dashed", "dotted"], Offered(Melody("c'4@phrasingSlur(da‸) d' e' f'@!phrasingSlur |")));
+        Assert.Equal(["solid", "dashed", "dotted"], Offered(Melody("c'4@phrasingSlur(‸) d' e' f'@!phrasingSlur |")));
+        Assert.Equal(["solid", "dashed", "dotted"], Offered(Melody("c'4@phrasingSlur(da‸) d' e' f'@!phrasingSlur |")));
         Assert.Contains("phrasingSlur", Offered(Melody("c'4@‸ d' e' f' |")));
         Assert.Equal(["up", "down"], Offered(Melody("c'4@phrasingSlur(dashed).‸ d' e' f'@!phrasingSlur |")));
     }

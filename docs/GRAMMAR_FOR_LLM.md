@@ -771,7 +771,7 @@ r8[ c d e] |         // a manual beam may open or close on a rest, and reaches i
 
 `@slur(dashed)` / `@tie(dashed)` say how the ONE slur / tie beginning on their note is drawn
 (an editor's suggestion, a slur for one verse only); they sound as the solid ones. The word
-is `dashed` or `dotted` and nothing else (LYS4074). On a note where no slur (no tie) begins —
+is `dashed` or `dotted` — or `solid`, the plain curve, there so the editor's step keys can show all three — and nothing else (LYS4074). On a note where no slur (no tie) begins —
 a rest, a note inside a chord's brackets, the slur's LAST note — it is an error (LYS4075).
 A phrasing slur takes the same word on its opening mark: `c4@phrasingSlur(dashed) d e f@!phrasingSlur`
 (the closing `@!phrasingSlur` is unchanged).
@@ -1434,7 +1434,7 @@ c'4@phrasingSlur d'( e') f' | g'( a') b' c''@!phrasingSlur |
 c'4@phrasingSlur(dashed) d'( e') f' | g'( a') b' c''@!phrasingSlur |  // DASHED: the word on the OPENING mark only
 c'4@phrasingSlur(dotted) d' e' f'@!phrasingSlur |                     // dotted; a side goes after it: @phrasingSlur(dashed).up
 ```
-The word is `dashed` or `dotted` (anything else: LYS4074, and the curve is drawn solid); the slurs
+The word is `dashed`, `dotted` or `solid` (anything else: LYS4074, and the curve is drawn solid); the slurs
 inside stay solid. Only a word glued to the `(` is read — `c'4@phrasingSlur( d' e')` is, as always,
 a phrasing slur AND a slur starting on that note.
 An annotation's argument always goes in PARENTHESES — a dot after the name is the placement qualifier

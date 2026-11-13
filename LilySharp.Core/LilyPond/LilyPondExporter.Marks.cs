@@ -160,10 +160,10 @@ public sealed partial class LilyPondExporter
                 // grob does below. With no slur or tie beginning (LYS4075) it sets nothing drawn.
                 // LILYPOND-REF: ly/property-init.ly slurDashed / slurDotted, tieDashed / tieDotted — `\override Slur.dash-definition = …`.
                 case MusicMarkSyntax mk when Semantics.AnnotationValues.BowLineOf(mk, Semantics.AnnotationValues.SlurLineName) is { } slurLine:
-                    prefix.Append(slurLine == BowLine.Dotted ? "\\once \\slurDotted " : "\\once \\slurDashed ");
+                    if (slurLine != BowLine.Solid) prefix.Append(slurLine == BowLine.Dotted ? "\\once \\slurDotted " : "\\once \\slurDashed ");
                     break;
                 case MusicMarkSyntax mk when Semantics.AnnotationValues.BowLineOf(mk, Semantics.AnnotationValues.TieLineName) is { } tieLine:
-                    prefix.Append(tieLine == BowLine.Dotted ? "\\once \\tieDotted " : "\\once \\tieDashed ");
+                    if (tieLine != BowLine.Solid) prefix.Append(tieLine == BowLine.Dotted ? "\\once \\tieDotted " : "\\once \\tieDashed ");
                     break;
                 // @phrasingSlur(dashed) / (dotted) (owner-approved 2026-11-13): the phrasing
                 // slur's START — `\(`, with the side a `.up` / `.down` after the argument forces,
@@ -174,7 +174,7 @@ public sealed partial class LilyPondExporter
                 //   `\override PhrasingSlur.dash-definition = #'((0 1 0.4 0.75))` / `… 0.1 0.75`,
                 //   the Slur's two definitions.
                 case MusicMarkSyntax mk when Semantics.AnnotationValues.OpensPhrasingSlurWithALine(mk):
-                    if (Semantics.AnnotationValues.BowLineOf(mk, Semantics.AnnotationValues.PhrasingSlurName) is { } phrasingLine)
+                    if (Semantics.AnnotationValues.BowLineOf(mk, Semantics.AnnotationValues.PhrasingSlurName) is { } phrasingLine and not BowLine.Solid)
                         prefix.Append(phrasingLine == BowLine.Dotted ? "\\once \\phrasingSlurDotted " : "\\once \\phrasingSlurDashed ");
                     suffix.Append(mk.ForcedAbove switch { true => "^\\(", false => "_\\(", null => "\\(" });
                     break;

@@ -742,7 +742,7 @@ public static class AnnotationValues
 
     /// <summary>The words <c>@slur(…)</c>, <c>@tie(…)</c> and <c>@phrasingSlur(…)</c> take, in
     /// the order the editor offers them.</summary>
-    public static readonly string[] BowLineWords = ["dashed", "dotted"];
+    public static readonly string[] BowLineWords = ["solid", "dashed", "dotted"];
 
     /// <summary>
     /// Whether <paramref name="mark"/> is a phrasing slur's START written with an argument list,
@@ -772,6 +772,7 @@ public static class AnnotationValues
             return null;
         return mark.Arguments[0].Text switch
         {
+            "solid" => Svg.Model.BowLine.Solid,
             "dashed" => Svg.Model.BowLine.Dashed,
             "dotted" => Svg.Model.BowLine.Dotted,
             _ => null,

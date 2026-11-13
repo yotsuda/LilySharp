@@ -660,7 +660,7 @@ The curve is the solid one's, cut into dashes as LilyPond's `\slurDashed` / `\sl
 does. MusicXML writes `line-type="dashed"` (or `dotted`) on the starting `<slur>` / `<tied>`,
 the LilyPond twin `\once \slurDashed` before the note.
 
-The word is `dashed` or `dotted` (anything else: **LYS4074**). With no slur beginning on the
+The word is `dashed` or `dotted`, or `solid` for the plain curve (anything else: **LYS4074**). With no slur beginning on the
 note (`@slur`) or no tie (`@tie`) — a rest, or one note inside a chord's brackets, among them —
 the annotation would draw nothing, and is an error (**LYS4075**). A phrasing slur takes the
 word on its own opening mark, `@phrasingSlur(dashed)` — see below.

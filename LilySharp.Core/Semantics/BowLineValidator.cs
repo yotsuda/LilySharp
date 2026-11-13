@@ -69,7 +69,7 @@ internal sealed class BowLineValidator : ISharedCollectValidator
                     // ASCII punctuation only: these strings reach legacy-codepage consoles via the CLI.
                     _diagnostics.Add(Diagnostic.Error(mark.Span, DiagnosticCodes.BowLineMalformed,
                         (word.Length == 0 ? $"'@{mark.Name}()' names no line" : $"'{word}' is not a line a phrasing slur is drawn with")
-                        + $" - write '@{mark.Name}(dashed)' or '@{mark.Name}(dotted)', or the bare '@{mark.Name}' for a solid one "
+                        + $" - write '@{mark.Name}(solid)', '@{mark.Name}(dashed)' or '@{mark.Name}(dotted)', or the bare '@{mark.Name}' for a solid one "
                         + "(c4@phrasingSlur(dashed) d e f@!phrasingSlur). The phrasing slur is drawn solid."));
                 }
                 continue;
@@ -83,7 +83,7 @@ internal sealed class BowLineValidator : ISharedCollectValidator
                 // ASCII punctuation only: these strings reach legacy-codepage consoles via the CLI.
                 _diagnostics.Add(Diagnostic.Error(mark.Span, DiagnosticCodes.BowLineMalformed,
                     (wrote.Length == 0 ? $"'@{mark.Name}()' names no line" : $"'{wrote}' is not a line a {What(slur)} is drawn with")
-                    + $" - write '@{mark.Name}(dashed)' or '@{mark.Name}(dotted)', on the note where the {What(slur)} begins "
+                    + $" - write '@{mark.Name}(solid)', '@{mark.Name}(dashed)' or '@{mark.Name}(dotted)', on the note where the {What(slur)} begins "
                     + (slur ? "(c4@slur(dashed)( d e))" : "(c2@tie(dashed)~ c2)")
                     + $". The {What(slur)} is drawn solid."));
                 continue;

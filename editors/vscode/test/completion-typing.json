@@ -875,6 +875,7 @@
     ["music-at>barre(", "half"],
     ["music-at>feather(", "right"],
     ["music-at>feather(", "left"],
+    ["music-at>phrasingSlur(", "solid"],
     ["music-at>phrasingSlur(", "dashed"],
     ["music-at>phrasingSlur(", "dotted"],
     ["music-at>arpeggio(", "up"],
