@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1227セッションの経緯
+
+### 1.1 第1227セッション（2026-11-14・YT-DELL2）
+
+base `6fc74af63`・18 commit（未 push）。評価 4 の残りを ⑴ から。OMR の `open` は 0。
+- **CI の赤（11-13 push 分・ubuntu 7 本）**: ランナーのイメージに .NET 11 が入り、`RollForward LatestMajor` でテストがそこで走る＝`Math.Round(x, n)` の丸めが変わり、期待値が中点の比較 4 か所が落ちた。許容差に直した（`148e2a478`・製品の出力は同じ）。⚠️ push 後の CI は未確認＝push はオーナー。Core の警告 5 → 0（`896f5e3b6`）。
+- **⑴ MusicXML（`f78ce52de`）**: スコアのパートを残して**スコアの順に並べてから**「先頭のパート」に書く（リハーサルマークは宣言順の先頭に書いてから落としていた）・落とすパートのテンポは先頭へ移す（`CarryTheTemposOf`）・パートは曲の頭のテンポで開く（`_openingTempo`）・play の音楽が言ったテンポは play の終わりに立つ（`_tempoStatedInThePlay`／`_tempoAfterTheHead`）・`<>` の記号・`falloff`/`doit`/`breath-mark`/`caesura`（読み戻しも）・弓・`fan`。網 `MusicXmlPartSheetTests`。
+- **⑴ 双子・ページ・VSQX（`7515a4d17`）**: 弱起で切れた短い最後の小節（`… | r2. |` → 次の section の `partial 4`）を休みのパートが満小節で埋めていた。**ページ**: 埋めた譜表が総譜の先頭だと `MarkBarsSplitBySectionBoundaries` の決め手になり分割小節を見失う＝合唱譜の総譜 69 小節・パート譜 67 小節。`SectionShortEnds`（新・ページと双子の 1 つの家）で埋め草をその小節の長さに。読むのは header に `partial` がある本で埋めるときだけ・増分は canonical の読みと同じ表に値で記録（`ShortEndRead`）。**双子**: 半分の後の `|` は何も書かない（`OpenWrittenBars`・歌詞の行は `ContinuesBar`）・埋め草は `s1*3/4`・`time none` で空に書いた小節はその小節を埋めるパートの長さ（header の `time none` も＝`UnmeteredBarLength`）。LP 2.26.0 の警告は合唱譜 24 → 0（この種）・室内楽 15 → 1。VSQX は 1 音の全モーラ。網 `SectionShortEndTests`。
+- **⑵ 誤った診断（補助 2 便・9 件・`3140d3100`〜`49b2d25fc`）**: LYS4018 は全譜表のペダルをまとめて対にしていた（`PedalEngraver.UnpairedPedalMarks`＝譜表ごと。隠れていた「離していないペダル」が出るようになる＝ペダルのある 11 冊は前後同数）／LYS4035 は niente で hairpin が終わる／LYS1050 は書かれた音高のパートだけ／LYS2023 は header の調の言い直しを数えない／`as1`・`a1`・`s1` は LYS0045 を 1 つ出して名前として読む（`Parser.AdoptNamesThatLexAsMusic`）／**裸の `R*N` は小節ごとにスコアの拍子**（ページも誤っていた＝休みの譜表に拍子記号が出ず 8 分休符。collector・`MeasureModel.Split`・MIDI・双子・XML）／`time 2/4+3/8` は LYS0046 と書き換えの案／知らない楽器名は近い名前と一覧／**反復の最後の括弧から次の section への span は普通の境界として運ぶ**（`ClosesOnItsLastPass`・スラーも。RULES §5.2 の音楽的妥当性）。
+- **⑷ 文書（補助・`8955df198`）**: 四分音・`@scoop`/`@plop`・強弱の全一覧・`transpose`（＝LP の `\transpose`。「移調楽器の書き方」という記述は誤りだった）ほか。
+- 7.6: `SectionShortEnds`・`OpenWrittenBars`・パートの順・テンポの運びは LILYSHARP-OWN（LP に写す形がない／LP の Timing は Score の 1 つという事実への合わせ）。7.7 の匂い: 増分の網は足していない（`ShortEndRead` の記録は既存の canonical の読みに相乗り＝フルと増分の一致は既存の網まかせ）／`SectionShortEnds` は埋めるときに全木の `SemanticVoices` を 1 回歩く＝打鍵の値段は測っていない（perf はオーナーの指示待ち）／補助の報告だけで自分の目で見ていないもの: ⑵ の PNG・⑷ の実験／VS Code の実機は未確認。
+- 門: 開始時 full 16533 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16536、終了時 full 16570 合格 / 1 失敗（同じ）/ skip 2 / 合計 16573（`p1227` の `run4.trx`・+37 は足した網）。全 svg の掃き 1041 冊 1268 枚で動いた svg 0（base は `6fc74af63` を `git archive` でビルド・Lab `p1227/sweep`）。毒は回していない。
 ## 以下は第1226セッションの経緯
 
 ### 1.1 第1226セッション（2026-11-11〜14・YT-DELL2）
