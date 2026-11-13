@@ -89,6 +89,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 - **★ 歌詞と歌い手の文法の作り直し（オーナー決定 2026-11-10・第1217）**: `docs/lyrics-singer-design.md` が全部（§9 が作業順）。①②③④は済み（§1.1 第1217〜第1219）。⚠️ ④の `ん` の聞こえ方はオーナーの実聴待ち（`MANUAL-CHECKS` 第1219）。Cantoria の master は zh／ko を歌う（VSIX の入れ直しはオーナー）。`singer` は 1 行 1 声で score の中にも書ける（第1220）。古い書き方を案内する専用エラーは作らない（オーナー指示）。設計 §10「パート自身の歌詞」（`part sop { lyrics words }`）は第1222 で実装（§1.1 第1222・実機は `MANUAL-CHECKS` 第1222）＝§9 は全部済み。**次の一手の指示はまだ無い＝下の積み残しから選ぶならオーナーに訊く**。積み残し: Calamo の生成コードが `lyrics … sings` のまま（`docs\repro\REQUESTS.md` に連絡済み・Calamo 側は未 commit）／実機確認（`MANUAL-CHECKS` 第1217）／perf ベンチ／コーパス外のオーナーのファイル（Downloads の Tabidachi・Rose Garden など）は未移行で、`LilySharp-Lab\sessions\p1217\migrate\migrate.ps1 -Lys -Files` で書き換えられる／Rose Garden のオクターブ変換はオーナーの回答待ち。
 - **★ 歌詞のある譜表では強弱記号とヘアピンを譜表の上に（オーナー決定 2026-11-11）＝設計 `docs/dynamics-above-lyrics-design.md` §5 の 1〜6 は全部済み（第1224〜第1225・§1.1）**。**D3 は LilyPond の規則に替えた（オーナー決定 2026-11-11「LP に合わせて」）**＝向きを書いた記号が*線*の向きを決め、同じ線の後続（向きを書いていない記号）は従う。歌詞のない譜表でも同じ（`c@f.up@decresc … g@p` の p は上）。残りはオーナー: 実機のプレビュー（`MANUAL-CHECKS` 第1225）と release（CHANGELOG は 2 つとも `## Unreleased`・`[engraving]`）。残る穴: 2 声部の譜表で上の声部のヘアピンの線に下の声部の同じ拍の強弱記号も乗る（ヘアピンが声部を持たない既知の穴＝`DynamicAlignEngraver` の注 ⑵・Lab `p1225/dyn/out/vv.png`）。線の向きも譜表ごとに 1 本の流れで読む（LP は声部ごと）。**次の一手の指示はまだ無い＝上の行の積み残しから選ぶならオーナーに訊く**。
+- **★ 次便＝評価 4（2026-11-13）の残り（オーナー 2026-11-14「次のセッションで取り組む」）**: 書き手のメモと再現は Lab `sessions/p1226/md/eval4/{bigband,choral,chamber,rock}`（`NOTES.md`・`r-NN-*.lys`）。順に ⑴ 書き出し＝MusicXML（ブレス・カエスーラ／パート譜のリハーサルマークが第 1 パートだけ／`<>` の強弱・文字／フォール・ドイト／パートの順／羽根付き連桁／2 パート目のテンポの戻り）・双子（弱起をまたぐ反復・`time none`）・VSQX（1 音に複数モーラの読みは最初だけ）⑵ 誤った診断＝LYS2023（同じ調の言い直し）・LYS1050（`pitch concert`）・LYS4035（`@niente` の後）・LYS4018（閉じたペダル）・`as1`/`a1`/`s1` の名前の連鎖エラー・`R*8`＋他パートの拍子変更で LYS2004×90・`time 2/4+3/8`・知らない楽器名に候補なし・2 番括弧から次の文字への hairpin がエラー ⑶ `lysc review`（ジャズの和音・無調・キューの音を「誤り」に数える）⑷ 文書（`@scoop`/`@plop`・四分音 `ceh`・`@pppp`・`transpose` の意味）⑸ 欠けている機能は**案を出してオーナーに確認**（持ち替え・自作の移調楽器・回ごとに違う演奏・調号なしのパート譜・ふりがな・語りの区間・`condensedStaff` の名前・ギターのプリベンド等・ポリメーター・複合拍子）。小残り: condensedStaff の数字付き低音など 3 種の再住所・tab のアルペジオ線が自分の数字に 0.035・小文字だけの枠の中央が 0.23〜0.51 下・`md end` は既定の yMargin では動かない・箇条書きのリンク・不安定な網 2 種（`ScoreVideoShapeTests`、まれに `SvgSnapshotTests`）。**3〜4 件ずつ・数行は自分で・全 full は自分が 1 回**（memory）。
+- **オーナー待ち（第1226）**: `samples/harbour-lights.lys`・`README.md` はオーナーの作業中の変更＝**commit しない**（歌を聴いてから。歌詞とリズムは Claude が直し済み・`ReadmeSampleTests` はそれで赤）／`tools\Deploy-Lsp.ps1`・Cantoria `deploy-extension.ps1`／実機（`MANUAL-CHECKS` 第1226: 補完・問題パネルの歌い手の失敗・LYS4078・プログレスバー・フェンスの色と Enter／囲み）／初回の声のダウンロード・Cantoria の声の解決の一本化・言語に合わせた既定の声＝未決。
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - **★ 歌わせる（Cantilena）＝第1124 設計・第1125 段 2（`lilysharp/sung`）・第1126 段 3（エディタ）・第1127 で Cantilena は拡張 `yotsuda.cantilena` になり Lily# は API で呼ぶ（§1.1 第1127）**: 第1128 で practice メニューに声（`♪ part`）と score に無いパート（既定オフ・`Extra`）のトグル。**第1129 オーナー決定＝歌うパートは歌い手・1 パート 1 音**（声が鳴れば楽器は鳴らない・楽器は代役・無名の歌い手は Choir Aahs・`♪` は歌う／弾くの切り替え）。**第1130＝1 段 1 音・言葉はその上の譜のもの**（`SungStaves`・`Sung`／`Played`・同じパートの言葉の無い段は楽器＝両方鳴らせる）。第1131 で段 4＝Export（WAV/MP3/MP4）に声を混ぜた。**第1132 で span の終わり・ループ・count-in の声を閉じ、ロードマップを `docs/singing-roadmap.md`（長期 A〜G・短期 8 行・オーナーの決定 5 つ）と Cantilena `docs/roadmap.md` に書いた。**第1133 で `engine/voice` の命名と `voices()`（Cantilena 0.2.0・VSIX の入れ直しはオーナー）**・第1134〜1136 で DiffSinger（Cantilena roadmap B1・B2・B4）・**第1137 で `lysc wav --singer <cantilena>`**・**第1138 で漢字の読み `漢[かん]`**（オーナー決定 2026-11-08・`.mid` は漢字・ルビは刷らない）・**第1139 で B3＝DirectML・第1140 で B5＝linux-x64／osx-arm64 の VSIX**（Cantilena 0.4.0・3 target・未公開・Linux／mac は未聴）＝次は Cantilena の公開（オーナー）・ローマ字→かな（Cantilena 側）・Phase C（歌詞ブロックの言語）。**第1141〜1148 でエディタの声のバッジ（▶ の隅のマイク）・本の切り替え・曲頭の子音・声を用意する時機（1.5 s の休み・`lilysharp.playback.singerPrepare`・`waiting`）＝singing-design §3・§5・実機は MANUAL-CHECKS §3.7（オーナー）**。****実機確認はオーナー（MANUAL-CHECKS §3.7）・Cantilena の VSIX の公開もオーナー**。問い 3 つ（漢字歌詞のかな・複数パート・置き換えか重ねか）はオーナー＝仮置きはかなだけ・全部・置き換え。Cantilena は `C:\MyProj\cantilena`（Apache-2.0・未 push）。**OMR #23 は `question`**（オーナー決定 2026-10-14 の規則そのもの＝オーナー判断待ち）。
 - **★ 打鍵の増加の監査＝第1108〜1110 で閉じた（§1.1 第1109・第1110）。** 1000 小節の本の床は `fingbeam1k` 118 → 44 ms／`plain1k`＋小節の挿入 98 → 63 ms／`plain1k` 36 → 30 ms／`v2bow1k` 67 → 52 ms。518 冊の打鍵は第1110 の分で 3.69 → 3.59 ms。第1107 の最悪ケースの増分（`perf-3vdot300`・`perf-kitmix300`、数 ms）は受け入れた（オーナー決定 2026-11-06）。**skyline の残りは急がない**（`docs/skyline-merge-design.md` §3・§4）。**Release の lysc は `8fc8e2be1`**（オーナー決定 2026-11-06。前は `0d09b8f61`。全 svg 1262 枚のうち前の Release と違うのは `Untitled-1.lys` の 1 枚で、第1108〜1110 の高速化の分は差 0。OMR の REQUESTS にお知らせを書いた＝OMR の repo では未 commit）。
@@ -107,7 +109,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **学習セットと Pages＝`docs/HANDOFF-LEARNING.md`**（レッスン 12 本・Pages の段 1〜4 は全部済＝判断待ちは無い・細かい残りはそこ。第910 が「段 1／3 済・判断待ち」の古い記述を直した）。
 - **プレビューの音源＝第901 で SoundFont シンセ（`docs/playback-design.md`）**: 音源は同梱しない（2026-10-12 決定・既定は OS の GM バンク）。LSP からの MIDI 出力は第911（Windows は網で実走・**mac／Linux は未実走＝MANUAL-CHECKS §3.5**）。`lysc wav` は第916・エディタの Export に第1030 で接続（C44 未確認）。`midiChannel` は要るときに。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」。
 - **`@todo` の memo の置き場＝第899〜900・第910 で閉じた**（規則は `docs/todo-memo-design.md`・残りは同 §4 と MANUAL-CHECKS §2.1 の実機確認。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
-- **線数の少ない譜表の点検＝済み**（第902・第910・第913 で閉じた・全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
 - **VS Code の手動確認＝第909 で 107 / 107 済**（手順と期待は `editors/vscode/MANUAL-CHECKS.md`・次の版で足した項目は `[ ]` から。ステップのキーは Ctrl+Shift+↑↓＝調の次の音・Ctrl+Shift+PgUp/PgDn＝オクターブ。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
 - **v0.15.0 は出した（2026-11-07・tag `8111ba3eb`・Release run `42292827975` 13/13・Marketplace 8/8・§1.1 第1119）**。v0.14.0 は 2026-10-26（tag `4188f209f`・表示名 Lily# Studio から）。push とタグはどちらもユーザー許可で Claude が打った（規則は「push はユーザー」のまま）。OMR の床 `OMR_MIN_VERSION` 0.4.0。手動確認の `[ ]` は MANUAL-CHECKS §3.6・§3.5 末尾。CHANGELOG は両方の `## Unreleased` に書き release 時に版番号へ（`RELEASING.md` §3）。Lab の本の警告は直さない（ユーザー決定 2026-10-17）。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」。
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
@@ -115,13 +116,11 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **双子の計器の残り（第881）＝分類済み**（本の側 8・ABC は LP の癖・LP 落ち 3＝本の側・全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
 - **U9 ユーザー報告 `space.lys` の小節頭の余白＝保留（ユーザー判断「一旦この件は忘れて」・第477）**。4 通りすべてで再現せず LP とも同比率（Lab `sessions/p477/`）。⚠️ **毒は今後も同じフォルダで回してよい**（ユーザー決定）＝毒の最中のビルドはユーザー側で避ける
 - ⏸ **perf の島（⒭⁸・⒮*・⒩⁴・⒨・⒯ …）は第615 で区切り＝一時停止（ユーザー判断・忠実度が先）**。本文と掃き終わった島（第434〜第456）の教訓は `HANDOFF-ARCHIVE.md`「§1.0 から移した perf の島」（第660）・閉じた島の一覧は第654 が畳んだ（各便の §1＝ARCHIVE・RULES §5.4 末尾）
-- **U8b 二声の同時 grace＝第1115 で閉じた**（列の合体・衝突の shift・臨時記号の 1 列。§1.1 第1115）。
 - ★★ **U10 ユーザーのコーパスに*効いていない弦番号*が 473 件（39 冊）**（第486・LYS5003・Lab `sessions/p486/lys5003-corpus.txt`）: 書いた `\N` の弦では弾けない音＝Lily# は黙って別の弦に描く（LP も同じ）。**ユーザー決定「放置」（第523）＝本は直さない・描画は今までと同じ**
 
 - ⚠️ **LP を `-dbackend=svg` で描く計器は `lysc ly --pin-fonts` 必須**（第690〜第695 の 6 本は無しで、数字の幅・高さが汎用 serif だった＝第736 ⑴⑵）。tab の tuplet の残差は全部 beam の決定（`uniformBeamedLength`）の帰結＝第737
 
 **⒝ 土台の変更・要設計（1 便では閉じない）**
-- **⒡′ bow を*staff 自身の枠*で採点して offset は描画時に足す＝第1116 で閉じた**（`BowShiftsOf`／`ReanchorBows` 退役・§1.1 第1116）
 - **⒵⁴ `prefixMarkAnchorX` の解き直し＝第1117 で反証して閉じた（Core 不変）**: 今の HEAD では 1 回 **0 B**（第420 の 1,399 B は消えていた）・時間 0.249%／打鍵・score ごとの memo は +7,956 B／打鍵で時間は動かず（§1.1 第1117）
 
 - ★ **⒵ perf は第615 で区切り（ユーザー判断）**: render −24%・割当 −31%（第598〜第615＝ARCHIVE）。照合の基準は `SvgGenerator.Generate`（Lab `sessions/p611/verify-all.ps1`）・打鍵ごとの計器は Lab `sessions/p613/lathost`。残る大物は設計級＝長い score の段ごと引き継ぎと collect の尾の `_tieTargetWarnings` abort（第613 ⒝）。⚠️ 弱参照の表で全 item を memo する形は GC で負ける（第602）
@@ -141,26 +140,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
-### 1.1 第1226セッション（2026-11-11・YT-DELL2）
+### 1.1 第1226セッション（2026-11-11〜14・YT-DELL2）
 
-オーナーの依頼: Copilot Chat が「ギターをハイコードでルート抜きに」に 12.2 分かかった件の調べと、提案 1〜4 の実装（base `9d5c995ff`）。OMR の `open` は 0。
-- **調べ**（Copilot のログ `~\.copilot\session-state\`・ツール呼び出しと時刻だけを読んだ）: `chordVoicings` を 1 コードずつ呼び、全文を読んで全文を書き直していたのが遅さの元。
-- **1 `chordVoicings`**（`Editing/ChordVoicingFinder`）: `omitRoot`・`fromFret`・`strings`。答えは構成音を先頭に、ダイアグラムは `@diagram( )` が読む綴り（`xx-12-10-x-10`）。弦をまたいでミュートする形は残すが後ろへ・注記つき（オーナー決定）。
-- **2 進行**: `chords`（`DescribeProgression`）＝各コード 12 候補から、最高音の移動＋最低音の半分＋音数の差＋ポジションの移動＋候補の順位×0.75＋ミュート越し 8 の最小の道（LILYSHARP-OWN）。
-- **3 `proposeScore` の `edits`**（`applyScoreEdits`）: `old` は `readScore` が見せた文字（絶対オクターブ）で 1 回だけ、`all: true` で全部。絶対オクターブの全文に当ててから今までの道（コンパイル・相対へ戻す）へ。差し戻しには「edits で送り直す」注記。
-- **4 `readScore` の `part`／`page`**（`scorePartView`・`scorePages`）: パートのブロック・各 section の中のそのパート・呼んでいるフレーズだけ（`[lines a-b]` と `…` の印）。6,500 B を超える読みはページに分ける（Copilot は 8 KB を超える答えをファイルに落とす）。実ファイルで全文 12,005 B → 2 ページ、`gtr` だけなら 2,819 B。
-- 網: `ChordVoicingFinderTests`・`aiTransformCore.test.ts`・`aiNewPiece.test.ts`。
-- 7.6: 移植は無い（道具とツール・LILYSHARP-OWN）。7.7 の匂い: **実物の Copilot では未確認**（`edits` を絶対オクターブの文字に当てて相対へ戻す道は単体の網だけ・`MANUAL-CHECKS` 第1226）／`scorePartView` は波括弧の文字読み（パーサではない）／進行の値段は耳で確かめていない／`OnStrings` の「隣り合う弦を残す」はルートなしのときだけ（エディタのコード図送りの順は変えていない）。⚠️ **`-Start p1226` は私の `dotnet build` と並走して build が落ちた**（開始時の full は使えない＝基準は同じ HEAD の第1225 `-End`）。`-Start` 中はビルドしない。探りの `Add-Type` は写しの dll で（bin の dll はコンソールが掴む）。
-- 指示ファイル（`esbuild.js` が書く頭）も `edits`・`part`・進行 1 回・`readChords` に直した＝ツールの説明だけでは常に渡る指示に負ける。
-- 門（`-End`、base `9d5c995ff`）: 開始時は第1225 の終了時と同じ HEAD＝full 15217 合格 / 0 失敗 / skip 2 / 合計 15219、終了時 full 15243 合格 / 0 失敗 / skip 2 / 合計 15245（+26 は足した網）。拡張の `npm test` 合格。台帳 1440 点 / ss 非ゼロ 302 総和 18.15959129 / OPEN 0。snapshot 251 枚。棚卸し OWN 308 → 309。未 push 135 件・Cantoria 27 件。歌い方＝`lyrics-singer-design.md` §11、歌い手の譜と書き出し（`SingerParts`・`HarmonyPartWriter`）＝同 §13・§14。
-- 楽譜に Markdown の文章＝`markdown-text-design.md` §8（1 済）。
-- **コードの形のステップの向きを反転（オーナー決定 2026-11-11）**: Ctrl+Shift+↓ が次の形（ハイポジションへ）、↑ が前＝`NoteStepper` の 2 つの入口に `-dir`。文言と網 30 本を合わせた。⚠️ サイトの動画（SHOTLIST 16 付近）は撮り直し（オーナー）。`13-0-15-14-15-x` のような形は後ろへ回さない（オーナー決定）。
-- **転回形は元のコードの形も巡る（オーナー依頼 2026-11-11）**: `NoteStepper.ShapeOrder`＝ベースが構成音の slash chord（`Dm/A`）は、ベースを外した `Dm` の形と上 4 弦の形もポジション順に差し込む。`C/D` は今までどおり。網 `AnInversion_WalksTheChordsOtherShapesToo`。
-- **プレビューの Ctrl+ホイール＝ポインターの位置を保つ（オーナー報告 2026-11-11）**: `extension.ts` の `zoomKeeping`。網 `aiCandidatePlay.test.ts`。実機は未確認（`MANUAL-CHECKS` 第1226）。
-- **自分で同じ依頼を回して進行モードを直した**: 1 コード 1 形（隣どうしの値段を全部足し、動かなくなるまで選び直す）・ポジションの移動 2 倍・2 音は 3 音以上の形があれば +4。`omitRoot` は三和音（ルートを抜くと 2 音）ではルートを残す読み替え（オーナー決定・同日）＝上 3 弦か `strings` の弦・`Answer.RootKept`・答えに印。7th 以上は抜く。オーナーの Zunda はこの答えで書き直した（Lab `sessions/p1226/zunda`・`before.lys` が元）。
-- **`readChords`＝コード進行を読むツール（オーナー依頼 2026-11-11）**: `ChordHarmonizer.DescribeProgression`（`Harmony/ChordHarmonizer.Progression.cs`）・`lilysharp/readChords`・`lilysharp_readChords`。セクションごとの `chords` 形式＋Form＋コードの一覧＋音域。**書かれた名前が先**（コード行はそのまま・`@chord`・形だけの `@chord`/`@diagram` は形の音・裸は乗っている音）、半分以上の小節に名前があれば名前だけ、少なければ名前の所以外を `HarmonyReader` で読む。`parts` は見せる小節と「書かれた和音の文字」を決めるだけで、名前は全パートの音から（ルート抜きのギターはベースが名付ける・オーナー決定同日）。⚠️ コード行は score が置かないと MIDI に鳴らない＝行は構文から読む。変化は拍に丸める。耳と実機は未確認。**Add Chord Track と読みを共有**（`ReadSection`・オーナー決定同日）＝書かれた名前はコマンドのコード行にも立つ（メロディだけの読みは除く）。
-- **`writePart`＝場所を指して音を書くツール（オーナー提案 2026-11-11）**: `Editing/PartWriter`（パート×セクション全部／`bars`／`lyrics`／`newParts`＝宣言と各 score の `staff`）→ `lilysharp/writePart` → 本文は `proposeScore` の全文の道へ。全部置くか、問題を全部言って何も変えない。新しい警告は 1 回だけ突き返す（フラグなし＝使う側の AI の希望）。小節は書かれた単位（小節線・`R*n`・フレーズ）で数え、反復や ending のあるブロックは `bars` を断る。実機未確認。
-
+base `9d5c995ff`・172 commit（未 push）。オーナーの依頼を順に（各 commit の本文に理由）。
+- **11-11〜12**: Copilot のツール（`chordVoicings`・`readChords`・`writePart`・`readScore` の part/page）、`indent 0` の名前、UTAU/ENUNU の判断（`singing-roadmap.md`）、声の入れ方の案内、`MidiForFile`、MIDI 読み込み（`MidiReader`）、評価 2・3 と修正、Cantoria `plan` と `lysc check --singer`。
+- **11-13**: 評価 3 の残りとギターの記号（palm mute・let ring・barre・vibrato・`@release`・矢印アルペジオ・弦の並びの tuning・tab ごとの capo・ハーモニクス）、記譜（数字の途中替え・破線/点線の弧と `solid`・`(p)`・`beaming syllabic`）、OMR #26（`restStyle z`）、`break` を chords と全パートで、ページの文章（`md`・`end`・`box`/`center`/`xMargin`/`yMargin`・見出しと箇条書き・Markdown の色と Enter）。評価 4 を書かせ、修正を始めた（ページの文章・描画・コード名はジャズの綴り・`@slide` は 1 弦・ペダル 3 種・LYS4078 `@cross` の衝突＝打鍵の外・キュー無音・16 ch の共有・condensedStaff の記号）。
+- **11-13〜14**: 歌い手（condensedStaff の後のパートの歌詞が 1 音ずれ＝REINA が止まる・失敗を問題パネルに）、バーが出ない（置き換えた仕事の声＝キーで知らせる）、`arranger`/`copyright`、6 つの見出しを ` ```md title ` で、見出しの並びは LilyPond どおり（行内の行送りは次の行より少し狭く＝0.75）、ページの文章の既定は余白から余白（11-13 の「譜表に合わせる」は 11-14 に取り消し）、共通の字下げは Markdown のコードにしない、` ```md start `（`end` の対・`preface` は退けた）と補完。
+- オーナー決定は `markdown-text-design.md`・各設計書・コードの注に日付つき。見送った見出し 7 つと評価の提案は `ROADMAP.md`。
+- 7.7 の匂い: VS Code の実機は全部未確認（補完の開き直し・問題パネル・プログレスバー・色付け）／一部は補助の報告だけ（npm の数）。補助は途中で 1 回 credits 切れ＝引き継いだ。モデルは Opus 5.5 に切り替わった（11-14）。
+- 門: 終了時 full 16533 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16536、npm 1136 合格 / skip 1。未 push 136 件・Cantoria 27 件。
 ## 以下は第1225セッションの経緯
 
 ### 1.1 第1225セッション（2026-11-11・YT-DELL2）
