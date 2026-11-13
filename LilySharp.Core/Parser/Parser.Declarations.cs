@@ -1138,6 +1138,7 @@ internal sealed partial class Parser
     // by ConsumeRejectedColon so the rest still parses.
     private TimeSignatureGreen ParseTimeSignature()
     {
+        int meterStart = _textPosition + Current.LeadingTriviaWidth;
         var timeKeyword = Expect(SyntaxKind.TimeKeyword);
         var bang = ParseForceMark();
         SyntaxToken? colon = ConsumeRejectedColon();
@@ -1160,12 +1161,43 @@ internal sealed partial class Parser
             }
             var addSlash = Expect(SyntaxKind.Slash);
             var addDen = Expect(SyntaxKind.IntegerLiteral);
-            return new TimeSignatureGreen(timeKeyword, bang, colon, [.. numTokens], addSlash, addDen, ParseBeatGrouping(null));
+            return new TimeSignatureGreen(timeKeyword, bang, colon, [.. numTokens], addSlash, addDen,
+                ParseSecondDenominator(meterStart) ?? ParseBeatGrouping(null));
         }
         var slash = Expect(SyntaxKind.Slash);
         var denominator = Expect(SyntaxKind.IntegerLiteral);
         return new TimeSignatureGreen(timeKeyword, bang, colon, [numerator], slash, denominator,
-            ParseBeatGrouping(int.TryParse(numerator.Text, out int beats) ? beats : null));
+            ParseSecondDenominator(meterStart) ?? ParseBeatGrouping(int.TryParse(numerator.Text, out int beats) ? beats : null));
+    }
+
+    // `time 2/4+3/8` — a meter of two denominators, which Lily# does not have (LYS0046). Until
+    // 2026-11-14 the meter ended at `2/4` and the rest was "'+' is not something a section can
+    // hold", "Invalid duration '3'" and "A bare duration repeats…", none of which said so
+    // (grammar evaluation 4). The `+ N/D` terms are read INTO the node, after its denominator,
+    // and the one error says what to write; TimeSignatureSyntax then reads the bar's whole
+    // length off them (Beats / BeatType), so the bars under it are measured as what was meant.
+    // Null when no such term follows.
+    private GreenNode?[]? ParseSecondDenominator(int meterStart)
+    {
+        bool TermAhead() => Check(SyntaxKind.Plus) && Peek(1).Kind == SyntaxKind.IntegerLiteral
+            && Peek(2).Kind == SyntaxKind.Slash && Peek(3).Kind == SyntaxKind.IntegerLiteral;
+        if (!TermAhead())
+            return null;
+        int firstTerm = _position;
+        while (firstTerm > 0 && _tokens[firstTerm - 1].Kind is SyntaxKind.IntegerLiteral or SyntaxKind.Slash or SyntaxKind.Plus)
+            firstTerm--;
+        var tokens = new List<GreenNode?>();
+        while (TermAhead())
+            for (int i = 0; i < 4; i++)
+                tokens.Add(Advance());
+        string written = string.Concat(_tokens.Skip(firstTerm).Take(_position - firstTerm).Select(t => t.Text));
+        int inkEnd = _textPosition - _tokens[_position - 1].TrailingTriviaWidth;
+        _diagnostics.Error(new TextSpan(meterStart, Math.Max(1, inkEnd - meterStart)), DiagnosticCodes.MeterOfTwoDenominators,
+            $"'time {written}' is not a meter Lily# has: a time signature has ONE denominator. "
+            + (Syntax.TimeSignatureSyntax.OneDenominatorSpelling(written) is { } spelling
+                ? $"Write the whole bar over one note value, its groups after it or in the numerator: {spelling}."
+                : "Write the whole bar over one note value, its groups after it: time 7/8 (4+3) for a bar of 2/4 and 3/8."));
+        return [.. tokens];
     }
 
     // The beat grouping after a meter — 	ime 7/8 (2+2+3) (owner's decision 2026-10-12): the

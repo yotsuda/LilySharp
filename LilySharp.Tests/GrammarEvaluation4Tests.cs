@@ -1239,4 +1239,32 @@ public class GrammarEvaluation4Tests
         Assert.Contains(Said("part as { clef treble }\nsection A { as { c'1 | } }\nform { ~A }\nscore { staff as }\n"),
             d => d.Message.StartsWith("Expected a name, found 'as', a reserved word", StringComparison.Ordinal));
     }
+
+    /// <summary><c>time 2/4+3/8</c> was "'+' is not something a section can hold", "Invalid
+    /// duration '3'" and "A bare duration repeats…": none said that a meter has one
+    /// denominator. One error at the <c>time</c> says it and what to write (LYS0046), and the
+    /// bars under it are measured as the bar that was meant, so nothing follows.</summary>
+    [Theory]
+    [InlineData("2/4+3/8", "time 7/8 (4+3)", "c'4 d' e'8 f' g'")]
+    [InlineData("2/4 + 3/8", "time 7/8 (4+3)", "c'4 d' e'8 f' g'")]
+    [InlineData("3/8+2/4", "time 7/8 (3+4)", "c'8 d' e' f'4 g'")]
+    [InlineData("2/4+3/4", "time 2+3/4", "c'4 d' e' f' g'")]
+    [InlineData("3+2/8+1/4", "time 7/8 (3+2+2)", "c'4 d' e'8 f' g'")]
+    public void AMeterOfTwoDenominators_IsOneError_ThatSaysWhatToWrite(string meter, string spelling, string bar)
+    {
+        string Book(string time) => "octave absolute\npart a { clef treble }\npart b { clef treble }\n"
+            + $"section B {{\n  {time}\n  a {{ {bar} | {bar} | }}\n  b {{ {bar} | {bar} | }}\n}}\nform {{ ~B }}\nscore {{ staff a staff b }}\n";
+        string source = Book($"time {meter}");
+        var said = Assert.Single(Said(source));
+        Assert.Equal((DiagnosticCodes.MeterOfTwoDenominators, DiagnosticSeverity.Error), (said.Code, said.Severity));
+        Assert.Equal(new TextSpan(source.IndexOf("time", StringComparison.Ordinal), $"time {meter}".Length), said.Span);
+        Assert.Contains("a time signature has ONE denominator", said.Message);
+        Assert.EndsWith($": {spelling}.", said.Message);
+        Assert.Equal(source, SyntaxTree.Parse(source).Root.ToFullString());
+        // What the message says to write is a meter, and those bars fill it.
+        Assert.Empty(Said(Book(spelling)).Select(d => d.Message));
+        // The supported spellings beside it say nothing; a bar that is not the meter's still does.
+        Assert.Empty(Said(Book("time 7/8 (2+2+3)").Replace(bar, "c'4 d' e'8 f' g'")).Select(d => d.Message));
+        Assert.Contains(Said(Book("time 3/4")), d => d.Code is DiagnosticCodes.MeasureDurationMismatch or DiagnosticCodes.MeasureOverflow);
+    }
 }

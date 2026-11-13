@@ -328,6 +328,13 @@ public static class DiagnosticCodes
     /// 4, 2026-11-14 — it was "Music cannot go at the top level" and a cascade).</summary>
     public const string NameReadsAsMusic = "LYS0045";
 
+    /// <summary>Parse error: a meter of two denominators, <c>time 2/4+3/8</c>. A time signature
+    /// has one; the message says the one-denominator spelling of the same bar
+    /// (<c>time 7/8 (4+3)</c>, or <c>time 2+3/4</c> when the note value is the same), and the
+    /// bars under it are measured as that bar (<c>Parser.ParseSecondDenominator</c>; grammar
+    /// evaluation 4, 2026-11-14 — it was LYS0030 at the '+', LYS1004 and LYS0016).</summary>
+    public const string MeterOfTwoDenominators = "LYS0046";
+
     /// <summary>Lexer error: an unexpected character was encountered.</summary>
     /// <remarks>
     /// ⚠️ Was LYS0014, which <see cref="KeyModeAssumedMajor"/> already held — this and the

@@ -164,6 +164,8 @@ public sealed class TimeSignatureSyntax : SyntaxNode
     {
         get
         {
+            if (SecondDenominator is { } whole)
+                return whole.Units.Sum();
             int sum = 0;
             bool any = false;
             for (int i = 3; i < SlashIndex; i++)
@@ -216,7 +218,67 @@ public sealed class TimeSignatureSyntax : SyntaxNode
     /// <summary>
     /// Gets the denominator value (e.g., 4 for 4/4).
     /// </summary>
-    public int BeatType => int.TryParse(Denominator?.Text, out var n) ? n : 4;
+    public int BeatType => SecondDenominator?.Denominator ?? (int.TryParse(Denominator?.Text, out var n) ? n : 4);
+
+    /// <summary>
+    /// The bar of a meter written with two denominators — <c>time 2/4+3/8</c>, an ERROR
+    /// (LYS0046, <c>Parser.ParseSecondDenominator</c>) whose <c>+ N/D</c> terms the node keeps
+    /// after its denominator: the groups in units of the smallest note value (4+3) and that
+    /// value (8). <see cref="Beats"/> and <see cref="BeatType"/> read it, so the bars under the
+    /// refused meter are measured as the 7/8 that was meant and the one error is all that is
+    /// said. Null for every meter the language has.
+    /// </summary>
+    private (int[] Units, int Denominator)? SecondDenominator
+    {
+        get
+        {
+            if (GetChild(SlashIndex + 2) is not SyntaxTokenNode { Kind: SyntaxKind.Plus })
+                return null;
+            var sb = new System.Text.StringBuilder();
+            for (int i = 3; i < SlotCount; i++)
+                if (GetChild(i) is SyntaxTokenNode t)
+                    sb.Append(t.Text);
+            return OneDenominator(sb.ToString());
+        }
+    }
+
+    /// <summary>What to write for a meter of several denominators (<c>2/4+3/8</c> →
+    /// <c>time 7/8 (4+3)</c>; <c>2/4+3/4</c> → <c>time 2+3/4</c>), or null when its terms are
+    /// not ones a bar can be counted in.</summary>
+    internal static string? OneDenominatorSpelling(string written)
+    {
+        if (OneDenominator(written) is not (var units, var denominator))
+            return null;
+        bool oneValue = written.Split('+').Where(t => t.Contains('/')).Select(t => t[(t.IndexOf('/') + 1)..]).Distinct().Count() == 1;
+        return oneValue
+            ? $"time {string.Join('+', units)}/{denominator}"
+            : $"time {units.Sum()}/{denominator} ({string.Join('+', units)})";
+    }
+
+    // "2/4+3/8" → ([4, 3], 8); "3+2/8+1/4" → ([3, 2, 2], 8). Null unless every term is
+    // whole numbers over a power of two.
+    private static (int[] Units, int Denominator)? OneDenominator(string written)
+    {
+        var terms = new List<(int Beats, int Denominator)>();
+        var pending = new List<int>();
+        foreach (string piece in written.Split('+'))
+        {
+            string[] parts = piece.Split('/');
+            if (parts.Length > 2 || !int.TryParse(parts[0], out int beats) || beats <= 0 || beats > 999)
+                return null;
+            pending.Add(beats);
+            if (parts.Length == 1)
+                continue;
+            if (!int.TryParse(parts[1], out int value) || value <= 0 || value > 128 || (value & (value - 1)) != 0)
+                return null;
+            terms.AddRange(pending.Select(b => (b, value)));
+            pending.Clear();
+        }
+        if (terms.Count == 0 || pending.Count > 0)
+            return null;
+        int denominator = terms.Max(t => t.Denominator);
+        return ([.. terms.Select(t => t.Beats * (denominator / t.Denominator))], denominator);
+    }
 }
 
 /// <summary>

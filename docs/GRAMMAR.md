@@ -623,6 +623,10 @@ BeatGrouping   = '(' , Integer , { '+' , Integer } , ')' ;
                     to the numerator, and an additive numerator (3+2+2/8, which groups by its own
                     terms) takes none: LYS0041 otherwise. The same meter grouped otherwise mid-piece
                     prints no signature and regroups the beams from there. *)
+                 (* A meter of TWO denominators — 'time 2/4+3/8' — is not in the language: LYS0046,
+                    once, at the 'time', naming the one-denominator spelling of the same bar
+                    ('time 7/8 (4+3)'; 'time 2+3/4' for 2/4+3/4). The '+ N/D' terms are read into
+                    the node and its bars are measured as that bar, so nothing else is said. *)
                  (* 'time none' is SENZA MISURA — unmetered music, LilyPond's \cadenzaOn.
                     From it to the next 'time N/M' the engine builds no automatic measure
                     boundary: a measure ends only at a WRITTEN '|', which still draws the
