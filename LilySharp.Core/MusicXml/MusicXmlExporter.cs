@@ -4288,7 +4288,7 @@ public sealed class MusicXmlExporter
     /// <summary>The written notes of every chord this walk has emitted, keyed by
     /// node — what a following <c>q</c> copies (post-transpose spelling; LP
     /// expands repetitions after \relative, so a q never re-reads the frame).</summary>
-    private readonly Dictionary<ChordSyntax, List<(string Step, int Alter, int Octave)>> _resolvedChordXmlNotes = new();
+    private readonly Dictionary<ChordSyntax, List<(string Step, int Alter, int Octave, int Quarter)>> _resolvedChordXmlNotes = new();
 
     /// <summary>The resolved spelling of every pitched note this walk has
     /// emitted - what a following bare duration copies. Same contract as
@@ -4416,7 +4416,8 @@ public sealed class MusicXmlExporter
                     var xmlNote = new MusicXmlNote
                     {
                         Step = m.Step,
-                        Alter = m.Alter,
+                        Alter = m.Quarter == 0 ? m.Alter : m.Alter + 0.5 * m.Quarter,
+                        AccidentalName = QuarterToneAccidentalName(m.Alter, m.Quarter),
                         Octave = m.Octave + bareDisplacement,
                         Duration = durationTicks,
                         Type = type,
@@ -4711,7 +4712,7 @@ public sealed class MusicXmlExporter
             }
             return;
         }
-        var resolved = new List<(string Step, int Alter, int Octave)>();
+        var resolved = new List<(string Step, int Alter, int Octave, int Quarter)>();
 
         var duration = GetDuration(chord.Duration);
         int durationTicks = FractionToTicks(duration);
@@ -4759,12 +4760,14 @@ public sealed class MusicXmlExporter
         {
             var (step, alter, targetOctave) = ResolveChordMemberPitch(
                 pitch, isFirst, chordOctave, ref firstStep, ref firstOctave);
-            resolved.Add((step, alter, targetOctave));
+            resolved.Add((step, alter, targetOctave, pitch.QuarterOffset));
 
             var xmlNote = new MusicXmlNote
             {
                 Step = step,
-                Alter = alter,
+                // A member's quarter tone, as a note's (found 2026-11-14: <cih' eeh'> went out as C and E).
+                Alter = pitch.QuarterOffset == 0 ? alter : alter + 0.5 * pitch.QuarterOffset,
+                AccidentalName = QuarterToneAccidentalName(alter, pitch.QuarterOffset),
                 Octave = targetOctave,
                 Duration = durationTicks,
                 Type = type,
@@ -4864,7 +4867,7 @@ public sealed class MusicXmlExporter
         {
             var (sstep, salter, soctave) = ApplyWrittenTransforms(sn.Step, sn.Alter, sn.Octave);
             string stepName = "CDEFGAB"[sstep].ToString();
-            resolved.Add((stepName, salter, soctave));
+            resolved.Add((stepName, salter, soctave, 0));
             var xmlNote = new MusicXmlNote
             {
                 Step = stepName,
@@ -4919,7 +4922,7 @@ public sealed class MusicXmlExporter
                 firstStep, firstOctave, degree.Number, degree.Alteration,
                 degree.OctaveOffset, _keyFifths);
             (dstep, dalter, doctave) = ApplyWrittenTransforms(dstep, dalter, doctave);
-            resolved.Add(("CDEFGAB"[dstep].ToString(), dalter, doctave));
+            resolved.Add(("CDEFGAB"[dstep].ToString(), dalter, doctave, 0));
             var xmlNote = new MusicXmlNote
             {
                 Step = "CDEFGAB"[dstep].ToString(),
@@ -5052,7 +5055,8 @@ public sealed class MusicXmlExporter
             var xmlNote = new MusicXmlNote
             {
                 Step = m.Step,
-                Alter = m.Alter,
+                Alter = m.Quarter == 0 ? m.Alter : m.Alter + 0.5 * m.Quarter,
+                        AccidentalName = QuarterToneAccidentalName(m.Alter, m.Quarter),
                 Octave = m.Octave + displacement,
                 Duration = durationTicks,
                 Type = type,
@@ -5485,7 +5489,8 @@ public sealed class MusicXmlExporter
                         IsSlash = isAcciaccatura,
                         StealTimePrevious = stealPrevious,
                         Step = step,
-                        Alter = alter,
+                        Alter = note.Pitch.QuarterOffset == 0 ? alter : alter + 0.5 * note.Pitch.QuarterOffset,
+                        AccidentalName = QuarterToneAccidentalName(alter, note.Pitch.QuarterOffset),
                         Octave = targetOctave,
                         Type = type,
                         ActualNotes = tupletActual,
@@ -5569,7 +5574,8 @@ public sealed class MusicXmlExporter
                             StealTimePrevious = stealPrevious,
                             IsChord = !firstMember,
                             Step = cstep,
-                            Alter = calter,
+                            Alter = pitch.QuarterOffset == 0 ? calter : calter + 0.5 * pitch.QuarterOffset,
+                            AccidentalName = QuarterToneAccidentalName(calter, pitch.QuarterOffset),
                             Octave = coctave,
                             Type = chordType,
                             ActualNotes = chordActual,
