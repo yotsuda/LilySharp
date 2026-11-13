@@ -195,7 +195,12 @@ A section named as a frame (intro, outro, coda, ending, tag, prelude, postlude, 
   2026-11-01: a song sang its 48 bars from the first note to the last without one). A bar is sung
   through when the part's notes cover it with no gap.
 - A note held a semitone or a minor ninth from the harmony (a major seventh over the bass is
-  colour, not a clash).
+  colour, not a clash). Not a tone of the chord the row names there (the seventh of `Fmaj7`, the
+  `#9` of `D7(#9)`), not a passing or neighbour note (a beat at most, stepwise between two notes
+  that sit in the harmony), not a cross head (a spoken word, a key click). One line several parts
+  play together is said once. Three lines or more with no one part under all of them are the
+  piece's language (`harmony.dissonant`, a choice to weigh, said once): atonal writing, clusters,
+  a band's voicings (grammar evaluation 4, 2026-11-13).
 - Sections whose tune ends open against the bass (a 2nd, a tritone or a 7th; a 4th does not count).
 
 **The piano**

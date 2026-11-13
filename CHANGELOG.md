@@ -6,6 +6,15 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Evaluation 4, `lysc review` on jazz, choral and contemporary scores:** a big band chart had twelve of its horns told "a wrong note?", a chamber piece of seconds and clusters eight of its parts, and both were "a band piece" that should keep one tempo.
+  - **A tone of the chord the row names is no wrong note.** The major seventh of `Fmaj7` over its root, the `#9` of `D7(#9)` over its third: where a `chords` row sounds, a melody note that is one of its chord's tones is not counted as standing a semitone from the harmony.
+  - **A passing note is let pass.** A quarter come to by step and left by step, between two notes that sit in the harmony (B C♯ D over a held D), is the "passing one, short and moving on by step" the finding's own words allow.
+  - **A cross head is no pitch.** A note written `@notehead(cross)` or `@dead` — a spoken word, a key click — is not heard against the harmony, nor the harmony against it.
+  - **One line in several parts is said once**, of all of them (four saxes on one riff were four findings).
+  - **Dissonance in most of the parts is a language.** Three lines or more that each hold such notes, with no one part under all of them, are told once, as a choice to weigh (`[style]`), not part by part as mistakes.
+  - **A piano and percussion among winds and strings are no band.** With no bass and nothing electric, drums and a chord instrument make a band while the other parts are two at most; an ensemble is not asked for an electric bass and one tempo.
+  - **An ending that broadens is no change of tempo.** A slower `tempo` within the last four bars of a piece of sixteen or more is the ending's.
+  - **A passage marked `unis.` is one line.** From a note marked `@text("unis.")` (or "unison", "a 2") until the two voices part, their unisons and octaves are not counted as parallels or as "two parts singing one line".
 - **Evaluation 4, diagnostics that were wrong:**
   - **A pedal's release is judged on its own staff.** With a pedal in two parts, the second part's `@!sustain` was told "this '@!' closes nothing, so nothing is drawn; no pedal is down in this voice" (LYS4018) beside its own drawn, closed bracket: the check paired the pedal marks of every staff together, where the page pairs each staff's alone. The same mistake hid a real one — a pedal one staff never releases was taken as lifted by another staff's release — and that is now reported.
   - **A hairpin ends at its `@niente`.** `c''2@mp@decresc~ c''4 r4@niente | c''1@f` was told `@decresc leads to @f, louder than the @mp it starts from` (LYS4035): the `@f` after the niente is a new level, not where the hairpin leads. Likewise a `@niente@cresc` starts from nothing, not from the level written before it.

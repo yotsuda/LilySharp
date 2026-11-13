@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -136,8 +136,13 @@ public static class CompositionChecks
         var roles = parts.Select(p => RoleOf(p)).ToList();
         // Drums alone do not make one: strings with drums are an orchestra's (owner's trial
         // 2026-10-29: a boss-battle piece for strings and drums was asked for a bass and a guitar).
+        // Nor do a piano and percussion among an ensemble's winds and strings: with no bass and nothing
+        // electric, drums and a chord instrument are a band's while the others are a singer or a horn or
+        // two (grammar evaluation 4, 2026-11-13: a chamber piece for eight players with piano and
+        // percussion was told to keep one tempo and to add an electric bass).
+        int others = roles.Count(r => !r.Drums && !r.Bass && !r.Chords);
         bool band = roles.Any(r => r.Electric) || (roles.Any(r => r.Bass) && roles.Any(r => r.Chords))
-            || (roles.Any(r => r.Drums) && roles.Any(r => r.Bass || r.Chords));
+            || (roles.Any(r => r.Drums) && (roles.Any(r => r.Bass) || (roles.Any(r => r.Chords) && others <= BandOthersWithNoBass)));
         if (band && parts.Count >= 2)
         {
             if (!roles.Any(r => r.Drums))
@@ -180,7 +185,14 @@ public static class CompositionChecks
                     + "and falls together: write the rhythm section's levels where the lead's change (the drums @f where the chorus "
                     + "comes in, the bass with them, both down for a quiet bridge), with the hairpins between.") { Parts = [.. held.Select(p => p.Name)] });
             }
-            int tempos = midi.Tracks.SelectMany(t => t.TempoChanges).Select(t => t.MicrosecondsPerBeat).Distinct().Count();
+            // An ending that broadens is the arrangement's own: a slower tempo in the last bars is not a change
+            // "in the middle" (grammar evaluation 4, 2026-11-13: a big band chart's "Broadly" over its last two
+            // bars).
+            var changes = midi.Tracks.SelectMany(t => t.TempoChanges).OrderBy(t => t.Tick).ToList();
+            var barStarts = midi.BarTicks.Where(b => b > 0).ToList();
+            int ending = barStarts.Count >= BroadEndingBars * 4 ? barStarts[^BroadEndingBars] : int.MaxValue;
+            int tempos = changes.Where((c, i) => !(c.Tick >= ending && i > 0 && c.MicrosecondsPerBeat > changes[i - 1].MicrosecondsPerBeat))
+                .Select(t => t.MicrosecondsPerBeat).Distinct().Count();
             if (tempos > 1)
                 findings.Add(new("band.tempo-changes", "A band piece keeps one tempo from start to end: write one `tempo` at the top and none in the sections."));
         }
@@ -570,7 +582,7 @@ public static class CompositionChecks
         }
         findings.AddRange(WideChords(source, root, midi, hands.Keys, barList, fifths));
 
-        findings.AddRange(Clashes(midi, melodies, barList, fifths, SwungBlueNotes(root)));
+        findings.AddRange(Clashes(midi, melodies, barList, fifths, SwungBlueNotes(root), UnpitchedHeads(root), [.. hands.Keys]));
         findings.AddRange(LowChords(midi, barList, fifths, parts));
         findings.AddRange(ThickChordsOnADistortedSound(midi, parts, barList, fifths));
         findings.AddRange(BandChordsOnLowStrings(midi, parts, barList, fifths));
@@ -624,8 +636,8 @@ public static class CompositionChecks
         findings.AddRange(NoBreath(midi, parts, barList, sung));
         findings.AddRange(SingersLines(midi, parts, declared is { } placed
             ? placed.Declaration.DescendantNodes<StaffRenderSyntax>().Select(s => s.PartToken?.Text).OfType<string>().ToList()
-            : [], fifths));
-        findings.AddRange(ChoirParallels(tree, midi, parts, declared?.Declaration, barList));
+            : [], fifths, MarkedUnison(root)));
+        findings.AddRange(ChoirParallels(tree, midi, parts, declared?.Declaration, barList, MarkedUnison(root)));
         findings.AddRange(BarsWithoutWords(midi, root, parts, barList, sung));
         findings.AddRange(PianoHolds(midi, parts, barList, sung));
         findings.AddRange(TuneUnderItsChords(midi, barList));
@@ -789,6 +801,18 @@ public static class CompositionChecks
     // A note on the beat a semitone from the harmony, this many times and in this share of the
     // melody's long notes on the beat: a wrong note, not a passing one (owner's request 2026-10-30).
     private const int ClashFewest = 3;
+
+    // With no bass and nothing electric, drums and a chord instrument are a band's with this many other
+    // parts at most (a singer, a horn or two); more are an ensemble's winds and strings.
+    private const int BandOthersWithNoBass = 2;
+
+    // A slower tempo within this many bars of the end — of a piece four times as long at least, where
+    // they are an ending and not half of it — is the ending broadening, not a change of tempo.
+    private const int BroadEndingBars = 4;
+
+    // This many lines each holding such notes, and no one part under all of them: the piece's language
+    // (Clashes).
+    private const int DissonantLinesFewest = 3;
     private const double ClashShare = 0.05;
 
     /// <summary>
@@ -817,12 +841,26 @@ public static class CompositionChecks
     /// line's chromatic approach — a note of a quarter or less moving straight on by a semitone — which is
     /// not the harmony the tune is heard against.</summary>
     private static IEnumerable<CompositionFinding> Clashes(MidiFile midi, HashSet<string> melodies, List<int> barList, int fifths,
-        int[]? blueNotes = null)
+        int[]? blueNotes = null, HashSet<int>? unpitched = null, HashSet<string>? hands = null)
     {
         int tpq = midi.TicksPerQuarterNote;
-        var notes = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9)
+        // A head that names no pitch — a spoken word's ×, a key click — is no note of the harmony, and
+        // none is heard against it (UnpitchedHeads).
+        var notes = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9
+                && !(unpitched != null && (unpitched.Contains(n.SourcePos) || unpitched.Contains(n.MemberPos))))
             .Select(n => (Part: n.Part ?? t.Name, n.Voice, n.StartTick, n.DurationTicks, n.Pitch))).ToList();
+        // The chord a row names where a note starts, as the pitch classes the row sounds: a note that is
+        // one of them is the chord's own tone, whatever it stands a semitone from — the major seventh of
+        // Fmaj7 over its root, the ♯9 of D7(♯9) over its third, the ♭9 over the root (grammar evaluation
+        // 4, 2026-11-13: a big band's thirteen horns, voiced through the changes its row writes, were each
+        // told "a wrong note? Take the chord's own tone there").
+        var row = notes.Where(n => n.Part.EndsWith(" (chords)", System.StringComparison.Ordinal)).ToList();
+        bool ChordTone(int tick, int pitch) => row.Any(c => c.StartTick <= tick && tick < c.StartTick + c.DurationTicks
+            && (c.Pitch - pitch) % 12 == 0);
         var voices = LineVoices(midi);
+        // Who a note stands against: a part, or the harmony itself — a piano's two hands and the chord rows, one voice.
+        string Player(string part) => hands?.Contains(part) == true || part.EndsWith(" (chords)", System.StringComparison.Ordinal) ? "" : part;
+        var found = new List<(string Part, List<(int Bar, int Note, int Against, List<string> With)> Clashes)>();
         foreach (var part in melodies)
         {
             // The melody is the part's line voice; its own chords in another voice are harmony it sounds against.
@@ -834,29 +872,87 @@ public static class CompositionChecks
             bool Approach((string Part, int Voice, int StartTick, int DurationTicks, int Pitch) n)
                 => blueNotes != null && n.DurationTicks <= tpq && notes.Any(o => o.Part == n.Part && o.Voice == n.Voice
                     && o.StartTick == n.StartTick + n.DurationTicks && System.Math.Abs(o.Pitch - n.Pitch) == 1);
+            // A passing or a neighbour note: a beat at most, come to by step from the note before it and
+            // left by step for the next — what the finding's own words allow ("a passing one, short and
+            // moving on by step") — where both of those sit in the harmony: a note a semitone, in any
+            // octave, from what sounds with it is nothing to pass from or to (F G A over an F♯ bass is a
+            // tune against its bass, each note of it). A choir's soprano, B C♯ D in quarters over a held
+            // D, was told of its C♯ (grammar evaluation 4, 2026-11-13).
+            bool Sits((string Part, int Voice, int StartTick, int DurationTicks, int Pitch) n)
+                => !others.Any(o => o.StartTick <= n.StartTick && n.StartTick < o.StartTick + o.DurationTicks
+                    && ((n.Pitch - o.Pitch) % 12 + 12) % 12 is 1 or 11);
+            bool Passing((string Part, int Voice, int StartTick, int DurationTicks, int Pitch) n)
+                => n.DurationTicks <= tpq
+                    && line.Any(o => o.StartTick + o.DurationTicks == n.StartTick && System.Math.Abs(o.Pitch - n.Pitch) is 1 or 2 && Sits(o))
+                    && line.Any(o => o.StartTick == n.StartTick + n.DurationTicks && System.Math.Abs(o.Pitch - n.Pitch) is 1 or 2 && Sits(o));
             var held = line.Where(m => m.DurationTicks >= tpq && (m.StartTick - barList.LastOrDefault(b => b <= m.StartTick)) % tpq == 0
                 && !(blueNotes != null && blueNotes.Contains((m.Pitch % 12 + 12) % 12))).ToList();
-            var clashes = new List<(int Bar, int Note, int Against)>();
+            var clashes = new List<(int Bar, int Note, int Against, List<string> With)>();
             foreach (var m in held)
             {
+                if (ChordTone(m.StartTick, m.Pitch) || Passing(m))
+                    continue;
                 // A semitone or a minor ninth over a note, or a semitone under one close by — not a major
                 // seventh over the bass, a chord's colour (owner's trial 2026-10-30: B♭ over a C♭ bass,
                 // ♭VImaj7, was told a wrong note).
-                var against = others.FirstOrDefault(n => n.StartTick <= m.StartTick && m.StartTick < n.StartTick + n.DurationTicks
+                var against = others.Where(n => n.StartTick <= m.StartTick && m.StartTick < n.StartTick + n.DurationTicks
                     && (m.Pitch - n.Pitch) is var gap && (gap > 0 ? gap % 12 == 1 || gap == 11 : -gap % 12 is 1 or 11)
-                    && !Approach(n));
-                if (against.Part != null)
-                    clashes.Add((barList.Count(b => b <= m.StartTick), m.Pitch, against.Pitch));
+                    && !Approach(n)).ToList();
+                if (against.Count > 0)
+                    clashes.Add((barList.Count(b => b <= m.StartTick), m.Pitch, against[0].Pitch, [.. against.Select(n => Player(n.Part)).Distinct()]));
             }
             if (clashes.Count < ClashFewest || clashes.Count < held.Count * ClashShare)
                 continue;
+            found.Add((part, clashes));
+        }
+
+        // One line several parts play together — a riff in unison or octaves — is said once, of them all.
+        var lines = found.GroupBy(f => string.Join(' ', f.Clashes.Select(c => $"{c.Bar}:{(c.Note % 12 + 12) % 12}")))
+            .Select(g => (Parts: g.Select(f => f.Part).ToList(), g.First().Clashes)).ToList();
+        static string BarsOf(List<int> bars) => string.Join(", ", bars.Take(6)) + (bars.Count > 6 ? ", …" : "");
+
+        // Dissonance in most of what sounds is a language, not a slip (grammar evaluation 4, 2026-11-13: a
+        // chamber piece of seconds, sevenths and clusters had eight parts each told "a wrong note?"; "noise
+        // for this repertoire"). Said once, as a choice to weigh — unless one part stands under all of it:
+        // then that part, or the others against it, is what to look at, and each is told as before.
+        if (lines.Count >= DissonantLinesFewest
+            && !found.SelectMany(f => f.Clashes).SelectMany(c => c.With).Distinct().Any(one =>
+                found.All(f => Player(f.Part) == one || f.Clashes.Count(c => c.With.Any(w => w != one)) < ClashFewest)))
+        {
+            var all = lines.SelectMany(l => l.Clashes).Select(c => c.Bar).Distinct().Order().ToList();
+            yield return new("harmony.dissonant", $"{string.Join(", ", lines.SelectMany(l => l.Parts))}: each holds notes on the beat a semitone from what sounds "
+                + $"with them ({lines.Sum(l => l.Clashes.Count)} times in all; bars {BarsOf(all)}, as the form plays them) — where the piece's language is "
+                + "dissonant (atonal writing, clusters, a band's voicings with no chord row to name them) this is its sound: keep it. In a tonal piece, look at "
+                + "the bars named: a note against the chord is a passing one, short and moving on by step.")
+            { Parts = [.. lines.SelectMany(l => l.Parts)], Bars = all };
+            yield break;
+        }
+        foreach (var (who, clashes) in lines)
+        {
             var bars = clashes.Select(c => c.Bar).Distinct().ToList();
-            yield return new("harmony.clash", $"{part}, the melody: {clashes.Count} times a note held on the beat stands a semitone from the harmony sounding "
-                + $"with it (bars {string.Join(", ", bars.Take(6))}{(bars.Count > 6 ? ", …" : "")}, as the form plays them; "
+            yield return new("harmony.clash", $"{string.Join(", ", who)}, the melody: {clashes.Count} times a note held on the beat stands a semitone from the harmony sounding "
+                + $"with it (bars {BarsOf(bars)}, as the form plays them; "
                 + $"{PartRanges.SpelledFromPitch(clashes[0].Note, fifths)} against {PartRanges.SpelledFromPitch(clashes[0].Against, fifths)} first) — "
                 + "a wrong note? Take the chord's own tone there, or change the chord under it; a note against the chord is a "
-                + "passing one, short and moving on by step — unless it is a blue note meant, a minor third over a major chord.") { Parts = [part], Bars = [.. bars] };
+                + "passing one, short and moving on by step — unless it is a blue note meant, a minor third over a major chord.") { Parts = who, Bars = [.. bars] };
         }
+    }
+
+    /// <summary>
+    /// Where the notes written with a cross head start (<c>@notehead(cross)</c>, <c>@notehead(x)</c>, <c>@dead</c>):
+    /// a spoken word in a singer's part, a key click, a muted string. The letter under the head says where
+    /// it is drawn, not a pitch anyone hears a harmony in (grammar evaluation 4, 2026-11-13: a choir's
+    /// spoken bars, written × on one line, were read as notes against the piano's chords).
+    /// </summary>
+    private static HashSet<int> UnpitchedHeads(SyntaxNode root)
+    {
+        var at = new HashSet<int>();
+        foreach (var mark in root.DescendantNodes())
+            if ((mark is MusicMarkSyntax m && Semantics.AnnotationValues.Notehead(m) is "x" or "cross")
+                || mark is ArticulationSyntax { Name: "dead" })
+                if (mark.Parent is { } note)
+                    at.Add(note.Span.Start);
+        return at;
     }
 
     // A third or a second stacked under C3 (MIDI 48) muddies — the low interval limit — in this many
@@ -986,6 +1082,48 @@ public static class CompositionChecks
     // How much of a choir's parallels a finding names: the pairs, and each pair's bars.
     private const int ParallelsPairsNamed = 6, ParallelsBarsNamed = 8;
 
+    /// <summary>Where the notes marked <c>unis.</c> start (<c>@text("unis.")</c>, "unison", "a 2"): the page's own word
+    /// that the voices sing one line from there.</summary>
+    private static HashSet<int> MarkedUnison(SyntaxNode root)
+        => root.DescendantNodes<MusicMarkSyntax>()
+            .Where(m => Semantics.AnnotationValues.Text(m) is { } word
+                && System.Text.RegularExpressions.Regex.IsMatch(word, @"^\s*(unis(on|\.)?|a\s*2)\s*$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            .Select(m => m.Parent?.Span.Start ?? -1).ToHashSet();
+
+    /// <summary>
+    /// The stretches two singers sing as one because the page says so: from a note marked <c>unis.</c> in
+    /// either part, where the two are in unison or octaves, until they part. Doubling there is the
+    /// arrangement's texture, not two lines that fell together (grammar evaluation 4, 2026-11-13: a
+    /// choral arrangement's verse, soprano and alto marked "unis.", was told of parallel unisons in each
+    /// of its bars and of "two parts singing one line").
+    /// </summary>
+    private static List<(int From, int To)> UnisonPassages(MidiFile midi, HashSet<int> marked, string a, string b)
+    {
+        var notes = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9 && !n.IsGrace && (n.Part ?? t.Name) is var p && (p == a || p == b))
+            .Select(n => (Part: n.Part ?? t.Name, Note: n))).ToList();
+        var starts = notes.Where(n => marked.Contains(n.Note.SourcePos)).Select(n => n.Note.StartTick).ToHashSet();
+        var spans = new List<(int From, int To)>();
+        if (starts.Count == 0)
+            return spans;
+        int? At(string part, int t) => notes.Where(n => n.Part == part && n.Note.StartTick <= t && t < n.Note.StartTick + n.Note.DurationTicks)
+            .Select(n => (int?)n.Note.Pitch).Max();
+        int from = -1;
+        foreach (int t in notes.Select(n => n.Note.StartTick).Distinct().Order())
+        {
+            bool apart = At(a, t) is { } x && At(b, t) is { } y && (x - y) % 12 != 0;
+            if (from >= 0 && apart)
+            {
+                spans.Add((from, t));
+                from = -1;
+            }
+            if (from < 0 && !apart && starts.Contains(t))
+                from = t;
+        }
+        if (from >= 0)
+            spans.Add((from, int.MaxValue));
+        return spans;
+    }
+
     /// <summary>
     /// A choir's parallel fifths and octaves, with no <c>check voiceLeading</c> line to ask for them
     /// (owner's review 2026-11-02: an eight-bar hymn had six; so did every one of 12 choirs, 4 to 80
@@ -993,7 +1131,7 @@ public static class CompositionChecks
     /// <see cref="Semantics.VoiceLeadingValidator"/>, from three voices in a <c>choirStaff</c>.
     /// </summary>
     private static IEnumerable<CompositionFinding> ChoirParallels(SyntaxTree tree, MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts,
-        SyntaxNode? score, List<int> barList)
+        SyntaxNode? score, List<int> barList, HashSet<int> unison)
     {
         if (score == null)
             yield break;
@@ -1004,6 +1142,11 @@ public static class CompositionChecks
             if (voices.Count < 3)
                 continue;
             var parallels = Semantics.VoiceLeadingValidator.ParallelsIn(tree, midi, voices);
+            // Not the octaves and unisons of a passage marked unis. (UnisonPassages).
+            var meant = new Dictionary<(string, string), List<(int From, int To)>>();
+            parallels.RemoveAll(x => x.Kind != "fifths"
+                && (meant.TryGetValue((x.Upper, x.Lower), out var spans) ? spans : meant[(x.Upper, x.Lower)] = UnisonPassages(midi, unison, x.Upper, x.Lower))
+                    .Any(s => s.From <= x.Tick && x.Tick < s.To));
             if (parallels.Count == 0)
                 continue;
             int BarOf(int tick) => barList.Count(b => b <= tick);
@@ -1025,7 +1168,7 @@ public static class CompositionChecks
     /// <summary>The singers' parts read against each other: a pair doubling at the octave, and an
     /// inner part that leaps from chord tone to chord tone. A choir's lines; a band's or an
     /// orchestra's parts double and leap by right, so only the voice presets are read.</summary>
-    private static IEnumerable<CompositionFinding> SingersLines(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts, IReadOnlyList<string> scoreOrder, int fifths)
+    private static IEnumerable<CompositionFinding> SingersLines(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts, IReadOnlyList<string> scoreOrder, int fifths, HashSet<int> unison)
     {
         var voices = parts.Where(IsVoicePreset).Select(p => p.Name.Text).ToList();
         // Top to bottom as the score stacks them, the order a choir's parts are meant in; a part
@@ -1061,9 +1204,13 @@ public static class CompositionChecks
             {
                 var (a, b) = (lines[singers[i]], lines[singers[j]]);
                 var times = a.Select(n => n.Start).Concat(b.Select(n => n.Start)).Distinct().Order().ToList();
+                var meant = UnisonPassages(midi, unison, singers[i], singers[j]);
                 int moves = 0, octaves = 0;
                 for (int k = 1; k < times.Count; k++)
                 {
+                    // A passage marked unis. is one line by the page's own word: not a move the two make together.
+                    if (meant.Any(s => s.From <= times[k - 1] && times[k] < s.To))
+                        continue;
                     if (At(a, times[k - 1]) is not { } a0 || At(b, times[k - 1]) is not { } b0
                         || At(a, times[k]) is not { } a1 || At(b, times[k]) is not { } b1 || a0 == a1 || b0 == b1)
                         continue;

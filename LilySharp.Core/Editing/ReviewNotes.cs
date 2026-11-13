@@ -117,6 +117,7 @@ public static class ReviewNotes
         ["chord.outside"] = new(S, L, "A chord outside the key usually has a job: it leads to the chord after it, or is borrowed from the parallel key. One with no job can be colour, and can be a slip.", "The style moves freely between keys, as jazz, film music and much rock do."),
         ["harmony.one-progression"] = new(S, L, "Sections are told apart by their harmony as much as by their tune.", "A blues, a vamp or a loop-based style, where one progression is the form."),
         ["harmony.clash"] = new(M, D, "A melody note held on the beat a semitone from the harmony is heard as a wrong note, not as colour.", "It is a blue note, or a suspension that resolves."),
+        ["harmony.dissonant"] = new(S, L, "Notes held a semitone from the harmony in most of the parts are either the piece's language or many slips, and only the composer knows which.", "The piece is atonal, written in clusters, or voiced as jazz voices its chords."),
 
         // The melody
         ["rhythm.one-value"] = new(S, D, "A line lives on its rhythm: long notes at its peaks, shorter ones leading to them, and rests to breathe.", "An even pace is the music's character, as in a perpetuum mobile, a chorale or a bass line."),
