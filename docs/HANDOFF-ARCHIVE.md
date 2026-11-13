@@ -267,6 +267,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1226セッションの経緯
+
+### 1.1 第1226セッション（2026-11-11〜14・YT-DELL2）
+
+base `9d5c995ff`・172 commit（未 push）。オーナーの依頼を順に（各 commit の本文に理由）。
+- **11-11〜12**: Copilot のツール（`chordVoicings`・`readChords`・`writePart`・`readScore` の part/page）、`indent 0` の名前、UTAU/ENUNU の判断（`singing-roadmap.md`）、声の入れ方の案内、`MidiForFile`、MIDI 読み込み（`MidiReader`）、評価 2・3 と修正、Cantoria `plan` と `lysc check --singer`。
+- **11-13**: 評価 3 の残りとギターの記号（palm mute・let ring・barre・vibrato・`@release`・矢印アルペジオ・弦の並びの tuning・tab ごとの capo・ハーモニクス）、記譜（数字の途中替え・破線/点線の弧と `solid`・`(p)`・`beaming syllabic`）、OMR #26（`restStyle z`）、`break` を chords と全パートで、ページの文章（`md`・`end`・`box`/`center`/`xMargin`/`yMargin`・見出しと箇条書き・Markdown の色と Enter）。評価 4 を書かせ、修正を始めた（ページの文章・描画・コード名はジャズの綴り・`@slide` は 1 弦・ペダル 3 種・LYS4078 `@cross` の衝突＝打鍵の外・キュー無音・16 ch の共有・condensedStaff の記号）。
+- **11-13〜14**: 歌い手（condensedStaff の後のパートの歌詞が 1 音ずれ＝REINA が止まる・失敗を問題パネルに）、バーが出ない（置き換えた仕事の声＝キーで知らせる）、`arranger`/`copyright`、6 つの見出しを ` ```md title ` で、見出しの並びは LilyPond どおり（行内の行送りは次の行より少し狭く＝0.75）、ページの文章の既定は余白から余白（11-13 の「譜表に合わせる」は 11-14 に取り消し）、共通の字下げは Markdown のコードにしない、` ```md start `（`end` の対・`preface` は退けた）と補完。
+- オーナー決定は `markdown-text-design.md`・各設計書・コードの注に日付つき。見送った見出し 7 つと評価の提案は `ROADMAP.md`。
+- 7.7 の匂い: VS Code の実機は全部未確認（補完の開き直し・問題パネル・プログレスバー・色付け）／一部は補助の報告だけ（npm の数）。補助は途中で 1 回 credits 切れ＝引き継いだ。モデルは Opus 5.5 に切り替わった（11-14）。
+- 門: 終了時 full 16533 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16536、npm 1136 合格 / skip 1。未 push 136 件・Cantoria 27 件。
 ## 以下は第1225セッションの経緯
 
 ### 1.1 第1225セッション（2026-11-11・YT-DELL2）
