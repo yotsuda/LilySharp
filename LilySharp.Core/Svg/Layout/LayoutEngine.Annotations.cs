@@ -889,14 +889,13 @@ internal sealed partial class LayoutEngine
             // starts on (the profile that reserved it) — the pass's one map, not a second
             // walk of the same measures.
             IReadOnlyDictionary<int, int>? measureToSysIdx = ctx.PedalLines != null ? measureToSystem : null;
-            foreach (var staffIndex in musicMarks
-                .Where(m => IsPedalMark(m.Type)).Select(m => m.StaffIndex).Distinct())
+            // Each staff's marks paired on their own, and numbered in the one list the renderer's
+            // data-pos reads back (PedalEngraver.PedalBracketsByStaff).
+            foreach (var (staffIndex, firstIndex, brackets) in PedalEngraver.PedalBracketsByStaff(musicMarks, sectionPlays))
             {
                 var style = StaffPedalStyle(staffIndex);
                 if (style == PedalStyle.Text)
                     continue;
-                var staffMarks = musicMarks.Where(m => m.StaffIndex == staffIndex).ToImmutableArray();
-                var brackets = PedalEngraver.DetectPedalBrackets(staffMarks, sectionPlays);
                 // Any staff may hold a mixed FAMILY now: the sostenuto is mixed under the bracket
                 // style (PedalStyles, owner's decision 2026-11-13).
                 {
@@ -952,7 +951,7 @@ internal sealed partial class LayoutEngine
                                 : score != null && staffVoices.IsDefaultOrEmpty ? ImmutableArray.Create(score.Voice)
                                 : staffVoices,
                                 ctx.GraceNotes, staffIndex),
-                            fonts: ctx.Fonts, partStyle: style));
+                            fonts: ctx.Fonts, partStyle: style, sourceIndexBase: firstIndex));
             }
         }
         var pedalBracketLayouts = pedalBracketBuilder?.ToImmutable() ?? [];

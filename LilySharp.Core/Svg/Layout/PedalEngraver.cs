@@ -45,7 +45,7 @@ public readonly record struct PedalBracketLayout(
     // PianoPedalBracket bracket-flare = (0.5 . 0.5).
     bool StartChange = false,
     bool EndChange = false,
-    // F3/B: index into the bracket list DetectPedalBrackets rebuilds from the live score,
+    // F3/B: index into the bracket list AllPedalBrackets rebuilds from the live score,
     // so a reused layout re-derives its data-pos instead of carrying a stale source offset.
     // The same shape MusicMarkLayout uses against BuildAllMarks: the list is not a score
     // side-table, it is reconstructed, and reconstructing it is deterministic.
@@ -620,12 +620,7 @@ internal static class PedalEngraver
         ImmutableArray<MusicMarkItem> musicMarks,
         Collector.SectionPlays? plays = null, List<Collector.SectionCarryWarning>? carrySink = null)
     {
-        if (musicMarks.IsDefaultOrEmpty)
-            return [];
-        List<int>? staves = null;
-        foreach (var m in musicMarks)
-            if (IsPedalMarkType(m.Type) && !(staves ??= []).Contains(m.StaffIndex))
-                staves.Add(m.StaffIndex);
+        var staves = PedalledStaves(musicMarks);
         if (staves == null)
             return [];
         if (staves.Count == 1)
@@ -637,6 +632,67 @@ internal static class PedalEngraver
                 if (!unpaired.Contains(w))
                     unpaired.Add(w);
         return [.. unpaired];
+    }
+
+    /// <summary>
+    /// The staves that hold a pedal mark, in the order their first one is collected; null
+    /// when no staff holds one.
+    /// </summary>
+    private static List<int>? PedalledStaves(ImmutableArray<MusicMarkItem> musicMarks)
+    {
+        if (musicMarks.IsDefaultOrEmpty)
+            return null;
+        List<int>? staves = null;
+        foreach (var m in musicMarks)
+            if (IsPedalMarkType(m.Type) && !(staves ??= []).Contains(m.StaffIndex))
+                staves.Add(m.StaffIndex);
+        return staves;
+    }
+
+    /// <summary>
+    /// A whole score's pedal brackets, paired STAFF BY STAFF as <see cref="UnpairedPedalMarks"/>
+    /// pairs them: one entry a pedalled staff, in the order of <see cref="PedalledStaves"/>.
+    /// <c>FirstIndex</c> is where the staff's brackets begin in <see cref="AllPedalBrackets"/>.
+    /// </summary>
+    /// <remarks>
+    /// The one list the layout, the renderer's data-pos and the incremental render's measure
+    /// keys all read. Until 2026-11-14 the layout paired each staff on its own and numbered its
+    /// brackets from 0 (<c>PedalBracketLayout.SourceIndex</c>), while the other two paired every
+    /// staff's marks together: with a pedal on two staves the live preview gave a bracket
+    /// another staff's source position, and a measure's key held spans no staff draws.
+    /// </remarks>
+    internal static List<(int StaffIndex, int FirstIndex, ImmutableArray<PedalBracketItem> Brackets)>
+        PedalBracketsByStaff(ImmutableArray<MusicMarkItem> musicMarks, Collector.SectionPlays? plays = null)
+    {
+        var result = new List<(int StaffIndex, int FirstIndex, ImmutableArray<PedalBracketItem> Brackets)>();
+        if (PedalledStaves(musicMarks) is not { } staves)
+            return result;
+        int first = 0;
+        foreach (int staff in staves)
+        {
+            var brackets = DetectPedalBrackets(
+                staves.Count == 1 ? musicMarks : musicMarks.Where(m => m.StaffIndex == staff).ToImmutableArray(),
+                plays);
+            result.Add((staff, first, brackets));
+            first += brackets.Length;
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// <see cref="PedalBracketsByStaff"/> as one list — what
+    /// <c>PedalBracketLayout.SourceIndex</c> indexes.
+    /// </summary>
+    internal static ImmutableArray<PedalBracketItem> AllPedalBrackets(
+        ImmutableArray<MusicMarkItem> musicMarks, Collector.SectionPlays? plays = null)
+    {
+        var byStaff = PedalBracketsByStaff(musicMarks, plays);
+        return byStaff.Count switch
+        {
+            0 => [],
+            1 => byStaff[0].Brackets,
+            _ => [.. byStaff.SelectMany(s => s.Brackets)],
+        };
     }
 
     private static void DetectBracketsForType(
@@ -737,7 +793,8 @@ internal static class PedalEngraver
         Func<int, double?>? staffTopDownOf = null,
         GraceAnchors? grace = null,
         Rendering.ScoreTextMetrics? fonts = null,
-        PedalStyle? partStyle = null)
+        PedalStyle? partStyle = null,
+        int sourceIndexBase = 0)
     {
         if (brackets.IsDefaultOrEmpty)
             return ImmutableArray<PedalBracketLayout>.Empty;
@@ -869,7 +926,7 @@ internal static class PedalEngraver
                 mixed && !brokenLeft && !startsAtChange[bi],
                 StartChange: !brokenLeft && startsAtChange[bi],
                 EndChange: !brokenRight && endsAtChange[bi],
-                SourceIndex: bi,
+                SourceIndex: sourceIndexBase + bi,
                 BrokenLeft: brokenLeft,
                 BrokenRight: brokenRight,
                 MixedLineStart: mixed && fonts != null ? MixedLineStartOffset(fonts, bracket.Type) : 0));

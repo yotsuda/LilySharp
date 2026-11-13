@@ -678,9 +678,11 @@ internal static partial class SharedRenderer
                 static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
             // Pedal brackets are not a score side-table either: they are PAIRED from the
             // music marks, so the list is rebuilt the way MusicMarks' is below and the
-            // layout's SourceIndex points into that reconstruction.
+            // layout's SourceIndex points into that reconstruction — staff by staff, as the
+            // layout numbered them (2026-11-14: paired over every staff at once, a second
+            // pedalled staff's brackets took another staff's position).
             PedalBracketLayouts = ResolveArr(layout.PedalBracketLayouts,
-                PedalEngraver.DetectPedalBrackets(score.MusicMarks, LilySharp.Core.Svg.Collector.SectionPlays.For(score)),
+                PedalEngraver.AllPedalBrackets(score.MusicMarks, LilySharp.Core.Svg.Collector.SectionPlays.For(score)),
                 static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
             // MusicMarks (incl. section labels + tempo) aren't a flat score side-table;
             // their SourceIndex points into the reconstructed BuildAllMarks() list. Rebuild

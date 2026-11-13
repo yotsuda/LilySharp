@@ -58,4 +58,116 @@ public class Session1229LeftoversTests
         Assert.Contains("eeh'", lys);
         Assert.Contains("aeh'", lys);
     }
+
+    private const string TwoPedalledStaves = """
+        tempo 120
+        time 4/4
+        key c major
+        part pa { clef treble }
+        part pb { clef bass }
+        section Main {
+          pa { c'2@sustain e | g2 e@!sustain | c1 | c2@sustain e@!sustain | }
+          pb { c1 | c2@sustain e | g2@!sustain e | c1 | }
+        }
+        form { Main }
+        score x { staff pa staff pb }
+        """;
+
+    private static readonly LilySharp.Core.Svg.Renderer.SvgRenderOptions NoFont = new() { EmbedFont = false };
+
+    private static string FullSvg(string text)
+        => LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(text), NoFont).Replace("\r\n", "\n");
+
+    /// <summary>
+    /// With a pedal on two staves, the live preview drew each bracket with another staff's
+    /// source position: a bracket's index counted its own staff's brackets and was looked up in
+    /// a list paired over every staff at once.
+    /// </summary>
+    [Fact]
+    public void PedalBracketsOfTwoStaves_KeepTheirOwnSourcePositions_InTheLivePreview()
+    {
+        string src = TwoPedalledStaves;
+        var session = new LilySharp.Core.Svg.IncrementalCompiler(SyntaxTree.Parse(src), NoFont);
+        string first = session.Render().Replace("\r\n", "\n");
+        Assert.Equal(FullSvg(src), first);
+        // Each staff's brackets carry the position of their own `@sustain`: three lines a bracket.
+        foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(src, "@sustain"))
+            Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(first, $"<line [^>]*data-pos=\"{m.Index}\"").Count);
+
+        // An edit that moves every offset and changes nothing else.
+        var shift = new TextChange(new TextSpan(0, 0), "\n");
+        Assert.Equal(FullSvg("\n" + src), session.Edit(shift).Replace("\r\n", "\n"));
+
+        // The control: one pedalled staff always agreed.
+        string one = src.Replace("c2@sustain e | g2@!sustain e", "c2 e | g2 e");
+        Assert.Equal(FullSvg(one), new LilySharp.Core.Svg.IncrementalCompiler(SyntaxTree.Parse(one), NoFont).Render().Replace("\r\n", "\n"));
+    }
+
+    /// <summary>…and an edit to one staff's pedal redraws what a full render draws.</summary>
+    [Fact]
+    public void EditingOneStaffsPedal_MatchesAFullRender_WhenAnotherStaffIsPedalledToo()
+    {
+        string src = TwoPedalledStaves;
+        foreach (var (find, replacement) in new[]
+                 {
+                     ("g2@!sustain e", "g2 e@!sustain"),   // the lower staff's release moves
+                     ("g2@!sustain e", "g2 e"),            // …or goes
+                     ("g2 e@!sustain", "g2@!sustain e"),   // the upper staff's release moves
+                     ("c2@sustain e@!sustain", "c2 e"),    // the upper staff's second pedal goes
+                 })
+        {
+            var session = new LilySharp.Core.Svg.IncrementalCompiler(SyntaxTree.Parse(src), NoFont);
+            session.Render();
+            int at = src.IndexOf(find, System.StringComparison.Ordinal);
+            Assert.True(at >= 0, find);
+            var change = new TextChange(new TextSpan(at, find.Length), replacement);
+            string edited = src.Remove(at, find.Length).Insert(at, replacement);
+            Assert.Equal(FullSvg(edited), session.Edit(change).Replace("\r\n", "\n"));
+        }
+    }
+
+    /// <summary>
+    /// The measure keys held the spans of every staff's marks paired together. Here the upper
+    /// staff's long bracket goes with its release, and paired together the marks gave the same
+    /// spans before and after (the lower staff's pedal sat between), so the systems in the
+    /// middle kept the bracket's room.
+    /// </summary>
+    [Fact]
+    public void DeletingOneStaffsPedalRelease_RedrawsTheSystemsItsBracketSpanned_WhenAnotherStaffIsPedalledToo()
+    {
+        string upper =
+            "c'4 d e f | g4 a@sustain b c | d4 e f g | a4 b c d | "
+            + "c4 b a g | f4 e d c | c4 d e f | g4 a b c | "
+            + "d4 e f g | a4 b c d | c4 b@!sustain a g | f4 e d c |";
+        string Lower(bool pedal) => (pedal
+            ? "c1 | c1 | c1 | c2@sustain c | c1 | c2@!sustain c | "
+            : "c1 | c1 | c1 | c2 c | c1 | c2 c | ") + "c1 | c1 | c1 | c1 | c1 | c1 |";
+        string sylls = string.Concat(Enumerable.Repeat("la la la la | ", 12)).TrimEnd();
+        string Text(bool lowerPedal) => $$"""
+            time 4/4
+            part pa { clef treble }
+            part pb { clef bass }
+            section Main {
+              pa { {{upper}} }
+              lyrics w { {{sylls}} }
+              pb { {{Lower(lowerPedal)}} }
+            }
+            form { Main }
+            score x { staff pa  lyrics w on pa  staff pb }
+            """.Replace("\r\n", "\n");
+
+        // With the lower staff pedalled, and the control without.
+        foreach (bool lowerPedal in new[] { true, false })
+        {
+            string text = Text(lowerPedal);
+            var tree = SyntaxTree.Parse(text);
+            var session = new LilySharp.Core.Svg.IncrementalCompiler(tree, NoFont);
+            Assert.Equal(FullSvg(text), session.RenderIncremental(tree).Replace("\r\n", "\n"));
+
+            int at = text.IndexOf("b@!sustain", System.StringComparison.Ordinal) + 1;
+            tree = tree.WithChange(new TextChange(new TextSpan(at, "@!sustain".Length), ""));
+            text = text.Remove(at, "@!sustain".Length);
+            Assert.Equal(FullSvg(text), session.RenderIncremental(tree).Replace("\r\n", "\n"));
+        }
+    }
 }
