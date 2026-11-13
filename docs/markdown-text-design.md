@@ -120,7 +120,7 @@ optional `end`, in any order, each once:
 | `xMargin LEFT [RIGHT]` | white at its left and right, INSIDE the line width: set that much narrower, beginning that much further right. One length is both sides |
 | `yMargin TOP [BOTTOM]` | white above and below it, in place of the default (1.0 each way). One length is both. `yMargin 0` is LilyPond's own spacing (section 5.1) |
 | `center` | each line centred in the text's width |
-| `box` | a ruled frame around the whole text |
+| `box` | a ruled frame around the whole text, the text in its optical middle; with no `xMargin`, as wide as the staff it stands against (section 5.5) |
 
 **The two margins are a pair** (owner's decision 2026-11-13). The side white was first the
 word `indent`; the owner, when the white above and below came up: "`space` is the y
@@ -231,8 +231,11 @@ without a word (open — the link itself was not nearly free, and is left for a 
   line-thickness) and is drawn OUTSIDE the extent widened by the padding (`scm/stencil.scm`
   box-stencil). The padding is **1.0** on all four sides (LILYSHARP-OWN; LilyPond's
   `box-padding` default is 0.2), around the lines' BOXES — 2.0 over the first baseline, 1.0
-  under the last — not around the ink. The frame's outer edge stands on the side margins' edges: with
-  no `xMargin` it is at the line width's edges, and the text inside is inset 1.1 a side and broken
+  under the last — not around the ink; **and the text is then set in the frame's optical
+  middle** (section 5.5: 3.314 inside over the first baseline, 1.686 under the last). The
+  frame's outer edge stands on the side margins' edges where `xMargin` is written; **with
+  no `xMargin` it is as wide as the staff it stands against** (section 5.5 — until then the
+  line width's edges), and the text inside is inset 1.1 a side and broken
   to the narrower width. The band (`ProseBand.Up` / `Down`) reaches **the text's margin past
   the frame's outer edges** above and below (`yMargin`, or the default 1.0 — which was first
   this frame's alone, `BoxMargin`), so the page's springs
@@ -258,7 +261,10 @@ frame's outer left edge from the text and its outer height):
 | 1.5 | 1.6 | 9.2 | loose: the frame reads as a panel, not a rule round a note |
 | 0.2 on the bare ink | 0.3 | 5.6 | LilyPond's own picture: the rule on the ascenders |
 
-The twin against the page (`showcase.lys`, its `lysc ly` twins engraved; staff spaces, y down):
+The twin against the page (`showcase.lys`, its `lysc ly` twins engraved; staff spaces, y down).
+⚠️ Measured BEFORE section 5.5: the boxed text under the title now begins at the first
+staff's left (17.07, 93.89 wide on this page) and every boxed baseline stands 0.314 lower in
+its frame (3.414 / 1.786 outside over and under one line); section 5.5 has today's numbers.
 
 | What | Lily# | LilyPond |
 |---|---|---|
@@ -302,8 +308,9 @@ The twin's forms:
   is centred — so LilyPond centres by ITS measure of the words. The centred line's left edge
   therefore differs by half the known difference of the two engines' text widths (section
   7.1, open), and its middle does not.
-- box: one line of the list, `\concat { \hspace #TEXT-LEFT \override #'(box-padding . 1) \box
-  \with-dimension #X #'(0 . WIDTH) \with-dimension #Y #'(-DOWN . 2) \column { … } }`, the white
+- box: one line of the list, `\concat { \hspace #TEXT-LEFT \translate #'(0 . -SHIFT)
+  \override #'(box-padding . 1) \box \with-dimension #X #'(0 . WIDTH) \with-dimension #Y
+  #'(-(DOWN−SHIFT) . 2+SHIFT) \column { … } }` (the shift: section 5.5), the white
   between paragraphs a `\vspace #0.5`. The column is given the page's extent, so the frame
   stands where the page rules it whatever LilyPond measures the words. ⚠️ The `\hspace` is to
   the TEXT's left edge: `\concat` sets the box's origin, not its left extent, after the white
@@ -372,6 +379,104 @@ line, the text close under the poet line.
   The text therefore stands 1.19 nearer the poet line there (8.83 for a rod of 10.02); on a
   page that fits it keeps its margin (3.95 from the poet / composer baseline). Not changed:
   the cure is a smaller staff (`paper { staffSpace … }`), which GRAMMAR_FOR_LLM now gives.
+
+### 5.5 The text in its frame, and the frame against the staff (built 2026-11-13)
+
+Two things the owner said on seeing a one-line `md center box` of ほえほえ. Both
+LILYSHARP-OWN: LilyPond's `\box` pads whatever extent it is given, wherever the markup stands.
+
+**1. The text stands in the frame's optical middle.** "With one line in the box, the text's
+y is not centred in the box; can it be centred?" The frame was the padding outside the
+line's BOX — inside it 3.0 over the baseline and 2.0 under — and a line's ink stands almost
+all over its baseline.
+
+- **The middle** is a fixed fraction of the line's em over its baseline:
+  `ProseBand.OpticalMiddle` = **0.37**. MEASURED (the bundled face through
+  `ScoreTextMetrics.Ink`; the Japanese on the PNG at 20 px a staff space, this machine's
+  face): capital H 0.722 em over the baseline (middle 0.361), round capitals and ascenders
+  0.737, x-height 0.466 (0.481 with overshoot), descenders 0.206 under; a Japanese em
+  square 0.88 over / 0.12 under (middle 0.38), ほえほえ as drawn in the renderer's cells
+  0.82 over / 0.04 under (middle 0.39).
+- **The shift** (`ProseBand.BoxShift`) = the middle less half of what a line box has more
+  over its baseline than under: 0.37 em − skip / 6 = 0.814 − 0.5 = **0.314** at the default
+  size. Inside the frame: **3.314 over the first baseline, 1.686 under the last**. Several
+  lines: the same (first line above, last line below; the step is untouched). A line set
+  larger takes it in proportion: a `#` heading first, 0.396 (so that frame is 0.08 taller
+  than it was: 0.314 × 0.26); a list or a paragraph last, 0.314.
+- **What stays is the FRAME; the text moves in it.** The band's `Up` — where the page stands
+  the frame under the composer's line — and the frame's height are to the digit what they
+  were (lines of one size), so the white tuned between the composer's line and the rule, and
+  the rule and the system, is untouched; every baseline stands 0.314 lower. A boxed band's
+  reference point is therefore no longer its first baseline: `Lines[0].Baseline` is the
+  shift. Under the last system the same: the frame's top is 8.9 under the last staff's
+  middle line as before (score-markup-spacing's 12 less the 3.1), the baseline 12.314 where
+  it was 12. A text with no frame is where it was.
+- **The white over and under the ink of one boxed line** (at 2.2; before in brackets):
+
+  | Line | Over | Under | |
+  |---|---|---|---|
+  | ほえほえ, by its em square | 1.38 (1.06) | 1.42 (1.74) | centred; as drawn on the PNG 1.50 / 1.60 |
+  | `HOEHOE` | 1.69 (1.38) | 1.65 (1.97) | centred; PNG 1.65 / 1.65 |
+  | `Play gently.` | 1.69 (1.38) | 1.23 (1.55) | ink's middle 0.23 low (was 0.08 high) |
+  | `moon over a canon` (x-height only) | 2.26 (1.94) | 1.65 (1.97) | 0.30 low (was centred) |
+  | `moon over a canyon` (and a descender) | 2.26 (1.94) | 1.23 (1.55) | 0.51 low (was 0.20 low); PNG 2.20 / 1.25 |
+
+  ⚠️ An all-lower-case line was nearer its ink's middle before. It is not special-cased:
+  on the PNG it reads a little low, not wrong (the eye discounts the one descender), and a
+  middle chosen from each text's own letters would make two frames on one page differ.
+  **Open, for the owner**: if it is to be mended, the mend is that — 0.37 where the text has
+  a capital or a wide character anywhere, about 0.23 (half the x-height) where it has none.
+
+**2. A frame with no `xMargin` is as wide as the staff.** "The box's default xMargin should
+be the same width as the staff." The frame ran from margin to margin while the first system
+begins its indent further right (15 mm by default, more where a long instrument name needs
+it: `LayoutEngine.EffectiveIndent`), so it stuck out to the left of the music.
+
+- **No `xMargin` written, `box` written**: the frame's left edge stands where the staff
+  LINES of the system it stands against begin (`SystemLayout.Indent` — the lines' left, not
+  a brace's or a bracket's, which hang left of it) and its right edge at the full line
+  width — for the text under the title the FIRST system, for the `end` text the LAST (the
+  short indent; the first system's own when the piece is one line; a ragged last line
+  changes nothing; on a page of its own the same number). Each block of a stack by itself.
+  `ProseBand.BoxedAtTheStaff`, applied in `ProseBand.Stack`: the staff's left becomes the
+  shape's left margin, so the text is BROKEN to the narrower width.
+- **`xMargin` written** — `xMargin 0` too (`Syntax.TextShape.SidesWritten`): from the page's
+  margins, as before; `box xMargin 0` is the old full-width frame. So the validator's "too
+  narrow" check and the step keys read what they read (they act only where `xMargin` is
+  written, and there the width is the page's); a default frame on a paper with a huge indent
+  gives way as any margin does (`MinimumWidth`).
+- **A text with no frame** begins at the left margin, as before.
+- **Where the number comes from.** The indents are paper constants (and the names'), known
+  before a line is broken, so the header's text is built with the first one where it always
+  was; the closing text is now built AFTER the systems are placed, from the last system's
+  own `Indent` (nothing read it earlier: it goes to the page with the systems).
+- ⚠️ Every score indents its first system (LilyPond's 15 mm, names or none), so every
+  default boxed text under a title moved 8.54 in at its left; with `paper { indent 0 }` it
+  is at the margin as before.
+
+**The twin.** The same band: `\hspace` to the text's left (the staff's left and the inset),
+the column's `\with-dimension #X` the narrower width; `\translate #'(0 . -SHIFT)` hangs the
+box the first line's share under the line's reference point and the column's
+`\with-dimension #Y` reaches the share further up and the last line's share less down. The
+closing text's staff left needs the page's own line count, so the exporter lays the page out
+— only when a closing block is boxed with no `xMargin` and the two indents differ.
+⚠️ The numbers are the PAGE's: where the page grew its indent for a long name (the twin
+writes LilyPond's 15 mm) or LilyPond breaks into one line where the page has two, the twin's
+frame stands where the page's does and LilyPond's staff does not.
+
+MEASURED 2026-11-13, LilyPond 2.26.0 (`LilySharp-Lab` `sessions/p1226/md/boxfit`: `owner.lys`,
+`heading.lys`, `list.lys`, `names2.lys` — two named staves, three systems, `md box` and
+`md end box` — and their `lysc ly --pin-fonts` twins in `lp/`; paper coordinates, y down):
+
+| What | Lily# | LilyPond |
+|---|---|---|
+| ほえほえ: frame's outer top, bottom; baseline | 17.71, 22.91; 21.12 | 17.7087, 22.9087; 21.1227 (3.414 over, 1.786 under) |
+| …frame's left, right; the first staff's lines from | 17.07, 110.97; 17.07 | 17.0716, 110.9657; 17.0717 |
+| `#` heading first: frame's top, bottom; the two baselines | 17.71, 27.52; 21.72, 25.73 | 17.7086, 27.5200; 21.7241, 25.7339 |
+| List last: frame's top, bottom; the three baselines | 17.71, 30.41; 21.12, 25.62, 28.62 | 17.7087, 30.4087; 21.1227, 25.6227, 28.6227 |
+| Named staves, under the title: frame's left; first staff from | 17.07; 17.07 | 17.0716; 17.0717 |
+| …`md end box`: frame's left, width; last staff from | 8.54, 102.43; 8.54 | 8.5358, 102.4299; 8.5358 |
+| …its frame's top under the last staff's middle line; its baseline | 8.90; 12.31 | 8.9000; 12.3140 |
 
 ### 5.2 Headings and lists (built 2026-11-13)
 

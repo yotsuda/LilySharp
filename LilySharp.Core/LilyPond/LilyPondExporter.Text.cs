@@ -16,6 +16,7 @@
 
 using System;
 using System.Globalization;
+using System.Linq;
 using LilySharp.Core.Rendering;
 using LilySharp.Core.Svg.Layout;
 
@@ -47,7 +48,7 @@ public sealed partial class LilyPondExporter
         if (_page is not { } page)
             return;
         var place = ProseBand.Stack(page.Texts.Blocks(before), page.TextMetrics, page.Paper.ContentWidth,
-            page.Paper.StaffSpaceMm);
+            page.Paper.StaffSpaceMm, StaffLeftFor(page, before));
         if (place is null)
             return;
         double skip = ProseBand.Skip(page.TextMetrics);
@@ -65,6 +66,39 @@ public sealed partial class LilyPondExporter
                 EmitPlainText(band, skip, up, down);
         }
         _sb.Append(before ? "}\n\n" : "}\n");
+    }
+
+    /// <summary>
+    /// Where the staff lines of the system a place's text stands against begin, from the left
+    /// margin, as the page has it: a boxed block with no <c>xMargin</c> is ruled from there
+    /// (the owner, 2026-11-13; ProseBand.BoxedAtTheStaff). The first system's indent for the
+    /// text under the title; the LAST system's for the closing one.
+    /// </summary>
+    /// <remarks>
+    /// The last system's is the short indent unless the piece is ONE line — which only the
+    /// page's own line breaking says, so the page is laid out for it, and only when the
+    /// answer can matter: a closing block that is boxed with no <c>xMargin</c>, on a paper
+    /// whose two indents differ. LILYSHARP-OWN. ⚠️ The number is the PAGE's: where LilyPond
+    /// breaks the twin into another count of lines across the one-line boundary, or the page
+    /// grew its indent to keep a long name on the paper (LayoutEngine.EffectiveIndent — the
+    /// twin writes LilyPond's 15 mm), the twin's frame stands where the page's does and
+    /// LilyPond's staff does not.
+    /// </remarks>
+    private static double StaffLeftFor(Svg.Model.MultiStaffScore page, bool before)
+    {
+        double first = LayoutEngine.EffectiveIndent(page.Paper, page);
+        double later = LayoutEngine.EffectiveShortIndent(page.Paper, page);
+        if (before || first == later || !page.Texts.Blocks(before: false).Any(b => b.Shape.Box && !b.Shape.SidesWritten))
+            return first;
+        try
+        {
+            var systems = new LayoutEngine(page.Paper).Layout(page).Systems;
+            return systems.Length > 0 ? systems[^1].Indent : first;
+        }
+        catch (Exception)
+        {
+            return later;
+        }
     }
 
     /// <summary>A block with no frame: one markup a line of the list.</summary>
@@ -200,11 +234,21 @@ public sealed partial class LilyPondExporter
         // ProseBand.DefaultMargin): the line's own extent, taller than the box by that much.
         _sb.Append("  \\with-dimension #Y #'(").Append(Num(-band.Down)).Append(" . ").Append(Num(band.Up)).Append(") ");
         _sb.Append("\\concat { \\hspace #").Append(Num(band.Left)).Append(' ');
+        // The text stands in the optical middle of its frame (ProseBand.BoxShift, the owner
+        // 2026-11-13: "the text's y is not centred in the box"): the column's extent — what
+        // \box pads — reaches the first line's share of the shift further over the first
+        // baseline and the last line's share less under the last, and the box hangs that far
+        // under the line's reference point (\translate), since the page's frame stays where
+        // it stood and its text moved down. LILYSHARP-OWN.
+        double drop = band.Lines[0].Baseline;
+        double sink = ProseBand.BoxShift(_page!.TextMetrics) * band.Lines[^1].Scale;
+        if (drop > 1e-9)
+            _sb.Append("\\translate #'(0 . ").Append(Num(-drop)).Append(") ");
         _sb.Append("\\override #'(box-padding . ").Append(Num(ProseBand.BoxPadding)).Append(") \\box\n");
         _sb.Append("    \\with-dimension #X #'(0 . ").Append(Num(band.TextWidth)).Append(") \\with-dimension #Y #'(")
-            .Append(Num(-(band.Lines[^1].Baseline + down * band.Lines[^1].Scale))).Append(" . ")
-            .Append(Num(up * band.Lines[0].Scale)).Append(") \\column {\n");
-        double previous = 0;
+            .Append(Num(-(band.Lines[^1].Baseline - drop + down * band.Lines[^1].Scale - sink))).Append(" . ")
+            .Append(Num(up * band.Lines[0].Scale + drop)).Append(") \\column {\n");
+        double previous = drop;
         for (int i = 0; i < band.Lines.Length; i++)
         {
             var line = band.Lines[i];

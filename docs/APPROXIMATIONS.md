@@ -14,17 +14,17 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 403 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **531** | |
+| `OWN` | 408 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **536** | |
 
 ## 密度の高いファイル（上位 12）
 
 | ファイル | 件数 |
 |---|---:|
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 21 |
+| `LilySharp.Core/Svg/Layout/ProseBand.cs` | 19 |
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 18 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 16 |
-| `LilySharp.Core/Svg/Layout/ProseBand.cs` | 16 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
 | `LilySharp.Core/Midi/MidiExporter.cs` | 10 |
 | `LilySharp.Core/Svg/Collector/MeasureCollector.cs` | 10 |
@@ -249,7 +249,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（403 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（408 件）
 
 ### `LilySharp.Core/Audio/SingerPlan.cs`
 - **`SingerPlan`** LILYSHARP-OWN.
@@ -297,7 +297,9 @@
 - **`LilyPondExporter.EmitLeadSheetTiming`** LILYSHARP-OWN: LilyPond has no lead sheet — a staff-less score prints no bar line,
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Text.cs`
 - **`LilyPondExporter.EmitText`** LILYSHARP-OWN: the breaking, and the white between paragraphs. Not written yet: a
+- **`LilyPondExporter.StaffLeftFor`** whose two indents differ. LILYSHARP-OWN. ⚠️ The number is the PAGE's: where LilyPond
 - **`LilyPondExporter.EmitMarker`** LILYSHARP-OWN: the indent and the gap (ProseBand.ListIndent, MarkerGap).
+- **`LilyPondExporter.EmitBoxedText`** it stood and its text moved down. LILYSHARP-OWN.
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
 - **`GeneralMidi.PreviewTimbreFamily`** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`
@@ -721,6 +723,9 @@
 ### `LilySharp.Core/Svg/Layout/ProseBand.cs`
 - **`ProseBand`** LILYSHARP-OWN: the breaking itself (LilyPond's \wordwrap does not break a text
 - **`ProseBand.Stack`** LILYSHARP-OWN: the stacking. It is what LilyPond's \column-lines does with the
+- **`ProseBand.BoxedAtTheStaff`** LILYSHARP-OWN (LilyPond's \box hugs its words wherever the markup stands).
+- **`ProseBand.OpticalMiddle`** LILYSHARP-OWN: 0.37. MEASURED 2026-11-13 (LilySharp-Lab sessions/p1226/md/boxfit;
+- **`ProseBand.BoxShift`** LILYSHARP-OWN (LilyPond's \box pads the extent it is given; the twin gives it
 - **`ProseBand.BoxPadding`** LILYSHARP-OWN (owner-approved 2026-11-13: a ruled frame; the padding is this
 - **`ProseBand.DefaultMargin`** LILYSHARP-OWN: one staff space each way. LilyPond's own spacing is yMargin 0.
 - **`ProseBand.MaximumMargin`** LILYSHARP-OWN: 50 — about 88 mm, under a third of an A4 page's height at the

@@ -50,6 +50,14 @@ public class MarkdownTextShapeTests
 
     private static readonly string Words = string.Join(' ', Enumerable.Repeat("measure", 60));
 
+    /// <summary>How far a boxed text stands under its band's reference point at the default
+    /// size: 0.37 × 2.2 − 0.5 = 0.314 (<see cref="ProseBand.BoxShift"/>).</summary>
+    private static readonly double Shift = ProseBand.BoxShift(ScoreTextMetrics.Bundled);
+
+    /// <summary>The default paper's first-system indent, 15 mm: where the first staff's lines
+    /// begin, and a boxed text's frame with no <c>xMargin</c>.</summary>
+    private static readonly double StaffLeft = LayoutOptions.Default.Indent;
+
     private static string Book(string top = "", string inScore = "", string head = "title \"Morning Song\"\ncomposer \"A. Composer\"") => $$"""
         {{head}}
         {{top}}
@@ -88,15 +96,19 @@ public class MarkdownTextShapeTests
         Assert.Equal(new TextShape(default, default, false, true), ShapeOf("```md box"));
         Assert.Equal(new TextShape(default, default, true, false), ShapeOf("```md end center"));
         var twenty = new TextLength(20, "mm");
-        Assert.Equal(new TextShape(twenty, twenty, false, false), ShapeOf("```md xMargin 20mm"));
-        Assert.Equal(new TextShape(twenty, new TextLength(1.5, "cm"), true, true), ShapeOf("```md xMargin 20mm 1.5cm box center"));
+        Assert.Equal(new TextShape(twenty, twenty, false, false, SidesWritten: true), ShapeOf("```md xMargin 20mm"));
+        Assert.Equal(new TextShape(twenty, new TextLength(1.5, "cm"), true, true, SidesWritten: true), ShapeOf("```md xMargin 20mm 1.5cm box center"));
+        // xMargin 0 is written too — a boxed text then runs from margin to margin, not the
+        // staff's width (the owner, 2026-11-13) — and alone it is still the plain text it was.
+        Assert.Equal(new TextShape(default, default, false, true, SidesWritten: true), ShapeOf("```md box xMargin 0"));
+        Assert.True(ShapeOf("```md xMargin 0").IsPlain);
         Assert.Equal(ShapeOf("```md xMargin 20mm 1.5cm box center end"), ShapeOf("```markdown center end box xMargin 20mm 1.5cm"));
         // yMargin: one length is above and below, two are above, then below; with none
         // written the shape says nothing and the page keeps its default.
         Assert.Equal((null, null), (ShapeOf("```md box").MarginTop, ShapeOf("```md box").MarginBottom));
         var two = new TextLength(2, null);
         Assert.Equal(new TextShape(default, default, false, false, two, two), ShapeOf("```md yMargin 2"));
-        Assert.Equal(new TextShape(twenty, twenty, false, true, new TextLength(3, null), new TextLength(5, "mm")),
+        Assert.Equal(new TextShape(twenty, twenty, false, true, new TextLength(3, null), new TextLength(5, "mm"), SidesWritten: true),
             ShapeOf("```md end yMargin 3 5mm box xMargin 20mm"));
         Assert.False(ShapeOf("```md yMargin 0").IsPlain);
     }
@@ -267,7 +279,12 @@ public class MarkdownTextShapeTests
         // owner 2026-11-13: "the white above and below the box looks too tight"): the lines'
         // boxes, the padding, the rule, the margin.
         Assert.Equal(2.0 + 1.1 + ProseBand.DefaultMargin, band.Up, 12);
-        Assert.Equal(band.Lines[^1].Baseline + 1.0 + 1.1 + ProseBand.DefaultMargin, band.Down, 12);
+        // …and the text stands in the frame's optical middle (ProseBand.BoxShift): its first
+        // baseline that much under the band's reference point, the frame's bottom that much
+        // nearer its last — the frame as tall as it was.
+        Assert.Equal(Shift, band.Lines[0].Baseline, 12);
+        Assert.Equal(band.Lines[^1].Baseline + 1.0 - Shift + 1.1 + ProseBand.DefaultMargin, band.Down, 12);
+        Assert.Equal(plain.Up + plain.Down + 2.2, band.Up + band.Down - 3.0 * (band.Lines.Length - plain.Lines.Length), 9);
         Assert.Equal(100.0, band.Width, 12);
         Assert.True(band.Lines.Length >= plain.Lines.Length);
 
@@ -350,7 +367,8 @@ public class MarkdownTextShapeTests
         Assert.NotNull(page.Header!.Text!.Frame);
         Assert.Null(page.EndText!.Frame);
         Assert.Equal(LineWidth / 2, page.EndText.Lines[0].Left + page.EndText.Lines[0].Width / 2, 6);
-        Assert.Equal(1.1, page.Header.Text.Lines[0].Left, 9);
+        // (A boxed text that writes no xMargin begins where the first staff does: the indent.)
+        Assert.Equal(LayoutOptions.Default.Indent + 1.1, page.Header.Text.Lines[0].Left, 9);
 
         // The score's own text for a place brings its own shape — here none — and the other
         // place keeps the file's.
@@ -376,7 +394,8 @@ public class MarkdownTextShapeTests
         Assert.Contains($"<rect x=\"{N(left)}\" y=\"{N(bottom - 0.1)}\" width=\"{N(right - left)}\" height=\"0.10\" data-pos=\"{fence}\"/>", svg);
         Assert.Contains($"<rect x=\"{N(left)}\" y=\"{N(top + 0.1)}\" width=\"0.10\" height=\"{N(bottom - top - 0.2)}\" data-pos=\"{fence}\"/>", svg);
         Assert.Contains($"<rect x=\"{N(right - 0.1)}\" y=\"{N(top + 0.1)}\" width=\"0.10\" height=\"{N(bottom - top - 0.2)}\" data-pos=\"{fence}\"/>", svg);
-        Assert.Matches($"<text x=\"{Regex.Escape(N(left + 1.1))}\" y=\"{Regex.Escape(N(page.HeaderTextY))}\" font-size=\"2\\.20\" data-pos=\"{fence}\">A note\\.</text>", svg);
+        // (The baseline: the shift under the reference point — 3.414 under the frame's top, 1.786 over its bottom.)
+        Assert.Matches($"<text x=\"{Regex.Escape(N(left + 1.1))}\" y=\"{Regex.Escape(N(page.HeaderTextY + Shift))}\" font-size=\"2\\.20\" data-pos=\"{fence}\">A note\\.</text>", svg);
         // A text with no box rules nothing.
         string plain = SvgGenerator.Generate(SyntaxTree.Parse(Book(top: $"{F}md\nA note.\n{F}")));
         Assert.Equal(Regex.Matches(plain, "<rect ").Count + 4, Regex.Matches(svg, "<rect ").Count);
@@ -486,7 +505,7 @@ public class MarkdownTextShapeTests
         string svg = SvgGenerator.Generate(SyntaxTree.Parse(Book(top: $"{F}md box yMargin 3 0\nOne.\n{F}")));
         var page = Laid(Book(top: $"{F}md box yMargin 3 0\nOne.\n{F}")).Pages[0];
         string top = (page.HeaderTextY - 2.0 - 1.1).ToString("0.00", CultureInfo.InvariantCulture);
-        Assert.Contains($"y=\"{top}\" width=\"{LineWidth.ToString("0.00", CultureInfo.InvariantCulture)}\" height=\"0.10\"", svg);
+        Assert.Contains($"y=\"{top}\" width=\"{(LineWidth - StaffLeft).ToString("0.00", CultureInfo.InvariantCulture)}\" height=\"0.10\"", svg);
         Assert.Equal(page.HeaderTop + page.Header!.Depth + 0.5 + 3.0 + 1.1 + 2.0, page.HeaderTextY, 6);
     }
 
@@ -508,7 +527,7 @@ public class MarkdownTextShapeTests
         // Millimetres through the paper's conversion (5 mm = 2.8453).
         Assert.Contains("  \\with-dimension #Y #'(-3.8453 . 4.8453) \"One.\"\n", Twin(Book(top: $"{F}md yMargin 5mm\nOne.\n{F}")));
         // In a box: the line's extent past the frame's (2 + 1.1 over, 1 + 1.1 under).
-        Assert.Contains("  \\with-dimension #Y #'(-2.1 . 6.1) \\concat { \\hspace #1.1", Twin(Book(top: $"{F}md box yMargin 3 0\nOne.\n{F}")));
+        Assert.Contains("  \\with-dimension #Y #'(-2.1 . 6.1) \\concat { \\hspace #9.6358", Twin(Book(top: $"{F}md box yMargin 3 0\nOne.\n{F}")));
         // None: LilyPond's own line.
         Assert.Contains("\\markuplist \\column-lines {\n  \"One.\"\n}", Twin(Book(top: $"{F}md yMargin 0\nOne.\n{F}")));
     }
@@ -540,8 +559,11 @@ public class MarkdownTextShapeTests
         string width = Math.Round(LineWidth - 40 - 2.2, 4).ToString("0.####", CultureInfo.InvariantCulture);
         Assert.Contains(
             "\\markuplist \\column-lines {\n"
-            + "  \\with-dimension #Y #'(-7.6 . 4.1) \\concat { \\hspace #11.1 \\override #'(box-padding . 1) \\box\n"
-            + $"    \\with-dimension #X #'(0 . {width}) \\with-dimension #Y #'(-5.5 . 2) \\column {{\n"
+            // (The line's extent is the band's, as it was; the box hangs the shift under the
+            // line's reference point and its column reaches the shift further up and less down:
+            // the text in the frame's optical middle, ProseBand.BoxShift.)
+            + "  \\with-dimension #Y #'(-7.6 . 4.1) \\concat { \\hspace #11.1 \\translate #'(0 . -0.314) \\override #'(box-padding . 1) \\box\n"
+            + $"    \\with-dimension #X #'(0 . {width}) \\with-dimension #Y #'(-5.186 . 2.314) \\column {{\n"
             + "      \"One.\"\n"
             + "      \\vspace #0.5\n"
             + "      \"Two.\"\n"
@@ -550,8 +572,11 @@ public class MarkdownTextShapeTests
         // Centred in the box: each line LilyPond's to centre in the text's width.
         Assert.Contains($"      \\override #'(line-width . {width}) \\fill-line {{ \"One.\" }}\n",
             Twin(Book(top: $"{F}md box center xMargin 10 30\nOne.\n{F}")));
-        // The frame's edge is at the margin with no xMargin: the white is the inset alone.
-        Assert.Contains(") \\concat { \\hspace #1.1 \\override #'(box-padding . 1) \\box\n", Twin(Book(top: $"{F}md end box\nOne.\n{F}")));
+        // With no xMargin the frame's edge is the staff's (this piece's one system is its
+        // last: the first system's indent, 8.5358): the white is that and the inset. With
+        // xMargin 0 it is at the margin: the inset alone.
+        Assert.Contains(") \\concat { \\hspace #9.6358 \\translate #'(0 . -0.314) \\override #'(box-padding . 1) \\box\n", Twin(Book(top: $"{F}md end box\nOne.\n{F}")));
+        Assert.Contains(") \\concat { \\hspace #1.1 \\translate #'(0 . -0.314) \\override #'(box-padding . 1) \\box\n", Twin(Book(top: $"{F}md end box xMargin 0\nOne.\n{F}")));
     }
 
     [Fact]

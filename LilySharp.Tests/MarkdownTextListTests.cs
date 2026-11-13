@@ -328,7 +328,13 @@ public class MarkdownTextListTests
         // The frame is around the heading's own box and the last item's.
         Assert.Equal(new ProseFrame(0, 100, ProseBand.BoxThickness), boxed.Frame);
         Assert.Equal(2.0 * H2 + 1.1 + ProseBand.DefaultMargin, boxed.Up, 9);
-        Assert.Equal(boxed.Lines[^1].Baseline + 1.0 + 1.1 + ProseBand.DefaultMargin, boxed.Down, 9);
+        // …the text in the frame's optical middle (ProseBand.BoxShift): the heading's baseline
+        // the shift under the reference point at the heading's size, the frame's bottom the
+        // shift nearer the last item's baseline at the text's.
+        double shift = ProseBand.BoxShift(ScoreTextMetrics.Bundled);
+        Assert.Equal(0.314, shift, 9);
+        Assert.Equal(shift * H2, boxed.Lines[0].Baseline, 9);
+        Assert.Equal(boxed.Lines[^1].Baseline + 1.0 - shift + 1.1 + ProseBand.DefaultMargin, boxed.Down, 9);
     }
 
     /// <summary>LILYSHARP-OWN (docs/markdown-text-design.md section 5.1, for the owner to
@@ -438,11 +444,16 @@ public class MarkdownTextListTests
     {
         string ly = new LilyPondExporter().Export(SyntaxTree.Parse(Book(top:
             $"{F}md box center\n## Head\n\n- one\n\nText.\n{F}")));
-        // The column is given the heading's own box over the first baseline.
-        Assert.Contains("\\with-dimension #Y #'(-9.3725 . 2.2449) \\column {\n", ly);
-        Assert.Contains("      \\override #'(line-width . 100.2299) \\fill-line { \\fontsize #1 \\concat { \\bold \"Head\" } }\n", ly);
+        // The column is given the heading's own box over the first baseline — and the shift
+        // that sets the text in the frame's optical middle (ProseBand.BoxShift), at the
+        // heading's size above (2.2449 + 0.314 × 1.1225) and the text's below (9.3725 − 0.314);
+        // the box hangs the heading's share under the line's reference point.
+        Assert.Contains("\\translate #'(0 . -0.3525) \\override #'(box-padding . 1) \\box\n", ly);
+        Assert.Contains("\\with-dimension #Y #'(-9.0585 . 2.5974) \\column {\n", ly);
+        // (The text's width: the staff's — the line width less the first system's indent — and the inset.)
+        Assert.Contains("      \\override #'(line-width . 91.6941) \\fill-line { \\fontsize #1 \\concat { \\bold \"Head\" } }\n", ly);
         // 1.1225 + 0.75 + 2.0 between the baselines: 0.8725 over the column's skip of 3.
         Assert.Contains("      \\vspace #0.2908\n      \\concat { \\with-dimension #X #'(0 . 3.3) \\translate #'(2.2 . 0) \\right-align \"\u2022\" \"one\" }\n", ly);
-        Assert.Contains("      \\vspace #0.5\n      \\override #'(line-width . 100.2299) \\fill-line { \"Text.\" }\n", ly);
+        Assert.Contains("      \\vspace #0.5\n      \\override #'(line-width . 91.6941) \\fill-line { \"Text.\" }\n", ly);
     }
 }

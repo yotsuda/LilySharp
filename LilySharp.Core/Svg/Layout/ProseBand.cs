@@ -76,7 +76,9 @@ internal sealed record ProseFrame(double Left, double Right, double Thickness);
 
 /// <summary>
 /// A fenced text set for the page (docs/markdown-text-design.md): its lines, broken to the
-/// line width, about a reference point that is the FIRST line's baseline at the left margin.
+/// line width, about a reference point that is the FIRST line's baseline at the left margin
+/// — for a BOXED text, where that baseline stood before the text was set in its frame's
+/// optical middle: <see cref="BoxShift"/> over it (the frame kept its place, the text moved).
 /// </summary>
 /// <remarks>
 /// The page spaces it as LilyPond spaces a top-level markup — a line of the page's chain, by
@@ -151,15 +153,24 @@ internal sealed record ProseBand(
     /// twin's lines (each block's first and last line carry its margins as their extent), so
     /// the twin writes every block into the one list.
     /// </remarks>
+    /// <param name="blocks">The place's blocks, in written order.</param>
+    /// <param name="fonts">The score's text metrics.</param>
+    /// <param name="lineWidth">The paper's line width.</param>
+    /// <param name="staffSpaceMm">The paper's staff space, for the lengths written in millimetres.</param>
+    /// <param name="staffLeft">Where the staff lines of the system the place stands against
+    /// begin, from the left margin: the FIRST system's indent for the text under the title, the
+    /// LAST system's for the closing text. A boxed block that writes no <c>xMargin</c> rules
+    /// its frame from there (<see cref="BoxedAtTheStaff"/>).</param>
     public static ProseBand? Stack(IEnumerable<Model.TextBlock> blocks, ScoreTextMetrics fonts, double lineWidth,
-        double staffSpaceMm)
+        double staffSpaceMm, double staffLeft)
     {
         ProseBand? first = null;
         var later = ImmutableArray.CreateBuilder<(ProseBand Band, double Offset)>();
         double bottom = 0, width = 0;
         foreach (var block in blocks)
         {
-            if (Build(block.Markdown, block.Position, fonts, lineWidth, ProseShape.Of(block.Shape, staffSpaceMm)) is not { } band)
+            var shape = BoxedAtTheStaff(ProseShape.Of(block.Shape, staffSpaceMm), block.Shape, staffLeft);
+            if (Build(block.Markdown, block.Position, fonts, lineWidth, shape) is not { } band)
                 continue;
             if (first is null)
             {
@@ -177,6 +188,69 @@ internal sealed record ProseBand(
             ? first
             : first with { Down = bottom, Width = width, Later = later.ToImmutable(), OwnDown = first.Down };
     }
+
+    /// <summary>
+    /// <paramref name="shape"/> with a boxed text's default width: where the opening line
+    /// writes <c>box</c> and no <c>xMargin</c>, the frame's left edge stands where the staff
+    /// lines begin (<paramref name="staffLeft"/> right of the left margin) and its right edge
+    /// where they end at full line width. Any other shape is itself.
+    /// </summary>
+    /// <remarks>
+    /// The owner, 2026-11-13: "the box's default xMargin should be the same width as the
+    /// staff" — the frame ran from margin to margin while the first system began an indent
+    /// further right, so it stuck out to the left of the music.
+    /// LILYSHARP-OWN (LilyPond's <c>\box</c> hugs its words wherever the markup stands).
+    /// A written <c>xMargin</c> is measured from the page's margins as it always was, so
+    /// <c>xMargin 0</c> is the frame from margin to margin; a text with no frame begins at
+    /// the left margin, written or not. The text is BROKEN to the narrower width, so this is
+    /// the shape the band is built with and not a shift at the draw.
+    /// </remarks>
+    public static ProseShape BoxedAtTheStaff(ProseShape shape, Syntax.TextShape written, double staffLeft)
+        => shape.Box && !written.SidesWritten && staffLeft > 0 ? shape with { MarginLeft = staffLeft } : shape;
+
+    /// <summary>Where a line's optical middle stands over its baseline, in ems of the line:
+    /// what a boxed text is centred on in its frame (<see cref="BoxShift"/>).</summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: 0.37. MEASURED 2026-11-13 (LilySharp-Lab sessions/p1226/md/boxfit;
+    /// the face's ink through ScoreTextMetrics.Ink, the Japanese on the PNG at 20 px a staff
+    /// space): the bundled text face's capital H reaches 0.722 em over the baseline (its
+    /// middle 0.361 em), a round capital and an ascender 0.737, the x-height 0.466 (0.481
+    /// with a round letter's overshoot), a descender 0.206 under. A Japanese em square is
+    /// 0.88 em over the baseline and 0.12 under (middle 0.38); this machine's face drew
+    /// ほえほえ in the renderer's cells from 0.82 em over to 0.04 under (middle 0.39).
+    /// 0.37 is between the capitals' 0.36 and the em square's 0.38. With it, in a one-line
+    /// box at the text's 2.2 (white over the ink / under it; before the shift in brackets):
+    /// Japanese by its em square 1.38 / 1.42 (1.06 / 1.74), as drawn 1.50 / 1.60; capitals
+    /// 1.69 / 1.65 (1.38 / 1.97); "Play gently." 1.69 / 1.23 (1.38 / 1.55); a line of
+    /// x-height letters alone 2.26 / 1.65 (1.94 / 1.97) — 0.30 low of its ink's middle, and
+    /// 0.51 low with a descender (2.26 / 1.23). ⚠️ So a lower-case line stood nearer its
+    /// ink's middle BEFORE: the middle is the capitals' and the em square's, which is where
+    /// a mixed line and a Japanese one are read to stand; not special-cased.
+    /// </remarks>
+    public const double OpticalMiddle = 0.37;
+
+    /// <summary>
+    /// How far a boxed text's frame is moved up about its text at the text's size, so that
+    /// its inside is centred on the first line's and the last line's optical middle
+    /// (<see cref="OpticalMiddle"/>) and not on the lines' boxes: the middle's height less
+    /// the half of what a line box has more above its baseline than below (a sixth of the skip).
+    /// At the default size 0.37 × 2.2 − 0.5 = 0.314. A line set larger (a heading) takes it
+    /// in proportion.
+    /// </summary>
+    /// <remarks>
+    /// The owner, 2026-11-13, on a one-line <c>md center box</c> of ほえほえ: "with one line
+    /// in the box, the text's y is not centred in the box; can it be centred?" The frame was
+    /// the padding outside the line's BOX — 3.0 inside over the baseline, 2.0 under — and
+    /// the ink of a line stands almost all over its baseline: 1.06 of white over the
+    /// characters, 1.74 under. Now 3.314 over the baseline and 1.686 under.
+    /// LILYSHARP-OWN (LilyPond's <c>\box</c> pads the extent it is given; the twin gives it
+    /// this one). WHAT STAYS: the frame — its size (to the digit when the first and the last
+    /// line are one size) and where the page puts it against its neighbours, the band's
+    /// <c>Up</c> — and the line step. WHAT MOVES: the text in it, down by this; so a boxed
+    /// band's reference point is no longer its first baseline but this much over it
+    /// (<c>Lines[0].Baseline</c> says how much).
+    /// </remarks>
+    public static double BoxShift(ScoreTextMetrics fonts) => OpticalMiddle * Em(fonts) - Skip(fonts) / 6.0;
 
     /// <summary>The rule of a boxed text's frame.</summary>
     /// <remarks>LILYPOND-REF: scm/define-markup-commands.scm box — <c>thickness</c> 1, times
@@ -432,12 +506,25 @@ internal sealed record ProseBand(
         if (lines.Count == 0)
             return null;
         var frame = shape.Box ? new ProseFrame(marginLeft, lineWidth - marginRight, BoxThickness) : null;
+        // A boxed text stands in the optical middle of its frame (BoxShift's remark): the
+        // frame stays where the band's reference point and Up put it, every baseline stands
+        // lower by the first line's share, and the frame's bottom is nearer the last baseline
+        // by the last line's.
+        double sink = 0;
+        if (shape.Box)
+        {
+            double drop = BoxShift(fonts) * lines[0].Scale;
+            for (int i = 0; i < lines.Count; i++)
+                lines[i] = lines[i] with { Baseline = lines[i].Baseline + drop };
+            baseline += drop;
+            sink = BoxShift(fonts) * lines[^1].Scale;
+        }
         // The white above and below (yMargin, or the default): in the band's extent, outside
         // a frame. Clamped, for a caller that did not come through the validator.
         double marginTop = Math.Clamp(shape.MarginTop ?? DefaultMargin, 0, MaximumMargin);
         double marginBottom = Math.Clamp(shape.MarginBottom ?? DefaultMargin, 0, MaximumMargin);
         return new ProseBand(lines.ToImmutable(), LineUp(fonts) * lines[0].Scale + inset + marginTop,
-            baseline + LineDown(fonts) * lines[^1].Scale + inset + marginBottom,
+            baseline + LineDown(fonts) * lines[^1].Scale - sink + inset + marginBottom,
             frame is null ? widest : Math.Max(widest, frame.Right), position, left, textWidth, frame,
             marginTop, marginBottom, shape.Center);
     }

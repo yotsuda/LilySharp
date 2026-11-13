@@ -42,7 +42,8 @@ poet "Poet"             // optional: the left end of the composer's line (\heade
                         // quotes, rules, images, HTML); ```md end prints them under the last system. Nothing
                         // between the fences is Lily#. Inside score { } a fence replaces the file's for that score.
                         // The opening line may go on, in any order, each word once: `box` (a ruled frame
-                        // around the text), `center` (each line centred), `xMargin 20mm` (white at both
+                        // around the text, as wide as the staff unless an xMargin is written — `xMargin 0`
+                        // is margin to margin), `center` (each line centred), `xMargin 20mm` (white at both
                         // sides, inside the line width) or `xMargin 20mm 10mm` (left, right), `yMargin 2`
                         // (white above and below, in staff spaces unless a unit is glued on; default 1,
                         // `yMargin 0` is LilyPond's own spacing) or `yMargin 3 1` (above, below) — e.g.
@@ -1767,7 +1768,7 @@ and NOT printed yet (warned, LYS4058).
 | Word | Meaning |
 |---|---|
 | `end` | the place: under the last system instead of under the title |
-| `box` | a thin ruled frame around the text |
+| `box` | a thin ruled frame around the text, the text in its middle. With no `xMargin` the frame is AS WIDE AS THE STAFF it stands against — its left edge where the first system's staff lines begin (under the title) or the last system's (`end`), its right edge at the line's end; with an `xMargin` it is measured from the page's margins, so `box xMargin 0` runs from margin to margin |
 | `center` | each line centred (headings too; a list keeps its shape at the left) |
 | `xMargin 20mm` / `xMargin 20mm 10mm` | white at both sides / at the left and the right, inside the line width: the text is set narrower |
 | `yMargin 2` / `yMargin 3 1` | white above and below / above, below. Default 1 staff space each; `yMargin 0` is LilyPond's own tight spacing |

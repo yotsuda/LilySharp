@@ -87,11 +87,15 @@ public readonly record struct TextLength(double Value, string? Unit)
 /// where the line writes no <c>yMargin</c>: the page's own default.</param>
 /// <param name="MarginBottom">The white below it (<c>yMargin</c>'s second length, or its
 /// first), or null likewise.</param>
+/// <param name="SidesWritten">Whether the line writes <c>xMargin</c> at all — <c>xMargin 0</c>
+/// too: a boxed text that writes none is as wide as the staff, one that writes it is measured
+/// from the page's margins (owner, 2026-11-13; Svg.Layout.ProseBand.BoxedAtTheStaff).</param>
 public readonly record struct TextShape(TextLength MarginLeft, TextLength MarginRight, bool Center, bool Box,
-    TextLength? MarginTop = null, TextLength? MarginBottom = null)
+    TextLength? MarginTop = null, TextLength? MarginBottom = null, bool SidesWritten = false)
 {
-    /// <summary>Whether the opening line wrote none of the words: the text as it has always been set.</summary>
-    public bool IsPlain => this == default;
+    /// <summary>Whether the opening line wrote none of the words that set a text apart: the
+    /// text as it has always been set (an <c>xMargin 0</c> alone is that too, as it was).</summary>
+    public bool IsPlain => this with { SidesWritten = false } == default;
 }
 
 /// <summary>
@@ -213,7 +217,7 @@ public sealed record FencedText(
                     break;
             }
         }
-        return new TextShape(left, right, center, box, top, bottom);
+        return new TextShape(left, right, center, box, top, bottom, xWritten);
 
         // One length, or two: the words that follow a margin's word and begin as a number does.
         (TextLength First, TextLength Second)? ReadLengths(ref int i, int offset, string word, bool written,

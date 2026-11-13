@@ -1105,7 +1105,7 @@ The opening line may go on to say how the text is set, in any order, each word o
 | `yMargin 2` | has that much white above and below it — two staff spaces here. With no `yMargin` a text keeps 1; `yMargin 0` is LilyPond's own tight spacing |
 | `yMargin 3 1` | the same, 3 above and 1 below |
 | `center` | has each line centred in its width (the default is ragged right from the left edge); a heading is centred too, a list keeps its shape at the left edge |
-| `box` | has a thin ruled frame around it; the frame stands on the side margins' edges and the text is set inside it, the white above and below outside it |
+| `box` | has a thin ruled frame around it, and stands in the frame's middle; the white above and below is outside the frame. With no `xMargin` the frame is as wide as the staff: it begins where the staff lines of the first system begin (for the `end` text, the last system's) — after the indent and the instrument names — and ends where a full line ends. With an `xMargin` it stands on the side margins' edges, measured from the page's margins: `box xMargin 0` is a frame from margin to margin |
 
 A length is written as in `paper { }`: `20mm`, `2cm`, `0.5in`, or a bare number of staff
 spaces. The text under the title and the `end` text each have their own words. The white above
