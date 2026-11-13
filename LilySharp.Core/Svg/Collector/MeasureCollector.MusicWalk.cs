@@ -311,11 +311,12 @@ public sealed partial class MeasureCollector
     /// off its annotation list, the one <c>CollectArticulations</c> reads; a chord member's
     /// own list is not read — a phrasing slur binds to the column, as LilyPond's does.
     /// </remarks>
-    private (int Start, int End, int Direction)? PhrasingSlurMarksOn(SyntaxNode node)
+    private (int Start, int End, int Direction, BowLine Line)? PhrasingSlurMarksOn(SyntaxNode node)
     {
         if (_v.PercentCoveredDepth > 0)
             return null;
         int start = MusicItem.NoSourcePosition, end = MusicItem.NoSourcePosition, dir = 0;
+        var line = BowLine.Solid;
         foreach (var a in ArticulationsOf(node))
         {
             // In grace time the question is LYS4020's own (GraceBodySupport.IsCarriedPhrasingSlur),
@@ -328,12 +329,22 @@ public sealed partial class MeasureCollector
                 start = art.SourceStart;
                 // '.up' / '.down' is LilyPond's ^\( / _\(.
                 dir = art.ForcedAbove switch { true => 1, false => -1, null => 0 };
+                line = BowLine.Solid;
+            }
+            // '@phrasingSlur(dashed)' / '(dotted)' (owner-approved 2026-11-13): the same start,
+            // with the line the curve is drawn with. A word that is neither still opens it,
+            // solid (BowLineValidator, LYS4074).
+            else if (a is MusicMarkSyntax lined && Semantics.AnnotationValues.OpensPhrasingSlurWithALine(lined))
+            {
+                start = lined.SourceStart;
+                dir = lined.ForcedAbove switch { true => 1, false => -1, null => 0 };
+                line = Semantics.AnnotationValues.BowLineOf(lined, Semantics.AnnotationValues.PhrasingSlurName) ?? BowLine.Solid;
             }
             else if (a is MusicMarkSyntax { IsSpanEnd: true } mark
                 && Semantics.AnnotationValues.IsPhrasingSlurName(mark.Name))
                 end = mark.SourceStart;
         }
-        return start < 0 && end < 0 ? null : (start, end, dir);
+        return start < 0 && end < 0 ? null : (start, end, dir, line);
     }
 
     /// <summary>

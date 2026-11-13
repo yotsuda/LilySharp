@@ -169,6 +169,7 @@ internal sealed record MusicItemRare
     public int PhrasingSlurDirection { get; init; }
     public BowLine SlurLine { get; init; }
     public BowLine TieLine { get; init; }
+    public BowLine PhrasingSlurLine { get; init; }
     public bool BeamBreakBefore { get; init; }
     public int PhrasingSlurStartSourcePosition { get; init; } = MusicItem.NoSourcePosition;
     public int PhrasingSlurEndSourcePosition { get; init; } = MusicItem.NoSourcePosition;
@@ -736,6 +737,17 @@ public abstract record MusicItem
     {
         get => _rareBase?.TieLine ?? BowLine.Solid;
         init { if (value != TieLine) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { TieLine = value }; }
+    }
+
+    /// <summary>How the PHRASING slur that begins on this item is drawn —
+    /// <c>c4@phrasingSlur(dashed) d e f@!phrasingSlur</c> (owner-approved 2026-11-13). Content,
+    /// like <see cref="SlurLine"/>; stamped with the curve's other marks
+    /// (<c>MeasureBuilder.TakePendingPhrasingSlur</c>) and read by <c>SlurDetector</c> onto
+    /// <see cref="SlurItem.Line"/>.</summary>
+    public BowLine PhrasingSlurLine
+    {
+        get => _rareBase?.PhrasingSlurLine ?? BowLine.Solid;
+        init { if (value != PhrasingSlurLine) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { PhrasingSlurLine = value }; }
     }
 
     /// <summary>Source position of the <c>@</c> of the <c>@phrasingSlur</c> on this item, or

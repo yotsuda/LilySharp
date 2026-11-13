@@ -165,6 +165,19 @@ public sealed partial class LilyPondExporter
                 case MusicMarkSyntax mk when Semantics.AnnotationValues.BowLineOf(mk, Semantics.AnnotationValues.TieLineName) is { } tieLine:
                     prefix.Append(tieLine == BowLine.Dotted ? "\\once \\tieDotted " : "\\once \\tieDashed ");
                     break;
+                // @phrasingSlur(dashed) / (dotted) (owner-approved 2026-11-13): the phrasing
+                // slur's START — `\(`, with the side a `.up` / `.down` after the argument forces,
+                // as the bare mark's (PostEventFor) — and before the note LilyPond's switch for
+                // the PhrasingSlur made at this moment. A word that is no line (LYS4074) is the
+                // solid curve the page draws.
+                // LILYPOND-REF: ly/property-init.ly phrasingSlurDashed / phrasingSlurDotted —
+                //   `\override PhrasingSlur.dash-definition = #'((0 1 0.4 0.75))` / `… 0.1 0.75`,
+                //   the Slur's two definitions.
+                case MusicMarkSyntax mk when Semantics.AnnotationValues.OpensPhrasingSlurWithALine(mk):
+                    if (Semantics.AnnotationValues.BowLineOf(mk, Semantics.AnnotationValues.PhrasingSlurName) is { } phrasingLine)
+                        prefix.Append(phrasingLine == BowLine.Dotted ? "\\once \\phrasingSlurDotted " : "\\once \\phrasingSlurDashed ");
+                    suffix.Append(mk.ForcedAbove switch { true => "^\\(", false => "_\\(", null => "\\(" });
+                    break;
                 // ⚠️ THE ONE MARK THAT TRAILS ITS NOTE. `\mark` is standalone music written
                 // BEFORE the note it stands over, which is why marks default to the prefix;
                 // `\nonArpeggiato` is a POST-EVENT (scm/define-music-types.scm:436-441 gives

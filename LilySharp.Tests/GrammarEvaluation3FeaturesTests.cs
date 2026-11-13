@@ -1505,6 +1505,9 @@ public class GrammarEvaluation3FeaturesTests
     [InlineData("c'4@slur(dashed)( d' e' f') |")]
     [InlineData("c'4@slur(dotted)( e'') r2 |")]
     [InlineData("c'1@tie(dotted)~ | c'1 |")]
+    // A phrasing slur's pieces too, the slurs inside it being solid (2026-11-13).
+    [InlineData("c'4@phrasingSlur(dotted) d' e' f'@!phrasingSlur |")]
+    [InlineData("c'4@phrasingSlur(dashed) d'( e') f' | g'( a') b' c''@!phrasingSlur |")]
     public void ADashedBowsPieces_StandEvenlyAlongIt(string music)
     {
         var quads = RenderedGeometry.Render(Melody(music)).Quads;
@@ -1582,6 +1585,9 @@ public class GrammarEvaluation3FeaturesTests
     [InlineData("c'2( c'2@tie(dotted)) |", "@tie(dotted)", DiagnosticCodes.BowLineWithoutBow, "no '~' ties this note on")]
     [InlineData("r4@slur(dashed)( c' d' e') |", "@slur(dashed)", DiagnosticCodes.BowLineWithoutBow, "it is written on a rest")]
     [InlineData("<c' e'@tie(dashed)~ g'>2 <c' e' g'>2 |", "@tie(dashed)", DiagnosticCodes.BowLineWithoutBow, "write it after the chord")]
+    // A phrasing slur's line (2026-11-13): the curve is drawn all the same, solid.
+    [InlineData("c'4@phrasingSlur(wavy) d' e' f'@!phrasingSlur |", "@phrasingSlur(wavy)", DiagnosticCodes.BowLineMalformed, "'wavy' is not a line a phrasing slur is drawn with")]
+    [InlineData("c'4@phrasingSlur(dashed dotted) d' e' f'@!phrasingSlur |", "@phrasingSlur(dashed dotted)", DiagnosticCodes.BowLineMalformed, "write '@phrasingSlur(dashed)' or '@phrasingSlur(dotted)'")]
     public void ABowLine_MiswrittenIsSaid(string music, string at, string code, string says)
     {
         string source = Melody(music);
@@ -1610,6 +1616,135 @@ public class GrammarEvaluation3FeaturesTests
         Assert.Contains("tie", offered);
         Assert.Equal(["dashed", "dotted"], Offered(Melody("c'4@slur(‸)( d' e' f') |")));
         Assert.Equal(["dashed", "dotted"], Offered(Melody("c'2@tie(‸)~ c'2 |")));
+    }
+
+    /// <summary>A dashed or dotted PHRASING slur, <c>@phrasingSlur(dashed)</c> (owner-approved
+    /// 2026-11-13): the solid one's curve, cut by the slur's own rule — LilyPond's
+    /// <c>phrasingSlurDashed</c> is the Slur's dash-definition — with the slurs inside it left
+    /// as they were.</summary>
+    /// <remarks>MEASURED, LilyPond 2.26.0 (LilySharp-Lab sessions/p1226/md/eval3/featK/lp1.ly,
+    /// lp1.svg: 57 stroked paths in all): the dashed phrasing slur over the two bars has a chord
+    /// of 21.4902 and draws 29 pieces beside its two solid slurs; the dotted one over
+    /// <c>c'4 d' e' f'</c>, 9.1308 and 13.</remarks>
+    [Theory]
+    [InlineData("c'4@phrasingSlur(dashed) d'( e') f' | g'( a') b' c''@!phrasingSlur |", 2)]
+    [InlineData("c'4@phrasingSlur(dotted) d' e' f'@!phrasingSlur |", 0)]
+    [InlineData("c'4@phrasingSlur(dashed).down d' e' f'@!phrasingSlur |", 0)]
+    [InlineData("c'4@phrasingSlur(dotted).up d' e' f'@!phrasingSlur |", 0)]
+    public void ADashedPhrasingSlur_IsTheSolidOnesCurveInPieces(string dashed, int inner)
+    {
+        Clean(Melody(dashed));
+        RoundTrips(Melody(dashed));
+        var plain = RenderedGeometry.Render(Melody(dashed.Replace("(dashed)", "").Replace("(dotted)", "")));
+        Assert.Empty(plain.Quads);
+        Assert.Equal(inner + 1, plain.Beziers.Count);
+
+        var g = RenderedGeometry.Render(Melody(dashed));
+        // The slurs inside it are the solid curves they were; the phrasing slur's is gone.
+        Assert.Equal(inner, g.Beziers.Count);
+        var bow = Assert.Single(plain.Beziers, b => !g.Beziers.Any(s => s.P0 == b.P0 && s.P1 == b.P1));
+        // The same curve: the pieces reach from its start to its end (grown by half the pen).
+        double pen = LilySharp.Core.Svg.EngravingDefaults.BowEndRounding / 2;
+        Assert.InRange(g.Quads.Min(q => Math.Min(q.X0, q.X3)) - bow.P0.X, -2 * pen, 0.0);
+        Assert.InRange(g.Quads.Max(q => Math.Max(q.X1, q.X2)) - bow.P1.X, 0.0, 2 * pen);
+        // One piece more than the chord holds periods (lily/lookup.cc Lookup::slur).
+        double chord = Math.Sqrt(Math.Pow(bow.P1.X - bow.P0.X, 2) + Math.Pow(bow.P1.Y - bow.P0.Y, 2));
+        Assert.Equal((int)(chord / LilySharp.Core.Svg.EngravingDefaults.BowDashPeriod) + 1, g.Quads.Count);
+        Assert.True(g.Quads.Count >= 10, $"{g.Quads.Count} pieces");
+        Assert.Equal(plain.Noteheads.Select(h => Math.Round(h.X, 6)), g.Noteheads.Select(h => Math.Round(h.X, 6)));
+    }
+
+    /// <summary>The counts LilyPond 2.26.0 draws for the two curves of the remark above.</summary>
+    [Theory]
+    [InlineData("c'4@phrasingSlur(dashed) d'( e') f' | g'( a') b' c''@!phrasingSlur |", 29)]
+    [InlineData("c'4@phrasingSlur(dotted) d' e' f'@!phrasingSlur |", 13)]
+    public void ADashedPhrasingSlur_HasLilyPondsCount(string music, int pieces)
+        => Assert.Equal(pieces, RenderedGeometry.Render(Melody(music)).Quads.Count);
+
+    /// <summary>Only a word glued to the <c>(</c> is the line: any other <c>(</c> after
+    /// <c>@phrasingSlur</c> is, as it always was, the slur that starts on the same note. Across
+    /// a line break both halves are dashed, and the written side holds.</summary>
+    [Fact]
+    public void ADashedPhrasingSlur_LeavesTheSlurAlone_AndBreaksDashed()
+    {
+        foreach (string both in new[] { "c'4@phrasingSlur( d' e')@!phrasingSlur f' |", "c'4@phrasingSlur(d' e')@!phrasingSlur f' |",
+                     "c'4@phrasingSlur.up( d' e')@!phrasingSlur f' |" })
+        {
+            Clean(Melody(both));
+            var solid = RenderedGeometry.Render(Melody(both));
+            Assert.Equal(2, solid.Beziers.Count);
+            Assert.Empty(solid.Quads);
+        }
+        // …and with its word the slur beside it is still a slur, solid.
+        string lined = Melody("c'4@phrasingSlur(dashed)( d' e')@!phrasingSlur f' |");
+        Clean(lined);
+        var one = RenderedGeometry.Render(lined);
+        Assert.Single(one.Beziers);
+        Assert.NotEmpty(one.Quads);
+        var items = Collected(lined).StaffGroups[0].Staves[0].Voices[0].Measures.SelectMany(m => m.Items).ToArray();
+        Assert.Equal((true, true, LilySharp.Core.Svg.Model.BowLine.Dashed, LilySharp.Core.Svg.Model.BowLine.Solid),
+            (items[0].HasPhrasingSlurStart, items[0] is LilySharp.Core.Svg.Model.NoteItem { HasSlurStart: true },
+                items[0].PhrasingSlurLine, items[0].SlurLine));
+
+        // Across a break: no solid curve on either system, pieces on both.
+        string broken = Melody("c'4@phrasingSlur(dashed) d' e' f' | break g' a' b' c''@!phrasingSlur |");
+        Clean(broken);
+        var halves = RenderedGeometry.Render(broken);
+        Assert.Empty(halves.Beziers);
+        Assert.Equal(2, RenderedGeometry.Render(broken.Replace("(dashed)", "")).Beziers.Count);
+        var rows = halves.Quads.GroupBy(q => Math.Round(q.Y0 / 8)).Select(r => r.Count()).ToArray();
+        Assert.True(rows.Length >= 2 && rows.All(n => n >= 5), string.Join(" ", rows));
+
+        // The side written after the argument is the bare mark's side.
+        var up = Collected(Melody("c''4@phrasingSlur(dotted).down d'' e'' f''@!phrasingSlur |"))
+            .StaffGroups[0].Staves[0].Voices[0].Measures[0].Items[0];
+        Assert.Equal((-1, LilySharp.Core.Svg.Model.BowLine.Dotted), (up.PhrasingSlurDirection, up.PhrasingSlurLine));
+    }
+
+    /// <summary>The sound is the solid curve's; MusicXML says <c>line-type</c> on the phrasing
+    /// slur's own <c>&lt;slur&gt;</c> (number 2) and reads it back; the twin is LilyPond's
+    /// switch for the one PhrasingSlur.</summary>
+    [Fact]
+    public void ADashedPhrasingSlur_GoesToTheExports_AndComesBack()
+    {
+        string source = Melody("c'4@phrasingSlur(dashed) d'( e') f' | g'( a') b' c''@!phrasingSlur | c'4@phrasingSlur(dotted).up d' e' f'@!phrasingSlur |");
+        string solid = source.Replace("(dashed)", "").Replace("(dotted)", "");
+        static IEnumerable<(int, int, int)> Sounds(LilySharp.Core.Midi.MidiFile midi)
+            => midi.Tracks.SelectMany(t => t.Notes).Select(n => (n.StartTick, n.Pitch, n.DurationTicks));
+        Assert.Equal(Sounds(Midi(solid)), Sounds(Midi(source)));
+
+        string xml = Xml(source);
+        Assert.Contains("<slur type=\"start\" number=\"2\" line-type=\"dashed\" />", xml);
+        Assert.Contains("<slur type=\"start\" number=\"2\" placement=\"above\" line-type=\"dotted\" />", xml);
+        // The slurs inside it carry none, and the solid book is the book it was.
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(xml, "<slur type=\"start\" number=\"1\" />").Count);
+        Assert.DoesNotContain("line-type", Xml(solid));
+        Assert.Equal(Xml(solid), xml.Replace(" line-type=\"dashed\"", "").Replace(" line-type=\"dotted\"", ""));
+
+        string ly = Ly(source);
+        Assert.Contains("\\once \\phrasingSlurDashed c'4\\( d' ( e' ) f' |", ly);
+        Assert.Contains("\\once \\phrasingSlurDotted c'4^\\( d' e' f'\\) |", ly);
+        Assert.Empty(TwinWarnings(source));
+        Assert.Equal(Ly(solid), ly.Replace("\\once \\phrasingSlurDashed ", "").Replace("\\once \\phrasingSlurDotted ", ""));
+
+        var report = new LilySharp.Core.MusicXmlImport.ImportReport();
+        string back = LilySharp.Core.MusicXmlImport.LysWriter.Write(
+            LilySharp.Core.MusicXmlImport.MusicXmlReader.Read(xml, report), report);
+        Assert.Contains("@phrasingSlur(dashed) d'4( e'4) f'4 | g'4( a'4) b'4 c''4@!phrasingSlur", back);
+        Assert.Contains("c'4@phrasingSlur(dotted).up d'4 e'4 f'4@!phrasingSlur", back);
+        Assert.DoesNotContain("@slur(", back);
+        Assert.DoesNotContain(Said(back), d => d.Severity == DiagnosticSeverity.Error);
+    }
+
+    /// <summary>Inside <c>@phrasingSlur(</c> the two words are offered, and after its
+    /// <c>)</c> the side.</summary>
+    [Fact]
+    public void APhrasingSlursLine_IsOffered()
+    {
+        Assert.Equal(["dashed", "dotted"], Offered(Melody("c'4@phrasingSlur(‸) d' e' f'@!phrasingSlur |")));
+        Assert.Equal(["dashed", "dotted"], Offered(Melody("c'4@phrasingSlur(da‸) d' e' f'@!phrasingSlur |")));
+        Assert.Contains("phrasingSlur", Offered(Melody("c'4@‸ d' e' f' |")));
+        Assert.Equal(["up", "down"], Offered(Melody("c'4@phrasingSlur(dashed).‸ d' e' f'@!phrasingSlur |")));
     }
 
     // ───────────────────────── 14. an editor's dynamic: @p(editorial) ─────────────────────────

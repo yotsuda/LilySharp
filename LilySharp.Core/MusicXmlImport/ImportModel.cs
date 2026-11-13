@@ -248,6 +248,9 @@ internal sealed class ImportNote : ImportItem
     /// <summary><c>above</c> / <c>below</c> from the starting <c>&lt;slur placement&gt;</c>,
     /// or null.</summary>
     public string? PhrasingSlurPlacement { get; set; }
+    /// <summary><c>dashed</c> or <c>dotted</c> from the starting phrasing <c>&lt;slur
+    /// line-type&gt;</c>, else null: written as <c>@phrasingSlur(dashed)</c> (2026-11-13).</summary>
+    public string? PhrasingSlurLine { get; set; }
     /// <summary>Lily# articulation/ornament mark names (<c>staccato</c>, <c>accent</c>,
     /// <c>fermata</c>, <c>trill</c>, …), emitted as <c>@name</c> suffixes.</summary>
     public List<string> Articulations { get; } = new();

@@ -75,8 +75,6 @@ asked — none is decided.
   LilyPond's bend spanner runs between two written notes.
 - **`@harmonic(N)` on a chord**: natural harmonics on several strings at once, today written
   in voices (LYS4072).
-- **A dashed phrasing slur**: `@slur(dashed)` and `@tie(dashed)` shipped 2026-11-13; the
-  phrasing slur (`@phrasingSlur`) has no dashed form.
 - **Another part's marks in a part sheet's exports**: a part sheet's page prints the rehearsal
   mark, tempo and rit. another part writes (2026-11-13); its LilyPond twin and MusicXML do
   not yet carry the mark or the rit.

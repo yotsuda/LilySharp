@@ -797,10 +797,12 @@ internal static class SyntaxFacts
     /// Whether <c>@name(…)</c> may be followed by the <c>.up</c> / <c>.down</c> placement:
     /// <c>@text("…").up</c>, <c>@diagram(…).down</c> (the diagram stands above by default,
     /// owner's decision, session 646) and <c>@todo("…").down</c> (the memo stands above by
-    /// default, owner's decision 2026-10-10). The other value annotations have fixed sides,
+    /// default, owner's decision 2026-10-10) — and <c>@phrasingSlur(dashed).up</c>, the side
+    /// the bare <c>@phrasingSlur.up</c> takes (owner-approved 2026-11-13). The other value
+    /// annotations have fixed sides,
     /// and a '.' after them would corrupt their dotted MarkName forms. One list for the
     /// parser, which takes the placement, and the editor, which offers it.
     /// </summary>
     public static bool AnnotationTakesPlacementAfterArgument(string name)
-        => name is "text" or "diagram" or "todo";
+        => name is "text" or "diagram" or "todo" or Semantics.AnnotationValues.PhrasingSlurName;
 }

@@ -734,19 +734,37 @@ public static class AnnotationValues
     /// <c>c2@tie(dashed)~ c2</c>.</summary>
     public const string TieLineName = "tie";
 
-    /// <summary>The words <c>@slur(…)</c> and <c>@tie(…)</c> take, in the order the editor
-    /// offers them.</summary>
+    /// <summary>The PHRASING slur's name. Its opening mark takes a slur's line word too:
+    /// <c>c4@phrasingSlur(dashed) d e f@!phrasingSlur</c> (owner-approved 2026-11-13). Unlike
+    /// <see cref="SlurLineName"/> the mark with the word IS the curve's start, not a remark on
+    /// one written beside it (<see cref="OpensPhrasingSlurWithALine"/>).</summary>
+    public const string PhrasingSlurName = "phrasingSlur";
+
+    /// <summary>The words <c>@slur(…)</c>, <c>@tie(…)</c> and <c>@phrasingSlur(…)</c> take, in
+    /// the order the editor offers them.</summary>
     public static readonly string[] BowLineWords = ["dashed", "dotted"];
 
     /// <summary>
+    /// Whether <paramref name="mark"/> is a phrasing slur's START written with an argument list,
+    /// <c>@phrasingSlur(dashed)</c> (owner-approved 2026-11-13) — whatever stands between the
+    /// parentheses: a word that is no line (<c>@phrasingSlur(wavy)</c>) still opens the curve,
+    /// drawn solid, and <c>BowLineValidator</c> names the two words (LYS4074). The bare
+    /// <c>@phrasingSlur</c> is an <see cref="ArticulationSyntax"/> and never arrives here.
+    /// </summary>
+    public static bool OpensPhrasingSlurWithALine(MusicMarkSyntax mark)
+        => mark is { IsSpanEnd: false, HasArgumentList: true } && Named(mark, PhrasingSlurName);
+
+    /// <summary>
     /// The line <c>@slur(dashed)</c> / <c>@slur(dotted)</c> (<paramref name="name"/>
-    /// <see cref="SlurLineName"/>) or <c>@tie(dashed)</c> / <c>@tie(dotted)</c>
-    /// (<see cref="TieLineName"/>) asks for, or null: another annotation, an end, no argument,
+    /// <see cref="SlurLineName"/>), <c>@tie(dashed)</c> / <c>@tie(dotted)</c>
+    /// (<see cref="TieLineName"/>) or <c>@phrasingSlur(dashed)</c> / <c>@phrasingSlur(dotted)</c>
+    /// (<see cref="PhrasingSlurName"/>) asks for, or null: another annotation, an end, no argument,
     /// several, or a word that is neither (owner-approved 2026-11-13, grammar evaluation 3).
     /// The one reader, so the page, the exports and the validator take the same.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: ly/property-init.ly slurDashed / slurDotted, tieDashed / tieDotted.
+    /// LILYPOND-REF: ly/property-init.ly slurDashed / slurDotted, tieDashed / tieDotted,
+    ///   phrasingSlurDashed / phrasingSlurDotted.
     /// </remarks>
     public static Svg.Model.BowLine? BowLineOf(MusicMarkSyntax mark, string name)
     {

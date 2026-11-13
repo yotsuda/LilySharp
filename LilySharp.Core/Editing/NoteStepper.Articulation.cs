@@ -122,6 +122,8 @@ public static partial class NoteStepper
         // 切り替えられるように"): the completion's two rows, traded by either key's first press.
         [Semantics.AnnotationValues.SlurLineName] = [.. Semantics.AnnotationValues.BowLineWords],
         [Semantics.AnnotationValues.TieLineName] = [.. Semantics.AnnotationValues.BowLineWords],
+        // …and a phrasing slur's, @phrasingSlur(dashed) (owner-approved 2026-11-13).
+        [Semantics.AnnotationValues.PhrasingSlurName] = [.. Semantics.AnnotationValues.BowLineWords],
     };
 
     /// <summary>A name the step may write: one the registry draws, or a plain annotation the

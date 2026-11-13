@@ -5362,7 +5362,7 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "treCorde", Kind = CompletionItemKind.Value, Detail = "Tre corde - the una corda release, same mark as @!unaCorda", SortText = "5treCorde" },
 
                 // The phrasing slur: LilyPond's \( … \), closed by '@!' like every span here.
-                new CompletionItem { Label = "phrasingSlur", Kind = CompletionItemKind.Value, Detail = "Phrasing slur - the long curve over a musical sentence, drawn over its slurs; ends at @!phrasingSlur", SortText = "6phrasingSlur" },
+                new CompletionItem { Label = "phrasingSlur", Kind = CompletionItemKind.Value, Detail = "Phrasing slur - the long curve over a musical sentence, drawn over its slurs; ends at @!phrasingSlur. Dashed or dotted: @phrasingSlur(dashed)", SortText = "6phrasingSlur" },
 
                 // Notation marks
                 new CompletionItem { Label = "glissando", Kind = CompletionItemKind.Value, Detail = "Glissando to next note", SortText = "6glissando" },
@@ -5470,6 +5470,7 @@ public sealed partial class LilySharpLanguageServer
             "barre" => GetBarreCompletions(),
             AnnotationValues.SlurLineName => GetBowLineCompletions("slur"),
             AnnotationValues.TieLineName => GetBowLineCompletions("tie"),
+            AnnotationValues.PhrasingSlurName => GetBowLineCompletions("phrasing slur"),
             LilySharp.Core.Music.Harmonics.Name => GetHarmonicCompletions(),
             _ when AnnotationValues.IsOrnamentName(annotation) => GetOrnamentAccidentalCompletions(),
             // @p(editorial) (owner-approved 2026-11-13, grammar evaluation 3): a level's one word.
@@ -5497,7 +5498,8 @@ public sealed partial class LilySharpLanguageServer
         ],
     };
 
-    /// <summary>Inside <c>@slur(…)</c> and <c>@tie(…)</c>: <c>dashed</c> and <c>dotted</c>
+    /// <summary>Inside <c>@slur(…)</c>, <c>@tie(…)</c> and <c>@phrasingSlur(…)</c>: <c>dashed</c>
+    /// and <c>dotted</c>
     /// (<c>AnnotationValues.BowLineWords</c>; owner-approved 2026-11-13, grammar evaluation 3).</summary>
     internal static CompletionList GetBowLineCompletions(string what) => new()
     {

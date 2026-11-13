@@ -1656,7 +1656,7 @@ public static class DiagnosticCodes
     /// the same, the partial above the note written.</summary>
     public const string HarmonicNotAnOpenString = "LYS4073";
 
-    /// <summary>Error: a <c>@slur(…)</c> or <c>@tie(…)</c> whose argument is not one word,
+    /// <summary>Error: a <c>@slur(…)</c>, <c>@tie(…)</c> or <c>@phrasingSlur(…)</c> whose argument is not one word,
     /// <c>dashed</c> or <c>dotted</c> (owner-approved 2026-11-13, grammar evaluation 3:
     /// <c>c4@slur(dashed)( d e)</c>; <c>Semantics.BowLineValidator</c>). The curve is drawn solid.</summary>
     public const string BowLineMalformed = "LYS4074";

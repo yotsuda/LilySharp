@@ -381,7 +381,7 @@ internal sealed class MeasureBuilder
     /// factory's parameters; this rides the one sink every item enters through instead
     /// (<see cref="MusicItem.HasPhrasingSlurStart"/>).
     /// </remarks>
-    public (int Start, int End, int Direction)? PendingPhrasingSlur { get; set; }
+    public (int Start, int End, int Direction, BowLine Line)? PendingPhrasingSlur { get; set; }
 
     /// <summary>
     /// <see cref="PendingPhrasingSlur"/>'s GRACE-TIME twin: a grace note's own marks, handed
@@ -389,7 +389,7 @@ internal sealed class MeasureBuilder
     /// a grace body can be walked while the note it precedes is being emitted, and the main
     /// note's mark must neither go to a grace nor be wiped by one.
     /// </summary>
-    public (int Start, int End, int Direction)? PendingGracePhrasingSlur { get; set; }
+    public (int Start, int End, int Direction, BowLine Line)? PendingGracePhrasingSlur { get; set; }
 
     /// <summary>The columns a phrasing slur binds to — the same three a slur does
     /// (<c>SlurDetector.TryGetSlurFlags</c>): a note, a chord, a sounding rest.</summary>
@@ -418,7 +418,7 @@ internal sealed class MeasureBuilder
         return WithPhrasingSlur(item, phrasing);
     }
 
-    private static MusicItem WithPhrasingSlur(MusicItem item, (int Start, int End, int Direction) phrasing)
+    private static MusicItem WithPhrasingSlur(MusicItem item, (int Start, int End, int Direction, BowLine Line) phrasing)
     {
         return item with
         {
@@ -427,6 +427,7 @@ internal sealed class MeasureBuilder
             HasPhrasingSlurEnd = phrasing.End >= 0,
             PhrasingSlurEndSourcePosition = phrasing.End,
             PhrasingSlurDirection = phrasing.Direction,
+            PhrasingSlurLine = phrasing.Line,
         };
     }
 
@@ -846,6 +847,7 @@ internal sealed class MeasureBuilder
                 HasPhrasingSlurEnd = n.HasPhrasingSlurEnd,
                 PhrasingSlurEndSourcePosition = n.PhrasingSlurEndSourcePosition,
                 PhrasingSlurDirection = n.PhrasingSlurDirection,
+                PhrasingSlurLine = n.PhrasingSlurLine,
                 // ⚠️ THE @todo SURVIVES (session 963): the preview rings the grace's small head
                 // and sets its memo as a full-size note's (SharedRenderer.GraceTodoInkBox); the
                 // mark engraves nothing, so an export is the same page either way.
@@ -902,6 +904,7 @@ internal sealed class MeasureBuilder
                 HasPhrasingSlurEnd = c.HasPhrasingSlurEnd,
                 PhrasingSlurEndSourcePosition = c.PhrasingSlurEndSourcePosition,
                 PhrasingSlurDirection = c.PhrasingSlurDirection,
+                PhrasingSlurLine = c.PhrasingSlurLine,
                 // The @todo (session 963), as on the note above.
                 TodoKey = c.TodoKey,
                 TodoMemo = c.TodoMemo,
@@ -926,6 +929,7 @@ internal sealed class MeasureBuilder
                 HasPhrasingSlurEnd = r.HasPhrasingSlurEnd,
                 PhrasingSlurEndSourcePosition = r.PhrasingSlurEndSourcePosition,
                 PhrasingSlurDirection = r.PhrasingSlurDirection,
+                PhrasingSlurLine = r.PhrasingSlurLine,
                 // The @todo (session 963), as on the note above.
                 TodoKey = r.TodoKey,
                 TodoMemo = r.TodoMemo,

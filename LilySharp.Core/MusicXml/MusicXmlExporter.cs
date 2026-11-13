@@ -5615,6 +5615,19 @@ public sealed class MusicXmlExporter
                     xmlNote.SlurLineType = slurLine == Svg.Model.BowLine.Dotted ? "dotted" : "dashed";
                 if (Semantics.AnnotationValues.BowLineOf(mark, Semantics.AnnotationValues.TieLineName) is { } tieLine)
                     xmlNote.TiedLineType = tieLine == Svg.Model.BowLine.Dotted ? "dotted" : "dashed";
+                // @phrasingSlur(dashed) (owner-approved 2026-11-13): the phrasing slur's start as
+                // the bare mark writes it — the <slur> numbered 2, with its side — and the
+                // line-type on it, as on a slur's.
+                if (Semantics.AnnotationValues.OpensPhrasingSlurWithALine(mark)
+                    && !RefusedSlur(mark.SourceStart, close: false))
+                {
+                    var start = PhrasingSlurNotation("start");
+                    if (mark.ForcedAbove is { } above)
+                        start.Add(new System.Xml.Linq.XAttribute("placement", above ? "above" : "below"));
+                    if (Semantics.AnnotationValues.BowLineOf(mark, Semantics.AnnotationValues.PhrasingSlurName) is { } phrasingLine)
+                        start.Add(new System.Xml.Linq.XAttribute("line-type", phrasingLine == Svg.Model.BowLine.Dotted ? "dotted" : "dashed"));
+                    xmlNote.ExtraNotations.Add(start);
+                }
                 // @bend(full) is the note's <technical><bend>, its amount in semitones. Until
                 // 2026-11-13 no bend reached the MusicXML; it is written now that its release is
                 // (a <release/> with no bend before it says nothing). Inserted before a release

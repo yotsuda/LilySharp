@@ -29,7 +29,8 @@ namespace LilySharp.Core.Semantics;
 /// curve is drawn. What is refused: an argument that is neither word
 /// (<see cref="DiagnosticCodes.BowLineMalformed"/>), and a note no slur / no tie begins on
 /// (<see cref="DiagnosticCodes.BowLineWithoutBow"/>), where the annotation would do nothing
-/// without a word.
+/// without a word. A PHRASING slur's line, <c>@phrasingSlur(dashed)</c> (owner-approved
+/// 2026-11-13), is the curve's own start, so only its word is judged (the first code).
 /// </summary>
 /// <remarks>
 /// The second is read off the collect (<see cref="MusicItem.SlurLine"/> against the item's own
@@ -58,6 +59,21 @@ internal sealed class BowLineValidator : ISharedCollectValidator
         List<(MusicMarkSyntax Mark, bool Slur, SyntaxNode? Host)>? written = null;
         foreach (var mark in tree.GetRoot().DescendantNodes<MusicMarkSyntax>())
         {
+            // A phrasing slur's line (owner-approved 2026-11-13): the mark is the curve's own
+            // start, so there is no "nothing begins here" to judge — only the word.
+            if (AnnotationValues.OpensPhrasingSlurWithALine(mark))
+            {
+                if (AnnotationValues.BowLineOf(mark, mark.Name) is null)
+                {
+                    string word = string.Join(" ", mark.Arguments.Select(a => a.Text));
+                    // ASCII punctuation only: these strings reach legacy-codepage consoles via the CLI.
+                    _diagnostics.Add(Diagnostic.Error(mark.Span, DiagnosticCodes.BowLineMalformed,
+                        (word.Length == 0 ? $"'@{mark.Name}()' names no line" : $"'{word}' is not a line a phrasing slur is drawn with")
+                        + $" - write '@{mark.Name}(dashed)' or '@{mark.Name}(dotted)', or the bare '@{mark.Name}' for a solid one "
+                        + "(c4@phrasingSlur(dashed) d e f@!phrasingSlur). The phrasing slur is drawn solid."));
+                }
+                continue;
+            }
             if (mark.IsSpanEnd || mark.Name is not (AnnotationValues.SlurLineName or AnnotationValues.TieLineName))
                 continue;
             bool slur = mark.Name == AnnotationValues.SlurLineName;

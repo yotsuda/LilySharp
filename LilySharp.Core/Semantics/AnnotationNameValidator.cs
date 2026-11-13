@@ -448,6 +448,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             || AnnotationValues.IsFretHarmonic(mark)
             // A slur's or a tie's line, read or not: BowLineValidator says what a miswritten one lacks (LYS4074, LYS4075).
             || mark is { Name: AnnotationValues.SlurLineName or AnnotationValues.TieLineName, IsSpanEnd: false, HasArgumentList: true }
+            // …and a phrasing slur's, which opens the curve whatever its word (LYS4074).
+            || AnnotationValues.OpensPhrasingSlurWithALine(mark)
             || AnnotationValues.Feather(mark) != 0
             || AnnotationValues.ArpeggioWords(mark) is not null
             || AnnotationValues.OrnamentAccidental(mark) is not null

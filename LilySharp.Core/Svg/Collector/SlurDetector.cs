@@ -92,6 +92,8 @@ internal sealed class SlurDetector
                     StartSourcePosition = op.item.PhrasingSlurStartSourcePosition,
                     EndSourcePosition = item.PhrasingSlurEndSourcePosition,
                     IsPhrasing = true,
+                    // @phrasingSlur(dashed) on the note the curve begins on (2026-11-13).
+                    Line = op.item.PhrasingSlurLine,
                 });
             }
             if (item.HasPhrasingSlurStart && openPhrasing is null)

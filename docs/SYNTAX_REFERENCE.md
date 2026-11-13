@@ -662,8 +662,8 @@ the LilyPond twin `\once \slurDashed` before the note.
 
 The word is `dashed` or `dotted` (anything else: **LYS4074**). With no slur beginning on the
 note (`@slur`) or no tie (`@tie`) — a rest, or one note inside a chord's brackets, among them —
-the annotation would draw nothing, and is an error (**LYS4075**). A phrasing slur has no dashed
-form yet.
+the annotation would draw nothing, and is an error (**LYS4075**). A phrasing slur takes the
+word on its own opening mark, `@phrasingSlur(dashed)` — see below.
 
 ### Phrasing Slurs
 
@@ -682,6 +682,23 @@ warned about, and **the end is required**: an unclosed one draws nothing and is 
 `e@!phrasingSlur@phrasingSlur`, and closes before it opens. `@phrasingSlur.up` /
 `@phrasingSlur.down` fixes its side (LilyPond's `^\(` / `_\(`); otherwise it takes a slur's
 rule.
+
+A dashed or dotted phrasing slur says the word a slur's line does, on its opening mark; the
+closing `@!phrasingSlur` is unchanged, and a bare `@phrasingSlur` is solid:
+
+```
+c4@phrasingSlur(dashed) d( e) f | g( a) b c@!phrasingSlur |   // the slurs inside stay solid
+c4@phrasingSlur(dotted) d e f@!phrasingSlur |
+c4@phrasingSlur(dashed).up d e f@!phrasingSlur |              // a side goes after the word
+```
+
+The curve is the solid one's, cut as a dashed slur is, and both halves of one that crosses a
+line break are dashed. MusicXML writes `line-type` on the phrasing slur's `<slur>` (number 2),
+out and back in; the LilyPond twin writes `\once \phrasingSlurDashed` / `\once
+\phrasingSlurDotted` before the note. Another word is **LYS4074**, and the curve is drawn
+solid. Only a word written against the `(` is the line: `c4@phrasingSlur( d e)` and
+`c4@phrasingSlur(d e)` are, as they always were, a phrasing slur and a slur that begin on the
+same note.
 
 ### Across a section boundary
 

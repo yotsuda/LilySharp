@@ -1677,7 +1677,12 @@ internal sealed partial class Parser
                                  // after these two names is otherwise the very slur they speak of
                                  // (`c4@slur( d e)`, `c4@tie(d e)`), and a pitch is no identifier.
                                  // (So they are NOT in SyntaxFacts' argument-taking list either.)
+                                 // ⚠️ And a PHRASING slur's, @phrasingSlur(dashed) (owner-approved
+                                 // 2026-11-13), by the same rule: `c4@phrasingSlur( d e)` and
+                                 // `c4@phrasingSlur(d e)` are, as they always were, the phrasing
+                                 // slur and the slur that starts on its note.
                                  || (Current.Text is Semantics.AnnotationValues.SlurLineName or Semantics.AnnotationValues.TieLineName
+                                         or Semantics.AnnotationValues.PhrasingSlurName
                                      && Peek(2) is { Kind: SyntaxKind.Identifier } lineWord
                                      && GluedToPrevious(openParen, lineWord))
                                  // ⚠️ A natural harmonic's fret, @harmonic(12) (owner-approved

@@ -608,7 +608,8 @@ internal static class GraceBodySupport
     };
 
     /// <summary>
-    /// True for a PHRASING SLUR's start or end a grace note carries — <c>@phrasingSlur</c>,
+    /// True for a PHRASING SLUR's start or end a grace note carries — <c>@phrasingSlur</c>
+    /// (and <c>@phrasingSlur(dashed)</c>, owner-approved 2026-11-13),
     /// <c>@!phrasingSlur</c>: the grace column binds it as any column does, paired by
     /// SlurDetector and laid out by the slur pass at the grace's own X (session 926; ledger
     /// phrasing.grace.*). THE question the collector's stamp and the drop list both answer.
@@ -622,6 +623,7 @@ internal static class GraceBodySupport
     {
         ArticulationSyntax a => AnnotationValues.IsPhrasingSlurName(a.Name),
         MusicMarkSyntax { IsSpanEnd: true } end => AnnotationValues.IsPhrasingSlurName(end.Name),
+        MusicMarkSyntax lined => AnnotationValues.OpensPhrasingSlurWithALine(lined),
         _ => false,
     };
 

@@ -1679,6 +1679,7 @@ internal static class PartCombiner
             HasPhrasingSlurStart = start.HasPhrasingSlurStart,
             PhrasingSlurStartSourcePosition = start.PhrasingSlurStartSourcePosition,
             PhrasingSlurDirection = start.PhrasingSlurDirection,
+            PhrasingSlurLine = start.PhrasingSlurLine,
             HasPhrasingSlurEnd = end.HasPhrasingSlurEnd,
             PhrasingSlurEndSourcePosition = end.PhrasingSlurEndSourcePosition,
         };

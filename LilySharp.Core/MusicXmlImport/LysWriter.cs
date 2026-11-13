@@ -693,6 +693,7 @@ internal static class LysWriter
             case "phrasing":
                 note.PhrasingSlurStart = true;
                 note.PhrasingSlurPlacement = span.Opener.PhrasingSlurPlacement;
+                note.PhrasingSlurLine = span.Opener.PhrasingSlurLine;
                 break;
             default: note.Articulations.Add(span.Name); break;
         }
@@ -1506,7 +1507,9 @@ internal static class LysWriter
             if (note.PhrasingSlurStop)
                 token += "@!phrasingSlur";
             if (note.PhrasingSlurStart)
-                token += "@phrasingSlur" + note.PhrasingSlurPlacement switch
+                // (A dashed or dotted one says its line first: @phrasingSlur(dashed).up.)
+                token += "@phrasingSlur" + (note.PhrasingSlurLine is { } phrasingLine ? "(" + phrasingLine + ")" : "")
+                    + note.PhrasingSlurPlacement switch
                 {
                     "above" => ".up",
                     "below" => ".down",
@@ -2053,6 +2056,8 @@ internal static class LysWriter
                         {
                             (start.SlurStart, note.SlurStop) = (false, false);
                             (start.PhrasingSlurStart, note.PhrasingSlurStop) = (true, true);
+                            // The curve keeps its line: a dashed slur is a dashed phrasing slur.
+                            start.PhrasingSlurLine = start.SlurLine;
                         }
                         start = null;
                     }

@@ -473,6 +473,8 @@ internal static class MusicXmlReader
                                     (string?)s.Attribute("type") == "start", voice, measureNo, slurOnset));
                         if (slurHost != note && note.PhrasingSlurPlacement != null)
                             slurHost.PhrasingSlurPlacement ??= note.PhrasingSlurPlacement;
+                        if (slurHost != note && note.PhrasingSlurLine != null)
+                            slurHost.PhrasingSlurLine ??= note.PhrasingSlurLine;
                         if (note.TieStart || note.TieStop)
                             tiedNotes.Add((note, voice, measureNo, slurOnset));
                         if (int.TryParse((string?)Local(Local(el, "notations"), "arpeggiate")?.Attribute("number"), out int together)
@@ -1226,6 +1228,8 @@ internal static class MusicXmlReader
                     case "start" when second:
                         note.PhrasingSlurStart = true;
                         note.PhrasingSlurPlacement = (string?)s.Attribute("placement");
+                        if ((string?)s.Attribute("line-type") is "dashed" or "dotted")
+                            note.PhrasingSlurLine = (string?)s.Attribute("line-type");
                         break;
                     case "stop" when second: note.PhrasingSlurStop = true; break;
                     case "start":

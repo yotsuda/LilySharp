@@ -3207,6 +3207,16 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                        or tie beginning on that note - a rest, one note inside a chord - it is
                        an error (LYS4075). The word must stand against the parenthesis: after
                        these two names any other parenthesis opens the slur itself. *)
+   - Dashed phrasing slur:  c4@phrasingSlur(dashed) d e f@!phrasingSlur
+                    (* PhrasingLine = '@phrasingSlur' '(' Line ')' [ '.up' | '.down' ]
+                       The opening mark of a phrasing slur with the Line of a dashed curve. The
+                       closing mark is unchanged and the bare opening mark is solid. The curve is
+                       cut as a dashed slur is, on both sides of a line break, and the slurs
+                       inside it stay solid. Another word is LYS4074 and the curve is drawn
+                       solid. The word must stand against the parenthesis: any other parenthesis
+                       after the name opens a slur on the same note. LilyPond: phrasingSlurDashed
+                       or phrasingSlurDotted set once before the note. MusicXML: line-type on
+                       the slur numbered 2. *)
    - Figured bass:  c4@figuredBass(6) , d4@figuredBass(6 4)
                     (* FigureGroup = { Figure } ;  top to bottom, spaces between
                        Figure      = Digit [ 's' | 'f' | 'n' ]   — 6 , 6 s = 6 sharp, 4 f, 7 n
@@ -3352,7 +3362,8 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                         c4@sustain … g4@sustain … c4@!sustain — the second releases and
                         re-presses; c4@!sustain@sustain on one note means the same *)
                      @phrasingSlur … @!phrasingSlur   [LilyPond's \( … \); an end is
-                     REQUIRED; one open per voice, ordinary slurs ( ) may sit inside] *)
+                     REQUIRED; one open per voice, ordinary slurs ( ) may sit inside;
+                     @phrasingSlur(dashed) or (dotted) opens a dashed or dotted one] *)
 
 (* Example: c4@staccato.up d4@accent@p <e g>4@arpeggio | *)
 

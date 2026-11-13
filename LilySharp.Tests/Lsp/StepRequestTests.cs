@@ -2402,6 +2402,9 @@ public class StepRequestTests
     [InlineData("c'4@slur(dot‸ted)( d' e' f') |", -1, "c'4@slur(dashed)( d' e' f') |")]
     [InlineData("c'2@‸tie(dashed)~ c'2 |", +1, "c'2@tie(dotted)~ c'2 |")]
     [InlineData("c'2@tie(‸dotted)~ c'2 |", -1, "c'2@tie(dashed)~ c'2 |")]
+    // …and a phrasing slur's (owner-approved 2026-11-13).
+    [InlineData("c'4@phrasing‸Slur(dashed) d' e' f'@!phrasingSlur |", +1, "c'4@phrasingSlur(dotted) d' e' f'@!phrasingSlur |")]
+    [InlineData("c'4@phrasingSlur(dot‸ted).up d' e' f'@!phrasingSlur |", -1, "c'4@phrasingSlur(dashed).up d' e' f'@!phrasingSlur |")]
     public void AnArgumentFromAList_StepsAlongIt(string from, int dir, string to)
         => Assert.Equal(Plain(to), Step(Plain(from), dir, semitone: true).After);
 
