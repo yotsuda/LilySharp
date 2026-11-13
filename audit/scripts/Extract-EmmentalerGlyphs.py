@@ -119,6 +119,11 @@ GLYPHS: list[tuple[str, str, str]] = [
     ("RestHalf", "rests.1", ""),
     ("RestHalfLedgered", "rests.1o", "half off a staff line: ledger in the glyph"),
     ("RestQuarter", "rests.2", ""),
+    # The two other quarter rests Rest.style draws (OMR request #26, 2026-11-12; built
+    # 2026-11-13): lily/rest.cc Rest::glyph_name appends the style to "rests.2" and to no other
+    # duration under `classical` and `z`.
+    ("RestQuarterClassical", "rests.2classical", "Rest.style classical: a mirrored 8th rest"),
+    ("RestQuarterZ", "rests.2z", "Rest.style z: a knob at each end of a z"),
     ("Rest8th", "rests.3", ""),
     ("Rest16th", "rests.4", ""),
     ("Rest32nd", "rests.5", ""),

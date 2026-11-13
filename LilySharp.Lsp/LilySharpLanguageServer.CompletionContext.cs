@@ -852,6 +852,8 @@ public sealed partial class LilySharpLanguageServer
         AfterLayoutMinorChords,
         /// <summary><c>layout { ottavaLine |</c> — dashed / wave.</summary>
         AfterLayoutOttavaLine,
+        /// <summary><c>layout { restStyle |</c> — default / classical / z.</summary>
+        AfterLayoutRestStyle,
         /// <summary><c>layout { chordDiagrams |</c> — written / none / all.</summary>
         AfterLayoutChordDiagrams,
         /// <summary><c>layout { chordTuning |</c> — the tuning words.</summary>
@@ -1412,6 +1414,8 @@ public sealed partial class LilySharpLanguageServer
                 return CompletionContext.AfterLayoutMinorChords;
             if (prevWord.Equals(OttavaLineKey.Key, StringComparison.Ordinal))
                 return CompletionContext.AfterLayoutOttavaLine;
+            if (prevWord.Equals(RestStyleKey.Key, StringComparison.Ordinal))
+                return CompletionContext.AfterLayoutRestStyle;
             if (prevWord.Equals(ChordDiagramsKey.Key, StringComparison.Ordinal))
                 return CompletionContext.AfterLayoutChordDiagrams;
             if (prevWord.Equals(ChordTuningKey.Key, StringComparison.Ordinal))

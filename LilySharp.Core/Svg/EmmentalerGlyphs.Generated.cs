@@ -115,6 +115,10 @@ internal static partial class EmmentalerGlyphs
     public const char RestHalfLedgered = '\uE003';
     /// <summary>rests.2</summary>
     public const char RestQuarter = '\uE008';
+    /// <summary>rests.2classical (Rest.style classical: a mirrored 8th rest)</summary>
+    public const char RestQuarterClassical = '\uE009';
+    /// <summary>rests.2z (Rest.style z: a knob at each end of a z)</summary>
+    public const char RestQuarterZ = '\uE00A';
     /// <summary>rests.3</summary>
     public const char Rest8th = '\uE00B';
     /// <summary>rests.4</summary>

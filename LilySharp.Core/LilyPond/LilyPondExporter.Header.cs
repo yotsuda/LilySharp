@@ -90,6 +90,9 @@ public sealed partial class LilyPondExporter
         Line(s.NoteHeadScale != d.NoteHeadScale, "NoteHead.font-size = #(magnification->font-size " + N(s.NoteHeadScale) + ")");
         Line(s.OttavaWave, "OttavaBracket.style = #'trill");
         Line(s.OttavaWave, "OttavaBracket.edge-height = #'(0 . 0)");
+        // `restStyle classical | z` — LilyPond's own words (Semantics.RestStyleKey). In \Score it
+        // is every staff's Rest; the MultiMeasureRest is another grob and keeps its glyphs.
+        Line(s.RestStyle != d.RestStyle, "Rest.style = #'" + Semantics.RestStyleKey.WordOf(s.RestStyle));
         Line(s.BarLineHairThickness != d.BarLineHairThickness, "BarLine.hair-thickness = #" + N(s.BarLineHairThickness));
         Line(s.BarLineThickThickness != d.BarLineThickThickness, "BarLine.thick-thickness = #" + N(s.BarLineThickThickness));
         return lines.ToString();

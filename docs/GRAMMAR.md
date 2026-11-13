@@ -962,6 +962,7 @@ LayoutEntry    = 'markTempo' , MarkArrangement
                | 'chordList' , Boolean
                | 'compressRests' , Boolean
                | 'ottavaLine' , ( 'dashed' | 'wave' )   (* an ottava's line: dashes and a hook (default), or a wave with no hook *)
+               | 'restStyle' , ( 'default' | 'classical' | 'z' )   (* the shape of the quarter rest: the modern one (default), a mirrored eighth rest, or a z with a knob at each end *)
                | 'voltaBracket' , VoltaLength        (* VoltaLength: 'all' | 'line' | Integer >= 1 — §6 StructureVolta *)
                | StyleKey , Number                     (* > 0, no unit *)
                | ( 'Beam.damping' | 'Dots.padding' | 'Accidental.rightPadding' ) , Number   (* >= 0 *)
@@ -1201,6 +1202,22 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
    on 2.26.0); the twin defines a music function, lysCompressRests, that merges the events on
    the same rule, and wraps each part's music in it.
 
+   restStyle — which QUARTER REST the score draws (OMR request 26, built 2026-11-13). The
+   words are LilyPond's Rest.style values: 'default' the modern rest (rests.2), 'classical' a
+   mirrored eighth rest (rests.2classical), 'z' a z with a knob at each end, an old French
+   print's (rests.2z). The quarter rest ALONE changes (lily/rest.cc Rest::glyph_name appends
+   the style for that duration only), so every other rest, and a multi-measure rest, keeps its
+   glyph. Every reader of the rest's extent reads the chosen glyph's box, as LilyPond's
+   do — MEASURED on 2.26.0: (0 . 0.95) x (-1.25 . 1.5624) by default, (0 . 1.0) x
+   (-1.05 . 0.82) classical, (0 . 1.125) x (-0.82 . 0.82) z — so the columns after the rest
+   stand further right by the wider box, a dot stands 0.45 past its right edge, and a lower
+   voice's rest under the other voice's chord stands half a space higher than the modern one
+   (-4.5 against -5.0 on the request's repro). A SMuFL music font draws its own
+   restQuarterOld / restQuarterZ. A DISPLAY switch: the rest's value, the MIDI and the
+   MusicXML are untouched. The twin writes the same word as an override of Rest.style in the
+   \Score context of its \layout block. NOT HERE: LilyPond's mensural and neomensural
+   styles, which change other durations and need another font's glyphs.
+
    voltaBracket — how far a form ending's volta bracket reaches (2026-09-28). 'all' (the
    default) covers every bar of the ending; 'line' stops at the end of the system the
    bracket starts in; a whole number N covers the ending's first N bars (all of them when
@@ -1238,6 +1255,7 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
      chordList true
      voltaBracket line
      compressRests true
+     restStyle z
    }
 *)
 

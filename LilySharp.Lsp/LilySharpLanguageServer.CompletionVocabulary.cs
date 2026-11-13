@@ -522,6 +522,13 @@ public sealed partial class LilySharpLanguageServer
         ["wave"] = "A wavy line with no hook, as in old prints",
     };
 
+    private static readonly System.Collections.Generic.Dictionary<string, string> RestStyleDetails = new()
+    {
+        ["default"] = "The modern quarter rest (the default)",
+        ["classical"] = "A mirrored eighth rest, as in old prints — LilyPond's classical",
+        ["z"] = "A z with a knob at each end, as in old French prints — LilyPond's z",
+    };
+
     /// <summary>After <c>layout { sectionLabels</c>.</summary>
     internal static CompletionList GetSectionLabelCompletions()
         => WordList(LanguageVocabulary.SectionLabelStyles, SectionLabelDetails);
@@ -541,6 +548,10 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>After <c>layout { ottavaLine</c>.</summary>
     internal static CompletionList GetOttavaLineCompletions()
         => WordList(Core.Semantics.OttavaLineKey.Words, OttavaLineDetails);
+
+    /// <summary>After <c>layout { restStyle</c>.</summary>
+    internal static CompletionList GetRestStyleCompletions()
+        => WordList(Core.Semantics.RestStyleKey.Words, RestStyleDetails);
 
     /// <summary>After <c>layout { chordDiagrams</c>: written, none, all (the compiler's
     /// <see cref="Core.Semantics.ChordDiagramsKey.Words"/>; owner's grammar 2026-10-31).</summary>
@@ -889,6 +900,7 @@ public sealed partial class LilySharpLanguageServer
         ["voltaBracket"] = "all",
         ["compressRests"] = "false",
         ["ottavaLine"] = "dashed",
+        ["restStyle"] = "default",
     };
 
     /// <summary>Every key's line of the pre-filled <c>layout</c> snippet, at its default — the
@@ -948,6 +960,7 @@ public sealed partial class LilySharpLanguageServer
         "chordQualities" => "How a chord's quality is spelled: symbols (default) | words",
         "minorChords" => "How a minor chord's root is spelled: upper (default) | lower",
         "ottavaLine" => "How an ottava's line is drawn: dashed (default, with a hook) | wave (no hook, as in old prints)",
+        "restStyle" => "Which quarter rest is drawn: default | classical (a mirrored eighth rest) | z (an old French print's)",
         "chordDiagrams" => "The tuning written chord shapes draw on: guitar | ukulele | mandolin | … | none (default: the part's instrument, else guitar); add `capo N` for a capo, `all` to draw every chord, `{ … }` to list the chords that draw",
         "chordNames" => "What a chord name shows under a capo: shape (default, the pressed chord's) | sounding | both",
         "chordList" => "The chords the score uses, each with its diagram, under the title: true | false (default)",

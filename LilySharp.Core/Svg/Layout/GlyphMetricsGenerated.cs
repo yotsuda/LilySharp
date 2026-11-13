@@ -614,6 +614,24 @@ internal static partial class GlyphMetrics
     /// <summary>Quarter rest — advance width (next-glyph horizontal feed).</summary>
     public const double RestQuarterAdvance = 0.948000;
 
+    /// <summary>Classical quarter rest — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.2classical (rests.2classical = U+E009 in this build)</remarks>
+    public static readonly BBox RestQuarterClassical = new(0.000000, -1.050000, 1.000000, 0.820000);
+    /// <summary>Classical quarter rest — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox RestQuarterClassicalOutline = new(0.000000, -1.040000, 1.012000, 0.820000);
+    /// <summary>Classical quarter rest — advance width (next-glyph horizontal feed).</summary>
+    public const double RestQuarterClassicalAdvance = 1.000000;
+
+    /// <summary>Z-shaped quarter rest — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.2z (rests.2z = U+E00A in this build)</remarks>
+    public static readonly BBox RestQuarterZ = new(0.000000, -0.820000, 1.125000, 0.820000);
+    /// <summary>Z-shaped quarter rest — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox RestQuarterZOutline = new(-0.008000, -0.820000, 1.132000, 0.820000);
+    /// <summary>Z-shaped quarter rest — advance width (next-glyph horizontal feed).</summary>
+    public const double RestQuarterZAdvance = 1.124000;
+
     /// <summary>8th rest — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.3 (rests.3 = U+E00B in this build)</remarks>
     public static readonly BBox Rest8th = new(0.000000, -1.050000, 1.000000, 0.820000);
@@ -1795,6 +1813,18 @@ internal static partial class GlyphMetrics
         public BBox RestQuarterOutline { get; init; }
         /// <summary>Quarter rest — advance width (next-glyph horizontal feed).</summary>
         public double RestQuarterAdvance { get; init; }
+        /// <summary>Classical quarter rest — BBox (LILC bbox).</summary>
+        public BBox RestQuarterClassical { get; init; }
+        /// <summary>Classical quarter rest — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox RestQuarterClassicalOutline { get; init; }
+        /// <summary>Classical quarter rest — advance width (next-glyph horizontal feed).</summary>
+        public double RestQuarterClassicalAdvance { get; init; }
+        /// <summary>Z-shaped quarter rest — BBox (LILC bbox).</summary>
+        public BBox RestQuarterZ { get; init; }
+        /// <summary>Z-shaped quarter rest — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox RestQuarterZOutline { get; init; }
+        /// <summary>Z-shaped quarter rest — advance width (next-glyph horizontal feed).</summary>
+        public double RestQuarterZAdvance { get; init; }
         /// <summary>8th rest — BBox (LILC bbox).</summary>
         public BBox Rest8th { get; init; }
         /// <summary>8th rest — the box its SKYLINE is built from (glyph outline).</summary>
@@ -2560,6 +2590,16 @@ internal static partial class GlyphMetrics
             RestQuarterOutline = new(RestQuarterOutline.Left * magnification, RestQuarterOutline.Bottom * magnification,
                 RestQuarterOutline.Right * magnification, RestQuarterOutline.Top * magnification),
             RestQuarterAdvance = RestQuarterAdvance * magnification,
+            RestQuarterClassical = new(RestQuarterClassical.Left * magnification, RestQuarterClassical.Bottom * magnification,
+                RestQuarterClassical.Right * magnification, RestQuarterClassical.Top * magnification),
+            RestQuarterClassicalOutline = new(RestQuarterClassicalOutline.Left * magnification, RestQuarterClassicalOutline.Bottom * magnification,
+                RestQuarterClassicalOutline.Right * magnification, RestQuarterClassicalOutline.Top * magnification),
+            RestQuarterClassicalAdvance = RestQuarterClassicalAdvance * magnification,
+            RestQuarterZ = new(RestQuarterZ.Left * magnification, RestQuarterZ.Bottom * magnification,
+                RestQuarterZ.Right * magnification, RestQuarterZ.Top * magnification),
+            RestQuarterZOutline = new(RestQuarterZOutline.Left * magnification, RestQuarterZOutline.Bottom * magnification,
+                RestQuarterZOutline.Right * magnification, RestQuarterZOutline.Top * magnification),
+            RestQuarterZAdvance = RestQuarterZAdvance * magnification,
             Rest8th = new(Rest8th.Left * magnification, Rest8th.Bottom * magnification,
                 Rest8th.Right * magnification, Rest8th.Top * magnification),
             Rest8thOutline = new(Rest8thOutline.Left * magnification, Rest8thOutline.Bottom * magnification,
@@ -3093,6 +3133,12 @@ internal static partial class GlyphMetrics
         RestQuarter = new(0.000000, -1.249906, 0.950086, 1.562561),
         RestQuarterOutline = new(-0.104000, -1.300000, 1.004000, 1.596000),
         RestQuarterAdvance = 0.948000,
+        RestQuarterClassical = new(0.000000, -1.075575, 0.999996, 0.819961),
+        RestQuarterClassicalOutline = new(0.000000, -1.060000, 1.020000, 0.820000),
+        RestQuarterClassicalAdvance = 1.000000,
+        RestQuarterZ = new(0.000000, -0.819961, 1.125130, 0.819961),
+        RestQuarterZOutline = new(-0.016000, -0.820000, 1.140000, 0.820000),
+        RestQuarterZAdvance = 1.124000,
         Rest8th = new(0.000000, -1.075575, 0.999996, 0.819961),
         Rest8thOutline = new(-0.020000, -1.060000, 1.000000, 0.820000),
         Rest8thAdvance = 1.000000,
@@ -3505,6 +3551,12 @@ internal static partial class GlyphMetrics
         RestQuarter = new(0.000000, -1.250155, 0.950156, 1.562535),
         RestQuarterOutline = new(-0.100000, -1.296000, 0.996000, 1.596000),
         RestQuarterAdvance = 0.948000,
+        RestQuarterClassical = new(0.000000, -1.069203, 0.999997, 0.819997),
+        RestQuarterClassicalOutline = new(0.000000, -1.056000, 1.020000, 0.820000),
+        RestQuarterClassicalAdvance = 1.000000,
+        RestQuarterZ = new(0.000000, -0.819997, 1.125076, 0.819997),
+        RestQuarterZOutline = new(-0.016000, -0.820000, 1.140000, 0.820000),
+        RestQuarterZAdvance = 1.124000,
         Rest8th = new(0.000000, -1.069203, 0.999997, 0.819997),
         Rest8thOutline = new(-0.020000, -1.056000, 1.000000, 0.820000),
         Rest8thAdvance = 1.000000,
@@ -3917,6 +3969,12 @@ internal static partial class GlyphMetrics
         RestQuarter = new(0.000000, -1.250071, 0.949929, 1.562376),
         RestQuarterOutline = new(-0.100000, -1.292000, 0.988000, 1.592000),
         RestQuarterAdvance = 0.948000,
+        RestQuarterClassical = new(0.000000, -1.063649, 1.000000, 0.820085),
+        RestQuarterClassicalOutline = new(0.000000, -1.052000, 1.016000, 0.820000),
+        RestQuarterClassicalAdvance = 0.996000,
+        RestQuarterZ = new(0.000000, -0.820085, 1.125035, 0.820085),
+        RestQuarterZOutline = new(-0.012000, -0.820000, 1.136000, 0.820000),
+        RestQuarterZAdvance = 1.124000,
         Rest8th = new(0.000000, -1.063649, 1.000000, 0.820085),
         Rest8thOutline = new(-0.016000, -1.052000, 1.000000, 0.820000),
         Rest8thAdvance = 0.996000,
@@ -4329,6 +4387,12 @@ internal static partial class GlyphMetrics
         RestQuarter = new(0.000000, -1.249905, 0.949968, 1.562445),
         RestQuarterOutline = new(-0.096000, -1.288000, 0.984000, 1.588000),
         RestQuarterAdvance = 0.948000,
+        RestQuarterClassical = new(0.000000, -1.058601, 0.999874, 0.819912),
+        RestQuarterClassicalOutline = new(0.000000, -1.048000, 1.012000, 0.820000),
+        RestQuarterClassicalAdvance = 0.996000,
+        RestQuarterZ = new(0.000000, -0.819912, 1.124890, 0.819912),
+        RestQuarterZOutline = new(-0.008000, -0.820000, 1.136000, 0.820000),
+        RestQuarterZAdvance = 1.124000,
         Rest8th = new(0.000000, -1.058601, 0.999874, 0.819912),
         Rest8thOutline = new(-0.012000, -1.048000, 1.000000, 0.820000),
         Rest8thAdvance = 0.996000,
@@ -4741,6 +4805,12 @@ internal static partial class GlyphMetrics
         RestQuarter = new(0.000000, -1.250056, 0.949944, 1.562514),
         RestQuarterOutline = new(-0.096000, -1.284000, 0.980000, 1.588000),
         RestQuarterAdvance = 0.948000,
+        RestQuarterClassical = new(0.000000, -1.054097, 1.000000, 0.819978),
+        RestQuarterClassicalOutline = new(0.000000, -1.044000, 1.012000, 0.820000),
+        RestQuarterClassicalAdvance = 0.996000,
+        RestQuarterZ = new(0.000000, -0.819978, 1.125028, 0.819978),
+        RestQuarterZOutline = new(-0.008000, -0.820000, 1.132000, 0.820000),
+        RestQuarterZAdvance = 1.124000,
         Rest8th = new(0.000000, -1.054097, 1.000000, 0.819978),
         Rest8thOutline = new(-0.012000, -1.044000, 1.000000, 0.820000),
         Rest8thAdvance = 0.996000,
@@ -5155,6 +5225,12 @@ internal static partial class GlyphMetrics
         RestQuarter = RestQuarter,
         RestQuarterOutline = RestQuarterOutline,
         RestQuarterAdvance = RestQuarterAdvance,
+        RestQuarterClassical = RestQuarterClassical,
+        RestQuarterClassicalOutline = RestQuarterClassicalOutline,
+        RestQuarterClassicalAdvance = RestQuarterClassicalAdvance,
+        RestQuarterZ = RestQuarterZ,
+        RestQuarterZOutline = RestQuarterZOutline,
+        RestQuarterZAdvance = RestQuarterZAdvance,
         Rest8th = Rest8th,
         Rest8thOutline = Rest8thOutline,
         Rest8thAdvance = Rest8thAdvance,
@@ -5567,6 +5643,12 @@ internal static partial class GlyphMetrics
         RestQuarter = new(0.000000, -1.250067, 0.950022, 1.562584),
         RestQuarterOutline = new(-0.092000, -1.280000, 0.968000, 1.584000),
         RestQuarterAdvance = 0.948000,
+        RestQuarterClassical = new(0.000000, -1.046414, 0.999911, 0.819955),
+        RestQuarterClassicalOutline = new(0.000000, -1.036000, 1.008000, 0.820000),
+        RestQuarterClassicalAdvance = 0.996000,
+        RestQuarterZ = new(0.000000, -0.819955, 1.124989, 0.819955),
+        RestQuarterZOutline = new(-0.004000, -0.820000, 1.132000, 0.820000),
+        RestQuarterZAdvance = 1.124000,
         Rest8th = new(0.000000, -1.046414, 0.999911, 0.819955),
         Rest8thOutline = new(-0.008000, -1.036000, 1.000000, 0.820000),
         Rest8thAdvance = 0.996000,
@@ -5979,6 +6061,12 @@ internal static partial class GlyphMetrics
         RestQuarter = new(0.000000, -1.250000, 0.950000, 1.562540),
         RestQuarterOutline = new(-0.092000, -1.276000, 0.964000, 1.584000),
         RestQuarterAdvance = 0.948000,
+        RestQuarterClassical = new(0.000000, -1.043175, 1.000000, 0.820000),
+        RestQuarterClassicalOutline = new(0.000000, -1.036000, 1.008000, 0.820000),
+        RestQuarterClassicalAdvance = 1.000000,
+        RestQuarterZ = new(0.000000, -0.820000, 1.125079, 0.820000),
+        RestQuarterZOutline = new(-0.004000, -0.820000, 1.128000, 0.820000),
+        RestQuarterZAdvance = 1.124000,
         Rest8th = new(0.000000, -1.043175, 1.000000, 0.820000),
         Rest8thOutline = new(-0.008000, -1.036000, 1.000000, 0.820000),
         Rest8thAdvance = 1.000000,

@@ -35,6 +35,23 @@ internal enum EngravingKeys
     BarLineThickThickness = 1 << 7,
 }
 
+/// <summary>Which quarter rest a score draws — LilyPond's <c>Rest.style</c>, the three values
+/// that are one font's (<c>layout { restStyle … }</c>, <see cref="Semantics.RestStyleKey"/>;
+/// OMR request #26, 2026-11-12; built 2026-11-13).</summary>
+/// <remarks>LILYPOND-REF: lily/rest.cc:166-227 Rest::glyph_name — <c>classical</c> and <c>z</c>
+/// change the quarter rest alone. The mensural styles, which change other durations too, are
+/// not here.</remarks>
+public enum RestStyle
+{
+    /// <summary>The modern quarter rest, <c>rests.2</c> (the default).</summary>
+    Default,
+    /// <summary>A mirrored eighth rest, <c>rests.2classical</c> — SMuFL's <c>restQuarterOld</c>.</summary>
+    Classical,
+    /// <summary>A z with a knob at each end, <c>rests.2z</c> — SMuFL's <c>restQuarterZ</c>; an
+    /// old French print's quarter rest.</summary>
+    Z,
+}
+
 /// <summary>
 /// The line thicknesses and the stem length a score is engraved with — LilyPond's own
 /// properties, at LilyPond's defaults unless <c>lysc --set</c> says otherwise
@@ -166,6 +183,11 @@ public sealed record EngravingStyle
     /// <summary><c>layout { ottavaLine wave }</c>: an ottava's line is a wave with no hook, not
     /// dashes and a hook (<see cref="Semantics.OttavaLineKey"/>).</summary>
     public bool OttavaWave { get; init; }
+
+    /// <summary><c>layout { restStyle classical | z }</c>: which quarter rest is drawn —
+    /// LilyPond's <c>Rest.style</c> (<see cref="Semantics.RestStyleKey"/>,
+    /// <see cref="MusicGlyphs.QuarterRest"/>; OMR request #26, 2026-11-12; built 2026-11-13).</summary>
+    public RestStyle RestStyle { get; init; }
 
     /// <summary><c>BarLine.hair-thickness</c>, in staff line thicknesses.</summary>
     /// <remarks>LILYPOND-REF: scm/bar-line.scm:227-238 make-simple-bar-line reads it times the

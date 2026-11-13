@@ -226,6 +226,10 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     GlyphSpec("RestWhole",   "rests.0", "Whole rest",   "mf/feta-rests.mf — rests.0"),
     GlyphSpec("RestHalf",    "rests.1", "Half rest",    "mf/feta-rests.mf — rests.1"),
     GlyphSpec("RestQuarter", "rests.2", "Quarter rest", "mf/feta-rests.mf — rests.2"),
+    # Rest.style classical / z (OMR request #26, 2026-11-12; built 2026-11-13): the quarter
+    # rest alone changes glyph, and every reader of its extent reads the chosen glyph's box.
+    GlyphSpec("RestQuarterClassical", "rests.2classical", "Classical quarter rest", "mf/feta-rests.mf — rests.2classical"),
+    GlyphSpec("RestQuarterZ",         "rests.2z",         "Z-shaped quarter rest",  "mf/feta-rests.mf — rests.2z"),
     GlyphSpec("Rest8th",     "rests.3", "8th rest",     "mf/feta-rests.mf — rests.3"),
     GlyphSpec("Rest16th",    "rests.4", "16th rest",    "mf/feta-rests.mf — rests.4"),
     GlyphSpec("Rest32nd",    "rests.5", "32nd rest",    "mf/feta-rests.mf — rests.5"),

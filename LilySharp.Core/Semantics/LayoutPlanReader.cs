@@ -94,6 +94,7 @@ internal static class LayoutPlanReader
         CompressRestsKey.Key => CompressRestsKey.Words,
         VoltaBracketLength.Key => VoltaBracketLength.Words,
         OttavaLineKey.Key => OttavaLineKey.Words,
+        RestStyleKey.Key => RestStyleKey.Words,
         _ => [],
     };
 
@@ -301,6 +302,10 @@ internal static class LayoutPlanReader
                 OttavaLineKey.Key => ReadOneWord(plan, entry, span, found, OttavaLineKey.Key,
                     OttavaLineKey.Words, w => OttavaLineKey.Find(w) is { } b
                         ? plan with { Style = plan.EngravingStyle with { OttavaWave = b } } : null),
+                // Which quarter rest is drawn — LilyPond's Rest.style (RestStyleKey).
+                RestStyleKey.Key => ReadOneWord(plan, entry, span, found, RestStyleKey.Key,
+                    RestStyleKey.Words, w => RestStyleKey.Find(w) is { } style
+                        ? plan with { Style = plan.EngravingStyle with { RestStyle = style } } : null),
                 // Which chords draw a diagram, and the tuning a part-less chord draws on — two
                 // keys, one question each (owner's grammar 2026-10-31). The old one-key form
                 // (a tuning word, `capo N`, a table) is refused naming the new spelling.

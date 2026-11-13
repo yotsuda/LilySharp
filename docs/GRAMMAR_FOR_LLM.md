@@ -1858,6 +1858,7 @@ layout {
   chordQualities words     // chord quality: symbols (default) | words
   minorChords lower        // a minor chord's root: upper (default) | lower
   ottavaLine wave          // an ottava's line: dashed with a hook (default) | wave with no hook, as in old prints
+  restStyle z              // the quarter rest: default | classical (a mirrored eighth rest) | z (an old French print's)
   chordDiagrams all        // which chords draw a diagram: written (default: those with a written or listed shape) | none | all
   chordTuning ukulele      // the tuning for chords no fretted part owns: a tuning word (a fretted part: its own; unset: guitar)
                            // the shape table and the capo are TOP-LEVEL lines, not layout keys:
@@ -1908,6 +1909,10 @@ layout {
   (`a7/C`), as LilyPond's does, and `Caug` (a major third) never lowercases. With both keys
   set Lily# spells these chords exactly as LilyPond prints them. `maj7` is NOT switchable:
   LilyPond draws it as a raised triangle, which Lily#'s one-line chord name has no home for.
+- `restStyle` is LilyPond's `Rest.style`, the whole score's: `classical` draws the quarter rest
+  as a mirrored eighth rest, `z` as a z with a knob at each end (old French prints). Only the
+  quarter rest's shape changes — not its value, not the other rests, not the MIDI or MusicXML;
+  the spacing follows the glyph's own width, as LilyPond's does. There is no per-note form.
 - `chordDiagrams written` (the default) draws a diagram where a chord has a shape — written at
   it, or listed in the file's `chordShapes { }`; `all` makes EVERY chord name draw: its written
   or listed shape, else the usual one (LilyPond's predefined, else Lily#'s first; a chord with

@@ -316,6 +316,42 @@ public static class OttavaLineKey
     };
 }
 
+/// <summary>
+/// <c>layout { restStyle default | classical | z }</c>: which quarter rest the score draws.
+/// <c>default</c> is the modern one; <c>classical</c> a mirrored eighth rest; <c>z</c> a z with a
+/// knob at each end, an old French print's (OMR request #26, 2026-11-12; built 2026-11-13). The
+/// words are LilyPond's own <c>Rest.style</c> values, and the twin writes that override.
+/// </summary>
+/// <remarks>LILYPOND-REF: lily/rest.cc:166-227 Rest::glyph_name — both styles change the quarter
+/// rest's glyph and no other duration's. A display switch: the rest's value, its place in the
+/// bar, the MIDI and the MusicXML are the default's. LilyPond's <c>mensural</c> and
+/// <c>neomensural</c> are not words of the key.</remarks>
+public static class RestStyleKey
+{
+    /// <summary>The key as written in the block.</summary>
+    public const string Key = "restStyle";
+
+    /// <summary>The three words, the default first.</summary>
+    public static readonly IReadOnlyList<string> Words = ["default", "classical", "z"];
+
+    /// <summary>The style <paramref name="word"/> names, or null.</summary>
+    public static Svg.RestStyle? Find(string word) => word switch
+    {
+        "default" => Svg.RestStyle.Default,
+        "classical" => Svg.RestStyle.Classical,
+        "z" => Svg.RestStyle.Z,
+        _ => null,
+    };
+
+    /// <summary>The word of <paramref name="style"/> — LilyPond's symbol too.</summary>
+    public static string WordOf(Svg.RestStyle style) => style switch
+    {
+        Svg.RestStyle.Classical => "classical",
+        Svg.RestStyle.Z => "z",
+        _ => "default",
+    };
+}
+
 /// <summary>What a chord name shows in a score with a capo (the file's <c>capo N</c> line):
 /// the name of the shape the player presses, the sounding chord's name, or both.</summary>
 /// <remarks>

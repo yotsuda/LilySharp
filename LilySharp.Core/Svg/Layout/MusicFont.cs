@@ -762,6 +762,8 @@ internal sealed class EmmentalerMusicFont : MusicFont
         MusicGlyph.RestHalf => new(d.RestHalf, d.RestHalfOutline, d.RestHalfAdvance),
         MusicGlyph.RestHalfLegerLine => new(d.RestHalfLedgered, d.RestHalfLedgeredOutline, d.RestHalfLedgeredAdvance),
         MusicGlyph.RestQuarter => new(d.RestQuarter, d.RestQuarterOutline, d.RestQuarterAdvance),
+        MusicGlyph.RestQuarterOld => new(d.RestQuarterClassical, d.RestQuarterClassicalOutline, d.RestQuarterClassicalAdvance),
+        MusicGlyph.RestQuarterZ => new(d.RestQuarterZ, d.RestQuarterZOutline, d.RestQuarterZAdvance),
         MusicGlyph.Rest8th => new(d.Rest8th, d.Rest8thOutline, d.Rest8thAdvance),
         MusicGlyph.Rest16th => new(d.Rest16th, d.Rest16thOutline, d.Rest16thAdvance),
         MusicGlyph.Rest32nd => new(d.Rest32nd, d.Rest32ndOutline, d.Rest32ndAdvance),

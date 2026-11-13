@@ -53,7 +53,7 @@ internal enum MusicGlyph : ushort
     // ---- rests ----
     RestMaxima, RestLonga, RestDoubleWhole, RestDoubleWholeLegerLine,
     RestWhole, RestWholeLegerLine, RestHalf, RestHalfLegerLine,
-    RestQuarter, Rest8th, Rest16th, Rest32nd, Rest64th, Rest128th,
+    RestQuarter, RestQuarterOld, RestQuarterZ, Rest8th, Rest16th, Rest32nd, Rest64th, Rest128th,
 
     // ---- accidentals ----
     AccidentalFlat, AccidentalNatural, AccidentalSharp, AccidentalDoubleSharp, AccidentalDoubleFlat,
@@ -197,6 +197,12 @@ internal static class MusicGlyphs
         new(MusicGlyph.RestHalf, "restHalf", 0xE4E4, "rests.1", EmmentalerGlyphs.RestHalf),
         new(MusicGlyph.RestHalfLegerLine, "restHalfLegerLine", 0xE4F5, "rests.1o", EmmentalerGlyphs.RestHalfLedgered),
         new(MusicGlyph.RestQuarter, "restQuarter", 0xE4E5, "rests.2", EmmentalerGlyphs.RestQuarter),
+        // The quarter rests of `layout { restStyle classical | z }` (OMR request #26, 2026-11-12;
+        // built 2026-11-13): LilyPond's Rest.style, which changes this one duration's glyph. SMuFL
+        // has both — restQuarterOld is the mirrored eighth rest, restQuarterZ the z.
+        // LILYPOND-REF: lily/rest.cc:166-227 Rest::glyph_name — "rests.2" + the style.
+        new(MusicGlyph.RestQuarterOld, "restQuarterOld", 0xE4F2, "rests.2classical", EmmentalerGlyphs.RestQuarterClassical),
+        new(MusicGlyph.RestQuarterZ, "restQuarterZ", 0xE4F6, "rests.2z", EmmentalerGlyphs.RestQuarterZ),
         new(MusicGlyph.Rest8th, "rest8th", 0xE4E6, "rests.3", EmmentalerGlyphs.Rest8th),
         new(MusicGlyph.Rest16th, "rest16th", 0xE4E7, "rests.4", EmmentalerGlyphs.Rest16th),
         new(MusicGlyph.Rest32nd, "rest32nd", 0xE4E8, "rests.5", EmmentalerGlyphs.Rest32nd),
@@ -456,12 +462,36 @@ internal static class MusicGlyphs
             0 => IsLedgered(0, pos, staffLines) ? MusicGlyph.RestDoubleWholeLegerLine : MusicGlyph.RestDoubleWhole,
             1 => IsLedgered(1, pos, staffLines) ? MusicGlyph.RestWholeLegerLine : MusicGlyph.RestWhole,
             2 => IsLedgered(2, pos, staffLines) ? MusicGlyph.RestHalfLegerLine : MusicGlyph.RestHalf,
-            4 => MusicGlyph.RestQuarter, 8 => MusicGlyph.Rest8th,
+            4 => QuarterRest, 8 => MusicGlyph.Rest8th,
             16 => MusicGlyph.Rest16th, 32 => MusicGlyph.Rest32nd, 64 => MusicGlyph.Rest64th,
             128 => MusicGlyph.Rest128th,
             _ => MusicGlyph.RestQuarter,
         };
     }
+
+    /// <summary>The quarter rest of the layout or render running on this thread: the modern one,
+    /// or the one <c>layout { restStyle classical | z }</c> asks for
+    /// (<see cref="EngravingStyle.RestStyle"/>; OMR request #26, 2026-11-12; built 2026-11-13).
+    /// The one place the style is turned into a glyph — the renderer draws it
+    /// (<see cref="Rest"/>) and every reader of a rest's box measures it
+    /// (<c>GlyphMetrics.GetRestBBox</c>, <c>GetRestSkylineBBox</c>).</summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/rest.cc:166-227 Rest::glyph_name — under <c>classical</c> and <c>z</c>
+    /// the style is appended for duration-log 2 alone ("these styles differ from the default in
+    /// quarter rests only"), so every other duration keeps its glyph.
+    /// <para>MEASURED (LilyPond 2.26.0, Lab sessions/p1226/md/req26): the rest's extent is the
+    /// chosen glyph's — <c>rests.2</c> (0 . 0.95) × (−1.25 . 1.5624), <c>rests.2classical</c>
+    /// (0 . 1.0) × (−1.05 . 0.82), the eighth rest's box, <c>rests.2z</c> (0 . 1.125) ×
+    /// (−0.82 . 0.82) — and the columns after it and the two-voice shift follow that box: the
+    /// lower voice's quarter rest under a chord stands at −5.0 staff spaces from the middle line
+    /// by default and at −4.5 in either style.</para>
+    /// </remarks>
+    internal static MusicGlyph QuarterRest => EngravingStyle.Current.RestStyle switch
+    {
+        RestStyle.Classical => MusicGlyph.RestQuarterOld,
+        RestStyle.Z => MusicGlyph.RestQuarterZ,
+        _ => MusicGlyph.RestQuarter,
+    };
 
     /// <summary>
     /// Whether a rest of this note value at this staff position prints the cut of its

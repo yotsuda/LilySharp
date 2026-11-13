@@ -2446,6 +2446,17 @@ and a hook at its end) or `wave` (a wavy line with no hook, as in old prints; th
 `OttavaBracket.style = #'trill` and `edge-height = #'(0 . 0)`). It is the whole score's, and the
 line's room follows its shape. `lysc --set ottavaLine=wave` takes it too.
 
+**`restStyle`** — which quarter rest is drawn, LilyPond's `Rest.style`: `default` (the modern
+one), `classical` (a mirrored eighth rest) or `z` (a z with a knob at each end, an old French
+print's). The quarter rest alone changes — every other duration, and a multi-measure rest,
+keeps its glyph — and the notes after it, its dots and a two-voice bar's rests are placed for
+the chosen glyph's own box, as LilyPond places them (`z` is 1.125 wide and 1.64 tall against
+the modern 0.95 by 2.81, so a lower voice's rest under a chord stands half a space higher). It
+is the whole score's; the value, the MIDI and the MusicXML are unchanged. The twin writes
+`\override Rest.style = #'z`; a SMuFL music font draws its own `restQuarterOld` /
+`restQuarterZ`. `lysc --set restStyle=z` takes it too. LilyPond's mensural styles are not
+offered.
+
 **`minorChords`** — whether a chord with a **minor third** prints an uppercase root with
 its `m` (`upper`, the default and LilyPond's) or a lowercase root with the `m` dropped
 (`lower` = LilyPond's `chordNameLowercaseMinor`, which the twin writes on the `ChordNames`

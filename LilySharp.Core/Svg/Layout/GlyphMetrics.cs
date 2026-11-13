@@ -539,7 +539,9 @@ internal static partial class GlyphMetrics
     {
         1 => MusicGlyph.RestWhole,
         2 => MusicGlyph.RestHalf,
-        4 => MusicGlyph.RestQuarter,
+        // The quarter rest the score's `restStyle` draws (MusicGlyphs.QuarterRest), so the box
+        // every reader here reserves is the box of the glyph the renderer fills.
+        4 => MusicGlyphs.QuarterRest,
         8 => MusicGlyph.Rest8th,
         16 => MusicGlyph.Rest16th,
         32 => MusicGlyph.Rest32nd,

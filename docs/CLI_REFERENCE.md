@@ -211,7 +211,7 @@ reader's training data does exactly that).
 | `spacingIncrement=1.6`, `leftMargin=20mm`, `size=a5`, `systemsPerPage=4`, `staffSpace=1.4mm` | a paper key and its value, as written in `paper { }` |
 | `staffStaffSpacing.basicDistance=9` | a sub-key of a spacing block |
 | `raggedRight`, `raggedRight=true`, `raggedRight=false` | a flag on, or off (off undoes the file's) |
-| `Stem.thickness=1.5`, `lineThickness=0.12`, `barNumbers=none` | a layout key and its value, as written in `layout { }` |
+| `Stem.thickness=1.5`, `lineThickness=0.12`, `barNumbers=none`, `restStyle=z` | a layout key and its value, as written in `layout { }` |
 | `LedgerLine.thickness=1.0,0.1` | two numbers, with a comma for the space |
 | `music=Bravura` | the music font, laid over the file's `fonts { music "…" }` (one name) |
 
@@ -225,7 +225,8 @@ The keys that came in for training data are the page's (`staffSpace`, `systemsPe
 the engraving style's (`lineThickness`, `StaffLine.thickness`, `LedgerLine.thickness`,
 `LedgerLine.lengthFraction`, `Stem.thickness`, `Stem.lengthFraction`, `Beam.thickness`,
 `Beam.damping`, `Dots.padding`, `Accidental.rightPadding`, `NoteHead.scale`, `BarLine.thinThickness`,
-`BarLine.thickThickness`, `cueSize`) — the language documents what each means. Two notes for a reader
+`BarLine.thickThickness`, `cueSize`) and the shapes' (`ottavaLine`, `restStyle`) — the language
+documents what each means. Two notes for a reader
 of the pictures:
 
 - Under `staffSpace` the SVG's `width`, the PNG's pixels and the PDF page keep the paper's
@@ -247,6 +248,7 @@ lysc png --set spacingIncrement=1.6 --set staffStaffSpacing.basicDistance=9 song
 lysc svg --set raggedRight=false --set leftMargin=25mm song.lys
 lysc png --set shortestDurationSpace=3 --set systemsPerPage=4 --set staffSpace=1.4mm song.lys
 lysc png --set lineThickness=0.13 --set Stem.thickness=1.6 --set Beam.thickness=0.52 song.lys
+lysc png --set restStyle=z song.lys
 ```
 
 ### boxes - Every drawn symbol's box, as JSON
