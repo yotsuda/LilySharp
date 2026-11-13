@@ -547,6 +547,42 @@ public sealed record RenderSpec(
         return clefs;
     }
 
+    /// <summary>
+    /// Whether each binding of <see cref="GetVoiceBindings"/> (same order) is a part of a
+    /// condensed staff — its first part's too, which <see cref="VoiceSlotting"/> does not tell
+    /// from a staff of its own. A part shown on a condensed staff AND on a staff of its own is
+    /// two bindings of one name, and only the first kind takes the condensed staff's one key,
+    /// meter and clef (<c>MeasureCollector.JunkCondensedStaffDuplicateChanges</c>).
+    /// </summary>
+    internal List<bool> GetBindingsOnCondensedStaves()
+    {
+        var on = new List<bool>();
+        void Add(RenderItemSpec item)
+        {
+            switch (item)
+            {
+                case GrandStaffRenderSpec grand:
+                    foreach (var member in grand.GrandStaff.Members)
+                        Add(member);
+                    break;
+                case CondensedStaffSpec condensed:
+                    foreach (var _ in condensed.PartNames)
+                        on.Add(true);
+                    break;
+                case CombinedStaffSpec combined:
+                    foreach (var _ in combined.PartNames)
+                        on.Add(false);
+                    break;
+                case SingleStaffSpec or TabStaffSpec or OssiaStaffSpec or ChordRowSpec or LyricsRowSpec:
+                    on.Add(false);
+                    break;
+            }
+        }
+        foreach (var item in OrderedItems())
+            Add(item);
+        return on;
+    }
+
     /// <summary>Whether this render contains a grand staff.</summary>
     public bool HasGrandStaff => Items.Any(i => i is GrandStaffRenderSpec);
 

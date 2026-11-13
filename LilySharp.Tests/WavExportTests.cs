@@ -187,8 +187,47 @@ public sealed class WavExportTests : IDisposable
         var (bytes, result) = Export(SungBook(), singer);
 
         Assert.True(Peak(bytes, 0.0, 1.0) > 1000, "the instrument stands in");
-        Assert.Contains("melody is not sung (no voice installed); its instrument plays", result.Warnings);
+        // Which line, and the engine's own words last (Audio.SingerFailure; owner, 2026-11-13).
+        Assert.Contains("melody (singer sings verse on melody, line 5) is not sung; its instrument plays instead. The engine said: no voice installed", result.Warnings);
         Assert.DoesNotContain(result.Notes, n => n.StartsWith("Voice:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AnEngineMessageLilySharpKnows_IsSaidInPlainWords_WithWhereToLook()
+    {
+        // The owner's alto: NEUTRINO's "Failed to load phrase data", and a syllable that is not kana.
+        var singer = new FakeSinger { Error = "Failed to load phrase data" };
+        string book = SungBook().Replace("か き く け", "か la く け");
+        var (_, result) = Export(book, singer);
+
+        Assert.Contains("melody: 1 syllable(s) are not kana, which the Japanese voice needs: la — the first at line 4 (section A, bar 1)", result.Warnings);
+        Assert.Contains(result.Warnings, w => w.StartsWith("melody (singer sings verse on melody, line 5) is not sung: NEUTRINO could not make a phrase out of the notes it was given", StringComparison.Ordinal)
+            && w.Contains("Its instrument plays instead. Look first at line 4 (section A, bar 1).", StringComparison.Ordinal)
+            && w.EndsWith("The engine said: Failed to load phrase data", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("alt { r4 | R*5 | r2. | a'4 b' }", "b'", "bar 8")]
+    [InlineData("alt { |: a'4 b' :| c'' d'' || e'' }", "e''", "bar 3")]
+    [InlineData("alt { a'4 // a | in a comment\n b' | c'' }", "c''", "bar 2")]
+    public void ThePlaceOfANote_IsItsLineItsSectionAndItsWrittenBar(string block, string note, string bar)
+    {
+        string text = "part alt { }\nsection Verse3 {\n  " + block + "\n}\n";
+        var tree = SyntaxTree.Parse(text);
+        string? place = SingerFailure.PlaceOf(tree.GetRoot(), text, text.LastIndexOf(note, StringComparison.Ordinal));
+        Assert.StartsWith("line ", place);
+        Assert.EndsWith($"(section Verse3, {bar})", place);
+    }
+
+    [Fact]
+    public void AnEngineMessageLilySharpDoesNotKnow_IsShownAsItIs()
+    {
+        Assert.Null(SingerFailure.Cause("the acoustic model wants energy"));
+        Assert.Equal("alt is not sung; its instrument plays instead. The engine said: the acoustic model wants energy",
+            SingerFailure.Sentence("alt", " the acoustic model wants energy\n"));
+        Assert.Equal("the engine took too long and was given up", SingerFailure.Cause("neutrino_client.exe did not finish within 600 s"));
+        Assert.Equal("the engine's program did not start", SingerFailure.Cause("neutrino_server.exe did not become ready within 60 s"));
+        Assert.Equal("the engine is not running", SingerFailure.Cause("VOICEVOX did not answer at http://127.0.0.1:50021/: is it running? (refused)"));
     }
 
     // ---- Who sings is asked first (Audio.SingerPlan, owner's decisions 2026-11-13) ----

@@ -472,6 +472,18 @@ public class SungVoiceDto
     /// <summary>How the voice sings, as its singer line's <c>with …</c> writes it: a name its
     /// number or its word, by the names the voice's engine takes; null where it sets nothing.</summary>
     public System.Collections.Generic.Dictionary<string, object>? Sing { get; set; }
+    /// <summary>Where the voice's <c>singer</c> line is written, as source offsets (the keyword
+    /// to the line's end), or null for a voice no line of the writer's asks for: where the editor
+    /// says that the engine failed on it (owner, 2026-11-13: a warning in the Problems panel).</summary>
+    public int? SingerStart { get; set; }
+    /// <summary>The end of <see cref="SingerStart"/>'s line.</summary>
+    public int? SingerEnd { get; set; }
+    /// <summary>The source offset of the note under the first syllable <see cref="Warnings"/>
+    /// speaks of (one that is not kana), or null.</summary>
+    public int? WarningAt { get; set; }
+    /// <summary><see cref="WarningAt"/> in words: its line, section and written bar
+    /// (<c>LilySharp.Core.Audio.SingerFailure.PlaceOf</c>).</summary>
+    public string? WarningPlace { get; set; }
 }
 
 /// <summary>Parameters for lilysharp/singerSlot: the caret in an open document.</summary>

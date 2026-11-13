@@ -36,7 +36,11 @@ export interface SungVoiceDto { Part: string; Key?: string; Language: string; No
     /** The singer's own name (`singer carol female …`), or null for a line that gives none. */
     Name?: string | null;
     /** How the voice sings, as its singer line's `with …` writes it: a name its number or its word, by the names the voice's engine takes. */
-    Sing?: Record<string, number | string> | null }
+    Sing?: Record<string, number | string> | null;
+    /** Where the voice's `singer` line is written (source offsets), or null with no line of the file's own. */
+    SingerStart?: number | null; SingerEnd?: number | null;
+    /** The note under the first syllable `Warnings` speaks of (a source offset), and that place in words. */
+    WarningAt?: number | null; WarningPlace?: string | null }
 
 /** The score Cantoria reads (its README): seconds, MIDI pitch, the syllable as pronounced. */
 export interface CantoriaNote { start: number; duration: number; pitch: number; lyric?: string; melisma?: boolean; breath?: boolean; level?: number; levelEnd?: number; inhale?: boolean; hyphen?: boolean; vibrato?: number; vibratoRate?: number;
@@ -140,6 +144,127 @@ export function unsingableReason(error: unknown): string | undefined {
  *  sing, with the way to a voice that could. */
 export function unsingableGuide(reason: string): Pick<VoiceGuide, 'message' | 'actions'> {
     return { message: `Lily#: a singer line is not sung: ${reason.trim().replace(/\.$/, '')}. The part's instrument plays instead.`, actions: [HOW_TO_INSTALL] };
+}
+
+/**
+ * The engine messages Lily# can put a plain cause to (owner, 2026-11-13, kaze.lys: the alto's
+ * "Failed to load phrase data" was shown as it came, for eight seconds, in the status bar).
+ * ⚠️ THE SAME TABLE AS Core's Audio.SingerFailure, which says these sentences for `lysc wav
+ * --singer`: a cause added here is added there. Kept small - a message that is not here is shown
+ * as the engine said it.
+ */
+const SINGER_FAILURE_CAUSES: readonly (readonly [RegExp, string])[] = [
+    [/Failed to load phrase data/i,
+        'NEUTRINO could not make a phrase out of the notes it was given (seen when a phrase begins on a held note with no syllable, or a syllable is not one it has a sound for)'],
+    [/did not start|did not become ready|before it was ready/i, "the engine's program did not start"],
+    [/did not finish within|gave no answer in/i, 'the engine took too long and was given up'],
+    [/did not answer at/i, 'the engine is not running'],
+];
+
+/** What an engine threw, as it said it: without the error's wrapping. */
+export function engineSaid(error: unknown): string {
+    return (error instanceof Error ? error.message : String(error)).replace(/^(Error: )+/, '').trim();
+}
+
+/** The plain cause of an engine's message, or undefined for one Lily# does not know. */
+export function singerFailureCause(engineMessage: string): string | undefined {
+    return SINGER_FAILURE_CAUSES.find(([pattern]) => pattern.test(engineMessage))?.[1];
+}
+
+/** The sentence said when the engine FAILS on a voice it agreed to sing: who (the voice, with its
+ *  singer line where known), why in plain words when the message is known, where to look first,
+ *  and the engine's own message verbatim at the end, for searching. Core's SingerFailure.Sentence. */
+export function singerFailureText(who: string, engineMessage: string, place?: string | null): string {
+    const said = engineSaid(engineMessage) || 'nothing';
+    const look = place ? ` Look first at ${place}.` : '';
+    const cause = singerFailureCause(said);
+    return cause
+        ? `${who} is not sung: ${cause}. Its instrument plays instead.${look} The engine said: ${said}`
+        : `${who} is not sung; its instrument plays instead.${look} The engine said: ${said}`;
+}
+
+/** Where a voice's `singer` line is and what it says, for a message about it: `alt (singer female
+ *  "neutrino/REINA" on alt, line 54)`; the voice's key alone where no line of the file asks for it. */
+export function voiceWho(voice: Pick<SungVoiceDto, 'Part' | 'Key' | 'SingerStart' | 'SingerEnd'>, text: string): string {
+    const key = sungKey(voice);
+    const start = voice.SingerStart, end = voice.SingerEnd;
+    if (typeof start !== 'number' || typeof end !== 'number' || start < 0 || end <= start || end > text.length) { return key; }
+    const line = text.slice(0, start).split('\n').length;
+    return `${key} (${text.slice(start, end).trim().replace(/\s+/g, ' ')}, line ${line})`;
+}
+
+/** Something wrong with a voice, at a place of the file: source offsets, and where else to look. */
+export interface VoiceProblem { start: number; end: number; message: string; related?: { start: number; end: number; message: string } }
+
+/** The end of the word that begins at `at` (a note, a chord): where the next blank is. */
+function wordEnd(text: string, at: number): number {
+    const rest = text.slice(at).search(/\s/);
+    return rest < 0 ? text.length : Math.max(at + 1, at + rest);
+}
+
+/**
+ * The warning for a voice the engine failed on, on its `singer` line - the natural home in the
+ * Problems panel, and a click from the place that asks for the voice (owner, 2026-11-13). With no
+ * line of the file's own (a voice asked for by the part's instrument alone) it stands on the
+ * voice's first note. The first syllable that is not kana, where the server found one, is the
+ * place to look first, and a related place of the warning.
+ */
+export function engineFailureProblem(voice: Pick<SungVoiceDto, 'Part' | 'Key' | 'SingerStart' | 'SingerEnd' | 'WarningAt' | 'WarningPlace' | 'Notes'>,
+    engineMessage: string, text: string): VoiceProblem {
+    const onLine = typeof voice.SingerStart === 'number' && typeof voice.SingerEnd === 'number' && voice.SingerEnd > voice.SingerStart;
+    const first = voice.Notes.find(n => typeof n.S === 'number' && n.S >= 0)?.S ?? 0;
+    const start = onLine ? voice.SingerStart! : first;
+    const end = onLine ? voice.SingerEnd! : wordEnd(text, first);
+    const problem: VoiceProblem = { start, end, message: singerFailureText(voiceWho(voice, text), engineMessage, voice.WarningPlace) };
+    if (typeof voice.WarningAt === 'number' && voice.WarningAt >= 0) {
+        problem.related = { start: voice.WarningAt, end: wordEnd(text, voice.WarningAt), message: 'the first syllable that is not kana stands under this note' };
+    }
+    return problem;
+}
+
+/** The warnings the server gives of a voice's words (syllables that are not kana), each on the
+ *  note its first such syllable stands under; none where the server names no place. */
+export function wordsProblems(voice: Pick<SungVoiceDto, 'Part' | 'Key' | 'Warnings' | 'WarningAt'>, text: string): VoiceProblem[] {
+    const at = voice.WarningAt;
+    if (typeof at !== 'number' || at < 0 || at >= text.length) { return []; }
+    return (voice.Warnings ?? []).map(w => ({ start: at, end: wordEnd(text, at), message: `${sungKey(voice)}: ${w}` }));
+}
+
+/**
+ * What is wrong with each document's voices NOW, for the Problems panel: a voice's problems of a
+ * kind (`engine` - the engine failed on it; `words` - syllables it will not sing) replace the ones
+ * said before, a voice sung clears its `engine` ones, and a voice the score sings no more takes
+ * all of its own away. No editor in it: the host turns `of` into diagnostics.
+ */
+export class VoiceProblems {
+    private readonly docs = new Map<string, Map<string, VoiceProblem[]>>();
+    /** The problems of `kind` of the voice `key`; an empty list clears them. True when anything changed. */
+    set(uri: string, kind: 'engine' | 'words', key: string, problems: readonly VoiceProblem[]): boolean {
+        const id = `${kind}\n${key}`;
+        let doc = this.docs.get(uri);
+        if (problems.length === 0) {
+            const had = doc?.delete(id) ?? false;
+            if (doc && doc.size === 0) { this.docs.delete(uri); }
+            return had;
+        }
+        if (!doc) { this.docs.set(uri, doc = new Map()); }
+        doc.set(id, [...problems]);
+        return true;
+    }
+    /** Only the voices of `keys` are the score's now: the others' problems go. True when any went. */
+    keep(uri: string, keys: Iterable<string>): boolean {
+        const doc = this.docs.get(uri);
+        if (!doc) { return false; }
+        const kept = new Set(keys);
+        let changed = false;
+        for (const id of [...doc.keys()]) {
+            if (!kept.has(id.slice(id.indexOf('\n') + 1))) { doc.delete(id); changed = true; }
+        }
+        if (doc.size === 0) { this.docs.delete(uri); }
+        return changed;
+    }
+    forget(uri: string): void { this.docs.delete(uri); }
+    of(uri: string): VoiceProblem[] { return [...(this.docs.get(uri)?.values() ?? [])].flat(); }
 }
 
 /**

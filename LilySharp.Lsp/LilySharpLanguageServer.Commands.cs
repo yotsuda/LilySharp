@@ -1130,6 +1130,21 @@ public sealed partial class LilySharpLanguageServer
         return some.Count == 0 ? null : some.ToDictionary(s => s.Name, s => s.Number is { } number ? (object)number : s.Word ?? "");
     }
 
+    /// <summary>Where the singer line that begins at <paramref name="start"/> ends: the end of
+    /// its line of text, less a comment and the blanks before it.</summary>
+    private static int EndOfSingerLine(string text, int start)
+    {
+        int end = text.IndexOfAny(['\r', '\n'], start);
+        if (end < 0)
+            end = text.Length;
+        int comment = text.IndexOf("//", start, end - start, StringComparison.Ordinal);
+        if (comment >= 0)
+            end = comment;
+        while (end > start && char.IsWhiteSpace(text[end - 1]))
+            end--;
+        return end;
+    }
+
     public SungResponse GetSung(SungParams @params)
     {
         SyntaxTree tree;
@@ -1178,14 +1193,25 @@ public sealed partial class LilySharpLanguageServer
             var midi = new LilySharp.Core.Midi.MidiExporter { Form = spec?.Form, Score = spec, AllParts = @params.AllLyrics && spec != null }.Export(tree);
             var voices = LilySharp.Core.Midi.SungVoices.Read(midi, LilySharp.Core.Midi.MidiClock.SecondsOf(midi));
             var names = LilySharp.Core.Music.LyricSinger.NamesReaderOf(tree.GetRoot(), spec);
+            // Where each voice's singer line stands, and its first syllable that is not kana: the
+            // places the editor's warnings are put at (owner, 2026-11-13).
+            var lineOf = LilySharp.Core.Music.LyricSinger.LineReaderOf(tree.GetRoot(), spec);
+            var asked = LilySharp.Core.Audio.SingerPlan.AskedOf(voices, null, v => lineOf(v.Track, v.Part, v.Line),
+                tree.Text, LilySharp.Core.Editing.SingerParts.MadeFrom(tree.Text));
+            string? PlaceOf(LilySharp.Core.Midi.SungVoice v)
+                => v.WarningAt is { } at ? LilySharp.Core.Audio.SingerFailure.PlaceOf(tree.GetRoot(), tree.Text, at) : null;
             return new SungResponse
             {
-                Voices = voices.Select(v => new SungVoiceDto
+                Voices = voices.Select((v, i) => new SungVoiceDto
                 {
                     Part = v.Part,
                     Key = v.Key ?? v.Part,
                     Language = v.Language,
-                    Warnings = v.Warnings.ToArray(),
+                    Warnings = v.Warnings.Select(w => LilySharp.Core.Audio.SingerFailure.WithPlace(w, PlaceOf(v))).ToArray(),
+                    SingerStart = asked[i].Position >= 0 ? asked[i].Position : null,
+                    SingerEnd = asked[i] is { Position: >= 0, Text: { } } ? EndOfSingerLine(tree.Text, asked[i].Position) : null,
+                    WarningAt = v.WarningAt,
+                    WarningPlace = PlaceOf(v),
                     InScore = inScore == null || inScore.Contains(v.Part),
                     Singer = v.Singer,
                     Name = names(v.Track, v.Part, v.Line),

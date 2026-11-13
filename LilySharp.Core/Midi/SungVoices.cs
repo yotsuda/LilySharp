@@ -42,8 +42,10 @@ public sealed record SungNote(double Start, double Duration, double Pitch, strin
 /// <paramref name="Sing"/> is how the voice sings, as its <c>singer</c> line's <c>with …</c> writes it: a name its
 /// number or its word, by the names the voice's engine takes; null where the line sets nothing.
 /// <paramref name="Line"/> is its place among the singer lines on these words of this part, from 0.
+/// <paramref name="WarningAt"/> is where the first thing <paramref name="Warnings"/> speaks of stands:
+/// the source offset of the note under the first syllable that is not kana, or null.
 public sealed record SungVoice(string Part, string Language, IReadOnlyList<SungNote> Notes, IReadOnlyList<string> Warnings, string? Singer = null, string? Gender = null, string? Track = null, string? Key = null,
-    IReadOnlyDictionary<string, (double? Number, string? Word)>? Sing = null, int Line = 0);
+    IReadOnlyDictionary<string, (double? Number, string? Word)>? Sing = null, int Line = 0, int? WarningAt = null);
 
 /// <summary>
 /// The sung voices of an exported piece: one per part a placed lyrics row sings with a voice asked for (<see cref="Music.LyricSinger.SungReaderOf"/>). Which note a
@@ -95,7 +97,7 @@ public static class SungVoices
             var words = new Dictionary<int, string>();
             var hyphens = new HashSet<int>();
             foreach (var l in lyrics)
-                if (l.Part == part && l.Track == track && words.TryAdd(l.Tick, l.Sung ?? l.Text) && l.Hyphen)     // a reading (漢[かん]) sings かん
+                if (l.Part == part && l.Track == track && words.TryAdd(l.Tick, AsSung(l.Sung ?? l.Text, language)) && l.Hyphen)     // a reading (漢[かん]) sings かん
                     hyphens.Add(l.Tick);
             var line = Line(midi, part!, words);
             MoveWordsOntoGraces(line, words, hyphens);
@@ -126,6 +128,7 @@ public static class SungVoices
             var sung = new List<(MidiNote Note, int End, string? Lyric, bool Melisma)>();
             bool singing = false;
             int prevEnd = -1;
+            MidiNote? prev = null;
             foreach (var (note, end) in line)
             {
                 if (words.TryGetValue(note.StartTick, out var text))
@@ -133,12 +136,15 @@ public static class SungVoices
                     // ⚠️ An empty text has no observer: the page files no syllable for `_` or a
                     // detached `~` (SungSyllables), so a held note reaches here wordless and is a
                     // melisma by adjacency below (session 1125 poisoned this arm: green). It is
-                    // kept for a file's own lyric events, where a blank is a vowel held on.
+                    // kept for a file's own lyric events, where a blank is a vowel held on —
+                    // a blank before any word holds nothing and is not sung.
                     bool held = text.Length == 0;
-                    sung.Add((note, end, held ? null : text, held));
-                    singing = true;
+                    singing = !held || sung.Count > 0;
+                    if (singing)
+                        sung.Add((note, end, held ? null : text, held));
                 }
-                else if (singing && note.StartTick == prevEnd && SectionHasWords(note.StartTick))
+                else if (singing && SectionHasWords(note.StartTick)
+                    && (note.StartTick == prevEnd || FollowsACutNote(prev, prevEnd, note)))
                 {
                     sung.Add((note, end, null, true));
                 }
@@ -147,6 +153,7 @@ public static class SungVoices
                     singing = false;
                 }
                 prevEnd = end;
+                prev = note;
             }
             if (sung.Count == 0)
                 continue;
@@ -154,9 +161,24 @@ public static class SungVoices
             var levels = Levels(sung.Select(s => s.Note).ToList(), sung.Select(s => s.End).ToList(), secondsAt);
             var notes = new List<SungNote>(sung.Count);
             var strange = new List<string>();
+            var strangeAt = new List<int>();     // each one's first note, as the source places it
+            string? syllable = null;    // the last syllable sung, which a held note carries on
             for (int i = 0; i < sung.Count; i++)
             {
                 var (note, end, lyric, melisma) = sung[i];
+                // ⚠️ A PHRASE NEVER BEGINS WITH A NOTE THAT HAS NO SYLLABLE (owner, 2026-11-13,
+                // kaze.lys: NEUTRINO answers "Failed to load phrase data" to one, and the whole
+                // part falls back to its instrument). A held note after a silence — the note
+                // before it ended its phrase: a rest, a cut-short note, an `@breath` or an
+                // `@caesura` inside the hold — begins a phrase, and sings the vowel of the
+                // syllable it holds again (docs/singing-design.md §4).
+                if (lyric != null)
+                    syllable = lyric;
+                else if (syllable != null && notes.Count > 0 && notes[^1].Breath)
+                {
+                    lyric = VowelOf(syllable, language);
+                    melisma = false;
+                }
                 bool joined = i < sung.Count - 1 && sung[i + 1].Note.StartTick <= end;
                 bool breath = !joined || note.BreathAfter;
                 double start = secondsAt(note.StartTick);
@@ -165,9 +187,12 @@ public static class SungVoices
                 // the next one still starts on its beat.
                 if (joined && note.BreathAfter)
                     duration -= Math.Min(BreathSeconds, duration / 3);
-                notes.Add(new SungNote(start, duration, note.Pitch + 0.5 * note.QuarterBend, lyric, melisma, breath, note.SourcePos, levels[i].Level, levels[i].End, joined && note.Inhale, lyric != null && hyphens.Contains(note.StartTick), note.Vibrato, note.VibratoRate, note.Sing));
+                notes.Add(new SungNote(start, duration, note.Pitch + 0.5 * note.QuarterBend, lyric, melisma, breath, note.SourcePos, levels[i].Level, levels[i].End, joined && note.Inhale, lyric != null && !melisma && sung[i].Lyric != null && hyphens.Contains(note.StartTick), note.Vibrato, note.VibratoRate, note.Sing));
                 if (lyric != null && language == Japanese && !IsKana(lyric) && !strange.Contains(lyric, StringComparer.Ordinal))
+                {
                     strange.Add(lyric);
+                    strangeAt.Add(note.SourcePos);
+                }
             }
             var warnings = new List<string>();
             if (strange.Count > 0)
@@ -194,7 +219,7 @@ public static class SungVoices
                     continue;       // it sings in sections the piece does not play these words in
                 int nth = before + s;
                 voices.Add(new SungVoice(part!, language, own, warnings, singer, gender, first.Track, nth == 0 ? part : $"{part}#{nth + 1}",
-                    sing is { Count: > 0 } ? sing : null, s));
+                    sing is { Count: > 0 } ? sing : null, s, strangeAt.Count > 0 ? strangeAt[0] : null));
             }
         }
         return voices;
@@ -269,6 +294,60 @@ public static class SungVoices
             sung[part.Key] = list;
         }
         return sung;
+    }
+
+    /// <summary>A syllable as a voice is handed it. An ELISION — two syllables under one note,
+    /// <c>ろ~う</c>, printed ろ‿う — is sung whole by a Japanese voice: both kana on the note. The
+    /// tie is the page's; sent as printed it was "not kana" and the engine refused the part
+    /// (owner, 2026-11-13, kaze.lys; the VSQX sings both halves the same way). Other languages
+    /// keep the syllable as written: what their engines make of a tie is theirs to say.</summary>
+    internal static string AsSung(string text, string language)
+        => language == Japanese && text.Length > 1 && text.IndexOfAny(['‿', '~']) >= 0
+            ? text.Replace("‿", "").Replace("~", "")
+            : text;
+
+    /// <summary>Whether <paramref name="note"/> goes on from the note before it across the
+    /// silence a cut made: the note before sounds shorter than it is written (a staccato; 25 %
+    /// at the shortest, a staccatissimo's) and no rest stands between the two
+    /// (<see cref="MidiNote.FollowsNote"/>). Until 2026-11-13 the rest of a held syllable was
+    /// not sung after a staccato note, as after a rest.</summary>
+    private static bool FollowsACutNote(MidiNote? before, int beforeEnd, MidiNote note)
+        => before is { } b && note.FollowsNote && beforeEnd < note.StartTick
+            && beforeEnd == b.StartTick + b.DurationTicks
+            && note.StartTick - b.StartTick <= 4 * b.DurationTicks;
+
+    private const string KanaA = "あぁかがさざただなはばぱまやゃらわゎ";
+    private const string KanaI = "いぃきぎしじちぢにひびぴみりゐ";
+    private const string KanaU = "うぅくぐすずつづぬふぶぷむゆゅるゔ";
+    private const string KanaE = "えぇけげせぜてでねへべぺめれゑ";
+    private const string KanaO = "おぉこごそぞとどのほぼぽもよょろを";
+
+    /// <summary>
+    /// What a held note sings when it begins a phrase (after a breath or a rest inside the
+    /// hold): the vowel of the syllable it holds. Japanese: the vowel of the last mora — か → あ,
+    /// きょ → お, こん → ん (ん is held as ん), そっ and ラー the vowel before the mark; a
+    /// syllable that is not kana, and every other language: the syllable again, as the engine
+    /// has no other word for it. LILYSHARP-OWN.
+    /// </summary>
+    internal static string VowelOf(string syllable, string language)
+    {
+        if (language != Japanese)
+            return syllable;
+        for (int i = syllable.Length - 1; i >= 0; i--)
+        {
+            char c = syllable[i];
+            if (c is >= 'ァ' and <= 'ヶ')
+                c = (char)(c - 0x60);       // katakana to hiragana
+            if (c == 'ん')
+                return "ん";
+            if (KanaA.Contains(c)) return "あ";
+            if (KanaI.Contains(c)) return "い";
+            if (KanaU.Contains(c)) return "う";
+            if (KanaE.Contains(c)) return "え";
+            if (KanaO.Contains(c)) return "お";
+            // っ, ー and anything else: the mora before it
+        }
+        return syllable;
     }
 
     /// <summary>The steps of a major scale above its tonic, in semitones.</summary>

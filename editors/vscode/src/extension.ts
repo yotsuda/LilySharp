@@ -58,6 +58,7 @@ import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
 import { VOICE_INSTALL_GUIDE, leftToTheInstrument, SINGER_NAME, SINGER_LANGUAGE, onSingerGender, singValueChoices, singerGoesOnToSings, singerLineOf, singerSettingSlot, singMarkSlot, singersWritten, singParameterDetail, singProblems, SingSettingDto, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitleOf, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger, unsingableGuide, unsingableReason } from './singerCore';
+import { VoiceProblems, engineFailureProblem, engineSaid, singerFailureText, voiceWho, wordsProblems } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -1115,6 +1116,8 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.workspace.onDidOpenTextDocument(scheduleSingProblems),
         vscode.workspace.onDidChangeTextDocument(e => scheduleSingProblems(e.document)),
         vscode.workspace.onDidCloseTextDocument(d => singDiagnostics.delete(d.uri)),
+        voiceDiagnostics,
+        vscode.workspace.onDidCloseTextDocument(d => { voiceProblems.forget(d.uri.toString()); voiceDiagnostics.delete(d.uri); }),
         vscode.extensions.onDidChange(() => { for (const d of vscode.workspace.textDocuments) { scheduleSingProblems(d); } }));
     for (const d of vscode.workspace.textDocuments) { scheduleSingProblems(d); }
     voiceSamplesDir = path.join(context.globalStorageUri.fsPath, 'voice-samples');
@@ -3847,7 +3850,7 @@ async function singJobs(jobs: readonly AudioJob[], source: { textDocument?: { ur
             } catch (e) {
                 const refused = unsingableReason(e);
                 if (refused) { tellUnsingable(key, refused); }
-                else { outputChannel.appendLine(`singer: export: the voice of ${voice.Part} was not sung — ${String(e)}; its instrument plays`); }
+                else { outputChannel.appendLine(`singer: export: ${singerFailureText(key, engineSaid(e), voice.WarningPlace)}`); }
                 notSung.add(key);
             }
         }
@@ -4701,14 +4704,51 @@ function tellSingerOnce(panel: vscode.WebviewPanel, text: string): void {
 
 /** The pane's voice badge (owner's request 2026-11-08): a voice that will not be sung, with the
  *  engine's sentence (`ready` is the page's own, when it has decoded the WAV). */
-function failVoice(panel: vscode.WebviewPanel, part: string, speed: number, why: string): void {
+function failVoice(panel: vscode.WebviewPanel, part: string, speed: number, why: string, voice?: SungVoiceDto): void {
     // The words themselves cannot be sung by what is installed (a language no voice sings): that
     // is the writer's to know, not a render gone wrong - said as tellUnsingable says it.
     const unsingable = unsingableReason(why);
     if (unsingable) { tellUnsingable(part, unsingable); }
-    else { tellSingerOnce(panel, `the voice of ${part} was not sung — ${why} (see Lily# Extension output)`); }
+    else {
+        // The engine FAILED on a voice it agreed to sing (owner, 2026-11-13, kaze.lys: the alto's
+        // "Failed to load phrase data" was a line of the status bar, gone in eight seconds, that
+        // named no line of the file and no cause): a warning on the voice's `singer` line in the
+        // Problems panel - which line, what happened in plain words, where to look when the
+        // server could tell, the engine's own words last - there until the voice is sung.
+        const uri = voiceDocs.get(panel)?.split('\n')[0];
+        const document = uri ? vscode.workspace.textDocuments.find(d => d.uri.toString() === uri) : undefined;
+        const text = document?.getText() ?? '';
+        const sentence = singerFailureText(voice ? voiceWho(voice, text) : part, why, voice?.WarningPlace);
+        outputChannel.appendLine(`singer: ${clockNow()} ${sentence}`);
+        if (uri && document && voice) {
+            voiceProblems.set(uri, 'engine', part, [engineFailureProblem(voice, why, text)]);
+            showVoiceProblems(uri);
+        }
+        tellSingerOnce(panel, `${part} is not sung, and its instrument plays — why is in the Problems panel`);
+    }
     missingVoices.get(panel)?.add(part);
     void panel.webview.postMessage({ type: 'voiceState', part, speed, state: 'failed', detail: unsingable ?? why });
+}
+
+/** What is wrong with each document's voices now (singerCore.VoiceProblems), and its warnings in
+ *  the Problems panel: the engine's failure on a voice at its `singer` line, the syllables a voice
+ *  will not sing at their first note. A collection of its own: the settings' warnings
+ *  (singDiagnostics) are set whole for a document and would take these away. */
+const voiceProblems = new VoiceProblems();
+const voiceDiagnostics = vscode.languages.createDiagnosticCollection('Lily# voices');
+function showVoiceProblems(uri: string): void {
+    const document = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri);
+    if (!document) { voiceDiagnostics.delete(vscode.Uri.parse(uri)); return; }
+    const range = (start: number, end: number) => new vscode.Range(document.positionAt(start), document.positionAt(end));
+    voiceDiagnostics.set(document.uri, voiceProblems.of(uri).map(p => {
+        const d = new vscode.Diagnostic(range(p.start, p.end), p.message, vscode.DiagnosticSeverity.Warning);
+        d.source = 'Lily# singer';
+        if (p.related) {
+            d.relatedInformation = [new vscode.DiagnosticRelatedInformation(
+                new vscode.Location(document.uri, range(p.related.start, p.related.end)), p.related.message)];
+        }
+        return d;
+    }));
 }
 
 /**
@@ -4823,6 +4863,15 @@ async function prepareVoices(panel: vscode.WebviewPanel, uri: string, reason: Pr
     }
     const turned = voiceTurned.delete(panel);
     const mode = prepareModeSetting();
+    // The Problems panel follows the text: a voice the score sings no more takes its warnings
+    // away, and each voice's words are said anew (a syllable that is not kana, at its note).
+    const shownText = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri)?.getText();
+    let problemsChanged = voiceProblems.keep(uri, parts);
+    for (const voice of active) {
+        for (const warning of voice.Warnings ?? []) { tellSingerOnce(panel, `${voice.Part}: ${warning}`); }
+        if (shownText !== undefined && voiceProblems.set(uri, 'words', sungKey(voice), wordsProblems(voice, shownText))) { problemsChanged = true; }
+    }
+    if (problemsChanged) { showVoiceProblems(uri); }
     // Who would sing, asked before anything is sung (Cantoria's plan): a line nobody installed
     // can sing never goes to the engine - it is said (tellUnsingable), shown as not sung on its
     // line of the practice menu, and its part's instrument stands in, having no voice.
@@ -4832,7 +4881,6 @@ async function prepareVoices(panel: vscode.WebviewPanel, uri: string, reason: Pr
     // Play's notes (missingVoices): anew each time, a voice that failed before being asked again below.
     missingVoices.set(panel, new Set(unsingable.keys()));
     for (const voice of active) {
-        for (const warning of voice.Warnings ?? []) { tellSingerOnce(panel, `${voice.Part}: ${warning}`); }
         const id = sungKey(voice);
         const slot = `${panelId(panel)}/${id}`;
         const nobody = unsingable.get(id);
@@ -4847,11 +4895,15 @@ async function prepareVoices(panel: vscode.WebviewPanel, uri: string, reason: Pr
         try {
             key = await engine.key(voice, speed);
         } catch (e) {
-            failVoice(panel, id, speed, String(e));
+            failVoice(panel, id, speed, engineSaid(e), voice);
             continue;
         }
         if (!current()) { return; }
-        if (mine.get(id) === key) { prepareQueue.cancelSlot(slot); continue; }   // the page has this text's voice; a job of an older text can go
+        if (mine.get(id) === key) {     // the page has this text's voice; a job of an older text can go
+            prepareQueue.cancelSlot(slot);
+            if (voiceProblems.set(uri, 'engine', id, [])) { showVoiceProblems(uri); }     // …and a failure on another text is not this one's
+            continue;
+        }
         mine.delete(id);
         const rests = reason === 'edit' && !turned && !engine.has(key);
         if (rests && mode === 'onPlay') {
@@ -4897,7 +4949,7 @@ async function renderVoice(job: PrepareJob): Promise<void> {
         outputChannel.appendLine(`singer: ${clockNow()} ${id}: to the engine`);
         ({ key, rendered, cached } = await engine.render(voice, speed, job.letGo.signal, onProgress));
     } catch (e) {
-        if (wanted()) { failVoice(panel, id, speed, String(e)); }
+        if (wanted()) { failVoice(panel, id, speed, engineSaid(e), voice); }
         return;
     }
     // Asked again after the await: the preview may have turned to a file with no lyrics
@@ -4932,11 +4984,14 @@ async function renderVoice(job: PrepareJob): Promise<void> {
             const bytes = await fs.promises.readFile(v.wav);
             if (!wanted()) { return; }
             mine.set(id, key);
+            // Sung: what was said of the engine's failure on this voice is over.
+            const sungUri = voiceDocs.get(panel)?.split('\n')[0];
+            if (sungUri && voiceProblems.set(sungUri, 'engine', id, [])) { showVoiceProblems(sungUri); }
             // entries: where the voice may come in if its part is already playing (joinVoice).
             void panel.webview.postMessage({ type: 'voice', part: id, key, speed, lead: VOICE_LEAD_S, bytes: new Uint8Array(bytes), entries: voiceEntries(voice.Notes) });
             outputChannel.appendLine(`singer: ${clockNow()} ${id} ${cached ? 'from the cache' : 'sung'} (${v.duration.toFixed(1)} s at speed ${speed})`);
         } catch (e) {
-            if (wanted()) { failVoice(panel, id, speed, e instanceof Error ? e.message : String(e)); }
+            if (wanted()) { failVoice(panel, id, speed, engineSaid(e), voice); }
         } finally {
             if (timer !== undefined) { clearTimeout(timer); }
         }

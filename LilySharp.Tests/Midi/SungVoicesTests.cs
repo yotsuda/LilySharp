@@ -432,6 +432,175 @@ public class SungVoicesTests
         Assert.Empty(SungVoices.Read(midi, MidiClock.SecondsOf(midi)));
     }
 
+    // ── a sung part on a condensed staff (owner, 2026-11-13, kaze.lys) ──
+
+    // The owner's choir, cut to three sections: a key change opens the Bridge, a key and a
+    // meter change the Final, and the alto is the SECOND part of the vocal score's condensed
+    // staff. Its words are read off a staff added for it (LyricSinger.WithSungWords), which
+    // had lost the changes the condensed staff junks from its later parts while the words had
+    // been placed counting them: the Bridge's first あ was gone, and the Final's か ぜ よ stood
+    // one note late with its よ off the bar. NEUTRINO refused the phrase that began wordless.
+    private const string Choir = """
+        language japanese
+        tempo 4 = 112
+        time 3/4
+        key d major
+        octave absolute
+        part sop { instrument soprano  lyrics sw }
+        part alt { instrument alto  lyrics aw }
+        part pr { instrument piano-right }
+        singer female "neutrino/REINA" on alt
+        section Spoken {
+          sop { b'4 b' b'@caesura | }
+          alt { b'4 b' b'@caesura | }
+          lyrics sw { う た を | }
+          lyrics aw { う た を | }
+          pr { b'2. | }
+        }
+        section Bridge {
+          key e major
+          sop { <e' gis'>2( <gis' b'>4 | <a' cis''>2.) | b'2 b'4 | }
+          alt { b2.( | cis'2.) | dis'2 dis'4 | }
+          lyrics sw { Ah[あ] __ | | Ah[あ] か | }
+          lyrics aw { Ah[あ] __ | | Ah[あ] か | }
+          pr { r4 e''4 e'' | r4 e'' e'' | b'2. | }
+        }
+        section Final {
+          key e major
+          time 4/4
+          sop { gis''2 fis''4 e'' | fis''4 b'2 b'4 | }
+          alt { r4 b'4 b' gis' | r4 b'4 b' fis' | }
+          lyrics sw { ぜ よ う | た え こ | }
+          lyrics aw { か ぜ よ | か ぜ よ | }
+          pr { e'1 | e'1 | }
+        }
+        form { Spoken Bridge Final }
+        score { staff sop  lyrics sw  staff alt  lyrics aw }
+        score choir { staff sop  lyrics sw  staff alt  lyrics aw  grandStaff { staff pr } }
+        score vocal { condensedStaff { sop alt }  lyrics sw on sop  grandStaff { staff pr } }
+        score bare { condensedStaff { sop alt } }
+        score under { condensedStaff { alt sop } }
+        """;
+
+    private static string?[] AltoOf(string scoreName)
+    {
+        var tree = SyntaxTree.Parse(Choir);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.Message)));
+        var score = RenderSpecParser.FindAll(tree).Single(s => (s.Name ?? "") == scoreName);
+        var midi = new MidiExporter { Form = score.Form, Score = score }.Export(tree);
+        var voice = Assert.Single(SungVoices.Read(midi, MidiClock.SecondsOf(midi)), v => v.Part == "alt");
+        return voice.Notes.Select(n => n.Lyric).ToArray();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("choir")]
+    [InlineData("vocal")]
+    [InlineData("bare")]
+    [InlineData("under")]
+    public void APartOnACondensedStaff_SingsTheWordsItSingsOnAStaffOfItsOwn(string score)
+        => Assert.Equal(
+            new[] { "う", "た", "を", /* Bridge */ "あ", null, "あ", "か", /* Final */ "か", "ぜ", "よ", "か", "ぜ", "よ" },
+            AltoOf(score));
+
+    [Fact]
+    public void APartsOwnStaffBesideACondensedStaff_KeepsItsKeyAndMeterChanges()
+    {
+        // The page's side of the same fault: `staff alt` beside `condensedStaff { sop alt }`
+        // drew no new key signature at the Bridge and no meter at the Final.
+        var tree = SyntaxTree.Parse(Choir + "\nscore both { condensedStaff { sop alt }  staff alt  lyrics aw }\n");
+        var spec = RenderSpecParser.FindAll(tree).Single(s => s.Name == "both");
+        var page = new MeasureCollector().CollectMultiStaff(tree, spec);
+        var own = page.StaffGroups.SelectMany(g => g.Staves).Last().PrimaryVoice.Measures;
+        Assert.Contains(own[1].Items, i => i is LilySharp.Core.Svg.Model.KeySignatureChangeItem);
+        Assert.Contains(own[4].Items, i => i is LilySharp.Core.Svg.Model.TimeSignatureChangeItem);
+        // …and the condensed staff still takes one of each: the alto's are junked there.
+        var condensed = page.StaffGroups.SelectMany(g => g.Staves).First();
+        Assert.DoesNotContain(condensed.Voices[1].Measures[1].Items, i => i is LilySharp.Core.Svg.Model.KeySignatureChangeItem);
+        // The words under the alto's own staff stand on its notes: Ah on the Bridge's first.
+        var ah = page.Lyrics.First(l => l.Text == "Ah");
+        Assert.IsType<LilySharp.Core.Svg.Model.NoteItem>(own[ah.MeasureIndex].Items[ah.ItemIndex]);
+        Assert.Equal(1, ah.MeasureIndex);
+    }
+
+    // ── a phrase never begins with a note that has no syllable (owner, 2026-11-13) ──
+
+    [Fact]
+    public void AHeldNoteAfterABreath_BeginsAPhraseOnTheVowel()
+    {
+        var notes = Assert.Single(Voices(Book("c'4( d'@breath | e' f') |", "か | |"))).Notes;
+        Assert.Equal(new[] { "か", null, "あ", null }, notes.Select(n => n.Lyric));
+        Assert.Equal(new[] { false, true, false, true }, notes.Select(n => n.Melisma));
+        Assert.True(notes[1].Breath);
+    }
+
+    [Fact]
+    public void AHeldNoteAfterACaesura_HoldsAnNAsAnN()
+        => Assert.Equal(new[] { "こん", null, "ん", null },
+            Assert.Single(Voices(Book("c'4( d'@caesura | e' f') |", "こん | |"))).Notes.Select(n => n.Lyric));
+
+    [Fact]
+    public void AHeldNoteAfterAStaccatoNote_IsSungAndBeginsAPhrase()
+    {
+        // Until 2026-11-13 the cut made a gap in ticks, and the rest of the hold was not sung at all.
+        var notes = Assert.Single(Voices(Book("c'4@staccato( d' | e' f') |", "きょ | |"))).Notes;
+        Assert.Equal(new[] { "きょ", "お", null, null }, notes.Select(n => n.Lyric));
+    }
+
+    [Fact]
+    public void ANoteAfterARestWithNoWords_IsStillNotSung()
+        => Assert.Equal(new[] { "か", null },
+            Assert.Single(Voices(Book("c'4( d' | r e') |", "か | |"))).Notes.Select(n => n.Lyric));
+
+    [Fact]
+    public void AnotherLanguagesHeldNote_SingsItsSyllableAgain()
+        => Assert.Equal(new[] { "Ah", null, "Ah", null },
+            Assert.Single(Voices(Book("c'4( d'@breath | e' f') |", "Ah | |", head: "language english"))).Notes.Select(n => n.Lyric));
+
+    [Theory]
+    [InlineData("か", "あ")]
+    [InlineData("きょ", "お")]
+    [InlineData("こん", "ん")]
+    [InlineData("そっ", "お")]
+    [InlineData("ラー", "あ")]
+    [InlineData("を", "お")]
+    [InlineData("ろう", "う")]
+    [InlineData("雪", "雪")]
+    public void TheVowelAHeldNoteSings_IsTheLastMoras(string syllable, string vowel)
+        => Assert.Equal(vowel, SungVoices.VowelOf(syllable, SungVoices.Japanese));
+
+    [Fact]
+    public void NoPhraseOfTheChoir_BeginsWithoutASyllable()
+    {
+        var tree = SyntaxTree.Parse(Choir.Replace("singer female \"neutrino/REINA\" on alt", "singer female on sop\nsinger female on alt"));
+        foreach (var score in RenderSpecParser.FindAll(tree))
+        {
+            var midi = new MidiExporter { Form = score.Form, Score = score }.Export(tree);
+            foreach (var voice in SungVoices.Read(midi, MidiClock.SecondsOf(midi)))
+                for (int i = 0; i < voice.Notes.Count; i++)
+                    Assert.True(voice.Notes[i].Lyric != null || (i > 0 && !voice.Notes[i - 1].Breath),
+                        $"{score.Name}/{voice.Part}: note {i} begins a phrase with no syllable");
+        }
+    }
+
+    [Fact]
+    public void AnElision_IsSungAsBothKanaOnItsNote()
+    {
+        // `ろ~う` prints ろ‿う; sent as printed it was "not kana" (owner, 2026-11-13, kaze.lys).
+        var voice = Assert.Single(Voices(Book("c'4 d' | e' f' |", "だ ろ~う | か ら |")));
+        Assert.Equal(new[] { "だ", "ろう", "か", "ら" }, voice.Notes.Select(n => n.Lyric));
+        Assert.Empty(voice.Warnings);
+    }
+
+    [Fact]
+    public void ASyllableThatIsNotKana_SaysWhereItsNoteIs()
+    {
+        string book = Book("c'4 d' | e' f' |", "ゆ き | la ら |");
+        var voice = Assert.Single(Voices(book));
+        Assert.Contains("la", Assert.Single(voice.Warnings));
+        Assert.Equal(book.IndexOf("e' f'", StringComparison.Ordinal), voice.WarningAt);
+    }
+
     [Fact]
     public void Kana_IsHiraganaKatakanaAndTheLongVowelMark()
     {

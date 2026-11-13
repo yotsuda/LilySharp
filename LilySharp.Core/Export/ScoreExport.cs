@@ -295,15 +295,18 @@ public static class ScoreExport
             return tracks;
         var shown = spec ?? RenderSpecParser.PlayedSpec(tree, null, null);
         var sounds = SungStaves.Of(tree.GetRoot(), shown!);
-        var (plan, planProblem) = Audio.SingerPlan.Ask(singer,
-            Audio.SingerPlan.AskedOfScore(tree, spec, (singer as Audio.CantoriaProgram)?.Voice, midi));
+        var asked = Audio.SingerPlan.AskedOfScore(tree, spec, (singer as Audio.CantoriaProgram)?.Voice, midi);
+        var (plan, planProblem) = Audio.SingerPlan.Ask(singer, asked);
         if (planProblem != null)
             warnings.Add(planProblem);
         var sang = new List<(SungVoice Voice, Audio.MonoAudio Sound, string Name)>();
         foreach (var voice in voices)
         {
+            // Where the voice's first syllable that is not kana stands, said with the warning
+            // and again when the engine then fails on the voice (Audio.SingerFailure).
+            string? place = voice.WarningAt is { } at ? Audio.SingerFailure.PlaceOf(tree.GetRoot(), tree.Text, at) : null;
             foreach (var w in voice.Warnings)
-                warnings.Add($"{voice.Part}: {w}");
+                warnings.Add($"{voice.Part}: {Audio.SingerFailure.WithPlace(w, place)}");
             var (sound, error) = (default(Audio.MonoAudio), default(string));
             string name = singer.Name;
             if (plan?.Of(voice) is { } planned)
@@ -339,7 +342,12 @@ public static class ScoreExport
             }
             if (sound == null)
             {
-                warnings.Add($"{voice.Part} is not sung ({error}); its instrument plays");
+                // WHICH line, WHAT happened, WHERE to look, and the engine's own words last
+                // (owner, 2026-11-13: "alt is not sung (Failed to load phrase data)" said none).
+                string who = voice.Key ?? voice.Part;
+                if (asked.FirstOrDefault(a => a.Part == voice.Part && a.Key == (voice.Key ?? voice.Part)) is { Text: { } written, Position: >= 0 } ask)
+                    who += $" ({written}, line {1 + tree.Text.AsSpan(0, Math.Min(ask.Position, tree.Text.Length)).Count('\n')})";
+                warnings.Add(Audio.SingerFailure.Sentence(who, error, place));
                 continue;
             }
             sang.Add((voice, sound, name));

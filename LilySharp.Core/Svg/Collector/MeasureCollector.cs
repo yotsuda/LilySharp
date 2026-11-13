@@ -1764,6 +1764,9 @@ public sealed partial class MeasureCollector
         var bindingClefs = renderSpec.GetBindingClefs();
         int bindingIndex = -1;
         var collectedPerBinding = new Dictionary<string, List<(string Clef, ImmutableArray<Voice> Voices)>>();
+        // …and whether each of a part's bindings is on a condensed staff (VoicesFor below).
+        var bindingsOnCondensed = renderSpec.GetBindingsOnCondensedStaves();
+        var onCondensedPerBinding = new Dictionary<string, List<bool>>();
         // GetVoiceNames() yields names in the SAME order ToStaffGroups() builds
         // staves, so this counter equals the global staff index (see
         // EnumerateStaves) and tags each staff's dynamics correctly.
@@ -1955,6 +1958,9 @@ public sealed partial class MeasureCollector
             if (!collectedPerBinding.TryGetValue(voiceName, out var collections))
                 collectedPerBinding[voiceName] = collections = new List<(string, ImmutableArray<Voice>)>();
             collections.Add((collectedUnder, staffVoices[voiceName]));
+            if (!onCondensedPerBinding.TryGetValue(voiceName, out var onCondensed))
+                onCondensedPerBinding[voiceName] = onCondensed = new List<bool>();
+            onCondensed.Add(bindingIndex < bindingsOnCondensed.Count && bindingsOnCondensed[bindingIndex]);
 
             // A section that OPENS with its own key (`part b { section A { key a … } }`)
             // gives THIS staff its own opening signature — a sibling staff's different
@@ -2248,6 +2254,19 @@ public sealed partial class MeasureCollector
         // …and one dynamic, one hairpin where its parts wrote the same one. Before the changes
         // are junked: the dynamics' item indices count the items as they were collected.
         JunkCondensedStaffDuplicateDynamics(staffCollections, staffVoices);
+        // ⚠️ The junk below rewrites staffVoices' entry of a PART, and a part shown on a
+        // condensed staff AND on a staff of its own has one entry for both: its own staff lost
+        // its key and meter changes too (the alto of `condensedStaff { sop alt }` beside
+        // `staff alt`: no new key signature where the section changes key), while the words
+        // under it had been placed by item index BEFORE the junk — so in every bar that opens
+        // with a change the words stood one note late, the first note's on the second and the
+        // last falling off the bar. Nobody writes that score, but Lily# does: a `singer` line
+        // on a part a condensed staff shows reads its words off a staff added for the part
+        // (LyricSinger.WithSungWords), so the alto of a vocal score was handed to the singing
+        // engine with the first note of three sections wordless, and NEUTRINO refused the
+        // phrase ("Failed to load phrase data"; owner, 2026-11-13, kaze.lys). The part's own
+        // staff takes its voices as they stood before the junk (VoicesFor).
+        var beforeTheJunk = new Dictionary<string, ImmutableArray<Voice>>(staffVoices);
         JunkCondensedStaffDuplicateChanges(renderSpec, staffVoices, voiceKeyDict);
         ImmutableArray<StaffGroup> staffGroups;
         // A condensed staff packs its parts' accidentals into one column as it is built
@@ -2278,6 +2297,11 @@ public sealed partial class MeasureCollector
                 return finished;
             int k = handedOut.TryGetValue(name, out var n) ? n : 0;
             handedOut[name] = k + 1;
+            // A staff of the part's own, where a condensed staff shows the part too: its own
+            // key, meter and clef changes, not the condensed staff's one of each.
+            if (onCondensedPerBinding.TryGetValue(name, out var onCondensed) && k < onCondensed.Count && !onCondensed[k]
+                && beforeTheJunk.TryGetValue(name, out var own))
+                finished = own;
             if (k >= each.Count - 1 || each[k].Clef == each[^1].Clef)
                 return finished;
             return WithItemsOf(finished, each[k].Voices);
@@ -2294,7 +2318,7 @@ public sealed partial class MeasureCollector
         // (ResolveStaffColumns). A staff that holds one part's voices as they are is skipped:
         // its pass already ran on exactly these voices.
         {
-            var partVoices = staffVoices.Values.ToList();
+            var partVoices = staffVoices.Values.Concat(beforeTheJunk.Values).ToList();
             staffGroups = staffGroups
                 .Select(sg => sg with
                 {

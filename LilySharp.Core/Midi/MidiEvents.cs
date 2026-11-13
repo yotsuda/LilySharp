@@ -99,7 +99,12 @@ public readonly record struct MidiNote(
     string? Sing = null,
     // An `afterGrace` run's note: it ends the note before it, where a leading grace begins the
     // note after it. Not written to .mid files.
-    bool IsAfterGrace = false
+    bool IsAfterGrace = false,
+    // No rest stands between this note and the onset its part played before it
+    // (MidiExporter.CloseOnset): where that note was cut short — a staccato — the silence
+    // between the two is the articulation's and not a rest, and a singer holding a syllable
+    // goes on into this note (SungVoices). Not written to .mid files.
+    bool FollowsNote = false
 );
 
 /// <summary>

@@ -389,6 +389,15 @@ public sealed class MidiExporter
     private void CloseOnset(MidiTrack track, List<int> indices, bool startsTie)
     {
         SyncTieSlot();
+        // The part played an onset before this one and no silence came since (ForgetOnset), in
+        // this section play or the one before it: these notes follow a note (MidiNote.FollowsNote).
+        if (_lastOnset.Count > 0 && _lastNoteTrack == track
+            && (_lastOnsetSerial == _sectionPlaySerial || _lastOnsetSerial + 1 == _sectionPlaySerial))
+        {
+            foreach (int i in indices)
+                if (i >= 0 && i < track.Notes.Count && track.Notes[i].StartTick == _currentTick && !track.Notes[i].FollowsNote)
+                    track.Notes[i] = track.Notes[i] with { FollowsNote = true };
+        }
         _lastOnset.Clear();
         _lastOnset.AddRange(indices);
         _lastNoteTrack = track;

@@ -80,6 +80,26 @@ public class SungRequestTests
         Assert.Equal(melody.Select(n => n.S), voice.Notes.Select(n => n.S));
     }
 
+    // Owner, 2026-11-13: an engine's failure is said at the voice's singer line, in the Problems
+    // panel — so the answer says where that line is, and where the first syllable that is not
+    // kana stands.
+    [Fact]
+    public void TheVoice_SaysWhereItsSingerLineIs_AndItsFirstSyllableThatIsNotKana()
+    {
+        var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
+        var uri = new Uri("file:///place.lys");
+        string text = Doc.Replace("こん こ", "kon こ").Replace("singer sings verse on melody", "singer sings verse on melody   // she sings");
+        server.DidOpen(new DidOpenTextDocumentParams
+        {
+            TextDocument = new TextDocumentItem { Uri = uri, Text = text, Version = 1, LanguageId = "lilysharp" },
+        });
+        var voice = Assert.Single(server.GetSung(new SungParams { TextDocument = new TextDocumentIdentifier { Uri = uri } }).Voices!);
+        Assert.Equal("singer sings verse on melody", text[voice.SingerStart!.Value..voice.SingerEnd!.Value]);
+        Assert.Equal(text.IndexOf("c4 a8 r", StringComparison.Ordinal), voice.WarningAt);
+        Assert.Equal("line 6 (section A, bar 2)", voice.WarningPlace);
+        Assert.Equal("1 syllable(s) are not kana, which the Japanese voice needs: kon — the first at line 6 (section A, bar 2)", Assert.Single(voice.Warnings));
+    }
+
     // Owner's decisions 2026-11-12: how the voice sings is written on its singer line after
     // `with`, a name and a value each, no commas - the names the voice's own engine takes.
     [Fact]

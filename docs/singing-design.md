@@ -76,7 +76,9 @@ The score spellings here (`lyrics NAME sings PART`) were replaced on 2026-11-10:
   an overlap under a millisecond as a caller's rounding).
 - **A syllable, not phonemes**, in the language's own script. `lyric` is the page's text
   with no connector (the hyphen and the extender are `LyricItem.ConnectorType`, not text);
-  the elision `‿` (`va~ga`) stays one syllable.
+  an elision (`ろ~う`, printed ろ‿う) is one note's syllable and a Japanese voice is sent both
+  kana with the tie taken out (`ろう`; 2026-11-13 — sent as printed it was "not kana", as the
+  VSQX's was until the same day); another language's elision goes as written.
 - **`melisma: true`** on a note that carries the previous syllable's vowel on: a note the
   page gave no syllable (inside a slur, the end of a tie that the MIDI did not merge, a
   `_` or a detached `~` holder, `__`'s span). A chord in a sung part sings its top note.
@@ -181,10 +183,64 @@ The score spellings here (`lyrics NAME sings PART`) were replaced on 2026-11-10:
     words; a note after a rest with no words is not sung, a `_` after a rest included
     (measured, Lab `sessions/p1125/e2e/held.lys`).
   - A breath after the last note before a gap, and after the last note.
+  - ⚠️ **A phrase never begins with a note that has no syllable** (owner, 2026-11-13, the choir
+    `kaze.lys`: NEUTRINO answers "Failed to load phrase data" to such a phrase and the whole part
+    falls back to its instrument). A phrase ends at a note that carries `breath` — the last
+    note before a silence, a note marked `@breath` or `@caesura`. A held note right after one
+    (a writer may hold a syllable through a breath: `Ah __` under `c'2.( | d'2.@breath | e'2.)`)
+    **sings the vowel of the syllable it holds again**, as a syllable and not as a melisma, and
+    the notes after it are its melisma. Japanese: the vowel of the last mora (か → あ, きょ → お,
+    そっ and ラー the vowel before the mark; **ん is held as ん**); a syllable that is not kana,
+    and every other language: the same syllable text again, the engine having no other word
+    for it (`SungVoices.VowelOf`). Why this and not dropping the breath or the note: the
+    breath is written and the note is the singer's; the vowel is what a singer sings there.
+    The page is not touched. The silences that count: an `@breath` / `@caesura` (the room
+    comes out of the marked note) and a note cut short by an articulation — a staccato inside
+    a hold. For the second the export says of each note whether a REST stands before it
+    (`MidiNote.FollowsNote`, from the exporter's own tie memory): until this rule the rest of a
+    hold after a staccato note was not sung at all, the cut reading as a rest. **A rest stays
+    what it was**: a note after a rest with no words is not sung (the rule above) — the lyric
+    events cannot tell a hold through a rest from words that ran out, and singing the second
+    was the fault of 2026-11-12 (a Coda sung "u— u—"). A writer who wants the vowel after a
+    rest writes the syllable again. A blank lyric event of a file's own before any word holds
+    nothing and is not sung. Nets: `SungVoicesTests` (`AHeldNoteAfterABreath…`,
+    `…AfterAStaccatoNote…`, `NoPhraseOfTheChoir_BeginsWithoutASyllable`).
+  - **A part on a condensed staff sings the words it sings on a staff of its own** (the cause
+    of the same report). A `singer` line on a part that has no staff of its own reads its
+    words off a staff added for it (`LyricSinger.WithSungWords`). Where a `condensedStaff
+    { sop alt }` showed the part too, the page's collector junked the later part's key and
+    meter changes from the PART's one entry — the added staff's as well — after the words had
+    been placed by item index: in every bar that opens with a change the words stood one
+    note late (the alto's and the bass's of a vocal score: the first note of three sections
+    wordless, the last word of the bar lost). `MeasureCollector` now hands a part's own staff
+    its voices as they stood before that junk; a written `condensedStaff { sop alt }  staff
+    alt` keeps its key signatures and meters too.
   - The first words at an onset win: a second row on the same part (the verse printed twice,
     a translation) is not a second voice.
   - `Warnings`: the syllables that are not kana (hiragana, katakana, the long-vowel mark), which
-    the Japanese voice will not sing; the notes are still in the list.
+    the Japanese voice will not sing; the notes are still in the list. `WarningAt` is the
+    source offset of the note under the first of them, and the answer says it in words too
+    (`WarningPlace`, "line 229 (section Verse3, bar 11)" — the line, the section and the bar
+    as WRITTEN in the part's block, `Audio.SingerFailure.PlaceOf`; not the page's bar number,
+    which a repeat and a pickup move). `SingerStart` / `SingerEnd` are where the voice's
+    `singer` line is written.
+- **When the engine fails on a voice it agreed to sing** (owner, 2026-11-13: "show such
+  errors readably in VS Code"). Before: `lysc wav` printed `alt is not sung (Failed to load
+  phrase data); its instrument plays`, and the editor a line of the status bar for eight
+  seconds — `the voice of alt was not sung — … (see Lily# Extension output)` — and the red
+  microphone. Now one sentence, the same in both (`Audio.SingerFailure.Sentence`,
+  `singerCore.singerFailureText` — ⚠️ two copies of a small table, each with its net): WHICH
+  voice and singer line (`alt (singer female "neutrino/REINA" on alt, line 54)`), WHAT
+  happened in plain words where the engine's message is one Lily# knows, WHERE to look first
+  when the voice has a syllable that is not kana, and the engine's own message verbatim at
+  the end, for searching. The table is small on purpose — NEUTRINO's "Failed to load phrase
+  data", an engine that did not start, one that took too long, one that is not running; any
+  other message is shown as it is after "The engine said:". In the editor it is a **warning
+  on the `singer` line in the Problems panel** (`voiceDiagnostics`, source `Lily# singer`;
+  on the voice's first note when no line of the file asks for the voice), with the not-kana
+  note as its related place; it stays until that voice is sung, or the score sings the voice
+  no more (`singerCore.VoiceProblems`). The not-kana warning itself is a warning on its note.
+  The status bar says only that the part is not sung and where the reason is.
 - **The practice menu**: speed scales the seconds (a voice cannot be resampled without a
   pitch change, so a speed change re-renders), muted parts drop their voice, the loop and the
   count-in move it with the notes — all in the editor, on the list the server gave, as the
@@ -365,8 +421,9 @@ The score spellings here (`lyrics NAME sings PART`) were replaced on 2026-11-10:
   resampled by linear interpolation at the engine's own level, the file grown when the voice
   outlasts the notes, as the editor's `mixIn` does. Where the score does not also play the
   part, its notes leave the MIDI before the synth plays it. A voice the engine cannot sing
-  leaves the instrument and a warning (`melody is not sung (…); its instrument plays`); the
-  voice's kana warning comes along. A file with no `score` block has no sung staff, so nothing
+  leaves the instrument and a warning (`melody (singer …, line 5) is not sung: …. Its instrument
+  plays instead. The engine said: …`, §4 "When the engine fails"); the voice's kana warning
+  comes along, with where its first syllable stands. A file with no `score` block has no sung staff, so nothing
   is sung there, as in the preview. Each voice is one `cantoria sing`, so NEUTRINO's cold
   start is paid once per sung part; `serve` would save nothing (its engines are one server per
   voice too). Nets: `WavExportTests` with a stand-in engine (`FakeSinger`).
