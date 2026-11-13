@@ -1976,8 +1976,24 @@ public sealed partial class LilyPondExporter
         {
             "cresc" => CircledTipTweak(d) + "\\<",
             "decresc" or "dim" => CircledTipTweak(d) + "\\>",
+            // `@sffz`, `@rf`: levels LilyPond has no command for ("unknown escaped string"
+            // until 2026-11-14, leftover of session 1227). Built as LilyPond builds its own;
+            // a post-event that is not a command needs its direction written, so '-' where
+            // the mark gives none.
+            // LILYPOND-REF: ly/dynamic-scripts-init.ly:26-28 make-dynamic-script.
+            var level when !LilyPondDynamicCommands.Contains(level)
+                => (d.ForcedAbove is null ? "-" : "") + "#(make-dynamic-script \"" + level + "\")",
             var level => "\\" + level,
         };
+
+    /// <summary>The dynamic levels LilyPond 2.26 declares a command for; any other level
+    /// Lily# reads is written through <c>make-dynamic-script</c> (<see cref="EmitDynamic"/>).
+    /// LILYPOND-REF: ly/dynamic-scripts-init.ly:31-54 make-dynamic-script — ppppp … n, the whole list.</summary>
+    internal static readonly HashSet<string> LilyPondDynamicCommands = new(StringComparer.Ordinal)
+    {
+        "ppppp", "pppp", "ppp", "pp", "p", "mp", "mf", "f", "ff", "fff", "ffff", "fffff",
+        "fp", "sf", "sfp", "sff", "sfz", "fz", "sp", "spp", "rfz", "n",
+    };
 
     /// <summary>Whether <paramref name="d"/> is a dynamic LEVEL after the first on its note —
     /// not printed on the page (LYS4022), and not written to the twin either, where LilyPond

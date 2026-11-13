@@ -17,6 +17,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using LilySharp.Core.LilyPond;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Syntax;
 using Xunit;
@@ -67,5 +68,35 @@ public class Session1228LeftoversTests
         var one = Assert.Single(slip);
         Assert.Equal(DiagnosticCodes.BareReferenceRequiresDollar, one.Code);
         Assert.Contains("did you mean the pitch '" + name[..1] + "es'", one.Message);
+    }
+
+    // ========== 2. The twin's dynamics LilyPond has no command for ==========
+
+    private static string Twin(string music) => new LilyPondExporter().Export(SyntaxTree.Parse(Book("", music)));
+
+    /// <summary>
+    /// LilyPond 2.26 declares no <c>\sffz</c> and no <c>\rf</c> (ly/dynamic-scripts-init.ly), so
+    /// the twin builds them as LilyPond builds its own; every other level keeps its command.
+    /// </summary>
+    [Fact]
+    public void TheTwin_WritesNoDynamicCommandLilyPondLacks()
+    {
+        Assert.Contains("c'4-#(make-dynamic-script \"sffz\")", Twin("c'4@sffz d' e' f' |"));
+        Assert.Contains("c'4-#(make-dynamic-script \"rf\")", Twin("c'4@rf d' e' f' |"));
+        Assert.Contains("c'4^#(make-dynamic-script \"sffz\")", Twin("c'4@sffz.up d' e' f' |"));
+        Assert.Contains("c'4_#(make-dynamic-script \"rf\")", Twin("c'4@rf.down d' e' f' |"));
+        // The control: a level LilyPond has is its command.
+        Assert.Contains("c'4\\sfz", Twin("c'4@sfz d' e' f' |"));
+
+        // Every level the language reads, so that a new one is asked the same question.
+        // `niente` is no level of LilyPond's and is written as text (EmitNiente).
+        foreach (string level in SyntaxFacts.DynamicTextLevels.Keys.Where(k => k != "niente"))
+        {
+            string twin = Twin($"c'4@{level} d' e' f' |");
+            bool command = twin.Contains($"c'4\\{level} ", StringComparison.Ordinal);
+            bool built = twin.Contains($"c'4-#(make-dynamic-script \"{level}\")", StringComparison.Ordinal);
+            Assert.True(command != built, level);
+            Assert.True(built == level is "sffz" or "rf", level);
+        }
     }
 }
