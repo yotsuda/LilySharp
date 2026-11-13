@@ -30,7 +30,11 @@ namespace LilySharp.Core.Semantics;
 /// it in the same line. A hairpin with no level before it in its line says nothing. A hairpin
 /// its <c>@!cresc</c> has closed leads nowhere: the next level is judged only when it stands on
 /// the note the hairpin ends on (until 2026-11-04 a level a phrase later was told it went the
-/// wrong way).
+/// wrong way). A <c>@niente</c> ends the hairpin before it and is the start of the one after it:
+/// the level after <c>@decresc … @niente</c> is a new level, not where the hairpin leads, and
+/// <c>@niente@cresc</c> starts from nothing, not from the level written before it (until
+/// 2026-11-14 the niente was read past, and <c>@mp@decresc … @niente | … @f</c> was told
+/// "@decresc leads to @f" — grammar evaluation 4).
 /// </remarks>
 internal sealed class HairpinTargetValidator : ISemanticValidator
 {
@@ -63,6 +67,14 @@ internal sealed class HairpinTargetValidator : ISemanticValidator
                 {
                     open = level >= 0 ? (mark, level) : null;
                     closedOn = null;
+                    continue;
+                }
+                if (mark.Level == DynamicLevel.Niente)
+                {
+                    // The hairpin ends at the niente, or the next one starts from it: silence is
+                    // no level a later one goes against (its thick end is LYS4029's to say).
+                    open = null;
+                    level = -1;
                     continue;
                 }
                 int next = System.Array.IndexOf(Order, text);

@@ -1102,4 +1102,26 @@ public class GrammarEvaluation4Tests
         Assert.Equal((DiagnosticCodes.UnpairedSpan, DiagnosticSeverity.Error), (neverReleased.Code, neverReleased.Severity));
         Assert.Equal(held.LastIndexOf("@sustain", StringComparison.Ordinal), neverReleased.Span.Start);
     }
+
+    /// <summary>A decrescendo al niente, then a new level: <c>@mp@decresc … @niente | … @f</c>
+    /// was told "@decresc leads to @f, louder than the @mp it starts from" (LYS4035). The
+    /// hairpin ends at the niente — on a rest or on a note — and the <c>@f</c> is a new level.
+    /// A crescendo dal niente starts from nothing, not from the level before the niente.</summary>
+    [Fact]
+    public void AHairpinEndsAtItsNiente_TheLevelAfterIsNotItsTarget()
+    {
+        static List<Diagnostic> Of(string music) => Said("octave absolute\npart a { clef treble }\n"
+            + $"section A {{ a {{ {music} }} }}\nform {{ ~A }}\nscore {{ staff a }}\n");
+
+        Assert.Empty(Of("c''2@mp@decresc~ c''4 r4@niente | c''1@f |").Select(d => d.Message));
+        Assert.Empty(Of("d''2@mp@decresc~ d''4 d''4@niente | c''1@f |").Select(d => d.Message));
+        Assert.Empty(Of("c''1@f | c''2@niente@cresc c''2 | c''1@mp |").Select(d => d.Message));
+
+        // Without the niente the same bars say it, and a hairpin after the niente's is judged.
+        var against = Assert.Single(Of("c''2@mp@decresc~ c''4 r4 | c''1@f |"));
+        Assert.Equal(DiagnosticCodes.HairpinAgainstItsLevel, against.Code);
+        var second = Assert.Single(Of("c''2@mp@decresc c''2@niente | c''2@p@decresc c''2 | c''1@f |"));
+        Assert.Equal(DiagnosticCodes.HairpinAgainstItsLevel, second.Code);
+        Assert.Contains("@decresc leads to @f, louder than the @p it starts from", second.Message);
+    }
 }
