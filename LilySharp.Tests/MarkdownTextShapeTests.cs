@@ -54,11 +54,6 @@ public class MarkdownTextShapeTests
     /// size: 0.37 × 2.2 − 0.5 = 0.314 (<see cref="ProseBand.BoxShift"/>).</summary>
     private static readonly double Shift = ProseBand.BoxShift(ScoreTextMetrics.Bundled);
 
-    /// <summary>The default paper's first-system indent, 15 mm: where the first staff's lines
-    /// begin, and with no <c>xMargin</c> a text — a boxed text's frame — too (the owner,
-    /// 2026-11-13: boxed first, then "box がつかない ```md の既定の xMargin も同じ値にして").</summary>
-    private static readonly double StaffLeft = LayoutOptions.Default.Indent;
-
     private static string Book(string top = "", string inScore = "", string head = "title \"Morning Song\"\ncomposer \"A. Composer\"") => $$"""
         {{head}}
         {{top}}
@@ -97,23 +92,19 @@ public class MarkdownTextShapeTests
         Assert.Equal(new TextShape(default, default, false, true), ShapeOf("```md box"));
         Assert.Equal(new TextShape(default, default, true, false), ShapeOf("```md end center"));
         var twenty = new TextLength(20, "mm");
-        Assert.Equal(new TextShape(twenty, twenty, false, false, SidesWritten: true), ShapeOf("```md xMargin 20mm"));
-        Assert.Equal(new TextShape(twenty, new TextLength(1.5, "cm"), true, true, SidesWritten: true), ShapeOf("```md xMargin 20mm 1.5cm box center"));
-        // xMargin 0 is written too — a boxed text then runs from margin to margin, not the
-        // staff's width (the owner, 2026-11-13). Alone it WAS still the plain text, while only
-        // a boxed text stood on the staff; since a plain one does too (the owner, the same
-        // day: "box がつかない ```md の既定の xMargin も同じ値にして") it is the text from
-        // margin to margin and no longer one text with a fence that writes nothing.
-        Assert.Equal(new TextShape(default, default, false, true, SidesWritten: true), ShapeOf("```md box xMargin 0"));
-        Assert.Equal(new TextShape(default, default, false, false, SidesWritten: true), ShapeOf("```md xMargin 0"));
-        Assert.False(ShapeOf("```md xMargin 0").IsPlain);
+        Assert.Equal(new TextShape(twenty, twenty, false, false), ShapeOf("```md xMargin 20mm"));
+        Assert.Equal(new TextShape(twenty, new TextLength(1.5, "cm"), true, true), ShapeOf("```md xMargin 20mm 1.5cm box center"));
+        // xMargin 0 is what writing none is — margin to margin (the owner, 2026-11-14) — so
+        // alone it is the plain text, one text with a fence that writes nothing.
+        Assert.Equal(ShapeOf("```md box"), ShapeOf("```md box xMargin 0"));
+        Assert.True(ShapeOf("```md xMargin 0").IsPlain);
         Assert.Equal(ShapeOf("```md xMargin 20mm 1.5cm box center end"), ShapeOf("```markdown center end box xMargin 20mm 1.5cm"));
         // yMargin: one length is above and below, two are above, then below; with none
         // written the shape says nothing and the page keeps its default.
         Assert.Equal((null, null), (ShapeOf("```md box").MarginTop, ShapeOf("```md box").MarginBottom));
         var two = new TextLength(2, null);
         Assert.Equal(new TextShape(default, default, false, false, two, two), ShapeOf("```md yMargin 2"));
-        Assert.Equal(new TextShape(twenty, twenty, false, true, new TextLength(3, null), new TextLength(5, "mm"), SidesWritten: true),
+        Assert.Equal(new TextShape(twenty, twenty, false, true, new TextLength(3, null), new TextLength(5, "mm")),
             ShapeOf("```md end yMargin 3 5mm box xMargin 20mm"));
         Assert.False(ShapeOf("```md yMargin 0").IsPlain);
     }
@@ -371,20 +362,17 @@ public class MarkdownTextShapeTests
         var page = Laid(Book(top: file)).Pages[0];
         Assert.NotNull(page.Header!.Text!.Frame);
         Assert.Null(page.EndText!.Frame);
-        // (A text that writes no xMargin, boxed or plain, begins where the staff beside it
-        // does — the indent; this piece's one system is its last too — so the closing line is
-        // centred over the staff, between the indent and the line's end, and not between the
-        // page's margins as it was until the owner's "box がつかない ```md の既定の xMargin も
-        // 同じ値にして", 2026-11-13.)
-        Assert.Equal((StaffLeft + LineWidth) / 2, page.EndText.Lines[0].Left + page.EndText.Lines[0].Width / 2, 6);
-        Assert.Equal(LayoutOptions.Default.Indent + 1.1, page.Header.Text.Lines[0].Left, 9);
+        // (A text that writes no xMargin, boxed or plain, runs from margin to margin — the
+        // owner, 2026-11-14 — so the closing line is centred between the page's margins.)
+        Assert.Equal(LineWidth / 2, page.EndText.Lines[0].Left + page.EndText.Lines[0].Width / 2, 6);
+        Assert.Equal(1.1, page.Header.Text.Lines[0].Left, 9);
 
         // The score's own text for a place brings its own shape — here a margin and no frame —
         // and the other place keeps the file's.
         var own = Laid(Book(top: file, inScore: $"{F}md xMargin 10\nThis score's.\n{F}\n")).Pages[0];
         Assert.Null(own.Header!.Text!.Frame);
         Assert.Equal(10.0, own.Header.Text.Lines[0].Left, 9);
-        Assert.Equal((StaffLeft + LineWidth) / 2, own.EndText!.Lines[0].Left + own.EndText.Lines[0].Width / 2, 6);
+        Assert.Equal(LineWidth / 2, own.EndText!.Lines[0].Left + own.EndText.Lines[0].Width / 2, 6);
     }
 
     [Fact]
@@ -514,7 +502,7 @@ public class MarkdownTextShapeTests
         string svg = SvgGenerator.Generate(SyntaxTree.Parse(Book(top: $"{F}md box yMargin 3 0\nOne.\n{F}")));
         var page = Laid(Book(top: $"{F}md box yMargin 3 0\nOne.\n{F}")).Pages[0];
         string top = (page.HeaderTextY - 2.0 - 1.1).ToString("0.00", CultureInfo.InvariantCulture);
-        Assert.Contains($"y=\"{top}\" width=\"{(LineWidth - StaffLeft).ToString("0.00", CultureInfo.InvariantCulture)}\" height=\"0.10\"", svg);
+        Assert.Contains($"y=\"{top}\" width=\"{LineWidth.ToString("0.00", CultureInfo.InvariantCulture)}\" height=\"0.10\"", svg);
         Assert.Equal(page.HeaderTop + page.Header!.Depth + 0.5 + 3.0 + 1.1 + 2.0, page.HeaderTextY, 6);
     }
 
@@ -532,17 +520,13 @@ public class MarkdownTextShapeTests
     public void TheTwin_WritesTheMarginAsTheFirstAndLastLinesExtent()
     {
         // One line carries both; 3 above and 1 below its box of 2 over and 1 under.
-        // (After the extent, the white to the text's left edge: the staff's, 8.5358, where no
-        // xMargin is written — the owner, 2026-11-13.)
-        Assert.Contains("  \\with-dimension #Y #'(-2 . 5) \\concat { \\hspace #8.5358 \"One.\" }\n", Twin(Book(top: $"{F}md yMargin 3 1\nOne.\n{F}")));
+        Assert.Contains("  \\with-dimension #Y #'(-2 . 5) \"One.\"\n", Twin(Book(top: $"{F}md yMargin 3 1\nOne.\n{F}")));
         // Millimetres through the paper's conversion (5 mm = 2.8453).
-        Assert.Contains("  \\with-dimension #Y #'(-3.8453 . 4.8453) \\concat { \\hspace #8.5358 \"One.\" }\n", Twin(Book(top: $"{F}md yMargin 5mm\nOne.\n{F}")));
+        Assert.Contains("  \\with-dimension #Y #'(-3.8453 . 4.8453) \"One.\"\n", Twin(Book(top: $"{F}md yMargin 5mm\nOne.\n{F}")));
         // In a box: the line's extent past the frame's (2 + 1.1 over, 1 + 1.1 under).
-        Assert.Contains("  \\with-dimension #Y #'(-2.1 . 6.1) \\concat { \\hspace #9.6358", Twin(Book(top: $"{F}md box yMargin 3 0\nOne.\n{F}")));
-        // None: the line's own box, nothing written for it…
-        Assert.Contains("\\markuplist \\column-lines {\n  \\concat { \\hspace #8.5358 \"One.\" }\n}", Twin(Book(top: $"{F}md yMargin 0\nOne.\n{F}")));
-        // …and with no white at the sides either, LilyPond's own line.
-        Assert.Contains("\\markuplist \\column-lines {\n  \"One.\"\n}", Twin(Book(top: $"{F}md xMargin 0 yMargin 0\nOne.\n{F}")));
+        Assert.Contains("  \\with-dimension #Y #'(-2.1 . 6.1) \\concat { \\hspace #1.1", Twin(Book(top: $"{F}md box yMargin 3 0\nOne.\n{F}")));
+        // None: LilyPond's own line.
+        Assert.Contains("\\markuplist \\column-lines {\n  \"One.\"\n}", Twin(Book(top: $"{F}md yMargin 0\nOne.\n{F}")));
     }
 
     // ---- the twin ----------------------------------------------------------------------
@@ -558,16 +542,10 @@ public class MarkdownTextShapeTests
         // \fill-line of one markup centres it in the line-width: LilyPond's own measure of the words.
         string width = Math.Round(LineWidth - 40, 4).ToString("0.####", CultureInfo.InvariantCulture);
         Assert.Contains($"  \\with-dimension #Y #'(-2 . 3) \\concat {{ \\hspace #10 \\override #'(line-width . {width}) \\fill-line {{ \"The end.\" }} }}\n", ly);
-        // With no xMargin a centred line is centred over the staff (the owner, 2026-11-13: a
-        // text with no xMargin is as wide as the staff, boxed or not): the white of the first
-        // system's indent, then the staff's width for LilyPond to centre in. With `xMargin 0`
-        // it begins at the margin and is centred in the line width.
-        string staff = Math.Round(LineWidth - StaffLeft, 4).ToString("0.####", CultureInfo.InvariantCulture);
-        Assert.Contains($"  \\concat {{ \\hspace #8.5358 \\override #'(line-width . {staff}) \\fill-line {{ \"One.\" }} }}\n",
-            Twin(Book(top: $"{F}md center yMargin 0\nOne.\n{F}")));
+        // With no xMargin a centred line begins at the margin and is centred in the line width.
         string whole = Math.Round(LineWidth, 4).ToString("0.####", CultureInfo.InvariantCulture);
         Assert.Contains($"  \\concat {{ \\override #'(line-width . {whole}) \\fill-line {{ \"One.\" }} }}\n",
-            Twin(Book(top: $"{F}md center xMargin 0 yMargin 0\nOne.\n{F}")));
+            Twin(Book(top: $"{F}md center yMargin 0\nOne.\n{F}")));
     }
 
     /// <summary>MEASURED, LilyPond 2.26.0 (showcase.ly → lp-showcase.svg): this form's frame
@@ -593,11 +571,8 @@ public class MarkdownTextShapeTests
         // Centred in the box: each line LilyPond's to centre in the text's width.
         Assert.Contains($"      \\override #'(line-width . {width}) \\fill-line {{ \"One.\" }}\n",
             Twin(Book(top: $"{F}md box center xMargin 10 30\nOne.\n{F}")));
-        // With no xMargin the frame's edge is the staff's (this piece's one system is its
-        // last: the first system's indent, 8.5358): the white is that and the inset. With
-        // xMargin 0 it is at the margin: the inset alone.
-        Assert.Contains(") \\concat { \\hspace #9.6358 \\translate #'(0 . -0.314) \\override #'(box-padding . 1) \\box\n", Twin(Book(top: $"{F}md end box\nOne.\n{F}")));
-        Assert.Contains(") \\concat { \\hspace #1.1 \\translate #'(0 . -0.314) \\override #'(box-padding . 1) \\box\n", Twin(Book(top: $"{F}md end box xMargin 0\nOne.\n{F}")));
+        // The frame's edge is at the margin with no xMargin: the white is the inset alone.
+        Assert.Contains(") \\concat { \\hspace #1.1 \\translate #'(0 . -0.314) \\override #'(box-padding . 1) \\box\n", Twin(Book(top: $"{F}md end box\nOne.\n{F}")));
     }
 
     [Fact]

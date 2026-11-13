@@ -87,18 +87,15 @@ public readonly record struct TextLength(double Value, string? Unit)
 /// where the line writes no <c>yMargin</c>: the page's own default.</param>
 /// <param name="MarginBottom">The white below it (<c>yMargin</c>'s second length, or its
 /// first), or null likewise.</param>
-/// <param name="SidesWritten">Whether the line writes <c>xMargin</c> at all — <c>xMargin 0</c>
-/// too: a text that writes none, boxed or plain, is as wide as the staff, one that writes it is
-/// measured from the page's margins (owner, 2026-11-13; Svg.Layout.ProseBand.AtTheStaff).</param>
 public readonly record struct TextShape(TextLength MarginLeft, TextLength MarginRight, bool Center, bool Box,
-    TextLength? MarginTop = null, TextLength? MarginBottom = null, bool SidesWritten = false)
+    TextLength? MarginTop = null, TextLength? MarginBottom = null)
 {
     /// <summary>Whether the opening line wrote none of the words that set a text apart: two
     /// such fences in a row are one text.</summary>
-    /// <remarks>An <c>xMargin 0</c> alone is NOT that since a plain text stands on the staff
-    /// (owner, 2026-11-13): it is the text from margin to margin, a block of its own beside a
-    /// fence that writes nothing. (While only a boxed text stood on the staff the two were
-    /// drawn alike and were one text.)</remarks>
+    /// <remarks>An <c>xMargin 0</c> alone is that too: a text with no <c>xMargin</c> runs
+    /// from margin to margin (owner, 2026-11-14), so the two are drawn alike and are one text.
+    /// (For a day, 2026-11-13, a text with none written stood on the staff and the two were
+    /// blocks of their own.)</remarks>
     public bool IsPlain => this == default;
 }
 
@@ -255,7 +252,7 @@ public sealed record FencedText(
                     break;
             }
         }
-        return new TextShape(left, right, center, box, top, bottom, xWritten);
+        return new TextShape(left, right, center, box, top, bottom);
 
         // One length, or two: the words that follow a margin's word and begin as a number does.
         (TextLength First, TextLength Second)? ReadLengths(ref int i, int offset, string word, bool written,

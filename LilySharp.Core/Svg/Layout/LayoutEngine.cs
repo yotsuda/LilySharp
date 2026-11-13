@@ -145,18 +145,12 @@ internal sealed partial class LayoutEngine
         // system goes to the pages with the systems.
         // Each is set as its own opening line says (indent, center, box).
         // …and each of its blocks (a later fence for the place with a shape of its own).
-        // One that writes no xMargin — boxed or plain — is as wide as the staff it stands
-        // against (the owner, 2026-11-13; ProseBand.AtTheStaff): the first system's for this one —
-        // its indent, a paper constant known before a line is broken — and the LAST system's
-        // for the closing text, which is therefore set once the lines are (below).
-        // LILYPOND-REF: ly/paper-defaults-init.ly — indent / short-indent
-        // LILYPOND-REF: scm/output-lib.scm — system-start-text::calc-x-offset
-        // Calculate indent from instrument names (auto-calculate if not explicitly set)
-        double indent = EffectiveIndent(_options, score);
-        double shortIndent = EffectiveShortIndent(_options, score);
+        // Each runs from the left margin to the right one unless it writes xMargin (the
+        // owner, 2026-11-14; ProseBand.Stack).
         header = HeaderBand.WithText(header, ProseBand.Stack(
-            score.Texts.Blocks(before: true), score.TextMetrics, _options.ContentWidth, _options.StaffSpaceMm,
-            staffLeft: indent));
+            score.Texts.Blocks(before: true), score.TextMetrics, _options.ContentWidth, _options.StaffSpaceMm));
+        var endText = ProseBand.Stack(
+            score.Texts.Blocks(before: false), score.TextMetrics, _options.ContentWidth, _options.StaffSpaceMm);
 
         // LILYPOND-REF: lily/page-layout-problem.cc:656-717 alignment_distances
         // Apply user overrides for StaffGrouper spacing before layout
@@ -188,6 +182,12 @@ internal sealed partial class LayoutEngine
         // (or take the driver's, computed for the break gate from this same score).
         double commonShortestDuration =
             precomputedShortest ?? SpacingRules.CalculateCommonShortestDuration(score);
+
+        // LILYPOND-REF: ly/paper-defaults-init.ly — indent / short-indent
+        // LILYPOND-REF: scm/output-lib.scm — system-start-text::calc-x-offset
+        // Calculate indent from instrument names (auto-calculate if not explicitly set)
+        double indent = EffectiveIndent(_options, score);
+        double shortIndent = EffectiveShortIndent(_options, score);
 
         // The line-break DP's WHOLE table, not only its best row: the system count is
         // chosen below by the page's score, which reads the other line counts too. F3
@@ -258,15 +258,6 @@ internal sealed partial class LayoutEngine
         var placed = pass.Placed;
         var prelim = pass.Prelim;
         double systemHeight = pass.FirstSystemHeight;
-
-        // The closing text, against the LAST system as it was just placed: a block with no
-        // xMargin, boxed or plain, begins where that system's staff lines do — the short
-        // indent, or the first system's own when the piece is one line (on a page of its own
-        // too: the left the last system has). A ragged last line changes nothing: the text
-        // (a frame) ends at the full line width.
-        var endText = ProseBand.Stack(
-            score.Texts.Blocks(before: false), score.TextMetrics, _options.ContentWidth, _options.StaffSpaceMm,
-            staffLeft: systems.Count > 0 ? systems[^1].Indent : indent);
 
         var (pages, systemsArray) = CreatePages(
             score, prelim.Systems, header, perSystemExtents, systemHeight,

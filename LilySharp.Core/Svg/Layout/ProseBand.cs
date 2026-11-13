@@ -30,9 +30,8 @@ internal sealed record ProsePiece(string Text, double X, FontStyle Style, int Of
 /// <param name="Baseline">The baseline below the band's reference point.</param>
 /// <param name="Pieces">The pieces, each from the line's left end.</param>
 /// <param name="Width">The line's own width.</param>
-/// <param name="Left">The line's left end from the left margin: 0 for a text built with no
-/// shape, else the white at its left (<c>xMargin</c>, or with none written the indent of the staff
-/// it stands against), the frame's inset and, centred, half the white the line leaves.</param>
+/// <param name="Left">The line's left end from the left margin: 0 for a text with no shape,
+/// else the left margin's white (<c>xMargin</c>), the frame's inset and, centred, half the white the line leaves.</param>
 /// <param name="Scale">The line's size over the text's: 1, or a heading's
 /// (<see cref="ProseBand.HeadingScale"/>). Its box grows with it.</param>
 /// <param name="Marker">The marker of the list item the line begins — its X from the line's
@@ -103,8 +102,7 @@ internal sealed record ProseFrame(double Left, double Right, double Thickness);
 /// <param name="Width">How far it reaches right of the left margin: its widest line, or — with
 /// a shape — the frame's outer right edge or the furthest line's end.</param>
 /// <param name="Position">Where its fence begins in the file (data-pos), or 0.</param>
-/// <param name="Left">Where the text begins, from the left margin (<c>xMargin</c>'s white —
-/// with none written, the staff's indent — and a frame's inset).</param>
+/// <param name="Left">Where the text begins, from the left margin (<c>xMargin</c>'s white, and a frame's inset).</param>
 /// <param name="TextWidth">The width the lines were broken to.</param>
 /// <param name="Frame">The frame of a boxed text, or null. Its outer top stands
 /// <paramref name="MarginTop"/> inside <paramref name="Up"/> and its outer bottom
@@ -154,25 +152,28 @@ internal sealed record ProseBand(
     /// LILYSHARP-OWN: the stacking. It is what LilyPond's <c>\column-lines</c> does with the
     /// twin's lines (each block's first and last line carry its margins as their extent), so
     /// the twin writes every block into the one list.
+    /// <para>
+    /// Every block is measured from the page's margins: with no <c>xMargin</c> written it runs
+    /// from the left margin to the right one, boxed or plain, under the title or closing the
+    /// piece (the owner, 2026-11-14). For a day (2026-11-13) a block with none written began
+    /// where the staff lines of the system beside it began instead; it sat off the page's
+    /// middle and off the poet's and the composer's lines, and was undone. A writer who wants
+    /// the text on the staff writes <c>xMargin 15mm</c> (docs/markdown-text-design.md).
+    /// </para>
     /// </remarks>
     /// <param name="blocks">The place's blocks, in written order.</param>
     /// <param name="fonts">The score's text metrics.</param>
     /// <param name="lineWidth">The paper's line width.</param>
     /// <param name="staffSpaceMm">The paper's staff space, for the lengths written in millimetres.</param>
-    /// <param name="staffLeft">Where the staff lines of the system the place stands against
-    /// begin, from the left margin: the FIRST system's indent for the text under the title, the
-    /// LAST system's for the closing text. A block that writes no <c>xMargin</c> begins
-    /// there — a boxed one rules its frame from there (<see cref="AtTheStaff"/>).</param>
     public static ProseBand? Stack(IEnumerable<Model.TextBlock> blocks, ScoreTextMetrics fonts, double lineWidth,
-        double staffSpaceMm, double staffLeft)
+        double staffSpaceMm)
     {
         ProseBand? first = null;
         var later = ImmutableArray.CreateBuilder<(ProseBand Band, double Offset)>();
         double bottom = 0, width = 0;
         foreach (var block in blocks)
         {
-            var shape = AtTheStaff(ProseShape.Of(block.Shape, staffSpaceMm), block.Shape, staffLeft);
-            if (Build(block.Markdown, block.Position, fonts, lineWidth, shape) is not { } band)
+            if (Build(block.Markdown, block.Position, fonts, lineWidth, ProseShape.Of(block.Shape, staffSpaceMm)) is not { } band)
                 continue;
             if (first is null)
             {
@@ -190,34 +191,6 @@ internal sealed record ProseBand(
             ? first
             : first with { Down = bottom, Width = width, Later = later.ToImmutable(), OwnDown = first.Down };
     }
-
-    /// <summary>
-    /// <paramref name="shape"/> with a text's default width: where the opening line writes no
-    /// <c>xMargin</c> — with <c>box</c> or without — the text's left edge (a boxed text's
-    /// frame's) stands where the staff lines begin (<paramref name="staffLeft"/> right of the
-    /// left margin) and its right edge where they end at full line width. A shape that writes
-    /// <c>xMargin</c> is itself.
-    /// </summary>
-    /// <remarks>
-    /// The owner, 2026-11-13: "the box's default xMargin should be the same width as the
-    /// staff" — the frame ran from margin to margin while the first system began an indent
-    /// further right, so it stuck out to the left of the music.
-    /// LILYSHARP-OWN (LilyPond's <c>\box</c> hugs its words wherever the markup stands, and a
-    /// top-level markup begins at the page's left margin).
-    /// A written <c>xMargin</c> is measured from the page's margins as it always was, so
-    /// <c>xMargin 0</c> is the text from margin to margin. The text is BROKEN to the narrower
-    /// width, so this is the shape the band is built with and not a shift at the draw.
-    /// <para>
-    /// A text with NO frame stands on the staff too (the owner, later the same day: "いま、
-    /// ```md box の既定の xMargin は五線と同じになっている。box がつかない ```md の既定の
-    /// xMargin も同じ値にして。" — make the default xMargin of a ```md with no box the same
-    /// value) — so a boxed note and a plain one written one after the other share their left
-    /// edge, and a <c>center</c> text is centred over the music and not over the page's
-    /// margins. Until then a plain text began at the left margin, written or not.
-    /// </para>
-    /// </remarks>
-    public static ProseShape AtTheStaff(ProseShape shape, Syntax.TextShape written, double staffLeft)
-        => !written.SidesWritten && staffLeft > 0 ? shape with { MarginLeft = staffLeft } : shape;
 
     /// <summary>Where a line's optical middle stands over its baseline, in ems of the line:
     /// what a boxed text is centred on in its frame (<see cref="BoxShift"/>).</summary>

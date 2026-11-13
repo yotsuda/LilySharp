@@ -117,10 +117,10 @@ optional `end`, in any order, each once:
 
 | Word | The text |
 |---|---|
-| `xMargin LEFT [RIGHT]` | white at its left and right, INSIDE the line width: set that much narrower, beginning that much further right. One length is both sides. With none written the text — boxed or not — is as wide as the staff it stands against (section 5.5); `xMargin 0` is the text from margin to margin |
+| `xMargin LEFT [RIGHT]` | white at its left and right, INSIDE the line width: set that much narrower, beginning that much further right. One length is both sides. With none written — the same as `xMargin 0` — the text, boxed or not, runs from the page's left margin to its right one; `xMargin 15mm` puts it on a default staff (section 5.5) |
 | `yMargin TOP [BOTTOM]` | white above and below it, in place of the default (1.0 each way). One length is both. `yMargin 0` is LilyPond's own spacing (section 5.1) |
 | `center` | each line centred in the text's width |
-| `box` | a ruled frame around the whole text, the text in its optical middle; with no `xMargin` the frame is as wide as the staff it stands against, as a text with no frame is (section 5.5) |
+| `box` | a ruled frame around the whole text, the text in its optical middle; with no `xMargin` the frame runs from margin to margin, as a text with no frame does (section 5.5) |
 
 **The two margins are a pair** (owner's decision 2026-11-13). The side white was first the
 word `indent`; the owner, when the white above and below came up: "`space` is the y
@@ -186,11 +186,10 @@ without a word (open — the link itself was not nearly free, and is left for a 
 
 - A text role of its own in the fonts block (`text`); by default the piece's text font at the
   size of the poet / composer line (section 6: that is LilyPond's markup size).
-- As wide as the staff it stands against — from where the staff lines of the first system
-  begin (for the `end` text, the last system's) to the line's end — ragged right, unless its
-  opening line says otherwise (sections 5.1 and 5.5; until 2026-11-13 it ran from the left
-  margin, which `xMargin 0` still writes). Lines break by themselves: between words, and
-  between characters in Japanese, Chinese and Korean.
+- From the page's left margin to its right one, ragged right, unless its opening line says
+  otherwise (sections 5.1 and 5.5 — for a day, 2026-11-13, it stood on the staff instead).
+  Lines break by themselves: between words, and between characters in Japanese, Chinese and
+  Korean.
 - A long text runs on to the next page between its lines.
 - Nothing here touches playback, MIDI or a voice.
 
@@ -198,8 +197,8 @@ without a word (open — the link itself was not nearly free, and is left for a 
 
 - **`xMargin`**: the text's left edge is the page's left margin plus the left length; its
   width is the line width less both. The lines are broken to that width. **With no `xMargin`
-  written the left edge is the staff's** — the indent of the system the text stands against,
-  boxed or not (section 5.5) — and `xMargin 0` is the page's margins.
+  written the text runs from margin to margin**, boxed or not — `xMargin 0` is the same text
+  (section 5.5).
 - **`yMargin`, and the default.** Every text, boxed or not, keeps **1.0 of white above and
   1.0 below** (`ProseBand.DefaultMargin`, LILYSHARP-OWN) beyond LilyPond's own spacing of a
   markup; `yMargin T [B]` replaces it for that text, and `yMargin 0` is LilyPond's spacing
@@ -237,9 +236,8 @@ without a word (open — the link itself was not nearly free, and is left for a 
   `box-padding` default is 0.2), around the lines' BOXES — 2.0 over the first baseline, 1.0
   under the last — not around the ink; **and the text is then set in the frame's optical
   middle** (section 5.5: 3.314 inside over the first baseline, 1.686 under the last). The
-  frame's outer edge stands on the side margins' edges where `xMargin` is written; **with
-  no `xMargin` it is as wide as the staff it stands against** (section 5.5 — until then the
-  line width's edges), and the text inside is inset 1.1 a side and broken
+  frame's outer edge stands on the side margins' edges — with no `xMargin`, the line width's
+  edges (section 5.5) — and the text inside is inset 1.1 a side and broken
   to the narrower width. The band (`ProseBand.Up` / `Down`) reaches **the text's margin past
   the frame's outer edges** above and below (`yMargin`, or the default 1.0 — which was first
   this frame's alone, `BoxMargin`), so the page's springs
@@ -266,10 +264,8 @@ frame's outer left edge from the text and its outer height):
 | 0.2 on the bare ink | 0.3 | 5.6 | LilyPond's own picture: the rule on the ascenders |
 
 The twin against the page (`showcase.lys`, its `lysc ly` twins engraved; staff spaces, y down).
-⚠️ Measured BEFORE section 5.5: a text under the title that writes no `xMargin`, boxed or
-plain, now begins at the first staff's left (17.07, 93.89 wide on this page) and every boxed
-baseline stands 0.314 lower in its frame (3.414 / 1.786 outside over and under one line);
-section 5.5 has today's numbers.
+⚠️ Measured BEFORE section 5.5: every boxed baseline now stands 0.314 lower in its frame
+(3.414 / 1.786 outside over and under one line); section 5.5 has today's numbers.
 
 | What | Lily# | LilyPond |
 |---|---|---|
@@ -308,9 +304,8 @@ The twin's forms:
 - yMargin: `\with-dimension #Y #'(-(DOWN+BOTTOM) . UP+TOP)` on the list's first line (the
   top) and its last (the bottom) — beside the white a paragraph or a heading already writes
   there; nothing at `yMargin 0`. In a box, the boxed line's own extent (below).
-- xMargin: `\concat { \hspace #LEFT … }` a line of the `\markuplist \column-lines` — and
-  the same form with the staff's left where none is written (section 5.5); only `xMargin 0`
-  writes the bare line.
+- xMargin: `\concat { \hspace #LEFT … }` a line of the `\markuplist \column-lines`; with
+  none written (or `xMargin 0`) the bare line.
 - center: `\override #'(line-width . WIDTH) \fill-line { … }` — one markup in a `\fill-line`
   is centred — so LilyPond centres by ITS measure of the words. The centred line's left edge
   therefore differs by half the known difference of the two engines' text widths (section
@@ -387,12 +382,12 @@ line, the text close under the poet line.
   page that fits it keeps its margin (3.95 from the poet / composer baseline). Not changed:
   the cure is a smaller staff (`paper { staffSpace … }`), which GRAMMAR_FOR_LLM now gives.
 
-### 5.5 The text in its frame, and the text against the staff (built 2026-11-13)
+### 5.5 The text in its frame, and the text's width (built 2026-11-13; the width undone 2026-11-14)
 
-Two things the owner said on seeing a one-line `md center box` of ほえほえ — and a third,
-later the same day, that made the second every text's. All LILYSHARP-OWN: LilyPond's `\box`
-pads whatever extent it is given, wherever the markup stands, and a top-level markup begins
-at the page's left margin.
+Two things the owner said on seeing a one-line `md center box` of ほえほえ. The first stands;
+the second was built, widened to every text the same day, and undone the next. LILYSHARP-OWN:
+LilyPond's `\box` pads whatever extent it is given, wherever the markup stands, and a
+top-level markup begins at the page's left margin.
 
 **1. The text stands in the frame's optical middle.** "With one line in the box, the text's
 y is not centred in the box; can it be centred?" The frame was the padding outside the
@@ -436,68 +431,44 @@ all over its baseline.
   **Open, for the owner**: if it is to be mended, the mend is that — 0.37 where the text has
   a capital or a wide character anywhere, about 0.23 (half the x-height) where it has none.
 
-**2. A text with no `xMargin` is as wide as the staff — its frame, or with no frame its
-lines.** First the frame: "The box's default xMargin should be the same width as the staff."
-It ran from margin to margin while the first system begins its indent further right (15 mm
-by default, more where a long instrument name needs it: `LayoutEngine.EffectiveIndent`), so
-it stuck out to the left of the music. Then every text, later the same day: "いま、```md box
-の既定の xMargin は五線と同じになっている。box がつかない ```md の既定の xMargin も同じ値に
-して。" — for the hours between, a text with no frame still began at the left margin, so a
-boxed note and a plain paragraph under it had two left edges.
+**2. A text with no `xMargin` runs from the page's left margin to its right one** — boxed or
+plain, under the title or after the last system, a centred line centred between the margins
+(under the title's middle). `xMargin` is how a writer puts a text elsewhere: `xMargin 15mm`
+sets it on the staff of a default first system (LilyPond's 15 mm indent), and any other
+length as written. `xMargin 0` is the same text as writing none, so a fence that writes it
+beside one that writes nothing is one text with it (`TextShape.IsPlain`), as two fences that
+write nothing are.
 
-- **No `xMargin` written**, with `box` or without: the text's left edge — a boxed text's
-  frame's — stands where the staff LINES of the system it stands against begin
-  (`SystemLayout.Indent` — the lines' left, not a brace's or a bracket's, which hang left of
-  it) and its right edge at the full line width — for the text under the title the FIRST
-  system, for the `end` text the LAST (the short indent; the first system's own when the
-  piece is one line; a ragged last line changes nothing; on a page of its own the same
-  number). Each block of a stack by itself, so a boxed block and a plain one share their
-  left edge. `ProseBand.AtTheStaff`, applied in `ProseBand.Stack`: the staff's left becomes
-  the shape's left margin, so the text is BROKEN to the narrower width, and a `center` text
-  is centred over the staff, not between the page's margins.
-- **`xMargin` written** — `xMargin 0` too (`Syntax.TextShape.SidesWritten`): from the page's
-  margins, as before; `xMargin 0` is the old text from margin to margin, `box xMargin 0` the
-  old full-width frame. So the validator's "too narrow" check and the step keys read what
-  they read (they act only where `xMargin` is written, and there the width is the page's); a
-  default text on a paper with a huge indent gives way as any margin does (`MinimumWidth`).
-- **`xMargin 0` alone is no longer a plain fence** (`TextShape.IsPlain`): while only a frame
-  stood on the staff, ```` ```md xMargin 0 ```` was drawn as ```` ```md ```` and the two in a
-  row were one text; now one is at the margin and the other on the staff, so they are two
-  blocks, each where it says. Two fences that write nothing are one text as before.
-- **Where the number comes from.** The indents are paper constants (and the names'), known
-  before a line is broken, so the header's text is built with the first one where it always
-  was; the closing text is now built AFTER the systems are placed, from the last system's
-  own `Indent` (nothing read it earlier: it goes to the page with the systems).
-- ⚠️ Every score indents its first system (LilyPond's 15 mm, names or none), so every
-  default text under a title moved 8.54 in at its left and is broken that much narrower;
-  with `paper { indent 0 }` it is at the margin as before, to the digit.
-
-**The twin.** The same band: `\hspace` to the text's left (the staff's left, and a frame's
-inset) — a plain line is `\concat { \hspace #LEFT "…" }`, a centred one LilyPond's to centre
-in the staff's width (`line-width`) after that white; a box's column's `\with-dimension #X`
-the narrower width; `\translate #'(0 . -SHIFT)` hangs the box the first line's share under
-the line's reference point and the column's `\with-dimension #Y` reaches the share further
-up and the last line's share less down. The closing text's staff left needs the page's own
-line count, so the exporter lays the page out — only when a closing block writes no
-`xMargin` and the two indents differ.
-⚠️ The numbers are the PAGE's: where the page grew its indent for a long name (the twin
-writes LilyPond's 15 mm) or LilyPond breaks into one line where the page has two, the twin's
-text stands where the page's does and LilyPond's staff does not.
+The history. On 2026-11-13 the owner asked, of a boxed note: "The box's default xMargin
+should be the same width as the staff" — the frame ran from margin to margin while the first
+system begins its indent further right (15 mm by default, more where a long instrument name
+needs it), so it stuck out to the left of the music. It was built (a frame with no `xMargin`
+began where the staff lines of the system beside it began, the first system's for the text
+under the title, the last system's for `md end`), and later the same day widened to a text
+with no frame ("box がつかない ```md の既定の xMargin も同じ値にして"), so that a boxed note
+and a plain one under it shared their left edge. On 2026-11-14 the owner undid it: "いま、md
+の xMargin は五線の一行めと揃うようになっているけど、なんだか不自然だ。右側と左側のマージンが
+違うからだろうか。" — the text sat asymmetrically on the page (an indent's white at its left,
+none at its right) and off the poet's and the composer's lines, which stand on the margins —
+and, after trying the idea of equal margins: "いや、やはり既定は0にしておいて。気に入らなければ、
+ユーザーが好きな値を指定できるから、それで良いか。" The default is the margins again, as it
+was before 2026-11-13; the twin writes the bare line (or the frame's inset alone) again.
 
 MEASURED 2026-11-13, LilyPond 2.26.0 (`LilySharp-Lab` `sessions/p1226/md/boxfit`: `owner.lys`,
-`heading.lys`, `list.lys`, `names2.lys` — two named staves, three systems, `md box` and
-`md end box` — and their `lysc ly --pin-fonts` twins in `lp/`; paper coordinates, y down):
+`heading.lys`, `list.lys`, `names2.lys` — and their `lysc ly --pin-fonts` twins in `lp/`;
+paper coordinates, y down). The vertical numbers stand; the frames' left edges were measured
+while a frame stood on the staff (today it begins at the margin, 8.54):
 
 | What | Lily# | LilyPond |
 |---|---|---|
 | ほえほえ: frame's outer top, bottom; baseline | 17.71, 22.91; 21.12 | 17.7087, 22.9087; 21.1227 (3.414 over, 1.786 under) |
-| …frame's left, right; the first staff's lines from | 17.07, 110.97; 17.07 | 17.0716, 110.9657; 17.0717 |
 | `#` heading first: frame's top, bottom; the two baselines | 17.71, 27.52; 21.72, 25.73 | 17.7086, 27.5200; 21.7241, 25.7339 |
 | List last: frame's top, bottom; the three baselines | 17.71, 30.41; 21.12, 25.62, 28.62 | 17.7087, 30.4087; 21.1227, 25.6227, 28.6227 |
-| Named staves, under the title: frame's left; first staff from | 17.07; 17.07 | 17.0716; 17.0717 |
-| …`md end box`: frame's left, width; last staff from | 8.54, 102.43; 8.54 | 8.5358, 102.4299; 8.5358 |
-| …its frame's top under the last staff's middle line; its baseline | 8.90; 12.31 | 8.9000; 12.3140 |
-| A text with NO frame, two lines under the title, one unnamed staff (`md/plainfit` `probe.lys` and its twin): the lines' left; the first staff's lines from | 17.07, 17.07; 17.07 | 17.0716, 17.0716; 17.0717 |
+| `md end box`: its frame's top under the last staff's middle line; its baseline | 8.90; 12.31 | 8.9000; 12.3140 |
+
+**The twin** of a boxed text: `\translate #'(0 . -SHIFT)` hangs the box the first line's
+share under the line's reference point and the column's `\with-dimension #Y` reaches the
+share further up and the last line's share less down.
 
 ### 5.2 Headings and lists (built 2026-11-13)
 

@@ -16,7 +16,6 @@
 
 using System;
 using System.Globalization;
-using System.Linq;
 using LilySharp.Core.Rendering;
 using LilySharp.Core.Svg.Layout;
 
@@ -48,7 +47,7 @@ public sealed partial class LilyPondExporter
         if (_page is not { } page)
             return;
         var place = ProseBand.Stack(page.Texts.Blocks(before), page.TextMetrics, page.Paper.ContentWidth,
-            page.Paper.StaffSpaceMm, StaffLeftFor(page, before));
+            page.Paper.StaffSpaceMm);
         if (place is null)
             return;
         double skip = ProseBand.Skip(page.TextMetrics);
@@ -66,39 +65,6 @@ public sealed partial class LilyPondExporter
                 EmitPlainText(band, skip, up, down);
         }
         _sb.Append(before ? "}\n\n" : "}\n");
-    }
-
-    /// <summary>
-    /// Where the staff lines of the system a place's text stands against begin, from the left
-    /// margin, as the page has it: a block with no <c>xMargin</c>, boxed or plain, begins
-    /// there (the owner, 2026-11-13; ProseBand.AtTheStaff). The first system's indent for the
-    /// text under the title; the LAST system's for the closing one.
-    /// </summary>
-    /// <remarks>
-    /// The last system's is the short indent unless the piece is ONE line — which only the
-    /// page's own line breaking says, so the page is laid out for it, and only when the
-    /// answer can matter: a closing block with no <c>xMargin</c>, on a paper
-    /// whose two indents differ. LILYSHARP-OWN. ⚠️ The number is the PAGE's: where LilyPond
-    /// breaks the twin into another count of lines across the one-line boundary, or the page
-    /// grew its indent to keep a long name on the paper (LayoutEngine.EffectiveIndent — the
-    /// twin writes LilyPond's 15 mm), the twin's text (its frame) stands where the page's
-    /// does and LilyPond's staff does not.
-    /// </remarks>
-    private static double StaffLeftFor(Svg.Model.MultiStaffScore page, bool before)
-    {
-        double first = LayoutEngine.EffectiveIndent(page.Paper, page);
-        double later = LayoutEngine.EffectiveShortIndent(page.Paper, page);
-        if (before || first == later || !page.Texts.Blocks(before: false).Any(b => !b.Shape.SidesWritten))
-            return first;
-        try
-        {
-            var systems = new LayoutEngine(page.Paper).Layout(page).Systems;
-            return systems.Length > 0 ? systems[^1].Indent : first;
-        }
-        catch (Exception)
-        {
-            return later;
-        }
     }
 
     /// <summary>A block with no frame: one markup a line of the list.</summary>

@@ -278,8 +278,7 @@ FenceClose     = (* a line that begins, after blanks, with as many backticks as 
                     '2-3', 'all') and not printed yet (LYS4058).
 
                     THE PAGE: the text is set at the poet / composer line's size (fonts key 'md'),
-                    as wide as the staff it stands against (from where its lines begin to the
-                    line width — THE SHAPE, below), ragged right; the lines break at
+                    from the left margin to the right one (THE SHAPE, below), ragged right; the lines break at
                     spaces, and between characters in Japanese, Chinese and Korean, never before
                     a stop or a closing bracket, never after an opening one (LILYSHARP-OWN:
                     LilyPond's \wordwrap breaks no text without spaces). It is a line of the
@@ -300,13 +299,10 @@ FenceClose     = (* a line that begins, after blanks, with as many backticks as 
                     THE SHAPE (owner-approved 2026-11-13). 'xMargin LEFT [RIGHT]' is white at the
                     text's left and right INSIDE the line width — the text is broken that much
                     narrower and begins that much further right, and one length is both sides.
-                    WITH NO xMargin a text, boxed or not, is as wide as the STAFF it stands
-                    against: its left edge (a box's frame's) where the staff lines of the first
-                    system begin — for an 'end' text the last system's — and its right edge at
-                    the line width (LILYSHARP-OWN, the owner 2026-11-13: first the box's default,
-                    then every text's; a top-level markup of LilyPond's begins at the left
-                    margin). 'xMargin 0' is written, and is the text from margin to margin — so
-                    alone it is a shape word, and such a fence a block of its own.
+                    WITH NO xMargin a text, boxed or not, runs from the left margin to the right
+                    one, as a top-level markup of LilyPond's does; 'xMargin 0' is the same text
+                    (the owner, 2026-11-14 — for a day such a text stood on the staff of the
+                    system beside it; 'xMargin 15mm' puts it on a default first system's staff).
                     'yMargin TOP [BOTTOM]' is the white above and below the text, one length
                     both; with none written a text keeps 1.0 each way (LILYSHARP-OWN), and
                     'yMargin 0' is LilyPond's own spacing of a markup list. The margin is part
@@ -319,8 +315,7 @@ FenceClose     = (* a line that begins, after blanks, with as many backticks as 
                     'box' rules a frame around the whole text, LilyPond's \box — a rule 0.1 thick
                     outside the padded extent (scm/stencil.scm box-stencil) — with a padding of
                     1.0 around the lines' boxes (LILYSHARP-OWN: LilyPond's 0.2 hugs one word). The
-                    frame's outer edge stands on the side margins' edges (the staff's left and
-                    the line's end where no xMargin is written), so the text inside is
+                    frame's outer edge stands on the side margins' edges, so the text inside is
                     inset by 1.1 and broken narrower again; the margin above and below is outside
                     the frame. The words combine, and the text under the title and the
                     'end' text each read their own opening line. Two fences for one place are
@@ -334,9 +329,7 @@ FenceClose     = (* a line that begins, after blanks, with as many backticks as 
                     the centring as \fill-line in an overridden line-width, the frame as \box
                     around a \column given the page's extent, and the margin above and below as
                     the first and last lines' \with-dimension #Y. MEASURED 2026-11-13 on LilyPond
-                    2.26.0: the frame at the left margin 8.5358 and 102.4299 wide ('box xMargin
-                    0' today; with none a plain text's lines at 17.0716 over a staff from
-                    17.0717), 3.1000 over
+                    2.26.0: the frame at the left margin 8.5358 and 102.4299 wide, 3.1000 over
                     the first baseline, the last staff's middle line to a boxed closing text's
                     first baseline 12.0000; the composer line to a plain text's first line
                     3.9705 at the default, 2.9705 at 'yMargin 0', 5.9705 at 'yMargin 3 1'.

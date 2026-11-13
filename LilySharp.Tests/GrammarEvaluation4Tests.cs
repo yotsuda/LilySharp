@@ -85,14 +85,11 @@ public class GrammarEvaluation4Tests
         // The band the page spaces is the whole stack: the music stands under the last block.
         Assert.Equal(blocks[1].Offset + dedication.Down, place.Down, 9);
         Assert.True(page.Height - page.Systems[0].Y > page.HeaderTextY + place.Down);
-        // The centred line is centred in ITS block's width, not in the box's narrower text
-        // width: the staff's — from the first system's indent to the line's end — since a text
-        // with no xMargin stands on the staff with or without a frame (the owner, 2026-11-13:
-        // "box がつかない ```md の既定の xMargin も同じ値にして"; until then the line width's
-        // middle). So the two blocks share their left edge, and the line stands over the
-        // frame's own middle.
-        double lineWidth = LayoutOptions.Default.ContentWidth, staffLeft = LayoutOptions.Default.Indent;
-        Assert.Equal((staffLeft + lineWidth) / 2, dedication.Lines[0].Left + dedication.Lines[0].Width / 2, 6);
+        // The centred line is centred in the line width, not in the box's narrower text width:
+        // with no xMargin both blocks run from margin to margin (the owner, 2026-11-14), so
+        // they share their left edge and the line stands over the frame's own middle.
+        double lineWidth = LayoutOptions.Default.ContentWidth;
+        Assert.Equal(lineWidth / 2, dedication.Lines[0].Left + dedication.Lines[0].Width / 2, 6);
         Assert.Equal(box.Frame!.Left, dedication.Left, 9);
         Assert.Equal((box.Frame.Left + box.Frame.Right) / 2, dedication.Lines[0].Left + dedication.Lines[0].Width / 2, 6);
 
@@ -117,6 +114,11 @@ public class GrammarEvaluation4Tests
         Assert.Single(plain.Blocks);
         Assert.Equal(one.Lines.Select(l => (TextOf(l), l.Baseline)), plain.Lines.Select(l => (TextOf(l), l.Baseline)));
         Assert.Equal((one.Up, one.Down), (plain.Up, plain.Down));
+        // `xMargin 0` is what writing none is — margin to margin (the owner, 2026-11-14) — so
+        // such a fence is the same text too, not a block of its own.
+        var zero = Laid(Titled($"{F}md\nFirst.\n{F}\n{F}md xMargin 0\nSecond.\n{F}")).Pages[0].Header!.Text!;
+        Assert.Single(zero.Blocks);
+        Assert.Equal(one.Lines.Select(l => (TextOf(l), l.Baseline)), zero.Lines.Select(l => (TextOf(l), l.Baseline)));
 
         // The closing text takes blocks too; a score's fences replace the file's sequence whole.
         string file = $"{F}md box\nA\n{F}\n{F}md center\nB\n{F}\n{F}md end center\nC\n{F}\n{F}md end xMargin 10 box\nD\n{F}";

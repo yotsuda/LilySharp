@@ -43,9 +43,8 @@ copyright "© 2026 Name" // optional: centred at the foot of the FIRST page only
                         // nested lists; NOT drawn, and warned about (LYS4058): tables, code blocks, block
                         // quotes, rules, images, HTML); ```md end prints them under the last system. Nothing
                         // between the fences is Lily#. Inside score { } a fence replaces the file's for that score.
-                        // A text is AS WIDE AS THE STAFF beside it (it begins where the staff lines begin,
-                        // after the indent and the instrument names) unless an xMargin is written —
-                        // `xMargin 0` is margin to margin.
+                        // A text runs from the page's left margin to its right one unless an xMargin is
+                        // written (`xMargin 15mm` sets it on a default first system's staff).
                         // The opening line may go on, in any order, each word once: `box` (a ruled frame
                         // around the text), `center` (each line centred), `xMargin 20mm` (white at both
                         // sides, inside the line width) or `xMargin 20mm 10mm` (left, right), `yMargin 2`
@@ -1807,9 +1806,9 @@ and NOT printed yet (warned, LYS4058).
 | `end` | the place: under the last system instead of under the title |
 | `title`, `subtitle`, `composer`, `poet`, `arranger`, `copyright` | the place: that header line, written as Markdown — alone on the line (below: "A header line written as Markdown") |
 | `box` | a thin ruled frame around the text, the text in its middle; as wide as the text's width (next rows) |
-| `center` | each line centred in the text's width — over the staff, with no `xMargin` (headings too; a list keeps its shape at the left) |
-| `xMargin 20mm` / `xMargin 20mm 10mm` | white at both sides / at the left and the right, measured from the page's margins, inside the line width: the text is set narrower. `xMargin 0` runs from margin to margin |
-| (no `xMargin`) | the text, boxed or plain, is AS WIDE AS THE STAFF it stands against — its left edge where the first system's staff lines begin (under the title) or the last system's (`end`), its right edge at the line's end. So a boxed note and a plain paragraph line up with each other and with the music |
+| `center` | each line centred in the text's width — between the page's margins, with no `xMargin`, under the title's middle (headings too; a list keeps its shape at the left) |
+| `xMargin 20mm` / `xMargin 20mm 10mm` | white at both sides / at the left and the right, measured from the page's margins, inside the line width: the text is set narrower. `xMargin 15mm` puts the text on the staff of a first system with the default indent |
+| (no `xMargin`, or `xMargin 0`) | the text, boxed or plain, runs from the page's left margin to its right one — the poet's and the composer's lines' edges |
 | `yMargin 2` / `yMargin 3 1` | white above and below / above, below. Default 1 staff space each; `yMargin 0` is LilyPond's own tight spacing |
 
 A length is `20mm`, `2cm`, `0.5in` (the unit glued on) or a bare number of staff spaces. Any
@@ -1819,7 +1818,7 @@ text, a `yMargin` over 50: LYS4057.
 **Two fences for one place** print one under the other in written order, and EACH HAS ITS OWN
 SHAPE — the boxed note and the centred dedication above. Between two blocks stands the upper
 one's white below and the lower one's white above (`yMargin`). Two fences that write no shape
-word are simply one text, the second its next paragraph (`xMargin 0` is a shape word).
+word are simply one text, the second its next paragraph (`xMargin 0` alone is no shape: it is what writing none is).
 
 **What is drawn**: paragraphs (a blank line between them), `**bold**`, `*italic*`, a line ended
 by hand (two spaces or `\` at the line's end), `# Heading` (bold, the subtitle's size) and
