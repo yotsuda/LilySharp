@@ -1084,12 +1084,14 @@ internal sealed class NoteCollision
 
                     // The rows the renderer will draw at — same inputs, same resolver:
                     // the two-layer preferred direction (voice props; a positive-shift
-                    // collision overrides the down voice's dots to UP).
+                    // collision overrides the down voice's dots to UP). The voice props'
+                    // number, not the slot's: a condensed staff's lower part is voice two
+                    // whatever the part above it holds (VoiceEntry.DirectionNumber).
                     bool isDownFirst = upEntries.Count > 0 && downEntries.Count > 0
                         && e.VoiceId == downEntries[0].VoiceId
                         && e.ItemIndex == downEntries[0].ItemIndex;
                     int dir = isDownFirst && collision.DownDotDirectionUp ? 1
-                        : VoiceDefaults.GetDefaultStemUp(e.VoiceId) switch
+                        : VoiceDefaults.GetDefaultStemUp(e.DirectionNumber) switch
                           { true => 1, false => -1, null => 0 };
                     rows.AddRange(DotConfiguration.Resolve(
                         positions,

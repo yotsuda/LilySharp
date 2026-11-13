@@ -901,8 +901,9 @@ internal static partial class SharedRenderer
     /// </summary>
     private static void DrawBendBefore(double x1, double y1, bool rise, IDrawingContext gc)
     {
-        const double len = 1.25;
-        double drop = rise ? 1.7 : -1.7;          // start BELOW for a scoop (device down)
+        const double len = LilySharp.Core.Svg.Layout.ArticulationEngraver.BendApproachLength;
+        const double depth = LilySharp.Core.Svg.Layout.ArticulationEngraver.BendApproachDepth;
+        double drop = rise ? depth : -depth;      // start BELOW for a scoop (device down)
         double x0 = x1 - len, y0 = y1 - drop;
         // Control point mirrored: arrives at the note nearly horizontal.
         double cx = x1 - len * 0.62, cy = y1 - drop * 0.08;
@@ -913,7 +914,8 @@ internal static partial class SharedRenderer
             double t = s / (double)seg, u = 1 - t;
             double nx = u * u * x0 + 2 * u * t * cx + t * t * x1;
             double ny = u * u * y0 + 2 * u * t * cy + t * t * y1;
-            gc.DrawLine(px, py, nx, ny, Color.Black, 0.13, cap: LineCap.Round);
+            gc.DrawLine(px, py, nx, ny, Color.Black,
+                LilySharp.Core.Svg.Layout.ArticulationEngraver.BendApproachThickness, cap: LineCap.Round);
             px = nx; py = ny;
         }
     }

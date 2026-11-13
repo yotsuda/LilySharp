@@ -178,7 +178,8 @@ internal sealed class VoiceCollector
             // actually reaches — per item, since a span can open mid-bar.
             // LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set
             entries.Add(new VoiceEntry(e.VoiceIndex + 1, item, e.ItemIndex,
-                writerAsk ?? VoiceDefaults.GetDefaultStemUpAt(voices, e.VoiceIndex, measureIndex, e.ItemIndex)));
+                writerAsk ?? VoiceDefaults.GetDefaultStemUpAt(voices, e.VoiceIndex, measureIndex, e.ItemIndex))
+            { DirectionNumber = VoiceDefaults.DirectionNumber(voices, e.VoiceIndex, measureIndex) });
         }
         if (entries == null)
             return ImmutableArray<VoiceColumn>.Empty;

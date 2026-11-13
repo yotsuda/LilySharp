@@ -2491,6 +2491,15 @@ public sealed partial class MeasureCollector
         // A grace run moves whole or not at all (VoiceState.GraceAllCross) — see CollectCrossStaff.
         if ((_v.GraceDepth == 0 || _v.GraceAllCross) && WritesCross(node))
             item = item with { CrossWritten = true };
+        // A scoop or a plop arrives from the LEFT of the head and a fall or a doit leaves it
+        // to the right: the column keeps their room (MusicItem.ApproachGesture /
+        // LeavingGesture; grammar evaluation 4, 2026-11-13).
+        if (_v.GraceDepth == 0 && item is NoteItem or ChordItem)
+            foreach (var art in ArticulationsOf(node))
+                if (art is ArticulationSyntax { Type: ArticulationType.Scoop or ArticulationType.Plop } approach)
+                    item = item with { ApproachGesture = approach.Type == ArticulationType.Scoop ? 1 : -1 };
+                else if (art is ArticulationSyntax { Type: ArticulationType.Fall or ArticulationType.Doit } leaving)
+                    item = item with { LeavingGesture = leaving.Type == ArticulationType.Doit ? 1 : -1 };
         // How the slur and the tie that begin here are drawn: c4@slur(dashed)( d e),
         // c2@tie(dotted)~ c2 (owner-approved 2026-11-13, grammar evaluation 3). The detectors
         // read them off the item (SlurDetector, TieDetector); with no slur or tie beginning

@@ -398,6 +398,48 @@ public class GrammarEvaluation4Tests
         Assert.Equal(a[..^2], c[..(a.Length - 2)]);
     }
 
+    /// <summary>The same staff's other readers of the voice number (Lab eval4/fixB2
+    /// i6-divisi against i6-plain): the alto's GRACE notes pointed up for the whole piece once
+    /// the soprano held a divisi — the collector read the slot, "voice three" — and the dot
+    /// column and the grace's script gate read the slot too. The grace keeps its stem, and the
+    /// first two bars are the plain book's, symbol for symbol.</summary>
+    [Fact]
+    public void ACondensedStaffsLowerPart_KeepsItsGraceStemsAndDots_WhenTheUpperPartHasADivisi()
+    {
+        static string Book(string sopB) => "octave absolute\npart sop { clef treble }\npart alt { clef treble }\n"
+            + "section A { sop { a'2 b'2 | d''1 | } alt { grace { e'8@staccato } f'2 g'4. f'8 | grace { e'16 f' } g'1@fermata | } }\n"
+            + $"section B {{ sop {{ {sopB} }} alt {{ c'1 | }} }}\nform {{ ~A ~B }}\nscore {{ condensedStaff {{ sop alt }} }}\n";
+        static LilySharp.Core.Svg.Model.Voice[] Voices(string source)
+        {
+            var tree = SyntaxTree.Parse(source);
+            return [.. SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)).StaffGroups.Single().Staves.Single().Voices];
+        }
+        static bool[] GraceStemsDown(LilySharp.Core.Svg.Model.Voice voice)
+            => [.. voice.Measures.SelectMany(m => m.Items).Where(i => i.GraceTime).Select(i => i.GraceStemDown)];
+
+        var plain = Voices(Book("e''1 |"));
+        var divisi = Voices(Book("voice { e''1 | } { c''1 | }"));
+        Assert.Equal(new[] { true, true, true }, GraceStemsDown(plain[1]));
+        Assert.Equal(GraceStemsDown(plain[1]), GraceStemsDown(divisi[2]));
+        // The dot column's reader: the alto's dotted g' is voice TWO's in both books.
+        static int[] Numbers(LilySharp.Core.Svg.Model.Voice[] voices, int alto)
+            => [.. VoiceCollector.CollectMeasure([.. voices], 0).SelectMany(c => c.Entries).Where(e => e.VoiceId == alto + 1).Select(e => e.DirectionNumber)];
+        Assert.Equal(new[] { 2, 2, 2 }, Numbers(plain, 1));
+        Assert.Equal(Numbers(plain, 1), Numbers(divisi, 2));
+        // The page of the first two bars: every symbol where the plain book has it.
+        static string[] FirstTwoBars(string source)
+        {
+            var tree = SyntaxTree.Parse(source);
+            var page = LilySharp.Core.Rendering.Boxes.BoxesGenerator.GeneratePages(tree, RenderSpecParser.FindFirst(tree)).Single();
+            double thirdBar = page.Bars.Single(b => b.Bar == 3).Box[0];
+            return [.. page.Symbols.Where(s => s.Kind != "staffLine" && s.Box[2] < thirdBar - 0.5)
+                .Select(s => $"{s.Kind} {s.Glyph} {string.Join(' ', s.Box.Select(v => v.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)))}")];
+        }
+        var page = FirstTwoBars(Book("e''1 |"));
+        Assert.True(page.Length > 20);
+        Assert.Equal(page, FirstTwoBars(Book("voice { e''1 | } { c''1 | }")));
+    }
+
     // ---- B3. a group with no staff on the system has no name there --------------------------
 
     /// <summary>A <c>grandStaff</c> whose two staves are both hidden on a system

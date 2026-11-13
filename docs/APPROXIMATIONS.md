@@ -14,16 +14,16 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 410 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **538** | |
+| `OWN` | 420 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **548** | |
 
 ## 密度の高いファイル（上位 12）
 
 | ファイル | 件数 |
 |---|---:|
+| `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 23 |
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 21 |
 | `LilySharp.Core/Svg/Layout/ProseBand.cs` | 19 |
-| `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 18 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 16 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
 | `LilySharp.Core/Midi/MidiExporter.cs` | 10 |
@@ -249,7 +249,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（410 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（420 件）
 
 ### `LilySharp.Core/Audio/SingerPlan.cs`
 - **`SingerPlan`** LILYSHARP-OWN.
@@ -563,7 +563,12 @@
 - **`ArticulationEngraver.BendTabXOffset`** X offset of a bend-up's curve from the fret digit on a TAB staff. LILYSHARP-OWN (above).
 - **`ArticulationEngraver.BendHeadPadding`** X gap between a bend-up's curve and the notehead's right edge. LILYSHARP-OWN (above).
 - **`ArticulationEngraver.BendApproachXOffset`** X offset for a curve that arrives FROM THE LEFT (scoop/plop). LILYSHARP-OWN (above).
+- **`ArticulationEngraver.BendApproachLength`** How long the scoop's / plop's curve is, left of where it arrives. LILYSHARP-OWN (above).
+- **`ArticulationEngraver.BendApproachDepth`** How far below (a scoop) or above (a plop) the head's row the curve starts. LILYSHARP-OWN (above).
+- **`ArticulationEngraver.BendApproachThickness`** The curve's line thickness. LILYSHARP-OWN (above).
+- **`ArticulationEngraver.BendApproachLeftReach`** LILYSHARP-OWN: LilyPond has no scoop or plop, so there is no grob whose room this is.
 - **`ArticulationEngraver.CalculateWithFingerings`** LILYSHARP-OWN: LilyPond draws NO fall or doit on a chord at all — its
+- **`ArticulationEngraver.CalculateWithFingerings`** LILYSHARP-OWN: the scoop and plop are (BendApproachLeftReach).
 - **`ArticulationEngraver.CalculateWithFingerings`** to this note's left. LILYSHARP-OWN, as the bend-up is.
 - **`ArticulationEngraver.CalculateWithFingerings`** LILYSHARP-OWN: LilyPond prints the collision. Its Script_engraver acknowledges
 - **`ArticulationEngraver.OtherVoiceRestSupport`** The rule and its LILYSHARP-OWN declaration are at the one call site in
@@ -623,6 +628,10 @@
 ### `LilySharp.Core/Svg/Layout/HeaderBand.cs`
 - **`HeaderBand.ChordListGap`** LILYSHARP-OWN: LilyPond has no chord list; the gap is Lily#'s, a little more
 - **`HeaderBand.RowPadding`** LILYSHARP-OWN (user decision 2026-09-26): LilyPond stacks the rows with ZERO padding
+### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
+- **`ItemSkylineFactory.AddApproachGesture`** LILYSHARP-OWN: LilyPond has no scoop or plop; the default extra-spacing-width is what
+- **`ItemSkylineFactory.LeavingGestureClearance`** shortest. LILYSHARP-OWN ('s remarks carry the tag's
+- **`ItemSkylineFactory.AddLeavingGesture`** LILYSHARP-OWN: LilyPond keeps NO room for a BendAfter. MEASURED (2.26.0, Lab
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
 - **`LayoutEngine.BuildPrefixMarkAnchorX`** ⚠️ LILYSHARP-OWN bridge, declared: LilyPond's mark aligns to the BreakAlignGroup,
 - **`LayoutEngine.ClearChordDiagramsOverStaffInk`** LILYSHARP-OWN (2026-09-28): see for
@@ -758,6 +767,7 @@
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
 - **`SpacingRules.FillsMeasure`** ⚠️ LILYSHARP-OWN, WHERE THE DIRECT FORM PARTS FROM LILYPOND: free time. fills_measure
 - **`SpacingRules.AnyStaffEngravesTime`** LILYSHARP-OWN, a DECIDED divergence (user decision 2026-08-20, HANDOFF §3):
+- **`SpacingRules.CalculateLeftExtent`** column holds (ArticulationEngraver.BendApproachLeftReach — LILYSHARP-OWN, there).
 ### `LilySharp.Core/Svg/Layout/SpacingRules.EmptyBar.cs`
 - **`SpacingRules.EmptyBarSprings`** LILYSHARP-OWN: LilyPond has no such spring because it has no such column — the
 ### `LilySharp.Core/Svg/Layout/SpacingRules.Grace.cs`
@@ -822,6 +832,8 @@
 - **`InstrumentDefaults.SoundingRange`** LILYSHARP-OWN: the ranges an orchestration text gives for professional players (the
 ### `LilySharp.Core/Svg/Model/Measure.cs`
 - **`Measure.IsTrailingClefColumn`** ⚠️ LILYSHARP-OWN: THE FLAGGED ZERO-WIDTH MEASURE IS A TRANSLATION DEVICE. LilyPond
+### `LilySharp.Core/Svg/Model/MusicItem.cs`
+- **`MusicItem.ApproachGesture`** LILYSHARP-OWN: LilyPond has no scoop or plop (grammar evaluation 4, 2026-11-13).
 ### `LilySharp.Core/Svg/Model/MusicMarkItem.cs`
 - **`MusicMarkType.RepeatCount`** edge on the bar line. The text is the item's. LILYSHARP-OWN — LilyPond prints nothing
 - **`MusicMarkItem..ctor`** coda itself (LILYSHARP-OWN, a Gould-style departure).

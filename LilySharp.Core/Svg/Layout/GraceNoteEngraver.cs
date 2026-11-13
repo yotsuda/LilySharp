@@ -201,7 +201,7 @@ internal static class GraceNoteEngraver
             // placement, below for the quanter's x frame, by the renderer for the drawn
             // heads, and by the inside-staff profile for the room they take.
             var (x, mainNoteAbsX, columns) = RunPlacement(
-                grace, measureLayout, graceMeasures, articulations);
+                grace, measureLayout, graceMeasures, articulations, graceVoices);
             var measure = graceMeasures[grace.MeasureIndex];
 
             // Main-note anchor for the grace slur (acciaccatura/appoggiatura).
@@ -276,7 +276,7 @@ internal static class GraceNoteEngraver
     /// </remarks>
     internal static (double X, double MainNoteX, SpacingRules.GraceColumnLayout Columns) RunPlacement(
         GraceNoteItem grace, MeasureLayout measureLayout, ImmutableArray<Measure> graceMeasures,
-        ImmutableArray<ArticulationItem> articulations)
+        ImmutableArray<ArticulationItem> articulations, ImmutableArray<Voice> voices = default)
     {
         double mainNoteX = LayoutUtilities.GetItemXOffset(
             graceMeasures, grace.MeasureIndex, grace.MainNoteItemIndex, measureLayout);
@@ -286,7 +286,7 @@ internal static class GraceNoteEngraver
             : null;
         var columns = PlacedColumns(grace.Columns, mainItem, measure, grace.MainNoteItemIndex, measureLayout);
         double scriptOverhang = ScriptOverhangForGrace(
-            articulations, grace, measure, columns.Span);
+            articulations, grace, measure, columns.Span, voices);
         // The run's FIRST column stands that far in front of the main note's.
         double x = measureLayout.X + mainNoteX - columns.Span - scriptOverhang;
         return (x, measureLayout.X + mainNoteX, columns);
@@ -609,7 +609,7 @@ internal static class GraceNoteEngraver
     /// </summary>
     private static double ScriptOverhangForGrace(
         ImmutableArray<ArticulationItem> articulations, GraceNoteItem grace, Measure measure,
-        double graceGroupWidth)
+        double graceGroupWidth, ImmutableArray<Voice> voices = default)
     {
         if (articulations.IsDefaultOrEmpty || grace.Columns.IsDefaultOrEmpty
             || grace.MainNoteItemIndex >= measure.Items.Length)
@@ -639,9 +639,15 @@ internal static class GraceNoteEngraver
 
         // A LOWER voice's script goes below unless it says .up (its voice forces it, as
         // \voiceTwo does; the engraver's voiceScriptUp) — out of the above-band this gate
-        // models. A lower voice only has the grace's main note inside a voice span, so its
-        // index alone says so; voice 1's scripts stay above as before.
-        bool? voiceUp = grace.VoiceIndex > 0 ? VoiceDefaults.GetDefaultStemUp(grace.VoiceIndex + 1) : null;
+        // models. The engraver's own question, asked of the staff's voices where the caller
+        // has them: until grammar evaluation 4 (2026-11-13) the index alone answered, and a
+        // condensed staff's lower part under an upper part with a divisi is slot 2 — "voice
+        // three", scripts above — though it is the staff's voice two (VoiceDefaults.DirectionNumber).
+        // Without the voices the index still answers: a lower voice only has the grace's main
+        // note inside a voice span, and voice 1's scripts stay above.
+        bool? voiceUp = !voices.IsDefaultOrEmpty && grace.VoiceIndex < voices.Length
+            ? VoiceDefaults.GetDefaultStemUpAt(voices, grace.VoiceIndex, grace.MeasureIndex, grace.MainNoteItemIndex)
+            : grace.VoiceIndex > 0 ? VoiceDefaults.GetDefaultStemUp(grace.VoiceIndex + 1) : null;
         foreach (var art in articulations)
         {
             // The script's OWN voice: MainNoteItemIndex counts the grace voice's items, and

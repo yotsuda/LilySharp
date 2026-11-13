@@ -184,6 +184,8 @@ internal sealed record MusicItemRare
     public bool ClosesWithoutWish { get; init; }
     public double DotColumnShift { get; init; }
     public SpanArpeggioPart SpanArpeggio { get; init; }
+    public int ApproachGesture { get; init; }
+    public int LeavingGesture { get; init; }
 }
 
 /// <summary>
@@ -329,6 +331,39 @@ public abstract record MusicItem
     {
         get => _rareBase?.SpanArpeggio ?? SpanArpeggioPart.None;
         init { if (value != SpanArpeggio) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { SpanArpeggio = value }; }
+    }
+
+    /// <summary>
+    /// The curve that arrives at this note or chord FROM THE LEFT — <c>@scoop</c> (+1, it
+    /// rises into the head from below) or <c>@plop</c> (−1, it falls into it from above) — or
+    /// 0. On the item so that its column keeps the curve's room
+    /// (<c>ArticulationEngraver.BendApproachLeftReach</c>); the mark itself is drawn off its
+    /// <see cref="ArticulationItem"/>. Not stamped on a grace note, whose run is spaced by
+    /// its own springs.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond has no scoop or plop (grammar evaluation 4, 2026-11-13).
+    ///   departs from: nothing — there is no LilyPond counterpart to depart from.
+    ///   goes away when: LilyPond grows one.
+    ///   observed by: EngravingCollisions4Tests (the curve clears what stands before it).
+    /// </remarks>
+    public int ApproachGesture
+    {
+        get => _rareBase?.ApproachGesture ?? 0;
+        init { if (value != ApproachGesture) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { ApproachGesture = value }; }
+    }
+
+    /// <summary>
+    /// The curve that LEAVES this note or chord to the right — <c>@doit</c> (+1, it rises) or
+    /// <c>@fall</c> (−1, it drops), LilyPond's BendAfter — or 0. On the item so that its
+    /// column keeps the curve's shortest form clear of the next column's ink
+    /// (<c>ItemSkylineFactory.AddLeavingGesture</c>, where the reason is); the mark itself is
+    /// drawn off its <see cref="ArticulationItem"/>. Not stamped on a grace note.
+    /// </summary>
+    public int LeavingGesture
+    {
+        get => _rareBase?.LeavingGesture ?? 0;
+        init { if (value != LeavingGesture) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { LeavingGesture = value }; }
     }
 
     /// <summary>

@@ -44,6 +44,39 @@ public sealed partial class MeasureCollector
     private SyntaxNode? _root;
 
     /// <summary>
+    /// The place of the part being collected among the parts of a <c>condensedStaff</c>
+    /// (1-based) when it is a LATER one, and the staff slot its first voice takes; 0 for a
+    /// part on a staff of its own and for a shared staff's first part, whose slots are their
+    /// voice numbers already. The collect-time half of
+    /// <see cref="VoiceDefaults.DirectionNumber"/>, which reads the same two numbers off the
+    /// built voices (<see cref="Voice.SharedPartNumber"/>) — see <see cref="DirectionNumberHere"/>.
+    /// </summary>
+    private int _sharedPartNumber;
+    private int _sharedPartFirstVoice;
+
+    /// <summary>
+    /// The voice number whose props the music being walked carries — what
+    /// <see cref="VoiceDefaults.DirectionNumber"/> answers once the staff is built, asked
+    /// while it is being collected: the cursor's slot plus one, except in a
+    /// <c>condensedStaff</c>'s later part, whose first voice is the PART's number outside a
+    /// <c>voice { } { }</c> span and voice one of the span inside it, and whose later voices
+    /// count from the part's first.
+    /// </summary>
+    /// <remarks>
+    /// Until grammar evaluation 4 (2026-11-13) the grace's stem direction read the slot: a
+    /// divisi anywhere in the soprano made the alto slot 2, "voice three", and every grace of
+    /// the alto pointed UP for the whole piece (Lab eval4/fixB2 i6-divisi against i6-plain).
+    /// LILYPOND-REF: scm/music-functions.scm voicify-list — every list is numbered from one.
+    /// </remarks>
+    private int DirectionNumberHere()
+    {
+        if (_sharedPartNumber == 0)
+            return _v.Cursor.VoiceIndex + 1;
+        int within = _v.Cursor.VoiceIndex - _sharedPartFirstVoice;
+        return within > 0 ? within + 1 : _v.Cursor.VoiceScope != null ? 1 : _sharedPartNumber;
+    }
+
+    /// <summary>
     /// The staff being collected carries lyrics directly under it (a verse folded into
     /// <see cref="StaffSpec.WithLyrics"/>), so its dynamics and hairpins stand above it unless
     /// written otherwise (<see cref="DynamicSideAbove"/>).
@@ -1724,6 +1757,7 @@ public sealed partial class MeasureCollector
         // in Staff.Voices, not at 0. Advanced from the PREVIOUS binding's collected voices
         // at the top of each turn, which is the one place every branch below passes through.
         int staffVoiceSlots = 0;
+        int sharedParts = 0;
         string? previousBinding = null;
         // What each binding's collection added to the dynamics and the marks, and the slot its
         // voices start at: how a condensed staff's parts are told apart afterwards
@@ -1774,6 +1808,11 @@ public sealed partial class MeasureCollector
             if (slotting == VoiceSlotting.OwnStaff)
                 staffVoiceSlots = 0;
             _v.Cursor.VoiceIndex = staffVoiceSlots;
+            // …and, for a condensed staff's later part, which PART of the staff it is: the
+            // voice props go by part there, not by slot (DirectionNumberHere).
+            sharedParts = slotting == VoiceSlotting.OwnStaff ? 1 : sharedParts + 1;
+            _sharedPartNumber = slotting == VoiceSlotting.AppendedToStaff ? sharedParts : 0;
+            _sharedPartFirstVoice = staffVoiceSlots;
             _v.Octave.LastPitchName = RelativeOctave.FrameStartLetter;
             _v.DefaultDuration = Fraction.Quarter;
             _v.DefaultDots = 0;
@@ -4505,7 +4544,8 @@ public sealed partial class MeasureCollector
                         var item = items[i];
                         if (item is NoteItem or ChordItem && !item.GraceTime && item.Duration > Fraction.Zero)
                             Add(at, new VoiceEntry(v + 1, item, i, (item is NoteItem n ? n.ForcedStemUp : ((ChordItem)item).ForcedStemUp)
-                                ?? VoiceDefaults.GetDefaultStemUpAt(own, v, m, i)));
+                                ?? VoiceDefaults.GetDefaultStemUpAt(own, v, m, i))
+                            { DirectionNumber = VoiceDefaults.DirectionNumber(own, v, m) });
                         at += item.Duration;
                     }
                 }
@@ -5004,6 +5044,8 @@ public sealed partial class MeasureCollector
         _v.Cursor.StaffIndex = 0;
         _v.Cursor.VoiceIndex = 0;
         _v.Cursor.VoiceScope = null;
+        _sharedPartNumber = 0;
+        _sharedPartFirstVoice = 0;
         _staffDynamicsUp = false;
         _chordNameCollector.Clear(); // grid warnings; its item list is registry-cleared
         _lyricsCollector.Clear();
@@ -7581,8 +7623,10 @@ public sealed partial class MeasureCollector
         // LILYPOND-REF: scm/music-functions.scm:666-674 make-voice-props-set (graceSettings = general-grace-settings)
         // A condensedStaff's later part reaches this too: it is collected at its slot in the
         // shared staff (the base CollectScore hands each binding), not at 0, so its grace
-        // points DOWN as LilyPond's << \a \\ \b >> draws it (SharedStaffVoiceSlotTests).
-        bool graceStemDown = VoiceDefaults.GetDefaultStemUp(_v.Cursor.VoiceIndex + 1) == false;
+        // points DOWN as LilyPond's << \a \\ \b >> draws it (SharedStaffVoiceSlotTests) —
+        // by the PART's number, not the slot's: the part above may hold a divisi
+        // (DirectionNumberHere; grammar evaluation 4, 2026-11-13).
+        bool graceStemDown = VoiceDefaults.GetDefaultStemUp(DirectionNumberHere()) == false;
         // …and a stem that writes @stemUp / @stemDown keeps its own (MeasureBuilder.NarrowToGraceTime,
         // session 935): every grace stem is a forced one, so a beam over stems that disagree is
         // kneed (GraceNoteItem.BeamStemUpOf).

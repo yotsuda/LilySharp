@@ -1073,7 +1073,7 @@ internal static partial class SpacingRules
     /// would read 0.600000.
     /// </remarks>
     internal static double LeftmostGrobExtraSpacingWidth(MusicItem? item)
-        => HasArpeggio(item) ? DefaultExtraSpacingWidth
+        => HasArpeggio(item) || item is { ApproachGesture: not 0 } ? DefaultExtraSpacingWidth
          : HasAccidental(item) ? AccidentalExtraSpacingWidthLeft
          : DefaultExtraSpacingWidth;
 
@@ -1459,6 +1459,11 @@ internal static partial class SpacingRules
             if (note.SpanArpeggio != SpanArpeggioPart.None)
                 extent += ArpeggioEngraver.ReachPastSupport(note.SpanArpeggio == SpanArpeggioPart.Bracket);
         }
+
+        // A scoop's or plop's curve stands a fixed way left of the head, whatever else the
+        // column holds (ArticulationEngraver.BendApproachLeftReach — LILYSHARP-OWN, there).
+        if (item.ApproachGesture != 0)
+            extent = Math.Max(extent, ArticulationEngraver.BendApproachLeftReach);
 
         return extent;
     }

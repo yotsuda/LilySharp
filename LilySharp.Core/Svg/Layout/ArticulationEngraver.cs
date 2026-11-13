@@ -135,7 +135,33 @@ internal static class ArticulationEngraver
     /// <summary>X gap between a bend-up's curve and the notehead's right edge. LILYSHARP-OWN (above).</summary>
     internal const double BendHeadPadding = 0.15;
     /// <summary>X offset for a curve that arrives FROM THE LEFT (scoop/plop). LILYSHARP-OWN (above).</summary>
-    private const double BendApproachXOffset = 1.55;
+    internal const double BendApproachXOffset = 1.55;
+    /// <summary>How long the scoop's / plop's curve is, left of where it arrives. LILYSHARP-OWN (above).</summary>
+    internal const double BendApproachLength = 1.25;
+    /// <summary>How far below (a scoop) or above (a plop) the head's row the curve starts. LILYSHARP-OWN (above).</summary>
+    internal const double BendApproachDepth = 1.7;
+    /// <summary>The curve's line thickness. LILYSHARP-OWN (above).</summary>
+    internal const double BendApproachThickness = 0.13;
+
+    /// <summary>
+    /// How far LEFT of its column a scooped or plopped note's curve reaches: the gap it
+    /// arrives at, its length and half its line. The room the column keeps for it
+    /// (<c>SpacingRules.CalculateLeftExtent</c>, <c>ItemSkylineFactory.AddApproachGesture</c>).
+    /// </summary>
+    /// <remarks>
+    /// Until grammar evaluation 4 (2026-11-13) the curve was drawn and never spaced for: a
+    /// rest before a scooped quarter stood entirely inside it, and on a line's first note it
+    /// ran 0.92 into the time signature (bigband/r-10: "C looks like cut time").
+    /// LILYSHARP-OWN: LilyPond has no scoop or plop, so there is no grob whose room this is.
+    ///   departs from: nothing — there is no LilyPond counterpart to depart from.
+    ///   goes away when: LilyPond grows one.
+    ///   observed by: EngravingCollisions4Tests (the curve clears the rest, the head and the time signature before it).
+    /// </remarks>
+    internal const double BendApproachLeftReach = BendApproachXOffset + BendApproachLength + BendApproachThickness / 2;
+
+    /// <summary>The row a scoop's or plop's curve arrives at, in staff positions — the one the
+    /// placement below hangs it at.</summary>
+    internal static int ApproachRow(MusicItem item) => GetStaffPosition(item);
 
     // Notehead half-extent and stem length: the canonical values live in
     // EngravingDefaults (single source of truth, LILYPOND-REF there).
@@ -980,6 +1006,12 @@ internal static class ArticulationEngraver
                 {
                     nextInkLeft = measureLayout.X + LayoutUtilities.GetItemXOffset(
                         artMeasures, articulation.MeasureIndex, articulation.ItemIndex + 1, measureLayout);
+                    // The next note's scoop or plop is ink of its column, standing left of the
+                    // head: the curve ends short of it, not of the head behind it (it ran
+                    // through the scoop until grammar evaluation 4, 2026-11-13).
+                    // LILYSHARP-OWN: the scoop and plop are (BendApproachLeftReach).
+                    if (measure.Items[articulation.ItemIndex + 1].ApproachGesture != 0)
+                        nextInkLeft -= BendApproachLeftReach;
                     if (bendTab is { Tuning: { } ntt } && !AnyNotationStaff(staffByIndex))
                     {
                         int[] nextTuning = Tunings.GetTuning(ntt);

@@ -1219,7 +1219,7 @@ internal sealed class SkylineBuilder
             if (grace.MeasureIndex >= graceMeasures.Length)
                 continue;
             var (x, _, columns) = GraceNoteEngraver.RunPlacement(
-                grace, measureLayout, graceMeasures, articulations);
+                grace, measureLayout, graceMeasures, articulations, owner.Voices);
             if (columns.Offsets.IsDefaultOrEmpty)
                 continue;
             int beamedPrefix = GraceNoteEngraver.BeamedPrefix(grace.Columns);

@@ -46,6 +46,13 @@ public sealed record VoiceEntry
     /// <summary>The voice this entry belongs to (1-based).</summary>
     public int VoiceId { get; }
 
+    /// <summary>The voice number whose props the entry carries
+    /// (<see cref="VoiceDefaults.DirectionNumber"/>): <see cref="VoiceId"/> unless the builder
+    /// says otherwise — on a staff whole parts share it is the PART's, and a lower part under
+    /// an upper part with a divisi is slot three and voice two (grammar evaluation 4,
+    /// 2026-11-13).</summary>
+    public int DirectionNumber { get; init; }
+
     /// <summary>The music item at this position.</summary>
     public MusicItem Item { get; }
 
@@ -59,6 +66,7 @@ public sealed record VoiceEntry
     public VoiceEntry(int voiceId, MusicItem item, int itemIndex, bool? forcedStemUp = null)
     {
         VoiceId = voiceId;
+        DirectionNumber = voiceId;
         Item = item;
         ItemIndex = itemIndex;
         ForcedStemUp = forcedStemUp;

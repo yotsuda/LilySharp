@@ -1028,9 +1028,12 @@ internal static class ItemSkylineFactory
             }
         }
 
+        AddApproachGesture(parts, item, noteheadLeftX, staffY);
         AddStem(parts, item, noteheadLeftX, staffY, headFont);
         AddFlag(parts, item, noteheadLeftX, staffY, noteValue, cueFont, headFont);
+        int firstDotPart = parts.Count;
         AddDots(parts, item, noteheadLeftX, maxNoteheadRightX, staffY, noteValue, staffLines);
+        AddLeavingGesture(parts, item, maxNoteheadRightX, staffY, firstDotPart);
         AddSemiTies(parts, item, noteheadLeftX, staffY, noteValue);
 
         return parts;
@@ -1556,5 +1559,99 @@ internal static class ItemSkylineFactory
                                  -SpacingRules.DefaultExtraSpacingWidth,
                                  SpacingRules.DefaultExtraSpacingWidth,
                                  Conditional: true));
+    }
+
+    /// <summary>
+    /// A SCOOP's or PLOP's curve, standing LEFT of the head it arrives at
+    /// (<see cref="MusicItem.ApproachGesture"/>): the box of the polyline the renderer draws —
+    /// from the head's row to <see cref="ArticulationEngraver.BendApproachDepth"/> below it
+    /// (a scoop) or above it (a plop), between
+    /// <see cref="ArticulationEngraver.BendApproachLeftReach"/> and
+    /// <see cref="ArticulationEngraver.BendApproachXOffset"/> left of the column — as a
+    /// conditional part, like the arpeggio: the column before clears it where the two share a
+    /// height, and a column that does not (a low head under a plop) may stand under it.
+    /// </summary>
+    /// <remarks>
+    /// Until grammar evaluation 4 (2026-11-13) the curve was drawn and never spaced for
+    /// (bigband/r-10: a quarter rest before a scooped quarter stood inside the curve).
+    /// LILYSHARP-OWN: LilyPond has no scoop or plop; the default extra-spacing-width is what
+    ///   an Arpeggio, the other grob standing left of a column, takes
+    ///   (<see cref="ArticulationEngraver.BendApproachLeftReach"/> carries the tag's fields).
+    /// </remarks>
+    private static void AddApproachGesture(List<ColumnPart> parts, MusicItem item,
+                                           double noteheadLeftX, double staffY)
+    {
+        if (item.ApproachGesture == 0)
+            return;
+        double half = ArticulationEngraver.BendApproachThickness / 2;
+        double right = noteheadLeftX - ArticulationEngraver.BendApproachXOffset + half;
+        double left = noteheadLeftX - ArticulationEngraver.BendApproachLeftReach;
+        // Device y runs DOWN: a scoop starts below the row it arrives at, a plop above.
+        double arrival = staffY - ArticulationEngraver.ApproachRow(item) / 2.0;
+        double start = arrival + item.ApproachGesture * ArticulationEngraver.BendApproachDepth;
+        parts.Add(new ColumnPart(Math.Min(arrival, start) - half, Math.Max(arrival, start) + half, left, right,
+                                 -SpacingRules.DefaultExtraSpacingWidth,
+                                 SpacingRules.DefaultExtraSpacingWidth,
+                                 Conditional: true));
+    }
+
+    /// <summary>How near the next column's ink a fall's or doit's stroke may come at its
+    /// shortest. LILYSHARP-OWN (<see cref="AddLeavingGesture"/>'s remarks carry the tag's
+    /// fields): the 0.1 LilyPond's natural spacing of a line's shortest notes leaves there.</summary>
+    private const double LeavingGestureClearance = 0.1;
+
+    /// <summary>
+    /// A FALL's or DOIT's curve at its SHORTEST (<see cref="MusicItem.LeavingGesture"/>): the
+    /// stencil LilyPond's bend::print draws when the next column is close — from
+    /// <see cref="BendAfterGeometry.Padding"/> right of the head's ink (or its dots', on the
+    /// head's own row) for <see cref="BendAfterGeometry.MinimumLength"/>, dropping or rising
+    /// <see cref="BendAfterGeometry.DeltaY"/> — as an ordinary element of the paper column,
+    /// so the rod keeps the next column's ink at that height clear of it.
+    /// </summary>
+    /// <remarks>
+    /// Found in grammar evaluation 4 (2026-11-13, bigband/r-10): on a tight line the curve
+    /// keeps its minimum length and was drawn 0.7 into the rest after a sixteenth, 0.3 into
+    /// the next eighth's head, and through the scoop of the note after it.
+    /// LILYSHARP-OWN: LilyPond keeps NO room for a BendAfter. MEASURED (2.26.0, Lab
+    ///   sessions/p1226/md/eval4/fixC1/lp-fall-probe.ly, WITH against NONE): every head and
+    ///   rest stands where it does without the bends, to six decimals, quarters to
+    ///   sixteenths — the spanner has no springs-and-rods, and under compression LilyPond
+    ///   draws it into what follows. So the room is the least that keeps the stroke off the
+    ///   next ink (<see cref="LeavingGestureClearance"/>), and it is the room LilyPond's
+    ///   natural spacing of a line's shortest notes already has: head left to the next
+    ///   column's left 2.504 = head 1.304 + padding 0.5 + length 0.5 + half the stroke 0.1
+    ///   + 0.1. So the rod binds only where the line is compressed below that.
+    ///   departs from: scm/define-grobs.scm:551-559 BendAfter (no springs-and-rods; minimum-length read by the stencil only).
+    ///   goes away when: never — the curve is not to be drawn through its neighbour.
+    ///   observed by: EngravingCollisions4Tests (a fall clears the rest, the head and the scoop after it on a tight line).
+    /// </remarks>
+    private static void AddLeavingGesture(List<ColumnPart> parts, MusicItem item,
+                                          double maxNoteheadRightX, double staffY, int firstDotPart)
+    {
+        if (item.LeavingGesture == 0)
+            return;
+        // The row the curve hangs at: the note's, a chord's top head's (ArticulationEngraver).
+        int row = item switch
+        {
+            NoteItem n => n.StaffPosition,
+            ChordItem { Notes.Length: > 0 } c => c.Notes.Max(m => m.StaffPosition),
+            _ => 0,
+        };
+        double rowY = staffY - row / 2.0;
+        double inkRight = maxNoteheadRightX;
+        for (int k = firstDotPart; k < parts.Count; k++)
+            if (parts[k].YBottom <= rowY && rowY <= parts[k].YTop)
+                inkRight = Math.Max(inkRight, parts[k].XRight);
+        double half = BendAfterGeometry.Thickness / 2;
+        double left = inkRight + BendAfterGeometry.Padding;
+        // Device y runs DOWN: a doit ends above its row, a fall below.
+        double endY = rowY - item.LeavingGesture * BendAfterGeometry.DeltaY;
+        // The box ends LeavingGestureClearance past the stroke, and its extra width takes
+        // back what every rod adds on top of a box — the next box's own extra width and the
+        // rod's padding — which the natural spacing above has no room for.
+        parts.Add(new ColumnPart(Math.Min(rowY, endY) - half, Math.Max(rowY, endY) + half,
+                                 left - half, left + BendAfterGeometry.MinimumLength + half + LeavingGestureClearance,
+                                 0, -2 * SpacingRules.DefaultExtraSpacingWidth,
+                                 Conditional: false) with { NoteColumnMember = false });
     }
 }
