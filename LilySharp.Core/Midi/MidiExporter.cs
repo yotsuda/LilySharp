@@ -1242,7 +1242,7 @@ public sealed class MidiExporter
             case RestSyntax rest:
                 if (rest.MeasureCount > 1)
                     _barFlows = true;
-                ProcessRest(rest);
+                ProcessRest(rest, conductorTrack);
                 break;
 
             case ChordSyntax chord:
@@ -3392,8 +3392,32 @@ public sealed class MidiExporter
         _currentTick += durationTicks;
     }
 
-    private void ProcessRest(RestSyntax rest)
+    private void ProcessRest(RestSyntax rest, MidiTrack? conductorTrack = null)
     {
+        // A bare `R*N` with another part's `time` inside it: each bar is a bar of the score's
+        // meter there, as the page lays it (SectionMeterPlan.ChangesInsideRun) — bar by bar,
+        // the change applied where it stands. Read as N bars of the first one's length, the
+        // music after the run sounded early or late against the other parts and the run's
+        // changes never reached this part (grammar evaluation 4, 2026-11-14).
+        if (conductorTrack != null && _meterPlan.ChangesInsideRun(rest) is { } inside)
+        {
+            ForgetOnset();
+            int bars = rest.MeasureCount;
+            for (int bar = 0; bar < bars; bar++)
+            {
+                if (bar > 0)
+                {
+                    _barTicks?.Add(_currentTick);
+                    if (bar - 1 < inside.Count && inside[bar - 1] is { } change)
+                        ProcessTimeSignature(change, conductorTrack);
+                }
+                int ticks = MeasureTicks();
+                if (bar == 0)
+                    ticks -= ConsumeGraceSteal(ticks);
+                _currentTick += ticks;
+            }
+            return;
+        }
         // A rest breaks any pending tie (a tie cannot span a rest) — and forgets the onset
         // before it, so a `~` WRITTEN AFTER the rest (`c4 r4 ~ c4`) has nothing to extend:
         // until session 398 it still pointed at the pre-rest c, which then swallowed the c

@@ -1219,6 +1219,29 @@ public sealed partial class LilyPondExporter
             // as it leaves Lily#'s running duration alone while LilyPond's moves to the value
             // written here, the next event states its own.
             _forceNextDuration = true;
+            // A bare `R*N` with another part's `time` inside it: each bar is a bar of the
+            // score's meter there, as the page lays it (SectionMeterPlan.ChangesInsideRun) —
+            // one rest a stretch of one meter, the change written between them. As one
+            // `R<first bar>*N` LilyPond said "bar check failed" after it and the staff's later
+            // bars stood against the others' (grammar evaluation 4, 2026-11-14).
+            if (r.MeasureCount > 1 && _meterPlan.ChangesInsideRun(r) is { } inside)
+            {
+                var run = new StringBuilder();
+                int bars = r.MeasureCount, from = 0;
+                for (int bar = 1; bar <= bars; bar++)
+                {
+                    var change = bar < bars && bar - 1 < inside.Count ? inside[bar - 1] : null;
+                    if (bar < bars && change == null)
+                        continue;
+                    run.Append(compress).Append(from == 0 ? prefix : "").Append('R')
+                        .Append(Music.BarRest.LilyPondDuration(_bars.BarLength))
+                        .Append(bar - from > 1 ? "*" + (bar - from) : "").Append(from == 0 ? suffix : "");
+                    if (change != null)
+                        run.Append(" | ").Append(EmitItemCore(change)).Append(' ');
+                    from = bar;
+                }
+                return run.ToString();
+            }
             return compress + prefix + "R" + Music.BarRest.LilyPondDuration(_bars.BarLength)
                 + mmr + suffix;
         }

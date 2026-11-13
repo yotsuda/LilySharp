@@ -354,8 +354,23 @@ internal static class MeasureModel
             // charges it: `R1*2000000000` parses, and this loop would faithfully model
             // that many bars on the diagnostics path.
             // (A mark's bars were charged with the mark, in Flatten.)
+            // Each bar of a bare `R*N` that opens its bar is a bar of the score's meter THERE, as
+            // each `R` of `R | R | R` is and as the collector lays it (MusicWalk's RestSyntax
+            // arm): a `time` another part writes inside the run moves the bars from it on. The
+            // walk above asks the plan once an entry, and the run is one entry — so until
+            // 2026-11-14 all N bars kept the first one's length (grammar evaluation 4).
+            bool bareRun = written > 1 && plannedMeterAt != null && !senzaMisura && current.Count == 1
+                && node is RestSyntax run && Music.BarRest.IsBare(run);
             for (int extra = 1; extra < written && (node is PercentMarkSyntax || budget.Charge(1)); extra++)
+            {
                 bars.Add(new Bar(itemDuration, node.Span, Flowed: true));
+                if (bareRun && plannedMeterAt!(bars.Count) is { IsSenzaMisura: false } inside)
+                {
+                    meter = DurationCalculator.ParseTimeSignature(inside.Beats, inside.BeatType);
+                    itemDuration = meter;
+                    total = meter;   // the bar left pending is the next of the run
+                }
+            }
         }
         FlushMusic(); // a trailing partial bar (music after the last barline) counts
         return bars;

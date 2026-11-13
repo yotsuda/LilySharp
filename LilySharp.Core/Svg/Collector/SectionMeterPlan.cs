@@ -301,8 +301,25 @@ internal sealed class SectionMeterPlan
             if (!directive && item is not BarlineSyntax)
             {
                 // An `R*N` before it made the bar lines a short count (BarsOfItems).
-                if (!timed && barOf.TryGetValue(item.Span.Start, out int placed))
+                bool isPlaced = barOf.TryGetValue(item.Span.Start, out int placed);
+                if (!timed && isPlaced)
                     bar = placed;
+                // The changes standing INSIDE a bare `R*N` cannot be put between items: they
+                // are kept for the reader of the rest (ChangesInsideRun).
+                if (!timed && item is RestSyntax run && Music.BarRest.IsBare(run) && BarsBeyondTheFirst(run) is > 0 and var inner)
+                {
+                    // (BarsOfItems places an item in the bar it CLOSES in — a run's last: the
+                    // change in front of the run is the one at its first bar. Asked for the
+                    // last, `R*3` under 5/8, 7/8, 3/4 was three bars of 3/4.)
+                    if (isPlaced && placed >= inner)
+                        bar = placed - inner;
+                    TimeSignatureSyntax?[]? inside = null;
+                    foreach (int at in c.Keys)
+                        if (at > bar && at - bar <= inner && ForeignChangeAt(section, at, container) is { } change)
+                            (inside ??= new TimeSignatureSyntax?[c.Keys.Where(k => k > bar && k - bar <= inner).Max() - bar])[at - bar - 1] = change;
+                    if (inside != null)
+                        _insideRuns[run] = inside;
+                }
                 beyond += BarsBeyondTheFirst(item);
             }
             if (pending && !directive && !decoration)
@@ -327,6 +344,19 @@ internal sealed class SectionMeterPlan
         }
         return result;
     }
+
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<RestSyntax, TimeSignatureSyntax?[]> _insideRuns = new();
+
+    /// <summary>
+    /// The changes other parts write INSIDE a bare <c>R*N</c> a reader was handed by
+    /// <see cref="WithForeignChanges"/>: element k is the <c>time</c> standing at the start of
+    /// the run's bar k+2, or null. Each bar of such a run is a bar of the score's meter there,
+    /// as the page lays it (MeasureCollector.MusicWalk's RestSyntax arm) — a reader that takes
+    /// the run as N bars of the first one's length is short or long from there on (grammar
+    /// evaluation 4, 2026-11-14). Null when no change stands inside it.
+    /// </summary>
+    public IReadOnlyList<TimeSignatureSyntax?>? ChangesInsideRun(RestSyntax rest)
+        => _insideRuns.TryGetValue(rest, out var inside) ? inside : null;
 
     private static SyntaxNode Normalize(SyntaxNode container)
         => container is MusicBlockSyntax { Parent: PartBlockSyntax block } ? block : container;

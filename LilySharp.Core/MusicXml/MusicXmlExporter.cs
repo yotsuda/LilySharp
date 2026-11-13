@@ -5263,6 +5263,15 @@ public sealed class MusicXmlExporter
                 _currentPart.Measures.Add(_currentMeasure);
                 StartNewMeasure();
             }
+            // …and of the meter THERE: StartNewMeasure has applied a `time` another part writes
+            // at this bar (the score's meter), and the bar's rest lasts the new bar — it kept
+            // the first bar's duration under a 7/8 or a 3/4 until 2026-11-14 (grammar evaluation 4).
+            if (bare && !_bars.SenzaMisura && _bars.MeterLength != duration)
+            {
+                duration = _bars.MeterLength;
+                durationTicks = FractionToTicks(duration);
+                (type, dots) = Music.BarRest.Shape(duration).Scale != 1 ? ((string?)null, 0) : GetNoteType(duration);
+            }
             _currentMeasure!.Notes.Add(new MusicXmlNote
             {
                 IsRest = true,

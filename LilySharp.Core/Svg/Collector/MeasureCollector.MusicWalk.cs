@@ -1356,6 +1356,8 @@ public sealed partial class MeasureCollector
                         // cloning inside the loop would allocate N-1 records per written
                         // rest (99 of them for `R1*100`) to no purpose.
                         var interior = restItem with { OpensWrittenRun = false };
+                        bool bareRun = Music.BarRest.IsBare(rest);
+                        Fraction interiorLength = builder.CurrentMeasureLength;
                         // The bar read ahead (SetFollowingBarline) confirms the LAST of the N
                         // closes, not the first: the interior measures end at the rest's own
                         // placeholder as before (session 550 — the grand-staff MMR fixture
@@ -1394,6 +1396,24 @@ public sealed partial class MeasureCollector
                                 break;
                             if (i == count - 1 && following.Start >= 0)
                                 builder.RestoreFollowingBoundary(following);
+                            // Each bar of a bare `R*N` is a bar of the SCORE's meter there, as each
+                            // bare `R` of `R | R | R` is: a `time` another part writes inside the
+                            // run is applied at its bar (the walk asks once a node, and the run is
+                            // one node) and that bar's rest lasts the new bar. Until 2026-11-14
+                            // every bar of the run kept the first bar's length — eighth rests in
+                            // the 7/8 and 3/4 bars, no signature on the staff, and LYS2004 for
+                            // every part and bar (grammar evaluation 4, chamber r-15). A run that
+                            // writes its value (`R1*3`) says its bars' length itself and is left.
+                            if (bareRun && !builder.SenzaMisura)
+                            {
+                                if (_meterCursor != null)
+                                    await ApplyPlannedMeter(builder);
+                                if (!builder.SenzaMisura && builder.CurrentMeasureLength != interiorLength)
+                                {
+                                    interiorLength = builder.CurrentMeasureLength;
+                                    interior = CreateBarRestItem(rest, interiorLength) with { OpensWrittenRun = false };
+                                }
+                            }
                             await AddItemAsync(builder, interior);
                         }
                     }

@@ -1302,6 +1302,63 @@ public class GrammarEvaluation4Tests
             d => d.Message.StartsWith("Unknown instrument preset", StringComparison.Ordinal));
     }
 
+    /// <summary><c>R*3</c> under another part's meter changes: every bar of the run kept the
+    /// FIRST bar's length — LYS2004 "Measure N of part 'a' lasts 7/8 but part 'b' has 5/8" for
+    /// every part and bar (90 in the chamber score), eighth rests drawn in the 7/8 and 3/4 bars
+    /// with no signature on the staff, and the exports short. Each bar of a bare run is a bar of
+    /// the score's meter there, as each <c>R</c> of <c>R | R | R</c> is: on the page, in the
+    /// bar check, in the sound, in MusicXML and in the twin.</summary>
+    [Fact]
+    public void ABareMultiBarRest_TakesTheScoresMeterBarByBar_AsWrittenOutRestsDo()
+    {
+        static string Book(string b) => "octave absolute\npart a { clef treble }\npart b { clef treble }\npart c { clef treble }\n"
+            + "section A {\n  time 5/8\n  a { c'4 d'4. | time 7/8 c'4 d' e'4. | time 3/4 c'2. | f'2. | }\n"
+            + $"  b {{ {b} }}\n  c {{ R | R | R | g'2. | }}\n}}\nform {{ ~A }}\nscore {{ staff a staff b staff c }}\n";
+        string source = Book("R*3 | g'2. |");
+        Assert.Empty(Said(source).Select(d => d.Message));
+
+        // The page: the run's bars are the written-out part's, rest for rest.
+        var tree = SyntaxTree.Parse(source);
+        var staves = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)).StaffGroups.SelectMany(g => g.Staves).ToArray();
+        static string[] Bars(LilySharp.Core.Svg.Model.Staff staff) => [.. staff.Voices[0].Measures.Select(m => string.Join(' ',
+            m.Items.Select(i => i switch
+            {
+                LilySharp.Core.Svg.Model.RestItem r => $"R{r.Duration}.{r.Dots}x{r.TimeScale}",
+                LilySharp.Core.Svg.Model.NoteItem n => $"n{n.Midi}",
+                _ => i.GetType().Name,
+            })))];
+        Assert.Equal(4, Bars(staves[1]).Length);
+        Assert.Equal(Bars(staves[2]), Bars(staves[1]));
+        Assert.Equal(4, Bars(staves[1]).Distinct().Count());   // three different bar rests, and the note
+
+        // The sound: the note after the run starts where the other parts' fourth bar does.
+        var midi = new LilySharp.Core.Midi.MidiExporter().Export(tree);
+        var starts = midi.Tracks.Select(t => t.Notes.Where(n => n.Pitch is 65 or 67).Select(n => n.StartTick).ToArray()).Where(s => s.Length > 0).ToArray();
+        Assert.Equal(3, starts.Length);
+        Assert.All(starts, s => Assert.Equal(starts[0], s));
+
+        // MusicXML: each bar's rest lasts its bar (5/8, 7/8, 3/4).
+        string xml = new LilySharp.Core.MusicXml.MusicXmlExporter().Export(tree).ToXml().ToString();
+        static string[] Durations(string xml, string part)
+        {
+            string body = xml[xml.IndexOf($"<part id=\"{part}\">", StringComparison.Ordinal)..];
+            body = body[..body.IndexOf("</part>", StringComparison.Ordinal)];
+            return [.. Regex.Matches(body, "<duration>(\\d+)</duration>").Select(m => m.Groups[1].Value)];
+        }
+        Assert.Equal(Durations(xml, "P3"), Durations(xml, "P2"));
+        Assert.Equal(3, Durations(xml, "P2").Take(3).Distinct().Count());
+
+        // The twin: one rest a meter, the change between them.
+        Assert.Contains("R8*5 | \\time 7/8 \\once \\set Score.skipBars = ##t R2.. | \\time 3/4 \\once \\set Score.skipBars = ##t R2. |", Twin(source));
+
+        // What is still said: a run a bar short of the section, and a bar that is not its meter's.
+        Assert.Contains(Said(Book("R*2 | g'2. |")), d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
+        Assert.Contains(Said(Book("R | c'2 d'4 | R | g'2. |")), d => d.Severity != DiagnosticSeverity.Info && d.Message.Contains("7/8"));
+        // A run with no change inside it is the bars it was.
+        Assert.Empty(Said("octave absolute\npart a { clef treble }\npart b { clef treble }\nsection A { time 3/4 a { c'2. | c'2. | c'2. | } b { R*3 | } }\n"
+            + "form { ~A }\nscore { staff a staff b }\n").Select(d => d.Message));
+    }
+
     private static string RepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
