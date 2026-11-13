@@ -421,8 +421,12 @@ internal sealed class CrossPartMeasureValidator
     /// A key that restates the one in force changes nothing and is not "a change": under a
     /// header's <c>key b minor</c>, which moves every part, one part's own <c>key b minor</c>
     /// was told the others "do not" change (grammar evaluation 4, 2026-11-13). The key in force
-    /// is known where the section's header states one (<see cref="SectionHeaders"/>); from there
-    /// each part's keys are read in order, and the first that differs is its change.
+    /// where a section begins is its header's (<see cref="SectionHeaders"/>), and with no header
+    /// key the FILE's — a section that states none begins in the file's key in every part, as
+    /// the page draws it (<see cref="ScoreHomeKey.Declaration"/>; C major when the file writes
+    /// none). From there each part's keys are read in order, and the first that differs is its
+    /// change. Until 2026-11-14 only a header's key was asked: in a section with none, a part's
+    /// <c>key g major</c> under the file's <c>key g major</c> was still "a change".
     /// </remarks>
     private void WarnOfAKeySomePartsChangeAlone(SectionDeclarationSyntax section, List<PartBlockSyntax> blocks)
     {
@@ -441,9 +445,10 @@ internal sealed class CrossPartMeasureValidator
                 if (!headerRead)
                 {
                     headerRead = true;
-                    header = (_headers ??= SectionHeaders.Read(_root ?? section)).Keys.GetValueOrDefault(section.SectionName);
+                    header = (_headers ??= SectionHeaders.Read(_root ?? section)).Keys.GetValueOrDefault(section.SectionName)
+                        ?? ScoreHomeKey.Declaration(_root ?? section);
                 }
-                if (header != null && SameKey(header, written))
+                if (header != null ? SameKey(header, written) : IsCMajor(written))
                     continue;
                 key = written;
                 break;
@@ -468,6 +473,11 @@ internal sealed class CrossPartMeasureValidator
     // Every section header of the file, read once and only when a part block writes a key.
     private SectionHeaders? _headers;
     private SyntaxNode? _root;
+
+    /// <summary>Whether a <c>key</c> states C major, the key of a file that writes none.</summary>
+    private static bool IsCMajor(KeySignatureSyntax key)
+        => !key.IsCustom && KeyTonic.Of(key) == KeyTonic.CMajor
+            && string.Equals(key.Mode.Text, "major", System.StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Whether two <c>key</c> statements name one key: the same tonic and mode, or
     /// the same custom signature.</summary>

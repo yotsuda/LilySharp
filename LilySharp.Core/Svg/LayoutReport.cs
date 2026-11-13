@@ -82,7 +82,7 @@ public static class LayoutReport
 
         sb.Append("  staves: ")
             .Append(staves.Count > 0 ? string.Join(", ", staves) : "(none)")
-            .Append("  |  time ").Append(TimeField(score))
+            .Append("  |  time ").Append(TimeField(score, BarLabels(modelMeasures)))
             .Append("  |  ").Append(Count(layout.SystemCount, "system"))
             .Append(", ").Append(Count(totalBars, "bar"))
             .AppendLine();
@@ -109,7 +109,7 @@ public static class LayoutReport
         var systems = layout.AllSystems;
         // The bar each model measure is labelled with: the count of bars begun before it,
         // plus one — a split bar's two halves share a label.
-        var barLabels = BarLabels(modelMeasures);
+        var barLabels = BarLabels(modelMeasures);   // (the time field above reads the same)
         int s = 0;
         while (s < systems.Length)
         {
@@ -249,8 +249,12 @@ public static class LayoutReport
     /// The score's meter, plus any mid-piece changes with the bar they take effect —
     /// e.g. "4/4 -> 3/4 (bar 2) -> 6/8 (bar 3)". The starting meter alone hides a
     /// change the source makes, so the report would otherwise misreport the meter.
+    /// The bar is the report's own label (<see cref="BarLabels"/>), the one its system lines
+    /// use: until 2026-11-14 it was the model measure's index plus one, which counts a bar a
+    /// section boundary splits (a short last bar and the next section's pickup, one bar on the
+    /// page) twice — every change after it was named a bar late.
     /// </summary>
-    private static string TimeField(MultiStaffScore score)
+    private static string TimeField(MultiStaffScore score, int[] barLabels)
     {
         string initial = score.TimeSignature.ToString(); // "none" for time none
         var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
@@ -258,7 +262,7 @@ public static class LayoutReport
         for (int i = 0; i < measures.Length; i++)
             foreach (var item in measures[i].Items)
                 if (item is TimeSignatureChangeItem ts)
-                    changes.Add($"{ts.NewTime} (bar {i + 1})");
+                    changes.Add($"{ts.NewTime} (bar {BarLabel(barLabels, i)})");
 
         return changes.Count == 0 ? initial : initial + " -> " + string.Join(" -> ", changes);
     }

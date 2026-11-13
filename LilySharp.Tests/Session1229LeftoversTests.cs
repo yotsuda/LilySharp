@@ -229,4 +229,65 @@ public class Session1229LeftoversTests
         Assert.Equal([(1, 8)], Runs(RestBesideAMeterChange("R*8", change: false)));
         Assert.Equal([(1, 8)], Runs(RestBesideAMeterChange("R1*8", change: false)));
     }
+
+    /// <summary>
+    /// <c>lysc layout</c> named a meter change by its model measure, which counts a bar a section
+    /// boundary splits (a short last bar and the next section's pickup — one bar on the page)
+    /// twice: every change after the split was a bar late against the page and against the
+    /// report's own system lines.
+    /// </summary>
+    [Fact]
+    public void LayoutReport_NamesAMeterChangeByThePagesBar_AfterABarASectionBoundarySplits()
+    {
+        static string Book(string endOfA, string startOfB)
+            => "time 3/4\noctave absolute\npart m { }\n"
+                + "section A { m { c'2. | d'2. | " + endOfA + " | } }\n"
+                + "section B { " + startOfB + " time 4/4 c'1 | d'1 | time 2/4 e'2 | } }\n"
+                + "form { A B }\nscore { staff m }\n";
+
+        // A's last bar is two beats and B's pickup the third: bars 1 2 3 on the page, 4/4 in bar 4.
+        string split = Book("e'2", "partial 4 m { g'4 |");
+        string report = LilySharp.Core.Svg.LayoutReport.Generate(SyntaxTree.Parse(split));
+        Assert.Contains("time 3/4 -> 4/4 (bar 4) -> 2/4 (bar 6)", report);
+        Assert.Contains("1 system, 6 bars", report);
+        // …which is the number the page prints on that bar.
+        var tree = SyntaxTree.Parse(split);
+        var measures = LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree))
+            .PrimaryContentStaff.PrimaryVoice.Measures;
+        var printed = LilySharp.Core.Svg.Layout.BarNumberEngraver.NumberMeasures(measures, 0);
+        int fourFour = Enumerable.Range(0, measures.Length).First(i => measures[i].Items.Any(
+            item => item is LilySharp.Core.Svg.Model.TimeSignatureChangeItem));
+        Assert.True(measures[fourFour - 1].ContinuesBar);
+        Assert.Equal(4, printed[fourFour]);
+
+        // The control: no split bar, and the count was right.
+        Assert.Contains("time 3/4 -> 4/4 (bar 4) -> 2/4 (bar 6)",
+            LilySharp.Core.Svg.LayoutReport.Generate(SyntaxTree.Parse(Book("e'2.", "m {"))));
+    }
+
+    /// <summary>
+    /// A section whose header states no key begins in the file's key, so a part's <c>key</c>
+    /// that restates the file's changes nothing — it was told "Part 'a' changes key here, and
+    /// 'b' of this section does not" (only a header's key was asked).
+    /// </summary>
+    [Fact]
+    public void AKeyThatRestatesTheFilesKey_IsNoKeyChange_InASectionWithNoHeaderKey()
+    {
+        static System.Collections.Generic.List<Diagnostic> KeyWarnings(string fileKey, string a)
+            => [.. LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(
+                    "time 4/4\n" + fileKey + "\noctave absolute\npart a { }\npart b { }\n"
+                    + "section A { a { " + a + " d'1 | d'1 | } b { d'1 | d'1 | } }\nform { A }\nscore { staff a staff b }\n"))
+                .Where(d => d.Code == DiagnosticCodes.KeyChangeInSomeParts)];
+
+        Assert.Empty(KeyWarnings("key g major", "key g major"));
+        // A file that writes no key is in C major.
+        Assert.Empty(KeyWarnings("", "key c major"));
+        // The control: a key that is not the file's is the part's change, as it was.
+        Assert.Single(KeyWarnings("key g major", "key d major"));
+        Assert.Single(KeyWarnings("key g major", "key g minor"));
+        Assert.Single(KeyWarnings("", "key a minor"));
+        // …and the first key that differs is named, past one that restates.
+        var said = Assert.Single(KeyWarnings("key g major", "key g major d'1 | key d major"));
+        Assert.Contains("'a' changes key", said.Message);
+    }
 }
