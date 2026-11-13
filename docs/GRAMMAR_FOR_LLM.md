@@ -329,6 +329,16 @@ verbatim `@"C:\music"` / `@"say ""hi"""` (backslash as written, `""` = one quote
 ## Pitches
 
 - Names: `c d e f g a b`. Sharp `is`, flat `es`: `cis`=C#, `ees`=Eb, `cisis`=C##, `deses`=Dbb. E/A flats also contract: `es`=`ees`, `as`=`aes`, `eses`=`eeses`, `ases`=`aeses`.
+- Quarter tones (LilyPond's names): after the letter, `ih` = a quarter tone sharp, `eh` = a quarter
+  tone flat, `isih` = three quarters sharp, `eseh` = three quarters flat — `cih` `ceh` `cisih`
+  `ceseh` `beh`. E and A have no short form here: `eeh` `aeh` `eeseh` `aeseh` (`eseh` alone is
+  not a note). The page prints the quarter-tone sign on EVERY such note (a tie's second note
+  excepted); ⚠️ a plain note of the same letter later in the bar gets no natural by itself — write
+  it `c'@courtesy`. MIDI plays them by pitch bend (50 cents, on a spare channel, so the part's
+  other notes stay in tune), MusicXML writes `<alter>` ±0.5 / ±1.5 and the accidental's name, the
+  LilyPond export the same names; `lysc import` does not read them back. They move with the part
+  under `pitch` and `transpose`. Notes only: a `key` tonic, a chord symbol and `@trill(…)` take
+  none, and a tab shows the fret of the note without its quarter tone.
 - Octave: `'` up one, `,` down one (repeatable: `''`, `,,`).
 - **Octaves are LilyPond's, in every part and for every instrument**: a bare `c` is C3 and
   `c'` is middle C (C4), `c''` C5, `c,` C2. An `instrument` never moves them.
@@ -364,6 +374,25 @@ verbatim `@"C:\music"` / `@"say ""hi"""` (backslash as written, `""` = one quote
   typed as they SOUND under `pitch concert` too (a bass's low E `e,,`, E1) and keep their printed
   octave on every page; without a transposing `instrument` the word changes nothing. A composed
   piece is best written at concert pitch: every part by the pitch it sounds.
+- `transpose PITCH` is LilyPond's `\transpose c PITCH`: the part's notes AND its key signature
+  move by the interval from `c` up to that pitch, on the page and in the sound alike.
+  `part m { clef treble transpose d }` prints and plays a C major tune a tone higher, in D major;
+  `transpose bes` is a minor seventh UP, `transpose bes,` a tone down. In a part header it is that
+  part's; at the top level the default of every part that writes none (own replaces it); on a
+  score header (`score high transpose d { … }`) it is added to each part's own for that score. A
+  part's `transpose` moves its music, not a chords row (a score's, and the top-level `shift N`,
+  move the rows too). ⚠️ It is NOT how a transposing instrument is written: nothing in it makes the
+  page and the sound differ. That difference comes from the `instrument` preset alone (`clarinet`,
+  `clarinet-a`, `trumpet`, `horn`, `soprano-sax` `alto-sax` `tenor-sax` `baritone-sax`), and a
+  `transpose` beside a preset is added on top of it — the page moves and the sound with it.
+- `transposition 8va | 8vb | 15ma | 15mb` (a part header) is the other half: the page stays and
+  the part SOUNDS one or two octaves from it. It REPLACES the preset's transposition instead of
+  adding to it: `instrument clarinet transposition 8vb` is no longer in B♭ — it sounds an octave
+  below the page, and under `pitch concert` it is typed as it sounds like any octave-only
+  instrument. ⚠️ So a transposing instrument with no preset (alto flute in G, bass clarinet,
+  cor anglais) cannot be declared yet: no property states an interval between page and sound
+  other than whole octaves. Write such a part at the pitch it sounds — it plays right and prints
+  untransposed on every page, `score … pitch transposed` included.
 - A chords track is SOUNDING pitch unless it says whose letters it is in: `chords tpc for tp
   { G6 | C7 }` is typed as the trumpet's notes are (under its `pitch`: the player's letters by
   default), and sounds `F6 Bb7`. With no `for` no `pitch` moves a track, and no staff it
@@ -567,6 +596,7 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
 - Voice column: `@shiftOff` keeps a note of a third or later voice in its group's first
   column, so it stands under the voice above instead of a column aside.
 - Articulations: `@staccato @staccatissimo @accent @tenuto @marcato @fermata @portato`
+  (`@fermata` is printed, not played: the note keeps its written length in the MIDI)
 - **A mark over a run of notes**: `c8@staccato d e f@!staccato` — the end `@!NAME` goes on the
   LAST note of the run, and every note and chord from the opening one to that one carries the
   mark (drawn and played on each, exactly as `c8@staccato d@staccato e@staccato f@staccato`).
@@ -595,7 +625,7 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   same argument on `@turn`, `@reverseTurn`, `@mordent`, `@prall`, `@pralltriller`. Only these
   three words, glued: `@trill(sharp)`. (A slur starting on a trilled note is still
   `c4@trill( d e)`.)
-- Dynamics: `@ppp @pp @p @mp @mf @f @ff @fff` and the accent dynamics `@sfz @sf @fp @sfp @rfz @fz` (default below the staff, above it on a `staff` with a lyrics row directly under it — not on a `condensedStaff` / `combinedStaff` or a tab, where you write `.up`; `.up` / `.down`
+- Dynamics: `@ppppp @pppp @ppp @pp @p @mp @mf @f @ff @fff @ffff @fffff` and the accent dynamics `@sfz @sffz @sf @fp @sfp @rf @rfz @fz` — no others (`@sff`, `@sp` are unknown, LYS1008). In playback an accent dynamic is a level like the rest and holds until the next dynamic, so write the level the music returns to: `c4@sfz d@p` (default below the staff, above it on a `staff` with a lyrics row directly under it — not on a `condensedStaff` / `combinedStaff` or a tab, where you write `.up`; `.up` / `.down`
   forces the side, e.g. `@f.up`). Subito: `@p.subito` prints an italic "sub." before the p and plays as `@p`;
   a side goes after it (`@ff.subito.up`). Editorial (an editor's suggestion): `@p(editorial)` prints the
   level in parentheses, "(p)", and plays as `@p` — any level (`@mf(editorial)`, `@sfz(editorial)`), a side
@@ -762,7 +792,13 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   is the head alone — `<c e@notehead(cross)>4`, `<c e>4@notehead(cross)`. Other heads the
   same way: `c2@notehead(diamond)`, `<c f@notehead(diamond)>2` (a stopped note and the touched
   fourth over it). Also `@parenthesize` (head in parentheses, a ghost note:
-  `sn16@parenthesize`; `<c e g>2@parenthesize` = one pair round the chord), `@fall`/`@doit` (jazz bends), `@breath`/`@caesura`
+  `sn16@parenthesize`; `<c e g>2@parenthesize` = one pair round the chord), `@breath`/`@caesura`
+- Jazz bends, four short curves at the head: `@scoop` (INTO the note from the left, rising from
+  below) and `@plop` (into it, falling from above); `@fall` (OUT of the note to the right,
+  downward) and `@doit` (out of it, upward) — `c''4@scoop`, `<c'' e''>2@fall` (a chord takes one
+  curve), `c''4@scoop@fall`. Drawn only: the sound is unchanged. MusicXML writes all four
+  (`<scoop>` `<plop>` `<falloff>` `<doit>`); the LilyPond export writes `@fall` / `@doit` as
+  `\bendAfter` and drops `@scoop` / `@plop` with a warning — LilyPond has neither
 - Cue notes: `cue { … }` — a REGION, not an annotation, so there is no `@cue`:
   `c4 d cue { e4 f } g4 |` (it maps onto LilyPond's CueVoice context). Name the quoted
   instrument's clef to read the cue in it: `c4 d cue bass { e4 f } g4 |` — the staff's own
@@ -773,7 +809,9 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   a cue is a voice of its own, so close the span inside the cue or keep both ends outside.
   Two `cue` blocks side by side are two voices — a span may not run from one into the next
   either, even though both of its ends are cue notes.
-- Feathered beams: `c16@feather(right) d e f` (accel), `@feather(left)` (rit)
+- Feathered beams: `c16@feather(right) d e f` (accel), `@feather(left)` (rit) — on sixteenths
+  or shorter: the fan is the beams spreading, and an eighth's one beam stays a plain beam. Drawn
+  only: the notes play evenly
 - Free expressive text: `c4@text("dolce")` (plain italic below the note; `.up` forces
   above: `c4@text("pizz.").up`). Not a dynamic: hairpins run through it.
 - Left to check: `fis'8@todo`, `@todo("F# or F natural?")`, `@todo(o12)`,
@@ -839,7 +877,9 @@ after it on the same line (until the hairpin has ended) that write no side follo
 
 ## Bar handling
 
-- Barlines in MUSIC: `|` single, `||` double, `|.` final, `!` dashed.
+- Barlines in MUSIC: `|` single, `||` double, `|.` final, `!` dashed. The final bar line is
+  yours to write: end the piece's last bar with `|.` (in one part is enough — every staff
+  draws it); without it the piece ends on a single bar line.
   **The repeat barlines `|:` `:|` `:|:` are NOT music items — they go in the `form`**
   (LYS1034, user decision 2026-08-31). The line is "does it change the playing ORDER":
   a repeat does, so it belongs where the order is written.
@@ -1423,7 +1463,7 @@ this way rather than as lyrics.
 ## Structure: reuse and navigation
 
 ```
-form { Intro Main Main "Main (reprise)" Coda }   // string = custom section label
+form { Intro Main Main "Main (reprise)" Coda }   // a string labels the play BEFORE it: the 2nd Main
 ```
 
 A trailing `'` / `,` on a reference shifts THAT play's octave (one per mark):
@@ -1458,7 +1498,8 @@ cutting the section there (`~` hides the label). They are landmarks, never note 
 In-note marks: `c4@mark("A")` (rehearsal mark),
 text spanners `@textSpan("poco rit.")` ... `@!textSpan` (sugar: `@rit` / `@accel` / `@rall`,
 closed by `@!rit` / `@!accel` / `@!rall` — **the end is REQUIRED**: a spanner nobody closes
-draws nothing at all, its word included, and says so with LYS4018),
+draws nothing at all, its word included, and says so with LYS4018; all are printed, not
+played — the MIDI's tempo changes only at a `tempo`),
 the guitar lines `@palmMute` ... `@!palmMute`, `@letRing` ... `@!letRing`, `@barre(7)` ... `@!barre`
 (see the guitar marks above),
 ottava `@8va` / `@8vb` / `@15ma` / `@15mb` ... `@!8va` (the label the page prints; `@ottava` / `@quindicesima` are retired)
@@ -1675,8 +1716,10 @@ score { staff melody }
 ```
 
 **"Transpose up/down …"** — rewrite the notes, the `key` lines and the chord symbols. The part
-property `transpose` is NOT this: it says how a transposing instrument (B♭ clarinet, …) is
-printed. The first note of each section may need new octave marks.
+property `transpose` does it for one part's notes and key signature without rewriting them
+(`transpose d` = up a tone, print and sound; see Pitches) but leaves a chords row where it is;
+the top-level `shift N` moves the whole piece N semitones, rows included. When you rewrite, the
+first note of each section may need new octave marks.
 
 **"Make it triplets"** — `tuplet 3/2 { c8 d e }` (three in the time of two), keeping each bar's
 length. **"Add dynamics / articulations"** — marks glued to the note: `c4@p`, `c4@cresc … g@f`,
@@ -1715,7 +1758,8 @@ with the `lilysharp_readGuide` tool, topic `composing` (`docs/COMPOSE_FOR_LLM.md
   is written out. ⚠️ **`transpose` takes a PITCH, not a number of steps** —
   `part cl { clef treble transpose bes }`, and `transpose -2` is an error naming the
   pitch form. Do not confuse it with `transposition`, a *different* part property that
-  takes an octave marker (`8va` / `8vb` / `15ma` / `15mb`) and nothing else. For a B♭
+  takes an octave marker (`8va` / `8vb` / `15ma` / `15mb`) and nothing else (what each does
+  to the page and the sound: Pitches). For a B♭
   or E♭ instrument you normally write NO `transpose` at all: name the `instrument` and
   either write what the player reads (the default) or write what sounds under a top-level
   `pitch concert` and print the player's part with `score NAME pitch transposed` (see Pitches).

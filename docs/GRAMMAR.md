@@ -87,12 +87,20 @@ IdentCont      = IdentStart | Digit ;
 ### Pitch Names
 
 PitchBase      = 'c' | 'd' | 'e' | 'f' | 'g' | 'a' | 'b' ;
-Accidental     = 'is' | 'es' | 'isis' | 'eses' ;   (* sharp / flat / double *)
+Accidental     = 'is' | 'es' | 'isis' | 'eses'     (* sharp / flat / double *)
+               | 'ih' | 'eh' | 'isih' | 'eseh' ;   (* quarter tones: a quarter sharp / flat, three
+                                                      quarters sharp / flat — LilyPond's names. On
+                                                      a NOTE only: a key's tonic, a 'transpose'
+                                                      target and a chord symbol take the first
+                                                      four. Printed on every such note, played by
+                                                      a 50-cent pitch bend, MusicXML <alter> ±0.5 /
+                                                      ±1.5 (SYNTAX_REFERENCE *Quarter tones*) *)
 OctaveUp       = { '\'' }+ ;
 OctaveDown     = { ',' }+ ;
 Octave         = OctaveUp | OctaveDown | ε ;
 PitchToken     = ( PitchBase , [ Accidental ] | Contraction ) , Octave ;
-Contraction    = 'es' | 'as' | 'eses' | 'ases' ;   (* = ees / aes / eeses / aeses, as LilyPond's nederlands *)
+Contraction    = 'es' | 'as' | 'eses' | 'ases' ;   (* = ees / aes / eeses / aeses, as LilyPond's nederlands;
+                                                      no quarter-tone contraction: eeh, aeseh *)
 
 (* Octaves default to RELATIVE: each bare pitch lands in the octave nearest the
    previous pitch (an interval of a fourth or less), then any '/',' marks shift it;
@@ -553,7 +561,12 @@ PagePitchMode  = 'transposed' | 'concert' ;  (* a score header and a staff: how 
                     prints (owner's decision 2026-10-11, option D — until then both places took
                     'written'). Semantics.ConcertPitch holds the rule. *)
 TransposeDecl  = 'transpose' , PitchToken ;
-                 (* the file default: every part that sets no 'transpose' of its own *)
+                 (* the file default: every part that sets no 'transpose' of its own.
+                    LilyPond's \transpose c PITCH: notes and key signature move by the interval
+                    from c UP to the pitch ('bes' a minor seventh up, 'bes,' a tone down), on
+                    the page and in the sound alike, on top of an 'instrument' preset's own
+                    shift. It is not how a transposing instrument is declared — that is the
+                    preset (the 'transposition' note under PartProperty). *)
 ShiftDecl      = 'shift' , [ '+' | '-' ] , Integer ;
                  (* The whole piece that many semitones up (or down), -11..11 — the karaoke /
                     band-chart move (owner's request 2026-10-17; Semantics.FileShift). Unlike
@@ -1579,7 +1592,11 @@ TranspositionMarker = '8va' | '8vb' | '15ma' | '15mb' ;
    letters start from ('octave N', else 3 — never the preset or the clef, above). 'transpose' moves the written pitches; 'transposition' states
    that the written pitches sound elsewhere. A chromatic transposer's shift comes from
    its 'instrument' preset (clarinet −2, alto-sax −9, …); a concert-pitch part on a
-   page for its player ('score … pitch transposed', §2.3) is PRINTED by that same shift, negated. *)
+   page for its player ('score … pitch transposed', §2.3) is PRINTED by that same shift, negated.
+   A written 'transposition' REPLACES the preset's shift (explicit > preset > the tuning's): it
+   takes octaves only, so 'instrument clarinet transposition 8vb' sounds an octave below the
+   page and is no longer in B♭ — and a transposing instrument with no preset (alto flute, bass
+   clarinet, cor anglais) cannot be declared yet. *)
 
 (* pedal: how a sustain span is drawn - the 'Ped.' text, a bracket, or 'mixed'
    (text at the start, bracket for the hold). *)
@@ -3302,7 +3319,7 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                        Ornaments are not played, so the sound is unchanged. MusicXML: the
                        ornament and its accidental-mark, both ways. LilyPond: the ornament
                        with a small accidental markup over it. LILYSHARP-OWN placement. *)
-   - Dynamics:      @ppp @pp @p @mp @mf @f @ff @fff @sfz @sf @fp @sfp @rfz @fz   (default below, above over a lyrics row directly under the staff; @f.up / @f.down forces side; @p.subito prints "sub. p", plays p - @p(editorial) prints the level in parentheses, plays p, and takes a side after it as @p(editorial).up - a hairpin or @niente takes no (editorial): LYS4076)
+   - Dynamics:      @ppppp @pppp @ppp @pp @p @mp @mf @f @ff @fff @ffff @fffff @sfz @sffz @sf @fp @sfp @rf @rfz @fz   (the whole list — SyntaxFacts.DynamicTextLevels; default below, above over a lyrics row directly under the staff; @f.up / @f.down forces side; @p.subito prints "sub. p", plays p - @p(editorial) prints the level in parentheses, plays p, and takes a side after it as @p(editorial).up - a hairpin or @niente takes no (editorial): LYS4076)
    - Hairpins:      @cresc @decresc @dim  (start note → next dynamic, or to @!cresc / @!decresc /
                  @!dim on a later note — LilyPond's \! — which ends whichever is open; written after
                  the start on ONE note, @cresc@!cresc, it spans that note's length; the staff's side as a level's; @cresc.up / @cresc.down gives its line the side,
@@ -3469,9 +3486,13 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                     parentheses, a ghost note; on a chord one pair round it, on a member
                     its own; LilyPond's \parenthesize — the parentheses take no room) ,
                     @fall @doit (jazz bends; on a chord ONE curve off its top head —
-                    a section's fall-off — where LilyPond draws none) , @breath @caesura
+                    a section's fall-off — where LilyPond draws none) , @scoop @plop (the
+                    curves INTO the note from the left, rising from below / falling from
+                    above; LILYSHARP-OWN — LilyPond has neither, its twin drops them with a
+                    warning; MusicXML writes all four) , @breath @caesura
                     (* a CUE is not an annotation — it is a region, 'cue { … }', below *)
    - Feathered beam: c16@feather(right) … (accel) / @feather(left) (rit)
+                     (* sixteenths or shorter: one beam cannot fan; drawn only *)
    - A mark over a RUN of notes: c8@staccato d e f@!staccato   [owner decision 2026-11-12]
                      (* @staccato @staccatissimo @tenuto @accent @marcato, each ended by
                         @!NAME written on the LAST note of the run: every note and chord

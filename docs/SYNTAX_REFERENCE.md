@@ -43,6 +43,36 @@ verbatim form, which is the easy spelling for text that is full of backslashes.
 
 Special forms: `ees` (Eb), `aes` (Ab), `bes` (Bb). LilyPond's contractions are accepted too: `es` = `ees`, `as` = `aes`, `eses` = `eeses`, `ases` = `aeses`.
 
+#### Quarter tones
+
+| Suffix | Meaning | Example |
+|--------|---------|---------|
+| `ih` | Quarter tone sharp | `cih` |
+| `eh` | Quarter tone flat | `ceh`, `beh` |
+| `isih` | Three quarter tones sharp | `cisih` |
+| `eseh` | Three quarter tones flat | `ceseh` |
+
+```
+c'4 cih' cis' cisih' | d'4 deh' des' deseh' |
+```
+
+These are LilyPond's names. E and A take the full spelling — `eeh`, `aeh`, `eeseh`, `aeseh`;
+the contractions stop at the semitones, so `eseh` alone is not a note. A quarter-tone note
+prints its sign (the half sharp, the sharp-and-a-half, the reversed flat, the flat-and-a-half)
+every time it is written, a tie's second note excepted. A plain note of the same letter later
+in the bar is not given a natural by itself — write it `c'@courtesy`.
+
+MIDI plays a quarter tone by pitch bend, 50 cents on the standard range, and moves the bent
+notes to a spare channel so that the part's other notes stay in tune (when all sixteen
+channels are taken, the bend is on the part's own). MusicXML writes `<alter>` ±0.5 / ±1.5
+with `<accidental>` `quarter-sharp`, `three-quarters-sharp`, `quarter-flat` or
+`three-quarters-flat`; the LilyPond export writes the same names. `lysc import` does not read
+them back, and `lysc check --pitches` lists the note without its quarter tone.
+
+They are transposed with the part (`pitch`, `transpose`). They are notes only: a `key`
+tonic and a chord symbol take none, an ornament's accidental is `sharp`, `flat` or `natural`,
+and a tab shows the fret of the note without its quarter tone.
+
 Annotations:
 
 ```
@@ -385,6 +415,8 @@ g4@fermata     // Fermata
 a4@portato     // Portato (tenuto + staccato)
 ```
 
+A fermata is printed, not played: the note keeps its written length in the MIDI.
+
 Every annotation name is case-sensitive and has one spelling: a name of several words is
 camelCase (`@upBow`, `@shortFermata`, `@reverseTurn`, `@laissezVibrer`, `@hammerOn`,
 `@figuredBass`) whatever LilyPond spells it (`\upbow`, `\shortfermata`), and a one-word
@@ -427,6 +459,27 @@ written earlier stay single notes' marks. An `@!staccato` with no `@staccato` be
 error (LYS4018). A run does not reach grace notes, or the notes of a phrase called between
 its ends (a warning says so — write the run inside the phrase). LilyPond and MusicXML have
 no such span: the exports write the mark on each note.
+
+### Scoop, plop, fall, doit
+
+The four jazz bends are short curves at the notehead:
+
+```
+c''4@scoop d''4@plop e''4@fall f''4@doit |
+```
+
+| Mark | Drawn |
+|------|-------|
+| `@scoop` | into the note from the left, rising from below |
+| `@plop` | into the note from the left, falling from above |
+| `@fall` | out of the note to the right, downward |
+| `@doit` | out of the note to the right, upward |
+
+A note may take one of each side (`c''4@scoop@fall`), and a chord takes one curve
+(`<c'' e''>2@fall`). They are drawn only — the sound is unchanged. MusicXML writes all four (`<scoop>`, `<plop>`, `<falloff>`, `<doit>`) and reads
+them back. The fall and the doit are LilyPond's `\bendAfter`, which the LilyPond export
+writes; LilyPond has no scoop and no plop, so those two are Lily#'s own drawing and the
+export drops them with a warning.
 
 ### Left to check (`@todo`)
 
@@ -521,6 +574,13 @@ c4@f     // Forte
 c4@ff    // Fortissimo
 c4@fff | // Fortississimo
 ```
+
+Beyond them `@pppp` and `@ppppp`, `@ffff` and `@fffff`. The accent dynamics are `@sf`, `@sfz`,
+`@sffz`, `@fz`, `@rf`, `@rfz`, `@fp` and `@sfp`; no other word is one (`@sff` and `@sp` are
+unknown annotations, LYS1008). Every one is printed, played, and written to MusicXML under its
+own name. The LilyPond export writes each as `\name` — and LilyPond has no `\sffz` and no
+`\rf`, so a `.ly` holding either does not compile as exported. In playback an accent dynamic is a level like the others: it holds
+until the next dynamic, so write the level the music returns to (`c4@sfz d@p`).
 
 Dynamics sit below the staff — and above it on a staff with a lyrics row directly under it
 (`staff sop  lyrics words`), where the words have the space below, as vocal music is written.
@@ -826,6 +886,9 @@ where there are marks, the sections are the marks'.
 
 The three repeat barlines change the order the music plays in, so they are written where
 the order is — see [Volta Repeats](#volta-repeats).
+
+The final barline is written, never added: a piece whose last bar does not end with `|.`
+ends on a single barline. One part writing it is enough — every staff draws it.
 
 ### Line and Page Breaks
 
@@ -1583,6 +1646,9 @@ Naming a clef writes it before the region and restores the staff's own clef afte
 the following notes are unaffected. Any clef name works: `treble`, `bass`, `alto`, `tenor`,
 `treble_8`.
 
+A cue is silent (since 2026-11-13): it is printed for the player's orientation and is not in
+the MIDI, the WAV or the preview — the part it quotes plays those notes itself.
+
 A cue is a **voice of its own**, which decides what may cross its edge:
 
 ```
@@ -1738,6 +1804,11 @@ A rest a manual beam covers keeps its place under the beam: it draws no stem, bu
 reaches it, so `r8[ c d e]` beams from the rest. Automatic beams still end at every rest —
 only a written bracket spans one.
 
+A **feathered beam** is `@feather(right)` (the beams spread to the right: accelerando) or
+`@feather(left)` (ritardando) on the first note of a beam of sixteenths or shorter —
+`c16@feather(right) d e f`. The fan is the beams spreading, so eighths, with one beam, stay a
+plain beam. It is drawn only: the notes play evenly.
+
 A bracket only joins: `c8[]` groups nothing and warns (LYS4016). Notes that each keep their
 own flag are a sung part's, and a part property:
 
@@ -1844,6 +1915,34 @@ an octave or more below the page (`instrument bass octave 2` writes a bare `c` a
 C1 — the octave is the WRITTEN register, LYS1050), and a `tuning` of another instrument's
 strings (`instrument ukulele tuning guitar`, LYS1051; `instrument guitar tuning guitarDropD` is
 an ordinary override and is not warned).
+
+**`transpose PITCH`** is LilyPond's `\transpose c PITCH`: the part's notes and its key
+signature move by the interval from `c` up to that pitch, on the page and in the sound alike.
+
+```
+part high { clef treble  transpose d }      // a tone up: C major prints, and plays, in D major
+part low  { clef treble  transpose bes, }   // a tone down; 'transpose bes' is a minor seventh UP
+```
+
+A top-level `transpose` is the default of every part that writes none, and one on a score
+header (`score high transpose d { … }`) is added to each part's own for that score. A part's
+`transpose` leaves a chords row where it is; a score's, and the top-level `shift N`, move the
+rows too. It is not the way to write a transposing instrument, because nothing in it makes the
+page and the sound differ: beside an `instrument` preset it is added on top of the preset's
+transposition, and the page and the sound move together.
+
+**`transposition 8va | 8vb | 15ma | 15mb`** leaves the page alone and says the part sounds one
+or two octaves from it. It replaces the preset's transposition, it is not added to it:
+`instrument clarinet transposition 8vb` is no longer a B♭ instrument — it sounds an octave
+below the page, and under `pitch concert` it is typed as it sounds and printed an octave above,
+as the octave-only presets (`bass`, `piccolo`) are.
+
+The interval between a transposing instrument's page and its sound comes from its preset alone
+(`clarinet`, `clarinet-a`, `trumpet`, `horn`, `soprano-sax`, `alto-sax`, `tenor-sax`,
+`baritone-sax`), and `pitch` (top level, part, score, staff) chooses which of the two is typed
+and which is printed. A transposing instrument with no preset — an alto flute, a bass
+clarinet, a cor anglais — cannot be declared yet: no property states an interval other than
+whole octaves. Such a part is written at the pitch it sounds, and prints so on every page.
 
 A note the preset's instrument cannot sound is warned too (LYS1052): its SOUNDING pitch below
 or above the instrument's range — a flute's B3, a soprano's D6. The pitch is what plays, so a
@@ -2741,7 +2840,8 @@ c4@textSpan d e f@!textSpan |                // no word: a bare dashed line
 ```
 
 `@rit`, `@accel` and `@rall` are shorthand for `@textSpan("rit.")` and its siblings —
-nothing else about them differs. **A spanner is closed by the name it was opened with**:
+nothing else about them differs: they are printed, not played, and the MIDI's tempo changes
+only at a `tempo`. **A spanner is closed by the name it was opened with**:
 `@rit … @!rit`, `@textSpan("…") … @!textSpan` — `@rit … @!accel` is an error (LYS4032) whose
 quick fix writes the right name. One spanner is open at a time in a voice, and a spanner does
 not carry from one voice into another. (The guitar lines — `@palmMute`, `@letRing`, `@barre(N)`,
