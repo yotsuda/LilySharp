@@ -609,7 +609,9 @@ public sealed partial class LilyPondExporter
         _shared.Root = root;
         _renderSpec = render != null ? Svg.Collector.RenderSpecParser.Parse(render) : null;
 
-        EmitHeader(root);
+        // (The page's model first where there is a score: a header line it writes as Markdown
+        // — a score's own over the file's — is the twin's header too.)
+        EmitHeader(root, render != null ? PageModel(tree, render) : null);
         // Before the part variables that call it (EmitPartVariable).
         if (_layoutPlan.CompressRests)
             _sb.Append(CompressRestsFunction);

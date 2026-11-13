@@ -851,3 +851,108 @@ surround. What only a person in VS Code can see is `editors/vscode/MANUAL-CHECKS
    a backtick surrounding a selection. NOT done: Markdown completion inside the fence; a
    click on the text in the preview going to its source; hover.
 6. Later: a footnote (`@footnote("…")` on a note, its text at the page's foot), code blocks.
+7. DONE 2026-11-13 (section 9): the six header lines written as Markdown.
+
+## 9. Header places (owner's decisions 2026-11-13, built that day)
+
+The header has six lines — `title`, `subtitle`, `composer`, `poet`, `arranger`, `copyright` —
+each a string (`title "…"`). Each may instead, or as well, be written as Markdown: a place word
+on the fence's opening line, as `end` is.
+
+````
+title "Morning Song"
+
+```md title
+Morning Song\
+*for two flutes*
+```
+
+```md composer
+A. Composer\
+1902–1971
+```
+
+```md copyright
+Copyright 2026 **Somebody**
+```
+````
+
+The owner's decisions:
+
+1. **Both written** (`title "X"` and a ```` ```md title ````): the PAGE draws the fence; the
+   plain string serves everything that is not the page — MusicXML's `work-title`, creators and
+   `rights`, the MIDI copyright notice. **The fence alone**: those take its words with the
+   formatting stripped, every line break one space (`Rendering.HeaderProse.Plain`;
+   `Semantics.HeaderLineText.NonPage`). The model's `Title` stays the plain string (nothing
+   that is not the page reads it: the exports walk the syntax).
+2. **Drawn**: bold, italic, hard line breaks (several lines), inline text; a paragraph is a line
+   of its own (a header line does not wrap, as the plain string does not). A heading, a list, a
+   block quote, a code block, an image: LYS4058, "… is not inline text: the title takes inline
+   text only …", drawn as plain lines — their words at the line's size and weight, no marker, an
+   image its alt text. A rule, a table, HTML: said and not drawn.
+3. **Size and face**: the line's own (`HeaderBand.TitleEm` and `TitleStyle` for a title…);
+   Markdown adds emphasis within it as an OR over the line's style — `*…*` italic (bold italic
+   in the title), `**…**` in an already-bold line stays bold, in the composer's line bold.
+   **Several lines step at that size's baseline-skip**: the page text's 3.0 grown as the line is
+   (`HeaderLineSet.LineStep` = 3.0 × em / 2.2: 4.7591 for the title, 3.7773 for the subtitle,
+   3.0 for the text size; LILYSHARP-OWN, as a heading's lines step), and the twin writes it as
+   the column's `baseline-skip`. The fence is ONE row of the header's column — its reference
+   point the first line's baseline, its ink every line's — so the rows under it stack on its
+   lowest ink and the band grows: the page's springs, the breaker's priced depth and the crop
+   width see it. A copyright fence is the first page's footer: its lowest line's ink on the
+   bottom margin, the footer that much taller, page 1 that much shorter (`footer_height_`).
+4. **Position**: the line's own — title and subtitle centred, composer and arranger at the
+   right margin, poet at the left margin on the composer's line, copyright centred at the first
+   page's foot — each LINE aligned so (a centred title centres each line; a composer's lines
+   end at the right margin). Shape words and `end` with a header place: LYS4057 naming what the
+   place takes ("'box' does not go with 'title': a header line written as Markdown is set where
+   and as the title is: centred, at its size, bold…"); a margin's lengths are one error with it.
+   One place word a fence ("'composer' is a second place for one text"). **Two fences for one
+   header place** in one scope (the file, or one score): LYS4057 on the second's place word —
+   a header line is one text; page texts stack, these do not. The later one is what is drawn.
+5. **Inside `score { }`**: for that score alone, replacing the file's. Decided here
+   (LILYSHARP-OWN): a score that restates a header line in EITHER spelling restates it whole —
+   the file's string and the file's fence for that line are both taken away first
+   (`MeasureCollector.ForgetHeaderLine`; the same in `HeaderLineText.NonPage`), so a score's
+   `title "Violin I"` is not drawn under the file's ```` ```md title ````, and a score's fence
+   does not leave the file's string in its MusicXML.
+6. **The twin** writes each as `\markup` in `\header` — one line as itself
+   (`\concat { "Copyright 2026 " \bold "Somebody" }`), several as `\override #'(baseline-skip
+   . STEP) \center-column { … }` (`\right-column` for the composer and the arranger,
+   `\left-column` for the poet), the emphasis the Markdown adds as `\italic` / `\bold` inside the
+   weight bookTitleMarkup gives the line. It reads the page's model, so a score's own fence is
+   that score's twin's.
+
+**Completion** on the opening line (the owner: "あまり多いと、補完入力が使いにくくなる"):
+after ```` ```md ```` and a space, the place words first — `title`, `subtitle`, `composer`,
+`poet`, `arranger`, `copyright`, `end` — then `box`, `center`, `xMargin`, `yMargin`. Once a
+place word is written no other is offered; after a header place word nothing (it takes no
+shape); after a shape word no header place (decided here: it would be an error), `end` still.
+No new block snippets. **Colours**: the TextMate rule's keyword list takes the six words; the
+body stays embedded Markdown.
+
+Out of scope: a MusicXML title or creator of several lines is imported as a string, not a fence.
+
+MEASURED 2026-11-13, LilyPond 2.26.0 (`LilySharp-Lab` `sessions/p1226/md/header`:
+`md-showcase.lys`, its `lysc ly --pin-fonts` twin engraved as `md-showcase-lp.ly` / `.svg` /
+`.png`; staff spaces from the paper's top-left, y down):
+
+| What | Lily# | LilyPond |
+|---|---|---|
+| The title's two lines (the second italic) | 12.2627, 17.0218 | 12.2642, 17.0233 (the step 4.7591 the twin writes) |
+| The subtitle's baseline | 20.2787 | 19.5593 |
+| The composer's two lines | 23.7787, 26.7787 | 23.0593, 26.0593 (3.0000 apart) |
+| The arranger's baseline | 28.9309 | 27.7116 |
+| The copyright's baseline (one line, a bold word) | 162.8656 | 162.8656 |
+| The first staff's top line | 31.6535 | 30.4342 |
+
+The steps inside a fence are LilyPond's to the digit. What differs is the column's, not the
+fence's: the subtitle under the title's last line and the arranger under the composer's stand
+ink to ink, LilyPond with no padding (2.5360 and 1.6523), Lily#'s column with its 0.5
+(`HeaderBand.RowPadding`, LILYSHARP-OWN 2026-09-26) — and this LilyPond set the SUBTITLE at
+2.4697 (font-size 1) where `HeaderBand.SubtitleFontSize` says 2.77 (font-size 2), its ink top
+0.22 taller: 3.2569 against 2.5360 under the title. Every row under the subtitle carries that
+0.72, and the arranger its own 0.5 more. ⚠️ The subtitle's size is not this section's, and is
+open: found here, and part A's own probe says the same — `p1.svg` sets "Sub" at font-size
+2.4697 too, where a plain header's baselines agree only because the 3.5 skip binds over a
+subtitle of either size. Not changed (it moves every subtitled page; for the owner).

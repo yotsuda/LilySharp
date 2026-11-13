@@ -583,21 +583,29 @@ internal static partial class SharedRenderer
         // when it stacked the column, so a `fonts { title step +2 }` moves the reserved
         // band and the drawn string together.
         var fonts = score.TextMetrics;
-        if (score.Title is { } title && band.TitleBaseline is { } titleBaseline)
+        // A header line written as Markdown (owner's decision 2026-11-13) is drawn in its row
+        // in place of the plain string, which then serves only what is not the page.
+        if (band.TitleText is { } titleText && band.TitleBaseline is { } titleTextBaseline)
+            DrawHeaderLine(titleText, page.Width / 2, top + titleTextBaseline, page, gc);
+        else if (score.Title is { } title && band.TitleBaseline is { } titleBaseline)
         {
             double centerX = page.Width / 2;
             using (SourceScope(gc, score.Header.Title))
                 gc.DrawText(title, centerX, page.Height - (top + titleBaseline),
                     HeaderBand.TitleEm(fonts), TextRole.Title, HeaderBand.TitleStyle(fonts), TextAnchor.Middle);
         }
-        if (score.Subtitle is { } subtitle && band.SubtitleBaseline is { } subtitleBaseline)
+        if (band.SubtitleText is { } subtitleText && band.SubtitleBaseline is { } subtitleTextBaseline)
+            DrawHeaderLine(subtitleText, page.Width / 2, top + subtitleTextBaseline, page, gc);
+        else if (score.Subtitle is { } subtitle && band.SubtitleBaseline is { } subtitleBaseline)
         {
             double centerX = page.Width / 2;
             using (SourceScope(gc, score.Header.Subtitle))
                 gc.DrawText(subtitle, centerX, page.Height - (top + subtitleBaseline),
                     HeaderBand.SubtitleEm(fonts), TextRole.Subtitle, HeaderBand.SubtitleStyle(fonts), TextAnchor.Middle);
         }
-        if (score.Poet is { } poet && band.ComposerBaseline is { } poetBaseline)
+        if (band.PoetText is { } poetText && band.ComposerBaseline is { } poetTextBaseline)
+            DrawHeaderLine(poetText, options.MarginLeft, top + poetTextBaseline, page, gc);
+        else if (score.Poet is { } poet && band.ComposerBaseline is { } poetBaseline)
         {
             // The left end of the poet / instrument / composer \fill-line: the left margin.
             double leftX = options.MarginLeft;
@@ -605,7 +613,9 @@ internal static partial class SharedRenderer
                 gc.DrawText(poet, leftX, page.Height - (top + poetBaseline),
                     HeaderBand.PoetEm(fonts), TextRole.Poet, HeaderBand.PoetStyle(fonts), TextAnchor.Start);
         }
-        if (score.Composer is { } composer && band.ComposerBaseline is { } composerBaseline)
+        if (band.ComposerText is { } composerText && band.ComposerBaseline is { } composerTextBaseline)
+            DrawHeaderLine(composerText, page.Width - options.MarginLeft, top + composerTextBaseline, page, gc);
+        else if (score.Composer is { } composer && band.ComposerBaseline is { } composerBaseline)
         {
             double rightX = page.Width - options.MarginLeft;
             using (SourceScope(gc, score.Header.Composer))
@@ -654,15 +664,41 @@ internal static partial class SharedRenderer
 
     /// <summary>
     /// One of the header lines of 2026-11-13 (HeaderLineSet) about <paramref name="anchorX"/>
-    /// as it aligns — centred on it or ending at it — its baseline <paramref name="baseline"/>
-    /// below the page's top edge.
+    /// as it aligns — centred on it, ending at it or beginning at it — its (first) baseline
+    /// <paramref name="baseline"/> below the page's top edge.
     /// </summary>
+    /// <remarks>A line written as Markdown (owner's decision 2026-11-13) is drawn line by line,
+    /// each aligned by its own width, a piece at a time from the line's left edge — the x the
+    /// layout measured, as the page text's pieces are (ProseBand).</remarks>
     private static void DrawHeaderLine(
         HeaderLineSet line, double anchorX, double baseline, PageLayout page, IDrawingContext gc)
     {
         using (SourceScope(gc, line.Position))
-            gc.DrawText(line.Text, anchorX, page.Height - baseline, line.Em, line.Role, line.Style,
-                line.Align == HeaderAlign.Center ? TextAnchor.Middle : TextAnchor.End);
+        {
+            if (!line.IsMarkdown)
+            {
+                gc.DrawText(line.Text, anchorX, page.Height - baseline, line.Em, line.Role, line.Style,
+                    line.Align switch
+                    {
+                        HeaderAlign.Center => TextAnchor.Middle,
+                        HeaderAlign.Left => TextAnchor.Start,
+                        _ => TextAnchor.End,
+                    });
+                return;
+            }
+            foreach (var row in line.Lines)
+            {
+                double left = line.Align switch
+                {
+                    HeaderAlign.Center => anchorX - row.Width / 2,
+                    HeaderAlign.Left => anchorX,
+                    _ => anchorX - row.Width,
+                };
+                foreach (var piece in row.Pieces)
+                    gc.DrawText(piece.Text, left + piece.X, page.Height - (baseline + row.Baseline), line.Em,
+                        line.Role, piece.Style, TextAnchor.Start);
+            }
+        }
     }
 
     /// <summary>

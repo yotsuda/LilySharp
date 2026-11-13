@@ -29,9 +29,12 @@ namespace LilySharp.Lsp;
 // comment.
 //   1. An empty line there: the two blocks, low in the list of keywords.
 //   2. After the backticks (`, `` or ```), and on into the first word: the same two.
-//   3. After ```md and a space, and after each further word: `end`, `box`, `center`, `xMargin`,
-//      `yMargin` (owner-approved 2026-11-13) — those not on the line yet; and after a margin
-//      its lengths, which taking the word from the list opens at once (owner's request, same day).
+//   3. After ```md and a space, and after each further word: the places — `title`, `subtitle`,
+//      `composer`, `poet`, `arranger`, `copyright` (a header line as Markdown, owner's decision
+//      2026-11-13) and `end` — then `box`, `center`, `xMargin`, `yMargin` (owner-approved
+//      2026-11-13) — those not on the line yet, one place at most, nothing after a header place;
+//      and after a margin its lengths, which taking the word from the list opens at once
+//      (owner's request, same day).
 // And between the fences nothing is Lily#, so nothing is offered there at all.
 public sealed partial class LilySharpLanguageServer
 {
@@ -233,18 +236,34 @@ public sealed partial class LilySharpLanguageServer
                 : [];
             if (lengthsWritten == 0 || (lengths.Length > 0 && typed.Length > 0 && char.IsAsciiDigit(typed[0])))
                 return new CompletionList { Items = lengths };
-            (string Word, string Detail)[] words =
-            [
-                (FencedText.EndWord, place == FencePlace.Score
+            // The PLACE words first — the six header lines (owner's decision 2026-11-13: ```md title
+            // is the title written as Markdown), then `end` — and the shape words after them.
+            // The owner: "あまり多いと、補完入力が使いにくくなる" — so the list stays short: once
+            // a place is written no other place is offered, and after a header place (which
+            // takes no shape) nor any shape word; after a shape word no header place.
+            bool placeWritten = before.Skip(1).Any(FencedText.IsPlaceWord);
+            bool headerPlaceWritten = before.Skip(1).Any(w => FencedText.HeaderPlaceWords.Contains(w));
+            bool shapeWritten = before.Skip(1).Any(w => FencedText.ShapeWords.Contains(w));
+            if (headerPlaceWritten)
+                return new CompletionList { Items = [] };
+            string own = place == FencePlace.Score ? "this score's " : "the ";
+            var words = new List<(string Word, string Detail)>();
+            if (!placeWritten && !shapeWritten)
+                words.AddRange(FencedText.HeaderPlaceWords.Select(w => (w,
+                    $"Write {own}{w} as Markdown: bold, italic and line breaks, set where and as the {w} is")));
+            if (!placeWritten)
+                words.Add((FencedText.EndWord, place == FencePlace.Score
                     ? "Print this score's text under its last system instead of under the title"
-                    : "Print the text under the last system instead of under the title"),
+                    : "Print the text under the last system instead of under the title"));
+            words.AddRange(
+            [
                 (FencedText.BoxWord, "Rule a frame around the text"),
                 (FencedText.CenterWord, "Centre each line in the text's width"),
                 (FencedText.XMarginWord, "White at the text's left and right, inside the line width: "
                     + "xMargin 20mm (both sides) or xMargin 20mm 10mm (left, right); mm, cm, in, or staff spaces"),
                 (FencedText.YMarginWord, "White above and below the text, 1 staff space where nothing is written: "
                     + "yMargin 2 (both) or yMargin 3 1 (above, below); staff spaces, or mm, cm, in"),
-            ];
+            ]);
             return new CompletionList
             {
                 Items = [.. words.Where(w => !before.Contains(w.Word)).Select((w, i) =>
@@ -258,7 +277,8 @@ public sealed partial class LilySharpLanguageServer
                         Label = w.Word,
                         Kind = CompletionItemKind.Keyword,
                         Detail = w.Detail,
-                        SortText = "fence" + i,     // the place first, then the shape, as the sentence lists them
+                        // the places first, then the shape, as the sentence lists them
+                        SortText = "fence" + i.ToString("00", System.Globalization.CultureInfo.InvariantCulture),
                         TextEdit = new TextEdit { Range = range, NewText = takesLength ? w.Word + " " : w.Word },
                         Command = takesLength
                             ? new Command { Title = "Suggest a length", CommandIdentifier = "editor.action.triggerSuggest" }
@@ -352,7 +372,9 @@ public sealed partial class LilySharpLanguageServer
             : "Every score of the file prints it; a fence inside `score { }` replaces it for that score. ")
             + "Write Markdown between the two fence lines — paragraphs, **bold** and *italic* are printed. "
             + "Nothing between them is Lily#. The opening line may go on to say how the text is set: "
-            + "`box` (a ruled frame), `center`, `xMargin 20mm` (white at the sides), `yMargin 2` (white above and below).";
+            + "`box` (a ruled frame), `center`, `xMargin 20mm` (white at the sides), `yMargin 2` (white above and below). "
+            + "`title`, `subtitle`, `composer`, `poet`, `arranger` or `copyright` there makes the text that header line, "
+            + "written as Markdown.";
         CompletionItem Item(string words, string detail, string sort) => new()
         {
             Label = ticks + words,

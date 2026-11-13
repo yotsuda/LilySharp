@@ -172,16 +172,12 @@ public static class MidiForFile
 
     /// <summary>The copyright line the score prints: its own <c>copyright</c>, else the file's,
     /// else null.</summary>
+    /// <remarks>Written as Markdown (<c>```md copyright</c>; owner's decision 2026-11-13) and as
+    /// no string, the notice is the Markdown's words with the formatting stripped
+    /// (Semantics.HeaderLineText).</remarks>
     private static string? CopyrightOf(SyntaxNode root, RenderSpec? spec)
     {
-        string? copyright = null;
-        foreach (var meta in root.ChildNodes().OfType<MetadataDeclarationSyntax>())
-            if (meta.Keyword == "copyright" && meta.StringValue is { } value)
-                copyright = value;
-        if (spec is { HeaderOverrides: { IsDefaultOrEmpty: false } overrides })
-            foreach (var meta in overrides)
-                if (meta.Keyword == "copyright" && meta.StringValue is { } value)
-                    copyright = value;
+        string? copyright = Semantics.HeaderLineText.NonPage(root, spec, "copyright");
         return string.IsNullOrEmpty(copyright) ? null : copyright;
     }
 }

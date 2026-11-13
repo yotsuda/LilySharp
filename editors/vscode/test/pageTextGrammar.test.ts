@@ -121,6 +121,19 @@ describe('a page text\'s colours', () => {
         assert.ok(open.every(t => !t.scopes.includes(EMBEDDED)), 'the opening line is Lily#, not the text');
     });
 
+    it('colours the six header places, and keeps such a body Markdown', () => {
+        // Owner's decision 2026-11-13: ```md title … the title written as Markdown.
+        for (const place of ['title', 'subtitle', 'composer', 'poet', 'arranger', 'copyright']) {
+            const lines = tokenize([F + 'md ' + place, 'Morning *Song*', F]);
+            assert.deepEqual(lilysharp(scopesOf(lines[0], place)), ['keyword.other.fenced-text.lilysharp'], place);
+            assert.ok(lines[1].every(t => t.scopes.includes(EMBEDDED)), JSON.stringify(lines[1]));
+            assert.deepEqual(lines[1].flatMap(t => lilysharp(t.scopes)), [], place);
+        }
+        // Only as a whole word: `titles` is no place.
+        const [open] = tokenize([F + 'md titles composer2', F]);
+        assert.ok(open.every(t => !t.scopes.some(s => s.startsWith('keyword.'))), JSON.stringify(open));
+    });
+
     it('reads markdown for md, with the tag alone on its line too', () => {
         assert.deepEqual(lilysharp(scopesOf(tokenize([F + 'markdown end', F])[0], 'markdown')), ['entity.name.tag.fenced-text.lilysharp']);
         assert.deepEqual(lilysharp(scopesOf(tokenize([F + 'md', F])[0], 'md')), ['entity.name.tag.fenced-text.lilysharp']);

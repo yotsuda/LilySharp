@@ -137,7 +137,7 @@ public class MarkdownTextShapeTests
 
     [Theory]
     [InlineData("```md frame", "'frame' means nothing here")]
-    [InlineData("```md frame", "end (under the last system), box (a ruled frame), center (each line centred), xMargin LEFT [RIGHT]")]
+    [InlineData("```md frame", "end (under the last system), title, subtitle, composer, poet, arranger or copyright (that header line, written as Markdown), box (a ruled frame), center (each line centred), xMargin LEFT [RIGHT]")]
     [InlineData("```md box box", "'box' is written twice")]
     [InlineData("```md center end center", "'center' is written twice")]
     [InlineData("```md xMargin", "'xMargin' needs a length")]

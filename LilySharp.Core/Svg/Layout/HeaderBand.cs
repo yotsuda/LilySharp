@@ -88,7 +88,14 @@ internal sealed record HeaderBand(
     // The arranger (owner's decision 2026-11-13), or null: the right end of the row under
     // the composer's, its baseline ArrangerBaseline below the column's top.
     HeaderLineSet? Arranger = null,
-    double? ArrangerBaseline = null)
+    double? ArrangerBaseline = null,
+    // The header lines written as Markdown (```md title …; owner's decision 2026-11-13), each
+    // drawn in place of its plain string at that row's baseline (TitleBaseline,
+    // SubtitleBaseline, ComposerBaseline for the poet and the composer), or null.
+    HeaderLineSet? TitleText = null,
+    HeaderLineSet? SubtitleText = null,
+    HeaderLineSet? PoetText = null,
+    HeaderLineSet? ComposerText = null)
 {
     /// <summary>Whether the band has rows of its own — a title, a subtitle, a poet / composer
     /// line, a chord list — or is only the page's opening text.</summary>
@@ -306,12 +313,25 @@ internal sealed record HeaderBand(
     /// <param name="arranger">The arranger (owner's decision 2026-11-13), or null: the row
     /// under the poet / composer row. Null builds the header of every score before that day
     /// exactly as it was.</param>
+    /// <param name="titleText">The title written as Markdown (<c>```md title</c>; owner's
+    /// decision 2026-11-13), or null: set in the title's row in place of
+    /// <paramref name="title"/>, its lines in the row's ink. So for the three after it.</param>
+    /// <param name="subtitleText">The subtitle written as Markdown, or null.</param>
+    /// <param name="poetText">The poet written as Markdown, or null.</param>
+    /// <param name="composerText">The composer written as Markdown, or null.</param>
     public static HeaderBand? Build(string? title, string? composer, ScoreTextMetrics fonts,
         string? subtitle = null, string? poet = null, string? instrument = null,
-        HeaderLineSet? arranger = null)
+        HeaderLineSet? arranger = null, HeaderLineSet? titleText = null, HeaderLineSet? subtitleText = null,
+        HeaderLineSet? poetText = null, HeaderLineSet? composerText = null)
     {
+        // The page draws the Markdown where both are written: the plain string serves the
+        // rest (MusicXML, the file's other exports).
+        if (titleText is not null) title = null;
+        if (subtitleText is not null) subtitle = null;
+        if (poetText is not null) poet = null;
+        if (composerText is not null) composer = null;
         if (title is null && composer is null && subtitle is null && poet is null && instrument is null
-            && arranger is null)
+            && arranger is null && titleText is null && subtitleText is null && poetText is null && composerText is null)
             return null;
 
         double? previousBaseline = null;
@@ -347,11 +367,18 @@ internal sealed record HeaderBand(
             return Stack(inkBottom, inkTop, fonts.Advance(text, size, role, style));
         }
 
-        double? titleBaseline = StackOne(title, TitleEm(fonts), TextRole.Title, TitleStyle(fonts));
-        double? subtitleBaseline = StackOne(subtitle, SubtitleEm(fonts), TextRole.Subtitle, SubtitleStyle(fonts));
+        // A header line written as Markdown is ONE row of the column whatever its lines: its
+        // reference point the first line's baseline, its ink every line's (HeaderLineSet), as
+        // LilyPond stacks a \column markup in bookTitleMarkup's column.
+        double? StackSet(HeaderLineSet? set) => set is null ? null : Stack(set.InkBottom, set.InkTop, set.Width);
+
+        double? titleBaseline = StackSet(titleText)
+            ?? StackOne(title, TitleEm(fonts), TextRole.Title, TitleStyle(fonts));
+        double? subtitleBaseline = StackSet(subtitleText)
+            ?? StackOne(subtitle, SubtitleEm(fonts), TextRole.Subtitle, SubtitleStyle(fonts));
 
         double? composerBaseline = null;
-        if (poet is not null || composer is not null || instrument is not null)
+        if (poet is not null || composer is not null || instrument is not null || poetText is not null || composerText is not null)
         {
             double inkBottom = double.PositiveInfinity, inkTop = double.NegativeInfinity, rowWidth = 0;
             void Add(string? text, double size, TextRole role, FontStyle style)
@@ -363,12 +390,23 @@ internal sealed record HeaderBand(
                 inkTop = Math.Max(inkTop, top);
                 rowWidth += fonts.Advance(text, size, role, style);
             }
+            void AddSet(HeaderLineSet? set)
+            {
+                if (set is null)
+                    return;
+                inkBottom = Math.Min(inkBottom, set.InkBottom);
+                inkTop = Math.Max(inkTop, set.InkTop);
+                rowWidth += set.Width;
+            }
             Add(poet, PoetEm(fonts), TextRole.Poet, PoetStyle(fonts));
+            AddSet(poetText);
             // LILYPOND-REF: ly/titling-init.ly bookTitleMarkup, lines 86-90 — the middle of the
             // poet / instrument / composer \fill-line; set in the composer's face and size.
             Add(instrument, ComposerEm(fonts), TextRole.Composer, ComposerStyle(fonts));
             Add(composer, ComposerEm(fonts), TextRole.Composer, ComposerStyle(fonts));
-            int strings = (poet is null ? 0 : 1) + (instrument is null ? 0 : 1) + (composer is null ? 0 : 1);
+            AddSet(composerText);
+            int strings = (poet is null && poetText is null ? 0 : 1) + (instrument is null ? 0 : 1)
+                + (composer is null && composerText is null ? 0 : 1);
             if (strings > 1)
                 rowWidth += FillLineWordSpace * (strings - 1);
             composerBaseline = Stack(inkBottom, inkTop, rowWidth);
@@ -387,6 +425,7 @@ internal sealed record HeaderBand(
             : Stack(arranger.InkBottom, arranger.InkTop, arranger.Width);
 
         return new HeaderBand(depth, titleBaseline, composerBaseline, width, subtitleBaseline,
-            Arranger: arranger, ArrangerBaseline: arrangerBaseline);
+            Arranger: arranger, ArrangerBaseline: arrangerBaseline,
+            TitleText: titleText, SubtitleText: subtitleText, PoetText: poetText, ComposerText: composerText);
     }
 }

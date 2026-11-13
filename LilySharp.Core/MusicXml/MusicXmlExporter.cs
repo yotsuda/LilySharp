@@ -1118,6 +1118,19 @@ public sealed class MusicXmlExporter
         if (_playedSpec is { HeaderOverrides: { IsDefaultOrEmpty: false } overrides })
             foreach (var meta in overrides)
                 ProcessMetadata(meta);
+        // A header line written as Markdown (```md title …; owner's decision 2026-11-13): the
+        // page draws it, and this document takes the line's string where one is written, else
+        // the Markdown's words with the formatting stripped (Semantics.HeaderLineText).
+        if (_document != null && LilySharp.Core.Semantics.HeaderLineText.AnyFence(root))
+        {
+            string? Line(string place) => LilySharp.Core.Semantics.HeaderLineText.NonPage(root, _playedSpec, place);
+            _document.Title = Line("title");
+            _document.Subtitle = Line("subtitle");
+            _document.Composer = Line("composer");
+            _document.Poet = Line("poet");
+            _document.Arranger = Line("arranger");
+            _document.Rights = Line("copyright");
+        }
     }
 
     /// <summary>True when <paramref name="node"/> stands inside a <c>score</c> block — whose

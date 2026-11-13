@@ -535,6 +535,21 @@ public sealed partial class MeasureCollector
         // and only for this render — the walk above skipped every render-scoped
         // metadata, so no score's header can reach another. A score that restates
         // one of the two keeps the file's other.
+        // A header line the score restates — as a string or as Markdown (```md title) — is
+        // restated WHOLE: the file's string and the file's Markdown for that line are both
+        // taken away first (owner's decision 2026-11-13: a score's fence replaces the file's
+        // "as the plain words do"; LILYSHARP-OWN that the two spellings of one line go
+        // together, so a score's `title "Violin I"` is not drawn under the file's ```md title).
+        if (!HeaderOverrides.IsDefaultOrEmpty || !TextOverrides.IsDefaultOrEmpty)
+        {
+            if (!HeaderOverrides.IsDefaultOrEmpty)
+                foreach (var meta in HeaderOverrides)
+                    ForgetHeaderLine(meta.Keyword.ToLowerInvariant());
+            if (!TextOverrides.IsDefaultOrEmpty)
+                foreach (var text in TextOverrides)
+                    if (text.Value.HeaderPlace is { } place)
+                        ForgetHeaderLine(place);
+        }
         if (!HeaderOverrides.IsDefaultOrEmpty)
             foreach (var meta in HeaderOverrides)
                 CollectMetadata(meta);
@@ -546,6 +561,12 @@ public sealed partial class MeasureCollector
             bool before = false, after = false;
             foreach (var text in TextOverrides)
             {
+                // (A header line's fence is no text of the page: collected with the header.)
+                if (text.Value.HeaderPlace is not null)
+                {
+                    CollectText(text, replace: false);
+                    continue;
+                }
                 bool end = text.IsEnd;
                 CollectText(text, replace: end ? !after : !before);
                 if (end) after = true; else before = true;
@@ -684,6 +705,14 @@ public sealed partial class MeasureCollector
             return;     // said by MarkdownTextValidator
         string body = value.Body;
         int position = text.Fence.Span.Start;
+        // A header line written as Markdown (```md title …; owner's decision 2026-11-13): ONE
+        // text, kept with the header's other lines. A second fence for the place is an error
+        // (MarkdownTextValidator); the later one is what is drawn, as a restated `title` is.
+        if (value.HeaderPlace is { } place)
+        {
+            _v.Meta.Lines = _v.Meta.Lines.WithFence(place, new Model.HeaderFence(body, position));
+            return;
+        }
         if (text.IsEnd)
             Add(ref _v.Meta.TextAfter, ref _v.Meta.TextAfterPosition, ref _v.Meta.TextAfterShape, ref _v.Meta.TextAfterMore);
         else
@@ -715,6 +744,23 @@ public sealed partial class MeasureCollector
             more = new Model.TextBlocks((more?.Items ?? ImmutableArray<Model.TextBlock>.Empty)
                 .Add(new Model.TextBlock(body, position, shape)));
         }
+    }
+
+    /// <summary>Takes away the file's header line <paramref name="place"/> — its string and its
+    /// Markdown — before a score restates it (owner's decision 2026-11-13).</summary>
+    private void ForgetHeaderLine(string place)
+    {
+        switch (place)
+        {
+            case "title": _v.Meta.Title = null; _v.Meta.TitlePosition = 0; break;
+            case "subtitle": _v.Meta.Subtitle = null; _v.Meta.SubtitlePosition = 0; break;
+            case "composer": _v.Meta.Composer = null; _v.Meta.ComposerPosition = 0; break;
+            case "poet": _v.Meta.Poet = null; _v.Meta.PoetPosition = 0; break;
+            case "arranger": _v.Meta.Lines = _v.Meta.Lines with { Arranger = null, ArrangerPosition = 0 }; break;
+            case "copyright": _v.Meta.Lines = _v.Meta.Lines with { Copyright = null, CopyrightPosition = 0 }; break;
+            default: return;
+        }
+        _v.Meta.Lines = _v.Meta.Lines.WithFence(place, null);
     }
 
     private void CollectMetadata(MetadataDeclarationSyntax metadata)

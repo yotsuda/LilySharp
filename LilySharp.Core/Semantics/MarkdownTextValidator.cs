@@ -39,7 +39,8 @@ internal sealed class MarkdownTextValidator : ISemanticValidator
 
     /// <summary>The sentence's list of what a top-level or a score's opening line may say after <c>md</c>.</summary>
     internal const string PageWords =
-        "end (under the last system), box (a ruled frame), center (each line centred), "
+        "end (under the last system), title, subtitle, composer, poet, arranger or copyright "
+        + "(that header line, written as Markdown), box (a ruled frame), center (each line centred), "
         + "xMargin LEFT [RIGHT] (white at the sides: ```md xMargin 20mm), "
         + "yMargin TOP [BOTTOM] (white above and below: ```md yMargin 2)";
 
@@ -56,7 +57,10 @@ internal sealed class MarkdownTextValidator : ISemanticValidator
         bool placed = false;
         foreach (var (word, offset) in value.Words.Skip(1))
         {
-            if (word != FencedText.EndWord)
+            if (!FencedText.IsPlaceWord(word))
+                continue;
+            // (`end` beside a header place is said below, in words that name what it takes.)
+            if (word == FencedText.EndWord && value.HeaderPlace is not null)
                 continue;
             if (placed)
             {
@@ -64,6 +68,14 @@ internal sealed class MarkdownTextValidator : ISemanticValidator
                     $"'{word}' is a second place for one text. Write one.");
             }
             placed = true;
+        }
+
+        // A header line written as Markdown (owner's decision 2026-11-13) is set where and as
+        // that line is: its place takes no shape and no `end`.
+        if (value.HeaderPlace is { } place)
+        {
+            ValidateHeaderPlace(value, place, at);
+            return;
         }
 
         var problems = new List<(int Offset, int Length, string? Message)>();
@@ -110,6 +122,56 @@ internal sealed class MarkdownTextValidator : ISemanticValidator
                 $"A margin above or below a text is at most {Mm(Svg.Layout.ProseBand.MaximumMargin, under)} mm "
                 + $"({Svg.Layout.ProseBand.MaximumMargin.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)} staff spaces): "
                 + "write a smaller one.");
+        }
+    }
+
+    /// <summary>What a header place's sentence says it is set as.</summary>
+    private static string SetAs(string place) => place switch
+    {
+        "title" => "the title is: centred, at its size, bold",
+        "subtitle" => "the subtitle is: centred under the title, at its size, bold",
+        "composer" => "the composer is: at the right margin",
+        "poet" => "the poet is: at the left margin, on the composer's line",
+        "arranger" => "the arranger is: at the right margin, under the composer",
+        _ => "the copyright line is: centred at the first page's foot",
+    };
+
+    /// <summary>
+    /// A header place's opening line (owner's decision 2026-11-13): <c>```md title</c> and
+    /// nothing more. A shape word or <c>end</c> beside it is an error naming what the place
+    /// takes; the words or lengths of one error are one span.
+    /// </summary>
+    private void ValidateHeaderPlace(FencedText value, string place, int at)
+    {
+        for (int i = 1; i < value.Words.Count; i++)
+        {
+            var (word, offset) = value.Words[i];
+            if (word == FencedText.EndWord)
+            {
+                _diagnostics.Error(new TextSpan(at + offset, word.Length), DiagnosticCodes.FencedTextWord,
+                    $"'end' does not go with '{place}': a header line written as Markdown stands where {SetAs(place)}. "
+                    + $"Write ```md {place} alone, or ```md end for a text under the last system.");
+                continue;
+            }
+            if (FencedText.IsPlaceWord(word))
+                continue;       // a second place is said above
+            int end = offset + word.Length;
+            // A margin's lengths go with it: one error.
+            if (word is FencedText.XMarginWord or FencedText.YMarginWord)
+            {
+                while (i + 1 < value.Words.Count && value.Words[i + 1].Text.Length > 0
+                       && (char.IsAsciiDigit(value.Words[i + 1].Text[0]) || value.Words[i + 1].Text[0] is '.' or '-' or '+'))
+                {
+                    i++;
+                    end = value.Words[i].Offset + value.Words[i].Text.Length;
+                }
+            }
+            string message = FencedText.ShapeWords.Contains(word)
+                ? $"'{word}' does not go with '{place}': a header line written as Markdown is set where and as {SetAs(place)}. "
+                  + $"After ```md {place} the opening line takes nothing more."
+                : $"'{word}' means nothing here. After ```md {place} the opening line takes nothing more: "
+                  + $"the {place} is set where and as {SetAs(place)}.";
+            _diagnostics.Error(new TextSpan(at + offset, end - offset), DiagnosticCodes.FencedTextWord, message);
         }
     }
 
@@ -187,6 +249,9 @@ internal sealed class MarkdownTextValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
+        // The header places written as Markdown so far, by scope (where the fence's parent
+        // begins: the file, or a score) and place.
+        var headerFences = new HashSet<(int Scope, SyntaxKind Kind, string Place)>();
         foreach (var node in tree.GetRoot().DescendantNodesOfKinds(Kinds))
         {
             if (node is not MarkdownTextSyntax text)
@@ -241,15 +306,46 @@ internal sealed class MarkdownTextValidator : ISemanticValidator
                     + "and the text after the last system (```md end) so far.");
                 continue;
             }
+
+            // A header line written as Markdown (owner's decision 2026-11-13) is ONE text: a
+            // second fence for the place in the same scope (the file, or one score) is an
+            // error — page texts stack, a header line does not. It takes inline text: what is
+            // not is said, and drawn as plain lines.
+            if (value.HeaderPlace is { } place)
+            {
+                var key = (text.Parent?.Span.Start ?? -1, text.Parent?.Kind ?? SyntaxKind.None, place);
+                if (!headerFences.Add(key))
+                {
+                    var word = value.Words.First(w => w.Text == place);
+                    _diagnostics.Error(new TextSpan(at + word.Offset, word.Text.Length), DiagnosticCodes.FencedTextWord,
+                        $"A second ```md {place}: a header line is one text, and the {place} is already written as Markdown "
+                        + $"{(text.Parent is RenderDeclarationSyntax ? "in this score" : "above")}. "
+                        + "Write it in one fence — a line break inside it (two spaces or a backslash at a line's end) gives it several lines.");
+                }
+                foreach (var note in Rendering.HeaderProse.Read(value.Body).NotInline)
+                {
+                    var span = SpanOf(value, note, at);
+                    _diagnostics.Warning(span, DiagnosticCodes.FencedTextNotDrawn,
+                        $"{note.What} is not inline text: the {place} takes inline text only — words in bold and italic, "
+                        + "and line breaks — so this is drawn as plain lines.");
+                }
+                continue;
+            }
             foreach (var note in Rendering.Prose.Read(value.Body).NotDrawn)
             {
-                int start = value.TokenOffsetOf(note.Offset);
-                int lineEnd = value.Body.IndexOf('\n', note.Offset);
-                int length = Math.Max(1, Math.Min(note.Length, (lineEnd < 0 ? value.Body.Length : lineEnd) - note.Offset));
-                _diagnostics.Warning(new TextSpan(at + start, length), DiagnosticCodes.FencedTextNotDrawn,
+                _diagnostics.Warning(SpanOf(value, note, at), DiagnosticCodes.FencedTextNotDrawn,
                     $"{note.What} is read and not drawn: a fenced text prints its paragraphs, headings and lists, bold and italic so far.");
             }
         }
+    }
+
+    /// <summary>Where a note on the body stands in the file: from its place to its line's end.</summary>
+    private static TextSpan SpanOf(FencedText value, Rendering.ProseNote note, int at)
+    {
+        int start = value.TokenOffsetOf(note.Offset);
+        int lineEnd = value.Body.IndexOf('\n', note.Offset);
+        int length = Math.Max(1, Math.Min(note.Length, (lineEnd < 0 ? value.Body.Length : lineEnd) - note.Offset));
+        return new TextSpan(at + start, length);
     }
 }
 

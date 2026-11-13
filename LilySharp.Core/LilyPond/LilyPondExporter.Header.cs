@@ -293,7 +293,10 @@ public sealed partial class LilyPondExporter
     /// of it — but a human comparing the two side by side will see different letterforms.
     /// </para>
     /// </remarks>
-    private void EmitHeader(CompilationUnitSyntax root)
+    /// <param name="root">The file.</param>
+    /// <param name="page">The page's model of the exported score, or null where there is none:
+    /// the header lines it writes as Markdown are its (the score's own replace the file's).</param>
+    private void EmitHeader(CompilationUnitSyntax root, Svg.Model.MultiStaffScore? page)
     {
         _sb.Append("\\version \"").Append(LilyPondVersion).Append("\"\n\n");
 
@@ -344,6 +347,18 @@ public sealed partial class LilyPondExporter
         bool opened = false;
         foreach (var (field, role) in fields)
         {
+            // A header line written as Markdown (```md title …; owner's decision 2026-11-13)
+            // is what the page draws, so it is what the twin writes: \markup of its lines.
+            if (HeaderFenceFor(root, page, field) is { } fence && HeaderFenceMarkup(fence, field, role) is { } markup)
+            {
+                if (!opened)
+                {
+                    _sb.Append("\\header {\n");
+                    opened = true;
+                }
+                _sb.Append("  ").Append(field).Append(" = ").Append(markup).Append('\n');
+                continue;
+            }
             if (MetaString(meta, field) is not { } value)
                 continue;
             if (!opened)
@@ -375,6 +390,87 @@ public sealed partial class LilyPondExporter
             _sb.Append("}\n\n");
         if (NamesBoth)
             _sb.Append(CapoBothNamer);
+    }
+
+    /// <summary>The header line <paramref name="field"/> written as Markdown: the page's, or —
+    /// with no page — the file's top-level fence; null where it is not.</summary>
+    private static Svg.Model.HeaderFence? HeaderFenceFor(CompilationUnitSyntax root, Svg.Model.MultiStaffScore? page, string field)
+    {
+        if (page is not null)
+            return page.HeaderLines.FenceOf(field);
+        Svg.Model.HeaderFence? fence = null;
+        foreach (var child in root.ChildNodes())
+            if (child is MarkdownTextSyntax text && text.Value.HeaderPlace == field)
+                fence = new Svg.Model.HeaderFence(text.Value.Body, text.Fence.Span.Start);
+        return fence;
+    }
+
+    /// <summary>
+    /// A header line written as Markdown (owner's decision 2026-11-13) as the twin's
+    /// <c>\markup</c>: one line as itself, several as a column aligned as the page aligns them
+    /// (<c>\center-column</c> for the title, the subtitle and the copyright,
+    /// <c>\right-column</c> for the composer and the arranger, the poet's column at the left)
+    /// stepping by the page's step (<see cref="Svg.Layout.HeaderLineSet.LineStep"/>) — and
+    /// in each line the emphasis the Markdown adds, <c>\italic</c> and <c>\bold</c>, inside the
+    /// weight bookTitleMarkup gives the line. Null for a fence that writes nothing.
+    /// </summary>
+    private string? HeaderFenceMarkup(Svg.Model.HeaderFence fence, string field, Rendering.TextRole role)
+    {
+        var prose = Rendering.HeaderProse.Read(fence.Markdown);
+        if (prose.Lines.IsEmpty)
+            return null;
+        var lines = prose.Lines.Select(HeaderLineMarkup).ToList();
+        string body;
+        if (lines.Count == 1)
+            body = "{ " + lines[0] + " }";
+        else
+        {
+            var fonts = _page?.TextMetrics ?? Rendering.ScoreTextMetrics.Bundled;
+            double em = field switch
+            {
+                "title" => Svg.Layout.HeaderBand.TitleEm(fonts),
+                "subtitle" => Svg.Layout.HeaderBand.SubtitleEm(fonts),
+                "poet" => Svg.Layout.HeaderBand.PoetEm(fonts),
+                "copyright" => Svg.Layout.HeaderBand.CopyrightEm(fonts),
+                _ => Svg.Layout.HeaderBand.ComposerEm(fonts),
+            };
+            string column = field switch
+            {
+                "composer" or "arranger" => "\\right-column",
+                "poet" => "\\left-column",
+                _ => "\\center-column",
+            };
+            body = "{ \\override #'(baseline-skip . "
+                + Svg.Layout.HeaderLineSet.LineStep(em).ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)
+                + ") " + column + " { " + string.Join(" ", lines) + " } }";
+        }
+        return MarkupForRole(role, body, "") ?? "\\markup " + body;
+    }
+
+    /// <summary>One line of a header fence: a string, or its runs in their emphasis.</summary>
+    private static string HeaderLineMarkup(System.Collections.Immutable.ImmutableArray<Rendering.ProseRun> runs)
+    {
+        var pieces = new List<(string Text, Rendering.FontStyle Style)>();
+        foreach (var run in runs)
+        {
+            if (pieces.Count > 0 && pieces[^1].Style == run.Style)
+                pieces[^1] = (pieces[^1].Text + run.Text, run.Style);
+            else
+                pieces.Add((run.Text, run.Style));
+        }
+        if (pieces.Count == 1 && pieces[0].Style == Rendering.FontStyle.Regular)
+            return "\"" + Escape(pieces[0].Text) + "\"";
+        var sb = new System.Text.StringBuilder("\\concat {");
+        foreach (var (text, style) in pieces)
+        {
+            sb.Append(' ');
+            if ((style & Rendering.FontStyle.Bold) != 0)
+                sb.Append("\\bold ");
+            if ((style & Rendering.FontStyle.Italic) != 0)
+                sb.Append("\\italic ");
+            sb.Append('"').Append(Escape(text)).Append('"');
+        }
+        return sb.Append(" }").ToString();
     }
 
     private static string? MetaString(List<MetadataDeclarationSyntax> meta, string keyword)

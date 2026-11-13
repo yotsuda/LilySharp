@@ -100,9 +100,9 @@
                         "5": {
                             "patterns": [
                                 {
-                                    "comment": "The opening line's words (LilySharp.Core FencedText: EndWord and ShapeWords), each a whole word. They are words only on this line — `part box { … }` compiles. EditorColouringTests holds the list to FencedText in both directions.",
+                                    "comment": "The opening line's words (LilySharp.Core FencedText: EndWord, HeaderPlaceWords — a header line written as Markdown, owner's decision 2026-11-13 — and ShapeWords), each a whole word. They are words only on this line — `part box { … }` compiles. EditorColouringTests holds the list to FencedText in both directions.",
                                     "name": "keyword.other.fenced-text.lilysharp",
-                                    "match": "(?<!\\S)(end|box|center|xMargin|yMargin)(?!\\S)"
+                                    "match": "(?<!\\S)(end|title|subtitle|composer|poet|arranger|copyright|box|center|xMargin|yMargin)(?!\\S)"
                                 },
                                 { "include": "#paper-length" }
                             ]

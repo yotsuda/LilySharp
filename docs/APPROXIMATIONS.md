@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 425 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **553** | |
+| `OWN` | 428 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **556** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -249,7 +249,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（425 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（428 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -382,6 +382,8 @@
 - **`Parser.ParseShapeChord`** LILYSHARP-OWN: LilyPond writes such a chord out note by note.
 ### `LilySharp.Core/Rendering/HarfBuzzOutline.cs`
 - **`HarfBuzzOutline`** LILYSHARP-OWN: LilyPond reads its text ink through FreeType as well (Pango over the
+### `LilySharp.Core/Rendering/HeaderProse.cs`
+- **`HeaderProse`** nothing. LILYSHARP-OWN.
 ### `LilySharp.Core/Rendering/InkRecorder.cs`
 - **`InkRecorder`** LILYSHARP-OWN: an editor's aid with no LilyPond counterpart — LilyPond has no marks to place.
 ### `LilySharp.Core/Rendering/Pdf/EmmentalerFontResolver.cs`
@@ -520,6 +522,7 @@
 - **`MeasureCollector.ProcessPercentRepeat`** notes stand (CondensedPercents; grammar evaluation 3, 2026-11-13). LILYSHARP-OWN.
 - **`MeasureCollector.ProcessGraceRegion`** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Definitions.cs`
+- **`MeasureCollector.CollectDefinitions`** "as the plain words do"; LILYSHARP-OWN that the two spellings of one line go
 - **`MeasureCollector.CollectText`** LILYSHARP-OWN: a plain fence after a SHAPED one is a plain block under it (it was a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Drums.cs`
 - **`MeasureCollector.PlanDrumChart`** LILYSHARP-OWN (owner's design 2026-10-11): LilyPond has no drum chart — its drum music
@@ -635,6 +638,8 @@
 ### `LilySharp.Core/Svg/Layout/HeaderBand.cs`
 - **`HeaderBand.ChordListGap`** LILYSHARP-OWN: LilyPond has no chord list; the gap is Lily#'s, a little more
 - **`HeaderBand.RowPadding`** LILYSHARP-OWN (user decision 2026-09-26): LilyPond stacks the rows with ZERO padding
+### `LilySharp.Core/Svg/Layout/HeaderLineSet.cs`
+- **`HeaderLineSet.LineStep`** LILYSHARP-OWN, as a heading's lines step (ProseBand, section 5.2). The twin
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
 - **`ItemSkylineFactory.AddApproachGesture`** LILYSHARP-OWN: LilyPond has no scoop or plop; the default extra-spacing-width is what
 - **`ItemSkylineFactory.LeavingGestureClearance`** shortest. LILYSHARP-OWN ('s remarks carry the tag's

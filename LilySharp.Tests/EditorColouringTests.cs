@@ -1048,7 +1048,8 @@ public class EditorColouringTests
             Regex.Match(begin, @"\(\?:\(([a-z|]+)\)").Groups[1].Value.Split('|'));
         var words = opening.GetProperty("beginCaptures").GetProperty("5").GetProperty("patterns");
         Assert.Equal(
-            FencedText.ShapeWords.Append(FencedText.EndWord).OrderBy(w => w, StringComparer.Ordinal),
+            // …the header places too (owner's decision 2026-11-13: ```md title).
+            FencedText.ShapeWords.Append(FencedText.EndWord).Concat(FencedText.HeaderPlaceWords).OrderBy(w => w, StringComparer.Ordinal),
             Regex.Match(words[0].GetProperty("match").GetString()!, @"\)\(([A-Za-z|]+)\)\(").Groups[1].Value
                 .Split('|').OrderBy(w => w, StringComparer.Ordinal));
         //    …and a length is paper { }'s own, unit and all: one list of units, one rule.

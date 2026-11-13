@@ -259,8 +259,10 @@ public class FencedTextCompletionTests
     public void AfterMdAndASpace_EndAndTheShapeWordsAreOffered(string marked, int from, int to)
     {
         var items = Ask(marked, marked.Contains(" ‸") ? " " : null)!;
-        // The place, then the shape (owner-approved 2026-11-13), in that order.
-        Assert.Equal(["end", "box", "center", "xMargin", "yMargin"], items.OrderBy(i => i.SortText, StringComparer.Ordinal).Select(i => i.Label));
+        // The places — the six header lines (owner's decision 2026-11-13: ```md title), then
+        // `end` — then the shape (owner-approved 2026-11-13), in that order.
+        Assert.Equal(["title", "subtitle", "composer", "poet", "arranger", "copyright", "end", "box", "center", "xMargin", "yMargin"],
+            items.OrderBy(i => i.SortText, StringComparer.Ordinal).Select(i => i.Label));
         var end = items.Single(i => i.Label == "end");
         Assert.Equal("end", end.TextEdit!.NewText);
         Assert.All(items, i => Assert.Equal((from, to), (i.TextEdit!.Range.Start.Character, i.TextEdit.Range.End.Character)));

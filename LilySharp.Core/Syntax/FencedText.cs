@@ -157,6 +157,39 @@ public sealed record FencedText(
     /// the sentences that list them say them (owner-approved 2026-11-13).</summary>
     public static readonly IReadOnlyList<string> ShapeWords = [BoxWord, CenterWord, XMarginWord, YMarginWord];
 
+    /// <summary>
+    /// The header lines a fence may be (owner's decision 2026-11-13): <c>```md title</c> is the
+    /// title written as Markdown, set where and as the title is. In the order the header lists
+    /// them, which is the order completion offers them in.
+    /// </summary>
+    public static readonly IReadOnlyList<string> HeaderPlaceWords =
+        ["title", "subtitle", "composer", "poet", "arranger", "copyright"];
+
+    /// <summary>The header place the opening line names (<see cref="HeaderPlaceWords"/>), the
+    /// first one written, or null: a text for the page, under the title or (<c>end</c>) under
+    /// the last system.</summary>
+    public string? HeaderPlace
+    {
+        get
+        {
+            if (!IsMarkdown)
+                return null;
+            for (int i = 1; i < Words.Count; i++)
+            {
+                foreach (string place in HeaderPlaceWords)
+                {
+                    if (Words[i].Text == place)
+                        return place;
+                }
+            }
+            return null;
+        }
+    }
+
+    /// <summary>Whether <paramref name="word"/> says where a top-level or a score's text goes:
+    /// <c>end</c>, or a header place.</summary>
+    public static bool IsPlaceWord(string word) => word == EndWord || HeaderPlaceWords.Contains(word);
+
     /// <summary>The units a length after <c>xMargin</c> or <c>yMargin</c> is written in —
     /// <c>paper { }</c>'s own; a bare number is staff spaces.</summary>
     public static readonly IReadOnlyList<string> LengthUnits = ["mm", "cm", "in"];
@@ -189,7 +222,8 @@ public sealed record FencedText(
             switch (word)
             {
                 case EndWord:
-                    break;      // the text's place, not its shape
+                case "title" or "subtitle" or "composer" or "poet" or "arranger" or "copyright":
+                    break;      // the text's place, not its shape (HeaderPlaceWords)
                 case BoxWord:
                     if (box)
                         problems?.Add((offset, word.Length, "'box' is written twice. Write it once."));

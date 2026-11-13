@@ -225,8 +225,25 @@ MarkdownText   = FenceOpen , { FenceWord } , NewLine , { TextLine } , FenceClose
 FenceOpen      = '```' , { '`' } , ( 'md' | 'markdown' ) ;
 FenceWord      = 'end' | 'box' | 'center'
                | 'xMargin' , FenceLength , [ FenceLength ]      (* left, right — one is both *)
-               | 'yMargin' , FenceLength , [ FenceLength ] ;    (* above, below — one is both *)
+               | 'yMargin' , FenceLength , [ FenceLength ]      (* above, below — one is both *)
+               | HeaderPlace ;
                  (* in any order, each at most once — at the top level and in a score *)
+HeaderPlace    = 'title' | 'subtitle' | 'composer' | 'poet' | 'arranger' | 'copyright' ;
+                 (* A HEADER LINE WRITTEN AS MARKDOWN (owner decisions 2026-11-13,
+                    docs/markdown-text-design.md section 9). A fence whose opening line names one
+                    of these is that header line: drawn where and as the line is, at its size and
+                    weight, with the emphasis the Markdown adds (italic, bold) and its lines ended
+                    by hand, each aligned as the place is and a baseline-skip at that size apart.
+                    The header grows (for the copyright, the first page footer) and the music
+                    moves. Alone on the opening line: no 'end', 'box', 'center' or margins, and
+                    one place word (LYS4057). One fence a header line in the file and one in each
+                    score (LYS4057 for a second). It takes inline text: a heading, a list, a quote,
+                    code or an image is warned (LYS4058) and drawn as plain lines. With the
+                    plain word written too the page draws the fence and the string serves the
+                    rest (MusicXML, the MIDI copyright), and alone it gives them its words with
+                    the formatting stripped. In a score it restates the line for that score,
+                    taking away both spellings of the file. The twin writes it as \markup in
+                    \header, several lines a \center-column, \right-column or \left-column. *)
 FenceLength    = Number , [ 'mm' | 'cm' | 'in' ] ;
                  (* the unit glued to the number, as a paper block writes a length, and a bare
                     number is staff spaces. Never negative. *)

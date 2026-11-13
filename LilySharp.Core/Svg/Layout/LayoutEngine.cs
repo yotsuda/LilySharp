@@ -130,8 +130,12 @@ internal sealed partial class LayoutEngine
         // is not — it is the first page's footer, which goes to the pages (CreatePages) and the
         // page breaker (ChooseSystemCount).
         var footer = HeaderLineSet.Copyright(score);
+        // A header line written as Markdown (```md title …; owner's decision 2026-11-13) is set
+        // in its row in place of the plain string, its lines that row's ink.
         var header = HeaderBand.Build(score.Title, score.Composer, score.TextMetrics,
-            score.Subtitle, score.Poet, score.Instrument, HeaderLineSet.Arranger(score));
+            score.Subtitle, score.Poet, score.Instrument, HeaderLineSet.Arranger(score),
+            HeaderLineSet.TitleFence(score), HeaderLineSet.SubtitleFence(score),
+            HeaderLineSet.PoetFence(score), HeaderLineSet.ComposerFence(score));
         // …and the chord list under it (layout { chordList … }): part of the same column, so
         // the page chain, the crop width and the draw see one band.
         header = HeaderBand.WithChordList(header, ChordListBand.EntriesOf(score), score.TextMetrics,

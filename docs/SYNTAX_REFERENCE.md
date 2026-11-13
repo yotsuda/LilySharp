@@ -1035,6 +1035,39 @@ first page keep clear of it — and a later page has none. It is the MusicXML's 
 the copyright notice of a .mid. LilyPond's other header fields — dedication, instrument, opus,
 piece, subsubtitle, meter, tagline — have no header line in Lily# (docs/ROADMAP.md).
 
+Each of the six may instead be written as **Markdown**, for a second line or a word in italic:
+a fence whose opening line says the line's word after `md`.
+
+````
+title "Morning Song"
+
+```md title
+Morning Song\
+*for two flutes*
+```
+
+```md composer
+A. Composer\
+1902–1971
+```
+
+```md copyright
+Copyright 2026 **Somebody**
+```
+````
+
+The fence is drawn where and as its line is — the title centred, at the title's size and bold;
+the composer at the right margin; and so on — with what the Markdown adds: `*italic*`,
+`**bold**` (a bold line stays bold), and lines ended by hand (`\` or two spaces at a line's end,
+or a blank line). Each line is aligned as the place is, the lines a baseline-skip at that size
+apart, and the header grows (or, for the copyright, the footer) and the music moves to make
+room. With both written, as the title above, the page draws the fence and the plain string is
+what MusicXML takes; a fence alone gives MusicXML and the .mid its words without the
+formatting, the lines joined by a space. Inside `score { }` such a fence is that score's own
+line and replaces the file's — its string and its fence. The opening line takes nothing more
+(no `box`, `center`, margins or `end`), one fence a line (LYS4057); a heading, list, quote, code
+block or image in it is warned (LYS4058) and drawn as plain lines.
+
 ### A text for the page
 
 A paragraph for the page — a performance note, a dedication, practice instructions — is written

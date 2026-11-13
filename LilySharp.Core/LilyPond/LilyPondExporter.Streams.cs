@@ -58,6 +58,9 @@ public sealed partial class LilyPondExporter
                     // …and the score's own fenced texts (2026-11-13: without them the twin
                     // of `score { ```md … }` wrote the FILE's text — the same two-plans fault).
                     TextOverrides = spec.TextOverrides,
+                    // …and its own header lines, which take the file's Markdown for a line away
+                    // (owner's decision 2026-11-13: a score restates a header line whole).
+                    HeaderOverrides = spec.HeaderOverrides,
                 }).CollectMultiStaff(tree, spec);
         }
         catch (Exception e)

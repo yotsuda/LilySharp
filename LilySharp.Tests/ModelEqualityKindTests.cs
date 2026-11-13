@@ -90,6 +90,9 @@ public class ModelEqualityKindTests
         // 2026-11-13): a description — it is a key of the incremental compiler's and a field
         // MetadataState compares, so two that say the same are the same.
         "HeaderLines",
+        // the header lines written as Markdown (owner's decision 2026-11-13), a field of
+        // HeaderLines: a description, compared with it.
+        "HeaderFences",
     ];
 
     [Fact]

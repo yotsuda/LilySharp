@@ -69,7 +69,7 @@ internal sealed record ProseNote(int Offset, int Length, string What);
 /// </remarks>
 internal sealed record Prose(ImmutableArray<ProseBlock> Blocks, ImmutableArray<ProseNote> NotDrawn)
 {
-    private static readonly MarkdownPipeline Pipeline =
+    internal static readonly MarkdownPipeline Pipeline =
         new MarkdownPipelineBuilder().UsePreciseSourceLocation().UsePipeTables().Build();
 
     /// <summary>A bullet list's marker as a block carries it. The glyph drawn is the page's
@@ -187,8 +187,13 @@ internal sealed record Prose(ImmutableArray<ProseBlock> Blocks, ImmutableArray<P
         _ => "This",
     };
 
-    private static void AddRuns(ContainerInline container, FontStyle style,
-        ImmutableArray<ProseRun>.Builder runs, ImmutableArray<ProseNote>.Builder notes)
+    /// <summary>The runs of <paramref name="container"/>, in <paramref name="style"/> and the
+    /// emphasis written in it; what is not drawn is noted.</summary>
+    /// <param name="imageWords">Whether an image's words (its alt text) are drawn where it
+    /// stands, as a header line takes it (owner's decision 2026-11-13: "drawn as plain lines"),
+    /// rather than nothing.</param>
+    internal static void AddRuns(ContainerInline container, FontStyle style,
+        ImmutableArray<ProseRun>.Builder runs, ImmutableArray<ProseNote>.Builder notes, bool imageWords = false)
     {
         foreach (var inline in container)
         {
@@ -198,7 +203,7 @@ internal sealed record Prose(ImmutableArray<ProseBlock> Blocks, ImmutableArray<P
                     Add(literal.Content.ToString(), literal.Span.Start);
                     break;
                 case EmphasisInline emphasis:
-                    AddRuns(emphasis, style | (emphasis.DelimiterCount >= 2 ? FontStyle.Bold : FontStyle.Italic), runs, notes);
+                    AddRuns(emphasis, style | (emphasis.DelimiterCount >= 2 ? FontStyle.Bold : FontStyle.Italic), runs, notes, imageWords);
                     break;
                 case LineBreakInline lineBreak:
                     if (lineBreak.IsHard)
@@ -213,9 +218,11 @@ internal sealed record Prose(ImmutableArray<ProseBlock> Blocks, ImmutableArray<P
                     break;
                 case LinkInline { IsImage: true } image:
                     notes.Add(new ProseNote(image.Span.Start, System.Math.Max(1, image.Span.Length), "An image"));
+                    if (imageWords)
+                        AddRuns(image, style, runs, notes, imageWords);
                     break;
                 case LinkInline link:
-                    AddRuns(link, style, runs, notes);      // the words; the address is not printed
+                    AddRuns(link, style, runs, notes, imageWords);      // the words; the address is not printed
                     break;
                 case AutolinkInline auto:
                     Add(auto.Url, auto.Span.Start + 1);
@@ -227,7 +234,7 @@ internal sealed record Prose(ImmutableArray<ProseBlock> Blocks, ImmutableArray<P
                     notes.Add(new ProseNote(html.Span.Start, System.Math.Max(1, html.Span.Length), "HTML"));
                     break;
                 case ContainerInline other:
-                    AddRuns(other, style, runs, notes);
+                    AddRuns(other, style, runs, notes, imageWords);
                     break;
             }
         }

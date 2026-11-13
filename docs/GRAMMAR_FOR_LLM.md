@@ -54,6 +54,9 @@ copyright "© 2026 Name" // optional: centred at the foot of the FIRST page only
                         // ```md end xMargin 30mm box. A length is 20mm, 2cm, 0.5in or bare staff spaces.
                         // Two fences for one place stack, each with its own shape. The whole of it,
                         // with examples: the section "A text for the page" below.
+                        // A HEADER LINE AS MARKDOWN: ```md title (or subtitle, composer, poet, arranger,
+                        // copyright) … ``` — that line with *italic*, **bold** and line breaks (`\` at a
+                        // line's end), drawn where and as the line is; no other word on that opening line.
 tempo 120               // optional; also: tempo "a tempo" (words alone: printed, the speed unchanged — for "a tempo", "Tempo I", "Meno mosso"), tempo "Allegro" 120, tempo "Andante" 4 = 96 (text + beat unit), tempo "Lively" 4. = 116 (dotted unit), tempo Comodo 4 = 84 (a bare word is the marking); 'tempo 120 swing' adds a shuffle-feel equation, and plays it from there on ('swing 16' = 16th swing; only 8 or 16; 'tempo swing' = the equation alone); a last word 'bare' PLAYS the count and does NOT PRINT it: tempo "Tempo I" 4 = 92 bare sounds at 92 and prints only the words — for a "Tempo I", "Più mosso", "a tempo" that must change the speed without a metronome mark (anywhere a tempo goes; it needs both words and a count, LYS0044 otherwise)
 time 4/4                // optional (default 4/4); 4/4 engraves as the C
                         // An ADDITIVE numerator groups the beats: 'time 3+2+2/8' prints 3+2+2 over 8
@@ -1802,6 +1805,7 @@ and NOT printed yet (warned, LYS4058).
 | Word | Meaning |
 |---|---|
 | `end` | the place: under the last system instead of under the title |
+| `title`, `subtitle`, `composer`, `poet`, `arranger`, `copyright` | the place: that header line, written as Markdown — alone on the line (below: "A header line written as Markdown") |
 | `box` | a thin ruled frame around the text, the text in its middle; as wide as the text's width (next rows) |
 | `center` | each line centred in the text's width — over the staff, with no `xMargin` (headings too; a list keeps its shape at the left) |
 | `xMargin 20mm` / `xMargin 20mm 10mm` | white at both sides / at the left and the right, measured from the page's margins, inside the line width: the text is set narrower. `xMargin 0` runs from margin to margin |
@@ -1828,6 +1832,47 @@ span's and a link's words are printed as plain words (the link's address is not)
 A copyright line is not a text: write `copyright "…"` at the top level (or in a score), and it is
 printed centred at the foot of the first page, as LilyPond prints `\header copyright`.
 
+### A header line written as Markdown (```` ```md title ```` …)
+
+The six header lines may be written as Markdown, for a second line or an italic word: a place
+word after `md` — `title`, `subtitle`, `composer`, `poet`, `arranger`, `copyright`.
+
+````
+title "Morning Song"
+
+```md title
+Morning Song\
+*for two flutes*
+```
+
+```md composer
+A. Composer\
+1902–1971
+```
+
+```md copyright
+Copyright 2026 **Somebody**
+```
+````
+
+- **Where and how big**: the line's OWN place, size and weight — the title centred, large and
+  bold; the composer at the right margin; the poet at the left on the composer's line; the
+  arranger at the right under it; the copyright centred at the first page's foot. Markdown adds
+  emphasis inside it: `*…*` italic, `**…**` bold (a bold line such as the title stays bold).
+- **Several lines**: end a line with `\` (or two spaces), or leave a blank line. Each line is
+  centred / right-aligned / left-aligned as the place is; they step by a baseline-skip at that
+  size. The header grows and the music moves down; a two-line copyright takes that much more
+  room from page 1.
+- **With `title "Morning Song"` written too**: the PAGE draws the fence; the plain string is
+  what MusicXML (and the MIDI copyright) get. With the fence alone they get its words with
+  the formatting stripped, the lines joined by one space.
+- **Inside `score NAME { … }`**: that score's own line, replacing the file's — the file's
+  string and the file's fence for that line both (as a score's `title "…"` replaces both too).
+- **Errors** (LYS4057): any other word on that opening line (`box`, `center`, `xMargin`,
+  `yMargin`, `end`), two place words, two fences for one header line in one place (the file,
+  or one score). **Warned** (LYS4058): a heading, list, block quote, code block or image in such
+  a fence — it takes inline text only, and those are drawn as plain lines.
+
 **In a Markdown file**, a Lily# example that holds a page text is fenced with FOUR backticks,
 because its own three would end a three-backtick block:
 
@@ -1847,7 +1892,8 @@ score { staff m }
 (Inside a `.lys` file the same rule holds one level down: a fence opened with four backticks
 closes on four, so its text may write three.)
 
-Not in MusicXML or MIDI. The LilyPond export writes the text as a `\markuplist`.
+Not in MusicXML or MIDI. The LilyPond export writes the text as a `\markuplist`, and a header
+line written as Markdown as `\markup` in `\header` (`title = \markup { … }`).
 
 ## Text fonts (`fonts { … }`)
 
