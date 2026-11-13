@@ -560,6 +560,7 @@ public sealed partial class LilyPondExporter
     {
         var result = new List<SyntaxNode>();
         var pending = new List<SyntaxNode>();
+        var barBreaks = new List<SyntaxNode>();
         bool firstBar = true;
         int barIndex = 0;
         void Flush()
@@ -577,7 +578,15 @@ public sealed partial class LilyPondExporter
                 : ChordBarText(pending, key, barLength)));
             pending.Clear();
             firstBar = false;
+            // The bar's own breaks stand after its chords, before its bar line.
+            result.AddRange(barBreaks);
+            barBreaks.Clear();
         }
+        // A track's `break` / `noBreak` / `pageBreak` / `noPageBreak` (owner's decision
+        // 2026-11-13) go out as the nodes they are — EmitItem writes the four words — where
+        // the page reads them (ChordNameCollector.WrittenBreaks): after the bar's chords
+        // (`F break |`) at that bar's end, with no chord before it in its bar at the bar line
+        // it follows. One with chords on both sides (LYS1069) breaks nothing and is left out.
         foreach (var item in items)
         {
             if (item is BarlineSyntax)
@@ -588,6 +597,14 @@ public sealed partial class LilyPondExporter
             else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
             {
                 pending.Add(item);
+                barBreaks.Clear();
+            }
+            else if (item is BreakSyntax)
+            {
+                if (pending.Count > 0)
+                    barBreaks.Add(item);
+                else
+                    result.Add(item);
             }
         }
         if (pending.Count > 0)

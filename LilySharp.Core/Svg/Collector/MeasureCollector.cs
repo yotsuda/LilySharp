@@ -1129,6 +1129,23 @@ public sealed partial class MeasureCollector
                 for (int i = 0; i < measures.Count; i++)
                     measures[i] = synced[i];
             }
+            // …and the breaks of every part and chords track (TakeBreaksFromEveryPart): a
+            // part sheet breaks where the other parts and the chords tracks say, too. (With
+            // neither, the one voice has nobody to hear from and is not copied.)
+            if (harvestVoices.Count > 0 || ChordNameCollector.WritesABreak(tree.GetRoot()))
+            {
+                var breakVoices = new Dictionary<string, Voice>
+                {
+                    [""] = new Voice(_voiceName ?? "default", measures.ToImmutableArray()),
+                };
+                foreach (var v in harvestVoices)
+                    breakVoices["omit:" + v.Name] = v;
+                TakeBreaksFromEveryPart(tree.GetRoot(), breakVoices);
+                var broken = breakVoices[""].Measures;
+                for (int i = 0; i < measures.Count; i++)
+                    if (!ReferenceEquals(measures[i], broken[i]))
+                        measures[i] = broken[i];
+            }
         }
 
         // After the omitted parts' barline sync above: they are not drawn, and the twin does not
@@ -2155,6 +2172,11 @@ public sealed partial class MeasureCollector
                     .ToImmutableArray());
         SynchronizeBarlines(flatVoices);
         DropFinalBarWhereTheMusicStopsOffTheBar(flatVoices);
+        // The breaks are the score's too (owner's decision 2026-11-13): every part's, shown
+        // or not, and every chords track's, on every voice. Not on the omitted parts' own
+        // harvest pass — the outer collect asks each place itself, so it can name it.
+        if (harvestStructureMarks)
+            TakeBreaksFromEveryPart(tree.GetRoot(), flatVoices);
         // The repeat-bar pairing is a SCORE-level fact, so it is read here — after the sync
         // that gives every voice the score's barlines, and including the omitted parts fed
         // in above — from ONE voice, not once per staff.
@@ -2726,7 +2748,7 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>True when <paramref name="partName"/> writes score-level structure (a navigation
-    /// mark, an inline volta or a repeat barline) in its music — the cheap gate that skips the
+    /// mark, an inline volta, a repeat barline or a break directive) in its music — the cheap gate that skips the
     /// isolated harvest pass when there is nothing to harvest. A part's music has TWO spellings
     /// (GRAMMAR §7: by-part cells inside <c>part X { section A { … } }</c>, by-section
     /// cells inside <c>section A { X { … } }</c>), and the gate must read BOTH: it used to scan
@@ -2756,12 +2778,14 @@ public sealed partial class MeasureCollector
         {
             foreach (var n in scope.GreenSites(static g => (
                     g.Kind is SyntaxKind.NavigationMark or SyntaxKind.InlineVolta
-                        or SyntaxKind.Barline or SyntaxKind.VariableReference,
+                        or SyntaxKind.Barline or SyntaxKind.VariableReference or SyntaxKind.Break,
                     Descend: true)))
             {
                 switch (n)
                 {
-                    case NavigationMarkSyntax or InlineVoltaSyntax:
+                    // …and a break directive (owner's decision 2026-11-13): the score breaks
+                    // where a part it does not show says (TakeBreaksFromEveryPart).
+                    case NavigationMarkSyntax or InlineVoltaSyntax or BreakSyntax:
                         return true;
                     case BarlineSyntax bl when bl.BarText.Contains(':'):
                         return true;
@@ -5056,6 +5080,8 @@ public sealed partial class MeasureCollector
         _midBarBreakRequests.Clear();
         _midBarBreakRefusals.Clear();
         _midBarBreakConflicts.Clear();
+        _breakConflicts.Clear();
+        _breaksOffTheStaves.Clear();
         _harvestedVoices.Clear();
         _sectionResetOverrides.Clear();
         _sectionActiveGrobProps.Clear();

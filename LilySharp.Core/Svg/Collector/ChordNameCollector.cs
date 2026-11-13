@@ -503,6 +503,118 @@ internal sealed class ChordNameCollector
     }
 
     /// <summary>
+    /// The <c>break</c> / <c>noBreak</c> / <c>pageBreak</c> / <c>noPageBreak</c> written in the
+    /// file's chords tracks — EVERY track, placed in the score or not — each at the model
+    /// measure it stands after (owner's decision 2026-11-13: a break is the score's, taken
+    /// from every part and chords track; <c>MeasureCollector.TakeBreaksFromEveryPart</c> lays
+    /// them on the measures). Null when no track writes one, which is almost every file.
+    /// </summary>
+    /// <remarks>
+    /// WHERE A WORD STANDS is what a part's music reads (<c>MeasureBuilder.SetBreak</c>'s two
+    /// arms): after the bar's chords (<c>F break |</c>) it is that bar's; before any chord of
+    /// its bar (<c>| break G</c>, <c>| break |</c>, after the last bar line) it is the bar
+    /// before's — the section before's last bar at a section's head — and the very first
+    /// bar's own when nothing is before it. With chords on both sides it is LYS1069 and is
+    /// passed by. A split bar's break stands after its second half. The bars are counted as
+    /// <see cref="CollectPart"/> counts them, and a section this score's form does not play
+    /// places nothing. Reads <see cref="SectionStarts"/> and <see cref="MidBarBreaks"/>.
+    /// </remarks>
+    internal List<WrittenBreak>? WrittenBreaks(SyntaxNode root, IReadOnlyDictionary<string, int> sectionStartMeasure)
+    {
+        List<WrittenBreak>? found = null;
+        // Green pre-filter: only a block that holds one of the words is made red.
+        foreach (var site in root.GreenSites(static g => (
+            g.Kind == SyntaxKind.ChordPartBlock && HoldsABreak(g), Descend: true)))
+        {
+            if (site is not ChordPartBlockSyntax block)
+                continue;
+            string track = block.PartName ?? SyntaxFacts.UnnamedChordsName;
+            if (block.HasSections)
+            {
+                foreach (var section in block.Sections)
+                    if (Plays(section.SectionName))
+                        foreach (int start in StartsFor(section.SectionName, sectionStartMeasure))
+                            Run(SectionItems(section).ToList(), start, track);
+            }
+            else
+            {
+                SectionDeclarationSyntax? inside = null;
+                for (var n = block.Parent; n != null && inside == null; n = n.Parent)
+                    inside = n as SectionDeclarationSyntax;
+                if (inside == null || Plays(inside.SectionName))
+                    foreach (int start in BlockStarts(block, sectionStartMeasure))
+                        Run(block.Items.ToList(), start, track);
+            }
+        }
+        return found;
+
+        bool Plays(string section) => sectionStartMeasure.ContainsKey(section)
+            || (SectionStarts != null && SectionStarts.TryGetValue(section, out var all) && all.Count > 0);
+
+        void Run(List<SyntaxNode> items, int startMeasure, string track)
+        {
+            int localMeasure = 0;
+            bool chordsBefore = false;
+            for (int i = 0; i < items.Count; i++)
+            {
+                switch (items[i])
+                {
+                    case BarlineSyntax bar:
+                        // CollectPart.ProcessRun's count: a `|:` with nothing before it opens
+                        // the next bar and closes none.
+                        if (chordsBefore || MeasureCollector.ParseBarlineType(bar.BarText) != BarlineType.RepeatStart)
+                            localMeasure++;
+                        chordsBefore = false;
+                        break;
+                    case ChordEntrySyntax or RestSyntax or ChordExtendSyntax:
+                        chordsBefore = true;
+                        break;
+                    case BreakSyntax brk:
+                        bool chordsAfter = false;
+                        for (int k = i + 1; k < items.Count && items[k] is not BarlineSyntax && !chordsAfter; k++)
+                            chordsAfter = items[k] is ChordEntrySyntax or RestSyntax or ChordExtendSyntax;
+                        if (chordsBefore && chordsAfter)
+                            break;      // inside the bar: LYS1069, read by nobody
+                        int head = MeasureOfBar(startMeasure, localMeasure, out var split);
+                        int measure = chordsBefore || head == 0 ? head + (split != null ? 1 : 0) : head - 1;
+                        (found ??= new List<WrittenBreak>()).Add(
+                            new WrittenBreak(measure, brk.Directive, brk.SourceStart, track));
+                        break;
+                }
+            }
+        }
+    }
+
+    /// <summary>Whether any chords track of the file writes a break directive — the green
+    /// question <see cref="WrittenBreaks"/> opens with, for a caller deciding whether to ask.</summary>
+    internal static bool WritesABreak(SyntaxNode root)
+    {
+        foreach (var _ in root.GreenSites(static g => (
+            g.Kind == SyntaxKind.ChordPartBlock && HoldsABreak(g), Descend: true)))
+            return true;
+        return false;
+    }
+
+    /// <summary>Whether a chords block's green holds a break directive, in its own items or in
+    /// an inner section's (<see cref="WrittenBreaks"/>'s pre-filter).</summary>
+    private static bool HoldsABreak(Syntax.InternalSyntax.GreenNode block)
+    {
+        for (int i = 0; i < block.SlotCount; i++)
+        {
+            var child = block.GetSlot(i);
+            if (child == null)
+                continue;
+            if (child.Kind == SyntaxKind.Break)
+                return true;
+            if (child.Kind == SyntaxKind.SectionDeclaration)
+                for (int k = 0; k < child.SlotCount; k++)
+                    if (child.GetSlot(k)?.Kind == SyntaxKind.Break)
+                        return true;
+        }
+        return false;
+    }
+
+    /// <summary>
     /// Walks ONE BAR's written slots — entries, rests, '.' extensions — on the
     /// meter's beat grid: each entry/rest opens a group that its trailing '.'
     /// slots extend, and <paramref name="emit"/> receives (node, start timing,

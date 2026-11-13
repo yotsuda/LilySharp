@@ -827,10 +827,25 @@ the order is — see [Volta Repeats](#volta-repeats).
 
 | Syntax | Effect | Where |
 |--------|--------|-------|
-| `break` | Force a system break here | music, form |
-| `noBreak` | Forbid a system break here | music, form |
-| `pageBreak` | Force a page break here (and the system break with it) | music, form |
-| `noPageBreak` | Forbid a page break here | music, form |
+| `break` | Force a system break here | music, form, a `chords` track (at a bar line) |
+| `noBreak` | Forbid a system break here | music, form, a `chords` track (at a bar line) |
+| `pageBreak` | Force a page break here (and the system break with it) | music, form, a `chords` track (at a bar line) |
+| `noPageBreak` | Forbid a page break here | music, form, a `chords` track (at a bar line) |
+
+**A break is the score's.** One written in any part — the first or the fifth, shown by the
+score being drawn or not — or in a `chords` track breaks every score of the piece at that bar
+line: a full score, a part sheet, a lead sheet. Write it once. Where one place writes
+`break` and another `noBreak` at the same bar line — or `pageBreak` against `noPageBreak` —
+the break wins and **LYS4077** warns at the `noBreak`, naming both places. A score's own
+`paper { breaksOnly }` and `--set measuresPerSystem=N` decide as before. The `.ly` twin writes
+each word where it stands; the words of a part or chords track the score does not show go in a
+silent `\new Devnull` stream beside the staves.
+
+In a `chords` track the four words stand **at a bar line**: after the bar's chords,
+`C | F break | G |`, or before the next bar's, `C | F | break G |` — both break after the F
+bar, as in a part's music. Inside a bar, with chords on both sides (`C break F |`), is an error
+(**LYS1069**): the break that splits a bar is a part's music's. A `lyrics` track takes none of
+the four (the word would be a syllable).
 
 At a bar line — `c4 d e f break | …` or `… | break g1` — the break ends the system with that
 bar. **Inside a bar, with notes on both sides of it** — `c4 d break e f |` — the bar itself is

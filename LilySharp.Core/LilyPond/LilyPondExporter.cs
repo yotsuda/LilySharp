@@ -628,6 +628,7 @@ public sealed partial class LilyPondExporter
         EmitFiguredBassTracks(tree, render);
         EmitLyricTracks(tree, render);
         EmitLeadSheetTiming(tree, render);
+        EmitBreaksOffTheStaves(tree, render);
         // Before the part variables: every event a grace on another voice stands beside owes
         // a grace skip, which the music walk writes in front of it (EmitItemCore).
         CollectGraceSync(tree, render);

@@ -66,24 +66,36 @@ internal sealed class FlatChordRows
     // run closing an empty one, except `|:`, which closes only what is pending. A bar keeps its bar line.
     private static List<List<SyntaxNode>> BarsOf(IEnumerable<SyntaxNode> items)
     {
+        // A break directive (owner's decision 2026-11-13) rides with the bar it stands after and is
+        // never a bar of its own: after the bar's chords it stays in that bar, before its bar line;
+        // with nothing of its bar before it, it follows the bar line of the bar before.
         var bars = new List<List<SyntaxNode>>();
         var bar = new List<SyntaxNode>();
+        int held = 0;       // what the open bar holds, its break directives aside
         foreach (var item in items)
         {
             if (item is BarlineSyntax barline)
             {
                 bar.Add(barline);
-                if (Svg.Collector.MeasureCollector.ParseBarlineType(barline.BarText) != Svg.Model.BarlineType.RepeatStart || bar.Count > 1)
+                if (Svg.Collector.MeasureCollector.ParseBarlineType(barline.BarText) != Svg.Model.BarlineType.RepeatStart || held > 0)
                 {
                     bars.Add(bar);
                     bar = [];
+                    held = 0;
                 }
+                else
+                    held++;
                 continue;
             }
             if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
+            {
                 bar.Add(item);
+                held++;
+            }
+            else if (item is BreakSyntax)
+                (held == 0 && bars.Count > 0 ? bars[^1] : bar).Add(item);
         }
-        if (bar.Count > 0)
+        if (held > 0)
             bars.Add(bar);
         return bars;
     }

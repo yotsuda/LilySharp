@@ -1741,7 +1741,7 @@ LyricText      = { Word , [ '[' , Reading , ']' ] } ;
                     no note; '_' and a detached '~' take one note each, holding the previous
                     syllable. *)
 
-ChordsBlock    = 'chords' , [ Identifier ] , [ 'for' , PartRef ] , '{' , { ChordRowEntry | ChordExtend | ChordRowRest | Barline } , '}' ;
+ChordsBlock    = 'chords' , [ Identifier ] , [ 'for' , PartRef ] , '{' , { ChordRowEntry | ChordExtend | ChordRowRest | Barline | ChordRowBreak } , '}' ;
                  (* The UNNAMED track (2026-10-09) is placed by a score's bare 'chords' row. *)
                  (* 'for PART' (owner's decision 2026-10-28, Semantics.ChordTrackPitch): the track
                     is typed in PART's letters — under PART's 'pitch', so the player's letters of
@@ -1782,6 +1782,17 @@ TodoMark       = Annotation ;   (* GLUED: '@todo', '@todo(key)', '@todo("memo")'
                     staff") was removed before the first tag (LYS0032): its
                     association was stated nowhere and broke down the moment a
                     section held two parts. *)
+ChordRowBreak  = 'break' | 'noBreak' | 'pageBreak' | 'noPageBreak' ;
+                 (* AT A BAR LINE (decided by the owner, 2026-11-13), meaning what the word means
+                    in the music of a part - a break after the bar it stands in. After the chords
+                    of its bar ('F break |') it belongs to that bar, and with no chord of its bar
+                    before it ('| break G', '| break |', after the last bar line) to the bar
+                    before, the two places a 'break' in MusicItem reads as a bar-line break. With
+                    chords on both sides of it in one bar ('C break F |') it is LYS1069: the
+                    break that splits a bar belongs to the music of a part. A 'lyrics' track
+                    takes none of the four words. A break belongs to the SCORE: every score of
+                    the piece breaks where any part, shown or not, or any chords track says, and
+                    a 'break' against a 'noBreak' at one bar line is LYS4077, the break winning. *)
 ChordEntry     = ChordRoot , [ Quality ] , [ '(' , AlterationList , ')' ] , [ '/' , ChordRoot ] ;
 ChordRoot      = ( 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' ) , [ '#' | 'b' | '♯' | '♭' ] ;
 ChordExtend    = '.' ;
@@ -2688,7 +2699,10 @@ MidMusicCommand = 'clef' , [ '!' ] , ClefName       (* '!' forces a clef that ch
                                                       is not split — the break falls to the
                                                       next bar line, LYS1037 names the voice
                                                       and the reason (tie the note, or move
-                                                      the break). One break per bar. *)
+                                                      the break). One break per bar. Written
+                                                      in ANY part, shown by the score or not,
+                                                      it breaks the score - see ChordRowBreak
+                                                      for a chords track and for LYS4077. *)
                | 'pageBreak' | 'noPageBreak' ;      (* force / forbid a page break after this
                                                       measure — the forced one breaks the
                                                       system too (LilyPond's \pageBreak), and

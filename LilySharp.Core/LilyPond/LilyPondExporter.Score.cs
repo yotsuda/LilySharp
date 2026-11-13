@@ -164,6 +164,9 @@ public sealed partial class LilyPondExporter
             var first = partVars.First();
             rows.Add(EmitStaff(first.Key, parts, partVars, tab: false, "    "));
         }
+        // …and the breaks no staff here writes (EmitBreaksOffTheStaves), silent beside them.
+        if (_breaksOffTheStavesVar != null && rows.Count > 0)
+            rows.Insert(0, "    \\new Devnull \\" + _breaksOffTheStavesVar + "\n");
 
         // An ossia's alignAboveContext names a context, so the staff it decorates has to
         // carry that id. Only the staves an ossia actually names get one.

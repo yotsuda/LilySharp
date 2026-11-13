@@ -116,6 +116,7 @@ public static class SemanticValidation
         new RepeatPairingValidator(),       // a '|:' that no ':|' closes (score-expanded)
         new ExpansionBudgetValidator(),     // expansion truncated at the collector's site budget
         new MidBarBreakValidator(),         // a mid-bar break the page could not split the bar at
+        new BreakConflictValidator(),       // a bar line one part gives a break and another a noBreak
         new TabRangeValidator(),            // notes clamped outside the tab range
         new DuplicateScoreNameValidator(),  // two score blocks with the same name
         new SectionLabelConflictValidator(), // two top-level declarations giving one section two labels

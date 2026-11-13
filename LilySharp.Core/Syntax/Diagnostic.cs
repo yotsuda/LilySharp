@@ -891,6 +891,13 @@ public static class DiagnosticCodes
     /// The first group is drawn.</summary>
     public const string DividedFiguresOnAGraceNote = "LYS1068";
 
+    /// <summary>A <c>break</c> / <c>noBreak</c> / <c>pageBreak</c> / <c>noPageBreak</c> written
+    /// INSIDE a bar of a <c>chords</c> track, with chords on both sides of it
+    /// (<c>C break F |</c>). A chords track takes the four words at a bar line only (owner's
+    /// decision 2026-11-13): the bar-splitting break is a part's music's, where the notes say
+    /// what may be cut. The word is kept in the tree and breaks nothing.</summary>
+    public const string ChordsBreakInsideBar = "LYS1069";
+
     /// <summary>Warning: a <c>chords</c> row entry that is no chord Lily# reads — <c>C7b9</c>,
     /// <c>C-5</c>, a misspelled quality. The row still prints it as written and plays only its
     /// root (a root that is no A–G is the parser's error); the message names the spelling's fix, as the
@@ -1672,6 +1679,13 @@ public static class DiagnosticCodes
     /// 2026-11-13, grammar evaluation 3; <c>Semantics.EditorialDynamicValidator</c>). The mark
     /// is drawn as the plain one.</summary>
     public const string EditorialNotALevel = "LYS4076";
+
+    /// <summary>Warning: one bar line is given a <c>break</c> by one part or chords track and a
+    /// <c>noBreak</c> by another (or <c>pageBreak</c> against <c>noPageBreak</c>). A break is
+    /// the score's, taken from every part and chords track of the piece (owner's decision
+    /// 2026-11-13), so the two meet: the break wins, and this says so at the word that lost,
+    /// naming the other (read off the collect, <c>Semantics.BreakConflictValidator</c>).</summary>
+    public const string BreakAgainstNoBreak = "LYS4077";
 
     /// <summary>Error: a span end whose name is not the one the span was opened with —
     /// <c>@8va … @!15ma</c> (owner's decision 2026-10-28: a span is closed by its own name;

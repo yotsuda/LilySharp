@@ -892,7 +892,13 @@ score { staff melody }
   the break, or a beam / tuplet / percent repeat runs across it, the bar stays whole, the
   break falls to the next bar line and LYS1037 says why — tie the note (`c2~ break c2`) or
   move the break to a beat nothing crosses. `e2 break |` (a bar line right after) is the
-  ordinary bar-line break.
+  ordinary bar-line break. **A break is the score's**: written in ANY part — the first, the
+  third, one this score does not show — or in a `chords` track, it breaks every score of the
+  piece there, so write it once, in whichever part you are reading. A `chords` track takes the
+  four words at a bar line only (`F break |` or `| break G`; inside a bar, `C break F |`, is
+  LYS1069), a `lyrics` track not at all. A `break` in one place against a `noBreak` in another
+  at the same bar line (or `pageBreak` against `noPageBreak`): the break wins and LYS4077 names
+  both.
 - Percent repeat: write the bars once, then ONE mark per repetition, each alone between bar
   lines — `%` repeats the bar before it, `%N` the N bars before it:
   `c4 d e f | % | % | % |` (the bar four times), `a2 b | c'2 d' | %2 | %2 |` (two bars three
@@ -1330,7 +1336,10 @@ the previous chord one more beat (`| C . . G7 |`; a `.` never crosses a barline)
 and lyrics: every written `|` closes exactly one bar, the one that OPENS the run
 included, so `| C | F |` is an empty bar and then two. A `|:` in a chord row IS a repeat,
 so it goes in the form like any other (LYS1034); the repeat barlines the form composes
-still reach the row and draw as real repeat barlines.
+still reach the row and draw as real repeat barlines. `break` / `noBreak` / `pageBreak` /
+`noPageBreak` may stand at a bar line of the track — after the bar's chords (`Am F break |`)
+or before the next bar's (`| break C`) — and break the line or page after that bar, on a lead
+sheet and on every score of the piece (*Line breaks* above); not inside a bar (LYS1069).
 
 ```
 section Main {

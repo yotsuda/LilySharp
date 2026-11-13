@@ -681,6 +681,7 @@ internal sealed partial class Parser
         }
         var openBrace = Expect(SyntaxKind.OpenBrace);
         var items = new List<GreenNode?>();
+        List<(int At, TextSpan Span)>? breaks = null;
 
         while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
         {
@@ -694,12 +695,70 @@ internal sealed partial class Parser
                 continue;
             }
 
-            var item = ParseChordBodyItem();
-            items.Add(item ?? SkipStrayChordToken());
+            AddChordBodyItem(items, ref breaks);
         }
 
+        ReportChordBreaksInsideABar(items, breaks);
         var closeBrace = Expect(SyntaxKind.CloseBrace);
         return new ChordPartBlockGreen(keyword, name, openBrace, [.. items], closeBrace, forKeyword, forTarget);
+    }
+
+    /// <summary>Reads one item of a chords body into <paramref name="items"/> — a stray token
+    /// reported and kept (<see cref="SkipStrayChordToken"/>) — noting where each break
+    /// directive stands for <see cref="ReportChordBreaksInsideABar"/>.</summary>
+    private void AddChordBodyItem(List<GreenNode?> items, ref List<(int At, TextSpan Span)>? breaks)
+    {
+        var span = new TextSpan(_textPosition + Current.LeadingTriviaWidth, Math.Max(1, Current.Width));
+        var item = ParseChordBodyItem();
+        if (item is BreakGreen)
+            (breaks ??= new List<(int, TextSpan)>()).Add((items.Count, span));
+        items.Add(item ?? SkipStrayChordToken());
+    }
+
+    /// <summary>
+    /// A chords track takes <c>break</c> / <c>noBreak</c> / <c>pageBreak</c> /
+    /// <c>noPageBreak</c> AT A BAR LINE (owner's decision 2026-11-13) — before it
+    /// (<c>F break |</c>) or after it (<c>| break G</c>), the two places a part's music reads as
+    /// "after this bar" (<c>MeasureBuilder.SetBreak</c>'s two arms). With chords on both sides
+    /// of it in one bar (<c>C break F |</c>) the word would be the bar-splitting break of a
+    /// part's music, which a chords track does not have: reported here (LYS1069), kept in the
+    /// tree, and read by nobody (<c>Svg.Collector.ChordTrackBreaks</c> passes it by).
+    /// </summary>
+    private void ReportChordBreaksInsideABar(List<GreenNode?> items, List<(int At, TextSpan Span)>? breaks)
+    {
+        if (breaks == null)
+            return;
+        foreach (var (at, span) in breaks)
+        {
+            if (!ChordBreakStandsInsideABar(items, at))
+                continue;
+            string word = ((SyntaxToken)items[at]!.GetSlot(0)!).Text;
+            _diagnostics.Error(span, DiagnosticCodes.ChordsBreakInsideBar,
+                $"'{word}' stands inside a bar of a chords track, with chords on both sides of it. "
+                + $"A chords track takes '{word}' at a bar line only: write it before or after the '|' "
+                + "(F break | or | break G), or inside the bar in a part's music, where it breaks the bar.");
+        }
+    }
+
+    /// <summary>True when the break directive at <paramref name="at"/> has a chord, a rest or a
+    /// <c>.</c> of the same bar on BOTH sides — other break directives and stray tokens between
+    /// are passed over, a bar line, an inner section or the list's end closes the bar.</summary>
+    internal static bool ChordBreakStandsInsideABar(IReadOnlyList<GreenNode?> items, int at)
+    {
+        return Slot(-1) && Slot(+1);
+
+        bool Slot(int step)
+        {
+            for (int i = at + step; i >= 0 && i < items.Count; i += step)
+                switch (items[i]?.Kind)
+                {
+                    case SyntaxKind.ChordEntry or SyntaxKind.Rest or SyntaxKind.ChordExtend:
+                        return true;
+                    case SyntaxKind.Barline or SyntaxKind.SectionDeclaration:
+                        return false;
+                }
+            return false;
+        }
     }
 
     /// <summary>A chord track's inner section (by-part grouping): <c>section NAME {
@@ -714,11 +773,10 @@ internal sealed partial class Parser
         var label = ReportSectionLabelInside("a chords track", name);
         var openBrace = Expect(SyntaxKind.OpenBrace);
         var items = new List<GreenNode?>();
+        List<(int At, TextSpan Span)>? breaks = null;
         while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
-        {
-            var item = ParseChordBodyItem();
-            items.Add(item ?? SkipStrayChordToken());
-        }
+            AddChordBodyItem(items, ref breaks);
+        ReportChordBreaksInsideABar(items, breaks);
         var closeBrace = Expect(SyntaxKind.CloseBrace);
         return new SectionDeclarationGreen(keyword, tilde, name, label, openBrace, [.. items], closeBrace);
     }
@@ -767,6 +825,13 @@ internal sealed partial class Parser
     {
         if (SyntaxFacts.IsMeasureBarlineKind(Current.Kind))
             return ParseBarline();
+        // `break` / `noBreak` / `pageBreak` / `noPageBreak` at a bar line, meaning what they
+        // mean in a part's music (owner's decision 2026-11-13: a chord chart's line breaks had
+        // nowhere to be written but a form). Where in the bar it may stand:
+        // ReportChordBreaksInsideABar.
+        if (Current.Kind is SyntaxKind.BreakKeyword or SyntaxKind.NoBreakKeyword
+            or SyntaxKind.PageBreakKeyword or SyntaxKind.NoPageBreakKeyword)
+            return ParseBreak();
         // '.' — the previous entry holds through one more slot of the measure's
         // beat grid (GRAMMAR_AUDIT 8.1: measure-relative placement, no durations).
         if (Check(SyntaxKind.Dot))

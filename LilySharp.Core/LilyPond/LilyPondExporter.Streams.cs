@@ -49,7 +49,7 @@ public sealed partial class LilyPondExporter
                 // different plans, which is the one thing PageModel exists to prevent. Found
                 // while wiring `layout NAME`; measured at the same time: no tracked book
                 // writes a named fonts or paper block, so no `.ly` in the corpus moves.
-                _page = new Svg.Collector.MeasureCollector
+                _page = (_pageCollector = new Svg.Collector.MeasureCollector
                 {
                     FontsOverride = spec.FontsRef,
                     PaperOverride = spec.PaperRef,
@@ -58,7 +58,7 @@ public sealed partial class LilyPondExporter
                     // …and the score's own fenced texts (2026-11-13: without them the twin
                     // of `score { ```md … }` wrote the FILE's text — the same two-plans fault).
                     TextOverrides = spec.TextOverrides,
-                }.CollectMultiStaff(tree, spec);
+                }).CollectMultiStaff(tree, spec);
         }
         catch (Exception e)
         {
@@ -68,6 +68,8 @@ public sealed partial class LilyPondExporter
     }
 
     private Svg.Model.MultiStaffScore? _page;
+    // The collector that made it, for what the collect noted beside the model (BreaksOffTheStaves).
+    private Svg.Collector.MeasureCollector? _pageCollector;
     private Svg.Collector.RenderSpec? _pageSpec;
     private bool _pageCollected;
 
@@ -756,6 +758,80 @@ public sealed partial class LilyPondExporter
 
     /// <summary>The lead sheet's timing track, when the score is one (<see cref="EmitLeadSheetTiming"/>).</summary>
     private string? _leadSheetTimingVar;
+
+    /// <summary>
+    /// The breaks the page takes from places this score's twin does not write (owner's
+    /// decision 2026-11-13: a break is the score's, read from every part and chords track):
+    /// a part the score does not show, a chords track it does not place. A silent
+    /// <c>\new Devnull</c> stream of the page's bars as skips, with the <c>\break</c> /
+    /// <c>\noBreak</c> / <c>\pageBreak</c> / <c>\noPageBreak</c> after the bar each stands
+    /// after (<see cref="EmitScore"/> places it first) — LilyPond's break is the Score's, heard
+    /// from any context. Nothing is written for a score with no such break: a drawn part's
+    /// words are in its own music and a placed chords track's in its <c>\chordmode</c>
+    /// (<see cref="ChordBarsOf"/>).
+    /// LILYPOND-REF: lily/paper-column-engraver.cc:68-112 Paper_column_engraver::handle_manual_breaks
+    ///   — in the Score context's engraver group: a break event from any descendant is heard.
+    /// </summary>
+    private void EmitBreaksOffTheStaves(SyntaxTree tree, RenderDeclarationSyntax? render)
+    {
+        if (render == null || PageModel(tree, render) is not { } score || _pageCollector == null)
+            return;
+        var placed = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var row in render.DescendantNodes<ChordRowRenderSyntax>())
+            if (row.PartName is { } name)
+                placed.Add(name);
+        Dictionary<int, List<BreakKind>>? byBar = null;
+        foreach (var b in _pageCollector.BreaksOffTheStaves)
+        {
+            if (b.Track != null && placed.Contains(b.Track))
+                continue;
+            byBar ??= new Dictionary<int, List<BreakKind>>();
+            if (!byBar.TryGetValue(b.MeasureIndex, out var kinds))
+                byBar[b.MeasureIndex] = kinds = new List<BreakKind>();
+            // A forbidding word first: where both stand the break is the last word, as on the page.
+            if (!kinds.Contains(b.Kind))
+                kinds.Insert(b.Kind is BreakKind.NoLine or BreakKind.NoPage ? 0 : kinds.Count, b.Kind);
+        }
+        if (byBar == null)
+            return;
+        Svg.Model.Staff? first = null;
+        foreach (var (_, staff, _) in score.EnumerateStaves())
+            if (staff.PrimaryVoice.Measures.Length > 0)
+            {
+                first = staff;
+                break;
+            }
+        if (first == null)
+            return;
+        var measures = first.PrimaryVoice.Measures;
+        var meters = Svg.Layout.ScoreSideTables.PrevailingMeters(score);
+        int lastBar = byBar.Keys.Where(k => k < measures.Length).DefaultIfEmpty(-1).Max();
+        if (lastBar < 0)
+            return;
+
+        _breaksOffTheStavesVar = VarName("breaksOffTheStaves");
+        _sb.Append(_breaksOffTheStavesVar).Append(" = {\n");
+        for (int m = 0; m <= lastBar; m++)
+        {
+            var line = new StringBuilder("  ");
+            AppendToken(line, "s" + ChordModeDuration(BarLength(measures[m], meters, m)), "  ");
+            if (byBar.TryGetValue(m, out var kinds))
+                foreach (var kind in kinds)
+                    AppendToken(line, kind switch
+                    {
+                        BreakKind.NoLine => "\\noBreak",
+                        BreakKind.Page => "\\pageBreak",
+                        BreakKind.NoPage => "\\noPageBreak",
+                        _ => "\\break",
+                    }, "  ");
+            _sb.Append(line).Append('\n');
+        }
+        _sb.Append("}\n\n");
+    }
+
+    /// <summary>The stream of breaks no staff of the twin writes, when the score has any
+    /// (<see cref="EmitBreaksOffTheStaves"/>).</summary>
+    private string? _breaksOffTheStavesVar;
 
     /// <summary>Whether <c>time none</c> is in force at each bar of the page — the walk
     /// <see cref="Svg.Layout.MultiMeasureRestEngraver.PrevailingMeters"/> makes, asked for the

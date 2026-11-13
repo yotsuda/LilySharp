@@ -483,7 +483,7 @@ public sealed partial class LilySharpLanguageServer
                 return new CompletionList { Items = [] };
             if (context is not (CompletionContext.ChordsTrackBody or CompletionContext.AfterSection
                     or CompletionContext.AfterValueAnnotationPlacement))
-                return GetDiatonicChordCompletions(doc.Text, offset, degreesToo: true);
+                return GetChordEntryCompletions(doc.Text, offset);
         }
 
         // `tempo 100 |`: the feel words. Mid-music (`c4 tempo 96 |`) a NOTE may follow as

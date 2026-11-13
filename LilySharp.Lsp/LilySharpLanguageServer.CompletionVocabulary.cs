@@ -3182,7 +3182,63 @@ public sealed partial class LilySharpLanguageServer
 
         return sectioned
             ? new CompletionList { Items = SectionScaffoldItems(text, offset, "Chords for this section").ToArray() }
-            : GetDiatonicChordCompletions(text, offset, degreesToo: true);
+            : GetChordEntryCompletions(text, offset);
+    }
+
+    /// <summary>
+    /// What a chords track's bars take at the caret: the key's chords, by name and by degree
+    /// (<see cref="GetDiatonicChordCompletions"/>), and — at a bar line — the four break words
+    /// (owner's decision 2026-11-13: <c>break</c> / <c>noBreak</c> / <c>pageBreak</c> /
+    /// <c>noPageBreak</c> in a chords track mean what they mean in a part's music).
+    /// </summary>
+    /// <remarks>
+    /// "At a bar line" is the parser's rule (<c>Parser.ReportChordBreaksInsideABar</c>, LYS1069):
+    /// the words are left out only where the bar already holds something on BOTH sides of the
+    /// caret, so a list never offers the spelling the compiler refuses. They sort after the
+    /// chords — a chart is mostly chords.
+    /// </remarks>
+    internal static CompletionList GetChordEntryCompletions(string text, int offset)
+    {
+        var chords = GetDiatonicChordCompletions(text, offset, degreesToo: true);
+        if (!ChordsBarTakesABreakAt(text, offset))
+            return chords;
+        return new CompletionList
+        {
+            Items =
+            [
+                .. chords.Items,
+                new CompletionItem { Label = "break", Kind = CompletionItemKind.Keyword, InsertText = "break", Detail = "Force a line/system break at this bar line", SortText = "8a" },
+                new CompletionItem { Label = "noBreak", Kind = CompletionItemKind.Keyword, InsertText = "noBreak", Detail = "Forbid a line break at this bar line", Documentation = "LilyPond \\noBreak", SortText = "8b" },
+                new CompletionItem { Label = "pageBreak", Kind = CompletionItemKind.Keyword, InsertText = "pageBreak", Detail = "Force a page break at this bar line", Documentation = "LilyPond \\pageBreak; breaks the line too", SortText = "8c" },
+                new CompletionItem { Label = "noPageBreak", Kind = CompletionItemKind.Keyword, InsertText = "noPageBreak", Detail = "Forbid a page break at this bar line", Documentation = "LilyPond \\noPageBreak", SortText = "8d" },
+            ],
+        };
+    }
+
+    /// <summary>Whether a break word typed at <paramref name="offset"/> in a chords bar would
+    /// stand at a bar line: the bar — from the <c>|</c> or brace before the word being typed to
+    /// the <c>|</c> or brace after the caret — holds nothing on one side of it at least (other
+    /// break words aside).</summary>
+    internal static bool ChordsBarTakesABreakAt(string text, int offset)
+    {
+        int wordStart = offset;
+        while (wordStart > 0 && char.IsLetterOrDigit(text[wordStart - 1]))
+            wordStart--;
+        int from = wordStart;
+        while (from > 0 && text[from - 1] is not ('|' or '{' or '}'))
+            from--;
+        int to = offset;
+        while (to < text.Length && text[to] is not ('|' or '{' or '}'))
+            to++;
+        return !Holds(text[from..wordStart]) || !Holds(text[offset..to]);
+
+        static bool Holds(string run)
+        {
+            foreach (var word in run.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+                if (word is not ("break" or "noBreak" or "pageBreak" or "noPageBreak" or ":"))
+                    return true;
+            return false;
+        }
     }
 
     /// <summary>
