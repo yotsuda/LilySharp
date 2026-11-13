@@ -6995,24 +6995,6 @@ public sealed partial class MeasureCollector
         return null;
     }
 
-    /// <summary>Display accidental kind for a quarter-tone pitch (ih/eh/isih/eseh).
-    /// LILYPOND-REF: scm/output-lib.scm:1136-1149 standard-alteration-glyph-name-alist — the glyphs
-    /// sharp.slashslash.stem, sharp.slashslash.stemstemstem, mirroredflat and mirroredflat.flat.</summary>
-    private static string? QuarterToneAccidental(PitchSyntax pitch, string? fallback)
-        => QuarterToneAccidental(pitch.AccidentalOffset, pitch.QuarterOffset, fallback);
-
-    /// <summary>The rule itself, on the two offsets — what the note factory asks of a
-    /// <see cref="PitchReading"/> (session 521).</summary>
-    private static string? QuarterToneAccidental(int accidentalOffset, int quarterOffset, string? fallback)
-        => (accidentalOffset, quarterOffset) switch
-        {
-            (0, 1) => "quarterSharp",
-            (1, 1) => "threeQuarterSharp",
-            (0, -1) => "quarterFlat",
-            (-1, -1) => "threeQuarterFlat",
-            _ => fallback,
-        };
-
     /// <summary>Absolute MIDI number from a diatonic step (0=C..6=B), alteration and octave.</summary>
     private static int PitchToMidi(int step, int alter, int octave)
         => RelativeOctave.StepToMidi(((step % 7) + 7) % 7, alter, octave);
