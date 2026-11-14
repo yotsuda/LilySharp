@@ -844,7 +844,12 @@ internal static partial class SpacingRules
         bool anyTab = false;
         for (int v = 0; v < voices.Count && !anyTab; v++)
             anyTab = TabOf(staves, voices.Count, v) is not null;
-        if (!anyTab)
+        // …or when a staff is silent in this bar (see IsSilentToItsNextChange): its wish reads
+        // no note column at all, which the column reading cannot say.
+        bool anySilent = false;
+        for (int s = 0; s < voices.Count && !anyTab && !anySilent; s++)
+            anySilent = !staves[s].IsTextRow && !IsSeenBefore(staves, s) && IsSilentToItsNextChange(voices, staves, s);
+        if (!anyTab && !anySilent)
             return default;
 
         var buffer = t_opticalByStaff is { } b && b.Length >= voices.Count
@@ -858,7 +863,7 @@ internal static partial class SpacingRules
                 continue;
             double barHalf = BarHalfSpaces(staff);
             double max = 0;
-            for (int v = 0; v < voices.Count; v++)
+            for (int v = 0; v < voices.Count && !IsSilentToItsNextChange(voices, staves, s); v++)
             {
                 if (staves[v].IsTextRow || NoteColumnAt(voices[v], Fraction.Zero) is not { } item)
                     continue;
@@ -875,6 +880,69 @@ internal static partial class SpacingRules
                     return true;
             return false;
         }
+    }
+
+    /// <summary>
+    /// Whether the staff of <paramref name="voices"/>[<paramref name="s"/>] has no note and no
+    /// rest between this bar's opening bar line and its own next break-aligned grob — the next
+    /// bar line, or a clef, key or meter change inside the bar: a bar of spacers, a
+    /// multi-measure rest (<c>R1</c>), a percent repeat's bar. Such a staff's wish earns NO
+    /// down-stem correction, whatever the other staves' first column holds.
+    /// </summary>
+    /// <remarks>
+    /// A Staff_spacing's right-items is the musical column at the bar line's moment — every
+    /// staff's note columns — but only until the staff's NEXT non-musical item: when that one
+    /// arrives and the staff has made no NoteSpacing since (no note, no rest: a spacer makes no
+    /// grob, a MultiMeasureRest and a percent sign are spanners), the engraver CLEARS the
+    /// previous Staff_spacing's right-items and puts the new command column there, which holds
+    /// no note column. next_notes_correction then finds nothing, and the staff's wish — still
+    /// merged with the others — pulls the average down by its share of the correction.
+    /// LILYPOND-REF: lily/separating-line-group-engraver.cc:95-110 Separating_line_group_engraver::acknowledge_item — with no note_spacings_ since the last staff_spacing_, `ga->clear (); ga->add (col);`
+    /// LILYPOND-REF: lily/staff-spacing.cc:95-110 Staff_spacing::next_notes_correction — the max over right_note_columns.
+    /// MEASURED (2.26.0, LilySharp-Lab sessions/p1236/bar, an upper staff of down-stem e''
+    /// quarters, the head-to-head distance over the bar line; alone 4.045): the lower staff
+    /// holding <c>s1</c>, <c>R1</c>, <c>R1*2</c> (each bar) or <c>s2 \clef treble c'2</c> 3.950 =
+    /// 4.045 − 0.19 / 2; two such staves below 3.919 (− 0.19 × 2 / 3); <c>c1</c>, <c>r1</c>,
+    /// <c>s2 c2</c>, <c>s2 r2</c> or a second voice's note 4.045; up stems above (e') 4.329 with
+    /// or without. Until session 1236 every staff took the column's correction (4.04 in all).
+    /// <para>
+    /// Not measured: a silent staff under a bar that opens with a grace run (the grace's
+    /// correction is read first, <c>CreateBarlineToFirstSpring</c>), and the line's first bar
+    /// (LineStartColumn — the correction is live there only behind an opening <c>|:</c>).
+    /// </para>
+    /// </remarks>
+    private static bool IsSilentToItsNextChange(IReadOnlyList<Measure> voices, IReadOnlyList<Staff> staves, int s)
+    {
+        // The staff's first change inside the bar, in any of its voices (one opening the bar
+        // stands in the bar line's own column).
+        Fraction? nextChange = null;
+        for (int v = 0; v < voices.Count; v++)
+        {
+            if (!ReferenceEquals(staves[v], staves[s]))
+                continue;
+            var onset = Fraction.Zero;
+            foreach (var item in voices[v].Items)
+            {
+                if (onset > Fraction.Zero && IsChangeItem(item) && (nextChange is not { } known || onset < known))
+                    nextChange = onset;
+                onset += item.Duration;
+            }
+        }
+        for (int v = 0; v < voices.Count; v++)
+        {
+            if (!ReferenceEquals(staves[v], staves[s]))
+                continue;
+            var onset = Fraction.Zero;
+            foreach (var item in voices[v].Items)
+            {
+                if (nextChange is { } change && onset >= change)
+                    break;
+                if (item is NoteItem or ChordItem or RestItem { IsSpacer: false, IsMultiMeasure: false })
+                    return false;
+                onset += item.Duration;
+            }
+        }
+        return true;
     }
 
     [ThreadStatic]
