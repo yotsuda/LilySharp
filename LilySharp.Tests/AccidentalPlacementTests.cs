@@ -675,6 +675,45 @@ public class AccidentalPlacementTests
     }
 
     /// <summary>
+    /// A courtesy accidental is seated among its note name's others by its BOX with the two
+    /// parentheses (<c>AccidentalPlacement.ExtentOf</c>), as <c>set_ape_skylines</c> reads
+    /// <c>a->extent (a, X_AXIS)</c> of an AccidentalCautionary.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (LilyPond 2.26.0, Lab sessions/p1235/court — <c>dump2.ily</c> prints the X extent
+    /// of each Accidental and AccidentalCautionary from its paper column; two voices on c', a
+    /// quarter note each): the lefts below, all twelve to four places. Session 1233 ported the
+    /// seat and left this half unmeasured; nothing had to change.
+    /// </remarks>
+    [Theory]
+    [InlineData("sharp", true, -2.65, "flat", false, -3.77)]
+    [InlineData("doubleSharp", false, -1.39, "sharp", true, -3.89)]
+    [InlineData("flat", true, -2.47, "doubleFlat", true, -5.44)]
+    [InlineData("natural", true, -2.2166, "sharp", false, -3.5166)]
+    // The same alteration: the plain one is struck over the parenthesised one, inside its parentheses.
+    [InlineData("sharp", true, -2.65, "sharp", false, -2.05)]
+    [InlineData("sharp", true, -2.65, "flat", true, -4.97)]
+    public void ACourtesyAccidentalOfOneNoteName_IsSeatedAsLilyPondSeatsIt(
+        string first, bool firstCourtesy, double firstLeft, string second, bool secondCourtesy, double secondLeft)
+    {
+        var notes = new[]
+        {
+            new ChordNoteInfo(-6, first, firstCourtesy),
+            new ChordNoteInfo(-6, second, secondCourtesy),
+        };
+        var stem = AccidentalStem.Of(true, 4, NoteheadStyle.Default, notes);
+        foreach (var order in new[] { notes, notes.Reverse().ToArray() })
+        {
+            var layouts = new AccidentalPlacement().CalculatePositions(order, stem: stem);
+            Assert.Equal(2, layouts.Length);
+            Assert.InRange(layouts.Single(l => l.Accidental == first && l.IsCourtesy == firstCourtesy).XOffset,
+                firstLeft - 1e-4, firstLeft + 1e-4);
+            Assert.InRange(layouts.Single(l => l.Accidental == second && l.IsCourtesy == secondCourtesy).XOffset,
+                secondLeft - 1e-4, secondLeft + 1e-4);
+        }
+    }
+
+    /// <summary>
     /// <see cref="GlyphMetrics.AlterationQuartersOf"/> is
     /// <c>MeasureCollector.AlterationName</c> read backwards — two spellings of one table,
     /// held together here.
