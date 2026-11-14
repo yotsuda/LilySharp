@@ -477,7 +477,25 @@ public sealed partial class LilyPondExporter
     /// before another ending). Not a close and not a rewind.
     /// </summary>
     private static bool IsEndingDivider(List<SyntaxNode> items, int i)
-        => i + 1 < items.Count && IsEnding(items[i + 1]);
+        => i + 1 < items.Count && (IsEnding(items[i + 1]) || ArmsAnEnding(items, i + 1));
+
+    /// <summary>Whether the item at <paramref name="i"/> is a repeat-tie marker standing right
+    /// before an ending — the tie carried to the ending's first note
+    /// (<see cref="PlantTheRepeatTies"/>). It belongs to that ending, and the scans that read
+    /// "an ending follows" look through it.</summary>
+    private static bool ArmsAnEnding(List<SyntaxNode> items, int i)
+        => items[i] is { Green: RepeatTieGreen } && i + 1 < items.Count && IsEnding(items[i + 1]);
+
+    /// <summary><see cref="EndingOf(SyntaxNode)"/>, with the repeat-tie marker that stood before the ending
+    /// (<paramref name="armed"/>, taken) as the first item of its music.</summary>
+    private static (List<int> Numbers, bool Specced, List<SyntaxNode> Items) EndingOf(SyntaxNode item, ref SyntaxNode? armed)
+    {
+        var ending = EndingOf(item);
+        if (armed != null)
+            ending.Items = [armed, .. ending.Items];
+        armed = null;
+        return ending;
+    }
 
     /// <summary>An ending of a repeat as the stream holds it: the one the voice wrote, or one
     /// another voice wrote around this voice's bars (<see cref="SpreadEndingMarker"/>).</summary>
@@ -594,9 +612,17 @@ public sealed partial class LilyPondExporter
         int i = start + 1;
         bool closed = false;
 
+        SyntaxNode? armed = null;
         for (; i < items.Count; i++)
         {
             var it = items[i];
+
+            // A repeat-tie marker before an ending arms that ending's first note.
+            if (ArmsAnEnding(items, i))
+            {
+                armed = it;
+                continue;
+            }
 
             // Once the ':|' has been seen the scan keeps running ONLY to pick up trailing
             // '[2. …]' endings. Anything else ends this repeat — in particular a second
@@ -609,7 +635,7 @@ public sealed partial class LilyPondExporter
             // two forward+backward pairs), so the twin was alone in disagreeing.
             if (closed)
             {
-                if (IsEnding(it)) { alternatives.Add(EndingOf(it)); endsOnAnEnding = true; continue; }
+                if (IsEnding(it)) { alternatives.Add(EndingOf(it, ref armed)); endsOnAnEnding = true; continue; }
                 if (it is BreakSyntax) { /* absorb a break right after :| */ continue; }
                 // The ':|' BETWEEN two endings (`[1. B] :| [2. C] :| [3. D]` — the parser's
                 // furtherAlternatives, Parser.Form.cs) is this repeat's own divider: the
@@ -641,7 +667,7 @@ public sealed partial class LilyPondExporter
             }
             if (IsEnding(it))
             {
-                alternatives.Add(EndingOf(it));
+                alternatives.Add(EndingOf(it, ref armed));
                 continue;
             }
             common.Add(it);

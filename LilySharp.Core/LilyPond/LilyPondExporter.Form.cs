@@ -116,6 +116,7 @@ public sealed partial class LilyPondExporter
         }
 
         _carriesTheSigns = CarriesTheScoresSigns(byName, $"part '{partName}'");
+        _repeatTieBars = RepeatTieBars(form, byName);
 
         var result = new List<SyntaxNode>();
         // The tempo standing where this voice's first play opens: the file's own.
@@ -133,7 +134,7 @@ public sealed partial class LilyPondExporter
         if (form != null)
         {
             var formItems = FormWalk.Read(form);
-            _repeatTiePlays = RepeatTiePlays(formItems, byName);
+            _repeatTiePlays = _repeatTieBars != null ? new HashSet<int>() : RepeatTiePlays(formItems, byName);
             _lpPlayIndex = 0;
             _firstPlayRestatesTempo = FirstPlayedSection(formItems) is { } first
                 && _sectionHeaders.Tempos.ContainsKey(first);
@@ -170,6 +171,7 @@ public sealed partial class LilyPondExporter
                     result.AddRange(_meterPlan.WithForeignChanges(entry.Section.SectionName,
                         entry.Container, ContainerMusic(entry.Container).ToList()));
                 result.AddRange(PaddingBars(entry.Container));
+                PlantTheRepeatTies(-1, entry.Section.SectionName, entry.Container, result, playStart);
                 WriteTheScoresRepeatSigns(entry.Section.SectionName, entry.Container, result, playStart);
             }
         }
@@ -503,6 +505,7 @@ public sealed partial class LilyPondExporter
             && ShortLastBar(name, voice) != null)
             _shared.OpenWrittenBars.Add(halfBarLine);
         result.AddRange(PaddingBars(entry.Container));
+        PlantTheRepeatTies(playIndex, name, entry.Container, result, playStart);
         WriteTheScoresRepeatSigns(name, entry.Container, result, playStart);
     }
 

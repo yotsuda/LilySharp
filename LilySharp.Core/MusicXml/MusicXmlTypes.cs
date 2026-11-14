@@ -1032,6 +1032,8 @@ internal sealed class MusicXmlNote
     public int? StealTimePrevious { get; set; }
     public bool TieStart { get; set; }
     public bool TieStop { get; set; }
+    /// <summary>The stop is a written <c>@repeatTie</c>'s, not a tie's that arrives.</summary>
+    public bool RepeatTieWritten { get; set; }
     public bool SlurStart { get; set; }
     public bool SlurStop { get; set; }
     /// <summary>The <c>line-type</c> of the slur that starts on this note — <c>dashed</c> or

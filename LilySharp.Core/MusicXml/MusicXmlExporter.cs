@@ -362,6 +362,7 @@ public sealed class MusicXmlExporter
         _pendingChordRows.Clear();
         _playStartMeasure.Clear();
         _musicNavMarks.Clear();
+        _openAtBarEnd.Clear();
         _writtenByPart.Clear();
         (_writtenKey, _writtenTime, _writtenClef) = (null, null, null);
         _homeTonic = ScoreHomeKey.Read(root);
@@ -1209,6 +1210,7 @@ public sealed class MusicXmlExporter
         var sectionDecls = root.DescendantNodes().OfType<SectionDeclarationSyntax>().ToList();
         // The form the caller asked for, else the primary one (`main`, else the first).
         var structure = Form ?? LilySharp.Core.Semantics.ScoreForms.Primary(root);
+        _xmlForm = structure;
 
         if (structure == null)
         {
@@ -1553,9 +1555,12 @@ public sealed class MusicXmlExporter
     /// </remarks>
     private void FinishCarriedTies()
     {
+        var alongTheColumn = CarryTiesAlongTheColumn();
         var successors = Svg.Collector.PlayedOrder.Successors(_printedPlays);
         foreach (var ((part, play), open) in _openAtEnd)
         {
+            if (alongTheColumn.Contains(part))
+                continue;
             var matched = new HashSet<MusicXmlNote>();
             bool inRange = play >= 1 && play <= successors.Length;
             // The play printed next (1-based play + 1 is 0-based play) is played next: the arc.
@@ -1583,6 +1588,133 @@ public sealed class MusicXmlExporter
         _openAtEnd.Clear();
         _pendingRepeatStop.Clear();
         _firstOnset.Clear();
+    }
+
+    // The form this document plays (null: the sections in declaration order).
+    private FormDeclarationSyntax? _xmlForm;
+    // Per (part, measure index): the tie starts open when the bar was written.
+    private readonly Dictionary<(MusicXmlPart Part, int Bar), List<MusicXmlNote>> _openAtBarEnd = new();
+    // …and the bars among them that end a block of the part: the flow stops there, so the
+    // tie is the carry rule's whatever follows.
+    private readonly HashSet<(MusicXmlPart Part, int Bar)> _playEndBars = new();
+
+    /// <summary>
+    /// The carry rule for a book whose MUSIC writes repeat signs (docs/inline-repeat-design.md
+    /// §7): the bar played after a bar is the score's sign column's answer
+    /// (<see cref="RepeatStream.Next"/>), so a tie that ends a bar reaches the first note of
+    /// every bar played after it — the head of the repeat a first ending returns to, the
+    /// second ending a tie out of the body also enters — and not the note printed next when
+    /// that bar is not played next. Returns the names of the parts read this way; the others
+    /// (and every part of a book with no sign in its music) keep the form's reading.
+    /// </summary>
+    /// <remarks>
+    /// The spellings are <see cref="FinishCarriedTies"/>': a stop on each target, the start
+    /// kept when something stops it and retracted when nothing does, and the hanging tie
+    /// (<c>let-ring</c>) where no arc leaves the tied note. A part is read this way when its
+    /// measures are the column's bars one for one; a target is the first onset of its bar in
+    /// the tied note's own voice.
+    /// MEASURED before (2026-11-15, Lab sessions/p1247/probe): in <c>|: c1 | d1~ | [1. d1 :|
+    /// [2. d1 ] |</c> the second ending's d carried no stop, and in <c>[1. c1~ :| [2. e1 ]</c>
+    /// the tie back to the head was not written at all — where the same music spelled with
+    /// the form's signs wrote both.
+    /// </remarks>
+    private HashSet<string> CarryTiesAlongTheColumn()
+    {
+        var alongTheColumn = TiesReadAlongTheColumn();
+        _openAtBarEnd.Clear();
+        _playEndBars.Clear();
+        return alongTheColumn;
+    }
+
+    /// <summary>The tie starts open now are the ones the part's last written bar leaves
+    /// (<see cref="_openAtBarEnd"/>) — asked whenever a bar has been written and the next opens.</summary>
+    private void NoteTheTiesOpenAtTheBarsEnd()
+    {
+        if (_tieToNextNote && _tieOpen.Count > 0 && _currentPart is { Measures.Count: > 0 } part)
+            _openAtBarEnd[(part, part.Measures.Count - 1)] = _tieOpen.ToList();
+    }
+
+    private HashSet<string> TiesReadAlongTheColumn()
+    {
+        var read = new HashSet<string>(StringComparer.Ordinal);
+        if (_root == null || _openAtBarEnd.Count == 0 || !RepeatStream.InTheMusic(_root))
+            return read;
+        var stream = RepeatStream.For(_root, _xmlForm);
+        var seams = new List<(MusicXmlPart Part, int Bar, List<MusicXmlNote> Open, IReadOnlyList<int> Next)>();
+        foreach (var (name, part) in _partsByName)
+        {
+            if (part.Measures.Count != stream.Bars)
+                continue;
+            read.Add(name);
+            foreach (var ((owner, bar), open) in _openAtBarEnd)
+            {
+                if (!ReferenceEquals(owner, part))
+                    continue;
+                var next = stream.Next(bar);
+                // A bar followed by the bar printed next and by no other is the flow's own,
+                // unless the part's block ends there.
+                if (next.Count != 1 || next[0] != bar + 1 || _playEndBars.Contains((part, bar)))
+                    seams.Add((part, bar, open, next));
+            }
+        }
+        // The stop the flow gave the note printed next, where that bar is not played next…
+        foreach (var (part, bar, open, next) in seams)
+        {
+            if (next.Contains(bar + 1) || bar + 1 >= part.Measures.Count)
+                continue;
+            foreach (var n in open)
+                foreach (var t in FirstOnsetOfTheBar(part.Measures[bar + 1], n.Voice ?? 1))
+                    if (!t.RepeatTieWritten && SameNotehead(n, t))
+                        t.TieStop = false;
+        }
+        // …then every stop the column gives.
+        foreach (var (part, bar, open, next) in seams)
+        {
+            var matched = new HashSet<MusicXmlNote>();
+            foreach (int s in next)
+            {
+                if (s < 0 || s >= part.Measures.Count)
+                    continue;
+                foreach (var n in open)
+                    foreach (var t in FirstOnsetOfTheBar(part.Measures[s], n.Voice ?? 1))
+                        if (SameNotehead(n, t))
+                        {
+                            t.TieStop = true;
+                            matched.Add(n);
+                        }
+            }
+            bool arc = next.Contains(bar + 1);
+            foreach (var n in open)
+            {
+                n.TieStart = matched.Contains(n);
+                if (n.TieStart && !arc)
+                    LetRing(n);
+            }
+        }
+        return read;
+    }
+
+    /// <summary>The first onset of <paramref name="voice"/> in one measure: its first sounding
+    /// note and that note's chord members, or nothing when the voice opens the bar with a rest.</summary>
+    private static List<MusicXmlNote> FirstOnsetOfTheBar(MusicXmlMeasure measure, int voice)
+    {
+        var onset = new List<MusicXmlNote>();
+        foreach (var n in measure.Notes)
+        {
+            if (n.RawElement != null || n.IsBackup || n.IsGrace || (n.Voice ?? 1) != voice)
+                continue;
+            if (onset.Count == 0)
+            {
+                if (n.IsRest)
+                    return onset;
+                onset.Add(n);
+            }
+            else if (n.IsChord)
+                onset.Add(n);
+            else
+                return onset;
+        }
+        return onset;
     }
 
     /// <summary>The first onset of the notes emitted into <paramref name="part"/> from measure
@@ -2543,7 +2675,11 @@ public sealed class MusicXmlExporter
         // leaves open (FinishCarriedTies matches them once every play is written).
         _firstOnset.TryAdd((partName, _xmlPlaySerial), FirstOnset(_currentPart!, measuresBefore));
         if (_tieToNextNote && _tieOpen.Count > 0)
+        {
             _openAtEnd[(partName, _xmlPlaySerial)] = _tieOpen.ToList();
+            if (_currentPart is { Measures.Count: > 0 } written)
+                _playEndBars.Add((written, written.Measures.Count - 1));
+        }
         _tieOpen.Clear();
         _tieToNextNote = false;
     }
@@ -2583,6 +2719,7 @@ public sealed class MusicXmlExporter
         if (_currentMeasure != null && _currentMeasure.Notes.Count > 0 && _currentPart != null)
         {
             _currentPart.Measures.Add(_currentMeasure);
+            NoteTheTiesOpenAtTheBarsEnd();
         }
         else if (_currentMeasure is { } dropped)
         {
@@ -2817,6 +2954,7 @@ public sealed class MusicXmlExporter
             _bars.SetTime(foreign);
             _attributesDirty = true;
         }
+        NoteTheTiesOpenAtTheBarsEnd();
         _currentMeasure = new MusicXmlMeasure { Number = _measureNumber++ };
 
         if (addAttributes)
@@ -6337,6 +6475,7 @@ public sealed class MusicXmlExporter
                     break;
                 case "repeatTie":
                     xmlNote.TieStop = true;
+                    xmlNote.RepeatTieWritten = true;
                     break;
             }
         }

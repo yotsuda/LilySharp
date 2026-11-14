@@ -145,6 +145,130 @@ public sealed partial class LilyPondExporter
         result.AddRange(items);
     }
 
+    // ---- a tie carried over a repeat the MUSIC writes ------------------------------------
+    //
+    // The carry rule is the form's (LilyPondExporter.Music.cs, "a tie carried over a repeat"),
+    // read where the signs stand: in a book whose music writes repeat signs the bar played
+    // after a bar is the score's sign column's answer (Semantics.RepeatStream.Next), not the
+    // form's alone. A tie that ends a bar of this part reaches the first note of every bar
+    // played after it; LilyPond draws the arc to the bar printed next, and every other such
+    // bar takes \repeatTie — the head of the repeat a first ending returns to, the second
+    // ending a tie out of the body also enters. MEASURED before (2026-11-15, Lab
+    // sessions/p1247/probe/t-b-endings, t-c-first): neither note carried one, where the same
+    // music spelled with the form's signs did (t-e-formtwin, t-f-formback).
+
+    // By printed play of the column: the bars of the section whose first note takes \repeatTie
+    // in the part being written. Null in a book whose music writes no sign — the form's
+    // reading stands there (RepeatTiePlays).
+    private Dictionary<int, HashSet<int>>? _repeatTieBars;
+    private RepeatStream? _repeatTieStream;
+
+    private Dictionary<int, HashSet<int>>? RepeatTieBars(FormDeclarationSyntax? form,
+        Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)> byName)
+    {
+        _repeatTieStream = null;
+        if (_shared.Root is not { } root || !RepeatStream.InTheMusic(root))
+            return null;
+        var stream = _repeatTieStream = RepeatStream.For(root, form);
+        var result = new Dictionary<int, HashSet<int>>();
+        for (int p = 0; p < stream.Plays.Count; p++)
+        {
+            var play = stream.Plays[p];
+            if (!byName.TryGetValue(play.Section, out var entry) || VoiceOf(entry.Container) is not { } voice)
+                continue;
+            foreach (int k in TiedBars(voice))
+            {
+                if (k < 0 || k >= play.Bars)
+                    continue;
+                int bar = play.FirstBar + k;
+                foreach (int next in stream.Next(bar))
+                {
+                    int q = next == bar + 1 ? -1 : stream.PlayOf(next);
+                    if (q < 0)
+                        continue;
+                    if (!result.TryGetValue(q, out var bars))
+                        result[q] = bars = new HashSet<int>();
+                    bars.Add(next - stream.Plays[q].FirstBar);
+                }
+            }
+        }
+        return result;
+    }
+
+    /// <summary>The bars of its section (0-based) a part voice leaves on a tie: the event
+    /// before the bar line that closes the bar is tied — or, for a last bar no line closes,
+    /// the voice's last event. A tie inside a phrase the voice plays is not seen (the form's
+    /// reading has the same blind spot, <see cref="EndsWithTie"/>).</summary>
+    private IEnumerable<int> TiedBars(SectionBarCounts.SemanticVoice voice)
+    {
+        if (voice.IsChords)
+            yield break;
+        foreach (var line in VoiceBarLines.Of(voice, _phraseBodies))
+            if (line.Bars > 0 && line.Node.Parent is { } parent && EndsTied(parent.ChildNodes(), before: line.Node))
+                yield return line.Bars - 1;
+        if (voice.TrailingOpen && EndsTied(voice.Container.ChildNodes(), before: null))
+            yield return voice.Bars - 1;
+    }
+
+    /// <summary>Whether the last event of <paramref name="items"/> before <paramref name="before"/>
+    /// (null: of all of them) is tied — looking into an ending that stands last.</summary>
+    private static bool EndsTied(IEnumerable<SyntaxNode> items, SyntaxNode? before)
+    {
+        var list = new List<SyntaxNode>();
+        foreach (var item in items)
+        {
+            if (ReferenceEquals(item, before))
+                break;
+            list.Add(item);
+        }
+        for (int i = list.Count - 1; i >= 0; i--)
+        {
+            switch (list[i])
+            {
+                case TieSyntax:
+                    return true;
+                case BarlineSyntax:
+                    return false;
+                case InlineVoltaSyntax ending:
+                    return EndsTied(ending.Items, before: null);
+            }
+            if (SectionSigns.TakesTime(list[i]))
+                return false;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Plants a <see cref="RepeatTieMarker"/> before the first note of every bar of this play
+    /// that <see cref="_repeatTieBars"/> names — after the bar line with that many bars of the
+    /// section before it, or at the play's head. Called before the score's signs are written
+    /// into the play (<see cref="WriteTheScoresRepeatSigns"/>), so an ending spread from
+    /// another voice takes the marker in with the bar; one before an ending this voice writes
+    /// is carried in by <see cref="EmitInlineRepeat"/>.
+    /// </summary>
+    /// <param name="play">The printed play (form-walk order), or -1 for a book with no form:
+    /// the section's one play.</param>
+    private void PlantTheRepeatTies(int play, string name, SyntaxNode container, List<SyntaxNode> result, int from)
+    {
+        if (_repeatTieBars == null || _repeatTieStream is not { } stream || _chordTrack)
+            return;
+        if (play < 0)
+            for (int p = 0; p < stream.Plays.Count && play < 0; p++)
+                if (stream.Plays[p].Section == name)
+                    play = p;
+        if (play < 0 || play >= stream.Plays.Count || stream.Plays[play].Section != name
+            || !_repeatTieBars.TryGetValue(play, out var targets))
+            return;
+        var bars = PlaceTheBarLines(result.GetRange(from, result.Count - from), VoiceOf(container));
+        foreach (int k in targets.OrderByDescending(k => k))
+        {
+            int line = bars.LastIndexOf(k);
+            if (line < 0 && k > 0)
+                continue;
+            result.Insert(from + line + 1, new RepeatTieMarker());
+        }
+    }
+
     // Whether the voice being written takes the other voices' signs (CarriesTheScoresSigns).
     private bool _carriesTheSigns = true;
 

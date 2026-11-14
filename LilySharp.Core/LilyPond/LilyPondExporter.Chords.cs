@@ -442,6 +442,7 @@ public sealed partial class LilyPondExporter
 
         var result = new List<SyntaxNode>();
         _repeatTiePlays = new HashSet<int>(); // a chord track carries no ties
+        _repeatTieBars = null;
         _chordTrack = true;
         _lastChordPlay = null;
         _carriesTheSigns = CarriesTheScoresSigns(byName, "a chord track");

@@ -117,7 +117,7 @@ LYS1034 のエラーが出ていても出力は書かれるので、今の答え
 | MIDI（`MidiExporter.ProcessSequence`／`ProcessRepeatSpan`） | **書いたパートだけ**反復する（2 パートで 25 音・正しくは 27）。section をまたぐ対は反復しない。コードの行の反復は誰も反復しない。ナビ記号はたどらない | 一番遠い。この歩きは 1 つの section の 1 パートしか見えない（同ファイル :2971-2985 の注）。score の小節の列から道順を取り、section の小節の範囲を全パートで鳴らす形にする |
 | MusicXML（`MusicXmlExporter`） | 書いたパートにだけ `<repeat>`。`<ending>`・回数・ナビ記号は出ない。コードの行の反復は出ない | 全パートの同じ小節に barline／ending／回数／記号を書く |
 | `.ly`（`LilyPondExporter.EmitInlineRepeat`） | 書いたパートにだけ `\repeat volta`・`\alternative`。ナビ記号は `\segnoMark`・`\jump`・`\codaMark` で出る | 書かなかったパートにも同じ小節で入れる（`\unfoldRepeats` と MIDI のため。絵は今も score 全体に出る） |
-| タイの持ち越し・小節の補完（`PlayedOrder.Expand`・`SectionBoundaryBars`） | **測った（第1245・§7）。** MIDI のタイ（第1245）とページ・検査のタイ（第1246）は直した。MusicXML・`.ly` のタイと、`:|` が割る小節は form の綴りと違う | score 全体の記号の列（`RepeatStream`）から「小節の次に鳴る小節」を引く |
+| タイの持ち越し・小節の補完（`PlayedOrder.Expand`・`SectionBoundaryBars`） | **測った（第1245・§7）。** タイは 5 つの読み手とも直した（MIDI 第1245・ページと検査 第1246・MusicXML と `.ly` 第1247）。`:|` が割る小節は form の綴りと違う | score 全体の記号の列（`RepeatStream`）から「小節の次に鳴る小節」を引く |
 | 歌詞の `verse N` | 未測定 | §6 Q3 |
 | プレビューの増分（`MeasureCollector.Resume`） | **測った（第1245）。** 記号を 1 つのパートに打つ・消す・1 文字ずつ打つ 10 通りで、増分の絵は全部描き直した絵と同じ（網 `InlineRepeatIncrementalTests`） | なし |
 | 読み込み（`LysWriter`）・OMR・Dettato | section に分解して書く | §6 Q2 |
@@ -131,7 +131,7 @@ LYS1034 は**最後に**外す。エラーの本も今は描けて鳴るので�
 
 0. ✅ 済み（上の表）。
 1. `RepeatStream`（✅ 列と演奏順・第1246＝§7「段 1」。form だけの本は答えが変わらない）と診断（§3.2〜§3.6・残り）。
-2. ✅ ページ（行の ending の括弧）。3. ✅ MIDI（§7）。4. タイと小節の補完（実測と MIDI のタイは ✅・ページほかのタイと `:|` が割る小節は段 1 の列の上で＝§7 段 4）。5. ✅ MusicXML（小節線・ending・回数・行の記号・音楽のナビ記号）。6. ✅ `.ly`（全声部に書く。LilyPond は通る・絵の突き合わせは未）。7. ✅ 歌詞（4 種目の警告は未）。
+2. ✅ ページ（行の ending の括弧）。3. ✅ MIDI（§7）。4. タイと小節の補完（タイは ✅＝§7「MusicXML・`.ly` のタイ」まで・`:|` が割る小節は段 1 の列の上で＝§7 段 4）。5. ✅ MusicXML（小節線・ending・回数・行の記号・音楽のナビ記号）。6. ✅ `.ly`（全声部に書く。LilyPond は通る・絵の突き合わせは未）。7. ✅ 歌詞（4 種目の警告は未）。
 8. LYS1034 を phrase だけに狭める。GRAMMAR・TUTORIAL・LEARN_FOR_LLM・COMPOSE_FOR_LLM・補完・CHANGELOG。
 9. 読み込みと OMR の書き出し（Q2 の答えしだい）。
 
@@ -238,8 +238,25 @@ LYS1034 は**最後に**外す。エラーの本も今は描けて鳴るので�
   網 `InlineRepeatTieTests`（別のパートが書いた記号・増分 3 通りを含む）。毒 6 本とも赤（Lab `p1246/poisons.ps1`）。
 - 打鍵の門: 「音楽に記号があるか」は green を歩き、top-level の宣言ごとに答えを覚える（`RepeatStream.InTheMusic`・`KeystrokeStaysRedFreeTests`）。
   記号とタイのある本は、木ごとに 1 回列を作る（全声部の `MeasureModel.Split` と木の索引）。その値段は未測定。
-- **残り**: MusicXML と `.ly` のタイ（`PlayedOrder.PlaysOf`＝form の項目を読む 2 つの読み手を列に替える）／`:|` が割る小節（下の残り 2・`Next` を引く）／診断（小節の途中の記号・入れ子・ending の食い違い）／
+- **残り**: ~~MusicXML と `.ly` のタイ~~（第1247 で済み・下）／`:|` が割る小節（上の残り 2・`Next` を引く）／診断（小節の途中の記号・入れ子・ending の食い違い）／
   MusicXML の `_musicNavMarks` と MIDI の `WritesRepeatsInTheMusic` は同じ読みの別の綴りのまま（`SectionSigns`・`InTheMusic` に寄せられる）。
+
+### MusicXML・`.ly` のタイ（第1247・2026-11-15）
+
+段 4「残り 1」の残っていた 2 つの読み手。どちらも**音楽に記号を書いた本だけ**列（`RepeatStream.Next`）を引き、ほかの本は form の読み（`PlayedOrder`）のまま。
+探り譜と LilyPond の絵は Lab `sessions/p1247/probe`（form の綴りの双子 `t-e`・`u-g`・`u-i-twin` と同じ出力になることを確かめた）。
+
+- **MusicXML**（`MusicXmlExporter.CarryTiesAlongTheColumn`）: 小節を書き終えるたびに、開いているタイの音を控える（`_openAtBarEnd`）。書き終わったあと、
+  「次に鳴る小節が刷った次の小節だけ」でない小節と、パートのブロックの最後の小節について、次に鳴る小節それぞれの最初の音に stop を書く。
+  刷った次の小節が次に鳴らないとき（`[1. d1~ :| [2. d1 ]`）は、流れが付けた stop を外す。stop の付かない start は外し、弧の出ない start には `let-ring` を足す（綴りは `FinishCarriedTies` と同じ）。
+  行き先は、タイの音と同じ声部の、その小節の最初の音。パートの小節の数が列と同じときだけこの読みにする（違えば form の読み）。
+- **`.ly`**（`LilyPondExporter.RepeatTieBars`／`PlantTheRepeatTies`）: パートの声部がタイで終える小節（`TiedBars`＝小節線の前の `~`）から、刷った次の小節以外の「次に鳴る小節」を求め、
+  その小節の頭に `RepeatTieMarker` を置く（次の音が `\repeatTie` を取る）。ending の直前の印はその ending の中身の先頭に入れる（`EmitInlineRepeat`・`:|` の先の ending を探す読みも印を透かす）。
+  別の声部の ending を広げる前に置くので、広げた ending にも一緒に入る。
+- 網: `InlineRepeatTieMusicXmlTests` 9 本・`InlineRepeatLilyPondTests.ATieOverARepeatTheMusicWrites_…`。毒 10 本とも赤（Lab `p1247/poisons.ps1`）。
+  掃き 1041 冊（xml 1268 件・ly 1268 件）は HEAD と差 0。LilyPond 2.26.0 は探り譜 10 冊を通る。
+- 残り: 1 番括弧から頭へ戻るタイ（弧の出ないタイ）は、`.ly` では `~` のままなので LilyPond が `unterminated tie` と警告する（form の綴りも同じ・ページは短い弧を描く）。
+  2 声部の小節どうしのタイは網がない（声部の番号で行き先を選ぶ）。フレーズの中で終わるタイは `.ly` では見ない（form の読みの `EndsWithTie` と同じ）。
 
 ## 8. エディタ: 記号を全パートに書く（オーナー決定 2026-11-14・小節線の分は実装 `Editing.RepeatSignSpreader`・実機は未確認）
 

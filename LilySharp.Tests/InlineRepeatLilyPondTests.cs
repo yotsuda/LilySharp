@@ -170,6 +170,37 @@ public sealed class InlineRepeatLilyPondTests
         Assert.Contains(exporter.Warnings, w => w.Contains("part 'bas' does not carry the repeat signs"));
     }
 
+    /// <summary>A tie that ends a bar reaches the first note of every bar played after it
+    /// (docs/inline-repeat-design.md §7 stage 4): LilyPond draws the arc to the bar printed
+    /// next, and every other such bar's first note takes <c>\repeatTie</c> — the second ending
+    /// a tie out of the body also enters, the head a first ending returns to. MEASURED before
+    /// (2026-11-15, Lab sessions/p1247/probe/t-b-endings, t-c-first): neither carried one,
+    /// where the form's spelling of the same music did.</summary>
+    [Fact]
+    public void ATieOverARepeatTheMusicWrites_IsARepeatTieOnEveryOtherBarPlayedNext()
+    {
+        var (endings, _) = Export(TwoParts("|: c''1 | d''1~ | [1. d''1 :| [2. d''1 ] | c''1 |", "c1 | d1 | e1 | f1 | g1 |"));
+        Assert.Equal(@"\repeat volta 2 { c''1 | d''1 ~ | } \alternative { { d''1 } { d''1\repeatTie } } | c''1 |", Var(endings, "mel"));
+        Assert.DoesNotContain("repeatTie", Var(endings, "bas"));
+
+        var (head, _) = Export(TwoParts("|: c''1 | d''1 | [1. c''1~ :| [2. e''1 ] | c''1 |", "c1 | d1 | e1 | f1 | g1 |"));
+        Assert.Equal(@"\repeat volta 2 { c''1\repeatTie | d''1 | } \alternative { { c''1 ~ } { e''1 } } | c''1 |", Var(head, "mel"));
+
+        // The signs are another part's: the tied part's own bars take the marks.
+        var (other, _) = Export(TwoParts("c''1 | d''1~ | d''1 | d''1 | c''1 |", "|: c1 | d1 | [1. e1 :| [2. f1 ] | g1 |"));
+        Assert.Equal(@"\repeat volta 2 { c''1 | d''1 ~ | } \alternative { { d''1 | } { d''1\repeatTie | } } c''1 |", Var(other, "mel"));
+
+        // Three endings: the ':|' between the second and the third still divides them, the
+        // mark before the third notwithstanding.
+        var (three, _) = Export(TwoParts("|: c''1 | d''1~ | [1. d''1 :| [2. d''1 :| [3. d''1 ] | c''1 |", "c1 | d1 | e1 | f1 | g1 | a1 |"));
+        Assert.Equal(@"\repeat volta 3 { c''1 | d''1 ~ | } \alternative { { d''1 } { d''1\repeatTie } { d''1\repeatTie } } | c''1 |", Var(three, "mel"));
+
+        // No form: the sections in declaration order, the same column.
+        var (noForm, _) = Export(TwoParts("|: c''1 | d''1~ | [1. d''1 :| [2. d''1 ] | c''1 |", "c1 | d1 | e1 | f1 | g1 |",
+            "score { staff mel staff bas }"));
+        Assert.Equal(Var(endings, "mel"), Var(noForm, "mel"));
+    }
+
     /// <summary>The control: a book whose repeats are the form's writes what it always wrote.</summary>
     [Fact]
     public void ABookWithNoSignInItsMusic_IsUntouched()
