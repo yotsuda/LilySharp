@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1256セッションの経緯
+
+### 1.1 第1256セッション（2026-11-15・YT-DELL2）
+
+base `cac7c6e55`・開始時 full 17096 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17099（Lab `p1256` の `run1.trx`）。Calamo・Dettato の REQUESTS は第1253 の開始時に見たまま（同じ会話）。CI は第1231 のまま。
+**オーナー決定 2026-11-15「3 回に統一して」**＝form の `|: A [1. B] :| [2. C] [3. D]`（3 番括弧の前に `:|` なし）も 3 回（設計 `inline-repeat-design.md` §7 MIDI の ✅ の項）。
+- **パーサ**（`ParseFormRepeatBlock`）: 最後の ending のすぐ後ろの ending を `:|` なしでも反復の一部として受け、省かれた `:|` を空のトークンで入れる。form の読み手（FormWalk・MIDI・双子・MusicXML）はそのまま印を見つける。ページは小節線を文字で読むので `SyntaxFacts.FormBarText`（`MeasureCollector.Form.cs` の 4 か所）。
+- `RepeatStream.Elements` の「form が書いたか」の分岐（第1255 の仮置き）は外した。LYS6008 はこの形に出なくなった（間に section がある `[2. C] E [3. D]` は今までどおり）。
+- 門: `[2. C] [3. D]` と `[2. C] :| [3. D]` で .mid・.xml・.ly がバイト一致・.svg は data-* を除いて一致（Lab `p1256/probe`）。全 1041 冊の .mid で変わったのはこの形を書く 11 冊の 17 本だけ（`p1256/midi-diff.txt`）。網 +3（`MidiRepeatTests`・`VoltaEndingWithoutRepeatDiagnosticTests`）。絵の掃きは回していない（snapshot は full で緑）。
+- 文書: GRAMMAR の StructureRepeat・GRAMMAR_FOR_LLM・SYNTAX_REFERENCE・CHANGELOG。commit `530216150`。終了時 full 17099 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17102（`run2.trx`）。
+- 7.7: ⚠️ コーパスの 11 冊は音が 1 回分長くなり、ページに 3. の括弧と 2 番括弧の終わりの反復小節線が出る（元の .ly と同じ）／残りは §1.0 の ⑴。
+
 ## 以下は第1255セッションの経緯
 
 ### 1.1 第1255セッション（2026-11-15・YT-DELL2）
