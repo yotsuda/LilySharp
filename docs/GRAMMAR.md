@@ -3322,7 +3322,7 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
    - Dynamics:      @ppppp @pppp @ppp @pp @p @mp @mf @f @ff @fff @ffff @fffff @sfz @sffz @sf @fp @sfp @rf @rfz @fz   (the whole list — SyntaxFacts.DynamicTextLevels; default below, above over a lyrics row directly under the staff; @f.up / @f.down forces side; @p.subito prints "sub. p", plays p - @p(editorial) prints the level in parentheses, plays p, and takes a side after it as @p(editorial).up - a hairpin or @niente takes no (editorial): LYS4076)
    - Hairpins:      @cresc @decresc @dim  (start note → next dynamic, or to @!cresc / @!decresc /
                  @!dim on a later note — LilyPond's \! — which ends whichever is open; written after
-                 the start on ONE note, @cresc@!cresc, it spans that note's length; the staff's side as a level's; @cresc.up / @cresc.down gives its line the side,
+                 the start on ONE note, @cresc@!cresc, it spans that note's length; a hairpin is its VOICE's — in a staff of two voices it ends at its own voice's next dynamic, hairpin or stop, at the staff's next only when its voice writes none, and on a condensedStaff, whose parts share one copy of a level, always at the staff's next; the staff's side as a level's; @cresc.up / @cresc.down gives its line the side,
                  and the marks after it on that line that write none follow, as LilyPond's do;
                  played: each note is struck at the level the hairpin has reached — from its first
                  note to the next level when that lies its way, else two dynamics on, which then

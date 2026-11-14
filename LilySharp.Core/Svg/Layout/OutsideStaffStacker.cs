@@ -465,8 +465,7 @@ internal static class OutsideStaffStacker
         // of the f's, so LilyPond seats the p by the staff (origin −4.708) and the f under it
         // (−6.884). Lily# placed them in source order, the f by the staff (−4.55) and the p
         // under it (−6.78).
-        // ⚠️ The left edge of a text is its centre less half its ADVANCE, not its ink — the
-        // two differ by the glyph's side bearings, which no order measured here depends on.
+        // The left edge is the grob's own X extent's (TurnLeft, below).
         var turn = new List<(double Left, int Seq, int Kind, int Index)>();
         if (!lineGroups.IsDefaultOrEmpty)
             for (int gi = 0; gi < lineGroups.Length; gi++)
@@ -476,20 +475,20 @@ internal static class OutsideStaffStacker
                 double left = double.PositiveInfinity;
                 foreach (int di in lineGroups[gi].DynamicIndices)
                     if (dynB != null)
-                        left = Math.Min(left, LabelLeft(dynB[di]));
+                        left = Math.Min(left, TurnLeft(fonts, dynB[di]));
                 foreach (int hi in lineGroups[gi].HairpinIndices)
                     if (hpB != null)
-                        left = Math.Min(left, hpB[hi].StartX);
+                        left = Math.Min(left, TurnLeft(hpB[hi]));
                 turn.Add((left, turn.Count, 0, gi));
             }
         if (dynB != null)
             for (int i = 0; i < dynB.Count; i++)
                 if (!groupedDynIdx.Contains(i) && !dynB[i].IsExpressiveText && !dynB[i].IsAbove)
-                    turn.Add((LabelLeft(dynB[i]), turn.Count, 1, i));
+                    turn.Add((TurnLeft(fonts, dynB[i]), turn.Count, 1, i));
         if (hpB != null)
             for (int i = 0; i < hpB.Count; i++)
                 if (!groupedHpIdx.Contains(i) && !hpB[i].IsAbove)
-                    turn.Add((hpB[i].StartX, turn.Count, 2, i));
+                    turn.Add((TurnLeft(hpB[i]), turn.Count, 2, i));
         turn.Sort(static (a, b) => a.Left != b.Left ? a.Left.CompareTo(b.Left) : a.Seq.CompareTo(b.Seq));
         foreach (var e in turn)
         {
@@ -503,8 +502,6 @@ internal static class OutsideStaffStacker
         var adjDynamics = dynB?.MoveToImmutable() ?? dynamics; // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
         var adjHairpins = hpB?.MoveToImmutable() ?? hairpins;
 
-        double LabelLeft(DynamicLayout d)
-            => DynamicEngraver.LabelExtentX(fonts, d).Left;
 
         // A multi-member line (texts + wedges linked by running hairpins) is ONE grob of
         // this pass: its members' combined outline takes one Place and one move, so a tie
@@ -666,6 +663,41 @@ internal static class OutsideStaffStacker
         adjDynamics = PlaceBelowDynamics(adjDynamics, expressive: true);
         adjArticulations = PlaceBelowScriptMovers(adjArticulations, textScriptStage: true);
         return (adjDynamics, adjHairpins, adjArticulations, adjTrills);
+    }
+
+    /// <summary>
+    /// The left edge the 250 turn orders a dynamic text by: the left of its grob's X extent,
+    /// which for a level is its letters' advance run about its centre — the box a hairpin bound
+    /// reads too (<c>HairpinEngraver</c>'s Text_interface bound), not the narrower drawn width
+    /// (<see cref="DynamicEngraver.LabelExtentX"/>), which stands in for the texts with no
+    /// such run (a free text, a subito's word, an editorial level's parentheses).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:886-907 Axis_group_interface::skyline_spacing — left_extent = g->extent (x_common, X_AXIS)[LEFT], then std::stable_sort.
+    /// MEASURED (LilyPond 2.26.0, Lab sessions/p1238/hpv v5: <c>voice { c''4@p … } { c'2@cresc
+    ///   c'2@!cresc }</c>): the p's DynamicLineSpanner spans 17.039..18.507 and the lower voice's
+    ///   hairpin's 17.071..24.553, so the p is placed first, by the staff (−7.083), and the
+    ///   wedge under it (−8.214). Until session 1238 the text was ordered by its drawn width
+    ///   (left 17.124) and the wedge by its bound (17.121, no half thickness): the wedge went
+    ///   first, by 0.003, and the p under it (−8.47). No pair had the two start on one column —
+    ///   a hairpin took every level in its span onto its own line while it held no voice.
+    /// </remarks>
+    private static double TurnLeft(Rendering.ScoreTextMetrics fonts, in DynamicLayout d)
+        => !d.IsExpressiveText && !d.IsSubito && !d.IsEditorial
+           && (d.GlyphRunWidth ?? DynamicOutline.AdvanceWidth(d.Text)) is { } run
+            ? d.X - run / 2.0
+            : DynamicEngraver.LabelExtentX(fonts, d).Left;
+
+    /// <summary>The left edge the 250 turn orders a hairpin by: its stencil's — the arms' start
+    /// less the half thickness their line is widened by, or the niente circle's left edge.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/line-interface.cc:177-191 Line_interface::make_line — the line's box is widened by th / 2
+    /// LILYPOND-REF: lily/hairpin.cc:342-355 Hairpin::print — circled_tip: Box extent (Interval (-rad, rad), …), added at the arms' edge
+    /// </remarks>
+    private static double TurnLeft(in HairpinLayout h)
+    {
+        double left = h.StartX - HairpinEngraver.CircleThickness / 2.0;
+        return double.IsNaN(h.CircleX) ? left : Math.Min(left, h.CircleX - HairpinEngraver.CircleRadius);
     }
 
     /// <summary>Per-system index lists into the below pass's four input arrays, plus
@@ -2760,13 +2792,13 @@ internal static class OutsideStaffStacker
                 {
                     (groupedDyn ??= new HashSet<int>()).Add(di);
                     if (!dynamics.IsDefaultOrEmpty)
-                        left = Math.Min(left, DynamicEngraver.LabelExtentX(fonts, dynamics[di]).Left);
+                        left = Math.Min(left, TurnLeft(fonts, dynamics[di]));
                 }
                 foreach (int hi in g.HairpinIndices)
                 {
                     (groupedHp ??= new HashSet<int>()).Add(hi);
                     if (!hairpins.IsDefaultOrEmpty)
-                        left = Math.Min(left, hairpins[hi].StartX);
+                        left = Math.Min(left, TurnLeft(hairpins[hi]));
                 }
                 (turn ??= new()).Add((left, turn.Count, 0, gi));
             }
@@ -2775,11 +2807,11 @@ internal static class OutsideStaffStacker
                 if (dynamics[i].IsAbove && !dynamics[i].IsExpressiveText
                     && !(groupedDyn?.Contains(i) ?? false))
                     (turn ??= new()).Add(
-                        (DynamicEngraver.LabelExtentX(fonts, dynamics[i]).Left, turn.Count, 1, i));
+                        (TurnLeft(fonts, dynamics[i]), turn.Count, 1, i));
         if (!hairpins.IsDefaultOrEmpty)
             for (int i = 0; i < hairpins.Length; i++)
                 if (hairpins[i].IsAbove && !(groupedHp?.Contains(i) ?? false))
-                    (turn ??= new()).Add((hairpins[i].StartX, turn.Count, 2, i));
+                    (turn ??= new()).Add((TurnLeft(hairpins[i]), turn.Count, 2, i));
         if (turn is null)
             return (dynamics, hairpins);
         turn.Sort(static (a, b) => a.Left != b.Left ? a.Left.CompareTo(b.Left) : a.Seq.CompareTo(b.Seq));

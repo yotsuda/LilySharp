@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 431 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **558** | |
+| `OWN` | 432 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **559** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -247,7 +247,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（431 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（432 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -633,7 +633,7 @@
 - **`GlyphMetrics.MinItemGap`** LILYSHARP-OWN: the gap Lily# leaves between a LYRIC syllable and its neighbour.
 - **`GlyphMetrics.AccidentalLedgerShorteningRange`** reaches — LILYSHARP-OWN. Measured before (Lab sessions/p871/probe/ledger, 30 accidentals
 ### `LilySharp.Core/Svg/Layout/HairpinEngraver.cs`
-- **`HairpinEngraver.VoiceIndex`** ⚠️ LILYSHARP-OWN, DECLARED: the voice a hairpin supports off. LilyPond's
+- **`HairpinEngraver.DetectHairpins`** LILYSHARP-OWN: with NO end in its own voice the hairpin takes the staff's next
 - **`HairpinEngraver.DetectHairpins`** LILYSHARP-OWN: LilyPond reads the two at one moment as a stop, then a start.
 ### `LilySharp.Core/Svg/Layout/HeaderBand.cs`
 - **`HeaderBand.ChordListGap`** LILYSHARP-OWN: LilyPond has no chord list; the gap is Lily#'s, a little more
@@ -849,6 +849,7 @@
 - **`MusicItem.ApproachGesture`** LILYSHARP-OWN: LilyPond has no scoop or plop (grammar evaluation 4, 2026-11-13).
 ### `LilySharp.Core/Svg/Model/MusicMarkItem.cs`
 - **`MusicMarkType.RepeatCount`** edge on the bar line. The text is the item's. LILYSHARP-OWN — LilyPond prints nothing
+- **`MusicMarkItem.HairpinEndsOnStaff`** LILYSHARP-OWN: a condensed staff prints ONE copy of a level two of its parts write
 - **`MusicMarkItem..ctor`** coda itself (LILYSHARP-OWN, a Gould-style departure).
 - **`MusicMarkItem.BarreText`** LILYSHARP-OWN: LilyPond has no barre command; its manual writes the label as the
 ### `LilySharp.Core/Svg/Model/PercentRepeatItem.cs`

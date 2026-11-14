@@ -199,9 +199,11 @@ internal static class HairpinEngraver
             // stems) and its measures (to place the columns in X).
             var hpVoices = voicesByStaff != null
                 && voicesByStaff.TryGetValue(hairpin.StaffIndex, out var vv) ? vv : voices;
-            var hpMeasures = LayoutUtilities.ResolveStaffMeasures(
+            var staffMeasures = LayoutUtilities.ResolveStaffMeasures(
                 measuresByStaff, hairpin.StaffIndex,
                 hpVoices.IsDefaultOrEmpty ? ImmutableArray<Measure>.Empty : hpVoices[0].Measures);
+            var hpMeasures = VoiceMeasures(hpVoices, hairpin.VoiceIndex, staffMeasures);
+            var endMeasures = VoiceMeasures(hpVoices, hairpin.EndVoiceIndex, staffMeasures);
 
             // The RIGHT bound under to-barline: a terminator on a measure START binds
             // the hairpin to the BAR LINE before it — Hairpin has to-barline = #t, so
@@ -252,8 +254,8 @@ internal static class HairpinEngraver
                 // report, a song's `@mf@cresc … | … @ff` over a break under `D7`).
                 double staffOffset = staffYAt?.Invoke(segment.StartMeasureIndex, hairpin.StaffIndex) ?? 0;
                 layouts.Add(LayoutPiece(hairpin, segment, system, endMeasureIdx, measureLayouts,
-                    staffOffset, hpVoices, hpMeasures, beamMembers, dynamicAt, staffLines, graceNotes,
-                    restShiftsOf?.Invoke(hairpin.StaffIndex)));
+                    staffOffset, hpVoices, hpMeasures, endMeasures, beamMembers, dynamicAt, staffLines,
+                    graceNotes, restShiftsOf?.Invoke(hairpin.StaffIndex)));
             }
         }
 
@@ -332,8 +334,10 @@ internal static class HairpinEngraver
                 EndMeasureIndex: Math.Min(endMeasureIdx, last),
                 IsFirst: isFirst, IsLast: isLast, IsMiddle: !isFirst && !isLast);
             layouts.Add(LayoutPiece(hairpin, segment, system, endMeasureIdx, byMeasureIndex,
-                staffOffset: 0.0, staffVoices, staffMeasures, beamMembers, dynamicAt, staffLines,
-                graceNotes, restShifts));
+                staffOffset: 0.0, staffVoices,
+                VoiceMeasures(staffVoices, hairpin.VoiceIndex, staffMeasures),
+                VoiceMeasures(staffVoices, hairpin.EndVoiceIndex, staffMeasures),
+                beamMembers, dynamicAt, staffLines, graceNotes, restShifts));
         }
 
         return layouts.ToImmutable();
@@ -345,15 +349,18 @@ internal static class HairpinEngraver
     /// in — the terminator's own measure, or the one before it when the bound was rewritten
     /// to a bar (the caller's to-barline answer). <paramref name="measureLayouts"/> is keyed
     /// by measure index; only the measures of the piece's own segment, and the bound
-    /// measures of a FIRST / LAST piece, are read from it.
+    /// measures of a FIRST / LAST piece, are read from it. <paramref name="hpMeasures"/> are
+    /// the measures of the hairpin's own voice (<see cref="VoiceMeasures"/>) and
+    /// <paramref name="endMeasures"/> those of the voice its end is counted in.
     /// </summary>
     private static HairpinLayout LayoutPiece(
         HairpinItem hairpin, SpannerBreakSegment segment, SystemLayout system,
         int endMeasureIdx, ImmutableArray<MeasureLayout> measureLayouts, double staffOffset,
         ImmutableArray<Voice> hpVoices, ImmutableArray<Measure> hpMeasures,
+        ImmutableArray<Measure> endMeasures,
         Dictionary<(int Staff, int Voice, int Measure, int Item),
             (BeamLayout Beam, double StemX, bool StemUp)> beamMembers,
-        Dictionary<(int Measure, int Item, int Staff, bool Above), DynamicLayout> dynamicAt,
+        Dictionary<(int Measure, int Item, int Staff, int Voice, bool Above), DynamicLayout> dynamicAt,
         int staffLines, ImmutableArray<GraceNoteItem> graceNotes,
         IReadOnlyDictionary<RestShiftKey, double>? restShifts = null)
     {
@@ -384,8 +391,8 @@ internal static class HairpinEngraver
                 }
             }
             else if (hairpin.AdjacentAtEnd && !(hairpin.TipAdjacent && hairpin.Direction == HairpinDirection.Decrescendo)
-                     && BoundText(dynamicAt, hairpin.EndMeasureIndex, hairpin.EndItemIndex, hairpin) is null
-                     && ColumnExtent(hairpin.EndMeasureIndex, hairpin.EndItemIndex, hpMeasures,
+                     && BoundText(dynamicAt, hairpin.EndMeasureIndex, hairpin.EndItemIndex, hairpin.EndVoiceIndex, hairpin) is null
+                     && ColumnExtent(hairpin.EndMeasureIndex, hairpin.EndItemIndex, endMeasures,
                          measureLayouts) is { } metColumn)
             {
                 // Back to back with the hairpin starting on this note, no circle between: a third
@@ -395,7 +402,7 @@ internal static class HairpinEngraver
                 ownEndX = (metColumn.Left + metColumn.Right) / 2 - BoundPadding / 3;
             }
             else if ((hairpin.NienteAtEnd != null || hairpin.EndsAtStop)
-                     && ColumnExtent(hairpin.EndMeasureIndex, hairpin.EndItemIndex, hpMeasures,
+                     && ColumnExtent(hairpin.EndMeasureIndex, hairpin.EndItemIndex, endMeasures,
                          measureLayouts) is { } endColumn)
             {
                 // A niente is no DynamicText — the twin ends the hairpin with \! — and an explicit
@@ -411,14 +418,14 @@ internal static class HairpinEngraver
                     ? (endColumn.Left + endColumn.Right) / 2 + (CircleRadius - CircleThickness / 2.0)
                     : endColumn.IsRest ? endColumn.Left : endColumn.Right;
             }
-            else if (BoundText(dynamicAt, hairpin.EndMeasureIndex, hairpin.EndItemIndex, hairpin) is { } endDyn
+            else if (BoundText(dynamicAt, hairpin.EndMeasureIndex, hairpin.EndItemIndex, hairpin.EndVoiceIndex, hairpin) is { } endDyn
                      && (endDyn.GlyphRunWidth ?? DynamicOutline.AdvanceWidth(endDyn.Text)) is { } endW)
             {
                 ownEndX = endDyn.X - endW / 2.0 - BoundPadding;
             }
             else
             {
-                ownEndX = CalculateEndX(hairpin, hpMeasures, measureLayouts);
+                ownEndX = CalculateEndX(hairpin, endMeasures, measureLayouts);
             }
         }
 
@@ -440,7 +447,7 @@ internal static class HairpinEngraver
             //   e.center () - (rad - thick / 2.0)
             ownStartX = (startColumn.Left + startColumn.Right) / 2 - (CircleRadius - CircleThickness / 2.0);
         else if (segment.IsFirst && hairpin.AdjacentAtStart
-            && BoundText(dynamicAt, hairpin.StartMeasureIndex, hairpin.StartItemIndex, hairpin) is null
+            && BoundText(dynamicAt, hairpin.StartMeasureIndex, hairpin.StartItemIndex, hairpin.VoiceIndex, hairpin) is null
             && ColumnExtent(hairpin.StartMeasureIndex, hairpin.StartItemIndex, hpMeasures,
                 measureLayouts) is { } metColumn)
             // Back to back with the hairpin ending on this note: a third of the padding past the
@@ -449,11 +456,11 @@ internal static class HairpinEngraver
             ownStartX = (metColumn.Left + metColumn.Right) / 2 + BoundPadding / 3;
         else if (segment.IsFirst)
             ownStartX =
-                BoundText(dynamicAt, hairpin.StartMeasureIndex, hairpin.StartItemIndex, hairpin) is { } startDyn
+                BoundText(dynamicAt, hairpin.StartMeasureIndex, hairpin.StartItemIndex, hairpin.VoiceIndex, hairpin) is { } startDyn
                 && (startDyn.GlyphRunWidth ?? DynamicOutline.AdvanceWidth(startDyn.Text)) is { } startW
                 ? startDyn.X + startW / 2.0 + BoundPadding
                 : GraceColumnX(graceNotes, hpVoices, staffIdx, hairpin.StartMeasureIndex,
-                      hairpin.StartItemIndex, measureLayouts)
+                      hairpin.StartItemIndex, measureLayouts, SupportVoice(hairpin, hpVoices))
                   ?? CalculateStartX(hairpin, hpMeasures, measureLayouts);
 
         {
@@ -564,9 +571,11 @@ internal static class HairpinEngraver
                 //   (Y-offset . side-position-interface::y-aligned-side) and its own
                 //   description, "a vertical baseline to align successive dynamic grobs
                 //   (DynamicText, DynamicTextSpanner, and Hairpin)".
+                // The supports are the hairpin's OWN voice's heads, stems and rests: its line
+                // spanner's engraver stands in that Voice (HairpinItem.VoiceIndex).
                 var support = DynamicEngraver.SpanSupportSkylines(
-                    hpVoices, VoiceIndex,
-                    SpanColumns(hairpin, segment, hpMeasures, measureLayouts, graceNotes, hpVoices),
+                    hpVoices, SupportVoice(hairpin, hpVoices),
+                    SpanColumns(hairpin, segment, hpMeasures, endMeasures, measureLayouts, graceNotes, hpVoices),
                     (vi, mi, ii) => beamMembers.TryGetValue((staffIdx, vi, mi, ii), out var b)
                         ? b : null,
                     staffLines, restShifts);
@@ -592,22 +601,46 @@ internal static class HairpinEngraver
     }
 
     /// <summary>
-    /// ⚠️ LILYSHARP-OWN, DECLARED: the voice a hairpin supports off. LilyPond's
-    /// Dynamic_align_engraver is consisted into the <c>Voice</c> context
-    /// (ly/engraver-init.ly:359,410), so a hairpin in the lower voice sides off the LOWER
-    /// voice's heads and stems. Lily# cannot ask that question here — a hairpin comes from
-    /// a <see cref="MusicMarkItem"/>, which carries a staff but no voice — so it takes the
-    /// staff's first voice. The other voices' ink still reaches the wedge, through the
-    /// outside-staff collision pass over the whole staff profile
-    /// (<see cref="OutsideStaffStacker"/>), which is the route LilyPond uses for them too;
-    /// what is lost is only the 0.6-padding side-position support of a hairpin authored in
-    /// a non-first voice. It goes when MusicMarkItem carries its voice.
-    /// ⚠️ NOTHING OBSERVES IT: the corpus has no point on a hairpin in a lower voice, and
-    /// the pair that would see it is a two-voice staff whose lower voice descends further
-    /// than 0.14 below where the collision pass would put the wedge anyway (the gap
-    /// between this padding, 0.6, and outside-staff-padding, 0.46).
+    /// The measures an item index of voice <paramref name="voiceIndex"/> counts in: that
+    /// voice's own, and the staff's for its first voice (the two are one list) or for a voice
+    /// the staff does not hold.
     /// </summary>
-    private const int VoiceIndex = 0;
+    internal static ImmutableArray<Measure> VoiceMeasures(
+        ImmutableArray<Voice> staffVoices, int voiceIndex, ImmutableArray<Measure> staffMeasures)
+        => voiceIndex > 0 && !staffVoices.IsDefaultOrEmpty && voiceIndex < staffVoices.Length
+            ? staffVoices[voiceIndex].Measures
+            : staffMeasures;
+
+    /// <summary>The voice whose heads, stems and rests the hairpin sides off: its own
+    /// (<see cref="HairpinItem.VoiceIndex"/>), or the staff's first where the staff holds no
+    /// such voice.</summary>
+    private static int SupportVoice(HairpinItem hairpin, ImmutableArray<Voice> staffVoices)
+        => !staffVoices.IsDefaultOrEmpty && hairpin.VoiceIndex < staffVoices.Length
+            ? hairpin.VoiceIndex : 0;
+
+    /// <summary>
+    /// The last item of the hairpin's own voice that the span still runs over in its end
+    /// measure. The end's own number when it is counted in that voice; for an end another
+    /// voice wrote (<see cref="HairpinItem.EndVoiceIndex"/>), the last own item starting no
+    /// later than that end's moment.
+    /// </summary>
+    internal static int OwnVoiceEndItem(int endMeasure, int endItem, bool sameVoice,
+        ImmutableArray<Measure> ownMeasures, ImmutableArray<Measure> endMeasures)
+    {
+        if (sameVoice || ownMeasures.IsDefaultOrEmpty || endMeasures.IsDefaultOrEmpty
+            || endMeasure < 0 || endMeasure >= ownMeasures.Length || endMeasure >= endMeasures.Length)
+            return endItem;
+        var endOnset = LayoutUtilities.ItemOnset(endMeasures[endMeasure], endItem);
+        var own = ownMeasures[endMeasure].Items;
+        int last = -1;
+        var onset = Semantics.Fraction.Zero;
+        for (int i = 0; i < own.Length && onset <= endOnset; i++)
+        {
+            last = i;
+            onset = onset + own[i].Duration;
+        }
+        return last;
+    }
 
     /// <summary>
     /// The wedge's OWN skyline pair (<c>my_dim</c>) about the spanner origin: the two
@@ -806,9 +839,15 @@ internal static class HairpinEngraver
     /// </remarks>
     private static IEnumerable<(int Measure, int Item, double X)> SpanColumns(
         HairpinItem hairpin, SpannerBreakSegment segment,
-        ImmutableArray<Measure> staffMeasures, ImmutableArray<MeasureLayout> measureLayouts,
+        ImmutableArray<Measure> staffMeasures, ImmutableArray<Measure> endMeasures,
+        ImmutableArray<MeasureLayout> measureLayouts,
         ImmutableArray<GraceNoteItem> graceNotes, ImmutableArray<Voice> voices)
     {
+        // staffMeasures are the hairpin's OWN voice's (LayoutPiece hands them in): the columns
+        // the line spanner's engraver saw are that voice's.
+        int supportVoice = SupportVoice(hairpin, voices);
+        int endItemInOwnVoice = OwnVoiceEndItem(hairpin.EndMeasureIndex, hairpin.EndItemIndex,
+            hairpin.EndVoiceIndex == hairpin.VoiceIndex, staffMeasures, endMeasures);
         // No measures means no caller supplied a staff — the harness case (a unit test that
         // builds layouts directly). The support is then the staff's own extent alone, which
         // is aligned_side's include_staff minimum and NOT a silent empty: HairpinTests'
@@ -824,10 +863,10 @@ internal static class HairpinEngraver
             var layout = measureLayouts[m];
             int itemCount = staffMeasures[m].Items.Length;
             int from = m == hairpin.StartMeasureIndex ? hairpin.StartItemIndex : 0;
-            int to = m == hairpin.EndMeasureIndex ? hairpin.EndItemIndex : itemCount - 1;
+            int to = m == hairpin.EndMeasureIndex ? endItemInOwnVoice : itemCount - 1;
             for (int i = Math.Max(0, from); i <= to && i < itemCount; i++)
                 yield return (m, i,
-                    GraceColumnX(graceNotes, voices, hairpin.StaffIndex, m, i, measureLayouts)
+                    GraceColumnX(graceNotes, voices, hairpin.StaffIndex, m, i, measureLayouts, supportVoice)
                     ?? layout.X + LayoutUtilities.GetItemXOffset(staffMeasures, m, i, layout));
         }
     }
@@ -844,7 +883,7 @@ internal static class HairpinEngraver
     /// </summary>
     internal static double? GraceColumnX(ImmutableArray<GraceNoteItem> graceNotes,
         ImmutableArray<Voice> voices, int staffIndex, int measure, int item,
-        ImmutableArray<MeasureLayout> measureLayouts, int voiceIndex = VoiceIndex)
+        ImmutableArray<MeasureLayout> measureLayouts, int voiceIndex = 0)
     {
         if (graceNotes.IsDefaultOrEmpty || voices.IsDefaultOrEmpty || voiceIndex >= voices.Length
             || measure >= measureLayouts.Length || measureLayouts[measure] is not { } layout)
@@ -862,16 +901,17 @@ internal static class HairpinEngraver
     /// same staff, the hairpin's own side of it, a real level (expressive text rides the
     /// dynamics table but is a different grob). First entry per key wins.
     /// </summary>
-    /// <remarks>Keyed by side so that <see cref="BoundText"/> can prefer the hairpin's own.</remarks>
-    private static Dictionary<(int Measure, int Item, int Staff, bool Above), DynamicLayout> BuildDynamicIndex(
+    /// <remarks>Keyed by side so that <see cref="BoundText"/> can prefer the hairpin's own, and
+    /// by voice: the item index is one voice's count.</remarks>
+    private static Dictionary<(int Measure, int Item, int Staff, int Voice, bool Above), DynamicLayout> BuildDynamicIndex(
         ImmutableArray<DynamicLayout> dynamicLayouts)
     {
-        var index = new Dictionary<(int, int, int, bool), DynamicLayout>();
+        var index = new Dictionary<(int, int, int, int, bool), DynamicLayout>();
         if (dynamicLayouts.IsDefaultOrEmpty)
             return index;
         foreach (var d in dynamicLayouts)
             if (!d.IsExpressiveText)
-                index.TryAdd((d.MeasureIndex, d.ItemIndex, d.StaffIndex, d.IsAbove), d);
+                index.TryAdd((d.MeasureIndex, d.ItemIndex, d.StaffIndex, d.VoiceIndex, d.IsAbove), d);
         return index;
     }
 
@@ -889,12 +929,16 @@ internal static class HairpinEngraver
     ///   DynamicText made in a timestep is set as the bound of the spanner ending there
     ///   (finished_spanner_->set_bound (RIGHT, script_)) or starting there
     ///   (current_spanner_->set_bound (LEFT, script_)); no direction is read.
+    /// The text is the one written in <paramref name="voice"/> — the voice the bound's item
+    /// index counts in: that engraver stands in one Voice (HairpinItem.VoiceIndex), and the same
+    /// number in another voice is another moment (until session 1238 a level at another
+    /// voice's item of the same number was taken for the bound).
     /// </remarks>
     private static DynamicLayout? BoundText(
-        Dictionary<(int Measure, int Item, int Staff, bool Above), DynamicLayout> dynamicAt,
-        int measure, int item, HairpinItem hairpin)
-        => dynamicAt.TryGetValue((measure, item, hairpin.StaffIndex, hairpin.IsAbove), out var own) ? own
-            : dynamicAt.TryGetValue((measure, item, hairpin.StaffIndex, !hairpin.IsAbove), out var other) ? other
+        Dictionary<(int Measure, int Item, int Staff, int Voice, bool Above), DynamicLayout> dynamicAt,
+        int measure, int item, int voice, HairpinItem hairpin)
+        => dynamicAt.TryGetValue((measure, item, hairpin.StaffIndex, voice, hairpin.IsAbove), out var own) ? own
+            : dynamicAt.TryGetValue((measure, item, hairpin.StaffIndex, voice, !hairpin.IsAbove), out var other) ? other
             : null;
 
     /// <summary>
@@ -1022,11 +1066,35 @@ internal static class HairpinEngraver
             //   same-timestep DynamicText item is wired
             //   current_spanner_->set_bound (LEFT, script_) and the ending one
             //   finished_spanner_->set_bound (RIGHT, script_).
-            var nextDynamic = sortedDynamics
-                .FirstOrDefault(d =>
-                    d.StaffIndex == mark.StaffIndex &&
-                    (d.MeasureIndex > mark.MeasureIndex ||
-                     (d.MeasureIndex == mark.MeasureIndex && d.ItemIndex > startItem)));
+            //
+            // …AND IN THE HAIRPIN'S OWN VOICE FIRST. An item index counts ONE voice's items, so
+            // an end in another voice is another moment under the same number. Until session
+            // 1238 the three searches below read the whole staff: a lower voice's
+            // `r4@cresc r r@!cresc r` under `c''8 c'' c''4 c''2` was paired right and then laid
+            // out on the upper voice's third item, and a level in the other voice ended a
+            // hairpin that had its own end further on (Lab sessions/p1237/hpv).
+            // LILYPOND-REF: ly/engraver-init.ly:359-410 Dynamic_engraver is consisted into the Voice context,
+            //   so its listeners hear their own voice's events only:
+            // LILYPOND-REF: lily/dynamic-engraver.cc:66-70 Dynamic_engraver::listen_absolute_dynamic
+            // LILYSHARP-OWN: with NO end in its own voice the hairpin takes the staff's next
+            //   one, whichever voice wrote it (`voice { c''4@cresc … } { c'2 c'2@f }`), as it did
+            //   before — the level a staff reaches is the staff's. LilyPond pairs nothing there
+            //   ("unterminated crescendo") and draws no hairpin.
+            //   departs from: lily/dynamic-engraver.cc:197-211 Dynamic_engraver::finalize.
+            //   ⚠️ That search still compares the two voices' ITEM NUMBERS, which are two
+            //   clocks: where their rhythms differ the end can be taken for earlier or later
+            //   than it is. A dynamic carries no time of its own to compare by.
+            //   observed by: HairpinVoiceTests (the other voice's level ends it).
+            (DynamicItem? Dynamic, MusicMarkItem? Mark, MusicMarkItem? Stop) EndsIn(bool ownVoice)
+            {
+                var dynamic = sortedDynamics
+                    .FirstOrDefault(d =>
+                        d.StaffIndex == mark.StaffIndex &&
+                        (!ownVoice || d.VoiceIndex == mark.VoiceIndex) &&
+                        (d.MeasureIndex > mark.MeasureIndex ||
+                         (d.MeasureIndex == mark.MeasureIndex && d.ItemIndex > startItem)));
+                return (dynamic, NextMark(ownVoice), NextStop(ownVoice));
+            }
 
             // Find the next cresc/decresc mark on this staff (another hairpin starts
             // there). A same-measure mark only counts if it is at a LATER item, so a
@@ -1041,11 +1109,12 @@ internal static class HairpinEngraver
             // defect the same day (TextSpannerEngraver.DetectTextSpanners' remark has the
             // report and the reasoning); the two searches are one shape and now carry one
             // guard.
-            var nextMark = crescMarks
+            MusicMarkItem? NextMark(bool ownVoice) => crescMarks
                 .Select(x => x.Mark)
                 .FirstOrDefault(m =>
                     m != mark && m.SourcePosition != mark.SourcePosition &&
                     m.StaffIndex == mark.StaffIndex &&
+                    (!ownVoice || m.VoiceIndex == mark.VoiceIndex) &&
                     (m.MeasureIndex > mark.MeasureIndex ||
                      (m.MeasureIndex == mark.MeasureIndex &&
                       m.AnchorItemIndex > mark.AnchorItemIndex)));
@@ -1053,10 +1122,16 @@ internal static class HairpinEngraver
             // An explicit stop (@!cresc, LilyPond's \!) on this staff, strictly after the start:
             // the wedge ends at its note. Another playing of the same written stop is fine — a
             // stop ends whatever hairpin is open, as \! does.
-            var nextStop = musicMarks.FirstOrDefault(m =>
+            MusicMarkItem? NextStop(bool ownVoice) => musicMarks.FirstOrDefault(m =>
                 m.Type == MusicMarkType.HairpinStop && m.StaffIndex == mark.StaffIndex &&
+                (!ownVoice || m.VoiceIndex == mark.VoiceIndex) &&
                 (m.MeasureIndex > mark.MeasureIndex ||
                  (m.MeasureIndex == mark.MeasureIndex && m.AnchorItemIndex > startItem)));
+
+            // (A condensed staff's levels are the staff's from the start: HairpinEndsOnStaff.)
+            var (nextDynamic, nextMark, nextStop) = EndsIn(ownVoice: !mark.HairpinEndsOnStaff);
+            if (nextDynamic == null && nextMark == null && nextStop == null)
+                (nextDynamic, nextMark, nextStop) = EndsIn(ownVoice: false);
             // A stop written after the next hairpin's start on one note is that hairpin's own.
             if (nextStop != null && nextMark != null && nextMark.MeasureIndex == nextStop.MeasureIndex
                 && nextMark.AnchorItemIndex == nextStop.AnchorItemIndex
@@ -1070,6 +1145,7 @@ internal static class HairpinEngraver
             // LILYSHARP-OWN: LilyPond reads the two at one moment as a stop, then a start.
             bool spansItsNote = musicMarks.Any(m =>
                 m.Type == MusicMarkType.HairpinStop && m.StaffIndex == mark.StaffIndex
+                && m.VoiceIndex == mark.VoiceIndex
                 && m.MeasureIndex == mark.MeasureIndex && m.AnchorItemIndex == startItem
                 && m.SourcePosition > mark.SourcePosition);
             if (spansItsNote)
@@ -1086,16 +1162,25 @@ internal static class HairpinEngraver
                 )
                 {
                     IsAbove = mark.HairpinAbove,
-                    NienteAtStart = sortedDynamics.FirstOrDefault(d =>
-                        d.Level == DynamicLevel.Niente && d.StaffIndex == mark.StaffIndex
-                        && d.MeasureIndex == mark.MeasureIndex && d.ItemIndex == startItem),
+                    VoiceIndex = mark.VoiceIndex,
+                    EndVoiceIndex = mark.VoiceIndex,
+                    NienteAtStart = NienteAtStart(),
                 });
                 continue;
             }
 
+            // The dynamic at the start moment is this hairpin's opening text (the terminator
+            // search above passes over it); a niente there is where a crescendo grows from. It
+            // is its own voice's — the same number in another voice is another moment.
+            DynamicItem? NienteAtStart() => sortedDynamics.FirstOrDefault(d =>
+                d.Level == DynamicLevel.Niente && d.StaffIndex == mark.StaffIndex
+                && d.VoiceIndex == mark.VoiceIndex
+                && d.MeasureIndex == mark.MeasureIndex && d.ItemIndex == startItem);
+
             // End at whichever comes first: next dynamic, next cresc/decresc, or a stop
             int endMeasure;
             int endItem;
+            int endVoice = mark.VoiceIndex;
             DynamicItem? endDynamic = null;
             bool endsAtStop = false;
 
@@ -1109,6 +1194,7 @@ internal static class HairpinEngraver
             {
                 endMeasure = nextStop.MeasureIndex;
                 endItem = nextStop.AnchorItemIndex;
+                endVoice = nextStop.VoiceIndex;
                 endsAtStop = true;
             }
             else if (nextDynamic != null && (nextMark == null ||
@@ -1118,6 +1204,7 @@ internal static class HairpinEngraver
             {
                 endMeasure = nextDynamic.MeasureIndex;
                 endItem = nextDynamic.ItemIndex;
+                endVoice = nextDynamic.VoiceIndex;
                 endDynamic = nextDynamic;
             }
             else if (nextMark != null)
@@ -1127,6 +1214,7 @@ internal static class HairpinEngraver
                 // a bar stopped short at that bar's line (LilyPond draws both, Lab sessions/p1097/hp3).
                 endMeasure = nextMark.MeasureIndex;
                 endItem = Math.Max(0, nextMark.AnchorItemIndex);
+                endVoice = nextMark.VoiceIndex;
             }
             else
             {
@@ -1146,6 +1234,7 @@ internal static class HairpinEngraver
                     plays.NameOf(ownPlay + 1), Play: ownPlay));
                 endMeasure = plays.StartOf(ownPlay + 1);
                 endItem = 0;
+                endVoice = mark.VoiceIndex;
                 endDynamic = null;
                 endsAtStop = false;
             }
@@ -1166,12 +1255,9 @@ internal static class HairpinEngraver
                 )
                 {
                     IsAbove = mark.HairpinAbove,
-                    // The dynamic at the start moment is this hairpin's opening text (the
-                    // terminator search above passes over it); a niente there is where a
-                    // crescendo grows from.
-                    NienteAtStart = sortedDynamics.FirstOrDefault(d =>
-                        d.Level == DynamicLevel.Niente && d.StaffIndex == mark.StaffIndex
-                        && d.MeasureIndex == mark.MeasureIndex && d.ItemIndex == startItem),
+                    VoiceIndex = mark.VoiceIndex,
+                    EndVoiceIndex = endVoice,
+                    NienteAtStart = NienteAtStart(),
                     NienteAtEnd = endDynamic is { Level: DynamicLevel.Niente } ? endDynamic : null,
                     EndsAtStop = endsAtStop,
                 });
@@ -1209,6 +1295,7 @@ internal static class HairpinEngraver
             {
                 var starting = hairpins[j];
                 if (j == i || starting.StaffIndex != ending.StaffIndex
+                    || starting.VoiceIndex != ending.EndVoiceIndex
                     || starting.StartMeasureIndex != ending.EndMeasureIndex || starting.StartItemIndex != ending.EndItemIndex)
                     continue;
                 bool circled = ending.Direction == HairpinDirection.Decrescendo && ending.NienteAtEnd is { } n

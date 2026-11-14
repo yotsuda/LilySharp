@@ -48,7 +48,8 @@ public readonly record struct DynamicLayout(
     bool OnMultiMeasureRest = false, // @text on an R: MultiMeasureRestText (DynamicItem.OnMultiMeasureRest).
     double? GlyphRunWidth = null, // A SMuFL score's level in the font's own glyphs: its width (DynamicEngraver.SmuflGlyphRun).
     bool IsSubito = false,  // @p.subito: an italic "sub." hangs left of the level (DynamicEngraver.SubitoWidth).
-    bool IsEditorial = false // @p(editorial): the level between parentheses (DynamicEngraver.EditorialReach).
+    bool IsEditorial = false, // @p(editorial): the level between parentheses (DynamicEngraver.EditorialReach).
+    int VoiceIndex = 0      // The voice of its staff it was written in (DynamicItem.VoiceIndex): ItemIndex counts that voice's items.
 );
 
 /// <summary>
@@ -396,7 +397,8 @@ internal static class DynamicEngraver
                 dynamic.OnMultiMeasureRest,
                 expressive ? null : SmuflGlyphRun(score.TextMetrics, labelText)?.Width,
                 IsSubito: dynamic.IsSubito && !expressive,
-                IsEditorial: dynamic.IsEditorial && !expressive
+                IsEditorial: dynamic.IsEditorial && !expressive,
+                VoiceIndex: dynamic.VoiceIndex
             ));
         }
 

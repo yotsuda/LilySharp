@@ -3711,9 +3711,10 @@ public sealed partial class MeasureCollector
     /// staff, each written to stand alone — and the choir or desk it prints reads one dynamic
     /// for both. The combined staff already says so of its own
     /// (<c>CombinedStaffReaddress.Apply</c>'s duplicate key).
-    /// A hairpin is addressed by staff, bar and item (<see cref="HairpinItem"/> holds no
-    /// voice), so the later part's is a duplicate exactly when it is detected with the same
-    /// ends, direction and side as an earlier part's — the two that were drawn on one place.
+    /// A later part's hairpin is a duplicate exactly when it is detected with the same ends
+    /// (bar and item), direction and side as an earlier part's — the two that were drawn on
+    /// one place while a hairpin held no voice (until session 1238), and that would now be
+    /// two wedges under one another.
     /// </remarks>
     private void JunkCondensedStaffDuplicateDynamics(
         List<StaffCollection> collections, Dictionary<string, ImmutableArray<Voice>> staffVoices)
@@ -3723,6 +3724,13 @@ public sealed partial class MeasureCollector
         foreach (int staff in collections.Where(c => c.Appended).Select(c => c.Staff).Distinct().ToList())
         {
             var parts = collections.Where(c => c.Staff == staff).ToList();
+            // This staff's levels are the STAFF's: the copy of a level that two parts write is
+            // printed once (below), so a part's hairpin is ended by whichever part's copy
+            // stands, not by its own voice's next one (MusicMarkItem.HairpinEndsOnStaff).
+            foreach (var part in parts)
+                for (int i = part.MarksFrom; i < part.MarksTo; i++)
+                    if (IsHairpinStart(_musicMarks[i]) && !_musicMarks[i].HairpinEndsOnStaff)
+                        _musicMarks[i] = _musicMarks[i] with { HairpinEndsOnStaff = true };
             // A level that takes a side here: one that writes none itself.
             static bool Sided(DynamicItem d) => !d.IsExpressiveText && !d.OnMultiMeasureRest
                 && d.WrittenAbove == null && d.Level != Syntax.DynamicLevel.Niente;
@@ -6829,6 +6837,10 @@ public sealed partial class MeasureCollector
                             dynamicSyntax.SourceStart, itemIndex)
                         {
                             StaffIndex = _v.Cursor.StaffIndex,
+                            // The hairpin is its voice's (HairpinItem.VoiceIndex). Until session
+                            // 1238 the start carried none — its stop (@!cresc) did — and every
+                            // hairpin was read on the staff's first voice.
+                            VoiceIndex = _v.Cursor.VoiceIndex,
                             HairpinAbove = DynamicSideAbove(dynamicSyntax.ForcedAbove),
                             HairpinWritten = dynamicSyntax.ForcedAbove,
                         });

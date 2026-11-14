@@ -73,7 +73,12 @@ internal static class DynamicAlignEngraver
         int EndMeasureIndex, int EndItemIndex,
         ImmutableArray<int> HairpinItemIndices,
         ImmutableArray<int> DynamicLayoutIndices,
-        bool IsAbove = false);
+        bool IsAbove = false,
+        // The voice of the staff the line is of (its hairpins' HairpinItem.VoiceIndex): the
+        // Start / End item indices count that voice's items — the End those of EndVoiceIndex,
+        // which differs only where another voice's mark ended the line's last hairpin.
+        int VoiceIndex = 0,
+        int EndVoiceIndex = 0);
 
     /// <summary>
     /// One BROKEN PIECE of a multi-member line, in layout-index terms: the members
@@ -148,23 +153,31 @@ internal static class DynamicAlignEngraver
         {
             var lineVoices = voicesByStaff != null
                 && voicesByStaff.TryGetValue(line.StaffIndex, out var vv) ? vv : voices;
-            var lineMeasures = LayoutUtilities.ResolveStaffMeasures(
+            var staffMeasures = LayoutUtilities.ResolveStaffMeasures(
                 measuresByStaff, line.StaffIndex,
                 lineVoices.IsDefaultOrEmpty ? ImmutableArray<Measure>.Empty : lineVoices[0].Measures);
 
             // The line's voice: LilyPond's engraver lives in ONE Voice context, so all
-            // members share it. The texts carry theirs; a wedge does not (see
-            // HairpinEngraver.VoiceIndex) — the first text's voice stands for the line.
-            int voiceIndex = 0;
-            foreach (int di in line.DynamicLayoutIndices)
-            {
-                int si = dynamicLayouts[di].SourceIndex;
-                if (si >= 0 && si < dynamics.Length)
+            // members share it — the line's hairpins' (BuildLines groups by it), or, for a
+            // numbered line of texts alone, its first text's. The columns the line runs over
+            // are that voice's.
+            int voiceIndex = line.VoiceIndex;
+            if (line.HairpinItemIndices.IsDefaultOrEmpty)
+                foreach (int di in line.DynamicLayoutIndices)
                 {
-                    voiceIndex = dynamics[si].VoiceIndex;
-                    break;
+                    int si = dynamicLayouts[di].SourceIndex;
+                    if (si >= 0 && si < dynamics.Length)
+                    {
+                        voiceIndex = dynamics[si].VoiceIndex;
+                        break;
+                    }
                 }
-            }
+            if (!lineVoices.IsDefaultOrEmpty && voiceIndex >= lineVoices.Length)
+                voiceIndex = 0;
+            var lineMeasures = line.HairpinItemIndices.IsDefaultOrEmpty
+                ? staffMeasures
+                : HairpinEngraver.VoiceMeasures(lineVoices, line.VoiceIndex, staffMeasures);
+            var lineEndMeasures = HairpinEngraver.VoiceMeasures(lineVoices, line.EndVoiceIndex, staffMeasures);
 
             // Wedge pieces per system, via each member item's layouts.
             var wedgePieces = new List<(int LayoutIdx, int HairpinItemIdx)>();
@@ -233,7 +246,7 @@ internal static class DynamicAlignEngraver
                 var support = DynamicEngraver.SpanSupportSkylines(
                     lineVoices, voiceIndex,
                     SpanColumns(line, sysIdx, lineMeasures, measureLayouts, measureToSystem,
-                        graceNotes, lineVoices, voiceIndex),
+                        graceNotes, lineVoices, voiceIndex, lineEndMeasures),
                     (vi, mi, ii) => beamMembers.TryGetValue((line.StaffIndex, vi, mi, ii), out var b)
                         ? b : null,
                     staffLines, restShiftsOf?.Invoke(line.StaffIndex));
@@ -295,7 +308,12 @@ internal static class DynamicAlignEngraver
         HashSet<int>? chained = null;
         foreach (var staffGroup in hairpinItems
             .Select((hp, i) => (Item: hp, Index: i))
-            .GroupBy(x => (Staff: x.Item.StaffIndex, Above: x.Item.IsAbove)))
+            // …and per VOICE: the engraver that keeps the line stands in one Voice, so two
+            // voices' hairpins are two lines, and their moments (item indices) are not one
+            // clock. Until session 1238 the staff was one stream, and a lower voice's hairpin
+            // chained with the upper voice's by item number.
+            // LILYPOND-REF: ly/engraver-init.ly:359-410 Dynamic_align_engraver is consisted into the Voice context
+            .GroupBy(x => (Staff: x.Item.StaffIndex, Voice: x.Item.VoiceIndex, Above: x.Item.IsAbove)))
         {
             var ordered = staffGroup
                 .OrderBy(x => x.Item.StartMeasureIndex)
@@ -309,6 +327,7 @@ internal static class DynamicAlignEngraver
                 members.Add(first.Index);
                 (int M, int I) start = (first.Item.StartMeasureIndex, first.Item.StartItemIndex);
                 (int M, int I) end = (first.Item.EndMeasureIndex, first.Item.EndItemIndex);
+                int endVoice = first.Item.EndVoiceIndex;
                 at++;
                 while (at < ordered.Count)
                 {
@@ -318,7 +337,10 @@ internal static class DynamicAlignEngraver
                     members.Add(next.Index);
                     var nextEnd = (next.Item.EndMeasureIndex, next.Item.EndItemIndex);
                     if (Cmp(nextEnd, end) > 0)
+                    {
                         end = nextEnd;
+                        endVoice = next.Item.EndVoiceIndex;
+                    }
                     at++;
                 }
 
@@ -330,7 +352,13 @@ internal static class DynamicAlignEngraver
                         || d.StaffIndex != staffGroup.Key.Staff)
                         continue;
                     var moment = (d.MeasureIndex, d.ItemIndex);
-                    if (Cmp(moment, start) >= 0 && Cmp(moment, end) <= 0)
+                    // The line's own voice's texts inside its span — and the text of another
+                    // voice that ENDED one of its hairpins (HairpinItem.EndVoiceIndex), which
+                    // stands at that hairpin's end and nowhere else on this line's clock.
+                    bool joins = d.VoiceIndex == staffGroup.Key.Voice
+                        ? Cmp(moment, start) >= 0 && Cmp(moment, end) <= 0
+                        : EndsAMember(members, hairpinItems, d);
+                    if (joins)
                     {
                         texts.Add(di);
                         (chained ??= new HashSet<int>()).Add(di);
@@ -339,7 +367,8 @@ internal static class DynamicAlignEngraver
 
                 lines.Add(new DynamicLine(staffGroup.Key.Staff,
                     start.M, start.I, end.M, end.I,
-                    members.ToImmutable(), texts.ToImmutable(), staffGroup.Key.Above));
+                    members.ToImmutable(), texts.ToImmutable(), staffGroup.Key.Above,
+                    staffGroup.Key.Voice, endVoice));
             }
         }
 
@@ -384,6 +413,21 @@ internal static class DynamicAlignEngraver
     private static int Cmp((int M, int I) a, (int M, int I) b)
         => a.M != b.M ? a.M.CompareTo(b.M) : a.I.CompareTo(b.I);
 
+    /// <summary>Whether <paramref name="text"/>, written in another voice than the line's, is
+    /// the level one of the line's hairpins ended on.</summary>
+    private static bool EndsAMember(ImmutableArray<int>.Builder members,
+        ImmutableArray<HairpinItem> hairpinItems, DynamicLayout text)
+    {
+        foreach (int hi in members)
+        {
+            var hp = hairpinItems[hi];
+            if (hp.EndVoiceIndex != hp.VoiceIndex && hp.EndVoiceIndex == text.VoiceIndex
+                && hp.EndMeasureIndex == text.MeasureIndex && hp.EndItemIndex == text.ItemIndex)
+                return true;
+        }
+        return false;
+    }
+
     /// <summary>The systems any member of the line lands on, each visited once.</summary>
     private static IEnumerable<int> MemberSystems(DynamicLine line,
         List<(int LayoutIdx, int HairpinItemIdx)> wedgePieces,
@@ -415,10 +459,15 @@ internal static class DynamicAlignEngraver
         DynamicLine line, int sysIdx,
         ImmutableArray<Measure> staffMeasures, ImmutableArray<MeasureLayout> measureLayouts,
         IReadOnlyDictionary<int, int> measureToSystem,
-        ImmutableArray<GraceNoteItem> graceNotes, ImmutableArray<Voice> voices, int voiceIndex)
+        ImmutableArray<GraceNoteItem> graceNotes, ImmutableArray<Voice> voices, int voiceIndex,
+        ImmutableArray<Measure> endMeasures)
     {
         if (staffMeasures.IsDefaultOrEmpty)
             yield break;
+        // staffMeasures are the line's OWN voice's; an end another voice wrote is read back
+        // into that voice's count (HairpinEngraver.OwnVoiceEndItem).
+        int endItemInOwnVoice = HairpinEngraver.OwnVoiceEndItem(line.EndMeasureIndex, line.EndItemIndex,
+            line.EndVoiceIndex == line.VoiceIndex, staffMeasures, endMeasures);
         for (int m = line.StartMeasureIndex;
              m <= line.EndMeasureIndex && m < measureLayouts.Length && m < staffMeasures.Length;
              m++)
@@ -428,7 +477,7 @@ internal static class DynamicAlignEngraver
             var layout = measureLayouts[m];
             int itemCount = staffMeasures[m].Items.Length;
             int from = m == line.StartMeasureIndex ? line.StartItemIndex : 0;
-            int to = m == line.EndMeasureIndex ? line.EndItemIndex : itemCount - 1;
+            int to = m == line.EndMeasureIndex ? endItemInOwnVoice : itemCount - 1;
             for (int i = Math.Max(0, from); i <= to && i < itemCount; i++)
                 yield return (m, i,
                     HairpinEngraver.GraceColumnX(graceNotes, voices, line.StaffIndex, m, i,

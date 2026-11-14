@@ -60,10 +60,28 @@ public sealed record HairpinItem(
     /// <summary>
     /// The hairpin stands above its staff: its start's <see cref="MusicMarkItem.HairpinAbove"/>.
     /// </summary>
-    /// <remarks>⚠️ Carried, not yet drawn (session 1224, step 2 of
-    /// docs/dynamics-above-lyrics-design.md §5): <c>HairpinEngraver</c> still places every
-    /// hairpin below its staff. The above side is step 3.</remarks>
     public bool IsAbove { get; init; }
+
+    /// <summary>
+    /// The voice of its staff the hairpin was written in (its start's
+    /// <see cref="MusicMarkItem.VoiceIndex"/>): <see cref="StartItemIndex"/> counts that voice's
+    /// items, the wedge's bounds are that voice's columns and it sides off that voice's heads
+    /// and stems.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:359-410 Dynamic_engraver and Dynamic_align_engraver are consisted into the Voice context,
+    ///   so a hairpin's bounds and its line's supports are its own voice's:
+    /// LILYPOND-REF: lily/dynamic-engraver.cc:229-250 Dynamic_engraver::acknowledge_note_column — the spanner's bounds
+    /// LILYPOND-REF: lily/dynamic-align-engraver.cc:107-118 Dynamic_align_engraver::acknowledge_rhythmic_head and acknowledge_stem — the supports
+    /// </remarks>
+    public int VoiceIndex { get; init; }
+
+    /// <summary>
+    /// The voice <see cref="EndItemIndex"/> counts in: <see cref="VoiceIndex"/>, unless the
+    /// hairpin found no end in its own voice and was ended by another voice of its staff
+    /// (<c>HairpinEngraver.DetectHairpins</c>, the whole-staff search).
+    /// </summary>
+    public int EndVoiceIndex { get; init; }
 
     /// <summary>The <c>@niente</c> at the hairpin's start moment (<c>c@niente@cresc</c>), or null.</summary>
     public DynamicItem? NienteAtStart { get; init; }

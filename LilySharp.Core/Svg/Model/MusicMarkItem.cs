@@ -254,6 +254,24 @@ public sealed record MusicMarkItem
     public int VoiceIndex { get; init; }
 
     /// <summary>
+    /// For a hairpin's start on a condensed staff: its end is the STAFF's next level, hairpin
+    /// or stop, whichever part wrote it — not its own voice's first
+    /// (<c>HairpinEngraver.DetectHairpins</c>).
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: a condensed staff prints ONE copy of a level two of its parts write
+    ///   (<c>MeasureCollector.JunkCondensedStaffDuplicateDynamics</c>), and the copy that is
+    ///   dropped is the later part's own — the very level that part's hairpin ends on. Read by
+    ///   voice, that hairpin would run past it to the part's next level.
+    ///   departs from: ly/engraver-init.ly:359-410 Dynamic_engraver consisted into the Voice context (one pairing a voice).
+    ///   ⚠️ The parts' item numbers are compared as one clock, as they were before a hairpin
+    ///   held a voice: right where the parts move together, which is where their levels are
+    ///   one. It goes when the standing copy carries the place of the copy it stands for.
+    ///   observed by: GrammarEvaluation3Tests.TwoPartsDifferingDynamicsOnACondensedStaff_TakeASideEach.
+    /// </remarks>
+    public bool HairpinEndsOnStaff { get; init; }
+
+    /// <summary>
     /// For a text spanner's start or stop: which line of its voice it is — the general spanner,
     /// or the palm mute, the let ring or the barre (owner-approved 2026-11-13, grammar
     /// evaluation 3). A stop closes the open start of its own family, so the guitar lines run

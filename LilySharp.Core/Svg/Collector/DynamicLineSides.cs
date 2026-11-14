@@ -42,10 +42,12 @@ namespace LilySharp.Core.Svg.Collector;
 ///   draws the ff below, the hairpin ABOVE and the closing p below — the hairpin is
 ///   acknowledged before the text of its own timestep, so it has joined the staff's line when
 ///   the ff breaks off; <c>c''4\p_\&lt; … f''\f</c> draws all three below.
-/// ⚠️ ONE STREAM A STAFF, where LilyPond keeps one line per Voice: a hairpin's start carries
-///   no voice here (MusicMarkItem), so two voices of one staff share the line. Their marks
-///   differ from LilyPond's only where one voice writes a side and the other, in the same
-///   stretch, writes none.
+/// ⚠️ ONE STREAM A STAFF, where LilyPond keeps one line per Voice: two voices of one staff
+///   share the line here, and their moments are compared by item number. Their marks differ
+///   from LilyPond's only where one voice writes a side and the other, in the same stretch,
+///   writes none. (Since session 1238 a hairpin's start carries its voice, as its stop and the
+///   levels always did, and the hairpins themselves are paired and laid out per voice —
+///   HairpinEngraver.DetectHairpins; this walk was not split with them.)
 /// </remarks>
 internal struct DynamicLineSides
 {
