@@ -121,15 +121,27 @@ internal sealed class SectionSigns
                 (bars, lineEnd) = (line.Bars, line.End);
             }
             // The bar the mark is written in already holds music: the mark is at its far line.
+            // Music is what stands after the block's brace: until session 1254 the block's own
+            // header (the section's name) was read as music too, so a sign that opens the
+            // section — `section A { segno c1 | … }` — stood one bar late on the column.
             bool open = false;
             if (mark.Parent is { } parent)
+            {
+                int body = lineEnd;
+                for (int i = 0; i < parent.SlotCount; i++)
+                    if (parent.GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.OpenBrace } brace)
+                    {
+                        body = System.Math.Max(body, brace.Span.Start + brace.Span.Length);
+                        break;
+                    }
                 foreach (var sibling in parent.ChildNodes())
                 {
                     if (sibling.Span.Start >= at)
                         break;
-                    if (sibling.Span.Start >= lineEnd && sibling is not BarlineSyntax && TakesTime(sibling))
+                    if (sibling.Span.Start >= body && sibling is not BarlineSyntax && TakesTime(sibling))
                         open = true;
                 }
+            }
             signs.Marks.Add(new Mark(bars + (open ? 1 : 0), mark, voice.Container));
         }
     }
