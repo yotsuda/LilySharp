@@ -3367,6 +3367,9 @@ public sealed class MusicXmlExporter
                     {
                         last.EndingStopNumbers = passes;
                         last.EndingStopType = inlineEnding.IsClosed || NextIsRepeatEnd(inlineEnding) ? "stop" : "discontinue";
+                        // …and it goes back although no ':|' says so, when the next ending follows it.
+                        if (SyntaxFacts.EndingGoesBackUnsaid(inlineEnding))
+                            last.RepeatBackward = true;
                     }
                 }
                 break;

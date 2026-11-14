@@ -143,6 +143,44 @@ internal static class SyntaxFacts
     }
 
     /// <summary>
+    /// Whether an ending written in the music goes back to its repeat's head although no
+    /// <c>:|</c> says so: the NEXT thing written is another ending, and the run it stands in has
+    /// met its <c>:|</c> — <c>|: c1 | [1. d1 :| [2. e1 | ] [3. f1 | ]</c>, where <c>[2.</c> is
+    /// followed by a third pass (owner's decision 2026-11-15: a further ending is a further
+    /// pass; <c>RepeatStream.Elements</c> plays it so). The page and MusicXML put the repeat
+    /// bar the writer left out at its end, as a form's spelling of the same has it
+    /// (<see cref="FormBarText"/>). False for an ending that writes or is followed by its own
+    /// <c>:|</c>, for a chord row's flat ending, and for endings no <c>:|</c> stands before.
+    /// </summary>
+    internal static bool EndingGoesBackUnsaid(InlineVoltaSyntax ending)
+    {
+        if (ending.Parent is not { } parent || ClosesOnARepeatBar(ending))
+            return false;
+        SyntaxNode? before = null;
+        bool passed = false;
+        foreach (var sibling in parent.ChildNodes())
+        {
+            if (sibling is SyntaxTokenNode)
+                continue;
+            if (passed)
+                return sibling is InlineVoltaSyntax && before != null && TheRunHasGoneBack(before);
+            if (ReferenceEquals(sibling, ending))
+                passed = true;
+            else
+                before = sibling;
+        }
+        return false;
+
+        static bool ClosesOnARepeatBar(InlineVoltaSyntax e)
+            => e.Items.LastOrDefault() is BarlineSyntax { BarToken.Kind: SyntaxKind.RepeatEndBar or SyntaxKind.RepeatBothBar };
+
+        // What stands right before the ending: the ':|' itself, or an ending that goes back.
+        static bool TheRunHasGoneBack(SyntaxNode node)
+            => node is BarlineSyntax { BarToken.Kind: SyntaxKind.RepeatEndBar }
+                || node is InlineVoltaSyntax e && (ClosesOnARepeatBar(e) || EndingGoesBackUnsaid(e));
+    }
+
+    /// <summary>
     /// A bar-line token of a form's repeat block as the sign it IS: its text — and <c>:|</c>
     /// for the empty token the parser puts between two endings written with no <c>:|</c>
     /// between them (<c>[2. C] [3. D]</c>, Parser.ParseFormRepeatBlock: a further ending is a

@@ -1631,6 +1631,11 @@ public sealed partial class MeasureCollector
                     builder.BeginAlternatives();
                     await ProcessMusicNodeSequence(innerNodes, builder);
                     builder.EndAlternative(last: false);
+                    // An ending the next one follows with no ':|' between them goes back all
+                    // the same (SyntaxFacts.EndingGoesBackUnsaid): the repeat bar the writer left
+                    // out is drawn on the bar line that closed it, as a form's is.
+                    if (builder.CurrentItemCount == 0 && SyntaxFacts.EndingGoesBackUnsaid(volta))
+                        builder.HandleBarline(BarlineType.RepeatEnd, volta.SourceStart + volta.Span.Length);
 
                     int endMeasureIndex = builder.CurrentMeasureIndex;
                     if (builder.CurrentItemCount > 0)

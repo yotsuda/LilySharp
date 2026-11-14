@@ -42,6 +42,32 @@ public sealed class BackToBackRepeatTests
     // at moment 0 would make "the leading |: is kept" unobservable — the assertion would
     // read None for a reason that has nothing to do with the merge under test.
 
+    /// <summary>
+    /// An ending the next one follows with no <c>:|</c> between them goes back all the same —
+    /// a further ending is a further pass (owner's decision 2026-11-15) — and the page draws
+    /// the repeat bar the writer left out at its end, as a form's spelling of the same has it
+    /// since session 1256. MEASURED before (Lab sessions/p1256/probe/m/inline.png): three
+    /// passes were played and the second ending closed on a plain bar line.
+    /// </summary>
+    [Theory]
+    // The written ':|' of the first ending: it pins the index the bars below are counted from
+    // (the first ending is measure 3 here, the second 4, the third 5).
+    [InlineData("c'1 | |: d'1 | [1. e'1 :| [2. f'1 | ] [3. g'1 | ] a'1 |", 3, true)]
+    // [2.] is followed by [3.]: its bar line is the repeat's
+    [InlineData("c'1 | |: d'1 | [1. e'1 :| [2. f'1 | ] [3. g'1 | ] a'1 |", 4, true)]
+    // …the last ending goes on
+    [InlineData("c'1 | |: d'1 | [1. e'1 :| [2. f'1 | ] [3. g'1 | ] a'1 |", 5, false)]
+    // no further ending: the second is the last
+    [InlineData("c'1 | |: d'1 | [1. e'1 :| [2. f'1 | ] a'1 |", 4, false)]
+    // no ':|' before them: nothing has gone back, and nothing is drawn
+    [InlineData("c'1 | |: d'1 | [1. e'1 | ] [2. f'1 | ] a'1 |", 3, false)]
+    public void AnEndingFollowedByAnotherGoesBack_AndItsRepeatBarIsDrawn(string music, int bar, bool repeatEnd)
+    {
+        var m = Measures("octave absolute\ntime 4/4\npart m { clef treble section A { " + music + " } }\n"
+                       + "form { A }\nscore { staff m }");
+        Assert.Equal(repeatEnd, m[bar].EndBarline == BarlineType.RepeatEnd);
+    }
+
     [Fact]
     public void RepeatEndThenRepeatStart_MergeIntoOneRepeatBoth()
     {

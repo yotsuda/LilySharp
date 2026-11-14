@@ -112,4 +112,21 @@ public sealed class InlineRepeatMusicXmlTests
         Assert.Equal("2:head:segno 2:end:tocoda 4:end:dalsegno 5:head:coda", marks[0]);
         Assert.Equal(marks[0], marks[1]);
     }
+
+    /// <summary>An ending the next one follows with no <c>:|</c> between them goes back all the
+    /// same (session 1257; <c>SyntaxFacts.EndingGoesBackUnsaid</c>): its last measure carries
+    /// the backward repeat, in every part — the document of <c>[2. e1 | ] [3. …</c> is the
+    /// document of <c>[2. e1 :| [3. …</c>.</summary>
+    [Fact]
+    public void AnEndingFollowedByAnotherWritesItsBackwardRepeat()
+    {
+        const string B = "c1 | d1 | e1 | f1 | g1 |";
+        static string Signs(XDocument doc) => string.Join(" ", doc.Descendants("part").Select(p =>
+            string.Join(",", p.Elements("measure").Select((m, i) => (m, i))
+                .Where(x => x.m.Descendants("repeat").Any(r => (string?)r.Attribute("direction") == "backward"))
+                .Select(x => x.i + 1))));
+        string unsaid = Signs(Export("|: c''1 | [1. d''1 :| [2. e''1 | ] [3. f''1 | ] g''1 |", B));
+        Assert.Equal("2,3 2,3", unsaid);
+        Assert.Equal(Signs(Export("|: c''1 | [1. d''1 :| [2. e''1 :| [3. f''1 | ] g''1 |", B)), unsaid);
+    }
 }
