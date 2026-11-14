@@ -198,8 +198,9 @@ LYS1034 は**最後に**外す。エラーの本も今は描けて鳴るので�
   行の項目の間に平らに置く。行の読み手は 54 ファイルあり、入れ子にすると知らない読み手が ending の中のコードを黙って落とすため。
   MIDI は読む（網 `AChordRowWritesEndingsAndJumps`）。ページも行の ending の括弧を描く（`ChordNameCollector.RowEndings`・網 `ThePageBracketsARowsEndings`・譜表の上でも行だけの譜でも）。`-]` と `@voltaBracket(…)` は行ではまだ読まない。
 - ✅ **行の小節線の規則を 1 つにした**（§3.4・`ChordRowBarLines`・網 `ARowsBarLineBeforeARepeatSignIsAnEmptyBar`／`ARowOpeningWithARepeatSignCountsTheBarsItWrites`）。
-- **form の無い by-part の本で、2 つ目のパートが 1 つ目の後に鳴る**（`part mel { section A { … } } part bas { section A { … } }`・form なし。
-  Lab `p1243/probe/h-plain.lys`: bas の最初の音が 8 拍目）。反復とは無関係の既存の欠陥。`form { A }` を書けば揃う。未着手。
+- ✅ **form の無い by-part の本で、2 つ目のパートが 1 つ目の後に鳴る**（`part mel { section A { … } } part bas { section A { … } }`・form なし。
+  Lab `p1243/probe/h-plain.lys`: bas の最初の音が 8 拍目）。反復とは無関係の既存の欠陥だった。第1250 で直した: form の無い本の MIDI は、
+  section を名前の宣言順に 1 回ずつ、全パートの写しを一緒に鳴らす（`MidiExporter.ProcessNode` の section の腕＝`PlaySectionByName`・網 `FormlessMidiTests`）。
 
 ### 段 4: 反復をまたぐタイと、反復記号が割る小節（第1245・2026-11-14）
 
@@ -310,7 +311,7 @@ LYS1034 は**最後に**外す。エラーの本も今は描けて鳴るので�
   TUTORIAL、LEARN_FOR_LLM、site `manual-body.html`、CHANGELOG 2 本、MANUAL-CHECKS。COMPOSE_FOR_LLM は古い規則を書いていなかったので触っていない。
 - 網: `RepeatStructureScopeValidatorTests`（phrase の 4 形・書ける場所 11 形）・`CompletionAuditTests` 3 本・`FormCompletionTests`（サーバー経由・phrase の中）・`FormJumpTargetValidatorTests` 11 本。
   毒 9 本とも赤（Lab `p1249/poisons.ps1`）。
-- 残り: step キー（`NoteStepper`）は音楽の小節線を `|` `||` `|.` `!` のまま回す（反復記号は回らない）／`|: d1 [1. e1 :|`（ending の前に小節線が無い）は LYS1071 と一緒に LYS1041「本体が無い」も出る（本体の小節が閉じていないため）／
+- 残り: step キー（`NoteStepper`）は音楽の小節線を `|` `||` `|.` `!` のまま回す（反復記号は回らない）／~~`|: d1 [1. e1 :|` に LYS1071 と一緒に LYS1041 も出る~~（第1250 で LYS1071 だけに）／
   fixture と audit の本は form の綴りのまま（2026-08-31 に切り直した形・戻していない）／Calamo と Dettato への知らせ（Q2）は release のときに。
 
 ## 8. エディタ: 記号を全パートに書く（オーナー決定 2026-11-14・小節線の分は実装 `Editing.RepeatSignSpreader`・実機は未確認）

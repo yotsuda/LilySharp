@@ -267,6 +267,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1248セッションの経緯
+
+### 1.1 第1248セッション（2026-11-15・YT-DELL2）
+
+base `7bbd2d283`・開始時 full 17002 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 17005（Lab `p1248` の `run1.trx`）。Calamo の `open` は 0、Dettato は 1・2 が `question` のまま。CI は第1231 のまま。
+「反復とナビ記号を section の音楽にも書く」の段 1 の残りの診断（設計 `docs/inline-repeat-design.md` §7「診断」・探り譜は Lab `p1248/probe/d-*`）。
+- **`Semantics.MusicRepeatValidator`**（`439d70da1`）: 音楽に記号を書いた本について、form の規則を列の上で見る。新設 LYS1071（小節の途中の ending・前後に音のあるナビ記号）と LYS1072（開いている反復の中の `|:`）、既存の LYS1041／1042／1043／6008 を音楽の ending にも。直す前に出ていたのは LYS4017 だけ。`RepeatStream` は `Runs`・`NestedAt`・`LoneEndingsAt` を出す。
+- 一緒に直した: `.ly` が、小節線なしにタイで終わる section の最後の小節を見落としていた（第1247 の `EndsTied` が閉じ括弧のトークンを音と数えた）。
+- 門: 網 `MusicRepeatValidatorTests` 19 本。毒 10 本とも赤（`p1248/poisons.ps1`）。終了時 full 17021 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17024（`p1248/run2.trx`）。掃きは回していない（診断は LYS1034 の本にだけ足される）。
+- 7.5／7.6: OWN 1（`MusicRepeatValidator`＝言語自身の規則）・REF 0。7.7: パートどうしの ending・ナビ記号の食い違いは見ていない／コードの行の小節の途中の記号は見ていない／LYS1071 は「小節線を書け」と言うが quick fix は無い。LYS1034 と CHANGELOG は第1244 のまま。
+
 ## 以下は第1247セッションの経緯
 
 ### 1.1 第1247セッション（2026-11-15・YT-DELL2）
