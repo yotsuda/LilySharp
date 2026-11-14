@@ -267,6 +267,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1238セッションの経緯
+
+### 1.1 第1238セッション（2026-11-14・YT-DELL2）
+
+base `b8a19cfb9`・開始時 full 16779 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16782（Lab `p1238` の `run1.trx`）。Calamo の `open` は 0。CI は第1231 のまま。
+「残りの欠陥を順に」（第1231）の続き。1 commit（未 push）。残りは Lab `p1238/leftovers.md`。
+- **`[engraving]` ヘアピンは書いた声部のもの（`12da6cf9d`）**: 一覧の先頭「下の声部に書いたヘアピンが上の声部を読む」。原因は 1 つ＝**ヘアピンの始点の印だけが声部を持っていなかった**（`MeasureCollector.CollectDynamics` の `@cresc` の腕。終わりの `@!cresc` と強弱は持っていた）ので、対は段全体を item 番号で、配置は 1 声部目の item で読んでいた。直したのは 4 か所: ⑴ 対（`HairpinEngraver.DetectHairpins`）は**同じ声部を先に**探し、無いときだけ段全体（今までどおり＝LILYSHARP-OWN・LilyPond は「unterminated crescendo」で描かない）／⑵ 端の X・端の文字（`BoundText`）・支え（`SpanSupportSkylines`）は自分の声部（`HairpinItem.VoiceIndex`・終わりは `EndVoiceIndex`・`DynamicLayout.VoiceIndex`）／⑶ 線（`DynamicAlignEngraver.BuildLines`）は声部ごと＝2 声部のヘアピンは 2 本の線で上下に並ぶ（前は 1 本の線に `<` と `>` が重なっていた）／⑷ **condensedStaff は最初から段全体で対にする**（`MusicMarkItem.HairpinEndsOnStaff`＝LILYSHARP-OWN）: 2 パートが同じ強弱を書くと 1 つだけ刷るので、落ちるのは後のパート自身の強弱＝そのパートのヘアピンの終わり。声部だけで探すと先の強弱まで走る（`GrammarEvaluation3Tests` の 1 本が赤になって分かった）。
+- **同じ commit: 250 の順番の鍵**（`OutsideStaffStacker.TurnLeft`）。LilyPond は同じ priority を grob の左端の順に置く（axis-group-interface.cc:886-907 `left_extent`）。Lily# は文字を「描く幅」の左（17.124）・ヘアピンを端そのまま（17.121）で並べていた＝LilyPond の箱は 17.039 と 17.071 で逆順。上の声部の `@p` と下の声部のヘアピンが同じ列から始まる形（今回から 2 本の線になる形）で p が楔の下（−8.47）に行った。文字は advance の幅の箱・ヘアピンは線の半分の太さを引く。
+- 実測（LilyPond 2.26.0・raggedRight・両端と線の高さ・12 形とも 0.005 以内）: 休符から休符 17.121..25.656／−5.3436・下向きの符尾の下 68.184..79.578／−6.8361・2 声部の同時のヘアピン −6.0235 と −7.3995・上の `@p` −7.0827 とその下の楔 −8.2137（Lab `p1237/hpv/f`・`p1238/hpv/probe.ps1` の v1〜v8）。網 `HairpinVoiceTests` 17 本。
+- ⚠️ 直したこと: 2 段の網を「1 段と同じ長さ」と相対で書いて毒 2 が緑＝LilyPond の長さの絶対値に直した／毒で緑だった 3 つ（隣り合い・始点の niente・同じ音の stop の声部の条件）に網を足して赤を見た／REF の行番号 2 つを読まずに書いて直した／`WriteAllBytes` で BOM を落とした（Lab `p1238/eol-bom.ps1` が HEAD と比べて戻す）。
+- 7.7 の匂い: 段全体の対は 2 声部の item 番号を比べる（2 つの時計＝OWN の注に明記・leftovers の先頭）／声部が段に無いときは 1 声部目に落とす（`VoiceMeasures`・`SupportVoice`＝combinedStaff の印は slot のまま re-address されない既存の穴・観測者なし）／`DynamicLineSides` は段ごとに 1 本の流れのまま／部屋の予約（`CalculateOnSystem`）の専用の網は無い／VS Code の実機は関係なし。
+- 7.5／7.6: 対と線と順番の鍵は ⒝（REF 9 本・定数なし）、段全体の対と condensedStaff は ⒞（OWN 2 つ・departs from と observed by つき）。消した OWN 1 つ（`HairpinEngraver.VoiceIndex = 0`）。perf: 走査は足していない（終わりの探索が 2 回走るのは自分の声部に終わりが無いヘアピンだけ）＝未計測。
+- 門: 終了時 full 16796 合格 / 1 失敗（`ReadmeSampleTests`＝同じ）/ skip 2 / 合計 16799（Lab `p1238` の `run5.trx`・+17 は足した網）。全 svg の掃き 1041 冊 1268 枚で動いた svg 0（`p1238/sweep`＝追跡コーパスに 2 声部目のヘアピンは無い・違うのは探り譜）。毒 14 本は全部赤（`p1238/poisons.log`・`poisons-2.log`）。snapshot は不動・台帳は `magic_constants.csv` の 1 行（`CalculateOnSystem` の行の折り返し）。
+
 ## 以下は第1237セッションの経緯
 
 ### 1.1 第1237セッション（2026-11-14・YT-DELL2）
