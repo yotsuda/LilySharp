@@ -267,6 +267,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1250セッションの経緯
+
+### 1.1 第1250セッション（2026-11-15・YT-DELL2）
+
+base `c1d4dacb1`・開始時 full 17042 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 17045（Lab `p1250` の `run1.trx`）。Calamo の `open` は 0、Dettato は 1・2 が `question` のまま。CI は第1231 のまま。
+第1249 の「次」の ⑴ と ⑶（commit `8a7c3c359`・毒は Lab `p1250/poisons.ps1`）。
+- **form の無い本の MIDI**: by-part の本（`part mel { section A {…} } part bas { section A {…} }`）で form を省くと、MIDI は宣言を出会った順に 1 つずつ鳴らし、2 つ目のパートが 1 つ目の後に鳴っていた（プレビューの再生も同じ経路）。form の無い本は section を名前の宣言順に 1 回ずつ、全パートの写しを一緒に鳴らす＝`form { A B … }` と書いた本と同じ音（`MidiExporter.ProcessNode` の section の腕が `PlaySectionByName` を呼ぶ・網 `FormlessMidiTests` 4 本）。CHANGELOG に 1 行。
+- **LYS1071 の脇の LYS1041**: `|: c1 [1. d1 :|`（ending の前に小節線が無い）は LYS1071 だけ（`MusicRepeatValidator`）。本体が本当に無い `|: [1. …` は LYS1041 のまま。
+- 門: 毒 4 本とも赤。終了時 full 17048 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17051（`p1250/run2.trx`）。掃きは回していない＝form の無い by-part の本の `.mid` は変わる（直した形）。
+- 7.5／7.6: OWN 0・REF 0。7.7: by-section の本で同じ名前の section を 2 度宣言した form の無い本は、2 つ目を別には鳴らさない（名前ごとに 1 回）。9（perf）: 走査は足していない。
+
 ## 以下は第1249セッションの経緯
 
 ### 1.1 第1249セッション（2026-11-15・YT-DELL2）
