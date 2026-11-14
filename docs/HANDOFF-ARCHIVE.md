@@ -267,6 +267,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1231セッションの経緯
+
+### 1.1 第1231セッション（2026-11-14・YT-DELL2）
+
+base `eba360371`・開始時 full 16627 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16630（Lab `p1231` の `run1.trx`）。Calamo の REQUESTS の `open` は 0。origin/master（`f636395ae`）の CI は ubuntu Release の脚が 7 本赤（丸めの中点の比較 4 種）＝`148e2a478` で直し済み・未 push（ほかの 3 脚は fail-fast の巻き添えで未完走）。
+オーナー指示（2026-11-14・この便で訊いた）: 「残りの欠陥を順に」と「楽器の MIDI の hairpin」。3 commit（未 push）。
+- **`[engraving]` 四分音は譜表の別の声部にも届く（`f843dbd4e`）**: `WrittenPitch` は変化を四分音の単位で持つ（`Pack` に四分音・`Alter` は `Quarters` に替えた）。四分音の頭は「記録なし（0）」だったので `StaffAccidentals` が読まず覚えず、第 1 声 `cih'` の後の第 2 声 `c'` にナチュラルが出なかった。名前は歩きの表（`MeasureCollector.AlterationName`）1 つから。LP 2.26.0 と 8 小節を見比べて、Lily# が自分の声部の記号を残す 1 小節（`StaffAccidentals` の ⑴）と下の 1 件のほかは一致（Lab `p1231/qt/after/xv.png`・`ly/xv.cropped.png`＝自分の目で見た）。連れて動いたもの: `cih'~ c'` はタイにならず `c'` にナチュラル（`MeasureBuilder.TiesInto` は `TieDetector.SamePitch` と同じ読み）・`solfege` の行が四分音の音にも語を付ける。⚠️ 残り: 第 1 声 `cis'`・第 2 声 `cih'` に LP は ♮＋四分音♯、Lily# は四分音♯ だけ（半音でも同じ形＝足すだけの規則）。
+- **楽器が hairpin を鳴らす（`6e54b8211`・オーナー決定）**: `MidiExporter.SwellInstruments`＝音ごとに、hairpin がその onset までに達した level で打つ。規則は歌い手のもの 1 つ（`SungVoices.Swells` に括り出した・楽器は tick、歌い手は秒）: 次に書かれた level が hairpin の向きならそこへ、無ければ 16（強弱 2 つぶん）先へ行ってそこに留まる。part の全声部と grand staff の両手が従う。書かれた level は `MidiNote.WrittenVelocity` に残り、歌い手はそれを読む（歌の出力は不変＝既存の網が緑）。LILYSHARP-OWN（LP は目標のない hairpin を音量幅の 1/4 動かす）。1 つの長い音は膨らまない（CC は書かない）。
+- **`voice { } { }` の声部は強弱を拍で共有（`13e455cba`）**: 2 つ目の声部は 1 つ目の声部が*終わった* level で頭から鳴っていた（`voice { c''1@p | d''1@f | } { c'1 | d'1 | }` の下が 2 小節とも f）。後の声部は span の頭の level で開き、`ShareSpanDynamics` が「その onset までに span のどの声部かに書かれた最後の強弱（同じ拍なら自分の声部のもの）」へ寄せる。LILYSHARP-OWN（grand staff の共有と同じ理由）。hairpin の網を書いていて見つけた。
+- 見送り 2 件（値を書いた `R1*N`・双子の `time none` 直後の `R`）と、見つけて残した 5 件は Lab `p1231/leftovers.md`。
+- 7.7 の匂い: 毒は回していない（3 件とも網は対照入り・四分音の網は直す前の木で赤になることを確かめていない）／耳で聴いていない（hairpin と声部の強弱は velocity の数だけ）／プレビューと `lysc wav` は同じ `MidiFile` を読むので動くはずだが実機は未確認（`MANUAL-CHECKS` には足していない）／ホバーの「plays at velocity N」が hairpin の中でどちらを言うか未確認。
+- 7.5／7.6: Core `+` 226 行・REF 0・OWN 2＝四分音は ⒟（`StaffAccidentals` と `GetDisplayAccidental` の REF が住所）・強弱の 2 件は ⒞。
+- 門: 終了時 full 16635 合格 / 1 失敗（`ReadmeSampleTests`＝同じ）/ skip 2 / 合計 16638（Lab `p1231` の `run3.trx`・+8 は足した網）。全 svg の掃き 1041 冊 1268 枚で動いた svg 0（base `eba360371` を `git archive` で建てた lysc・head は `13e455cba` の bin の写し・Lab `p1231/sweep`）＝別の声部の四分音を書く追跡本は無い（結果であって構成ではない）。
+
 ## 以下は第1230セッションの経緯
 
 ### 1.1 第1230セッション（2026-11-14・YT-DELL2）
