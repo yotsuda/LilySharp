@@ -267,6 +267,23 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1232セッションの経緯
+
+### 1.1 第1232セッション（2026-11-14・YT-DELL2）
+
+base `d6e174e57`・開始時 full 16635 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16638（Lab `p1232` の `run1.trx`）。Calamo の `open` は 0。CI は第1231 のまま（下の便）。
+オーナー指示（2026-11-14・第1231）「残りの欠陥を順に」の続き。7 commit（未 push）。残りは Lab `p1232/leftovers.md`。
+- **hairpin の中のアクセント（`074a9f14b`）**: `c''4@p@cresc d''@accent e'' f'' | g''1@f` が P・P+20・P・P・F と鳴っていた＝`SungVoices.Swells` が velocity を比べ、アクセントの音を「crescendo の行き先の level」と読んで hairpin を止めていた。音は「自分の記号が level に足す分」を持つ（`MidiNote.Accent`＝velocity − 自分の強弱の後に立つ level。`@accent`・`@marcato`・`@sfz`・`@fp` の打ち始め・空和音のアクセント）。歩きは level（`SungVoices.Level`）で読み、hairpin が着いた所にその分を載せる。楽器も歌い手も同じ。
+- **`[engraving]` 別の声部の記号の前の戻しのナチュラル（`c7206e9da`）**: 第 1 声 `cisis'`・第 2 声 `cis'` に ♮♯（`cis'` の後の `cih'`・重フラットの後のフラット・和音の構成音も）。`StaffAccidentals.Apply` は記号のある頭を飛ばしていた＝素の記号（courtesy・editorial・段頭の記号でない）を持つ頭も読み、別の声部が同じ記号を多く見せた後なら restore の合成字形に替える（`extraNatural` のときだけ）。LP 2.26.0 と 7 小節を見比べて一致（Lab `p1232/rn/after/rn.png`・`ly/rn.cropped.png`＝自分の目で見た・`before/rn.png` が直す前）。⚠️ 同じ拍の 2 つの頭の記号の左右の並びが LP と逆（8 小節目・前から・leftovers）。`ApplyAcrossStaves`（`@cross`）は足すだけのまま。
+- **MusicXML の装飾音の記号（`90c237dfa`）**: `grace { d''16@staccato }`・accent・fermata・trill・弓の記号が grace の `<note>` に無かった＝`ProcessGraceScripts` がページの運ぶ記号（`GraceBodySupport.IsCarried…`）を普通の音と同じ `ProcessArticulations` へ渡す。ページが落とす記号（LYS4020）は書かない。
+- **和音のホバーの四分音（`0d45521ca`）**: `<c' eeh' gis'>` が C4 E4 G♯4 だった＝`ResolvedChordMember` に `QuarterOffset`。`PitchGlyphs`（LSP）は `+`／`d` を 𝄲／𝄳 に。起票のうち `lysc check --pitches`（ASCII は意図）と単音のホバー（無い）は欠陥ではなかった。
+- **双子の `@bend dropped`（`1a1d82c30`）**: 休符の上の bend（LYS4079）に `lysc ly` は何も言わない（`GestureHosts.IsOnARest`・fall の先例と同じ）。
+- **`[engraving]` 反復の境で切られたペダル（`6800433d4`）**: `PedalEngraver.SolveAndSeed`（譜表の下にペダルの線の場所を取る解き）が section の演奏順なしで対にしていた＝`form { A |: B :| }` で A で踏み B で離すペダル（LYS4023・括弧は A の終わりで切る）の線を B の全段で取り続けていた（探り譜のページ高 73.52 → 72.22＝対照と同じ・Lab `p1232/ped`）。`SectionPlays.For(score)` を渡す 1 行＋古い注の直し。エラーのある本でだけ起きる。
+- **`[engraving]` 繰り返しの四分音（`ef13805e6`）**: `<cih' e'>4 q`・`cih'4 4` の繰り返しにナチュラルが出ていた＝`q` と裸の音価が写す綴りに四分音がなかった。補助が見つけた。
+- 7.7 の匂い: 毒は hairpin とペダルに 1 本ずつ（赤）・ほかは直す前の木で赤を確認／耳で聴いていない／VS Code の実機は未確認（ホバーの 𝄲／𝄳 がエディタのフォントで出るか・`MANUAL-CHECKS` には足していない）。
+- 7.5／7.6: Core `+` 130 行・REF 0・OWN 0（定数なし）＝hairpin は ⒞（住所は `MidiExporter.SwellInstruments` の OWN）・ほかは ⒟（戻しのナチュラルの住所は `StaffAccidentals` の REF）。
+- 門: 終了時 full 16661 合格 / 3 失敗（`ReadmeSampleTests`＝同じ・ほか 2 本は棚卸しの再生成とこの節の字数で、直して緑）/ skip 2 / 合計 16666（Lab `p1232` の `run2.trx`）。全 svg の掃き 1041 冊 1268 枚で動いた svg 0（base＝`13e455cba` の bin の写し＝開始時と同じ Core・head＝`ef13805e6` の bin の写し・Lab `p1232/sweep`）＝これらの形を書く追跡本は無い（結果であって構成ではない）。
+
 ## 以下は第1231セッションの経緯
 
 ### 1.1 第1231セッション（2026-11-14・YT-DELL2）
