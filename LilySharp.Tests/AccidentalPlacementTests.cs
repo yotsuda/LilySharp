@@ -621,4 +621,73 @@ public class AccidentalPlacementTests
         foreach (var l in layouts)
             Assert.True(l.XOffset < 0);
     }
+
+    /// <summary>
+    /// The accidentals of ONE note name are seated against each other the way
+    /// <c>set_ape_skylines</c> seats them, and the ape meets the column as one thing.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/accidental-placement.cc:253-301 set_ape_skylines.
+    /// MEASURED (LilyPond 2.26.0, Lab sessions/p1233/ap/dump.ily — each Accidental's X extent
+    /// from its paper column): the numbers below, a quarter note with its stem. Positions are
+    /// the treble staff's: c' −6, c'' 1, c''' 8. Before session 1233 the first seven rows read
+    /// differently here — a sharp stood nearer the notes than a double sharp on its line, a
+    /// second alteration was nested by outline, and one in another octave took its own column.
+    /// </remarks>
+    [Theory]
+    // Two voices on one line: the higher alteration nearest the notes, boxes 0.2 apart.
+    [InlineData(true, -6, "doubleSharp", -1.39, -6, "sharp", -2.69)]
+    [InlineData(true, -6, "sharp", -1.45, -6, "flat", -2.57)]
+    [InlineData(true, -6, "threeQuarterSharp", -1.95, -6, "sharp", -3.25)]
+    [InlineData(true, -6, "quarterSharp", -1.05, -6, "quarterFlat", -2.17)]
+    [InlineData(true, -6, "flat", -1.27, -6, "doubleFlat", -3.04)]
+    // Another octave: one origin for the whole note name, whatever the alteration.
+    [InlineData(true, -6, "sharp", -1.45, 1, "flat", -1.57)]
+    [InlineData(true, -6, "doubleSharp", -1.45, 1, "sharp", -1.45)]
+    [InlineData(false, 1, "flat", -1.57, 8, "sharp", -1.45)]
+    // …and the same one: the column is where the octave that needs most room needs it.
+    [InlineData(false, 1, "sharp", -1.45, 8, "sharp", -1.45)]
+    [InlineData(false, 1, "natural", -1.0460, 8, "natural", -1.0460)]
+    public void OneNoteName_IsSeatedAsLilyPondSeatsIt(
+        bool stemUp, int firstPosition, string first, double firstLeft,
+        int secondPosition, string second, double secondLeft)
+    {
+        var notes = new[]
+        {
+            new ChordNoteInfo(firstPosition, first),
+            new ChordNoteInfo(secondPosition, second),
+        };
+        var stem = AccidentalStem.Of(stemUp, 4, NoteheadStyle.Default, notes);
+
+        // Both ways round: the seats are the ape's, not the order the notes arrive in.
+        foreach (var order in new[] { notes, notes.Reverse().ToArray() })
+        {
+            var layouts = new AccidentalPlacement().CalculatePositions(order, stem: stem);
+
+            Assert.Equal(2, layouts.Length);
+            Assert.InRange(
+                layouts.Single(l => l.StaffPosition == firstPosition && l.Accidental == first).XOffset,
+                firstLeft - 1e-4, firstLeft + 1e-4);
+            Assert.InRange(
+                layouts.Single(l => l.StaffPosition == secondPosition && l.Accidental == second).XOffset,
+                secondLeft - 1e-4, secondLeft + 1e-4);
+        }
+    }
+
+    /// <summary>
+    /// <see cref="GlyphMetrics.AlterationQuartersOf"/> is
+    /// <c>MeasureCollector.AlterationName</c> read backwards — two spellings of one table,
+    /// held together here.
+    /// </summary>
+    [Fact]
+    public void EveryAccidentalWordReadsBackToItsAlteration()
+    {
+        for (int quarters = -4; quarters <= 4; quarters++)
+            foreach (bool restore in new[] { false, true })
+            {
+                string? word = LilySharp.Core.Svg.Collector.MeasureCollector.AlterationName(quarters, restore);
+                Assert.NotNull(word);
+                Assert.Equal(quarters, GlyphMetrics.AlterationQuartersOf(word));
+            }
+    }
 }

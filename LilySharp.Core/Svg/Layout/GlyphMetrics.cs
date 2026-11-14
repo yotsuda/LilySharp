@@ -708,6 +708,27 @@ internal static partial class GlyphMetrics
         _ => null,
     };
 
+    /// <summary>
+    /// The alteration an accidental word stands for, in quarter tones (a sharp is 2,
+    /// <c>quarterSharp</c> 1); a restore-first composite's is its main glyph's. 0 for a
+    /// natural, and for a word that is no accidental.
+    /// </summary>
+    /// <remarks>The table <c>MeasureCollector.AlterationName</c> writes, read backwards;
+    /// <c>AccidentalPlacementTests.EveryAccidentalWordReadsBackToItsAlteration</c> holds the
+    /// two together.</remarks>
+    internal static int AlterationQuartersOf(string? accidental) => (RestoreMainOf(accidental) ?? accidental) switch
+    {
+        "doubleSharp" => 4,
+        "threeQuarterSharp" => 3,
+        "sharp" => 2,
+        "quarterSharp" => 1,
+        "quarterFlat" => -1,
+        "flat" => -2,
+        "threeQuarterFlat" => -3,
+        "doubleFlat" => -4,
+        _ => 0,
+    };
+
     /// <summary>The same lookup asked of ONE font — see
     /// <see cref="GetNoteheadBBox(MusicFontDesign, int)"/>.</summary>
     public static BBox GetAccidentalBBox(MusicFontDesign font, string? accidental)

@@ -172,8 +172,9 @@ internal sealed record AccidentalPlacementParameters
 /// IMPLEMENTED — octave-first priority sorting (accidental-placement.cc:164-184)
 /// IMPLEMENTED — stagger_apes (accidental-placement.cc:192-235): apes by note name, sorted
 ///   by size then top, zigzag within each size run (see StaggerEntries)
-/// IMPLEMENTED — same-note-name overstrike (accidental-placement.cc set_ape_skylines):
-///   overstrike when same note name + same octave + same alteration
+/// IMPLEMENTED — the seats inside one ape (accidental-placement.cc:253-301
+///   set_ape_skylines, see SetApeSeats): every octave of a note name in one column,
+///   the same alteration in the same octave overstruck, a different one stepped left
 /// NOTE — editorial (AccidentalSuggestion) accidentals do NOT pass through this
 ///   class: per LilyPond they are placed ABOVE the note (define-grobs.scm:96-123,
 ///   direction UP), handled by the collector + ArticulationEngraver.
@@ -484,13 +485,14 @@ internal sealed class AccidentalPlacement
                 n.IsCourtesy));
         }
 
-        // Processing order = rightmost (closest to the notes) placed FIRST. This sort decides
-        // only the order WITHIN one ape (one note name): naturals first, then the higher
-        // octave — LILYPOND-REF: accidental-placement.cc:164-181 acc_less (naturals largest),
-        // walked from its end by set_ape_skylines (:268). The order ACROSS apes is
-        // StaggerEntries' (ape_less + stagger_apes): until 2026-09-24 this sort ran across
-        // apes too, and put a natural nearest the notes where LilyPond puts the higher
-        // accidental (session 569).
+        // ⚠️ THIS SORT DECIDES NOTHING LilyPond decides. The order ACROSS apes is
+        // StaggerEntries' (ape_less + stagger_apes) and the order WITHIN one is WalkApes'
+        // (acc_less); what is left to this one is the order the apes are first MET in, which
+        // breaks ape_less' ties (two apes of one size whose tops are level — LilyPond's
+        // std::sort leaves those to chance). It is kept as it was so those ties fall as they
+        // always have. Until 2026-09-24 it ran across apes (session 569) and until 2026-11-14
+        // within them (session 1233): a sharp stood nearer the notes than a double sharp on
+        // the same line, where acc_less puts the higher alteration.
         entries.Sort((a, b) =>
         {
             if (a.Priority != b.Priority)
@@ -500,9 +502,12 @@ internal sealed class AccidentalPlacement
 
         // LILYPOND-REF: accidental-placement.cc:192-235 stagger_apes — the placing order is
         // LilyPond's: apes by note name, the larger first, each size run zigzagged from its
-        // highest (StaggerEntries).
+        // highest (StaggerEntries). Each ape leaves it as one unbroken run.
         if (entries.Count > 1)
+        {
             entries = StaggerEntries(entries);
+            WalkApes(entries);
+        }
 
         // LILYPOND-REF: accidental-placement.cc:375-385 build_heads_skyline — the reference
         // LEFT skyline is built from ALL noteheads of the column (not only the
@@ -545,89 +550,98 @@ internal sealed class AccidentalPlacement
         var layouts = new AccidentalLayout[entries.Count];
         int placed = 0;
 
-        // LILYPOND-REF: accidental-placement.cc set_ape_skylines() — accidentals of the SAME
-        // note name form one APE sharing a SINGLE column, whatever the octave. The first of
-        // each note-name+alteration is positioned against the reference; later ones at that
-        // note name snap to the SAME column (same octave overstrikes, different octaves align
-        // vertically — C♯4 and C♯5 sit in one column, as LilyPond draws them).
-        // 40.11 of these a keystroke over the reader's corpus, and 99.9% of them finish
-        // holding ONE column — a chord's accidentals are almost always all the same note
-        // name. So the first column lives in a pair of locals and the dictionary is built on
-        // the second DISTINCT name, which arrives once in a thousand (session 448).
-        (int NoteName, string Accidental) firstApeKey = default;
-        double? firstApeOffset = null;
-        Dictionary<(int NoteName, string Accidental), double>? apeColumn = null;
+        // LILYPOND-REF: accidental-placement.cc:55-81 add_accidental — the accidentals of ONE
+        // note name are one APE, whatever the octave and whatever the alteration, and
+        // position_apes moves an ape as one thing. Each ape is one unbroken run of `entries`
+        // (StaggerEntries), already in the order set_ape_skylines walks it (WalkApes).
+        // 40.11 columns a keystroke over the reader's corpus, and 99.9% of them hold ONE
+        // note name (session 448) — almost always one accidental, whose seat is 0.
         double lastOffset = 0.0;
+        Span<double> seatBuffer = stackalloc double[8];
 
-        foreach (var entry in entries)
+        for (int start = 0; start < entries.Count;)
         {
-            int noteName = ((entry.StaffPosition % 7) + 7) % 7;
-            var apeKey = (noteName, entry.Accidental);
-            var bbox = GlyphMetrics.GetAccidentalBBox(accidentalFont, entry.Accidental);
-            double yCenterSS = entry.StaffPosition / 2.0;
+            int noteName = NoteNameOf(entries[start].StaffPosition);
+            int end = start + 1;
+            while (end < entries.Count && NoteNameOf(entries[end].StaffPosition) == noteName)
+                end++;
 
-            // The glyph's own LEFT/RIGHT outline skylines, out of the same font as the box
-            // above and lifted onto the note's staff position (the Y centre does not scale —
-            // a grace's head sits on the real staff lines).
-            // LILYPOND-REF: accidental-placement.cc:292-295 set_ape_skylines.
-            // ⚠️ THE PAIR IS SHARED (SharedGlyphSkylinePair) AND NEVER MUTATED: the right one
-            // is shifted into a scratch copy only the distance below reads, and the left one is
-            // shifted, raised and merged into the new reference in one step — the buildings the
-            // in-place Shift / Raise / Merge on a fresh pair used to leave.
-            var (glyphLeft, glyphRight) =
-                SharedGlyphSkylinePair(entry.Accidental, entry.IsCourtesy, accidentalFont);
+            // LILYPOND-REF: accidental-placement.cc:253-301 set_ape_skylines — first the
+            // accidentals are seated against EACH OTHER …
+            Span<double> seats = end - start <= seatBuffer.Length
+                ? seatBuffer[..(end - start)]
+                : new double[end - start];
+            SetApeSeats(entries, start, end, accidentalFont, seats);
 
-            double offset;
-            if (firstApeOffset is { } firstShared && firstApeKey.Equals(apeKey))
+            // … and the ape's skyline is all of theirs merged where they were seated
+            // (:292-296). LILYPOND-REF: accidental-placement.cc:411-416 position_apes — nest
+            // the ape's RIGHT skyline against the accumulated LEFT skyline (horizon padding
+            // 0.1), then back off by the inter-column padding (0.2).
+            // ⚠️ THE MERGED SKYLINE IS NOT BUILT. The distance of a merge is the greatest of
+            // its members' distances — the merge is the pointwise furthest of them, and the
+            // horizon padding widens each building on its own (lily/skyline.cc:558-615
+            // padded) — and a member seated `seat` to the left stands that much further off.
+            // So each glyph's SHARED right skyline is read where it is, as it was for one
+            // accidental, and nothing is built for the ape.
+            double distance = double.NegativeInfinity;
+            for (int k = start; k < end; k++)
             {
-                offset = firstShared;
+                var member = entries[k];
+                // The glyph's own LEFT/RIGHT outline skylines, out of the same font as its
+                // box and lifted onto the note's staff position (the Y centre does not scale
+                // — a grace's head sits on the real staff lines).
+                // ⚠️ THE PAIR IS SHARED (SharedGlyphSkylinePair) AND NEVER MUTATED: the right
+                // one is shifted into a scratch copy only the distance reads, and the left one
+                // is shifted, raised and merged into the new reference in one step below.
+                var (_, memberRight) =
+                    SharedGlyphSkylinePair(member.Accidental, member.IsCourtesy, accidentalFont);
+                double d = HorizontalSkyline.ShiftedScratch(memberRight, member.StaffPosition / 2.0)
+                    .Distance(reference, _params.HorizonPadding) + seats[k - start];
+                if (d > distance)
+                    distance = d;
             }
-            else if (apeColumn is not null
-                     && apeColumn.TryGetValue(apeKey, out double sharedOffset))
-            {
-                offset = sharedOffset;
-            }
+            double offset = -distance;
+            if (double.IsInfinity(offset))
+                offset = lastOffset;
             else
+                offset -= _params.Padding;
+            lastOffset = offset;
+
+            for (int k = start; k < end; k++)
             {
-                // LILYPOND-REF: accidental-placement.cc:411-416 — nest the RIGHT skyline
-                // against the accumulated LEFT skyline (horizon padding 0.1), then back off
-                // by the inter-column padding (0.2).
-                offset = -HorizontalSkyline.ShiftedScratch(glyphRight, yCenterSS)
-                    .Distance(reference, _params.HorizonPadding);
-                if (double.IsInfinity(offset))
-                    offset = lastOffset;
-                else
-                    offset -= _params.Padding;
-                if (firstApeOffset is null)
+                var entry = entries[k];
+                // LILYPOND-REF: accidental-placement.cc:423-425 position_apes — every grob of
+                // the ape is translated by the ape's offset, on top of its seat.
+                double origin = offset + seats[k - start];
+                double yCenterSS = entry.StaffPosition / 2.0;
+
+                // LILYPOND-REF: accidental-placement.cc:418-421 — the new LEFT skyline is the
+                // ape's LEFT skyline shifted into place, merged over the old one: one member
+                // at a time here. After the LAST accidental nothing reads it, so it is not
+                // built.
+                if (placed + 1 < entries.Count)
                 {
-                    firstApeKey = apeKey;
-                    firstApeOffset = offset;
+                    var (glyphLeft, _) =
+                        SharedGlyphSkylinePair(entry.Accidental, entry.IsCourtesy, accidentalFont);
+                    reference = HorizontalSkyline.ShiftedRaisedOverInto(
+                        ReferenceEquals(reference, scratch.ReferenceA) ? scratch.ReferenceB : scratch.ReferenceA,
+                        glyphLeft, yCenterSS, origin, reference);
                 }
-                else
-                {
-                    (apeColumn ??= new Dictionary<(int NoteName, string Accidental), double>())
-                        [apeKey] = offset;
-                }
-                lastOffset = offset;
+
+                // XOffset is the whole accidental's ink-left (what DrawAccidentalAtInkLeft and
+                // the reservation boxes anchor to): the glyph origin lands at `origin`, so its
+                // LILC left edge is origin + bbox.Left. A courtesy accidental's left
+                // parenthesis draws that much further left again (DrawAccidentalAtInkLeft:
+                // accInkLeft = inkLeftX + leftParen.Width) and its box is already packed
+                // there, so the anchor must be the group left, not the bare glyph's. All out
+                // of the accidental's own font.
+                var bbox = GlyphMetrics.GetAccidentalBBox(accidentalFont, entry.Accidental);
+                layouts[placed++] = new AccidentalLayout(
+                    entry.StaffPosition, entry.Accidental,
+                    InkLeft(origin, bbox.Left, entry.IsCourtesy, accidentalFont), entry.IsCourtesy);
             }
 
-            // LILYPOND-REF: accidental-placement.cc:418-421 — the new LEFT skyline is this
-            // accidental's LEFT skyline shifted into place, merged over the old one. After the
-            // LAST accidental nothing reads it, so it is not built.
-            if (placed + 1 < entries.Count)
-                reference = HorizontalSkyline.ShiftedRaisedOverInto(
-                    ReferenceEquals(reference, scratch.ReferenceA) ? scratch.ReferenceB : scratch.ReferenceA,
-                    glyphLeft, yCenterSS, offset, reference);
-
-            // XOffset is the whole accidental's ink-left (what DrawAccidentalAtInkLeft and the
-            // reservation boxes anchor to): the glyph origin lands at `offset`, so its LILC
-            // left edge is offset + bbox.Left. A courtesy accidental's left parenthesis draws
-            // that much further left again (DrawAccidentalAtInkLeft: accInkLeft = inkLeftX +
-            // leftParen.Width) and its box is already packed there, so the anchor must be the
-            // group left, not the bare glyph's. All out of the accidental's own font.
-            layouts[placed++] = new AccidentalLayout(
-                entry.StaffPosition, entry.Accidental,
-                InkLeft(offset, bbox.Left, entry.IsCourtesy, accidentalFont), entry.IsCourtesy);
+            start = end;
         }
 
         scratch.Entries.Clear();
@@ -636,6 +650,151 @@ internal sealed class AccidentalPlacement
         scratch.ReferenceB.Clear();
         t_placementScratch = scratch;
         return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(layouts);
+    }
+
+    /// <summary>The note name of a staff position: what an ape is keyed on.</summary>
+    private static int NoteNameOf(int staffPosition) => ((staffPosition % 7) + 7) % 7;
+
+    /// <summary>
+    /// Puts each ape's accidentals — each unbroken run of one note name — in the order
+    /// <c>set_ape_skylines</c> walks them: the higher octave first, and within an octave the
+    /// natural first, then the higher alteration.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/accidental-placement.cc:160-181 acc_less — by octave, then "naturals
+    ///   are the largest (so that they don't get confused with cancellation naturals); apart
+    ///   from that, we order according to the alteration";
+    ///   lily/accidental-placement.cc:256-268 set_ape_skylines sorts by it and walks from the
+    ///   END, so the largest is seated first and stands nearest the notes.
+    /// A run is one accidental in all but a few columns, so this is an insertion sort over
+    /// the list itself: nothing is built, and two accidentals acc_less calls equal keep the
+    /// order they came in.
+    /// </remarks>
+    private static void WalkApes(List<PlacementEntry> entries)
+    {
+        for (int start = 0; start < entries.Count;)
+        {
+            int noteName = NoteNameOf(entries[start].StaffPosition);
+            int end = start + 1;
+            while (end < entries.Count && NoteNameOf(entries[end].StaffPosition) == noteName)
+                end++;
+            for (int i = start + 1; i < end; i++)
+            {
+                var moving = entries[i];
+                int j = i;
+                while (j > start && AccLess(entries[j - 1], moving))
+                {
+                    entries[j] = entries[j - 1];
+                    j--;
+                }
+                entries[j] = moving;
+            }
+            start = end;
+        }
+    }
+
+    /// <summary><c>acc_less</c>: whether <paramref name="p"/> is seated to the left of
+    /// <paramref name="q"/> in their ape (the two have one note name).</summary>
+    /// <remarks>LILYPOND-REF: lily/accidental-placement.cc:160-181 acc_less.</remarks>
+    private static bool AccLess(PlacementEntry p, PlacementEntry q)
+    {
+        int pOctave = OctaveOf(p.StaffPosition), qOctave = OctaveOf(q.StaffPosition);
+        if (pOctave != qOctave)
+            return pOctave < qOctave;
+
+        int pAlteration = GlyphMetrics.AlterationQuartersOf(p.Accidental);
+        int qAlteration = GlyphMetrics.AlterationQuartersOf(q.Accidental);
+        if (pAlteration == 0)
+            return false;
+        if (qAlteration == 0)
+            return true;
+
+        return pAlteration < qAlteration;
+    }
+
+    /// <summary>The octave a staff position stands in, counted in sevens from the middle
+    /// line — only ever compared between two positions of one note name.</summary>
+    private static int OctaveOf(int staffPosition) => (staffPosition - NoteNameOf(staffPosition)) / 7;
+
+    /// <summary>
+    /// Seats the accidentals of one ape — <paramref name="entries"/> from
+    /// <paramref name="start"/> to <paramref name="end"/>, in the order <see cref="WalkApes"/>
+    /// left them — against each other: <paramref name="seats"/> receives each one's X from the
+    /// ape's own origin (0 or left of it).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/accidental-placement.cc:259-290 set_ape_skylines — "we assume that
+    ///   accidentals in different octaves won't collide. If two or more accidentals are in the
+    ///   same octave: 1) if they are the same accidental, print them in overstrike 2) otherwise,
+    ///   shift one to the left so they don't overlap." The first of an octave is not moved; a
+    ///   different alteration in the same octave is put with its extent's RIGHT
+    ///   <c>padding</c> left of the extent's LEFT of the one before.
+    /// The extents are the grobs' own (<c>a->extent (a, X_AXIS)</c>): BOXES, a courtesy
+    /// accidental's with its parentheses — not the outlines the ape then meets the column with.
+    /// <para>
+    /// MEASURED (LilyPond 2.26.0, Lab sessions/p1233/ap, extents from the paper column):
+    /// <c>cisis'</c> and <c>cis'</c> on one beat in two voices, 𝄪 (−1.39 . −0.39) and ♯
+    /// (−2.69 . −1.59); <c>&lt;cis' ces''&gt;</c>, ♯ (−1.45 . −0.35) and ♭ (−1.57 . −0.65) —
+    /// one origin, though the flat alone would stand at −0.35.
+    /// </para>
+    /// <para>
+    /// ⚠️ UNTIL 2026-11-14 (session 1233) an ape was (note name, GLYPH), the first of each
+    /// met the column alone and the rest snapped to it: a second alteration on the same line
+    /// was nested outline against outline (0.039–0.045 nearer than the boxes allow), one in
+    /// another octave took a column of its own, and an octave that needed more room than the
+    /// first one placed did not get it.
+    /// </para>
+    /// </remarks>
+    private void SetApeSeats(
+        List<PlacementEntry> entries, int start, int end, MusicFontDesign accidentalFont,
+        Span<double> seats)
+    {
+        double padding = _params.Padding;
+        int lastOctave = 0;
+        double offset = 0;
+        double lastOffset = 0;
+        int lastAlteration = 0;
+        for (int k = start; k < end; k++)
+        {
+            var a = entries[k];
+            int octave = OctaveOf(a.StaffPosition);
+            int alteration = GlyphMetrics.AlterationQuartersOf(a.Accidental);
+            var (left, right) = ExtentOf(a, accidentalFont);
+
+            double seat = 0;
+            if (k == start || octave != lastOctave)
+            {
+                lastOffset = 0;
+                offset = left - padding;
+            }
+            else if (alteration == lastAlteration)
+                seat = lastOffset;
+            else // Our alteration is different from the last one
+            {
+                double thisOffset = offset - right;
+                seat = thisOffset;
+
+                lastOffset = thisOffset;
+                offset -= (right - left) + padding;
+            }
+            seats[k - start] = seat;
+
+            lastOctave = octave;
+            lastAlteration = alteration;
+        }
+    }
+
+    /// <summary>The X extent of an accidental's stencil from its glyph origin: the glyph's
+    /// box, and around a courtesy accidental its two parentheses.</summary>
+    /// <remarks>LILYPOND-REF: lily/accidental.cc:33-43 parenthesize's two add_at_edge — each
+    /// parenthesis is added at the stencil's edge with no padding.</remarks>
+    private static (double Left, double Right) ExtentOf(PlacementEntry entry, MusicFontDesign font)
+    {
+        var bbox = GlyphMetrics.GetAccidentalBBox(font, entry.Accidental);
+        return entry.IsCourtesy
+            ? (bbox.Left - font.Box(MusicGlyph.AccidentalParensLeft).Width,
+               bbox.Right + font.Box(MusicGlyph.AccidentalParensRight).Width)
+            : (bbox.Left, bbox.Right);
     }
 
     /// <summary>

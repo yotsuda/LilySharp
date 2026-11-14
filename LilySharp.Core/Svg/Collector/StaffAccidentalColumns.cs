@@ -167,10 +167,10 @@ internal static class StaffAccidentalColumns
             if (layouts.Length == 0)
                 continue;
 
-            // position_apes gives one X per APE, and an ape is (note name, alteration) — two
-            // notes that share it share the column, whatever the octave or the voice. So the
-            // answer is looked up by what the ape is keyed on, not by which note asked.
-            // LILYPOND-REF: accidental-placement.cc:55-81 add_accidental.
+            // An ape is a note name (LILYPOND-REF: accidental-placement.cc:55-81 add_accidental),
+            // and inside it the same alteration in the same octave is overstruck: two voices'
+            // heads on one line with one accidental get one X. So the answer is looked up by
+            // line and accidental, not by which note asked.
             var byKey = new Dictionary<(int Position, string Accidental, bool Courtesy), double>();
             foreach (var l in layouts)
                 byKey.TryAdd((l.StaffPosition, l.Accidental, l.IsCourtesy), l.XOffset);
