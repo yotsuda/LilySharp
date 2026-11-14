@@ -140,6 +140,18 @@ public class SungVoicesTests
     }
 
     [Fact]
+    public void AnAccentInsideAHairpin_IsOverTheHairpin_WhichGoesOnThroughIt()
+    {
+        // The accented note used to be read as the level the crescendo was going to: the
+        // hairpin ended on it and the third note fell back to piano.
+        var notes = Assert.Single(Voices(Book("c'4@p@cresc d@accent | e f@f |", "さ く | ら よ |"))).Notes;
+        Assert.Equal(Square(70 + (25.0 / 3) + 20), notes[1].Level);
+        Assert.Equal(Square(70 + (50.0 / 3)), notes[2].Level);
+        Assert.Equal(Square(95), notes[2].LevelEnd);
+        Assert.Equal(Square(95), notes[3].Level);
+    }
+
+    [Fact]
     public void AHairpinWithNothingAfterIt_GoesTwoDynamics_AndStays()
     {
         var notes = Assert.Single(Voices(Book("c'4@decresc d | e f@!decresc | g a |", "さ く | ら よ | き く |"))).Notes;

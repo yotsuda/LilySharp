@@ -109,7 +109,12 @@ public readonly record struct MidiNote(
     // The level written for this note, where a hairpin moved Velocity away from it
     // (MidiExporter.SwellInstruments); 0 where Velocity is that level. A singer reads this one
     // and swells by its own clock (SungVoices.Written). Not written to .mid files.
-    int WrittenVelocity = 0
+    int WrittenVelocity = 0,
+    // What the note's own marks add to the level it is written in — an accent, a marcato, an
+    // `@sfz`, the attack of an `@fp`: Velocity less the level standing after the note's own
+    // dynamic. A hairpin reads the level without it (SungVoices.Level), so an accent inside a
+    // crescendo neither ends the hairpin nor is its target. Not written to .mid files.
+    int Accent = 0
 );
 
 /// <summary>

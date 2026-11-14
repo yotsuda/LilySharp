@@ -73,6 +73,38 @@ public class InstrumentHairpinMidiTests
     }
 
     [Fact]
+    public void AnAccentInsideAHairpin_IsStruckOverWhereTheHairpinHasCome_AndDoesNotEndIt()
+    {
+        // Until session 1232 the accented note was read as the level the crescendo was going
+        // to: P, P+20, P, P, F — the hairpin ended on the second note.
+        var v = Velocities(OnePart("c''4@p@cresc d''@accent e'' f'' | g''4@f a'' b'' c''' |"), "fl");
+        Assert.Equal(new[] { P, Along(P, F, 1, 4) + 20, Along(P, F, 2, 4), Along(P, F, 3, 4), F, F, F, F }, v);
+        // A marcato on the way down (control: the same line without it).
+        var down = Velocities(OnePart("c''4@f@decresc d'' e''@marcato f'' | g''4@p a'' b'' c''' |"), "fl");
+        Assert.Equal(new[] { F, Along(F, P, 1, 4), Along(F, P, 2, 4) + 30, Along(F, P, 3, 4), P, P, P, P }, down);
+    }
+
+    [Fact]
+    public void AnAccentDynamicInsideAHairpin_IsOneNotes_AndTheHairpinGoesOn()
+    {
+        // `@sfz` at piano is struck at its own number: that much over the level.
+        int over = (int)DynamicLevel.SFZ - P;
+        var v = Velocities(OnePart("c''4@p@cresc d'' e''@sfz f'' | g''4@f a'' b'' c''' |"), "fl");
+        Assert.Equal(new[] { P, Along(P, F, 1, 4), System.Math.Min(127, Along(P, F, 2, 4) + over), Along(P, F, 3, 4), F, F, F, F }, v);
+        // The hairpin's own first note may carry one too.
+        var first = Velocities(OnePart("c''4@p@accent@cresc d'' e'' f'' | g''4@f a'' b'' c''' |"), "fl");
+        Assert.Equal(new[] { P + 20, Along(P, F, 1, 4), Along(P, F, 2, 4), Along(P, F, 3, 4), F, F, F, F }, first);
+    }
+
+    [Fact]
+    public void AnAccentAfterAHairpinWithNoLevel_IsOverWhatTheHairpinReached()
+    {
+        int d = MidiExporter.DefaultVelocity;
+        var v = Velocities(OnePart("c''4@cresc d'' e'' f'' | g''4@!cresc a''@accent b'' c''' |"), "fl");
+        Assert.Equal(new[] { d, Along(d, d + 16, 1, 4), Along(d, d + 16, 2, 4), Along(d, d + 16, 3, 4), d + 16, d + 36, d + 16, d + 16 }, v);
+    }
+
+    [Fact]
     public void NoHairpin_NoChange()
     {
         Assert.Equal(new[] { P, P, P, P, F }, Velocities(OnePart("c''4@p d'' e'' f'' | g''1@f |"), "fl"));

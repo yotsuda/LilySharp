@@ -3438,7 +3438,7 @@ public sealed class MidiExporter
         int actualTicks = Math.Max(1, ticks * durationPercent / 100);
         track.Notes.Add(new MidiNote(track.Channel, SoundKey(midiPitch, pitch.SourceStart), velocity,
             _currentTick, actualTicks, pitch.SourceStart, QuarterBend: pitch.QuarterOffset,
-            SourceOrdinal: NextOrdinal(pitch.SourceStart), Timbre: _currentTimbre, Part: _currentPart));
+            SourceOrdinal: NextOrdinal(pitch.SourceStart), Timbre: _currentTimbre, Part: _currentPart, Accent: velocity - _velocity));
         // The last member is what a '~' after '>>' ties on from (OpenTieTargets).
         CloseOnset(track, [track.Notes.Count - 1], false);
         _currentTick += ticks;
@@ -3540,7 +3540,7 @@ public sealed class MidiExporter
         track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity,
             _currentTick, actualDuration, note.SourceStart,
             QuarterBend: note.Pitch.QuarterOffset,
-            SourceOrdinal: NextOrdinal(note.SourceStart), Timbre: _currentTimbre, Part: _currentPart));
+            SourceOrdinal: NextOrdinal(note.SourceStart), Timbre: _currentTimbre, Part: _currentPart, Accent: velocity - _velocity));
         MarkForSinger(track, [track.Notes.Count - 1], note.Articulations);
         CloseOnset(track, [track.Notes.Count - 1], startsTie);
         _currentTick += durationTicks;
@@ -3575,7 +3575,7 @@ public sealed class MidiExporter
         (velocity, durationPercent) = ApplyRunMarks(drum, velocity, durationPercent);
         int actualDuration = Math.Max(1, durationTicks * durationPercent / 100);
         track.Notes.Add(new MidiNote(9, info.GmKey, velocity, _currentTick, actualDuration,
-            drum.SourceStart, SourceOrdinal: NextOrdinal(drum.SourceStart), Timbre: 9, Part: _currentPart));
+            drum.SourceStart, SourceOrdinal: NextOrdinal(drum.SourceStart), Timbre: 9, Part: _currentPart, Accent: velocity - _velocity));
         CloseOnset(track, [track.Notes.Count - 1], startsTie: false);
         _currentTick += durationTicks;
     }
@@ -3704,7 +3704,7 @@ public sealed class MidiExporter
                 track.Notes.Add(new MidiNote(track.Channel, sound.MidiPitch, velocity,
                     startTick, actualDuration, bare.SourceStart,
                     QuarterBend: sound.QuarterBend,
-                    SourceOrdinal: NextOrdinal(bare.SourceStart), Timbre: _currentTimbre, Part: _currentPart));
+                    SourceOrdinal: NextOrdinal(bare.SourceStart), Timbre: _currentTimbre, Part: _currentPart, Accent: velocity - _velocity));
                 MarkForSinger(track, [track.Notes.Count - 1], bare.Articulations);
                 CloseOnset(track, [track.Notes.Count - 1], startsTie);
                 break;
@@ -3723,14 +3723,15 @@ public sealed class MidiExporter
                     if (n.IsDrum)
                     {
                         track.Notes.Add(new MidiNote(9, n.MidiPitch, velocity, startTick, actualDuration,
-                            bare.SourceStart, SourceOrdinal: ordinal, Timbre: 9, Part: _currentPart));
+                            bare.SourceStart, SourceOrdinal: ordinal, Timbre: 9, Part: _currentPart, Accent: velocity - _velocity));
                         continue;
                     }
                     int pitch = n.MidiPitch + semitones;
                     int tiedInto = ExtendTied(track, tieTargets, pitch, durationTicks);
                     if (tiedInto >= 0) { onset.Add(tiedInto); continue; }
                     track.Notes.Add(new MidiNote(track.Channel, pitch, velocity, startTick, actualDuration,
-                        bare.SourceStart, QuarterBend: n.QuarterBend, SourceOrdinal: ordinal, Timbre: _currentTimbre, Part: _currentPart));
+                        bare.SourceStart, QuarterBend: n.QuarterBend, SourceOrdinal: ordinal, Timbre: _currentTimbre, Part: _currentPart,
+                        Accent: velocity - _velocity));
                     onset.Add(track.Notes.Count - 1);
                 }
                 MarkForSinger(track, onset, bare.Articulations);
@@ -3741,7 +3742,7 @@ public sealed class MidiExporter
             {
                 var info = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
                 track.Notes.Add(new MidiNote(9, info.GmKey, velocity, startTick, actualDuration,
-                    bare.SourceStart, SourceOrdinal: NextOrdinal(bare.SourceStart), Timbre: 9, Part: _currentPart));
+                    bare.SourceStart, SourceOrdinal: NextOrdinal(bare.SourceStart), Timbre: 9, Part: _currentPart, Accent: velocity - _velocity));
                 CloseOnset(track, [track.Notes.Count - 1], startsTie: false);
                 break;
             }
@@ -3956,7 +3957,8 @@ public sealed class MidiExporter
             {
                 track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity, startTick, soundTicks, chord.SourceStart,
                     QuarterBend: pitch.QuarterOffset,
-                    SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart, MemberPos: pitch.SourceStart));
+                    SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart, MemberPos: pitch.SourceStart,
+                    Accent: velocity - _velocity));
                 onset.Add(track.Notes.Count - 1);
             }
             // A tie written on members (<c f d~>) goes on from those notes alone.
@@ -3983,7 +3985,7 @@ public sealed class MidiExporter
                 else
                 {
                     track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity, startTick, soundTicks, chord.SourceStart,
-                        SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart));
+                        SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart, Accent: velocity - _velocity));
                     onset.Add(track.Notes.Count - 1);
                 }
                 resolved.Add((midiPitch, 0, false));
@@ -4015,7 +4017,8 @@ public sealed class MidiExporter
             else
             {
                 track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity, startTick, soundTicks, chord.SourceStart,
-                    SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart, MemberPos: degree.SourceStart));
+                    SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart, MemberPos: degree.SourceStart,
+                    Accent: velocity - _velocity));
                 onset.Add(track.Notes.Count - 1);
             }
             resolved.Add((midiPitch, 0, false));
@@ -4028,7 +4031,7 @@ public sealed class MidiExporter
         {
             var dinfo = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
             track.Notes.Add(new MidiNote(9, dinfo.GmKey, velocity, startTick, soundTicks, chord.SourceStart,
-                SourceOrdinal: chordOrdinal, Timbre: 9, Part: _currentPart));
+                SourceOrdinal: chordOrdinal, Timbre: 9, Part: _currentPart, Accent: velocity - _velocity));
             resolved.Add((dinfo.GmKey, 0, true));
         }
         _resolvedChordNotes[chord] = resolved;

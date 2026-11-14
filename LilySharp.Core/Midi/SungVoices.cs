@@ -455,6 +455,10 @@ public static class SungVoices
     /// moved it (<see cref="MidiNote.WrittenVelocity"/>).</summary>
     internal static int Written(in MidiNote note) => note.WrittenVelocity != 0 ? note.WrittenVelocity : note.Velocity;
 
+    /// <summary>The level <paramref name="note"/> is written in: <see cref="Written"/> less what
+    /// its own marks add to it (<see cref="MidiNote.Accent"/>).</summary>
+    internal static int Level(in MidiNote note) => Written(note) - note.Accent;
+
     /// <summary>
     /// Where the hairpins take a line's notes, in MIDI velocity: the level at each note's start,
     /// and — for a note a hairpin crosses — the level at its end. A hairpin goes from its first
@@ -463,6 +467,14 @@ public static class SungVoices
     /// is written. The one rule a singer (<see cref="Levels"/>) and an instrument
     /// (MidiExporter.SwellInstruments) follow, each on its own clock.
     /// </summary>
+    /// <remarks>
+    /// A hairpin moves the LEVEL, and a note keeps what its own marks add to it: an accent, a
+    /// marcato or an <c>@sfz</c> inside a crescendo is struck that much over where the hairpin
+    /// has come, and the hairpin goes on through it. Until 2026-11-14 (session 1232) the walk
+    /// compared velocities, so <c>c@p@cresc d@accent e f@f</c> took the accented note for the
+    /// level the crescendo was going to: the hairpin ended there, at the accent's velocity, and
+    /// the notes after it fell back to piano.
+    /// </remarks>
     /// <param name="notes">The line in time order, each note at its WRITTEN level (<see cref="Written"/>).</param>
     /// <param name="startOf">When note <c>k</c> starts, on the caller's clock.</param>
     /// <param name="endOf">When note <c>k</c> ends.</param>
@@ -476,24 +488,24 @@ public static class SungVoices
         {
             if (notes[i].Swell == 0)
                 continue;
-            int level = Written(notes[i]);
+            int level = Level(notes[i]);
             int stop = i + 1;
-            while (stop < notes.Count && Written(notes[stop]) == level && notes[stop].Swell == 0 && !notes[stop].SwellEnds)
+            while (stop < notes.Count && Level(notes[stop]) == level && notes[stop].Swell == 0 && !notes[stop].SwellEnds)
                 stop++;
-            bool landsOnALevel = stop < notes.Count && Math.Sign(Written(notes[stop]) - level) == notes[i].Swell;
-            double target = landsOnALevel ? Written(notes[stop]) : level + (notes[i].Swell * HairpinReach);
+            bool landsOnALevel = stop < notes.Count && Math.Sign(Level(notes[stop]) - level) == notes[i].Swell;
+            double target = landsOnALevel ? Level(notes[stop]) : level + (notes[i].Swell * HairpinReach);
             double from = startOf(i);
             double until = stop < notes.Count ? startOf(stop) : endOf(notes.Count - 1);
             double Along(double t) => level + ((target - level) * Math.Clamp((t - from) / Math.Max(1e-6, until - from), 0, 1));
             for (int k = i; k < stop && k < notes.Count; k++)
             {
-                at[k] = Along(startOf(k));
-                after[k] = Along(endOf(k));
+                at[k] = Along(startOf(k)) + notes[k].Accent;
+                after[k] = Along(endOf(k)) + notes[k].Accent;
             }
             // With no level to land on, what the hairpin reached stands until one is written.
             if (!landsOnALevel)
-                for (int k = stop; k < notes.Count && Written(notes[k]) == level && notes[k].Swell == 0; k++)
-                    at[k] = target;
+                for (int k = stop; k < notes.Count && Level(notes[k]) == level && notes[k].Swell == 0; k++)
+                    at[k] = target + notes[k].Accent;
             i = stop - 1;
         }
         return (at, after);

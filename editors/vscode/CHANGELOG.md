@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **An accent inside a hairpin no longer ends it.** `c''4@p@cresc d''@accent e'' f'' | g''1@f` played the accented note, then fell back to piano for the rest of the crescendo: the louder note was taken for the level the hairpin was going to. A hairpin moves the level, and a note keeps what its own marks add to it — an `@accent`, a `@marcato`, an `@sfz`, the attack of an `@fp` is struck that much over where the hairpin has come, and the hairpin goes on through it to the level written after it. For an instrument and for a singer alike.
 - **Two voices on a staff share its dynamics in playback**: with `voice { … } { … }`, a dynamic written in one voice now reaches the other from the moment it is written (the second voice used to play from its first note at the level the first voice ended on).
 - **Playback follows a hairpin on every instrument**: the notes under `@cresc`, `@decresc` or `@dim` are struck louder or softer one after another — up to the next level written, or two dynamics on when none follows — where only a singer used to swell and an instrument jumped at the next mark. Both hands of a piano's grand staff share the hairpin.
 - **An accent dynamic is one note's in playback**: `@sf`, `@sfz`, `@fz`, `@sffz`, `@rf` and `@rfz` accent their note and leave the level as it stood (the notes after an `@sfz` used to stay as loud until the next mark), and `@fp` / `@sfp` leave the level at piano.
