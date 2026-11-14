@@ -361,6 +361,7 @@ public sealed class MusicXmlExporter
         ReadCarryRefusals(tree);
         _pendingChordRows.Clear();
         _playStartMeasure.Clear();
+        _musicNavMarks.Clear();
         _writtenByPart.Clear();
         (_writtenKey, _writtenTime, _writtenClef) = (null, null, null);
         _homeTonic = ScoreHomeKey.Read(root);
@@ -399,6 +400,7 @@ public sealed class MusicXmlExporter
             EmitPendingChordRows();
         }
         SpreadRepeatSignsToEveryPart();
+        WriteTheMusicsNavigationMarks();
         FinishOpenSpans();
         WriteCapo();
         WriteBeams(tree, hasSections);
@@ -2237,6 +2239,37 @@ public sealed class MusicXmlExporter
         }
     }
 
+    // The navigation marks the parts' music writes, by the measure index they stand on.
+    private readonly List<(int Bar, NavigationMarkType Type)> _musicNavMarks = new();
+
+    /// <summary>
+    /// A navigation mark written in ONE part's music is the score's: every part's same measure
+    /// carries its sign or words and its <c>&lt;sound&gt;</c>, as every part carries the form's
+    /// (<see cref="ApplyNavMark"/>). MEASURED before (2026-11-14, Lab sessions/p1244/probe/e-nav):
+    /// a mark in the music was not written at all, while the page drew it and the MIDI followed it.
+    /// </summary>
+    private void WriteTheMusicsNavigationMarks()
+    {
+        if (_document == null)
+            return;
+        foreach (var (bar, type) in _musicNavMarks)
+        {
+            var (dir, isTarget) = BuildNavDirection(type);
+            if (dir == null)
+                continue;
+            foreach (var part in _document.Parts)
+            {
+                if (bar >= part.Measures.Count)
+                    continue;
+                var note = new MusicXmlNote { RawElement = new System.Xml.Linq.XElement(dir) };
+                if (isTarget)
+                    part.Measures[bar].Notes.Insert(0, note);
+                else
+                    part.Measures[bar].Notes.Add(note);
+            }
+        }
+    }
+
     /// <summary>The MusicXML <c>&lt;ending number&gt;</c> list for a volta: "1", a
     /// range <c>[1-3.]</c> → "1,2,3", a list <c>[1,3,5.]</c> → "1,3,5" — the passes every
     /// reader plays it by (<see cref="FormAlternativeSyntax.Numbers"/>).</summary>
@@ -3165,6 +3198,21 @@ public sealed class MusicXmlExporter
                         last.EndingStopNumbers = passes;
                         last.EndingStopType = inlineEnding.IsClosed || NextIsRepeatEnd(inlineEnding) ? "stop" : "discontinue";
                     }
+                }
+                break;
+
+            // A navigation mark written in the music (docs/inline-repeat-design.md §3.6): a
+            // target (segno, coda) heads the bar that follows it, a jump or a fine ends the bar
+            // before it. Held by bar and written into every part once all have their bars
+            // (WriteTheMusicsNavigationMarks) — the form's marks are every part's too (ApplyNavMark).
+            case NavigationMarkSyntax nav when _currentPart != null:
+                {
+                    bool target = nav.MarkType is NavigationMarkType.Segno or NavigationMarkType.Coda;
+                    bool inBar = _currentMeasure is { Notes.Count: > 0 };
+                    int closed = _currentPart.Measures.Count;
+                    int bar = target ? (inBar ? closed + 1 : closed) : (inBar ? closed : closed - 1);
+                    if (bar >= 0 && !_musicNavMarks.Contains((bar, nav.MarkType)))
+                        _musicNavMarks.Add((bar, nav.MarkType));
                 }
                 break;
 
@@ -7350,6 +7398,73 @@ public sealed class MusicXmlExporter
     }
 
     private readonly List<PendingChordRow> _pendingChordRows = new();
+
+    /// <summary>
+    /// The repeat signs and endings a chords row writes, on the measures of its play
+    /// (<paramref name="measureAt"/>, by bar of the play; null past them): a <c>|:</c> opens the
+    /// bar after it, a <c>:|</c> closes the bar before it with its <c>*N</c>, and an ending
+    /// brackets the bars from its <c>[N.</c> to its <c>]</c>, its <c>:|</c> or the next ending
+    /// (docs/inline-repeat-design.md §3.2: the signs are the score's, whichever voice writes
+    /// them — <see cref="SpreadRepeatSignsToEveryPart"/> then gives them to every part).
+    /// MEASURED before (2026-11-14, Lab sessions/p1244/probe/f-chords, i-chordvolta): a row's
+    /// signs were not written at all, while the page drew them and the MIDI played them.
+    /// </summary>
+    /// <remarks>The bars are counted by <see cref="ChordRowBarLines"/>, as <see cref="RowBars"/>
+    /// counts them. A row's ending stands flat among its chords (an empty
+    /// <see cref="InlineVoltaSyntax"/> and a <see cref="VoltaEndSyntax"/>).</remarks>
+    private static void WriteRowSigns(IReadOnlyList<SyntaxNode> items, Func<int, MusicXmlMeasure?> measureAt)
+    {
+        int bars = 0;
+        bool holds = false;
+        (string Passes, int From)? open = null;
+        void Close(bool stops)
+        {
+            int to = bars + (holds ? 1 : 0);
+            if (open is { } ending && to > ending.From && measureAt(ending.From) is { } first && measureAt(to - 1) is { } last)
+            {
+                first.EndingStartNumbers ??= ending.Passes;
+                if (last.EndingStopNumbers == null)
+                    (last.EndingStopNumbers, last.EndingStopType) = (ending.Passes, stops ? "stop" : "discontinue");
+            }
+            open = null;
+        }
+        foreach (var item in items)
+        {
+            switch (item)
+            {
+                case BarlineSyntax line:
+                    if (ChordRowBarLines.Closes(line, holds))
+                        bars++;
+                    holds = false;
+                    var kind = line.BarToken.Kind;
+                    if (kind is SyntaxKind.RepeatEndBar or SyntaxKind.RepeatBothBar)
+                    {
+                        Close(stops: true);
+                        if (measureAt(bars - 1) is { } closed)
+                        {
+                            closed.RepeatBackward = true;
+                            if (line.HasExplicitRepeatCount && line.RepeatCount > closed.RepeatTimes)
+                                closed.RepeatTimes = line.RepeatCount;
+                        }
+                    }
+                    if (kind is SyntaxKind.RepeatStartBar or SyntaxKind.RepeatBothBar && measureAt(bars) is { } opened)
+                        opened.RepeatForward = true;
+                    break;
+                case ChordEntrySyntax or RestSyntax or ChordExtendSyntax:
+                    holds = true;
+                    break;
+                case InlineVoltaSyntax ending:
+                    Close(stops: false);
+                    if (string.Join(",", ending.Numbers) is { Length: > 0 } passes)
+                        open = (passes, bars + (holds ? 1 : 0));
+                    break;
+                case VoltaEndSyntax:
+                    Close(stops: true);
+                    break;
+            }
+        }
+        Close(stops: false);
+    }
     private FlatChordRows _flatRows = FlatChordRows.None;
     /// <summary>The measure index a part's bars of a printed play begin at.</summary>
     private readonly Dictionary<(string Part, int Play), int> _playStartMeasure = new();
@@ -7550,6 +7665,7 @@ public sealed class MusicXmlExporter
                         Semantics.FileShift.RowDrop(WrittenDrop(header.TranspositionSemitones),
                             _root != null ? Semantics.FileShift.ReadSemitones(_root) : 0), typedDrop);
                 }
+                WriteRowSigns(pending.Items, k => k >= 0 && start + k < part.Measures.Count ? part.Measures[start + k] : null);
             }
             else if (!scoreHasStaff)
                 EmitRowAsItsOwnPart(pending, bars, typedDrop);
@@ -7706,6 +7822,8 @@ public sealed class MusicXmlExporter
             _currentPart.Measures.Add(_currentMeasure);
             _currentMeasure = null;
         }
+        var own = _currentPart!;
+        WriteRowSigns(pending.Items, k => k >= 0 && k < bars.Count ? own.Measures[own.Measures.Count - bars.Count + k] : null);
     }
 
     /// <summary>Nothing to emit since 2026-09-29: <see cref="HandleDynamicText"/> writes a

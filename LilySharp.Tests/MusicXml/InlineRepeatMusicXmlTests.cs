@@ -68,4 +68,48 @@ public sealed class InlineRepeatMusicXmlTests
         Assert.Equal("1:forward 1:backward*3", counted[0]);
         Assert.Equal(counted[0], counted[1]);
     }
+
+    /// <summary>A chords row's signs are the score's too. MEASURED before (2026-11-14, Lab
+    /// sessions/p1244/probe/f-chords, i-chordvolta, u-rowpart): none of them was written.</summary>
+    [Fact]
+    public void ARowsRepeatsAndEndingsAreWritten_InEveryPart()
+    {
+        var signs = Signs(new MusicXmlExporter().Export(SyntaxTree.Parse("""
+            octave absolute
+            time 4/4
+            part m { section S { c''1 | d''1 | e''1 | f''1 | } }
+            part b { section S { c1 | d1 | e1 | f1 | } }
+            chords prog { section S { |: C | [1. G | Dm :|*3 [2. G ] | } }
+            form { S }
+            score { chords prog staff m staff b }
+            """)).ToXml());
+        Assert.Equal("1:forward 2:1.start 3:1.stop 3:backward*3 4:2.start 4:2.stop", signs[0]);
+        Assert.Equal(signs[0], signs[1]);
+
+        // A lead sheet: the row is its own part, and carries its own signs.
+        var lead = Signs(new MusicXmlExporter().Export(SyntaxTree.Parse("""
+            time 4/4
+            chords prog { section S { C |: G | Dm :| G | } }
+            form { S }
+            score { chords prog }
+            """)).ToXml());
+        Assert.Equal("2:forward 3:backward", Assert.Single(lead));
+    }
+
+    /// <summary>A navigation mark written in one part's music is written in every part: a
+    /// target at the head of the bar after it, a jump or a fine at the end of the bar before
+    /// it. MEASURED before (2026-11-14, Lab sessions/p1244/probe/e-nav): none was written.</summary>
+    [Fact]
+    public void ANavigationMarkInTheMusicIsWritten_InEveryPart()
+    {
+        var doc = Export("c''1 | segno d''1 | to coda e''1 | f''1 ds al coda | coda g''1 |", "c1 | d1 | e1 | f1 | g1 |");
+        string[] marks = [.. doc.Descendants("part").Select(part => string.Join(" ",
+            part.Elements("measure").SelectMany(measure => measure.Elements("direction")
+                .Where(d => d.Element("sound") is { } sound && sound.Attribute("tempo") == null)
+                .Select(d => measure.Attribute("number")!.Value
+                    + (d.ElementsBeforeSelf("note").Any() ? ":end:" : ":head:")
+                    + d.Element("sound")!.Attributes().First().Name.LocalName))))];
+        Assert.Equal("2:head:segno 2:end:tocoda 4:end:dalsegno 5:head:coda", marks[0]);
+        Assert.Equal(marks[0], marks[1]);
+    }
 }
