@@ -267,6 +267,21 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1255セッションの経緯
+
+### 1.1 第1255セッション（2026-11-15・YT-DELL2）
+
+base `1412188a1`・開始時 full 17090 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17093（Lab `p1255` の `run1.trx`）。Calamo・Dettato の REQUESTS は第1253 の開始時に見たまま（同じ会話）。CI は第1231 のまま。
+オーナー指示 2026-11-15 の 2 つ（設計 `inline-repeat-design.md` §7 MIDI の「第1255」が全部）。
+- **step キー（Ctrl+Shift+↑↓）が音楽の小節線で反復記号も回す**: form と同じ並び `|` `||` `|:` `:|` `:|:` `|.` `!`。phrase の中は `|` `||` `|.` `!` のまま（`NoteStepper.WalkOf`）。
+- **MIDI の読み手を 1 つに**（commit `70465428b`）: どの本も刷った順に 1 回歩いて `PlayedTimeline` で展開。form 専用の歩きと `ProcessRepeatSpan` を外した（−387 行）。
+  - 門: 全 1041 冊・1268 本の .mid を古い歩きと突き合わせ＝1265 一致・3 本（ABC）は冗長な拍子イベント 1 個（Lab `p1255/midi-sweep.ps1`・`mid-dump.ps1`・`midi-diff.txt`）。探り譜 10 冊（`p1255/probe`）。
+  - **決めた規則＝戻った小節は刷られているとおりに鳴る**（form の `|: :|` の中で変えた強弱を 2 回目の頭へ持ち越さない・反復をまたぐペダルは離す）。⚠️ 音が変わる形なのでオーナーに報告済み（この便の報告）。
+  - 直した欠陥: 列の最後の区間が曲の終わりのペダルの離しを落としていた。
+  - 残した 2 つの規則は §1.0 の ⑴。`RepeatStream.Normalized` は lane を「form が書いたか」として残す・MIDI は part 名の無い音楽の記号に lane `music` を付ける。
+- 門: 網 +6（`MidiRepeatTests`・step は既存の 2 本を書き直し）。毒 1 本（ペダル）で 1 赤。終了時 full 17096 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17099（`run2.trx`）。棚卸し: `APPROXIMATIONS.md` は `PlayForm` の OWN が入り、外した歩きの行が出た。
+- 7.7: ⚠️ プレビューだけが使う値（`BarTicks`・`SectionStarts`・ハイライトの ordinal）は .mid に出ない＝網（LSP の再生の網を含む full）で見ただけ／step キーとプレビューの実機は未確認。
+
 ## 以下は第1254セッションの経緯
 
 ### 1.1 第1254セッション（2026-11-15・YT-DELL2）
