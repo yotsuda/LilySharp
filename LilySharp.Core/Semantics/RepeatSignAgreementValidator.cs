@@ -87,55 +87,11 @@ internal sealed class RepeatSignAgreementValidator : ISemanticValidator
         var signs = new List<Sign>();
         var phrases = SectionBarCounts.PhraseBodies(root);
         foreach (var voice in SectionBarCounts.SemanticVoices(root, phrases))
-        {
-            if (voice.IsChords)
-            {
-                int bars = 0;
-                bool holds = false;
-                var items = voice.Container is ChordPartBlockSyntax block
-                    ? block.Items : ChordNameCollector.SectionItems((SectionDeclarationSyntax)voice.Container);
-                foreach (var item in items)
-                {
-                    if (item is BarlineSyntax line)
-                    {
-                        if (ChordRowBarLines.Closes(line, holds))
-                            bars++;
-                        holds = false;
-                        Add(line, bars);
-                    }
-                    else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
-                        holds = true;
-                }
-                continue;
-            }
-
-            var written = new List<(int End, int Bars)>();
-            bool any = false;
-            foreach (var node in voice.Container.DescendantNodesOfKinds(SyntaxKind.Barline))
-            {
-                if (node is not BarlineSyntax line || !SyntaxFacts.IsRepeatBarlineKind(line.BarToken.Kind))
-                    continue;
-                if (!any)
-                {
-                    MeasureModel.Split(voice.Container, phrases, longestVoice: true, writtenLines: written);
-                    any = true;
-                }
-                int end = line.Span.Start + line.Span.Length;
-                foreach (var (lineEnd, bars) in written)
-                    if (lineEnd == end)
-                    {
-                        Add(line, bars);
-                        break;
-                    }
-            }
-
-            void Add(BarlineSyntax line, int barsBefore)
-            {
-                if (SyntaxFacts.IsRepeatBarlineKind(line.BarToken.Kind))
-                    signs.Add(new Sign(voice.SectionName, barsBefore,
-                        line.BarToken.Text + (line.HasExplicitRepeatCount ? "*" + line.RepeatCount : ""), line, voice.Label));
-            }
-        }
+            foreach (var line in VoiceBarLines.Of(voice, phrases))
+                if (SyntaxFacts.IsRepeatBarlineKind(line.Node.BarToken.Kind))
+                    signs.Add(new Sign(voice.SectionName, line.Bars,
+                        line.Node.BarToken.Text + (line.Node.HasExplicitRepeatCount ? "*" + line.Node.RepeatCount : ""),
+                        line.Node, voice.Label));
         return signs;
     }
 }

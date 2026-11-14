@@ -84,34 +84,10 @@ public static class SameBarFinder
         => offset >= node.Span.Start && offset <= node.Span.Start + node.Span.Length;
 
     /// <summary>The voice's own bar lines, each with the bars of the section standing before
-    /// what follows it.</summary>
+    /// what follows it (<see cref="VoiceBarLines"/>).</summary>
     private static List<(int End, int Bars)> LinesOf(SectionBarCounts.SemanticVoice voice,
         IReadOnlyDictionary<string, SyntaxNode> phrases)
-    {
-        var lines = new List<(int End, int Bars)>();
-        if (!voice.IsChords)
-        {
-            MeasureModel.Split(voice.Container, phrases, longestVoice: true, writtenLines: lines);
-            return lines;
-        }
-        int bars = 0;
-        bool holds = false;
-        var items = voice.Container is ChordPartBlockSyntax block
-            ? block.Items : ChordNameCollector.SectionItems((SectionDeclarationSyntax)voice.Container);
-        foreach (var item in items)
-        {
-            if (item is BarlineSyntax line)
-            {
-                if (ChordRowBarLines.Closes(line, holds))
-                    bars++;
-                holds = false;
-                lines.Add((line.Span.Start + line.Span.Length, bars));
-            }
-            else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
-                holds = true;
-        }
-        return lines;
-    }
+        => [.. VoiceBarLines.Of(voice, phrases).Select(line => (line.End, line.Bars))];
 
     /// <summary>Where bar <paramref name="bar"/> (0-based) of the voice opens: after the line
     /// that closes the bar before it, else after the nearest line before that, else at the

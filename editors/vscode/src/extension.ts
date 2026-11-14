@@ -854,6 +854,8 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('lilysharp.convertOctavesToRelative', () => convertOctaves(false)),
         vscode.commands.registerCommand('lilysharp.removeStringNumbers', () => removeStringNumbers()),
         vscode.commands.registerCommand('lilysharp.sameBarNextPart', () => goToSameBar('next')),
+        vscode.commands.registerCommand('lilysharp.writeRepeatSignsInEveryPart', () => spreadRepeatSigns(false)),
+        vscode.commands.registerCommand('lilysharp.keepRepeatSignsInOnePart', () => spreadRepeatSigns(true)),
         vscode.commands.registerCommand('lilysharp.sameBarPreviousPart', () => goToSameBar('previous')),
         vscode.commands.registerCommand('lilysharp.sameBarInPart', () => goToSameBar('pick')),
         // From the context menu at the caret, or from the code action with the document and offset.
@@ -2724,6 +2726,63 @@ interface RemoveStringNumbersResponse {
  * Removes every written string number (`\1` … `\9`) from the active .lys document, so the tab
  * chooses every string itself. Applied as one edit, so one undo puts them all back.
  */
+interface SpreadRepeatSignsResponse {
+    Edits: { Start: number; End: number; NewText: string }[];
+    Count: number;
+    Skipped: string[];
+}
+
+/**
+ * Writes the document's repeat signs in every part that writes their section, or (reverse)
+ * takes them back to the first part that writes each — owner's design 2026-11-14,
+ * docs/inline-repeat-design.md §8: run from the palette or the context menu wherever the
+ * caret is, never while typing, and with nothing underlined (a sign written in one part is
+ * correct). The server finds the bar lines (lilysharp/spreadRepeatSigns, Core's
+ * RepeatSignSpreader); the places it could not write are listed in the output channel.
+ */
+async function spreadRepeatSigns(reverse: boolean) {
+    const editor = vscode.window.activeTextEditor;
+    if (!client || !editor || editor.document.languageId !== 'lilysharp') {
+        return;
+    }
+    const doc = editor.document;
+    try {
+        const response = await client.sendRequest<SpreadRepeatSignsResponse>('lilysharp/spreadRepeatSigns', {
+            textDocument: { uri: doc.uri.toString() },
+            reverse,
+        });
+        if (response.Edits.length > 0) {
+            const edit = new vscode.WorkspaceEdit();
+            for (const e of response.Edits) {
+                edit.replace(doc.uri, new vscode.Range(doc.positionAt(e.Start), doc.positionAt(e.End)), e.NewText);
+            }
+            await vscode.workspace.applyEdit(edit);
+        }
+        const did = reverse
+            ? `took ${response.Count} repeat sign(s) out of the other parts`
+            : `wrote ${response.Count} repeat sign(s) in the other parts`;
+        if (response.Skipped.length === 0) {
+            vscode.window.showInformationMessage(response.Count === 0
+                ? 'Lily#: nothing to change - the repeat signs are already written that way.'
+                : `Lily#: ${did}.`);
+            return;
+        }
+        outputChannel.appendLine(`Repeat signs: ${response.Skipped.length} place(s) left as written:`);
+        for (const place of response.Skipped) {
+            outputChannel.appendLine(`  ${place}`);
+        }
+        const show = 'Show';
+        const picked = await vscode.window.showInformationMessage(
+            `Lily#: ${did}; ${response.Skipped.length} place(s) could not be written (a bar inside a phrase, or another bar line there).`,
+            show);
+        if (picked === show) {
+            outputChannel.show(true);
+        }
+    } catch (err) {
+        vscode.window.showErrorMessage(`Lily#: writing the repeat signs failed: ${err}`);
+    }
+}
+
 interface SameBarResponse {
     Section: string | null;
     Bar: number;

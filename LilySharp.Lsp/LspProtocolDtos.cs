@@ -1255,6 +1255,33 @@ public class PlaceAtParams
     public int[]? Offsets { get; set; }
 }
 
+/// <summary>lilysharp/spreadRepeatSigns: the document whose repeat signs are written in every
+/// part (<see cref="Reverse"/> false) or taken back to the first part that writes each (true).</summary>
+public class SpreadRepeatSignsParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    public bool Reverse { get; set; }
+}
+
+/// <summary>One edit of lilysharp/spreadRepeatSigns: <see cref="NewText"/> in place of
+/// <c>[Start, End)</c>.</summary>
+public class SpreadRepeatSignsEdit
+{
+    public int Start { get; set; }
+    public int End { get; set; }
+    public string NewText { get; set; } = "";
+}
+
+/// <summary>The edits of lilysharp/spreadRepeatSigns (<see cref="LilySharp.Core.Editing.RepeatSignSpreader"/>),
+/// how many signs they write or take away, and the places that could not be written.</summary>
+public class SpreadRepeatSignsResponse
+{
+    public SpreadRepeatSignsEdit[] Edits { get; set; } = [];
+    public int Count { get; set; }
+    public string[] Skipped { get; set; } = [];
+    public int Version { get; set; }
+}
+
 /// <summary>lilysharp/sameBar: the caret whose bar is asked for.</summary>
 public class SameBarParams
 {

@@ -604,6 +604,16 @@
         "title": "Remove All String Numbers"
       },
       {
+        "command": "lilysharp.writeRepeatSignsInEveryPart",
+        "category": "Lily#",
+        "title": "Write Repeat Signs in Every Part"
+      },
+      {
+        "command": "lilysharp.keepRepeatSignsInOnePart",
+        "category": "Lily#",
+        "title": "Keep Repeat Signs in One Part"
+      },
+      {
         "command": "lilysharp.sameBarNextPart",
         "category": "Lily#",
         "title": "Go to the Same Bar in the Next Part"
@@ -1066,6 +1076,14 @@
           "when": "resourceLangId == lilysharp"
         },
         {
+          "command": "lilysharp.writeRepeatSignsInEveryPart",
+          "when": "resourceLangId == lilysharp"
+        },
+        {
+          "command": "lilysharp.keepRepeatSignsInOnePart",
+          "when": "resourceLangId == lilysharp"
+        },
+        {
           "command": "lilysharp.sameBarNextPart",
           "when": "resourceLangId == lilysharp"
         },
@@ -1369,6 +1387,16 @@
           "command": "lilysharp.sameBarInPart",
           "when": "resourceLangId == lilysharp",
           "group": "navigation@9"
+        },
+        {
+          "command": "lilysharp.writeRepeatSignsInEveryPart",
+          "when": "resourceLangId == lilysharp",
+          "group": "1_modification@3"
+        },
+        {
+          "command": "lilysharp.keepRepeatSignsInOnePart",
+          "when": "resourceLangId == lilysharp",
+          "group": "1_modification@3"
         },
         {
           "command": "lilysharp.extractPhrase",

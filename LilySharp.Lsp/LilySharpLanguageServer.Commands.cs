@@ -2171,6 +2171,37 @@ public sealed partial class LilySharpLanguageServer
         }
     }
 
+    /// <summary>
+    /// A section's repeat signs written in every part that writes the section, or taken back to
+    /// one — the editor's two commands (owner's design 2026-11-14, docs/inline-repeat-design.md
+    /// §8). See <see cref="LilySharp.Core.Editing.RepeatSignSpreader"/>.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/spreadRepeatSigns", UseSingleObjectParameterDeserialization = true)]
+    public Task<SpreadRepeatSignsResponse> SpreadRepeatSignsAsync(SpreadRepeatSignsParams @params, CancellationToken token)
+        => OffDispatch(() => SpreadRepeatSigns(@params), token);
+
+    public SpreadRepeatSignsResponse SpreadRepeatSigns(SpreadRepeatSignsParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new SpreadRepeatSignsResponse();
+        try
+        {
+            var result = @params.Reverse
+                ? LilySharp.Core.Editing.RepeatSignSpreader.KeepInOnePart(doc.Tree)
+                : LilySharp.Core.Editing.RepeatSignSpreader.WriteInEveryPart(doc.Tree);
+            return new SpreadRepeatSignsResponse
+            {
+                Edits = [.. result.Edits.Select(e => new SpreadRepeatSignsEdit { Start = e.Start, End = e.End, NewText = e.NewText })],
+                Count = result.Count, Skipped = [.. result.Skipped], Version = doc.Version,
+            };
+        }
+        catch (Exception)
+        {
+            return new SpreadRepeatSignsResponse { Version = doc.Version };
+        }
+    }
+
     // The last document's places, by version: the caret asks on every move, and a collect per
     // move would be the preview's whole cost again.
     private readonly object _placesLock = new();
