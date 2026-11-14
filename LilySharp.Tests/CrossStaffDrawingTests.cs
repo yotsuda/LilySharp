@@ -208,6 +208,21 @@ public class CrossStaffDrawingTests
         Assert.Equal(new[] { 3.92, 3.74, 3.15, 3.52 }, gaps);
     }
 
+    /// <summary>…and NOT where it did not: the voice's walk owes a natural after its own
+    /// double sharp, but a staff that never showed the double sharp reads a bare sharp (Lab
+    /// sessions/p1234/rev, LilyPond 2.26.0) — the staff the note moved to, and the staff the
+    /// double sharp moved away from, alike. With no move the natural stays.</summary>
+    [Fact]
+    public void ANaturalTheVoiceOwesIsNotOwedOnAStaffThatNeverShowedTheNote()
+    {
+        var score = Score(Book(
+            "r1 | r1 | r1 | r1 |",
+            "cisis'4 r cis'4@cross r | cisis'4@cross r cis'4 r | cisis'4 r cis'4 r | ceses'4@cross r ces'4 r |"));
+        Assert.Equal(
+            new[] { "doubleSharp", "sharp", "doubleSharp", "sharp", "doubleSharp", "naturalSharp", "doubleFlat", "flat" },
+            Notes(score, 1).Select(n => n.Accidental).ToArray());
+    }
+
     [Fact]
     public void AMovedNotePrintsTheSharpItsOldStaffRemembers()
     {

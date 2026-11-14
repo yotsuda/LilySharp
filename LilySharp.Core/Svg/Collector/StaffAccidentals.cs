@@ -73,6 +73,21 @@ internal static class StaffAccidentals
     private static bool IsPlain(int packed, string? accidental, bool others)
         => !others && accidental != null && accidental == MeasureCollector.AlterationName(WrittenPitch.Quarters(packed));
 
+    /// <summary>A head's accidental when it is its alteration's own sign — bare, or with the
+    /// restoring natural before it — and nothing else (no courtesy, line-start or editorial
+    /// sign); else null. The two a staff may trade for each other
+    /// (<see cref="ApplyAcrossStaves"/>).</summary>
+    private static string? OwnSign(int packed, string? accidental, bool others)
+    {
+        if (others || accidental == null)
+            return null;
+        int quarters = WrittenPitch.Quarters(packed);
+        return accidental == MeasureCollector.AlterationName(quarters)
+               || accidental == MeasureCollector.AlterationName(quarters, restore: true)
+            ? accidental
+            : null;
+    }
+
     /// <summary>
     /// Returns <paramref name="voices"/> with the accidentals the staff owes added, or the
     /// same array when it owes none.
@@ -279,6 +294,10 @@ internal static class StaffAccidentals
     /// MEASURED, LilyPond 2.26.0 (Lab sessions/p1233/xr): `cisis''4` on the staff and then a
     /// `cis''4@cross` moved onto it prints ♮♯, `ceses''` then `ces''` ♮♭, `cis''` then `cih''` the
     /// natural and the quarter sharp — the restoring natural, owed here since session 1233.
+    /// MEASURED, LilyPond 2.26.0 (Lab sessions/p1234/rev): the other way round, `cisis'4` on its
+    /// own staff and then `cis'4@cross` prints a bare sharp on the staff above, and
+    /// `cisis'4@cross` then `cis'4` a bare sharp below — neither staff showed the double sharp,
+    /// so the natural the voice's walk put there is not owed (taken off since session 1234).
     /// ⚠️ LILYSHARP-OWN, as <see cref="Apply"/> ⑴: only ADDS. A moved note repeating the sharp
     /// already shown on its new staff keeps the one its voice wrote, where LilyPond drops it —
     /// owner's decision 2026-10-02: the reminder is correct and harmless.
@@ -364,7 +383,7 @@ internal static class StaffAccidentals
                         memory[so] = a;
                     moment.Clear();
                 }
-                void Read(int vi, int item, int member, int packed, int staffPosition, int midi, bool shown, bool plain)
+                void Read(int vi, int item, int member, int packed, int staffPosition, int midi, bool shown, string? own)
                 {
                     if (packed == 0)
                         return;
@@ -376,16 +395,24 @@ internal static class StaffAccidentals
                         return;
                     if (shown)
                     {
-                        // The voice printed its sign by its own memory; where the staff the
-                        // head is DRAWN on last showed the note with more of the same sign, the
-                        // natural is owed before it, as Apply owes it across voices.
-                        if (plain && style.ExtraNatural
-                            && memory.TryGetValue(stepOctave, out int more) && more != alter
-                            && Name(alter, more, extraNatural: true) is { } restored
-                            && restored != MeasureCollector.AlterationName(alter))
+                        // The voice printed its sign by its own memory, with the natural before
+                        // it or without. Which of the two is owed is the DRAWN staff's to say:
+                        // the natural where this staff last showed the note with more of the
+                        // sign (as Apply owes it across voices), the bare sign where it did not
+                        // — the voice may have shown that on the other staff.
+                        if (own != null)
                         {
-                            var (rs, rv) = drawers[vi];
-                            (added[rs] ??= new())[(rv, mi, item, member)] = restored;
+                            string bare = MeasureCollector.AlterationName(alter)!;
+                            string owed = style.ExtraNatural
+                                          && memory.TryGetValue(stepOctave, out int more) && more != alter
+                                          && Name(alter, more, extraNatural: true) is { } restored
+                                ? restored
+                                : bare;
+                            if (owed != own)
+                            {
+                                var (rs, rv) = drawers[vi];
+                                (added[rs] ??= new())[(rv, mi, item, member)] = owed;
+                            }
                         }
                         return;
                     }
@@ -416,14 +443,16 @@ internal static class StaffAccidentals
                         case NoteItem n:
                             Read(vi, e.ItemIndex, -1, n.WrittenPitch, n.StaffPosition, n.Midi,
                                 n.Accidental != null || n.LineStartAccidental != null || n.EditorialAccidental != null,
-                                IsPlain(n.WrittenPitch, n.Accidental, n.LineStartAccidental != null || n.EditorialAccidental != null));
+                                OwnSign(n.WrittenPitch, n.Accidental,
+                                    n.IsCourtesy || n.LineStartAccidental != null || n.EditorialAccidental != null));
                             previous[vi] = n;
                             break;
                         case ChordItem c:
                             for (int k = 0; k < c.Notes.Length; k++)
                                 Read(vi, e.ItemIndex, k, c.Notes[k].WrittenPitch, c.Notes[k].StaffPosition, c.Notes[k].Midi,
                                     c.Notes[k].Accidental != null || c.Notes[k].LineStartAccidental != null,
-                                    IsPlain(c.Notes[k].WrittenPitch, c.Notes[k].Accidental, c.Notes[k].LineStartAccidental != null));
+                                    OwnSign(c.Notes[k].WrittenPitch, c.Notes[k].Accidental,
+                                        c.Notes[k].IsCourtesy || c.Notes[k].LineStartAccidental != null));
                             previous[vi] = c;
                             break;
                         case RestItem { IsSpacer: false }:
