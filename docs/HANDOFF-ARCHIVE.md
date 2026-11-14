@@ -267,6 +267,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1251セッションの経緯
+
+### 1.1 第1251セッション（2026-11-15・YT-DELL2）
+
+base `c420f6adb`・開始時 full 17048 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 17051（Lab `p1251` の `run1.trx`）。Calamo の `open` は 0、Dettato は 1・2 が `question` のまま。CI は第1231 のまま。
+第1250 の「次」の ⑴（commit `db0d27e07`・毒は Lab `p1251/poisons.ps1`）。
+- **パートどうしの ending とナビ記号の食い違い＝LYS1070**（`RepeatSignAgreementValidator.ReportEndingsAndMarks`・規則は小節線の LYS1070 と同じ＝オーナー決定 2026-11-14 の延長として書いた）: 同じ小節線で開く 2 つのパートの ending は、番号も長さも同じ。同じ小節線に 2 つのパートが書くナビ記号は、同じ並び（`segno` と `coda` を別々のパートが同じ線に書くのもエラー＝1 つのパートに両方書く）。書かないパートは従う。コードの行も 1 つの声。直す前は、最初のパートの ending が黙って勝ち、2 つのパートの違うジャンプは両方が列に乗っていた。
+- 文書: GRAMMAR §8.1 の規則 1・GRAMMAR_FOR_LLM・SYNTAX_REFERENCE・CHANGELOG・設計 §3.2。
+- 門: 網 `RepeatSignAgreementValidatorTests` +14。毒 6 本とも赤（最初の回は 2 本が緑＝逆向きの比較の網を足した）。終了時 full 17062 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17065（`p1251/run2.trx`）。掃きは回していない（検査だけ）。
+- 7.5／7.6: OWN 0・REF 0（既存の OWN の中）。7.7: ⚠️ ナビ記号の「同じ並び」は厳しい側に倒した決めごと＝オーナーの確認が要る（緩めるなら「違うジャンプどうしだけ」）／quick fix は小節線の分だけ／From の違う重なった ending は LYS1043 が言う。9（perf）: 音楽に記号を書いた本だけ、section ごとに `SectionSigns.Of` を 1 回（`MusicRepeatValidator` と同じ読みをもう 1 度）＝未測定。
+
 ## 以下は第1250セッションの経緯
 
 ### 1.1 第1250セッション（2026-11-15・YT-DELL2）

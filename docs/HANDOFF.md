@@ -88,7 +88,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
-- **★ 反復とナビ記号を section の音楽にも書く（オーナー提案 2026-11-14・第1243＝第1249 で段 0〜8 が済み・LYS1034 は phrase だけ）**: 全部 `docs/inline-repeat-design.md`（規則 §3・段取り §4・未決 §6・経過 §7・エディタのコマンド §8）。オーナー決定（2026-11-14）: 対は form に組み立てた列で見る／`| |:` は空小節のまま／歌詞の verse は 5 規則／書き出しはなるべく form 側（Q2）。**次**（順は上から）: ⑴ **歌詞の規則 3 が再生に入っていない（第1252 の実測・欠陥）＋警告の 4 種目**: `|: c1 | [1. d1 :| [2. e1 | ]` に verse 1・verse 2 とも全小節の言葉を書くと、2 回目の 2 番括弧で verse 1 の言葉が歌われる（`SingLyrics` は「その音の N 回目の発音＝verse N」と数え、1 回しか鳴らない括弧の音では番号を最後の発音へ丸める＝両方の verse が同じ発音に乗り、先に書いたほうが勝つ。括弧の小節を空けて書けば正しい）。直し方: 反復を持つ section の音は「発音 j が反復の何回目か」（小節が鳴る回＝本体は 1..K・ending はその番号・反復の外は 1。`RepeatStream` の `Runs`／`Plays` から）で verse を選び、その回に鳴らない小節の言葉は歌わない。警告の 4 種目（LYS4080）は同じ表から出す。実測は Lab `p1252/probe-verse-endings.md`／⑵ ナビ記号と ending を全パートに書くコマンド（設計 §8・小節線の分だけ実装）と、ending・ナビ記号の LYS1070 の quick fix／⑶ step キーは音楽の小節線を `|` `||` `|.` `!` のまま回す（反復記号を回すかはオーナーに訊く）／⑷ `PlayForm` の歩きを `PlayedTimeline` に寄せる（設計 §7 MIDI の「2 つの読み手の差」をオーナーが決めてから）。段 9（読み込みと OMR の書き出し）は Q2 の決定で今の形のまま＝作業なし。⚠️ Calamo と Dettato の REQUESTS への知らせ（Q2「本体が出てから」）は未＝release のときに書く。実機は `MANUAL-CHECKS` 第1243・第1249。
+- **★ 反復とナビ記号を section の音楽にも書く（オーナー提案 2026-11-14・第1243＝第1249 で段 0〜8 が済み・LYS1034 は phrase だけ）**: 全部 `docs/inline-repeat-design.md`（規則 §3・段取り §4・未決 §6・経過 §7・エディタのコマンド §8）。オーナー決定（2026-11-14）: 対は form に組み立てた列で見る／`| |:` は空小節のまま／歌詞の verse は 5 規則／書き出しはなるべく form 側（Q2）。**次**（順は上から。歌詞の規則 3 の再生と警告の 4 種目は第1253 で済み＝§1.1）: ⑴ ナビ記号と ending を全パートに書くコマンド（設計 §8・小節線の分だけ実装）と、ending・ナビ記号の LYS1070 の quick fix／⑵ step キーは音楽の小節線を `|` `||` `|.` `!` のまま回す（反復記号を回すかはオーナーに訊く）／⑶ `PlayForm` の歩きを `PlayedTimeline` に寄せる（設計 §7 MIDI の「2 つの読み手の差」をオーナーが決めてから）。段 9（読み込みと OMR の書き出し）は Q2 の決定で今の形のまま＝作業なし。⚠️ Calamo と Dettato の REQUESTS への知らせ（Q2「本体が出てから」）は未＝release のときに書く。実機は `MANUAL-CHECKS` 第1243・第1249・第1253。
 - **★ 歌詞と歌い手の文法の作り直し（オーナー決定 2026-11-10・第1217）**: `docs/lyrics-singer-design.md` が全部（§9 が作業順）。①②③④は済み（§1.1 第1217〜第1219）。⚠️ ④の `ん` の聞こえ方はオーナーの実聴待ち（`MANUAL-CHECKS` 第1219）。Cantoria の master は zh／ko を歌う（VSIX の入れ直しはオーナー）。`singer` は 1 行 1 声で score の中にも書ける（第1220）。古い書き方を案内する専用エラーは作らない（オーナー指示）。設計 §10「パート自身の歌詞」（`part sop { lyrics words }`）は第1222 で実装（§1.1 第1222・実機は `MANUAL-CHECKS` 第1222）＝§9 は全部済み。**次の一手の指示はまだ無い＝下の積み残しから選ぶならオーナーに訊く**。積み残し: Calamo の生成コードが `lyrics … sings` のまま（`docs\repro\REQUESTS.md` に連絡済み・Calamo 側は未 commit）／実機確認（`MANUAL-CHECKS` 第1217）／perf ベンチ／コーパス外のオーナーのファイル（Downloads の Tabidachi・Rose Garden など）は未移行で、`LilySharp-Lab\sessions\p1217\migrate\migrate.ps1 -Lys -Files` で書き換えられる／Rose Garden のオクターブ変換はオーナーの回答待ち。
 - **★ 歌詞のある譜表では強弱記号とヘアピンを譜表の上に（オーナー決定 2026-11-11）＝設計 `docs/dynamics-above-lyrics-design.md` §5 の 1〜6 は全部済み（第1224〜第1225・§1.1）**。**D3 は LilyPond の規則に替えた（オーナー決定 2026-11-11「LP に合わせて」）**＝向きを書いた記号が*線*の向きを決め、同じ線の後続（向きを書いていない記号）は従う。歌詞のない譜表でも同じ（`c@f.up@decresc … g@p` の p は上）。残りはオーナー: 実機のプレビュー（`MANUAL-CHECKS` 第1225）と release（CHANGELOG は 2 つとも `## Unreleased`・`[engraving]`）。残る穴: 2 声部の譜表で上の声部のヘアピンの線に下の声部の同じ拍の強弱記号も乗る（ヘアピンが声部を持たない既知の穴＝`DynamicAlignEngraver` の注 ⑵・Lab `p1225/dyn/out/vv.png`）。線の向きも譜表ごとに 1 本の流れで読む（LP は声部ごと）。**次の一手の指示はまだ無い＝上の行の積み残しから選ぶならオーナーに訊く**。
 - **★ 評価 4（2026-11-13）の残り＝⑴ 書き出し・⑵ 誤った診断・⑷ 文書は第1227 で閉じた（§1.1）**。書き手のメモと再現は Lab `sessions/p1226/md/eval4/{bigband,choral,chamber,rock}`。⑶ `lysc review` は第1228 で閉じた（§1.1）。**残り**: ⑸ 欠けている機能＝**案 10 件を Lab `sessions/p1227/proposals-eval4.md` に書いた・オーナーの確認待ち＝確認なしに作らない**。**残っているもの**（どれも未着手・値段は未測定）: **一覧は Lab `sessions/p1242/leftovers.md`**（**オーナー指示 2026-11-14・第1231「残りの欠陥を順に」＝この一覧の「残り（欠陥）」と「第1231〜第1235 が見つけて残したもの」は訊かずに着手してよい**。機能の追加は訊く）。残りの先頭（一覧）: condensedStaff で別のパートの強弱で終わるヘアピンを MusicXML のパートがどこで止めるか（今はページどおり＝決めごと・第1240 の報告でオーナーに訊いてある＝返事待ち）／`lysc import` は wedge の number を読まない（2 声部目のヘアピンが 1 声部目に戻る）／combinedStaff の印は re-address されない／別の声部のヘアピンと出会う形の絵／黙っている段の wish の測っていない形（装飾音で始まる小節・段の最初の小節）／`lysc review` の 3 件。MusicXML の四分音の `<accidental>` は他のリーダーの読みを確かめてから（一覧に理由）。大譜表の段間の `@sfz`・`@fp` を両手に効かせるかは決めごと＝オーナーに訊く。見送ったものの理由もそこ。小残り（第1226 から）: condensedStaff の数字付き低音など 3 種の再住所・tab のアルペジオ線が自分の数字に 0.035・小文字だけの枠の中央が 0.23〜0.51 下・`md end` は既定の yMargin では動かない・箇条書きのリンク・不安定な網 2 種（`ScoreVideoShapeTests`、まれに `SvgSnapshotTests`）。**補助は同じモデルで 3〜5 件ずつ順番に・数行は自分で・全 full は自分が 1 回**（memory）。
@@ -142,21 +142,24 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1253セッション（2026-11-15・YT-DELL2）
+
+base `2d614438b`・開始時 full 17062 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 17065（Lab `p1253` の `run1.trx`。⚠️ `-Start` の build が走る前に `RepeatStream`／`PlayedTimeline` を書き換え始めていた＝この run はその途中の木。数は第1252 の終わりと同じ）。Calamo の `open` は 0、Dettato は 1・2 が `question` のまま。CI は第1231 のまま。
+第1252 の「次」の ⑴＝歌詞の規則 3 の再生と、警告の 4 種目（commit `ec31c998f`・設計 `inline-repeat-design.md` §6 の「第1253」の項が全部）。
+- **回の表は 1 つ**: `RepeatStream.RouteByPass`（`Route` を継ぐ前の区間＋何回目か）。再生は `PlayedTimeline.Unfold` が返す表を `SingLyrics` が `PassAt` で引き、検査は `RepeatStream.PassesOf(bar)` を読む。
+- **再生**: 反復を持つ section の `verse N` は、発音の回が N のときだけ歌う（括弧の音は括弧の回だけ・反復の後の小節は 1 回目だけ）。直す前は 2 番括弧で verse 1 の言葉が歌われた。
+- **決めごと（オーナーの確認が要る）**: 「足りない回は最後の verse」を、反復を持つ section では*歌詞の section の verse がどれも名指していない回*だけにした（前は音ごと）＝`verse 2` の小節を空けると 2 回目のその小節は黙る。規則 3 の「刷るが歌わない」を守るための変更で、form だけの反復は前のまま。
+- **警告 LYS4080 の 4 種目**（`VerseRepeatValidator.Fault.NotSungHere`・言葉の上に出る）と quick fix 2 つ（歌われる verse の空の小節へ移す／この小節を空にする）。
+- 文書: GRAMMAR §8.1 の 7・GRAMMAR_FOR_LLM・SYNTAX_REFERENCE・CHANGELOG 2 つ・設計 §6。
+- 門: 網 +13（`InlineRepeatMidiTests.AVerseSingsInTheBarsItsPassPlays` 5・`VerseRepeatValidatorTests` 8）。毒 1 本（`SingLyrics` の新しい腕を止める）で 3 本赤。弱起が反復の中の本でも小節は合う（Lab `p1253/cut-bar*.lys`）。掃きは回していない（絵は変えていない）。終了時 full 17073 合格 / 3 失敗（`ReadmeSampleTests`＋`SvgSnapshotTests` の 2 枚＝単独で 249 緑・不安定な網）/ skip 2 / 合計 17078（`run3.trx`）。
+- 7.7: ⚠️ quick fix は実機未確認／小節の回は「その section を最初に演奏する form の最初の印刷」から読む＝form が 2 つあって反復の対が違う本は最初の form の読み／LSP の毎打鍵に `RepeatStream.For` を 1 回足した（verse のある反復の section を持つ本だけ・未測定）。
+
+## 以下は第1252セッションの経緯
+
 ### 1.1 第1252セッション（2026-11-15・YT-DELL2）
 
 base `2e8bd59b5`・開始時 full 17062 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 17065（Lab `p1252` の `run1.trx`）。Calamo の `open` は 0、Dettato は 1・2 が `question` のまま。CI は第1231 のまま。
 コードは変えていない（docs だけ）。歌詞の警告の 4 種目に着手して、警告の文（「その言葉は刷るが歌わない」）が再生の実際と違うことを測った＝§1.0 の ⑴ に欠陥として書いた（Lab `p1252/probe-verse-endings.md`）。終了時の full は回していない（開始時のまま）。
-
-## 以下は第1251セッションの経緯
-
-### 1.1 第1251セッション（2026-11-15・YT-DELL2）
-
-base `c420f6adb`・開始時 full 17048 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 17051（Lab `p1251` の `run1.trx`）。Calamo の `open` は 0、Dettato は 1・2 が `question` のまま。CI は第1231 のまま。
-第1250 の「次」の ⑴（commit `db0d27e07`・毒は Lab `p1251/poisons.ps1`）。
-- **パートどうしの ending とナビ記号の食い違い＝LYS1070**（`RepeatSignAgreementValidator.ReportEndingsAndMarks`・規則は小節線の LYS1070 と同じ＝オーナー決定 2026-11-14 の延長として書いた）: 同じ小節線で開く 2 つのパートの ending は、番号も長さも同じ。同じ小節線に 2 つのパートが書くナビ記号は、同じ並び（`segno` と `coda` を別々のパートが同じ線に書くのもエラー＝1 つのパートに両方書く）。書かないパートは従う。コードの行も 1 つの声。直す前は、最初のパートの ending が黙って勝ち、2 つのパートの違うジャンプは両方が列に乗っていた。
-- 文書: GRAMMAR §8.1 の規則 1・GRAMMAR_FOR_LLM・SYNTAX_REFERENCE・CHANGELOG・設計 §3.2。
-- 門: 網 `RepeatSignAgreementValidatorTests` +14。毒 6 本とも赤（最初の回は 2 本が緑＝逆向きの比較の網を足した）。終了時 full 17062 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17065（`p1251/run2.trx`）。掃きは回していない（検査だけ）。
-- 7.5／7.6: OWN 0・REF 0（既存の OWN の中）。7.7: ⚠️ ナビ記号の「同じ並び」は厳しい側に倒した決めごと＝オーナーの確認が要る（緩めるなら「違うジャンプどうしだけ」）／quick fix は小節線の分だけ／From の違う重なった ending は LYS1043 が言う。9（perf）: 音楽に記号を書いた本だけ、section ごとに `SectionSigns.Of` を 1 回（`MusicRepeatValidator` と同じ読みをもう 1 度）＝未測定。
 
 ## 2. 開いている作業
 
