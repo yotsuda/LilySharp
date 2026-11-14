@@ -791,6 +791,16 @@ internal sealed class MusicXmlDirection
     /// run beside one another.</summary>
     public int GuitarLineNumber { get; set; }
 
+    /// <summary>A text spanner's dashed line (<c>@rit … @!rit</c>, <c>@textSpan("…")</c>;
+    /// session 1236): MusicXML's <c>&lt;dashes&gt;</c>, "start" after its <see cref="Words"/>
+    /// (none for a bare <c>@textSpan</c>) and "stop" where the note that ends it ends. Null for
+    /// no line.</summary>
+    public string? DashesType { get; set; }
+
+    /// <summary>The dashed line's <c>number</c>, so two voices' lines run beside one another;
+    /// a grand staff's lower staff counts on from 5, as its voices do (<see cref="Number"/>).</summary>
+    public int DashesNumber { get; set; } = 1;
+
     /// <summary>The rehearsal label's frame (<c>square</c>, <c>none</c>), or null for the
     /// reader's default.</summary>
     public string? RehearsalEnclosure { get; set; }
@@ -855,7 +865,12 @@ internal sealed class MusicXmlDirection
 
         if (Words != null)
             direction.Add(new XElement("direction-type", new XElement("words",
-                GuitarLineNumber > 0 ? new XAttribute("font-style", "italic") : null, Words)));
+                GuitarLineNumber > 0 || DashesType != null ? new XAttribute("font-style", "italic") : null, Words)));
+
+        if (DashesType != null)
+            direction.Add(new XElement("direction-type", new XElement("dashes",
+                new XAttribute("type", DashesType),
+                new XAttribute("number", DashesNumber + (Number == 2 ? 4 : 0)))));
 
         if (GuitarLineType != null)
             direction.Add(new XElement("direction-type", new XElement("bracket",
@@ -988,6 +1003,12 @@ internal sealed class MusicXmlNote
     public List<XElement> Technicals { get; } = new();
     /// <summary>Direct &lt;notations&gt; children (arpeggiate, glissando, …).</summary>
     public List<XElement> ExtraNotations { get; } = new();
+    /// <summary>The trill spanner's elements on this note, in the order they happen (session
+    /// 1236): a <c>&lt;wavy-line type="stop"/&gt;</c> for the trill that ends here, a
+    /// <c>&lt;trill-mark/&gt;</c> and a <c>&lt;wavy-line type="start"/&gt;</c> for the one that
+    /// starts. Written inside the note's <c>&lt;ornaments&gt;</c>; the <c>trill-mark</c> is left
+    /// out when <see cref="Ornaments"/> already holds one (<c>@trill@trillSpan</c>).</summary>
+    public List<XElement> TrillLine { get; } = new();
     public bool IsGrace { get; set; }
     /// <summary>A note or a rest of a <c>cue { }</c>: <c>&lt;cue/&gt;</c> and
     /// <c>&lt;type size="cue"&gt;</c> — printed small, and silent in a reader that plays the
@@ -1201,7 +1222,8 @@ internal sealed class MusicXmlNote
 
         // Notations (articulations, ornaments, ties, slurs)
         var tremolo = tabCopy ? null : Tremolo;
-        var hasNotations = articulations.Count > 0 || ornaments.Count > 0 || tremolo != null ||
+        var trillLine = tabCopy ? new List<XElement>() : TrillLine;
+        var hasNotations = articulations.Count > 0 || ornaments.Count > 0 || tremolo != null || trillLine.Count > 0 ||
                           technicals.Count > 0 || extraNotations.Count > 0 ||
                           TieStart || TieStop || slurStart || slurStop;
 
@@ -1234,13 +1256,16 @@ internal sealed class MusicXmlNote
             }
 
             // Ornaments
-            if (ornaments.Count > 0 || tremolo != null)
+            if (ornaments.Count > 0 || tremolo != null || trillLine.Count > 0)
             {
                 var orns = new XElement("ornaments");
                 // An entry "accidental-mark=sharp" is an ornament's accidental (@trill(sharp),
                 // 2026-11-12): MusicXML's <accidental-mark> after the ornament it belongs to.
                 foreach (var o in ornaments)
                     orns.Add(o.Split('=') is [var element, var value] ? new XElement(element, value) : new XElement(o));
+                foreach (var w in trillLine)
+                    if (w.Name.LocalName != "trill-mark" || !ornaments.Contains("trill-mark"))
+                        orns.Add(new XElement(w));
                 if (tremolo is { } t)
                     orns.Add(new XElement("tremolo", new XAttribute("type", t.Type), t.Marks));
                 notations.Add(orns);

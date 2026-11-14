@@ -987,6 +987,10 @@ public class MusicXmlExportShapeTests
     [InlineData("@text(\"dolce\")", "", "dolce")]
     [InlineData("@sustain", "@!sustain", "<pedal type=\"start\"")]
     [InlineData("@8va", "@!8va", "<octave-shift type=\"down\"")]
+    // The text spanner and the trill spanner, written on any note since session 1236.
+    [InlineData("@rit", "@!rit", "rit.</words>")]
+    [InlineData("@textSpan(\"poco rit.\")", "@!textSpan", "poco rit.")]
+    [InlineData("@trillSpan", "@!trillSpan", "<wavy-line type=\"start\"")]
     [InlineData("@finger(2)", "", "<fingering>2")]
     [InlineData("@tap", "", "<tap")]
     [InlineData("@laissezVibrer", "", "let-ring")]

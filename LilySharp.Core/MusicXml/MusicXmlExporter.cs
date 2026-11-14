@@ -398,6 +398,7 @@ public sealed class MusicXmlExporter
             EmitFlatRowsPastTheMusic();
             EmitPendingChordRows();
         }
+        FinishOpenSpans();
         WriteCapo();
         WriteBeams(tree, hasSections);
         WriteTab(tree);
@@ -715,6 +716,10 @@ public sealed class MusicXmlExporter
                         n.Staff = headCrosses ? 1 : 2;
                         n.Voice = (n.Voice ?? 1) + 4;
                         n.SlurNumber = 2;
+                        // …and its trill lines count on from 5, as its voices do, beside the upper staff's.
+                        foreach (var wavy in n.TrillLine)
+                            if (wavy.Attribute("number") is { } wavyNumber)
+                                wavyNumber.Value = ((int)wavyNumber + 4).ToString(System.Globalization.CultureInfo.InvariantCulture);
                     }
                     u.Notes.Add(n);
                 }
@@ -4718,6 +4723,8 @@ public sealed class MusicXmlExporter
             {
                 if (postEvent is DynamicSyntax dynamic)
                     HandleDynamicText(dynamic.DynamicToken.Text, dynamic.SourceStart, dynamic.IsSubito, dynamic.ForcedAbove, dynamic.IsEditorial);
+                else if (WriteTextSpan(postEvent))
+                    continue;
                 else if (postEvent is MusicMarkSyntax mark)
                     ProcessDirectionMark(mark);
                 else if (postEvent is ArticulationSyntax { Type: ArticulationType.None } named)
@@ -5332,8 +5339,7 @@ public sealed class MusicXmlExporter
                 ProcessDirectionMark(mark);
         // The other <direction>s a grace column carries on the page (session 1235) — the
         // level, the hairpin's start, the text, and the spans that start or end on it (pedal,
-        // ottava; a text spanner is handed over too, though the reader writes none yet, a
-        // full-size note's neither) — through the reader a full-size note's go through, before
+        // ottava, a text spanner) — through the reader a full-size note's go through, before
         // the grace <note> they stand on. They write nothing on a note, so the note handed
         // over is nobody's; a grace takes no time, so a span's end is at the grace itself.
         // Until then the grace wrote none of them, and a span STARTED on a grace left its stop
@@ -5374,6 +5380,8 @@ public sealed class MusicXmlExporter
             || Semantics.GraceBodySupport.IsCarriedTabTechnique(annotation)
             || Semantics.GraceBodySupport.IsCarriedSemiTie(annotation)
             || Semantics.GraceBodySupport.IsCarriedPhrasingSlur(annotation)
+            // The trill spanner's start or end is the note's own <wavy-line> (session 1236).
+            || Semantics.GraceBodySupport.IsCarriedTrillSpan(annotation)
             // The breathing sign and the caesura stand after the grace that writes them, in
             // the run or at its end (CarriedBreath / InnerBreaths); a grace rest's is not drawn.
             || (!xmlNote.IsRest && annotation is ArticulationSyntax
@@ -5790,6 +5798,9 @@ public sealed class MusicXmlExporter
             // A gesture on a rest is refused (LYS4079) and written nowhere (2026-11-14).
             if (Semantics.GestureHosts.IsOnARest(artic))
                 continue;
+            // A text spanner's or a trill spanner's start or end (session 1236).
+            if (WriteTextSpan(artic) || WriteTrillSpan(artic, xmlNote))
+                continue;
             if (artic is ArticulationSyntax articulation)
             {
                 // MergeGrandStaves reads it for the note's <staff>.
@@ -6178,6 +6189,167 @@ public sealed class MusicXmlExporter
     /// or a chord's later member): where an end that includes its note stands.</summary>
     private int _markedNoteLength;
 
+    // ---- the text spanner and the trill spanner (session 1236) -------------------------
+    //
+    // Until then neither reached the document, on a note of any size: `c4@rit d e f@!rit` and
+    // `c4@trillSpan d e@!trillSpan` wrote four and three bare notes, without a word. Both are
+    // paired here as the page pairs them — in the order the music is written out, one open at
+    // a time in a voice of a part, across a section's end — and not on the syntax, where a
+    // span opened in one section and closed in the next has no partner.
+
+    /// <summary>The text spanners open: the part, the voice, and the start's direction in its
+    /// measure — taken back out if nothing closes it (<see cref="FinishOpenSpans"/>).</summary>
+    private readonly List<(string Part, int Voice, MusicXmlMeasure Measure, MusicXmlDirection Start)> _openTextSpans = new();
+
+    /// <summary>The trill spanners open: the part's name and document part, the voice, and the
+    /// line's number.</summary>
+    private readonly List<(string Part, int Voice, MusicXmlPart? Home, int Number)> _openTrills = new();
+
+    /// <summary>The voice of its part a mark is written in: 0, or the index of its branch of a
+    /// <c>voice { } { }</c> — the first branch is the voice the music around it runs in.</summary>
+    private static int VoiceLineOf(SyntaxNode node)
+    {
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (p is MusicBlockSyntax { Parent: ParallelExpressionSyntax parallel })
+            {
+                int index = 0;
+                foreach (var voice in parallel.Voices)
+                {
+                    if (ReferenceEquals(voice, p))
+                        return index;
+                    index++;
+                }
+            }
+        return 0;
+    }
+
+    /// <summary>
+    /// Writes the start or the end of a general text spanner — <c>@rit</c>, <c>@accel</c>,
+    /// <c>@rall</c>, <c>@textSpan("…")</c>, a bare <c>@textSpan</c>, and the <c>@!</c> of each —
+    /// and answers whether <paramref name="annotation"/> is one. The start is its word and
+    /// MusicXML's <c>&lt;dashes type="start"/&gt;</c> in one direction at its note; the end a
+    /// <c>&lt;dashes type="stop"/&gt;</c> where the note it is written on ends ("a ritardando
+    /// over four notes", SYNTAX_REFERENCE — the end includes its note, as an octave line's does).
+    /// </summary>
+    /// <remarks>
+    /// A spanner nobody closes draws nothing on the page, neither its line nor its word
+    /// (LYS4018), so its start is taken back out of the document at the end
+    /// (<see cref="FinishOpenSpans"/>). An end with nothing open writes nothing. The guitar lines (<c>@palmMute</c>, <c>@letRing</c>, <c>@barre</c>) are not
+    /// read here: each is a <c>&lt;bracket&gt;</c> (ProcessOtherDirectionMark).
+    /// </remarks>
+    private bool WriteTextSpan(SyntaxNode annotation)
+    {
+        if (Semantics.SpanNames.Of(annotation) is not
+            { Family: Svg.Model.MusicMarkType.TextSpanStop, Line: Svg.Model.TextSpanFamily.Text } span)
+            return false;
+        if (_currentMeasure == null || _inLaterTremoloPass)
+            return true;
+        string part = _currentPartName ?? "";
+        int voice = VoiceLineOf(annotation);
+        int open = _openTextSpans.FindLastIndex(s => s.Part == part && s.Voice == voice);
+        if (span.IsEnd)
+        {
+            if (open < 0)
+                return true;
+            var stop = new MusicXmlDirection { DashesType = "stop", DashesNumber = _openTextSpans[open].Start.DashesNumber };
+            AddDirection(stop);
+            stop.Offset += _markedNoteLength;
+            _openTextSpans.RemoveAt(open);
+            return true;
+        }
+        // A second start in the voice is ignored, as the page ignores it (LYS4018, "spans do
+        // not nest"): the one open runs on to its end.
+        if (open >= 0)
+            return true;
+        // One is open at a time in a voice, so the voice numbers the line: two voices' lines
+        // overlap in time though they are written one after the other.
+        int number = voice + 1;
+        string? words = annotation is MusicMarkSyntax written
+            ? Semantics.AnnotationValues.TextSpan(written)
+            : Svg.Model.MusicMarkItem.TextSpanSugarText(span.Name);
+        bool? above = annotation switch
+        {
+            ArticulationSyntax a => a.ForcedAbove,
+            MusicMarkSyntax m => m.ForcedAbove,
+            _ => null,
+        };
+        var start = new MusicXmlDirection
+        {
+            Words = string.IsNullOrEmpty(words) ? null : words,
+            DashesType = "start",
+            DashesNumber = number,
+            Placement = above == false ? "below" : null,
+        };
+        AddDirection(start);
+        _openTextSpans.Add((part, voice, _currentMeasure, start));
+        return true;
+    }
+
+    /// <summary>
+    /// Writes the start or the end of a trill spanner on its note — <c>@trillSpan</c>,
+    /// <c>@!trillSpan</c> — and answers whether <paramref name="annotation"/> is one. The start
+    /// is the "tr" and the line's start, <c>&lt;trill-mark/&gt;&lt;wavy-line type="start"/&gt;</c>;
+    /// the end a <c>&lt;wavy-line type="stop"/&gt;</c> on the last trilled note, the note it is
+    /// written on (owner's decision 2026-10-28).
+    /// </summary>
+    /// <remarks>
+    /// A new start while a trill runs ends the running one on the new start's note, before its
+    /// own "tr" — the page's rule (MeasureCollector.PairTrillSpannerEvents); a trill nobody ends
+    /// runs to the end of the score, so its stop goes on the part's last note
+    /// (<see cref="FinishOpenSpans"/>). An end with nothing open writes nothing.
+    /// </remarks>
+    private bool WriteTrillSpan(SyntaxNode annotation, MusicXmlNote xmlNote)
+    {
+        bool starts = annotation is ArticulationSyntax { Name: Svg.Model.MusicMarkItem.TrillSpanName };
+        if (!starts && annotation is not MusicMarkSyntax { IsSpanEnd: true, Name: Svg.Model.MusicMarkItem.TrillSpanName })
+            return false;
+        if (_currentMeasure == null || _inLaterTremoloPass)
+            return true;
+        string part = _currentPartName ?? "";
+        int voice = VoiceLineOf(annotation);
+        int open = _openTrills.FindLastIndex(t => t.Part == part && t.Voice == voice);
+        if (open >= 0)
+        {
+            xmlNote.TrillLine.Add(WavyLine("stop", _openTrills[open].Number, null));
+            _openTrills.RemoveAt(open);
+        }
+        if (!starts)
+            return true;
+        int number = voice + 1;
+        string? placement = ((ArticulationSyntax)annotation).ForcedAbove switch
+        {
+            true => "above",
+            false => "below",
+            null => null,
+        };
+        xmlNote.TrillLine.Add(new System.Xml.Linq.XElement("trill-mark",
+            placement is null ? null : new System.Xml.Linq.XAttribute("placement", placement)));
+        xmlNote.TrillLine.Add(WavyLine("start", number, placement));
+        _openTrills.Add((part, voice, _currentPart, number));
+        return true;
+    }
+
+    private static System.Xml.Linq.XElement WavyLine(string type, int number, string? placement)
+        => new("wavy-line", new System.Xml.Linq.XAttribute("type", type), new System.Xml.Linq.XAttribute("number", number),
+            placement is null ? null : new System.Xml.Linq.XAttribute("placement", placement));
+
+    /// <summary>Settles the spans still open once every part is written: a text spanner nobody
+    /// closed is taken back out (the page draws none of it), and a trill nobody ended stops on
+    /// its part's last note (the page runs it to the end of the score).</summary>
+    private void FinishOpenSpans()
+    {
+        foreach (var span in _openTextSpans)
+            span.Measure.Directions.Remove(span.Start);
+        _openTextSpans.Clear();
+        foreach (var trill in _openTrills)
+        {
+            var last = trill.Home?.Measures.SelectMany(m => m.Notes)
+                .LastOrDefault(n => n.RawElement == null && !n.IsBackup && !n.IsRest);
+            last?.TrillLine.Add(WavyLine("stop", trill.Number, null));
+        }
+        _openTrills.Clear();
+    }
+
     /// <summary>In the second or a later pass of a <c>repeat tremolo</c>, which is engraved once.</summary>
     private bool _inLaterTremoloPass;
 
@@ -6522,7 +6694,7 @@ public sealed class MusicXmlExporter
                         stop.Offset += _markedNoteLength;
                         break;
                     }
-                    // The text spanner has no stop spelling here — the silence '@rit' meets.
+                    // The general text spanner's end is WriteTextSpan's, read before this.
                 }
             return;
         }

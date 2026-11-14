@@ -229,6 +229,7 @@ internal static class MusicXmlReader
         ImportNote? partLastNote = null;
         var pedals = new List<string>();                   // the pedals down, oldest first
         var ottava = new List<string>();                   // the octave line open, by the name it opened with
+        var dashed = new Dictionary<string, string>(StringComparer.Ordinal);   // the text spanners open, by number
         // Grace notes wait for the next note, which may be the next bar's: those at a bar's end
         // were lost until 2026-11-04 (Lang op. 36/3, bars 45-46).
         var pendingGrace = new List<ImportGraceNote>();
@@ -382,7 +383,7 @@ internal static class MusicXmlReader
                         // the note at their position exactly as a dynamic does.
                         foreach (var text in ReadDirectionTexts(el, report, measureNo, wordsAreTheTempos: tempoWords != null))
                             pendingDynamics.Add((text, at, dirStaff));
-                        foreach (var span in ReadDirectionSpans(el, pedals, ottava, report, measureNo))
+                        foreach (var span in ReadDirectionSpans(el, pedals, ottava, dashed, report, measureNo))
                         {
                             pendingDynamics.Add((span, at, dirStaff));
                             if (EndsWithItsNote(span))
@@ -611,6 +612,7 @@ internal static class MusicXmlReader
         {
             EndWedges(wedgeStops, noteAt, voiceStaff);
             EndOttavasInTheirVoice(ottavaStops, noteAt, voiceStaff, report);
+            KeepUnclosedTextSpansAsWords(noteAt);
             KeepUnreleasedUnaCordaAsWords(noteAt);
             ToPlainClefOctave(part.Measures, part.Clef);
             return new List<ImportPart> { part };
@@ -618,6 +620,7 @@ internal static class MusicXmlReader
         SendDirectedMarksHome(directed, noteAt, voiceStaff);
         EndWedges(wedgeStops, noteAt, voiceStaff);
         EndOttavasInTheirVoice(ottavaStops, noteAt, voiceStaff, report);
+        KeepUnclosedTextSpansAsWords(noteAt);
         KeepUnreleasedUnaCordaAsWords(noteAt);
         // `@cross` names "the other staff", which only two staves answer.
         if (staves.Count == 2)
@@ -901,18 +904,63 @@ internal static class MusicXmlReader
         foreach (var (name, measure, at, staff) in stops.OrderBy(s => s.Measure).ThenBy(s => s.At))
         {
             bool Before((int Voice, int Measure, int Onset) p) => p.Measure < measure || (p.Measure == measure && p.Onset < at);
-            var open = byTime.Where(n => Before(n.Value) && !ended.Contains(n.Key) && n.Key.Articulations.Contains(name)).ToList();
+            // (A text spanner's start is its name, or its name and its word: textSpan("…").)
+            var open = byTime.Where(n => Before(n.Value) && !ended.Contains(n.Key)
+                && n.Key.Articulations.Any(a => a == name || a.StartsWith(name + "(", StringComparison.Ordinal))).ToList();
             // Each hand may have a line of its own open at once.
             var opener = open.LastOrDefault(n => staff == null || voiceStaff.GetValueOrDefault(n.Value.Voice) == staff).Key
                 ?? open.LastOrDefault().Key;
             if (opener == null)
             {
-                report.Warn(measure, "an octave line's end has no start, so it is dropped.");
+                report.Warn(measure, (OpensATextSpan(name) ? "a dashed line's" : "an octave line's") + " end has no start, so it is dropped.");
                 continue;
             }
             ended.Add(opener);
             int voice = noteAt[opener].Voice;
             byTime.Last(n => n.Value.Voice == voice && Before(n.Value)).Key.Articulations.Add("!" + name);
+        }
+    }
+
+    /// <summary>
+    /// A text spanner nothing closes in its voice stays the words on the page (session 1236): a
+    /// Lily# spanner with no end draws nothing at all (LYS4018), and a file may start a dashed
+    /// line it never stops, or stop it in a voice Lily# cannot close it from. So does a second
+    /// start while one is open, which Lily# ignores.
+    /// </summary>
+    private static void KeepUnclosedTextSpansAsWords(Dictionary<ImportNote, (int Voice, int Measure, int Onset)> noteAt)
+    {
+        foreach (var voice in noteAt.GroupBy(n => n.Value.Voice))
+        {
+            (ImportNote Note, string Mark)? open = null;
+            void Words((ImportNote Note, string Mark) span)
+            {
+                int at = span.Note.Articulations.IndexOf(span.Mark);
+                string words = span.Mark switch
+                {
+                    "rit" => "rit.",
+                    "accel" => "accel.",
+                    "rall" => "rall.",
+                    "textSpan" => "",
+                    _ => span.Mark["textSpan(\"".Length..^2],
+                };
+                if (words.Length == 0)
+                    span.Note.Articulations.RemoveAt(at);
+                else
+                    span.Note.Articulations[at] = "text(\"" + words + "\").up";
+            }
+            foreach (var note in voice.OrderBy(n => n.Value.Measure).ThenBy(n => n.Value.Onset).Select(n => n.Key))
+                foreach (var mark in note.Articulations.ToList())
+                    if (OpensATextSpan(mark))
+                    {
+                        if (open is { } running)
+                            Words((note, mark));
+                        else
+                            open = (note, mark);
+                    }
+                    else if (mark.StartsWith('!') && OpensATextSpan(mark[1..]))
+                        open = null;
+            if (open is { } unclosed)
+                Words(unclosed);
         }
     }
 
@@ -1249,8 +1297,29 @@ internal static class MusicXmlReader
                 }
             }
             ReadMarks(notations, note);
-            foreach (var o in Local(notations, "ornaments")?.Elements() ?? Enumerable.Empty<XElement>())
+            // A trill's wavy line is a trill spanner (session 1236): `@trillSpan` on the note it
+            // starts on — in place of the trill-mark's `@trill`, the spanner prints the "tr" —
+            // and `@!trillSpan` on the note it stops on. A stop BEFORE a start on one note is a
+            // chain (the new start ends the trill running); a line started and stopped on one
+            // note with no trill-mark is another program's vibrato, or Lily#'s own, and is not read.
+            var ornamentList = (Local(notations, "ornaments")?.Elements() ?? Enumerable.Empty<XElement>()).ToList();
+            int WavyAt(string type) => ornamentList.FindIndex(o => o.Name.LocalName == "wavy-line" && (string?)o.Attribute("type") == type);
+            int wavyStart = WavyAt("start"), wavyStop = WavyAt("stop");
+            bool trillMarked = ornamentList.Any(o => o.Name.LocalName == "trill-mark");
+            bool trillLine = wavyStart >= 0 && (trillMarked || wavyStop < 0 || wavyStop < wavyStart);
+            if (trillLine || (wavyStop >= 0 && wavyStart < 0))
             {
+                bool below = ornamentList.Any(o => o.Name.LocalName is "trill-mark" or "wavy-line"
+                    && (string?)o.Attribute("type") != "stop" && (string?)o.Attribute("placement") == "below");
+                if (trillLine)
+                    note.Articulations.Add(below ? "trillSpan.down" : "trillSpan");
+                if (wavyStop >= 0 && wavyStop > wavyStart)
+                    note.Articulations.Add("!trillSpan");
+            }
+            foreach (var o in ornamentList)
+            {
+                if (trillLine && o.Name.LocalName == "trill-mark")
+                    continue;
                 if (OrnamentMark(o.Name.LocalName) is { } mark && !note.Articulations.Contains(mark))
                 {
                     // The accidental-mark after an ornament is its accidental: @trill(sharp)
@@ -1489,7 +1558,31 @@ internal static class MusicXmlReader
     /// the next one as a pedal's release does.</summary>
     private static bool EndsWithItsNote(string mark)
         => mark.StartsWith('!')
-           && Svg.Model.MusicMarkItem.ParseSpanEndName(mark[1..]) == Svg.Model.MusicMarkType.OttavaStop;
+           && Svg.Model.MusicMarkItem.ParseSpanEndName(mark[1..])
+               is Svg.Model.MusicMarkType.OttavaStop or Svg.Model.MusicMarkType.TextSpanStop;
+
+    /// <summary>The Lily# name of a text spanner that prints <paramref name="words"/>: the
+    /// three sugar words, else <c>textSpan("…")</c>, or the bare <c>textSpan</c> for no word.</summary>
+    private static string TextSpanMark(string words) => words switch
+    {
+        "" => "textSpan",
+        "rit." => "rit",
+        "accel." => "accel",
+        "rall." => "rall",
+        _ => "textSpan(\"" + LysWriter.EscapeString(words) + "\")",
+    };
+
+    /// <summary>Whether <paramref name="mark"/> opens a text spanner (<see cref="TextSpanMark"/>).</summary>
+    private static bool OpensATextSpan(string mark)
+        => mark is "rit" or "accel" or "rall" or "textSpan" || mark.StartsWith("textSpan(", StringComparison.Ordinal);
+
+    /// <summary>The words a direction's <c>&lt;dashes type="start"&gt;</c> runs from, joined as
+    /// <see cref="ReadDirectionTexts"/> joins them — or null when it starts no dashed line.</summary>
+    private static string? DashedWords(XElement dir)
+        => Els(dir, "direction-type").SelectMany(t => Els(t, "dashes")).Any(d => (string?)d.Attribute("type") == "start")
+            ? string.Join(" ", string.Concat(Els(dir, "direction-type").SelectMany(t => Els(t, "words")).Select(w => w.Value))
+                .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+            : null;
     /// <summary>
     /// The lines a &lt;direction&gt; opens and closes: an &lt;octave-shift&gt; as
     /// <c>ottava</c> / <c>ottava(bassa)</c> / <c>quindicesima</c>(…) and its stop as
@@ -1505,10 +1598,26 @@ internal static class MusicXmlReader
     /// holds the part's pedals that are down, so a stop closes the latest one.
     /// </remarks>
 
-    private static IEnumerable<string> ReadDirectionSpans(XElement dir, List<string> pedals, List<string> ottava, ImportReport report, int measureNo)
+    private static IEnumerable<string> ReadDirectionSpans(XElement dir, List<string> pedals, List<string> ottava,
+        Dictionary<string, string> dashed, ImportReport report, int measureNo)
     {
+        // A dashed line from words is a text spanner (session 1236): `@rit … @!rit`,
+        // `@textSpan("…") … @!textSpan`, closed by the name it opened with (LYS4032).
+        // <paramref name="dashed"/> holds the part's lines open, by their number.
+        if (DashedWords(dir) is { } dashedWords)
+        {
+            string number = (string?)Els(dir, "direction-type").SelectMany(t => Els(t, "dashes"))
+                .First(d => (string?)d.Attribute("type") == "start").Attribute("number") ?? "1";
+            string name = TextSpanMark(dashedWords);
+            dashed[number] = name;
+            yield return name;
+        }
         foreach (var dt in Els(dir, "direction-type"))
         {
+            foreach (var dashes in Els(dt, "dashes"))
+                if ((string?)dashes.Attribute("type") == "stop"
+                    && dashed.Remove((string?)dashes.Attribute("number") ?? "1", out string? opened))
+                    yield return "!" + opened.Split('(')[0];
             foreach (var shift in Els(dt, "octave-shift"))
             {
                 string type = (string?)shift.Attribute("type") ?? "";
@@ -1591,7 +1700,9 @@ internal static class MusicXmlReader
         {
             string text = string.Join(" ", string.Concat(Els(dt, "words").Select(w => w.Value))
                 .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
-            if (text.Length > 0 && !wordsAreTheTempos && !(text is "(" or ")" && IsEditorialDynamics(dir)))
+            // (The words a dashed line runs from are its text spanner's — ReadDirectionSpans.)
+            if (text.Length > 0 && !wordsAreTheTempos && !(text is "(" or ")" && IsEditorialDynamics(dir))
+                && DashedWords(dir) == null)
             {
                 if (text == "una corda")
                     yield return "unaCorda";

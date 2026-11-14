@@ -2848,7 +2848,8 @@ only at a `tempo`. **A spanner is closed by the name it was opened with**:
 quick fix writes the right name. One spanner is open at a time in a voice, and a spanner does
 not carry from one voice into another. (The guitar lines — `@palmMute`, `@letRing`, `@barre(N)`,
 under *Guitar Bends, Lines and Technique Letters* — are text spanners of their own: each runs
-beside the others and beside a `@rit`.)
+beside the others and beside a `@rit`.) MusicXML writes a text spanner as its word and
+`<dashes>`, from its note to the end of the note that carries the `@!`, and reads it back.
 
 ### Ottava Brackets
 
@@ -2927,6 +2928,9 @@ one running, so a chain needs no `@!` between its trills.
 c4@trillSpan d e@!trillSpan f |      // c, d and e trilled; the line stops before f
 c4@trillSpan d e@trillSpan f@!trillSpan |   // two trills: c-d, then e-f
 ```
+
+MusicXML writes the start as `<trill-mark/>` and `<wavy-line type="start"/>` on its note and the
+end as `<wavy-line type="stop"/>` on the last trilled note, and reads both back.
 
 ## Glissando
 
