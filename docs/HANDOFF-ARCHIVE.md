@@ -267,6 +267,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1244セッションの経緯
+
+### 1.1 第1244セッション（2026-11-14・YT-DELL2）
+
+base `551049503`・開始時 full 16923 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16926（Lab `p1244` の `run1.trx`）。Calamo・Dettato の `open` は 0。CI は第1231 のまま。
+「反復とナビ記号を section の音楽にも書く」の続き（設計 `docs/inline-repeat-design.md` §4 の段 6 と段 5 の残り）。Core の commit 2 つ（未 push）。経過は設計 §7。
+- **`.ly`（`c9ff89900`）**: 1 つの声部に書いた反復記号と ending を、全部のパートとコードのトラックの同じ小節線に書く（`LilyPondExporter.RepeatSigns.cs`）。置き場所は `VoiceBarLines` の数え方（LYS1070 と同じ）で、埋め草の小節と section を書かないパートにも置く。コードの行が自分で書いた平らな ending も同じ経路で `\alternative` になる。
+- 途中で直した: ⑴ phrase の中に小節線があるパートに `:|` だけが写り、曲頭からの反復に化けた（探り譜 `t-phrase`）＝全部置けるパートにだけ書く門（`CarriesTheScoresSigns`）と警告。⑵ 既存の欠陥: `[2. … ] | c1 |` の `|` が空小節 `s1 |` を書いていた。
+- **MusicXML（`8f33cddd8`）**: コードの行の反復・ending・回数（`WriteRowSigns`）と、音楽に書いたナビ記号（`WriteTheMusicsNavigationMarks`）を全パートに書く。どちらも 1 つも書かれていなかった。
+- 門: `-End` の full 16934 合格 / 2 失敗 / skip 2 / 合計 16938（`p1244/run4.trx`）。赤は `ReadmeSampleTests` と `TheHandoffStaysReadable`（語りが長すぎた＝縮めて緑。full は取り直していない）。網は `InlineRepeatLilyPondTests` 10 本（毒 6 本とも赤・`p1244/poisons.ps1`）と `InlineRepeatMusicXmlTests` に 2 本（毒 4 本とも赤）。探り譜 12 冊の `.ly` は LilyPond 2.26.0 を警告 0 で通る。掃き（`p1244/sweep-ly.ps1`・1041 冊 1268 件）: `.ly` は差 0、MusicXML は 4 冊 8 件（音楽に `segno`／`coda` を書いている本＝意図した変化）。svg と MIDI の経路は触っていない。
+- 7.5／7.6: OWN 0・REF 0（書き出しの配線）。7.7: form の ending（`[1. A]`）が緑で組み直す経路にこの印が入る形は未確認（設計 §7）。
+- LYS1034 はまだ外していない。CHANGELOG は LYS1034 を狭める便でまとめて書く。
+
 ## 以下は第1243セッションの経緯
 
 ### 1.1 第1243セッション（2026-11-14・YT-DELL2）
