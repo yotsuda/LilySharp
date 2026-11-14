@@ -39,6 +39,57 @@ public sealed class MidiRepeatTests
         Assert.Equal(new[] { 60, 62, 60, 62 }, Pitches("{ |: c'4 d4 :| }"));
     }
 
+    /// <summary>
+    /// A replayed bar sounds as it is printed at its place — whichever sign sends the piece
+    /// back, and wherever it is written (session 1255, when the form's own walk was dropped and
+    /// every book came to be played along its timeline). MEASURED before (Lab
+    /// sessions/p1255/probe/p7-dyn): a form's <c>|: A :|</c> carried the level its body ended
+    /// on back to the head — the second c ff — where the same form's D.C. and one-sided
+    /// <c>:|</c>, and the same repeat written in the music, played the head as printed.
+    /// </summary>
+    [Theory]
+    [InlineData("section A { m { c'1 | d'1@ff | } }", "form { |: A :| }")]   // the form's repeat
+    [InlineData("section A { m { c'1 | d'1@ff | } }", "form { A :| }")]      // its one-sided ':|'
+    [InlineData("section A { m { c'1 | d'1@ff | } }", "form { A dc }")]      // its D.C.
+    [InlineData("section A { m { |: c'1 | d'1@ff :| } }", "form { A }")]     // the music's repeat
+    public void AReplayedBarSoundsAsItIsPrinted(string section, string form)
+    {
+        string src = "octave absolute\ntime 4/4\npart m { }\n" + section + "\n" + form + "\nscore { staff m }\n";
+        var notes = new MidiExporter().Export(SyntaxTree.Parse(src)).Tracks[1].Notes.OrderBy(n => n.StartTick).ToList();
+        Assert.Equal(new[] { 60, 62, 60, 62 }, notes.Select(n => n.Pitch));
+        Assert.Equal(notes[0].Velocity, notes[2].Velocity);
+        Assert.Equal(notes[1].Velocity, notes[3].Velocity);
+        Assert.True(notes[1].Velocity > notes[0].Velocity);
+    }
+
+    /// <summary>A pedal the piece ends under is lifted at its end, in a book with a repeat too:
+    /// the timeline's last stretch dropped what stood at its very end (measured the same
+    /// session: Lab sessions/p1255/probe/p4-pedal, the first run).</summary>
+    [Fact]
+    public void APedalThePieceEndsUnderIsLifted_AfterARepeatToo()
+    {
+        const string Src = "octave absolute\ntime 4/4\npart m { }\nsection A { m { c'1 | } }\nsection B { m { d'1@sustain | e'1 | } }\nform { |: A :| B }\nscore { staff m }\n";
+        var pedals = new MidiExporter().Export(SyntaxTree.Parse(Src)).Tracks.SelectMany(t => t.Pedals).OrderBy(p => p.Tick).ToList();
+        Assert.NotEmpty(pedals);
+        Assert.False(pedals[^1].Down);
+    }
+
+    /// <summary>⚠️ TWO RULES, KEPT AS THEY WERE (session 1255; the owner has not chosen): a third
+    /// ending with no <c>:|</c> before it. In a FORM it is an ending no repeat opens — two
+    /// passes, then its section once (LYS6008 says so, and the page reads the form that way);
+    /// in the MUSIC it joins the run — three passes (<see cref="InlineVoltas_CountInferredFromHighestNumber"/>).
+    /// The form's rule lived in the form's own MIDI walk until that walk was dropped; it is
+    /// <c>RepeatStream.Elements</c>' now. 11 books of the owner's corpus write the form's shape
+    /// (their LilyPond originals are <c>\repeat volta 3</c> with three alternatives).</summary>
+    [Fact]
+    public void AFormsThirdEndingWithNoRepeatSignBeforeIt_IsPlayedOnce()
+    {
+        const string Src = "octave absolute\ntime 4/4\npart m { }\n"
+            + "section A { m { c'1 | } }\nsection B { m { d'1 | } }\nsection C { m { e'1 | } }\nsection D { m { f'1 | } }\n"
+            + "form { |: A [1. B] :| [2. C] [3. D] }\nscore { staff m }\n";
+        Assert.Equal(new[] { 60, 62, 60, 64, 65 }, Pitches(Src));
+    }
+
     [Fact]
     public void NoRepeat_PlaysOnce()
     {

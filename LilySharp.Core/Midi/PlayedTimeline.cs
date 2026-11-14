@@ -195,8 +195,11 @@ internal static class PlayedTimeline
                         if (was != now)
                             track.Pedals.Add(new PedalChange(starts[k], now, controller));
                     }
+                // …and the last stretch keeps what stands at its very end: the release that
+                // lifts a pedal the piece ends under. Until session 1255 it was dropped, and
+                // the pedal of such a piece stayed down in the file.
                 foreach (var pedal in pedals)
-                    if (pedal.Tick >= from && pedal.Tick < to)
+                    if (pedal.Tick >= from && (pedal.Tick < to || last))
                         track.Pedals.Add(pedal with { Tick = pedal.Tick + shift });
             }
         }

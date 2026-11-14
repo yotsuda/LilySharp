@@ -48,7 +48,7 @@ namespace LilySharp.Core.Semantics;
 /// <item>On the replayed stretch a repeat block plays ONCE, on its last pass (body, then the
 /// ending that pass names) — the performer's convention that repeats are not taken on the
 /// D.C./D.S. pass; a one-sided <c>:|</c> rewinds nothing (one rewind per written sign —
-/// <c>MidiExporter.PlayFormItem</c>'s rule); jump texts met inside it are not followed again
+/// <c>RepeatStream.Route</c>'s rule); jump texts met inside it are not followed again
 /// (a second <c>dc</c> inside the replay would not terminate).</item>
 /// <item>The stretch the first pass resumes with is a first pass again: its repeats are
 /// taken, its <c>segno</c> is remembered, and a later jump text is followed. A form with two

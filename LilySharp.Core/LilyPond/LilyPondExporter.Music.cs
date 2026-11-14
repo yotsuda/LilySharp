@@ -524,7 +524,7 @@ public sealed partial class LilyPondExporter
     /// written.
     /// ⚠️ Two rewinds nest (<c>A :| B :|</c> → <c>\repeat { \repeat { A } B }</c>), and there
     /// LilyPond REPLAYS THE INNER REPEAT on the outer pass, while Lily# replays the WRITTEN
-    /// stretch once (MidiExporter.RepeatFromTheBeginning: A B A B C A B C, not A B A B C
+    /// stretch once (Semantics.RepeatStream.Route, a lone ':|': A B A B C A B C, not A B A B C
     /// A B A B C). Same page, one more pass — said in the warning channel, since no
     /// <c>\repeat</c> spelling plays the written order.
     /// </remarks>

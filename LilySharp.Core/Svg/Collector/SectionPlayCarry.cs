@@ -369,8 +369,7 @@ internal readonly record struct PrintedPlay(SectionRepeatRole Role, bool RunStar
 
 /// <summary>
 /// The PLAYED order of a form's printed section plays: the order the MIDI plays them in
-/// (<c>MidiExporter.PlayForm</c> along <see cref="FormRoute"/>, <c>PlayRepeatRun</c>,
-/// <c>RepeatFromTheBeginning</c>), as indices into the printed order. A tie is carried along it
+/// (<c>Midi.PlayedTimeline</c> along <c>RepeatStream.Route</c>), as indices into the printed order. A tie is carried along it
 /// (owner's decision 2026-09-28): from the end of a printed play to the first note of EVERY play
 /// that follows it in this order.
 /// </summary>

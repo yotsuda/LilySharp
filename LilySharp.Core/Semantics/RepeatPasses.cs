@@ -79,8 +79,8 @@ public readonly struct PassSet : IEquatable<PassSet>
 }
 
 /// <summary>
-/// How a repeat run plays its passes — ONE SENTENCE, FOUR READERS: the music stream's MIDI
-/// (<c>MidiExporter.ProcessRepeatSpan</c>), the form's MIDI (<c>MidiExporter.PlayRepeatRun</c>),
+/// How a repeat run plays its passes — ONE SENTENCE, ITS READERS: the MIDI and the score's
+/// sign column (<c>RepeatStream.Route</c>; until session 1255 the MIDI had two walks of its own),
 /// the PLAYED order a tie is carried along (<c>PlayedOrder.Expand</c>) and the neighbours a
 /// split bar is judged by (<c>SectionBoundaryBars.ExpandRepeat</c>). The body plays
 /// <see cref="Count"/> times and, on pass p, the ending <see cref="EndingFor"/> names follows.

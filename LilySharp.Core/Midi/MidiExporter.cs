@@ -644,7 +644,7 @@ public sealed class MidiExporter
     /// (<c>TieSyntax</c> in the sequence), and both come here.</summary>
     private void MarkTiedOut()
     {
-        if (_timeline == null || _lastNoteTrack is not { } track)
+        if (_lastNoteTrack is not { } track)
             return;
         foreach (int i in _lastOnset)
             if (i >= 0 && i < track.Notes.Count && track.Notes[i].TiedOut != _tiePending)
@@ -916,8 +916,8 @@ public sealed class MidiExporter
         _formDriven = _root.DescendantNodes().OfType<FormDeclarationSyntax>().Any();
         _formPlayed = false;
         _declaredPlayed.Clear();
-        _timeline = WritesRepeatsInTheMusic(_root) ? new List<RepeatSign>() : null;
-        _signCuts = _timeline != null ? SignCutBars.For(_root, ScoreForms.Primary(_root)) : null;
+        _timeline.Clear();
+        _signCuts = SignCutBars.For(_root, ScoreForms.Primary(_root));
         if (_signCuts is { IsEmpty: true })
             _signCuts = null;
         _playedSpec = RenderSpecParser.PlayedSpec(tree, Score, Form);
@@ -2456,28 +2456,28 @@ public sealed class MidiExporter
                 if (Semantics.ChordRowBarLines.Closes(barline, bar.Count > 0))
                     Close();
                 // A repeat written in the row is the score's, as one written in a part is.
-                NoteRepeatSign(barline, barStart, part);
+                NoteRepeatSign(barline, barStart, part ?? MusicLane);
                 continue;
             }
             // An ending of the row (`[1.` … `]`, or closed by its `:|`): it opens at a bar
             // line, and its `]` closes the bar it is written in.
             if (item is InlineVoltaSyntax rowEnding)
             {
-                _timeline?.Add(new RepeatSign(barStart, RepeatSignKind.EndingStart,
-                    Passes: PassSet.Of(rowEnding.Numbers), Lane: part));
+                _timeline.Add(new RepeatSign(barStart, RepeatSignKind.EndingStart,
+                    Passes: PassSet.Of(rowEnding.Numbers), Lane: part ?? MusicLane));
                 continue;
             }
             if (item is VoltaEndSyntax)
             {
-                _timeline?.Add(new RepeatSign(bar.Count > 0 ? barStart + thisBarTicks : barStart,
-                    RepeatSignKind.EndingEnd, Lane: part));
+                _timeline.Add(new RepeatSign(bar.Count > 0 ? barStart + thisBarTicks : barStart,
+                    RepeatSignKind.EndingEnd, Lane: part ?? MusicLane));
                 continue;
             }
             if (item is NavigationMarkSyntax rowMark)
             {
                 // A text closes the bar it is written in; a sign opens the one after it.
-                _timeline?.Add(new RepeatSign(bar.Count > 0 ? barStart + thisBarTicks : barStart,
-                    RepeatSignKind.Navigation, Navigation: rowMark.MarkType, Lane: part));
+                _timeline.Add(new RepeatSign(bar.Count > 0 ? barStart + thisBarTicks : barStart,
+                    RepeatSignKind.Navigation, Navigation: rowMark.MarkType, Lane: part ?? MusicLane));
                 continue;
             }
             if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
@@ -2537,14 +2537,30 @@ public sealed class MidiExporter
     }
 
     /// <summary>
-    /// Plays sections in structure order. `|: … :|` bodies play twice (or
-    /// once per volta alternative); display relabels ("A2") are visual and skipped.
-    /// The jump texts (D.C., D.S., al fine, al coda) are FOLLOWED, along the route
-    /// <see cref="Semantics.FormRoute"/> reads off the form (2026-10-03; until then they
-    /// were visual too): a replayed stretch restores the state the piece had at its target
-    /// — the beginning, or the segno — exactly as a one-sided ':|' restores the beginning's.
+    /// Plays the form: its sections walked ONCE, in the order the page prints them
+    /// (<see cref="PlayFormAsPrinted"/>), the repeat signs, endings and navigation marks noted on
+    /// the timeline — the form's own and the ones the music writes — and the piece played
+    /// afterwards along them (<see cref="PlayedTimeline"/>). Display relabels ("A2") are visual
+    /// and skipped.
     /// </summary>
     /// <remarks>
+    /// <para>
+    /// ONE READER SINCE SESSION 1255 (owner's instruction 2026-11-15). Until then a book that
+    /// wrote no sign in its music was played by a walk of its own, which walked the sections
+    /// again for every pass (PlayRepeatBlock, PlayRepeatRun, RepeatFromTheBeginning; and in the
+    /// music ProcessRepeatSpan) — the same form read two ways. MEASURED before dropping it (Lab
+    /// sessions/p1255: 1268 exports of 1041 books, old walk against this one): every note, tempo,
+    /// meter, key and word the same, but for one redundant meter event the old walk wrote. What
+    /// the two did NOT share, and the rule that stands now — A REPLAYED BAR SOUNDS AS IT IS
+    /// PRINTED AT ITS PLACE:
+    /// a dynamic changed inside a form's <c>|: … :|</c> was carried back to the head of the next
+    /// pass (<c>|: c1 | d1@ff :|</c> played the second c ff), where the same walk's D.C., D.S. and
+    /// one-sided <c>:|</c> put the head's own level back, as an inline repeat always did; and a
+    /// pedal held over a repeat sign (LYS4023 says it is cut there) stayed down until pressed
+    /// again. LILYSHARP-OWN: LilyPond's MIDI unfolds the music in time
+    /// (scm/music-functions.scm unfold-repeats), so its levels carry in played order. Observed
+    /// by: <c>MidiRepeatTests.AReplayedBarSoundsAsItIsPrinted</c>.
+    /// </para>
     /// ⚠️ A '~' REFERENCE HIDES A LABEL, NOT THE MUSIC. <c>~Name</c> is the same section
     /// reference with its rehearsal label suppressed (Parser.Form.cs ParseSilentSectionReference),
     /// so it has to play. Matching only <see cref="SectionReferenceSyntax"/> here silenced
@@ -2560,79 +2576,22 @@ public sealed class MidiExporter
         // SectionRef like any other — the bite this method's remark records), and the
         // ROUTE through them once, by FormRoute.
         var items = FormWalk.Read(structure);
-        if (_timeline != null)
-        {
-            PlayFormAsPrinted(items, track, conductorTrack);
-            return;
-        }
-        var route = Semantics.FormRoute.Of(items);
-
-        // The state a replay has to put back, keyed by the item it starts from: the
-        // beginning's, captured before anything plays, and each segno's, captured as the
-        // first pass meets the sign. FormRoute sends a replay only to the beginning or to
-        // the item after a segno the first pass has met, so the key is always there.
-        var states = new Dictionary<int, PieceState> { [0] = CaptureState() };
-
-        foreach (var stretch in route)
-        {
-            if (stretch.Replay)
-                RestoreState(states[stretch.From]);
-            for (int i = stretch.From; i < stretch.To; i++)
-            {
-                var item = items[i];
-                if (stretch.Replay)
-                {
-                    // The D.C./D.S. pass: a repeat block plays once, on its last pass (the
-                    // performer's convention), and a one-sided ':|' rewinds nothing — one
-                    // rewind per written sign, as inside RepeatFromTheBeginning's stretch.
-                    if (item is FormWalk.Repeat replayed)
-                        PlayRepeatBlock(replayed, track, conductorTrack, lastPassOnly: true);
-                    else if (item is not FormWalk.LoneRepeatEnd)
-                        PlayFormItem(item, track, conductorTrack);
-                    continue;
-                }
-                if (Semantics.FormRoute.IsSegno(item))
-                    states[i + 1] = CaptureState();
-                // A ':|' written in the form outside any '|: … :|' block: it has no '|:' to
-                // pair with, so it repeats FROM THE BEGINNING OF THE PIECE (user decision,
-                // 2026-08-15) — the ordinary reading of a one-sided end-repeat, and the one
-                // MusicXML already spells (a backward repeat with no forward one). Replay
-                // everything before it, once.
-                if (item is FormWalk.LoneRepeatEnd)
-                    RepeatFromTheBeginning(items, i, track, conductorTrack, states[0]);
-                else
-                    PlayFormItem(item, track, conductorTrack);
-            }
-        }
+        PlayFormAsPrinted(items, track, conductorTrack);
     }
 
-    // The repeat signs, endings and navigation marks of the PRINTED timeline, each at its tick
-    // — or null for a book that writes none of them in its music, which the form's own walk
-    // plays (PlayForm). A book that writes one is walked once, as the page prints it, and
-    // played afterwards along the marks (PlayedTimeline; docs/inline-repeat-design.md §4).
-    private List<RepeatSign>? _timeline;
+    // The repeat signs, endings and navigation marks of the PRINTED timeline, each at its tick:
+    // every book is walked once, as the page prints it, and played afterwards along the marks
+    // (PlayedTimeline; docs/inline-repeat-design.md §4). Empty for a book with none.
+    private readonly List<RepeatSign> _timeline = new();
 
-    /// <summary>Whether the book writes a repeat sign, a volta ending or a navigation mark in
-    /// its music — anywhere but in a form (the three node kinds RepeatStructureScopeValidator
-    /// asks about).</summary>
-    private static bool WritesRepeatsInTheMusic(SyntaxNode root)
-    {
-        foreach (var node in root.DescendantNodesOfKinds(Semantics.RepeatStructureScopeValidator.RepeatStructureKinds))
-        {
-            bool mark = node is InlineVoltaSyntax or NavigationMarkSyntax
-                || node is BarlineSyntax bar && SyntaxFacts.IsRepeatBarlineKind(bar.BarToken.Kind);
-            if (mark && !node.IsInside<FormDeclarationSyntax>())
-                return true;
-        }
-        return false;
-    }
+    // The lane of a sign the MUSIC writes in a book with no named part: never the form's (null),
+    // which RepeatStream reads as "the form wrote it".
+    private const string MusicLane = "music";
 
     /// <summary>Notes a repeat bar line of the music on the timeline (a plain one says nothing):
     /// a <c>:|</c> with its written <c>*N</c>, a <c>|:</c>, and a <c>:|:</c> as both.</summary>
     private void NoteRepeatSign(BarlineSyntax sign, int tick, string? lane)
     {
-        if (_timeline == null)
-            return;
         if (sign.BarToken.Kind is SyntaxKind.RepeatEndBar or SyntaxKind.RepeatBothBar)
             _timeline.Add(new RepeatSign(tick, RepeatSignKind.RepeatEnd,
                 Count: sign.HasExplicitRepeatCount ? sign.RepeatCount : null, Lane: lane));
@@ -2654,242 +2613,31 @@ public sealed class MidiExporter
                     PlaySectionByName(s.Name, track, conductorTrack, s.OctaveOffset);
                     break;
                 case FormWalk.Repeat repeat:
-                    _timeline!.Add(new RepeatSign(_currentTick, RepeatSignKind.RepeatStart));
+                    _timeline.Add(new RepeatSign(_currentTick, RepeatSignKind.RepeatStart));
                     PlayFormAsPrinted(repeat.Children, track, conductorTrack, repeat.ExplicitPlayCount);
                     break;
                 // Inside a block, the block's ':|' with the block's '*N'; and a ':|:' is both.
                 case FormWalk.RepeatEnd:
-                    _timeline!.Add(new RepeatSign(_currentTick, RepeatSignKind.RepeatEnd, Count: count));
+                    _timeline.Add(new RepeatSign(_currentTick, RepeatSignKind.RepeatEnd, Count: count));
                     break;
                 case FormWalk.BothBar:
-                    _timeline!.Add(new RepeatSign(_currentTick, RepeatSignKind.RepeatEnd, Count: count));
+                    _timeline.Add(new RepeatSign(_currentTick, RepeatSignKind.RepeatEnd, Count: count));
                     _timeline.Add(new RepeatSign(_currentTick, RepeatSignKind.RepeatStart));
                     break;
                 case FormWalk.Ending e:
-                    _timeline!.Add(new RepeatSign(_currentTick, RepeatSignKind.EndingStart, Passes: PassSet.Of(e.Node.Numbers)));
+                    _timeline.Add(new RepeatSign(_currentTick, RepeatSignKind.EndingStart, Passes: PassSet.Of(e.Node.Numbers)));
                     foreach (var s in e.Sections)
                         PlaySectionByName(s.Name, track, conductorTrack, s.OctaveOffset);
                     _timeline.Add(new RepeatSign(_currentTick, RepeatSignKind.EndingEnd));
                     break;
                 case FormWalk.LoneRepeatEnd:
-                    _timeline!.Add(new RepeatSign(_currentTick, RepeatSignKind.RepeatEnd));
+                    _timeline.Add(new RepeatSign(_currentTick, RepeatSignKind.RepeatEnd));
                     break;
                 case FormWalk.Other { Node: NavigationMarkSyntax nav }:
-                    _timeline!.Add(new RepeatSign(_currentTick, RepeatSignKind.Navigation, Navigation: nav.MarkType));
+                    _timeline.Add(new RepeatSign(_currentTick, RepeatSignKind.Navigation, Navigation: nav.MarkType));
                     break;
             }
         }
-    }
-
-    /// <summary>The state a replay puts back: the same three things PlayRepeatBlock /
-    /// ProcessRepeatSpan already restore per pass, plus the per-part pitch lanes, which those
-    /// two do not touch because a '|: … :|' body never rewinds past its own start.</summary>
-    private sealed record PieceState(
-        Dictionary<int, int> Ordinals,
-        Dictionary<string, (int, int, Fraction)> PitchLanes,
-        Dictionary<string, int> VelocityLanes,
-        Fraction Duration,
-        int Velocity,
-        int FlatRowBar);
-
-    private PieceState CaptureState() => new(
-        new Dictionary<int, int>(_sourceOrdinals),
-        new Dictionary<string, (int, int, Fraction)>(_partPitchLanes),
-        new Dictionary<string, int>(_partVelocity),
-        _defaultDuration,
-        _velocity,
-        _flatRows.Cursor);
-
-    /// <summary>Puts <paramref name="state"/> back, so the replayed stretch sounds as it did
-    /// the first time. The replayed music is ENGRAVED once, so its printed copies are the ones
-    /// already laid out — the ordinals restart from the snapshot, exactly as a '|: … :|' second
-    /// pass does (see PlayRepeatBlock).</summary>
-    private void RestoreState(PieceState state)
-    {
-        _sourceOrdinals = new Dictionary<int, int>(state.Ordinals);
-        _partPitchLanes.Clear();
-        foreach (var kv in state.PitchLanes)
-            _partPitchLanes[kv.Key] = kv.Value;
-        _partVelocity.Clear();
-        foreach (var kv in state.VelocityLanes)
-            _partVelocity[kv.Key] = kv.Value;
-        _defaultDuration = state.Duration;
-        _velocity = state.Velocity;
-        _flatRows.Cursor = state.FlatRowBar;
-    }
-
-    /// <summary>Plays one form item. The one switch both the first pass and a
-    /// from-the-beginning replay run — they used to be two hand-synced switches,
-    /// and a shape handled in one and not the other would make <c>A [1. B] :|</c>
-    /// play B once and then not at all.</summary>
-    private void PlayFormItem(FormWalk.Item item, MidiTrack track, MidiTrack conductorTrack)
-    {
-        switch (item)
-        {
-            case FormWalk.SectionRef s:
-                PlaySectionByName(s.Name, track, conductorTrack, s.OctaveOffset);
-                break;
-            case FormWalk.Repeat r:
-                PlayRepeatBlock(r, track, conductorTrack);
-                break;
-            // A volta ending no repeat block opened — `form { A [1. B] }`. There is
-            // nothing for it to be an alternative TO, so it sounds as its plain section,
-            // once.
-            // LILYPOND-REF: lily/alternative-sequence-iterator.cc:83-84 — Alternative_sequence_iterator::analyze defaults repeat-count to 1
-            // with no enclosing repeat, which is exactly "played once". Confirmed on
-            // 2.26.0 (a `\volta 1` alternative with no `\repeat` in front renders
-            // byte-identically to the bare music), and both
-            // MusicXmlExporter and LilyPondExporter already read it this way; MIDI and
-            // the page were the two walks that dropped it. Saying so to the author is
-            // the other half of the repair and lives in FormDeclarationValidator.
-            case FormWalk.Ending e:
-                foreach (var s in e.Sections)
-                    PlaySectionByName(s.Name, track, conductorTrack, s.OctaveOffset);
-                break;
-            // A one-sided ':|' only rewinds on the FIRST pass (PlayForm's loop); inside
-            // a replayed stretch it does NOT rewind again — that would not terminate.
-            // One rewind per written ':|' is what the sign says. Display relabels and
-            // anything else are visual and skipped — the navigation marks included: WHERE
-            // a jump text sends the walk is PlayForm's (FormRoute), not this switch's, and
-            // the signs (segno, coda) are the points it comes back to.
-        }
-    }
-
-    /// <summary>
-    /// Replays form items <c>[0, upTo)</c> — the piece from its beginning up to the
-    /// one-sided <c>:|</c> — restoring the state the piece started from so the second pass
-    /// sounds like the first.
-    /// </summary>
-    private void RepeatFromTheBeginning(IReadOnlyList<FormWalk.Item> items, int upTo,
-        MidiTrack track, MidiTrack conductorTrack, PieceState piece)
-    {
-        RestoreState(piece);
-        for (int j = 0; j < upTo; j++)
-            PlayFormItem(items[j], track, conductorTrack);
-    }
-
-    /// <param name="lastPassOnly">True on a D.C./D.S. replay (PlayForm): the block plays once,
-    /// on its last pass — the body, then the ending that pass names.</param>
-    private void PlayRepeatBlock(FormWalk.Repeat repeatBlock, MidiTrack track, MidiTrack conductorTrack,
-        bool lastPassOnly = false)
-    {
-        // The body carries each reference's OWN octave shift, not just its name: `|: ~A ~A' :|`
-        // is two different plays of one section and the list has to keep them apart.
-        // A ':|:' INSIDE the block closes one repeat and opens the next (`|: B :|: C :|` is
-        // `|: B :| |: C :|` — the page's ProcessRepeatBlock, the twin's AppendRepeatBlock and
-        // MusicXML's EmitPlainRepeatBlock all split there), so the children are RUNS, each
-        // played as its own repeat with its own endings. MEASURED 2026-09-10 (session 363):
-        // this walk read the block as one body and sounded B C B C where the other three
-        // readers give B B C C — no book on disk writes the divider inside a block (925
-        // scanned), so the observers are FormRepeatBarlineTests' own.
-        var body = new List<(string Name, int OctaveOffset)>();
-        // One entry per ENDING: the passes its bracket names and the sections it plays in
-        // order ([1-2. C D] is {1, 2} and C then D).
-        var alternatives = new List<(PassSet Passes, List<(string Name, int OctaveOffset)> Sections)>();
-        foreach (var child in repeatBlock.Children)
-        {
-            switch (child)
-            {
-                // …a silent reference counts inside a repeat body too. See PlayForm's remark.
-                case FormWalk.SectionRef s:
-                    body.Add((s.Name, s.OctaveOffset));
-                    break;
-                case FormWalk.Ending e:
-                    alternatives.Add((PassSet.Of(e.Node.Numbers),
-                        e.Sections.Select(s => (s.Name, s.OctaveOffset)).ToList()));
-                    break;
-                case FormWalk.BothBar:
-                    PlayRepeatRun(repeatBlock, body, alternatives, track, conductorTrack, lastPassOnly);
-                    body = new List<(string Name, int OctaveOffset)>();
-                    alternatives = new List<(PassSet, List<(string Name, int OctaveOffset)>)>();
-                    break;
-            }
-        }
-        PlayRepeatRun(repeatBlock, body, alternatives, track, conductorTrack, lastPassOnly);
-    }
-
-    /// <summary>One <c>|: body [endings] :|</c> run of a form repeat block — the whole block
-    /// when it holds no <c>:|:</c>. The written <c>:|*N</c> is the block's and applies to
-    /// every run, as the LilyPond twin writes it on each run's close.</summary>
-    private void PlayRepeatRun(FormWalk.Repeat repeatBlock,
-        List<(string Name, int OctaveOffset)> body,
-        List<(PassSet Passes, List<(string Name, int OctaveOffset)> Sections)> alternatives,
-        MidiTrack track, MidiTrack conductorTrack, bool lastPassOnly = false)
-    {
-        if (body.Count == 0 && alternatives.Count == 0)
-            return;
-        // The SAME rule the music stream plays by (ProcessRepeatSpan, RepeatPasses): an
-        // explicit `:|*N` wins, else the highest pass an ending names, else 2 — and on pass p
-        // the ending whose numbers name p.
-        // ⚠️ THIS ARM USED TO READ NEITHER — it was `Math.Max(2, alternatives.Count)`, so a
-        // form's `:|*3` was silently dropped and the piece sounded twice while the same music
-        // written inline sounded three times (MEASURED 2026-08-31: 24 note-ons against 16, on
-        // one book spelled both ways). The page draws no count either way, and the LilyPond
-        // twin has always honoured it (LilyPondExporter.AppendRepeatBlock), so MIDI was the
-        // one reader of the four that disagreed — and only about the FORM spelling, which is
-        // why it survived: until LYS1034 an author could write the count in the music, where
-        // it worked. Nineteen books on disk write `:|*N`.
-        // ⚠️ AND UNTIL 2026-09-29 IT READ NO ENDING NUMBER EITHER (HANDOFF 第663 ⑾): the i-th
-        // written ending played on pass i and the count was the number of endings, so
-        // `|: A [1-2. B] :| [3. C]` sounded A B A C while the same music written inline
-        // sounded A B A B A C (FormEndingPassTests).
-        var endingPasses = new List<PassSet>(alternatives.Count);
-        foreach (var alternative in alternatives)
-            endingPasses.Add(alternative.Passes);
-        int passes = RepeatPasses.Count(repeatBlock.ExplicitPlayCount, endingPasses);
-        // A structure repeat is engraved once (repeat barlines): later passes
-        // revisit the same printed BODY copy, so the body's ordinals restart from
-        // this snapshot each pass (the highlight re-lights the same printed body).
-        var structOrdSnapshot = new Dictionary<int, int>(_sourceOrdinals);
-        // A flat chord track's bars are printed once too: the body's for every pass, each ending's after it.
-        int BarsOfRun(IEnumerable<string> names) => names.Sum(n => _sectionBars.Canonical.GetValueOrDefault(n));
-        int flatBody = _flatRows.Cursor, flatEndings = flatBody + BarsOfRun(body.Select(b => b.Item1));
-        var flatEnding = new List<int>(alternatives.Count);
-        foreach (var alternative in alternatives)
-        {
-            flatEnding.Add(flatEndings);
-            flatEndings += BarsOfRun(alternative.Sections.Select(s => s.Item1));
-        }
-        // On a D.C./D.S. replay the run is heard once, as its LAST pass: the body and the
-        // ending that pass names (`|: A [1. B] :| [2. C]` replays A C) — the performer's
-        // convention that repeats are not taken after the jump (FormRoute).
-        for (int pass = lastPassOnly ? passes : 1; pass <= passes; pass++)
-        {
-            // A tie is carried to whatever is PLAYED next — back to the body at a new pass,
-            // into this pass's ending — as the page draws it (SectionPlayGraph).
-            if (pass > 1)
-                _sourceOrdinals = new Dictionary<int, int>(structOrdSnapshot);
-            _flatRows.Cursor = flatBody;
-            foreach (var (name, bodyOctave) in body)
-                PlaySectionByName(name, track, conductorTrack, bodyOctave);
-            int ending = RepeatPasses.EndingFor(pass, endingPasses);
-            if (ending >= 0)
-            {
-                // Each ENDING, unlike the body, is a distinct printed copy laid out
-                // in written order after the body. When the endings reuse the body's
-                // section they share its source positions, so the body's per-pass
-                // ordinal restart would otherwise map every ending onto the FIRST
-                // ending's printed copy (highlighting ending 1 each pass, never
-                // ending 2). Advance the body's positions by the ENDING's index — not
-                // the pass: a ranged `[1-2. B]` is ONE printed copy played twice — so
-                // this pass's ending resolves to its OWN printed copy. Only positions
-                // the body just bumped are advanced, leaving intro/outro sections intact.
-                if (ending > 0)
-                {
-                    foreach (var key in new List<int>(_sourceOrdinals.Keys))
-                    {
-                        structOrdSnapshot.TryGetValue(key, out int before);
-                        if (_sourceOrdinals[key] > before)
-                            _sourceOrdinals[key] += ending;
-                    }
-                }
-                // An ending's sections play in order, as one stretch of the pass.
-                _flatRows.Cursor = flatEnding[ending];
-                foreach (var (name, endingOctave) in alternatives[ending].Sections)
-                    PlaySectionByName(name, track, conductorTrack, endingOctave);
-            }
-        }
-        _flatRows.Cursor = flatEndings;
     }
 
     /// <summary>
@@ -3117,49 +2865,24 @@ public sealed class MidiExporter
             }
             // A book that writes its repeats in the music is walked once and played afterwards
             // (PlayedTimeline): here the signs are only noted, each where it stands.
-            if (_timeline != null)
+            if (items[i] is BarlineSyntax sign)
+                NoteRepeatSign(sign, _currentTick, _currentPart ?? MusicLane);
+            else if (items[i] is InlineVoltaSyntax ending)
             {
-                if (items[i] is BarlineSyntax sign)
-                    NoteRepeatSign(sign, _currentTick, _currentPart);
-                else if (items[i] is InlineVoltaSyntax ending)
-                {
-                    _timeline.Add(new RepeatSign(_currentTick, RepeatSignKind.EndingStart, Passes: PassSet.Of(ending.Numbers), Lane: _currentPart));
-                    ProcessSequence(ending.Items.ToList(), track, conductorTrack);
-                    _timeline.Add(new RepeatSign(_currentTick, RepeatSignKind.EndingEnd, Lane: _currentPart));
-                    continue;
-                }
-                else if (items[i] is NavigationMarkSyntax nav)
-                {
-                    _timeline.Add(new RepeatSign(_currentTick, RepeatSignKind.Navigation, Navigation: nav.MarkType, Lane: _currentPart));
-                    continue;
-                }
+                _timeline.Add(new RepeatSign(_currentTick, RepeatSignKind.EndingStart, Passes: PassSet.Of(ending.Numbers), Lane: _currentPart ?? MusicLane));
+                ProcessSequence(ending.Items.ToList(), track, conductorTrack);
+                _timeline.Add(new RepeatSign(_currentTick, RepeatSignKind.EndingEnd, Lane: _currentPart ?? MusicLane));
+                continue;
             }
-            else if (IsRepeatBar(items[i], SyntaxKind.RepeatStartBar))
+            else if (items[i] is NavigationMarkSyntax nav)
             {
-                int end = FindMatchingRepeatEnd(items, i);
-                if (end > i)
-                {
-                    int last = ProcessRepeatSpan(items, i, end, track, conductorTrack);
-                    i = last; // continue after the repeat (and any trailing endings)
-                    continue;
-                }
+                _timeline.Add(new RepeatSign(_currentTick, RepeatSignKind.Navigation, Navigation: nav.MarkType, Lane: _currentPart ?? MusicLane));
+                continue;
             }
-            // ⚠️ A ':|' reached HERE is NOT necessarily one-sided, and THIS WALK CANNOT TELL.
-            // It sees one SECTION's music, and a '|:' opened in another section pairs with a
-            // ':|' in this one — the collector's flattened measure stream is where that
-            // becomes visible, which is exactly why LYS4017 is decided there and not here.
-            // MEASURED, and it is why this arm does nothing: a first version treated it as
-            // one-sided and rewound the piece, which changed 3 correctly written books in the
-            // author's library (ABC, Automatic, Beat It — each spelling '|:' in one section
-            // and '] :|' in a later one) by replaying the whole song.
-            // Only the FORM-level ':|' gets the from-the-beginning meaning, where PlayForm
-            // sees the whole piece and the parser guarantees a form repeat block closes at
-            // form level. A one-sided ':|' written inside section music is therefore still
-            // not played — measured 2026-08-15: ZERO of the 133 books on disk that contain a
-            // repeat barline spell one. ⚠️ A BOOK THAT WRITES A SIGN IN ITS MUSIC IS NOT UNFOLDED
-            // HERE: it is laid out once, this walk only noting the signs, and unfolded on the
-            // score's timeline (PlayFormAsPrinted, Midi.PlayedTimeline), where a ':|' in one
-            // section does find the '|:' of another.
+            // NO SIGN IS UNFOLDED HERE: this walk sees one section's music, and a '|:' opened in
+            // one section pairs with a ':|' in another (three books of the author's library spell
+            // that). The music is laid out once, the signs noted where they stand (just above), and
+            // the piece unfolded on the score's timeline (PlayFormAsPrinted, Midi.PlayedTimeline).
             // A percent mark in its repeat sounds the bars once more (ProcessPercentRepeat).
             if (items[i] is PercentMarkSyntax { Parent: PercentRepeatSyntax } && _percentFrames.Count > 0)
             {
@@ -3230,81 +2953,6 @@ public sealed class MidiExporter
         (_currentOctave, _currentNoteName, _defaultDuration) = frame;
         ProcessSequence(body, track, conductorTrack);
     }
-
-    /// <summary>
-    /// Plays a <c>|: … :|</c> span: the common body N times, selecting the matching
-    /// inline volta ending (<c>[1. …] [2. …]</c>) on each pass. N comes from an
-    /// explicit <c>:|*N</c>, else the highest volta number, else the default 2
-    /// (<see cref="RepeatPasses"/> — the rule the form's readers share since 2026-09-29).
-    /// Returns the index of the last item consumed (the <c>:|</c> or the last
-    /// trailing ending) so the caller resumes after it.
-    /// </summary>
-    /// <remarks>LILYPOND-REF: scm/music-functions.scm (unfold-repeats); lily/volta-repeat-iterator.cc — body performed N times, i-th ending per pass.</remarks>
-    private int ProcessRepeatSpan(List<SyntaxNode> items, int start, int end,
-        MidiTrack track, MidiTrack conductorTrack)
-    {
-        // Partition the inner span into the common body and any inline volta endings.
-        var body = new List<SyntaxNode>();
-        var endings = new List<InlineVoltaSyntax>();
-        for (int k = start + 1; k < end; k++)
-        {
-            if (items[k] is InlineVoltaSyntax ev)
-                endings.Add(ev);
-            else if (endings.Count == 0)
-                body.Add(items[k]);
-            // (items after an early ending but before :| are non-standard; ignored.)
-        }
-
-        // Trailing endings live after the :| (e.g. |: body [1. …] :| [2. …]).
-        int last = end;
-        for (int k = end + 1; k < items.Count && items[k] is InlineVoltaSyntax lv; k++)
-        {
-            endings.Add(lv);
-            last = k;
-        }
-
-        var endBar = items[end] as BarlineSyntax;
-        // The rule every reader plays a run by (RepeatPasses): the written `:|*N`, else the
-        // highest pass an ending names (at least two), else 2; on pass p the ending naming p.
-        var endingPasses = new List<PassSet>(endings.Count);
-        foreach (var e in endings)
-            endingPasses.Add(PassSet.Of(e.Numbers));
-        int count = RepeatPasses.Count(endBar?.HasExplicitRepeatCount == true ? endBar.RepeatCount : null, endingPasses);
-
-        int savedName = _currentNoteName, savedOctave = _currentOctave, savedVelocity = _velocity;
-        var savedDuration = _defaultDuration;
-        // The repeat span is ENGRAVED once: later passes replay the same
-        // printed copies, so their ordinals restart from this snapshot.
-        var ordinalSnapshot = new Dictionary<int, int>(_sourceOrdinals);
-        for (int pass = 1; pass <= count; pass++)
-        {
-            _currentNoteName = savedName;
-            _currentOctave = savedOctave;
-            SetLevel(savedVelocity, written: false);
-            _defaultDuration = savedDuration;
-            if (pass > 1)
-                _sourceOrdinals = new Dictionary<int, int>(ordinalSnapshot);
-            // The `:|` that ends a turn is not walked, so where the turn ends is no bar line
-            // this walk saw: the bar grid starts over unknown (AlignBarLine leaves its first bar).
-            if (pass > 1)
-                OpenBarGrid(track, null);
-
-            ProcessSequence(body, track, conductorTrack);
-
-            int ending = RepeatPasses.EndingFor(pass, endingPasses);
-            if (ending >= 0)
-            {
-                OpenBarGrid(track, null);
-                ProcessSequence(endings[ending].Items.ToList(), track, conductorTrack);
-            }
-        }
-        OpenBarGrid(track, null);
-
-        return last;
-    }
-
-    private static bool IsRepeatBar(SyntaxNode node, SyntaxKind kind)
-        => node is BarlineSyntax b && b.BarToken.Kind == kind;
 
     /// <summary>Opens a lane's bar grid at the current tick: its first bar is held to
     /// <paramref name="firstBarTicks"/> when the parts disagree about it, to the pickup when
@@ -3460,21 +3108,6 @@ public sealed class MidiExporter
     /// the one beat the page draws, not the whole bar it drew nothing of.</summary>
     private int MeasureTicks()
         => FractionToTicks(_bars.BarLength);
-
-    private static int FindMatchingRepeatEnd(List<SyntaxNode> items, int start)
-    {
-        int depth = 0;
-        for (int i = start + 1; i < items.Count; i++)
-        {
-            if (IsRepeatBar(items[i], SyntaxKind.RepeatStartBar)) depth++;
-            else if (IsRepeatBar(items[i], SyntaxKind.RepeatEndBar))
-            {
-                if (depth == 0) return i;
-                depth--;
-            }
-        }
-        return -1; // unmatched |: — caller falls back to normal processing
-    }
 
     /// <summary>
     /// Calculates the MIDI pitch using LilyPond's relative octave algorithm.

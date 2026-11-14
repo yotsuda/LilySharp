@@ -191,10 +191,17 @@ LYS1034 は**最後に**外す。エラーの本も今は描けて鳴るので�
 道順は `FormRoute`、回数と ending は `RepeatPasses` をそのまま使う。網は `InlineRepeatMidiTests`（16 本・毒で 27 赤）。
 
 - 全パートが従う（コードの行に書いた記号にも）。section をまたぐ対、form の `:|` が音楽の `|:` を閉じる形、`ds`／`dc`／`al fine`／`al coda` を読む。
-- ⚠️ **読み手が 2 つある。** 音楽に記号を 1 つも書かない本は今までどおり `PlayForm` の歩きが鳴らす（既存の本の音は 1 つも動かしていない）。
-  同じ form を 2 通りに読むので、**`PlayForm` の歩きを `PlayedTimeline` に寄せて 1 つにする**のが残り（下の差を決めてから）。
-- 2 つの読み手の差（わかっている分）: ジャンプをまたぐタイは、新しい方はジャンプで切る（古い方は次に鳴る音へ運ぶ）。
-  テンポ・拍子・調・ペダルは、新しい方は「刷った位置で効いていたもの」に戻す（古い方は鳴った順に引き継ぐ）。
+- ✅ **読み手は 1 つ（第1255・オーナー指示 2026-11-15「あるべき妥当な形に」）。** どの本も刷った順に 1 回歩いて列で展開する。
+  form 専用の歩き（`PlayRepeatBlock`・`PlayRepeatRun`・`RepeatFromTheBeginning`・音楽の `ProcessRepeatSpan`）は外した（`MidiExporter.cs` −387 行）。
+  - 外す前の実測（Lab `sessions/p1255`・`midi-sweep.ps1`＝1041 冊・1268 本の .mid を古い歩きと突き合わせ）: 1265 本がバイト一致・違う 3 本は 1 冊（ABC）で、古い歩きが書いていた冗長な拍子イベント 1 個だけ。
+    テンポ・拍子・調・タイは探り譜でも同じだった（古い歩きも section の頭で戻していた＝第1243 の「差」の記述は、form の反復では起きない）。
+  - **2 つが違った点と、決めた規則＝「戻った小節は、そこに刷られているとおりに鳴る」**:
+    ⑴ form の `|: … :|` の中で変えた強弱（`|: c1 | d1@ff :|`）は、古い歩きだけ 2 回目の頭へ持ち越していた（2 回目の c が ff）。同じ歩きの `dc`／`ds`／片側の `:|` と、音楽に書いた反復は頭の強さに戻していた＝古い歩きの中でも食い違っていた。戻す側に統一（網 `AReplayedBarSoundsAsItIsPrinted`）。LilyPond の MIDI は時間順に持ち越す＝LILYSHARP-OWN。
+    ⑵ 反復記号をまたいで踏んだままのペダル（LYS4023 が「そこで切る」と言う形）は、古い歩きは次に踏むまで踏みっぱなしだった。今は戻った位置の状態（離す）。
+  - 途中で見つけて直した欠陥: 列の最後の区間が、曲の終わりの tick に在るペダルの離しを落としていた（音楽に記号を書いた本で、踏んだまま終わる曲のペダルが .mid に残る）。網 `APedalThePieceEndsUnderIsLifted_AfterARepeatToo`。
+  - ⚠️ **決まっていない規則が 1 つ（オーナーに訊く）**: `[1. B] :| [2. C] [3. D]`＝3 番括弧の前に `:|` が無い形。form に書くと「反復が開いていない ending」＝2 回＋D を 1 回（LYS6008・ページ・双子・MusicXML もその読み）、音楽に書くと 3 回繰り返す（`MidiRepeatTests.InlineVoltas_CountInferredFromHighestNumber`）。
+    どちらも今までどおりに残した（`RepeatStream.Elements` が「form が書いた ending か」で分ける）。オーナーのコーパスの 11 冊が form でこの形を書いていて、元の .ly は `\repeat volta 3` ＋ alternative 3 つ（＝3 回）。
+    3 回に統一するなら form の読み手（ページ・双子・MusicXML・LYS6008）も一緒に変える。網 `AFormsThirdEndingWithNoRepeatSignBeforeIt_IsPlayedOnce`。
 - 残り: 反復の中に書いたナビ記号はたどらない（form と同じ）／1 つのパートの 2 つの声部が同じ記号を書くと 2 つと数える／
   歌詞は刷った位置の言葉をそのまま繰り返す（Q3）。
 

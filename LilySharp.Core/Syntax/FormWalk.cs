@@ -78,8 +78,8 @@ internal static class FormWalk
     /// <remarks>
     /// ⚠️ <paramref name="ExplicitPlayCount"/> is null when no <c>*N</c> was written, and the
     /// difference matters to anyone who ALSO counts endings: the music stream's rule is
-    /// "an explicit count, else the highest ending number, else 2" (MidiExporter
-    /// ProcessRepeatSpan), and a reader that only sees <c>PlayCount</c>'s defaulted 2 cannot
+    /// "an explicit count, else the highest ending number, else 2" (Semantics.RepeatPasses),
+    /// and a reader that only sees <c>PlayCount</c>'s defaulted 2 cannot
     /// spell that rule. MEASURED 2026-08-31, which is why it is here: MIDI's form-side arm
     /// read neither and hard-coded <c>Math.Max(2, endings)</c>, so <c>form { |: ~X :|*3 }</c>
     /// sounded twice while the same music written <c>|: … :|*3</c> sounded three times.

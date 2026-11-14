@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 439 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **566** | |
+| `OWN` | 440 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **567** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -24,8 +24,8 @@
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 23 |
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 21 |
 | `LilySharp.Core/Svg/Layout/ProseBand.cs` | 18 |
+| `LilySharp.Core/Midi/MidiExporter.cs` | 16 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 16 |
-| `LilySharp.Core/Midi/MidiExporter.cs` | 15 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
 | `LilySharp.Core/Svg/Collector/MeasureCollector.cs` | 10 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 10 |
@@ -247,7 +247,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（439 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（440 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -313,6 +313,7 @@
 - **`MidiExporter.ProcessNode`** LILYSHARP-OWN: LilyPond's \cueDuring quotes a voice into a CueVoice, which its
 - **`MidiExporter.PlayChordRow`** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
 - **`MidiExporter.RowsAndLanesEnd`** 0 1 2 4 5 for 0 1 2 3 4). LILYSHARP-OWN: LilyPond performs no ChordNames context. The parts
+- **`MidiExporter.PlayForm`** again. LILYSHARP-OWN: LilyPond's MIDI unfolds the music in time
 - **`MidiExporter._sequenceClosedAt`** part's bar 3 at 3840 — a bar early from there on. LILYSHARP-OWN. ⚠️ Not a drum chart: the
 - **`MidiExporter.ProcessChord`** (Music.Harmonics.ArtificialSounds; LILYSHARP-OWN — LilyPond plays the two written).
 - **`MidiExporter.SwingNotes`** LILYSHARP-OWN: LilyPond's MIDI plays its swing equation straight unless the score asks for
