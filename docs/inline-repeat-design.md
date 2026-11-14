@@ -171,7 +171,9 @@ LYS1034 は**最後に**外す。エラーの本も今は描けて鳴るので�
     足りない回は最後に書いた verse（`lastVerseGoesOn`・規則 5 の `ds` の戻りも同じ腕）。反復を持つ section は、どの印刷にも verse を全部重ねる
     （`LyricsCollector.SectionRepeatsItself`・規則 4）。網 `AVerseIsThePassOfTheRepeat`。
   - ⚠️ **「足りない回は最後の verse」は音楽に記号を書いた本だけ。** form だけで反復を書いた本（古い経路）は、verse の無い回に何も歌わないまま＝揃えるかはオーナーに訊く。
-  - 残り: 下の表の警告 4 種と quick fix。
+  - **警告 LYS4080 と quick fix（第1243）**: 下の表の上 3 行を実装（`VerseRepeatValidator`・`Editing.VerseRepeatFixes`・網 `VerseRepeatValidatorTests`）。
+    回数は section の音楽が求める最大（`:|*N`・ending の最大の番号・どちらも無ければ 2）。「反復を 3 回にする」の fix は入れていない（記号が複数のパートにあると全部を直す必要があるため）。
+  - 残り: 表の 4 行目（N 回目に歌われない小節に `verse N` の言葉）。小節ごとの回が要る。
 
 ## 7. 経過
 
