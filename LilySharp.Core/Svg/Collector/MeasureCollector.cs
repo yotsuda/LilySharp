@@ -1215,6 +1215,11 @@ public sealed partial class MeasureCollector
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
         _chordNameCollector.MeterByMeasure = MeterTimeline(measures, _v.Meta.TimeBeats, _v.Meta.TimeBeatType);
+        // (Written beside the meter's. ⚠️ No score reaches CollectAttached on this road or on
+        // BuildMultiVoiceScore's today: a track on a staff is a row of the score, and a score
+        // with a row is collected by CollectMultiStaff — RenderSpec.IsMultiStaff. Emptying
+        // either table here turns no net red, session 1242's poisons 7 and 8.)
+        _chordNameCollector.PickupByMeasure = PickupTimeline(measures);
         // (The nameless `chords { }` auto-attach is gone — LYS0032. A chord part
         // renders only where a score places its row.)
         if (attachedChordPart != null)
@@ -1353,6 +1358,54 @@ public sealed partial class MeasureCollector
                     && (tsc.NewTime.Beats, tsc.NewTime.BeatType) != (timeline[^1].Beats, timeline[^1].BeatType))
                     timeline.Add((i, tsc.NewTime.Beats, tsc.NewTime.BeatType));
         return timeline;
+    }
+
+    /// <summary>The pickup bars of a finished voice, by measure, each with the length its items
+    /// sound — what a chord row's bar there is gridded on
+    /// (<see cref="ChordNameCollector.PickupByMeasure"/>).</summary>
+    internal static Dictionary<int, Fraction> PickupTimeline(IReadOnlyList<Measure> measures)
+    {
+        var pickups = new Dictionary<int, Fraction>();
+        AddPickups(pickups, measures);
+        return pickups;
+    }
+
+    private static void AddPickups(Dictionary<int, Fraction> pickups, IReadOnlyList<Measure> measures)
+    {
+        for (int m = 0; m < measures.Count; m++)
+        {
+            if (!measures[m].IsPickup)
+                continue;
+            var sum = Fraction.Zero;
+            foreach (var it in measures[m].Items)
+                sum += it.Duration;
+            // The longest any voice sounds there, as FitRowsToMusicBars reads the bar's length.
+            if (sum > Fraction.Zero && (!pickups.TryGetValue(m, out var standing) || sum > standing))
+                pickups[m] = sum;
+        }
+    }
+
+    /// <summary>The pickup bars the chord rows grid on the beats they have: the music voices'
+    /// (<see cref="PickupTimeline"/>), or — on a rows-only sheet — the structure's bar table
+    /// (<see cref="RowsOnlyBarLengths"/>: the section headers' <c>partial</c>).</summary>
+    private static Dictionary<int, Fraction> RowPickupTimeline(
+        Dictionary<string, ImmutableArray<Voice>> staffVoices, IReadOnlySet<string> rowNames,
+        IReadOnlyList<RowsOnlyBar>? rowsOnlyBars)
+    {
+        var pickups = new Dictionary<int, Fraction>();
+        bool music = false;
+        foreach (var (name, voices) in staffVoices)
+            if (!rowNames.Contains(name))
+                foreach (var v in voices)
+                {
+                    music |= v.Measures.Length > 0;
+                    AddPickups(pickups, v.Measures);
+                }
+        if (!music && rowsOnlyBars != null)
+            for (int m = 0; m < rowsOnlyBars.Count; m++)
+                if (rowsOnlyBars[m].IsPickup)
+                    pickups[m] = rowsOnlyBars[m].Length;
+        return pickups;
     }
 
     /// <summary>The meter timeline the chord rows grid their bars on: the longest music
@@ -1995,6 +2048,7 @@ public sealed partial class MeasureCollector
         // (RowsOnlyBarLengths): the header's pickup and meter, which no walk applied to a row.
         var rowsOnlyBars = RowsOnlyBarLengths(tree.GetRoot(), staffVoices, rowNames);
         _chordNameCollector.MeterByMeasure = RowMeterTimeline(staffVoices, rowNames, rowsOnlyBars);
+        _chordNameCollector.PickupByMeasure = RowPickupTimeline(staffVoices, rowNames, rowsOnlyBars);
         // How many rows of each (track, diagram tuning) the score places: the LAST of them
         // draws the diagrams, the ones above it the names alone — name, name, diagram
         // (ChordNameCollector.DiagramsDrawOnALaterRow).
@@ -3056,6 +3110,7 @@ public sealed partial class MeasureCollector
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
         _chordNameCollector.MeterByMeasure = MeterTimeline(track0, _v.Meta.TimeBeats, _v.Meta.TimeBeatType);
+        _chordNameCollector.PickupByMeasure = PickupTimeline(track0);
         // Attached chords on a multi-voice single staff — collected here because
         // Collect's own CollectAttached is skipped by the multi-voice early return.
         if (attachedChordPart != null)

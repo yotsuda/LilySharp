@@ -575,7 +575,7 @@ public sealed partial class LilyPondExporter
             var barLength = firstBar && pickup is { } p ? p : barMeter;
             result.Add(new ChordBarMarker(pending.Count == 0
                 ? "s" + ChordModeDuration(barLength)
-                : ChordBarText(pending, key, barLength)));
+                : ChordBarText(pending, key, barLength, firstBar && pickup != null)));
             pending.Clear();
             firstBar = false;
             // The bar's own breaks stand after its chords, before its bar line.
@@ -623,16 +623,19 @@ public sealed partial class LilyPondExporter
     /// chord row has no <c>s</c> slot since 2026-09-04, LYS1028.) The grid is the score
     /// meter's, as the page reads it.
     /// </summary>
-    private string ChordBarText(List<SyntaxNode> slots, (int TonicStep, int Sharps) key, Fraction barLength)
+    private string ChordBarText(List<SyntaxNode> slots, (int TonicStep, int Sharps) key, Fraction barLength,
+        bool isPickup = false)
     {
-        // The page grids every bar on the meter (ChordRhythm); a PICKUP bar is shorter, and
-        // its slots are scaled to it so the chords keep their share of the bar they stand in.
+        // The page grids every bar on the meter (ChordRhythm). A PICKUP bar is gridded on the
+        // beats it has (ChordRhythm.BeatsOf, the page's PickupByMeasure); a bar of another
+        // length is scaled to it so the chords keep their share of the bar they stand in.
         var meter = _bars.HomeMeter.Length;
+        bool pickupGrid = isPickup && barLength < meter;
         var sb = new StringBuilder();
         foreach (var (node, _, gridDur) in Svg.Collector.ChordNameCollector.SlotGroups(
-                     slots, _bars.HomeMeter.Beats, _bars.HomeMeter.BeatType, out _))
+                     slots, _bars.HomeMeter.Beats, _bars.HomeMeter.BeatType, out _, pickupGrid ? barLength : null))
         {
-            var dur = barLength.Equals(meter) ? gridDur : gridDur * barLength / meter;
+            var dur = pickupGrid || barLength.Equals(meter) ? gridDur : gridDur * barLength / meter;
             if (sb.Length > 0)
                 sb.Append(' ');
             string d = ChordModeDuration(dur);

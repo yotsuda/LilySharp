@@ -204,6 +204,17 @@ internal sealed class ChordNameCollector
         return eff;
     }
 
+    /// <summary>The score's PICKUP bars, by measure, each with its length — read off the music's
+    /// measures or, on a rows-only sheet, its section headers, as <see cref="MeterByMeasure"/>
+    /// is, and set with it before any row is walked. A row's bar there is gridded on the beats
+    /// the pickup has (<see cref="ChordRhythm.BeatsOf"/>), not on the whole meter's.</summary>
+    public IReadOnlyDictionary<int, Fraction> PickupByMeasure { get; set; } = new Dictionary<int, Fraction>();
+
+    /// <summary>The length of the pickup bar at <paramref name="measure"/>, or null for a bar
+    /// that is not one.</summary>
+    private Fraction? PickupAt(int measure)
+        => PickupByMeasure.TryGetValue(measure, out var length) ? length : null;
+
     /// <summary>EVERY start measure of each section across the structure, so a chord
     /// track repeats under a reprise (A played again as "A2" gets its chords again).
     /// Null falls back to the single first-occurrence start.</summary>
@@ -317,6 +328,7 @@ internal sealed class ChordNameCollector
         _items.Clear();
         _gridWarnings.Clear();
         MeterByMeasure = [];
+        PickupByMeasure = new Dictionary<int, Fraction>();
     }
 
     /// <summary>Adds one inline chord name (a <c>@chord(c:m)</c> mark on a note). The
@@ -452,7 +464,7 @@ internal sealed class ChordNameCollector
             int mi = MeasureOfBar(startMeasure, localMeasure, out var split);
             int emittedFrom = _items.Count;
             var (barBeats, barBeatType) = MeterAt(mi, timeBeats, timeBeatType);
-            ForEachSlotGroup(pending, barBeats, barBeatType, (node, timing, _) =>
+            ForEachSlotGroup(pending, barBeats, barBeatType, PickupAt(mi), (node, timing, _) =>
             {
                 if (node is RestSyntax rest)
                 {
@@ -623,15 +635,16 @@ internal sealed class ChordNameCollector
     /// group — the time still passes), are recorded in <see cref="GridWarnings"/>
     /// for ChordRowGridValidator to surface.
     /// </summary>
-    private void ForEachSlotGroup(List<SyntaxNode> items, int timeBeats, int timeBeatType,
+    private void ForEachSlotGroup(List<SyntaxNode> items, int timeBeats, int timeBeatType, Fraction? pickup,
         Action<SyntaxNode, Fraction, Fraction> emit)
     {
-        var groups = SlotGroups(items, timeBeats, timeBeatType, out bool equalFallback);
+        var groups = SlotGroups(items, timeBeats, timeBeatType, out bool equalFallback, pickup);
         foreach (var (node, timing, dur) in groups)
             emit(node, timing, dur);
         if (equalFallback)
             _gridWarnings.Add(new ChordRowGridWarning(
-                PositionOf(items[0]), items.Count, timeBeats, timeBeatType));
+                PositionOf(items[0]), items.Count, timeBeats, timeBeatType,
+                pickup is { } p && p > Fraction.Zero && p < new Fraction(timeBeats, timeBeatType) ? p : null));
     }
 
     /// <summary>
@@ -642,15 +655,23 @@ internal sealed class ChordNameCollector
     /// still passes). <paramref name="equalFallback"/> reports a slot count that fits no grid
     /// shape and was divided equally (the page's LYS2009).
     /// </summary>
+    /// <param name="pickup">The bar's length when it is a pickup, shorter than the meter's bar:
+    /// its slots are read on the beats it has (<see cref="ChordRhythm.BeatsOf"/>), and the
+    /// equal division is of that length. Every reader hands the same one — the page
+    /// (<see cref="PickupByMeasure"/>), the sound, the MusicXML and the twin.</param>
     internal static List<(SyntaxNode Node, Fraction Timing, Fraction Duration)> SlotGroups(
-        IReadOnlyList<SyntaxNode> items, int timeBeats, int timeBeatType, out bool equalFallback)
+        IReadOnlyList<SyntaxNode> items, int timeBeats, int timeBeatType, out bool equalFallback,
+        Fraction? pickup = null)
     {
         int slotCount = items.Count;
-        var slots = ChordRhythm.SlotDurations(slotCount, timeBeats, timeBeatType);
+        var meterBar = new Fraction(timeBeats, timeBeatType);
+        if (pickup is { } p && (p <= Fraction.Zero || p >= meterBar))
+            pickup = null;
+        var slots = ChordRhythm.SlotDurations(slotCount, timeBeats, timeBeatType, pickup);
         equalFallback = slots == null;
         if (slots == null)
         {
-            var equal = new Fraction(timeBeats, timeBeatType) * new Fraction(1, slotCount);
+            var equal = (pickup ?? meterBar) * new Fraction(1, slotCount);
             var eq = System.Collections.Immutable.ImmutableArray.CreateBuilder<Fraction>(slotCount);
             for (int i = 0; i < slotCount; i++)
                 eq.Add(equal);
@@ -928,7 +949,7 @@ internal sealed class ChordNameCollector
         ChordDisplayMode mode = ChordDisplayMode.Names)
     {
         var rests = ImmutableArray.CreateBuilder<MusicItem>();
-        ForEachSlotGroup(entries, timeBeats, timeBeatType, (node, timing, dur) =>
+        ForEachSlotGroup(entries, timeBeats, timeBeatType, PickupAt(measureIndex), (node, timing, dur) =>
         {
             int position = PositionOf(node);
             if (node is ChordEntrySyntax entry)
@@ -1090,5 +1111,7 @@ internal sealed class ChordNameCollector
 /// <c>ChordRowGridValidator</c>: a bar whose slot count fits no beat-grid shape
 /// (the bar fell back to equal division, LYS2009). A '.' at a bar's head used to be
 /// the second kind (LYS2010); since 2026-09-04 it is the silent slot and no fault.</summary>
+/// <param name="Pickup">The bar's length when it is a pickup (its slots were read on the beats
+/// it has, <see cref="ChordRhythm.BeatsOf"/>), else null.</param>
 public readonly record struct ChordRowGridWarning(
-    int SourcePosition, int SlotCount, int Beats, int BeatType);
+    int SourcePosition, int SlotCount, int Beats, int BeatType, Fraction? Pickup = null);

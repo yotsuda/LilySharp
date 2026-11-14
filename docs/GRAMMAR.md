@@ -1946,7 +1946,11 @@ AssembledQuality = [ 'm' | 'min' | 'dim' | 'aug' ] , [ 'maj' ]
                     (the beams' grid). One slot takes the bar. Slots = beats sit
                     one per beat, an integer multiple splits each beat equally,
                     a divisor groups whole beats — anything else warns (LYS2009)
-                    and divides equally. '.' holds the previous chord one more
+                    and divides equally. A PICKUP bar ('partial') is a bar of
+                    the beats it has, the meter's last ones: three beats of
+                    pickup in 4/4 take 1, 3 or 6 slots, and 2 or 4 warn as they
+                    do in 3/4 (2026-11-14; every output reads the same grid,
+                    ChordRhythm.BeatsOf). '.' holds the previous chord one more
                     slot ('| C . . G7 |' in 4/4 = C for three beats) and never
                     crosses a barline: at a bar's head it is the bar's SILENT
                     slot ('| . C |' = no chord, then C on the second beat), and

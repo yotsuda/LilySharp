@@ -2271,8 +2271,10 @@ public sealed class MidiExporter
     /// </summary>
     /// <remarks>
     /// LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
-    /// ChordNames context and performs nothing for it. A pickup bar keeps the full meter's
-    /// grid and cuts what runs past its end.
+    /// ChordNames context and performs nothing for it. A pickup bar is gridded on the beats it
+    /// has (<see cref="Svg.Collector.ChordRhythm.BeatsOf"/>), as the page grids it: until
+    /// 2026-11-14 it kept the whole meter's grid and cut what ran past its end, so the second
+    /// chord of <c>C7 F |</c> over two beats of pickup was never struck.
     /// </remarks>
     /// <param name="meterOfBar">The score's meter at each bar of the row, by bar index
     /// (<see cref="Svg.Collector.SectionMeterPlan.MeterOfBar"/> of the section the row sounds
@@ -2304,6 +2306,8 @@ public sealed class MidiExporter
         // one-beat pickup, and a full bar there played every later bar a bar late and ran the
         // section past its parts.
         int thisBarTicks = _bars.BarLength != _bars.MeterLength ? FractionToTicks(_bars.BarLength) : barTicks;
+        // …and its slots are that pickup's (SlotGroups' pickup): the first bar only.
+        Fraction? thisBarPickup = _bars.BarLength != _bars.MeterLength ? _bars.BarLength : null;
         int tonicStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
         int barStart = startTick;
         var bar = new List<SyntaxNode>();
@@ -2327,7 +2331,7 @@ public sealed class MidiExporter
                 typedDrop = Semantics.ChordTrackPitch.TypedDrop(root, rowName, Semantics.ConcertPitch.FileIsConcert(root));
             }
             foreach (var (node, timing, duration) in
-                     Svg.Collector.ChordNameCollector.SlotGroups(bar, gridBeats, gridBeatType, out _))
+                     Svg.Collector.ChordNameCollector.SlotGroups(bar, gridBeats, gridBeatType, out _, thisBarPickup))
             {
                 if (node is not ChordEntrySyntax entry
                     || Svg.Collector.ChordNameCollector.StructureOf(entry.SymbolText, tonicStep, _keySharps)
@@ -2392,9 +2396,11 @@ public sealed class MidiExporter
             Sound();
             thisBarTicksOfLast = thisBarTicks;
             barStart += thisBarTicks;
+            _chordRowBarEnds.Add(barStart);
             barIndex++;
             ArmBar();
             thisBarTicks = barTicks;
+            thisBarPickup = null;
         }
 
         // The page's walk of a placed row (ChordNameCollector.CollectPart): every bar line
@@ -2422,6 +2428,9 @@ public sealed class MidiExporter
     // them) just sounded opened — what RowsAndLanesEnd asks.
     private int _chordRowLastBar;
 
+    // Where each bar the section's chord rows sounded ends, until RowsAndLanesEnd reads them.
+    private readonly SortedSet<int> _chordRowBarEnds = new();
+
     /// <summary>Where a section's play ends, its part lanes ending at <paramref name="lanesEnd"/>
     /// (padded to the section's bar count) and its chord rows at <paramref name="rowsEnd"/>: the
     /// later of the two — except that lanes which end INSIDE the rows' last bar are that bar's
@@ -2435,6 +2444,18 @@ public sealed class MidiExporter
     /// say how long a bar is; a row has no durations to say it with.</remarks>
     private int RowsAndLanesEnd(int lanesEnd, int rowsEnd, int rowsLastBar, MidiTrack track, int firstNote)
     {
+        // The bars the rows play PAST the lanes are bars of the piece — all of them in a section
+        // of rows alone, a lead sheet's — and their bar lines stand (MidiFile.BarTicks), as the
+        // page draws them. Until 2026-11-14 only a part's lane marked a bar line, so a lead sheet
+        // had none: its metronome counted whole bars of the meter from the first beat, and after
+        // three beats of pickup every accent fell a beat before its bar line (MEASURED, Lab
+        // sessions/p1242/dettato/probe-lsp.txt: bar lines at 1.5 3.5 5.5 s, accents at 0 2 4 6).
+        bool cut = lanesEnd < rowsEnd && lanesEnd > rowsLastBar;
+        if (!cut && _barTicks != null)
+            foreach (int barEnd in _chordRowBarEnds)
+                if (barEnd > lanesEnd && barEnd <= rowsEnd)
+                    _barTicks.Add(barEnd);
+        _chordRowBarEnds.Clear();
         if (lanesEnd >= rowsEnd || lanesEnd <= rowsLastBar)
             return Math.Max(lanesEnd, rowsEnd);
         for (int i = firstNote; i < track.Notes.Count; i++)

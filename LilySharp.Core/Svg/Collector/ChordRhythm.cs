@@ -50,21 +50,24 @@ public static class ChordRhythm
     /// shape (see the class remarks; the caller falls back to equal division
     /// and warns).
     /// </summary>
-    public static ImmutableArray<Fraction>? SlotDurations(int slotCount, int beats, int beatType)
+    /// <param name="pickup">The bar's own length when it is a PICKUP — shorter than the meter's
+    /// bar: its beats are the ones it has, the meter's LAST ones (<see cref="BeatsOf"/>), and
+    /// the same three shapes are read on them. Null, or not shorter than the meter's bar: the
+    /// whole bar.</param>
+    public static ImmutableArray<Fraction>? SlotDurations(int slotCount, int beats, int beatType, Fraction? pickup = null)
     {
         if (slotCount < 1)
             return null;
 
-        var options = BeamingPattern.Options.For(new TimeSignature(beats, beatType));
-        var structure = options.BeatStructure;
-        int beatCount = structure.Length;
+        var beatLengths = BeatsOf(beats, beatType, pickup);
+        int beatCount = beatLengths.Count;
 
         // One slot is the whole bar in ANY meter — "| Am |" needs no grid.
         if (slotCount == 1)
         {
             var whole = Fraction.Zero;
-            foreach (int g in structure)
-                whole += options.BeatBase * new Fraction(g);
+            foreach (var beat in beatLengths)
+                whole += beat;
             return ImmutableArray.Create(whole);
         }
 
@@ -74,9 +77,9 @@ public static class ChordRhythm
         if (slotCount % beatCount == 0)
         {
             int k = slotCount / beatCount;
-            foreach (int g in structure)
+            foreach (var beat in beatLengths)
             {
-                var part = options.BeatBase * new Fraction(g, k);
+                var part = beat * new Fraction(1, k);
                 for (int i = 0; i < k; i++)
                     slots.Add(part);
             }
@@ -91,12 +94,58 @@ public static class ChordRhythm
             {
                 var len = Fraction.Zero;
                 for (int b = 0; b < m; b++)
-                    len += options.BeatBase * new Fraction(structure[s * m + b]);
+                    len += beatLengths[s * m + b];
                 slots.Add(len);
             }
             return slots.MoveToImmutable();
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// The beats a chord row's bar is gridded on, each with its length: the meter's own
+    /// (<see cref="BeamingPattern.Options.For"/>), or — for a <paramref name="pickup"/>, a bar
+    /// shorter than the meter's — the LAST of them that fill it, the first cut where the pickup
+    /// begins inside a beat.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN (2026-11-14, a design by musical validity — RULES §5.2; LilyPond's chord
+    /// names are written with durations and have no slot grid): a pickup is the END of a bar,
+    /// counted back from its bar line, as the metronome counts it
+    /// (<see cref="LilySharp.Core.Midi.MetronomeBeats"/>) and as LilyPond's <c>\partial</c> sets
+    /// measurePosition. So three beats of pickup in 4/4 take three slots, one a beat, and two
+    /// slots there fit no beat as they fit none in 3/4. Until then the page and the LilyPond
+    /// twin gridded the pickup on the WHOLE meter and scaled the slots to its length (three
+    /// slots were warned off a grid they stood on, LYS2009; four were not, and stood off every
+    /// beat), while the sound and the MusicXML kept the whole meter's grid and CUT it at the
+    /// pickup's length — the bar's first beats, where a pickup is its last, and a slot past the
+    /// cut neither sounded nor was written (Dettato's request 3, Lab sessions/p1242/dettato).
+    /// Observed by ChordRowPickupGridTests.
+    /// </remarks>
+    public static IReadOnlyList<Fraction> BeatsOf(int beats, int beatType, Fraction? pickup = null)
+    {
+        var options = BeamingPattern.Options.For(new TimeSignature(beats, beatType));
+        var structure = options.BeatStructure;
+        var all = new List<Fraction>(structure.Length);
+        var whole = Fraction.Zero;
+        foreach (int g in structure)
+        {
+            var beat = options.BeatBase * new Fraction(g);
+            all.Add(beat);
+            whole += beat;
+        }
+        if (pickup is not { } length || length <= Fraction.Zero || length >= whole)
+            return all;
+
+        var tail = new List<Fraction>();
+        var left = length;
+        for (int i = all.Count - 1; i >= 0 && left > Fraction.Zero; i--)
+        {
+            var beat = all[i] <= left ? all[i] : left;
+            tail.Insert(0, beat);
+            left -= beat;
+        }
+        return tail;
     }
 }

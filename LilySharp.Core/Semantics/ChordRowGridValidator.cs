@@ -50,9 +50,13 @@ internal sealed class ChordRowGridValidator : ISharedCollectValidator
         foreach (var w in warnings.DistinctBy(w => w.SourcePosition))
         {
             // ASCII punctuation only: these strings reach legacy-codepage consoles via the CLI.
+            // A pickup is read on the beats it has (ChordRhythm.BeatsOf): the bar named is that one.
+            string bar = w.Pickup is { } pickup
+                ? $"pickup of {Svg.Collector.ChordRhythm.BeatsOf(w.Beats, w.BeatType, pickup).Count} beat(s) in {w.Beats}/{w.BeatType}"
+                : $"{w.Beats}/{w.BeatType} bar";
             _diagnostics.Warning(new TextSpan(w.SourcePosition, 1),
                 DiagnosticCodes.ChordSlotMismatch,
-                $"{w.SlotCount} chord slot(s) in a {w.Beats}/{w.BeatType} bar fit no "
+                $"{w.SlotCount} chord slot(s) in a {bar} fit no "
                 + $"beat: one slot takes the bar, a multiple of the beat count splits "
                 + $"each beat, a divisor groups whole beats. The bar is divided "
                 + $"equally instead; add '.' to land on beats "

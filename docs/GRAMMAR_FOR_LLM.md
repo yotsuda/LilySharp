@@ -1383,7 +1383,8 @@ a staff: just a grid of measure barlines, the chord symbols between them and the
 lyrics below. A chord entry is the SYMBOL as it prints — `C`, `Am`, `G7`, `F#m`,
 `Bb7`, `Gm7-5`, `C/G`, and the chart's other spellings (`CΔ7`, `Cø7`, `C°7`, `C-7`, `CM7`,
 `B♭7`, `C7(b9, #11)`, `Cm7(b5)`, `C7(9)`; see *Chord names* above) — with NO durations: a bar's entries divide it on the meter's
-beat grid (one entry = the bar, two in 4/4 = halves, four = beats), and `.` holds
+beat grid (one entry = the bar, two in 4/4 = halves, four = beats; a pickup bar is
+gridded on the beats it has — three beats of pickup take one entry or three), and `.` holds
 the previous chord one more beat (`| C . . G7 |`; a `.` never crosses a barline).
 `r`/`R` print "N.C." in their slot; a `.` at a bar's head is the bar's SILENT slot
 (`| . C |` = no chord, then C), and there is no `s`. Barlines in the source

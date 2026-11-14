@@ -7473,23 +7473,24 @@ public sealed class MusicXmlExporter
     /// with its slot's offset — the grid every reader of a row shares
     /// (<see cref="Svg.Collector.ChordNameCollector.SlotGroups"/>), on the meter of THAT bar
     /// (<see cref="PendingChordRow.MeterOf"/>, bar <paramref name="barIndex"/> of the play) —
-    /// dropping an @chord of the same chord at the same moment. A slot past a pickup's end
-    /// (<paramref name="cut"/>) is not written, as the MIDI does not play it.
+    /// dropping an @chord of the same chord at the same moment. A pickup bar
+    /// (<paramref name="pickup"/>, its length) is gridded on the beats it has, as the page and
+    /// the MIDI read it (<see cref="Svg.Collector.ChordRhythm.BeatsOf"/>): until 2026-11-14 the
+    /// whole meter's grid was cut at the pickup's length, so <c>C7 F |</c> over two beats of
+    /// pickup wrote C7 alone and three slots over three beats stood at 0, 1⅓ and 2⅔ beats.
     /// </summary>
     private void AddRowHarmonies(MusicXmlMeasure measure, List<SyntaxNode> bar, int barIndex, PendingChordRow pending,
-        TuningType? tuning, Fraction? cut, int drop = 0, int typedDrop = 0)
+        TuningType? tuning, Fraction? pickup, int drop = 0, int typedDrop = 0)
     {
         if (bar.Count == 0)
             return;
         var existing = HarmoniesWithOnsets(measure);
         int insertAt = 0;
         var (beats, beatType) = pending.MeterOf(barIndex);
-        foreach (var (node, timing, _) in Svg.Collector.ChordNameCollector.SlotGroups(bar, beats, beatType, out _))
+        foreach (var (node, timing, _) in Svg.Collector.ChordNameCollector.SlotGroups(bar, beats, beatType, out _, pickup))
         {
             if (node is not ChordEntrySyntax entry)
                 continue;   // N.C. and a bar-head '.' write nothing
-            if (cut is { } pickup && timing >= pickup)
-                continue;
             if (Svg.Collector.ChordNameCollector.StructureOf(entry.SymbolText, pending.TonicStep, pending.Sharps) is not { } typed)
                 continue;
             var chord = Semantics.ChordTrackPitch.Sounding(typed, entry.SymbolText, typedDrop, pending.Sharps);
