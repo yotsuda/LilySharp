@@ -267,6 +267,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1233セッションの経緯
+
+### 1.1 第1233セッション（2026-11-14・YT-DELL2）
+
+base `a55c44c93`・開始時 full 16663 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16666（Lab `p1233` の `run1.trx`）。Calamo の `open` は 0。CI は第1231 のまま（origin/master `f636395ae` の ubuntu Release の脚が赤＝`148e2a478` で直し済み・未 push）。
+オーナー指示（2026-11-14・第1231）「残りの欠陥を順に」の続き。3 commit（未 push）。残りは Lab `p1233/leftovers.md`。
+- **`[engraving]` 同じ音名の臨時記号の座席（`cd50dd114`）**: 同じ拍の `cisis'`／`cis'` の並びが LilyPond と逆、は一番小さい部分だった。Lily# の ape は（音名, 字形）で、最初の 1 つが列に当たり残りはそこへ寄っていた。LilyPond の ape は音名 1 つで、`set_ape_skylines` が中で互いに座らせてから `position_apes` が ape を 1 つとして動かす。字面で移植（`AccidentalPlacement.WalkApes`＝`acc_less`・`SetApeSeats`）: オクターブごとに最初は原点、同じオクターブの同じ変化は重ね刷り、別の変化は箱の幅＋0.2 だけ左。ape の skyline は建てない（合併の距離＝各メンバーの距離の最大・1 つなら今までと同じ値段）。LP 2.26.0 と 12 列を 4 桁で突き合わせ、直す前は 7 列が違い、後は 12 列一致（Lab `p1233/ap`＝`dump.ily` が Accidental の X 範囲を刷る・絵は `after/ap.png` と `lp/ap.png` を自分の目で見た）。古い並べ替えは ape に出会う順（`ape_less` の同点）のためだけに残した。`GlyphMetrics.AlterationQuartersOf` は `AlterationName` の逆引きで、網が 2 つを結ぶ。
+- **MusicXML の読み込み: 装飾音の半端な `<alter>` に警告（`5049e1334`）**: `ReadAlter` の「綴れたか」を `ReadGraceNote` が捨てていた。言葉は 1 つのヘルパから。
+- **`[engraving]` `@cross` で移った音の戻しのナチュラル（`372358703`）**: `ApplyAcrossStaves` も、素の記号を持つ頭を描かれる段の記憶で読む（`Apply` の規則）。LP 2.26.0 と 5 小節を見比べて一致（Lab `p1233/xr`）。⚠️ **これで見えるようになった既存の欠陥**: 移った音の臨時記号は移った先の段の前の列から場所を取らず、♮♯ が前の音の符幹に重なる（`xr/after/xr.png`・LP は間を開ける）。素のシャープも直す前から触れていた。`ApplyCrossVoiceColumnSpacing` の `ownShifted` の門を外す試しでは動かなかった＝未特定（leftovers の先頭）。
+- 起票の読み直し: 「LYS4023 と LYS4018 が同じペダルに両方」は `form { A |: B :| }` では今 1 件だけ。両方出るのは `A |: B :| A` で、それぞれ別の演奏について正しい（言葉が演奏を言わない＝leftovers）。MusicXML の四分音の `<accidental>` は着手せず（他のリーダーが `<accidental>` なしの 0.5 をどう読むか未検証・leftovers に理由）。
+- 7.7 の匂い: 毒は装飾音の警告に 1 本（赤）・`@cross` の網は直す前の木で赤・座席の網は直す前の数字（`probe-before.log`）で 7 行が違うことを見た（網そのものを直す前の木で回してはいない）／courtesy の臨時記号の座席（括弧込みの幅）は移植したが LP と測っていない／VS Code の実機は未確認。
+- 7.5／7.6: 座席は ⒜（`acc_less`・`set_ape_skylines` の字面）＋ ⒝ 1 点（ape の合併 skyline を建てず距離の最大で読む＝註に理由）・`@cross` のナチュラルは ⒟（住所は `Apply` の REF）・定数なし。perf: pass は足していない（1 列の挿入ソートと stackalloc 8・列の辞書は消えた）＝ベンチは回していない。
+- 門: 終了時 full 16676 合格 / 1 失敗（`ReadmeSampleTests`＝同じ）/ skip 2 / 合計 16679（Lab `p1233` の `run3.trx`・+13 は足した網）。全 svg の掃き 1041 冊 1268 枚で動いた svg 0（base＝`p1232` の exe・head＝`372358703` の bin の写し・`p1233/sweep`）＝これらの形を書く追跡本は無い（結果であって構成ではない）。
+
 ## 以下は第1232セッションの経緯
 
 ### 1.1 第1232セッション（2026-11-14・YT-DELL2）
