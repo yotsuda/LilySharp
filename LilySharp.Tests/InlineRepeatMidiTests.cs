@@ -227,6 +227,7 @@ public sealed class InlineRepeatMidiTests
     [InlineData("|: c''1 :|*3", "S", "one two two")]           // a pass past the verses: the last one
     [InlineData("|: c''1 :|", "S S", "one two one two")]       // played again by the form: the same words
     [InlineData("c''1 |", "|: S :|", "one two")]               // the form's repeat, as before
+    [InlineData("c''1 |", "|: S :|*3", "one two two")]         // …and its pass past the verses sings the last one too
     public void AVerseIsThePassOfTheRepeat(string music, string form, string sung)
     {
         string src = $$"""

@@ -989,7 +989,7 @@ public sealed class MidiExporter
             var played = new MidiTrack();
             foreach (var partTrack in midi.Tracks)
                 played.Notes.AddRange(partTrack.Notes);
-            SingLyrics(tree, played, lastVerseGoesOn: true);
+            SingLyrics(tree, played);
             // …and land where the main track's do: in the first part track (SplitIntoPartTracks).
             if (midi.Tracks.Count > 1)
                 midi.Tracks[1].Lyrics.AddRange(played.Lyrics);
@@ -4858,7 +4858,7 @@ public sealed class MidiExporter
     /// The events go to the main track and land in the first part track (SplitIntoPartTracks),
     /// wherever the sung part's notes went.
     /// </remarks>
-    private void SingLyrics(SyntaxTree tree, MidiTrack track, bool lastVerseGoesOn = false)
+    private void SingLyrics(SyntaxTree tree, MidiTrack track)
     {
         if (_playedSpec is not { } spec)
             return;
@@ -4873,10 +4873,9 @@ public sealed class MidiExporter
         var sings = Music.LyricSinger.SungReaderOf(tree.GetRoot(), spec);
         var settingsOf = Music.LyricSinger.SettingsReaderOf(tree.GetRoot(), spec);
         // The passes the verses written on each note name, between them — what a pass no verse
-        // names falls back on (lastVerseGoesOn).
+        // names falls back on.
         var versedPasses = new Dictionary<(int Source, int Printing, string Part, string? Track), SortedSet<int>>();
-        if (lastVerseGoesOn)
-            foreach (var (lyric, item, printing, part, sungTrack, _) in sung)
+        foreach (var (lyric, item, printing, part, sungTrack, _) in sung)
                 if (lyric.StanzaLabel > 0)
                 {
                     var key = (item.SourcePosition, printing, part, sungTrack);
@@ -4903,7 +4902,9 @@ public sealed class MidiExporter
             // A pass past the verses written — a third time through with two verses, the stretch a
             // `ds` plays again — sings the LAST verse written before it (owner's rules 2026-11-14,
             // docs/inline-repeat-design.md §6: the words of the last pass; a verse missing still sings).
-            if (lastVerseGoesOn && lyric.StanzaLabel > 0
+            // The same for a repeat the FORM writes (owner's decision the same day): until then
+            // such a pass sang nothing.
+            if (lyric.StanzaLabel > 0
                 && versedPasses.TryGetValue((item.SourcePosition, printing, part, sungTrack), out var written))
             {
                 var own = passes.ToHashSet();
