@@ -1564,9 +1564,10 @@ internal static partial class SpacingRules
     /// spring (index <paramref name="timings"/>.Count) the voices with one on the last column.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/spacing-spanner.cc:300-381 musical_column_spacing — the spring of a
-    ///   column pair is merge_springs over the NoteSpacing wishes of the LEFT PAPER COLUMN, and
-    ///   a paper column is the system's: every staff's voices file their wishes on it.
+    /// LILYPOND-REF: lily/spacing-spanner.cc:323-394 musical_column_spacing — the spring of a
+    ///   column pair is merge_springs over the NoteSpacing wishes of the LEFT PAPER COLUMN whose
+    ///   right-items stand on the right column (<c>found_matching_column</c>), and a paper column
+    ///   is the system's: every staff's voices file their wishes on it.
     /// LILYPOND-REF: lily/spring.cc:101-129 merge_springs — avg_distance over all of them.
     /// So a head shifted in one staff moves the pair's ideal by its shift over ALL the wishes,
     /// the other staves' unshifted ones among them. <see cref="ApplyCrossVoiceColumnSpacing"/>

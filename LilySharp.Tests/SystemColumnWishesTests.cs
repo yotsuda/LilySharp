@@ -28,7 +28,7 @@ namespace LilySharp.Tests;
 /// wishes of the pair — the system's, every staff's voices that have an item on both columns —
 /// because a paper column is the system's and <c>merge_springs</c> averages what every voice
 /// filed on it (SpacingRules.ColumnWishes).
-/// LILYPOND-REF: lily/spacing-spanner.cc:300-381 musical_column_spacing;
+/// LILYPOND-REF: lily/spacing-spanner.cc:323-394 musical_column_spacing;
 /// LILYPOND-REF: lily/spring.cc:101-129 merge_springs.
 /// </summary>
 /// <remarks>
