@@ -267,6 +267,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1240セッションの経緯
+
+### 1.1 第1240セッション（2026-11-14・YT-DELL2）
+
+base `59e87947d`・開始時 full 16811 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16814（Lab `p1240` の `run1.trx`）。Calamo の `open` は 0。CI は第1231 のまま。
+「残りの欠陥を順に」（第1231）の続き。1 commit（未 push）。残りは Lab `p1240/leftovers.md`。
+- **MusicXML の wedge はページのヘアピン（`9422493a7`）**: 一覧の先頭。書き出しは wedge の対を自分で作っていて、開いた wedge は**ファイルに 1 本**だった＝どの声部・どのパートの強弱・ヘアピンの始まり・`@!cresc` でも閉じた。再現 3 形: ⑴ `voice { c''1@cresc } { c'2@decresc c'2@!decresc } | … c''1@f`＝上の声部の crescendo が長さ 0（Lab `p1239/xml/x1`）／⑵ section をまたいで運ばれたヘアピンが、2 つのブロックの間に書かれる別のパートの強弱で閉じる（書き出しは section ごとにパートを順に歩く・`p1240/xml/s1`）／⑶ 何も終わらせないヘアピンは開いたまま。
+- 直し: 書き出しがページの対（`HairpinEngraver.DetectHairpins`・ページ自身の collect）を読む＝section の境の切り（`_cutHairpins`）が前から読んでいたのと同じ形で、それも一緒に畳んだ。`HairpinItem.EndSourcePosition`（何で終わったか＝強弱・次のヘアピン・stop の位置。無ければ −1）と `CutAtSectionEnd`。書き出しは開いた wedge をパートごとに持ち（`_openWedges`）、ページがヘアピンを描く印でだけ始め（`StartWedge`・同じ印を 1 つの play で 2 回弾けば順に取る）、ページが終わりにした印で止める（`EndWedgesAt`）。何も終わらせないものは小節線、切られたものは section の最後の小節線。声部ごとの `number`（1 声部目は今までどおり・2 声部目から 3, 5…・大譜表の下の段は 2, 4, 6…＝`MusicXmlDirection.WedgeVoice`）。フレーズを後の声部で弾けばその声部（構文の親ではなく書き出しの歩き `_voiceLine`）。niente の丸もページから（`_circledNientes`）。
+- 書かれる順が時刻の順でない 2 形は、終わりが書かれた場所を覚えて使う（`_endsWritten`）: ⑴ 1 声部目の強弱で終わる 2 声部目のヘアピン（1 声部目を先に歩く）＝stop は始まりの後ろに書く／⑵ **condensedStaff の 2 パート**（ページでは 1 つの譜表・文書では 2 つのパート）＝もう片方のパートの強弱が書かれた小節と位置に、自分のパートの stop を置く（`FinishOpenSpans`）。
+- ⚠️ 直したこと: `EndSourcePosition` を足して full が 3 本赤（`IncrementalCompilerTests` 2 本・`SystemLayoutCacheTests`）＝`MeasureContentKey` は side table の item を reflection で畳むので、ソース位置の field は `SideExclusions` に足す／**⑵ の condensedStaff は、最初の full と掃きが緑になった後に探り譜で見つけた退行**（wedge が開いたまま・追跡コーパスにこの形が無いので掃きの「対の崩れ 0」は何も言っていなかった）／毒で緑だった 3 つ（どのパートでも閉じる・別パートの強弱の「始まりより前」と「最後の書き込み」）に網を足して赤を見た／網の期待値 1 つを読まずに書いた（stop は音を含む＝+48）。
+- 7.7 の匂い: ページが集められない本は wedge を 1 つも書かない／同じ印が 1 つの play の 2 つの声部・2 つのパートに同時に現れる形は取る順が食い違いうる（未測定）／`EndSourcePosition` の −1 は「無い」の印。
+- 7.5／7.6: LilyPond の式は足していない（REF／OWN の追加なし・定数なし）。ページは新しい field を読まない。perf: 打鍵の経路には足していない（書き出しの collect が、section の無い本でもヘアピンがあれば 1 回増える）＝未計測。
+- 門: 終了時 full 16827 合格 / 1 失敗（`ReadmeSampleTests`＝同じ）/ skip 2 / 合計 16830（`p1240/run4.trx`・+16 は足した網）。全 MusicXML の掃き 1041 冊 1268 文書で変わったのは 2（どちらも終わりのないヘアピンが小節線で止まるようになった本）・head の wedge 4492 個は対の崩れ 0（`p1240/sweep/xml-sweep.ps1`）。全 svg の掃きは動いた svg 0 / 1268。毒 27 本は全部赤（`p1240/poisons-final.log`）。snapshot・台帳は不動。CHANGELOG は 2 つとも `## Unreleased`。
+
 ## 以下は第1239セッションの経緯
 
 ### 1.1 第1239セッション（2026-11-14・YT-DELL2）
