@@ -500,9 +500,10 @@ public sealed partial class MeasureCollector
         if (chord != null)
         {
             if (_resolvedChordMembers.TryGetValue(chord, out var members))
-                foreach (var member in members.OrderBy(m => m.Midi))
+                // …and of two members a quarter tone apart (`<c cih>`, one MIDI key), the lower.
+                foreach (var member in members.OrderBy(m => m.Midi).ThenBy(m => m.QuarterOffset))
                     if (member.DisplacedBy(displacement) is { Step: { } s, Alter: { } a, Octave: { } o })
-                        pitches.Add(FormatPitch(s, a, o));
+                        pitches.Add(FormatPitch(s, a, o, member.QuarterOffset));
         }
         else if (node is ArpeggioSyntax && RecordsPitchTrace)
         {

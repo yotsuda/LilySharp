@@ -424,7 +424,11 @@ public sealed partial class MeasureCollector
         // grammar evaluation 4 (2026-11-13) — `<bes,\6 f\5 bes\4>4 q` was 8-8-8 and then
         // x-1-3-3 on the tab, the same chord at another position (rock/r-05). Nothing is
         // drawn on the staff from it; only the tab's fret choice reads it.
-        int? StringNumber = null)
+        int? StringNumber = null,
+        // The member's written quarter tone (PitchSyntax.QuarterOffset: `eih` +1, `eeh` −1), on
+        // top of Alter. Read by the editor's chord hover alone (RecordChordFacts): until
+        // 2026-11-14 (session 1232) the member carried none and `<c eeh g>` hovered as C E G.
+        int QuarterOffset = 0)
     {
         /// <summary>
         /// The same member displaced by whole octaves — what <c>q'</c> repeats. A
@@ -737,7 +741,7 @@ public sealed partial class MeasureCollector
                 WrittenPitch: WrittenPitch.Pack(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave, pitch.QuarterOffset)));
             members.Add(new ResolvedChordMember(staffPosition, rp.DisplayStep, rp.DisplayAlteration,
                 rp.DisplayOctave, memberHead, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
-                IsDead: memberDead));
+                IsDead: memberDead, QuarterOffset: pitch.QuarterOffset));
         }
 
         // diagram(SYMBOL SHAPE): the shape's strings on the part's tuning, ABSOLUTE and each with

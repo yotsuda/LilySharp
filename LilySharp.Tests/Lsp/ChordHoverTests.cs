@@ -133,6 +133,31 @@ public class ChordHoverTests
     public void NotesThatNameNoChord_StillListTheirPitches() =>
         Assert.Equal("C4 \u00A0D♭4 \u00A0D4", HoverAt("<c des d>"));
 
+    private static string QuarterToneDoc(string music) =>
+        "octave absolute\npart melody {\n  section A { " + music + " | }\n}\n\nform { A }\n\nscore {\n  staff melody\n}\n";
+
+    /// <summary>A member's quarter tone is in the chord's hover, as its sign after the
+    /// accidental's: 𝄲 a quarter sharp higher, 𝄳 a quarter flat lower. Until 2026-11-14
+    /// (session 1232) a chord's hover dropped it — <c>&lt;c' eeh' gis'&gt;</c> listed E4.</summary>
+    [Fact]
+    public void AChordMembersQuarterTone_IsInTheHover()
+    {
+        Assert.EndsWith("C4  E𝄳4  G♯𝄲4", HoverAt("<c' eeh' gisih'>", doc: QuarterToneDoc("<c' eeh' gisih'>1")));
+        Assert.EndsWith("C♭𝄳4  E𝄲4", HoverAt("<ceseh' eih'>", doc: QuarterToneDoc("<ceseh' eih'>1")));
+        // Lowest first: the quarter flat below the plain note, the quarter sharp above it.
+        Assert.EndsWith("C𝄳4  C4  C𝄲4", HoverAt("<cih' c' ceh'>", doc: QuarterToneDoc("<cih' c' ceh'>1")));
+        // The control: a chord with no quarter tone hovers as it did.
+        Assert.EndsWith("C4  E♭4  G♯4", HoverAt("<c' ees' gis'>", doc: QuarterToneDoc("<c' ees' gis'>1")));
+    }
+
+    /// <summary>An arpeggio's notes are the resolved-pitch trace's (<c>C+4</c>, <c>Ed4</c>): the
+    /// hover shows the same signs. Until 2026-11-14 (session 1232) the '+' and the 'd' were
+    /// shown as written in the trace — E♭d4.</summary>
+    [Fact]
+    public void AnArpeggioNotesQuarterTone_IsShownAsItsSign() =>
+        Assert.EndsWith("C4  E♭𝄳4  G𝄲4  D𝄳5", HoverAt("<< c' eeseh' gih' deh'' >>",
+            doc: QuarterToneDoc("<< c' eeseh' gih' deh'' >>1")));
+
     [Fact]
     public void ASingleNote_IsNotAChord()
     {

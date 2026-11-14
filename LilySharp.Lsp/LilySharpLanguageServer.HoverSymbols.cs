@@ -457,7 +457,11 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>A trace pitch (<c>F#4</c>, <c>Bb3</c>, <c>Cx4</c>, <c>Dbb4</c>) with the
-    /// accidental as its sign: F♯4, B♭3, C𝄪4, D𝄫4.</summary>
+    /// accidental as its sign: F♯4, B♭3, C𝄪4, D𝄫4. A quarter tone — the trace's '+' or 'd'
+    /// after the accidental (<c>C+4</c>, <c>Ed4</c>, <c>F#+4</c>, <c>Bbd3</c>;
+    /// MeasureCollector.FormatPitch) — is its sign after the accidental's: C𝄲4, E𝄳4, F♯𝄲4,
+    /// B♭𝄳3. Until 2026-11-14 (session 1232) the two letters were shown as they stand in the
+    /// trace, "E♭d4".</summary>
     private static string PitchGlyphs(string pitch)
     {
         if (pitch.Length < 2)
@@ -469,7 +473,8 @@ public sealed partial class LilySharpLanguageServer
             : rest.StartsWith('x') ? "𝄪"
             : "";
         int skip = sign switch { "𝄫" => 2, "" => 0, _ => 1 };
-        return pitch[0] + sign + rest.Substring(skip);
+        string quarter = rest.Length > skip ? rest[skip] switch { '+' => "𝄲", 'd' => "𝄳", _ => "" } : "";
+        return pitch[0] + sign + quarter + rest.Substring(skip + (quarter.Length > 0 ? 1 : 0));
     }
 
     // Delegate to the single, correct line/character -> offset conversion in
