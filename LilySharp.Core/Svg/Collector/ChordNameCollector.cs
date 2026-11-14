@@ -502,10 +502,13 @@ internal sealed class ChordNameCollector
 
         foreach (var item in items)
         {
-            if (item is BarlineSyntax)
+            if (item is BarlineSyntax alignedBar)
             {
-                Commit();
-                localMeasure++;
+                if (Semantics.ChordRowBarLines.Closes(alignedBar, pending.Count > 0))
+                {
+                    Commit();
+                    localMeasure++;
+                }
                 continue;
             }
             if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
@@ -572,9 +575,8 @@ internal sealed class ChordNameCollector
                 switch (items[i])
                 {
                     case BarlineSyntax bar:
-                        // CollectPart.ProcessRun's count: a `|:` with nothing before it opens
-                        // the next bar and closes none.
-                        if (chordsBefore || MeasureCollector.ParseBarlineType(bar.BarText) != BarlineType.RepeatStart)
+                        // CollectPart.ProcessRun's count (Semantics.ChordRowBarLines).
+                        if (Semantics.ChordRowBarLines.Closes(bar, chordsBefore))
                             localMeasure++;
                         chordsBefore = false;
                         break;
@@ -765,13 +767,9 @@ internal sealed class ChordNameCollector
         {
             if (item is BarlineSyntax bar)
             {
-                // Mirror ProcessRun: every written barline closes a bar, the one that opens
-                // the run included — except a `|:` with nothing before it, which opens the
-                // next bar and closes none. Any drift here mis-sizes the row grid.
-                // ⚠️ THE EXCEPTION WAS MISSING HERE until 2026-11-14 (Lab sessions/p1243/probe/
-                // j-rowlead): `|: C | G :|` counted three bars for a row the page and the MIDI
-                // read as two, so the section was laid out a bar longer than its music.
-                if (pendingEntries || MeasureCollector.ParseBarlineType(bar.BarText) != BarlineType.RepeatStart)
+                // Mirror ProcessRun (Semantics.ChordRowBarLines, the one rule): any drift
+                // here mis-sizes the row grid.
+                if (Semantics.ChordRowBarLines.Closes(bar, pendingEntries))
                     bars++;
                 pendingEntries = false;
             }
@@ -867,8 +865,9 @@ internal sealed class ChordNameCollector
                     var t = MeasureCollector.ParseBarlineType(bar.BarText);
                     if (t == BarlineType.RepeatStart)
                     {
-                        // |: opens the NEXT measure; close anything pending first.
-                        if (pending.Count > 0)
+                        // |: opens the NEXT measure; it closes what stands before it first —
+                        // an empty bar too, as a bare '|' does (Semantics.ChordRowBarLines).
+                        if (Semantics.ChordRowBarLines.Closes(bar, pending.Count > 0))
                             Commit(BarlineType.Single);
                         pendingStart = BarlineType.RepeatStart;
                     }

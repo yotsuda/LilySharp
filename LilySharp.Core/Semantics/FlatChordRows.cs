@@ -62,8 +62,7 @@ internal sealed class FlatChordRows
     /// <summary>What is left of each track past the music.</summary>
     public IEnumerable<(string Row, List<SyntaxNode> Items)> Rest() => Take(int.MaxValue - Cursor);
 
-    // Split as a row is read (MidiExporter.PlayChordRow): every bar line closes a bar, a `|` opening the
-    // run closing an empty one, except `|:`, which closes only what is pending. A bar keeps its bar line.
+    // Split as a row is read (ChordRowBarLines): a bar keeps the bar line that closes it.
     private static List<List<SyntaxNode>> BarsOf(IEnumerable<SyntaxNode> items)
     {
         // A break directive (owner's decision 2026-11-13) rides with the bar it stands after and is
@@ -77,7 +76,7 @@ internal sealed class FlatChordRows
             if (item is BarlineSyntax barline)
             {
                 bar.Add(barline);
-                if (Svg.Collector.MeasureCollector.ParseBarlineType(barline.BarText) != Svg.Model.BarlineType.RepeatStart || held > 0)
+                if (ChordRowBarLines.Closes(barline, held > 0))
                 {
                     bars.Add(bar);
                     bar = [];
@@ -105,5 +104,59 @@ internal sealed class FlatChordRows
         if (held > 0)
             bars.Add(bar);
         return bars;
+    }
+}
+
+/// <summary>
+/// THE ONE READER of what a bar line of a CHORDS ROW closes — the rule the page's three walks
+/// of a row (<c>ChordNameCollector</c>'s <c>CountBars</c>, <c>ProcessRun</c>, the diagram run and
+/// the aligned row), the MIDI (<c>MidiExporter.PlayChordRow</c>), <see cref="FlatChordRows"/>,
+/// the MusicXML (<c>RowBars</c>) and the LilyPond twin (<c>ChordBarsOf</c>) each spelled for
+/// themselves until 2026-11-14.
+/// </summary>
+/// <remarks>
+/// <para>
+/// A written bar line closes a bar, an EMPTY one when nothing stands before it in its bar —
+/// the bare-barline rule a part's music has (<c>MeasureBuilder.HandleBarline</c>). A <c>|:</c>
+/// is no exception (owner's decision 2026-11-14: "<c>C | |: G</c> makes an empty bar, since
+/// <c>C | | G</c> does"; the music's own rule since 2026-08-28), but for the one place it
+/// differs from <c>|</c> in the music too: a <c>|:</c> that OPENS the row closes nothing — it
+/// opens the bar in front of it and there is no span behind it to leave unowned
+/// (<c>MeasureBuilder._atScopeStart</c>).
+/// </para>
+/// <para>
+/// MEASURED before (Lab sessions/p1243): the spellings had drifted two ways. Five read a
+/// <c>|:</c> as closing only a bar that held something (<c>C | |: G</c> two bars), the count,
+/// the aligned row and the twin read every bar line as closing one (three bars — and
+/// <c>|: C | G :|</c> three, an empty bar before the row began). A row with a repeat sign was
+/// LYS1034 from 2026-08-31, so no book showed it.
+/// </para>
+/// <para>
+/// The row's start is read off the TREE — no entry and no bar line before this one in the row
+/// it is written in (a track's section, or a flat track's block) — so a reader that walks a
+/// slice of a row (<see cref="FlatChordRows.Take"/>) answers as one that walks all of it.
+/// </para>
+/// </remarks>
+internal static class ChordRowBarLines
+{
+    /// <summary>Whether <paramref name="barLine"/> closes a bar of its row, given whether the
+    /// bar being read <paramref name="holds"/> an entry, a rest or a <c>.</c> already.</summary>
+    public static bool Closes(BarlineSyntax barLine, bool holds)
+    {
+        if (holds || barLine.BarToken.Kind != SyntaxKind.RepeatStartBar)
+            return true;
+        if (barLine.Parent is not { } row)
+            return true;
+        for (int i = 0; i < row.SlotCount; i++)
+        {
+            var child = row.GetChild(i);
+            if (child == null)
+                continue; // an optional slot the row does not write
+            if (ReferenceEquals(child, barLine) || child.Position >= barLine.Position)
+                break;
+            if (child is BarlineSyntax or ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
+                return true;
+        }
+        return false;
     }
 }

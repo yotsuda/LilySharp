@@ -589,9 +589,10 @@ public sealed partial class LilyPondExporter
         // it follows. One with chords on both sides (LYS1069) breaks nothing and is left out.
         foreach (var item in items)
         {
-            if (item is BarlineSyntax)
+            if (item is BarlineSyntax barLine)
             {
-                Flush();
+                if (Semantics.ChordRowBarLines.Closes(barLine, pending.Count > 0))
+                    Flush();
                 result.Add(item);
             }
             else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)

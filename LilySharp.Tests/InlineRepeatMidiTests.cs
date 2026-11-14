@@ -142,6 +142,26 @@ public sealed class InlineRepeatMidiTests
         Assert.Equal("ABABC", Played(src));
     }
 
+    /// <summary>A row's <c>| |:</c> is an empty bar, as its <c>| |</c> is and as a part's is
+    /// (owner's decision 2026-11-14) — and the count, the page, the MIDI, the MusicXML and the
+    /// twin read it by one rule (<c>ChordRowBarLines</c>). Until then five of the row's readers
+    /// made two bars of <c>C | |: G</c> and three made three.</summary>
+    [Fact]
+    public void ARowsBarLineBeforeARepeatSignIsAnEmptyBar()
+    {
+        string src = $$"""
+            octave absolute
+            part m { section S { {{A}} | {{B}} | {{C}} | {{D}} | } }
+            chords prog { section S { C | |: G :| Am | } }
+            form { S }
+            score { chords prog staff m }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        Assert.DoesNotContain(LilySharp.Core.Semantics.SemanticValidation.Run(tree),
+            d => d.Message.Contains("not the same length"));
+        Assert.Equal("ABCCD", Played(src));                 // the repeat is the THIRD bar
+    }
+
     /// <summary>A chart with no section at all — a chords track written flat, the one shape a
     /// file without sections has — reads the same marks.</summary>
     [Fact]

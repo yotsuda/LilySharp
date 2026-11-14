@@ -7314,8 +7314,7 @@ public sealed class MusicXmlExporter
         {
             if (item is BarlineSyntax barline)
             {
-                if (Svg.Collector.MeasureCollector.ParseBarlineType(barline.BarText) != Svg.Model.BarlineType.RepeatStart
-                    || bar.Count > 0)
+                if (ChordRowBarLines.Closes(barline, bar.Count > 0))
                 {
                     bars.Add(bar);
                     bar = new List<SyntaxNode>();

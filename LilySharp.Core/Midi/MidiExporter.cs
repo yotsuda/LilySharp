@@ -2409,15 +2409,13 @@ public sealed class MidiExporter
             thisBarPickup = null;
         }
 
-        // The page's walk of a placed row (ChordNameCollector.CollectPart): every bar line
-        // closes a bar — a `|` opening the run closes an EMPTY one — except `|:`, which only
-        // closes what is pending and opens the next.
+        // The page's walk of a placed row (ChordNameCollector.CollectPart), by the one rule of
+        // what a row's bar line closes (Semantics.ChordRowBarLines).
         foreach (var item in items)
         {
             if (item is BarlineSyntax barline)
             {
-                if (Svg.Collector.MeasureCollector.ParseBarlineType(barline.BarText) != Svg.Model.BarlineType.RepeatStart
-                    || bar.Count > 0)
+                if (Semantics.ChordRowBarLines.Closes(barline, bar.Count > 0))
                     Close();
                 // A repeat written in the row is the score's, as one written in a part is.
                 NoteRepeatSign(barline, barStart, part);
