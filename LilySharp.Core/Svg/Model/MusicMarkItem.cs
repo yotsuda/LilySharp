@@ -264,9 +264,10 @@ public sealed record MusicMarkItem
     ///   dropped is the later part's own — the very level that part's hairpin ends on. Read by
     ///   voice, that hairpin would run past it to the part's next level.
     ///   departs from: ly/engraver-init.ly:359-410 Dynamic_engraver consisted into the Voice context (one pairing a voice).
-    ///   ⚠️ The parts' item numbers are compared as one clock, as they were before a hairpin
-    ///   held a voice: right where the parts move together, which is where their levels are
-    ///   one. It goes when the standing copy carries the place of the copy it stands for.
+    ///   The parts' places are compared by their moments (<c>HairpinEngraver.StaffPlace</c>;
+    ///   by their item numbers, as one clock, until session 1239). ⚠️ The END it gives is still
+    ///   the standing copy's place, in the standing part's voice: it goes when the standing copy
+    ///   carries the place of the copy it stands for.
     ///   observed by: GrammarEvaluation3Tests.TwoPartsDifferingDynamicsOnACondensedStaff_TakeASideEach.
     /// </remarks>
     public bool HairpinEndsOnStaff { get; init; }

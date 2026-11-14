@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 432 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **559** | |
+| `OWN` | 433 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **560** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -247,7 +247,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（432 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（433 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -635,6 +635,7 @@
 ### `LilySharp.Core/Svg/Layout/HairpinEngraver.cs`
 - **`HairpinEngraver.DetectHairpins`** LILYSHARP-OWN: with NO end in its own voice the hairpin takes the staff's next
 - **`HairpinEngraver.DetectHairpins`** LILYSHARP-OWN: LilyPond reads the two at one moment as a stop, then a start.
+- **`HairpinEngraver.StaffPlace`** LILYSHARP-OWN: the order of the search over a whole staff, which is Lily#'s own
 ### `LilySharp.Core/Svg/Layout/HeaderBand.cs`
 - **`HeaderBand.ChordListGap`** LILYSHARP-OWN: LilyPond has no chord list; the gap is Lily#'s, a little more
 - **`HeaderBand.RowPadding`** LILYSHARP-OWN (user decision 2026-09-26): LilyPond stacks the rows with ZERO padding

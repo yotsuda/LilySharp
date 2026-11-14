@@ -570,7 +570,7 @@ public sealed partial class MeasureCollector
 
         if (piece.MarkedRest is { } marked)
         {
-            CollectDynamics(marked, measureIndex, itemIndex);
+            CollectDynamics(marked, measureIndex, itemIndex, anchor);
             CollectArticulations(marked, measureIndex, itemIndex, stemUp, null, anchor);
         }
         if (piece.Hits is { } members)
@@ -579,7 +579,7 @@ public sealed partial class MeasureCollector
                 AddDrumMark(h.Drum, measureIndex, itemIndex, h.Node.SourceStart);
             foreach (var node in members.Select(h => h.Node).Distinct())
             {
-                CollectDynamics(node, measureIndex, itemIndex);
+                CollectDynamics(node, measureIndex, itemIndex, anchor);
                 CollectArticulations(node, measureIndex, itemIndex, stemUp, null, anchor);
             }
         }

@@ -6769,7 +6769,14 @@ public sealed partial class MeasureCollector
     /// <remarks>
     /// LILYPOND-REF: dynamic-engraver.cc:36-61 Dynamic_engraver::listen_dynamic
     /// </remarks>
-    private void CollectDynamics(SyntaxNode node, int measureIndex, int itemIndex)
+    /// <param name="node">The note, chord, rest or group that carries the marks.</param>
+    /// <param name="measureIndex">Its bar.</param>
+    /// <param name="itemIndex">Its item in its voice's bar.</param>
+    /// <param name="moment">Its moment from the bar's start — stamped on the level
+    /// (<see cref="DynamicItem.Moment"/>) and on the hairpin's start
+    /// (<see cref="MusicMarkItem.AnchorTiming"/>, as a stop's is by <c>CollectArticulations</c>):
+    /// what <c>HairpinEngraver.DetectHairpins</c> compares two voices' places by.</param>
+    private void CollectDynamics(SyntaxNode node, int measureIndex, int itemIndex, Fraction moment)
     {
         // In grace time a dynamic LEVEL rides (session 916, GraceBodySupport.IsCarriedDynamic,
         // the predicate LYS4020 reads too): DynamicEngraver stands it on the grace column. So
@@ -6814,6 +6821,7 @@ public sealed partial class MeasureCollector
                             : DynamicSideAbove(dynamicSyntax.ForcedAbove),
                         WrittenAbove = dynamicSyntax.ForcedAbove,
                         VoiceIndex = _v.Cursor.VoiceIndex,
+                        Moment = moment,
                         IsSubito = dynamicSyntax.IsSubito,
                         // (A niente is a word or its hairpin's circle: no parentheses, LYS4076.)
                         IsEditorial = dynamicSyntax.IsEditorial && level != DynamicLevel.Niente,
@@ -6834,7 +6842,7 @@ public sealed partial class MeasureCollector
                     if (markType != null)
                     {
                         _musicMarks.Add(new MusicMarkItem(markType.Value, measureIndex,
-                            dynamicSyntax.SourceStart, itemIndex)
+                            dynamicSyntax.SourceStart, itemIndex, moment)
                         {
                             StaffIndex = _v.Cursor.StaffIndex,
                             // The hairpin is its voice's (HairpinItem.VoiceIndex). Until session

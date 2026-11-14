@@ -263,4 +263,99 @@ public class HairpinVoiceTests
         var pin = Assert.Single(Pins("voice { c''4@cresc c'' c'' c'' } { c'2 c'2@f } |"));
         Assert.Equal("voice 0 (0,0)..(0,1) end voice 1 stop False", Say(pin));
     }
+
+    /// <summary>
+    /// …and that search orders the two voices' places by their MOMENTS (session 1239): an item
+    /// number counts its own voice's items, so two voices' numbers are two clocks. Each bar
+    /// has the end under a number that says the opposite of its beat.
+    /// </summary>
+    [Theory]
+    // The f is the lower voice's item 1 on beat 3; the crescendo starts on item 3, the fourth
+    // eighth. By number the f was "before" it: no end, and the wedge ran to the bar's end.
+    [InlineData("voice { c''8 c'' c'' c''@cresc c''2 } { c'2 c'2@f } |", "voice 0 (0,3)..(0,1) end voice 1 stop False")]
+    // The same with a stop.
+    [InlineData("voice { c''8 c'' c'' c''@cresc c''2 } { c'2 c'2@!cresc } |", "voice 0 (0,3)..(0,1) end voice 1 stop True")]
+    // The f is item 2 on beat 2, BEFORE the crescendo (item 1, beat 3). By number it was the
+    // end, and a wedge of no length was drawn. With no end at all the wedge runs its bar out.
+    [InlineData("voice { c''2 c''2@cresc } { c'8 c' c'@f c' c'2 } |", "voice 0 (0,1)..(1,0) end voice 0 stop False")]
+    // The p stands at the crescendo's own moment (both on beat 3) and is not its end; the f
+    // on beat 4 is — item 2 of its voice, the number the crescendo starts on.
+    [InlineData("voice { c''4 c''4 c''4@cresc c''4 } { c'2 c'4@p c'4@f } |", "voice 0 (0,2)..(0,2) end voice 1 stop False")]
+    public void AnEndInAnotherVoice_IsFoundByItsMoment_NotItsItemNumber(string bar, string expected)
+        => Assert.Equal(expected, Say(Assert.Single(Pins(bar))));
+
+    /// <summary>The other voice's next hairpin ends this one at its moment (beat 3: the lower
+    /// voice's item 1, under the upper voice's crescendo from item 2), and of two ends on the
+    /// staff the EARLIER beat is taken, whichever voice was collected first.</summary>
+    /// <remarks>LILYSHARP-OWN, as the search is (HairpinEngraver.DetectHairpins).</remarks>
+    [Fact]
+    public void TheEarliestEndOnTheStaff_IsTheEarliestBeat()
+    {
+        var pins = Pins("voice { c''8 c'' c''@cresc c'' c''2 } { c'2 c'2@decresc } | voice { c''1 } { c'1@p } |");
+        Assert.Equal(2, pins.Length);
+        Assert.Equal("voice 0 (0,2)..(0,1) end voice 1 stop False", Say(pins.Single(p => p.VoiceIndex == 0)));
+
+        // The mf on beat 2 and the f on beat 4 are both their voices' item 1; the mf is the
+        // end, whichever voice writes it.
+        var first = Assert.Single(Pins("voice { c''1@cresc } { c'4 c'4@mf c'2 } { a2. a4@f } |"));
+        Assert.Equal("voice 0 (0,0)..(0,1) end voice 1 stop False", Say(first));
+        var swapped = Assert.Single(Pins("voice { c''1@cresc } { a2. a4@f } { c'4 c'4@mf c'2 } |"));
+        Assert.Equal("voice 0 (0,0)..(0,1) end voice 2 stop False", Say(swapped));
+
+        // On a condensed staff the levels are the staff's from the start (HairpinEndsOnStaff),
+        // and the list has one PART's after another's: the upper part's own f on beat 4 is
+        // listed before the lower part's mf on beat 2, under the same number. The mf ends it.
+        var tree = SyntaxTree.Parse("octave absolute\npart a { instrument violin }\npart b { instrument violin }\n"
+            + "section S {\n  a { c''2.@cresc c''4@f | }\n  b { e'4 e'4@mf e'2 | }\n}\nform { ~S }\nscore { condensedStaff { a b } }\n");
+        var page = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var condensed = Assert.Single(HairpinEngraver.DetectHairpins(page.MusicMarks, page.Dynamics));
+        Assert.Equal("voice 0 (0,0)..(0,1) end voice 1 stop False", Say(condensed));
+
+        // A stop on the note another voice's next hairpin starts on is not that hairpin's own
+        // (`c@decresc@!cresc` in one voice is): it ends this one, as a stop.
+        var stopped = Pins("voice { c''1@cresc } { c'4 c'4@decresc c'2 } { a4 a4@!cresc a2 } |");
+        Assert.Equal("voice 0 (0,0)..(0,1) end voice 2 stop True", Say(stopped.Single(p => p.VoiceIndex == 0)));
+    }
+
+    /// <summary>
+    /// Every carrier of a level or of a hairpin's start stamps its moment — a rest, a chord, a
+    /// tuplet's member and a member of a <c>&lt;&lt; &gt;&gt;</c> group as a note does. Each
+    /// bar's end is on beat 3 under the number 1, and the crescendo starts on its voice's item
+    /// 2 or 3: without the moment the end is "before" it and is not found.
+    /// </summary>
+    [Theory]
+    [InlineData("voice { c''8 c'' c'' c''@cresc c''2 } { r2 r2@f } |", 3)]
+    [InlineData("voice { c''8 c'' c'' c''@cresc c''2 } { <c' e'>2 <c' e'>2@f } |", 3)]
+    [InlineData("voice { c''8 c'' c'' <c'' e''>@cresc c''2 } { c'2 c'2@f } |", 3)]
+    [InlineData("voice { c''8 c'' c'' r@cresc c''2 } { c'2 c'2@f } |", 3)]
+    [InlineData("voice { c''8 c'' c'' c''@cresc c''2 } { c'2 tuplet 3/2 { c'4@f c' c' } } |", 3)]
+    [InlineData("voice { tuplet 3/2 { c''4 c'' c''@cresc } c''2 } { c'2 c'2@f } |", 2)]
+    [InlineData("voice { c''8 c'' c'' c''@cresc c''2 } { c'2 << c'@f e' g' >>2 } |", 3)]
+    [InlineData("voice { c''8 c'' c'' c''@cresc c''2 } { c'2 << c' e' g' >>2@f } |", 3)]
+    [InlineData("voice { << c'' e'' g''@cresc >>2 c''2 } { c'2 c'2@f } |", 2)]
+    public void EveryCarrier_StampsTheMomentOfItsLevelOrItsHairpinsStart(string bar, int startItem)
+        => Assert.Equal($"voice 0 (0,{startItem})..(0,1) end voice 1 stop False", Say(Assert.Single(Pins(bar))));
+
+    /// <summary>
+    /// The page for two of those bars: the wedge spans the columns it spans when the end is
+    /// written in its own voice, which LilyPond draws. MEASURED (LilyPond 2.26.0, raggedRight,
+    /// Lab sessions/p1239/hpv s1 and s5 — the same bars with the f moved into the hairpin's
+    /// voice; a printed extent is half a line thickness wider at either end than the bound):
+    ///   s1  Hairpin 24.583..26.245 at −5.2858, the f at −5.8858
+    ///   s5  Hairpin 23.075..25.198 at −8.4473, the p at −7.2227 and the f at −9.0473
+    /// </summary>
+    [Fact]
+    public void TheWedgeToAnotherVoicesLevel_SpansTheColumnsOfItsBeats()
+    {
+        const string later = "voice { c''8 c'' c'' c''@cresc c''2 } { c'2 c'2@f } |";
+        var wedge = Assert.Single(Wedges(later));
+        Near(24.633, wedge.StartX); Near(26.195, wedge.EndX); Near(-5.2858, wedge.Y);
+        Near(-5.8858, Assert.Single(LevelHeights(later)));
+
+        const string sameNumber = "voice { c''4 c''4 c''4@cresc c''4 } { c'2 c'4@p c'4@f } |";
+        wedge = Assert.Single(Wedges(sameNumber));
+        Near(23.125, wedge.StartX); Near(25.148, wedge.EndX); Near(-8.4473, wedge.Y);
+        var levels = LevelHeights(sameNumber);
+        Near(-7.2227, levels[0]); Near(-9.0473, levels[1]);
+    }
 }

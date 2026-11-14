@@ -724,7 +724,7 @@ public sealed partial class MeasureCollector
                 TodoSideWritten = TodoSideWrittenOf(arpeggio),
             });
         CollectChordNames(arpeggio, measureIndex, startNoteIndex, startTiming);
-        CollectDynamics(arpeggio, measureIndex, startNoteIndex);
+        CollectDynamics(arpeggio, measureIndex, startNoteIndex, startTiming);
         // An @diagram on the group stands over its first note, as its @chord's does (review
         // 2026-10-31, D2: the page dropped it, LYS4008, while the .ly twin drew it); a bare one
         // draws the group's notes as the part's strings fret them.
@@ -800,7 +800,7 @@ public sealed partial class MeasureCollector
                     await AddItemWithoutDurationAsync(builder, items[k] with { TimeScale = scale });
                     if (k == 0)
                     {
-                        CollectDynamics(pitch, measureIndex, itemIndex);
+                        CollectDynamics(pitch, measureIndex, itemIndex, onset);
                         CollectArticulations(pitch, measureIndex, itemIndex, items[k].StemUp, anchorTiming: onset);
                     }
                 }
@@ -838,7 +838,7 @@ public sealed partial class MeasureCollector
                     await AddItemWithoutDurationAsync(builder, item);
                     if (first)
                     {
-                        CollectDynamics(chord, measureIndex, itemIndex);
+                        CollectDynamics(chord, measureIndex, itemIndex, onset);
                         CollectArticulations(chord, measureIndex, itemIndex, item.StemUp, anchorTiming: onset);
                     }
                 }
@@ -1232,7 +1232,7 @@ public sealed partial class MeasureCollector
                         // sibling in EmitScaledItem was written to match it).
                         CollectArticulations(note, prMeasureIndex, prItemIndex,
                             stemUp: false, anchorTiming: prAnchorTiming);
-                        CollectDynamics(note, prMeasureIndex, prItemIndex);
+                        CollectDynamics(note, prMeasureIndex, prItemIndex, prAnchorTiming);
                         // …and a chord symbol, as on `r1@chord(C)` (owner's decision 2026-09-28).
                         CollectChordNames(note, prMeasureIndex, prItemIndex, prAnchorTiming);
                         break;
@@ -1245,7 +1245,7 @@ public sealed partial class MeasureCollector
                     await AddItemAsync(builder, WithBowSources(noteItem, m));
                     AddNoteCrossArpeggio(noteItem, measureIndex, itemIndex, note.SourceStart, CrossArpeggioOf(note) != SpanArpeggioPart.None, ArpeggioArrowOf(note));
                     await AddBreathingSignColumn(note.Articulations, builder, measureIndex);
-                    CollectDynamics(note, measureIndex, itemIndex);
+                    CollectDynamics(note, measureIndex, itemIndex, noteAnchorTiming);
                     CollectArticulations(note, measureIndex, itemIndex, noteItem.StemUp,
                         noteItem.EditorialAccidental, noteAnchorTiming);
                     CollectFiguredBass(note, measureIndex, itemIndex, noteAnchorTiming, noteItem.Duration);
@@ -1326,7 +1326,7 @@ public sealed partial class MeasureCollector
                         // LILYPOND-REF: lily/dynamic-engraver.cc Dynamic_engraver — the
                         //   dynamic is its own event stream, unanchored to note heads
                         //   (regression dynamics-rest-positioning.ly is the pin).
-                        CollectDynamics(rest, restMeasureIndex, restItemIndex);
+                        CollectDynamics(rest, restMeasureIndex, restItemIndex, restAnchorTiming);
                         // A chord symbol belongs to the BEAT, not to a note (owner's decision
                         // 2026-09-28): `r1@chord(C x32013)` / `s1@chord(G)` draw the name on the
                         // chord-name line at the rest's moment, and the diagram under it by the
@@ -1382,7 +1382,7 @@ public sealed partial class MeasureCollector
                         //   event stream at that same moment.
                         CollectArticulations(rest, restMeasureIndex, restItemIndex, stemUp: false,
                             anchorTiming: restAnchorTiming);
-                        CollectDynamics(rest, restMeasureIndex, restItemIndex);
+                        CollectDynamics(rest, restMeasureIndex, restItemIndex, restAnchorTiming);
                         // `R1*4@chord(C)`: the symbol stands at the run's first bar, on the
                         // written event (the count<=1 arm's remark — owner's decision 2026-09-28).
                         CollectChordNames(rest, restMeasureIndex, restItemIndex, restAnchorTiming);
@@ -1450,7 +1450,7 @@ public sealed partial class MeasureCollector
                             _v.DefaultDuration = Fraction.FromNoteValue(chord.Duration.Value);
                             _v.DefaultDots = chord.Duration.DotCount;
                         }
-                        CollectDynamics(chord, measureIndex, itemIndex);
+                        CollectDynamics(chord, measureIndex, itemIndex, chordAnchorTiming);
                         CollectArticulations(chord, measureIndex, itemIndex,
                             stemUp: false, anchorTiming: chordAnchorTiming);
                         // A SLUR mark needs a carrier grob, so unlike a dynamic it cannot be
@@ -1473,7 +1473,7 @@ public sealed partial class MeasureCollector
                     if (chord.IsShapeChord && ShapeNotesOf(chord).IsEmpty)
                     {
                         await AddItemAsync(builder, WithBowSources(CreateShapeSpacerItem(chord), m));
-                        CollectDynamics(chord, measureIndex, itemIndex);
+                        CollectDynamics(chord, measureIndex, itemIndex, chordAnchorTiming);
                         CollectChordNames(chord, measureIndex, itemIndex, chordAnchorTiming);
                         break;
                     }
@@ -1498,7 +1498,7 @@ public sealed partial class MeasureCollector
                         chordItem = chordItem with { HasArpeggioBracket = true };
                     await AddItemAsync(builder, WithBowSources(chordItem, m));
                     await AddBreathingSignColumn(chord.Articulations, builder, measureIndex);
-                    CollectDynamics(chord, measureIndex, itemIndex);
+                    CollectDynamics(chord, measureIndex, itemIndex, chordAnchorTiming);
                     // Use chord stem direction for articulation placement
                     CollectArticulations(chord, measureIndex, itemIndex, chordItem.StemUp, anchorTiming: chordAnchorTiming);
                     CollectFiguredBass(chord, measureIndex, itemIndex, chordAnchorTiming, chordItem.Duration);
@@ -1536,7 +1536,7 @@ public sealed partial class MeasureCollector
                     if (arpBracket)
                         chordCopy = chordCopy with { HasArpeggioBracket = true };
                     await AddItemAsync(builder, WithBowSources(chordCopy, m));
-                    CollectDynamics(rep, measureIndex, itemIndex);
+                    CollectDynamics(rep, measureIndex, itemIndex, repAnchorTiming);
                     CollectArticulations(rep, measureIndex, itemIndex, chordCopy.StemUp, anchorTiming: repAnchorTiming);
                     CollectFiguredBass(rep, measureIndex, itemIndex, repAnchorTiming, chordCopy.Duration);
                     CollectChordNames(rep, measureIndex, itemIndex, repAnchorTiming);
@@ -1561,7 +1561,7 @@ public sealed partial class MeasureCollector
                         CreateSlashNoteItem(slash, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, isCue),
                         slash, isCue);
                     await AddItemAsync(builder, WithBowSources(slashItem, m));
-                    CollectDynamics(slash, measureIndex, itemIndex);
+                    CollectDynamics(slash, measureIndex, itemIndex, slashAnchorTiming);
                     CollectArticulations(slash, measureIndex, itemIndex, slashItem.StemUp, anchorTiming: slashAnchorTiming);
                     CollectFiguredBass(slash, measureIndex, itemIndex, slashAnchorTiming, slashItem.Duration);
                     CollectChordNames(slash, measureIndex, itemIndex, slashAnchorTiming);
@@ -1590,7 +1590,7 @@ public sealed partial class MeasureCollector
                         ChordItem c => c.StemUp,
                         _ => false,
                     };
-                    CollectDynamics(bare, measureIndex, itemIndex);
+                    CollectDynamics(bare, measureIndex, itemIndex, bareAnchorTiming);
                     CollectArticulations(bare, measureIndex, itemIndex, bareStemUp, anchorTiming: bareAnchorTiming);
                     CollectFiguredBass(bare, measureIndex, itemIndex, bareAnchorTiming, bareItem.Duration);
                     CollectChordNames(bare, measureIndex, itemIndex, bareAnchorTiming);
@@ -2647,7 +2647,7 @@ public sealed partial class MeasureCollector
         int measureIndex, int itemIndex, Fraction anchorTiming)
     {
         AddDrumMark(drumNote.DrumName, measureIndex, itemIndex, drumNote.SourceStart);
-        CollectDynamics(drumNote, measureIndex, itemIndex);
+        CollectDynamics(drumNote, measureIndex, itemIndex, anchorTiming);
         CollectArticulations(drumNote, measureIndex, itemIndex, drumItem.StemUp, null, anchorTiming);
     }
 
@@ -2799,7 +2799,7 @@ public sealed partial class MeasureCollector
                     };
                     await AddItemWithoutDurationAsync(builder, WithBowSources(pitchedRest with { TimeScale = scale }, m));
                     CollectArticulations(note, annMeasureIndex, annItemIndex, stemUp: false, anchorTiming: annAnchor);
-                    CollectDynamics(note, annMeasureIndex, annItemIndex);
+                    CollectDynamics(note, annMeasureIndex, annItemIndex, annAnchor);
                     CollectChordNames(note, annMeasureIndex, annItemIndex, annAnchor);
                     return pitchedRest.Duration;
                 }
@@ -2815,7 +2815,7 @@ public sealed partial class MeasureCollector
                 noteItem = WithCrossArpeggio(DecorateSoundingItem(noteItem with { TimeScale = scale }, note, isCue), note);
                 await AddItemWithoutDurationAsync(builder, WithBowSources(noteItem, m));
                 AddNoteCrossArpeggio(noteItem, annMeasureIndex, annItemIndex, note.SourceStart, CrossArpeggioOf(note) != SpanArpeggioPart.None, ArpeggioArrowOf(note));
-                CollectDynamics(note, annMeasureIndex, annItemIndex);
+                CollectDynamics(note, annMeasureIndex, annItemIndex, annAnchor);
                 CollectArticulations(note, annMeasureIndex, annItemIndex, noteItem.StemUp,
                     noteItem.EditorialAccidental, annAnchor);
                 CollectFiguredBass(note, annMeasureIndex, annItemIndex, annAnchor, noteItem.Duration);
@@ -2837,7 +2837,7 @@ public sealed partial class MeasureCollector
                 await AddItemWithoutDurationAsync(builder, WithBowSources(restItem with { TimeScale = scale }, m));
                 CollectArticulations(rest, annMeasureIndex, annItemIndex, stemUp: false, anchorTiming: annAnchor);
                 // Same repair as the main walk's rest case: a rest carries dynamics too.
-                CollectDynamics(rest, annMeasureIndex, annItemIndex);
+                CollectDynamics(rest, annMeasureIndex, annItemIndex, annAnchor);
                 // …and a chord symbol (the main rest arm's remark, 2026-09-28).
                 CollectChordNames(rest, annMeasureIndex, annItemIndex, annAnchor);
                 return restItem.Duration;
@@ -2847,7 +2847,7 @@ public sealed partial class MeasureCollector
                 // A diagram(…) item with no usable shape: a spacer (LYS1040), as the main arm.
                 var spacer = CreateShapeSpacerItem(chord);
                 await AddItemWithoutDurationAsync(builder, WithBowSources(spacer with { TimeScale = scale }, m));
-                CollectDynamics(chord, annMeasureIndex, annItemIndex);
+                CollectDynamics(chord, annMeasureIndex, annItemIndex, annAnchor);
                 CollectChordNames(chord, annMeasureIndex, annItemIndex, annAnchor);
                 return spacer.Duration;
             }
@@ -2869,7 +2869,7 @@ public sealed partial class MeasureCollector
                 if (arpBracket)
                     chordItem = chordItem with { HasArpeggioBracket = true };
                 await AddItemWithoutDurationAsync(builder, WithBowSources(chordItem, m));
-                CollectDynamics(chord, annMeasureIndex, annItemIndex);
+                CollectDynamics(chord, annMeasureIndex, annItemIndex, annAnchor);
                 CollectArticulations(chord, annMeasureIndex, annItemIndex, chordItem.StemUp, anchorTiming: annAnchor);
                 CollectFiguredBass(chord, annMeasureIndex, annItemIndex, annAnchor, chordItem.Duration);
                 CollectChordNames(chord, annMeasureIndex, annItemIndex, annAnchor);
@@ -2900,7 +2900,7 @@ public sealed partial class MeasureCollector
                     await AddItemWithoutDurationAsync(builder, WithBowSources(chordCopy, m));
                     AddArpeggio(chordCopy, hasArpeggio, arpBracket, annMeasureIndex, annItemIndex, rep.SourceStart,
                         cross: CrossArpeggioOf(rep) != SpanArpeggioPart.None, arrow: ArpeggioArrowOf(rep));
-                    CollectDynamics(rep, annMeasureIndex, annItemIndex);
+                    CollectDynamics(rep, annMeasureIndex, annItemIndex, annAnchor);
                     CollectArticulations(rep, annMeasureIndex, annItemIndex, chordCopy.StemUp, anchorTiming: annAnchor);
                     CollectFiguredBass(rep, annMeasureIndex, annItemIndex, annAnchor, chordCopy.Duration);
                     CollectChordNames(rep, annMeasureIndex, annItemIndex, annAnchor);
@@ -2921,7 +2921,7 @@ public sealed partial class MeasureCollector
                 Fraction written = slashItem.Duration;
                 slashItem = DecorateSoundingItem(slashItem with { TimeScale = scale }, slash, isCue);
                 await AddItemWithoutDurationAsync(builder, WithBowSources(slashItem, m));
-                CollectDynamics(slash, annMeasureIndex, annItemIndex);
+                CollectDynamics(slash, annMeasureIndex, annItemIndex, annAnchor);
                 CollectArticulations(slash, annMeasureIndex, annItemIndex, slashItem.StemUp, anchorTiming: annAnchor);
                 CollectChordNames(slash, annMeasureIndex, annItemIndex, annAnchor);
                 return written;
@@ -2957,7 +2957,7 @@ public sealed partial class MeasureCollector
                         n = DecorateSoundingItem(n with { TimeScale = scale }, bare, isCue);
                         await AddItemWithoutDurationAsync(builder, WithBowSources(n, m));
                         AddRepeatedDrumMark(bare, annMeasureIndex, annItemIndex);
-                        CollectDynamics(bare, annMeasureIndex, annItemIndex);
+                        CollectDynamics(bare, annMeasureIndex, annItemIndex, annAnchor);
                         CollectArticulations(bare, annMeasureIndex, annItemIndex, n.StemUp, anchorTiming: annAnchor);
                         CollectChordNames(bare, annMeasureIndex, annItemIndex, annAnchor);
                         return written;
@@ -2967,7 +2967,7 @@ public sealed partial class MeasureCollector
                         Fraction written = c.Duration;
                         c = DecorateSoundingItem(c with { TimeScale = scale }, bare, isCue);
                         await AddItemWithoutDurationAsync(builder, WithBowSources(c, m));
-                        CollectDynamics(bare, annMeasureIndex, annItemIndex);
+                        CollectDynamics(bare, annMeasureIndex, annItemIndex, annAnchor);
                         CollectArticulations(bare, annMeasureIndex, annItemIndex, c.StemUp, anchorTiming: annAnchor);
                         CollectChordNames(bare, annMeasureIndex, annItemIndex, annAnchor);
                         return written;

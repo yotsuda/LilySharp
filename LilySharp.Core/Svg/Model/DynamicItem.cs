@@ -48,6 +48,14 @@ public sealed record DynamicItem
     /// <summary>The item index within the measure.</summary>
     public int ItemIndex { get; init; }
 
+    /// <summary>
+    /// The moment of its note, from the bar's start: what a place in ANOTHER voice is compared
+    /// by (<c>HairpinEngraver.DetectHairpins</c>) — an item index counts one voice's items, and
+    /// two voices' numbers are two clocks. Null where no collector stamped one (a model built
+    /// by hand), and the numbers are compared as they were.
+    /// </summary>
+    public Semantics.Fraction? Moment { get; init; }
+
     /// <summary>Source position for click-to-source mapping.</summary>
     public int SourcePosition { get; init; }
 

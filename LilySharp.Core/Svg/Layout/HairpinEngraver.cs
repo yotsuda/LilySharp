@@ -1081,19 +1081,20 @@ internal static class HairpinEngraver
             //   before — the level a staff reaches is the staff's. LilyPond pairs nothing there
             //   ("unterminated crescendo") and draws no hairpin.
             //   departs from: lily/dynamic-engraver.cc:197-211 Dynamic_engraver::finalize.
-            //   ⚠️ That search still compares the two voices' ITEM NUMBERS, which are two
-            //   clocks: where their rhythms differ the end can be taken for earlier or later
-            //   than it is. A dynamic carries no time of its own to compare by.
-            //   observed by: HairpinVoiceTests (the other voice's level ends it).
+            //   Two voices' places are compared by their MOMENTS (StaffPlace): their item
+            //   numbers are two clocks. Until session 1239 the numbers were compared, so under
+            //   `c''8 c'' c'' c''@cresc c''2` the other voice's `c'2 c'2@f` (item 1, the third
+            //   beat) was "before" the start (item 3) and the hairpin ran to the bar's end, and
+            //   a level on an earlier beat under a higher number was taken for its end.
+            //   observed by: HairpinVoiceTests (the other voice's level ends it; the two clocks).
+            var start = new StaffPlace(mark.MeasureIndex, mark.VoiceIndex, startItem, MomentOf(mark));
             (DynamicItem? Dynamic, MusicMarkItem? Mark, MusicMarkItem? Stop) EndsIn(bool ownVoice)
             {
-                var dynamic = sortedDynamics
-                    .FirstOrDefault(d =>
-                        d.StaffIndex == mark.StaffIndex &&
-                        (!ownVoice || d.VoiceIndex == mark.VoiceIndex) &&
-                        (d.MeasureIndex > mark.MeasureIndex ||
-                         (d.MeasureIndex == mark.MeasureIndex && d.ItemIndex > startItem)));
-                return (dynamic, NextMark(ownVoice), NextStop(ownVoice));
+                var ends = sortedDynamics.Where(d =>
+                    d.StaffIndex == mark.StaffIndex &&
+                    (!ownVoice || d.VoiceIndex == mark.VoiceIndex) &&
+                    PlaceOf(d).IsAfter(start));
+                return (FirstOf(ends, PlaceOf, ownVoice), NextMark(ownVoice), NextStop(ownVoice));
             }
 
             // Find the next cresc/decresc mark on this staff (another hairpin starts
@@ -1109,24 +1110,21 @@ internal static class HairpinEngraver
             // defect the same day (TextSpannerEngraver.DetectTextSpanners' remark has the
             // report and the reasoning); the two searches are one shape and now carry one
             // guard.
-            MusicMarkItem? NextMark(bool ownVoice) => crescMarks
+            MusicMarkItem? NextMark(bool ownVoice) => FirstOf(crescMarks
                 .Select(x => x.Mark)
-                .FirstOrDefault(m =>
+                .Where(m =>
                     m != mark && m.SourcePosition != mark.SourcePosition &&
                     m.StaffIndex == mark.StaffIndex &&
                     (!ownVoice || m.VoiceIndex == mark.VoiceIndex) &&
-                    (m.MeasureIndex > mark.MeasureIndex ||
-                     (m.MeasureIndex == mark.MeasureIndex &&
-                      m.AnchorItemIndex > mark.AnchorItemIndex)));
+                    PlaceOfMark(m).IsAfter(PlaceOfMark(mark))), PlaceOfMark, ownVoice);
 
             // An explicit stop (@!cresc, LilyPond's \!) on this staff, strictly after the start:
             // the wedge ends at its note. Another playing of the same written stop is fine — a
             // stop ends whatever hairpin is open, as \! does.
-            MusicMarkItem? NextStop(bool ownVoice) => musicMarks.FirstOrDefault(m =>
+            MusicMarkItem? NextStop(bool ownVoice) => FirstOf(musicMarks.Where(m =>
                 m.Type == MusicMarkType.HairpinStop && m.StaffIndex == mark.StaffIndex &&
                 (!ownVoice || m.VoiceIndex == mark.VoiceIndex) &&
-                (m.MeasureIndex > mark.MeasureIndex ||
-                 (m.MeasureIndex == mark.MeasureIndex && m.AnchorItemIndex > startItem)));
+                PlaceOfMark(m).IsAfter(start)), PlaceOfMark, ownVoice);
 
             // (A condensed staff's levels are the staff's from the start: HairpinEndsOnStaff.)
             var (nextDynamic, nextMark, nextStop) = EndsIn(ownVoice: !mark.HairpinEndsOnStaff);
@@ -1134,10 +1132,18 @@ internal static class HairpinEngraver
                 (nextDynamic, nextMark, nextStop) = EndsIn(ownVoice: false);
             // A stop written after the next hairpin's start on one note is that hairpin's own.
             if (nextStop != null && nextMark != null && nextMark.MeasureIndex == nextStop.MeasureIndex
+                && nextMark.VoiceIndex == nextStop.VoiceIndex
                 && nextMark.AnchorItemIndex == nextStop.AnchorItemIndex
                 && nextMark.SourcePosition < nextStop.SourcePosition)
                 nextStop = null;
-            static bool Before(int m1, int i1, int m2, int i2) => m1 < m2 || (m1 == m2 && i1 <= i2);
+            // Where each candidate stands. (The next hairpin's start with no item of its own
+            // stands at its bar's head, as the end it gives is.)
+            StaffPlace? stopAt = nextStop != null ? PlaceOfMark(nextStop) : null;
+            StaffPlace? dynamicAt = nextDynamic != null ? PlaceOf(nextDynamic) : null;
+            StaffPlace? markAt = nextMark != null
+                ? PlaceOfMark(nextMark) with { Item = Math.Max(0, nextMark.AnchorItemIndex) }
+                : null;
+            static bool Before(StaffPlace a, StaffPlace? b) => b is not { } other || a.CompareTo(other) <= 0;
 
             // A stop written AFTER this start on one note (`g1@cresc@!cresc`): the wedge spans that
             // note's length, to the next column or the bar's end (CalculateEndX). The written order
@@ -1183,45 +1189,36 @@ internal static class HairpinEngraver
             int endVoice = mark.VoiceIndex;
             DynamicItem? endDynamic = null;
             bool endsAtStop = false;
+            StaffPlace end;
 
             // The dynamic ends it when it stands at or before the next mark. ⚠️ Until session 847
             // only a dynamic at the bar's head beat a mark in the same bar, so `c@p@cresc d@f
             // e@decresc` ended the crescendo at the mark — whose end is its bar's head, before
             // the start — and drew neither hairpin (LilyPond draws both, the f between).
-            if (nextStop != null
-                && (nextDynamic == null || Before(nextStop.MeasureIndex, nextStop.AnchorItemIndex, nextDynamic.MeasureIndex, nextDynamic.ItemIndex))
-                && (nextMark == null || Before(nextStop.MeasureIndex, nextStop.AnchorItemIndex, nextMark.MeasureIndex, Math.Max(0, nextMark.AnchorItemIndex))))
+            if (nextStop != null && stopAt is { } stopPlace
+                && Before(stopPlace, dynamicAt) && Before(stopPlace, markAt))
             {
-                endMeasure = nextStop.MeasureIndex;
-                endItem = nextStop.AnchorItemIndex;
-                endVoice = nextStop.VoiceIndex;
+                end = stopPlace;
                 endsAtStop = true;
             }
-            else if (nextDynamic != null && (nextMark == null ||
-                nextDynamic.MeasureIndex < nextMark.MeasureIndex ||
-                (nextDynamic.MeasureIndex == nextMark.MeasureIndex
-                 && nextDynamic.ItemIndex <= Math.Max(0, nextMark.AnchorItemIndex))))
+            else if (nextDynamic != null && dynamicAt is { } dynamicPlace && Before(dynamicPlace, markAt))
             {
-                endMeasure = nextDynamic.MeasureIndex;
-                endItem = nextDynamic.ItemIndex;
-                endVoice = nextDynamic.VoiceIndex;
+                end = dynamicPlace;
                 endDynamic = nextDynamic;
             }
-            else if (nextMark != null)
+            else if (markAt is { } markPlace)
             {
                 // At the next hairpin's own moment. Until 2026-11-04 this was its bar's head: a
                 // hairpin met by another in its own bar was not drawn at all, and one met later in
                 // a bar stopped short at that bar's line (LilyPond draws both, Lab sessions/p1097/hp3).
-                endMeasure = nextMark.MeasureIndex;
-                endItem = Math.Max(0, nextMark.AnchorItemIndex);
-                endVoice = nextMark.VoiceIndex;
+                end = markPlace;
             }
             else
             {
                 // No end found — extend to end of the mark's measure + 1
-                endMeasure = mark.MeasureIndex + 1;
-                endItem = 0;
+                end = new StaffPlace(mark.MeasureIndex + 1, mark.VoiceIndex, 0, null);
             }
+            (endMeasure, endItem, endVoice) = (end.Measure, end.Item, end.Voice);
 
             // The carry rule at section boundaries. Only an end the pairing FOUND is judged;
             // the default end above never reaches past the next bar line.
@@ -1237,11 +1234,11 @@ internal static class HairpinEngraver
                 endVoice = mark.VoiceIndex;
                 endDynamic = null;
                 endsAtStop = false;
+                end = new StaffPlace(endMeasure, endVoice, endItem, null);
             }
 
             // Only add if there's actually a span
-            if (endMeasure > mark.MeasureIndex ||
-                (endMeasure == mark.MeasureIndex && endItem > startItem))
+            if (end.IsAfter(start))
             {
                 hairpins.Add(new HairpinItem(
                     Direction: direction,
@@ -1265,6 +1262,64 @@ internal static class HairpinEngraver
         }
 
         return MarkAdjacentTips(hairpins);
+    }
+
+    /// <summary>
+    /// A place on a staff, as <see cref="DetectHairpins"/> orders them: an item of a voice's
+    /// bar, with its moment from the bar's start where the collector stamped one
+    /// (<see cref="DynamicItem.Moment"/>, <see cref="MusicMarkItem.AnchorTiming"/>).
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: the order of the search over a whole staff, which is Lily#'s own
+    ///   (<see cref="DetectHairpins"/>: LilyPond pairs a hairpin in its voice and nowhere else).
+    ///   One voice's two places are ordered by their item numbers — a grace note and its main
+    ///   note stand at one moment under two numbers. Two voices' are ordered by their moments:
+    ///   an item number counts its own voice's items, so the two voices' numbers are two clocks.
+    ///   Without a moment on both (a model built by hand) the numbers are compared, as every
+    ///   place was until session 1239.
+    ///   departs from: lily/dynamic-engraver.cc:197-211 Dynamic_engraver::finalize.
+    ///   observed by: HairpinVoiceTests (the two clocks; every carrier; the earliest beat).
+    /// </remarks>
+    private readonly record struct StaffPlace(int Measure, int Voice, int Item, Semantics.Fraction? Moment)
+    {
+        public int CompareTo(StaffPlace other)
+        {
+            if (Measure != other.Measure)
+                return Measure.CompareTo(other.Measure);
+            if (Voice != other.Voice && Moment is { } at && other.Moment is { } otherAt)
+                return at == otherAt ? 0 : at < otherAt ? -1 : 1;
+            return Item.CompareTo(other.Item);
+        }
+
+        /// <summary>Strictly later than <paramref name="other"/>.</summary>
+        public bool IsAfter(StaffPlace other) => CompareTo(other) > 0;
+    }
+
+    private static StaffPlace PlaceOf(DynamicItem d) => new(d.MeasureIndex, d.VoiceIndex, d.ItemIndex, d.Moment);
+
+    private static StaffPlace PlaceOfMark(MusicMarkItem m)
+        => new(m.MeasureIndex, m.VoiceIndex, m.AnchorItemIndex, MomentOf(m));
+
+    /// <summary>A mark's moment, or null where its collector stamped none (the default
+    /// <see cref="MusicMarkItem.AnchorTiming"/> has no denominator).</summary>
+    private static Semantics.Fraction? MomentOf(MusicMarkItem m) => m.AnchorTiming.Denominator != 0 ? m.AnchorTiming : null;
+
+    /// <summary>
+    /// The first of <paramref name="candidates"/>: in the hairpin's own voice the first in
+    /// their list's order, as it was; over the whole staff the EARLIEST by
+    /// <see cref="StaffPlace"/> — a condensed staff's lists are in one part's order after
+    /// another's, so the first listed is not the first heard. Null for none.
+    /// </summary>
+    private static T? FirstOf<T>(IEnumerable<T> candidates, Func<T, StaffPlace> placeOf, bool ownVoice)
+        where T : class
+    {
+        if (ownVoice)
+            return candidates.FirstOrDefault();
+        T? first = null;
+        foreach (var candidate in candidates)
+            if (first == null || placeOf(candidate).CompareTo(placeOf(first)) < 0)
+                first = candidate;
+        return first;
     }
 
     /// <summary>
