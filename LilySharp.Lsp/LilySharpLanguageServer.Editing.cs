@@ -386,6 +386,7 @@ public sealed partial class LilySharpLanguageServer
                     actions.Add(ownDiagram);
                 if (TabOctaveAction(doc, uri, diagnostic) is { } tabOctave)
                     actions.Add(tabOctave);
+                actions.AddRange(RepeatSignActions(doc, uri, diagnostic));
                 if (diagnostic.Code == DiagnosticCodes.TodoMark && !todoOffered)
                 {
                     todoOffered = true;
@@ -615,6 +616,20 @@ public sealed partial class LilySharpLanguageServer
             start--;
         return QuickFix($"Write '@{annotation}'", doc, uri, diagnostic,
             EditOf(doc.Text, start, end, "@" + annotation));
+    }
+
+    /// <summary>
+    /// The quick fixes for LYS1070, two parts writing different repeat signs on one bar line
+    /// (owner's request 2026-11-14: the other part's bar line may stand many lines away, and
+    /// finding it is the work): write the other part's sign here, write this one there, or write
+    /// a plain <c>|</c> here (<see cref="LilySharp.Core.Editing.RepeatSignFixes"/>).
+    /// </summary>
+    private static IEnumerable<CodeAction> RepeatSignActions(Document doc, Uri uri, CoreDiagnostic diagnostic)
+    {
+        if (diagnostic.Code != DiagnosticCodes.RepeatSignsDisagree)
+            yield break;
+        foreach (var fix in LilySharp.Core.Editing.RepeatSignFixes.For(doc.Tree, diagnostic.Span))
+            yield return QuickFix(fix.Title, doc, uri, diagnostic, EditOf(doc.Text, fix.Start, fix.End, fix.NewText));
     }
 
     /// <summary>
