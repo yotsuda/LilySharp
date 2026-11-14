@@ -267,6 +267,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1241セッションの経緯
+
+### 1.1 第1241セッション（2026-11-14・YT-DELL2）
+
+base `4157a5e16`（第1240 の後にオーナーのアイコンの commit が 1 つ）・開始時 full 16827 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16830（Lab `p1241` の `run1.trx`）。Calamo の `open` は 0。CI は第1231 のまま。
+「残りの欠陥を順に」（第1231）の続き。1 commit（未 push）。残りは Lab `p1241/leftovers.md`。
+- **`[engraving]` 自分の play の中でもう一度弾かれた印は次のヘアピン（`537626b7c`）**: 第1240 が見つけて残した先頭。終わりのないヘアピンを始めるフレーズ（`phrase riff { c'4@cresc d' e' f' }`）を `riff | riff | c'1@f` と弾くと、1 本目が 2 本目を通り抜けて f まで走り、2 小節目で楔が 2 本重なった（Lab `p1240/xml/png/s3.png`）。同じ小節を書き下すと 1 本目は 2 本目の始まりで終わる。
+- 原因と直し: `HairpinEngraver.DetectHairpins` の `NextMark` の番「同じ SourcePosition の印は別の playing なので終わりにしない」（2026-08-29・form が section を 2 回並べる形のための番＝`test/hairpin-in-a-repeated-section`）が、同じ play の中のフレーズの再利用にも掛かっていた。番を**別の play の印だけ**にした（`InAnotherPlay`＝`SectionPlays.PlayAt` が違う。plays が無ければ全部同じ play）。plays を渡さずに対を訊いていた呼び手が 1 つ（`MeasureCollector` の condensedStaff の重複ヘアピンの pass）＝渡すようにした。
+- ⚠️ 直したこと: 網 2 本が空虚だった＝「フレーズ 2 回・後ろに何も無い」は古い番でも同じ答え（どちらも小節線で終わる）で、section を 2 回弾く形の網に f を足すまで毒 3（plays があれば全部別の play）が緑だった。condensedStaff の呼び手は plays の有無で答えが変わる網が書けない（2 パートのヘアピンを互いに比べるだけで、どちらも同じ読み）＝毒は緑・注に明記。
+- 7.7 の匂い: 上の「観測者なし」1 つ。7.5／7.6: 式の追加なし（LilyPond は新しい `\<` で前のヘアピンを終える＝既存の `NextMark` の読みが 1 つ多くの綴りに届いただけ・REF／OWN の追加なし）。perf: 同じ SourcePosition の候補ごとに `PlayAt` 1 回＝繰り返される印の無い本では 0 回・未計測。VS Code の実機は関係なし。
+- 門: 終了時 full 16832 合格 / 1 失敗（`ReadmeSampleTests`＝同じ）/ skip 2 / 合計 16835（`p1241/run2.trx`・+5 は足した網 `HairpinPlayedAgainTests` 4 本と `MusicXmlWedgePairTests` 1 本）。全 svg の掃き 1041 冊 1268 枚で動いた svg 0・全 MusicXML も 0 / 1268・wedge 4492 個の対の崩れ 0（`p1241/sweep`＝追跡コーパスにこの形は無い・見ているのは網）。毒 4 本は 3 赤 1 緑（上のとおり・`p1241/poisons.log`・`poisons-2.log`）。snapshot・台帳は不動。CHANGELOG は 2 つとも `## Unreleased`（`[engraving]`）。
+- **オーナーへの問い（第1240 の報告・返事待ち）**: condensedStaff の `a { c''2.@cresc c''4@f }` と `b { e'4 e'4@mf e'2 }` で、MusicXML のパート a の crescendo を b の mf（ページどおり・今）で止めるか、自分の f で止めるか。
+
 ## 以下は第1240セッションの経緯
 
 ### 1.1 第1240セッション（2026-11-14・YT-DELL2）

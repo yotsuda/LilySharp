@@ -88,6 +88,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
+- **★ 反復とナビ記号を section の音楽にも書く（オーナー提案 2026-11-14・第1243・LYS1034 の取り下げ）**: 全部 `docs/inline-repeat-design.md`（規則 §3・段取り §4・未決 §6・経過 §7）。対は form に組み立てた列で見る（オーナー決定 2026-11-14）。済み: 設計・段 0・MIDI。**次**: コードの行に `[1. …]` を読ませる（パーサ・LYS1028）→ §3.4（`| |:` の空小節）とパートの食い違いの診断 → MusicXML → `.ly` → LYS1034 を phrase だけに狭めて文書。未決 Q1〜Q3（section の無いファイル・書き出しの綴り・verse）はオーナー待ち。見つけた別件: form の無い by-part の本で 2 つ目のパートが後に鳴る（設計 §7・未着手）。
 - **★ 歌詞と歌い手の文法の作り直し（オーナー決定 2026-11-10・第1217）**: `docs/lyrics-singer-design.md` が全部（§9 が作業順）。①②③④は済み（§1.1 第1217〜第1219）。⚠️ ④の `ん` の聞こえ方はオーナーの実聴待ち（`MANUAL-CHECKS` 第1219）。Cantoria の master は zh／ko を歌う（VSIX の入れ直しはオーナー）。`singer` は 1 行 1 声で score の中にも書ける（第1220）。古い書き方を案内する専用エラーは作らない（オーナー指示）。設計 §10「パート自身の歌詞」（`part sop { lyrics words }`）は第1222 で実装（§1.1 第1222・実機は `MANUAL-CHECKS` 第1222）＝§9 は全部済み。**次の一手の指示はまだ無い＝下の積み残しから選ぶならオーナーに訊く**。積み残し: Calamo の生成コードが `lyrics … sings` のまま（`docs\repro\REQUESTS.md` に連絡済み・Calamo 側は未 commit）／実機確認（`MANUAL-CHECKS` 第1217）／perf ベンチ／コーパス外のオーナーのファイル（Downloads の Tabidachi・Rose Garden など）は未移行で、`LilySharp-Lab\sessions\p1217\migrate\migrate.ps1 -Lys -Files` で書き換えられる／Rose Garden のオクターブ変換はオーナーの回答待ち。
 - **★ 歌詞のある譜表では強弱記号とヘアピンを譜表の上に（オーナー決定 2026-11-11）＝設計 `docs/dynamics-above-lyrics-design.md` §5 の 1〜6 は全部済み（第1224〜第1225・§1.1）**。**D3 は LilyPond の規則に替えた（オーナー決定 2026-11-11「LP に合わせて」）**＝向きを書いた記号が*線*の向きを決め、同じ線の後続（向きを書いていない記号）は従う。歌詞のない譜表でも同じ（`c@f.up@decresc … g@p` の p は上）。残りはオーナー: 実機のプレビュー（`MANUAL-CHECKS` 第1225）と release（CHANGELOG は 2 つとも `## Unreleased`・`[engraving]`）。残る穴: 2 声部の譜表で上の声部のヘアピンの線に下の声部の同じ拍の強弱記号も乗る（ヘアピンが声部を持たない既知の穴＝`DynamicAlignEngraver` の注 ⑵・Lab `p1225/dyn/out/vv.png`）。線の向きも譜表ごとに 1 本の流れで読む（LP は声部ごと）。**次の一手の指示はまだ無い＝上の行の積み残しから選ぶならオーナーに訊く**。
 - **★ 評価 4（2026-11-13）の残り＝⑴ 書き出し・⑵ 誤った診断・⑷ 文書は第1227 で閉じた（§1.1）**。書き手のメモと再現は Lab `sessions/p1226/md/eval4/{bigband,choral,chamber,rock}`。⑶ `lysc review` は第1228 で閉じた（§1.1）。**残り**: ⑸ 欠けている機能＝**案 10 件を Lab `sessions/p1227/proposals-eval4.md` に書いた・オーナーの確認待ち＝確認なしに作らない**。**残っているもの**（どれも未着手・値段は未測定）: **一覧は Lab `sessions/p1242/leftovers.md`**（**オーナー指示 2026-11-14・第1231「残りの欠陥を順に」＝この一覧の「残り（欠陥）」と「第1231〜第1235 が見つけて残したもの」は訊かずに着手してよい**。機能の追加は訊く）。残りの先頭（一覧）: condensedStaff で別のパートの強弱で終わるヘアピンを MusicXML のパートがどこで止めるか（今はページどおり＝決めごと・第1240 の報告でオーナーに訊いてある＝返事待ち）／`lysc import` は wedge の number を読まない（2 声部目のヘアピンが 1 声部目に戻る）／combinedStaff の印は re-address されない／別の声部のヘアピンと出会う形の絵／黙っている段の wish の測っていない形（装飾音で始まる小節・段の最初の小節）／`lysc review` の 3 件。MusicXML の四分音の `<accidental>` は他のリーダーの読みを確かめてから（一覧に理由）。大譜表の段間の `@sfz`・`@fp` を両手に効かせるかは決めごと＝オーナーに訊く。見送ったものの理由もそこ。小残り（第1226 から）: condensedStaff の数字付き低音など 3 種の再住所・tab のアルペジオ線が自分の数字に 0.035・小文字だけの枠の中央が 0.23〜0.51 下・`md end` は既定の yMargin では動かない・箇条書きのリンク・不安定な網 2 種（`ScoreVideoShapeTests`、まれに `SvgSnapshotTests`）。**補助は同じモデルで 3〜5 件ずつ順番に・数行は自分で・全 full は自分が 1 回**（memory）。
@@ -141,6 +142,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1243セッション（2026-11-14・YT-DELL2）
+
+base `faa82761c`・開始時 full 16865 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16868（Lab `p1243` の `run1.trx`）。Calamo・Dettato の `open` は 0。CI は第1231 のまま。
+オーナーの提案「反復とナビ記号を section の音楽にも書けるようにする」（LYS1034 の取り下げ）に着手。設計・規則・段取り・経過は全部 `docs/inline-repeat-design.md`。commit 4 つ（未 push）。
+- 設計（`f34f7a159`）と段 0＝今の答えの実測（`e7cfb9ca9`・Lab `p1243/stage0.md`・探り譜 `p1243/probe/`）: ページは片方のパートに書いた記号を score のものとして描き、section をまたぐ対も組む＝ほぼ済み。MIDI・MusicXML・`.ly` は書いたパートだけ。
+- **MIDI（`fd6c5d0b0`）**: 音楽に記号を書いた本は刷った順に 1 回歩き、記号を時刻つきで控えて最後に展開する（`Midi/PlayedTimeline.cs`）。全パートが従う・section をまたぐ対・コードの行の記号・`ds`／`dc` を読む。網 `InlineRepeatMidiTests` 16 本（毒＝展開を外すと 27 赤）。⚠️ 音楽に記号の無い本は今までどおり `PlayForm` が鳴らす＝読み手が 2 つ（差と寄せる話は設計 §7）。
+- LYS1034 はまだ外していない（最後に外す）。探り譜は LYS1034 のエラーつきで出力を読む。
+- 門: 終了時 full 16881 合格 / 1 失敗（同じ）/ skip 2 / 合計 16884（`p1243/trx/run4.trx`・+16 は足した網）。掃きは回していない（音楽に記号の無い本の経路は触っていない＝`_timeline` が null）。`-End` は未実行。
+
+## 以下は第1242セッションの経緯
+
 ### 1.1 第1242セッション（2026-11-14・YT-DELL2）
 
 base `6c3b10a9f`・開始時 full 16832 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16835（Lab `p1242` の `run1.trx`）。Calamo の `open` は 0・Dettato の `open` は 3。CI は第1231 のまま。
@@ -151,19 +163,6 @@ Dettato（録音 → コード譜）の依頼 3 件に着手。Core の commit 1
 - ⚠️ 直したこと: 網の「譜表に付けた和音」の形を 2 回取り違えた（collector の attached の walk に入るのは**上にも下にも譜表がある行**だけ＝`RenderSpecParser.FoldAdjacentRows`。毒 15 が緑で気づいた）／`PickupByMeasure` の初期値を共有の static にして `MeasureCollectorResetTests` が赤／掃きは差 0 だが、追跡コーパスに 2 スロット以上の弱起の行は無い＝見ているのは網。
 - 7.7 の匂い: 緑の毒 3 本。7・8＝単一譜表の `Collect` に渡る `attachedChordPart` は今の文法では立たない（行を持つ score は `IsMultiStaff`）＝走らない腕・コードに注記。19＝行の小節の終わりは lane の中では音楽の小節線と同じ場所にしか立たない本しか書けなかった（観測者なし）。`KeyEstimator` と `.ly` の home の拍子の格子は未測定（leftovers）。7.5／7.6: OWN 1（`BeatsOf`）・REF 0＝和音の行の格子は Lily# の設計で LilyPond に対応物なし。perf: 打鍵の経路に `PickupTimeline`（小節を 1 回歩く）と辞書 1 つ＝未計測。
 - 門: 終了時 full 16865 合格 / 1 失敗（`ReadmeSampleTests`＝同じ）/ skip 2 / 合計 16868（`p1242/run4.trx`・+33 は足した網 `ChordRowPickupGridTests`）。全 svg・MusicXML・MIDI の掃きは 1041 冊 1268 件で差 0（`p1242/sweep`）。毒 19 本は 16 赤 3 緑（`p1242/poisons*.log`）。snapshot 不動・OWN 433 → 434。CHANGELOG は 2 つとも `## Unreleased`・GRAMMAR 2 文書に 1 文ずつ。
-
-## 以下は第1241セッションの経緯
-
-### 1.1 第1241セッション（2026-11-14・YT-DELL2）
-
-base `4157a5e16`（第1240 の後にオーナーのアイコンの commit が 1 つ）・開始時 full 16827 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16830（Lab `p1241` の `run1.trx`）。Calamo の `open` は 0。CI は第1231 のまま。
-「残りの欠陥を順に」（第1231）の続き。1 commit（未 push）。残りは Lab `p1241/leftovers.md`。
-- **`[engraving]` 自分の play の中でもう一度弾かれた印は次のヘアピン（`537626b7c`）**: 第1240 が見つけて残した先頭。終わりのないヘアピンを始めるフレーズ（`phrase riff { c'4@cresc d' e' f' }`）を `riff | riff | c'1@f` と弾くと、1 本目が 2 本目を通り抜けて f まで走り、2 小節目で楔が 2 本重なった（Lab `p1240/xml/png/s3.png`）。同じ小節を書き下すと 1 本目は 2 本目の始まりで終わる。
-- 原因と直し: `HairpinEngraver.DetectHairpins` の `NextMark` の番「同じ SourcePosition の印は別の playing なので終わりにしない」（2026-08-29・form が section を 2 回並べる形のための番＝`test/hairpin-in-a-repeated-section`）が、同じ play の中のフレーズの再利用にも掛かっていた。番を**別の play の印だけ**にした（`InAnotherPlay`＝`SectionPlays.PlayAt` が違う。plays が無ければ全部同じ play）。plays を渡さずに対を訊いていた呼び手が 1 つ（`MeasureCollector` の condensedStaff の重複ヘアピンの pass）＝渡すようにした。
-- ⚠️ 直したこと: 網 2 本が空虚だった＝「フレーズ 2 回・後ろに何も無い」は古い番でも同じ答え（どちらも小節線で終わる）で、section を 2 回弾く形の網に f を足すまで毒 3（plays があれば全部別の play）が緑だった。condensedStaff の呼び手は plays の有無で答えが変わる網が書けない（2 パートのヘアピンを互いに比べるだけで、どちらも同じ読み）＝毒は緑・注に明記。
-- 7.7 の匂い: 上の「観測者なし」1 つ。7.5／7.6: 式の追加なし（LilyPond は新しい `\<` で前のヘアピンを終える＝既存の `NextMark` の読みが 1 つ多くの綴りに届いただけ・REF／OWN の追加なし）。perf: 同じ SourcePosition の候補ごとに `PlayAt` 1 回＝繰り返される印の無い本では 0 回・未計測。VS Code の実機は関係なし。
-- 門: 終了時 full 16832 合格 / 1 失敗（`ReadmeSampleTests`＝同じ）/ skip 2 / 合計 16835（`p1241/run2.trx`・+5 は足した網 `HairpinPlayedAgainTests` 4 本と `MusicXmlWedgePairTests` 1 本）。全 svg の掃き 1041 冊 1268 枚で動いた svg 0・全 MusicXML も 0 / 1268・wedge 4492 個の対の崩れ 0（`p1241/sweep`＝追跡コーパスにこの形は無い・見ているのは網）。毒 4 本は 3 赤 1 緑（上のとおり・`p1241/poisons.log`・`poisons-2.log`）。snapshot・台帳は不動。CHANGELOG は 2 つとも `## Unreleased`（`[engraving]`）。
-- **オーナーへの問い（第1240 の報告・返事待ち）**: condensedStaff の `a { c''2.@cresc c''4@f }` と `b { e'4 e'4@mf e'2 }` で、MusicXML のパート a の crescendo を b の mf（ページどおり・今）で止めるか、自分の f で止めるか。
 
 ## 2. 開いている作業
 
