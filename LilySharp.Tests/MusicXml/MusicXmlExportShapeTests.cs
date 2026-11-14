@@ -945,4 +945,88 @@ public class MusicXmlExportShapeTests
         Assert.Contains("<trill-mark", fullSize);
         Assert.Contains("<accidental-mark", fullSize);
     }
+
+    /// <summary>What a bar says beside its pitches and lengths, in document order: each
+    /// <c>&lt;direction&gt;</c> (its type, and its offset where it has one) and, for each note,
+    /// its <c>&lt;notations&gt;</c>, <c>&lt;notehead&gt;</c> and ties. A grace note reads as any
+    /// note, so a grace's bar can be held against the same marks on a full-size note.</summary>
+    private static string Marks(string music)
+    {
+        var parts = new List<string>();
+        foreach (var e in Export(PhraseBook("", music)).Descendants("measure").First().Elements())
+        {
+            if (e.Name.LocalName == "direction" && e.Element("direction-type")!.Element("rehearsal") == null)
+                parts.Add("DIR " + string.Concat(e.Element("direction-type")!.Elements().Select(x => x.ToString(SaveOptions.DisableFormatting)))
+                    + (e.Element("offset") is { } offset ? " +" + offset.Value : ""));
+            else if (e.Name.LocalName == "note")
+                parts.Add("NOTE " + (e.Element("notations")?.ToString(SaveOptions.DisableFormatting) ?? "")
+                    + (e.Element("notehead")?.ToString(SaveOptions.DisableFormatting) ?? "")
+                    + string.Concat(e.Elements("tie").Select(t => " tie-" + t.Attribute("type")!.Value)));
+        }
+        return string.Join("\n", parts);
+    }
+
+    /// <summary>
+    /// The OTHER marks the page draws off a grace column are exported as a full-size note's are:
+    /// the dynamic level and the hairpin's start, the text, a pedal and an ottava that start on
+    /// the grace, the fingering, the tab letters, the half-ties, the head marks, the breathing
+    /// sign and the glissando (<c>GraceBodySupport.IsCarried…</c>). Until session 1235 a grace
+    /// <c>&lt;note&gt;</c> wrote none of them — and a span STARTED on a grace left its stop alone
+    /// in the file (<c>&lt;pedal type="stop"/&gt;</c> with no start).
+    /// </summary>
+    /// <remarks>
+    /// The grace's bar is held against the bar that writes the same marks on a full-size note
+    /// where the grace stood: the same <c>&lt;direction&gt;</c>s in the same order before the
+    /// note, the same <c>&lt;notations&gt;</c> on it, and the span's end on the same note after
+    /// it. The marks go through one reader (<c>ProcessArticulations</c>).
+    /// </remarks>
+    [Theory]
+    [InlineData("@f", "", "<f")]
+    [InlineData("@sfz", "", "<sfz")]
+    [InlineData("@cresc", "@!cresc", "<wedge type=\"crescendo\"")]
+    [InlineData("@text(\"dolce\")", "", "dolce")]
+    [InlineData("@sustain", "@!sustain", "<pedal type=\"start\"")]
+    [InlineData("@8va", "@!8va", "<octave-shift type=\"down\"")]
+    [InlineData("@finger(2)", "", "<fingering>2")]
+    [InlineData("@tap", "", "<tap")]
+    [InlineData("@laissezVibrer", "", "let-ring")]
+    [InlineData("@repeatTie", "", "tie-stop")]
+    [InlineData("@dead", "", "<notehead>x")]
+    [InlineData("@notehead(cross)", "", "<notehead>x")]
+    [InlineData("@parenthesize", "", "parentheses=\"yes\"")]
+    [InlineData("@breath", "", "<breath-mark")]
+    [InlineData("@caesura", "", "<caesura")]
+    [InlineData("@glissando", "", "<glissando type=\"start\"")]
+    [InlineData("@f@finger(1)@staccato", "", "<staccato")]
+    public void AGraceNotesOtherMarks_AreExportedAsAFullSizeNotesAre(string marks, string end, string says)
+    {
+        // The grace takes no time: the bar after it is the full-size bar after its first note.
+        string onAGrace = Marks($"grace {{ d''16{marks} }} e''4 f''{end} g'' a'' |");
+        string fullSize = Marks($"d''4{marks} e''4 f''{end} g'' a''4 |");
+        Assert.Contains(says, onAGrace);
+        // The span's end stands a quarter later in the full-size bar (its first note takes one).
+        Assert.Equal(System.Text.RegularExpressions.Regex.Replace(fullSize, @" \+\d+", ""),
+            System.Text.RegularExpressions.Regex.Replace(onAGrace, @" \+\d+", ""));
+    }
+
+    /// <summary>A glissando INTO a grace note ends on the grace, as the page draws it; its stop
+    /// went past the grace to the main note.</summary>
+    [Fact]
+    public void AGlissandoIntoAGraceNote_EndsOnIt()
+    {
+        var notes = Export(PhraseBook("", "c''4@glissando grace { d''16 } e''4 f'' g'' |")).Descendants("note").ToList();
+        Assert.NotNull(notes[1].Element("grace"));
+        Assert.Contains("<glissando type=\"stop\"", notes[1].ToString(SaveOptions.DisableFormatting));
+        Assert.DoesNotContain("<glissando", notes[2].ToString(SaveOptions.DisableFormatting));
+    }
+
+    /// <summary>A grace CHORD's level stands before its members and its fingering on the first.</summary>
+    [Fact]
+    public void AGraceChordsDirections_StandBeforeItsMembers()
+    {
+        string[] lines = Marks("grace { <d'' f''>16@f@finger(1) } e''4 f'' g'' a'' |").Split('\n');
+        Assert.StartsWith("DIR <dynamics", lines[0]);
+        Assert.Contains("<fingering>1", lines[1]);
+        Assert.Equal("NOTE ", lines[2]);
+    }
 }

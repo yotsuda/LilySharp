@@ -3661,10 +3661,45 @@ public sealed class MusicXmlExporter
         _ => null,
     };
 
+    /// <summary>Glissando / slide lines pair their start (this note) with a stop on the next
+    /// note written — a grace note's as a full-size one's (the page draws a line from or to a
+    /// grace head, GraceBodySupport.IsCarriedGlissando; until session 1235 a grace note neither
+    /// started one nor ended the one before it, whose stop went to the main note past it).</summary>
+    private void WriteLine(IEnumerable<SyntaxNode> articulations, MusicXmlNote xmlNote)
+    {
+        if (_pendingLineStop is { } lineKind)
+        {
+            xmlNote.ExtraNotations.Add(new System.Xml.Linq.XElement(lineKind,
+                new System.Xml.Linq.XAttribute("type", "stop"),
+                new System.Xml.Linq.XAttribute("number", 1)));
+            _pendingLineStop = null;
+        }
+        foreach (var art in articulations)
+        {
+            if (art is ArticulationSyntax { Type: ArticulationType.None } named
+                && named.NameToken.Text is "glissando" or "slide")
+            {
+                string el = named.NameToken.Text.Equals("slide", StringComparison.Ordinal)
+                    ? "slide" : "glissando";
+                xmlNote.ExtraNotations.Add(new System.Xml.Linq.XElement(el,
+                    new System.Xml.Linq.XAttribute("type", "start"),
+                    new System.Xml.Linq.XAttribute("number", 1),
+                    new System.Xml.Linq.XAttribute("line-type", el == "slide" ? "solid" : "wavy")));
+                _pendingLineStop = el;
+                break;
+            }
+        }
+    }
+
     private static string? NoteheadFromMarks(IEnumerable<SyntaxNode> articulations)
     {
         foreach (var art in articulations)
-            if (art is MusicMarkSyntax mark
+            // `@dead` is the cross head (LilyPond's \deadNote), as `@notehead(cross)` is: the
+            // page drew it and no <notehead> said so until session 1235.
+            if (art is ArticulationSyntax { Type: ArticulationType.None } dead
+                && dead.NameToken.Text.Equals("dead", StringComparison.Ordinal))
+                return "x";
+            else if (art is MusicMarkSyntax mark
                 && mark.Name.Equals("notehead", StringComparison.Ordinal)
                 && mark.HasArgumentList)
                 return Semantics.AnnotationValues.Notehead(mark) switch
@@ -3830,29 +3865,7 @@ public sealed class MusicXmlExporter
         CloseTies([xmlNote]);
         if (note.Articulations.OfType<TieSyntax>().Any()) OpenTies([xmlNote]);
 
-        // Glissando / slide lines pair start (this note) with stop (next).
-        if (_pendingLineStop is { } lineKind)
-        {
-            xmlNote.ExtraNotations.Add(new System.Xml.Linq.XElement(lineKind,
-                new System.Xml.Linq.XAttribute("type", "stop"),
-                new System.Xml.Linq.XAttribute("number", 1)));
-            _pendingLineStop = null;
-        }
-        foreach (var art in note.Articulations)
-        {
-            if (art is ArticulationSyntax { Type: ArticulationType.None } named
-                && named.NameToken.Text is "glissando" or "slide")
-            {
-                string el = named.NameToken.Text.Equals("slide", StringComparison.Ordinal)
-                    ? "slide" : "glissando";
-                xmlNote.ExtraNotations.Add(new System.Xml.Linq.XElement(el,
-                    new System.Xml.Linq.XAttribute("type", "start"),
-                    new System.Xml.Linq.XAttribute("number", 1),
-                    new System.Xml.Linq.XAttribute("line-type", el == "slide" ? "solid" : "wavy")));
-                _pendingLineStop = el;
-                break;
-            }
-        }
+        WriteLine(note.Articulations, xmlNote);
 
         WriteCrossArpeggio(note, [xmlNote]);
         // A single note's own wavy line, drawn since 2026-11-12 (MeasureCollector.WithCrossArpeggio).
@@ -5317,6 +5330,22 @@ public sealed class MusicXmlExporter
                 && (Semantics.GraceBodySupport.IsCarriedChordName(mark)
                     || Semantics.GraceBodySupport.IsCarriedFiguredBass(mark)))
                 ProcessDirectionMark(mark);
+        // The other <direction>s a grace column carries on the page (session 1235) — the
+        // level, the hairpin's start, the text, and the spans that start or end on it (pedal,
+        // ottava; a text spanner is handed over too, though the reader writes none yet, a
+        // full-size note's neither) — through the reader a full-size note's go through, before
+        // the grace <note> they stand on. They write nothing on a note, so the note handed
+        // over is nobody's; a grace takes no time, so a span's end is at the grace itself.
+        // Until then the grace wrote none of them, and a span STARTED on a grace left its stop
+        // alone in the file: `grace { d''16@sustain } e''4 f''@!sustain` was a <pedal
+        // type="stop"/> with no start.
+        ProcessArticulations(annotations.Where(annotation =>
+            Semantics.GraceBodySupport.IsCarriedDynamic(annotation)
+            || Semantics.GraceBodySupport.IsCarriedHairpinStart(annotation)
+            || Semantics.GraceBodySupport.IsCarriedText(annotation)
+            || Semantics.GraceBodySupport.IsCarriedTextSpan(annotation)
+            || Semantics.GraceBodySupport.IsCarriedPedal(annotation)
+            || Semantics.GraceBodySupport.IsCarriedOttava(annotation)), new MusicXmlNote { IsGrace = true });
     }
 
     /// <summary>The marks a grace note, chord or rest carries on its own column on the page —
@@ -5337,7 +5366,18 @@ public sealed class MusicXmlExporter
             Semantics.GraceBodySupport.IsCarriedScript(annotation)
             || Semantics.GraceBodySupport.IsCarriedThumb(annotation)
             || Semantics.GraceBodySupport.IsCarriedGesture(annotation)
-            || Semantics.GraceBodySupport.IsCarriedBendAfter(annotation)), xmlNote);
+            || Semantics.GraceBodySupport.IsCarriedBendAfter(annotation)
+            // The other engravers' marks the page draws off a grace column (session 1235): the
+            // level, the hairpin's start, the text, the digit, the letters, the half-tie, and the
+            // spans that start or end on it.
+            || Semantics.GraceBodySupport.IsCarriedFingering(annotation)
+            || Semantics.GraceBodySupport.IsCarriedTabTechnique(annotation)
+            || Semantics.GraceBodySupport.IsCarriedSemiTie(annotation)
+            || Semantics.GraceBodySupport.IsCarriedPhrasingSlur(annotation)
+            // The breathing sign and the caesura stand after the grace that writes them, in
+            // the run or at its end (CarriedBreath / InnerBreaths); a grace rest's is not drawn.
+            || (!xmlNote.IsRest && annotation is ArticulationSyntax
+                { Type: ArticulationType.Breath or ArticulationType.Caesura })), xmlNote);
 
     /// <summary>
     /// Writes the grace notes of a <c>grace { … }</c> body.
@@ -5517,7 +5557,10 @@ public sealed class MusicXmlExporter
                         Octave = targetOctave,
                         Type = type,
                         ActualNotes = tupletActual,
-                        NormalNotes = tupletNormal
+                        NormalNotes = tupletNormal,
+                        // The head marks the page draws on a grace head (IsCarriedHeadMark).
+                        Notehead = NoteheadFromMarks(note.Articulations),
+                        NoteheadParentheses = WritesParenthesize(note.Articulations),
                     };
                     // A grace's written \N, which the page frets it on (GraceHeadInfo.StringNumber);
                     // until 2026-09-30 only a grace CHORD's member carried it here.
@@ -5528,6 +5571,7 @@ public sealed class MusicXmlExporter
                     // before the grace <note>, exactly as before a full-size one.
                     EmitGraceDirectionMarks(note.Articulations);
                     ProcessGraceScripts(note.Articulations, xmlNote);
+                    WriteLine(note.Articulations, xmlNote);
                     _currentMeasure.Notes.Add(xmlNote);
                     (lastGrace, graceSlurOn) = (xmlNote, null);
                     break;
