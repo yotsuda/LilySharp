@@ -267,6 +267,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1249セッションの経緯
+
+### 1.1 第1249セッション（2026-11-15・YT-DELL2）
+
+base `5c49c4c00`・開始時 full 17021 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 17024（Lab `p1249` の `run1.trx`）。Calamo の `open` は 0、Dettato は 1・2 が `question` のまま。CI は第1231 のまま（origin/master `f636395ae` の ubuntu Release の脚が赤＝`148e2a478` で直し済み・未 push）。
+「反復とナビ記号を section の音楽にも書く」の段 8（設計 `docs/inline-repeat-design.md` §7「段 8」・探り譜は Lab `p1249/probe`）。commit は `35f1d5f49`。
+- **LYS1034 は phrase だけ**: `RepeatStructureScopeValidator` は、反復の小節線・ending・ナビ記号を phrase の中に書いたときだけ言う。section の音楽・コードの行・form は書ける。
+- **見つけて直した穴＝LYS4025**: 行き先のないジャンプの警告が form の歩きしか読んでいなかった（LYS1034 のエラーが隠していた）。form の `ds` が音楽の `segno` を「無い」と言い、音楽の `ds` は黙っていた。音楽に記号を書いた本は列で読む（`RepeatStream.JumpFaults`＝`Played` を作るのと同じ `FormRoute` の歩き）。音楽に記号を書かない本は今までの読みのまま。
+- **補完**: section の音楽（ドラムも）の一覧の最後に反復の小節線・`[1. :|` `[2. ]` `[3. ]`・ナビ記号 10 語（`RepeatSignItems`）。phrase の中では出さない（`WithRepeatSigns`）。`repeat volta` のエラー文は小節のまわりの `|: … :|` を先に言う。
+- **文書**: GRAMMAR §8.1・GRAMMAR_FOR_LLM・SYNTAX_REFERENCE・TUTORIAL・LEARN_FOR_LLM・site `manual-body.html`・CHANGELOG 2 本（`[check]`）・MANUAL-CHECKS 第1249（一覧は設計 §7「段 8」）。例は `lysc check` で確かめた。
+- 門: 網 `RepeatStructureScopeValidatorTests`・`CompletionAuditTests`・`FormCompletionTests`・`FormJumpTargetValidatorTests`（+11）。毒 9 本とも赤（`p1249/poisons.ps1`・緑だった 2 本には網を足した）。終了時 full 17042 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17045（`p1249/run4.trx`）。掃きは回していない（変えたのは検査と補完だけ）。
+- 7.5／7.6: OWN 0・REF 0（`RepeatStream` の既存の OWN の中）。7.7: LYS4025 の読み手が 2 つある（音楽に記号を書いた本は列・ほかは form の歩き＝MIDI と同じ分かれ方）／fixture と audit の本は form の綴りのまま／site の手引きは未 release の書き方を載せた（push すると Pages に出る）。9（perf）: 足したのはナビ記号のある本の `RepeatStream` を作るときの `FormRoute.Of` 1 回（木・form ごと）＝未測定。
+
 ## 以下は第1248セッションの経緯
 
 ### 1.1 第1248セッション（2026-11-15・YT-DELL2）
