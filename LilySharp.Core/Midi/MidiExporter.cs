@@ -899,6 +899,7 @@ public sealed class MidiExporter
         _bars.SpendPartial();
         _formDriven = _root.DescendantNodes().OfType<FormDeclarationSyntax>().Any();
         _formPlayed = false;
+        _timeline = WritesRepeatsInTheMusic(_root) ? new List<TimelineMark>() : null;
         _playedSpec = RenderSpecParser.PlayedSpec(tree, Score, Form);
         _scoreTransposeSemitones = _playedSpec?.ScoreTranspose is { } moved
             ? PitchTransposer.IntervalSemitones(moved.step, moved.alt, moved.oct) : 0;
@@ -929,6 +930,7 @@ public sealed class MidiExporter
         _onGuitarLineCarrier = false;
         _anyGuitarLine = tree.GetRoot().DescendantNodes().Any(n => GuitarLineMark(n) != null);
         ProcessNode(_root, mainTrack, conductorTrack);
+        int printedEnd = _currentTick;
         // A flat chord track's bars past the music go on (owner's decision 2026-11-07): bars of
         // the SCORE's meter in its home key — they stand after every section, and a section
         // that states no meter opens at the home — as the page pads the staves with them
@@ -944,6 +946,7 @@ public sealed class MidiExporter
             int end = _currentTick;
             foreach (var (row, items) in pastTheMusic)
                 end = Math.Max(end, PlayChordRow(items, row, _currentTick, mainTrack, _strokesByRow.GetValueOrDefault(row)));
+            printedEnd = Math.Max(printedEnd, end);
             // Their bar lines, for the metronome and the loop (MidiFile.BarTicks), as the page draws them.
             int barTicks = FractionToTicks(_bars.MeterLength);
             for (int t = _currentTick + barTicks; t <= end && barTicks > 0; t += barTicks)
@@ -975,6 +978,9 @@ public sealed class MidiExporter
         SingLyrics(tree, mainTrack);
         SplitIntoPartTracks(midi, mainTrack);
         AddPedals(midi, mainTrack.Name);
+        // The music was walked once, as printed: now it is played (PlayedTimeline).
+        if (_timeline is { Count: > 0 } marks)
+            PlayedTimeline.Unfold(midi, marks, printedEnd);
 
         return midi;
     }
@@ -2413,6 +2419,15 @@ public sealed class MidiExporter
                 if (Svg.Collector.MeasureCollector.ParseBarlineType(barline.BarText) != Svg.Model.BarlineType.RepeatStart
                     || bar.Count > 0)
                     Close();
+                // A repeat written in the row is the score's, as one written in a part is.
+                NoteRepeatSign(barline, barStart, part);
+                continue;
+            }
+            if (item is NavigationMarkSyntax rowMark)
+            {
+                // A text closes the bar it is written in; a sign opens the one after it.
+                _timeline?.Add(new TimelineMark(bar.Count > 0 ? barStart + thisBarTicks : barStart,
+                    TimelineMarkKind.Navigation, Navigation: rowMark.MarkType, Lane: part));
                 continue;
             }
             if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
@@ -2495,6 +2510,11 @@ public sealed class MidiExporter
         // SectionRef like any other — the bite this method's remark records), and the
         // ROUTE through them once, by FormRoute.
         var items = FormWalk.Read(structure);
+        if (_timeline != null)
+        {
+            PlayFormAsPrinted(items, track, conductorTrack);
+            return;
+        }
         var route = Semantics.FormRoute.Of(items);
 
         // The state a replay has to put back, keyed by the item it starts from: the
@@ -2532,6 +2552,81 @@ public sealed class MidiExporter
                     RepeatFromTheBeginning(items, i, track, conductorTrack, states[0]);
                 else
                     PlayFormItem(item, track, conductorTrack);
+            }
+        }
+    }
+
+    // The repeat signs, endings and navigation marks of the PRINTED timeline, each at its tick
+    // — or null for a book that writes none of them in its music, which the form's own walk
+    // plays (PlayForm). A book that writes one is walked once, as the page prints it, and
+    // played afterwards along the marks (PlayedTimeline; docs/inline-repeat-design.md §4).
+    private List<TimelineMark>? _timeline;
+
+    /// <summary>Whether the book writes a repeat sign, a volta ending or a navigation mark in
+    /// its music — anywhere but in a form (the three node kinds RepeatStructureScopeValidator
+    /// asks about).</summary>
+    private static bool WritesRepeatsInTheMusic(SyntaxNode root)
+    {
+        foreach (var node in root.DescendantNodesOfKinds(Semantics.RepeatStructureScopeValidator.RepeatStructureKinds))
+        {
+            bool mark = node is InlineVoltaSyntax or NavigationMarkSyntax
+                || node is BarlineSyntax bar && SyntaxFacts.IsRepeatBarlineKind(bar.BarToken.Kind);
+            if (mark && !node.IsInside<FormDeclarationSyntax>())
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>Notes a repeat bar line of the music on the timeline (a plain one says nothing):
+    /// a <c>:|</c> with its written <c>*N</c>, a <c>|:</c>, and a <c>:|:</c> as both.</summary>
+    private void NoteRepeatSign(BarlineSyntax sign, int tick, string? lane)
+    {
+        if (_timeline == null)
+            return;
+        if (sign.BarToken.Kind is SyntaxKind.RepeatEndBar or SyntaxKind.RepeatBothBar)
+            _timeline.Add(new TimelineMark(tick, TimelineMarkKind.RepeatEnd,
+                Count: sign.HasExplicitRepeatCount ? sign.RepeatCount : null, Lane: lane));
+        if (sign.BarToken.Kind is SyntaxKind.RepeatStartBar or SyntaxKind.RepeatBothBar)
+            _timeline.Add(new TimelineMark(tick, TimelineMarkKind.RepeatStart, Lane: lane));
+    }
+
+    /// <summary>The form walked ONCE, in the order the page prints it, its own repeat signs,
+    /// endings and navigation marks noted on the timeline beside the ones the music writes —
+    /// one sequence, so a <c>|:</c> in a section pairs with a <c>:|</c> wherever it stands
+    /// (docs/inline-repeat-design.md §3.3).</summary>
+    private void PlayFormAsPrinted(IReadOnlyList<FormWalk.Item> items, MidiTrack track, MidiTrack conductorTrack, int? count = null)
+    {
+        foreach (var item in items)
+        {
+            switch (item)
+            {
+                case FormWalk.SectionRef s:
+                    PlaySectionByName(s.Name, track, conductorTrack, s.OctaveOffset);
+                    break;
+                case FormWalk.Repeat repeat:
+                    _timeline!.Add(new TimelineMark(_currentTick, TimelineMarkKind.RepeatStart));
+                    PlayFormAsPrinted(repeat.Children, track, conductorTrack, repeat.ExplicitPlayCount);
+                    break;
+                // Inside a block, the block's ':|' with the block's '*N'; and a ':|:' is both.
+                case FormWalk.RepeatEnd:
+                    _timeline!.Add(new TimelineMark(_currentTick, TimelineMarkKind.RepeatEnd, Count: count));
+                    break;
+                case FormWalk.BothBar:
+                    _timeline!.Add(new TimelineMark(_currentTick, TimelineMarkKind.RepeatEnd, Count: count));
+                    _timeline.Add(new TimelineMark(_currentTick, TimelineMarkKind.RepeatStart));
+                    break;
+                case FormWalk.Ending e:
+                    _timeline!.Add(new TimelineMark(_currentTick, TimelineMarkKind.EndingStart, Passes: PassSet.Of(e.Node.Numbers)));
+                    foreach (var s in e.Sections)
+                        PlaySectionByName(s.Name, track, conductorTrack, s.OctaveOffset);
+                    _timeline.Add(new TimelineMark(_currentTick, TimelineMarkKind.EndingEnd));
+                    break;
+                case FormWalk.LoneRepeatEnd:
+                    _timeline!.Add(new TimelineMark(_currentTick, TimelineMarkKind.RepeatEnd));
+                    break;
+                case FormWalk.Other { Node: NavigationMarkSyntax nav }:
+                    _timeline!.Add(new TimelineMark(_currentTick, TimelineMarkKind.Navigation, Navigation: nav.MarkType));
+                    break;
             }
         }
     }
@@ -2958,7 +3053,26 @@ public sealed class MidiExporter
                 // …and fall through: the repeat spans below key on the repeat barlines,
                 // and every other node type still takes its ordinary path.
             }
-            if (IsRepeatBar(items[i], SyntaxKind.RepeatStartBar))
+            // A book that writes its repeats in the music is walked once and played afterwards
+            // (PlayedTimeline): here the signs are only noted, each where it stands.
+            if (_timeline != null)
+            {
+                if (items[i] is BarlineSyntax sign)
+                    NoteRepeatSign(sign, _currentTick, _currentPart);
+                else if (items[i] is InlineVoltaSyntax ending)
+                {
+                    _timeline.Add(new TimelineMark(_currentTick, TimelineMarkKind.EndingStart, Passes: PassSet.Of(ending.Numbers), Lane: _currentPart));
+                    ProcessSequence(ending.Items.ToList(), track, conductorTrack);
+                    _timeline.Add(new TimelineMark(_currentTick, TimelineMarkKind.EndingEnd, Lane: _currentPart));
+                    continue;
+                }
+                else if (items[i] is NavigationMarkSyntax nav)
+                {
+                    _timeline.Add(new TimelineMark(_currentTick, TimelineMarkKind.Navigation, Navigation: nav.MarkType, Lane: _currentPart));
+                    continue;
+                }
+            }
+            else if (IsRepeatBar(items[i], SyntaxKind.RepeatStartBar))
             {
                 int end = FindMatchingRepeatEnd(items, i);
                 if (end > i)

@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 434 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **561** | |
+| `OWN` | 435 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **562** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -247,7 +247,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（434 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（435 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -319,6 +319,8 @@
 - **`MidiExporter.ProcessGrace`** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Midi/MidiForFile.cs`
 - **`MidiForFile`** (). LILYSHARP-OWN: LilyPond writes no singer.
+### `LilySharp.Core/Midi/PlayedTimeline.cs`
+- **`PlayedTimeline`** LILYSHARP-OWN: the language's reading of its own signs, on ticks. Departs from: LilyPond
 ### `LilySharp.Core/Midi/SungVoices.cs`
 - **`SungVoices`** drifted from the page). LILYSHARP-OWN: LilyPond writes no sound.
 - **`SungVoices.SungBy`** LILYSHARP-OWN.
