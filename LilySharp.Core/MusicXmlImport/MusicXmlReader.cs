@@ -1374,6 +1374,9 @@ internal static class MusicXmlReader
                     else
                         report.Warn(measureNo, $"fingering '{fingering.Value.Trim()}' is not a number and is dropped.");
                 }
+                // The right hand's finger, @pluck(p|i|m|a) (session 1236).
+                if (Local(technical, "pluck")?.Value.Trim() is "p" or "i" or "m" or "a")
+                    note.Articulations.Add("pluck(" + Local(technical, "pluck")!.Value.Trim() + ")");
             }
             ReadTuplets(notations, el, note);
         }

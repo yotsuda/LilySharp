@@ -5655,7 +5655,12 @@ public sealed class MusicXmlExporter
                             Octave = coctave,
                             Type = chordType,
                             ActualNotes = chordActual,
-                            NormalNotes = chordNormal
+                            NormalNotes = chordNormal,
+                            // The head marks the page draws on a grace chord's heads, a member's
+                            // own or the chord's, as ProcessChord writes a full-size chord's
+                            // (session 1236; a grace chord wrote none).
+                            NoteheadParentheses = WritesParenthesize(chord.Articulations) || WritesParenthesize(pitch.Articulations),
+                            Notehead = NoteheadFromMarks(pitch.Articulations) ?? NoteheadFromMarks(chord.Articulations),
                         };
                         // A member's own script (`<d f@accent>`), on that member's <note>.
                         ProcessGraceScripts(pitch.Articulations, memberNote);
@@ -5698,6 +5703,24 @@ public sealed class MusicXmlExporter
                     // The chord's scripts and gestures are written on its first member.
                     if (_currentMeasure.Notes.Count > graceChordAt)
                         ProcessGraceScripts(chord.Articulations, _currentMeasure.Notes[graceChordAt]);
+                    // The grace chord's arpeggio, which the page draws before it (session 1236;
+                    // it was not written): <arpeggiate> on every member with its arrow, or the
+                    // bracket's two ends, as ProcessChord writes a full-size chord's. The
+                    // cross-staff spellings are not a grace's.
+                    if (_currentMeasure.Notes.Count > graceChordAt)
+                    {
+                        var graceMembers = _currentMeasure.Notes.Skip(graceChordAt).ToList();
+                        if (WritesOwnWavyLine(chord.Articulations))
+                        {
+                            foreach (var member in graceMembers)
+                                member.ExtraNotations.Add(new System.Xml.Linq.XElement("arpeggiate",
+                                    new System.Xml.Linq.XAttribute("number", 1)));
+                            StampArpeggioDirection(chord, graceMembers);
+                        }
+                        else if (chord.Articulations.Any(a => a is MusicMarkSyntax mm
+                                     && Semantics.AnnotationValues.ArpeggioWords(mm) is { Bracket: true, Cross: false }))
+                            AddBracketEnds(graceMembers[0], graceMembers[^1], 1);
+                    }
                     // A diagram(…) item in a grace body: its strings, as ProcessChord writes them.
                     var graceShape = chord.IsShapeChord ? ShapeNotesOf(chord) : [];
                     foreach (var sn in Music.ShapeChords.Ascending(graceShape))
@@ -5760,6 +5783,11 @@ public sealed class MusicXmlExporter
                         ActualNotes = restActual,
                         NormalNotes = restNormal
                     };
+                    // What stands at the grace rest's moment on the page — a level, a hairpin's
+                    // start, words, a pedal, an octave line, a text spanner — before it, as
+                    // before a grace note (session 1236: a span started on a grace rest left
+                    // its stop alone in the file).
+                    EmitGraceDirectionMarks(rest.Articulations);
                     // A grace rest's fermata, as the page draws it (a gesture on a rest is refused).
                     ProcessGraceScripts(rest.Articulations, graceRest);
                     _currentMeasure.Notes.Add(graceRest);
@@ -5913,6 +5941,10 @@ public sealed class MusicXmlExporter
                 // marks (pedal, ottava, chord symbol) go on to their own reader.
                 if (Semantics.AnnotationValues.Finger(mark) is { } finger)
                     xmlNote.Technicals.Add(new System.Xml.Linq.XElement("fingering", finger));
+                // @pluck(p) is the right hand's finger, MusicXML's <technical><pluck> (session
+                // 1236; it was written on no note).
+                if (Semantics.AnnotationValues.Pluck(mark) is { } pluck)
+                    xmlNote.Technicals.Add(new System.Xml.Linq.XElement("pluck", pluck));
                 // @slur(dashed) / @tie(dotted) (owner-approved 2026-11-13): the line-type of the
                 // <slur> / <tied> that starts on this note. With none starting, nothing is written.
                 if (Semantics.AnnotationValues.BowLineOf(mark, Semantics.AnnotationValues.SlurLineName) is { } slurLine and not Svg.Model.BowLine.Solid)

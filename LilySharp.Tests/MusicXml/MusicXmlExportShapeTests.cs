@@ -1033,4 +1033,54 @@ public class MusicXmlExportShapeTests
         Assert.Contains("<fingering>1", lines[1]);
         Assert.Equal("NOTE ", lines[2]);
     }
+
+    /// <summary>A grace chord's arpeggio is on every member, with its arrow; its bracket is the
+    /// two ends. Until session 1236 the page drew both and the file had neither.</summary>
+    [Fact]
+    public void AGraceChordsArpeggio_IsWrittenAsAFullSizeChordsIs()
+    {
+        var wavy = Export(PhraseBook("", "grace { <d'' f''>16@arpeggio } e''4 f'' g'' a'' |")).Descendants("note").Take(2).ToList();
+        Assert.All(wavy, n => Assert.Single(n.Descendants("arpeggiate")));
+        var arrowed = Export(PhraseBook("", "grace { <d'' f''>16@arpeggio(down) } e''4 f'' g'' a'' |")).Descendants("arpeggiate").ToList();
+        Assert.Equal(["down", "down"], arrowed.Select(a => (string?)a.Attribute("direction")));
+        var bracket = Export(PhraseBook("", "grace { <d'' f''>16@arpeggio(bracket) } e''4 f'' g'' a'' |")).Descendants("non-arpeggiate").ToList();
+        Assert.Equal(["bottom", "top"], bracket.Select(a => (string?)a.Attribute("type")));
+    }
+
+    /// <summary>A grace chord's head marks — a member's own, or the chord's on every member —
+    /// are each member's <c>&lt;notehead&gt;</c>, as a full-size chord's are.</summary>
+    [Fact]
+    public void AGraceChordsHeadMarks_AreItsMembers()
+    {
+        string[] Heads(string music) => Export(PhraseBook("", music)).Descendants("note").Take(2)
+            .Select(n => n.Element("notehead")?.ToString(SaveOptions.DisableFormatting) ?? "").ToArray();
+        Assert.Equal(["<notehead>x</notehead>", ""], Heads("grace { <d''@dead f''>16 } e''4 f'' g'' a'' |"));
+        Assert.Equal(["<notehead>diamond</notehead>", "<notehead>diamond</notehead>"],
+            Heads("grace { <d'' f''>16@notehead(diamond) } e''4 f'' g'' a'' |"));
+        Assert.Equal(["", "<notehead parentheses=\"yes\">normal</notehead>"],
+            Heads("grace { <d'' f''@parenthesize>16 } e''4 f'' g'' a'' |"));
+    }
+
+    /// <summary>What stands at a grace REST's moment is written before it, as before a grace
+    /// note: the level, the words, and a span's start — whose stop stood alone in the file.</summary>
+    [Theory]
+    [InlineData("@f", "", "<f")]
+    [InlineData("@text(\"dolce\")", "", "dolce")]
+    [InlineData("@sustain", "@!sustain", "<pedal type=\"start\"")]
+    [InlineData("@8va", "@!8va", "<octave-shift type=\"down\"")]
+    [InlineData("@cresc", "@!cresc", "<wedge type=\"crescendo\"")]
+    [InlineData("@rit", "@!rit", "rit.</words>")]
+    public void AGraceRestsDirections_AreWritten(string marks, string end, string says)
+        => Assert.Contains(says, Marks($"grace {{ r16{marks} }} e''4 f''{end} g'' a'' |"));
+
+    /// <summary><c>@pluck(p)</c> is the note's <c>&lt;technical&gt;&lt;pluck&gt;</c>.</summary>
+    [Fact]
+    public void APluckingFinger_IsTheNotesPluck()
+    {
+        var doc = Export(PhraseBook("", "c''4@pluck(p) d''@pluck(i) e''@pluck(m) f''@pluck(a) |"));
+        Assert.Equal(["p", "i", "m", "a"], doc.Descendants("technical").Elements("pluck").Select(p => p.Value));
+        // …and it is read back.
+        var (lys, _) = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(doc.ToString());
+        Assert.Contains("d''4@pluck(i) e''4@pluck(m) f''4@pluck(a)", lys);
+    }
 }
