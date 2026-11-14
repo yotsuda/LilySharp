@@ -177,7 +177,7 @@ LYS1034 は**最後に**外す。エラーの本も今は描けて鳴るので�
   - **規則 3 の再生と、表の 4 行目の警告（第1253）**: 回は 1 つの表から読む＝`RepeatStream.RouteByPass`（`Route` を継ぐ前の区間に「何回目か」を付けたもの。反復の本体は 1..K・ending はその番号・反復の外は 1・`|:` の無い `:|` が戻した区間は 2・ジャンプで戻った区間は最後の回）。
     - 再生: `PlayedTimeline.Unfold` がその表を演奏の tick に並べて返し、`SingLyrics` は反復を持つ section の verse を「発音の回がその verse の回か」で置く（`PassAt`）。
       第1252 の実測（Lab `p1252/probe-verse-endings.md`）: それまでは verse N を「その音の N 回目の発音」に置き、足りなければ最後の発音へ丸めていたので、1 回しか鳴らない括弧の音に全部の verse が乗り、先に書いたほうが歌われた。
-    - 「足りない回は最後の verse」は、**その歌詞の section の verse がどれも名指していない回**だけ（それまでは音ごとに見ていた）。帰結: 反復を持つ section で `verse 2` の小節を空けると、2 回目のその小節は黙る（verse 1 の言葉は歌わない）。form だけで反復を書いた本は今までどおり音ごと。
+    - 「足りない回は最後の verse」は、**その歌詞の section の verse がどれも名指していない回**だけ（それまでは音ごとに見ていた）。帰結: 反復を持つ section で `verse 2` の小節を空けると、2 回目のその小節は黙る（verse 1 の言葉は歌わない）＝**オーナー決定 2026-11-15「2 回目は黙るので良い」**。form だけで反復を書いた本は今までどおり音ごと。
     - 警告: `VerseRepeatValidator` の `NotSungHere`。小節の回は列（`RepeatStream.PassesOf`）の、その section を最初に演奏する form の最初の印刷から読む。歌詞の小節は section の小節と順に対応させる（ページの置き方と同じ）。警告は言葉の上に出る。
       quick fix は「その小節で歌われる verse の、同じ小節が空ならそこへ移す」と「この小節を空にする」。
     - 網: `InlineRepeatMidiTests.AVerseSingsInTheBarsItsPassPlays`・`VerseRepeatValidatorTests` の 3 本。反復記号が小節を割る本（弱起が反復の中・`g a b :| g4 |`）でも歌詞の小節と列の小節は合う（Lab `p1253/cut-bar*.lys`＝正しい本は警告 0・反復の後の小節に書いた `verse 2` は 2 件）。

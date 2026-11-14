@@ -161,7 +161,7 @@ base `2d614438b`・開始時 full 17062 合格 / 1 失敗（`ReadmeSampleTests`�
 第1252 の「次」の ⑴＝歌詞の規則 3 の再生と、警告の 4 種目（commit `ec31c998f`・設計 `inline-repeat-design.md` §6 の「第1253」の項が全部）。
 - **回の表は 1 つ**: `RepeatStream.RouteByPass`（`Route` を継ぐ前の区間＋何回目か）。再生は `PlayedTimeline.Unfold` が返す表を `SingLyrics` が `PassAt` で引き、検査は `RepeatStream.PassesOf(bar)` を読む。
 - **再生**: 反復を持つ section の `verse N` は、発音の回が N のときだけ歌う（括弧の音は括弧の回だけ・反復の後の小節は 1 回目だけ）。直す前は 2 番括弧で verse 1 の言葉が歌われた。
-- **決めごと（オーナーの確認が要る）**: 「足りない回は最後の verse」を、反復を持つ section では*歌詞の section の verse がどれも名指していない回*だけにした（前は音ごと）＝`verse 2` の小節を空けると 2 回目のその小節は黙る。規則 3 の「刷るが歌わない」を守るための変更で、form だけの反復は前のまま。
+- **決めごと（オーナー決定 2026-11-15「2 回目は黙るので良い」）**: 「足りない回は最後の verse」を、反復を持つ section では*歌詞の section の verse がどれも名指していない回*だけにした（前は音ごと）＝`verse 2` の小節を空けると 2 回目のその小節は黙る。規則 3 の「刷るが歌わない」を守るための変更で、form だけの反復は前のまま。
 - **警告 LYS4080 の 4 種目**（`VerseRepeatValidator.Fault.NotSungHere`・言葉の上に出る）と quick fix 2 つ（歌われる verse の空の小節へ移す／この小節を空にする）。
 - 文書: GRAMMAR §8.1 の 7・GRAMMAR_FOR_LLM・SYNTAX_REFERENCE・CHANGELOG 2 つ・設計 §6。
 - 門: 網 +13（`InlineRepeatMidiTests.AVerseSingsInTheBarsItsPassPlays` 5・`VerseRepeatValidatorTests` 8）。毒 1 本（`SingLyrics` の新しい腕を止める）で 3 本赤。弱起が反復の中の本でも小節は合う（Lab `p1253/cut-bar*.lys`）。掃きは回していない（絵は変えていない）。終了時 full 17073 合格 / 3 失敗（`ReadmeSampleTests`＋`SvgSnapshotTests` の 2 枚＝単独で 249 緑・不安定な網）/ skip 2 / 合計 17078（`run3.trx`）。
