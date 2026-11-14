@@ -574,14 +574,14 @@ internal static class PedalEngraver
         ImmutableArray<UnpairedSpanWarning>.Builder? unpaired = null;
         HashSet<(int Position, SpanPairingFault Fault)>? reported = null;
 
-        void Report(int sourcePosition, SpanPairingFault fault)
+        void Report(int sourcePosition, SpanPairingFault fault, bool closedElsewhere)
         {
             // ONE ROOT CAUSE, ONE DIAGNOSTIC: a mark inside a repeated section arrives once
             // per playing, and the reader forgot one terminator however often it is played.
             reported ??= new HashSet<(int Position, SpanPairingFault Fault)>();
             if (reported.Add((sourcePosition, fault)))
                 (unpaired ??= ImmutableArray.CreateBuilder<UnpairedSpanWarning>())
-                    .Add(new UnpairedSpanWarning(sourcePosition, SpanKind.Pedal, fault));
+                    .Add(new UnpairedSpanWarning(sourcePosition, SpanKind.Pedal, fault, closedElsewhere));
         }
 
         // Each pedal is its own span: a sustain is not closed by a una corda.
@@ -701,7 +701,7 @@ internal static class PedalEngraver
         MusicMarkType onType, MusicMarkType offType,
         PedalType pedalType,
         ref ImmutableArray<PedalBracketItem>.Builder? brackets,
-        Action<int, SpanPairingFault> report,
+        Action<int, SpanPairingFault, bool> report,
         Collector.SectionPlays? plays, List<Collector.SectionCarryWarning>? carrySink)
     {
         // Collect all on/off marks for this pedal type, ordered by position
@@ -757,7 +757,7 @@ internal static class PedalEngraver
                         carrySink?.Add(plays.RefusedClose(mark.SourcePosition, Collector.SectionSpanKind.Pedal,
                             closeFault, mark.MeasureIndex));
                     else
-                        report(mark.SourcePosition, SpanPairingFault.StopWithNoStart);
+                        report(mark.SourcePosition, SpanPairingFault.StopWithNoStart, false);
                     continue;
                 }
                 (brackets ??= ImmutableArray.CreateBuilder<PedalBracketItem>()).Add(Closed(activeOn, mark));
@@ -767,7 +767,14 @@ internal static class PedalEngraver
 
         // A pedal still down when the music ends drew no bracket at all, silently.
         if (activeOn != null)
-            report(activeOn.SourcePosition, SpanPairingFault.Unterminated);
+        {
+            // …though an earlier playing of the same written pedal may have drawn one.
+            bool closedElsewhere = false;
+            if (brackets != null)
+                foreach (var b in brackets)
+                    closedElsewhere |= b.Type == pedalType && b.SourcePosition == activeOn.SourcePosition;
+            report(activeOn.SourcePosition, SpanPairingFault.Unterminated, closedElsewhere);
+        }
     }
 
     /// <summary>

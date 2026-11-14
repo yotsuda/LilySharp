@@ -91,6 +91,10 @@ internal sealed class SpanPairingValidator : ISharedCollectValidator
             // ASCII punctuation only: these strings reach legacy-codepage consoles via the CLI.
             var span = SpanNames.MarkSpan(tree, w.SourcePosition);
             string message = MessageFor(w.Kind, w.Fault, OpenedAs(tree.Text, w.SourcePosition));
+            // Closed in an earlier playing and drawn there: the fault is the last playing's
+            // alone, and "nothing is drawn" beside a drawn bracket reads as a wrong report.
+            if (w.ClosedElsewhere)
+                message = LastPlayingOnly + message;
             if (w.Fault == SpanPairingFault.Unterminated)
                 _diagnostics.Error(span, DiagnosticCodes.UnpairedSpan, message);
             else
@@ -112,6 +116,11 @@ internal sealed class SpanPairingValidator : ISharedCollectValidator
         var m = System.Text.RegularExpressions.Regex.Match(text[at..], @"^[A-Za-z0-9]+");
         return m.Success ? m.Value : null;
     }
+
+    /// <summary>What goes before an unterminated span's words when the same written start is
+    /// closed in an earlier playing (<see cref="UnpairedSpanWarning.ClosedElsewhere"/>).</summary>
+    internal const string LastPlayingOnly =
+        "in its last playing only (the earlier ones are closed and drawn): ";
 
     /// <summary>The words for one fault, in the family's own vocabulary.</summary>
     /// <remarks>

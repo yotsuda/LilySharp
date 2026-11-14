@@ -652,8 +652,15 @@ internal static class TextSpannerEngraver
         {
             if (start.Mark.SpanFamily == TextSpanFamily.Barre)
                 AddBarreLabel(start);
-            else
-                Report(start.Mark.SourcePosition, SpanPairingFault.Unterminated);
+            else if (reported.Add((start.Mark.SourcePosition, SpanPairingFault.Unterminated)))
+            {
+                // An earlier playing of the same written start may have drawn its line.
+                bool closedElsewhere = false;
+                foreach (var s in spanners)
+                    closedElsewhere |= s.SourcePosition == start.Mark.SourcePosition;
+                unpaired.Add(new UnpairedSpanWarning(start.Mark.SourcePosition, SpanKind.TextSpanner,
+                    SpanPairingFault.Unterminated, closedElsewhere));
+            }
         }
 
         return (spanners.ToImmutable(), unpaired.ToImmutable());

@@ -282,4 +282,38 @@ public class SpanPairingValidatorTests
         Assert.Equal(DiagnosticSeverity.Warning,
             Assert.Single(Reports("c'4@rit c'@rit c' c'@!rit |")).Severity);
     }
+
+    /// <summary>
+    /// A span section A opens and section B closes, in <c>form { A B A }</c>: the first A's is
+    /// closed and drawn, the last A's runs into the end of the music. The report is the last
+    /// playing's alone and says so — "nothing is drawn" beside a drawn bracket read as a wrong
+    /// report (session 1234). In <c>form { A }</c> the same start is simply never closed.
+    /// </summary>
+    [Theory]
+    [InlineData("@sustain", "@!sustain", "a pedal is never released")]
+    [InlineData("@rit", "@!rit", "is never closed")]
+    [InlineData("@8va", "@!8va", "is never closed")]
+    public void ASpanOnlyItsLastPlayingLeavesOpen_SaysSo(string start, string stop, string words)
+    {
+        static IReadOnlyList<Diagnostic> In(string form, string start, string stop)
+        {
+            var validator = new SpanPairingValidator();
+            validator.Validate(SyntaxTree.Parse(
+                "octave absolute part m { clef treble } "
+                + $"section A {{ m {{ c'4{start} c' c' c' | }} }} section B {{ m {{ c'4 c' c' c'{stop} | }} }} "
+                + $"form {{ {form} }} score {{ staff m }}"));
+            return validator.Diagnostics.Where(d => d.Code == DiagnosticCodes.UnpairedSpan).ToList();
+        }
+
+        Assert.Empty(In("A B", start, stop));
+
+        var last = Assert.Single(In("A B A", start, stop));
+        Assert.StartsWith(SpanPairingValidator.LastPlayingOnly, last.Message);
+        Assert.Contains(words, last.Message);
+        Assert.Equal(DiagnosticSeverity.Error, last.Severity);
+
+        var never = Assert.Single(In("A", start, stop));
+        Assert.DoesNotContain("last playing", never.Message);
+        Assert.Contains(words, never.Message);
+    }
 }

@@ -831,7 +831,15 @@ internal static class OttavaBracketEngraver
         }
 
         foreach (var (mark, _) in open.Values)
-            Report(mark.SourcePosition, SpanPairingFault.Unterminated);
+        {
+            // An earlier playing of the same written start may have drawn its bracket.
+            bool closedElsewhere = false;
+            foreach (var b in brackets)
+                closedElsewhere |= b.SourcePosition == mark.SourcePosition;
+            if (reported.Add((mark.SourcePosition, SpanPairingFault.Unterminated)))
+                unpaired.Add(new UnpairedSpanWarning(mark.SourcePosition, SpanKind.Ottava,
+                    SpanPairingFault.Unterminated, closedElsewhere));
+        }
 
         return (brackets.ToImmutable(), unpaired.ToImmutable());
     }

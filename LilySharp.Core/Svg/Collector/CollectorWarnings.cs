@@ -255,10 +255,16 @@ public enum SpanPairingFault
 /// once.
 /// </para>
 /// </remarks>
+/// <param name="ClosedElsewhere">For <see cref="SpanPairingFault.Unterminated"/>: the same
+/// written start IS closed, and drawn, in another playing — a section played again at the
+/// form's end, after the section that closes it. The fault is then the last playing's alone,
+/// and the words say so (session 1234: `form { A B A }`, A opening and B closing, said "no
+/// bracket is drawn" beside the first A's drawn bracket).</param>
 public record UnpairedSpanWarning(
     int SourcePosition,
     SpanKind Kind,
-    SpanPairingFault Fault
+    SpanPairingFault Fault,
+    bool ClosedElsewhere = false
 );
 
 /// <summary>Which kind of span crossed a cue boundary — the two whose engravers LilyPond
