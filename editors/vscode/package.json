@@ -604,6 +604,21 @@
         "title": "Remove All String Numbers"
       },
       {
+        "command": "lilysharp.sameBarNextPart",
+        "category": "Lily#",
+        "title": "Go to the Same Bar in the Next Part"
+      },
+      {
+        "command": "lilysharp.sameBarPreviousPart",
+        "category": "Lily#",
+        "title": "Go to the Same Bar in the Previous Part"
+      },
+      {
+        "command": "lilysharp.sameBarInPart",
+        "category": "Lily#",
+        "title": "Go to the Same Bar in Another Part…"
+      },
+      {
         "command": "lilysharp.convertShapeToNotes",
         "category": "Lily#",
         "title": "Convert to Chord Notes <…>"
@@ -1051,6 +1066,18 @@
           "when": "resourceLangId == lilysharp"
         },
         {
+          "command": "lilysharp.sameBarNextPart",
+          "when": "resourceLangId == lilysharp"
+        },
+        {
+          "command": "lilysharp.sameBarPreviousPart",
+          "when": "resourceLangId == lilysharp"
+        },
+        {
+          "command": "lilysharp.sameBarInPart",
+          "when": "resourceLangId == lilysharp"
+        },
+        {
           "command": "lilysharp.extractPhrase",
           "when": "resourceLangId == lilysharp"
         },
@@ -1339,6 +1366,11 @@
           "group": "1_modification@2"
         },
         {
+          "command": "lilysharp.sameBarInPart",
+          "when": "resourceLangId == lilysharp",
+          "group": "navigation@9"
+        },
+        {
           "command": "lilysharp.extractPhrase",
           "when": "resourceLangId == lilysharp",
           "group": "1_modification@3"
@@ -1383,6 +1415,18 @@
       ]
     },
     "keybindings": [
+      {
+        "command": "lilysharp.sameBarNextPart",
+        "key": "ctrl+alt+pagedown",
+        "mac": "cmd+alt+pagedown",
+        "when": "editorTextFocus && resourceLangId == lilysharp"
+      },
+      {
+        "command": "lilysharp.sameBarPreviousPart",
+        "key": "ctrl+alt+pageup",
+        "mac": "cmd+alt+pageup",
+        "when": "editorTextFocus && resourceLangId == lilysharp"
+      },
       {
         "command": "lilysharp.openPreview",
         "key": "ctrl+shift+v",

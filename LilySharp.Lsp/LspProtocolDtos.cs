@@ -1255,6 +1255,36 @@ public class PlaceAtParams
     public int[]? Offsets { get; set; }
 }
 
+/// <summary>lilysharp/sameBar: the caret whose bar is asked for.</summary>
+public class SameBarParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    public int Offset { get; set; }
+}
+
+/// <summary>One other voice's copy of the bar (lilysharp/sameBar).</summary>
+public class SameBarPlace
+{
+    /// <summary>The voice as a message names it: <c>part 'bass'</c>, <c>chords 'prog'</c>.</summary>
+    public string Voice { get; set; } = "";
+    /// <summary>Where its bar opens.</summary>
+    public int Offset { get; set; }
+}
+
+/// <summary>The same bar in the other voices of the caret's section
+/// (<see cref="LilySharp.Core.Editing.SameBarFinder"/>). <see cref="Section"/> is null when the
+/// caret is in no section's music.</summary>
+public class SameBarResponse
+{
+    public string? Section { get; set; }
+    /// <summary>The caret's bar of its section, 1-based.</summary>
+    public int Bar { get; set; }
+    public string? Voice { get; set; }
+    /// <summary>The other voices, in document order starting after the caret's own.</summary>
+    public SameBarPlace[] Places { get; set; } = [];
+    public int Version { get; set; }
+}
+
 /// <summary>One answer of lilysharp/placeAt's <c>Offsets</c>.</summary>
 public class PlaceInfo
 {

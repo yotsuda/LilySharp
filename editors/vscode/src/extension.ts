@@ -853,6 +853,9 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('lilysharp.convertOctavesToAbsolute', () => convertOctaves(true)),
         vscode.commands.registerCommand('lilysharp.convertOctavesToRelative', () => convertOctaves(false)),
         vscode.commands.registerCommand('lilysharp.removeStringNumbers', () => removeStringNumbers()),
+        vscode.commands.registerCommand('lilysharp.sameBarNextPart', () => goToSameBar('next')),
+        vscode.commands.registerCommand('lilysharp.sameBarPreviousPart', () => goToSameBar('previous')),
+        vscode.commands.registerCommand('lilysharp.sameBarInPart', () => goToSameBar('pick')),
         // From the context menu at the caret, or from the code action with the document and offset.
         vscode.commands.registerCommand('lilysharp.convertShapeToNotes',
             (uri?: string, offset?: number) => rewriteChordAt('lilysharp/shapeToNotes',
@@ -2721,6 +2724,63 @@ interface RemoveStringNumbersResponse {
  * Removes every written string number (`\1` … `\9`) from the active .lys document, so the tab
  * chooses every string itself. Applied as one edit, so one undo puts them all back.
  */
+interface SameBarResponse {
+    Section: string | null;
+    Bar: number;
+    Voice: string | null;
+    Places: { Voice: string; Offset: number }[];
+}
+
+/**
+ * Moves the caret to the bar it is in, as another part (or chords row) of the same section
+ * writes it (owner's request 2026-11-14: the same bar of two parts may stand many lines
+ * apart). 'next' and 'previous' walk the section's voices in document order, round and
+ * round; 'pick' asks which one when there are several. The server counts the bars
+ * (lilysharp/sameBar, Core's SameBarFinder).
+ */
+async function goToSameBar(which: 'next' | 'previous' | 'pick') {
+    const editor = vscode.window.activeTextEditor;
+    if (!client || !editor || editor.document.languageId !== 'lilysharp') {
+        return;
+    }
+    const doc = editor.document;
+    try {
+        const response = await client.sendRequest<SameBarResponse>('lilysharp/sameBar', {
+            textDocument: { uri: doc.uri.toString() },
+            offset: doc.offsetAt(editor.selection.active),
+        });
+        if (!response.Section) {
+            vscode.window.showInformationMessage("Lily#: put the caret in a section's music.");
+            return;
+        }
+        if (response.Places.length === 0) {
+            vscode.window.showInformationMessage(`Lily#: no other part writes section ${response.Section}.`);
+            return;
+        }
+        let place = which === 'previous' ? response.Places[response.Places.length - 1] : response.Places[0];
+        if (which === 'pick' && response.Places.length > 1) {
+            const picked = await vscode.window.showQuickPick(
+                response.Places.map(p => ({
+                    label: p.Voice,
+                    description: doc.lineAt(doc.positionAt(p.Offset).line).text.trim().slice(0, 60),
+                    place: p,
+                })),
+                { placeHolder: `Bar ${response.Bar} of section ${response.Section}: go to…` });
+            if (!picked) {
+                return;
+            }
+            place = picked.place;
+        }
+        const at = doc.positionAt(place.Offset);
+        editor.selection = new vscode.Selection(at, at);
+        editor.revealRange(new vscode.Range(at, at), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+        vscode.window.setStatusBarMessage(
+            `Lily#: bar ${response.Bar} of section ${response.Section}, ${place.Voice}`, 3000);
+    } catch (err) {
+        vscode.window.showErrorMessage(`Lily#: finding the same bar failed: ${err}`);
+    }
+}
+
 async function removeStringNumbers() {
     const editor = vscode.window.activeTextEditor;
     if (!editor || editor.document.languageId !== 'lilysharp') {

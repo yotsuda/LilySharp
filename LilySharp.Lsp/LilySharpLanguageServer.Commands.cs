@@ -2140,6 +2140,37 @@ public sealed partial class LilySharpLanguageServer
         }
     }
 
+    /// <summary>
+    /// The bar under a caret, in the other parts and chords rows that write its section — the
+    /// editor's "go to the same bar in another part" (owner's request 2026-11-14).
+    /// See <see cref="LilySharp.Core.Editing.SameBarFinder"/>.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/sameBar", UseSingleObjectParameterDeserialization = true)]
+    public Task<SameBarResponse> SameBarAsync(SameBarParams @params, CancellationToken token)
+        => OffDispatch(() => SameBar(@params), token);
+
+    public SameBarResponse SameBar(SameBarParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new SameBarResponse();
+        try
+        {
+            var answer = LilySharp.Core.Editing.SameBarFinder.At(doc.Tree, @params.Offset);
+            return answer == null
+                ? new SameBarResponse { Version = doc.Version }
+                : new SameBarResponse
+                {
+                    Section = answer.Section, Bar = answer.Bar, Voice = answer.Voice, Version = doc.Version,
+                    Places = [.. answer.Others.Select(o => new SameBarPlace { Voice = o.Voice, Offset = o.Offset })],
+                };
+        }
+        catch (Exception)
+        {
+            return new SameBarResponse { Version = doc.Version };
+        }
+    }
+
     // The last document's places, by version: the caret asks on every move, and a collect per
     // move would be the preview's whole cost again.
     private readonly object _placesLock = new();
