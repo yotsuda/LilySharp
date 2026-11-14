@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- `[engraving]` **A repetition repeats the quarter tone.** `<cih' e'>4 q` and `cih'4 4` printed a natural on the repetition: `q` and a bare duration copied the note without its quarter tone, and the page read the plain note. They are the note again, quarter tone and all.
 - `[engraving]` **A pedal cut at a repeat keeps no room in the next section.** A pedal pressed in one section and released past a repeat sign is an error (LYS4023) and its bracket is cut at the end of its own section — but the page still held a line open under the staff through the next section, to the release, and those systems stood further apart for a bracket that is not drawn.
 - **MusicXML: a grace note keeps its marks.** `grace { d''16@staccato }`, an `@accent`, a `@fermata`, a `@trill` or a bowing mark on a grace note, grace chord or grace rest were drawn on the page and missing from `lysc xml`; they are now written on the grace `<note>` exactly as on a full-size note. A mark the page does not draw in grace time stays out of the file.
 - **The editor's chord hover shows quarter tones.** `<c' eeh' gis'>` hovered as C4 E4 G♯4; a member's quarter tone is now part of its name (E𝄳4), and an arpeggio's notes show the sign instead of the raw letters ("E♭d4").

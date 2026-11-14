@@ -239,6 +239,24 @@ public class AccidentalStyleTests
     }
 
     /// <summary>
+    /// A repetition repeats the quarter tone: <c>q</c> after a chord and a bare duration after
+    /// a note or a chord are that note again. Until 2026-11-14 (session 1232) the copy carried
+    /// the semitone spelling alone, so the page read the repetition as the plain note and
+    /// printed a natural on it.
+    /// </summary>
+    [Fact]
+    public void Default_ARepetition_RepeatsTheQuarterTone()
+    {
+        Assert.Equal(new string?[] { "quarterSharp", null, null, null }, Glyphs("<cih' e'>4 q r2 |"));
+        Assert.Equal(new string?[] { "quarterSharp", null, null, null }, Glyphs("<cih' e'>4 4 r2 |"));
+        Assert.Equal(new string?[] { "quarterSharp", null, "natural", null }, Glyphs("cih'4 4 c'4 4 |"));
+        // The repetition is remembered as what it is: the plain note after it owes its natural.
+        Assert.Equal(new string?[] { "quarterFlat", null, null, null, "natural", null }, Glyphs("<ceh' e'>4 q <c' e'>2 |"));
+        // The control: a plain chord repeated.
+        Assert.Equal(new string?[] { "sharp", null, null, null }, Glyphs("<cis' e'>4 q r2 |"));
+    }
+
+    /// <summary>
     /// The staff owes the restoring natural BEFORE a sign a voice printed for itself, where the
     /// note was last shown in another voice with more of that sign. Until 2026-11-14 (session
     /// 1232) the staff's pass skipped every head that had a sign, so the second voice's

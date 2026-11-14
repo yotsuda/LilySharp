@@ -50,7 +50,7 @@ public sealed partial class MeasureCollector
             var resolvedSpelling = new ResolvedChordMember(
                 staffPosition, rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave,
                 NoteheadStyle.Default, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
-                StringNumber: ExtractStringNumber(note));
+                StringNumber: ExtractStringNumber(note), QuarterOffset: pitch.QuarterOffset);
             _resolvedNotes[note] = resolvedSpelling;
             // Record mode (finding 3-4): log the write, so a resume can restore the adopted
             // prefix's entries. Order matters (a form replay's overwrite must land last).
@@ -426,7 +426,7 @@ public sealed partial class MeasureCollector
         // drawn on the staff from it; only the tab's fret choice reads it.
         int? StringNumber = null,
         // The member's written quarter tone (PitchSyntax.QuarterOffset: `eih` +1, `eeh` −1), on
-        // top of Alter. Read by the editor's chord hover alone (RecordChordFacts): until
+        // top of Alter. Read by the editor's chord hover (RecordChordFacts) and by a repetition (`q`, a bare duration), which is the note again, quarter tone and all: until
         // 2026-11-14 (session 1232) the member carried none and `<c eeh g>` hovered as C E G.
         int QuarterOffset = 0)
     {
@@ -1064,12 +1064,12 @@ public sealed partial class MeasureCollector
         {
             var m = written.DisplacedBy(displacement);
             var (accidental, styleCourtesy) = m.Step is { } step
-                ? GetDisplayAccidental(step, m.Alter!.Value, m.Octave!.Value)
+                ? GetDisplayAccidental(step, m.Alter!.Value, m.Octave!.Value, m.QuarterOffset)
                 : (null, false);
             // `<c e>~ q`: a tied member keeps its accidental for a line start only.
             string? memberLineStart = null;
             if (accidental != null && builder != null && m.Step is { } tiedStep
-                && builder.TiesInto(m.StaffPosition, m.Midi, WrittenPitch.Pack(tiedStep, m.Alter!.Value, m.Octave!.Value)))
+                && builder.TiesInto(m.StaffPosition, m.Midi, WrittenPitch.Pack(tiedStep, m.Alter!.Value, m.Octave!.Value, m.QuarterOffset)))
             {
                 MarkAccidentalTied(tiedStep, m.Octave!.Value);
                 memberLineStart = accidental;
@@ -1084,7 +1084,7 @@ public sealed partial class MeasureCollector
                 Midi: m.Midi,
                 SourcePosition: rep.SourceStart,
                 LineStartAccidental: memberLineStart,
-                WrittenPitch: m.Step is { } ps ? WrittenPitch.Pack(ps, m.Alter!.Value, m.Octave!.Value) : 0));
+                WrittenPitch: m.Step is { } ps ? WrittenPitch.Pack(ps, m.Alter!.Value, m.Octave!.Value, m.QuarterOffset) : 0));
         }
 
         return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, rep.SourceStart, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieStart: hasTieAfter, hasSlurStart: hasSlurStartAfter, hasSlurEnd: hasSlurEndAfter)
@@ -1215,7 +1215,7 @@ public sealed partial class MeasureCollector
                 {
                     var m = writtenMember.DisplacedBy(bareDisplacement);
                     var (accidental, styleCourtesy) = m.Step is { } step
-                        ? GetDisplayAccidental(step, m.Alter!.Value, m.Octave!.Value)
+                        ? GetDisplayAccidental(step, m.Alter!.Value, m.Octave!.Value, m.QuarterOffset)
                         : (null, false);
                     notes.Add(new ChordNoteInfo(
                         m.StaffPosition, accidental,
@@ -1225,7 +1225,7 @@ public sealed partial class MeasureCollector
                         IsDead: bareDead || m.IsDead,
                         Midi: m.Midi,
                         SourcePosition: bare.SourceStart,
-                        WrittenPitch: m.Step is { } ps ? WrittenPitch.Pack(ps, m.Alter!.Value, m.Octave!.Value) : 0));
+                        WrittenPitch: m.Step is { } ps ? WrittenPitch.Pack(ps, m.Alter!.Value, m.Octave!.Value, m.QuarterOffset) : 0));
                 }
                 return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, bare.SourceStart, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio: false, isCue, hasTieStart: hasTieAfter, hasSlurStart: hasSlurStartAfter, hasSlurEnd: hasSlurEndAfter)
                 {
@@ -1238,7 +1238,7 @@ public sealed partial class MeasureCollector
             case NoteSyntax note when _resolvedNotes.TryGetValue(note, out var m):
             {
                 var (bareAccidental, bareStyleCourtesy) = m.Step is { } noteStep
-                    ? GetDisplayAccidental(noteStep, m.Alter!.Value, m.Octave!.Value)
+                    ? GetDisplayAccidental(noteStep, m.Alter!.Value, m.Octave!.Value, m.QuarterOffset)
                     : (null, false);
                 return new NoteItem(
                     m.StaffPosition,
@@ -1260,7 +1260,7 @@ public sealed partial class MeasureCollector
                     // The string the original was written on (ResolvedChordMember.StringNumber).
                     StringNumber = m.StringNumber,
                     ForcedStemUp = GetStemDirectionOverride(bare), ShiftOff = HasNamedArticulation(bare, "shiftOff"),
-                    WrittenPitch = m.Step is { } ps ? WrittenPitch.Pack(ps, m.Alter!.Value, m.Octave!.Value) : 0,
+                    WrittenPitch = m.Step is { } ps ? WrittenPitch.Pack(ps, m.Alter!.Value, m.Octave!.Value, m.QuarterOffset) : 0,
                 };
             }
 
