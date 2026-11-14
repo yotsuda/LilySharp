@@ -160,6 +160,8 @@ internal sealed record MusicItemRare
     public bool SectionPlayRewinds { get; init; }
     public string? SectionPlayMarksBefore { get; init; }
     public string? SectionPlayMarksAfter { get; init; }
+    public string? ScoreSignsBefore { get; init; }
+    public string? ScoreSignsAfter { get; init; }
     public bool GraceSlash { get; init; }
     public bool GraceStemDown { get; init; }
     public bool WrittenAfterGrace { get; init; }
@@ -550,6 +552,27 @@ public abstract record MusicItem
     {
         get => _rareBase?.SectionPlayMarksAfter;
         init { if (value != SectionPlayMarksAfter) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { SectionPlayMarksAfter = value }; }
+    }
+
+    /// <summary>On a bar's first item, in a book that writes repeat signs, endings or navigation
+    /// marks in its MUSIC: the score's signs standing at the bar line the bar opens on — the
+    /// form's and the music's, whichever voice writes them — in <c>Semantics.RepeatStream.Encode</c>'s
+    /// spelling; null where no sign stands, and in every book that writes its repeats in the
+    /// form alone. What lets <see cref="Collector.SectionPlayGraph"/> rebuild the score's sign
+    /// column from one finished voice (docs/inline-repeat-design.md §4). Stamped by the
+    /// collector as it finishes the voice (<c>MeasureCollector.StampTheScoresSigns</c>).</summary>
+    public string? ScoreSignsBefore
+    {
+        get => _rareBase?.ScoreSignsBefore;
+        init { if (value != ScoreSignsBefore) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { ScoreSignsBefore = value }; }
+    }
+
+    /// <summary>On the LAST bar's first item: the signs standing at the bar line that closes
+    /// the voice (<see cref="ScoreSignsBefore"/>'s spelling); null on every other item.</summary>
+    public string? ScoreSignsAfter
+    {
+        get => _rareBase?.ScoreSignsAfter;
+        init { if (value != ScoreSignsAfter) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { ScoreSignsAfter = value }; }
     }
 
     /// <summary>

@@ -22,34 +22,10 @@ using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Midi;
 
-/// <summary>What a <see cref="TimelineMark"/> says at its tick.</summary>
-internal enum TimelineMarkKind
-{
-    /// <summary>A <c>|:</c>.</summary>
-    RepeatStart,
-    /// <summary>A <c>:|</c>, with its <c>*N</c> when one is written.</summary>
-    RepeatEnd,
-    /// <summary>A volta ending opens (<c>[1.</c>), with the passes it names.</summary>
-    EndingStart,
-    /// <summary>A volta ending closes (its <c>]</c>, or the <c>:|</c> that closes it).</summary>
-    EndingEnd,
-    /// <summary>A navigation mark: a sign (segno, coda) or a text (fine, to coda, dc, ds).</summary>
-    Navigation,
-}
-
-/// <summary>A repeat sign, an ending's edge or a navigation mark at a tick of the PRINTED
-/// timeline — the music walked once, in the order the page prints it.</summary>
-/// <param name="Lane">Who noted it: the part (or the chord row) whose music writes it, null for the
-/// form. Every lane walking the same bars notes the same sign, and those are ONE sign; two alike
-/// in one lane are two (<c>:| :|</c>).</param>
-internal readonly record struct TimelineMark(
-    int Tick, TimelineMarkKind Kind, int? Count = null, PassSet Passes = default,
-    NavigationMarkType? Navigation = null, string? Lane = null);
-
 /// <summary>
 /// Plays a PRINTED timeline in the order a performer plays it: the exporter walks the music
 /// once, as the page prints it, noting where the repeat signs, the endings and the navigation
-/// marks stand (<see cref="TimelineMark"/>), and this class unfolds the result — the notes, the
+/// marks stand (<see cref="RepeatSign"/>), and this class unfolds the result — the notes, the
 /// tempo, the meters, the pedals, the words and the bar lines — along the route those marks
 /// spell. One reader for a mark wherever it is written: in the form, in a section's music, in
 /// any part of it (docs/inline-repeat-design.md §3.2, §3.3).
@@ -85,214 +61,16 @@ internal readonly record struct TimelineMark(
 /// </remarks>
 internal static class PlayedTimeline
 {
-    /// <summary>A stretch <c>[From, To)</c> of the printed timeline, played as it stands.</summary>
-    internal readonly record struct Segment(int From, int To);
-
-    private abstract record Element;
-    private sealed record Plain(int From, int To) : Element;
-    private sealed record Run(int Start, int BodyEnd, int End, int? Count,
-        List<(PassSet Passes, int From, int To)> Endings) : Element;
-    private sealed record LoneEnd : Element;
-    private sealed record Sign(NavigationMarkType Type) : Element;
-
-    /// <summary>The stretches of a printed timeline <c>[0, end)</c> in played order.</summary>
-    internal static List<Segment> Route(IEnumerable<TimelineMark> marks, int end)
-    {
-        var elements = Elements(marks, end);
-        var signs = new List<NavigationMarkType?>(elements.Count);
-        foreach (var element in elements)
-            signs.Add(element is Sign sign ? sign.Type : null);
-
-        var played = new List<Segment>();
-        foreach (var stretch in FormRoute.Of(signs))
-        {
-            for (int i = stretch.From; i < stretch.To; i++)
-            {
-                // A ':|' no '|:' opened: the piece from its beginning, once more — on the first
-                // pass only (one rewind per written sign, MidiExporter.PlayForm's rule).
-                if (elements[i] is LoneEnd && !stretch.Replay)
-                {
-                    for (int j = 0; j < i; j++)
-                        Play(elements[j], lastPassOnly: false, played);
-                    continue;
-                }
-                Play(elements[i], stretch.Replay, played);
-            }
-        }
-        return Joined(played);
-    }
-
-    private static void Play(Element element, bool lastPassOnly, List<Segment> played)
-    {
-        switch (element)
-        {
-            case Plain plain:
-                Add(played, plain.From, plain.To);
-                break;
-            case Run run:
-                var passes = new List<PassSet>(run.Endings.Count);
-                foreach (var ending in run.Endings)
-                    passes.Add(ending.Passes);
-                int count = RepeatPasses.Count(run.Count, passes);
-                for (int pass = lastPassOnly ? count : 1; pass <= count; pass++)
-                {
-                    Add(played, run.Start, run.BodyEnd);
-                    int ending = RepeatPasses.EndingFor(pass, passes);
-                    if (ending >= 0)
-                        Add(played, run.Endings[ending].From, run.Endings[ending].To);
-                }
-                break;
-        }
-    }
-
-    private static void Add(List<Segment> played, int from, int to)
-    {
-        if (from < to)
-            played.Add(new Segment(from, to));
-    }
-
-    /// <summary>Neighbours that follow each other on the printed timeline are one stretch, so
-    /// every seam left is a jump.</summary>
-    private static List<Segment> Joined(List<Segment> played)
-    {
-        var joined = new List<Segment>(played.Count);
-        foreach (var segment in played)
-        {
-            if (joined.Count > 0 && joined[^1].To == segment.From)
-                joined[^1] = new Segment(joined[^1].From, segment.To);
-            else
-                joined.Add(segment);
-        }
-        return joined;
-    }
-
-    /// <summary>At one tick: an ending closes, the repeat ends, a text of the bar behind it, a
-    /// sign of the bar ahead, the next repeat opens, an ending opens.</summary>
-    private static int Rank(TimelineMark mark) => mark.Kind switch
-    {
-        TimelineMarkKind.EndingEnd => 0,
-        TimelineMarkKind.RepeatEnd => 1,
-        TimelineMarkKind.Navigation => mark.Navigation is NavigationMarkType.Segno or NavigationMarkType.Coda ? 3 : 2,
-        TimelineMarkKind.RepeatStart => 4,
-        _ => 5,
-    };
-
-    private static List<Element> Elements(IEnumerable<TimelineMark> marks, int end)
-    {
-        // Every lane that walks a sign notes it: as many of a sign as the lane that wrote the
-        // most of it (the record's remark).
-        var sorted = marks.GroupBy(m => m with { Lane = null })
-            .SelectMany(g => Enumerable.Repeat(g.Key, g.GroupBy(m => m.Lane).Max(lane => lane.Count())))
-            .OrderBy(m => m.Tick).ThenBy(Rank).ToList();
-        var elements = new List<Element>();
-        int pos = 0;            // where the plain stretch being gathered began
-        int runStart = -1;      // the open run's '|:' (or -1)
-        int bodyEnd = -1;       // …where its body ends: its first ending, or its ':|'
-        int? count = null;      // …its written ':|*N'
-        int lastEnd = -1;       // …its last ':|' (or -1 before the first)
-        int tail = -1;          // …where it ends so far: that ':|', or an ending closed after it
-        var endings = new List<(PassSet Passes, int From, int To)>();
-        (PassSet Passes, int From)? open = null; // the ending being read
-
-        void Flush(int upTo)
-        {
-            if (pos < upTo)
-                elements.Add(new Plain(pos, upTo));
-            pos = Math.Max(pos, upTo);
-        }
-        void CloseEnding(int at)
-        {
-            if (open is { } ending)
-                endings.Add((ending.Passes, ending.From, at));
-            open = null;
-        }
-        void CloseRun(int at)
-        {
-            CloseEnding(at);
-            elements.Add(new Run(runStart, bodyEnd, at, count, endings));
-            pos = at;
-            (runStart, bodyEnd, count, lastEnd, tail) = (-1, -1, null, -1, -1);
-            endings = new List<(PassSet, int, int)>();
-        }
-
-        foreach (var mark in sorted)
-        {
-            bool inRun = runStart >= 0;
-            // A run that has met its ':|' goes on only through an ending opening where it ends
-            // so far, or a further ':|' closing such an ending; anything else finds it finished.
-            if (inRun && lastEnd >= 0 && open == null
-                && !(mark.Kind == TimelineMarkKind.EndingStart && mark.Tick == tail)
-                && !(mark.Kind == TimelineMarkKind.RepeatEnd && mark.Tick == tail && tail > lastEnd))
-            {
-                CloseRun(tail);
-                inRun = false;
-            }
-            switch (mark.Kind)
-            {
-                case TimelineMarkKind.RepeatStart:
-                    if (inRun && lastEnd >= 0)
-                        CloseRun(mark.Tick); // a trailing ending nothing closed ends here
-                    // A '|:' nothing closed repeats nothing: its music is plain (LYS4017).
-                    Flush(mark.Tick);
-                    (runStart, bodyEnd, count, lastEnd, tail) = (mark.Tick, -1, null, -1, -1);
-                    endings = new List<(PassSet, int, int)>();
-                    open = null;
-                    break;
-                case TimelineMarkKind.RepeatEnd:
-                    if (!inRun)
-                    {
-                        Flush(mark.Tick);
-                        elements.Add(new LoneEnd());
-                        break;
-                    }
-                    CloseEnding(mark.Tick);
-                    if (bodyEnd < 0)
-                        bodyEnd = mark.Tick;
-                    count ??= mark.Count;
-                    lastEnd = tail = mark.Tick;
-                    break;
-                case TimelineMarkKind.EndingStart:
-                    // An ending no repeat opens is its plain music, once (GRAMMAR §6, LYS6008).
-                    if (!inRun)
-                        break;
-                    CloseEnding(mark.Tick);
-                    if (bodyEnd < 0)
-                        bodyEnd = mark.Tick;
-                    open = (mark.Passes, mark.Tick);
-                    break;
-                case TimelineMarkKind.EndingEnd:
-                    if (inRun && open != null)
-                    {
-                        CloseEnding(mark.Tick);
-                        if (lastEnd >= 0)
-                            tail = mark.Tick;
-                    }
-                    break;
-                case TimelineMarkKind.Navigation:
-                    if (!inRun && mark.Navigation is { } type)
-                    {
-                        Flush(mark.Tick);
-                        elements.Add(new Sign(type));
-                    }
-                    break;
-            }
-        }
-        if (runStart >= 0 && lastEnd >= 0)
-            CloseRun(open != null ? end : tail);
-        Flush(end);
-        return elements;
-    }
-
     /// <summary>Rewrites <paramref name="midi"/> — a printed timeline — as it is played along
     /// <paramref name="marks"/>. A timeline with no jump in it is left as it is.</summary>
     /// <param name="printedEnd">Where the printed music ends (the walk's last tick: a closing
     /// rest sounds nothing and still takes its time).</param>
-    internal static void Unfold(MidiFile midi, IReadOnlyList<TimelineMark> marks, int printedEnd)
+    internal static void Unfold(MidiFile midi, IReadOnlyList<RepeatSign> marks, int printedEnd)
     {
         int end = Math.Max(printedEnd, midi.EndTick);
         if (midi.BarTicks.Count > 0)
             end = Math.Max(end, midi.BarTicks.Max);
-        var route = Route(marks, end);
+        var route = RepeatStream.Route(marks, end);
         if (route.Count == 1 && route[0].From == 0 && route[0].To >= end)
             return;
 

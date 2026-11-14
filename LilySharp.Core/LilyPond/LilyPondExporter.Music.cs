@@ -558,14 +558,8 @@ public sealed partial class LilyPondExporter
     /// </summary>
     private static bool TakesMeasureTime(SyntaxNode item) => item switch
     {
-        BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
-            or DynamicSyntax or KeySignatureSyntax or TimeSignatureSyntax
-            or TempoDeclarationSyntax or ClefDeclarationSyntax or PartialDeclarationSyntax
-            or MusicMarkSyntax or NavigationMarkSyntax or GraceExpressionSyntax
-            or StringNumberAnnotationSyntax or ArticulationSyntax
-            or OctaveDirectiveSyntax or MetadataDeclarationSyntax
-            or SectionDeclarationSyntax or FormDeclarationSyntax
-            or PartDeclarationSyntax or RenderDeclarationSyntax => false,
+        // The written items that stand at a moment: one list with the section's sign reader.
+        _ when !Semantics.SectionSigns.TakesTime(item) => false,
         { Green: SectionPlayGreen } => false,
         { Green: ClosedBarGreen } => false,
         { Green: RepeatTieGreen } => false,

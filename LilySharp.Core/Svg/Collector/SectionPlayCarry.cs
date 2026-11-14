@@ -620,18 +620,46 @@ internal sealed class SectionPlayGraph
     public string? NameOf(int play) => play >= 0 && play < _names.Count ? _names[play] : null;
 
     /// <summary>The graph of a voice's stamped plays, or null when it stamps none (one play is a graph too:<br/>/// <c>|: A :|</c> follows itself).</summary>
+    /// <remarks>
+    /// A BOOK THAT WRITES SIGNS IN ITS MUSIC (a <c>|:</c>, an ending, a jump text in a section's
+    /// music — docs/inline-repeat-design.md) is read off the score's sign column instead: the
+    /// collector has stamped the signs of each bar line on the bar behind it
+    /// (<see cref="MusicItem.ScoreSignsBefore"/>, the form's signs among them), and the "plays"
+    /// of the graph are then the stretches between the stamped bars and the section plays —
+    /// played along <see cref="RepeatStream.Route"/>, the one expansion the MIDI of such a book
+    /// takes. A tie out of a repeat's body then reaches both endings, though no section
+    /// boundary stands there.
+    /// </remarks>
     public static SectionPlayGraph? Of(ImmutableArray<Measure> measures)
     {
         List<(int, int)>? starts = null;
         List<PrintedPlay>? plays = null;
         List<string?>? names = null;
+        // The same walk for a book whose music writes signs: every stamped bar starts a stretch.
+        List<(int, int)>? stretches = null;
+        List<string?>? stretchNames = null;
+        List<RepeatSign>? signs = null;
+        string? closing = null, section = null;
+        bool signed = false;
         for (int mi = 0; mi < measures.Length; mi++)
         {
             var items = measures[mi].Items;
             for (int ii = 0; ii < items.Length; ii++)
             {
                 var item = items[ii];
-                if (item.BeginsSectionPlay == SectionPlayEdge.None)
+                bool begins = item.BeginsSectionPlay != SectionPlayEdge.None;
+                if (begins)
+                    section = item.SectionPlayName;
+                if (begins || item.ScoreSignsBefore != null)
+                {
+                    (signs ??= new()).AddRange(RepeatStream.Decode(item.ScoreSignsBefore, stretches?.Count ?? 0));
+                    (stretches ??= new()).Add((mi, ii));
+                    (stretchNames ??= new()).Add(section);
+                    signed |= item.ScoreSignsBefore != null;
+                }
+                if (item.ScoreSignsAfter != null)
+                    (closing, signed) = (item.ScoreSignsAfter, true);
+                if (!begins)
                     continue;
                 (starts ??= new()).Add((mi, ii));
                 (names ??= new()).Add(item.SectionPlayName);
@@ -640,7 +668,33 @@ internal sealed class SectionPlayGraph
                     item.SectionPlayMarksBefore, item.SectionPlayMarksAfter));
             }
         }
+        if (signed)
+        {
+            signs!.AddRange(RepeatStream.Decode(closing, stretches!.Count));
+            return new SectionPlayGraph(stretches, stretchNames!, SuccessorsAlong(signs, stretches.Count));
+        }
         return starts is { Count: > 0 } ? new SectionPlayGraph(starts, names!, PlayedOrder.Successors(plays!)) : null;
+    }
+
+    /// <summary>For each of <paramref name="count"/> printed stretches, the stretches that
+    /// follow it when the column is played along <paramref name="signs"/> (each standing at the
+    /// index of the stretch it opens).</summary>
+    private static List<int>[] SuccessorsAlong(List<RepeatSign> signs, int count)
+    {
+        var next = new List<int>[count];
+        for (int k = 0; k < count; k++)
+            next[k] = new List<int>();
+        int last = -1;
+        foreach (var segment in RepeatStream.Route(signs, count))
+        {
+            for (int k = segment.From; k < segment.To; k++)
+            {
+                if (last >= 0 && !next[last].Contains(k))
+                    next[last].Add(k);
+                last = k;
+            }
+        }
+        return next;
     }
 
     /// <summary>The number of printed plays.</summary>
@@ -727,7 +781,7 @@ internal static class SectionTieCarry
                 if (play < 0)
                     continue;
                 var next = NoteScan.FindNext(measures, mi, ii, x => x is NoteItem or ChordItem or RestItem);
-                if (next is { } n && n.Item.BeginsSectionPlay == SectionPlayEdge.None)
+                if (next is { } n && !graph.IsPlayStart(n.MeasureIdx, n.ItemIdx, out _))
                     continue; // not at its play's end: an ordinary tie
                 var successors = graph.Successors(play);
                 bool arc = next != null && graph.PrintedNextIsPlayedNext(play);

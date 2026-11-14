@@ -216,7 +216,7 @@ internal sealed class TieDetector
         while (next is { } run && AfterGraceSpacerFrom(measures[run.MeasureIdx].Items, run.ItemIdx) is int spacer)
             next = NoteScan.FindNext(measures, run.MeasureIdx, spacer,
                 x => x is NoteItem or ChordItem or RestItem);
-        if (next is { } n && graph != null && n.Item.BeginsSectionPlay != SectionPlayEdge.None
+        if (next is { } n && graph != null && graph.IsPlayStart(n.MeasureIdx, n.ItemIdx, out _)
             && !graph.PrintedNextIsPlayedNext(graph.PlayOf(measureIdx, itemIdx)))
             return null;
         return next;

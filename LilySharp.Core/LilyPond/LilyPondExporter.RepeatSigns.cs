@@ -28,117 +28,17 @@ namespace LilySharp.Core.LilyPond;
 // tracks), on the same bar line, before EmitMusicStream groups the stream into \repeat volta.
 public sealed partial class LilyPondExporter
 {
-    /// <summary>The repeat signs and endings the voices of one section write, by the bars of
-    /// the section standing before each (<see cref="VoiceBarLines"/>).</summary>
-    private sealed class SectionSigns
-    {
-        /// <summary>The first sign written at each place, and the voice that wrote it.</summary>
-        public readonly SortedDictionary<int, (BarlineSyntax Node, SyntaxNode Container)> Lines = new();
-        public readonly List<SectionEnding> Endings = [];
-        public bool IsEmpty => Lines.Count == 0 && Endings.Count == 0;
-    }
-
-    /// <summary>An ending a voice writes over the bars <c>[From, To)</c> of its section.</summary>
-    private sealed record SectionEnding(int From, int To, InlineVoltaSyntax Node, SyntaxNode Container, bool Nested);
-
     private readonly Dictionary<string, SectionSigns> _sectionSigns = new(StringComparer.Ordinal);
     private readonly HashSet<string> _signWarned = new(StringComparer.Ordinal);
 
-    /// <summary>
-    /// What the voices of <paramref name="name"/> write of the score's repeats, read once per
-    /// export. A part's lines are placed by <see cref="VoiceBarLines"/> (the count LYS1070
-    /// compares signs by); an ending runs from the bars standing where it opens to the bars
-    /// standing where it closes, a bar still open there counted.
-    /// </summary>
+    /// <summary>What the voices of <paramref name="name"/> write of the score's repeats
+    /// (<see cref="SectionSigns"/>, the reading the score's sign column shares), read once per
+    /// export.</summary>
     private SectionSigns SignsOf(string name)
     {
-        if (_sectionSigns.TryGetValue(name, out var signs))
-            return signs;
-        _sectionSigns[name] = signs = new SectionSigns();
-        foreach (var voice in _sectionBars.ByContainer.Values)
-        {
-            if (voice.SectionName != name || voice.IsLyrics)
-                continue;
-            var lines = VoiceBarLines.Of(voice, _phraseBodies);
-            foreach (var line in lines)
-                if (SyntaxFacts.IsRepeatBarlineKind(line.Node.BarToken.Kind))
-                    signs.Lines.TryAdd(line.Bars, (line.Node, voice.Container));
-            if (voice.IsChords)
-                ReadRowEndings(voice, signs);
-            else
-                ReadMusicEndings(voice, lines, signs);
-        }
+        if (!_sectionSigns.TryGetValue(name, out var signs))
+            _sectionSigns[name] = signs = SectionSigns.Of(name, _sectionBars.ByContainer.Values, _phraseBodies);
         return signs;
-    }
-
-    /// <summary>A part's endings: each <c>[N. … ]</c> of its own music (not a phrase's).</summary>
-    private static void ReadMusicEndings(SectionBarCounts.SemanticVoice voice, List<VoiceBarLines.Line> lines, SectionSigns signs)
-    {
-        foreach (var ending in voice.Container.DescendantNodes<InlineVoltaSyntax>())
-        {
-            int start = ending.Span.Start, end = ending.Span.Start + ending.Span.Length;
-            int from = 0;
-            VoiceBarLines.Line? lastInside = null, firstAfter = null;
-            foreach (var line in lines)
-            {
-                if (line.End <= start)
-                    from = line.Bars;
-                else if (line.End <= end)
-                    lastInside = line;
-                else if (firstAfter == null)
-                    firstAfter = line;
-            }
-            // The ending's last bar is closed by a line of its own, or by the next line the
-            // voice writes (`[1. g a b c :|`, `[2. g f e d ] |`).
-            var last = ending.Items.LastOrDefault(item => item is BarlineSyntax || TakesMeasureTime(item));
-            int to = last is BarlineSyntax && lastInside is { } inside ? inside.Bars
-                : firstAfter is { } after ? after.Bars
-                : voice.Bars;
-            if (to > from)
-                signs.Endings.Add(new SectionEnding(from, to, ending, voice.Container, Nested: true));
-        }
-    }
-
-    /// <summary>A row's endings: its <c>[N.</c> and <c>]</c> stand flat among its chords, and
-    /// an ending with no <c>]</c> closes at the <c>:|</c> or at the next ending.</summary>
-    private static void ReadRowEndings(SectionBarCounts.SemanticVoice voice, SectionSigns signs)
-    {
-        var items = voice.Container is ChordPartBlockSyntax block
-            ? block.Items : ChordNameCollector.SectionItems((SectionDeclarationSyntax)voice.Container);
-        int bars = 0;
-        bool holds = false;
-        (InlineVoltaSyntax Node, int From)? open = null;
-        void Close()
-        {
-            int to = bars + (holds ? 1 : 0);
-            if (open is { } o && to > o.From)
-                signs.Endings.Add(new SectionEnding(o.From, to, o.Node, voice.Container, Nested: false));
-            open = null;
-        }
-        foreach (var item in items)
-        {
-            switch (item)
-            {
-                case BarlineSyntax line:
-                    if (ChordRowBarLines.Closes(line, holds))
-                        bars++;
-                    holds = false;
-                    if (line.BarToken.Kind is SyntaxKind.RepeatEndBar or SyntaxKind.RepeatBothBar)
-                        Close();
-                    break;
-                case ChordEntrySyntax or RestSyntax or ChordExtendSyntax:
-                    holds = true;
-                    break;
-                case InlineVoltaSyntax ending:
-                    Close();
-                    open = (ending, bars + (holds ? 1 : 0));
-                    break;
-                case VoltaEndSyntax:
-                    Close();
-                    break;
-            }
-        }
-        Close();
     }
 
     /// <summary>
@@ -173,7 +73,7 @@ public sealed partial class LilyPondExporter
     private void WriteTheScoresRepeatSigns(string name, SyntaxNode? container, List<SyntaxNode> result, int from)
     {
         var signs = SignsOf(name);
-        if (signs.IsEmpty || from >= result.Count || !_carriesTheSigns)
+        if (signs.HasNoRepeats || from >= result.Count || !_carriesTheSigns)
             return;
         var voice = container != null ? VoiceOf(container) : null;
         var voiceKey = voice?.Container;
@@ -266,7 +166,7 @@ public sealed partial class LilyPondExporter
         foreach (var (name, entry) in byName)
         {
             var signs = SignsOf(name);
-            if (signs.IsEmpty || VoiceOf(entry.Container) is not { } voice)
+            if (signs.HasNoRepeats || VoiceOf(entry.Container) is not { } voice)
                 continue;
             var lines = VoiceBarLines.Of(voice, _phraseBodies);
             int own = voice.Bars - (voice.TrailingOpen ? 1 : 0);

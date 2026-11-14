@@ -3234,10 +3234,115 @@ public sealed partial class MeasureCollector
     private void ApplySectionTieCarry(List<Measure> measures)
     {
         StampTrailingMarks(measures);
+        StampTheScoresSigns(measures);
         var carried = SectionTieCarry.Apply(measures.ToImmutableArray());
         for (int i = 0; i < measures.Count; i++)
             if (!ReferenceEquals(carried[i], measures[i]))
                 measures[i] = carried[i];
+    }
+
+    /// <summary>
+    /// In a book that writes repeat signs, endings or navigation marks in its MUSIC: stamps the
+    /// score's signs of each bar line on the first item of the bar behind it
+    /// (<see cref="MusicItem.ScoreSignsBefore"/>; the line that closes the voice on the last
+    /// bar's, <see cref="MusicItem.ScoreSignsAfter"/>), so the readers of a tie
+    /// (<see cref="SectionPlayGraph"/>) follow the signs whichever voice writes them. The signs
+    /// come off the score's column (<see cref="Semantics.RepeatStream"/>), read once per tree.
+    /// </summary>
+    /// <remarks>
+    /// A bar of the column is a bar of the voice: its measures in order, the second half of a
+    /// bar a mid-bar <c>break</c> splits and a trailing clef column not counted, each section
+    /// play starting where the column's play starts. A voice whose bars do not line up with the
+    /// column that way — a play of another length, another section — is left unstamped and read
+    /// by the form's stamps alone, as before session 1246. Sets AND clears, so finishing a voice
+    /// again after another part's sign went gives the same answer as a fresh collect.
+    /// <para>
+    /// ONLY A VOICE THAT WRITES A TIE IS STAMPED: the ties are the stamps' one reader, and a
+    /// stamp is content — two bars alike but for the sign before them would no longer share a
+    /// layout (<c>MeasureContentKey</c>; <c>SystemLayoutCacheTests</c> holds a `:|:` book to that).
+    /// </para>
+    /// </remarks>
+    private void StampTheScoresSigns(List<Measure> measures)
+    {
+        if (_root == null || !Semantics.RepeatStream.InTheMusic(_root))
+            return;
+        bool ties = false;
+        for (int mi = 0; mi < measures.Count && !ties; mi++)
+            foreach (var item in measures[mi].Items)
+                if (item is NoteItem { HasTieStart: true } or ChordItem { HasTieStart: true })
+                {
+                    ties = true;
+                    break;
+                }
+        if (!ties)
+        {
+            for (int mi = 0; mi < measures.Count; mi++)
+            {
+                var items = measures[mi].Items;
+                for (int ii = 0; ii < items.Length; ii++)
+                    if (items[ii].ScoreSignsBefore != null || items[ii].ScoreSignsAfter != null)
+                        measures[mi] = measures[mi] with
+                        {
+                            Items = measures[mi].Items.SetItem(ii, items[ii] with { ScoreSignsBefore = null, ScoreSignsAfter = null }),
+                        };
+            }
+            return;
+        }
+        var stream = Semantics.RepeatStream.For(_root, _form);
+        // The first timed item of each bar, and the bar line of the column it opens on.
+        var bars = new List<(int Measure, int Item, int Bar)>();
+        int play = -1, bar = -1, stamps = 0;
+        bool aligned = true;
+        for (int mi = 0; mi < measures.Count && aligned; mi++)
+        {
+            var items = measures[mi].Items;
+            for (int ii = 0; ii < items.Length; ii++)
+                if (items[ii].BeginsSectionPlay != SectionPlayEdge.None)
+                    stamps++;
+            if (measures[mi].IsTrailingClefColumn || (mi > 0 && measures[mi - 1].BreaksMidBar))
+                continue;
+            int first = -1;
+            for (int ii = 0; ii < items.Length && first < 0; ii++)
+                if (!items[ii].GraceTime && items[ii] is NoteItem or ChordItem or RestItem)
+                    first = ii;
+            if (first < 0)
+            {
+                aligned = false;
+                break;
+            }
+            if (items[first].BeginsSectionPlay != SectionPlayEdge.None)
+            {
+                // The play before took exactly its bars; this one is the column's next play.
+                if (play >= 0 && bar + 1 != stream.Plays[play].FirstBar + stream.Plays[play].Bars)
+                    aligned = false;
+                do
+                    play++;
+                while (play < stream.Plays.Count && stream.Plays[play].Bars == 0);
+                if (play >= stream.Plays.Count || stream.Plays[play].Section != items[first].SectionPlayName)
+                    aligned = false;
+                else
+                    bar = stream.Plays[play].FirstBar;
+            }
+            else
+                bar++;
+            bars.Add((mi, first, bar));
+        }
+        // Every play stamp opened a counted bar, and the voice ends where the column does.
+        aligned &= play >= 0 && stamps == bars.Count(b => measures[b.Measure].Items[b.Item].BeginsSectionPlay != SectionPlayEdge.None)
+            && bar + 1 == stream.Bars;
+
+        for (int k = 0; k < bars.Count; k++)
+        {
+            var (mi, ii, at) = bars[k];
+            var item = measures[mi].Items[ii];
+            string? before = aligned ? Semantics.RepeatStream.Encode(stream.SignsAt(at)) : null;
+            string? after = aligned && k == bars.Count - 1 ? Semantics.RepeatStream.Encode(stream.SignsAt(at + 1)) : null;
+            if (item.ScoreSignsBefore != before || item.ScoreSignsAfter != after)
+                measures[mi] = measures[mi] with
+                {
+                    Items = measures[mi].Items.SetItem(ii, item with { ScoreSignsBefore = before, ScoreSignsAfter = after }),
+                };
+        }
     }
 
     /// <summary>Stamps the navigation marks that stand after the form's last play

@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 437 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **564** | |
+| `OWN` | 438 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **565** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -247,7 +247,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（437 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（438 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -481,6 +481,8 @@
 - **`RepeatPasses.EndingFor`** LILYSHARP-OWN: a pass no ending names replays the LAST ending — |: A [1. B] :|*3 [2. C]
 ### `LilySharp.Core/Semantics/RepeatSignAgreementValidator.cs`
 - **`RepeatSignAgreementValidator`** LILYSHARP-OWN: the language's rule about its own signs. Departs from: nothing in LilyPond
+### `LilySharp.Core/Semantics/RepeatStream.cs`
+- **`RepeatStream`** LILYSHARP-OWN: the language's reading of its own signs. Departs from: LilyPond unfolds the
 ### `LilySharp.Core/Semantics/RestRunFractionValidator.cs`
 - **`RestRunFractionValidator`** gets no suggestion, only the reading. LILYSHARP-OWN: LilyPond reads *5/4 as a
 ### `LilySharp.Core/Semantics/SectionHeaders.cs`

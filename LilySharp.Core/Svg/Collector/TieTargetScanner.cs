@@ -78,7 +78,7 @@ internal static class TieTargetScanner
                 // section the part does not play (padding) has nothing to reach.
                 int play = graph?.PlayOf(mi, ii) ?? -1;
                 if (graph != null && play >= 0
-                    && (next is { } boundary ? boundary.Item.BeginsSectionPlay != SectionPlayEdge.None
+                    && (next is { } boundary ? graph.IsPlayStart(boundary.MeasureIdx, boundary.ItemIdx, out _)
                                              : graph.Successors(play).Count > 0))
                 {
                     var successors = graph.Successors(play);
