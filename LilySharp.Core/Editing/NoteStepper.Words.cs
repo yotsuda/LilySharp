@@ -850,17 +850,17 @@ public static partial class NoteStepper
 
     // ------------------------------------------------------------------ bar lines
 
-    /// <summary>The bar lines the keys walk (GRAMMAR.md: Barline), in the completion's order: the
-    /// single, the double, the final, the dotted. The repeat bar lines (<c>|:</c>, <c>:|</c> …) are
-    /// not here: they change the playing order, a different thing from a bar line's look.</summary>
+    /// <summary>The bar lines the keys walk in a PHRASE (GRAMMAR.md: Barline), in the completion's
+    /// order: the single, the double, the final, the dotted. A phrase takes no repeat sign
+    /// (LYS1034): it is played wherever it is named.</summary>
     private static readonly string[] BarlineWalk = ["|", "||", "|.", "!"];
 
     /// <summary>The bar lines the keys walk in a <c>form</c>, in the owner's order (2026-10-24): the
     /// plain divider, the double, the repeat's <c>|:</c>, <c>:|</c> and <c>:|:</c>, the final, the
     /// dotted — the order the form's completion lists them in. A <c>|:</c> wants a <c>:|</c> after
-    /// it (the form says so until it is written); a <c>:|</c> alone repeats from the top. The
-    /// music walks <see cref="BarlineWalk"/>: until 2026-11-15 it took no repeat sign (LYS1034,
-    /// form-only then), and its walk has not been widened since — a phrase still takes none.</summary>
+    /// it (the form says so until it is written); a <c>:|</c> alone repeats from the top. A
+    /// section's music walks the same list (owner's decision 2026-11-15, session 1255: the repeat
+    /// signs are written there too); a phrase's walks <see cref="BarlineWalk"/>.</summary>
     public static IReadOnlyList<string> FormBarlineWalk { get; } = ["|", "||", "|:", ":|", ":|:", "|.", "!"];
 
     /// <summary>A bar line of <see cref="BarlineWalk"/> the caret is on, or null — in the music, or
@@ -869,7 +869,7 @@ public static partial class NoteStepper
     private static SyntaxTokenNode? BarlineAt(SyntaxTree tree, int offset)
     {
         // A bar line node in a form walks the form's list (a `:|:` there is one).
-        static bool On(SyntaxTokenNode t, int at) => (InForm(t) ? FormBarlineWalk : BarlineWalk).Contains(t.Text)
+        static bool On(SyntaxTokenNode t, int at) => WalkOf(t).Contains(t.Text)
             && t.Span.Start <= at && at <= t.Span.End;
         foreach (var bar in tree.GetNodes<BarlineSyntax>())
             if (bar.GetChild(0) is SyntaxTokenNode token && On(token, offset))
@@ -888,6 +888,16 @@ public static partial class NoteStepper
         return null;
     }
 
+    /// <summary>The walk of a bar-line token: the form's list in a form and in a section's music,
+    /// the looks alone in a phrase.</summary>
+    private static IReadOnlyList<string> WalkOf(SyntaxNode bar)
+    {
+        for (SyntaxNode? n = bar; n != null; n = n.Parent)
+            if (n is PhraseDeclarationSyntax)
+                return BarlineWalk;
+        return FormBarlineWalk;
+    }
+
     /// <summary>Whether a bar-line token stands in a form, where a plain <c>|</c> divides and draws nothing.</summary>
     private static bool InForm(SyntaxNode node)
     {
@@ -898,12 +908,12 @@ public static partial class NoteStepper
     }
 
     /// <summary>One step of a bar line (owner's request 2026-10-24): the next (Down) or previous (Up)
-    /// of <see cref="BarlineWalk"/>, stopping at either end. Every one of them ends the bar
-    /// (Semantics.WrittenBar), so only the look changes.</summary>
+    /// of its walk (<see cref="WalkOf"/>), stopping at either end. Every one of them ends the bar
+    /// (Semantics.WrittenBar); a repeat sign changes the playing order as well.</summary>
     private static (Edit? Edit, string Message) BarlineEdit(SyntaxTokenNode bar, int dir)
     {
         bool inForm = InForm(bar);
-        var walk = inForm ? FormBarlineWalk : BarlineWalk;
+        var walk = WalkOf(bar);
         int at = walk.ToList().IndexOf(bar.Text), to = at - dir;
         if (at < 0 || to < 0 || to >= walk.Count)
             return (null, $"{bar.Text}: already the {(to < 0 ? "first" : "last")} ({string.Join(" ", walk)})");
@@ -926,7 +936,8 @@ public static partial class NoteStepper
         "||" => "||: the double bar line",
         "|." => "|.: the final bar line",
         "!" => "!: the dotted bar line",
-        "|:" => "|: opens a repeat - close it with :| in the form",
+        "|:" when inForm => "|: opens a repeat - close it with :| in the form",
+        "|:" => "|: opens a repeat - close it with :|",
         ":|" => ":| closes the repeat (alone, it repeats from the top)",
         _ => ":|: closes the repeat before it and opens the next - close that with :|",
     };

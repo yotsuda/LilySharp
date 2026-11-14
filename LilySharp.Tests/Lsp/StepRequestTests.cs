@@ -2127,14 +2127,29 @@ public class StepRequestTests
     [Fact]
     public void ABarLine_WalksItsLooks_ANoteTouchingItKeepsTheKeys()
     {
-        // Owner's request 2026-10-24: | || |. ! — Down down the completion's list.
-        Assert.Equal(Plain("c'1 || d'1"), Step(Plain("c'1 ‸| d'1"), -1, semitone: true).After);
-        Assert.Equal(Plain("c'1 |. d'1"), Step(Plain("c'1 ||‸ d'1"), -1).After);
-        Assert.Equal(Plain("c'1 ! d'1"), Step(Plain("c'1 ‸|. d'1"), -1, semitone: true).After);
-        Assert.Equal(Plain("c'1 | d'1"), Step(Plain("c'1 ‸|| d'1"), +1, semitone: true).After);
+        // Owner's request 2026-10-24: Down down the completion's list — and since 2026-11-15
+        // (owner's decision, session 1255) through the repeat signs too, in the form's order:
+        // | || |: :| :|: |. !
+        var walk = LilySharp.Core.Editing.NoteStepper.FormBarlineWalk;
+        for (int i = 0; i + 1 < walk.Count; i++)
+        {
+            Assert.Equal(Plain($"c'1 {walk[i + 1]} d'1"), Step(Plain($"c'1 ‸{walk[i]} d'1"), -1, semitone: true).After);
+            Assert.Equal(Plain($"c'1 {walk[i]} d'1"), Step(Plain($"c'1 {walk[i + 1]}‸ d'1"), +1, semitone: true).After);
+        }
+        Assert.Equal(Plain("c'1 |: d'1"), Step(Plain("c'1 ||‸ d'1"), -1).After);
         var (last, same) = Step(Plain("c'1 ‸! d'1"), -1, semitone: true);
         Assert.Equal(Plain("c'1 ! d'1"), same);
         Assert.Contains("last", last.Message);
+        // An opening wants its close — in the music, not "in the form".
+        string opens = Step(Plain("c'1 ‸|| d'1"), -1, semitone: true).Response.Message;
+        Assert.Contains("close it with :|", opens);
+        Assert.DoesNotContain("form", opens);
+        // A `:|*3` leaving the repeat's close takes its count with it.
+        Assert.Equal(Plain("c'1 :|: d'1"), Step(Plain("c'1 ‸:|*3 d'1"), -1, semitone: true).After);
+        // A phrase takes no repeat sign (LYS1034): its bar lines walk the looks alone.
+        const string Phrase = "octave absolute\nphrase riff {{ c'1 {0} d'1 | }}\npart m {{ }}\nsection A {{ m {{ riff }} }}\n";
+        Assert.Equal(string.Format(Phrase, "|."), Step(string.Format(Phrase, "‸||"), -1, semitone: true).After);
+        Assert.Equal(string.Format(Phrase, "||"), Step(string.Format(Phrase, "‸|."), +1, semitone: true).After);
         // A caret between a note and a bar line it touches steps the note.
         Assert.DoesNotContain("||", Step(Plain("c'1‸| d'1"), -1, semitone: true).After);
     }
@@ -2173,7 +2188,7 @@ public class StepRequestTests
         // A `:|*3` leaving the repeat's close takes its count with it.
         const string Count = "part m {{ }}\nsection A {{ m {{ c'1 }} }}\nsection B {{ m {{ d'1 }} }}\nform {{ A {0} B }}\n";
         Assert.Equal(string.Format(Count, ":|:"), Step(string.Format(Count, "‸:|*3"), -1, semitone: true).After);
-        // The music's walk stops at `!`: a music body takes no repeat sign.
+        // The music's walk stops at `!` too.
         var (music, kept) = Step(Plain("c'1 ‸! d'1"), -1, semitone: true);
         Assert.Equal(Plain("c'1 ! d'1"), kept);
         Assert.Contains("last", music.Message);
