@@ -855,4 +855,94 @@ public class MusicXmlExportShapeTests
         Assert.Equal(3, graces.Length);
         Assert.All(graces, g => Assert.Null(g.Element("time-modification")));
     }
+
+    /// <summary>The <c>&lt;notations&gt;</c> of the notes of <paramref name="music"/>, grace or
+    /// full-size, one string a note ("" for a note with none).</summary>
+    private static string[] Notations(string music, bool grace)
+        => Export(PhraseBook("", music)).Descendants("note")
+            .Where(n => (n.Element("grace") != null) == grace)
+            .Select(n => n.Element("notations")?.ToString(SaveOptions.DisableFormatting) ?? "")
+            .ToArray();
+
+    /// <summary>
+    /// A grace note's scripts are EXPORTED, as a full-size note's are: the stem-side
+    /// articulations, the fermata, the ornaments, the bowing marks, the thumb — what the page
+    /// draws on a grace column (<c>GraceBodySupport.IsCarriedScript</c> / <c>IsCarriedThumb</c>).
+    /// Until 2026-11-14 (session 1232) the grace <c>&lt;note&gt;</c> carried the four jazz
+    /// gestures and nothing else, on a page that draws every one of these.
+    /// </summary>
+    /// <remarks>
+    /// The grace note is asked for the SAME <c>&lt;notations&gt;</c> the full-size note with the
+    /// same mark writes: the marks go through one reader (<c>ProcessArticulations</c>), so the
+    /// two cannot be spelled apart.
+    /// </remarks>
+    [Theory]
+    [InlineData("@staccato", "staccato")]
+    [InlineData("@staccatissimo", "staccatissimo")]
+    [InlineData("@accent", "accent")]
+    [InlineData("@marcato", "strong-accent")]
+    [InlineData("@tenuto", "tenuto")]
+    [InlineData("@portato", "detached-legato")]
+    [InlineData("@fermata", "fermata")]
+    [InlineData("@trill", "trill-mark")]
+    [InlineData("@mordent", "mordent")]
+    [InlineData("@prall", "inverted-mordent")]
+    [InlineData("@turn", "turn")]
+    [InlineData("@upBow", "up-bow")]
+    [InlineData("@downBow", "down-bow")]
+    [InlineData("@thumb", "thumb-position")]
+    [InlineData("@bend(full)", "bend")]
+    [InlineData("@staccato@fermata@trill", "trill-mark")]
+    public void AGraceNotesScript_IsExportedAsAFullSizeNotesIs(string marks, string element)
+    {
+        string onAGrace = Assert.Single(Notations($"grace {{ d''16{marks} }} e''4 f'' g'' a'' |", grace: true));
+        Assert.Contains("<" + element, onAGrace);
+        // The full-size note with the same marks writes the same <notations>.
+        Assert.Equal(Notations($"d''4{marks} e''4 f'' g'' |", grace: false)[0], onAGrace);
+        // The control: the main note after the grace carries none of it.
+        Assert.All(Notations($"grace {{ d''16{marks} }} e''4 f'' g'' a'' |", grace: false), n => Assert.Equal("", n));
+    }
+
+    /// <summary>A grace CHORD's script is written on its first member, a member's own on that
+    /// member, a grace rest's fermata on the rest — as the page draws each.</summary>
+    [Fact]
+    public void AGraceChordsScripts_AreExportedOnTheNoteThatCarriesThem()
+    {
+        var chord = Notations("grace { <d'' f''>16@staccato } e''4 f'' g'' a'' |", grace: true);
+        Assert.Contains("<staccato", chord[0]);
+        Assert.Equal("", chord[1]);
+
+        var member = Notations("grace { <d'' f''@accent>16 } e''4 f'' g'' a'' |", grace: true);
+        Assert.Equal("", member[0]);
+        Assert.Contains("<accent", member[1]);
+
+        var rest = Notations("grace { r16@fermata d''16 } e''4 f'' g'' a'' |", grace: true);
+        Assert.Contains("<fermata", rest[0]);
+        Assert.Equal("", rest[1]);
+    }
+
+    /// <summary>
+    /// …and a mark the page DROPS on a grace note stays unexported: <c>@trill(sharp)</c>, the
+    /// ornament with its accidental, is not engraved in grace time (LYS4020 says so in this very
+    /// book), so the grace <c>&lt;note&gt;</c> claims no ornament — while the full-size note with
+    /// the same mark writes it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS ROW IS MEANT TO GO RED THE DAY THE PAGE LEARNS THE MARK in grace time, as the
+    /// tuplet bracket's row above is.
+    /// </remarks>
+    [Fact]
+    public void AMarkThePageDropsOnAGraceNote_StaysUnexported()
+    {
+        string book = PhraseBook("", "grace { d''16@trill(sharp) } e''4 f'' g'' a'' |");
+        var tree = SyntaxTree.Parse(book);
+        Assert.Contains(LilySharp.Core.Semantics.SemanticValidation.Run(tree),
+            d => d.Code == DiagnosticCodes.UnengravedGraceContent);
+
+        Assert.Equal("", Assert.Single(Notations("grace { d''16@trill(sharp) } e''4 f'' g'' a'' |", grace: true)));
+        // The control: on a full-size note the same mark is its ornament and accidental-mark.
+        string fullSize = Notations("d''4@trill(sharp) e''4 f'' g'' |", grace: false)[0];
+        Assert.Contains("<trill-mark", fullSize);
+        Assert.Contains("<accidental-mark", fullSize);
+    }
 }

@@ -5319,19 +5319,25 @@ public sealed class MusicXmlExporter
                 ProcessDirectionMark(mark);
     }
 
-    /// <summary>The jazz gestures a grace note or chord carries on the page — scoop, plop, fall,
-    /// doit (GraceBodySupport.IsCarriedGesture / IsCarriedBendAfter) — as the children of
-    /// <c>&lt;articulations&gt;</c> a full-size note's are. Until 2026-11-14 a grace
-    /// <c>&lt;note&gt;</c> carried none (leftover of session 1227).</summary>
-    private static void AddGraceGestures(MusicXmlNote xmlNote, IEnumerable<SyntaxNode> annotations)
-    {
-        foreach (var annotation in annotations)
-            if (annotation is ArticulationSyntax articulation
-                && (Semantics.GraceBodySupport.IsCarriedGesture(articulation)
-                    || Semantics.GraceBodySupport.IsCarriedBendAfter(articulation))
-                && MapArticulation(articulation.Type) is { } name)
-                xmlNote.Articulations.Add(name);
-    }
+    /// <summary>The marks a grace note, chord or rest carries on its own column on the page —
+    /// the scripts (the stem-side articulations, the fermata, the ornaments, the bowing marks:
+    /// GraceBodySupport.IsCarriedScript), the thumb (IsCarriedThumb) and the gestures (scoop,
+    /// plop, fall, doit, the bend-up: IsCarriedGesture / IsCarriedBendAfter) — written through
+    /// the reader a full-size note's are (<see cref="ProcessArticulations"/>), so a grace
+    /// <c>&lt;note&gt;</c> spells each as any note does. A mark the page drops in grace time
+    /// (LYS4020 — <c>@trill(sharp)</c>, say) is not handed over and stays unwritten.</summary>
+    /// <remarks>
+    /// Until 2026-11-14 a grace <c>&lt;note&gt;</c> carried none of them (leftover of session
+    /// 1227); then the four jazz gestures alone, through a second spelling of the
+    /// <c>&lt;articulations&gt;</c> arm, while the page drew a grace's staccato, accent, fermata
+    /// and trill and the XML had none (session 1232).
+    /// </remarks>
+    private void ProcessGraceScripts(IEnumerable<SyntaxNode> annotations, MusicXmlNote xmlNote)
+        => ProcessArticulations(annotations.Where(annotation =>
+            Semantics.GraceBodySupport.IsCarriedScript(annotation)
+            || Semantics.GraceBodySupport.IsCarriedThumb(annotation)
+            || Semantics.GraceBodySupport.IsCarriedGesture(annotation)
+            || Semantics.GraceBodySupport.IsCarriedBendAfter(annotation)), xmlNote);
 
     /// <summary>
     /// Writes the grace notes of a <c>grace { … }</c> body.
@@ -5521,7 +5527,7 @@ public sealed class MusicXmlExporter
                     // Its chord symbol and figures (session 964), as <harmony> / <figured-bass>
                     // before the grace <note>, exactly as before a full-size one.
                     EmitGraceDirectionMarks(note.Articulations);
-                    AddGraceGestures(xmlNote, note.Articulations);
+                    ProcessGraceScripts(note.Articulations, xmlNote);
                     _currentMeasure.Notes.Add(xmlNote);
                     (lastGrace, graceSlurOn) = (xmlNote, null);
                     break;
@@ -5550,6 +5556,7 @@ public sealed class MusicXmlExporter
                         NormalNotes = tupletNormal,
                         Notehead = NoteheadName(info.Notehead),
                     };
+                    ProcessGraceScripts(drum.Articulations, xmlNote);
                     _currentMeasure.Notes.Add(xmlNote);
                     (lastGrace, graceSlurOn) = (xmlNote, null);
                     break;
@@ -5584,7 +5591,7 @@ public sealed class MusicXmlExporter
                     {
                         var (cstep, calter, coctave) = ResolveChordMemberPitch(
                             pitch, firstMember, chordOctave, ref firstStep, ref firstOctave);
-                        _currentMeasure.Notes.Add(new MusicXmlNote
+                        var memberNote = new MusicXmlNote
                         {
                             IsGrace = true,
                             IsSlash = isAcciaccatura,
@@ -5597,7 +5604,10 @@ public sealed class MusicXmlExporter
                             Type = chordType,
                             ActualNotes = chordActual,
                             NormalNotes = chordNormal
-                        });
+                        };
+                        // A member's own script (`<d f@accent>`), on that member's <note>.
+                        ProcessGraceScripts(pitch.Articulations, memberNote);
+                        _currentMeasure.Notes.Add(memberNote);
                         firstMember = false;
                     }
                     // Scale-degree members (`grace { <d 3 5>16 }`): the same stacking the main
@@ -5633,9 +5643,9 @@ public sealed class MusicXmlExporter
                         });
                         firstMember = false;
                     }
-                    // The chord's gesture is written on its first member.
+                    // The chord's scripts and gestures are written on its first member.
                     if (_currentMeasure.Notes.Count > graceChordAt)
-                        AddGraceGestures(_currentMeasure.Notes[graceChordAt], chord.Articulations);
+                        ProcessGraceScripts(chord.Articulations, _currentMeasure.Notes[graceChordAt]);
                     // A diagram(…) item in a grace body: its strings, as ProcessChord writes them.
                     var graceShape = chord.IsShapeChord ? ShapeNotesOf(chord) : [];
                     foreach (var sn in Music.ShapeChords.Ascending(graceShape))
@@ -5698,6 +5708,8 @@ public sealed class MusicXmlExporter
                         ActualNotes = restActual,
                         NormalNotes = restNormal
                     };
+                    // A grace rest's fermata, as the page draws it (a gesture on a rest is refused).
+                    ProcessGraceScripts(rest.Articulations, graceRest);
                     _currentMeasure.Notes.Add(graceRest);
                     (lastGrace, graceSlurOn) = (graceRest, null);
                     break;
