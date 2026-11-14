@@ -203,6 +203,34 @@ public sealed class InlineRepeatMidiTests
                 .Select(v => (v.StartMeasureIndex, v.EndMeasureIndex, v.VoltaText, v.IsClosed)).ToArray());
     }
 
+    /// <summary>A row's ending the next one follows with no <c>:|</c> between them goes back all
+    /// the same, as a part's does (session 1258; <c>ChordRowBarLines.EndingsAfterAnUnsaidRepeat</c>):
+    /// the page puts the repeat bar on its last bar and MusicXML writes the backward repeat —
+    /// the same bars as with the <c>:|</c> written. MEASURED before (Lab
+    /// sessions/p1258/probe): three passes were played, the page closed the second ending on
+    /// a plain bar line and the document wrote one backward repeat.</summary>
+    [Theory]
+    [InlineData("C |: G | [1. Am :| [2. F ] | [3. Dm ] | C |", true)]    // the ':|' left out
+    [InlineData("C |: G | [1. Am :| [2. F :| [3. Dm ] | C |", true)]     // …and written
+    [InlineData("C |: G | [1. Am :| [2. F ] | Dm | C |", false)]         // no further ending: the second is the last
+    [InlineData("C |: G | [1. Am ] | [2. F ] | Dm | C |", false)]        // no ':|' before them: nothing has gone back
+    public void ARowsEndingFollowedByAnotherGoesBack(string row, bool goesBack)
+    {
+        var tree = SyntaxTree.Parse("octave absolute\ntime 4/4\n"
+            + "part m { section S { c''1 | g''1 | e'''1 | a''1 | d''1 | c''1 | } }\n"
+            + "chords prog { section S { " + row + " } }\nform { S }\nscore { chords prog staff m }");
+        // The page: the second ending's bar (the fourth) closes on the repeat bar; the third's never does.
+        var voices = new LilySharp.Core.Svg.Collector.MeasureCollector()
+            .CollectMultiStaff(tree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree)!)
+            .StaffGroups.SelectMany(g => g.Staves).SelectMany(s => s.Voices).ToList();
+        Assert.Equal(goesBack, voices.Any(v => v.Measures[3].EndBarline == LilySharp.Core.Svg.Model.BarlineType.RepeatEnd));
+        Assert.DoesNotContain(voices, v => v.Measures[4].EndBarline == LilySharp.Core.Svg.Model.BarlineType.RepeatEnd);
+        // MusicXML: the measures that go back, in the part.
+        var doc = new LilySharp.Core.MusicXml.MusicXmlExporter().Export(tree);
+        var back = doc.Parts[0].Measures.Select((m, i) => (m, i)).Where(x => x.m.RepeatBackward).Select(x => x.i + 1).ToArray();
+        Assert.Equal(goesBack ? new[] { 3, 4 } : row.Contains(":|") ? new[] { 3 } : System.Array.Empty<int>(), back);
+    }
+
     /// <summary>A row's <c>| |:</c> is an empty bar, as its <c>| |</c> is and as a part's is
     /// (owner's decision 2026-11-14) — and the count, the page, the MIDI, the MusicXML and the
     /// twin read it by one rule (<c>ChordRowBarLines</c>). Until then five of the row's readers

@@ -868,6 +868,9 @@ internal sealed class ChordNameCollector
                 pending.Clear();
             }
 
+            // The endings that follow another with no ':|' between them: the one before goes
+            // back all the same, and its last bar takes the repeat bar the writer left out.
+            var unsaid = Semantics.ChordRowBarLines.EndingsAfterAnUnsaidRepeat(items as IReadOnlyList<SyntaxNode> ?? items.ToList());
             foreach (var item in items)
             {
                 if (item is BarlineSyntax bar)
@@ -912,6 +915,8 @@ internal sealed class ChordNameCollector
                 else if (item is InlineVoltaSyntax opens)
                 {
                     CloseEnding(MeasureOfBar(startMeasure, localMeasure - 1, out _), hooked: false);
+                    if (unsaid.Contains(opens) && pending.Count == 0 && localMeasure > 0)
+                        measureEndBar[MeasureOfBar(startMeasure, localMeasure - 1, out _)] = BarlineType.RepeatEnd;
                     ending = (opens, MeasureOfBar(startMeasure, localMeasure, out _));
                 }
                 else if (item is VoltaEndSyntax)

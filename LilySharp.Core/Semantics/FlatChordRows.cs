@@ -139,6 +139,51 @@ internal sealed class FlatChordRows
 /// </remarks>
 internal static class ChordRowBarLines
 {
+    /// <summary>
+    /// The endings of a row that follow another ending with no <c>:|</c> between them, in a
+    /// repeat that has gone back already — <c>|: C | [1. G :| [2. Am ] | [3. F ] |</c>, where
+    /// <c>[3.</c> is one: a further ending is a further pass (owner's decision 2026-11-15), so
+    /// the ending before it goes back although no sign says so, and its last bar takes the
+    /// repeat bar on the page and in MusicXML. The row's reading of
+    /// <c>SyntaxFacts.EndingGoesBackUnsaid</c> (a part's endings hold their music; a row's
+    /// stand flat among its chords).
+    /// </summary>
+    public static HashSet<InlineVoltaSyntax> EndingsAfterAnUnsaidRepeat(IReadOnlyList<SyntaxNode> items)
+    {
+        var found = new HashSet<InlineVoltaSyntax>(ReferenceEqualityComparer.Instance);
+        bool goneBack = false;     // the run has met a ':|'
+        bool inEnding = false;     // an ending is open
+        bool closedPlain = false;  // …or one was closed by its ']' and nothing but bar lines followed
+        foreach (var item in items)
+        {
+            switch (item)
+            {
+                case BarlineSyntax line:
+                    var kind = line.BarToken.Kind;
+                    if (kind == SyntaxKind.RepeatEndBar)
+                        (goneBack, inEnding, closedPlain) = (true, false, false);
+                    else if (kind is SyntaxKind.RepeatStartBar or SyntaxKind.RepeatBothBar)
+                        (goneBack, inEnding, closedPlain) = (false, false, false);
+                    break;
+                case ChordEntrySyntax or RestSyntax or ChordExtendSyntax:
+                    // Chords after the endings: the run is over.
+                    if (!inEnding)
+                        (goneBack, closedPlain) = (false, false);
+                    break;
+                case InlineVoltaSyntax ending:
+                    if (goneBack && (inEnding || closedPlain))
+                        found.Add(ending);
+                    (inEnding, closedPlain) = (true, false);
+                    break;
+                case VoltaEndSyntax:
+                    if (inEnding)
+                        (inEnding, closedPlain) = (false, true);
+                    break;
+            }
+        }
+        return found;
+    }
+
     /// <summary>Whether <paramref name="barLine"/> closes a bar of its row, given whether the
     /// bar being read <paramref name="holds"/> an entry, a rest or a <c>.</c> already.</summary>
     public static bool Closes(BarlineSyntax barLine, bool holds)

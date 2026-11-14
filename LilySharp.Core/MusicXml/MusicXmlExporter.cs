@@ -7602,6 +7602,8 @@ public sealed class MusicXmlExporter
             }
             open = null;
         }
+        // The endings that follow another with no ':|' between them: the one before goes back.
+        var unsaid = ChordRowBarLines.EndingsAfterAnUnsaidRepeat(items);
         foreach (var item in items)
         {
             switch (item)
@@ -7629,6 +7631,8 @@ public sealed class MusicXmlExporter
                     break;
                 case InlineVoltaSyntax ending:
                     Close(stops: false);
+                    if (unsaid.Contains(ending) && !holds && measureAt(bars - 1) is { } wentBack)
+                        wentBack.RepeatBackward = true;
                     if (string.Join(",", ending.Numbers) is { Length: > 0 } passes)
                         open = (passes, bars + (holds ? 1 : 0));
                     break;
