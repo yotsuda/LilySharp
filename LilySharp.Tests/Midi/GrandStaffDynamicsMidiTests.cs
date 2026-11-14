@@ -72,6 +72,20 @@ public class GrandStaffDynamicsMidiTests
         Assert.All(Velocities(src, "lh"), v => Assert.Equal(90, v));
     }
 
+    // Two voices of one hand that write different dynamics at one moment each keep their own;
+    // a dynamic the other hand writes later is then both voices'. Until session 1235 the hand
+    // was read as standing at the last dynamic logged (the second voice's forte), and the
+    // piano voice was moved by the distance from THAT: 70 + (86 − 95) = 61, under the mf shared.
+    [Fact]
+    public void AHandsVoicesAtDifferentLevels_BothTakeTheOtherHandsLaterDynamic()
+    {
+        var src = Book("grandStaff", "voice { c''1@p | c''1 | } { e'1@f | e'1 | }", "c1 | c1@mf |");
+        var notes = new MidiExporter().Export(SyntaxTree.Parse(src)).Tracks
+            .SelectMany(t => t.Notes).Where(n => n.Part == "rh").OrderBy(n => n.StartTick).ThenBy(n => n.Voice).ToList();
+        Assert.Equal(new[] { (int)DynamicLevel.P, (int)DynamicLevel.F, (int)DynamicLevel.MF, (int)DynamicLevel.MF },
+            notes.Select(n => n.Velocity));
+    }
+
     // The voices of a span share the part's dynamics by the moment they are written at
     // (MidiExporter.ShareSpanDynamics). Until 2026-11-14 the second voice, walked after the
     // first, opened at the level the first one ENDED on and played both bars forte.

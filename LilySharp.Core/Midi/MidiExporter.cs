@@ -286,10 +286,29 @@ public sealed class MidiExporter
                 int self = LastAtOrBefore(mine, n.StartTick);
                 if (at < 0 || self < 0)
                     continue;
-                // At one moment, the note's own hand's dynamic wins over the other's.
-                for (int k = at; k >= 0 && written[k].Tick == written[at].Tick; k--)
-                    if (written[k].Part == part) { at = k; break; }
-                int shift = written[at].Level - mine[self].Level;
+                // The level the note stands at: its hand's last — and where the hand's voices
+                // wrote different dynamics at that one moment (`voice { c'1@p } { e'1@f }`, each
+                // voice keeping its own, ShareSpanDynamics), the note's own voice's. Until
+                // 2026-11-14 (session 1235) it was the last one logged, whichever voice wrote
+                // it: under a dynamic the other hand wrote later, the piano voice was moved by
+                // the forte voice's distance and sounded under the level shared.
+                int stands = mine[self].Level, level = SungVoices.Level(n);
+                for (int k = self; k >= 0 && mine[k].Tick == mine[self].Tick; k--)
+                    if (mine[k].Level == level) { stands = level; break; }
+                // At one moment, the note's own hand's dynamic wins over the other's — its own
+                // voice's first.
+                int tie = at, hand = -1;
+                for (int k = tie; k >= 0 && written[k].Tick == written[tie].Tick; k--)
+                {
+                    if (written[k].Part != part)
+                        continue;
+                    if (hand < 0)
+                        hand = k;
+                    if (written[k].Level == stands) { hand = k; break; }
+                }
+                if (hand >= 0)
+                    at = hand;
+                int shift = written[at].Level - stands;
                 if (shift != 0)
                     track.Notes[i] = Releveled(n, shift);
             }
