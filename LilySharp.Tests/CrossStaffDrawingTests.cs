@@ -159,6 +159,20 @@ public class CrossStaffDrawingTests
         Assert.Equal("natural", Notes(score, 1).Single().Accidental);
     }
 
+    /// <summary>…and the natural before its own sign, where the new staff last showed the note
+    /// with more of it (Lab sessions/p1233/xr, LilyPond 2.26.0: ♮♯, ♮♭, ♮ and the quarter
+    /// sharp; a plain sharp after a natural c).</summary>
+    [Fact]
+    public void AMovedNoteOwesTheRestoringNaturalBeforeItsOwnSign()
+    {
+        var notes = Notes(Score(Book(
+            "cisis''4 r2. | ceses''4 r2. | cis''4 r2. | c''4 r2. |",
+            "r4 cis''4@cross r2 | r4 ces''4@cross r2 | r4 cih''4@cross r2 | r4 cis''4@cross r2 |")), 1);
+        Assert.Equal(
+            new[] { "naturalSharp", "naturalFlat", "naturalQuarterSharp", "sharp" },
+            notes.Select(n => n.Accidental).ToArray());
+    }
+
     [Fact]
     public void AMovedNotePrintsTheSharpItsOldStaffRemembers()
     {

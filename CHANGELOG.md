@@ -6,6 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- `[engraving]` **A note moved by `@cross` takes the restoring natural of the staff it is drawn on.** After a `cisis''` on the upper staff, a `cis''4@cross` moved onto it printed a bare sharp; it now prints the natural first (♮♯), as a second voice's does and as LilyPond does — for flats and quarter tones alike.
 - **MusicXML import says when it rounds a grace note's alteration.** An `<alter>` Lily# has no name for (0.25, 0.75 …) was rounded with a warning on a full-size note and with no word on a grace note; the grace note now gets the same warning.
 - `[engraving]` **Accidentals of one note name are seated as LilyPond seats them.** Two voices on one line with different signs (`cisis'` over `cis'` on the same beat) put the sharp nearest the notes and the double sharp outside it; the higher alteration now stands nearest, a natural before either, with the two boxes 0.2 apart. In a chord, a note name's signs in different octaves now share one column whatever the signs are (`<cis' ces''>`), and the column stands where the octave that needs most room needs it.
 - `[engraving]` **A repetition repeats the quarter tone.** `<cih' e'>4 q` and `cih'4 4` printed a natural on the repetition: `q` and a bare duration copied the note without its quarter tone, and the page read the plain note. They are the note again, quarter tone and all.

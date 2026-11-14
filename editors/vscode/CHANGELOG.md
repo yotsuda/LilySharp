@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- `[engraving]` **A note moved by `@cross` takes the restoring natural of the staff it is drawn on.** After a `cisis''` on the upper staff, a `cis''4@cross` moved onto it printed a bare sharp; it now prints the natural first (♮♯), as a second voice's does and as LilyPond does — for flats and quarter tones alike.
 - `[engraving]` **Accidentals of one note name are seated as LilyPond seats them.** Two voices on one line with different signs (`cisis'` over `cis'` on the same beat) put the sharp nearest the notes and the double sharp outside it; the higher alteration now stands nearest, a natural before either, with the two boxes 0.2 apart. In a chord, a note name's signs in different octaves now share one column whatever the signs are (`<cis' ces''>`), and the column stands where the octave that needs most room needs it.
 - `[engraving]` **A repetition repeats the quarter tone.** `<cih' e'>4 q` and `cih'4 4` printed a natural on the repetition: `q` and a bare duration copied the note without its quarter tone, and the page read the plain note. They are the note again, quarter tone and all.
 - `[engraving]` **A pedal cut at a repeat keeps no room in the next section.** A pedal pressed in one section and released past a repeat sign is an error (LYS4023) and its bracket is cut at the end of its own section — but the page still held a line open under the staff through the next section, to the release, and those systems stood further apart for a bracket that is not drawn.
