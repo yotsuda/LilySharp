@@ -1319,7 +1319,8 @@ internal static partial class SpacingRules
         int measureIndex)
     {
         var staffVoices = staff.Voices;
-        if ((staffVoices.Length < 2 && !CrossCollisionMark.AnyIn(staffVoices)) || springs.Length != timings.Count + 1)
+        if ((staffVoices.Length < 2 && !CrossCollisionMark.AnyIn(staffVoices) && !IsVisitedIn(staff, measureIndex))
+            || springs.Length != timings.Count + 1)
             return springs;
 
         var offsets = VoiceCollisionShiftsOf(staff);
@@ -1361,8 +1362,15 @@ internal static partial class SpacingRules
         //   lily/spring.cc:101-129 merge_springs averages the wishes of the column.
         // MEASURED, LilyPond 2.26.0 (Lab sessions/p1111/x2): `e''4@stemUp e''` over
         //   `r4 d''4@cross@stemDown f''` — the gap after the shared column is the half shift wider.
-        // Only in a bar where a moved note's column shifted something: elsewhere the moved notes
-        //   are spaced as they were before the shift was solved here.
+        // The ROD is every bar's: the moved note's ink — its accidental above all — keeps clear
+        //   of the columns of the staff it stands on. Until session 1234 a visitor joined the
+        //   columns only in a bar where a column had shifted, and a staff of one voice was not
+        //   asked at all, so a moved note's accidental took no room from the note before it.
+        // MEASURED, LilyPond 2.26.0 (Lab sessions/p1234/rod, head to head): `cisis''16` and a
+        //   `cis''16@cross` moved onto its staff 3.9208, `ceses''`/`ces''` 3.7408, `c''`/`cis''`
+        //   3.1542, `cis''`/`cih''` 3.5208 — 2.40 each here before, those four after.
+        // The WISH is still shared only in a bar where a moved note's column shifted something:
+        //   elsewhere the moved notes are spaced as they were before the shift was solved here.
         var visitorIds = new List<ImmutableArray<Model.Measure>>();
         int VisitorOf(ImmutableArray<Model.Measure> measures)
         {
@@ -1385,7 +1393,7 @@ internal static partial class SpacingRules
         List<(int Spring, double Shift)>? visitorWishes = null;
         foreach (var crossed in staff.CrossedIn)
         {
-            if (crossed.MeasureIndex != measureIndex || !ownShifted)
+            if (crossed.MeasureIndex != measureIndex)
                 continue;
             var items = crossed.Measures[measureIndex].Items;
             var onset = Fraction.Zero;
@@ -1401,7 +1409,7 @@ internal static partial class SpacingRules
                         next++;
                     int spring = next >= items.Length ? (t == timings.Count - 1 ? timings.Count : -1)
                         : t + 1 < timings.Count && timings[t + 1] == onset + crossed.Item.Duration ? t + 1 : -1;
-                    if (spring > 0)
+                    if (spring > 0 && ownShifted)
                         (visitorWishes ??= new()).Add((spring, crossed.CollisionShift));
                     break;
                 }
@@ -1537,6 +1545,18 @@ internal static partial class SpacingRules
             }
         }
         return widened ? result.ToImmutable() : springs;
+    }
+
+    /// <summary>Whether a note <c>@cross</c> moved stands on <paramref name="staff"/> in this
+    /// measure — a column of the staff that none of its own voices holds, and which
+    /// <see cref="ApplyCrossVoiceColumnSpacing"/> therefore has to be asked about even on a
+    /// staff of one voice.</summary>
+    internal static bool IsVisitedIn(Model.Staff staff, int measureIndex)
+    {
+        foreach (var crossed in staff.CrossedIn)
+            if (crossed.MeasureIndex == measureIndex)
+                return true;
+        return false;
     }
 
     /// <summary>The room past a bend's amount on a bar's last note beyond the bar line's own

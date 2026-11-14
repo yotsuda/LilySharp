@@ -173,6 +173,41 @@ public class CrossStaffDrawingTests
             notes.Select(n => n.Accidental).ToArray());
     }
 
+    /// <summary>
+    /// A moved note's accidental keeps clear of the note before it on the staff it stands on:
+    /// the rod is the staff's, whichever voice the ink came from.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/separation-item.cc:120-190 Separation_item::boxes — a Staff's separation
+    ///   item boxes every grob of the column standing on it.
+    /// MEASURED, LilyPond 2.26.0 (Lab sessions/p1234/rod, NoteHead X from the system, head to
+    /// head): 3.9208, 3.7408, 3.1542 and 3.5208. Before session 1234 every one of these was
+    /// 2.40 here — the visitor joined the staff's columns only where a column had shifted —
+    /// and the natural of the first bar ran into the stem before it.
+    /// </remarks>
+    [Fact]
+    public void AMovedNotesAccidentalKeepsClearOfTheNoteBeforeItOnItsNewStaff()
+    {
+        var tree = SyntaxTree.Parse("""
+            octave absolute
+            time 4/4
+            paper { raggedRight }
+            part rh { clef treble }
+            part lh { clef bass }
+            section A {
+              rh { cisis''16 s16 s8 s4 s2 | ceses''16 s16 s8 s4 s2 | c''16 s16 s8 s4 s2 | cis''16 s16 s8 s4 s2 | }
+              lh { r16 cis''16@cross r8 r4 r2 | r16 ces''16@cross r8 r4 r2 | r16 cis''16@cross r8 r4 r2 | r16 cih''16@cross r8 r4 r2 | }
+            }
+            form { ~A }
+            score { grandStaff { staff rh staff lh } }
+            """);
+        var layout = new LayoutEngine().Layout(
+            new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!));
+        var gaps = layout.AllSystems.SelectMany(s => s.Measures).OrderBy(m => m.MeasureIndex)
+            .Select(m => Math.Round(m.Items[1].X - m.Items[0].X, 2)).ToArray();
+        Assert.Equal(new[] { 3.92, 3.74, 3.15, 3.52 }, gaps);
+    }
+
     [Fact]
     public void AMovedNotePrintsTheSharpItsOldStaffRemembers()
     {

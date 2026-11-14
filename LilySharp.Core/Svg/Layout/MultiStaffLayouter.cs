@@ -2654,7 +2654,8 @@ internal sealed class MultiStaffLayouter
         // staff's columns are digit rows, priced by ApplyTabChordSpacing below.
         foreach (var vGroup in score.StaffGroups)
             foreach (var vStaff in vGroup.Staves)
-                if (!vStaff.IsTab && (vStaff.Voices.Length >= 2 || CrossCollisionMark.AnyIn(vStaff.Voices)))
+                if (!vStaff.IsTab && (vStaff.Voices.Length >= 2 || CrossCollisionMark.AnyIn(vStaff.Voices)
+                                      || SpacingRules.IsVisitedIn(vStaff, measureIndex)))
                     springs = SpacingRules.ApplyCrossVoiceColumnSpacing(
                         springs, allTimings, vStaff, measureIndex);
 
