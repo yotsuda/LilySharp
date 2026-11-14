@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1246セッションの経緯
+
+### 1.1 第1246セッション（2026-11-14〜15・YT-DELL2）
+
+base `4e1fc8398`・開始時 full 16954 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16957（Lab `p1246` の `run1.trx`）。Calamo の `open` は 0、Dettato は 1・2 が `question` のまま。CI は第1231 のまま。
+「反復とナビ記号を section の音楽にも書く」の段 1（設計 `docs/inline-repeat-design.md` §7「段 1」・メモは Lab `p1246/notes.md`）。
+- **`Semantics.RepeatStream`**（score の記号の列と「次に鳴る小節」の表）と `Semantics.SectionSigns`（section の声部が書いた記号の読み）。展開は 1 つ（`RepeatStream.Route`）で、MIDI の `PlayedTimeline` と `.ly` の書き出しはこれを使う形に付け替えた（出力は変えていない）。
+- **ページと検査のタイ**: 本体から 2 番括弧へ入るタイの短い弧、1 番括弧から頭へ戻るタイ、LYS4007 の誤り（2 番括弧の音に出ていた・戻った先が違う音のとき出なかった）。別のパートが書いた記号でも同じ。作りは刻印（`MusicItem.ScoreSignsBefore`）＝設計 §7。
+- 途中の赤 7 本（打鍵の門 6・`SystemLayoutCacheTests` 1）は、green の歩きと「タイのある声部だけ刻印」で直した。
+- 門: 網 `RepeatStreamTests` 17 本・`InlineRepeatTieTests` 8 本、毒 6 本とも赤（`p1246/poisons.ps1`）。終了時 full 16979 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 16982（`p1246/run3.trx`）。掃きは回していない: 絵と検査が動くのは「音楽に記号を書き、その声部にタイがある」本だけ（今は LYS1034 の本）。
+- 7.5／7.6: OWN 1（`RepeatStream`＝`PlayedTimeline` の注と同じ規則を列の側にも置いた）・REF 0。7.7: MusicXML・`.ly` のタイは form の綴りと違うまま／列と小節の数が揃わない声部は刻印しない（`R1*N` は未確認）／記号とタイのある本の打鍵の値段は未測定。LYS1034 と CHANGELOG は第1244 のまま。
+
 ## 以下は第1245セッションの経緯
 
 ### 1.1 第1245セッション（2026-11-14・YT-DELL2）
