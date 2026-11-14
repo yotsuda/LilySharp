@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1243セッションの経緯
+
+### 1.1 第1243セッション（2026-11-14・YT-DELL2）
+
+base `faa82761c`・開始時 full 16865 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16868（Lab `p1243` の `run1.trx`）。Calamo・Dettato の `open` は 0。CI は第1231 のまま。
+オーナーの提案「反復とナビ記号を section の音楽にも書けるようにする」（LYS1034 の取り下げ）に着手。設計・規則・段取り・経過は全部 `docs/inline-repeat-design.md`。commit は `git log faa82761c..`（未 push）。
+- 設計（`f34f7a159`）と段 0＝今の答えの実測（`e7cfb9ca9`・Lab `p1243/stage0.md`・探り譜 `p1243/probe/`）: ページは片方のパートに書いた記号を score のものとして描き、section をまたぐ対も組む＝ほぼ済み。MIDI・MusicXML・`.ly` は書いたパートだけ。
+- **MIDI（`fd6c5d0b0`）**: 音楽に記号を書いた本は刷った順に 1 回歩き、記号を時刻つきで控えて最後に展開する（`Midi/PlayedTimeline.cs`）。全パートが従う・section をまたぐ対・コードの行の記号・`ds`／`dc` を読む。網 `InlineRepeatMidiTests` 16 本（毒＝展開を外すと 27 赤）。⚠️ 音楽に記号の無い本は今までどおり `PlayForm` が鳴らす＝読み手が 2 つ（差と寄せる話は設計 §7）。
+- LYS1034 はまだ外していない（最後に外す）。探り譜は LYS1034 のエラーつきで出力を読む。
+- コードの行が `[1. …]`・`]`・ナビ記号を読む（`VoltaEnd` を足した・行の ending は平らな印）。MIDI は読む。ページは行の ending の括弧をまだ描かない。
+- 門: 終了時 full 16922 合格 / 2 失敗 / skip 2 / 合計 16926（`p1243/trx/run17.trx`）のあと、赤 1 本（`DocCommentPlacementTests`＝足したメソッドが既存の doc の間に入った）を直して関連 681 本は緑。全 full は取り直していない。拡張は `tsc --noEmit` 緑・実機は未確認。掃きは回していない（音楽に記号の無い本の経路は触っていない＝`_timeline` が null）。`-End` は未実行。
+
 ## 以下は第1242セッションの経緯
 
 ### 1.1 第1242セッション（2026-11-14・YT-DELL2）

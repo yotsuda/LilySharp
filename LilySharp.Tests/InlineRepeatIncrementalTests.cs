@@ -36,7 +36,8 @@ public sealed class InlineRepeatIncrementalTests
     private static readonly SvgRenderOptions Opt = new() { EmbedFont = false };
 
     // Two parts and a chord row over two sections, long enough to break into systems.
-    private const string Book = """
+    // (Line ends as the cases below spell them, whatever this file's are.)
+    private static readonly string Book = """
         time 4/4
         part mel { section A { c'4 d e f | g a b c | d c b a | g f e d | c d e f | g a b c | d c b a | g1 | }
                    section B { e'4 f g a | b c d e | f e d c | b a g f | e1 | } }
@@ -45,7 +46,7 @@ public sealed class InlineRepeatIncrementalTests
         chords ch { section A { C | G | Dm | G | C | G | Dm | G | } section B { Em | Bm | F | Bm | Em | } }
         form { A B }
         score { chords ch staff mel staff bas }
-        """;
+        """.ReplaceLineEndings("\n");
 
     private static string Full(string src) => SvgGenerator.Generate(SyntaxTree.Parse(src), Opt).Replace("\r\n", "\n");
 

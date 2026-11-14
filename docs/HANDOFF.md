@@ -88,7 +88,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
-- **★ 反復とナビ記号を section の音楽にも書く（オーナー提案 2026-11-14・第1243・LYS1034 の取り下げ）**: 全部 `docs/inline-repeat-design.md`（規則 §3・段取り §4・未決 §6・経過 §7）。対は form に組み立てた列で見る（オーナー決定 2026-11-14）。済み: 設計・段 0・MIDI・コードの行の `[1. …]` とナビ記号（パーサと MIDI）。`| |:` は空小節のまま（オーナー決定 2026-11-14・行も音楽に合わせた＝`ChordRowBarLines`）。ページは行の ending の括弧を描く。食い違いの診断は LYS1070（`|:` と `|` は可・`|:` と `:|` はエラー・quick fix 3 つ）。「同じ小節を別のパートで開く」コマンドは実装（`SameBarFinder`・`lilysharp/sameBar`・Ctrl+Alt+PgDn/PgUp・実機は `MANUAL-CHECKS` 第1243）。「反復記号を全パートに書く／1 か所に戻す」コマンドも実装（`RepeatSignSpreader`・小節線だけ＝ナビ記号と ending は未）。歌詞の verse は 5 規則で決定・歌い分けは実装（反復の N 回目＝verse N・足りない回は最後の verse・form が何度演奏しても同じ言葉）。verse の警告は LYS4080（回が足りない・余る・重なる＝3 種・quick fix つき。4 種目＝歌われない小節の言葉は未）。MusicXML は全パートに反復・ending・回数・行の記号・音楽のナビ記号を書く（第1244）。`.ly` は全部のパートとコードのトラックに `\repeat volta`・`\alternative` を書く（第1244・置けない声部は全部見送って警告）。**次**（設計 §4 の残り。順は「LYS1034 は最後に外す」に合わせた第1244 の読み）: 段 4＝タイの持ち越しと小節の補完の実測 → プレビューの増分の実測 → 段 1 の残りの診断（小節の途中の記号・入れ子・ending の番号とナビ記号の食い違い） → LYS1034 を phrase だけに狭めて文書（form だけの本にも同じ＝オーナー決定）。未決は無い（Q1〜Q3 は閉じた）。見つけた別件: form の無い by-part の本で 2 つ目のパートが後に鳴る（設計 §7・未着手）。
+- **★ 反復とナビ記号を section の音楽にも書く（オーナー提案 2026-11-14・第1243・LYS1034 の取り下げ）**: 全部 `docs/inline-repeat-design.md`（規則 §3・段取り §4・未決 §6・経過 §7）。対は form に組み立てた列で見る（オーナー決定 2026-11-14）。済み: 設計・段 0・MIDI・コードの行の `[1. …]` とナビ記号（パーサと MIDI）。`| |:` は空小節のまま（オーナー決定 2026-11-14・行も音楽に合わせた＝`ChordRowBarLines`）。ページは行の ending の括弧を描く。食い違いの診断は LYS1070（`|:` と `|` は可・`|:` と `:|` はエラー・quick fix 3 つ）。「同じ小節を別のパートで開く」コマンドは実装（`SameBarFinder`・`lilysharp/sameBar`・Ctrl+Alt+PgDn/PgUp・実機は `MANUAL-CHECKS` 第1243）。「反復記号を全パートに書く／1 か所に戻す」コマンドも実装（`RepeatSignSpreader`・小節線だけ＝ナビ記号と ending は未）。歌詞の verse は 5 規則で決定・歌い分けは実装（反復の N 回目＝verse N・足りない回は最後の verse・form が何度演奏しても同じ言葉）。verse の警告は LYS4080（回が足りない・余る・重なる＝3 種・quick fix つき。4 種目＝歌われない小節の言葉は未）。MusicXML は全パートに反復・ending・回数・行の記号・音楽のナビ記号を書く（第1244）。`.ly` は全部のパートとコードのトラックに `\repeat volta`・`\alternative` を書く（第1244・置けない声部は全部見送って警告）。段 4 の実測・MIDI のタイ・プレビューの増分の実測は第1245 で済み（設計 §7 段 4・Lab `p1245/stage4.md`）。**次**（順は「LYS1034 は最後に外す」に合わせた読み）: 段 1＝score の記号の列（`RepeatStream`）と「小節の次に鳴る小節」の表を作る → その上で ⑴ ページ・検査・MusicXML・`.ly` のタイ（2 番括弧の頭の短い弧・1 番括弧から頭へ戻るタイ・LYS4007 の誤り）⑵ `:|` が割る小節を 1 小節と読む（弱起を含む反復・検査と MIDI とページの小節番号と書き出しを一度に）⑶ 段 1 の残りの診断（小節の途中の記号・入れ子・ending の番号とナビ記号の食い違い） → LYS1034 を phrase だけに狭めて文書（form だけの本にも同じ＝オーナー決定）。未決は無い（Q1〜Q3 は閉じた）。見つけた別件: form の無い by-part の本で 2 つ目のパートが後に鳴る（設計 §7・未着手）。
 - **★ 歌詞と歌い手の文法の作り直し（オーナー決定 2026-11-10・第1217）**: `docs/lyrics-singer-design.md` が全部（§9 が作業順）。①②③④は済み（§1.1 第1217〜第1219）。⚠️ ④の `ん` の聞こえ方はオーナーの実聴待ち（`MANUAL-CHECKS` 第1219）。Cantoria の master は zh／ko を歌う（VSIX の入れ直しはオーナー）。`singer` は 1 行 1 声で score の中にも書ける（第1220）。古い書き方を案内する専用エラーは作らない（オーナー指示）。設計 §10「パート自身の歌詞」（`part sop { lyrics words }`）は第1222 で実装（§1.1 第1222・実機は `MANUAL-CHECKS` 第1222）＝§9 は全部済み。**次の一手の指示はまだ無い＝下の積み残しから選ぶならオーナーに訊く**。積み残し: Calamo の生成コードが `lyrics … sings` のまま（`docs\repro\REQUESTS.md` に連絡済み・Calamo 側は未 commit）／実機確認（`MANUAL-CHECKS` 第1217）／perf ベンチ／コーパス外のオーナーのファイル（Downloads の Tabidachi・Rose Garden など）は未移行で、`LilySharp-Lab\sessions\p1217\migrate\migrate.ps1 -Lys -Files` で書き換えられる／Rose Garden のオクターブ変換はオーナーの回答待ち。
 - **★ 歌詞のある譜表では強弱記号とヘアピンを譜表の上に（オーナー決定 2026-11-11）＝設計 `docs/dynamics-above-lyrics-design.md` §5 の 1〜6 は全部済み（第1224〜第1225・§1.1）**。**D3 は LilyPond の規則に替えた（オーナー決定 2026-11-11「LP に合わせて」）**＝向きを書いた記号が*線*の向きを決め、同じ線の後続（向きを書いていない記号）は従う。歌詞のない譜表でも同じ（`c@f.up@decresc … g@p` の p は上）。残りはオーナー: 実機のプレビュー（`MANUAL-CHECKS` 第1225）と release（CHANGELOG は 2 つとも `## Unreleased`・`[engraving]`）。残る穴: 2 声部の譜表で上の声部のヘアピンの線に下の声部の同じ拍の強弱記号も乗る（ヘアピンが声部を持たない既知の穴＝`DynamicAlignEngraver` の注 ⑵・Lab `p1225/dyn/out/vv.png`）。線の向きも譜表ごとに 1 本の流れで読む（LP は声部ごと）。**次の一手の指示はまだ無い＝上の行の積み残しから選ぶならオーナーに訊く**。
 - **★ 評価 4（2026-11-13）の残り＝⑴ 書き出し・⑵ 誤った診断・⑷ 文書は第1227 で閉じた（§1.1）**。書き手のメモと再現は Lab `sessions/p1226/md/eval4/{bigband,choral,chamber,rock}`。⑶ `lysc review` は第1228 で閉じた（§1.1）。**残り**: ⑸ 欠けている機能＝**案 10 件を Lab `sessions/p1227/proposals-eval4.md` に書いた・オーナーの確認待ち＝確認なしに作らない**。**残っているもの**（どれも未着手・値段は未測定）: **一覧は Lab `sessions/p1242/leftovers.md`**（**オーナー指示 2026-11-14・第1231「残りの欠陥を順に」＝この一覧の「残り（欠陥）」と「第1231〜第1235 が見つけて残したもの」は訊かずに着手してよい**。機能の追加は訊く）。残りの先頭（一覧）: condensedStaff で別のパートの強弱で終わるヘアピンを MusicXML のパートがどこで止めるか（今はページどおり＝決めごと・第1240 の報告でオーナーに訊いてある＝返事待ち）／`lysc import` は wedge の number を読まない（2 声部目のヘアピンが 1 声部目に戻る）／combinedStaff の印は re-address されない／別の声部のヘアピンと出会う形の絵／黙っている段の wish の測っていない形（装飾音で始まる小節・段の最初の小節）／`lysc review` の 3 件。MusicXML の四分音の `<accidental>` は他のリーダーの読みを確かめてから（一覧に理由）。大譜表の段間の `@sfz`・`@fp` を両手に効かせるかは決めごと＝オーナーに訊く。見送ったものの理由もそこ。小残り（第1226 から）: condensedStaff の数字付き低音など 3 種の再住所・tab のアルペジオ線が自分の数字に 0.035・小文字だけの枠の中央が 0.23〜0.51 下・`md end` は既定の yMargin では動かない・箇条書きのリンク・不安定な網 2 種（`ScoreVideoShapeTests`、まれに `SvgSnapshotTests`）。**補助は同じモデルで 3〜5 件ずつ順番に・数行は自分で・全 full は自分が 1 回**（memory）。
@@ -142,6 +142,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1245セッション（2026-11-14・YT-DELL2）
+
+base `91dd7918a`・開始時 full 16935 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16938（Lab `p1245` の `run1.trx`）。Calamo の `open` は 0、Dettato は 1・2 が `question`（返事待ち）で `open` は 0。CI は第1231 のまま。
+「反復とナビ記号を section の音楽にも書く」の段 4 と増分の実測（設計 `docs/inline-repeat-design.md` §7 段 4・表は Lab `p1245/stage4.md`・探り譜 `p1245/probe`）。
+- **実測**（form の綴りの本と並べた）: タイは、本体から 2 番括弧へ入る形と 1 番括弧から頭へ戻る形が違う。`:|` が割る小節（弱起を含む反復）は form の綴りだけが 1 小節と読む。プレビューの増分は 10 通りとも全部描き直した絵と同じ（網 `InlineRepeatIncrementalTests`＝緑で生まれた・毒なし）。
+- **直した**（`c703f7886`）: MIDI のタイ（`PlayedTimeline.Unfold`・`MidiNote.TiedOut`・網 `ATieIsCarriedToTheNotePlayedNext` 6 通り）と、頭の `|:` が宣言した弱起を忘れる欠陥（`MeasureValidator`・LYS2006 の誤り）。
+- 門: 毒 5 本とも赤（`p1245/poisons.ps1`）。終了時 full 16954 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 16957（`p1245/run3.trx`）。掃きは回していない: MIDI の変更は音楽に記号を書いた本（今は LYS1034 の本）だけ、検査の変更は「頭に `partial` を宣言し音楽が `|:` で始まる」本だけに効く。
+- 7.5／7.6: OWN 0・REF 0（`PlayedTimeline` の OWN の注に規則を足した）。7.7: 設計 §7 段 4 の「残り 1・2」＝score の記号の列が先。LYS1034 と CHANGELOG は第1244 のまま。
+
+## 以下は第1244セッションの経緯
+
 ### 1.1 第1244セッション（2026-11-14・YT-DELL2）
 
 base `551049503`・開始時 full 16923 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16926（Lab `p1244` の `run1.trx`）。Calamo・Dettato の `open` は 0。CI は第1231 のまま。
@@ -152,18 +163,6 @@ base `551049503`・開始時 full 16923 合格 / 1 失敗（`ReadmeSampleTests`�
 - 門: `-End` の full 16934 合格 / 2 失敗 / skip 2 / 合計 16938（`p1244/run4.trx`）。赤は `ReadmeSampleTests` と `TheHandoffStaysReadable`（語りが長すぎた＝縮めて緑。full は取り直していない）。網は `InlineRepeatLilyPondTests` 10 本（毒 6 本とも赤・`p1244/poisons.ps1`）と `InlineRepeatMusicXmlTests` に 2 本（毒 4 本とも赤）。探り譜 12 冊の `.ly` は LilyPond 2.26.0 を警告 0 で通る。掃き（`p1244/sweep-ly.ps1`・1041 冊 1268 件）: `.ly` は差 0、MusicXML は 4 冊 8 件（音楽に `segno`／`coda` を書いている本＝意図した変化）。svg と MIDI の経路は触っていない。
 - 7.5／7.6: OWN 0・REF 0（書き出しの配線）。7.7: form の ending（`[1. A]`）が緑で組み直す経路にこの印が入る形は未確認（設計 §7）。
 - LYS1034 はまだ外していない。CHANGELOG は LYS1034 を狭める便でまとめて書く。
-
-## 以下は第1243セッションの経緯
-
-### 1.1 第1243セッション（2026-11-14・YT-DELL2）
-
-base `faa82761c`・開始時 full 16865 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16868（Lab `p1243` の `run1.trx`）。Calamo・Dettato の `open` は 0。CI は第1231 のまま。
-オーナーの提案「反復とナビ記号を section の音楽にも書けるようにする」（LYS1034 の取り下げ）に着手。設計・規則・段取り・経過は全部 `docs/inline-repeat-design.md`。commit は `git log faa82761c..`（未 push）。
-- 設計（`f34f7a159`）と段 0＝今の答えの実測（`e7cfb9ca9`・Lab `p1243/stage0.md`・探り譜 `p1243/probe/`）: ページは片方のパートに書いた記号を score のものとして描き、section をまたぐ対も組む＝ほぼ済み。MIDI・MusicXML・`.ly` は書いたパートだけ。
-- **MIDI（`fd6c5d0b0`）**: 音楽に記号を書いた本は刷った順に 1 回歩き、記号を時刻つきで控えて最後に展開する（`Midi/PlayedTimeline.cs`）。全パートが従う・section をまたぐ対・コードの行の記号・`ds`／`dc` を読む。網 `InlineRepeatMidiTests` 16 本（毒＝展開を外すと 27 赤）。⚠️ 音楽に記号の無い本は今までどおり `PlayForm` が鳴らす＝読み手が 2 つ（差と寄せる話は設計 §7）。
-- LYS1034 はまだ外していない（最後に外す）。探り譜は LYS1034 のエラーつきで出力を読む。
-- コードの行が `[1. …]`・`]`・ナビ記号を読む（`VoltaEnd` を足した・行の ending は平らな印）。MIDI は読む。ページは行の ending の括弧をまだ描かない。
-- 門: 終了時 full 16922 合格 / 2 失敗 / skip 2 / 合計 16926（`p1243/trx/run17.trx`）のあと、赤 1 本（`DocCommentPlacementTests`＝足したメソッドが既存の doc の間に入った）を直して関連 681 本は緑。全 full は取り直していない。拡張は `tsc --noEmit` 緑・実機は未確認。掃きは回していない（音楽に記号の無い本の経路は触っていない＝`_timeline` が null）。`-End` は未実行。
 
 ## 2. 開いている作業
 
