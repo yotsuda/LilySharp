@@ -763,11 +763,16 @@ internal sealed class ChordNameCollector
         bool pendingEntries = false;
         foreach (var item in items)
         {
-            if (item is BarlineSyntax)
+            if (item is BarlineSyntax bar)
             {
-                // Mirror ProcessRun: EVERY written barline closes a bar, the one that
-                // opens the run included. Any drift here mis-sizes the row grid.
-                bars++;
+                // Mirror ProcessRun: every written barline closes a bar, the one that opens
+                // the run included — except a `|:` with nothing before it, which opens the
+                // next bar and closes none. Any drift here mis-sizes the row grid.
+                // ⚠️ THE EXCEPTION WAS MISSING HERE until 2026-11-14 (Lab sessions/p1243/probe/
+                // j-rowlead): `|: C | G :|` counted three bars for a row the page and the MIDI
+                // read as two, so the section was laid out a bar longer than its music.
+                if (pendingEntries || MeasureCollector.ParseBarlineType(bar.BarText) != BarlineType.RepeatStart)
+                    bars++;
                 pendingEntries = false;
             }
             else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)

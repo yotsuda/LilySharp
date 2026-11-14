@@ -123,6 +123,25 @@ public sealed class InlineRepeatMidiTests
         Assert.Equal(played, Played(src));
     }
 
+    /// <summary>A row that opens with <c>|:</c> has the bars it writes: the <c>|:</c> closes
+    /// none (the page's and the MIDI's reading of a row). Until 2026-11-14 the bar COUNT read
+    /// it as a bar of its own, and the section was laid out a bar longer than the music beside it.</summary>
+    [Fact]
+    public void ARowOpeningWithARepeatSignCountsTheBarsItWrites()
+    {
+        string src = $$"""
+            octave absolute
+            part m { section S { {{A}} | {{B}} | {{C}} | } }
+            chords prog { section S { |: C | G :| Am | } }
+            form { S }
+            score { chords prog staff m }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        Assert.DoesNotContain(LilySharp.Core.Semantics.SemanticValidation.Run(tree),
+            d => d.Message.Contains("not the same length"));
+        Assert.Equal("ABABC", Played(src));
+    }
+
     /// <summary>A chart with no section at all — a chords track written flat, the one shape a
     /// file without sections has — reads the same marks.</summary>
     [Fact]
