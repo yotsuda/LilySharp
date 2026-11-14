@@ -55,6 +55,10 @@ public sealed class MusicRepeatValidatorTests
     // An ending inside a bar; written with a line before it, it is one cut bar and says nothing.
     [InlineData("|: c'4 d e f | g a [1. b c :| [2. b g ] | c1 |", "LYS1071@[1.")]
     [InlineData("|: c'4 d e f | g a | [1. b c :| [2. b g ] | c1 |", "")]
+    // …and once only: the body's one bar is there, it has no line of its own yet — so the
+    // repeat is not also told it has no body (LYS1041 stood beside this until 2026-11-15).
+    [InlineData("|: c'1 [1. d1 :| [2. e1 ] | c1 |", "LYS1071@[1.")]
+    [InlineData("|: [1. d'1 :| [2. e1 ] | c1 |", "LYS1041@|:")]
     // A mark with music on both sides of it in its bar; at either edge it stands on the line.
     [InlineData("c'1 | d2 segno e2 | f1 | g2 ds e2 | c1 |", "LYS1071@segno LYS1071@ds")]
     [InlineData("c'1 | segno d1 | f1 | g1 ds | c1 |", "")]

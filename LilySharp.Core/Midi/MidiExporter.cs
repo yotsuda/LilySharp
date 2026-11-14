@@ -82,6 +82,7 @@ public sealed class MidiExporter
     private Semantics.SectionHeaders _sectionHeaders = Semantics.SectionHeaders.Empty;
     private bool _formDriven;
     private bool _formPlayed;
+    private readonly HashSet<string> _declaredPlayed = new(StringComparer.Ordinal);
 
     // Part declarations by name (first-wins), built once in Export so PartTimbre /
     // PartOctaveAnchor / part-transpose lookups are O(1) instead of a full-tree
@@ -914,6 +915,7 @@ public sealed class MidiExporter
         _bars.SpendPartial();
         _formDriven = _root.DescendantNodes().OfType<FormDeclarationSyntax>().Any();
         _formPlayed = false;
+        _declaredPlayed.Clear();
         _timeline = WritesRepeatsInTheMusic(_root) ? new List<RepeatSign>() : null;
         _signCuts = _timeline != null ? SignCutBars.For(_root, ScoreForms.Primary(_root)) : null;
         if (_signCuts is { IsEmpty: true })
@@ -1415,11 +1417,15 @@ public sealed class MidiExporter
             case SectionDeclarationSyntax sectionDecl:
                 // With a structure the play order is ITS job; declarations
                 // are silent (they used to play in file order regardless).
-                if (!_formDriven)
-                {
-                    _sectionPlaySerial++; // one play, as PlaySectionByName counts them
-                    PlaySection(sectionDecl, track, conductorTrack);
-                }
+                // With no form the sections play in declaration order, each ONCE and with
+                // every part's copy together — `form { A B … }` over the names as they are
+                // first declared (the page's reading, and Semantics.RepeatStream.DeclaredOrder).
+                // ⚠️ Until 2026-11-15 each DECLARATION played where the walk met it, so a by-part
+                // book's second part began after the first had ended:
+                // `part mel { section A { … } } part bas { section A { … } }` with no form
+                // sounded the bass's first note eight beats late (Lab sessions/p1243/probe/h-plain).
+                if (!_formDriven && _declaredPlayed.Add(sectionDecl.SectionName))
+                    PlaySectionByName(sectionDecl.SectionName, track, conductorTrack);
                 break;
 
             case FormDeclarationSyntax formDecl:

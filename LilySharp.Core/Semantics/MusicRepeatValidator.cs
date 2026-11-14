@@ -53,6 +53,7 @@ internal sealed class MusicRepeatValidator : ISemanticValidator
 {
     private readonly DiagnosticBag _diagnostics = new();
     private readonly HashSet<(int Start, string Code)> _said = new();
+    private readonly HashSet<int> _endingsInsideABar = new();
 
     public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics.ToList();
 
@@ -93,10 +94,14 @@ internal sealed class MusicRepeatValidator : ISemanticValidator
     private void ReportSignsInsideABar(SyntaxNode container)
     {
         foreach (var ending in container.DescendantNodes<InlineVoltaSyntax>())
-            if (MusicInTheBar(ending, before: true))
-                Error(InkOf(ending), DiagnosticCodes.SignInsideABar,
-                    $"The ending '[{ending.VoltaText}' opens inside a bar: an ending opens on a bar line. Write '|' before it "
-                    + "- a bar the ending cuts is still read as one bar ('g a | [1. b c :| [2. b g ] |').");
+        {
+            if (!MusicInTheBar(ending, before: true))
+                continue;
+            _endingsInsideABar.Add(ending.Span.Start);
+            Error(InkOf(ending), DiagnosticCodes.SignInsideABar,
+                $"The ending '[{ending.VoltaText}' opens inside a bar: an ending opens on a bar line. Write '|' before it "
+                + "- a bar the ending cuts is still read as one bar ('g a | [1. b c :| [2. b g ] |').");
+        }
         foreach (var mark in container.DescendantNodes<NavigationMarkSyntax>())
             if (MusicInTheBar(mark, before: true) && MusicInTheBar(mark, before: false))
                 Error(mark.Span, DiagnosticCodes.SignInsideABar,
@@ -179,7 +184,11 @@ internal sealed class MusicRepeatValidator : ISemanticValidator
             var written = run.Endings.Select(e => endings.GetValueOrDefault(e.From)).ToList();
             if (written.All(e => e == null))
                 continue; // the form's own endings: FormDeclarationValidator's
-            if (run.BodyEnd <= run.Start && opens.TryGetValue(run.Start, out var open))
+            // (Not when the first ending opens INSIDE the body's bar: that bar is the body, the
+            // ending stands at the bar line before it only because it has none of its own, and
+            // LYS1071 has said what to write.)
+            if (run.BodyEnd <= run.Start && opens.TryGetValue(run.Start, out var open)
+                && !(written[0] is { } opening && _endingsInsideABar.Contains(opening.Span.Start)))
                 Error(open.BarToken.Span, DiagnosticCodes.EmptyRepeatBody,
                     "This repeat has no body: its first ending opens right at the '|:'. The body is what every pass "
                     + "plays before its ending - write the music the passes share before '[1.'.");
