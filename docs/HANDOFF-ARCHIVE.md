@@ -267,6 +267,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1247セッションの経緯
+
+### 1.1 第1247セッション（2026-11-15・YT-DELL2）
+
+base `2206379bc`・開始時 full 16979 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16982（Lab `p1247` の `run1.trx`）。Calamo の `open` は 0、Dettato は 1・2 が `question` のまま。CI は第1231 のまま。
+「反復とナビ記号を section の音楽にも書く」の段 4 の残り 2 つ（設計 `docs/inline-repeat-design.md` §7「MusicXML・`.ly` のタイ」「記号が割る小節」・探り譜は Lab `p1247/probe`）。
+- **MusicXML・`.ly` のタイ**（`86e1b2d91`）: 音楽に記号を書いた本は、2 つの書き出しも列（`RepeatStream.Next`）を引く。MusicXML は `CarryTiesAlongTheColumn`、`.ly` は `PlantTheRepeatTies`。form の綴りの双子と同じ出力。
+- **記号が割る小節**（`1824c5cfb`）: `g a b :| g4 |` を 1 小節と読む。`Semantics.SignCutBars`＝`SectionBoundaryBars` の規則を列の上で読む（記号の立つ小節線だけ・score の全声部で決める）。検査・MIDI・ページ・MusicXML・`.ly` が引く。素の小節線の短い小節は今までどおり。
+- 門: 網 23 本（設計 §7）。毒 21 本とも赤（`p1247/poisons*.ps1`）。掃き 1041 冊は svg・xml・midi・ly とも HEAD と差 0。終了時 full 17002 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17005（`p1247/run3.trx`）。
+- 7.5／7.6: OWN 0・REF 1（`SignCutBars`＝repeat-acknowledge-engraver・volta-engraver・timing-translator.cc:478-507、`SectionBoundaryBars` と同じ引用）。7.7: 弧の出ないタイは `.ly` で `~` のまま（LilyPond が `unterminated tie`・form の綴りも同じ）／2 声部の小節どうしのタイと、ナビ記号が割る小節は網がない／1 つのパートの譜でも割れた小節は score 全体で決める／打鍵の値段は未測定（記号を書いた本は木ごとに全声部を `MeasureModel.Split`）。LYS1034 と CHANGELOG は第1244 のまま。
+
 ## 以下は第1246セッションの経緯
 
 ### 1.1 第1246セッション（2026-11-14〜15・YT-DELL2）

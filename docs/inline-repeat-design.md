@@ -1,6 +1,6 @@
-# 反復とナビ記号を section の音楽にも書く（設計・未実装）
+# 反復とナビ記号を section の音楽にも書く（設計・段 0〜8 は実装済み）
 
-2026-11-14・第1243。オーナーの提案から始まった設計。**まだ 1 行も実装していない。**
+2026-11-14・第1243。オーナーの提案から始まった設計。**第1243〜第1249 で段 0〜8 を実装した**（§4 の段取り・経過は §7。LYS1034 は第1249 で phrase だけになった）。
 これは次の 2 つの決定を取り下げる変更で、取り下げそのものがオーナーの判断（同日の会話）。
 
 - 2026-08-31・第304「`|:` `:|` `[N. …]` は music に書けない。書けるのは `form {}` だけ」（LYS1034）
@@ -36,7 +36,7 @@
 section の中の音楽（パートの本体と `chords` の行）に、`|:` `:|` `:|:` `:|*N` `[N. … ]` と
 `segno` `coda` `fine` `to coda` `dc` `ds`（`al fine`・`al coda`）を書ける。form にも今までどおり書ける。
 
-- **phrase の中は書けないまま**（LYS1034 が残る）。phrase は使い回す部品で、置かれる場所ごとに反復の意味が変わる。
+- **phrase の中は書けないまま**（LYS1034＝第1249 からこの 1 つだけを言う）。phrase は使い回す部品で、置かれる場所ごとに反復の意味が変わる。
 - `lyrics` の行は今までどおり対象外（`verse N { }` は別の構文）。
 - section の無いファイル: パートの音楽は section の中にしか書けないので（`part mel { c'4 … }` はエラー）、section の無い形は
   **平らに書いた chords トラックだけ**（`chords X { C | G7 | }`・by-part でないファイル）。そこにも同じ記号を書ける（オーナーの指摘 2026-11-14 で Q1 は閉じた）。
@@ -132,7 +132,7 @@ LYS1034 は**最後に**外す。エラーの本も今は描けて鳴るので�
 0. ✅ 済み（上の表）。
 1. `RepeatStream`（✅ 列と演奏順・第1246＝§7「段 1」。form だけの本は答えが変わらない）と診断（✅ 第1248＝§7「診断」・パートどうしの ending とナビ記号の食い違いは残り）。
 2. ✅ ページ（行の ending の括弧）。3. ✅ MIDI（§7）。4. ✅ タイと小節の補完（§7「MusicXML・`.ly` のタイ」「記号が割る小節」）。5. ✅ MusicXML（小節線・ending・回数・行の記号・音楽のナビ記号）。6. ✅ `.ly`（全声部に書く。LilyPond は通る・絵の突き合わせは未）。7. ✅ 歌詞（4 種目の警告は未）。
-8. LYS1034 を phrase だけに狭める。GRAMMAR・TUTORIAL・LEARN_FOR_LLM・COMPOSE_FOR_LLM・補完・CHANGELOG。
+8. ✅ LYS1034 を phrase だけに狭める（第1249＝§7「段 8」）。GRAMMAR・GRAMMAR_FOR_LLM・SYNTAX_REFERENCE・TUTORIAL・LEARN_FOR_LLM・site の手引き・補完・CHANGELOG 2 本。
 9. 読み込みと OMR の書き出し（Q2 の答えしだい）。
 
 ## 5. 残る懸念
@@ -295,6 +295,23 @@ LYS1034 は**最後に**外す。エラーの本も今は描けて鳴るので�
 - 列の診断は form ごとに見て、**音楽が書いた記号の位置**に出す（form だけが書いた記号は `FormDeclarationValidator` のまま）。同じ場所の同じ診断は 1 回。
 - 毒 10 本とも赤（Lab `p1248/poisons.ps1`）。一緒に直した: `.ly` で、小節線なしにタイで終わる section の最後の小節を見落としていた（閉じ括弧のトークンを音と数えていた・第1247 の `EndsTied`）。
 - 残り: パートどうしで ending の番号やナビ記号が食い違うときの診断（LYS1070 は反復の小節線だけ）。コードの行の小節の途中の記号は見ていない。
+
+### 段 8: LYS1034 を phrase だけに（第1249・2026-11-15）
+
+- **検査**（`RepeatStructureScopeValidator`）: 反復の小節線・ending・ナビ記号を、phrase の中に書いたときだけ LYS1034。定数は `RepeatStructureInPhrase`。
+  文は「phrase が演奏される場所（section の音楽）か form に書け」と言う。section の音楽・コードの行・form はどれも書ける。
+- **見つけて直した穴＝LYS4025（行き先のないジャンプ）**: この検査は form の歩きだけを読んでいた。LYS1034 が外れると、form の `ds` が音楽の `segno` を「無い」と言い、
+  音楽の `ds` は行き先が無くても黙っていた。音楽に記号を書いた本は列で読む（`RepeatStream.JumpFaults`＝`Played` を作るのと同じ `FormRoute` の歩きに報告させる）。
+  警告は音楽の記号の位置にも出て、2 つのパートが同じ記号を書いても、2 つの form が同じ section を使っても 1 回。音楽に記号を書かない本は今までの読みのまま。
+- **補完**: section の音楽（ドラムも）の一覧の最後に `|:` `:|` `:|*3` `:|:` `[1. :|` `[2. ]` `[3. ]` とナビ記号 10 語（`RepeatSignItems`）。phrase の中では出さない（`WithRepeatSigns`）。
+  `|` や `:` を打ってから選ぶと、打った分を置き換える（form の一覧と同じ規則・`BarSignRunBefore`）。
+- **`repeat volta` のエラー文**: 小節のまわりに `|: … :|` を書く形を先に言い、form の形を後に言う。
+- **文書**: GRAMMAR §8.1「Repeat signs in the music」（規則 7 つ）・§7.1・§6 の注、GRAMMAR_FOR_LLM「Repeats in the music」、SYNTAX_REFERENCE「Repeats in the music」と Barlines の表・Navigation Marks、
+  TUTORIAL、LEARN_FOR_LLM、site `manual-body.html`、CHANGELOG 2 本、MANUAL-CHECKS。COMPOSE_FOR_LLM は古い規則を書いていなかったので触っていない。
+- 網: `RepeatStructureScopeValidatorTests`（phrase の 4 形・書ける場所 11 形）・`CompletionAuditTests` 3 本・`FormCompletionTests`（サーバー経由・phrase の中）・`FormJumpTargetValidatorTests` 11 本。
+  毒 9 本とも赤（Lab `p1249/poisons.ps1`）。
+- 残り: step キー（`NoteStepper`）は音楽の小節線を `|` `||` `|.` `!` のまま回す（反復記号は回らない）／`|: d1 [1. e1 :|`（ending の前に小節線が無い）は LYS1071 と一緒に LYS1041「本体が無い」も出る（本体の小節が閉じていないため）／
+  fixture と audit の本は form の綴りのまま（2026-08-31 に切り直した形・戻していない）／Calamo と Dettato への知らせ（Q2）は release のときに。
 
 ## 8. エディタ: 記号を全パートに書く（オーナー決定 2026-11-14・小節線の分は実装 `Editing.RepeatSignSpreader`・実機は未確認）
 
