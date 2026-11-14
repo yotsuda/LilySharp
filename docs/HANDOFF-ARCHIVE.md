@@ -267,6 +267,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1257セッションの経緯
+
+### 1.1 第1257セッション（2026-11-15・YT-DELL2）
+
+base `05b0e87a0`・開始時 full 17099 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17102（Lab `p1257` の `run1.trx`）。Calamo・Dettato の REQUESTS は第1253 の開始時に見たまま（同じ会話）。CI は第1231 のまま。
+第1256 の「次」の ⑴＝音楽に書いた `[1. d :| [2. e | ] [3. f | ]` の、2 番括弧の終わりの反復小節線（設計 `inline-repeat-design.md` §7 MIDI の ✅ の項の「第1257」）。
+- 実測（直す前・Lab `p1257/probe`）: `:|` を書いた版と比べて .mid は一致・.ly は実質同じ（LilyPond が自分で描く）・**.xml に backward の repeat が無い・ページに反復小節線が無い**。
+- `SyntaxFacts.EndingGoesBackUnsaid`（次に書かれたものが ending で、その前に `:|` が在る）を、ページ（`MeasureCollector.MusicWalk` の `InlineVoltaSyntax` の腕＝閉じた小節に `RepeatEnd` を後付け）と MusicXML（`RepeatBackward`）が読む。書いたパートの線は全段に出る（絵で確認）・XML は全パートに広がる。
+- 門: 直したあと .mid・.xml は `:|` を書いた版と一致、絵は `]` の鉤 1 本だけ違う。網 +6（`BackToBackRepeatTests` 5・`InlineRepeatMusicXmlTests` 1）。掃きは回していない（snapshot は full で緑）。commit `9ea96f198`。終了時 full 17105 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17108（`run2.trx`）。
+- 7.7: ⚠️ 残りは §1.0 の ⑴／`RepeatStream` の列（小節の軸）にはこの `:|` の印は足していない（`Elements` が ending の並びで読むので演奏順は合う）。
+
 ## 以下は第1256セッションの経緯
 
 ### 1.1 第1256セッション（2026-11-15・YT-DELL2）
