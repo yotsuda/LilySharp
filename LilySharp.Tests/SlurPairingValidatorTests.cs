@@ -174,4 +174,34 @@ public class SlurPairingValidatorTests
         var all = Warnings("c4( d e f | g1 |)");
         Assert.Contains(all, d => d.Message.StartsWith("this ')' follows a barline", System.StringComparison.Ordinal));
     }
+
+    /// <summary>
+    /// A slur section A opens and section B closes, in <c>form { A B A }</c>: the first A's is
+    /// closed and drawn, the last A's runs into the end of the music. Until session 1235 the one
+    /// report said "no slur is drawn" at a '(' whose slur is on the page; it now says which
+    /// playing (SpanPairingValidator's words, as for a pedal). In <c>form { A }</c> the '(' is
+    /// simply never closed.
+    /// </summary>
+    [Fact]
+    public void ASlurOnlyItsLastPlayingLeavesOpen_SaysSo()
+    {
+        static IReadOnlyList<Diagnostic> In(string form)
+        {
+            var validator = new SlurPairingValidator();
+            validator.Validate(SyntaxTree.Parse(
+                "octave absolute part m { clef treble } "
+                + "section A { m { c'4( c' c' c' | } } section B { m { c'4 c' c' c') | } } "
+                + $"form {{ {form} }} score {{ staff m }}"));
+            return validator.Diagnostics.Where(d => d.Code == DiagnosticCodes.UnpairedSlur).ToList();
+        }
+
+        Assert.Empty(In("A B"));
+
+        var last = Assert.Single(In("A B A"));
+        Assert.StartsWith(SpanPairingValidator.LastPlayingOnly, last.Message);
+        Assert.Contains("a slur '(' is never closed", last.Message);
+
+        var never = Assert.Single(In("A"));
+        Assert.StartsWith("a slur '(' is never closed", never.Message);
+    }
 }

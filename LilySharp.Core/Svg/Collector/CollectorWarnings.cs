@@ -189,6 +189,11 @@ public record UnpairedSlurWarning(
     /// <summary>A '(' written while a slur is already open, which is ignored (one slur at a
     /// time — SlurDetector.IgnoredAsAlreadyOpen), rather than one never closed.</summary>
     public bool AlreadyOpen { get; init; }
+
+    /// <summary>For a '(' never closed: the same written '(' IS closed, and drawn, in an
+    /// earlier playing — its section is played again at the form's end, after the section
+    /// that closes it (<see cref="UnpairedSpanWarning"/>'s ClosedElsewhere, for the slur).</summary>
+    public bool ClosedElsewhere { get; init; }
 }
 
 /// <summary>Which span family a pairing complaint is about. One enum rather than one per

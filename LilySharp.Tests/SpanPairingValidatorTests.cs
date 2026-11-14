@@ -293,6 +293,7 @@ public class SpanPairingValidatorTests
     [InlineData("@sustain", "@!sustain", "a pedal is never released")]
     [InlineData("@rit", "@!rit", "is never closed")]
     [InlineData("@8va", "@!8va", "is never closed")]
+    [InlineData("@phrasingSlur", "@!phrasingSlur", "a phrasing slur is never closed")]
     public void ASpanOnlyItsLastPlayingLeavesOpen_SaysSo(string start, string stop, string words)
     {
         static IReadOnlyList<Diagnostic> In(string form, string start, string stop)

@@ -81,7 +81,11 @@ internal sealed class SlurPairingValidator : ISharedCollectValidator
                       + "so the ')' after it closes the first; close the first slur before "
                       + "opening another, or mark the outer phrase with @phrasingSlur ... @!phrasingSlur"
                     : w.IsOpen
-                    ? "a slur '(' is never closed, so no slur is drawn; add the matching ')' "
+                    // Closed in an earlier playing and drawn there (form { A B A }, A opening
+                    // and B closing): "no slur is drawn" beside a drawn slur reads as a wrong
+                    // report, so the words say which playing - SpanPairingValidator's, for '('.
+                    ? (w.ClosedElsewhere ? SpanPairingValidator.LastPlayingOnly : "")
+                      + "a slur '(' is never closed, so no slur is drawn; add the matching ')' "
                       + "after the last note of the phrase - note that a slur does not carry "
                       + "into another voice"
                     : "a slur ')' has no '(' open, so no slur is drawn; a slur mark goes AFTER "

@@ -88,6 +88,9 @@ internal static class SlurPairingScanner
         // in (0 = not in one), and the section play it was opened in. A list used as a
         // stack: the carry rule can drop an entry from under the top.
         var open = new List<(int Position, int Region, int Play, bool Grace)>();
+        // The written '(' marks a ')' has closed, and a slur drawn for: one left open at the
+        // end is then the last playing's fault alone (UnpairedSlurWarning.ClosedElsewhere).
+        HashSet<int>? closed = null;
         var plays = new SectionPlayCursor();
         bool openedThisPlay = false;
         int regionsSeen = 0;
@@ -130,6 +133,8 @@ internal static class SlurPairingScanner
                             cueSink.Add(new CueSpanBoundaryWarning(
                                 start.Position, CueSpanKind.Slur,
                                 CrossingOf(start.Region, region)));
+                        else
+                            (closed ??= new HashSet<int>()).Add(start.Position);
                     }
                     else if (plays.OnUnmatchedClose(openedThisPlay) is { } fault)
                     {
@@ -161,7 +166,10 @@ internal static class SlurPairingScanner
                 carrySink?.Add(new SectionCarryWarning(position, SectionSpanKind.Slur, fault, from, into, Play: play));
             }
             else
-                sink.Add(new UnpairedSlurWarning(position, IsOpen: true));
+                sink.Add(new UnpairedSlurWarning(position, IsOpen: true)
+                {
+                    ClosedElsewhere = closed?.Contains(position) == true
+                });
         }
     }
 
@@ -182,6 +190,8 @@ internal static class SlurPairingScanner
     {
         int open = MusicItem.NoSourcePosition;
         int openPlay = -1;
+        // The written starts a stop has closed (UnpairedSpanWarning.ClosedElsewhere).
+        HashSet<int>? closed = null;
         var plays = new SectionPlayCursor();
         bool openedThisPlay = false;
         var measures = voice.Measures;
@@ -206,7 +216,10 @@ internal static class SlurPairingScanner
                 if (item.HasPhrasingSlurEnd)
                 {
                     if (open >= 0)
+                    {
+                        (closed ??= new HashSet<int>()).Add(open);
                         open = MusicItem.NoSourcePosition;
+                    }
                     else if (plays.OnUnmatchedClose(openedThisPlay) is { } fault)
                     {
                         var (from, into) = plays.NamesForClose();
@@ -239,7 +252,8 @@ internal static class SlurPairingScanner
                 carrySink?.Add(new SectionCarryWarning(open, SectionSpanKind.PhrasingSlur, fault, from, into, Play: openPlay));
             }
             else
-                sink.Add(new UnpairedSpanWarning(open, SpanKind.PhrasingSlur, SpanPairingFault.Unterminated));
+                sink.Add(new UnpairedSpanWarning(open, SpanKind.PhrasingSlur, SpanPairingFault.Unterminated,
+                    closed?.Contains(open) == true));
         }
     }
 
