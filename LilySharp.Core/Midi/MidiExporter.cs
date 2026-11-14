@@ -975,12 +975,25 @@ public sealed class MidiExporter
         if (_soundingParts is { } sounding)
             mainTrack.Notes.RemoveAll(n => n.Part is { } part && !IsChordRowTrack(part) && !sounding.Contains(part));
 
-        SingLyrics(tree, mainTrack);
+        // A book played along its timeline (below) takes its words afterwards, on the notes as
+        // they are PLAYED: a verse is the words of a pass, and the printed timeline has one.
+        bool playedLater = _timeline is { Count: > 0 };
+        if (!playedLater)
+            SingLyrics(tree, mainTrack);
         SplitIntoPartTracks(midi, mainTrack);
         AddPedals(midi, mainTrack.Name);
         // The music was walked once, as printed: now it is played (PlayedTimeline).
         if (_timeline is { Count: > 0 } marks)
+        {
             PlayedTimeline.Unfold(midi, marks, printedEnd);
+            var played = new MidiTrack();
+            foreach (var partTrack in midi.Tracks)
+                played.Notes.AddRange(partTrack.Notes);
+            SingLyrics(tree, played, lastVerseGoesOn: true);
+            // …and land where the main track's do: in the first part track (SplitIntoPartTracks).
+            if (midi.Tracks.Count > 1)
+                midi.Tracks[1].Lyrics.AddRange(played.Lyrics);
+        }
 
         return midi;
     }
@@ -4845,7 +4858,7 @@ public sealed class MidiExporter
     /// The events go to the main track and land in the first part track (SplitIntoPartTracks),
     /// wherever the sung part's notes went.
     /// </remarks>
-    private void SingLyrics(SyntaxTree tree, MidiTrack track)
+    private void SingLyrics(SyntaxTree tree, MidiTrack track, bool lastVerseGoesOn = false)
     {
         if (_playedSpec is not { } spec)
             return;
@@ -4859,6 +4872,18 @@ public sealed class MidiExporter
         var genderOf = Music.LyricSinger.GenderReaderOf(tree.GetRoot());
         var sings = Music.LyricSinger.SungReaderOf(tree.GetRoot(), spec);
         var settingsOf = Music.LyricSinger.SettingsReaderOf(tree.GetRoot(), spec);
+        // The passes the verses written on each note name, between them — what a pass no verse
+        // names falls back on (lastVerseGoesOn).
+        var versedPasses = new Dictionary<(int Source, int Printing, string Part, string? Track), SortedSet<int>>();
+        if (lastVerseGoesOn)
+            foreach (var (lyric, item, printing, part, sungTrack, _) in sung)
+                if (lyric.StanzaLabel > 0)
+                {
+                    var key = (item.SourcePosition, printing, part, sungTrack);
+                    if (!versedPasses.TryGetValue(key, out var named))
+                        versedPasses[key] = named = [];
+                    named.UnionWith(Svg.Collector.LyricsCollector.PlaysOfVerseAt(tree.GetRoot(), lyric.SourcePosition).Select(play => play - 1));
+                }
         foreach (var (lyric, item, printing, part, sungTrack, reading) in sung)
         {
             var notes = bySource[item.SourcePosition].ToList();
@@ -4875,6 +4900,19 @@ public sealed class MidiExporter
                 ? Svg.Collector.LyricsCollector.PlaysOfVerseAt(tree.GetRoot(), lyric.SourcePosition).Select(play => play - 1)
                 : wrappedTracks.Contains(sungTrack) ? new[] { lyric.WrapRow }
                 : Enumerable.Range(0, onsets.Count);
+            // A pass past the verses written — a third time through with two verses, the stretch a
+            // `ds` plays again — sings the LAST verse written before it (owner's rules 2026-11-14,
+            // docs/inline-repeat-design.md §6: the words of the last pass; a verse missing still sings).
+            if (lastVerseGoesOn && lyric.StanzaLabel > 0
+                && versedPasses.TryGetValue((item.SourcePosition, printing, part, sungTrack), out var written))
+            {
+                var own = passes.ToHashSet();
+                var more = new List<int>(own);
+                for (int pass = 0; pass < onsets.Count; pass++)
+                    if (!written.Contains(pass) && written.Where(w => w < pass).DefaultIfEmpty(-1).Max() is int last && own.Contains(last))
+                        more.Add(pass);
+                passes = more;
+            }
             foreach (int tick in passes.Select(pass => onsets[Math.Min(pass, onsets.Count - 1)]).Distinct())
                 track.Lyrics.Add(new LyricEvent(tick, lyric.Text, part, reading, languageOf(sungTrack), singerOf(sungTrack, part), genderOf(singerOf(sungTrack, part), part), lyric.ConnectorType == Svg.Model.LyricConnectorType.Hyphen, sings(sungTrack, part), sungTrack, settingsOf(sungTrack, part)));
         }

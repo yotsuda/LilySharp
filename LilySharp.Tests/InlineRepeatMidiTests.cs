@@ -216,6 +216,30 @@ public sealed class InlineRepeatMidiTests
         Assert.Equal(played, Played(src));
     }
 
+    /// <summary>The words of a section that repeats (owner's rules 2026-11-14,
+    /// docs/inline-repeat-design.md §6): <c>verse N</c> is the repeat's Nth pass, a pass past the
+    /// verses written sings the last one, and a section the form plays again sings the same
+    /// words again. MEASURED before (Lab sessions/p1243/probe/p-lyr-inline): a repeat written
+    /// in the music sang verse 1 on every pass, where the same repeat written in the form sang
+    /// verse 2 on the second.</summary>
+    [Theory]
+    [InlineData("|: c''1 :|", "S", "one two")]                 // the repeat's Nth pass
+    [InlineData("|: c''1 :|*3", "S", "one two two")]           // a pass past the verses: the last one
+    [InlineData("|: c''1 :|", "S S", "one two one two")]       // played again by the form: the same words
+    [InlineData("c''1 |", "|: S :|", "one two")]               // the form's repeat, as before
+    public void AVerseIsThePassOfTheRepeat(string music, string form, string sung)
+    {
+        string src = $$"""
+            octave absolute
+            time 4/4
+            part m { section S { {{music}} } }
+            lyrics w { section S { verse 1 { one | } verse 2 { two | } } }
+            form { {{form}} }
+            score { staff m  lyrics w on m }
+            """;
+        Assert.Equal(sung, string.Join(" ", Export(src).Tracks.SelectMany(t => t.Lyrics).OrderBy(l => l.Tick).Select(l => l.Text)));
+    }
+
     /// <summary>The bar lines are the played ones: a bar played three times is three bars.</summary>
     [Fact]
     public void TheBarLinesAreUnfoldedWithTheNotes()

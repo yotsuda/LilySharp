@@ -88,6 +88,8 @@ internal sealed class LyricsCollector
     public void Clear()
     {
         _lyrics.Clear();
+        _repeatsRoot = null;
+        _sectionsThatRepeat = null;
         _warnings.Clear();
         _shadowedPlain.Clear();
     }
@@ -338,6 +340,19 @@ internal sealed class LyricsCollector
             return;
         }
 
+        // A section whose own music repeats counts ONE thing by its verses: the passes of
+        // that repeat (owner's rules 2026-11-14, docs/inline-repeat-design.md §6 — rule 1 and
+        // rule 4). So every printing of it carries all its verses, stacked, as the one
+        // printing of a section a form repeats does; the form playing it again sings the
+        // same words again.
+        if (body.Count > 0 && SectionRepeatsItself(body[0], sectionName))
+        {
+            foreach (int start in starts)
+                foreach (var v in verses)
+                    place(v.Measures, start, v.Spec.PrimaryNumber, v.Spec.HideLabel);
+            return;
+        }
+
         bool plainUsed = false;
         for (int i = 1; i <= starts.Count; i++)
         {
@@ -360,6 +375,38 @@ internal sealed class LyricsCollector
         // never renders. Silent for the user, so flag it rather than dropping it.
         if (!plainUsed && plain is { Count: > 0 })
             _shadowedPlain.Add(new ShadowedPlainLyricWarning(plain[0].Span, sectionName));
+    }
+
+    // The sections whose music writes a repeat sign or an ending of its own, of the tree last
+    // asked about (one walk a tree; a collector is asked about one).
+    private SyntaxNode? _repeatsRoot;
+    private HashSet<string>? _sectionsThatRepeat;
+
+    /// <summary>Whether section <paramref name="sectionName"/> of the tree <paramref name="node"/>
+    /// stands in writes a repeat sign (<c>|:</c> <c>:|</c> <c>:|:</c>) or a volta ending in its
+    /// own music — a part's, or a chords row's.</summary>
+    private bool SectionRepeatsItself(SyntaxNode node, string sectionName)
+    {
+        var root = node;
+        while (root.Parent != null)
+            root = root.Parent;
+        if (!ReferenceEquals(root, _repeatsRoot))
+        {
+            _repeatsRoot = root;
+            _sectionsThatRepeat = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var sign in root.DescendantNodesOfKinds(SyntaxKind.Barline, SyntaxKind.InlineVolta))
+            {
+                if (sign is BarlineSyntax line && !SyntaxFacts.IsRepeatBarlineKind(line.BarToken.Kind))
+                    continue;
+                for (var up = sign.Parent; up != null; up = up.Parent)
+                    if (up is SectionDeclarationSyntax section)
+                    {
+                        _sectionsThatRepeat.Add(section.SectionName);
+                        break;
+                    }
+            }
+        }
+        return _sectionsThatRepeat!.Contains(sectionName);
     }
 
     /// <summary>Splits a lyric-section body into its <c>verse N { … }</c> verses (in source
