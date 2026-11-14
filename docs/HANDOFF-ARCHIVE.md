@@ -267,6 +267,24 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1235セッションの経緯
+
+### 1.1 第1235セッション（2026-11-14・YT-DELL2）
+
+base `0fa5c632f`・開始時 full 16681 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16684（Lab `p1235` の `run1.trx`）。Calamo の `open` は 0。CI は第1231 のまま。
+「残りの欠陥を順に」（第1231）の続き。7 commit（未 push）。残りは Lab `p1235/leftovers.md`。
+- **`@sfz` は、下の level が動いたらその level で打ち直す（`97da4dbb8`）**: 音は「書かれた level との差」（`MidiNote.Accent`）を持ち歩いていたので、`c''4@p@cresc d'' e''@sfz` の e'' は 116（`@fff` より上）、crescendo の上のほうでは全部 127。`MidiNote.Sforzando`（記号の番号）を足し、`SungVoices.StruckAt` が `Strike` と同じ規則で読み直す（hairpin と強弱の共有 2 つ）。大譜表で `@pp` の下の左手の `@sfz` は 76 → 104。
+- **大譜表の強弱の共有は、音自身の声部の level から測る（`f2c6b91d1`）**: 片手の 2 声部が同じ瞬間に `@p` と `@f` を書き、もう片方の手が後から `@mf` を書くと、piano の声部は 61 だった（実測）＝86 に。
+- **slur と phrasing slur の「最後の演奏だけ閉じない」（`e74debf72`）**: `form { A B A }` で LYS4010／LYS4018 が、描かれている弧の横で「描かれない」と言っていた。`SlurPairingScanner` が閉じた start を覚え、`LastPlayingOnly` を前に付ける。`A |: B :| A` は素の文のまま。
+- **括弧つき臨時記号の座席を LilyPond 2.26.0 と測った（`51acf47c2`）**: 6 形・左端 12 個が 4 桁一致（Lab `p1235/court`）。Core は不変・網で固定。
+- **`[engraving]` ずれた頭の分の間隔は、全段の wish で平均する（`5bcdd7173`）**: 「移ってきた音の wish」を測っていて見つけた別の差。片手の 2 声部が 2 度で頭が 1.3042 ずれるとき、LilyPond は列の対をまたぐ wish 全部（paper column は全段のもの＝`musical_column_spacing` の `found_matching_column`）で割るのに、Lily# は段ごとに割っていた。隣の段が 4 分音符なら 1 拍 3.65 → 3.44（LP 3.437）、両手とも 2 度なら 4.31 → 3.65（LP 3.654）。`SpacingRules.ColumnWishes` が spring ごとに全段の声部を数える。休符・tab・付点・`@cross` の客を含む 12 形が LP と一致（Lab `p1235/wish/probe.ps1`）＝移った音の wish も全小節で平均に入る（第1234 の残りの半分）。
+- **MusicXML: 装飾音の強弱・span・運指・頭の印（`8f93bc907`）**: `<direction>` 系（強弱・hairpin の始まり・`@text`・ペダル・ottava）は音の前に、音に付く物（`@finger`・tab の字・half-tie・`@breath`／`@caesura`・glissando・頭の印）は音に。装飾音で始めたペダルは stop だけがファイルに残っていた。full サイズの `@dead` も `<notehead>` を書く。
+- 測って閉じた: 重変化より先の変化の字形（言語で書けない＝届かない・Lab `p1235/alt`）。
+- ⚠️ 直したこと: commit 文面の既定 velocity（80 → 90・amend）／掃きの head を毒のビルドのまま写して「差 0」を 1 度得た＝取り直し／`ColumnWishes` の REF の行範囲を読まずに書いた＝`7f7417d42` で :323-394 に。
+- 7.7 の匂い: 6 つとも網は毒で赤を見た／耳と VS Code の実機は未確認／小節またぎは複数段で 0.0029 までずれる（第739 の span bar）／p7 の 0.081 は未特定（leftovers）。
+- 7.5／7.6: wish は ⒝（`musical_column_spacing`・`merge_springs` の REF。Lily# は段ごとの後段でずれだけを足すので分母を渡した＝字面にするには wish を spring の前に束ねる器が要る）・`@sfz` と大譜表は LILYSHARP-OWN の既存の家・slur と MusicXML は LP と無関係。定数なし。perf: `ColumnWishes` は 2 声部以上か客のいる段がある小節でだけ 1 回＝未計測。
+- 門: 終了時 full 16718 合格 / 2 失敗 / skip 2 / 合計 16722（Lab `p1235` の `run3.trx`・+38 は足した網）。失敗は `ReadmeSampleTests`（同じ）と `TheHandoffStaysReadable`（この語りの字数超過＝詰めて、その網だけ回し直して緑）。全 svg の掃き 1041 冊 1268 枚で動いた svg 2（`audit/lpreg/stclash`＝1 小節が 0.22 狭く・コーパス 1 冊。`p1235/sweep`）。snapshot と台帳は不動。
+
 ## 以下は第1234セッションの経緯
 
 ### 1.1 第1234セッション（2026-11-14・YT-DELL2）
