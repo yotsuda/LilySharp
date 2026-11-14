@@ -267,6 +267,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1229セッションの経緯
+
+### 1.1 第1229セッション（2026-11-14・YT-DELL2）
+
+base `b4d879488`・5 commit（未 push）。Lab `sessions/p1228/leftovers.md` の残りを順に。OMR の `open` は第1228 開始時に 0。
+- **MusicXML の四分音（`c2b839de9`）**: 和音の構成音・それを繰り返す `q`・装飾音・装飾音の和音が半端な `<alter>` と `<accidental>` を持つ（`_resolvedChordXmlNotes` に `Quarter`）。`lysc import` で往復する。
+- **補助 1 便・4 件（`e82be56e2`〜`259f399b2`）**:
+  - ペダルの括弧は譜表ごとに数える（`PedalEngraver.PedalBracketsByStaff`／`AllPedalBrackets`）＝増分の描画の `data-pos` が他の譜表の印を指していた・片方の譜表の `@!sustain` を消しても括弧の場所が残った（`MeasureContentKey`）。フルの絵は不変。
+  - ⚠️ **`[engraving]` 臨時記号の記憶は四分音を変化量として持つ（`481ce2fa0`）**: `cih'4 c'` にナチュラル・繰り返す `cih'` は記号なし・`cis'4 cih'` は ♮ を先に（合成字形 4 つを `GlyphMetrics.RestoreMainOf` に）。LP 2.26.0 と 8 小節 2 段を見比べて一致（Lab `p1229/b/qt-after/qt.png`・`qt-ly/lp-sys*.png`＝自分の目でも見た）。**出力を変える変更＝オーナーの承認前に出荷しない**（CLAUDE.md）。
+  - 値を書いた `R1*8` が他パートの拍子変更をまたぐと LYS2004 は 1 回（「R*8 と書け」）・MusicXML の `<multiple-rest>` は拍子変更で割る（裸の `R*N` も）・`R1 | R1 | R1 | R2.*5`（正しい綴り）が「3/4 は 4/4 より短い」と言われていたのも直した（`MeasureValidator` が休みの最後の小節の拍子を訊いていた）。
+  - `lysc layout` の「time … (bar N)」は報告のほかの行と同じラベル（分割小節は 1 つ）／LYS2023 は header に key のない section で、ファイルの調を言い直す `key` を数えない（前の section の調の言い直しは**数える**＝header に key のない section は全パートをファイルの調に戻すのがページの動き）。
+- 7.6: 新しい LILYSHARP-OWN は無し（臨時記号は LILYPOND-REF `accidental-engraver.cc:380-432`・`accidental.cc:131-143`）。7.7 の匂い: 補助の報告だけで見ていないもの＝ペダルの増分の網の中身・`R1*N` のページと MIDI の絵（Lab `p1229/b`）／VS Code の実機は未確認／毒は回していない（網は各本に対照入り）。
+- 門: 開始時 full 16615 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16618、終了時 full 16625 合格 / 1 失敗（同じ）/ skip 2 / 合計 16628（`p1229` の `run1.trx`・+10 は足した網）。全 svg の掃き 1041 冊 1268 枚で動いた svg 0（base `b4d879488`・head `259f399b2`・Lab `p1229/sweep`）。
 ## 以下は第1228セッションの経緯
 
 ### 1.1 第1228セッション（2026-11-14・YT-DELL2）
