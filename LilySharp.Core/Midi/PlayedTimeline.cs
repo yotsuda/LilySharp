@@ -65,12 +65,38 @@ internal static class PlayedTimeline
     /// <paramref name="marks"/>. A timeline with no jump in it is left as it is.</summary>
     /// <param name="printedEnd">Where the printed music ends (the walk's last tick: a closing
     /// rest sounds nothing and still takes its time).</param>
-    internal static void Unfold(MidiFile midi, IReadOnlyList<RepeatSign> marks, int printedEnd)
+    /// <returns>The pass each PLAYED tick is on (<see cref="PassAt"/>): the stretches of
+    /// <see cref="RepeatStream.RouteByPass"/> laid end to end, each <c>[From, To)</c> in played
+    /// ticks.</returns>
+    internal static IReadOnlyList<RepeatStream.PassStretch> Unfold(MidiFile midi, IReadOnlyList<RepeatSign> marks, int printedEnd)
     {
         int end = Math.Max(printedEnd, midi.EndTick);
         if (midi.BarTicks.Count > 0)
             end = Math.Max(end, midi.BarTicks.Max);
-        var route = RepeatStream.Route(marks, end);
+        var byPass = RepeatStream.RouteByPass(marks, end);
+        var passes = new List<RepeatStream.PassStretch>(byPass.Count);
+        int at = 0;
+        foreach (var stretch in byPass)
+        {
+            passes.Add(new RepeatStream.PassStretch(at, at + (stretch.To - stretch.From), stretch.Pass));
+            at += stretch.To - stretch.From;
+        }
+        Rewrite(midi, RepeatStream.Route(marks, end), end);
+        return passes;
+    }
+
+    /// <summary>The pass the played tick <paramref name="tick"/> is on (<see cref="Unfold"/>'s
+    /// answer) — 1 outside every stretch.</summary>
+    internal static int PassAt(IReadOnlyList<RepeatStream.PassStretch> passes, int tick)
+    {
+        foreach (var stretch in passes)
+            if (tick >= stretch.From && tick < stretch.To)
+                return stretch.Pass;
+        return 1;
+    }
+
+    private static void Rewrite(MidiFile midi, List<RepeatStream.Segment> route, int end)
+    {
         if (route.Count == 1 && route[0].From == 0 && route[0].To >= end)
             return;
 

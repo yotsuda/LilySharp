@@ -1005,11 +1005,11 @@ public sealed class MidiExporter
         // The music was walked once, as printed: now it is played (PlayedTimeline).
         if (_timeline is { Count: > 0 } marks)
         {
-            PlayedTimeline.Unfold(midi, marks, printedEnd);
+            var passes = PlayedTimeline.Unfold(midi, marks, printedEnd);
             var played = new MidiTrack();
             foreach (var partTrack in midi.Tracks)
                 played.Notes.AddRange(partTrack.Notes);
-            SingLyrics(tree, played);
+            SingLyrics(tree, played, passes);
             // …and land where the main track's do: in the first part track (SplitIntoPartTracks).
             if (midi.Tracks.Count > 1)
                 midi.Tracks[1].Lyrics.AddRange(played.Lyrics);
@@ -4884,6 +4884,42 @@ public sealed class MidiExporter
         };
     }
 
+    // The verses of the lyric sections whose section's own music repeats, of the tree last asked.
+    private SyntaxNode? _versesRoot;
+    private List<(TextSpan Span, HashSet<int> Own, HashSet<int> Cell)>? _versesOfRepeatingSections;
+
+    /// <summary>The <c>verse N { }</c> holding <paramref name="position"/>, when the section it
+    /// writes the words of repeats in its own music (<c>VerseRepeatValidator</c>'s sections):
+    /// the passes it names, and the passes the verses of its lyric section name between them.</summary>
+    private (HashSet<int> Own, HashSet<int> Cell)? VerseOfARepeatingSection(SyntaxNode root, int position)
+    {
+        if (!ReferenceEquals(root, _versesRoot) || _versesOfRepeatingSections == null)
+        {
+            _versesRoot = root;
+            _versesOfRepeatingSections = [];
+            var repeating = Semantics.VerseRepeatValidator.PassesOfRepeatingSections(root);
+            if (repeating.Count > 0)
+                foreach (var cell in root.DescendantNodesOfKinds(SyntaxKind.LyricVerse).GroupBy(v => v.Parent))
+                {
+                    string? section = null;
+                    for (var up = cell.Key; up != null && section == null; up = up.Parent)
+                        section = (up as SectionDeclarationSyntax)?.SectionName;
+                    if (section == null || !repeating.ContainsKey(section))
+                        continue;
+                    var named = new HashSet<int>();
+                    var own = cell.Select(v => (v.Span, Plays: Svg.Collector.LyricsCollector.PlaysOfVerseAt(root, v.Span.Start).ToHashSet())).ToList();
+                    foreach (var verse in own)
+                        named.UnionWith(verse.Plays);
+                    foreach (var verse in own)
+                        _versesOfRepeatingSections.Add((verse.Span, verse.Plays, named));
+                }
+        }
+        foreach (var verse in _versesOfRepeatingSections)
+            if (position >= verse.Span.Start && position < verse.Span.End)
+                return (verse.Own, verse.Cell);
+        return null;
+    }
+
     /// <summary>
     /// The words as lyric meta events, each on the onset the page sets it on (SungSyllables):
     /// a page note is the k-th printing of its source in its part (MidiNote.SourceOrdinal), and
@@ -4899,7 +4935,9 @@ public sealed class MidiExporter
     /// The events go to the main track and land in the first part track (SplitIntoPartTracks),
     /// wherever the sung part's notes went.
     /// </remarks>
-    private void SingLyrics(SyntaxTree tree, MidiTrack track)
+    /// <param name="played">The pass of each played tick (<see cref="PlayedTimeline.Unfold"/>),
+    /// for a book played along its timeline; null for a book the form's own walk plays.</param>
+    private void SingLyrics(SyntaxTree tree, MidiTrack track, IReadOnlyList<Semantics.RepeatStream.PassStretch>? played = null)
     {
         if (_playedSpec is not { } spec)
             return;
@@ -4955,7 +4993,19 @@ public sealed class MidiExporter
                         more.Add(pass);
                 passes = more;
             }
-            foreach (int tick in passes.Select(pass => onsets[Math.Min(pass, onsets.Count - 1)]).Distinct())
+            IEnumerable<int> ticks = passes.Select(pass => onsets[Math.Min(pass, onsets.Count - 1)]).Distinct();
+            // In a section whose own music repeats, a verse is the words of a PASS, and a note
+            // sounds on the passes its bar is played on — an ending's on its own, however few
+            // times that is (rule 3 of the same rules): the verse sings where the pass is one
+            // of its own, or one no verse of its lyric section names and the last named before
+            // it is its own. Until session 1253 the passes were counted off the note's onsets,
+            // so under a second ending — one onset — every verse landed on it and the first
+            // written was sung.
+            if (played != null && lyric.StanzaLabel > 0 && VerseOfARepeatingSection(tree.GetRoot(), lyric.SourcePosition) is { } verse)
+                ticks = onsets.Where(tick => PlayedTimeline.PassAt(played, tick) is int pass
+                    && (verse.Own.Contains(pass)
+                        || (!verse.Cell.Contains(pass) && verse.Own.Contains(verse.Cell.Where(w => w < pass).DefaultIfEmpty(0).Max())))).ToList();
+            foreach (int tick in ticks)
                 track.Lyrics.Add(new LyricEvent(tick, lyric.Text, part, reading, languageOf(sungTrack), singerOf(sungTrack, part), genderOf(singerOf(sungTrack, part), part), lyric.ConnectorType == Svg.Model.LyricConnectorType.Hyphen, sings(sungTrack, part), sungTrack, settingsOf(sungTrack, part)));
         }
     }

@@ -91,6 +91,56 @@ public sealed class VerseRepeatValidatorTests
         Assert.Empty(Warnings(after));
     }
 
+    /// <summary>Rule 3: a verse writes words only in the bars its pass plays. Words elsewhere
+    /// are printed and not sung (<c>InlineRepeatMidiTests.AVerseSingsInTheBarsItsPassPlays</c>
+    /// hears that), and the warning stands on the words.</summary>
+    [Theory]
+    // a first ending is pass 1's
+    [InlineData("|: c''1 | [1. d''1 :| [2. e''1 | ]", "    verse 1 { one | first | }\n    verse 2 { two | lost | second | }", "lost", "verse 2", "bar 2", "pass 1")]
+    // a second ending is pass 2's
+    [InlineData("|: c''1 | [1. d''1 :| [2. e''1 | ]", "    verse 1 { one | first | lost | }\n    verse 2 { two | | second | }", "lost", "verse 1", "bar 3", "pass 2")]
+    // a bar after the repeat is played once
+    [InlineData("|: c''1 :| d''1 |", "    verse 1 { one | after | }\n    verse 2 { two | lost gone | }", "lost gone", "verse 2", "bar 2", "pass 1")]
+    public void WordsInABarThePassDoesNotPlay_AreAWarningOnTheWords(string music, string verses, string words, string verse, string bar, string pass)
+    {
+        string book = Book(music, verses);
+        var warning = Assert.Single(Warnings(book));
+        Assert.Equal(DiagnosticSeverity.Warning, warning.Severity);
+        Assert.Equal(words, book.Substring(warning.Span.Start, warning.Span.Length));
+        Assert.Contains("not sung", warning.Message);
+        Assert.Contains($"'{verse}'", warning.Message);
+        Assert.Contains(bar, warning.Message);
+        Assert.Contains(pass, warning.Message);
+        // The last way out empties the bar.
+        var fixes = VerseRepeatFixes.For(SyntaxTree.Parse(book), warning.Span);
+        Assert.Empty(Warnings(Fixed(book, warning, fixes.Count - 1)));
+    }
+
+    [Theory]
+    [InlineData("    verse 1 { one | | lost | }\n    verse 2 { two | | | }", "    verse 1 { one | |  | }\n    verse 2 { two | | lost | }")]  // down to a later verse
+    [InlineData("    verse 1 { one | | | }\n    verse 2 { two | lost | | }", "    verse 1 { one | lost | | }\n    verse 2 { two |  | | }")]  // up to an earlier one
+    public void TheWordsCanBeMovedToTheVerseSungInThatBar(string verses, string moved)
+    {
+        const string music = "|: c''1 | [1. d''1 :| [2. e''1 | ]";
+        string book = Book(music, verses);
+        var warning = Assert.Single(Warnings(book));
+        var fixes = VerseRepeatFixes.For(SyntaxTree.Parse(book), warning.Span);
+        Assert.Equal(2, fixes.Count);
+        Assert.Contains("Move these words", fixes[0].Title);
+        Assert.Equal(Book(music, moved), Fixed(book, warning, 0));
+        Assert.Empty(Warnings(Fixed(book, warning, 0)));
+    }
+
+    [Theory]
+    // a third pass no verse names sings the last verse: its words under the third ending are sung
+    [InlineData("|: c''1 | [1,2. d''1 :|*3 [3. e''1 | ]", "    verse 1 { one | first | | }\n    verse 2-3 { two | again | last | }")]
+    // a verse of two passes under the ending of one of them
+    [InlineData("|: c''1 | [1. d''1 :| [2. e''1 | ]", "    verse 1-2 { one | first | second | }")]
+    // a blank and a held note are no words
+    [InlineData("|: c''1 | [1. d''1 :| [2. e''1 | ]", "    verse 1 { one | first | _ | }\n    verse 2 { two | \"\" | second | }")]
+    public void WordsInABarOneOfThePassesPlays_AreToldNothing(string music, string verses)
+        => Assert.Empty(Warnings(Book(music, verses)));
+
     [Fact]
     public void AnEndingsNumberIsAPass()
     {

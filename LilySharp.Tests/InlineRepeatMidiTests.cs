@@ -286,6 +286,36 @@ public sealed class InlineRepeatMidiTests
         Assert.Equal(sung, string.Join(" ", Export(src).Tracks.SelectMany(t => t.Lyrics).OrderBy(l => l.Tick).Select(l => l.Text)));
     }
 
+    /// <summary>A verse's words are sung in the bars its pass plays (rule 3 of the same rules):
+    /// a note under an ending sounds once, on the ending's pass, and takes that pass's verse —
+    /// words another verse writes under it are printed and not sung. MEASURED before (Lab
+    /// sessions/p1252/probe-verse-endings.md): the passes were counted off the note's onsets,
+    /// so every verse landed on an ending's one onset and the first written was sung — "lost1"
+    /// under the second ending.</summary>
+    [Theory]
+    // each verse leaves the other's ending empty: as written
+    [InlineData("|: c''1 | [1. d''1 :| [2. e''1 | ]", "one | first | |", "two | | second |", "one first two second")]
+    // every bar written in both: an ending sings its own pass's verse
+    [InlineData("|: c''1 | [1. d''1 :| [2. e''1 | ]", "one | first | lost1 |", "two | lost2 | second |", "one first two second")]
+    // each written under the other's ending: neither is sung
+    [InlineData("|: c''1 | [1. d''1 :| [2. e''1 | ]", "one | | second1 |", "two | first2 | |", "one two")]
+    // a bar after the repeat is played once, on pass 1
+    [InlineData("|: c''1 :| d''1 |", "one | after |", "two | lost |", "one two after")]
+    // a third pass no verse names sings the last verse where that verse has words: its bar under the third ending is empty
+    [InlineData("|: c''1 | [1,2. d''1 :|*3 [3. e''1 | ]", "one | first | |", "two | again | |", "one first two again two")]
+    public void AVerseSingsInTheBarsItsPassPlays(string music, string verse1, string verse2, string sung)
+    {
+        string src = $$"""
+            octave absolute
+            time 4/4
+            part m { section S { {{music}} } }
+            lyrics w { section S { verse 1 { {{verse1}} } verse 2 { {{verse2}} } } }
+            form { S }
+            score { staff m  lyrics w on m }
+            """;
+        Assert.Equal(sung, string.Join(" ", Export(src).Tracks.SelectMany(t => t.Lyrics).OrderBy(l => l.Tick).Select(l => l.Text)));
+    }
+
     /// <summary>The bar lines are the played ones: a bar played three times is three bars.</summary>
     [Fact]
     public void TheBarLinesAreUnfoldedWithTheNotes()

@@ -131,7 +131,7 @@ LYS1034 は**最後に**外す。エラーの本も今は描けて鳴るので�
 
 0. ✅ 済み（上の表）。
 1. `RepeatStream`（✅ 列と演奏順・第1246＝§7「段 1」。form だけの本は答えが変わらない）と診断（✅ 第1248＝§7「診断」・パートどうしの ending とナビ記号の食い違いは残り）。
-2. ✅ ページ（行の ending の括弧）。3. ✅ MIDI（§7）。4. ✅ タイと小節の補完（§7「MusicXML・`.ly` のタイ」「記号が割る小節」）。5. ✅ MusicXML（小節線・ending・回数・行の記号・音楽のナビ記号）。6. ✅ `.ly`（全声部に書く。LilyPond は通る・絵の突き合わせは未）。7. ✅ 歌詞（4 種目の警告は未）。
+2. ✅ ページ（行の ending の括弧）。3. ✅ MIDI（§7）。4. ✅ タイと小節の補完（§7「MusicXML・`.ly` のタイ」「記号が割る小節」）。5. ✅ MusicXML（小節線・ending・回数・行の記号・音楽のナビ記号）。6. ✅ `.ly`（全声部に書く。LilyPond は通る・絵の突き合わせは未）。7. ✅ 歌詞（規則 3 の再生と 4 種目の警告は第1253）。
 8. ✅ LYS1034 を phrase だけに狭める（第1249＝§7「段 8」）。GRAMMAR・GRAMMAR_FOR_LLM・SYNTAX_REFERENCE・TUTORIAL・LEARN_FOR_LLM・site の手引き・補完・CHANGELOG 2 本。
 9. 読み込みと OMR の書き出し（Q2 の答えしだい）。
 
@@ -174,10 +174,13 @@ LYS1034 は**最後に**外す。エラーの本も今は描けて鳴るので�
     帰結: `verse 1,3 { … }` で 2 回目を飛ばすと、2 回目も同じ言葉を歌う。黙らせたい回は空の verse（`verse 2 { | }`）を書く。
   - **警告 LYS4080 と quick fix（第1243）**: 下の表の上 3 行を実装（`VerseRepeatValidator`・`Editing.VerseRepeatFixes`・網 `VerseRepeatValidatorTests`）。
     回数は section の音楽が求める最大（`:|*N`・ending の最大の番号・どちらも無ければ 2）。「反復を 3 回にする」の fix は入れていない（記号が複数のパートにあると全部を直す必要があるため）。
-  - 残り: 表の 4 行目（N 回目に歌われない小節に `verse N` の言葉）。小節ごとの回が要る。
-  - ⚠️ **規則 3 は再生に入っていない（第1252 の実測）**: `SingLyrics` は verse N を「その音の N 回目の発音」に置き、発音の数が足りなければ最後の発音へ丸める。
-    1 回しか鳴らない括弧の音では verse 1 と verse 2 の言葉が同じ発音に乗り、先に書いたほうが勝つ＝両方の verse に全小節の言葉を書くと、2 番括弧で verse 1 の言葉が歌われる。
-    括弧の小節を空けて書いた本（1 番括弧は verse 1 だけ・2 番括弧は verse 2 だけ）は正しい。直すなら「発音 j が反復の何回目か」を小節から引く（Lab `p1252/probe-verse-endings.md`）。警告の 4 種目はそのあと。
+  - **規則 3 の再生と、表の 4 行目の警告（第1253）**: 回は 1 つの表から読む＝`RepeatStream.RouteByPass`（`Route` を継ぐ前の区間に「何回目か」を付けたもの。反復の本体は 1..K・ending はその番号・反復の外は 1・`|:` の無い `:|` が戻した区間は 2・ジャンプで戻った区間は最後の回）。
+    - 再生: `PlayedTimeline.Unfold` がその表を演奏の tick に並べて返し、`SingLyrics` は反復を持つ section の verse を「発音の回がその verse の回か」で置く（`PassAt`）。
+      第1252 の実測（Lab `p1252/probe-verse-endings.md`）: それまでは verse N を「その音の N 回目の発音」に置き、足りなければ最後の発音へ丸めていたので、1 回しか鳴らない括弧の音に全部の verse が乗り、先に書いたほうが歌われた。
+    - 「足りない回は最後の verse」は、**その歌詞の section の verse がどれも名指していない回**だけ（それまでは音ごとに見ていた）。帰結: 反復を持つ section で `verse 2` の小節を空けると、2 回目のその小節は黙る（verse 1 の言葉は歌わない）。form だけで反復を書いた本は今までどおり音ごと。
+    - 警告: `VerseRepeatValidator` の `NotSungHere`。小節の回は列（`RepeatStream.PassesOf`）の、その section を最初に演奏する form の最初の印刷から読む。歌詞の小節は section の小節と順に対応させる（ページの置き方と同じ）。警告は言葉の上に出る。
+      quick fix は「その小節で歌われる verse の、同じ小節が空ならそこへ移す」と「この小節を空にする」。
+    - 網: `InlineRepeatMidiTests.AVerseSingsInTheBarsItsPassPlays`・`VerseRepeatValidatorTests` の 3 本。反復記号が小節を割る本（弱起が反復の中・`g a b :| g4 |`）でも歌詞の小節と列の小節は合う（Lab `p1253/cut-bar*.lys`＝正しい本は警告 0・反復の後の小節に書いた `verse 2` は 2 件）。
 
 ## 7. 経過
 

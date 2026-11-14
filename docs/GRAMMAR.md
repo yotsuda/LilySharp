@@ -2759,7 +2759,10 @@ InlineVolta    = '[' , Integer , [ '-' , Integer | ',' , Integer , { ',' , Integ
       ending, or back to the repeat's head (where a short arc is drawn on the note it lands on).
    7. WORDS: with a repeat in the section, a lyric 'verse N' is the Nth pass of that repeat
       (without one it is the Nth time the form plays the section). A pass with no verse sings
-      the last one written; LYS4080 warns of a verse missing, spare or doubled, with fixes.
+      the last one written. A verse is sung in the bars its pass plays: a first ending takes
+      verse 1's words, a second verse 2's, a bar outside the repeat verse 1's — words in any
+      other bar are printed and not sung. LYS4080 warns of a verse missing, spare or doubled
+      and of such words, with fixes.
 
    ⚠️ A PHRASE TAKES NONE OF THEM (LYS1034): a phrase is played wherever it is named, and a
    sign in it would stand in a different repeat each time. Write the sign where the phrase is

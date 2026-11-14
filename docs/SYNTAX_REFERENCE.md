@@ -1817,8 +1817,10 @@ with `]`).
 - **A tie at a sign** goes to the note played next, as at a form's sign: into the second
   ending, or back to the head of the repeat (drawn there as a short arc into the note).
 - **Words**: in a section with a repeat, a lyric `verse N` is the Nth pass of that repeat;
-  a pass with no verse sings the last one written, and **LYS4080** warns of a verse that is
-  missing, spare or doubled, with fixes.
+  a pass with no verse sings the last one written. A verse is sung only in the bars its pass
+  plays: a first ending takes `verse 1`'s words, a second `verse 2`'s, a bar after the
+  repeat `verse 1`'s — words in any other bar are printed and not sung. **LYS4080** warns of
+  a verse that is missing, spare or doubled and of such words, with fixes.
 - **A `phrase` takes no sign** (**LYS1034**): it is played wherever it is named, so the sign
   is written where it is played — `|: riff :|`.
 

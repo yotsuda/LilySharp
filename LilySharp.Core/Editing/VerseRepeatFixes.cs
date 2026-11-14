@@ -40,11 +40,40 @@ public static class VerseRepeatFixes
         string text = root.ToFullString();
         var fixes = new List<Fix>();
         string newLine = text.Contains("\r\n") ? "\r\n" : "\n";
-        foreach (var f in VerseRepeatValidator.Findings(root).Where(f => f.Verse.Span.Start == reported.Start))
+        foreach (var f in VerseRepeatValidator.Findings(root).Where(f => VerseRepeatValidator.SpanOf(f).Start == reported.Start))
         {
             int end = f.Verse.Span.Start + f.Verse.Span.Length;
             switch (f.Fault)
             {
+                case VerseRepeatValidator.Fault.NotSungHere:
+                    var words = VerseRepeatValidator.SpanOf(f);
+                    int wordsEnd = words.Start + words.Length;
+                    // Into the same bar of the first verse that is sung there and has it empty.
+                    var all = new HashSet<int>();
+                    var siblings = f.Verse.Parent!.ChildNodes().Where(n => n.Kind == SyntaxKind.LyricVerse).ToList();
+                    foreach (var verse in siblings)
+                        all.UnionWith(LyricsCollector.PlaysOfVerseAt(root, verse.Span.Start));
+                    var playedOn = f.BarPasses.Split(',').Select(p => int.Parse(p.Trim(), System.Globalization.CultureInfo.InvariantCulture)).ToHashSet();
+                    foreach (var verse in siblings)
+                    {
+                        if (ReferenceEquals(verse, f.Verse)
+                            || !VerseRepeatValidator.SungPasses(LyricsCollector.PlaysOfVerseAt(root, verse.Span.Start), all, f.Passes).Overlaps(playedOn))
+                            continue;
+                        var bar = LyricSyllableReader.VerseMeasures(verse).Where(m => m.Kind == SyntaxKind.LyricMeasure).ElementAtOrDefault(f.BarIndex);
+                        if (bar == null || VerseRepeatValidator.WordsSpan(bar) != null)
+                            continue;
+                        // One edit over both places: the words leave here and stand before that bar's line.
+                        int to = bar.Span.Start;
+                        string moved = text.Substring(words.Start, words.Length) + " ";
+                        var (from, until) = (System.Math.Min(to, words.Start), System.Math.Max(to, wordsEnd));
+                        string between = to < words.Start
+                            ? moved + text.Substring(to, words.Start - to)
+                            : text.Substring(wordsEnd, to - wordsEnd) + moved;
+                        fixes.Add(new Fix($"Move these words to '{VerseRepeatValidator.HeaderText(verse)}', which is sung in this bar", from, until, between));
+                        break;
+                    }
+                    fixes.Add(new Fix("Leave this bar empty here", words.Start, wordsEnd, ""));
+                    break;
                 case VerseRepeatValidator.Fault.MissingPass:
                     // After the last verse, on a line of its own at that verse's indent.
                     string indent = Indent(text, f.Verse.Span.Start);

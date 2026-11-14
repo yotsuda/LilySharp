@@ -141,7 +141,12 @@ internal sealed class RepeatStream
         Plays = plays;
         Signs = signs;
         Bars = bars;
-        Played = Route(signs, bars);
+        var byPass = RouteByPass(signs, bars);
+        Played = Joined(byPass);
+        _passes = new SortedSet<int>?[bars];
+        foreach (var stretch in byPass)
+            for (int b = stretch.From; b < stretch.To && b < bars; b++)
+                (_passes[b] ??= []).Add(stretch.Pass);
         var faults = new Faults();
         var runs = new List<RepeatRun>();
         var elements = Elements(signs, bars, faults);
@@ -181,6 +186,14 @@ internal sealed class RepeatStream
     /// <summary>The printed bars played right after <paramref name="bar"/>, in the order the
     /// piece first reaches them — none after the bar the piece ends on (and nothing else).</summary>
     public IReadOnlyList<int> Next(int bar) => bar >= 0 && bar < _next.Length ? _next[bar] : [];
+
+    private readonly SortedSet<int>?[] _passes;
+
+    /// <summary>The passes printed bar <paramref name="bar"/> is played on, ascending
+    /// (<see cref="RouteByPass"/>): a repeat's body on every pass, an ending on its own, a bar
+    /// outside every repeat on pass 1 — none for a bar the piece never reaches.</summary>
+    public IReadOnlyCollection<int> PassesOf(int bar)
+        => bar >= 0 && bar < _passes.Length && _passes[bar] is { } passes ? passes : [];
 
     /// <summary>Whether the bar printed after <paramref name="bar"/> is also played after it.</summary>
     public bool PrintedNextIsPlayedNext(int bar) => Next(bar).Contains(bar + 1);
@@ -468,13 +481,29 @@ internal sealed class RepeatStream
     /// <summary>The stretches of printed music <c>[0, end)</c> in played order, along
     /// <paramref name="signs"/> — on whatever axis they stand (ticks, bar lines).</summary>
     internal static List<Segment> Route(IEnumerable<RepeatSign> signs, int end)
+        => Joined(RouteByPass(signs, end));
+
+    /// <summary>A stretch of <see cref="RouteByPass"/>: printed music <c>[From, To)</c> played
+    /// on pass <paramref name="Pass"/> of the repeat it stands in.</summary>
+    internal readonly record struct PassStretch(int From, int To, int Pass);
+
+    /// <summary>
+    /// <see cref="Route"/> before its neighbours are joined, each stretch with THE PASS it is
+    /// played on (1-based) — what a <c>verse N</c> counts in a section whose music repeats
+    /// (docs/inline-repeat-design.md §6, rules 1, 3 and 5): a repeat's body on each of its
+    /// passes, an ending on the pass that takes it, music outside every repeat on pass 1 — and
+    /// on pass 2 when a <c>:|</c> no <c>|:</c> opened plays it again. A stretch a jump text
+    /// replays is on the last pass it had.
+    /// </summary>
+    internal static List<PassStretch> RouteByPass(IEnumerable<RepeatSign> signs, int end)
     {
         var elements = Elements(signs, end);
         var marks = new List<NavigationMarkType?>(elements.Count);
         foreach (var element in elements)
             marks.Add(element is Sign sign ? sign.Type : null);
 
-        var played = new List<Segment>();
+        var played = new List<PassStretch>();
+        var plainPlays = new int[elements.Count];
         foreach (var stretch in FormRoute.Of(marks))
         {
             for (int i = stretch.From; i < stretch.To; i++)
@@ -484,21 +513,22 @@ internal sealed class RepeatStream
                 if (elements[i] is LoneEnd && !stretch.Replay)
                 {
                     for (int j = 0; j < i; j++)
-                        PlayElement(elements[j], lastPassOnly: false, played);
+                        PlayElement(elements[j], j, lastPassOnly: false, played, plainPlays);
                     continue;
                 }
-                PlayElement(elements[i], stretch.Replay, played);
+                PlayElement(elements[i], i, stretch.Replay, played, plainPlays);
             }
         }
-        return Joined(played);
+        return played;
     }
 
-    private static void PlayElement(Element element, bool lastPassOnly, List<Segment> played)
+    private static void PlayElement(Element element, int index, bool lastPassOnly, List<PassStretch> played, int[] plainPlays)
     {
         switch (element)
         {
             case Plain plain:
-                Add(played, plain.From, plain.To);
+                int time = lastPassOnly ? Math.Max(1, plainPlays[index]) : ++plainPlays[index];
+                Add(played, plain.From, plain.To, time);
                 break;
             case Run run:
                 var passes = new List<PassSet>(run.Endings.Count);
@@ -507,32 +537,32 @@ internal sealed class RepeatStream
                 int count = RepeatPasses.Count(run.Count, passes);
                 for (int pass = lastPassOnly ? count : 1; pass <= count; pass++)
                 {
-                    Add(played, run.Start, run.BodyEnd);
+                    Add(played, run.Start, run.BodyEnd, pass);
                     int ending = RepeatPasses.EndingFor(pass, passes);
                     if (ending >= 0)
-                        Add(played, run.Endings[ending].From, run.Endings[ending].To);
+                        Add(played, run.Endings[ending].From, run.Endings[ending].To, pass);
                 }
                 break;
         }
     }
 
-    private static void Add(List<Segment> played, int from, int to)
+    private static void Add(List<PassStretch> played, int from, int to, int pass)
     {
         if (from < to)
-            played.Add(new Segment(from, to));
+            played.Add(new PassStretch(from, to, pass));
     }
 
     /// <summary>Neighbours that follow each other in the printed music are one stretch, so
     /// every seam left is a jump.</summary>
-    private static List<Segment> Joined(List<Segment> played)
+    private static List<Segment> Joined(List<PassStretch> played)
     {
         var joined = new List<Segment>(played.Count);
-        foreach (var segment in played)
+        foreach (var stretch in played)
         {
-            if (joined.Count > 0 && joined[^1].To == segment.From)
-                joined[^1] = new Segment(joined[^1].From, segment.To);
+            if (joined.Count > 0 && joined[^1].To == stretch.From)
+                joined[^1] = new Segment(joined[^1].From, stretch.To);
             else
-                joined.Add(segment);
+                joined.Add(new Segment(stretch.From, stretch.To));
         }
         return joined;
     }

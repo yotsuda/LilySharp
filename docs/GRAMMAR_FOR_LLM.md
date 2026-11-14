@@ -1536,8 +1536,11 @@ score { chords prog  staff mel }
 - A sign may cut a bar between two passes — `|: g4 | c d e f | g a b :| g4 | c1 |` (a pickup
   inside the repeat, with `partial 4`) reads `g a b` + `g4` as one bar.
 - **Lyrics**: with a repeat in the section, `verse N` is the Nth pass of that repeat; a pass
-  with no verse sings the last one written (LYS4080 warns of a missing, spare or doubled
-  verse).
+  with no verse sings the last one written. Write a verse's words only in the bars its pass
+  plays — leave the other ending's bars empty: `verse 1 { one | first | | }`
+  `verse 2 { two | | second | }` over `|: c1 | [1. d1 :| [2. e1 | ]`; a bar after the repeat
+  takes `verse 1` only (LYS4080 warns of a missing, spare or doubled verse and of words in a
+  bar the verse's pass does not play — they are printed, not sung).
 - Which spelling: either. Signs in the music follow the page bar by bar; the form is the
   better place when whole sections repeat or are reused in a different order.
 
