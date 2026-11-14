@@ -238,6 +238,39 @@ public class AccidentalStyleTests
         Assert.Null(Second(6));                     // the control: nothing to cancel
     }
 
+    /// <summary>
+    /// The staff owes the restoring natural BEFORE a sign a voice printed for itself, where the
+    /// note was last shown in another voice with more of that sign. Until 2026-11-14 (session
+    /// 1232) the staff's pass skipped every head that had a sign, so the second voice's
+    /// <c>cis'</c> after the first voice's <c>cisis'</c> printed a bare sharp. Each bar is
+    /// LilyPond 2.26.0's (Lab sessions/p1232/rn).
+    /// </summary>
+    [Fact]
+    public void Default_TheRestoringNatural_IsOwedAcrossTheStaffsVoices()
+    {
+        var tree = SyntaxTree.Parse(
+            "time 4/4\noctave absolute\npart mel { }\nsection Main {\n  mel { voice " +
+            "{ cisis'4 r r2 | cis'4 r r2 | ceses'4 r r2 | cis'4 r r2 | cis'4 r r2 | <cisis' e'>4 r r2 | cisis'4 r r2 | } " +
+            "{ r4 cis' r2 | r4 cih' r2 | r4 ces' r2 | r4 cisis' r2 | r4 ces' r2 | r4 <cis' e'> r2 | cis'4 r r2 | } }\n" +
+            "}\nform { Main }\nscore { staff mel }\n");
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+        var score = SvgGenerator.CollectScore(tree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree));
+        var lower = score.StaffGroups[0].Staves[0].Voices[1].Measures;
+        string? Sign(int bar, int item = 1) => lower[bar].Items[item] switch
+        {
+            LilySharp.Core.Svg.Model.NoteItem n => n.Accidental,
+            LilySharp.Core.Svg.Model.ChordItem c => c.Notes[0].Accidental,
+            _ => "?",
+        };
+        Assert.Equal("naturalSharp", Sign(0));          // double sharp above, then sharp
+        Assert.Equal("naturalQuarterSharp", Sign(1));   // sharp, then quarter sharp
+        Assert.Equal("naturalFlat", Sign(2));           // double flat, then flat
+        Assert.Equal("doubleSharp", Sign(3));           // more of the sign restores nothing
+        Assert.Equal("flat", Sign(4));                  // the other sign restores nothing
+        Assert.Equal("naturalSharp", Sign(5));          // on a chord member, after a chord member
+        Assert.Equal("sharp", Sign(6, 0));              // two heads at one moment do not see each other
+    }
+
     // ================================================================================
     // modern — Kurt Stone's
     // ================================================================================

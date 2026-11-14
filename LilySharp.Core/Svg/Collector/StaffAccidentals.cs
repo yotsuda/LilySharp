@@ -24,8 +24,9 @@ namespace LilySharp.Core.Svg.Collector;
 /// The accidentals a STAFF owes beyond the ones each of its voices decided for itself: a head
 /// whose alteration differs from the one last shown, earlier in the bar, for the same note in
 /// ANOTHER voice of the staff — or, under an ottava line, for a head drawn on the same line or
-/// space in another octave. The pass only ADDS accidentals; none the voices printed is taken
-/// away.
+/// space in another octave. The pass only ADDS: an accidental to a head that printed none, or
+/// the restoring natural before the sign a head printed (the other voice showed more of that
+/// sign: <c>cisis'</c> above, then <c>cis'</c> below is ♮♯). None the voices printed is taken away.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -65,7 +66,12 @@ internal static class StaffAccidentals
 {
     private readonly record struct Head(
         int Voice, int Item, int Member, Fraction Onset, int GraceRank,
-        int Packed, int StaffPosition, bool HasAccidental, bool TiedIn, KeySignature? Key);
+        int Packed, int StaffPosition, bool HasAccidental, bool TiedIn, KeySignature? Key, bool Plain = false);
+
+    /// <summary>Whether a head's accidental is its alteration's plain sign and nothing else — the
+    /// one the staff may owe a restoring natural before (<see cref="Apply"/>).</summary>
+    private static bool IsPlain(int packed, string? accidental, bool others)
+        => !others && accidental != null && accidental == MeasureCollector.AlterationName(WrittenPitch.Quarters(packed));
 
     /// <summary>
     /// Returns <paramref name="voices"/> with the accidentals the staff owes added, or the
@@ -116,7 +122,8 @@ internal static class StaffAccidentals
                             bar.Add(new Head(vi, e.ItemIndex, -1, e.Onset, e.GraceRank,
                                 n.WrittenPitch, n.StaffPosition,
                                 n.Accidental != null || n.LineStartAccidental != null || n.EditorialAccidental != null,
-                                TiedInto(previous[vi], n.StaffPosition, n.Midi), key));
+                                TiedInto(previous[vi], n.StaffPosition, n.Midi), key,
+                                IsPlain(n.WrittenPitch, n.Accidental, n.LineStartAccidental != null || n.EditorialAccidental != null)));
                         previous[vi] = n;
                         break;
                     case ChordItem c:
@@ -127,7 +134,8 @@ internal static class StaffAccidentals
                                 bar.Add(new Head(vi, e.ItemIndex, k, e.Onset, e.GraceRank,
                                     member.WrittenPitch, member.StaffPosition,
                                     member.Accidental != null || member.LineStartAccidental != null,
-                                    TiedInto(previous[vi], member.StaffPosition, member.Midi), key));
+                                    TiedInto(previous[vi], member.StaffPosition, member.Midi), key,
+                                    IsPlain(member.WrittenPitch, member.Accidental, member.LineStartAccidental != null)));
                         }
                         previous[vi] = c;
                         break;
@@ -149,9 +157,23 @@ internal static class StaffAccidentals
                 : a.Item != b.Item ? a.Item.CompareTo(b.Item) : a.Member.CompareTo(b.Member));
             foreach (var head in bar)
             {
-                if (head.HasAccidental || head.TiedIn)
+                if (head.TiedIn)
                     continue;
                 int alter = WrittenPitch.Quarters(head.Packed);
+                if (head.HasAccidental)
+                {
+                    // The voice printed its sign by its own memory; where the note was last
+                    // shown in ANOTHER voice with more of the same sign, the staff owes the
+                    // natural before it (first voice `cisis'`, second voice `cis'`: ♮♯).
+                    if (head.Plain && style.ExtraNatural
+                        && Owed(bar, head, alter,
+                            e => WrittenPitch.StepOctave(e.Packed) == WrittenPitch.StepOctave(head.Packed),
+                            e => e.Voice != head.Voice) is { } more
+                        && Name(alter, more, extraNatural: true) is { } restored
+                        && restored != MeasureCollector.AlterationName(alter))
+                        (added ??= new())[(head.Voice, mi, head.Item, head.Member)] = restored;
+                    continue;
+                }
                 // ⑴ The same note in the same octave, last shown in ANOTHER voice.
                 int? owed = Owed(bar, head, alter,
                     e => WrittenPitch.StepOctave(e.Packed) == WrittenPitch.StepOctave(head.Packed),
