@@ -55,16 +55,19 @@ describe('the Lily# Sound Font extension', () => {
         assert.equal((pkg.bugs as { url: string }).url, 'https://github.com/yotsuda/LilySharp/issues');
     });
 
-    // Owner's decisions 2026-11-11: the family's dark tile, a hue none of the three has (Lily# blue, Calamo
-    // green, Cantoria amber), and Emmentaler's `sf` — sforzando, and the sound font's own initials.
+    // Owner's decisions 2026-11-11: the family's dark tile, a hue none of the others has, and Emmentaler's
+    // `sf` — sforzando, and the sound font's own initials. 2026-11-14: the family grew to six (Shosa,
+    // Dettato) and was coloured anew, six hues 60 degrees apart at one lightness (OKLCH 0.76, 0.13) — the
+    // pink of this one stood too near Shosa's red — and every glyph is from one cut, emmentaler-14, untouched.
+    // The recipe, for all six: tools/icons.js in the Shosa repository.
     it('has the family\'s tile in a colour of its own', () => {
         assert.equal(pkg.icon, 'icon.png');
         assert.ok(fs.statSync(path.join(root, 'icon.png')).size > 1000);
         const icon = read('icon.svg');
         assert.match(icon, /<stop offset="0%" stop-color="#2d2d30"\/><stop offset="100%" stop-color="#1e1e1e"\/>/);
-        assert.match(icon, /<path fill="#e86a9a" d="M/);
+        assert.match(icon, /<path fill="#db93de" d="M/);
         const lily = fs.readFileSync(path.join(__dirname, '..', '..', 'icon.svg'), 'utf8');
-        assert.match(lily, /<path fill="#5aa7e8"/);
+        assert.match(lily, /<path fill="#8bafff"/);
         assert.ok(lily.includes('stop-color="#2d2d30"') && lily.includes('stop-color="#1e1e1e"'));
     });
 
