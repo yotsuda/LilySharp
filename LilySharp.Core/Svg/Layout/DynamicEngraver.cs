@@ -240,7 +240,10 @@ internal static class DynamicEngraver
         Func<int, int>? staffLinesOf = null,
         ImmutableArray<GraceNoteItem> graceNotes = default,
         // The indices not engraved: a drum staff's second copy of a level (DrumDoubles).
-        HashSet<int>? skipped = null)
+        HashSet<int>? skipped = null,
+        // A staff's rest shifts (by staff index): a rest moved off the staff is a support
+        // where it was moved to (MergeColumnSupport). Absent, no rest is read.
+        Func<int, IReadOnlyDictionary<RestShiftKey, double>?>? restShiftsOf = null)
     {
         if (dynamics.IsDefaultOrEmpty)
             return ImmutableArray<DynamicLayout>.Empty;
@@ -365,7 +368,7 @@ internal static class DynamicEngraver
             double y = PointwiseBaselineY(score.TextMetrics, dynamic.IsAbove, dynVoices, dynamic.VoiceIndex,
                 mi, ii, xColumn, x, dynamic.Text, expressive,
                 vi => beamMembers.TryGetValue((staffIdx, vi, mi, ii), out var b) ? b : null,
-                staffLines);
+                staffLines, restShiftsOf?.Invoke(staffIdx));
 
             // No step between two dynamics of one column, on either side: each stays at its
             // own side-position and OutsideStaffStacker's 250 turn separates them, in
@@ -531,7 +534,8 @@ internal static class DynamicEngraver
         ImmutableArray<Voice> voices, int voiceIndex, int measureIndex, int itemIndex,
         double xColumn, double xLabel, string? text, bool expressive,
         Func<int, (BeamLayout Beam, double StemX, bool StemUp)?>? beamOf,
-        int staffLines = EngravingDefaults.DefaultStaffLines)
+        int staffLines = EngravingDefaults.DefaultStaffLines,
+        IReadOnlyDictionary<RestShiftKey, double>? restShifts = null)
     {
         if (expressive)
         {
@@ -551,7 +555,7 @@ internal static class DynamicEngraver
             return off;
         }
         var support = ColumnSupportSkylines(
-            voices, voiceIndex, measureIndex, itemIndex, xColumn, beamOf, staffLines);
+            voices, voiceIndex, measureIndex, itemIndex, xColumn, beamOf, staffLines, restShifts);
         double textOffset = TextOffsetInSpanner(fonts);
         var my = LabelSkylines(fonts, text, expressive, xLabel, -textOffset);
         // total_off positions the SPANNER; the text's baseline sits TextOffsetInSpanner
@@ -657,10 +661,12 @@ internal static class DynamicEngraver
         ImmutableArray<Voice> voices, int voiceIndex, int measureIndex, int itemIndex,
         double xColumn,
         Func<int, (BeamLayout Beam, double StemX, bool StemUp)?>? beamOf,
-        int staffLines = EngravingDefaults.DefaultStaffLines)
+        int staffLines = EngravingDefaults.DefaultStaffLines,
+        IReadOnlyDictionary<RestShiftKey, double>? restShifts = null)
     {
         var (up, down) = StaffFloorSupport(staffLines);
-        MergeColumnSupport(up, down, voices, voiceIndex, measureIndex, itemIndex, xColumn, beamOf);
+        MergeColumnSupport(up, down, voices, voiceIndex, measureIndex, itemIndex, xColumn, beamOf,
+            staffLines, restShifts);
         return (up, down);
     }
 
@@ -683,7 +689,8 @@ internal static class DynamicEngraver
         ImmutableArray<Voice> voices, int voiceIndex,
         IEnumerable<(int Measure, int Item, double X)> columns,
         Func<int, int, int, (BeamLayout Beam, double StemX, bool StemUp)?>? beamOf,
-        int staffLines = EngravingDefaults.DefaultStaffLines)
+        int staffLines = EngravingDefaults.DefaultStaffLines,
+        IReadOnlyDictionary<RestShiftKey, double>? restShifts = null)
     {
         var (up, down) = StaffFloorSupport(staffLines);
         // A span is many boxes into one skyline, which is the shape Merge's batch mode
@@ -693,7 +700,7 @@ internal static class DynamicEngraver
         down.BeginBatch();
         foreach (var (mi, ii, x) in columns)
             MergeColumnSupport(up, down, voices, voiceIndex, mi, ii, x,
-                beamOf is null ? null : vi => beamOf(vi, mi, ii));
+                beamOf is null ? null : vi => beamOf(vi, mi, ii), staffLines, restShifts);
         up.EndBatch();
         down.EndBatch();
         return (up, down);
@@ -734,7 +741,9 @@ internal static class DynamicEngraver
         VerticalSkyline up, VerticalSkyline down,
         ImmutableArray<Voice> voices, int voiceIndex, int measureIndex, int itemIndex,
         double xColumn,
-        Func<int, (BeamLayout Beam, double StemX, bool StemUp)?>? beamOf)
+        Func<int, (BeamLayout Beam, double StemX, bool StemUp)?>? beamOf,
+        int staffLines = EngravingDefaults.DefaultStaffLines,
+        IReadOnlyDictionary<RestShiftKey, double>? restShifts = null)
     {
         var vs = voices.IsDefaultOrEmpty ? ImmutableArray<Voice>.Empty : voices;
         if (vs.Length > 0)
@@ -745,6 +754,35 @@ internal static class DynamicEngraver
                 && itemIndex < voice.Measures[measureIndex].Items.Length)
             {
                 var item = voice.Measures[measureIndex].Items[itemIndex];
+                // A REST is a support too, where the rest collision left it: LilyPond's Rest
+                // carries rhythmic-head-interface, so the dynamics' engraver acknowledges it
+                // as it does a note head, and a rest makes the NoteColumn the ottava's and the
+                // trill's engravers side off. Inside the staff the staff floor covers it; a
+                // rest pushed off the staff (another voice's notes, or a grace rest standing
+                // over its main note) is what the mark then keeps ITS OWN padding from.
+                // LILYPOND-REF: lily/dynamic-align-engraver.cc:108-111 acknowledge_rhythmic_head;
+                //   scm/define-grobs.scm:2958-2979 Rest — rhythmic-head-interface among its
+                //   interfaces; lily/rhythmic-column-engraver.cc:78-90 process_acknowledged —
+                //   the NoteColumn is made for whatever rhythmic head came, a rest as a note;
+                //   lily/ottava-engraver.cc:139-150 acknowledge_note_column — add_support.
+                // MEASURED (LilyPond 2.26.0, Lab sessions/p1237/ott/d.lys): under a lower
+                //   voice's quarter rest at -3 (ink bottom -4.25) `@p` reads -5.9306; over an
+                //   upper voice's rests at +2 (ink top 3.5624) an 8va's line reads 4.6145 and a
+                //   trill's 5.0840. Until session 1237 the rest reached the three only through
+                //   the outside-staff pass, 0.46 off instead of their own 0.6 / 0.5 / 0.5:
+                //   -5.80, 4.58 and 5.04.
+                // ⚠️ Without the staff's rest shifts (a caller that has none) no rest is read:
+                //   its neutral position is inside the staff floor for every rest but a
+                //   sixteenth's or shorter's hook, and a rest read at a position it was moved
+                //   from is the two-spellings shape.
+                if (item is RestItem { IsSpacer: false, IsMultiMeasure: false } rest && restShifts is not null)
+                {
+                    SkylineBuilder.MergeRestSupport(rest, xColumn,
+                        restShifts.TryGetValue(new RestShiftKey(measureIndex, vi, itemIndex), out var shift)
+                            ? shift * 0.5 : 0.0,
+                        staffLines, up, down);
+                    return;
+                }
                 // Direction policy stays the caller side's (NoteColumnLayout's contract):
                 // the voice { } span's forcing, overridden by the beam's resolved
                 // direction.

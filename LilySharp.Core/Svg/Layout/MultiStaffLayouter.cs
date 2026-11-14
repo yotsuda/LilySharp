@@ -4232,7 +4232,7 @@ internal sealed class MultiStaffLayouter
                     // placed on a COPY, so the shared one stays the inside profile.
                     var sky = skylineBuilder.PlaceDynamicsOn(
                         inSky, staff, dynamics, measureLayouts, beams,
-                        articulationLayouts: articulations);
+                        articulationLayouts: articulations, restShifts: restShifts);
                     // ...and this staff's TRILL SPANNERS (priority 50, placed against the inside
                     // profile before every other mover) — outside-staff ink the staff above is
                     // spaced off (StaffTrillInk). ⚠️ The dynamics just placed did not see them; a
@@ -4760,7 +4760,8 @@ internal sealed class MultiStaffLayouter
                     voicesByStaff: new Dictionary<int, ImmutableArray<Voice>> { [staffIndex] = staff.Voices },
                     beamLayouts: RestampedToStaff(beamLayouts, staffIndex),
                     staffLinesOf: _ => NotationStaffLinesOf(staff),
-                    graceNotes: score.GraceNotes);
+                    graceNotes: score.GraceNotes,
+                    restShiftsOf: _ => RestCollisionsOf(staff));
         var layouts = Lay(onThisSystem.ToImmutable());
         var continuedLayouts = Lay(continued.ToImmutable());
         if (!continuedLayouts.IsDefaultOrEmpty)
@@ -4866,7 +4867,8 @@ internal sealed class MultiStaffLayouter
             voicesByStaff: new Dictionary<int, ImmutableArray<Voice>> { [staffIndex] = staff.Voices },
             beamLayouts: RestampedToStaff(beamLayouts, staffIndex),
             staffLinesOf: _ => NotationStaffLinesOf(staff),
-            graceNotes: score.GraceNotes);
+            graceNotes: score.GraceNotes,
+            restShiftsOf: _ => RestCollisionsOf(staff));
         if (layouts.IsDefaultOrEmpty)
             return null;
 
@@ -4955,12 +4957,13 @@ internal sealed class MultiStaffLayouter
             : DynamicEngraver.Calculate(
                 StaffSpannerItemsOf(score, staff).LocalScore, systemDynamics.ToImmutable(),
                 keyed, staff.Voices, voicesByStaff, measuresByStaff, staffBeams,
-                staffLinesOf: _ => NotationStaffLinesOf(staff));
+                staffLinesOf: _ => NotationStaffLinesOf(staff),
+                restShiftsOf: _ => RestCollisionsOf(staff));
 
         return HairpinEngraver.CalculateOnSystem(
             staffHairpins, system, staff.PrimaryVoice.Measures.Length, keyed,
             staff.Voices, staff.PrimaryVoice.Measures, staffBeams, dynamicLayouts,
-            NotationStaffLinesOf(staff), score.GraceNotes);
+            NotationStaffLinesOf(staff), score.GraceNotes, RestCollisionsOf(staff));
     }
 
     /// <summary>

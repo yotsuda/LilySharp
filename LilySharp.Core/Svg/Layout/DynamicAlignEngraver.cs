@@ -113,7 +113,8 @@ internal static class DynamicAlignEngraver
             Dictionary<int, ImmutableArray<Measure>>? measuresByStaff,
             ImmutableArray<BeamLayout> beamLayouts,
             Func<int, int>? staffLinesOf = null,
-            ImmutableArray<GraceNoteItem> graceNotes = default)
+            ImmutableArray<GraceNoteItem> graceNotes = default,
+            Func<int, IReadOnlyDictionary<RestShiftKey, double>?>? restShiftsOf = null)
     {
         if (hairpinItems.IsDefaultOrEmpty || hairpinLayouts.IsDefaultOrEmpty)
             return (dynamicLayouts, hairpinLayouts, ImmutableArray<AlignedLineGroup>.Empty);
@@ -235,7 +236,7 @@ internal static class DynamicAlignEngraver
                         graceNotes, lineVoices, voiceIndex),
                     (vi, mi, ii) => beamMembers.TryGetValue((line.StaffIndex, vi, mi, ii), out var b)
                         ? b : null,
-                    staffLines);
+                    staffLines, restShiftsOf?.Invoke(line.StaffIndex));
                 // The line's own side: one computation, dir its sign. The text hangs
                 // TextOffsetInSpanner BELOW the spanner on either side (define-grobs.scm:1450
                 // is a plain Y-offset, not a side position).

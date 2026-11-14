@@ -111,7 +111,10 @@ internal static class TrillSpannerEngraver
         Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
         ImmutableArray<BeamLayout> beamLayouts = default,
         Func<int, int>? staffLinesOf = null,
-        ImmutableArray<GraceNoteItem> graceNotes = default)
+        ImmutableArray<GraceNoteItem> graceNotes = default,
+        // A staff's rest shifts (by staff index): a rest moved off the staff is a support where
+        // it was moved to (DynamicEngraver.MergeColumnSupport). Absent, no rest is read.
+        Func<int, IReadOnlyDictionary<RestShiftKey, double>?>? restShiftsOf = null)
     {
         if (trillSpanners.IsDefaultOrEmpty)
             return ImmutableArray<TrillSpannerLayout>.Empty;
@@ -312,7 +315,8 @@ internal static class TrillSpannerEngraver
             {
                 double lineUp = AlignedSideLineY(
                     spanner, piece.Segment, piece.GlyphX, piece.LineStartX, piece.EndX,
-                    trillVoices, measureLayouts, beamMembers, dir, staffLines, graceNotes);
+                    trillVoices, measureLayouts, beamMembers, dir, staffLines, graceNotes,
+                    restShiftsOf?.Invoke(spanner.StaffIndex));
                 // AlignedSideLineY answers in the staff-MIDDLE frame (the frame the ledger's
                 // staff-to-line entries read); this record's frame has its origin on the
                 // staff TOP line, 2 above it, and carries the staff's own offset within the
@@ -382,7 +386,8 @@ internal static class TrillSpannerEngraver
         ImmutableArray<Voice> voices, ImmutableArray<MeasureLayout> measureLayouts,
         Dictionary<(int Staff, int Voice, int Measure, int Item),
             (BeamLayout Beam, double StemX, bool StemUp)> beamMembers,
-        int dir, int staffLines, ImmutableArray<GraceNoteItem> graceNotes = default)
+        int dir, int staffLines, ImmutableArray<GraceNoteItem> graceNotes = default,
+        IReadOnlyDictionary<RestShiftKey, double>? restShifts = null)
     {
         // The DOWN arm (dir = −1) is the same aligned_side with every side flipped: my_dim
         // becomes the grob's UP profile (skyp[-dir]), the supports contribute their DOWN
@@ -471,7 +476,7 @@ internal static class TrillSpannerEngraver
                     xColumn,
                     v => beamMembers.TryGetValue((spanner.StaffIndex, v, cmi, cii),
                         out var b) ? b : null,
-                    staffLines);
+                    staffLines, restShifts);
                 support.Merge(dir > 0 ? up : down);
             }
         }

@@ -762,11 +762,16 @@ internal sealed partial class LayoutEngine
         // The lines each staff draws, which the DynamicLineSpanner family floors on.
         Func<int, int> staffLinesOf = si => staffByIndex != null && staffByIndex.TryGetValue(si, out var st)
             ? MultiStaffLayouter.NotationStaffLinesOf(st) : EngravingDefaults.DefaultStaffLines;
+        // Each staff's rest shifts, for the marks that side off a rest where it was moved to
+        // (DynamicEngraver.MergeColumnSupport) — the room's table, as the tuplets below read it.
+        Func<int, ImmutableDictionary<RestShiftKey, double>?> restShiftsOf = si =>
+            staffByIndex != null && staffByIndex.TryGetValue(si, out var shifted)
+                ? ctx.RestCollisionsOf(shifted) : null;
         // A drum staff's level written in both its voices at one moment prints once.
         var drumDoubles = DynamicEngraver.DrumDoubles(dynamics,
             si => staffByIndex != null && staffByIndex.TryGetValue(si, out var ds) && ds.Clef == ClefType.Percussion,
             voicesByStaff, staffVoices);
-        var dynamicLayouts = score != null ? DynamicEngraver.Calculate(score, dynamics, ml, staffVoices, voicesByStaff, measuresByStaff, beamLayouts ?? default, circledNientes, staffLinesOf, ctx.GraceNotes, drumDoubles) : ImmutableArray<DynamicLayout>.Empty;
+        var dynamicLayouts = score != null ? DynamicEngraver.Calculate(score, dynamics, ml, staffVoices, voicesByStaff, measuresByStaff, beamLayouts ?? default, circledNientes, staffLinesOf, ctx.GraceNotes, drumDoubles, restShiftsOf) : ImmutableArray<DynamicLayout>.Empty;
         // …minus the ones a tab staff blanks. LILYPOND-REF:
         // ly/engraver-init.ly:1280-1285 Tab_staff_symbol_engraver — that context's
         // \override DynamicText.stencil = ##f / \override TextScript.stencil = ##f — one
@@ -805,7 +810,7 @@ internal sealed partial class LayoutEngine
             score != null && staffVoices.IsDefaultOrEmpty
                 ? ImmutableArray.Create(score.Voice) : staffVoices,
             voicesByStaff, measuresByStaff, beamLayouts ?? default, dynamicLayouts, staffLinesOf,
-            ctx.GraceNotes);
+            ctx.GraceNotes, restShiftsOf);
 
         // Texts and wedges linked by RUNNING hairpins ride one DynamicLineSpanner: the
         // group is side-positioned once and every member re-seats on the shared line
@@ -818,7 +823,8 @@ internal sealed partial class LayoutEngine
             ctx.Fonts, hairpinItems, dynamics, dynamicLayouts, hairpinLayouts, systems, ml, staffYAt,
             score != null && staffVoices.IsDefaultOrEmpty
                 ? ImmutableArray.Create(score.Voice) : staffVoices,
-            voicesByStaff, measuresByStaff, beamLayouts ?? default, staffLinesOf, ctx.GraceNotes);
+            voicesByStaff, measuresByStaff, beamLayouts ?? default, staffLinesOf, ctx.GraceNotes,
+            restShiftsOf);
 
         // Detect and layout text spanners from rit/accel marks (outside-staff-priority: 350)
         // Pass dynamic layouts so text spanners can stack below them
@@ -842,7 +848,8 @@ internal sealed partial class LayoutEngine
         // stem ends at the quanted beam face — the same ingredients the trill reads.
         var ottavaLayouts = OttavaBracketEngraver.Calculate(
             ctx.Fonts, ottavaItems, systems, ml, staffYAt,
-            voicesByStaff, beamLayouts ?? ImmutableArray<BeamLayout>.Empty, staffLinesOf, ctx.GraceNotes);
+            voicesByStaff, beamLayouts ?? ImmutableArray<BeamLayout>.Empty, staffLinesOf, ctx.GraceNotes,
+            restShiftsOf);
 
         // Layout arpeggio markings
         var arpeggioLayouts = ArpeggioEngraver.Calculate(arpeggios, systems, measures, measuresByStaff,
@@ -1063,7 +1070,8 @@ internal sealed partial class LayoutEngine
         // LILYPOND-REF: scm/scheme-engravers.scm — trill spanner positioning
         var trillSpannerLayouts = TrillSpannerEngraver.Calculate(
             trillSpanners ?? ImmutableArray<TrillSpannerItem>.Empty, systems, ml, staffYAt,
-            voicesByStaff, beamLayouts ?? ImmutableArray<BeamLayout>.Empty, staffLinesOf, ctx.GraceNotes);
+            voicesByStaff, beamLayouts ?? ImmutableArray<BeamLayout>.Empty, staffLinesOf, ctx.GraceNotes,
+            restShiftsOf);
 
         // Calculate volta brackets first — needed by MusicMarkEngraver for collision avoidance
         // LILYPOND-REF: axis-group-interface.cc — elements sorted by outside-staff-priority

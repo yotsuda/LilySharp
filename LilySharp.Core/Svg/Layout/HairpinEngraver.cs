@@ -156,7 +156,10 @@ internal static class HairpinEngraver
         ImmutableArray<BeamLayout> beamLayouts = default,
         ImmutableArray<DynamicLayout> dynamicLayouts = default,
         Func<int, int>? staffLinesOf = null,
-        ImmutableArray<GraceNoteItem> graceNotes = default)
+        ImmutableArray<GraceNoteItem> graceNotes = default,
+        // A staff's rest shifts (by staff index), for the rests the wedge sides off
+        // (DynamicEngraver.MergeColumnSupport). Absent, no rest is read.
+        Func<int, IReadOnlyDictionary<RestShiftKey, double>?>? restShiftsOf = null)
     {
         if (hairpins.IsDefaultOrEmpty)
             return ImmutableArray<HairpinLayout>.Empty;
@@ -249,7 +252,8 @@ internal static class HairpinEngraver
                 // report, a song's `@mf@cresc … | … @ff` over a break under `D7`).
                 double staffOffset = staffYAt?.Invoke(segment.StartMeasureIndex, hairpin.StaffIndex) ?? 0;
                 layouts.Add(LayoutPiece(hairpin, segment, system, endMeasureIdx, measureLayouts,
-                    staffOffset, hpVoices, hpMeasures, beamMembers, dynamicAt, staffLines, graceNotes));
+                    staffOffset, hpVoices, hpMeasures, beamMembers, dynamicAt, staffLines, graceNotes,
+                    restShiftsOf?.Invoke(hairpin.StaffIndex)));
             }
         }
 
@@ -290,7 +294,8 @@ internal static class HairpinEngraver
         ImmutableArray<BeamLayout> beamLayouts,
         ImmutableArray<DynamicLayout> dynamicLayouts,
         int staffLines = EngravingDefaults.DefaultStaffLines,
-        ImmutableArray<GraceNoteItem> graceNotes = default)
+        ImmutableArray<GraceNoteItem> graceNotes = default,
+        IReadOnlyDictionary<RestShiftKey, double>? restShifts = null)
     {
         if (hairpins.IsDefaultOrEmpty || system.Measures.IsDefaultOrEmpty)
             return ImmutableArray<HairpinLayout>.Empty;
@@ -328,7 +333,7 @@ internal static class HairpinEngraver
                 IsFirst: isFirst, IsLast: isLast, IsMiddle: !isFirst && !isLast);
             layouts.Add(LayoutPiece(hairpin, segment, system, endMeasureIdx, byMeasureIndex,
                 staffOffset: 0.0, staffVoices, staffMeasures, beamMembers, dynamicAt, staffLines,
-                graceNotes));
+                graceNotes, restShifts));
         }
 
         return layouts.ToImmutable();
@@ -349,7 +354,8 @@ internal static class HairpinEngraver
         Dictionary<(int Staff, int Voice, int Measure, int Item),
             (BeamLayout Beam, double StemX, bool StemUp)> beamMembers,
         Dictionary<(int Measure, int Item, int Staff, bool Above), DynamicLayout> dynamicAt,
-        int staffLines, ImmutableArray<GraceNoteItem> graceNotes)
+        int staffLines, ImmutableArray<GraceNoteItem> graceNotes,
+        IReadOnlyDictionary<RestShiftKey, double>? restShifts = null)
     {
         int staffIdx = hairpin.StaffIndex;
 
@@ -563,7 +569,7 @@ internal static class HairpinEngraver
                     SpanColumns(hairpin, segment, hpMeasures, measureLayouts, graceNotes, hpVoices),
                     (vi, mi, ii) => beamMembers.TryGetValue((staffIdx, vi, mi, ii), out var b)
                         ? b : null,
-                    staffLines);
+                    staffLines, restShifts);
                 // The side is the hairpin's own (aligned_side is one computation, dir its
                 // sign): above its staff the wedge sides off the UP supports — the heads and
                 // the up stems — and the staff's top line.

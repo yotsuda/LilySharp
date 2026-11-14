@@ -954,6 +954,18 @@ internal sealed class SkylineBuilder
                             // beam and those stems are seeded together (AddGraceBeamsToSkyline)
                             // — the same split the full-size walk makes with suppressStems.
                             reserveStem: !seed.Beamed,
+                            // A grace REST the rest collision moved is reserved where it was
+                            // moved to, as a full-size rest is below — and a grace rest is moved
+                            // far more often: in one voice it stands clear ABOVE the staff over
+                            // its main note. Until session 1237 the seed kept the default
+                            // position, inside the staff, so nothing above the staff saw the
+                            // rest: an `@8va` written on `grace { r16 }` printed its "8va"
+                            // through it, and so did a trill, a text and a fermata on the main
+                            // note (LilyPond 2.26.0 clears it with each of them, Lab
+                            // sessions/p1237/ott).
+                            restShiftUp: restShifts is not null && restShifts.TryGetValue(
+                                new RestShiftKey(measureIndex, vi, itemIndex), out var graceRestShift)
+                                ? graceRestShift * 0.5 : 0.0,
                             clef: staff.Clef, staffLines: staff.Lines);
                         // A grace's half-ties (session 930), at the column the run placed.
                         if (TieVariantEngraver.HasSemiTie(item))
@@ -1804,7 +1816,7 @@ internal sealed class SkylineBuilder
             BuildInsideStaffSkylines(staff, measureLayouts, articulationLayouts,
                 tupletBrackets, slurs, ties, beams, systemLeft, restShifts),
             staff, dynamics, measureLayouts, beams, copyFirst: false,
-            articulationLayouts: articulationLayouts);
+            articulationLayouts: articulationLayouts, restShifts: restShifts);
 
     /// <summary>
     /// THE inside-staff skyline: every grob that declares no <c>outside-staff-priority</c> —
@@ -2049,7 +2061,8 @@ internal sealed class SkylineBuilder
         Staff staff, ImmutableArray<DynamicItem> dynamics,
         ImmutableArray<MeasureLayout> measureLayouts,
         ImmutableArray<BeamLayout> beams = default, bool copyFirst = true,
-        ImmutableArray<ArticulationLayout> articulationLayouts = default)
+        ImmutableArray<ArticulationLayout> articulationLayouts = default,
+        IReadOnlyDictionary<RestShiftKey, double>? restShifts = null)
     {
         var upSkyline = copyFirst ? Copy(inside.Up) : inside.Up;
         var downSkyline = copyFirst ? Copy(inside.Down) : inside.Down;
@@ -2063,7 +2076,7 @@ internal sealed class SkylineBuilder
         AddArticulationLayoutsToSkyline(articulationLayouts, staffMiddleUp: 0, size,
             upSkyline, downSkyline, moversInstead: true);
         AddDynamicsToSkyline(staff, dynamics, measureLayouts, staffMiddleUp: 0,
-            size, upSkyline, downSkyline, beams);
+            size, upSkyline, downSkyline, beams, restShifts);
         return (upSkyline, downSkyline);
     }
 
@@ -2911,7 +2924,8 @@ internal sealed class SkylineBuilder
         ImmutableArray<MeasureLayout> measureLayouts,
         double staffMiddleUp, StaffSize size,
         VerticalSkyline upSkyline, VerticalSkyline downSkyline,
-        ImmutableArray<BeamLayout> beams = default)
+        ImmutableArray<BeamLayout> beams = default,
+        IReadOnlyDictionary<RestShiftKey, double>? restShifts = null)
     {
         if (dynamics.IsDefaultOrEmpty)
             return;
@@ -2962,7 +2976,7 @@ internal sealed class SkylineBuilder
             double baselineUp = DynamicEngraver.PointwiseBaselineY(_fonts, dyn.IsAbove, voices,
                 dyn.VoiceIndex, mi, ii, xColumn, xLabel, dyn.Text, dyn.IsExpressiveText,
                 vi => beamMembers.TryGetValue((dynStaff, vi, mi, ii), out var b) ? b : null,
-                MultiStaffLayouter.NotationStaffLinesOf(staff));
+                MultiStaffLayouter.NotationStaffLinesOf(staff), restShifts);
 
             // This label's own ink, from the font. LilyPond's DynamicText extent IS the
             // drawn glyph's ink, so it differs per dynamic — see DynamicEngraver.InkOf.
@@ -3368,24 +3382,7 @@ internal sealed class SkylineBuilder
                 // ⚠️ NO OBSERVER for the X origin (poisons, session 813): shifting it by the
                 // outline's own bearing (≤ 0.104) moves no point — the sixteenth's high right
                 // end stays clear of the next staff's stem either way.
-                var (restUp, restDown) = TextOutlineSkylines.MusicGlyphProfile(
-                    restGlyph, size.Span(Rendering.SharedRenderer.FontSize * GrobFontSize.ScaleOf(restItem, SizedGrob.Rest)),
-                    GrobFontSize.ProfileDesignOf(restItem, SizedGrob.Rest));
-                if (restUp.Count > 0 || restDown.Count > 0)
-                {
-                    upSkyline.Merge(restUp, x, restOriginUp);
-                    downSkyline.Merge(restDown, x, restOriginUp);
-                }
-                else
-                {
-                    // No walkable music font: the outline's box.
-                    double restTop = restOriginUp + restBox.Top;
-                    double restBottom = restOriginUp + restBox.Bottom;
-                    upSkyline.MergeBox(
-                        x + restBox.Left, x + restBox.Right, restBottom, restTop);
-                    downSkyline.MergeBox(
-                        x + restBox.Left, x + restBox.Right, restBottom, restTop);
-                }
+                MergeRestGlyph(restGlyph, restItem, restBox, x, restOriginUp, size, upSkyline, downSkyline);
                 // The rest's dots, where the renderer puts them (SharedRenderer.DrawRest):
                 // one dot width right of the rest's LILC ink, at the dot-column answer
                 // RELATIVE to the glyph origin — riding the same shift the glyph took.
@@ -3406,6 +3403,53 @@ internal sealed class SkylineBuilder
                 }
                 break;
         }
+    }
+
+    /// <summary>The drawn rest glyph's OUTLINE, origin at (<paramref name="x"/>,
+    /// <paramref name="restOriginUp"/>), into both skylines — its box when the music font
+    /// cannot be walked.</summary>
+    private static void MergeRestGlyph(MusicGlyph restGlyph, RestItem restItem,
+        GlyphMetrics.BBox restBox, double x, double restOriginUp,
+        StaffSize size, VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        var (restUp, restDown) = TextOutlineSkylines.MusicGlyphProfile(
+            restGlyph, size.Span(Rendering.SharedRenderer.FontSize * GrobFontSize.ScaleOf(restItem, SizedGrob.Rest)),
+            GrobFontSize.ProfileDesignOf(restItem, SizedGrob.Rest));
+        if (restUp.Count > 0 || restDown.Count > 0)
+        {
+            upSkyline.Merge(restUp, x, restOriginUp);
+            downSkyline.Merge(restDown, x, restOriginUp);
+        }
+        else
+        {
+            // No walkable music font: the outline's box.
+            double restTop = restOriginUp + restBox.Top;
+            double restBottom = restOriginUp + restBox.Bottom;
+            upSkyline.MergeBox(
+                x + restBox.Left, x + restBox.Right, restBottom, restTop);
+            downSkyline.MergeBox(
+                x + restBox.Left, x + restBox.Right, restBottom, restTop);
+        }
+    }
+
+    /// <summary>
+    /// A rest's drawn glyph as a side-position SUPPORT: its outline at the position the rest
+    /// collision left it (<paramref name="restShiftUp"/> staff spaces off its neutral line),
+    /// about the staff middle, at full size — the same glyph, origin and outline the staff's
+    /// own profile seeds (<see cref="AddMusicItemToSkylines"/>'s rest arm), so the support and
+    /// the profile cannot read one rest two ways.
+    /// </summary>
+    internal static void MergeRestSupport(RestItem restItem, double x, double restShiftUp, int staffLines,
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        int restValue = GlyphMetrics.NoteValueOf(restItem.BaseDuration);
+        var neutral = ElementCoordinator.NeutralRestPosition(staffLines, restValue);
+        var restGlyph = MusicGlyphs.Rest(restValue, neutral + restShiftUp * 2.0, staffLines);
+        var restBox = GlyphMetrics.GetRestSkylineBBox(restItem, restValue,
+            ledgered: restGlyph is MusicGlyph.RestWholeLegerLine or MusicGlyph.RestHalfLegerLine
+                or MusicGlyph.RestDoubleWholeLegerLine);
+        MergeRestGlyph(restGlyph, restItem, restBox, x, neutral / 2.0 + restShiftUp,
+            StaffSize.FullSize, upSkyline, downSkyline);
     }
 
     /// <summary>

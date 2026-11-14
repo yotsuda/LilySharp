@@ -298,7 +298,10 @@ internal static class OttavaBracketEngraver
         Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
         ImmutableArray<BeamLayout> beamLayouts = default,
         Func<int, int>? staffLinesOf = null,
-        ImmutableArray<GraceNoteItem> graceNotes = default)
+        ImmutableArray<GraceNoteItem> graceNotes = default,
+        // A staff's rest shifts (by staff index): a rest moved off the staff is a support where
+        // it was moved to (DynamicEngraver.MergeColumnSupport). Absent, no rest is read.
+        Func<int, IReadOnlyDictionary<RestShiftKey, double>?>? restShiftsOf = null)
     {
         if (ottavaBrackets.IsDefaultOrEmpty)
             return ImmutableArray<OttavaBracketLayout>.Empty;
@@ -422,7 +425,7 @@ internal static class OttavaBracketEngraver
                 double lineMiddleFrame = AlignedSideLineY(
                     fonts, segText, startX, endX, segEdgeHeight, isAbove,
                     segment, ottavaVoices, measureLayouts, beamMembers, bracket.StaffIndex,
-                    staffLines, graceNotes);
+                    staffLines, graceNotes, restShiftsOf?.Invoke(bracket.StaffIndex));
                 // aligned_side answers in the staff-MIDDLE frame (the frame the ledger's
                 // staff-to-line entries read); this record's frame has its origin on the
                 // staff TOP line, 2 above it, and carries the staff's own within-system
@@ -648,7 +651,8 @@ internal static class OttavaBracketEngraver
         ImmutableArray<MeasureLayout> measureLayouts,
         Dictionary<(int Staff, int Voice, int Measure, int Item),
             (BeamLayout Beam, double StemX, bool StemUp)> beamMembers,
-        int staffIndex, int staffLines, ImmutableArray<GraceNoteItem> graceNotes = default)
+        int staffIndex, int staffLines, ImmutableArray<GraceNoteItem> graceNotes = default,
+        IReadOnlyDictionary<RestShiftKey, double>? restShifts = null)
     {
         double dir = isAbove ? 1.0 : -1.0;
         // :225-259 — my_dim, the grob's own profile about its line (Y = 0 here).
@@ -682,7 +686,7 @@ internal static class OttavaBracketEngraver
                 voices, voiceIndex, columns,
                 (v, m, i) => beamMembers.TryGetValue((staffIndex, v, m, i), out var b)
                     ? b : null,
-                staffLines);
+                staffLines, restShifts);
             support.Up.Merge(vUp);
             support.Down.Merge(vDown);
         }
