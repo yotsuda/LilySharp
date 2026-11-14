@@ -267,6 +267,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1245セッションの経緯
+
+### 1.1 第1245セッション（2026-11-14・YT-DELL2）
+
+base `91dd7918a`・開始時 full 16935 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16938（Lab `p1245` の `run1.trx`）。Calamo の `open` は 0、Dettato は 1・2 が `question`（返事待ち）で `open` は 0。CI は第1231 のまま。
+「反復とナビ記号を section の音楽にも書く」の段 4 と増分の実測（設計 `docs/inline-repeat-design.md` §7 段 4・表は Lab `p1245/stage4.md`・探り譜 `p1245/probe`）。
+- **実測**（form の綴りの本と並べた）: タイは、本体から 2 番括弧へ入る形と 1 番括弧から頭へ戻る形が違う。`:|` が割る小節（弱起を含む反復）は form の綴りだけが 1 小節と読む。プレビューの増分は 10 通りとも全部描き直した絵と同じ（網 `InlineRepeatIncrementalTests`＝緑で生まれた・毒なし）。
+- **直した**（`c703f7886`）: MIDI のタイ（`PlayedTimeline.Unfold`・`MidiNote.TiedOut`・網 `ATieIsCarriedToTheNotePlayedNext` 6 通り）と、頭の `|:` が宣言した弱起を忘れる欠陥（`MeasureValidator`・LYS2006 の誤り）。
+- 門: 毒 5 本とも赤（`p1245/poisons.ps1`）。終了時 full 16954 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 16957（`p1245/run3.trx`）。掃きは回していない: MIDI の変更は音楽に記号を書いた本（今は LYS1034 の本）だけ、検査の変更は「頭に `partial` を宣言し音楽が `|:` で始まる」本だけに効く。
+- 7.5／7.6: OWN 0・REF 0（`PlayedTimeline` の OWN の注に規則を足した）。7.7: 設計 §7 段 4 の「残り 1・2」＝score の記号の列が先。LYS1034 と CHANGELOG は第1244 のまま。
+
 ## 以下は第1244セッションの経緯
 
 ### 1.1 第1244セッション（2026-11-14・YT-DELL2）
