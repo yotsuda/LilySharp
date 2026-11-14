@@ -159,6 +159,12 @@ LYS1034 は**最後に**外す。エラーの本も今は描けて鳴るので�
 
 ### 途中で見つけたもの
 
-- **コードの行は `[1. …]` を読めない**（LYS1028「'[' is none of these」・Lab `p1243/probe/i-chordvolta.lys`）。コード譜の手入力に要るので、パーサに足す（段 2 の前）。
+- ✅ **コードの行が `[1. …]` とナビ記号を読む**（同便）。行の ending は入れ子にしない＝`[1.`（中身の無い `InlineVolta`）と `]`（新しい `VoltaEnd`）を
+  行の項目の間に平らに置く。行の読み手は 54 ファイルあり、入れ子にすると知らない読み手が ending の中のコードを黙って落とすため。
+  MIDI は読む（網 `AChordRowWritesEndingsAndJumps`）。⚠️ **ページはまだ行の ending の括弧を描かない**（コードと反復の小節線は出る・Lab `p1243/probe/i-chordvolta.lys`）。`-]` は行ではまだ読まない。
+- **行の頭の `|:` が空小節を 1 つ数える**（`chords p { section A { |: C | G :| } }` は 3 小節・Lab `p1243/probe/j-rowlead.lys`）。
+  数える側（`ChordNameCollector.CountBars`）は「どの小節線も 1 小節を閉じる」、鳴らす側（`MidiExporter.PlayChordRow`）は「`|:` は待っている小節だけを閉じる」で食い違っている。§3.4 と同じ直し。
+- **§3.4 の住所**（`|:` が空小節を作る規則の写し）: `MeasureBuilder.HandleBarline`（`_atScopeStart`）・`MidiExporter.ProcessSequence`（`pairsHere`）・
+  `MusicXmlExporter`（:3029 `pairsHere`）・`LilyPondExporter.Music`（:332 `pairsHere`）・`Semantics.MeasureModel`（:256）・小節を数える `WalkBars`／`WalkBarsRed`・行の `CountBars`／`ProcessRun`。全部を 1 便で替える。
 - **form の無い by-part の本で、2 つ目のパートが 1 つ目の後に鳴る**（`part mel { section A { … } } part bas { section A { … } }`・form なし。
   Lab `p1243/probe/h-plain.lys`: bas の最初の音が 8 拍目）。反復とは無関係の既存の欠陥。`form { A }` を書けば揃う。未着手。
