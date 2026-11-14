@@ -3797,8 +3797,14 @@ public sealed partial class MeasureCollector
             if (!laterPartOpensOne)
                 continue;
             var marks = _musicMarks.ToImmutableArray();
+            // (With the score's plays, as the page pairs them: a section played twice is two
+            // plays, and its hairpin's second playing does not end its first. No net sees the
+            // plays here — the two parts' hairpins are compared with one another and both
+            // are read the same way, with them or without; asked without, session 1241's
+            // poison left the suite green.)
             var hairpins = Layout.HairpinEngraver.DetectHairpins(marks,
-                _dynamics.Where(d => !_condensedStaffDuplicateDynamics.Contains(d)).ToImmutableArray());
+                _dynamics.Where(d => !_condensedStaffDuplicateDynamics.Contains(d)).ToImmutableArray(),
+                SectionPlays.Of(staffVoices.Values.SelectMany(voices => voices)));
             foreach (var later in hairpins)
             {
                 if (later.StaffIndex != staff || later.SourceIndex < 0 || PartOfMark(later.SourceIndex) is not (> 0 and var laterPart))

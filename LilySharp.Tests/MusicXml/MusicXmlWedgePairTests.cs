@@ -138,6 +138,15 @@ public class MusicXmlWedgePairTests
             Say(Document("octave absolute\ntime 4/4\npart m { clef treble }\nphrase riff { c'4@cresc d' e' f' }\n"
                 + "section A { m { riff | c'1@f | riff | c'1 | } }\nform { A }\nscore { staff m }\n")));
 
+    /// <summary>…and played twice bar after bar the first stops where the second starts, as the
+    /// page ends it (session 1241; the two wedges overlapped under one number before).</summary>
+    [Fact]
+    public void APhrasePlayedTwiceBarAfterBar_StopsTheFirstWedgeWhereTheSecondStarts()
+        => Assert.Equal(
+            ["bar 1 crescendo", "bar 2 stop", "bar 2 crescendo", "bar 3 stop", "bar 3 f"],
+            Say(Document("octave absolute\ntime 4/4\npart m { clef treble }\nphrase riff { c'4@cresc d' e' f' }\n"
+                + "section A { m { riff | riff | c'1@f | } }\nform { A }\nscore { staff m }\n")));
+
     /// <summary>A hairpin the carry rule cuts stops where its section's play ends — the end of
     /// the section's LAST bar, not of the bar it started in, and not at the f two sections on.</summary>
     [Fact]

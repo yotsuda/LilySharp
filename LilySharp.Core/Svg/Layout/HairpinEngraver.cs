@@ -1005,7 +1005,11 @@ internal static class HairpinEngraver
     /// or null for a score with none: a hairpin open when its section ends is carried into the
     /// section played next and must end there (<see cref="Collector.SectionPlayCursor"/>'s rule).
     /// One that does not — or is carried over a repeat, volta or jump — is cut at the end of its
-    /// own section, and reported to <paramref name="carrySink"/>.</param>
+    /// own section, and reported to <paramref name="carrySink"/>. They also tell another PLAYING
+    /// of a written mark (a section the form plays twice — never the end of this one's
+    /// hairpin) from the same mark played again within one play (a phrase used twice — the
+    /// next hairpin): a caller that passes none for a score that has them reads every
+    /// repeated mark as the second.</param>
     /// <param name="carrySink">Where the refused carries go; null to report none.</param>
     public static ImmutableArray<HairpinItem> DetectHairpins(
         ImmutableArray<MusicMarkItem> musicMarks,
@@ -1110,10 +1114,18 @@ internal static class HairpinEngraver
             // defect the same day (TextSpannerEngraver.DetectTextSpanners' remark has the
             // report and the reasoning); the two searches are one shape and now carry one
             // guard.
+            // …IN ANOTHER PLAY. The same written mark met again in its OWN play is a phrase
+            // played twice (`phrase riff { c'4@cresc d' e' f' }`, `riff | riff | c'1@f`), and
+            // that is the next hairpin like any other: until session 1241 the guard passed over
+            // it too, so the first playing's hairpin ran on to the f through the second's and
+            // the two wedges were drawn one over the other (Lab sessions/p1240/xml/s3). The
+            // same bars written out without the phrase always ended the first at the second.
+            bool InAnotherPlay(MusicMarkItem m)
+                => plays != null && plays.PlayAt(m.MeasureIndex) != plays.PlayAt(mark.MeasureIndex);
             MusicMarkItem? NextMark(bool ownVoice) => FirstOf(crescMarks
                 .Select(x => x.Mark)
                 .Where(m =>
-                    m != mark && m.SourcePosition != mark.SourcePosition &&
+                    m != mark && (m.SourcePosition != mark.SourcePosition || !InAnotherPlay(m)) &&
                     m.StaffIndex == mark.StaffIndex &&
                     (!ownVoice || m.VoiceIndex == mark.VoiceIndex) &&
                     PlaceOfMark(m).IsAfter(PlaceOfMark(mark))), PlaceOfMark, ownVoice);
