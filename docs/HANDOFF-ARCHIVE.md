@@ -267,6 +267,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1236セッションの経緯
+
+### 1.1 第1236セッション（2026-11-14・YT-DELL2）
+
+base `3ae0f8167`・開始時 full 16719 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16722（Lab `p1236` の `run1.trx`）。Calamo の `open` は 0。CI は第1231 のまま。
+「残りの欠陥を順に」（第1231）の続き。3 commit（未 push）。残りは Lab `p1236/leftovers.md`。
+- **MusicXML: text spanner と trill span を書き出し、読み戻す（`6a30138d7`）**: `@rit`・`@accel`・`@rall`・`@textSpan("…")` は語と `<dashes type="start">` を 1 つの direction に、stop は `@!` の音の終わりに（ottava と同じ「終わりは音を含む」）。`@trillSpan` は音の `<ornaments>` に `<trill-mark/>`＋`<wavy-line start>`、stop は最後の音に。対はページと同じ読み＝書き出す順に、パートの声部ごとに 1 本、section をまたぐ（`MusicXmlExporter.WriteTextSpan`／`WriteTrillSpan`／`FinishOpenSpans`）: 閉じない text spanner は文書から取り除く（LYS4018 でページも描かない）・開いている間の 2 つ目の start は無視・新しい trill は走っている trill をその音で閉じる・閉じない trill はパートの最後の音で止める。番号は声部＋1、大譜表の下の段は 5 から。読み手（`MusicXmlReader`）は `<dashes>` を開いた名前で閉じ、声部は `EndOttavasInTheirVoice` が運ぶ。止まらない線は `@text("…").up` に（`KeepUnclosedTextSpansAsWords`）、trill-mark のない 1 音の波（vibrato）は読まない。
+- **MusicXML: 装飾音の和音の arpeggio と頭の印・装飾休符の `<direction>`・`@pluck`（`8e733d30f`）**: ページが描いて XML に無かった 4 つ（Lab `p1236/grace/c.lys` の絵と XML で確かめた）。装飾休符から始めた pedal／8va／hairpin は stop だけがファイルに残っていた。`@pluck(p)` は `<technical><pluck>`・読み戻す。
+- **`[engraving]` 黙っている段の小節線の wish は符尾の補正を持たない（`74119b3fe`）**: 第1235 の「0.081」の原因。小節線の直後の下向きの符尾の補正（最大 0.19）は全段の `Staff_spacing` の wish が読んで平均するが、LilyPond は「その小節線から自分の次の break-aligned grob（次の小節線・小節内の clef／key／time）までに NoteSpacing を作らない段」＝spacer・`R1`・`%` の小節の wish の right-items を次の command column に差し替える（`separating-line-group-engraver.cc:95-110`）＝補正 0。`SpacingRules.IsSilentToItsNextChange` が段ごとの値（もと tab 用の `TabBarlineToNextNotesCorrections`）に 0 を入れる。20 形を LP 2.26.0 と測って全部一致（Lab `p1236/bar` の probe 3 本: 2 段中 1 段が黙ると 4.045 → 3.950・3 段中 2 段 3.919・`%` 4.151・小節のどこかに音か休符があれば 4.045）。
+- ⚠️ 直したこと: text spanner の 2 つ目の start を「前の start を取り消す」と書いて探り譜の LYS4018 の文面で逆と分かった（無視）／2 声部の線の番号を「開いている本数」で振って時間で重なる 2 本が同じ 1 になった＝声部で振る／装飾音の網の `says` を `Marks` が刷らない 2 つ目の direction-type に当てた。
+- 7.7 の匂い: MusicXML の網は無かった物を見る＝直す前の赤は構成上（毒は回していない）／wish の網 15 行のうち黙る段の 7 行は直す前の exe で 4.04・4.24 を見た／他のソフト（MuseScore）での読みは未検証／耳と VS Code は関係なし。
+- 7.5／7.6: wish は ⒝（REF 2 本・定数なし・LILYSHARP-OWN なし）、MusicXML は LP と無関係。perf: `IsSilentToItsNextChange` は複数段の小節線ごとに段の先頭の item を見る（tab のない譜で黙る段が無ければ今までの道）＝未計測。
+- 門: 終了時 full 16770 合格 / 1 失敗（`ReadmeSampleTests`＝同じ）/ skip 2 / 合計 16773（Lab `p1236` の `run3.trx`・+51 は足した網）。全 svg の掃き 1041 冊 1268 枚で動いた svg 1（`audit/lpreg/gliss-xstaff`・`p1236/sweep`）。snapshot と台帳は不動。
+
 ## 以下は第1235セッションの経緯
 
 ### 1.1 第1235セッション（2026-11-14・YT-DELL2）
