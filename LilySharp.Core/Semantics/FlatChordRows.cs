@@ -94,6 +94,13 @@ internal sealed class FlatChordRows
             }
             else if (item is BreakSyntax)
                 (held == 0 && bars.Count > 0 ? bars[^1] : bar).Add(item);
+            // An ending's marks and a navigation mark (docs/inline-repeat-design.md) ride with
+            // their bar as a break does: an ending opens the bar ahead, anything else written
+            // right after a bar line stays with the bar behind it — the same tick either way.
+            else if (item is InlineVoltaSyntax)
+                bar.Add(item);
+            else if (item is VoltaEndSyntax or NavigationMarkSyntax)
+                (held == 0 && bars.Count > 0 ? bars[^1] : bar).Add(item);
         }
         if (held > 0)
             bars.Add(bar);

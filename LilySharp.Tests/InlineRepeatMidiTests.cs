@@ -123,6 +123,22 @@ public sealed class InlineRepeatMidiTests
         Assert.Equal(played, Played(src));
     }
 
+    /// <summary>A chart with no section at all — a chords track written flat, the one shape a
+    /// file without sections has — reads the same marks.</summary>
+    [Fact]
+    public void AFlatChordsTrackWritesEndingsToo()
+    {
+        const string src = """
+            time 4/4
+            chords prog { C |: G | [1. Am :| [2. F ] | C | }
+            score { chords prog }
+            """;
+        // The roots' pitch classes, a bar each: C G Am G F C.
+        var bars = Export(src).Tracks.SelectMany(t => t.Notes).GroupBy(n => n.StartTick).OrderBy(g => g.Key)
+            .Select(g => string.Join(",", g.Select(n => n.Pitch % 12).OrderBy(p => p)));
+        Assert.Equal(new[] { "0,4,7", "2,7,11", "0,4,9", "2,7,11", "0,5,9", "0,4,7" }, bars);
+    }
+
     /// <summary>The pair is read on the sequence the form assembles (owner's decision
     /// 2026-11-14): a section need not close what it opens.</summary>
     [Theory]
