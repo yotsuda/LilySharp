@@ -267,6 +267,21 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1237セッションの経緯
+
+### 1.1 第1237セッション（2026-11-14・YT-DELL2）
+
+base `b5a8db5df`・開始時 full 16770 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16773（Lab `p1237` の `run1.trx`）。Calamo の `open` は 0。CI は第1231 のまま。
+「残りの欠陥を順に」（第1231）の続き。1 commit（未 push）。残りは Lab `p1237/leftovers.md`。
+- **`[engraving]` 譜表の外へ動いた休符を、その横に立つ記号が見る（`ac9368eb2`）**: 一覧の先頭「8va の字が装飾休符に重なる」の原因は 8va ではなく、**装飾休符の種が動かされる前の位置（譜表の中）に立っていた**こと（`SkylineBuilder` の装飾音の歩きだけ `restShiftUp` を渡していなかった）。装飾休符は 1 声部でも主音符の上（+5）へ浮く（`ElementCoordinator.GraceRestShift`＝LP どおり）ので、trill・`@text`・fermata・強弱も休符を突き抜けていた。種を描かれる位置へ。
+- **同じ commit: 休符は支えでもある**。LilyPond の Rest は rhythmic-head-interface を持つ（define-grobs.scm:2958-2979）＝強弱の engraver が頭として受け取り（dynamic-align-engraver.cc:108-111）、8va と trill が支えにする NoteColumn も作る（ottava-engraver.cc:139-150）。Lily# の支え（`DynamicEngraver.MergeColumnSupport`）は「休符には頭がない＝譜表の床」だったので、2 声部で譜表の外へ押された休符には外側の pass の 0.46 でしか離れなかった（自分の padding は強弱 0.6・8va と trill 0.5）。休符の輪郭を動いた位置で支えに入れ、段の rest shift を強弱・ヘアピン・線のまとめ・8va・trill へ配った（`restShiftsOf`）。
+- 実測（LilyPond 2.26.0・1 小節の本・Lab `p1237/ott/probe.ps1`＝本と双子と両側の Y を刷る）: 装飾休符の上の 8va 6.9369（前は 4.05）・trill 7.3200・主音符の trill 7.1760・fermata 6.1601／上の声部の休符の上の 8va 4.6145（4.58）・trill 5.0840（5.04）／下の声部の休符の下の `@p` −5.9306（−5.80）・上の `@mf.up` 4.7413（4.60）・ヘアピン 4.6002（4.46）。網 `RestOffTheStaffSupportTests` 9 本（0.005）。
+- **見つけて残した: 下の声部に書いたヘアピンが上の声部を読む**（対・配置・線のまとめの 3 か所が声部を見ない＝`HairpinEngraver.VoiceIndex = 0` の注より広い）。リズムが違うと終点の X が別の音になる。再現・LP の数値・第一案・決めごと 1 つは leftovers の先頭と Lab `p1237/hpv`。
+- ⚠️ 直したこと: svg の Y を「前に読んだ譜表の位置」から引いて「変わっていない」と 2 度読んだ（記号が上がると譜表が下がる＝`ott/lsy.ps1` が毎回譜表から読む）／コメントの REF の行範囲を読まずに書いた（rhythmic-column-engraver.cc）＝読んで直した／commit 文面の「前の値」2 つを測らずに書いた＝測って amend。
+- 7.7 の匂い: 網は毒 2 本で赤を見た（種の shift を 0 に＝2 本、支えを切る＝7 本）／付点休符の付点・`@cross` の装飾休符・下へ押された装飾休符・下側（8vb）は未測定（leftovers）／VS Code の実機は関係なし。
+- 7.5／7.6: ⒝（REF 1 行に出典 4・定数なし・OWN なし）。perf: 支えを作る記号ごとに休符 1 つあたり輪郭の merge 1 回（休符が譜表の中でも入れる）＝未計測。
+- 門: 終了時 full 16779 合格 / 1 失敗（`ReadmeSampleTests`＝同じ）/ skip 2 / 合計 16782（Lab `p1237` の `run3.trx`・+9 は足した網）。全 svg の掃き 1041 冊 1268 枚で動いた svg 0（`p1237/sweep`）。snapshot は不動・台帳は `magic_constants.csv` に単位換算の 4 行。
+
 ## 以下は第1236セッションの経緯
 
 ### 1.1 第1236セッション（2026-11-14・YT-DELL2）
