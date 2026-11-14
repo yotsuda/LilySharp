@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Two voices on a staff share its dynamics in playback**: with `voice { … } { … }`, a dynamic written in one voice now reaches the other from the moment it is written (the second voice used to play from its first note at the level the first voice ended on).
 - **Playback follows a hairpin on every instrument**: the notes under `@cresc`, `@decresc` or `@dim` are struck louder or softer one after another — up to the next level written, or two dynamics on when none follows — where only a singer used to swell and an instrument jumped at the next mark. Both hands of a piano's grand staff share the hairpin.
 - **An accent dynamic is one note's in playback**: `@sf`, `@sfz`, `@fz`, `@sffz`, `@rf` and `@rfz` accent their note and leave the level as it stood (the notes after an `@sfz` used to stay as loud until the next mark), and `@fp` / `@sfp` leave the level at piano.
 - **The score review reads jazz, choral and contemporary scores more fairly**: a tone of the chord the `chords` row names, a passing note, a cross-head (spoken) note and a passage marked `unis.` are no longer told as wrong notes or part-writing faults; dissonance in most of the parts is told once, as the piece's language to weigh; a chamber group with piano and percussion is not read as a band, and an ending that broadens is not a change of tempo.

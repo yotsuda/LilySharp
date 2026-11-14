@@ -72,6 +72,36 @@ public class GrandStaffDynamicsMidiTests
         Assert.All(Velocities(src, "lh"), v => Assert.Equal(90, v));
     }
 
+    // The voices of a span share the part's dynamics by the moment they are written at
+    // (MidiExporter.ShareSpanDynamics). Until 2026-11-14 the second voice, walked after the
+    // first, opened at the level the first one ENDED on and played both bars forte.
+    [Fact]
+    public void TheVoicesOfASpan_ShareTheirDynamicsByTheMoment()
+    {
+        static string One(string music) =>
+            "time 4/4\noctave absolute\npart p { }\nsection A {\n  p { " + music + " }\n}\nform { A }\nscore { staff p }\n";
+        List<int> Voice(string music, int voice) => new MidiExporter().Export(SyntaxTree.Parse(One(music))).Tracks
+            .SelectMany(t => t.Notes).Where(n => n.Voice == voice).OrderBy(n => n.StartTick).Select(n => n.Velocity).ToList();
+        const int p = (int)DynamicLevel.P, f = (int)DynamicLevel.F, pp = (int)DynamicLevel.PP;
+
+        // Written in the upper voice: the lower one follows, bar by bar.
+        const string upper = "voice { c''1@p | d''1@f | } { c'1 | d'1 | } e'1 |";
+        Assert.Equal(new[] { p, f, f }, Voice(upper, 0));
+        Assert.Equal(new[] { p, f }, Voice(upper, 1));
+        // Written in the lower voice: the upper one follows, and the level stands after the span.
+        const string lower = "voice { c''1 | d''1 | } { c'1@p | d'1@f | } e'1 |";
+        Assert.Equal(new[] { p, f, f }, Voice(lower, 0));
+        Assert.Equal(new[] { p, f }, Voice(lower, 1));
+        // Both write one at the same moment: each plays its own, and the later single mark is both's.
+        const string each = "voice { c''1@f | d''1 | } { c'1@p | d'1@pp | }";
+        Assert.Equal(new[] { f, pp }, Voice(each, 0));
+        Assert.Equal(new[] { p, pp }, Voice(each, 1));
+        // No dynamic in the span: the level standing before it, in every voice.
+        const string none = "b'1@p | voice { c''1 | } { c'1 | }";
+        Assert.Equal(new[] { p, p }, Voice(none, 0));
+        Assert.Equal(new[] { p }, Voice(none, 1));
+    }
+
     [Fact]
     public void AtOneMoment_AHandsOwnDynamicWins()
     {

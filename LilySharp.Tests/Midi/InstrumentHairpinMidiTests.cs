@@ -96,9 +96,9 @@ public class InstrumentHairpinMidiTests
     [Fact]
     public void EveryVoiceOfThePart_FollowsItsHairpin()
     {
-        // No level is written, so both voices stand at the default and the hairpin goes two
-        // dynamics up. (A level written in one voice does not yet reach the other by its moment:
-        // the second voice is walked after the first and opens at the level the first ended on.)
+        var both = Notes(OnePart("voice { c''4@p@cresc d'' e'' f'' | g''1@f | } { c'2 c'2 | c'1 | }"), "fl");
+        Assert.Equal(new[] { P, Along(P, F, 2, 4), F }, both.Where(n => n.Voice == 1).Select(n => n.Velocity));
+        // With no level written, both voices stand at the default and the hairpin goes two dynamics up.
         int d = MidiExporter.DefaultVelocity;
         var v = Notes(OnePart("voice { c''4@cresc d'' e'' f'' | g''1@!cresc | } { c'2 c'2 | c'1 | }"), "fl");
         var lower = v.Where(n => n.Voice == 1).Select(n => n.Velocity).ToList();

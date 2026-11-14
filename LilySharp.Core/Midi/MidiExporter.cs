@@ -349,6 +349,62 @@ public sealed class MidiExporter
         }
     }
 
+    /// <summary>
+    /// The voices of a span (<c>voice { } { }</c>) are one part's and share its dynamics by the
+    /// MOMENT they are written at: a note sounds at the last dynamic written in any voice of
+    /// the span at or before its onset — its own voice's when several write one at that moment —
+    /// and keeps what its own marks add to the level (an accent). The level standing after the
+    /// span is the last one written in it.
+    /// </summary>
+    /// <remarks>
+    /// The voices are walked one after another with one running level, so until 2026-11-14 the
+    /// second voice opened at the level the first one ENDED on: under
+    /// <c>voice { c''1@p | d''1@f | } { c'1 | d'1 | }</c> the lower voice played both bars forte.
+    /// LILYSHARP-OWN, as <see cref="ShareGrandStaffDynamics"/> is and for its reason: LilyPond's
+    /// Dynamic_performer is per Voice (ly/performer-init.ly:100-103) and plays the lower voice at
+    /// its default; a staff's dynamic is written once for the voices on it.
+    /// </remarks>
+    private void ShareSpanDynamics(MidiTrack track, List<(int LogFrom, int LogTo, int NotesFrom, int NotesTo)> lanes,
+        int startTick, int levelAtStart)
+    {
+        if (lanes.Count < 2)
+            return;
+        // Every dynamic written in the span, by moment; at one moment in lane order.
+        var written = new List<(int Tick, int Level, int Lane)>();
+        for (int l = 0; l < lanes.Count; l++)
+            for (int k = lanes[l].LogFrom; k < lanes[l].LogTo; k++)
+                if (_levelLog[k].Written)
+                    written.Add((_levelLog[k].Tick, _levelLog[k].Level, l));
+        if (written.Count == 0)
+            return;
+        written.Sort(static (a, b) => a.Tick != b.Tick ? a.Tick.CompareTo(b.Tick) : a.Lane.CompareTo(b.Lane));
+
+        for (int l = 0; l < lanes.Count; l++)
+        {
+            for (int i = lanes[l].NotesFrom; i < lanes[l].NotesTo; i++)
+            {
+                var n = track.Notes[i];
+                // The level this lane stood at when the note was struck: what it last set, written
+                // or not (a repeat's turn reopening), else the level the span opened at.
+                int own = levelAtStart;
+                for (int k = lanes[l].LogFrom; k < lanes[l].LogTo; k++)
+                    if (_levelLog[k].Tick <= n.StartTick)
+                        own = _levelLog[k].Level;
+                // The latest moment at or before the onset; at that moment the lane's own, else
+                // the first lane's.
+                int shared = -1;
+                for (int k = 0; k < written.Count && written[k].Tick <= n.StartTick; k++)
+                    if (shared < 0 || written[k].Tick > written[shared].Tick || written[k].Lane == l)
+                        shared = k;
+                if (shared < 0 || written[shared].Level == own)
+                    continue;
+                track.Notes[i] = n with { Velocity = Math.Clamp(n.Velocity + written[shared].Level - own, 1, 127) };
+            }
+        }
+        // After the span the part stands at the last level written in it.
+        _velocity = written[^1].Level;
+    }
+
     /// <summary>The part names under each brace (<see cref="Svg.Model.StaffGroupType.GrandStaff"/>)
     /// of the played score, every staff of the group at any depth.</summary>
     private static IEnumerable<HashSet<string>> GrandStaffPartSets(IEnumerable<Svg.Collector.RenderItemSpec> items)
@@ -1483,9 +1539,20 @@ public sealed class MidiExporter
                 (int, int, bool, int?, bool)? gridAfterFirst = null;
                 int lane = 0;
                 int leadClosedAt = -1; // the bar line the first voice ended on (_spanClosedAt)
+                // The level the span opens at, and what each voice then logged and struck
+                // (ShareSpanDynamics).
+                int levelAtStart = _velocity;
+                var lanes = new List<(int LogFrom, int LogTo, int NotesFrom, int NotesTo)>();
                 foreach (var voice in voices)
                 {
                     int notesBefore = track.Notes.Count;
+                    int logBefore = _levelLog.Count;
+                    if (lane > 0)
+                    {
+                        // A later voice opens where the span did, not where the voice before it ended.
+                        _velocity = levelAtStart;
+                        _accentPending = null;
+                    }
                     _currentTick = blockStartTick;
                     _currentNoteName = startNoteName;
                     _currentOctave = startOctave;
@@ -1507,9 +1574,11 @@ public sealed class MidiExporter
                             if (track.Notes[k].Voice == 0)
                                 track.Notes[k] = track.Notes[k] with { Voice = lane };
                     lane++;
+                    lanes.Add((logBefore, _levelLog.Count, notesBefore, track.Notes.Count));
                     voicesEndTick = Math.Max(voicesEndTick, _currentTick);
                     gridAfterFirst ??= (_barStart, _barNotes, _barKnown, _firstBarTicks, _barFlows);
                 }
+                ShareSpanDynamics(track, lanes, blockStartTick, levelAtStart);
                 (_barStart, _barNotes, _barKnown, _firstBarTicks, _barFlows) = gridAfterFirst is { } g
                     && g.Item1 != gridAtStart._barStart ? g : gridAtStart;
                 _pendingGraceSteal = 0;
