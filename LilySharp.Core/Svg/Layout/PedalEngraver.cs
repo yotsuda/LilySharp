@@ -362,7 +362,11 @@ internal static class PedalEngraver
 
         var staffMarks = score.MusicMarks
             .Where(m => m.StaffIndex == staffIndex).ToImmutableArray();
-        var brackets = DetectPedalBrackets(staffMarks);
+        // With the score's section plays, as the drawing pairs (LayoutEngine's PedalBracketsByStaff):
+        // a bracket whose release a repeat's edge refuses is cut at the end of its own section, and
+        // until 2026-11-14 (session 1232) this solve paired without them — it reserved the line on
+        // through the next section, to a release the page does not draw the bracket to.
+        var brackets = DetectPedalBrackets(staffMarks, Collector.SectionPlays.For(score));
         if (brackets.IsDefaultOrEmpty)
             return (ImmutableArray<SolvedPedalLine>.Empty, ImmutableArray<SolvedPedalRow>.Empty);
 
@@ -521,14 +525,11 @@ internal static class PedalEngraver
     /// changes is that it now says so. Declared in docs/APPROXIMATIONS.md.
     /// </para>
     /// <para>
-    /// ⚠️ WHAT IS STILL NOT ASKED HERE, named rather than hidden: the walk has NO staff or
-    /// voice filter, so a <c>@!sustain</c> on one staff would close a <c>@sustain</c> on
-    /// another — the defect the text spanner's staff filter exists for. Fixing it MOVES INK,
-    /// so it is not done in a trip that promised to move none.
-    /// MEASURED 2026-08-29 over every .lys on disk: 15 books write a pedal mark, ONE of them
-    /// (showcase/03-piano) scores more than one staff, and there every pedal mark is in the
-    /// same part (<c>leftHand</c>). No book reaches the configuration, so no ledger point and
-    /// no fixture observes it — which is also why the repair needs a book written for it.
+    /// ⚠️ THE WALK ITSELF HAS NO STAFF OR VOICE FILTER: handed several staves' marks at once,
+    /// a <c>@!sustain</c> on one staff closes a <c>@sustain</c> on another. Its callers
+    /// therefore hand it ONE STAFF's marks at a time (<see cref="PedalBracketsByStaff"/>,
+    /// <see cref="UnpairedPedalMarks"/>, <see cref="SolveAndSeed"/>; all of them since
+    /// 2026-11-14) — a new caller must do the same.
     /// </para>
     /// </remarks>
     /// <param name="musicMarks">The score's marks.</param>

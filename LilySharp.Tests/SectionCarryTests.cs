@@ -544,4 +544,34 @@ public class SectionCarryTests
         Assert.Empty(Carry(src));
         Assert.Single(Check(src), d => d.Code == DiagnosticCodes.UnpairedSlur);
     }
+
+    /// <summary>
+    /// A pedal refused at a repeat's edge is cut at the end of its own section, and the page
+    /// keeps room for the bracket it draws and no more. Until 2026-11-14 (session 1232) the
+    /// solve that reserves a pedal line under a staff (PedalEngraver.SolveAndSeed) paired
+    /// without the section plays: it held the line open through section B to the release, and
+    /// the systems of B stood further apart for a bracket that is not there (Lab
+    /// sessions/p1232/ped: the page was 73.52 high against the control's 72.22).
+    /// </summary>
+    [Fact]
+    public void APedalCutAtARepeatsEdge_ReservesNoLineInTheNextSection()
+    {
+        const string up = "c''8 d'' e'' f'' g'' f'' e'' d'' | ", low = "c8 d e f g f e d | ";
+        string Book(string release) =>
+            "time 4/4\noctave absolute\npart rh { }\npart lh { clef bass }\n" +
+            "section A {\n  rh { " + string.Concat(Enumerable.Repeat(up, 3)) + "c''1 | }\n" +
+            "  lh { c8@sustain d e f g f e d | " + string.Concat(Enumerable.Repeat(low, 2)) + "c1 | }\n}\n" +
+            "section B {\n  rh { " + string.Concat(Enumerable.Repeat(up, 11)) + "c''1 | }\n" +
+            "  lh { " + string.Concat(Enumerable.Repeat(low, 11)) + "c1" + release + " | }\n}\n" +
+            "form { A |: B :| }\nscore { grandStaff { staff rh staff lh } }\n";
+        static string ViewBox(string src)
+        {
+            string svg = LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(src),
+                new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+            return System.Text.RegularExpressions.Regex.Match(svg, "viewBox=\"[^\"]+\"").Value;
+        }
+        string released = ViewBox(Book("@!sustain")), control = ViewBox(Book(""));
+        Assert.NotEqual("", control);
+        Assert.Equal(control, released);
+    }
 }
