@@ -757,6 +757,18 @@ internal sealed class MusicXmlDirection
     /// <summary>The wedge's <c>niente="yes"</c>: a circle at its tip — on a crescendo's start
     /// (dal niente) or on the stop of a diminuendo (al niente), as MusicXML 4.0 defines it.</summary>
     public bool WedgeNiente { get; set; }
+    /// <summary>The voice of its part a wedge is written in (0, or the index of its branch of
+    /// a <c>voice { } { }</c>): the later voices' wedges are numbered apart from the first's
+    /// (<see cref="WedgeNumber"/>), since two voices' hairpins overlap in time.</summary>
+    public int WedgeVoice { get; set; }
+
+    /// <summary>
+    /// The wedge's <c>number</c>: the first voice's is the staff's (<see cref="Number"/> — none
+    /// on the upper or only staff, 2 on a grand staff's lower one, as before session 1240), and
+    /// each later voice counts on in twos, the upper staff's odd (3, 5, …) and the lower
+    /// staff's even (4, 6, …), so no two lines of one part that may run at one time share one.
+    /// </summary>
+    private int? WedgeNumber => WedgeVoice == 0 ? Number : 2 * WedgeVoice + (Number == 2 ? 2 : 1);
     /// <summary>Pedal mark: "start" / "stop" / "sostenuto".</summary>
     public string? PedalType { get; set; }
     /// <summary>The part's <c>pedal</c> style (<c>text</c>, <c>mixed</c>, <c>bracket</c>): the mark's
@@ -845,7 +857,7 @@ internal sealed class MusicXmlDirection
         if (WedgeType != null)
             direction.Add(new XElement("direction-type",
                 new XElement("wedge", new XAttribute("type", WedgeType),
-                    Number is { } wedgeNumber ? new XAttribute("number", wedgeNumber) : null,
+                    WedgeNumber is { } wedgeNumber ? new XAttribute("number", wedgeNumber) : null,
                     WedgeNiente ? new XAttribute("niente", "yes") : null)));
 
         if (PedalType != null)

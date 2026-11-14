@@ -94,6 +94,18 @@ public sealed record HairpinItem(
     public bool EndsAtStop { get; init; }
 
     /// <summary>
+    /// The source position of what the hairpin was paired with as its end — the level, the next
+    /// hairpin's start or the stop (<c>@!cresc</c>) — or -1 for none: a hairpin nothing ends
+    /// runs to its bar's line, and one the carry rule cuts (<see cref="CutAtSectionEnd"/>) to
+    /// its section's end. What a writer of the same pairs closes the hairpin at (MusicXmlExporter).
+    /// </summary>
+    public int EndSourcePosition { get; init; } = -1;
+
+    /// <summary>The hairpin's end was found past its section's end and refused by the carry
+    /// rule (<c>Collector.SectionPlayCursor</c>): it is cut where its own section's play ends.</summary>
+    public bool CutAtSectionEnd { get; init; }
+
+    /// <summary>
     /// The hairpin's THIN end touches a niente — a crescendo from it (dal niente) or a
     /// decrescendo to it (al niente) — so that end is drawn as a circle and the niente is not
     /// printed as a word. A niente at the THICK end is a contradiction (LYS4029): the wedge is

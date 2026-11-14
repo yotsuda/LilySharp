@@ -1272,13 +1272,75 @@ public sealed class MusicXmlExporter
     /// slur for them (LYS4023), and neither does this document.</summary>
     private readonly HashSet<(int Position, int Play, bool Close)> _refusedSlurs = new();
 
-    /// <summary>The hairpins the carry rule cuts at their own section's end, by (the mark's
-    /// source position, 0-based play): the wedge stops where the section's play ends
-    /// (<see cref="CloseCutWedge"/>), not at the next dynamic.</summary>
-    private readonly HashSet<(int Position, int Play)> _cutHairpins = new();
+    /// <summary>
+    /// The page's hairpins (<c>HairpinEngraver.DetectHairpins</c> over the page's own collect of
+    /// the exported score), by (the start mark's source position, 0-based play) and in the
+    /// page's order — staff, bar, voice, item — so a mark written once and played more than
+    /// once in a play (a phrase used twice) gives each playing its own.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Until session 1240 this document paired its wedges itself, with ONE open wedge for
+    /// the whole file: any level, any other hairpin's start and any <c>@!cresc</c> closed it,
+    /// whichever voice — or part — wrote it. Under <c>voice { c''1@cresc } { c'2@decresc
+    /// c'2@!decresc } | … c''1@f</c> the upper voice's crescendo, which the page draws to the
+    /// next bar's f, stopped at the lower voice's decrescendo with no length (Lab
+    /// sessions/p1239/xml/x1), and a hairpin a section carried into its next play was closed
+    /// by whatever the part written between the two blocks said. The pairs are the page's
+    /// now — its voice's own end first, then its staff's (the rule and its reasons are
+    /// DetectHairpins') — read from one place, as the cut at a section's end already was.
+    /// A mark the page draws no hairpin from writes no wedge, and neither does a book the
+    /// page cannot collect (<see cref="ReadCarryRefusals"/> finds no page then).
+    /// </remarks>
+    private readonly Dictionary<(int Position, int Play), Queue<(Svg.Model.HairpinItem Item, int EndPlay)>> _pageHairpins = new();
 
-    /// <summary>True while the open wedge is one the rule cuts at the block's end.</summary>
-    private bool _wedgeCut;
+    /// <summary>The nientes a hairpin's circled tip stands for on the page, by (source
+    /// position, play): no <c>&lt;n/&gt;</c> is written for them, the wedge's
+    /// <c>niente="yes"</c> is.</summary>
+    private readonly HashSet<(int Position, int Play)> _circledNientes = new();
+
+    /// <summary>Whether the page counts plays (more than one section play): its play numbers
+    /// are this walk's then, else every key's play is 0.</summary>
+    private bool _pageHasPlays;
+
+    /// <summary>The play the page files the music now being written under.</summary>
+    private int PagePlay => _pageHasPlays ? _xmlPlaySerial - 1 : 0;
+
+    /// <summary>A wedge whose start is written and whose stop is not: its part, the page's
+    /// hairpin, the play its end is in, the start's direction and the number in the part of
+    /// the bar it starts in.</summary>
+    private sealed record OpenWedge(string Part, Svg.Model.HairpinItem Page, int EndPlay, MusicXmlDirection Start, int Bar);
+
+    private readonly List<OpenWedge> _openWedges = new();
+
+    /// <summary>
+    /// Where each thing that may end a hairpin was written — a level, a hairpin's start, a
+    /// stop — by (source position, play): its part, the bar's number in the part, the bar and
+    /// the offset, one entry a writing.
+    /// </summary>
+    /// <remarks>
+    /// Two hairpins are stopped from here and not as their end is written. One ended by
+    /// ANOTHER VOICE's level may meet its own start after that level is written: the first
+    /// voice of a <c>voice { } { }</c> is walked first (<see cref="StartWedge"/>). And one
+    /// ended by ANOTHER PART's level — two parts on a <c>condensedStaff</c> or a
+    /// <c>combinedStaff</c> are one staff of the page, whose levels end its hairpins, and two
+    /// parts of this document — never meets it in its own part (<see cref="FinishOpenSpans"/>).
+    /// </remarks>
+    private readonly Dictionary<(int Position, int Play), List<(string Part, int Bar, MusicXmlMeasure Measure, int Offset)>> _endsWritten = new();
+
+    /// <summary>The stops of the hairpins nothing ends: each stands at its bar's line, an
+    /// offset known once the bar is whole (<see cref="FinishOpenSpans"/>).</summary>
+    private readonly List<(MusicXmlMeasure Measure, MusicXmlDirection Stop)> _barEndStops = new();
+
+    /// <summary>The voice of its part being written: 0, or the index of the branch of a
+    /// <c>voice { } { }</c> — a phrase played in a later branch is that branch's.</summary>
+    private int _voiceLine;
+
+    /// <summary>The number in the part of the first bar of the scratch stream a later voice is
+    /// written into (0 in the part's own stream).</summary>
+    private int _voiceBarBase;
+
+    /// <summary>The number in its part of the bar being written, whichever stream it is in.</summary>
+    private int BarInPart => _voiceBarBase + (_currentPart?.Measures.Count ?? 0);
 
     /// <summary>The source position of the note, chord or slash the last emitted onset came
     /// from (-1 when unknown) — what a slur walked as a SIBLING after it is refused by.</summary>
@@ -1302,25 +1364,38 @@ public sealed class MusicXmlExporter
     private void ReadCarryRefusals(SyntaxTree tree)
     {
         _refusedSlurs.Clear();
-        _cutHairpins.Clear();
-        _wedgeCut = false;
-        if (!tree.GetRoot().DescendantNodes().OfType<SectionDeclarationSyntax>().Any())
+        _pageHairpins.Clear();
+        _circledNientes.Clear();
+        _openWedges.Clear();
+        _endsWritten.Clear();
+        _barEndStops.Clear();
+        _pageHasPlays = false;
+        bool sections = tree.GetRoot().DescendantNodes().OfType<SectionDeclarationSyntax>().Any();
+        bool hairpins = tree.GetRoot().DescendantNodes<DynamicSyntax>()
+            .Any(d => d.DynamicToken.Text is "cresc" or "decresc" or "dim");
+        if (!sections && !hairpins)
             return;
         var collector = Semantics.SemanticValidation.TryCollect(tree, _playedSpec);
         if (collector == null)
             return;
-        foreach (var w in collector.SectionCarryWarnings)
-        {
-            switch (w.Kind)
-            {
-                case Svg.Collector.SectionSpanKind.Slur:
-                case Svg.Collector.SectionSpanKind.PhrasingSlur:
+        if (sections)
+            foreach (var w in collector.SectionCarryWarnings)
+                if (w.Kind is Svg.Collector.SectionSpanKind.Slur or Svg.Collector.SectionSpanKind.PhrasingSlur)
                     _refusedSlurs.Add((w.SourcePosition, w.Play, w.AtClose));
-                    break;
-                case Svg.Collector.SectionSpanKind.Hairpin:
-                    _cutHairpins.Add((w.SourcePosition, w.Play));
-                    break;
-            }
+        if (!hairpins || collector.Collected is not { } page)
+            return;
+        var plays = Svg.Collector.SectionPlays.For(page);
+        _pageHasPlays = plays != null;
+        foreach (var h in Svg.Layout.HairpinEngraver.DetectHairpins(page.MusicMarks, page.Dynamics, plays)
+                     .OrderBy(h => h.StaffIndex).ThenBy(h => h.StartMeasureIndex)
+                     .ThenBy(h => h.VoiceIndex).ThenBy(h => h.StartItemIndex))
+        {
+            var key = (h.SourcePosition, plays?.PlayAt(h.StartMeasureIndex) ?? 0);
+            if (!_pageHairpins.TryGetValue(key, out var playings))
+                _pageHairpins[key] = playings = new();
+            playings.Enqueue((h, plays?.PlayAt(h.EndMeasureIndex) ?? 0));
+            if (h.CircledNiente is { } circled)
+                _circledNientes.Add((circled.SourcePosition, plays?.PlayAt(circled.MeasureIndex) ?? 0));
         }
     }
 
@@ -1329,26 +1404,115 @@ public sealed class MusicXmlExporter
     private bool RefusedSlur(int host, bool close)
         => host >= 0 && _refusedSlurs.Contains((host, _xmlPlaySerial - 1, close));
 
-    /// <summary>Stops the open wedge the rule cuts, at the end of the last written bar of the
-    /// block — where the page cuts the hairpin (HairpinEngraver.DetectHairpins: at the start
-    /// of the play that follows).</summary>
+    /// <summary>Stops the part's open wedges the carry rule cuts, at the end of the last
+    /// written bar of the block — where the page cuts the hairpin (HairpinEngraver.DetectHairpins:
+    /// at the start of the play that follows).</summary>
     private void CloseCutWedge()
     {
-        if (!_wedgeOpen || !_wedgeCut)
-            return;
-        _wedgeOpen = false;
-        _wedgeCut = false;
+        string part = _currentPartName ?? "";
         var measure = _currentMeasure is { Notes.Count: > 0 } m ? m
             : _currentPart is { Measures.Count: > 0 } p ? p.Measures[^1]
             : null;
-        if (measure == null)
-            return;
-        measure.Directions.Add(new MusicXmlDirection
+        for (int i = 0; i < _openWedges.Count; i++)
         {
-            WedgeType = "stop",
-            Placement = _openWedge?.Placement ?? "below",
-            Offset = CurrentMeasurePosition(measure),
-        });
+            var open = _openWedges[i];
+            if (open.Part != part || !open.Page.CutAtSectionEnd)
+                continue;
+            _openWedges.RemoveAt(i--);
+            if (measure == null)
+                continue;
+            var stop = WedgeStop(open);
+            stop.Offset = CurrentMeasurePosition(measure);
+            measure.Directions.Add(stop);
+        }
+    }
+
+    /// <summary>The stop of a wedge: on the side its start stands and under its number.</summary>
+    private static MusicXmlDirection WedgeStop(OpenWedge open) => new()
+    {
+        WedgeType = "stop",
+        Placement = open.Start.Placement ?? "below",
+        WedgeVoice = open.Start.WedgeVoice,
+        // A diminuendo the page ends in a niente: the circle at its tip (al niente).
+        WedgeNiente = open.Page is { Direction: Svg.Model.HairpinDirection.Decrescendo, NienteAtEnd: not null },
+    };
+
+    /// <summary>
+    /// Stops the part's open wedges the page ends at the thing written at
+    /// <paramref name="position"/> — a level, a hairpin's start, a stop — and notes where it
+    /// stands (<see cref="_endsWritten"/>). True when a wedge was stopped.
+    /// </summary>
+    /// <param name="position">The source position of the level or mark being written.</param>
+    /// <param name="noteLength">For an end that includes its note (<c>@!cresc</c>), the note's
+    /// length in divisions: the stop stands where the note ends.</param>
+    private bool EndWedgesAt(int position, int noteLength = 0)
+    {
+        if (_currentMeasure == null || _inLaterTremoloPass || position < 0)
+            return false;
+        string part = _currentPartName ?? "";
+        int play = PagePlay;
+        if (!_endsWritten.TryGetValue((position, play), out var written))
+            _endsWritten[(position, play)] = written = new();
+        written.Add((part, BarInPart, _currentMeasure, CurrentMeasurePosition(_currentMeasure) + noteLength));
+        bool ended = false;
+        for (int i = 0; i < _openWedges.Count; i++)
+        {
+            var open = _openWedges[i];
+            if (open.Part != part || open.Page.EndSourcePosition != position || open.EndPlay != play)
+                continue;
+            _openWedges.RemoveAt(i--);
+            var stop = WedgeStop(open);
+            AddDirection(stop);
+            stop.Offset += noteLength;
+            ended = true;
+        }
+        return ended;
+    }
+
+    /// <summary>
+    /// Writes the start of the hairpin the page draws from the mark at <paramref name="position"/>,
+    /// or nothing when the page draws none from it (an end not after its start).
+    /// </summary>
+    private void StartWedge(int position, string type, string placement)
+    {
+        if (_currentMeasure == null || _inLaterTremoloPass
+            || !_pageHairpins.TryGetValue((position, PagePlay), out var playings) || playings.Count == 0)
+            return;
+        var (page, endPlay) = playings.Dequeue();
+        var start = new MusicXmlDirection
+        {
+            WedgeType = type,
+            Placement = placement,
+            WedgeVoice = _voiceLine,
+            // A crescendo from a niente on its own note grows from nothing (dal niente).
+            WedgeNiente = page is { Direction: Svg.Model.HairpinDirection.Crescendo, NienteAtStart: not null },
+        };
+        AddDirection(start);
+        var open = new OpenWedge(_currentPartName ?? "", page, endPlay, start, BarInPart);
+        if (page.EndSourcePosition < 0 && !page.CutAtSectionEnd)
+        {
+            // Nothing ends it: the page draws it to its bar's line.
+            var stop = WedgeStop(open);
+            AddDirection(stop);
+            _barEndStops.Add((_currentMeasure, stop));
+            return;
+        }
+        // Ended by another voice's level that is written already — the first voice of a
+        // `voice { } { }` is walked before the later ones: its stop stands where that level does.
+        var end = page.EndSourcePosition >= 0 && page.EndVoiceIndex != page.VoiceIndex
+            && _endsWritten.TryGetValue((page.EndSourcePosition, endPlay), out var written)
+                ? written.FindLast(w => w.Part == open.Part)
+                : default;
+        if (end.Measure != null
+            && (end.Bar > BarInPart || (end.Bar == BarInPart && end.Offset > start.Offset)))
+        {
+            var stop = WedgeStop(open);
+            stop.Offset = end.Offset;
+            // In its own bar the stop follows its start in the document, as a reader pairs them.
+            (end.Bar == BarInPart ? _currentMeasure : end.Measure).Directions.Add(stop);
+            return;
+        }
+        _openWedges.Add(open);
     }
 
     /// <summary>Opens the next printed play with the repeat role the form walk set.</summary>
@@ -3228,6 +3392,12 @@ public sealed class MusicXmlExporter
             var savedTie = _tieToNextNote;
             var savedTieOpen = _tieOpen.ToList(); // the open starts belong to the OUTER stream
 
+            // The voice the scratch stream is, and where its first bar stands in the part
+            // (what a hairpin's page pair is numbered and placed by).
+            int savedVoiceLine = _voiceLine, savedVoiceBarBase = _voiceBarBase;
+            _voiceLine = v;
+            _voiceBarBase = savedVoiceBarBase + startMeasure;
+
             var temp = new MusicXmlPart { Name = "voice-temp" };
             _currentPart = temp;
             _currentMeasure = null;
@@ -3249,6 +3419,8 @@ public sealed class MusicXmlExporter
             ProcessNode(voices[v]);
             FlushCurrentMeasure();
 
+            _voiceLine = savedVoiceLine;
+            _voiceBarBase = savedVoiceBarBase;
             _currentPart = savedPart;
             _currentMeasure = savedMeasure;
             _measureNumber = savedMeasureNumber;
@@ -4044,7 +4216,7 @@ public sealed class MusicXmlExporter
         // through the shared dynamic/wedge funnel and emit before the first member.
         foreach (var a in arpeggio.Articulations)
             if (a is DynamicSyntax dyn)
-                HandleDynamicText(dyn.DynamicToken.Text, subito: dyn.IsSubito, written: dyn.ForcedAbove, editorial: dyn.IsEditorial);
+                HandleDynamicText(dyn.DynamicToken.Text, dyn.SourceStart, dyn.IsSubito, dyn.ForcedAbove, dyn.IsEditorial);
         EmitPendingDynamic();
         // A string number on the group (`>>4\3`) is every pitched / degree member's that
         // names none of its own — the collector's groupString (a chord member inside the
@@ -6049,20 +6221,18 @@ public sealed class MusicXmlExporter
         => new("slur", new System.Xml.Linq.XAttribute("type", type),
             new System.Xml.Linq.XAttribute("number", 2));
 
-    /// <summary>Whether a crescendo/diminuendo wedge is open (closed by the
-    /// next level dynamic).</summary>
-    private bool _wedgeOpen;
-
     /// <summary>A dynamic word: cresc/decresc/dim OPEN a &lt;wedge&gt; (they
-    /// used to leak into &lt;dynamics&gt; as invalid &lt;cresc/&gt;); a level
-    /// mark closes any open wedge, then emits as a dynamics direction.</summary>
+    /// used to leak into &lt;dynamics&gt; as invalid &lt;cresc/&gt;) where the page draws a
+    /// hairpin from them (<see cref="StartWedge"/>); a level mark closes the wedges the page
+    /// ends at it (<see cref="EndWedgesAt"/>), then emits as a dynamics direction.</summary>
+    /// <param name="position">The mark's source position: what the page's pairs are read by.</param>
     /// <param name="written">The side the mark writes (<c>.up</c> true, <c>.down</c> false),
     /// null for none: the staff's own then (<see cref="StaffDynamicsUp"/>).</param>
     private void HandleDynamicText(string text, int position = -1, bool subito = false, bool? written = null, bool editorial = false)
     {
         if (text == "niente")
         {
-            HandleNiente();
+            HandleNiente(position);
             return;
         }
         // The side is the line's (Svg.Collector.DynamicLineSides, the page's rule): a new
@@ -6093,42 +6263,13 @@ public sealed class MusicXmlExporter
                 _line.HairpinStarts();
             }
             _momentHairpin = true;
-            var wedge = new MusicXmlDirection
-            {
-                WedgeType = text == "cresc" ? "crescendo" : "diminuendo",
-                Placement = placement,
-            };
-            // A crescendo from a niente on the same note grows from nothing: the circle is the
-            // wedge's own niente="yes", and the <n/> written for it goes.
-            if (text == "cresc" && _niente is { } n && n.Measure == _currentMeasure
-                && n.Offset == CurrentMeasurePosition(_currentMeasure!))
-            {
-                wedge.WedgeNiente = true;
-                if (n.Word != null)
-                    _currentMeasure!.Directions.Remove(n.Word);
-                _niente = null;
-            }
-            // A hairpin the next one ends stops there, or the file leaves it open.
-            if (_wedgeOpen)
-                AddDirection(new MusicXmlDirection { WedgeType = "stop", Placement = _openWedge?.Placement ?? "below" });
-            AddDirection(wedge);
-            _openWedge = wedge;
-            _wedgeOpen = true;
-            // The rule cuts this one at its section's end (CloseCutWedge), whatever dynamic
-            // follows in the next section.
-            _wedgeCut = position >= 0 && _cutHairpins.Contains((position, _xmlPlaySerial - 1));
+            // The hairpins this one's start ends stop here, before it starts.
+            EndWedgesAt(position);
+            StartWedge(position, text == "cresc" ? "crescendo" : "diminuendo", placement);
             return;
         }
-        if (_wedgeOpen)
-        {
-            // A wedge's stop stands on the side its start did.
-            AddDirection(new MusicXmlDirection
-            {
-                WedgeType = "stop",
-                Placement = _openWedge?.Placement ?? "below",
-            });
-            _wedgeOpen = false;
-        }
+        // The hairpins this level ends (a wedge's stop stands on the side its start did).
+        EndWedgesAt(position);
         // Written where it stands — its note's onset (a note's marks are read before the note
         // is added) — rather than held for the next note: a dynamic on a bar's last note used
         // to be written at the next bar's head, and one on a part's last note never (2026-09-29).
@@ -6148,9 +6289,6 @@ public sealed class MusicXmlExporter
     private MusicXmlDirection? _momentLevel;
     private bool? _momentLevelWritten;
     private bool _momentHairpin;
-
-    /// <summary>The open wedge's start direction, while <see cref="_wedgeOpen"/>.</summary>
-    private MusicXmlDirection? _openWedge;
 
     /// <summary>
     /// Whether the part being written stands its dynamics and wedges ABOVE its staff on the
@@ -6177,44 +6315,22 @@ public sealed class MusicXmlExporter
 
     private HashSet<string>? _dynamicsUpParts;
 
-    /// <summary>The last niente seen — its measure and offset, and the <c>&lt;n/&gt;</c> written
-    /// for it if one was — so a crescendo starting on the same note takes it as its circle.</summary>
-    private (MusicXmlMeasure Measure, int Offset, MusicXmlDirection? Word)? _niente;
-
     /// <summary>
-    /// A <c>@niente</c>, as the page reads it (HairpinEngraver.DetectHairpins): it ends an open
-    /// wedge — a diminuendo AL NIENTE, whose stop carries <c>niente="yes"</c> and stands for the
-    /// niente; a crescendo just started on this same note grows FROM it (dal niente, the
-    /// start's <c>niente="yes"</c>); otherwise it is the dynamic <c>&lt;n/&gt;</c>.
+    /// A <c>@niente</c>, as the page reads it (HairpinEngraver.DetectHairpins): it ends the
+    /// hairpins the page ends at it — a diminuendo AL NIENTE, whose stop carries
+    /// <c>niente="yes"</c> and stands for the niente; a crescendo starting on its note grows FROM
+    /// it (dal niente, the start's <c>niente="yes"</c>, <see cref="StartWedge"/>); a niente no
+    /// circled tip stands for is the dynamic <c>&lt;n/&gt;</c>.
     /// </summary>
-    private void HandleNiente()
+    private void HandleNiente(int position)
     {
         if (_currentMeasure == null)
             return;
-        int offset = CurrentMeasurePosition(_currentMeasure);
-        if (_wedgeOpen && _openWedge is { WedgeType: "crescendo" } started
-            && _currentMeasure.Directions.Contains(started) && started.Offset == offset)
-        {
-            started.WedgeNiente = true;
-            return;
-        }
-        bool consumed = false;
-        if (_wedgeOpen)
-        {
-            bool alNiente = _openWedge?.WedgeType == "diminuendo";
-            AddDirection(new MusicXmlDirection { WedgeType = "stop", Placement = _openWedge?.Placement ?? "below", WedgeNiente = alNiente });
+        if (EndWedgesAt(position))
             _line.HairpinEnds();
-            _wedgeOpen = false;
-            _openWedge = null;
-            consumed = alNiente;
-        }
-        MusicXmlDirection? word = null;
-        if (!consumed)
-        {
-            word = new MusicXmlDirection { DynamicType = "n", Placement = "below" };
-            AddDirection(word);
-        }
-        _niente = (_currentMeasure, offset, word);
+        if (_circledNientes.Contains((position, PagePlay)))
+            return;
+        AddDirection(new MusicXmlDirection { DynamicType = "n", Placement = "below" });
     }
 
     /// <summary>The length of the note whose marks are being read, in divisions (0 for a grace
@@ -6373,6 +6489,41 @@ public sealed class MusicXmlExporter
         foreach (var span in _openTextSpans)
             span.Measure.Directions.Remove(span.Start);
         _openTextSpans.Clear();
+        // A hairpin still open was ended on the page by ANOTHER PART's level — a part it
+        // shares a staff of the page with (_endsWritten): its stop stands in its own part at
+        // the bar and the offset that level was written at, the first such after its start.
+        foreach (var open in _openWedges)
+        {
+            if (!_partsByName.TryGetValue(open.Part, out var home)
+                || !_endsWritten.TryGetValue((open.Page.EndSourcePosition, open.EndPlay), out var written))
+                continue;
+            (string Part, int Bar, MusicXmlMeasure Measure, int Offset)? end = null;
+            foreach (var w in written)
+                if (w.Part != open.Part
+                    && (w.Bar > open.Bar || (w.Bar == open.Bar && w.Offset > open.Start.Offset))
+                    && (end is not { } first || w.Bar < first.Bar || (w.Bar == first.Bar && w.Offset < first.Offset)))
+                    end = w;
+            if (end is not { } at || at.Bar >= home.Measures.Count)
+                continue;
+            var stop = WedgeStop(open);
+            stop.Offset = at.Offset;
+            home.Measures[at.Bar].Directions.Add(stop);
+        }
+        _openWedges.Clear();
+        // A hairpin nothing ends stops at its bar's line: the bar's length, now that it is whole.
+        foreach (var (measure, stop) in _barEndStops)
+        {
+            int at = 0, length = 0;
+            foreach (var n in measure.Notes)
+            {
+                if (n.RawElement != null || n.IsGrace || n.IsChord)
+                    continue;
+                at += n.IsBackup ? -n.Duration : n.Duration;
+                length = Math.Max(length, at);
+            }
+            stop.Offset = length;
+        }
+        _barEndStops.Clear();
         foreach (var trill in _openTrills)
         {
             var last = trill.Home?.Measures.SelectMany(m => m.Notes)
@@ -6707,15 +6858,11 @@ public sealed class MusicXmlExporter
                     // '@!cresc' / '@!decresc' / '@!dim' (LilyPond's \!): the wedge runs to this
                     // note's right edge (SYNTAX_REFERENCE), so the stop stands where the note ends.
                     // Until 2026-11-04 it stood at the note's start, a note short.
-                    case Svg.Model.MusicMarkType.HairpinStop when _wedgeOpen:
-                    {
-                        var stop = new MusicXmlDirection { WedgeType = "stop", Placement = _openWedge?.Placement ?? "below" };
-                        _line.HairpinEnds();
-                        AddDirection(stop);
-                        stop.Offset += _markedNoteLength;
-                        _wedgeOpen = false;
+                    // It ends the hairpins the page ends at it (EndWedgesAt), and no other.
+                    case Svg.Model.MusicMarkType.HairpinStop:
+                        if (EndWedgesAt(mark.SourceStart, _markedNoteLength))
+                            _line.HairpinEnds();
                         break;
-                    }
                     // The end of a palm mute, a let ring or a barre (2026-11-13): the bracket's
                     // stop, where the note it is written on ends.
                     case Svg.Model.MusicMarkType.TextSpanStop

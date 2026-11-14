@@ -545,6 +545,9 @@ public readonly record struct MeasureContentKey(long Hash)
     private static readonly HashSet<string> SideExclusions = new(StringComparer.Ordinal)
     {
         "SourcePosition", "MeasureIndex", "StartMeasureIndex", "EndMeasureIndex",
+        // A hairpin's end by its source offset (what a writer of the page's pairs closes it
+        // at); where it ends — the bar, the item, the voice, at a stop or not — is the content.
+        "EndSourcePosition",
         // The item diagram an ArticulationItem repeats, by its source offset (the twin's key);
         // its relative bar count, RepeatsDiagramBack, is the content.
         "RepeatsDiagramAt", "RepeatsNameAt",

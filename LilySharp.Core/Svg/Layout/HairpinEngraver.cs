@@ -1149,12 +1149,12 @@ internal static class HairpinEngraver
             // note's length, to the next column or the bar's end (CalculateEndX). The written order
             // decides, so `@!cresc@decresc` still ends the hairpin before it and opens another.
             // LILYSHARP-OWN: LilyPond reads the two at one moment as a stop, then a start.
-            bool spansItsNote = musicMarks.Any(m =>
+            var ownNoteStop = musicMarks.FirstOrDefault(m =>
                 m.Type == MusicMarkType.HairpinStop && m.StaffIndex == mark.StaffIndex
                 && m.VoiceIndex == mark.VoiceIndex
                 && m.MeasureIndex == mark.MeasureIndex && m.AnchorItemIndex == startItem
                 && m.SourcePosition > mark.SourcePosition);
-            if (spansItsNote)
+            if (ownNoteStop != null)
             {
                 hairpins.Add(new HairpinItem(
                     Direction: direction,
@@ -1171,6 +1171,7 @@ internal static class HairpinEngraver
                     VoiceIndex = mark.VoiceIndex,
                     EndVoiceIndex = mark.VoiceIndex,
                     NienteAtStart = NienteAtStart(),
+                    EndSourcePosition = ownNoteStop.SourcePosition,
                 });
                 continue;
             }
@@ -1189,6 +1190,8 @@ internal static class HairpinEngraver
             int endVoice = mark.VoiceIndex;
             DynamicItem? endDynamic = null;
             bool endsAtStop = false;
+            int endSource = -1;
+            bool cut = false;
             StaffPlace end;
 
             // The dynamic ends it when it stands at or before the next mark. ⚠️ Until session 847
@@ -1200,11 +1203,13 @@ internal static class HairpinEngraver
             {
                 end = stopPlace;
                 endsAtStop = true;
+                endSource = nextStop.SourcePosition;
             }
             else if (nextDynamic != null && dynamicAt is { } dynamicPlace && Before(dynamicPlace, markAt))
             {
                 end = dynamicPlace;
                 endDynamic = nextDynamic;
+                endSource = nextDynamic.SourcePosition;
             }
             else if (markAt is { } markPlace)
             {
@@ -1212,6 +1217,7 @@ internal static class HairpinEngraver
                 // hairpin met by another in its own bar was not drawn at all, and one met later in
                 // a bar stopped short at that bar's line (LilyPond draws both, Lab sessions/p1097/hp3).
                 end = markPlace;
+                endSource = nextMark!.SourcePosition;
             }
             else
             {
@@ -1234,6 +1240,8 @@ internal static class HairpinEngraver
                 endVoice = mark.VoiceIndex;
                 endDynamic = null;
                 endsAtStop = false;
+                endSource = -1;
+                cut = true;
                 end = new StaffPlace(endMeasure, endVoice, endItem, null);
             }
 
@@ -1257,6 +1265,8 @@ internal static class HairpinEngraver
                     NienteAtStart = NienteAtStart(),
                     NienteAtEnd = endDynamic is { Level: DynamicLevel.Niente } ? endDynamic : null,
                     EndsAtStop = endsAtStop,
+                    EndSourcePosition = endSource,
+                    CutAtSectionEnd = cut,
                 });
             }
         }
