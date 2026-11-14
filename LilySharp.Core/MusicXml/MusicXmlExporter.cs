@@ -398,6 +398,7 @@ public sealed class MusicXmlExporter
             EmitFlatRowsPastTheMusic();
             EmitPendingChordRows();
         }
+        SpreadRepeatSignsToEveryPart();
         FinishOpenSpans();
         WriteCapo();
         WriteBeams(tree, hasSections);
@@ -2172,6 +2173,70 @@ public sealed class MusicXmlExporter
         }
     }
 
+    /// <summary>Whether the item written right after <paramref name="ending"/> is a <c>:|</c>
+    /// (or a <c>:|:</c>) — the bar line that closes an ending written without its <c>]</c>.</summary>
+    private static bool NextIsRepeatEnd(InlineVoltaSyntax ending)
+    {
+        if (ending.Parent is not { } parent)
+            return false;
+        bool passed = false;
+        foreach (var sibling in parent.ChildNodes())
+        {
+            if (passed)
+                return sibling is BarlineSyntax { BarToken.Kind: SyntaxKind.RepeatEndBar or SyntaxKind.RepeatBothBar };
+            passed = ReferenceEquals(sibling, ending);
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// A repeat sign or an ending written in ONE part's music is the score's
+    /// (docs/inline-repeat-design.md §3.2): every part's same measure carries it, as every
+    /// part carries the form's (<see cref="EmitRepeatBlock"/> writes each part). The page draws
+    /// them on every staff and the MIDI repeats every part; until 2026-11-14 the document wrote
+    /// them in the part that wrote them only (Lab sessions/p1243/stage0.md), so a reader that
+    /// takes its repeats per part played the others straight through.
+    /// </summary>
+    private void SpreadRepeatSignsToEveryPart()
+    {
+        if (_document is not { Parts: { Count: >= 2 } parts })
+            return;
+        int bars = parts.Max(p => p.Measures.Count);
+        for (int k = 0; k < bars; k++)
+        {
+            bool forward = false, backward = false;
+            int times = 0;
+            string? starts = null, stops = null, stopType = null;
+            foreach (var part in parts)
+            {
+                if (k >= part.Measures.Count)
+                    continue;
+                var m = part.Measures[k];
+                forward |= m.RepeatForward;
+                backward |= m.RepeatBackward;
+                times = Math.Max(times, m.RepeatTimes);
+                starts ??= m.EndingStartNumbers;
+                if (m.EndingStopNumbers != null && stops == null)
+                    (stops, stopType) = (m.EndingStopNumbers, m.EndingStopType);
+            }
+            if (!forward && !backward && starts == null && stops == null)
+                continue;
+            foreach (var part in parts)
+            {
+                if (k >= part.Measures.Count)
+                    continue;
+                var m = part.Measures[k];
+                m.RepeatForward |= forward;
+                m.RepeatBackward |= backward;
+                if (backward && times > m.RepeatTimes)
+                    m.RepeatTimes = times;
+                m.EndingStartNumbers ??= starts;
+                if (m.EndingStopNumbers == null && stops != null)
+                    (m.EndingStopNumbers, m.EndingStopType) = (stops, stopType);
+            }
+        }
+    }
+
     /// <summary>The MusicXML <c>&lt;ending number&gt;</c> list for a volta: "1", a
     /// range <c>[1-3.]</c> → "1,2,3", a list <c>[1,3,5.]</c> → "1,3,5" — the passes every
     /// reader plays it by (<see cref="FormAlternativeSyntax.Numbers"/>).</summary>
@@ -3054,7 +3119,12 @@ public sealed class MusicXmlExporter
                     {
                         // Closing side: repeat sign / double / final / dashed.
                         if (barText is ":|" or ":|:")
+                        {
                             closing.RepeatBackward = true;
+                            // …with its written `*N` (the form's count is written the same way).
+                            if (barline.HasExplicitRepeatCount)
+                                closing.RepeatTimes = barline.RepeatCount;
+                        }
                         else if (barText == "||")
                             closing.BarStyle = "light-light";
                         else if (barText == "|.")
@@ -3074,6 +3144,26 @@ public sealed class MusicXmlExporter
                         // any notes) — reuse it instead of emitting a blank bar.
                         if (barText is "|:" or ":|:")
                             _currentMeasure!.RepeatForward = true;
+                    }
+                }
+                break;
+
+            // A volta ending written in the music: its bracket over the bars it holds, as a
+            // form's ending writes it (EmitRepeatBlock) — it starts on the bar it opens and stops
+            // on the last bar it holds, closed where a `]` or its `:|` closes it.
+            case InlineVoltaSyntax inlineEnding:
+                {
+                    string passes = string.Join(",", inlineEnding.Numbers);
+                    if (_currentMeasure != null && passes.Length > 0)
+                        _currentMeasure.EndingStartNumbers = passes;
+                    foreach (var item in inlineEnding.Items)
+                        ProcessNode(item);
+                    var last = _currentMeasure is { Notes.Count: > 0 } ? _currentMeasure
+                        : _currentPart is { Measures.Count: > 0 } ? _currentPart.Measures[^1] : _currentMeasure;
+                    if (last != null && passes.Length > 0)
+                    {
+                        last.EndingStopNumbers = passes;
+                        last.EndingStopType = inlineEnding.IsClosed || NextIsRepeatEnd(inlineEnding) ? "stop" : "discontinue";
                     }
                 }
                 break;
