@@ -913,6 +913,13 @@ public static class DiagnosticCodes
     /// what may be cut. The word is kept in the tree and breaks nothing.</summary>
     public const string ChordsBreakInsideBar = "LYS1069";
 
+    /// <summary>Two parts (or a part and a chords row) write DIFFERENT repeat signs on the same
+    /// bar line of a section — <c>|:</c> in one and <c>:|</c> in the other, or <c>:|*2</c> and
+    /// <c>:|*3</c>. A repeat is the score's (docs/inline-repeat-design.md §3.2): a part that
+    /// writes a plain <c>|</c> there follows the sign another writes, but two signs that
+    /// disagree leave no reading (owner's decision 2026-11-14).</summary>
+    public const string RepeatSignsDisagree = "LYS1070";
+
     /// <summary>Warning: a <c>chords</c> row entry that is no chord Lily# reads — <c>C7b9</c>,
     /// <c>C-5</c>, a misspelled quality. The row still prints it as written and plays only its
     /// root (a root that is no A–G is the parser's error); the message names the spelling's fix, as the

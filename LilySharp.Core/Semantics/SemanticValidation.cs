@@ -115,6 +115,7 @@ public static class SemanticValidation
         new TabRenderVocabularyValidator(), // `tab [TUNING] X as WORD` — the same clause's other half
         new RepeatStructureScopeValidator(),// a repeat barline / volta ending written in music
         new RepeatPairingValidator(),       // a '|:' that no ':|' closes (score-expanded)
+        new RepeatSignAgreementValidator(), // two parts writing different repeat signs on one bar line
         new ExpansionBudgetValidator(),     // expansion truncated at the collector's site budget
         new MidBarBreakValidator(),         // a mid-bar break the page could not split the bar at
         new BreakConflictValidator(),       // a bar line one part gives a break and another a noBreak

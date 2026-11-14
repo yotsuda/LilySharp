@@ -90,7 +90,8 @@ internal static class MeasureModel
     public static List<Bar> Split(SyntaxNode scope, IReadOnlyDictionary<string, SyntaxNode> phraseBodies,
         Fraction? initialMeter = null, List<(int Bar, TimeSignatureSyntax Time, bool MidBar)>? meterChanges = null,
         Func<int, TimeSignatureSyntax?>? plannedMeterAt = null, int expansionBudget = ExpansionCap,
-        Dictionary<(string Chain, int Position), int>? index = null, bool longestVoice = false)
+        Dictionary<(string Chain, int Position), int>? index = null, bool longestVoice = false,
+        List<(int End, int Bars)>? writtenLines = null)
     {
         var stream = new List<object>();
         var budget = new ExpansionBudget(expansionBudget);
@@ -281,7 +282,10 @@ internal static class MeasureModel
                 }
                 prevBarEnd = barEnd;
                 if (callSites.Count == 0)
+                {
                     barsAtWrittenLine.Add((barEnd, bars.Count));
+                    writtenLines?.Add((barEnd, bars.Count));
+                }
                 continue;
             }
             var itemDuration = MeasureDurations.ItemDuration(node, ref defaultDuration);
