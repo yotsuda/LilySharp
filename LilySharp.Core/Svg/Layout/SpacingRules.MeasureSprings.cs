@@ -1316,7 +1316,8 @@ internal static partial class SpacingRules
         ImmutableArray<Spring> springs,
         IReadOnlyList<Fraction> timings,
         Model.Staff staff,
-        int measureIndex)
+        int measureIndex,
+        int[]? systemWishes = null)
     {
         var staffVoices = staff.Voices;
         if ((staffVoices.Length < 2 && !CrossCollisionMark.AnyIn(staffVoices) && !IsVisitedIn(staff, measureIndex))
@@ -1369,8 +1370,10 @@ internal static partial class SpacingRules
         // MEASURED, LilyPond 2.26.0 (Lab sessions/p1234/rod, head to head): `cisis''16` and a
         //   `cis''16@cross` moved onto its staff 3.9208, `ceses''`/`ces''` 3.7408, `c''`/`cis''`
         //   3.1542, `cis''`/`cih''` 3.5208 — 2.40 each here before, those four after.
-        // The WISH is still shared only in a bar where a moved note's column shifted something:
-        //   elsewhere the moved notes are spaced as they were before the shift was solved here.
+        // The WISH: a moved note's shift joins the pair's average in every bar, over the system's
+        //   wishes (ColumnWishes, session 1235) — with a shift of 0 it adds nothing, and its
+        //   voice is one of the count. Without that count (no caller today) it is shared, as
+        //   until then, only in a bar where a moved note's column shifted something.
         var visitorIds = new List<ImmutableArray<Model.Measure>>();
         int VisitorOf(ImmutableArray<Model.Measure> measures)
         {
@@ -1409,7 +1412,9 @@ internal static partial class SpacingRules
                         next++;
                     int spring = next >= items.Length ? (t == timings.Count - 1 ? timings.Count : -1)
                         : t + 1 < timings.Count && timings[t + 1] == onset + crossed.Item.Duration ? t + 1 : -1;
-                    if (spring > 0 && ownShifted)
+                    // With the system's count the visitor's wish is one of the column's whatever
+                    // the bar; without it, as before, only where a column of the bar shifted.
+                    if (spring > 0 && (ownShifted || systemWishes != null))
                         (visitorWishes ??= new()).Add((spring, crossed.CollisionShift));
                     break;
                 }
@@ -1497,7 +1502,7 @@ internal static partial class SpacingRules
                 continue;
             var s = result[t];
             if (shiftSum != 0)
-                s = s.WithIdealDistance(Math.Max(0.0, s.IdealDistance + shiftSum / wishes));
+                s = s.WithIdealDistance(Math.Max(0.0, s.IdealDistance + shiftSum / WishesOf(t, wishes)));
             if (maxSky > s.MinDistance)
             {
                 // The same steps the per-voice loop takes, in the same order: raise the
@@ -1540,11 +1545,74 @@ internal static partial class SpacingRules
             {
                 int closing = timings.Count;
                 result[closing] = result[closing].WithIdealDistance(
-                    Math.Max(0.0, result[closing].IdealDistance + shiftSum / wishes));
+                    Math.Max(0.0, result[closing].IdealDistance + shiftSum / WishesOf(closing, wishes)));
                 widened = true;
             }
         }
         return widened ? result.ToImmutable() : springs;
+
+        // The wishes a spring's shifts are averaged over: every voice's of the SYSTEM that
+        // spans the pair, not this staff's alone (ColumnWishes).
+        int WishesOf(int spring, int own) =>
+            systemWishes != null && spring < systemWishes.Length ? Math.Max(own, systemWishes[spring]) : own;
+    }
+
+    /// <summary>
+    /// How many wishes each spring of a measure has over the whole system: for the spring into
+    /// column <c>t</c> (1 … <paramref name="timings"/>.Count − 1) the voices, of every staff,
+    /// with a rhythmic item on column <c>t − 1</c> AND on column <c>t</c>; for the closing
+    /// spring (index <paramref name="timings"/>.Count) the voices with one on the last column.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:300-381 musical_column_spacing — the spring of a
+    ///   column pair is merge_springs over the NoteSpacing wishes of the LEFT PAPER COLUMN, and
+    ///   a paper column is the system's: every staff's voices file their wishes on it.
+    /// LILYPOND-REF: lily/spring.cc:101-129 merge_springs — avg_distance over all of them.
+    /// So a head shifted in one staff moves the pair's ideal by its shift over ALL the wishes,
+    /// the other staves' unshifted ones among them. <see cref="ApplyCrossVoiceColumnSpacing"/>
+    /// is asked staff by staff and until 2026-11-14 (session 1235) divided each staff's shifts
+    /// by that staff's wishes alone.
+    /// MEASURED (LilyPond 2.26.0, Lab sessions/p1235/wish, quarters, an upper staff of two
+    ///   voices a second apart — one head shifted 1.3042 — where the unshifted gap is 3.002):
+    ///   alone 3.654 (the shift over 2); beside a staff of quarters 3.437 (over 3), of quarter
+    ///   RESTS 3.319 (over 3, the rest's narrower box in the average), of two voices or with a
+    ///   third staff 3.328 (over 4); beside a staff of half notes or of spacers 3.654 (no wish
+    ///   spans the pair); and beside a staff with its own second 3.654 — two shifts over 4,
+    ///   where Lily# drew 4.31, each staff adding its own half.
+    /// </remarks>
+    internal static int[] ColumnWishes(Model.MultiStaffScore score, IReadOnlyList<Fraction> timings, int measureIndex)
+    {
+        var wishes = new int[timings.Count + 1];
+        if (timings.Count == 0)
+            return wishes;
+        foreach (var group in score.StaffGroups)
+            foreach (var staff in group.Staves)
+                foreach (var voice in staff.Voices)
+                {
+                    if (measureIndex >= voice.Measures.Length)
+                        continue;
+                    var items = voice.Measures[measureIndex].Items;
+                    var onset = Fraction.Zero;
+                    int t = 0, previous = -2;
+                    for (int oi = 0; oi < items.Length; oi++)
+                    {
+                        if (IsMusicalColumn(items[oi]))
+                        {
+                            while (t < timings.Count && timings[t] < onset)
+                                t++;
+                            if (t < timings.Count && timings[t] == onset)
+                            {
+                                if (previous == t - 1)
+                                    wishes[t]++;
+                                previous = t;
+                            }
+                        }
+                        onset += items[oi].Duration;
+                    }
+                    if (previous == timings.Count - 1)
+                        wishes[timings.Count]++;
+                }
+        return wishes;
     }
 
     /// <summary>Whether a note <c>@cross</c> moved stands on <paramref name="staff"/> in this

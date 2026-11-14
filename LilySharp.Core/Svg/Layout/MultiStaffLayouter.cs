@@ -2652,12 +2652,16 @@ internal sealed class MultiStaffLayouter
         // single voice occupies both columns of the pair. One separation frame per
         // STAFF, as LilyPond's Separation_item has; never across staves. A tab
         // staff's columns are digit rows, priced by ApplyTabChordSpacing below.
+        int[]? columnWishes = null;
         foreach (var vGroup in score.StaffGroups)
             foreach (var vStaff in vGroup.Staves)
                 if (!vStaff.IsTab && (vStaff.Voices.Length >= 2 || CrossCollisionMark.AnyIn(vStaff.Voices)
                                       || SpacingRules.IsVisitedIn(vStaff, measureIndex)))
+                    // A shifted head moves the pair's ideal by its shift over the wishes of
+                    // the whole system's column, counted once for the staves that ask.
                     springs = SpacingRules.ApplyCrossVoiceColumnSpacing(
-                        springs, allTimings, vStaff, measureIndex);
+                        springs, allTimings, vStaff, measureIndex,
+                        columnWishes ??= SpacingRules.ColumnWishes(score, allTimings, measureIndex));
 
         // Ledger-line rods between the consecutive ledgered columns of each staff, inside
         // this measure (the pairs across a bar line are the system's rods, in LayoutMeasures).
