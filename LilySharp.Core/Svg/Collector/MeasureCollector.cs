@@ -1463,6 +1463,17 @@ public sealed partial class MeasureCollector
     /// </summary>
     private List<(int Index, int From)> SectionBoundaryContinuations(IReadOnlyList<Measure> measures)
     {
+        // …and the bars a sign written in the music cuts: the same continuation.
+        var result = SignCutContinuations(measures);
+        var bySign = result.Count == 0 ? null : result.Select(r => r.Item1).ToHashSet();
+        foreach (var boundary in BoundaryContinuations(measures))
+            if (bySign == null || !bySign.Contains(boundary.Index))
+                result.Add(boundary);
+        return result;
+    }
+
+    private List<(int Index, int From)> BoundaryContinuations(IReadOnlyList<Measure> measures)
+    {
         var result = new List<(int, int)>();
         if (measures.Count < 2 || _sectionState.AllStarts.Count == 0)
             return result;
@@ -3289,10 +3300,32 @@ public sealed partial class MeasureCollector
             return;
         }
         var stream = Semantics.RepeatStream.For(_root, _form);
+        var bars = ColumnBarsOf(measures, stream, out bool aligned);
+
+        for (int k = 0; k < bars.Count; k++)
+        {
+            var (mi, ii, at) = bars[k];
+            var item = measures[mi].Items[ii];
+            string? before = aligned ? Semantics.RepeatStream.Encode(stream.SignsAt(at)) : null;
+            string? after = aligned && k == bars.Count - 1 ? Semantics.RepeatStream.Encode(stream.SignsAt(at + 1)) : null;
+            if (item.ScoreSignsBefore != before || item.ScoreSignsAfter != after)
+                measures[mi] = measures[mi] with
+                {
+                    Items = measures[mi].Items.SetItem(ii, item with { ScoreSignsBefore = before, ScoreSignsAfter = after }),
+                };
+        }
+    }
+
+    /// <summary>The bars of a finished voice on the score's sign column: the first timed item
+    /// of each bar and the printed bar of <paramref name="stream"/> it is — and whether the
+    /// voice lines up with the column at all (<see cref="StampTheScoresSigns"/>' remark).</summary>
+    private static List<(int Measure, int Item, int Bar)> ColumnBarsOf(
+        IReadOnlyList<Measure> measures, Semantics.RepeatStream stream, out bool aligned)
+    {
         // The first timed item of each bar, and the bar line of the column it opens on.
         var bars = new List<(int Measure, int Item, int Bar)>();
         int play = -1, bar = -1, stamps = 0;
-        bool aligned = true;
+        aligned = true;
         for (int mi = 0; mi < measures.Count && aligned; mi++)
         {
             var items = measures[mi].Items;
@@ -3330,19 +3363,40 @@ public sealed partial class MeasureCollector
         // Every play stamp opened a counted bar, and the voice ends where the column does.
         aligned &= play >= 0 && stamps == bars.Count(b => measures[b.Measure].Items[b.Item].BeginsSectionPlay != SectionPlayEdge.None)
             && bar + 1 == stream.Bars;
+        return bars;
+    }
 
-        for (int k = 0; k < bars.Count; k++)
+    /// <summary>
+    /// The measures that open with the rest of a bar a SIGN written in the music cuts
+    /// (<see cref="Semantics.SignCutBars"/>: <c>g a b :| g4 |</c>, the repeat that takes its
+    /// pickup with it), each with the measure whose bar it continues — the measure before it,
+    /// or the body's last for a later ending. The same fact as a bar a section boundary splits
+    /// (<see cref="SectionBoundaryContinuations"/>), found on the score's sign column; empty
+    /// for a book whose music writes no sign and for a voice the column does not line up with.
+    /// </summary>
+    private List<(int Index, int From)> SignCutContinuations(IReadOnlyList<Measure> measures)
+    {
+        var result = new List<(int, int)>();
+        if (_root == null || measures.Count < 2
+            || Semantics.SignCutBars.For(_root, _form) is not { IsEmpty: false } cuts)
+            return result;
+        var bars = ColumnBarsOf(measures, cuts.Stream, out bool aligned);
+        if (!aligned)
+            return result;
+        var measureOf = new Dictionary<int, int>();
+        foreach (var (mi, _, bar) in bars)
+            measureOf[bar] = mi;
+        foreach (var (mi, _, bar) in bars)
         {
-            var (mi, ii, at) = bars[k];
-            var item = measures[mi].Items[ii];
-            string? before = aligned ? Semantics.RepeatStream.Encode(stream.SignsAt(at)) : null;
-            string? after = aligned && k == bars.Count - 1 ? Semantics.RepeatStream.Encode(stream.SignsAt(at + 1)) : null;
-            if (item.ScoreSignsBefore != before || item.ScoreSignsAfter != after)
-                measures[mi] = measures[mi] with
-                {
-                    Items = measures[mi].Items.SetItem(ii, item with { ScoreSignsBefore = before, ScoreSignsAfter = after }),
-                };
+            if (cuts.ContinuedFrom(bar) is not (>= 0 and var fromBar) || !measureOf.TryGetValue(fromBar, out int from) || from >= mi)
+                continue;
+            var (prev, cur) = (measures[from], measures[mi]);
+            if (prev.Unmetered || cur.Unmetered || prev.IsEmptyPlaceholder || cur.IsEmptyPlaceholder
+                || prev.BreaksMidBar || cur.ContinuesBar || cur.BreaksMidBar)
+                continue;
+            result.Add((mi, from));
         }
+        return result;
     }
 
     /// <summary>Stamps the navigation marks that stand after the form's last play

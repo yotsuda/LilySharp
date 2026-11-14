@@ -95,6 +95,9 @@ internal sealed class MeasureValidator : ISemanticValidator
         // The split-bar exemption reads the header pickups: a predecessor whose only bar is its
         // declared pickup leaves the PICKUP open, not a bar of the meter (p753).
         _boundaries = new SectionBoundaryBars(root, _phraseBodies, _sectionHeaders);
+        // …and the bars a sign written in the music cuts (SignCutBars): the same exemption,
+        // read on the score's sign column.
+        _signCutHalves = SignCutBars.HalvesInEveryForm(root);
         // The meters other parts write into each section's bars (HANDOFF §2 F-partmeter ⒜).
         _meterPlan = Svg.Collector.SectionMeterPlan.Build(root, _phraseBodies);
         // A score has one meter at a time: where two parts write different ones at the start
@@ -243,6 +246,8 @@ internal sealed class MeasureValidator : ISemanticValidator
     // bar completes (a repeat sign or a volta bracket standing mid-bar). Asked of the form's
     // play order, per part; see SectionBoundaryBars.
     private SectionBoundaryBars? _boundaries;
+    // Where the bars start that are one half of a bar a sign in the music cuts (SignCutBars).
+    private HashSet<int> _signCutHalves = [];
     private Svg.Collector.SectionMeterPlan _meterPlan = Svg.Collector.SectionMeterPlan.Empty;
 
     // HANDOFF §2 F-phrasemeter: the phrase bodies the walk met, with the meter at their
@@ -911,6 +916,13 @@ internal sealed class MeasureValidator : ISemanticValidator
                     {
                         if (duration > spanEndHere)
                             EmitSpanTailBetween(measure, duration, spanEndHere, expected);
+                    }
+                    // A bar a SIGN in the music cuts — `g a b :| g4 |`, the repeat that takes
+                    // its pickup with it — is one bar too, by the same rule read on the
+                    // score's sign column (SignCutBars; docs/inline-repeat-design.md §7).
+                    else if (_signCutHalves.Count > 0
+                             && _signCutHalves.Contains(MeasureDurations.GetSpan(measure.Items).Start))
+                    {
                     }
                     else if (!(openTail && tailUnclosed && isLast) && !splitByBoundary)
                         EmitUnderfull(measure, duration, expected, partialLength, completesOpeningPickup,

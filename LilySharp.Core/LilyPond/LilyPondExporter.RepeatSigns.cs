@@ -162,13 +162,17 @@ public sealed partial class LilyPondExporter
     // reading stands there (RepeatTiePlays).
     private Dictionary<int, HashSet<int>>? _repeatTieBars;
     private RepeatStream? _repeatTieStream;
+    // The bars a sign written in the music cuts, for the form being written (null: none).
+    private SignCutBars? _signCuts;
 
     private Dictionary<int, HashSet<int>>? RepeatTieBars(FormDeclarationSyntax? form,
         Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)> byName)
     {
         _repeatTieStream = null;
+        _signCuts = null;
         if (_shared.Root is not { } root || !RepeatStream.InTheMusic(root))
             return null;
+        _signCuts = SignCutBars.For(root, form) is { IsEmpty: false } cuts ? cuts : null;
         var stream = _repeatTieStream = RepeatStream.For(root, form);
         var result = new Dictionary<int, HashSet<int>>();
         for (int p = 0; p < stream.Plays.Count; p++)
@@ -250,6 +254,15 @@ public sealed partial class LilyPondExporter
     /// the section's one play.</param>
     private void PlantTheRepeatTies(int play, string name, SyntaxNode container, List<SyntaxNode> result, int from)
     {
+        // The plain line a voice writes where another voice's sign cuts a bar (`g2. |` under the
+        // melody's `g a b :|`, SignCutBars) closes half a bar: a bar check there fails in
+        // LilyPond ("bar check failed at: 3/4", MEASURED 2026-11-15, Lab
+        // sessions/p1247/probe/m-a-pickup), so it is written as nothing (EmitBarline), as the
+        // line of a bar a section boundary splits is.
+        if (_signCuts != null && !_chordTrack)
+            for (int i = from; i < result.Count; i++)
+                if (result[i] is BarlineSyntax { BarToken.Kind: SyntaxKind.Bar, Parent: not null } line && _signCuts.ClosesAFirstHalf(line))
+                    _shared.OpenWrittenBars.Add(line);
         if (_repeatTieBars == null || _repeatTieStream is not { } stream || _chordTrack)
             return;
         if (play < 0)

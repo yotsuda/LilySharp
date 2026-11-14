@@ -395,6 +395,7 @@ public sealed class MusicXmlExporter
             _bars.CaptureHome();
             BuildSectionHeaderRegistry(root);
             ProcessSections(root);
+            NumberTheBarsASignCuts();
             // A flat top-level chord track's bars past the music (FlatChordRows.Rest), then the
             // chord rows, once every part has written its bars (their measures are the rows' homes).
             EmitFlatRowsPastTheMusic();
@@ -2906,6 +2907,37 @@ public sealed class MusicXmlExporter
         for (int i = firstIndex; i < measures.Count; i++)
             measures[i].Number -= 1;
         _measureNumber -= 1;
+    }
+
+    /// <summary>
+    /// The bar a SIGN written in the music cuts (<see cref="SignCutBars"/>: <c>g a b :| g4 |</c>,
+    /// the repeat that takes its pickup with it) is one bar for the numbering too: its second
+    /// half takes the first half's number and is implicit, and the bars after it follow from
+    /// there — <see cref="ContinueSplitBar"/>'s spelling, for the same fact found on the
+    /// score's sign column. Only the half printed right after its first half: a later ending
+    /// that continues the body's bar is numbered on, as the page numbers it. A part whose
+    /// measures are not the column's bars one for one is left as it was.
+    /// MEASURED before (2026-11-15, Lab sessions/p1247/probe/m-a-pickup): 0, 1, 2, 3, 4 where
+    /// the form's spelling of the same music (m-c-formtwin) wrote 0, 1, 2, 2 (implicit), 3.
+    /// </summary>
+    private void NumberTheBarsASignCuts()
+    {
+        if (_root == null || _document == null || SignCutBars.For(_root, _xmlForm) is not { IsEmpty: false } cuts)
+            return;
+        foreach (var part in _document.Parts)
+        {
+            var measures = part.Measures;
+            if (measures.Count != cuts.Stream.Bars)
+                continue;
+            for (int bar = 1; bar < measures.Count; bar++)
+            {
+                if (cuts.ContinuedFrom(bar) != bar - 1 || measures[bar].Implicit || measures[bar - 1].Implicit)
+                    continue;
+                measures[bar].Implicit = true;
+                for (int i = bar; i < measures.Count; i++)
+                    measures[i].Number -= 1;
+            }
+        }
     }
 
     private static int ElapsedTicks(MusicXmlMeasure measure)

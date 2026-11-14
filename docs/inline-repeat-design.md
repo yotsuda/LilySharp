@@ -117,7 +117,7 @@ LYS1034 のエラーが出ていても出力は書かれるので、今の答え
 | MIDI（`MidiExporter.ProcessSequence`／`ProcessRepeatSpan`） | **書いたパートだけ**反復する（2 パートで 25 音・正しくは 27）。section をまたぐ対は反復しない。コードの行の反復は誰も反復しない。ナビ記号はたどらない | 一番遠い。この歩きは 1 つの section の 1 パートしか見えない（同ファイル :2971-2985 の注）。score の小節の列から道順を取り、section の小節の範囲を全パートで鳴らす形にする |
 | MusicXML（`MusicXmlExporter`） | 書いたパートにだけ `<repeat>`。`<ending>`・回数・ナビ記号は出ない。コードの行の反復は出ない | 全パートの同じ小節に barline／ending／回数／記号を書く |
 | `.ly`（`LilyPondExporter.EmitInlineRepeat`） | 書いたパートにだけ `\repeat volta`・`\alternative`。ナビ記号は `\segnoMark`・`\jump`・`\codaMark` で出る | 書かなかったパートにも同じ小節で入れる（`\unfoldRepeats` と MIDI のため。絵は今も score 全体に出る） |
-| タイの持ち越し・小節の補完（`PlayedOrder.Expand`・`SectionBoundaryBars`） | **測った（第1245・§7）。** タイは 5 つの読み手とも直した（MIDI 第1245・ページと検査 第1246・MusicXML と `.ly` 第1247）。`:|` が割る小節は form の綴りと違う | score 全体の記号の列（`RepeatStream`）から「小節の次に鳴る小節」を引く |
+| タイの持ち越し・小節の補完（`PlayedOrder.Expand`・`SectionBoundaryBars`） | **測った（第1245・§7）。** タイは 5 つの読み手とも直した（MIDI 第1245・ページと検査 第1246・MusicXML と `.ly` 第1247）。`:|` が割る小節も 5 つとも 1 小節と読む（第1247・`SignCutBars`） | score 全体の記号の列（`RepeatStream`）から「小節の次に鳴る小節」を引く |
 | 歌詞の `verse N` | 未測定 | §6 Q3 |
 | プレビューの増分（`MeasureCollector.Resume`） | **測った（第1245）。** 記号を 1 つのパートに打つ・消す・1 文字ずつ打つ 10 通りで、増分の絵は全部描き直した絵と同じ（網 `InlineRepeatIncrementalTests`） | なし |
 | 読み込み（`LysWriter`）・OMR・Dettato | section に分解して書く | §6 Q2 |
@@ -131,7 +131,7 @@ LYS1034 は**最後に**外す。エラーの本も今は描けて鳴るので�
 
 0. ✅ 済み（上の表）。
 1. `RepeatStream`（✅ 列と演奏順・第1246＝§7「段 1」。form だけの本は答えが変わらない）と診断（§3.2〜§3.6・残り）。
-2. ✅ ページ（行の ending の括弧）。3. ✅ MIDI（§7）。4. タイと小節の補完（タイは ✅＝§7「MusicXML・`.ly` のタイ」まで・`:|` が割る小節は段 1 の列の上で＝§7 段 4）。5. ✅ MusicXML（小節線・ending・回数・行の記号・音楽のナビ記号）。6. ✅ `.ly`（全声部に書く。LilyPond は通る・絵の突き合わせは未）。7. ✅ 歌詞（4 種目の警告は未）。
+2. ✅ ページ（行の ending の括弧）。3. ✅ MIDI（§7）。4. ✅ タイと小節の補完（§7「MusicXML・`.ly` のタイ」「記号が割る小節」）。5. ✅ MusicXML（小節線・ending・回数・行の記号・音楽のナビ記号）。6. ✅ `.ly`（全声部に書く。LilyPond は通る・絵の突き合わせは未）。7. ✅ 歌詞（4 種目の警告は未）。
 8. LYS1034 を phrase だけに狭める。GRAMMAR・TUTORIAL・LEARN_FOR_LLM・COMPOSE_FOR_LLM・補完・CHANGELOG。
 9. 読み込みと OMR の書き出し（Q2 の答えしだい）。
 
@@ -257,6 +257,24 @@ LYS1034 は**最後に**外す。エラーの本も今は描けて鳴るので�
   掃き 1041 冊（xml 1268 件・ly 1268 件）は HEAD と差 0。LilyPond 2.26.0 は探り譜 10 冊を通る。
 - 残り: 1 番括弧から頭へ戻るタイ（弧の出ないタイ）は、`.ly` では `~` のままなので LilyPond が `unterminated tie` と警告する（form の綴りも同じ・ページは短い弧を描く）。
   2 声部の小節どうしのタイは網がない（声部の番号で行き先を選ぶ）。フレーズの中で終わるタイは `.ly` では見ない（form の読みの `EndsWithTie` と同じ）。
+
+### 記号が割る小節（第1247・2026-11-15）
+
+段 4「残り 2」。`|: g4 | c d e f | g a b :| g4 | c1 |`（弱起を含む反復）の `g a b` と `g4` を 1 小節と読む。探り譜は Lab `sessions/p1247/probe/m-a-pickup`（form の綴りの双子 `m-c-formtwin` と同じ答えになることを確かめた）。
+
+- **規則は `SectionBoundaryBars` のものを列の上で読む**（新しい決めごとは無い・`Semantics.SignCutBars`）: 短い小節は、**閉じる小節線に score の記号が立ち**、次に鳴る小節（`RepeatStream.Next`）が
+  どれもちょうど残りを持っていれば「前半」。小節は、開く小節線に記号が立ち、前に鳴る小節がどれもちょうどその分を残していれば「後半」。
+  記号のない素の小節線の前後は今までどおり短い小節（LYS2001・MIDI は埋める）。
+- **score が決める**: その 2 小節を両方書いている音楽の声部が全部そう書いているときだけ（埋め草の声部とコードの行は数えない）。長さは `MeasureModel.Split`。
+  宣言した弱起（`partial`）は後半にはなるが前半にはならない。曲の最初の小節は後半にならない。
+- 後半が「続き」になるのは、前に鳴る小節が全部前半のとき（`ContinuedFrom`）: 刷った前の小節、または 2 つ目以降の ending なら本体の最後の小節（`g a | [1. b c :| [2. b g ] |`）。
+  反復が 4 拍の小節へ戻る形（`|: c d e f | g a b :| g4 |`）は、1 回目に 3 拍の小節ができるので前半にならず、今までどおり警告する。
+- 読み手: 検査（`MeasureValidator`＝どの form のどの play でも半分である小節には LYS2001・LYS2006 を出さない）／MIDI（`ProcessSequence`＝前半を埋めず、後半の小節は前半の分だけ進んだところから数える）／
+  ページ（`MeasureCollector.SignCutContinuations`＝`Measure.ContinuesBar`・小節番号は 1 つ）／MusicXML（`NumberTheBarsASignCuts`＝後半は前半の番号で `implicit`）／
+  `.ly`（記号を別の声部から受け取る声部が前半の後ろに書いた素の `|` を書かない＝LilyPond の bar check が通る）。
+- 網: `SignCutBarsTests` 7 本・`InlineRepeatCutBarTests` 6 本。毒 11 本とも赤（Lab `p1247/poisons2.ps1` と `.ly` の 1 本）。掃き 1041 冊（svg・xml・midi・ly 各 1268 件）は HEAD と差 0。
+- 残り: ナビ記号（`fine`・`ds`）が割る小節も同じ規則で読む（記号の種類を選んでいない）が、網は反復記号と ending だけ。曲が割れた小節の前半で終わる形（`… g a b fine`）は、今までの「最後の小節が弱起を補う」の読みのまま。
+  1 つのパートだけを描く譜でも score 全体の声部で決める。ページの絵は LilyPond と突き合わせていない。
 
 ## 8. エディタ: 記号を全パートに書く（オーナー決定 2026-11-14・小節線の分は実装 `Editing.RepeatSignSpreader`・実機は未確認）
 

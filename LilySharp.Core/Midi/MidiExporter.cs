@@ -915,6 +915,9 @@ public sealed class MidiExporter
         _formDriven = _root.DescendantNodes().OfType<FormDeclarationSyntax>().Any();
         _formPlayed = false;
         _timeline = WritesRepeatsInTheMusic(_root) ? new List<RepeatSign>() : null;
+        _signCuts = _timeline != null ? SignCutBars.For(_root, ScoreForms.Primary(_root)) : null;
+        if (_signCuts is { IsEmpty: true })
+            _signCuts = null;
         _playedSpec = RenderSpecParser.PlayedSpec(tree, Score, Form);
         _scoreTransposeSemitones = _playedSpec?.ScoreTranspose is { } moved
             ? PitchTransposer.IntervalSemitones(moved.step, moved.alt, moved.oct) : 0;
@@ -3068,7 +3071,12 @@ public sealed class MidiExporter
                     || (bar.BarToken.Kind is SyntaxKind.RepeatStartBar && !atScopeStart);
                 atScopeStart = false;
                 bool timePassed = _currentTick > boundaryTick;
-                if (_currentTick > _barStart)
+                // A sign that stands INSIDE a bar (`g a b :| g4 |`, SignCutBars): the bar behind
+                // it is the first half of a bar, not a short bar to fill out, and the bar it
+                // opens has that half behind it — its own line closes the whole bar.
+                bool closesAHalf = _signCuts?.ClosesAFirstHalf(bar) == true;
+                var headBehind = _signCuts?.HeadBehind(bar);
+                if (_currentTick > _barStart && !closesAHalf)
                     AlignBarLine(track, items, i);
                 if (pairsHere && _currentTick <= boundaryTick && boundaryClaimed)
                 {
@@ -3090,7 +3098,14 @@ public sealed class MidiExporter
                     _bars.SpendPartial();
                 boundaryTick = _currentTick;
                 boundaryClaimed = true;
+                // The line between the two halves is no bar line of the count (MidiFile.BarTicks).
+                var barTicks = _barTicks;
+                if (closesAHalf && headBehind != null)
+                    _barTicks = null;
                 MarkBarLine(track);
+                _barTicks = barTicks;
+                if (headBehind is { } head)
+                    _barStart = _currentTick - FractionToTicks(head);
                 // …and fall through: the repeat spans below key on the repeat barlines,
                 // and every other node type still takes its ordinary path.
             }
@@ -3322,6 +3337,9 @@ public sealed class MidiExporter
     }
 
     /// <summary>A bar line at the current tick: the next bar opens here.</summary>
+    // The bars a sign in the music cuts, in a book that writes its repeats there (null otherwise).
+    private SignCutBars? _signCuts;
+
     private void MarkBarLine(MidiTrack track)
     {
         _barTicks?.Add(_currentTick);
