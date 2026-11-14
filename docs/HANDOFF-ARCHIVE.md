@@ -267,6 +267,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1242セッションの経緯
+
+### 1.1 第1242セッション（2026-11-14・YT-DELL2）
+
+base `6c3b10a9f`・開始時 full 16832 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16835（Lab `p1242` の `run1.trx`）。Calamo の `open` は 0・Dettato の `open` は 3。CI は第1231 のまま。
+Dettato（録音 → コード譜）の依頼 3 件に着手。Core の commit 1 つ（未 push）。返事は Lab `p1242/dettato/lilysharp-reply-2026-11-14.md` と Dettato の REQUESTS の行（Dettato の repo では未 commit）。残りは Lab `p1242/leftovers.md`。
+- **`[engraving]` `[check]` 和音の行の弱起は、その小節が持つ拍で割る（`c9f060dc8`）**（依頼 3）: 4/4・`partial 4*3`・`chords harmony { C7 F G7 | }` で読み手が 2 通りに割れていた。ページと `.ly` は拍子の格子を弱起の長さに**縮め**（絵は 1 拍ずつで正しいが LYS2009 が「3 slots in a 4/4 bar」と警告）、MIDI と MusicXML は拍子の格子のまま弱起の長さで**切る**（F は 1⅓ 拍・2 拍の弱起の `C7 F |` は F が鳴らず書かれない）。直し: 弱起の小節の拍＝拍子の**最後の**拍（`ChordRhythm.BeatsOf`・LILYSHARP-OWN＝意味論の設計。拍の途中から始まる弱起は「残りの半端・あとは 1 拍ずつ」）を 1 か所に置き、`ChordNameCollector.SlotGroups` の `pickup` 引数でページ（`PickupByMeasure`＝`MeterByMeasure` と同じ所で渡す）・MIDI（`PlayChordRow`）・MusicXML（`AddRowHarmonies`）・`.ly`（`ChordBarText`）が同じ格子を読む。3 拍に 2 つ・4 つは新しく警告になる（3/4 の小節と同じ・「in a pickup of 3 beat(s) in 4/4」）。
+- **和音だけの譜（リードシート）の小節線**: Dettato の問いを測って見つけた別の欠陥。小節線（`MidiFile.BarTicks`）を立てるのはパートの lane だけで、行だけの score は 1 本も持たなかった＝メトロノームは最初の拍から拍子の小節を数え、3 拍の弱起の後はアクセントが毎小節 1 拍早い（120 bpm で小節線 1.5・3.5 秒に対し 0・2・4 秒）。直し: `RowsAndLanesEnd` が、行の小節の終わりのうち lane より後ろの分を小節線にする（音楽に切られる最後の小節は足さない）。
+- Dettato への答え（実測・`p1242/dettato/probe-lsp-after.txt`）: `lilysharp/playback` の `Beats` は弱起の拍に `A` を立てない（最初の `A` は弱起の終わりの小節線）／`lilysharp/placeAt` は弱起に 0 を返す。依頼 1（録音を変換するメニュー）は取り決めへの希望を返した段階＝**実装は Dettato の D3 で形が固まってから・オーナーに確認してから**。依頼 2（選んだ小節の原音を鳴らす）も機能の追加＝オーナーに訊く。
+- ⚠️ 直したこと: 網の「譜表に付けた和音」の形を 2 回取り違えた（collector の attached の walk に入るのは**上にも下にも譜表がある行**だけ＝`RenderSpecParser.FoldAdjacentRows`。毒 15 が緑で気づいた）／`PickupByMeasure` の初期値を共有の static にして `MeasureCollectorResetTests` が赤／掃きは差 0 だが、追跡コーパスに 2 スロット以上の弱起の行は無い＝見ているのは網。
+- 7.7 の匂い: 緑の毒 3 本。7・8＝単一譜表の `Collect` に渡る `attachedChordPart` は今の文法では立たない（行を持つ score は `IsMultiStaff`）＝走らない腕・コードに注記。19＝行の小節の終わりは lane の中では音楽の小節線と同じ場所にしか立たない本しか書けなかった（観測者なし）。`KeyEstimator` と `.ly` の home の拍子の格子は未測定（leftovers）。7.5／7.6: OWN 1（`BeatsOf`）・REF 0＝和音の行の格子は Lily# の設計で LilyPond に対応物なし。perf: 打鍵の経路に `PickupTimeline`（小節を 1 回歩く）と辞書 1 つ＝未計測。
+- 門: 終了時 full 16865 合格 / 1 失敗（`ReadmeSampleTests`＝同じ）/ skip 2 / 合計 16868（`p1242/run4.trx`・+33 は足した網 `ChordRowPickupGridTests`）。全 svg・MusicXML・MIDI の掃きは 1041 冊 1268 件で差 0（`p1242/sweep`）。毒 19 本は 16 赤 3 緑（`p1242/poisons*.log`）。snapshot 不動・OWN 433 → 434。CHANGELOG は 2 つとも `## Unreleased`・GRAMMAR 2 文書に 1 文ずつ。
+
 ## 以下は第1241セッションの経緯
 
 ### 1.1 第1241セッション（2026-11-14・YT-DELL2）
