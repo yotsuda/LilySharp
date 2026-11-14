@@ -142,6 +142,22 @@ public sealed class InlineRepeatMidiTests
         Assert.Equal("ABABC", Played(src));
     }
 
+    /// <summary>The page brackets a row's endings as it brackets a part's: one bracket an
+    /// ending, over the bars it holds, hooked where a <c>]</c> closes it — beside a staff, and
+    /// on a lead sheet of the row alone. Until 2026-11-14 a row could not write one.</summary>
+    [Theory]
+    [InlineData("part m { section S { c''1 | g''1 | e'''1 | a''1 | c''1 | } }\nchords prog { section S { C |: G | [1. Am :| [2. F ] | C | } }\nform { S }\nscore { chords prog staff m }")]
+    [InlineData("chords prog { C |: G | [1. Am :| [2. F ] | C | }\nscore { chords prog }")]
+    public void ThePageBracketsARowsEndings(string book)
+    {
+        var tree = SyntaxTree.Parse("octave absolute\ntime 4/4\n" + book);
+        var score = new LilySharp.Core.Svg.Collector.MeasureCollector()
+            .CollectMultiStaff(tree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree)!);
+        Assert.Equal(new[] { (2, 2, "1.", false), (3, 3, "2.", true) },
+            score.VoltaBrackets.OrderBy(v => v.StartMeasureIndex)
+                .Select(v => (v.StartMeasureIndex, v.EndMeasureIndex, v.VoltaText, v.IsClosed)).ToArray());
+    }
+
     /// <summary>A row's <c>| |:</c> is an empty bar, as its <c>| |</c> is and as a part's is
     /// (owner's decision 2026-11-14) — and the count, the page, the MIDI, the MusicXML and the
     /// twin read it by one rule (<c>ChordRowBarLines</c>). Until then five of the row's readers

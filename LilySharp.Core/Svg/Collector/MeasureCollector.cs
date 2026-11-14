@@ -2078,6 +2078,9 @@ public sealed partial class MeasureCollector
             var rowMeasures = _chordNameCollector.CollectPart(
                 tree.GetRoot(), rowName, rowIdx, _sectionState.StartMeasure, _v.Meta.TimeBeats, _v.Meta.TimeBeatType, rowMode);
             staffVoices[rowName] = ImmutableArray.Create(new Voice(rowName, rowMeasures));
+            // The endings the row writes are the score's, as a part's are (one bracket an ending).
+            foreach (var ending in _chordNameCollector.RowEndings)
+                AddVoltaBracket(ending);
         }
 
         // Now that the music is collected, gather the lyrics rows. The wrap bar

@@ -327,6 +327,7 @@ internal sealed class ChordNameCollector
     {
         _items.Clear();
         _gridWarnings.Clear();
+        RowEndings.Clear();
         MeterByMeasure = [];
         PickupByMeasure = new Dictionary<int, Fraction>();
     }
@@ -782,6 +783,12 @@ internal sealed class ChordNameCollector
         return bars + (pendingEntries ? 1 : 0);
     }
 
+    /// <summary>The volta endings the row collected last writes (<c>[1. … ]</c>, or closed by
+    /// its <c>:|</c>), as the brackets a part's inline endings make
+    /// (<c>MeasureCollector</c>'s <c>PendingInlineVoltas</c>): the collector adds them to the
+    /// score's, one bracket an ending.</summary>
+    public List<VoltaBracketItem> RowEndings { get; } = new();
+
     public ImmutableArray<Measure> CollectPart(
         SyntaxNode root, string partName, int staffIndex,
         IReadOnlyDictionary<string, int> sectionStartMeasure, int timeBeats, int timeBeatType,
@@ -792,6 +799,7 @@ internal sealed class ChordNameCollector
         if (blocks.Count == 0)
             return ImmutableArray<Measure>.Empty;
 
+        RowEndings.Clear();
         var measureItems = new Dictionary<int, ImmutableArray<MusicItem>>();
         // Source barline types per measure. A chord row carries its own `|`, `:|`,
         // `||` etc. so a standalone lead sheet draws a real measure grid (and the
@@ -815,6 +823,15 @@ internal sealed class ChordNameCollector
             //   — general-rest-event (r and R, not s) → currentChordText = noChordSymbol.
             var pending = new List<SyntaxNode>();
             var pendingStart = BarlineType.None;
+            // The ending being read: its mark and the measure it opened at.
+            (InlineVoltaSyntax Mark, int First)? ending = null;
+            void CloseEnding(int last, bool hooked)
+            {
+                if (ending is { } open)
+                    RowEndings.Add(new VoltaBracketItem(open.First, Math.Max(open.First, last),
+                        open.Mark.PrintedText, hooked, open.Mark.SourceStart));
+                ending = null;
+            }
 
             // Close the current measure with the given end barline (None = trailing
             // measure, no written closer → defaults to Single in the build below).
@@ -880,16 +897,31 @@ internal sealed class ChordNameCollector
                     else
                     {
                         Commit(t);
+                        // The `:|` an ending is written before closes it, as it closes a
+                        // part's (`[1. G :|`): the bar just committed is its last.
+                        if (t == BarlineType.RepeatEnd)
+                            CloseEnding(MeasureOfBar(startMeasure, localMeasure - 1, out _), hooked: false);
                     }
                 }
                 else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
                 {
                     pending.Add(item);
                 }
+                // A row's ending (docs/inline-repeat-design.md): `[1.` opens it at the bar
+                // about to be read, `]` closes it on the bar it is written in.
+                else if (item is InlineVoltaSyntax opens)
+                {
+                    CloseEnding(MeasureOfBar(startMeasure, localMeasure - 1, out _), hooked: false);
+                    ending = (opens, MeasureOfBar(startMeasure, localMeasure, out _));
+                }
+                else if (item is VoltaEndSyntax)
+                    CloseEnding(MeasureOfBar(startMeasure, pending.Count > 0 ? localMeasure : localMeasure - 1, out _), hooked: true);
             }
             // A trailing measure with no closing barline still counts.
             if (pending.Count > 0 || pendingStart != BarlineType.None)
                 Commit(BarlineType.None);
+            // An ending nothing closed runs to the row's last bar.
+            CloseEnding(MeasureOfBar(startMeasure, localMeasure - 1, out _), hooked: false);
         }
 
         foreach (var block in blocks)
