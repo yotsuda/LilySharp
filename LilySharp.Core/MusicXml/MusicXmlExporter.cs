@@ -3784,6 +3784,9 @@ public sealed class MusicXmlExporter
                 }
                 // Until 2026-11-04 only the notes came across: a later voice's dynamics, hairpins,
                 // pedals, octave lines and words went with its scratch stream.
+                // …and they say whose they are (MusicXmlDirection.Voice).
+                foreach (var d in temp.Measures[i].Directions)
+                    d.Voice ??= v + 1;
                 target.Directions.AddRange(temp.Measures[i].Directions);
             }
         }

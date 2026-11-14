@@ -833,6 +833,13 @@ internal sealed class MusicXmlDirection
     /// hand at once closed the other's).</summary>
     public int? Number { get; set; }
 
+    /// <summary>The later voice of a <c>voice { } { }</c> the direction was written in (2 for
+    /// the second), or null for the first or only voice: the direction's <c>&lt;voice&gt;</c>,
+    /// numbered as that voice's notes are (a grand staff's lower staff counts on from 5). Every
+    /// direction stands at its bar's head with an offset, so without it nothing told a reader
+    /// whose mark a later voice's hairpin or dynamic was (session 1259).</summary>
+    public int? Voice { get; set; }
+
     public XElement ToXml()
     {
         var placement = Placement ?? "above";
@@ -929,9 +936,13 @@ internal sealed class MusicXmlDirection
         if (SoftPedal is { } soft)
             (sound ??= new XElement("sound")).Add(new XAttribute("soft-pedal", soft ? "yes" : "no"));
 
-        // Schema order: direction-type+, offset?, …, staff?, sound?.
+        // Schema order: direction-type+, offset?, …, voice?, staff?, sound?.
         if (Offset > 0)
             direction.Add(new XElement("offset", Offset));
+        // (A wedge's stop is written where the page ends the hairpin, which may be another
+        // voice's stream: it is its start's voice's all the same.)
+        if ((WedgeType == null ? Voice : WedgeVoice > 0 ? WedgeVoice + 1 : null) is { } voice)
+            direction.Add(new XElement("voice", voice + (Number == 2 ? 4 : 0)));
         if (Staff is { } staff)
             direction.Add(new XElement("staff", staff));
         if (sound != null)

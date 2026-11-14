@@ -211,7 +211,9 @@ internal static class MusicXmlReader
         var directed = new List<(ImportNote Host, string Mark, int Staff)>();  // marks a <staff> sent
         var slurEnds = new List<SlurEnd>();                 // every <slur> of the part, in stream order
         var tiedNotes = new List<(ImportNote Note, int Voice, int Measure, int Onset)>();
-        var wedgeStops = new List<(int Measure, int At, int? Staff)>();
+        var wedgeStops = new List<(int Measure, int At, int? Staff, string Number)>();
+        // The <wedge number> each opening hairpin was written under (EndWedges pairs by it).
+        var wedgeNumbers = new Dictionary<ImportNote, string>();
         var ottavaStops = new List<(string Name, int Measure, int At, int? Staff)>();
         void NoteDirected(ImportNote host, string mark, int? staff)
         {
@@ -255,9 +257,12 @@ internal static class MusicXmlReader
             // dynamic on beat 4 came in on beat 1.
             // A direction of a multi-staff part marks a note of ITS staff (<staff>; none = any):
             // the lower hand's `@f` used to land on the upper hand's note at the same beat.
-            var pendingDynamics = new List<(string Dynamic, int At, int? Staff)>();
+            // …and a direction that names its <voice> marks a note of THAT voice (session 1259):
+            // every direction may stand at the bar's head, before the first voice's notes, and a
+            // later voice's hairpin or dynamic used to land on the first voice's note at its beat.
+            var pendingDynamics = new List<PendingMark>();
             foreach (var (end, endStaff) in carriedEnds)
-                pendingDynamics.Add((end, 0, endStaff));
+                pendingDynamics.Add(new(end, 0, endStaff));
             carriedEnds.Clear();
             int position = 0;           // divisions from the bar's head, along the stream
             var voiceAt = new Dictionary<int, int>();   // where each voice's written music ends
@@ -269,11 +274,16 @@ internal static class MusicXmlReader
             var stavesWritten = measEl.Elements().Where(e => e.Name.LocalName == "note")
                 .Select(e => e.Elements().FirstOrDefault(c => c.Name.LocalName == "staff") is { } s && int.TryParse(s.Value, out int n) ? n : 1)
                 .ToHashSet();
+            // (The same for a direction's voice: one with no note in this bar says nothing.)
+            var voicesWritten = measEl.Elements().Where(e => e.Name.LocalName == "note")
+                .Select(e => e.Elements().FirstOrDefault(c => c.Name.LocalName == "voice") is { } s && int.TryParse(s.Value, out int n) ? n : 1)
+                .ToHashSet();
 
-            void AttachDue(ImportNote note, int staff)
+            void AttachDue(ImportNote note, int staff, int voice)
             {
-                bool Due((string Dynamic, int At, int? Staff) p)
-                    => p.At <= position && (p.Staff == null || p.Staff == staff || !stavesWritten.Contains(p.Staff.Value));
+                bool Due(PendingMark p)
+                    => p.At <= position && (p.Staff == null || p.Staff == staff || !stavesWritten.Contains(p.Staff.Value))
+                       && (p.Voice == null || p.Voice == voice || !voicesWritten.Contains(p.Voice.Value));
                 // Levels written at different moments, with no note of their staff until now, all
                 // fall on this note, and a note prints one: the last is what stands when it
                 // sounds. Two at ONE moment are left as written, for the check to name.
@@ -292,7 +302,7 @@ internal static class MusicXmlReader
                     if (left.Count == 2 && left[1].Dynamic == "p" && left[0].Dynamic is "sf" or "f")
                     {
                         int first = pendingDynamics.IndexOf(left[0]);
-                        pendingDynamics[first] = (left[0].Dynamic + "p", left[0].At, left[0].Staff);
+                        pendingDynamics[first] = left[0] with { Dynamic = left[0].Dynamic + "p" };
                         pendingDynamics.Remove(left[1]);
                     }
                 }
@@ -317,6 +327,8 @@ internal static class MusicXmlReader
                         {
                             note.Articulations.Insert(k++, pendingDynamics[i].Dynamic);
                             NoteDirected(note, pendingDynamics[i].Dynamic, pendingDynamics[i].Staff);
+                            if (pendingDynamics[i].Wedge is { } number)
+                                wedgeNumbers[note] = number;
                         }
                     }
                 pendingDynamics.RemoveAll(Due);
@@ -337,7 +349,7 @@ internal static class MusicXmlReader
                                        staffClefs, report, measureNo,
                                        midBar: position > 0 || measure.VoiceItems.Values.Any(items => items.Count > 0),
                                        clefsInForce, ref staffCount,
-                                       (word, staff) => pendingDynamics.Add((ClefMark + word, position, staff)));
+                                       (word, staff) => pendingDynamics.Add(new(ClefMark + word, position, staff)));
                         break;
 
                     case "direction":
@@ -374,18 +386,24 @@ internal static class MusicXmlReader
                         }
                         int at = position + (int.TryParse(Local(el, "offset")?.Value, out int off) ? off : 0);
                         int? dirStaff = int.TryParse(Local(el, "staff")?.Value, out int ds) ? ds : null;
+                        int? dirVoice = int.TryParse(Local(el, "voice")?.Value, out int dv) ? dv : null;
+                        // A wedge's number tells it from the others open with it (none = 1): a
+                        // stop ends the wedge of ITS number (EndWedges).
+                        var wedges = Els(el, "direction-type").SelectMany(t => Els(t, "wedge")).ToList();
+                        string? opened = wedges.FirstOrDefault(w => (string?)w.Attribute("type") is "crescendo" or "diminuendo") is { } opening
+                            ? (string?)opening.Attribute("number") ?? "1" : null;
                         foreach (var dyn in ReadDirectionDynamics(el))
-                            pendingDynamics.Add((dyn, at, dirStaff));
-                        if (Els(el, "direction-type").SelectMany(t => Els(t, "wedge"))
-                                .Any(w => (string?)w.Attribute("type") == "stop"))
-                            wedgeStops.Add((measureNo, at, dirStaff));
+                            pendingDynamics.Add(new(dyn, at, dirStaff, dirVoice, dyn is "cresc" or "decresc" ? opened : null));
+                        foreach (var number in wedges.Where(w => (string?)w.Attribute("type") == "stop")
+                                     .Select(w => (string?)w.Attribute("number") ?? "1").Distinct())
+                            wedgeStops.Add((measureNo, at, dirStaff, number));
                         // The direction's text and its lines ride the same queue: they mark
                         // the note at their position exactly as a dynamic does.
                         foreach (var text in ReadDirectionTexts(el, report, measureNo, wordsAreTheTempos: tempoWords != null))
-                            pendingDynamics.Add((text, at, dirStaff));
+                            pendingDynamics.Add(new(text, at, dirStaff, dirVoice));
                         foreach (var span in ReadDirectionSpans(el, pedals, ottava, dashed, report, measureNo))
                         {
-                            pendingDynamics.Add((span, at, dirStaff));
+                            pendingDynamics.Add(new(span, at, dirStaff, dirVoice));
                             if (EndsWithItsNote(span))
                                 ottavaStops.Add((span[1..], measureNo, at, dirStaff));
                         }
@@ -516,7 +534,7 @@ internal static class MusicXmlReader
                                 report.Warn(measureNo, "a voice's gap has no plain note value, so its next note stands early.");
                             target.AddRange(pendingAnnotations);
                             pendingAnnotations.Clear();
-                            AttachDue(note, staff);
+                            AttachDue(note, staff, voice);
                             note.LeadingGrace.AddRange(pendingGrace);
                             pendingGrace.Clear();
                             noteAt[note] = (voice, measureNo, position);
@@ -544,8 +562,9 @@ internal static class MusicXmlReader
             // A dynamic past the bar's last onset (on its last note, at that note's end)
             // belongs to that note of its staff: it used to be dropped. A span's end goes on
             // to the next bar's note instead (carriedEnds).
-            foreach (var (dyn, _, dynStaff) in pendingDynamics)
+            foreach (var pending in pendingDynamics)
             {
+                var (dyn, dynStaff) = (pending.Dynamic, pending.Staff);
                 // A clef after the bar's last note stands at the next bar's first (and is drawn
                 // before the bar line between them, as a clef opening a bar is).
                 if ((dyn.StartsWith('!') && !EndsWithItsNote(dyn)) || dyn.StartsWith(ClefMark, StringComparison.Ordinal))
@@ -610,7 +629,7 @@ internal static class MusicXmlReader
         }
         if (staves.Count <= 1)
         {
-            EndWedges(wedgeStops, noteAt, voiceStaff);
+            EndWedges(wedgeStops, noteAt, voiceStaff, wedgeNumbers);
             EndOttavasInTheirVoice(ottavaStops, noteAt, voiceStaff, report);
             KeepUnclosedTextSpansAsWords(noteAt);
             KeepUnreleasedUnaCordaAsWords(noteAt);
@@ -618,7 +637,7 @@ internal static class MusicXmlReader
             return new List<ImportPart> { part };
         }
         SendDirectedMarksHome(directed, noteAt, voiceStaff);
-        EndWedges(wedgeStops, noteAt, voiceStaff);
+        EndWedges(wedgeStops, noteAt, voiceStaff, wedgeNumbers);
         EndOttavasInTheirVoice(ottavaStops, noteAt, voiceStaff, report);
         KeepUnclosedTextSpansAsWords(noteAt);
         KeepUnreleasedUnaCordaAsWords(noteAt);
@@ -854,20 +873,27 @@ internal static class MusicXmlReader
     /// <remarks>
     /// Nothing is written when the voice's next note carries a dynamic or a hairpin: that ends the
     /// wedge where it stops, and is how a hairpin ending on a dynamic is spelled.
+    /// <para>The stop ends the open wedge of ITS <c>number</c> (session 1259): two voices'
+    /// hairpins run at one time under two numbers, and until then the stop took the latest
+    /// wedge open on its staff, so a second voice's stop closed the first voice's hairpin. A stop
+    /// whose number no open wedge carries falls back to that older reading.</para>
     /// </remarks>
-    private static void EndWedges(List<(int Measure, int At, int? Staff)> stops,
-        Dictionary<ImportNote, (int Voice, int Measure, int Onset)> noteAt, Dictionary<int, int> voiceStaff)
+    private static void EndWedges(List<(int Measure, int At, int? Staff, string Number)> stops,
+        Dictionary<ImportNote, (int Voice, int Measure, int Onset)> noteAt, Dictionary<int, int> voiceStaff,
+        Dictionary<ImportNote, string> wedgeNumbers)
     {
         if (stops.Count == 0)
             return;
         var byTime = noteAt.OrderBy(n => n.Value.Measure).ThenBy(n => n.Value.Onset).ToList();
         var ended = new HashSet<ImportNote>();
-        foreach (var (measure, at, staff) in stops.OrderBy(s => s.Measure).ThenBy(s => s.At))
+        foreach (var (measure, at, staff, number) in stops.OrderBy(s => s.Measure).ThenBy(s => s.At))
         {
             bool Before((int Voice, int Measure, int Onset) p) => p.Measure < measure || (p.Measure == measure && p.Onset < at);
-            var opener = byTime.LastOrDefault(n => Before(n.Value) && !ended.Contains(n.Key)
+            var open = byTime.Where(n => Before(n.Value) && !ended.Contains(n.Key)
                 && n.Key.Articulations.Any(a => a is "cresc" or "decresc")
-                && (staff == null || voiceStaff.GetValueOrDefault(n.Value.Voice, staff.Value) == staff)).Key;
+                && (staff == null || voiceStaff.GetValueOrDefault(n.Value.Voice, staff.Value) == staff)).ToList();
+            var opener = open.LastOrDefault(n => wedgeNumbers.GetValueOrDefault(n.Key, "1") == number).Key
+                ?? open.LastOrDefault().Key;
             if (opener == null)
                 continue;
             ended.Add(opener);
@@ -963,6 +989,11 @@ internal static class MusicXmlReader
                 Words(unclosed);
         }
     }
+
+    /// <summary>A mark a &lt;direction&gt; holds until its note arrives: where it stands in the
+    /// bar, the staff and the voice the direction names (null = any), and for an opening hairpin
+    /// the <c>number</c> of its wedge.</summary>
+    private readonly record struct PendingMark(string Dynamic, int At, int? Staff, int? Voice = null, string? Wedge = null);
 
     /// <summary>A mark that ends the hairpin before it: a dynamic, or another hairpin.</summary>
     private static bool EndsAHairpin(string mark)
