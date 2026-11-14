@@ -101,25 +101,28 @@ form { B A }          -- エラー: A の |: を閉じる :| がない（B の :
 「section の play の中の小節の範囲」を単位にする読みに替える。新しい読み手（仮に `Semantics.RepeatStream`）が
 §3.3 の列を作り、構造（反復・ending・道順）と診断を返す。各出力はそれを読む。
 
-読み手ごとの距離（読んで確かめた分だけ。残りは段 0 で測る）:
+読み手ごとの距離。**段 0 で測った**（2026-11-14・探り譜 7 冊と表は Lab `sessions/p1243/stage0.md`）。
+LYS1034 のエラーが出ていても出力は書かれるので、今の答えがそのまま読める。
 
-| 読み手 | 今 | 要ること |
+| 読み手 | 今の答え（実測） | 要ること |
 |---|---|---|
-| ページ（`MeasureCollector.Form`） | form の反復を小節線にして音楽の列に入れ（`CreateBarlineSyntax`）、対を展開後の列で見る | 一番近い。パートをまたいで記号を合わせる所（§3.2）と §3.4 |
-| MIDI（`MidiExporter`） | form は `PlayForm`／`FormRoute`、music の記号は `ProcessSequence`／`ProcessRepeatSpan` がパートごと・section ごとに展開（エラーの本のために残っている腕） | 一番遠い。section の小節の範囲を全パートで鳴らす形にする。状態（relative・タイ・強弱）を範囲の境目で運ぶ |
-| タイの持ち越し・小節の補完（`PlayedOrder.Expand`・`SectionBoundaryBars`） | play に押した印から `FormRoute` を読む | 印を小節の範囲に細かくする |
-| MusicXML（`MusicXmlExporter.WalkForm`） | 構造を記録する（展開しない） | 小節ごとに barline／ending を書く |
-| `.ly`（`LilyPondExporter`） | form は `AppendFormItems`、music の記号は `EmitInlineRepeat` | 書かなかったパートにも同じ小節で `\repeat volta` を入れる。section をまたぐ反復 |
-| 歌詞の `verse N` | section の反復で段を重ねる | §6 Q3 |
-| プレビューの増分（`MeasureCollector.Resume`） | — | 記号 1 つの打鍵が全パートの小節線を動かす |
+| ページ（`MeasureCollector`） | **§3.2・§3.3 をもう満たす。** 片方のパートにだけ書いた反復・ending が全段に出る。`|:` を A に、`:|` を B に書いても対になる。コードの行に書いた反復は譜表に出る。ナビ記号 4 種も描く | §3.4（`| |:` は今は空小節を 1 つ作る）と、パートどうしが食い違うときの診断 |
+| MIDI（`MidiExporter.ProcessSequence`／`ProcessRepeatSpan`） | **書いたパートだけ**反復する（2 パートで 25 音・正しくは 27）。section をまたぐ対は反復しない。コードの行の反復は誰も反復しない。ナビ記号はたどらない | 一番遠い。この歩きは 1 つの section の 1 パートしか見えない（同ファイル :2971-2985 の注）。score の小節の列から道順を取り、section の小節の範囲を全パートで鳴らす形にする |
+| MusicXML（`MusicXmlExporter`） | 書いたパートにだけ `<repeat>`。`<ending>`・回数・ナビ記号は出ない。コードの行の反復は出ない | 全パートの同じ小節に barline／ending／回数／記号を書く |
+| `.ly`（`LilyPondExporter.EmitInlineRepeat`） | 書いたパートにだけ `\repeat volta`・`\alternative`。ナビ記号は `\segnoMark`・`\jump`・`\codaMark` で出る | 書かなかったパートにも同じ小節で入れる（`\unfoldRepeats` と MIDI のため。絵は今も score 全体に出る） |
+| タイの持ち越し・小節の補完（`PlayedOrder.Expand`・`SectionBoundaryBars`） | 未測定 | play の印を小節の範囲に細かくする |
+| 歌詞の `verse N` | 未測定 | §6 Q3 |
+| プレビューの増分（`MeasureCollector.Resume`） | 未測定 | 記号 1 つの打鍵が全パートの小節線を動かす |
 | 読み込み（`LysWriter`）・OMR・Dettato | section に分解して書く | §6 Q2 |
+
+オーナーの本にも前例がある: LYS1034 より前、ABC・Automatic・Beat It の 3 冊は `|:` を 1 つの section に、
+`] :|` を後ろの section に書いていた（`MidiExporter.cs` :2975-2978 の注）。§3.3 はその綴りを戻す。
 
 ### 段取り
 
 LYS1034 は**最後に**外す。エラーの本も今は描けて鳴るので、各段の網はエラーつきの本の出力で書ける。
 
-0. 探り譜（section 内で閉じる反復・section をまたぐ反復・ending・`:|*3`・`segno`／`ds al coda`・2 パートの片方だけ）を
-   ページ・MIDI・MusicXML・`.ly` に通し、今の答えを表にする。
+0. ✅ 済み（上の表）。
 1. `RepeatStream` と診断（§3.2〜§3.6）。form の反復も同じ列に入れ、今の form の本で答えが変わらないことを見る。
 2. ページ。3. MIDI。4. タイと小節の補完。5. MusicXML。6. `.ly`（LP の絵と突き合わせる）。7. 歌詞。
 8. LYS1034 を phrase だけに狭める。GRAMMAR・TUTORIAL・LEARN_FOR_LLM・COMPOSE_FOR_LLM・補完・CHANGELOG。
