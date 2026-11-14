@@ -89,7 +89,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 - **★ 歌詞と歌い手の文法の作り直し（オーナー決定 2026-11-10・第1217）**: `docs/lyrics-singer-design.md` が全部（§9 が作業順）。①②③④は済み（§1.1 第1217〜第1219）。⚠️ ④の `ん` の聞こえ方はオーナーの実聴待ち（`MANUAL-CHECKS` 第1219）。Cantoria の master は zh／ko を歌う（VSIX の入れ直しはオーナー）。`singer` は 1 行 1 声で score の中にも書ける（第1220）。古い書き方を案内する専用エラーは作らない（オーナー指示）。設計 §10「パート自身の歌詞」（`part sop { lyrics words }`）は第1222 で実装（§1.1 第1222・実機は `MANUAL-CHECKS` 第1222）＝§9 は全部済み。**次の一手の指示はまだ無い＝下の積み残しから選ぶならオーナーに訊く**。積み残し: Calamo の生成コードが `lyrics … sings` のまま（`docs\repro\REQUESTS.md` に連絡済み・Calamo 側は未 commit）／実機確認（`MANUAL-CHECKS` 第1217）／perf ベンチ／コーパス外のオーナーのファイル（Downloads の Tabidachi・Rose Garden など）は未移行で、`LilySharp-Lab\sessions\p1217\migrate\migrate.ps1 -Lys -Files` で書き換えられる／Rose Garden のオクターブ変換はオーナーの回答待ち。
 - **★ 歌詞のある譜表では強弱記号とヘアピンを譜表の上に（オーナー決定 2026-11-11）＝設計 `docs/dynamics-above-lyrics-design.md` §5 の 1〜6 は全部済み（第1224〜第1225・§1.1）**。**D3 は LilyPond の規則に替えた（オーナー決定 2026-11-11「LP に合わせて」）**＝向きを書いた記号が*線*の向きを決め、同じ線の後続（向きを書いていない記号）は従う。歌詞のない譜表でも同じ（`c@f.up@decresc … g@p` の p は上）。残りはオーナー: 実機のプレビュー（`MANUAL-CHECKS` 第1225）と release（CHANGELOG は 2 つとも `## Unreleased`・`[engraving]`）。残る穴: 2 声部の譜表で上の声部のヘアピンの線に下の声部の同じ拍の強弱記号も乗る（ヘアピンが声部を持たない既知の穴＝`DynamicAlignEngraver` の注 ⑵・Lab `p1225/dyn/out/vv.png`）。線の向きも譜表ごとに 1 本の流れで読む（LP は声部ごと）。**次の一手の指示はまだ無い＝上の行の積み残しから選ぶならオーナーに訊く**。
-- **★ 評価 4（2026-11-13）の残り＝⑴ 書き出し・⑵ 誤った診断・⑷ 文書は第1227 で閉じた（§1.1）**。書き手のメモと再現は Lab `sessions/p1226/md/eval4/{bigband,choral,chamber,rock}`。⑶ `lysc review` は第1228 で閉じた（§1.1）。**残り**: ⑸ 欠けている機能＝**案 10 件を Lab `sessions/p1227/proposals-eval4.md` に書いた・オーナーの確認待ち＝確認なしに作らない**。**残っているもの**（どれも未着手・値段は未測定）: **一覧は Lab `sessions/p1231/leftovers.md`**（**オーナー指示 2026-11-14・第1231「残りの欠陥を順に」＝この一覧の「残り（欠陥）」と「第1231 が見つけて残したもの」は訊かずに着手してよい**。機能の追加は訊く）。次に手が動くもの: MusicXML の装飾音の記号／ホバーの四分音／別の声部の記号に戻しのナチュラルを足せない（`StaffAccidentals` は足すだけ）／hairpin の途中のアクセントが hairpin を止める。見送ったもの（値を書いた `R1*N`・双子の `time none` 直後の `R`）の理由もそこ。小残り（第1226 から）: condensedStaff の数字付き低音など 3 種の再住所・tab のアルペジオ線が自分の数字に 0.035・小文字だけの枠の中央が 0.23〜0.51 下・`md end` は既定の yMargin では動かない・箇条書きのリンク・不安定な網 2 種（`ScoreVideoShapeTests`、まれに `SvgSnapshotTests`）。**補助は同じモデルで 3〜5 件ずつ順番に・数行は自分で・全 full は自分が 1 回**（memory）。
+- **★ 評価 4（2026-11-13）の残り＝⑴ 書き出し・⑵ 誤った診断・⑷ 文書は第1227 で閉じた（§1.1）**。書き手のメモと再現は Lab `sessions/p1226/md/eval4/{bigband,choral,chamber,rock}`。⑶ `lysc review` は第1228 で閉じた（§1.1）。**残り**: ⑸ 欠けている機能＝**案 10 件を Lab `sessions/p1227/proposals-eval4.md` に書いた・オーナーの確認待ち＝確認なしに作らない**。**残っているもの**（どれも未着手・値段は未測定）: **一覧は Lab `sessions/p1232/leftovers.md`**（**オーナー指示 2026-11-14・第1231「残りの欠陥を順に」＝この一覧の「残り（欠陥）」と「第1231・第1232 が見つけて残したもの」は訊かずに着手してよい**。機能の追加は訊く）。第1232 が 7 件閉じた（§1.1）。次に手が動くもの: 同じ拍の 2 声部の臨時記号の並びが LilyPond と逆／LYS4023 と LYS4018 が同じペダルに両方出る／MusicXML が四分音ごとに `<accidental>` を書く／装飾音の半端な `<alter>` の丸め。大譜表の段間の `@sfz`・`@fp` を両手に効かせるかは決めごと＝オーナーに訊く。見送ったもの（値を書いた `R1*N`・双子の `time none` 直後の `R`）の理由もそこ。小残り（第1226 から）: condensedStaff の数字付き低音など 3 種の再住所・tab のアルペジオ線が自分の数字に 0.035・小文字だけの枠の中央が 0.23〜0.51 下・`md end` は既定の yMargin では動かない・箇条書きのリンク・不安定な網 2 種（`ScoreVideoShapeTests`、まれに `SvgSnapshotTests`）。**補助は同じモデルで 3〜5 件ずつ順番に・数行は自分で・全 full は自分が 1 回**（memory）。
 - **オーナー待ち（第1226）**: `samples/harbour-lights.lys`・`README.md` はオーナーの作業中の変更＝**commit しない**（歌を聴いてから。歌詞とリズムは Claude が直し済み・`ReadmeSampleTests` はそれで赤）／`tools\Deploy-Lsp.ps1`・Cantoria `deploy-extension.ps1`／実機（`MANUAL-CHECKS` 第1226: 補完・問題パネルの歌い手の失敗・LYS4078・プログレスバー・フェンスの色と Enter／囲み）／初回の声のダウンロード・Cantoria の声の解決の一本化・言語に合わせた既定の声＝未決。
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - **★ 歌わせる（Cantilena）＝第1124 設計・第1125 段 2（`lilysharp/sung`）・第1126 段 3（エディタ）・第1127 で Cantilena は拡張 `yotsuda.cantilena` になり Lily# は API で呼ぶ（§1.1 第1127）**: 第1128 で practice メニューに声（`♪ part`）と score に無いパート（既定オフ・`Extra`）のトグル。**第1129 オーナー決定＝歌うパートは歌い手・1 パート 1 音**（声が鳴れば楽器は鳴らない・楽器は代役・無名の歌い手は Choir Aahs・`♪` は歌う／弾くの切り替え）。**第1130＝1 段 1 音・言葉はその上の譜のもの**（`SungStaves`・`Sung`／`Played`・同じパートの言葉の無い段は楽器＝両方鳴らせる）。第1131 で段 4＝Export（WAV/MP3/MP4）に声を混ぜた。**第1132 で span の終わり・ループ・count-in の声を閉じ、ロードマップを `docs/singing-roadmap.md`（長期 A〜G・短期 8 行・オーナーの決定 5 つ）と Cantilena `docs/roadmap.md` に書いた。**第1133 で `engine/voice` の命名と `voices()`（Cantilena 0.2.0・VSIX の入れ直しはオーナー）**・第1134〜1136 で DiffSinger（Cantilena roadmap B1・B2・B4）・**第1137 で `lysc wav --singer <cantilena>`**・**第1138 で漢字の読み `漢[かん]`**（オーナー決定 2026-11-08・`.mid` は漢字・ルビは刷らない）・**第1139 で B3＝DirectML・第1140 で B5＝linux-x64／osx-arm64 の VSIX**（Cantilena 0.4.0・3 target・未公開・Linux／mac は未聴）＝次は Cantilena の公開（オーナー）・ローマ字→かな（Cantilena 側）・Phase C（歌詞ブロックの言語）。**第1141〜1148 でエディタの声のバッジ（▶ の隅のマイク）・本の切り替え・曲頭の子音・声を用意する時機（1.5 s の休み・`lilysharp.playback.singerPrepare`・`waiting`）＝singing-design §3・§5・実機は MANUAL-CHECKS §3.7（オーナー）**。****実機確認はオーナー（MANUAL-CHECKS §3.7）・Cantilena の VSIX の公開もオーナー**。問い 3 つ（漢字歌詞のかな・複数パート・置き換えか重ねか）はオーナー＝仮置きはかなだけ・全部・置き換え。Cantilena は `C:\MyProj\cantilena`（Apache-2.0・未 push）。**OMR #23 は `question`**（オーナー決定 2026-10-14 の規則そのもの＝オーナー判断待ち）。
@@ -140,6 +140,23 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1232セッション（2026-11-14・YT-DELL2）
+
+base `d6e174e57`・開始時 full 16635 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16638（Lab `p1232` の `run1.trx`）。Calamo の `open` は 0。CI は第1231 のまま（下の便）。
+オーナー指示（2026-11-14・第1231）「残りの欠陥を順に」の続き。7 commit（未 push）。残りは Lab `p1232/leftovers.md`。
+- **hairpin の中のアクセント（`074a9f14b`）**: `c''4@p@cresc d''@accent e'' f'' | g''1@f` が P・P+20・P・P・F と鳴っていた＝`SungVoices.Swells` が velocity を比べ、アクセントの音を「crescendo の行き先の level」と読んで hairpin を止めていた。音は「自分の記号が level に足す分」を持つ（`MidiNote.Accent`＝velocity − 自分の強弱の後に立つ level。`@accent`・`@marcato`・`@sfz`・`@fp` の打ち始め・空和音のアクセント）。歩きは level（`SungVoices.Level`）で読み、hairpin が着いた所にその分を載せる。楽器も歌い手も同じ。
+- **`[engraving]` 別の声部の記号の前の戻しのナチュラル（`c7206e9da`）**: 第 1 声 `cisis'`・第 2 声 `cis'` に ♮♯（`cis'` の後の `cih'`・重フラットの後のフラット・和音の構成音も）。`StaffAccidentals.Apply` は記号のある頭を飛ばしていた＝素の記号（courtesy・editorial・段頭の記号でない）を持つ頭も読み、別の声部が同じ記号を多く見せた後なら restore の合成字形に替える（`extraNatural` のときだけ）。LP 2.26.0 と 7 小節を見比べて一致（Lab `p1232/rn/after/rn.png`・`ly/rn.cropped.png`＝自分の目で見た・`before/rn.png` が直す前）。⚠️ 同じ拍の 2 つの頭の記号の左右の並びが LP と逆（8 小節目・前から・leftovers）。`ApplyAcrossStaves`（`@cross`）は足すだけのまま。
+- **MusicXML の装飾音の記号（`90c237dfa`）**: `grace { d''16@staccato }`・accent・fermata・trill・弓の記号が grace の `<note>` に無かった＝`ProcessGraceScripts` がページの運ぶ記号（`GraceBodySupport.IsCarried…`）を普通の音と同じ `ProcessArticulations` へ渡す。ページが落とす記号（LYS4020）は書かない。
+- **和音のホバーの四分音（`0d45521ca`）**: `<c' eeh' gis'>` が C4 E4 G♯4 だった＝`ResolvedChordMember` に `QuarterOffset`。`PitchGlyphs`（LSP）は `+`／`d` を 𝄲／𝄳 に。起票のうち `lysc check --pitches`（ASCII は意図）と単音のホバー（無い）は欠陥ではなかった。
+- **双子の `@bend dropped`（`1a1d82c30`）**: 休符の上の bend（LYS4079）に `lysc ly` は何も言わない（`GestureHosts.IsOnARest`・fall の先例と同じ）。
+- **`[engraving]` 反復の境で切られたペダル（`6800433d4`）**: `PedalEngraver.SolveAndSeed`（譜表の下にペダルの線の場所を取る解き）が section の演奏順なしで対にしていた＝`form { A |: B :| }` で A で踏み B で離すペダル（LYS4023・括弧は A の終わりで切る）の線を B の全段で取り続けていた（探り譜のページ高 73.52 → 72.22＝対照と同じ・Lab `p1232/ped`）。`SectionPlays.For(score)` を渡す 1 行＋古い注の直し。エラーのある本でだけ起きる。
+- **`[engraving]` 繰り返しの四分音（`ef13805e6`）**: `<cih' e'>4 q`・`cih'4 4` の繰り返しにナチュラルが出ていた＝`q` と裸の音価が写す綴りに四分音がなかった。補助が見つけた。
+- 7.7 の匂い: 毒は hairpin とペダルに 1 本ずつ（赤）・ほかは直す前の木で赤を確認／耳で聴いていない／VS Code の実機は未確認（ホバーの 𝄲／𝄳 がエディタのフォントで出るか・`MANUAL-CHECKS` には足していない）。
+- 7.5／7.6: Core `+` 130 行・REF 0・OWN 0（定数なし）＝hairpin は ⒞（住所は `MidiExporter.SwellInstruments` の OWN）・ほかは ⒟（戻しのナチュラルの住所は `StaffAccidentals` の REF）。
+- 門: 終了時 full 16661 合格 / 3 失敗（`ReadmeSampleTests`＝同じ・ほか 2 本は棚卸しの再生成とこの節の字数で、直して緑）/ skip 2 / 合計 16666（Lab `p1232` の `run2.trx`）。全 svg の掃き 1041 冊 1268 枚で動いた svg 0（base＝`13e455cba` の bin の写し＝開始時と同じ Core・head＝`ef13805e6` の bin の写し・Lab `p1232/sweep`）＝これらの形を書く追跡本は無い（結果であって構成ではない）。
+
+## 以下は第1231セッションの経緯
+
 ### 1.1 第1231セッション（2026-11-14・YT-DELL2）
 
 base `eba360371`・開始時 full 16627 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16630（Lab `p1231` の `run1.trx`）。Calamo の REQUESTS の `open` は 0。origin/master（`f636395ae`）の CI は ubuntu Release の脚が 7 本赤（丸めの中点の比較 4 種）＝`148e2a478` で直し済み・未 push（ほかの 3 脚は fail-fast の巻き添えで未完走）。
@@ -152,16 +169,6 @@ base `eba360371`・開始時 full 16627 合格 / 1 失敗（`ReadmeSampleTests`�
 - 7.5／7.6: Core `+` 226 行・REF 0・OWN 2＝四分音は ⒟（`StaffAccidentals` と `GetDisplayAccidental` の REF が住所）・強弱の 2 件は ⒞。
 - 門: 終了時 full 16635 合格 / 1 失敗（`ReadmeSampleTests`＝同じ）/ skip 2 / 合計 16638（Lab `p1231` の `run3.trx`・+8 は足した網）。全 svg の掃き 1041 冊 1268 枚で動いた svg 0（base `eba360371` を `git archive` で建てた lysc・head は `13e455cba` の bin の写し・Lab `p1231/sweep`）＝別の声部の四分音を書く追跡本は無い（結果であって構成ではない）。
 
-## 以下は第1230セッションの経緯
-
-### 1.1 第1230セッション（2026-11-14・YT-DELL2）
-
-base `082c40c5a`・3 commit（未 push）。オーナー指示 3 件（2026-11-14）: 使われないコードの削除・弱起の小節番号・括弧つきのナチュラル。
-- **削除（`73c4d81ea`）**: `MeasureCollector.QuarterToneAccidental` の 2 つ（第1229 の `481ce2fa0` で呼び手が消えた）。`KeySignatureAccidentalName` も下の修正で呼び手が消えたので一緒に消した。
-- **`[engraving]` courtesy は音自身の記号（`00cc468b2`）**: `cis'4 cis'@courtesy`（ハ長調）の 2 つ目が括弧つきのナチュラルだった＝記憶で記号が消えた音に、`@courtesy`／`@editorial` が**調号の**記号を出していた。`ForcedAccidentalName` は音自身の変化量（`AlterationName`）。LP 2.26.0 と 2 段 2 小節（ハ長調・ニ長調、和音の構成音と editorial 込み）を見比べて全部一致（Lab `p1230/c/after/court.png`・`ly/court.png`＝自分の目で見た）。LILYPOND-REF `accidental-engraver.cc:282-327`。オーナー指示＝承認済み。
-- **`lysc layout` の小節番号（`7b322ec4b`）**: `LayoutReport.BarLabels` は `BarNumberEngraver.NumberMeasures`＝ページが刷る番号（弱起は 0・分割小節は 1 つ・`time none` の小節は数えない）。小節の*数*（「N bars」）は元のまま。⚠️ senza misura では複数の小節が同じ番号になる（`SenzaMisuraTests` の期待を「system 1: bars 1-2／system 2: bars 2-3」に直した＝LP が 2 段目の頭に刷る 2）。⚠️ **Lab の掃きのスクリプト（`sessions/p321/parse321.ps1` ほか）がこの行の番号を読むなら、弱起の本で 1 ずれる**＝未確認。
-- 7.7 の匂い: 毒は回していない（網は各本に対照入り）／VS Code の実機は未確認／`lysc layout` を読む Lab の計器は見ていない。
-- 門: 開始時 full 16625 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16628、終了時 full 16627 合格 / 1 失敗（同じ）/ skip 2 / 合計 16630（`p1230` の `run2.trx`・+2 は足した網）。全 svg の掃き 1041 冊 1268 枚で動いた svg 0（base `259f399b2`・head は作業ツリー＝`7b322ec4b` と同じ Core・Lab `p1230/sweep`）。
 ## 2. 開いている作業
 
 ### U. ユーザー報告（2026-08-29・第286 起票）← **順に着手。ユーザーが優先度を与えた**

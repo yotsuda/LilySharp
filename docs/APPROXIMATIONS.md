@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
+| `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
 | `OWN` | 431 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **559** | |
+| **計** | **558** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -140,7 +140,7 @@
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
 - **`BeamRestStem`** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（65 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（64 件）
 
 ### `LilySharp.Core/Midi/SungVoices.cs`
 - **`SungVoices.Read`** ⚠️ An empty text has no observer: the page files no syllable for `_` or a
@@ -221,8 +221,6 @@
 - **`OttavaBracketEngraver.BelowStaffYUp`** staff_extent[DOWN], which is the ink edge too. ⚠️ No ledger point measures
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
 - **`OutsideStaffStacker.SeedClefInk`** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
-### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
-- **`PedalEngraver.PairPedalBrackets`** same part (leftHand). No book reaches the configuration, so no ledger point and
 ### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`
 - **`SkylineBuilder.AddTabStemsAndBeamsToSkylines`** ⚠️ The half-blot Y has no observer (session 812): the tab test reads
 - **`SkylineBuilder.AddMusicItemToSkylines`** ⚠️ NO OBSERVER for the X origin (poisons, session 813): shifting it by the

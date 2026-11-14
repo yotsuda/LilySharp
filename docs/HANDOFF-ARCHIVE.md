@@ -267,6 +267,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1230セッションの経緯
+
+### 1.1 第1230セッション（2026-11-14・YT-DELL2）
+
+base `082c40c5a`・3 commit（未 push）。オーナー指示 3 件（2026-11-14）: 使われないコードの削除・弱起の小節番号・括弧つきのナチュラル。
+- **削除（`73c4d81ea`）**: `MeasureCollector.QuarterToneAccidental` の 2 つ（第1229 の `481ce2fa0` で呼び手が消えた）。`KeySignatureAccidentalName` も下の修正で呼び手が消えたので一緒に消した。
+- **`[engraving]` courtesy は音自身の記号（`00cc468b2`）**: `cis'4 cis'@courtesy`（ハ長調）の 2 つ目が括弧つきのナチュラルだった＝記憶で記号が消えた音に、`@courtesy`／`@editorial` が**調号の**記号を出していた。`ForcedAccidentalName` は音自身の変化量（`AlterationName`）。LP 2.26.0 と 2 段 2 小節（ハ長調・ニ長調、和音の構成音と editorial 込み）を見比べて全部一致（Lab `p1230/c/after/court.png`・`ly/court.png`＝自分の目で見た）。LILYPOND-REF `accidental-engraver.cc:282-327`。オーナー指示＝承認済み。
+- **`lysc layout` の小節番号（`7b322ec4b`）**: `LayoutReport.BarLabels` は `BarNumberEngraver.NumberMeasures`＝ページが刷る番号（弱起は 0・分割小節は 1 つ・`time none` の小節は数えない）。小節の*数*（「N bars」）は元のまま。⚠️ senza misura では複数の小節が同じ番号になる（`SenzaMisuraTests` の期待を「system 1: bars 1-2／system 2: bars 2-3」に直した＝LP が 2 段目の頭に刷る 2）。⚠️ **Lab の掃きのスクリプト（`sessions/p321/parse321.ps1` ほか）がこの行の番号を読むなら、弱起の本で 1 ずれる**＝未確認。
+- 7.7 の匂い: 毒は回していない（網は各本に対照入り）／VS Code の実機は未確認／`lysc layout` を読む Lab の計器は見ていない。
+- 門: 開始時 full 16625 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16628、終了時 full 16627 合格 / 1 失敗（同じ）/ skip 2 / 合計 16630（`p1230` の `run2.trx`・+2 は足した網）。全 svg の掃き 1041 冊 1268 枚で動いた svg 0（base `259f399b2`・head は作業ツリー＝`7b322ec4b` と同じ Core・Lab `p1230/sweep`）。
 ## 以下は第1229セッションの経緯
 
 ### 1.1 第1229セッション（2026-11-14・YT-DELL2）
