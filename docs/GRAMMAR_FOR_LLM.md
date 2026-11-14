@@ -904,7 +904,8 @@ after it on the same line (until the hairpin has ended) that write no side follo
   down; `-]` ends it with a straight (open) right end: `|: A [1. B] :| [2. C D -]`. The
   `]` may be left off only right before a `:|` (`|: A [1. B C :| [2. D]` — the `:|` closes
   it, hooked); an unclosed LAST ending is an error. The first ending is the last thing
-  before the `:|`, and each later ending follows its own `:|`: `:| [3. D]` again.
+  before the `:|`, and each later ending follows its own `:|`: `:| [3. D]` again (a `:|` left out there is
+  read as if written: `[2. C] [3. D]` is still a third pass).
 - How far the bracket reaches: `layout { voltaBracket all|line|N }` — `all` (default) every
   bar of the ending, `line` up to the end of the system it starts in, `N` its first N bars.
   One ending overrides it after its `]`: `[1. B C]@voltaBracket(2)`. A bracket cut short

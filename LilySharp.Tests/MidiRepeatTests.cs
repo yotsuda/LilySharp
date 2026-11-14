@@ -74,20 +74,21 @@ public sealed class MidiRepeatTests
         Assert.False(pedals[^1].Down);
     }
 
-    /// <summary>⚠️ TWO RULES, KEPT AS THEY WERE (session 1255; the owner has not chosen): a third
-    /// ending with no <c>:|</c> before it. In a FORM it is an ending no repeat opens — two
-    /// passes, then its section once (LYS6008 says so, and the page reads the form that way);
-    /// in the MUSIC it joins the run — three passes (<see cref="InlineVoltas_CountInferredFromHighestNumber"/>).
-    /// The form's rule lived in the form's own MIDI walk until that walk was dropped; it is
-    /// <c>RepeatStream.Elements</c>' now. 11 books of the owner's corpus write the form's shape
-    /// (their LilyPond originals are <c>\repeat volta 3</c> with three alternatives).</summary>
-    [Fact]
-    public void AFormsThirdEndingWithNoRepeatSignBeforeIt_IsPlayedOnce()
+    /// <summary>A third ending with no <c>:|</c> before it is a third pass, in a form as in the
+    /// music (owner's decision 2026-11-15, session 1256;
+    /// <see cref="InlineVoltas_CountInferredFromHighestNumber"/> is the music's). Until then a
+    /// form's was an ending no repeat opened — two passes, then its section once (LYS6008) —
+    /// which played 11 books of the owner's corpus a pass short of their LilyPond originals
+    /// (<c>\repeat volta 3</c> with three alternatives).</summary>
+    [Theory]
+    [InlineData("form { |: A [1. B] :| [2. C] [3. D] }")]
+    [InlineData("form { |: A [1. B] :| [2. C] :| [3. D] }")]   // the same, its ':|' written
+    public void AFormsThirdEnding_IsAThirdPass_WithItsRepeatSignWrittenOrNot(string form)
     {
-        const string Src = "octave absolute\ntime 4/4\npart m { }\n"
+        string src = "octave absolute\ntime 4/4\npart m { }\n"
             + "section A { m { c'1 | } }\nsection B { m { d'1 | } }\nsection C { m { e'1 | } }\nsection D { m { f'1 | } }\n"
-            + "form { |: A [1. B] :| [2. C] [3. D] }\nscore { staff m }\n";
-        Assert.Equal(new[] { 60, 62, 60, 64, 65 }, Pitches(Src));
+            + form + "\nscore { staff m }\n";
+        Assert.Equal(new[] { 60, 62, 60, 64, 60, 65 }, Pitches(src));
     }
 
     [Fact]

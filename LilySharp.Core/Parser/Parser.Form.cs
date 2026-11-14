@@ -547,11 +547,23 @@ internal sealed partial class Parser
         // the music spelling existed. MEASURED before writing this: 13 of the author's 326
         // books and one tracked book (audit/lpreg/voltasky) write a third or later ending,
         // so banning the music spelling without this arm would have left them NO spelling.
+        // ⚠️ …AND WITH NO ':|' BEFORE IT (owner's decision 2026-11-15, session 1256):
+        // `|: A [1. B] :| [2. C] [3. D]` is three passes, as the same music written in a
+        // section already was — an ending standing right after the run's last one can only be
+        // a further pass. The ':|' the writer left out is put in as an EMPTY token, so every
+        // reader of the block still finds the sign between two endings (the page draws it,
+        // the twin and MusicXML write it, the MIDI goes back at it). Until then the block
+        // ended with '[2.', and '[3.' was an ending no repeat opens (LYS6008): two passes and
+        // D once — 11 books of the owner's corpus, each `\repeat volta 3` with three
+        // alternatives in its LilyPond original.
         var furtherAlternatives = new List<GreenNode?>();
-        while (finalAlternative != null && Check(SyntaxKind.RepeatEndBar)
-               && Peek(1).Kind == SyntaxKind.OpenBracket)
+        while (finalAlternative != null
+               && (Check(SyntaxKind.OpenBracket)
+                   || (Check(SyntaxKind.RepeatEndBar) && Peek(1).Kind == SyntaxKind.OpenBracket)))
         {
-            furtherAlternatives.Add(Advance());   // the ':|' between this ending and the next
+            furtherAlternatives.Add(Check(SyntaxKind.RepeatEndBar)
+                ? Advance()   // the ':|' between this ending and the next
+                : new SyntaxToken(SyntaxKind.RepeatEndBar, "", null, null));
             furtherAlternatives.Add(ParseVoltaBracket());
         }
 

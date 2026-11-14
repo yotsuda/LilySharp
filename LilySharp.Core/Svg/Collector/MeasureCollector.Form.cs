@@ -80,7 +80,7 @@ public sealed partial class MeasureCollector
             if (child is FormAlternativeSyntax alt)
                 return IsLastWrittenEnding(repeat, i) && alt.Numbers.Any()
                     && !Semantics.RepeatPasses.EndingReturns(alt.Numbers, HighestPass(repeat));
-            if (child is SyntaxTokenNode { Text: ":|" or ":|:" } or SectionReferenceSyntax || child.Kind == SyntaxKind.SilentSectionReference)
+            if (child is SyntaxTokenNode bar && SyntaxFacts.FormBarText(bar) is ":|" or ":|:" || child is SectionReferenceSyntax || child.Kind == SyntaxKind.SilentSectionReference)
                 return false;
         }
         return false;
@@ -132,7 +132,9 @@ public sealed partial class MeasureCollector
 
             if (child is SyntaxTokenNode token)
             {
-                if (token.Text is "|:" or ":|" or ":|:")
+                // The sign the token is — a ':|' the writer left out between two endings too.
+                string sign = SyntaxFacts.FormBarText(token);
+                if (sign is "|:" or ":|" or ":|:")
                     MarkFormEdge(SectionPlayEdge.Repeat);
                 // `:|:` closes one run and opens the next (MIDI plays them B B C C).
                 if (token.Text == ":|:")
@@ -142,9 +144,9 @@ public sealed partial class MeasureCollector
                     await PushFormBarline(token.Text, token.SourceStart, token.Span);
                     afterRepeatStart = true;
                 }
-                else if (token.Text == ":|")
+                else if (sign == ":|")
                 {
-                    await PushFormBarline(token.Text, token.SourceStart, token.Span);
+                    await PushFormBarline(sign, token.SourceStart, token.Span);
                     // `:|*4`: the count is printed over this bar (MusicMarkType.RepeatCount).
                     AddRepeatCountMark(Syntax.FormWalk.ExplicitPlayCount(repeat) ?? 0, token.SourceStart, builder);
                 }
@@ -316,7 +318,7 @@ public sealed partial class MeasureCollector
     private static bool IsLastWrittenEnding(FormRepeatBlockSyntax repeat, int index)
     {
         for (int j = index + 1; j < repeat.SlotCount; j++)
-            if (repeat.GetChild(j) is FormAlternativeSyntax or SyntaxTokenNode { Text: ":|" })
+            if (repeat.GetChild(j) is FormAlternativeSyntax || repeat.GetChild(j) is SyntaxTokenNode later && SyntaxFacts.FormBarText(later) == ":|")
                 return false;
         return true;
     }
@@ -2154,7 +2156,7 @@ public sealed partial class MeasureCollector
                         OpenRepeatAt(cur);
                         afterRepeatStart = true;
                     }
-                    else if (token.Text == ":|")
+                    else if (SyntaxFacts.FormBarText(token) == ":|")
                     {
                         CloseRepeatBefore(cur);
                     }

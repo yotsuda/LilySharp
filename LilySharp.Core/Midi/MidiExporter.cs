@@ -2585,7 +2585,7 @@ public sealed class MidiExporter
     private readonly List<RepeatSign> _timeline = new();
 
     // The lane of a sign the MUSIC writes in a book with no named part: never the form's (null),
-    // which RepeatStream reads as "the form wrote it".
+    // so a sign the form and the music both write at one place is ONE sign (RepeatStream.Normalized).
     private const string MusicLane = "music";
 
     /// <summary>Notes a repeat bar line of the music on the timeline (a plain one says nothing):

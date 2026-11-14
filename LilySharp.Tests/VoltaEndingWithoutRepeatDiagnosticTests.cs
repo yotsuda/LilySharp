@@ -96,7 +96,7 @@ public sealed class VoltaEndingWithoutRepeatDiagnosticTests
     /// and the collector ever answer differently, this is where it shows (HANDOFF §5.2.1②).
     /// </summary>
     [Theory]
-    [InlineData("form { |: A [1. A] :| [2. B] [3. B] }")]
+    [InlineData("form { |: A [1. A] :| [2. B] A [3. B] }")]
     // …and the same partition over a run a form-level `:|:` opens: its endings are
     // bracketed (ProcessForm's ending arm, 2026-09-29), the one after the plain A is loose.
     [InlineData("form { A :|: B [1. A] :| [2. B] A [3. B] }")]
@@ -119,6 +119,23 @@ public sealed class VoltaEndingWithoutRepeatDiagnosticTests
         Assert.Equal(new[] { "3." }, warned);
         Assert.Empty(bracketed.Intersect(warned));                  // disjoint
         Assert.Equal(written, bracketed.Concat(warned).OrderBy(t => t).ToArray());  // exhaustive
+    }
+
+    /// <summary>An ending standing right after the run's last one is a further pass of it, its
+    /// <c>:|</c> written or not (owner's decision 2026-11-15, session 1256): bracketed, and
+    /// warned of nothing. Until then <c>[3. B]</c> here was the loose ending of the theory
+    /// above.</summary>
+    [Theory]
+    [InlineData("form { |: A [1. A] :| [2. B] [3. B] }")]
+    [InlineData("form { |: A [1. A] :| [2. B] :| [3. B] }")]
+    public void AnEndingRightAfterTheRunsLastOneIsAFurtherPass(string form)
+    {
+        var tree = Parse(form);
+        var bracketed = new LayoutEngine()
+            .Layout(new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!))
+            .VoltaBracketLayouts.Select(v => v.VoltaText).OrderBy(t => t).ToArray();
+        Assert.Equal(new[] { "1.", "2.", "3." }, bracketed);
+        Assert.Empty(Warnings(form));
     }
 
     /// <summary>Every loose ending is reported on its own, so two of them do not hide behind

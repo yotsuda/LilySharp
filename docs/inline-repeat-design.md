@@ -199,7 +199,10 @@ LYS1034 は**最後に**外す。エラーの本も今は描けて鳴るので�
     ⑴ form の `|: … :|` の中で変えた強弱（`|: c1 | d1@ff :|`）は、古い歩きだけ 2 回目の頭へ持ち越していた（2 回目の c が ff）。同じ歩きの `dc`／`ds`／片側の `:|` と、音楽に書いた反復は頭の強さに戻していた＝古い歩きの中でも食い違っていた。戻す側に統一（網 `AReplayedBarSoundsAsItIsPrinted`）。LilyPond の MIDI は時間順に持ち越す＝LILYSHARP-OWN。
     ⑵ 反復記号をまたいで踏んだままのペダル（LYS4023 が「そこで切る」と言う形）は、古い歩きは次に踏むまで踏みっぱなしだった。今は戻った位置の状態（離す）。
   - 途中で見つけて直した欠陥: 列の最後の区間が、曲の終わりの tick に在るペダルの離しを落としていた（音楽に記号を書いた本で、踏んだまま終わる曲のペダルが .mid に残る）。網 `APedalThePieceEndsUnderIsLifted_AfterARepeatToo`。
-  - ⚠️ **決まっていない規則が 1 つ（オーナーに訊く）**: `[1. B] :| [2. C] [3. D]`＝3 番括弧の前に `:|` が無い形。form に書くと「反復が開いていない ending」＝2 回＋D を 1 回（LYS6008・ページ・双子・MusicXML もその読み）、音楽に書くと 3 回繰り返す（`MidiRepeatTests.InlineVoltas_CountInferredFromHighestNumber`）。
+  - ✅ **下の規則はオーナーが決めた（2026-11-15「3 回に統一して」・第1256）**: form でも 3 回。パーサ（`ParseFormRepeatBlock`）が、最後の ending のすぐ後ろの ending を `:|` なしでも反復の一部として受け、省かれた `:|` を空のトークンで入れる＝form の読み手（FormWalk・MIDI・双子・MusicXML）は印を見つける。ページは小節線を文字で読むので `SyntaxFacts.FormBarText` で読む。
+    実測（Lab `sessions/p1256/probe`）: `[2. C] [3. D]` と `[2. C] :| [3. D]` で .mid・.xml・.ly がバイト一致、.svg は data-* を除いて一致。全 1041 冊の .mid で変わったのはこの形を書く 11 冊だけ。`RepeatStream.Elements` の「form が書いたか」の分岐は外した。
+    ⚠️ 残り: 音楽に書いた `[2. e ] [3. f ]` はページが 2 番括弧の終わりの反復小節線を描かない（音は 3 回・form は描く）。以下は第1255 の記録。
+  - （第1255 の時点）**決まっていない規則が 1 つ（オーナーに訊く）**: `[1. B] :| [2. C] [3. D]`＝3 番括弧の前に `:|` が無い形。form に書くと「反復が開いていない ending」＝2 回＋D を 1 回（LYS6008・ページ・双子・MusicXML もその読み）、音楽に書くと 3 回繰り返す（`MidiRepeatTests.InlineVoltas_CountInferredFromHighestNumber`）。
     どちらも今までどおりに残した（`RepeatStream.Elements` が「form が書いた ending か」で分ける）。オーナーのコーパスの 11 冊が form でこの形を書いていて、元の .ly は `\repeat volta 3` ＋ alternative 3 つ（＝3 回）。
     3 回に統一するなら form の読み手（ページ・双子・MusicXML・LYS6008）も一緒に変える。網 `AFormsThirdEndingWithNoRepeatSignBeforeIt_IsPlayedOnce`。
 - 残り: 反復の中に書いたナビ記号はたどらない（form と同じ）／1 つのパートの 2 つの声部が同じ記号を書くと 2 つと数える／

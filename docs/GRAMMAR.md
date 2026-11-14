@@ -2075,7 +2075,12 @@ StructureItem  = SectionRef                        (* Identifier , { OctaveMark 
    With endings the numbers are the passes: a '*' Integer beside them is an error (LYS1042),
    and each pass from 1 to the highest number is named by exactly one ending (LYS1043). *)
 StructureRepeat = '|:' , { StructureItem } , ':|' , [ '*' , Integer ] ,
-                  [ StructureVolta , { ':|' , StructureVolta } ] ;
+                  [ StructureVolta , { [ ':|' ] , StructureVolta } ] ;
+(* The ':|' before a third or later ending may be left out — |: A [1. B] :| [2. C] [3. D] —
+   and is read all the same: an ending standing right after the run's last one is a further
+   pass (three passes here), and the page draws the repeat bar at the end of C. Writing it
+   is the plain spelling. (Until 2026-11-15 such a [3. D] was an ending no repeat opens,
+   LYS6008: two passes, then D once.) *)
 
 (* A repeat volta ending inside a |: … :| repeat, naming one or more sections that play in
    order under ONE bracket:

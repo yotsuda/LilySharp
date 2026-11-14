@@ -143,6 +143,25 @@ internal static class SyntaxFacts
     }
 
     /// <summary>
+    /// A bar-line token of a form's repeat block as the sign it IS: its text — and <c>:|</c>
+    /// for the empty token the parser puts between two endings written with no <c>:|</c>
+    /// between them (<c>[2. C] [3. D]</c>, Parser.ParseFormRepeatBlock: a further ending is a
+    /// further pass, owner's decision 2026-11-15). The page's form walk reads its bars by
+    /// text, and this is where it finds the one the writer left out. The empty <c>:|</c> of a
+    /// block nothing closes is not followed by an ending, and stays empty.
+    /// </summary>
+    internal static string FormBarText(SyntaxTokenNode token)
+    {
+        if (token.Text.Length > 0 || token.Kind != SyntaxKind.RepeatEndBar || token.Parent is not FormRepeatBlockSyntax block)
+            return token.Text;
+        for (int i = 0; i + 1 < block.SlotCount; i++)
+            if (ReferenceEquals(block.GetChild(i), token))
+                return i > 0 && block.GetChild(i - 1) is FormAlternativeSyntax && block.GetChild(i + 1) is FormAlternativeSyntax
+                    ? ":|" : token.Text;
+        return token.Text;
+    }
+
+    /// <summary>
     /// A list ending's third and later numbers — <c>3</c>, <c>5</c> of <c>[1,2,3,5.</c> — the
     /// number tokens the parser holds between the end number and the point (the commas are
     /// skipped). Empty for every other ending.

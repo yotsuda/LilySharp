@@ -581,12 +581,9 @@ internal sealed class RepeatStream
     /// <summary>The signs as ONE set, in reading order: every lane that walks a sign notes it,
     /// so there are as many of a sign as the lane that wrote the most of it (the record's
     /// remark). Idempotent — the result is one lane's.</summary>
-    /// <remarks>What is left of the lane is WHO wrote the sign: null when the form does (alone,
-    /// or with the music), <see cref="Music"/> when only the music does — the one thing
-    /// <see cref="Elements"/> still asks of it.</remarks>
     private static List<RepeatSign> Normalized(IEnumerable<RepeatSign> signs)
         => signs.GroupBy(m => m with { Lane = null })
-            .SelectMany(g => Enumerable.Repeat(g.Key with { Lane = g.Any(m => m.Lane == null) ? null : Music },
+            .SelectMany(g => Enumerable.Repeat(g.Key,
                 g.GroupBy(m => m.Lane).Max(lane => lane.Count())))
             .OrderBy(m => m.At).ThenBy(Rank).ToList();
 
@@ -629,18 +626,11 @@ internal sealed class RepeatStream
             bool inRun = runStart >= 0;
             // A run that has met its ':|' goes on only through an ending opening where it ends
             // so far, or a further ':|' closing such an ending; anything else finds it finished.
-            // ⚠️ TWO RULES STAND HERE, AND THE OWNER HAS NOT CHOSEN (session 1255): after
-            // `[1. B] :| [2. C]`, a `[3. D]` with no ':|' before it. Written in a FORM it is an
-            // ending no repeat opens — two passes and a plain D (GRAMMAR §6: the endings go
-            // BETWEEN the bar lines; LYS6008 says so; the page, the twin and MusicXML read the
-            // form that way). Written in the MUSIC it joins the run — three passes
-            // (MidiRepeatTests.InlineVoltas_CountInferredFromHighestNumber). Both are kept as
-            // they were: until this session the form's rule lived in the form's own MIDI walk
-            // (MidiExporter.PlayRepeatRun, gone) and this method read every ending the music's
-            // way, which sounded three passes for 11 books whose form writes the shape once
-            // that walk was dropped (measured: Lab sessions/p1255/midi-diff.txt).
-            bool joins = mark.Kind == RepeatSignKind.EndingStart && mark.At == tail
-                && (tail == lastEnd || mark.Lane != null);
+            // Every ending standing where the run ends so far is a further pass of it, its ':|'
+            // written or not: [1. B] :| [2. C] [3. D] is three passes (owner's decision
+            // 2026-11-15, session 1256 — in a form the parser puts the missing ':|' in,
+            // Parser.ParseFormRepeatBlock, so the sign is here either way).
+            bool joins = mark.Kind == RepeatSignKind.EndingStart && mark.At == tail;
             if (inRun && lastEnd >= 0 && open == null && !joins
                 && !(mark.Kind == RepeatSignKind.RepeatEnd && mark.At == tail && tail > lastEnd))
             {
