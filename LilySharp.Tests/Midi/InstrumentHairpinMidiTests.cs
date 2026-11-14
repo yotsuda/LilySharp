@@ -29,7 +29,7 @@ namespace LilySharp.Tests.Midi;
 /// </summary>
 public class InstrumentHairpinMidiTests
 {
-    private const int P = (int)DynamicLevel.P, F = (int)DynamicLevel.F;
+    private const int P = (int)DynamicLevel.P, F = (int)DynamicLevel.F, Sfz = (int)DynamicLevel.SFZ;
 
     private static List<MidiNote> Notes(string src, string part) =>
         new MidiExporter().Export(SyntaxTree.Parse(src)).Tracks
@@ -87,13 +87,48 @@ public class InstrumentHairpinMidiTests
     [Fact]
     public void AnAccentDynamicInsideAHairpin_IsOneNotes_AndTheHairpinGoesOn()
     {
-        // `@sfz` at piano is struck at its own number: that much over the level.
-        int over = (int)DynamicLevel.SFZ - P;
+        // `@sfz` is struck at its own number where the hairpin has come to a level under it.
+        // Until session 1235 it kept the step it made at piano (34) over the level: 116 here.
         var v = Velocities(OnePart("c''4@p@cresc d'' e''@sfz f'' | g''4@f a'' b'' c''' |"), "fl");
-        Assert.Equal(new[] { P, Along(P, F, 1, 4), System.Math.Min(127, Along(P, F, 2, 4) + over), Along(P, F, 3, 4), F, F, F, F }, v);
+        Assert.Equal(new[] { P, Along(P, F, 1, 4), Sfz, Along(P, F, 3, 4), F, F, F, F }, v);
         // The hairpin's own first note may carry one too.
         var first = Velocities(OnePart("c''4@p@accent@cresc d'' e'' f'' | g''4@f a'' b'' c''' |"), "fl");
         Assert.Equal(new[] { P + 20, Along(P, F, 1, 4), Along(P, F, 2, 4), Along(P, F, 3, 4), F, F, F, F }, first);
+    }
+
+    [Fact]
+    public void AnAccentDynamic_IsReadAtTheLevelTheHairpinHasComeTo()
+    {
+        const int FF = (int)DynamicLevel.FF;
+        // Where the crescendo has passed the sforzato's own number less the step, it is the
+        // step over the level, as it is written in a loud passage (it was 127).
+        int near = Along(P, FF, 3, 4);
+        Assert.True(near + 12 > Sfz);
+        var late = Velocities(OnePart("c''4@p@cresc d'' e'' f''@sfz | g''4@ff a'' b'' c''' |"), "fl");
+        Assert.Equal(new[] { P, Along(P, FF, 1, 4), Along(P, FF, 2, 4), near + 12, FF, FF, FF, FF }, late);
+        // What the note's scripts add stays on top of it.
+        var both = Velocities(OnePart("c''4@p@cresc d'' e''@sfz@accent f'' | g''4@f a'' b'' c''' |"), "fl");
+        Assert.Equal(Sfz + 20, both[2]);
+        // Written on an empty chord, for the next note.
+        var held = Velocities(OnePart("c''4@p@cresc d'' <>@sfz e'' f'' | g''4@f a'' b'' c''' |"), "fl");
+        Assert.Equal(new[] { P, Along(P, F, 1, 4), Sfz, Along(P, F, 3, 4), F, F, F, F }, held);
+        // On the way down it stays its own number too.
+        var down = Velocities(OnePart("c''4@f@decresc d'' e''@sfz f'' | g''4@p a'' b'' c''' |"), "fl");
+        Assert.Equal(new[] { F, Along(F, P, 1, 4), Sfz, Along(F, P, 3, 4), P, P, P, P }, down);
+    }
+
+    [Fact]
+    public void AnAccentDynamicUnderASharedLevel_IsReadAtThatLevel()
+    {
+        const int PP = (int)DynamicLevel.PP;
+        // A grand staff: the left hand writes no level and its `@sfz` is under the right hand's
+        // `@pp`. It was the step made at the hand's own default, carried down: 104 − (90 − 62) = 76.
+        string book = "time 4/4\noctave absolute\npart rh { }\npart lh { clef bass }\nsection A {\n" +
+            "  rh { c'4@pp d' e' f' | }\n  lh { c4 c@sfz c c | }\n}\nform { A }\nscore { grandStaff { staff rh staff lh } }\n";
+        Assert.Equal(new[] { PP, Sfz, PP, PP }, Velocities(book, "lh"));
+        // The voices of a span, the same way.
+        var lower = Notes(OnePart("voice { c''1@pp | } { c'4 c'@sfz c' c' | }"), "fl").Where(n => n.Voice == 1).Select(n => n.Velocity);
+        Assert.Equal(new[] { PP, Sfz, PP, PP }, lower);
     }
 
     [Fact]

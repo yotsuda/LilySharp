@@ -168,7 +168,10 @@ public sealed class MidiExporter
         _velocity = level;
         // A lane or a turn reopening: an accent written on an empty chord before it is not this note's.
         if (!written)
+        {
             _accentPending = null;
+            _struckByPending = 0;
+        }
         _levelLog.Add((part ?? _currentPart, _currentTick, level, written));
     }
 
@@ -179,6 +182,15 @@ public sealed class MidiExporter
     // The velocity an accent dynamic written on an empty chord (`<>@sfz`) or on a `<< >>` group
     // gives the next note struck (Hold, Standing).
     private int? _accentPending;
+
+    // The number of the accent dynamic the note now being struck carries (MidiNote.Sforzando),
+    // 0 with none; and the one an empty chord wrote for the next note (_accentPending's).
+    private int _struckBy, _struckByPending;
+
+    /// <summary>What an accent dynamic of number <paramref name="own"/> is struck at where the
+    /// level is <paramref name="level"/>: its own number, or <see cref="AccentOverStanding"/>
+    /// over the level where that is louder.</summary>
+    internal static double AccentAt(int own, double level) => Math.Min(127, Math.Max(own, level + AccentOverStanding));
 
     /// <summary>
     /// The velocity of the note a dynamic is written on, with the level standing after it set: a
@@ -201,14 +213,17 @@ public sealed class MidiExporter
         {
             case DynamicLevel.SF or DynamicLevel.SFZ or DynamicLevel.FZ or DynamicLevel.SFFZ or DynamicLevel.RF or DynamicLevel.RFZ:
                 int own = dynamic.Level == DynamicLevel.SF ? (int)DynamicLevel.SFZ : dynamic.Velocity;
-                return Math.Min(127, Math.Max(own, _velocity + AccentOverStanding));
+                _struckBy = own;
+                return (int)AccentAt(own, _velocity);
             case DynamicLevel.FP or DynamicLevel.SFP:
                 // Struck no softer than the level it is written in (`@fp` in a forte passage).
                 int attack = Math.Max(dynamic.Velocity, _velocity);
                 SetLevel((int)DynamicLevel.P, written: true);
+                _struckBy = 0;
                 return attack;
             default:
                 SetLevel(dynamic.Velocity, written: true);
+                _struckBy = 0;
                 return dynamic.Velocity;
         }
     }
@@ -219,7 +234,10 @@ public sealed class MidiExporter
     {
         int struck = Strike(dynamic);
         if (struck != _velocity)
+        {
             _accentPending = struck;
+            _struckByPending = _struckBy;
+        }
     }
 
     /// <summary>The velocity a note with no dynamic of its own is struck at: the standing level,
@@ -228,6 +246,7 @@ public sealed class MidiExporter
     {
         int velocity = _accentPending ?? _velocity;
         _accentPending = null;
+        (_struckBy, _struckByPending) = (_struckByPending, 0);
         return velocity;
     }
 
@@ -272,7 +291,7 @@ public sealed class MidiExporter
                     if (written[k].Part == part) { at = k; break; }
                 int shift = written[at].Level - mine[self].Level;
                 if (shift != 0)
-                    track.Notes[i] = n with { Velocity = Math.Clamp(n.Velocity + shift, 1, 127) };
+                    track.Notes[i] = Releveled(n, shift);
             }
         }
 
@@ -287,6 +306,20 @@ public sealed class MidiExporter
             }
             return found;
         }
+    }
+
+    /// <summary><paramref name="n"/> where the level it is written in moves by
+    /// <paramref name="shift"/> (a dynamic shared from another hand or voice): it keeps what its
+    /// own marks add to the level, and an accent dynamic is read again at the new level
+    /// (<see cref="SungVoices.StruckAt"/>) — an <c>@sfz</c> under a shared <c>@pp</c> is still
+    /// its own 104, where carrying the difference would have dropped it with the level.</summary>
+    private static MidiNote Releveled(in MidiNote n, int shift)
+    {
+        if (n.Sforzando == 0)
+            return n with { Velocity = Math.Clamp(n.Velocity + shift, 1, 127) };
+        int level = SungVoices.Level(n) + shift;
+        int struck = Math.Clamp((int)Math.Round(SungVoices.StruckAt(n, level)), 1, 127);
+        return n with { Velocity = struck, Accent = struck - level };
     }
 
     /// <summary>
@@ -398,7 +431,7 @@ public sealed class MidiExporter
                         shared = k;
                 if (shared < 0 || written[shared].Level == own)
                     continue;
-                track.Notes[i] = n with { Velocity = Math.Clamp(n.Velocity + written[shared].Level - own, 1, 127) };
+                track.Notes[i] = Releveled(n, written[shared].Level - own);
             }
         }
         // After the span the part stands at the last level written in it.
@@ -1552,6 +1585,7 @@ public sealed class MidiExporter
                         // A later voice opens where the span did, not where the voice before it ended.
                         _velocity = levelAtStart;
                         _accentPending = null;
+                        _struckByPending = 0;
                     }
                     _currentTick = blockStartTick;
                     _currentNoteName = startNoteName;
@@ -3438,7 +3472,7 @@ public sealed class MidiExporter
         int actualTicks = Math.Max(1, ticks * durationPercent / 100);
         track.Notes.Add(new MidiNote(track.Channel, SoundKey(midiPitch, pitch.SourceStart), velocity,
             _currentTick, actualTicks, pitch.SourceStart, QuarterBend: pitch.QuarterOffset,
-            SourceOrdinal: NextOrdinal(pitch.SourceStart), Timbre: _currentTimbre, Part: _currentPart, Accent: velocity - _velocity));
+            SourceOrdinal: NextOrdinal(pitch.SourceStart), Timbre: _currentTimbre, Part: _currentPart, Accent: velocity - _velocity, Sforzando: _struckBy));
         // The last member is what a '~' after '>>' ties on from (OpenTieTargets).
         CloseOnset(track, [track.Notes.Count - 1], false);
         _currentTick += ticks;
@@ -3540,7 +3574,7 @@ public sealed class MidiExporter
         track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity,
             _currentTick, actualDuration, note.SourceStart,
             QuarterBend: note.Pitch.QuarterOffset,
-            SourceOrdinal: NextOrdinal(note.SourceStart), Timbre: _currentTimbre, Part: _currentPart, Accent: velocity - _velocity));
+            SourceOrdinal: NextOrdinal(note.SourceStart), Timbre: _currentTimbre, Part: _currentPart, Accent: velocity - _velocity, Sforzando: _struckBy));
         MarkForSinger(track, [track.Notes.Count - 1], note.Articulations);
         CloseOnset(track, [track.Notes.Count - 1], startsTie);
         _currentTick += durationTicks;
@@ -3575,7 +3609,7 @@ public sealed class MidiExporter
         (velocity, durationPercent) = ApplyRunMarks(drum, velocity, durationPercent);
         int actualDuration = Math.Max(1, durationTicks * durationPercent / 100);
         track.Notes.Add(new MidiNote(9, info.GmKey, velocity, _currentTick, actualDuration,
-            drum.SourceStart, SourceOrdinal: NextOrdinal(drum.SourceStart), Timbre: 9, Part: _currentPart, Accent: velocity - _velocity));
+            drum.SourceStart, SourceOrdinal: NextOrdinal(drum.SourceStart), Timbre: 9, Part: _currentPart, Accent: velocity - _velocity, Sforzando: _struckBy));
         CloseOnset(track, [track.Notes.Count - 1], startsTie: false);
         _currentTick += durationTicks;
     }
@@ -3704,7 +3738,7 @@ public sealed class MidiExporter
                 track.Notes.Add(new MidiNote(track.Channel, sound.MidiPitch, velocity,
                     startTick, actualDuration, bare.SourceStart,
                     QuarterBend: sound.QuarterBend,
-                    SourceOrdinal: NextOrdinal(bare.SourceStart), Timbre: _currentTimbre, Part: _currentPart, Accent: velocity - _velocity));
+                    SourceOrdinal: NextOrdinal(bare.SourceStart), Timbre: _currentTimbre, Part: _currentPart, Accent: velocity - _velocity, Sforzando: _struckBy));
                 MarkForSinger(track, [track.Notes.Count - 1], bare.Articulations);
                 CloseOnset(track, [track.Notes.Count - 1], startsTie);
                 break;
@@ -3723,7 +3757,7 @@ public sealed class MidiExporter
                     if (n.IsDrum)
                     {
                         track.Notes.Add(new MidiNote(9, n.MidiPitch, velocity, startTick, actualDuration,
-                            bare.SourceStart, SourceOrdinal: ordinal, Timbre: 9, Part: _currentPart, Accent: velocity - _velocity));
+                            bare.SourceStart, SourceOrdinal: ordinal, Timbre: 9, Part: _currentPart, Accent: velocity - _velocity, Sforzando: _struckBy));
                         continue;
                     }
                     int pitch = n.MidiPitch + semitones;
@@ -3731,7 +3765,7 @@ public sealed class MidiExporter
                     if (tiedInto >= 0) { onset.Add(tiedInto); continue; }
                     track.Notes.Add(new MidiNote(track.Channel, pitch, velocity, startTick, actualDuration,
                         bare.SourceStart, QuarterBend: n.QuarterBend, SourceOrdinal: ordinal, Timbre: _currentTimbre, Part: _currentPart,
-                        Accent: velocity - _velocity));
+                        Accent: velocity - _velocity, Sforzando: _struckBy));
                     onset.Add(track.Notes.Count - 1);
                 }
                 MarkForSinger(track, onset, bare.Articulations);
@@ -3742,7 +3776,7 @@ public sealed class MidiExporter
             {
                 var info = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
                 track.Notes.Add(new MidiNote(9, info.GmKey, velocity, startTick, actualDuration,
-                    bare.SourceStart, SourceOrdinal: NextOrdinal(bare.SourceStart), Timbre: 9, Part: _currentPart, Accent: velocity - _velocity));
+                    bare.SourceStart, SourceOrdinal: NextOrdinal(bare.SourceStart), Timbre: 9, Part: _currentPart, Accent: velocity - _velocity, Sforzando: _struckBy));
                 CloseOnset(track, [track.Notes.Count - 1], startsTie: false);
                 break;
             }
@@ -3958,7 +3992,7 @@ public sealed class MidiExporter
                 track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity, startTick, soundTicks, chord.SourceStart,
                     QuarterBend: pitch.QuarterOffset,
                     SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart, MemberPos: pitch.SourceStart,
-                    Accent: velocity - _velocity));
+                    Accent: velocity - _velocity, Sforzando: _struckBy));
                 onset.Add(track.Notes.Count - 1);
             }
             // A tie written on members (<c f d~>) goes on from those notes alone.
@@ -3985,7 +4019,7 @@ public sealed class MidiExporter
                 else
                 {
                     track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity, startTick, soundTicks, chord.SourceStart,
-                        SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart, Accent: velocity - _velocity));
+                        SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart, Accent: velocity - _velocity, Sforzando: _struckBy));
                     onset.Add(track.Notes.Count - 1);
                 }
                 resolved.Add((midiPitch, 0, false));
@@ -4018,7 +4052,7 @@ public sealed class MidiExporter
             {
                 track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity, startTick, soundTicks, chord.SourceStart,
                     SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart, MemberPos: degree.SourceStart,
-                    Accent: velocity - _velocity));
+                    Accent: velocity - _velocity, Sforzando: _struckBy));
                 onset.Add(track.Notes.Count - 1);
             }
             resolved.Add((midiPitch, 0, false));
@@ -4031,7 +4065,7 @@ public sealed class MidiExporter
         {
             var dinfo = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
             track.Notes.Add(new MidiNote(9, dinfo.GmKey, velocity, startTick, soundTicks, chord.SourceStart,
-                SourceOrdinal: chordOrdinal, Timbre: 9, Part: _currentPart, Accent: velocity - _velocity));
+                SourceOrdinal: chordOrdinal, Timbre: 9, Part: _currentPart, Accent: velocity - _velocity, Sforzando: _struckBy));
             resolved.Add((dinfo.GmKey, 0, true));
         }
         _resolvedChordNotes[chord] = resolved;

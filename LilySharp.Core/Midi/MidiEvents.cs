@@ -114,7 +114,13 @@ public readonly record struct MidiNote(
     // `@sfz`, the attack of an `@fp`: Velocity less the level standing after the note's own
     // dynamic. A hairpin reads the level without it (SungVoices.Level), so an accent inside a
     // crescendo neither ends the hairpin nor is its target. Not written to .mid files.
-    int Accent = 0
+    int Accent = 0,
+    // The number of the accent dynamic this note is struck with (`@sfz` 104, `@rf` 103, …), 0
+    // with none. Such a dynamic is not so much over the level: it is its own number, or a
+    // little over the level where that is louder (MidiExporter.AccentAt) — so where the level
+    // moves under the note (a hairpin, a shared dynamic) the strike is read again at the level
+    // it has come to (SungVoices.StruckAt). Not written to .mid files.
+    int Sforzando = 0
 );
 
 /// <summary>

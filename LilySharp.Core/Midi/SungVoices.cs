@@ -459,6 +459,23 @@ public static class SungVoices
     /// its own marks add to it (<see cref="MidiNote.Accent"/>).</summary>
     internal static int Level(in MidiNote note) => Written(note) - note.Accent;
 
+    /// <summary>The velocity <paramref name="note"/> is struck at where the level under it has
+    /// come to <paramref name="level"/> (a hairpin, a shared dynamic): the level and what the
+    /// note's own marks add to it.</summary>
+    /// <remarks>An accent dynamic (<see cref="MidiNote.Sforzando"/>) is not a fixed step over the
+    /// level: it is its own number, or a little over the level where that is louder
+    /// (MidiExporter.AccentAt), so it is read again at the level come to. Until 2026-11-14
+    /// (session 1235) the step it made where it was WRITTEN was carried along: an <c>@sfz</c> in
+    /// a crescendo from piano kept its 34 over the level, and half-way to forte it was struck at
+    /// 116, over <c>@fff</c>; near the top every one of them was 127.</remarks>
+    internal static double StruckAt(in MidiNote note, double level)
+    {
+        if (note.Sforzando == 0)
+            return level + note.Accent;
+        int written = Level(note);
+        return note.Accent + MidiExporter.AccentAt(note.Sforzando, level) - MidiExporter.AccentAt(note.Sforzando, written) + written;
+    }
+
     /// <summary>
     /// Where the hairpins take a line's notes, in MIDI velocity: the level at each note's start,
     /// and — for a note a hairpin crosses — the level at its end. A hairpin goes from its first
@@ -468,9 +485,10 @@ public static class SungVoices
     /// (MidiExporter.SwellInstruments) follow, each on its own clock.
     /// </summary>
     /// <remarks>
-    /// A hairpin moves the LEVEL, and a note keeps what its own marks add to it: an accent, a
-    /// marcato or an <c>@sfz</c> inside a crescendo is struck that much over where the hairpin
-    /// has come, and the hairpin goes on through it. Until 2026-11-14 (session 1232) the walk
+    /// A hairpin moves the LEVEL, and a note keeps what its own marks add to it: an accent or a
+    /// marcato inside a crescendo is struck that much over where the hairpin has come, an
+    /// <c>@sfz</c> as it is at that level (<see cref="StruckAt"/>), and the hairpin goes on
+    /// through it. Until 2026-11-14 (session 1232) the walk
     /// compared velocities, so <c>c@p@cresc d@accent e f@f</c> took the accented note for the
     /// level the crescendo was going to: the hairpin ended there, at the accent's velocity, and
     /// the notes after it fell back to piano.
@@ -499,13 +517,13 @@ public static class SungVoices
             double Along(double t) => level + ((target - level) * Math.Clamp((t - from) / Math.Max(1e-6, until - from), 0, 1));
             for (int k = i; k < stop && k < notes.Count; k++)
             {
-                at[k] = Along(startOf(k)) + notes[k].Accent;
-                after[k] = Along(endOf(k)) + notes[k].Accent;
+                at[k] = StruckAt(notes[k], Along(startOf(k)));
+                after[k] = StruckAt(notes[k], Along(endOf(k)));
             }
             // With no level to land on, what the hairpin reached stands until one is written.
             if (!landsOnALevel)
                 for (int k = stop; k < notes.Count && Level(notes[k]) == level && notes[k].Swell == 0; k++)
-                    at[k] = target + notes[k].Accent;
+                    at[k] = StruckAt(notes[k], target);
             i = stop - 1;
         }
         return (at, after);
