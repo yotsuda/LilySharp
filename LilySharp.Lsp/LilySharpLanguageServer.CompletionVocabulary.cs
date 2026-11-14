@@ -74,22 +74,7 @@ public sealed partial class LilySharpLanguageServer
         // The run of barline characters before the caret — the thing an operator item
         // replaces. Null when the caret follows a word or a space (nothing to replace) or
         // when the caller gave no position (the range cannot be expressed).
-        LilySharp.Lsp.Protocol.Range? operatorRange = null;
-        if (offset >= 0 && position is not null)
-        {
-            int start = Math.Min(offset, text.Length);
-            while (start > 0 && text[start - 1] is '|' or ':' or '*' or '.' or '!')
-                start--;
-            if (start < offset)
-            {
-                var (line, character) = GetLineAndCharacter(text, start);
-                operatorRange = new LilySharp.Lsp.Protocol.Range
-                {
-                    Start = new Position(line, character),
-                    End = position,
-                };
-            }
-        }
+        var operatorRange = BarSignRunBefore(text, offset, position);
 
         CompletionItem Item(string label, string detail, CompletionItemKind kind, string sort,
             string? insert = null)
@@ -140,8 +125,8 @@ public sealed partial class LilySharpLanguageServer
 
         // The bar signs, in the order the step keys walk them (NoteStepper.FormBarlineWalk, the
         // owner's order 2026-10-24): the double, the repeat block — |: … :| with its endings
-        // between the bars and the count on the closing bar (:|*N, default 2; form-only since
-        // LYS1034) — then the final and the dotted. (A plain `|` is an inert divider and is not
+        // between the bars and the count on the closing bar (:|*N, default 2) — then the final
+        // and the dotted. (A section's music writes the same signs: RepeatSignItems.) (A plain `|` is an inert divider and is not
         // offered.)
         items.Add(Item("||", "Double barline", CompletionItemKind.Operator, "2a"));
         items.Add(Item("|:", "Repeat start — |: … :|", CompletionItemKind.Operator, "2b"));
@@ -4635,8 +4620,7 @@ public sealed partial class LilySharpLanguageServer
             new CompletionItem { Label = "pageBreak", Kind = CompletionItemKind.Keyword, InsertText = "pageBreak", Detail = "Force a page break", Documentation = "LilyPond \\pageBreak; breaks the line too", SortText = "4pagebreak" },
             new CompletionItem { Label = "noPageBreak", Kind = CompletionItemKind.Keyword, InsertText = "noPageBreak", Detail = "Forbid a page break", Documentation = "LilyPond \\noPageBreak", SortText = "4nopagebreak" },
         });
-        // The navigation marks are NOT offered in drum music either: they are form-only since
-        // 2026-10-04 (LYS1034, owner's decision) — the form popup has them.
+        // (The repeat bars, endings and navigation marks: WithRepeatSigns, as for pitched music.)
         // voice { } is only meaningful directly in the part's music —
         // NESTED voice blocks silently become parallel siblings (verified),
         // so the snippet is withheld inside a voice wrapper.
@@ -4798,12 +4782,10 @@ public sealed partial class LilySharpLanguageServer
                 // q). Offered beside the rests as the other pitchless item a bar is built of.
                 new CompletionItem { Label = "q", Kind = CompletionItemKind.Value, Detail = "Repeat the previous chord", Documentation = "q4; q' an octave up", SortText = "1q" },
 
-                // Structures. ⚠️ NO `|: :|` and NO `[1. …]` here: repeat structure is written
-                // in a `form { … }` and nowhere else since 2026-08-31 (LYS1034 — a `|:` in
-                // music is an error), and the two volta snippets that stood here taught that
-                // rejected spelling for two more sessions (owner report, 2026-09-02). What
-                // stays is what the music grammar keeps: `repeat unfold/percent/tremolo`, which
-                // abbreviate notes rather than change the playing order.
+                // Structures. `|: :|` and `[1. …]` are not here but in RepeatSignItems, which
+                // the caller adds outside a phrase (WithRepeatSigns). These are what every
+                // music takes: `repeat unfold/percent/tremolo` abbreviate notes rather than
+                // change the playing order.
                 // The kind is chosen from the popup this re-opens (GetRepeatKindCompletions),
                 // not committed to here — this item used to insert `repeat unfold 2 { }` outright.
                 new CompletionItem { Label = "repeat", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "repeat $0", Detail = "Repeat block", Documentation = string.Join(" | ", LanguageVocabulary.RepeatKinds), SortText = "2repeatkw", Command = new Command { Title = "Suggest repeat kind", CommandIdentifier = "editor.action.triggerSuggest" } },
@@ -4847,11 +4829,9 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "once override", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "once override $0", Detail = "One-time override", SortText = "4once", Command = new Command { Title = "Suggest grob property", CommandIdentifier = "editor.action.triggerSuggest" } }
         });
 
-        // The navigation marks are NOT offered here (since 2026-10-04): they are form-only —
-        // LYS1034, owner's decision, the same line as the repeat barlines (a mark in music was
-        // drawn and never followed). From 2026-09-10 to that day this list offered them, as
-        // GRAMMAR §8.1 then read "NavMark is the SAME bare token in a section's music as in a
-        // form". The form popup (GetFormCompletions) is where they live.
+        // The repeat bars, the endings and the navigation marks are not in THIS list: the
+        // caller adds them (WithRepeatSigns), since a phrase's music takes none (LYS1034) and
+        // this list does not know where the caret stands.
 
         // Parallel voices (voice { } voice { }): only meaningful directly in the
         // part's music — nested voice blocks silently become siblings — so the
@@ -5386,7 +5366,7 @@ public sealed partial class LilySharpLanguageServer
 
                 // Navigation signs (segno / coda / fine / D.S. / D.C. / to coda) are
                 // NOT offered here: they are standalone BARE landmarks, not note
-                // modifiers ('@'), and form-only (LYS1034), so they come from the form completions.
+                // modifiers ('@'), so they come from RepeatSignItems and the form completions.
                 // Rehearsal mark: @mark("A") drops a boxed label. Shown as a bare
                 // "mark" (like @text), but completes straight into the quotes so the
                 // caret lands where the label is typed.
@@ -5797,9 +5777,88 @@ public sealed partial class LilySharpLanguageServer
         ["ds al coda"] = "Dal Segno al Coda",
     };
 
+    /// <summary>The run of barline characters before the caret — what a bar-sign item
+    /// replaces (<c>|</c> and <c>:</c> are not word characters, so the editor's own replace
+    /// range is empty there and accepting <c>|:</c> after a typed <c>|</c> wrote <c>||:</c>).
+    /// Null when the caret follows a word or a space, or when the caller gave no position.</summary>
+    private static LilySharp.Lsp.Protocol.Range? BarSignRunBefore(string text, int offset, Position? position)
+    {
+        if (offset < 0 || position is null)
+            return null;
+        int start = Math.Min(offset, text.Length);
+        while (start > 0 && text[start - 1] is '|' or ':' or '*' or '.' or '!')
+            start--;
+        if (start >= offset)
+            return null;
+        var (line, character) = GetLineAndCharacter(text, start);
+        return new LilySharp.Lsp.Protocol.Range { Start = new Position(line, character), End = position };
+    }
+
+    /// <summary>
+    /// The signs a section's music writes at a bar line: the repeat bars, the endings and the
+    /// navigation marks — the form popup's rows, after everything else in the music list.
+    /// </summary>
+    /// <remarks>
+    /// From 2026-08-31 (the bars and endings) and 2026-10-04 (the marks) to 2026-11-15 these
+    /// were form-only and the music popups offered none. A sign in a section's music is the
+    /// score's — every part follows it (docs/inline-repeat-design.md §3.2). A PHRASE still
+    /// takes none (LYS1034), which is <see cref="WithRepeatSigns"/>'s test, not this list's.
+    /// </remarks>
+    internal static IReadOnlyList<CompletionItem> RepeatSignItems(string text = "", int offset = -1, Position? position = null)
+    {
+        var run = BarSignRunBefore(text, offset, position);
+        CompletionItem Bar(string label, string detail, string sort) => new()
+        {
+            Label = label,
+            InsertText = label,
+            FilterText = label,
+            Kind = CompletionItemKind.Operator,
+            Detail = detail,
+            SortText = sort,
+            TextEdit = run is not null ? new TextEdit { Range = run, NewText = label } : null,
+        };
+        CompletionItem Ending(string label, string insert, string detail, string sort) => new()
+        {
+            Label = label,
+            InsertText = insert,
+            InsertTextFormat = InsertTextFormat.Snippet,
+            FilterText = label,
+            Kind = CompletionItemKind.Snippet,
+            Detail = detail,
+            SortText = sort,
+        };
+        var items = new List<CompletionItem>
+        {
+            Bar("|:", "Repeat start — every part repeats", "7a"),
+            Bar(":|", "Repeat end (:|*3 to play three times)", "7b"),
+            Bar(":|*3", "Repeat end played three times", "7c"),
+            Bar(":|:", "Repeat end and the next repeat's start, back to back", "7d"),
+            Ending("[1. :|", "[1. $0 :|", "1st ending — closed by its :|", "7e"),
+            Ending("[2. ]", "[2. $0 ]", "2nd ending (the last ending closes with ])", "7f"),
+            Ending("[3. ]", "[3. $0 ]", "3rd ending", "7g"),
+        };
+        items.AddRange(NavigationMarkItems("8"));
+        return items;
+    }
+
+    /// <summary>A music list with <see cref="RepeatSignItems"/> after it — unless the caret
+    /// stands in a <c>phrase</c>, which holds no sign (LYS1034).</summary>
+    internal static CompletionList WithRepeatSigns(CompletionList list, LilySharp.Core.Syntax.SyntaxTree tree,
+        string text, int offset, Position? position = null)
+    {
+        foreach (var phrase in tree.GetRoot().ChildNodes().OfType<LilySharp.Core.Syntax.PhraseDeclarationSyntax>())
+            if (phrase.Span.Start < offset && offset <= phrase.Span.Start + phrase.Span.Length)
+                return list;
+        return new CompletionList
+        {
+            IsIncomplete = list.IsIncomplete,
+            Items = [.. list.Items, .. RepeatSignItems(text, offset, position)],
+        };
+    }
+
     /// <summary>The navigation marks as keyword items, in the compiler's order, sorted
-    /// under <paramref name="sortPrefix"/> — one list for the form popup and the two music
-    /// popups (GRAMMAR §8.1: the same bare token in both).</summary>
+    /// under <paramref name="sortPrefix"/> — one list for the form popup and the music
+    /// popups (the same bare token in both).</summary>
     private static IEnumerable<CompletionItem> NavigationMarkItems(string sortPrefix)
         => LanguageVocabulary.NavigationMarks.Select((mark, i) => new CompletionItem
         {

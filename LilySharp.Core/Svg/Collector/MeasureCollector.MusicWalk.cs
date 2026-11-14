@@ -1705,10 +1705,10 @@ public sealed partial class MeasureCollector
             case NavigationMarkSyntax nav:
                 {
                     // A bare navigation mark inside a section's music: place its sign at
-                    // the current note position (same MusicMarkItem the form uses). An ERROR
-                    // since 2026-10-04 (LYS1034, RepeatStructureScopeValidator — the route is
-                    // read off the form alone); still placed, so the picture of a book with
-                    // that error is whole. The mid-measure warning (LYS4003) retired with it.
+                    // the current note position (same MusicMarkItem the form uses). The
+                    // score's mark, followed like the form's (Semantics.RepeatStream); one
+                    // written inside a bar is LYS1071 and still placed, so the picture of a
+                    // book with that error is whole.
                     var navType = NavigationToMusicMark(nav.MarkType);
                     _musicMarks.Add(new MusicMarkItem(navType, NavigationMarkMeasure(navType, builder), nav.SourceStart));
                 }

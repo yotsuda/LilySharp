@@ -268,8 +268,8 @@ public class CompletionAuditTests
         Assert.Contains("cue", labels);
         Assert.Contains("q", labels);
         Assert.Contains("theme", labels);
-        // The navigation marks are form-only (LYS1034, owner's decision 2026-10-04): the
-        // music popup offers none, and one written in music is that error.
+        // The navigation marks are not in THIS list: the caller adds them with the repeat
+        // signs, outside a phrase (WithRepeatSigns — the next fact).
         foreach (string mark in LanguageVocabulary.NavigationMarks)
             Assert.DoesNotContain(mark, labels);
 
@@ -286,28 +286,81 @@ public class CompletionAuditTests
         AssertCompiles(Book(music: "cue bass { c4 d } e4 f |"), "`cue bass { }` in music");
         AssertCompiles(Book(music: "<c e g>4 q q q |"), "`q` in music");
         AssertCompiles("phrase theme { c4 d e f | }\n" + Book(music: "theme g4 a b c' |"), "a phrase reference in music");
-        foreach (string mark in LanguageVocabulary.NavigationMarks)
-            Assert.Contains(SemanticValidation.Run(SyntaxTree.Parse(Book(music: $"c4 d e f | {mark} g4 a b c' |"))),
-                d => d.Code == DiagnosticCodes.RepeatStructureOutsideForm);
         // …and a phrase list absent (the parameterless callers) offers no reference row.
         Assert.DoesNotContain("theme",
             LilySharpLanguageServer.GetMusicCompletions("", 0).Items.Select(i => i.Label));
     }
 
     [Fact]
-    public void NavigationMarks_AreTheCompilersList_InTheFormPopupAlone()
+    public void NavigationMarks_AreTheCompilersList_InTheFormPopupAndTheMusicsSigns()
     {
         const string doc = "part m { section A { c'4 d e f | } }\nform { A }";
         var form = LilySharpLanguageServer.GetFormCompletions(doc).Items.Select(i => i.Label).ToHashSet();
-        var drums = LilySharpLanguageServer.GetDrumCompletions().Items.Select(i => i.Label).ToHashSet();
+        var signs = LilySharpLanguageServer.RepeatSignItems().Select(i => i.Label).ToHashSet();
         foreach (string mark in LanguageVocabulary.NavigationMarks)
         {
             Assert.Contains(mark, form);
-            Assert.DoesNotContain(mark, drums);
+            Assert.Contains(mark, signs);
             AssertCompiles(Book().Replace("form { A }", $"form {{ A {mark} A }}"), $"`{mark}` in a form");
         }
         // The list is the ten the grammar spells (GRAMMAR NavMark) — guard the guard.
         Assert.Equal(10, LanguageVocabulary.NavigationMarks.Count);
+    }
+
+    /// <summary>
+    /// The repeat bars, the endings and the navigation marks are offered in a section's music
+    /// and withheld in a phrase — the line LYS1034 draws since 2026-11-15, asked of the
+    /// compiler: every sign the popup adds is refused in a phrase and not refused in a section.
+    /// </summary>
+    /// <remarks>Poison: drop the phrase test from <c>WithRepeatSigns</c> and the phrase half
+    /// goes red; restore the form-only predicate in <c>RepeatStructureScopeValidator</c> and
+    /// the section half does.</remarks>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RepeatSigns_AreOfferedInASectionsMusic_AndWithheldInAPhrase(bool drums)
+    {
+        const string head = "part m { clef treble }\nphrase T { c'4 d e f | ";
+        const string doc = head + "}\nsection A { m { c'4 d e f | } }\nform { A }\nscore { staff m }\n";
+        var tree = SyntaxTree.Parse(doc);
+        var bare = drums
+            ? LilySharpLanguageServer.GetDrumCompletions()
+            : LilySharpLanguageServer.GetMusicCompletions("", 0);
+        int inSection = doc.IndexOf("} }\nform", StringComparison.Ordinal);
+        var section = LilySharpLanguageServer.WithRepeatSigns(bare, tree, doc, inSection).Items.Select(i => i.Label!).ToHashSet();
+        var phrase = LilySharpLanguageServer.WithRepeatSigns(bare, tree, doc, head.Length).Items.Select(i => i.Label!).ToHashSet();
+
+        var signs = LilySharpLanguageServer.RepeatSignItems();
+        Assert.Contains(signs, i => i.Label == "|:");
+        Assert.Contains(signs, i => i.Label == ":|");
+        Assert.Contains(signs, i => i.Label == "segno");
+        foreach (var sign in signs)
+        {
+            Assert.Contains(sign.Label!, section);
+            Assert.DoesNotContain(sign.Label!, phrase);
+            string written = Resolved(sign, "g4 a b c'");
+            Assert.DoesNotContain(
+                SemanticValidation.Run(SyntaxTree.Parse(Book(music: $"c4 d e f | {written} g4 a b c' |"))),
+                d => d.Code == DiagnosticCodes.RepeatStructureInPhrase);
+            Assert.Contains(
+                SemanticValidation.Run(SyntaxTree.Parse(
+                    $"phrase T {{ c4 d e f | {written} g4 a b c' | }}\n" + Book(music: "T"))),
+                d => d.Code == DiagnosticCodes.RepeatStructureInPhrase);
+        }
+    }
+
+    /// <summary>A sign the writer has started typing is replaced, not appended to (the form
+    /// popup's rule): <c>|</c> then the <c>|:</c> item writes <c>|:</c>, not <c>||:</c>.</summary>
+    [Fact]
+    public void ARepeatBarTypedAsFarAsItsFirstCharacter_IsReplaced()
+    {
+        const string text = "part m { section A { c'4 d e f |";
+        var bar = LilySharpLanguageServer.RepeatSignItems(text, text.Length, new LilySharp.Lsp.Protocol.Position(0, text.Length))
+            .Single(i => i.Label == "|:");
+        Assert.Equal("|:", bar.TextEdit!.NewText);
+        Assert.Equal(text.Length - 1, bar.TextEdit.Range.Start.Character);
+        Assert.Null(LilySharpLanguageServer.RepeatSignItems(text + " ", text.Length + 1, new LilySharp.Lsp.Protocol.Position(0, text.Length + 1))
+            .Single(i => i.Label == "|:").TextEdit);
     }
 
     // ================= a section's track cells =================

@@ -881,9 +881,9 @@ after it on the same line (until the hairpin has ended) that write no side follo
 - Barlines in MUSIC: `|` single, `||` double, `|.` final, `!` dashed. The final bar line is
   yours to write: end the piece's last bar with `|.` (in one part is enough — every staff
   draws it); without it the piece ends on a single bar line.
-  **The repeat barlines `|:` `:|` `:|:` are NOT music items — they go in the `form`**
-  (LYS1034, user decision 2026-08-31). The line is "does it change the playing ORDER":
-  a repeat does, so it belongs where the order is written.
+  The repeat barlines `|:` `:|` `:|:` (`:|*3` = three times) are written in a section's
+  music, in a `chords` row, or in the `form` — see *Repeats in the music* below. A `phrase`
+  takes none (LYS1034): write `|: riff :|` where the phrase is played.
 - **A written `|` closes exactly one measure, and a measure with nothing in it is an
   empty one** — so `{ | | | | }` is four empty bars and `{ | c1 }` is an empty bar then
   `c1`. An empty bar is filled with a full-measure spacer (`| |` == `| s1 |`, on the page
@@ -891,7 +891,8 @@ after it on the same line (until the hairpin has ended) that write no side follo
   on an empty span DECORATE the bar behind them; and a `|` landing where the
   meter just auto-filled a bar merely confirms it — which is why a trailing `c1 |` is one
   bar, not two.
-- Volta repeats are symbolic and live in the form: `form { |: A [1. B] :| [2. C] }`.
+- Volta repeats in the form name sections: `form { |: A [1. B] :| [2. C] }` (in a section's
+  music an ending holds its bars instead: *Repeats in the music*).
   An ending NAMES one or more sections, played in order under one bracket:
   `|: A [1. B C] :| [2. D]` plays A B C, then A D. The body before the first ending must
   name a section (`|: [1. B] :| [2. C]` and `|: :|` are errors, LYS1041).
@@ -964,7 +965,7 @@ score { staff melody }
   alternates them, and lasts N times the body: `repeat tremolo 4 { c16 e }` = 4 × an eighth =
   a half note's time, drawn as two half notes joined by the tremolo beams.
 - NOT Lily#: `repeat volta` / `alternative` are LilyPond's spellings (the parser refuses
-  `repeat volta` and points at the symbolic `|: ... :|` form above; `alternative` is just a
+  `repeat volta` and points at the `|: ... :|` bar lines above; `alternative` is just a
   word). `repeat` is only for `tremolo`.
 
 ## Tuplets
@@ -1390,9 +1391,10 @@ the previous chord one more beat (`| C . . G7 |`; a `.` never crosses a barline)
 (`| . C |` = no chord, then C), and there is no `s`. Barlines in the source
 (`|` `||` `|.`) are drawn, and follow the same bare-barline rule as music
 and lyrics: every written `|` closes exactly one bar, the one that OPENS the run
-included, so `| C | F |` is an empty bar and then two. A `|:` in a chord row IS a repeat,
-so it goes in the form like any other (LYS1034); the repeat barlines the form composes
-still reach the row and draw as real repeat barlines. `break` / `noBreak` / `pageBreak` /
+included, so `| C | F |` is an empty bar and then two. A chord row writes the repeat signs,
+endings (`[1. … ]`) and navigation marks like any music, and they are the SCORE's: a repeat
+written in the row alone repeats the melody over it (*Repeats in the music*); the repeat
+barlines a form composes reach the row too. `break` / `noBreak` / `pageBreak` /
 `noPageBreak` may stand at a bar line of the track — after the bar's chords (`Am F break |`)
 or before the next bar's (`| break C`) — and break the line or page after that bar, on a lead
 sheet and on every score of the piece (*Line breaks* above); not inside a bar (LYS1069).
@@ -1485,17 +1487,58 @@ form { A segno  B to coda  C ds al coda  coda D }   // the MIDI plays A B C B D
 The MIDI follows a FORM's jump texts as a player reads them (`dc` to the beginning, `ds` to
 after the last `segno`; `al fine` ends at the first `fine` of the replay; `al coda` goes on
 from the `coda` after the jump; a bare `dc`/`ds` goes on after the jump; repeats play once on
-the replay). A `ds` with no `segno`, and a mark written in the music, are drawn only. A
-jump text whose landmark is missing in the form (`ds` with no `segno` before it, `al fine`
+the replay). A jump text whose landmark is missing (`ds` with no `segno` before it, `al fine`
 with no `fine`, `al coda` with no `to coda` or no `coda` after it) warns (LYS4025) and names
 the fallback the MIDI takes.
 
-The words are **form-only** (LYS1034, user decision 2026-10-04 — the same line as the repeat
-barlines): a navigation mark written in a section's music (`segno c4 d e f |`,
-`c4 d e f | ds al fine`) is an error, because the route is read off the form alone and a mark
-there was drawn and never followed. A landmark that falls inside a section is written by
-cutting the section there (`~` hides the label). They are landmarks, never note modifiers, so
-`c4@segno` is an error too (LYS1022).
+The same words are written in a section's MUSIC, at a bar line, when the landmark falls
+inside a section — no need to cut the section there (`c4 d e f | segno g4 a b c' |`,
+`… c1 | ds al fine`). `segno` and `coda` belong to the bar AFTER their bar line, the others to
+the bar BEFORE it; a mark with notes on both sides of it in its bar is an error (LYS1071).
+A mark in the music is the score's: every part follows it, whichever part wrote it. A
+`phrase` takes none (LYS1034). They are landmarks, never note modifiers, so `c4@segno` is an
+error too (LYS1022).
+
+### Repeats in the music
+
+A section's music writes the repeat signs where the paper has them — no section is cut for
+a repeat or for a one-bar ending, and the relative pitch, duration, key, meter and clef carry
+straight through:
+
+```
+part mel { clef treble }
+section A {
+  chords prog { C | F |: G7 | [1. C :| [2. Am | C | ] }
+  mel { c'4 e g e | f a c' a | g b d' b | c'1 | a1 | c1 | }
+}
+form { ~A }
+score { chords prog  staff mel }
+```
+
+- **The sign is the score's.** It stands at a bar line counted from the section's head, and
+  every part follows it. Above, only the chord row writes the repeat; `mel` writes its bars
+  once, in PRINTED order (body, 1st ending, 2nd ending), and plays C F G7 C G7 Am C.
+  Writing the sign in several parts is fine when they agree; `|:` against a plain `|` is
+  fine; `|:` against `:|` at the same bar line is an error (LYS1070).
+- **Pairs are read on the form**, in the order it prints the sections: a `|:` is closed by a
+  later `:|` — even in a later section, or by the form's (`form { A B }` with the `|:` in A
+  and the `:|` in B). Unclosed is an error (LYS4017). A `:|` with nothing open repeats from
+  the previous repeat's end, or from the top. Repeats do not nest (LYS1072) — also not a
+  form's `|: A :|` around a section that opens its own.
+- **Endings**: `[1. … :|` then `[2. … ]`. An ending opens ON a bar line (LYS1071 inside a
+  bar), runs to its `:|` or `]`, and the last one closes with `]`. Pass numbers follow the
+  form's rules (each pass once: LYS1043; no `:|*N` beside endings: LYS1042; a body before
+  the first ending: LYS1041).
+- **`|:` is a written bar line**: `C | |: G` has an EMPTY bar between the two, as `C | | G`
+  has. Write one sign per bar line of the paper: `C |: G`. At the very head of a section's
+  music `|:` closes nothing.
+- A sign may cut a bar between two passes — `|: g4 | c d e f | g a b :| g4 | c1 |` (a pickup
+  inside the repeat, with `partial 4`) reads `g a b` + `g4` as one bar.
+- **Lyrics**: with a repeat in the section, `verse N` is the Nth pass of that repeat; a pass
+  with no verse sings the last one written (LYS4080 warns of a missing, spare or doubled
+  verse).
+- Which spelling: either. Signs in the music follow the page bar by bar; the form is the
+  better place when whole sections repeat or are reused in a different order.
 
 In-note marks: `c4@mark("A")` (rehearsal mark),
 text spanners `@textSpan("poco rit.")` ... `@!textSpan` (sugar: `@rit` / `@accel` / `@rall`,

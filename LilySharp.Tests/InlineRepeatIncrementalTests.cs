@@ -28,8 +28,6 @@ namespace LilySharp.Tests;
 /// what the full render draws (docs/inline-repeat-design.md §4, the row "the preview's
 /// increment": one keystroke in one part, every part's bar line).
 /// </summary>
-/// <remarks>⚠️ These books still report LYS1034 (the signs belong in the form); the page is
-/// drawn all the same, and that is what is compared (the design's §4: the rule is lifted last).</remarks>
 [Trait("Category", "Unit")]
 public sealed class InlineRepeatIncrementalTests
 {

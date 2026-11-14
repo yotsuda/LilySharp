@@ -31,9 +31,6 @@ namespace LilySharp.Tests;
 /// only the part that wrote the sign repeated, a pair cut by a section boundary did not
 /// repeat at all, a chord row's sign repeated nothing and no jump was followed.
 /// </summary>
-/// <remarks>⚠️ These books still report LYS1034 (the signs belong in the form) — the rule is
-/// lifted last, when every output reads them (the design's §4). The MIDI is written all the
-/// same, and that is what is read here.</remarks>
 [Trait("Category", "Unit")]
 public sealed class InlineRepeatMidiTests
 {

@@ -26,7 +26,6 @@ namespace LilySharp.Tests;
 /// when every bar played after it opens with what it lacks, and a bar is the second half when
 /// every bar played before it leaves that much open.
 /// </summary>
-/// <remarks>⚠️ The books here still report LYS1034 (the design lifts the rule last).</remarks>
 [Trait("Category", "Unit")]
 public sealed class SignCutBarsTests
 {

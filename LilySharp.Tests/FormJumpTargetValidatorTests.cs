@@ -133,4 +133,71 @@ public sealed class FormJumpTargetValidatorTests
         Assert.DoesNotContain(SemanticValidation.Run(SyntaxTree.Parse(Head + "score { staff m }\n")),
             d => d.Code == DiagnosticCodes.JumpTargetMissing);
     }
+
+    // ───────── marks written in the music (session 1249) ─────────
+
+    private static string Book(string sections, string form)
+        => "part m { clef treble }\npart b { clef bass }\n" + sections + "\n"
+           + (form.Length > 0 ? "form { " + form + " }\n" : "") + "score { staff m staff b }\n";
+
+    private static IReadOnlyList<Diagnostic> FaultsOf(string book)
+    {
+        var v = new FormJumpTargetValidator();
+        v.Validate(SyntaxTree.Parse(book));
+        return v.Diagnostics.Where(d => d.Code == DiagnosticCodes.JumpTargetMissing).ToList();
+    }
+
+    /// <summary>
+    /// A mark a section's music writes is a landmark like the form's: the marks of the music
+    /// and of the form are one set on the score's column (<c>RepeatStream.JumpFaults</c>).
+    /// </summary>
+    /// <remarks>Until LYS1034 narrowed to the phrase these books were errors and the question
+    /// was never asked; the form's walk alone says "no segno" to the first row, whose writer
+    /// is looking at one. Poison: drop the <c>RepeatStream.InTheMusic</c> arm of
+    /// <c>FormJumpTargetValidator.Validate</c> — rows 1 and 3 report, and the next theory's
+    /// music-only rows go silent.</remarks>
+    [Theory]
+    // the form's jump, the music's landmarks
+    [InlineData("section A { m { c'4 c c c | segno d'1 | e'1 fine | f'1 | } }", "A ds al fine")]
+    // all of it in the music, the coda in a later section
+    [InlineData("section A { m { c'4 c c c | segno d'1 | e'1 to coda | f'1 | ds al coda } }\n"
+        + "section B { m { coda g'1 | } }", "A B")]
+    // the music's jump, the form's landmark; and the other part writes nothing
+    [InlineData("section A { m { c'4 c c c | d'1 fine | e'1 | dc al fine } b { c1 | d1 | e1 | } }", "A")]
+    // no form: the sections in declaration order
+    [InlineData("section A { m { segno c'4 c c c | } }\nsection B { m { d'1 | ds } }", "")]
+    public void AMarkOfTheMusic_IsALandmark(string sections, string form)
+        => Assert.Empty(FaultsOf(Book(sections, form)));
+
+    [Theory]
+    [InlineData("section A { m { c'4 c c c | d'1 | ds al fine } }", "A", "segno")]
+    [InlineData("section A { m { segno c'4 c c c | d'1 | ds al fine } }", "A", "fine")]
+    [InlineData("section A { m { c'4 c c c | d'1 | dc al coda } }\nsection B { m { coda g'1 | } }", "A B", "to coda")]
+    // the segno comes after the jump, in a later section
+    [InlineData("section A { m { c'4 c c c | ds } }\nsection B { m { segno d'1 | } }", "A B", "segno")]
+    // the jump stands in a later section: its place on the column is past the first play
+    [InlineData("section A { m { c'4 c c c | } }\nsection B { m { d'1 | ds al fine } }", "A B", "segno")]
+    // the form's jump beside a section that writes another mark: still the column's reading
+    [InlineData("section A { m { c'4 c c c | d'1 fine | } }", "A ds al fine", "segno")]
+    public void AJumpInABookOfMusicMarks_WarnsOnceAndNamesTheLandmark(string sections, string form, string landmark)
+    {
+        var fault = Assert.Single(FaultsOf(Book(sections, form)));
+        Assert.Equal(DiagnosticSeverity.Warning, fault.Severity);
+        Assert.Contains($"'{landmark}'", fault.Message);
+        // The landmark may be written in the music or the form: the advice names neither.
+        Assert.DoesNotContain("in the form", fault.Message);
+    }
+
+    /// <summary>The warning stands at the jump the MUSIC writes — once, though two parts write
+    /// it and two forms play the section.</summary>
+    [Fact]
+    public void TheWarning_StandsAtTheMusicsJump_Once()
+    {
+        string book = "part m { clef treble }\npart b { clef bass }\n"
+            + "section A { m { c'4 c c c | d'1 | ds al fine } b { c1 | d1 | ds al fine } }\n"
+            + "form { A }\nform again { A A }\nscore { staff m staff b }\n";
+        var fault = Assert.Single(FaultsOf(book));
+        Assert.Equal(book.IndexOf("ds al fine"), fault.Span.Start);
+        Assert.StartsWith("'ds al fine' has no 'segno' before it", fault.Message);
+    }
 }

@@ -3150,9 +3150,10 @@ public sealed class MidiExporter
             // sees the whole piece and the parser guarantees a form repeat block closes at
             // form level. A one-sided ':|' written inside section music is therefore still
             // not played — measured 2026-08-15: ZERO of the 133 books on disk that contain a
-            // repeat barline spell one. Since 2026-08-31 a repeat barline in section music is
-            // an ERROR anyway (LYS1034, RepeatStructureScopeValidator: repeats are written in
-            // the form); this arm only keeps an error book's MIDI whole.
+            // repeat barline spell one. ⚠️ A BOOK THAT WRITES A SIGN IN ITS MUSIC IS NOT UNFOLDED
+            // HERE: it is laid out once, this walk only noting the signs, and unfolded on the
+            // score's timeline (PlayFormAsPrinted, Midi.PlayedTimeline), where a ':|' in one
+            // section does find the '|:' of another.
             // A percent mark in its repeat sounds the bars once more (ProcessPercentRepeat).
             if (items[i] is PercentMarkSyntax { Parent: PercentRepeatSyntax } && _percentFrames.Count > 0)
             {

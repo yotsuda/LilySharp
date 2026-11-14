@@ -491,9 +491,9 @@ internal sealed partial class Parser
         // so was the whole value of this message: a `|:` written in a SECTION could be closed
         // by a `:|` the form wrote (which is why LYS4017 is raised only after score
         // expansion), while the reverse never held, because a form repeat is a BRACKETED
-        // construct. That ONE-SIDEDNESS is the argument that carried LYS1034 — the author
-        // moving structure into the form always hit the direction that does not work first —
-        // and since 2026-08-31 neither direction exists: a repeat can only be written here.
+        // construct. That one-sidedness stands again since 2026-11-15, when the music took
+        // its repeat signs back (from 2026-08-31 to then a repeat could only be written here,
+        // LYS1034, and neither direction existed).
         SyntaxToken endBar;
         if (Check(SyntaxKind.RepeatEndBar))
         {

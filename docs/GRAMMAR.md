@@ -2055,9 +2055,9 @@ StructureItem  = SectionRef                        (* Identifier , { OctaveMark 
                | StructureRepeat                    (* |: … :| *)
                | StructureVolta                     (* a repeat volta ending *)
                | Barline | RepeatBarline            (* '||' '|.' '!' ':|' ':|:' engrave; a plain
-                                                      '|' is kept as an inert divider. The
-                                                      repeat halves are legal ONLY here —
-                                                      §8.1 MusicItem *)
+                                                      '|' is kept as an inert divider. A
+                                                      section's music writes the repeat
+                                                      halves too — §8.1 *)
                | ( 'break' | 'noBreak' )            (* force / forbid a system break here *)
                | ( 'pageBreak' | 'noPageBreak' )    (* force / forbid a PAGE break here. A forced
                                                       page break forces the system break too,
@@ -2137,7 +2137,9 @@ NavMark        = 'segno' | 'coda' | 'fine' | 'to' 'coda'
 (* Navigation: signs (segno/coda) engrave at the START of the following section; text
    directives (fine, to coda, dc/ds, dc al fine, ds al coda) engrave at the END of the
    section just played:
-   form { A segno  B to coda  C ds al coda  coda D } *)
+   form { A segno  B to coda  C ds al coda  coda D }
+   A section's music writes the same marks at its own bar lines (§8.1 "Repeat signs in the
+   music"), so a landmark inside a section needs no cut. *)
 
 ================================================================================
 ## 7. Score (Output) Definition
@@ -2606,12 +2608,15 @@ DisplayName    = String ;
    lyrics below. Source barlines ( | || |. ) are drawn, and follow the
    bare-barline rule (below): every written '|' closes one bar, the one that OPENS
    the run included, so '| C | F |' is an empty bar and then two.
-   ⚠️ A chord row takes no repeat barline: a '|:' in a 'chords' row IS a repeat, so it goes
-   in the form like any other (LYS1034). The repeat barlines a form composes still reach the
-   row and are drawn as real barline types — that is the claim
-   LilySharp.Tests/Fixtures/test/lead-sheet-repeat.lys pins. A LYRIC row is different: its
-   barline is a plain measure delimiter that never played anything, and its 'verse N { … }'
-   is a VERSE (LyricVerse), so neither is touched. *)
+   A chord row writes the score's repeat signs like any music (§8.1 "Repeat signs in the
+   music"): '|:' ':|' ':|:' ':|*N', an ending '[1. … ]' and the navigation marks. A sign in
+   the row is the SCORE's — the melody over the row repeats with it — and the repeat barlines
+   a form composes reach the row too, drawn as real barline types (the claim
+   LilySharp.Tests/Fixtures/test/lead-sheet-repeat.lys pins). A row's ending is written flat:
+   '[1.' and its ']' or ':|' stand between the row's bars ('-]' and '@voltaBracket(…)' are
+   not read in a row). A LYRIC row is different: its barline is a plain measure delimiter
+   that never played anything, and its 'verse N { … }' is a VERSE (LyricVerse) — the words
+   for the Nth time through. *)
 
 (* Example:
    section Main {
@@ -2706,37 +2711,68 @@ MusicBlock     = '{' , { MusicItem } , '}' ;
 MusicItem      = Note | Rest | Chord | Arpeggio | Barline | PhraseRef
                | SlashNote | BareDuration | PercentMark
                | Slur | Tie | Beam | Tuplet | Grace | Cue | MidMusicCommand
-               | DrumChart ;                      (* §5.2 *)
+               | DrumChart                        (* §5.2 *)
+               | InlineVolta | NavMark ;          (* a section's music and a chords row;
+                                                      not a phrase — see below *)
+InlineVolta    = '[' , Integer , [ '-' , Integer | ',' , Integer , { ',' , Integer } ] , '.' ,
+                 { MusicItem } , [ ( ']' | '-]' ) , [ '@voltaBracket(' , VoltaLength , ')' ] ] ;
+                 (* The passes and the bracket's length as StructureVolta's, §6. The ending
+                    ends at its ']' ('-]': the bracket is left open), or at the ':|' that
+                    sends the pass back. *)
 
-(* ⚠️ REPEAT STRUCTURE IS NOT A MUSIC ITEM (user decision, 2026-08-31; LYS1034). A repeat
-   barline ('|:' ':|' ':|:') and a volta ending ('[1. … ]') change the ORDER the music plays
-   in, and a book's order is written in its `form`. Writing one here is an ERROR with no
-   grace period and no rewriter — the line is drawn at "does it change the playing order",
-   which is why the percent mark '%' and `repeat tremolo` STAY (they abbreviate notes)
-   and why a `lyrics` row's 'verse N { … }' is untouched (it is the words for the Nth time
-   through, a different construct: LyricVerse in §5).
-   They are still LEXED and PARSED here so the error can name them and point at them; what
-   the grammar refuses is a place, not a token. See StructureRepeat / StructureVolta in §6.
-   ⚠️ THE MOVE IS NOT PURELY SYNTACTIC and the difference is worth knowing: a '|:' in music
-   expanded ONLY the part it was written in, while a form's repeat expands the SCORE
-   (measured: 8 notes over 4 in the upper part alone, against 8 and 8). The page always
-   treated it as score-level, so that spelling let the picture and the sound disagree. *)
+(* REPEAT SIGNS IN THE MUSIC (owner's decision, 2026-11-14; in force 2026-11-15). A section's
+   music — a part's bars and a 'chords' row — writes the repeat barlines ('|:' ':|' ':|:'
+   ':|*N'), the endings ('[1. … ]') and the navigation marks (NavMark, §6: segno, coda, fine,
+   to coda, dc, ds and the al forms), as the paper has them, in the flow of the bars. A form
+   writes them too, as before (StructureRepeat / StructureVolta, §6); the two spellings are
+   read as ONE column of signs and mean the same thing.
 
-(* ⚠️ A NAVIGATION MARK IS NOT A MUSIC ITEM EITHER (user decision, 2026-10-04; LYS1034).
-   NavMark (see §6) — segno, coda, fine, to coda, dc, ds and the al forms — is written in the
-   form, between the section names, and nowhere else: the route a jump takes is read off the
-   form alone (Semantics.FormRoute: dc to the beginning, ds to after the last segno, al fine
-   ends at fine, al coda goes on from the coda sign, repeats once on the replay), and the
-   MIDI, the tie carry, MusicXML and the twin all follow that one reading. A mark in the
-   music was drawn and never followed, and a segno there was no target for the form's ds; so
-   it is an ERROR now, as the repeat barlines above are — still lexed and parsed here so the
-   error can name it. A landmark that falls inside a section is written by cutting the
-   section there (`~` hides the label). It is a landmark, never a note modifier, so it takes
-   no '@' (c4@segno is LYS1022). A jump text whose landmark the form does not write (ds with
-   no segno before it, al fine with no fine, al coda with no to coda or no coda after it)
-   warns (LYS4025) and names the fallback the route takes. From 2026-09-24 to 2026-10-04 the
-   mark was a music item too, drawn at the written barline (a text to the bar's left, a sign
-   to its right) and warned mid-measure (LYS4003, retired). *)
+     section A { m { |: c4 d e f | [1. g2 g :| [2. g2 c ] } }
+       — the first bar, the first ending, the first bar again, the second ending.
+
+   1. THE SIGN IS THE SCORE'S. It stands at a bar line counted from the section's head, and
+      every part follows it, whichever part wrote it: a repeat written in the chords row
+      alone repeats the melody. A part that does not write it is right ('|:' against a plain
+      '|' is no disagreement). Two parts writing DIFFERENT repeat barlines at the same bar
+      line ('|:' against ':|', ':|*2' against ':|*3') is an error (LYS1070, with quick fixes
+      that write one part's sign into the other).
+   2. THE PAIRS ARE READ ON THE FORM, not in the section. The sections are laid out in the
+      order the form prints them, the form's own signs among them, and the rules are the
+      form's: a '|:' is closed by a later ':|' — in a later section, or by the form
+      (LYS4017 when nothing closes it); a ':|' with nothing open repeats from the end of the
+      repeat before it, or from the beginning of the piece; a '|:' inside an open repeat is
+      an error (LYS1072 — repeats do not nest, and a form's '|: A :|' around a section that
+      opens its own is that case); the endings' pass numbers are the form's rules
+      (LYS1041–1043, LYS6008). A file with no form is read in declaration order.
+   3. A SIGN STANDS AT A BAR LINE. An ending that opens inside a bar, or a navigation mark
+      with notes on both sides of it in its bar, is an error (LYS1071). A sign may CUT a bar
+      between two passes: 'g a b :| g4 |' after a one-beat pickup is one bar, as the same
+      music cut into sections is, wherever every part writes it so.
+   4. '|:' IS A WRITTEN BAR LINE like '|': 'C | |: G' has an empty bar between the two, as
+      'C | | G' has. Write one sign per bar line of the paper ('f |: g'). The one exception
+      is the head of a section's music, where '|:' closes nothing ('|: c d e f :|' is one bar).
+   5. NOTHING RESETS at a sign. The section is not cut, so the relative pitch, the duration,
+      the key, the meter and the clef carry through a repeat and its endings.
+   6. A TIE at a sign goes to the note played NEXT, as at a form's sign: into the second
+      ending, or back to the repeat's head (where a short arc is drawn on the note it lands on).
+   7. WORDS: with a repeat in the section, a lyric 'verse N' is the Nth pass of that repeat
+      (without one it is the Nth time the form plays the section). A pass with no verse sings
+      the last one written; LYS4080 warns of a verse missing, spare or doubled, with fixes.
+
+   ⚠️ A PHRASE TAKES NONE OF THEM (LYS1034): a phrase is played wherever it is named, and a
+   sign in it would stand in a different repeat each time. Write the sign where the phrase is
+   played — '|: riff :|' in the section's music. The percent mark '%' and `repeat percent` /
+   `unfold` / `tremolo` are not signs (they abbreviate notes) and a phrase keeps them.
+   The navigation marks are landmarks, never note modifiers, so they take no '@' (c4@segno is
+   LYS1022); segno and coda stand at the head of the bar after their bar line, the others at
+   the end of the bar before it. A jump whose landmark nothing writes (ds with no segno
+   before it, al fine with no fine, al coda with no to coda or no coda after it) warns
+   (LYS4025) and names the fallback the route takes.
+   HISTORY, for a reader with an older book or an older note: from 2026-08-31 the repeat
+   barlines and endings, and from 2026-10-04 the navigation marks, were legal in a form ALONE
+   (LYS1034 was "repeat structure outside a form"), because a '|:' in the music then unfolded
+   only the part it was written in while the page drew the score's repeat. The readers share
+   one column now (Semantics.RepeatStream), so the spelling is back. *)
 
 (* Mid-music commands change context here. clef/key/time use the bare COMMAND form
    (no colon) — distinct from a part header which uses the same bare form to set the
@@ -3049,25 +3085,20 @@ RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N ti
        2026-10-18): '% % %' is read as '% | % | %', the written spelling, which is what the
        tools write and the editor's space after a mark types for you (see PercentMark).
    The playback re-syncs every part at every bar line: a short bar is filled with silence.
-   One rule, one place: Semantics.WrittenBar (page: MeasureBuilder, playback: MidiExporter). *)
+   One rule, one place: Semantics.WrittenBar (page: MeasureBuilder, playback: MidiExporter).
+   (A bar a repeat sign cuts between two passes is one bar: §8.1 "Repeat signs in the music".) *)
 
-(* REPEAT BARLINES ARE FORM-ONLY (user decision, 2026-08-31; LYS1034). Written in music
-   they are an error — see the note on MusicItem in §8.1 for the line the decision draws.
-   What is left to say about them is what happens INSIDE a form:
-     - ':|' with no '|:' open REPEATS FROM THE BEGINNING OF THE PIECE. Not an error.
-     - '|:' that no ':|' closes IS AN ERROR — where it ends is undefined. A form's own
-       '|: … :|' block is closed by the parser (its ':|' is part of the block), so the
-       surviving way to write an unclosed one is a bare ':|:' standing in a form body,
-       which is one written divider meaning ':|' then '|:' (LYS4017, decided on the
-       LAID-OUT score rather than on the text).
-   ⚠️ THE CROSS-LAYER PAIR IS GONE. Until 2026-08-31 a '|:' written in a section's music
-   could be closed by a ':|' the form wrote, and books in the tree were spelled that way;
-   that direction died with the music-side spelling, and the reverse never worked (a form
-   repeat is a bracketed construct that opens and closes in the form). The one-sidedness
-   of the OLD rule is what made the ban worth doing: the author moving structure into the
-   form hits the direction that does not work first.
-   A repeat barline belongs to the SCORE, not to one part: it is drawn on every staff, and
-   since it can only be written in the form it is now PLAYED on every staff too. *)
+(* REPEAT BARLINES are the score's signs, written in a section's music, a chords row or the
+   form — the rules are in §8.1 "Repeat signs in the music". In short:
+     - ':|' with no '|:' open REPEATS FROM THE END OF THE REPEAT BEFORE IT, or from the
+       beginning of the piece. Not an error.
+     - '|:' that no ':|' closes IS AN ERROR — where it ends is undefined (LYS4017, decided on
+       the LAID-OUT score rather than on the text, since the ':|' may stand in a later
+       section or in the form).
+     - a '|:' in the music may be closed by a ':|' the form writes. The reverse does not
+       hold: a form's '|: … :|' is a bracketed construct that opens and closes in the form.
+   A repeat barline belongs to the SCORE, not to one part: it is drawn on every staff and
+   PLAYED on every staff, whichever part wrote it. A phrase writes none (LYS1034). *)
 
 (* '!' is the DASHED barline (LilyPond's \bar "!"), and like every other barline it
    CLOSES THE BAR it follows. Write it spaced ('c4 d e f ! g4 …'). Glued to a note
@@ -3099,16 +3130,15 @@ RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N ti
    the bar behind it — it retro-types that bar's end and creates nothing (with no bar behind
    it there is nothing to decorate, so it closes its own span like any other written bar:
    `{ || }` is one empty bar).
-   ⚠️ A '|:' PARTED COMPANY WITH '|' HERE, AND THE SPELLING IS GONE (2026-08-31, LYS1034).
-   A '|:' decorates nothing — it OPENS the bar in front of it — so it made an empty bar
-   whenever a written bar had opened the span it left behind: `c1 | |: d1 :|` was THREE bars
-   where `c1 |: d1 :|` was two. That cost the author's library 87 ghost bars across 72 of
-   326 books, almost all of them spelled `… | break |: …`, and it is the defect the ban
-   retires rather than fixes: a repeat is written in the form now, where the collector ARMS
-   the boundary the structural barline lands on (MeasureBuilder.ArmBoundaryForStructuralBarline)
-   so the form's own '|:' confirms a boundary instead of opening a bar. The paragraph is kept
-   because the rule it states about '|' is unchanged, and because a reader who finds a ghost
-   bar in an old book should be able to read what made it. And a '|' landing on a boundary
+   ⚠️ A '|:' IS A WRITTEN BAR LINE TOO, and does not decorate: it OPENS the bar in front of
+   it, so it makes an empty bar whenever a written bar had closed the span it left behind —
+   `c1 | |: d1 :|` is THREE bars where `c1 |: d1 :|` is two (owner's decision 2026-11-14:
+   the rule of '|' stays whole; a chords row counts the same way, Semantics.ChordRowBarLines).
+   Measured when the signs were form-only: 87 such ghost bars across 72 of the author's 326
+   books, almost all spelled `… | break |: …` — so write ONE sign per bar line of the paper.
+   A FORM's own '|:' is different: the collector ARMS the boundary the structural barline
+   lands on (MeasureBuilder.ArmBoundaryForStructuralBarline), so it confirms a boundary
+   instead of opening a bar. And a '|' landing on a boundary
    something else JUST CLOSED merely confirms it: the auto-fill that closes a full bar at
    the meter (which is what keeps a trailing 'c1 |' one bar, not two), a form's own
    '|:' / ':|', and the EXIT of a phrase reference — so 'phrase x { c d e f | }' used as
@@ -3119,13 +3149,8 @@ RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N ti
    ひかる |' is "bar 1 has no syllables" followed by two sung bars, one bar longer than
    'きら | ひかる'. That is how a verse skips a rest bar the melody opens with. *)
 
-(* ⚠️ THE INLINE VOLTA WAS REMOVED FROM MUSIC on 2026-08-31 (LYS1034) — first/second-time
-   endings are written in the form, as StructureVolta (§6). What is left of the '[' here is
-   the manual beam group, and the parser's lookahead is unchanged: '[' followed by an integer
-   is still read as an ending so the error can point at it, and anything else is a beam.
-   The old production, for a reader with an old book in front of them, was
-     InlineVolta = '[' , Integer , [ ( '-' | ',' ) , Integer ] , '.' , { MusicItem } , [ ']' ] ;
-   and its endings held their MUSIC, where a form's ending NAMES a section that holds it. *)
+(* '[' followed by an integer opens an ending (InlineVolta, §8.1 — its body is MUSIC, where
+   a form's ending NAMES the sections that hold it); any other '[' is the manual beam group. *)
 Beam           = '[' | ']' ;
 PhraseRef      = PhraseName , { "'" | ',' } ;
                  (* ⚠️ The '$' sigil was REMOVED 2026-08-22. The two spellings had been

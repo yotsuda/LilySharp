@@ -293,8 +293,8 @@ internal static class SyntaxFacts
     /// <summary>
     /// The barlines that REPEAT — <c>|:</c>, <c>:|</c> and the fused <c>:|:</c>. The subset of
     /// <see cref="IsBarlineKind"/> that changes the playing ORDER rather than drawing a
-    /// division, which is the line the language draws: these may be written only inside a
-    /// <c>form { … }</c> (<see cref="DiagnosticCodes.RepeatStructureOutsideForm"/>), while
+    /// division: these are the score's (a form, a section's music and a chords row write
+    /// them, a phrase does not — <see cref="DiagnosticCodes.RepeatStructureInPhrase"/>), while
     /// <c>|</c> <c>||</c> <c>|.</c> <c>!</c> stay free anywhere a barline is legal.
     /// </summary>
     public static bool IsRepeatBarlineKind(SyntaxKind kind) => kind is

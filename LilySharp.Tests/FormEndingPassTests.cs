@@ -351,8 +351,8 @@ public sealed class FormEndingPassTests
         var tree = SyntaxTree.Parse(src);
         var parse = Assert.Single(tree.Diagnostics);
         Assert.Equal(DiagnosticCodes.VoltaPassesWithPoints, parse.Code);
-        // The music's own complaint about an ending in the music still stands beside it.
-        Assert.Contains(SemanticValidation.Run(tree), d => d.Code == DiagnosticCodes.RepeatStructureOutsideForm);
+        // …and an ending in a section's music is no error of its own (it was LYS1034 until 2026-11-15).
+        Assert.DoesNotContain(SemanticValidation.Run(tree), d => d.Code == DiagnosticCodes.RepeatStructureInPhrase);
     }
 
     /// <summary>

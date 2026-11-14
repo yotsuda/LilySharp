@@ -32,8 +32,6 @@ namespace LilySharp.Tests;
 /// tie where no arc leaves it, and LYS4007 on a note it reaches at another pitch — whichever
 /// voice writes the signs (<see cref="RepeatStream"/>, stamped by the collector).
 /// </summary>
-/// <remarks>⚠️ These books still report LYS1034; the page is drawn all the same (§4: the rule
-/// is lifted last).</remarks>
 [Trait("Category", "Unit")]
 public sealed class InlineRepeatTieTests
 {

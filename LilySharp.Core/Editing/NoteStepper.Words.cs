@@ -858,8 +858,9 @@ public static partial class NoteStepper
     /// <summary>The bar lines the keys walk in a <c>form</c>, in the owner's order (2026-10-24): the
     /// plain divider, the double, the repeat's <c>|:</c>, <c>:|</c> and <c>:|:</c>, the final, the
     /// dotted — the order the form's completion lists them in. A <c>|:</c> wants a <c>:|</c> after
-    /// it (the form says so until it is written); a <c>:|</c> alone repeats from the top. A music
-    /// body takes no repeat sign (LYS1034), so the music walks <see cref="BarlineWalk"/>.</summary>
+    /// it (the form says so until it is written); a <c>:|</c> alone repeats from the top. The
+    /// music walks <see cref="BarlineWalk"/>: until 2026-11-15 it took no repeat sign (LYS1034,
+    /// form-only then), and its walk has not been widened since — a phrase still takes none.</summary>
     public static IReadOnlyList<string> FormBarlineWalk { get; } = ["|", "||", "|:", ":|", ":|:", "|.", "!"];
 
     /// <summary>A bar line of <see cref="BarlineWalk"/> the caret is on, or null — in the music, or

@@ -26,7 +26,6 @@ namespace LilySharp.Tests;
 /// form's rules, asked of the score's sign column. MEASURED before (2026-11-15, Lab
 /// sessions/p1248/probe/d-*): of the shapes here only an unclosed <c>|:</c> was reported.
 /// </summary>
-/// <remarks>⚠️ These books still report LYS1034 too (the design lifts the rule last).</remarks>
 [Trait("Category", "Unit")]
 public sealed class MusicRepeatValidatorTests
 {

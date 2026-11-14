@@ -6702,8 +6702,8 @@ public sealed partial class MeasureCollector
     /// barline. Which measure carries it is the side its kind draws on — a text (fine, D.C.,
     /// D.S., To Coda) is right-aligned to the bar, so it is the END of the measure before;
     /// a sign (segno, coda) is left-aligned, so it is the START of the measure after.
-    /// Mid-measure the mark stays in its measure. (Since 2026-10-04 a mark in music is LYS1034,
-    /// an error; this walk still places it so the picture of a book with that error is whole.)
+    /// Mid-measure the mark stays in its measure (and is an error, LYS1071: a mark stands on a
+    /// bar line; this walk still places it so the picture of a book with that error is whole).
     /// Owner's decision, session 559 (HANDOFF ⒳¹²): the doc's <c>c4 d e f | to coda</c> and
     /// the form's <c>A to coda B</c> read this way already; the picture read "the measure the
     /// builder stands in", which drew a text one measure late from EITHER side of the bar and

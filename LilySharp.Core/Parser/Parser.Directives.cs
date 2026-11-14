@@ -35,20 +35,22 @@ internal sealed partial class Parser
         {
             repeatType = Advance();
 
-            // LilyPond's `\repeat volta` has no counterpart in the music: a repeat that
-            // changes the playing order is written in the form. Say so where the word
+            // LilyPond's `\repeat volta` is not a `repeat` kind: a repeat that changes the
+            // playing order is written with the repeat bar lines. Say so where the word
             // stands, and go on parsing the count and the body so nothing cascades.
-            // ⚠️ THE HINT NAMES THE FORM, and it has to (2026-08-31, LYS1034): it used to end
-            // "with inline volta endings '[1. …] [2. …]'", which is a spelling this compiler
-            // refuses — an error message advertising an error.
+            // ⚠️ THE HINT NAMES SPELLINGS THE COMPILER TAKES, and it has to: from 2026-08-31
+            // to 2026-11-15 (LYS1034, form-only) it named the form alone, after a version
+            // that advertised the then-refused '[1. …] [2. …]' in the music — an error
+            // message advertising an error. The music's spelling is first now: the writer is
+            // looking at bars.
             if (repeatType.Text == "volta")
             {
                 var voltaSpan = new TextSpan(startPos, Math.Max(1, _textPosition - startPos));
                 _diagnostics.Error(voltaSpan, DiagnosticCodes.LilyPondRepeatVolta,
-                    "'repeat volta' is LilyPond's spelling. In Lily# a repeat is written in "
-                    + "the form: cut the repeated bars into a section and write "
-                    + "'form { |: A :| }' (explicit count ':|*N', volta endings "
-                    + "'|: A [1. B] :| [2. C]').");
+                    "'repeat volta' is LilyPond's spelling. In Lily# a repeat is written with "
+                    + "repeat bar lines round the bars: '|: c4 d e f :|' (explicit count "
+                    + "':|*N', volta endings '|: … [1. … :| [2. … ]'). Whole sections repeat "
+                    + "in the form: 'form { |: A :| }'.");
             }
         }
         else

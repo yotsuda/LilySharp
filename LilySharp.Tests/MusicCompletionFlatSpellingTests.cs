@@ -94,8 +94,10 @@ public class MusicCompletionFlatSpellingTests
 
     /// <summary>
     /// Nothing the music grammar refuses is offered. Repeat structure — <c>|:</c>, <c>:|</c>,
-    /// <c>[1. …]</c> — is form-only (LYS1034, 2026-08-31), and the two volta snippets that
-    /// stayed in this list taught the rejected spelling (owner report, 2026-09-02).
+    /// <c>[1. …]</c> — is not in THIS list: a phrase's music refuses it (LYS1034), so the
+    /// caller adds it where the caret is not in a phrase (<c>WithRepeatSigns</c>,
+    /// <c>CompletionAuditTests</c>). From 2026-08-31 to 2026-11-15 it was form-only, and two
+    /// volta snippets that stayed here taught the rejected spelling (owner report, 2026-09-02).
     /// </summary>
     /// <remarks>
     /// ⚠️ The net is the COMPILER, not a blacklist: every item — a snippet by its keyword,

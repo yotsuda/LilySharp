@@ -65,8 +65,9 @@ internal static class LanguageReference
         new("repeat", $"repeat ({string.Join("|", LilySharp.Core.Semantics.LanguageVocabulary.RepeatKinds)}) count {{ music }}",
             "A tremolo: the music alternated count times. A percent repeat is written after the "
                 + "bars it repeats, one mark a repetition: 'c4 d e f | % | % |', 'a2 b | c d | %2 |'. "
-                + "A volta repeat is written in the form: '|: A :|' (count ':|*N'), with endings "
-                + "'|: A [1. B] :| [2. C]'.",
+                + "A volta repeat is written with repeat bar lines, round the bars of a section's music "
+                + "('|: c4 d e f :|', count ':|*N', endings '[1. … :| [2. … ]') or round sections in "
+                + "the form ('|: A [1. B] :| [2. C]').",
             new[] { (string.Join("|", LilySharp.Core.Semantics.LanguageVocabulary.RepeatKinds), "Repeat kind (volta is the symbolic |: :| form, not this keyword)"),
                     ("count", "Number of strokes (integer)"),
                     ("{ music }", "The note or the two notes alternated") },

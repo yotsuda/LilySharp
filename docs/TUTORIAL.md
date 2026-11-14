@@ -202,12 +202,27 @@ section Main {
 
 ## Repeats
 
-Repeats use the symbolic `|: … :|` barlines — **written in the `form`, not in the
-music**. A repeat changes the order the music plays in, and the form is where a piece's
-order lives, so the bars that repeat go in a `section` of their own and the form repeats
-the section. Add volta endings with `[1. Section] [2. Section]` for first/second-time
-bars; the repeat count defaults to 2 (or the number of endings), or state it as
-`|: … :|*N`.
+Repeats use the symbolic `|: … :|` barlines. Written in the music, they go round the bars
+that repeat, with the first- and second-time bars in `[1. … :|` and `[2. … ]`:
+
+```
+part melody { clef treble }
+
+section Tune {
+  melody { |: c'4 d e f | g4 a b c | [1. d'2 d :| [2. c'2 c | ] }
+}
+
+form { Tune }
+score { staff melody }
+```
+
+A repeat belongs to the whole score: write it in one part (or in the chord row) and every
+part follows it. The count defaults to 2 (or the number of endings); state another as
+`:|*N`.
+
+The `form` writes the same signs round whole **sections** — the spelling to use when a
+section repeats, or comes back later in the piece. There an ending names its sections,
+`[1. Section] [2. Section]`:
 
 ```
 part melody { clef treble }
@@ -225,6 +240,10 @@ score { staff melody }
 
 A plain `form { |: Body :| }` (no endings) just repeats its body. A third and later
 ending is written the same way: `:| [3. Third]`.
+
+`segno`, `coda`, `fine`, `to coda`, `dc` and `ds` (`ds al coda`, …) are written the same two
+ways: between the section names of the form, or at a bar line of the music. A `phrase` is
+the one place that takes none of these signs — write them where the phrase is played.
 
 ## Grace Notes
 

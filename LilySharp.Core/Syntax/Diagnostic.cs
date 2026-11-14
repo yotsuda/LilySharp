@@ -1077,58 +1077,38 @@ public static class DiagnosticCodes
     /// <c>&lt;0 …&gt;</c> is invalid.</summary>
     public const string InvalidScaleDegree = "LYS1021";
 
-    /// <summary>Semantic error: a repeat barline (<c>|:</c> <c>:|</c> <c>:|:</c>) or a volta
-    /// ending (<c>[1. … ]</c>) written in MUSIC. These belong in a <c>form { … }</c>, which is
-    /// where a book's playing order lives.</summary>
+    /// <summary>Semantic error: a repeat barline (<c>|:</c> <c>:|</c> <c>:|:</c>), a volta
+    /// ending (<c>[1. … ]</c>) or a navigation mark (<c>segno</c>, <c>ds al coda</c>, …)
+    /// written in a PHRASE. A section's music, a <c>chords</c> row and the <c>form</c> write
+    /// them; a phrase is played wherever it is named, so a sign in it has no one place.</summary>
     /// <remarks>
     /// <para>
-    /// ⚠️ USER DECISION 2026-08-31 (§3, HANDOFF §2 F ⒫), and the line it draws is
-    /// "does it change the playing ORDER". <c>|:</c> <c>:|</c> <c>[N. …]</c> move to the form;
-    /// <c>repeat percent</c>, <c>repeat unfold</c> and <c>tremolo</c> STAY in music, because
-    /// they are abbreviations for notes and the order is unchanged. LilyPond's
-    /// <c>repeat volta</c> is refused where it stands (<see cref="LilyPondRepeatVolta"/>).
+    /// ⚠️ THE CODE'S HISTORY, since its number is quoted all over the tree. 2026-08-31 (user
+    /// decision): the repeat signs and endings were legal in a <c>form</c> ALONE, because a
+    /// <c>|:</c> meant two things — MEASURED that day on a two-part book with the repeat in
+    /// the upper part only, the MIDI unfolded THAT PART (8 notes over 4) and the page drew the
+    /// score's repeat. 2026-10-04 (owner's decision, session 793): the navigation marks joined,
+    /// as the route (<c>Semantics.FormRoute</c>) was read off the form alone and a mark in the
+    /// music was drawn and never followed. 2026-11-14 (owner's decision, session 1243,
+    /// docs/inline-repeat-design.md): both withdrawn — a sign in the music is the SCORE's,
+    /// read by every reader off one column (<c>Semantics.RepeatStream</c>) — and on 2026-11-15
+    /// (session 1249) the rule narrowed to the phrase.
     /// </para>
     /// <para>
-    /// ⚠️ TWO SPELLINGS THIS MUST NOT CATCH, both of which a naive count did catch (three
-    /// separate miscounts, HANDOFF §2 F ⒫): a LYRIC verse <c>verse 1 { … }</c> is a
+    /// <c>repeat percent</c>, <c>repeat unfold</c> and <c>tremolo</c> were never in this rule:
+    /// they abbreviate notes and the order is unchanged. LilyPond's <c>repeat volta</c> is
+    /// refused where it stands (<see cref="LilyPondRepeatVolta"/>).
+    /// </para>
+    /// <para>
+    /// ⚠️ TWO SPELLINGS THIS MUST NOT CATCH: a LYRIC verse <c>verse 1 { … }</c> is a
     /// <c>LyricVerse</c> node — the words for the Nth play, not a repeat — and a lyric row's
     /// barline is a raw token inside <c>LyricMeasureGreen</c>, not a
     /// <see cref="Syntax.BarlineSyntax"/> at all. Both are invisible to this rule by
     /// construction rather than by an exclusion list, which is why the rule is written on the
     /// NODE TYPES and not on the source text.
     /// </para>
-    /// <para>
-    /// ⚠️ AN ERROR WITH NO GRACE PERIOD AND NO REWRITER (user decision, same day), taken with
-    /// the reach on the table: 115 of the author's 326 books and 11 of the tree's tracked
-    /// books stop compiling. The recommendation on offer was a rewriter first; the decision
-    /// was the hard error, applying the author's standing rule that implementation and
-    /// migration cost do not enter how the options are ranked.
-    /// </para>
-    /// <para>
-    /// ⚠️ THE MOVE IS NOT PURELY SYNTACTIC — a <c>|:</c> means something different in the two
-    /// places, and that difference is a CONSEQUENCE of the decision, not an open question.
-    /// MEASURED 2026-08-31 on a two-part book with the repeat written in the upper part only:
-    /// in music it expands THAT PART alone (8 notes over 4), in a form it expands the whole
-    /// score (8 and 8). The page has always treated it as score-level, so the page and the
-    /// MIDI disagreed before this rule existed; after it, the disagreeing spelling cannot be
-    /// written.
-    /// </para>
-    /// <para>
-    /// ⚠️ THE NAVIGATION MARKS JOINED THE RULE ON 2026-10-04 (owner's decision, session 793):
-    /// <c>segno</c>, <c>coda</c>, <c>fine</c>, <c>to coda</c>, <c>dc</c>, <c>ds</c> and the
-    /// <c>al</c> forms written in music are the same error. The route a jump takes —
-    /// <c>Semantics.FormRoute</c>, which the MIDI plays and (since session 792) the tie carry,
-    /// MusicXML, the twin and the bar-complement adjacency follow — is read off the FORM alone,
-    /// so a mark in the music was drawn and never followed, and a <c>segno</c> there was no
-    /// target for the form's <c>ds</c> (LYS4025 said "no segno" to a writer who could see
-    /// one). The same line as the repeat barlines: one place for the order. A landmark that
-    /// falls inside a section is written by cutting the section there (<c>~</c> hides the
-    /// label). Measured before the decision: 11 of 1177 books on disk wrote a mark in music,
-    /// one of them the owner's (`Billie Jean`'s <c>segno</c> at a bar's end); the rest were
-    /// test shapes. LYS4003 (a mark mid-measure, a warning) retired with it.
-    /// </para>
     /// </remarks>
-    public const string RepeatStructureOutsideForm = "LYS1034";
+    public const string RepeatStructureInPhrase = "LYS1034";
 
     /// <summary>Semantic error: a PART setting (<c>clef</c>, <c>octave</c>) written in the
     /// header position of a section that holds part cells. It belongs to no cell there, so

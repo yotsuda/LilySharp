@@ -33,7 +33,6 @@ namespace LilySharp.Tests;
 /// against m-c-formtwin, the form's spelling of the same music): four LYS2001, a beat of
 /// silence after the third beat and three after the lone one, five bars for four.
 /// </summary>
-/// <remarks>⚠️ These books still report LYS1034 (the design lifts the rule last).</remarks>
 [Trait("Category", "Unit")]
 public sealed class InlineRepeatCutBarTests
 {

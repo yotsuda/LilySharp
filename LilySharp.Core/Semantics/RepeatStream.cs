@@ -125,7 +125,17 @@ internal sealed class RepeatStream
         public readonly List<int> LoneEndings = [];
     }
 
-    private RepeatStream(List<Play> plays, List<RepeatSign> written, int bars)
+    /// <summary>A jump text of the column that asks for a landmark nothing writes where the
+    /// route looks for it (<see cref="FormRoute.JumpFault"/>), and the node that writes the
+    /// jump — the form's, or the first voice's that writes it in the music.</summary>
+    internal readonly record struct JumpFault(NavigationMarkSyntax Jump, FormRoute.JumpFault Kind);
+
+    /// <summary>The jump texts whose landmark is missing — read off the walk whose stretches
+    /// are <see cref="Played"/>, so a report cannot disagree with the sound (LYS4025).</summary>
+    public IReadOnlyList<JumpFault> JumpFaults { get; }
+
+    private RepeatStream(List<Play> plays, List<RepeatSign> written, int bars,
+        List<(int At, NavigationMarkSyntax Node)> marks)
     {
         var signs = Normalized(written);
         Plays = plays;
@@ -134,10 +144,25 @@ internal sealed class RepeatStream
         Played = Route(signs, bars);
         var faults = new Faults();
         var runs = new List<RepeatRun>();
-        foreach (var element in Elements(signs, bars, faults))
+        var elements = Elements(signs, bars, faults);
+        foreach (var element in elements)
             if (element is Run run)
                 runs.Add(new RepeatRun(run.Start, run.BodyEnd, run.End, run.Count, run.Endings));
         (Runs, NestedAt, LoneEndingsAt) = (runs, faults.Nested, faults.LoneEndings);
+        var jumpFaults = new List<JumpFault>();
+        if (marks.Count > 0)
+        {
+            var route = new List<NavigationMarkType?>(elements.Count);
+            foreach (var element in elements)
+                route.Add(element is Sign sign ? sign.Type : null);
+            FormRoute.Of(route, (i, kind) =>
+            {
+                if (elements[i] is Sign jump
+                    && marks.Find(m => m.At == jump.At && m.Node.MarkType == jump.Type).Node is { } node)
+                    jumpFaults.Add(new JumpFault(node, kind));
+            });
+        }
+        JumpFaults = jumpFaults;
         _next = new List<int>[bars];
         for (int b = 0; b < bars; b++)
             _next[b] = [];
@@ -325,6 +350,7 @@ internal sealed class RepeatStream
         var sectionSigns = new Dictionary<string, SectionSigns>(StringComparer.Ordinal);
         var plays = new List<Play>();
         var signs = new List<RepeatSign>();
+        var marks = new List<(int At, NavigationMarkSyntax Node)>();
         int bar = 0;
 
         void PlaySection(string name)
@@ -334,6 +360,9 @@ internal sealed class RepeatStream
             if (!sectionSigns.TryGetValue(name, out var written))
                 sectionSigns[name] = written = SectionSigns.Of(name, voices, phrases);
             AddTheMusics(written, bar, bars, signs);
+            foreach (var mark in written.Marks)
+                if (mark.Bars <= bars)
+                    marks.Add((bar + mark.Bars, mark.Node));
             bar += bars;
         }
 
@@ -370,12 +399,13 @@ internal sealed class RepeatStream
                         break;
                     case FormWalk.Other { Node: NavigationMarkSyntax nav }:
                         signs.Add(new RepeatSign(bar, RepeatSignKind.Navigation, Navigation: nav.MarkType));
+                        marks.Add((bar, nav));
                         break;
                 }
             }
         }
         Walk(items, null);
-        return new RepeatStream(plays, signs, bar);
+        return new RepeatStream(plays, signs, bar, marks);
     }
 
     /// <summary>The lane of every sign the music writes: a section's voices are read as one
@@ -433,7 +463,7 @@ internal sealed class RepeatStream
     private sealed record Run(int Start, int BodyEnd, int End, int? Count,
         List<(PassSet Passes, int From, int To)> Endings) : Element;
     private sealed record LoneEnd : Element;
-    private sealed record Sign(NavigationMarkType Type) : Element;
+    private sealed record Sign(NavigationMarkType Type, int At) : Element;
 
     /// <summary>The stretches of printed music <c>[0, end)</c> in played order, along
     /// <paramref name="signs"/> — on whatever axis they stand (ticks, bar lines).</summary>
@@ -622,7 +652,7 @@ internal sealed class RepeatStream
                     if (!inRun && mark.Navigation is { } type)
                     {
                         Flush(mark.At);
-                        elements.Add(new Sign(type));
+                        elements.Add(new Sign(type, mark.At));
                     }
                     break;
             }

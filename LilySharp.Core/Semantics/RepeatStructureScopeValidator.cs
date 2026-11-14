@@ -20,13 +20,22 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// Keeps the constructs that change a book's PLAYING ORDER inside its <c>form { … }</c>:
-/// a repeat barline (<c>|:</c> <c>:|</c> <c>:|:</c>), a volta ending (<c>[1. … ]</c>) and —
-/// since 2026-10-04 (owner's decision, session 793) — a navigation mark (<c>segno</c>,
-/// <c>coda</c>, <c>fine</c>, <c>to coda</c>, <c>dc</c>, <c>ds</c> and the <c>al</c> forms)
-/// written in music are refused (<see cref="DiagnosticCodes.RepeatStructureOutsideForm"/>).
+/// Keeps the constructs that change a book's PLAYING ORDER out of its PHRASES: a repeat
+/// barline (<c>|:</c> <c>:|</c> <c>:|:</c>), a volta ending (<c>[1. … ]</c>) and a navigation
+/// mark (<c>segno</c>, <c>coda</c>, <c>fine</c>, <c>to coda</c>, <c>dc</c>, <c>ds</c> and the
+/// <c>al</c> forms) written in a <c>phrase</c> are refused
+/// (<see cref="DiagnosticCodes.RepeatStructureInPhrase"/>).
 /// </summary>
 /// <remarks>
+/// <para>
+/// ⚠️ THE RULE WAS WIDER UNTIL 2026-11-15 (owner's decision 2026-11-14, session 1243;
+/// docs/inline-repeat-design.md): from 2026-08-31 the signs — and from 2026-10-04 the marks —
+/// were legal in a <c>form</c> ALONE, because the readers of a sign written in the music
+/// disagreed (the page drew a score's repeat, the MIDI unfolded one part). Since the readers
+/// share one column of signs (<see cref="RepeatStream"/>), a section's music and a
+/// <c>chords</c> row write them too. A phrase stays out: it is a part played wherever it is
+/// named, and a sign in it would stand at a different bar line of a different repeat each time.
+/// </para>
 /// <para>
 /// ⚠️ ONE PREDICATE, NOT N PARSER ARMS, and that is the load-bearing choice. The four shapes
 /// the tree's books spread this across — inside a phrase, inside a <c>chords</c> row, inside a
@@ -79,48 +88,38 @@ internal sealed class RepeatStructureScopeValidator : ISemanticValidator
             {
                 case BarlineSyntax bar
                     when SyntaxFacts.IsRepeatBarlineKind(bar.BarToken.Kind)
-                         && !bar.IsInside<FormDeclarationSyntax>():
+                         && bar.IsInside<PhraseDeclarationSyntax>():
                     // At the bar token, not the node: `:|*3` carries its count on the same
                     // node, and the count is not what is wrong with it.
                     _diagnostics.Error(bar.BarToken.Span,
-                        DiagnosticCodes.RepeatStructureOutsideForm,
-                        $"'{bar.BarToken.Text}' is a repeat, so it belongs in the form, not in "
-                        + "the music: a repeat changes the ORDER the music plays in, and a "
-                        + "form is where a book's order is written. Cut the repeated bars "
-                        + "into a section of their own and repeat the SECTION - "
-                        + "'section A { … }' with 'form { |: A :| }'.");
+                        DiagnosticCodes.RepeatStructureInPhrase,
+                        $"'{bar.BarToken.Text}' is a repeat sign, and a phrase holds none: a "
+                        + "phrase is played wherever it is named, and the sign would stand in "
+                        + "a different repeat each time. Write a plain '|' here and the sign "
+                        + "where the phrase is played, in the section's music - "
+                        + "'|: NAME :|' - or in the form.");
                     break;
 
-                case InlineVoltaSyntax volta when !volta.IsInside<FormDeclarationSyntax>():
+                case InlineVoltaSyntax volta when volta.IsInside<PhraseDeclarationSyntax>():
                     // At the '[' alone. An ending's body can run for bars, and squiggling all
                     // of it buries the one token to delete (the rule CueRegionValidator
                     // reports a nested cue by).
                     _diagnostics.Error(volta.OpenBracket.Span,
-                        DiagnosticCodes.RepeatStructureOutsideForm,
-                        $"a volta ending ('[{volta.VoltaText} … ]') belongs in the form, not "
-                        + "in the music: an ending changes the ORDER the music plays in, and a "
-                        + "form is where a book's order is written. Cut each ending into a "
-                        + "section of its own and name it in the form - "
-                        + "'form { |: A [1. B] :| [2. C] }'. (A LYRIC verse keeps this "
-                        + "spelling: '[1. … ]' in a 'lyrics' row is the words for the first "
-                        + "pass, and stays where it is.)");
+                        DiagnosticCodes.RepeatStructureInPhrase,
+                        $"a volta ending ('[{volta.VoltaText} … ]') cannot be written in a "
+                        + "phrase: a phrase is played wherever it is named, and the ending "
+                        + "would belong to a different repeat each time. Write the ending "
+                        + "where the phrase is played, in the section's music - "
+                        + $"'[{volta.VoltaText} NAME ]' - or in the form.");
                     break;
 
-                // The navigation marks (owner's decision 2026-10-04, session 793): the route
-                // through a book — where a `ds` returns to, where an `al fine` ends — is read
-                // off the FORM alone (Semantics.FormRoute), so a mark in the music was drawn
-                // and never followed, and a `segno` there was no target for the form's `ds`.
-                // One place for the order, as the repeat barlines have had since LYS1034; a
-                // landmark that falls inside a section is written by cutting the section there.
-                case NavigationMarkSyntax nav when !nav.IsInside<FormDeclarationSyntax>():
+                case NavigationMarkSyntax nav when nav.IsInside<PhraseDeclarationSyntax>():
                     _diagnostics.Error(nav.Span,
-                        DiagnosticCodes.RepeatStructureOutsideForm,
-                        $"'{Written(nav)}' is a navigation mark, so it belongs in the form, not "
-                        + "in the music: the route a jump takes is read off the form alone, and a "
-                        + "mark here would be drawn and never followed (a 'segno' here is no "
-                        + "target for the form's 'ds'). Write it between the section names - "
-                        + $"'form {{ A {Written(nav)} B }}' - cutting the section where the "
-                        + "mark falls inside it.");
+                        DiagnosticCodes.RepeatStructureInPhrase,
+                        $"'{Written(nav)}' is a navigation mark, and a phrase holds none: a "
+                        + "phrase is played wherever it is named, and the mark would stand at "
+                        + "every one of those places. Write it where the phrase is played, in "
+                        + "the section's music at a bar line, or in the form.");
                     break;
             }
         }
@@ -143,7 +142,7 @@ internal sealed class RepeatStructureScopeValidator : ISemanticValidator
     /// <remarks>
     /// ⚠️ A SECOND SPELLING OF THE SWITCH, kept beside it on purpose (the shape
     /// <see cref="Editing.PartReferenceFinder.ReferenceKinds"/> has): a third repeat
-    /// spelling must be added to BOTH, or it is accepted in the music in silence. The
+    /// spelling must be added to BOTH, or it is accepted in a phrase in silence. The
     /// cases carry typed bindings and long messages, so there is no predicate to ask
     /// instead — <c>TailValidatorKindsTests</c> spells the two TYPES itself and compares
     /// the plain walk's answer with the index's, over every net book.

@@ -30,10 +30,9 @@ namespace LilySharp.Tests;
 /// carries the mark is the side its kind draws on — a text (fine, D.C., D.S., To Coda) to
 /// the bar's left (the measure before), a sign (segno, coda) to its right (the measure
 /// after). Owner's decision, session 559 (HANDOFF ⒳¹²).
-/// ⚠️ Since 2026-10-04 a navigation mark in music is an ERROR (LYS1034, owner's decision,
-/// session 793: the marks are form-only). The collector still places it, so the picture of a
-/// book with that error is whole — which is what these facts pin; the books here carry the
-/// error by design.
+/// (From 2026-10-04 to 2026-11-15 a mark in music was an error, LYS1034 — form-only. It is
+/// the score's mark again: docs/inline-repeat-design.md §3.6. A mark with notes on both sides
+/// of it in its bar is LYS1071, and still placed.)
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: scm/define-grobs.scm:1898-1925 jump-script-interface — JumpScript's
@@ -101,15 +100,16 @@ public sealed class NavigationMarkMomentTests
     }
 
     /// <summary>The control: mid-measure there is no bar to stand at — the mark keeps its
-    /// measure. (LYS4003 said where it was until 2026-10-04; a mark in music is LYS1034 now,
-    /// wherever it stands in the bar.)</summary>
+    /// measure, and the writer is told a mark stands at a bar line (LYS1071; LYS4003 was the
+    /// warning until 2026-10-04, LYS1034 the error from then to 2026-11-15).</summary>
     [Fact]
-    public void AMidMeasureText_StaysInItsMeasure_AndIsTheFormOnlyError()
+    public void AMidMeasureText_StaysInItsMeasure_AndIsTheSignInsideABarError()
     {
         string music = "c'4 d' fine e' f' | g'4 a' b' c'' |";
         Assert.Equal(0, Mark(music, MusicMarkType.Fine).MeasureIndex);
         var diagnostics = SemanticValidation.Run(SyntaxTree.Parse(Book(music)));
-        Assert.Contains(diagnostics, d => d.Code == DiagnosticCodes.RepeatStructureOutsideForm);
+        Assert.Contains(diagnostics, d => d.Code == DiagnosticCodes.SignInsideABar);
+        Assert.DoesNotContain(diagnostics, d => d.Code == DiagnosticCodes.RepeatStructureInPhrase);
         Assert.DoesNotContain(diagnostics, d => d.Code == "LYS4003");
     }
 

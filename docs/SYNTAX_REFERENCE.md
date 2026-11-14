@@ -882,12 +882,13 @@ where there are marks, the sections are the marks'.
 | `\|\|` | Double barline | music, chord row, lyric row, form |
 | `\|.` | Final barline | music, chord row, lyric row, form |
 | `!` | Dashed barline | music |
-| `\|:` | Repeat start | **`form` only** (LYS1034) |
-| `:\|` | Repeat end | **`form` only** (LYS1034) |
-| `:\|:` | Back-to-back repeat (`:\|` then `\|:`) | **`form` only** (LYS1034) |
+| `\|:` | Repeat start | music, chord row, form — not a phrase (LYS1034) |
+| `:\|` | Repeat end (`:\|*3`: three times) | music, chord row, form — not a phrase |
+| `:\|:` | Back-to-back repeat (`:\|` then `\|:`) | music, chord row, form — not a phrase |
 
-The three repeat barlines change the order the music plays in, so they are written where
-the order is — see [Volta Repeats](#volta-repeats).
+The three repeat barlines change the order the music plays in. They belong to the score,
+whichever part writes them — see [Volta Repeats](#volta-repeats) and
+[Repeats in the music](#repeats-in-the-music).
 
 The final barline is written, never added: a piece whose last bar does not end with `|.`
 ends on a single barline. One part writing it is enough — every staff draws it.
@@ -1673,9 +1674,10 @@ Two other shapes are closed while the feature is young: a `cue` nested in a `cue
 ### Volta Repeats
 
 Volta repeats are written symbolically with `|: … :|` repeat barlines and volta
-endings `[1. Section] [2. Section]` — **in the `form`, never in the music**
-(**LYS1034**, user decision 2026-08-31). A repeat changes the ORDER the music plays
-in, and a book's order is written in its form; that is the whole line the rule draws.
+endings. This part is the `form`'s spelling, where a repeat goes round whole sections and
+an ending names them — `[1. Section] [2. Section]`; a section's own music writes the same
+signs round its bars ([Repeats in the music](#repeats-in-the-music)). The rules about passes
+are the same in both.
 With endings, **the numbers are the passes**: the repeat plays as many passes as the highest
 number, and each pass from 1 up plays the ending that names it — `|: A [1-2. B] :| [3. C]` is
 A B A B A C. A pass no ending names, or two name, is an error (**LYS1043**), and so is a count
@@ -1750,27 +1752,77 @@ decides, not the reading order: in `|: A [1. D] :| [2. O]` the ending written af
 
 The two halves are **not** symmetric.
 
-- A `:|` with no `|:` open **repeats from the beginning of the piece** — the
-  ordinary reading of a one-sided end-repeat. It is not an error.
+- A `:|` with no `|:` open **repeats from the end of the repeat before it, or from the
+  beginning of the piece** — the ordinary reading of a one-sided end-repeat. It is not an
+  error.
 - A `|:` that no `:|` ever closes **is an error** (LYS4017): where the repeat ends
-  is undefined. A form's own `|: … :|` block is closed by the parser, so what is left
-  to reach this is a bare `:|:` standing in a form body — one written divider that
-  means `:|` then `|:`.
+  is undefined. The `:|` may stand in a later section's music, or in the form.
+- A `|:` in a section's music may be closed by a `:|` the form writes. The reverse does not
+  hold: a form's `|: … :|` is bracketed, and opens and closes in the form.
 
-> ⚠️ **The cross-layer pair is gone.** Until 2026-08-31 a `|:` written in a section's
-> music could be closed by a `:|` the `form` wrote, and books in the tree were spelled
-> that way; the reverse never worked, because a form repeat is bracketed and closes in
-> the form. That one-sidedness is what made the ban worth doing — an author moving
-> structure into the form always hit the direction that does not work first.
-
-A repeat barline belongs to the **score**, not to one part: it is drawn on every staff,
-and since the only place to write one is the form, it is now **played** on every staff
-too. (Written in the music it expanded only the part it stood in — 8 notes over 4 in a
-two-part book, measured — so the picture and the sound could disagree.)
+A repeat barline belongs to the **score**, not to one part: it is drawn on every staff and
+**played** on every staff, whichever part writes it.
 
 > ⚠️ One gap, stated so nothing looks decided that is not: the LilyPond twin cannot
 > express "repeat from the beginning" at all (`\bar ":|."` only draws the barline) —
 > `lysc ly` warns when it emits one.
+
+### Repeats in the music
+
+A section's music writes the repeat barlines, the endings and the navigation marks where
+the paper has them. No section is cut for a repeat or for a one-bar ending, and nothing
+resets at a sign: the relative pitch, the duration, the key, the meter and the clef carry
+straight through.
+
+```
+part mel { clef treble }
+section A {
+  chords prog { C | F |: G7 | [1. C :| [2. Am | C | ] }
+  mel { c'4 e g e | f a c' a | g b d' b | c'1 | a1 | c1 | }
+}
+form { ~A }
+score { chords prog  staff mel }
+```
+
+This plays C F G7 C, then G7 Am C. An ending in the music holds its bars: it opens on a bar
+line, and runs to the `:|` that sends the pass back or to its `]` (`-]` and
+`@voltaBracket(…)` as in the form — a chord row reads neither; the last ending closes
+with `]`).
+
+- **The sign is the score's.** It stands at a bar line counted from the section's head, and
+  every part follows it — above, the chord row alone writes the repeat and the melody
+  repeats with it. Each part writes its bars once, in printed order. A part may write the
+  same sign too; `|:` against a plain `|` is no disagreement, but two parts writing
+  different repeat barlines at the same bar line (`|:` against `:|`, `:|*2` against `:|*3`)
+  is an error (**LYS1070**; the quick fixes write one part's sign into the other). The
+  editor's *Write Repeat Signs in Every Part* / *Keep Repeat Signs in One Part*
+  commands do it for a whole file.
+- **The pairs are read on the form.** The sections are laid out in the order the form prints
+  them, with the form's own signs among them, and the form's rules are asked of that one
+  column: a `|:` is closed by a later `:|` — in the same section, in a later one, or the
+  form's (**LYS4017** when nothing closes it); repeats do not nest (**LYS1072**), also not a
+  form's `|: A :|` round a section that opens its own; the endings' passes are each named
+  once (**LYS1043**), take no `:|*N` beside them (**LYS1042**) and follow a body
+  (**LYS1041**); an ending in no repeat is plain music (**LYS6008**). A file with no form is
+  read in declaration order.
+- **A sign stands on a bar line.** An ending that opens inside a bar, or a navigation mark
+  with notes on both sides of it in its bar, is an error (**LYS1071**). A sign may *cut* a
+  bar between two passes — a pickup inside a repeat, `|: g4 | c d e f | g a b :| g4 | c1 |`
+  (with `partial 4`), reads `g a b` and the `g4` after the sign as one bar, with one number.
+- **`|:` is a written bar line**, like `|`: `C | |: G` has an empty bar between the two, as
+  `C | | G` has. Write one sign for each bar line of the paper — `C |: G`. At the head of a
+  section's music `|:` closes nothing (`|: c d e f :|` is one bar).
+- **A tie at a sign** goes to the note played next, as at a form's sign: into the second
+  ending, or back to the head of the repeat (drawn there as a short arc into the note).
+- **Words**: in a section with a repeat, a lyric `verse N` is the Nth pass of that repeat;
+  a pass with no verse sings the last one written, and **LYS4080** warns of a verse that is
+  missing, spare or doubled, with fixes.
+- **A `phrase` takes no sign** (**LYS1034**): it is played wherever it is named, so the sign
+  is written where it is played — `|: riff :|`.
+
+Both spellings mean the same and may be mixed. Signs in the music follow a printed page bar
+by bar; the form is the place when whole sections repeat or come back in another order. The
+importers (`lysc import`) write a repeat in the form.
 
 ### Percent Repeats
 
@@ -2153,7 +2205,8 @@ sounds); `al coda` plays to the first `to coda` in it, then goes on from the `co
 the jump; a bare `dc` / `ds` plays up to the jump and goes on after it. On the replayed stretch
 a repeat block plays once, as its last pass (`|: A [1. B] :| [2. C]` replays A C), and a
 one-sided `:|` rewinds nothing. The form above plays A B C B D. A `ds` with no `segno` before
-it, and a mark written in the music or inside a `|: … :|` block, are drawn and not followed.
+it, and a mark written inside a `|: … :|` repeat, are drawn and not followed. A mark written
+in a section's music is followed like the form's ([Navigation Marks](#navigation-marks)).
 The page draws the marks where they stand, MusicXML writes each with its `<sound>` attribute,
 and the LilyPond twin writes `\jump`, whose MIDI does not follow it.
 
@@ -2571,12 +2624,13 @@ sheet's LilyPond twin and MusicXML do not carry another part's mark or line.)
 
 ### Navigation Marks
 
-A navigation mark is **bare** and **form-only**: it is written between the section names of
-a `form`, never in the music (LYS1034, the same rule as the repeat barlines — user decision
-2026-10-04) and never as a note modifier (`c4@segno` is LYS1022). The route a jump takes is
-read off the form alone, so a mark in the music was drawn and never followed; a landmark that
-falls inside a section is written by cutting the section there (`~` hides the label). A mark
-stands at the section boundary it is written at — a text (`fine`, `dc`, `ds`, `to coda`, the
+A navigation mark is **bare**: it is written between the section names of a `form`, or at a
+bar line of a section's music when the landmark falls inside a section
+(`c4 d e f | segno g4 a b c' |`) — never as a note modifier (`c4@segno` is LYS1022) and
+never in a `phrase` (LYS1034). Either way it is the score's mark: every part follows it, and
+the route reads the form's marks and the music's as one set. In the music it stands on a bar
+line; with notes on both sides of it in its bar it is an error (LYS1071). In the form, a mark
+stands at the section boundary it is written at. In both places a text (`fine`, `dc`, `ds`, `to coda`, the
 `al` forms) hangs to the bar's left, at the end of the section just played; a sign (`segno`,
 `coda`) sits to its right, at the start of the next — as LilyPond aligns `JumpScript` and
 `SegnoMark`/`CodaMark`. A text after the last section is drawn at the final bar.

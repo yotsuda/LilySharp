@@ -25,16 +25,13 @@ namespace LilySharp.Core.Semantics;
 /// Like <see cref="SlurPairingValidator"/> this runs the shared collector and reads back
 /// what it recorded as a side effect, rather than re-deciding the pairing.
 /// <para>
-/// ⚠️ THE REASON IT HAD TO WORK THIS WAY IS GONE, AND THE MECHANISM IS KEPT ANYWAY
-/// (2026-08-31, LYS1034). Until repeat structure became form-only, the pairing was not
-/// decidable on the written text at all: a <c>|:</c> in a section's music could be closed by
-/// a <c>:|</c> the form wrote, and books in the wild were spelled that way, so only the
-/// collector's expanded stream had the two layers as siblings. Now a <c>|:</c> can only be
-/// written in a form, where <c>ParseFormRepeatBlock</c> closes its own block — so what is
-/// left to reach this check is a bare <c>:|:</c> standing in a form body, which is ONE
-/// written divider meaning <c>:|</c> then <c>|:</c>, and whose second half nothing closes.
-/// That is still a question about the laid-out score rather than the text, so the reading is
-/// unchanged; what changed is how narrow the surviving case is.
+/// WHY THE LAID-OUT SCORE: the pairing is not decidable on the written text. A <c>|:</c> in
+/// a section's music may be closed by a <c>:|</c> in a later section, or by one the form
+/// writes (docs/inline-repeat-design.md §3.3), so only the collector's expanded stream has
+/// the layers as siblings. (From 2026-08-31 to 2026-11-15 a <c>|:</c> could only be written
+/// in a form, whose block the parser closes, and all that reached this check was a bare
+/// <c>:|:</c> in a form body — ONE written divider meaning <c>:|</c> then <c>|:</c>, whose
+/// second half nothing closes. That case is still here.)
 /// </para>
 /// <para>
 /// An ERROR, not a warning, and the direction is deliberate: <c>error → warning → works</c>

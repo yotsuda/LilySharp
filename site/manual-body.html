@@ -1016,9 +1016,10 @@ score { staff melody  lyrics words }</pre>
   only its root and <code>@chord</code> on a note refuses it.</p>
 
   <p>Entries carry no durations — the grid does the arithmetic. Barlines in the source are
-  drawn and follow the same bare-barline rule as music and lyrics. A <code>|:</code> in a
-  chord row is a repeat like any other and belongs in the form; the repeat barlines the form
-  composes still reach the row and draw there.</p>
+  drawn and follow the same bare-barline rule as music and lyrics. A chord row writes the
+  repeat barlines, endings and navigation marks like any music, and they are the score's: a
+  repeat written in the row alone repeats the melody over it. The repeat barlines the form
+  composes reach the row too.</p>
   <p>The same named row can be used twice — above a staff in one score, and as a
   standalone chart in another — so a progression is written once.</p>
   <p><b>A row the score places also sounds.</b> In the MIDI (and in the editor's playback)
@@ -1109,8 +1110,9 @@ score { chords harmony plays rhythm  staff singer  lyrics words }</pre>
 
 <section id="forms">
   <h2>Forms — the playing order</h2>
-  <p>A <code>form</code> lists sections in the order they are played and printed. This is
-  where repeats live, because a repeat is a change to the order.</p>
+  <p>A <code>form</code> lists sections in the order they are played and printed. Repeats
+  of whole sections are written here; a section's own music writes them round its bars
+  (<i>Repeats in the music</i>, below).</p>
 <pre>form { Intro Main Main "Main (reprise)" Coda }   // three ways to write a form —
 form { |: Body [1. ~First] :| [2. ~Second] }     // a file has ONE unnamed form
 form { |: A :|*3 }                               // (a second is LYS1016)
@@ -1150,10 +1152,33 @@ form practice { Verse }        // a named form: a score plays it with `form prac
   <code>ds</code> goes on after the jump. On the replay a repeat plays once. A tie at the
   end of a section is carried along the same route. A <code>ds</code> with no
   <code>segno</code> before it is drawn and not followed, and a warning says so.</p>
-  <p>The marks are form-only: written in a section's music they are an error, like a repeat
-  barline there — the route is read off the form alone. A landmark that falls inside a
-  section is written by cutting the section there (<code>~</code> hides the label). They are
-  landmarks, never note modifiers, so <code>c4@segno</code> is an error too.</p>
+  <p>A landmark that falls inside a section is written in the section's music, at a bar line
+  (<code>c4 d e f | segno g4 a b c' |</code>); the route reads the form's marks and the
+  music's as one set. They are landmarks, never note modifiers, so <code>c4@segno</code> is
+  an error.</p>
+  <h3>Repeats in the music</h3>
+  <p>A section's music writes the same signs round its bars, where the paper has them — no
+  section is cut for a repeat or a one-bar ending, and the relative pitch, key and meter
+  carry straight through:</p>
+<pre>section A {
+  chords prog { C | F |: G7 | [1. C :| [2. Am | C | ] }
+  mel { c'4 e g e | f a c' a | g b d' b | c'1 | a1 | c1 | }
+}</pre>
+  <ul>
+    <li><b>The sign is the score's.</b> Every part follows it, whichever part writes it —
+    here the chord row alone. Each part writes its bars once, in printed order. Two parts
+    writing different repeat barlines at one bar line is an error.</li>
+    <li><b>The pairs are read on the form</b>, in the order it prints the sections: a
+    <code>|:</code> may be closed by a <code>:|</code> in a later section, or by the form's.
+    Repeats do not nest, and the endings' numbers follow the rules above.</li>
+    <li><b>A sign stands on a bar line.</b> An ending holds its bars and runs to its
+    <code>:|</code> or <code>]</code>. An ending opening inside a bar, or a mark with notes on
+    both sides of it, is an error.</li>
+    <li><b><code>|:</code> is a written bar line</b>: <code>C | |: G</code> has an empty bar
+    between the two. Write one sign per bar line — <code>C |: G</code>.</li>
+    <li><b>A <code>phrase</code> takes no sign</b>: write it where the phrase is played,
+    <code>|: riff :|</code>.</li>
+  </ul>
   <p>The unnamed <code>form { }</code> is the file's default; a score plays another with a
   <code>form NAME</code> item.</p>
   <!--EXAMPLE:repeats-->
@@ -1455,8 +1480,8 @@ ppp pp p mp mf ff fff</pre>
     <tr><td><code>c4.5</code></td><td>'4.5' is not a duration - a duration is a whole number (c4, c8), lengthened by dots…</td></tr>
     <tr><td><code>&lt;c e g2&gt;</code></td><td>A chord member can't carry a duration - members share one, written after the closing '&gt;': &lt;c e g&gt;2. …</td></tr>
     <tr><td><code>4 g f e</code> opening a part's music</td><td>A bare duration repeats the previous note, chord or slash - and nothing repeatable comes before this one…</td></tr>
-    <tr><td><code>c4 d e f :|</code></td><td>':|' is a repeat, so it belongs in the form, not in the music…</td></tr>
-    <tr><td><code>repeat volta 2 { … }</code></td><td>'repeat volta' is LilyPond's spelling. In Lily# a repeat is written in the form…</td></tr>
+    <tr><td><code>c4 d e f :|</code> in a <code>phrase</code></td><td>':|' is a repeat sign, and a phrase holds none…</td></tr>
+    <tr><td><code>repeat volta 2 { … }</code></td><td>'repeat volta' is LilyPond's spelling. In Lily# a repeat is written with repeat bar lines round the bars…</td></tr>
     <tr><td><code>|: A [1. B] :|*3 [2. C]</code></td><td>A repeat with endings takes its passes from the endings' numbers: remove '*3' and number every pass instead — the pass an ending plays on is the number it prints: three passes, the first two on B, are '|: A [1-2. B] :| [3. C]'.</td></tr>
     <tr><td><code>[1.3. B]</code></td><td>An ending's passes are separated by ',' or '-', not by points: write '[1,3.' for passes 1 and 3, or '[1-3.' for the range. The bracket prints the points itself.</td></tr>
     <tr><td><code>@text("say \^")</code></td><td>'\^' is not an escape sequence. A string follows C#'s escapes (\" \\ \n \t \uXXXX …); write '\\' for a backslash, or use a verbatim string @"…", which takes a backslash as written.</td></tr>
@@ -1488,8 +1513,8 @@ ppp pp p mp mf ff fff</pre>
     <tr><td><code>\new Staff</code>, <code>\new Voice</code></td><td><code>part</code> declarations and <code>score</code> rows</td></tr>
     <tr><td><code>&lt;&lt; … \\ … &gt;&gt;</code></td><td><code>voice { … } { … }</code></td></tr>
     <tr><td><code>&lt;&lt; … &gt;&gt;</code> (parallel)</td><td>in Lily# this spelling is a written-out arpeggio</td></tr>
-    <tr><td><code>\repeat volta 2 { … }</code></td><td><code>form { |: A :| }</code></td></tr>
-    <tr><td><code>\alternative</code></td><td><code>[1. B] :| [2. C]</code> in the form</td></tr>
+    <tr><td><code>\repeat volta 2 { … }</code></td><td><code>|: … :|</code> round the bars, or <code>form { |: A :| }</code> round sections</td></tr>
+    <tr><td><code>\alternative</code></td><td><code>[1. … :| [2. … ]</code> in the music, <code>[1. B] :| [2. C]</code> in the form</td></tr>
     <tr><td><code>c4\staccato</code>, <code>c4-.</code></td><td><code>c4@staccato</code></td></tr>
     <tr><td><code>c:maj7</code>, <code>fis:m7.5-</code></td><td><code>Cmaj7</code>, <code>F#m7-5</code> — the printed symbol, with <code>+</code>/<code>-</code> for an altered tension</td></tr>
     <tr><td><code>\fret-diagram-terse</code>, <code>FretBoards</code></td><td><code>@chord(C x32010)</code>, <code>@diagram(x32010)</code>, <code>C(x32010)</code> in a chord row — see <a href="chords.html">Chords and chord diagrams</a></td></tr>

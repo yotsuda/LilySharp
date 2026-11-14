@@ -26,8 +26,6 @@ namespace LilySharp.Tests;
 /// the printed bars of a form with every repeat sign, ending and navigation mark — the form's
 /// and the music's, whichever voice writes it — and the bars played right after each bar.
 /// </summary>
-/// <remarks>⚠️ The books that write a sign in their music still report LYS1034; the column is
-/// read all the same (the design's §4: the rule is lifted last).</remarks>
 [Trait("Category", "Unit")]
 public sealed class RepeatStreamTests
 {

@@ -521,11 +521,14 @@ public sealed partial class LilySharpLanguageServer
             // A drum part's popup names the phrases too, FIRST and by kit piece — a drum part
             // is written as patterns (owner's request 2026-10-11) — and every phrase item tells
             // what it holds (PhraseSummary: its pieces and length, the grid in its documentation).
-            CompletionContext.MusicBlock => IsInsidePercussionPartMusic(doc.Text, offset, out bool inVoice)
+            // …and the repeat bars, endings and navigation marks after either list, outside a
+            // phrase (WithRepeatSigns; a sign in a section's music is the score's since 2026-11-15).
+            CompletionContext.MusicBlock => WithRepeatSigns(IsInsidePercussionPartMusic(doc.Text, offset, out bool inVoice)
                 ? WithPhraseSummaries(GetDrumCompletions(inVoice), doc.Tree, drums: true)
                 : WithPhraseSummaries(GetMusicCompletions(word, CurrentKeySharps(doc.Text, offset), _flatSpellingContracted, inVoice,
                     CurrentKey(doc.Text, offset).Tonic, DeclaredNamesOf(doc.Text, "phrase"),
                     bowed: IsInsideBowedPartMusic(doc.Tree, offset)), doc.Tree, drums: false),
+                doc.Tree, doc.Text, offset, position),
             // The position goes with the text here too: a repeat barline typed as far as
             // `|` or `:` is REPLACED by the item, not appended to (see GetFormCompletions).
             CompletionContext.FormBlock => GetFormCompletions(doc.Text, offset, position),

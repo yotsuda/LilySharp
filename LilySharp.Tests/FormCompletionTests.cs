@@ -201,6 +201,40 @@ public class FormCompletionTests
         Assert.Null(CompletionAt(doc, doc.Length).Single(i => i.Label == "Intro").TextEdit);
     }
 
+    /// <summary>The same signs in a section's music, by the real Completion path — and not in
+    /// a phrase, which takes none (LYS1034). A bar half-typed is replaced there too.</summary>
+    /// <remarks>Poison: hand <c>WithRepeatSigns</c> a caret that is in no phrase
+    /// (<c>Completion.cs</c>) and the phrase half goes red.</remarks>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void InASectionsMusic_TheSignsAreOffered_AndInAPhraseTheyAreNot(bool drums)
+    {
+        string part = drums ? "part m { clef percussion }\n" : "part m { clef treble }\n";
+        string note = drums ? "hh4 hh hh hh" : "c'4 d e f";
+        string phrase = part + "phrase riff { " + note + " | ";
+        string section = phrase + "}\nsection A { m { " + note + " | ";
+        string tail = " } }\nform { A }\nscore { staff m }\n";
+
+        var inSection = CompletionAt(section + tail, section.Length).Select(i => i.Label).ToArray();
+        Assert.Contains("|:", inSection);
+        Assert.Contains(":|", inSection);
+        Assert.Contains("[1. :|", inSection);
+        Assert.Contains("ds al coda", inSection);
+        Assert.Contains(drums ? "hh" : "c", inSection);
+
+        var inPhrase = CompletionAt(phrase + "}\n" + section[phrase.Length..].TrimStart('}', '\n') + tail, phrase.Length)
+            .Select(i => i.Label).ToArray();
+        Assert.NotEmpty(inPhrase); // (a phrase is no part's: its list is the pitched one)
+        Assert.DoesNotContain("|:", inPhrase);
+        Assert.DoesNotContain("[1. :|", inPhrase);
+        Assert.DoesNotContain("segno", inPhrase);
+
+        string typed = section + "|";
+        var bar = CompletionAt(typed + tail, typed.Length).Single(i => i.Label == "|:");
+        Assert.Equal("|:", bar.TextEdit!.NewText);
+    }
+
     [Fact]
     public void StructureCompletions_OfferNoNoteNames()
     {

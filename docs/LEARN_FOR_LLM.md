@@ -202,11 +202,12 @@ form { |: Verse [1. ~First] :| [2. ~Second] }
 score { staff melody }
 ```
 
-- **Repeats go in the form, not in the notes**: `|: … :|` repeats, `[1. X]` and `[2. Y]` are endings.
+- **Whole sections repeat in the form**: `|: … :|` repeats, `[1. X]` and `[2. Y]` are endings.
+- The same signs go round bars in a section's notes: `|: c4 d e f | [1. g2 g :| [2. c1 | ]`. One part writes them and every part follows. Not in a `phrase`.
 - A section that comes back is named again: `form { A B A }`. Do not copy its music.
 - One section name is one stretch of time: words, chords and other parts join by writing the same name.
 
-- `segno`, `coda`, `fine`, `dc` and `ds` also go in the form, between section names. Ctrl+Space there lists them.
+- `segno`, `coda`, `fine`, `dc` and `ds` go in the form, between section names, or in the notes at a bar line. Ctrl+Space lists them.
 
 **Try:** change the form to `form { |: Verse First :|*3 Second }`. **Lesson:** `lesson-06-form`.
 

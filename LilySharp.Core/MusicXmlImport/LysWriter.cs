@@ -39,9 +39,9 @@ internal static class LysWriter
         // for the by-section volta layout too — each section is its own stream.
         var firstMeasures = doc.Parts.Count > 0 ? doc.Parts[0].Measures : new List<ImportMeasure>();
         // Endings first (the richer shape), then a plain repeat. ⚠️ THE SECOND CALL IS NOT AN
-        // OPTIMISATION: since 2026-08-31 a repeat barline may only be written in a `form`
-        // (LYS1034), so an imported book whose repeat stayed in the music would not compile —
-        // this writer would have been emitting `|:` into a section body.
+        // OPTIMISATION: an import writes its repeats in the `form` (owner's decision 2026-11-14,
+        // docs/inline-repeat-design.md Q2 — the spelling it took on 2026-08-31, when a repeat
+        // in the music was LYS1034). A short ending may one day stay in the section instead.
         // Anything else is one flat section played once. Either is then cut again at the
         // rehearsal marks and at the bars that state a key, time or clef (CutPoints).
         // ⚠️ The flat section runs to the LONGEST part's end, not the first part's: a first
@@ -779,8 +779,8 @@ internal static class LysWriter
     /// still be written as one flat section.</summary>
     /// <remarks>
     /// <para>
-    /// ⚠️ This exists because of LYS1034 (2026-08-31): a repeat barline is legal only inside a
-    /// <c>form</c>, so the flat layout's output — one section holding the whole piece with
+    /// ⚠️ This exists because of LYS1034 (2026-08-31 to 2026-11-15): a repeat barline was legal
+    /// only inside a <c>form</c>, so the flat layout's output — one section holding the whole piece with
     /// its <c>|:</c> / <c>:|</c> / <c>:|:</c> in it — stopped
     /// being a book Lily# accepts. The endings case already factored (TryFactorVoltas); this
     /// is the same move for the case that did not.
@@ -1689,7 +1689,7 @@ internal static class LysWriter
     /// <summary>A measure's own right bar line as a section writes it. A repeat is the form's,
     /// so it reads as plain here.</summary>
     /// <remarks>
-    /// Since LYS1034 (2026-08-31) a repeat barline is legal only in a <c>form</c>, and
+    /// An import writes a repeat in the <c>form</c> (since 2026-08-31, when the music took none), and
     /// <see cref="TryFactorPlainRepeats"/> cuts a section at every one. The repeat spellings
     /// this used to write (<c>|:</c> <c>:|</c> <c>:|:</c>) left with the one-line flat writer,
     /// 2026-10-01.
