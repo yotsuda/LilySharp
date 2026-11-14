@@ -1303,6 +1303,20 @@ public sealed class BeamMarkerSyntax : SyntaxNode
 }
 
 /// <summary>
+/// The <c>]</c> that closes a volta ending of a CHORDS ROW. A row's ending is two marks among
+/// the row's items — an <see cref="InlineVoltaSyntax"/> holding no music (<c>[1.</c>) and this —
+/// so the chords and bar lines between them stay the row's own items, where every reader of a
+/// row finds them (docs/inline-repeat-design.md §7). An ending a <c>:|</c> closes writes none.
+/// </summary>
+public sealed class VoltaEndSyntax : SyntaxNode
+{
+    internal VoltaEndSyntax(VoltaEndGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+}
+
+/// <summary>
 /// An inline volta ending in a <c>|: … :|</c> repeat: <c>[1. … ]</c> (or a range
 /// <c>[1-2. …]</c> / list <c>[1,3. …]</c>). Carries the volta number(s) and the
 /// ending's literal music; selected per repeat pass for playback and drawn as a

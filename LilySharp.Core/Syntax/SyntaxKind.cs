@@ -553,6 +553,9 @@ public enum SyntaxKind : ushort
     ParallelExpression,
     /// <summary>An inline volta node (<c>[1. ...]</c> inline volta ending inside a <c>|: :|</c> repeat).</summary>
     InlineVolta,
+    /// <summary>The <c>]</c> that closes a volta ending opened in a chords row, where an ending
+    /// is a pair of marks among the row's items and not a node around them.</summary>
+    VoltaEnd,
 
     // === Nodes: Properties ===
     /// <summary>A property assignment node.</summary>

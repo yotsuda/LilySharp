@@ -103,6 +103,26 @@ public sealed class InlineRepeatMidiTests
         Assert.Equal("ABBC", Played(src));
     }
 
+    /// <summary>A chord row writes an ending and a jump as a part's music does: until
+    /// 2026-11-14 its '[' was LYS1028 ("'[' is none of these") and so was 'segno'.</summary>
+    [Theory]
+    [InlineData("C |: G | [1. Am :| [2. F ] | C |", "ABCBDA")]
+    [InlineData("C | segno G | Am to coda | F ds al coda | coda C |", "ABCDBCA")]
+    public void AChordRowWritesEndingsAndJumps(string row, string played)
+    {
+        string src = $$"""
+            octave absolute
+            part m { section S { {{A}} | {{B}} | {{C}} | {{D}} | {{A}} | } }
+            chords prog { section S { {{row}} } }
+            form { S }
+            score { chords prog staff m }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        Assert.Equal(src, tree.GetRoot().ToFullString());
+        Assert.DoesNotContain(tree.Diagnostics, d => d.Code == LilySharp.Core.Syntax.DiagnosticCodes.ChordBlockBadMember);
+        Assert.Equal(played, Played(src));
+    }
+
     /// <summary>The pair is read on the sequence the form assembles (owner's decision
     /// 2026-11-14): a section need not close what it opens.</summary>
     [Theory]

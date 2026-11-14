@@ -381,6 +381,15 @@ internal sealed class InlineVoltaGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// The <c>]</c> closing a volta ending of a chords row (<see cref="SyntaxKind.VoltaEnd"/>).
+/// </summary>
+internal sealed class VoltaEndGreen : GreenSyntaxNode
+{
+    public VoltaEndGreen(SyntaxToken closeBracket)
+        : base(SyntaxKind.VoltaEnd, [closeBracket]) { }
+}
+
+/// <summary>
 /// Property assignment: name: value
 /// </summary>
 internal sealed class PropertyAssignmentGreen : GreenSyntaxNode

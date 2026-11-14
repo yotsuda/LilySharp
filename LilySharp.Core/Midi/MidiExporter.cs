@@ -2423,6 +2423,20 @@ public sealed class MidiExporter
                 NoteRepeatSign(barline, barStart, part);
                 continue;
             }
+            // An ending of the row (`[1.` … `]`, or closed by its `:|`): it opens at a bar
+            // line, and its `]` closes the bar it is written in.
+            if (item is InlineVoltaSyntax rowEnding)
+            {
+                _timeline?.Add(new TimelineMark(barStart, TimelineMarkKind.EndingStart,
+                    Passes: PassSet.Of(rowEnding.Numbers), Lane: part));
+                continue;
+            }
+            if (item is VoltaEndSyntax)
+            {
+                _timeline?.Add(new TimelineMark(bar.Count > 0 ? barStart + thisBarTicks : barStart,
+                    TimelineMarkKind.EndingEnd, Lane: part));
+                continue;
+            }
             if (item is NavigationMarkSyntax rowMark)
             {
                 // A text closes the bar it is written in; a sign opens the one after it.

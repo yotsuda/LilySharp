@@ -832,6 +832,23 @@ internal sealed partial class Parser
         if (Current.Kind is SyntaxKind.BreakKeyword or SyntaxKind.NoBreakKeyword
             or SyntaxKind.PageBreakKeyword or SyntaxKind.NoPageBreakKeyword)
             return ParseBreak();
+        // A volta ending, as a part's music writes it (docs/inline-repeat-design.md): `[1.`
+        // opens it and `]` closes it — two marks among the row's items, the chords between
+        // them the row's own (VoltaEndSyntax says why it is not a node around them).
+        if (Check(SyntaxKind.OpenBracket)
+            && (Peek(1).Kind == SyntaxKind.IntegerLiteral
+                || (Peek(1).Kind == SyntaxKind.DecimalLiteral && Peek(2).Kind == SyntaxKind.Dot)))
+        {
+            var openBracket = Advance();
+            var (number, separator, endNumber, more, dot) = ParseVoltaPasses();
+            return new InlineVoltaGreen(openBracket, number, separator, endNumber, more, dot, [], null);
+        }
+        if (Check(SyntaxKind.CloseBracket))
+            return new VoltaEndGreen(Advance());
+        // A navigation mark, as a part's music writes it: a chart's segno, coda and D.S.
+        if (Current.Kind is SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword
+            or SyntaxKind.DcKeyword or SyntaxKind.DsKeyword or SyntaxKind.ToKeyword)
+            return ParseNavigationMark();
         // '.' — the previous entry holds through one more slot of the measure's
         // beat grid (GRAMMAR_AUDIT 8.1: measure-relative placement, no durations).
         if (Check(SyntaxKind.Dot))
