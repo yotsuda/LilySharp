@@ -267,6 +267,21 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1239セッションの経緯
+
+### 1.1 第1239セッション（2026-11-14・YT-DELL2）
+
+base `521b2cf12`・開始時 full 16796 合格 / 1 失敗（`ReadmeSampleTests`＝オーナーの作業中の sample）/ skip 2 / 合計 16799（Lab `p1239` の `run1.trx`）。Calamo の `open` は 0。CI は第1231 のまま。
+「残りの欠陥を順に」（第1231）の続き。1 commit（未 push）。残りは Lab `p1239/leftovers.md`。
+- **`[engraving]` 2 つの声部の場所は時刻で比べる（`076d89f16`）**: 一覧の先頭「段全体から終わりを探すとき item 番号を比べる（2 つの時計）」。自分の声部に終わりが無いヘアピンは段の次の強弱・ヘアピン・`@!` で終わる（LILYSHARP-OWN）が、その「次」を 2 声部の item 番号で比べていた。再現 4 形（Lab `p1239/hpv/probe.ps1`）: ⑴ `c''8 c'' c'' c''@cresc c''2` の下の `c'2 c'2@f`＝f（番号 1・拍 3）が始点（番号 3）より「前」で、楔は小節の終わりまで（24.63..31.35）・f は楔の下（−9.08）／⑵ `c''2 c''2@cresc` の下の `c'8 c' c'@f c' c'2`＝拍 2 の f が終わりに取られ、長さ 0 の楔／⑶ 次の拍の f が始点と同じ番号で見落とされる／⑷ 別の声部の次のヘアピンで終わらない。
+- 直し: 強弱に小節頭からの時刻（`DynamicItem.Moment`）、ヘアピンの始点に `MusicMarkItem.AnchorTiming`（`@!` は前から持っていた）＝`CollectDynamics` の必須の引数にして 25 の呼び手が `CollectArticulations` に渡すのと同じ値を渡す。`DetectHairpins` は `HairpinEngraver.StaffPlace` で並べる（同じ声部は item 番号＝装飾音と主音符は同じ時刻で番号が違う・別の声部は時刻・時刻が無ければ番号）。自分の声部の探索は不変。段全体では「一番早い」候補（condensedStaff の並びはパートの順）・stop／強弱／次のヘアピンの選び方と「長さがあるか」も同じ順序・別の声部の次のヘアピンの音に書いた `@!` はそのヘアピンのものと読まない。condensedStaff（`HairpinEndsOnStaff`）も時刻。
+- 実測（LilyPond 2.26.0・raggedRight・終わりを自分の声部に書いた s1・s5 が LilyPond の描く値）: 24.633..26.195／−5.2858・f −5.8858、23.125..25.148／−8.4473・p −7.2227・f −9.0473（0.005 以内）。網 `HairpinVoiceTests` +15 本（2 つの時計 4・運び手 9・一番早い拍・ページ）。
+- ⚠️ 直したこと: 行番号で置換する計器が `OrderedDictionary` を int で引いて位置の添字になり、25 行に空の引数を書いた（ビルドが止めた）／毒 2（段全体で最初に並んだ候補を取る）が 3 声部の本で緑＝`score.Dynamics` の並びが声部の順ではなかった。condensedStaff の主張を足して赤を見た／full の 1 回目に `ScoreVideoShapeTests` が 1 本赤（既知の不安定な網・単独と 2 回目の full は緑）。
+- **見つけて残した: MusicXML の wedge はパートに 1 本の状態**＝下の声部のヘアピンの始まりが上の声部の開いた wedge を閉じる（`voice { c''1@cresc } { c'2@decresc c'2@!decresc } | … c''1@f`＝crescendo が長さ 0）。再現と第一案（書き出しがページの対を読む）は leftovers の先頭と Lab `p1239/xml`。
+- 7.7 の匂い: 時刻が無いときは番号で比べる（fallback＝OWN の注に明記・製品の収集は必ず刻印する・届くのは手で組んだ model と、音に乗らなかった `@!` の回復路）／item の時刻の綴りが 3 つ（刻印・`OnsetOf`・`OwnVoiceEndItem`＝leftovers）／drum・rep・slash・bare・pitched rest の刻印に網が無い／別の声部のヘアピンと出会う形は「背中合わせ」として描かれる（決めごとの面・leftovers）／VS Code の実機は関係なし。
+- 7.5／7.6: 全部 ⒞（段全体の探索は LilyPond に無い＝OWN 1 つ追加 `StaffPlace`・書き直し 2 つ・REF の追加なし・定数なし）。perf: 走査は足していない（候補ごとに struct の比較 1 回・段全体の探索だけ最後まで読む）＝未計測。
+- 門: 終了時 full 16811 合格 / 1 失敗（`ReadmeSampleTests`＝同じ）/ skip 2 / 合計 16814（Lab `p1239` の `run4.trx`・+15 は足した網）。全 svg の掃き 1041 冊 1268 枚で動いた svg 0（`p1239/sweep`＝結果: 追跡コーパスにこの形は無い・違うのは探り譜）。毒 11 本は全部赤（`p1239/poisons.log`・`poisons-2.log`・`poisons-3.log`）。snapshot は不動・台帳は `APPROXIMATIONS.md` の OWN +1。
+
 ## 以下は第1238セッションの経緯
 
 ### 1.1 第1238セッション（2026-11-14・YT-DELL2）
