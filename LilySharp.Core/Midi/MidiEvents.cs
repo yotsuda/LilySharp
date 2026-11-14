@@ -120,7 +120,11 @@ public readonly record struct MidiNote(
     // little over the level where that is louder (MidiExporter.AccentAt) — so where the level
     // moves under the note (a hairpin, a shared dynamic) the strike is read again at the level
     // it has come to (SungVoices.StruckAt). Not written to .mid files.
-    int Sforzando = 0
+    int Sforzando = 0,
+    // A tie `~` is written after this note (after the last note a tie merged into it) and the
+    // onset PRINTED next did not take it: where the music jumps from the note's end, the note
+    // PLAYED next may (PlayedTimeline.Unfold). Not written to .mid files.
+    bool TiedOut = false
 );
 
 /// <summary>

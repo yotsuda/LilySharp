@@ -73,6 +73,54 @@ public sealed class InlineRepeatMidiTests
     public void AJumpWrittenInTheMusicIsFollowed(string music, string played)
         => Assert.Equal(played, Played(OneSection(music)));
 
+    /// <summary>The notes one part plays, each as its letter and the bars it sounds for.</summary>
+    private static string Held(string src, string part = "m") =>
+        string.Join(' ', Export(src).Tracks.SelectMany(t => t.Notes).Where(n => n.Part == part)
+            .OrderBy(n => n.StartTick)
+            .Select(n => (n.Pitch % 12) switch { 0 => "A", 7 => "B", 4 => "C", 9 => "D", _ => "?" } + n.DurationTicks / (4 * 480)));
+
+    /// <summary>A tie is carried to the note PLAYED next, over the jump a sign in the music makes
+    /// — the rule a form's repeat keeps (<c>|: A [1. B] :| [2. C]</c>; owner's decision
+    /// 2026-09-28). MEASURED before (2026-11-14, Lab sessions/p1245/stage4.md): every note was cut
+    /// at the jump, so the tie out of the body sounded into the first ending and struck the
+    /// second again (B2 … B1 B1), and a tie out of the first ending back to the body was lost.</summary>
+    [Theory]
+    // Out of the body into both endings.
+    [InlineData($"|: {A} | {B}~ | [1. {B} :| [2. {B} ] | {D} |", "A1 B2 A1 B2 D1")]
+    // Out of the first ending, back to the body's first note; the second ending is another pitch.
+    [InlineData($"|: {A} | {B} | [1. {A}~ :| [2. {C} ] | {D} |", "A1 B1 A2 B1 C1 D1")]
+    // Out of the body: back to its first note on the first pass, on into the next bar on the last.
+    [InlineData($"|: {B} | {A} | {B}~ :| {B} | {D} |", "B1 A1 B2 A1 B2 D1")]
+    // Where the note played next is another pitch the tie ends at the jump.
+    [InlineData($"|: {A} | {B}~ :| {B} | {D} |", "A1 B1 A1 B2 D1")]
+    // A tie the page prints from one ending into the next joins nothing: the second is reached from the body.
+    [InlineData($"|: {A} | [1. {B}~ :| [2. {B} ] | {D} |", "A1 B1 A1 B1 D1")]
+    // Over a jump text.
+    [InlineData($"segno {A} | {B} | {A}~ ds al fine | {A} fine |", "A1 B1 A2 B1 A2")]
+    public void ATieIsCarriedToTheNotePlayedNext(string music, string held)
+        => Assert.Equal(held, Held(OneSection(music)));
+
+    /// <summary>A <c>|:</c> at the head of the music closes nothing, so the bar after it is still
+    /// the section's opening bar and its declared pickup stands. MEASURED before (2026-11-14, Lab
+    /// sessions/p1245/stage4.md): the pickup was forgotten behind the sign and the bar was told
+    /// to declare one (LYS2006), with the header's <c>partial</c> right above it.</summary>
+    [Theory]
+    [InlineData("|: g'4 | c d e f :| c1 |", 0)]
+    [InlineData("g'4 | c d e f | c1 |", 0)]
+    [InlineData("| g'4 | c d e f | c1 |", 1)] // a plain bar line has passed the pickup, empty
+    public void ARepeatSignAtTheHeadKeepsTheDeclaredPickup(string music, int shortBars)
+    {
+        var validator = new LilySharp.Core.Semantics.MeasureValidator();
+        validator.Validate(SyntaxTree.Parse($$"""
+            time 4/4
+            section S { partial 4 }
+            part m { section S { {{music}} } }
+            form { S }
+            score { staff m }
+            """));
+        Assert.Equal(shortBars, validator.Diagnostics.Count(d => d.Code is "LYS2001" or "LYS2006"));
+    }
+
     /// <summary>The sign is the score's: the part that writes none plays the same bars.</summary>
     [Fact]
     public void EveryPartFollowsASignOnePartWrites()

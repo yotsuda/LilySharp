@@ -632,7 +632,22 @@ public sealed class MidiExporter
         _lastOnset.AddRange(indices);
         _lastNoteTrack = track;
         _tiePending = startsTie;
+        MarkTiedOut();
         _lastOnsetSerial = _sectionPlaySerial;
+    }
+
+    /// <summary>Writes the current part's pending tie on the notes of its last onset
+    /// (<see cref="MidiNote.TiedOut"/>) — in a book played along its timeline, the only one with
+    /// jumps the printed walk does not see (<see cref="PlayedTimeline"/>). A tie is written two
+    /// ways, on the note (<c>CloseOnset</c>'s <c>startsTie</c>) and as the item after it
+    /// (<c>TieSyntax</c> in the sequence), and both come here.</summary>
+    private void MarkTiedOut()
+    {
+        if (_timeline == null || _lastNoteTrack is not { } track)
+            return;
+        foreach (int i in _lastOnset)
+            if (i >= 0 && i < track.Notes.Count && track.Notes[i].TiedOut != _tiePending)
+                track.Notes[i] = track.Notes[i] with { TiedOut = _tiePending };
     }
 
     /// <summary>What the onset's marks ask of a singer and not of an instrument (owner's requests
@@ -1485,6 +1500,7 @@ public sealed class MidiExporter
                 // the previous one rather than re-articulating. `8~ | 4` in a strokes part is
                 // this same sibling, so the stroke it follows goes on into the next (RecordStroke).
                 SetTiePending(true);
+                MarkTiedOut();
                 if (_recordStrokesFor != null && _currentPart == _recordStrokesFor)
                     _strokeTieOpen = true;
                 break;

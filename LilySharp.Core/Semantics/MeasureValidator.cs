@@ -535,7 +535,11 @@ internal sealed class MeasureValidator : ISemanticValidator
         // A stream opening on a bar line has passed the pickup empty: its first music stands in a
         // later bar (`voice { c4 | d1 | e1 | } { | | g1 | }`), and SplitIntoMeasures keeps no empty
         // bar to say so. The page draws it there; this read it as the pickup until 2026-11-04.
-        if (items.FirstOrDefault() is BarlineSyntax)
+        // …but not on a `|:`: at the head of its music it closes nothing, and the bar after it is
+        // the opening one (`|: g4 | c d e f | g a b :|`, a repeat that takes its pickup with it;
+        // MeasureBuilder.HandleBarline, docs/inline-repeat-design.md §3.4). Until session 1245 the
+        // declared pickup was forgotten there and the bar took the nudge to declare it (LYS2006).
+        if (items.FirstOrDefault() is BarlineSyntax { BarText: not "|:" })
             streamPickup = null;
 
         // Its section header's meter, for this stream only (ValidateItemsScoped restores the

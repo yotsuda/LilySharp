@@ -73,10 +73,14 @@ internal readonly record struct TimelineMark(
 /// <c>|:</c> nothing closes repeats nothing (LYS4017 says so).
 /// </para>
 /// <para>
-/// ⚠️ A note sounding across a jump is cut at the jump: the printed timeline has tied it to the
-/// note PRINTED next, and what is played next is somewhere else. The form's older walk
-/// (<c>MidiExporter.PlayForm</c>, still the reader of a book that writes no repeat in its
-/// music) carries such a tie to the note played next.
+/// A TIE IS CARRIED TO THE NOTE PLAYED NEXT, over any jump (owner's decision 2026-09-28, the
+/// rule the form's older walk <c>MidiExporter.PlayForm</c> and the page's
+/// <c>Svg.Collector.SectionPlayGraph</c> keep): the printed timeline has tied a note to the note
+/// PRINTED next, so at a jump the note is cut, and it goes on into a note of its pitch that
+/// starts where the jump lands — as does a note that ends at the jump with a tie nothing printed
+/// took (<see cref="MidiNote.TiedOut"/>: <c>[1. c1~ :|</c> back to a body opening on c). With no
+/// such note there the tie ends at the jump. Until session 1245 every note was cut there, so a
+/// tie out of a repeat's body sounded into its first ending and struck the second one again.
 /// </para>
 /// </remarks>
 internal static class PlayedTimeline
@@ -311,17 +315,46 @@ internal static class PlayedTimeline
             track.KeySignatures.Clear();
             track.Lyrics.Clear();
             track.Pedals.Clear();
+            // The notes of the stretch before that reach its end TIED (indices into track.Notes).
+            var tiedOver = new List<int>();
             for (int k = 0; k < route.Count; k++)
             {
                 var (from, to) = (route[k].From, route[k].To);
                 int shift = starts[k] - from;
+                bool last = k + 1 == route.Count;
+                var arriving = tiedOver;
+                tiedOver = new List<int>();
                 foreach (var note in notes)
                 {
-                    if (note.StartTick < from || note.StartTick >= to)
+                    int noteEnd = note.StartTick + note.DurationTicks;
+                    // A note the printed walk tied INTO the stretch from the bars printed before
+                    // it (`[1. d1~ :| [2. d1 ]`): what is played before the stretch is somewhere
+                    // else, so the part of it standing here is a note written here.
+                    bool tail = note.StartTick < from && noteEnd > from && note.DurationTicks > 0;
+                    if (!tail && (note.StartTick < from || note.StartTick >= to))
                         continue;
-                    // Cut at the jump (the class remarks); the last stretch has none after it.
-                    int length = k + 1 < route.Count ? Math.Min(note.DurationTicks, to - note.StartTick) : note.DurationTicks;
-                    track.Notes.Add(note with { StartTick = note.StartTick + shift, DurationTicks = length });
+                    int start = Math.Max(note.StartTick, from);
+                    // Cut at the jump; the last stretch has none after it.
+                    int length = last ? noteEnd - start : Math.Min(noteEnd, to) - start;
+                    // …and TIED over it when the cut took the rest of a tie away, or the note ends
+                    // at the jump with a tie written after it.
+                    bool tied = !last && note.DurationTicks > 0 && (noteEnd > to || (noteEnd == to && note.TiedOut));
+                    // A tie is carried to the note PLAYED next (the class remarks).
+                    int into = start == from ? arriving.FindIndex(i => track.Notes[i].Pitch == note.Pitch
+                        && track.Notes[i].Channel == note.Channel && track.Notes[i].Part == note.Part
+                        && track.Notes[i].Voice == note.Voice) : -1;
+                    if (into >= 0)
+                    {
+                        int held = arriving[into];
+                        arriving.RemoveAt(into);
+                        track.Notes[held] = track.Notes[held] with { DurationTicks = track.Notes[held].DurationTicks + length };
+                        if (tied)
+                            tiedOver.Add(held);
+                        continue;
+                    }
+                    if (tied)
+                        tiedOver.Add(track.Notes.Count);
+                    track.Notes.Add(note with { StartTick = start + shift, DurationTicks = length });
                 }
 
                 // What stands at the stretch's start is what was in force there when printed.
