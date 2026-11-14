@@ -1342,6 +1342,21 @@ public class GrammarEvaluation3FeaturesTests
         Assert.Contains("a'4 a'4 a'4 r4 |", Ly(Guitar("a'4@bend(full)@release a'4@bend(half) a'4@release r4 |")));
     }
 
+    /// <summary>A bend on a REST is refused by the validators (LYS4079) — the twin says nothing
+    /// more about it. Until 2026-11-14 (session 1232) it reported "@bend(full) dropped" beside
+    /// the error, of a mark that is drawn nowhere.</summary>
+    [Fact]
+    public void TheTwin_SaysNothingOfABendARestRefuses()
+    {
+        string source = Guitar("r4@bend(full) a'4 a'4 a'4 |");
+        Assert.Contains(Said(source), d => d.Code == DiagnosticCodes.GestureNotOnANote && d.Severity == DiagnosticSeverity.Error);
+        Assert.Empty(TwinWarnings(source));
+        Assert.Contains("r4 a'4 a'4 a'4 |", Ly(source));
+        // The control: on a note the same bend is still reported.
+        Assert.Single(TwinWarnings(Guitar("a'4@bend(full) a'4 a'4 r4 |")),
+            w => w.StartsWith("@bend(full) dropped: LilyPond's bend spanner", StringComparison.Ordinal));
+    }
+
     // ───────────────────────── 12. a change of figure over one held bass: @figuredBass(4, 3) ─────────────────────────
 
     /// <summary>A continuo part with one section of <paramref name="music"/>.</summary>

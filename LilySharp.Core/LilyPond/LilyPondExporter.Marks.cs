@@ -328,6 +328,12 @@ public sealed partial class LilyPondExporter
                 // LILYPOND-REF: ly/music-functions-init.ly bendHold, bendStartLevel;
                 //   scm/define-music-types.scm BendSpanEvent (`\^`), a span event between notes.
                 case MusicMarkSyntax bm when Semantics.AnnotationValues.Bend(bm) is not null:
+                    // On a rest the bend is refused (LYS4079) and drawn nowhere, so there is
+                    // nothing the twin drops: the error is the one thing said of it, as of a
+                    // fall on a rest (EmitAttachment's GestureHosts arm). Until 2026-11-14 (session
+                    // 1232) `r4@bend(full)` was reported "dropped" beside its error.
+                    if (Semantics.GestureHosts.IsOnARest(bm))
+                        break;
                     _warnings.Add($"@bend({string.Join(" ", bm.Arguments.Select(x => x.Text))}) dropped: LilyPond's bend spanner "
                         + "(\\^) runs from one written note to another, and @bend bends one note by an amount - the twin's note is plain");
                     break;
