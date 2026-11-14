@@ -115,6 +115,8 @@ public sealed partial class LilyPondExporter
             inOrder.Add((s, container));
         }
 
+        _carriesTheSigns = CarriesTheScoresSigns(byName, $"part '{partName}'");
+
         var result = new List<SyntaxNode>();
         // The tempo standing where this voice's first play opens: the file's own.
         SyntaxNode? top = allSections.FirstOrDefault();
@@ -161,12 +163,14 @@ public sealed partial class LilyPondExporter
                     headerMusic.Any(h => h is KeySignatureSyntax),
                     headerMusic.Any(h => h is TimeSignatureSyntax)));
                 result.AddRange(WithoutRestatedTempo(headerMusic, entry.Container));
+                int playStart = result.Count;
                 if (_meterPlan.IsEmpty)
                     result.AddRange(ContainerMusic(entry.Container));
                 else
                     result.AddRange(_meterPlan.WithForeignChanges(entry.Section.SectionName,
                         entry.Container, ContainerMusic(entry.Container).ToList()));
                 result.AddRange(PaddingBars(entry.Container));
+                WriteTheScoresRepeatSigns(entry.Section.SectionName, entry.Container, result, playStart);
             }
         }
 
@@ -453,9 +457,11 @@ public sealed partial class LilyPondExporter
         if (_chordTrack)
         {
             _lastChordPlay = name;
+            int rowStart = result.Count;
             result.AddRange(ChordBars(entry.Container, ChordKeyFor(name), ChordPickupFor(name),
                 SectionBarMeters(name)));
             result.AddRange(PaddingBars(entry.Container));
+            WriteTheScoresRepeatSigns(name, entry.Container, result, rowStart);
             return;
         }
         // The header directives of the name, in the collector's application order (time,
@@ -497,6 +503,7 @@ public sealed partial class LilyPondExporter
             && ShortLastBar(name, voice) != null)
             _shared.OpenWrittenBars.Add(halfBarLine);
         result.AddRange(PaddingBars(entry.Container));
+        WriteTheScoresRepeatSigns(name, entry.Container, result, playStart);
     }
 
     /// <summary>
@@ -637,6 +644,7 @@ public sealed partial class LilyPondExporter
             // A flat chord track at the top level writes the bars it has for this play, on the
             // same bars' lengths; a track that has run out is silent, as a row that writes nothing.
             int flatBars = 0;
+            int silentRowStart = result.Count;
             if (_flatChordBars != null)
             {
                 flatBars = Math.Min(bars, _flatChordBars.BarsLeft);
@@ -648,6 +656,7 @@ public sealed partial class LilyPondExporter
                 result.Add(new ChordBarMarker("s" + ChordModeDuration(i == 0 && pickup is { } p ? p : barMeter)));
                 result.Add(CreateBarline(SyntaxKind.Bar, "|", 0, 0));
             }
+            WriteTheScoresRepeatSigns(name, null, result, silentRowStart);
             return;
         }
         result.Add(new SectionPlayMarker(
@@ -656,6 +665,7 @@ public sealed partial class LilyPondExporter
             headers?.Any(h => h is TimeSignatureSyntax) == true,
             octaveOffset));
         result.AddRange(WithoutRestatedTempo(headers, null));
+        int silentStart = result.Count;
         // The section's last bar as the parts that write it leave it: short, when the next
         // play's pickup completes it. A full spacer there put every later bar of this staff
         // the difference late — and the Score's with it: "mid-measure time signature" at each
@@ -683,6 +693,7 @@ public sealed partial class LilyPondExporter
             }
             result.Add(padding);
         }
+        WriteTheScoresRepeatSigns(name, null, result, silentStart);
     }
 
     // The meters other parts write into each section's bars (SectionMeterPlan), read once per Export.

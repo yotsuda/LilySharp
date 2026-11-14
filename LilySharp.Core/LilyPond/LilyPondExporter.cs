@@ -574,6 +574,7 @@ public sealed partial class LilyPondExporter
         _sectionBars = Svg.Collector.SectionBarCounts.BuildSemanticIndex(root);
         _phraseBodies = Svg.Collector.SectionBarCounts.PhraseBodies(root);
         _headerUnmetered.Clear();
+        _sectionSigns.Clear();
         // The meters other parts write into each section's bars (HANDOFF §2 F-partmeter ⒜):
         // a voice's silent bars are written in them (AppendSilentPlay, PaddingBars).
         _meterPlan = Svg.Collector.SectionMeterPlan.Build(root, _phraseBodies);

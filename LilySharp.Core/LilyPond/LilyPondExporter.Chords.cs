@@ -444,6 +444,7 @@ public sealed partial class LilyPondExporter
         _repeatTiePlays = new HashSet<int>(); // a chord track carries no ties
         _chordTrack = true;
         _lastChordPlay = null;
+        _carriesTheSigns = CarriesTheScoresSigns(byName, "a chord track");
         if (form != null)
         {
             _flatChordBars = loose.Count > 0 ? Semantics.FlatChordRows.Of(loose) : null;

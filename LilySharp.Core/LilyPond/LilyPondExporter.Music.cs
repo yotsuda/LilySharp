@@ -277,6 +277,14 @@ public sealed partial class LilyPondExporter
         {
             var item = items[i];
 
+            // An ending spread from another voice with no repeat of this stream's around it
+            // (its `|:` could not be written here): its bars are the voice's own, written plain.
+            if (item is { Green: SpreadEndingGreen stray })
+            {
+                items = [.. items.Take(i), .. stray.Items, .. items.Skip(i + 1)];
+                continue;
+            }
+
             // Standalone music a note left behind (`\breathe`, see SplitAttachments) goes
             // out once every post-event written as a SIBLING of that note — the tie, slur,
             // beam marker, dynamic, string number — has been written, so `c4@breath~ c4`
@@ -365,9 +373,15 @@ public sealed partial class LilyPondExporter
             if (item is BarlineSyntax { BarToken.Kind: SyntaxKind.RepeatStartBar or SyntaxKind.RepeatBothBar })
             {
                 FlushLine(line, indent);
-                i = EmitInlineRepeat(items, i, indent);
-                // The `:|` that closed the span is a boundary too.
-                _timeSinceBoundary = false;
+                i = EmitInlineRepeat(items, i, indent, out bool endsOnAnEnding);
+                // The `:|` that closed the span is a boundary too. ⚠️ A span that ends on its
+                // LAST ENDING ends where that ending's music does: `[2. g f e d ] | c1 |` leaves
+                // the ending's bar open, and the `|` after it closes that bar — the ending's own
+                // stream left the clock saying so. Until 2026-11-14 the clock was reset here
+                // whatever closed the span, and that `|` wrote an empty bar (`s1 |`) the page
+                // does not draw (Lab sessions/p1244/probe/c-volta).
+                if (!endsOnAnEnding)
+                    _timeSinceBoundary = false;
                 atScopeStart = false;
                 continue;
             }
@@ -463,7 +477,18 @@ public sealed partial class LilyPondExporter
     /// before another ending). Not a close and not a rewind.
     /// </summary>
     private static bool IsEndingDivider(List<SyntaxNode> items, int i)
-        => i + 1 < items.Count && items[i + 1] is InlineVoltaSyntax;
+        => i + 1 < items.Count && IsEnding(items[i + 1]);
+
+    /// <summary>An ending of a repeat as the stream holds it: the one the voice wrote, or one
+    /// another voice wrote around this voice's bars (<see cref="SpreadEndingMarker"/>).</summary>
+    private static bool IsEnding(SyntaxNode item) => item is InlineVoltaSyntax or { Green: SpreadEndingGreen };
+
+    /// <summary>An ending's numbers, whether they are written out as a range or a list, and its music.</summary>
+    private static (List<int> Numbers, bool Specced, List<SyntaxNode> Items) EndingOf(SyntaxNode item)
+        => item is { Green: SpreadEndingGreen spread }
+            ? (spread.Written.Numbers.ToList(), spread.Written.HasSeparator, spread.Items)
+            : (((InlineVoltaSyntax)item).Numbers.ToList(), ((InlineVoltaSyntax)item).HasSeparator,
+                ((InlineVoltaSyntax)item).Items.ToList());
 
     /// <summary>
     /// Writes <paramref name="items"/> with the stretch before the rewinding bar at
@@ -562,12 +587,14 @@ public sealed partial class LilyPondExporter
 
     // items[start] is |: . Returns the index just past the matching :| (and any
     // trailing [n. …] alternatives).
-    private int EmitInlineRepeat(List<SyntaxNode> items, int start, string indent)
+    private int EmitInlineRepeat(List<SyntaxNode> items, int start, string indent, out bool endsOnAnEnding)
     {
+        // Whether the last item the span took is an ending (and not the `:|` after one).
+        endsOnAnEnding = false;
         // Collect common items until the first alternative or the closing :|,
         // tracking nesting so a nested |: … :| does not close us early.
         var common = new List<SyntaxNode>();
-        var alternatives = new List<InlineVoltaSyntax>();
+        var alternatives = new List<(List<int> Numbers, bool Specced, List<SyntaxNode> Items)>();
         int depth = 0;
         int repeatCount = 2;
         int i = start + 1;
@@ -588,7 +615,7 @@ public sealed partial class LilyPondExporter
             // two forward+backward pairs), so the twin was alone in disagreeing.
             if (closed)
             {
-                if (it is InlineVoltaSyntax trailing) { alternatives.Add(trailing); continue; }
+                if (IsEnding(it)) { alternatives.Add(EndingOf(it)); endsOnAnEnding = true; continue; }
                 if (it is BreakSyntax) { /* absorb a break right after :| */ continue; }
                 // The ':|' BETWEEN two endings (`[1. B] :| [2. C] :| [3. D]` — the parser's
                 // furtherAlternatives, Parser.Form.cs) is this repeat's own divider: the
@@ -597,7 +624,7 @@ public sealed partial class LilyPondExporter
                 // play count below. MEASURED 2026-09-10 (sweep of 925 books, p364): it used
                 // to fall out of this scan as a stray bar, written `\bar ":|."` after the
                 // \alternative, with the third ending outside the repeat.
-                if (IsEndingDivider(items, i)) continue;
+                if (IsEndingDivider(items, i)) { endsOnAnEnding = false; continue; }
                 break;
             }
 
@@ -610,6 +637,7 @@ public sealed partial class LilyPondExporter
                 if (depth > 0) { depth--; common.Add(it); continue; }
                 repeatCount = rb.HasExplicitRepeatCount ? rb.RepeatCount : repeatCount;
                 closed = true;
+                endsOnAnEnding = false;
                 // ':|:' both closes this repeat and opens the next one, so hand the token
                 // back to the caller (EmitMusicStream opens a repeat on RepeatBothBar too)
                 // instead of consuming it. A ':|' only closes, so keep scanning for the
@@ -617,9 +645,9 @@ public sealed partial class LilyPondExporter
                 if (rb.BarToken.Kind == SyntaxKind.RepeatBothBar) break;
                 continue;
             }
-            if (it is InlineVoltaSyntax v)
+            if (IsEnding(it))
             {
-                alternatives.Add(v);
+                alternatives.Add(EndingOf(it));
                 continue;
             }
             common.Add(it);
@@ -641,7 +669,7 @@ public sealed partial class LilyPondExporter
             // \volta on every alternative LilyPond hands the extra volte to the FIRST one.
             // LILYPOND-REF: scm/music-functions.scm:346-354 make-repeat — with no specced alternative, alt-1-count = times - lalts + 1 volte go to the first.
             // A plain `[1.] [2.]` run is left unspecced: LilyPond's fill IS that reading.
-            bool specced = alternatives.Any(a => a.HasSeparator);
+            bool specced = alternatives.Any(a => a.Specced);
             _sb.Append(indent).Append("\\alternative {\n");
             foreach (var alt in alternatives)
             {
@@ -649,7 +677,7 @@ public sealed partial class LilyPondExporter
                 if (specced)
                     _sb.Append("\\volta ").Append(string.Join(",", alt.Numbers)).Append(' ');
                 _sb.Append("{\n");
-                EmitMusicStream(alt.Items.ToList(), indent + "    ");
+                EmitMusicStream(alt.Items, indent + "    ");
                 _sb.Append(indent).Append("  }\n");
             }
             _sb.Append(indent).Append("}\n");
