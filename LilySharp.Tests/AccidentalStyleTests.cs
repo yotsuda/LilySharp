@@ -186,6 +186,9 @@ public class AccidentalStyleTests
             Glyphs("<cih' e'>4 <c' e'> cih'2~ | cih'4 c' r2 |"));
         // The bar line forgets it.
         Assert.Equal(new string?[] { "quarterSharp", null }, Glyphs("cih'1 | c'1 |"));
+        // `cih'~ c'` is two pitches: no tie swallows the natural (the control ties and prints none).
+        Assert.Equal(new string?[] { "quarterSharp", "natural" }, Glyphs("cih'2~ c'2 |"));
+        Assert.Equal(new string?[] { "quarterSharp", null }, Glyphs("cih'2~ cih'2 |"));
         // A forced accidental on a quarter tone that shows none is its own, not the key's.
         Assert.Equal(new (string?, bool)[] { ("quarterSharp", false), ("quarterSharp", true) },
             Notes("cih'2 cih'@courtesy |"));
@@ -199,6 +202,40 @@ public class AccidentalStyleTests
         var sharp = LilySharp.Core.Svg.Layout.GlyphMetrics.GetAccidentalBBox("sharp");
         Assert.Equal(sharpRestored.Width - sharp.Width, restored.Width - plain.Width, 6);
         Assert.True(restored.Width > plain.Width);
+    }
+
+    /// <summary>
+    /// The staff's memory holds a quarter tone too: a head of ANOTHER voice reads it. Until
+    /// 2026-11-14 a quarter-tone head recorded no written pitch, so the staff's pass
+    /// (StaffAccidentals) neither read nor remembered it and the second voice's <c>c'</c>
+    /// after the first voice's <c>cih'</c> printed no natural. Each bar is LilyPond 2.26.0's
+    /// (Lab sessions/p1231/qt), but bar 3, where Lily# keeps the voice's own reminder
+    /// (StaffAccidentals' remark ⑴).
+    /// </summary>
+    [Fact]
+    public void Default_AQuarterToneInOneVoice_HoldsForTheStaffsOtherVoices()
+    {
+        var tree = SyntaxTree.Parse(
+            "time 4/4\noctave absolute\npart mel { }\nsection Main {\n  mel { voice " +
+            "{ cih'4 r r2 | ceh'4 r r2 | cih'4 r r2 | <cih' e'>4 r r2 | cih'4 r r2 | cih''4 r r2 | c'4 r r2 | } " +
+            "{ r4 c' r2 | r4 c' r2 | r4 cih' r2 | r4 c' r2 | r4 <c' e'> r2 | r4 c' r2 | r4 c' r2 | } }\n" +
+            "}\nform { Main }\nscore { staff mel }\n");
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+        var score = SvgGenerator.CollectScore(tree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree));
+        var lower = score.StaffGroups[0].Staves[0].Voices[1].Measures;
+        string? Second(int bar) => lower[bar].Items[1] switch
+        {
+            LilySharp.Core.Svg.Model.NoteItem n => n.Accidental,
+            LilySharp.Core.Svg.Model.ChordItem c => c.Notes[0].Accidental,
+            _ => "?",
+        };
+        Assert.Equal("natural", Second(0));         // after the other voice's quarter sharp
+        Assert.Equal("natural", Second(1));         // …and its quarter flat
+        Assert.Equal("quarterSharp", Second(2));    // the voice's own, kept
+        Assert.Equal("natural", Second(3));         // after a chord member
+        Assert.Equal("natural", Second(4));         // on a chord member
+        Assert.Null(Second(5));                     // another octave is another memory
+        Assert.Null(Second(6));                     // the control: nothing to cancel
     }
 
     // ================================================================================

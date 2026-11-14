@@ -169,7 +169,7 @@ public sealed partial class MeasureCollector
         string? lineStartAccidental = null;
         if (accidental != null && builder != null
             && !_courtesySourcePositions.Contains(note.SourceStart)
-            && builder.TiesInto(staffPosition, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave), WrittenPitch.Pack(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)))
+            && builder.TiesInto(staffPosition, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave), WrittenPitch.Pack(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave, pitch.QuarterOffset)))
         {
             MarkAccidentalTied(rp.DisplayStep, rp.DisplayOctave);
             lineStartAccidental = accidental;
@@ -221,8 +221,7 @@ public sealed partial class MeasureCollector
             RepeatTieSourcePosition = hasRepeatTie
                 ? NamedArticulationSourceOf(note, "repeatTie") : MusicItem.NoSourcePosition,
             LineStartAccidental = lineStartAccidental,
-            WrittenPitch = pitch.QuarterOffset != 0 ? 0
-                : WrittenPitch.Pack(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
+            WrittenPitch = WrittenPitch.Pack(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave, pitch.QuarterOffset),
             TodoKey = TodoKeyOf(note), TodoMemo = TodoMemoOf(note), TodoBelow = TodoBelowOf(note), TodoSideWritten = TodoSideWrittenOf(note),
         };
     }
@@ -660,7 +659,7 @@ public sealed partial class MeasureCollector
             // A tied member keeps its accidental for a line start only (CreateNoteItem).
             string? memberLineStart = null;
             if (accidental != null && !memberCourtesy && builder != null
-                && builder.TiesInto(staffPosition, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave), WrittenPitch.Pack(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)))
+                && builder.TiesInto(staffPosition, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave), WrittenPitch.Pack(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave, pitch.QuarterOffset)))
             {
                 MarkAccidentalTied(rp.DisplayStep, rp.DisplayOctave);
                 memberLineStart = accidental;
@@ -735,8 +734,7 @@ public sealed partial class MeasureCollector
                 LaissezVibrerSourcePosition: memberLv?.SourceStart ?? MusicItem.NoSourcePosition,
                 RepeatTieSourcePosition: memberRt?.SourceStart ?? MusicItem.NoSourcePosition,
                 LineStartAccidental: memberLineStart,
-                WrittenPitch: pitch.QuarterOffset != 0 ? 0
-                    : WrittenPitch.Pack(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
+                WrittenPitch: WrittenPitch.Pack(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave, pitch.QuarterOffset)));
             members.Add(new ResolvedChordMember(staffPosition, rp.DisplayStep, rp.DisplayAlteration,
                 rp.DisplayOctave, memberHead, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
                 IsDead: memberDead));

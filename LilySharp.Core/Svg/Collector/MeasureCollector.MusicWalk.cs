@@ -915,8 +915,8 @@ public sealed partial class MeasureCollector
             {
                 Midi = midi,
                 // The first part only: the rest are its tied continuations.
-                WrittenPitch = first && pitch.QuarterOffset == 0
-                    ? WrittenPitch.Pack(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave) : 0,
+                WrittenPitch = first
+                    ? WrittenPitch.Pack(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave, pitch.QuarterOffset) : 0,
                 StringNumber = stringNumber,
                 IsDead = isDead,
                 // The dead note's cross head (ItemFactory's note arm says why).

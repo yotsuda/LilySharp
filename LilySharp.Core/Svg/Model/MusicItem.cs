@@ -1772,9 +1772,15 @@ public readonly record struct ChordNoteInfo(
 /// </summary>
 public static class WrittenPitch
 {
-    /// <summary>Packs a step (0–6), an alteration (−2…2) and an octave.</summary>
-    public static int Pack(int step, int alter, int octave)
-        => 1 + step + 7 * (octave + 50) + 1000 * (alter + 3);
+    /// <summary>Packs a step (0–6), an alteration in semitones (−2…2), an octave, and the
+    /// quarter tone written on top of the alteration (<c>cih</c> +1, <c>ceh</c> −1).</summary>
+    /// <remarks>The alteration is held in QUARTER tones, as the voice's accidental memory holds
+    /// it (MeasureCollector.GetDisplayAccidental) and as LilyPond's is a Rational. Until
+    /// 2026-11-14 a quarter-tone head recorded 0 ("none"), so the staff's pass
+    /// (<see cref="Collector.StaffAccidentals"/>) neither read it nor remembered it: a second
+    /// voice's <c>c'</c> after the first voice's <c>cih'</c> printed no natural.</remarks>
+    public static int Pack(int step, int alter, int octave, int quarter = 0)
+        => 1 + step + 7 * (octave + 50) + 1000 * (2 * alter + quarter + 8);
 
     /// <summary>The (step, octave) part — equal for two heads of the same note name in the
     /// same octave, whatever their alterations.</summary>
@@ -1786,8 +1792,9 @@ public static class WrittenPitch
     /// <summary>The octave of a packed pitch.</summary>
     public static int Octave(int packed) => (packed % 1000 - 1) / 7 - 50;
 
-    /// <summary>The alteration of a packed pitch, in semitones.</summary>
-    public static int Alter(int packed) => packed / 1000 - 3;
+    /// <summary>The alteration of a packed pitch, in QUARTER tones: a sharp is 2,
+    /// <c>cih</c> 1.</summary>
+    public static int Quarters(int packed) => packed / 1000 - 8;
 }
 
 /// <summary>

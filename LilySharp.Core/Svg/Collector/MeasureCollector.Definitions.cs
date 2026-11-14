@@ -1210,7 +1210,7 @@ public sealed partial class MeasureCollector
     /// LILYPOND-REF: lily/accidental.cc:131-143 Accidental_interface::print — restore-first adds
     ///   the natural at the left of whichever glyph the alteration has, a quarter tone's too.
     /// </remarks>
-    private static string? AlterationName(int quarters, bool restore = false) => quarters switch
+    internal static string? AlterationName(int quarters, bool restore = false) => quarters switch
     {
         4 => "doubleSharp",
         3 => restore ? "naturalThreeQuarterSharp" : "threeQuarterSharp",

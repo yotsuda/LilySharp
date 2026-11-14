@@ -151,7 +151,7 @@ internal static class StaffAccidentals
             {
                 if (head.HasAccidental || head.TiedIn)
                     continue;
-                int alter = WrittenPitch.Alter(head.Packed);
+                int alter = WrittenPitch.Quarters(head.Packed);
                 // ⑴ The same note in the same octave, last shown in ANOTHER voice.
                 int? owed = Owed(bar, head, alter,
                     e => WrittenPitch.StepOctave(e.Packed) == WrittenPitch.StepOctave(head.Packed),
@@ -166,9 +166,8 @@ internal static class StaffAccidentals
                 // and this line or space reads otherwise.
                 if (owed is null && !clefChange)
                     owed = OwedWhereDrawn(bar, head, alter);
-                if (owed is { } previousAlter)
-                    (added ??= new())[(head.Voice, mi, head.Item, head.Member)] =
-                        Name(alter, previousAlter, style.ExtraNatural);
+                if (owed is { } previousAlter && Name(alter, previousAlter, style.ExtraNatural) is { } name)
+                    (added ??= new())[(head.Voice, mi, head.Item, head.Member)] = name;
             }
         }
         return added == null ? voices : Written(voices, added);
@@ -344,7 +343,7 @@ internal static class StaffAccidentals
                 {
                     if (packed == 0)
                         return;
-                    int alter = WrittenPitch.Alter(packed);
+                    int alter = WrittenPitch.Quarters(packed);
                     int stepOctave = WrittenPitch.StepOctave(packed);
                     bool tied = TiedInto(previous[vi], staffPosition, midi);
                     moment.Add((stepOctave, alter));
@@ -355,8 +354,10 @@ internal static class StaffAccidentals
                         : KeyAlteration(key, WrittenPitch.Step(packed));
                     if (reader == alter)
                         return;
+                    if (Name(alter, reader, style.ExtraNatural) is not { } name)
+                        return;
                     var (s, v) = drawers[vi];
-                    (added[s] ??= new())[(v, mi, item, member)] = Name(alter, reader, style.ExtraNatural);
+                    (added[s] ??= new())[(v, mi, item, member)] = name;
                 }
                 foreach (var e in StaffTimeline.OfMeasure(seenVoices, mi))
                 {
@@ -435,7 +436,7 @@ internal static class StaffAccidentals
         {
             if (!owesFrom(l))
                 continue;
-            int previous = WrittenPitch.Alter(l.Packed);
+            int previous = WrittenPitch.Quarters(l.Packed);
             if (previous != alter)
                 return previous;
         }
@@ -481,22 +482,23 @@ internal static class StaffAccidentals
         if (lastPitch is not { } shown || shown.StaffPosition == head.StaffPosition)
             return null;
         int reader = lastHere is { } here
-            ? WrittenPitch.Alter(here.Packed)
+            ? WrittenPitch.Quarters(here.Packed)
             : KeyAlteration(key, WrittenPitch.Step(head.Packed));
         return reader != alter ? reader : null;
     }
 
-    /// <summary>The alteration <paramref name="key"/> gives diatonic <paramref name="step"/>.</summary>
+    /// <summary>The alteration <paramref name="key"/> gives diatonic <paramref name="step"/>,
+    /// in quarter tones as <see cref="WrittenPitch.Quarters"/> is.</summary>
     private static int KeyAlteration(KeySignature key, int step)
     {
         if (key.Custom != null)
         {
             foreach (var (s, a) in KeySignature.DecodeCustom(key.Custom))
                 if (s == step)
-                    return a;
+                    return 2 * a;
             return 0;
         }
-        return Music.KeySpelling.Alteration(step, key.Sharps);
+        return 2 * Music.KeySpelling.Alteration(step, key.Sharps);
     }
 
     /// <summary>
@@ -642,20 +644,14 @@ internal static class StaffAccidentals
         }
     }
 
-    /// <summary>The glyph for <paramref name="alter"/> after <paramref name="previous"/> —
-    /// with the restoring natural when it steps down inside one sign, as the walk's
-    /// <c>GetDisplayAccidental</c> spells it.</summary>
-    private static string Name(int alter, int previous, bool extraNatural)
+    /// <summary>The glyph for <paramref name="alter"/> after <paramref name="previous"/>, both
+    /// in quarter tones — with the restoring natural when it steps down inside one sign, as
+    /// the walk's <c>GetDisplayAccidental</c> spells it, and by the walk's own table
+    /// (<c>MeasureCollector.AlterationName</c>): null where that has no glyph.</summary>
+    private static string? Name(int alter, int previous, bool extraNatural)
     {
         bool restore = extraNatural && alter != 0 && Math.Abs(alter) < Math.Abs(previous)
             && previous * alter > 0;
-        return alter switch
-        {
-            >= 2 => "doubleSharp",
-            1 => restore ? "naturalSharp" : "sharp",
-            0 => "natural",
-            -1 => restore ? "naturalFlat" : "flat",
-            _ => "doubleFlat",
-        };
+        return MeasureCollector.AlterationName(alter, restore);
     }
 }

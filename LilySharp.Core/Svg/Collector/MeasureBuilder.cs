@@ -340,8 +340,12 @@ internal sealed class MeasureBuilder
             _ => false,
         };
 
+        // Two written pitches decide it where both are recorded, as TieDetector.SamePitch reads
+        // them: `cih'~ c'` shares a position and a MIDI key and is no tie, so the c' keeps
+        // its natural (2026-11-14).
         bool Same(int position, int sounding, int spelled)
-            => sounding == midi && (position == staffPosition || (written != 0 && spelled == written));
+            => sounding == midi
+               && (written != 0 && spelled != 0 ? spelled == written : position == staffPosition);
 
         bool ChordHas(ChordItem c)
         {
