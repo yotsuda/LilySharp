@@ -195,6 +195,11 @@ public sealed class InlineRepeatLilyPondTests
         var (three, _) = Export(TwoParts("|: c''1 | d''1~ | [1. d''1 :| [2. d''1 :| [3. d''1 ] | c''1 |", "c1 | d1 | e1 | f1 | g1 | a1 |"));
         Assert.Equal(@"\repeat volta 3 { c''1 | d''1 ~ | } \alternative { { d''1 } { d''1\repeatTie } { d''1\repeatTie } } | c''1 |", Var(three, "mel"));
 
+        // A section that ends on the tie with no bar line after it, under the form's ':|'.
+        var (open, _) = Export("part mel { section A { c''1 |: d''1 | d''1~ } section B { d''1 | } }\n"
+            + "form { A :| B }\nscore { staff mel }");
+        Assert.Contains(@"\repeat volta 2 { d''1\repeatTie | d''1 ~ }", Var(open, "mel"));
+
         // No form: the sections in declaration order, the same column.
         var (noForm, _) = Export(TwoParts("|: c''1 | d''1~ | [1. d''1 :| [2. d''1 ] | c''1 |", "c1 | d1 | e1 | f1 | g1 |",
             "score { staff mel staff bas }"));

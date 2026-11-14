@@ -103,6 +103,28 @@ internal sealed class RepeatStream
 
     private readonly List<int>[] _next;
 
+    /// <summary>A repeat of the column: its <c>|:</c>, where its body ends (its first ending, or
+    /// its <c>:|</c>), where the whole run ends, its written <c>:|*N</c> and its endings.</summary>
+    internal readonly record struct RepeatRun(int Start, int BodyEnd, int End, int? Count,
+        IReadOnlyList<(PassSet Passes, int From, int To)> Endings);
+
+    /// <summary>The repeats of the column, in order — what the rules about a repeat's endings
+    /// are asked of (<c>MusicRepeatValidator</c>).</summary>
+    public IReadOnlyList<RepeatRun> Runs { get; }
+
+    /// <summary>The bar lines a <c>|:</c> stands on while the <c>|:</c> before it is still
+    /// open: repeats do not nest (docs/inline-repeat-design.md §3.3).</summary>
+    public IReadOnlyList<int> NestedAt { get; }
+
+    /// <summary>The bar lines an ending opens on with no repeat open: its music is plain.</summary>
+    public IReadOnlyList<int> LoneEndingsAt { get; }
+
+    private sealed class Faults
+    {
+        public readonly List<int> Nested = [];
+        public readonly List<int> LoneEndings = [];
+    }
+
     private RepeatStream(List<Play> plays, List<RepeatSign> written, int bars)
     {
         var signs = Normalized(written);
@@ -110,6 +132,12 @@ internal sealed class RepeatStream
         Signs = signs;
         Bars = bars;
         Played = Route(signs, bars);
+        var faults = new Faults();
+        var runs = new List<RepeatRun>();
+        foreach (var element in Elements(signs, bars, faults))
+            if (element is Run run)
+                runs.Add(new RepeatRun(run.Start, run.BodyEnd, run.End, run.Count, run.Endings));
+        (Runs, NestedAt, LoneEndingsAt) = (runs, faults.Nested, faults.LoneEndings);
         _next = new List<int>[bars];
         for (int b = 0; b < bars; b++)
             _next[b] = [];
@@ -498,7 +526,7 @@ internal sealed class RepeatStream
             .SelectMany(g => Enumerable.Repeat(g.Key, g.GroupBy(m => m.Lane).Max(lane => lane.Count())))
             .OrderBy(m => m.At).ThenBy(Rank).ToList();
 
-    private static List<Element> Elements(IEnumerable<RepeatSign> signs, int end)
+    private static List<Element> Elements(IEnumerable<RepeatSign> signs, int end, Faults? faults = null)
     {
         var sorted = Normalized(signs);
         var elements = new List<Element>();
@@ -550,6 +578,8 @@ internal sealed class RepeatStream
                     if (inRun && lastEnd >= 0)
                         CloseRun(mark.At); // a trailing ending nothing closed ends here
                     // A '|:' nothing closed repeats nothing: its music is plain (LYS4017).
+                    if (runStart >= 0 && lastEnd < 0 && mark.At > runStart)
+                        faults?.Nested.Add(mark.At);
                     Flush(mark.At);
                     (runStart, bodyEnd, count, lastEnd, tail) = (mark.At, -1, null, -1, -1);
                     endings = new List<(PassSet, int, int)>();
@@ -571,7 +601,10 @@ internal sealed class RepeatStream
                 case RepeatSignKind.EndingStart:
                     // An ending no repeat opens is its plain music, once (GRAMMAR §6, LYS6008).
                     if (!inRun)
+                    {
+                        faults?.LoneEndings.Add(mark.At);
                         break;
+                    }
                     CloseEnding(mark.At);
                     if (bodyEnd < 0)
                         bodyEnd = mark.At;

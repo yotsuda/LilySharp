@@ -920,6 +920,18 @@ public static class DiagnosticCodes
     /// disagree leave no reading (owner's decision 2026-11-14).</summary>
     public const string RepeatSignsDisagree = "LYS1070";
 
+    /// <summary>Error: a volta ending or a navigation mark written INSIDE a bar of a section's
+    /// music — <c>g a [1. b c :|</c>, <c>d2 segno e2</c>. A sign stands on a bar line
+    /// (docs/inline-repeat-design.md §3.5, §3.6); the bar it cuts is written with a line there
+    /// and read as one bar (<c>Semantics.SignCutBars</c>).</summary>
+    public const string SignInsideABar = "LYS1071";
+
+    /// <summary>Error: a <c>|:</c> written in a section's music opens a repeat while the
+    /// <c>|:</c> before it — the music's or the form's, in this section or an earlier one — is
+    /// still open. Repeats do not nest (docs/inline-repeat-design.md §3.3); read on the score's
+    /// sign column, per form.</summary>
+    public const string NestedRepeat = "LYS1072";
+
     /// <summary>Warning: the verses of a lyric section do not fit the repeat its section's music
     /// writes (docs/inline-repeat-design.md §6, owner's rules 2026-11-14) — a pass no verse
     /// names (it sings the last verse written), a verse for a pass the repeat does not have (it

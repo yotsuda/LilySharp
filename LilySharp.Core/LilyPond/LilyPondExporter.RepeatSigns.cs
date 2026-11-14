@@ -236,7 +236,7 @@ public sealed partial class LilyPondExporter
                 case InlineVoltaSyntax ending:
                     return EndsTied(ending.Items, before: null);
             }
-            if (SectionSigns.TakesTime(list[i]))
+            if (list[i] is not SyntaxTokenNode && SectionSigns.TakesTime(list[i]))
                 return false;
         }
         return false;

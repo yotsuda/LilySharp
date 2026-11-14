@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 438 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **565** | |
+| `OWN` | 439 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **566** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -247,7 +247,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（438 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（439 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -477,6 +477,8 @@
 - **`ChordDiagramsKey`** LILYSHARP-OWN: LilyPond's FretBoards context carries its own stringTunings
 ### `LilySharp.Core/Semantics/MeasureModel.cs`
 - **`MeasureModel.Split`** LILYSHARP-OWN. ⚠️ ONLY A CHART, and only one whose line wrote the bar line:
+### `LilySharp.Core/Semantics/MusicRepeatValidator.cs`
+- **`MusicRepeatValidator`** LILYSHARP-OWN: the language's rules about its own signs. Departs from: LilyPond's
 ### `LilySharp.Core/Semantics/RepeatPasses.cs`
 - **`RepeatPasses.EndingFor`** LILYSHARP-OWN: a pass no ending names replays the LAST ending — |: A [1. B] :|*3 [2. C]
 ### `LilySharp.Core/Semantics/RepeatSignAgreementValidator.cs`
