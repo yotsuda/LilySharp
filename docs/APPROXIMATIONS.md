@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 436 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **563** | |
+| `OWN` | 437 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **564** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -247,7 +247,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（436 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（437 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -491,6 +491,8 @@
 - **`TupletMeterValidator`** LILYSHARP-OWN: a deliberate difference from LilyPond, which takes \time inside \tuplet.
 ### `LilySharp.Core/Semantics/TupletVoiceValidator.cs`
 - **`TupletVoiceValidator`** LILYSHARP-OWN: a deliberate difference from LilyPond, which takes &lt;&lt; \\ &gt;&gt;
+### `LilySharp.Core/Semantics/VerseRepeatValidator.cs`
+- **`VerseRepeatValidator`** LILYSHARP-OWN: the language's rule about its own verses. Departs from: nothing in LilyPond
 ### `LilySharp.Core/Semantics/VoiceLeading.cs`
 - **`CheckPragma`** LILYSHARP-OWN: LilyPond has no checks to turn on; the pragma is Lily#'s own.
 - **`VoiceLeadingValidator`** LILYSHARP-OWN: LilyPond checks no voice leading. The rules are the common-practice

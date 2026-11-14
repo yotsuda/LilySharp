@@ -387,6 +387,7 @@ public sealed partial class LilySharpLanguageServer
                 if (TabOctaveAction(doc, uri, diagnostic) is { } tabOctave)
                     actions.Add(tabOctave);
                 actions.AddRange(RepeatSignActions(doc, uri, diagnostic));
+                actions.AddRange(VerseRepeatActions(doc, uri, diagnostic));
                 if (diagnostic.Code == DiagnosticCodes.TodoMark && !todoOffered)
                 {
                     todoOffered = true;
@@ -629,6 +630,19 @@ public sealed partial class LilySharpLanguageServer
         if (diagnostic.Code != DiagnosticCodes.RepeatSignsDisagree)
             yield break;
         foreach (var fix in LilySharp.Core.Editing.RepeatSignFixes.For(doc.Tree, diagnostic.Span))
+            yield return QuickFix(fix.Title, doc, uri, diagnostic, EditOf(doc.Text, fix.Start, fix.End, fix.NewText));
+    }
+
+    /// <summary>
+    /// The quick fixes for LYS4080, verses that do not fit their section's repeat (owner's
+    /// instruction 2026-11-14): add the missing verse, delete the one never sung, or renumber
+    /// the one that names a pass twice (<see cref="LilySharp.Core.Editing.VerseRepeatFixes"/>).
+    /// </summary>
+    private static IEnumerable<CodeAction> VerseRepeatActions(Document doc, Uri uri, CoreDiagnostic diagnostic)
+    {
+        if (diagnostic.Code != DiagnosticCodes.VerseAgainstRepeat)
+            yield break;
+        foreach (var fix in LilySharp.Core.Editing.VerseRepeatFixes.For(doc.Tree, diagnostic.Span))
             yield return QuickFix(fix.Title, doc, uri, diagnostic, EditOf(doc.Text, fix.Start, fix.End, fix.NewText));
     }
 

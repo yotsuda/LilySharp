@@ -920,6 +920,13 @@ public static class DiagnosticCodes
     /// disagree leave no reading (owner's decision 2026-11-14).</summary>
     public const string RepeatSignsDisagree = "LYS1070";
 
+    /// <summary>Warning: the verses of a lyric section do not fit the repeat its section's music
+    /// writes (docs/inline-repeat-design.md §6, owner's rules 2026-11-14) — a pass no verse
+    /// names (it sings the last verse written), a verse for a pass the repeat does not have (it
+    /// is printed and not sung), or a pass two verses name (the first is sung). A warning: the
+    /// book plays as the sentence says, and each has a quick fix.</summary>
+    public const string VerseAgainstRepeat = "LYS4080";
+
     /// <summary>Warning: a <c>chords</c> row entry that is no chord Lily# reads — <c>C7b9</c>,
     /// <c>C-5</c>, a misspelled quality. The row still prints it as written and plays only its
     /// root (a root that is no A–G is the parser's error); the message names the spelling's fix, as the
