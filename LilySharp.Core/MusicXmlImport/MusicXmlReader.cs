@@ -460,7 +460,7 @@ internal static class MusicXmlReader
                         // next real note as a leading acciaccatura/grace block.
                         if (Local(el, "grace") != null)
                         {
-                            if (ReadGraceNote(el) is { } g)
+                            if (ReadGraceNote(el, report, measureNo) is { } g)
                             {
                                 pendingGrace.Add(g);
                                 if (g.SlurStart && !g.ChordWithPrev)
@@ -1203,8 +1203,7 @@ internal static class MusicXmlReader
         note.Octave = int.TryParse(Local(pitch, "octave")?.Value, out int oct) ? oct : 4;
 
         if (!alterSpelled)
-            report.Warn(measureNo, $"an alteration of {alterText?.Trim()} semitones has no Lily# spelling (whole semitones "
-                + "to two, and the quarter tones 0.5 and 1.5 either way); the nearest is written.");
+            WarnOfAnUnspelledAlter(report, measureNo, alterText);
 
         // Ties: either the sounding <tie> or the notated <tied> marks a tie.
         foreach (var t in Els(el, "tie").Concat(
@@ -1401,9 +1400,16 @@ internal static class MusicXmlReader
         return (Math.Clamp(whole, -2, 2), 0, whole == alter && Math.Abs(whole) <= 2);
     }
 
+    /// <summary>The word for an <c>&lt;alter&gt;</c> <see cref="ReadAlter"/> could only round —
+    /// a note's and a grace note's alike (the grace's was rounded with no word until
+    /// session 1233).</summary>
+    private static void WarnOfAnUnspelledAlter(ImportReport report, int measureNo, string? alterText)
+        => report.Warn(measureNo, $"an alteration of {alterText?.Trim()} semitones has no Lily# spelling (whole semitones "
+            + "to two, and the quarter tones 0.5 and 1.5 either way); the nearest is written.");
+
     /// <summary>A grace &lt;note&gt; → an <see cref="ImportGraceNote"/> (pitch + written
     /// value + slash), or null for a rest/pitchless grace.</summary>
-    private static ImportGraceNote? ReadGraceNote(XElement el)
+    private static ImportGraceNote? ReadGraceNote(XElement el, ImportReport report, int measureNo)
     {
         var pitch = Local(el, "pitch");
         if (pitch == null)
@@ -1411,7 +1417,10 @@ internal static class MusicXmlReader
         string step = Local(pitch, "step")?.Value.Trim().ToUpperInvariant() ?? "C";
         int stepIdx = "CDEFGAB".IndexOf(step.Length > 0 ? step[0] : 'C');
         var (value, dots) = NoteValue(el, 1); // grace has no duration → use <type>
-        var graceAlter = ReadAlter(Local(pitch, "alter")?.Value);
+        string? graceAlterText = Local(pitch, "alter")?.Value;
+        var graceAlter = ReadAlter(graceAlterText);
+        if (!graceAlter.Spelled)
+            WarnOfAnUnspelledAlter(report, measureNo, graceAlterText);
         return new ImportGraceNote
         {
             Step = stepIdx < 0 ? 0 : stepIdx,

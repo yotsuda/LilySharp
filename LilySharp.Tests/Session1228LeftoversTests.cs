@@ -286,6 +286,24 @@ public class Session1228LeftoversTests
         Assert.Contains("0.25", Assert.Single(report.Warnings));
     }
 
+    /// <summary>
+    /// …and a GRACE note's unnameable alteration is said too: until session 1233 only a
+    /// full-size note's was, and the grace's was rounded with no word.
+    /// </summary>
+    [Fact]
+    public void Import_SaysWhatItCannotSpellOnAGraceNote()
+    {
+        string xml = "<score-partwise version=\"4.0\"><part-list><score-part id=\"P1\"><part-name>m</part-name></score-part></part-list>"
+            + "<part id=\"P1\"><measure number=\"1\"><attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time>"
+            + "<clef><sign>G</sign><line>2</line></clef></attributes>"
+            + "<note><grace/><pitch><step>A</step><alter>0.75</alter><octave>4</octave></pitch><type>16th</type></note>"
+            + "<note><pitch><step>G</step><octave>4</octave></pitch><duration>4</duration><type>whole</type></note>"
+            + "</measure></part></score-partwise>";
+        var (lys, report) = new MusicXmlImporter().Import(xml);
+        Assert.Contains("grace { ais'16 } g'1 |", lys);
+        Assert.Contains("0.75", Assert.Single(report.Warnings));
+    }
+
     // ---- An accent dynamic is one note's (2026-11-14) ----
 
     private static List<int> Velocities(string music)
