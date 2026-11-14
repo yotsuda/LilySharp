@@ -1519,7 +1519,8 @@ score { chords prog  staff mel }
   every part follows it. Above, only the chord row writes the repeat; `mel` writes its bars
   once, in PRINTED order (body, 1st ending, 2nd ending), and plays C F G7 C G7 Am C.
   Writing the sign in several parts is fine when they agree; `|:` against a plain `|` is
-  fine; `|:` against `:|` at the same bar line is an error (LYS1070).
+  fine; `|:` against `:|` at the same bar line is an error (LYS1070), and so are two parts'
+  endings there with different numbers or lengths, or two parts' different navigation marks.
 - **Pairs are read on the form**, in the order it prints the sections: a `|:` is closed by a
   later `:|` — even in a later section, or by the form's (`form { A B }` with the `|:` in A
   and the `:|` in B). Unclosed is an error (LYS4017). A `:|` with nothing open repeats from

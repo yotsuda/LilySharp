@@ -1794,7 +1794,9 @@ with `]`).
   repeats with it. Each part writes its bars once, in printed order. A part may write the
   same sign too; `|:` against a plain `|` is no disagreement, but two parts writing
   different repeat barlines at the same bar line (`|:` against `:|`, `:|*2` against `:|*3`)
-  is an error (**LYS1070**; the quick fixes write one part's sign into the other). The
+  is an error (**LYS1070**; the quick fixes write one part's sign into the other) — and so
+  are two parts' endings opening on one bar line with different passes or lengths, and two
+  parts' different navigation marks on one bar line. The
   editor's *Write Repeat Signs in Every Part* / *Keep Repeat Signs in One Part*
   commands do it for a whole file.
 - **The pairs are read on the form.** The sections are laid out in the order the form prints

@@ -917,7 +917,9 @@ public static class DiagnosticCodes
     /// bar line of a section — <c>|:</c> in one and <c>:|</c> in the other, or <c>:|*2</c> and
     /// <c>:|*3</c>. A repeat is the score's (docs/inline-repeat-design.md §3.2): a part that
     /// writes a plain <c>|</c> there follows the sign another writes, but two signs that
-    /// disagree leave no reading (owner's decision 2026-11-14).</summary>
+    /// disagree leave no reading (owner's decision 2026-11-14). The same of two parts' endings
+    /// opening on one bar line (other passes, or another length) and of two parts' different
+    /// navigation marks on one (session 1251).</summary>
     public const string RepeatSignsDisagree = "LYS1070";
 
     /// <summary>Error: a volta ending or a navigation mark written INSIDE a bar of a section's

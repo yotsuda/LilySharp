@@ -2735,7 +2735,9 @@ InlineVolta    = '[' , Integer , [ '-' , Integer | ',' , Integer , { ',' , Integ
       alone repeats the melody. A part that does not write it is right ('|:' against a plain
       '|' is no disagreement). Two parts writing DIFFERENT repeat barlines at the same bar
       line ('|:' against ':|', ':|*2' against ':|*3') is an error (LYS1070, with quick fixes
-      that write one part's sign into the other).
+      that write one part's sign into the other). The same holds of the other signs: two
+      parts' endings opening on one bar line name the same passes and run the same bars, and
+      two parts' navigation marks on one bar line are the same marks (LYS1070).
    2. THE PAIRS ARE READ ON THE FORM, not in the section. The sections are laid out in the
       order the form prints them, the form's own signs among them, and the rules are the
       form's: a '|:' is closed by a later ':|' — in a later section, or by the form

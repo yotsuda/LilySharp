@@ -23,7 +23,8 @@ namespace LilySharp.Core.Semantics;
 
 /// <summary>
 /// Reports two voices of a section — parts, or a part and a chords row — that write DIFFERENT
-/// repeat signs on the same bar line (<see cref="DiagnosticCodes.RepeatSignsDisagree"/>).
+/// repeat signs on the same bar line (<see cref="DiagnosticCodes.RepeatSignsDisagree"/>) — bar
+/// lines, endings, or navigation marks.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -60,10 +61,10 @@ internal sealed class RepeatSignAgreementValidator : ISemanticValidator
     public void Validate(SyntaxTree tree)
     {
         var root = tree.GetRoot();
-        // No repeat sign in the music: nothing to compare, and no voice is split for it.
-        if (!root.DescendantNodesOfKinds(SyntaxKind.Barline).Any(n => n is BarlineSyntax b
-                && SyntaxFacts.IsRepeatBarlineKind(b.BarToken.Kind) && !b.IsInside<FormDeclarationSyntax>()))
+        // No sign in the music: nothing to compare, and no voice is split for it.
+        if (!RepeatStream.InTheMusic(root))
             return;
+        ReportEndingsAndMarks(root);
 
         foreach (var place in Signs(root).GroupBy(s => (s.Section, s.BarsBefore)))
         {
@@ -79,6 +80,74 @@ internal sealed class RepeatSignAgreementValidator : ISemanticValidator
                     + "agree, or write a plain '|' in one of them - it follows the other's sign.");
             }
         }
+    }
+
+    /// <summary>
+    /// The same rule for the endings and the navigation marks (session 1251): two voices that
+    /// each write an ending opening on one bar line write the same passes over the same bars,
+    /// and two that each write marks on one bar line write the same marks. A voice that writes
+    /// none there follows the one that does, as with the bar lines.
+    /// </summary>
+    /// <remarks>Until then the first voice's ending stood and the other's numbers were dropped
+    /// unsaid (<c>RepeatStream.AddTheMusics</c>), and two parts' different jumps on one line
+    /// were both on the column, the route taking the first.</remarks>
+    private void ReportEndingsAndMarks(SyntaxNode root)
+    {
+        var phrases = SectionBarCounts.PhraseBodies(root);
+        var voices = SectionBarCounts.SemanticVoices(root, phrases);
+        var label = new Dictionary<SyntaxNode, string>(ReferenceEqualityComparer.Instance);
+        foreach (var voice in voices)
+            label.TryAdd(voice.Container, voice.Label);
+        string Who(SyntaxNode container) => label.GetValueOrDefault(container, "another part");
+
+        foreach (string section in voices.Select(v => v.SectionName).Distinct(StringComparer.Ordinal))
+        {
+            var written = SectionSigns.Of(section, voices, phrases);
+
+            foreach (var place in written.Endings.GroupBy(e => e.From))
+            {
+                var first = place.First();
+                foreach (var ending in place.Skip(1))
+                {
+                    if (ReferenceEquals(ending.Container, first.Container))
+                        continue;
+                    var ink = new TextSpan(ending.Node.Span.Start, Math.Min(ending.Node.Span.Length, 1 + ending.Node.VoltaText.Length));
+                    if (!ending.Node.Numbers.SequenceEqual(first.Node.Numbers))
+                        _diagnostics.Error(ink, DiagnosticCodes.RepeatSignsDisagree,
+                            $"'[{ending.Node.VoltaText}' here and '[{first.Node.VoltaText}' in {Who(first.Container)} open on the same bar line of "
+                            + $"section '{section}' (after its bar {ending.From}). An ending is the whole score's, so the parts "
+                            + "that write one there write the same passes: make the two agree, or leave the ending out of "
+                            + "one of them - it follows the other's.");
+                    else if (ending.To != first.To)
+                        _diagnostics.Error(ink, DiagnosticCodes.RepeatSignsDisagree,
+                            $"The ending '[{ending.Node.VoltaText}' runs {Bars(ending.To - ending.From)} here and {Bars(first.To - first.From)} in "
+                            + $"{Who(first.Container)} (section '{section}', after its bar {ending.From}). An ending is the whole score's, so "
+                            + "the parts that write it end it on the same bar line: make the two agree, or leave the ending out "
+                            + "of one of them - it follows the other's.");
+                }
+            }
+
+            foreach (var place in written.Marks.GroupBy(m => m.Bars))
+            {
+                var byVoice = place.GroupBy(m => m.Container, ReferenceEqualityComparer.Instance).ToList();
+                var first = byVoice[0].ToList();
+                foreach (var other in byVoice.Skip(1).Select(g => g.ToList()))
+                {
+                    if (other.Select(m => m.Node.MarkType).SequenceEqual(first.Select(m => m.Node.MarkType)))
+                        continue;
+                    _diagnostics.Error(other[0].Node.Span, DiagnosticCodes.RepeatSignsDisagree,
+                        $"{Marks(other)} here and {Marks(first)} in {Who(first[0].Container)} stand on the same bar line of "
+                        + $"section '{section}' (after its bar {place.Key}). A navigation mark is the whole score's, so the "
+                        + "parts that write one there write the same marks: make the two agree, or leave the mark out of "
+                        + "one of them - it follows the other's.");
+                }
+            }
+        }
+
+        static string Bars(int n) => n == 1 ? "1 bar" : $"{n} bars";
+        static string Marks(List<SectionSigns.Mark> marks)
+            => string.Join(" ", marks.Select(m => "'" + string.Join(' ',
+                Enumerable.Range(0, m.Node.SlotCount).Select(i => m.Node.GetChild(i)).OfType<SyntaxTokenNode>().Select(t => t.Text)) + "'"));
     }
 
     /// <summary>Every repeat sign the sections' voices write, in document order.</summary>
