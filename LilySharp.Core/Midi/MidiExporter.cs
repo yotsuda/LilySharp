@@ -289,6 +289,66 @@ public sealed class MidiExporter
         }
     }
 
+    /// <summary>
+    /// A hairpin is played: each note of the part is struck at the level the hairpin has reached
+    /// at its onset (owner's decision 2026-11-14; until then only a singer swelled, and an
+    /// instrument played every note of a crescendo at the level written before it). The rule is
+    /// the singer's (<see cref="SungVoices.Swells"/>): from the hairpin's first note to the first
+    /// level written after it, or two dynamics on where none follows. A hairpin is its PART's —
+    /// every voice of the part follows it, as every voice follows the part's levels — and a
+    /// grand staff's hands share it as they share those (<see cref="ShareGrandStaffDynamics"/>).
+    /// The level written stays on the note (<see cref="MidiNote.WrittenVelocity"/>) for the
+    /// singer, who swells inside a note too.
+    /// </summary>
+    /// <remarks>LILYSHARP-OWN in its reach: LilyPond's Dynamic_performer ramps a hairpin with no
+    /// target by a quarter of the volume range (lily/dynamic-performer.cc:233-272
+    /// calc_departure_volume); this follows the singer's rule so that a part sounds one way sung or played.
+    /// A note is struck once, so a held note does not swell (no controller is written).</remarks>
+    private void SwellInstruments(MidiTrack track)
+    {
+        bool any = false;
+        foreach (var n in track.Notes)
+            any |= n.Swell != 0;
+        if (!any)
+            return;
+        var groupOf = new Dictionary<string, int>(StringComparer.Ordinal);
+        int groups = 0;
+        if (_playedSpec != null)
+            foreach (var set in GrandStaffPartSets(_playedSpec.Items))
+            {
+                foreach (string p in set)
+                    groupOf.TryAdd(p, groups);
+                groups++;
+            }
+        var lines = new Dictionary<int, List<int>>();
+        for (int i = 0; i < track.Notes.Count; i++)
+        {
+            if (track.Notes[i].Part is not { } part || track.Notes[i].DurationTicks < 0)
+                continue;
+            if (!groupOf.TryGetValue(part, out int g))
+                groupOf[part] = g = groups++;
+            if (!lines.TryGetValue(g, out var line))
+                lines[g] = line = new List<int>();
+            line.Add(i);
+        }
+        foreach (var line in lines.Values)
+        {
+            if (!line.Exists(i => track.Notes[i].Swell != 0))
+                continue;
+            // In time order; the notes of one moment keep the order they were written in.
+            var order = line.OrderBy(i => track.Notes[i].StartTick).ToList();
+            var notes = order.ConvertAll(i => track.Notes[i]);
+            var (at, _) = SungVoices.Swells(notes, k => notes[k].StartTick, k => notes[k].StartTick + notes[k].DurationTicks);
+            for (int k = 0; k < order.Count; k++)
+            {
+                int level = SungVoices.Written(notes[k]);
+                int struck = Math.Clamp((int)Math.Round(at[k]), 1, 127);
+                if (struck != level)
+                    track.Notes[order[k]] = notes[k] with { Velocity = struck, WrittenVelocity = level };
+            }
+        }
+    }
+
     /// <summary>The part names under each brace (<see cref="Svg.Model.StaffGroupType.GrandStaff"/>)
     /// of the played score, every staff of the group at any depth.</summary>
     private static IEnumerable<HashSet<string>> GrandStaffPartSets(IEnumerable<Svg.Collector.RenderItemSpec> items)
@@ -782,6 +842,7 @@ public sealed class MidiExporter
                 _barTicks.Add(t);
         }
         ShareGrandStaffDynamics(mainTrack);
+        SwellInstruments(mainTrack);
         // The notes an overfull bar ran past its bar line (AlignBarLine), once nothing indexes
         // the track any more.
         mainTrack.Notes.RemoveAll(n => n.DurationTicks < 0);

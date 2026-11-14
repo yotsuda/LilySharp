@@ -84,8 +84,9 @@ public readonly record struct MidiNote(
     bool BreathAfter = false,
     // `@breath` alone, of those two: with a note right after it the breath is heard. Not written to .mid files.
     bool Inhale = false,
-    // A hairpin starts on this note, 1 `@cresc`, -1 `@decresc`/`@dim`: a singer swells (SungVoices).
-    // Not written to .mid files: the MIDI plays each note at the last level written.
+    // A hairpin starts on this note, 1 `@cresc`, -1 `@decresc`/`@dim`: a singer swells through
+    // its notes (SungVoices) and an instrument strikes each note at the level the hairpin has
+    // reached (MidiExporter.SwellInstruments, which writes that into Velocity).
     int Swell = 0,
     // `@!cresc` or `@!decresc` was written on this note. Not written to .mid files.
     bool SwellEnds = false,
@@ -104,7 +105,11 @@ public readonly record struct MidiNote(
     // (MidiExporter.CloseOnset): where that note was cut short — a staccato — the silence
     // between the two is the articulation's and not a rest, and a singer holding a syllable
     // goes on into this note (SungVoices). Not written to .mid files.
-    bool FollowsNote = false
+    bool FollowsNote = false,
+    // The level written for this note, where a hairpin moved Velocity away from it
+    // (MidiExporter.SwellInstruments); 0 where Velocity is that level. A singer reads this one
+    // and swells by its own clock (SungVoices.Written). Not written to .mid files.
+    int WrittenVelocity = 0
 );
 
 /// <summary>

@@ -142,8 +142,8 @@ public enum DynamicLevel
     /// <summary>niente — nothing, the silence a hairpin fades to (<c>@decresc … @niente</c>, al
     /// niente) or grows from (<c>@niente@cresc</c>, dal niente); the thin end that touches it is
     /// drawn as a circle. Its value only tells it from the levels: a note struck at it plays as
-    /// <see cref="PPPP"/> (<see cref="DynamicSyntax.Velocity"/>; the MIDI plays each note at the
-    /// last level written and does not ramp a hairpin).</summary>
+    /// <see cref="PPPP"/> (<see cref="DynamicSyntax.Velocity"/>), and a hairpin that grows from
+    /// it or fades to it is played from or to that level (MidiExporter.SwellInstruments).</summary>
     Niente = 1,
     /// <summary>Five-p pianissississimo, <c>\ppppp</c> (softest).</summary>
     PPPPP = 32,

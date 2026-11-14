@@ -1400,8 +1400,7 @@ public class GrammarEvaluation4Tests
         Assert.Contains("c'4\\f\\< d' e' f' |", ly);
         Assert.Contains("g'1\\ff", ly);
         Assert.Contains("g1 )", ly);
-        // (The MIDI ramps no hairpin whose target stands in the next section, over an ordinary
-        // boundary either: the ending's notes are at @f and B's at @ff in both books.)
+        // (The ending's notes climb from @f to B's @ff, the same in both books.)
         static int[] Levels(string source) => [.. new LilySharp.Core.Midi.MidiExporter().Export(SyntaxTree.Parse(source)).Tracks
             .SelectMany(t => t.Notes).Where(n => n.Pitch >= 60).OrderBy(n => n.StartTick).TakeLast(5).Select(n => n.Velocity)];
         Assert.Equal(Levels(Book("A ~E1 ~E2 B")), Levels(source));

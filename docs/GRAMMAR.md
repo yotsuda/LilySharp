@@ -3323,7 +3323,10 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
    - Hairpins:      @cresc @decresc @dim  (start note → next dynamic, or to @!cresc / @!decresc /
                  @!dim on a later note — LilyPond's \! — which ends whichever is open; written after
                  the start on ONE note, @cresc@!cresc, it spans that note's length; the staff's side as a level's; @cresc.up / @cresc.down gives its line the side,
-                 and the marks after it on that line that write none follow, as LilyPond's do)
+                 and the marks after it on that line that write none follow, as LilyPond's do;
+                 played: each note is struck at the level the hairpin has reached — from its first
+                 note to the next level when that lies its way, else two dynamics on, which then
+                 stands; every voice of the part follows it, and both hands of a grandStaff)
    - Niente:        @niente  (a hairpin's thin end on it is a circle: @decresc … @niente,
                     @niente@cresc; alone the italic word; at the thick end LYS4029)
    - Stem:          @stemUp @stemDown      (a beam's shared direction wins)
