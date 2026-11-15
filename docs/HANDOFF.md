@@ -141,6 +141,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1276セッション（2026-11-15・YT-DELL2）
+
+base `1ff29489d`・開始時 full 17316 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17319（Lab `p1276` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 198）。
+移調楽器の part が自分の調号で書かれた MusicXML（B♭ クラが D major・フルートが C major の総譜）の読み込み（`004f3e74a`）。
+- ⚠️ **第1275 の 7.7 と leftovers に書いた「part の調号がファイルの調になる」は測らずに書いた誤り**（RULES §5.0「未確認と書く前に 1 冊書く」）。測ると（Lab `p1276/probe`）絵は正しく、クラの `key d major` が**音楽の 1 小節目**に書かれ、読み込んだ本が LYS2023 を出していた。
+- 直し: ファイルの調は「基準の part」の調＝移調しない（オクターブは可）・調号のある最初の part（`LysWriter.ReferencePart`）。開始の調がそれと違う part は header に自分の調を書く＝home（`HomeKey`・`part clarinet { clef treble transposition bes key d major }`）、その part の section ごとの指示は home に対して読む（home に戻る section は何も書かない）。両方が変える転調は今までどおり各 part の音楽の中。調号の無い part（`<key/>`）も同じ形で header に `key none`＝第1272 `89d3f7924` の「調のある側で開く」規則を置き換えた。
+- 門: 網 `MusicXmlTransposingImportTests` に 3 本（クラが先でも後でも・読んだ本に診断なし・もう一度 MusicXML に書くと各 part が読んだ調を言う＝第1273 の直しと合わせて往復）。毒 5 本は全部赤（Lab `p1276/poisons.txt`）。終了時 full 17319 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17322（`run2.trx`）・Core 警告 0。絵と書き出しは触っていない。
+- 7.7: ⚠️ 1 つの part だけが曲の途中で調を変える形は今も音楽の中に書かれ LYS2023 が出る（それはその警告の対象）。⚠️ 大譜表を割った 2 段（同じ調）と、基準の part が途中から始まる（最初の小節に調が無い）ファイルは見ていない。perf: 読み込みだけ。7.5: Core '+' 35 行・REF 0・OWN 1（`ReferencePart`）。
+
+## 以下は第1275セッションの経緯
+
 ### 1.1 第1275セッション（2026-11-15・YT-DELL2）
 
 base `5687fabb2`・開始時 full 17302 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17305（Lab `p1275` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 196）。
@@ -148,17 +159,6 @@ base `5687fabb2`・開始時 full 17302 合格 / 1 失敗（`ReadmeSampleTests`�
 - 直し: 読み手はどの移調も取り、書き手は `transposition` に書く＝1・2 オクターブは 4 語のまま、ほかは「書かれた `c'` で鳴る音」（`InstrumentDefaults.TranspositionPitchOf`＝`TranspositionOfPitch` の逆・B♭／E♭／A♭ は♭、F♯／C♯ は♯）。3 オクターブ（語が無かった）は `c,,`。鳴る高さで書かれた bass（TAB で `<transpose>` なし）は `instrument bass transposition c'` と宣言し、vibrato を読む（今までは「なし」の語が無く宣言しなかった）。
 - 門: 網 `MusicXmlTransposingImportTests` 14 本（Lily# が書いた 12 種の header が警告なしで戻り、同じ音で鳴る・他のソフトの B♭ の part・逆関数）と `MusicXmlFrettedImportTests` の bass の網を書き直した。毒 6 本は全部赤（Lab `p1275/poisons.txt`）。終了時 full 17316 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17319（`run2.trx`）・Core 警告 0。絵と書き出しは触っていない（掃きは回していない）。
 - 7.7: ⚠️ 読み戻した part は `instrument` の preset を持たない（名前・音色・移調は戻る・音域の検査は戻らない）。⚠️ `<diatonic>` は読まない。⚠️ 移調楽器が自分の調号で書かれたファイルは、書き手がファイルに 1 つの調しか書かないので part の調号がファイルの調になる（どれも leftovers に書いた）。perf: 読み込みだけ。7.5: Core '+' 52 行・REF 0・OWN 1（`TranspositionPitchOf` の綴り）。CHANGELOG は 2 つとも `## Unreleased`。
-
-## 以下は第1274セッションの経緯
-
-### 1.1 第1274セッション（2026-11-15・YT-DELL2）
-
-base `f1e0f0fcf`・開始時 full 17301 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17304（Lab `p1274` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 194）。
-オーナーの指摘（2026-11-15）「テンポは各 section の頭でリセットせず、直前のテンポを維持すべき」→ **`00f7b3d29`（2026-11-12）を戻した**（`c8ea54943`）。
-- 経緯: §3 の決定（2026-08-31・第303「テンポはリセットしない」）があるのに、文法の評価の所見（`form { A B A }` で B の見出しの tempo が戻った A に残る）を欠陥と読み、**確認なしに**「tempo の無い section はファイルの tempo に戻る」へ変えていた。⇒ **評価・双子・探り譜の所見が §3 の行と食い違ったら、直す前に訊く**（§3 の行に書いた）。
-- 戻したもの: ページ（`ReturnToHomeTempo` と呼び手 2 つ）・MIDI（section の頭の戻し）・MusicXML（戻りの direction）・`.ly`（戻りの `\tempo`）。**残したもの**（戻りに依存しない）: 曲の最初の音の前の `tempo` は開始のテンポ／見出しの `tempo` が立っているテンポと同じなら刷らない・送らない（`tempo!` は刷る）／MusicXML の各 part は曲頭のテンポで開く。戻りは書く＝戻る section の見出しに `tempo`。
-- 門: 戻りを見張っていた網 13 本を決定の向きに書き直し、「見出しに書けば戻る」の網を 1 本足した。毒はページと MusicXML の 2 本が赤・MIDI の 1 本は緑（同じテンポを送り直すだけで結果が変わらない）（Lab `p1274/poisons.txt`）。全 svg の掃き 1268 枚で差 0（コーパスに戻りを踏む本は無かった）。文書 3 冊と CHANGELOG（未リリースの 2 項目を削除・3 項目から戻りの句を削除）。終了時 full 17302 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17305（`run2.trx`）・Core 警告 0。0.15.0（11-07）には入っていない挙動。
-- 7.7: ⚠️ ページの「立っているテンポ」は譜表の歩きごと＝音楽の中の tempo を 1 つの part だけが書いた本で、見出しの tempo を刷るかどうかが先頭の譜表の歩きで決まる形は見ていない（今回の変更より前から）。perf: 計算を減らしただけ。7.5: Core '+' 40 行・REF 0・OWN 1（`SectionHeaders.RestatesTempo` の注を書き直した行）。
 
 ## 2. 開いている作業
 
