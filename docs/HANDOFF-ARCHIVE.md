@@ -271,6 +271,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1270セッションの経緯
+
+### 1.1 第1270セッション（2026-11-15・YT-DELL2）
+
+base `eef8adb7e`・開始時 full 17225 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17228（Lab `p1270` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 184）。
+オーナー決定 2026-11-15 ⑥ の案 7（まとめた譜表の名前 `condensedStaff "Tpts 1-2" "Tpts" { tp1 tp2 }`）。設計メモは `docs/eval4-features-design.md` §7（実際の形）。
+- 作った: キーワード（と音部記号の語）の後・`{` の前に文字列を 1 つか 2 つ＝最初の段の名前と 2 段目からの短い名前（`part vn1 "Violin I" "Vn. I"` と同じ並び・combinedStaff も同じ）。音部記号の語は後ろが `{` か文字列のとき音部記号。書かなければ無名のまま（既定の名前は付かない）。構文（`NameToken`／`ShortNameToken`・1 つの読み `SharedStaffNames`・`OpenBraceSlot`）→ spec（`InstrumentName`／`ShortInstrumentName`）→ `RenderSpec.OneStaff` が `Staff` へ。`.ly` は `\new Staff \with { instrumentName = … shortInstrumentName = … }`。エディタ: `condensedStaff ▮` の補完に `"name"`・ステップのキーは condensed ⇄ combined で名前を保ち、group に変えると名前を落としてステータスバーが言う。音は変わらない。
+- ⚠️ Claude が決めた点（決定の文面に無い）: 文字列 1 つなら 2 段目からは名前なし／`""` は名前なし／順は音部記号 → 名前（`staff bass x "Name"` と同じ）／group へのステップは名前を落とす（group は名前を持てない）／**MusicXML には書かない**（まとめた譜表のパートは別々の `<part>` のまま・`<part-group>` の `<group-name>` は読み手が staffGroup として読み戻すので入れていない）。
+- 門: 網 `GrammarEvaluation4FeaturesTests` に 15 本（7 番の節）・`StepRequestTests` に 1 本・`ValueContextCompletionTests` の 1 本に 2 行。毒 16 本のうち 15 本が赤、緑の 1 本＝届かない保険（空文字列を null にする行。名前の読み手は全部 `""` を名前なしと読む）は行ごと外した（Lab `p1270/poisons.txt`）。全 svg の掃き（Lab `p1270/svg`・base は HEAD を `git archive` で作った）: 1268 枚で差 0。絵は Lab `p1270/name/out`（`n1`＝総譜の直下・`n2`＝staffGroup の中）。commit `cee899494`。`APPROXIMATIONS.md`・`magic_constants.csv`・`completion-typing.json` は再生成して差 0。終了時 full 17241 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17244（`run2.trx`）。
+- 7.7: ⚠️ 3 つ目の文字列と、名前の後ろに書いた音部記号（`condensedStaff "A" bass {`）は「Expected '{'」の一般のエラーになる（専用の言い方は無い）。⚠️ `condensedStaff bass ▮`・`condensedStaff "A" ▮` の位置の補完は見ていない（`{` の中は網あり）。⚠️ 名前の位置は LilyPond の絵と比べていない（ほかの譜表の名前と同じ経路 `DrawInstrumentNames`）。⚠️ grandStaff の中の名前つきのまとめた譜表（`WithPresetNames` の「名前を書いた手がある」の判定は plain の staff だけを見る）は見ていない。perf: 足した計算なし（spec に文字列 2 つ・構文の読みは spec を作るときだけ）。7.5: Core '+' はパーサー・構文・spec・`.ly`（REF 0・OWN 0＝式も定数も足していない）。CHANGELOG は 2 つとも `## Unreleased`。実機は `MANUAL-CHECKS` 第1270。
+
 ## 以下は第1269セッションの経緯
 
 ### 1.1 第1269セッション（2026-11-15・YT-DELL2）
