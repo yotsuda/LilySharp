@@ -5962,7 +5962,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         <!-- The recording beside the chart (docs/recording-design.md §1 3): shown only when the chart
              has one. The first chooses what Play sounds (the score, or the recording); the second
              opens the recording's panel (speed, pitch, pitch with speed). -->
-        <button id="recBtn" class="toggle icon" type="button" aria-pressed="false" hidden aria-label="Play the recording" title="Play the recording beside the chart instead of the score"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="1" y="6.5" width="1.6" height="3" rx=".8"/><rect x="4" y="4" width="1.6" height="8" rx=".8"/><rect x="7" y="1.5" width="1.6" height="13" rx=".8"/><rect x="10" y="4.5" width="1.6" height="7" rx=".8"/><rect x="13" y="6" width="1.6" height="4" rx=".8"/></svg></button>
+        <button id="recBtn" class="toggle icon" type="button" aria-pressed="false" hidden aria-label="Play the recording" title="Play the recording beside the chart (press again to go back to the score)"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="1" y="6.5" width="1.6" height="3" rx=".8"/><rect x="4" y="4" width="1.6" height="8" rx=".8"/><rect x="7" y="1.5" width="1.6" height="13" rx=".8"/><rect x="10" y="4.5" width="1.6" height="7" rx=".8"/><rect x="13" y="6" width="1.6" height="4" rx=".8"/></svg></button>
         <button id="recPanelBtn" class="toggle icon practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" hidden aria-label="Recording settings" title="The recording: speed, pitch, pitch with speed"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12"/><circle cx="5" cy="4" r="1.6" fill="currentColor"/><circle cx="10.5" cy="8" r="1.6" fill="currentColor"/><circle cx="7" cy="12" r="1.6" fill="currentColor"/></svg><span id="recSummary"></span></button>
         <span id="lengthInfo" class="length" title="Length, as played"></span>
         </span>
@@ -9029,7 +9029,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     if (!recording || recording.chart !== m.chart) return;
                     recording.ready = true;
                     recStatus(Math.floor(seconds / 60) + ':' + String(Math.round(seconds % 60)).padStart(2, '0') + ' — ' + barsSaid);
-                    recBtn.title = 'Play the recording beside the chart instead of the score';
+                    recBtn.title = 'Play the recording beside the chart (press again to go back to the score)';
                 }, err => {
                     if (recording) recording.ready = false;
                     recStatus('The recording cannot be decoded: ' + (err && err.message || err));
@@ -9049,9 +9049,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             void player.play(sec, recSettings);
             return true;
         }
+        // The button plays the recording at once, as its name says (owner's report 2026-11-16: it only
+        // chose what the next Play would sound, so a press did nothing); pressed again it stops and
+        // Play sounds the score again. While it is pressed, Play sounds the recording too.
         recBtn.addEventListener('click', () => {
             recOn = !recOn;
-            if (!recOn && recPlayer && recPlayer.playing) { recPlayer.stop(); setPlayUi(false); }
+            if (recOn) {
+                if (recording && recording.ready) playRecordingFrom(0);
+                else recStatus(recording && recording.error ? recording.error : 'The recording is still loading — press again when it is ready');
+            } else if (recPlayer && recPlayer.playing) {
+                recPlayer.stop();
+                setPlayUi(false);
+            }
             showRecording();
         });
         function closeRecPanel() {
