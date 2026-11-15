@@ -723,7 +723,7 @@
       {
         "command": "lilysharp.convertRecording",
         "category": "Lily#",
-        "title": "Convert Recording to Lily# (.lys)…"
+        "title": "Convert Recording to Lily# (.lys)… (Preview)"
       },
       {
         "command": "lilysharp.showScan",
