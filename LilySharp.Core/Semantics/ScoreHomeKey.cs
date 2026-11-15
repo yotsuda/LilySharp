@@ -66,11 +66,18 @@ public static class ScoreHomeKey
     /// overrides an earlier one; no top-level key means C major (0). A custom
     /// home key has no sharp count, so 0.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ THE FILE'S, as <see cref="Read"/> is: a part header's key is that part's home
+    /// (<see cref="PartHeaderDeclaration"/>) and not counted here. Until 2026-11-15 it was —
+    /// the tonic and the sharps of one "home" were read off two different sets of keys — so
+    /// with <c>part a { key d major }</c> the MIDI stacked EVERY part's degree chords in D
+    /// major (the last header to state a key won) while the page kept part b in the file's.
+    /// </remarks>
     public static int Sharps(SyntaxNode root)
     {
         int sharps = 0;
         foreach (var key in root.DescendantNodes<KeySignatureSyntax>())
-            if (!IsInsideMusicContent(key, excludePartHeader: false) && !key.IsCustom)
+            if (!IsInsideMusicContent(key, excludePartHeader: true) && !key.IsCustom)
                 sharps = KeySpelling.SharpsFor(
                     key.Pitch.ToFullString().Trim().ToLowerInvariant(),
                     key.Mode.Text.ToLowerInvariant()) ?? 0;
@@ -112,8 +119,7 @@ public static class ScoreHomeKey
     // IsInsideMusicContent excludes PartDeclarationSyntax for exactly this reason): Read and
     // Declaration exclude it, so the phrase auto-transpose home is the page's (HANDOFF §2 R12⒞,
     // session 570 — a part's header key used to become EVERY part's home, the last part's
-    // winning). Sharps still counts it: the MIDI exporter's scale-degree reset reads that, and
-    // moving it is a separate question.
+    // winning). Sharps excludes it too since 2026-11-15 (see there).
     // The one spelling of the container list is DeclarationScope (session 1123).
     private static bool IsInsideMusicContent(SyntaxNode node, bool excludePartHeader)
         => DeclarationScope.IsInsideMusicContent(node, partHeaderIsMusic: excludePartHeader);

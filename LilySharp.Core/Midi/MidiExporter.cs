@@ -851,6 +851,48 @@ public sealed class MidiExporter
     // part transpose is applied separately (semitone shift), so this stays written.
     private int _homeKeySharps;
     private int _keySharps;
+    // The key the PIECE is in, for the one key lane a .mid has (MidiFile.KeyStarts): the
+    // file's own; in a file that states none, its first part's header key — a single part
+    // written `part melody { key bes major … }` is a piece in B flat (test/part-header-key).
+    // Not what a degree chord stacks in: that is each part's (ArmKeyLane).
+    private int _pieceKeySharps;
+
+    // The running key PER PART inside the section being played — the lane twin of
+    // _partPitchLanes for the key: a `key` written in a part's music is that part's alone
+    // (LYS2023 says so), and a part's HEADER key is its home, so the key a part's block opens
+    // in is the one its last block of this section left, else the section header's, else its
+    // own header's, else the file's (ArmKeyLane). Until 2026-11-15 there was ONE running key:
+    // a part header's `key d major` made every part's degree chords stack in D major (the
+    // last header to state one won), and a key one part's music changed went on into the
+    // next part's block — where the page kept each part in its own.
+    private readonly Dictionary<string, (KeyTonic Tonic, int Sharps)> _partKeyLanes = new(StringComparer.Ordinal);
+    // The key the section's header states for every part of it, or null.
+    private (KeyTonic Tonic, int Sharps)? _sectionHeadKey;
+
+    /// <summary>Opens <paramref name="partName"/>'s key lane: the key its block starts in.</summary>
+    private void ArmKeyLane(string partName)
+    {
+        (_ambientTonic, _keySharps) = _partKeyLanes.TryGetValue(partName, out var left) ? left
+            : _sectionHeadKey ?? PartHomeKey(partName) ?? (_homeTonic, _homeKeySharps);
+    }
+
+    /// <summary>The key a part's header states — its home — or null: the file's is.</summary>
+    /// <remarks>
+    /// ⚠️ Its SHARPS, under the file's TONIC: a part header's key is the signature the part is
+    /// written under (what a degree chord stacks in), and NOT a modulation a phrase is moved
+    /// to — the page plays `riff` in `part a { key d major }` as written, where a section
+    /// header's or an in-music `key d major` moves it up a tone (measured 2026-11-15, Lab
+    /// sessions/p1278/probe/ph.png; ScoreHomeKey.Read leaves the header out for the same reason).
+    /// </remarks>
+    private (KeyTonic Tonic, int Sharps)? PartHomeKey(string partName)
+        => _partDecls.TryGetValue(partName, out var decl) && ScoreHomeKey.PartHeaderDeclaration(decl) is { } key
+            ? (_homeTonic, SharpsOf(key))
+            : null;
+
+    private static int SharpsOf(KeySignatureSyntax key)
+        => key.IsCustom ? 0 : KeySpelling.SharpsFor(
+            key.Pitch.ToFullString().Trim().ToLowerInvariant(),
+            key.Mode.Text.ToLowerInvariant()) ?? 0;
 
     /// <summary>
     /// The <c>form</c> to play, or null for the default (<see cref="ScoreForms.Primary"/>).
@@ -972,6 +1014,9 @@ public sealed class MidiExporter
         _ambientTonic = _homeTonic;
         _homeKeySharps = ScoreHomeKey.Sharps(_root);
         _keySharps = _homeKeySharps;
+        _pieceKeySharps = ScoreHomeKey.Declaration(_root) != null ? _homeKeySharps
+            : ScoreHomeKey.PartHeaderDeclaration(_root.DescendantNodes<PartDeclarationSyntax>().FirstOrDefault()) is { } firstParts
+                ? SharpsOf(firstParts) : 0;
         var (homeBeats, homeBeatType) = ScoreHomeMeter.Read(_root);
         _bars.HomeMeter = new Semantics.Meter(homeBeats, homeBeatType);
         _bars.SpendPartial();
@@ -1877,6 +1922,7 @@ public sealed class MidiExporter
         _currentOctave = pitch.Octave;
         _defaultDuration = pitch.Dur;
         SetLevel(LaneVelocity(partName), written: false, partName);
+        ArmKeyLane(partName);
         _partOctaveAnchor = anchor;
         _partAbsoluteBase = absBase;
         _currentTimbre = PartTimbre(partName);
@@ -1892,6 +1938,8 @@ public sealed class MidiExporter
         _currentTransposeSemitones = PartPlaybackShift(partName);
         body();
         _partPitchLanes[partName] = (_currentNoteName, _currentOctave, _defaultDuration);
+        // (No key lane is kept here: a section written inside its part is one block a play —
+        // poisoned 2026-11-15, keeping it changed nothing. The by-section loop keeps it.)
         _partVelocity[partName] = _velocity;
         (_partOctaveAnchor, _partAbsoluteBase) = (LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave, LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave);
         _currentTimbre = 0;
@@ -1934,6 +1982,8 @@ public sealed class MidiExporter
         // boundary into it — that is the whole of what "self-contained" means for pitch,
         // and it is the rule `test/section-octave-reset` names.
         _partPitchLanes.Clear();
+        _partKeyLanes.Clear();
+        _sectionHeadKey = null;
 
         // ⚠️ NOT THE TEMPO. A tempo is the piece's flow and not a section's: it holds to the
         // next one stated, across sections (owner's decision 2026-08-31, HANDOFF §3). So
@@ -1947,11 +1997,12 @@ public sealed class MidiExporter
         if (_sectionHeaders.Keys.TryGetValue(section.SectionName, out var headerKey))
         {
             _ambientTonic = KeyTonic.Of(headerKey);
-            _keySharps = headerKey.IsCustom ? 0 : KeySpelling.SharpsFor(
-                headerKey.Pitch.ToFullString().Trim().ToLowerInvariant(),
-                headerKey.Mode.Text.ToLowerInvariant()) ?? 0;
+            _keySharps = SharpsOf(headerKey);
+            _sectionHeadKey = (_ambientTonic, _keySharps);
         }
-        NoteKey();
+        // The key the PIECE is in here (one lane: the .mid's key signature, a sung third's
+        // scale): the section's, else the file's — not the part's about to play.
+        NoteKey(_sectionHeadKey?.Sharps ?? _pieceKeySharps);
 
         // ⚠️ THE METER AND THE PICKUP ARE THE SAME QUESTION, asked of the same registry
         // (Semantics.BarContext.OpenSection has the rule): the section's own `time` if it
@@ -2059,6 +2110,7 @@ public sealed class MidiExporter
                 _currentOctave = pitch.Octave;
                 _defaultDuration = pitch.Dur;
                 SetLevel(LaneVelocity(pname), written: false, pname);
+                ArmKeyLane(pname);
                 _partOctaveAnchor = anchor;
                 _partAbsoluteBase = absBase;
                 _currentTimbre = PartTimbre(pname);
@@ -2089,6 +2141,7 @@ public sealed class MidiExporter
                 _pendingGraceSteal = 0;
                 _currentPart = outerPart;
                 _partPitchLanes[pname] = (_currentNoteName, _currentOctave, _defaultDuration);
+                _partKeyLanes[pname] = (_ambientTonic, _keySharps);
                 _partVelocity[pname] = _velocity;
                 _currentTick += PaddingTicks(sectionPart);
                 tickLanes[pname] = _currentTick;
@@ -3042,10 +3095,11 @@ public sealed class MidiExporter
     // The keys' starting ticks of the file being exported (MidiFile.KeyStarts), and the one
     // place that writes them: the scale in force from here on, as it sounds.
     private SortedDictionary<int, int>? _keyStarts;
-    private void NoteKey()
+    private void NoteKey() => NoteKey(_keySharps);
+    private void NoteKey(int sharps)
     {
         if (_keyStarts != null)
-            _keyStarts[_currentTick] = (((_keySharps * 7 + _fileShiftSemitones + _scoreTransposeSemitones) % 12) + 12) % 12;
+            _keyStarts[_currentTick] = (((sharps * 7 + _fileShiftSemitones + _scoreTransposeSemitones) % 12) + 12) % 12;
     }
 
     /// <summary>A bar line at the current tick: the next bar opens here.</summary>
