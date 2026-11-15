@@ -84,6 +84,10 @@
 - **門**: site の例 4 冊（`chord-all`／`chord-capo`／`chord-list`／`chord-table`）を新綴りに書き換え、**旧 exe × 旧 .lys と新 exe × 新 .lys の svg／ly／mid／xml が data-pos 以外バイト一致**（Lab `sessions/p1036/gate/`）。網: `ChordDiagramTests`（旧綴り 7 形の LYS1061・quick fix 5 形＋score 内・`capo` 単体・`chordShapes` 単体・2 行目・「Capo N」の行の条件・`chordTuning`）ほか。文書: GRAMMAR（§2.2 CapoDecl／ChordShapesDecl・§2.6）・GRAMMAR_FOR_LLM・SYNTAX_REFERENCE・site（chords／manual／build-preview／build-examples）・README・MANUAL-CHECKS §2.2 に `[ ]` 4 項・HANDOFF §2 K0／K2／K5。
 - ⚠️ **罠**: ⑴ pwsh の var1 で書いたテストの期待文字列は hover の区切り（空白＋**NBSP**）を落とす＝`" "` で書く。⑵ C# の raw string literal（`"""`）の改行はソースの CRLF＝`.Replace("capo 3\n", "")` は当たらない。⑶ `Session-Check -Start` のあとに `Remove-LinesFromFile` でファイルを変えると Edit ツールは「modified since read」で止まる＝読み直す。⑷ layout の鍵を足すと赤くなる網は第1035 の 2 本に加え `LayoutBlockTests.TheVocabularyIsPublished`・`EditorColouringTests.TheLayoutBlock_…` の key/word 表。
 
+## §1.0 から移した閉じた段落（2026-11-15・第1268 に移した）← §1 の 20,000 字の門を超えたので出した
+
+- **オーナー指示 2026-11-04「横幅と付点の差を順に着手」は第1094 で閉じた**（語りは ARCHIVE に出る前の §1.1）。第1095 は MusicXML の `@cross`、第1096 は連符の時刻（`lysc xml`・MIDI）とスコアごとのパート、第1097 は読み込みの `lysc check` 16 件 → 0・線とタイの往復・1 音の hairpin・弱起の宣言・歌詞、第1098 は歌詞の綴りと書き出しの一本化（§1.1）。次の一手の指示はまだ無い＝下の残りから選ぶならオーナーに訊く。第1100 は連符の本体に書けるものと入れ子の連符の上下を閉じた（§1.1）。OMR の `open` は 0。点の列の共有は第1101 で閉じた（§1.1）。休符の声部の wish は第1102 で閉じた（§1.1）。付点のない声部の符尾は第1103 で閉じた（§1.1）。`lysc ly` のフレーズのドラムは第1104 で閉じた（§1.1）。ドラムの和音の揃え方は第1105 で閉じた（§1.1）。`Untitled-1` の段割れの差は名前の字下げと第1106 で分かった（§1.1）。**Release の lysc は `d6fd3b912`**（オーナー決定 2026-11-04・第1098。OMR の REQUESTS にお知らせを書いた）。#22（声部の中の `clef`）は第1099 で `fixed`＝OMR の `open` は 0。**Release の lysc は `1200c035a`**（オーナー決定 2026-11-04・第1099。OMR の REQUESTS #22 の行に書いた＝OMR の repo では未 commit）。
+
 ## §1.0 から移した閉じた段落（2026-11-01・第1036 に移した）← §1 の 20,000 字の門を超えたので出した
 
 - **コード図の文法の整理＝第1036 で実装した（2026-10-31・オーナー決定の文法・§1.1 第1036）**: 残りは **VS Code の実機確認だけ**（MANUAL-CHECKS §2.2 の `[ ]` 4 項＝旧綴りのエラー・`capo`／`chordShapes` の補完・hover・step・色）。⚠️ Lab `corpora/` のユーザーの本に旧綴り `chordDiagrams guitar …` があれば普通の語のエラー（旧形の認識も quick fix も無い＝同日のユーザー決定 B・本は Claude が直さない）。
@@ -266,6 +270,17 @@
 
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
+
+## 以下は第1266セッションの経緯
+
+### 1.1 第1266セッション（2026-11-15・YT-DELL2）
+
+base `d1660f057`・開始時 full 17169 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17172（Lab `p1266` の `run1.trx`）。Calamo と Dettato の REQUESTS の `open` は 0。CI は第1260 が見たまま（未 push）。
+オーナー決定 2026-11-15 の ③（condensedStaff のヘアピンの xml の stop は自分のパートの強弱まで）。
+- 直した: 書き出しは condensedStaff のヘアピン（ページの印の `HairpinEndsOnStaff`）を、**自分のパートの自分の声部**が次に書く強弱・ヘアピン・`@!cresc` で止める（`MusicXmlExporter.EndWedgesAt`・`OpenWedge.EndsInItsPart`）。自分の声部に無ければ自分のパートの別の声部が後に書いた最初のもの、それも無ければ小節線（`FinishOpenSpans`）。section の終わりで切られるものは今までどおり。
+- 一緒に見つけて直した: 2 パートが同じヘアピンを書くと、後のパートの xml に wedge が 1 つも無かった（ページは 1 本だけ刷る＝後のパートの印は score の中身から外れる）。`MeasureCollector.CondensedStaffDuplicateHairpinStarts` が名指し、書き出しがページの印の後ろに並べる（2 パートが同じフレーズを弾く形は書いた順に取る）。
+- 門: 網 `MusicXmlWedgePairTests` 23 本（書き直し 2・新 7）。毒 12 本とも赤（1 回目は緑 2 本＝網の穴 1 を網で塞ぎ、恒等 1 は番を外した。Lab `p1266/poisons.txt`・`poisons-2.txt`）。往復の掃き（Lab `p1266/rt-sweep.ps1`）: xml 0・読み戻し 0 / 1268（⚠️ 追跡コーパスにこの形は 0 冊＝「他が動かない」だけ。形は探り譜 Lab `p1266/cs` の c1〜c8）。描画には触っていない。commit `689bb025d`。終了時 full 17175 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17178（`run2.trx`）。
+- 7.7: ⚠️ 自分の終わりが*後の play* にある condensedStaff のヘアピンは carry の規則で裁かれない（ページが裁いたのは譜表で見つけた終わり・未測定）。⚠️ 重複ヘアピンの niente の丸は書かない（未測定）。combinedStaff は今までどおり（ページが声部ごとに対を作る）。7.5: Core '+' は MusicXML の書き出しと collector の一覧 1 つ（REF 0・OWN 0）。perf: 書き出しのときだけ・重複ヘアピンのある本でだけ `DetectHairpins` が 1 回増える。CHANGELOG は 2 つとも `## Unreleased`。
 
 ## 以下は第1265セッションの経緯
 
