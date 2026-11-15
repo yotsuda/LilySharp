@@ -267,6 +267,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1265セッションの経緯
+
+### 1.1 第1265セッション（2026-11-15・YT-DELL2）
+
+base `ee007c257`・開始時 full 17158 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17161（Lab `p1265` の `run1.trx`）。Calamo と Dettato の REQUESTS の `open` は 0。CI は第1260 が見たまま（未 push）。
+第1263 が見つけた欠陥「`voice { } { }` の 2 つ目以降の声部の `@finger(N)` は描かれない」。
+- 実測（Lab `p1265/fg`・LilyPond 2.26.0・14 冊）: 単音の数字は声部に従う（2 声目は下）。**和音の数字は従わない**（1 声と同じ分割）。下の数字も script の列に入る。
+- 直した: `FingeringLayout.VoiceIndex`・`FingeringEngraver` が譜表の全声部を歩く・`ArticulationEngraver.FlushFingerings` は上下両側で鍵に声部・memo の弧の鍵は全声部・使い回した layout の data-pos は数字の声部から（`SharedRenderer.ResolveDataPos`＝増分の網が捕まえた）・譜表の隣の tab は全声部の数字を落とす。長い版は Lab `p1265/narrative-long.md`
+- 門: 網 `LaterVoiceFingeringTests` 10 本＋`FingScriptMemo_ALaterVoicesDigits_MatchFull`。毒 17 本のうち 16 本が赤・緑の P15＝memo の弧の鍵＝観測者なし。全 svg の掃き: 動いた svg 1 / 1268＝`chord-repetition.lys` の和音の下の 1 が弧の下へ 0.46（LilyPond はさらに 0.61 下）。commit `5b839783f`。終了時 full 17169 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17172。
+- 7.7: ⚠️ script の列の鍵（`supportScripts`）は声部を持たない（既存・未測定）。⚠️ 残差: staccato の外の数字 0.06（g2）・弧を避ける数字 0.03（g7）。⚠️ 未測定: 下の声部の数字の MusicXML の読み戻し（書き出しは出る）・tab だけの score の 2 声目の数字・下の声部の grace の数字。7.5: REF 5・MEASURED 3・新しい定数なし。CHANGELOG は 2 つとも `## Unreleased`。
+
 ## 以下は第1264セッションの経緯
 
 ### 1.1 第1264セッション（2026-11-15・YT-DELL2）
