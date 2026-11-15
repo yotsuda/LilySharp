@@ -3551,6 +3551,18 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                         run are not covered (the call is warned of, LYS4018). Read on the
                         syntax by Semantics.ArticulationRuns. LilyPond has no such span:
                         its twin, and MusicXML, write the mark on each note. *)
+   - A head style over a RUN of notes: c8@notehead(cross) d e f@!notehead   [owner decision 2026-11-15]
+                     (* the same run, opened by an @notehead(STYLE) naming a style Lily# draws
+                        and ended by a bare @!notehead (an end takes no argument): every note
+                        and chord from the opening one to that one has the head, on the page,
+                        in the .ly (\once \override NoteHead.style on each) and in MusicXML
+                        (<notehead> on each), exactly as if each had been written
+                        @notehead(STYLE). The rules are the run of marks' — the nearest opening
+                        in its own music, LYS4018 for an end with none, rests / grace notes /
+                        another voice / a called phrase not covered. A note's own @notehead(…)
+                        inside the run wins, as does @dead; a note in two runs takes the inner
+                        one's. A run of marks and a run of a head are told apart by name, so
+                        they nest and cross freely. The sound is not changed. LILYSHARP-OWN. *)
    - Spanners:       @textSpan("poco rit.") … @!textSpan   [sugar: @rit @accel @rall,
                      each ended by @!rit / @!accel / @!rall — an end is REQUIRED]
                      @8va … @!8va, @8vb … @!8vb, @15ma … @!15ma, @15mb … @!15mb

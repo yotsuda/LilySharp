@@ -311,6 +311,7 @@
     ["music-at-bang", "sostenuto"],
     ["music-at-bang", "unaCorda"],
     ["music-at-bang", "phrasingSlur"],
+    ["music-at-bang", "notehead"],
     ["music-clef", "treble"],
     ["music-clef", "treble_8"],
     ["music-clef", "alto"],

@@ -605,6 +605,11 @@ public sealed partial class LilyPondExporter
         // '@!phrasingSlur' — LilyPond's `\)`, the PhrasingSlurEvent STOP.
         if (mk.IsSpanEnd && Semantics.AnnotationValues.IsPhrasingSlurName(mk.Name))
             return "\\)";
+        // The end of a run of marks or of a head style ('@!staccato', '@!notehead'): nothing is
+        // lost — the run's mark is written on each of its notes (ArticulationRuns.WithCovering).
+        // Until 2026-11-15 every such end was reported "dropped (out of scope)".
+        if (mk.IsSpanEnd && Semantics.ArticulationRuns.IsRunEndName(mk.Name))
+            return "";
         // Spelt as WRITTEN: MarkName steps over the '!' of a terminator, so a bare
         // "@rit dropped" for a '@!rit' would name a mark the reader did not write.
         _warnings.Add($"@{(mk.IsSpanEnd ? "!" : "")}{name} dropped (out of scope)");

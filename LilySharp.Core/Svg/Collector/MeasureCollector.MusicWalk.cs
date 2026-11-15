@@ -919,8 +919,10 @@ public sealed partial class MeasureCollector
                     ? WrittenPitch.Pack(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave, pitch.QuarterOffset) : 0,
                 StringNumber = stringNumber,
                 IsDead = isDead,
-                // The dead note's cross head (ItemFactory's note arm says why).
-                Notehead = isDead ? NoteheadStyle.Cross : NoteheadStyle.Default,
+                // The dead note's cross head (ItemFactory's note arm says why), else the member's
+                // own @notehead(style) or the run's it stands in — until 2026-11-15 the page drew
+                // an ordinary head for `<< c@notehead(cross) e g >>` while the MusicXML said x.
+                Notehead = isDead ? NoteheadStyle.Cross : ExtractNoteheadStyle(pitch),
                 TieStartSourcePosition = tieStart ? (last ? marks.TieSource : pitch.SourceStart) : MusicItem.NoSourcePosition,
                 SlurStartSourcePosition = first && marks.SlurStart ? marks.SlurStartSource : MusicItem.NoSourcePosition,
                 SlurEndSourcePosition = last && marks.SlurEnd ? marks.SlurEndSource : MusicItem.NoSourcePosition,

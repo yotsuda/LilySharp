@@ -79,6 +79,9 @@ public class GrammarEvaluation4ReviewTests
     public void ACrossHead_IsNoNoteOfTheHarmony()
     {
         Assert.Empty(Clashes(FluteOver("f''1@notehead(cross)")));
+        // …and so are the notes a run of that head covers (2026-11-15): one mark, four bars.
+        Assert.Empty(Clashes(Beside(Flute, "  fl { f''1@notehead(cross)@mf | f''1 | f''1 | f''1@!notehead | }", "staff fl")));
+        Assert.NotEmpty(Clashes(Beside(Flute, "  fl { f''1@notehead(cross)@mf | f''1 | f''1 | f''1 | }", "staff fl")));
     }
 
     /// <summary>A line two parts play together is said once, of both.</summary>

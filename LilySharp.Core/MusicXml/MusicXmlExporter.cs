@@ -4397,7 +4397,9 @@ public sealed class MusicXmlExporter
             Type = type,
             Dots = dots,
             AccidentalName = QuarterToneAccidentalName(alter, quarter),
-            Notehead = harmonicFret > 0 ? "diamond" : NoteheadFromMarks(note.Articulations),
+            // The note's own head mark, else the run's it stands in (@notehead(cross) … @!notehead).
+            Notehead = harmonicFret > 0 ? "diamond"
+                : NoteheadFromMarks(Semantics.ArticulationRuns.WithCovering(note, note.Articulations)),
             NoteheadParentheses = WritesParenthesize(note.Articulations),
             ActualNotes = tupletActual,
             NormalNotes = tupletNormal
@@ -4776,7 +4778,7 @@ public sealed class MusicXmlExporter
                 Type = type,
                 Dots = dots,
                 AccidentalName = QuarterToneAccidentalName(alter, quarter),
-                Notehead = NoteheadFromMarks(pitch.Articulations),
+                Notehead = NoteheadFromMarks(Semantics.ArticulationRuns.WithCovering(pitch, pitch.Articulations)),
                 ActualNotes = tupletActual,
                 NormalNotes = tupletNormal,
                 // The page's arpeggio note carries its MEMBER's offset (BuildArpeggioNoteItems),
@@ -5349,7 +5351,8 @@ public sealed class MusicXmlExporter
                 // …and the touched member of an artificial harmonic, `<c' f'@harmonic>`, is the
                 // diamond (owner-approved 2026-11-13, grammar evaluation 3).
                 Notehead = Music.Harmonics.IsTouchedMember(pitch) ? "diamond"
-                    : NoteheadFromMarks(pitch.Articulations) ?? NoteheadFromMarks(chord.Articulations),
+                    : NoteheadFromMarks(pitch.Articulations)
+                        ?? NoteheadFromMarks(Semantics.ArticulationRuns.WithCovering(chord, chord.Articulations)),
             };
 
             // An artificial harmonic's two notes say which they are: the touched one

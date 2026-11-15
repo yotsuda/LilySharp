@@ -952,6 +952,11 @@ public static class CompositionChecks
                 || mark is ArticulationSyntax { Name: "dead" })
                 if (mark.Parent is { } note)
                     at.Add(note.Span.Start);
+        // …and the notes a run of that head covers (`c8@notehead(cross) d e f@!notehead`).
+        foreach (var run in Semantics.ArticulationRuns.Of(root).Runs)
+            if (run.Opener is MusicMarkSyntax head && Semantics.AnnotationValues.Notehead(head) is "x" or "cross")
+                foreach (var covered in run.Covered)
+                    at.Add(covered.Span.Start);
         return at;
     }
 

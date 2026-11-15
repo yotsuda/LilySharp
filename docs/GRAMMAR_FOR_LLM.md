@@ -606,6 +606,12 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   before it there; an `@!staccato` with no `@staccato` before it is an error (LYS4018). Not
   covered: grace notes, and the notes of a phrase called inside the run (write the run inside
   the phrase). Use it for a passage marked throughout instead of a mark on every note.
+- **A head style over a run of notes** (a spoken passage, a run of slashes): the same shape,
+  `c8@notehead(cross) d e f@!notehead` — the style on the first note, the bare end `@!notehead`
+  on the last, and every note and chord between has that head, as if each wrote
+  `@notehead(cross)`. Same rules as a run of marks (same music, nearest opening, LYS4018, grace
+  notes and called phrases not covered). A note's own `@notehead(…)` inside the run wins. The
+  sound is not changed.
 - String technique: `@upBow @downBow @flageolet` (`@harmonic` on a note or a whole chord is the
   same mark, the small circle) `@stopped` (+)
 - Artificial harmonic (strings): `@harmonic` on a MEMBER of a chord — `<c' f'@harmonic>4`, the

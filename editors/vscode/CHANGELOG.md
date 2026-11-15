@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A head style over a run of notes**: `c'8@notehead(cross) d' e' f'@!notehead` gives every note from the first to the last the × head (or `diamond`, `triangle`, `slash`, `xcircle`), where the annotation had to be written on each note. After `@!` the list offers `notehead`; an end with no opening is underlined with what to write.
 - **Importing MusicXML says a guitar part is a guitar's, and keeps its vibrato**: a part with a tab staff, or whose staff names its strings, comes in with `instrument guitar` (a bass, a ukulele, a banjo; a `tuning` for other strings) in its header, and the wavy line over one of its notes as `@vibrato`. The vibrato was dropped.
 - **Playback: an `@sfz` or the loud first note of an `@fp` written in one hand of a piano's grand staff is played by both hands** — on the notes the other hand starts at that moment. It sounded in the hand it was written in only.
 - **Exporting MusicXML from a `condensedStaff`: each part's hairpins are its own.** A part's crescendo stops at that part's next dynamic, not where the other part of the staff writes one, and a hairpin both parts wrote is in both parts (it was missing from the second).

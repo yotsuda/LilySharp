@@ -460,6 +460,18 @@ error (LYS4018). A run does not reach grace notes, or the notes of a phrase call
 its ends (a warning says so — write the run inside the phrase). LilyPond and MusicXML have
 no such span: the exports write the mark on each note.
 
+A **head style** runs the same way — a spoken passage's × heads, a bar of slashes:
+
+```
+c8@notehead(cross) d e f@!notehead g4 a |    // four × heads, then two ordinary notes
+```
+
+The style is written on the first note and the end, `@!notehead`, bare on the last; every note
+and chord between them has that head (`cross` / `x`, `diamond`, `triangle`, `slash`,
+`xcircle`). The rules are the run of marks' own. A note's own `@notehead(…)` inside the run
+wins, and so does `@dead`. Only the page and the exported heads change — the notes sound as
+written.
+
 ### Scoop, plop, fall, doit
 
 The four jazz bends are short curves at the notehead:

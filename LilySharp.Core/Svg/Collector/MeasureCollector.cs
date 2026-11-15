@@ -7298,19 +7298,22 @@ public sealed partial class MeasureCollector
             if (art is MusicMarkSyntax mark
                 && mark.Name.Equals("notehead", StringComparison.Ordinal)
                 && mark.HasArgumentList)
-            {
-                return Semantics.AnnotationValues.Notehead(mark) switch
-                {
-                    "x" or "cross" => NoteheadStyle.Cross,
-                    "diamond" => NoteheadStyle.Diamond,
-                    "triangle" => NoteheadStyle.Triangle,
-                    "slash" => NoteheadStyle.Slash,
-                    "xcircle" => NoteheadStyle.XCircle,
-                    _ => NoteheadStyle.Default,
-                };
-            }
+                return StyleOf(mark);
         }
-        return NoteheadStyle.Default;
+        // A run of a head style it stands in and did not open (`c8@notehead(cross) d e f@!notehead`,
+        // owner's decision 2026-11-15): the opening's style, read as if written on this note. Its
+        // own @notehead, above, wins. LILYSHARP-OWN (Semantics.ArticulationRuns).
+        return Semantics.ArticulationRuns.CoveringNotehead(node) is { } run ? StyleOf(run) : NoteheadStyle.Default;
+
+        static NoteheadStyle StyleOf(MusicMarkSyntax mark) => Semantics.AnnotationValues.Notehead(mark) switch
+        {
+            "x" or "cross" => NoteheadStyle.Cross,
+            "diamond" => NoteheadStyle.Diamond,
+            "triangle" => NoteheadStyle.Triangle,
+            "slash" => NoteheadStyle.Slash,
+            "xcircle" => NoteheadStyle.XCircle,
+            _ => NoteheadStyle.Default,
+        };
     }
 
     // Case-sensitive: the name is its one canonical spelling (owner's decision 2026-09-27).

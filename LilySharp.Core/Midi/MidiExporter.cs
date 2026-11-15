@@ -4562,8 +4562,10 @@ public sealed class MidiExporter
     /// on it are: the run is played note for note as the single marks would be.</summary>
     private (int velocity, int durationPercent) ApplyRunMarks(SyntaxNode item, int velocity, int durationPercent)
     {
+        // A run of a head style (@notehead(cross) … @!notehead) is the page's: it plays as written.
         foreach (var opener in Semantics.ArticulationRuns.Covering(item))
-            (velocity, durationPercent) = ApplyArticulationType(opener.Type, velocity, durationPercent);
+            if (opener is ArticulationSyntax mark)
+                (velocity, durationPercent) = ApplyArticulationType(mark.Type, velocity, durationPercent);
         return (velocity, durationPercent);
     }
 

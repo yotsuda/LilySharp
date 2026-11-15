@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 442 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **568** | |
+| `OWN` | 443 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **569** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -27,7 +27,7 @@
 | `LilySharp.Core/Midi/MidiExporter.cs` | 17 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 16 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
-| `LilySharp.Core/Svg/Collector/MeasureCollector.cs` | 10 |
+| `LilySharp.Core/Svg/Collector/MeasureCollector.cs` | 11 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 10 |
 | `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 8 |
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（442 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（443 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -532,6 +532,7 @@
 - **`MeasureCollector.JunkCondensedStaffDuplicateDynamics`** LILYSHARP-OWN: LilyPond's Dynamic_engraver stands in the Voice context
 - **`MeasureCollector.SolveCrossCollisions`** LILYSHARP-OWN: the moved voice's slot. LilyPond keeps the Voice's own horizontal-shift,
 - **`MeasureCollector.DefaultExpansionBudgetCap`** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **`MeasureCollector.ExtractNoteheadStyle`** own @notehead, above, wins. LILYSHARP-OWN (Semantics.ArticulationRuns).
 - **`MeasureCollector.ProcessPercentRepeat`** LILYSHARP-OWN, owner's decision 2026-10-14, session 905). Whole bars: the body opens
 - **`MeasureCollector.ProcessPercentRepeat`** notes stand (CondensedPercents; grammar evaluation 3, 2026-11-13). LILYSHARP-OWN.
 - **`MeasureCollector.ProcessGraceRegion`** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a

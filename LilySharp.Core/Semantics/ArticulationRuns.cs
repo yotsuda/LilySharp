@@ -57,10 +57,34 @@ public static class ArticulationRuns
     /// annotation name is).</summary>
     public static bool IsRunName(string? name) => name is "staccato" or "staccatissimo" or "tenuto" or "accent" or "marcato";
 
-    /// <summary>One run: the mark that opens it, the end that closes it, and the notes it covers
-    /// beyond the opening one (which carries its own written mark).</summary>
-    public sealed record Run(ArticulationSyntax Opener, MusicMarkSyntax End, IReadOnlyList<SyntaxNode> Covered,
-        IReadOnlyList<VariableReferenceSyntax> PhraseCalls);
+    /// <summary>The head style's name: <c>c'8@notehead(cross) d' e' f'@!notehead</c> is a run too
+    /// (owner's decision 2026-11-15, grammar evaluation 4: a spoken passage wrote
+    /// <c>@notehead(cross)</c> on 56 notes). Not among <see cref="Names"/>: it is not a script,
+    /// it opens with its style in an argument, and the step keys do not rotate it into one.</summary>
+    public const string NoteheadName = "notehead";
+
+    /// <summary>Whether <c>@!</c><paramref name="name"/> ends a run: a running mark's name, or the
+    /// head style's.</summary>
+    public static bool IsRunEndName(string? name) => IsRunName(name) || name == NoteheadName;
+
+    /// <summary>The name <paramref name="node"/> opens a run with when an end follows it — a
+    /// running mark, or an <c>@notehead(style)</c> naming a style Lily# draws — else null.</summary>
+    public static string? OpeningNameOf(SyntaxNode node) => node switch
+    {
+        ArticulationSyntax art when IsRunName(art.Name) => art.Name,
+        MusicMarkSyntax { IsSpanEnd: false } mark when AnnotationValues.Notehead(mark) != null => NoteheadName,
+        _ => null,
+    };
+
+    /// <summary>One run: the mark that opens it (an <see cref="ArticulationSyntax"/>, or the
+    /// <see cref="MusicMarkSyntax"/> of an <c>@notehead(style)</c>), the end that closes it, and the
+    /// notes it covers beyond the opening one (which carries its own written mark).</summary>
+    public sealed record Run(SyntaxNode Opener, MusicMarkSyntax End, IReadOnlyList<SyntaxNode> Covered,
+        IReadOnlyList<VariableReferenceSyntax> PhraseCalls)
+    {
+        /// <summary>The name the run was opened and closed with.</summary>
+        public string Name => End.Name;
+    }
 
     /// <summary>What a tree's runs come to: the runs, the ends that close nothing, and — the
     /// lookup the four readers make — the openers covering each note, by the note's start.</summary>
@@ -71,7 +95,7 @@ public static class ArticulationRuns
         public List<Run> Runs { get; } = [];
         /// <summary>The <c>@!NAME</c> with no <c>@NAME</c> open before it in its line.</summary>
         public List<MusicMarkSyntax> StrayEnds { get; } = [];
-        internal Dictionary<int, List<ArticulationSyntax>> ByItemStart { get; } = [];
+        internal Dictionary<int, List<SyntaxNode>> ByItemStart { get; } = [];
     }
 
     private static readonly ConditionalWeakTable<SyntaxNode, Reading> Cache = new();
@@ -94,12 +118,28 @@ public static class ArticulationRuns
     /// duration, a drum note, a member of a <c>&lt;&lt; &gt;&gt;</c> group) carries from runs it stands in and
     /// did not open — the opening marks themselves, to be read as if written on it. Empty for
     /// every note of a file with no run.</summary>
-    public static IReadOnlyList<ArticulationSyntax> Covering(SyntaxNode item)
+    public static IReadOnlyList<SyntaxNode> Covering(SyntaxNode item)
     {
+        // The kind first: the page asks this of every chord MEMBER too (its head style), and a
+        // member is never covered itself — its chord is.
+        if (!IsCoverable(item))
+            return [];
         var reading = Of(item);
-        return reading.ByItemStart.Count > 0 && IsCoverable(item) && reading.ByItemStart.TryGetValue(item.Span.Start, out var openers)
+        return reading.ByItemStart.Count > 0 && reading.ByItemStart.TryGetValue(item.Span.Start, out var openers)
             ? openers
             : [];
+    }
+
+    /// <summary>The <c>@notehead(style)</c> a run lays on <paramref name="item"/> — the nearest
+    /// opening when it stands in two — or null: what the readers of a note's head style ask after
+    /// the note's own marks (the page's ExtractNoteheadStyle, MusicXML's notehead).</summary>
+    public static MusicMarkSyntax? CoveringNotehead(SyntaxNode item)
+    {
+        var covering = Covering(item);
+        for (int i = covering.Count - 1; i >= 0; i--)
+            if (covering[i] is MusicMarkSyntax head)
+                return head;
+        return null;
     }
 
     /// <summary><paramref name="written"/> — the marks written on <paramref name="item"/> — and
@@ -108,7 +148,22 @@ public static class ArticulationRuns
     public static IEnumerable<SyntaxNode> WithCovering(SyntaxNode item, IEnumerable<SyntaxNode> written)
     {
         var covering = Covering(item);
-        return covering.Count == 0 ? written : System.Linq.Enumerable.Concat(written, covering);
+        if (covering.Count == 0)
+            return written;
+        // A note has ONE head style: its own @notehead, else the nearest run's — a reader that
+        // writes every mark it is handed (the .ly's \once \override) is handed that one alone.
+        MusicMarkSyntax? head = null;
+        foreach (var opener in covering)
+            if (opener is MusicMarkSyntax)
+            {
+                head = CoveringNotehead(item);
+                foreach (var own in written)
+                    if (own is MusicMarkSyntax { IsSpanEnd: false, Name: NoteheadName, HasArgumentList: true })
+                        head = null;
+                return System.Linq.Enumerable.Concat(written,
+                    System.Linq.Enumerable.Where(covering, c => c is not MusicMarkSyntax || ReferenceEquals(c, head)));
+            }
+        return System.Linq.Enumerable.Concat(written, covering);
     }
 
     /// <summary>The note-like item a mark is written on: the mark's parent, or the chord when
@@ -141,28 +196,29 @@ public static class ArticulationRuns
         // (KeystrokeStaysRedFreeTests). Only a file that writes a run pays for more.
         List<MusicMarkSyntax>? ends = null;
         foreach (var node in root.KindSites(SyntaxKind.MusicMark))
-            if (node is MusicMarkSyntax { IsSpanEnd: true } end && IsRunName(end.Name))
+            // ('@!notehead' is written bare: an end takes no argument — the parser's rule.)
+            if (node is MusicMarkSyntax { IsSpanEnd: true } end && IsRunEndName(end.Name))
                 (ends ??= []).Add(end);
         if (ends == null)
             return Reading.None;
 
         var reading = new Reading();
-        var closed = new HashSet<ArticulationSyntax>(ReferenceEqualityComparer.Instance);
+        var closed = new HashSet<SyntaxNode>(ReferenceEqualityComparer.Instance);
         foreach (var end in ends)
         {
             var line = SpanNames.Line(end);
             var endHost = HostOf(end);
             // The nearest opening of that name before the end's note, in the end's own line,
             // not already closed. (One on the end's own note is that note's mark, not a run.)
-            ArticulationSyntax? opener = null;
+            SyntaxNode? opener = null;
             if (endHost != null)
                 foreach (var d in line.DescendantNodes())
                 {
                     if (d.Span.Start >= endHost.Span.Start)
                         break;
-                    if (d is ArticulationSyntax art && art.Name == end.Name && !closed.Contains(art)
-                        && ReferenceEquals(SpanNames.Line(art), line) && !InGrace(art, line))
-                        opener = art;
+                    if (OpeningNameOf(d) == end.Name && !closed.Contains(d)
+                        && ReferenceEquals(SpanNames.Line(d), line) && !InGrace(d, line))
+                        opener = d;
                 }
             if (opener == null || HostOf(opener) is not { } openHost)
             {
@@ -215,15 +271,20 @@ internal sealed class ArticulationRunValidator : ISemanticValidator
     {
         var reading = ArticulationRuns.Of(tree.GetRoot());
         foreach (var end in reading.StrayEnds)
+        {
+            // The opening as it is written: a head style's takes its style, 'cross' the example.
+            string open = end.Name == ArticulationRuns.NoteheadName ? $"@{end.Name}(cross)" : $"@{end.Name}";
+            string what = end.Name == ArticulationRuns.NoteheadName ? "@notehead(style)" : $"@{end.Name}";
             _diagnostics.Error(end.Span, DiagnosticCodes.UnpairedSpan,
-                $"this '@!{end.Name}' ends nothing: no '@{end.Name}' is written before it in this part's music of "
+                $"this '@!{end.Name}' ends nothing: no '{what}' is written before it in this part's music of "
                 + $"this section (or this phrase, or this voice). A run of marks opens and closes in one of them - "
-                + $"write '@{end.Name}' on the first note of the run and '@!{end.Name}' on its last "
-                + $"(c8@{end.Name} d e f@!{end.Name}); one note's mark is '@{end.Name}' alone.");
+                + $"write '{open}' on the first note of the run and '@!{end.Name}' on its last "
+                + $"(c8{open} d e f@!{end.Name}); one note's mark is '{open}' alone.");
+        }
         foreach (var run in reading.Runs)
             foreach (var call in run.PhraseCalls)
                 _diagnostics.Warning(call.Span, DiagnosticCodes.UnpairedSpan,
-                    $"the '@{run.Opener.Name}' run that '@!{run.End.Name}' closes does not reach into '{call.Name.Text}': "
+                    $"the '@{run.Name}' run that '@!{run.End.Name}' closes does not reach into '{call.Name.Text}': "
                     + "a run marks the notes written between its two ends, and a phrase's notes are the same at "
                     + $"every call. Write the run inside the phrase, or close it before the call and open it again after.");
     }

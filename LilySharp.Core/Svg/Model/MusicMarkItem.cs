@@ -545,9 +545,10 @@ public sealed record MusicMarkItem
 
     /// <summary>True for every name an <c>@!</c> may be written with: the marks'
     /// (<see cref="ParseSpanEndName"/>), the trill spanner's, and the marks that may run over
-    /// several notes (<c>@staccato … @!staccato</c>, <see cref="Semantics.ArticulationRuns"/>).</summary>
+    /// several notes (<c>@staccato … @!staccato</c>, <see cref="Semantics.ArticulationRuns"/>) —
+    /// the head style among them (<c>@notehead(cross) … @!notehead</c>).</summary>
     public static bool IsSpanEndName(string name)
-        => name == TrillSpanName || ParseSpanEndName(name) != null || Semantics.ArticulationRuns.IsRunName(name);
+        => name == TrillSpanName || ParseSpanEndName(name) != null || Semantics.ArticulationRuns.IsRunEndName(name);
 
     /// <summary>
     /// Parses the name of a TERMINATOR annotation — the <c>X</c> of <c>@!X</c> — into the

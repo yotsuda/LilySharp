@@ -240,11 +240,12 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                         // The trill spanner's end — paired by the collector's trill events,
                         // not a MusicMarkItem, so ParseSpanEndName does not know it.
                     }
-                    else if (ArticulationRuns.IsRunName(name))
+                    else if (ArticulationRuns.IsRunEndName(name))
                     {
-                        // The end of a run of marks, '@staccato … @!staccato' (2026-11-12) —
-                        // paired on the syntax by ArticulationRuns, whose validator says
-                        // when it closes nothing.
+                        // The end of a run of marks, '@staccato … @!staccato' (2026-11-12), or of
+                        // a head style, '@notehead(cross) … @!notehead' (2026-11-15) — paired on
+                        // the syntax by ArticulationRuns, whose validator says when it closes
+                        // nothing.
                     }
                     else if (MusicMarkItem.ParseSpanEndName(name) is null
                         && AnnotationNames.CaseOnlyMatch(name) is { } canonical
@@ -269,8 +270,9 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                             + "an ottava ('@!8va', '@!8vb', '@!15ma', '@!15mb'), "
                             + "a pedal ('@!sustain', '@!sostenuto', '@!unaCorda'), a phrasing "
                             + "slur ('@!phrasingSlur'), a trill span ('@!trillSpan'), a hairpin "
-                            + "('@!cresc', '@!decresc', '@!dim') and a run of marks ('@!staccato', "
-                            + "'@!staccatissimo', '@!tenuto', '@!accent', '@!marcato').");
+                            + "('@!cresc', '@!decresc', '@!dim'), a run of marks ('@!staccato', "
+                            + "'@!staccatissimo', '@!tenuto', '@!accent', '@!marcato') and a run of a "
+                            + "head style ('@!notehead', written with no style).");
                 }
                 else if (!IsKnownCompoundName(mark))
                 {
