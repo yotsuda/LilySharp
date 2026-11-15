@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1261セッションの経緯
+
+### 1.1 第1261セッション（2026-11-15・YT-DELL2）
+
+base `c8612967d`・開始時 full 17133 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17136（Lab `p1261` の `run1.trx`）。REQUESTS と CI は第1260 の開始時に見たまま（同じ会話）。
+leftovers「残り（欠陥）」の先頭「MusicXML の読み込みは guitar の線（`<bracket>`）と fretted の vibrato の `<wavy-line>` を読まない」（オーナー指示 2026-11-14「残りの欠陥を順に」）。
+- 実測（直す前・Lab `p1261/gt`・`back0`）: `e4@palmMute g a b@!palmMute` は `e4@text("P.M.").up` と線なしで戻り、`@barre(7)` は `@text("CVII").up`、`@vibrato` は消える。
+- 読み手（`MusicXmlReader`）: 言葉（"P.M."・"let ring"・barre の題字）から始まる `<bracket type="start">` を `palmMute`／`letRing`／`barre(N)`・`barre(N half)` に読む（`GuitarLineMark`・`BarreMark`）。stop は自分の `number` の線を、stop の前の音で、開いた声部の中で閉じる（text spanner と同じ道＝`EndOttavasInTheirVoice`）。bracket のない barre の題字は 1 音の barre。閉じない palm mute／let ring は言葉のまま（Lily# では閉じない線はエラー＝`KeepUnclosedTextSpansAsWords` を線ごとに）。
+- 一緒に直した欠陥: 線の終わりは開いた*音*を使い切っていたので、1 つの音に 2 本開く形（`e4@palmMute@letRing`。破線の文字の線と ottava が同じ音で始まる形も）の 2 本目の終わりが「始まりなし」で落ちていた → 音と線の名前の組で使い切る。
+- 門: 網 `MusicXmlImportGuitarLineTests` 13 本・毒 12 本が全部赤（Lab `p1261/poisons.ps1`）。往復の掃き（Lab `p1261/rt-sweep.ps1`）: xml の差 0・読み戻しの差 0 / 1268＝コーパスに guitar の線の本は 0 冊（形は探り譜 g1〜g5 と網で見た）。⚠️ この掃きの head は毒 P12 の残りのビルドだった（線の鍵だけが違う。毒のあと作り直さずに exe を写した）＝「ほかの読みは動かない」の確認としては有効。描画には触っていない（svg の掃きなし）。commit `abb28426d`。終了時 full 17146 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17149。
+- 7.7: ⚠️ **vibrato の `<wavy-line>` は読んでいない**: 読み手はパートを fretted と宣言しない（`part guitar { clef treble_8 }`）ので、`@vibrato` を書くと「歌い手の印＝無視」の警告になる。パートに `instrument guitar` を書く（MIDI program や TAB から決める）のは機能の追加＝オーナーに訊く。⚠️ 言葉は Lily# が書く綴りだけを読む（"PM"・"l.v." などは文字のまま）。⚠️ section の境をまたぐ guitar の線は切らない（text spanner と同じ・未測定）。7.5: Core '+' は MusicXML の読み（REF 0・OWN 0）。CHANGELOG は 2 つとも `## Unreleased`。
+
 ## 以下は第1260セッションの経緯
 
 ### 1.1 第1260セッション（2026-11-15・YT-DELL2）

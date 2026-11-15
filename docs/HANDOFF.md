@@ -142,6 +142,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1263セッション（2026-11-15・YT-DELL2）
+
+base `42247b882`・開始時 full 17151 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17154（Lab `p1263` の `run1.trx`）。REQUESTS と CI は第1260 の開始時に見たまま（同じ会話）。
+第1262 の残り「ずれた声部の text spanner・ottava・trill・pedal・アーティキュレーション」（オーナー指示 2026-11-14「残りの欠陥を順に」）。
+- 実測（Lab `p1263/sp`・LilyPond 2.26.0・ずれ 1.377・`1` がずれた本／`0` が対照）: アーティキュレーション（accent・fermata が上の声部の音の下＝17.81／LP 19.187）・text spanner（始まり 17.37／LP 18.748・終わり 22.52／LP 23.951）・trill の始まり（+1.377 足りない）がずれる前の列。**pedal は LilyPond もずれない列＝一致（直す物なし）**。
+- 直した: `ArticulationEngraver` のスクリプトの X・`TextSpannerEngraver.BoundX`／`RightBoundCentre`・`TrillSpannerEngraver.VoiceItemX` に `HairpinEngraver.CollisionShift` を足した。直したあと s1・t1・r1 は LilyPond と一致（絵は `sp/png-fix/s1.png`）。
+- 門: 網 `VoiceShiftedMarksTests` 4 本・毒 5 本のうち 4 本が赤（Lab `p1263/poisons.ps1`）。緑の P3＝text spanner の*予約の帯*の右端（描く線ではない・X の網からは見えない）＝観測者なし。全 svg の掃き（Lab `p1263/sweep`）: 動いた svg 1 / 1268＝`site/air-in-d.lys` の交差した声部の `@trill` が自分の音符の中心へ 0.47 右（正しい変化）。commit `7a5967b98`。終了時 full 17155 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17158。
+- ★★ **見つけた欠陥（未着手・次の一手の第一候補）: `voice { } { }` の 2 つ目以降の声部の `@finger(N)` は何も描かれない**（警告もなし）。`FingeringEngraver` は譜表の第 1 声だけを歩く（`score.Voice`・呼び手が 1 声の Score を作る・`ColumnOf` の注「serves the staff's PRIMARY voice」）。LilyPond は下の声部の下に描く（Lab `p1263/fg`: f2 の Fingering y=−3.6725・f3＝staccato の下 −5.1645）。直すには声部の走査・向き（下の声部は下）・memo（`FingScriptMemo`）・予約の 4 か所＝1 便ぶん。
+- 7.7: ⚠️ ottava は未着手: LilyPond は左端が*最初に来た*声部の列・右端が*最後に来た*声部の列（o1: 16.321..25.490・Lily# の右端 24.06）＝譜表の単位の規則で、声部のずれを足すだけでは合わない。⚠️ 茎側の staccato は LilyPond では符尾に乗る（s0: LP 21.461・Lily# 22.08＝符頭の中心）＝ずれとは別の既存の差・未追跡。7.5: Core '+' は `CollisionShift`（第1262 の MEASURED と REF）を読む 3 か所＝新しい定数なし。CHANGELOG は第1262 の行に足した。
+
+## 以下は第1262セッションの経緯
+
 ### 1.1 第1262セッション（2026-11-15・YT-DELL2）
 
 base `b84816f8b`・開始時 full 17146 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17149（Lab `p1262` の `run1.trx`）。REQUESTS と CI は第1260 の開始時に見たまま（同じ会話）。
@@ -151,18 +163,6 @@ leftovers の未測定の形を測り、欠陥だった 1 件を直した（オ�
 - 門: 網 `HairpinVoiceShiftTests` 5 本（数字は全部 LilyPond の実測）・毒 9 本のうち 7 本が赤（Lab `p1262/poisons.ps1`）。緑の 2 本: P5＝ヘアピン自身の支えの列（高さは後段の `DynamicAlignEngraver` の線が上書きするので単独では見えない）・P9＝文字も stop もない終わりの列（`CalculateEndX` の音の腕。その形を書けなかった）＝観測者なし。全 svg の掃き（Lab `p1262/sweep`）は差 0 / 1268＝コーパスに「ずれた声部の強弱」は無い（head の exe が直したビルドであることは a1 で確かめた）。commit `a5ddc40ac`。終了時 full 17151 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17154。
 - 不安定な網: 第1261 の full で 1 度だけ `SvgSnapshotTests` 2 本（`test/system-count-line-start-ink`・`test/dead-note`）が赤くなった（そのときの log は上書きして残っていない）。full を 5 回回して再現せず（Lab `p1262/flake`）＝原因は未特定のまま。
 - 7.7: ⚠️ 同じ読み（`ColumnExtent`・列の X）を使う text spanner・ottava・trill・pedal の端は、ずれた声部でまだずれを足していない（`ColumnExtent` の `shift` は既定 0・未測定）。⚠️ アーティキュレーションと運指は未測定。7.5: Core '+' は `CollisionShift` の MEASURED と LILYPOND-REF（lily/note-collision.cc:403-470）。CHANGELOG は 2 つとも `## Unreleased`（`[engraving]`）。
-
-## 以下は第1261セッションの経緯
-
-### 1.1 第1261セッション（2026-11-15・YT-DELL2）
-
-base `c8612967d`・開始時 full 17133 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17136（Lab `p1261` の `run1.trx`）。REQUESTS と CI は第1260 の開始時に見たまま（同じ会話）。
-leftovers「残り（欠陥）」の先頭「MusicXML の読み込みは guitar の線（`<bracket>`）と fretted の vibrato の `<wavy-line>` を読まない」（オーナー指示 2026-11-14「残りの欠陥を順に」）。
-- 実測（直す前・Lab `p1261/gt`・`back0`）: `e4@palmMute g a b@!palmMute` は `e4@text("P.M.").up` と線なしで戻り、`@barre(7)` は `@text("CVII").up`、`@vibrato` は消える。
-- 読み手（`MusicXmlReader`）: 言葉（"P.M."・"let ring"・barre の題字）から始まる `<bracket type="start">` を `palmMute`／`letRing`／`barre(N)`・`barre(N half)` に読む（`GuitarLineMark`・`BarreMark`）。stop は自分の `number` の線を、stop の前の音で、開いた声部の中で閉じる（text spanner と同じ道＝`EndOttavasInTheirVoice`）。bracket のない barre の題字は 1 音の barre。閉じない palm mute／let ring は言葉のまま（Lily# では閉じない線はエラー＝`KeepUnclosedTextSpansAsWords` を線ごとに）。
-- 一緒に直した欠陥: 線の終わりは開いた*音*を使い切っていたので、1 つの音に 2 本開く形（`e4@palmMute@letRing`。破線の文字の線と ottava が同じ音で始まる形も）の 2 本目の終わりが「始まりなし」で落ちていた → 音と線の名前の組で使い切る。
-- 門: 網 `MusicXmlImportGuitarLineTests` 13 本・毒 12 本が全部赤（Lab `p1261/poisons.ps1`）。往復の掃き（Lab `p1261/rt-sweep.ps1`）: xml の差 0・読み戻しの差 0 / 1268＝コーパスに guitar の線の本は 0 冊（形は探り譜 g1〜g5 と網で見た）。⚠️ この掃きの head は毒 P12 の残りのビルドだった（線の鍵だけが違う。毒のあと作り直さずに exe を写した）＝「ほかの読みは動かない」の確認としては有効。描画には触っていない（svg の掃きなし）。commit `abb28426d`。終了時 full 17146 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17149。
-- 7.7: ⚠️ **vibrato の `<wavy-line>` は読んでいない**: 読み手はパートを fretted と宣言しない（`part guitar { clef treble_8 }`）ので、`@vibrato` を書くと「歌い手の印＝無視」の警告になる。パートに `instrument guitar` を書く（MIDI program や TAB から決める）のは機能の追加＝オーナーに訊く。⚠️ 言葉は Lily# が書く綴りだけを読む（"PM"・"l.v." などは文字のまま）。⚠️ section の境をまたぐ guitar の線は切らない（text spanner と同じ・未測定）。7.5: Core '+' は MusicXML の読み（REF 0・OWN 0）。CHANGELOG は 2 つとも `## Unreleased`。
 
 ## 2. 開いている作業
 
