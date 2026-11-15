@@ -88,7 +88,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
-- **★★★ オーナー決定 2026-11-15（第1264・待ちだった 6 件＝Claude の勧めた案を全部採用。順に着手してよい）**: ① `%` の小節の xml は強弱を書かない＝**第1264 で済み**／② vibrato の読み込み＝**TAB の譜表か `<staff-tuning>` のあるパートにだけ**読み手が `instrument` を書き、`<wavy-line>` を `@vibrato` に読む（MIDI program からは決めない）／③ condensedStaff のヘアピンの xml の stop は**自分のパートの強弱まで**（第1240 の前の動き）／④ 大譜表の `@sfz`・`@fp`（一撃）は**両手に効く・同じ拍に音がある手だけ**／⑤ Dettato: 依頼 1＝作る（D3 で形が固まってから・名前「Convert Recording to Lily# (.lys)…」・Windows 以外はメニューを出さない）・依頼 2＝今は作らない（REQUESTS の行に書いた＝Dettato の repo では未 commit）／⑥ 評価 4 の案（Lab `p1227/proposals-eval4.md` の末尾）: **作る**＝6（`@notehead(x) … @!notehead`）・7（condensedStaff／combinedStaff の名前・既定は無名のまま）・8-1（`:|*4` に "4x"・`[engraving]`）・2（`transposition` に音名＋`range`）・4（`key none`）／**後で**＝3（`pass 2 { }`・文字は英語固定）・1（持ち替え・「to X」は自動で刷らない）・10（まず診断だけ）／**見送り**＝5・8-2〜4・9。機能は作る前に設計メモ。**着手の順**: 下の声部の `@finger`（欠陥・第1263 が見つけた）→ ③ → ④ → ② → ⑥ の小 3 件（6・7・8-1）→ 2・4。
+- **★★★ オーナー決定 2026-11-15（第1264・待ちだった 6 件＝Claude の勧めた案を全部採用。順に着手してよい）**: ① `%` の小節の xml は強弱を書かない＝**第1264 で済み**／② vibrato の読み込み＝**TAB の譜表か `<staff-tuning>` のあるパートにだけ**読み手が `instrument` を書き、`<wavy-line>` を `@vibrato` に読む（MIDI program からは決めない）／③ condensedStaff のヘアピンの xml の stop は**自分のパートの強弱まで**（第1240 の前の動き）／④ 大譜表の `@sfz`・`@fp`（一撃）は**両手に効く・同じ拍に音がある手だけ**／⑤ Dettato: 依頼 1＝作る（D3 で形が固まってから・名前「Convert Recording to Lily# (.lys)…」・Windows 以外はメニューを出さない）・依頼 2＝今は作らない（REQUESTS の行に書いた＝Dettato の repo では未 commit）／⑥ 評価 4 の案（Lab `p1227/proposals-eval4.md` の末尾）: **作る**＝6（`@notehead(x) … @!notehead`）・7（condensedStaff／combinedStaff の名前・既定は無名のまま）・8-1（`:|*4` に "4x"・`[engraving]`）・2（`transposition` に音名＋`range`）・4（`key none`）／**後で**＝3（`pass 2 { }`・文字は英語固定）・1（持ち替え・「to X」は自動で刷らない）・10（まず診断だけ）／**見送り**＝5・8-2〜4・9。機能は作る前に設計メモ。**着手の順**: ③ → ④ → ② → ⑥ の小 3 件（6・7・8-1）→ 2・4（先頭だった下の声部の `@finger` は第1265 で済み）。
 - **★ 反復とナビ記号を section の音楽にも書く（オーナー提案 2026-11-14・第1243＝第1249 で段 0〜8 が済み・LYS1034 は phrase だけ）**: 全部 `docs/inline-repeat-design.md`（規則 §3・段取り §4・未決 §6・経過 §7・エディタのコマンド §8）。オーナー決定（2026-11-14）: 対は form に組み立てた列で見る／`| |:` は空小節のまま／歌詞の verse は 5 規則／書き出しはなるべく form 側（Q2）。**次**（順は上から。歌詞の規則 3 と警告の 4 種目は第1253、ending・ナビ記号を全パートに書くコマンドと LYS1070 の quick fix は第1254 で済み＝§1.1）: ⑴ この島（反復とナビ記号を音楽に書く）の「次」は無い＝判断待ちも残りの形も 0。step キー・`PlayForm` の一本化（第1255）、3 番括弧＝3 回（form は第1256・音楽は第1257・コードの行は第1258）は済み。次の一手は下の積み残しから（オーナーに訊く）。段 9（読み込みと OMR の書き出し）は Q2 の決定で今の形のまま＝作業なし。⚠️ Calamo と Dettato の REQUESTS への知らせ（Q2「本体が出てから」）は未＝release のときに書く。実機は `MANUAL-CHECKS` 第1243・第1249・第1253・第1254・第1255。
 - **★ 歌詞と歌い手の文法の作り直し（オーナー決定 2026-11-10・第1217）**: `docs/lyrics-singer-design.md` が全部（§9 が作業順）。①②③④は済み（§1.1 第1217〜第1219）。⚠️ ④の `ん` の聞こえ方はオーナーの実聴待ち（`MANUAL-CHECKS` 第1219）。Cantoria の master は zh／ko を歌う（VSIX の入れ直しはオーナー）。`singer` は 1 行 1 声で score の中にも書ける（第1220）。古い書き方を案内する専用エラーは作らない（オーナー指示）。設計 §10「パート自身の歌詞」（`part sop { lyrics words }`）は第1222 で実装（§1.1 第1222・実機は `MANUAL-CHECKS` 第1222）＝§9 は全部済み。**次の一手の指示はまだ無い＝下の積み残しから選ぶならオーナーに訊く**。積み残し: Calamo の生成コードが `lyrics … sings` のまま（`docs\repro\REQUESTS.md` に連絡済み・Calamo 側は未 commit）／実機確認（`MANUAL-CHECKS` 第1217）／perf ベンチ／コーパス外のオーナーのファイル（Downloads の Tabidachi・Rose Garden など）は未移行で、`LilySharp-Lab\sessions\p1217\migrate\migrate.ps1 -Lys -Files` で書き換えられる／Rose Garden のオクターブ変換はオーナーの回答待ち。
 - **★ 歌詞のある譜表では強弱記号とヘアピンを譜表の上に（オーナー決定 2026-11-11）＝設計 `docs/dynamics-above-lyrics-design.md` §5 の 1〜6 は全部済み（第1224〜第1225・§1.1）**。**D3 は LilyPond の規則に替えた（オーナー決定 2026-11-11「LP に合わせて」）**＝向きを書いた記号が*線*の向きを決め、同じ線の後続（向きを書いていない記号）は従う。歌詞のない譜表でも同じ（`c@f.up@decresc … g@p` の p は上）。残りはオーナー: 実機のプレビュー（`MANUAL-CHECKS` 第1225）と release（CHANGELOG は 2 つとも `## Unreleased`・`[engraving]`）。残る穴: 2 声部の譜表で上の声部のヘアピンの線に下の声部の同じ拍の強弱記号も乗る（ヘアピンが声部を持たない既知の穴＝`DynamicAlignEngraver` の注 ⑵・Lab `p1225/dyn/out/vv.png`）。線の向きは第1260 で声部ごとにした。**次の一手の指示はまだ無い＝上の行の積み残しから選ぶならオーナーに訊く**。
@@ -124,7 +124,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **LP を `-dbackend=svg` で描く計器は `lysc ly --pin-fonts` 必須**（第690〜第695 の 6 本は無しで、数字の幅・高さが汎用 serif だった＝第736 ⑴⑵）。tab の tuplet の残差は全部 beam の決定（`uniformBeamedLength`）の帰結＝第737
 
 **⒝ 土台の変更・要設計（1 便では閉じない）**
-- **⒵⁴ `prefixMarkAnchorX` の解き直し＝第1117 で反証して閉じた（Core 不変）**: 今の HEAD では 1 回 **0 B**（第420 の 1,399 B は消えていた）・時間 0.249%／打鍵・score ごとの memo は +7,956 B／打鍵で時間は動かず（§1.1 第1117）
 
 - ★ **⒵ perf は第615 で区切り（ユーザー判断）**: render −24%・割当 −31%（第598〜第615＝ARCHIVE）。照合の基準は `SvgGenerator.Generate`（Lab `sessions/p611/verify-all.ps1`）・打鍵ごとの計器は Lab `sessions/p613/lathost`。残る大物は設計級＝長い score の段ごと引き継ぎと collect の尾の `_tieTargetWarnings` abort（第613 ⒝）。⚠️ 弱参照の表で全 item を memo する形は GC で負ける（第602）
 
@@ -143,6 +142,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1265セッション（2026-11-15・YT-DELL2）
+
+base `ee007c257`・開始時 full 17158 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17161（Lab `p1265` の `run1.trx`）。Calamo と Dettato の REQUESTS の `open` は 0。CI は第1260 が見たまま（未 push）。
+第1263 が見つけた欠陥「`voice { } { }` の 2 つ目以降の声部の `@finger(N)` は描かれない」。
+- 実測（Lab `p1265/fg`・LilyPond 2.26.0・14 冊）: 単音の数字は声部に従う（2 声目は下）。**和音の数字は従わない**（1 声と同じ分割）。下の数字も script の列に入る。
+- 直した: `FingeringLayout.VoiceIndex`・`FingeringEngraver` が譜表の全声部を歩く・`ArticulationEngraver.FlushFingerings` は上下両側で鍵に声部・memo の弧の鍵は全声部・使い回した layout の data-pos は数字の声部から（`SharedRenderer.ResolveDataPos`＝増分の網が捕まえた）・譜表の隣の tab は全声部の数字を落とす。長い版は Lab `p1265/narrative-long.md`
+- 門: 網 `LaterVoiceFingeringTests` 10 本＋`FingScriptMemo_ALaterVoicesDigits_MatchFull`。毒 17 本のうち 16 本が赤・緑の P15＝memo の弧の鍵＝観測者なし。全 svg の掃き: 動いた svg 1 / 1268＝`chord-repetition.lys` の和音の下の 1 が弧の下へ 0.46（LilyPond はさらに 0.61 下）。commit `5b839783f`。終了時 full 17169 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17172。
+- 7.7: ⚠️ script の列の鍵（`supportScripts`）は声部を持たない（既存・未測定）。⚠️ 残差: staccato の外の数字 0.06（g2）・弧を避ける数字 0.03（g7）。⚠️ 未測定: 下の声部の数字の MusicXML の読み戻し（書き出しは出る）・tab だけの score の 2 声目の数字・下の声部の grace の数字。7.5: REF 5・MEASURED 3・新しい定数なし。CHANGELOG は 2 つとも `## Unreleased`。
+
+## 以下は第1264セッションの経緯
+
 ### 1.1 第1264セッション（2026-11-15・YT-DELL2）
 
 base `d6e4cec0a`・開始時 full 17155 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17158（Lab `p1264` の `run1.trx`）。REQUESTS と CI は第1260 の開始時に見たまま（同じ会話）。
@@ -150,18 +160,6 @@ base `d6e4cec0a`・開始時 full 17155 合格 / 1 失敗（`ReadmeSampleTests`�
 - 決定 ①を直した: `lysc xml` は `%` の繰り返しの小節に強弱を書き直さない（`MusicXmlExporter._inPercentRepetition`＝`ProcessPercentRepeat` が繰り返しの間だけ立て、`HandleDynamicText` が何も書かずに返る。level と niente）。直す前は `c''4@p d'' e''@cresc f'' | % | c''1@f` の 2 小節目に `p`（wedge は 1〜3 小節目に開いたまま）。Lab `p1264/pc`（q1〜q4・前後の一覧）。
 - 門: 網 `MusicXmlPercentDynamicsTests` 3 本・毒 2 本とも赤（立てない／戻さない）。往復の掃き（Lab `p1264/rt-sweep.ps1`）: xml の差 1・読み戻しの差 1 / 1268＝`test/percent-covered-bows.lys`（繰り返しの小節の `f` と `p` の 2 つが消えただけ）。描画には触っていない。commit `88b86ef31`。終了時 full 17158 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17161。
 - 7.7: ⚠️ `%` の小節の文字（`@text`）・pedal・ottava・text spanner は今も書き直す（決定は強弱だけ・未測定）。7.5: Core '+' は MusicXML の書き出し（REF 0・OWN 0）。
-
-## 以下は第1263セッションの経緯
-
-### 1.1 第1263セッション（2026-11-15・YT-DELL2）
-
-base `42247b882`・開始時 full 17151 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17154（Lab `p1263` の `run1.trx`）。REQUESTS と CI は第1260 の開始時に見たまま（同じ会話）。
-第1262 の残り「ずれた声部の text spanner・ottava・trill・pedal・アーティキュレーション」（オーナー指示 2026-11-14「残りの欠陥を順に」）。
-- 実測（Lab `p1263/sp`・LilyPond 2.26.0・ずれ 1.377・`1` がずれた本／`0` が対照）: アーティキュレーション（accent・fermata が上の声部の音の下＝17.81／LP 19.187）・text spanner（始まり 17.37／LP 18.748・終わり 22.52／LP 23.951）・trill の始まり（+1.377 足りない）がずれる前の列。**pedal は LilyPond もずれない列＝一致（直す物なし）**。
-- 直した: `ArticulationEngraver` のスクリプトの X・`TextSpannerEngraver.BoundX`／`RightBoundCentre`・`TrillSpannerEngraver.VoiceItemX` に `HairpinEngraver.CollisionShift` を足した。直したあと s1・t1・r1 は LilyPond と一致（絵は `sp/png-fix/s1.png`）。
-- 門: 網 `VoiceShiftedMarksTests` 4 本・毒 5 本のうち 4 本が赤（Lab `p1263/poisons.ps1`）。緑の P3＝text spanner の*予約の帯*の右端（描く線ではない・X の網からは見えない）＝観測者なし。全 svg の掃き（Lab `p1263/sweep`）: 動いた svg 1 / 1268＝`site/air-in-d.lys` の交差した声部の `@trill` が自分の音符の中心へ 0.47 右（正しい変化）。commit `7a5967b98`。終了時 full 17155 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17158。
-- ★★ **見つけた欠陥（未着手・次の一手の第一候補）: `voice { } { }` の 2 つ目以降の声部の `@finger(N)` は何も描かれない**（警告もなし）。`FingeringEngraver` は譜表の第 1 声だけを歩く（`score.Voice`・呼び手が 1 声の Score を作る・`ColumnOf` の注「serves the staff's PRIMARY voice」）。LilyPond は下の声部の下に描く（Lab `p1263/fg`: f2 の Fingering y=−3.6725・f3＝staccato の下 −5.1645）。直すには声部の走査・向き（下の声部は下）・memo（`FingScriptMemo`）・予約の 4 か所＝1 便ぶん。
-- 7.7: ⚠️ ottava は未着手: LilyPond は左端が*最初に来た*声部の列・右端が*最後に来た*声部の列（o1: 16.321..25.490・Lily# の右端 24.06）＝譜表の単位の規則で、声部のずれを足すだけでは合わない。⚠️ 茎側の staccato は LilyPond では符尾に乗る（s0: LP 21.461・Lily# 22.08＝符頭の中心）＝ずれとは別の既存の差・未追跡。7.5: Core '+' は `CollisionShift`（第1262 の MEASURED と REF）を読む 3 か所＝新しい定数なし。CHANGELOG は第1262 の行に足した。
 
 ## 2. 開いている作業
 

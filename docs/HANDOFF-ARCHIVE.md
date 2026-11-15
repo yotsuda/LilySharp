@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1263セッションの経緯
+
+### 1.1 第1263セッション（2026-11-15・YT-DELL2）
+
+base `42247b882`・開始時 full 17151 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17154（Lab `p1263` の `run1.trx`）。REQUESTS と CI は第1260 の開始時に見たまま（同じ会話）。
+第1262 の残り「ずれた声部の text spanner・ottava・trill・pedal・アーティキュレーション」（オーナー指示 2026-11-14「残りの欠陥を順に」）。
+- 実測（Lab `p1263/sp`・LilyPond 2.26.0・ずれ 1.377・`1` がずれた本／`0` が対照）: アーティキュレーション（accent・fermata が上の声部の音の下＝17.81／LP 19.187）・text spanner（始まり 17.37／LP 18.748・終わり 22.52／LP 23.951）・trill の始まり（+1.377 足りない）がずれる前の列。**pedal は LilyPond もずれない列＝一致（直す物なし）**。
+- 直した: `ArticulationEngraver` のスクリプトの X・`TextSpannerEngraver.BoundX`／`RightBoundCentre`・`TrillSpannerEngraver.VoiceItemX` に `HairpinEngraver.CollisionShift` を足した。直したあと s1・t1・r1 は LilyPond と一致（絵は `sp/png-fix/s1.png`）。
+- 門: 網 `VoiceShiftedMarksTests` 4 本・毒 5 本のうち 4 本が赤（Lab `p1263/poisons.ps1`）。緑の P3＝text spanner の*予約の帯*の右端（描く線ではない・X の網からは見えない）＝観測者なし。全 svg の掃き（Lab `p1263/sweep`）: 動いた svg 1 / 1268＝`site/air-in-d.lys` の交差した声部の `@trill` が自分の音符の中心へ 0.47 右（正しい変化）。commit `7a5967b98`。終了時 full 17155 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17158。
+- ★★ **見つけた欠陥（未着手・次の一手の第一候補）: `voice { } { }` の 2 つ目以降の声部の `@finger(N)` は何も描かれない**（警告もなし）。`FingeringEngraver` は譜表の第 1 声だけを歩く（`score.Voice`・呼び手が 1 声の Score を作る・`ColumnOf` の注「serves the staff's PRIMARY voice」）。LilyPond は下の声部の下に描く（Lab `p1263/fg`: f2 の Fingering y=−3.6725・f3＝staccato の下 −5.1645）。直すには声部の走査・向き（下の声部は下）・memo（`FingScriptMemo`）・予約の 4 か所＝1 便ぶん。
+- 7.7: ⚠️ ottava は未着手: LilyPond は左端が*最初に来た*声部の列・右端が*最後に来た*声部の列（o1: 16.321..25.490・Lily# の右端 24.06）＝譜表の単位の規則で、声部のずれを足すだけでは合わない。⚠️ 茎側の staccato は LilyPond では符尾に乗る（s0: LP 21.461・Lily# 22.08＝符頭の中心）＝ずれとは別の既存の差・未追跡。7.5: Core '+' は `CollisionShift`（第1262 の MEASURED と REF）を読む 3 か所＝新しい定数なし。CHANGELOG は第1262 の行に足した。
+
 ## 以下は第1262セッションの経緯
 
 ### 1.1 第1262セッション（2026-11-15・YT-DELL2）
