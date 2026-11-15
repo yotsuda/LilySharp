@@ -180,10 +180,17 @@ public sealed record GrandStaffRenderSpec(GrandStaffSpec GrandStaff) : RenderIte
 /// polyphony treatment (voice 1 up, voice 2 down, collision resolution). It does NOT merge
 /// unisons or print a2/Solo; that is the part combiner, which is a separate item.
 /// </remarks>
+/// <param name="Clef">The staff's clef: the one written before the brace, else the first part's.</param>
+/// <param name="PartNames">The parts, in voice order.</param>
+/// <param name="InstrumentName">The name the writer gave the staff
+/// (<c>condensedStaff "Tpts 1-2" "Tpts" { tp1 tp2 }</c>), printed left of the first system, or
+/// null: a staff of several parts takes no default name (owner's decision 2026-11-15).</param>
+/// <param name="ShortInstrumentName">The second string, printed left of the later systems, or null.</param>
 public sealed record CondensedStaffSpec(
     ClefType Clef,
     ImmutableArray<string> PartNames,
-    string? InstrumentName = null) : RenderItemSpec;
+    string? InstrumentName = null,
+    string? ShortInstrumentName = null) : RenderItemSpec;
 
 /// <summary>
 /// Combined-staff render item: <c>combinedStaff { partA partB }</c> puts TWO parts onto one
@@ -194,10 +201,16 @@ public sealed record CondensedStaffSpec(
 /// The counterpart of <see cref="CondensedStaffSpec"/>, which keeps both parts whole. See
 /// <see cref="PartCombiner"/> for what "agree" means at each moment.
 /// </remarks>
+/// <param name="Clef">The staff's clef: the one written before the brace, else the first part's.</param>
+/// <param name="PartNames">The two parts, the first the one "Solo" names.</param>
+/// <param name="InstrumentName">The name the writer gave the staff, or null — as
+/// <see cref="CondensedStaffSpec"/>'s.</param>
+/// <param name="ShortInstrumentName">The second string, printed left of the later systems, or null.</param>
 public sealed record CombinedStaffSpec(
     ClefType Clef,
     ImmutableArray<string> PartNames,
-    string? InstrumentName = null) : RenderItemSpec;
+    string? InstrumentName = null,
+    string? ShortInstrumentName = null) : RenderItemSpec;
 
 /// <summary>
 /// Where on its staff a binding's voices land — the numbering every item the collector
@@ -979,7 +992,9 @@ public sealed record RenderSpec(
                     var condensedVoices = StaffAccidentalColumns.Resolve(
                         MeasureCollector.ResolveVoiceStemDirections(
                             CondensedVoices(condensed, getVoices)));
-                    return Staff.Create(condensed.Clef, condensedVoices, condensed.InstrumentName);
+                    return Staff.Create(condensed.Clef, condensedVoices, condensed.InstrumentName)
+                        with
+                        { ShortInstrumentName = condensed.ShortInstrumentName };
 
                 // TWO parts -> ONE staff, MERGED. Unlike the condensed staff above, the
                 // voices that come out are not the voices that went in: the combiner
@@ -1020,7 +1035,7 @@ public sealed record RenderSpec(
                             result.Voices.AddRange(extraVoices),
                             combined.InstrumentName)
                         with
-                        { PartCombineMarks = result.Marks };
+                        { PartCombineMarks = result.Marks, ShortInstrumentName = combined.ShortInstrumentName };
 
                 default:
                     throw new InvalidOperationException(

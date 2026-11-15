@@ -1309,24 +1309,39 @@ internal sealed partial class Parser
     /// A clef word before the brace (<c>condensedStaff bass { vla vc }</c>) is the staff's
     /// clef, as in <c>staff bass x</c> (owner's decision 2026-10-13, grammar feedback B7):
     /// the brace that must follow makes it unambiguous, part names living inside.
+    /// One or two strings before the brace name the staff (<see cref="ParseSharedStaffNames"/>).
     /// </remarks>
     private CondensedStaffRenderGreen ParseCondensedStaffRender()
     {
         var keyword = Expect(SyntaxKind.CondensedStaffKeyword);
         var clef = ParseSharedStaffClef();
+        var names = ParseSharedStaffNames();
         var openBrace = Expect(SyntaxKind.OpenBrace);
         var partNames = ParseBarePartNameMembers(
             "condensedStaff", DiagnosticCodes.CondensedStaffBadMember,
             "Everything inside becomes a VOICE of the one staff it produces, and a staff or "
             + "a group of staves is not a voice.");
         var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new CondensedStaffRenderGreen(keyword, clef, openBrace, [.. partNames], closeBrace);
+        return new CondensedStaffRenderGreen(keyword, clef, names, openBrace, [.. partNames], closeBrace);
     }
 
     /// <summary>The optional clef word of <c>condensedStaff bass { … }</c> /
-    /// <c>combinedStaff bass { … }</c>: taken only when the brace follows it.</summary>
+    /// <c>combinedStaff bass { … }</c>: taken only when the brace — or the staff's name, which
+    /// stands between the two (<c>condensedStaff bass "Vc. / Cb." { … }</c>) — follows it.</summary>
     private SyntaxToken? ParseSharedStaffClef() =>
-        IsClefKeyword() && Peek(1).Kind == SyntaxKind.OpenBrace ? Advance() : null;
+        IsClefKeyword() && Peek(1).Kind is SyntaxKind.OpenBrace or SyntaxKind.StringLiteral ? Advance() : null;
+
+    /// <summary>The name a condensed or combined staff prints, before its brace: none, one string
+    /// (the first system's name) or two (the short name of the later systems after it) — the
+    /// order of <c>part vn1 "Violin I" "Vn. I"</c> (owner's decision 2026-11-15, grammar
+    /// evaluation 4). A third string is left for the brace's own "expected" error.</summary>
+    private SyntaxToken[] ParseSharedStaffNames()
+    {
+        var names = new List<SyntaxToken>(2);
+        while (names.Count < 2 && Check(SyntaxKind.StringLiteral))
+            names.Add(Advance());
+        return [.. names];
+    }
 
     /// <summary>
     /// Parse a combined-staff render: <c>combinedStaff { partA partB }</c>.
@@ -1341,13 +1356,14 @@ internal sealed partial class Parser
     {
         var keyword = Expect(SyntaxKind.CombinedStaffKeyword);
         var clef = ParseSharedStaffClef();
+        var names = ParseSharedStaffNames();
         var openBrace = Expect(SyntaxKind.OpenBrace);
         var partNames = ParseBarePartNameMembers(
             "combinedStaff", DiagnosticCodes.CombinedStaffBadMember,
             "It combines two PARTS — it has to see each part's own music to decide, moment "
             + "by moment, whether they are playing the same thing.");
         var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new CombinedStaffRenderGreen(keyword, clef, openBrace, [.. partNames], closeBrace);
+        return new CombinedStaffRenderGreen(keyword, clef, names, openBrace, [.. partNames], closeBrace);
     }
 
     /// <summary>

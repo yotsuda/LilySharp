@@ -151,7 +151,11 @@ drawn once, and a later part's `key` / `time` / `clef` that differs from the fir
 the same moment is not applied and warns (LYS4024) — write the same change in every part.
 The staff's clef is the first part's unless one is written before the brace:
 `condensedStaff bass { viola cello }` (also `combinedStaff bass { … }`). Every part is drawn
-under that clef, at its own pitches. Dynamics the parts share at a moment are printed once;
+under that clef, at its own pitches. To NAME the staff write one or two strings before the
+brace, after the clef word: `condensedStaff "Tpts 1-2" "Tpts" { tp1 tp2 }` prints "Tpts 1-2"
+left of the first system and the short name "Tpts" left of the later ones (also
+`combinedStaff "Flutes" "Fl." { … }`, `condensedStaff bass "Vc. / Cb." { vc cb }`). With no
+string the staff has no name — it never borrows its parts' names. Dynamics the parts share at a moment are printed once;
 where two parts differ (`@mf` in one over `@p` in the other, a crescendo against a diminuendo)
 the upper part's level and hairpin stand ABOVE the staff and the lower part's below. A side
 you write (`@p.up`) is kept.

@@ -2412,7 +2412,7 @@ StaffGroupBody = '{' , { StaffRender | CondensedStaff | CombinedStaff
                     the editor (once the text has rested) say it; a moved grace note is not
                     judged. *)
 
-CondensedStaff = 'condensedStaff' , [ ClefName ] , '{' , PartRef , PartRef , { PartRef } , '}' ;
+CondensedStaff = 'condensedStaff' , [ ClefName ] , [ DisplayName , [ DisplayName ] ] , '{' , PartRef , PartRef , { PartRef } , '}' ;
                  (* A CONDENSED score: the named parts, each of which would otherwise be its
                     own staff, share ONE staff — one voice each, in source order, so the
                     first part is voice 1 (stems up) exactly as the first block of a
@@ -2442,14 +2442,26 @@ CondensedStaff = 'condensedStaff' , [ ClefName ] , '{' , PartRef , PartRef , { P
                     the brace that must follow tells the clef from a part named `bass`
                     (`condensedStaff { bass vc }`).
 
+                    NAME (owner's decision 2026-11-15): one or two strings before the brace,
+                    after the clef word, name the staff — `condensedStaff "Tpts 1-2" "Tpts"
+                    { tp1 tp2 }`, `condensedStaff bass "Vc. / Cb." { vc cb }`. The first is
+                    printed left of the first system and the second, the short name, left of
+                    each later one, as a part's two names are (`part vn1 "Violin I" "Vn. I"`).
+                    With one string the later systems print none. With none the staff is
+                    unnamed: it never takes its parts' names or a default. The same on a
+                    `combinedStaff`. The name is the page's — LilyPond's instrumentName in
+                    the `.ly`; MusicXML keeps the parts as parts and does not carry it.
+
                     DYNAMICS (2026-11-13): what the parts share at a moment is printed once.
                     Where two parts differ — @mf in one over @p in the other, a crescendo
                     against a diminuendo — the upper part takes the side above the staff for
                     its level and hairpin and the lower part the side below, as LilyPond does
                     with \dynamicUp on the upper voice. A side the writer chose is kept. *)
 
-CombinedStaff  = 'combinedStaff' , [ ClefName ] , '{' , PartRef , PartRef , '}' ;
-                 (* The clef as for `condensedStaff`: written, else the first part's. *)
+CombinedStaff  = 'combinedStaff' , [ ClefName ] , [ DisplayName , [ DisplayName ] ] , '{' , PartRef , PartRef , '}' ;
+                 (* The clef as for `condensedStaff`: written, else the first part's. The
+                    name and short name as for `condensedStaff` too: `combinedStaff "Flutes"
+                    "Fl." { fl1 fl2 }`. *)
                  (* The part COMBINER: exactly two parts on one staff, merged wherever they
                     agree. At each moment the two are compared —
 

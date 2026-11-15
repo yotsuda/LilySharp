@@ -708,7 +708,9 @@ public static class RenderSpecParser
     /// <c>condensedStaff { partA partB … }</c> → one staff carrying every named part's
     /// voices. The clef is the one written before the brace (<c>condensedStaff bass { … }</c>),
     /// else the FIRST part's, since a condensed staff has only one and the leading part is the
-    /// one whose register the writer put on top.
+    /// one whose register the writer put on top. The name and the short name are the strings
+    /// written before the brace (<c>condensedStaff "Tpts 1-2" "Tpts" { … }</c>), and there is no
+    /// default: unwritten, the staff prints none (owner's decision 2026-11-15).
     /// </summary>
     /// <remarks>
     /// ⚠️ Unlike <see cref="ParseGrandStaff"/> this NEVER returns null. A group of fewer
@@ -723,7 +725,8 @@ public static class RenderSpecParser
         var names = condensed.PartNames.Where(n => n.Length > 0).ToImmutableArray();
         var clef = ClefOfKeyword(condensed.ClefToken)
             ?? (names.Length > 0 ? GetPartClef(condensed, names[0]) : null) ?? ClefType.Treble;
-        return new CondensedStaffSpec(clef, names);
+        // An empty string goes through as written: every reader of a staff's name takes it for none.
+        return new CondensedStaffSpec(clef, names, condensed.DisplayName, condensed.ShortName);
     }
 
     /// <summary>
@@ -740,7 +743,7 @@ public static class RenderSpecParser
         var names = combined.PartNames.Where(n => n.Length > 0).ToImmutableArray();
         var clef = ClefOfKeyword(combined.ClefToken)
             ?? (names.Length > 0 ? GetPartClef(combined, names[0]) : null) ?? ClefType.Treble;
-        return new CombinedStaffSpec(clef, names);
+        return new CombinedStaffSpec(clef, names, combined.DisplayName, combined.ShortName);
     }
 
     /// <summary>

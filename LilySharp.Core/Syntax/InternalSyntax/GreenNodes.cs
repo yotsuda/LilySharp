@@ -1216,20 +1216,22 @@ internal sealed class GrandStaffRenderGreen : GreenSyntaxNode
 
 /// <summary>
 /// Condensed-staff render: <c>condensedStaff { partA partB … }</c> — bare part names, not
-/// <c>staff</c> items, because the result is ONE staff however many parts go in.
+/// <c>staff</c> items, because the result is ONE staff however many parts go in. Before the
+/// brace, after the optional clef word: the staff's name and short name, none, one or two strings.
 /// </summary>
 internal sealed class CondensedStaffRenderGreen : GreenSyntaxNode
 {
     public CondensedStaffRenderGreen(
         SyntaxToken condensedStaffKeyword,
         SyntaxToken? clef,
+        SyntaxToken[] names,
         SyntaxToken openBrace,
         SyntaxToken[] partNames,
         SyntaxToken closeBrace)
         : base(SyntaxKind.CondensedStaffRender,
                clef is null
-                   ? [condensedStaffKeyword, openBrace, ..partNames, closeBrace]
-                   : [condensedStaffKeyword, clef, openBrace, ..partNames, closeBrace])
+                   ? [condensedStaffKeyword, ..names, openBrace, ..partNames, closeBrace]
+                   : [condensedStaffKeyword, clef, ..names, openBrace, ..partNames, closeBrace])
     {
     }
 }
@@ -1244,13 +1246,14 @@ internal sealed class CombinedStaffRenderGreen : GreenSyntaxNode
     public CombinedStaffRenderGreen(
         SyntaxToken combinedStaffKeyword,
         SyntaxToken? clef,
+        SyntaxToken[] names,
         SyntaxToken openBrace,
         SyntaxToken[] partNames,
         SyntaxToken closeBrace)
         : base(SyntaxKind.CombinedStaffRender,
                clef is null
-                   ? [combinedStaffKeyword, openBrace, ..partNames, closeBrace]
-                   : [combinedStaffKeyword, clef, openBrace, ..partNames, closeBrace])
+                   ? [combinedStaffKeyword, ..names, openBrace, ..partNames, closeBrace]
+                   : [combinedStaffKeyword, clef, ..names, openBrace, ..partNames, closeBrace])
     {
     }
 }

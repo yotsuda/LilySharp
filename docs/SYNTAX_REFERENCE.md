@@ -2358,6 +2358,12 @@ name of one; a staff group produces a **group of staves**, and says so. LilyPond
 its own contexts the same way for the same reason: of its seventeen staff contexts,
 `StaffGroup` is the only one that is not a musical term.
 
+A `condensedStaff` or `combinedStaff` takes its own name before its brace, after the clef word
+when there is one: `condensedStaff "Tpts 1-2" "Tpts" { tp1 tp2 }` prints the first string left
+of the first system and the second, the short name, left of each later one — the order of a
+part's two names. One string names the first system alone; with none the staff is unnamed (it
+does not take its parts' names). `combinedStaff bass "Vc. / Cb." { vc cb }`.
+
 ### This score's own header, and parts that only play
 
 A `title` / `subtitle` / `composer` / `poet` / `arranger` / `copyright` inside a score restates the file's metadata for **that score

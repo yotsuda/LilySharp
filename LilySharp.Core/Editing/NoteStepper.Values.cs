@@ -513,12 +513,17 @@ public static partial class NoteStepper
             string clef = clefToken is { } c ? c.Text + " " : "";
             int end = names!.Count > 0 ? names[^1].Span.End : keyword.Span.End;
             var spliced = new System.Text.StringBuilder(next);
-            int from = clefToken?.Span.End ?? keyword.Span.End;
+            // The staff's own name (`condensedStaff "Tpts 1-2" "Tpts" { … }`) is not a group's: a
+            // group prints its staves' names, so the strings go and the status bar says so.
+            var staffNames = CondensedStaffRenderSyntax.SharedStaffNames(group).ToList();
+            int from = staffNames.Count > 0 ? staffNames[^1].Span.End : clefToken?.Span.End ?? keyword.Span.End;
             foreach (var name in names)
             {
                 spliced.Append(text, from, name.Span.Start - from).Append("staff ").Append(clef).Append(name.Text);
                 from = name.Span.End;
             }
+            if (staffNames.Count > 0)
+                said += $" - the staff's name {staffNames[0].Text} is dropped (a group prints its staves' names)";
             return (new Edit(keyword.Span.Start, end, spliced.ToString()), said);
         }
         // Into a condensed / combined staff: every member must be a `staff [CLEF] NAME` row.

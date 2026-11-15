@@ -495,8 +495,8 @@ public sealed partial class LilyPondExporter
     /// FIRST part's, as <c>RenderSpecParser.ParseCombinedStaff</c> reads it;
     /// it stands before the voices in the staff's own braces (LilyPond 2.26.0 draws one staff
     /// with that clef for both spellings — scratch/p382/shared/clef-pc.ly).
-    /// No instrument name: the page names single staves only (RenderSpecParser's default
-    /// name fills <c>SingleStaffSpec</c> alone).
+    /// The instrument name is the one written before the brace and no other: the page's default
+    /// name fills single staves only (RenderSpecParser's <c>SingleStaffSpec</c> alone).
     /// A combined staff whose arity the validator already refused (CombinedStaffNeedsTwoParts)
     /// is reported rather than written: <c>\partCombine</c> takes exactly two.
     /// ⚠️ A tab or drum part named here is written as ordinary staff music: the page reads
@@ -524,7 +524,20 @@ public sealed partial class LilyPondExporter
             AddInlineChordRow(rows, name, indent);
 
         var sb = new StringBuilder();
-        sb.Append(indent).Append("\\new Staff { ");
+        sb.Append(indent).Append("\\new Staff");
+        // The staff's own name, written before its brace (`condensedStaff "Tpts 1-2" "Tpts" { … }`).
+        var (staffName, staffShortName) = item switch
+        {
+            CombinedStaffRenderSyntax c => (c.DisplayName, c.ShortName),
+            CondensedStaffRenderSyntax c => (c.DisplayName, c.ShortName),
+            _ => (null, null),
+        };
+        var sharedWith = new List<string>(2);
+        if (!string.IsNullOrEmpty(staffName)) sharedWith.Add("instrumentName = " + QuoteLilyPondString(staffName));
+        if (!string.IsNullOrEmpty(staffShortName)) sharedWith.Add("shortInstrumentName = " + QuoteLilyPondString(staffShortName));
+        if (sharedWith.Count > 0)
+            sb.Append(" \\with { ").Append(string.Join(" ", sharedWith)).Append(" }");
+        sb.Append(" { ");
         var part = parts.FirstOrDefault(p => p.Name.Text == names[0]);
         var writtenClef = item switch
         {

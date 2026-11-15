@@ -276,7 +276,9 @@ public class ValueContextCompletionTests
     {
         var items = LilySharpLanguageServer.GetOneStaffHeadCompletions().Items
             .OrderBy(i => i.SortText, StringComparer.Ordinal).ToList();
-        Assert.Equal(new[] { "{ }", "treble", "treble_8", "alto", "tenor", "bass" }, items.Select(i => i.Label));
+        // …and last the staff's own name (owner's decision 2026-11-15).
+        Assert.Equal(new[] { "{ }", "treble", "treble_8", "alto", "tenor", "bass", "\"name\"" }, items.Select(i => i.Label));
+        Assert.Equal("\"${1:name}\" {\n\t$0\n}", items.Single(i => i.Label == "\"name\"").InsertText);
         // The body on its own indented line (owner's request 2026-10-24).
         Assert.Equal("bass {\n\t$0\n}", items.Single(i => i.Label == "bass").InsertText);
         Assert.Equal("{\n\t$0\n}", items.Single(i => i.Label == "{ }").InsertText);

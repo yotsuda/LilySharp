@@ -2132,6 +2132,18 @@ public sealed partial class LilySharpLanguageServer
                 SortText = (i + 1).ToString("D2", System.Globalization.CultureInfo.InvariantCulture),
                 Command = bodyWritten ? null : suggestParts,
             });
+        // The staff's own name (owner's decision 2026-11-15): a string before the brace, after
+        // the clefs in the list as it is after the clef in the row.
+        items.Add(new CompletionItem
+        {
+            Label = "\"name\"",
+            Kind = CompletionItemKind.Snippet,
+            InsertTextFormat = InsertTextFormat.Snippet,
+            InsertText = bodyWritten ? "\"$0\"" : "\"${1:name}\" {\n\t$0\n}",
+            Detail = "The staff's name, left of the first system — a second string is the short name of the later systems",
+            SortText = (clefs.Count + 1).ToString("D2", System.Globalization.CultureInfo.InvariantCulture),
+            Command = bodyWritten ? null : suggestParts,
+        });
         return new CompletionList { Items = [.. items] };
     }
 

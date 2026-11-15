@@ -188,4 +188,129 @@ public class GrammarEvaluation4FeaturesTests
         Assert.Contains("notehead", offered);
         Assert.Contains("staccato", offered);
     }
+
+    // ───────────────────────── 7. condensedStaff "Tpts 1-2" "Tpts" { tp1 tp2 } ─────────────────────────
+
+    /// <summary>A score of a flute and one staff of two parts, long enough for a second system.</summary>
+    private static string Ensemble(string sharedStaff)
+    {
+        string bars = string.Concat(Enumerable.Repeat("c''4 d'' e'' f'' | ", 24));
+        string low = string.Concat(Enumerable.Repeat("c'4 d' e' f' | ", 24));
+        return "octave absolute\ntime 4/4\npart fl \"Flute\" \"Fl.\" { }\npart tp1 { }\npart tp2 { }\n"
+            + $"section A {{ fl {{ {bars}}} tp1 {{ {bars}}} tp2 {{ {low}}} }}\nform {{ A }}\n"
+            + $"score {{ staff fl {sharedStaff} }}\n";
+    }
+
+    /// <summary>The texts the page draws, by how many times each is drawn.</summary>
+    private static Dictionary<string, int> Drawn(string source)
+        => RenderedGeometry.Render(source).Texts.GroupBy(t => t.Text).ToDictionary(g => g.Key, g => g.Count());
+
+    /// <summary>The strings before the brace are the staff's name and short name, after the clef
+    /// word when there is one; the text reads back as written and the parts are the same parts.</summary>
+    [Theory]
+    [InlineData("condensedStaff \"Tpts 1-2\" \"Tpts\" { tp1 tp2 }", null, "Tpts 1-2", "Tpts")]
+    [InlineData("condensedStaff \"Tpts 1-2\" { tp1 tp2 }", null, "Tpts 1-2", null)]
+    [InlineData("condensedStaff bass \"Vc. / Cb.\" { tp1 tp2 }", "bass", "Vc. / Cb.", null)]
+    [InlineData("combinedStaff \"Tpts 1-2\" \"Tpts\" { tp1 tp2 }", null, "Tpts 1-2", "Tpts")]
+    [InlineData("combinedStaff alto \"A \\\"B\\\"\" \"A\" { tp1 tp2 }", "alto", "A \"B\"", "A")]
+    [InlineData("condensedStaff bass { tp1 tp2 }", "bass", null, null)]
+    [InlineData("combinedStaff { tp1 tp2 }", null, null, null)]
+    public void AStaffOfSeveralParts_TakesItsNameBeforeItsBrace(string row, string? clef, string? name, string? shortName)
+    {
+        string source = Ensemble(row);
+        Clean(source);
+        var tree = SyntaxTree.Parse(source);
+        Assert.Equal(source, tree.GetRoot().ToFullString());
+
+        var read = tree.GetNodes<SyntaxNode>().Select(n => n switch
+        {
+            CondensedStaffRenderSyntax c => (c.ClefToken?.Text, c.DisplayName, c.ShortName, string.Join(" ", c.PartNames)),
+            CombinedStaffRenderSyntax c => (c.ClefToken?.Text, c.DisplayName, c.ShortName, string.Join(" ", c.PartNames)),
+            _ => ((string?, string?, string?, string)?)null,
+        }).Single(r => r != null);
+        Assert.Equal((clef, name, shortName, "tp1 tp2"), read);
+    }
+
+    /// <summary>The name stands left of the first system and the short name left of each later
+    /// one, as a part's two names do; one string names the first system alone; none — or an
+    /// empty one — names nothing, and the other staves' names stay what they were.</summary>
+    [Theory]
+    [InlineData("condensedStaff")]
+    [InlineData("combinedStaff")]
+    public void TheName_IsOnTheFirstSystem_AndTheShortNameOnTheLaterOnes(string keyword)
+    {
+        var unnamed = Drawn(Ensemble(keyword + " { tp1 tp2 }"));
+        int laterSystems = unnamed["Fl."];
+        Assert.True(laterSystems >= 1, "the probe needs a second system");
+        Assert.Equal(1, unnamed["Flute"]);
+
+        var both = Drawn(Ensemble(keyword + " \"Tpts 1-2\" \"Tpts\" { tp1 tp2 }"));
+        Assert.Equal(1, both["Tpts 1-2"]);
+        Assert.Equal(laterSystems, both["Tpts"]);
+        Assert.Equal((1, laterSystems), (both["Flute"], both["Fl."]));
+
+        var one = Drawn(Ensemble(keyword + " \"Tpts 1-2\" { tp1 tp2 }"));
+        Assert.Equal(1, one["Tpts 1-2"]);
+        Assert.Equal(unnamed.Count + 1, one.Count);
+
+        // No name written is no name printed: never the parts' own, never a default.
+        Assert.DoesNotContain(unnamed.Keys, t => t.Contains("tp", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(unnamed, Drawn(Ensemble(keyword + " \"\" { tp1 tp2 }")));
+    }
+
+    /// <summary>The name makes room for itself: the first system's music starts further right
+    /// under a long name than under none, as it does for a staff's.</summary>
+    [Fact]
+    public void ALongName_IndentsTheFirstSystem()
+    {
+        // The first system is the top one: its leftmost glyph is its first clef.
+        static double FirstClefX(string source)
+        {
+            var glyphs = RenderedGeometry.Render(source).Glyphs;
+            double top = glyphs.Min(g => g.Y);
+            return glyphs.Where(g => g.Y < top + 10).Min(g => g.X);
+        }
+        Assert.True(FirstClefX(Ensemble("condensedStaff \"Trumpets in B-flat 1 and 2\" { tp1 tp2 }"))
+            > FirstClefX(Ensemble("condensedStaff { tp1 tp2 }")) + 1.0);
+    }
+
+    /// <summary>A staff of several parts that is the score's only staff prints its name too.</summary>
+    [Fact]
+    public void TheOnlyStaffOfAScore_PrintsItsName()
+    {
+        string alone = Ensemble("condensedStaff \"Tpts 1-2\" \"Tpts\" { tp1 tp2 }").Replace("staff fl ", "");
+        Clean(alone);
+        var drawn = Drawn(alone);
+        Assert.Equal(1, drawn["Tpts 1-2"]);
+        Assert.True(drawn["Tpts"] >= 1);
+    }
+
+    /// <summary>LilyPond's file names the staff the same way; MIDI is the unnamed score's.</summary>
+    [Theory]
+    [InlineData("condensedStaff", "<< ")]
+    [InlineData("combinedStaff", "\\partCombine ")]
+    public void TheTwinNamesTheStaff_AndTheSoundIsTheSame(string keyword, string music)
+    {
+        string named = Ensemble(keyword + " \"Tpts 1-2\" \"Tpts\" { tp1 tp2 }");
+        string ly = Ly(named, out var warnings);
+        Assert.Empty(warnings);
+        Assert.Contains("\\new Staff \\with { instrumentName = \"Tpts 1-2\" shortInstrumentName = \"Tpts\" } { " + music, ly);
+        Assert.Contains("\\new Staff \\with { instrumentName = \"Tpts 1-2\" } { " + music,
+            Ly(Ensemble(keyword + " \"Tpts 1-2\" { tp1 tp2 }"), out _));
+
+        string plain = Ensemble(keyword + " { tp1 tp2 }");
+        Assert.Contains("\\new Staff { " + music, Ly(plain, out _));
+        Assert.Equal(Notes(plain), Notes(named));
+    }
+
+    /// <summary>The caret after the name is still before this staff's brace, and inside the
+    /// braces the editor still offers bare part names.</summary>
+    [Theory]
+    [InlineData("score { condensedStaff \"Tpts 1-2\" \"Tpts\" { ")]
+    [InlineData("score { combinedStaff bass \"Vc. / Cb.\" { tp1 ")]
+    public void InsideANamedStaffsBraces_ThePartNamesAreOffered(string text)
+    {
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.BarePartNameList,
+            LilySharpLanguageServer.GetCompletionContext(text, text.Length));
+    }
 }

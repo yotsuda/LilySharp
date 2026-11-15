@@ -1205,6 +1205,44 @@ public sealed partial class CondensedStaffRenderSyntax : SyntaxNode
         node.SlotCount > 1 && node.GetChild(1) is SyntaxTokenNode t && SyntaxFacts.IsClefKeyword(t.Kind)
             ? t : null;
 
+    /// <summary>The token of the staff's name (<c>condensedStaff "Tpts 1-2" "Tpts" { … }</c> →
+    /// <c>"Tpts 1-2"</c>), or null: the staff then prints none (owner's decision 2026-11-15 — a
+    /// staff of several parts is named by its writer, never by a default).</summary>
+    public SyntaxTokenNode? NameToken => SharedStaffNames(this).FirstOrDefault();
+
+    /// <summary>The token of the short name the systems after the first print, the second
+    /// string, or null.</summary>
+    public SyntaxTokenNode? ShortNameToken => SharedStaffNames(this).Skip(1).FirstOrDefault();
+
+    /// <summary>The staff's name as text (escapes resolved), or null when none is written.</summary>
+    public string? DisplayName => NameToken is { } t ? StringLiteral.Value(t.Text) : null;
+
+    /// <summary>The staff's short name as text, or null when none is written.</summary>
+    public string? ShortName => ShortNameToken is { } t ? StringLiteral.Value(t.Text) : null;
+
+    /// <summary>The slot of the node's own opening brace: after the keyword, the clef word and
+    /// the names, whichever of them are written (a missing brace is still a token there).</summary>
+    internal static int OpenBraceSlot(SyntaxNode node)
+    {
+        int i = ClefBeforeBrace(node) is null ? 1 : 2;
+        while (i < node.SlotCount && node.GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral })
+            i++;
+        return i;
+    }
+
+    /// <summary>The strings between the keyword (and the clef word) and the brace of a
+    /// <c>condensedStaff</c> / <c>combinedStaff</c> node — its name, then its short name: one
+    /// reading for both.</summary>
+    internal static IEnumerable<SyntaxTokenNode> SharedStaffNames(SyntaxNode node)
+    {
+        for (int i = ClefBeforeBrace(node) is null ? 1 : 2; i < node.SlotCount; i++)
+        {
+            if (node.GetChild(i) is not SyntaxTokenNode { Kind: SyntaxKind.StringLiteral } t)
+                yield break;
+            yield return t;
+        }
+    }
+
     /// <summary>The part-name TOKENS to condense, in source order — which is also VOICE
     /// order, so the first part gets voice 1 (stems up) exactly as the first block of a
     /// <c>voice { … } { … }</c> span does. Tokens rather than text, because a reference that
@@ -1245,8 +1283,9 @@ public sealed partial class CondensedStaffRenderSyntax : SyntaxNode
     internal static IEnumerable<SyntaxTokenNode> BarePartNameMembers(SyntaxNode node)
     {
         int depth = 0;
-        // Inside the node's own braces: the open brace is slot 1, or 2 after a clef word.
-        for (int i = ClefBeforeBrace(node) is null ? 2 : 3; i < node.SlotCount - 1; i++)
+        // Inside the node's own braces: the open brace follows the keyword, the clef word and
+        // the staff's names, whichever are written.
+        for (int i = OpenBraceSlot(node) + 1; i < node.SlotCount - 1; i++)
         {
             if (node.GetChild(i) is not SyntaxTokenNode t) continue;
             if (t.Kind == SyntaxKind.OpenBrace) { depth++; continue; }
@@ -1279,6 +1318,19 @@ public sealed partial class CombinedStaffRenderSyntax : SyntaxNode
     /// <summary>The clef word of <c>combinedStaff bass { … }</c>, or null: the staff then
     /// takes its first part's clef.</summary>
     public SyntaxTokenNode? ClefToken => CondensedStaffRenderSyntax.ClefBeforeBrace(this);
+
+    /// <summary>The token of the staff's name (<c>combinedStaff "Flutes" "Fl." { … }</c>), or
+    /// null — as <see cref="CondensedStaffRenderSyntax.NameToken"/>.</summary>
+    public SyntaxTokenNode? NameToken => CondensedStaffRenderSyntax.SharedStaffNames(this).FirstOrDefault();
+
+    /// <summary>The token of the short name the systems after the first print, or null.</summary>
+    public SyntaxTokenNode? ShortNameToken => CondensedStaffRenderSyntax.SharedStaffNames(this).Skip(1).FirstOrDefault();
+
+    /// <summary>The staff's name as text (escapes resolved), or null when none is written.</summary>
+    public string? DisplayName => NameToken is { } t ? StringLiteral.Value(t.Text) : null;
+
+    /// <summary>The staff's short name as text, or null when none is written.</summary>
+    public string? ShortName => ShortNameToken is { } t ? StringLiteral.Value(t.Text) : null;
 
     /// <summary>The two part-name TOKENS, in source order: the first is the part whose stems
     /// go UP where the two are engraved apart, and the one "Solo" refers to. Tokens rather

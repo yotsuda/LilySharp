@@ -1270,6 +1270,11 @@ score { staff melody  staff bass }</pre>
   takes one key, one meter and one clef at a moment: a <code>time</code> both parts write is
   drawn once, and a later part's change that differs from the first part's at the same
   moment is not applied and warns — write the same change in every part.</p>
+  <p>Either takes a clef word and a name before its brace:
+  <code>condensedStaff "Tpts 1-2" "Tpts" { tp1 tp2 }</code> prints the first string left of
+  the first system and the second, the short name, left of the later ones;
+  <code>combinedStaff bass "Vc. / Cb." { vc cb }</code> puts both parts on a bass staff.
+  A staff with no string has no name.</p>
   <p>Because these are score items, one source prints both the condensed score and the
   separate parts:</p>
 <pre>score full  { condensedStaff { fl1 fl2 } }

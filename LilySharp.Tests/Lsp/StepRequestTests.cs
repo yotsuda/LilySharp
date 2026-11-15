@@ -1334,6 +1334,24 @@ public class StepRequestTests
         Assert.Contains("lyrics row", lyrics.Message);
     }
 
+    /// <summary>A condensed or combined staff's own name (owner's decision 2026-11-15) stays
+    /// between the two one-staff kinds; a group prints its staves' names, so stepping to one
+    /// drops the strings and the status bar says so.</summary>
+    [Fact]
+    public void AOneStaffsName_StaysOnOneStaff_AndIsDroppedForAGroup()
+    {
+        Assert.Equal(Score("combinedStaff bass \"Hands\" \"H.\" { rh lh }"),
+            Step(Score("‸condensedStaff bass \"Hands\" \"H.\" { rh lh }"), -1, semitone: true).After);
+        Assert.Equal(Score("condensedStaff \"Hands\" { rh lh }"),
+            Step(Score("‸combinedStaff \"Hands\" { rh lh }"), +1, semitone: true).After);
+
+        var (dropped, group) = Step(Score("‸condensedStaff bass \"Hands\" \"H.\" { rh lh }"), +1, semitone: true);
+        Assert.Equal(Score("choirStaff { staff bass rh staff bass lh }"), group);
+        Assert.Contains("the staff's name \"Hands\" is dropped", dropped.Message);
+        Assert.Equal(Score("grandStaff {\n  staff rh\n  staff lh }"),
+            Step(Score("‸condensedStaff \"Hands\" {\n  rh\n  lh }"), +1).After);
+    }
+
     [Fact]
     public void AScoreRowsClefWord_StepsLikeAClefInMusic()
     {
