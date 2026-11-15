@@ -142,6 +142,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1262セッション（2026-11-15・YT-DELL2）
+
+base `b84816f8b`・開始時 full 17146 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17149（Lab `p1262` の `run1.trx`）。REQUESTS と CI は第1260 の開始時に見たまま（同じ会話）。
+leftovers の未測定の形を測り、欠陥だった 1 件を直した（オーナー指示 2026-11-14「残りの欠陥を順に」）。
+- **測って欠陥でなかったもの**（Lab `p1262/w`）: `%` の小節をまたぐヘアピン・同じフレーズを 2 声部で弾く形・別の声部の stop は、xml の wedge がページどおり。MIDI のヘアピンは「パートのもの」（オーナー決定 2026-11-14・`SwellInstruments`）＝声部ごとではないのが仕様。⚠️ 決めごとが 1 つ残る: `c''4@p d'' e''@cresc f'' | % | c''1@f` で xml は `%` の小節に `p` だけ書き直す（wedge は開いたまま・ページは `%` の小節に何も刷らない）＝ページどおりに `p` を書かないか、音どおりに wedge も切って書き直すか。
+- **直した欠陥**（Lab `p1262/shift`・LilyPond 2.26.0 と数字で比較）: 2 度・同音でぶつかって横にずれた声部のヘアピンと強弱記号が、ずれる前の列に立っていた。`voice { c''2 d''2 } { b'2@cresc c''2@f }` でヘアピンの左端 17.12（LP 18.448）・f の中心 22.77（LP 24.151）・高さ −4.76（LP −4.01＝f が上の声部の音の下で隣の符尾を避けて 0.74 下がり、線ごと下がっていた）。`HairpinEngraver.CollisionShift`（譜表の衝突の表 `VoiceCollisionShiftsOf` を声部の列で読む）を、ヘアピンの両端の列・支えの列・`DynamicAlignEngraver` の線の支えの列・`DynamicEngraver` の文字の列に足した。直したあと a0〜a5 は全部 LilyPond と一致（端の 0.05 はずれのない対照にも同じだけある既存の差）。
+- 門: 網 `HairpinVoiceShiftTests` 5 本（数字は全部 LilyPond の実測）・毒 9 本のうち 7 本が赤（Lab `p1262/poisons.ps1`）。緑の 2 本: P5＝ヘアピン自身の支えの列（高さは後段の `DynamicAlignEngraver` の線が上書きするので単独では見えない）・P9＝文字も stop もない終わりの列（`CalculateEndX` の音の腕。その形を書けなかった）＝観測者なし。全 svg の掃き（Lab `p1262/sweep`）は差 0 / 1268＝コーパスに「ずれた声部の強弱」は無い（head の exe が直したビルドであることは a1 で確かめた）。commit `a5ddc40ac`。終了時 full 17151 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17154。
+- 不安定な網: 第1261 の full で 1 度だけ `SvgSnapshotTests` 2 本（`test/system-count-line-start-ink`・`test/dead-note`）が赤くなった（そのときの log は上書きして残っていない）。full を 5 回回して再現せず（Lab `p1262/flake`）＝原因は未特定のまま。
+- 7.7: ⚠️ 同じ読み（`ColumnExtent`・列の X）を使う text spanner・ottava・trill・pedal の端は、ずれた声部でまだずれを足していない（`ColumnExtent` の `shift` は既定 0・未測定）。⚠️ アーティキュレーションと運指は未測定。7.5: Core '+' は `CollisionShift` の MEASURED と LILYPOND-REF（lily/note-collision.cc:403-470）。CHANGELOG は 2 つとも `## Unreleased`（`[engraving]`）。
+
+## 以下は第1261セッションの経緯
+
 ### 1.1 第1261セッション（2026-11-15・YT-DELL2）
 
 base `c8612967d`・開始時 full 17133 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17136（Lab `p1261` の `run1.trx`）。REQUESTS と CI は第1260 の開始時に見たまま（同じ会話）。
@@ -151,19 +163,6 @@ leftovers「残り（欠陥）」の先頭「MusicXML の読み込みは guitar 
 - 一緒に直した欠陥: 線の終わりは開いた*音*を使い切っていたので、1 つの音に 2 本開く形（`e4@palmMute@letRing`。破線の文字の線と ottava が同じ音で始まる形も）の 2 本目の終わりが「始まりなし」で落ちていた → 音と線の名前の組で使い切る。
 - 門: 網 `MusicXmlImportGuitarLineTests` 13 本・毒 12 本が全部赤（Lab `p1261/poisons.ps1`）。往復の掃き（Lab `p1261/rt-sweep.ps1`）: xml の差 0・読み戻しの差 0 / 1268＝コーパスに guitar の線の本は 0 冊（形は探り譜 g1〜g5 と網で見た）。⚠️ この掃きの head は毒 P12 の残りのビルドだった（線の鍵だけが違う。毒のあと作り直さずに exe を写した）＝「ほかの読みは動かない」の確認としては有効。描画には触っていない（svg の掃きなし）。commit `abb28426d`。終了時 full 17146 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17149。
 - 7.7: ⚠️ **vibrato の `<wavy-line>` は読んでいない**: 読み手はパートを fretted と宣言しない（`part guitar { clef treble_8 }`）ので、`@vibrato` を書くと「歌い手の印＝無視」の警告になる。パートに `instrument guitar` を書く（MIDI program や TAB から決める）のは機能の追加＝オーナーに訊く。⚠️ 言葉は Lily# が書く綴りだけを読む（"PM"・"l.v." などは文字のまま）。⚠️ section の境をまたぐ guitar の線は切らない（text spanner と同じ・未測定）。7.5: Core '+' は MusicXML の読み（REF 0・OWN 0）。CHANGELOG は 2 つとも `## Unreleased`。
-
-## 以下は第1260セッションの経緯
-
-### 1.1 第1260セッション（2026-11-15・YT-DELL2）
-
-base `9f18bbea6`・開始時 full 17121 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17124（Lab `p1260` の `run1.trx`）。Calamo の REQUESTS の `open` は 0・Dettato は 1・2 が `question`（オーナー待ち）のまま。CI は第1231 のまま。
-leftovers の「`@f.up`・`@p.up` の向きが往復で落ちる」（第1259 が見つけた）と、測る途中で出た第1238 の残り「`DynamicLineSides` は段ごとに 1 本の流れ」（オーナー指示 2026-11-14「残りの欠陥を順に」）。
-- 実測（直す前・Lab `p1260/side`）: 向きを落としていたのは読み手（direction の `placement` を読まない）。探り譜 `s4`（2 声部・片方だけが向きを書く）で向きの読みが 3 通りあった: ページは 2 声部を 1 本の流れで読み、下の声部の p が上の声部の `@f.up` に重なり、下の声部の `.down` が上の声部の線を切る（`png/s4.png`）。`lysc xml` は声部を書く順で読む別の答え。LilyPond 2.26.0 は声部ごと（`ly/s4.png`: f とヘアピンは上、p と mf は下）。
-- ページ: `DynamicLineSides.Resolve` を声部ごとに歩く（並べる鍵・1 拍のまとまり・線のリセットに `VoiceIndex`）。直したあとの絵は LilyPond と同じ（`png-head/s4.png`）。
-- 書き手: 後の声部（`voice { } { }` の 2 つ目以降）は自分の線を持ち、ブロックをまたいで続く（`MusicXmlExporter._laterVoiceLines`）。
-- 読み手: 強弱とヘアピンの始まりの `placement` を覚え（`placed`）、`MusicXmlReader.SayDynamicSides` がページと同じ歩き（声部ごと・1 拍の中は stop → ヘアピン → 文字）で「書かなければ出る向き」を出し、違う記号にだけ `.up`／`.down` を書く（`ImportNote.SaidSides`・`LysWriter.SaidSide`）。譜表の既定は歌詞のあるパートが上。placement のない direction は何も言わない。
-- 門: 網 `DynamicSideRoundTripTests` 12 本・毒 13 本が全部赤（Lab `p1260/poisons.ps1`。最初の回は 3 本が緑＝網 2 本を足した）。全 svg の掃き（Lab `p1260/sweep`）は差 0 / 1268＝コーパスにこの形は無く、絵の変化は `s4` で見た。往復の掃き（Lab `p1260/rt-sweep.ps1`）: xml の差 0・読み戻した `.lys` の差 4 / 1268（どれも `.up`／`.down` が戻っただけ）。commit `56c17ffd0`。終了時 full 17132 合格 / 2 失敗 / skip 2 / 合計 17136（`run3.trx`＝`ReadmeSampleTests` と、語りが 191 字長かった `TheHandoffStaysReadable`。削ったあと後者は単独で緑）。
-- 7.7: ⚠️ section の境で切って開き直したヘアピン（`LysWriter.CutSpan` の `AddOpen`）は向きを運ばない。⚠️ 別の段へ送った印の向き（`SendDirectedMarksHome`）と装飾音の強弱は網なし。⚠️ `<dynamics placement>`（direction ではなく中の要素に書く形）は読まない。残したものは Lab `p1242/leftovers.md` の「第1260」。7.5: Core '+' 134 行（REF 0・OWN 0）＝`DynamicLineSides` は既存の LILYPOND-REF の下に MEASURED を足した・ほかは MusicXML の読み書き。CHANGELOG は 2 つとも `## Unreleased`。
 
 ## 2. 開いている作業
 

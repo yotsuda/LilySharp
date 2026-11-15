@@ -267,6 +267,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1260セッションの経緯
+
+### 1.1 第1260セッション（2026-11-15・YT-DELL2）
+
+base `9f18bbea6`・開始時 full 17121 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17124（Lab `p1260` の `run1.trx`）。Calamo の REQUESTS の `open` は 0・Dettato は 1・2 が `question`（オーナー待ち）のまま。CI は第1231 のまま。
+leftovers の「`@f.up`・`@p.up` の向きが往復で落ちる」（第1259 が見つけた）と、測る途中で出た第1238 の残り「`DynamicLineSides` は段ごとに 1 本の流れ」（オーナー指示 2026-11-14「残りの欠陥を順に」）。
+- 実測（直す前・Lab `p1260/side`）: 向きを落としていたのは読み手（direction の `placement` を読まない）。探り譜 `s4`（2 声部・片方だけが向きを書く）で向きの読みが 3 通りあった: ページは 2 声部を 1 本の流れで読み、下の声部の p が上の声部の `@f.up` に重なり、下の声部の `.down` が上の声部の線を切る（`png/s4.png`）。`lysc xml` は声部を書く順で読む別の答え。LilyPond 2.26.0 は声部ごと（`ly/s4.png`: f とヘアピンは上、p と mf は下）。
+- ページ: `DynamicLineSides.Resolve` を声部ごとに歩く（並べる鍵・1 拍のまとまり・線のリセットに `VoiceIndex`）。直したあとの絵は LilyPond と同じ（`png-head/s4.png`）。
+- 書き手: 後の声部（`voice { } { }` の 2 つ目以降）は自分の線を持ち、ブロックをまたいで続く（`MusicXmlExporter._laterVoiceLines`）。
+- 読み手: 強弱とヘアピンの始まりの `placement` を覚え（`placed`）、`MusicXmlReader.SayDynamicSides` がページと同じ歩き（声部ごと・1 拍の中は stop → ヘアピン → 文字）で「書かなければ出る向き」を出し、違う記号にだけ `.up`／`.down` を書く（`ImportNote.SaidSides`・`LysWriter.SaidSide`）。譜表の既定は歌詞のあるパートが上。placement のない direction は何も言わない。
+- 門: 網 `DynamicSideRoundTripTests` 12 本・毒 13 本が全部赤（Lab `p1260/poisons.ps1`。最初の回は 3 本が緑＝網 2 本を足した）。全 svg の掃き（Lab `p1260/sweep`）は差 0 / 1268＝コーパスにこの形は無く、絵の変化は `s4` で見た。往復の掃き（Lab `p1260/rt-sweep.ps1`）: xml の差 0・読み戻した `.lys` の差 4 / 1268（どれも `.up`／`.down` が戻っただけ）。commit `56c17ffd0`。終了時 full 17132 合格 / 2 失敗 / skip 2 / 合計 17136（`run3.trx`＝`ReadmeSampleTests` と、語りが 191 字長かった `TheHandoffStaysReadable`。削ったあと後者は単独で緑）。
+- 7.7: ⚠️ section の境で切って開き直したヘアピン（`LysWriter.CutSpan` の `AddOpen`）は向きを運ばない。⚠️ 別の段へ送った印の向き（`SendDirectedMarksHome`）と装飾音の強弱は網なし。⚠️ `<dynamics placement>`（direction ではなく中の要素に書く形）は読まない。残したものは Lab `p1242/leftovers.md` の「第1260」。7.5: Core '+' 134 行（REF 0・OWN 0）＝`DynamicLineSides` は既存の LILYPOND-REF の下に MEASURED を足した・ほかは MusicXML の読み書き。CHANGELOG は 2 つとも `## Unreleased`。
+
 ## 以下は第1259セッションの経緯
 
 ### 1.1 第1259セッション（2026-11-15・YT-DELL2）
