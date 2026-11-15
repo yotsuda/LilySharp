@@ -597,9 +597,16 @@ public sealed partial class LilyPondExporter
                     Flush();
                 result.Add(item);
             }
-            // An ending's `]` with no bar line after it closes its bar (ChordRowBarLines.EndCloses).
+            // An ending's `]` with no bar line after it closes its bar (ChordRowBarLines.EndCloses),
+            // and the stream takes the plain line it stands for: the ending's last bar is closed
+            // by a line, so WriteTheScoresRepeatSigns finds where the ending ends (PlaceTheBarLines)
+            // and writes the \alternative. MEASURED before (2026-11-15, Lab sessions/p1283/row/e2):
+            // `|: D | G | [1. A7] :| [2. D]` wrote no \alternative — D stood after the repeat.
             else if (item is VoltaEndSyntax end && Semantics.ChordRowBarLines.EndCloses(end, pending.Count > 0))
+            {
                 Flush();
+                result.Add(CreateBarline(SyntaxKind.Bar, "|", end.Position, 0));
+            }
             else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
             {
                 pending.Add(item);

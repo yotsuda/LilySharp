@@ -123,7 +123,30 @@ public class ChordRowEndingBarTests
     {
         string ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(Melody
             + "chords prog { section S { C | A } section T { [1. A7] [2. D] } }\nform { S T }\nscore { chords prog staff m }\n"));
-        Assert.Matches(@"a1:7\s+d1", ly);
+        // The `]` closes A7's bar: the plain line it stands for is written (2026-11-15).
+        Assert.Matches(@"a1:7 \|\s+d1", ly);
+    }
+
+    /// <summary>The twin writes the <c>\alternative</c> of endings whose last bar a <c>]</c>
+    /// closes — the row's own, and the part's copy of them — and says nothing about it.</summary>
+    /// <remarks>Until 2026-11-15 (Lab sessions/p1283/row/e2) the twin placed endings on written
+    /// bar lines only: <c>[2. D]</c> with no line after it lost its <c>\alternative</c> (D stood
+    /// after the repeat) and the row was said not to carry the signs.</remarks>
+    [Theory]
+    [InlineData("|: D | G | [1. A7] :| [2. D]", false, @"\\alternative \{\s*\{\s*a1:7\s*\}\s*\{\s*d1 \|\s*\}\s*\}")]
+    [InlineData("|: D | G | [1. A7 :| [2. D]", false, @"\\alternative \{\s*\{\s*a1:7\s*\}\s*\{\s*d1 \|\s*\}\s*\}")]
+    [InlineData("|: D | A | [1. A7] :| [2. ]", false, @"\\alternative \{\s*\{\s*a1:7\s*\}\s*\{\s*s1 \|\s*\}\s*\}")]
+    [InlineData("|: D | G | [1. A7] :| [2. D] G | C |", false, @"\\alternative \{\s*\{\s*a1:7\s*\}\s*\{\s*d1 \|\s*\}\s*\}\s*g1 \|\s*c1 \|")]
+    [InlineData("C |: D | E | [1. F] :| [2. G] A |", true, @"\\alternative \{\s*\{\s*f1\s*\}\s*\{\s*g1 \|\s*\}\s*\}\s*a1 \|")]
+    [InlineData("C |: D | E | [1. F] :| [2. G] A |", true, @"\\alternative \{\s*\{\s*f''1 \|\s*\}\s*\{\s*g''1 \|\s*\}\s*\}\s*a''1 \|")]
+    public void TheTwin_WritesTheAlternativeOfEndingsABracketCloses(string row, bool withPart, string expected)
+    {
+        string part = withPart ? "part m { section A { c''1 | d''1 | e''1 | f''1 | g''1 | a''1 | } }\n" : "";
+        var exporter = new LilySharp.Core.LilyPond.LilyPondExporter();
+        string ly = exporter.Export(SyntaxTree.Parse("octave absolute\ntime 4/4\n" + part
+            + "chords prog { section A { " + row + " } }\nform { A }\nscore { chords prog" + (withPart ? " staff m" : "") + " }\n"));
+        Assert.Matches(expected, ly);
+        Assert.DoesNotContain(exporter.Warnings, w => w.Contains("repeat signs"));
     }
 
     /// <summary>A part and a row that write the same signs agree bar line by bar line (LYS1070

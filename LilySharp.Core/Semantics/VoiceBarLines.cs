@@ -69,6 +69,44 @@ internal static class VoiceBarLines
             return lines;
         }
 
+        return PartLines(voice, phrases, lines);
+    }
+
+    /// <summary>The bars of a chords row's section (the count <see cref="Of"/> keeps) after
+    /// which an ending's <c>]</c> closes a bar with no bar line written
+    /// (<see cref="ChordRowBarLines.EndCloses"/>) — the places the LilyPond twin writes a plain
+    /// line for. Empty for a part's music.</summary>
+    internal static List<int> RowEndClosedBars(SectionBarCounts.SemanticVoice voice)
+    {
+        var places = new List<int>();
+        if (!voice.IsChords)
+            return places;
+        int bars = 0;
+        bool holds = false;
+        var items = voice.Container is ChordPartBlockSyntax block
+            ? block.Items : ChordNameCollector.SectionItems((SectionDeclarationSyntax)voice.Container);
+        foreach (var item in items)
+        {
+            if (item is BarlineSyntax line)
+            {
+                if (ChordRowBarLines.Closes(line, holds))
+                    bars++;
+                holds = false;
+            }
+            else if (item is VoltaEndSyntax end && ChordRowBarLines.EndCloses(end, holds))
+            {
+                (bars, holds) = (bars + 1, false);
+                places.Add(bars);
+            }
+            else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
+                holds = true;
+        }
+        return places;
+    }
+
+    private static List<Line> PartLines(SectionBarCounts.SemanticVoice voice,
+        IReadOnlyDictionary<string, SyntaxNode> phrases, List<Line> lines)
+    {
         var byEnd = new Dictionary<int, BarlineSyntax>();
         foreach (var node in voice.Container.DescendantNodesOfKinds(SyntaxKind.Barline))
             if (node is BarlineSyntax line)

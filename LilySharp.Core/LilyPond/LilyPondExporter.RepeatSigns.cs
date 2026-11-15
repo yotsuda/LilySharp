@@ -306,11 +306,14 @@ public sealed partial class LilyPondExporter
             if (signs.HasNoRepeats || VoiceOf(entry.Container) is not { } voice)
                 continue;
             var lines = VoiceBarLines.Of(voice, _phraseBodies);
+            // A row's `]` that closes its bar stands for a plain line (ChordBarsOf writes one).
+            var closedByEnd = VoiceBarLines.RowEndClosedBars(voice);
             int own = voice.Bars - (voice.TrailingOpen ? 1 : 0);
             bool pads = _sectionBars.Missing(entry.Container, out _) > 0;
             int canonical = _sectionBars.Canonical.GetValueOrDefault(name);
             bool Stands(int place) => place == 0
                 || (pads && place > own && place <= canonical)
+                || closedByEnd.Contains(place)
                 || lines.Any(l => l.Bars == place && (voice.IsChords || ReferenceEquals(l.Node.Parent, entry.Container)));
             int? missing = null;
             foreach (var (place, sign) in signs.Lines)
