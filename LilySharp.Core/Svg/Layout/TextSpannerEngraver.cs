@@ -395,7 +395,9 @@ internal static class TextSpannerEngraver
         if (measureIndex < 0 || measureIndex >= measures.Length
             || itemIndex >= measures[measureIndex].Items.Length)
             return null;
-        return LayoutUtilities.GetItemXOffset(measures, measureIndex, itemIndex, ml);
+        // …where the note collision put that voice's column (HairpinEngraver.CollisionShift).
+        return LayoutUtilities.GetItemXOffset(measures, measureIndex, itemIndex, ml)
+            + HairpinEngraver.CollisionShift(voices, voiceIndex, measureIndex, itemIndex);
     }
 
     /// <summary>The page X of the centre of the note column a span ends on — its heads and stem,
@@ -411,7 +413,8 @@ internal static class TextSpannerEngraver
                 measureIndex, itemIndex, measureLayouts[measureIndex], SpacingRules.VoiceCollisionShiftsOf(voices)) != null)
             return null;
         var measures = LayoutUtilities.ResolveVoiceMeasures(voices, voiceIndex, default);
-        return HairpinEngraver.ColumnExtent(measureIndex, itemIndex, measures, measureLayouts) is { } extent
+        return HairpinEngraver.ColumnExtent(measureIndex, itemIndex, measures, measureLayouts,
+                HairpinEngraver.CollisionShift(voices, voiceIndex, measureIndex, itemIndex)) is { } extent
             ? (extent.Left + extent.Right) / 2
             : null;
     }
@@ -769,7 +772,8 @@ internal static class TextSpannerEngraver
                     spanner.StaffIndex, spanner.VoiceIndex, spanner.EndMeasureIndex, spanner.EndItemIndex, endLayout,
                     SpacingRules.VoiceCollisionShiftsOf(voices)) == null)
                 && HairpinEngraver.ColumnExtent(spanner.EndMeasureIndex, spanner.EndItemIndex,
-                    LayoutUtilities.ResolveVoiceMeasures(voices, spanner.VoiceIndex, default), endLayout) is { } endColumn)
+                    LayoutUtilities.ResolveVoiceMeasures(voices, spanner.VoiceIndex, default), endLayout,
+                    HairpinEngraver.CollisionShift(voices, spanner.VoiceIndex, spanner.EndMeasureIndex, spanner.EndItemIndex)) is { } endColumn)
                 endX = (endColumn.Left + endColumn.Right) / 2 - BoundPadding;
             // A one-note barre's label, and a hooked line shorter than its word (Calculate).
             if (startsHere && (spanner.Style == TextSpannerStyle.None || (spanner.EndHook && endsHere))

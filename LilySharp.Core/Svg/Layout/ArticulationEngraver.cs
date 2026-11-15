@@ -1432,9 +1432,14 @@ internal static class ArticulationEngraver
             // land the glyph centre on the notehead centre rather than its left edge; the
             // glyph's own centre is taken off below (OriginFromCentre).
             // LILYPOND-REF: define-grobs.scm:3001 self-alignment-X = CENTER
+            // …of the column where the note collision put its voice (HairpinEngraver.CollisionShift:
+            // until session 1263 the script of a voice shifted beside another's was centred on
+            // the unshifted column, under the other voice's note).
             double x = (graceHeadLeft ?? measureLayout.X
                 + LayoutUtilities.GetItemXOffset(artMeasures,
-                    articulation.MeasureIndex, articulation.ItemIndex, measureLayout))
+                    articulation.MeasureIndex, articulation.ItemIndex, measureLayout)
+                + HairpinEngraver.CollisionShift(artVoices, articulation.VoiceIndex,
+                    articulation.MeasureIndex, articulation.ItemIndex))
                 + NoteheadHalfWidth(item);
 
             // A grace note's script is set at general-grace-settings' size (GrobFontSize:

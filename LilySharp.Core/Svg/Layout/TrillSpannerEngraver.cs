@@ -693,13 +693,16 @@ internal static class TrillSpannerEngraver
             && ElementCoordinator.GraceColumnAt(voices[voiceIndex], graceNotes, staffIndex, voiceIndex,
                 measureIndex, itemIndex, ml, SpacingRules.VoiceCollisionShiftsOf(voices)) is { } grace)
             return grace.HeadLeftX - ml.X;
+        // The column stands where the note collision put its voice (HairpinEngraver.CollisionShift;
+        // session 1263: a trill of a voice shifted beside another's began on the unshifted column).
+        double shift = HairpinEngraver.CollisionShift(voices, voiceIndex, measureIndex, itemIndex);
         if (!ml.Columns.IsDefaultOrEmpty && !voices.IsDefaultOrEmpty
             && voiceIndex >= 0 && voiceIndex < voices.Length
             && measureIndex < voices[voiceIndex].Measures.Length)
-            return LayoutUtilities.GetItemXOffset(voices[voiceIndex].Measures, measureIndex, itemIndex, ml);
+            return LayoutUtilities.GetItemXOffset(voices[voiceIndex].Measures, measureIndex, itemIndex, ml) + shift;
         if (voiceIndex <= 0 || voices.IsDefaultOrEmpty || voiceIndex >= voices.Length
             || measureIndex >= voices[voiceIndex].Measures.Length)
-            return itemIndex < ml.Items.Length ? ml.Items[itemIndex].X : 0.0;
+            return (itemIndex < ml.Items.Length ? ml.Items[itemIndex].X : 0.0) + shift;
 
         var items = voices[voiceIndex].Measures[measureIndex].Items;
         var t = Fraction.Zero;
