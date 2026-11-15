@@ -186,12 +186,29 @@ internal static class RecordingDecoder
             if (trak.Type != "trak" || Find(moov, (trak.From, trak.To), "mdia") is not { } mdia) continue;
             if (Find(moov, mdia, "hdlr") is not { } hdlr || Encoding.ASCII.GetString(moov, hdlr.From + 8, 4) != "soun") continue;
             // the first sound track is the one Windows plays
-            if (Find(moov, mdia, "mdhd") is not { } mdhd || Find(moov, (trak.From, trak.To), "edts") is not { } edts || Find(moov, edts, "elst") is not { } elst) return 0;
+            if (Find(moov, mdia, "mdhd") is not { } mdhd) return 0;
+            if (Find(moov, (trak.From, trak.To), "edts") is not { } edts || Find(moov, edts, "elst") is not { } elst) return Priming(moov);
             long scale = U32(moov, mdhd.From + (moov[mdhd.From] == 1 ? 20 : 12));
             if (U32(moov, elst.From + 4) < 1 || scale == 0) return 0;
             long begins = moov[elst.From] == 1 ? I64(moov, elst.From + 16) : (int)U32(moov, elst.From + 12);
             return begins > 0 && begins < scale ? (int)Math.Round(begins * (double)rate / scale) : 0;      // (under a second: an encoder's, not a cut)
         }
         return 0;
+    }
+
+    /// <summary>With no edit list, iTunes (and the iPhone's Voice Memos) say the encoder's silence in their own note,
+    /// "iTunSMPB": hex numbers, the second the samples in front (2112 for AAC). ffmpeg goes by it, Windows does not
+    /// (MEASURED 2026-11-16 by Dettato on the owner's files, its README "A recording as it comes"; Dettato
+    /// REQUESTS #5). 0 when there is none.</summary>
+    internal static int Priming(byte[] moov)
+    {
+        int at = moov.AsSpan().IndexOf("iTunSMPB"u8);
+        if (at < 0) return 0;
+        int data = moov.AsSpan(at).IndexOf("data"u8);
+        if (data < 0 || data > 64) return 0;
+        int from = at + data + 12, to = from;      // ('data', then 4 bytes of kind and 4 of language, then the text)
+        while (to < moov.Length && to < from + 200 && moov[to] is >= 0x20 and < 0x7F) to++;
+        var fields = Encoding.ASCII.GetString(moov, from, to - from).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return fields.Length > 1 && int.TryParse(fields[1], System.Globalization.NumberStyles.HexNumber, null, out int n) && n is > 0 and < 10000 ? n : 0;
     }
 }

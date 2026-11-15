@@ -85,6 +85,57 @@ public class RecordingDecoderTests
         }
     }
 
+    // An MPEG-4 box: size, type, content.
+    private static byte[] Box(string type, params byte[][] content)
+    {
+        int size = 8;
+        foreach (var c in content) size += c.Length;
+        var b = new byte[size];
+        b[0] = (byte)(size >> 24); b[1] = (byte)(size >> 16); b[2] = (byte)(size >> 8); b[3] = (byte)size;
+        System.Text.Encoding.ASCII.GetBytes(type, 0, 4, b, 4);
+        int at = 8;
+        foreach (var c in content) { c.CopyTo(b, at); at += c.Length; }
+        return b;
+    }
+
+    private static byte[] Be32(uint v) => [(byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v];
+    private static byte[] Ascii(string s) => System.Text.Encoding.ASCII.GetBytes(s);
+
+    // A file as iTunes 11 and the iPhone's Voice Memos write it: a sound track with no edit list (or with
+    // one, beginning at `editBegins` in a 44100 time scale) and the iTunes note "iTunSMPB" under udta.
+    private static MemoryStream ITunesFile(uint? editBegins)
+    {
+        var hdlr = Box("hdlr", new byte[8], Ascii("soun"), new byte[12]);
+        var mdhd = Box("mdhd", new byte[12], Be32(44100), Be32(441000), new byte[4]);
+        var trakParts = new System.Collections.Generic.List<byte[]>();
+        if (editBegins is { } begins)
+            trakParts.Add(Box("edts", Box("elst", new byte[4], Be32(1), Be32(441000), Be32(begins), Be32(0x00010000))));
+        trakParts.Add(Box("mdia", mdhd, hdlr));
+        var note = Box("----",
+            Box("mean", new byte[4], Ascii("com.apple.iTunes")),
+            Box("name", new byte[4], Ascii("iTunSMPB")),
+            Box("data", Be32(1), new byte[4], Ascii(" 00000000 00000840 000002D8 00000000000AC6E8 00000000 00000000")));
+        var moov = Box("moov", Box("trak", trakParts.ToArray()), Box("udta", Box("meta", new byte[4], Box("ilst", note))));
+        var ftyp = Box("ftyp", Ascii("M4A "), new byte[4]);
+        var file = new MemoryStream();
+        file.Write(ftyp); file.Write(moov); file.Write(Box("mdat", new byte[16]));
+        file.Position = 0;
+        return file;
+    }
+
+    [Fact]
+    public void AnM4aWithNoEditList_IsCutByItsITunesNote()
+    {
+        // (Dettato REQUESTS #5: without it the bar seconds Dettato writes are 48 ms before the sound Lily# plays)
+        Assert.Equal(0x840, RecordingDecoder.Mp4Lead(ITunesFile(null), 44100));
+    }
+
+    [Fact]
+    public void AnM4aWithAnEditList_GoesByItsEditList()
+    {
+        Assert.Equal(1024, RecordingDecoder.Mp4Lead(ITunesFile(1024), 44100));
+    }
+
     [Fact]
     public void AFileThatIsNotThere_SaysSo()
     {
