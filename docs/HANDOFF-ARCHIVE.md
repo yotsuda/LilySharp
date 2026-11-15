@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1262セッションの経緯
+
+### 1.1 第1262セッション（2026-11-15・YT-DELL2）
+
+base `b84816f8b`・開始時 full 17146 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17149（Lab `p1262` の `run1.trx`）。REQUESTS と CI は第1260 の開始時に見たまま（同じ会話）。
+leftovers の未測定の形を測り、欠陥だった 1 件を直した（オーナー指示 2026-11-14「残りの欠陥を順に」）。
+- **測って欠陥でなかったもの**（Lab `p1262/w`）: `%` の小節をまたぐヘアピン・同じフレーズを 2 声部で弾く形・別の声部の stop は、xml の wedge がページどおり。MIDI のヘアピンは「パートのもの」（オーナー決定 2026-11-14・`SwellInstruments`）＝声部ごとではないのが仕様。⚠️ 決めごとが 1 つ残る: `c''4@p d'' e''@cresc f'' | % | c''1@f` で xml は `%` の小節に `p` だけ書き直す（wedge は開いたまま・ページは `%` の小節に何も刷らない）＝ページどおりに `p` を書かないか、音どおりに wedge も切って書き直すか。
+- **直した欠陥**（Lab `p1262/shift`・LilyPond 2.26.0 と数字で比較）: 2 度・同音でぶつかって横にずれた声部のヘアピンと強弱記号が、ずれる前の列に立っていた。`voice { c''2 d''2 } { b'2@cresc c''2@f }` でヘアピンの左端 17.12（LP 18.448）・f の中心 22.77（LP 24.151）・高さ −4.76（LP −4.01＝f が上の声部の音の下で隣の符尾を避けて 0.74 下がり、線ごと下がっていた）。`HairpinEngraver.CollisionShift`（譜表の衝突の表 `VoiceCollisionShiftsOf` を声部の列で読む）を、ヘアピンの両端の列・支えの列・`DynamicAlignEngraver` の線の支えの列・`DynamicEngraver` の文字の列に足した。直したあと a0〜a5 は全部 LilyPond と一致（端の 0.05 はずれのない対照にも同じだけある既存の差）。
+- 門: 網 `HairpinVoiceShiftTests` 5 本（数字は全部 LilyPond の実測）・毒 9 本のうち 7 本が赤（Lab `p1262/poisons.ps1`）。緑の 2 本: P5＝ヘアピン自身の支えの列（高さは後段の `DynamicAlignEngraver` の線が上書きするので単独では見えない）・P9＝文字も stop もない終わりの列（`CalculateEndX` の音の腕。その形を書けなかった）＝観測者なし。全 svg の掃き（Lab `p1262/sweep`）は差 0 / 1268＝コーパスに「ずれた声部の強弱」は無い（head の exe が直したビルドであることは a1 で確かめた）。commit `a5ddc40ac`。終了時 full 17151 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17154。
+- 不安定な網: 第1261 の full で 1 度だけ `SvgSnapshotTests` 2 本（`test/system-count-line-start-ink`・`test/dead-note`）が赤くなった（そのときの log は上書きして残っていない）。full を 5 回回して再現せず（Lab `p1262/flake`）＝原因は未特定のまま。
+- 7.7: ⚠️ 同じ読み（`ColumnExtent`・列の X）を使う text spanner・ottava・trill・pedal の端は、ずれた声部でまだずれを足していない（`ColumnExtent` の `shift` は既定 0・未測定）。⚠️ アーティキュレーションと運指は未測定。7.5: Core '+' は `CollisionShift` の MEASURED と LILYPOND-REF（lily/note-collision.cc:403-470）。CHANGELOG は 2 つとも `## Unreleased`（`[engraving]`）。
+
 ## 以下は第1261セッションの経緯
 
 ### 1.1 第1261セッション（2026-11-15・YT-DELL2）
