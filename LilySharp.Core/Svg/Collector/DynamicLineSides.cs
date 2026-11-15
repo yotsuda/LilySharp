@@ -42,12 +42,14 @@ namespace LilySharp.Core.Svg.Collector;
 ///   draws the ff below, the hairpin ABOVE and the closing p below — the hairpin is
 ///   acknowledged before the text of its own timestep, so it has joined the staff's line when
 ///   the ff breaks off; <c>c''4\p_\&lt; … f''\f</c> draws all three below.
-/// ⚠️ ONE STREAM A STAFF, where LilyPond keeps one line per Voice: two voices of one staff
-///   share the line here, and their moments are compared by item number. Their marks differ
-///   from LilyPond's only where one voice writes a side and the other, in the same stretch,
-///   writes none. (Since session 1238 a hairpin's start carries its voice, as its stop and the
-///   levels always did, and the hairpins themselves are paired and laid out per voice —
-///   HairpinEngraver.DetectHairpins; this walk was not split with them.)
+/// ONE LINE A VOICE, as LilyPond keeps one (Dynamic_align_engraver lives in the Voice context):
+///   a side one voice writes says nothing of the other voice's marks. Until session 1260 the
+///   two voices of a staff shared one stream, so a lower voice's <c>@p</c> beside the upper
+///   voice's <c>@f.up</c> rode up onto it, and a lower voice's <c>.down</c> broke the upper
+///   voice's line.
+/// MEASURED (LilyPond 2.26.0, Lab sessions/p1260/side/ly/s4):
+///   <c>&lt;&lt; { e''4^\f … } \\ { b'4\p … } &gt;&gt;</c> draws the f above and the p below;
+///   <c>&lt;&lt; { e''2^\&lt; g''\f } \\ { b'2_\p c''\mf } &gt;&gt;</c> the hairpin and its f above, p and mf below.
 /// </remarks>
 internal struct DynamicLineSides
 {
@@ -102,23 +104,24 @@ internal struct DynamicLineSides
 
         // The events of every staff in time order; within a moment LilyPond's order: a written
         // stop, the hairpin's start, then the level.
-        var events = new List<(int Staff, int Measure, int Item, int Kind, int Source, int Index)>();
+        var events = new List<(int Staff, int Voice, int Measure, int Item, int Kind, int Source, int Index)>();
         for (int i = 0; i < marks.Count; i++)
         {
             var m = marks[i];
             if (m.Type == MusicMarkType.HairpinStop)
-                events.Add((m.StaffIndex, m.MeasureIndex, m.AnchorItemIndex, 0, m.SourcePosition, i));
+                events.Add((m.StaffIndex, m.VoiceIndex, m.MeasureIndex, m.AnchorItemIndex, 0, m.SourcePosition, i));
             else if (m.Type is MusicMarkType.Cresc or MusicMarkType.Decresc or MusicMarkType.Dim)
-                events.Add((m.StaffIndex, m.MeasureIndex, m.AnchorItemIndex, 1, m.SourcePosition, i));
+                events.Add((m.StaffIndex, m.VoiceIndex, m.MeasureIndex, m.AnchorItemIndex, 1, m.SourcePosition, i));
         }
         for (int i = 0; i < dynamics.Count; i++)
         {
             var d = dynamics[i];
             if (!d.IsExpressiveText)
-                events.Add((d.StaffIndex, d.MeasureIndex, d.ItemIndex, 2, d.SourcePosition, i));
+                events.Add((d.StaffIndex, d.VoiceIndex, d.MeasureIndex, d.ItemIndex, 2, d.SourcePosition, i));
         }
         events.Sort(static (a, b) =>
             a.Staff != b.Staff ? a.Staff.CompareTo(b.Staff)
+            : a.Voice != b.Voice ? a.Voice.CompareTo(b.Voice)
             : a.Measure != b.Measure ? a.Measure.CompareTo(b.Measure)
             : a.Item != b.Item ? a.Item.CompareTo(b.Item)
             : a.Kind != b.Kind ? a.Kind.CompareTo(b.Kind)
@@ -132,9 +135,10 @@ internal struct DynamicLineSides
         {
             int end = at;
             while (end < events.Count && events[end].Staff == events[at].Staff
+                   && events[end].Voice == events[at].Voice
                    && events[end].Measure == events[at].Measure && events[end].Item == events[at].Item)
                 end++;
-            if (at > 0 && events[at - 1].Staff != events[at].Staff)
+            if (at > 0 && (events[at - 1].Staff != events[at].Staff || events[at - 1].Voice != events[at].Voice))
                 line = default;
 
             bool startsHere = false;

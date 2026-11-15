@@ -77,7 +77,7 @@ D3 は「強弱記号だけ `.down` と書いても、ヘアピンは追随し�
 - ヘアピンが抜けたあとの線に残る文字どうし（その ff と p）も一本にそろう（`DynamicItem.LineId`・`DynamicAlignEngraver.BuildLines` の「番号のある線」）。
 - 歌詞のない譜表でも同じ規則: `c@f.up@decresc … g@p` の p は f と一緒に上に出る（今までは下）。
 - MusicXML の placement も同じ規則（同じ部品を音符の順に進める）。双子は `\with { \dynamicUp }` と `^`／`_` だけで紙面と同じ絵になる。
-- ⚠️ 線は譜表ごとに 1 本の流れで読む（LilyPond は声部ごと）: ヘアピンの始まりが声部を持たないため。2 声部の片方だけが向きを書いた拍でだけ LilyPond と違いうる。
+- 線は声部ごと（第1260・LilyPond と同じ）: 片方の声部が書いた向きは、もう片方の声部の記号を動かさない。ページ（`DynamicLineSides.Resolve`）・`lysc xml`（声部ごとの `_laterVoiceLines`）・`lysc import`（`MusicXmlReader.SayDynamicSides`＝placement がこの規則の出す向きと違う記号にだけ `.up`／`.down` を書く）が同じ規則を読む。第1260 の前は譜表ごとに 1 本の流れで、下の声部の `@p` が上の声部の `@f.up` の線に乗って重なっていた（Lab `sessions/p1260/side`）。
 - X の端は LilyPond に合わせた: ヘアピンは向きの違う文字にも付く（`HairpinEngraver.BoundText`）。
 
 ## 4. 照合と門

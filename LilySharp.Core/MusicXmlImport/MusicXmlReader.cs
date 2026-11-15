@@ -214,6 +214,9 @@ internal static class MusicXmlReader
         var wedgeStops = new List<(int Measure, int At, int? Staff, string Number)>();
         // The <wedge number> each opening hairpin was written under (EndWedges pairs by it).
         var wedgeNumbers = new Dictionary<ImportNote, string>();
+        // The side each dynamic level and opening hairpin was placed on, by its note and its name
+        // (SayDynamicSides writes the ones the book has to say).
+        var placed = new Dictionary<(ImportNote Note, string Mark), bool>();
         var ottavaStops = new List<(string Name, int Measure, int At, int? Staff)>();
         void NoteDirected(ImportNote host, string mark, int? staff)
         {
@@ -329,6 +332,8 @@ internal static class MusicXmlReader
                             NoteDirected(note, pendingDynamics[i].Dynamic, pendingDynamics[i].Staff);
                             if (pendingDynamics[i].Wedge is { } number)
                                 wedgeNumbers[note] = number;
+                            if (pendingDynamics[i].Above is { } above)
+                                placed[(note, pendingDynamics[i].Dynamic)] = above;
                         }
                     }
                 pendingDynamics.RemoveAll(Due);
@@ -392,8 +397,11 @@ internal static class MusicXmlReader
                         var wedges = Els(el, "direction-type").SelectMany(t => Els(t, "wedge")).ToList();
                         string? opened = wedges.FirstOrDefault(w => (string?)w.Attribute("type") is "crescendo" or "diminuendo") is { } opening
                             ? (string?)opening.Attribute("number") ?? "1" : null;
+                        // The side the direction stands on (SayDynamicSides); a niente rides no line.
+                        bool? dirAbove = (string?)el.Attribute("placement") switch { "above" => true, "below" => false, _ => null };
                         foreach (var dyn in ReadDirectionDynamics(el))
-                            pendingDynamics.Add(new(dyn, at, dirStaff, dirVoice, dyn is "cresc" or "decresc" ? opened : null));
+                            pendingDynamics.Add(new(dyn, at, dirStaff, dirVoice, dyn is "cresc" or "decresc" ? opened : null,
+                                dyn == "niente" ? null : dirAbove));
                         foreach (var number in wedges.Where(w => (string?)w.Attribute("type") == "stop")
                                      .Select(w => (string?)w.Attribute("number") ?? "1").Distinct())
                             wedgeStops.Add((measureNo, at, dirStaff, number));
@@ -634,9 +642,10 @@ internal static class MusicXmlReader
             KeepUnclosedTextSpansAsWords(noteAt);
             KeepUnreleasedUnaCordaAsWords(noteAt);
             ToPlainClefOctave(part.Measures, part.Clef);
+            SayDynamicSides([part], placed);
             return new List<ImportPart> { part };
         }
-        SendDirectedMarksHome(directed, noteAt, voiceStaff);
+        SendDirectedMarksHome(directed, noteAt, voiceStaff, placed);
         EndWedges(wedgeStops, noteAt, voiceStaff, wedgeNumbers);
         EndOttavasInTheirVoice(ottavaStops, noteAt, voiceStaff, report);
         KeepUnclosedTextSpansAsWords(noteAt);
@@ -651,7 +660,81 @@ internal static class MusicXmlReader
                             && written != voiceStaff.GetValueOrDefault(voice, written)
                             && staves.Contains(written))
                             note.Articulations.Add("cross");
-        return SplitByStaff(part, staves, voiceStaff, staffClefs, transposeSet);
+        var split = SplitByStaff(part, staves, voiceStaff, staffClefs, transposeSet);
+        SayDynamicSides(split, placed);
+        return split;
+    }
+
+    /// <summary>
+    /// Writes the side (<c>.up</c> / <c>.down</c>) on each dynamic level and opening hairpin
+    /// whose direction stands on another side than Lily# would give it unsaid
+    /// (<see cref="ImportNote.SaidSides"/>). Until session 1260 a direction's
+    /// <c>placement</c> was not read, so <c>@f.up</c> came back from `lysc xml` as <c>@f</c>.
+    /// </summary>
+    /// <remarks>
+    /// What Lily# gives a mark that says nothing is its line's side
+    /// (<see cref="Svg.Collector.DynamicLineSides"/>, one line a voice): the staff's own — above
+    /// on a staff with lyrics under it, else below — or the side a mark before it on the line
+    /// wrote, while a hairpin keeps the line open. So the walk is the page's: a voice's marks in
+    /// time order and, at one moment, a written stop, the hairpin's start, then the level. A
+    /// mark is written a side only where its placement differs from that; a direction with no
+    /// placement says nothing.
+    /// </remarks>
+    private static void SayDynamicSides(IReadOnlyList<ImportPart> parts, Dictionary<(ImportNote Note, string Mark), bool> placed)
+    {
+        if (placed.Count == 0)
+            return;
+        foreach (var part in parts)
+        {
+            bool staffAbove = LysWriter.HasLyrics(part);
+            foreach (int voice in part.Measures.SelectMany(m => m.VoiceItems.Keys).Distinct().ToList())
+            {
+                var line = default(Svg.Collector.DynamicLineSides);
+                foreach (var measure in part.Measures)
+                {
+                    if (!measure.VoiceItems.TryGetValue(voice, out var items))
+                        continue;
+                    foreach (var note in items.OfType<ImportNote>())
+                    {
+                        var marks = note.Articulations;
+                        void Say(string mark)
+                        {
+                            var unsaid = line;
+                            bool follows = unsaid.Join(null, staffAbove);
+                            bool? written = placed.TryGetValue((note, mark), out bool above) && above != follows ? above : null;
+                            line.Join(written, staffAbove);
+                            if (written is { } side)
+                                (note.SaidSides ??= new())[mark] = side;
+                        }
+                        int lastStop = marks.FindLastIndex(m => m is "!cresc" or "!decresc");
+                        int lastStart = marks.FindLastIndex(m => m is "cresc" or "decresc");
+                        bool level = marks.Any(m => m == "niente" || LysWriter.IsDynamic(m));
+                        if (lastStop < 0 && lastStart < 0 && !level)
+                            continue;
+                        if (lastStop >= 0)
+                            line.HairpinEnds();
+                        foreach (var mark in marks.Where(m => m is "cresc" or "decresc").ToList())
+                        {
+                            Say(mark);
+                            line.HairpinStarts();
+                        }
+                        foreach (var mark in marks.Where(m => m == "niente" || LysWriter.IsDynamic(m)).ToList())
+                        {
+                            // A niente rides no line; it ends the hairpin as a level does.
+                            if (mark != "niente")
+                                Say(mark);
+                            // (The level of a hairpin's own start is its start text, not its end.)
+                            if (lastStart < 0)
+                                line.HairpinEnds();
+                        }
+                        // `@cresc@!cresc` on one note: the stop written after the start ends it there.
+                        if (lastStart >= 0 && lastStop > lastStart)
+                            line.HairpinEnds();
+                        line.MomentEnds();
+                    }
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -697,7 +780,8 @@ internal static class MusicXmlReader
     /// the bar; a bar with no such note keeps the mark where it is.
     /// </remarks>
     private static void SendDirectedMarksHome(List<(ImportNote Host, string Mark, int Staff)> directed,
-        Dictionary<ImportNote, (int Voice, int Measure, int Onset)> noteAt, Dictionary<int, int> voiceStaff)
+        Dictionary<ImportNote, (int Voice, int Measure, int Onset)> noteAt, Dictionary<int, int> voiceStaff,
+        Dictionary<(ImportNote Note, string Mark), bool> placed)
     {
         Dictionary<int, List<ImportNote>>? byMeasure = null;
         foreach (var (host, mark, staff) in directed)
@@ -730,6 +814,9 @@ internal static class MusicXmlReader
                     home.Articulations.Insert(0, mark);
                 else
                     home.Articulations.Add(mark);
+                // …and the side it was placed on goes with it (SayDynamicSides).
+                if (placed.Remove((host, mark), out bool above))
+                    placed[(home, mark)] = above;
             }
         }
     }
@@ -993,7 +1080,10 @@ internal static class MusicXmlReader
     /// <summary>A mark a &lt;direction&gt; holds until its note arrives: where it stands in the
     /// bar, the staff and the voice the direction names (null = any), and for an opening hairpin
     /// the <c>number</c> of its wedge.</summary>
-    private readonly record struct PendingMark(string Dynamic, int At, int? Staff, int? Voice = null, string? Wedge = null);
+    /// <param name="Above">For a dynamic level or an opening hairpin, the side its direction's
+    /// <c>placement</c> says (above true, below false), null for none said.</param>
+    private readonly record struct PendingMark(string Dynamic, int At, int? Staff, int? Voice = null, string? Wedge = null,
+        bool? Above = null);
 
     /// <summary>A mark that ends the hairpin before it: a dynamic, or another hairpin.</summary>
     private static bool EndsAHairpin(string mark)

@@ -2588,6 +2588,7 @@ public sealed class MusicXmlExporter
         _currentPartName = partName;
         _line = default;
         _lineMoment = default;
+        _laterVoiceLines.Clear();
         if (_openAtEnd.Remove((partName, _xmlPlaySerial), out var samePlay))
         {
             _tieOpen.AddRange(samePlay);
@@ -3708,6 +3709,10 @@ public sealed class MusicXmlExporter
             int savedVoiceLine = _voiceLine, savedVoiceBarBase = _voiceBarBase;
             _voiceLine = v;
             _voiceBarBase = savedVoiceBarBase + startMeasure;
+            // The line its dynamics ride is the voice's own (DynamicLineSides: one line a voice).
+            var outerLine = (_line, _lineBeforeLevel, _lineMoment, _momentLevel, _momentLevelWritten, _momentHairpin);
+            (_line, _lineBeforeLevel, _lineMoment, _momentLevel, _momentLevelWritten, _momentHairpin)
+                = _laterVoiceLines.GetValueOrDefault(v);
 
             var temp = new MusicXmlPart { Name = "voice-temp" };
             _currentPart = temp;
@@ -3730,6 +3735,8 @@ public sealed class MusicXmlExporter
             ProcessNode(voices[v]);
             FlushCurrentMeasure();
 
+            _laterVoiceLines[v] = (_line, _lineBeforeLevel, _lineMoment, _momentLevel, _momentLevelWritten, _momentHairpin);
+            (_line, _lineBeforeLevel, _lineMoment, _momentLevel, _momentLevelWritten, _momentHairpin) = outerLine;
             _voiceLine = savedVoiceLine;
             _voiceBarBase = savedVoiceBarBase;
             _currentPart = savedPart;
@@ -6604,6 +6611,11 @@ public sealed class MusicXmlExporter
     private MusicXmlDirection? _momentLevel;
     private bool? _momentLevelWritten;
     private bool _momentHairpin;
+    // The same of each later voice of the part (the branches of `voice { } { }`, by index),
+    // kept while the first voice's stream is written: a voice's line is its own, as on the
+    // page — until session 1260 the voices shared one, read in the order they are written.
+    private readonly Dictionary<int, (Svg.Collector.DynamicLineSides Line, Svg.Collector.DynamicLineSides BeforeLevel,
+        (MusicXmlMeasure? Measure, int Offset) Moment, MusicXmlDirection? Level, bool? LevelWritten, bool Hairpin)> _laterVoiceLines = new();
 
     /// <summary>
     /// Whether the part being written stands its dynamics and wedges ABOVE its staff on the

@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **With two voices on a staff, each voice's dynamics and hairpins keep to their own line.** A side one voice wrote (`@f.up`, `@p.down`) no longer moves the other voice's marks: the lower voice's `@p` beside the upper voice's `@f.up` stays below instead of being printed over it.
+- **Importing MusicXML keeps the side of a dynamic and of a hairpin**: one set above the staff comes in as `@f.up` (it came in below), and over lyrics one set below as `@p.down`.
 - **Repeat signs, endings and navigation marks can be written in a section's music** — `|: c4 d e f | [1. g2 g :| [2. g2 c ]`, `segno`, `ds al coda` — and every part follows them, in the preview and in playback. They were an error outside the `form` (LYS1034); a `phrase` still takes none. The language reference has the rules (*Repeats in the music*).
   - **Completion offers them in the music**: the repeat bars, `[1. :|` / `[2. ]` and the ten navigation marks, after the notes — not inside a `phrase`. A bar typed as far as `|` or `:` is replaced, not doubled.
   - **Lily#: Write Repeat Signs in Every Part** / **Keep Repeat Signs in One Part** (Command Palette and the editor's context menu): one part's repeat barlines, volta endings (`[1.` … `]` around the same bars) and navigation marks written at the same bar lines of every other part, or taken back to one. They tell how many were written and where one could not be (a bar line inside a phrase, an `R1*4`, a `%`).

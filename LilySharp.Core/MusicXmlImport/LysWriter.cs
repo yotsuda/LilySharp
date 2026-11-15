@@ -703,6 +703,11 @@ internal static class LysWriter
         }
     }
 
+    /// <summary>The side a dynamic or a hairpin says after its name (<c>@f.up</c>,
+    /// <see cref="ImportNote.SaidSides"/>), or nothing.</summary>
+    private static string SaidSide(ImportNote note, string mark)
+        => note.SaidSides != null && note.SaidSides.TryGetValue(mark, out bool above) ? (above ? ".up" : ".down") : "";
+
     // A dynamic mark as the reader spells one: it ends a hairpin.
     internal static bool IsDynamic(string articulation)
         // (…or as an editor's level, `p(editorial)`, 2026-11-13.)
@@ -1440,7 +1445,7 @@ internal static class LysWriter
                 pendingChord = null;
                 pendingFig = null;
                 foreach (var art in note.Articulations)
-                    rest += "@" + art;
+                    rest += "@" + art + SaidSide(note, art);
                 if (note.TupletStart is { } rt)
                 {
                     tokens.Add($"tuplet {rt.Actual}/{rt.Normal}{(note.TupletBare ? " bare" : "")} {{");
@@ -1500,7 +1505,7 @@ internal static class LysWriter
                 pendingFig = null;
             }
             foreach (var art in note.Articulations)
-                token += "@" + art;
+                token += "@" + art + SaidSide(note, art);
             // A dashed or dotted slur / tie is said on the note it begins on (2026-11-13); a
             // chord's ties take one line, and a head tied alone keeps the solid one.
             if (note.SlurStart && note.SlurLine != null)
@@ -1847,7 +1852,7 @@ internal static class LysWriter
 
     // ---- lyrics -----------------------------------------------------------
 
-    private static bool HasLyrics(ImportPart part)
+    internal static bool HasLyrics(ImportPart part)
         => part.Measures.SelectMany(m => m.PrimaryItems)
             .OfType<ImportNote>().Any(n => n.Lyrics.Count > 0);
 

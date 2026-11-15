@@ -262,6 +262,10 @@ internal sealed class ImportNote : ImportItem
     /// <summary>Lily# articulation/ornament mark names (<c>staccato</c>, <c>accent</c>,
     /// <c>fermata</c>, <c>trill</c>, …), emitted as <c>@name</c> suffixes.</summary>
     public List<string> Articulations { get; } = new();
+    /// <summary>The side a dynamic level or an opening hairpin of <see cref="Articulations"/> has
+    /// to say, by its name: true <c>.up</c>, false <c>.down</c> (the reader's
+    /// <c>SayDynamicSides</c>); null when none does.</summary>
+    public Dictionary<string, bool>? SaidSides { get; set; }
     /// <summary>A clef change written before this note: one inside a bar, or on one staff of a
     /// split part (<see cref="ImportMeasure.Clef"/> is a whole staff's at a bar's head).</summary>
     public string? ClefBefore { get; set; }
