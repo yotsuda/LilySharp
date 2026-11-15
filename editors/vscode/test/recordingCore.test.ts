@@ -17,8 +17,8 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import {
-    Recording, ScoreBeat, audioPathFor, barAt, lineUp, newRecording, parseRecording, recordingPathFor,
-    recordingSecondAt, scoreBars, scoreTimeAt, serializeRecording,
+    Recording, ScoreBeat, audioPathFor, audioReader, barAt, chartForRecording, lineUp, newRecording, parseRecording,
+    recordingPathFor, recordingSecondAt, scoreBars, scoreTimeAt, serializeRecording, workForRename,
 } from '../src/recordingCore';
 
 // Dettato's own example (SIDECAR.md), cut to its first bars.
@@ -104,6 +104,42 @@ describe('the file beside a chart', () => {
     it('starts empty for a recording a person attached', () => {
         const back = JSON.parse(serializeRecording(newRecording('take.mp3', 120.5)));
         assert.deepEqual(back, { dettato: 2, audio: 'take.mp3', duration: 120.5, bars: [] });
+    });
+});
+
+describe('attaching a recording', () => {
+    it('reads wav, mp3, flac and ogg in the webview, an m4a by the server on Windows only', () => {
+        assert.equal(audioReader('a.WAV', false), 'webview');
+        assert.equal(audioReader('C:\\x\\take.ogg', true), 'webview');
+        assert.equal(audioReader('take.m4a', true), 'server');
+        assert.match((audioReader('take.m4a', false) as { refused: string }).refused, /Windows only/);
+        assert.match((audioReader('take.opus', true) as { refused: string }).refused, /not a recording/);
+        assert.match((audioReader('noext', true) as { refused: string }).refused, /not a recording/);
+    });
+
+    it('goes to the chart of its own name, else the open chart in its folder, else the folder\'s only chart', () => {
+        assert.equal(chartForRecording('Song.m4a', ['other.lys', 'song.lys'], 'other.lys'), 'song.lys');
+        assert.equal(chartForRecording('take 3.wav', ['a.lys', 'b.lys'], 'b.lys'), 'b.lys');
+        assert.equal(chartForRecording('take 3.wav', ['a.lys', 'b.lys'], 'elsewhere.lys'), undefined);
+        assert.equal(chartForRecording('take 3.wav', ['a.lys']), 'a.lys');
+        assert.equal(chartForRecording('take 3.wav', []), undefined);
+    });
+
+    it('takes the file beside a chart along when the chart is renamed, not over one already there', () => {
+        const files = new Set(['/s/song.dettato.json']);
+        assert.deepEqual(workForRename('/s/song.lys', '/s/tune.lys', p => files.has(p), () => undefined),
+            [{ kind: 'move', from: '/s/song.dettato.json', to: '/s/tune.dettato.json' }]);
+        files.add('/s/tune.dettato.json');
+        assert.deepEqual(workForRename('/s/song.lys', '/s/tune.lys', p => files.has(p), () => undefined), []);
+        assert.deepEqual(workForRename('/s/none.lys', '/s/x.lys', p => files.has(p), () => undefined), []);
+    });
+
+    it('renames the recording inside every file in its folder that names it', () => {
+        const names: Record<string, string> = { '/s/chart.dettato.json': 'take.m4a', '/s/other.dettato.json': 'b.wav' };
+        const work = workForRename('/s/take.m4a', '/s/final.m4a', p => p in names, p => names[p], Object.keys(names));
+        assert.deepEqual(work, [{ kind: 'rename', file: '/s/chart.dettato.json', audio: 'final.m4a' }]);
+        // Moved to another folder: the file can no longer name it — nothing is rewritten.
+        assert.deepEqual(workForRename('/s/take.m4a', '/t/take.m4a', p => p in names, p => names[p], Object.keys(names)), []);
     });
 });
 

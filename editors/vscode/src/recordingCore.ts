@@ -65,6 +65,77 @@ export function audioPathFor(recordingPath: string, audio: string): string {
     return recordingPath.slice(0, slash + 1) + audio;
 }
 
+/** The recordings the preview decodes itself (MEASURED in VS Code 1.146's webview, 2026-11-15:
+ *  wav, mp3, flac, ogg), and the ones the language server decodes on Windows only (an m4a: the
+ *  webview has no AAC; docs/recording-design.md §1 5). */
+export const WEBVIEW_AUDIO = ['wav', 'mp3', 'flac', 'ogg'];
+export const WINDOWS_AUDIO = ['m4a', 'mp4', 'aac', 'wma'];
+
+function extensionOf(name: string): string {
+    const slash = Math.max(name.lastIndexOf('/'), name.lastIndexOf('\\'));
+    const dot = name.lastIndexOf('.');
+    return dot > slash ? name.slice(dot + 1).toLowerCase() : '';
+}
+
+/** How a recording is read: by the webview, by the language server (Windows), or not at all
+ *  (with the words to say why). */
+export function audioReader(name: string, isWindows: boolean): 'webview' | 'server' | { refused: string } {
+    const ext = extensionOf(name);
+    if (WEBVIEW_AUDIO.includes(ext)) {
+        return 'webview';
+    }
+    if (WINDOWS_AUDIO.includes(ext)) {
+        return isWindows ? 'server' : { refused: `a .${ext} recording is read on Windows only — use a wav, mp3, flac or ogg` };
+    }
+    return { refused: `not a recording Lily# reads (${[...WEBVIEW_AUDIO, ...(isWindows ? WINDOWS_AUDIO : [])].join(', ')})` };
+}
+
+/** The chart a recording is attached to, when it is right-clicked: the .lys of its own stem in
+ *  its folder; else the chart open in the editor when it is in that folder; else the folder's one
+ *  .lys. Undefined when the person has to choose (several, or none). Names are file names. */
+export function chartForRecording(audio: string, lysInFolder: readonly string[], activeLys?: string): string | undefined {
+    const stem = (n: string) => n.slice(0, n.lastIndexOf('.') >= 0 ? n.lastIndexOf('.') : n.length).toLowerCase();
+    const own = lysInFolder.find(n => stem(n) === stem(audio));
+    if (own) {
+        return own;
+    }
+    if (activeLys && lysInFolder.includes(activeLys)) {
+        return activeLys;
+    }
+    return lysInFolder.length === 1 ? lysInFolder[0] : undefined;
+}
+
+/** What a rename in the workspace asks of the files beside charts: a chart renamed takes its
+ *  file along; a recording renamed is renamed inside the file that names it. Paths in, the work
+ *  out — `move` the file beside a chart, or `rename` the audio a file names. */
+export type RecordingRenameWork =
+    | { kind: 'move'; from: string; to: string }
+    | { kind: 'rename'; file: string; audio: string };
+
+export function workForRename(oldPath: string, newPath: string, exists: (path: string) => boolean,
+    namesAudio: (recordingPath: string) => string | undefined, recordingsInFolder: readonly string[] = []): RecordingRenameWork[] {
+    const work: RecordingRenameWork[] = [];
+    const folder = (p: string) => p.slice(0, Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\')) + 1);
+    const name = (p: string) => p.slice(folder(p).length);
+    if (extensionOf(oldPath) === 'lys' && extensionOf(newPath) === 'lys') {
+        const from = recordingPathFor(oldPath), to = recordingPathFor(newPath);
+        if (exists(from) && !exists(to)) {
+            work.push({ kind: 'move', from, to });
+        }
+        return work;
+    }
+    // A recording renamed in its own folder: every file beside a chart there that names it follows
+    // (a chart's file is named for the chart, which need not be the recording's name).
+    if (folder(oldPath) === folder(newPath) && [...WEBVIEW_AUDIO, ...WINDOWS_AUDIO].includes(extensionOf(oldPath))) {
+        for (const file of recordingsInFolder) {
+            if (folder(file) === folder(oldPath) && exists(file) && namesAudio(file) === name(oldPath)) {
+                work.push({ kind: 'rename', file, audio: name(newPath) });
+            }
+        }
+    }
+    return work;
+}
+
 /** Reads the file beside a chart. An error says why it cannot be used, in words for the user. */
 export function parseRecording(text: string): Recording | { error: string } {
     let raw: unknown;

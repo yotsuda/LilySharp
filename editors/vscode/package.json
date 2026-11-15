@@ -711,6 +711,11 @@
         "title": "Import MusicXML or MIDI…"
       },
       {
+        "command": "lilysharp.attachRecording",
+        "category": "Lily#",
+        "title": "Attach Recording…"
+      },
+      {
         "command": "lilysharp.importImage",
         "category": "Lily#",
         "title": "Convert Image/PDF to Lily# (.lys)… (Beta)"
@@ -1132,6 +1137,10 @@
           "command": "lilysharp.importMusicXml"
         },
         {
+          "command": "lilysharp.attachRecording",
+          "when": "editorLangId == lilysharp"
+        },
+        {
           "command": "lilysharp.importImage",
           "when": "lilysharp.omrAvailable || isWindows"
         },
@@ -1316,6 +1325,11 @@
         }
       ],
       "explorer/context": [
+        {
+          "command": "lilysharp.attachRecording",
+          "when": "resourceExtname =~ /^\\.(wav|mp3|flac|ogg)$/i || isWindows && resourceExtname =~ /^\\.(m4a|mp4|aac|wma)$/i",
+          "group": "7_modification"
+        },
         {
           "command": "lilysharp.importMusicXml",
           "when": "resourceExtname == .xml || resourceExtname == .musicxml || resourceExtname == .mxl || resourceExtname == .mid || resourceExtname == .midi",

@@ -38,6 +38,7 @@ import { registerStepAudition } from './stepAudition';
 import { registerCaretInfo } from './caretInfo';
 import { registerExportBatch } from './exportBatch';
 import { OmrImportDeps, importFromImage } from './omrImport';
+import { attachRecording, followRenames } from './recording';
 import { registerOmrContexts } from './omrReader';
 import { OmrScanDeps, hasScan, previewHoversBar, previewReady, previewShowsBar, registerScanFollow, scanBarAt, scanColumnOf, scanSideOf, scanThresholdOf, showScan } from './omrScan';
 import { registerOmrAiFix } from './omrAiFix';
@@ -986,6 +987,11 @@ export function activate(context: vscode.ExtensionContext) {
             outputChannel.appendLine('importMusicXml command triggered');
             importMusicXml(context, uri);
         }),
+        // The recording beside a chart (docs/recording-design.md): attached by a file beside the
+        // chart, never by the .lys; renames keep the two together.
+        vscode.commands.registerCommand('lilysharp.attachRecording', (uri?: vscode.Uri) =>
+            attachRecording(uri instanceof vscode.Uri ? uri : undefined)),
+        followRenames(),
         // Audition: sound the note under the caret (held: the keybinding re-fires on
         // key-repeat, and the webview sustains until the repeats stop) or play the
         // whole measure the caret is in. The preview webview is the synth.
