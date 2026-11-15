@@ -271,6 +271,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1268セッションの経緯
+
+### 1.1 第1268セッション（2026-11-15・YT-DELL2）
+
+base `c2cb41059`・開始時 full 17187 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17190。REQUESTS の `open` は 0・CI は第1260 のまま。
+オーナー決定 2026-11-15 の ②（MusicXML の読み手が fretted のパートに `instrument` を書き、1 音の `<wavy-line>` を `@vibrato` に読む）。読み込みだけ（書き出し・ページ・再生は動かない）。
+- 直した: `MusicXmlReader.ReadStaffDetails`（`<staff-lines>`・`<staff-tuning>`）と `DeclareFretted`。TAB の譜表か弦を名乗る譜表のあるパートに、弦がプリセットそのものなら `instrument`（guitar・bass・bass5・bass6・ukulele・banjo）、ほかの名前つき tuning と 4〜8 本の弦の列は `tuning …`、弦を言わない TAB は guitar（4 線は bass）を書く。宣言したパートでだけ「1 音の上で start と stop・trill-mark なし」の波線が `@vibrato`（trill-mark のある線・何音も続く線は trill span のまま）。
+- ⚠️ Claude が決めた点（決定の文面に無い・理由は Lab `p1242/leftovers.md` の「第1268」）: プリセットに無い弦は `instrument` を当てず `tuning` だけ／**実音で書かれた bass（`<transpose>` が 1〜2 オクターブでない）は宣言しない＝今までどおり**（`transposition` に「なし」の綴りが無い）／弓の弦の tuning は fretted と読まない。
+- 門: 網 `MusicXmlFrettedImportTests` 23 本。毒 23 本のうち 22 本が赤、緑の 1 本＝届かない番（休符の notations は読まれない）は外して網で留めた（Lab `p1268/poisons*.txt`）。往復の掃き（Lab `p1268/rt-sweep.ps1`・`classify.ps1`）: xml 0・読み戻し 468 / 1268＝どれもパート宣言に語が入っただけ（bass 313・bass5 115・guitar 41）・音楽の行の差 0（⚠️ コーパスに tab の横の `@vibrato` は 0 冊＝形は網と Lab `p1268/vib`）。commit `238f9ebc9`。`APPROXIMATIONS.md` は OWN 441 → 442。終了時 full 17210 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17213（`run4.trx`）。
+- 7.7: ⚠️ tab の無い fretted のパート（`staff gtr` だけ）は `lysc xml` が `<staff-tuning>` を書かないので、自分の vibrato が戻らない（オーナーに訊く・ROADMAP）。⚠️ 何音も続く trill-mark なしの波線は trill span のまま（未測定）。⚠️ プリセットは音域の検査を連れてくる＝読み戻しの 364 冊が LYS1052（元の本が同じ音に LYS5002）。⚠️ TAB だけのパートは今も `staff` で戻る・`<capo>` は読まない（未測定）。7.5: Core '+' は読み込み（REF 0・OWN 1）。CHANGELOG は 2 つとも `## Unreleased`。
+
 ## 以下は第1267セッションの経緯
 
 ### 1.1 第1267セッション（2026-11-15・YT-DELL2）
