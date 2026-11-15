@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Importing MusicXML keeps palm mutes, let rings and barres** (`@palmMute … @!palmMute`, `@letRing`, `@barre(7)`): they came in as plain text with no line.
 - **With two voices on a staff, each voice's dynamics and hairpins keep to their own line.** A side one voice wrote (`@f.up`, `@p.down`) no longer moves the other voice's marks: the lower voice's `@p` beside the upper voice's `@f.up` stays below instead of being printed over it.
 - **Importing MusicXML keeps the side of a dynamic and of a hairpin**: one set above the staff comes in as `@f.up` (it came in below), and over lyrics one set below as `@p.down`.
 - **Repeat signs, endings and navigation marks can be written in a section's music** — `|: c4 d e f | [1. g2 g :| [2. g2 c ]`, `segno`, `ds al coda` — and every part follows them, in the preview and in playback. They were an error outside the `form` (LYS1034); a `phrase` still takes none. The language reference has the rules (*Repeats in the music*).

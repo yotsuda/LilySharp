@@ -1013,12 +1013,14 @@ internal static class MusicXmlReader
         foreach (var note in noteAt.Keys)
             note.Articulations.RemoveAll(EndsWithItsNote);
         var byTime = noteAt.OrderBy(n => n.Value.Measure).ThenBy(n => n.Value.Onset).ToList();
-        var ended = new HashSet<ImportNote>();
+        // (By note AND line: one note may open two — `e4@palmMute@letRing` — and until session
+        // 1261 the first one's end used the note up, so the second line's end found no start.)
+        var ended = new HashSet<(ImportNote Note, string Name)>();
         foreach (var (name, measure, at, staff) in stops.OrderBy(s => s.Measure).ThenBy(s => s.At))
         {
             bool Before((int Voice, int Measure, int Onset) p) => p.Measure < measure || (p.Measure == measure && p.Onset < at);
             // (A text spanner's start is its name, or its name and its word: textSpan("…").)
-            var open = byTime.Where(n => Before(n.Value) && !ended.Contains(n.Key)
+            var open = byTime.Where(n => Before(n.Value) && !ended.Contains((n.Key, name))
                 && n.Key.Articulations.Any(a => a == name || a.StartsWith(name + "(", StringComparison.Ordinal))).ToList();
             // Each hand may have a line of its own open at once.
             var opener = open.LastOrDefault(n => staff == null || voiceStaff.GetValueOrDefault(n.Value.Voice) == staff).Key
@@ -1028,7 +1030,7 @@ internal static class MusicXmlReader
                 report.Warn(measure, (OpensATextSpan(name) ? "a dashed line's" : "an octave line's") + " end has no start, so it is dropped.");
                 continue;
             }
-            ended.Add(opener);
+            ended.Add((opener, name));
             int voice = noteAt[opener].Voice;
             byTime.Last(n => n.Value.Voice == voice && Before(n.Value)).Key.Articulations.Add("!" + name);
         }
@@ -1044,7 +1046,11 @@ internal static class MusicXmlReader
     {
         foreach (var voice in noteAt.GroupBy(n => n.Value.Voice))
         {
-            (ImportNote Note, string Mark)? open = null;
+            // Each line is its own: the text spanner, the palm mute and the let ring run beside
+            // one another (session 1261; a barre with no end is its label, and stays).
+            var open = new Dictionary<string, (ImportNote Note, string Mark)>(StringComparer.Ordinal);
+            static string? Line(string mark)
+                => OpensATextSpan(mark) ? "text" : mark is "palmMute" or "letRing" ? mark : null;
             void Words((ImportNote Note, string Mark) span)
             {
                 int at = span.Note.Articulations.IndexOf(span.Mark);
@@ -1053,6 +1059,7 @@ internal static class MusicXmlReader
                     "rit" => "rit.",
                     "accel" => "accel.",
                     "rall" => "rall.",
+                    "palmMute" or "letRing" => Svg.Model.MusicMarkItem.TextSpanSugarText(span.Mark)!,
                     "textSpan" => "",
                     _ => span.Mark["textSpan(\"".Length..^2],
                 };
@@ -1063,16 +1070,16 @@ internal static class MusicXmlReader
             }
             foreach (var note in voice.OrderBy(n => n.Value.Measure).ThenBy(n => n.Value.Onset).Select(n => n.Key))
                 foreach (var mark in note.Articulations.ToList())
-                    if (OpensATextSpan(mark))
+                    if (Line(mark) is { } line)
                     {
-                        if (open is { } running)
+                        if (open.ContainsKey(line))
                             Words((note, mark));
                         else
-                            open = (note, mark);
+                            open[line] = (note, mark);
                     }
-                    else if (mark.StartsWith('!') && OpensATextSpan(mark[1..]))
-                        open = null;
-            if (open is { } unclosed)
+                    else if (mark.StartsWith('!') && Line(mark[1..]) is { } closed)
+                        open.Remove(closed);
+            foreach (var unclosed in open.Values)
                 Words(unclosed);
         }
     }
@@ -1707,6 +1714,39 @@ internal static class MusicXmlReader
             ? string.Join(" ", string.Concat(Els(dir, "direction-type").SelectMany(t => Els(t, "words")).Select(w => w.Value))
                 .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
             : null;
+    /// <summary>The words of a direction, joined as <see cref="ReadDirectionTexts"/> joins them.</summary>
+    private static string DirectionWords(XElement dir)
+        => string.Join(" ", string.Concat(Els(dir, "direction-type").SelectMany(t => Els(t, "words")).Select(w => w.Value))
+            .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+    /// <summary>
+    /// The guitar line a direction starts — <c>palmMute</c>, <c>letRing</c>, <c>barre(7)</c> —
+    /// or null: a <c>&lt;bracket type="start"&gt;</c> after the words that name one ("P.M.",
+    /// "let ring", "CVII" / "½CVII"). MusicXML has no element for any of the three; this is the
+    /// shape <c>MusicXmlDirection.GuitarLineType</c> writes. Until session 1261 the bracket was
+    /// not read: the words came back as <c>@text("P.M.").up</c> and the line was lost.
+    /// </summary>
+    private static string? GuitarLineMark(XElement dir)
+    {
+        if (!Els(dir, "direction-type").SelectMany(t => Els(t, "bracket")).Any(b => (string?)b.Attribute("type") == "start"))
+            return null;
+        string words = DirectionWords(dir);
+        return words == Svg.Model.MusicMarkItem.TextSpanSugarText("palmMute") ? "palmMute"
+            : words == Svg.Model.MusicMarkItem.TextSpanSugarText("letRing") ? "letRing"
+            : BarreMark(words);
+    }
+
+    /// <summary>A barre's label ("CVII", "½CV") as <c>barre(7)</c> / <c>barre(5 half)</c>, or null
+    /// for any other words: the label <c>MusicMarkItem.BarreText</c> prints, read back.</summary>
+    private static string? BarreMark(string words)
+    {
+        bool half = words.StartsWith('½');
+        for (int fret = 1; fret <= Svg.Model.MusicMarkItem.BarreMaxFret; fret++)
+            if (Svg.Model.MusicMarkItem.BarreText(fret, half) == words)
+                return "barre(" + fret + (half ? " half" : "") + ")";
+        return null;
+    }
+
     /// <summary>
     /// The lines a &lt;direction&gt; opens and closes: an &lt;octave-shift&gt; as
     /// <c>ottava</c> / <c>ottava(bassa)</c> / <c>quindicesima</c>(…) and its stop as
@@ -1736,12 +1776,25 @@ internal static class MusicXmlReader
             dashed[number] = name;
             yield return name;
         }
+        // A guitar line (session 1261): the words and the bracket that runs from them, as
+        // `lysc xml` and notation programs write a palm mute, a let ring and a barre. Kept apart
+        // from the dashed lines by the "b" before its number.
+        if (GuitarLineMark(dir) is { } guitarLine)
+        {
+            dashed["b" + ((string?)Els(dir, "direction-type").SelectMany(t => Els(t, "bracket"))
+                .First(b => (string?)b.Attribute("type") == "start").Attribute("number") ?? "1")] = guitarLine;
+            yield return guitarLine;
+        }
         foreach (var dt in Els(dir, "direction-type"))
         {
             foreach (var dashes in Els(dt, "dashes"))
                 if ((string?)dashes.Attribute("type") == "stop"
                     && dashed.Remove((string?)dashes.Attribute("number") ?? "1", out string? opened))
                     yield return "!" + opened.Split('(')[0];
+            foreach (var bracket in Els(dt, "bracket"))
+                if ((string?)bracket.Attribute("type") == "stop"
+                    && dashed.Remove("b" + ((string?)bracket.Attribute("number") ?? "1"), out string? openedLine))
+                    yield return "!" + openedLine.Split('(')[0];
             foreach (var shift in Els(dt, "octave-shift"))
             {
                 string type = (string?)shift.Attribute("type") ?? "";
@@ -1826,12 +1879,15 @@ internal static class MusicXmlReader
                 .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
             // (The words a dashed line runs from are its text spanner's — ReadDirectionSpans.)
             if (text.Length > 0 && !wordsAreTheTempos && !(text is "(" or ")" && IsEditorialDynamics(dir))
-                && DashedWords(dir) == null)
+                && DashedWords(dir) == null && GuitarLineMark(dir) == null)
             {
                 if (text == "una corda")
                     yield return "unaCorda";
                 else if (text == "tre corde")
                     yield return "treCorde";
+                // A barre's label with no line after it is the barre on its one note.
+                else if (BarreMark(text) is { } barre)
+                    yield return barre;
                 else
                 {
                     if (jump)
