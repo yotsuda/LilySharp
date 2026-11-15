@@ -3176,8 +3176,13 @@ public sealed class MusicXmlExporter
             (_currentOctave, _currentStep, _defaultDuration) = frame;
             int passStart = _currentPart?.Measures.Count ?? 0;
             var opened = _currentMeasure;
+            // The repetition is the sign on the page, which prints none of the bars' dynamics
+            // again (owner's decision 2026-11-15): neither does the file (HandleDynamicText).
+            bool outerRepetition = _inPercentRepetition;
+            _inPercentRepetition = true;
             foreach (var item in body)
                 ProcessNode(item);
+            _inPercentRepetition = outerRepetition;
             if (sign && first)
             {
                 var start = _currentPart!.Measures.Count > passStart ? _currentPart.Measures[passStart] : opened;
@@ -6552,6 +6557,13 @@ public sealed class MusicXmlExporter
     /// null for none: the staff's own then (<see cref="StaffDynamicsUp"/>).</param>
     private void HandleDynamicText(string text, int position = -1, bool subito = false, bool? written = null, bool editorial = false)
     {
+        // A percent repeat's repetition writes its notes again and none of its dynamics: the
+        // page draws the sign there and prints no level and no hairpin, and the document's
+        // wedges are the page's (owner's decision 2026-11-15). Until then the levels were
+        // written again and the hairpins not: `c4@p d e@cresc f | % | c1@f` said a p in the
+        // middle of the crescendo that runs through the repeated bar (Lab sessions/p1262/w/w2).
+        if (_inPercentRepetition)
+            return;
         if (text == "niente")
         {
             HandleNiente(position);
@@ -6603,6 +6615,10 @@ public sealed class MusicXmlExporter
         _momentLevel = new MusicXmlDirection { DynamicType = text, Placement = placement, Subito = subito, Editorial = editorial && text != "niente" };
         AddDirection(_momentLevel);
     }
+
+    /// <summary>The bars being written are a percent repeat's repetition (ProcessPercentRepeat):
+    /// the page draws the sign there, and none of the bars' dynamics.</summary>
+    private bool _inPercentRepetition;
 
     // The line the part's dynamics ride, as the page reads it, and what the current moment
     // has written so far (a level written before its note's hairpin is re-read after it).
