@@ -271,6 +271,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1269セッションの経緯
+
+### 1.1 第1269セッション（2026-11-15・YT-DELL2）
+
+base `24719cc86`・開始時 full 17210 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17213（Lab `p1269` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 183）。
+オーナー決定 2026-11-15 ⑥ の案 6（符頭の形の区間 `c'8@notehead(cross) d' e' f'@!notehead`）。設計メモは `docs/eval4-features-design.md`（§6 が実際の形・§7 以降は見出しだけ）。
+- 作った: 印の区間（`@staccato … @!staccato`）と同じ読み手 `Semantics.ArticulationRuns` に乗せた（開きは形を名乗る `@notehead(STYLE)`・終わりは引数なしの `@!notehead`・規則は同じ＝いちばん近い開き・LYS4018・休符／装飾音／別の声部／呼んだ phrase には掛からない）。自分の `@notehead(…)` と `@dead` が勝ち、2 つの区間の中は内側。ページ（`ExtractNoteheadStyle`）・MusicXML（`NoteheadFromMarks(WithCovering)`）・`.ly`（音ごとの `\once \override`）・`lysc review`（× は和声の音でない）・`@!` の補完。音は変わらない。
+- 一緒に直した: `lysc ly` が区間の終わり（`@!staccato` も）を "dropped (out of scope)" と報告していた／`<< c@notehead(cross) e g >>` の中の音の形をページが描いていなかった（MusicXML は書いていた）。
+- 門: 網 `GrammarEvaluation4FeaturesTests` 14 本＋`GrammarEvaluation4ReviewTests` の 1 本に 2 行。毒 14 本が全部赤（Lab `p1269/poisons.txt`・`poisons-2.txt`。P9・P14 は `<< >>` の形の網を足してから赤）。全 svg の掃き（Lab `p1269/svg`・base は HEAD を `git archive` で作った）: 1268 枚で差 0。commit `6fec37e68`。`completion-typing.json` を再生成。終了時 full 17225 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17228（`run3.trx`）。
+- 7.7: ⚠️ **歌い手は × の音を今も歌う**（案の文面「歌い手はこの区間を歌わない」は未実装。1 音の `@notehead(cross)` も同じ規則になるので、入れるなら `MidiExporter.SingLyrics` と `SungVoices.Read` の 2 か所＝設計 §6 の末尾。耳はオーナー）。⚠️ `@!notehead(cross)` はパーサーが終わりに引数を取らないので、`(cross)` がスラーと未定義の名前として読まれる（エラーは出るが言い方は的外れ・未修正）。⚠️ `@dead … @!dead` の区間は無い（頼まれていない）。⚠️ tab の譜表での × の区間の絵は見ていない。perf: 符頭の形を訊くたびに `Covering` を 1 回（区間の無い本は木に 1 回の走査だけ・打鍵のベンチは取っていない）。7.5: Core '+' はページと書き出し（REF 0・OWN 1）。CHANGELOG は 2 つとも `## Unreleased`。
+
 ## 以下は第1268セッションの経緯
 
 ### 1.1 第1268セッション（2026-11-15・YT-DELL2）
