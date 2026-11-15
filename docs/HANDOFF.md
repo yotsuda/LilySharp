@@ -141,6 +141,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1279セッション（2026-11-15・YT-DELL2）
+
+base `7ee3044aa`・開始時 full 17337 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17340（Lab `p1279` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 204）。
+オーナーの報告 3 件を順に閉じた（`pass 2 { }` は途中で止めて退避）。
+- **フェルマータの後の繰り返しで言葉が 2 回歌われる**（`44d026bac`・Lab eval3 `theatre.lys` L162「last」）: フェルマータは 150 % 鳴って次の小節に食い込む。その尾が `|: Safety :|` の 2 回目の頭で「タイで入ってきた音」（`[1. d1~ :| [2. d1 ]` の規則）と読まれ、和音と言葉がもう一度出ていた。同じ尾が反復の終わりでは「跳ぶ所をまたぐタイ」と読まれ、頭の同じ高さの音を打たなかった。⇒ 打った音に「書いた長さを越えて鳴る分」（`MidiNote.Overhang`・`ProcessNode` が打った直後に付ける）を持たせ、`PlayedTimeline.Rewrite` は書いた終わりで読む。網 5・毒 4 赤・追跡 1,268 本は同じ・Lab の評価の本 993 本のうち 8 本が変わった（どれもフェルマータの後の繰り返し）。
+- **chords の `[1. A7] [2. ]` で 2 つめの括弧の小節が無い**（`821b4c0a7`）: 行の小節を閉じるのは小節線だけだった。⇒ `ChordRowBarLines.EndCloses`＝後ろに小節線の無い `]` は自分の小節を閉じる（空の `[2. ]` は空の 1 小節）。`[2. F ] |` は今までどおり小節線のもの。行の小節を数える読み手 11 か所が全部これを読む。網 16・毒 14 のうち赤 10（緑 4 の理由は commit）・スイープ同じ（この書き方の本が無い）。⚠️ `.ly` は小節線の無い ending に `\alternative` を書かない（警告は出る・前から）。⚠️ オーナーの本は `|:` を閉じていない（LYS4017）＝`:|` が無いので戻らない。
+- **1. の閉じ鉤と 2. の開き鉤が重なる**（`aba8d740b`・オーナー依頼＝LILYSHARP-OWN）: LilyPond も同じ小節線に描く。普通の小節線で 0.5 譜間に満たない所だけ、1 つめの終わりを 0.5 手前で止める（`:|` は元から 0.93 空く＝そのまま）。
+- **`pass 2 { }`**: 設計メモ（`docs/eval4-features-design.md` §3）・構文ノード・パーサー・MIDI の途中まで書いて、報告に切り替えた。全部 Lab `sessions/p1279/pass-wip/`（ファイルごとの写しと diff）に退避し、作業ツリーからは戻した。⚠️ 写しの `MidiExporter.cs`・`MidiEvents.cs` はフェルマータの修正の前の版なので、**写しで上書きせず diff の `pass` の塊だけを当て直す**。
+- 気づいた: chords だけの段で全部が空の小節（`| | | |`）の段は、小節線も描かれず真っ白になる（オーナーの本の 13 小節目・Lab `p1279/row/mylife.png`）。未着手。
+- 終了時 full 17360 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17363（`full3.trx`）。
+
+## 以下は第1278セッションの経緯
+
 ### 1.1 第1278セッション（2026-11-15・YT-DELL2）
 
 base `d5ec78728`・開始時 full 17319 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17322（Lab `p1278` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 202）。
@@ -152,17 +165,6 @@ Lab leftovers の「度数和音の基準が part header の調をファイル�
 - 門: `PartHomeKeySoundTests` 18 本（MIDI・ページ・MusicXML が同じ）・毒 12 本は全部赤（Lab `p1278/poisons-3.txt`。L8 は緑だったので行を消した）・MIDI スイープ 1,041 冊 1,268 本＝同じ 1,267／違う 1（`test/part-header-key-per-part`＝`key c major` の本の調号が part の B♭ → C。意図どおり）。終了時 full 17337 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17340（`full3.trx`）。
 - 7.7: ⚠️ ページの `chords … as roman` の行は part header の調で読む（前から・欠陥かはオーナーに訊く＝leftovers）。⚠️ part ごとに調が違う本の 2 つめ以降の part の調は `.mid` に書かれない。perf: 触っていない（block の頭で辞書を 1 回引くだけ）。
 - **オーナー指示（2026-11-15）「後で作る件、ほかに着手すべき候補がなければすぐ着手して良い」**＝§3 の ⑥ の「いつ着手するかは訊く」は解けた。10 の「まず診断だけ」は LYS0046 で済み（2026-11-14）。次は 3（`pass 2 { }`）→ 1（持ち替え）・どちらも設計メモが先。
-
-## 以下は第1277セッションの経緯
-
-### 1.1 第1277セッション（2026-11-15・YT-DELL2）
-
-base `2ac8091c8`・開始時 full 17319 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17322（Lab `p1277` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 200）。
-オーナー依頼（2026-11-15）「Shosa のプレビューは再生すると対応するテキストがエディタでハイライトする。Lily# にも入れて」（`0bdec6703`・エディタだけ・Core／Lsp 不変）。
-- Shosa の形（`C:\MyProj\Shosa\editors\vscode\src`）: ページが再生位置の span を `active` で送り、host が `editor.findMatchHighlightBackground`・角丸 3px の装飾を付ける。Lily# のページは「いま鳴っている音符」を既に持つ（follow-along＝譜面の音符を光らせる tick）ので、**同じ音符の source offset を送るだけ**。
-- 作った: ページは鳴っている音が変わるたびに `soundingSource`（offset の列）を送り、止まると `ended` つきで 1 回（`sourceLit`）。host の `showSoundingSource` がその panel のファイルを開いている可視のエディタ全部に装飾を付ける。offset → 文字の範囲は `previewCore.soundingRange`（offset はノードの full-span の頭＝前の空白を飛ばす・音符は音高と音価と付点まで・和音は `<…>` と音価の全体・ドラム名・コードの行の記号。`@` の印・タイ・スラー・連桁は含めない）。1 回の報告の判断は `previewCore.soundingLight`＝**再生の音符は ▶ を押したときの本文のもの**なので、編集後（document の version が変わった後）は止まるまで何も光らせない／休符は消す／別のファイルは新しい session。設定 `lilysharp.playback.highlightSource`（既定 on）。
-- 門: 拡張のテスト 1141 → 1145 本（`test/previewCore.test.ts`）・毒 4 本は全部赤（Lab `p1277/poisons.txt`）・`tsc`・bundle は通る。終了時 full 17319 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17322（`run2.trx`・開始時と同じ）。
-- 7.7: ⚠️ **実物の VS Code では見ていない**（装飾は API から読み戻せない・webview の ▶ はクリックが要る）＝`MANUAL-CHECKS` 第1277。⚠️ AI の候補の ▶ と試聴（Alt+P／Alt+M）は光らせていない。⚠️ 再生中に見えるようになったエディタは次の変化から光る。⚠️ 拡張の作り直し（`deploy-extension.ps1`）はオーナー。perf: 鳴っている音が変わるたびに postMessage 1 回と、可視のエディタの本文に対する範囲の計算（鳴っている音の数ぶん）。
 
 ## 2. 開いている作業
 

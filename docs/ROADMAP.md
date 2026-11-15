@@ -81,6 +81,14 @@ asked — none is decided.
   labels and the tempos since 2026-11-14; a `@mark` on another part's note and a rit. are not
   yet in it, and the LilyPond twin carries neither.
 
+### A meter of two denominators (listed 2026-11-15, grammar evaluation 4; the owner's decision)
+
+`time 2/4+3/8` — LilyPond's `\compoundMeter #'((2 4) (3 8))`: the signature printed as
+"2/4 + 3/8", a bar of 7/8, the beams cut 2/4 | 3/8. The owner decided the diagnostic first:
+since 2026-11-14 the spelling is one error (LYS0046) that names the same bar in one denominator
+(`time 7/8 (4+3)`), where it was three unrelated ones. The meter itself is not built and not
+designed: what a section's pickup, a `%` repeat and the MIDI time signature read of it.
+
 ### LilyPond's other header lines (listed 2026-11-13, the owner's decision)
 
 `arranger` and `copyright` were built on 2026-11-13 (CHANGELOG). The owner declined the rest of

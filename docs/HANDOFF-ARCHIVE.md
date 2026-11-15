@@ -271,6 +271,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1277セッションの経緯
+
+### 1.1 第1277セッション（2026-11-15・YT-DELL2）
+
+base `2ac8091c8`・開始時 full 17319 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17322（Lab `p1277` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 200）。
+オーナー依頼（2026-11-15）「Shosa のプレビューは再生すると対応するテキストがエディタでハイライトする。Lily# にも入れて」（`0bdec6703`・エディタだけ・Core／Lsp 不変）。
+- Shosa の形（`C:\MyProj\Shosa\editors\vscode\src`）: ページが再生位置の span を `active` で送り、host が `editor.findMatchHighlightBackground`・角丸 3px の装飾を付ける。Lily# のページは「いま鳴っている音符」を既に持つ（follow-along＝譜面の音符を光らせる tick）ので、**同じ音符の source offset を送るだけ**。
+- 作った: ページは鳴っている音が変わるたびに `soundingSource`（offset の列）を送り、止まると `ended` つきで 1 回（`sourceLit`）。host の `showSoundingSource` がその panel のファイルを開いている可視のエディタ全部に装飾を付ける。offset → 文字の範囲は `previewCore.soundingRange`（offset はノードの full-span の頭＝前の空白を飛ばす・音符は音高と音価と付点まで・和音は `<…>` と音価の全体・ドラム名・コードの行の記号。`@` の印・タイ・スラー・連桁は含めない）。1 回の報告の判断は `previewCore.soundingLight`＝**再生の音符は ▶ を押したときの本文のもの**なので、編集後（document の version が変わった後）は止まるまで何も光らせない／休符は消す／別のファイルは新しい session。設定 `lilysharp.playback.highlightSource`（既定 on）。
+- 門: 拡張のテスト 1141 → 1145 本（`test/previewCore.test.ts`）・毒 4 本は全部赤（Lab `p1277/poisons.txt`）・`tsc`・bundle は通る。終了時 full 17319 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17322（`run2.trx`・開始時と同じ）。
+- 7.7: ⚠️ **実物の VS Code では見ていない**（装飾は API から読み戻せない・webview の ▶ はクリックが要る）＝`MANUAL-CHECKS` 第1277。⚠️ AI の候補の ▶ と試聴（Alt+P／Alt+M）は光らせていない。⚠️ 再生中に見えるようになったエディタは次の変化から光る。⚠️ 拡張の作り直し（`deploy-extension.ps1`）はオーナー。perf: 鳴っている音が変わるたびに postMessage 1 回と、可視のエディタの本文に対する範囲の計算（鳴っている音の数ぶん）。
+
 ## 以下は第1276セッションの経緯
 
 ### 1.1 第1276セッション（2026-11-15・YT-DELL2）
