@@ -149,7 +149,7 @@ base `9d3f19b06`・開始時 full 17359 合格 / 2 失敗（`ReadmeSampleTests`�
 - MusicXML: 自動の譜表は書かず、行を自分のパートにする前の形に `<staff-lines>1` と印刷しない名前（前の形は拍子の変更を持っていた＝自動のパートは 3/4 を落としていた）。
 - 網: `AutoRowStaffTests` に「手で書いた `as lines 1` と描くものと高さが同じ」6 冊（X は行が間隔を決めるので別）。譜表の無い格子を測っていた網 4 ファイル（`GridRowMeterCentring`・`RowsOnlySystemGap`・`RowsOnlyBarNumberAnchor`・`RowsOnlyDiagramStack`）と `SharedRendererBarline` の歌詞行の 1 例は形ごと無くなったので消した（絵は Lab `p1281/row/*.png` で目で見た＝重なり無し）。`TheBox_TakesAStaffsLineStartAnchor` は 1 本線の譜表の規則（左端に中央）へ、テンポの網はインクで測る形へ。台帳は 2 点を外し 1 点を 0 に。スナップショット 5 枚を再ベース。
 - スイープ: 全 svg 1268 枚のうち動いたのは 12 枚＝全部行だけの score（Lab `p1281/svg/sweep.log`）。
-- **オーナーに訊く（未決）**: ⑴ 区切りのラベルが譜表の規則でコードの名前と同じ高さに並ぶ（2026-10-04 の決定「譜表の無い譜面ではラベルは行の上」と食い違う・`p1281/row/lab.png`・網 `SectionLabel_OnAStafflessChordSheet_StandsAboveTheSymbols` は Skip にした）／⑵ 歌詞と一線の間 5.5 譜間。⚠️ 手で書いた `part l { }`＋`staff l as lines 1` の横の、旋律に付かない `lyrics` の行は描かれない（`p1281/row/tempo2.png`・前から・未着手）。⚠️ `IsLeadSheet` の格子の描画（行に小節線と拍子を描く道）は今は通らない＝消すかは次の便で（オーナーの答え ⑴ 次第）。
+- **★ 次の一手＝オーナーの返答（2026-11-15）**: ⑴「ラベルは余地があればコードと同じ高さに並べて」＝今の形で決定（10-04 の決定を一線譜では上書き）→ Skip にした網 `SectionLabel_OnAStafflessChordSheet_StandsAboveTheSymbols` をこの規則に書き直す／⑵ 歌詞と一線の間（今 5.5 譜間）は「自然に見える間隔にして。あとで私が見て評価する」／⑶「気づいた点も直して」＝下の 2 つ。⚠️ 手で書いた `part l { }`＋`staff l as lines 1` の横の、旋律に付かない `lyrics` の行は描かれない（`p1281/row/tempo2.png`・前から・未着手）。⚠️ `IsLeadSheet` の格子の描画（行に小節線と拍子を描く道）は今は通らない＝消すかは次の便で（オーナーの答え ⑴ 次第）。
 - commit `0642cf5ab`・`b586b0376`。終了時 full 17360 合格 / 1 失敗（README）/ skip 3 / 合計 17364（`run2.trx`）。
 
 ## 以下は第1280セッションの経緯
