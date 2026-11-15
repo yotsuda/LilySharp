@@ -28,6 +28,16 @@ Transcribe!（Seventh String）と同じ体験を Lily# のプレビューで（
    帯は再生位置のまわりを拡大して見せ、全体は細い全景で示す（3 分の曲を 600px に並べると 1 小節が約 6px で打てない）。
    下のパネル（ターミナルの場所）に出す案は、楽譜から目が離れるので採らない。
 
+4. **（2026-11-15・同じ便）伸縮のエンジンは Signalsmith Stretch（MIT・公式の Web 版を同梱）。**
+5. **m4a は (a)**: Windows では LSP（.NET）が Media Foundation で復号し、拡張の保存場所（`globalStorageUri`）に置いて webview に渡す。
+   mac／Linux の m4a は最初の版では受けない（受けないと言う）。wav・mp3・flac・ogg は webview が自分で復号する（§3 で実測）。
+6. **最初の版は §4 の 1〜4。**
+   小節を打つ操作について（オーナー 2026-11-15「Transcribe! を意識しすぎな感じもするが、便利な機能だから拝借してよい」）:
+   Lily# では意味が違う＝Transcribe! は打った所に小節を**作る**が、Lily# の小節は `.lys` が持っていて、打つのは
+   「楽譜の次の小節は録音のここから」と**合わせる**操作（小節の数は楽譜が決め、録音がそれに揃う）。だから
+   VS Code のコマンド（仮名 `Lily#: Mark Bar Line Here`）にし、キーは既定の割り当て（プレビューにフォーカスがあるとき）で、
+   利用者が `keybindings.json` で変えられる。M に固定しない。
+
 ## 2. 入口（メニュー）
 
 - 録音を `.lys` に変換するメニューは **Lily# が持つ**（オーナー決定 2026-11-15・第1264: 名前「Convert Recording to Lily# (.lys)…」・
@@ -69,7 +79,20 @@ Transcribe!（Seventh String）と同じ体験を Lily# のプレビューで（
 
 **決めてほしいこと**: ⑴ エンジン（推奨 Signalsmith）／⑵ m4a の扱い＝(a) Windows では LSP（.NET）が Media Foundation で復号して拡張の保存場所（`globalStorageUri`）に置く・mac／Linux の m4a は最初の版では受けない、(b) Dettato が入っているときだけ受ける、(c) 最初の版は m4a を受けない／⑶ 最初の版の範囲（上の 1〜4）。
 
-## 5. まだ決めていない細部
+## 5. 段取り（最初の版）
+
+段ごとに網を付け、段の終わりで full と拡張のテストを回す。手本は歌い手の声（外から来た音のバッファを楽譜と同期して鳴らす道・`extension.ts` の `voice`／`playVoiceSample`）。
+
+| 段 | 中身 | 確かめ方 |
+|---|---|---|
+| S1 | 隣のファイルの読み書き（純粋な TS・`recordingCore.ts`）: `.lys` の隣の `<stem>.dettato.json` を探す・形式 1 を読み形式 2（`byHand` ほか）を書く・小節（form をたどった演奏の順）↔ 録音の秒の対応（弱起・反復・最後の小節が録音より長い形） | `editors/vscode/test` の単体の網 |
+| S2 | 「Attach Recording…」（コマンドパレットと音源の右クリック）・`.lys` のリネームで隣のファイルも変える・m4a は LSP の Media Foundation で復号（Windows）して `globalStorageUri` に置く | 網＋`--extensionTestsPath` で実物の VS Code |
+| S3 | webview の録音の再生: Signalsmith を同梱（`LICENSE` と NOTICE）・秒から鳴らす・ループ・速度・半音とセント・オクターブ・連動のオン／オフ（オンは再標本化）・余裕かリミッター。ツールバーの切り替えと録音パネル（隣のファイルが無ければ出ない） | 網（`previewToolbar` の型）＋OfflineAudioContext で書き出して測る |
+| S4 | 楽譜の小節を押すとそこから録音・選んだ範囲はループ・再生位置の小節を追う（録音の秒 → 小節） | 網＋実物 |
+| S5 | 帯: 波形・小節のマーク（人が確かめたものは濃く）・再生位置・再生位置のまわりの拡大と全景・`Mark Bar Line Here`・ドラッグ。書いたら隣のファイルの `byHand` | 網＋実物（CDP か `--extensionTestsPath`） |
+| S6 | `MANUAL-CHECKS`・CHANGELOG・Dettato の REQUESTS への返事（m4a は Lily# が自分で復号するので PCM を渡してもらう必要はない・形式 2 の項目の合意） | — |
+
+## 6. まだ決めていない細部
 
 - キー操作（M・B・S はプレビューにフォーカスがあるときだけ）、拍への吸い寄せ（オフにできる）、ペダル。
 - 隣のファイル（形式 2）の項目と、書き手の取り合い（Lily# はマーク・ループ、Dettato は読み直し）。人が小節を足し消しして小節数が合わないとき。
