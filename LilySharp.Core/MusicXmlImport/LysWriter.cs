@@ -54,7 +54,12 @@ internal static class LysWriter
         var systemStarts = SystemStarts(doc);
         var marks = CutPoints(RehearsalMarks(doc), doc, systemStarts);
         var header = HeaderState(doc, cuts.Segments.Select(s => s.Start).Concat(marks.Keys));
-        var directives = doc.Parts.ToDictionary(p => p, p => Directives(doc, p, header, systemStarts, report));
+        // A part that opens in a key of its own — a transposing instrument's, in a score that
+        // prints each part as its player reads it — has that key as its HOME (its header's
+        // `key`): its sections are read against it, not against the file's.
+        var homeKeys = doc.Parts.ToDictionary(p => p, p => HomeKey(doc, p));
+        var directives = doc.Parts.ToDictionary(p => p,
+            p => Directives(doc, p, (header.Time, homeKeys[p] ?? header.Key), systemStarts, report));
         var layout = SplitAtMarks(cuts, CuttableMarks(marks, cuts, doc, report), doc);
         CutSpansAtSectionEdges(doc, layout, report);
         bool useRelative = relativeOctave;
@@ -133,6 +138,8 @@ internal static class LysWriter
             {
                 sb.Append(" transposition ").Append(Svg.Model.InstrumentDefaults.TranspositionPitchOf(0));
             }
+            if (homeKeys[part] is { } home)
+                sb.Append(" key ").Append(KeyToLily(home, report));
             sb.Append(" }\n");
         }
         sb.Append('\n');
@@ -1199,14 +1206,33 @@ internal static class LysWriter
         => (doc.Parts.SelectMany(p => p.Measures).Select(m => m.Time).FirstOrDefault(t => t != null),
             OpeningKey(doc));
 
-    // A key that names a tonic before `key none` (ImportKey.NoneMode): the writer states one
-    // key for all the parts, and a file where one part has no signature beside parts in a key
-    // opened in that key before `<key/>` was read at all (2026-11-15) — it still does.
+    // The FILE's key is the reference part's (ReferencePart): the first key it states. A part
+    // that opens in another is given that key as its own (HomeKey).
     private static ImportKey? OpeningKey(ImportDocument doc)
-    {
-        var keys = doc.Parts.SelectMany(p => p.Measures).Select(m => m.Key).Where(k => k != null).ToList();
-        return keys.FirstOrDefault(k => k!.Value.Mode != ImportKey.NoneMode) ?? keys.FirstOrDefault();
-    }
+        => doc.Parts.Count == 0 ? null
+            : ReferencePart(doc).Measures.Select(m => m.Key).FirstOrDefault(k => k != null)
+              ?? doc.Parts.SelectMany(p => p.Measures).Select(m => m.Key).FirstOrDefault(k => k != null);
+
+    /// <summary>
+    /// The part whose key is the file's: the first that neither transposes nor is without a
+    /// signature (<c>key none</c>) where it opens — the concert key of a score that prints its
+    /// transposing parts in their players' keys — else the first part.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN (2026-11-15). Until then the file's key was the first key any part
+    /// stated and every other part's key was written into its MUSIC at its first bar — a B♭
+    /// clarinet's <c>key d major</c> beside a flute in C — which the page read rightly and
+    /// LYS2023 warned about in the file just imported.
+    /// </remarks>
+    private static ImportPart ReferencePart(ImportDocument doc)
+        => doc.Parts.FirstOrDefault(p => (p.TranspositionSemitones ?? 0) % 12 == 0
+               && p.Measures.FirstOrDefault()?.Key is not { Mode: ImportKey.NoneMode })
+           ?? doc.Parts[0];
+
+    /// <summary>The key <paramref name="part"/> opens in where that is not the file's opening
+    /// key — written in its header, <c>part cl { … key d major }</c> — or null.</summary>
+    private static ImportKey? HomeKey(ImportDocument doc, ImportPart part)
+        => part.Measures.FirstOrDefault()?.Key is { } own && own != OpeningKey(doc) ? own : null;
 
     /// <summary>
     /// The time and key the header states: the ones in force at the most places a section may
@@ -1230,7 +1256,7 @@ internal static class LysWriter
         var times = new List<ImportTime?>();
         var keys = new List<ImportKey?>();
         var (t, k) = (time, key);
-        var measures = doc.Parts[0].Measures;
+        var measures = ReferencePart(doc).Measures;
         // A bar that changes the value itself writes it anyway, so only the others vote.
         for (int i = 0; i < measures.Count; i++)
         {

@@ -94,6 +94,93 @@ public class MusicXmlTransposingImportTests
         Assert.Equal([60], Sounds(lys));   // the written D4 sounds C4
     }
 
+    // ---- a score that prints each transposing part in its player's key ----
+
+    private static string Whole(string step, int octave)
+        => $"<note><pitch><step>{step}</step><octave>{octave}</octave></pitch><duration>4</duration><type>whole</type></note>";
+
+    /// <summary>A part of four bars, one note each, whose key is stated at bars 1, 3 and 4.</summary>
+    private static string Part(string id, string transpose, int[] fifths, string[] steps)
+    {
+        string Key(int f) => $"<key><fifths>{f}</fifths></key>";
+        return $"<part id=\"{id}\"><measure number=\"1\"><attributes><divisions>1</divisions>{Key(fifths[0])}"
+            + "<time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef>"
+            + transpose + $"</attributes>{Whole(steps[0], 5)}</measure>"
+            + $"<measure number=\"2\">{Whole(steps[1], 5)}</measure>"
+            + $"<measure number=\"3\"><attributes>{Key(fifths[1])}</attributes>{Whole(steps[2], 5)}</measure>"
+            + $"<measure number=\"4\"><attributes>{Key(fifths[2])}</attributes>{Whole(steps[3], 5)}</measure></part>";
+    }
+
+    private const string InBFlat = "<transpose><diatonic>-1</diatonic><chromatic>-2</chromatic></transpose>";
+    private static readonly string Flute = Part("{0}", "", [0, 1, 0], ["C", "D", "G", "C"]);
+    private static readonly string Clarinet = Part("{0}", InBFlat, [2, 3, 2], ["D", "E", "A", "D"]);
+
+    private static string Score(params (string Name, string Part)[] parts)
+        => "<score-partwise version=\"4.0\"><part-list>"
+            + string.Concat(parts.Select((p, i) => $"<score-part id=\"P{i + 1}\"><part-name>{p.Name}</part-name></score-part>"))
+            + "</part-list>" + string.Concat(parts.Select((p, i) => string.Format(p.Part, "P" + (i + 1)))) + "</score-partwise>";
+
+    /// <summary>Each part's key statements read back from MusicXML written again: the fifths.</summary>
+    private static string[] KeysWritten(string lys)
+        => [.. new MusicXmlExporter().Export(SyntaxTree.Parse(lys)).ToXml().Descendants("part")
+            .Select(part => string.Join(" ", part.Descendants("fifths").Select(f => f.Value)))];
+
+    /// <summary>
+    /// A B♭ clarinet printed in D major beside a flute in C: the file is in the flute's key and
+    /// the clarinet's own is its header's — its home, where each of its sections opens — with no
+    /// diagnostic in the file read. (Until 2026-11-15 the clarinet's key was written into its
+    /// music at its first bar, which LYS2023 warned about; the page read it rightly.) A change
+    /// both parts make is written in each part's music, and a return to the opening keys writes
+    /// nothing: each part is back in its home.
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]    // the transposing part first: the file's key is still the flute's
+    public void ATransposingPartsOwnKey_IsItsHeadersKey(bool clarinetFirst)
+    {
+        string xml = clarinetFirst ? Score(("Clarinet", Clarinet), ("Flute", Flute)) : Score(("Flute", Flute), ("Clarinet", Clarinet));
+        var (read, report) = new MusicXmlImporter().Import(xml);
+        string lys = read.Replace("\r", "");
+        Assert.Empty(report.Warnings);
+        Assert.Empty(SemanticValidation.Run(SyntaxTree.Parse(lys)).Select(d => d.Message));
+
+        Assert.Contains("\nkey c major\n", lys);
+        Assert.Contains("part flute { clef treble }", lys);
+        Assert.Contains("part clarinet { clef treble transposition bes key d major }", lys);
+        // The home keys are written once, in the header; the change of the third bar in each part.
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(lys, "key d major"));
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(lys, "key c major"));
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(lys, "key g major"));
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(lys, "key a major"));
+
+        // Written to MusicXML again, each part states the keys it was read with.
+        string[] keys = KeysWritten(lys);
+        Assert.Equal(clarinetFirst ? ["2 3 2", "0 1 0"] : ["0 1 0", "2 3 2"], keys);
+        // …and the clarinet sounds the flute's notes.
+        var sounds = Sounds(lys);
+        Assert.Equal(8, sounds.Length);
+        Assert.Equal(sounds.Take(4), sounds.Skip(4));
+    }
+
+    /// <summary>A part with no signature first, beside a part in a key: the file's key is the
+    /// keyed part's, and <c>key none</c> is the first part's own.</summary>
+    [Fact]
+    public void APartWithNoSignatureFirst_IsNotTheFilesKey()
+    {
+        static string One(string id, string key, string step)
+            => $"<part id=\"{id}\"><measure number=\"1\"><attributes><divisions>1</divisions>{key}"
+                + "<time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef></attributes>"
+                + Whole(step, 4) + "</measure></part>";
+        string xml = "<score-partwise version=\"4.0\"><part-list><score-part id=\"P1\"><part-name>Free</part-name></score-part>"
+            + "<score-part id=\"P2\"><part-name>Keyed</part-name></score-part></part-list>"
+            + One("P1", "<key />", "C") + One("P2", "<key><fifths>-1</fifths></key>", "F") + "</score-partwise>";
+        string lys = new MusicXmlImporter().Import(xml).Item1.Replace("\r", "");
+        Assert.Contains("\nkey f major\n", lys);
+        Assert.Contains("part free { clef treble key none }", lys);
+        Assert.Contains("part keyed { clef treble }", lys);
+        Assert.Equal(["", "-1"], KeysWritten(lys));
+    }
+
     /// <summary>The pitch a shift is written as reads back as that shift, over every shift a part
     /// could state.</summary>
     [Fact]

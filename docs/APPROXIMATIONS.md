@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 446 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **572** | |
+| `OWN` | 447 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **573** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（446 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（447 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -373,6 +373,7 @@
 - **`MusicXmlExporter.PendingChordRow`** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
 ### `LilySharp.Core/MusicXmlImport/LysWriter.cs`
 - **`LysWriter.CuttableMarks`** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision; the twin omits it too).
+- **`LysWriter.ReferencePart`** LILYSHARP-OWN (2026-11-15). Until then the file's key was the first key any part
 ### `LilySharp.Core/MusicXmlImport/MidiReader.cs`
 - **`MidiReader`** LILYSHARP-OWN: a .mid is a performance, not a page, so every notated thing is a reading.
 ### `LilySharp.Core/MusicXmlImport/MusicXmlReader.cs`
