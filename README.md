@@ -13,19 +13,20 @@ editor at work, a gallery of engraved scores, and the
 
 *Harbour Lights* — music, words and source composed by an AI (Claude, by Anthropic) — engraved by Lily#. Play it in the VS Code preview and each note lights up as it sounds:
 
-https://github.com/user-attachments/assets/2b00e458-15b7-485c-a82c-ce7db2970d13
+https://github.com/user-attachments/assets/a5b2c904-20e5-4475-bfdd-d712bbf5ec71
 
 The page in the video is the whole of [`samples/harbour-lights.lys`](samples/harbour-lights.lys):
 
 <!-- README-SAMPLE:harbour-lights (kept identical to the file by ReadmeSampleTests) -->
-```lilysharp
+```lily#
 // Harbour Lights — an original song written for the Lily# README. The music, the words
 // and this source were composed by an AI (Claude, by Anthropic).
 //
 // One page from one source: chord symbols, a voice with its lyrics, and a piano on a
 // grand staff — pedal changes, hairpins, a triplet, a ritardando, rolled chords and
-// fermatas. Written in relative octaves: each note takes the octave nearest the one
-// before it.
+// fermatas. The `singer` line gives the voice part a singing voice: press Play and the
+// words are sung. Written in relative octaves: each note takes the octave nearest the
+// one before it.
 title "Harbour Lights"
 composer "Lily#"
 tempo "Andante" 4 = 72
@@ -34,24 +35,26 @@ key ees major
 
 paper { paperWidth 297mm  paperHeight 210mm }
 
-part singer "Voice" { clef treble }
+part singer "Voice" { clef treble_8  lyrics words }   // a tenor's clef: sung an octave below the page
 part rh "Piano" { clef treble }
 part lh { clef bass }
+
+singer male english "diffsinger/TIGER" on singer
 
 section Song {
   chords harmony { Eb | Cm7 | Ab Bb7 | Eb | Ab | Fm7 Bb7 | Gm7 C7 | Fm7 Bb7 | Eb | }
   singer {
-    r4 g'8@mp@phrasingSlur aes bes4. g8 | c4 bes8 g ees4 g@!phrasingSlur |
-    aes4@phrasingSlur c8 bes aes4 g8 f | g2.~ g8@!phrasingSlur r |
-    tuplet 3/2 { aes8@cresc@phrasingSlur bes c } ees4 d8 c bes4 | aes4. g8 f4 bes@!phrasingSlur |
+    r4 g8@mp@phrasingSlur aes bes4. g8 | c4 bes g8 ees g4@!phrasingSlur |
+    aes4@phrasingSlur c8 bes aes4 g8( f) | g2.~ g8@!phrasingSlur r |
+    tuplet 3/2 { aes8@cresc@phrasingSlur bes c@stemUp } ees4 d8 c bes4 | aes4. g8 f4 bes@!phrasingSlur |
     bes4@f@phrasingSlur g'@accent f8 ees d c@!phrasingSlur | c4@rit@decresc bes8 aes g4 f |
     ees1@p@fermata@!rit |.
   }
-  lyrics words {
+  lyrics words language english {
     Lights a- cross the | har- bour, burn- ing low, |
-    car- ry- ing the long way | home, |
-    night is fall- ing soft- ly on | the wa- ter, and |
-    all the lights are call- ing | me, back a- long the | shore. |
+    show me the long way | home. |
+    Out on the tide I can hear | dis- tant sing- ing, |
+    each bright light is call- ing | me back a- long the | shore. |
   }
   rh {
     r8 g'@p bes ees r g, bes ees | r8 g, bes ees r g, bes d |
