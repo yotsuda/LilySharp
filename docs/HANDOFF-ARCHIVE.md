@@ -271,6 +271,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1273セッションの経緯
+
+### 1.1 第1273セッション（2026-11-15・YT-DELL2）
+
+base `c34dfc4d2`・開始時 full 17292 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17295（Lab `p1273` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 192）。
+第1272 が見つけて残した欠陥（Lab `sessions/p1242/leftovers.md`・オーナー指示「残りの欠陥を順に」）＝`lysc xml` が part header の `key` を後ろの part 全部に書く。
+- 測った規則（ページ・`.ly` は元から正しい・Lab `p1273/probe/out/k1.png`）: part の home の調は自分の header の調、なければファイルの調／section の見出しの調はその section だけ全 part に勝つ／次の section で各 part の home に戻る。MusicXML だけが「最後に header に調を書いた part の調」を全 part の home にしていた（`CollectMetadata` が part header の `key` を top-level として歩き、その後の状態を home に取っていた）。
+- 直し（`ff29f6391`）: `MusicXmlExporter.FileHomeKey`（root の直下の `key`）と `PartHomeKey`（part の直下の `key`）を分け、play の頭で part の home ?? ファイルの home を当てる。調の読みは `KeyStateOf` の 1 つ（`ProcessKeySignature` から切り出しただけ）。
+- 門: 網 `MusicXmlPartHomeKeyTests` 10 本。毒 5 本は全部赤（5 本目＝part の中に書いた音楽の `key` を home と取り違える毒は、その形の網を足してから赤・Lab `p1273/poisons*.txt`）。**全冊の MusicXML の前後**（Lab `p1273/xml/sweep-xml.ps1`＝`lysc xml` に batch が無いので 8 並列・約 6 分）: 1268 冊で差 1 冊＝fixture `test/part-header-key-per-part.lys`（2 つ目の part が ♭2 つ → 調号なし＝ページどおり）。終了時 full 17301 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17304（`run2.trx`）・Core 警告 0。
+- 7.7: ⚠️ phrase の自動移調と度数和音の主音（`ScoreHomeKey.Read`）は part header の調を今も「ファイルの調」として読む＝3 つの出力が同じ読みかは見ていない（leftovers に書いた）。⚠️ 絵は触っていない（svg の掃きは回していない・Core の差分は `MusicXmlExporter.cs` だけ）。perf: 書き出しだけ（打鍵の経路ではない）。7.5: Core '+' 55 行・REF 0・OWN 0（式も定数も足していない＝既存の読みの置き場所を分けただけ）。CHANGELOG は 2 つとも `## Unreleased`。
+
 ## 以下は第1272セッションの経緯
 
 ### 1.1 第1272セッション（2026-11-15・YT-DELL2）
