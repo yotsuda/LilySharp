@@ -2680,7 +2680,7 @@ internal sealed class MultiStaffLayouter
             // the map the engraver draws with. The fork is the INCLUDE: a lead sheet
             // reserves its lyrics row only (chords and lyrics subdivide the bar
             // differently), a staff-backed score reserves every verse.
-            springs = score.IsLeadSheet
+            springs = score.RowsSpaceTheGrid
                 ? LyricSpacing.ApplyLeadSheetLyricSpacing(
                     score.TextMetrics, springs, allTimings, measureIndex,
                     ScoreSideTables.Lyrics(score),
@@ -2696,7 +2696,7 @@ internal sealed class MultiStaffLayouter
                     LyricSpacing.SpanBarCrossedStaves(score));
         }
         springs = LyricSpacing.ReserveDynamicsAgainstSpanBars(score, springs, allTimings, measureIndex);
-        if (score.IsLeadSheet)
+        if (score.RowsSpaceTheGrid)
         {
             // A staff-less row keeps its empty command columns (LilyPond never
             // prunes them without note-column neighbours), so every inter-column

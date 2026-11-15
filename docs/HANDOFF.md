@@ -141,6 +141,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1281セッション（2026-11-15・YT-DELL2）
+
+base `9d3f19b06`・開始時 full 17359 合格 / 2 失敗（`ReadmeSampleTests`・`CrossStaffCollisionTests.TheKeystrokePass_DoesNotLayTheScoreOut`）/ skip 2 / 合計 17363（Lab `p1281` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-15 の push（オーナーの Harbour Lights）の run も failure（未 push 212）。`CrossStaffCollisionTests.TheKeystrokePass_DoesNotLayTheScoreOut` は単独では緑（時間の網のゆれ）。
+**行だけの score の一線譜**を第1280 の退避から戻して仕上げた（設計と決めたことは `docs/row-staff-design.md` の「作ってみて決めたこと」）。
+- 落ちた 48 本のうち 16 本は**本物の欠陥**だった: 自動の譜表が名前の無い声部として form の無い本を歩き、上の段の `chords` の中の括弧と小節線を音楽として読んでいた（`[1. A7] [2. ]` で 2 つめの `2.` が 1 小節前・`break` が増える・LYS 網 7 本）。手で書いた `part l { }`＋`staff l as lines 1` も同じだった。⇒ form の無い歩きは `chords`／`lyrics` の中へ入らない（`s_formlessMusicSiteRule`）＋自動の譜表は歩かず行の小節を写す（拍子と調の変更は残す＝`SpacerSkeleton(keepSignatures)`。歩かせると見出しの `partial` を落とし、空にしただけでは拍子の変更を落とした）。
+- MusicXML: 自動の譜表は書かず、行を自分のパートにする前の形に `<staff-lines>1` と印刷しない名前（前の形は拍子の変更を持っていた＝自動のパートは 3/4 を落としていた）。
+- 網: `AutoRowStaffTests` に「手で書いた `as lines 1` と描くものと高さが同じ」6 冊（X は行が間隔を決めるので別）。譜表の無い格子を測っていた網 4 ファイル（`GridRowMeterCentring`・`RowsOnlySystemGap`・`RowsOnlyBarNumberAnchor`・`RowsOnlyDiagramStack`）と `SharedRendererBarline` の歌詞行の 1 例は形ごと無くなったので消した（絵は Lab `p1281/row/*.png` で目で見た＝重なり無し）。`TheBox_TakesAStaffsLineStartAnchor` は 1 本線の譜表の規則（左端に中央）へ、テンポの網はインクで測る形へ。台帳は 2 点を外し 1 点を 0 に。スナップショット 5 枚を再ベース。
+- スイープ: 全 svg 1268 枚のうち動いたのは 12 枚＝全部行だけの score（Lab `p1281/svg/sweep.log`）。
+- **オーナーに訊く（未決）**: ⑴ 区切りのラベルが譜表の規則でコードの名前と同じ高さに並ぶ（2026-10-04 の決定「譜表の無い譜面ではラベルは行の上」と食い違う・`p1281/row/lab.png`・網 `SectionLabel_OnAStafflessChordSheet_StandsAboveTheSymbols` は Skip にした）／⑵ 歌詞と一線の間 5.5 譜間。⚠️ 手で書いた `part l { }`＋`staff l as lines 1` の横の、旋律に付かない `lyrics` の行は描かれない（`p1281/row/tempo2.png`・前から・未着手）。⚠️ `IsLeadSheet` の格子の描画（行に小節線と拍子を描く道）は今は通らない＝消すかは次の便で（オーナーの答え ⑴ 次第）。
+
+## 以下は第1280セッションの経緯
+
 ### 1.1 第1280セッション（2026-11-15・YT-DELL2）
 
 base `94e6947f`・開始時 full 17360 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17363（Lab `p1280` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 211）。
@@ -148,19 +160,6 @@ base `94e6947f`・開始時 full 17360 合格 / 1 失敗（`ReadmeSampleTests`�
 - 作った形（Lab `p1280/auto-staff-wip.diff`＝`git apply` で戻る・網 `p1280/AutoRowStaffTests.cs` 14 本は緑だった）: `RenderSpecParser.Parse` が譜表の無い score に `SingleStaffSpec(AutoStaffPart "(staff)", Lines 1, 名前なし)` を最初の歌詞の行の前（無ければ最後）に差し込む／`SingleEngravedPart` は数えない／`MultiStaffScore.RowsSpaceTheGrid`（行が小節の幅を決める＝リードシートと同じ間隔の分岐を `ApplySharedColumnReservations` が読む。これが無いと歌詞が小節線にかかる）／`.ly` は拍の骨組みを `\new RhythmicStaff \leadSheetTiming` として一線譜の位置に書く（`LeadSheetScoreMarks` も一線譜の小節から）／MusicXML は `<part-name>` を空に。絵は Lab `p1279/row/auto/*.png`（chords だけ・歌詞だけ・両方）。
 - **止めた理由**: 全テストで 47 本が落ちる（`p1280/failing-48.txt`＝README を入れて 32 の名前）。行だけの譜の絵と間隔を固定した網（RowsOnly*・BreaksAnywhere・GridRowMeterCentring・Svg のスナップショット・ChordRowEndingBar 4 本など）と、**LilyPond の実測に照らす台帳 3 本**（LpFidelity）。一線譜が入ると LilyPond 側も RhythmicStaff を持つ別の絵＝台帳は LilyPond で測り直しが要る。数便の仕事。
 - 次の便: diff を当てる → 落ちた網を 1 本ずつ「意図した変化か」を見て書き直す（行だけの譜の網は IsLeadSheet＝本物の行だけの譜を見ていたもの。一線譜で無くなる形は網ごと消すか、網の本に `staff` を足す）→ 台帳 3 本を LilyPond で測り直す → 歌詞と一線の間（いま 5.5 譜間＝LilyPond の Lyrics の related-staff の値。一線譜だと広く見える）をオーナーに見せて訊く → スイープ。⚠️ MusicXML の行だけの score は歌詞（`<lyric>`）を書いていない（前からか未確認）。
-
-## 以下は第1279セッションの経緯
-
-### 1.1 第1279セッション（2026-11-15・YT-DELL2）
-
-base `7ee3044aa`・開始時 full 17337 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17340（Lab `p1279` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 204）。
-オーナーの報告 3 件を順に閉じた（`pass 2 { }` は途中で止めて退避）。
-- **フェルマータの後の繰り返しで言葉が 2 回歌われる**（`44d026bac`・Lab eval3 `theatre.lys` L162「last」）: フェルマータは 150 % 鳴って次の小節に食い込む。その尾が `|: Safety :|` の 2 回目の頭で「タイで入ってきた音」（`[1. d1~ :| [2. d1 ]` の規則）と読まれ、和音と言葉がもう一度出ていた。同じ尾が反復の終わりでは「跳ぶ所をまたぐタイ」と読まれ、頭の同じ高さの音を打たなかった。⇒ 打った音に「書いた長さを越えて鳴る分」（`MidiNote.Overhang`・`ProcessNode` が打った直後に付ける）を持たせ、`PlayedTimeline.Rewrite` は書いた終わりで読む。網 5・毒 4 赤・追跡 1,268 本は同じ・Lab の評価の本 993 本のうち 8 本が変わった（どれもフェルマータの後の繰り返し）。
-- **chords の `[1. A7] [2. ]` で 2 つめの括弧の小節が無い**（`821b4c0a7`）: 行の小節を閉じるのは小節線だけだった。⇒ `ChordRowBarLines.EndCloses`＝後ろに小節線の無い `]` は自分の小節を閉じる（空の `[2. ]` は空の 1 小節）。`[2. F ] |` は今までどおり小節線のもの。行の小節を数える読み手 11 か所が全部これを読む。網 16・毒 14 のうち赤 10（緑 4 の理由は commit）・スイープ同じ（この書き方の本が無い）。⚠️ `.ly` は小節線の無い ending に `\alternative` を書かない（警告は出る・前から）。⚠️ オーナーの本は `|:` を閉じていない（LYS4017）＝`:|` が無いので戻らない。
-- **1. の閉じ鉤と 2. の開き鉤が重なる**（`aba8d740b`・オーナー依頼＝LILYSHARP-OWN）: LilyPond も同じ小節線に描く。普通の小節線で 0.5 譜間に満たない所だけ、1 つめの終わりを 0.5 手前で止める（`:|` は元から 0.93 空く＝そのまま）。
-- **`pass 2 { }`**: 設計メモ（`docs/eval4-features-design.md` §3）・構文ノード・パーサー・MIDI の途中まで書いて、報告に切り替えた。全部 Lab `sessions/p1279/pass-wip/`（ファイルごとの写しと diff）に退避し、作業ツリーからは戻した。⚠️ 写しの `MidiExporter.cs`・`MidiEvents.cs` はフェルマータの修正の前の版なので、**写しで上書きせず diff の `pass` の塊だけを当て直す**。
-- **気づいた問題（未着手）は Lab `sessions/p1242/leftovers.md` の先頭「第1279 が見つけて残したもの」に書いた**＝次はその ★（chords だけの段で全部が空の小節の段が真っ白・オーナーの本の 13 小節目）から。ほかに `.ly` の `\alternative`・緑の毒 3 本。
-- 終了時 full 17360 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17363（`full3.trx`）。
 
 ## 2. 開いている作業
 

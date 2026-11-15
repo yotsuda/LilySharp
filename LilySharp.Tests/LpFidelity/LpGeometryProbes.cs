@@ -16962,23 +16962,12 @@ internal static class LpGeometryProbes
         new("tempo.staffless.grid.over-chord.row-ink-to-baseline", TCG,
             g => g.TempoBaselineAboveChordInkTop(), RaggedBottomPaper),
 
-        // A chord row over a lyrics row, no staff (book SFL1, probes/staffless-fretboards.ly):
-        // the lyric line's refpoint step under the promoted first line — the Lyrics spec's
-        // 5.5 ideal, a spring at rest. See the book's remark.
-        new("staffless.chords-lyrics.refpoint-step", SFL1,
-            g => g.LyricBaselineBelowChordBaseline(), RaggedBottomPaper),
-
-        // ...and the shape BOTH of those were blind to: NO STAFF AT ALL (book BNS, mirroring
-        // barnumber-staffless.ly). The entries above measure over a staff refpoint, which a
-        // lead sheet has not got, so nothing watched where the number went — it was measured
-        // from the SYSTEM TOP, a whole chord row above where LilyPond leaves it. This entry
-        // measures over the ROW's refpoint (the syllable baseline, which is what a Lyrics
-        // VerticalAxisGroup's refpoint IS) and reads stage ONE of the placement, the half
-        // that is music-independent: 1.000000 for any book. See
-        // RenderedGeometry.FirstBarNumberInkBottomAboveLyricRow for why the full 1.564576 of
-        // book SLN is deliberately NOT the value here — it carries a glyph outline.
-        new("barnumber.rows-only.row-to-ink-bottom", BNS,
-            g => g.FirstBarNumberInkBottomAboveLyricRow(), RaggedBottomPaper),
+        // (Two points stood here until 2026-11-15: `staffless.chords-lyrics.refpoint-step` (book
+        // SFL1, the lyric line's step under a chord line with nothing between) and
+        // `barnumber.rows-only.row-to-ink-bottom` (book BNS, a bar number over a lyric row with no
+        // staff). Since the owner's decision of 2026-11-15 a score of rows alone draws a one-line
+        // staff (docs/row-staff-design.md), so neither shape is drawn any more: the lyric line
+        // hangs under the staff and the number rides the staff, as on any staff.)
 
         // --- where a TEXT SCRIPT sits, per string (books TXD/TXP/TXS/TXL) ---
         // The first ledger points that reach OutsideStaffStacker's letter-class constants

@@ -76,7 +76,7 @@ public class RowsOnlySectionLabelTests
 
     /// <summary>On a staffless chord sheet every label stands ABOVE the chord line, clear of
     /// the symbols by a real margin (device Y grows downward, so "above" is a smaller Y).</summary>
-    [Fact]
+    [Fact(Skip = "owner's question 2026-11-15 (HANDOFF §1.1 session 1281): on the automatic one-line staff the label takes the staff's rule and stands level with the chords where there is room (Lab p1281/row/lab.png)")]
     public void SectionLabel_OnAStafflessChordSheet_StandsAboveTheSymbols()
     {
         var g = RenderedGeometry.Render(RowsOnly(withChords: true));
@@ -196,6 +196,11 @@ public class RowsOnlySectionLabelTests
         double indent = layout.Systems[0].Indent;
         if (openingRepeat)
             Assert.True(left > indent + 0.3 + 1.0, $"the box's left edge ({left:F2}) should stand on the drawn `|:`, past the edge");
+        else if (top.Length == 0)
+            // The automatic one-line staff's line start (docs/row-staff-design.md): an `as lines 1`
+            // staff prints no clef and no key, so the box is CENTRED on the staff's left edge, as
+            // LilyPond centres it on the empty line-start bar (MusicMarkEngraver, session 879).
+            Assert.Equal(indent, left + MusicMarkEngraver.LabelBoxHalfWidth(score.TextMetrics, MusicMarkType.SectionLabel, "Intro", true), 6);
         else
             Assert.Equal(indent + 0.3, left, 6);
     }

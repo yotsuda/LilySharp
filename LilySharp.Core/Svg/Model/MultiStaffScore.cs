@@ -444,6 +444,29 @@ public sealed record MultiStaffScore
     public int MeasureCount => PrimaryContentStaff.MeasureCount;
 
     /// <summary>
+    /// True when the rows space the bars: a lead sheet (<see cref="IsLeadSheet"/>), or a score
+    /// of rows whose only staff is the automatic one-line staff
+    /// (<see cref="Collector.RenderSpecParser.AutoStaffPart"/>, docs/row-staff-design.md) — its
+    /// bars are spacers, so the words and the chords size each bar as on a lead sheet, each word
+    /// inside its bar. Not <see cref="IsLeadSheet"/> itself: that also draws the grid's bar lines
+    /// on a row, which the staff draws here.
+    /// </summary>
+    public bool RowsSpaceTheGrid
+    {
+        get
+        {
+            bool any = false;
+            foreach (var (_, staff, _) in EnumerateStaves())
+            {
+                any = true;
+                if (!staff.IsTextRow && !Collector.RenderSpecParser.IsAutoStaff(staff.PrimaryVoice.Name))
+                    return false;
+            }
+            return any;
+        }
+    }
+
+    /// <summary>
     /// True when every row is a text row (lyrics and/or chords) and there is no
     /// notation staff — a lead-sheet score. Such a score draws a measure grid on
     /// its top text row and spaces each bar by its densest (lyric) row rather than

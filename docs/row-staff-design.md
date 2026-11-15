@@ -41,6 +41,28 @@
    小節を足さない道（form の無い本・section の無い本）では今の書き方（行を自分のパートにする）を保つ＝コードを落とさない。
 4. **MIDI**: 何もしない（音符が無いのでトラックもチャンネルも作られない）。バイト同じを網とスイープで確かめる。
 
+## 作ってみて決めたこと（第1281）
+
+- **自動の譜表は音楽を歩かない**: `MeasureCollector.CollectMultiStaffPass` は自動の譜表に空の声部を与え、
+  `GiveBlankStavesTheRowsBars` が行の小節（chords の行、無ければ歌詞の行）を写す。写すときは行の拍子と調の
+  変更（`TimeSignatureChangeItem`・`KeySignatureChangeItem`）をそのまま残す（`SpacerSkeleton(keepSignatures)`）。
+  歩かせると ⑴ form の無い本で行の終わりの括弧を音楽のものとして読み（2 つめの `2.` が 1 小節前に出た）、
+  ⑵ 見出しの `partial` を落とした。
+- **form の無い本の声部の歩きは、上の段の `chords`／`lyrics` の中へ入らない**（`s_formlessMusicSiteRule`）。
+  自動の譜表だけでなく、手で書いた `part l { }`＋`staff l as lines 1` も同じ括弧を重ねていた。
+- **ページは手で書いた `as lines 1` と同じ規則で描く**＝網 `AutoRowStaffTests.ThePage_IsAPartWithNoMusic_PlacedAsLines1`
+  （描くものと高さが同じ。X だけ違う＝自動の譜表の小節は行が間隔を決める `RowsSpaceTheGrid`）。
+  行の頭のラベルは 1 本線の譜表の規則＝譜表の左端に中央を置く（LilyPond の実測・第879）。
+- **MusicXML は自動の譜表を書かず、行を自分のパートにする今の形のまま**、そのパートに `<staff-lines>1</staff-lines>` と
+  印刷しない名前（`ROW (chords)`・`print-object="no"`）を与える（`MusicXmlExporter._rowsStaffLines`）。
+  そのパートが拍子の変更・反復記号・`<harmony>` を前から持っている。chords の行が 2 本なら 1 本線のパートが 2 つ。
+- **台帳**: 譜表の無い形を測っていた 2 点（`staffless.chords-lyrics.refpoint-step`・`barnumber.rows-only.row-to-ink-bottom`）は
+  その形が描かれなくなったので外した。`tempo.staffless.grid.over-chord.row-ink-to-baseline` は 0 に閉じた（コードの行が
+  譜表の上に立ち、目印との間は outside-staff-padding 0.46＝LilyPond と同じ）。
+- **オーナーに訊くこと**: ⑴ 区切りのラベルは譜表の規則で、余地があればコードの名前と同じ高さに並ぶ
+  （2026-10-04 のオーナー決定「譜表の無い譜面ではラベルは行の上の段」と食い違う・Lab `p1281/row/lab.png`）。
+  ⑵ 歌詞と一線の間（5.5 譜間）。
+
 ## 作らないもの
 
 - 線の上のスラッシュ・休符（⑴）。描かない設定（⑶）。

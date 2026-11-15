@@ -103,18 +103,9 @@ public sealed class SharedRendererBarlineTests
         form { A |: B :| }
         score { staff m }
         """, 5)]
-    // A staffless lyrics row with TWO verses: the band is taller than a staff, which is the
-    // only shape that can tell "centred" apart from "1.5 below the top".
-    [InlineData("""
-        time 4/4
-        part m { clef treble section A { c4 d e f | } section B { g4 a b c' | } }
-        lyrics v {
-          section A { one two three four | }
-          section B { verse ~1 { five six sev- en | } verse ~2 { eight nine ten e- le- ven | } }
-        }
-        form { A |: B :| }
-        score { lyrics v }
-        """, 0)]
+    // (A staffless lyrics row with two verses stood here, the one band taller than a staff;
+    // since 2026-11-15 a score of rows alone draws a one-line staff and no row band at all —
+    // docs/row-staff-design.md.)
     // …and the span between them is the SEARCH's answer for that band: five lines put a dot
     // in each space beside the middle line, a band with no lines at all takes LilyPond's
     // no-staff-symbol default. One constant used to serve both (EngravingDefaults).

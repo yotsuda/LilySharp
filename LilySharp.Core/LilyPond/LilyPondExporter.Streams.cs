@@ -621,22 +621,36 @@ public sealed partial class LilyPondExporter
     /// </remarks>
     private void EmitLeadSheetTiming(SyntaxTree tree, RenderDeclarationSyntax? render)
     {
-        if (render == null || PageModel(tree, render) is not { IsLeadSheet: true } score)
+        _autoStaffTiming = false;
+        if (render == null || PageModel(tree, render) is not { } score)
             return;
+        // A score of rows alone draws its automatic one-line staff (RenderSpecParser.AutoStaffPart,
+        // docs/row-staff-design.md): this track is that staff's music, a RhythmicStaff of skips
+        // (EmitScore places it), and LilyPond's clock is the page's for the same reason.
         Svg.Model.Staff? grid = null;
-        foreach (var (_, staff, idx) in score.EnumerateStaves())
-            if (idx == score.GridBarlineRowIndex)
+        foreach (var (_, staff, _) in score.EnumerateStaves())
+            if (!staff.IsTextRow && RenderSpecParser.IsAutoStaff(staff.PrimaryVoice.Name))
             {
                 grid = staff;
+                _autoStaffTiming = true;
                 break;
             }
+        if (grid == null && !score.IsLeadSheet)
+            return;
+        if (grid == null)
+            foreach (var (_, staff, idx) in score.EnumerateStaves())
+                if (idx == score.GridBarlineRowIndex)
+                {
+                    grid = staff;
+                    break;
+                }
         if (grid == null || grid.PrimaryVoice.Measures.Length == 0)
             return;
         var measures = grid.PrimaryVoice.Measures;
         var meters = Svg.Layout.ScoreSideTables.PrevailingMeters(score);
         var senza = SenzaMisuraByBar(score);
         var home = score.TimeSignature;
-        var marks = LeadSheetScoreMarks(score, tree);
+        var marks = LeadSheetScoreMarks(score, tree, _autoStaffTiming ? grid : null);
 
         _leadSheetTimingVar = VarName("leadSheetTiming");
         _sb.Append(_leadSheetTimingVar).Append(" = {\n");
@@ -703,11 +717,14 @@ public sealed partial class LilyPondExporter
     ///   Mark_engraver hear a tempo-change or ad-hoc-mark event from ANY descendant, a Devnull
     ///   included.
     /// </remarks>
-    private Dictionary<int, List<string>> LeadSheetScoreMarks(Svg.Model.MultiStaffScore score, SyntaxTree tree)
+    private Dictionary<int, List<string>> LeadSheetScoreMarks(Svg.Model.MultiStaffScore score, SyntaxTree tree,
+        Svg.Model.Staff? autoStaff = null)
     {
         var byBar = new Dictionary<int, List<string>>();
-        Svg.Model.Staff? firstRow = null;
-        foreach (var (_, staff, _) in score.EnumerateStaves())
+        // The automatic one-line staff's bars are the page's (its section labels and tempos);
+        // a lead sheet's are its first row's.
+        Svg.Model.Staff? firstRow = autoStaff;
+        foreach (var (_, staff, _) in firstRow == null ? score.EnumerateStaves() : [])
             if (staff.IsTextRow && staff.PrimaryVoice.Measures.Length > 0)
             {
                 firstRow = staff;
@@ -765,6 +782,9 @@ public sealed partial class LilyPondExporter
 
     /// <summary>The lead sheet's timing track, when the score is one (<see cref="EmitLeadSheetTiming"/>).</summary>
     private string? _leadSheetTimingVar;
+
+    /// <summary>The timing track is the automatic one-line staff's (written as a RhythmicStaff).</summary>
+    private bool _autoStaffTiming;
 
     /// <summary>
     /// The breaks the page takes from places this score's twin does not write (owner's

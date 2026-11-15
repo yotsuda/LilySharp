@@ -2024,7 +2024,12 @@ public sealed partial class MeasureCollector
             _openingKeyOverride = null;
             string collectedUnder = _v.Meta.Clef;
             int dynamicsBefore = _dynamics.Count, marksBefore = _musicMarks.Count;
-            staffVoices[voiceName] = CollectStaffVoices(voiceName);
+            // The automatic one-line staff of a score of rows alone walks no music: it takes the
+            // rows' bars — their lengths, the header's pickup, meters and bar lines
+            // (GiveBlankStavesTheRowsBars), as the rows-only clock counts them (RowsOnlyBarLengths).
+            staffVoices[voiceName] = RenderSpecParser.IsAutoStaff(voiceName)
+                ? ImmutableArray.Create(new Voice(voiceName, ImmutableArray<Measure>.Empty))
+                : CollectStaffVoices(voiceName);
             staffCollections.Add(new StaffCollection(voiceName, _v.Cursor.StaffIndex, staffVoiceSlots,
                 slotting == VoiceSlotting.AppendedToStaff,
                 dynamicsBefore, _dynamics.Count, marksBefore, _musicMarks.Count));
@@ -3827,12 +3832,21 @@ public sealed partial class MeasureCollector
                 foreach (var v in rowVoices)
                     if (grid.IsDefault || v.Measures.Length > grid.Length)
                         grid = v.Measures;
+        // A score of lyrics rows alone (its automatic one-line staff, docs/row-staff-design.md):
+        // the lyrics rows are the bars.
+        if (grid.IsDefaultOrEmpty)
+            foreach (var name in rowNames)
+                if (staffVoices.TryGetValue(name, out var rowVoices))
+                    foreach (var v in rowVoices)
+                        if (grid.IsDefault || v.Measures.Length > grid.Length)
+                            grid = v.Measures;
         if (grid.IsDefaultOrEmpty)
             return;
         foreach (var (name, voices) in staffVoices)
             if (!rowNames.Contains(name) && voices.Any(v => v.Measures.Length > 0))
                 return;
-        var bars = SpacerSkeleton(grid);
+        // The row's meter and key changes stay what they are: the staff engraves them.
+        var bars = SpacerSkeleton(grid, keepSignatures: true);
         foreach (var key in staffVoices.Keys.ToArray())
             if (!rowNames.Contains(key) && staffVoices[key].Length > 0)
                 staffVoices[key] = staffVoices[key].SetItem(0, staffVoices[key][0] with { Measures = bars });
@@ -5257,7 +5271,7 @@ public sealed partial class MeasureCollector
     /// length, 1:1 by item index so the syllable alignment's (measure, item)
     /// coordinates and timings stay real columns. The row occupies the melody's
     /// time without drawing its notes.</summary>
-    private static ImmutableArray<Measure> SpacerSkeleton(ImmutableArray<Measure> melody)
+    private static ImmutableArray<Measure> SpacerSkeleton(ImmutableArray<Measure> melody, bool keepSignatures = false)
     {
         var result = ImmutableArray.CreateBuilder<Measure>(melody.Length);
         foreach (var m in melody)
@@ -5266,7 +5280,9 @@ public sealed partial class MeasureCollector
             foreach (var item in m.Items)
                 // Duration folds dots and the tuplet TimeScale, so a plain
                 // spacer of it occupies exactly the item's sounding time.
-                items.Add(new RestItem(item.Duration, 0, item.SourcePosition) { IsSpacer = true });
+                items.Add(keepSignatures && item is TimeSignatureChangeItem or KeySignatureChangeItem
+                    ? item
+                    : new RestItem(item.Duration, 0, item.SourcePosition) { IsSpacer = true });
             result.Add(m with { Items = items.MoveToImmutable() });
         }
         return result.MoveToImmutable();
@@ -6083,8 +6099,12 @@ public sealed partial class MeasureCollector
             // filter also drops them (as the old spelling's type test did) —
             // IsCollectableMusicKind is the kind-level twin the equivalence net
             // pins to the type test.
+            // A top-level `chords` or `lyrics` track is not this voice's music: its bar lines and
+            // endings are the row's (ChordNameCollector). Until 2026-11-15 the walk went into it,
+            // so a part with no music beside a form-less `chords prog { … [1. A7] [2. ] }` drew a
+            // second `2.` bracket a bar early (AutoRowStaffTests).
             var musicNodes = new List<GreenSite>();
-            foreach (var s in MusicSitesLazy(_root, includeParallel: true))
+            foreach (var s in _root.GreenSitesLazy(s_formlessMusicSiteRule))
                 if (IsCollectableMusicKind(s.Kind))
                     musicNodes.Add(s);
             await ProcessNodes(MusicSiteList.Preset(musicNodes));
@@ -7001,6 +7021,10 @@ public sealed partial class MeasureCollector
         IsMusicCandidate(g), !IsProcessedContainerKind(g.Kind, includeParallel: true));
     private static readonly GreenSiteRule s_musicSiteRuleParallelFlattened = static g => (
         IsMusicCandidate(g), !IsProcessedContainerKind(g.Kind, includeParallel: false));
+    /// <summary>The form-less file's music walk: the wrapped rule, kept out of the rows' tracks.</summary>
+    private static readonly GreenSiteRule s_formlessMusicSiteRule = static g => (
+        IsMusicCandidate(g), !IsProcessedContainerKind(g.Kind, includeParallel: true)
+            && g.Kind is not (SyntaxKind.ChordPartBlock or SyntaxKind.LyricsBlock));
 
     /// <summary>A candidate kind, less a chord's drum member (<c>&lt;bd hh&gt;</c>): the walk goes
     /// into a chord for the marks on it, and its drums are the chord's, not notes of their own

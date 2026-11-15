@@ -136,9 +136,19 @@ public sealed class RowsOnlySectionTempoTests
         var tempo = Assert.Single(g.Texts, t => t.Role == TextRole.Tempo && t.Text == "= 100");
         // Y grows downward: the label's baseline stands above the tempo's by at least the tempo's
         // ink (its note), the pass's padding and the label's frame below its baseline — the
-        // arrangement the staffed sheet and the chords-only sheet have always had (3.97).
-        Assert.True(tempo.Y - label.Y > 3.5,
-            $"the label's baseline is {tempo.Y - label.Y:F2} over the tempo's; it printed on it");
+        // arrangement the staffed sheet has (3.97) — OR, on the automatic one-line staff
+        // (docs/row-staff-design.md), the box is centred on the staff's left edge and the tempo
+        // stands on the first column, clear of it to the right: the box's right edge left of the
+        // tempo's note (an `as lines 1` staff's line start, MusicMarkEngraver).
+        var box = Assert.Single(g.Rects, r => r.X <= label.X && label.X <= r.X + r.Width && r.Y <= label.Y && label.Y <= r.Y + r.Height);
+        // …and where the box reaches over the note's column, it stands over the head by the
+        // outside-staff padding (measured 2026-11-15: box bottom 9.435, head top 9.90 — 0.46).
+        // A black head is one staff space tall at a staff space's font size (4).
+        var head = g.Glyphs.Where(gl => gl.Glyph == LilySharp.Core.Svg.EmmentalerGlyphs.NoteheadBlack).MinBy(gl => gl.X)!;
+        double headTop = head.Y - 0.5 * head.FontSize / 4.0;
+        Assert.True(tempo.Y - label.Y > 3.5 || box.X + box.Width < head.X || box.Y + box.Height <= headTop - 0.4,
+            $"the label's box ({box.X:F2}..{box.X + box.Width:F2}, bottom {box.Y + box.Height:F2}) reaches the tempo's note "
+            + $"(left {head.X:F2}, top {headTop:F2}); it printed on it");
     }
 
     [Fact]

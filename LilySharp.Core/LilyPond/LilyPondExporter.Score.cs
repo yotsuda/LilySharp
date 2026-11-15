@@ -71,6 +71,7 @@ public sealed partial class LilyPondExporter
         var rows = new List<string>();
         string? lastMainStaffPart = null;   // what an ossia written next would sit above
         var alignedAbove = new HashSet<string>(StringComparer.Ordinal);
+        int? autoStaffAt = null;   // where the automatic one-line staff stands among the rows
         if (render != null)
         {
             foreach (var item in RenderRows(render))
@@ -145,6 +146,8 @@ public sealed partial class LilyPondExporter
                     // A lyrics row is its part's Lyrics context(s), standing where the row
                     // stands (EmitLyricTracks); a row the page placed nothing for is reported.
                     case LyricsRowRenderSyntax lyrics:
+                        // The automatic one-line staff stands above the first lyrics row.
+                        autoStaffAt ??= rows.Count;
                         if (StandingRowKey(lyrics) is not { } rowKey)
                             break;
                         if (_lyricRowVars.ContainsKey(rowKey))
@@ -155,8 +158,14 @@ public sealed partial class LilyPondExporter
                 }
             }
         }
+        // A score of rows alone: its automatic one-line staff, the timing track's skips on a
+        // RhythmicStaff (LILYPOND-REF: ly/engraver-init.ly \context RhythmicStaff — one line,
+        // no Clef_engraver, no Key_engraver: the page's `as lines 1`), above the first lyrics
+        // row, else last (docs/row-staff-design.md).
+        if (_leadSheetTimingVar != null && _autoStaffTiming)
+            rows.Insert(Math.Min(autoStaffAt ?? rows.Count, rows.Count), "    \\new RhythmicStaff \\" + _leadSheetTimingVar + "\n");
         // A lead sheet's clock stands first: the silent timing track (EmitLeadSheetTiming).
-        if (_leadSheetTimingVar != null)
+        else if (_leadSheetTimingVar != null)
             rows.Insert(0, "    \\new Devnull \\" + _leadSheetTimingVar + "\n");
         if (rows.Count == 0 && partVars.Count > 0)
         {

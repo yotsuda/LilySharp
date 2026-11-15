@@ -3859,6 +3859,9 @@ internal sealed class RenderedGeometry
     /// <summary>Straight strokes in drawing order — stems, staff lines, ledger lines.</summary>
     public IReadOnlyList<DrawnLine> Lines => _page.Lines;
 
+    /// <summary>Filled rectangles in drawing order — bar lines, a boxed mark's frame.</summary>
+    public IReadOnlyList<DrawnRect> Rects => _page.Rects;
+
     /// <summary>
     /// The EXTENT of the page's one arpeggio — the stack of <c>scripts.arpeggio</c> copies
     /// as the drawn anchors plus the glyph's own designed box, in device coordinates.

@@ -356,6 +356,15 @@ public sealed class MusicXmlExporter
         _meterPlan = Svg.Collector.SectionMeterPlan.Build(root);
         _bareSectionOwner = RenderSpecParser.SingleEngravedPart(tree, Score, Form);
         _playedSpec = RenderSpecParser.PlayedSpec(tree, Score, Form);
+        // A score of rows alone: the page's automatic one-line staff (RenderSpecParser.AutoStaffPart)
+        // is here the row's own part (EmitRowAsItsOwnPart), given the staff's one line — that part
+        // already holds the rows' bars, meters, signs and harmonies (docs/row-staff-design.md).
+        _rowsStaffLines = false;
+        if (_playedSpec is { } played && played.Items.Any(i => i is SingleStaffSpec s && RenderSpecParser.IsAutoStaff(s.Staff.VoiceName)))
+        {
+            _playedSpec = played with { Items = [.. played.Items.Where(i => !(i is SingleStaffSpec s && RenderSpecParser.IsAutoStaff(s.Staff.VoiceName)))] };
+            _rowsStaffLines = true;
+        }
         _placedChordRows = RenderSpecParser.PlacedChordRows(_playedSpec);
         _flatRows = FlatChordRows.Of(root, _placedChordRows);
         ReadCarryRefusals(tree);
@@ -489,6 +498,10 @@ public sealed class MusicXmlExporter
         Document.Parts.Clear();
         Document.Parts.AddRange(ordered);
     }
+
+    /// <summary>The played score is one of rows alone, whose page draws its automatic one-line
+    /// staff: a row's own part takes the staff's one line and prints no name.</summary>
+    private bool _rowsStaffLines;
 
     /// <summary>The name of the part a lead sheet's chord row is written into.</summary>
     private static string RowsOwnPart(string row) => row + " (chords)";
@@ -8091,6 +8104,12 @@ public sealed class MusicXmlExporter
     private void EmitRowAsItsOwnPart(PendingChordRow pending, List<List<SyntaxNode>> bars, int typedDrop)
     {
         EnsurePart(RowsOwnPart(pending.Row));
+        // The page draws it as its automatic one-line staff, with no name (_rowsStaffLines).
+        if (_rowsStaffLines)
+        {
+            _currentPart!.StaffLines = 1;
+            _currentPart.UnprintedName ??= RowsOwnPart(pending.Row);
+        }
         _currentTranspose = null;
         _partTransposeSemitones = 0;
         _partTransposeWritten = 0;

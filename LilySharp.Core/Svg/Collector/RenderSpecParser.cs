@@ -50,6 +50,14 @@ public static class RenderSpecParser
     /// </summary>
     public const string UnnamedScoreLabel = "(Default)";
 
+    /// <summary>The part of the one-line staff a score of rows alone draws (<see cref="Parse"/>,
+    /// docs/row-staff-design.md): no part can be named so — a name takes no parentheses — and
+    /// none is declared.</summary>
+    public const string AutoStaffPart = "(staff)";
+
+    /// <summary>Whether <paramref name="part"/> is the automatic one-line staff's.</summary>
+    public static bool IsAutoStaff(string? part) => part == AutoStaffPart;
+
     /// <summary>A score's picker label: its name, or <see cref="UnnamedScoreLabel"/>.</summary>
     public static string LabelOf(string scoreName)
         => scoreName.Length > 0 ? scoreName : UnnamedScoreLabel;
@@ -255,6 +263,17 @@ public static class RenderSpecParser
             if (((node as StaffRenderSyntax)?.MidiOnlyPartToken ?? (node as OssiaRenderSyntax)?.MidiOnlyPartToken)
                 is { } staffMidiOnly)
                 midiOnlyParts.Add(staffMidiOnly.Text);
+
+        // A score of rows alone draws a one-line staff they stand on (owner's decision
+        // 2026-11-15, docs/row-staff-design.md): placed as `staff (staff) as lines 1` would be,
+        // above the first lyrics row, else last. It is no declaration and no text — the page,
+        // MusicXML and MIDI read it here; the LilyPond twin writes it from IsAutoStaff.
+        if (items.Count > 0 && items.All(i => i is ChordRowSpec or LyricsRowSpec))
+        {
+            int at = items.FindIndex(i => i is LyricsRowSpec);
+            items.Insert(at < 0 ? items.Count : at, new SingleStaffSpec(new StaffSpec(
+                ClefType.Treble, AutoStaffPart, Lines: 1, NameSuppressed: true, WithLyrics: [])));
+        }
 
         FoldAdjacentRows(render, items);
 
@@ -599,7 +618,8 @@ public static class RenderSpecParser
         var spec = PlayedSpec(tree, score, form);
         if (spec == null) return null;
         var parts = spec.EngravedPartNames;
-        return parts.Length == 1 ? parts[0] : null;
+        // The automatic one-line staff owns no music: bare section music stays nobody's.
+        return parts.Length == 1 && !IsAutoStaff(parts[0]) ? parts[0] : null;
     }
 
     /// <summary>
