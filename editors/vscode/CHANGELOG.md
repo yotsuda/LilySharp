@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A fingering written in a later voice is drawn**: in `voice { d''2 e''2 } { b'2 c''2@finger(2) }` the lower voice's 2 was missing from the preview. It is printed below its note (a third voice's above), under that note's staccato or accent.
 - **A hairpin and a dynamic of a voice set aside by a collision** (two voices a second or a unison apart) **stand on that voice's notes as drawn**, not a note head's width to the left — and so do its articulations, its `@rit` / `@textSpan` line and its trill line.
 - **Importing MusicXML keeps palm mutes, let rings and barres** (`@palmMute … @!palmMute`, `@letRing`, `@barre(7)`): they came in as plain text with no line.
 - **With two voices on a staff, each voice's dynamics and hairpins keep to their own line.** A side one voice wrote (`@f.up`, `@p.down`) no longer moves the other voice's marks: the lower voice's `@p` beside the upper voice's `@f.up` stays below instead of being printed over it.

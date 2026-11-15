@@ -2559,8 +2559,11 @@ public sealed partial class MeasureCollector
                             // tab's copy of the part printed it a second time, over the fret
                             // numbers (grammar evaluation 4, 2026-11-13, rock/r-06). A tab alone
                             // keeps it. LILYSHARP-OWN.
+                            // Every voice's, since session 1265 lays out every voice's digits
+                            // (until then only the first voice's were drawn, so only they were
+                            // taken off).
                             return tabOnly ? StampTabGraceDigits(resolved, staffIndex)
-                                : resolved with { Voices = resolved.Voices.SetItem(0, TabResolver.RemoveFingerings(resolved.Voices[0])) };
+                                : resolved with { Voices = ImmutableArray.CreateRange(resolved.Voices, TabResolver.RemoveFingerings) };
                         })
                         .ToImmutableArray()
                 })

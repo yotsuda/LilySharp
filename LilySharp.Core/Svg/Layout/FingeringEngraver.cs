@@ -66,7 +66,11 @@ public readonly record struct FingeringLayout(
     // The grob's own font-size: the Fingering's −5, or a GRACE note's −8 (general-grace-settings)
     // — the size the pen, the script column and the reservation all read the digit run at
     // (FingeringEngraver.DigitRun).
-    double FontSizeStep = FingeringGlyphRun.FontSizeStep);
+    double FontSizeStep = FingeringGlyphRun.FontSizeStep,
+    // Which of its staff's voices wrote the host note (0-based): ItemIndex counts THAT voice's
+    // items, so the script column (ArticulationEngraver.CalculateWithFingerings) finds the
+    // digit's note, beam and bow by (staff, voice, measure, item) — the scripts' own key.
+    int VoiceIndex = 0);
 
 /// <summary>
 /// Calculates positions for fingering numbers attached to notes.
@@ -191,9 +195,10 @@ internal static class FingeringEngraver
     /// Calculates layouts for all fingerings in a single-staff score.
     /// </summary>
     /// <param name="fonts">The SCORE's text metrics — passed in rather than read off
-    /// <paramref name="score"/>, because every caller hands this engraver a one-voice
-    /// <see cref="Score"/> built for the walk, which carries no <c>fonts</c> plan of its
-    /// own; the plan the digits follow (<c>fonts { finger step … }</c>) is the page's.</param>
+    /// <paramref name="score"/>, because every caller hands this engraver a one-STAFF
+    /// <see cref="Score"/> built for the walk (that staff's voices), which carries no
+    /// <c>fonts</c> plan of its own; the plan the digits follow (<c>fonts { finger step … }</c>)
+    /// is the page's.</param>
     public static ImmutableArray<FingeringLayout> Calculate(
         Rendering.ScoreTextMetrics fonts,
         Score score,
@@ -394,15 +399,27 @@ internal static class FingeringEngraver
         // Lent, and given back at the one return below (see t_tips).
         Dictionary<(int, int, int, int), (BeamLayout Beam, double StemX, bool StemUp)>? beamedTips = null;
 
-        var voice = score.Voice;
+        // EVERY VOICE OF THE STAFF, the first one first (session 1265). Until then the walk was
+        // score.Voice — the staff's first — and a digit written in `voice { } { … }`'s second
+        // body was laid out nowhere: not drawn, not reserved, no warning. Each voice's digits
+        // are placed off its OWN heads, stem and beam, as LilyPond's engravers (both live in
+        // the Voice context) see only their own voice's grobs.
+        // LILYPOND-REF: ly/engraver-init.ly Voice — \consists Fingering_engraver,
+        //   \consists New_fingering_engraver.
+        var voices = score.Voices;
         var indices = new List<int>(measureMap.Count);
         foreach (int mi in measureMap.Keys)
-            if (mi >= 0 && mi < voice.Measures.Length && isPlaced(mi))
+            if (mi >= 0 && isPlaced(mi))
                 indices.Add(mi);
         indices.Sort();
 
+        for (int vi = 0; vi < voices.Length; vi++)
+        {
+        var voice = voices[vi];
         foreach (int mi in indices)
         {
+            if (mi >= voice.Measures.Length)
+                continue;
             var measure = voice.Measures[mi];
             var measureLayout = measureMap[mi];
 
@@ -420,27 +437,51 @@ internal static class FingeringEngraver
                     if (graceNotes.IsDefaultOrEmpty)
                         continue;
                     graceHeadLeft = ElementCoordinator.GraceColumnHeadLeftX(voice, graceNotes,
-                        System.Math.Max(staffIndex, 0), 0, mi, ii, measureLayout,
-                        SpacingRules.VoiceCollisionShiftsOf(score.Voices));
+                        System.Math.Max(staffIndex, 0), vi, mi, ii, measureLayout,
+                        SpacingRules.VoiceCollisionShiftsOf(voices));
                     if (graceHeadLeft is null)
                         continue;
                 }
                 double? graceStemTip = graceHeadLeft is null ? null
-                    : BeamedGraceStemTip(graceNotes, System.Math.Max(staffIndex, 0), mi, ii, measureLayout, voice.Measures);
+                    : BeamedGraceStemTip(graceNotes, System.Math.Max(staffIndex, 0), vi, mi, ii, measureLayout, voice.Measures);
+                // The column the note collision put this voice's note in: the digit's X-parent
+                // is its own head, so it rides the shift (HairpinEngraver.CollisionShift — the
+                // scripts' own reading since session 1263). MEASURED (LilyPond 2.26.0, Lab
+                // sessions/p1265/fg g5): `voice { c''2 … } { b'2-1 … }` centres the 1 on the
+                // shifted b' (19.187), not on the column the two voices share (17.810).
+                double shiftX = item.GraceTime || voices.Length < 2
+                    ? 0.0 : HairpinEngraver.CollisionShift(voices, vi, mi, ii);
                 if (item is NoteItem note && note.Fingering.HasValue)
                 {
                     layouts ??= ImmutableArray.CreateBuilder<FingeringLayout>();
-                    var column = item.GraceTime ? null : ColumnOf(ref beamedTips, beamLayouts, item, staffIndex, mi, ii);
+                    var column = item.GraceTime ? null : ColumnOf(ref beamedTips, beamLayouts, item, staffIndex, vi, mi, ii);
+                    // A LONE note's digit follows its VOICE inside a voice span: \voiceTwo sets
+                    // Fingering.direction DOWN, and Fingering_engraver — the engraver of a digit
+                    // written on a note, not in a chord — keeps a direction the grob already has.
+                    // A chord's digits do not follow it (the branch below): New_fingering_engraver
+                    // sets each one's direction itself, from the split.
+                    // LILYPOND-REF: scm/music-functions.scm:617-634 direction-polyphonic-grobs —
+                    //   Fingering is one of them; :666-674 make-voice-props-set.
+                    // LILYPOND-REF: lily/fingering-engraver.cc:120-123 make_script — UP only when
+                    //   the grob's direction is not yet a direction.
+                    // LILYPOND-REF: lily/new-fingering-engraver.cc:340 position_scripts —
+                    //   set_property (f, "direction", to_scm (d)), unconditionally.
+                    // MEASURED (LilyPond 2.26.0, Lab sessions/p1265/fg): g1 the lower voice's
+                    //   `c''2-2` has its ink top at −2.55 (below the staff); g3 the lower voice's
+                    //   `<a'-1 c''-3>` puts the 1 below and the 3 above, as in a single voice.
+                    bool loneDown = voices.Length > 1
+                        && VoiceDefaults.GetDefaultStemUpAt(voices, vi, mi, ii) == false;
                     BuildLayouts(fonts,
                         new[] { (note.StaffPosition, note.Fingering.Value) },
                         new[] { note.StaffPosition },
                         note.BaseDuration, note.SourcePosition,
                         mi, ii, measureLayout, staffIndex, layouts, voice.Measures, column,
-                        item.GraceTime ? item : null, graceHeadLeft ?? 0, graceStemTip);
+                        item.GraceTime ? item : null, graceHeadLeft ?? 0, graceStemTip,
+                        vi, shiftX, loneDown);
                 }
                 else if (item is ChordItem chord && AnyFingered(chord))
                 {
-                    var column = item.GraceTime ? null : ColumnOf(ref beamedTips, beamLayouts, item, staffIndex, mi, ii);
+                    var column = item.GraceTime ? null : ColumnOf(ref beamedTips, beamLayouts, item, staffIndex, vi, mi, ii);
                     var fingered = chord.Notes
                         .Where(n => n.Fingering.HasValue)
                         .Select(n => (n.StaffPosition, n.Fingering!.Value))
@@ -453,9 +494,11 @@ internal static class FingeringEngraver
                         chord.Notes.Select(n => n.StaffPosition).ToArray(),
                         chord.BaseDuration, chord.SourcePosition,
                         mi, ii, measureLayout, staffIndex, layouts, voice.Measures, column,
-                        item.GraceTime ? item : null, graceHeadLeft ?? 0, graceStemTip);
+                        item.GraceTime ? item : null, graceHeadLeft ?? 0, graceStemTip,
+                        vi, shiftX);
                 }
             }
+        }
         }
 
         if (beamedTips != null)
@@ -465,12 +508,11 @@ internal static class FingeringEngraver
 
     /// <summary>The beamed column a fingered item's digits clear, or null for an unbeamed
     /// item — building the body's tip map on the first ask (see t_tips).</summary>
-    /// <remarks>The engraver serves the staff's PRIMARY voice (its callers build a score of
-    /// that one voice), so the lookup asks for voice 0 — the same key
+    /// <remarks>The lookup asks for the digit's own voice — the same key
     /// <see cref="ArticulationEngraver"/> queries with the script's own voice index.</remarks>
     private static NoteColumnLayout? ColumnOf(
         ref Dictionary<(int, int, int, int), (BeamLayout Beam, double StemX, bool StemUp)>? beamedTips,
-        ReadOnlySpan<BeamLayout> beamLayouts, MusicItem item, int staffIndex, int mi, int ii)
+        ReadOnlySpan<BeamLayout> beamLayouts, MusicItem item, int staffIndex, int voiceIndex, int mi, int ii)
     {
         if (beamLayouts.IsEmpty)
             return null;
@@ -479,14 +521,15 @@ internal static class FingeringEngraver
             beamedTips = RentTips();
             ArticulationEngraver.FillBeamedStemTips(beamLayouts, wanted: null, beamedTips);
         }
-        return beamedTips.TryGetValue((System.Math.Max(0, staffIndex), 0, mi, ii), out var beamTip)
+        return beamedTips.TryGetValue((System.Math.Max(0, staffIndex), voiceIndex, mi, ii), out var beamTip)
             ? NoteColumnLayout.Of(item, beamTip.StemUp, beamTip.Beam, beamTip.StemX)
             : null;
     }
 
     /// <summary>
     /// Where the stem of grace column <paramref name="itemIndex"/> of measure
-    /// <paramref name="measureIndex"/> (voice 0 of staff <paramref name="staffIndex"/>) ends,
+    /// <paramref name="measureIndex"/> (voice <paramref name="voiceIndex"/> of staff
+    /// <paramref name="staffIndex"/>) ends,
     /// in staff spaces above the middle line, when that column is in its run's BEAMED prefix —
     /// the grace beam's line read at that column, the quanter's two ends as the renderer and
     /// the reservation read them (<c>SkylineBuilder.AddGraceBeamsToSkyline</c>). Null for a
@@ -498,12 +541,12 @@ internal static class FingeringEngraver
     /// out of the slope, and the run's X is not needed.
     /// </remarks>
     private static double? BeamedGraceStemTip(ImmutableArray<GraceNoteItem> graceNotes,
-        int staffIndex, int measureIndex, int itemIndex, MeasureLayout measureLayout,
+        int staffIndex, int voiceIndex, int measureIndex, int itemIndex, MeasureLayout measureLayout,
         ImmutableArray<Measure> measures)
     {
         foreach (var grace in graceNotes)
         {
-            if (grace.StaffIndex != staffIndex || grace.VoiceIndex != 0
+            if (grace.StaffIndex != staffIndex || grace.VoiceIndex != voiceIndex
                 || grace.MeasureIndex != measureIndex || grace.ColumnItemIndices.IsDefaultOrEmpty)
                 continue;
             int k = grace.ColumnItemIndices.IndexOf(itemIndex);
@@ -615,7 +658,8 @@ internal static class FingeringEngraver
         ImmutableArray<FingeringLayout>.Builder layouts,
         ImmutableArray<Measure> measures,
         NoteColumnLayout? column = null,
-        MusicItem? graceItem = null, double graceHeadLeft = 0, double? graceStemTip = null)
+        MusicItem? graceItem = null, double graceHeadLeft = 0, double? graceStemTip = null,
+        int voiceIndex = 0, double shiftX = 0.0, bool loneDown = false)
     {
         if (measureLayout.Columns.IsDefaultOrEmpty
             && itemIndex >= measureLayout.Items.Length)
@@ -638,7 +682,7 @@ internal static class FingeringEngraver
             : FingeringGlyphRun.FontSizeStep;
         double centerX = graceItem is not null
             ? graceHeadLeft + headBox.CenterX
-            : CentreX(baseDuration, measureIndex, itemIndex, measureLayout, measures);
+            : CentreX(baseDuration, measureIndex, itemIndex, measureLayout, measures) + shiftX;
 
         // The support set: every head's own INK edge, and the staff's.
         // ⚠️ DERIVATION, NOT A TRANSCRIPTION, and it is the shape of the code that differs:
@@ -665,7 +709,9 @@ internal static class FingeringEngraver
 
         // The split. A stable sort by staff position, then LilyPond's own cut.
         var sorted = fingered.OrderBy(f => f.Position).ToArray();
-        int center = sorted.Length / 2;
+        // …except a lone note's digit in a voice whose props point DOWN: all of it (one) goes
+        // down (the caller's remark has the rule and the measurement).
+        int center = loneDown ? sorted.Length : sorted.Length / 2;
 
         // The BEAMED stem's reach, on each side, in the same Y-up-about-the-middle frame the
         // heads are in — <c>column</c> is non-null exactly when this note is beamed (see the
@@ -711,7 +757,8 @@ internal static class FingeringEngraver
                 SourcePosition: sourcePosition,
                 StaffIndex: staffIndex,
                 ColumnPriority: 100 + sorted[i].Position,
-                FontSizeStep: step));
+                FontSizeStep: step,
+                VoiceIndex: voiceIndex));
             support = yUp + ink.Top;
         }
 
@@ -739,7 +786,8 @@ internal static class FingeringEngraver
                 SourcePosition: sourcePosition,
                 StaffIndex: staffIndex,
                 ColumnPriority: 100 - sorted[i].Position,
-                FontSizeStep: step));
+                FontSizeStep: step,
+                VoiceIndex: voiceIndex));
             support = yUp + ink.Bottom;
         }
     }

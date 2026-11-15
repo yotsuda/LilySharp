@@ -2585,6 +2585,32 @@ public class IncrementalCompilerTests
         Assert.Equal(Full(ApplyFirst(source, "d@finger(2)", "e@finger(2)")), incremental);
     }
 
+    /// <summary>A LATER VOICE's digits (session 1265: the island walks every voice of the
+    /// staff) are replayed and declined like the first voice's: an edited digit of the second
+    /// voice equals a full recompile, moves the answer, and leaves the other systems' units
+    /// replayed.</summary>
+    [Fact]
+    public void FingScriptMemo_ALaterVoicesDigits_MatchFull()
+    {
+        string source = "octave absolute\ntime 4/4\nkey c major\npart melody { clef treble }\n"
+            + "section Main { melody { "
+            + string.Join(" ", Enumerable.Repeat(
+                "voice { e''2 f''2 } { b'4@finger(1)( c''@finger(2) d''@finger(3) c''@finger(2)) } |", 14))
+            + " } }\n";
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);
+        string before = Norm(session.Render());
+        var final = session.SystemCache!.FinalFingScripts;
+        int finalHits0 = final.Hits;
+
+        var change = Replace(source, "d''@finger(3)", "d''@finger(5)");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(ApplyFirst(source, "d''@finger(3)", "d''@finger(5)")), incremental);
+        Assert.NotEqual(before, incremental);
+        Assert.True(final.Hits > finalHits0,
+            $"final fingering memo never hit (hits {final.Hits}, misses {final.Misses})");
+    }
+
     /// <summary>THE DECLARED GATE: a unit carrying ANY script is never memoized, because
     /// a script and a digit on one note share a column and the articulation half of the
     /// call is deliberately left unfiltered. With a script in every measure the store

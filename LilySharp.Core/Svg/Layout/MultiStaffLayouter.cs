@@ -5032,14 +5032,16 @@ internal sealed class MultiStaffLayouter
         Staff staff, int staffIndex, ImmutableArray<MeasureLayout> measureLayouts,
         MultiStaffScore score, ImmutableArray<BeamLayout> beamLayouts = default)
     {
+        // Every voice of the staff: the engraver walks each (session 1265), so a later voice's
+        // digit is reserved where it is drawn.
         var staffScore = new Score(
-            staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
+            staff.Voices, score.TimeSignature, score.KeySignature,
             LayoutEngine.ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer);
         // The beams arrive stamped with the trivial one-staff system's index 0 and the
         // engraver keys its stem tips by staff, so they are restamped to meet the score's
         // real index — the same restamp StaffArticulationLayouts makes, for the same reason.
         var localBeams = RestampedToStaff(beamLayouts, staffIndex);
-        // The plan is the SCORE's, not the one-voice staffScore's (which carries none).
+        // The plan is the SCORE's, not the staffScore's (which carries none).
         // …and the score's grace groups, so a grace note's digit is reserved where it is drawn.
         return FingeringEngraver.Calculate(score.TextMetrics, staffScore, measureLayouts, staffIndex, localBeams,
             score.GraceNotes);

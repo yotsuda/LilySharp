@@ -709,10 +709,11 @@ internal static partial class SharedRenderer
             GlissandoLayouts = ResolveNoteArr(layout.GlissandoLayouts, noteHosts,
                 static l => (l.StaffIndex, l.VoiceIndex, l.MeasureIndex, l.ItemIndex),
                 static (l, pos) => l with { SourcePosition = pos }),
-            // Fingering data-pos = its host note/chord's source offset. Fingerings are
-            // computed only for the primary voice, so they always resolve against voice 0.
+            // Fingering data-pos = its host note/chord's source offset, in the voice that
+            // wrote it (every voice's digits are laid out since session 1265; until then
+            // only the first voice's were, and this resolved against voice 0).
             FingeringLayouts = ResolveNoteArr(layout.FingeringLayouts, noteHosts,
-                static l => (l.StaffIndex, 0, l.MeasureIndex, l.ItemIndex),
+                static l => (l.StaffIndex, l.VoiceIndex, l.MeasureIndex, l.ItemIndex),
                 static (l, pos) => l with { SourcePosition = pos }),
             // Detected spanners (hairpin / ottava / text spanner) take their data-pos from
             // the originating cresc/ottava/rit mark in score.MusicMarks — re-derive by its index.

@@ -12,16 +12,16 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
+| `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
 | `OWN` | 440 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **567** | |
+| **計** | **566** | |
 
 ## 密度の高いファイル（上位 12）
 
 | ファイル | 件数 |
 |---|---:|
-| `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 23 |
+| `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 22 |
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 21 |
 | `LilySharp.Core/Svg/Layout/ProseBand.cs` | 18 |
 | `LilySharp.Core/Midi/MidiExporter.cs` | 16 |
@@ -34,7 +34,7 @@
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 8 |
 | `LilySharp.Core/Tablature/Tunings.cs` | 8 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（63 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（62 件）
 
 ### `LilySharp.Core/Music/ChordStructure.cs`
 - **`ChordQualityRegistry.GetTones`** ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
@@ -71,7 +71,6 @@
 ### `LilySharp.Core/Svg/Layout/AlignmentWalk.cs`
 - **`AlignmentWalk.Seed`** ⚠️ THE ONE LINE OF THAT BRANCH NOT PORTED is its dy,
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
-- **`ArticulationEngraver.CalculateWithFingerings`** that does not exist yet. Named, not silently approximated.
 - **`ArticulationEngraver.CalculateWithFingerings`** the band it would have had without the rest — the same approximation that
 ### `LilySharp.Core/Svg/Layout/BarNumberEngraver.cs`
 - **`BarNumberEngraver.AnchorStaff`** ⚠️ The X test itself is NOT ported HERE: a row's ink X-range is not on StaffLayout.

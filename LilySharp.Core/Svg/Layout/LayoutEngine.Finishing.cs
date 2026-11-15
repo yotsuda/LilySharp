@@ -60,9 +60,9 @@ internal sealed partial class LayoutEngine
             {
                 if (kv.Value.IsDefaultOrEmpty)
                     continue;
-                // The plan is the page's (fonts), not the one-voice staffScore's, which
-                // carries none.
-                var staffScore = new Score(kv.Value[0], score.TimeSignature,
+                // The plan is the page's (fonts), not the staffScore's, which carries none.
+                // The staff's voices, ALL of them: the engraver walks each (session 1265).
+                var staffScore = new Score(kv.Value, score.TimeSignature,
                     score.KeySignature, score.Clef, score.Tempo);
                 fb.AddRange(FingeringEngraver.Calculate(fonts, staffScore, systems, kv.Key, beamLayouts, graceNotes));
             }
@@ -73,7 +73,7 @@ internal sealed partial class LayoutEngine
 
     /// <summary>
     /// The staff-by-staff walk order the fingering island runs in, spelled ONCE: the
-    /// per-staff score whose primary voice carries the digits, at that staff's index.
+    /// per-staff score whose voices carry the digits, at that staff's index.
     /// <see cref="ComputeFingeringIslands"/> and the memoized per-(staff, system) path
     /// both consume it, so the two cannot drift into different staff orders — which is
     /// what would break the memo's positional reassembly.
@@ -88,7 +88,7 @@ internal sealed partial class LayoutEngine
             {
                 if (kv.Value.IsDefaultOrEmpty)
                     continue;
-                list.Add((kv.Key, new Score(kv.Value[0], score.TimeSignature,
+                list.Add((kv.Key, new Score(kv.Value, score.TimeSignature,
                     score.KeySignature, score.Clef, score.Tempo)));
             }
             return list;
@@ -177,7 +177,7 @@ internal sealed partial class LayoutEngine
         // keystroke, for a 199/200 memo; the walk below folds the whole map once more for the
         // scripts, which is where the one whole-score fold now lives).
         var beamsAt = BuildBeamsByMeasure(beamLayouts);
-        var slursAt = BuildVoiceZeroSlursByMeasure(ctx.SlurLayouts);
+        var slursAt = BuildSlursByMeasure(ctx.SlurLayouts);
         var scriptedMeasures = new HashSet<(int, int)>();
         if (!articulations.IsDefaultOrEmpty)
             foreach (var a in articulations)
@@ -334,7 +334,7 @@ internal sealed partial class LayoutEngine
     }
 
     /// <summary>Whether any note of the voices the fingering island walks
-    /// (<see cref="FingeringStaffScores"/>: each staff's primary voice, else the score's)
+    /// (<see cref="FingeringStaffScores"/>: each staff's voices, else the score's)
     /// carries a digit — the gate that lets a book without one skip the pass's whole
     /// apparatus. One read per item, no allocation.</summary>
     private static bool AnyFingering(Score? score, Dictionary<int, ImmutableArray<Voice>>? voicesByStaff)
@@ -345,7 +345,8 @@ internal sealed partial class LayoutEngine
         {
             if (staffScore.Voices.IsDefaultOrEmpty)
                 continue;
-            foreach (var measure in staffScore.Voice.Measures)
+            foreach (var voice in staffScore.Voices)
+            foreach (var measure in voice.Measures)
                 foreach (var item in measure.Items)
                 {
                     switch (item)
@@ -392,10 +393,11 @@ internal sealed partial class LayoutEngine
         return map;
     }
 
-    /// <summary>The voice-0 slurs covering each (staff, measure) — the only ones a digit's
+    /// <summary>The slurs covering each (staff, measure), every voice's — the ones a digit's
     /// <c>avoid-slur #'around</c> shift can read (<c>ArticulationEngraver</c>'s flush keys
-    /// its lookup at voice 0 by construction).</summary>
-    private static Dictionary<(int, int), List<SlurLayout>>? BuildVoiceZeroSlursByMeasure(
+    /// its lookup at the digit's own voice; until session 1265 only the first voice had
+    /// digits and only its slurs were folded).</summary>
+    private static Dictionary<(int, int), List<SlurLayout>>? BuildSlursByMeasure(
         ImmutableArray<SlurLayout> slurLayouts)
     {
         if (slurLayouts.IsDefaultOrEmpty)
@@ -403,8 +405,6 @@ internal sealed partial class LayoutEngine
         var map = new Dictionary<(int, int), List<SlurLayout>>();
         foreach (var s in slurLayouts)
         {
-            if (s.Slur.VoiceIndex != 0)
-                continue;
             int staff = Math.Max(s.StaffIndex, 0);
             for (int m = s.Slur.StartMeasureIndex; m <= s.Slur.EndMeasureIndex; m++)
             {

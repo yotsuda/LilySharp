@@ -666,18 +666,27 @@ internal static class ArticulationEngraver
         // fingering is FLUSHED into the chain when the walk reaches its slot — before
         // the first same-side script whose priority exceeds its own — or after the
         // loop when nothing outranks it.
+        // BOTH SIDES since session 1265: until then only an ABOVE digit entered a column, and a
+        // DOWN digit — a chord's lower half, and now the lone digit of a voice whose props
+        // point down — printed on whatever script stood under its note. The column is one per
+        // (voice, note, side): Script_column_engraver lives in the Voice.
+        // LILYPOND-REF: lily/script-column.cc:131-187 order_grobs — each direction's scripts
+        //   are sorted by script-priority and each becomes a support of the next, UP and DOWN
+        //   alike.
+        // MEASURED (LilyPond 2.26.0, Lab sessions/p1265/fg g2): the lower voice's
+        //   `c''2-\staccato-2` has the dot at −3.4 and the 2's ink top at −4.042.
         ImmutableArray<FingeringLayout>.Builder? adjFingerings = null;
-        Dictionary<(int, int, int), List<int>>? pendingFingerings = null;
+        Dictionary<(int, int, int, int, bool), List<int>>? pendingFingerings = null;
         if (!fingerings.IsDefaultOrEmpty)
         {
             for (int fi = 0; fi < fingerings.Length; fi++)
             {
                 var fg = fingerings[fi];
-                if (fg.ColumnPriority == int.MinValue || !fg.IsAbove)
+                if (fg.ColumnPriority == int.MinValue)
                     continue;
                 adjFingerings ??= fingerings.ToBuilder();
-                pendingFingerings ??= new Dictionary<(int, int, int), List<int>>();
-                var nk = (Math.Max(fg.StaffIndex, 0), fg.MeasureIndex, fg.ItemIndex);
+                pendingFingerings ??= new Dictionary<(int, int, int, int, bool), List<int>>();
+                var nk = (Math.Max(fg.StaffIndex, 0), fg.VoiceIndex, fg.MeasureIndex, fg.ItemIndex, fg.IsAbove);
                 if (!pendingFingerings.TryGetValue(nk, out var queue))
                     pendingFingerings[nk] = queue = new List<int>();
                 queue.Add(fi);
@@ -688,7 +697,7 @@ internal static class ArticulationEngraver
         }
 
         // Sit the note's queued fingerings below priority <paramref>upTo</paramref>
-        // into the chain of (note, UP): each takes max(its island answer, pointwise
+        // into the chain of (note, side): each takes max(its island answer, pointwise
         // distance over the placed profiles + its own padding 0.5), then becomes a
         // support itself. The reader-side horizon padding is the FINGERING's — it
         // declares none, so 0 (the Script's 0.1 is not borrowed).
@@ -699,12 +708,12 @@ internal static class ArticulationEngraver
         // LILYPOND-REF: lily/side-position-interface.cc:354-378 aligned_side — the
         //   distance call spends the placed-grob's horizon-padding and the padding is
         //   the moving grob's own.
-        void FlushFingerings((int, int, int, bool) key, int upTo)
+        void FlushFingerings((int, int, int, bool) key, int kVoice, int upTo)
         {
-            var (kStaff, kMeasure, kItem, _) = key;
+            var (kStaff, kMeasure, kItem, kAbove) = key;
             if (pendingFingerings == null
                 || !pendingFingerings.TryGetValue(
-                    (Math.Max(kStaff, 0), kMeasure, kItem), out var queue))
+                    (Math.Max(kStaff, 0), kVoice, kMeasure, kItem, kAbove), out var queue))
                 return;
             while (queue.Count > 0 && adjFingerings![queue[0]].ColumnPriority < upTo)
             {
@@ -714,17 +723,22 @@ internal static class ArticulationEngraver
                 var synth = FingeringScriptLayout(fonts, fg);
                 if (supportScripts.TryGetValue(key, out var sup) && sup.Count > 0)
                 {
-                    var myDown = ScriptSkyline(synth, fg.YUp, VerticalDirection.Down);
+                    // The digit's face toward the note against each placed script's face away
+                    // from it — the pair the scripts' own chain below reads, on either side.
+                    var mine = ScriptSkyline(synth, fg.YUp,
+                        kAbove ? VerticalDirection.Down : VerticalDirection.Up);
                     double closest = double.NegativeInfinity;
                     foreach (var s in sup)
                     {
-                        var sUp = ScriptSkyline(s, s.YUp, VerticalDirection.Up);
-                        closest = Math.Max(closest, myDown.Distance(sUp, 0.0));
+                        var theirs = ScriptSkyline(s, s.YUp,
+                            kAbove ? VerticalDirection.Up : VerticalDirection.Down);
+                        closest = Math.Max(closest,
+                            kAbove ? mine.Distance(theirs, 0.0) : theirs.Distance(mine, 0.0));
                     }
                     double move = Math.Max(0.0, closest + FingeringPadding);
                     if (move > 0)
                     {
-                        fg = fg with { YUp = fg.YUp + move };
+                        fg = fg with { YUp = fg.YUp + (kAbove ? move : -move) };
                         synth = synth with { YUp = fg.YUp };
                         adjFingerings[fi] = fg;
                     }
@@ -747,25 +761,16 @@ internal static class ArticulationEngraver
                 //   subtracts the near edge of the box widened by slur-padding.
                 // MEASURED: ledger fingering.slur.{bound,interior}-note.staff-to-ink-bottom,
                 //   whose two controls are the halves that say nothing else moved.
-                // ⚠️ THIS IS THE ABOVE HALF ONLY, and it is a property of where the code
-                //   sits rather than of the rule: the fingering queue this flush drains
-                //   holds only IsAbove digits (a DOWN digit never enters a script column),
-                //   so a below digit still ignores a bow. No book measures one — the corpus
-                //   sighting IS a below digit, and LilyPond moves it by nothing there
-                //   (scratch cr-probe.ly), so the point for it has to come from a texture
-                //   that does not exist yet. Named, not silently approximated.
+                // BOTH SIDES since session 1265 (a DOWN digit enters its column now), by the
+                //   same callback: the shift is signed by the digit's side.
                 // ⚠️ THE PER-STAFF SKYLINE PASS DOES NOT GET THIS EITHER:
                 //   MultiStaffLayouter.StaffFingeringLayouts calls the ISLAND directly, so a
                 //   lifted digit reserves the band it would have had without the bow — the
                 //   same approximation that file already records for the script movers.
-                // ⚠️ THE VOICE IS 0 BY CONSTRUCTION, not by assumption: FingeringEngraver
-                //   serves the staff's PRIMARY voice only (both of its callers build a score
-                //   of that one voice), so every FingeringLayout here came from voice 0 —
-                //   which is also why FingeringLayout carries no voice axis. A second voice's
-                //   fingerings are laid out nowhere today; when they are, this key and that
-                //   record need the axis together.
+                // The bow is the digit's own VOICE's (FingeringLayout.VoiceIndex), as a
+                //   script's is its voice's below.
                 if (slursAtMeasure != null
-                    && slursAtMeasure.TryGetValue((Math.Max(kStaff, 0), 0, kMeasure),
+                    && slursAtMeasure.TryGetValue((Math.Max(kStaff, 0), kVoice, kMeasure),
                         out var fgVoiceSlurs)
                     && CoveringSlurPiece(fgVoiceSlurs, kMeasure, kItem) is { } fgSlurPiece)
                 {
@@ -1655,8 +1660,7 @@ internal static class ArticulationEngraver
             // The note's fingerings whose priority is below this script's enter the
             // column FIRST — they support this script, and this script's own walk
             // slot stays after them (the priority sort is the shared order).
-            if (effArt.IsAbove)
-                FlushFingerings(stackKey, ScriptPriority(effArt));
+            FlushFingerings(stackKey, effArt.VoiceIndex, ScriptPriority(effArt));
             double? declaredOsp = layout.OutsideStaffPriority;
             if (anyMover && lastOnKey is not null && lastOnKey.TryGetValue(stackKey, out var lastScript)
                 && lastScript.CurrentOsp is { } moverOsp)
@@ -1785,7 +1789,7 @@ internal static class ArticulationEngraver
         if (pendingFingerings != null)
         {
             foreach (var nk in pendingFingerings.Keys.ToArray())
-                FlushFingerings((nk.Item1, nk.Item2, nk.Item3, true), int.MaxValue);
+                FlushFingerings((nk.Item1, nk.Item3, nk.Item4, nk.Item5), nk.Item2, int.MaxValue);
             adjustedFingerings = adjFingerings!.ToImmutable();
         }
 
@@ -2019,7 +2023,7 @@ internal static class ArticulationEngraver
             X: fg.X - width / 2.0,
             YUp: fg.YUp,
             Glyph: string.Empty,
-            IsAbove: true,
+            IsAbove: fg.IsAbove,
             SourcePosition: fg.SourcePosition,
             FontSizeStep: fg.FontSizeStep,
             Ink: ink,
