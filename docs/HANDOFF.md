@@ -88,7 +88,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
-- **★★★ オーナー決定 2026-11-15（第1264・6 件）**: ①〜④ と、⑥ 評価 4 の案（Lab `p1227/proposals-eval4.md`）の「作る」5 件＝6・7・8-1・2・4 は済み（第1264〜第1272・設計と実際の形は `docs/eval4-features-design.md`。6 の「歌い手が × の音を歌わない」だけ未＝同 §6 の末尾）／⑤ Dettato: 依頼 1＝作る（D3 で形が固まってから・名前「Convert Recording to Lily# (.lys)…」・Windows 以外はメニューを出さない）・依頼 2＝今は作らない（REQUESTS の行に書いた＝Dettato の repo では未 commit）／⑥ の**後で**＝3（`pass 2 { }`・文字は英語固定）・1（持ち替え・「to X」は自動で刷らない）・10（まず診断だけ）＝作る前に設計メモ・**いつ着手するかはオーナーに訊く**／**見送り**＝5・8-2〜4・9。**次の一手**: 下の行の Lab `sessions/p1242/leftovers.md` の欠陥から（先頭は第1272 が見つけた「`lysc xml` が part header の `key` を後ろの part に書く」）。
+- **★★★ オーナー決定 2026-11-15（第1264・6 件）**: ①〜④ と、⑥ 評価 4 の案（Lab `p1227/proposals-eval4.md`）の「作る」5 件＝6・7・8-1・2・4 は済み（第1264〜第1272・設計と実際の形は `docs/eval4-features-design.md`。6 の「歌い手が × の音を歌わない」だけ未＝同 §6 の末尾）／⑤ Dettato: 依頼 1＝作る（D3 で形が固まってから・名前「Convert Recording to Lily# (.lys)…」・Windows 以外はメニューを出さない）・依頼 2＝今は作らない（REQUESTS の行に書いた＝Dettato の repo では未 commit）／⑥ の**後で**＝3（`pass 2 { }`・文字は英語固定）・1（持ち替え・「to X」は自動で刷らない）・10（まず診断だけ）＝作る前に設計メモ・**いつ着手するかはオーナーに訊く**／**見送り**＝5・8-2〜4・9。**次の一手**: 下の行の Lab `sessions/p1242/leftovers.md` の欠陥から（第1272 が見つけた「`lysc xml` が part header の `key` を後ろの part に書く」は第1273 で閉じた。その節の残り＝MusicXML の読み込みがオクターブでない `<transpose>` を `transposition` に書かない、が次の候補）。
 - **★ 反復とナビ記号を section の音楽にも書く（オーナー提案 2026-11-14・第1243＝第1249 で段 0〜8 が済み・LYS1034 は phrase だけ）**: 全部 `docs/inline-repeat-design.md`（規則 §3・段取り §4・未決 §6・経過 §7・エディタのコマンド §8）。オーナー決定（2026-11-14）: 対は form に組み立てた列で見る／`| |:` は空小節のまま／歌詞の verse は 5 規則／書き出しはなるべく form 側（Q2）。**次**（順は上から。歌詞の規則 3 と警告の 4 種目は第1253、ending・ナビ記号を全パートに書くコマンドと LYS1070 の quick fix は第1254 で済み＝§1.1）: ⑴ この島（反復とナビ記号を音楽に書く）の「次」は無い＝判断待ちも残りの形も 0。step キー・`PlayForm` の一本化（第1255）、3 番括弧＝3 回（form は第1256・音楽は第1257・コードの行は第1258）は済み。次の一手は下の積み残しから（オーナーに訊く）。段 9（読み込みと OMR の書き出し）は Q2 の決定で今の形のまま＝作業なし。⚠️ Calamo と Dettato の REQUESTS への知らせ（Q2「本体が出てから」）は未＝release のときに書く。実機は `MANUAL-CHECKS` 第1243・第1249・第1253・第1254・第1255。
 - **★ 歌詞と歌い手の文法の作り直し（オーナー決定 2026-11-10・第1217）**: `docs/lyrics-singer-design.md` が全部（§9 が作業順）。①②③④は済み（§1.1 第1217〜第1219）。⚠️ ④の `ん` の聞こえ方はオーナーの実聴待ち（`MANUAL-CHECKS` 第1219）。Cantoria の master は zh／ko を歌う（VSIX の入れ直しはオーナー）。`singer` は 1 行 1 声で score の中にも書ける（第1220）。古い書き方を案内する専用エラーは作らない（オーナー指示）。設計 §10「パート自身の歌詞」（`part sop { lyrics words }`）は第1222 で実装（§1.1 第1222・実機は `MANUAL-CHECKS` 第1222）＝§9 は全部済み。**次の一手の指示はまだ無い＝下の積み残しから選ぶならオーナーに訊く**。積み残し: Calamo の生成コードが `lyrics … sings` のまま（`docs\repro\REQUESTS.md` に連絡済み・Calamo 側は未 commit）／実機確認（`MANUAL-CHECKS` 第1217）／perf ベンチ／コーパス外のオーナーのファイル（Downloads の Tabidachi・Rose Garden など）は未移行で、`LilySharp-Lab\sessions\p1217\migrate\migrate.ps1 -Lys -Files` で書き換えられる／Rose Garden のオクターブ変換はオーナーの回答待ち。
 - **★ 歌詞のある譜表では強弱記号とヘアピンを譜表の上に（オーナー決定 2026-11-11）＝設計 `docs/dynamics-above-lyrics-design.md` §5 の 1〜6 は全部済み（第1224〜第1225・§1.1）**。**D3 は LilyPond の規則に替えた（オーナー決定 2026-11-11「LP に合わせて」）**＝向きを書いた記号が*線*の向きを決め、同じ線の後続（向きを書いていない記号）は従う。歌詞のない譜表でも同じ（`c@f.up@decresc … g@p` の p は上）。残りはオーナー: 実機のプレビュー（`MANUAL-CHECKS` 第1225）と release（CHANGELOG は 2 つとも `## Unreleased`・`[engraving]`）。残る穴: 2 声部の譜表で上の声部のヘアピンの線に下の声部の同じ拍の強弱記号も乗る（ヘアピンが声部を持たない既知の穴＝`DynamicAlignEngraver` の注 ⑵・Lab `p1225/dyn/out/vv.png`）。線の向きは第1260 で声部ごとにした。**次の一手の指示はまだ無い＝上の行の積み残しから選ぶならオーナーに訊く**。
@@ -141,6 +141,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1273セッション（2026-11-15・YT-DELL2）
+
+base `c34dfc4d2`・開始時 full 17292 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17295（Lab `p1273` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 192）。
+第1272 が見つけて残した欠陥（Lab `sessions/p1242/leftovers.md`・オーナー指示「残りの欠陥を順に」）＝`lysc xml` が part header の `key` を後ろの part 全部に書く。
+- 測った規則（ページ・`.ly` は元から正しい・Lab `p1273/probe/out/k1.png`）: part の home の調は自分の header の調、なければファイルの調／section の見出しの調はその section だけ全 part に勝つ／次の section で各 part の home に戻る。MusicXML だけが「最後に header に調を書いた part の調」を全 part の home にしていた（`CollectMetadata` が part header の `key` を top-level として歩き、その後の状態を home に取っていた）。
+- 直し（`ff29f6391`）: `MusicXmlExporter.FileHomeKey`（root の直下の `key`）と `PartHomeKey`（part の直下の `key`）を分け、play の頭で part の home ?? ファイルの home を当てる。調の読みは `KeyStateOf` の 1 つ（`ProcessKeySignature` から切り出しただけ）。
+- 門: 網 `MusicXmlPartHomeKeyTests` 10 本。毒 5 本は全部赤（5 本目＝part の中に書いた音楽の `key` を home と取り違える毒は、その形の網を足してから赤・Lab `p1273/poisons*.txt`）。**全冊の MusicXML の前後**（Lab `p1273/xml/sweep-xml.ps1`＝`lysc xml` に batch が無いので 8 並列・約 6 分）: 1268 冊で差 1 冊＝fixture `test/part-header-key-per-part.lys`（2 つ目の part が ♭2 つ → 調号なし＝ページどおり）。終了時 full 17301 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17304（`run2.trx`）・Core 警告 0。
+- 7.7: ⚠️ phrase の自動移調と度数和音の主音（`ScoreHomeKey.Read`）は part header の調を今も「ファイルの調」として読む＝3 つの出力が同じ読みかは見ていない（leftovers に書いた）。⚠️ 絵は触っていない（svg の掃きは回していない・Core の差分は `MusicXmlExporter.cs` だけ）。perf: 書き出しだけ（打鍵の経路ではない）。7.5: Core '+' 55 行・REF 0・OWN 0（式も定数も足していない＝既存の読みの置き場所を分けただけ）。CHANGELOG は 2 つとも `## Unreleased`。
+
+## 以下は第1272セッションの経緯
+
 ### 1.1 第1272セッション（2026-11-15・YT-DELL2）
 
 base `77429bfaa`・開始時 full 17250 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17253（Lab `p1272` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 188）。
@@ -149,18 +160,6 @@ base `77429bfaa`・開始時 full 17250 合格 / 1 失敗（`ReadmeSampleTests`�
 - **案 4**（`ffbd021dd`・`89d3f7924`）: `key none`＝調号なし・移調譜でも。器は既に在った（文書に無い `key custom` を音名なしで書いた絵と同じ）＝`KeySignatureSyntax.IsNone` を足し `IsCustom` が none も含む。足したのは語・`lysc review`（「no key」と言い「Heard in」を出さない）・エディタの文面と補完・MusicXML の読み込み（何も言わない `<key/>` → `key none`）。
 - 門: 網 `GrammarEvaluation4FeaturesTests` に 42 本・補完の網 2 本を 16 項目に直した。毒 18＋12 本は全部赤（Lab `p1272/poisons*.txt`）。全 svg の掃き 2 回とも 1268 枚で差 0（Lab `p1272/svg`・base は HEAD の `git archive`）。終了時 full 17292 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17295（`run2.trx`）・Core 警告 0。
 - 7.7: ⚠️ **見つけて直していない既存の欠陥**＝`lysc xml` が part header の `key` を後ろの part 全部に書く（`key d major` でも・ページは正しい・再現 Lab `p1272/probe4/oned.lys`）。⚠️ `.ly` の `PartTransposition` は毒が緑＝届かない腕だったので `PartHeaderDefaults` を読む形にした。⚠️ MusicXML の読み込みはオクターブでない `<transpose>` をまだ `transposition` に書かない。⚠️ `transposition ▮` の補完は 4 語のまま・`key none` は色なし。perf: 足した計算なし。7.5: Core '+' 281 行・REF 1（`TranspositionOfPitch`）・OWN 2（`Range`・`IsNone`）。CHANGELOG は 2 つとも `## Unreleased`。実機は `MANUAL-CHECKS` 第1272（2 項目）。
-
-## 以下は第1271セッションの経緯
-
-### 1.1 第1271セッション（2026-11-15・YT-DELL2）
-
-base `202b86bd3`・開始時 full 17241 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17244（Lab `p1271` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 186）。
-オーナー決定 2026-11-15 ⑥ の案 8-1（`:|*4` に回数を刷る）。設計メモは `docs/eval4-features-design.md` §8-1。
-- ⚠️ **案の半分は既に在った**: form の `|: A :|*4` は 2026-11-13（`f636395ae`）から "4×" を刷り、MusicXML は form でも音楽でも `times="4"` を書いていた。残っていたのは**音楽に書いた `:|*4`**（第1243〜の「反復を音楽にも書く」の後に入った綴り）で、4 回鳴るのにページは何も言わなかった。
-- 作った: 音楽の歩きの小節線が `:|*N`（N > 2）で form と同じ印（`MusicMarkType.RepeatCount`・"N×"）を閉じた小節に足す（`AddRepeatCountMarkOfTheMusic`）。**スコアの印は 1 小節に 1 つ**（`HasScoreMarkAt`）＝何パートが書いても 1 回、描かないパートが書いた分は harvest が運ぶ（`IsStructuralMark` に `RepeatCount`）。
-- 一緒に直した（探り譜で見つけた既存の欠陥）: ⑴ 2 つのパートが同じ小節線に書いたナビ記号（`fine` ほか＝「Write Repeat Signs in Every Part」が書く形）が 2 つ重ねて刷られていた。**同じパートを五線と tab に描く譜（`staff m  tab m`）でも同じ**＝オーナーの本 4 冊で segno／coda が 2 つ重なっていた ⑵ `chords` の行にだけ書いた `:|*N` の回数とナビ記号が、反復し跳ぶのにページに出ていなかった（`ChordNameCollector.RowScoreMarks`・行の ending の `RowEndings` と同じ形で collector が足す）。
-- 門: 網 `GrammarEvaluation4FeaturesTests` に 10 本（8-1 の節）。毒は音楽の分 7 本・行の分 6 本が全部赤（Lab `p1271/poisons.txt`・`poisons-row.txt`・`poisons-row-2.txt`。行の R3 は「小節線の直後の文字の記号」の形を網に足してから赤。音楽の分の 8 本目＝字の毒は錨が当たらず走っていない）。全 svg の掃き（Lab `p1271/svg`・base は第1270 の `exe-head`＝HEAD と同じコード）: 1268 枚のうち 4 枚が動いた＝`Addicted To Love-both`・`Billie Jean-both`・`ワインレッドの心`・`残酷な天使のテーゼ`、どれも五線＋tab の譜で 2 つ重なっていた segno／coda が 1 つになった（Lab `p1271/wine` に前後の絵・⚠️ 出力が変わる修正＝オーナーの確認はまだ）。絵は Lab `p1271/x4/out2`・`out3`。commit `1fc0e21e3`。`APPROXIMATIONS.md`・`magic_constants.csv` は再生成して差 0。終了時 full 17250 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17253（`run2.trx`）。
-- 7.7: ⚠️ 2 つのパートが違う回数を書いた小節線（LYS1070 のエラー）は、先に歩いたパートの回数が刷られる。⚠️ 同じ種類のナビ記号を 1 小節に 2 つ書いたパートは 2 つ目が刷られない（今までは 2 つとも）。⚠️ 行の "4×" は和音の名前の高さに並ぶ（Lab `p1271/x4/out3/row.png`・LilyPond に対応物なし）。⚠️ 行だけの譜（譜表なし）と、行の小節の途中のナビ記号の絵は見ていない。perf: 小節線 1 本に bool 1 つ・ナビ記号と回数 1 つにつき `_musicMarks` の走査 1 回（打鍵のベンチは取っていない）。7.5: Core '+' は collector（REF 0・OWN 0＝"N×" の印は 2026-11-13 の OWN の家を読むだけ）。CHANGELOG は 2 つとも `## Unreleased`（`[engraving]` 3 行）。
 
 ## 2. 開いている作業
 

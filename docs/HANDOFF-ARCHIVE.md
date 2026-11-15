@@ -271,6 +271,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1271セッションの経緯
+
+### 1.1 第1271セッション（2026-11-15・YT-DELL2）
+
+base `202b86bd3`・開始時 full 17241 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17244（Lab `p1271` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 186）。
+オーナー決定 2026-11-15 ⑥ の案 8-1（`:|*4` に回数を刷る）。設計メモは `docs/eval4-features-design.md` §8-1。
+- ⚠️ **案の半分は既に在った**: form の `|: A :|*4` は 2026-11-13（`f636395ae`）から "4×" を刷り、MusicXML は form でも音楽でも `times="4"` を書いていた。残っていたのは**音楽に書いた `:|*4`**（第1243〜の「反復を音楽にも書く」の後に入った綴り）で、4 回鳴るのにページは何も言わなかった。
+- 作った: 音楽の歩きの小節線が `:|*N`（N > 2）で form と同じ印（`MusicMarkType.RepeatCount`・"N×"）を閉じた小節に足す（`AddRepeatCountMarkOfTheMusic`）。**スコアの印は 1 小節に 1 つ**（`HasScoreMarkAt`）＝何パートが書いても 1 回、描かないパートが書いた分は harvest が運ぶ（`IsStructuralMark` に `RepeatCount`）。
+- 一緒に直した（探り譜で見つけた既存の欠陥）: ⑴ 2 つのパートが同じ小節線に書いたナビ記号（`fine` ほか＝「Write Repeat Signs in Every Part」が書く形）が 2 つ重ねて刷られていた。**同じパートを五線と tab に描く譜（`staff m  tab m`）でも同じ**＝オーナーの本 4 冊で segno／coda が 2 つ重なっていた ⑵ `chords` の行にだけ書いた `:|*N` の回数とナビ記号が、反復し跳ぶのにページに出ていなかった（`ChordNameCollector.RowScoreMarks`・行の ending の `RowEndings` と同じ形で collector が足す）。
+- 門: 網 `GrammarEvaluation4FeaturesTests` に 10 本（8-1 の節）。毒は音楽の分 7 本・行の分 6 本が全部赤（Lab `p1271/poisons.txt`・`poisons-row.txt`・`poisons-row-2.txt`。行の R3 は「小節線の直後の文字の記号」の形を網に足してから赤。音楽の分の 8 本目＝字の毒は錨が当たらず走っていない）。全 svg の掃き（Lab `p1271/svg`・base は第1270 の `exe-head`＝HEAD と同じコード）: 1268 枚のうち 4 枚が動いた＝`Addicted To Love-both`・`Billie Jean-both`・`ワインレッドの心`・`残酷な天使のテーゼ`、どれも五線＋tab の譜で 2 つ重なっていた segno／coda が 1 つになった（Lab `p1271/wine` に前後の絵・⚠️ 出力が変わる修正＝オーナーの確認はまだ）。絵は Lab `p1271/x4/out2`・`out3`。commit `1fc0e21e3`。`APPROXIMATIONS.md`・`magic_constants.csv` は再生成して差 0。終了時 full 17250 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17253（`run2.trx`）。
+- 7.7: ⚠️ 2 つのパートが違う回数を書いた小節線（LYS1070 のエラー）は、先に歩いたパートの回数が刷られる。⚠️ 同じ種類のナビ記号を 1 小節に 2 つ書いたパートは 2 つ目が刷られない（今までは 2 つとも）。⚠️ 行の "4×" は和音の名前の高さに並ぶ（Lab `p1271/x4/out3/row.png`・LilyPond に対応物なし）。⚠️ 行だけの譜（譜表なし）と、行の小節の途中のナビ記号の絵は見ていない。perf: 小節線 1 本に bool 1 つ・ナビ記号と回数 1 つにつき `_musicMarks` の走査 1 回（打鍵のベンチは取っていない）。7.5: Core '+' は collector（REF 0・OWN 0＝"N×" の印は 2026-11-13 の OWN の家を読むだけ）。CHANGELOG は 2 つとも `## Unreleased`（`[engraving]` 3 行）。
+
 ## 以下は第1270セッションの経緯
 
 ### 1.1 第1270セッション（2026-11-15・YT-DELL2）
