@@ -3401,11 +3401,39 @@ public sealed partial class LilySharpLanguageServer
                 SortText = "8b",
             },
         };
+        // …and before those two, the tracks the file already writes, by name (`chords harmony`):
+        // a chord chart's next section takes the same track again (owner's report 2026-11-16).
+        var named = DeclaredTrackCellsOf(text).Select((t, i) => new CompletionItem
+        {
+            Label = t.Kind + " " + t.Name,
+            Kind = CompletionItemKind.Reference,
+            Detail = (t.Kind == "chords" ? "Chord cell" : "Lyrics cell") + " — this section's part of the " + t.Name + " track",
+            InsertTextFormat = InsertTextFormat.Snippet,
+            InsertText = Body(t.Kind + " " + t.Name),
+            FilterText = t.Kind + " " + t.Name,
+            SortText = "5" + i.ToString("D2"),
+        });
         return new CompletionList
         {
-            Items = cells.Concat(tracks).Concat(SectionHeaderDirectiveItems("9")).ToArray()
+            Items = cells.Concat(named).Concat(tracks).Concat(SectionHeaderDirectiveItems("9")).ToArray()
         };
     }
+
+    /// <summary>The chord and lyrics tracks the file writes (<c>chords NAME {</c>,
+    /// <c>lyrics NAME {</c>, at the top level or as a section's cell), in first-written order.</summary>
+    private static List<(string Kind, string Name)> DeclaredTrackCellsOf(string text)
+    {
+        var found = new List<(string Kind, string Name)>();
+        foreach (System.Text.RegularExpressions.Match m in TrackCellRegex().Matches(text))
+        {
+            var t = (m.Groups[1].Value, m.Groups[2].Value);
+            if (!found.Contains(t)) found.Add(t);
+        }
+        return found;
+    }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"(?<![\w-])(chords|lyrics)[ \t]+([A-Za-z_][\w-]*)\s*\{")]
+    private static partial System.Text.RegularExpressions.Regex TrackCellRegex();
 
     // Prose and the value popup per section directive. Membership decides NOTHING — the words
     // and their order come from the compiler (LanguageVocabulary.SectionSettings =

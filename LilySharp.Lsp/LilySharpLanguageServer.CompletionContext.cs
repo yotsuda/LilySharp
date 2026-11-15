@@ -776,6 +776,67 @@ public sealed partial class LilySharpLanguageServer
     private static bool IsInsideTopLevelSectionBody(List<OpenBlock> stack)
         => stack.Count == 1 && FrameKeyword(stack[0].Frame) == "section";
 
+    /// <summary>
+    /// Whether the section body opened at <paramref name="openIndex"/> holds at least one
+    /// track cell (<c>chords NAME { … }</c> / <c>lyrics NAME { … }</c>) and, at its own level,
+    /// nothing else but section directives (<c>key d major</c>, <c>partial 4</c> — each to its
+    /// line's end). The whole body is read, to its closing brace, the word being typed at
+    /// <paramref name="offset"/> left out. A note, a bar line or any other word there is a
+    /// single voice's music, and the answer is no.
+    /// </summary>
+    internal static bool SectionHoldsTrackCellsOnly(string text, int openIndex, int offset)
+    {
+        int typedFrom = offset;
+        while (typedFrom > 0 && (char.IsLetterOrDigit(text[typedFrom - 1]) || text[typedFrom - 1] == '_')) typedFrom--;
+        bool sawTrack = false, nameNext = false;
+        int depth = 0;
+        for (int i = openIndex + 1; i < text.Length; i++)
+        {
+            if (i == typedFrom && typedFrom < offset) { i = offset - 1; continue; }
+            char c = text[i];
+            if (char.IsWhiteSpace(c)) continue;
+            if (c == '/' && i + 1 < text.Length && text[i + 1] == '/')
+            {
+                while (i < text.Length && text[i] != '\n') i++;
+                continue;
+            }
+            if (c == '/' && i + 1 < text.Length && text[i + 1] == '*')
+            {
+                int end = text.IndexOf("*/", i + 2, StringComparison.Ordinal);
+                i = end < 0 ? text.Length : end + 1;
+                continue;
+            }
+            if (c == '"')
+            {
+                for (i++; i < text.Length && text[i] != '"'; i++)
+                    if (text[i] == '\\') i++;
+                if (depth == 0) return false;
+                continue;
+            }
+            if (c == '{') { depth++; nameNext = false; continue; }
+            if (c == '}')
+            {
+                if (depth == 0) break;      // the section's own close
+                depth--;
+                continue;
+            }
+            if (depth > 0) continue;
+            if (!char.IsLetter(c)) return false;
+            int from = i;
+            while (i + 1 < text.Length && (char.IsLetterOrDigit(text[i + 1]) || text[i + 1] is '_' or '-')) i++;
+            string word = text[from..(i + 1)];
+            if (nameNext) { nameNext = false; continue; }
+            if (word is "chords" or "lyrics") { sawTrack = true; nameNext = true; continue; }
+            if (LanguageVocabulary.SectionSettings.Contains(word))
+            {
+                while (i + 1 < text.Length && text[i + 1] != '\n' && text[i + 1] != '{' && text[i + 1] != '}') i++;
+                continue;
+            }
+            return false;
+        }
+        return sawTrack;
+    }
+
     private static bool IsInsideScoreBlock(List<OpenBlock> stack)
         => stack.Count > 0 && stack[^1].IsScoreOpener;
 
@@ -1790,7 +1851,12 @@ public sealed partial class LilySharpLanguageServer
         // BLOCKS (`melody { … }`), not notes — so offer the declared parts as cell scaffolds,
         // not the pitch letters. (A section in a NO-parts doc is a single voice and keeps its
         // note completions; a section nested in a part is a by-part cell, likewise music.)
-        if (IsInsideTopLevelSectionBody(scan.Stack) && HasDeclaredParts(text)
+        // …and in a NO-parts doc whose section holds TRACK cells only (a chord chart: `section A
+        // { chords harmony { … } }`, as Dettato writes one): beside the cells, not a single
+        // voice's music (owner's report 2026-11-16 — the list offered pitch letters after a
+        // section's chords cell).
+        if (IsInsideTopLevelSectionBody(scan.Stack)
+            && (HasDeclaredParts(text) || SectionHoldsTrackCellsOnly(text, scan.Stack[0].OpenIndex, offset))
             && !IsInsideStringLiteral(text, offset))
             return CompletionContext.SectionBlock;
 

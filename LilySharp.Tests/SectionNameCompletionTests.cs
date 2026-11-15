@@ -404,6 +404,43 @@ public class SectionNameCompletionTests
         Assert.DoesNotContain("bass", labels);
     }
 
+    /// <summary>A chord chart (no parts: a `chords` track's cells in each section, as Dettato
+    /// writes one) — the caret after a section's chords cell is beside the cells, not in a
+    /// single voice's music (owner's report 2026-11-16: the list offered pitch letters there).
+    /// The section takes another track cell — the file's own track names first — and the
+    /// section directives.</summary>
+    [Fact]
+    public void InsideASectionOfTrackCells_NoParts_OffersTrackCellsAndDirectives_NotNotes()
+    {
+        var text = "title \"x\"\ntime 4/4\nsection A {\n  chords harmony {\n    D | D |\n  }\n}\n"
+            + "section C {\n  chords harmony {\n    D | D/F# | G | G break |\n    A | A break |\n  }\n  ";
+        int caret = text.Length;
+        text += "\n}\nform { A C }\nscore { chords harmony }\n";
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.SectionBlock,
+            LilySharpLanguageServer.GetCompletionContext(text, caret));
+        var labels = LilySharpLanguageServer.GetSectionBlockCompletions(text, caret).Items.Select(i => i.Label).ToArray();
+        Assert.Equal("chords harmony", labels[0]);
+        Assert.Contains("lyrics", labels);
+        Assert.Contains("chords", labels);
+        Assert.Contains("key", labels);
+        Assert.DoesNotContain("c", labels);
+        // A word begun there is still that context (`ch|`), and the caret before the cell too.
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.SectionBlock,
+            LilySharpLanguageServer.GetCompletionContext(text.Insert(caret, "ch"), caret + 2));
+        int before = text.IndexOf("section C {", System.StringComparison.Ordinal) + "section C {".Length;
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.SectionBlock,
+            LilySharpLanguageServer.GetCompletionContext(text, before));
+    }
+
+    [Fact]
+    public void ASectionWithNotesBesideATrackCell_NoParts_StaysAMusicContext()
+    {
+        // A single voice's notes written in the section: music, whatever cell stands beside it.
+        var text = "section A {\n  c4 d e f |\n  chords x { C | }\n  ";
+        Assert.NotEqual(LilySharpLanguageServer.CompletionContext.SectionBlock,
+            LilySharpLanguageServer.GetCompletionContext(text, text.Length));
+    }
+
     [Fact]
     public void InsideTopLevelSectionBody_NoParts_StaysAMusicContext()
     {
