@@ -1031,12 +1031,13 @@ public class GrammarEvaluation4Tests
             var tree = SyntaxTree.Parse(source);
             var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
             Assert.Equal((80, "Slower"), (score.Tempo, score.TempoText));
-            // …and the file's tempo back at B, the one other mark.
-            var back = Assert.Single(score.MusicMarks, m => m.Type == LilySharp.Core.Svg.Model.MusicMarkType.Tempo);
-            Assert.Equal((1, "120"), (back.MeasureIndex, back.Text));
+            // …and it stands: B states no tempo, and nothing is marked or played there (the
+            // tempo is not reset at a section).
+            Assert.DoesNotContain(score.MusicMarks, m => m.Type == LilySharp.Core.Svg.Model.MusicMarkType.Tempo);
 
             var tempos = Midi(source, out _).Tracks.SelectMany(t => t.TempoChanges).OrderBy(t => t.Tick).Select(t => 60_000_000 / t.MicrosecondsPerBeat);
-            Assert.Equal(new[] { 80, 120 }, tempos);
+            Assert.Equal(80, tempos.Last());
+            Assert.DoesNotContain(120, tempos.Skip(1));
 
             var first = new LilySharp.Core.MusicXml.MusicXmlExporter().Export(tree).ToXml().Descendants("measure").First();
             Assert.Equal("80", Assert.Single(first.Descendants("per-minute")).Value);

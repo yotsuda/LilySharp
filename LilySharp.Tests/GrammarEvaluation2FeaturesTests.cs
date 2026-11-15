@@ -309,8 +309,8 @@ public class GrammarEvaluation2FeaturesTests
 
     /// <summary>A lead sheet's twin writes its tempos on a timing track built from the page's
     /// marks, and a mark with a hidden count has none: the words were written alone and LilyPond
-    /// played its default tempo (a leftover of the same day). At the opening, at a section's
-    /// head, and where a section with no tempo returns to the file's.</summary>
+    /// played its default tempo (a leftover of the same day). At the opening and at a section's
+    /// head; C, which states no tempo, keeps B's (the tempo is not reset at a section).</summary>
     [Fact]
     public void ALeadSheetsTwin_PlaysABareTempoAtItsCount()
     {
@@ -324,7 +324,6 @@ public class GrammarEvaluation2FeaturesTests
         Assert.Equal([
                 "\\once \\set Score.tempoHideNote = ##t \\tempo \"Allegro\" 4 = 120",
                 "\\once \\set Score.tempoHideNote = ##t \\tempo \"Meno mosso\" 2 = 40",
-                "\\once \\set Score.tempoHideNote = ##t \\tempo \"Allegro\" 4 = 120",
             ],
             System.Text.RegularExpressions.Regex.Matches(timing, @"\\once \\set Score\.tempoHideNote = ##t \\tempo ""[^""]*"" \d+ = \d+").Select(m => m.Value));
         Assert.DoesNotMatch(@"\\tempo ""[^""]*"" (?!\d)", timing);

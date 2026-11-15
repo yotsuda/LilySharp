@@ -128,24 +128,46 @@ public class GrammarEvaluation2Tests
         + "section B { tempo \"Con moto\" 4 = 100\n a { d'1 | d'1 | } b { d1 | d1 | } }\n"
         + "section C { a { e'1 | tempo 4 = 60 e'1 | } b { e1 | e1 | } }\n";
 
-    /// <summary>A section that states no tempo plays at the file's, as it is in the file's key and
-    /// meter: the returning A was played at B's tempo with nothing printed.</summary>
-    [Fact]
-    public void ASectionWithNoTempoOfItsOwn_ReturnsToTheFiles()
+    private static int[] TemposPlayed(string source)
     {
-        string source = ThreeTempos + "form { ~A ~B ~A ~C ~A ~A }\nscore { staff a  staff b }\n";
-        Clean(source);
         var tree = SyntaxTree.Parse(source);
         var spec = RenderSpecParser.FindFirst(tree);
         var midi = new LilySharp.Core.Midi.MidiExporter { Form = spec?.Form, Score = spec }.Export(tree);
-        Assert.Equal([88, 100, 88, 60, 88], midi.Tracks[0].TempoChanges.Select(t => (int)Math.Round(60_000_000.0 / t.MicrosecondsPerBeat)));
-
-        // The page says it where it changes back, once (not on each staff, not where nothing changes).
-        string svg = SvgGenerator.Generate(tree);
-        Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(svg, ">Andante").Count);
+        return [.. midi.Tracks[0].TempoChanges.Select(t => (int)Math.Round(60_000_000.0 / t.MicrosecondsPerBeat))];
     }
 
-    /// <summary>With no tempo at the top of the file there is none to return to: a tempo holds.</summary>
+    /// <summary>
+    /// THE TEMPO IS NOT RESET AT A SECTION (owner's decision 2026-08-31): it is the piece's flow
+    /// and not a section's, so a section that states none keeps the tempo standing — the
+    /// returning A plays at B's tempo, and nothing is printed there. From 2026-11-12 to
+    /// 2026-11-15 such a section went back to the file's tempo, which this net then held; the
+    /// owner had not decided that, and it was taken back.
+    /// </summary>
+    [Fact]
+    public void ATempoHoldsAcrossSections_UntilTheNextOneIsStated()
+    {
+        string source = ThreeTempos + "form { ~A ~B ~A ~C ~A ~A }\nscore { staff a  staff b }\n";
+        Clean(source);
+        Assert.Equal([88, 100, 60], TemposPlayed(source));
+        // The page prints the file's tempo where the piece opens, and nowhere again.
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(SvgGenerator.Generate(SyntaxTree.Parse(source)), ">Andante"));
+    }
+
+    /// <summary>The return is WRITTEN: a section that is to go back to a tempo states it in its
+    /// header, and is then at that tempo wherever it is played — printed where it changes the
+    /// one standing, and not where it changes nothing.</summary>
+    [Fact]
+    public void ASectionThatStatesItsTempo_ReturnsToItWhereverItIsPlayed()
+    {
+        string source = ThreeTempos.Replace("section A { a {", "section A { tempo \"Andante\" 4 = 88\n a {")
+            + "form { ~A ~B ~A ~C ~A ~A }\nscore { staff a  staff b }\n";
+        Clean(source);
+        Assert.Equal([88, 100, 88, 60, 88], TemposPlayed(source));
+        // The opening, the A after B and the A after C; the last A changes nothing.
+        Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(SvgGenerator.Generate(SyntaxTree.Parse(source)), ">Andante").Count);
+    }
+
+    /// <summary>…with or without a tempo at the top of the file.</summary>
     [Fact]
     public void WithNoFileTempo_ASectionsTempoHolds()
     {

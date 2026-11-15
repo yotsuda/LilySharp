@@ -856,9 +856,14 @@ a key followed by a dashed bar.
 
 A section's header `tempo` has the same rule: one that states again the tempo already standing —
 the same words, count, unit, swing and `bare` as the last tempo before it — draws nothing and
-sends nothing, so a tempo held over two sections (each must state it, since a section with no
-tempo returns to the file's) is printed once. `tempo! "Più mosso" 4 = 108` draws it anyway. A
-tempo of words alone (`tempo "a tempo"`) and a tempo in the music are always drawn.
+sends nothing. `tempo! "Più mosso" 4 = 108` draws it anyway. A tempo of words alone
+(`tempo "a tempo"`) and a tempo in the music are always drawn.
+
+Unlike the key and the meter, **a tempo is not reset at a section**: it holds until the next
+tempo is stated. With `tempo 4 = 100` in B's header, `form { A B A }` plays the returning A at
+100 as well, and prints nothing there. A section that should go back to a tempo states it in
+its own header — `section A { tempo "Andante" 4 = 88 … }` — and is then at that tempo wherever
+the form plays it.
 
 ```
 time 4/4

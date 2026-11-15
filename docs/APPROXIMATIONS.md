@@ -492,7 +492,7 @@
 ### `LilySharp.Core/Semantics/RestRunFractionValidator.cs`
 - **`RestRunFractionValidator`** gets no suggestion, only the reading. LILYSHARP-OWN: LilyPond reads *5/4 as a
 ### `LilySharp.Core/Semantics/SectionHeaders.cs`
-- **`SectionHeaders.RestatesTempo`** LILYSHARP-OWN (grammar evaluation 3, 2026-11-13). Since 2026-11-12 a section with no
+- **`SectionHeaders.RestatesTempo`** LILYSHARP-OWN (grammar evaluation 3, 2026-11-13). The page, the MIDI, the MusicXML and
 ### `LilySharp.Core/Semantics/SpanNames.cs`
 - **`SpanNames`** LILYSHARP-OWN: LilyPond's \ottava #0 and \stopTextSpan carry no name.
 ### `LilySharp.Core/Semantics/TupletMeterValidator.cs`

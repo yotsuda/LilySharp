@@ -300,14 +300,15 @@ after the value is the dashed barline (`key ees major !` = a key, then a dashed 
 every part's, wherever it is written. A `key` written IN THE MUSIC is that part's alone: for a
 change every part makes, write it in each part at the same bar, or — where a section begins in
 the new key — once in the section header (a key some parts of a section change and others do
-not is warning LYS2023). All three go back to the file's at the next section: a section with no
-`tempo` of its own plays at the file's top-level tempo, and the mark is printed where that
-changes the tempo back (`form { A B A }` with `tempo 4 = 100` in B's header: the second A is at
-the file's tempo, marked). With no top-level `tempo` there is none to go back to, and a tempo
-holds until the next. So a tempo HELD over several sections is written in each one's header —
-and a header tempo that states again the tempo already standing (the same words, count, unit,
-swing and `bare` as the last tempo before it) **draws nothing** and changes nothing, like a
-restated `key`: `section B { tempo "Più mosso" 4 = 108 … }  section B2 { tempo "Più mosso" 4 = 108 … }`
+not is warning LYS2023). The `key` and the `time` go back to the file's at the next section.
+⚠️ **The `tempo` does NOT**: a tempo is the piece's flow, not a section's, and it HOLDS until
+the next tempo is stated, across sections — `form { A B A }` with `tempo 4 = 100` in B's header
+plays the second A at 100 too, and nothing is printed there. A section that must return to a
+tempo STATES it: give A its own header tempo (`section A { tempo "Andante" 4 = 88 … }`) and it
+is at 88 wherever it is played, marked where that changes the tempo standing. A header tempo
+that states again the tempo already standing (the same words, count, unit, swing and `bare` as
+the last tempo before it) **draws nothing** and changes nothing, like a restated `key`:
+`section B { tempo "Più mosso" 4 = 108 … }  section B2 { tempo "Più mosso" 4 = 108 … }`
 prints "Più mosso" once. `tempo! …` draws it anyway. Words alone (`tempo "a tempo"`) always print.
 
 **A mark on a phrase call** goes on an empty chord before it, which takes no time:

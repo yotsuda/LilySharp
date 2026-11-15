@@ -168,12 +168,10 @@ public class SectionHeaderDirectiveTests
             score { staff melody }
             """);
         Assert.Equal(140, score.Tempo);
-        // It replaced the opening mark — no second Tempo mark stacked on top of it…
-        Assert.DoesNotContain(score.MusicMarks, m => m.Type == MusicMarkType.Tempo && m.MeasureIndex == 0);
-        // …and B, which states no tempo, is back at the file's 100, marked where it begins
-        // (2026-11-12: a section with no tempo of its own plays at the file's).
-        var back = Assert.Single(score.MusicMarks, m => m.Type == MusicMarkType.Tempo);
-        Assert.Equal((1, "100"), (back.MeasureIndex, back.Text));
+        // It replaced the opening mark — no second Tempo mark stacked on top of it — and B,
+        // which states no tempo, keeps the 140: nothing is marked where it begins (the tempo is
+        // not reset at a section, owner's decision 2026-08-31).
+        Assert.DoesNotContain(score.MusicMarks, m => m.Type == MusicMarkType.Tempo);
     }
 
     [Fact]

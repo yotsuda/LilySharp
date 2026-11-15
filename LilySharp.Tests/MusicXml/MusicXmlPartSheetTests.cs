@@ -73,19 +73,20 @@ public class MusicXmlPartSheetTests
     public void APartSheet_HasTheSectionLabels_AndTheTemposAnotherPartsMusicStates()
     {
         var sheet = Export(TwoParts, "second").Descendants("part").Single();
-        // Until 2026-11-14: no label at all (they went to the book's first part), "Slower" in
-        // the opening bar in place of the file's 120, and no return at B.
+        // Until 2026-11-14: no label at all (they went to the book's first part), and "Slower"
+        // in the opening bar in place of the file's 120. B states no tempo: "Slower" stands,
+        // and nothing is written at its head (the tempo is not reset at a section).
         Assert.Equal(new[] { "A", "", "B" }, Rehearsals(sheet));
-        Assert.Equal(new[] { ":120", "Slower:80", ":120" }, Tempos(sheet));
+        Assert.Equal(new[] { ":120", "Slower:80", "" }, Tempos(sheet));
     }
 
     [Fact]
-    public void EveryPartOpensAtThePiecesTempo_AndTheReturnIsWrittenOnce()
+    public void EveryPartOpensAtThePiecesTempo_AndTheChangeIsWrittenOnce()
     {
         var parts = Export(TwoParts).Descendants("part").ToList();
-        Assert.Equal(new[] { ":120", "Slower:80", ":120" }, Tempos(parts[0]));
+        Assert.Equal(new[] { ":120", "Slower:80", "" }, Tempos(parts[0]));
         // The second part opens at 120 (it opened at the 80 the first part's music had left
-        // running), and repeats neither the change nor the return.
+        // running), and does not repeat the change.
         Assert.Equal(new[] { ":120", "", "" }, Tempos(parts[1]));
     }
 
@@ -103,7 +104,8 @@ public class MusicXmlPartSheetTests
             form { A B C }
             score { staff first  staff second }
             """).Descendants("part").ToList();
-        Assert.Equal(new[] { ":120", "", ":80", ":120" }, Tempos(parts[0]));
+        // C states no tempo: the 80 stands, and nothing is written at its head.
+        Assert.Equal(new[] { ":120", "", ":80", "" }, Tempos(parts[0]));
         Assert.Equal(new[] { ":120", "", "", "" }, Tempos(parts[1]));
     }
 

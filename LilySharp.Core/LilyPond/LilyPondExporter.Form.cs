@@ -127,7 +127,7 @@ public sealed partial class LilyPondExporter
         for (int i = 0; top != null && i < top.SlotCount; i++)
             if (top.GetChild(i) is TempoDeclarationSyntax fileTempo)
             {
-                (_fileTempo, _fileTempoDeclaration) = (fileTempo.Value, fileTempo);
+                _fileTempo = fileTempo.Value;
                 break;
             }
         _tempoStanding = _fileTempo;
@@ -191,35 +191,25 @@ public sealed partial class LilyPondExporter
     // The last tempo this voice's stream has stated, and the file's own (the page's
     // MeasureCollector._tempoStanding).
     private TempoValue? _tempoStanding, _fileTempo;
-    private TempoDeclarationSyntax? _fileTempoDeclaration;
 
     /// <summary>
     /// A play's header directives, without a <c>tempo</c> that restates the one standing: the
     /// page draws nothing for it (<see cref="Semantics.SectionHeaders.RestatesTempo(string, TempoValue?)"/>,
     /// grammar evaluation 3, 2026-11-13), and a second <c>\tempo</c> would print it again.
-    /// Moves the standing tempo over the play: its header's, else the file's (a section with no
-    /// tempo of its own returns to it), then the last one its music writes.
+    /// Moves the standing tempo over the play: its header's where it states one — a play that
+    /// states none keeps the tempo standing, which is not reset at a section (owner's decision
+    /// 2026-08-31; LilyPond's own <c>\tempo</c> holds the same way, so the twin writes nothing
+    /// there) — then the last one its music writes.
     /// </summary>
     private IEnumerable<SyntaxNode> WithoutRestatedTempo(IReadOnlyList<SyntaxNode>? headers, SyntaxNode? container)
     {
         var own = headers?.OfType<TempoDeclarationSyntax>().FirstOrDefault();
         bool restates = own != null && Semantics.SectionHeaders.RestatesTempo(own, _tempoStanding);
-        // A play with no tempo of its own, after music that left another count: the file's
-        // tempo is back in force and the page prints it there (MeasureCollector
-        // .ReturnToHomeTempo, 2026-11-12). The twin wrote nothing, so LilyPond kept the faster
-        // section's tempo to the end (found 2026-11-13, grammar evaluation 3).
-        TempoDeclarationSyntax? returns = own == null
-            && _fileTempoDeclaration is { Value.QuarterBpm: double homeBpm } home
-            && _tempoStanding is { QuarterBpm: double standingBpm } && standingBpm != homeBpm
-                ? home : null;
         if (own != null)
             _tempoStanding = own.Value;
-        else if (_fileTempo is { Bpm: not null })
-            _tempoStanding = _fileTempo;
         if (container?.DescendantNodes<TempoDeclarationSyntax>().LastOrDefault(t => t != own) is { } inMusic)
             _tempoStanding = inMusic.Value;
-        var kept = headers == null ? [] : restates ? headers.Where(h => h != own) : headers;
-        return returns != null ? kept.Prepend(returns) : kept;
+        return headers == null ? [] : restates ? headers.Where(h => h != own) : headers;
     }
 
     /// <summary>

@@ -601,9 +601,14 @@ FeelWord       = 'swing' | 'shuffle' ;      (* contextual, NOT reserved words *)
                     'swing 0' as none). *)
                  (* A section HEADER's tempo that states again the tempo standing — the same
                     words, count, unit, swing and 'bare' as the last tempo before it — draws
-                    nothing and sends nothing (LILYSHARP-OWN, 2026-11-13: a section with no
-                    tempo returns to the file's, so a tempo held over two sections is written
-                    in both). The '!' right after the keyword draws it all the same. *)
+                    nothing and sends nothing (LILYSHARP-OWN, 2026-11-13), as a 'key', 'time'
+                    or 'clef' that changes nothing. The '!' right after the keyword draws it
+                    all the same. *)
+                 (* ⚠️ A TEMPO IS NOT RESET AT A SECTION (owner's decision 2026-08-31): unlike
+                    the key and the meter, which go back to the file's where a section states
+                    none, a tempo holds until the next one is stated — form { A B A } with a
+                    tempo in B's header plays the returning A at B's tempo, and nothing is
+                    printed there. A return is written: a tempo in A's header. *)
                  (* 'bare', the run's LAST word (owner's decision 2026-11-12, the word a tuplet
                     takes for no number and no bracket): the count is PLAYED and NOT PRINTED.
                     tempo "Tempo I" 4 = 92 bare sounds at 92 and prints the words alone, with no

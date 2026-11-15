@@ -1156,7 +1156,7 @@ public sealed class MusicXmlExporter
                     break;
                 case TempoDeclarationSyntax tempo:
                     if (!IsInsideMusicContent(tempo)) ProcessTempo(tempo);
-                    if (tempo.Parent?.Parent == null) (_fileTempo, _fileTempoDeclaration) = (tempo.Value, tempo);
+                    if (tempo.Parent?.Parent == null) _fileTempo = tempo.Value;
                     break;
                 case KeySignatureSyntax key:
                     if (!IsInsideMusicContent(key)) ProcessKeySignature(key);
@@ -2663,9 +2663,8 @@ public sealed class MusicXmlExporter
         // The tempo a play's music states stands when the play ends, whichever part states it:
         // every part of the play starts from the section's head (the reset below), so the
         // standing tempo was the LAST part's, and a `tempo "Slower" 4 = 80` in the first
-        // part's music was forgotten by the time the next section asked whether to write the
-        // return to the file's tempo — the page and the MIDI went back to 120, the document
-        // stayed at 80 (grammar evaluation 4, r-14, found 2026-11-14).
+        // part's music was forgotten by the time the next section's header asked whether it
+        // restates the tempo standing (grammar evaluation 4, r-14, found 2026-11-14).
         if (_tempoPlaySerial != _xmlPlaySerial)
         {
             if (_tempoStatedInThePlay is { } left)
@@ -2676,8 +2675,7 @@ public sealed class MusicXmlExporter
         else
         {
             // A later part of the same play asks the head's questions of the tempo the head
-            // left, not of one an earlier part's music stated since: it wrote the return to
-            // the file's tempo at the section's head, under the first part's new tempo.
+            // left, not of one an earlier part's music stated since.
             _tempoStanding = _tempoAfterTheHead;
         }
         // A part opens at the piece's opening tempo, not at the one the parts walked before it
@@ -2696,16 +2694,10 @@ public sealed class MusicXmlExporter
             && !Semantics.SectionHeaders.RestatesTempo(laterSectionTempo, _tempoStanding))
             ProcessTempo(laterSectionTempo);
         // The page's standing tempo after a section's head (MeasureCollector._tempoStanding):
-        // the header's, else the file's where it states a count.
-        // …and where the music before left another count, that return is a direction: the
-        // file's tempo, back in force (the page's MeasureCollector.ReturnToHomeTempo and the
-        // MIDI's PlaySectionCore, 2026-11-12). The document wrote nothing there, so it kept
-        // the faster section's tempo to the end (found 2026-11-13, grammar evaluation 3).
-        if (_sectionTempo == null && !isFirst
-            && _fileTempoDeclaration is { Value.QuarterBpm: double homeBpm } home
-            && _tempoStanding is { QuarterBpm: double standingBpm } && standingBpm != homeBpm)
-            ProcessTempo(home);
-        if (_sectionTempo == null && (isFirst || _fileTempo is { Bpm: not null }))
+        // the header's; the file's where the part opens; else the one standing — a section
+        // that states no tempo keeps it, and the document writes nothing there (the tempo is
+        // not reset at a section: owner's decision 2026-08-31, HANDOFF §3).
+        if (_sectionTempo == null && isFirst)
             _tempoStanding = _fileTempo;
         _tempoAfterTheHead = _tempoStanding;
         // The section's header pickup shortens this part's first bar of the section — the
@@ -3893,7 +3885,6 @@ public sealed class MusicXmlExporter
     private int _tempoPlaySerial = -1;
     private TempoValue? _tempoAfterTheHead, _tempoStatedInThePlay;
     private bool _inPartMusic;
-    private TempoDeclarationSyntax? _fileTempoDeclaration;
 
     private void ProcessTempo(TempoDeclarationSyntax tempo)
     {

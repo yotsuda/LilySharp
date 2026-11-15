@@ -96,13 +96,10 @@ public sealed class RowsOnlySectionTempoTests
         // piece's opening): one mark, reading the section's count.
         var staffless = RenderedGeometry.Render(Book("chords prog  lyrics words", headerA: "tempo 4 = 72", headerB: ""));
         var staffful = RenderedGeometry.Render(Book("chords prog  staff melody  lyrics words", headerA: "tempo 4 = 72", headerB: ""));
-        // …and the next section, which states none, goes back to the file's, marked there
-        // (2026-11-12: a section with no tempo of its own plays at the file's). Both walks alike.
-        var onStaves = Equations(staffful).Select(t => t.Text).ToArray();
-        Assert.Equal("= 72", onStaves[0]);
-        Assert.Equal(2, onStaves.Length);
-        Assert.NotEqual("= 72", onStaves[1]);
-        Assert.Equal(onStaves, Equations(staffless).Select(t => t.Text).ToArray());
+        // …and the next section, which states none, keeps it: no second mark (the tempo is not
+        // reset at a section). Both walks alike.
+        Assert.Equal(new[] { "= 72" }, Equations(staffful).Select(t => t.Text).ToArray());
+        Assert.Equal(new[] { "= 72" }, Equations(staffless).Select(t => t.Text).ToArray());
     }
 
     [Fact]
@@ -148,14 +145,19 @@ public sealed class RowsOnlySectionTempoTests
     public void ASectionPlayedTwice_PrintsItsTempoAtEachPass_OnARowsOnlySheet()
     {
         // Every pass gets its mark, as every pass of the staff walk's ProcessSection does —
-        // where the pass changes the tempo: B after A after B. (Until 2026-11-13 this book was
-        // `~A ~B ~B` and counted three; a header tempo that restates the one standing now draws
-        // nothing on either sheet, SectionHeaders.RestatesTempo — B straight after B is one mark.)
-        string book = Book("chords prog").Replace("form { ~A ~B }", "form { ~A ~B ~A ~B }");
-        string staffBook = Book("chords prog  staff melody").Replace("form { ~A ~B }", "form { ~A ~B ~A ~B }");
+        // where the pass changes the tempo: each section states its own, so A after B and B
+        // after A are each a change. (A header tempo that restates the one standing draws
+        // nothing on either sheet, SectionHeaders.RestatesTempo; a section that states none
+        // keeps the tempo standing and draws nothing either.)
+        const string Twice = "form { ~A ~B ~A ~B }";
+        string book = Book("chords prog", headerA: "tempo 4 = 120").Replace("form { ~A ~B }", Twice);
+        string staffBook = Book("chords prog  staff melody", headerA: "tempo 4 = 120").Replace("form { ~A ~B }", Twice);
         Assert.Equal(
             Equations(RenderedGeometry.Render(staffBook)).Select(t => t.Text),
             Equations(RenderedGeometry.Render(book)).Select(t => t.Text));
-        Assert.Equal(4, Equations(RenderedGeometry.Render(book)).Count);
+        Assert.Equal(new[] { "= 120", "= 90", "= 120", "= 90" }, Equations(RenderedGeometry.Render(book)).Select(t => t.Text).ToArray());
+        // With no tempo of its own A keeps B's 90 when it returns, and B then restates it: two marks.
+        Assert.Equal(new[] { "= 111", "= 90" },
+            Equations(RenderedGeometry.Render(Book("chords prog").Replace("form { ~A ~B }", Twice))).Select(t => t.Text).ToArray());
     }
 }

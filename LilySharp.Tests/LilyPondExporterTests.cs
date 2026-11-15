@@ -2811,12 +2811,10 @@ public class LilyPondExporterTests
             score { staff m }
             """);
         Assert.Contains("\\tempo \"Rubato\" 4 = 80", ly);
-        // The file's is not at the opening — it comes back at B, the section with no tempo of
-        // its own, as the page prints it there (the 2026-11-12 return; the twin wrote nothing
-        // at B until 2026-11-13, and this test read that as "no Moderato anywhere").
-        Assert.Equal(1, Occurrences(ly, "\\tempo \"Moderato\" 4 = 100"));
-        Assert.True(ly.IndexOf("\\tempo \"Rubato\"", StringComparison.Ordinal) < ly.IndexOf("\\tempo \"Moderato\"", StringComparison.Ordinal), ly);
-        Assert.Equal(2, Occurrences(ly, "\\tempo "));
+        // The file's is nowhere: not at the opening, and not at B — a section with no tempo of
+        // its own keeps the one standing (the tempo is not reset at a section).
+        Assert.Equal(0, Occurrences(ly, "\\tempo \"Moderato\""));
+        Assert.Equal(1, Occurrences(ly, "\\tempo "));
     }
 
     [Fact]

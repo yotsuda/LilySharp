@@ -653,26 +653,16 @@ public sealed partial class MeasureCollector
             else if (SectionTempoMark(sectionTempo, builder.CurrentMeasureIndex, sectionPos,
                          builder.CurrentItemCount, builder.CurrentDuration) is { } tempoMark)
                 _musicMarks.Add(tempoMark);
-            if (sectionTempo.Value.QuarterBpm is double stated)
-                _tempoInForce = stated;
             _tempoStanding = sectionTempo.Value;
         }
-        else
+        else if (builder.AtPieceOpening)
         {
-            // Every staff's walk starts from the file's own tempo.
-            if (builder.AtPieceOpening)
-                _tempoStanding = _fileTempo;
-            // No tempo of its own: the file's, printed where the music before left another.
-            bool homeAlready = false;
-            foreach (var m in _musicMarks)
-                if (m.Type == MusicMarkType.Tempo && m.MeasureIndex == builder.CurrentMeasureIndex && m.SourcePosition == sectionPos)
-                {
-                    homeAlready = true;
-                    break;
-                }
-            if (ReturnToHomeTempo(builder.AtPieceOpening, homeAlready, builder.CurrentMeasureIndex, sectionPos,
-                    builder.CurrentItemCount, builder.CurrentDuration) is { } homeMark)
-                _musicMarks.Add(homeMark);
+            // Every staff's walk starts from the file's own tempo. A LATER section that states
+            // none keeps the tempo standing: a tempo is the piece's flow and not a section's
+            // (THE TEMPO IS NOT RESET AT A SECTION — owner's decision 2026-08-31, HANDOFF §3;
+            // from 2026-11-12 to 2026-11-15 such a section went back to the file's tempo and
+            // printed it, which the owner had not decided and took back).
+            _tempoStanding = _fileTempo;
         }
 
         // A section's own starting key sits beside the part blocks (by-section) or in
@@ -2102,12 +2092,9 @@ public sealed partial class MeasureCollector
                 }
                 else if (SectionTempoMark(sectionTempo, cur, pos, 0, Fraction.Zero) is { } tempoMark)
                     _musicMarks.Add(tempoMark);
-                if (sectionTempo.Value.QuarterBpm is double stated)
-                    _tempoInForce = stated;
                 _tempoStanding = sectionTempo.Value;
             }
-            else if (ReturnToHomeTempo(cur == 0, false, cur, pos, 0, Fraction.Zero) is { } homeMark)
-                _musicMarks.Add(homeMark);
+            // (A section that states none keeps the tempo standing — ProcessSectionPrologue.)
             // …and the cursor moves FORWARD by this pass's width. It used to be assigned
             // `StartMeasure[name] + secBars`, which REWOUND the grid to the section's
             // first occurrence, so every bar after a reprise overprinted bars already written.

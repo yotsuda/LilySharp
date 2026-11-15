@@ -127,12 +127,9 @@ public sealed class MidiExporter
     }
     private Fraction _defaultDuration = Fraction.Quarter;
     private int _tempo = 120;
-    // The file's own tempo (its top-level `tempo`, with a count), in quarters a minute: what a
-    // section that states no tempo plays at (HomeTempo). Null: the file states none.
-    private double? _homeTempo;
-    // The last tempo stated where the walk stands, and the file's own, as written: a section
-    // header that states the standing one again sends nothing (SectionHeaders.RestatesTempo).
-    private TempoValue? _tempoStanding, _homeTempoValue;
+    // The last tempo stated where the walk stands: a section header that states the standing
+    // one again sends nothing (SectionHeaders.RestatesTempo). Not reset at a section.
+    private TempoValue? _tempoStanding;
     /// <summary>The velocity a note sounds at when it carries no dynamic of its own — the
     /// last dynamic written in the PART being played, else <see cref="DefaultVelocity"/>.</summary>
     private int _velocity = DefaultVelocity;
@@ -1938,20 +1935,11 @@ public sealed class MidiExporter
         // and it is the rule `test/section-octave-reset` names.
         _partPitchLanes.Clear();
 
-        // …and so does the tempo, where the file states one: a section with no tempo of its
-        // own plays at the file's, as it does in the file's key and meter. Until 2026-11-12 a
-        // tempo held to the next one across sections, so `form { A B A }` with `tempo 100` in
-        // B's header played the returning A at 100 with nothing printed (two of four writers
-        // trying the grammar met it). With no top-level tempo there is no home, and a tempo
-        // holds as it did. Every part's copy asks; the same tempo at the same tick is one event.
-        if (_homeTempo is double home && !_sectionHeaders.Tempos.ContainsKey(section.SectionName)
-            && _tempo != (int)System.Math.Round(home))
-        {
-            _tempo = (int)System.Math.Round(home);
-            conductorTrack.SetTempo(_currentTick, BpmToMicroseconds(home));
-        }
-        if (_homeTempo != null && !_sectionHeaders.Tempos.ContainsKey(section.SectionName))
-            _tempoStanding = _homeTempoValue;
+        // ⚠️ NOT THE TEMPO. A tempo is the piece's flow and not a section's: it holds to the
+        // next one stated, across sections (owner's decision 2026-08-31, HANDOFF §3). So
+        // `form { A B A }` with `tempo 100` in B's header plays the returning A at 100 — a
+        // return is written, `tempo` in A's header. From 2026-11-12 to 2026-11-15 a section
+        // with no tempo went back to the file's here; that was never the owner's decision.
 
         // A section's own header key — stated beside the part blocks (by-section) or
         // in a standalone by-part header — is not walked with the part cell's music,
@@ -4090,8 +4078,6 @@ public sealed class MidiExporter
         _tempoStanding = tempo.Value;
         if (tempo.Value.QuarterBpm is double quarterBpm)
         {
-            if (tempo.Parent?.Parent == null)
-                (_homeTempo, _homeTempoValue) = (quarterBpm, tempo.Value);
             _tempo = (int)System.Math.Round(quarterBpm);
             conductorTrack.SetTempo(_currentTick, BpmToMicroseconds(quarterBpm));
         }

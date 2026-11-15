@@ -1808,8 +1808,6 @@ public sealed partial class MeasureCollector
                     // CurrentDuration is the time elapsed in this measure, used
                     // to resolve the column X on a grand staff (where the voice's
                     // item index would point into the wrong staff's note list).
-                    if (tempoChange.Value.QuarterBpm is double changed)
-                        _tempoInForce = changed;
                     _tempoStanding = tempoChange.Value;
                     // Before the piece's first note it IS the piece's opening tempo: it replaces
                     // the file's mark, as a first section's header tempo does (ProcessSection),

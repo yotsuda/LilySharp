@@ -642,30 +642,32 @@ public class GrammarEvaluation3Tests
         Assert.NotEmpty(pages[0]);
     }
 
-    /// <summary>A section with no tempo of its own returns to the file's (2026-11-12): the page
-    /// prints it and the MIDI plays it, and MusicXML and the LilyPond twin wrote nothing there —
-    /// the faster section's tempo to the end. Both write the file's tempo at that section, and
-    /// nothing where the tempo in force is already the file's.</summary>
+    /// <summary>A section with no tempo of its own keeps the tempo standing (the tempo is not
+    /// reset at a section — owner's decision 2026-08-31): the page, the MIDI, MusicXML and the
+    /// LilyPond twin all say nothing at C and D, which play on at B's "Piu mosso". (From
+    /// 2026-11-12 to 2026-11-15 the four went back to the file's tempo there, and this net held
+    /// the return in the two exports.)</summary>
     [Fact]
-    public void TheReturnToTheFilesTempo_IsWrittenInMusicXmlAndTheLilyPondTwin()
+    public void ASectionWithNoTempo_KeepsTheOneStanding_InEveryOutput()
     {
         const string Source = "octave absolute\ntempo \"Moderato\" 4 = 96\npart m { clef treble }\n"
             + "section A { m { c'1 | c'1 | } }\nsection B { tempo \"Piu mosso\" 4 = 108  m { d'1 | d'1 | } }\n"
             + "section C { m { f'1 | f'1 | } }\nsection D { m { g'1 | } }\nform { ~A ~B ~C ~D }\nscore { staff m }\n";
         var tree = SyntaxTree.Parse(Source);
         var spec = RenderSpecParser.FindFirst(tree);
-        // The page: Moderato, Piu mosso, Moderato — and nothing at D.
-        Assert.StartsWith("Moderato", TempoMarks(Source)[^1]);
-        Assert.Single(TempoMarks(Source), m => m.StartsWith("Piu mosso", StringComparison.Ordinal));
+        // The page: Moderato where it opens, Piu mosso at B — and nothing at C or D.
+        Assert.Equal(["Piu mosso 108"], TempoMarks(Source));
+        Assert.Equal([96, 108], Midi(Source).Tracks[0].TempoChanges.Select(t => (int)Math.Round(60_000_000.0 / t.MicrosecondsPerBeat)));
 
         var xml = new LilySharp.Core.MusicXml.MusicXmlExporter { Form = spec?.Form, Score = spec }.Export(tree).ToXml();
         var words = xml.Descendants("measure").Select(m => (string?)m.Descendants("words").FirstOrDefault()).ToArray();
-        Assert.Equal(["Moderato", null, "Piu mosso", null, "Moderato", null, null], words);
-        Assert.Equal(["96", "108", "96"], xml.Descendants("sound").Select(s => (string?)s.Attribute("tempo")));
+        Assert.Equal(["Moderato", null, "Piu mosso", null, null, null, null], words);
+        Assert.Equal(["96", "108"], xml.Descendants("sound").Select(s => (string?)s.Attribute("tempo")));
 
         string ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(tree);
-        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(ly, "\\\\tempo \"Moderato\" 4 = 96").Count);
-        Assert.Contains("\\tempo \"Moderato\" 4 = 96 f'1", ly);
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(ly, "\\\\tempo \"Moderato\" 4 = 96"));
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(ly, "\\\\tempo \"Piu mosso\" 4 = 108"));
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(ly, "\\\\tempo ").Count);
     }
 
     // ── The ossia ───────────────────────────────────────────────────────────────────────────
@@ -791,10 +793,10 @@ public class GrammarEvaluation3Tests
             .OrderBy(m => m.MeasureIndex).Select(m => (m.TempoText + " " + m.Text).Trim())];
     }
 
-    /// <summary>Since a section with no tempo of its own returns to the file's, a tempo held over
-    /// two sections is written in both headers — and the second printed "Più mosso" again. A
-    /// header tempo that restates the one standing draws nothing and sends nothing, as a
-    /// <c>key</c>, <c>time</c> or <c>clef</c> that changes nothing; <c>tempo!</c> draws it.</summary>
+    /// <summary>A header tempo that restates the one standing draws nothing and sends nothing, as
+    /// a <c>key</c>, <c>time</c> or <c>clef</c> that changes nothing; <c>tempo!</c> draws it.
+    /// The tempo standing is the last one stated — it is not reset at a section, so B3, which
+    /// states none, keeps "Più mosso" and nothing is printed there.</summary>
     [Fact]
     public void ATempoHeldOverTwoSections_IsPrintedOnce()
     {
@@ -810,8 +812,8 @@ public class GrammarEvaluation3Tests
         static int Count(string text, string word) => System.Text.RegularExpressions.Regex.Matches(text, word).Count;
 
         Assert.Empty(Said(Book()).Select(d => d.Message));
-        Assert.Equal(["Piu mosso", "Moderato 96"], TempoMarks(Book()));
-        Assert.Equal([96, 108, 96], Played(Book()));
+        Assert.Equal(["Piu mosso"], TempoMarks(Book()));
+        Assert.Equal([96, 108], Played(Book()));
         var tree = SyntaxTree.Parse(Book());
         // (the twin writes a tempo in each of the two voices)
         Assert.Equal(2, Count(new LilySharp.Core.LilyPond.LilyPondExporter().Export(tree), "Piu mosso"));
@@ -821,20 +823,27 @@ public class GrammarEvaluation3Tests
         // `tempo!` draws it anyway, in the twin and MusicXML too.
         string forced = Book("tempo! \"Piu mosso\" 4 = 108 bare");
         Assert.Empty(Said(forced).Select(d => d.Message));
-        Assert.Equal(["Piu mosso", "Piu mosso", "Moderato 96"], TempoMarks(forced));
+        Assert.Equal(["Piu mosso", "Piu mosso"], TempoMarks(forced));
         Assert.Equal(4, Count(new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(forced)), "Piu mosso"));
         Assert.Equal(forced, SyntaxTree.Parse(forced).Root.ToFullString());
 
         // Anything that differs is a change: the count, the words, `bare`.
-        Assert.Equal(["Piu mosso", "Piu mosso 112", "Moderato 96"], TempoMarks(Book("tempo \"Piu mosso\" 4 = 112")));
-        Assert.Equal(["Piu mosso", "Ancora", "Moderato 96"], TempoMarks(Book("tempo \"Ancora\" 4 = 108 bare")));
-        Assert.Equal(["Piu mosso", "Piu mosso 108", "Moderato 96"], TempoMarks(Book("tempo \"Piu mosso\" 4 = 108")));
+        Assert.Equal(["Piu mosso", "Piu mosso 112"], TempoMarks(Book("tempo \"Piu mosso\" 4 = 112")));
+        Assert.Equal(["Piu mosso", "Ancora"], TempoMarks(Book("tempo \"Ancora\" 4 = 108 bare")));
+        Assert.Equal(["Piu mosso", "Piu mosso 108"], TempoMarks(Book("tempo \"Piu mosso\" 4 = 108")));
         // Words alone state no count and are always printed.
-        Assert.Equal(["Piu mosso", "a tempo", "Moderato 96"], TempoMarks(Book("tempo \"a tempo\"")));
-        // A return to the same header after another tempo changes something, and a tempo in
-        // the music between two equal headers does.
-        Assert.Equal(["Piu mosso", "Moderato 96", "Piu mosso"], TempoMarks(Book(form: "A B ~B2 ~B3 ~B2")));
-        Assert.Equal(["Piu mosso", "80", "Piu mosso", "Moderato 96"],
+        Assert.Equal(["Piu mosso", "a tempo"], TempoMarks(Book("tempo \"a tempo\"")));
+        // B2 again after B3, which stated none: "Piu mosso" still stands, and nothing is printed
+        // — nor played, nor written in the two exports.
+        string again = Book(form: "A B ~B2 ~B3 ~B2");
+        Assert.Equal(["Piu mosso"], TempoMarks(again));
+        Assert.Equal([96, 108], Played(again));
+        var againTree = SyntaxTree.Parse(again);
+        var againSpec = RenderSpecParser.FindFirst(againTree);
+        Assert.Equal(2, Count(new LilySharp.Core.LilyPond.LilyPondExporter().Export(againTree), "Piu mosso"));
+        Assert.Equal(1, Count(new LilySharp.Core.MusicXml.MusicXmlExporter { Form = againSpec?.Form, Score = againSpec }.Export(againTree).ToXml().ToString(), "Piu mosso"));
+        // A tempo in the music between two equal headers makes the second one a change.
+        Assert.Equal(["Piu mosso", "80", "Piu mosso"],
             TempoMarks(Book().Replace("m { d'1 | d'1 | }", "m { d'1 | tempo 4 = 80 d'1 | }")));
     }
 

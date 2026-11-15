@@ -131,11 +131,12 @@ public sealed class SectionHeaders
     /// <c>tempo!</c>. Words alone (<c>tempo "a tempo"</c>) state no count and always print.
     /// </summary>
     /// <remarks>
-    /// LILYSHARP-OWN (grammar evaluation 3, 2026-11-13). Since 2026-11-12 a section with no
-    /// tempo of its own returns to the file's, so holding "Più mosso" over two sections means
-    /// writing it in both headers — and the second printed it again. The page, the MIDI, the
-    /// MusicXML and the LilyPond twin each ask this at a section's head with the tempo their
-    /// own walk last stated.
+    /// LILYSHARP-OWN (grammar evaluation 3, 2026-11-13). The page, the MIDI, the MusicXML and
+    /// the LilyPond twin each ask this at a section's head with the tempo their own walk last
+    /// stated — which a section that states none does not reset (owner's decision 2026-08-31:
+    /// a tempo holds until the next one, across sections). The rule was written while such a
+    /// section went back to the file's tempo (2026-11-12 to 2026-11-15, taken back) and a
+    /// tempo held over two sections had to be written in both; it stands without that.
     /// </remarks>
     public bool RestatesTempo(string name, TempoValue? standing)
         => Tempos.TryGetValue(name, out var tempo) && RestatesTempo(tempo, standing);
