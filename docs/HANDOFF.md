@@ -146,7 +146,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 base `1cd52d6d7`・開始時 full 17372 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17375（Lab `p1284` の `run1.trx`）。REQUESTS は**手で見た**: Calamo の open／question 0・Dettato は #1・#4 が `question`（Lily# が返事を書いた側＝Dettato の確認待ち）。
 **録音を聴きながら直す（Dettato #4）の実装に着手**＝`docs/recording-design.md`（決定 §1・測ったこと §3・最初の版 §4・段取り §5）。オーナー決定（第1283 の会話）: エンジンは Signalsmith Stretch／m4a は Windows で LSP が Media Foundation で復号（(a)）／最初の版は §4 の 1〜4／小節を打つ操作は「楽譜の次の小節を録音に合わせる」コマンドでキーは変えられる。
 - S1（隣のファイル `<stem>.dettato.json` の読み書き・小節 ↔ 録音の秒）: `editors/vscode/src/recordingCore.ts`＋網 `test/recordingCore.test.ts` 10 本緑。形式 1 を読み形式 2（`byHand`）で書く・知らない項目は保つ・弱起は最初の `A` が 0 より後なら 0 番の小節。
-- 次: S2（Attach Recording・リネームの追従・m4a は Dettato の `Audio.cs` の読み方＝NAudio の `MediaFoundationReader`＋エンコーダの先頭の無音を取る、を LSP へ移す）。
+- S2: LSP `lilysharp/decodeRecording`（`RecordingDecoder`＝Dettato の `Audio.cs` の読み方・NAudio.Wasapi 2.2.1・先頭の無音を取る。網 `RecordingDecoderTests` 3・毒＝無音を取らないと赤。`b7d98c03c`）／拡張の「Attach Recording…」（右クリックとパレット・別フォルダの音源はコピーを訊く・置き換えを訊く）とリネームの追従（`recording.ts`・判断は `recordingCore`。実物の VS Code で 3 段確認＝Lab `p1284/attach-e2e`。`ba784ad1b`）。
+- 次: S3（webview の再生・Signalsmith の同梱・ツールバーの切り替えと録音パネル）。
 
 ## 以下は第1283セッションの経緯
 
