@@ -175,6 +175,16 @@ function copyWorkletProcessor() {
     fs.mkdirSync(outDir, { recursive: true });
     fs.copyFileSync(src, path.join(outDir, 'spessasynth_processor.min.js'));
     console.log('esbuild: copied spessasynth_processor.min.js');
+    // The recording's time-stretcher (docs/recording-design.md §1 4: Signalsmith Stretch, MIT):
+    // its Web release is one ES module that builds its own AudioWorklet from its own source, so it
+    // ships unmodified and the page imports it by webview URI — bundling (minifying) it could
+    // break the worklet it makes of itself.
+    const stretch = path.resolve(__dirname, 'node_modules', 'signalsmith-stretch', 'SignalsmithStretch.mjs');
+    if (!fs.existsSync(stretch)) {
+        throw new Error(`${stretch} not found - node_modules is out of date with package.json; run \`npm ci\` in ${__dirname}.`);
+    }
+    fs.copyFileSync(stretch, path.join(outDir, 'SignalsmithStretch.mjs'));
+    console.log('esbuild: copied SignalsmithStretch.mjs');
 }
 
 async function main() {

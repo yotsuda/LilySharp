@@ -102,6 +102,7 @@ bundles, or in both.
 | Newtonsoft.Json | © James Newton-King 2008 | MIT |
 | Markdig | © Alexandre Mutel | BSD-2-Clause |
 | MeltySynth | © 2021 Nobuaki Tanaka; including C# Synth © 2014 Alex Veltsistas, TinySoundFont © 2017, 2018 Bernhard Schelling, based on SFZero © 2012 Steve Folta | MIT |
+| NAudio.Core, NAudio.Wasapi (language server only) | © Mark Heath 2023 | MIT |
 
 SixLabors.ImageSharp, which PdfSharpCore depends on for raster images, is not
 among them: Lily#'s PDFs carry no images, and the package is referenced for its
@@ -127,6 +128,14 @@ ships with the binaries.
 | vscode-languageclient | © Microsoft Corporation | MIT |
 | spessasynth_lib, spessasynth_core | © Spessasus | Apache-2.0 |
 | @breezystack/lamejs (lamejs) | © Alex Zhukov and the lamejs contributors; a port of LAME, © the LAME project | LGPL-3.0 |
+| signalsmith-stretch | © 2022 Geraint Luff / Signalsmith Audio Ltd. | MIT |
+
+signalsmith-stretch is the Web Audio release (WASM and AudioWorklet) of Signalsmith Stretch
+(<https://github.com/Signalsmith-Audio/signalsmith-stretch>, its `web/` folder; npm 1.3.2). It
+stretches and pitch-shifts a recording the preview plays beside a chart
+(`docs/recording-design.md`) and ships unmodified as `out/synth/SignalsmithStretch.mjs`.
+NAudio decodes, on Windows, a recording the preview cannot decode itself (an m4a), through
+Windows' Media Foundation (`LilySharp.Lsp/RecordingDecoder.cs`).
 
 spessasynth_lib is the preview's SoundFont synthesizer (`docs/playback-design.md`): its
 browser half is bundled into `out/synth/preview-synth.js` and its AudioWorklet processor
