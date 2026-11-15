@@ -469,6 +469,28 @@ public static class InstrumentDefaults
     public static int? TranspositionOfPitch(string value)
         => Semantics.PitchTransposer.AbsoluteMidi(value) is int sounds ? sounds - MiddleC : null;
 
+    /// <summary>
+    /// The pitch a <c>transposition</c> of <paramref name="semitones"/> is written as — the
+    /// inverse of <see cref="TranspositionOfPitch"/>: −2 → <c>bes</c>, −14 → <c>bes,</c>,
+    /// +3 → <c>ees'</c>, 0 → <c>c'</c>. For a writer that holds the shift and not its spelling
+    /// (the MusicXML importer).
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: the spelling is the transposing instruments' own — B♭, E♭ and A♭ as flats,
+    /// F♯ and C♯ as sharps — and only the semitones come back when it is read.
+    /// </remarks>
+    public static string TranspositionPitchOf(int semitones)
+    {
+        int sounds = MiddleC + semitones;
+        int octave = (int)System.Math.Floor(sounds / 12.0) - 1;
+        int marks = octave - DefaultAnchorOctave;
+        return TranspositionPitchNames[sounds - 12 * (octave + 1)]
+            + new string(marks < 0 ? ',' : '\'', System.Math.Abs(marks));
+    }
+
+    private static readonly string[] TranspositionPitchNames =
+        ["c", "cis", "d", "ees", "e", "f", "fis", "g", "aes", "a", "bes", "b"];
+
     /// <summary>Middle C as a MIDI pitch — the written note a <c>transposition</c> pitch answers for.</summary>
     private const int MiddleC = 60;
 

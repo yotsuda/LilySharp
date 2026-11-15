@@ -155,23 +155,36 @@ public class MusicXmlFrettedImportTests
         Assert.Contains("e4@vibrato", bass);
     }
 
-    /// <summary>A bass's preset and tunings carry its octave, and the header has no word for
-    /// "none": a bass written at the pitch it sounds stays undeclared, its notes where they
-    /// were, and its wave unread.</summary>
+    /// <summary>A bass's preset and tunings carry its octave. A bass the file writes at the pitch
+    /// it sounds is a bass all the same: its header states <c>transposition c'</c> — "none",
+    /// which <c>transposition</c> could not say until it took a pitch (2026-11-15; the part was
+    /// left undeclared and its wave unread) — its notes stay where they were, and its wave is
+    /// its vibrato.</summary>
     [Theory]
-    [InlineData(true, 0)]
-    [InlineData(false, 0)]
-    // Three octaves have no `transposition` word either (the writer says so and writes none).
-    [InlineData(true, -3)]
-    public void ABassWrittenAtItsSoundingPitch_IsLeftAsItWas(bool namesItsStrings, int transposedOctaves)
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ABassWrittenAtItsSoundingPitch_SaysSo(bool namesItsStrings)
     {
         string details = namesItsStrings ? Strings(BassStrings) : "<staff-details><staff-lines>4</staff-lines></staff-details>";
-        string transpose = transposedOctaves == 0 ? ""
-            : $"<transpose><chromatic>0</chromatic><octave-change>{transposedOctaves}</octave-change></transpose>";
-        string lys = Read(Foreign(TabClef + details + transpose, Bar(octave: 2)));
-        Assert.EndsWith("{ clef treble }", Header(lys));
-        Assert.Contains("e,4 g,4", lys);
-        Assert.DoesNotContain("vibrato", lys);
+        string lys = Read(Foreign(TabClef + details, Bar(octave: 2)));
+        Assert.EndsWith("{ clef treble instrument bass transposition c' }", Header(lys));
+        Assert.Contains("e,4@vibrato g,4", lys);
+        // It sounds what it writes: E2, not the E1 a bass's own octave would make of it.
+        var tree = SyntaxTree.Parse(lys);
+        var spec = LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree);
+        var midi = new LilySharp.Core.Midi.MidiExporter { Form = spec?.Form, Score = spec }.Export(tree);
+        Assert.Equal(40, midi.Tracks.SelectMany(t => t.Notes).First().Pitch);
+    }
+
+    /// <summary>A shift no marker writes — three octaves, here — is the pitch a written middle C
+    /// sounds; it was a warning, and the part came in at written pitch.</summary>
+    [Fact]
+    public void AShiftWithNoMarker_IsWrittenAsAPitch()
+    {
+        var (lys, report) = new MusicXmlImporter().Import(Foreign(TabClef + Strings(BassStrings)
+            + "<transpose><chromatic>0</chromatic><octave-change>-3</octave-change></transpose>", Bar(octave: 2)));
+        Assert.EndsWith("instrument bass transposition c,, }", Header(lys.Replace("\r", "")));
+        Assert.Empty(report.Warnings);
     }
 
     /// <summary>The sound decides nothing: a part with a guitar's General MIDI program and no

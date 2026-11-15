@@ -630,7 +630,7 @@ internal static class MusicXmlReader
         // and frets (what MusicXmlExporter writes for `staff gt  tab gt`): its voices are a
         // copy, not more music, and are dropped rather than split into a part of their own.
         var tabStaves = staves.Where(s => staffClefs.GetValueOrDefault(s) == TabClef).ToList();
-        DeclareFretted(part, staffClefs, staffStrings, staffLines, transposeSet);
+        DeclareFretted(part, staffClefs, staffStrings, staffLines);
         if (tabStaves.Count > 0 && tabStaves.Count < staves.Count)
         {
             foreach (var measure in part.Measures)
@@ -1287,15 +1287,11 @@ internal static class MusicXmlReader
             int chromatic = int.TryParse(Local(transEl, "chromatic")?.Value, out int c) ? c : 0;
             int octaveChange = int.TryParse(Local(transEl, "octave-change")?.Value, out int oc) ? oc : 0;
             int semis = chromatic + octaveChange * 12;
+            // Any shift is stated since `transposition` takes a pitch (2026-11-15): until then
+            // only whole octaves were, and a B♭ clarinet's part came in at written pitch with a
+            // warning — it played a tone high.
             if (semis != 0)
-            {
-                if (semis % 12 == 0)
-                    transposeSet = semis;
-                else
-                    report.Warn(measureNo,
-                        $"a transposing part ({semis} semitones) is imported at written pitch — "
-                        + "Lily#'s `transposition` states whole octaves only.");
-            }
+                transposeSet = semis;
         }
     }
 
@@ -1357,14 +1353,16 @@ internal static class MusicXmlReader
     /// The bowed strings' tunings are no fretted instrument's (a mandolin's are the violin's, and
     /// the file does not say which), and strings that spell no tuning say nothing.</para>
     /// <para>⚠️ A bass's preset and tunings carry its octave (<c>GetTransposition</c>,
-    /// <c>TuningTransposition</c>: the part is written an octave above its sound), and
-    /// <c>transposition</c> has no word for "none": a bass the file writes AT its sounding pitch
-    /// — no <c>&lt;transpose&gt;</c> the header can state — is left undeclared, as before,
-    /// rather than moved an octave.</para>
+    /// <c>TuningTransposition</c>: the part is written an octave above its sound). A bass the
+    /// file writes AT its sounding pitch — no <c>&lt;transpose&gt;</c> — is declared all the
+    /// same since 2026-11-15, and its header states <c>transposition c'</c>, "none"
+    /// (<c>LysWriter</c> writes it where the declared instrument carries a shift the file does
+    /// not): until <c>transposition</c> took a pitch there was no word for it, and such a part
+    /// was left undeclared rather than moved an octave.</para>
     /// </remarks>
     private static void DeclareFretted(
         ImportPart part, Dictionary<int, string> staffClefs, Dictionary<int, int[]> staffStrings,
-        Dictionary<int, int> staffLines, int? transpose)
+        Dictionary<int, int> staffLines)
     {
         var tabStaves = staffClefs.Where(c => c.Value == TabClef).Select(c => c.Key).OrderBy(s => s).ToList();
         if (tabStaves.Count == 0 && staffStrings.Count == 0)
@@ -1373,12 +1371,6 @@ internal static class MusicXmlReader
             ? FrettedWords(staffStrings[staffStrings.Keys.Min()])
             : (staffLines.GetValueOrDefault(tabStaves[0]) == 4 ? "bass" : "guitar", null);
         if (instrument == null && tuning == null)
-            return;
-        int carried = instrument != null
-            ? Svg.Model.InstrumentDefaults.GetTransposition(instrument)
-            : Tablature.Tunings.TuningTransposition(Tablature.Tunings.Parse(tuning));
-        bool stated = transpose is 12 or -12 or 24 or -24;   // what LysWriter spells as `transposition`
-        if (carried != 0 && !stated)
             return;
         part.Instrument = instrument;
         part.Tuning = tuning;

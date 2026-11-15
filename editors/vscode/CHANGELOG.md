@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Importing MusicXML keeps a transposing instrument's transposition**: a B♭ clarinet, a saxophone or a horn comes in with `transposition bes` (or `ees`, `f`, `bes,` …) in its header and plays at the right pitch; it was imported at written pitch with a warning.
 - **Exporting MusicXML: a key written in one part's header stays in that part.** With `part a { key d major }` in a file in F major, every part was exported in D major; the other parts now keep the file's key, as the preview shows them.
 - **`key none`**: no key signature on any page — a transposing instrument's part included, which printed C major transposed (two sharps for a B♭ clarinet) when the file wrote no key. After `key` the list offers `none` below the tonics, and the status bar says what it does.
 - **A transposing instrument that has no preset**: `part bcl { instrument clarinet "Bass Clarinet"  transposition bes,  range d, bes'' }`. `transposition` now takes a pitch — what a written middle C sounds (`bes` a tone down, `bes,` a ninth down, `g` an alto flute, `f` a cor anglais, `c'` none) — beside the octave markers, and the new `range LOW HIGH` states the lowest and highest pitch the part sounds, for the out-of-range warning (also for a part with no instrument: `range c' g'`). The status bar says what a written C4 sounds while the caret is on the `transposition`.

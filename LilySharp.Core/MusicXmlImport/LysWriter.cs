@@ -107,24 +107,31 @@ internal static class LysWriter
                 sb.Append(" midiInstrument \"").Append(EscapeString(sound)).Append('"');
             if (part.PedalStyle is { } pedalStyle)
                 sb.Append(" pedal ").Append(pedalStyle);
-            // <transpose> comes back as `transposition`, the same knob that produced it.
-            // Only whole octaves reach here (the reader warns about anything else), and the
+            // <transpose> comes back as `transposition`, the same knob that produced it. The
             // clef's own octave has already been subtracted — see ImportPart.
-            // ⚠️ TWO octaves are spelled `15mb`, not `8vb`: this used to write 8vb for any
-            // multiple of 12 and quietly halved a doubly-transposing part on the way in.
-            // Three or more has no marker at all, and is said out loud rather than rounded.
+            // One or two octaves are their markers (⚠️ two are `15mb`, not `8vb`: this used to
+            // write 8vb for any multiple of 12 and quietly halved a doubly-transposing part on
+            // the way in); any other shift is the PITCH a written middle C sounds (2026-11-15:
+            // a B♭ clarinet's −2 is `transposition bes`), where it was a warning and a part
+            // imported at written pitch.
             if (part.TranspositionSemitones is { } semis && semis != 0)
             {
                 string? marker = semis switch
                 {
                     -12 => "8vb", 12 => "8va", -24 => "15mb", 24 => "15ma", _ => null,
                 };
-                if (marker != null)
-                    sb.Append(" transposition ").Append(marker);
-                else
-                    report.Warn($"a part transposing {semis} semitones beyond its clef is "
-                        + "imported at written pitch — Lily#'s `transposition` states one or "
-                        + "two octaves.");
+                sb.Append(" transposition ")
+                  .Append(marker ?? Svg.Model.InstrumentDefaults.TranspositionPitchOf(semis));
+            }
+            // …and a part declared as an instrument that carries a shift of its own (a bass's
+            // octave) which the file does not state is written at its sounding pitch: "none".
+            else if ((part.Instrument != null
+                         ? Svg.Model.InstrumentDefaults.GetTransposition(part.Instrument)
+                         : part.Tuning != null
+                             ? Tablature.Tunings.TuningTransposition(Tablature.Tunings.Parse(part.Tuning))
+                             : 0) != 0)
+            {
+                sb.Append(" transposition ").Append(Svg.Model.InstrumentDefaults.TranspositionPitchOf(0));
             }
             sb.Append(" }\n");
         }
