@@ -141,6 +141,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1274セッション（2026-11-15・YT-DELL2）
+
+base `f1e0f0fcf`・開始時 full 17301 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17304（Lab `p1274` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 194）。
+オーナーの指摘（2026-11-15）「テンポは各 section の頭でリセットせず、直前のテンポを維持すべき」→ **`00f7b3d29`（2026-11-12）を戻した**（`c8ea54943`）。
+- 経緯: §3 の決定（2026-08-31・第303「テンポはリセットしない」）があるのに、文法の評価の所見（`form { A B A }` で B の見出しの tempo が戻った A に残る）を欠陥と読み、**確認なしに**「tempo の無い section はファイルの tempo に戻る」へ変えていた。⇒ **評価・双子・探り譜の所見が §3 の行と食い違ったら、直す前に訊く**（§3 の行に書いた）。
+- 戻したもの: ページ（`ReturnToHomeTempo` と呼び手 2 つ）・MIDI（section の頭の戻し）・MusicXML（戻りの direction）・`.ly`（戻りの `\tempo`）。**残したもの**（戻りに依存しない）: 曲の最初の音の前の `tempo` は開始のテンポ／見出しの `tempo` が立っているテンポと同じなら刷らない・送らない（`tempo!` は刷る）／MusicXML の各 part は曲頭のテンポで開く。戻りは書く＝戻る section の見出しに `tempo`。
+- 門: 戻りを見張っていた網 13 本を決定の向きに書き直し、「見出しに書けば戻る」の網を 1 本足した。毒はページと MusicXML の 2 本が赤・MIDI の 1 本は緑（同じテンポを送り直すだけで結果が変わらない）（Lab `p1274/poisons.txt`）。全 svg の掃き 1268 枚で差 0（コーパスに戻りを踏む本は無かった）。文書 3 冊と CHANGELOG（未リリースの 2 項目を削除・3 項目から戻りの句を削除）。終了時 full 17302 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17305（`run2.trx`）・Core 警告 0。0.15.0（11-07）には入っていない挙動。
+- 7.7: ⚠️ ページの「立っているテンポ」は譜表の歩きごと＝音楽の中の tempo を 1 つの part だけが書いた本で、見出しの tempo を刷るかどうかが先頭の譜表の歩きで決まる形は見ていない（今回の変更より前から）。perf: 計算を減らしただけ。7.5: Core '+' 40 行・REF 0・OWN 1（`SectionHeaders.RestatesTempo` の注を書き直した行）。
+
+## 以下は第1273セッションの経緯
+
 ### 1.1 第1273セッション（2026-11-15・YT-DELL2）
 
 base `c34dfc4d2`・開始時 full 17292 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17295（Lab `p1273` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 192）。
@@ -149,17 +160,6 @@ base `c34dfc4d2`・開始時 full 17292 合格 / 1 失敗（`ReadmeSampleTests`�
 - 直し（`ff29f6391`）: `MusicXmlExporter.FileHomeKey`（root の直下の `key`）と `PartHomeKey`（part の直下の `key`）を分け、play の頭で part の home ?? ファイルの home を当てる。調の読みは `KeyStateOf` の 1 つ（`ProcessKeySignature` から切り出しただけ）。
 - 門: 網 `MusicXmlPartHomeKeyTests` 10 本。毒 5 本は全部赤（5 本目＝part の中に書いた音楽の `key` を home と取り違える毒は、その形の網を足してから赤・Lab `p1273/poisons*.txt`）。**全冊の MusicXML の前後**（Lab `p1273/xml/sweep-xml.ps1`＝`lysc xml` に batch が無いので 8 並列・約 6 分）: 1268 冊で差 1 冊＝fixture `test/part-header-key-per-part.lys`（2 つ目の part が ♭2 つ → 調号なし＝ページどおり）。終了時 full 17301 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17304（`run2.trx`）・Core 警告 0。
 - 7.7: ⚠️ phrase の自動移調と度数和音の主音（`ScoreHomeKey.Read`）は part header の調を今も「ファイルの調」として読む＝3 つの出力が同じ読みかは見ていない（leftovers に書いた）。⚠️ 絵は触っていない（svg の掃きは回していない・Core の差分は `MusicXmlExporter.cs` だけ）。perf: 書き出しだけ（打鍵の経路ではない）。7.5: Core '+' 55 行・REF 0・OWN 0（式も定数も足していない＝既存の読みの置き場所を分けただけ）。CHANGELOG は 2 つとも `## Unreleased`。
-
-## 以下は第1272セッションの経緯
-
-### 1.1 第1272セッション（2026-11-15・YT-DELL2）
-
-base `77429bfaa`・開始時 full 17250 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17253（Lab `p1272` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 188）。
-オーナー決定 ⑥ の残り 2 件。設計と実際の形は `docs/eval4-features-design.md` §2・§4、作らなかったもの・見つけた欠陥は Lab `sessions/p1242/leftovers.md` の第1272 の節。
-- **案 2**（`e3a24916b`）: `transposition` が音名を取る＝書かれた `c'` で鳴る音（LilyPond の `\transposition`・`bes,`＝バスクラ）。読み手は `InstrumentDefaults.ParseTranspositionSemitones` の 1 つ＝MIDI・tab・`pitch concert`・移調譜・`<transpose>`・`.ly` は `PartHeaderDefaults.TranspositionSemitones` から付いてくる。`range LOW HIGH`＝part の鳴る音域（`PartHeaderDefaults.Range`・LYS1052 と `chord(…)` の床が読む）。⚠️ Claude が決めた点: range は鳴る音／preset の音域は書いた `transposition` で動かさない（警告が `range` を名指す）／tuning で動かさない／音名は小文字。
-- **案 4**（`ffbd021dd`・`89d3f7924`）: `key none`＝調号なし・移調譜でも。器は既に在った（文書に無い `key custom` を音名なしで書いた絵と同じ）＝`KeySignatureSyntax.IsNone` を足し `IsCustom` が none も含む。足したのは語・`lysc review`（「no key」と言い「Heard in」を出さない）・エディタの文面と補完・MusicXML の読み込み（何も言わない `<key/>` → `key none`）。
-- 門: 網 `GrammarEvaluation4FeaturesTests` に 42 本・補完の網 2 本を 16 項目に直した。毒 18＋12 本は全部赤（Lab `p1272/poisons*.txt`）。全 svg の掃き 2 回とも 1268 枚で差 0（Lab `p1272/svg`・base は HEAD の `git archive`）。終了時 full 17292 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17295（`run2.trx`）・Core 警告 0。
-- 7.7: ⚠️ **見つけて直していない既存の欠陥**＝`lysc xml` が part header の `key` を後ろの part 全部に書く（`key d major` でも・ページは正しい・再現 Lab `p1272/probe4/oned.lys`）。⚠️ `.ly` の `PartTransposition` は毒が緑＝届かない腕だったので `PartHeaderDefaults` を読む形にした。⚠️ MusicXML の読み込みはオクターブでない `<transpose>` をまだ `transposition` に書かない。⚠️ `transposition ▮` の補完は 4 語のまま・`key none` は色なし。perf: 足した計算なし。7.5: Core '+' 281 行・REF 1（`TranspositionOfPitch`）・OWN 2（`Range`・`IsNone`）。CHANGELOG は 2 つとも `## Unreleased`。実機は `MANUAL-CHECKS` 第1272（2 項目）。
 
 ## 2. 開いている作業
 
@@ -1937,7 +1937,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 | ★★★ **歌詞の音節はスラー・タイの中の音符を取らない（LP の `\lyricsto`）・`__` は線だけで音符を取らない・`_` は 1 つ取る**（2026-09-24・第570・**ユーザー決定「LP に合わせて」**。旧＝全音符が音節を取り歌詞側の印だけがメリスマ・`__` も 1 音取る。`9049fb78`） | **根拠は `HANDOFF-ARCHIVE.md`「閉じた §3 の根拠」の同じ見出し**（2026-10-02・第739 に落とした） |
 | ★★★ **full-notation のタブ譜では 8 分の群の符尾を 16 分の群と同じ理想の長さにする＝同じ弦の上の 8 分対と 16 分群の梁が揃う＝LP の `\tabFullNotation` から宣言して離れる**（2026-09-24・第569・**ユーザー決定**「通常の五線譜と同じ形で beam が揃うように」→ 1 度目の実装（向きごとに 1 つの下限まで引き上げる）に「stem が長すぎる・beam が全部水平」→「stem を適切な長さにして、必要に応じて beam を傾けるべき」。向きは LP のまま。`BeamScoringProblem` の `uniformBeamedLength`） | **根拠は `HANDOFF-ARCHIVE.md`「閉じた §3 の根拠」の同じ見出し**（2026-10-02・第739 に落とした） |
 | ★★★ **tab の声部の spacing wish は LP の数字（TabNoteHead 既定の大きさ）で左の頭を読む＝Lily# の大きい数字（F9）ではない**（2026-09-25・第576・**ユーザー決定**＝2 択から「LP の数字で測る」。`SpacingRules.LilyPondTabHeadRight`） | **根拠は `HANDOFF-ARCHIVE.md`「閉じた §3 の根拠」の同じ見出し**（2026-10-02・第739 に落とした） |
-| ★★★ **セクション境界: 調はリセット／音部記号もリセットでよい／テンポはリセットしない**（2026-08-31・第303・**ユーザー決定**・**実測すると現状が既にその通り**） | **根拠は `HANDOFF-ARCHIVE.md`「閉じた §3 の根拠」の同じ見出し**（2026-09-16 に落とした） |
+| ★★★ **セクション境界: 調はリセット／音部記号もリセットでよい／テンポはリセットしない**（2026-08-31・第303・**ユーザー決定**・**実測すると現状が既にその通り**）⚠️ **2026-11-12〜15 に Claude が確認なしに「tempo の無い section はファイルの tempo に戻る」へ変え（`00f7b3d29`・文法の評価の所見を仕様と読んだ）、オーナーの指摘で第1274 が戻した**＝評価や双子の所見がこの表の行と食い違ったら、直す前に訊く | **根拠は `HANDOFF-ARCHIVE.md`「閉じた §3 の根拠」の同じ見出し**（2026-09-16 に落とした） |
 | ★★★ **セクション境界で調と拍子は score レベルへ戻る（音部記号とテンポは戻らない）**（2026-08-31・第303・**ユーザー確認**・✅ `02613871` で 3 つの書き出しにも実装） | **根拠は `HANDOFF-ARCHIVE.md`「閉じた §3 の根拠」の同じ見出し**（2026-09-16 に落とした） |
 | ★★★ **volta 用に切った section でも relative の音高と音価はリセットされる。引き継ぎは*記法*で与える**（2026-08-31・第303・**ユーザー決定**・✅ **音高側は第304 で実装**） | **根拠は `HANDOFF-ARCHIVE.md`「閉じた §3 の根拠」の同じ見出し**（2026-09-16 に落とした） |
 | ★★★ **rule 2（`|:` は span を閉じない）は実装しない**（2026-08-31・第303・**ユーザー決定**） | **根拠は `HANDOFF-ARCHIVE.md`「閉じた §3 の根拠」の同じ見出し**（2026-09-16 に落とした） |

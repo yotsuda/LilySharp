@@ -271,6 +271,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1272セッションの経緯
+
+### 1.1 第1272セッション（2026-11-15・YT-DELL2）
+
+base `77429bfaa`・開始時 full 17250 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17253（Lab `p1272` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 188）。
+オーナー決定 ⑥ の残り 2 件。設計と実際の形は `docs/eval4-features-design.md` §2・§4、作らなかったもの・見つけた欠陥は Lab `sessions/p1242/leftovers.md` の第1272 の節。
+- **案 2**（`e3a24916b`）: `transposition` が音名を取る＝書かれた `c'` で鳴る音（LilyPond の `\transposition`・`bes,`＝バスクラ）。読み手は `InstrumentDefaults.ParseTranspositionSemitones` の 1 つ＝MIDI・tab・`pitch concert`・移調譜・`<transpose>`・`.ly` は `PartHeaderDefaults.TranspositionSemitones` から付いてくる。`range LOW HIGH`＝part の鳴る音域（`PartHeaderDefaults.Range`・LYS1052 と `chord(…)` の床が読む）。⚠️ Claude が決めた点: range は鳴る音／preset の音域は書いた `transposition` で動かさない（警告が `range` を名指す）／tuning で動かさない／音名は小文字。
+- **案 4**（`ffbd021dd`・`89d3f7924`）: `key none`＝調号なし・移調譜でも。器は既に在った（文書に無い `key custom` を音名なしで書いた絵と同じ）＝`KeySignatureSyntax.IsNone` を足し `IsCustom` が none も含む。足したのは語・`lysc review`（「no key」と言い「Heard in」を出さない）・エディタの文面と補完・MusicXML の読み込み（何も言わない `<key/>` → `key none`）。
+- 門: 網 `GrammarEvaluation4FeaturesTests` に 42 本・補完の網 2 本を 16 項目に直した。毒 18＋12 本は全部赤（Lab `p1272/poisons*.txt`）。全 svg の掃き 2 回とも 1268 枚で差 0（Lab `p1272/svg`・base は HEAD の `git archive`）。終了時 full 17292 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17295（`run2.trx`）・Core 警告 0。
+- 7.7: ⚠️ **見つけて直していない既存の欠陥**＝`lysc xml` が part header の `key` を後ろの part 全部に書く（`key d major` でも・ページは正しい・再現 Lab `p1272/probe4/oned.lys`）。⚠️ `.ly` の `PartTransposition` は毒が緑＝届かない腕だったので `PartHeaderDefaults` を読む形にした。⚠️ MusicXML の読み込みはオクターブでない `<transpose>` をまだ `transposition` に書かない。⚠️ `transposition ▮` の補完は 4 語のまま・`key none` は色なし。perf: 足した計算なし。7.5: Core '+' 281 行・REF 1（`TranspositionOfPitch`）・OWN 2（`Range`・`IsNone`）。CHANGELOG は 2 つとも `## Unreleased`。実機は `MANUAL-CHECKS` 第1272（2 項目）。
+
 ## 以下は第1271セッションの経緯
 
 ### 1.1 第1271セッション（2026-11-15・YT-DELL2）
