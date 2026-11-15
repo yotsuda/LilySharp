@@ -81,6 +81,42 @@ describe('the preview\'s Range panel', () => {
         assert.match(extension, /if \(message\.type === 'requestLength'\)/);
     });
 
+    // An @todo mark's memo can stand over another bar than its chord name or head; counted as a
+    // copy of the music it was "copy 0" and lit alone, the chord name dark (owner's report
+    // 2026-11-16: a chords row's marked names did not light while playing).
+    it('lights a marked chord name while it sounds, its memo not counted as a copy', () => {
+        const at = html.indexOf('function highlightPositions(');
+        const body = html.slice(at, html.indexOf('\n        }', at) + '\n        }'.length);
+        const el = (name: string, bar: number, todo: boolean) => {
+            const attrs: Record<string, string> = todo ? { 'data-todo': '' } : {};
+            return {
+                name, bar, tagName: 'text', parentNode: null, classList: { add() { /* */ } },
+                hasAttribute: (a: string) => a in attrs, getAttribute: (a: string) => attrs[a] ?? null,
+                setAttribute: (a: string, v: string) => { attrs[a] = v; },
+            };
+        };
+        const run = (elements: ReturnType<typeof el>[], occ: number): string[] => {
+            const context = vm.createContext({
+                posElements: new Map([[7, elements]]), highlighted: [], sourcePositions() { /* */ },
+                getHighlightColor: () => '#f60',
+                // The copies, as the page's bar-boxes would tell them: one a bar, in bar order.
+                clusterInstances: (m: ReturnType<typeof el>[]) => {
+                    const bars = [...new Set(m.map(e => e.bar))].sort((a, b) => a - b);
+                    return bars.map(b => m.filter(e => e.bar === b));
+                },
+            });
+            new vm.Script(body).runInContext(context);
+            return (new vm.Script(`highlightPositions([{ pos: 7, occ: ${occ} }]).map(e => e.name)`).runInContext(context) as string[]).slice().map(String).join('|').split('|');
+        };
+        // The name in bar 2, its ring with it, its memo pushed over bar 1.
+        const marked = [el('Dm', 2, false), el('7', 2, false), el('ring', 2, true), el('memo', 1, true)];
+        assert.deepEqual(run(marked, 0), ['Dm', '7', 'ring', 'memo']);
+        // A phrase played twice (two copies of the name): the copy sounding, without the mark.
+        const twice = [el('C', 1, false), el('C', 5, false), el('memo', 0, true)];
+        assert.deepEqual(run(twice, 1), ['C']);
+        assert.deepEqual(run([el('G', 3, false), el('ring', 3, true)], 0), ['G', 'ring']);
+    });
+
     // The recording beside a chart sounds with the score (owner's decision 2026-11-16,
     // docs/recording-design.md §1 7): a line of the practice menu's Parts and the recording panel's
     // top line; no waveform button in the toolbar.

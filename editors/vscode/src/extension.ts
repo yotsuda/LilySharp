@@ -7212,8 +7212,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     // (plus dots/accidentals) shares one data-pos, so slicing
                     // by raw element index lit a single head and left the
                     // rest of the chord dark. Cluster by geometry instead.
-                    const instances = clusterInstances(matches);
-                    matches = instances[Math.min(occ, instances.length - 1)] || matches;
+                    // An @todo mark's pieces (data-todo: its ring, and a memo that may
+                    // stand bars away) share the data-pos too but are no copy of the
+                    // music: counted, a memo moved over another bar was "copy 0" and lit
+                    // alone, the chord name or head left dark (owner's report 2026-11-16).
+                    // So the copies are counted from the music alone; the mark lights
+                    // with it where there is one copy only.
+                    const marks = matches.filter(el => el.hasAttribute('data-todo'));
+                    const music = marks.length > 0 && marks.length < matches.length
+                        ? matches.filter(el => !el.hasAttribute('data-todo')) : matches;
+                    const instances = clusterInstances(music);
+                    const picked = instances[Math.min(occ, instances.length - 1)] || music;
+                    matches = music !== matches && instances.length === 1 ? picked.concat(marks) : picked;
                 }
                 painted.push.apply(painted, matches);
                 highlighted.push.apply(highlighted, matches);
