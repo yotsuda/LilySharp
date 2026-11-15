@@ -41,7 +41,9 @@ Transcribe!（Seventh String）と同じ体験を Lily# のプレビューで（
 ## 2. 入口（メニュー）
 
 - 録音を `.lys` に変換するメニューは **Lily# が持つ**（オーナー決定 2026-11-15・第1264: 名前「Convert Recording to Lily# (.lys)…」・
-  Windows 以外では出さない・着手は Dettato の D3 で呼び出しの形が固まってから）。今の Dettato の拡張の
+  Windows 以外では出さない）。**同日・第1284 のオーナー決定で変えた**: D3 を待たずに今作る・Windows では Dettato が無くても出し、
+  実行したときに無ければ拡張のインストールを勧める（Calamo の「Convert Image/PDF…」と同じ形）。実装は `src/dettato.ts`・`dettatoCore.ts`（`da1d1caac`）。
+  ⚠️ `yotsuda.dettato` は Marketplace に出ていない（2026-11-15）＝「Install Dettato」は今は拡張の検索を開くだけ。今の Dettato の拡張の
   `dettato.transcribe`「Dettato: Transcribe Recording to Lily# Chord Chart (.lys)… (Preview)」は仮置きで、
   Lily# のメニューが出た版で外してもらう（REQUESTS で知らせる）。
 - 音源ファイルの右クリックとコマンドパレットに 2 つ:
