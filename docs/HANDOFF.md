@@ -89,6 +89,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
 - **★★★ オーナー決定 2026-11-15（第1264・6 件）**: ①〜④ と、⑥ 評価 4 の案（Lab `p1227/proposals-eval4.md`）の「作る」5 件＝6・7・8-1・2・4 は済み（第1264〜第1272・設計と実際の形は `docs/eval4-features-design.md`。6 の「歌い手が × の音を歌わない」だけ未＝同 §6 の末尾）／⑤ Dettato: 依頼 1＝作る（D3 で形が固まってから・名前「Convert Recording to Lily# (.lys)…」・Windows 以外はメニューを出さない）・依頼 2＝今は作らない（REQUESTS の行に書いた＝Dettato の repo では未 commit）／⑥ の**後で**＝3（`pass 2 { }`・文字は英語固定）・1（持ち替え・「to X」は自動で刷らない）・10（まず診断だけ）＝作る前に設計メモ・**着手してよい**（オーナー 2026-11-15 第1278「ほかに着手すべき候補がなければすぐ着手して良い」。10 の診断は LYS0046 で済み＝残りは 3 → 1）／**見送り**＝5・8-2〜4・9。**次の一手**: 下の行の Lab `sessions/p1242/leftovers.md` の欠陥から（第1272 が見つけた 2 件＝`lysc xml` の part header の `key` と、MusicXML の読み込みの `<transpose>` は第1273・第1275 で閉じた。一覧の先頭から順に）。
+- **★ 録音を聴きながら直す（Dettato #4・オーナーの希望 2026-11-15）＝`docs/recording-design.md`**: S1〜S4 と §1 7（楽譜と録音を同時に）は済み（§1.1 第1284・第1285）。**次は S5**（帯・`Mark Bar Line Here`・ドラッグ・`byHand`）→ S6（CHANGELOG・Dettato への返事）。耳の確認は `MANUAL-CHECKS` §3.9（オーナー）。
 - **★ 反復とナビ記号を section の音楽にも書く（オーナー提案 2026-11-14・第1243＝第1249 で段 0〜8 が済み・LYS1034 は phrase だけ）**: 全部 `docs/inline-repeat-design.md`（規則 §3・段取り §4・未決 §6・経過 §7・エディタのコマンド §8）。オーナー決定（2026-11-14）: 対は form に組み立てた列で見る／`| |:` は空小節のまま／歌詞の verse は 5 規則／書き出しはなるべく form 側（Q2）。**次**（順は上から。歌詞の規則 3 と警告の 4 種目は第1253、ending・ナビ記号を全パートに書くコマンドと LYS1070 の quick fix は第1254 で済み＝§1.1）: ⑴ この島（反復とナビ記号を音楽に書く）の「次」は無い＝判断待ちも残りの形も 0。step キー・`PlayForm` の一本化（第1255）、3 番括弧＝3 回（form は第1256・音楽は第1257・コードの行は第1258）は済み。次の一手は下の積み残しから（オーナーに訊く）。段 9（読み込みと OMR の書き出し）は Q2 の決定で今の形のまま＝作業なし。⚠️ Calamo と Dettato の REQUESTS への知らせ（Q2「本体が出てから」）は未＝release のときに書く。実機は `MANUAL-CHECKS` 第1243・第1249・第1253・第1254・第1255。
 - **★ 歌詞と歌い手の文法の作り直し（オーナー決定 2026-11-10・第1217）**: `docs/lyrics-singer-design.md` が全部（§9 が作業順）。①②③④は済み（§1.1 第1217〜第1219）。⚠️ ④の `ん` の聞こえ方はオーナーの実聴待ち（`MANUAL-CHECKS` 第1219）。Cantoria の master は zh／ko を歌う（VSIX の入れ直しはオーナー）。`singer` は 1 行 1 声で score の中にも書ける（第1220）。古い書き方を案内する専用エラーは作らない（オーナー指示）。設計 §10「パート自身の歌詞」（`part sop { lyrics words }`）は第1222 で実装（§1.1 第1222・実機は `MANUAL-CHECKS` 第1222）＝§9 は全部済み。**次の一手の指示はまだ無い＝下の積み残しから選ぶならオーナーに訊く**。積み残し: Calamo の生成コードが `lyrics … sings` のまま（`docs\repro\REQUESTS.md` に連絡済み・Calamo 側は未 commit）／実機確認（`MANUAL-CHECKS` 第1217）／perf ベンチ／コーパス外のオーナーのファイル（Downloads の Tabidachi・Rose Garden など）は未移行で、`LilySharp-Lab\sessions\p1217\migrate\migrate.ps1 -Lys -Files` で書き換えられる／Rose Garden のオクターブ変換はオーナーの回答待ち。
 - **★ 歌詞のある譜表では強弱記号とヘアピンを譜表の上に（オーナー決定 2026-11-11）＝設計 `docs/dynamics-above-lyrics-design.md` §5 の 1〜6 は全部済み（第1224〜第1225・§1.1）**。**D3 は LilyPond の規則に替えた（オーナー決定 2026-11-11「LP に合わせて」）**＝向きを書いた記号が*線*の向きを決め、同じ線の後続（向きを書いていない記号）は従う。歌詞のない譜表でも同じ（`c@f.up@decresc … g@p` の p は上）。残りはオーナー: 実機のプレビュー（`MANUAL-CHECKS` 第1225）と release（CHANGELOG は 2 つとも `## Unreleased`・`[engraving]`）。残る穴: 2 声部の譜表で上の声部のヘアピンの線に下の声部の同じ拍の強弱記号も乗る（ヘアピンが声部を持たない既知の穴＝`DynamicAlignEngraver` の注 ⑵・Lab `p1225/dyn/out/vv.png`）。線の向きは第1260 で声部ごとにした。**次の一手の指示はまだ無い＝上の行の積み残しから選ぶならオーナーに訊く**。
@@ -141,6 +142,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1285セッション（2026-11-16・YT-DELL2）
+
+base `a902491d1`・開始時 full 17377 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17380（Lab `p1285` の `run1.trx`）。REQUESTS: Calamo の open 0・**Dettato #5 `open`**（m4a の `iTunSMPB`）＝先に閉じた。
+- **Dettato #5**: `RecordingDecoder.Mp4Lead` は編集リストが無いとき `Priming()`（Dettato の `Audio.cs` の写し＝`iTunSMPB` の 2 つ目の数・AAC は 2112）。網 `RecordingDecoderTests` に作った m4a 2 本（編集リストなし＝0x840・ありは編集リストが勝つ）・毒（`return 0`）で赤。`0a083f8cb`。Dettato の REQUESTS の行は `fixed`（Dettato の repo では未 commit）。mp3 は Lily# が復号しないので `Mp3Lead` は触らず。
+- **S4 と §1 7（楽譜と録音を同時に）**: 形は `docs/recording-design.md` §5 の「S4 の実際の形」。Parts の最後に Recording（トグル＋フェーダー）・録音パネルの一番上にも同じ 2 つ・波形のボタンは外した。オンで小節の数が合えば楽譜の音符と拍を小節ごとに録音の秒へ写し（`recordingCore` の `timeWarp`／`warpNotes`／`warpBeats`／`warpTime`／`unwarpTime`）、録音は楽譜の `AudioContext` の時刻で鳴る（webview の `startRecordingAlong`・`RecordingPlayer.play(from, s, { tempo, at })`・`setLevel`・`presetLoop`）。`recordingPlan(s, tempo)` が Tempo を掛ける（連動の録音を別のテンポで鳴らすときは伸縮）。合わない・小節なしは録音だけ（`recordingAlone`）。網: `recordingCore.test.ts` に 3 本・`previewRanges.test.ts` に 1 本（配線と `startRecordingAlong` を vm で）・既存の配線の網 4 行を新しい形に。拡張の網 1175 / skip 1。**実物の VS Code（CDP・Lab `p1285/rec-e2e`）**: 最初の音符 1.0 s・2 小節目の 4 分 0.625 s 間隔・録音と楽譜のずれ 0・80% で録音 0.82 s/s・オフで録音だけ止まり楽譜は続く・オンで同じ所から・フェーダー 50% と Reset・ループは録音も 1〜10 s を巡る（150%）・3 小節に減らすと録音だけ「The score plays 4 bars and the recording places 3」・エラー 0。`MANUAL-CHECKS` §3.9 に耳の確認。`d47a76222`。
+- **次の一手**: S5（帯・`Mark Bar Line Here`・ドラッグ・`byHand`）→ S6（CHANGELOG・Dettato への返事）。残る穴 3 つ（歌い手の声・MIDI 出力・2 片の範囲）は設計 §5 の末尾＝要るならオーナーに訊く。§1 7 の未決（パネルの速さで楽譜も動く）は Claude の案のまま実装した。
+- 終了時 full 17377 合格 / 1 失敗（README）/ skip 2 / 合計 17380（`run2.trx`）。§7 7.5: Core の差 0 行。
+
+## 以下は第1284セッションの経緯
+
 ### 1.1 第1284セッション（2026-11-15・YT-DELL2）
 
 base `1cd52d6d7`・開始時 full 17372 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17375（Lab `p1284` の `run1.trx`）。REQUESTS は**手で見た**: Calamo の open／question 0・Dettato は #1・#4 が `question`（Lily# が返事を書いた側＝Dettato の確認待ち）。
@@ -151,18 +162,6 @@ base `1cd52d6d7`・開始時 full 17372 合格 / 1 失敗（`ReadmeSampleTests`�
 - オーナー決定（同日）で変換メニュー「Convert Recording to Lily# (.lys)…」を今作った（Dettato が無ければインストールを勧める・`da1d1caac`・実物で 2 通り確認＝Lab `p1284/convert-e2e`）。
 - オーナー決定（2026-11-16）: 楽譜と録音を同時に鳴らす（Practice の Parts に Recording の行＝トグル＋フェーダー、録音パネルの一番上にも同じもの・波形のボタンは外す）＝`docs/recording-design.md` §1 7。S4 と一緒に作る。
 - **次: S4**＝Play は今は録音の頭から（`playRecordingFrom(0)`）。楽譜の小節・選択から鳴らす・選んだ範囲のループ（`setLoop`）・再生位置の小節を追う（`scoreTimeAt`）。手がかり: 選択は `selectedBarsSpan()`（ソースの位置）・小節頭は `rawBeats`／`rawBarEnd`（`playbackData` の後に入る）・追従は `followAlong`。その後 S5（帯・小節を打つ）・S6（文書・Dettato への返事・CHANGELOG）。⚠️ Release 前に `MANUAL-CHECKS` に耳の確認を足す。
-
-## 以下は第1283セッションの経緯
-
-### 1.1 第1283セッション（2026-11-15・YT-DELL2）
-
-base `1f9eb6551`・開始時 full 17364 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17367（Lab `p1283` の `run1.trx`）。⚠️ REQUESTS は開始時に**見ていなかった**（`-Start` は REQUESTS を読まない＝手で見る）。Dettato に **#4 `open`**（2026-11-15 23:07・録音を聴きながら直す＝Transcribe! の体験・オーナーの希望・便り `Dettato\docs\repro\lilysharp-requests-2026-11-15-listening.md`）が来ていた。**オーナー決定（同日）は `docs/recording-design.md` §1**（紐づけは隣のファイルだけ・音源が無ければ UI 無し・マークはヘッダの下の畳める帯・変換メニューは Lily# が持つ）＝次は同 §3 の未決。
-**Lab `p1242/leftovers.md` の先頭から**（訊かずに着手してよい分）。
-- 先頭「chords だけの段で全部が空の小節の段が真っ白」は第1281 の一線譜で消えていた（`p1283/row/r0.png`＝5〜8 小節に一線と小節線）＝確かめて閉じた。
-- 次の「`.ly` は小節線の無い ending に `\alternative` を書かない」を閉じた: 和音の行の `]` が小節を閉じても、`.ly` の和音の流れには小節線が無く、ending の終わりの場所が見つからなかった（`|: D | G | [1. A7] :| [2. D]` で D が反復の後に出て、「行が反復記号を運ばない」の警告が 2 回）。`ChordBarsOf` は `]` が閉じた小節の後に普通の小節線を書く／`CarriesTheScoresSigns` はその場所を「立つ」と数える（`VoiceBarLines.RowEndClosedBars`。`Of` は LYS1070 とエディタが読むので触らない）。LilyPond 2.26 で 4 冊とも警告なし（`p1283/row/e2`・`e4`〜`e6`）。網 `ChordRowEndingBarTests` に 6 例・既存の twin の網は `a1:7 | d1` に。毒 2 本とも赤（`p1283/poisons.ps1`）。`]` を小節線の前に書かない本の `.ly` は前後で同じ（3 冊・`p1283/lycmp`）・オーナーの報告の再現 `r0` だけが `\alternative` を得た（LilyPond 警告なし）。commit `3898b6c9c`。
-- 第1279 の毒で緑だった R12（`SectionSigns`）・R13（`VoiceBarLines`）に網: 行の `[2. D] G |:` と part の 5 小節目の後の `|:` が合う／1 小節ずれると LYS1070（`a14d42255`・毒は `p1283/poisons2.ps1`＝R13 は新しい網、R12 は上の `.ly` の網の空の 2 番が赤）。MusicXML の `RowBars`（R10）は観測者なしのまま。
-- **次の一手**: §1.0 のとおり leftovers の欠陥を先頭から＝次は「第1242 が見つけて残したもの」（Dettato の 2 行は決定済みで飛ばす。`KeyEstimator` の弱起・`.ly` の和音の行の格子と section の拍子・`RowsAndLanesEnd` の観測者・小節の途中の `partial`＝どれも未測定。`attachedChordPart` の腕を消すのはオーナー承認）。一線譜はオーナーの目視待ちのまま。
-- 終了時 full 17372 合格 / 1 失敗（README）/ skip 2 / 合計 17375（`run3.trx`）。§7 7.5: Core +49 行は配管（小節線 1 本と数え）＝LP の近似ではないので REF／OWN 0。
 
 ## 2. 開いている作業
 

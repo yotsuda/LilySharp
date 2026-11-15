@@ -271,6 +271,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1283セッションの経緯
+
+### 1.1 第1283セッション（2026-11-15・YT-DELL2）
+
+base `1f9eb6551`・開始時 full 17364 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17367（Lab `p1283` の `run1.trx`）。⚠️ REQUESTS は開始時に**見ていなかった**（`-Start` は REQUESTS を読まない＝手で見る）。Dettato に **#4 `open`**（2026-11-15 23:07・録音を聴きながら直す＝Transcribe! の体験・オーナーの希望・便り `Dettato\docs\repro\lilysharp-requests-2026-11-15-listening.md`）が来ていた。**オーナー決定（同日）は `docs/recording-design.md` §1**（紐づけは隣のファイルだけ・音源が無ければ UI 無し・マークはヘッダの下の畳める帯・変換メニューは Lily# が持つ）＝次は同 §3 の未決。
+**Lab `p1242/leftovers.md` の先頭から**（訊かずに着手してよい分）。
+- 先頭「chords だけの段で全部が空の小節の段が真っ白」は第1281 の一線譜で消えていた（`p1283/row/r0.png`＝5〜8 小節に一線と小節線）＝確かめて閉じた。
+- 次の「`.ly` は小節線の無い ending に `\alternative` を書かない」を閉じた: 和音の行の `]` が小節を閉じても、`.ly` の和音の流れには小節線が無く、ending の終わりの場所が見つからなかった（`|: D | G | [1. A7] :| [2. D]` で D が反復の後に出て、「行が反復記号を運ばない」の警告が 2 回）。`ChordBarsOf` は `]` が閉じた小節の後に普通の小節線を書く／`CarriesTheScoresSigns` はその場所を「立つ」と数える（`VoiceBarLines.RowEndClosedBars`。`Of` は LYS1070 とエディタが読むので触らない）。LilyPond 2.26 で 4 冊とも警告なし（`p1283/row/e2`・`e4`〜`e6`）。網 `ChordRowEndingBarTests` に 6 例・既存の twin の網は `a1:7 | d1` に。毒 2 本とも赤（`p1283/poisons.ps1`）。`]` を小節線の前に書かない本の `.ly` は前後で同じ（3 冊・`p1283/lycmp`）・オーナーの報告の再現 `r0` だけが `\alternative` を得た（LilyPond 警告なし）。commit `3898b6c9c`。
+- 第1279 の毒で緑だった R12（`SectionSigns`）・R13（`VoiceBarLines`）に網: 行の `[2. D] G |:` と part の 5 小節目の後の `|:` が合う／1 小節ずれると LYS1070（`a14d42255`・毒は `p1283/poisons2.ps1`＝R13 は新しい網、R12 は上の `.ly` の網の空の 2 番が赤）。MusicXML の `RowBars`（R10）は観測者なしのまま。
+- **次の一手**: §1.0 のとおり leftovers の欠陥を先頭から＝次は「第1242 が見つけて残したもの」（Dettato の 2 行は決定済みで飛ばす。`KeyEstimator` の弱起・`.ly` の和音の行の格子と section の拍子・`RowsAndLanesEnd` の観測者・小節の途中の `partial`＝どれも未測定。`attachedChordPart` の腕を消すのはオーナー承認）。一線譜はオーナーの目視待ちのまま。
+- 終了時 full 17372 合格 / 1 失敗（README）/ skip 2 / 合計 17375（`run3.trx`）。§7 7.5: Core +49 行は配管（小節線 1 本と数え）＝LP の近似ではないので REF／OWN 0。
+
 ## 以下は第1282セッションの経緯
 
 ### 1.1 第1282セッション（2026-11-15・YT-DELL2）
