@@ -997,7 +997,7 @@ export function activate(context: vscode.ExtensionContext) {
         // Dettato writes the chart (and the file beside it) from a recording; without it the
         // command offers its extension (owner's decision 2026-11-15).
         vscode.commands.registerCommand('lilysharp.convertRecording', (uri?: vscode.Uri) =>
-            convertRecording(uri instanceof vscode.Uri ? uri : undefined, outputChannel,
+            convertRecording(context, uri instanceof vscode.Uri ? uri : undefined, outputChannel,
                 () => vscode.commands.executeCommand('lilysharp.openPreviewToSide'))),
         followRenames(),
         watchRecordings(context),

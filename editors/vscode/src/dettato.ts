@@ -24,7 +24,8 @@ import * as cp from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import {
-    DETTATO_EXTENSION_ID, DettatoLocation, chartForConversion, dettatoArgs, dettatoFailure, dettatoTooOld, locateDettato,
+    DETTATO_EXTENSION_ID, DettatoLocation, DettatoVersion, chartForConversion, dettatoArgs, dettatoFailure, judgeDettato,
+    locateDettato, parseDettatoVersion,
 } from './dettatoCore';
 
 async function dettatoExports(): Promise<unknown> {
@@ -53,15 +54,37 @@ async function installDettato(): Promise<void> {
     }
 }
 
-/** Says the reader is missing and offers its extension. */
+/** Says the reader is missing and offers its extension (as offerOmrExtension does for Calamo). */
 export async function offerDettato(): Promise<void> {
     const install = 'Install Dettato';
     const choice = await vscode.window.showInformationMessage(
-        'Lily#: converting a recording to a chord chart needs the Dettato extension (Preview, Windows x64). Install it?',
+        'Lily#: converting a recording needs the Dettato extension (Preview, Windows). Install it?',
         install);
     if (choice === install) {
         await installDettato();
     }
+}
+
+/** Offers the reader's update (offerOmrUpdate's twin). True when the person took it. */
+async function offerDettatoUpdate(text: string): Promise<boolean> {
+    const update = 'Update Dettato';
+    if (await vscode.window.showWarningMessage(`Lily#: ${text}`, update) !== update) {
+        return false;
+    }
+    await installDettato();
+    return true;
+}
+
+/** Once per install: the reader is a Preview, so its marks are where to look first (noteOmrBeta's twin). */
+async function noteDettatoPreview(context: vscode.ExtensionContext): Promise<void> {
+    const key = 'dettato.previewNoted';
+    if (context.globalState.get<boolean>(key)) {
+        return;
+    }
+    await context.globalState.update(key, true);
+    void vscode.window.showInformationMessage(
+        'Lily#: Dettato is a Preview. It marks every chord it is unsure of with @todo — '
+        + 'check those against the recording (the preview plays it) before trusting the chart.');
 }
 
 /** Keeps `lilysharp.dettatoAvailable` true to what is installed (the name is shared with
@@ -105,24 +128,23 @@ function run(exe: string, args: string[], output: vscode.OutputChannel,
     });
 }
 
-/** Converts a recording (right-clicked, or chosen) into a chart beside it and opens the chart. */
-export async function convertRecording(uri: vscode.Uri | undefined, output: vscode.OutputChannel,
-    openPreview?: (chart: vscode.Uri) => Thenable<unknown>): Promise<void> {
-    if (process.platform !== 'win32' || process.arch !== 'x64') {
-        void vscode.window.showErrorMessage('Lily#: converting a recording needs Dettato, which runs on Windows x64 only.');
-        return;
-    }
+/** Asks the reader its version (`--version --json`), as Calamo is asked. */
+function askVersion(exe: string): Promise<DettatoVersion | undefined> {
+    return new Promise(resolve => cp.execFile(exe, ['--version', '--json'], { timeout: 20000, windowsHide: true },
+        (err, stdout) => resolve(err ? undefined : parseDettatoVersion(String(stdout)))));
+}
+
+/**
+ * Converts a recording (right-clicked, or chosen) into a chart and opens it. The steps and the
+ * words follow "Convert Image/PDF to Lily# (.lys)…" (omrImport.ts importFromImage): the reader
+ * first (offered when missing, before any file is chosen), its version asked, the folder beside
+ * the recording unless it cannot be written, the progress cancellable, the same failures.
+ */
+export async function convertRecording(context: vscode.ExtensionContext, uri: vscode.Uri | undefined,
+    output: vscode.OutputChannel, openPreview?: (chart: vscode.Uri) => Thenable<unknown>): Promise<void> {
     const reader = await findDettato();
     if (!reader) {
         await offerDettato();
-        return;
-    }
-    const old = dettatoTooOld(reader);
-    if (old) {
-        const update = 'Update Dettato';
-        if (await vscode.window.showWarningMessage(`Lily#: Dettato ${reader.version} ${old}.`, update) === update) {
-            await installDettato();
-        }
         return;
     }
     if (!uri) {
@@ -135,13 +157,41 @@ export async function convertRecording(uri: vscode.Uri | undefined, output: vsco
         }
         uri = picked[0];
     }
+    output.appendLine(`Dettato reader (${reader.source}): ${reader.path}`);
+    const v = await askVersion(reader.path);
+    if (!v) {
+        void vscode.window.showErrorMessage(`Lily#: the Dettato reader at ${reader.path} did not answer '--version --json'.`);
+        return;
+    }
+    const judged = judgeDettato(v);
+    if (judged.kind === 'updateLilySharp') {
+        void vscode.window.showErrorMessage(`Lily#: ${judged.text}`);
+        return;
+    }
+    if (judged.kind === 'offerUpdate' && (await offerDettatoUpdate(judged.text) || !judged.goesOn)) {
+        return;
+    }
+    const inputs = v.inputs ?? [...reader.inputs];
     const kind = path.extname(uri.fsPath).slice(1).toLowerCase();
-    if (uri.scheme !== 'file' || !reader.inputs.includes(kind)) {
-        void vscode.window.showErrorMessage(`Lily#: Dettato reads a recording on this computer (${reader.inputs.join(', ')}).`);
+    if (uri.scheme !== 'file' || !inputs.includes(kind)) {
+        void vscode.window.showErrorMessage(`Lily#: Dettato reads a recording on this computer (${inputs.join(', ')}).`);
         return;
     }
     const recording = uri.fsPath;
-    const chart = chartForConversion(recording);
+    // Beside the recording, unless that folder cannot be written: then ask (as Calamo's read does).
+    let chart = chartForConversion(recording);
+    try {
+        await fs.promises.access(path.dirname(chart), fs.constants.W_OK);
+    } catch {
+        const folder = await vscode.window.showOpenDialog({
+            canSelectFiles: false, canSelectFolders: true, openLabel: 'Write the chart here',
+            title: `Lily#: ${path.dirname(chart)} cannot be written — where should the chart go?`,
+        });
+        if (!folder || folder.length === 0) {
+            return;
+        }
+        chart = path.join(folder[0].fsPath, path.basename(chart));
+    }
     // A chart beside the recording may hold the person's corrections: never written over unasked.
     let replace = false;
     if (fs.existsSync(chart)) {
@@ -153,28 +203,37 @@ export async function convertRecording(uri: vscode.Uri | undefined, output: vsco
         }
         replace = true;
     }
-    output.appendLine(`dettato ${dettatoArgs(recording, chart, replace).join(' ')}`);
+    const name = path.basename(recording);
+    void noteDettatoPreview(context);
+    output.appendLine(`Dettato ${v.version}: dettato ${dettatoArgs(recording, chart, replace).join(' ')}`);
+    let done: { code: number | null; stderr: string } | undefined;
     try {
-        const done = await vscode.window.withProgress(
-            { location: vscode.ProgressLocation.Notification, title: `Lily#: listening to ${path.basename(recording)}`, cancellable: true },
+        done = await vscode.window.withProgress(
+            { location: vscode.ProgressLocation.Notification, title: `Lily#: reading ${name}`, cancellable: true },
             (progress, token) => run(reader.path, dettatoArgs(recording, chart, replace), output, progress, token));
-        if (done === undefined) {
-            return;
-        }
-        if (done.code !== 0) {
-            const choice = await vscode.window.showErrorMessage(dettatoFailure(done.code, done.stderr), 'Show Log');
-            if (choice === 'Show Log') {
-                output.show(true);
-            }
-            return;
-        }
-        const doc = await vscode.workspace.openTextDocument(chart);
-        await vscode.window.showTextDocument(doc);
-        if (openPreview) {
-            await openPreview(doc.uri);
-        }
     } catch (e) {
-        output.appendLine(String(e));
-        void vscode.window.showErrorMessage(`Lily#: Dettato could not be run: ${(e as Error).message ?? e}`);
+        void vscode.window.showErrorMessage(`Lily#: the Dettato reader could not start: ${(e as Error).message ?? e}`);
+        return;
+    }
+    if (done === undefined) {
+        void vscode.window.showInformationMessage(`Lily#: reading ${name} was stopped.`);
+        return;
+    }
+    if (done.code !== 0 || !fs.existsSync(chart)) {
+        const failure = done.code !== 0 ? dettatoFailure(done.code, done.stderr, name)
+            : { text: 'Lily#: the Dettato reader finished without writing a chart.', showOutput: true };
+        if (failure.showOutput) {
+            void vscode.window.showErrorMessage(failure.text, 'Show Output')
+                .then(choice => { if (choice === 'Show Output') { output.show(true); } });
+        } else {
+            void vscode.window.showErrorMessage(failure.text);
+        }
+        return;
+    }
+    // The chart and its preview beside it (as Calamo's read opens the score).
+    const doc = await vscode.workspace.openTextDocument(chart);
+    await vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
+    if (openPreview) {
+        await openPreview(doc.uri);
     }
 }

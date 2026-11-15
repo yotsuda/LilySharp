@@ -1151,7 +1151,7 @@
         },
         {
           "command": "lilysharp.convertRecording",
-          "when": "isWindows"
+          "when": "lilysharp.dettatoAvailable || isWindows"
         },
         {
           "command": "lilysharp.showScan",
@@ -1351,7 +1351,7 @@
         },
         {
           "command": "lilysharp.convertRecording",
-          "when": "isWindows && resourceExtname =~ /^\\.(wav|mp3|m4a|mp4|aac|flac|wma)$/i",
+          "when": "(lilysharp.dettatoAvailable || isWindows) && resourceExtname =~ /^\\.(wav|mp3|m4a|mp4|aac|flac|wma)$/i",
           "group": "7_modification"
         },
         {

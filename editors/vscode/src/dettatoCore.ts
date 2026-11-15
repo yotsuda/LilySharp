@@ -85,16 +85,38 @@ function compareVersions(a: string, b: string): number {
     return 0;
 }
 
-/** Why the extension's reader is too old for this Lily#, or undefined when it is fine (or when
- *  nothing says its version: a reader named by the variable). */
-export function dettatoTooOld(loc: DettatoLocation): string | undefined {
-    if (loc.protocol !== undefined && (loc.protocol < DETTATO_PROTOCOLS.min || loc.protocol > DETTATO_PROTOCOLS.max)) {
-        return `speaks protocol ${loc.protocol}; this Lily# speaks ${DETTATO_PROTOCOLS.min}`;
+/** What `dettato --version --json` answered: `{"version":"0.2.0","protocol":1,"inputs":[…]}`. */
+export interface DettatoVersion { version: string; protocol: number; inputs?: string[] }
+
+export function parseDettatoVersion(stdout: string): DettatoVersion | undefined {
+    try {
+        const o = JSON.parse(stdout.trim());
+        if (typeof o?.version !== 'string' || typeof o?.protocol !== 'number') {
+            return undefined;
+        }
+        const inputs = Array.isArray(o.inputs) && o.inputs.every((x: unknown) => typeof x === 'string')
+            ? (o.inputs as string[]).map(x => x.toLowerCase()) : undefined;
+        return { version: o.version, protocol: o.protocol, inputs };
+    } catch {
+        return undefined;
     }
-    if (loc.version !== undefined && compareVersions(loc.version, DETTATO_MIN_VERSION) < 0) {
-        return `is older than this Lily# is written for (${DETTATO_MIN_VERSION})`;
+}
+
+/** What to do with the reader's answer — as Calamo's is judged (omrImport.ts): a protocol newer
+ *  than this Lily# speaks stops with "Update Lily#"; an older protocol offers the reader's update
+ *  and stops; a version under the floor offers the update and goes on when it is declined. */
+export function judgeDettato(v: DettatoVersion):
+    { kind: 'ok' } | { kind: 'updateLilySharp'; text: string } | { kind: 'offerUpdate'; text: string; goesOn: boolean } {
+    if (v.protocol > DETTATO_PROTOCOLS.max) {
+        return { kind: 'updateLilySharp', text: `Dettato ${v.version} speaks protocol ${v.protocol}; this Lily# speaks ${DETTATO_PROTOCOLS.min}–${DETTATO_PROTOCOLS.max}. Update Lily#.` };
     }
-    return undefined;
+    if (v.protocol < DETTATO_PROTOCOLS.min) {
+        return { kind: 'offerUpdate', goesOn: false, text: `Dettato ${v.version} speaks protocol ${v.protocol}; this Lily# speaks ${DETTATO_PROTOCOLS.min}–${DETTATO_PROTOCOLS.max}. Update Dettato?` };
+    }
+    if (compareVersions(v.version, DETTATO_MIN_VERSION) < 0) {
+        return { kind: 'offerUpdate', goesOn: true, text: `Dettato ${v.version} is older than this Lily# is written for (${DETTATO_MIN_VERSION} or newer). Update it? The conversion goes on with this one otherwise.` };
+    }
+    return { kind: 'ok' };
 }
 
 /** The call: the recording, the chart to write, and `--force` only when the person agreed to
@@ -110,11 +132,15 @@ export function chartForConversion(recording: string): string {
     return (dot > slash ? recording.slice(0, dot) : recording) + '.lys';
 }
 
-/** What to tell the person when the reader did not write the chart: the reason it gave on its
- *  last line (`dettato: <reason>`), as it gave it — a broken reader (exit 3) said to be one. */
-export function dettatoFailure(code: number | null, stderr: string): string {
+/** What to tell the person when the reader did not write the chart, in the words Calamo's failures
+ *  use (omrImport.ts): the recording could not be read (exit 1, 2) with the reason the reader gave
+ *  on its last line (`dettato: <reason>`), or the reader itself failed (exit 3, or anything else) —
+ *  that one with Show Output. */
+export function dettatoFailure(code: number | null, stderr: string, name: string): { text: string; showOutput: boolean } {
     const lines = stderr.split(/\r?\n/).map(l => l.trim()).filter(l => l !== '');
-    const last = lines.length > 0 ? lines[lines.length - 1].replace(/^dettato:\s*/, '') : '';
-    const reason = last || `it stopped with exit code ${code}`;
-    return code === 3 ? `Dettato's reader is broken: ${reason}` : `Dettato: ${reason}`;
+    const reason = lines.length > 0 ? lines[lines.length - 1].replace(/^dettato:\s*/, '') : '';
+    if (code === 1 || code === 2) {
+        return { text: `Lily#: ${name} cannot be read${reason ? `: ${reason}` : '.'}`, showOutput: false };
+    }
+    return { text: `Lily#: the Dettato reader failed (exit code ${code})${reason ? `: ${reason}` : '.'}`, showOutput: true };
 }

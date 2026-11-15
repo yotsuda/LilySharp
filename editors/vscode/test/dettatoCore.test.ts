@@ -19,7 +19,7 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
-    DETTATO_INPUTS, chartForConversion, dettatoArgs, dettatoFailure, dettatoTooOld, locateDettato,
+    DETTATO_INPUTS, chartForConversion, dettatoArgs, dettatoFailure, judgeDettato, locateDettato, parseDettatoVersion,
 } from '../src/dettatoCore';
 
 describe('Dettato, the recording reader', () => {
@@ -34,13 +34,25 @@ describe('Dettato, the recording reader', () => {
         assert.equal(locateDettato({}, { version: '1' }), undefined);
     });
 
-    it('is offered its update when older than 0.2.0 or speaking another protocol', () => {
-        const at = (version?: string, protocol?: number) => ({ path: 'p', source: 'extension' as const, version, protocol, inputs: [] });
-        assert.equal(dettatoTooOld(at('0.2.0', 1)), undefined);
-        assert.equal(dettatoTooOld(at('0.10.0', 1)), undefined);
-        assert.match(dettatoTooOld(at('0.1.0', 1))!, /older/);
-        assert.match(dettatoTooOld(at('0.3.0', 2))!, /protocol 2/);
-        assert.equal(dettatoTooOld({ path: 'p', source: 'environment', inputs: [] }), undefined);
+    it('reads its --version --json', () => {
+        assert.deepEqual(parseDettatoVersion('{"version":"0.2.1","protocol":1,"commands":["read"],"inputs":["WAV","mp3"]}\n'),
+            { version: '0.2.1', protocol: 1, inputs: ['wav', 'mp3'] });
+        assert.deepEqual(parseDettatoVersion('{"version":"0.2.0","protocol":1}'), { version: '0.2.0', protocol: 1, inputs: undefined });
+        assert.equal(parseDettatoVersion('0.2.0'), undefined);
+        assert.equal(parseDettatoVersion('{"version":2}'), undefined);
+    });
+
+    it('is judged as Calamo is: a newer protocol asks to update Lily#, an older one or an old version offers its update', () => {
+        assert.deepEqual(judgeDettato({ version: '0.2.0', protocol: 1 }), { kind: 'ok' });
+        assert.deepEqual(judgeDettato({ version: '0.10.0', protocol: 1 }), { kind: 'ok' });
+        const newer = judgeDettato({ version: '0.5.0', protocol: 2 });
+        assert.equal(newer.kind, 'updateLilySharp');
+        assert.match((newer as { text: string }).text, /Update Lily#\.$/);
+        const older = judgeDettato({ version: '0.1.0', protocol: 0 });
+        assert.deepEqual([older.kind, (older as { goesOn: boolean }).goesOn], ['offerUpdate', false]);
+        const old = judgeDettato({ version: '0.1.9', protocol: 1 });
+        assert.deepEqual([old.kind, (old as { goesOn: boolean }).goesOn], ['offerUpdate', true]);
+        assert.match((old as { text: string }).text, /goes on with this one otherwise/);
     });
 
     it('is called with the recording and the chart, --force only when the person agreed to replace it', () => {
@@ -50,11 +62,12 @@ describe('Dettato, the recording reader', () => {
         assert.equal(chartForConversion('/a.b/rec'), '/a.b/rec.lys');
     });
 
-    it('says why it did not write the chart in its own words, a broken reader as broken', () => {
-        assert.equal(dettatoFailure(1, 'listening to x.mp3\nthe beats\ndettato: x.mp3 is shorter than 5 seconds\n'),
-            'Dettato: x.mp3 is shorter than 5 seconds');
-        assert.equal(dettatoFailure(3, 'dettato: the models are missing'), 'Dettato\'s reader is broken: the models are missing');
-        assert.equal(dettatoFailure(1, ''), 'Dettato: it stopped with exit code 1');
+    it('says why it did not write the chart in Calamo\'s words: the recording cannot be read, or the reader failed', () => {
+        assert.deepEqual(dettatoFailure(1, 'listening to x.mp3\nthe beats\ndettato: x.mp3 is shorter than 5 seconds\n', 'x.mp3'),
+            { text: 'Lily#: x.mp3 cannot be read: x.mp3 is shorter than 5 seconds', showOutput: false });
+        assert.deepEqual(dettatoFailure(2, '', 'x.mp3'), { text: 'Lily#: x.mp3 cannot be read.', showOutput: false });
+        assert.deepEqual(dettatoFailure(3, 'dettato: the models are missing', 'x.mp3'),
+            { text: 'Lily#: the Dettato reader failed (exit code 3): the models are missing', showOutput: true });
     });
 
     it('takes the recordings the Explorer offers it for — the same list as package.json\'s right-click', () => {
@@ -64,8 +77,15 @@ describe('Dettato, the recording reader', () => {
         for (const ext of DETTATO_INPUTS) {
             assert.match(item.when, new RegExp(`\\b${ext}\\b`), ext);
         }
-        assert.match(item.when, /isWindows/);
-        // Shown without the reader too: the command offers it (owner's decision 2026-11-15).
-        assert.doesNotMatch(item.when, /dettatoAvailable/);
+        // Shown without the reader too: the command offers it (owner's decision 2026-11-15) — the
+        // same condition as Calamo's "Convert Image/PDF to Lily# (.lys)…", in the right-click and
+        // in the palette.
+        const omr = pkg.contributes.menus['explorer/context'].find((m: { command: string }) => m.command === 'lilysharp.importImage');
+        const head = (when: string) => when.slice(0, when.indexOf('&&')).trim();
+        assert.equal(head(item.when).replace('dettatoAvailable', 'X'), head(omr.when).replace('omrAvailable', 'X'));
+        const palette = pkg.contributes.menus.commandPalette;
+        const mine = palette.find((m: { command: string }) => m.command === 'lilysharp.convertRecording');
+        const theirs = palette.find((m: { command: string }) => m.command === 'lilysharp.importImage');
+        assert.equal(mine.when.replace('dettatoAvailable', 'X'), theirs.when.replace('omrAvailable', 'X'));
     });
 });
