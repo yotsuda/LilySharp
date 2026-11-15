@@ -390,7 +390,12 @@ public sealed class MusicXmlExporter
             // The score's own signature, now that the pass takes only the top-level ones.
             // A section reverts to it before stating a key of its own, the way its
             // auto-transpose baseline reverts to _homeTonic just above.
-            _homeKey = (_keyFifths, _keyMode, _keyCustomXml);
+            // ⚠️ THE FILE'S, not a part header's (2026-11-15). CollectMetadata walks a part
+            // header's `key` as a top-level one, so the last part to write a key gave every
+            // part its key: `key f major` beside `part a { key d major }` exported a AND b in D
+            // major, where the page and the twin print b in F. A part's own key is its home
+            // (PartHomeKey), read where the part's play opens.
+            _homeKey = FileHomeKey(root);
             _openingTempo = (_tempo, _tempoStated, _tempoBeatUnit, _tempoBeatDots, _tempoHiddenWords, _tempoMarking, _tempoWordsAlone);
             _bars.CaptureHome();
             BuildSectionHeaderRegistry(root);
@@ -2604,7 +2609,9 @@ public sealed class MusicXmlExporter
         // ⚠️ No measure is open across this point — the change belongs to the bar
         // StartNewMeasure is about to open, not to whatever the previous part left behind.
         _currentMeasure = null;
-        if (_homeKey is { } hk) (_keyFifths, _keyMode, _keyCustomXml) = hk;
+        // The part's home: its header's key, else the file's — what the page opens each of its
+        // sections in before the section states a key of its own (MeasureCollector.ApplyPartHeaderKey).
+        if ((PartHomeKey(partName) ?? _homeKey) is { } hk) (_keyFifths, _keyMode, _keyCustomXml) = hk;
         // ⚠️ THE METER REVERTS HERE TOO — the third half of "a section is self-contained".
         // A section that states no `time` of its own opens at the SCORE meter
         // (MeasureCollector.ProcessSectionPrologue; ScoreHomeMeter carries the rule), and
@@ -4016,28 +4023,60 @@ public sealed class MusicXmlExporter
     private void ProcessKeySignature(KeySignatureSyntax key)
     {
         _forcedKey |= key.IsForced;
-        if (key.IsCustom)
+        (_keyFifths, string? mode, _keyCustomXml) = KeyStateOf(key, _keyMode);
+        if (mode != null)
         {
-            _keyCustomXml = LilySharp.Core.Svg.Model.KeySignature.EncodeCustom(key.CustomAlterations);
-            _keyFifths = 0;
-            _attributesDirty = true;
-            SyncAttributes();
-            return;
+            _keyMode = mode;
+            // Advance the phrase auto-transpose baseline to this key's (written) tonic.
+            _ambientTonic = KeyTonic.Of(key);
         }
-        _keyCustomXml = null;
+        _attributesDirty = true;
+        SyncAttributes();
+    }
+
+    /// <summary>
+    /// What a <c>key</c> states as the document writes it: its fifths, its mode and — for a
+    /// signature with no tonic (<c>key custom …</c>, <c>key none</c>) — its encoded pitches.
+    /// A custom signature states no mode: <paramref name="standingMode"/> stays.
+    /// </summary>
+    /// <remarks>One reading for the key met in the walk (<see cref="ProcessKeySignature"/>)
+    /// and the two homes read off the declarations (<see cref="FileHomeKey"/>,
+    /// <see cref="PartHomeKey"/>).</remarks>
+    private static (int Fifths, string? Mode, string? Custom) KeyStateOf(KeySignatureSyntax key, string standingMode)
+    {
+        if (key.IsCustom)
+            return (0, null, LilySharp.Core.Svg.Model.KeySignature.EncodeCustom(key.CustomAlterations));
         var pitch = key.Pitch?.ToFullString().Trim().ToLower();
         // MusicXML's <mode> takes the church-mode names directly.
         var mode = key.Mode.Text.ToLowerInvariant();
-
         // Delegate to KeySpelling (the single source of truth for tonic -> fifths);
         // an unrecognized tonic falls back to 0 (C), as before.
-        _keyFifths = KeySpelling.SharpsFor(pitch ?? "", mode) ?? 0;
-        _keyMode = mode;
+        return (KeySpelling.SharpsFor(pitch ?? "", mode) ?? 0, mode, null);
+    }
 
-        // Advance the phrase auto-transpose baseline to this key's (written) tonic.
-        _ambientTonic = KeyTonic.Of(key);
-        _attributesDirty = true;
-        SyncAttributes();
+    /// <summary>The key the FILE states — its top-level <c>key</c>, the last written — as
+    /// (fifths, mode, custom); C major with none.</summary>
+    private static (int Fifths, string Mode, string? Custom) FileHomeKey(SyntaxNode root)
+    {
+        (int Fifths, string Mode, string? Custom) home = (0, "major", null);
+        foreach (var key in root.ChildNodes().OfType<KeySignatureSyntax>())
+        {
+            var (fifths, mode, custom) = KeyStateOf(key, home.Mode);
+            home = (fifths, mode ?? home.Mode, custom);
+        }
+        return home;
+    }
+
+    /// <summary>The key a part's HEADER states (<c>part a { key d major }</c>), which is that
+    /// part's home in every section, or null for a part that writes none: the file's is its home.</summary>
+    private (int Fifths, string Mode, string? Custom)? PartHomeKey(string partName)
+    {
+        if (_root == null || Semantics.ConcertPitch.FindPart(_root, partName) is not { } part
+            || part.ChildNodes().OfType<KeySignatureSyntax>().LastOrDefault() is not { } key)
+            return null;
+        string fileMode = _homeKey?.Mode ?? "major";
+        var (fifths, mode, custom) = KeyStateOf(key, fileMode);
+        return (fifths, mode ?? fileMode, custom);
     }
 
     /// <summary>
