@@ -271,6 +271,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1280セッションの経緯
+
+### 1.1 第1280セッション（2026-11-15・YT-DELL2）
+
+base `94e6947f`・開始時 full 17360 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17363（Lab `p1280` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 211）。
+**行だけの score の一線譜**（オーナー決定 2026-11-15＝§3 最上段）の設計メモ `docs/row-staff-design.md` を書き、途中まで作って**退避した**（commit なし・作業ツリーは HEAD に戻した）。
+- 作った形（Lab `p1280/auto-staff-wip.diff`＝`git apply` で戻る・網 `p1280/AutoRowStaffTests.cs` 14 本は緑だった）: `RenderSpecParser.Parse` が譜表の無い score に `SingleStaffSpec(AutoStaffPart "(staff)", Lines 1, 名前なし)` を最初の歌詞の行の前（無ければ最後）に差し込む／`SingleEngravedPart` は数えない／`MultiStaffScore.RowsSpaceTheGrid`（行が小節の幅を決める＝リードシートと同じ間隔の分岐を `ApplySharedColumnReservations` が読む。これが無いと歌詞が小節線にかかる）／`.ly` は拍の骨組みを `\new RhythmicStaff \leadSheetTiming` として一線譜の位置に書く（`LeadSheetScoreMarks` も一線譜の小節から）／MusicXML は `<part-name>` を空に。絵は Lab `p1279/row/auto/*.png`（chords だけ・歌詞だけ・両方）。
+- **止めた理由**: 全テストで 47 本が落ちる（`p1280/failing-48.txt`＝README を入れて 32 の名前）。行だけの譜の絵と間隔を固定した網（RowsOnly*・BreaksAnywhere・GridRowMeterCentring・Svg のスナップショット・ChordRowEndingBar 4 本など）と、**LilyPond の実測に照らす台帳 3 本**（LpFidelity）。一線譜が入ると LilyPond 側も RhythmicStaff を持つ別の絵＝台帳は LilyPond で測り直しが要る。数便の仕事。
+- 次の便: diff を当てる → 落ちた網を 1 本ずつ「意図した変化か」を見て書き直す（行だけの譜の網は IsLeadSheet＝本物の行だけの譜を見ていたもの。一線譜で無くなる形は網ごと消すか、網の本に `staff` を足す）→ 台帳 3 本を LilyPond で測り直す → 歌詞と一線の間（いま 5.5 譜間＝LilyPond の Lyrics の related-staff の値。一線譜だと広く見える）をオーナーに見せて訊く → スイープ。⚠️ MusicXML の行だけの score は歌詞（`<lyric>`）を書いていない（前からか未確認）。
+
 ## 以下は第1279セッションの経緯
 
 ### 1.1 第1279セッション（2026-11-15・YT-DELL2）

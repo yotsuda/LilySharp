@@ -141,6 +141,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1282セッション（2026-11-15・YT-DELL2）
+
+base `33872050f`・開始時 full 17360 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 3 / 合計 17364（Lab `p1282` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-15 の push の run が failure のまま（未 push 216）。
+**第1281 の「次の一手」（一線譜へのオーナーの答え ⑴〜⑶）を全部閉じた**（決めたことは `docs/row-staff-design.md` の「第1282 で決めたこと」）。
+- ⑴ Skip の網を規則に書き直した: `SectionLabel_OnAStafflessChordSheet_StandsLevelWithTheSymbolsWhereThereIsRoom`（余地のある B はコードの名前と同じ高さ・開くのは C。A は名前より下に来ない）。
+- ⑵ 歌詞と一線の間＝**3.5 譜間**（LILYSHARP-OWN・`ScoreAssembler.RowStaffPaper`）。5.5 は LilyPond が中央の線から測る値＝5 線なら下の線から 3.5。前は段で違った（押された段は最小の 4.4・最後の段は 5.5）。音符の無い譜表だけの score に当てる（自動の譜表と、音楽の無いパートの手書きの `as lines 1`）。絵は Lab `p1282/gap/gap.png`・`p1282/snap/*.png`＝**オーナーが見て評価する**（`MANUAL-CHECKS` には足していない）。
+- ⑶-1 手で書いた `part l { }`＋`staff l as lines 1` の下の `on` の無い歌詞の行が消えていた＝すぐ上の譜表を歌う規則でその空の譜表に畳まれ、音符が無いので全部消えていた（警告も無し）。音楽の無いパートは既定の歌い先にしない（`RenderSpecParser.SungStaffAbove`・`LyricBindings` も同じ）＋`RowsSpaceTheGrid` は音符の無い譜表を自動の譜表と同じに数える。⑶-2 `IsLeadSheet` は**消さない**＝ページでは通らないが MusicXML が読む（true で投げる毒: SVG の網 0 本・MusicXML の網 13 本）。
+- 網: `AutoRowStaffTests` に 3.5 の 2 例と空の譜表の歌詞の 1 例。毒 3 本は全部赤（Lab `p1282/poisons.ps1`）。スナップショット 3 枚を再ベース。スイープ: 1268 枚のうち 6 枚が動いた＝全部行だけの score（`p1282/svg/sweep.log`）。⚠️ 紙に入れたので、網の道具 `RenderedGeometry.Render`（既定の紙）には 3.5 が出ない＝ledger は動かない。
+- **次の一手**: §1.0 のとおり Lab `sessions/p1242/leftovers.md` の欠陥を先頭から（訊かずに着手してよい）。一線譜はオーナーの目視待ち（3.5 の間）。
+- 棚卸し: OWN 449 → 450（`RowStaffPaper`）。終了時 full 17364 合格 / 1 失敗（README）/ skip 2 / 合計 17367（`run2.trx`）。
+
+## 以下は第1281セッションの経緯
+
 ### 1.1 第1281セッション（2026-11-15・YT-DELL2）
 
 base `9d3f19b06`・開始時 full 17359 合格 / 2 失敗（`ReadmeSampleTests`・`CrossStaffCollisionTests.TheKeystrokePass_DoesNotLayTheScoreOut`）/ skip 2 / 合計 17363（Lab `p1281` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-15 の push（オーナーの Harbour Lights）の run も failure（未 push 212）。`CrossStaffCollisionTests.TheKeystrokePass_DoesNotLayTheScoreOut` は単独では緑（時間の網のゆれ）。
@@ -151,16 +164,6 @@ base `9d3f19b06`・開始時 full 17359 合格 / 2 失敗（`ReadmeSampleTests`�
 - スイープ: 全 svg 1268 枚のうち動いたのは 12 枚＝全部行だけの score（Lab `p1281/svg/sweep.log`）。
 - **★ 次の一手＝オーナーの返答（2026-11-15）**: ⑴「ラベルは余地があればコードと同じ高さに並べて」＝今の形で決定（10-04 の決定を一線譜では上書き）→ Skip にした網 `SectionLabel_OnAStafflessChordSheet_StandsAboveTheSymbols` をこの規則に書き直す／⑵ 歌詞と一線の間（今 5.5 譜間）は「自然に見える間隔にして。あとで私が見て評価する」／⑶「気づいた点も直して」＝下の 2 つ。⚠️ 手で書いた `part l { }`＋`staff l as lines 1` の横の、旋律に付かない `lyrics` の行は描かれない（`p1281/row/tempo2.png`・前から・未着手）。⚠️ `IsLeadSheet` の格子の描画（行に小節線と拍子を描く道）は今は通らない＝消すかは次の便で（オーナーの答え ⑴ 次第）。
 - commit `0642cf5ab`・`b586b0376`。終了時 full 17360 合格 / 1 失敗（README）/ skip 3 / 合計 17364（`run2.trx`）。
-
-## 以下は第1280セッションの経緯
-
-### 1.1 第1280セッション（2026-11-15・YT-DELL2）
-
-base `94e6947f`・開始時 full 17360 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17363（Lab `p1280` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 211）。
-**行だけの score の一線譜**（オーナー決定 2026-11-15＝§3 最上段）の設計メモ `docs/row-staff-design.md` を書き、途中まで作って**退避した**（commit なし・作業ツリーは HEAD に戻した）。
-- 作った形（Lab `p1280/auto-staff-wip.diff`＝`git apply` で戻る・網 `p1280/AutoRowStaffTests.cs` 14 本は緑だった）: `RenderSpecParser.Parse` が譜表の無い score に `SingleStaffSpec(AutoStaffPart "(staff)", Lines 1, 名前なし)` を最初の歌詞の行の前（無ければ最後）に差し込む／`SingleEngravedPart` は数えない／`MultiStaffScore.RowsSpaceTheGrid`（行が小節の幅を決める＝リードシートと同じ間隔の分岐を `ApplySharedColumnReservations` が読む。これが無いと歌詞が小節線にかかる）／`.ly` は拍の骨組みを `\new RhythmicStaff \leadSheetTiming` として一線譜の位置に書く（`LeadSheetScoreMarks` も一線譜の小節から）／MusicXML は `<part-name>` を空に。絵は Lab `p1279/row/auto/*.png`（chords だけ・歌詞だけ・両方）。
-- **止めた理由**: 全テストで 47 本が落ちる（`p1280/failing-48.txt`＝README を入れて 32 の名前）。行だけの譜の絵と間隔を固定した網（RowsOnly*・BreaksAnywhere・GridRowMeterCentring・Svg のスナップショット・ChordRowEndingBar 4 本など）と、**LilyPond の実測に照らす台帳 3 本**（LpFidelity）。一線譜が入ると LilyPond 側も RhythmicStaff を持つ別の絵＝台帳は LilyPond で測り直しが要る。数便の仕事。
-- 次の便: diff を当てる → 落ちた網を 1 本ずつ「意図した変化か」を見て書き直す（行だけの譜の網は IsLeadSheet＝本物の行だけの譜を見ていたもの。一線譜で無くなる形は網ごと消すか、網の本に `staff` を足す）→ 台帳 3 本を LilyPond で測り直す → 歌詞と一線の間（いま 5.5 譜間＝LilyPond の Lyrics の related-staff の値。一線譜だと広く見える）をオーナーに見せて訊く → スイープ。⚠️ MusicXML の行だけの score は歌詞（`<lyric>`）を書いていない（前からか未確認）。
 
 ## 2. 開いている作業
 
