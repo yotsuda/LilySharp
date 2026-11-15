@@ -39,6 +39,7 @@ import { registerCaretInfo } from './caretInfo';
 import { registerExportBatch } from './exportBatch';
 import { OmrImportDeps, importFromImage } from './omrImport';
 import { DecodeResult, attachRecording, followRenames, sendRecording } from './recording';
+import { convertRecording, registerDettatoContext } from './dettato';
 import { recordingPathFor } from './recordingCore';
 import { registerOmrContexts } from './omrReader';
 import { OmrScanDeps, hasScan, previewHoversBar, previewReady, previewShowsBar, registerScanFollow, scanBarAt, scanColumnOf, scanSideOf, scanThresholdOf, showScan } from './omrScan';
@@ -732,6 +733,7 @@ export function activate(context: vscode.ExtensionContext) {
     // (it offers that extension when the reader is missing); in the Explorer's menu only where a
     // reader is — kept current as extensions come and go (omrReader.ts).
     registerOmrContexts(context, outputChannel);
+    registerDettatoContext(context, outputChannel);
 
     // "Show Original Scan" (LilySharp-Omr proposal B3) is offered on a .lys an OMR reader
     // wrote, i.e. one with its side file beside it.
@@ -992,6 +994,11 @@ export function activate(context: vscode.ExtensionContext) {
         // chart, never by the .lys; renames keep the two together.
         vscode.commands.registerCommand('lilysharp.attachRecording', (uri?: vscode.Uri) =>
             attachRecording(uri instanceof vscode.Uri ? uri : undefined)),
+        // Dettato writes the chart (and the file beside it) from a recording; without it the
+        // command offers its extension (owner's decision 2026-11-15).
+        vscode.commands.registerCommand('lilysharp.convertRecording', (uri?: vscode.Uri) =>
+            convertRecording(uri instanceof vscode.Uri ? uri : undefined, outputChannel,
+                () => vscode.commands.executeCommand('lilysharp.openPreviewToSide'))),
         followRenames(),
         watchRecordings(context),
         // Audition: sound the note under the caret (held: the keybinding re-fires on

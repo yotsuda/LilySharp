@@ -721,6 +721,11 @@
         "title": "Convert Image/PDF to Lily# (.lys)… (Beta)"
       },
       {
+        "command": "lilysharp.convertRecording",
+        "category": "Lily#",
+        "title": "Convert Recording to Lily# (.lys)…"
+      },
+      {
         "command": "lilysharp.showScan",
         "category": "Lily#",
         "icon": "$(file-media)",
@@ -1145,6 +1150,10 @@
           "when": "lilysharp.omrAvailable || isWindows"
         },
         {
+          "command": "lilysharp.convertRecording",
+          "when": "isWindows"
+        },
+        {
           "command": "lilysharp.showScan",
           "when": "resourceLangId == lilysharp && lilysharp.hasScan"
         },
@@ -1338,6 +1347,11 @@
         {
           "command": "lilysharp.importImage",
           "when": "(lilysharp.omrAvailable || isWindows) && resourceExtname =~ /^\\.(png|jpe?g|bmp|tiff?|pdf)$/i",
+          "group": "7_modification"
+        },
+        {
+          "command": "lilysharp.convertRecording",
+          "when": "isWindows && resourceExtname =~ /^\\.(wav|mp3|m4a|mp4|aac|flac|wma)$/i",
           "group": "7_modification"
         },
         {
