@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 447 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **573** | |
+| `OWN` | 448 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **574** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（447 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（448 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -851,6 +851,7 @@
 - **`VerticalSkyline.FromGlyphOutline`** ⚠️ LILYSHARP-OWN, one deviation, declared rather than hidden: LilyPond flattens each
 - **`VerticalSkyline.Scale`** ⚠️ LILYSHARP-OWN: THIS EXISTS BECAUSE LILY# SCALES AT DRAW TIME. An ossia is drawn
 ### `LilySharp.Core/Svg/Layout/VoltaBracketEngraver.cs`
+- **`VoltaBracketEngraver.GapBeforeTheNextBracket`** ⚠️ LILYSHARP-OWN (owner's request 2026-11-15: "the 1.'s closing hook and the 2.'s opening
 - **`VoltaBracketEngraver.Bounds`** ⚠️ LILYSHARP-OWN: that column's X extent is taken as EMPTY, where
 - **`VoltaBracketEngraver.BarWalk`** ⚠️ LILYSHARP-OWN: the plain bar lines inside a compressed multi-measure rest, which the
 ### `LilySharp.Core/Svg/Model/ArticulationItem.cs`

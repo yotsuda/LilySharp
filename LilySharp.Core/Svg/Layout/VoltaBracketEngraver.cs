@@ -276,10 +276,51 @@ internal static class VoltaBracketEngraver
             }
         }
 
+        KeepApartFromTheNext(layouts, voltaBrackets);
         var engraved = layouts.ToImmutable();
         layouts.Clear();
         t_layouts = layouts;
         return engraved;
+    }
+
+    /// <summary>How far short of the bar line a bracket's end (its hook, or its open end) stops when the next
+    /// ending's bracket opens on that bar line, on the same line of music.</summary>
+    /// <remarks>
+    /// ⚠️ LILYSHARP-OWN (owner's request 2026-11-15: "the 1.'s closing hook and the 2.'s opening
+    /// hook touch — separate them"). LilyPond draws the two on the same bar line, the first's
+    /// hook and the second's left end meeting there (scm/bar-line.scm:1135-1245
+    /// ly:volta-bracket::calc-shorten-pair gives each end only the bar line's own thickness), so
+    /// they read as one stroke at a plain bar line. Only the first one's end moves, so the
+    /// second's start stays on the bar line, where its number is read from; a <c>:|</c>, whose
+    /// thick line already parts them by 0.93, is left as LilyPond spaces it.
+    /// </remarks>
+    internal const double GapBeforeTheNextBracket = 0.5;
+
+    /// <summary>Pulls each bracket's last piece back from the first piece of a bracket opening on
+    /// the bar line it ends at, on the same line of music, until <see cref="GapBeforeTheNextBracket"/>
+    /// stands between them — where the bar line there leaves less (a plain one leaves next to
+    /// nothing; a <c>:|</c>'s thick line leaves more, and is left alone).</summary>
+    private static void KeepApartFromTheNext(ImmutableArray<VoltaBracketLayout>.Builder pieces,
+        ImmutableArray<VoltaBracketItem> brackets)
+    {
+        for (int i = 0; i < pieces.Count; i++)
+        {
+            var piece = pieces[i];
+            if (piece.SourceIndex < 0)
+                continue;
+            for (int j = 0; j < pieces.Count; j++)
+            {
+                var next = pieces[j];
+                if (next.SourceIndex < 0 || next.StartMeasureIndex != piece.EndMeasureIndex + 1
+                    || next.StartMeasureIndex != brackets[next.SourceIndex].StartMeasureIndex)
+                    continue;
+                // On the same line of music the next one starts just right of this end; on the
+                // next line (a break between them) far left of it, and nothing is moved.
+                double room = next.StartX - piece.EndX;
+                if (room >= 0 - 1e-9 && room < GapBeforeTheNextBracket)
+                    pieces[i] = piece with { EndX = next.StartX - GapBeforeTheNextBracket };
+            }
+        }
     }
 
     /// <summary>
