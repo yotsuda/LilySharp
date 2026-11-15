@@ -17,7 +17,7 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import {
-    Recording, ScoreBeat, audioPathFor, audioReader, barAt, chartForRecording, lineUp, newRecording, parseRecording,
+    RECORDING_DEFAULTS, Recording, ScoreBeat, audioPathFor, recordingPlan, audioReader, barAt, chartForRecording, lineUp, newRecording, parseRecording,
     recordingPathFor, recordingSecondAt, scoreBars, scoreTimeAt, serializeRecording, workForRename,
 } from '../src/recordingCore';
 
@@ -140,6 +140,36 @@ describe('attaching a recording', () => {
         assert.deepEqual(work, [{ kind: 'rename', file: '/s/chart.dettato.json', audio: 'final.m4a' }]);
         // Moved to another folder: the file can no longer name it — nothing is rewritten.
         assert.deepEqual(workForRename('/s/take.m4a', '/t/take.m4a', p => p in names, p => names[p], Object.keys(names)), []);
+    });
+});
+
+describe('the recording panel', () => {
+    it('plays the recording as it is, resampled at 1, when nothing is changed', () => {
+        assert.deepEqual(recordingPlan(RECORDING_DEFAULTS), { engine: 'resample', rate: 1, semitones: 0, gain: 1 });
+    });
+
+    it('stretches for a speed or a pitch apart, turning a raised pitch down 3 dB', () => {
+        const slow = recordingPlan({ ...RECORDING_DEFAULTS, speed: 0.5 });
+        assert.deepEqual(slow, { engine: 'stretch', rate: 0.5, semitones: 0, gain: 1 });
+        const up = recordingPlan({ ...RECORDING_DEFAULTS, octave: 1, semitones: 2, cents: -30 });
+        assert.equal(up.engine, 'stretch');
+        assert.ok(Math.abs(up.semitones - 13.7) < 1e-9);
+        assert.ok(Math.abs(up.gain - 0.7079) < 1e-4);
+        assert.equal(recordingPlan({ ...RECORDING_DEFAULTS, octave: -1 }).gain, 1);
+    });
+
+    it('resamples when pitch and speed go together: a tape set right', () => {
+        const tape = recordingPlan({ ...RECORDING_DEFAULTS, cents: 30, speed: 0.5, linked: true });
+        assert.equal(tape.engine, 'resample');
+        assert.ok(Math.abs(tape.rate - Math.pow(2, 0.3 / 12)) < 1e-12);
+        assert.equal(recordingPlan({ ...RECORDING_DEFAULTS, octave: 1, linked: true }).rate, 2);
+    });
+
+    it('keeps the settings in the panel\'s ranges', () => {
+        const p = recordingPlan({ speed: 9, octave: 5, semitones: 40, cents: 900, linked: false });
+        assert.equal(p.rate, 1.5);
+        assert.ok(Math.abs(p.semitones - (24 + 11 + 0.5)) < 1e-9);
+        assert.equal(recordingPlan({ ...RECORDING_DEFAULTS, speed: NaN }).rate, 1);
     });
 });
 

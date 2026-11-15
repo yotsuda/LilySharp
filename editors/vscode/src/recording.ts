@@ -150,6 +150,93 @@ export async function attachRecording(uri?: vscode.Uri, onAttached?: (chart: vsc
     return file;
 }
 
+/** What the language server says of lilysharp/decodeRecording. */
+export interface DecodeResult { Ok: boolean; Error?: string | null; Seconds?: number }
+
+const sentKeys = new WeakMap<vscode.WebviewPanel, string>();
+
+async function statKey(uri: vscode.Uri): Promise<string | undefined> {
+    try {
+        const s = await vscode.workspace.fs.stat(uri);
+        return `${s.mtime}:${s.size}`;
+    } catch {
+        return undefined;
+    }
+}
+
+/**
+ * Tells the preview of `chart` about its recording: none, why it cannot be used, or its bars and
+ * its sound (the file's bytes; for an m4a, the float WAV the language server decoded into the
+ * extension's storage — never beside the chart). Sent again only when the file beside the chart,
+ * the recording or the chart shown changed (a preview re-renders on every keystroke).
+ */
+export async function sendRecording(panel: vscode.WebviewPanel, chart: vscode.Uri, storage: vscode.Uri,
+    decode: (input: string, output: string) => Promise<DecodeResult>, force = false): Promise<void> {
+    const file = vscode.Uri.file(recordingPathFor(chart.fsPath));
+    const fileKey = await statKey(file);
+    const text = fileKey ? await readText(file) : undefined;
+    const rec = text !== undefined ? parseRecording(text) : undefined;
+    const audio = rec && !('error' in rec) ? vscode.Uri.file(path.join(path.dirname(chart.fsPath), rec.audio)) : undefined;
+    const audioKey = audio ? await statKey(audio) : undefined;
+    const key = `${chart.toString()}\n${fileKey}\n${audioKey}`;
+    if (!force && sentKeys.get(panel) === key) {
+        return;
+    }
+    sentKeys.set(panel, key);
+    const post = (m: Record<string, unknown>) => void panel.webview.postMessage({ type: 'recording', chart: chart.toString(), ...m });
+    if (!rec) {
+        post({ none: true });
+        return;
+    }
+    if ('error' in rec) {
+        post({ error: `${path.basename(file.fsPath)}: ${rec.error}` });
+        return;
+    }
+    const base = { name: rec.audio, bars: rec.bars, pickup: rec.pickup };
+    if (!audio || !audioKey) {
+        post({ ...base, error: `${rec.audio} is not beside the chart` });
+        return;
+    }
+    const how = audioReader(rec.audio, isWindows);
+    if (typeof how === 'object') {
+        post({ ...base, error: how.refused });
+        return;
+    }
+    try {
+        let bytes: Uint8Array;
+        if (how === 'webview') {
+            bytes = await vscode.workspace.fs.readFile(audio);
+        } else {
+            // The decoded WAV, kept in the extension's storage under the recording's path and stamp.
+            const dir = vscode.Uri.joinPath(storage, 'recordings');
+            await vscode.workspace.fs.createDirectory(dir);
+            const id = Buffer.from(audio.fsPath.toLowerCase()).toString('base64url').slice(-48);
+            const cached = vscode.Uri.joinPath(dir, `${id}-${audioKey.replace(':', '-')}.wav`);
+            if (!(await exists(cached))) {
+                post({ ...base, preparing: true });
+                const r = await decode(audio.fsPath, cached.fsPath);
+                if (!r.Ok) {
+                    post({ ...base, error: r.Error ?? 'the recording could not be decoded' });
+                    return;
+                }
+            }
+            bytes = await vscode.workspace.fs.readFile(cached);
+        }
+        if (sentKeys.get(panel) !== key) {
+            return;   // (something newer was sent meanwhile)
+        }
+        // A plain Uint8Array, as the voices are sent: a Node Buffer does not cross postMessage as one.
+        post({ ...base, bytes: new Uint8Array(bytes) });
+    } catch (e) {
+        post({ ...base, error: String(e) });
+    }
+}
+
+/** Forgets what was sent to a preview, so the next update sends the recording again. */
+export function forgetSentRecording(panel: vscode.WebviewPanel): void {
+    sentKeys.delete(panel);
+}
+
 /** Keeps the files beside charts with what they name when files are renamed in VS Code: a chart
  *  takes its file along; a recording renamed is renamed inside the files that name it. */
 export function followRenames(): vscode.Disposable {

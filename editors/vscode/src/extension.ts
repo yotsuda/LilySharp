@@ -38,7 +38,8 @@ import { registerStepAudition } from './stepAudition';
 import { registerCaretInfo } from './caretInfo';
 import { registerExportBatch } from './exportBatch';
 import { OmrImportDeps, importFromImage } from './omrImport';
-import { attachRecording, followRenames } from './recording';
+import { DecodeResult, attachRecording, followRenames, sendRecording } from './recording';
+import { recordingPathFor } from './recordingCore';
 import { registerOmrContexts } from './omrReader';
 import { OmrScanDeps, hasScan, previewHoversBar, previewReady, previewShowsBar, registerScanFollow, scanBarAt, scanColumnOf, scanSideOf, scanThresholdOf, showScan } from './omrScan';
 import { registerOmrAiFix } from './omrAiFix';
@@ -992,6 +993,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('lilysharp.attachRecording', (uri?: vscode.Uri) =>
             attachRecording(uri instanceof vscode.Uri ? uri : undefined)),
         followRenames(),
+        watchRecordings(context),
         // Audition: sound the note under the caret (held: the keybinding re-fires on
         // key-repeat, and the webview sustains until the repeats stop) or play the
         // whole measure the caret is in. The preview webview is the synth.
@@ -2022,6 +2024,32 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     updatePreviewContent(document, panel, context);
 }
 
+/** An m4a the preview cannot decode, decoded by the language server (Windows; recording-design §1 5). */
+async function decodeRecordingOnServer(input: string, output: string): Promise<DecodeResult> {
+    if (!clientReady) {
+        await Promise.race([clientReadyPromise, new Promise(r => setTimeout(r, 15000))]);
+    }
+    if (!clientReady) {
+        return { Ok: false, Error: 'the language server is not running' };
+    }
+    return client.sendRequest<DecodeResult>('lilysharp/decodeRecording', { Input: input, Output: output });
+}
+
+/** A file beside a chart written or removed (Attach Recording…, the bar marks, Dettato): the
+ *  chart's open preview hears of it at once. */
+function watchRecordings(context: vscode.ExtensionContext): vscode.Disposable {
+    const watcher = vscode.workspace.createFileSystemWatcher('**/*.dettato.json');
+    const changed = (file: vscode.Uri) => {
+        for (const [uri, panel] of previewPanels) {
+            const chart = vscode.Uri.parse(uri);
+            if (chart.scheme === 'file' && recordingPathFor(chart.fsPath).toLowerCase() === file.fsPath.toLowerCase()) {
+                void sendRecording(panel, chart, context.globalStorageUri, decodeRecordingOnServer);
+            }
+        }
+    };
+    return vscode.Disposable.from(watcher, watcher.onDidChange(changed), watcher.onDidCreate(changed), watcher.onDidDelete(changed));
+}
+
 async function updatePreviewContent(
     document: vscode.TextDocument,
     panel: vscode.WebviewPanel,
@@ -2056,6 +2084,10 @@ async function updatePreviewContent(
     followVoices(panel, uri);
     // The chords of the text, for Select Chord on a member right-clicked (owner's request 2026-10-27).
     void panel.webview.postMessage({ type: 'chordSpans', spans: chordSpans(document.getText()) });
+    // The recording beside the chart (docs/recording-design.md): sent when it or the chart changed.
+    if (document.uri.scheme === 'file') {
+        void sendRecording(panel, document.uri, context.globalStorageUri, decodeRecordingOnServer);
+    }
     // The @todo marks of the text, for Resolve This TODO on the bar right-clicked and Resolve
     // All TODOs off the staves (owner's request 2026-10-31) — once the server is up to answer.
     void todoMarksOf(document).then(marks => {
@@ -5357,6 +5389,7 @@ function synthUrls(webview: vscode.Webview, extensionUri: vscode.Uri): SynthUrls
         script: webview.asWebviewUri(vscode.Uri.joinPath(root, 'preview-synth.js')).toString(),
         processor: webview.asWebviewUri(vscode.Uri.joinPath(root, 'spessasynth_processor.min.js')).toString(),
         soundFont: sf ? webview.asWebviewUri(sf.file).toString() : '',
+        stretch: webview.asWebviewUri(vscode.Uri.joinPath(root, 'SignalsmithStretch.mjs')).toString(),
     };
 }
 
@@ -5369,7 +5402,7 @@ function getPreviewTheme(): 'auto' | 'light' | 'dark' {
 }
 
 /** The URLs of the preview's SoundFont synth, as the webview reaches them (synthUrls). */
-interface SynthUrls { script: string; processor: string; soundFont: string }
+interface SynthUrls { script: string; processor: string; soundFont: string; stretch: string }
 
 // The CSP: the page's own scripts by nonce; the synth bundle, its AudioWorklet
 // processor (fetched by audioWorklet.addModule — a worklet module answers to
@@ -5379,7 +5412,7 @@ interface SynthUrls { script: string; processor: string; soundFont: string }
 // font is fetch()ed (connect-src).
 function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string, nonce: string,
                         theme: 'auto' | 'light' | 'dark', textFontCss: string,
-                        synth: SynthUrls = { script: '', processor: '', soundFont: '' },
+                        synth: SynthUrls = { script: '', processor: '', soundFont: '', stretch: '' },
                         midiOutput: string = ''): string {
     return `<!DOCTYPE html>
 <html>
@@ -5401,7 +5434,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // The SoundFont synth's files (docs/playback-design.md): the worklet processor
         // and the sound font ('' = none, the page then plays its oscillator patches); and
         // the MIDI output port's name ('' = the synth here), lilysharp.playback.midiOutput.
-        window.lysSynthConfig = { processor: '${synth.processor}', soundFont: '${synth.soundFont}', midiOutput: ${JSON.stringify(midiOutput)} };
+        window.lysSynthConfig = { processor: '${synth.processor}', soundFont: '${synth.soundFont}', stretch: '${synth.stretch}', midiOutput: ${JSON.stringify(midiOutput)} };
     </script>
     <script nonce="${nonce}" src="${synth.script}"></script>
     <style>
@@ -5861,6 +5894,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
            colours are the same rules, on the toggle's lower right. None prepared: grey, as not sung yet. */
         .practice-panel .parts button.voice { position: relative; padding-right: 16px; }
         .practice-panel .parts .voice-badge { right: -4px; bottom: -4px; }
+        /* The recording's panel (docs/recording-design.md): its file name and what it is doing. */
+        .practice-panel .rec-name { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .practice-panel .rec-status { font-size: 11px; opacity: .8; padding-top: 4px; max-width: 300px; }
+        .practice-panel .rec-status:empty { display: none; }
+        .practice-panel input[type="range"]:disabled { opacity: .4; }
         .range-panel table { border-collapse: collapse; }
         .range-panel th { text-align: left; font-weight: 600; opacity: 0.75; padding: 2px 8px; }
         .range-panel td { padding: 2px 8px; white-space: nowrap; }
@@ -5914,6 +5952,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         </span>
         <button id="stopBtn" type="button" title="Stop" disabled>⏹</button>
         <button id="practiceBtn" class="toggle icon practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" aria-label="Practice" title="Tempo, loop, metronome, parts"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M3.6 14.8 6.3 1.4h3.4l2.7 13.4zM7.3 3 5.9 10.2h4.2L8.7 3z"/><path d="M7.7 11.2 12.4 3.9l1 .65-4.7 7.3z"/></svg><span id="practiceSpeed"></span></button>
+        <!-- The recording beside the chart (docs/recording-design.md §1 3): shown only when the chart
+             has one. The first chooses what Play sounds (the score, or the recording); the second
+             opens the recording's panel (speed, pitch, pitch with speed). -->
+        <button id="recBtn" class="toggle icon" type="button" aria-pressed="false" hidden aria-label="Play the recording" title="Play the recording beside the chart instead of the score"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="1" y="6.5" width="1.6" height="3" rx=".8"/><rect x="4" y="4" width="1.6" height="8" rx=".8"/><rect x="7" y="1.5" width="1.6" height="13" rx=".8"/><rect x="10" y="4.5" width="1.6" height="7" rx=".8"/><rect x="13" y="6" width="1.6" height="4" rx=".8"/></svg></button>
+        <button id="recPanelBtn" class="toggle icon practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" hidden aria-label="Recording settings" title="The recording: speed, pitch, pitch with speed"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12"/><circle cx="5" cy="4" r="1.6" fill="currentColor"/><circle cx="10.5" cy="8" r="1.6" fill="currentColor"/><circle cx="7" cy="12" r="1.6" fill="currentColor"/></svg><span id="recSummary"></span></button>
         <span id="lengthInfo" class="length" title="Length, as played"></span>
         </span>
         <span class="sep"></span>
@@ -5937,6 +5980,17 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         <div class="prow"><span class="plbl">Count-in</span><button type="button" id="countInBtn" class="toggle" aria-pressed="false" title="One bar of clicks before the music starts">Off</button></div>
         <div class="prow"><span class="plbl">Parts</span><span id="partsList" class="parts"></span></div>
         <div class="prow presets"><span class="plbl"></span><span class="tempo"><button type="button" id="partsReset" title="The parts as the score has them: its own on, the ones it leaves out off, every voice sung">Reset parts</button><button type="button" id="fadersReset" title="Every fader back to 100%">Reset faders</button></span></div>
+    </div>
+    <div id="recPanel" class="range-panel practice-panel" hidden>
+        <button type="button" id="recClose" class="panel-close" title="Close" aria-label="Close">×</button>
+        <div class="prow"><span class="plbl">Recording</span><span id="recName" class="rec-name"></span></div>
+        <div class="prow"><span class="plbl">Speed</span><span class="tempo"><input type="range" id="recSpeedSlider" min="25" max="150" step="5" value="100" aria-label="Speed"><span id="recSpeedValue" class="tval">100%</span></span></div>
+        <div class="prow"><span class="plbl">Octave</span><span class="tempo"><button type="button" id="recOctDown" title="An octave down">−</button><span id="recOctValue" class="tval">0</span><button type="button" id="recOctUp" title="An octave up">+</button></span></div>
+        <div class="prow"><span class="plbl">Semitones</span><span class="tempo"><input type="range" id="recSemiSlider" min="-11" max="11" step="1" value="0" aria-label="Semitones"><span id="recSemiValue" class="tval">0</span></span></div>
+        <div class="prow"><span class="plbl">Cents</span><span class="tempo"><input type="range" id="recCentSlider" min="-50" max="50" step="1" value="0" aria-label="Cents"><span id="recCentValue" class="tval">0</span></span></div>
+        <div class="prow"><span class="plbl">Pitch with speed</span><button type="button" id="recLinkBtn" class="toggle" aria-pressed="false" title="Pitch and speed go together, as a tape's speed is set right (no stretching)">Off</button></div>
+        <div class="prow presets"><span class="plbl"></span><span class="tempo"><button type="button" id="recReset" title="The recording as it is">Reset</button></span></div>
+        <div id="recStatus" class="rec-status" role="status"></div>
     </div>
     <div class="main-content">
         <div class="container">
@@ -8093,6 +8147,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function stopPlayback() {
             playGeneration++;   // a Play waiting for the sound font is off
             stopVoices();
+            if (recPlayer) recPlayer.stop();   // the recording (docs/recording-design.md) gives way too
             clearTimeout(playEndTimer);
             playEndTimer = null;
             clearInterval(playheadTimer);
@@ -8496,6 +8551,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
 
         document.getElementById('playBtn').addEventListener('click', () => {
+            // The recording's button pressed: Play sounds the recording (docs/recording-design.md).
+            if (recOn && recording) {
+                if (!recording.ready) { recStatus(recording.error || 'The recording is not loaded yet'); return; }
+                playRecordingFrom(0);
+                return;
+            }
             setPlayUi(true); // immediate feedback while the request runs
             // A highlighted note (editor sync / preview click) is the start
             // point: play from its first onset instead of the top. Use the
@@ -8508,6 +8569,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         document.getElementById('stopBtn').addEventListener('click', () => {
             loopList = null;
             stopPlayback();
+            if (recPlayer && recPlayer.playing) { recPlayer.stop(); setPlayUi(false); }
         });
         const loopBtn = document.getElementById('loopBtn');
         loopBtn.addEventListener('click', () => {
@@ -8608,6 +8670,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
         const practiceBtn = document.getElementById('practiceBtn');
         const practicePanel = document.getElementById('practicePanel');
+        const recPanel = document.getElementById('recPanel');
         const clickBtn = document.getElementById('clickBtn');
         const countInBtn = document.getElementById('countInBtn');
         const tempoSlider = document.getElementById('tempoSlider');
@@ -8822,7 +8885,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // 2026-11-02: the practice panel always did, being later in the page). Both stay under
         // the toolbar's z-index.
         function raisePanel(panel) {
-            for (const p of [rangePanel, practicePanel]) p.style.zIndex = p === panel ? '6' : '5';
+            for (const p of [rangePanel, practicePanel, recPanel]) p.style.zIndex = p === panel ? '6' : '5';
         }
         // A press anywhere but an input starts it, once it has gone 4 px: a click on a
         // button or a cell stays a click, and the click a drag ends with does nothing.
@@ -8868,7 +8931,153 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
         installPanelDrag(rangePanel);
         installPanelDrag(practicePanel);
-        window.addEventListener('resize', () => { clampPanel(rangePanel); clampPanel(practicePanel); });
+        installPanelDrag(recPanel);
+        window.addEventListener('resize', () => { clampPanel(rangePanel); clampPanel(practicePanel); clampPanel(recPanel); });
+
+        // ---- The recording beside the chart (docs/recording-design.md) ----------------------
+        // The extension sends 'recording' when the chart has a file beside it (or no longer has):
+        // its bars and its sound. The two toolbar buttons show only then. With the first pressed,
+        // Play sounds the recording through LysSynth.RecordingPlayer (resampled, or stretched by
+        // Signalsmith Stretch) instead of the score; the panel sets speed and pitch.
+        // (var: stopPlayback and Play, defined above, reach them before this line has run.)
+        var recording = null;      // { chart, name, bars, pickup, ready, error }
+        var recPlayer = null;
+        var recOn = false;
+        let recSettings = null;
+        const recBtn = document.getElementById('recBtn');
+        const recPanelBtn = document.getElementById('recPanelBtn');
+        const recSpeedSlider = document.getElementById('recSpeedSlider');
+        const recSemiSlider = document.getElementById('recSemiSlider');
+        const recCentSlider = document.getElementById('recCentSlider');
+        const recLinkBtn = document.getElementById('recLinkBtn');
+        function recDefaults() {
+            return Object.assign({}, window.LysSynth ? window.LysSynth.RECORDING_DEFAULTS : { speed: 1, octave: 0, semitones: 0, cents: 0, linked: false });
+        }
+        recSettings = recDefaults();
+        function recordingPlayer() {
+            const cfg = window.lysSynthConfig;
+            if (!recPlayer && window.LysSynth && cfg && cfg.stretch) {
+                recPlayer = new window.LysSynth.RecordingPlayer(audioContext(), cfg.stretch);
+                recPlayer.onEnded = () => { setPlayUi(false); };
+            }
+            return recPlayer;
+        }
+        function recStatus(text) {
+            document.getElementById('recStatus').textContent = text || '';
+        }
+        function signed(n) { return n > 0 ? '+' + n : String(n); }
+        function showRecording() {
+            const s = recSettings;
+            const plan = window.LysSynth ? window.LysSynth.recordingPlan(s) : { rate: s.speed, semitones: 0 };
+            recSpeedSlider.value = String(Math.round((s.linked ? plan.rate : s.speed) * 100));
+            recSpeedSlider.disabled = s.linked;
+            document.getElementById('recSpeedValue').textContent = Math.round((s.linked ? plan.rate : s.speed) * 100) + '%';
+            document.getElementById('recOctValue').textContent = signed(s.octave);
+            recSemiSlider.value = String(s.semitones);
+            document.getElementById('recSemiValue').textContent = signed(s.semitones);
+            recCentSlider.value = String(s.cents);
+            document.getElementById('recCentValue').textContent = signed(s.cents);
+            recLinkBtn.setAttribute('aria-pressed', String(s.linked));
+            recLinkBtn.textContent = s.linked ? 'On' : 'Off';
+            // The button says what is not as recorded: the speed, and the pitch in semitones.
+            const parts = [];
+            if (!s.linked && s.speed !== 1) parts.push(Math.round(s.speed * 100) + '%');
+            const shift = Math.round(plan.semitones * 100) / 100;
+            if (shift !== 0) parts.push(signed(shift));
+            document.getElementById('recSummary').textContent = parts.join(' ');
+            recBtn.setAttribute('aria-pressed', String(recOn));
+        }
+        function recChanged() {
+            showRecording();
+            if (recPlayer && recPlayer.playing) void recPlayer.update(recSettings);
+        }
+        function setRecording(m) {
+            if (m.none) {
+                if (recPlayer) recPlayer.unload();
+                recording = null;
+                recOn = false;
+                recBtn.hidden = true;
+                recPanelBtn.hidden = true;
+                recPanel.hidden = true;
+                return;
+            }
+            const same = recording && recording.chart === m.chart && recording.name === m.name;
+            recording = { chart: m.chart, name: m.name || '', bars: m.bars || [], pickup: !!m.pickup, ready: same ? recording.ready : false, error: m.error || null };
+            recBtn.hidden = false;
+            recPanelBtn.hidden = false;
+            document.getElementById('recName').textContent = recording.name;
+            document.getElementById('recName').title = recording.name;
+            const barsSaid = recording.bars.length > 0 ? recording.bars.length + ' bars placed' : 'no bars placed yet';
+            if (m.error) {
+                recording.ready = false;
+                recStatus(m.error);
+                recBtn.title = 'The recording cannot be played: ' + m.error;
+            } else if (m.preparing) {
+                recStatus('Decoding the recording…');
+            } else if (m.bytes) {
+                const player = recordingPlayer();
+                if (!player) { recStatus('The preview\\'s sound is not ready'); return; }
+                recStatus('Loading…');
+                player.load(m.bytes).then(seconds => {
+                    if (!recording || recording.chart !== m.chart) return;
+                    recording.ready = true;
+                    recStatus(Math.floor(seconds / 60) + ':' + String(Math.round(seconds % 60)).padStart(2, '0') + ' — ' + barsSaid);
+                    recBtn.title = 'Play the recording beside the chart instead of the score';
+                }, err => {
+                    if (recording) recording.ready = false;
+                    recStatus('The recording cannot be decoded: ' + (err && err.message || err));
+                });
+            } else {
+                recStatus(barsSaid);
+            }
+            showRecording();
+        }
+        /** Plays the recording from its second \`sec\` (the score's place when the bars say it). */
+        function playRecordingFrom(sec) {
+            const player = recordingPlayer();
+            if (!player || !recording || !recording.ready) return false;
+            stopPlayback();
+            audio();   // resumes the page's context (and says so when the browser holds it)
+            setPlayUi(true);
+            void player.play(sec, recSettings);
+            return true;
+        }
+        recBtn.addEventListener('click', () => {
+            recOn = !recOn;
+            if (!recOn && recPlayer && recPlayer.playing) { recPlayer.stop(); setPlayUi(false); }
+            showRecording();
+        });
+        function closeRecPanel() {
+            recPanel.hidden = true;
+            recPanelBtn.setAttribute('aria-expanded', 'false');
+        }
+        recPanelBtn.addEventListener('click', () => {
+            if (!recPanel.hidden) { closeRecPanel(); return; }
+            const b = recPanelBtn.getBoundingClientRect();
+            recPanel.hidden = false;
+            raisePanel(recPanel);
+            if (recPanel.dataset.moved) clampPanel(recPanel);
+            else {
+                recPanel.style.top = (document.querySelector('.toolbar').getBoundingClientRect().bottom + 6) + 'px';
+                recPanel.style.right = 'auto';
+                recPanel.style.left = Math.max(6, Math.min(b.left, window.innerWidth - recPanel.offsetWidth - 6)) + 'px';
+            }
+            recPanelBtn.setAttribute('aria-expanded', 'true');
+            showRecording();
+        });
+        document.getElementById('recClose').addEventListener('click', closeRecPanel);
+        // The sliders say their value as they move and set it where they are let go.
+        function recSlider(slider, set) {
+            slider.addEventListener('input', () => { set(Number(slider.value)); showRecording(); });
+            slider.addEventListener('change', () => { set(Number(slider.value)); recChanged(); });
+        }
+        recSlider(recSpeedSlider, v => { recSettings.speed = v / 100; });
+        recSlider(recSemiSlider, v => { recSettings.semitones = v; });
+        recSlider(recCentSlider, v => { recSettings.cents = v; });
+        document.getElementById('recOctDown').addEventListener('click', () => { recSettings.octave = Math.max(-2, recSettings.octave - 1); recChanged(); });
+        document.getElementById('recOctUp').addEventListener('click', () => { recSettings.octave = Math.min(2, recSettings.octave + 1); recChanged(); });
+        recLinkBtn.addEventListener('click', () => { recSettings.linked = !recSettings.linked; recChanged(); });
+        document.getElementById('recReset').addEventListener('click', () => { recSettings = recDefaults(); recChanged(); });
         // The slider says its value as it moves and sets the tempo where it is let go: a
         // playback restarts once, not at every step of a drag.
         function setSpeed(percent) {
@@ -9244,6 +9453,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     break;
                 case 'voiceLinesChanged':
                     if (!practicePanel.hidden) requestParts();
+                    break;
+                case 'recording':
+                    setRecording(message);
                     break;
                 case 'partsData':
                     renderParts(message);

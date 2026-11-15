@@ -214,6 +214,46 @@ function round(s: number): number {
     return Math.round(s * 10000) / 10000;
 }
 
+/** How the recording panel plays the recording (docs/recording-design.md §1 3): its speed (pitch
+ *  kept), its pitch in octaves, semitones and cents, and whether pitch and speed go together — a
+ *  tape's speed set right, which is resampling alone (§3: no stretcher, no sound lost). */
+export interface RecordingSettings {
+    speed: number;
+    octave: number;
+    semitones: number;
+    cents: number;
+    linked: boolean;
+}
+
+export const RECORDING_DEFAULTS: RecordingSettings = { speed: 1, octave: 0, semitones: 0, cents: 0, linked: false };
+
+/** The panel's ranges. */
+export const RECORDING_LIMITS = {
+    speed: [0.25, 1.5], octave: [-2, 2], semitones: [-11, 11], cents: [-50, 50],
+} as const;
+
+function clamp(x: number, [lo, hi]: readonly [number, number]): number {
+    return Number.isFinite(x) ? Math.min(hi, Math.max(lo, x)) : 0;
+}
+
+/** What the player does for the panel's settings: resample (the plain source's playback rate —
+ *  linked, or nothing changed at all) or stretch (Signalsmith: rate and semitones apart), at what
+ *  rate (recording seconds per second of sound), shifted how far, and at what gain: a sound shifted
+ *  up by the stretcher peaks over its source (MEASURED 2026-11-15: +1200 cents peaked at 1.177,
+ *  Lab sessions/p1283/stretch), so it is turned down 3 dB before the limiter. */
+export function recordingPlan(s: RecordingSettings): { engine: 'resample' | 'stretch'; rate: number; semitones: number; gain: number } {
+    const shift = clamp(s.octave, RECORDING_LIMITS.octave) * 12 + clamp(s.semitones, RECORDING_LIMITS.semitones)
+        + clamp(s.cents, RECORDING_LIMITS.cents) / 100;
+    if (s.linked) {
+        return { engine: 'resample', rate: Math.pow(2, shift / 12), semitones: shift, gain: 1 };
+    }
+    const speed = clamp(s.speed, RECORDING_LIMITS.speed) || 1;
+    if (shift === 0 && speed === 1) {
+        return { engine: 'resample', rate: 1, semitones: 0, gain: 1 };
+    }
+    return { engine: 'stretch', rate: speed, semitones: shift, gain: shift > 0 ? Math.pow(10, -3 / 20) : 1 };
+}
+
 /** One beat of the score's playback (`lilysharp/playback`'s `Beats`): its time in seconds at
  *  the written tempo, and whether it begins a bar. */
 export interface ScoreBeat { T: number; A: boolean }
