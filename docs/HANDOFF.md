@@ -90,7 +90,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 - **★ 反復とナビ記号を section の音楽にも書く（オーナー提案 2026-11-14・第1243＝第1249 で段 0〜8 が済み・LYS1034 は phrase だけ）**: 全部 `docs/inline-repeat-design.md`（規則 §3・段取り §4・未決 §6・経過 §7・エディタのコマンド §8）。オーナー決定（2026-11-14）: 対は form に組み立てた列で見る／`| |:` は空小節のまま／歌詞の verse は 5 規則／書き出しはなるべく form 側（Q2）。**次**（順は上から。歌詞の規則 3 と警告の 4 種目は第1253、ending・ナビ記号を全パートに書くコマンドと LYS1070 の quick fix は第1254 で済み＝§1.1）: ⑴ この島（反復とナビ記号を音楽に書く）の「次」は無い＝判断待ちも残りの形も 0。step キー・`PlayForm` の一本化（第1255）、3 番括弧＝3 回（form は第1256・音楽は第1257・コードの行は第1258）は済み。次の一手は下の積み残しから（オーナーに訊く）。段 9（読み込みと OMR の書き出し）は Q2 の決定で今の形のまま＝作業なし。⚠️ Calamo と Dettato の REQUESTS への知らせ（Q2「本体が出てから」）は未＝release のときに書く。実機は `MANUAL-CHECKS` 第1243・第1249・第1253・第1254・第1255。
 - **★ 歌詞と歌い手の文法の作り直し（オーナー決定 2026-11-10・第1217）**: `docs/lyrics-singer-design.md` が全部（§9 が作業順）。①②③④は済み（§1.1 第1217〜第1219）。⚠️ ④の `ん` の聞こえ方はオーナーの実聴待ち（`MANUAL-CHECKS` 第1219）。Cantoria の master は zh／ko を歌う（VSIX の入れ直しはオーナー）。`singer` は 1 行 1 声で score の中にも書ける（第1220）。古い書き方を案内する専用エラーは作らない（オーナー指示）。設計 §10「パート自身の歌詞」（`part sop { lyrics words }`）は第1222 で実装（§1.1 第1222・実機は `MANUAL-CHECKS` 第1222）＝§9 は全部済み。**次の一手の指示はまだ無い＝下の積み残しから選ぶならオーナーに訊く**。積み残し: Calamo の生成コードが `lyrics … sings` のまま（`docs\repro\REQUESTS.md` に連絡済み・Calamo 側は未 commit）／実機確認（`MANUAL-CHECKS` 第1217）／perf ベンチ／コーパス外のオーナーのファイル（Downloads の Tabidachi・Rose Garden など）は未移行で、`LilySharp-Lab\sessions\p1217\migrate\migrate.ps1 -Lys -Files` で書き換えられる／Rose Garden のオクターブ変換はオーナーの回答待ち。
-- **★ 歌詞のある譜表では強弱記号とヘアピンを譜表の上に（オーナー決定 2026-11-11）＝設計 `docs/dynamics-above-lyrics-design.md` §5 の 1〜6 は全部済み（第1224〜第1225・§1.1）**。**D3 は LilyPond の規則に替えた（オーナー決定 2026-11-11「LP に合わせて」）**＝向きを書いた記号が*線*の向きを決め、同じ線の後続（向きを書いていない記号）は従う。歌詞のない譜表でも同じ（`c@f.up@decresc … g@p` の p は上）。残りはオーナー: 実機のプレビュー（`MANUAL-CHECKS` 第1225）と release（CHANGELOG は 2 つとも `## Unreleased`・`[engraving]`）。残る穴: 2 声部の譜表で上の声部のヘアピンの線に下の声部の同じ拍の強弱記号も乗る（ヘアピンが声部を持たない既知の穴＝`DynamicAlignEngraver` の注 ⑵・Lab `p1225/dyn/out/vv.png`）。線の向きも譜表ごとに 1 本の流れで読む（LP は声部ごと）。**次の一手の指示はまだ無い＝上の行の積み残しから選ぶならオーナーに訊く**。
+- **★ 歌詞のある譜表では強弱記号とヘアピンを譜表の上に（オーナー決定 2026-11-11）＝設計 `docs/dynamics-above-lyrics-design.md` §5 の 1〜6 は全部済み（第1224〜第1225・§1.1）**。**D3 は LilyPond の規則に替えた（オーナー決定 2026-11-11「LP に合わせて」）**＝向きを書いた記号が*線*の向きを決め、同じ線の後続（向きを書いていない記号）は従う。歌詞のない譜表でも同じ（`c@f.up@decresc … g@p` の p は上）。残りはオーナー: 実機のプレビュー（`MANUAL-CHECKS` 第1225）と release（CHANGELOG は 2 つとも `## Unreleased`・`[engraving]`）。残る穴: 2 声部の譜表で上の声部のヘアピンの線に下の声部の同じ拍の強弱記号も乗る（ヘアピンが声部を持たない既知の穴＝`DynamicAlignEngraver` の注 ⑵・Lab `p1225/dyn/out/vv.png`）。線の向きは第1260 で声部ごとにした。**次の一手の指示はまだ無い＝上の行の積み残しから選ぶならオーナーに訊く**。
 - **★ 評価 4（2026-11-13）の残り＝⑴ 書き出し・⑵ 誤った診断・⑷ 文書は第1227 で閉じた（§1.1）**。書き手のメモと再現は Lab `sessions/p1226/md/eval4/{bigband,choral,chamber,rock}`。⑶ `lysc review` は第1228 で閉じた（§1.1）。**残り**: ⑸ 欠けている機能＝**案 10 件を Lab `sessions/p1227/proposals-eval4.md` に書いた・オーナーの確認待ち＝確認なしに作らない**。**残っているもの**（どれも未着手・値段は未測定）: **一覧は Lab `sessions/p1242/leftovers.md`**（**オーナー指示 2026-11-14・第1231「残りの欠陥を順に」＝この一覧の「残り（欠陥）」と「第1231〜第1235 が見つけて残したもの」は訊かずに着手してよい**。機能の追加は訊く）。残りの先頭（一覧）: condensedStaff で別のパートの強弱で終わるヘアピンを MusicXML のパートがどこで止めるか（今はページどおり＝決めごと・第1240 の報告でオーナーに訊いてある＝返事待ち）／combinedStaff の印は re-address されない／別の声部のヘアピンと出会う形の絵／黙っている段の wish の測っていない形（装飾音で始まる小節・段の最初の小節）／`lysc review` の 3 件。MusicXML の四分音の `<accidental>` は他のリーダーの読みを確かめてから（一覧に理由）。大譜表の段間の `@sfz`・`@fp` を両手に効かせるかは決めごと＝オーナーに訊く。見送ったものの理由もそこ。小残り（第1226 から）: condensedStaff の数字付き低音など 3 種の再住所・tab のアルペジオ線が自分の数字に 0.035・小文字だけの枠の中央が 0.23〜0.51 下・`md end` は既定の yMargin では動かない・箇条書きのリンク・不安定な網 2 種（`ScoreVideoShapeTests`、まれに `SvgSnapshotTests`）。**補助は同じモデルで 3〜5 件ずつ順番に・数行は自分で・全 full は自分が 1 回**（memory）。
 - **オーナー待ち（第1226）**: `samples/harbour-lights.lys`・`README.md` はオーナーの作業中の変更＝**commit しない**（歌を聴いてから。歌詞とリズムは Claude が直し済み・`ReadmeSampleTests` はそれで赤）／`tools\Deploy-Lsp.ps1`・Cantoria `deploy-extension.ps1`／実機（`MANUAL-CHECKS` 第1226: 補完・問題パネルの歌い手の失敗・LYS4078・プログレスバー・フェンスの色と Enter／囲み）／初回の声のダウンロード・Cantoria の声の解決の一本化・言語に合わせた既定の声＝未決。
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
@@ -142,6 +142,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1260セッション（2026-11-15・YT-DELL2）
+
+base `9f18bbea6`・開始時 full 17121 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17124（Lab `p1260` の `run1.trx`）。Calamo の REQUESTS の `open` は 0・Dettato は 1・2 が `question`（オーナー待ち）のまま。CI は第1231 のまま。
+leftovers の「`@f.up`・`@p.up` の向きが往復で落ちる」（第1259 が見つけた）と、測る途中で出た第1238 の残り「`DynamicLineSides` は段ごとに 1 本の流れ」（オーナー指示 2026-11-14「残りの欠陥を順に」）。
+- 実測（直す前・Lab `p1260/side`）: 向きを落としていたのは読み手（direction の `placement` を読まない）。探り譜 `s4`（2 声部・片方だけが向きを書く）で向きの読みが 3 通りあった: ページは 2 声部を 1 本の流れで読み、下の声部の p が上の声部の `@f.up` に重なり、下の声部の `.down` が上の声部の線を切る（`png/s4.png`）。`lysc xml` は声部を書く順で読む別の答え。LilyPond 2.26.0 は声部ごと（`ly/s4.png`: f とヘアピンは上、p と mf は下）。
+- ページ: `DynamicLineSides.Resolve` を声部ごとに歩く（並べる鍵・1 拍のまとまり・線のリセットに `VoiceIndex`）。直したあとの絵は LilyPond と同じ（`png-head/s4.png`）。
+- 書き手: 後の声部（`voice { } { }` の 2 つ目以降）は自分の線を持ち、ブロックをまたいで続く（`MusicXmlExporter._laterVoiceLines`）。
+- 読み手: 強弱とヘアピンの始まりの `placement` を覚え（`placed`）、`MusicXmlReader.SayDynamicSides` がページと同じ歩き（声部ごと・1 拍の中は stop → ヘアピン → 文字）で「書かなければ出る向き」を出し、違う記号にだけ `.up`／`.down` を書く（`ImportNote.SaidSides`・`LysWriter.SaidSide`）。譜表の既定は歌詞のあるパートが上。placement のない direction は何も言わない。
+- 門: 網 `DynamicSideRoundTripTests` 12 本・毒 13 本が全部赤（Lab `p1260/poisons.ps1`。最初の回は 3 本が緑＝網 2 本を足した）。全 svg の掃き（Lab `p1260/sweep`）は差 0 / 1268＝コーパスにこの形は無く、絵の変化は `s4` で見た。往復の掃き（Lab `p1260/rt-sweep.ps1`）: xml の差 0・読み戻した `.lys` の差 4 / 1268（どれも `.up`／`.down` が戻っただけ）。commit `56c17ffd0`。終了時 full 17132 合格 / 2 失敗 / skip 2 / 合計 17136（`run3.trx`＝`ReadmeSampleTests` と、語りが 191 字長かった `TheHandoffStaysReadable`。削ったあと後者は単独で緑）。
+- 7.7: ⚠️ section の境で切って開き直したヘアピン（`LysWriter.CutSpan` の `AddOpen`）は向きを運ばない。⚠️ 別の段へ送った印の向き（`SendDirectedMarksHome`）と装飾音の強弱は網なし。⚠️ `<dynamics placement>`（direction ではなく中の要素に書く形）は読まない。残したものは Lab `p1242/leftovers.md` の「第1260」。7.5: Core '+' 134 行（REF 0・OWN 0）＝`DynamicLineSides` は既存の LILYPOND-REF の下に MEASURED を足した・ほかは MusicXML の読み書き。CHANGELOG は 2 つとも `## Unreleased`。
+
+## 以下は第1259セッションの経緯
+
 ### 1.1 第1259セッション（2026-11-15・YT-DELL2）
 
 base `e1f4a5aed`・開始時 full 17109 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17112（Lab `p1259` の `run1.trx`）。Calamo の REQUESTS の `open` は 0・Dettato は 1・2 が `question`（オーナー待ち）のまま。CI は第1231 のまま（最新の CI は 2026-11-13 の failure）。
@@ -151,17 +164,6 @@ leftovers の欠陥の先頭「`lysc import` は wedge の `number` を読まな
 - 読み手（`MusicXmlReader`）: direction の `<voice>` の声部の音に付ける（`PendingMark.Voice`・その小節に音のない声部は何も言わない＝`<staff>` と同じ扱い）。stop は自分の `number` の wedge を閉じる（`wedgeNumbers`・その番号の開いた wedge がなければ今までどおり最後に開いたもの）。
 - 門: 網 `MusicXmlImportVoiceDirectionTests` 12 本・毒 8 本が全部赤（Lab `p1259/poisons.ps1`・`poison8.ps1`）。往復の掃き（Lab `p1259/rt-sweep.ps1`・1268 文書）: xml の差 5（`<voice>` の行だけ・ほかの差 0）・読み戻した `.lys` の差 5（`voice-dynamics*.lys` 4 冊と `above-dynamics.lys`。直す前は 2 声部の `@f` と `@p` が 1 声部目の `@fp` に潰れていた）。絵は動かない（svg の掃きは回していない＝描画のコードに触っていない・snapshot は full で緑）。commit `96d6668fa`。終了時 full 17121 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17124（`run2.trx`）。
 - 7.7: ⚠️ 古い Lily# が書いた xml（`number` はあるが `<voice>` がない）の 2 声部目の印は今も 1 声部目に戻る（番号から声部を逆算する読みは入れていない＝Lily# だけの番号の規則を読み手に持ち込まない）。1 声部目の direction は `<voice>` を書かない。残したものは Lab `p1242/leftovers.md` の「第1259」。7.5: Core '+' 69 行は MusicXML の読み書き＝LilyPond 由来でない（REF 0・OWN 0）。
-
-## 以下は第1258セッションの経緯
-
-### 1.1 第1258セッション（2026-11-15・YT-DELL2）
-
-base `96d2d025b`・開始時 full 17105 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17108（Lab `p1258` の `run1.trx`）。Calamo・Dettato の REQUESTS は第1253 の開始時に見たまま（同じ会話）。CI は第1231 のまま。
-第1257 の残り 2 形（設計 `inline-repeat-design.md` §7 MIDI の ✅ の項の「第1258」）。
-- **コードの行の `[1. G :| [2. Am ] | [3. F ] |`**: 直す前の実測（Lab `p1258/probe`）＝.mid は `:|` を書いた版と一致・.xml に backward の repeat が無い・ページに反復小節線が無い。`ChordRowBarLines.EndingsAfterAnUnsaidRepeat`（行の平らな ending の読み）をページ（`ChordNameCollector.CollectPart`）と MusicXML（`WriteRowSigns`）が読む。直したあと .mid・.xml は一致、絵は `]` の鉤 1 本だけ違う。
-- **括弧の最後の小節を小節線で閉じていない `[2. e1 ] [3. f1 ]`** は、測ったら LYS2017（小節線の書き忘れ）のエラーだった＝対象外（直す物は無い）。
-- 門: 網 +4（`InlineRepeatMidiTests.ARowsEndingFollowedByAnotherGoesBack`＝ページと MusicXML）。掃きは回していない（snapshot は full で緑）。commit `8128f7014`。終了時 full 17109 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17112（`run2.trx`）。
-- 7.7: 行の ending が小節の途中で開く形（`[2. Am ] [3. F ]`・小節線なし）は描かない（小節の途中の ending は別のエラーの形）。
 
 ## 2. 開いている作業
 

@@ -267,6 +267,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1258セッションの経緯
+
+### 1.1 第1258セッション（2026-11-15・YT-DELL2）
+
+base `96d2d025b`・開始時 full 17105 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17108（Lab `p1258` の `run1.trx`）。Calamo・Dettato の REQUESTS は第1253 の開始時に見たまま（同じ会話）。CI は第1231 のまま。
+第1257 の残り 2 形（設計 `inline-repeat-design.md` §7 MIDI の ✅ の項の「第1258」）。
+- **コードの行の `[1. G :| [2. Am ] | [3. F ] |`**: 直す前の実測（Lab `p1258/probe`）＝.mid は `:|` を書いた版と一致・.xml に backward の repeat が無い・ページに反復小節線が無い。`ChordRowBarLines.EndingsAfterAnUnsaidRepeat`（行の平らな ending の読み）をページ（`ChordNameCollector.CollectPart`）と MusicXML（`WriteRowSigns`）が読む。直したあと .mid・.xml は一致、絵は `]` の鉤 1 本だけ違う。
+- **括弧の最後の小節を小節線で閉じていない `[2. e1 ] [3. f1 ]`** は、測ったら LYS2017（小節線の書き忘れ）のエラーだった＝対象外（直す物は無い）。
+- 門: 網 +4（`InlineRepeatMidiTests.ARowsEndingFollowedByAnotherGoesBack`＝ページと MusicXML）。掃きは回していない（snapshot は full で緑）。commit `8128f7014`。終了時 full 17109 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17112（`run2.trx`）。
+- 7.7: 行の ending が小節の途中で開く形（`[2. Am ] [3. F ]`・小節線なし）は描かない（小節の途中の ending は別のエラーの形）。
+
 ## 以下は第1257セッションの経緯
 
 ### 1.1 第1257セッション（2026-11-15・YT-DELL2）
