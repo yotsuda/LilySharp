@@ -251,37 +251,139 @@ public class MusicXmlWedgePairTests
 
     /// <summary>
     /// Two parts on a condensed staff are one staff of the page, whose levels end its hairpins
-    /// (MusicMarkItem.HairpinEndsOnStaff), and two parts of the document: a hairpin the page
-    /// ends at the OTHER part's level never meets that level in its own part. Its stop stands
-    /// in its own part where the level was written — whichever of the two parts is written
-    /// first — and no wedge is left open.
+    /// (MusicMarkItem.HairpinEndsOnStaff), and two parts of the document, each read alone: a
+    /// wedge stops at ITS OWN part's next level, not at the other part's the page ends the
+    /// hairpin at (owner's decision 2026-11-15; from session 1240 until then it stopped where
+    /// the other part's level was written).
     /// </summary>
     [Fact]
-    public void OnACondensedStaff_AHairpinEndedByTheOtherPartsLevel_StopsThereInItsOwnPart()
+    public void OnACondensedStaff_AHairpinStopsAtItsOwnPartsLevel_NotAtTheOtherParts()
     {
-        // The later part's mf on beat 2 ends the first part's crescendo on the page.
+        // The later part's mf on beat 2 ends the first part's crescendo on the page; in the
+        // first part's own document it runs to its own f on beat 4.
         var later = Condensed("c''2.@cresc c''4@f | c''1 |", "e'4 e'4@mf e'2 | e'1 |");
-        Assert.Equal(["bar 1 crescendo", "bar 1 +72 f", "bar 1 +24 stop"], Say(later, 0));
+        Assert.Equal(["bar 1 crescendo", "bar 1 +72 stop", "bar 1 +72 f"], Say(later, 0));
         Assert.Equal(["bar 1 +24 mf"], Say(later, 1));
-        // Both parts write the f and the page prints the first part's: it ends the second's.
+        // Both parts write the f and the page prints the first part's: the second's crescendo
+        // stops at its own copy.
         var earlier = Condensed("c''2@p c''2@f | c''1 |", "e'2@p@cresc e'2@f | e'1 |");
         Assert.Equal(["bar 1 p", "bar 1 +48 f"], Say(earlier, 0));
-        Assert.Equal(["bar 1 p", "bar 1 crescendo", "bar 1 +48 f", "bar 1 +48 stop"], Say(earlier, 1));
+        Assert.Equal(["bar 1 p", "bar 1 crescendo", "bar 1 +48 stop", "bar 1 +48 f"], Say(earlier, 1));
     }
 
-    /// <summary>…and where the other part plays that level more than once (a phrase played in
-    /// both bars), at its first writing after the hairpin's start: not one before the start,
-    /// not a later one.</summary>
+    /// <summary>…and its own part's next HAIRPIN and its own STOP end it as its level does:
+    /// the other part's mf (bar 1) and p (bar 2), which the page ends the two at, end neither.</summary>
     [Fact]
-    public void OnACondensedStaff_TheOtherPartsLevelPlayedTwice_EndsTheHairpinAtTheFirstAfterItsStart()
+    public void OnACondensedStaff_AHairpinStopsAtItsOwnPartsNextHairpinAndStop()
+        => Assert.Equal(
+            ["bar 1 crescendo", "bar 1 +72 stop", "bar 1 +72 diminuendo", "bar 2 +96 stop"],
+            Say(Condensed("c''2.@cresc c''4@decresc | c''2 c''2@!decresc |", "e'4 e'4@mf e'2 | e'4@p e'2. |"), 0));
+
+    /// <summary>With nothing in its own part to end it, the wedge stops at its bar's line — what
+    /// the page draws of a hairpin nothing ends — though the other part's level (a phrase played
+    /// in both bars) ends it on the page a beat in.</summary>
+    [Fact]
+    public void OnACondensedStaff_AHairpinNothingInItsPartEnds_StopsAtItsBarsLine()
     {
         const string head = "octave absolute\npart a { instrument violin }\npart b { instrument violin }\n"
             + "phrase lev { e'4 e'4@mf e'2 }\nsection S {\n";
         const string tail = "  b { lev | lev | }\n}\nform { ~S }\nscore { condensedStaff { a b } }\n";
-        Assert.Equal(["bar 2 crescendo", "bar 2 +24 stop"],
+        Assert.Equal(["bar 2 crescendo", "bar 2 +96 stop"],
             Say(Document(head + "  a { c''1 | c''1@cresc | }\n" + tail), 0));
-        Assert.Equal(["bar 1 crescendo", "bar 1 +24 stop"],
+        Assert.Equal(["bar 1 crescendo", "bar 1 +96 stop"],
             Say(Document(head + "  a { c''1@cresc | c''1 | }\n" + tail), 0));
+    }
+
+    /// <summary>A part with two voices on a condensed staff: the second voice's hairpin has no
+    /// end in its own voice and stops where the FIRST voice of its part wrote its level — the
+    /// other part's mf a beat in, which the page ends it at, does not end it.</summary>
+    [Fact]
+    public void OnACondensedStaff_AHairpinWithNoEndInItsVoice_StopsAtItsOwnPartsOtherVoice()
+        => Assert.Equal(
+            ["bar 1 +72 f", "bar 1 crescendo#3", "bar 1 +72 stop#3"],
+            Say(Condensed("voice { c''2. c''4@f } { a'1@cresc } | c''1 |", "e'4 e'4@mf e'2 | e'1 |"), 0));
+
+    /// <summary>Its own VOICE's end first: the second voice of its part writes a p under the
+    /// first voice's crescendo — the page, where the staff's levels end a condensed staff's
+    /// hairpins, ends it there — and the wedge runs on to its own voice's f.</summary>
+    [Fact]
+    public void OnACondensedStaff_AnotherVoiceOfItsPart_DoesNotEndAHairpinWithItsOwnEnd()
+        => Assert.Equal(
+            ["bar 1 crescendo", "bar 2 +48 p", "bar 3 stop", "bar 3 f"],
+            Say(Condensed("c''1@cresc | voice { c''1 } { a'2 a'2@p } | c''1@f |", "e'1 | e'1 | e'1 |"), 0));
+
+    /// <summary>A hairpin the carry rule cuts stops at its section's last bar line, as any
+    /// part's does — not at its own part's f two sections on.</summary>
+    [Fact]
+    public void OnACondensedStaff_AHairpinCutAtItsSectionsEnd_StopsThere()
+        => Assert.Equal(
+            ["bar 1 crescendo", "bar 2 +96 stop", "bar 4 f"],
+            Say(Document("""
+                octave absolute
+                part a { instrument violin }
+                part b { instrument violin }
+                section C {
+                  a { c''1@cresc | c''1 || }
+                  b { e'1 | e'1 || }
+                }
+                section D {
+                  a { c''1 || }
+                  b { e'1 || }
+                }
+                section E {
+                  a { c''1@f | }
+                  b { e'1 | }
+                }
+                form { C D E }
+                score { condensedStaff { a b } }
+                """), 0));
+
+    /// <summary>
+    /// The hairpin BOTH parts of a condensed staff write is printed once on the page — the
+    /// later part's is left out of it (MeasureCollector.JunkCondensedStaffDuplicateDynamics) —
+    /// and is each part's own wedge in the document. Until session 1266 the later part wrote
+    /// its p and its f with no wedge between (Lab sessions/p1266/cs/c4, c7).
+    /// </summary>
+    [Fact]
+    public void OnACondensedStaff_TheHairpinBothPartsWrite_IsEachPartsOwnWedge()
+    {
+        string[] own = ["bar 1 p", "bar 1 crescendo", "bar 1 +48 stop", "bar 1 +48 f"];
+        var written = Condensed("c''2@p@cresc c''2@f | c''1 |", "e'2@p@cresc e'2@f | e'1 |");
+        Assert.Equal(own, Say(written, 0));
+        Assert.Equal(own, Say(written, 1));
+        // One phrase played by both parts: one written mark, the earlier part's playing first.
+        var phrase = Document("octave absolute\npart a { instrument violin }\npart b { instrument violin }\n"
+            + "phrase swell { e'2@p@cresc e'2@f }\nsection S {\n  a { swell | e'1 | }\n  b { swell | e'1 | }\n}\n"
+            + "form { ~S }\nscore { condensedStaff { a b } }\n");
+        Assert.Equal(own, Say(phrase, 0));
+        Assert.Equal(own, Say(phrase, 1));
+    }
+
+    /// <summary>…in every play of its section, and a hairpin carried into the next section
+    /// (the diminuendo of T ends at S's p) as the earlier part's is.</summary>
+    [Fact]
+    public void OnACondensedStaff_TheHairpinBothPartsWrite_IsWrittenInEveryPlay()
+    {
+        var doc = Document("""
+            octave absolute
+            part a { instrument violin }
+            part b { instrument violin }
+            section S {
+              a { c''2@p@cresc c''2@f | c''1 | }
+              b { e'2@p@cresc e'2@f | e'1 | }
+            }
+            section T {
+              a { c''2@decresc c''2 | c''1@p | }
+              b { e'2@decresc e'2 | e'1@p | }
+            }
+            form { S T S }
+            score { condensedStaff { a b } }
+            """);
+        string[] own = ["bar 1 p", "bar 1 crescendo", "bar 1 +48 stop", "bar 1 +48 f",
+                        "bar 3 diminuendo", "bar 4 stop", "bar 4 p",
+                        "bar 5 p", "bar 5 crescendo", "bar 5 +48 stop", "bar 5 +48 f"];
+        Assert.Equal(own, Say(doc, 0));
+        Assert.Equal(own, Say(doc, 1));
     }
 
     private const string GrandStaff = """

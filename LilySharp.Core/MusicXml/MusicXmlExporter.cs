@@ -1297,7 +1297,17 @@ public sealed class MusicXmlExporter
     /// A mark the page draws no hairpin from writes no wedge, and neither does a book the
     /// page cannot collect (<see cref="ReadCarryRefusals"/> finds no page then).
     /// </remarks>
-    private readonly Dictionary<(int Position, int Play), Queue<(Svg.Model.HairpinItem Item, int EndPlay)>> _pageHairpins = new();
+    /// <para>
+    /// ONE PAIRING IS NOT THE PAGE'S: a hairpin of a <c>condensedStaff</c> (owner's decision
+    /// 2026-11-15). Its parts are one staff of the page, where any part's level ends a
+    /// hairpin (<c>MusicMarkItem.HairpinEndsOnStaff</c>), and separate parts of this document,
+    /// each read alone: there a wedge stops at ITS OWN part's next level, hairpin or stop
+    /// (<c>OnStaffOfParts</c> below, <see cref="EndWedgesAt"/>). Under
+    /// <c>a { c''2.@cresc c''4@f }</c> over <c>b { e'4 e'4@mf e'2 }</c> part a's crescendo
+    /// stops at its f, the fourth beat — from session 1240 until then at the second, where
+    /// part b writes the mf the page ends it at (Lab sessions/p1266/cs/c1).
+    /// </para>
+    private readonly Dictionary<(int Position, int Play), Queue<(Svg.Model.HairpinItem Item, int EndPlay, bool OnStaffOfParts)>> _pageHairpins = new();
 
     /// <summary>The nientes a hairpin's circled tip stands for on the page, by (source
     /// position, play): no <c>&lt;n/&gt;</c> is written for them, the wedge's
@@ -1313,8 +1323,10 @@ public sealed class MusicXmlExporter
 
     /// <summary>A wedge whose start is written and whose stop is not: its part, the page's
     /// hairpin, the play its end is in, the start's direction and the number in the part of
-    /// the bar it starts in.</summary>
-    private sealed record OpenWedge(string Part, Svg.Model.HairpinItem Page, int EndPlay, MusicXmlDirection Start, int Bar);
+    /// the bar it starts in. <c>EndsInItsPart</c>: a condensed staff's, which stops at its own
+    /// part's next end and not at the page's (<see cref="_pageHairpins"/>).</summary>
+    private sealed record OpenWedge(string Part, Svg.Model.HairpinItem Page, int EndPlay, MusicXmlDirection Start, int Bar,
+        bool EndsInItsPart = false);
 
     private readonly List<OpenWedge> _openWedges = new();
 
@@ -1399,9 +1411,32 @@ public sealed class MusicXmlExporter
             var key = (h.SourcePosition, plays?.PlayAt(h.StartMeasureIndex) ?? 0);
             if (!_pageHairpins.TryGetValue(key, out var playings))
                 _pageHairpins[key] = playings = new();
-            playings.Enqueue((h, plays?.PlayAt(h.EndMeasureIndex) ?? 0));
+            bool onStaffOfParts = h.SourceIndex >= 0 && h.SourceIndex < page.MusicMarks.Length
+                && page.MusicMarks[h.SourceIndex].HairpinEndsOnStaff;
+            playings.Enqueue((h, plays?.PlayAt(h.EndMeasureIndex) ?? 0, onStaffOfParts));
             if (h.CircledNiente is { } circled)
                 _circledNientes.Add((circled.SourcePosition, plays?.PlayAt(circled.MeasureIndex) ?? 0));
+        }
+        // The hairpins a condensed staff prints ONCE for two of its parts
+        // (MeasureCollector.JunkCondensedStaffDuplicateDynamics): the page holds the earlier
+        // part's only, and the later part's own document still says its own. Paired here
+        // beside the page's marks, each is queued AFTER the page's under its key — two parts
+        // playing one phrase write one position, the earlier part first. ⚠️ Until session 1266
+        // the later part wrote no wedge at all: `b { e'2@p@cresc e'2@f }` under the same in
+        // part a was a p and an f with nothing between (Lab sessions/p1266/cs/c4).
+        var duplicates = collector.CondensedStaffDuplicateHairpinStarts;
+        if (duplicates.Count == 0)
+            return;
+        int pageMarks = page.MusicMarks.Length;
+        foreach (var h in Svg.Layout.HairpinEngraver.DetectHairpins(page.MusicMarks.AddRange(duplicates), page.Dynamics, plays)
+                     .Where(h => h.SourceIndex >= pageMarks)
+                     .OrderBy(h => h.StaffIndex).ThenBy(h => h.StartMeasureIndex)
+                     .ThenBy(h => h.VoiceIndex).ThenBy(h => h.StartItemIndex))
+        {
+            var key = (h.SourcePosition, plays?.PlayAt(h.StartMeasureIndex) ?? 0);
+            if (!_pageHairpins.TryGetValue(key, out var playings))
+                _pageHairpins[key] = playings = new();
+            playings.Enqueue((h, plays?.PlayAt(h.EndMeasureIndex) ?? 0, true));
         }
     }
 
@@ -1464,7 +1499,12 @@ public sealed class MusicXmlExporter
         for (int i = 0; i < _openWedges.Count; i++)
         {
             var open = _openWedges[i];
-            if (open.Part != part || open.Page.EndSourcePosition != position || open.EndPlay != play)
+            // The page's end — or, for a condensed staff's hairpin, whatever its own voice of
+            // its own part writes next that ends one.
+            bool ends = open.EndsInItsPart
+                ? open.Start.WedgeVoice == _voiceLine
+                : open.Page.EndSourcePosition == position && open.EndPlay == play;
+            if (open.Part != part || !ends)
                 continue;
             _openWedges.RemoveAt(i--);
             var stop = WedgeStop(open);
@@ -1484,7 +1524,7 @@ public sealed class MusicXmlExporter
         if (_currentMeasure == null || _inLaterTremoloPass
             || !_pageHairpins.TryGetValue((position, PagePlay), out var playings) || playings.Count == 0)
             return;
-        var (page, endPlay) = playings.Dequeue();
+        var (page, endPlay, onStaffOfParts) = playings.Dequeue();
         var start = new MusicXmlDirection
         {
             WedgeType = type,
@@ -1501,6 +1541,14 @@ public sealed class MusicXmlExporter
             var stop = WedgeStop(open);
             AddDirection(stop);
             _barEndStops.Add((_currentMeasure, stop));
+            return;
+        }
+        if (onStaffOfParts)
+        {
+            // A condensed staff's: open until its own part ends it (EndWedgesAt), whatever
+            // the page ended it at; with no end of its own, settled in FinishOpenSpans. One
+            // the page cuts at its section's end is cut there if still open (CloseCutWedge).
+            _openWedges.Add(open with { EndsInItsPart = true });
             return;
         }
         // Ended by another voice's level that is written already — the first voice of a
@@ -6835,22 +6883,35 @@ public sealed class MusicXmlExporter
         // A hairpin still open was ended on the page by ANOTHER PART's level — a part it
         // shares a staff of the page with (_endsWritten): its stop stands in its own part at
         // the bar and the offset that level was written at, the first such after its start.
+        // A condensed staff's hairpin still open has no end in its own voice of its own part
+        // (EndWedgesAt): it stops at the first thing ANOTHER VOICE OF ITS PART wrote after its
+        // start that ends a hairpin — the part's own staff, were it read alone, as the page
+        // pairs one (its voice's end first, then its staff's) — and with none at its bar's
+        // line, what the page draws of a hairpin nothing ends.
         foreach (var open in _openWedges)
         {
-            if (!_partsByName.TryGetValue(open.Part, out var home)
-                || !_endsWritten.TryGetValue((open.Page.EndSourcePosition, open.EndPlay), out var written))
+            if (!_partsByName.TryGetValue(open.Part, out var home))
                 continue;
+            IEnumerable<(string Part, int Bar, MusicXmlMeasure Measure, int Offset)> written = open.EndsInItsPart
+                ? _endsWritten.Values.SelectMany(w => w)
+                : _endsWritten.TryGetValue((open.Page.EndSourcePosition, open.EndPlay), out var pagesEnd) ? pagesEnd : [];
             (string Part, int Bar, MusicXmlMeasure Measure, int Offset)? end = null;
             foreach (var w in written)
-                if (w.Part != open.Part
+                if ((w.Part != open.Part) != open.EndsInItsPart
                     && (w.Bar > open.Bar || (w.Bar == open.Bar && w.Offset > open.Start.Offset))
                     && (end is not { } first || w.Bar < first.Bar || (w.Bar == first.Bar && w.Offset < first.Offset)))
                     end = w;
-            if (end is not { } at || at.Bar >= home.Measures.Count)
-                continue;
             var stop = WedgeStop(open);
-            stop.Offset = at.Offset;
-            home.Measures[at.Bar].Directions.Add(stop);
+            if (end is { } at && at.Bar < home.Measures.Count)
+            {
+                stop.Offset = at.Offset;
+                home.Measures[at.Bar].Directions.Add(stop);
+            }
+            else if (open.EndsInItsPart && open.Bar < home.Measures.Count)
+            {
+                home.Measures[open.Bar].Directions.Add(stop);
+                _barEndStops.Add((home.Measures[open.Bar], stop));
+            }
         }
         _openWedges.Clear();
         // A hairpin nothing ends stops at its bar's line: the bar's length, now that it is whole.

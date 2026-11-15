@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Exporting MusicXML from a `condensedStaff`: each part's hairpins are its own.** A part's crescendo stops at that part's next dynamic, not where the other part of the staff writes one, and a hairpin both parts wrote is in both parts (it was missing from the second).
 - **A fingering written in a later voice is drawn**: in `voice { d''2 e''2 } { b'2 c''2@finger(2) }` the lower voice's 2 was missing from the preview. It is printed below its note (a third voice's above), under that note's staccato or accent.
 - **A hairpin and a dynamic of a voice set aside by a collision** (two voices a second or a unison apart) **stand on that voice's notes as drawn**, not a note head's width to the left — and so do its articulations, its `@rit` / `@textSpan` line and its trill line.
 - **Importing MusicXML keeps palm mutes, let rings and barres** (`@palmMute … @!palmMute`, `@letRing`, `@barre(7)`): they came in as plain text with no line.

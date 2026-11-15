@@ -537,6 +537,14 @@ public sealed partial class MeasureCollector
     /// <see cref="_musicMarks"/> (the second is append-only), left out of the score's content.</summary>
     private readonly HashSet<object> _condensedStaffDuplicateDynamics = new(ReferenceEqualityComparer.Instance);
 
+    /// <summary>The hairpin starts among them: the ones a condensed staff prints once for two
+    /// of its parts, in the order they were collected. The page draws none of these; a document
+    /// that writes each part alone (MusicXML) still owes the later part its own.</summary>
+    public IReadOnlyList<MusicMarkItem> CondensedStaffDuplicateHairpinStarts
+        => _condensedStaffDuplicateDynamics.Count == 0
+            ? []
+            : _musicMarks.Where(m => _condensedStaffDuplicateDynamics.Contains(m)).ToList();
+
     /// <summary>The dynamics and hairpin starts of a condensed staff's parts that DIFFER at one
     /// moment, with the side each takes — the upper part's above the staff (true), a lower
     /// part's below (<see cref="JunkCondensedStaffDuplicateDynamics"/>): applied as a written
