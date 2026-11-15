@@ -1493,6 +1493,27 @@ public sealed class MidiExporter
 
     private void ProcessNode(SyntaxNode node, MidiTrack track, MidiTrack conductorTrack)
     {
+        if (node is not (NoteSyntax or ChordSyntax or BareDurationSyntax or ChordRepetitionSyntax or ArpeggioSyntax or DrumNoteSyntax))
+        {
+            ProcessNodeCore(node, track, conductorTrack);
+            return;
+        }
+        // An onset: what its notes sound past the time it takes (a fermata's 150 %) is noted on
+        // them (MidiNote.Overhang), so a repeat played again does not take that ring for a note
+        // written at its start (PlayedTimeline).
+        int first = track.Notes.Count;
+        ProcessNodeCore(node, track, conductorTrack);
+        for (int i = first; i < track.Notes.Count; i++)
+        {
+            var n = track.Notes[i];
+            int past = n.StartTick + n.DurationTicks - _currentTick;
+            if (past > 0 && n.DurationTicks > 0 && !n.IsGrace && !n.IsAfterGrace && n.StartTick < _currentTick)
+                track.Notes[i] = n with { Overhang = past };
+        }
+    }
+
+    private void ProcessNodeCore(SyntaxNode node, MidiTrack track, MidiTrack conductorTrack)
+    {
         if (_anyGuitarLine && !_onGuitarLineCarrier
             && node is NoteSyntax or ChordSyntax or BareDurationSyntax or ChordRepetitionSyntax or ArpeggioSyntax
             && (_guitarLines.Count > 0 || node.DescendantNodes().Any(n => GuitarLineMark(n) != null)))

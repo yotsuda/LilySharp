@@ -124,7 +124,12 @@ public readonly record struct MidiNote(
     // A tie `~` is written after this note (after the last note a tie merged into it) and the
     // onset PRINTED next did not take it: where the music jumps from the note's end, the note
     // PLAYED next may (PlayedTimeline.Unfold). Not written to .mid files.
-    bool TiedOut = false
+    bool TiedOut = false,
+    // What the note sounds past the time its value takes in the music — a fermata's half again
+    // (MidiExporter.ApplyArticulationType) — 0 for most. The note's WRITTEN end is its end less
+    // this: a repeat played again starts with no note that only rings into it (PlayedTimeline).
+    // Not written to .mid files.
+    int Overhang = 0
 );
 
 /// <summary>

@@ -134,7 +134,12 @@ internal static class PlayedTimeline
                     // A note the printed walk tied INTO the stretch from the bars printed before
                     // it (`[1. d1~ :| [2. d1 ]`): what is played before the stretch is somewhere
                     // else, so the part of it standing here is a note written here.
-                    bool tail = note.StartTick < from && noteEnd > from && note.DurationTicks > 0;
+                    // ⚠️ By its WRITTEN end: a fermata's ring past its bar (MidiNote.Overhang) is not
+                    // written there — `B |: Safety :|` with `e''1@fermata` closing B sang its word
+                    // again at the head of Safety's second pass (owner's report 2026-11-15,
+                    // Lab eval3 theatre.lys).
+                    int writtenEnd = noteEnd - note.Overhang;
+                    bool tail = note.StartTick < from && writtenEnd > from && note.DurationTicks > 0;
                     if (!tail && (note.StartTick < from || note.StartTick >= to))
                         continue;
                     int start = Math.Max(note.StartTick, from);
@@ -142,7 +147,7 @@ internal static class PlayedTimeline
                     int length = last ? noteEnd - start : Math.Min(noteEnd, to) - start;
                     // …and TIED over it when the cut took the rest of a tie away, or the note ends
                     // at the jump with a tie written after it.
-                    bool tied = !last && note.DurationTicks > 0 && (noteEnd > to || (noteEnd == to && note.TiedOut));
+                    bool tied = !last && note.DurationTicks > 0 && (writtenEnd > to || (writtenEnd == to && note.TiedOut));
                     // A tie is carried to the note PLAYED next (the class remarks).
                     int into = start == from ? arriving.FindIndex(i => track.Notes[i].Pitch == note.Pitch
                         && track.Notes[i].Channel == note.Channel && track.Notes[i].Part == note.Part

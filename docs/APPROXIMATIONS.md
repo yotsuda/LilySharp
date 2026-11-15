@@ -310,7 +310,7 @@
 - **`MidiExporter.SplitIntoPartTracks`** LILYSHARP-OWN: LilyPond's performer gives each staff its own channel in the same way
 - **`MidiExporter.PlanChannels`** LILYSHARP-OWN: a second port (meta event 0x21, a port a track) would give sixteen more
 - **`MidiExporter.PlayUnderGuitarLines`** LILYSHARP-OWN: LilyPond plays neither (they are text spanners there). The half is the
-- **`MidiExporter.ProcessNode`** LILYSHARP-OWN: LilyPond's \cueDuring quotes a voice into a CueVoice, which its
+- **`MidiExporter.ProcessNodeCore`** LILYSHARP-OWN: LilyPond's \cueDuring quotes a voice into a CueVoice, which its
 - **`MidiExporter.PlayChordRow`** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
 - **`MidiExporter.RowsAndLanesEnd`** 0 1 2 4 5 for 0 1 2 3 4). LILYSHARP-OWN: LilyPond performs no ChordNames context. The parts
 - **`MidiExporter.PlayForm`** again. LILYSHARP-OWN: LilyPond's MIDI unfolds the music in time
