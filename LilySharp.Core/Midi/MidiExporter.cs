@@ -193,6 +193,11 @@ public sealed class MidiExporter
     /// over the level where that is louder.</summary>
     internal static double AccentAt(int own, double level) => Math.Min(127, Math.Max(own, level + AccentOverStanding));
 
+    // Every accent dynamic the walk strikes a note with, in the order it meets them: the part,
+    // where, the accent's number (0 for an `@fp` / `@sfp`) and, for those two, the velocity of
+    // the attack. ShareGrandStaffStrikes reads it.
+    private readonly List<(string? Part, int Tick, int Own, int Attack)> _strikeLog = new();
+
     /// <summary>
     /// The velocity of the note a dynamic is written on, with the level standing after it set: a
     /// level (<c>@p</c>, <c>@ff</c>) stands from here on; <c>@sf</c>, <c>@sfz</c>, <c>@fz</c>,
@@ -215,10 +220,12 @@ public sealed class MidiExporter
             case DynamicLevel.SF or DynamicLevel.SFZ or DynamicLevel.FZ or DynamicLevel.SFFZ or DynamicLevel.RF or DynamicLevel.RFZ:
                 int own = dynamic.Level == DynamicLevel.SF ? (int)DynamicLevel.SFZ : dynamic.Velocity;
                 _struckBy = own;
+                _strikeLog.Add((_currentPart, _currentTick, own, 0));
                 return (int)AccentAt(own, _velocity);
             case DynamicLevel.FP or DynamicLevel.SFP:
                 // Struck no softer than the level it is written in (`@fp` in a forte passage).
                 int attack = Math.Max(dynamic.Velocity, _velocity);
+                _strikeLog.Add((_currentPart, _currentTick, 0, attack));
                 SetLevel((int)DynamicLevel.P, written: true);
                 _struckBy = 0;
                 return attack;
@@ -325,6 +332,64 @@ public sealed class MidiExporter
                 else hi = mid - 1;
             }
             return found;
+        }
+    }
+
+    /// <summary>
+    /// An accent dynamic — <c>@sf</c>, <c>@sfz</c>, <c>@fz</c>, <c>@sffz</c>, <c>@rf</c>,
+    /// <c>@rfz</c>, and the attack of an <c>@fp</c> or <c>@sfp</c> — written in one hand of a
+    /// grand staff strikes the other hands too: every note they START at that moment (owner's
+    /// decision 2026-11-15). A hand that starts no note there plays on as it was — the accent is
+    /// a stroke, not a level — and a hand that writes its own accent dynamic at that moment
+    /// plays its own. Until then the hand it was written in struck alone: under the right
+    /// hand's <c>@sfz</c> the left hand's chord sounded at the level standing.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN, as <see cref="ShareGrandStaffDynamics"/> is and for its reason: LilyPond's
+    /// Dynamic_performer is per Voice (ly/performer-init.ly:100-103); a piano score writes one
+    /// sfz between the staves for both hands. Run AFTER the levels are shared: the strike is
+    /// read at the level the other hand's note stands at (<see cref="AccentAt"/>; an
+    /// <c>@fp</c>'s attack as it was struck), with what that note's own marks add on top, and it
+    /// is the note's own from here on (<see cref="MidiNote.Sforzando"/>, <see cref="MidiNote.Accent"/>)
+    /// — a hairpin the hands share reads it again at the level it has come to.
+    /// The voices of ONE hand are not struck by one another's (each voice keeps its own
+    /// dynamics, <see cref="ShareSpanDynamics"/>); no net sees that either way.
+    /// </remarks>
+    private void ShareGrandStaffStrikes(MidiTrack track)
+    {
+        if (_playedSpec == null || _strikeLog.Count == 0)
+            return;
+        foreach (var group in GrandStaffPartSets(_playedSpec.Items))
+        {
+            if (group.Count < 2)
+                continue;
+            var strikes = _strikeLog.Where(s => s.Part is { } p && group.Contains(p)).ToLookup(s => s.Tick);
+            if (strikes.Count == 0)
+                continue;
+            for (int i = 0; i < track.Notes.Count; i++)
+            {
+                var n = track.Notes[i];
+                if (n.Part is not { } part || !group.Contains(part) || !strikes.Contains(n.StartTick))
+                    continue;
+                // Its own hand's accent dynamic at this moment is the one it plays.
+                bool own = false;
+                (string? Part, int Tick, int Own, int Attack) strike = default;
+                foreach (var s in strikes[n.StartTick])
+                {
+                    own |= s.Part == part;
+                    // Two other hands' at one moment: the louder.
+                    if (Math.Max(s.Own, s.Attack) > Math.Max(strike.Own, strike.Attack))
+                        strike = s;
+                }
+                if (own)
+                    continue;
+                int level = SungVoices.Level(n);
+                int struck = Math.Clamp(
+                    (strike.Own > 0 ? (int)AccentAt(strike.Own, level) : Math.Max(strike.Attack, level)) + n.Accent, 1, 127);
+                if (struck <= n.Velocity)
+                    continue;
+                track.Notes[i] = n with { Velocity = struck, Accent = struck - level, Sforzando = strike.Own };
+            }
         }
     }
 
@@ -944,6 +1009,7 @@ public sealed class MidiExporter
         _swing.Clear();
         OpenBarGrid(mainTrack, null);
         _levelLog.Clear();
+        _strikeLog.Clear();
         _pedalLog.Clear();
         _anyPedal = tree.GetRoot().DescendantNodes().Any(n => PedalMark(n) != null);
         _guitarLines.Clear();
@@ -973,6 +1039,7 @@ public sealed class MidiExporter
                 _barTicks.Add(t);
         }
         ShareGrandStaffDynamics(mainTrack);
+        ShareGrandStaffStrikes(mainTrack);
         SwellInstruments(mainTrack);
         // The notes an overfull bar ran past its bar line (AlignBarLine), once nothing indexes
         // the track any more.
@@ -1478,11 +1545,13 @@ public sealed class MidiExporter
                 // MIDI plays again; a Lily# cue is typed in the reading part and is print only.
                 {
                     int firstCued = track.Notes.Count, levels = _levelLog.Count, pedals = _pedalLog.Count, level = _velocity;
+                    int strikes = _strikeLog.Count;
                     ProcessNode(cue.Body, track, conductorTrack);
                     for (int i = firstCued; i < track.Notes.Count; i++)
                         track.Notes[i] = track.Notes[i] with { DurationTicks = DroppedNote };
                     _velocity = level;
                     _levelLog.RemoveRange(levels, _levelLog.Count - levels);
+                    _strikeLog.RemoveRange(strikes, _strikeLog.Count - strikes);
                     _pedalLog.RemoveRange(pedals, _pedalLog.Count - pedals);
                     // A tie out of the cue's last note has nothing sounding to extend.
                     if (track.Notes.Count > firstCued)
