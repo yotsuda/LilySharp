@@ -244,7 +244,7 @@ internal static partial class SharedRenderer
                                 DrawSystem(score, layout, drawn, resolver, beamedItems, systemGc, flipBase);
                         // OUTSIDE the capture: a replayed system stands at other bar numbers
                         // once a bar is added before it, and its boxes must say so.
-                        DrawBarBoxes(drawn, barNumbers, barStarts, systemGc);
+                        DrawBarBoxes(drawn, barNumbers, barStarts, systemGc, score.TextMetrics, layout.ChordNameLayouts);
                     }
                     finally
                     {
@@ -393,11 +393,22 @@ internal static partial class SharedRenderer
     /// own X range, from the top line of the system's highest shown staff to the bottom line
     /// of its lowest — and one <see cref="IDrawingContext.DrawBarStaffBox"/> per bar per shown
     /// staff, carrying where that staff's bar is written (a click on the bar goes there).</summary>
+    /// <remarks>
+    /// A chords ROW's box stands where its symbols are, not on the row's band: the band is the
+    /// room the layout reserves (<c>ChordNameEngraver.ChordRowTextBaseline</c> — its top, the
+    /// symbols' baseline below it), and on a chords-only sheet the baseline is 2.9 under a band
+    /// 2.5 tall, so the box the preview lights on a hover stood above the names with their
+    /// lower half outside it (owner's report 2026-11-16). The box spans the ink of the row's
+    /// symbols in this system (<c>ChordNameEngraver.SymbolInk</c>, the raised run and the
+    /// accidentals with it), one height for the whole row, with <see cref="RowBoxPad"/> round it.
+    /// </remarks>
     private static void DrawBarBoxes(SystemLayout system, ImmutableArray<int> barNumbers,
-        BarSource[][] barStarts, IDrawingContext gc)
+        BarSource[][] barStarts, IDrawingContext gc,
+        ScoreTextMetrics fonts, ImmutableArray<ChordNameLayout> chordNames)
     {
         if (system.StaffGroups.IsDefaultOrEmpty)
             return;
+        var rowInk = ChordRowInk(system, fonts, chordNames);
         double top = double.NegativeInfinity, bottom = double.PositiveInfinity;
         foreach (var group in system.StaffGroups)
             foreach (var staff in group.Staves)
@@ -424,9 +435,39 @@ internal static partial class SharedRenderer
                     if (measure.MeasureIndex >= row.Length || row[measure.MeasureIndex].Start < 0)
                         continue;
                     var at = row[measure.MeasureIndex];
-                    gc.DrawBarStaffBox(at.Start, at.From, at.To, measure.X, system.Y + staff.Y, measure.Width, staff.Height);
+                    if (staff.IsTextRow && rowInk.TryGetValue(staff.StaffIndex, out var ink))
+                        gc.DrawBarStaffBox(at.Start, at.From, at.To, measure.X, system.Y + ink.Top + RowBoxPad,
+                            measure.Width, ink.Top - ink.Bottom + 2 * RowBoxPad);
+                    else
+                        gc.DrawBarStaffBox(at.Start, at.From, at.To, measure.X, system.Y + staff.Y, measure.Width, staff.Height);
                 }
         }
+    }
+
+    /// <summary>The room a chords row's box leaves round its symbols' ink, in staff spaces.</summary>
+    private const double RowBoxPad = 0.3;
+
+    /// <summary>Each chords row's symbols' ink in this system, Y-up from the system top: the
+    /// lowest bottom and the highest top of the symbols printed on the row's line.</summary>
+    private static Dictionary<int, (double Bottom, double Top)> ChordRowInk(SystemLayout system,
+        ScoreTextMetrics fonts, ImmutableArray<ChordNameLayout> chordNames)
+    {
+        var ink = new Dictionary<int, (double Bottom, double Top)>();
+        if (chordNames.IsDefaultOrEmpty)
+            return ink;
+        var measures = new HashSet<int>();
+        foreach (var m in system.Measures)
+            measures.Add(m.MeasureIndex);
+        foreach (var c in chordNames)
+        {
+            if (c.RowStaffIndex < 0 || !measures.Contains(c.MeasureIndex) || string.IsNullOrEmpty(c.ChordText))
+                continue;
+            var (bottom, top) = ChordNameEngraver.SymbolInk(fonts, c);
+            (double b, double t) = (c.YUp + bottom, c.YUp + top);
+            ink[c.RowStaffIndex] = ink.TryGetValue(c.RowStaffIndex, out var cur)
+                ? (Math.Min(cur.Bottom, b), Math.Max(cur.Top, t)) : (b, t);
+        }
+        return ink;
     }
 
     // ---------- Header ----------

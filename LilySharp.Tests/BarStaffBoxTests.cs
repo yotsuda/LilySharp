@@ -119,6 +119,31 @@ public class BarStaffBoxTests
         Assert.All(own, s => Assert.Equal("drums { { hh8 hh hh hh hh hh hh hh } { bd4 r bd r } } |", s));
     }
 
+    /// <summary>A chords row's box stands where its names are (owner's report 2026-11-16: on a
+    /// chord chart the box a hover lights stood above the names, their lower half outside it —
+    /// it was the row's reserved band, whose top is 2.9 above the names' baseline and which is
+    /// 2.5 tall). It spans the names' ink, the raised 7 included, with a little room round it.</summary>
+    [Fact]
+    public void AChordRowsBox_StandsWhereItsNamesAre()
+    {
+        const string book = "time 4/4\nsection A {\n  chords h {\n    D | C7 | F7 | G Am |\n  }\n}\nform { ~A }\nscore { chords h }\n";
+        string preview = SvgGenerator.Generate(SyntaxTree.Parse(book), SvgRenderOptions.Preview());
+        double systemY = double.Parse(Regex.Match(preview, @"<g class=""system"">\s*<g transform=""translate\([^,]+,([^)]+)\)").Groups[1].Value, CultureInfo.InvariantCulture);
+        int at = book.IndexOf("C7", StringComparison.Ordinal);
+        var box = Box.Matches(preview).Cast<Match>().First(b => b.Groups[1].Value == at.ToString(CultureInfo.InvariantCulture));
+        double top = systemY + Num(box, 3), bottom = top + Num(box, 5);
+        // The name's baseline and its raised 7's (page y, down-positive).
+        var texts = Regex.Matches(preview, $@"<text x=""[^""]+"" y=""([^""]+)"" font-size=""([^""]+)""[^>]*data-pos=""{at}""").Cast<Match>()
+            .Select(m => (Y: double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture), Size: double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture)))
+            .ToList();
+        Assert.Equal(2, texts.Count);
+        double baseline = texts.Max(t => t.Y);
+        var raised = texts.First(t => t.Y < baseline);
+        Assert.InRange(bottom - baseline, 0.1, 0.6);                            // just under the baseline
+        Assert.InRange(raised.Y - 0.7 * raised.Size - top, 0.1, 0.8);         // just over the raised 7's cap
+        Assert.True(bottom - top < 4.0, $"{bottom - top}");
+    }
+
     [Fact]
     public void AnExportedPage_HasNone()
         => Assert.DoesNotContain("bar-staff", SvgGenerator.Generate(SyntaxTree.Parse(Book), SvgRenderOptions.Default));
