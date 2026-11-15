@@ -16,7 +16,120 @@
 
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { svgPostKey, pagesSummary, previewOnEditorShown, sourceGroupToReveal, sourceGroupToOpen, newPreviewColumn, scoreGroupFor, ShownEditor, jumpOffsetFor, chordSpans, chordAtCaret } from '../src/previewCore';
+import { svgPostKey, pagesSummary, previewOnEditorShown, sourceGroupToReveal, sourceGroupToOpen, newPreviewColumn, scoreGroupFor, ShownEditor, jumpOffsetFor, chordSpans, chordAtCaret, soundingRange, soundingRanges, soundingLight } from '../src/previewCore';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+
+// Owner's request 2026-11-15: while the preview plays, the editor lights the text of what
+// sounds — as Shosa's editor lights the word being performed. A playback note's offset is its
+// node's full-span start, so the leading spaces are skipped and the word is what is lit.
+describe('the text of a note that sounds', () => {
+    const lit = (text: string, pos: number) => { const r = soundingRange(text, pos); return r ? text.slice(r[0], r[1]) : undefined; };
+
+    it('is the note with its octave marks, duration and dots, from past its leading spaces', () => {
+        const text = "m { c'4  cis''8.@staccato d,2~ d,4 | e4) f8[ g] bes4\\3 }";
+        assert.equal(lit(text, text.indexOf("c'4")), "c'4");
+        assert.equal(lit(text, text.indexOf("c'4") - 1), "c'4");          // the space before it
+        assert.equal(lit(text, text.indexOf('  cis')), "cis''8.");         // two spaces, then the mark is left out
+        assert.equal(lit(text, text.indexOf('d,2')), 'd,2');               // the tie is not the note
+        assert.equal(lit(text, text.indexOf('e4)')), 'e4');
+        assert.equal(lit(text, text.indexOf('f8[')), 'f8');
+        assert.equal(lit(text, text.indexOf('g]')), 'g');
+        assert.equal(lit(text, text.indexOf('bes4')), 'bes4');             // the string number is not
+    });
+
+    it('is the whole chord with its duration, a broken chord too', () => {
+        const text = "<c' e' g'>4. <d f a>'2@fermata << c e g >>1 |";
+        assert.equal(lit(text, 0), "<c' e' g'>4.");
+        assert.equal(lit(text, text.indexOf(' <d')), "<d f a>'2");
+        assert.equal(lit(text, text.indexOf('<<')), '<< c e g >>1');
+        assert.equal(lit('<c e g', 0), undefined);                         // not closed
+        assert.equal(lit('<c e\ng>4', 0), undefined);                      // nor on its line
+    });
+
+    it('is a drum name and a chord row symbol as written', () => {
+        assert.equal(lit('drums { bd4 hh sn hh | }', 8), 'bd4');
+        const row = 'chords prog { Cmaj7 | F#m7/E Bb | % | }';
+        assert.equal(lit(row, row.indexOf('Cmaj7')), 'Cmaj7');
+        assert.equal(lit(row, row.indexOf(' F#m7')), 'F#m7/E');
+        assert.equal(lit(row, row.indexOf('%')), '%');
+    });
+
+    it('is nothing past the text, at its end or on a bar line', () => {
+        assert.equal(soundingRange('c4 d4', 5), undefined);
+        assert.equal(soundingRange('c4 d4', 99), undefined);
+        assert.equal(soundingRange('c4 d4', -1), undefined);
+        assert.equal(soundingRange('c4 | d4', 2), undefined);
+        assert.equal(soundingRange('c4   ', 2), undefined);
+    });
+
+    it('is each sounding note once, in the order of the text', () => {
+        const text = "rh { e''4 c''4 } lh { <c e g>2 }";
+        const positions = [text.indexOf('<c'), text.indexOf("e''4"), text.indexOf("e''4") - 1, 999];
+        assert.deepEqual(soundingRanges(text, positions).map(([a, b]) => text.slice(a, b)), ["e''4", '<c e g>2']);
+        assert.deepEqual(soundingRanges(text, []), []);
+    });
+});
+
+describe('the editor lights what the preview plays', () => {
+    const text = "m { c'4 d'4 r4 <e' g'>4 | }";
+    const at = (word: string) => text.indexOf(word);
+    const words = (ranges: [number, number][]) => ranges.map(([a, b]) => text.slice(a, b));
+    const report = (session: ReturnType<typeof soundingLight>['session'], positions: number[], o: { uri?: string; version?: number; ended?: boolean; on?: boolean } = {}) =>
+        soundingLight(session, o.uri ?? 'a.lys', o.version ?? 7, () => text, positions, o.ended ?? false, o.on ?? true);
+
+    it('lights each report of a playback, and nothing for a rest', () => {
+        let r = report(undefined, [at("c'4")]);
+        assert.deepEqual(words(r.ranges), ["c'4"]);
+        assert.deepEqual(r.session, { uri: 'a.lys', version: 7 });
+        r = report(r.session, []);                       // the rest: dark, the playback goes on
+        assert.deepEqual(r.ranges, []);
+        assert.deepEqual(r.session, { uri: 'a.lys', version: 7 });
+        r = report(r.session, [at("<e'")]);
+        assert.deepEqual(words(r.ranges), ["<e' g'>4"]);
+    });
+
+    it('lights nothing once the text is edited, until the playback ends and the next starts', () => {
+        const first = report(undefined, [at("c'4")]);
+        // An edit: every offset after it has moved, and the notes are the old text's.
+        const edited = report(first.session, [at("d'4")], { version: 8 });
+        assert.deepEqual(edited.ranges, []);
+        assert.deepEqual(edited.session, { uri: 'a.lys', version: 7 });
+        // …a rest in between does not start it again…
+        assert.deepEqual(report(report(edited.session, [], { version: 8 }).session, [at("d'4")], { version: 8 }).ranges, []);
+        // …the end does: the next Play reads the text as it then is.
+        const ended = report(edited.session, [], { version: 8, ended: true });
+        assert.equal(ended.session, undefined);
+        assert.deepEqual(words(report(ended.session, [at("d'4")], { version: 8 }).ranges), ["d'4"]);
+        // A playback that opens on a rest is this text's from that first report.
+        const opened = report(undefined, [], { version: 3 });
+        assert.deepEqual(report(opened.session, [at("c'4")], { version: 4 }).ranges, []);
+    });
+
+    it('starts again for another file, lights nothing when switched off, and clears at the end', () => {
+        const first = report(undefined, [at("c'4")]);
+        const turned = report(first.session, [at("c'4")], { uri: 'b.lys', version: 1 });
+        assert.deepEqual(turned.session, { uri: 'b.lys', version: 1 });
+        assert.deepEqual(words(turned.ranges), ["c'4"]);
+        assert.deepEqual(report(first.session, [at("c'4")], { on: false }).ranges, []);
+        assert.deepEqual(report(first.session, [at("c'4")], { ended: true }), { session: undefined, ranges: [] });
+    });
+
+    // The wiring, in the source: the page reports what its follow-along lights and says when
+    // the playback stops; the host lights the editors of the panel's file.
+    it('is told by the page at every change of what sounds, and at the stop', () => {
+        const extension = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(extension, /const painted = highlightPositions\(r\.sounding\);[\s\S]{0,200}sourceLit = true;\s*vscode\.postMessage\(\{ type: 'soundingSource', positions: r\.sounding\.map\(x => x\.pos\) \}\);/);
+        assert.match(extension, /if \(sourceLit\) \{\s*sourceLit = false;\s*vscode\.postMessage\(\{ type: 'soundingSource', positions: \[\], ended: true \}\);/);
+        assert.match(extension, /if \(message\.type === 'soundingSource'\) \{\s*showSoundingSource\(panel, uri,/);
+        // A preview closed while it played leaves nothing lit.
+        assert.match(extension, /showSoundingSource\(panel, soundingLit\.get\(panel\)\?\.uri, \[\], true\);/);
+        assert.match(extension, /backgroundColor: new vscode\.ThemeColor\('editor\.findMatchHighlightBackground'\)/);
+        const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
+        const settings = pkg.contributes.configuration.flatMap((c: { properties: Record<string, { default?: unknown }> }) => Object.entries(c.properties));
+        assert.equal(settings.find(([k]: [string, unknown]) => k === 'lilysharp.playback.highlightSource')?.[1].default, true);
+    });
+});
 
 // Owner's request 2026-10-27: Select Chord on a member right-clicked puts the caret past the
 // chord's ">", and a caret there (or on its "<", or on what is glued after the ">") lights it whole.

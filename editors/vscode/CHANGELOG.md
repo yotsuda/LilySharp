@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Play lights the text being played**: while the preview plays, the editor highlights the notes sounding now — each note, chord, drum stroke and chord symbol, in every part at once — as the preview lights them on the score. It goes dark when the playback stops, and after an edit until the next Play (the notes are those of the text as it was). `lilysharp.playback.highlightSource` turns it off.
 - **Importing MusicXML keeps a transposing instrument's transposition**: a B♭ clarinet, a saxophone or a horn comes in with `transposition bes` (or `ees`, `f`, `bes,` …) in its header and plays at the right pitch; it was imported at written pitch with a warning.
 - **Exporting MusicXML: a key written in one part's header stays in that part.** With `part a { key d major }` in a file in F major, every part was exported in D major; the other parts now keep the file's key, as the preview shows them.
 - **`key none`**: no key signature on any page — a transposing instrument's part included, which printed C major transposed (two sharps for a B♭ clarinet) when the file wrote no key. After `key` the list offers `none` below the tonics, and the status bar says what it does.

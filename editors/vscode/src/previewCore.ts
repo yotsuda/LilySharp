@@ -168,6 +168,93 @@ export function jumpOffsetFor(text: string, pos: number): number {
     return offset;
 }
 
+/**
+ * The text of the thing that SOUNDS at `pos` — a playback note's source offset, which is its
+ * node's full-span start (the leading spaces included) — as [start, end) offsets, for the
+ * editor to light while the preview plays it (owner's request 2026-11-15, as Shosa's editor
+ * lights the word being performed). Undefined for an offset past the text (a note of a staff
+ * Lily# made) or one with nothing written at it.
+ *
+ * A chord is the whole of it with its duration (`<c' e' g'>4.`), a broken chord too
+ * (`<< c e g >>2`); anything else is the word standing there — a note with its octave marks,
+ * duration and dots (`cis''8.`), a drum's name, a chord row's symbol (`F#m7/E`) — up to the
+ * first space, bar line, `@` mark, tie, slur or beam.
+ */
+export function soundingRange(text: string, pos: number): [number, number] | undefined {
+    if (!Number.isInteger(pos) || pos < 0 || pos >= text.length) {
+        return undefined;
+    }
+    let start = pos;
+    while (start < text.length && /\s/.test(text[start])) {
+        start++;
+    }
+    let end = start;
+    if (text[start] === '<') {
+        const broken = text[start + 1] === '<';
+        const close = broken ? text.indexOf('>>', start + 2) : chordCloseFrom(text, start);
+        const lineEnd = text.indexOf('\n', start);
+        if (close < 0 || (lineEnd >= 0 && close > lineEnd)) {
+            return undefined;
+        }
+        end = close + (broken ? 2 : 1);
+        // What is glued after the chord and belongs to how long and how high it sounds.
+        while (end < text.length && /[0-9.',]/.test(text[end])) {
+            end++;
+        }
+    } else {
+        while (end < text.length && !/[\s|@~()\[\]{}<>\\]/.test(text[end])) {
+            end++;
+        }
+    }
+    return end > start ? [start, end] : undefined;
+}
+
+/**
+ * The ranges to light for the notes sounding at `positions`, each once, in the text's order.
+ */
+export function soundingRanges(text: string, positions: readonly number[]): [number, number][] {
+    const seen = new Set<number>();
+    const ranges: [number, number][] = [];
+    for (const pos of positions) {
+        const range = soundingRange(text, pos);
+        if (range && !seen.has(range[0])) {
+            seen.add(range[0]);
+            ranges.push(range);
+        }
+    }
+    return ranges.sort((a, b) => a[0] - b[0]);
+}
+
+/** A playback whose notes the editor lights: the file it plays and the version of its text
+ * when its first report came. */
+export interface SoundingSession {
+    uri: string;
+    version: number;
+}
+
+/**
+ * What the editor of `uri` lights for one report of the preview's follow-along, and the
+ * session to remember after it. The notes are those of the text Play read, so the session
+ * holds that text's version: a report for a text edited since lights nothing — every offset
+ * after the edit has moved — until the playback ends and the next one starts from the text
+ * as it then is. A report for another file (the preview turned to it) starts a session of
+ * its own. `text` is asked only when something is to be lit.
+ */
+export function soundingLight(
+    session: SoundingSession | undefined, uri: string, version: number, text: () => string,
+    positions: readonly number[], ended: boolean, enabled: boolean,
+): { session: SoundingSession | undefined; ranges: [number, number][] } {
+    if (ended) {
+        return { session: undefined, ranges: [] };
+    }
+    // The playback is this text's from its first report, a rest included.
+    const started = session && session.uri === uri ? session : { uri, version };
+    if (positions.length === 0 || !enabled || started.version !== version) {
+        return { session: started, ranges: [] };
+    }
+    return { session: started, ranges: soundingRanges(text(), positions) };
+}
+
 export function svgPostKey(
     svg: string, error: string | null | undefined,
     renders: readonly RenderEntry[] | null | undefined, drawnRender: string): string {

@@ -43,7 +43,7 @@ import { OmrScanDeps, hasScan, previewHoversBar, previewReady, previewShowsBar, 
 import { registerOmrAiFix } from './omrAiFix';
 import { registerVerifyOnSave } from './omrVerify';
 import { markdownItExtensionApi } from './markdownFence';
-import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, sourceGroupToOpen, SourceTab, jumpOffsetFor, chordSpans, chordAtCaret } from './previewCore';
+import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, sourceGroupToOpen, SourceTab, jumpOffsetFor, chordSpans, chordAtCaret, soundingLight, SoundingSession } from './previewCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 import { PLAIN_TONES_JS } from './plainTones';
 import { FOLLOW_SCROLL_CSS, FOLLOW_SCROLL_JS } from './followScroll';
@@ -104,6 +104,41 @@ const playingPanels = new Set<vscode.WebviewPanel>();
 // own, so a closed preview takes nothing with it: closing this one stops it (owner's request
 // 2026-11-02), and closing another leaves it playing.
 let midiPlaybackPanel: vscode.WebviewPanel | undefined;
+// The text of what a preview is playing, lit in the editor (owner's request 2026-11-15: as
+// Shosa's editor lights the word being performed). Each playing panel's file, and the version
+// of its text when the first note was lit: the notes are those of the text Play read, so an
+// edit since has moved every offset after it and nothing more is lit until the next Play.
+let soundingMark: vscode.TextEditorDecorationType | undefined;
+const soundingLit = new Map<vscode.WebviewPanel, SoundingSession>();
+
+/**
+ * Lights, in every visible editor of `uri`, the text of the notes sounding at `positions`
+ * (their source offsets, as the preview's follow-along has them), and nothing with none.
+ * `ended`: the playback stopped — the next one starts from the text as it then is.
+ */
+function showSoundingSource(panel: vscode.WebviewPanel, uri: string | undefined, positions: readonly number[], ended: boolean): void {
+    const mark = soundingMark ??= vscode.window.createTextEditorDecorationType({
+        backgroundColor: new vscode.ThemeColor('editor.findMatchHighlightBackground'),
+        borderRadius: '3px',
+    });
+    const editorsOf = (u: string | undefined) => vscode.window.visibleTextEditors.filter(e => e.document.uri.toString() === u);
+    const clear = (u: string | undefined) => { for (const e of editorsOf(u)) { e.setDecorations(mark, []); } };
+    const lit = soundingLit.get(panel);
+    if (lit && lit.uri !== uri) {
+        clear(lit.uri);   // the follower turned to another file while this one was lit
+    }
+    const editors = editorsOf(uri);
+    if (!uri || editors.length === 0) {
+        if (ended) { soundingLit.delete(panel); }
+        return;
+    }
+    const doc = editors[0].document;
+    const on = vscode.workspace.getConfiguration('lilysharp').get<boolean>('playback.highlightSource', true);
+    const { session, ranges } = soundingLight(lit, uri, doc.version, () => doc.getText(), positions, ended, on);
+    if (session) { soundingLit.set(panel, session); } else { soundingLit.delete(panel); }
+    const lights = ranges.map(([start, end]) => new vscode.Range(doc.positionAt(start), doc.positionAt(end)));
+    for (const e of editors) { e.setDecorations(mark, lights); }
+}
 let pendingFollow: string | undefined;
 // Files whose preview the writer closed this session: opening them again opens none.
 const dismissedPreviews = new Set<string>();
@@ -1629,6 +1664,8 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
             midiPlaybackPanel = undefined;
             void midiOutRequest('lilysharp/midiOut/stop', {});
         }
+        // A preview closed while it played leaves no text lit.
+        showSoundingSource(panel, soundingLit.get(panel)?.uri, [], true);
     });
     panel.webview.onDidReceiveMessage(
         async message => {
@@ -1637,6 +1674,14 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
             // The notes of an AI candidate sounding now: lit on the candidate panel's score.
             if (message.type === 'candidateSounding') {
                 showCandidateSounding(message.sounding);
+                return;
+            }
+            // The notes sounding now, for the editor to light their text — not logged: every
+            // change of what sounds.
+            if (message.type === 'soundingSource') {
+                showSoundingSource(panel, uri,
+                    Array.isArray(message.positions) ? message.positions.filter((p: unknown) => Number.isInteger(p)) : [],
+                    message.ended === true);
                 return;
             }
             if (message.type === 'playState') {
@@ -7850,6 +7895,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         let playEndTimer = null;
         let playheadTimer = null;
         let relaying = false;       // the current playback is a candidate's, followed for its panel
+        let sourceLit = false;      // the host was told what sounds, for the editor to light its text
         let tickWatch = null;       // the follow-along tick's evenness, for the log (followAlong)
         let followTick = null;      // the follow-along's tick while it runs (the host's followTick calls it too)
         let sfPlayer = null;       // the SoundFont player of the current playback
@@ -8058,6 +8104,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 relaying = false;
                 vscode.postMessage({ type: 'candidateSounding', sounding: [] });
             }
+            if (sourceLit) {
+                sourceLit = false;
+                vscode.postMessage({ type: 'soundingSource', positions: [], ended: true });
+            }
             clearHighlights();
             lastHighlightPos = -1;
             // No note is highlighted once playback ends (naturally or via Stop),
@@ -8234,6 +8284,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 }
                 clearHighlights();
                 const painted = highlightPositions(r.sounding);
+                // …and the host lights their text in the editor (the same notes, by their offsets).
+                sourceLit = true;
+                vscode.postMessage({ type: 'soundingSource', positions: r.sounding.map(x => x.pos) });
                 if (r.sounding.length > 0) {
                     lastHighlightPos = r.sounding[0].pos;
                     lastResolvedPos = r.sounding[0].pos;
