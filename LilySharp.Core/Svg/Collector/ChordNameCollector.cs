@@ -328,6 +328,7 @@ internal sealed class ChordNameCollector
         _items.Clear();
         _gridWarnings.Clear();
         RowEndings.Clear();
+        RowScoreMarks.Clear();
         MeterByMeasure = [];
         PickupByMeasure = new Dictionary<int, Fraction>();
     }
@@ -789,6 +790,13 @@ internal sealed class ChordNameCollector
     /// score's, one bracket an ending.</summary>
     public List<VoltaBracketItem> RowEndings { get; } = new();
 
+    /// <summary>The marks of the score the row collected last writes — the "N×" of its
+    /// <c>:|*N</c> and its navigation marks (<c>fine</c>, <c>segno</c> …) — at the bars a
+    /// part's would stand at (<c>MeasureCollector.NavigationMarkMeasure</c>'s rule): the
+    /// collector prints each once a bar, the row's where no part wrote it. Until session 1271
+    /// a row's signs repeated and jumped, and the page said neither.</summary>
+    public List<MusicMarkItem> RowScoreMarks { get; } = new();
+
     public ImmutableArray<Measure> CollectPart(
         SyntaxNode root, string partName, int staffIndex,
         IReadOnlyDictionary<string, int> sectionStartMeasure, int timeBeats, int timeBeatType,
@@ -800,6 +808,7 @@ internal sealed class ChordNameCollector
             return ImmutableArray<Measure>.Empty;
 
         RowEndings.Clear();
+        RowScoreMarks.Clear();
         var measureItems = new Dictionary<int, ImmutableArray<MusicItem>>();
         // Source barline types per measure. A chord row carries its own `|`, `:|`,
         // `||` etc. so a standalone lead sheet draws a real measure grid (and the
@@ -831,6 +840,13 @@ internal sealed class ChordNameCollector
                     RowEndings.Add(new VoltaBracketItem(open.First, Math.Max(open.First, last),
                         open.Mark.PrintedText, hooked, open.Mark.SourceStart));
                 ending = null;
+            }
+
+            // The measure a bar of the run ENDS in: its second half where the score breaks it.
+            int EndMeasureOfBar(int local)
+            {
+                int mi = MeasureOfBar(startMeasure, local, out var split);
+                return split != null ? mi + 1 : mi;
             }
 
             // Close the current measure with the given end barline (None = trailing
@@ -905,6 +921,22 @@ internal sealed class ChordNameCollector
                         if (t == BarlineType.RepeatEnd)
                             CloseEnding(MeasureOfBar(startMeasure, localMeasure - 1, out _), hooked: false);
                     }
+                    // `:|*4`: the count over the bar just closed, as a part's and a form's.
+                    if (bar.HasExplicitRepeatCount && bar.RepeatCount > 2 && localMeasure > 0)
+                        RowScoreMarks.Add(new MusicMarkItem(MusicMarkType.RepeatCount,
+                            bar.RepeatCount.ToString(System.Globalization.CultureInfo.InvariantCulture) + "×",
+                            EndMeasureOfBar(localMeasure - 1), bar.BarTokenStart));
+                }
+                // A navigation mark of the row: a sign (segno, coda) on the bar it opens, a
+                // text (fine, dc …) on the bar it ends — the bar before, written at a bar line.
+                else if (item is NavigationMarkSyntax nav)
+                {
+                    var navType = MeasureCollector.NavigationToMusicMark(nav.MarkType);
+                    bool sign = MusicMarkItem.PositionOf(navType) == MusicMarkPosition.Beginning;
+                    int navMeasure = pending.Count == 0 && !sign && localMeasure > 0
+                        ? EndMeasureOfBar(localMeasure - 1)
+                        : MeasureOfBar(startMeasure, localMeasure, out _);
+                    RowScoreMarks.Add(new MusicMarkItem(navType, navMeasure, nav.SourceStart));
                 }
                 else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
                 {

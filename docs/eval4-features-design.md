@@ -50,7 +50,23 @@
 - ⚠️ **作っていないもの＝MusicXML**: まとめた譜表のパートは MusicXML では今も別々の `<part>` で、譜表の名前を
   載せる場所がない（`<part-group>` の `<group-name>` が候補だが、読み手は part-group を staffGroup として読み戻す）。
 
-## 8-1. `:|*4` に "4x" を刷る（未着手）
+## 8-1. `:|*4` に "4×" を刷る（form は 2026-11-13 に済み・音楽の中は第1271）
+
+- **案を書いた時点で半分は在った**: form の `|: A :|*4` は 2026-11-13（評価 4 の浄書の便）から閉じる小節の上に "4×" を刷り、
+  MusicXML は `<repeat direction="backward" times="4"/>` を書く（`MusicMarkType.RepeatCount`・`MeasureCollector.AddRepeatCountMark`・
+  網 `GrammarEvaluation4Tests.ARepeatPlayedMoreThanTwice_PrintsItsCountOverTheClosingBar`）。字は "4x" ではなく "4×"。
+- **残っていたもの＝音楽に書いた反復**（2026-11-14〜15 の「反復記号を音楽にも書く」より前に form の分だけ入った）:
+  `section A { m { |: c'1 | d'1 :|*4 } }` は 4 回鳴り MusicXML も `times="4"` だが、ページは何も言わなかった。
+- **作った形**: 音楽の歩き（`MeasureCollector.MusicWalk` の小節線）が `:|*N`（N > 2）で同じ印を足す
+  （`AddRepeatCountMarkOfTheMusic`）。置き場所は form の印と同じ（閉じた小節の上・右端が小節線）。
+- **スコアの印は 1 小節に 1 つ**（`HasScoreMarkAt`）: 反復は score のものなので、何パートが書いても 1 回。描かないパートが
+  書いた分は harvest（`HarvestOmittedStructure`・`IsStructuralMark` に `RepeatCount`）が描くパートの譜へ運ぶ。
+- **コードの行も同じ**: `chords` の行にだけ書いた `:|*N` の回数とナビ記号（`fine`・`segno` …）は、反復し跳ぶのにページに出て
+  いなかった。行の歩き（`ChordNameCollector.CollectPart`）が `RowScoreMarks` に出し、collector がパートの印の無い小節にだけ足す
+  （行の ending の括弧 `RowEndings` と同じ形）。置く小節はパートの規則と同じ（記号は開く小節・文字は閉じた小節）。
+- **一緒に直したもの**: 2 つのパートが同じ小節線に書いたナビ記号（`fine`・`segno` …＝「Write Repeat Signs in Every Part」が
+  書く形）が 2 つ重ねて刷られていた。同じ規則（1 小節に 1 つ）で 1 回になった。
+- LilyPond は `\repeat volta 4` に何も刷らない＝LILYSHARP-OWN（双子の絵に回数は無い）。音は変わらない。
 
 ## 2. `transposition` に音名＋`range`（未着手）
 

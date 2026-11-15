@@ -1615,6 +1615,10 @@ public sealed partial class MeasureCollector
                 // a barline is read once a keystroke per re-collected bar, and the token red
                 // it used to build for that carried nothing else.
                 builder.HandleBarline(barType, barline.BarTokenStart);
+                // `:|*4` written in the music: the count is printed over the bar it closes, as
+                // the form's is (MusicMarkType.RepeatCount) — once a score, whichever parts write it.
+                if (barline.HasExplicitRepeatCount)
+                    AddRepeatCountMarkOfTheMusic(barline.RepeatCount, barline.BarTokenStart, builder);
                 break;
 
             case InlineVoltaSyntax volta:
@@ -1716,8 +1720,13 @@ public sealed partial class MeasureCollector
                     // score's mark, followed like the form's (Semantics.RepeatStream); one
                     // written inside a bar is LYS1071 and still placed, so the picture of a
                     // book with that error is whole.
+                    // ONE A BAR, WHOEVER WRITES IT: the mark is the score's, and every part may
+                    // write it (the editor's "Write Repeat Signs in Every Part" does) — until
+                    // session 1271 two parts' `fine` printed "Fine" twice, one above the other.
                     var navType = NavigationToMusicMark(nav.MarkType);
-                    _musicMarks.Add(new MusicMarkItem(navType, NavigationMarkMeasure(navType, builder), nav.SourceStart));
+                    int navMeasure = NavigationMarkMeasure(navType, builder);
+                    if (!HasScoreMarkAt(navType, navMeasure))
+                        _musicMarks.Add(new MusicMarkItem(navType, navMeasure, nav.SourceStart));
                 }
                 break;
 

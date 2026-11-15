@@ -2100,6 +2100,10 @@ public sealed partial class MeasureCollector
             // The endings the row writes are the score's, as a part's are (one bracket an ending).
             foreach (var ending in _chordNameCollector.RowEndings)
                 AddVoltaBracket(ending);
+            // …and so are its count and its navigation marks: one a bar, a part's first.
+            foreach (var mark in _chordNameCollector.RowScoreMarks)
+                if (!HasScoreMarkAt(mark.Type, mark.MeasureIndex))
+                    _musicMarks.Add(mark);
         }
 
         // Now that the music is collected, gather the lyrics rows. The wrap bar
@@ -2758,6 +2762,11 @@ public sealed partial class MeasureCollector
             if (_musicMarks.Any(m => m.Type == mark.Type && m.MeasureIndex == mark.MeasureIndex
                     && m.SourcePosition == mark.SourcePosition))
                 continue;
+            // A navigation mark and a repeat's count are printed once a bar: the one a drawn
+            // part writes there stands (the music walk's own rule, HasScoreMarkAt).
+            if (mark.Type != MusicMarkType.Rehearsal && IsStructuralMark(mark.Type)
+                && HasScoreMarkAt(mark.Type, mark.MeasureIndex))
+                continue;
             // A rehearsal mark and a tempo are the SCORE's (LilyPond engraves RehearsalMark and
             // MetronomeMark in the Score context, once above the system and on every extracted
             // part), so a part sheet prints the ones written in a part it does not show
@@ -3056,6 +3065,7 @@ public sealed partial class MeasureCollector
         or MusicMarkType.DalSegno or MusicMarkType.DaCapo
         or MusicMarkType.DalSegnoAlFine or MusicMarkType.DalSegnoAlCoda
         or MusicMarkType.DaCapoAlFine or MusicMarkType.DaCapoAlCoda
+        or MusicMarkType.RepeatCount
         or MusicMarkType.Rehearsal;
 
     private List<Measure> CollectMeasuresForVoice(string voiceName)
@@ -6259,6 +6269,33 @@ public sealed partial class MeasureCollector
                 count.ToString(System.Globalization.CultureInfo.InvariantCulture) + "×", measure, sourcePosition));
     }
 
+    /// <summary>
+    /// "N×" over the bar a <c>:|*N</c> written in a section's MUSIC closes, for N above two —
+    /// the form's count (<see cref="AddRepeatCountMark"/>) for the repeat the music writes
+    /// (owner's decision 2026-11-15, grammar evaluation 4). The repeat is the score's, so the
+    /// count is printed once however many parts write it.
+    /// </summary>
+    private void AddRepeatCountMarkOfTheMusic(int count, int sourcePosition, MeasureBuilder builder)
+    {
+        if (count <= 2)
+            return;
+        int measure = NavigationMarkMeasure(MusicMarkType.RepeatCount, builder);
+        if (!HasScoreMarkAt(MusicMarkType.RepeatCount, measure))
+            _musicMarks.Add(new MusicMarkItem(MusicMarkType.RepeatCount,
+                count.ToString(System.Globalization.CultureInfo.InvariantCulture) + "×", measure, sourcePosition));
+    }
+
+    /// <summary>Whether a mark of the score — a navigation mark, a repeat's count — already
+    /// stands at this bar, wherever it was written: such a mark is printed once a bar, and
+    /// each part of the section may write it.</summary>
+    private bool HasScoreMarkAt(MusicMarkType type, int measureIndex)
+    {
+        foreach (var m in _musicMarks)
+            if (m.Type == type && m.MeasureIndex == measureIndex)
+                return true;
+        return false;
+    }
+
     private bool HasMusicMark(MusicMarkType type, int measureIndex, int sourcePosition)
     {
         foreach (var m in _musicMarks)
@@ -6747,7 +6784,7 @@ public sealed partial class MeasureCollector
         return atTheBar && !sign && measure > 0 ? measure - 1 : measure;
     }
 
-    private static MusicMarkType NavigationToMusicMark(NavigationMarkType t) => t switch
+    internal static MusicMarkType NavigationToMusicMark(NavigationMarkType t) => t switch
     {
         NavigationMarkType.Segno => MusicMarkType.Segno,
         NavigationMarkType.Coda => MusicMarkType.Coda,

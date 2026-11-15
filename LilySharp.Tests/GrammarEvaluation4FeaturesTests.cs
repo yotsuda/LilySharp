@@ -313,4 +313,147 @@ public class GrammarEvaluation4FeaturesTests
         Assert.Equal(LilySharpLanguageServer.CompletionContext.BarePartNameList,
             LilySharpLanguageServer.GetCompletionContext(text, text.Length));
     }
+
+    // ───────────────────────── 8-1. |: … :|*4 in the music prints "4×" ─────────────────────────
+
+    /// <summary>Two parts, an upper and a lower, each with its own music of section A.</summary>
+    private static string Duo(string upper, string lower, string score = "staff a staff b")
+        => "octave absolute\ntime 4/4\npart a { }\npart b { clef bass }\n"
+            + $"section A {{ a {{ {upper} }} b {{ {lower} }} }}\nform {{ A }}\nscore {{ {score} }}\n";
+
+    /// <summary>The count marks of the laid-out page: text and where it stands.</summary>
+    private static List<(string Text, double X, double YUp)> Counts(string source)
+    {
+        var tree = SyntaxTree.Parse(source);
+        var layout = new LilySharp.Core.Svg.Layout.LayoutEngine()
+            .Layout(LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)));
+        return [.. layout.MusicMarkLayouts
+            .Where(m => m.MarkType == LilySharp.Core.Svg.Model.MusicMarkType.RepeatCount)
+            .Select(m => (m.Text ?? "", Math.Round(m.X, 6), Math.Round(m.YUp, 6)))];
+    }
+
+    /// <summary>A repeat the music writes says its count where a form's does: "4×" over the bar
+    /// its <c>:|*4</c> closes, once a score — the same mark, at the same place, as the same bars
+    /// repeated by the form. Twice, said or not, prints nothing.</summary>
+    [Fact]
+    public void ARepeatOfTheMusicPlayedMoreThanTwice_PrintsItsCountAsAFormsDoes()
+    {
+        string inMusic = Duo("c'1 |: d'1 | e'1 :|*4 f'1 |", "c1 | d1 | e1 | f1 |");
+        Clean(inMusic);
+        string byForm = "octave absolute\ntime 4/4\npart a { }\npart b { clef bass }\n"
+            + "section A { a { c'1 | } b { c1 | } }\nsection B { a { d'1 | e'1 | } b { d1 | e1 | } }\nsection C { a { f'1 | } b { f1 | } }\n"
+            + "form { A |: B :|*4 C }\nscore { staff a staff b }\n";
+        var count = Assert.Single(Counts(inMusic));
+        Assert.Equal("4×", count.Text);
+        var formCount = Assert.Single(Counts(byForm));
+        Assert.Equal((formCount.Text, formCount.X), (count.Text, count.X));
+        Assert.Equal(1, Drawn(inMusic)["4×"]);
+
+        Assert.Empty(Counts(Duo("c'1 |: d'1 | e'1 :| f'1 |", "c1 | d1 | e1 | f1 |")));
+        Assert.Empty(Counts(Duo("c'1 |: d'1 | e'1 :|*2 f'1 |", "c1 | d1 | e1 | f1 |")));
+
+        // Each repeat says its own, at its own bar.
+        var two = Counts(Duo("|: c'1 :|*3 d'1 |: e'1 :|*5 f'1 |", "c1 | d1 | e1 | f1 |"));
+        Assert.Equal(new[] { "3×", "5×" }, two.OrderBy(c => c.X).Select(c => c.Text));
+
+        // MusicXML's own count, on every part; and four passes sound.
+        Assert.Equal(2, Xml(inMusic).Split("<repeat direction=\"backward\" times=\"4\" />").Length - 1);
+        Assert.Equal(2 * (1 + 4 * 2 + 1), Notes(inMusic).Count);
+    }
+
+    /// <summary>The repeat and the marks of a section are the score's: written in every part
+    /// they are printed once, and written in a part the score does not draw they are printed
+    /// on the staff it does. (Two parts' <c>fine</c> printed "Fine" twice until session 1271.)</summary>
+    [Theory]
+    [InlineData("|: c'1 | d'1 :|*3 e'1 fine |", "|: c1 | d1 :|*3 e1 fine |", "staff a staff b")]
+    [InlineData("c'1 | d'1 | e'1 |", "|: c1 | d1 :|*3 e1 fine |", "staff a staff b")]
+    [InlineData("|: c'1 | d'1 :|*3 e'1 fine |", "c1 | d1 | e1 |", "staff a staff b")]
+    [InlineData("c'1 | d'1 | e'1 |", "|: c1 | d1 :|*3 e1 fine |", "staff a")]
+    [InlineData("|: c'1 | d'1 :|*3 e'1 fine |", "|: c1 | d1 :|*3 e1 fine |", "staff a")]
+    public void TheCountAndTheMarksOfTheScore_ArePrintedOnce_WhoeverWritesThem(string upper, string lower, string score)
+    {
+        string source = Duo(upper, lower, score);
+        Clean(source);
+        var drawn = Drawn(source);
+        Assert.Equal((1, 1), (drawn["3×"], drawn["Fine"]));
+        Assert.Equal("3×", Assert.Single(Counts(source)).Text);
+    }
+
+    /// <summary>One part on a staff and on a tab is walked twice, and its marks are still the
+    /// score's: a <c>segno</c> and a count of its music are printed once. (Four of the owner's
+    /// bass books printed the sign twice, one above the other, until session 1271.)</summary>
+    [Fact]
+    public void APartOnAStaffAndATab_PrintsItsMarksOnce()
+    {
+        string source = "octave absolute\ntime 4/4\npart m { instrument bass }\n"
+            + "section A { m { |: e,1 | a,1 :|*3 segno d1 | g1 fine | } }\nform { A }\nscore { staff m tab m }\n";
+        Clean(source);
+        var tree = SyntaxTree.Parse(source);
+        var layout = new LilySharp.Core.Svg.Layout.LayoutEngine()
+            .Layout(LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)));
+        foreach (var type in new[] { LilySharp.Core.Svg.Model.MusicMarkType.Segno,
+                     LilySharp.Core.Svg.Model.MusicMarkType.Fine, LilySharp.Core.Svg.Model.MusicMarkType.RepeatCount })
+            Assert.Single(layout.MusicMarkLayouts, m => m.MarkType == type);
+    }
+
+    /// <summary>A chords row's signs are the score's too: the count of its <c>:|*N</c> and its
+    /// navigation marks are printed where a part's would be — the same marks at the same
+    /// places as the part writing them — and once when a part writes them as well. (A row's
+    /// signs repeated and jumped, and the page said neither, until session 1271.)</summary>
+    [Fact]
+    public void AChordsRowsCountAndMarks_ArePrintedAsAPartsAre()
+    {
+        static string Lead(string row, string melody)
+            => "octave absolute\ntime 4/4\npart a { }\n"
+                + $"chords prog {{ section A {{ {row} }} }}\nsection A {{ a {{ {melody} }} }}\nform {{ A }}\nscore {{ chords prog staff a }}\n";
+        static List<(string, double, double)> Marks(string source)
+        {
+            var tree = SyntaxTree.Parse(source);
+            var layout = new LilySharp.Core.Svg.Layout.LayoutEngine()
+                .Layout(LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)));
+            return [.. layout.MusicMarkLayouts
+                .Where(m => m.MarkType is LilySharp.Core.Svg.Model.MusicMarkType.RepeatCount
+                    or LilySharp.Core.Svg.Model.MusicMarkType.Fine or LilySharp.Core.Svg.Model.MusicMarkType.Segno)
+                .Select(m => (m.Text ?? m.MarkType.ToString(), Math.Round(m.X, 4), Math.Round(m.YUp, 4)))
+                .OrderBy(m => m)];
+        }
+
+        const string Signs = "|: {0} | {1} :|*4 segno {2} | {3} fine |";
+        string byRow = Lead(string.Format(Signs, "C", "G", "Am", "F"), "c'1 | d'1 | e'1 | f'1 |");
+        string byPart = Lead("C | G | Am | F |", string.Format(Signs, "c'1", "d'1", "e'1", "f'1"));
+        string byBoth = Lead(string.Format(Signs, "C", "G", "Am", "F"), string.Format(Signs, "c'1", "d'1", "e'1", "f'1"));
+        Clean(byRow);
+        Clean(byBoth);
+
+        var marks = Marks(byPart);
+        Assert.Equal(3, marks.Count);
+        Assert.Contains(marks, m => m.Item1 == "4×");
+        Assert.Equal(marks, Marks(byRow));
+        Assert.Equal(marks, Marks(byBoth));
+
+        // A text mark written right after a bar line ends the bar before it, in a row as in a part.
+        const string AtTheBar = "{0} | {1} | fine {2} | {3} |";
+        string rowAtTheBar = Lead(string.Format(AtTheBar, "C", "G", "Am", "F"), "c'1 | d'1 | e'1 | f'1 |");
+        Clean(rowAtTheBar);
+        var atTheBar = Marks(Lead("C | G | Am | F |", string.Format(AtTheBar, "c'1", "d'1", "e'1", "f'1")));
+        Assert.Single(atTheBar);
+        Assert.Equal(atTheBar, Marks(rowAtTheBar));
+        Assert.NotEqual(atTheBar, Marks(Lead("C | G | Am fine | F |", "c'1 | d'1 | e'1 | f'1 |")));
+    }
+
+    /// <summary>Typing the count onto a repeat already on the page, and taking it off, redraws
+    /// the page a fresh compile draws.</summary>
+    [Fact]
+    public void TypingTheCount_RedrawsThePage()
+    {
+        string bars = string.Concat(Enumerable.Repeat("c'4 d' e' f' | ", 6));
+        string before = Duo("|: c'1 | d'1 :| " + bars, "|: c1 | d1 :| " + bars.Replace("'", ""));
+        string after = before.Replace("d'1 :|", "d'1 :|*4");
+        var options = new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false };
+        var compiler = new LilySharp.Core.Svg.IncrementalCompiler(SyntaxTree.Parse(before), options);
+        compiler.Render();
+        foreach (string text in new[] { after, before, after })
+            Assert.Equal(LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(text), options),
+                compiler.RenderIncremental(SyntaxTree.Parse(text)));
+    }
 }

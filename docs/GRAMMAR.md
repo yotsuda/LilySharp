@@ -2754,7 +2754,9 @@ InlineVolta    = '[' , Integer , [ '-' , Integer | ',' , Integer , { ',' , Integ
       line ('|:' against ':|', ':|*2' against ':|*3') is an error (LYS1070, with quick fixes
       that write one part's sign into the other). The same holds of the other signs: two
       parts' endings opening on one bar line name the same passes and run the same bars, and
-      two parts' navigation marks on one bar line are the same marks (LYS1070).
+      two parts' navigation marks on one bar line are the same marks (LYS1070). A mark, and
+      the "N×" of a ':|*N', is PRINTED ONCE at its bar line however many parts write it, and
+      on a score that does not draw the part that wrote it; a chords row's are printed too.
    2. THE PAIRS ARE READ ON THE FORM, not in the section. The sections are laid out in the
       order the form prints them, the form's own signs among them, and the rules are the
       form's: a '|:' is closed by a later ':|' — in a later section, or by the form
@@ -3083,7 +3085,11 @@ Arpeggio       = '<<' , ArpMember , { ArpItem } , '>>' , { "'" | ',' } , [ Durat
 Barline        = '|' | '||' | '|.' | '!' ;           (* MUSIC: the divisions *)
 RepeatBarline  = '|:' | ':|:' | RepeatEnd ;          (* FORM ONLY — changes the playing order *)
 RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N times, default 2;
-                                                        not beside endings (LYS1042) *)
+                                                        not beside endings (LYS1042). N above 2
+                                                        prints "N×" over the bar it closes, in
+                                                        a form and in the music alike, once a
+                                                        score however many parts write it
+                                                        (LILYSHARP-OWN: LilyPond prints none) *)
 
 (* THE BAR LINES ARE THE BARS (owner's decision, 2026-10-14). Unlike LilyPond, where '|' is
    only a check and Timing draws the bars, a written bar line ends a bar and nothing else does:

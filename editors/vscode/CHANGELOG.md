@@ -4,6 +4,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A repeat written in the music shows its count**: `|: c'1 | d'1 :|*4` prints "4×" over the closing repeat bar, as a form's `:|*4` does.
+- **Fixed: "Fine" printed twice** when two parts wrote the same navigation mark on one bar line (as *Write Repeat Signs in Every Part* does), or when one part was drawn on a staff and on a tab. It is printed once.
+- **Fixed: the signs a chords row writes are printed**: the "4×" of a row's `:|*4` and its `fine` / `segno` … were played but missing from the preview.
 - **A staff of several parts takes a name**: `condensedStaff "Tpts 1-2" "Tpts" { tp1 tp2 }` (and `combinedStaff …`) prints the first string left of the first system and the second, the short name, left of the later ones. After the keyword the list offers `"name"` below the clefs. `Ctrl+Shift+Up` / `Down` on the keyword keeps the name between `condensedStaff` and `combinedStaff`; turning the staff into a group drops it (a group prints its staves' names) and the status bar says so.
 - **A head style over a run of notes**: `c'8@notehead(cross) d' e' f'@!notehead` gives every note from the first to the last the × head (or `diamond`, `triangle`, `slash`, `xcircle`), where the annotation had to be written on each note. After `@!` the list offers `notehead`; an end with no opening is underlined with what to write.
 - **Importing MusicXML says a guitar part is a guitar's, and keeps its vibrato**: a part with a tab staff, or whose staff names its strings, comes in with `instrument guitar` (a bass, a ukulele, a banjo; a `tuning` for other strings) in its header, and the wavy line over one of its notes as `@vibrato`. The vibrato was dropped.

@@ -909,7 +909,7 @@ after it on the same line (until the hairpin has ended) that write no side follo
   With endings the numbers are the passes: `|: A [1-2. B] :| [3. C]` plays A B A B A C, and
   every pass from 1 to the highest number must be named by exactly one ending (LYS1043); a
   `:|*N` beside endings is an error (LYS1042). Without endings the body plays twice, or
-  `|: A :|*N` N times — more than twice prints "N×" over the closing repeat bar. A bracket prints its passes as LilyPond does: `[1-2.` "1. 2.",
+  `|: A :|*N` N times — more than twice prints "N×" over the closing repeat bar (the same for a `:|*N` written in a section's music; printed once, whichever parts write it). A bracket prints its passes as LilyPond does: `[1-2.` "1. 2.",
   `[1-3.` "1.–3.". The `]` ends the ending and hooks its bracket's right end
   down; `-]` ends it with a straight (open) right end: `|: A [1. B] :| [2. C D -]`. The
   `]` may be left off only right before a `:|` (`|: A [1. B C :| [2. D]` — the `:|` closes
