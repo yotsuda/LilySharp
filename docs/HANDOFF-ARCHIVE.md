@@ -271,6 +271,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1278セッションの経緯
+
+### 1.1 第1278セッション（2026-11-15・YT-DELL2）
+
+base `d5ec78728`・開始時 full 17319 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17322（Lab `p1278` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 202）。
+Lab leftovers の「度数和音の基準が part header の調をファイルの調として読む」を測って閉じた（`3f458da53`）。
+- 測った: `key c major` と `part a { key d major }` で **MIDI だけが全 part の度数和音（`<d 3 5>`）を D major で積んでいた**（`ScoreHomeKey.Sharps` が part header の調も数え、最後の header が勝つ）。ページと MusicXML は part ごと。さらに 1 つの part の音楽の中の `key` が、同じ section の次の part の block に漏れていた。
+- 直した: `MidiExporter._partKeyLanes`（`_partPitchLanes` の調の双子）＝block の開く調は「その part の section 内の前の block が残した調 → section header の調 → part header の調 → ファイルの調」（`ArmKeyLane`）。`ScoreHomeKey.Sharps` はファイルの調だけ（`Read`・`Declaration` と同じ）。
+- ⚠️ **part header の調は ♯♭ の数だけを与え、phrase の自動移調の主音は与えない**（ページは `part a { key d major }` の下の `riff` を書いたとおりに描く。section header と音楽の中の `key` は動かす）。最初の版は主音も渡して MIDI だけ phrase が 1 音上がった＝網と毒 L9。
+- `.mid` の調号（FF 59・`KeyStarts`＝歌の 3 度の音階も）は 1 本だけ＝**曲の調**: section header → ファイルの調 → ファイルに調が無ければ最初の part の header の調（`_pieceKeySharps`）。スイープで見つけた（`Sharps` を変えたら `test/part-header-key` の B♭ が C になった）。
+- 門: `PartHomeKeySoundTests` 18 本（MIDI・ページ・MusicXML が同じ）・毒 12 本は全部赤（Lab `p1278/poisons-3.txt`。L8 は緑だったので行を消した）・MIDI スイープ 1,041 冊 1,268 本＝同じ 1,267／違う 1（`test/part-header-key-per-part`＝`key c major` の本の調号が part の B♭ → C。意図どおり）。終了時 full 17337 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17340（`full3.trx`）。
+- 7.7: ⚠️ ページの `chords … as roman` の行は part header の調で読む（前から・欠陥かはオーナーに訊く＝leftovers）。⚠️ part ごとに調が違う本の 2 つめ以降の part の調は `.mid` に書かれない。perf: 触っていない（block の頭で辞書を 1 回引くだけ）。
+- **オーナー指示（2026-11-15）「後で作る件、ほかに着手すべき候補がなければすぐ着手して良い」**＝§3 の ⑥ の「いつ着手するかは訊く」は解けた。10 の「まず診断だけ」は LYS0046 で済み（2026-11-14）。次は 3（`pass 2 { }`）→ 1（持ち替え）・どちらも設計メモが先。
+
 ## 以下は第1277セッションの経緯
 
 ### 1.1 第1277セッション（2026-11-15・YT-DELL2）

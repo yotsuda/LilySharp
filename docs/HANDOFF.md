@@ -141,6 +141,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1280セッション（2026-11-15・YT-DELL2）
+
+base `94e6947f`・開始時 full 17360 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17363（Lab `p1280` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 211）。
+**行だけの score の一線譜**（オーナー決定 2026-11-15＝§3 最上段）の設計メモ `docs/row-staff-design.md` を書き、途中まで作って**退避した**（commit なし・作業ツリーは HEAD に戻した）。
+- 作った形（Lab `p1280/auto-staff-wip.diff`＝`git apply` で戻る・網 `p1280/AutoRowStaffTests.cs` 14 本は緑だった）: `RenderSpecParser.Parse` が譜表の無い score に `SingleStaffSpec(AutoStaffPart "(staff)", Lines 1, 名前なし)` を最初の歌詞の行の前（無ければ最後）に差し込む／`SingleEngravedPart` は数えない／`MultiStaffScore.RowsSpaceTheGrid`（行が小節の幅を決める＝リードシートと同じ間隔の分岐を `ApplySharedColumnReservations` が読む。これが無いと歌詞が小節線にかかる）／`.ly` は拍の骨組みを `\new RhythmicStaff \leadSheetTiming` として一線譜の位置に書く（`LeadSheetScoreMarks` も一線譜の小節から）／MusicXML は `<part-name>` を空に。絵は Lab `p1279/row/auto/*.png`（chords だけ・歌詞だけ・両方）。
+- **止めた理由**: 全テストで 47 本が落ちる（`p1280/failing-48.txt`＝README を入れて 32 の名前）。行だけの譜の絵と間隔を固定した網（RowsOnly*・BreaksAnywhere・GridRowMeterCentring・Svg のスナップショット・ChordRowEndingBar 4 本など）と、**LilyPond の実測に照らす台帳 3 本**（LpFidelity）。一線譜が入ると LilyPond 側も RhythmicStaff を持つ別の絵＝台帳は LilyPond で測り直しが要る。数便の仕事。
+- 次の便: diff を当てる → 落ちた網を 1 本ずつ「意図した変化か」を見て書き直す（行だけの譜の網は IsLeadSheet＝本物の行だけの譜を見ていたもの。一線譜で無くなる形は網ごと消すか、網の本に `staff` を足す）→ 台帳 3 本を LilyPond で測り直す → 歌詞と一線の間（いま 5.5 譜間＝LilyPond の Lyrics の related-staff の値。一線譜だと広く見える）をオーナーに見せて訊く → スイープ。⚠️ MusicXML の行だけの score は歌詞（`<lyric>`）を書いていない（前からか未確認）。
+
+## 以下は第1279セッションの経緯
+
 ### 1.1 第1279セッション（2026-11-15・YT-DELL2）
 
 base `7ee3044aa`・開始時 full 17337 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17340（Lab `p1279` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 204）。
@@ -151,20 +161,6 @@ base `7ee3044aa`・開始時 full 17337 合格 / 1 失敗（`ReadmeSampleTests`�
 - **`pass 2 { }`**: 設計メモ（`docs/eval4-features-design.md` §3）・構文ノード・パーサー・MIDI の途中まで書いて、報告に切り替えた。全部 Lab `sessions/p1279/pass-wip/`（ファイルごとの写しと diff）に退避し、作業ツリーからは戻した。⚠️ 写しの `MidiExporter.cs`・`MidiEvents.cs` はフェルマータの修正の前の版なので、**写しで上書きせず diff の `pass` の塊だけを当て直す**。
 - **気づいた問題（未着手）は Lab `sessions/p1242/leftovers.md` の先頭「第1279 が見つけて残したもの」に書いた**＝次はその ★（chords だけの段で全部が空の小節の段が真っ白・オーナーの本の 13 小節目）から。ほかに `.ly` の `\alternative`・緑の毒 3 本。
 - 終了時 full 17360 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17363（`full3.trx`）。
-
-## 以下は第1278セッションの経緯
-
-### 1.1 第1278セッション（2026-11-15・YT-DELL2）
-
-base `d5ec78728`・開始時 full 17319 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17322（Lab `p1278` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 202）。
-Lab leftovers の「度数和音の基準が part header の調をファイルの調として読む」を測って閉じた（`3f458da53`）。
-- 測った: `key c major` と `part a { key d major }` で **MIDI だけが全 part の度数和音（`<d 3 5>`）を D major で積んでいた**（`ScoreHomeKey.Sharps` が part header の調も数え、最後の header が勝つ）。ページと MusicXML は part ごと。さらに 1 つの part の音楽の中の `key` が、同じ section の次の part の block に漏れていた。
-- 直した: `MidiExporter._partKeyLanes`（`_partPitchLanes` の調の双子）＝block の開く調は「その part の section 内の前の block が残した調 → section header の調 → part header の調 → ファイルの調」（`ArmKeyLane`）。`ScoreHomeKey.Sharps` はファイルの調だけ（`Read`・`Declaration` と同じ）。
-- ⚠️ **part header の調は ♯♭ の数だけを与え、phrase の自動移調の主音は与えない**（ページは `part a { key d major }` の下の `riff` を書いたとおりに描く。section header と音楽の中の `key` は動かす）。最初の版は主音も渡して MIDI だけ phrase が 1 音上がった＝網と毒 L9。
-- `.mid` の調号（FF 59・`KeyStarts`＝歌の 3 度の音階も）は 1 本だけ＝**曲の調**: section header → ファイルの調 → ファイルに調が無ければ最初の part の header の調（`_pieceKeySharps`）。スイープで見つけた（`Sharps` を変えたら `test/part-header-key` の B♭ が C になった）。
-- 門: `PartHomeKeySoundTests` 18 本（MIDI・ページ・MusicXML が同じ）・毒 12 本は全部赤（Lab `p1278/poisons-3.txt`。L8 は緑だったので行を消した）・MIDI スイープ 1,041 冊 1,268 本＝同じ 1,267／違う 1（`test/part-header-key-per-part`＝`key c major` の本の調号が part の B♭ → C。意図どおり）。終了時 full 17337 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17340（`full3.trx`）。
-- 7.7: ⚠️ ページの `chords … as roman` の行は part header の調で読む（前から・欠陥かはオーナーに訊く＝leftovers）。⚠️ part ごとに調が違う本の 2 つめ以降の part の調は `.mid` に書かれない。perf: 触っていない（block の頭で辞書を 1 回引くだけ）。
-- **オーナー指示（2026-11-15）「後で作る件、ほかに着手すべき候補がなければすぐ着手して良い」**＝§3 の ⑥ の「いつ着手するかは訊く」は解けた。10 の「まず診断だけ」は LYS0046 で済み（2026-11-14）。次は 3（`pass 2 { }`）→ 1（持ち替え）・どちらも設計メモが先。
 
 ## 2. 開いている作業
 
