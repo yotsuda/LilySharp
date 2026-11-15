@@ -58,6 +58,9 @@
          still inside the affected range. So the bump has to clear 2.25.28, and
          no direct MessagePack reference is needed to force it. Still MIT. -->
     <PackageReference Include="StreamJsonRpc" Version="2.25.29" />
+    <!-- Windows' Media Foundation for a recording the preview cannot decode itself (an m4a:
+         RecordingDecoder, docs/recording-design.md §1 5). MIT. Used on Windows only. -->
+    <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
   </ItemGroup>
 
   <ItemGroup>
