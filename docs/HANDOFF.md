@@ -141,6 +141,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1277セッション（2026-11-15・YT-DELL2）
+
+base `2ac8091c8`・開始時 full 17319 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17322（Lab `p1277` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 200）。
+オーナー依頼（2026-11-15）「Shosa のプレビューは再生すると対応するテキストがエディタでハイライトする。Lily# にも入れて」（`0bdec6703`・エディタだけ・Core／Lsp 不変）。
+- Shosa の形（`C:\MyProj\Shosa\editors\vscode\src`）: ページが再生位置の span を `active` で送り、host が `editor.findMatchHighlightBackground`・角丸 3px の装飾を付ける。Lily# のページは「いま鳴っている音符」を既に持つ（follow-along＝譜面の音符を光らせる tick）ので、**同じ音符の source offset を送るだけ**。
+- 作った: ページは鳴っている音が変わるたびに `soundingSource`（offset の列）を送り、止まると `ended` つきで 1 回（`sourceLit`）。host の `showSoundingSource` がその panel のファイルを開いている可視のエディタ全部に装飾を付ける。offset → 文字の範囲は `previewCore.soundingRange`（offset はノードの full-span の頭＝前の空白を飛ばす・音符は音高と音価と付点まで・和音は `<…>` と音価の全体・ドラム名・コードの行の記号。`@` の印・タイ・スラー・連桁は含めない）。1 回の報告の判断は `previewCore.soundingLight`＝**再生の音符は ▶ を押したときの本文のもの**なので、編集後（document の version が変わった後）は止まるまで何も光らせない／休符は消す／別のファイルは新しい session。設定 `lilysharp.playback.highlightSource`（既定 on）。
+- 門: 拡張のテスト 1141 → 1145 本（`test/previewCore.test.ts`）・毒 4 本は全部赤（Lab `p1277/poisons.txt`）・`tsc`・bundle は通る。終了時 full 17319 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17322（`run2.trx`・開始時と同じ）。
+- 7.7: ⚠️ **実物の VS Code では見ていない**（装飾は API から読み戻せない・webview の ▶ はクリックが要る）＝`MANUAL-CHECKS` 第1277。⚠️ AI の候補の ▶ と試聴（Alt+P／Alt+M）は光らせていない。⚠️ 再生中に見えるようになったエディタは次の変化から光る。⚠️ 拡張の作り直し（`deploy-extension.ps1`）はオーナー。perf: 鳴っている音が変わるたびに postMessage 1 回と、可視のエディタの本文に対する範囲の計算（鳴っている音の数ぶん）。
+
+## 以下は第1276セッションの経緯
+
 ### 1.1 第1276セッション（2026-11-15・YT-DELL2）
 
 base `1ff29489d`・開始時 full 17316 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17319（Lab `p1276` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 198）。
@@ -149,16 +160,6 @@ base `1ff29489d`・開始時 full 17316 合格 / 1 失敗（`ReadmeSampleTests`�
 - 直し: ファイルの調は「基準の part」の調＝移調しない（オクターブは可）・調号のある最初の part（`LysWriter.ReferencePart`）。開始の調がそれと違う part は header に自分の調を書く＝home（`HomeKey`・`part clarinet { clef treble transposition bes key d major }`）、その part の section ごとの指示は home に対して読む（home に戻る section は何も書かない）。両方が変える転調は今までどおり各 part の音楽の中。調号の無い part（`<key/>`）も同じ形で header に `key none`＝第1272 `89d3f7924` の「調のある側で開く」規則を置き換えた。
 - 門: 網 `MusicXmlTransposingImportTests` に 3 本（クラが先でも後でも・読んだ本に診断なし・もう一度 MusicXML に書くと各 part が読んだ調を言う＝第1273 の直しと合わせて往復）。毒 5 本は全部赤（Lab `p1276/poisons.txt`）。終了時 full 17319 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17322（`run2.trx`）・Core 警告 0。絵と書き出しは触っていない。
 - 7.7: ⚠️ 1 つの part だけが曲の途中で調を変える形は今も音楽の中に書かれ LYS2023 が出る（それはその警告の対象）。⚠️ 大譜表を割った 2 段（同じ調）と、基準の part が途中から始まる（最初の小節に調が無い）ファイルは見ていない。perf: 読み込みだけ。7.5: Core '+' 35 行・REF 0・OWN 1（`ReferencePart`）。
-
-## 以下は第1275セッションの経緯
-
-### 1.1 第1275セッション（2026-11-15・YT-DELL2）
-
-base `5687fabb2`・開始時 full 17302 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17305（Lab `p1275` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 196）。
-第1272 が残した欠陥（Lab `sessions/p1242/leftovers.md`）＝MusicXML の読み込みがオクターブでない `<transpose>` を警告して捨て、B♭ クラの part が 1 音高く鳴っていた（`a175cfbed`）。
-- 直し: 読み手はどの移調も取り、書き手は `transposition` に書く＝1・2 オクターブは 4 語のまま、ほかは「書かれた `c'` で鳴る音」（`InstrumentDefaults.TranspositionPitchOf`＝`TranspositionOfPitch` の逆・B♭／E♭／A♭ は♭、F♯／C♯ は♯）。3 オクターブ（語が無かった）は `c,,`。鳴る高さで書かれた bass（TAB で `<transpose>` なし）は `instrument bass transposition c'` と宣言し、vibrato を読む（今までは「なし」の語が無く宣言しなかった）。
-- 門: 網 `MusicXmlTransposingImportTests` 14 本（Lily# が書いた 12 種の header が警告なしで戻り、同じ音で鳴る・他のソフトの B♭ の part・逆関数）と `MusicXmlFrettedImportTests` の bass の網を書き直した。毒 6 本は全部赤（Lab `p1275/poisons.txt`）。終了時 full 17316 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17319（`run2.trx`）・Core 警告 0。絵と書き出しは触っていない（掃きは回していない）。
-- 7.7: ⚠️ 読み戻した part は `instrument` の preset を持たない（名前・音色・移調は戻る・音域の検査は戻らない）。⚠️ `<diatonic>` は読まない。⚠️ 移調楽器が自分の調号で書かれたファイルは、書き手がファイルに 1 つの調しか書かないので part の調号がファイルの調になる（どれも leftovers に書いた）。perf: 読み込みだけ。7.5: Core '+' 52 行・REF 0・OWN 1（`TranspositionPitchOf` の綴り）。CHANGELOG は 2 つとも `## Unreleased`。
 
 ## 2. 開いている作業
 

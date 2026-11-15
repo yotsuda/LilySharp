@@ -271,6 +271,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1275セッションの経緯
+
+### 1.1 第1275セッション（2026-11-15・YT-DELL2）
+
+base `5687fabb2`・開始時 full 17302 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17305（Lab `p1275` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 196）。
+第1272 が残した欠陥（Lab `sessions/p1242/leftovers.md`）＝MusicXML の読み込みがオクターブでない `<transpose>` を警告して捨て、B♭ クラの part が 1 音高く鳴っていた（`a175cfbed`）。
+- 直し: 読み手はどの移調も取り、書き手は `transposition` に書く＝1・2 オクターブは 4 語のまま、ほかは「書かれた `c'` で鳴る音」（`InstrumentDefaults.TranspositionPitchOf`＝`TranspositionOfPitch` の逆・B♭／E♭／A♭ は♭、F♯／C♯ は♯）。3 オクターブ（語が無かった）は `c,,`。鳴る高さで書かれた bass（TAB で `<transpose>` なし）は `instrument bass transposition c'` と宣言し、vibrato を読む（今までは「なし」の語が無く宣言しなかった）。
+- 門: 網 `MusicXmlTransposingImportTests` 14 本（Lily# が書いた 12 種の header が警告なしで戻り、同じ音で鳴る・他のソフトの B♭ の part・逆関数）と `MusicXmlFrettedImportTests` の bass の網を書き直した。毒 6 本は全部赤（Lab `p1275/poisons.txt`）。終了時 full 17316 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17319（`run2.trx`）・Core 警告 0。絵と書き出しは触っていない（掃きは回していない）。
+- 7.7: ⚠️ 読み戻した part は `instrument` の preset を持たない（名前・音色・移調は戻る・音域の検査は戻らない）。⚠️ `<diatonic>` は読まない。⚠️ 移調楽器が自分の調号で書かれたファイルは、書き手がファイルに 1 つの調しか書かないので part の調号がファイルの調になる（どれも leftovers に書いた）。perf: 読み込みだけ。7.5: Core '+' 52 行・REF 0・OWN 1（`TranspositionPitchOf` の綴り）。CHANGELOG は 2 つとも `## Unreleased`。
+
 ## 以下は第1274セッションの経緯
 
 ### 1.1 第1274セッション（2026-11-15・YT-DELL2）
