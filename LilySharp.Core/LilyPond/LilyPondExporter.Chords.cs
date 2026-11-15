@@ -597,6 +597,9 @@ public sealed partial class LilyPondExporter
                     Flush();
                 result.Add(item);
             }
+            // An ending's `]` with no bar line after it closes its bar (ChordRowBarLines.EndCloses).
+            else if (item is VoltaEndSyntax end && Semantics.ChordRowBarLines.EndCloses(end, pending.Count > 0))
+                Flush();
             else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
             {
                 pending.Add(item);

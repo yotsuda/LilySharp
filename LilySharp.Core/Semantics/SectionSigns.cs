@@ -180,7 +180,10 @@ internal sealed class SectionSigns
                     Close();
                     open = (ending, bars + (holds ? 1 : 0));
                     break;
-                case VoltaEndSyntax:
+                case VoltaEndSyntax end:
+                    // With no bar line after it, it closes its bar (ChordRowBarLines.EndCloses).
+                    if (ChordRowBarLines.EndCloses(end, holds))
+                        (bars, holds) = (bars + 1, false);
                     Close();
                     break;
                 case NavigationMarkSyntax mark:

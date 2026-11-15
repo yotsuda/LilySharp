@@ -7761,7 +7761,10 @@ public sealed class MusicXmlExporter
                     if (string.Join(",", ending.Numbers) is { Length: > 0 } passes)
                         open = (passes, bars + (holds ? 1 : 0));
                     break;
-                case VoltaEndSyntax:
+                case VoltaEndSyntax end:
+                    // With no bar line after it, it closes its bar (ChordRowBarLines.EndCloses).
+                    if (ChordRowBarLines.EndCloses(end, holds))
+                        (bars, holds) = (bars + 1, false);
                     Close(stops: true);
                     break;
             }
@@ -7827,6 +7830,12 @@ public sealed class MusicXmlExporter
                     bars.Add(bar);
                     bar = new List<SyntaxNode>();
                 }
+                continue;
+            }
+            if (item is VoltaEndSyntax end && ChordRowBarLines.EndCloses(end, bar.Count > 0))
+            {
+                bars.Add(bar);
+                bar = new List<SyntaxNode>();
                 continue;
             }
             if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)

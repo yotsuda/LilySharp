@@ -61,6 +61,8 @@ internal static class VoiceBarLines
                     holds = false;
                     lines.Add(new Line(line, bars));
                 }
+                else if (item is VoltaEndSyntax end && ChordRowBarLines.EndCloses(end, holds))
+                    (bars, holds) = (bars + 1, false);
                 else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
                     holds = true;
             }

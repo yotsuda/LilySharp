@@ -513,6 +513,13 @@ internal sealed class ChordNameCollector
                 }
                 continue;
             }
+            // An ending's `]` with no bar line after it closes its bar (ChordRowBarLines.EndCloses).
+            if (item is VoltaEndSyntax alignedEnd && Semantics.ChordRowBarLines.EndCloses(alignedEnd, pending.Count > 0))
+            {
+                Commit();
+                localMeasure++;
+                continue;
+            }
             if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
                 pending.Add(item);
         }
@@ -580,6 +587,10 @@ internal sealed class ChordNameCollector
                         // CollectPart.ProcessRun's count (Semantics.ChordRowBarLines).
                         if (Semantics.ChordRowBarLines.Closes(bar, chordsBefore))
                             localMeasure++;
+                        chordsBefore = false;
+                        break;
+                    case VoltaEndSyntax end when Semantics.ChordRowBarLines.EndCloses(end, chordsBefore):
+                        localMeasure++;
                         chordsBefore = false;
                         break;
                     case ChordEntrySyntax or RestSyntax or ChordExtendSyntax:
@@ -775,6 +786,11 @@ internal sealed class ChordNameCollector
                     bars++;
                 pendingEntries = false;
             }
+            else if (item is VoltaEndSyntax end && Semantics.ChordRowBarLines.EndCloses(end, pendingEntries))
+            {
+                bars++;
+                pendingEntries = false;
+            }
             else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
             {
                 pendingEntries = true;
@@ -951,8 +967,14 @@ internal sealed class ChordNameCollector
                         measureEndBar[MeasureOfBar(startMeasure, localMeasure - 1, out _)] = BarlineType.RepeatEnd;
                     ending = (opens, MeasureOfBar(startMeasure, localMeasure, out _));
                 }
-                else if (item is VoltaEndSyntax)
+                else if (item is VoltaEndSyntax end)
+                {
+                    // With no bar line after it, the `]` closes its bar as one would
+                    // (Semantics.ChordRowBarLines.EndCloses): `[1. A7] [2. ]` is two bars.
+                    if (Semantics.ChordRowBarLines.EndCloses(end, pending.Count > 0))
+                        Commit(BarlineType.Single);
                     CloseEnding(MeasureOfBar(startMeasure, pending.Count > 0 ? localMeasure : localMeasure - 1, out _), hooked: true);
+                }
             }
             // A trailing measure with no closing barline still counts.
             if (pending.Count > 0 || pendingStart != BarlineType.None)

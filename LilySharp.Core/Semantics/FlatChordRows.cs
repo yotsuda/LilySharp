@@ -98,6 +98,13 @@ internal sealed class FlatChordRows
             // right after a bar line stays with the bar behind it — the same tick either way.
             else if (item is InlineVoltaSyntax)
                 bar.Add(item);
+            else if (item is VoltaEndSyntax end && ChordRowBarLines.EndCloses(end, held > 0))
+            {
+                bar.Add(end);
+                bars.Add(bar);
+                bar = [];
+                held = 0;
+            }
             else if (item is VoltaEndSyntax or NavigationMarkSyntax)
                 (held == 0 && bars.Count > 0 ? bars[^1] : bar).Add(item);
         }
@@ -182,6 +189,46 @@ internal static class ChordRowBarLines
             }
         }
         return found;
+    }
+
+    /// <summary>
+    /// Whether an ending's <paramref name="end"/> (<c>]</c>) closes the bar it stands in, as a bar
+    /// line would, given whether that bar <paramref name="holds"/> an entry already: when no bar
+    /// line follows it — <c>| A | [1. A7] [2. ]</c> is A, A7, and an empty bar, where the bar line
+    /// is left to the brackets — and the ending has a bar to close: one it holds, or none at all
+    /// yet (<c>[2. ]</c>, an empty bar). <c>[2. F ] |</c> is the bar line's, as it always was.
+    /// </summary>
+    /// <remarks>Until 2026-11-15 a <c>]</c> closed nothing, so <c>[1. A7] [2. ]</c> stacked both
+    /// brackets over A7's bar and the second ending had no bar (owner's report).</remarks>
+    public static bool EndCloses(VoltaEndSyntax end, bool holds)
+    {
+        if (end.Parent is not { } row)
+            return false;
+        var items = new List<SyntaxNode>();
+        for (int i = 0; i < row.SlotCount; i++)
+            if (row.GetChild(i) is { } child and not SyntaxTokenNode)
+                items.Add(child);
+        int at = items.FindIndex(n => ReferenceEquals(n, end));
+        if (at < 0)
+            return false;
+        for (int k = at + 1; k < items.Count; k++)
+        {
+            if (items[k] is BarlineSyntax)
+                return false;
+            if (items[k] is not BreakSyntax)
+                break;
+        }
+        if (holds)
+            return true;
+        // An empty ending: nothing written since its `[N.` — no bar line closed a bar of it.
+        for (int k = at - 1; k >= 0; k--)
+        {
+            if (items[k] is InlineVoltaSyntax)
+                return true;
+            if (items[k] is BarlineSyntax or ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
+                return false;
+        }
+        return false;
     }
 
     /// <summary>Whether <paramref name="barLine"/> closes a bar of its row, given whether the

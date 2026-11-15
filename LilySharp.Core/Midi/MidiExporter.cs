@@ -2598,8 +2598,12 @@ public sealed class MidiExporter
                     Passes: PassSet.Of(rowEnding.Numbers), Lane: part ?? MusicLane));
                 continue;
             }
-            if (item is VoltaEndSyntax)
+            if (item is VoltaEndSyntax rowEnd)
             {
+                // With no bar line after it, it closes its bar as one would — an empty one too,
+                // `[2. ]` (Semantics.ChordRowBarLines.EndCloses).
+                if (Semantics.ChordRowBarLines.EndCloses(rowEnd, bar.Count > 0))
+                    Close();
                 _timeline.Add(new RepeatSign(bar.Count > 0 ? barStart + thisBarTicks : barStart,
                     RepeatSignKind.EndingEnd, Lane: part ?? MusicLane));
                 continue;
