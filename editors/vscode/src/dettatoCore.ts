@@ -130,7 +130,22 @@ export function dettatoArgs(recording: string, chart: string, replace: boolean):
  *  again with the person's lines as its input is Dettato's D4, to be agreed with format 2). */
 export function replaceQuestion(chartName: string, byHand: number): string {
     const marks = byHand > 0 ? `, and the ${byHand} bar${byHand === 1 ? '' : 's'} you placed by hand in the recording` : '';
-    return `${chartName} is already there. Read the recording again and replace it${marks}?`;
+    return `${chartName} is already there. Replace it${marks ? marks + ',' : ''} with Dettato's reading, or write the reading beside it to compare?`;
+}
+
+/** Where "Write Beside" puts Dettato's reading of a recording whose chart is already there — a
+ *  chart a person may have written by ear, to be compared, not replaced (owner's decision
+ *  2026-11-16): `song (Dettato).lys`, else `song (Dettato 2).lys`, … — the first not there, with
+ *  its own file beside it (`song (Dettato).dettato.json`, the same recording). */
+export function besideChart(chart: string, exists: (p: string) => boolean): string {
+    const dot = chart.toLowerCase().endsWith('.lys') ? chart.length - 4 : chart.length;
+    const stem = chart.slice(0, dot);
+    for (let n = 1; ; n++) {
+        const candidate = `${stem} (Dettato${n === 1 ? '' : ' ' + n}).lys`;
+        if (!exists(candidate) && !exists(candidate.slice(0, -4) + '.dettato.json')) {
+            return candidate;
+        }
+    }
 }
 
 /** The chart a recording is written to: beside it, its own name, `.lys`. */

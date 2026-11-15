@@ -20,7 +20,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
     DETTATO_INPUTS, chartForConversion, dettatoArgs, dettatoFailure, judgeDettato, locateDettato, parseDettatoVersion,
-    replaceQuestion,
+    besideChart, replaceQuestion,
 } from '../src/dettatoCore';
 
 describe('Dettato, the recording reader', () => {
@@ -74,11 +74,23 @@ describe('Dettato, the recording reader', () => {
             { text: 'Lily#: the Dettato reader failed (exit code 3): the models are missing', showOutput: true });
     });
 
-    it('asks before reading a chart again, naming the bars placed by hand it would write over', () => {
-        assert.equal(replaceQuestion('take.lys', 0), 'take.lys is already there. Read the recording again and replace it?');
+    it('asks before writing over a chart already there, offering to write the reading beside it', () => {
+        assert.equal(replaceQuestion('take.lys', 0),
+            'take.lys is already there. Replace it with Dettato\'s reading, or write the reading beside it to compare?');
         assert.equal(replaceQuestion('take.lys', 1),
-            'take.lys is already there. Read the recording again and replace it, and the 1 bar you placed by hand in the recording?');
+            'take.lys is already there. Replace it, and the 1 bar you placed by hand in the recording, with Dettato\'s reading, or write the reading beside it to compare?');
         assert.match(replaceQuestion('take.lys', 12), /the 12 bars you placed by hand/);
+    });
+
+    it('writes the reading beside a chart already there under the first free "(Dettato N)" name', () => {
+        const taken = new Set<string>();
+        const exists = (p: string) => taken.has(p);
+        assert.equal(besideChart('C:\\s\\song.lys', exists), 'C:\\s\\song (Dettato).lys');
+        taken.add('C:\\s\\song (Dettato).lys');
+        assert.equal(besideChart('C:\\s\\song.lys', exists), 'C:\\s\\song (Dettato 2).lys');
+        // A file beside a chart of that name counts too: the reading must not take another's recording file.
+        taken.add('C:\\s\\song (Dettato 2).dettato.json');
+        assert.equal(besideChart('C:\\s\\song.lys', exists), 'C:\\s\\song (Dettato 3).lys');
     });
 
     it('takes the recordings the Explorer offers it for — the same list as package.json\'s right-click', () => {

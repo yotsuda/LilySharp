@@ -26,7 +26,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {
     DETTATO_EXTENSION_ID, DettatoLocation, DettatoVersion, chartForConversion, dettatoArgs, dettatoFailure, judgeDettato,
-    locateDettato, parseDettatoVersion, replaceQuestion,
+    besideChart, locateDettato, parseDettatoVersion, replaceQuestion,
 } from './dettatoCore';
 import { parseRecording, recordingPathFor } from './recordingCore';
 
@@ -206,12 +206,17 @@ export async function convertRecording(context: vscode.ExtensionContext, uri: vs
         } catch {
             // (no file beside it)
         }
+        // Or beside it: a chart written by ear, to be compared with the reading, not replaced
+        // (owner's decision 2026-11-16).
         const answer = await vscode.window.showWarningMessage(
-            replaceQuestion(path.basename(chart), byHand), { modal: true }, 'Replace');
-        if (answer !== 'Replace') {
+            replaceQuestion(path.basename(chart), byHand), { modal: true }, 'Replace', 'Write Beside');
+        if (answer === 'Write Beside') {
+            chart = besideChart(chart, fs.existsSync);
+        } else if (answer === 'Replace') {
+            replace = true;
+        } else {
             return;
         }
-        replace = true;
     }
     const name = path.basename(recording);
     void noteDettatoPreview(context);
