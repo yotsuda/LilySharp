@@ -88,7 +88,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
-- **★★★ オーナー決定 2026-11-15（第1264・待ちだった 6 件＝Claude の勧めた案を全部採用。順に着手してよい）**: ①②③④ は済み（第1264・第1268・第1266・第1267）／⑤ Dettato: 依頼 1＝作る（D3 で形が固まってから・名前「Convert Recording to Lily# (.lys)…」・Windows 以外はメニューを出さない）・依頼 2＝今は作らない（REQUESTS の行に書いた＝Dettato の repo では未 commit）／⑥ 評価 4 の案（Lab `p1227/proposals-eval4.md` の末尾）: **作る**＝6（`@notehead(x) … @!notehead`）・7（condensedStaff／combinedStaff の名前・既定は無名のまま）・8-1（`:|*4` に "4x"・`[engraving]`）・2（`transposition` に音名＋`range`）・4（`key none`）／**後で**＝3（`pass 2 { }`・文字は英語固定）・1（持ち替え・「to X」は自動で刷らない）・10（まず診断だけ）／**見送り**＝5・8-2〜4・9。機能は作る前に設計メモ。**着手の順**: ⑥ の小 3 件（6・7・8-1）→ 2・4。
+- **★★★ オーナー決定 2026-11-15（第1264・待ちだった 6 件＝Claude の勧めた案を全部採用。順に着手してよい）**: ①②③④ は済み（第1264・第1268・第1266・第1267）／⑤ Dettato: 依頼 1＝作る（D3 で形が固まってから・名前「Convert Recording to Lily# (.lys)…」・Windows 以外はメニューを出さない）・依頼 2＝今は作らない（REQUESTS の行に書いた＝Dettato の repo では未 commit）／⑥ 評価 4 の案（Lab `p1227/proposals-eval4.md` の末尾）: **作る**＝6（`@notehead(x) … @!notehead`）・7（condensedStaff／combinedStaff の名前・既定は無名のまま）・8-1（`:|*4` に "4x"・`[engraving]`）・2（`transposition` に音名＋`range`）・4（`key none`）／**後で**＝3（`pass 2 { }`・文字は英語固定）・1（持ち替え・「to X」は自動で刷らない）・10（まず診断だけ）／**見送り**＝5・8-2〜4・9。機能は作る前に設計メモ。**着手の順**: ⑥ の小 3 件（6・7・8-1）→ 2・4。**6 は第1269 で済み（`6fec37e68`・設計と実際の形は `docs/eval4-features-design.md` §6。歌い手が × の音を歌わない件だけ未＝同 §6 の末尾）＝次は 7。**
 - **★ 反復とナビ記号を section の音楽にも書く（オーナー提案 2026-11-14・第1243＝第1249 で段 0〜8 が済み・LYS1034 は phrase だけ）**: 全部 `docs/inline-repeat-design.md`（規則 §3・段取り §4・未決 §6・経過 §7・エディタのコマンド §8）。オーナー決定（2026-11-14）: 対は form に組み立てた列で見る／`| |:` は空小節のまま／歌詞の verse は 5 規則／書き出しはなるべく form 側（Q2）。**次**（順は上から。歌詞の規則 3 と警告の 4 種目は第1253、ending・ナビ記号を全パートに書くコマンドと LYS1070 の quick fix は第1254 で済み＝§1.1）: ⑴ この島（反復とナビ記号を音楽に書く）の「次」は無い＝判断待ちも残りの形も 0。step キー・`PlayForm` の一本化（第1255）、3 番括弧＝3 回（form は第1256・音楽は第1257・コードの行は第1258）は済み。次の一手は下の積み残しから（オーナーに訊く）。段 9（読み込みと OMR の書き出し）は Q2 の決定で今の形のまま＝作業なし。⚠️ Calamo と Dettato の REQUESTS への知らせ（Q2「本体が出てから」）は未＝release のときに書く。実機は `MANUAL-CHECKS` 第1243・第1249・第1253・第1254・第1255。
 - **★ 歌詞と歌い手の文法の作り直し（オーナー決定 2026-11-10・第1217）**: `docs/lyrics-singer-design.md` が全部（§9 が作業順）。①②③④は済み（§1.1 第1217〜第1219）。⚠️ ④の `ん` の聞こえ方はオーナーの実聴待ち（`MANUAL-CHECKS` 第1219）。Cantoria の master は zh／ko を歌う（VSIX の入れ直しはオーナー）。`singer` は 1 行 1 声で score の中にも書ける（第1220）。古い書き方を案内する専用エラーは作らない（オーナー指示）。設計 §10「パート自身の歌詞」（`part sop { lyrics words }`）は第1222 で実装（§1.1 第1222・実機は `MANUAL-CHECKS` 第1222）＝§9 は全部済み。**次の一手の指示はまだ無い＝下の積み残しから選ぶならオーナーに訊く**。積み残し: Calamo の生成コードが `lyrics … sings` のまま（`docs\repro\REQUESTS.md` に連絡済み・Calamo 側は未 commit）／実機確認（`MANUAL-CHECKS` 第1217）／perf ベンチ／コーパス外のオーナーのファイル（Downloads の Tabidachi・Rose Garden など）は未移行で、`LilySharp-Lab\sessions\p1217\migrate\migrate.ps1 -Lys -Files` で書き換えられる／Rose Garden のオクターブ変換はオーナーの回答待ち。
 - **★ 歌詞のある譜表では強弱記号とヘアピンを譜表の上に（オーナー決定 2026-11-11）＝設計 `docs/dynamics-above-lyrics-design.md` §5 の 1〜6 は全部済み（第1224〜第1225・§1.1）**。**D3 は LilyPond の規則に替えた（オーナー決定 2026-11-11「LP に合わせて」）**＝向きを書いた記号が*線*の向きを決め、同じ線の後続（向きを書いていない記号）は従う。歌詞のない譜表でも同じ（`c@f.up@decresc … g@p` の p は上）。残りはオーナー: 実機のプレビュー（`MANUAL-CHECKS` 第1225）と release（CHANGELOG は 2 つとも `## Unreleased`・`[engraving]`）。残る穴: 2 声部の譜表で上の声部のヘアピンの線に下の声部の同じ拍の強弱記号も乗る（ヘアピンが声部を持たない既知の穴＝`DynamicAlignEngraver` の注 ⑵・Lab `p1225/dyn/out/vv.png`）。線の向きは第1260 で声部ごとにした。**次の一手の指示はまだ無い＝上の行の積み残しから選ぶならオーナーに訊く**。
@@ -141,6 +141,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1269セッション（2026-11-15・YT-DELL2）
+
+base `24719cc86`・開始時 full 17210 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17213（Lab `p1269` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-13 の push の run が failure のまま（未 push 183）。
+オーナー決定 2026-11-15 ⑥ の案 6（符頭の形の区間 `c'8@notehead(cross) d' e' f'@!notehead`）。設計メモは `docs/eval4-features-design.md`（§6 が実際の形・§7 以降は見出しだけ）。
+- 作った: 印の区間（`@staccato … @!staccato`）と同じ読み手 `Semantics.ArticulationRuns` に乗せた（開きは形を名乗る `@notehead(STYLE)`・終わりは引数なしの `@!notehead`・規則は同じ＝いちばん近い開き・LYS4018・休符／装飾音／別の声部／呼んだ phrase には掛からない）。自分の `@notehead(…)` と `@dead` が勝ち、2 つの区間の中は内側。ページ（`ExtractNoteheadStyle`）・MusicXML（`NoteheadFromMarks(WithCovering)`）・`.ly`（音ごとの `\once \override`）・`lysc review`（× は和声の音でない）・`@!` の補完。音は変わらない。
+- 一緒に直した: `lysc ly` が区間の終わり（`@!staccato` も）を "dropped (out of scope)" と報告していた／`<< c@notehead(cross) e g >>` の中の音の形をページが描いていなかった（MusicXML は書いていた）。
+- 門: 網 `GrammarEvaluation4FeaturesTests` 14 本＋`GrammarEvaluation4ReviewTests` の 1 本に 2 行。毒 14 本が全部赤（Lab `p1269/poisons.txt`・`poisons-2.txt`。P9・P14 は `<< >>` の形の網を足してから赤）。全 svg の掃き（Lab `p1269/svg`・base は HEAD を `git archive` で作った）: 1268 枚で差 0。commit `6fec37e68`。`completion-typing.json` を再生成。終了時 full 17225 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17228（`run3.trx`）。
+- 7.7: ⚠️ **歌い手は × の音を今も歌う**（案の文面「歌い手はこの区間を歌わない」は未実装。1 音の `@notehead(cross)` も同じ規則になるので、入れるなら `MidiExporter.SingLyrics` と `SungVoices.Read` の 2 か所＝設計 §6 の末尾。耳はオーナー）。⚠️ `@!notehead(cross)` はパーサーが終わりに引数を取らないので、`(cross)` がスラーと未定義の名前として読まれる（エラーは出るが言い方は的外れ・未修正）。⚠️ `@dead … @!dead` の区間は無い（頼まれていない）。⚠️ tab の譜表での × の区間の絵は見ていない。perf: 符頭の形を訊くたびに `Covering` を 1 回（区間の無い本は木に 1 回の走査だけ・打鍵のベンチは取っていない）。7.5: Core '+' はページと書き出し（REF 0・OWN 1）。CHANGELOG は 2 つとも `## Unreleased`。
+
+## 以下は第1268セッションの経緯
+
 ### 1.1 第1268セッション（2026-11-15・YT-DELL2）
 
 base `c2cb41059`・開始時 full 17187 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17190。REQUESTS の `open` は 0・CI は第1260 のまま。
@@ -149,16 +160,6 @@ base `c2cb41059`・開始時 full 17187 合格 / 1 失敗（`ReadmeSampleTests`�
 - ⚠️ Claude が決めた点（決定の文面に無い・理由は Lab `p1242/leftovers.md` の「第1268」）: プリセットに無い弦は `instrument` を当てず `tuning` だけ／**実音で書かれた bass（`<transpose>` が 1〜2 オクターブでない）は宣言しない＝今までどおり**（`transposition` に「なし」の綴りが無い）／弓の弦の tuning は fretted と読まない。
 - 門: 網 `MusicXmlFrettedImportTests` 23 本。毒 23 本のうち 22 本が赤、緑の 1 本＝届かない番（休符の notations は読まれない）は外して網で留めた（Lab `p1268/poisons*.txt`）。往復の掃き（Lab `p1268/rt-sweep.ps1`・`classify.ps1`）: xml 0・読み戻し 468 / 1268＝どれもパート宣言に語が入っただけ（bass 313・bass5 115・guitar 41）・音楽の行の差 0（⚠️ コーパスに tab の横の `@vibrato` は 0 冊＝形は網と Lab `p1268/vib`）。commit `238f9ebc9`。`APPROXIMATIONS.md` は OWN 441 → 442。終了時 full 17210 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17213（`run4.trx`）。
 - 7.7: ⚠️ tab の無い fretted のパート（`staff gtr` だけ）は `lysc xml` が `<staff-tuning>` を書かないので、自分の vibrato が戻らない（オーナーに訊く・ROADMAP）。⚠️ 何音も続く trill-mark なしの波線は trill span のまま（未測定）。⚠️ プリセットは音域の検査を連れてくる＝読み戻しの 364 冊が LYS1052（元の本が同じ音に LYS5002）。⚠️ TAB だけのパートは今も `staff` で戻る・`<capo>` は読まない（未測定）。7.5: Core '+' は読み込み（REF 0・OWN 1）。CHANGELOG は 2 つとも `## Unreleased`。
-
-## 以下は第1267セッションの経緯
-
-### 1.1 第1267セッション（2026-11-15・YT-DELL2）
-
-base `f3a9313ad`・開始時 full 17175 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17178（Lab `p1267` の `run1.trx`）。REQUESTS と CI は第1266 の開始時に見たまま（同じ会話）。
-オーナー決定 2026-11-15 の ④（大譜表の一撃＝`@sfz` の族と `@fp`／`@sfp` の頭は両手に効く・同じ拍に音がある手だけ）。再生だけ（ページと MusicXML は動かない）。
-- 直した: `MidiExporter.ShareGrandStaffStrikes`（level を分け合った後・hairpin の前）。一撃は打った場所で `_strikeLog` に書き（`Strike`）、同じ brace の別の手が*その tick に始める*音を打つ: sfz はその音の level で読み直した数（`AccentAt`）、fp は打たれた強さ、その音自身の印（`@accent`）は上に乗る。`Sforzando`／`Accent` を音に持たせるので、分け合った hairpin の中でも読み直される。音を始めない手はそのまま・自分で一撃を書いた手は自分のもの・別の 2 つの手が同時なら大きいほう・cue の一撃は鳴らない。
-- 門: 網 `GrandStaffStrikeMidiTests` 12 本。毒 11 本が赤（Lab `p1267/poisons.txt`・`poisons-2.txt`）。緑で残した 1 本＝export をまたぐ `_strikeLog.Clear()`（exporter の使い回しを見る網は無い・隣の `_levelLog.Clear()` と同じ）。緑で外した 1 本＝落とされる音の番（恒等）。MIDI の掃き（Lab `p1267/midi-sweep.ps1`）: 1267 同じ / 1 違う / 1268＝コーパスの `がくふ.lys`（片手の `@fp` の和音と同時に始まる 3 音が 70 → 90）。commit `f94fbdceb`。`APPROXIMATIONS.md` は OWN 440 → 441。終了時 full 17187 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17190（`run3.trx`）。
-- 7.7: ⚠️ 片手の中の声部どうしは打ち合わない（声部は自分の強弱を持つ＝決めごとの面・未測定）。⚠️ 装飾音に書いた一撃は未測定。perf: brace と一撃の両方がある本でだけ音を 1 回歩く。7.5: Core '+' は再生（REF 0・OWN 1）。CHANGELOG は 2 つとも `## Unreleased`。
 
 ## 2. 開いている作業
 

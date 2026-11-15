@@ -271,6 +271,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1267セッションの経緯
+
+### 1.1 第1267セッション（2026-11-15・YT-DELL2）
+
+base `f3a9313ad`・開始時 full 17175 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17178（Lab `p1267` の `run1.trx`）。REQUESTS と CI は第1266 の開始時に見たまま（同じ会話）。
+オーナー決定 2026-11-15 の ④（大譜表の一撃＝`@sfz` の族と `@fp`／`@sfp` の頭は両手に効く・同じ拍に音がある手だけ）。再生だけ（ページと MusicXML は動かない）。
+- 直した: `MidiExporter.ShareGrandStaffStrikes`（level を分け合った後・hairpin の前）。一撃は打った場所で `_strikeLog` に書き（`Strike`）、同じ brace の別の手が*その tick に始める*音を打つ: sfz はその音の level で読み直した数（`AccentAt`）、fp は打たれた強さ、その音自身の印（`@accent`）は上に乗る。`Sforzando`／`Accent` を音に持たせるので、分け合った hairpin の中でも読み直される。音を始めない手はそのまま・自分で一撃を書いた手は自分のもの・別の 2 つの手が同時なら大きいほう・cue の一撃は鳴らない。
+- 門: 網 `GrandStaffStrikeMidiTests` 12 本。毒 11 本が赤（Lab `p1267/poisons.txt`・`poisons-2.txt`）。緑で残した 1 本＝export をまたぐ `_strikeLog.Clear()`（exporter の使い回しを見る網は無い・隣の `_levelLog.Clear()` と同じ）。緑で外した 1 本＝落とされる音の番（恒等）。MIDI の掃き（Lab `p1267/midi-sweep.ps1`）: 1267 同じ / 1 違う / 1268＝コーパスの `がくふ.lys`（片手の `@fp` の和音と同時に始まる 3 音が 70 → 90）。commit `f94fbdceb`。`APPROXIMATIONS.md` は OWN 440 → 441。終了時 full 17187 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17190（`run3.trx`）。
+- 7.7: ⚠️ 片手の中の声部どうしは打ち合わない（声部は自分の強弱を持つ＝決めごとの面・未測定）。⚠️ 装飾音に書いた一撃は未測定。perf: brace と一撃の両方がある本でだけ音を 1 回歩く。7.5: Core '+' は再生（REF 0・OWN 1）。CHANGELOG は 2 つとも `## Unreleased`。
+
 ## 以下は第1266セッションの経緯
 
 ### 1.1 第1266セッション（2026-11-15・YT-DELL2）
