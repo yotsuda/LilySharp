@@ -267,6 +267,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1264セッションの経緯
+
+### 1.1 第1264セッション（2026-11-15・YT-DELL2）
+
+base `d6e4cec0a`・開始時 full 17155 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17158（Lab `p1264` の `run1.trx`）。REQUESTS と CI は第1260 の開始時に見たまま（同じ会話）。
+**オーナーが待ちの 6 件を決めた（2026-11-15）**＝§1.0 の「オーナー決定 2026-11-15」に全部（Claude が勧めた案と対案を並べ、「すべて提案通り」）。Dettato の REQUESTS 1・2 の行、Lab `p1227/proposals-eval4.md` の末尾、Lab `p1242/leftovers.md` の末尾にも書いた。
+- 決定 ①を直した: `lysc xml` は `%` の繰り返しの小節に強弱を書き直さない（`MusicXmlExporter._inPercentRepetition`＝`ProcessPercentRepeat` が繰り返しの間だけ立て、`HandleDynamicText` が何も書かずに返る。level と niente）。直す前は `c''4@p d'' e''@cresc f'' | % | c''1@f` の 2 小節目に `p`（wedge は 1〜3 小節目に開いたまま）。Lab `p1264/pc`（q1〜q4・前後の一覧）。
+- 門: 網 `MusicXmlPercentDynamicsTests` 3 本・毒 2 本とも赤（立てない／戻さない）。往復の掃き（Lab `p1264/rt-sweep.ps1`）: xml の差 1・読み戻しの差 1 / 1268＝`test/percent-covered-bows.lys`（繰り返しの小節の `f` と `p` の 2 つが消えただけ）。描画には触っていない。commit `88b86ef31`。終了時 full 17158 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17161。
+- 7.7: ⚠️ `%` の小節の文字（`@text`）・pedal・ottava・text spanner は今も書き直す（決定は強弱だけ・未測定）。7.5: Core '+' は MusicXML の書き出し（REF 0・OWN 0）。
+
 ## 以下は第1263セッションの経緯
 
 ### 1.1 第1263セッション（2026-11-15・YT-DELL2）
