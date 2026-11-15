@@ -141,6 +141,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1283セッション（2026-11-15・YT-DELL2）
+
+base `1f9eb6551`・開始時 full 17364 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17367（Lab `p1283` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。
+**Lab `p1242/leftovers.md` の先頭から**（訊かずに着手してよい分）。
+- 先頭「chords だけの段で全部が空の小節の段が真っ白」は第1281 の一線譜で消えていた（`p1283/row/r0.png`＝5〜8 小節に一線と小節線）＝確かめて閉じた。
+- 次の「`.ly` は小節線の無い ending に `\alternative` を書かない」を閉じた: 和音の行の `]` が小節を閉じても、`.ly` の和音の流れには小節線が無く、ending の終わりの場所が見つからなかった（`|: D | G | [1. A7] :| [2. D]` で D が反復の後に出て、「行が反復記号を運ばない」の警告が 2 回）。`ChordBarsOf` は `]` が閉じた小節の後に普通の小節線を書く／`CarriesTheScoresSigns` はその場所を「立つ」と数える（`VoiceBarLines.RowEndClosedBars`。`Of` は LYS1070 とエディタが読むので触らない）。LilyPond 2.26 で 4 冊とも警告なし（`p1283/row/e2`・`e4`〜`e6`）。網 `ChordRowEndingBarTests` に 6 例・既存の twin の網は `a1:7 | d1` に。毒 2 本とも赤（`p1283/poisons.ps1`）。`]` を小節線の前に書かない本の `.ly` は前後で同じ（3 冊・`p1283/lycmp`）・オーナーの報告の再現 `r0` だけが `\alternative` を得た（LilyPond 警告なし）。commit `3898b6c9c`。
+- 第1279 の毒で緑だった R12（`SectionSigns`）・R13（`VoiceBarLines`）に網: 行の `[2. D] G |:` と part の 5 小節目の後の `|:` が合う／1 小節ずれると LYS1070（`a14d42255`・毒は `p1283/poisons2.ps1`＝R13 は新しい網、R12 は上の `.ly` の網の空の 2 番が赤）。MusicXML の `RowBars`（R10）は観測者なしのまま。
+- **次の一手**: §1.0 のとおり leftovers の欠陥を先頭から＝次は「第1242 が見つけて残したもの」（Dettato の 2 行は決定済みで飛ばす。`KeyEstimator` の弱起・`.ly` の和音の行の格子と section の拍子・`RowsAndLanesEnd` の観測者・小節の途中の `partial`＝どれも未測定。`attachedChordPart` の腕を消すのはオーナー承認）。一線譜はオーナーの目視待ちのまま。
+- 終了時 full 17372 合格 / 1 失敗（README）/ skip 2 / 合計 17375（`run3.trx`）。§7 7.5: Core +49 行は配管（小節線 1 本と数え）＝LP の近似ではないので REF／OWN 0。
+
+## 以下は第1282セッションの経緯
+
 ### 1.1 第1282セッション（2026-11-15・YT-DELL2）
 
 base `33872050f`・開始時 full 17360 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 3 / 合計 17364（Lab `p1282` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-15 の push の run が failure のまま（未 push 216）。
@@ -151,19 +163,6 @@ base `33872050f`・開始時 full 17360 合格 / 1 失敗（`ReadmeSampleTests`�
 - 網: `AutoRowStaffTests` に 3.5 の 2 例と空の譜表の歌詞の 1 例。毒 3 本は全部赤（Lab `p1282/poisons.ps1`）。スナップショット 3 枚を再ベース。スイープ: 1268 枚のうち 6 枚が動いた＝全部行だけの score（`p1282/svg/sweep.log`）。⚠️ 紙に入れたので、網の道具 `RenderedGeometry.Render`（既定の紙）には 3.5 が出ない＝ledger は動かない。
 - **次の一手**: §1.0 のとおり Lab `sessions/p1242/leftovers.md` の欠陥を先頭から（訊かずに着手してよい）。一線譜はオーナーの目視待ち（3.5 の間）。
 - 棚卸し: OWN 449 → 450（`RowStaffPaper`）。終了時 full 17364 合格 / 1 失敗（README）/ skip 2 / 合計 17367（`run2.trx`）。
-
-## 以下は第1281セッションの経緯
-
-### 1.1 第1281セッション（2026-11-15・YT-DELL2）
-
-base `9d3f19b06`・開始時 full 17359 合格 / 2 失敗（`ReadmeSampleTests`・`CrossStaffCollisionTests.TheKeystrokePass_DoesNotLayTheScoreOut`）/ skip 2 / 合計 17363（Lab `p1281` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-15 の push（オーナーの Harbour Lights）の run も failure（未 push 212）。`CrossStaffCollisionTests.TheKeystrokePass_DoesNotLayTheScoreOut` は単独では緑（時間の網のゆれ）。
-**行だけの score の一線譜**を第1280 の退避から戻して仕上げた（設計と決めたことは `docs/row-staff-design.md` の「作ってみて決めたこと」）。
-- 落ちた 48 本のうち 16 本は**本物の欠陥**だった: 自動の譜表が名前の無い声部として form の無い本を歩き、上の段の `chords` の中の括弧と小節線を音楽として読んでいた（`[1. A7] [2. ]` で 2 つめの `2.` が 1 小節前・`break` が増える・LYS 網 7 本）。手で書いた `part l { }`＋`staff l as lines 1` も同じだった。⇒ form の無い歩きは `chords`／`lyrics` の中へ入らない（`s_formlessMusicSiteRule`）＋自動の譜表は歩かず行の小節を写す（拍子と調の変更は残す＝`SpacerSkeleton(keepSignatures)`。歩かせると見出しの `partial` を落とし、空にしただけでは拍子の変更を落とした）。
-- MusicXML: 自動の譜表は書かず、行を自分のパートにする前の形に `<staff-lines>1` と印刷しない名前（前の形は拍子の変更を持っていた＝自動のパートは 3/4 を落としていた）。
-- 網: `AutoRowStaffTests` に「手で書いた `as lines 1` と描くものと高さが同じ」6 冊（X は行が間隔を決めるので別）。譜表の無い格子を測っていた網 4 ファイル（`GridRowMeterCentring`・`RowsOnlySystemGap`・`RowsOnlyBarNumberAnchor`・`RowsOnlyDiagramStack`）と `SharedRendererBarline` の歌詞行の 1 例は形ごと無くなったので消した（絵は Lab `p1281/row/*.png` で目で見た＝重なり無し）。`TheBox_TakesAStaffsLineStartAnchor` は 1 本線の譜表の規則（左端に中央）へ、テンポの網はインクで測る形へ。台帳は 2 点を外し 1 点を 0 に。スナップショット 5 枚を再ベース。
-- スイープ: 全 svg 1268 枚のうち動いたのは 12 枚＝全部行だけの score（Lab `p1281/svg/sweep.log`）。
-- **★ 次の一手＝オーナーの返答（2026-11-15）**: ⑴「ラベルは余地があればコードと同じ高さに並べて」＝今の形で決定（10-04 の決定を一線譜では上書き）→ Skip にした網 `SectionLabel_OnAStafflessChordSheet_StandsAboveTheSymbols` をこの規則に書き直す／⑵ 歌詞と一線の間（今 5.5 譜間）は「自然に見える間隔にして。あとで私が見て評価する」／⑶「気づいた点も直して」＝下の 2 つ。⚠️ 手で書いた `part l { }`＋`staff l as lines 1` の横の、旋律に付かない `lyrics` の行は描かれない（`p1281/row/tempo2.png`・前から・未着手）。⚠️ `IsLeadSheet` の格子の描画（行に小節線と拍子を描く道）は今は通らない＝消すかは次の便で（オーナーの答え ⑴ 次第）。
-- commit `0642cf5ab`・`b586b0376`。終了時 full 17360 合格 / 1 失敗（README）/ skip 3 / 合計 17364（`run2.trx`）。
 
 ## 2. 開いている作業
 

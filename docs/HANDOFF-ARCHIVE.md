@@ -271,6 +271,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1281セッションの経緯
+
+### 1.1 第1281セッション（2026-11-15・YT-DELL2）
+
+base `9d3f19b06`・開始時 full 17359 合格 / 2 失敗（`ReadmeSampleTests`・`CrossStaffCollisionTests.TheKeystrokePass_DoesNotLayTheScoreOut`）/ skip 2 / 合計 17363（Lab `p1281` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-15 の push（オーナーの Harbour Lights）の run も failure（未 push 212）。`CrossStaffCollisionTests.TheKeystrokePass_DoesNotLayTheScoreOut` は単独では緑（時間の網のゆれ）。
+**行だけの score の一線譜**を第1280 の退避から戻して仕上げた（設計と決めたことは `docs/row-staff-design.md` の「作ってみて決めたこと」）。
+- 落ちた 48 本のうち 16 本は**本物の欠陥**だった: 自動の譜表が名前の無い声部として form の無い本を歩き、上の段の `chords` の中の括弧と小節線を音楽として読んでいた（`[1. A7] [2. ]` で 2 つめの `2.` が 1 小節前・`break` が増える・LYS 網 7 本）。手で書いた `part l { }`＋`staff l as lines 1` も同じだった。⇒ form の無い歩きは `chords`／`lyrics` の中へ入らない（`s_formlessMusicSiteRule`）＋自動の譜表は歩かず行の小節を写す（拍子と調の変更は残す＝`SpacerSkeleton(keepSignatures)`。歩かせると見出しの `partial` を落とし、空にしただけでは拍子の変更を落とした）。
+- MusicXML: 自動の譜表は書かず、行を自分のパートにする前の形に `<staff-lines>1` と印刷しない名前（前の形は拍子の変更を持っていた＝自動のパートは 3/4 を落としていた）。
+- 網: `AutoRowStaffTests` に「手で書いた `as lines 1` と描くものと高さが同じ」6 冊（X は行が間隔を決めるので別）。譜表の無い格子を測っていた網 4 ファイル（`GridRowMeterCentring`・`RowsOnlySystemGap`・`RowsOnlyBarNumberAnchor`・`RowsOnlyDiagramStack`）と `SharedRendererBarline` の歌詞行の 1 例は形ごと無くなったので消した（絵は Lab `p1281/row/*.png` で目で見た＝重なり無し）。`TheBox_TakesAStaffsLineStartAnchor` は 1 本線の譜表の規則（左端に中央）へ、テンポの網はインクで測る形へ。台帳は 2 点を外し 1 点を 0 に。スナップショット 5 枚を再ベース。
+- スイープ: 全 svg 1268 枚のうち動いたのは 12 枚＝全部行だけの score（Lab `p1281/svg/sweep.log`）。
+- **★ 次の一手＝オーナーの返答（2026-11-15）**: ⑴「ラベルは余地があればコードと同じ高さに並べて」＝今の形で決定（10-04 の決定を一線譜では上書き）→ Skip にした網 `SectionLabel_OnAStafflessChordSheet_StandsAboveTheSymbols` をこの規則に書き直す／⑵ 歌詞と一線の間（今 5.5 譜間）は「自然に見える間隔にして。あとで私が見て評価する」／⑶「気づいた点も直して」＝下の 2 つ。⚠️ 手で書いた `part l { }`＋`staff l as lines 1` の横の、旋律に付かない `lyrics` の行は描かれない（`p1281/row/tempo2.png`・前から・未着手）。⚠️ `IsLeadSheet` の格子の描画（行に小節線と拍子を描く道）は今は通らない＝消すかは次の便で（オーナーの答え ⑴ 次第）。
+- commit `0642cf5ab`・`b586b0376`。終了時 full 17360 合格 / 1 失敗（README）/ skip 3 / 合計 17364（`run2.trx`）。
+
 ## 以下は第1280セッションの経緯
 
 ### 1.1 第1280セッション（2026-11-15・YT-DELL2）
