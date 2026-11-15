@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 441 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **567** | |
+| `OWN` | 442 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **568** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（441 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（442 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -376,6 +376,7 @@
 ### `LilySharp.Core/MusicXmlImport/MidiReader.cs`
 - **`MidiReader`** LILYSHARP-OWN: a .mid is a performance, not a page, so every notated thing is a reading.
 ### `LilySharp.Core/MusicXmlImport/MusicXmlReader.cs`
+- **`MusicXmlReader.DeclareFretted`** LILYSHARP-OWN. The General MIDI sound is NOT asked (the decision): a program change names
 - **`MusicXmlReader.ConnectArpeggios`** LILYSHARP-OWN: the 2. MusicXML's number tells chords "arpeggiated together" (the
 - **`MusicXmlReader.ReadArpeggioBrackets`** LILYSHARP-OWN: what one bracket on two staves is. The ends that begin at one moment
 - **`MusicXmlReader.TempoWordsAlone`** LILYSHARP-OWN: MusicXML has no element for a tempo word, so the reading goes by the

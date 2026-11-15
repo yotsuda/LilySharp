@@ -203,6 +203,8 @@ internal static class MusicXmlReader
         int measureNo = 0;
         var staffClefs = new Dictionary<int, string>();   // staff number -> clef
         var clefsInForce = new Dictionary<int, string>(); // staff number -> the clef it stands in now
+        var staffStrings = new Dictionary<int, int[]>();  // staff number -> its <staff-tuning>s, line 1 first
+        var staffLines = new Dictionary<int, int>();      // staff number -> its <staff-lines>
         int staffCount = 1;                               // the part's <staves>
         var voiceStaff = new Dictionary<int, int>();       // voice number -> its staff
         var staffCounts = new Dictionary<(int Voice, int Staff), int>();   // the notes it has on each
@@ -355,6 +357,7 @@ internal static class MusicXmlReader
                                        midBar: position > 0 || measure.VoiceItems.Values.Any(items => items.Count > 0),
                                        clefsInForce, ref staffCount,
                                        (word, staff) => pendingDynamics.Add(new(ClefMark + word, position, staff)));
+                        ReadStaffDetails(el, staffStrings, staffLines);
                         break;
 
                     case "direction":
@@ -627,6 +630,7 @@ internal static class MusicXmlReader
         // and frets (what MusicXmlExporter writes for `staff gt  tab gt`): its voices are a
         // copy, not more music, and are dropped rather than split into a part of their own.
         var tabStaves = staves.Where(s => staffClefs.GetValueOrDefault(s) == TabClef).ToList();
+        DeclareFretted(part, staffClefs, staffStrings, staffLines, transposeSet);
         if (tabStaves.Count > 0 && tabStaves.Count < staves.Count)
         {
             foreach (var measure in part.Measures)
@@ -1155,6 +1159,9 @@ internal static class MusicXmlReader
                 // written pitch. Each staff reads it against its OWN clef.
                 TranspositionSemitones = transposeTotal,
                 PedalStyle = part.PedalStyle,
+                // The instrument is the part's too: each of its staves is that instrument's.
+                Instrument = part.Instrument,
+                Tuning = part.Tuning,
             };
             foreach (var measure in part.Measures)
             {
@@ -1284,6 +1291,119 @@ internal static class MusicXmlReader
                         + "Lily#'s `transposition` states whole octaves only.");
             }
         }
+    }
+
+    /// <summary>Remembers what each staff's <c>&lt;staff-details&gt;</c> says of it: its
+    /// <c>&lt;staff-lines&gt;</c>, and its open strings (<c>&lt;staff-tuning&gt;</c>) as sounding
+    /// MIDI pitches from line 1 up — the order of <see cref="Tablature.Tunings"/>' table, the
+    /// highest string number first (<c>MusicXmlTab.Details</c> writes them so). A staff's first
+    /// statement stands; strings that cannot be read are an empty list.</summary>
+    private static void ReadStaffDetails(XElement attributes, Dictionary<int, int[]> staffStrings, Dictionary<int, int> staffLines)
+    {
+        foreach (var details in Els(attributes, "staff-details"))
+        {
+            int staff = int.TryParse((string?)details.Attribute("number"), out int n) ? n : 1;
+            if (int.TryParse(Local(details, "staff-lines")?.Value, out int lines))
+                staffLines.TryAdd(staff, lines);
+            var tunings = Els(details, "staff-tuning").ToList();
+            if (tunings.Count == 0)
+                continue;
+            var strings = new SortedDictionary<int, int>();
+            foreach (var tuning in tunings)
+            {
+                int step = Local(tuning, "tuning-step")?.Value.Trim() is { Length: 1 } letter ? "CDEFGAB".IndexOf(letter[0]) : -1;
+                double alter = 0;
+                if (step < 0
+                    || !int.TryParse((string?)tuning.Attribute("line"), out int line)
+                    || !int.TryParse(Local(tuning, "tuning-octave")?.Value, out int octave)
+                    || (Local(tuning, "tuning-alter") is { } alterEl
+                        && !double.TryParse(alterEl.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out alter))
+                    || alter != Math.Round(alter))
+                {
+                    strings.Clear();
+                    break;
+                }
+                strings[line] = 12 * (octave + 1) + StepSemitones[step] + (int)alter;
+            }
+            staffStrings.TryAdd(staff, [.. strings.Values]);
+        }
+    }
+
+    /// <summary>The semitones of C D E F G A B above C.</summary>
+    private static readonly int[] StepSemitones = [0, 2, 4, 5, 7, 9, 11];
+
+    /// <summary>
+    /// Says the part is a fretted instrument's where the file says so — it has a TAB staff, or a
+    /// staff of it names its strings (<c>&lt;staff-tuning&gt;</c>) — as the part header's
+    /// <c>instrument</c> (<see cref="ImportPart.Instrument"/>) or <c>tuning</c>
+    /// (<see cref="ImportPart.Tuning"/>), and reads the part's one-note wavy lines as
+    /// <c>@vibrato</c> (owner's decision 2026-11-15). Until then no part came back fretted, so a
+    /// guitar's <c>@vibrato</c>, written by `lysc xml` as that wavy line, was not read: on a part
+    /// that is nobody's to fret the mark is a singer's, and a warning.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN. The General MIDI sound is NOT asked (the decision): a program change names
+    /// a sound, and a piano playing a guitar's patch is no guitar.
+    /// <para>The word: strings that are exactly a preset's are that <c>instrument</c> (guitar,
+    /// bass, bass5, bass6, ukulele, and the banjo in open G); any other named tuning or a list of
+    /// four to eight strings is a <c>tuning</c>, which makes the part fretted and guesses no
+    /// instrument; a TAB staff that names no strings is a guitar's, or a bass's on four lines.
+    /// The bowed strings' tunings are no fretted instrument's (a mandolin's are the violin's, and
+    /// the file does not say which), and strings that spell no tuning say nothing.</para>
+    /// <para>⚠️ A bass's preset and tunings carry its octave (<c>GetTransposition</c>,
+    /// <c>TuningTransposition</c>: the part is written an octave above its sound), and
+    /// <c>transposition</c> has no word for "none": a bass the file writes AT its sounding pitch
+    /// — no <c>&lt;transpose&gt;</c> the header can state — is left undeclared, as before,
+    /// rather than moved an octave.</para>
+    /// </remarks>
+    private static void DeclareFretted(
+        ImportPart part, Dictionary<int, string> staffClefs, Dictionary<int, int[]> staffStrings,
+        Dictionary<int, int> staffLines, int? transpose)
+    {
+        var tabStaves = staffClefs.Where(c => c.Value == TabClef).Select(c => c.Key).OrderBy(s => s).ToList();
+        if (tabStaves.Count == 0 && staffStrings.Count == 0)
+            return;
+        var (instrument, tuning) = staffStrings.Count > 0
+            ? FrettedWords(staffStrings[staffStrings.Keys.Min()])
+            : (staffLines.GetValueOrDefault(tabStaves[0]) == 4 ? "bass" : "guitar", null);
+        if (instrument == null && tuning == null)
+            return;
+        int carried = instrument != null
+            ? Svg.Model.InstrumentDefaults.GetTransposition(instrument)
+            : Tablature.Tunings.TuningTransposition(Tablature.Tunings.Parse(tuning));
+        bool stated = transpose is 12 or -12 or 24 or -24;   // what LysWriter spells as `transposition`
+        if (carried != 0 && !stated)
+            return;
+        part.Instrument = instrument;
+        part.Tuning = tuning;
+        foreach (var measure in part.Measures)
+            foreach (var items in measure.VoiceItems.Values)
+                foreach (var item in items)
+                    if (item is ImportNote { WavyLineOnItself: true } note)
+                        note.Articulations.Add("vibrato");
+    }
+
+    /// <summary>The <c>instrument</c> preset or the <c>tuning</c> these open strings are
+    /// (<see cref="DeclareFretted"/>), or neither.</summary>
+    private static (string? Instrument, string? Tuning) FrettedWords(int[] strings)
+    {
+        foreach (var type in Enum.GetValues<Syntax.TuningType>())
+            if (Tablature.Tunings.GetTuning(type).AsSpan().SequenceEqual(strings))
+                return type switch
+                {
+                    Syntax.TuningType.Guitar => ("guitar", null),
+                    Syntax.TuningType.Bass => ("bass", null),
+                    Syntax.TuningType.Bass5 => ("bass5", null),
+                    Syntax.TuningType.Bass6 => ("bass6", null),
+                    Syntax.TuningType.Ukulele => ("ukulele", null),
+                    Syntax.TuningType.BanjoOpenG => ("banjo", null),
+                    Syntax.TuningType.Violin or Syntax.TuningType.Viola or Syntax.TuningType.Cello => (null, null),
+                    _ => (null, Tablature.Tunings.Spell(type)),
+                };
+        if (strings.Length is < Tablature.Tunings.MinCustomStrings or > Tablature.Tunings.MaxCustomStrings
+            || strings.Any(s => s is < 0 or > 127))
+            return (null, null);
+        return (null, Tablature.Tunings.Spell(Tablature.Tunings.Custom(strings)));
     }
 
     /// <summary>What <c>staffClefs</c> records for a TAB staff — not a clef word.</summary>
@@ -1429,12 +1549,15 @@ internal static class MusicXmlReader
             // starts on — in place of the trill-mark's `@trill`, the spanner prints the "tr" —
             // and `@!trillSpan` on the note it stops on. A stop BEFORE a start on one note is a
             // chain (the new start ends the trill running); a line started and stopped on one
-            // note with no trill-mark is another program's vibrato, or Lily#'s own, and is not read.
+            // note with no trill-mark is a vibrato — Lily#'s own spelling of a fretted part's
+            // `@vibrato` — and is read as one on a part the file says is fretted (DeclareFretted),
+            // and not read on any other.
             var ornamentList = (Local(notations, "ornaments")?.Elements() ?? Enumerable.Empty<XElement>()).ToList();
             int WavyAt(string type) => ornamentList.FindIndex(o => o.Name.LocalName == "wavy-line" && (string?)o.Attribute("type") == type);
             int wavyStart = WavyAt("start"), wavyStop = WavyAt("stop");
             bool trillMarked = ornamentList.Any(o => o.Name.LocalName == "trill-mark");
             bool trillLine = wavyStart >= 0 && (trillMarked || wavyStop < 0 || wavyStop < wavyStart);
+            note.WavyLineOnItself = !trillMarked && wavyStart >= 0 && wavyStop > wavyStart;
             if (trillLine || (wavyStop >= 0 && wavyStart < 0))
             {
                 bool below = ornamentList.Any(o => o.Name.LocalName is "trill-mark" or "wavy-line"

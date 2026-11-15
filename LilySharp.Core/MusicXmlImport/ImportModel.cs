@@ -88,6 +88,15 @@ internal sealed class ImportPart
     /// <summary>The part's General MIDI sound by name, written <c>midiInstrument "…"</c>, or null
     /// (a .mid's program change, <see cref="MidiReader"/>).</summary>
     public string? MidiInstrument { get; set; }
+    /// <summary>The fretted instrument the source says the part is — it has a TAB staff, or its
+    /// staff names its strings (<c>&lt;staff-tuning&gt;</c>) — as the <c>instrument</c> preset
+    /// those strings are (<c>guitar</c>, <c>bass</c>), or null. See
+    /// <c>MusicXmlReader.DeclareFretted</c>.</summary>
+    public string? Instrument { get; set; }
+    /// <summary>The strings of a fretted part that are no preset's, as a <c>tuning</c> is written:
+    /// a tuning word (<c>guitarDropD</c>) or a quoted list (<c>"d, a, d g a d'"</c>). Null with
+    /// <see cref="Instrument"/>, and for a part that is not fretted.</summary>
+    public string? Tuning { get; set; }
     /// <summary>The part's opening clef as a Lily# clef name ("treble", "bass", ...).</summary>
     public string Clef { get; set; } = "treble";
 
@@ -266,6 +275,10 @@ internal sealed class ImportNote : ImportItem
     /// to say, by its name: true <c>.up</c>, false <c>.down</c> (the reader's
     /// <c>SayDynamicSides</c>); null when none does.</summary>
     public Dictionary<string, bool>? SaidSides { get; set; }
+    /// <summary>A <c>&lt;wavy-line&gt;</c> started and stopped on this one note with no
+    /// trill-mark: a fretted part's <c>@vibrato</c> (<c>MusicXmlReader.DeclareFretted</c> adds
+    /// the mark once the part is known to be one), and nothing on any other part.</summary>
+    public bool WavyLineOnItself { get; set; }
     /// <summary>A clef change written before this note: one inside a bar, or on one staff of a
     /// split part (<see cref="ImportMeasure.Clef"/> is a whole staff's at a bar's head).</summary>
     public string? ClefBefore { get; set; }

@@ -69,8 +69,9 @@ asked — none is decided.
   close before it.
 - **MusicXML import**: senza misura (`time none`), `fine` / `dc al fine`, and cue-size notes
   are written by the exporter and not read back.
-- **MusicXML import of the new guitar marks**: palm mute, let ring and barre brackets, the
-  wavy vibrato line, a bend's release, harmonics at a fret.
+- **MusicXML import of the new guitar marks**: a bend's release, harmonics at a fret — and the
+  wavy vibrato line of a guitar part the score shows without a tab staff (its file names no
+  strings, so nothing in it says the part is fretted).
 - **A LilyPond twin for `@bend` / `@release`**: the twin writes the note plain and says so;
   LilyPond's bend spanner runs between two written notes.
 - **`@harmonic(N)` on a chord**: natural harmonics on several strings at once, today written

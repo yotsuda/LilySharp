@@ -97,6 +97,12 @@ internal static class LysWriter
         {
             sb.Append("part ").Append(part.SafeName)
               .Append(" { clef ").Append(part.Clef);
+            // A fretted part says so (MusicXmlReader.DeclareFretted): its `@vibrato` is the
+            // guitarist's wavy line only there. The clef written above stays the part's own.
+            if (part.Instrument is { } instrument)
+                sb.Append(" instrument ").Append(instrument);
+            if (part.Tuning is { } tuning)
+                sb.Append(" tuning ").Append(tuning);
             if (part.MidiInstrument is { } sound)
                 sb.Append(" midiInstrument \"").Append(EscapeString(sound)).Append('"');
             if (part.PedalStyle is { } pedalStyle)
