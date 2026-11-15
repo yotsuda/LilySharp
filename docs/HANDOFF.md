@@ -141,6 +141,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1284セッション（2026-11-15・YT-DELL2）
+
+base `1cd52d6d7`・開始時 full 17372 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17375（Lab `p1284` の `run1.trx`）。REQUESTS は**手で見た**: Calamo の open／question 0・Dettato は #1・#4 が `question`（Lily# が返事を書いた側＝Dettato の確認待ち）。
+**録音を聴きながら直す（Dettato #4）の実装に着手**＝`docs/recording-design.md`（決定 §1・測ったこと §3・最初の版 §4・段取り §5）。オーナー決定（第1283 の会話）: エンジンは Signalsmith Stretch／m4a は Windows で LSP が Media Foundation で復号（(a)）／最初の版は §4 の 1〜4／小節を打つ操作は「楽譜の次の小節を録音に合わせる」コマンドでキーは変えられる。
+- S1（隣のファイル `<stem>.dettato.json` の読み書き・小節 ↔ 録音の秒）: `editors/vscode/src/recordingCore.ts`＋網 `test/recordingCore.test.ts` 10 本緑。形式 1 を読み形式 2（`byHand`）で書く・知らない項目は保つ・弱起は最初の `A` が 0 より後なら 0 番の小節。
+- 次: S2（Attach Recording・リネームの追従・m4a は Dettato の `Audio.cs` の読み方＝NAudio の `MediaFoundationReader`＋エンコーダの先頭の無音を取る、を LSP へ移す）。
+
+## 以下は第1283セッションの経緯
+
 ### 1.1 第1283セッション（2026-11-15・YT-DELL2）
 
 base `1f9eb6551`・開始時 full 17364 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17367（Lab `p1283` の `run1.trx`）。⚠️ REQUESTS は開始時に**見ていなかった**（`-Start` は REQUESTS を読まない＝手で見る）。Dettato に **#4 `open`**（2026-11-15 23:07・録音を聴きながら直す＝Transcribe! の体験・オーナーの希望・便り `Dettato\docs\repro\lilysharp-requests-2026-11-15-listening.md`）が来ていた。**オーナー決定（同日）は `docs/recording-design.md` §1**（紐づけは隣のファイルだけ・音源が無ければ UI 無し・マークはヘッダの下の畳める帯・変換メニューは Lily# が持つ）＝次は同 §3 の未決。
@@ -150,19 +159,6 @@ base `1f9eb6551`・開始時 full 17364 合格 / 1 失敗（`ReadmeSampleTests`�
 - 第1279 の毒で緑だった R12（`SectionSigns`）・R13（`VoiceBarLines`）に網: 行の `[2. D] G |:` と part の 5 小節目の後の `|:` が合う／1 小節ずれると LYS1070（`a14d42255`・毒は `p1283/poisons2.ps1`＝R13 は新しい網、R12 は上の `.ly` の網の空の 2 番が赤）。MusicXML の `RowBars`（R10）は観測者なしのまま。
 - **次の一手**: §1.0 のとおり leftovers の欠陥を先頭から＝次は「第1242 が見つけて残したもの」（Dettato の 2 行は決定済みで飛ばす。`KeyEstimator` の弱起・`.ly` の和音の行の格子と section の拍子・`RowsAndLanesEnd` の観測者・小節の途中の `partial`＝どれも未測定。`attachedChordPart` の腕を消すのはオーナー承認）。一線譜はオーナーの目視待ちのまま。
 - 終了時 full 17372 合格 / 1 失敗（README）/ skip 2 / 合計 17375（`run3.trx`）。§7 7.5: Core +49 行は配管（小節線 1 本と数え）＝LP の近似ではないので REF／OWN 0。
-
-## 以下は第1282セッションの経緯
-
-### 1.1 第1282セッション（2026-11-15・YT-DELL2）
-
-base `33872050f`・開始時 full 17360 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 3 / 合計 17364（Lab `p1282` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-15 の push の run が failure のまま（未 push 216）。
-**第1281 の「次の一手」（一線譜へのオーナーの答え ⑴〜⑶）を全部閉じた**（決めたことは `docs/row-staff-design.md` の「第1282 で決めたこと」）。
-- ⑴ Skip の網を規則に書き直した: `SectionLabel_OnAStafflessChordSheet_StandsLevelWithTheSymbolsWhereThereIsRoom`（余地のある B はコードの名前と同じ高さ・開くのは C。A は名前より下に来ない）。
-- ⑵ 歌詞と一線の間＝**3.5 譜間**（LILYSHARP-OWN・`ScoreAssembler.RowStaffPaper`）。5.5 は LilyPond が中央の線から測る値＝5 線なら下の線から 3.5。前は段で違った（押された段は最小の 4.4・最後の段は 5.5）。音符の無い譜表だけの score に当てる（自動の譜表と、音楽の無いパートの手書きの `as lines 1`）。絵は Lab `p1282/gap/gap.png`・`p1282/snap/*.png`＝**オーナーが見て評価する**（`MANUAL-CHECKS` には足していない）。
-- ⑶-1 手で書いた `part l { }`＋`staff l as lines 1` の下の `on` の無い歌詞の行が消えていた＝すぐ上の譜表を歌う規則でその空の譜表に畳まれ、音符が無いので全部消えていた（警告も無し）。音楽の無いパートは既定の歌い先にしない（`RenderSpecParser.SungStaffAbove`・`LyricBindings` も同じ）＋`RowsSpaceTheGrid` は音符の無い譜表を自動の譜表と同じに数える。⑶-2 `IsLeadSheet` は**消さない**＝ページでは通らないが MusicXML が読む（true で投げる毒: SVG の網 0 本・MusicXML の網 13 本）。
-- 網: `AutoRowStaffTests` に 3.5 の 2 例と空の譜表の歌詞の 1 例。毒 3 本は全部赤（Lab `p1282/poisons.ps1`）。スナップショット 3 枚を再ベース。スイープ: 1268 枚のうち 6 枚が動いた＝全部行だけの score（`p1282/svg/sweep.log`）。⚠️ 紙に入れたので、網の道具 `RenderedGeometry.Render`（既定の紙）には 3.5 が出ない＝ledger は動かない。
-- **次の一手**: §1.0 のとおり Lab `sessions/p1242/leftovers.md` の欠陥を先頭から（訊かずに着手してよい）。一線譜はオーナーの目視待ち（3.5 の間）。
-- 棚卸し: OWN 449 → 450（`RowStaffPaper`）。終了時 full 17364 合格 / 1 失敗（README）/ skip 2 / 合計 17367（`run2.trx`）。
 
 ## 2. 開いている作業
 

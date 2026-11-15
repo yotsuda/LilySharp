@@ -271,6 +271,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1282セッションの経緯
+
+### 1.1 第1282セッション（2026-11-15・YT-DELL2）
+
+base `33872050f`・開始時 full 17360 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 3 / 合計 17364（Lab `p1282` の `run1.trx`）。REQUESTS の `open` は Calamo・Dettato とも 0。CI は 2026-11-15 の push の run が failure のまま（未 push 216）。
+**第1281 の「次の一手」（一線譜へのオーナーの答え ⑴〜⑶）を全部閉じた**（決めたことは `docs/row-staff-design.md` の「第1282 で決めたこと」）。
+- ⑴ Skip の網を規則に書き直した: `SectionLabel_OnAStafflessChordSheet_StandsLevelWithTheSymbolsWhereThereIsRoom`（余地のある B はコードの名前と同じ高さ・開くのは C。A は名前より下に来ない）。
+- ⑵ 歌詞と一線の間＝**3.5 譜間**（LILYSHARP-OWN・`ScoreAssembler.RowStaffPaper`）。5.5 は LilyPond が中央の線から測る値＝5 線なら下の線から 3.5。前は段で違った（押された段は最小の 4.4・最後の段は 5.5）。音符の無い譜表だけの score に当てる（自動の譜表と、音楽の無いパートの手書きの `as lines 1`）。絵は Lab `p1282/gap/gap.png`・`p1282/snap/*.png`＝**オーナーが見て評価する**（`MANUAL-CHECKS` には足していない）。
+- ⑶-1 手で書いた `part l { }`＋`staff l as lines 1` の下の `on` の無い歌詞の行が消えていた＝すぐ上の譜表を歌う規則でその空の譜表に畳まれ、音符が無いので全部消えていた（警告も無し）。音楽の無いパートは既定の歌い先にしない（`RenderSpecParser.SungStaffAbove`・`LyricBindings` も同じ）＋`RowsSpaceTheGrid` は音符の無い譜表を自動の譜表と同じに数える。⑶-2 `IsLeadSheet` は**消さない**＝ページでは通らないが MusicXML が読む（true で投げる毒: SVG の網 0 本・MusicXML の網 13 本）。
+- 網: `AutoRowStaffTests` に 3.5 の 2 例と空の譜表の歌詞の 1 例。毒 3 本は全部赤（Lab `p1282/poisons.ps1`）。スナップショット 3 枚を再ベース。スイープ: 1268 枚のうち 6 枚が動いた＝全部行だけの score（`p1282/svg/sweep.log`）。⚠️ 紙に入れたので、網の道具 `RenderedGeometry.Render`（既定の紙）には 3.5 が出ない＝ledger は動かない。
+- **次の一手**: §1.0 のとおり Lab `sessions/p1242/leftovers.md` の欠陥を先頭から（訊かずに着手してよい）。一線譜はオーナーの目視待ち（3.5 の間）。
+- 棚卸し: OWN 449 → 450（`RowStaffPaper`）。終了時 full 17364 合格 / 1 失敗（README）/ skip 2 / 合計 17367（`run2.trx`）。
+
 ## 以下は第1281セッションの経緯
 
 ### 1.1 第1281セッション（2026-11-15・YT-DELL2）
