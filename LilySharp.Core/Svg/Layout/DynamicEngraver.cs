@@ -324,8 +324,12 @@ internal static class DynamicEngraver
             // LILYPOND-REF: scm/define-grobs.scm:3810-3820 TextScript
             //   parent-alignment-X #f / self-alignment-X #f;
             //   lily/self-alignment-interface.cc:159-175 (non-number aligns add 0).
+            // …where the note collision put that voice's column (HairpinEngraver.CollisionShift:
+            // until session 1262 the label of a voice shifted beside another's stood on the
+            // unshifted column, a head's width to the left).
             double xColumn = measureLayout.X + LayoutUtilities.GetItemXOffset(
-                dynMeasures, dynamic.MeasureIndex, dynamic.ItemIndex, measureLayout);
+                dynMeasures, dynamic.MeasureIndex, dynamic.ItemIndex, measureLayout)
+                + HairpinEngraver.CollisionShift(dynVoices, dynamic.VoiceIndex, dynamic.MeasureIndex, dynamic.ItemIndex);
             // A DYNAMIC ON A GRACE NOTE (session 916, HANDOFF §2 U8 ⒟) stands on the grace
             // column, read off the run as a grace tie's, slur's or script's bound is. It keeps
             // the full size: general-grace-settings names no DynamicText (MEASURED, 2.26.0, Lab

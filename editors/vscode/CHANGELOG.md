@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A hairpin and a dynamic of a voice set aside by a collision** (two voices a second or a unison apart) **stand on that voice's notes as drawn**, not a note head's width to the left.
 - **Importing MusicXML keeps palm mutes, let rings and barres** (`@palmMute … @!palmMute`, `@letRing`, `@barre(7)`): they came in as plain text with no line.
 - **With two voices on a staff, each voice's dynamics and hairpins keep to their own line.** A side one voice wrote (`@f.up`, `@p.down`) no longer moves the other voice's marks: the lower voice's `@p` beside the upper voice's `@f.up` stays below instead of being printed over it.
 - **Importing MusicXML keeps the side of a dynamic and of a hairpin**: one set above the staff comes in as `@f.up` (it came in below), and over lyrics one set below as `@p.down`.

@@ -365,6 +365,11 @@ internal static class HairpinEngraver
         IReadOnlyDictionary<RestShiftKey, double>? restShifts = null)
     {
         int staffIdx = hairpin.StaffIndex;
+        // The bound columns stand where the note collision put their voices (CollisionShift).
+        double startShift = CollisionShift(hpVoices, SupportVoice(hairpin, hpVoices),
+            hairpin.StartMeasureIndex, hairpin.StartItemIndex);
+        double endShift = CollisionShift(hpVoices, hairpin.EndVoiceIndex,
+            hairpin.EndMeasureIndex, hairpin.EndItemIndex);
 
         // The RIGHT bound, read only for the piece that carries it (a cut right edge is the
         // system's, ReattachSpanX): under to-barline the bound is the bar the terminator's
@@ -393,7 +398,7 @@ internal static class HairpinEngraver
             else if (hairpin.AdjacentAtEnd && !(hairpin.TipAdjacent && hairpin.Direction == HairpinDirection.Decrescendo)
                      && BoundText(dynamicAt, hairpin.EndMeasureIndex, hairpin.EndItemIndex, hairpin.EndVoiceIndex, hairpin) is null
                      && ColumnExtent(hairpin.EndMeasureIndex, hairpin.EndItemIndex, endMeasures,
-                         measureLayouts) is { } metColumn)
+                         measureLayouts, endShift) is { } metColumn)
             {
                 // Back to back with the hairpin starting on this note, no circle between: a third
                 // of the padding short of the column's centre, the other's start as far past it
@@ -403,7 +408,7 @@ internal static class HairpinEngraver
             }
             else if ((hairpin.NienteAtEnd != null || hairpin.EndsAtStop)
                      && ColumnExtent(hairpin.EndMeasureIndex, hairpin.EndItemIndex, endMeasures,
-                         measureLayouts) is { } endColumn)
+                         measureLayouts, endShift) is { } endColumn)
             {
                 // A niente is no DynamicText — the twin ends the hairpin with \! — and an explicit
                 // stop (@!cresc) IS \!, so for both the bound is the note column: its right edge (the default endpoint alignment), a rest's
@@ -425,7 +430,7 @@ internal static class HairpinEngraver
             }
             else
             {
-                ownEndX = CalculateEndX(hairpin, endMeasures, measureLayouts);
+                ownEndX = CalculateEndX(hairpin, endMeasures, measureLayouts, endShift);
             }
         }
 
@@ -440,7 +445,7 @@ internal static class HairpinEngraver
         if (segment.IsFirst && hairpin.TipAdjacent
             && hairpin.Direction == HairpinDirection.Crescendo
             && ColumnExtent(hairpin.StartMeasureIndex, hairpin.StartItemIndex, hpMeasures,
-                measureLayouts) is { } startColumn)
+                measureLayouts, startShift) is { } startColumn)
             // A crescendo dal niente from the note a decrescendo al niente ends on: just left of
             // the column's centre, the mirror of that decrescendo's end.
             // LILYPOND-REF: lily/hairpin.cc:243-252 Hairpin::print — x_points[LEFT] =
@@ -449,7 +454,7 @@ internal static class HairpinEngraver
         else if (segment.IsFirst && hairpin.AdjacentAtStart
             && BoundText(dynamicAt, hairpin.StartMeasureIndex, hairpin.StartItemIndex, hairpin.VoiceIndex, hairpin) is null
             && ColumnExtent(hairpin.StartMeasureIndex, hairpin.StartItemIndex, hpMeasures,
-                measureLayouts) is { } metColumn)
+                measureLayouts, startShift) is { } metColumn)
             // Back to back with the hairpin ending on this note: a third of the padding past the
             // column's centre (HairpinItem.AdjacentAtStart; the mirror of the end above).
             // LILYPOND-REF: lily/hairpin.cc:258-259 — x_points[d] = e.center () - d * padding / 3
@@ -461,7 +466,7 @@ internal static class HairpinEngraver
                 ? startDyn.X + startW / 2.0 + BoundPadding
                 : GraceColumnX(graceNotes, hpVoices, staffIdx, hairpin.StartMeasureIndex,
                       hairpin.StartItemIndex, measureLayouts, SupportVoice(hairpin, hpVoices))
-                  ?? CalculateStartX(hairpin, hpMeasures, measureLayouts);
+                  ?? CalculateStartX(hairpin, hpMeasures, measureLayouts, startShift);
 
         {
             {
@@ -734,25 +739,27 @@ internal static class HairpinEngraver
     ///   column's head box is the normal-side one) — the bracket bound's
     ///   (TupletBracketEngraver.BoundEdgeOffset) reading, and no pair measures it.
     /// </remarks>
+    /// <param name="shift">What a collision with another voice moved the column by
+    /// (<see cref="CollisionShift"/>); 0 for a caller that reads none.</param>
     internal static (double Left, double Right, bool IsRest)? ColumnExtent(
         int measure, int item, ImmutableArray<Measure> staffMeasures,
-        ImmutableArray<MeasureLayout> measureLayouts)
+        ImmutableArray<MeasureLayout> measureLayouts, double shift = 0.0)
     {
         if (measure >= measureLayouts.Length || measureLayouts[measure] is not { } layout)
             return null;
-        return ColumnExtent(measure, item, staffMeasures, layout);
+        return ColumnExtent(measure, item, staffMeasures, layout, shift);
     }
 
-    /// <summary><see cref="ColumnExtent(int, int, ImmutableArray{Measure}, ImmutableArray{MeasureLayout})"/>
+    /// <summary><see cref="ColumnExtent(int, int, ImmutableArray{Measure}, ImmutableArray{MeasureLayout}, double)"/>
     /// with the measure's own layout in hand — for a caller holding one system's layouts,
     /// which the score-wide measure index does not index.</summary>
     internal static (double Left, double Right, bool IsRest)? ColumnExtent(
-        int measure, int item, ImmutableArray<Measure> staffMeasures, MeasureLayout layout)
+        int measure, int item, ImmutableArray<Measure> staffMeasures, MeasureLayout layout, double shift = 0.0)
     {
         if (staffMeasures.IsDefaultOrEmpty || measure >= staffMeasures.Length
             || item < 0 || item >= staffMeasures[measure].Items.Length)
             return null;
-        double x = layout.X + LayoutUtilities.GetItemXOffset(staffMeasures, measure, item, layout);
+        double x = layout.X + LayoutUtilities.GetItemXOffset(staffMeasures, measure, item, layout) + shift;
         double halfStem = EngravingDefaults.StemThickness / 2;
         switch (staffMeasures[measure].Items[item])
         {
@@ -867,7 +874,8 @@ internal static class HairpinEngraver
             for (int i = Math.Max(0, from); i <= to && i < itemCount; i++)
                 yield return (m, i,
                     GraceColumnX(graceNotes, voices, hairpin.StaffIndex, m, i, measureLayouts, supportVoice)
-                    ?? layout.X + LayoutUtilities.GetItemXOffset(staffMeasures, m, i, layout));
+                    ?? layout.X + LayoutUtilities.GetItemXOffset(staffMeasures, m, i, layout)
+                       + CollisionShift(voices, supportVoice, m, i));
         }
     }
 
@@ -956,8 +964,30 @@ internal static class HairpinEngraver
             ? layout.Items.Length
             : hpMeasures[measure].Items.Length;
 
+    /// <summary>
+    /// What the note collision moved a voice's column by: the heads of a voice a second or a
+    /// unison from another voice's stand shifted, and what is bound to that voice's NoteColumn
+    /// — a hairpin's end, a dynamic text — stands on the column where it is drawn.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (LilyPond 2.26.0, Lab sessions/p1262/shift, <c>voice { c''2 d''2 } { b'2@cresc
+    /// c''2@f }</c>): the lower voice's heads stand 1.377 right of the upper's (18.498 against
+    /// 17.121), its hairpin opens at 18.448 — the shifted column's left edge, as the unshifted
+    /// control's opens at 17.071 under a head at 17.121 — and its f is centred on the shifted
+    /// head (24.151). Until session 1262 the hairpin and the f stood on the unshifted column,
+    /// 1.377 to the left (and the f, there, under the other voice's stem, 0.74 lower).
+    /// LILYPOND-REF: lily/note-collision.cc:403-470 Note_collision_interface::calc_positioning_done —
+    ///   <c>done[i]->translate_axis (amounts[i] - left_most, X_AXIS)</c>: the shift is the
+    ///   NoteColumn's own X translation, so every grob whose X-parent or bound is that column
+    ///   moves with it.
+    /// </remarks>
+    internal static double CollisionShift(ImmutableArray<Voice> voices, int voiceIndex, int measure, int item)
+        => voices.IsDefaultOrEmpty || voiceIndex < 0 || voiceIndex >= voices.Length
+            ? 0.0
+            : SpacingRules.VoiceCollisionShiftsOf(voices).ShiftOf(measure, voiceIndex + 1, item);
+
     private static double CalculateStartX(HairpinItem hairpin, ImmutableArray<Measure> hpMeasures,
-        ImmutableArray<MeasureLayout> measureLayouts)
+        ImmutableArray<MeasureLayout> measureLayouts, double shift)
     {
         var startMeasure = measureLayouts[hairpin.StartMeasureIndex];
         if (hairpin.StartItemIndex < StaffItemCount(hpMeasures, hairpin.StartMeasureIndex, startMeasure))
@@ -977,19 +1007,19 @@ internal static class HairpinEngraver
             //   LEFT of it, and LilyPond's generic_bound_extent would start the wedge
             //   there. No pair measures it (needs a hairpin opening on such a chord).
             return startMeasure.X + LayoutUtilities.GetItemXOffset(
-                hpMeasures, hairpin.StartMeasureIndex, hairpin.StartItemIndex, startMeasure);
+                hpMeasures, hairpin.StartMeasureIndex, hairpin.StartItemIndex, startMeasure) + shift;
         }
         return startMeasure.X + BoundPadding;
     }
 
     private static double CalculateEndX(HairpinItem hairpin, ImmutableArray<Measure> hpMeasures,
-        ImmutableArray<MeasureLayout> measureLayouts)
+        ImmutableArray<MeasureLayout> measureLayouts, double shift)
     {
         var endMeasure = measureLayouts[hairpin.EndMeasureIndex];
         if (hairpin.EndItemIndex < StaffItemCount(hpMeasures, hairpin.EndMeasureIndex, endMeasure))
         {
             return endMeasure.X + LayoutUtilities.GetItemXOffset(
-                hpMeasures, hairpin.EndMeasureIndex, hairpin.EndItemIndex, endMeasure) - BoundPadding * 0.5;
+                hpMeasures, hairpin.EndMeasureIndex, hairpin.EndItemIndex, endMeasure) + shift - BoundPadding * 0.5;
         }
         return endMeasure.X + endMeasure.Width - BoundPadding;
     }

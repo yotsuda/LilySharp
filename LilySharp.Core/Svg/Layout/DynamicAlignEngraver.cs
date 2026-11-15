@@ -482,7 +482,8 @@ internal static class DynamicAlignEngraver
                 yield return (m, i,
                     HairpinEngraver.GraceColumnX(graceNotes, voices, line.StaffIndex, m, i,
                         measureLayouts, voiceIndex)
-                    ?? layout.X + LayoutUtilities.GetItemXOffset(staffMeasures, m, i, layout));
+                    ?? layout.X + LayoutUtilities.GetItemXOffset(staffMeasures, m, i, layout)
+                       + HairpinEngraver.CollisionShift(voices, voiceIndex, m, i));
         }
     }
 }
