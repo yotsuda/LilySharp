@@ -77,6 +77,10 @@ public class AutoRowStaffTests
     [InlineData("chords prog { C | G | [1. Am :| [2. F ] | C | }", "chords prog")]
     [InlineData("part melody { section A { c'4 c g' g | a a g2 | } }\nchords prog { section A { C | F | } }\n"
         + "lyrics verse { section A { one two | three four | } }\nform { |: A :| A \"A2\" }", "chords prog as names  lyrics verse on melody")]
+    // A row that names no melody: under the hand-written staff it used to sing that staff's part,
+    // which has no note — every word vanished, silently (RenderSpecParser.SungStaffAbove).
+    [InlineData("tempo 100\nchords prog { section A { Cmaj7 | Dm7 | } }\nlyrics verse { section A { one two three four | five six sev- en | } }\nform { A }",
+        "chords prog  lyrics verse")]
     public void ThePage_IsAPartWithNoMusic_PlacedAsLines1(string body, string rows)
     {
         static string Svg(string source)
@@ -97,6 +101,44 @@ public class AutoRowStaffTests
         string byHand = lyricsAt < 0 ? rows + "  staff l as lines 1"
             : rows[..lyricsAt] + "staff l as lines 1  " + rows[lyricsAt..];
         Assert.Equal(Svg(head + "part l { }\nscore { " + byHand + " }\n"), Svg(head + "score { " + rows + " }\n"));
+    }
+
+    /// <summary>
+    /// The words hang 3.5 staff spaces below the one line on every system — where a five-line
+    /// staff's bottom line would leave them (owner's request 2026-11-15, "a natural-looking
+    /// gap"; ScoreAssembler.RowStaffPaper). LilyPond's 5.5 runs from the middle line, which IS
+    /// the line here: the first system, squeezed by the next, stood 4.4 below and the last, at
+    /// rest, 5.5 — two gaps on one page. Two verses, so the squeeze is in reach.
+    /// </summary>
+    [Theory]
+    [InlineData("")]                                         // the automatic staff
+    [InlineData("part l { }\n")]                             // a hand-written staff of a part with no music
+    public void TheWords_Hang3Point5BelowTheLine_OnEverySystem(string part)
+    {
+        string staff = part.Length == 0 ? "" : "staff l as lines 1  ";
+        string src = "time 4/4\n" + part
+            + "chords prog { section A { C | F | G | C } section B { Am | G } }\n"
+            + "lyrics verse { section A { one two | three four | five six | sev- en | }\n"
+            + "  section B { verse ~1 { eight nine | ten e- } verse ~2 { le- ven | twelve thir- } } }\n"
+            + "form { A |: B :| A \"A2\" }\n"
+            + "score { chords prog as names  " + staff + "lyrics verse }\n";
+        var tree = SyntaxTree.Parse(src);
+        Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
+        var svg = SvgGenerator.Generate(tree, new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+        var lines = System.Text.RegularExpressions.Regex.Matches(svg,
+                "<line x1=\"([0-9.]+)\" y1=\"([0-9.]+)\" x2=\"([0-9.]+)\" y2=\"\\2\"[^>]*stroke-width=\"0.100\"")
+            .Where(m => double.Parse(m.Groups[3].Value, System.Globalization.CultureInfo.InvariantCulture)
+                - double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture) > 30)
+            .Select(m => double.Parse(m.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture)).Distinct().ToList();
+        Assert.Equal(2, lines.Count);
+        var words = System.Text.RegularExpressions.Regex.Matches(svg, "<text x=\"[0-9.]+\" y=\"([0-9.]+)\" font-size=\"2.47\"")
+            .Select(m => double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture)).Distinct().ToList();
+        foreach (var line in lines)
+        {
+            double first = words.Where(y => y > line).Min();
+            Assert.True(System.Math.Abs(first - line - 3.5) < 0.011,
+                $"the words under the line at {line:F2} stand {first - line:F2} below it, not 3.5");
+        }
     }
 
     [Fact]

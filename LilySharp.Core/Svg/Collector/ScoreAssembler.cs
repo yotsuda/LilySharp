@@ -182,9 +182,61 @@ internal static class ScoreAssembler
             HeaderLines = c.HeaderLines ?? Model.HeaderLines.None,
             Instrument = c.Instrument,
             Fonts = c.Fonts,
-            Paper = c.Paper,
+            Paper = RowStaffPaper(staffGroups, c.Paper),
             LayoutPlan = c.LayoutPlan,
         };
+
+    /// <summary>
+    /// The paper of a score of rows whose staves carry no notes — the automatic one-line staff
+    /// (<see cref="RenderSpecParser.AutoStaffPart"/>, docs/row-staff-design.md): the words hang
+    /// from it as they would from a five-line staff's bottom line.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN (owner's request 2026-11-15, "a natural-looking gap"): LilyPond's Lyrics
+    /// <c>nonstaff-relatedstaff-spacing</c> basic-distance 5.5 runs from the staff's reference
+    /// point, its middle line (ly/engraver-init.ly:649-652) — 3.5 below a five-line staff's
+    /// bottom line, but 5.5 below a staff that IS its middle line, which looked detached. The
+    /// basic distance takes off the half-staff (2) so the words stand 3.5 below the line; the
+    /// padding floor is untouched, so the bar ticks still keep the words clear. Only a score
+    /// whose staves carry no notes — the automatic staff, or a written staff of a part with no
+    /// music (<see cref="MultiStaffScore.CarriesNoMusic"/>), drawn by the same rule: a staff
+    /// with notes has stems reaching below its line, and there LilyPond's distance stays. A paper that sets
+    /// <c>nonStaffRelatedStaffSpacing</c> keeps what it set.
+    /// </remarks>
+    private static Layout.LayoutOptions RowStaffPaper(ImmutableArray<StaffGroup> staffGroups, Layout.LayoutOptions paper)
+    {
+        var ss = paper.StaffSpacing;
+        if (ss.NonStaffRelatedStaff != s_defaultSpacing.NonStaffRelatedStaff)
+            return paper;
+        bool auto = false;
+        foreach (var group in staffGroups)
+            foreach (var staff in group.Staves)
+            {
+                if (staff.IsTextRow)
+                    continue;
+                if (!RenderSpecParser.IsAutoStaff(staff.PrimaryVoice.Name) && !MultiStaffScore.CarriesNoMusic(staff))
+                    return paper;
+                auto = true;
+            }
+        if (!auto)
+            return paper;
+        return paper with
+        {
+            StaffSpacing = ss with
+            {
+                NonStaffRelatedStaff = ss.NonStaffRelatedStaff with
+                {
+                    BasicDistance = ss.NonStaffRelatedStaff.BasicDistance - AutoStaffHalf,
+                },
+            },
+        };
+    }
+
+    private static readonly Layout.StaffSpacingParameters s_defaultSpacing = new();
+
+    /// <summary>A five-line staff's half height, staff spaces — the step from its reference
+    /// point (the middle line) to its bottom line.</summary>
+    private const double AutoStaffHalf = 2.0;
 
     // ⚠️ THERE IS NO INITIAL-REPEAT GATE HERE ANY MORE, and that is a decision, not an
     // omission. LILYSHARP-OWN: a `|:` that opens the piece IS printed. LilyPond's default

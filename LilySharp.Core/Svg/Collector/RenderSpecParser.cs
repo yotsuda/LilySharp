@@ -313,11 +313,51 @@ public static class RenderSpecParser
         SyntaxNode root = row;
         while (root.Parent != null)
             root = root.Parent;
-        if (NearestStaffAbove(row, out bool severalParts) is { } above)
+        if (SungStaffAbove(row, out bool severalParts) is { } above)
             return above;
         if (row.NameToken == null)
             return Music.LyricBindings.TargetOf(root, row.PartName);
         return severalParts ? null : Music.LyricBindings.OnlyPartNaming(root, row.PartName);
+    }
+
+    /// <summary>
+    /// The staff above a row that writes no <c>on</c> sings: <see cref="NearestStaffAbove"/>, unless
+    /// that part writes no music at all (<c>part l { }</c> + <c>staff l as lines 1</c> beside a
+    /// chord row, owner's book "My Life (chord).lys"). Such a staff takes the rows' bars
+    /// (MeasureCollector.GiveBlankStavesTheRowsBars) and has no note for a word to stand on — the
+    /// row folded under it and every syllable vanished, silently (HANDOFF §1.1 session 1281,
+    /// Lab p1281/row/tempo2.png). It stays the even-spread row instead, as under the automatic
+    /// one-line staff. A written <c>on l</c> still binds.
+    /// </summary>
+    internal static string? SungStaffAbove(LyricsRowRenderSyntax row, out bool severalParts)
+    {
+        var above = NearestStaffAbove(row, out severalParts);
+        if (above == null)
+            return null;
+        SyntaxNode root = row;
+        while (root.Parent != null)
+            root = root.Parent;
+        return PartWritesNoMusic(root, above) ? null : above;
+    }
+
+    /// <summary>True when no declaration of <paramref name="part"/> holds a section or a music
+    /// block — its header properties at most. Deliberately coarse: an empty
+    /// <c>section A { }</c> counts as music, so a part that writes anything keeps its words.</summary>
+    private static bool PartWritesNoMusic(SyntaxNode root, string part)
+    {
+        bool declared = false;
+        foreach (var n in root.SitesOfKinds(Editing.PartReferenceFinder.DeclaringKinds))
+        {
+            if (Editing.PartReferenceFinder.DeclaredName(n)?.Text != part)
+                continue;
+            if (n is PartBlockSyntax)
+                return false;
+            declared = true;
+            foreach (var d in n.DescendantNodes())
+                if (d is SectionDeclarationSyntax or MusicBlockSyntax)
+                    return false;
+        }
+        return declared;
     }
 
     /// <summary>The nearest staff above <paramref name="row"/> among its siblings, and whether what

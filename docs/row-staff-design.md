@@ -59,9 +59,30 @@
 - **台帳**: 譜表の無い形を測っていた 2 点（`staffless.chords-lyrics.refpoint-step`・`barnumber.rows-only.row-to-ink-bottom`）は
   その形が描かれなくなったので外した。`tempo.staffless.grid.over-chord.row-ink-to-baseline` は 0 に閉じた（コードの行が
   譜表の上に立ち、目印との間は outside-staff-padding 0.46＝LilyPond と同じ）。
-- **オーナーに訊くこと**: ⑴ 区切りのラベルは譜表の規則で、余地があればコードの名前と同じ高さに並ぶ
-  （2026-10-04 のオーナー決定「譜表の無い譜面ではラベルは行の上の段」と食い違う・Lab `p1281/row/lab.png`）。
-  ⑵ 歌詞と一線の間（5.5 譜間）。
+- **オーナーの答え（2026-11-15）**: ⑴ 区切りのラベルは譜表の規則のまま＝余地があればコードの名前と同じ高さに並ぶ
+  （2026-10-04 の「譜表の無い譜面ではラベルは行の上の段」を一線譜では上書き・網 `RowsOnlySectionLabelTests`）。
+  ⑵ 歌詞と一線の間は「自然に見える間隔に。あとで見て評価する」⇒ 下の第1282。
+
+## 第1282 で決めたこと
+
+- **歌詞は線の 3.5 譜間下**（LILYSHARP-OWN・`ScoreAssembler.RowStaffPaper`）: LilyPond の Lyrics の
+  `nonstaff-relatedstaff-spacing` basic-distance 5.5 は譜表の基準点（中央の線）から測る＝5 線の譜なら下の線から 3.5 だが、
+  1 本線ではその線から 5.5 で離れて見えた。basic-distance から 5 線の半分（2）を引く。padding（小節線の端から 0.5）は
+  そのまま。⚠️ 前は段で間が違った: 次の段に押された段は最小の 4.4、最後の段は 5.5（LilyPond も最小を取る＝
+  page-layout-problem.cc:593-599）。3.5 は最小より近いので、どの段も 3.5 にそろう（Lab `p1282/gap/gap.png`）。
+  当てるのは**音符の無い譜表だけの score**（自動の譜表と、音楽の無いパートの手書きの `as lines 1`）。音符のある
+  一線譜は符尾が線の下へ伸びるので LilyPond のまま。紙に `nonStaffRelatedStaffSpacing` を書いた本は書いた値のまま。
+  ⚠️ 紙（`score.Paper`）に入れたので、紙を読まない網の道具 `RenderedGeometry.Render`（既定の紙）には出ない＝
+  網は `SvgGenerator.Generate` で測る（`AutoRowStaffTests.TheWords_Hang3Point5BelowTheLine_OnEverySystem`）。
+- **`on` を書かない歌詞の行は、音楽の無いパートを歌わない**（`RenderSpecParser.SungStaffAbove`）: すぐ上の譜表を歌う
+  規則のせいで、`part l { }`＋`staff l as lines 1` の下の歌詞の行はその譜表に畳まれ、音符が無いので全部の音節が
+  黙って消えていた（警告も無し）。音楽の無いパート（宣言に section も音楽のブロックも無い）なら、行は等分の行のまま。
+  書いた `on l` は今までどおり結ぶ。あわせて `MultiStaffScore.RowsSpaceTheGrid` も音符の無い譜表を自動の譜表と
+  同じに数える（行が小節の幅を決める）。網は `ThePage_IsAPartWithNoMusic_PlacedAsLines1` の 7 例目。
+- **`IsLeadSheet` の格子の道は消さない**: ページでは通らない（全網で true になったら投げる毒＝SVG の網は 0 本）が、
+  MusicXML の書き出しは自動の譜表を外した仕様で score を組むので true になる（網 13 本）。ページ側の分岐
+  （`SharedRenderer` の格子・`MultiStaffLayouter`／`SpacingRules` の lead sheet の枝）は、片付けるなら MusicXML の読み手と
+  分けてから。
 
 ## 作らないもの
 

@@ -64,7 +64,7 @@ public static class LyricBindings
         // the validators and the composing checks mean by a track's part. A track can be
         // placed on several parts; each row knows its own (RenderSpecParser.RowTarget).
         foreach (var row in root.SitesOfKinds(SyntaxKind.LyricsRowRender).OfType<LyricsRowRenderSyntax>())
-            if ((row.SingsTarget ?? Svg.Collector.RenderSpecParser.NearestStaffAbove(row, out _)) is { } placed)
+            if ((row.SingsTarget ?? Svg.Collector.RenderSpecParser.SungStaffAbove(row, out _)) is { } placed)
                 map.TryAdd(row.PartName, placed);
         // The UNNAMED track that states no `sings` (2026-10-09) sings the file's one part: the
         // unnamed part, the only declared one, or — a file that declares none and writes its

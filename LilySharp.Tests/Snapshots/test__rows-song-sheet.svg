@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="416.1" viewBox="0 0 119.50 41.61" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="396.1" viewBox="0 0 119.50 39.61" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="41.61" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="39.61" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="424">Rows sheet</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <line x1="8.59" y1="17.02" x2="102.38" y2="17.02" stroke="#000000" stroke-width="0.100"/>
@@ -18,34 +18,34 @@
   <rect x="51.38" y="28.02" width="0.19" height="2.00" data-pos="0"/>
   <rect x="80.11" y="28.02" width="0.19" height="2.00" data-pos="0"/>
   <rect x="102.24" y="28.02" width="0.19" height="2.00" data-pos="0"/>
-  <text x="13.91" y="22.52" font-size="2.47" text-anchor="middle" data-pos="536">Twin</text>
-  <text x="20.75" y="22.52" font-size="2.47" text-anchor="middle" data-pos="542">kle</text>
-  <text x="27.56" y="22.52" font-size="2.47" text-anchor="middle" data-pos="546">twin</text>
-  <text x="34.03" y="22.52" font-size="2.47" text-anchor="middle" data-pos="552">kle</text>
-  <text x="39.62" y="22.52" font-size="2.47" text-anchor="middle" data-pos="558">lit</text>
-  <text x="45.41" y="22.52" font-size="2.47" text-anchor="middle" data-pos="563">tle</text>
-  <text x="52.01" y="22.52" font-size="2.47" text-anchor="middle" data-pos="567">star</text>
-  <text x="59.47" y="22.52" font-size="2.47" text-anchor="middle" data-pos="574">how</text>
-  <text x="64.74" y="22.52" font-size="2.47" text-anchor="middle" data-pos="578">I</text>
-  <text x="70.02" y="22.52" font-size="2.47" text-anchor="middle" data-pos="580">won</text>
-  <text x="76.33" y="22.52" font-size="2.47" text-anchor="middle" data-pos="585">der</text>
-  <text x="83.58" y="22.52" font-size="2.47" text-anchor="middle" data-pos="591">what</text>
-  <text x="91.29" y="22.52" font-size="2.47" text-anchor="middle" data-pos="596">you</text>
-  <text x="97.98" y="22.52" font-size="2.47" text-anchor="middle" data-pos="600">are</text>
-  <text x="1.73" y="34.52" font-size="2.47" text-anchor="middle" data-pos="610">Up</text>
-  <text x="7.58" y="34.52" font-size="2.47" text-anchor="middle" data-pos="613">a</text>
-  <text x="13.84" y="34.52" font-size="2.47" text-anchor="middle" data-pos="616">bove</text>
-  <text x="21.60" y="34.52" font-size="2.47" text-anchor="middle" data-pos="621">the</text>
-  <text x="29.99" y="34.52" font-size="2.47" text-anchor="middle" data-pos="627">world</text>
-  <text x="38.28" y="34.52" font-size="2.47" text-anchor="middle" data-pos="633">so</text>
-  <text x="45.97" y="34.52" font-size="2.47" text-anchor="middle" data-pos="636">high</text>
-  <text x="54.57" y="34.52" font-size="2.47" text-anchor="middle" data-pos="643">like</text>
-  <text x="60.75" y="34.52" font-size="2.47" text-anchor="middle" data-pos="648">a</text>
-  <text x="66.62" y="34.52" font-size="2.47" text-anchor="middle" data-pos="650">dia</text>
-  <text x="74.64" y="34.52" font-size="2.47" text-anchor="middle" data-pos="655">mond</text>
-  <text x="82.37" y="34.52" font-size="2.47" text-anchor="middle" data-pos="662">in</text>
-  <text x="89.31" y="34.52" font-size="2.47" text-anchor="middle" data-pos="665">the</text>
-  <text x="97.07" y="34.52" font-size="2.47" text-anchor="middle" data-pos="669">sky</text>
+  <text x="13.91" y="20.52" font-size="2.47" text-anchor="middle" data-pos="536">Twin</text>
+  <text x="20.75" y="20.52" font-size="2.47" text-anchor="middle" data-pos="542">kle</text>
+  <text x="27.56" y="20.52" font-size="2.47" text-anchor="middle" data-pos="546">twin</text>
+  <text x="34.03" y="20.52" font-size="2.47" text-anchor="middle" data-pos="552">kle</text>
+  <text x="39.62" y="20.52" font-size="2.47" text-anchor="middle" data-pos="558">lit</text>
+  <text x="45.41" y="20.52" font-size="2.47" text-anchor="middle" data-pos="563">tle</text>
+  <text x="52.01" y="20.52" font-size="2.47" text-anchor="middle" data-pos="567">star</text>
+  <text x="59.47" y="20.52" font-size="2.47" text-anchor="middle" data-pos="574">how</text>
+  <text x="64.74" y="20.52" font-size="2.47" text-anchor="middle" data-pos="578">I</text>
+  <text x="70.02" y="20.52" font-size="2.47" text-anchor="middle" data-pos="580">won</text>
+  <text x="76.33" y="20.52" font-size="2.47" text-anchor="middle" data-pos="585">der</text>
+  <text x="83.58" y="20.52" font-size="2.47" text-anchor="middle" data-pos="591">what</text>
+  <text x="91.29" y="20.52" font-size="2.47" text-anchor="middle" data-pos="596">you</text>
+  <text x="97.98" y="20.52" font-size="2.47" text-anchor="middle" data-pos="600">are</text>
+  <text x="1.73" y="32.52" font-size="2.47" text-anchor="middle" data-pos="610">Up</text>
+  <text x="7.58" y="32.52" font-size="2.47" text-anchor="middle" data-pos="613">a</text>
+  <text x="13.84" y="32.52" font-size="2.47" text-anchor="middle" data-pos="616">bove</text>
+  <text x="21.60" y="32.52" font-size="2.47" text-anchor="middle" data-pos="621">the</text>
+  <text x="29.99" y="32.52" font-size="2.47" text-anchor="middle" data-pos="627">world</text>
+  <text x="38.28" y="32.52" font-size="2.47" text-anchor="middle" data-pos="633">so</text>
+  <text x="45.97" y="32.52" font-size="2.47" text-anchor="middle" data-pos="636">high</text>
+  <text x="54.57" y="32.52" font-size="2.47" text-anchor="middle" data-pos="643">like</text>
+  <text x="60.75" y="32.52" font-size="2.47" text-anchor="middle" data-pos="648">a</text>
+  <text x="66.62" y="32.52" font-size="2.47" text-anchor="middle" data-pos="650">dia</text>
+  <text x="74.64" y="32.52" font-size="2.47" text-anchor="middle" data-pos="655">mond</text>
+  <text x="82.37" y="32.52" font-size="2.47" text-anchor="middle" data-pos="662">in</text>
+  <text x="89.31" y="32.52" font-size="2.47" text-anchor="middle" data-pos="665">the</text>
+  <text x="97.07" y="32.52" font-size="2.47" text-anchor="middle" data-pos="669">sky</text>
   <text x="13.24" y="16.02" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="478">C</text>
   <text x="38.94" y="16.02" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="482">G</text>
   <text x="58.79" y="16.02" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="486">Am</text>
@@ -58,11 +58,11 @@
   <text x="0.00" y="25.95" font-size="1.75" font-weight="bold" text-anchor="end">5</text>
   <rect x="4.88" y="12.82" width="7.32" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="447"/>
   <text x="8.55" y="15.17" font-size="2.77" text-anchor="middle" data-pos="447">Main</text>
-  <line x1="17.61" y1="22.04" x2="18.27" y2="22.04" stroke="#000000" stroke-width="0.130"/>
-  <line x1="30.89" y1="22.04" x2="31.55" y2="22.04" stroke="#000000" stroke-width="0.130"/>
-  <line x1="42.07" y1="22.04" x2="42.73" y2="22.04" stroke="#000000" stroke-width="0.130"/>
-  <line x1="73.05" y1="22.04" x2="73.71" y2="22.04" stroke="#000000" stroke-width="0.130"/>
-  <line x1="9.46" y1="34.04" x2="10.12" y2="34.04" stroke="#000000" stroke-width="0.130"/>
-  <line x1="69.61" y1="34.04" x2="70.27" y2="34.04" stroke="#000000" stroke-width="0.130"/>
+  <line x1="17.61" y1="20.04" x2="18.27" y2="20.04" stroke="#000000" stroke-width="0.130"/>
+  <line x1="30.89" y1="20.04" x2="31.55" y2="20.04" stroke="#000000" stroke-width="0.130"/>
+  <line x1="42.07" y1="20.04" x2="42.73" y2="20.04" stroke="#000000" stroke-width="0.130"/>
+  <line x1="73.05" y1="20.04" x2="73.71" y2="20.04" stroke="#000000" stroke-width="0.130"/>
+  <line x1="9.46" y1="32.04" x2="10.12" y2="32.04" stroke="#000000" stroke-width="0.130"/>
+  <line x1="69.61" y1="32.04" x2="70.27" y2="32.04" stroke="#000000" stroke-width="0.130"/>
   </g>
 </svg>

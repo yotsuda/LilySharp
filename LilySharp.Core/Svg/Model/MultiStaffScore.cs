@@ -459,11 +459,28 @@ public sealed record MultiStaffScore
             foreach (var (_, staff, _) in EnumerateStaves())
             {
                 any = true;
-                if (!staff.IsTextRow && !Collector.RenderSpecParser.IsAutoStaff(staff.PrimaryVoice.Name))
+                if (!staff.IsTextRow && !Collector.RenderSpecParser.IsAutoStaff(staff.PrimaryVoice.Name)
+                    && !CarriesNoMusic(staff))
                     return false;
             }
             return any;
         }
+    }
+
+    /// <summary>
+    /// A staff whose part has no music (<c>part l { }</c> + <c>staff l as lines 1</c> beside the
+    /// rows): its bars are the rows' spacers (MeasureCollector.GiveBlankStavesTheRowsBars), as
+    /// the automatic staff's are, so the rows space it the same way — else a lyrics row under it
+    /// had no column to stand on and was not drawn (HANDOFF §1.1 session 1281, Lab p1281/row/tempo2.png).
+    /// </summary>
+    internal static bool CarriesNoMusic(Staff staff)
+    {
+        foreach (var voice in staff.Voices)
+            foreach (var measure in voice.Measures)
+                foreach (var item in measure.Items)
+                    if (item is not (RestItem { IsSpacer: true } or TimeSignatureChangeItem or KeySignatureChangeItem))
+                        return false;
+        return true;
     }
 
     /// <summary>

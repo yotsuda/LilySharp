@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 449 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **575** | |
+| `OWN` | 450 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **576** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（449 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（450 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -566,6 +566,7 @@
 - **`RenderSpecParser.Parse`** LILYSHARP-OWN: a score of rows alone draws a one-line staff they stand on (owner's
 - **`RenderSpecParser.ParseTab`** LILYSHARP-OWN: LilyPond's TabStaff has no capo; standard tablature counts from it.
 ### `LilySharp.Core/Svg/Collector/ScoreAssembler.cs`
+- **`ScoreAssembler.RowStaffPaper`** LILYSHARP-OWN (owner's request 2026-11-15, "a natural-looking gap"): LilyPond's Lyrics
 - **`ScoreAssembler`** omission. LILYSHARP-OWN: a `|:` that opens the piece IS printed. LilyPond's default
 ### `LilySharp.Core/Svg/Collector/SectionPlayCarry.cs`
 - **`SectionTieCarry`** LILYSHARP-OWN: the hanging tie is drawn as a laissez-vibrer tie, LilyPond's short half-tie,

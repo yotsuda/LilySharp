@@ -44,6 +44,12 @@ namespace LilySharp.Tests;
 /// the row above"), and the X half went with the convention (HANDOFF 5.3). The controls
 /// below are the old file's, read the other way round.
 /// </para>
+/// <para>
+/// ⚠️ AND A CHORD SHEET IS NO LONGER STAFFLESS: since 2026-11-15 it stands on an automatic
+/// one-line staff (docs/row-staff-design.md), and its label takes the staff's rule — level
+/// with the chord names where there is room (owner's decision 2026-11-15). The lyrics-only
+/// control below still reads "above the row".
+/// </para>
 /// </remarks>
 [Trait("Category", "Unit")]
 public class RowsOnlySectionLabelTests
@@ -74,24 +80,31 @@ public class RowsOnlySectionLabelTests
         }
         """;
 
-    /// <summary>On a staffless chord sheet every label stands ABOVE the chord line, clear of
-    /// the symbols by a real margin (device Y grows downward, so "above" is a smaller Y).</summary>
-    [Fact(Skip = "owner's question 2026-11-15 (HANDOFF §1.1 session 1281): on the automatic one-line staff the label takes the staff's rule and stands level with the chords where there is room (Lab p1281/row/lab.png)")]
-    public void SectionLabel_OnAStafflessChordSheet_StandsAboveTheSymbols()
+    /// <summary>On a chord sheet's automatic one-line staff a label takes the staff's rule:
+    /// where there is room it stands level with the chord names, on the left of the symbol it
+    /// opens (owner's decision 2026-11-15, which overrides the 2026-10-04 "row above" for the
+    /// one-line staff — HANDOFF §1.1 session 1281, Lab p1281/row/lab.png). Beside the meter at
+    /// the start of a line there is no room, and the label stands no lower than the names
+    /// (device Y grows downward).</summary>
+    [Fact]
+    public void SectionLabel_OnAStafflessChordSheet_StandsLevelWithTheSymbolsWhereThereIsRoom()
     {
         var g = RenderedGeometry.Render(RowsOnly(withChords: true));
-        var labels = g.MusicMarkLabels;
-        Assert.Equal(2, labels.Count);          // one per section, one per system
-        foreach (var label in labels)
-        {
-            double nearestChord = g.ChordSymbols
-                .Select(c => c.Y)
-                .OrderBy(y => System.Math.Abs(y - label.Y))
-                .First();
-            Assert.True(nearestChord - label.Y > 1.0,
-                $"'{label.Text}' at {label.Y:F6} must stand above the chord line at {nearestChord:F6}, "
-                + "not level with the symbols (the 2026-08-24 convention, reversed 2026-10-04).");
-        }
+        var labels = g.MusicMarkLabels.OrderBy(l => l.X).ToList();
+        Assert.Equal(["A", "B"], labels.Select(l => l.Text).ToList());
+        double chordLine = g.ChordSymbols.Max(c => c.Y);
+        Assert.All(g.ChordSymbols, c => Assert.Equal(chordLine, c.Y, 6));
+
+        var a = labels[0];
+        Assert.True(a.Y <= chordLine + 1e-6,
+            $"'A' at {a.Y:F6} beside the meter must stand no lower than the chord line at {chordLine:F6}");
+
+        var b = labels[1];
+        Assert.True(System.Math.Abs(b.Y - chordLine) < 1.0,
+            $"'B' at {b.Y:F6} has room in its bar and must stand level with the chord line at "
+            + $"{chordLine:F6}, not above it (owner's decision 2026-11-15)");
+        var opened = g.ChordSymbols.Where(c => c.X > b.X).OrderBy(c => c.X).First();
+        Assert.Equal("C", opened.Text);
     }
 
     /// <summary>...and the symbols owe the label nothing: hidden (<c>~A</c>) or shown, every
