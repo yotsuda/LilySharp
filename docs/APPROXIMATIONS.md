@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 448 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **574** | |
+| `OWN` | 449 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **575** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（448 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（449 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -563,6 +563,7 @@
 - **`StaffSpec.MaxLines`** LILYSHARP-OWN: the DEFAULT five is LilyPond's (scm/define-grobs.scm:3396,
 - **`RenderSpec.SoundingPartNames`** LILYSHARP-OWN: a part the score shows ONLY as an ossia is silent. An ossia is
 ### `LilySharp.Core/Svg/Collector/RenderSpecParser.cs`
+- **`RenderSpecParser.Parse`** LILYSHARP-OWN: a score of rows alone draws a one-line staff they stand on (owner's
 - **`RenderSpecParser.ParseTab`** LILYSHARP-OWN: LilyPond's TabStaff has no capo; standard tablature counts from it.
 ### `LilySharp.Core/Svg/Collector/ScoreAssembler.cs`
 - **`ScoreAssembler`** omission. LILYSHARP-OWN: a `|:` that opens the piece IS printed. LilyPond's default

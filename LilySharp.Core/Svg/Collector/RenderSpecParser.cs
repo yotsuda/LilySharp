@@ -264,8 +264,8 @@ public static class RenderSpecParser
                 is { } staffMidiOnly)
                 midiOnlyParts.Add(staffMidiOnly.Text);
 
-        // A score of rows alone draws a one-line staff they stand on (owner's decision
-        // 2026-11-15, docs/row-staff-design.md): placed as `staff (staff) as lines 1` would be,
+        // LILYSHARP-OWN: a score of rows alone draws a one-line staff they stand on (owner's
+        // decision 2026-11-15, docs/row-staff-design.md; LilyPond sets ChordNames and Lyrics alone): placed as `staff (staff) as lines 1` would be,
         // above the first lyrics row, else last. It is no declaration and no text — the page,
         // MusicXML and MIDI read it here; the LilyPond twin writes it from IsAutoStaff.
         if (items.Count > 0 && items.All(i => i is ChordRowSpec or LyricsRowSpec))
