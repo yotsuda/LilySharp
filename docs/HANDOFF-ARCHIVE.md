@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1259セッションの経緯
+
+### 1.1 第1259セッション（2026-11-15・YT-DELL2）
+
+base `e1f4a5aed`・開始時 full 17109 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17112（Lab `p1259` の `run1.trx`）。Calamo の REQUESTS の `open` は 0・Dettato は 1・2 が `question`（オーナー待ち）のまま。CI は第1231 のまま（最新の CI は 2026-11-13 の failure）。
+leftovers の欠陥の先頭「`lysc import` は wedge の `number` を読まない」（オーナー指示 2026-11-14「残りの欠陥を順に」）。
+- 実測（直す前・Lab `p1259/wedge`）: `lysc xml` は小節の direction を全部小節の頭に offset つきで書き、後の声部の印がどの声部のものかを言っていなかった。読み手は「流れの中で次に来た、その位置以降の音」に付けるので、2 声部目の印が 1 声部目の同じ拍の音に付く（`x1` → `c''1@cresc@decresc`）。wedge の stop は番号を見ず「その段で最後に開いた wedge」を閉じていた。
+- 書き手: 後の声部の `<direction>` に `<voice>`（`MusicXmlDirection.Voice`＝v + 1・大譜表の下の段は音と同じく 5 から）。wedge は start の声部（`WedgeVoice`）で言う＝stop が別の声部の流れに書かれても start の声部。
+- 読み手（`MusicXmlReader`）: direction の `<voice>` の声部の音に付ける（`PendingMark.Voice`・その小節に音のない声部は何も言わない＝`<staff>` と同じ扱い）。stop は自分の `number` の wedge を閉じる（`wedgeNumbers`・その番号の開いた wedge がなければ今までどおり最後に開いたもの）。
+- 門: 網 `MusicXmlImportVoiceDirectionTests` 12 本・毒 8 本が全部赤（Lab `p1259/poisons.ps1`・`poison8.ps1`）。往復の掃き（Lab `p1259/rt-sweep.ps1`・1268 文書）: xml の差 5（`<voice>` の行だけ・ほかの差 0）・読み戻した `.lys` の差 5（`voice-dynamics*.lys` 4 冊と `above-dynamics.lys`。直す前は 2 声部の `@f` と `@p` が 1 声部目の `@fp` に潰れていた）。絵は動かない（svg の掃きは回していない＝描画のコードに触っていない・snapshot は full で緑）。commit `96d6668fa`。終了時 full 17121 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17124（`run2.trx`）。
+- 7.7: ⚠️ 古い Lily# が書いた xml（`number` はあるが `<voice>` がない）の 2 声部目の印は今も 1 声部目に戻る（番号から声部を逆算する読みは入れていない＝Lily# だけの番号の規則を読み手に持ち込まない）。1 声部目の direction は `<voice>` を書かない。残したものは Lab `p1242/leftovers.md` の「第1259」。7.5: Core '+' 69 行は MusicXML の読み書き＝LilyPond 由来でない（REF 0・OWN 0）。
+
 ## 以下は第1258セッションの経緯
 
 ### 1.1 第1258セッション（2026-11-15・YT-DELL2）

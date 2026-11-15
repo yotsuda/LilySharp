@@ -142,6 +142,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1261セッション（2026-11-15・YT-DELL2）
+
+base `c8612967d`・開始時 full 17133 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17136（Lab `p1261` の `run1.trx`）。REQUESTS と CI は第1260 の開始時に見たまま（同じ会話）。
+leftovers「残り（欠陥）」の先頭「MusicXML の読み込みは guitar の線（`<bracket>`）と fretted の vibrato の `<wavy-line>` を読まない」（オーナー指示 2026-11-14「残りの欠陥を順に」）。
+- 実測（直す前・Lab `p1261/gt`・`back0`）: `e4@palmMute g a b@!palmMute` は `e4@text("P.M.").up` と線なしで戻り、`@barre(7)` は `@text("CVII").up`、`@vibrato` は消える。
+- 読み手（`MusicXmlReader`）: 言葉（"P.M."・"let ring"・barre の題字）から始まる `<bracket type="start">` を `palmMute`／`letRing`／`barre(N)`・`barre(N half)` に読む（`GuitarLineMark`・`BarreMark`）。stop は自分の `number` の線を、stop の前の音で、開いた声部の中で閉じる（text spanner と同じ道＝`EndOttavasInTheirVoice`）。bracket のない barre の題字は 1 音の barre。閉じない palm mute／let ring は言葉のまま（Lily# では閉じない線はエラー＝`KeepUnclosedTextSpansAsWords` を線ごとに）。
+- 一緒に直した欠陥: 線の終わりは開いた*音*を使い切っていたので、1 つの音に 2 本開く形（`e4@palmMute@letRing`。破線の文字の線と ottava が同じ音で始まる形も）の 2 本目の終わりが「始まりなし」で落ちていた → 音と線の名前の組で使い切る。
+- 門: 網 `MusicXmlImportGuitarLineTests` 13 本・毒 12 本が全部赤（Lab `p1261/poisons.ps1`）。往復の掃き（Lab `p1261/rt-sweep.ps1`）: xml の差 0・読み戻しの差 0 / 1268＝コーパスに guitar の線の本は 0 冊（形は探り譜 g1〜g5 と網で見た）。⚠️ この掃きの head は毒 P12 の残りのビルドだった（線の鍵だけが違う。毒のあと作り直さずに exe を写した）＝「ほかの読みは動かない」の確認としては有効。描画には触っていない（svg の掃きなし）。commit `abb28426d`。終了時 full 17146 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17149。
+- 7.7: ⚠️ **vibrato の `<wavy-line>` は読んでいない**: 読み手はパートを fretted と宣言しない（`part guitar { clef treble_8 }`）ので、`@vibrato` を書くと「歌い手の印＝無視」の警告になる。パートに `instrument guitar` を書く（MIDI program や TAB から決める）のは機能の追加＝オーナーに訊く。⚠️ 言葉は Lily# が書く綴りだけを読む（"PM"・"l.v." などは文字のまま）。⚠️ section の境をまたぐ guitar の線は切らない（text spanner と同じ・未測定）。7.5: Core '+' は MusicXML の読み（REF 0・OWN 0）。CHANGELOG は 2 つとも `## Unreleased`。
+
+## 以下は第1260セッションの経緯
+
 ### 1.1 第1260セッション（2026-11-15・YT-DELL2）
 
 base `9f18bbea6`・開始時 full 17121 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17124（Lab `p1260` の `run1.trx`）。Calamo の REQUESTS の `open` は 0・Dettato は 1・2 が `question`（オーナー待ち）のまま。CI は第1231 のまま。
@@ -152,18 +164,6 @@ leftovers の「`@f.up`・`@p.up` の向きが往復で落ちる」（第1259 �
 - 読み手: 強弱とヘアピンの始まりの `placement` を覚え（`placed`）、`MusicXmlReader.SayDynamicSides` がページと同じ歩き（声部ごと・1 拍の中は stop → ヘアピン → 文字）で「書かなければ出る向き」を出し、違う記号にだけ `.up`／`.down` を書く（`ImportNote.SaidSides`・`LysWriter.SaidSide`）。譜表の既定は歌詞のあるパートが上。placement のない direction は何も言わない。
 - 門: 網 `DynamicSideRoundTripTests` 12 本・毒 13 本が全部赤（Lab `p1260/poisons.ps1`。最初の回は 3 本が緑＝網 2 本を足した）。全 svg の掃き（Lab `p1260/sweep`）は差 0 / 1268＝コーパスにこの形は無く、絵の変化は `s4` で見た。往復の掃き（Lab `p1260/rt-sweep.ps1`）: xml の差 0・読み戻した `.lys` の差 4 / 1268（どれも `.up`／`.down` が戻っただけ）。commit `56c17ffd0`。終了時 full 17132 合格 / 2 失敗 / skip 2 / 合計 17136（`run3.trx`＝`ReadmeSampleTests` と、語りが 191 字長かった `TheHandoffStaysReadable`。削ったあと後者は単独で緑）。
 - 7.7: ⚠️ section の境で切って開き直したヘアピン（`LysWriter.CutSpan` の `AddOpen`）は向きを運ばない。⚠️ 別の段へ送った印の向き（`SendDirectedMarksHome`）と装飾音の強弱は網なし。⚠️ `<dynamics placement>`（direction ではなく中の要素に書く形）は読まない。残したものは Lab `p1242/leftovers.md` の「第1260」。7.5: Core '+' 134 行（REF 0・OWN 0）＝`DynamicLineSides` は既存の LILYPOND-REF の下に MEASURED を足した・ほかは MusicXML の読み書き。CHANGELOG は 2 つとも `## Unreleased`。
-
-## 以下は第1259セッションの経緯
-
-### 1.1 第1259セッション（2026-11-15・YT-DELL2）
-
-base `e1f4a5aed`・開始時 full 17109 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17112（Lab `p1259` の `run1.trx`）。Calamo の REQUESTS の `open` は 0・Dettato は 1・2 が `question`（オーナー待ち）のまま。CI は第1231 のまま（最新の CI は 2026-11-13 の failure）。
-leftovers の欠陥の先頭「`lysc import` は wedge の `number` を読まない」（オーナー指示 2026-11-14「残りの欠陥を順に」）。
-- 実測（直す前・Lab `p1259/wedge`）: `lysc xml` は小節の direction を全部小節の頭に offset つきで書き、後の声部の印がどの声部のものかを言っていなかった。読み手は「流れの中で次に来た、その位置以降の音」に付けるので、2 声部目の印が 1 声部目の同じ拍の音に付く（`x1` → `c''1@cresc@decresc`）。wedge の stop は番号を見ず「その段で最後に開いた wedge」を閉じていた。
-- 書き手: 後の声部の `<direction>` に `<voice>`（`MusicXmlDirection.Voice`＝v + 1・大譜表の下の段は音と同じく 5 から）。wedge は start の声部（`WedgeVoice`）で言う＝stop が別の声部の流れに書かれても start の声部。
-- 読み手（`MusicXmlReader`）: direction の `<voice>` の声部の音に付ける（`PendingMark.Voice`・その小節に音のない声部は何も言わない＝`<staff>` と同じ扱い）。stop は自分の `number` の wedge を閉じる（`wedgeNumbers`・その番号の開いた wedge がなければ今までどおり最後に開いたもの）。
-- 門: 網 `MusicXmlImportVoiceDirectionTests` 12 本・毒 8 本が全部赤（Lab `p1259/poisons.ps1`・`poison8.ps1`）。往復の掃き（Lab `p1259/rt-sweep.ps1`・1268 文書）: xml の差 5（`<voice>` の行だけ・ほかの差 0）・読み戻した `.lys` の差 5（`voice-dynamics*.lys` 4 冊と `above-dynamics.lys`。直す前は 2 声部の `@f` と `@p` が 1 声部目の `@fp` に潰れていた）。絵は動かない（svg の掃きは回していない＝描画のコードに触っていない・snapshot は full で緑）。commit `96d6668fa`。終了時 full 17121 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17124（`run2.trx`）。
-- 7.7: ⚠️ 古い Lily# が書いた xml（`number` はあるが `<voice>` がない）の 2 声部目の印は今も 1 声部目に戻る（番号から声部を逆算する読みは入れていない＝Lily# だけの番号の規則を読み手に持ち込まない）。1 声部目の direction は `<voice>` を書かない。残したものは Lab `p1242/leftovers.md` の「第1259」。7.5: Core '+' 69 行は MusicXML の読み書き＝LilyPond 由来でない（REF 0・OWN 0）。
 
 ## 2. 開いている作業
 
