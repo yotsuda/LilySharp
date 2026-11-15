@@ -59,6 +59,10 @@ export class RecordingPlayer {
     private stretchHas: AudioBuffer | null = null;
     private source: AudioBufferSourceNode | null = null;
     private readonly gain: GainNode;
+    /** The fader's level (the practice menu's Recording line, docs/recording-design.md §1 7). */
+    private readonly level: GainNode;
+    /** The practice menu's tempo the sound now playing was started with (update keeps it). */
+    private tempo = 1;
     /** Where the sound now playing began: the context time, the recording's second, its rate. */
     private anchor: { at: number; sec: number; rate: number } | null = null;
     private loop: { from: number; to: number } | null = null;
@@ -69,6 +73,7 @@ export class RecordingPlayer {
 
     constructor(private readonly ctx: AudioContext, private readonly stretchUrl: string) {
         this.gain = ctx.createGain();
+        this.level = ctx.createGain();
         const limiter = ctx.createDynamicsCompressor();
         limiter.threshold.value = -1;
         limiter.knee.value = 0;
@@ -76,7 +81,13 @@ export class RecordingPlayer {
         limiter.attack.value = 0.002;
         limiter.release.value = 0.1;
         this.gain.connect(limiter);
-        limiter.connect(ctx.destination);
+        limiter.connect(this.level);
+        this.level.connect(ctx.destination);
+    }
+
+    /** The fader: 0–2 (0 to 200 %), at once. */
+    setLevel(level: number): void {
+        this.level.gain.value = Number.isFinite(level) ? Math.min(2, Math.max(0, level)) : 1;
     }
 
     /** The recording's length in seconds, once loaded. */
@@ -114,8 +125,13 @@ export class RecordingPlayer {
         this.loop = loop && loop.to > loop.from + 0.05 ? loop : null;
         if (this.anchor) {
             const at = this.position() ?? 0;
-            void this.play(this.loop && (at < this.loop.from || at >= this.loop.to) ? this.loop.from : at, settings);
+            void this.play(this.loop && (at < this.loop.from || at >= this.loop.to) ? this.loop.from : at, settings, { tempo: this.tempo });
         }
+    }
+
+    /** Sets the loop for the next play without restarting what plays. */
+    presetLoop(loop: { from: number; to: number } | null): void {
+        this.loop = loop && loop.to > loop.from + 0.05 ? loop : null;
     }
 
     /** The recording's second now sounding, or null when nothing plays. */
@@ -131,16 +147,28 @@ export class RecordingPlayer {
         return Math.min(raw, this.duration);
     }
 
-    /** Starts the recording at its second `from` with the panel's settings. */
-    async play(from: number, settings: RecordingSettings): Promise<void> {
+    /** Starts the recording at its second `from` with the panel's settings — at the practice
+     *  menu's `tempo`, and at the context time `at` when given (with the score: the score's own
+     *  clock, so the two stay together; a stretcher not ready by then starts late, and the
+     *  second it starts from moves on by as much). */
+    async play(from: number, settings: RecordingSettings, when: { tempo?: number; at?: number } = {}): Promise<void> {
         const buffer = this.buffer;
         if (!buffer) {
             return;
         }
         this.stopSound();
         const generation = ++this.generation;
-        const plan = recordingPlan(settings);
-        const sec = Math.min(Math.max(0, from), Math.max(0, buffer.duration - 0.01));
+        this.tempo = when.tempo ?? 1;
+        const plan = recordingPlan(settings, this.tempo);
+        let sec = Math.min(Math.max(0, from), Math.max(0, buffer.duration - 0.01));
+        // The context time it starts at, and the second it then starts from.
+        const startAt = (soonest: number): number => {
+            if (when.at === undefined || when.at >= soonest) {
+                return when.at ?? soonest;
+            }
+            sec = Math.min(sec + (soonest - when.at) * plan.rate, Math.max(0, buffer.duration - 0.01));
+            return soonest;
+        };
         this.gain.gain.value = plan.gain;
         const loop = this.loop;
         if (plan.engine === 'resample') {
@@ -153,7 +181,7 @@ export class RecordingPlayer {
                 src.loopEnd = loop.to;
             }
             src.connect(this.gain);
-            const at = this.ctx.currentTime + 0.03;
+            const at = startAt(this.ctx.currentTime + 0.03);
             src.start(at, sec);
             this.source = src;
             this.anchor = { at, sec, rate: plan.rate };
@@ -162,7 +190,7 @@ export class RecordingPlayer {
             if (generation !== this.generation) {
                 return;
             }
-            const at = this.ctx.currentTime + 0.05;
+            const at = startAt(this.ctx.currentTime + 0.05);
             node.schedule({
                 active: true, input: sec, rate: plan.rate, semitones: plan.semitones, output: at,
                 loopStart: loop ? loop.from : 0, loopEnd: loop ? loop.to : 0,
@@ -170,7 +198,7 @@ export class RecordingPlayer {
             this.anchor = { at, sec, rate: plan.rate };
         }
         if (!loop) {
-            const left = (buffer.duration - sec) / plan.rate;
+            const left = (buffer.duration - sec) / plan.rate + (this.anchor!.at - this.ctx.currentTime);
             this.endTimer = setTimeout(() => {
                 if (generation === this.generation) {
                     this.stop();
@@ -184,7 +212,7 @@ export class RecordingPlayer {
     async update(settings: RecordingSettings): Promise<void> {
         const at = this.position();
         if (at !== null) {
-            await this.play(at, settings);
+            await this.play(at, settings, { tempo: this.tempo });
         }
     }
 

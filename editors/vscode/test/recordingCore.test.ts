@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import {
     RECORDING_DEFAULTS, Recording, ScoreBeat, audioPathFor, recordingPlan, audioReader, barAt, chartForRecording, lineUp, newRecording, parseRecording,
-    recordingPathFor, recordingSecondAt, scoreBars, scoreTimeAt, serializeRecording, workForRename,
+    recordingPathFor, recordingSecondAt, scoreBars, scoreTimeAt, serializeRecording, timeWarp, unwarpTime, warpBeats, warpNotes, warpTime, workForRename,
 } from '../src/recordingCore';
 
 // Dettato's own example (SIDECAR.md), cut to its first bars.
@@ -170,6 +170,54 @@ describe('the recording panel', () => {
         assert.equal(p.rate, 1.5);
         assert.ok(Math.abs(p.semitones - (24 + 11 + 0.5)) < 1e-9);
         assert.equal(recordingPlan({ ...RECORDING_DEFAULTS, speed: NaN }).rate, 1);
+    });
+
+    it('plays at the practice menu\'s tempo too, the pitch kept (§1 7)', () => {
+        const slow = recordingPlan(RECORDING_DEFAULTS, 0.8);
+        assert.equal(slow.engine, 'stretch');
+        assert.equal(slow.rate, 0.8);
+        assert.equal(slow.semitones, 0);
+        assert.equal(recordingPlan({ ...RECORDING_DEFAULTS, speed: 0.5 }, 0.8).rate, 0.4);
+        // A tape set right, at another tempo: its pitch as the tape's, its rate times the tempo — stretched.
+        const tape = recordingPlan({ ...RECORDING_DEFAULTS, octave: 1, linked: true }, 0.5);
+        assert.deepEqual([tape.engine, tape.rate, tape.semitones], ['stretch', 1, 12]);
+        assert.deepEqual(recordingPlan(RECORDING_DEFAULTS, 1), recordingPlan(RECORDING_DEFAULTS));
+        assert.equal(recordingPlan(RECORDING_DEFAULTS, NaN).rate, 1);
+    });
+});
+
+describe('the score played with the recording (§1 7)', () => {
+    it('lines up the score\'s bars with the recording\'s, or says it cannot', () => {
+        const r = ok(FORMAT1);
+        const w = timeWarp(beats(2, 3), 5.5, r)!;
+        assert.deepEqual(w.score, [[0, 1.5], [1.5, 3.5], [3.5, 5.5]]);
+        assert.deepEqual(w.rec, [[0.355, 1.9], [1.9, 3.96], [3.96, 6.0]]);
+        assert.equal(timeWarp(beats(3, 3), 7.5, r), null);           // a bar more in the score
+        assert.equal(timeWarp(beats(2, 3), 5.5, { bars: [] }), null);  // only attached: no bar placed
+        assert.equal(timeWarp(null, 5.5, r), null);
+        assert.equal(timeWarp(beats(2, 3), null, r), null);
+    });
+
+    it('moves the score\'s notes onto the recording\'s seconds, bar by bar', () => {
+        const w = timeWarp(beats(2, 3), 5.5, ok(FORMAT1))!;
+        const near = (a: number, b: number) => assert.ok(Math.abs(a - b) < 1e-9, `${a} vs ${b}`);
+        near(warpTime(w, 0), 0.355);
+        near(warpTime(w, 2.5), 2.93);
+        near(warpTime(w, 5.5), 6.0);
+        // Before the first bar and past the last, at that bar's pace.
+        near(warpTime(w, 6.5), 6.0 + 1 * (6.0 - 3.96) / 2);
+        near(warpTime(w, -0.5), 0.355 - 0.5 * (1.9 - 0.355) / 1.5);
+        for (const t of [-0.5, 0, 0.7, 1.5, 2.5, 3.5, 4.9, 5.5, 6.5]) {
+            near(unwarpTime(w, warpTime(w, t)), t);
+        }
+        // A note across a bar line: its start and end each moved by its own bar.
+        const [n] = warpNotes([{ T: 1, D: 1.5, P: 60 }], w);
+        near(n.T, warpTime(w, 1));
+        near(n.T + n.D, warpTime(w, 2.5));
+        assert.equal(n.P, 60);
+        assert.equal(warpNotes([{ T: 1, D: 0 }], w)[0].D, 0);
+        const [b] = warpBeats([{ T: 3.5, A: true }], w);
+        assert.deepEqual(b, { T: 3.96, A: true });
     });
 });
 

@@ -5959,10 +5959,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         </span>
         <button id="stopBtn" type="button" title="Stop" disabled>⏹</button>
         <button id="practiceBtn" class="toggle icon practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" aria-label="Practice" title="Tempo, loop, metronome, parts"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M3.6 14.8 6.3 1.4h3.4l2.7 13.4zM7.3 3 5.9 10.2h4.2L8.7 3z"/><path d="M7.7 11.2 12.4 3.9l1 .65-4.7 7.3z"/></svg><span id="practiceSpeed"></span></button>
-        <!-- The recording beside the chart (docs/recording-design.md §1 3): shown only when the chart
-             has one. The first chooses what Play sounds (the score, or the recording); the second
-             opens the recording's panel (speed, pitch, pitch with speed). -->
-        <button id="recBtn" class="toggle icon" type="button" aria-pressed="false" hidden aria-label="Play the recording" title="Play the recording beside the chart (press again to go back to the score)"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="1" y="6.5" width="1.6" height="3" rx=".8"/><rect x="4" y="4" width="1.6" height="8" rx=".8"/><rect x="7" y="1.5" width="1.6" height="13" rx=".8"/><rect x="10" y="4.5" width="1.6" height="7" rx=".8"/><rect x="13" y="6" width="1.6" height="4" rx=".8"/></svg></button>
+        <!-- The recording beside the chart (docs/recording-design.md §1 3, §1 7): shown only when the
+             chart has one. It opens the recording's panel (on/off and volume, speed, pitch, pitch
+             with speed); the on/off and the volume are also the practice menu's Recording line. -->
         <button id="recPanelBtn" class="toggle icon practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" hidden aria-label="Recording settings" title="The recording: speed, pitch, pitch with speed"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12"/><circle cx="5" cy="4" r="1.6" fill="currentColor"/><circle cx="10.5" cy="8" r="1.6" fill="currentColor"/><circle cx="7" cy="12" r="1.6" fill="currentColor"/></svg><span id="recSummary"></span></button>
         <span id="lengthInfo" class="length" title="Length, as played"></span>
         </span>
@@ -5990,7 +5989,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
     </div>
     <div id="recPanel" class="range-panel practice-panel" hidden>
         <button type="button" id="recClose" class="panel-close" title="Close" aria-label="Close">×</button>
-        <div class="prow"><span class="plbl">Recording</span><span id="recName" class="rec-name"></span></div>
+        <div class="prow"><span class="plbl">Recording</span><span class="parts"><span class="pline"><button type="button" id="recOnBtn" class="rec-name" aria-pressed="false"><span id="recName"></span></button><input type="range" id="recLevelSlider" class="fader" min="0" max="200" step="1" value="100"><span id="recLevelValue" class="flevel"></span></span></span></div>
         <div class="prow"><span class="plbl">Speed</span><span class="tempo"><input type="range" id="recSpeedSlider" min="25" max="150" step="5" value="100" aria-label="Speed"><span id="recSpeedValue" class="tval">100%</span></span></div>
         <div class="prow"><span class="plbl">Octave</span><span class="tempo"><button type="button" id="recOctDown" title="An octave down">−</button><span id="recOctValue" class="tval">0</span><button type="button" id="recOctUp" title="An octave up">+</button></span></div>
         <div class="prow"><span class="plbl">Semitones</span><span class="tempo"><input type="range" id="recSemiSlider" min="-11" max="11" step="1" value="0" aria-label="Semitones"><span id="recSemiValue" class="tval">0</span></span></div>
@@ -8206,7 +8205,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // plays the oscillator patches only if it does not come. The generation makes a
         // Stop or another Play in the meantime cancel the wait.
         let playGeneration = 0;
-        function startPlayback(notes, offset, plainTones, here, countFix) {
+        // origin: given by the score's own Play (and its changes and loop rounds) — the score's
+        // played time the list's 0 is — and then the recording sounds with it (startRecordingAlong).
+        function startPlayback(notes, offset, plainTones, here, countFix, origin) {
             offset = offset || 0;
             stopPlayback();
             // A voice's phrase still sounding gives way to the score (playVoiceSample).
@@ -8216,7 +8217,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // session 1164: the part's button off and its voice on - the voice alone - gave
             // silence): the part's button is the instrument's, the voice is its own toggle's.
             notes = notes || [];
-            const voiced = sungTracks().size > 0;
+            // (the recording with the score sounds even with every part off: the recording alone, in time)
+            const voiced = sungTracks().size > 0 || (origin !== undefined && !!(playBasis && playBasis.warp) && recordingAlong());
             if (notes.length === 0 && !voiced) { return; }
             // Seek = re-schedule from the offset; notes already past it are
             // dropped (mid-note tails too — re-striking half a note reads
@@ -8255,7 +8257,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 sf.whenReady(8000).then(ok => {
                     if (gen !== playGeneration) { return; }
                     if (!ok) { flashInfo('The sound font is not ready: plain tones this time'); }
-                    startPlayback(notes, offset, !ok, here, countFix);
+                    startPlayback(notes, offset, !ok, here, countFix, origin);
                 });
                 return;
             }
@@ -8275,6 +8277,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
             // The sung parts' voices, in the instruments' place, from the same clock.
             startVoices(ctx, t0, offset, pre);
+            // The recording beside the chart, from the same clock (docs/recording-design.md §1 7).
+            if (origin !== undefined) end = Math.max(end, startRecordingAlong(t0, offset, origin, !!loopList));
             setPlayUi(true);
             // A loop goes round when the last note ends; a plain playback lets it ring a moment.
             playEndTimer = setTimeout(playEnded, (end - offset + (loopList ? 0 : 0.5)) * 1000);
@@ -8558,11 +8562,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
 
         document.getElementById('playBtn').addEventListener('click', () => {
-            // The recording's button pressed: Play sounds the recording (docs/recording-design.md).
-            if (recOn && recording) {
-                if (!recording.ready) { recStatus(recording.error || 'The recording is not loaded yet'); return; }
-                playRecordingFrom(0);
-                return;
+            // The recording on but not loaded: the score plays alone this time (and says why).
+            if (recOn && recording && !recording.ready) {
+                flashInfo(recording.error || 'The recording is not loaded yet: the score alone', 4000);
             }
             setPlayUi(true); // immediate feedback while the request runs
             // A highlighted note (editor sync / preview click) is the start
@@ -8604,9 +8606,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // practice menu's tempo.
         let loopRound = 0;
         function spanOf(notes, span, once) {
-            const bars = rawBeats ? rawBeats.filter(b => b.A).map(b => b.T / practice.speed) : undefined;
+            const beats = playedBeats(), barEnd = playedBarEnd(), speed = playedSpeed();
+            const bars = beats ? beats.filter(b => b.A).map(b => b.T / speed) : undefined;
             // And where the last bar ends (the server's closing bar line), the last bar's end.
-            if (bars && typeof rawBarEnd === 'number' && rawBarEnd > 0) bars.push(rawBarEnd / practice.speed);
+            if (bars && typeof barEnd === 'number' && barEnd > 0) bars.push(barEnd / speed);
             const w = window.LysSynth.playSpanWindow
                 ? window.LysSynth.playSpanWindow(notes, span ? span[0] : null, span ? span[1] : null, once, bars)
                 : { notes: window.LysSynth.playSpan(notes, span ? span[0] : null, span ? span[1] : null, once), length: 0 };
@@ -8622,15 +8625,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // counts in — a tempo change, the loop's next round and a seek go on at once.
         function counted(notes, start, origin) {
             if (!practice.countIn || !rawBeats || !window.LysSynth || !window.LysSynth.countIn) return null;
+            const speed = playedSpeed();
             return window.LysSynth.countIn(notes, start, origin,
-                rawBeats.map(b => ({ T: b.T / practice.speed, A: b.A })));
+                playedBeats().map(b => ({ T: b.T / speed, A: b.A })));
         }
         let countInFix = 0;         // the played list's clock minus the score's, while a count-in plays
         // Where a playback that ran to its end goes: round again while looping, else it stops.
         function playEnded() {
             const list = loopOn ? loopList : null;
             if (!list) { stopPlayback(); return; }
-            startPlayback(looped(list), 0);
+            startPlayback(looped(list), 0, false, false, 0, lastSpan === undefined ? 0 : spanStart);
             loopList = list;
         }
 
@@ -8670,11 +8674,28 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         let lastSpan;               // what plays: undefined the whole score, null/[lo, hi] a playSpan
         let lastOnce = false;
         let playOffset = 0, playClock = null;   // where the playback stands (startPlayback / midiStarted)
+        // What the list practiced() built is timed by: the score's bars on the recording's (warp,
+        // when the recording sounds with the score: the notes are on its seconds) and the speed
+        // the times were divided by (with the recording, the recording's own rate: the practice
+        // tempo times its panel's speed — the score follows the recording).
+        let playBasis = null;
         function practiced(notes) {
-            return window.LysSynth && window.LysSynth.practiceNotes
-                ? window.LysSynth.practiceNotes(notes, rawParts, rawBeats, practice, rawExtra)
-                : notes;
+            if (!window.LysSynth || !window.LysSynth.practiceNotes) return notes;
+            const warp = warpNow();
+            playBasis = { warp, speed: warp ? window.LysSynth.recordingPlan(recSettings, practice.speed).rate : practice.speed };
+            const timed = warp ? window.LysSynth.warpNotes(notes, warp) : notes;
+            return window.LysSynth.practiceNotes(timed, rawParts, playedBeats(), Object.assign({}, practice, { speed: playBasis.speed }), rawExtra);
         }
+        /** The score's beats and last bar line on the list's time base (playBasis), before the speed. */
+        function playedBeats() {
+            const w = playBasis && playBasis.warp;
+            return rawBeats && w ? window.LysSynth.warpBeats(rawBeats, w) : rawBeats;
+        }
+        function playedBarEnd() {
+            const w = playBasis && playBasis.warp;
+            return typeof rawBarEnd === 'number' && w ? window.LysSynth.warpTime(w, rawBarEnd) : rawBarEnd;
+        }
+        function playedSpeed() { return playBasis ? playBasis.speed : practice.speed; }
         const practiceBtn = document.getElementById('practiceBtn');
         const practicePanel = document.getElementById('practicePanel');
         const recPanel = document.getElementById('recPanel');
@@ -8700,7 +8721,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             countInBtn.textContent = practice.countIn ? 'On' : 'Off';
             // The two resets under the parts (owner's request 2026-11-09): live while there is something to put back.
             document.getElementById('partsReset').disabled = practice.muted.length === 0 && practice.extraOn.length === 0 && practice.voicesOff.length === 0 && practice.voicesOn.length === 0 && practice.instrumentsOn.length === 0;
-            document.getElementById('fadersReset').disabled = Object.keys(practice.levels).length === 0 && Object.keys(practice.voiceLevels).length === 0;
+            document.getElementById('fadersReset').disabled = Object.keys(practice.levels).length === 0 && Object.keys(practice.voiceLevels).length === 0
+                && Object.keys(recLevels || {}).length === 0;
             // The exports play as the menu does, the loop aside (owner's request 2026-11-07): the
             // extension keeps this page's menu for them (previewPractice).
             vscode.postMessage({ type: 'practiceState', practice: {
@@ -8709,26 +8731,45 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 instrumentsOn: practice.instrumentsOn.slice(),
                 levels: Object.assign({}, practice.levels), voiceLevels: Object.assign({}, practice.voiceLevels) } });
         }
+        // A change while playing goes on from the same place in the music: the list's time now
+        // (its count-in aside, within the loop's round) to the score's time through the basis the
+        // list was built on (its speed, and the recording's bars when the notes were on them),
+        // and back through the new one. (oldSpeed is the caller's: the old basis already has it.)
         function practiceChanged(oldSpeed) {
             showPractice();
             const playing = !document.getElementById('stopBtn').disabled;
             if (!playing || relaying || !rawNotes || !playClock) return;
-            const at = Math.max(0, playOffset + playClock() - countInFix) * oldSpeed / practice.speed;
+            const old = playBasis || { warp: null, speed: oldSpeed };
+            const oldOrigin = lastSpan === undefined ? 0 : spanStart;
+            let tau = Math.max(0, playOffset + playClock() - countInFix);
+            if (lastSpan !== undefined && loopList && loopRound > 0) tau %= loopRound;
+            const u = (oldOrigin + tau) * old.speed;
+            const t = old.warp ? window.LysSynth.unwarpTime(old.warp, u) : u;
             playbackNotes = practiced(rawNotes);
-            if (lastSpan === undefined) { voicePlan = { pieces: null, rounds: 1 }; startPlayback(playbackNotes, at); return; }
+            const u2 = playBasis.warp ? window.LysSynth.warpTime(playBasis.warp, t) : t;
+            const p = u2 / playBasis.speed;
+            if (lastSpan === undefined) {
+                voicePlan = { pieces: null, rounds: 1 };
+                startPlayback(playbackNotes, Math.max(0, p), false, false, 0, 0);
+                return;
+            }
             const list = spanOf(playbackNotes, lastSpan, lastOnce);
             loopList = loopOn ? list : null;
             const toPlay = loopOn ? looped(list) : list;
             voicePlan = { pieces: spanPieces, rounds: loopOn ? loopRoundCount : 1 };
-            startPlayback(toPlay, at);
+            const at = p - spanStart;
+            startPlayback(toPlay, at >= 0 && (!loopOn || at < loopRound) ? at : 0, false, false, 0, spanStart);
             loopList = loopOn ? list : null;
         }
+        var lastPartsMessage = null;    // the Parts list's last answer: drawn again when a recording comes or goes
         function renderParts(message) {
+            lastPartsMessage = message;
             const list = document.getElementById('partsList');
             list.textContent = '';
             partRefreshers = [];
+            recRefreshers = [];
             const parts = message.parts || [], voices = message.voices || [], extra = message.extra || [];
-            if (parts.length + voices.length + extra.length === 0) { list.textContent = '—'; return; }
+            if (parts.length + voices.length + extra.length === 0 && !recording) { list.textContent = '—'; return; }
             // One toggle each, pressed in while it sounds; the lists are by name, so a part muted
             // in another score stays muted.
             const without = (names, name) => names.filter(n => n !== name);
@@ -8848,6 +8889,19 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     () => { practice.extraOn = practice.extraOn.includes(name) ? without(practice.extraOn, name) : practice.extraOn.concat([name]); },
                     'extra', '', practice.levels, name);
             }
+            // The recording beside the chart, when it has one (owner's decision 2026-11-16,
+            // docs/recording-design.md §1 7): on, it sounds with the score; its fader is its
+            // volume against the parts'. The recording panel's top line is the same two.
+            if (recording) {
+                toggle('Recording', 'The recording beside the chart (' + recording.name + '): on, it sounds with the score', () => recOn,
+                    () => {
+                        recOn = !recOn;
+                        showRecording();
+                        if (!recOn && !playClock && recPlayer && recPlayer.playing) { recPlayer.stop(); setPlayUi(false); }
+                    },
+                    'recording', '', recLevels, 'Recording');
+                recRefreshers = [partRefreshers[partRefreshers.length - 1]];
+            }
             renderVoiceBadge();     // the voices' signs on their fresh toggles
         }
         function closePractice() {
@@ -8943,15 +8997,22 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
 
         // ---- The recording beside the chart (docs/recording-design.md) ----------------------
         // The extension sends 'recording' when the chart has a file beside it (or no longer has):
-        // its bars and its sound. The two toolbar buttons show only then. With the first pressed,
-        // Play sounds the recording through LysSynth.RecordingPlayer (resampled, or stretched by
-        // Signalsmith Stretch) instead of the score; the panel sets speed and pitch.
+        // its bars and its sound. The panel's button shows only then. The recording is a line of
+        // the practice menu's Parts (and the panel's top line: the same on/off and fader — owner's
+        // decision 2026-11-16, docs/recording-design.md §1 7). On, Play sounds it with the score
+        // through LysSynth.RecordingPlayer (resampled, or stretched by Signalsmith Stretch), on the
+        // score's clock: the score's notes are moved bar by bar onto the recording's seconds
+        // (timeWarp), so the score plays as the recording does, and a bar clicked or the bars
+        // selected play from there in both. A recording whose bars are not placed (only attached),
+        // or whose bar count differs from the score's, plays alone.
         // (var: stopPlayback and Play, defined above, reach them before this line has run.)
         var recording = null;      // { chart, name, bars, pickup, ready, error }
         var recPlayer = null;
         var recOn = false;
+        var recLevels = {};        // the fader, as the parts' are: { Recording: 0..2 } while not 100%
         let recSettings = null;
-        const recBtn = document.getElementById('recBtn');
+        const recOnBtn = document.getElementById('recOnBtn');
+        const recLevelSlider = document.getElementById('recLevelSlider');
         const recPanelBtn = document.getElementById('recPanelBtn');
         const recSpeedSlider = document.getElementById('recSpeedSlider');
         const recSemiSlider = document.getElementById('recSemiSlider');
@@ -8965,7 +9026,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const cfg = window.lysSynthConfig;
             if (!recPlayer && window.LysSynth && cfg && cfg.stretch) {
                 recPlayer = new window.LysSynth.RecordingPlayer(audioContext(), cfg.stretch);
-                recPlayer.onEnded = () => { setPlayUi(false); };
+                // (alone, its end is the playback's; with the score, the score's end is)
+                recPlayer.onEnded = () => { if (!playClock) setPlayUi(false); };
             }
             return recPlayer;
         }
@@ -8992,33 +9054,82 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const shift = Math.round(plan.semitones * 100) / 100;
             if (shift !== 0) parts.push(signed(shift));
             document.getElementById('recSummary').textContent = parts.join(' ');
-            recBtn.setAttribute('aria-pressed', String(recOn));
+            recPanelBtn.setAttribute('aria-pressed', String(recOn));
+            recOnBtn.setAttribute('aria-pressed', String(recOn));
+            recOnBtn.title = recOn ? 'The recording sounds with the score — press to silence it' : 'Press to sound the recording with the score';
+            const level = Math.round(recLevel() * 100);
+            recLevelSlider.value = String(level);
+            recLevelSlider.title = 'Volume ' + level + '% (double-click: 100%)';
+            recLevelSlider.setAttribute('aria-label', 'Recording volume ' + level + '%');
+            document.getElementById('recLevelValue').textContent = level === 100 ? '' : level + '%';
+            if (recPlayer) recPlayer.setLevel(recLevel());
+            for (const refresh of recRefreshers) refresh();
         }
+        function recLevel() { return levelIn(recLevels, 'Recording'); }
+        let recRefreshers = [];     // the practice menu's Recording line, refreshed with the panel's
         function recChanged() {
             showRecording();
+            // With the score, the score follows the recording's speed: both start again from here.
+            if (playClock && playBasis && playBasis.warp) { practiceChanged(practice.speed); return; }
             if (recPlayer && recPlayer.playing) void recPlayer.update(recSettings);
+        }
+        /** Whether the recording sounds with the next Play: on, and loaded. */
+        function recordingAlong() {
+            return !!(recOn && recording && recording.ready && recordingPlayer());
+        }
+        /** The score's bars on the recording's (LysSynth.timeWarp), or null: the recording off or
+         *  not loaded, or the two not lined up. */
+        function warpNow() {
+            if (!recordingAlong() || !window.LysSynth.timeWarp) return null;
+            return window.LysSynth.timeWarp(rawBeats, rawBarEnd, recording);
+        }
+        /** Why the recording plays alone (warpNow null while it is on), in words. */
+        function recAloneReason() {
+            if (!recording || recording.bars.length === 0) return 'No bars are placed in the recording yet: it plays alone';
+            const score = rawBeats && typeof rawBarEnd === 'number' && window.LysSynth.scoreBars
+                ? window.LysSynth.scoreBars(rawBeats, rawBarEnd).length : 0;
+            return 'The score plays ' + score + ' bars and the recording places ' + recording.bars.length + ': it plays alone';
+        }
+        /** The recording with the score, from the score's clock: \`t0\` is the context time the
+         *  list's \`offset\` sounds at, \`origin\` the score's played time the list's 0 is (a stretch's
+         *  start), the count-in's lead aside. Played time is the recording's second over the speed
+         *  (the notes were moved onto its seconds), so it starts from there; in a count-in that
+         *  begins before the recording's 0 it waits. Looping, it loops the stretch's seconds.
+         *  Returns where it ends, in the list's time (0 when it does not play). */
+        function startRecordingAlong(t0, offset, origin, looping) {
+            const w = playBasis && playBasis.warp;
+            if (!w || !recordingAlong()) return 0;
+            const k = playBasis.speed;
+            const p0 = origin + offset - countInFix;
+            let sec = p0 * k, at = t0;
+            if (sec < 0) { at = t0 - p0; sec = 0; }
+            recPlayer.presetLoop(looping ? { from: origin * k, to: (origin + loopRound) * k } : null);
+            recPlayer.setLevel(recLevel());
+            void recPlayer.play(sec, recSettings, { tempo: practice.speed, at });
+            return looping ? 0 : recPlayer.duration / k - origin + countInFix;
         }
         function setRecording(m) {
             if (m.none) {
                 if (recPlayer) recPlayer.unload();
+                const had = !!recording;
                 recording = null;
                 recOn = false;
-                recBtn.hidden = true;
                 recPanelBtn.hidden = true;
                 recPanel.hidden = true;
+                if (had && lastPartsMessage) renderParts(lastPartsMessage);
                 return;
             }
             const same = recording && recording.chart === m.chart && recording.name === m.name;
+            const fresh = !recording;
             recording = { chart: m.chart, name: m.name || '', bars: m.bars || [], pickup: !!m.pickup, ready: same ? recording.ready : false, error: m.error || null };
-            recBtn.hidden = false;
             recPanelBtn.hidden = false;
+            if (fresh && lastPartsMessage) renderParts(lastPartsMessage);
             document.getElementById('recName').textContent = recording.name;
             document.getElementById('recName').title = recording.name;
             const barsSaid = recording.bars.length > 0 ? recording.bars.length + ' bars placed' : 'no bars placed yet';
             if (m.error) {
                 recording.ready = false;
                 recStatus(m.error);
-                recBtn.title = 'The recording cannot be played: ' + m.error;
             } else if (m.preparing) {
                 recStatus('Decoding the recording…');
             } else if (m.bytes) {
@@ -9029,7 +9140,6 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     if (!recording || recording.chart !== m.chart) return;
                     recording.ready = true;
                     recStatus(Math.floor(seconds / 60) + ':' + String(Math.round(seconds % 60)).padStart(2, '0') + ' — ' + barsSaid);
-                    recBtn.title = 'Play the recording beside the chart (press again to go back to the score)';
                 }, err => {
                     if (recording) recording.ready = false;
                     recStatus('The recording cannot be decoded: ' + (err && err.message || err));
@@ -9039,30 +9149,55 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
             showRecording();
         }
-        /** Plays the recording from its second \`sec\` (the score's place when the bars say it). */
+        /** Plays the recording alone from its second \`sec\` (its bars not lined up with the score's). */
         function playRecordingFrom(sec) {
             const player = recordingPlayer();
             if (!player || !recording || !recording.ready) return false;
             stopPlayback();
             audio();   // resumes the page's context (and says so when the browser holds it)
             setPlayUi(true);
-            void player.play(sec, recSettings);
+            player.presetLoop(null);
+            player.setLevel(recLevel());
+            void player.play(sec, recSettings, { tempo: practice.speed });
             return true;
         }
-        // The button plays the recording at once, as its name says (owner's report 2026-11-16: it only
-        // chose what the next Play would sound, so a press did nothing); pressed again it stops and
-        // Play sounds the score again. While it is pressed, Play sounds the recording too.
-        recBtn.addEventListener('click', () => {
+        /** The recording on or off — the practice menu's line and the panel's top line. While
+         *  playing, what plays goes on from the same place with the recording or without it. */
+        function flipRecording() {
             recOn = !recOn;
-            if (recOn) {
-                if (recording && recording.ready) playRecordingFrom(0);
-                else recStatus(recording && recording.error ? recording.error : 'The recording is still loading — press again when it is ready');
-            } else if (recPlayer && recPlayer.playing) {
-                recPlayer.stop();
-                setPlayUi(false);
+            if (recOn && recording && !recording.ready) {
+                recStatus(recording.error || 'The recording is still loading — it sounds from the next Play once it is ready');
             }
             showRecording();
+            if (!playClock && recPlayer && recPlayer.playing) {
+                // (the recording playing alone)
+                recPlayer.stop();
+                setPlayUi(false);
+                return;
+            }
+            practiceChanged(practice.speed);
+        }
+        /** The recording on but not lined up with the score (playBasis has no warp): it plays alone
+         *  from its start, and says why. False when the score is to play. */
+        function recordingAlone() {
+            if (!recordingAlong() || (playBasis && playBasis.warp)) return false;
+            const why = recAloneReason();
+            recStatus(why);
+            flashInfo(why, 5000);
+            playRecordingFrom(0);
+            return true;
+        }
+        function setRecLevel(v) {
+            if (v === 100) delete recLevels.Recording; else recLevels.Recording = v / 100;
+            showRecording();
+            showPractice();
+        }
+        recOnBtn.addEventListener('click', flipRecording);
+        recLevelSlider.addEventListener('input', () => {
+            document.getElementById('recLevelValue').textContent = recLevelSlider.value === '100' ? '' : recLevelSlider.value + '%';
         });
+        recLevelSlider.addEventListener('change', () => setRecLevel(Number(recLevelSlider.value)));
+        recLevelSlider.addEventListener('dblclick', () => setRecLevel(100));
         function closeRecPanel() {
             recPanel.hidden = true;
             recPanelBtn.setAttribute('aria-expanded', 'false');
@@ -9118,7 +9253,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         document.getElementById('fadersReset').addEventListener('click', () => {
             for (const k of Object.keys(practice.levels)) delete practice.levels[k];
             for (const k of Object.keys(practice.voiceLevels)) delete practice.voiceLevels[k];
+            delete recLevels.Recording;     // (the recording's too: §1 7)
             for (const refresh of partRefreshers) refresh();
+            showRecording();
             practiceChanged(practice.speed);
         });
         clickBtn.addEventListener('click', () => {
@@ -9599,9 +9736,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         loopList = loopOn ? list : null;
                         const toPlay = loopOn ? looped(list) : list;
                         voicePlan = { pieces: spanPieces, rounds: loopOn ? loopRoundCount : 1 };
+                        if (recordingAlone()) break;
                         const c = counted(toPlay, 0, spanStart);
-                        if (c) startPlayback(c.notes, 0, false, false, c.lead);
-                        else startPlayback(toPlay, 0);
+                        if (c) startPlayback(c.notes, 0, false, false, c.lead, spanStart);
+                        else startPlayback(toPlay, 0, false, false, 0, spanStart);
                     } else {
                         // The practice menu's tempo, parts and metronome, from the notes as written.
                         rawNotes = message.notes; rawParts = message.parts || null; rawBeats = message.beats || null; rawBarEnd = message.barEnd || null; rawExtra = message.extra || null; rawSung = message.sung || null; rawPlayed = message.played || null;
@@ -9631,9 +9769,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                             if (first !== Infinity) startAt = first;
                         }
                         pendingStartPos = -1;
+                        if (recordingAlone()) break;
                         const c = counted(playbackNotes, startAt, 0);
-                        if (c) startPlayback(c.notes, 0, false, false, c.lead - startAt);
-                        else startPlayback(playbackNotes, startAt);
+                        if (c) startPlayback(c.notes, 0, false, false, c.lead - startAt, 0);
+                        else startPlayback(playbackNotes, startAt, false, false, 0, 0);
                     }
                     break;
                 case 'highlightPosition':
@@ -9708,7 +9847,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 }
             }
             if (best === null) return false;
-            startPlayback(playbackNotes, best.T);
+            startPlayback(playbackNotes, best.T, false, false, 0, 0);   // (the recording seeks too)
             return true;
         }
 

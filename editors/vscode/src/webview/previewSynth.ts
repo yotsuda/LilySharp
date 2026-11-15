@@ -32,7 +32,7 @@ import {
     nextVoiceEntry, soundStart, strikeKey, strikeKeys, voiceBadge, voiceBar, voiceEntryEarly, voiceRound, voiceBarShown, voiceCues, voiceProgress, voiceRowProgress, voiceStillSinging, withVoiceLead,
 } from './playbackCore';
 import { RecordingPlayer } from './recordingPlayer';
-import { RECORDING_DEFAULTS, RECORDING_LIMITS, barAt, recordingPlan, recordingSecondAt, scoreBars, scoreTimeAt } from '../recordingCore';
+import { RECORDING_DEFAULTS, RECORDING_LIMITS, barAt, recordingPlan, recordingSecondAt, scoreBars, scoreTimeAt, timeWarp, unwarpTime, warpBeats, warpNotes, warpTime } from '../recordingCore';
 
 export type SynthState = 'loading' | 'ready' | 'failed' | 'none';
 export interface SynthStatus { state: SynthState; detail?: string }
@@ -360,6 +360,11 @@ const api = {
     barAt,
     recordingSecondAt,
     scoreTimeAt,
+    timeWarp,
+    warpTime,
+    unwarpTime,
+    warpNotes,
+    warpBeats,
 };
 
 declare global {

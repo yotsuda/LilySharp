@@ -240,14 +240,20 @@ function clamp(x: number, [lo, hi]: readonly [number, number]): number {
  *  linked, or nothing changed at all) or stretch (Signalsmith: rate and semitones apart), at what
  *  rate (recording seconds per second of sound), shifted how far, and at what gain: a sound shifted
  *  up by the stretcher peaks over its source (MEASURED 2026-11-15: +1200 cents peaked at 1.177,
- *  Lab sessions/p1283/stretch), so it is turned down 3 dB before the limiter. */
-export function recordingPlan(s: RecordingSettings): { engine: 'resample' | 'stretch'; rate: number; semitones: number; gain: number } {
+ *  Lab sessions/p1283/stretch), so it is turned down 3 dB before the limiter.
+ *  `tempo` is the practice menu's (§1 7: its slider works on both, the recording's pitch kept):
+ *  it multiplies the rate, and a linked recording played at another tempo is stretched. */
+export function recordingPlan(s: RecordingSettings, tempo = 1): { engine: 'resample' | 'stretch'; rate: number; semitones: number; gain: number } {
     const shift = clamp(s.octave, RECORDING_LIMITS.octave) * 12 + clamp(s.semitones, RECORDING_LIMITS.semitones)
         + clamp(s.cents, RECORDING_LIMITS.cents) / 100;
+    const k = Number.isFinite(tempo) && tempo > 0 ? tempo : 1;
     if (s.linked) {
-        return { engine: 'resample', rate: Math.pow(2, shift / 12), semitones: shift, gain: 1 };
+        const rate = Math.pow(2, shift / 12) * k;
+        return k === 1
+            ? { engine: 'resample', rate, semitones: shift, gain: 1 }
+            : { engine: 'stretch', rate, semitones: shift, gain: shift > 0 ? Math.pow(10, -3 / 20) : 1 };
     }
-    const speed = clamp(s.speed, RECORDING_LIMITS.speed) || 1;
+    const speed = (clamp(s.speed, RECORDING_LIMITS.speed) || 1) * k;
     if (shift === 0 && speed === 1) {
         return { engine: 'resample', rate: 1, semitones: 0, gain: 1 };
     }
@@ -324,4 +330,80 @@ export function scoreTimeAt(bars: readonly [number, number][], rec: Recording, s
         }
     }
     return null;
+}
+
+/** The score's bars and the recording's, lined up bar for bar — what lets the score play with the
+ *  recording (docs/recording-design.md §1 7: the score's notes moved, bar by bar, onto the
+ *  recording's seconds). Null when they cannot be: no bar placed yet (a recording only attached
+ *  sounds alone), or the counts differ (a chart changed by a bar: SIDECAR.md says not to play a bar
+ *  that may be the wrong one). Every bar must move forward in both. */
+export interface TimeWarp {
+    score: [number, number][];
+    rec: [number, number][];
+}
+
+export function timeWarp(beats: readonly ScoreBeat[] | null, scoreEnd: number | null, rec: Pick<Recording, 'bars'>): TimeWarp | null {
+    if (!beats || typeof scoreEnd !== 'number' || !(scoreEnd > 0) || rec.bars.length === 0) {
+        return null;
+    }
+    const score = scoreBars(beats, scoreEnd);
+    if (score.length !== rec.bars.length) {
+        return null;
+    }
+    const recBars = rec.bars.map(b => [b.start, b.end] as [number, number]);
+    for (let i = 0; i < score.length; i++) {
+        if (!(score[i][1] > score[i][0]) || !(recBars[i][1] > recBars[i][0])) {
+            return null;
+        }
+    }
+    return { score, rec: recBars };
+}
+
+/** Moves a time from one line of bars to the other: straight inside a bar; before the first bar
+ *  and after the last, at that bar's pace (a note that rings past the last bar line, the score's
+ *  lead before its first bar). */
+function carry(from: readonly [number, number][], to: readonly [number, number][], t: number): number {
+    const last = from.length - 1;
+    let n = 0;
+    if (t >= from[last][0]) {
+        n = last;
+    } else if (t > from[0][0]) {
+        let lo = 0, hi = last;
+        while (lo < hi) {
+            const mid = (lo + hi + 1) >> 1;
+            if (from[mid][0] <= t) {
+                lo = mid;
+            } else {
+                hi = mid - 1;
+            }
+        }
+        n = lo;
+    }
+    const [f0, f1] = from[n], [t0, t1] = to[n];
+    return t0 + (t - f0) / (f1 - f0) * (t1 - t0);
+}
+
+/** The recording's second for score time t (any t: see carry). */
+export function warpTime(w: TimeWarp, t: number): number {
+    return carry(w.score, w.rec, t);
+}
+
+/** The score time for the recording's second sec — warpTime's inverse. */
+export function unwarpTime(w: TimeWarp, sec: number): number {
+    return carry(w.rec, w.score, sec);
+}
+
+/** Notes (any object with a start T and a length D, in score seconds) on the recording's seconds:
+ *  each bar's notes stretched or squeezed as the recording plays that bar. */
+export function warpNotes<N extends { T: number; D: number }>(notes: readonly N[], w: TimeWarp): N[] {
+    return notes.map(n => {
+        const T = warpTime(w, n.T);
+        return { ...n, T, D: n.D > 0 ? Math.max(0, warpTime(w, n.T + n.D) - T) : n.D };
+    });
+}
+
+/** The score's beats on the recording's seconds (the metronome, the count-in and the loop's bars
+ *  follow the recording too). */
+export function warpBeats<B extends { T: number }>(beats: readonly B[], w: TimeWarp): B[] {
+    return beats.map(b => ({ ...b, T: warpTime(w, b.T) }));
 }
