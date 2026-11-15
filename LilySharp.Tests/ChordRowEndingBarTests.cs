@@ -161,6 +161,24 @@ public class ChordRowEndingBarTests
         Assert.Empty(LilySharp.Core.Semantics.SemanticValidation.Run(tree).Select(d => d.Message));
     }
 
+    /// <summary>A sign written at a bar line AFTER a bar a <c>]</c> closed is counted on the
+    /// right bar — the row's `|:` after `[2. D] G` agrees with the part's after its fifth bar
+    /// (SectionSigns and VoiceBarLines read the closing <c>]</c>), and one bar off does not.</summary>
+    /// <remarks>Until 2026-11-15 no test wrote a bar line after a bracket-closed bar (Lab
+    /// sessions/p1279: poisons R12 and R13 stayed green).</remarks>
+    [Theory]
+    [InlineData("|: e''1 | [1. f''1 :| [2. g''1 ] | a''1 |: b''1 :|", true)]
+    [InlineData("|: e''1 | [1. f''1 :| [2. g''1 ] | a''1 | b''1 |: c'''1 :|", false)]
+    public void ASignAfterABracketClosedBar_IsCountedOnItsBar(string partT, bool agrees)
+    {
+        var tree = SyntaxTree.Parse("octave absolute\ntime 4/4\n"
+            + "part m { section T { " + partT + " } }\n"
+            + "chords prog { section T { |: Em | [1. A7 :| [2. D] G |: A :| } }\n"
+            + "form { T }\nscore { chords prog staff m }\n");
+        var messages = LilySharp.Core.Semantics.SemanticValidation.Run(tree).Select(d => d.Code).ToList();
+        Assert.Equal(agrees, !messages.Contains("LYS1070"));
+    }
+
     /// <summary>A row over a staff puts the second ending's chord over the staff's fourth bar.</summary>
     [Theory]
     [InlineData("chords prog staff m")]
