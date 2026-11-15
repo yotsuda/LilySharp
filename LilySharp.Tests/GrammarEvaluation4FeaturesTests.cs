@@ -757,6 +757,13 @@ public class GrammarEvaluation4FeaturesTests
         Assert.DoesNotContain("<fifths>", xml);
         var (back, _) = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(xml);
         Assert.Contains("\nkey none\n", back.ReplaceLineEndings("\n"));
+        // A file where one part has no signature beside a part in a key opens in that key, as
+        // it did before `<key/>` was read (the writer states one key for all the parts).
+        int second = xml.LastIndexOf("<key />", StringComparison.Ordinal);
+        Assert.NotEqual(xml.IndexOf("<key />", StringComparison.Ordinal), second);
+        string mixed = xml[..second] + "<key><fifths>-1</fifths></key>" + xml[(second + "<key />".Length)..];
+        var (keyed, _) = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(mixed);
+        Assert.Contains("\nkey f major\n", keyed.ReplaceLineEndings("\n"));
         // A signature that names pitches is still not read, and says so.
         var (_, report) = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(Xml(Atonal("key custom fis")));
         Assert.Contains(report.Warnings, w => w.Contains("non-traditional key signature dropped"));

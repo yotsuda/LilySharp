@@ -1190,7 +1190,16 @@ internal static class LysWriter
     // The time and key the piece opens in: the first a measure declares, in any part.
     private static (ImportTime? Time, ImportKey? Key) Opening(ImportDocument doc)
         => (doc.Parts.SelectMany(p => p.Measures).Select(m => m.Time).FirstOrDefault(t => t != null),
-            doc.Parts.SelectMany(p => p.Measures).Select(m => m.Key).FirstOrDefault(k => k != null));
+            OpeningKey(doc));
+
+    // A key that names a tonic before `key none` (ImportKey.NoneMode): the writer states one
+    // key for all the parts, and a file where one part has no signature beside parts in a key
+    // opened in that key before `<key/>` was read at all (2026-11-15) — it still does.
+    private static ImportKey? OpeningKey(ImportDocument doc)
+    {
+        var keys = doc.Parts.SelectMany(p => p.Measures).Select(m => m.Key).Where(k => k != null).ToList();
+        return keys.FirstOrDefault(k => k!.Value.Mode != ImportKey.NoneMode) ?? keys.FirstOrDefault();
+    }
 
     /// <summary>
     /// The time and key the header states: the ones in force at the most places a section may
