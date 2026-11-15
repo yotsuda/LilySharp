@@ -138,8 +138,13 @@ internal enum BarlineKind
     RepeatEnd,
 }
 
-/// <summary>A key signature as fifths (+sharps / -flats) plus mode name.</summary>
-internal readonly record struct ImportKey(int Fifths, string Mode);
+/// <summary>A key signature as fifths (+sharps / -flats) plus mode name — or no signature at
+/// all, <see cref="NoneMode"/> (a <c>&lt;key&gt;</c> that states nothing: <c>key none</c>).</summary>
+internal readonly record struct ImportKey(int Fifths, string Mode)
+{
+    /// <summary>The <see cref="Mode"/> of no signature: written <c>key none</c>.</summary>
+    public const string NoneMode = "none";
+}
 
 /// <summary>A time signature.</summary>
 internal readonly record struct ImportTime(int Beats, int BeatType);

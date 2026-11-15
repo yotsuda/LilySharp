@@ -660,7 +660,11 @@ public class CompletionAuditTests
     [Fact]
     public void KeyTonics_DescribeTheCompilersSignature_AndEachCompiles()
     {
-        var items = LilySharpLanguageServer.GetKeyTonicCompletions().Items;
+        var all = LilySharpLanguageServer.GetKeyTonicCompletions().Items;
+        // The fifteen tonics, then `none` — no signature, which takes no mode (2026-11-15).
+        Assert.Equal(KeySignatureSyntax.NoneWord, all[^1].Label);
+        AssertCompiles(Book(top: $"key {all[^1].Label}"), $"`key {all[^1].Label}`");
+        var items = all[..^1];
         Assert.Equal(15, items.Length);
         // The counts are KeySpelling's, pinned on the three the circle's ends and centre give.
         Assert.Contains("0 ♯/♭", items.Single(i => i.Label == "c").Detail);

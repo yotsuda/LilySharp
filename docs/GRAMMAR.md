@@ -679,7 +679,17 @@ BeatGrouping   = '(' , Integer , { '+' , Integer } , ')' ;
                     parts write DIFFERENT meters at the start of the same bar, the first in
                     the file stands for every part and the other warns (LYS2005). A 'time'
                     written after music in its bar stays its own part's. *)
-KeyDecl        = 'key' , [ '!' ] , PitchBase , [ Accidental-text ] , Mode ;
+KeyDecl        = 'key' , [ '!' ] , ( PitchBase , [ Accidental-text ] , Mode | 'none' ) ;
+                 (* 'key none' (2026-11-15): no key signature, on EVERY page — a transposed
+                    one too, where a file that writes no key prints the transposition of
+                    C major (a B♭ clarinet's part in D major). Every accidental is written at
+                    its note; under 'transpose', 'shift' and on a transposed page the notes move
+                    and the signature stays empty; there is no tonic for a degree chord or a phrase's
+                    auto-transpose to stand on. It stands wherever a key does (the file, a
+                    section's head, a part header — that part alone —, the music) and takes
+                    nothing after it. MusicXML: an empty <key/>, read back as 'key none';
+                    the twin: \set Staff.keyAlterations = #`(). 'lysc review' says "no key"
+                    and guesses none. *)
                  (* A 'time', 'key' or 'clef' that changes nothing draws nothing — at a
                     section's start, compared with what the section before it left
                     (LILYSHARP-OWN, 2026-10-02; LilyPond engraves every \time and \key).

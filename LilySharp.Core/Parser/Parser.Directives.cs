@@ -319,6 +319,13 @@ internal sealed partial class Parser
             return new KeySignatureGreen(keyKeyword, bang, customWord, [.. pitches]);
         }
 
+        // No signature: key none (owner's decision 2026-11-15, grammar evaluation 4) — the
+        // custom signature of no pitches, by its own word (KeySignatureSyntax.IsNone). It
+        // takes nothing after it: a pitch that follows is the music's.
+        if (Current.Kind == SyntaxKind.Identifier
+            && Current.Text == KeySignatureSyntax.NoneWord)
+            return new KeySignatureGreen(keyKeyword, bang, Advance(), []);
+
         var pitch = ParsePitch();
 
         SyntaxToken mode;

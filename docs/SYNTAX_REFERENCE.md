@@ -950,7 +950,15 @@ key g major      // G major (1 sharp)
 key f major      // F major (1 flat)
 key a minor      // A minor (no accidentals)
 key d minor      // D minor (1 flat)
+key none         // no key signature at all
 ```
+
+`key none` is for music with no key: no signature is printed on any page, and every accidental
+stands at its note. It differs from writing no `key` line on a page for a transposing
+instrument: a file with no key is in C major, so `score clarinet pitch transposed { … }` prints
+a B♭ clarinet's part with the two sharps of D major — under `key none` it prints none. The word
+stands wherever a key does (the top of the file, a section's head, a part header for that part
+alone, the music) and takes nothing after it.
 
 ## Clef
 

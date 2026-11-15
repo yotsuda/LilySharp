@@ -3781,6 +3781,14 @@ public sealed partial class LilySharpLanguageServer
                     Command = new Command { Title = "Suggest scale", CommandIdentifier = "editor.action.triggerSuggest" },
                     SortText = i.ToString("D2"),
                 };
+            // …and, after the fifteen, the word for no signature at all (2026-11-15). It takes
+            // no mode, so it does not re-open the list.
+            }).Append(new CompletionItem
+            {
+                Label = LilySharp.Core.Syntax.KeySignatureSyntax.NoneWord,
+                Kind = CompletionItemKind.EnumMember,
+                Detail = "No key signature — on a transposed page too; every accidental at its note",
+                SortText = tonics.Length.ToString("D2"),
             }).ToArray()
         };
     }

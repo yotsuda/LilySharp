@@ -77,6 +77,10 @@ time 4/4                // optional (default 4/4); 4/4 engraves as the C
 key c major             // optional (default c major); all church modes work:
                         // major minor ionian dorian phrygian lydian mixolydian aeolian locrian
                         // (key d dorian = no accidentals, key e dorian = 2 sharps)
+                        // 'key none' = NO key signature on any page, a transposing
+                        // instrument's part included (with no key line at all such a part
+                        // prints C major transposed: two sharps for a B-flat clarinet). For
+                        // atonal music: every accidental is written at its note.
                         // A note's NAME IS ITS PITCH: the key never changes it. In
                         // 'key c minor', 'b' is B natural (drawn with its natural sign) and
                         // B-flat is 'bes'; a minor key's raised leading tone is 'b', never 'ces'

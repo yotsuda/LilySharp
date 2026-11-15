@@ -191,6 +191,8 @@ public static partial class NoteStepper
     /// <summary>A key: its sharps or flats, and its relative key.</summary>
     private static string? KeySays(KeySignatureSyntax key)
     {
+        if (key.IsNone)
+            return "key none: no key signature - on a transposed page too; every accidental is written at its note";
         if (key.IsCustom || key.GetChild(2) is not PitchSyntax)
             return null;
         string tonic = key.Pitch.ToFullString().Trim();

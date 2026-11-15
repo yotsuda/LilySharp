@@ -68,7 +68,7 @@ public static partial class NoteStepper
 
         var key = WrittenKeyAt(site);
         if (key is { IsCustom: true })
-            return (null, $"{symbol}: a custom key has no seventh chords to walk.");
+            return (null, $"{symbol}: {(key.IsNone ? "key none" : "a custom key")} has no seventh chords to walk.");
         char tonic = 'c';
         int sharps = 0;
         string keyName = "C major";

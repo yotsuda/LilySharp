@@ -665,4 +665,125 @@ public class GrammarEvaluation4FeaturesTests
         string book = Player("instrument clarinet transposition " + value);
         Assert.Equal(says, LilySharp.Core.Editing.NoteStepper.Describe(book, SyntaxTree.Parse(book), book.IndexOf("transposition", StringComparison.Ordinal) + 15));
     }
+
+    // ───────────────────────── 4. key none ─────────────────────────
+
+    /// <summary>A B♭ clarinet typed at concert pitch beside a piano, under the file's
+    /// <paramref name="key"/> line and the clarinet's own <paramref name="partKey"/>.</summary>
+    private static string Atonal(string key, string score = "score { staff cl staff pf }", string partKey = "")
+        => $"pitch concert\noctave absolute\ntime 4/4\n{key}\npart cl {{ instrument clarinet {partKey} }}\npart pf {{ clef treble }}\n"
+            + "section A { cl { c'4 fis' bes' e' | f'1 | } pf { c'4 fis' bes' e' | f'1 | } }\nform { A }\n" + score + "\n";
+
+    private const string ThePlayers = "score player pitch transposed { staff cl }";
+    // The accidentals as the music font draws them (Emmentaler's own code points).
+    private const char Sharp = '', Natural = '', Flat = '';
+
+    /// <summary>`key none` prints no key signature — on the transposed page too, where a file
+    /// that writes no key prints the transposition of C major — and every accidental at its
+    /// note. It is the custom signature of no pitches, and the sound is the keyless file's.</summary>
+    [Fact]
+    public void KeyNone_PrintsNoSignature_OnATransposedPageToo()
+    {
+        Clean(Atonal("key none"));
+        // The player's page: D G♯ C F♯ | G. No key: two sharps of D major, then G♯ and a
+        // natural on the C; `key none`: the G♯ and the F♯ at their notes, no signature.
+        var keyless = Glyphs(Atonal("", ThePlayers)).Select(g => g.Glyph).ToList();
+        var none = Glyphs(Atonal("key none", ThePlayers)).Select(g => g.Glyph).ToList();
+        Assert.Equal((3, 1), (keyless.Count(g => g == Sharp), keyless.Count(g => g == Natural)));
+        Assert.Equal((2, 0), (none.Count(g => g == Sharp), none.Count(g => g == Natural)));
+
+        foreach (string score in new[] { "score { staff cl staff pf }", ThePlayers })
+            Assert.Equal(Glyphs(Atonal("key custom", score)), Glyphs(Atonal("key none", score)));
+        // A `transpose` moves the notes and leaves the signature empty: no D major's two sharps.
+        var moved = Glyphs(Book("c'4 e' g' b' |", "transpose d\nkey none\n")).Select(g => g.Glyph).ToList();
+        Assert.Equal(2, moved.Count(g => g == Sharp));      // F♯ and C♯, at their notes
+        Assert.Equal(2, Glyphs(Book("c'4 e' g' b' |", "transpose d\n")).Count(g => g.Glyph == Sharp));   // the signature's
+        Assert.NotEqual(Glyphs(Book("c'4 e' g' b' |", "transpose d\n")), Glyphs(Book("c'4 e' g' b' |", "transpose d\nkey none\n")));
+        Assert.Equal(Notes(Atonal("")), Notes(Atonal("key none")));
+        Assert.Equal(Notes(Atonal("", ThePlayers)), Notes(Atonal("key none", ThePlayers)));
+    }
+
+    /// <summary>The word stands wherever a key does — the file's top, a section's head, a part's
+    /// header, the music — and a part's own `key none` is that part's alone.</summary>
+    [Fact]
+    public void KeyNone_StandsWhereverAKeyDoes()
+    {
+        string own = Atonal("key f major", partKey: "key none");
+        Clean(own);
+        Assert.Equal(Glyphs(Atonal("key f major", partKey: "key custom")), Glyphs(own));
+        var flats = Glyphs(own).Where(g => g.Glyph == Flat).ToList();
+        // The piano's signature, and the clarinet's B♭ at its note (the piano's is in its key).
+        Assert.Equal(2, flats.Count);
+        Assert.NotEqual(Glyphs(Atonal("key f major")), Glyphs(own));
+
+        string inSection = Atonal("key f major").Replace("section A { cl", "section A { key none cl");
+        Clean(inSection);
+        Assert.Equal(Glyphs(Atonal("key none")), Glyphs(inSection));
+
+        // In the music: the signature is cancelled where the word stands.
+        string inMusic = Book("c'4 d' e' f' | key none fis'4 g' a' b' |", "key d major\n");
+        Clean(inMusic);
+        Assert.Equal(Glyphs(inMusic.Replace("key none", "key custom")), Glyphs(inMusic));
+        Assert.NotEqual(Glyphs(inMusic.Replace("key none ", "")), Glyphs(inMusic));
+
+        var key = SyntaxTree.Parse(Atonal("key none")).GetNodes<KeySignatureSyntax>().Single();
+        Assert.True(key.IsNone);
+        Assert.True(key.IsCustom);
+        Assert.Empty(key.CustomAlterations);
+        Assert.Equal("none", key.DisplayName);
+        Assert.False(SyntaxTree.Parse(Atonal("key custom")).GetNodes<KeySignatureSyntax>().Single().IsNone);
+    }
+
+    /// <summary>The word takes nothing after it, and is case-sensitive.</summary>
+    [Theory]
+    [InlineData("key none major")]
+    [InlineData("key None")]
+    [InlineData("key none fis")]
+    public void KeyNone_TakesNothingAfterIt(string key)
+        => Assert.Contains(Said(Atonal(key)), d => d.Severity == DiagnosticSeverity.Error);
+
+    /// <summary>The files say no signature, and MusicXML read back says `key none` again.</summary>
+    [Fact]
+    public void KeyNone_IsNoSignatureInTheFiles_AndComesBack()
+    {
+        string book = Atonal("key none");
+        string ly = Ly(book, out var warnings);
+        Assert.Empty(warnings);
+        Assert.Contains("\\set Staff.keyAlterations = #`()", ly);
+        Assert.DoesNotContain("\\key", ly);
+
+        string xml = Xml(book);
+        Assert.Contains("<key />", xml);
+        Assert.DoesNotContain("<fifths>", xml);
+        var (back, _) = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(xml);
+        Assert.Contains("\nkey none\n", back.ReplaceLineEndings("\n"));
+        // A signature that names pitches is still not read, and says so.
+        var (_, report) = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(Xml(Atonal("key custom fis")));
+        Assert.Contains(report.Warnings, w => w.Contains("non-traditional key signature dropped"));
+    }
+
+    /// <summary>`lysc review` says the piece has no key and guesses none; the editor's status
+    /// line and its list after `key` know the word.</summary>
+    [Fact]
+    public void KeyNone_IsSaidByTheReviewAndTheEditor()
+    {
+        // Long enough for the review to hear a key in it.
+        const string Row = "c'4 cis' d' ees' | e' f' fis' g' | aes' a' bes' b' | c''4 fis' b' f' | ees'4 a' d' aes' | des'1 |";
+        static string Review(string key) => LilySharp.Core.Editing.ScoreReview.Text(Book(Row, key)).ReplaceLineEndings("\n");
+        string head = Review("key none\n");
+        Assert.Contains(" - no key, 4/4", head.Split('\n')[0]);
+        Assert.DoesNotContain("Heard in:", head);
+        Assert.Contains("Heard in:", Review(""));
+        Assert.Contains("Heard in:", Review("key custom\n"));
+        Assert.DoesNotContain("no key", Review("key custom\n"));
+
+        string book = Atonal("key none");
+        Assert.Equal("key none: no key signature - on a transposed page too; every accidental is written at its note",
+            LilySharp.Core.Editing.NoteStepper.Describe(book, SyntaxTree.Parse(book), book.IndexOf("key none", StringComparison.Ordinal) + 5));
+
+        var offered = LilySharpLanguageServer.GetKeyTonicCompletions().Items;
+        Assert.Equal("none", offered[^1].Label);
+        Assert.Null(offered[^1].Command);
+        Assert.Equal(16, offered.Length);
+    }
 }

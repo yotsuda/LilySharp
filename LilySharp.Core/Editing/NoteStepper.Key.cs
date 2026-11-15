@@ -69,7 +69,7 @@ public static partial class NoteStepper
     private static (Edit[] Edits, string Message) ModeEdits(KeySignatureSyntax key, int dir, bool longFlats)
     {
         if (key.IsCustom)
-            return ([], "key custom: no parallel or relative key - write a key such as c major");
+            return ([], $"key {key.DisplayName}: no parallel or relative key - write a key such as c major");
         if (key.GetChild(2) is not PitchSyntax tonic || tonic.BaseName == '\0'
             || key.GetChild(3) is not SyntaxTokenNode { Text.Length: > 0 } modeToken)
             return ([], "key: write its tonic and mode first (key c major)");
@@ -105,7 +105,7 @@ public static partial class NoteStepper
     private static (Edit? Edit, string Message) KeyEdit(KeySignatureSyntax key, int dir, bool longFlats)
     {
         if (key.IsCustom)
-            return (null, "key custom: no circle of fifths to step - write a key such as c major");
+            return (null, $"key {key.DisplayName}: no circle of fifths to step - write a key such as c major");
         if (key.GetChild(2) is not PitchSyntax tonic || tonic.BaseName == '\0'
             || key.GetChild(3) is not SyntaxTokenNode { Text.Length: > 0 } modeToken)
             return (null, "key: write its tonic and mode first (key c major)");

@@ -2103,6 +2103,9 @@ internal static class LysWriter
 
     private static string KeyToLily(ImportKey key, ImportReport report)
     {
+        // No signature (ImportKey.NoneMode): `key none`, which takes no mode.
+        if (key.Mode == ImportKey.NoneMode)
+            return Syntax.KeySignatureSyntax.NoneWord;
         string mode = string.IsNullOrEmpty(key.Mode) ? "major" : key.Mode;
         // Undo the church-mode fifths offset to land back on a MAJOR tonic, then
         // spell that tonic and keep the mode word (matches KeySpelling.SharpsFor).

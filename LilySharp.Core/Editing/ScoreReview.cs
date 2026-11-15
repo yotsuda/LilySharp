@@ -216,9 +216,14 @@ public static class ScoreReview
         var facts = new JsonObject();
         if (CompositionChecks.TitleOf(source) is { } title)
             facts["title"] = title;
-        if (HomeKey(root) is { } key)
+        // `key none` at the top of the file says the piece has no key: the header says so, and
+        // the key the notes would be heard in is not guessed (owner's decision 2026-11-15).
+        bool keyless = root.ChildNodes().OfType<KeySignatureSyntax>().FirstOrDefault() is { IsNone: true };
+        if (keyless)
+            facts["key"] = "no key";
+        else if (HomeKey(root) is { } key)
             facts["key"] = key;
-        if (midi != null && KeyChecks.Heard(midi) is { Count: > 0 } heard)
+        if (!keyless && midi != null && KeyChecks.Heard(midi) is { Count: > 0 } heard)
             facts["keyHeard"] = string.Join(" / ", heard.Take(2).Select(k => $"{k.Name} ({k.Fit:0.00})"));
         var form = CompositionChecks.PlayedSections(root, midi);
         if (form.Count > 0)

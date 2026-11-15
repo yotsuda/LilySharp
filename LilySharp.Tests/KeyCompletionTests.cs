@@ -129,9 +129,11 @@ public class KeyCompletionTests
     [Fact]
     public void TonicCompletions_CoverTheCircleOfFifths()
     {
+        // The fifteen of the circle, and `none` after them (no signature, 2026-11-15).
         var labels = LilySharpLanguageServer.GetKeyTonicCompletions().Items
             .Select(i => i.Label).ToArray();
-        Assert.Equal(15, labels.Length);
+        Assert.Equal(16, labels.Length);
+        Assert.Equal("none", labels[^1]);
         Assert.Contains("c", labels);
         Assert.Contains("fis", labels);
         Assert.Contains("ces", labels);

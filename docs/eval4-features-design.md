@@ -111,4 +111,22 @@
   `transposition` が音名を取るようになったので書けるはず＝別便。
 - 補完の `transposition ▮` は 4 語のまま（説明文だけ直す）。
 
-## 4. `key none`（未着手）
+## 4. `key none`（第1272 で実装）
+
+- **背景**: 無調の曲でも `score clarinet pitch transposed` は「C major → D major」として ♯ 2 つを刷った。
+  調を書かない本は C major として移調される（`pitch concert` の規則）ので、調号を消す綴りが要る。
+- **綴り**: `key none`。`key` が書ける所ならどこでも（ファイルの頭・section の頭・part header・音楽の中）。`time none` と対。
+- **意味**: 調号を刷らない。**移調譜でも刷らない**（`score … pitch transposed`・`transpose`・`shift`）。臨時記号は音ごと
+  （空の調号に対する普通の規則）。音は変わらない。
+- **器は既に在った**: 文書に載っていない `key custom`（調号を音名で並べる綴り）を**音名なし**で書くと、まさにこの絵になる
+  （Lab `sessions/p1272/probe4/out/cus-player.png`: B♭ クラの移調譜で調号なし・D G♯ C F♯。`key c major` と無記は ♯ 2 つ）。
+  「custom の調は移調で綴り直さない・主音を持たない」が `MeasureCollector` の規則で、MusicXML は `<key />`、`.ly` は
+  `\set Staff.keyAlterations = #`()`。⇒ **`key none` は「音名のない custom」の名前**＝`KeySignatureSyntax.IsNone`、
+  `IsCustom` は none も含む（主音のない調を訊く 22 ファイルの読み手は 1 つの問いのまま）。
+- **足すもの**: パーサー（`none` の語・後ろに音名を取らない）／`lysc review`（下）／ステータスバーとステップのキーの文面／
+  補完（`key ▮` に `none`）・色付け・文書 3 冊。
+- **`lysc review`**: 調を書かない本と custom の本には今も調の検査（`key.signature`・`key.outside`・`form.final-bass`）が出ない
+  ＝「調を聞かない」は既に成り立つ。`key none` の本は見出しに「no key」と言い、「Heard in: …」の行（聞こえる調の推定）を出さない。
+- **MusicXML の読み込み**: 調号も `<key-step>` も無い `<key>` は `key none` で戻す（今は何で戻るかを作る前に測る）。
+- ⚠️ Claude の判断: `none` の後ろに音名や mode を書いたらエラー／part header の `key none` はその part だけ（ほかの part は自分の調）。
+

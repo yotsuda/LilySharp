@@ -1220,6 +1220,12 @@ internal static class MusicXmlReader
                 string mode = Local(keyEl, "mode")?.Value.Trim().ToLowerInvariant() ?? "major";
                 measure.Key = new ImportKey(fifths, mode);
             }
+            // A <key> that states nothing — no <fifths>, no <key-step> — is no signature:
+            // `key none` (2026-11-15), which is what `lysc xml` writes for it.
+            else if (Local(keyEl, "key-step") == null)
+            {
+                measure.Key = new ImportKey(0, ImportKey.NoneMode);
+            }
             else
             {
                 report.Warn(measureNo, "non-traditional key signature dropped.");

@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **`key none`**: no key signature on any page — a transposing instrument's part included, which printed C major transposed (two sharps for a B♭ clarinet) when the file wrote no key. After `key` the list offers `none` below the tonics, and the status bar says what it does.
 - **A transposing instrument that has no preset**: `part bcl { instrument clarinet "Bass Clarinet"  transposition bes,  range d, bes'' }`. `transposition` now takes a pitch — what a written middle C sounds (`bes` a tone down, `bes,` a ninth down, `g` an alto flute, `f` a cor anglais, `c'` none) — beside the octave markers, and the new `range LOW HIGH` states the lowest and highest pitch the part sounds, for the out-of-range warning (also for a part with no instrument: `range c' g'`). The status bar says what a written C4 sounds while the caret is on the `transposition`.
 - **A repeat written in the music shows its count**: `|: c'1 | d'1 :|*4` prints "4×" over the closing repeat bar, as a form's `:|*4` does.
 - **Fixed: "Fine" printed twice** when two parts wrote the same navigation mark on one bar line (as *Write Repeat Signs in Every Part* does), or when one part was drawn on a staff and on a tab. It is printed once.

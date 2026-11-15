@@ -260,9 +260,28 @@ public sealed class KeySignatureSyntax : SyntaxNode
     /// <summary>True when <see cref="ForceMark"/> is written.</summary>
     public bool IsForced => ForceMark is not null;
 
-    /// <summary>True for <c>key custom …</c> (slot 2 is the word, pitches follow).</summary>
+    /// <summary>The word of <c>key none</c>.</summary>
+    public const string NoneWord = "none";
+
+    /// <summary>
+    /// True for <c>key none</c> (owner's decision 2026-11-15, grammar evaluation 4): no key
+    /// signature — on a transposed page too, where a file that writes no key prints the
+    /// transposition of C major — and accidentals note by note.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond has no word for it (an atonal part there writes no \key, and a
+    /// \transpose of it moves no signature because there is none). It IS the custom signature
+    /// of no pitches — <see cref="IsCustom"/> answers true — so every reader that asks "has
+    /// this key a tonic?" already reads it: not respelled by a transposition, no tonic for a
+    /// phrase or a degree chord to stand on. The word exists so that a writer need not know a
+    /// custom signature to say "none".
+    /// </remarks>
+    public bool IsNone => GetChild(2) is SyntaxTokenNode t && t.Text == NoneWord;
+
+    /// <summary>True for a signature with no tonic: <c>key custom …</c> (slot 2 is the word,
+    /// pitches follow) and <c>key none</c> (<see cref="IsNone"/>, no pitch).</summary>
     public bool IsCustom => GetChild(2) is SyntaxTokenNode t
-        && t.Text.Equals("custom", StringComparison.OrdinalIgnoreCase);
+        && (t.Text.Equals("custom", StringComparison.OrdinalIgnoreCase) || t.Text == NoneWord);
 
     /// <summary>The tonic pitch of a traditional key.</summary>
     public PitchSyntax Pitch => (PitchSyntax)GetChild(2)!;
@@ -272,7 +291,7 @@ public sealed class KeySignatureSyntax : SyntaxNode
     /// <remarks>The outline and the hover read <see cref="Pitch"/> as if it could be null;
     /// it is a cast, and on <c>key custom …</c> it threw — every book with a custom key lost
     /// its outline (found by the language-server sweep, session 717).</remarks>
-    public string DisplayName => IsCustom ? "custom"
+    public string DisplayName => IsNone ? NoneWord : IsCustom ? "custom"
         : $"{(GetChild(2) as PitchSyntax)?.PitchName} {(IsMajor ? "major" : "minor")}";
     /// <summary>The mode token (e.g. <c>major</c>, <c>minor</c>).</summary>
     public SyntaxTokenNode Mode => (SyntaxTokenNode)GetChild(3)!;
