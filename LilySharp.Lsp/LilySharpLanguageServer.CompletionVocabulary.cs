@@ -160,7 +160,7 @@ public sealed partial class LilySharpLanguageServer
     private static readonly string[] PartPropertyOrder =
     {
         "clef", "instrument", "tuning", "octave", "transpose",
-        "transposition", "pitch", "pedal", "midiInstrument", "beaming",
+        "transposition", "range", "pitch", "pedal", "midiInstrument", "beaming",
     };
 
     // Prose per property, and whether the editor has a VALUE list to enumerate for it.
@@ -193,7 +193,11 @@ public sealed partial class LilySharpLanguageServer
                           + "The words absolute and relative belong to the TOP-LEVEL octave "
                           + "directive and a part header refuses them", false),
             ["transpose"] = ("Transpose target pitch, e.g. `transpose d`, `transpose bes,`", true),
-            ["transposition"] = ($"Sounding-octave marker ({string.Join("/", LanguageVocabulary.TranspositionMarkers)})", true),
+            ["transposition"] = ("What the part sounds against what it writes — the pitch a written middle C sounds, "
+                                 + "e.g. `transposition bes`, `transposition bes,`, or an octave marker "
+                                 + $"({string.Join("/", LanguageVocabulary.TranspositionMarkers)}); replaces the preset's", true),
+            ["range"] = ("The lowest and highest pitch the part sounds, e.g. `range d, bes''` — a note outside it is warned; "
+                         + "replaces the preset's range", false),
             ["pitch"] = ($"How this part's notes are typed for a transposing instrument ({string.Join("/", LanguageVocabulary.PitchModes)}) — overrides the top-level directive", true),
             ["pedal"] = ($"Piano pedal style ({string.Join("/", LanguageVocabulary.PedalStyles)})", false),
             ["midiInstrument"] = ("General MIDI sound for the .mid and the preview — one of LilyPond's 128 names in quotes, "

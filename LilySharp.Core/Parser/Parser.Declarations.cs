@@ -424,6 +424,17 @@ internal sealed partial class Parser
                     values.Add(Advance());
                 }
             }
+            // `range LOW HIGH` (2026-11-15) takes a SECOND pitch with its marks. Only a word
+            // that is a pitch is taken, so a range of one pitch leaves the next property where
+            // it stands and SymbolCaseValidator says what is missing — no property is named
+            // like a pitch.
+            if (propName.Text == Semantics.PartHeaderDefaults.RangeProperty
+                && Semantics.PitchTransposer.TryParseTarget(Current.Text, out _, out _))
+            {
+                values.Add(Advance());
+                while (Check(SyntaxKind.Apostrophe) || Check(SyntaxKind.Comma))
+                    values.Add(Advance());
+            }
             // An instrument preset may carry a quoted display-name label:
             // `instrument violin "1st Violin"` — the preset drives clef/octave/tuning
             // defaults while the quoted label overrides the shown instrument name.

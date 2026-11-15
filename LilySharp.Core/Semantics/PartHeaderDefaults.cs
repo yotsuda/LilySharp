@@ -196,6 +196,7 @@ public sealed class PartHeaderDefaults
         int? explicitOctave = null;
         string? preset = null, clefText = null, transText = null, tuningText = null, midiName = null;
         bool syllabic = false;
+        (int Low, int High)? writtenRange = null;
 
         foreach (var prop in part.Properties)
         {
@@ -219,7 +220,10 @@ public sealed class PartHeaderDefaults
                     clefText = (prop.GetChild(2) as SyntaxTokenNode)?.Text.ToLowerInvariant();
                     break;
                 case "transposition":
-                    transText = (prop.GetChild(2) as SyntaxTokenNode)?.Text;
+                    transText = Joined();   // the marks too: `bes,` is a pitch and its octave
+                    break;
+                case RangeProperty:
+                    writtenRange = ReadRange(prop);
                     break;
                 case "tuning":
                     tuningText = Joined();   // as written: the words are camelCase (`banjoOpenD`)
@@ -286,7 +290,64 @@ public sealed class PartHeaderDefaults
             Tuning = Tunings.Parse(tuningText ?? InstrumentDefaults.GetTuning(preset)),
             FrettedTuningWord = FrettedWord(tuningText, preset),
             BeamingSyllabic = syllabic,
+            WrittenRange = writtenRange,
         };
+    }
+
+    /// <summary>The name of the <c>range</c> property.</summary>
+    public const string RangeProperty = "range";
+
+    /// <summary>
+    /// The part's own <c>range LOW HIGH</c> (owner's decision 2026-11-15, grammar evaluation 4)
+    /// as SOUNDING MIDI pitches, or null when it writes none (or one that cannot be read:
+    /// SymbolCaseValidator refuses that one).
+    /// </summary>
+    public (int Low, int High)? WrittenRange { get; private init; }
+
+    /// <summary>
+    /// The lowest and highest pitch the part can SOUND (MIDI, C4 = 60): its own <c>range</c>,
+    /// else its preset's (<see cref="InstrumentDefaults.SoundingRange"/>), else null — a part
+    /// that says neither is not judged. What LYS1052 measures a note against.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond has no instrument ranges. The two pitches are named absolutely
+    /// and AS THEY SOUND, like the presets' table and the warning's own words ("as it sounds"):
+    /// a bass clarinet's <c>range d, bes''</c> is D2–B♭5, whatever its part writes. A preset's
+    /// range does not move with a written <c>transposition</c> — the part that changes one
+    /// writes the other (<c>instrument clarinet transposition bes, range d, bes''</c>).
+    /// </remarks>
+    public (int Low, int High)? Range => WrittenRange ?? InstrumentDefaults.SoundingRange(Preset);
+
+    /// <summary>
+    /// Reads a <c>range</c> property's two pitches — each a word and its octave marks, the
+    /// tokens the parser kept (<c>d</c> <c>,</c> <c>bes</c> <c>'</c> <c>'</c>) — or null when
+    /// they are not exactly two pitches, the lower first.
+    /// </summary>
+    /// <remarks>
+    /// Token by token and not off the joined text: joined, <c>a es</c> and <c>aes</c> are one
+    /// spelling. An equal pair is a range of one note and is read.
+    /// </remarks>
+    public static (int Low, int High)? ReadRange(PropertyAssignmentSyntax prop)
+    {
+        var pitches = new List<int?>();   // null: a word that is no pitch
+        var word = new StringBuilder();
+        void Close()
+        {
+            if (word.Length == 0)
+                return;
+            pitches.Add(PitchTransposer.AbsoluteMidi(word.ToString()));
+            word.Clear();
+        }
+        for (int i = 2; i < prop.SlotCount; i++)
+        {
+            if (prop.GetChild(i) is not SyntaxTokenNode token)
+                continue;
+            if (token.Kind is not (SyntaxKind.Apostrophe or SyntaxKind.Comma))
+                Close();
+            word.Append(token.Text);
+        }
+        Close();
+        return pitches is [int low, int high] && low <= high ? (low, high) : null;
     }
 
     /// <summary>The part's fretted tuning word (<see cref="FrettedTuningWord"/>).</summary>

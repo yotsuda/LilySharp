@@ -1419,7 +1419,8 @@ PartLyrics     = 'lyrics' , Identifier ;
 PartProperty   = 'clef'          , PartClefName
                | 'instrument'    , ( InstrumentPreset , [ String ] | String )
                | 'transpose'     , PitchToken
-               | 'transposition' , TranspositionMarker
+               | 'transposition' , ( TranspositionMarker | PitchToken )
+               | 'range'         , PitchToken , PitchToken   (* lowest, highest — as they sound *)
                | 'tuning'        , Tuning
                | 'octave'        , Integer
                | 'pitch'         , PitchMode        (* this part's convention — own wins
@@ -1593,10 +1594,24 @@ TranspositionMarker = '8va' | '8vb' | '15ma' | '15mb' ;
    that the written pitches sound elsewhere. A chromatic transposer's shift comes from
    its 'instrument' preset (clarinet −2, alto-sax −9, …); a concert-pitch part on a
    page for its player ('score … pitch transposed', §2.3) is PRINTED by that same shift, negated.
-   A written 'transposition' REPLACES the preset's shift (explicit > preset > the tuning's): it
-   takes octaves only, so 'instrument clarinet transposition 8vb' sounds an octave below the
-   page and is no longer in B♭ — and a transposing instrument with no preset (alto flute, bass
-   clarinet, cor anglais) cannot be declared yet. *)
+   A written 'transposition' REPLACES the preset's shift (explicit > preset > the tuning's), so
+   'instrument clarinet transposition 8vb' sounds an octave below the page and is no longer in
+   B♭. It takes an octave marker or, since 2026-11-15, a PITCH: the pitch a written middle C
+   sounds, named absolutely (c' is middle C) — LilyPond's \transposition. 'transposition bes' is
+   a B♭ instrument (−2), 'bes,' a bass clarinet or a tenor saxophone (−14), 'a' a clarinet in A,
+   'g' an alto flute, 'f' a horn or a cor anglais, 'ees' an alto saxophone, "ees'" an E♭
+   clarinet (+3), "c'" none (a preset's shift taken away); 'c' is 8vb and "c''" 8va. Only the
+   semitones are kept (ais = bes). Case-sensitive like every value here: 'Bes' is refused. So a
+   transposing instrument with no preset is its family's preset and its own transposition:
+   'part bcl { instrument clarinet  transposition bes,  range d, bes'' }'. *)
+
+(* range: the lowest and the highest pitch the part SOUNDS, named absolutely (c' is middle C),
+   the lower first: 'range d, bes''' is D2 to B♭5. It replaces the preset's range for the
+   out-of-range warning (LYS1052), and gives a part with no preset one ('part kids { range c' g' }').
+   As it sounds, like the presets' table: a transposing part's range is not what it writes. A
+   preset's range does NOT move with a written 'transposition' — the part that states one states
+   the other. A tuning does not move a written range. Nothing is drawn or played differently,
+   but a chord(…) item's close voicing is lifted into the range as into a preset's. *)
 
 (* pedal: how a sustain span is drawn - the 'Ped.' text, a bracket, or 'mixed'
    (text at the start, bracket for the hold). *)

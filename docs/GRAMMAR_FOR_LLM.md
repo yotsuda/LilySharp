@@ -389,14 +389,24 @@ verbatim `@"C:\music"` / `@"say ""hi"""` (backslash as written, `""` = one quote
   page and the sound differ. That difference comes from the `instrument` preset alone (`clarinet`,
   `clarinet-a`, `trumpet`, `horn`, `soprano-sax` `alto-sax` `tenor-sax` `baritone-sax`), and a
   `transpose` beside a preset is added on top of it — the page moves and the sound with it.
-- `transposition 8va | 8vb | 15ma | 15mb` (a part header) is the other half: the page stays and
-  the part SOUNDS one or two octaves from it. It REPLACES the preset's transposition instead of
-  adding to it: `instrument clarinet transposition 8vb` is no longer in B♭ — it sounds an octave
-  below the page, and under `pitch concert` it is typed as it sounds like any octave-only
-  instrument. ⚠️ So a transposing instrument with no preset (alto flute in G, bass clarinet,
-  cor anglais) cannot be declared yet: no property states an interval between page and sound
-  other than whole octaves. Write such a part at the pitch it sounds — it plays right and prints
-  untransposed on every page, `score … pitch transposed` included.
+- `transposition PITCH` (a part header) is the other half: the page stays and the part SOUNDS
+  elsewhere. PITCH is what a written middle C sounds, as an absolute pitch (`c'` is middle C) —
+  LilyPond's `\transposition`: `transposition bes` a B♭ instrument, `transposition bes,` a bass
+  clarinet or tenor saxophone (a ninth down), `transposition a` a clarinet in A,
+  `transposition g` an alto flute, `transposition f` a horn or a cor anglais,
+  `transposition ees` an alto saxophone, `transposition ees'` an E♭ clarinet (UP a minor third),
+  `transposition c'` none. The octaves also have markers: `transposition 8va | 8vb | 15ma | 15mb`.
+  It REPLACES the preset's transposition instead of adding to it: `instrument clarinet
+  transposition 8vb` is no longer in B♭ — it sounds an octave below the page, and under
+  `pitch concert` it is typed as it sounds like any octave-only instrument. So a transposing
+  instrument with no preset (alto flute, bass clarinet, cor anglais) is its family's preset with
+  its own transposition and range: `part bcl { instrument clarinet "Bass Clarinet"
+  transposition bes,  range d, bes'' }` — under `pitch concert` it is typed as it sounds, and
+  `score … pitch transposed` prints the player's part.
+- `range LOW HIGH` (a part header) is the part's own range: the lowest and highest pitch it
+  SOUNDS, absolute pitches, the lower first (`range d, bes''` = D2–B♭5). It replaces the preset's
+  range for the out-of-range warning (LYS1052) and gives a part with no preset one
+  (`part kids { range c' g' }`). A preset's range does not move with a written `transposition`.
 - A chords track is SOUNDING pitch unless it says whose letters it is in: `chords tpc for tp
   { G6 | C7 }` is typed as the trumpet's notes are (under its `pitch`: the player's letters by
   default), and sounds `F6 Bb7`. With no `for` no `pitch` moves a track, and no staff it
@@ -1841,7 +1851,7 @@ with the `lilysharp_readGuide` tool, topic `composing` (`docs/COMPOSE_FOR_LLM.md
   `octave absolute` too. This is how a section cut only to carry a repeat says its music
   belongs an octave away: the boundary's frame reset stays, and the carry is written down.
 - Part header attributes are written **bare, no `=`**, like the top-level commands:
-  `clef` `key` `octave` `instrument` `transpose` `transposition` `tuning` `pitch` `pedal`
+  `clef` `key` `octave` `instrument` `transpose` `transposition` `range` `tuning` `pitch` `pedal`
   `beaming syllabic` (a sung part: see Ties, slurs, beams)
   and `midiInstrument "acoustic bass"` (a quoted General MIDI sound — what playback sounds
   like, overriding the preset's). ⚠️ `time` and `tempo` are NOT part attributes: every

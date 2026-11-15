@@ -137,8 +137,8 @@ public static class ShapeChords
     public static int CloseRegisterOf(SyntaxNode node)
         => HeaderOf(node) is { } header ? CloseRegisterOf(header) : 0;
 
-    /// <summary>The lowest note a close voicing may sound on the part's instrument (its preset's
-    /// range), or none: an octave is added until the chord is in it (owner's review 2026-10-31: a
+    /// <summary>The lowest note a close voicing may sound on the part's instrument (the part's
+    /// <c>range</c>, else its preset's — <see cref="PartHeaderDefaults.Range"/>), or none: an octave is added until the chord is in it (owner's review 2026-10-31: a
     /// ukulele's chord(G) sounded G3, below its C4).</summary>
     public static int CloseFloorOf(SyntaxNode node)
         => HeaderOf(node) is { } header ? CloseFloorOf(header) : int.MinValue;
@@ -169,7 +169,7 @@ public static class ShapeChords
     } - 71;
 
     private static int CloseFloorOf(PartHeaderDefaults header)
-        => Svg.Model.InstrumentDefaults.SoundingRange(header.Preset)?.Low ?? int.MinValue;
+        => header.Range?.Low ?? int.MinValue;   // the part's own `range`, else its preset's
 
     /// <summary>Whether <paramref name="item"/>, with no shape written, plays the usual shape of its
     /// part's instrument: a <c>diagram(…)</c> item on a fretted part (it draws that shape too). A

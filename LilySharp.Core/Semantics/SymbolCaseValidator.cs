@@ -47,6 +47,9 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
         // `beaming syllabic` (owner-approved 2026-11-13, grammar evaluation 3): a sung part's
         // beams join only the notes of one syllable (PartHeaderDefaults.BeamingSyllabic).
         "beaming",
+        // `range LOW HIGH` (owner's decision 2026-11-15, grammar evaluation 4): the pitches the
+        // part sounds between, for LYS1052 (PartHeaderDefaults.Range).
+        PartHeaderDefaults.RangeProperty,
     };
 
     /// <summary>The two words a part header's <c>pitch</c> takes (how its notes are typed),
@@ -273,7 +276,25 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
                 // to refuse sail straight through. The published marker list is the
                 // vocabulary (InstrumentPresetTests holds it to that switch), and Ordinal is
                 // the rule every other symbol in this header obeys.
-                CheckValue(valueTokens, TranspositionMarkers, "transposition", "markers");
+                // …or a PITCH (2026-11-15): what a written middle C sounds. Its reader is
+                // case-sensitive itself (PitchTransposer.AbsoluteMidi), so it is asked.
+                if (TranspositionMarkers.Contains(Joined(valueTokens))
+                    || IsQuoted(Joined(valueTokens))
+                    || InstrumentDefaults.TranspositionOfPitch(Joined(valueTokens)) is not null)
+                    break;
+                Error(valueTokens[0],
+                    $"Unknown transposition '{Joined(valueTokens)}'. transposition takes the pitch a written "
+                    + "middle C sounds (c' is middle C: 'transposition bes' a B-flat clarinet, 'transposition bes,' "
+                    + "a bass clarinet, 'transposition f' a horn in F) or an octave marker; both are case-sensitive; "
+                    + $"markers: {string.Join(", ", TranspositionMarkers.OrderBy(s => s, StringComparer.Ordinal))}.");
+                break;
+            case PartHeaderDefaults.RangeProperty:
+                // Ask the READER, as `transpose` does: two pitches, the lower first.
+                if (PartHeaderDefaults.ReadRange(prop) is null)
+                    Error(valueTokens[0],
+                        $"'{string.Join(' ', RangeWords(valueTokens))}' is not a range. range takes the lowest and the "
+                        + "highest pitch the part sounds, named as absolute pitches (c' is middle C), the lower "
+                        + "first - e.g. 'range d, bes''' (D2 to B-flat 5).");
                 break;
             case "pitch":
                 // The same two words the top-level directive takes (the parser refuses a
@@ -334,6 +355,23 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
     /// <summary>A hyphenated or mark-carrying value is several tokens in the tree.</summary>
     private static string Joined(List<SyntaxTokenNode> tokens)
         => string.Concat(tokens.Select(t => t.Text));
+
+    /// <summary>A <c>range</c>'s value as its writer spaced it: each word with its octave marks.</summary>
+    private static IEnumerable<string> RangeWords(List<SyntaxTokenNode> tokens)
+    {
+        var word = new System.Text.StringBuilder();
+        foreach (var token in tokens)
+        {
+            if (token.Kind is not (SyntaxKind.Apostrophe or SyntaxKind.Comma) && word.Length > 0)
+            {
+                yield return word.ToString();
+                word.Clear();
+            }
+            word.Append(token.Text);
+        }
+        if (word.Length > 0)
+            yield return word.ToString();
+    }
 
     private static IEnumerable<SyntaxTokenNode> ValueTokens(PropertyAssignmentSyntax prop)
     {

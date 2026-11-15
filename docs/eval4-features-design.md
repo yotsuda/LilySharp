@@ -2,7 +2,7 @@
 
 オーナー決定 2026-11-15（第1264）: 案 10 件（Lab `sessions/p1227/proposals-eval4.md`）のうち
 **作る**＝6・7・8-1・2・4、**後で**＝3・1・10、**見送り**＝5・8-2〜4・9。着手の順は
-6 → 7 → 8-1 → 2 → 4（6・7 は済み）。この文書は機能ごとの設計と、作った後の実際の形。
+6 → 7 → 8-1 → 2 → 4（6・7・8-1・2 は済み）。この文書は機能ごとの設計と、作った後の実際の形。
 
 ## 6. 符頭の形の区間 `c'8@notehead(cross) d' e' f'@!notehead`（第1269 で実装）
 
@@ -68,6 +68,47 @@
   書く形）が 2 つ重ねて刷られていた。同じ規則（1 小節に 1 つ）で 1 回になった。
 - LilyPond は `\repeat volta 4` に何も刷らない＝LILYSHARP-OWN（双子の絵に回数は無い）。音は変わらない。
 
-## 2. `transposition` に音名＋`range`（未着手）
+## 2. `transposition` に音名＋`range`（第1272 で実装）
+
+- **背景**: `transposition` は `8va`／`8vb`／`15ma`／`15mb` だけ＝オクターブしか言えず、preset の移調を**置き換える**。
+  preset にない移調楽器（B♭ のバスクラ＝長 9 度・アルトフルート・コールアングレ）は書けなかった
+  （評価 4 の書き手は `instrument clarinet` のまま 1 オクターブ上の音を聞いた）。音域の検査（LYS1052）も preset の表だけ。
+
+### `transposition PITCH`
+
+- **綴り**: 今の 4 語に加えて**音名**＝文字 a–g・`is`／`isis`／`es`／`eses`・オクターブの印（`transpose` の的と同じ読み）。
+- **意味**: 「**書かれた中央のド（`c'`）で鳴る音**」＝LilyPond の `\transposition bes,` と同じ。音名は絶対の読み
+  （裸の `c` は C3・`c'` が中央のド＝2026-10-28 からの音楽の中の読みと同じ）。
+  `bes`＝B♭ 管（−2）・`bes,`＝バスクラ・テナーサックス（−14）・`a`＝A 管（−3）・`g`＝アルトフルート（−5）・
+  `f`＝ホルン・コールアングレ（−7）・`ees`＝アルトサックス（−9）・`ees'`＝E♭ クラ（+3）・`c'`＝移調なし
+  （preset の移調を消す語が今まで無かった）・`c`＝`8vb`・`c''`＝`8va`。
+- **優先は今のまま**: 書いた `transposition` ＞ preset ＞ tuning。置き換えであって足し算ではない。
+- **読み手は 1 つ**: `InstrumentDefaults.ParseTranspositionSemitones` が値の全文（`bes,`）を読む。
+  `PartHeaderDefaults.TranspositionSemitones` から先は半音の数しか見ていないので、MIDI・tab のフレット・
+  `pitch concert` の入力・`score … pitch transposed`／`concert` の調号・MusicXML の `<transpose>`・`.ly` は付いてくる。
+  文字を自分で読んでいた 2 か所（`.ly` の `PartTransposition`・`RenderSpecParser.ResolvePartTransposition`）と
+  検査（`SymbolCaseValidator`）・ステータスバーの 1 行（`NoteStepper.TranspositionSays`）を同じ読みに揃える。
+- **大文字は拒む**（`Bes`）＝part header のほかの語と同じ Ordinal の規則。異名同音は区別しない（`ais`＝`bes`）。
+
+### `range LOW HIGH`
+
+- **綴り**: part header に音名 2 つ。`part bcl { instrument clarinet  transposition bes,  range d, bes'' }`。
+- **意味**: その part の**鳴る音**の下限と上限（絶対の音名）。preset の音域を置き換える。preset の無い part にも書ける
+  （`part kids { range c' g' }`＝子どもの歌を C4–G4 に収める検査）。
+  ⚠️ **「書かれた音」ではなく「鳴る音」にした**（Claude の判断）: preset の表と LYS1052 の文面が「as it sounds」で、
+  案の例 `range d, bes''` もバスクラの鳴る音域（D2–B♭5）。
+- **誤り**: 音名が 2 つでない・音名でない・下限が上限より高い＝エラー（LYS1010・ほかの part property の値と同じ）。
+- **読み手**: `PartHeaderDefaults.Range`（書いた range ＞ preset の表）を LYS1052（`InstrumentRangeValidator`）と
+  コードの音の床（`ShapeChords.CloseFloorOf`）が読む。書いた range は tuning では動かさない（書いた人の数字）。
+- **preset の音域は `transposition` で動かさない**（Claude の判断）: `instrument clarinet transposition bes,` で `range` を
+  書かなければ、低い音に今までどおり LYS1052 が出る＝その文面に `range` を 1 言足す。動かす案（preset の「書かれた音域」を保つ）は
+  `instrument piano-left transposition 8vb` のような「同じ楽器を 1 オクターブ下で」の本の警告を変えるので取らない。
+- 譜面は変えない。音は `chord(…)` の項目の密集の床だけが動く（preset の音域と同じ扱い）。MusicXML・`.ly` には書かない。
+
+### 作らないもの（残り）
+
+- MusicXML の読み込みはオクターブでない `<transpose>` を今も「書かれた音高で読み込む」と警告する。
+  `transposition` が音名を取るようになったので書けるはず＝別便。
+- 補完の `transposition ▮` は 4 語のまま（説明文だけ直す）。
 
 ## 4. `key none`（未着手）

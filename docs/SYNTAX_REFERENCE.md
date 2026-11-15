@@ -1962,7 +1962,7 @@ theme              // Insert the phrase's music here (bare name)
 ### Part Declaration
 
 Header attributes are written bare (no colon), the same as the top-level commands:
-`clef`, `key`, `octave`, `instrument`, `transpose`, `transposition`, `tuning`, `pitch`,
+`clef`, `key`, `octave`, `instrument`, `transpose`, `transposition`, `range`, `tuning`, `pitch`,
 `pedal`, `beaming syllabic` (a sung part's beams — see Beaming) and `midiInstrument "acoustic bass"` (a quoted General MIDI sound for playback,
 overriding the instrument preset's). `time` and `tempo` are not part attributes — every
 part shares them, so they go at the top level or in a section header:
@@ -2001,23 +2001,47 @@ rows too. It is not the way to write a transposing instrument, because nothing i
 page and the sound differ: beside an `instrument` preset it is added on top of the preset's
 transposition, and the page and the sound move together.
 
-**`transposition 8va | 8vb | 15ma | 15mb`** leaves the page alone and says the part sounds one
-or two octaves from it. It replaces the preset's transposition, it is not added to it:
-`instrument clarinet transposition 8vb` is no longer a B♭ instrument — it sounds an octave
-below the page, and under `pitch concert` it is typed as it sounds and printed an octave above,
-as the octave-only presets (`bass`, `piccolo`) are.
+**`transposition PITCH`** leaves the page alone and says what the part sounds: the pitch a
+written middle C sounds, named as an absolute pitch (`c'` is middle C) — LilyPond's
+`\transposition`. It replaces the preset's transposition, it is not added to it.
 
-The interval between a transposing instrument's page and its sound comes from its preset alone
+| | sounds | |
+|---|---|---|
+| `transposition bes` | a tone lower | B♭ clarinet, trumpet, soprano saxophone |
+| `transposition bes,` | a ninth lower | bass clarinet, tenor saxophone |
+| `transposition a` | a minor third lower | clarinet in A |
+| `transposition g` | a fourth lower | alto flute |
+| `transposition f` | a fifth lower | horn in F, cor anglais |
+| `transposition ees` | a sixth lower | alto saxophone |
+| `transposition ees'` | a minor third higher | E♭ clarinet |
+| `transposition c'` | as written | takes a preset's transposition away |
+
+The octaves have markers too: `transposition 8va | 8vb | 15ma | 15mb` (`8vb` is `c`, `8va` is
+`c''`). `instrument clarinet transposition 8vb` is no longer a B♭ instrument — it sounds an
+octave below the page, and under `pitch concert` it is typed as it sounds and printed an octave
+above, as the octave-only presets (`bass`, `piccolo`) are.
+
+The interval between a transposing instrument's page and its sound comes from its preset
 (`clarinet`, `clarinet-a`, `trumpet`, `horn`, `soprano-sax`, `alto-sax`, `tenor-sax`,
-`baritone-sax`), and `pitch` (top level, part, score, staff) chooses which of the two is typed
-and which is printed. A transposing instrument with no preset — an alto flute, a bass
-clarinet, a cor anglais — cannot be declared yet: no property states an interval other than
-whole octaves. Such a part is written at the pitch it sounds, and prints so on every page.
+`baritone-sax`) or from its own `transposition`, and `pitch` (top level, part, score, staff)
+chooses which of the two is typed and which is printed. A transposing instrument with no
+preset is its family's preset and its own transposition:
+
+```lilysharp
+part bcl { instrument clarinet "Bass Clarinet"  transposition bes,  range d, bes'' }
+part afl { instrument flute "Alto Flute"  transposition g  range g g''' }
+```
 
 A note the preset's instrument cannot sound is warned too (LYS1052): its SOUNDING pitch below
 or above the instrument's range — a flute's B3, a soprano's D6. The pitch is what plays, so a
 transposing instrument is judged by its sound (a B♭ clarinet's written E3 sounds D3, its lowest
 note). The ranges are a professional player's, wide rather than comfortable.
+
+**`range LOW HIGH`** states the part's own range: the lowest and the highest pitch it sounds,
+as absolute pitches, the lower first (`range d, bes''` is D2 to B♭5). It replaces the preset's
+range, and gives a part with no preset one — `part kids { range c' g' }` warns every note
+outside C4–G4. A preset's range does not move with a `transposition` the part writes: the part
+that states one states the other, as the bass clarinet above does.
 
 ### One part, no names
 

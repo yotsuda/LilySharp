@@ -24,7 +24,8 @@ namespace LilySharp.Core.Semantics;
 
 /// <summary>
 /// LYS1052: a note the part's <c>instrument</c> cannot sound (owner's request 2026-10-25) — its
-/// sounding pitch outside <see cref="InstrumentDefaults.SoundingRange"/>. Read off the notes the
+/// sounding pitch outside <see cref="PartHeaderDefaults.Range"/>: the part's own <c>range</c>,
+/// else its preset's <see cref="InstrumentDefaults.SoundingRange"/>. Read off the notes the
 /// MIDI export plays, so it is the SOUNDING pitch, every transposition applied (a B♭ clarinet's
 /// written E3 is its D3), and a phrase or a repeat is the note it expands from.
 /// </summary>
@@ -40,16 +41,31 @@ internal sealed class InstrumentRangeValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
-        var presets = new Dictionary<string, string>(System.StringComparer.Ordinal);
-        var ranges = new Dictionary<string, (int Low, int High)>(System.StringComparer.Ordinal);
+        // Each ranged part: its range, whose range it is in the message's words, and what the
+        // message advises. A part's own `range` (2026-11-15) is the writer's number: it is not
+        // moved to the tuning, and it is the part's, whatever its preset.
+        var ranges = new Dictionary<string, (int Low, int High, string Whose, string Advice)>(System.StringComparer.Ordinal);
         foreach (var part in tree.GetRoot().ChildNodes().OfType<PartDeclarationSyntax>())
         {
             var header = PartHeaderDefaults.Read(part);
-            if (header.Preset is { } preset && InstrumentDefaults.SoundingRange(preset) is { } range
-                && presets.TryAdd(part.Name.Text, preset))
-                ranges[part.Name.Text] = Retuned(range, preset, header.Tuning);
+            if (header.WrittenRange is { } written)
+                ranges.TryAdd(part.Name.Text, (written.Low, written.High, "the part's range",
+                    "check its octave, or the part's range"));
+            else if (header.Preset is { } preset && InstrumentDefaults.SoundingRange(preset) is { } range)
+            {
+                var (low, high) = Retuned(range, preset, header.Tuning);
+                // A part that states its own transposition is likely another member of the
+                // preset's family (a bass clarinet on `instrument clarinet`): the preset's range
+                // stays where it is, and the message names the property that states the part's.
+                bool ownShift = header.TranspositionSemitones != InstrumentDefaults.GetTransposition(preset);
+                ranges.TryAdd(part.Name.Text, (low, high,
+                    $"the range of the {InstrumentDefaults.PrintedName(preset) ?? preset}",
+                    ownShift
+                        ? "check its octave, or state the part's own range beside its transposition, e.g. 'range d, bes'''"
+                        : "check its octave, or the part's instrument"));
+            }
         }
-        if (presets.Count == 0)
+        if (ranges.Count == 0)
             return;
 
         MidiFile midi;
@@ -75,17 +91,16 @@ internal sealed class InstrumentRangeValidator : ISemanticValidator
         var seen = new HashSet<int>();
         foreach (var n in midi.Tracks.SelectMany(t => t.Notes))
         {
-            if (n.SourcePos < 0 || n.Part is not { } part || !presets.TryGetValue(part, out var preset))
+            if (n.SourcePos < 0 || n.Part is not { } part || !ranges.TryGetValue(part, out var range))
                 continue;
-            var (low, high) = ranges[part];
+            var (low, high, whose, advice) = range;
             if (n.Pitch >= low && n.Pitch <= high || !seen.Add(n.SourcePos))
                 continue;
             if (n.Pitch > high && harmonics?.Contains(n.SourcePos) == true)
                 continue;
-            string printed = InstrumentDefaults.PrintedName(preset) ?? preset;
             _diagnostics.Warning(new TextSpan(n.SourcePos, 1), DiagnosticCodes.NoteOutsideInstrumentRange,
-                $"this note sounds {Spell(n.Pitch)}, {(n.Pitch < low ? "below" : "above")} the range of the "
-                + $"{printed} ({Spell(low)}-{Spell(high)}, as it sounds) - check its octave, or the part's instrument");
+                $"this note sounds {Spell(n.Pitch)}, {(n.Pitch < low ? "below" : "above")} {whose} "
+                + $"({Spell(low)}-{Spell(high)}, as it sounds) - {advice}");
         }
     }
 

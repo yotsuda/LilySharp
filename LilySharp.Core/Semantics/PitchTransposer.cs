@@ -71,6 +71,36 @@ public static class PitchTransposer
     }
 
     /// <summary>
+    /// The MIDI pitch (C4 = 60) of an ABSOLUTE pitch name written with its octave marks as one
+    /// text — <c>bes,</c>, <c>c'</c>, <c>fis''</c> — or null for anything else. A bare letter is
+    /// in the octave every part's bare letter means (<c>c</c> = C3, <c>c'</c> middle C:
+    /// <see cref="Svg.Model.InstrumentDefaults.DefaultAnchorOctave"/>), so a pitch a part header
+    /// names — a <c>transposition</c>'s, a <c>range</c>'s end — is spelled as the same pitch is
+    /// in absolute music.
+    /// </summary>
+    /// <remarks>
+    /// Case-sensitive, where <see cref="TryParseTarget"/> lowers the letter: <c>Bes</c> is no
+    /// pitch here, by the Ordinal rule every other symbol of a part header obeys. Marks of both
+    /// kinds on one name (<c>c',</c>) are refused rather than summed.
+    /// </remarks>
+    public static int? AbsoluteMidi(string? text)
+    {
+        if (string.IsNullOrEmpty(text) || text[0] is < 'a' or > 'g')
+            return null;
+        int letters = text.Length;
+        while (letters > 0 && text[letters - 1] is '\'' or ',')
+            letters--;
+        string marks = text[letters..];
+        if (marks.Contains('\'') && marks.Contains(','))
+            return null;
+        if (!TryParseTarget(text[..letters], out int step, out int alteration))
+            return null;
+        int octave = Svg.Model.InstrumentDefaults.DefaultAnchorOctave
+            + (marks.StartsWith('\'') ? marks.Length : -marks.Length);
+        return 12 * (octave + 1) + RelativeOctave.StepSemitoneOf(step) + alteration;
+    }
+
+    /// <summary>
     /// Transposes one pitch by the interval from c to (toStep, toAlteration),
     /// preserving its chromatic distance. The octave is absolute (apply AFTER
     /// relative-octave resolution); a b→c roll-over carries the octave.

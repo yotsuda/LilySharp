@@ -289,7 +289,16 @@ public static partial class NoteStepper
     /// not change.</summary>
     private static string? TranspositionSays(string? marker)
     {
-        if (marker == null || !Svg.Model.InstrumentDefaults.TranspositionMarkers.Contains(marker)
+        if (marker == null)
+            return null;
+        // A pitch (2026-11-15): what a written middle C sounds.
+        if (Svg.Model.InstrumentDefaults.TranspositionOfPitch(marker) is int semitones)
+            return semitones == 0
+                ? $"transposition {marker}: sounds as written - the part has no transposition, whatever its instrument"
+                : $"transposition {marker}: written C4 sounds {SpellFlat(60 + semitones)}, {Math.Abs(semitones)} "
+                    + $"semitone{(Math.Abs(semitones) == 1 ? "" : "s")} {(semitones < 0 ? "below" : "above")} the page"
+                    + " - the written notes do not move";
+        if (!Svg.Model.InstrumentDefaults.TranspositionMarkers.Contains(marker)
             || Svg.Model.InstrumentDefaults.ParseTranspositionSemitones(marker) is not int shift)
             return null;
         string how = Math.Abs(shift) == 12 ? "an octave" : "two octaves";

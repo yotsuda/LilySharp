@@ -456,4 +456,213 @@ public class GrammarEvaluation4FeaturesTests
             Assert.Equal(LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(text), options),
                 compiler.RenderIncremental(SyntaxTree.Parse(text)));
     }
+
+    // ───────────────────────── 2. transposition bes,  ·  range d, bes'' ─────────────────────────
+
+    /// <summary>A part with <paramref name="header"/> playing <paramref name="music"/>.</summary>
+    private static string Player(string header, string music = "c'1 |", string top = "", string score = "score")
+        => $"{top}octave absolute\ntime 4/4\nkey c major\npart m {{ {header} }}\nsection A {{ m {{ {music} }} }}\nform {{ A }}\n"
+            + score + " { staff m }\n";
+
+    private static List<string> RangeWarnings(string source)
+        => [.. Said(source).Where(d => d.Code == DiagnosticCodes.NoteOutsideInstrumentRange).Select(d => d.Message)];
+
+    /// <summary>A <c>transposition</c> written as a pitch is the pitch a written middle C sounds,
+    /// named absolutely (<c>c'</c> is middle C) — LilyPond's <c>\transposition</c>.</summary>
+    [Theory]
+    [InlineData("bes", 58)]     // a B♭ clarinet
+    [InlineData("bes,", 46)]    // a bass clarinet, a tenor saxophone
+    [InlineData("a", 57)]       // a clarinet in A
+    [InlineData("g", 55)]       // an alto flute
+    [InlineData("f", 53)]       // a horn, a cor anglais
+    [InlineData("ees", 51)]     // an alto saxophone
+    [InlineData("ees'", 63)]    // an E♭ clarinet
+    [InlineData("ees,", 39)]    // a baritone saxophone
+    [InlineData("fis", 54)]
+    [InlineData("ais", 58)]     // only the semitones are kept: ais is bes
+    [InlineData("c'", 60)]      // none
+    [InlineData("c", 48)]       // 8vb
+    [InlineData("c''", 72)]     // 8va
+    [InlineData("c,", 36)]      // 15mb
+    public void ATranspositionWrittenAsAPitch_IsWhatAWrittenMiddleCSounds(string pitch, int sounds)
+    {
+        string book = Player("transposition " + pitch);
+        Clean(book);
+        Assert.Equal(sounds, Assert.Single(Notes(book)).Key);
+        Assert.Equal(sounds - 60, PartHeaderDefaults.Read(SyntaxTree.Parse(book).GetNodes<PartDeclarationSyntax>().Single()).TranspositionSemitones);
+    }
+
+    /// <summary>The octave pitches are the four markers, and a pitch replaces the preset's
+    /// transposition as a marker does — <c>c'</c> says "none", which no marker could.</summary>
+    [Fact]
+    public void APitch_ReplacesThePresetsTransposition_AsAMarkerDoes()
+    {
+        foreach (var (pitch, marker) in new[] { ("c", "8vb"), ("c''", "8va"), ("c,", "15mb"), ("c'''", "15ma") })
+            Assert.Equal(Notes(Player("transposition " + marker)), Notes(Player("transposition " + pitch)));
+
+        Assert.Equal(58, Assert.Single(Notes(Player("instrument clarinet"))).Key);
+        Assert.Equal(46, Assert.Single(Notes(Player("instrument clarinet transposition bes,"))).Key);
+        Assert.Equal(48, Assert.Single(Notes(Player("instrument bass"))).Key);
+        Assert.Equal(60, Assert.Single(Notes(Player("instrument bass transposition c'"))).Key);
+    }
+
+    /// <summary>A tab frets against a pitch as against the marker of the same octaves, on the
+    /// page and in the twin — the pitch read with its marks (<c>c,</c> is two octaves, not the
+    /// one of its letter).</summary>
+    [Fact]
+    public void ATab_FretsAgainstAPitchAsAgainstItsMarker()
+    {
+        static string Tab(string transposition)
+            => $"octave absolute\ntime 4/4\npart m {{ tuning guitar transposition {transposition} }}\n"
+                + "section A { m { e''4 g'' b'' e''' | } }\nform { A }\nscore { tab m }\n";
+        // The fret numbers are text, not glyphs: the page is compared as its SVG, less the
+        // source offsets (the two spellings differ in length).
+        static string Page(string source)
+            => System.Text.RegularExpressions.Regex.Replace(
+                LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(source),
+                    new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false }),
+                "data-pos=\"[^\"]*\"", "");
+        Clean(Tab("c,"));
+        Assert.Equal(Page(Tab("15mb")), Page(Tab("c,")));
+        Assert.NotEqual(Page(Tab("8vb")), Page(Tab("c,")));
+        Assert.Equal(Ly(Tab("15mb"), out _), Ly(Tab("c,"), out var warnings));
+        Assert.Empty(warnings);
+        Assert.NotEqual(Ly(Tab("8vb"), out _), Ly(Tab("c,"), out _));
+    }
+
+    /// <summary>A part that states a tenor saxophone's transposition is, on every page and in the
+    /// files, the tenor saxophone preset's part but for the instrument's name and sound: the
+    /// player's page a ninth up in D major, the conductor's as typed, MusicXML's
+    /// <c>&lt;transpose&gt;</c>, the twin's <c>\transpose</c>.</summary>
+    [Fact]
+    public void AStatedTransposition_IsThePresetsOnThePagesAndInTheFiles()
+    {
+        const string Music = "c'4 d' e' f' | g'1 |";
+        const string Conductors = "score", Players = "score player pitch transposed";
+        string preset = Player("instrument tenor-sax", Music, "pitch concert\n");
+        string stated = Player("clef treble transposition bes,", Music, "pitch concert\n");
+        Clean(stated);
+
+        foreach (string score in new[] { Conductors, Players })
+            Assert.Equal(Glyphs(Player("instrument tenor-sax", Music, "pitch concert\n", score)),
+                Glyphs(Player("clef treble transposition bes,", Music, "pitch concert\n", score)));
+        // The player's page is not the conductor's, nor a B♭ clarinet's: the pages above moved.
+        var players = Glyphs(Player("clef treble transposition bes,", Music, "pitch concert\n", Players));
+        Assert.NotEqual(Glyphs(stated), players);
+        Assert.NotEqual(Glyphs(Player("clef treble transposition bes", Music, "pitch concert\n", Players)), players);
+        Assert.Equal(Glyphs(stated), Glyphs(Player("clef treble", Music, "pitch concert\n", Players)));
+
+        Assert.Equal(Notes(preset).Select(n => (n.Key, n.Start, n.Ticks)), Notes(stated).Select(n => (n.Key, n.Start, n.Ticks)));
+
+        string xml = Xml(stated);
+        Assert.Contains("<chromatic>-2</chromatic>", xml);
+        Assert.Contains("<octave-change>-1</octave-change>", xml);
+        static string Transpose(string x) => x[x.IndexOf("<transpose>", StringComparison.Ordinal)..x.IndexOf("</transpose>", StringComparison.Ordinal)];
+        Assert.Equal(Transpose(Xml(preset)), Transpose(xml));
+
+        string ly = Ly(stated, out var warnings);
+        Assert.Empty(warnings);
+        Assert.Equal(Ly(preset, out _).Replace(" \\with { midiInstrument = \"tenor sax\" }", ""), ly);
+    }
+
+    /// <summary>What is neither a pitch nor a marker is refused, case included, and the message
+    /// names both.</summary>
+    [Theory]
+    [InlineData("Bes")]
+    [InlineData("h")]
+    [InlineData("bes,'")]
+    [InlineData("bess")]
+    [InlineData("banana")]
+    [InlineData("8VB")]
+    [InlineData("-2")]
+    public void ATranspositionThatIsNoPitchAndNoMarker_IsAnError(string value)
+    {
+        var said = Said(Player("transposition " + value));
+        var error = Assert.Single(said, d => d.Severity == DiagnosticSeverity.Error && d.Message.Contains("transposition"));
+        Assert.Equal(DiagnosticCodes.UnknownSymbolCase, error.Code);
+        Assert.Contains("the pitch a written middle C sounds", error.Message);
+        Assert.Contains("15ma, 15mb, 8va, 8vb", error.Message);
+    }
+
+    /// <summary>A part's <c>range</c> is the lowest and highest pitch it sounds: LYS1052 measures
+    /// its notes against it, with or without a preset, and by what they SOUND.</summary>
+    [Fact]
+    public void APartsRange_IsWhatItsNotesAreMeasuredAgainst()
+    {
+        // No preset: a part that names none was never judged.
+        Assert.Empty(RangeWarnings(Player("clef treble", "b4 c' g' a' |")));
+        var kids = RangeWarnings(Player("range c' g'", "b4 c' g' a' |"));
+        Assert.Equal(2, kids.Count);
+        Assert.Equal("this note sounds B3, below the part's range (C4-G4, as it sounds) - check its octave, or the part's range", kids[0]);
+        Assert.StartsWith("this note sounds A4, above the part's range (C4-G4", kids[1]);
+
+        // It replaces the preset's: a bass clarinet, written a ninth above its sound. Written E3
+        // sounds D2, the range's low end; written D3 sounds C2; written C7 sounds B♭5, the top.
+        const string Music = "e4 d c' c'''' |";
+        var clarinet = RangeWarnings(Player("instrument clarinet transposition bes,", Music));
+        Assert.Equal(3, clarinet.Count);   // the preset's range has not moved: all but the top note
+        Assert.All(clarinet, w => Assert.Contains("below the range of the Clarinet (D3-Bb6, as it sounds)", w));
+        Assert.All(clarinet, w => Assert.EndsWith("or state the part's own range beside its transposition, e.g. 'range d, bes'''", w));
+        var bass = Assert.Single(RangeWarnings(Player("instrument clarinet transposition bes, range d, bes''", Music)));
+        Assert.StartsWith("this note sounds C2, below the part's range (D2-Bb5", bass);
+        // The preset's own advice stands where the part states no transposition of its own.
+        Assert.EndsWith("check its octave, or the part's instrument",
+            Assert.Single(RangeWarnings(Player("instrument clarinet", "d4 e f g |"))));
+
+        // A written range is the writer's number: a tuning does not move it, as it moves a preset's.
+        Assert.Empty(RangeWarnings(Player("instrument guitar tuning guitarDropD", "d,1 |")));
+        Assert.Single(RangeWarnings(Player("instrument guitar tuning guitarDropD range e, e'''", "d,1 |")));
+    }
+
+    /// <summary>A range is two pitches, the lower first; anything else is said at the property,
+    /// and the property after it is read as it stands.</summary>
+    [Theory]
+    [InlineData("range c'", "'c'' is not a range")]
+    [InlineData("range g' c'", "'g' c'' is not a range")]
+    [InlineData("range C' g'", "'C' g'' is not a range")]
+    [InlineData("range 60 72", "'60' is not a range")]
+    public void ARangeThatIsNotTwoPitches_IsAnError(string header, string says)
+    {
+        var said = Said(Player(header + " clef bass"));
+        Assert.Contains(said, d => d.Code == DiagnosticCodes.UnknownSymbolCase && d.Message.StartsWith(says, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void TheRangesNeighbours_AreReadAsTheyStand()
+    {
+        string book = Player("clef bass range c, c'' instrument cello \"Vc.\"", "c,1 |");
+        Clean(book);
+        var header = PartHeaderDefaults.Read(SyntaxTree.Parse(book).GetNodes<PartDeclarationSyntax>().Single());
+        Assert.Equal((36, 72), header.Range);
+        Assert.Equal("cello", header.Preset);
+        Assert.Equal("bass", header.ClefWord);
+        // No range written: the preset's; neither: none.
+        Assert.Equal((36, 84), PartHeaderDefaults.Read(SyntaxTree.Parse(Player("instrument cello")).GetNodes<PartDeclarationSyntax>().Single()).Range);
+        Assert.Null(PartHeaderDefaults.Read(SyntaxTree.Parse(Player("clef bass")).GetNodes<PartDeclarationSyntax>().Single()).Range);
+        // A range of one pitch is a range.
+        Clean(Player("range c' c'"));
+    }
+
+    /// <summary>A chord item's close voicing is lifted into the part's range, a written one as a
+    /// preset's.</summary>
+    [Fact]
+    public void AChordItem_SoundsInsideThePartsWrittenRange()
+    {
+        int Lowest(string header) => Notes(Player(header, "chord(G)1 |")).Min(n => n.Key);
+        int free = Lowest("clef treble");
+        Assert.True(free < 60, $"the unranged chord's lowest note is {free}");
+        Assert.Equal(free + 12, Lowest("clef treble range c' c'''"));
+    }
+
+    /// <summary>The caret's status line on a pitch says what the written middle C sounds.</summary>
+    [Theory]
+    [InlineData("bes,", "transposition bes,: written C4 sounds B♭2, 14 semitones below the page - the written notes do not move")]
+    [InlineData("ees'", "transposition ees': written C4 sounds E♭4, 3 semitones above the page - the written notes do not move")]
+    [InlineData("c'", "transposition c': sounds as written - the part has no transposition, whatever its instrument")]
+    [InlineData("8vb", "transposition 8vb: sounds an octave below the page (written C4 sounds C3) - the written notes do not move")]
+    public void TheStatusLine_SaysWhatAPitchSounds(string value, string says)
+    {
+        string book = Player("instrument clarinet transposition " + value);
+        Assert.Equal(says, LilySharp.Core.Editing.NoteStepper.Describe(book, SyntaxTree.Parse(book), book.IndexOf("transposition", StringComparison.Ordinal) + 15));
+    }
 }

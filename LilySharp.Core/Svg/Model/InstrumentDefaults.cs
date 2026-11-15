@@ -439,10 +439,11 @@ public static class InstrumentDefaults
     };
 
     /// <summary>
-    /// Maps a <c>transposition</c> property value (an ottava marker — <c>8va</c>,
-    /// <c>8vb</c>, <c>15ma</c>, <c>15mb</c>) to its signed semitone shift, or null if
-    /// the text is not a recognized marker. <c>vb</c>/<c>mb</c> = down (sounds lower),
-    /// <c>va</c>/<c>ma</c> = up.
+    /// Maps a <c>transposition</c> property's value — the WHOLE of it, marks included
+    /// (<c>PropertyAssignmentSyntax.ValueText</c>) — to its signed semitone shift, or null if
+    /// the text is neither of the two things the property takes: an ottava marker
+    /// (<c>8va</c>, <c>8vb</c>, <c>15ma</c>, <c>15mb</c>; <c>vb</c>/<c>mb</c> = down, sounds
+    /// lower) or a PITCH (<see cref="TranspositionOfPitch"/>, 2026-11-15).
     /// </summary>
     public static int? ParseTranspositionSemitones(string value) => value.ToLowerInvariant() switch
     {
@@ -450,8 +451,26 @@ public static class InstrumentDefaults
         "8vb" => -12,
         "15ma" => 24,
         "15mb" => -24,
-        _ => null,
+        _ => TranspositionOfPitch(value),
     };
+
+    /// <summary>
+    /// A <c>transposition</c> written as a pitch (owner's decision 2026-11-15, grammar
+    /// evaluation 4): the pitch a written middle C SOUNDS, named absolutely (<c>c'</c> is middle
+    /// C) — <c>bes</c> a B♭ clarinet's −2, <c>bes,</c> a bass clarinet's −14, <c>g</c> an alto
+    /// flute's −5, <c>f</c> a cor anglais's −7, <c>ees'</c> an E♭ clarinet's +3, and <c>c'</c>
+    /// "none", which no marker says. Null for a text that is no pitch.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: Documentation/notation "Instrument transpositions" — \transposition takes the pitch heard when a written c' is played.
+    /// Until this the property took the four markers alone, so a transposing instrument with no
+    /// preset could not be declared. Only the semitones are kept: <c>ais</c> is <c>bes</c>.
+    /// </remarks>
+    public static int? TranspositionOfPitch(string value)
+        => Semantics.PitchTransposer.AbsoluteMidi(value) is int sounds ? sounds - MiddleC : null;
+
+    /// <summary>Middle C as a MIDI pitch — the written note a <c>transposition</c> pitch answers for.</summary>
+    private const int MiddleC = 60;
 
     /// <summary>
     /// The markers <c>transposition</c> takes, beside the switch that reads them so the two

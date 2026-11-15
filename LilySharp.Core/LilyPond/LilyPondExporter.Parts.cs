@@ -621,18 +621,17 @@ public sealed partial class LilyPondExporter
     /// The part's SOUNDING transposition in semitones, excluding the octave the clef itself
     /// carries: an explicit <c>transposition</c> property (<c>8vb</c> …) &gt; the instrument
     /// preset's default (bass = −12, piccolo = +12) &gt; the tuning's default (bass tunings =
-    /// −12). RenderSpecParser.ResolvePartTransposition, on the same two tables.
+    /// −12). The part header's one reading (<see cref="Semantics.PartHeaderDefaults.TranspositionSemitones"/>).
     /// </summary>
+    /// <remarks>
+    /// ⚠️ Asked only for a tab the page could not read (<c>RenderSpecParser.TabSpecOf</c> null —
+    /// a tab item naming no part): every other tab frets against its item's own shift. Until
+    /// 2026-11-15 this spelled the chain a third time, off the property's first token; no book
+    /// that compiles reaches it, so it reads the one home rather than keep a spelling no net
+    /// can watch (poisoned that day: the twin's tab net stayed green).
+    /// </remarks>
     private static int PartTransposition(PartDeclarationSyntax? part)
-    {
-        if (part == null) return 0;
-        if (PartProperty(part, "transposition") is string text
-            && InstrumentDefaults.ParseTranspositionSemitones(text) is int explicitShift)
-            return explicitShift;
-        return InstrumentPresetOf(part) is string preset
-            ? InstrumentDefaults.GetTransposition(preset)
-            : Tablature.Tunings.TuningTransposition(TabTuningType(part));
-    }
+        => Semantics.PartHeaderDefaults.Read(part).TranspositionSemitones;
 
     /// <summary>The clef word of a part header as the model's clef, for the octave it carries
     /// (<c>treble_8</c> sounds 8vb). Unknown or absent reads as treble, which carries none.</summary>
