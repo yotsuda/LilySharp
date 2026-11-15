@@ -26,8 +26,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {
     DETTATO_EXTENSION_ID, DettatoLocation, DettatoVersion, chartForConversion, dettatoArgs, dettatoFailure, judgeDettato,
-    locateDettato, parseDettatoVersion,
+    locateDettato, parseDettatoVersion, replaceQuestion,
 } from './dettatoCore';
+import { parseRecording, recordingPathFor } from './recordingCore';
 
 async function dettatoExports(): Promise<unknown> {
     const ext = vscode.extensions.getExtension(DETTATO_EXTENSION_ID);
@@ -196,9 +197,17 @@ export async function convertRecording(context: vscode.ExtensionContext, uri: vs
     // A chart beside the recording may hold the person's corrections: never written over unasked.
     let replace = false;
     if (fs.existsSync(chart)) {
+        // The bars a person placed by hand are named: the reading writes over them (Dettato's note
+        // of 2026-11-16; reading again around them is its D4, with format 2).
+        let byHand = 0;
+        try {
+            const rec = parseRecording(fs.readFileSync(recordingPathFor(chart), 'utf8'));
+            byHand = 'error' in rec ? 0 : rec.bars.filter(b => b.byHand).length;
+        } catch {
+            // (no file beside it)
+        }
         const answer = await vscode.window.showWarningMessage(
-            `${path.basename(chart)} is already there. Read the recording again and replace it (and its bar marks)?`,
-            { modal: true }, 'Replace');
+            replaceQuestion(path.basename(chart), byHand), { modal: true }, 'Replace');
         if (answer !== 'Replace') {
             return;
         }
@@ -230,6 +239,20 @@ export async function convertRecording(context: vscode.ExtensionContext, uri: vs
             void vscode.window.showErrorMessage(failure.text);
         }
         return;
+    }
+    // A chart written in another folder (the recording's could not be written): the file beside it
+    // names the recording without a path, so the recording goes there too, or the preview cannot
+    // find it (Dettato's note of 2026-11-16; docs/recording-design.md §1 1: no path in the file).
+    if (path.dirname(chart).toLowerCase() !== path.dirname(recording).toLowerCase()) {
+        const copy = path.join(path.dirname(chart), path.basename(recording));
+        try {
+            if (!fs.existsSync(copy)) {
+                await fs.promises.copyFile(recording, copy);
+                output.appendLine(`copied ${recording} → ${copy} (the preview plays the recording beside the chart)`);
+            }
+        } catch (e) {
+            void vscode.window.showWarningMessage(`Lily#: ${path.basename(recording)} could not be copied beside the chart, so the preview cannot play it: ${(e as Error).message ?? e}`);
+        }
     }
     // The chart and its preview beside it (as Calamo's read opens the score).
     const doc = await vscode.workspace.openTextDocument(chart);

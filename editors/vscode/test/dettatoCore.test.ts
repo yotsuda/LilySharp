@@ -20,6 +20,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
     DETTATO_INPUTS, chartForConversion, dettatoArgs, dettatoFailure, judgeDettato, locateDettato, parseDettatoVersion,
+    replaceQuestion,
 } from '../src/dettatoCore';
 
 describe('Dettato, the recording reader', () => {
@@ -66,8 +67,18 @@ describe('Dettato, the recording reader', () => {
         assert.deepEqual(dettatoFailure(1, 'listening to x.mp3\nthe beats\ndettato: x.mp3 is shorter than 5 seconds\n', 'x.mp3'),
             { text: 'Lily#: x.mp3 cannot be read: x.mp3 is shorter than 5 seconds', showOutput: false });
         assert.deepEqual(dettatoFailure(2, '', 'x.mp3'), { text: 'Lily#: x.mp3 cannot be read.', showOutput: false });
+        // The reader names the recording itself: said once (Dettato's note of 2026-11-16).
+        assert.deepEqual(dettatoFailure(1, 'dettato: x.wav was not read: shorter than 5 seconds', 'x.wav'),
+            { text: 'Lily#: x.wav cannot be read: shorter than 5 seconds', showOutput: false });
         assert.deepEqual(dettatoFailure(3, 'dettato: the models are missing', 'x.mp3'),
             { text: 'Lily#: the Dettato reader failed (exit code 3): the models are missing', showOutput: true });
+    });
+
+    it('asks before reading a chart again, naming the bars placed by hand it would write over', () => {
+        assert.equal(replaceQuestion('take.lys', 0), 'take.lys is already there. Read the recording again and replace it?');
+        assert.equal(replaceQuestion('take.lys', 1),
+            'take.lys is already there. Read the recording again and replace it, and the 1 bar you placed by hand in the recording?');
+        assert.match(replaceQuestion('take.lys', 12), /the 12 bars you placed by hand/);
     });
 
     it('takes the recordings the Explorer offers it for — the same list as package.json\'s right-click', () => {

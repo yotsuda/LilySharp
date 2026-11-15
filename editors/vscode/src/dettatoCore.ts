@@ -125,6 +125,14 @@ export function dettatoArgs(recording: string, chart: string, replace: boolean):
     return replace ? [recording, '-o', chart, '--force'] : [recording, '-o', chart];
 }
 
+/** The question before a chart already there is read again: it, and the bars a person placed by
+ *  hand in the file beside it, which the reading writes over (Dettato's note of 2026-11-16: reading
+ *  again with the person's lines as its input is Dettato's D4, to be agreed with format 2). */
+export function replaceQuestion(chartName: string, byHand: number): string {
+    const marks = byHand > 0 ? `, and the ${byHand} bar${byHand === 1 ? '' : 's'} you placed by hand in the recording` : '';
+    return `${chartName} is already there. Read the recording again and replace it${marks}?`;
+}
+
 /** The chart a recording is written to: beside it, its own name, `.lys`. */
 export function chartForConversion(recording: string): string {
     const slash = Math.max(recording.lastIndexOf('/'), recording.lastIndexOf('\\'));
@@ -138,7 +146,9 @@ export function chartForConversion(recording: string): string {
  *  that one with Show Output. */
 export function dettatoFailure(code: number | null, stderr: string, name: string): { text: string; showOutput: boolean } {
     const lines = stderr.split(/\r?\n/).map(l => l.trim()).filter(l => l !== '');
-    const reason = lines.length > 0 ? lines[lines.length - 1].replace(/^dettato:\s*/, '') : '';
+    // The reader says `dettato: <name> was not read: <reason>`; the name is already ours (Dettato's
+    // note of 2026-11-16: it was said twice).
+    const reason = lines.length > 0 ? lines[lines.length - 1].replace(/^dettato:\s*/, '').replace(/^.*? was not read:\s*/, '') : '';
     if (code === 1 || code === 2) {
         return { text: `Lily#: ${name} cannot be read${reason ? `: ${reason}` : '.'}`, showOutput: false };
     }
