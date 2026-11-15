@@ -147,7 +147,8 @@ base `1cd52d6d7`・開始時 full 17372 合格 / 1 失敗（`ReadmeSampleTests`�
 **録音を聴きながら直す（Dettato #4）の実装に着手**＝`docs/recording-design.md`（決定 §1・測ったこと §3・最初の版 §4・段取り §5）。オーナー決定（第1283 の会話）: エンジンは Signalsmith Stretch／m4a は Windows で LSP が Media Foundation で復号（(a)）／最初の版は §4 の 1〜4／小節を打つ操作は「楽譜の次の小節を録音に合わせる」コマンドでキーは変えられる。
 - S1（隣のファイル `<stem>.dettato.json` の読み書き・小節 ↔ 録音の秒）: `editors/vscode/src/recordingCore.ts`＋網 `test/recordingCore.test.ts` 10 本緑。形式 1 を読み形式 2（`byHand`）で書く・知らない項目は保つ・弱起は最初の `A` が 0 より後なら 0 番の小節。
 - S2: LSP `lilysharp/decodeRecording`（`RecordingDecoder`＝Dettato の `Audio.cs` の読み方・NAudio.Wasapi 2.2.1・先頭の無音を取る。網 `RecordingDecoderTests` 3・毒＝無音を取らないと赤。`b7d98c03c`）／拡張の「Attach Recording…」（右クリックとパレット・別フォルダの音源はコピーを訊く・置き換えを訊く）とリネームの追従（`recording.ts`・判断は `recordingCore`。実物の VS Code で 3 段確認＝Lab `p1284/attach-e2e`。`ba784ad1b`）。
-- 次: S3（webview の再生・Signalsmith の同梱・ツールバーの切り替えと録音パネル）。
+- S3: Signalsmith を同梱（npm 1.3.2 を esbuild が `out/synth` へ写す・THIRD-PARTY-NOTICES に NAudio と共に。`23f188828`）／ツールバーの 2 つのボタン（隣のファイルがあるときだけ）と録音パネル・`LysSynth.RecordingPlayer`（`src/webview/recordingPlayer.ts`・再標本化か伸縮かは `recordingPlan`・−3 dB とリミッター）・拡張は `sendRecording` で変わったときだけ送る（m4a は LSP の WAV）。実物の VS Code を CDP で: そのまま 1.008 s／50%＋1 オクターブ 0.505 s／連動 2.10 s 進む（Lab `p1284/rec-e2e`。CDP は `userGesture: true` でないと AudioContext が止まったまま）。`62a57b8fd`。
+- **次: S4**＝Play は今は録音の頭から（`playRecordingFrom(0)`）。楽譜の小節・選択から鳴らす・選んだ範囲のループ（`setLoop`）・再生位置の小節を追う（`scoreTimeAt`）。手がかり: 選択は `selectedBarsSpan()`（ソースの位置）・小節頭は `rawBeats`／`rawBarEnd`（`playbackData` の後に入る）・追従は `followAlong`。その後 S5（帯・小節を打つ）・S6（文書・Dettato への返事・CHANGELOG）。⚠️ Release 前に `MANUAL-CHECKS` に耳の確認を足す。
 
 ## 以下は第1283セッションの経緯
 
