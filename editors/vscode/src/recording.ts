@@ -20,8 +20,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import {
-    WEBVIEW_AUDIO, WINDOWS_AUDIO, audioReader, chartForRecording, newRecording, parseRecording, recordingPathFor,
-    serializeRecording, workForRename,
+    WEBVIEW_AUDIO, WINDOWS_AUDIO, audioReader, audioRef, chartForRecording, newRecording, parseRecording, recordingPathFor,
+    resolveAudio, samePath, serializeRecording, workForRename,
 } from './recordingCore';
 
 const isWindows = process.platform === 'win32';
@@ -51,9 +51,9 @@ function activeChart(): vscode.Uri | undefined {
 /**
  * Attaches a recording to a chart: writes the file beside the chart, `<stem>.dettato.json`
  * (format 2, no bars yet — they are set by hand in the preview). From the Explorer's right-click
- * on a recording, or from the Command Palette for the chart open in the editor. The recording
- * must be in the chart's folder (the file names it without a path): one elsewhere is copied
- * there when the person agrees. Returns the file written, or undefined.
+ * on a recording, or from the Command Palette for the chart open in the editor. A recording in
+ * another folder stays where it is: the file names the way to it (audioRef; owner's decision
+ * 2026-11-16, which retired the copy). Returns the file written, or undefined.
  */
 export async function attachRecording(uri?: vscode.Uri, onAttached?: (chart: vscode.Uri) => void): Promise<vscode.Uri | undefined> {
     let audio = uri && uri.scheme === 'file' && !uri.fsPath.toLowerCase().endsWith('.lys') ? uri : undefined;
@@ -80,7 +80,7 @@ export async function attachRecording(uri?: vscode.Uri, onAttached?: (chart: vsc
             }
             chart = vscode.Uri.joinPath(folder, pick);
         } else {
-            void vscode.window.showErrorMessage('Lily#: there is no chart (.lys) beside this recording — put the recording in the chart\'s folder.');
+            void vscode.window.showErrorMessage('Lily#: there is no chart (.lys) beside this recording — open the chart and run "Attach Recording…" there to choose it.');
             return undefined;
         }
     } else {
@@ -108,30 +108,12 @@ export async function attachRecording(uri?: vscode.Uri, onAttached?: (chart: vsc
         }
     }
 
-    // The file names the recording without a path: it must sit in the chart's folder.
-    const chartFolder = path.dirname(chart.fsPath);
-    if (path.dirname(audio.fsPath).toLowerCase() !== chartFolder.toLowerCase()) {
-        const target = vscode.Uri.file(path.join(chartFolder, path.basename(audio.fsPath)));
-        if (await exists(target)) {
-            void vscode.window.showErrorMessage(`Lily#: ${path.basename(target.fsPath)} is already in the chart's folder — attach that one, or rename one of them.`);
-            return undefined;
-        }
-        const copy = 'Copy';
-        const answer = await vscode.window.showInformationMessage(
-            `The recording has to be in the chart's folder. Copy ${path.basename(audio.fsPath)} there?`, { modal: true }, copy);
-        if (answer !== copy) {
-            return undefined;
-        }
-        await vscode.workspace.fs.copy(audio, target);
-        audio = target;
-    }
-
     const file = vscode.Uri.file(recordingPathFor(chart.fsPath));
     const name = path.basename(audio.fsPath);
     const before = await readText(file);
     if (before !== undefined) {
         const old = parseRecording(before);
-        if (!('error' in old) && old.audio === name) {
+        if (!('error' in old) && samePath(resolveAudio(file.fsPath, old.audio), audio.fsPath)) {
             void vscode.window.showInformationMessage(`Lily#: ${name} is already attached to ${path.basename(chart.fsPath)}.`);
             return file;
         }
@@ -143,7 +125,7 @@ export async function attachRecording(uri?: vscode.Uri, onAttached?: (chart: vsc
             return undefined;
         }
     }
-    await vscode.workspace.fs.writeFile(file, Buffer.from(serializeRecording(newRecording(name)), 'utf8'));
+    await vscode.workspace.fs.writeFile(file, Buffer.from(serializeRecording(newRecording(audioRef(file.fsPath, audio.fsPath))), 'utf8'));
     onAttached?.(chart);
     void vscode.window.showInformationMessage(
         `Lily#: ${name} is attached to ${path.basename(chart.fsPath)} (in ${path.basename(file.fsPath)}). Its bars are not placed yet: mark them in the preview while it plays.`);
@@ -191,7 +173,7 @@ export async function sendRecording(panel: vscode.WebviewPanel, chart: vscode.Ur
     const fileKey = await statKey(file);
     const text = fileKey ? await readText(file) : undefined;
     const rec = text !== undefined ? parseRecording(text) : undefined;
-    const audio = rec && !('error' in rec) ? vscode.Uri.file(path.join(path.dirname(chart.fsPath), rec.audio)) : undefined;
+    const audio = rec && !('error' in rec) ? vscode.Uri.file(path.normalize(resolveAudio(file.fsPath, rec.audio))) : undefined;
     const audioKey = audio ? await statKey(audio) : undefined;
     const key = `${chart.toString()}\n${fileKey}\n${audioKey}`;
     if (!force && sentKeys.get(panel) === key) {
@@ -207,9 +189,13 @@ export async function sendRecording(panel: vscode.WebviewPanel, chart: vscode.Ur
         post({ error: `${path.basename(file.fsPath)}: ${rec.error}` });
         return;
     }
-    const base = { name: rec.audio, bars: rec.bars, pickup: rec.pickup, settings: recordingSettingsFor(chart.toString(), rec.audio) ?? null };
+    const shown = path.basename(audio!.fsPath);
+    const base = { name: shown, bars: rec.bars, pickup: rec.pickup, settings: recordingSettingsFor(chart.toString(), shown) ?? null };
     if (!audio || !audioKey) {
-        post({ ...base, error: `${rec.audio} is not beside the chart` });
+        // Moved, renamed outside VS Code, or on a drive not here: say where it was looked for, and
+        // let it be found again (Dettato's request 6).
+        post({ ...base, error: `${shown} cannot be found (${audio!.fsPath})` });
+        offerLocate(chart, audio!.fsPath, key);
         return;
     }
     const how = audioReader(rec.audio, isWindows);
@@ -282,6 +268,35 @@ export function keepRecordingSettings(chart: string, audio: string, settings: un
     void settingsStore.update(settingsKey(chart, audio), kept);
 }
 
+/** The recordings already asked about, so a preview re-rendering does not ask again. */
+const locateAsked = new Set<string>();
+
+/** Says a chart's recording cannot be found, and offers to find it: the file beside the chart then
+ *  names the one chosen, its bars kept. */
+function offerLocate(chart: vscode.Uri, lookedFor: string, key: string): void {
+    if (locateAsked.has(key)) { return; }
+    locateAsked.add(key);
+    const locate = 'Locate Recording…';
+    void vscode.window.showWarningMessage(
+        `Lily#: the recording of ${path.basename(chart.fsPath)} cannot be found: ${lookedFor}.`, locate)
+        .then(async choice => {
+            if (choice !== locate) { return; }
+            const kinds = [...WEBVIEW_AUDIO, ...(isWindows ? WINDOWS_AUDIO : [])];
+            const picked = await vscode.window.showOpenDialog({
+                title: `Where is ${path.basename(lookedFor)}?`, canSelectMany: false,
+                defaultUri: vscode.Uri.file(path.dirname(chart.fsPath)), filters: { Recordings: kinds }, openLabel: 'Use This Recording',
+            });
+            if (!picked || picked.length === 0) { return; }
+            const file = vscode.Uri.file(recordingPathFor(chart.fsPath));
+            const text = await readText(file);
+            const rec = text !== undefined ? parseRecording(text) : undefined;
+            if (!rec || 'error' in rec) { return; }
+            rec.audio = audioRef(file.fsPath, picked[0].fsPath);
+            await vscode.workspace.fs.writeFile(file, Buffer.from(serializeRecording(rec), 'utf8'));
+            locateAsked.delete(key);
+        });
+}
+
 /** Forgets what was sent to a preview, so the next update sends the recording again. */
 export function forgetSentRecording(panel: vscode.WebviewPanel): void {
     sentKeys.delete(panel);
@@ -307,6 +322,21 @@ export function followRenames(): vscode.Disposable {
             } catch {
                 // (a folder gone: nothing to follow)
             }
+            // A recording may be named from anywhere (audio leads to it, Dettato's request 6): every
+            // file beside a chart in the workspace may name it.
+            const isRecording = [...WEBVIEW_AUDIO, ...WINDOWS_AUDIO].includes(path.extname(oldUri.fsPath).slice(1).toLowerCase());
+            if (isRecording) {
+                try {
+                    for (const u of await vscode.workspace.findFiles('**/*.dettato.json', '**/node_modules/**', 2000)) {
+                        if (!texts.has(u.fsPath)) {
+                            inFolder.push(u.fsPath);
+                            texts.set(u.fsPath, await readText(u));
+                        }
+                    }
+                } catch {
+                    // (no workspace: the folder's files only)
+                }
+            }
             const known = new Set<string>(inFolder);
             for (const f of [recordingPathFor(oldUri.fsPath), recordingPathFor(newUri.fsPath)]) {
                 if (!texts.has(f) && await exists(vscode.Uri.file(f))) {
@@ -321,6 +351,12 @@ export function followRenames(): vscode.Disposable {
                 try {
                     if (w.kind === 'move') {
                         await vscode.workspace.fs.rename(vscode.Uri.file(w.from), vscode.Uri.file(w.to), { overwrite: false });
+                        // Into another folder: the way to the recording is written from there.
+                        const r = w.audio !== undefined ? parseRecording(texts.get(w.from) ?? '') : undefined;
+                        if (r && !('error' in r)) {
+                            r.audio = w.audio!;
+                            await vscode.workspace.fs.writeFile(vscode.Uri.file(w.to), Buffer.from(serializeRecording(r), 'utf8'));
+                        }
                     } else {
                         const r = parseRecording(texts.get(w.file) ?? '');
                         if (!('error' in r)) {

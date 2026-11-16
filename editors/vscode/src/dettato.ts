@@ -137,11 +137,19 @@ function askVersion(exe: string): Promise<DettatoVersion | undefined> {
         (err, stdout) => resolve(err ? undefined : parseDettatoVersion(String(stdout)))));
 }
 
+/** Whether a version string ("0.3.1") is at least major.minor.patch. */
+function versionAtLeast(version: string | undefined, major: number, minor: number, patch: number): boolean {
+    const m = /^(\d+)\.(\d+)\.(\d+)/.exec(version ?? '');
+    if (!m) { return false; }
+    const [a, b, c] = [Number(m[1]), Number(m[2]), Number(m[3])];
+    return a !== major ? a > major : b !== minor ? b > minor : c >= patch;
+}
+
 /**
  * Converts a recording (right-clicked, or chosen) into a chart and opens it. The steps and the
  * words follow "Convert Image/PDF to Lily# (.lys)…" (omrImport.ts importFromImage): the reader
- * first (offered when missing, before any file is chosen), its version asked, the folder beside
- * the recording unless it cannot be written, the progress cancellable, the same failures.
+ * first (offered when missing, before any file is chosen), its version asked, the folder asked
+ * (the recording's offered first), the progress cancellable, the same failures.
  */
 export async function convertRecording(context: vscode.ExtensionContext, uri: vscode.Uri | undefined,
     output: vscode.OutputChannel, openPreview?: (chart: vscode.Uri) => Thenable<unknown>): Promise<void> {
@@ -181,19 +189,26 @@ export async function convertRecording(context: vscode.ExtensionContext, uri: vs
         return;
     }
     const recording = uri.fsPath;
-    // Beside the recording, unless that folder cannot be written: then ask (as Calamo's read does).
+    // The folder is asked every time, the recording's offered first (owner's decision 2026-11-16,
+    // Dettato's request 6: a chart and its file beside the recording was awkward to keep).
     let chart = chartForConversion(recording);
-    try {
-        await fs.promises.access(path.dirname(chart), fs.constants.W_OK);
-    } catch {
+    for (;;) {
         const folder = await vscode.window.showOpenDialog({
-            canSelectFiles: false, canSelectFolders: true, openLabel: 'Write the chart here',
-            title: `Lily#: ${path.dirname(chart)} cannot be written — where should the chart go?`,
+            canSelectFiles: false, canSelectFolders: true, canSelectMany: false, openLabel: 'Write the Chart Here',
+            defaultUri: vscode.Uri.file(path.dirname(recording)),
+            title: `Lily#: where should the chart of ${path.basename(recording)} go?`,
         });
         if (!folder || folder.length === 0) {
             return;
         }
+        try {
+            await fs.promises.access(folder[0].fsPath, fs.constants.W_OK);
+        } catch {
+            void vscode.window.showErrorMessage(`Lily#: ${folder[0].fsPath} cannot be written — choose another folder.`);
+            continue;
+        }
         chart = path.join(folder[0].fsPath, path.basename(chart));
+        break;
     }
     // A chart beside the recording may hold the person's corrections: never written over unasked.
     let replace = false;
@@ -246,10 +261,11 @@ export async function convertRecording(context: vscode.ExtensionContext, uri: vs
         }
         return;
     }
-    // A chart written in another folder (the recording's could not be written): the file beside it
-    // names the recording without a path, so the recording goes there too, or the preview cannot
-    // find it (Dettato's note of 2026-11-16; docs/recording-design.md §1 1: no path in the file).
-    if (path.dirname(chart).toLowerCase() !== path.dirname(recording).toLowerCase()) {
+    // A chart written in another folder: Dettato 0.3.0 and later write the way to the recording in
+    // the file beside the chart (`audio`, read by recordingCore.resolveAudio — Dettato's request 6),
+    // and the recording stays where it is. An older reader names it without a path, so the
+    // recording goes beside the chart, or the preview cannot find it.
+    if (path.dirname(chart).toLowerCase() !== path.dirname(recording).toLowerCase() && !versionAtLeast(v.version, 0, 3, 0)) {
         const copy = path.join(path.dirname(chart), path.basename(recording));
         try {
             if (!fs.existsSync(copy)) {

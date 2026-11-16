@@ -105,31 +105,113 @@ export function chartForRecording(audio: string, lysInFolder: readonly string[],
     return lysInFolder.length === 1 ? lysInFolder[0] : undefined;
 }
 
+// ---------------------------------------------------------------- where the recording is
+//
+// The file beside a chart names its recording by `audio` (Dettato's request 6, owner's decision
+// 2026-11-16, which retired "the file name only"): the file name when the recording is beside the
+// chart; else the way to it from the chart's folder, `/`-separated (`../Music/x.mp3`); on another
+// drive, the whole path (`F:/Music/x.mp3`). These are strings, not Node paths: the webview reads
+// this module too.
+
+function slashed(p: string): string {
+    return p.replace(/\\/g, '/');
+}
+
+function isAbsolutePath(p: string): boolean {
+    return /^[A-Za-z]:\//.test(p) || p.startsWith('/');
+}
+
+/** The folder of a path, with its last `/`. */
+function folderOf(p: string): string {
+    const s = slashed(p);
+    return s.slice(0, s.lastIndexOf('/') + 1);
+}
+
+/** `.` and `..` taken out of a `/` path. */
+function collapse(p: string): string {
+    const lead = p.startsWith('//') ? '//' : p.startsWith('/') ? '/' : '';
+    const out: string[] = [];
+    for (const part of p.slice(lead.length).split('/')) {
+        if (part === '' || part === '.') { continue; }
+        if (part === '..' && out.length > 0 && out[out.length - 1] !== '..' && !/^[A-Za-z]:$/.test(out[out.length - 1])) {
+            out.pop();
+        } else {
+            out.push(part);
+        }
+    }
+    return lead + out.join('/');
+}
+
+/** Whether two paths name one file (Windows: case aside). */
+export function samePath(a: string, b: string): boolean {
+    return collapse(slashed(a)).toLowerCase() === collapse(slashed(b)).toLowerCase();
+}
+
+/** The recording a file beside a chart names, as a whole `/` path: its `audio` read from the
+ *  file's own folder. */
+export function resolveAudio(recordingFile: string, audio: string): string {
+    const a = slashed(audio);
+    return collapse(isAbsolutePath(a) || a.startsWith('//') ? a : folderOf(recordingFile) + a);
+}
+
+/** What the file at `recordingFile` writes as `audio` for the recording at `audioPath`: its name
+ *  when beside it, the way to it from the file's folder, or — on another drive — its whole path. */
+export function audioRef(recordingFile: string, audioPath: string): string {
+    const fromPath = collapse(slashed(folderOf(recordingFile))), toPath = collapse(slashed(audioPath));
+    const from = fromPath.split('/').filter(s => s !== '');
+    const to = toPath.split('/').filter(s => s !== '');
+    const name = to.pop() ?? '';
+    const lower = (s: string) => s.toLowerCase();
+    if (from.length === to.length && from.every((s, i) => lower(s) === lower(to[i]))) {
+        return name;
+    }
+    // The drive (C:), the share (//server) or the one root (/): another one, the whole path.
+    const root = (s: string) => /^[A-Za-z]:\//.test(s) ? lower(s.slice(0, 2))
+        : s.startsWith('//') ? '//' + lower(s.slice(2).split('/')[0]) : '/';
+    if (root(fromPath) !== root(toPath)) {
+        return toPath;
+    }
+    let common = 0;
+    while (common < from.length && common < to.length && lower(from[common]) === lower(to[common])) {
+        common++;
+    }
+    return [...from.slice(common).map(() => '..'), ...to.slice(common), name].join('/');
+}
+
 /** What a rename in the workspace asks of the files beside charts: a chart renamed takes its
- *  file along; a recording renamed is renamed inside the file that names it. Paths in, the work
+ *  file along (its `audio` written anew when the folder changed, so it still finds the recording);
+ *  a recording renamed or moved is named anew inside every file that names it. Paths in, the work
  *  out — `move` the file beside a chart, or `rename` the audio a file names. */
 export type RecordingRenameWork =
-    | { kind: 'move'; from: string; to: string }
+    | { kind: 'move'; from: string; to: string; audio?: string }
     | { kind: 'rename'; file: string; audio: string };
 
+/** `candidates` are the files beside charts that may name a renamed recording — the folder's and,
+ *  as `audio` may lead elsewhere since 2026-11-16, the workspace's. */
 export function workForRename(oldPath: string, newPath: string, exists: (path: string) => boolean,
-    namesAudio: (recordingPath: string) => string | undefined, recordingsInFolder: readonly string[] = []): RecordingRenameWork[] {
+    namesAudio: (recordingPath: string) => string | undefined, candidates: readonly string[] = []): RecordingRenameWork[] {
     const work: RecordingRenameWork[] = [];
-    const folder = (p: string) => p.slice(0, Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\')) + 1);
-    const name = (p: string) => p.slice(folder(p).length);
     if (extensionOf(oldPath) === 'lys' && extensionOf(newPath) === 'lys') {
         const from = recordingPathFor(oldPath), to = recordingPathFor(newPath);
         if (exists(from) && !exists(to)) {
-            work.push({ kind: 'move', from, to });
+            const audio = namesAudio(from);
+            const moved = audio !== undefined && !samePath(folderOf(from), folderOf(to))
+                ? audioRef(to, resolveAudio(from, audio)) : undefined;
+            work.push(moved !== undefined && moved !== audio ? { kind: 'move', from, to, audio: moved } : { kind: 'move', from, to });
         }
         return work;
     }
-    // A recording renamed in its own folder: every file beside a chart there that names it follows
-    // (a chart's file is named for the chart, which need not be the recording's name).
-    if (folder(oldPath) === folder(newPath) && [...WEBVIEW_AUDIO, ...WINDOWS_AUDIO].includes(extensionOf(oldPath))) {
-        for (const file of recordingsInFolder) {
-            if (folder(file) === folder(oldPath) && exists(file) && namesAudio(file) === name(oldPath)) {
-                work.push({ kind: 'rename', file, audio: name(newPath) });
+    // A recording renamed or moved: every file beside a chart that names it follows (a chart's
+    // file is named for the chart, which need not be the recording's name).
+    if ([...WEBVIEW_AUDIO, ...WINDOWS_AUDIO].includes(extensionOf(oldPath))) {
+        const seen = new Set<string>();
+        for (const file of candidates) {
+            const key = collapse(slashed(file)).toLowerCase();
+            if (seen.has(key)) { continue; }
+            seen.add(key);
+            const audio = namesAudio(file);
+            if (audio !== undefined && exists(file) && samePath(resolveAudio(file, audio), oldPath)) {
+                work.push({ kind: 'rename', file, audio: audioRef(file, newPath) });
             }
         }
     }
@@ -156,8 +238,10 @@ export function parseRecording(text: string): Recording | { error: string } {
     if (format > RECORDING_FORMAT) {
         return { error: `format ${format} is newer than this Lily# reads (${RECORDING_FORMAT}) — update Lily#` };
     }
-    if (typeof o.audio !== 'string' || o.audio === '' || /[\\/]/.test(o.audio)) {
-        return { error: `"audio" must be the recording's file name, in the same folder` };
+    // The file name beside the chart, the way to the recording from the chart's folder, or the
+    // whole path (resolveAudio; Dettato's request 6).
+    if (typeof o.audio !== 'string' || o.audio.trim() === '') {
+        return { error: `"audio" must name the recording` };
     }
     if (!Array.isArray(o.bars)) {
         return { error: `"bars" is missing` };

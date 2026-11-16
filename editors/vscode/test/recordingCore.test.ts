@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import {
     RECORDING_DEFAULTS, Recording, ScoreBeat, audioPathFor, recordingPlan, audioReader, barAt, chartForRecording, lineUp, newRecording, parseRecording,
-    recordingPathFor, recordingSecondAt, scoreBars, scoreTimeAt, serializeRecording, timeWarp, unwarpTime, warpBeats, warpFit, warpNotes, warpTime, workForRename,
+    audioRef, recordingPathFor, recordingSecondAt, resolveAudio, samePath, scoreBars, scoreTimeAt, serializeRecording, timeWarp, unwarpTime, warpBeats, warpFit, warpNotes, warpTime, workForRename,
 } from '../src/recordingCore';
 
 // Dettato's own example (SIDECAR.md), cut to its first bars.
@@ -74,9 +74,11 @@ describe('the file beside a chart', () => {
         assert.equal(r.pickup, false);
     });
 
-    it('refuses a newer format, a path for the audio, and bars out of order', () => {
+    it('refuses a newer format, an empty audio, and bars out of order', () => {
         assert.match((parseRecording(JSON.stringify({ dettato: 3, audio: 'x.wav', bars: [] })) as { error: string }).error, /newer/);
-        assert.match((parseRecording(JSON.stringify({ dettato: 1, audio: 'sub/x.wav', bars: [] })) as { error: string }).error, /file name/);
+        assert.match((parseRecording(JSON.stringify({ dettato: 1, audio: ' ', bars: [] })) as { error: string }).error, /name the recording/);
+        // A way to the recording is read (Dettato's request 6, 2026-11-16).
+        assert.equal(ok(JSON.stringify({ dettato: 1, audio: '../Music/x.mp3', bars: [] })).audio, '../Music/x.mp3');
         assert.match((parseRecording(JSON.stringify({ dettato: 1, audio: 'x.wav', bars: [{ start: 2, end: 4 }, { start: 1, end: 2 }] })) as { error: string }).error, /before/);
         assert.match((parseRecording(JSON.stringify({ dettato: 1, audio: 'x.wav', bars: [{ start: 2, end: 2 }] })) as { error: string }).error, /after/);
         assert.match((parseRecording('{ nope') as { error: string }).error, /JSON/);
@@ -134,12 +136,43 @@ describe('attaching a recording', () => {
         assert.deepEqual(workForRename('/s/none.lys', '/s/x.lys', p => files.has(p), () => undefined), []);
     });
 
-    it('renames the recording inside every file in its folder that names it', () => {
-        const names: Record<string, string> = { '/s/chart.dettato.json': 'take.m4a', '/s/other.dettato.json': 'b.wav' };
+    it('renames the recording inside every file that names it, wherever it moves', () => {
+        const names: Record<string, string> = { '/s/chart.dettato.json': 'take.m4a', '/s/other.dettato.json': 'b.wav', '/u/far.dettato.json': '../s/take.m4a' };
         const work = workForRename('/s/take.m4a', '/s/final.m4a', p => p in names, p => names[p], Object.keys(names));
-        assert.deepEqual(work, [{ kind: 'rename', file: '/s/chart.dettato.json', audio: 'final.m4a' }]);
-        // Moved to another folder: the file can no longer name it — nothing is rewritten.
-        assert.deepEqual(workForRename('/s/take.m4a', '/t/take.m4a', p => p in names, p => names[p], Object.keys(names)), []);
+        assert.deepEqual(work, [
+            { kind: 'rename', file: '/s/chart.dettato.json', audio: 'final.m4a' },
+            { kind: 'rename', file: '/u/far.dettato.json', audio: '../s/final.m4a' },
+        ]);
+        // Moved to another folder: the files name the way to it (since 2026-11-16).
+        assert.deepEqual(workForRename('/s/take.m4a', '/t/take.m4a', p => p in names, p => names[p], Object.keys(names)), [
+            { kind: 'rename', file: '/s/chart.dettato.json', audio: '../t/take.m4a' },
+            { kind: 'rename', file: '/u/far.dettato.json', audio: '../t/take.m4a' },
+        ]);
+    });
+
+    it('moves a chart\'s file with it, the way to the recording written from the new folder', () => {
+        const names: Record<string, string> = { '/s/chart.dettato.json': 'take.m4a' };
+        assert.deepEqual(workForRename('/s/chart.lys', '/s/song.lys', p => p in names, p => names[p]),
+            [{ kind: 'move', from: '/s/chart.dettato.json', to: '/s/song.dettato.json' }]);
+        assert.deepEqual(workForRename('/s/chart.lys', '/s/charts/song.lys', p => p in names, p => names[p]),
+            [{ kind: 'move', from: '/s/chart.dettato.json', to: '/s/charts/song.dettato.json', audio: '../take.m4a' }]);
+    });
+
+    // Dettato's request 6: the recording's name beside the chart, the way to it from the chart's
+    // folder, or — on another drive — its whole path.
+    it('names the recording from the chart\'s folder, and reads the name back', () => {
+        assert.equal(audioRef('C:/songs/a.dettato.json', 'C:/songs/a.wav'), 'a.wav');
+        assert.equal(audioRef('C:/songs/a.dettato.json', 'C:/Music/x.mp3'), '../Music/x.mp3');
+        assert.equal(audioRef('C:\\songs\\sub\\a.dettato.json', 'C:\\songs\\x.mp3'), '../x.mp3');
+        assert.equal(audioRef('C:/songs/a.dettato.json', 'F:/Music/x.mp3'), 'F:/Music/x.mp3');
+        assert.equal(audioRef('c:/Songs/a.dettato.json', 'C:/songs/A.wav'), 'A.wav');   // Windows: case aside
+        assert.equal(resolveAudio('C:/songs/a.dettato.json', '../Music/x.mp3'), 'C:/Music/x.mp3');
+        assert.equal(resolveAudio('C:\\songs\\a.dettato.json', 'a.wav'), 'C:/songs/a.wav');
+        assert.equal(resolveAudio('C:/songs/a.dettato.json', 'F:/Music/x.mp3'), 'F:/Music/x.mp3');
+        assert.equal(resolveAudio('/home/me/s/a.dettato.json', '../../m/x.mp3'), '/home/m/x.mp3');
+        for (const [file, audio] of [['C:/a/b/c.dettato.json', 'C:/a/x/y.wav'], ['/r/s/c.dettato.json', '/q/y.wav'], ['C:/a/c.dettato.json', 'D:/y.wav']]) {
+            assert.ok(samePath(resolveAudio(file, audioRef(file, audio)), audio), file + ' ' + audio);
+        }
     });
 });
 
