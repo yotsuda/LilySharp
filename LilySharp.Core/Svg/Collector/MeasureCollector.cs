@@ -2700,6 +2700,12 @@ public sealed partial class MeasureCollector
             (staffGroups, var connected) = CrossArpeggios.Connect(staffGroups, content.Arpeggios);
             content = content with { Arpeggios = connected };
         }
+        // A score of staves that cannot show a signature (one to four lines): the key in words
+        // over the first bar and each change (KeyNameMarks; owner's request 2026-11-16). After
+        // every other mark, so the indices they are read by stay.
+        if (KeyNameMarks.Wanted(staffGroups))
+            content = content with { MusicMarks = KeyNameMarks.Add(content.MusicMarks, staffGroups,
+                tree.GetRoot(), _sectionHeaders, _sectionState.AllStarts) };
         var built = ScoreAssembler.BuildMultiStaffScore(staffGroups, content);
         // The rows' unseen melodies ride on the model for the files (almost always none: no copy then).
         return rowMelodies.Count == 0 ? built : built with { RowMelodies = rowMelodies.ToImmutable() };

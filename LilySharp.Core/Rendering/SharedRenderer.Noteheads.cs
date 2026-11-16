@@ -164,8 +164,12 @@ internal static partial class SharedRenderer
                     // A change that OPENS a later system is folded into that
                     // system's prefix (new key only, like LilyPond) — drawing
                     // it here too overprinted the prefix with naturals.
-                    // ...and a staff with no Key_engraver (a drum staff) draws none at all.
-                    if (SpacingRules.ClefEngravesKey(clef)
+                    // ...and a staff with no Key_engraver (a drum staff) draws none at all —
+                    // nor a ONE-LINE staff (LilyPond's RhythmicStaff removes the Key_engraver:
+                    // SpacingRules.EngravesClef), which drew the change's naturals and flats on
+                    // its line though it draws no signature at the start (found 2026-11-16,
+                    // with the key's words over such a score: KeyNameMarks); nor a blanked one.
+                    if (SpacingRules.ClefEngravesKey(clef) && staffLines > 1 && !keyChange.Blanked
                         && !IsSystemStartKeyChange(voice, system, ml.MeasureIndex, keyChange))
                         DrawKeySignatureChange(keyChange, itemX, staffY, gc);
                     break;

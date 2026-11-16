@@ -3567,7 +3567,18 @@ internal static class OutsideStaffStacker
         }
         var ridingTempos = new HashSet<int>(besideTempoOfLabel.Values);
         var b = musicMarks.ToBuilder();
+        // The key's words (MusicMarkType.KeyName, LILYSHARP-OWN) are placed LAST: they are no
+        // grob LilyPond draws, so nothing it draws may stand on them — the tempo and the labels
+        // keep LilyPond's places, and the words take the room left (ledger
+        // tempo.staffless.over-chord.*: placed in array order they lifted the tempo).
+        var stackOrder = new List<int>(b.Count);
         for (int i = 0; i < b.Count; i++)
+            if (b[i].MarkType != MusicMarkType.KeyName)
+                stackOrder.Add(i);
+        for (int i = 0; i < b.Count; i++)
+            if (b[i].MarkType == MusicMarkType.KeyName)
+                stackOrder.Add(i);
+        foreach (int i in stackOrder)
         {
             var m = b[i];
             if (!measureToSystem.TryGetValue(m.MeasureIndex, out int sysIdx))
@@ -3793,8 +3804,11 @@ internal static class OutsideStaffStacker
                 var style = MusicMarkEngraver.TextStyleOf(fonts, m.MarkType);
                 var role = MusicMarkEngraver.TextRoleOf(m.MarkType);
                 double halfW = fonts.Advance(m.Text, fs, role, style) / 2;
+                // The key's words are left-aligned on X and centred on their Y, as drawn.
+                bool keyName = m.MarkType == MusicMarkType.KeyName;
                 var (mUp, mDown) = TextOutlineSkylines.Place(
-                    m.Text, fs, fonts.Face(role, style), m.X - halfW, m.YUp + midUp);
+                    m.Text, fs, fonts.Face(role, style), keyName ? m.X : m.X - halfW,
+                    m.YUp + midUp - (keyName ? MusicMarkEngraver.KeyNameBaselineBelowCentre(fonts, m.Text) : 0));
                 double mMove = trackers(sysIdx, m.StaffIndex).Place(mUp, mDown, OutsideStaffPadding,
                     OutsideStaffHorizontalPadding, extraSupport: RowOf(sysIdx));
                 b[i] = m with { YUp = m.YUp + mMove };

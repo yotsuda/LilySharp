@@ -84,6 +84,22 @@
   （`SharedRenderer` の格子・`MultiStaffLayouter`／`SpacingRules` の lead sheet の枝）は、片付けるなら MusicXML の読み手と
   分けてから。
 
+## 調を文字で（オーナー要望 2026-11-16・第1285）
+
+- **score の譜表（行は除く）が全部 1〜4 線**（自動の一線譜・`as lines 1`〜`4`）で、タブ譜・打楽器の譜が無ければ、
+  最初の小節と転調の小節の頭に **「Key: D」**（短調は「Key: Bm」・♯♭は「F#」「Bb」の ASCII）を出す
+  （`Svg/Collector/KeyNameMarks.cs`・目印の種類 `MusicMarkType.KeyName`・LILYSHARP-OWN）。5 線以上の譜表が 1 本でもあれば出さない。
+  `key custom`／`key none`、`key` を書いていない本も出さない。
+- 名前は書いた `key` の構文から（主音の音名と長調／短調）。最初の調は「0 小節目から始まる section の見出しの `key`、無ければ
+  section の外の最初の `key`」。転調は譜表に転調の記号があればそこ（元の調への戻りは元の調の名前）、無ければ（自動の一線譜は
+  行の骨組みを写すので転調を持たない）section の開始小節ごとに見出しの `key` か元の調を並べ、前と違う所。
+- 見た目: 直立・テキストの大きさ・テンポと同じ横位置に左揃え。**積むのは最後**（`OutsideStaffStacker.PlaceMusicMarks`）＝
+  テンポと区切りのラベルは LilyPond の位置のまま（台帳 `tempo.staffless.over-chord.*` が見張る）で、文字はその一番外側に乗る。
+  縦は文字のインクで箱を作り、その中心に描く（`KeyNameInk`・`KeyNameBaselineBelowCentre`）。
+- 同時に直したこと: **一線譜が途中の転調の記号（♮と♭）を描いていた**（最初の調号は描かないのに）＝`DrawStaffItems` が
+  線の数と `Blanked` も見る。2〜4 線の譜は今までどおり記号も描く（LilyPond と同じ・線から外れて見えるので文字が要る）。
+- `.ly`・MusicXML には出さない（あちらは本物の調を持つ）。
+
 ## 作らないもの
 
 - 線の上のスラッシュ・休符（⑴）。描かない設定（⑶）。

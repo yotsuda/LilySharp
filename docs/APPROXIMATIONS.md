@@ -14,15 +14,15 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 450 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **576** | |
+| `OWN` | 455 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **581** | |
 
 ## 密度の高いファイル（上位 12）
 
 | ファイル | 件数 |
 |---|---:|
+| `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 23 |
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 22 |
-| `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 21 |
 | `LilySharp.Core/Svg/Layout/ProseBand.cs` | 18 |
 | `LilySharp.Core/Midi/MidiExporter.cs` | 17 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 16 |
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（450 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（455 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -523,6 +523,8 @@
 - **`CrossArpeggios`** LILYSHARP-OWN: the pairing. LilyPond connects whatever arpeggios the staves WROTE at a
 ### `LilySharp.Core/Svg/Collector/ItemDiagramRuns.cs`
 - **`ItemDiagramRuns`** LILYSHARP-OWN: LilyPond draws a markup diagram wherever it is written; the twin asks it the
+### `LilySharp.Core/Svg/Collector/KeyNameMarks.cs`
+- **`KeyNameMarks`** LILYSHARP-OWN. A one-line staff is LilyPond's RhythmicStaff, which removes the Key_engraver
 ### `LilySharp.Core/Svg/Collector/MeasureBuilder.cs`
 - **`MeasureBuilder.SectionHead`** LILYSHARP-OWN (owner's decisions, 2026-10-02, HANDOFF §1.1 第737): a time, key
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Clock.cs`
@@ -735,12 +737,14 @@
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **`MusicMarkEngraver.PlainTextFontSize`** tagged LILYSHARP-OWN on 2026-08-18 (session 203) with the four things the tag owes,
 - **`MusicMarkEngraver.TextStyleOf`** ⚠️ IT USED TO ANSWER BoldItalic, and session 203 tagged that LILYSHARP-OWN
+- **`MusicMarkEngraver.TextStyleOf`** The key's words read as a chart's heading, upright (LILYSHARP-OWN, KeyNameMarks).
 - **`MusicMarkEngraver.IsJumpScript`** (LILYSHARP-OWN, MusicMarkType.RepeatCount).
 - **`MusicMarkEngraver.BesideTempoGap`** LILYSHARP-OWN: `markTempo beside` is a Lily#-own arrangement (user decision 2026-09-02,
 - **`MusicMarkEngraver.CoPlaceToCodaWithLabels`** side-by-side shared line itself is LILYSHARP-OWN: LilyPond prints a boundary
 - **`MusicMarkEngraver.ToCodaGlyphScale`** (a sign the player must not miss). LILYSHARP-OWN with the composition.
 - **`MusicMarkEngraver.ToCodaPrefixGap`** The air between the "To" advance and the coda sign's ink. LILYSHARP-OWN with the
 - **`MusicMarkEngraver.ToCodaLabelGap`** shares the rehearsal line with. LILYSHARP-OWN with the arrangement itself
+- **`MusicMarkEngraver.GetOutsideStaffPriority`** The key's words: over the tempo, under the section's label (LILYSHARP-OWN, KeyNameMarks).
 - **`MusicMarkEngraver.LabelFontSizeStep`** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-11, session 368): a Lily# `form'
 - **`MusicMarkEngraver.LabelFrameAboutBaseline`** ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26: "Bridge"'s B stood too high — above
 - **`MusicMarkEngraver.LabelBoxBottomMargin`** ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26): with equal margins round the ink, a
@@ -757,6 +761,7 @@
 - **`NoteSpacingParameters.MinItemGap`** LILYSHARP-OWN: ⚠️ this knob no longer reaches note-to-note spacing at all, and it is
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
 - **`OutsideStaffStacker.StackAboveStaff`** system would hand back marks placed without the labels under them. LILYSHARP-OWN
+- **`OutsideStaffStacker.PlaceMusicMarks`** The key's words (MusicMarkType.KeyName, LILYSHARP-OWN) are placed LAST: they are no
 - **`OutsideStaffStacker.OutsideStaffSkylines.Place`** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
 ### `LilySharp.Core/Svg/Layout/PageBreaker.cs`
 - **`SystemDetails.Shape`** ⚠️ LILYSHARP-OWN: THE NULLABILITY. LilyPond's Line_details ALWAYS carries a shape —
@@ -872,6 +877,7 @@
 - **`MusicItem.ApproachGesture`** LILYSHARP-OWN: LilyPond has no scoop or plop (grammar evaluation 4, 2026-11-13).
 ### `LilySharp.Core/Svg/Model/MusicMarkItem.cs`
 - **`MusicMarkType.RepeatCount`** edge on the bar line. The text is the item's. LILYSHARP-OWN — LilyPond prints nothing
+- **`MusicMarkType.KeyName`** LILYSHARP-OWN — LilyPond's RhythmicStaff draws no key at all (ly/engraver-init.ly removes
 - **`MusicMarkItem.HairpinEndsOnStaff`** LILYSHARP-OWN: a condensed staff prints ONE copy of a level two of its parts write
 - **`MusicMarkItem..ctor`** coda itself (LILYSHARP-OWN, a Gould-style departure).
 - **`MusicMarkItem.BarreText`** LILYSHARP-OWN: LilyPond has no barre command; its manual writes the label as the

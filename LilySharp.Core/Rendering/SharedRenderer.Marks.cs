@@ -890,9 +890,13 @@ internal static partial class SharedRenderer
         // drawn RIGHT-anchored on its X, which is the bar line's anchor (MusicMarkEngraver.
         // IsJumpScript) — the extent MarkXExtent reserves, (x − w, x), and until session 733 the
         // draw centred it there instead, so the reservation and the ink disagreed by w/2.
+        // (The key's words are stacked as a box centred on their Y: their baseline is under it.)
+        if (m.MarkType == MusicMarkType.KeyName)
+            absY -= MusicMarkEngraver.KeyNameBaselineBelowCentre(fonts, m.Text);
         gc.DrawText(m.Text, m.X, absY, MusicMarkEngraver.PlainMarkEm(fonts, m.MarkType), TextRole.Navigation,
             MusicMarkEngraver.TextStyleOf(fonts, m.MarkType),
-            MusicMarkEngraver.IsJumpScript(m.MarkType) ? TextAnchor.End : TextAnchor.Middle,
+            MusicMarkEngraver.IsJumpScript(m.MarkType) ? TextAnchor.End
+                : MusicMarkEngraver.IsLeftAlignedText(m.MarkType) ? TextAnchor.Start : TextAnchor.Middle,
             Color.Black);
     }
 

@@ -202,9 +202,33 @@ internal static class MusicMarkEngraver
     /// </para>
     /// </remarks>
     internal static FontStyle TextStyleOf(MusicMarkType type)
-        => type is MusicMarkType.SustainOn or MusicMarkType.SustainOff
-            ? FontStyle.Bold
-            : FontStyle.Italic;
+        => type switch
+        {
+            MusicMarkType.SustainOn or MusicMarkType.SustainOff => FontStyle.Bold,
+            // The key's words read as a chart's heading, upright (LILYSHARP-OWN, KeyNameMarks).
+            MusicMarkType.KeyName => FontStyle.Regular,
+            _ => FontStyle.Italic,
+        };
+
+    /// <summary>A plain mark set LEFT-aligned on its anchor, as a measure-start tempo is: the
+    /// key's words (<see cref="MusicMarkType.KeyName"/>), which stand where the tempo would.</summary>
+    internal static bool IsLeftAlignedText(MusicMarkType type) => type == MusicMarkType.KeyName;
+
+    /// <summary>The key's words' ink about their baseline (Y-up): the stack places such a mark
+    /// as a box CENTRED on its Y (<see cref="GetMarkHalfExtent"/>), so the draw sets the baseline
+    /// that centres this ink there (<see cref="KeyNameBaselineBelowCentre"/>). The other plain
+    /// marks take a fixed ±1.0 on a baseline-drawn word, whose ink then stands up to ~0.6 above
+    /// the box; the words over a tempo mark touched its note (found 2026-11-16).</summary>
+    internal static (double Bottom, double Top) KeyNameInk(ScoreTextMetrics fonts, string text)
+        => fonts.Ink(text, PlainMarkEm(fonts, MusicMarkType.KeyName), TextRoleOf(MusicMarkType.KeyName),
+            TextStyleOf(fonts, MusicMarkType.KeyName));
+
+    /// <summary>How far under the stacked centre the key's words are drawn on their baseline.</summary>
+    internal static double KeyNameBaselineBelowCentre(ScoreTextMetrics fonts, string text)
+    {
+        var (bottom, top) = KeyNameInk(fonts, text);
+        return (bottom + top) / 2;
+    }
 
     /// <summary>
     /// The style a plain-text mark is DRAWN AND MEASURED in for THIS score: the engraving's
@@ -2194,6 +2218,8 @@ internal static class MusicMarkEngraver
     {
         // LILYPOND-REF: scm/define-grobs.scm:2346 MetronomeMark outside-staff-priority = 1300
         MusicMarkType.Tempo => 1300,
+        // The key's words: over the tempo, under the section's label (LILYSHARP-OWN, KeyNameMarks).
+        MusicMarkType.KeyName => 1350,
         // Segno/Coda sit CLOSEST to the staff (below SectionLabel 1450 < RehearsalMark 1500).
         MusicMarkType.Segno => 1400,
         MusicMarkType.Coda => 1400,
@@ -2319,6 +2345,7 @@ internal static class MusicMarkEngraver
                 double w = PlainMarkWidth(fonts, type, text);
                 return MusicMarkItem.PositionOf(type) == MusicMarkPosition.End
                     ? (x - w, x)
+                    : IsLeftAlignedText(type) ? (x, x + w)
                     : (x - w / 2, x + w / 2);
             }
         }
@@ -2680,6 +2707,8 @@ internal static class MusicMarkEngraver
         MusicMarkType.Rehearsal or MusicMarkType.SectionLabel
             => LabelBoxHalfHeight(fonts, type, text, boxed),
         MusicMarkType.Segno or MusicMarkType.Coda => 2.0,
+        // The key's words: their own ink, drawn centred on the stacked Y (KeyNameBaselineBelowCentre).
+        MusicMarkType.KeyName => (KeyNameInk(fonts, text).Top - KeyNameInk(fonts, text).Bottom) / 2,
         _ => 1.0
     };
 
@@ -2792,7 +2821,8 @@ internal static class MusicMarkEngraver
         // LILYPOND-REF: lily/metronome-engraver.cc:109-135 stop_translation_timestep —
         //   break-align parent when a support was acknowledged, currentMusicalColumn
         //   otherwise; scm/output-lib.scm:498-504 self-aligned-on-breakable.
-        if (mark.Type == MusicMarkType.Tempo && mark.Position == MusicMarkPosition.Beginning)
+        // …and the key's words stand where a measure-start tempo would (KeyNameMarks).
+        if (mark.Type is MusicMarkType.Tempo or MusicMarkType.KeyName && mark.Position == MusicMarkPosition.Beginning)
         {
             bool opensLine = false;
             if (prefixTimeSignatureX != null)

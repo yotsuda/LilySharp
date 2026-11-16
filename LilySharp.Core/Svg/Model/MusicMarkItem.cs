@@ -147,6 +147,13 @@ public enum MusicMarkType
     /// for <c>\repeat volta 4</c>; the convention is the player's (grammar evaluation 4,
     /// 2026-11-13: a rock chart's four-times riff was engraved as an ordinary repeat).</summary>
     RepeatCount,
+    /// <summary>The key, as words ("Key: D", "Key: Bm"), over the first bar and over a bar the
+    /// key changes at — on a score whose every staff has one to four lines, where no key
+    /// signature can be read off the lines (owner's request 2026-11-16). The text is the item's.
+    /// LILYSHARP-OWN — LilyPond's RhythmicStaff draws no key at all (ly/engraver-init.ly removes
+    /// its Key_engraver) and a staff of 2–4 lines draws the signature off the lines; the words are
+    /// the chord chart's convention (a "Key:" line at its head).</summary>
+    KeyName,
 }
 
 /// <summary>
@@ -651,6 +658,7 @@ public sealed record MusicMarkItem
         MusicMarkType.Rehearsal => "?",  // Rehearsal text set via constructor overload
         MusicMarkType.SectionLabel => "?",  // Section label text set via constructor overload
         MusicMarkType.Tempo => "?",  // Tempo text set via constructor overload
+        MusicMarkType.KeyName => "?",  // the key's words set via the constructor overload
         MusicMarkType.SustainOn => "Ped.",
         MusicMarkType.SustainOff => "*",
         MusicMarkType.SostenutoOn => "Sost. Ped.",
@@ -681,6 +689,7 @@ public sealed record MusicMarkItem
         MusicMarkType.Rehearsal => MusicMarkPosition.Beginning,
         MusicMarkType.SectionLabel => MusicMarkPosition.Beginning,
         MusicMarkType.Tempo => MusicMarkPosition.Beginning,
+        MusicMarkType.KeyName => MusicMarkPosition.Beginning,
         // LILYPOND-REF: piano-pedal-engraver.cc - pedal marks at note position
         MusicMarkType.SustainOn or MusicMarkType.SustainOff => MusicMarkPosition.Beginning,
         MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff => MusicMarkPosition.Beginning,
