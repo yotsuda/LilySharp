@@ -9011,6 +9011,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 pendingStartPos = from;
                 pendingSpan = null;
                 pendingFromHere = true;
+                pendingLoopRefresh = false;
                 setPlayUi(true);
                 vscode.postMessage({ type: 'requestPlayback' });
                 return;
@@ -9024,9 +9025,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // A-B on: the bars A to B (docs/ab-repeat-design.md) — which retire "the selected bars"
             // (owner's decision 2026-11-17: the selection only places A and B the first time).
             pendingSpan = abOn ? { ab: [abFrom, abTo] } : null;
+            pendingLoopRefresh = false;     // (this Play's notes are its own, not a loop's next round)
             vscode.postMessage({ type: 'requestPlayback' });
         });
         document.getElementById('stopBtn').addEventListener('click', () => {
+            pendingLoopRefresh = false;     // (a loop's next round with the new text: off with it)
             loopList = null;
             stopPlayback();
             if (recPlayer && recPlayer.playing) { recPlayer.stop(); setPlayUi(false); }
@@ -9196,6 +9199,40 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 playedBeats().map(b => ({ T: b.T / speed, A: b.A })));
         }
         let countInFix = 0;         // the played list's clock minus the score's, while a count-in plays
+        // ---- The loop goes on with the text as it is now (owner's request 2026-11-17: a bar looped
+        // while it is written by ear — the next round sounds the edit). The score changed while a
+        // loop went round: the new notes were asked for (pendingLoopRefresh), and when they come
+        // the round sounding plays to its end and the next starts with them. The rounds are laid
+        // out ahead (looped), so the switch is a new list started at the round's end; one that
+        // comes too late for it waits for the end of the next.
+        var pendingLoopRefresh = false, loopSwitchTimer = null;
+        function refreshLoop(message) {
+            if (document.getElementById('stopBtn').disabled || !playClock || !loopList || lastSpan === undefined) return;
+            const oldRound = loopRound, oldStart = spanStart, oldPieces = spanPieces;
+            const tau = Math.max(0, playOffset + playClock() - countInFix);
+            rawNotes = message.notes; rawParts = message.parts || null; rawBeats = message.beats || null; rawBarEnd = message.barEnd || null; rawExtra = message.extra || null; rawSung = message.sung || null; rawPlayed = message.played || null;
+            playbackNotes = practiced(rawNotes);
+            const list = spanOf(playbackNotes, lastSpan, false);
+            const newRound = loopRound, newStart = spanStart, newPieces = spanPieces;
+            // (the round sounding keeps its own until the switch: the position shown reads them)
+            loopRound = oldRound; spanStart = oldStart; spanPieces = oldPieces;
+            if (!list.length) return;
+            let remain = oldRound > 0 ? oldRound - (tau % oldRound) : 0;
+            if (remain < 0.25) remain += oldRound;
+            if (loopSwitchTimer) clearTimeout(loopSwitchTimer);
+            const gen = playGeneration;
+            // A new list starts 0.15 s after it is handed over (startPlayback): handed over so
+            // much before the round's end.
+            loopSwitchTimer = setTimeout(() => {
+                loopSwitchTimer = null;
+                if (gen !== playGeneration || document.getElementById('stopBtn').disabled) return;
+                loopRound = newRound; spanStart = newStart; spanPieces = newPieces;
+                const rounds = looped(list);
+                voicePlan = { pieces: spanPieces, rounds: loopRoundCount };
+                startPlayback(rounds, 0, false, false, 0, spanStart);
+                loopList = list;
+            }, Math.max(0, (remain - 0.15) * 1000));
+        }
         // Where a playback that ran to its end goes: round again while looping, else it stops.
         function playEnded() {
             const list = loopOn ? loopList : null;
@@ -10194,6 +10231,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         // it still fits (joinVoice, voiceFitsPlay).
                         playbackNotes = null;
                         playEdited = true;
+                        // Going round a loop: the next round sounds the new text (owner's request
+                        // 2026-11-17 — a bar looped while it is written by ear; refreshLoop).
+                        if (loopOn && loopList && lastSpan !== undefined && playClock && !document.getElementById('stopBtn').disabled) {
+                            pendingLoopRefresh = true;
+                            vscode.postMessage({ type: 'requestPlayback' });
+                        }
                         collectPages();
                         applyBarFlags();
                         lightCaretBar();
@@ -10355,6 +10398,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         // From the note, as asked — not the selection, not round the loop.
                         pendingSpan = null;
                         pendingFromHere = true;
+                        pendingLoopRefresh = false;
                         setPlayUi(true);
                         vscode.postMessage({ type: 'requestPlayback' });
                     }
@@ -10383,6 +10427,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     clearHighlights();
                     break;
                 case 'playbackData':
+                    if (pendingLoopRefresh && !message.error && message.notes) {
+                        pendingLoopRefresh = false;
+                        refreshLoop(message);
+                        break;
+                    }
+                    pendingLoopRefresh = false;
                     if (message.error || !message.notes) {
                         setPlayUi(false);
                         pendingAudition = null;

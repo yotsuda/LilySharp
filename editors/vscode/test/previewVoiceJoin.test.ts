@@ -210,7 +210,7 @@ describe('a voice that lands while the preview plays', () => {
         assert.match(extension, /playClock = null;\s*playingNotes = null;/);
         // A score edited while it plays: the Play is the old text's, and the new text's voice is
         // cut into it only where it still fits.
-        assert.match(extension, /playbackNotes = null;\s*playEdited = true;\s*collectPages\(\);/);
+        assert.match(extension, /playbackNotes = null;\s*playEdited = true;[\s\S]{0,700}?collectPages\(\);/);
         assert.match(extension, /playingNotes = notes;\s*playEdited = false;/);
         // Each voice's sources say whose they are, for the one that replaces them.
         assert.match(extension, /src\.voiceKey = key;     \/\/ which voice sings here/);
