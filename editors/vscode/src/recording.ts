@@ -164,6 +164,21 @@ async function statKey(uri: vscode.Uri): Promise<string | undefined> {
     }
 }
 
+/** Charts just written from their recording (Convert Recording to Lily#), by path: their preview
+ *  starts with the recording ON — Play sounds it with the score (owner's request 2026-11-16: right
+ *  after the chart is made from the recording, the recording is what one wants to hear). Once: the
+ *  mark goes when the sound is sent, and the practice menu's toggle is the reader's after that. */
+const justConverted = new Set<string>();
+
+function chartKey(chart: string): string {
+    return path.resolve(chart).toLowerCase();
+}
+
+/** Marks `chart` as just written from its recording (see justConverted). */
+export function markJustConverted(chart: string): void {
+    justConverted.add(chartKey(chart));
+}
+
 /**
  * Tells the preview of `chart` about its recording: none, why it cannot be used, or its bars and
  * its sound (the file's bytes; for an m4a, the float WAV the language server decoded into the
@@ -226,7 +241,9 @@ export async function sendRecording(panel: vscode.WebviewPanel, chart: vscode.Ur
             return;   // (something newer was sent meanwhile)
         }
         // A plain Uint8Array, as the voices are sent: a Node Buffer does not cross postMessage as one.
-        post({ ...base, bytes: new Uint8Array(bytes) });
+        // A chart just made from this recording starts with it on (justConverted), once.
+        const turnOn = justConverted.delete(chartKey(chart.fsPath));
+        post({ ...base, bytes: new Uint8Array(bytes), ...(turnOn ? { turnOn: true } : {}) });
     } catch (e) {
         post({ ...base, error: String(e) });
     }

@@ -29,6 +29,7 @@ import {
     besideChart, locateDettato, parseDettatoVersion, replaceQuestion,
 } from './dettatoCore';
 import { parseRecording, recordingPathFor } from './recordingCore';
+import { markJustConverted } from './recording';
 
 async function dettatoExports(): Promise<unknown> {
     const ext = vscode.extensions.getExtension(DETTATO_EXTENSION_ID);
@@ -259,7 +260,9 @@ export async function convertRecording(context: vscode.ExtensionContext, uri: vs
             void vscode.window.showWarningMessage(`Lily#: ${path.basename(recording)} could not be copied beside the chart, so the preview cannot play it: ${(e as Error).message ?? e}`);
         }
     }
-    // The chart and its preview beside it (as Calamo's read opens the score).
+    // The chart and its preview beside it (as Calamo's read opens the score) — with the recording on,
+    // so Play sounds it at once (owner's request 2026-11-16; recording.ts justConverted).
+    markJustConverted(chart);
     const doc = await vscode.workspace.openTextDocument(chart);
     await vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
     if (openPreview) {

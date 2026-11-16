@@ -9132,6 +9132,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const same = recording && recording.chart === m.chart && recording.name === m.name;
             const fresh = !recording;
             recording = { chart: m.chart, name: m.name || '', bars: m.bars || [], pickup: !!m.pickup, ready: same ? recording.ready : false, error: m.error || null };
+            // A chart just made from this recording starts with it on: Play sounds it (owner's
+            // request 2026-11-16; the extension says so once, recording.ts justConverted).
+            if (m.turnOn) recOn = true;
             recPanelBtn.hidden = false;
             if (fresh && lastPartsMessage) renderParts(lastPartsMessage);
             document.getElementById('recName').textContent = recording.name;

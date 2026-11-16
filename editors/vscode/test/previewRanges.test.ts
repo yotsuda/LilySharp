@@ -81,6 +81,16 @@ describe('the preview\'s Range panel', () => {
         assert.match(extension, /if \(message\.type === 'requestLength'\)/);
     });
 
+    // Right after a chart is made from its recording (Convert Recording to Lily#), its preview starts
+    // with the recording on (owner's request 2026-11-16): the conversion marks the chart, the first
+    // sending of the sound says turnOn, once, and the page turns the recording on.
+    it('starts a chart just made from its recording with the recording on, once', () => {
+        const src = (name: string) => fs.readFileSync(path.join(__dirname, '..', '..', 'src', name), 'utf8');
+        assert.match(src('dettato.ts'), /markJustConverted\(chart\);\s*const doc = await vscode\.workspace\.openTextDocument\(chart\);/);
+        assert.match(src('recording.ts'), /const turnOn = justConverted\.delete\(chartKey\(chart\.fsPath\)\);\s*post\(\{ \.\.\.base, bytes: new Uint8Array\(bytes\), \.\.\.\(turnOn \? \{ turnOn: true \} : \{\}\) \}\);/);
+        assert.match(html, /if \(m\.turnOn\) recOn = true;/);
+    });
+
     // An @todo mark's memo can stand over another bar than its chord name or head; counted as a
     // copy of the music it was "copy 0" and lit alone, the chord name dark (owner's report
     // 2026-11-16: a chords row's marked names did not light while playing).

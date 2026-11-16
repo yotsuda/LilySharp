@@ -488,6 +488,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] 鳴っている途中で Recording をオフ → 楽譜はそのまま続く。オン → 録音が同じ所から戻る。
 - [ ] 小節を置いていない録音（Attach しただけ）・小節数が楽譜と違う録音 → ▶ で録音だけが頭から鳴り、「…it plays alone」と出る。
 - [ ] m4a（Windows）: iTunes の m4a・iPhone のボイスメモ（編集リストのない形）でも小節の頭がそろう（48 ms 早く／遅く聞こえない・Dettato REQUESTS #5）。
+- [ ] 「Convert Recording to Lily# (.lys)…」で作った直後のプレビュー → Recording が最初からオン、▶ で録音が楽譜と一緒に鳴る。ウィンドウを開き直す・別の譜面から戻る → オフ（直後の 1 回だけ）。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 
