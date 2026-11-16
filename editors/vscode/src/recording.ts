@@ -20,8 +20,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import {
-    WEBVIEW_AUDIO, WINDOWS_AUDIO, audioReader, audioRef, chartForRecording, newRecording, parseRecording, recordingPathFor,
-    resolveAudio, samePath, serializeRecording, workForRename,
+    CopySource, WEBVIEW_AUDIO, WINDOWS_AUDIO, audioReader, audioRef, chartForRecording, chartPathFor, copiedRecordingText, newRecording,
+    parseRecording, recordingPathFor, resolveAudio, samePath, serializeRecording, sourceForCopy, workForRename,
 } from './recordingCore';
 
 const isWindows = process.platform === 'win32';
@@ -300,6 +300,135 @@ function offerLocate(chart: vscode.Uri, lookedFor: string, key: string): void {
 /** Forgets what was sent to a preview, so the next update sends the recording again. */
 export function forgetSentRecording(panel: vscode.WebviewPanel): void {
     sentKeys.delete(panel);
+}
+
+/**
+ * A chart copied in VS Code takes the file beside it along, and a file beside a chart copied takes
+ * its chart (owner's request 2026-11-16: a chart copied to another folder played without its
+ * recording). The Explorer's copy and paste and File > Save As both raise onDidCreateFiles
+ * (MEASURED in VS Code 1.146, Lab sessions/p1286/e2e/run-ev.js); a copy outside VS Code raises
+ * nothing and is not followed.
+ *
+ * VS Code says what was made, not what from: the source is the chart with the same text that has
+ * a file beside it — an open chart as it stood just before (a Save As writes the editor's text,
+ * edits and all) or a chart of the workspace on the disk (sourceForCopy). Charts that name
+ * different recordings are asked about, not guessed.
+ */
+export function followCopies(): vscode.Disposable {
+    let before = new Map<string, string>();
+    const willCreate = vscode.workspace.onWillCreateFiles(() => {
+        before = new Map(vscode.workspace.textDocuments
+            .filter(d => d.uri.scheme === 'file' && d.fileName.toLowerCase().endsWith('.lys'))
+            .map(d => [d.uri.fsPath, d.getText()]));
+    });
+    const didCreate = vscode.workspace.onDidCreateFiles(async e => {
+        const open = before;
+        for (const file of e.files) {
+            if (file.scheme !== 'file') {
+                continue;
+            }
+            try {
+                const lower = file.fsPath.toLowerCase();
+                if (lower.endsWith('.lys')) {
+                    await chartCopied(file.fsPath, open);
+                } else if (lower.endsWith('.dettato.json')) {
+                    await recordingFileCopied(file.fsPath);
+                }
+            } catch (err) {
+                void vscode.window.showWarningMessage(`Lily#: could not bring the recording along with ${path.basename(file.fsPath)}: ${err}`);
+            }
+        }
+    });
+    return vscode.Disposable.from(willCreate, didCreate);
+}
+
+/** The text of a file, the way charts are compared: line ends aside (a Save As writes the editor's). */
+function sameText(a: string, b: string): boolean {
+    return a.replace(/\r\n/g, '\n') === b.replace(/\r\n/g, '\n');
+}
+
+async function chartCopied(chart: string, open: ReadonlyMap<string, string>): Promise<void> {
+    const beside = recordingPathFor(chart);
+    if (await exists(vscode.Uri.file(beside))) {
+        return;     // (copied together with the chart: recordingFileCopied sets its way to the recording)
+    }
+    // A Save As makes the file before it writes the text (MEASURED: empty when created is said), so
+    // a text that matches no open chart is read again a moment later — the disk's or the new editor's.
+    let text = await readText(vscode.Uri.file(chart));
+    const openMatch = (t: string | undefined) => t !== undefined && [...open.values()].some(o => sameText(o, t));
+    for (let i = 0; i < 10 && !openMatch(text); i++) {
+        await new Promise(r => setTimeout(r, 200));
+        text = vscode.workspace.textDocuments.find(d => samePath(d.uri.fsPath, chart))?.getText() ?? await readText(vscode.Uri.file(chart));
+    }
+    if (text === undefined || text === '') {
+        return;
+    }
+    const charts = new Set<string>();
+    for (const [p, t] of open) {
+        if (sameText(t, text)) { charts.add(p); }
+    }
+    for (const u of await vscode.workspace.findFiles('**/*.lys', '**/node_modules/**', 2000)) {
+        if (!charts.has(u.fsPath) && !samePath(u.fsPath, chart)) {
+            const t = await readText(u);
+            if (t !== undefined && sameText(t, text)) { charts.add(u.fsPath); }
+        }
+    }
+    const sources: CopySource[] = [];
+    const texts = new Map<string, string>();
+    for (const c of charts) {
+        const f = recordingPathFor(c);
+        const t = await readText(vscode.Uri.file(f));
+        const r = t !== undefined ? parseRecording(t) : undefined;
+        if (t !== undefined && r && !('error' in r)) {
+            sources.push({ chart: c, recordingFile: f, audio: resolveAudio(f, r.audio) });
+            texts.set(f, t);
+        }
+    }
+    let source = sourceForCopy(chart, sources);
+    if (source === 'ambiguous') {
+        const pick = await vscode.window.showQuickPick(
+            [...sources.map(s => ({ label: path.basename(s.chart), description: s.chart, detail: `Recording: ${s.audio}`, source: s })),
+                { label: 'No recording', description: '', detail: 'Leave the copy without one', source: undefined }],
+            { title: `Lily#: ${path.basename(chart)} is a copy of more than one chart with a recording — which recording goes with it?` });
+        source = pick?.source;
+    }
+    if (!source) {
+        return;
+    }
+    await vscode.workspace.fs.writeFile(vscode.Uri.file(beside),
+        Buffer.from(copiedRecordingText(texts.get(source.recordingFile)!, source.recordingFile, beside), 'utf8'));
+    void vscode.window.showInformationMessage(`Lily#: the recording came along — ${path.basename(beside)} written beside ${path.basename(chart)} (from ${source.recordingFile}).`);
+}
+
+async function recordingFileCopied(file: string): Promise<void> {
+    const text = await readText(vscode.Uri.file(file));
+    if (text === undefined) {
+        return;
+    }
+    // The file it was copied from: the same text, beside a chart.
+    let from: string | undefined;
+    for (const u of await vscode.workspace.findFiles('**/*.dettato.json', '**/node_modules/**', 2000)) {
+        if (samePath(u.fsPath, file)) { continue; }
+        const t = await readText(u);
+        const chart = chartPathFor(u.fsPath);
+        if (t !== undefined && t === text && chart && await exists(vscode.Uri.file(chart))) {
+            if (path.basename(u.fsPath).toLowerCase() === path.basename(file).toLowerCase() || from === undefined) { from = u.fsPath; }
+        }
+    }
+    if (!from) {
+        return;
+    }
+    // Its way to the recording, from the new place.
+    const moved = copiedRecordingText(text, from, file);
+    if (moved !== text) {
+        await vscode.workspace.fs.writeFile(vscode.Uri.file(file), Buffer.from(moved, 'utf8'));
+    }
+    // And its chart, unless one is there already (copied together).
+    const chart = chartPathFor(file)!, fromChart = chartPathFor(from)!;
+    if (!(await exists(vscode.Uri.file(chart)))) {
+        await vscode.workspace.fs.copy(vscode.Uri.file(fromChart), vscode.Uri.file(chart), { overwrite: false });
+        void vscode.window.showInformationMessage(`Lily#: the chart came along — ${path.basename(chart)} copied beside ${path.basename(file)} (from ${fromChart}).`);
+    }
 }
 
 /** Keeps the files beside charts with what they name when files are renamed in VS Code: a chart

@@ -490,6 +490,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] m4a（Windows）: iTunes の m4a・iPhone のボイスメモ（編集リストのない形）でも小節の頭がそろう（48 ms 早く／遅く聞こえない・Dettato REQUESTS #5）。
 - [ ] 「Convert Recording to Lily# (.lys)…」で作った直後のプレビュー → Recording が最初からオン、▶ で録音が楽譜と一緒に鳴る。ウィンドウを開き直す・別の譜面から戻る → オフ（直後の 1 回だけ）。
 - [ ] **書き出しに録音**（第1286・機械は WAV／MP3／MP4 で録音のクリックが小節頭に来ること・MP4 の映像と音の長さが揃うことを測った＝Lab `p1286/e2e`）: Recording オンでプレビューの Export → WAV・MP3・MP4 のどれも、▶ で聞くのと同じに録音が入る（小節の頭がそろう・録音とパートの音量の釣り合いがプレビューと同じ・Speed や半音を変えた録音はその速さと高さ）。Count-in オンなら録音もクリックの後から。オフで書き出すと録音は入らない。出力チャンネル「Lily#」に `recording: export: … with the recording` の行。
+- [ ] **コピーに録音が付いて行く**（第1286・機械は隔離した VS Code でエクスプローラーのコピー 2 通りと Save As を確かめた＝Lab `p1286/e2e/run-copy.js`）: 録音のある `.lys` をエクスプローラーで別フォルダへコピー → 隣に `.dettato.json` も出て、プレビューで録音が鳴る。名前を付けて保存（編集中でも）→ 新しい名前の `.dettato.json` ができる。`.dettato.json` だけをコピー → `.lys` も付いて来る。右下に「the recording came along」「the chart came along」の知らせ。Windows のエクスプローラーでのコピーは付いて行かない（仕様）。
 - [ ] **スライダーのダブルクリック**（第1286・機械は CDP で値が戻るのを確かめた）: Practice の Tempo・パートと Recording のフェーダー、録音パネルの Speed・Semitones・Cents・音量をそれぞれ動かしてからダブルクリック → 100%／0 に戻り、鳴っている途中なら音もすぐ戻る。連動オンの Speed（灰色）は動かない。
 - [ ] **MP4 でコード名が光る**（第1286）: コードだけの楽譜（`score { chords prog }`）を MP4 に書き出す → 鳴っているコードの名前が色付きになる。旋律＋コード行の楽譜でも符頭とコード名の両方が光る。映像が音の最後まで続く（最後の絵が早く終わらない）。
 

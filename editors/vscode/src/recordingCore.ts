@@ -59,6 +59,12 @@ export function recordingPathFor(lysPath: string): string {
     return stem + '.dettato.json';
 }
 
+/** The chart a file beside a chart belongs to — `recordingPathFor`'s inverse; undefined for a
+ *  name that is not `<stem>.dettato.json`. */
+export function chartPathFor(recordingPath: string): string | undefined {
+    return /\.dettato\.json$/i.test(recordingPath) ? recordingPath.replace(/\.dettato\.json$/i, '.lys') : undefined;
+}
+
 /** The recording's own path, from the file beside the chart and the name it holds. */
 export function audioPathFor(recordingPath: string, audio: string): string {
     const slash = Math.max(recordingPath.lastIndexOf('/'), recordingPath.lastIndexOf('\\'));
@@ -216,6 +222,57 @@ export function workForRename(oldPath: string, newPath: string, exists: (path: s
         }
     }
     return work;
+}
+
+/** A chart a copy may have come from (followCopies, recording.ts): the chart, the file beside it,
+ *  and the recording that file names, as a whole path. */
+export interface CopySource { chart: string; recordingFile: string; audio: string }
+
+/**
+ * Which file beside a chart a copied chart takes along (owner's request 2026-11-16: a chart copied
+ * or saved under another name in VS Code takes its recording with it). VS Code says what was made,
+ * not what it was made from, so `sources` are the charts with the same text that have a file
+ * beside them. None: nothing to take. Several naming the same recording: any of them is that
+ * recording's — the one of the same name first (a copy into another folder keeps the name), else
+ * the first. Several naming different recordings: 'ambiguous' — the person is asked.
+ */
+export function sourceForCopy(newPath: string, sources: readonly CopySource[]): CopySource | 'ambiguous' | undefined {
+    const seen = new Set<string>();
+    const unique = sources.filter(s => {
+        const key = collapse(slashed(s.recordingFile)).toLowerCase();
+        if (seen.has(key) || samePath(s.chart, newPath)) { return false; }
+        seen.add(key);
+        return true;
+    });
+    if (unique.length === 0) {
+        return undefined;
+    }
+    if (unique.some(s => !samePath(s.audio, unique[0].audio))) {
+        return 'ambiguous';
+    }
+    const name = baseOf(newPath).toLowerCase();
+    return unique.find(s => baseOf(s.chart).toLowerCase() === name) ?? unique[0];
+}
+
+/** The text of a file beside a chart copied from `fromFile` to `toFile`: the same, its `audio`
+ *  written from the new place so it still finds the recording (a name beside the old chart becomes
+ *  the way to it). A file that cannot be read is copied as it is. */
+export function copiedRecordingText(text: string, fromFile: string, toFile: string): string {
+    const r = parseRecording(text);
+    if ('error' in r) {
+        return text;
+    }
+    const audio = audioRef(toFile, resolveAudio(fromFile, r.audio));
+    if (audio === r.audio) {
+        return text;
+    }
+    r.audio = audio;
+    return serializeRecording(r);
+}
+
+function baseOf(p: string): string {
+    const s = slashed(p);
+    return s.slice(s.lastIndexOf('/') + 1);
 }
 
 /** Reads the file beside a chart. An error says why it cannot be used, in words for the user. */

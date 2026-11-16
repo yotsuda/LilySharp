@@ -18,6 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import {
     RECORDING_DEFAULTS, Recording, ScoreBeat, audioPathFor, recordingPlan, audioReader, barAt, chartForRecording, lineUp, newRecording, parseRecording,
+    CopySource, chartPathFor, copiedRecordingText, sourceForCopy,
     audioRef, recordingPathFor, recordingSecondAt, resolveAudio, samePath, scoreBars, scoreTimeAt, serializeRecording, timeWarp, unwarpTime, warpBeats, warpFit, warpNotes, warpTime, workForRename,
 } from '../src/recordingCore';
 
@@ -342,5 +343,45 @@ describe('the score\'s bars and the recording\'s seconds', () => {
         assert.deepEqual(lineUp(bars, r), { scoreBars: 4, recordingBars: 3, same: false });
         assert.equal(recordingSecondAt(bars, r, 6.0), null);
         assert.deepEqual(lineUp(scoreBars(beats(2, 3), 5.5), r).same, true);
+    });
+});
+
+// A chart copied in VS Code takes its recording along (owner's request 2026-11-16).
+describe('a chart copied takes the file beside it', () => {
+    const src = (chart: string, audio: string): CopySource => ({ chart, recordingFile: recordingPathFor(chart), audio });
+
+    it('takes nothing when no chart of the same text has a recording', () => {
+        assert.equal(sourceForCopy('C:/b/song.lys', []), undefined);
+        assert.equal(sourceForCopy('C:/b/song.lys', [src('C:/b/song.lys', 'C:/m/x.mp3')]), undefined, 'not from itself');
+    });
+
+    it('takes the one of the same name when several name the same recording', () => {
+        const got = sourceForCopy('C:/b/song.lys', [src('C:/a/other.lys', 'C:/m/x.mp3'), src('C:/c/Song.lys', 'C:/m/x.mp3')]);
+        assert.ok(got && got !== 'ambiguous');
+        assert.equal(got.chart, 'C:/c/Song.lys');
+        const first = sourceForCopy('C:/b/new.lys', [src('C:/a/other.lys', 'C:/m/x.mp3'), src('C:/c/song.lys', 'C:/m/x.mp3')]);
+        assert.ok(first && first !== 'ambiguous');
+        assert.equal(first.chart, 'C:/a/other.lys');
+    });
+
+    it('asks when the charts of the same text name different recordings — a name in another folder is not the same file', () => {
+        assert.equal(sourceForCopy('C:/b/song.lys', [src('C:/a/song.lys', 'C:/a/take.wav'), src('C:/c/song.lys', 'C:/c/take.wav')]), 'ambiguous');
+    });
+
+    it('writes the way to the recording from the new place', () => {
+        const text = serializeRecording(newRecording('take.wav', 12));
+        const moved = parseRecording(copiedRecordingText(text, 'C:/a/song.dettato.json', 'C:/a/sub/song.dettato.json'));
+        assert.ok(!('error' in moved));
+        assert.equal(moved.audio, '../take.wav');
+        // beside the recording still, or a whole path: as it was
+        assert.equal(copiedRecordingText(text, 'C:/a/song.dettato.json', 'C:/a/copy.dettato.json'), text);
+        const whole = serializeRecording(newRecording('F:/Music/x.mp3', 12));
+        assert.equal(copiedRecordingText(whole, 'C:/a/song.dettato.json', 'C:/b/song.dettato.json'), whole);
+        assert.equal(copiedRecordingText('not json', 'C:/a/x.dettato.json', 'C:/b/x.dettato.json'), 'not json');
+    });
+
+    it('finds the chart of a file beside a chart', () => {
+        assert.equal(chartPathFor('C:/a/My Life.dettato.json'), 'C:/a/My Life.lys');
+        assert.equal(chartPathFor('C:/a/notes.json'), undefined);
     });
 });

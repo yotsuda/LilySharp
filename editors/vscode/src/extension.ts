@@ -38,7 +38,7 @@ import { registerStepAudition } from './stepAudition';
 import { registerCaretInfo } from './caretInfo';
 import { registerExportBatch } from './exportBatch';
 import { OmrImportDeps, importFromImage } from './omrImport';
-import { DecodeResult, attachRecording, followRenames, keepRecordingSettings, sendRecording, useRecordingSettingsStore } from './recording';
+import { DecodeResult, attachRecording, followCopies, followRenames, keepRecordingSettings, sendRecording, useRecordingSettingsStore } from './recording';
 import { TimedNote, soundingOf, startSecondsAt } from './playbackStart';
 import { convertRecording, registerDettatoContext } from './dettato';
 import { recordingPathFor } from './recordingCore';
@@ -1009,6 +1009,8 @@ export function activate(context: vscode.ExtensionContext) {
             convertRecording(context, uri instanceof vscode.Uri ? uri : undefined, outputChannel,
                 () => vscode.commands.executeCommand('lilysharp.openPreviewToSide'))),
         followRenames(),
+        // …and a chart copied (or saved under another name) takes it along (owner's request 2026-11-16).
+        followCopies(),
         watchRecordings(context),
         // Audition: sound the note under the caret (held: the keybinding re-fires on
         // key-repeat, and the webview sustains until the repeats stop) or play the
