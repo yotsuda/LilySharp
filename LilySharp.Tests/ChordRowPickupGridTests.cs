@@ -294,6 +294,28 @@ public class ChordRowPickupGridTests
             Assert.Equal(Of(sections, "staff m"), Of(sections, "chords h  staff m"));
     }
 
+    /// <summary>
+    /// A part written for a section's first bars only — a bass line being added by hand under a
+    /// chord chart (owner's report 2026-11-16: "the play position jumps in section A") — is padded
+    /// with silence to the section's bars, and the silence draws no bar line: the rows' bar lines
+    /// past the music written stand, so the metronome accents every bar and a recording lined up
+    /// bar by bar does not rush the bars the part leaves out. Before, the bar lines stood at 1 2
+    /// only, and with the part's last bar unclosed at 1 only.
+    /// </summary>
+    [Theory]
+    [InlineData("c'1 | c'1 |")]
+    [InlineData("c'1 | c'1")]
+    [InlineData("c'1 | % |")]
+    public void APartWrittenForTheFirstBars_KeepsTheRowsBarLinesAfterIt(string music)
+    {
+        var midi = new MidiExporter().Export(SyntaxTree.Parse(
+            $"time 4/4\npart m\nsection A {{ chords h {{ C | C | C | C | }} m {{ {music} }} }}\nform {{ A A }}\nscore {{ chords h  staff m }}\n"));
+        int bar = 4 * Quarter;
+        Assert.Equal(Enumerable.Range(1, 8).Select(i => i * bar), midi.BarTicks.Where(t => t > 0));
+        var accents = MetronomeBeats.Of(midi, Quarter, out _).Where(b => b.Accent).Select(b => b.Tick);
+        Assert.Equal(Enumerable.Range(0, 8).Select(i => i * bar), accents);
+    }
+
     // ── the MusicXML ────────────────────────────────────────────────────────────────────────
 
     private static (string Root, int Offset)[] PickupHarmonies(string book, out int divisions)

@@ -2091,7 +2091,7 @@ public sealed class MidiExporter
         }
 
         int sectionStart = _currentTick;
-        int sectionEnd = sectionStart;
+        int sectionEnd = sectionStart, sectionWritten = sectionStart;
         var tickLanes = new Dictionary<string, int>();
         // The section's pickup belongs to EVERY part's first bar, as on the page (each part's
         // MeasureBuilder is armed at the boundary). One lane spends it at its first bar line,
@@ -2161,6 +2161,8 @@ public sealed class MidiExporter
                 _partPitchLanes[pname] = (_currentNoteName, _currentOctave, _defaultDuration);
                 _partKeyLanes[pname] = (_ambientTonic, _keySharps);
                 _partVelocity[pname] = _velocity;
+                // (where its music ends, before the silence that pads it: RowsAndLanesEnd)
+                sectionWritten = Math.Max(sectionWritten, _currentTick);
                 _currentTick += PaddingTicks(sectionPart);
                 tickLanes[pname] = _currentTick;
                 sectionEnd = Math.Max(sectionEnd, _currentTick);
@@ -2174,9 +2176,10 @@ public sealed class MidiExporter
             {
                 ProcessNode(child, track, conductorTrack);
                 sectionEnd = Math.Max(sectionEnd, _currentTick);
+                sectionWritten = Math.Max(sectionWritten, _currentTick);
             }
         }
-        _currentTick = RowsAndLanesEnd(sectionEnd, rowsEnd, rowsLastBar, track, rowNotes);
+        _currentTick = RowsAndLanesEnd(sectionEnd, rowsEnd, rowsLastBar, track, rowNotes, sectionWritten);
     }
 
     private void PlaySectionByName(string name, MidiTrack track, MidiTrack conductorTrack,
@@ -2193,7 +2196,7 @@ public sealed class MidiExporter
         if (_sections == null || !_sections.TryGetValue(name, out var sections))
             return;
         int start = _currentTick;
-        int end = start;
+        int end = start, written = start;
         // A by-part chord track's copy is a row, not a lane (RowsAndLanesEnd).
         int rowsEnd = start, rowsLastBar = start, rowNotes = track.Notes.Count;
         // Each part's copy's first bar, when the copies disagree about it (AlignBarLine), asked
@@ -2214,6 +2217,8 @@ public sealed class MidiExporter
             _clockCarry = default;
             PlaySection(section, track, conductorTrack, octaveOffset,
                 firstBars.TryGetValue(section, out int firstBar) ? firstBar : null);
+            if (section.Parent is not ChordPartBlockSyntax)
+                written = Math.Max(written, _currentTick);   // (before the padding: RowsAndLanesEnd)
             // A by-part cell (or a bare section the score attributes to one part) is one
             // part's voice: pad it to the section's canonical bar count. A by-section
             // declaration pads each of its part blocks inside PlaySection; a chord-track
@@ -2230,7 +2235,7 @@ public sealed class MidiExporter
             }
             end = Math.Max(end, _currentTick);
         }
-        _currentTick = RowsAndLanesEnd(end, rowsEnd, rowsLastBar, track, rowNotes);
+        _currentTick = RowsAndLanesEnd(end, rowsEnd, rowsLastBar, track, rowNotes, written);
     }
 
     // The book's section voices (SectionBarCounts.BuildSemanticIndex), read once per Export.
@@ -2671,7 +2676,8 @@ public sealed class MidiExporter
     /// row played it right (grammar evaluation 3, 2026-11-13; MEASURED: m's note-ons at beats
     /// 0 1 2 4 5 for 0 1 2 3 4). LILYSHARP-OWN: LilyPond performs no ChordNames context. The parts
     /// say how long a bar is; a row has no durations to say it with.</remarks>
-    private int RowsAndLanesEnd(int lanesEnd, int rowsEnd, int rowsLastBar, MidiTrack track, int firstNote)
+    private int RowsAndLanesEnd(int lanesEnd, int rowsEnd, int rowsLastBar, MidiTrack track, int firstNote,
+        int? lanesWritten = null)
     {
         // The bars the rows play PAST the lanes are bars of the piece — all of them in a section
         // of rows alone, a lead sheet's — and their bar lines stand (MidiFile.BarTicks), as the
@@ -2679,10 +2685,18 @@ public sealed class MidiExporter
         // had none: its metronome counted whole bars of the meter from the first beat, and after
         // three beats of pickup every accent fell a beat before its bar line (MEASURED, Lab
         // sessions/p1242/dettato/probe-lsp.txt: bar lines at 1.5 3.5 5.5 s, accents at 0 2 4 6).
+        // ⚠️ PAST THE MUSIC WRITTEN (`lanesWritten`), not past the lanes as padded: a part
+        // shorter than its section's rows is padded with silence to the section's bars, and the
+        // silence draws no bar line. Measured from the padded end, the rows' bar lines there were
+        // left out too — a chord chart with a bass line written for its first bars lost every
+        // accent after them, and a recording lined up bar by bar ran those bars in a rush
+        // (owner's report 2026-11-16: "the play position jumps in section A"; MEASURED: a 2-bar
+        // part on 4 bars of chords stood bar lines at 1 2 only).
+        int written = Math.Min(lanesWritten ?? lanesEnd, lanesEnd);
         bool cut = lanesEnd < rowsEnd && lanesEnd > rowsLastBar;
         if (!cut && _barTicks != null)
             foreach (int barEnd in _chordRowBarEnds)
-                if (barEnd > lanesEnd && barEnd <= rowsEnd)
+                if ((barEnd > written || (barEnd == written && written < lanesEnd)) && barEnd <= rowsEnd)
                     _barTicks.Add(barEnd);
         _chordRowBarEnds.Clear();
         if (lanesEnd >= rowsEnd || lanesEnd <= rowsLastBar)
