@@ -246,6 +246,32 @@ public class PlaybackRequestTests
         Assert.DoesNotContain(sounding, n => n.S == written && n.T > 1.0 && n.T < 8.0);
     }
 
+    /// <summary>
+    /// A `%` bar's notes say which written note each plays again (R), so the preview's loop and
+    /// A-B repeat tell them apart (owner's report 2026-11-17: A-B over bars whose `%` repeats a bar
+    /// of the same two pitches sounded only the first beat — every later note, same S, O and pitch,
+    /// was taken for a repeat). The written bar's notes carry no R.
+    /// </summary>
+    [Fact]
+    public void APercentBarsNotes_SayTheWrittenNoteEachPlays()
+    {
+        const string doc = "tempo 4 = 120\ntime 4/4\npart m\nsection A { m { d8 d' d d' d d' d d' | % | % | } }\nscore { staff m }\n";
+        var pb = Playback(doc, null);
+        Assert.Null(pb.Error);
+        var sounding = pb.Notes!.Where(n => !n.L && n.P > 0).OrderBy(n => n.T).ToArray();
+        Assert.Equal(24, sounding.Length);
+        int bar = doc.IndexOf("d8", StringComparison.Ordinal);
+        int[] written = sounding.Take(8).Select(n => n.S).ToArray();
+        Assert.All(sounding.Take(8), n => Assert.Null(n.R));
+        // each % bar: its eight notes play the eight written ones, in order, each its own
+        foreach (var copy in new[] { sounding.Skip(8).Take(8), sounding.Skip(16).Take(8) })
+        {
+            Assert.Equal(written.Select(w => (int?)w), copy.Select(n => n.R));
+            Assert.Equal(8, copy.Select(n => (n.S, n.O, n.P, n.K, n.R)).Distinct().Count());
+        }
+        Assert.Equal(bar, written[0]);
+    }
+
     /// <summary>A chord row's `%` lights its mark for the bar too (owner's request 2026-11-16), and
     /// the chord it sounds again keeps its own printed copies: the second play lights its second.</summary>
     [Fact]

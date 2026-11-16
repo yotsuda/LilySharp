@@ -37,6 +37,9 @@ export interface PlaybackNote {
     W?: string[] | null;
     /** The bar the note is printed in, from 0 (PlaybackNote.M): the A-B repeat picks its bars by it. */
     M?: number;
+    /** Of a note a `%` sounds (S and O are the mark's): the source offset of the note it plays
+     *  again (PlaybackNote.R) — what tells the bar's notes apart (playSpanWindow). */
+    R?: number | null;
     /** A light, not a note: a `%` lit for the bars it sounds (PlaybackNote.L; owner's request
      *  2026-11-16). Nothing sounds it (isLight); the follow-along lights it, a video too. */
     L?: boolean;
@@ -286,7 +289,10 @@ export function playSpanWindow(notes: readonly PlaybackNote[], lo: number | null
     // And a row that plays strokes sounds them from that one place, each its own: taken for a
     // repeat, all but a chord's first stroke were dropped and the time closed up (owner's report
     // 2026-11-01, a bossa nova's four bars going round in two).
-    const key = (n: PlaybackNote) => n.S + ':' + (n.O ?? 0) + ':' + n.P + ':' + (n.K ?? 0);
+    // And a `%` sounds its bar's notes from the mark's place, each from its own (R): taken for
+    // repeats, all but each pitch's first note of the bar were dropped (owner's report 2026-11-17,
+    // A-B over My Life's bars 5-8: the `%` bars sounded their first beat only).
+    const key = (n: PlaybackNote) => n.S + ':' + (n.O ?? 0) + ':' + n.P + ':' + (n.K ?? 0) + ':' + (n.R ?? '');
     const sorted = [...notes].sort((a, b) => a.T - b.T);
     // A printed note's first sounding; a later one is a repeat playing it again.
     const first = new Set<PlaybackNote>();

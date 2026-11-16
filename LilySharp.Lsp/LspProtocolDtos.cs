@@ -568,6 +568,13 @@ public class PlaybackNote
     /// measures (<c>MidiNote.PrintedBar</c>): the preview's A-B repeat picks its bars by it
     /// (docs/ab-repeat-design.md). -1 where unknown (a pedal change).</summary>
     public int M { get; set; } = -1;
+    /// <summary>Of a note a `%` sounds (its <see cref="S"/> and <see cref="O"/> are the mark's, so the
+    /// mark lights): the source offset of the note it plays again. What the preview's loop and A-B
+    /// repeat tell the bar's notes apart by — without it, every note of the bar after its pitch's
+    /// first was taken for a repeat and dropped (owner's report 2026-11-17: only the first beat of
+    /// a `%` bar sounded). Null everywhere else, and then not written.</summary>
+    [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+    public int? R { get; set; }
     /// <summary>WHO sings the note's section, in a sung part with several singer lines: the keys
     /// of the voices that sing there (<see cref="SungVoiceDto.Key"/>; <c>Midi.SungVoices.SungBy</c>).
     /// The editor, which knows what this machine can sing, plays on the instrument a section all
