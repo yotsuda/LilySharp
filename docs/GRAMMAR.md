@@ -1844,7 +1844,7 @@ LyricText      = { Word , [ '[' , Reading , ']' ] } ;
                     no note; '_' and a detached '~' take one note each, holding the previous
                     syllable. *)
 
-ChordsBlock    = 'chords' , [ Identifier ] , [ 'for' , PartRef ] , '{' , { ChordRowEntry | ChordExtend | ChordRowRest | Barline | ChordRowBreak | ChordRowTime | ChordRowTempo } , '}' ;
+ChordsBlock    = 'chords' , [ Identifier ] , [ 'for' , PartRef ] , '{' , { ChordRowEntry | ChordExtend | ChordRowRest | Barline | ChordRowBreak | ChordRowTime | ChordRowTempo | ChordRowRepeat } , '}' ;
                  (* The UNNAMED track (2026-10-09) is placed by a score's bare 'chords' row. *)
                  (* 'for PART' (owner's decision 2026-10-28, Semantics.ChordTrackPitch): the track
                     is typed in PART's letters — under PART's 'pitch', so the player's letters of
@@ -1905,6 +1905,14 @@ ChordRowTime   = TimeSignature ;
                     different one is LYS2005, and the sound and the exports follow. After a chord,
                     a rest or a '.' of its bar it is LYS1073. 'partial' stays the section
                     header's: a pickup opens a section, and the header says it once. *)
+ChordRowRepeat = '%' ;
+                 (* THE BAR BEFORE, AGAIN (decided by the owner 2026-11-16), the chart's bar-repeat
+                    sign: '| G C | % | % | D |' is G C three times. Alone between two bar lines (the
+                    row's end closes the last), after a bar of its row - a '%' too. The page prints
+                    the sign in the bar and no names; the MIDI sounds the bar again; the MusicXML and
+                    the LilyPond twin write its chords again (a ChordNames context has no percent
+                    engraver). One bar at a time: '%N' is a part's. A misplaced one is LYS1048,
+                    saying why. *)
 ChordRowTempo  = TempoDecl ;
                  (* AT A BAR'S HEAD, by ChordRowTime's rule (decided by the owner 2026-11-16):
                     '| G | tempo "Slower" 4 = 60 C |'. The SCORE'S tempo from that bar, as a

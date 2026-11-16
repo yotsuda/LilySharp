@@ -2491,10 +2491,20 @@ public sealed class MidiExporter
         int ringingLeft = 0, ringingTo = -1;
         string? ringingChord = null;
 
+        // The bar a `%` sounds again: the last bar that sounded, as it was read (a `%` before it
+        // already replaced by its own).
+        var lastBar = new List<SyntaxNode>();
         void Sound()
         {
+            if (bar.Count == 1 && bar[0] is PercentMarkSyntax)
+            {
+                bar.Clear();
+                bar.AddRange(lastBar);
+            }
             if (bar.Count == 0)
                 return;
+            lastBar.Clear();
+            lastBar.AddRange(bar);
             if (typedDrop == null)
             {
                 SyntaxNode root = bar[0];
@@ -2622,7 +2632,7 @@ public sealed class MidiExporter
                 _currentTick = was;
                 continue;
             }
-            if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
+            if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax or PercentMarkSyntax)
                 bar.Add(item);
         }
         if (bar.Count > 0)

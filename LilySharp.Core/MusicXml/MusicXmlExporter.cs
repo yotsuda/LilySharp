@@ -7766,7 +7766,7 @@ public sealed class MusicXmlExporter
                     if (kind is SyntaxKind.RepeatStartBar or SyntaxKind.RepeatBothBar && measureAt(bars) is { } opened)
                         opened.RepeatForward = true;
                     break;
-                case ChordEntrySyntax or RestSyntax or ChordExtendSyntax:
+                case ChordEntrySyntax or RestSyntax or ChordExtendSyntax or PercentMarkSyntax:
                     holds = true;
                     break;
                 // A `tempo` at a bar's head (owner's decision 2026-11-16): the score's, a direction
@@ -7866,11 +7866,16 @@ public sealed class MusicXmlExporter
                 bar = new List<SyntaxNode>();
                 continue;
             }
-            if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
+            if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax or PercentMarkSyntax)
                 bar.Add(item);
         }
         if (bar.Count > 0)
             bars.Add(bar);
+        // A `%` bar (owner's decision 2026-11-16) is the bar before it again: its harmonies are
+        // written again, as a reader plays them.
+        for (int k = 1; k < bars.Count; k++)
+            if (bars[k] is [PercentMarkSyntax])
+                bars[k] = bars[k - 1];
         return bars;
     }
 

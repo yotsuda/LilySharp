@@ -565,8 +565,21 @@ public sealed partial class LilyPondExporter
         var barBreaks = new List<SyntaxNode>();
         bool firstBar = true;
         int barIndex = 0;
+        // The bar a `%` (owner's decision 2026-11-16) is again: the last one written, its chords
+        // written out — a ChordNames context has no percent engraver to draw the sign with.
+        var lastBar = new List<SyntaxNode>();
         void Flush()
         {
+            if (pending.Count == 1 && pending[0] is PercentMarkSyntax)
+            {
+                pending.Clear();
+                pending.AddRange(lastBar);
+            }
+            if (pending.Count > 0)
+            {
+                lastBar.Clear();
+                lastBar.AddRange(pending);
+            }
             // The bar is as long as the MUSIC's bar at this point of the section (see
             // SectionBarMeters): a chord row written under a `time 7/8` bar still said `a1:m`,
             // a whole 4/4 bar, and LilyPond's bar check failed there (Lab probes/complex-lys/06).
@@ -607,7 +620,7 @@ public sealed partial class LilyPondExporter
                 Flush();
                 result.Add(CreateBarline(SyntaxKind.Bar, "|", end.Position, 0));
             }
-            else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
+            else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax or PercentMarkSyntax)
             {
                 pending.Add(item);
                 barBreaks.Clear();

@@ -37,6 +37,11 @@ internal sealed class PercentRepeatValidator : ISemanticValidator
         {
             if (node is RepeatExpressionSyntax { RepeatType.Text: "percent" or "unfold" } old)
                 ReportOldSpelling(old);
+            else if (node is PercentMarkSyntax rowMark && InAChordRow(rowMark))
+            {
+                if (WhyNotARowsRepeat(rowMark) is { } why)
+                    _diagnostics.Error(rowMark.Span, DiagnosticCodes.PercentMarkUngrouped, why);
+            }
             else if (node is PercentMarkSyntax mark && node.Parent is not PercentRepeatSyntax)
                 _diagnostics.Error(mark.Span, DiagnosticCodes.PercentMarkUngrouped, WhyUngrouped(mark));
         }
@@ -102,6 +107,46 @@ internal sealed class PercentRepeatValidator : ISemanticValidator
             k = j;
         }
         return $"'{text}' repeats {Bars(bars)} written before it, and only {Bars(counted)} are written here.";
+    }
+
+    /// <summary>A mark written in a chords track (a flat one, or a section of one, or a cell of a
+    /// section): the bar before it again (owner's decision 2026-11-16).</summary>
+    internal static bool InAChordRow(PercentMarkSyntax mark) => mark.Parent switch
+    {
+        ChordPartBlockSyntax => true,
+        SectionDeclarationSyntax { Parent: ChordPartBlockSyntax } => true,
+        _ => false,
+    };
+
+    /// <summary>
+    /// What is wrong with a chords track's <c>%</c>, or null: it is one bar, alone between two bar
+    /// lines, after a bar of the same row (a <c>%</c> too — <c>| G | % | % |</c> is G three times).
+    /// A row repeats one bar at a time; <c>%N</c> is a part's.
+    /// </summary>
+    private static string? WhyNotARowsRepeat(PercentMarkSyntax mark)
+    {
+        string text = mark.Mark.Text;
+        if (mark.Bars != 1)
+            return $"A chords track repeats one bar at a time: write '%' in each bar, '| G C | % | % |'; '{text}' is a part's.";
+        var siblings = mark.Parent!.ChildNodes().Where(n => n is not SyntaxTokenNode).ToList();
+        int at = siblings.FindIndex(s => s.Position == mark.Position);
+        bool BarSide(int step)
+        {
+            for (int i = at + step; i >= 0 && i < siblings.Count; i += step)
+                switch (siblings[i])
+                {
+                    case BarlineSyntax or VoltaEndSyntax:
+                        return true;
+                    case ChordEntrySyntax or RestSyntax or ChordExtendSyntax or PercentMarkSyntax:
+                        return false;
+                }
+            return step > 0;   // the row's end closes the bar; its start opens none before it
+        }
+        if (!BarSide(+1) || !BarSide(-1) && siblings.Take(at).Any(s => s is ChordEntrySyntax or RestSyntax or ChordExtendSyntax or PercentMarkSyntax))
+            return $"A percent mark is the only thing in its bar: write it between two bar lines, '| % |'.";
+        if (!siblings.Take(at).Any(s => s is ChordEntrySyntax or RestSyntax or ChordExtendSyntax or PercentMarkSyntax))
+            return "'%' repeats the bar before it, and this row has none before it: write the chords of the bar.";
+        return null;
     }
 
     private static string Bars(int n) => n == 1 ? "1 bar" : $"{n} bars";

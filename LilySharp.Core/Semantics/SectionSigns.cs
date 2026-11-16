@@ -173,7 +173,7 @@ internal sealed class SectionSigns
                     if (line.BarToken.Kind is SyntaxKind.RepeatEndBar or SyntaxKind.RepeatBothBar)
                         Close();
                     break;
-                case ChordEntrySyntax or RestSyntax or ChordExtendSyntax:
+                case ChordEntrySyntax or RestSyntax or ChordExtendSyntax or PercentMarkSyntax:
                     holds = true;
                     break;
                 case InlineVoltaSyntax ending:

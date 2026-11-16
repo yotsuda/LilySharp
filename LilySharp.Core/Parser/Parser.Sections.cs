@@ -756,7 +756,7 @@ internal sealed partial class Parser
         for (int i = at - 1; i >= 0; i--)
             switch (items[i]?.Kind)
             {
-                case SyntaxKind.ChordEntry or SyntaxKind.Rest or SyntaxKind.ChordExtend:
+                case SyntaxKind.ChordEntry or SyntaxKind.Rest or SyntaxKind.ChordExtend or SyntaxKind.PercentMarkItem:
                     return true;
                 case SyntaxKind.Barline or SyntaxKind.SectionDeclaration:
                     return false;
@@ -776,7 +776,7 @@ internal sealed partial class Parser
             for (int i = at + step; i >= 0 && i < items.Count; i += step)
                 switch (items[i]?.Kind)
                 {
-                    case SyntaxKind.ChordEntry or SyntaxKind.Rest or SyntaxKind.ChordExtend:
+                    case SyntaxKind.ChordEntry or SyntaxKind.Rest or SyntaxKind.ChordExtend or SyntaxKind.PercentMarkItem:
                         return true;
                     case SyntaxKind.Barline or SyntaxKind.SectionDeclaration:
                         return false;
@@ -878,6 +878,10 @@ internal sealed partial class Parser
         // 2026-11-16): the score's tempo from there, as a part's music writes it.
         if (Check(SyntaxKind.TempoKeyword))
             return ParseTempoDeclaration();
+        // `%`: the bar before, again (owner's decision 2026-11-16) — the chart's bar-repeat sign.
+        // A bar of its own: `| G C | % | % |`. Where it may stand: ReportChordPercents.
+        if (Check(SyntaxKind.PercentMark))
+            return new PercentMarkGreen(Advance());
         // A navigation mark, as a part's music writes it: a chart's segno, coda and D.S.
         if (Current.Kind is SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword
             or SyntaxKind.DcKeyword or SyntaxKind.DsKeyword or SyntaxKind.ToKeyword)

@@ -86,7 +86,7 @@ internal sealed class FlatChordRows
                     held++;
                 continue;
             }
-            if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
+            if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax or PercentMarkSyntax)
             {
                 bar.Add(item);
                 held++;
@@ -172,7 +172,7 @@ internal static class ChordRowBarLines
                     else if (kind is SyntaxKind.RepeatStartBar or SyntaxKind.RepeatBothBar)
                         (goneBack, inEnding, closedPlain) = (false, false, false);
                     break;
-                case ChordEntrySyntax or RestSyntax or ChordExtendSyntax:
+                case ChordEntrySyntax or RestSyntax or ChordExtendSyntax or PercentMarkSyntax:
                     // Chords after the endings: the run is over.
                     if (!inEnding)
                         (goneBack, closedPlain) = (false, false);
@@ -225,7 +225,7 @@ internal static class ChordRowBarLines
         {
             if (items[k] is InlineVoltaSyntax)
                 return true;
-            if (items[k] is BarlineSyntax or ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
+            if (items[k] is BarlineSyntax or ChordEntrySyntax or RestSyntax or ChordExtendSyntax or PercentMarkSyntax)
                 return false;
         }
         return false;
@@ -246,7 +246,7 @@ internal static class ChordRowBarLines
                 continue; // an optional slot the row does not write
             if (ReferenceEquals(child, barLine) || child.Position >= barLine.Position)
                 break;
-            if (child is BarlineSyntax or ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
+            if (child is BarlineSyntax or ChordEntrySyntax or RestSyntax or ChordExtendSyntax or PercentMarkSyntax)
                 return true;
         }
         return false;

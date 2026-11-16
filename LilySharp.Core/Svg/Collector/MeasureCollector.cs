@@ -2111,6 +2111,7 @@ public sealed partial class MeasureCollector
             foreach (var mark in _chordNameCollector.RowScoreMarks)
                 if (!HasScoreMarkAt(mark.Type, mark.MeasureIndex))
                     _musicMarks.Add(mark);
+            _percentRepeats.AddRange(_chordNameCollector.RowPercents);
         }
 
         // Now that the music is collected, gather the lyrics rows. The wrap bar

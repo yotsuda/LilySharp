@@ -329,6 +329,7 @@ internal sealed class ChordNameCollector
         _gridWarnings.Clear();
         RowEndings.Clear();
         RowScoreMarks.Clear();
+        RowPercents.Clear();
         MeterByMeasure = [];
         PickupByMeasure = new Dictionary<int, Fraction>();
     }
@@ -520,7 +521,7 @@ internal sealed class ChordNameCollector
                 localMeasure++;
                 continue;
             }
-            if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
+            if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax or PercentMarkSyntax)
                 pending.Add(item);
         }
         Commit();
@@ -593,13 +594,13 @@ internal sealed class ChordNameCollector
                         localMeasure++;
                         chordsBefore = false;
                         break;
-                    case ChordEntrySyntax or RestSyntax or ChordExtendSyntax:
+                    case ChordEntrySyntax or RestSyntax or ChordExtendSyntax or PercentMarkSyntax:
                         chordsBefore = true;
                         break;
                     case BreakSyntax brk:
                         bool chordsAfter = false;
                         for (int k = i + 1; k < items.Count && items[k] is not BarlineSyntax && !chordsAfter; k++)
-                            chordsAfter = items[k] is ChordEntrySyntax or RestSyntax or ChordExtendSyntax;
+                            chordsAfter = items[k] is ChordEntrySyntax or RestSyntax or ChordExtendSyntax or PercentMarkSyntax;
                         if (chordsBefore && chordsAfter)
                             break;      // inside the bar: LYS1069, read by nobody
                         int head = MeasureOfBar(startMeasure, localMeasure, out var split);
@@ -803,7 +804,7 @@ internal sealed class ChordNameCollector
                 bars++;
                 pendingEntries = false;
             }
-            else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
+            else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax or PercentMarkSyntax)
                 pendingEntries = true;
             else if (item is TimeSignatureSyntax time)
                 found.Add((bars, time, pendingEntries));
@@ -830,7 +831,7 @@ internal sealed class ChordNameCollector
                 bars++;
                 pendingEntries = false;
             }
-            else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
+            else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax or PercentMarkSyntax)
             {
                 pendingEntries = true;
             }
@@ -852,6 +853,10 @@ internal sealed class ChordNameCollector
     /// a row's signs repeated and jumped, and the page said neither.</summary>
     public List<MusicMarkItem> RowScoreMarks { get; } = new();
 
+    /// <summary>The bar-repeat signs (<c>%</c>) of the row collected last, each in its bar, on the
+    /// row (owner's decision 2026-11-16).</summary>
+    public List<PercentRepeatItem> RowPercents { get; } = new();
+
     public ImmutableArray<Measure> CollectPart(
         SyntaxNode root, string partName, int staffIndex,
         IReadOnlyDictionary<string, int> sectionStartMeasure, int timeBeats, int timeBeatType,
@@ -864,6 +869,7 @@ internal sealed class ChordNameCollector
 
         RowEndings.Clear();
         RowScoreMarks.Clear();
+        RowPercents.Clear();
         var measureItems = new Dictionary<int, ImmutableArray<MusicItem>>();
         // Source barline types per measure. A chord row carries its own `|`, `:|`,
         // `||` etc. so a standalone lead sheet draws a real measure grid (and the
@@ -913,6 +919,13 @@ internal sealed class ChordNameCollector
                 // break, then the rest timed from it; its written end bar line is the
                 // second half's (MidBarBreakTable's remarks).
                 int endMeasure = split != null ? mi + 1 : mi;
+                // `%`: the bar before, again — the sign in the bar, no names (RowPercents).
+                if (pending.Count == 1 && pending[0] is PercentMarkSyntax percent)
+                {
+                    RowPercents.Add(new PercentRepeatItem(mi, percent.SourceStart, staffIndex));
+                    maxIndex = Math.Max(maxIndex, endMeasure);
+                    pending.Clear();
+                }
                 if (pending.Count > 0)
                 {
                     int emittedFrom = _items.Count;
@@ -1000,7 +1013,7 @@ internal sealed class ChordNameCollector
                     if (MeasureCollector.TempoMark(rowTempo, MeasureOfBar(startMeasure, localMeasure, out _), 0, Fraction.Zero) is { } tempoMark)
                         RowScoreMarks.Add(tempoMark);
                 }
-                else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
+                else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax or PercentMarkSyntax)
                 {
                     pending.Add(item);
                 }
