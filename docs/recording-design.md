@@ -84,7 +84,6 @@ Transcribe!（Seventh String）と同じ体験を Lily# のプレビューで（
 
 1. 入口: 「Attach Recording…」（wav・mp3・flac・ogg）と、Dettato の `x.dettato.json` を読むこと。変換メニューは D3 の後（§2）。
 2. ツールバー: 鳴らす物の切り替え（楽譜の音／録音）と録音パネル（速度・半音とセント・オクターブ・連動のオン／オフ）。
-   - **表示だけの移調**（オーナーの要望 2026-11-16）: パネルの半音で、楽譜の絵と再生も移調する。ファイルは書き換えない。オクターブとセントは録音だけ。綴りは臨時記号の少ない調（同数なら ♯・key が無ければ C major）、双子のある調（B／C♭・F♯／G♭・D♭／C♯ と短調）だけパネルの ♯／♭ で他方を選べる。ヘッダに `Key G♭ (+6)`。score の `transpose` の外に重ねる（Core `ViewTranspose`・LSP `lilysharp/svg` の `viewSemitones`／`viewSpelling`・`lilysharp/playback` の `viewSemitones`）。歌い手の声は移調しない。
 3. 楽譜: 小節を押すとそこから録音、選んだ範囲はループ（今の Practice の Loop と同じ選び方）。
 4. 帯: 波形・小節のマーク・再生位置。**M で小節を打つ・ドラッグで直すまでは最初の版に入れる**（Dettato を使わずに録音を付けた人は、小節を打たないと小節から鳴らせないため）。
 5. 次の版: 拍（B）・section（S）・範囲のテンポ・名前つきのループ・EQ とカラオケ・ショートカットの設定・ペダル。

@@ -81,21 +81,6 @@ describe('the preview\'s Range panel', () => {
         assert.match(extension, /if \(message\.type === 'requestLength'\)/);
     });
 
-    // The view transpose (owner's request 2026-11-16): the recording panel's semitones move the
-    // score's picture and playback, the file unedited; the ♯/♭ works where the key has two names.
-    it('the view transpose: the panel tells the extension, which draws and plays the score moved', () => {
-        assert.match(extension, /function viewSemitones\(\) \{ return recording \? Math\.round\(recSettings\.semitones\) : 0; \}/);
-        assert.match(extension, /vscode\.postMessage\(\{ type: 'viewTranspose', semitones: s, spelling: viewSpelling \}\)/);
-        assert.match(extension, /viewSemitones: previewView\.get\(panel\)\?\.semitones \?\? 0,\s*viewSpelling: previewView\.get\(panel\)\?\.spelling \?\? null,/);
-        assert.match(extension, /'lilysharp\/playback', \{ textDocument: \{ uri \}, renderName: selectedRenders\.get\(uri\) \|\| null,\s*viewSemitones: previewView\.get\(panel\)\?\.semitones \?\? 0 \}\)/);
-        // A playback going on is moved where it stands (the drums stay), not fetched again.
-        assert.match(extension, /for \(const n of rawNotes\) if \(n\.C !== 9 && n\.P !== -1\) n\.P \+= d;/);
-        assert.match(extension, /rawShift = message\.viewSemitones \|\| 0;/);
-        // No recording, no view transpose.
-        assert.match(extension, /if \(had && lastPartsMessage\) renderParts\(lastPartsMessage\);\s*sendView\(\);/);
-        assert.match(extension, /spell\.disabled = !\(k && viewKeyState\.hasTwin\);/);
-    });
-
     // A held step key edits every ~30 ms; the preview's debounce restarted on each edit, so it
     // stood still until the key was let go (owner's report 2026-11-16). A max-wait bounds it.
     it('follows a held key: the refresh waits no longer than its max-wait after the first change', () => {
