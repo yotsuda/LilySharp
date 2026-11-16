@@ -42,6 +42,7 @@ import { DecodeResult, attachRecording, followCopies, followRenames, keepRecordi
 import { TimedNote, soundingOf, startSecondsAt } from './playbackStart';
 import { convertRecording, registerDettatoContext } from './dettato';
 import { recordingPathFor } from './recordingCore';
+import { normalizeAbRanges } from './abRangesCore';
 import { registerOmrContexts } from './omrReader';
 import { OmrScanDeps, hasScan, previewHoversBar, previewReady, previewShowsBar, registerScanFollow, scanBarAt, scanColumnOf, scanSideOf, scanThresholdOf, showScan } from './omrScan';
 import { registerOmrAiFix } from './omrAiFix';
@@ -531,6 +532,8 @@ export function activate(context: vscode.ExtensionContext) {
     rememberRefusalsIn(context.globalState);
     // The recording panel's settings, kept per chart and recording (recording.ts).
     useRecordingSettingsStore(context.workspaceState);
+    // The A-B repeat's eight kept ranges, per file (docs/ab-repeat-design.md, step 5).
+    abRangesStore = context.workspaceState;
     // Copilot Chat's log, which names the model Copilot's Auto answered with (modelClient).
     findCopilotLogFrom(context.logUri);
 
@@ -1854,6 +1857,11 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 else if (onNow !== onBefore) { void prepareVoices(panel, uri, 'play'); }
                 return;
             }
+            // A strip of the A-B repeat kept, renamed or cleared: the file's eight, kept.
+            if (message.type === 'abRanges') {
+                if (typeof message.chart === 'string') { keepAbRanges(message.chart, message.ranges); }
+                return;
+            }
             // The recording panel's settings changed: kept for this recording (recording.ts).
             if (message.type === 'recordingSettings') {
                 if (typeof message.chart === 'string' && typeof message.name === 'string') {
@@ -2126,6 +2134,28 @@ function watchRecordings(context: vscode.ExtensionContext): vscode.Disposable {
     return vscode.Disposable.from(watcher, watcher.onDidChange(changed), watcher.onDidCreate(changed), watcher.onDidDelete(changed));
 }
 
+/** Where the A-B repeat's kept ranges live (docs/ab-repeat-design.md §1: the strips under the
+ *  practice menu, kept per file in the workspace — the A-B the flags set is the page's and not kept). */
+let abRangesStore: vscode.Memento | undefined;
+
+/** The workspace-state key of a file's ranges: its path, case aside, or the URI of a file not on disk. */
+function abRangesKey(uri: string): string {
+    const u = vscode.Uri.parse(uri);
+    return 'lilysharp.abRanges:' + (u.scheme === 'file' ? path.resolve(u.fsPath).toLowerCase() : uri);
+}
+
+/** The eight strips kept for `uri`, empty ones null. */
+function abRangesFor(uri: string) {
+    return normalizeAbRanges(abRangesStore?.get<unknown>(abRangesKey(uri)));
+}
+
+/** Keeps the eight strips the page sent for `uri` (all empty: forgotten). */
+function keepAbRanges(uri: string, ranges: unknown): void {
+    if (!abRangesStore) { return; }
+    const kept = normalizeAbRanges(ranges);
+    void abRangesStore.update(abRangesKey(uri), kept.some(r => r) ? kept : undefined);
+}
+
 async function updatePreviewContent(
     document: vscode.TextDocument,
     panel: vscode.WebviewPanel,
@@ -2155,6 +2185,8 @@ async function updatePreviewContent(
     // Whether the right-click menu offers the OMR doors (owner, 2026-10-24: not for a file
     // the reader did not write) — asked again with each render, as an import adds the file.
     void panel.webview.postMessage({ type: 'scanState', hasScan: hasScan(document.uri) });
+    // The A-B repeat's kept ranges of this file (the page draws its eight strips from them).
+    void panel.webview.postMessage({ type: 'abRanges', chart: uri, ranges: abRangesFor(uri) });
     // Another document or score: its voices replace the last one's, asked for once the server
     // has answered the render below (prepareVoices; singing-design §5).
     followVoices(panel, uri);
@@ -5775,6 +5807,19 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             font: bold 11px sans-serif; padding: 1px 5px; border-radius: 2px; transform: translate(6px, -18px); }
         #abRubber { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 1000; }
         #abRubber line { stroke: #e8710a; stroke-width: 1.5; stroke-dasharray: 4 3; }
+        /* The eight kept ranges at the practice menu's foot (step 5): each strip is the whole score,
+           its range in the flags' colour. */
+        .ab-strips { display: flex; flex-direction: column; gap: 3px; min-width: 180px; flex: 1; }
+        /* (in the practice menu's own colours, as its buttons: .practice-panel button) */
+        .practice-panel .ab-strip { position: relative; display: block; width: 100%; height: 18px; padding: 0; margin: 0; overflow: hidden;
+            border: 1px solid #c8c8c8; border-radius: 2px; background: #fff; color: #333; text-align: left; }
+        .practice-panel .ab-strip.empty { border-style: dashed; background: transparent; color: #888; }
+        .practice-panel .ab-strip.current { border-color: #e8710a; box-shadow: 0 0 0 1px #e8710a; }
+        .practice-panel .ab-strip:hover { border-color: #e8710a; }
+        .ab-strip-fill { position: absolute; top: 0; bottom: 0; background: rgba(232, 113, 10, 0.55); pointer-events: none; }
+        .ab-strip-name { position: relative; padding: 0 5px; font-size: 11px; line-height: 16px; white-space: nowrap; pointer-events: none;
+            text-shadow: 0 0 2px #fff; }
+        .ab-strip-edit { width: 100%; height: 18px; box-sizing: border-box; font-size: 11px; padding: 0 4px; }
         #svgContainer svg {
             display: block;
         }
@@ -6166,6 +6211,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         <div class="prow"><span class="plbl">Count-in</span><button type="button" id="countInBtn" class="toggle" aria-pressed="false" title="One bar of clicks before the music starts">Off</button></div>
         <div class="prow"><span class="plbl">Parts</span><span id="partsList" class="parts"></span></div>
         <div class="prow presets"><span class="plbl"></span><span class="tempo"><button type="button" id="partsReset" title="The parts as the score has them: its own on, the ones it leaves out off, every voice sung">Reset parts</button><button type="button" id="fadersReset" title="Every fader back to 100%">Reset faders</button></span></div>
+        <div class="prow"><span class="plbl" title="Kept A-B ranges: click to play one, Shift+click to keep the A-B shown, double-click to name">Ranges</span><span id="abStrips" class="ab-strips"></span></div>
     </div>
     <div id="recPanel" class="range-panel practice-panel" hidden>
         <button type="button" id="recClose" class="panel-close" title="Close" aria-label="Close">×</button>
@@ -9125,6 +9171,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             abBtn.textContent = abOn ? 'On' : 'Off';
             document.getElementById('abFields').hidden = !abOn;
             drawAbFlags();
+            renderAbStrips();
             if (!abOn) return;
             const bars = abBars();
             const num = m => bars[m] ? bars[m].bar : m + 1;
@@ -9331,6 +9378,106 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (!abDrag) return;
             abDrag = null;
             setAb(abFrom, abTo);    // (and from A, if it plays)
+        }
+
+        // ---- The eight kept ranges (docs/ab-repeat-design.md §1, step 5): strips at the foot of
+        // the practice menu, each the whole score's length with its range coloured. A click calls
+        // the range up (the flags move there, A-B on); Shift+click keeps the A-B shown in it (over
+        // what was there); a double-click names it (unnamed, it says its bar numbers); Alt+click
+        // empties it. Kept per file in the workspace by the extension (abRanges messages).
+        let abSlots = [], abSlotsChart = null;
+        const abStripsEl = document.getElementById('abStrips');
+        function abSlotsReady() { return window.LysSynth && window.LysSynth.normalizeAbRanges; }
+        function keepAbSlots() {
+            if (abSlotsChart) vscode.postMessage({ type: 'abRanges', chart: abSlotsChart, ranges: abSlots });
+            renderAbStrips();
+        }
+        function renderAbStrips() {
+            if (!abStripsEl || !abSlotsReady()) return;
+            const S = window.LysSynth;
+            if (abSlots.length !== S.AB_SLOTS) abSlots = S.normalizeAbRanges(abSlots);
+            const bars = abBars(), n = bars.length;
+            const printed = m => bars[m] ? bars[m].bar : undefined;
+            if (abStripsEl.querySelector('input.ab-strip-edit')) return;    // (not while one is being named)
+            abStripsEl.textContent = '';
+            abSlots.forEach((r, i) => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'ab-strip' + (r ? '' : ' empty') + (r && abOn && r.from === abFrom && r.to === abTo ? ' current' : '');
+                b.dataset.slot = String(i);
+                const band = r ? S.abRangeBand(r, n) : null;
+                if (band) {
+                    const fill = document.createElement('span');
+                    fill.className = 'ab-strip-fill';
+                    fill.style.left = band.left + '%';
+                    fill.style.width = Math.max(band.width, 0.8) + '%';
+                    b.appendChild(fill);
+                }
+                const name = document.createElement('span');
+                name.className = 'ab-strip-name';
+                name.textContent = r ? S.abRangeLabel(r, printed) : String(i + 1);
+                b.appendChild(name);
+                b.title = r
+                    ? 'Bars ' + S.abRangeLabel(Object.assign({}, r, { name: undefined }), printed) + (r.name ? ' (' + r.name + ')' : '')
+                        + ': click to play them (A-B); Shift+click keeps the A-B shown here instead; double-click names it; Alt+click empties it'
+                    : 'Empty: Shift+click keeps the A-B shown here';
+                b.addEventListener('click', e => onAbStripClick(e, i));
+                b.addEventListener('dblclick', e => { e.preventDefault(); if (abSlots[i]) nameAbStrip(b, i); });
+                abStripsEl.appendChild(b);
+            });
+        }
+        function onAbStripClick(e, i) {
+            if (e.detail > 1) return;   // (the second click of a double-click: naming, not calling again)
+            const r = abSlots[i];
+            if (e.altKey) {
+                if (r) { abSlots[i] = null; keepAbSlots(); }
+                return;
+            }
+            if (e.shiftKey) {
+                if (!abOn || abFrom < 0) { flashInfo('Turn A-B on first: the strip keeps the bars A to B', 3000); return; }
+                const bars = abBars();
+                abSlots[i] = { from: abFrom, to: abTo,
+                    fromBar: bars[abFrom] ? bars[abFrom].bar : undefined, toBar: bars[abTo] ? bars[abTo].bar : undefined };
+                keepAbSlots();
+                return;
+            }
+            if (!r) { flashInfo('Empty: Shift+click keeps the A-B shown here', 3000); return; }
+            const last = abBars().length - 1;
+            if (last < 0 || r.from > last) { flashInfo('The score has no bar ' + (r.fromBar ?? r.from + 1) + ' now', 3000); return; }
+            const wasOn = abOn;
+            abOn = true;
+            setAb(r.from, r.to);
+            if (!wasOn) askStoppedPosition();
+        }
+        function nameAbStrip(b, i) {
+            const r = abSlots[i];
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'ab-strip-edit';
+            input.value = r.name || '';
+            input.placeholder = window.LysSynth.abRangeLabel(Object.assign({}, r, { name: undefined }), m => { const bs = abBars(); return bs[m] ? bs[m].bar : undefined; });
+            input.maxLength = 80;
+            input.setAttribute('aria-label', 'The strip\\'s name');
+            b.replaceWith(input);
+            input.focus();
+            input.select();
+            let done = false;
+            const finish = keep => {
+                if (done) return;
+                done = true;
+                if (keep && abSlots[i]) {
+                    const v = input.value.trim();
+                    abSlots[i] = Object.assign({}, abSlots[i], { name: v || undefined });
+                }
+                input.remove();
+                keepAbSlots();
+            };
+            input.addEventListener('keydown', e => {
+                e.stopPropagation();
+                if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+                else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+            });
+            input.addEventListener('blur', () => finish(true));
         }
         // A loop's rounds are laid out ahead, ten minutes of them (loopNotes): the player's
         // clock times each round, not a page timer the browser may hold to a second.
@@ -10362,6 +10509,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 case 'scanState':
                     docHasScan = !!message.hasScan;
                     break;
+                case 'abRanges':
+                    // The file's kept ranges (each render: another file has its own eight).
+                    abSlotsChart = typeof message.chart === 'string' ? message.chart : null;
+                    abSlots = Array.isArray(message.ranges) ? message.ranges : [];
+                    renderAbStrips();
+                    break;
                 case 'chordSpans':
                     chordSpanList = Array.isArray(message.spans) ? message.spans : [];
                     break;
@@ -10420,6 +10573,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         applyBarFlags();
                         lightCaretBar();
                         drawAbFlags();      // (the A-B flags are the page's: drawn into each new picture)
+                        renderAbStrips();   // (and the strips' length is the new picture's bars)
                         refreshRanges();
                         vscode.postMessage({ type: 'requestLength' });
                         // Keep the fit across re-renders (this is also what fits

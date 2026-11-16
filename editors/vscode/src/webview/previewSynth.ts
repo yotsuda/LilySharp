@@ -33,6 +33,7 @@ import {
 } from './playbackCore';
 import { RecordingPlayer } from './recordingPlayer';
 import { RECORDING_DEFAULTS, RECORDING_LIMITS, barAt, recordingPlan, recordingSecondAt, scoreBars, scoreTimeAt, timeWarp, unwarpTime, warpFit, warpBeats, warpNotes, warpTime } from '../recordingCore';
+import { AB_SLOTS, abRangeBand, abRangeLabel, normalizeAbRanges } from '../abRangesCore';
 
 export type SynthState = 'loading' | 'ready' | 'failed' | 'none';
 export interface SynthStatus { state: SynthState; detail?: string }
@@ -367,6 +368,11 @@ const api = {
     unwarpTime,
     warpNotes,
     warpBeats,
+    // The A-B repeat's kept ranges, the strips under the practice menu (docs/ab-repeat-design.md).
+    AB_SLOTS,
+    normalizeAbRanges,
+    abRangeLabel,
+    abRangeBand,
 };
 
 declare global {
