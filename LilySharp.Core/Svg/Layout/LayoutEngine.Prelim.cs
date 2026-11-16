@@ -187,6 +187,7 @@ internal sealed partial class LayoutEngine
             TempoText = score.TempoText,
             TempoBeatUnit = score.TempoBeatUnit,
             TempoDots = score.TempoDots,
+            TempoApprox = score.TempoApprox,
         };
         // Lent, and given back once the annotation context has copied it (see RentPrelimBeams).
         var prelimBeams = RentPrelimBeams();

@@ -576,6 +576,7 @@ internal sealed partial class LayoutEngine
             TempoText = score.TempoText,
             TempoBeatUnit = score.TempoBeatUnit,
             TempoDots = score.TempoDots,
+            TempoApprox = score.TempoApprox,
         };
 
         var anchors = BuildStaffAnchorTables(score, systemsArray);

@@ -1987,7 +1987,8 @@ public sealed partial class MeasureCollector
     {
         // The PRINTED count: a `bare` tempo's mark is its words (TempoValue.PrintedBpm).
         if (sectionTempo.PrintedBpm is int bpm)
-            return new MusicMarkItem(MusicMarkType.Tempo, bpm.ToString(),
+            return new MusicMarkItem(MusicMarkType.Tempo,
+                Layout.MetronomeMarkGeometry.CountText(bpm, sectionTempo.Value.IsApproximate),
                 measureIndex, sectionPos, anchorItemIndex, anchorTiming)
             {
                 TempoText = sectionTempo.Marking,

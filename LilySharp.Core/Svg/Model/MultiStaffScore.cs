@@ -89,6 +89,10 @@ public sealed record MultiStaffScore
     /// <summary>Augmentation dots on the opening tempo's beat unit.</summary>
     public int TempoDots { get; init; }
 
+    /// <summary>The opening tempo was written with a fraction (<c>tempo 4 = 131.8</c>): its mark
+    /// prints the count rounded after "≈" (owner's decision 2026-11-16).</summary>
+    public bool TempoApprox { get; init; }
+
     /// <summary>The note value the initial tempo asked to swing (0 = none, 8, 16).</summary>
     public int SwingSubdivision { get; }
 
@@ -391,6 +395,7 @@ public sealed record MultiStaffScore
             TempoText = score.TempoText,
             TempoBeatUnit = score.TempoBeatUnit,
             TempoDots = score.TempoDots,
+            TempoApprox = score.TempoApprox,
             Subtitle = score.Subtitle,
             Poet = score.Poet,
             Texts = score.Texts,

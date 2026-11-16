@@ -1270,7 +1270,7 @@ internal sealed partial class Parser
         // whole run). These are NOT reserved words, so they stay usable as names.
         string? feelWord = null;
         bool subdivisionRead = false;
-        bool sawWords = valueTokens.Count > 0, sawCount = false;
+        bool sawWords = valueTokens.Count > 0, sawCount = false, sawEquals = false;
         while (Check(SyntaxKind.StringLiteral) ||
                Check(SyntaxKind.IntegerLiteral) ||
                // a dotted beat unit: "tempo \"Lively\" 4. = 116" lexes as
@@ -1286,18 +1286,25 @@ internal sealed partial class Parser
             // the floor — `tempo 4.5 = 116` would keep neither the '=' nor the 116 —
             // and the reader would be told about a stray number somewhere after a
             // tempo instead of about the tempo.
-            if (Check(SyntaxKind.DecimalLiteral))
+            // …except as the COUNT (owner's decision 2026-11-16): `tempo 4 = 131.8`, `tempo 131.8`
+            // — a tempo read off a recording. The page prints it rounded after "≈"
+            // (TempoValue.IsApproximate); the sound keeps the fraction. Still refused as a beat
+            // unit (before an `=`: `tempo 4.5 = 116`) and as a swung value (after the feel word).
+            bool decimalCount = Check(SyntaxKind.DecimalLiteral) && feelWord == null
+                && (sawEquals || Peek(1)?.Kind is not (SyntaxKind.Equals or SyntaxKind.Dot));
+            if (Check(SyntaxKind.DecimalLiteral) && !decimalCount)
             {
                 var span = new TextSpan(_textPosition, System.Math.Max(1, Current.FullWidth));
                 _diagnostics.Error(span, DiagnosticCodes.FractionalTempoValue,
-                    $"'{Current.Text}' is not a tempo value - a metronome mark is a whole "
-                    + "number of beats per minute (tempo 4 = 116) and a beat unit is a "
-                    + "note value, dotted with a dot (tempo 4. = 116).");
+                    $"'{Current.Text}' is not a tempo value here - a beat unit is a note value, dotted "
+                    + "with a dot (tempo 4. = 116), and a swung value is 8 or 16; only the count may "
+                    + "have a fraction (tempo 4 = 131.8).");
             }
+            sawEquals |= Check(SyntaxKind.Equals);
             // The swung note value — the FIRST integer after the feel word, as TempoValue
             // reads it — is 8 or 16; anything else used to be drawn as one of them silently.
             sawWords |= Check(SyntaxKind.StringLiteral);
-            sawCount |= feelWord == null && Check(SyntaxKind.IntegerLiteral);
+            sawCount |= feelWord == null && (Check(SyntaxKind.IntegerLiteral) || decimalCount);
             if (Check(SyntaxKind.Identifier))
                 feelWord ??= Current.Text;
             else if (feelWord != null && !subdivisionRead && Check(SyntaxKind.IntegerLiteral))

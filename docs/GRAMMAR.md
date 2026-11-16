@@ -631,8 +631,14 @@ FeelWord       = 'swing' | 'shuffle' ;      (* contextual, NOT reserved words *)
                     - beat dots  = the dots after that unit.
                     - marking    = the bare word in the first position, else the string.
                     Every one of those is pinned in TempoValueTests; changing one changes
-                    what existing scores mean. A Decimal anywhere in the run is LYS0022 —
-                    a metronome mark is whole and a beat unit is a note value. *)
+                    what existing scores mean. A Decimal is the COUNT with a fraction where
+                    the count stands — after the '=' (`tempo 4 = 131.8`) or alone
+                    (`tempo 131.8`), a tempo read off a recording (owner's decision
+                    2026-11-16): the sound keeps the fraction (MIDI, MusicXML's sound and
+                    per-minute), the page prints it rounded after a wave, "♩ ≈ 132" (a
+                    metronome mark is printed in whole beats; LILYSHARP-OWN), and the
+                    LilyPond twin writes the whole count. Anywhere else — a beat unit
+                    (`tempo 4.5 = 116`), a swung value — it is LYS0022. *)
 TimeDecl       = 'time' , [ '!' ] , Integer , { '+' , Integer } , '/' , Integer , [ BeatGrouping ]
                | 'time' , [ '!' ] , 'none' ;
 BeatGrouping   = '(' , Integer , { '+' , Integer } , ')' ;

@@ -47,8 +47,20 @@ public sealed record TempoValue(
     int BeatDots,
     int? Bpm,
     int SwingSubdivision,
-    bool CountHidden = false)
+    bool CountHidden = false,
+    // The count as written when it has a fraction (`tempo 4 = 131.8`, owner's decision
+    // 2026-11-16: a tempo read off a recording); null for a whole number. Bpm then holds it
+    // rounded, for every reader that counts in whole beats (the printed number among them).
+    double? BpmExact = null)
 {
+    /// <summary>The count was written with a fraction: the page prints it rounded after "≈"
+    /// ("♩ ≈ 132") — a metronome mark is printed in whole beats — and the sound keeps the fraction
+    /// (<see cref="QuarterBpm"/>).</summary>
+    public bool IsApproximate => BpmExact is not null;
+
+    /// <summary>The count the sound runs at: <see cref="BpmExact"/>, else <see cref="Bpm"/>.</summary>
+    public double? SoundingBpm => BpmExact ?? Bpm;
+
     /// <summary>The word that ends a tempo whose count is played and not printed:
     /// <c>tempo "Tempo I" 4 = 92 bare</c> sounds at 92 and prints "Tempo I" alone — no
     /// metronome equation, no parentheses (owner's decision 2026-11-12, grammar evaluation 2).
@@ -74,7 +86,7 @@ public sealed record TempoValue(
         => 4.0 / (BeatUnit ?? 4) * (2.0 - System.Math.Pow(2.0, -BeatDots));
 
     /// <summary>The tempo in crotchets per minute, or null when the run states no bpm.</summary>
-    public double? QuarterBpm => Bpm is int bpm ? bpm * QuarterNotesPerBeat : null;
+    public double? QuarterBpm => SoundingBpm is double bpm ? bpm * QuarterNotesPerBeat : null;
 
     /// <summary>
     /// Reads the value run left to right, in ONE pass.
@@ -97,8 +109,8 @@ public sealed record TempoValue(
     /// <item><b>SwingSubdivision</b> — the first integer after a feel word, 8 for a bare
     /// feel word, 0 for none.</item>
     /// </list>
-    /// A <see cref="SyntaxKind.DecimalLiteral"/> is not a tempo value and is skipped here;
-    /// the parser has already reported it (LYS0022) at the point it consumed it.
+    /// A <see cref="SyntaxKind.DecimalLiteral"/> is the count with a fraction (<see cref="BpmExact"/>)
+    /// where the parser takes one; elsewhere it reported it (LYS0022) and it changes nothing here.
     /// </remarks>
     public static TempoValue FromTokens(IEnumerable<SyntaxTokenNode> tokens)
     {
@@ -107,6 +119,7 @@ public sealed record TempoValue(
         int? beatCandidate = null;
         int? beatUnit = null;
         int? subdivision = null;
+        double? exact = null;
         int dots = 0, beatDots = 0;
         bool sawUnit = false, sawEquals = false, sawFeelWord = false, first = true, countHidden = false;
 
@@ -145,9 +158,21 @@ public sealed record TempoValue(
                     if (sawFeelWord)
                         subdivision ??= n;   // the FIRST number after the feel word
                     else
+                    {
                         bpm = n;             // the LAST number before it
+                        exact = null;
+                    }
                     if (!sawEquals)
                         beatCandidate = n;
+                    break;
+
+                // A count with a fraction (`4 = 131.8`): the bpm, rounded, and the fraction
+                // kept. Anywhere else the parser refused it (LYS0022) and it is skipped.
+                case SyntaxKind.DecimalLiteral when !sawFeelWord
+                        && double.TryParse(token.Text, System.Globalization.NumberStyles.Float,
+                            System.Globalization.CultureInfo.InvariantCulture, out double d) && d > 0:
+                    bpm = (int)System.Math.Round(d, System.MidpointRounding.AwayFromZero);
+                    exact = d;
                     break;
 
                 case SyntaxKind.Dot when sawUnit && !sawEquals:
@@ -167,7 +192,7 @@ public sealed record TempoValue(
         // for a subdivision and named zero, and the reading this replaces answered 0.
         int swing = subdivision ?? (sawFeelWord ? 8 : 0);
 
-        return new TempoValue(marking, beatUnit, beatDots, bpm, swing, countHidden);
+        return new TempoValue(marking, beatUnit, beatDots, bpm, swing, countHidden, exact);
     }
 
     /// <summary>

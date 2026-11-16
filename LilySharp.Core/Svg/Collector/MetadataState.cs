@@ -86,6 +86,9 @@ internal sealed class MetadataState
     public int SwingValuePosition;
 
     public int? Tempo;
+    /// <summary>The opening tempo was written with a fraction: its mark prints "≈" (owner's
+    /// decision 2026-11-16; MetronomeMarkGeometry.ApproxMark).</summary>
+    public bool TempoApprox;
     public string? TempoText;
     public int TempoBeatUnit = 4;
     public int TempoDots;
@@ -148,6 +151,7 @@ internal sealed class MetadataState
         SwingPosition = other.SwingPosition;
         SwingValuePosition = other.SwingValuePosition;
         Tempo = other.Tempo;
+        TempoApprox = other.TempoApprox;
         TempoText = other.TempoText;
         TempoBeatUnit = other.TempoBeatUnit;
         TempoDots = other.TempoDots;
@@ -200,6 +204,7 @@ internal sealed class MetadataState
             && SwingPosition == other.SwingPosition
             && SwingValuePosition == other.SwingValuePosition
             && Tempo == other.Tempo
+            && TempoApprox == other.TempoApprox
             && TempoText == other.TempoText
             && TempoBeatUnit == other.TempoBeatUnit
             && TempoDots == other.TempoDots
@@ -255,6 +260,7 @@ internal sealed class MetadataState
         SwingPosition = 0;
         SwingValuePosition = 0;
         Tempo = null;
+        TempoApprox = false;
         TempoText = null;
         TempoBeatUnit = 4;
         TempoDots = 0;

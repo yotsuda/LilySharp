@@ -693,7 +693,7 @@ internal static partial class SharedRenderer
                 MusicMarkEngraver.BuildAllMarks(score.MusicMarks,
                     score.PrimaryContentStaff.PrimaryVoice.Measures, score.Tempo,
                     score.SwingSubdivision, score.TempoText, score.TempoBeatUnit, score.TempoDots,
-                    score.Header.Tempo, score.LayoutPlan.SectionLabels, score.Header.TempoPieces),
+                    score.Header.Tempo, score.LayoutPlan.SectionLabels, score.Header.TempoPieces, score.TempoApprox),
                 // A tempo mark's pieces carry their own offsets (note, "= N", swing).
                 static (l, it) => l with { SourcePosition = it.SourcePosition, TempoPieces = it.TempoPieces },
                 static l => l.SourceIndex),

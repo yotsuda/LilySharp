@@ -366,6 +366,9 @@ public sealed class TempoDeclarationSyntax : SyntaxNode
                         count = token.Span.Start;
                         if (!sawEquals) candidate = token.Span.Start;
                         break;
+                    case SyntaxKind.DecimalLiteral when feel == 0:
+                        count = token.Span.Start;      // a count with a fraction (TempoValue.BpmExact)
+                        break;
                     case SyntaxKind.Equals when !sawEquals:
                         sawEquals = true;
                         unit = candidate;

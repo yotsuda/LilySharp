@@ -1648,7 +1648,7 @@ c4 d e f |
 ```
 
 A decimal is a VALUE, not a duration: `c4.5` is an error (LYS0021), `c4.` is a dotted
-quarter. Same in a tempo — `tempo 4. = 116` is dotted, `tempo 4.5 = 116` is LYS0022.
+quarter. Same in a tempo — `tempo 4. = 116` is dotted, `tempo 4.5 = 116` is LYS0022. The COUNT may have a fraction — `tempo 4 = 131.8` (a tempo read off a recording) sounds at 131.8 and prints "♩ ≈ 132".
 
 ## Common requests — which construct answers them
 

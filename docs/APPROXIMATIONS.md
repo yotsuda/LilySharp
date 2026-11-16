@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 455 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **581** | |
+| `OWN` | 456 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **582** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（455 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（456 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -718,6 +718,8 @@
 ### `LilySharp.Core/Svg/Layout/MeterGlyphRun.cs`
 - **`MeterGlyphRun.PlusEngravingEm`** LILYSHARP-OWN, a text character LilyPond spells with markup.
 - **`MeterGlyphRun.Pieces`** ⚠️ LILYSHARP-OWN: the fallback branch. The only non-digit that reaches here is the
+### `LilySharp.Core/Svg/Layout/MetronomeMarkGeometry.cs`
+- **`MetronomeMarkGeometry.ApproxMark`** LILYSHARP-OWN: LilyPond's \tempo takes a whole count only. The mark rides at the
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
 - **`MultiStaffLayouter.TextRowRefpointBelowTop`** ⚠️ LILYSHARP-OWN, AND IT HAS ONE HOME ON PURPOSE. LilyPond has no band: a Lyrics or
 - **`MultiStaffLayouter.TextRowVerseSpacing`** ⚠️ LILYSHARP-OWN, AND IT IS NOW THE LAST FLAT VERSE STEP LEFT. Where the row is an

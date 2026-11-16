@@ -180,9 +180,37 @@ internal static class MetronomeMarkGeometry
     }
 
     /// <summary>The equation string as drawn: "= N", closed with ")" after a textual
-    /// marking ("Grave (♩ = 120)").</summary>
+    /// marking ("Grave (♩ = 120)") — "≈ N" for a count written with a fraction
+    /// (<see cref="CountText"/>).</summary>
     public static string EquationText(string count, bool parenthesised)
-        => "= " + count + (parenthesised ? ")" : "");
+        => (IsApproximateCount(count) ? ApproxMark + " " + count[1..] : "= " + count) + (parenthesised ? ")" : "");
+
+    /// <summary>
+    /// The mark that leads a tempo mark's count when the tempo was written with a fraction
+    /// (<c>tempo 4 = 131.8</c>, owner's decision 2026-11-16: a tempo read off a recording): the
+    /// count is printed rounded, after a wave, "♩ ≈ 132" — a metronome mark is printed in whole
+    /// beats, and the wave says the number is not exact.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond's <c>\tempo</c> takes a whole count only. The mark rides at the
+    /// head of the mark's count string (<c>MusicMarkItem.Text</c>, "≈132") so every reader that
+    /// prices or draws the equation — the draw, the outside-staff stack, the extents — goes
+    /// through <see cref="EquationText"/> and they cannot disagree; a reader that wants the number
+    /// strips it (<see cref="CountValue"/>).
+    /// </remarks>
+    public const char ApproxMark = '≈';
+
+    /// <summary>The count string of a tempo mark: the whole count, led by
+    /// <see cref="ApproxMark"/> when the tempo was written with a fraction.</summary>
+    public static string CountText(int bpm, bool approximate)
+        => (approximate ? ApproxMark.ToString() : "") + bpm.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>Whether a mark's count string says "approximately".</summary>
+    public static bool IsApproximateCount(string count) => count.Length > 0 && count[0] == ApproxMark;
+
+    /// <summary>The whole count a mark's count string names, or null.</summary>
+    public static int? CountValue(string count)
+        => int.TryParse(IsApproximateCount(count) ? count[1..] : count, out int n) ? n : null;
 
     /// <summary>
     /// Pen advance from the piece BEFORE a text run to the run's first VISIBLE glyph,

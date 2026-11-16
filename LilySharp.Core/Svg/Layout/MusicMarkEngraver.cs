@@ -621,7 +621,7 @@ internal static class MusicMarkEngraver
         // Merge section labels and tempo marking into the mark list
         var allMarks = BuildAllMarks(musicMarks, measures, score?.Tempo, score?.SwingSubdivision ?? 0,
             score?.TempoText, score?.TempoBeatUnit ?? 4, score?.TempoDots ?? 0,
-            score?.Header.Tempo ?? 0, sectionLabels, score?.Header.TempoPieces ?? default);
+            score?.Header.Tempo ?? 0, sectionLabels, score?.Header.TempoPieces ?? default, score?.TempoApprox ?? false);
 
         if (allMarks.Length == 0)
             return ImmutableArray<MusicMarkLayout>.Empty;
@@ -2029,7 +2029,9 @@ internal static class MusicMarkEngraver
         int tempoDots = 0,
         int tempoPosition = 0,
         Semantics.SectionLabelStyle sectionLabels = Semantics.SectionLabelStyle.Boxed,
-        TempoPiecePositions tempoPieces = default)
+        TempoPiecePositions tempoPieces = default,
+        // The opening tempo was written with a fraction: its count prints after "≈".
+        bool tempoApprox = false)
     {
         // `layout { sectionLabels none }`: the names are not engraved at all. Gated HERE,
         // in the one home that merges them in, so every reader follows — the placement, the
@@ -2042,7 +2044,7 @@ internal static class MusicMarkEngraver
             ? (musicMarks.IsDefaultOrEmpty ? ImmutableArray<MusicMarkItem>.Empty : musicMarks)
             : MergeSectionLabels(musicMarks, measures);
         return MergeTempoMark(allMarks, tempo, swingSubdivision, tempoText, tempoBeatUnit,
-            tempoDots, tempoPosition, tempoPieces);
+            tempoDots, tempoPosition, tempoPieces, tempoApprox);
     }
 
     /// <summary>
@@ -2149,7 +2151,7 @@ internal static class MusicMarkEngraver
     private static ImmutableArray<MusicMarkItem> MergeTempoMark(
         ImmutableArray<MusicMarkItem> marks, int? tempo, int swingSubdivision = 0,
         string? tempoText = null, int tempoBeatUnit = 4, int tempoDots = 0,
-        int tempoPosition = 0, TempoPiecePositions tempoPieces = default)
+        int tempoPosition = 0, TempoPiecePositions tempoPieces = default, bool tempoApprox = false)
     {
         // A textual marking without a BPM ("tempo \"Grave\"") still prints, and so does the
         // swing equation alone ("tempo swing").
@@ -2161,7 +2163,7 @@ internal static class MusicMarkEngraver
         // which is a real offset (the file's first character), so clicking the opening
         // metronome mark in the preview jumped to the top of the file.
         var tempoMark = new MusicMarkItem(
-            MusicMarkType.Tempo, tempo?.ToString() ?? "", 0, tempoPosition)
+            MusicMarkType.Tempo, tempo is int bpm ? MetronomeMarkGeometry.CountText(bpm, tempoApprox) : "", 0, tempoPosition)
         {
             SwingSubdivision = swingSubdivision,
             TempoText = tempoText,

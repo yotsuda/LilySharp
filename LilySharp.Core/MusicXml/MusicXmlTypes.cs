@@ -312,7 +312,7 @@ internal sealed class MusicXmlMeasure
 
     /// <summary>A playback tempo (quarters a minute) that prints nothing — a bare
     /// <c>&lt;sound tempo&gt;</c> — or null.</summary>
-    public int? SoundTempo { get; set; }
+    public double? SoundTempo { get; set; }
     public List<MusicXmlDirection> Directions { get; } = new();
     public List<MusicXmlNote> Notes { get; } = new();
 
@@ -366,7 +366,7 @@ internal sealed class MusicXmlMeasure
         if (Direction != null)
             measure.Add(Direction.ToXml());
         if (SoundTempo is { } soundTempo)
-            measure.Add(new XElement("sound", new XAttribute("tempo", soundTempo)));
+            measure.Add(new XElement("sound", new XAttribute("tempo", soundTempo.ToString(System.Globalization.CultureInfo.InvariantCulture))));
 
         // Interleave directions with notes by emitting all directions first
         foreach (var dir in Directions)
@@ -732,6 +732,9 @@ internal sealed class MusicXmlDirection
     public bool Editorial { get; set; }
     /// <summary>The metronome's per-minute figure, in <see cref="TempoBeatUnit"/>s.</summary>
     public int? Tempo { get; set; }
+    /// <summary>The count as written when it has a fraction (<c>tempo 4 = 131.8</c>, owner's
+    /// decision 2026-11-16), written so in <c>&lt;per-minute&gt;</c> and the sound; null for a whole one.</summary>
+    public double? TempoExact { get; set; }
     /// <summary>The metronome's beat unit as a note value (4 = quarter) and its dots. Until
     /// session 398 the unit was written as a quarter whatever the source said, so
     /// <c>tempo 2 = 60</c> came out ♩ = 60 — half the speed.</summary>
@@ -924,11 +927,12 @@ internal sealed class MusicXmlDirection
                 var metronome = new XElement("metronome", new XElement("beat-unit", BeatUnitName(TempoBeatUnit)));
                 for (int i = 0; i < TempoBeatDots; i++)
                     metronome.Add(new XElement("beat-unit-dot"));
-                metronome.Add(new XElement("per-minute", Tempo.Value));
+                metronome.Add(new XElement("per-minute", TempoExact is double exact
+                    ? exact.ToString(System.Globalization.CultureInfo.InvariantCulture) : Tempo.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)));
                 direction.Add(new XElement("direction-type", metronome));
             }
             // <sound tempo> is in QUARTER notes per minute whatever the metronome's unit.
-            var value = new Syntax.TempoValue(null, TempoBeatUnit, TempoBeatDots, Tempo.Value, 0);
+            var value = new Syntax.TempoValue(null, TempoBeatUnit, TempoBeatDots, Tempo.Value, 0, BpmExact: TempoExact);
             sound = new XElement("sound", new XAttribute("tempo",
                 System.Math.Round(value.QuarterBpm!.Value, 2).ToString(System.Globalization.CultureInfo.InvariantCulture)));
         }

@@ -113,6 +113,7 @@ public sealed class MusicXmlExporter
             "MusicXmlExporter: the document was accessed before the build created it.");
 
     private int _tempo = 120;
+    private double? _tempoExact;   // the count with its fraction (tempo 4 = 131.8), or null
     // The meter in force (the pair, the additive numerator's text, `time none`) and the score's
     // home meter a section reverts to: Semantics.BarContext, the one spelling of those rules
     // (REFACTOR_PLAN stage C3; the MIDI moved first). The pickup is still this exporter's own —
@@ -405,7 +406,7 @@ public sealed class MusicXmlExporter
             // major, where the page and the twin print b in F. A part's own key is its home
             // (PartHomeKey), read where the part's play opens.
             _homeKey = FileHomeKey(root);
-            _openingTempo = (_tempo, _tempoStated, _tempoBeatUnit, _tempoBeatDots, _tempoHiddenWords, _tempoMarking, _tempoWordsAlone);
+            _openingTempo = (_tempo, _tempoExact, _tempoStated, _tempoBeatUnit, _tempoBeatDots, _tempoHiddenWords, _tempoMarking, _tempoWordsAlone);
             _bars.CaptureHome();
             BuildSectionHeaderRegistry(root);
             ProcessSections(root);
@@ -2695,7 +2696,7 @@ public sealed class MusicXmlExporter
         // left running: `tempo "Slower" 4 = 80` in the first part's second bar was the second
         // part's opening tempo (grammar evaluation 4, 2026-11-13).
         if (isFirst)
-            (_tempo, _tempoStated, _tempoBeatUnit, _tempoBeatDots, _tempoHiddenWords, _tempoMarking, _tempoWordsAlone) = _openingTempo;
+            (_tempo, _tempoExact, _tempoStated, _tempoBeatUnit, _tempoBeatDots, _tempoHiddenWords, _tempoMarking, _tempoWordsAlone) = _openingTempo;
         if (_sectionTempo is { } sectionTempo && isFirst)
             ProcessTempo(sectionTempo);
         // The bar the play opens in — what a split bar's two halves must add up to.
@@ -3889,7 +3890,7 @@ public sealed class MusicXmlExporter
 
     /// <summary>The running tempo as the file's top level leaves it (CollectMetadata), which
     /// every part opens at.</summary>
-    private (int Tempo, bool Stated, int BeatUnit, int BeatDots, string? HiddenWords, string? Marking, string? WordsAlone) _openingTempo;
+    private (int Tempo, double? Exact, bool Stated, int BeatUnit, int BeatDots, string? HiddenWords, string? Marking, string? WordsAlone) _openingTempo;
 
     // The last tempo stated where the walk stands, and the file's own, as written.
     private TempoValue? _tempoStanding, _fileTempo;
@@ -3922,6 +3923,7 @@ public sealed class MusicXmlExporter
         }
         _tempoWordsAlone = null;
         _tempo = bpm;
+        _tempoExact = value.BpmExact;
         _tempoStated = true;
         _tempoBeatUnit = value.BeatUnit ?? 4;
         _tempoBeatDots = value.BeatDots;
@@ -3959,7 +3961,7 @@ public sealed class MusicXmlExporter
     private MusicXmlDirection TempoDirection()
         => new()
         {
-            Tempo = _tempo, TempoBeatUnit = _tempoBeatUnit, TempoBeatDots = _tempoBeatDots,
+            Tempo = _tempo, TempoExact = _tempoExact, TempoBeatUnit = _tempoBeatUnit, TempoBeatDots = _tempoBeatDots,
             TempoHiddenWords = _tempoHiddenWords, TempoMarking = _tempoMarking,
         };
 
@@ -3992,7 +3994,7 @@ public sealed class MusicXmlExporter
         {
             // Words alone open the part: the words, and the running speed as the bare sound.
             measure.Direction = new MusicXmlDirection { TempoWordsAlone = _tempoWordsAlone };
-            measure.SoundTempo = _tempo;
+            measure.SoundTempo = _tempoExact ?? _tempo;
         }
         else if (_tempoStated)
             measure.Direction = TempoDirection();

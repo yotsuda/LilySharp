@@ -1925,7 +1925,7 @@ public sealed partial class LilyPondExporter
     private static string EmitTempo(Svg.Model.MusicMarkItem mark, (int Bpm, int Unit, int Dots)? hidden = null)
         => hidden is var (played, unit, dots)
             ? EmitTempo(mark.TempoText, played, unit, dots, mark.SwingSubdivision, countHidden: true)
-            : EmitTempo(mark.TempoText, int.TryParse(mark.Text, out int bpm) ? bpm : null,
+            : EmitTempo(mark.TempoText, Svg.Layout.MetronomeMarkGeometry.CountValue(mark.Text),
                 mark.TempoBeatUnit, mark.TempoDots, mark.SwingSubdivision);
 
     private static string EmitTempo(string? marking, int? bpm, int unit, int dots, int swingSubdivision,

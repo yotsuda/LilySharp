@@ -71,7 +71,10 @@ internal sealed record ScoreContent(
     Model.ScoreTexts Texts = default,
     // The arranger and the copyright line (owner's
     // decision 2026-11-13); null = none.
-    Model.HeaderLines? HeaderLines = null);
+    Model.HeaderLines? HeaderLines = null,
+    // The opening tempo was written with a fraction: its mark prints "≈" (owner's decision
+    // 2026-11-16; MetronomeMarkGeometry.ApproxMark).
+    bool TempoApprox = false);
 
 /// <summary>
 /// Turns a <see cref="ScoreContent"/> snapshot plus a set of voices / staff groups
@@ -124,6 +127,7 @@ internal static class ScoreAssembler
             TempoText = c.TempoText,
             TempoBeatUnit = c.TempoBeatUnit,
             TempoDots = c.TempoDots,
+            TempoApprox = c.TempoApprox,
             Subtitle = c.Subtitle,
             Poet = c.Poet,
             Texts = c.Texts,
@@ -176,6 +180,7 @@ internal static class ScoreAssembler
             TempoText = c.TempoText,
             TempoBeatUnit = c.TempoBeatUnit,
             TempoDots = c.TempoDots,
+            TempoApprox = c.TempoApprox,
             Subtitle = c.Subtitle,
             Poet = c.Poet,
             Texts = c.Texts,

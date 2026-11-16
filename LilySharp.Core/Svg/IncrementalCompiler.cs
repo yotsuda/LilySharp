@@ -166,7 +166,7 @@ public sealed class IncrementalCompiler
     private ImmutableArray<Layout.SystemBreaker.SpringEdgeKey> _springEdges;
     private (string? Title, string? Composer, string? Subtitle, string? Poet, string? Instrument, int? Tempo,
         int SwingSubdivision, string? TempoText, int TempoBeatUnit, int TempoDots, Model.ScoreTexts Texts,
-        Model.HeaderLines HeaderLines) _globalKey;
+        Model.HeaderLines HeaderLines, bool TempoApprox) _globalKey;
 
     // The override/revert collections the cached geometry was laid out with, compared
     // BY VALUE (GrobOverride/GrobRevert are records over scalars and the typed LysValue).
@@ -745,7 +745,8 @@ public sealed class IncrementalCompiler
         // key buckets, so a swing toggle at an unchanged BPM must be caught here.
         var globalKey = (score.Title, score.Composer, score.Subtitle, score.Poet, score.Instrument, score.Tempo,
             score.SwingSubdivision, score.TempoText, score.TempoBeatUnit, score.TempoDots, score.Texts,
-            score.HeaderLines);
+            // …and whether the opening tempo prints "≈": 131 and 131.4 both print 131.
+            score.HeaderLines, score.TempoApprox);
         // Whole-layout reuse no longer requires override-freedom (finding 3-2, first
         // stage): it localizes nothing, so the per-measure key's inability to localize
         // an override is irrelevant — what it needs is TOTALITY, and that is exactly

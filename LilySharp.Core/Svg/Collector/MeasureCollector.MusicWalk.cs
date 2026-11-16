@@ -1827,7 +1827,7 @@ public sealed partial class MeasureCollector
                     // (above) and its mark is the words alone (TempoValue.PrintedBpm).
                     if (tempoChange.PrintedBpm is int bpm)
                         _musicMarks.Add(new MusicMarkItem(
-                            MusicMarkType.Tempo, bpm.ToString(),
+                            MusicMarkType.Tempo, Layout.MetronomeMarkGeometry.CountText(bpm, tempoChange.Value.IsApproximate),
                             // The declaration's first VALUE — see TempoDataPos.
                             builder.CurrentMeasureIndex, TempoDataPos(tempoChange),
                             builder.CurrentItemCount, builder.CurrentMoment)

@@ -899,12 +899,15 @@ public sealed partial class MeasureCollector
             // `tempo "Tempo I" 4 = 92 bare`: the opening mark is the words alone, as
             // `tempo "Tempo I"` draws it; the 92 is the sound's (the MIDI reads the syntax).
             _v.Meta.Tempo = null;
+            _v.Meta.TempoApprox = false;
             _v.Meta.TempoCountPosition = 0;
             _v.Meta.TempoUnitPosition = 0;
         }
         else if (tempo.Bpm is int bpm)
         {
             _v.Meta.Tempo = bpm;
+            // A count with a fraction prints "≈" (MetronomeMarkGeometry.ApproxMark).
+            _v.Meta.TempoApprox = tempo.IsApproximate;
             // The note and "= N" are this declaration's: a unit it does not write leaves
             // the note pointing at its bpm, not at an earlier declaration's unit.
             _v.Meta.TempoCountPosition = pieces.Count;

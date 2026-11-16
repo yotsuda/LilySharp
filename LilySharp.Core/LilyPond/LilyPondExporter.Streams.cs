@@ -734,7 +734,8 @@ public sealed partial class LilyPondExporter
             return byBar;
         var marks = Svg.Layout.MusicMarkEngraver.BuildAllMarks(
             score.MusicMarks, firstRow.PrimaryVoice.Measures, score.Tempo, score.SwingSubdivision,
-            score.TempoText, score.TempoBeatUnit, score.TempoDots, score.Header.Tempo, _layoutPlan.SectionLabels);
+            score.TempoText, score.TempoBeatUnit, score.TempoDots, score.Header.Tempo, _layoutPlan.SectionLabels,
+            tempoApprox: score.TempoApprox);
         foreach (var mark in marks)
         {
             string text;
