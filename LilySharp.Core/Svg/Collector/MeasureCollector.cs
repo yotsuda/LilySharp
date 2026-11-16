@@ -2172,6 +2172,7 @@ public sealed partial class MeasureCollector
             rowStaffIndex[rowName] = rowIdx;
         foreach (var (_, rowKey, rowIdx, _) in pendingLyricsRows)
             rowStaffIndex[rowKey] = rowIdx;
+        PadRowsToTheGrid(staffVoices, rowNames, rowsOnlyBars);
         FitRowsToMusicBars(staffVoices, rowNames, rowsOnlyBars, rowStaffIndex);
         ExtendStavesToTheRows(staffVoices, rowNames, pendingChordRows.Select(r => r.Item1));
 
@@ -3590,6 +3591,40 @@ public sealed partial class MeasureCollector
             // A malformed melody surfaces its real error through the validators;
             // the row then falls back to the even-spread reading.
             return ImmutableArray<Measure>.Empty;
+        }
+    }
+
+    /// <summary>
+    /// A ROWS-ONLY score's rows, each as long as its structure (<paramref name="rowsOnlyBars"/>,
+    /// every section the form plays at its own span — <see cref="RowGridSectionBars"/> counts
+    /// every row a section writes, shown or not): a row whose words or symbols stop early is
+    /// carried on in empty bars to the end (owner's report 2026-11-16, "1-01 My Life.lys" with
+    /// its chords row commented out: a lyrics row of one unbarred word in section B drew A, B as
+    /// ONE bar with no bar line, and nothing after — the row was all the score had, and it stopped
+    /// at its last word). An empty bar is a spacer the bar long with a plain bar line, as the
+    /// rows' own (<c>LyricsCollector.CollectRow</c>); the lengths, pickups, meters and the form's
+    /// repeats and labels are given to it after, as to the row's other bars.
+    /// </summary>
+    private static void PadRowsToTheGrid(
+        Dictionary<string, ImmutableArray<Voice>> staffVoices, IReadOnlySet<string> rowNames,
+        IReadOnlyList<RowsOnlyBar>? rowsOnlyBars)
+    {
+        if (rowsOnlyBars == null || rowsOnlyBars.Count == 0)
+            return;
+        foreach (string rowName in rowNames)
+        {
+            if (!staffVoices.TryGetValue(rowName, out var rowVoices) || rowVoices.Length == 0)
+                continue;
+            var measures = rowVoices[0].Measures;
+            // (A row with no bar at all — every symbol an error — draws nothing still.)
+            if (measures.Length == 0 || measures.Length >= rowsOnlyBars.Count)
+                continue;
+            var b = measures.ToBuilder();
+            for (int i = measures.Length; i < rowsOnlyBars.Count; i++)
+                b.Add(new Measure(ImmutableArray.Create<MusicItem>(
+                        new RestItem(rowsOnlyBars[i].Length, 0, 0) { IsSpacer = true }),
+                    BarlineType.None, BarlineType.Single, null, 0, 0));
+            staffVoices[rowName] = rowVoices.SetItem(0, rowVoices[0] with { Measures = b.ToImmutable() });
         }
     }
 
