@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import {
     RECORDING_DEFAULTS, Recording, ScoreBeat, audioPathFor, recordingPlan, audioReader, barAt, chartForRecording, lineUp, newRecording, parseRecording,
-    CopySource, chartPathFor, copiedRecordingText, sourceForCopy,
+    CopySource, chartPathFor, copiedRecordingText, rebasedParts, sourceForCopy,
     audioRef, recordingPathFor, recordingSecondAt, resolveAudio, samePath, scoreBars, scoreTimeAt, serializeRecording, timeWarp, unwarpTime, warpBeats, warpFit, warpNotes, warpTime, workForRename,
 } from '../src/recordingCore';
 
@@ -399,5 +399,54 @@ describe('a chart copied takes the file beside it', () => {
     it('finds the chart of a file beside a chart', () => {
         assert.equal(chartPathFor('C:/a/My Life.dettato.json'), 'C:/a/My Life.lys');
         assert.equal(chartPathFor('C:/a/notes.json'), undefined);
+    });
+});
+
+// The recording in parts (Dettato's `parts`, REQUESTS 16; docs/recording-design.md §8): as many as
+// written, in the order written, each found as `audio` is and moved with the file as it is.
+describe('the recording\'s parts', () => {
+    const withParts = (parts: unknown) => JSON.stringify({ dettato: 1, audio: 'song.mp3', bars: [{ start: 0, end: 2 }], parts });
+
+    it('are read in the order written, as many as written, whatever their names', () => {
+        const r = parseRecording(withParts({ drums: 'song.parts/drums.flac', bass: 'song.parts/bass.flac', other: 'song.parts/other.flac',
+            vocals: 'song.parts/vocals.flac', guitar: 'song.parts/guitar.flac', piano: 'song.parts/piano.flac' }));
+        assert.ok(!('error' in r));
+        assert.deepEqual(r.parts!.map(p => p.name), ['drums', 'bass', 'other', 'vocals', 'guitar', 'piano']);
+        assert.equal(r.parts![1].file, 'song.parts/bass.flac');
+        assert.equal(resolveAudio('C:/a/song.dettato.json', r.parts![1].file), 'C:/a/song.parts/bass.flac');
+    });
+
+    it('leave out an entry that is not a file, and are absent when none is', () => {
+        const r = parseRecording(withParts({ drums: 'd.flac', bass: 3, '': 'x.flac', vocals: '' }));
+        assert.ok(!('error' in r));
+        assert.deepEqual(r.parts, [{ name: 'drums', file: 'd.flac' }]);
+        for (const none of [undefined, ['d.flac'], 'd.flac', {}, { bass: 1 }]) {
+            const n = parseRecording(withParts(none));
+            assert.ok(!('error' in n));
+            assert.equal(n.parts, undefined, JSON.stringify(none));
+        }
+    });
+
+    it('are written back as they were', () => {
+        const r = parseRecording(withParts({ drums: 'song.parts/drums.flac', bass: 'song.parts/bass.flac' }));
+        assert.ok(!('error' in r));
+        const again = JSON.parse(serializeRecording(r));
+        assert.deepEqual(again.parts, { drums: 'song.parts/drums.flac', bass: 'song.parts/bass.flac' });
+    });
+
+    it('are found from the new place when the file moves or is copied, in their order', () => {
+        const raw = { parts: { drums: 'song.parts/drums.flac', bass: 'song.parts/bass.flac' } };
+        assert.deepEqual(rebasedParts(raw, 'C:/a/song.dettato.json', 'C:/a/sub/song.dettato.json').parts,
+            { drums: '../song.parts/drums.flac', bass: '../song.parts/bass.flac' });
+        assert.deepEqual(Object.keys(rebasedParts(raw, 'C:/a/song.dettato.json', 'C:/b/song.dettato.json').parts as object), ['drums', 'bass']);
+        // The same folder, or none to move: the very object back.
+        assert.equal(rebasedParts(raw, 'C:/a/song.dettato.json', 'C:/a/copy.dettato.json'), raw);
+        const none = { audio: 'x.mp3' };
+        assert.equal(rebasedParts(none, 'C:/a/x.dettato.json', 'C:/b/x.dettato.json'), none);
+        // A copy into another folder: the recording's way and the parts' both written from there.
+        const copied = parseRecording(copiedRecordingText(withParts(raw.parts), 'C:/a/song.dettato.json', 'C:/a/sub/song.dettato.json'));
+        assert.ok(!('error' in copied));
+        assert.equal(copied.audio, '../song.mp3');
+        assert.deepEqual(copied.parts!.map(p => p.file), ['../song.parts/drums.flac', '../song.parts/bass.flac']);
     });
 });

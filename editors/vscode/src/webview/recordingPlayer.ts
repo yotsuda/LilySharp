@@ -34,7 +34,12 @@ interface StretchNode extends AudioNode {
         loopStart?: number; loopEnd?: number }): void;
 }
 
-type StretchFactory = (ctx: BaseAudioContext) => Promise<StretchNode>;
+type StretchFactory = (ctx: BaseAudioContext, options?: AudioWorkletNodeOptions) => Promise<StretchNode>;
+
+/** A stretcher for `channels` channels (Signalsmith's default is two). */
+function stretchOptions(channels: number): AudioWorkletNodeOptions {
+    return { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [channels] };
+}
 
 /** The module, from its URL; failing that (a host that will not import a module across origins),
  *  from a blob of the same text. */
@@ -70,6 +75,23 @@ export class RecordingPlayer {
     private generation = 0;
     /** Called when the recording plays to its end (not on a stop). */
     onEnded: (() => void) | null = null;
+
+    // The recording's parts (Dettato's `parts`, docs/recording-design.md §8): ONE buffer, channel i
+    // part i, played through one stretcher (or one resampling source) of that many channels, so
+    // the parts keep together to the sample; each channel then has its own gain, and they add up
+    // in the recording's gain. Played only when a part is off or not at 100% (partLevels): all of
+    // them as recorded, the recording itself plays (the separation's error left out).
+    private parts: AudioBuffer | null = null;
+    private partNames: string[] = [];
+    /** Each part's level, as partNames: 0 off, 1 as recorded, up to 2 (its fader). */
+    private partLevels: number[] = [];
+    private partsStretch: StretchNode | null = null;
+    private partsStretchHas: AudioBuffer | null = null;
+    private partsStretchChannels = 0;
+    private partsSplit: ChannelSplitterNode | null = null;
+    private partGains: GainNode[] = [];
+    /** What the sound now playing plays: the parts (true) or the recording. */
+    private playingParts = false;
 
     constructor(private readonly ctx: AudioContext, private readonly stretchUrl: string) {
         this.gain = ctx.createGain();
@@ -111,6 +133,7 @@ export class RecordingPlayer {
             : (bytes.buffer as ArrayBuffer).slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
         this.buffer = await this.ctx.decodeAudioData(copy);
         this.stretchHas = null;
+        this.dropParts();   // (another recording's parts come after it, recordingParts)
         return this.buffer.duration;
     }
 
@@ -118,6 +141,104 @@ export class RecordingPlayer {
         this.stop();
         this.buffer = null;
         this.stretchHas = null;
+        this.dropParts();
+    }
+
+    /** The parts' names, as loaded (in the file's order). */
+    get partsLoaded(): readonly string[] {
+        return this.partNames;
+    }
+
+    /**
+     * Decodes the recording's parts into one buffer of as many channels (a part in two channels is
+     * made one). A part that cannot be decoded is left out; resolves to the names of the ones in,
+     * with the reasons for the others. Their levels start as recorded.
+     */
+    async loadParts(list: readonly { name: string; bytes: Uint8Array | ArrayBuffer }[]): Promise<{ names: string[]; failed: string[] }> {
+        const decoded: { name: string; data: Float32Array }[] = [];
+        const failed: string[] = [];
+        for (const p of list) {
+            try {
+                const copy = p.bytes instanceof ArrayBuffer ? p.bytes.slice(0)
+                    : (p.bytes.buffer as ArrayBuffer).slice(p.bytes.byteOffset, p.bytes.byteOffset + p.bytes.byteLength);
+                const b = await this.ctx.decodeAudioData(copy);
+                let data = b.getChannelData(0);
+                if (b.numberOfChannels > 1) {
+                    data = data.slice();
+                    for (let c = 1; c < b.numberOfChannels; c++) {
+                        const other = b.getChannelData(c);
+                        for (let i = 0; i < data.length; i++) { data[i] += other[i]; }
+                    }
+                    for (let i = 0; i < data.length; i++) { data[i] /= b.numberOfChannels; }
+                }
+                decoded.push({ name: p.name, data });
+            } catch (e) {
+                failed.push(`${p.name}: ${(e as Error)?.message ?? e}`);
+            }
+        }
+        const wasPlaying = this.playingParts && this.anchor !== null;
+        this.dropParts();
+        if (decoded.length > 0) {
+            const length = Math.max(...decoded.map(d => d.data.length));
+            const buffer = this.ctx.createBuffer(decoded.length, length, this.ctx.sampleRate);
+            decoded.forEach((d, c) => buffer.getChannelData(c).set(d.data));
+            this.parts = buffer;
+            this.partNames = decoded.map(d => d.name);
+            this.partLevels = decoded.map(() => 1);
+        }
+        if (wasPlaying) { this.stop(); }
+        return { names: this.partNames, failed };
+    }
+
+    /**
+     * Each part's level by name (0 off, 1 as recorded, up to 2); a name not given is as recorded.
+     * Takes effect at once while the parts play. True when what is to play has changed between
+     * the parts and the recording itself while sounding — the caller plays it again from here.
+     */
+    setPartLevels(levels: Readonly<Record<string, number>>): boolean {
+        this.partLevels = this.partNames.map(n => {
+            const v = levels[n];
+            return typeof v === 'number' && Number.isFinite(v) ? Math.min(2, Math.max(0, v)) : 1;
+        });
+        this.partGains.forEach((g, i) => { g.gain.value = this.partLevels[i] ?? 1; });
+        return this.anchor !== null && this.usesParts() !== this.playingParts;
+    }
+
+    /** Whether the parts play (a part off or not at 100 %), not the recording itself. */
+    usesParts(): boolean {
+        return this.parts !== null && this.partLevels.some(l => l !== 1);
+    }
+
+    private dropParts(): void {
+        if (this.playingParts) { this.stopSound(); }
+        this.parts = null;
+        this.partNames = [];
+        this.partLevels = [];
+        this.partsStretchHas = null;
+        void this.partsStretch?.dropBuffers();
+        this.partsSplit?.disconnect();
+        for (const g of this.partGains) { g.disconnect(); }
+        this.partsSplit = null;
+        this.partGains = [];
+    }
+
+    /** The parts' way in on the page's context: a splitter, a gain a channel, into the recording's gain. */
+    private partsInput(): ChannelSplitterNode {
+        const n = this.parts!.numberOfChannels;
+        if (!this.partsSplit || this.partGains.length !== n) {
+            this.partsSplit?.disconnect();
+            for (const g of this.partGains) { g.disconnect(); }
+            this.partsSplit = this.ctx.createChannelSplitter(n);
+            this.partGains = [];
+            for (let c = 0; c < n; c++) {
+                const g = this.ctx.createGain();
+                g.gain.value = this.partLevels[c] ?? 1;
+                this.partsSplit.connect(g, c);
+                g.connect(this.gain);
+                this.partGains.push(g);
+            }
+        }
+        return this.partsSplit;
     }
 
     /** Plays in a loop between two seconds, or straight on (null). Takes effect at once. */
@@ -171,22 +292,25 @@ export class RecordingPlayer {
         };
         this.gain.gain.value = plan.gain;
         const loop = this.loop;
+        // The parts in the recording's place when one is off or not as recorded (§8).
+        const parts = this.usesParts() ? this.parts! : null;
+        this.playingParts = parts !== null;
         if (plan.engine === 'resample') {
             const src = this.ctx.createBufferSource();
-            src.buffer = buffer;
+            src.buffer = parts ?? buffer;
             src.playbackRate.value = plan.rate;
             if (loop) {
                 src.loop = true;
                 src.loopStart = loop.from;
                 src.loopEnd = loop.to;
             }
-            src.connect(this.gain);
+            src.connect(parts ? this.partsInput() : this.gain);
             const at = startAt(this.ctx.currentTime + 0.03);
             src.start(at, sec);
             this.source = src;
             this.anchor = { at, sec, rate: plan.rate };
         } else {
-            const node = await this.stretchNode(buffer);
+            const node = parts ? await this.partsStretchNode(parts) : await this.stretchNode(buffer);
             if (generation !== this.generation) {
                 return;
             }
@@ -242,19 +366,33 @@ export class RecordingPlayer {
         limiter.release.value = 0.1;
         gain.connect(limiter);
         limiter.connect(ctx.destination);
+        // The parts as they sound now (§8): through a splitter and a gain each, as play does.
+        const parts = this.usesParts() ? this.parts! : null;
+        let into: AudioNode = gain;
+        if (parts) {
+            const split = ctx.createChannelSplitter(parts.numberOfChannels);
+            for (let c = 0; c < parts.numberOfChannels; c++) {
+                const g = ctx.createGain();
+                g.gain.value = this.partLevels[c] ?? 1;
+                split.connect(g, c);
+                g.connect(gain);
+            }
+            into = split;
+        }
+        const source = parts ?? buffer;
         if (!stretched) {
             const src = ctx.createBufferSource();
-            src.buffer = buffer;
+            src.buffer = source;
             src.playbackRate.value = plan.rate;
-            src.connect(gain);
+            src.connect(into);
             src.start(0, 0);
         } else {
             this.stretchFactory ??= importStretch(this.stretchUrl);
-            const node = await (await this.stretchFactory)(ctx);
-            node.connect(gain);
+            const node = await (await this.stretchFactory)(ctx, parts ? stretchOptions(parts.numberOfChannels) : undefined);
+            node.connect(into);
             const channels: Float32Array[] = [];
-            for (let c = 0; c < buffer.numberOfChannels; c++) {
-                channels.push(buffer.getChannelData(c).slice());
+            for (let c = 0; c < source.numberOfChannels; c++) {
+                channels.push(source.getChannelData(c).slice());
             }
             await node.addBuffers(channels);
             // Awaited (the worklet answers every call): the change is in place before the render starts.
@@ -292,7 +430,28 @@ export class RecordingPlayer {
             this.source = null;
         }
         this.stretch?.schedule({ active: false });
+        this.partsStretch?.schedule({ active: false });
         this.anchor = null;
+    }
+
+    /** The parts' stretcher: as many channels as parts, into the splitter (partsInput). */
+    private async partsStretchNode(parts: AudioBuffer): Promise<StretchNode> {
+        this.stretchFactory ??= importStretch(this.stretchUrl);
+        const n = parts.numberOfChannels;
+        if (!this.partsStretch || this.partsStretchChannels !== n) {
+            this.partsStretch?.disconnect();
+            this.partsStretch = await (await this.stretchFactory)(this.ctx, stretchOptions(n));
+            this.partsStretchChannels = n;
+            this.partsStretchHas = null;
+        }
+        this.partsStretch.disconnect();
+        this.partsStretch.connect(this.partsInput());
+        if (this.partsStretchHas !== parts) {
+            await this.partsStretch.dropBuffers();
+            await this.partsStretch.addBuffers(Array.from({ length: n }, (_, c) => parts.getChannelData(c)));
+            this.partsStretchHas = parts;
+        }
+        return this.partsStretch;
     }
 
     private async stretchNode(buffer: AudioBuffer): Promise<StretchNode> {

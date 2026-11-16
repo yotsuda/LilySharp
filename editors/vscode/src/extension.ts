@@ -6091,6 +6091,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             font-variant-numeric: tabular-nums; font-size: 12px;
         }
         .toolbar button.practice #practiceSpeed:empty { display: none; }
+        /* Taller than 60vh it scrolls: the scroll bar's room kept in its width, or the bar ate into
+           the rows and a sideways bar came too (the recording's parts, §8, made it that tall). */
+        .practice-panel { scrollbar-gutter: stable; }
         .practice-panel .prow { display: flex; align-items: flex-start; gap: 10px; padding: 4px 2px; }
         .practice-panel .plbl { width: 72px; flex-shrink: 0; opacity: 0.75; font-weight: 600; padding-top: 3px; }
         .practice-panel button {
@@ -6110,6 +6113,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         /* One line a part: the toggle, then its fader (owner's request 2026-11-09). */
         .practice-panel .parts .pline { display: flex; align-items: center; gap: 8px; }
         .practice-panel .parts .pline button { flex: 1 1 auto; min-width: 0; }
+        /* The recording's parts under its line (docs/recording-design.md §8), set in a little. */
+        .practice-panel .rec-part-rows { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+        .practice-panel .parts .rec-part-rows .pline.rec-part { padding-left: 14px; }
+        .practice-panel .rec-part-rows:empty { display: none; }
         /* As long as the tempo's slider (owner's request 2026-11-09, session 1159: longer, the 200% end further right). */
         .practice-panel .parts input.fader { width: 160px; flex: 0 0 auto; margin: 0; accent-color: #0078d7; cursor: pointer; }
         .practice-panel .parts .flevel { width: 2.8em; flex: 0 0 auto; text-align: right; font-size: 11px; opacity: 0.8; font-variant-numeric: tabular-nums; }
@@ -6216,6 +6223,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
     <div id="recPanel" class="range-panel practice-panel" hidden>
         <button type="button" id="recClose" class="panel-close" title="Close" aria-label="Close">×</button>
         <div class="prow"><span class="plbl">Recording</span><span class="parts"><span class="pline"><button type="button" id="recOnBtn" class="rec-name" aria-pressed="false"><span id="recName"></span></button><input type="range" id="recLevelSlider" class="fader" min="0" max="200" step="1" value="100"><span id="recLevelValue" class="flevel"></span></span></span></div>
+        <div class="prow" id="recPartsRow" hidden><span class="plbl">Parts</span><span id="recPartsRows" class="parts rec-part-rows"></span></div>
         <div class="prow"><span class="plbl">Speed</span><span class="tempo"><input type="range" id="recSpeedSlider" min="25" max="150" step="5" value="100" aria-label="Speed"><span id="recSpeedValue" class="tval">100%</span></span></div>
         <div class="prow"><span class="plbl">Octave</span><span class="tempo"><button type="button" id="recOctDown" title="An octave down">−</button><span id="recOctValue" class="tval">0</span><button type="button" id="recOctUp" title="An octave up">+</button></span></div>
         <div class="prow"><span class="plbl">Semitones</span><span class="tempo"><input type="range" id="recSemiSlider" min="-11" max="11" step="1" value="0" aria-label="Semitones"><span id="recSemiValue" class="tval">0</span></span></div>
@@ -9670,7 +9678,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // Pressed in while anything differs from the score as written.
             practiceBtn.setAttribute('aria-pressed', String(speedOn || practice.click || practice.countIn || practice.muted.length > 0
                 || practice.extraOn.length > 0 || practice.voicesOff.length > 0 || practice.voicesOn.length > 0 || practice.instrumentsOn.length > 0 || loopOn || abOn
-                || Object.keys(practice.levels).length > 0 || Object.keys(practice.voiceLevels).length > 0));
+                || Object.keys(practice.levels).length > 0 || Object.keys(practice.voiceLevels).length > 0
+                || (recPartsOff || []).length > 0 || Object.keys(recPartLevels || {}).length > 0));
             // The loop lives here too (owner's request 2026-10-25), an On/Off as the metronome's.
             loopBtn.setAttribute('aria-pressed', String(loopOn));
             loopBtn.textContent = loopOn ? 'On' : 'Off';
@@ -9682,9 +9691,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             countInBtn.setAttribute('aria-pressed', String(practice.countIn));
             countInBtn.textContent = practice.countIn ? 'On' : 'Off';
             // The two resets under the parts (owner's request 2026-11-09): live while there is something to put back.
-            document.getElementById('partsReset').disabled = practice.muted.length === 0 && practice.extraOn.length === 0 && practice.voicesOff.length === 0 && practice.voicesOn.length === 0 && practice.instrumentsOn.length === 0;
+            document.getElementById('partsReset').disabled = practice.muted.length === 0 && practice.extraOn.length === 0 && practice.voicesOff.length === 0 && practice.voicesOn.length === 0 && practice.instrumentsOn.length === 0
+                && (recPartsOff || []).length === 0;
             document.getElementById('fadersReset').disabled = Object.keys(practice.levels).length === 0 && Object.keys(practice.voiceLevels).length === 0
-                && Object.keys(recLevels || {}).length === 0;
+                && Object.keys(recLevels || {}).length === 0 && Object.keys(recPartLevels || {}).length === 0;
             postPracticeState();
         }
         // The exports play as the menu does, the loop aside (owner's request 2026-11-07): the
@@ -9887,6 +9897,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     },
                     'recording', '', recLevels, 'Recording');
                 recRefreshers = [partRefreshers[partRefreshers.length - 1]];
+                // Its parts under it, when it has them (§8).
+                const sub = document.createElement('span');
+                sub.id = 'recPartsInPractice';
+                sub.className = 'rec-part-rows';
+                list.appendChild(sub);
+                renderRecParts();
             }
             renderVoiceBadge();     // the voices' signs on their fresh toggles
         }
@@ -9996,6 +10012,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         var recPlayer = null;
         var recOn = false;
         var recLevels = {};        // the fader, as the parts' are: { Recording: 0..2 } while not 100%
+        // The recording's parts (Dettato's parts, docs/recording-design.md §8): the ones turned off,
+        // and the faders not at 100% — the page's own, as the score's parts are (not kept).
+        var recPartsOff = [];
+        var recPartLevels = {};
         let recSettings = null;
         const recOnBtn = document.getElementById('recOnBtn');
         const recLevelSlider = document.getElementById('recLevelSlider');
@@ -10061,6 +10081,75 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             postPracticeState();    // (the exports mix the recording in as it sounds now)
         }
         function recLevel() { return levelIn(recLevels, 'Recording'); }
+        /** Each part's level for the player: 0 off, else its fader (§8). */
+        function recPartMix() {
+            const out = {};
+            for (const name of (recording && recording.parts) || []) out[name] = recPartsOff.includes(name) ? 0 : levelIn(recPartLevels, name);
+            return out;
+        }
+        /** A part turned on or off, or its fader moved: between parts the gains change at once;
+         *  from the recording to its parts (or back) what plays goes on from here (§8). */
+        function applyRecParts() {
+            renderRecParts();
+            showPractice();
+            if (!recPlayer) return;
+            if (!recPlayer.setPartLevels(recPartMix())) return;
+            if (playClock && playBasis && playBasis.warp) practiceChanged(practice.speed);
+            else if (recPlayer.playing) void recPlayer.update(recSound());
+        }
+        /** The parts' lines — under the practice menu's Recording line and the panel's (the same
+         *  values in both): a toggle and a fader each, in the file's order, greyed until loaded. */
+        function renderRecParts() {
+            const names = (recording && recording.parts) || [];
+            const loaded = (recording && recording.partsLoaded) || null;
+            const row = document.getElementById('recPartsRow');
+            if (row) row.hidden = names.length === 0;
+            for (const box of [document.getElementById('recPartsRows'), document.getElementById('recPartsInPractice')]) {
+                if (!box) continue;
+                box.textContent = '';
+                for (const name of names) box.appendChild(recPartLine(name, !!loaded && loaded.includes(name)));
+            }
+        }
+        function recPartLine(name, ready) {
+            const line = document.createElement('span');
+            line.className = 'pline rec-part';
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.textContent = name;
+            b.dataset.recPart = name;
+            b.disabled = !ready;
+            b.title = ready ? 'The recording\\'s ' + name + ' (a part of it): on or off'
+                : (recording && recording.partsError && recording.partsError[name]) || 'The recording\\'s parts are loading';
+            b.setAttribute('aria-pressed', String(!recPartsOff.includes(name)));
+            b.addEventListener('click', () => {
+                recPartsOff = recPartsOff.includes(name) ? recPartsOff.filter(n => n !== name) : recPartsOff.concat([name]);
+                applyRecParts();
+            });
+            const fader = document.createElement('input');
+            fader.type = 'range'; fader.min = '0'; fader.max = String(FADER_MAX * 100); fader.step = '1';
+            fader.className = 'fader';
+            fader.disabled = !ready;
+            const num = document.createElement('span');
+            num.className = 'flevel';
+            const say = () => {
+                fader.title = 'Volume ' + fader.value + '% (double-click: 100%)';
+                fader.setAttribute('aria-label', name + ' volume ' + fader.value + '%');
+                num.textContent = fader.value === '100' ? '' : fader.value + '%';
+            };
+            fader.value = String(Math.round(levelIn(recPartLevels, name) * 100));
+            say();
+            fader.addEventListener('input', say);
+            fader.addEventListener('change', () => {
+                const v = Number(fader.value);
+                if (v === 100) delete recPartLevels[name]; else recPartLevels[name] = v / 100;
+                applyRecParts();
+            });
+            resetOnDoubleClick(fader, () => { fader.value = '100'; fader.dispatchEvent(new Event('change')); });
+            line.appendChild(b);
+            line.appendChild(fader);
+            line.appendChild(num);
+            return line;
+        }
         let recRefreshers = [];     // the practice menu's Recording line, refreshed with the panel's
         function recChanged() {
             // Kept for this recording, for the next time it is opened (recording.ts).
@@ -10122,9 +10211,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
             const same = recording && recording.chart === m.chart && recording.name === m.name;
             const fresh = !recording;
-            recording = { chart: m.chart, name: m.name || '', bars: m.bars || [], pickup: !!m.pickup, ready: same ? recording.ready : false, error: m.error || null };
+            const before = recording;
+            recording = { chart: m.chart, name: m.name || '', bars: m.bars || [], pickup: !!m.pickup, ready: same ? recording.ready : false, error: m.error || null,
+                // Its parts by name (§8); loaded when recordingParts comes (after the sound).
+                parts: Array.isArray(m.parts) ? m.parts : [], partsLoaded: same ? before.partsLoaded : null, partsError: same ? before.partsError : null };
             // Another recording: its own settings, as kept the last time (recording.ts), else as recorded.
             if (!same) recSettings = Object.assign(recDefaults(), m.settings && typeof m.settings === 'object' ? m.settings : {});
+            if (!same) { recPartsOff = []; recPartLevels = {}; }
             // A chart just made from this recording starts with it on: Play sounds it (owner's
             // request 2026-11-16; the extension says so once, recording.ts justConverted).
             if (m.turnOn) recOn = true;
@@ -10142,7 +10235,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 const player = recordingPlayer();
                 if (!player) { recStatus('The preview\\'s sound is not ready'); return; }
                 recStatus('Loading…');
-                player.load(m.bytes).then(seconds => {
+                // (kept: the parts are loaded once the sound is, which drops any before it — §8)
+                recording.loading = player.load(m.bytes);
+                recording.loading.then(seconds => {
                     if (!recording || recording.chart !== m.chart) return;
                     recording.ready = true;
                     postPracticeState();
@@ -10155,6 +10250,28 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 recStatus(barsSaid);
             }
             showRecording();
+        }
+        /** The recording's parts (recordingParts, §8), decoded into the player once the recording
+         *  itself is in; their lines then turn live, and a part that cannot be used says why. */
+        async function loadRecordingParts(m) {
+            const rec = recording;
+            if (!rec || rec.chart !== m.chart || rec.name !== m.name) return;
+            const player = recordingPlayer();
+            if (!player) return;
+            try { if (rec.loading) await rec.loading; } catch (e) { return; }
+            if (recording !== rec) return;
+            const list = (m.parts || []).filter(p => p.bytes);
+            const errors = {};
+            for (const p of m.parts || []) if (p.error) errors[p.name] = p.error;
+            const r = await player.loadParts(list);
+            if (recording !== rec) return;
+            for (const f of r.failed) { const i = f.indexOf(':'); errors[f.slice(0, i)] = 'Cannot be decoded:' + f.slice(i + 1); }
+            rec.partsLoaded = r.names;
+            rec.partsError = errors;
+            player.setPartLevels(recPartMix());
+            renderRecParts();
+            const bad = Object.keys(errors);
+            if (bad.length > 0) recStatus('Parts not usable: ' + bad.map(n => n + ' (' + errors[n] + ')').join(', '));
         }
         /** Plays the recording alone from its second \`sec\` (its bars not lined up with the score's). */
         function playRecordingFrom(sec) {
@@ -10298,7 +10415,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // is also the way out of a part silenced in another file.
         document.getElementById('partsReset').addEventListener('click', () => {
             practice.muted = []; practice.extraOn = []; practice.voicesOff = []; practice.voicesOn = []; practice.instrumentsOn = [];
+            recPartsOff = [];       // (the recording's parts too: §8)
             for (const refresh of partRefreshers) refresh();
+            renderRecParts();
+            if (recPlayer) recPlayer.setPartLevels(recPartMix());
             practiceChanged(practice.speed);
         });
         // Every fader back to 100% — the objects stay (the lines hold them), their entries go.
@@ -10306,7 +10426,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             for (const k of Object.keys(practice.levels)) delete practice.levels[k];
             for (const k of Object.keys(practice.voiceLevels)) delete practice.voiceLevels[k];
             delete recLevels.Recording;     // (the recording's too: §1 7)
+            for (const k of Object.keys(recPartLevels)) delete recPartLevels[k];   // (and its parts': §8)
             for (const refresh of partRefreshers) refresh();
+            renderRecParts();
+            if (recPlayer) recPlayer.setPartLevels(recPartMix());
             showRecording();
             practiceChanged(practice.speed);
         });
@@ -10676,6 +10799,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 case 'recording':
                     setRecording(message);
                     showRecording();
+                    renderRecParts();
+                    break;
+                case 'recordingParts':
+                    void loadRecordingParts(message);
                     break;
                 case 'renderRecording':
                     void renderRecordingFor(message);

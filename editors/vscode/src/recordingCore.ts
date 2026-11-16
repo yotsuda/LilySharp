@@ -43,8 +43,46 @@ export interface Recording {
     bars: RecordingBar[];
     /** The first bar is a pickup (format 1 marks it `pickup`). */
     pickup: boolean;
+    /** The recording in parts, each its own file (Dettato's `parts`, REQUESTS 16;
+     *  docs/recording-design.md §8): in the order written, as many as written, each found as
+     *  `audio` is (resolveAudio). Absent when the file has none. */
+    parts?: RecordingPart[];
     /** The file as parsed: items this reader does not know are written back as they were. */
     raw: Record<string, unknown>;
+}
+
+/** One part of the recording: its name (`drums`, `bass`, … — whatever the file says) and the way
+ *  to its file as written. */
+export interface RecordingPart {
+    name: string;
+    file: string;
+}
+
+/** The parts a file beside a chart names (its `parts`: an object of name to file, in order);
+ *  undefined when it names none. An entry that is not a name and a file is left out. */
+export function partsOf(raw: Record<string, unknown>): RecordingPart[] | undefined {
+    const p = raw.parts;
+    if (!p || typeof p !== 'object' || Array.isArray(p)) { return undefined; }
+    const out: RecordingPart[] = [];
+    for (const [name, file] of Object.entries(p as Record<string, unknown>)) {
+        if (name.trim() !== '' && typeof file === 'string' && file.trim() !== '') { out.push({ name, file }); }
+    }
+    return out.length > 0 ? out : undefined;
+}
+
+/** The parts' ways written from the file's new place (it moved from `fromFile` to `toFile`), as
+ *  `audio` is (audioRef): the file's raw items with `parts` rewritten; the same object when there
+ *  is nothing to rewrite. */
+export function rebasedParts(raw: Record<string, unknown>, fromFile: string, toFile: string): Record<string, unknown> {
+    const parts = partsOf(raw);
+    if (!parts) { return raw; }
+    const moved: Record<string, string> = {};
+    let changed = false;
+    for (const p of parts) {
+        moved[p.name] = audioRef(toFile, resolveAudio(fromFile, p.file));
+        changed ||= moved[p.name] !== p.file;
+    }
+    return changed ? { ...raw, parts: moved } : raw;
 }
 
 /** The highest format number this reader knows (SIDECAR.md "Changing the format": a reader
@@ -280,10 +318,12 @@ export function copiedRecordingText(text: string, fromFile: string, toFile: stri
         return text;
     }
     const audio = audioRef(toFile, resolveAudio(fromFile, r.audio));
-    if (audio === r.audio) {
+    const raw = rebasedParts(r.raw, fromFile, toFile);
+    if (audio === r.audio && raw === r.raw) {
         return text;
     }
     r.audio = audio;
+    r.raw = raw;
     return serializeRecording(r);
 }
 
@@ -332,12 +372,14 @@ export function parseRecording(text: string): Recording | { error: string } {
         bars.push(b.byHand === true ? { start: b.start, end: b.end, byHand: true } : { start: b.start, end: b.end });
     }
     const first = o.bars[0] as Record<string, unknown> | undefined;
+    const parts = partsOf(o);
     return {
         format,
         audio: o.audio,
         duration: typeof o.duration === 'number' ? o.duration : undefined,
         bars,
         pickup: !!first && first.pickup !== undefined,
+        ...(parts ? { parts } : {}),
         raw: o,
     };
 }

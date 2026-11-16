@@ -21,7 +21,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import {
     CopySource, WEBVIEW_AUDIO, WINDOWS_AUDIO, audioReader, audioRef, chartForRecording, chartPathFor, copiedRecordingText, newRecording,
-    parseRecording, recordingPathFor, resolveAudio, samePath, serializeRecording, sourceForCopy, workForRename,
+    parseRecording, rebasedParts, recordingPathFor, resolveAudio, samePath, serializeRecording, sourceForCopy, workForRename,
 } from './recordingCore';
 
 const isWindows = process.platform === 'win32';
@@ -175,7 +175,13 @@ export async function sendRecording(panel: vscode.WebviewPanel, chart: vscode.Ur
     const rec = text !== undefined ? parseRecording(text) : undefined;
     const audio = rec && !('error' in rec) ? vscode.Uri.file(path.normalize(resolveAudio(file.fsPath, rec.audio))) : undefined;
     const audioKey = audio ? await statKey(audio) : undefined;
-    const key = `${chart.toString()}\n${fileKey}\n${audioKey}`;
+    // The recording's parts (docs/recording-design.md §8): their files, found as the recording is.
+    const parts = rec && !('error' in rec) && rec.parts
+        ? rec.parts.map(p => ({ name: p.name, uri: vscode.Uri.file(path.normalize(resolveAudio(file.fsPath, p.file))), written: p.file }))
+        : [];
+    const partKeys: (string | undefined)[] = [];
+    for (const p of parts) { partKeys.push(await statKey(p.uri)); }
+    const key = `${chart.toString()}\n${fileKey}\n${audioKey}\n${partKeys.join('|')}`;
     if (!force && sentKeys.get(panel) === key) {
         return;
     }
@@ -190,7 +196,8 @@ export async function sendRecording(panel: vscode.WebviewPanel, chart: vscode.Ur
         return;
     }
     const shown = path.basename(audio!.fsPath);
-    const base = { name: shown, bars: rec.bars, pickup: rec.pickup, settings: recordingSettingsFor(chart.toString(), shown) ?? null };
+    const base = { name: shown, bars: rec.bars, pickup: rec.pickup, settings: recordingSettingsFor(chart.toString(), shown) ?? null,
+        parts: parts.map(p => p.name) };
     if (!audio || !audioKey) {
         // Moved, renamed outside VS Code, or on a drive not here: say where it was looked for, and
         // let it be found again (Dettato's request 6).
@@ -232,7 +239,32 @@ export async function sendRecording(panel: vscode.WebviewPanel, chart: vscode.Ur
         post({ ...base, bytes: new Uint8Array(bytes), ...(turnOn ? { turnOn: true } : {}) });
     } catch (e) {
         post({ ...base, error: String(e) });
+        return;
     }
+    // Then its parts, each the file's bytes for the page to decode (FLAC as Dettato writes them),
+    // or why it cannot be — after the recording, which plays without them.
+    if (parts.length === 0) {
+        return;
+    }
+    const sent: { name: string; bytes?: Uint8Array; error?: string }[] = [];
+    for (let i = 0; i < parts.length; i++) {
+        const p = parts[i];
+        if (!partKeys[i]) {
+            sent.push({ name: p.name, error: `${p.written} cannot be found` });
+        } else if (audioReader(p.written, false) !== 'webview') {
+            sent.push({ name: p.name, error: `${path.basename(p.uri.fsPath)}: the preview reads wav, mp3, flac and ogg parts` });
+        } else {
+            try {
+                sent.push({ name: p.name, bytes: new Uint8Array(await vscode.workspace.fs.readFile(p.uri)) });
+            } catch (e) {
+                sent.push({ name: p.name, error: String(e) });
+            }
+        }
+    }
+    if (sentKeys.get(panel) !== key) {
+        return;
+    }
+    void panel.webview.postMessage({ type: 'recordingParts', chart: chart.toString(), name: shown, parts: sent });
 }
 
 /** Where the recording panel's settings are kept, per chart and recording (owner's decision
@@ -500,12 +532,18 @@ export function followRenames(): vscode.Disposable {
                         const r = w.audio !== undefined ? parseRecording(texts.get(w.from) ?? '') : undefined;
                         if (r && !('error' in r)) {
                             r.audio = w.audio!;
+                            // …and the ways to its parts (docs/recording-design.md §8).
+                            r.raw = rebasedParts(r.raw, w.from, w.to);
                             await vscode.workspace.fs.writeFile(vscode.Uri.file(w.to), Buffer.from(serializeRecording(r), 'utf8'));
                         }
                     } else {
                         const r = parseRecording(texts.get(w.file) ?? '');
                         if (!('error' in r)) {
                             r.audio = w.audio;
+                            // The file beside a chart itself moved: its parts' ways from the new place too.
+                            if (chartPathFor(newUri.fsPath) && samePath(w.file, newUri.fsPath)) {
+                                r.raw = rebasedParts(r.raw, oldUri.fsPath, newUri.fsPath);
+                            }
                             await vscode.workspace.fs.writeFile(vscode.Uri.file(w.file), Buffer.from(serializeRecording(r), 'utf8'));
                         }
                     }
