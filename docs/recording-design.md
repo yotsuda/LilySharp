@@ -123,3 +123,17 @@ Transcribe!（Seventh String）と同じ体験を Lily# のプレビューで（
 - キー操作（M・B・S はプレビューにフォーカスがあるときだけ）、拍への吸い寄せ（オフにできる）、ペダル。
 - 隣のファイル（形式 2）の項目と、書き手の取り合い（Lily# はマーク・ループ、Dettato は読み直し）。人が小節を足し消しして小節数が合わないとき。
 - 速度・音高・EQ の値をファイルに書くか、表示の状態にするか（Lily# が決めてよい）。
+
+## 7. MP4 の書き出しに録音を入れる（オーナー報告 2026-11-16・第1285 が調べた・未着手）
+
+今の MP4 は楽譜の音だけ（`videoExport.ts` の `writeVideos` → `renderAudioFiles` → `videoExportCore.ts` の `videoArgs`）。プレビューが Recording オンで鳴らす形に合わせる。
+
+- **時刻**: webview の `practiced()`（extension.ts の 9038 付近）と同じ。音符を `warpNotes(notes, timeWarp(beats, barEnd, rec))` で録音の秒へ移し、速さは `recordingPlan(recSound(), practice.speed * warpFit(warp)).rate`。録音は秒 0 から、`rate`・`semitones`・`gain` × フェーダー（`recLevels.Recording`）で鳴る。
+- **配線**:
+  1. webview の `practiceState` に、`recOn && recording.ready` のとき録音の設定（`recSound()`＝speed／octave／semitones／cents／linked／chart）とレベルを足す。
+  2. LSP の `PlaybackExport` に `BarEnd` を足す（`PlaybackOf` の `PlaybackResponse.BarEnd`・Commands.cs の `new PlaybackExport`）。
+  3. 拡張の `practisedJobs`（extension.ts）で `.dettato.json`（`recordingPathFor`・`parseRecording`・`resolveAudio`）を読み、`exportPlan` の前に warp。job に録音の道と rate／semitones／gain／lead を持たせる。m4a は LSP の復号 WAV（`sendRecording` の cache）を使う。
+  4. `videoArgs` に 3 つ目の入力: `aresample=48000,asetrate=48000*p,aresample=48000` で音高、`atempo`（0.5〜2 を連鎖）で速さ、`volume`、`adelay=lead`、楽譜の音と `amix=normalize=0`。
+- **訊くこと**: WAV／MP3 の書き出しにも入れるか。
+
+同じ報告の ⑴: コードだけの楽譜で MP4 のコード名が光らない。`Core/Export/ScoreVideo.cs` の `HeadsByNote` が `notehead` の箱しか拾わない（2026-11-07 の決定「符頭だけ」）。コード行の音の `S`／`O` はコード名の位置なので、`BoxesGenerator` のコード名の箱（Kind を確かめる）も同じ鍵で拾えば光る。プレビューはコード名も光らせる。全部の楽譜で光らせてよいかはオーナーに一言。
