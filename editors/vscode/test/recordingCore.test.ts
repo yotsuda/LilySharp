@@ -151,6 +151,22 @@ describe('attaching a recording', () => {
         ]);
     });
 
+    // Owner's request 2026-11-16: the file beside a chart moved takes its chart along.
+    it('moves the chart with its file, the way to the recording written from the new folder', () => {
+        const files = new Set(['/s/song.lys', '/t/song.dettato.json']);
+        const names: Record<string, string> = { '/t/song.dettato.json': 'take.wav' };
+        assert.deepEqual(workForRename('/s/song.dettato.json', '/t/song.dettato.json', p => files.has(p), p => names[p]), [
+            { kind: 'moveChart', from: '/s/song.lys', to: '/t/song.lys' },
+            { kind: 'rename', file: '/t/song.dettato.json', audio: '../s/take.wav' },
+        ]);
+        // renamed in its folder: the chart takes the name, the way is as it was
+        assert.deepEqual(workForRename('/s/song.dettato.json', '/s/tune.dettato.json', p => files.has(p), () => 'take.wav'),
+            [{ kind: 'moveChart', from: '/s/song.lys', to: '/s/tune.lys' }]);
+        // a chart already there, or none to move: the chart stays
+        files.add('/t/song.lys');
+        assert.deepEqual(workForRename('/s/song.dettato.json', '/t/song.dettato.json', p => files.has(p), () => 'F:/m/take.wav'), []);
+    });
+
     it('moves a chart\'s file with it, the way to the recording written from the new folder', () => {
         const names: Record<string, string> = { '/s/chart.dettato.json': 'take.m4a' };
         assert.deepEqual(workForRename('/s/chart.lys', '/s/song.lys', p => p in names, p => names[p]),

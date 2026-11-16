@@ -472,13 +472,29 @@ export function followRenames(): vscode.Disposable {
                     known.add(f);
                 }
             }
+            // The file beside a chart moved: what it holds now, and whether its chart is there to follow.
+            if (chartPathFor(newUri.fsPath)) {
+                texts.set(newUri.fsPath, await readText(newUri));
+                known.add(newUri.fsPath);
+                for (const c of [chartPathFor(oldUri.fsPath), chartPathFor(newUri.fsPath)]) {
+                    if (c && await exists(vscode.Uri.file(c))) { known.add(c); }
+                }
+            }
             const work = workForRename(oldUri.fsPath, newUri.fsPath, p => known.has(p), p => {
                 const r = texts.get(p) !== undefined ? parseRecording(texts.get(p)!) : undefined;
                 return r && !('error' in r) ? r.audio : undefined;
             }, inFolder);
             for (const w of work) {
                 try {
-                    if (w.kind === 'move') {
+                    if (w.kind === 'moveChart') {
+                        // As a rename in the workspace, so an editor showing the chart follows it (the
+                        // chart's own rename then finds its file already moved: nothing more to do).
+                        const edit = new vscode.WorkspaceEdit();
+                        edit.renameFile(vscode.Uri.file(w.from), vscode.Uri.file(w.to), { overwrite: false });
+                        if (!(await vscode.workspace.applyEdit(edit))) {
+                            throw new Error(`${path.basename(w.to)} could not be written`);
+                        }
+                    } else if (w.kind === 'move') {
                         await vscode.workspace.fs.rename(vscode.Uri.file(w.from), vscode.Uri.file(w.to), { overwrite: false });
                         // Into another folder: the way to the recording is written from there.
                         const r = w.audio !== undefined ? parseRecording(texts.get(w.from) ?? '') : undefined;
@@ -494,7 +510,7 @@ export function followRenames(): vscode.Disposable {
                         }
                     }
                 } catch (err) {
-                    void vscode.window.showWarningMessage(`Lily#: could not keep ${path.basename(w.kind === 'move' ? w.from : w.file)} with the rename: ${err}`);
+                    void vscode.window.showWarningMessage(`Lily#: could not keep ${path.basename(w.kind === 'rename' ? w.file : w.from)} with the rename: ${err}`);
                 }
             }
         }

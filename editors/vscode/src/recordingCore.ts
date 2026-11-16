@@ -190,7 +190,8 @@ export function audioRef(recordingFile: string, audioPath: string): string {
  *  out — `move` the file beside a chart, or `rename` the audio a file names. */
 export type RecordingRenameWork =
     | { kind: 'move'; from: string; to: string; audio?: string }
-    | { kind: 'rename'; file: string; audio: string };
+    | { kind: 'rename'; file: string; audio: string }
+    | { kind: 'moveChart'; from: string; to: string };
 
 /** `candidates` are the files beside charts that may name a renamed recording — the folder's and,
  *  as `audio` may lead elsewhere since 2026-11-16, the workspace's. */
@@ -204,6 +205,22 @@ export function workForRename(oldPath: string, newPath: string, exists: (path: s
             const moved = audio !== undefined && !samePath(folderOf(from), folderOf(to))
                 ? audioRef(to, resolveAudio(from, audio)) : undefined;
             work.push(moved !== undefined && moved !== audio ? { kind: 'move', from, to, audio: moved } : { kind: 'move', from, to });
+        }
+        return work;
+    }
+    // The file beside a chart moved or renamed: its chart follows (owner's request 2026-11-16, as
+    // a copy of it brings the chart), and its way to the recording is written from the new place.
+    const fromChart = chartPathFor(oldPath), toChart = chartPathFor(newPath);
+    if (fromChart && toChart) {
+        if (exists(fromChart) && !exists(toChart)) {
+            work.push({ kind: 'moveChart', from: fromChart, to: toChart });
+        }
+        const audio = namesAudio(newPath);
+        if (audio !== undefined && !samePath(folderOf(oldPath), folderOf(newPath))) {
+            const moved = audioRef(newPath, resolveAudio(oldPath, audio));
+            if (moved !== audio) {
+                work.push({ kind: 'rename', file: newPath, audio: moved });
+            }
         }
         return work;
     }
