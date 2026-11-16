@@ -148,7 +148,7 @@ public enum MusicMarkType
     /// 2026-11-13: a rock chart's four-times riff was engraved as an ordinary repeat).</summary>
     RepeatCount,
     /// <summary>The key, as words ("Key: D", "Key: Bm"), over the first bar and over a bar the
-    /// key changes at — on a score whose every staff has one to four lines, where no key
+    /// key changes at — on a score whose every staff is a one-line staff, where no key
     /// signature can be read off the lines (owner's request 2026-11-16). The text is the item's.
     /// LILYSHARP-OWN — LilyPond's RhythmicStaff draws no key at all (ly/engraver-init.ly removes
     /// its Key_engraver) and a staff of 2–4 lines draws the signature off the lines; the words are

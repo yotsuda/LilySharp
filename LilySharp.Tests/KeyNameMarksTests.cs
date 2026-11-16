@@ -26,10 +26,10 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// The key in words over a score whose staves cannot show a signature (owner's request
-/// 2026-11-16): every staff one to four lines — the chord chart's one-line staff, and two-,
-/// three- and four-line staves — prints "Key: D" over the first bar and again where the key
-/// changes. A five-line, tab or drum staff in the score, and it prints none.
+/// The key in words over a score whose staves show no signature (owner's request 2026-11-16):
+/// every staff a one-line staff — the chord chart's — prints "Key: D" over the first bar and
+/// again where the key changes. A staff of more lines (two to four draw the signature themselves:
+/// owner's decision the same day), a tab or a drum staff in the score, and it prints none.
 /// </summary>
 [Trait("Category", "Unit")]
 public class KeyNameMarksTests
@@ -67,10 +67,7 @@ public class KeyNameMarksTests
     [Theory]
     [InlineData("chords h")]                          // the automatic one-line staff
     [InlineData("chords h  staff l as lines 1")]
-    [InlineData("chords h  staff l as lines 2")]
-    [InlineData("chords h  staff l as lines 3")]
-    [InlineData("chords h  staff l as lines 4")]
-    public void AStaffOfOneToFourLines_PrintsTheKeyInWords_AtTheStartAndTheChange(string scoreLine)
+    public void AOneLineStaff_PrintsTheKeyInWords_AtTheStartAndTheChange(string scoreLine)
     {
         string svg = Svg(Book(scoreLine));
         var words = KeyWords(svg);
@@ -82,7 +79,12 @@ public class KeyNameMarksTests
     [Theory]
     [InlineData("chords h  staff l")]                 // five lines: the signature says it
     [InlineData("chords h  staff l as lines 1  staff l as lines 5")]
-    public void AScoreWithAFiveLineStaff_PrintsNone(string scoreLine)
+    // Two to four lines draw the signature themselves (owner's decision 2026-11-16).
+    [InlineData("chords h  staff l as lines 2")]
+    [InlineData("chords h  staff l as lines 3")]
+    [InlineData("chords h  staff l as lines 4")]
+    [InlineData("chords h  staff l as lines 1  staff l as lines 2")]
+    public void AScoreWithAStaffOfMoreLines_PrintsNone(string scoreLine)
         => Assert.Empty(KeyWords(Svg(Book(scoreLine))));
 
     [Fact]

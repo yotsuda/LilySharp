@@ -2700,7 +2700,7 @@ public sealed partial class MeasureCollector
             (staffGroups, var connected) = CrossArpeggios.Connect(staffGroups, content.Arpeggios);
             content = content with { Arpeggios = connected };
         }
-        // A score of staves that cannot show a signature (one to four lines): the key in words
+        // A score of one-line staves, which show no signature: the key in words
         // over the first bar and each change (KeyNameMarks; owner's request 2026-11-16). After
         // every other mark, so the indices they are read by stay.
         if (KeyNameMarks.Wanted(staffGroups))

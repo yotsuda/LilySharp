@@ -21,10 +21,10 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Svg.Collector;
 
 /// <summary>
-/// The key as words over a score whose staves cannot show a signature — every staff one to four
-/// lines (owner's request 2026-11-16: the one-line staff of a chord chart, then the two-, three-
-/// and four-line ones): "Key: D" over the first bar, and again over a bar the key changes at
-/// (<see cref="MusicMarkType.KeyName"/>).
+/// The key as words over a score whose staves show no signature — every staff a ONE-LINE staff
+/// (owner's request 2026-11-16, the chord chart's one-line staff; staves of two to four lines draw
+/// the signature themselves and take no words — owner's decision the same day): "Key: D" over the
+/// first bar, and again over a bar the key changes at (<see cref="MusicMarkType.KeyName"/>).
 /// </summary>
 /// <remarks>
 /// LILYSHARP-OWN. A one-line staff is LilyPond's RhythmicStaff, which removes the Key_engraver
@@ -39,8 +39,8 @@ internal static class KeyNameMarks
     /// <summary>The prefix the words carry.</summary>
     internal const string Prefix = "Key: ";
 
-    /// <summary>Whether the score's staves (rows aside) are all of one to four lines, none a tab
-    /// or drum staff, and there is one at least.</summary>
+    /// <summary>Whether the score's staves (rows aside) are all one-line staves, none a tab or
+    /// drum staff, and there is one at least.</summary>
     internal static bool Wanted(ImmutableArray<StaffGroup> staffGroups)
     {
         bool any = false;
@@ -49,7 +49,7 @@ internal static class KeyNameMarks
             {
                 if (staff.IsTextRow)
                     continue;
-                if (staff.IsTab || staff.Clef == ClefType.Percussion || staff.Lines < 1 || staff.Lines > 4)
+                if (staff.IsTab || staff.Clef == ClefType.Percussion || staff.Lines != 1)
                     return false;
                 any = true;
             }
