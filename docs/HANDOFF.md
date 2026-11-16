@@ -151,6 +151,7 @@ base `dc7c332e3`・開始時 full 17493 合格 / 1 失敗（`ReadmeSampleTests`�
 - **A-B リピートの段 5（区間の帯 8 本）**: 練習メニューの一番下の「Ranges」。クリック＝呼び出し・Shift＋クリック＝今の A-B を保存・ダブルクリック＝名前・Alt＋クリック＝空に（Alt は Claude が足した）。拡張の `workspaceState` にファイルごと（形は `docs/ab-repeat-design.md` §3 の末尾）。純粋な部分は `abRangesCore.ts`（拡張とページの `LysSynth` が共用・網 `abRanges.test.ts`）。実物の VS Code で CDP（Lab `p1287/e2e`: 保存・呼び出し・名前・空に・プレビューを開き直しても残る・エラー 0）。最初の絵で空の帯が VS Code のダークの入力欄の色で灰色に塗られた＝メニューのボタンと同じ自前の配色に直した。
 - **オーナー報告「A-B を 5〜8 小節にすると bass の `%` の小節が 1 拍目しか鳴らない」（My Life）＝第1286 の `%` の点灯の退行**: `%` の音の S を記号の位置にしたので、ページの `playSpanWindow` の「同じ S・O・音高は繰り返し」が小節の中の 2 回目以降の `d,`・`d'` を落とした。LSP が `%` の音に元の音の位置 `PlaybackNote.Q` を足し、鍵に入れた（最初 R と名付け、AI 候補の中継の印と衝突して光らなくなった）。網 `APercentBarsNotes_SayTheWrittenNoteEachPlays`・`playbackCore.test.ts`（毒はどちらも 1 赤）。実物の VS Code で My Life の 5〜8 小節の bass が 8・8・8・8 個（Lab `p1287/e2e/cdp-pct.mjs`）。A-B オフの再生と Repeat は音を落とさない（`once` でない）うえ、窓の端も変わらない（`R` を外した旧サーバーの形で比べて同じ＝Lab `p1287/e2e/tail-check.js`）＝影響は A-B だけ。
 - オーナー要望: A-B の旗は相手を越えると入れ替わる（形は設計 §1）。CDP の本物のドラッグで確認（Lab `p1287/e2e/cdp-swap.mjs`）。
+- 報告: パート全部オフで録音が消えた＝ループの周が 0 秒。周と窓は全パートで測る（`keepSilent`）。
 - **次の一手**: §1.0 のとおり（録音は S5、コード行の印 `@rit` ほか）。
 
 ## 以下は第1286セッションの経緯

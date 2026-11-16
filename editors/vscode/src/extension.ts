@@ -8648,6 +8648,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             startVoices(ctx, t0, offset, pre);
             // The recording beside the chart, from the same clock (docs/recording-design.md §1 7).
             if (origin !== undefined) end = Math.max(end, startRecordingAlong(t0, offset, origin, !!loopList));
+            // A loop's rounds end where they were laid out to, notes or none (the recording alone goes round too).
+            if (loopList && loopRound > 0) end = Math.max(end, loopRound * loopRoundCount);
             setPlayUi(true);
             // A loop goes round when the last note ends; a plain playback lets it ring a moment.
             playEndTimer = setTimeout(playEnded, (end - offset + (loopList ? 0 : 0.5)) * 1000);
@@ -9507,7 +9509,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 return list;
             }
             const rounds = window.LysSynth.loopNotes(list, 600, loopRound);
-            loopRoundCount = list.length ? rounds.length / list.length : 1;
+            // (nothing to sound — every part off, the recording alone: as many rounds as loopNotes lays out)
+            loopRoundCount = list.length ? rounds.length / list.length : loopRound > 0 ? Math.max(1, Math.min(500, Math.ceil(600 / loopRound))) : 1;
             vscode.postMessage({ type: 'webviewPerf', text: 'loop: ' + (list.length ? rounds.length / list.length : 0)
                 + ' rounds of ' + (loopRound || 0).toFixed(3) + ' s, ' + rounds.length + ' notes' });
             return rounds;
@@ -9518,6 +9521,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // practice menu's tempo.
         let loopRound = 0;
         function spanOf(notes, span, once) {
+            // The stretch is measured on EVERY part, the ones turned off kept (marked Z) and dropped
+            // after (owner's report 2026-11-17: every part off but the recording, a loop's round was
+            // 0 s — Play started again and again, the recording never sounding; a part with the last
+            // bar's notes turned off shortened the round too). The callers' list is practiced(rawNotes).
+            if (rawNotes) notes = practiced(rawNotes, true);
             const beats = playedBeats(), barEnd = playedBarEnd(), speed = playedSpeed();
             const bars = beats ? beats.filter(b => b.A).map(b => b.T / speed) : undefined;
             // And where the last bar ends (the server's closing bar line), the last bar's end.
@@ -9531,7 +9539,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             loopRound = w.length;
             spanStart = w.start || 0;
             spanPieces = w.pieces || [[spanStart, spanStart + loopRound]];
-            return w.notes;
+            return w.notes.filter(n => !n.Z);
         }
         let spanStart = 0;          // where the stretch spanOf cut starts in the score's time (the count-in's bar)
         let spanPieces = null;      // the score's times the stretch plays, in order — the voice is cut from them
@@ -9628,7 +9636,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // the times were divided by (with the recording, the recording's own rate: the practice
         // tempo times its panel's speed — the score follows the recording).
         let playBasis = null;
-        function practiced(notes) {
+        function practiced(notes, keepSilent) {
             if (!window.LysSynth || !window.LysSynth.practiceNotes) return notes;
             const warp = warpNow();
             // With the recording, the SCORE's tempo sets the pace (owner's decision 2026-11-16): the
@@ -9638,7 +9646,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const recTempo = warp ? practice.speed * window.LysSynth.warpFit(warp) : practice.speed;
             playBasis = { warp, recTempo, speed: warp ? window.LysSynth.recordingPlan(recSound(), recTempo).rate : practice.speed };
             const timed = warp ? window.LysSynth.warpNotes(notes, warp) : notes;
-            return window.LysSynth.practiceNotes(timed, rawParts, playedBeats(), Object.assign({}, practice, { speed: playBasis.speed }), rawExtra);
+            return window.LysSynth.practiceNotes(timed, rawParts, playedBeats(), Object.assign({}, practice, { speed: playBasis.speed }), rawExtra, !!keepSilent);
         }
         /** The score's beats and last bar line on the list's time base (playBasis), before the speed. */
         function playedBeats() {

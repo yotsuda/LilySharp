@@ -346,6 +346,17 @@ describe('the notes the practice menu plays', () => {
         assert.deepEqual(practiceNotes(notes, parts, beats, { ...as, muted: ['alt'] }).map(n => n.P), [72, 74]);
     });
 
+    // Owner's report 2026-11-17: every part off but the recording, a loop's round — measured on the
+    // notes left — was 0 s. The round and the A-B window are measured with the parts kept, marked.
+    it('keeps a muted part marked Z when asked, for a loop\'s round to be measured on', () => {
+        const all = practiceNotes(notes, parts, beats, { ...as, muted: ['sop', 'alt'], speed: 0.5 }, null, true);
+        assert.deepEqual(all.map(n => [n.P, n.T, !!n.Z]), [[72, 0, true], [64, 0, true], [74, 2, true]]);
+        const w = playSpanWindow(all, null, null, false, [0, 2, 4]);
+        assert.equal(w.length, 4);
+        assert.deepEqual(w.notes.filter(n => !n.Z), []);
+        assert.equal(practiceNotes(notes, parts, beats, { ...as, muted: ['alt'] }, null, true).filter(n => !n.Z).length, 2);
+    });
+
     it('stretches every time to the tempo', () => {
         const slow = practiceNotes(notes, parts, beats, { ...as, speed: 0.5 });
         assert.deepEqual(slow.map(n => [n.T, n.D]), [[0, 2], [0, 2], [2, 2]]);

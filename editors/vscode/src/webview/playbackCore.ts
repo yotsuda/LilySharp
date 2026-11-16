@@ -40,6 +40,9 @@ export interface PlaybackNote {
     /** Of a note a `%` sounds (S and O are the mark's): the source offset of the note it plays
      *  again (PlaybackNote.Q; not R, which marks a relayed candidate's notes) — what tells the bar's notes apart (playSpanWindow). */
     Q?: number | null;
+    /** A note of a part the practice menu has off, kept only to measure a loop's round and the
+     *  A-B window by (practiceNotes' keepSilent); never sounded or lit. Page-side, not the server's. */
+    Z?: boolean;
     /** A light, not a note: a `%` lit for the bars it sounds (PlaybackNote.L; owner's request
      *  2026-11-16). Nothing sounds it (isLight); the follow-along lights it, a video too. */
     L?: boolean;
@@ -98,7 +101,8 @@ export const CLICK_BEAT = 77;
  * change carries no velocity and is left as it is).
  */
 export function practiceNotes(notes: readonly PlaybackNote[], parts: readonly string[] | null,
-    beats: readonly PlaybackBeat[] | null, practice: Practice, extra: readonly string[] | null = null): PlaybackNote[] {
+    beats: readonly PlaybackBeat[] | null, practice: Practice, extra: readonly string[] | null = null,
+    keepSilent = false): PlaybackNote[] {
     const silent = new Set([...practice.muted, ...(extra ?? [])]);
     for (const name of practice.extraOn ?? []) { if (!practice.muted.includes(name)) { silent.delete(name); } }
     if (practice.levels && parts) {
@@ -106,12 +110,19 @@ export function practiceNotes(notes: readonly PlaybackNote[], parts: readonly st
     }
     const k = 1 / (practice.speed > 0 ? practice.speed : 1);
     const faded = practice.levels && parts && Object.keys(practice.levels).length > 0;
+    // A part turned off is left out — or, with keepSilent, kept marked Z: what a loop's round and
+    // the A-B window are measured on is every part, whatever sounds (owner's report 2026-11-17:
+    // every part off but the recording, the round was 0 s and the recording never sounded).
+    const isSilent = (n: PlaybackNote) => !!(parts && typeof n.N === 'number' && silent.has(parts[n.N]));
     const out = notes
-        .filter(n => !(parts && typeof n.N === 'number' && silent.has(parts[n.N])))
+        .filter(n => keepSilent || !isSilent(n))
         .map(n => {
+            const z = keepSilent && isSilent(n);
             const level = faded && typeof n.N === 'number' && n.N >= 0 && n.N < parts!.length && !isPedal(n) ? levelOf(practice.levels, parts![n.N]) : 1;
-            if (k === 1 && level === 1) { return n; }
-            return { ...n, T: n.T * k, D: n.D * k, V: level === 1 ? n.V : velocityAt(n.V, level) };
+            if (k === 1 && level === 1 && !z) { return n; }
+            const m: PlaybackNote = { ...n, T: n.T * k, D: n.D * k, V: level === 1 ? n.V : velocityAt(n.V, level) };
+            if (z) { m.Z = true; }
+            return m;
         });
     if (practice.click && beats) {
         for (const b of beats) {
