@@ -1844,7 +1844,7 @@ LyricText      = { Word , [ '[' , Reading , ']' ] } ;
                     no note; '_' and a detached '~' take one note each, holding the previous
                     syllable. *)
 
-ChordsBlock    = 'chords' , [ Identifier ] , [ 'for' , PartRef ] , '{' , { ChordRowEntry | ChordExtend | ChordRowRest | Barline | ChordRowBreak | ChordRowTime | ChordRowTempo | ChordRowRepeat } , '}' ;
+ChordsBlock    = 'chords' , [ Identifier ] , [ 'for' , PartRef ] , '{' , { ChordRowEntry | ChordExtend | ChordRowRest | Barline | ChordRowBreak | ChordRowTime | ChordRowTempo | ChordRowKey | ChordRowRepeat } , '}' ;
                  (* The UNNAMED track (2026-10-09) is placed by a score's bare 'chords' row. *)
                  (* 'for PART' (owner's decision 2026-10-28, Semantics.ChordTrackPitch): the track
                     is typed in PART's letters — under PART's 'pitch', so the player's letters of
@@ -1905,6 +1905,14 @@ ChordRowTime   = TimeSignature ;
                     different one is LYS2005, and the sound and the exports follow. After a chord,
                     a rest or a '.' of its bar it is LYS1073. 'partial' stays the section
                     header's: a pickup opens a section, and the header says it once. *)
+ChordRowKey    = KeyDecl ;
+                 (* AT A BAR'S HEAD, by ChordRowTime's rule (decided by the owner 2026-11-16), but
+                    THE ROW'S ALONE, as a 'key' in the music of a part is that part's: the key the
+                    row's degrees (I, V7) are read in from that bar to the end of the row's run (its
+                    section). A chord spelled by its root (G, D7) is not moved by it. A chart of
+                    one-line staves says "Key: D" over the bar (KeyNameMarks); a pitched part of the
+                    section that changes key nowhere in it is told, as a part that does not follow
+                    another's key is. After a chord of its bar it is LYS1073. *)
 ChordRowRepeat = '%' ;
                  (* THE BAR BEFORE, AGAIN (decided by the owner 2026-11-16), the chart's bar-repeat
                     sign: '| G C | % | % | D |' is G C three times. Alone between two bar lines (the

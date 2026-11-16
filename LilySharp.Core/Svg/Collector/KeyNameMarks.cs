@@ -68,8 +68,10 @@ internal static class KeyNameMarks
     /// </summary>
     internal static ImmutableArray<MusicMarkItem> Add(ImmutableArray<MusicMarkItem> marks,
         ImmutableArray<StaffGroup> staffGroups, SyntaxNode root, Semantics.SectionHeaders headers,
-        IReadOnlyDictionary<string, List<int>> sectionStarts)
+        IReadOnlyDictionary<string, List<int>> sectionStarts,
+        IReadOnlyList<(int Measure, KeySignatureSyntax Key)>? rowKeys = null)
     {
+        rowKeys ??= [];
         var staff = staffGroups.SelectMany(g => g.Staves).FirstOrDefault(s => !s.IsTextRow);
         if (staff is null)
             return marks;
@@ -114,17 +116,26 @@ internal static class KeyNameMarks
                     break;      // a change later in the bar is not the bar's opening key
             }
         if (drawn)
+        {
+            // A chords row's own `key` (owner's decision 2026-11-16) where no staff drew one.
+            var marked = builder.Where(b => b.Type == MusicMarkType.KeyName).Select(b => b.MeasureIndex).ToHashSet();
+            foreach (var (measure, key) in rowKeys)
+                if (measure > 0 && measure < measures.Length && marked.Add(measure) && NameOf(key) is { } rowName)
+                    Mark(measure, rowName, key.Pitch.Position);
             return builder.ToImmutable();
+        }
 
-        // The sections, in the order the form plays them.
-        var plays = new List<(int Measure, string Section)>();
+        // The sections, in the order the form plays them — and a chords row's own `key` at a bar's
+        // head (owner's decision 2026-11-16), after the start of the section it stands in.
+        var plays = new List<(int Measure, int Order, KeySignatureSyntax? Key)>();
         foreach (var (name, starts) in sectionStarts)
             foreach (int s in starts)
-                plays.Add((s, name));
+                plays.Add((s, 0, headers.Keys.TryGetValue(name, out var k) ? k : null));
+        foreach (var (measure, key) in rowKeys)
+            plays.Add((measure, 1, key));
         string current = home;
-        foreach (var (measure, section) in plays.OrderBy(p => p.Measure))
+        foreach (var (measure, _, key) in plays.OrderBy(p => p.Measure).ThenBy(p => p.Order))
         {
-            var key = headers.Keys.TryGetValue(section, out var k) ? k : null;
             string? name = key is null ? home : NameOf(key);
             if (name is null || name == current || measure >= measures.Length)
                 continue;

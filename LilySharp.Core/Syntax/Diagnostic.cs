@@ -917,7 +917,7 @@ public static class DiagnosticCodes
     /// what may be cut. The word is kept in the tree and breaks nothing.</summary>
     public const string ChordsBreakInsideBar = "LYS1069";
 
-    /// <summary>A <c>time</c> or a <c>tempo</c> stands after a chord, a rest or a <c>.</c> of its bar
+    /// <summary>A <c>time</c>, a <c>tempo</c> or a <c>key</c> stands after a chord, a rest or a <c>.</c> of its bar
     /// in a chords track (<c>C time 2/4 F |</c>). A row writes either at a bar's head only (Dettato's request 13,
     /// owner's decision 2026-11-16): the bar it opens is a bar of that meter. Kept in the tree, read
     /// by nobody.</summary>

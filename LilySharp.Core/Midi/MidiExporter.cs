@@ -2481,6 +2481,9 @@ public sealed class MidiExporter
         // …and its slots are that pickup's (SlotGroups' pickup): the first bar only.
         Fraction? thisBarPickup = _bars.BarLength != _bars.MeterLength ? _bars.BarLength : null;
         int tonicStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
+        // The key the row's degrees are read in: the piece's here, then the row's own `key` from its
+        // bar (owner's decision 2026-11-16: a row's key is that row's alone).
+        int rowSharps = _keySharps;
         int barStart = startTick;
         var bar = new List<SyntaxNode>();
         // A track typed `for` a transposing part in its player's letters sounds that many
@@ -2516,10 +2519,10 @@ public sealed class MidiExporter
                      Svg.Collector.ChordNameCollector.SlotGroups(bar, gridBeats, gridBeatType, out _, thisBarPickup))
             {
                 if (node is not ChordEntrySyntax entry
-                    || Svg.Collector.ChordNameCollector.StructureOf(entry.SymbolText, tonicStep, _keySharps)
+                    || Svg.Collector.ChordNameCollector.StructureOf(entry.SymbolText, tonicStep, rowSharps)
                         is not { } typed)
                     continue;
-                var chord = Semantics.ChordTrackPitch.Sounding(typed, entry.SymbolText, typedDrop.Value, _keySharps);
+                var chord = Semantics.ChordTrackPitch.Sounding(typed, entry.SymbolText, typedDrop.Value, rowSharps);
                 int onset = barStart + FractionToTicks(timing);
                 int length = Math.Min(FractionToTicks(duration), barStart + thisBarTicks - onset);
                 if (length < 1)
@@ -2624,6 +2627,12 @@ public sealed class MidiExporter
             }
             // A `tempo` at a bar's head (owner's decision 2026-11-16) is the score's from that bar, as
             // one in a part's music: at the bar's tick. After a chord of its bar it is LYS1073, unread.
+            if (item is KeySignatureSyntax rowKey && bar.Count == 0)
+            {
+                if (Semantics.ChordRowBarLines.KeyOf(rowKey) is { } k)
+                    (tonicStep, rowSharps) = k;
+                continue;
+            }
             if (item is TempoDeclarationSyntax rowTempo && bar.Count == 0 && _conductorTrack != null)
             {
                 int was = _currentTick;

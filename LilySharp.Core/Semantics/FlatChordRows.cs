@@ -231,6 +231,45 @@ internal static class ChordRowBarLines
         return false;
     }
 
+    /// <summary>
+    /// The tonic step (0=C..6=B) and signature a row's <c>key</c> sets (owner's decision 2026-11-16:
+    /// a row's <c>key</c> is that row's alone, as a part's is — the key its degrees are read in
+    /// from that bar). Null for a key with no tonic (<c>key custom</c>, <c>key none</c>).
+    /// </summary>
+    public static (int TonicStep, int Sharps)? KeyOf(KeySignatureSyntax key)
+    {
+        if (key.IsCustom)
+            return null;
+        return (Math.Max(0, Music.KeySpelling.StepOf(key.Pitch.BaseName)),
+            Music.KeySpelling.SharpsFor(key.Pitch.ToFullString().Trim().ToLowerInvariant(),
+                key.Mode.Text.ToLowerInvariant()) ?? 0);
+    }
+
+    /// <summary>The <c>key</c>s a row writes at a bar's head, each with the bar of the row it
+    /// opens — counted as every reader of a row's bars counts them.</summary>
+    public static List<(int Bar, KeySignatureSyntax Key)> KeysAtBars(IEnumerable<SyntaxNode> items)
+    {
+        var found = new List<(int, KeySignatureSyntax)>();
+        int bars = 0;
+        bool holds = false;
+        foreach (var item in items)
+        {
+            if (item is BarlineSyntax line)
+            {
+                if (Closes(line, holds))
+                    bars++;
+                holds = false;
+            }
+            else if (item is VoltaEndSyntax end && EndCloses(end, holds))
+                (bars, holds) = (bars + 1, false);
+            else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax or PercentMarkSyntax)
+                holds = true;
+            else if (item is KeySignatureSyntax key && !holds)
+                found.Add((bars, key));
+        }
+        return found;
+    }
+
     /// <summary>Whether <paramref name="barLine"/> closes a bar of its row, given whether the
     /// bar being read <paramref name="holds"/> an entry, a rest or a <c>.</c> already.</summary>
     public static bool Closes(BarlineSyntax barLine, bool holds)

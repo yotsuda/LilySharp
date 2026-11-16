@@ -158,10 +158,21 @@ internal sealed class ChordNameCollector
     public IReadOnlyList<(int Measure, int TonicStep, int Sharps)> KeyByMeasure { get; set; }
         = new[] { (0, 0, 0) };
 
+    // The `key`s the run being read writes (CollectPart's ProcessRun), by the measure each opens.
+    private readonly List<(int From, int TonicStep, int Sharps)> _runKeys = new();
+
+    /// <summary>The <c>key</c>s the row collected last writes at a bar's head, by the measure each
+    /// opens — the chart's "Key: D" words over that bar (<see cref="KeyNameMarks"/>).</summary>
+    public List<(int Measure, KeySignatureSyntax Key)> RowKeys { get; } = new();
+
     /// <summary>The (tonic step, sharps) in force at <paramref name="measure"/> — the
     /// last timeline entry that begins at or before it.</summary>
     private (int TonicStep, int Sharps) KeyAt(int measure)
     {
+        // The row's own `key` (owner's decision 2026-11-16), from its bar to the run's end.
+        for (int i = _runKeys.Count - 1; i >= 0; i--)
+            if (_runKeys[i].From <= measure)
+                return (_runKeys[i].TonicStep, _runKeys[i].Sharps);
         (int TonicStep, int Sharps) eff = (0, 0);
         foreach (var e in KeyByMeasure)
         {
@@ -330,6 +341,8 @@ internal sealed class ChordNameCollector
         RowEndings.Clear();
         RowScoreMarks.Clear();
         RowPercents.Clear();
+        RowKeys.Clear();
+        _runKeys.Clear();
         MeterByMeasure = [];
         PickupByMeasure = new Dictionary<int, Fraction>();
     }
@@ -870,6 +883,7 @@ internal sealed class ChordNameCollector
         RowEndings.Clear();
         RowScoreMarks.Clear();
         RowPercents.Clear();
+        RowKeys.Clear();
         var measureItems = new Dictionary<int, ImmutableArray<MusicItem>>();
         // Source barline types per measure. A chord row carries its own `|`, `:|`,
         // `||` etc. so a standalone lead sheet draws a real measure grid (and the
@@ -886,6 +900,7 @@ internal sealed class ChordNameCollector
         void ProcessRun(IEnumerable<SyntaxNode> items, int startMeasure)
         {
             int localMeasure = 0;
+            _runKeys.Clear();
             // Chord entries AND rests: r / R print the no-chord symbol at their
             // moment, s prints nothing; all three advance the timing like an entry
             // (EmitChordPartMeasure). Same rule as the attached path.
@@ -1008,6 +1023,14 @@ internal sealed class ChordNameCollector
                 }
                 // A `tempo` at a bar's head (owner's decision 2026-11-16): the score's mark over the
                 // bar it opens, as a part's. After a chord of its bar it is LYS1073, unread.
+                // A `key` at a bar's head: this row's key from that bar (KeyAt), and its words.
+                else if (item is KeySignatureSyntax rowKey && pending.Count == 0)
+                {
+                    int keyMeasure = MeasureOfBar(startMeasure, localMeasure, out _);
+                    if (Semantics.ChordRowBarLines.KeyOf(rowKey) is { } k)
+                        _runKeys.Add((keyMeasure, k.TonicStep, k.Sharps));
+                    RowKeys.Add((keyMeasure, rowKey));
+                }
                 else if (item is TempoDeclarationSyntax rowTempo && pending.Count == 0)
                 {
                     if (MeasureCollector.TempoMark(rowTempo, MeasureOfBar(startMeasure, localMeasure, out _), 0, Fraction.Zero) is { } tempoMark)
@@ -1054,6 +1077,7 @@ internal sealed class ChordNameCollector
                 foreach (int start in BlockStarts(block, sectionStartMeasure))
                     ProcessRun(block.Items, start);
         }
+        _runKeys.Clear();   // the row's own keys are its own: no later reader of KeyAt sees them
 
         if (maxIndex < 0)
             return ImmutableArray<Measure>.Empty;

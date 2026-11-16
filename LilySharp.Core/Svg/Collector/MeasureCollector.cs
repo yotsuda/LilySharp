@@ -628,6 +628,10 @@ public sealed partial class MeasureCollector
     private readonly ChordNameCollector _chordNameCollector = new();
     // Percent repeats
     private readonly List<PercentRepeatItem> _percentRepeats = new();
+
+    // The `key`s the chords rows write at a bar's head (ChordNameCollector.RowKeys), for the
+    // chart's key words (KeyNameMarks).
+    private readonly List<(int Measure, KeySignatureSyntax Key)> _rowKeys = new();
     // The marks a shared staff writes out as notes (CondensedPercents), by source start; null: none.
     private HashSet<int>? _writtenOutPercents;
     // Cross-staff items
@@ -2112,6 +2116,7 @@ public sealed partial class MeasureCollector
                 if (!HasScoreMarkAt(mark.Type, mark.MeasureIndex))
                     _musicMarks.Add(mark);
             _percentRepeats.AddRange(_chordNameCollector.RowPercents);
+            _rowKeys.AddRange(_chordNameCollector.RowKeys);
         }
 
         // Now that the music is collected, gather the lyrics rows. The wrap bar
@@ -2712,7 +2717,7 @@ public sealed partial class MeasureCollector
             content = content with { ChordNames = content.ChordNames.Select(c => c.IsChordRow && c.UseTiming ? c with { PlacedByBeat = true } : c).ToImmutableArray() };
         if (KeyNameMarks.Wanted(staffGroups))
             content = content with { MusicMarks = KeyNameMarks.Add(content.MusicMarks, staffGroups,
-                tree.GetRoot(), _sectionHeaders, _sectionState.AllStarts) };
+                tree.GetRoot(), _sectionHeaders, _sectionState.AllStarts, _rowKeys) };
         var built = ScoreAssembler.BuildMultiStaffScore(staffGroups, content);
         // The rows' unseen melodies ride on the model for the files (almost always none: no copy then).
         return rowMelodies.Count == 0 ? built : built with { RowMelodies = rowMelodies.ToImmutable() };
@@ -5582,6 +5587,7 @@ public sealed partial class MeasureCollector
         _writtenBars.Clear();
         _writtenBarPhrases = null;
         _meterPlan = null;
+        _rowKeys.Clear();
         _shortEnds = null;
         _shortEndVoices = null;
         // The definitions walk's own gatherings (its fields say what for): cleared here as
@@ -6273,7 +6279,37 @@ public sealed partial class MeasureCollector
         foreach (var (m, key) in _keyByMeasure)
             if (m > 0)
                 list.Add((m, key.TonicStep, key.Sharps));
+        if (_keyByMeasure.Count == 0)
+            AddSectionHeaderKeys(list);
         return list;
+    }
+
+    /// <summary>
+    /// A score no music walk went through (rows alone, its automatic one-line staff): the keys of
+    /// the section headers, at each start the form plays, the home key where a header says none —
+    /// what a part's walk records at a section's start (Form's revert). Until 2026-11-16 a rows-only
+    /// chart's degrees were read in the file's key throughout: <c>section B { key d major … }</c>
+    /// printed its <c>I</c> as C while the MIDI sounded D and the "Key: D" words stood over it.
+    /// </summary>
+    private void AddSectionHeaderKeys(List<(int, int, int)> list)
+    {
+        if (_sectionHeaders.Keys.Count == 0)
+            return;
+        var home = (_v.Meta.KeyTonicStep, _v.Meta.InitialKeySharps);
+        var plays = new List<(int Measure, (int, int) Key)>();
+        foreach (var (name, starts) in _sectionState.AllStarts)
+        {
+            var key = _sectionHeaders.Keys.TryGetValue(name, out var k) ? Semantics.ChordRowBarLines.KeyOf(k) : null;
+            if (_sectionHeaders.Keys.ContainsKey(name) && key == null)
+                continue;   // a key with no tonic: the degrees stay as they were
+            foreach (int s in starts)
+                plays.Add((s, key ?? home));
+        }
+        foreach (var (measure, (step, sharps)) in plays.OrderBy(p => p.Measure))
+            if (measure == 0)
+                list[0] = (0, step, sharps);
+            else
+                list.Add((measure, step, sharps));
     }
 
     private void RecordSectionStart(string name, int startMeasure)

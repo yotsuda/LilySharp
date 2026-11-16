@@ -7709,6 +7709,17 @@ public sealed class MusicXmlExporter
         /// 3-beat bar (Lab sessions/p1120/probe/m-flat).</summary>
         public (int Beats, int BeatType) MeterOf(int bar)
             => Meters.Count == 0 ? (Beats, BeatType) : Meters[Math.Min(bar, Meters.Count - 1)];
+
+        /// <summary>The key the row's degrees are read in at bar <paramref name="bar"/>: the play's,
+        /// then the row's own <c>key</c> from its bar (owner's decision 2026-11-16).</summary>
+        public (int TonicStep, int Sharps) KeyOf(int bar)
+        {
+            var key = (TonicStep, Sharps);
+            foreach (var (at, k) in ChordRowBarLines.KeysAtBars(Items))
+                if (at <= bar && ChordRowBarLines.KeyOf(k) is { } own)
+                    key = own;
+            return key;
+        }
     }
 
     private readonly List<PendingChordRow> _pendingChordRows = new();
@@ -8037,18 +8048,19 @@ public sealed class MusicXmlExporter
         var existing = HarmoniesWithOnsets(measure);
         int insertAt = 0;
         var (beats, beatType) = pending.MeterOf(barIndex);
+        var (tonicStep, sharps) = pending.KeyOf(barIndex);
         foreach (var (node, timing, _) in Svg.Collector.ChordNameCollector.SlotGroups(bar, beats, beatType, out _, pickup))
         {
             if (node is not ChordEntrySyntax entry)
                 continue;   // N.C. and a bar-head '.' write nothing
-            if (Svg.Collector.ChordNameCollector.StructureOf(entry.SymbolText, pending.TonicStep, pending.Sharps) is not { } typed)
+            if (Svg.Collector.ChordNameCollector.StructureOf(entry.SymbolText, tonicStep, sharps) is not { } typed)
                 continue;
-            var chord = Semantics.ChordTrackPitch.Sounding(typed, entry.SymbolText, typedDrop, pending.Sharps);
+            var chord = Semantics.ChordTrackPitch.Sounding(typed, entry.SymbolText, typedDrop, sharps);
             // A part written with a <transpose> carries its harmonies in WRITTEN pitch, as it does
             // its notes (a reader adds the <transpose> to both): the row is sounding, so a B♭
             // trumpet's harmony is the chord a major second up — the name its page prints
             // (ConcertPitch.ChordNameDrop). The diagram stays the sounding chord's.
-            var named = drop == 0 ? chord : chord.Pressed(drop, pending.Sharps);
+            var named = drop == 0 ? chord : chord.Pressed(drop, sharps);
             // The score's own `transpose` moves the row with the notes, and its diagrams (a written
             // shape is the written chord's), as the page does.
             var move = ScoreChordMove;

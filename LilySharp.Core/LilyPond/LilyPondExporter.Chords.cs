@@ -625,6 +625,10 @@ public sealed partial class LilyPondExporter
                 pending.Add(item);
                 barBreaks.Clear();
             }
+            // A row's own `key` at a bar's head (owner's decision 2026-11-16): its degrees from there.
+            else if (item is KeySignatureSyntax rowKey && pending.Count == 0
+                     && Semantics.ChordRowBarLines.KeyOf(rowKey) is { } own)
+                key = own;
             else if (item is BreakSyntax)
             {
                 if (pending.Count > 0)

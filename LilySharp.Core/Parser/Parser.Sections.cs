@@ -713,13 +713,17 @@ internal sealed partial class Parser
         if (item is BreakGreen)
             (breaks ??= new List<(int, TextSpan)>()).Add((items.Count, span));
         // A `time` after an entry of its bar: the row writes a meter at a bar's head only.
-        if (item is TimeSignatureGreen or TempoDeclarationGreen && ChordSlotBefore(items, items.Count))
+        if (item is TimeSignatureGreen or TempoDeclarationGreen or KeySignatureGreen && ChordSlotBefore(items, items.Count))
         {
-            string word = item is TimeSignatureGreen ? "time" : "tempo";
-            string example = item is TimeSignatureGreen ? "| time 2/4 C |" : "| tempo 72 C |";
+            var (word, what, example) = item switch
+            {
+                TimeSignatureGreen => ("time", "meter", "| time 2/4 C |"),
+                TempoDeclarationGreen => ("tempo", "tempo", "| tempo 72 C |"),
+                _ => ("key", "key", "| key d major I |"),
+            };
             _diagnostics.Error(span, DiagnosticCodes.ChordsTimeInsideBar,
                 $"'{word}' stands inside a bar of a chords track, after a chord of it. A chords track "
-                + $"changes the {(word == "time" ? "meter" : "tempo")} at a bar's head only: write it right after the '|' ({example}).");
+                + $"changes the {what} at a bar's head only: write it right after the '|' ({example}).");
         }
         items.Add(item ?? SkipStrayChordToken());
     }
@@ -878,6 +882,10 @@ internal sealed partial class Parser
         // 2026-11-16): the score's tempo from there, as a part's music writes it.
         if (Check(SyntaxKind.TempoKeyword))
             return ParseTempoDeclaration();
+        // `key d major` at a bar's head (owner's decision 2026-11-16): THIS ROW's key from that bar
+        // — the key its degrees are read in — as a part's `key` is that part's alone.
+        if (Check(SyntaxKind.KeyKeyword))
+            return ParseKeySignature();
         // `%`: the bar before, again (owner's decision 2026-11-16) — the chart's bar-repeat sign.
         // A bar of its own: `| G C | % | % |`. Where it may stand: ReportChordPercents.
         if (Check(SyntaxKind.PercentMark))

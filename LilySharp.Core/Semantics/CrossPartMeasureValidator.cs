@@ -317,6 +317,7 @@ internal sealed class CrossPartMeasureValidator
         }
 
         WarnOfAKeySomePartsChangeAlone(section, blocks.Select(b => b.Block).ToList());
+        WarnOfARowKeyThePartsDoNotWrite(section, blocks.Select(b => b.Block).ToList());
 
         if (blocks.Count + chordVoices.Count < 2)
             return time; // one voice has nothing to align with — and nothing to split for
@@ -468,6 +469,39 @@ internal sealed class CrossPartMeasureValidator
             $"Part '{writer}' changes key here, and {NameList(silent.Select(n => $"'{n}'").ToList())} of this section {(silent.Count == 1 ? "does" : "do")} not: "
             + "a 'key' written in the music is that part's alone (a 'time' or a 'tempo' is every part's). "
             + "Write it in each part at the same bar; where the section begins in the new key, write it once in the section header.");
+    }
+
+    /// <summary>
+    /// A chords row's <c>key</c> at a bar's head is that row's alone (owner's decision 2026-11-16) —
+    /// the key its degrees are read in — as a part's is: where a pitched part of the section changes
+    /// key nowhere in it, the row and the staff now read in two keys. Said once, at the row's first
+    /// <c>key</c>, by the rule <see cref="WarnOfAKeySomePartsChangeAlone"/> says it for parts.
+    /// </summary>
+    private void WarnOfARowKeyThePartsDoNotWrite(SectionDeclarationSyntax section, List<PartBlockSyntax> blocks)
+    {
+        if (blocks.Count == 0)
+            return;
+        foreach (var row in section.ChildNodes().OfType<ChordPartBlockSyntax>())
+        {
+            var rowKey = row.Items.OfType<KeySignatureSyntax>().FirstOrDefault();
+            if (rowKey == null)
+                continue;
+            var header = (_headers ??= SectionHeaders.Read(_root ?? section)).Keys.GetValueOrDefault(section.SectionName)
+                ?? ScoreHomeKey.Declaration(_root ?? section);
+            if (header != null ? SameKey(header, rowKey) : IsCMajor(rowKey))
+                continue;
+            var silent = blocks
+                .Where(b => !b.DescendantNodes<KeySignatureSyntax>().Any(k => header != null ? !SameKey(header, k) : !IsCMajor(k)))
+                .Where(b => (b.DescendantNodes<NoteSyntax>().Any() || b.DescendantNodes<ChordSyntax>().Any())
+                            && !b.DescendantNodes<DrumNoteSyntax>().Any())
+                .Select(b => $"'{b.Name}'").ToList();
+            if (silent.Count == 0 || !_warnedSpans.Add((rowKey.Span.Start, rowKey.Span.Length)))
+                continue;
+            _diagnostics.Warning(rowKey.Span, DiagnosticCodes.KeyChangeInSomeParts,
+                $"Chords '{row.PartName}' changes key here, and {NameList(silent)} of this section {(silent.Count == 1 ? "does" : "do")} not: "
+                + "a 'key' in a chords track is that track's alone, the key its degrees are read in. "
+                + "Write it in each part at the same bar; where the section begins in the new key, write it once in the section header.");
+        }
     }
 
     // Every section header of the file, read once and only when a part block writes a key.
