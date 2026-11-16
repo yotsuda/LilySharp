@@ -72,8 +72,9 @@ public sealed record ScoreVideoFrames(string ConcatList, int Pictures, double Se
 /// <summary>
 /// The pictures of a score video: the engraved pages, the page the music is on shown whole, the
 /// noteheads lit while they sound and nothing else marked (owner's decisions 2026-11-07, for a
-/// video of an AI-composed piece). The first page shows until a note printed on the next page
-/// starts; then the whole picture turns to that page.
+/// video of an AI-composed piece) — and the chord names a chord row sounds, as the preview lights
+/// them (owner's decision 2026-11-16: a chart of chords alone lit nothing). The first page shows
+/// until a note printed on the next page starts; then the whole picture turns to that page.
 /// </summary>
 /// <remarks>
 /// The editor's MP4 export and <c>tools/lys-to-mp4</c> both come here, so the two cannot drift.
@@ -227,9 +228,11 @@ public static class ScoreVideo
         static int Even(double pixels) => Math.Max(2, (int)Math.Round(pixels / 2) * 2);
     }
 
-    /// <summary>Every notehead by the note that lights it — (source offset, printed copy) — with
-    /// its page and box.</summary>
-    private static Dictionary<(int Pos, int Ordinal), List<(int Page, double[] Box)>> HeadsByNote(
+    /// <summary>Every notehead and chord name by the note that lights it — (source offset, printed
+    /// copy) — with its page and box. A chord row's notes play under the chord name's offset, so
+    /// its name answers to them as a head to its note (owner's decision 2026-11-16, every score:
+    /// until then a chart of chords alone was a still picture).</summary>
+    internal static Dictionary<(int Pos, int Ordinal), List<(int Page, double[] Box)>> HeadsByNote(
         SyntaxTree tree, IReadOnlyList<BoxPage> pages)
     {
         // The bars in reading order, to count the printed copies of one offset by.
@@ -253,7 +256,7 @@ public static class ScoreVideo
         for (int pi = 0; pi < pages.Count; pi++)
             foreach (var s in pages[pi].Symbols)
             {
-                if (s.Kind != "notehead" || s.Pos < 0) continue;
+                if (s.Kind is not ("notehead" or "chordName") || s.Pos < 0) continue;
                 int bar = BarOf(pi, s.Box);
                 keyed.Add((s.Pos, pi, bar, s.Box));
                 int chord = ChordStart(tree, s.Pos);
