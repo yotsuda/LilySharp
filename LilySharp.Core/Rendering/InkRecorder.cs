@@ -348,8 +348,8 @@ internal sealed class InkRecorder : IDrawingContext
     public void DrawBarBox(int barNumber, double x, double y, double width, double height)
         => _inner.DrawBarBox(barNumber, x, y, width, height);
 
-    public void DrawBarStaffBox(int sourcePosition, int from, int to, double x, double y, double width, double height)
-        => _inner.DrawBarStaffBox(sourcePosition, from, to, x, y, width, height);
+    public void DrawBarStaffBox(int sourcePosition, int from, int to, double x, double y, double width, double height, bool row = false)
+        => _inner.DrawBarStaffBox(sourcePosition, from, to, x, y, width, height, row);
 
     public IDisposable BeginGroup(DrawingTransform transform)
     {

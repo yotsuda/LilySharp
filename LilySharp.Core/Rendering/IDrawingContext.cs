@@ -327,9 +327,11 @@ public interface IDrawingContext
     /// (<c>data-start</c>, the offset of its first note, rest or chord) and the stretch of text it
     /// is written in (<c>data-span</c>, <paramref name="from"/> and <paramref name="to"/>). A click
     /// on the bar in the preview takes the editor there; the editor's caret in the span lights the
-    /// bar. Draws nothing; static backends emit nothing.
+    /// bar. Draws nothing; static backends emit nothing. <paramref name="row"/> marks a chords or
+    /// lyrics ROW's box (<c>data-row</c>, round its symbols' ink): the playing bar is lit on the
+    /// staves' boxes alone (owner's request 2026-11-16).
     /// </summary>
-    void DrawBarStaffBox(int sourcePosition, int from, int to, double x, double y, double width, double height) { }
+    void DrawBarStaffBox(int sourcePosition, int from, int to, double x, double y, double width, double height, bool row = false) { }
 
     /// <summary>
     /// Begins a transformed group scope. Subsequent draw operations have the

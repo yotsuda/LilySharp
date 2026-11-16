@@ -53,7 +53,7 @@ public class BarStaffBoxTests
         """;
 
     private static readonly Regex Box = new(
-        @"<rect class=""bar-staff"" data-start=""(\d+)""(?: data-span=""\d+ \d+"")? x=""([^""]+)"" y=""([^""]+)"" width=""([^""]+)"" height=""([^""]+)""");
+        @"<rect class=""bar-staff"" data-start=""(\d+)""(?: data-span=""\d+ \d+"")?(?: data-row="""")? x=""([^""]+)"" y=""([^""]+)"" width=""([^""]+)"" height=""([^""]+)""");
 
     [Fact]
     public void EachBarOfEachStaff_GoesToItsFirstNote()
@@ -142,6 +142,20 @@ public class BarStaffBoxTests
         Assert.InRange(bottom - baseline, 0.1, 0.6);                            // just under the baseline
         Assert.InRange(raised.Y - 0.7 * raised.Size - top, 0.1, 0.8);         // just over the raised 7's cap
         Assert.True(bottom - top < 4.0, $"{bottom - top}");
+    }
+
+    // The playing bar is tinted on the staves' boxes alone (owner's request 2026-11-16): a row's
+    // box says it is a row's, as the one-line staff a rows-only score draws under it does not.
+    [Fact]
+    public void ARowsBox_SaysItIsARows_AStaffsDoesNot()
+    {
+        const string book = "time 4/4\nsection A {\n  chords h { D | C7 | }\n  lyrics w { la la | la | }\n}\nform { ~A }\nscore { chords h  lyrics w }\n";
+        string preview = SvgGenerator.Generate(SyntaxTree.Parse(book), SvgRenderOptions.Preview());
+        var boxes = Regex.Matches(preview, @"<rect class=""bar-staff""[^>]*>").Cast<Match>().Select(m => m.Value).ToList();
+        int rows = boxes.Count(b => b.Contains("data-row=\"\"")), staves = boxes.Count - rows;
+        Assert.Equal(4, rows);       // the chords row's and the lyrics row's, two bars each
+        Assert.Equal(2, staves);     // the one-line staff's
+        Assert.DoesNotContain("data-row", SvgGenerator.Generate(SyntaxTree.Parse(Book), SvgRenderOptions.Preview()));
     }
 
     [Fact]

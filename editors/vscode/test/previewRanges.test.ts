@@ -155,6 +155,14 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /if \(m\.turnOn\) recOn = true;/);
     });
 
+    // The playing bar tinted on its staves, as a hover tints a bar (owner's request 2026-11-16).
+    it('tints the playing bar on its staves alone, and clears it when the playback stops', () => {
+        assert.match(html, /#svgContainer rect\.bar-staff\.caret,\s*#svgContainer rect\.bar-staff\.playing \{/);
+        assert.match(html, /svgContainer\.querySelectorAll\('rect\.bar-staff:not\(\[data-row\]\)'\)/);
+        assert.match(html, /if \(painted\.length > 0\) lightPlayingBar\(painted\);/);
+        assert.match(html, /clearHighlights\(\);\s*lightPlayingBar\(null\);/);
+    });
+
     // An @todo mark's memo can stand over another bar than its chord name or head; counted as a
     // copy of the music it was "copy 0" and lit alone, the chord name dark (owner's report
     // 2026-11-16: a chords row's marked names did not light while playing).

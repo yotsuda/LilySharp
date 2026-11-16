@@ -5644,7 +5644,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
            lights a bar in (omrScan.ts rect.light; the owner's request 2026-10-14: the two alike). */
         #svgContainer rect.bar-staff.hover,
         #svgContainer rect.bar-staff.peer,
-        #svgContainer rect.bar-staff.caret {
+        #svgContainer rect.bar-staff.caret,
+        #svgContainer rect.bar-staff.playing {
             fill: rgba(0, 120, 215, 0.14);
         }
         /* The bars a score selection covers (owner's request 2026-10-25: the bars lit, not the
@@ -7127,6 +7128,30 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
             return best;
         }
+        // The bar playing now, tinted on its STAVES as a hover tints a bar (owner's request
+        // 2026-11-16: the chord names are small, the eye loses them) — the staves' boxes alone, not a
+        // chords or lyrics row's (data-row), whose band would overlap a one-line staff's. The bar is
+        // the one the first lit element stands in (its copy, as the follow-along lit it); a moment
+        // with nothing lit keeps the bar there. null takes it away (the playback stopped).
+        function lightPlayingBar(painted) {
+            for (const r of svgContainer.querySelectorAll('rect.bar-staff.playing')) r.classList.remove('playing');
+            if (!painted || painted.length === 0) return;
+            const b = painted[0].getBoundingClientRect();
+            const cx = (b.left + b.right) / 2, cy = (b.top + b.bottom) / 2;
+            let column = null, bestGap = Infinity;
+            for (const r of svgContainer.querySelectorAll('rect.bar-box')) {
+                const k = r.getBoundingClientRect();
+                if (cx < k.left || cx > k.right) continue;
+                const gap = cy < k.top ? k.top - cy : cy > k.bottom ? cy - k.bottom : 0;
+                if (gap < bestGap) { column = k; bestGap = gap; }
+            }
+            if (!column) return;
+            for (const r of svgContainer.querySelectorAll('rect.bar-staff:not([data-row])')) {
+                const k = r.getBoundingClientRect();
+                const mx = (k.left + k.right) / 2, my = (k.top + k.bottom) / 2;
+                if (mx >= column.left && mx <= column.right && my >= column.top - 1 && my <= column.bottom + 1) r.classList.add('playing');
+            }
+        }
         let hoveredBar = null;
         function hoverBar(r) {
             if (r === hoveredBar) return;
@@ -8334,6 +8359,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 vscode.postMessage({ type: 'soundingSource', positions: [], ended: true });
             }
             clearHighlights();
+            lightPlayingBar(null);
             lastHighlightPos = -1;
             // No note is highlighted once playback ends (naturally or via Stop), so the
             // resolved note goes too (the follow-along had pointed it at the last note sounded).
@@ -8522,6 +8548,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 }
                 if (painted.length > 0) follow.sounding(painted);
                 if (r.hadNew && painted.length > 0 && follow.follows()) follow.auto(() => keepSoundingInView(painted));
+                if (painted.length > 0) lightPlayingBar(painted);
             };
             followTick = tick;
             playheadTimer = setInterval(tick, 50);

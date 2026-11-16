@@ -437,9 +437,10 @@ internal static partial class SharedRenderer
                     var at = row[measure.MeasureIndex];
                     if (staff.IsTextRow && rowInk.TryGetValue(staff.StaffIndex, out var ink))
                         gc.DrawBarStaffBox(at.Start, at.From, at.To, measure.X, system.Y + ink.Top + RowBoxPad,
-                            measure.Width, ink.Top - ink.Bottom + 2 * RowBoxPad);
+                            measure.Width, ink.Top - ink.Bottom + 2 * RowBoxPad, row: true);
                     else
-                        gc.DrawBarStaffBox(at.Start, at.From, at.To, measure.X, system.Y + staff.Y, measure.Width, staff.Height);
+                        gc.DrawBarStaffBox(at.Start, at.From, at.To, measure.X, system.Y + staff.Y, measure.Width, staff.Height,
+                            row: staff.IsTextRow);
                 }
         }
     }
