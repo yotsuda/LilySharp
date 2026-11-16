@@ -81,6 +81,35 @@ describe('the preview\'s Range panel', () => {
         assert.match(extension, /if \(message\.type === 'requestLength'\)/);
     });
 
+    // Where the playback stands, just left of the length (owner's request 2026-11-16), on the
+    // length's yardstick: the score's seconds at the written tempo.
+    it('shows where the playback stands beside the length, in the score\'s seconds', () => {
+        assert.match(html, /<span id="posInfo" class="length"[^>]*hidden><\/span>\s*<span id="lengthInfo"/);
+        const at = html.indexOf('function playbackScoreSeconds(');
+        const body = html.slice(at, html.indexOf('\n        }', at) + '\n        }'.length);
+        const context = vm.createContext({
+            playClock: () => 3, playOffset: 1, countInFix: 0, lastSpan: undefined, spanStart: 0, loopList: null, loopRound: 0,
+            playBasis: { warp: null, speed: 0.5 }, practice: { speed: 0.5 }, recPlayer: null,
+            window: { LysSynth: { unwarpTime: (_w: unknown, u: number) => u * 10 } },
+        });
+        new vm.Script(body).runInContext(context);
+        const run = (code: string) => new vm.Script(code).runInContext(context) as number | null;
+        // 4 s into a list played at half speed: 2 s of the score.
+        assert.equal(run('playbackScoreSeconds()'), 2);
+        // A count-in of 1 s is not the score's.
+        run('countInFix = 1');
+        assert.equal(run('playbackScoreSeconds()'), 1.5);
+        // A looped stretch from played time 6, 4 s a round, 9 s in: the stretch's start plus 1 s.
+        run('countInFix = 0; lastSpan = [0, 1]; spanStart = 6; loopList = []; loopRound = 4; playOffset = 0; playClock = () => 9');
+        assert.equal(run('playbackScoreSeconds()'), (6 + 1) * 0.5);
+        // On the recording's seconds: taken back off them.
+        run('lastSpan = undefined; loopList = null; playClock = () => 2; playBasis = { warp: {}, speed: 1 }');
+        assert.equal(run('playbackScoreSeconds()'), 20);
+        // The recording alone: its own second.
+        run('playClock = null; recPlayer = { playing: true, position: () => 42 }');
+        assert.equal(run('playbackScoreSeconds()'), 42);
+    });
+
     // Right after a chart is made from its recording (Convert Recording to Lily#), its preview starts
     // with the recording on (owner's request 2026-11-16): the conversion marks the chart, the first
     // sending of the sound says turnOn, once, and the page turns the recording on.

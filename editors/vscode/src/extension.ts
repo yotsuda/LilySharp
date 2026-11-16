@@ -39,6 +39,7 @@ import { registerCaretInfo } from './caretInfo';
 import { registerExportBatch } from './exportBatch';
 import { OmrImportDeps, importFromImage } from './omrImport';
 import { DecodeResult, attachRecording, followRenames, sendRecording } from './recording';
+import { TimedNote, soundingOf, startSecondsAt } from './playbackStart';
 import { convertRecording, registerDettatoContext } from './dettato';
 import { recordingPathFor } from './recordingCore';
 import { registerOmrContexts } from './omrReader';
@@ -1682,10 +1683,27 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
         // A preview closed while it played leaves no text lit.
         showSoundingSource(panel, soundingLit.get(panel)?.uri, [], true);
     });
+    // The sounding notes of the text and score this panel shows, kept per version: the header's
+    // length and its position while stopped read them (a caret move must not export again).
+    let soundingCache: { key: string; notes: Promise<TimedNote[] | null> } | undefined;
     panel.webview.onDidReceiveMessage(
         async message => {
             // The file the panel shows NOW: the follower turns, and an untitled save re-keys.
             const uri = panelKey(panel) ?? openedUri;
+            const soundingNotes = (): Promise<TimedNote[] | null> => {
+                const version = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri)?.version ?? -1;
+                const renderName = selectedRenders.get(uri) || null;
+                const key = `${uri}\n${version}\n${renderName ?? ''}`;
+                if (soundingCache?.key !== key) {
+                    const notes = client!.sendRequest<{ Notes?: TimedNote[] | null; Parts?: string[] | null; Extra?: string[] | null }>(
+                        'lilysharp/playback', { textDocument: { uri }, renderName })
+                        .then(pb => pb.Notes ? soundingOf(pb.Notes, pb.Parts, pb.Extra) : null);
+                    // (a failed fetch is not kept: the next asks again)
+                    notes.catch(() => { if (soundingCache?.key === key) { soundingCache = undefined; } });
+                    soundingCache = { key, notes };
+                }
+                return soundingCache.notes;
+            };
             // The notes of an AI candidate sounding now: lit on the candidate panel's score.
             if (message.type === 'candidateSounding') {
                 showCandidateSounding(message.sounding);
@@ -1883,15 +1901,26 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
             if (message.type === 'requestLength') {
                 if (!client || !clientReady) { return; }
                 try {
-                    const pb = await client.sendRequest<{ Notes?: { T: number; D: number; N?: number }[] | null; Parts?: string[] | null; Extra?: string[] | null }>(
-                        'lilysharp/playback', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null });
-                    const extraSet = new Set(pb.Extra ?? []);
-                    const seconds = (pb.Notes ?? [])
-                        .filter(n => !(pb.Parts && typeof n.N === 'number' && extraSet.has(pb.Parts[n.N])))
-                        .reduce((end, n) => Math.max(end, n.T + n.D), 0);
-                    panel.webview.postMessage({ type: 'lengthData', seconds: pb.Notes ? seconds : null });
+                    const notes = await soundingNotes();
+                    const seconds = (notes ?? []).reduce((end, n) => Math.max(end, n.T + n.D), 0);
+                    panel.webview.postMessage({ type: 'lengthData', seconds: notes ? seconds : null });
                 } catch {
                     panel.webview.postMessage({ type: 'lengthData', seconds: null });
+                }
+                return;
+            }
+            // Where Play would start, in the score's seconds, for the header while nothing plays
+            // (owner's request 2026-11-16): the note the caret resolved to (exact: its first
+            // onset, as Play's start), else the first one sounding at or after the place given.
+            // Read off the length's notes (soundingNotes, kept per text and score).
+            if (message.type === 'requestPositionTime') {
+                if (!client || !clientReady) { return; }
+                try {
+                    const notes = await soundingNotes();
+                    panel.webview.postMessage({ type: 'positionTime', seq: message.seq,
+                        seconds: notes ? startSecondsAt(notes, message.position, !!message.exact) : null });
+                } catch {
+                    panel.webview.postMessage({ type: 'positionTime', seq: message.seq, seconds: null });
                 }
                 return;
             }
@@ -5963,6 +5992,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
              chart has one. It opens the recording's panel (on/off and volume, speed, pitch, pitch
              with speed); the on/off and the volume are also the practice menu's Recording line. -->
         <button id="recPanelBtn" class="toggle icon practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" hidden aria-label="Recording settings" title="The recording: speed, pitch, pitch with speed"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12"/><circle cx="5" cy="4" r="1.6" fill="currentColor"/><circle cx="10.5" cy="8" r="1.6" fill="currentColor"/><circle cx="7" cy="12" r="1.6" fill="currentColor"/></svg><span id="recSummary"></span></button>
+        <span id="posInfo" class="length" title="Where the playback stands, in the score's time" hidden></span>
         <span id="lengthInfo" class="length" title="Length, as played"></span>
         </span>
         <span class="sep"></span>
@@ -6041,6 +6071,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function aiClearSelection() {
             aiAnchorPos = -1; aiRangeLo = -1; aiRangeHi = -1;
             lightSelectedBars();
+            askStoppedPosition();
         }
         function aiSetSelection(a, b) {
             aiRangeLo = Math.min(a, b);
@@ -6051,6 +6082,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             lastHighlightRanges = null;
             lastHighlightPos = -1;
             lightSelectedBars();
+            askStoppedPosition();   // the header's position: the selection's start while stopped
         }
         // Every bar whose written stretch (data-span) meets the selection [lo, hi] is lit; none
         // when there is no selection. Re-run after a render replaces the boxes.
@@ -6886,6 +6918,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             } else {
                 lastResolvedPos = -1;
             }
+            askStoppedPosition();   // the header's position follows the caret while stopped
         }
 
         // Highlight every note whose source position falls inside a selected range
@@ -6909,6 +6942,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 highlightPositions(positions);
             }
             lastResolvedPos = -1;   // a range has no single resolved note
+            askStoppedPosition();
         }
 
         // The marks the scan view's slider hides (*Marks below*), hidden here too (owner's
@@ -8158,6 +8192,65 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
             document.getElementById('playBtn').disabled = playing;
             document.getElementById('stopBtn').disabled = !playing;
+            // Where the playback stands, beside the length (owner's request 2026-11-16).
+            clearInterval(positionTimer);
+            positionTimer = playing ? setInterval(showPosition, 200) : null;
+            showPosition();
+            if (!playing) askStoppedPosition();    // stopped: where the next Play starts
+        }
+
+        // ---- The playback's position in the header (owner's request 2026-11-16): just left of
+        // the length, on the length's own yardstick — the score's seconds at the written tempo,
+        // repeats played (the length is when the score's last note ends, lengthData). The list's
+        // clock is taken back to it: less the count-in, plus the stretch's start (a selection or a
+        // loop, within its round), times the speed the list was built at (the practice tempo, or
+        // the recording's rate), and off the recording's seconds when the notes were moved onto
+        // them (playBasis.warp). A recording playing alone shows its own second. Hidden when
+        // nothing plays.
+        // (var: setPlayUi, above, may run before this line has.)
+        var positionTimer = null;
+        function clockText(s) {
+            const r = Math.max(0, Math.round(s));
+            return Math.floor(r / 60) + ':' + String(r % 60).padStart(2, '0');
+        }
+        function playbackScoreSeconds() {
+            if (playClock) {
+                let tau = playOffset + playClock() - countInFix;
+                const origin = lastSpan === undefined ? 0 : spanStart;
+                if (lastSpan !== undefined && loopList && loopRound > 0 && tau > 0) tau %= loopRound;
+                const basis = playBasis || { warp: null, speed: practice.speed };
+                const u = (origin + tau) * basis.speed;
+                return basis.warp && window.LysSynth && window.LysSynth.unwarpTime
+                    ? window.LysSynth.unwarpTime(basis.warp, u) : u;
+            }
+            if (recPlayer && recPlayer.playing) return recPlayer.position();
+            return null;
+        }
+        function showPosition() {
+            const el = document.getElementById('posInfo');
+            const playing = !document.getElementById('stopBtn').disabled;
+            const s = playing ? playbackScoreSeconds() : stoppedSeconds;
+            el.hidden = typeof s !== 'number' || !isFinite(s);
+            el.textContent = el.hidden ? '' : clockText(s) + ' /';
+        }
+        // …and while nothing plays, where Play would start (owner's request 2026-11-16): the
+        // selected bars' start, else the note the caret is on (its first onset, as Play's start),
+        // else the first note written after the caret; the top when there is no caret. The
+        // extension reads it off the length's notes (requestPositionTime → positionTime); a newer
+        // question makes an older answer stale (seq).
+        var stoppedSeconds = null, positionSeq = 0;
+        function askStoppedPosition() {
+            if (!document.getElementById('stopBtn').disabled) return;
+            let position = -1, exact = false;
+            try {
+                const span = aiRangeLo >= 0 ? selectedBarsSpan() : null;
+                if (span) position = span[0];
+                else if (lastResolvedPos >= 0) { position = lastResolvedPos; exact = true; }
+                else if (lastHighlightPos >= 0) position = lastHighlightPos;
+            } catch (e) {
+                return;     // (the page's script is still starting: its bindings are not there yet)
+            }
+            vscode.postMessage({ type: 'requestPositionTime', position, exact, seq: ++positionSeq });
         }
 
         function stopPlayback() {
@@ -9635,11 +9728,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 case 'lengthData': {
                     const s = message.seconds;
                     const len = document.getElementById('lengthInfo');
-                    len.textContent = typeof s === 'number' && s > 0
-                        ? Math.floor(Math.round(s) / 60) + ':' + String(Math.round(s) % 60).padStart(2, '0')
-                        : '';
+                    len.textContent = typeof s === 'number' && s > 0 ? clockText(s) : '';
+                    askStoppedPosition();   // (a new render: the caret's time may have moved)
                     break;
                 }
+                case 'positionTime':
+                    if (message.seq === positionSeq) {
+                        stoppedSeconds = typeof message.seconds === 'number' ? message.seconds : null;
+                        showPosition();
+                    }
+                    break;
                 case 'rangesData':
                     rangeParts = message.parts || null;
                     rangeError = message.error || null;
