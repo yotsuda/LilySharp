@@ -9721,14 +9721,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             showRecording();
         });
         document.getElementById('recClose').addEventListener('click', closeRecPanel);
-        // The sliders say their value as they move and set it where they are let go.
-        function recSlider(slider, set) {
+        // The sliders say their value as they move and set it where they are let go; a
+        // double-click puts it back as recorded (owner's request 2026-11-16: every slider of the
+        // practice menu and the recording panel resets on a double-click).
+        function recSlider(slider, set, reset) {
             slider.addEventListener('input', () => { set(Number(slider.value)); showRecording(); });
             slider.addEventListener('change', () => { set(Number(slider.value)); recChanged(); });
+            slider.addEventListener('dblclick', () => { if (slider.disabled) return; slider.value = String(reset); set(reset); recChanged(); });
+            slider.title = 'Double-click: ' + (reset === 100 ? '100%' : reset);
         }
-        recSlider(recSpeedSlider, v => { recSettings.speed = v / 100; });
-        recSlider(recSemiSlider, v => { recSettings.semitones = v; });
-        recSlider(recCentSlider, v => { recSettings.cents = v; });
+        recSlider(recSpeedSlider, v => { recSettings.speed = v / 100; }, 100);
+        recSlider(recSemiSlider, v => { recSettings.semitones = v; }, 0);
+        recSlider(recCentSlider, v => { recSettings.cents = v; }, 0);
         document.getElementById('recOctDown').addEventListener('click', () => { recSettings.octave = Math.max(-2, recSettings.octave - 1); recChanged(); });
         document.getElementById('recOctUp').addEventListener('click', () => { recSettings.octave = Math.min(2, recSettings.octave + 1); recChanged(); });
         recLinkBtn.addEventListener('click', () => { recSettings.linked = !recSettings.linked; recChanged(); });
@@ -9744,6 +9748,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             document.getElementById('tempoValue').textContent = tempoSlider.value + '%';
         });
         tempoSlider.addEventListener('change', () => setSpeed(Number(tempoSlider.value)));
+        // A double-click is 100 %, as the reset beside it (owner's request 2026-11-16).
+        tempoSlider.addEventListener('dblclick', () => { tempoSlider.value = '100'; setSpeed(100); showPractice(); });
+        tempoSlider.title = 'Double-click: 100%';
         document.getElementById('tempoReset').addEventListener('click', () => setSpeed(100));
         // The parts as the score shown has them (owner's request 2026-11-09): nothing muted, the
         // parts it leaves out off, every voice sung. The lists are by name across files, so this

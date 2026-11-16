@@ -5,6 +5,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 ## Unreleased
 
 - **Export as WAV, MP3 or MP4 with the recording**: while the recording sounds with the score (the practice menu's Recording line on, its bars placed), the preview's Export — and the Explorer's, for a file a preview shows — mixes it in as Play sounds it: the notes on the recording's bars, the recording at its speed, pitch and fader, after the count-in. The Lily# output channel says each file written with it, or why it was left out.
+- **Every slider of the practice menu and the recording panel resets on a double-click**: Tempo to 100 %, the recording's Speed to 100 %, Semitones and Cents to 0 (the volume faders already went back to 100 %).
 - **An MP4 lights the chord names as they sound**, in every score: a chart of chords alone made a video in which nothing lit.
 - **Fixed: an MP4's picture stopped before its sound** — by the length of the last picture (half a second for a song, more where a recording rings on). It now lasts to the end.
 - **A score of chords and lyrics rows alone draws a one-line staff under them**: the line, its bar lines and the meter — the empty bars too, which were blank. It stands above the first lyrics row, else at the bottom.
