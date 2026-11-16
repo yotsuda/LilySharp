@@ -5982,7 +5982,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
              instruments are notes too"): a status over the Play it speaks of, drawn as what sings.
              A click still opens the practice menu, where each voice has its own toggle and sign. -->
         <span class="play-wrap">
-        <button id="playBtn" type="button" title="Play">▶</button>
+        <button id="playBtn" type="button" title="Play (while playing: again from the editor's caret)">▶</button>
         <span id="voiceBadge" class="voice-badge" role="status" hidden aria-label="Voice"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="1.2" width="4" height="7.6" rx="2"/><path d="M3.6 7.4a4.4 4.4 0 0 0 8.8 0"/><path d="M8 11.8v2.6M5.6 14.4h4.8"/></svg></span>
         <span id="voiceBar" class="voice-bar" hidden aria-hidden="true"><span></span></span>
         </span>
@@ -6883,6 +6883,28 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 pendingHighlight = null;
                 if (paintNow) paintNow();
             });
+        }
+
+        // The editor's caret as the extension last said it (highlightPosition / highlightRange),
+        // kept apart from lastResolvedPos, which the follow-along points at the note sounding.
+        var editorCaret = null;
+        /** Where a Play pressed while playing starts: the note the editor's caret is on (the
+         *  rule highlightNearestElement lights it by), else the caret's own place (the next note
+         *  written after it is found when the notes come), else a selection's start; -1 none. */
+        function caretStartPos() {
+            const c = editorCaret;
+            if (!c) return -1;
+            if (c.ranges && c.ranges.length > 0) return Math.min.apply(null, c.ranges.map(r => r[0]));
+            if (!(c.pos >= 0)) return typeof c.caret === 'number' ? c.caret : -1;
+            sourcePositions();
+            const floor = typeof c.tokenStart === 'number' && c.tokenStart >= 0 ? c.tokenStart : 0;
+            let lo = 0, hi = posSorted.length - 1, nearest = -1;
+            while (lo <= hi) {
+                const mid = (lo + hi) >> 1;
+                if (posSorted[mid] <= c.pos) { nearest = posSorted[mid]; lo = mid + 1; }
+                else { hi = mid - 1; }
+            }
+            return nearest >= floor && c.pos - nearest < HIGHLIGHT_THRESHOLD ? nearest : c.pos;
         }
 
         function highlightNearestElement(cursorPos, tokenStart) {
@@ -8190,7 +8212,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (playing !== !document.getElementById('stopBtn').disabled) {
                 vscode.postMessage({ type: 'playState', playing });
             }
-            document.getElementById('playBtn').disabled = playing;
+            // Play stays pressable while playing: pressed then, it plays again from the editor's
+            // caret (owner's request 2026-11-16; the click handler).
+            document.getElementById('playBtn').disabled = false;
             document.getElementById('stopBtn').disabled = !playing;
             // Where the playback stands, beside the length (owner's request 2026-11-16).
             clearInterval(positionTimer);
@@ -8668,6 +8692,20 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // The recording on but not loaded: the score plays alone this time (and says why).
             if (recOn && recording && !recording.ready) {
                 flashInfo(recording.error || 'The recording is not loaded yet: the score alone', 4000);
+            }
+            // Pressed while playing: again from the editor's caret (owner's request 2026-11-16) —
+            // as the menu's Play from Here does: from that note, not the selection, not round the
+            // loop. The caret is the editor's own (editorCaret): the page's resolved note follows
+            // the sound while it plays.
+            if (!document.getElementById('stopBtn').disabled) {
+                const from = caretStartPos();
+                stopPlayback();
+                pendingStartPos = from;
+                pendingSpan = null;
+                pendingFromHere = true;
+                setPlayUi(true);
+                vscode.postMessage({ type: 'requestPlayback' });
+                return;
             }
             setPlayUi(true); // immediate feedback while the request runs
             // A highlighted note (editor sync / preview click) is the start
@@ -9887,6 +9925,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     }
                     break;
                 case 'highlightPosition':
+                    editorCaret = { pos: message.position, tokenStart: message.tokenStart, caret: message.caret };
                     lightCaretBar(message.caret, message.tokenStart, message.lineEnd);
                     lastHighlightPos = message.position;
                     lastHighlightTokenStart = message.tokenStart;
@@ -9894,6 +9933,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     scheduleHighlight(() => highlightNearestElement(message.position, message.tokenStart));
                     break;
                 case 'highlightRange':
+                    editorCaret = { ranges: message.ranges, caret: message.caret };
                     lightCaretBar(message.caret, -1);
                     lastHighlightRanges = message.ranges;
                     lastHighlightPos = -1;

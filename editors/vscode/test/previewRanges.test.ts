@@ -81,6 +81,26 @@ describe('the preview\'s Range panel', () => {
         assert.match(extension, /if \(message\.type === 'requestLength'\)/);
     });
 
+    // Play stays pressable while playing; pressed then, it plays again from the editor's caret
+    // (owner's request 2026-11-16), as Play from Here does.
+    it('plays again from the editor\'s caret when Play is pressed while playing', () => {
+        assert.match(html, /document\.getElementById\('playBtn'\)\.disabled = false;/);
+        assert.doesNotMatch(html, /getElementById\('playBtn'\)\.disabled = playing/);
+        assert.match(html, /if \(!document\.getElementById\('stopBtn'\)\.disabled\) \{\s*const from = caretStartPos\(\);\s*stopPlayback\(\);\s*pendingStartPos = from;\s*pendingSpan = null;\s*pendingFromHere = true;/);
+        assert.match(html, /case 'highlightPosition':\s*editorCaret = \{ pos: message\.position, tokenStart: message\.tokenStart, caret: message\.caret \};/);
+        // The caret's note, by the highlight's rule; its own place when on no note; a selection's start.
+        const at = html.indexOf('function caretStartPos(');
+        const body = html.slice(at, html.indexOf('\n        }', at) + '\n        }'.length);
+        const context = vm.createContext({ editorCaret: null, posSorted: [10, 20, 30], HIGHLIGHT_THRESHOLD: 50, sourcePositions() { /* */ } });
+        new vm.Script(body).runInContext(context);
+        const run = (code: string) => new vm.Script(code).runInContext(context) as number;
+        assert.equal(run('caretStartPos()'), -1);
+        assert.equal(run('editorCaret = { pos: 22, tokenStart: 20, caret: 22 }; caretStartPos()'), 20);
+        assert.equal(run('editorCaret = { pos: 25, tokenStart: 24, caret: 25 }; caretStartPos()'), 25);
+        assert.equal(run('editorCaret = { pos: -1, tokenStart: -1, caret: 17 }; caretStartPos()'), 17);
+        assert.equal(run('editorCaret = { ranges: [[40, 50], [12, 18]], caret: 18 }; caretStartPos()'), 12);
+    });
+
     // Where the playback stands, just left of the length (owner's request 2026-11-16), on the
     // length's yardstick: the score's seconds at the written tempo.
     it('shows where the playback stands beside the length, in the score\'s seconds', () => {
