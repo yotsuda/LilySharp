@@ -151,6 +151,7 @@ base `e2b77fc11`・開始時 full 17475 合格 / 1 失敗（`ReadmeSampleTests`�
 - ⑵ 録音: `cdd29c520`（形と罠は `docs/recording-design.md` §7）。プレビューが自分のプレイヤーで録音を OfflineAudioContext に描き、拡張がステレオで混ぜる（`recordingExportCore.ts`・`RecordingPlayer.render`・`mixInStereo`・LSP `PlaybackExport.BarEnd`）。実物の VS Code で WAV／MP3／MP4 のクリックが小節頭に来るのを測った（Lab `p1286/e2e`）。その途中で 2 つ踏んだ: 描画のレートは復号したバッファのもの（44.1 kHz で描くと ×1.125 が ×1.034）／MP4 の映像が音より先に終わる既存の不具合（`-r` が最後の絵の長さを落とす＝`fps` フィルタ）。
 - ⚠️ 計器の罠: `editors/vscode/server` に自己完結の LSP（coreclr）があると `lilysharp.serverPath` を無視する＝拡張の写しを作り `server` に publish して `--extensionDevelopmentPath` に渡す（Lab `p1286/e2e` の手順）。保存ダイアログは拡張ごとの API なので run.js から差し替えられない＝`files.simpleDialog.enable` にして CDP で入れる（値が既定の名前で埋まり終わるまで待つ）。
 - **次の一手**: §1.0 のとおり（録音は S5、コード行の印 `@rit` ほか）。耳の確認は `MANUAL-CHECKS` §3.9 の末尾 2 項（オーナー）。
+- オーナー報告「My Life の終わりで録音とずれる」＝Lily# は小節線どおり（測った）・Dettato の拍の時刻が 0.237% 長い＝Dettato REQUESTS 15 `open`（Dettato の repo では未 commit・Lab `p1286/e2e/DRIFT.md`）。
 - 終了時 full 17477 合格 / 1 失敗（README）/ skip 2 / 合計 17480（`run2.trx`）。§7 7.5: Core の '+' 9 行＝`ScoreVideo` の箱の種類と注釈だけ（LP の移植ではない）。HEAD `cdd29c520`。
 
 ## 以下は第1285セッションの経緯
