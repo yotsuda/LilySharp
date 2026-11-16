@@ -8540,6 +8540,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             relaying = relay;
             if (!relay) follow.start();
             followSystemDocTop = null; followSystemOffset = null; followTopTarget = null;   // a new Play finds its place anew
+            followStaff = relay ? -1 : followStaffOfCaret();
             const cursor = new Cursor(notes.map(n => ({ t: n.T - offset, d: n.D, s: relay ? n.R : n.S, o: n.O || 0 })));
             // The notes about to sound, FOLLOW_LEAD seconds ahead (owner's request 2026-11-16: a
             // player must see the next line, or the notes cut off at the side, before they sound —
@@ -8621,7 +8622,54 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
             return top === Infinity ? null : { top, bottom, left, right };
         }
+        // The part followed (owner's request 2026-11-16): with several staves, the view follows the
+        // part the editor's caret was in when Play was pressed — its staff's place among a system's
+        // staff boxes, top first (rect.bar-staff.caret's, followStaffOfCaret) — and keeps still while
+        // it rests. -1: every part, as before (no caret bar).
+        var followStaff = -1;
+        /** The staff boxes (client rects) of a bar column, top first. */
+        function staffBoxesIn(column) {
+            const list = [];
+            for (const r of svgContainer.querySelectorAll('rect.bar-staff')) {
+                const k = r.getBoundingClientRect();
+                const mx = (k.left + k.right) / 2, my = (k.top + k.bottom) / 2;
+                if (mx >= column.left && mx <= column.right && my >= column.top - 1 && my <= column.bottom + 1) list.push(k);
+            }
+            return list.sort((a, b) => a.top - b.top);
+        }
+        function followStaffOfCaret() {
+            const c = svgContainer.querySelector('rect.bar-staff.caret');
+            const column = c ? barBoxOf(c) : null;
+            if (!column) return -1;
+            const k = c.getBoundingClientRect();
+            const list = staffBoxesIn(column);
+            return list.length > 1 ? list.findIndex(b => Math.abs(b.top - k.top) < 0.5 && Math.abs(b.left - k.left) < 0.5) : -1;
+        }
+        /** The followed staff's band in an element's bar column — its box, widened halfway to the
+         *  staves above and below (a high note stands over its staff) — or null. */
+        function followedBand(el) {
+            const column = barBoxOf(el);
+            if (!column) return null;
+            const list = staffBoxesIn(column);
+            if (followStaff < 0 || followStaff >= list.length) return null;
+            const b = list[followStaff];
+            const above = followStaff > 0 ? list[followStaff - 1].bottom : column.top - 1e6;
+            const below = followStaff + 1 < list.length ? list[followStaff + 1].top : column.bottom + 1e6;
+            return { top: b.top, bottom: b.bottom, lo: (above + b.top) / 2, hi: (b.bottom + below) / 2 };
+        }
+        /** The elements on the followed staff (all of them when no staff is followed). */
+        function onFollowedStaff(els) {
+            if (followStaff < 0 || !els || els.length === 0) return els || [];
+            const band = followedBand(els[0]);
+            if (!band) return els;
+            return els.filter(el => { const b = el.getBoundingClientRect(); const cy = (b.top + b.bottom) / 2; return cy >= band.lo && cy <= band.hi; });
+        }
         function keepSoundingInView(current, ahead) {
+            // The system is told by every part's notes to come: the followed part resting there
+            // must not send the view back to the system it is leaving (MEASURED 2026-11-16: 5471 →
+            // 6343 → 5383 when the part's notes to come were none and its sounding ones led).
+            const leading = (ahead && ahead[0]) || (current && current[0]);
+            if (followStaff >= 0) { current = onFollowedStaff(current); ahead = onFollowedStaff(ahead); }
             const cur = extentOf(current), next = extentOf(ahead);
             if (!cur && !next) return;
             const both = cur && next ? { top: Math.min(cur.top, next.top), bottom: Math.max(cur.bottom, next.bottom),
@@ -8658,7 +8706,6 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 dx = anchor - (m.left + margin);
                 if (Math.abs(dx) < 1) dx = 0;
             }
-            const leading = (next && ahead && ahead[0]) || (current && current[0]);
             const system = leading ? barBoxOf(leading) : null;
             if (system && system.height > m.height - 2 * margin) {
                 const docTop = system.top + mainContent.scrollTop;
@@ -8675,6 +8722,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     followTopTarget = mainContent.scrollTop + system.top + followSystemOffset - m.top;
                 }
                 followSystemDocTop = docTop;
+                // The part followed out of sight: its staff to the middle of the view, at once.
+                const band = followStaff >= 0 && leading ? followedBand(leading) : null;
+                if (band && !moving && (band.top < m.top + margin || band.bottom > m.bottom - margin)) {
+                    followTopTarget = mainContent.scrollTop + (band.top + band.bottom) / 2 - (m.top + m.bottom) / 2;
+                    followSystemOffset = followTopTarget - mainContent.scrollTop + m.top - system.top;
+                }
                 // Where the view goes, both ways at once, so neither cuts the other short.
                 const topTo = followTopTarget !== null ? followTopTarget : mainContent.scrollTop;
                 const vertical = Math.abs(topTo - mainContent.scrollTop) > 1;

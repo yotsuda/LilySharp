@@ -586,7 +586,7 @@ describe('the preview keeps what sounds in view, every part together', () => {
             getBoundingClientRect: () => rect(0, 600, 0, 800),
             scrollBy: (o: { top: number; left: number }) => scrolls.push(o),
         };
-        const keep = pageFunction('keepSoundingInView', { mainContent, barBoxOf: () => null, extentOf: pageFunction('extentOf', {}) }) as (els: unknown[], ahead?: unknown[]) => void;
+        const keep = pageFunction('keepSoundingInView', { mainContent, barBoxOf: () => null, extentOf: pageFunction('extentOf', {}), followStaff: -1 }) as (els: unknown[], ahead?: unknown[]) => void;
         const notes = (...rs: ReturnType<typeof rect>[]) => rs.map(r => ({ getBoundingClientRect: () => r }));
         return { keep, notes, scrolls };
     };
@@ -603,7 +603,7 @@ describe('the preview keeps what sounds in view, every part together', () => {
             scrollTo: (o: { top: number; left: number }) => { moves.push(o); systemTop -= o.top - view.scrollTop; view.scrollTop = o.top; },
         };
         const context: Record<string, unknown> = { mainContent, barBoxOf: () => rect(systemTop, systemTop + 3000, 0, 800),
-            followSystemDocTop: null, followSystemOffset: null, followTopTarget: null, extentOf: pageFunction('extentOf', {}) };
+            followSystemDocTop: null, followSystemOffset: null, followTopTarget: null, extentOf: pageFunction('extentOf', {}), followStaff: -1 };
         const keep = pageFunction('keepSoundingInView', context) as (els: unknown[]) => void;
         const at = (top: number) => [{ getBoundingClientRect: () => rect(top, top + 10) }];
         keep(at(40));                       // the first: the view stands in it, 200 below its top — stays
@@ -638,7 +638,26 @@ describe('the preview keeps what sounds in view, every part together', () => {
         back.keep(back.notes(rect(100, 110, 600, 700)), back.notes(rect(300, 310, -400, -350)));
         assert.equal(back.scrolls[0].left, -400 - 30);
     });
+    // The part the editor's caret is in is followed (owner's request 2026-11-16): the view moves
+    // for its notes alone, and keeps still while it rests.
+    it('follows the part the caret is in, and keeps still while it rests', () => {
+        const scrolls: { top: number; left: number }[] = [];
+        const mainContent = { getBoundingClientRect: () => rect(0, 600, 0, 800), scrollBy: (o: { top: number; left: number }) => scrolls.push(o) };
+        // Two staves: the followed one (the second) from 700 to 740 — below the view.
+        const band = { top: 700, bottom: 740, lo: 650, hi: 800 };
+        const keep = pageFunction('keepSoundingInView', {
+            mainContent, barBoxOf: () => null, extentOf: pageFunction('extentOf', {}), followStaff: 1,
+            onFollowedStaff: (els: { getBoundingClientRect: () => ReturnType<typeof rect> }[]) => (els || []).filter(e => { const b = e.getBoundingClientRect(); const cy = (b.top + b.bottom) / 2; return cy >= band.lo && cy <= band.hi; }),
+        }) as (els: unknown[], ahead?: unknown[]) => void;
+        const notes = (...rs: ReturnType<typeof rect>[]) => rs.map(r => ({ getBoundingClientRect: () => r }));
+        keep(notes(rect(100, 110)), notes(rect(120, 130)));         // the other part sounding, in view: the followed one rests
+        assert.equal(scrolls.length, 0);
+        keep(notes(rect(100, 110), rect(710, 720)), []);            // the followed part sounds below the view
+        assert.equal(scrolls.length, 1);
+        assert.equal(scrolls[0].top, (710 + 720) / 2 - 300);       // its notes alone decide
+    });
     it('leaves alone what is all in view', () => {
+
         const { keep, notes, scrolls } = follow();
         keep(notes(rect(100, 110), rect(400, 410)));
         assert.equal(scrolls.length, 0);
