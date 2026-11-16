@@ -1023,6 +1023,31 @@ internal static class ChordNameEngraver
         ChordNameGlyphRun.Width(fonts, text, superFrom, bracketSuperFrom);
 
     /// <summary>
+    /// Whether the chord name at <paramref name="index"/> is the one that shows its <c>@todo</c>
+    /// (ring and memo): of the names one written chord prints — one per row placing the same
+    /// <c>chords</c> part, <c>chords harmony</c> and <c>chords harmony as roman</c> — only the
+    /// first row's (lowest staff index). The others are the same doubt again (owner's report
+    /// 2026-11-16: the mark was drawn twice). One home for the drawing (<c>SharedRenderer.DrawTodoMarks</c>)
+    /// and the room reserved for it (<c>TodoMemoBand</c>).
+    /// </summary>
+    /// <remarks>LILYSHARP-OWN: an editor's mark.</remarks>
+    internal static bool ShowsTodo(ImmutableArray<ChordNameItem> chordNames, int index)
+    {
+        var chord = chordNames[index];
+        if (chord.TodoKey is not { } key)
+            return false;
+        for (int i = 0; i < chordNames.Length; i++)
+        {
+            var other = chordNames[i];
+            if (i == index || other.TodoKey != key || other.SourcePosition != chord.SourcePosition)
+                continue;
+            if (other.StaffIndex < chord.StaffIndex || (other.StaffIndex == chord.StaffIndex && i < index))
+                return false;
+        }
+        return true;
+    }
+
+    /// <summary>
     /// A chord symbol's ink about its baseline — the union of its text runs' and its
     /// accidental glyphs'. The one home for the symbol's HEIGHT, as
     /// <see cref="SymbolInkWidth(Rendering.ScoreTextMetrics, string, int, int)"/> is for its width.

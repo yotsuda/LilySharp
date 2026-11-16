@@ -233,6 +233,7 @@ internal static partial class SharedRenderer
                 continue;
             var chord = score.ChordNames[c.SourceIndex];
             if (chord.TodoKey is not { } key
+                || !ChordNameEngraver.ShowsTodo(score.ChordNames, c.SourceIndex)   // another row shows it
                 || !sysTopYUp.TryGetValue(c.MeasureIndex, out double systemTop)
                 || !measureToSystem.TryGetValue(c.MeasureIndex, out var system))
                 continue; // no mark, or another page

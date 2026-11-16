@@ -115,6 +115,23 @@ public class ChordRowTodoTests
         Assert.DoesNotContain("data-todo", export);
     }
 
+    [Theory]
+    [InlineData("chords prog\n  chords prog as roman")]
+    [InlineData("chords prog as roman\n  chords prog")]
+    public void TwoRowsOfOnePart_RingTheSymbolOnce(string rows)
+    {
+        // One written chord, printed by two rows: one doubt, one ring, one memo — on the first
+        // row (owner's report 2026-11-16: both rows drew it).
+        string text = $"key c major\nchords prog {{ section A {{ C | Am7@todo(\"Am7 or C?\") | }} }}\nform {{ ~A }}\nscore {{\n  {rows}\n}}\n";
+        string preview = SvgGenerator.Generate(SyntaxTree.Parse(text), SvgRenderOptions.Preview());
+        Assert.Single(Regex.Matches(preview, ">Am7 or C\\?<").Cast<Match>());
+        int rings = Regex.Matches(preview, "<[^>]*data-todo=\"\"[^>]*>").Count;
+        string alone = SvgGenerator.Generate(SyntaxTree.Parse(
+            $"key c major\nchords prog {{ section A {{ C | Am7@todo(\"Am7 or C?\") | }} }}\nform {{ ~A }}\nscore {{\n  chords prog\n}}\n"),
+            SvgRenderOptions.Preview());
+        Assert.Equal(Regex.Matches(alone, "<[^>]*data-todo=\"\"[^>]*>").Count, rings);
+    }
+
     [Fact]
     public void ResolveThisTodo_DeletesTheMarkFromTheSymbol()
     {

@@ -236,9 +236,11 @@ internal static class TodoMemoBand
         // row's symbol stands on its timing column (ChordNameEngraver.SymbolX), its ring's centre
         // half its ink to the right. Without these a row's memo had no room reserved and climbed
         // over the title (the p902 probe `chordtodo`).
-        foreach (var chord in chordRows ? score.ChordNames : [])
+        for (int ci = 0; chordRows && ci < score.ChordNames.Length; ci++)
         {
+            var chord = score.ChordNames[ci];
             if (chord.TodoMemo is not { Length: > 0 } memo || !chord.UseTiming
+                || !ChordNameEngraver.ShowsTodo(score.ChordNames, ci)   // another row shows it
                 || !measureToLayout.TryGetValue(chord.MeasureIndex, out var measureLayout))
                 continue;
             double inkWidth = ChordNameEngraver.SymbolInkWidth(fonts, chord);

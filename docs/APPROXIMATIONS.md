@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 458 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **584** | |
+| `OWN` | 459 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **585** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -30,7 +30,7 @@
 | `LilySharp.Core/Svg/Collector/MeasureCollector.cs` | 11 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 10 |
 | `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 9 |
-| `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 8 |
+| `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 8 |
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（458 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（459 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -628,6 +628,7 @@
 - **`ChordNameEngraver.ChordLineOfSystem`** ⚠️ LILYSHARP-OWN, all of it. LilyPond cannot spell the configuration: a
 - **`ChordNameEngraver.SymbolGap`** LILYSHARP-OWN: LilyPond does not shift a ChordName off its column at all — a
 - **`ChordNameEngraver.BeatShareX`** LILYSHARP-OWN (owner's decision 2026-11-16). The symbols that would then crowd
+- **`ChordNameEngraver.ShowsTodo`** LILYSHARP-OWN: an editor's mark.
 - **`ChordNameEngraver.FootprintWidth`** ⚠️ LILYSHARP-OWN, THE DIAGRAM'S X: its box stands with its LEFT edge on the symbol's
 - **`ChordNameEngraver.GridLineSymbol`** ChordNames line, was declined). LILYSHARP-OWN: LilyPond's ChordNames draws no bar lines.
 ### `LilySharp.Core/Svg/Layout/ChordNameGlyphRun.cs`
