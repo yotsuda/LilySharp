@@ -33,7 +33,10 @@ describe('the MP4 export\'s ffmpeg', () => {
         const after = (flag: string) => args[args.indexOf(flag) + 1];
         assert.deepEqual(args.slice(args.indexOf('-f'), args.indexOf('-f') + 6), ['-f', 'concat', '-safe', '0', '-i', '/w/frames.txt']);
         assert.ok(args.includes('/w/sound.wav'));
-        assert.equal(after('-filter_complex'), '[1:a]adelay=1500:all=1[a]');
+        // …and the pictures through the fps filter, which keeps the last one for its whole
+        // duration (the output's -r alone dropped it: the video stopped before the sound).
+        assert.equal(after('-filter_complex'), `[0:v]fps=${VIDEO_FPS}[v];[1:a]adelay=1500:all=1[a]`);
+        assert.deepEqual(args.filter((a, i) => args[i - 1] === '-map'), ['[v]', '[a]']);
         assert.equal(after('-t'), '103.250');
         assert.equal(after('-r'), String(VIDEO_FPS));
         assert.equal(after('-c:v'), 'libx264');

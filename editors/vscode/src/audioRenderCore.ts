@@ -74,12 +74,57 @@ export interface VoiceTrack {
     gain?: number;
 }
 
-/** How long the file runs with its voices: the notes' end or the last voice's, and the tail. */
+/** How long the file runs with its voices: the notes' end or the last voice's, and the tail —
+ *  or the recording's end, when one is mixed in (the preview plays on to it). */
 export function fileSeconds(notes: readonly PlaybackNote[], voices: readonly VoiceTrack[] | null | undefined,
-    sampleRate = WAV_SAMPLE_RATE): number {
+    sampleRate = WAV_SAMPLE_RATE, recording?: RecordingTrack | null): number {
     let seconds = frameCount(notes, sampleRate) / sampleRate;
     for (const v of voices ?? []) { seconds = Math.max(seconds, v.at + v.duration + WAV_TAIL_S); }
+    if (recording) { seconds = Math.max(seconds, recording.at + recording.left.length / recording.sampleRate); }
     return seconds;
+}
+
+/**
+ * The recording beside the chart, mixed into a file (docs/recording-design.md §7): its two
+ * channels as the preview plays it — rendered by the preview's own player at the speed, pitch and
+ * gain it sounds with (RecordingPlayer.render) — where its second 0 stands in the file (the
+ * count-in's lead), and its gain against the synth's raw output.
+ */
+export interface RecordingTrack {
+    left: Float32Array; right: Float32Array; sampleRate: number; at: number; gain: number;
+}
+
+/** The preview synth's master gain (previewSynth.ts), which the exports leave out (fileLevel): a
+ *  recording is mixed in at its fader over it, so the two stand as they do in the preview. */
+export const PREVIEW_MASTER = 0.9;
+
+/**
+ * Adds the recording's two channels into the file's from `track.at` seconds, resampled to
+ * `sampleRate` by linear interpolation when the rates differ. As {@link mixIn}: the channels grow
+ * to hold it, and the two arrays returned are the ones to use from here on; a negative `at` leaves
+ * that much of its head out.
+ */
+export function mixInStereo(left: Float32Array, right: Float32Array, track: RecordingTrack,
+    sampleRate = WAV_SAMPLE_RATE): [Float32Array, Float32Array] {
+    const start = Math.max(0, Math.round(track.at * sampleRate));
+    const skip = track.at < 0 ? Math.min(track.left.length, Math.round(-track.at * track.sampleRate)) : 0;
+    const ratio = track.sampleRate / sampleRate;
+    const frames = Math.max(0, Math.floor((track.left.length - skip) / ratio));
+    const needed = start + frames;
+    if (needed > left.length) {
+        const l = new Float32Array(needed), r = new Float32Array(needed);
+        l.set(left); r.set(right);
+        left = l; right = r;
+    }
+    const sl = track.left, sr = track.right;
+    for (let i = 0; i < frames; i++) {
+        const pos = skip + i * ratio;
+        const i0 = Math.floor(pos), t = pos - i0;
+        const i1 = i0 + 1 < sl.length ? i0 + 1 : i0;
+        left[start + i] += (sl[i0] * (1 - t) + sl[i1] * t) * track.gain;
+        right[start + i] += (sr[i0] * (1 - t) + sr[i1] * t) * track.gain;
+    }
+    return [left, right];
 }
 
 /** A decoded WAV: one channel (several averaged), at the file's own rate. */

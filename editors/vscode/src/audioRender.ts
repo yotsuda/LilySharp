@@ -26,8 +26,9 @@ import { SoundBankLoader, SpessaSynthProcessor, audioToWav } from 'spessasynth_c
 import { Mp3Encoder } from '@breezystack/lamejs';
 import type { PlaybackBeat, PlaybackNote } from './webview/playbackCore';
 import {
-    MP3_KBPS, OfflineSynth, VoiceTrack, WAV_SAMPLE_RATE, decodeWav, encodeMp3, fileLevel, mixIn, renderNotes,
+    MP3_KBPS, OfflineSynth, RecordingTrack, VoiceTrack, WAV_SAMPLE_RATE, decodeWav, encodeMp3, fileLevel, mixIn, mixInStereo, renderNotes,
 } from './audioRenderCore';
+import type { RecordingPlay } from './recordingExportCore';
 
 /** One file to write, as the server gives it (PlaybackExport): where it goes and the notes it
  *  sounds, with what the practice menu needs (the parts, the beats) and its score's name. */
@@ -49,6 +50,14 @@ export interface AudioJob {
     Voices?: VoiceTrack[] | null;
     /** The notes a video lights: the whole list, where `Notes` lost a sung part's to its voice. */
     Lit?: PlaybackNote[] | null;
+    /** Where the music's last bar ends (PlaybackExport.BarEnd): with `Beats`, the bars a
+     *  recording beside the chart lines up with. */
+    BarEnd?: number | null;
+    /** How the recording beside the chart plays in this file, when the preview sounds it with the
+     *  score and its bars line up (recordedExportPlan; docs/recording-design.md §7). */
+    RecordingPlay?: RecordingPlay | null;
+    /** That recording as rendered for the file (the preview's player, offline), mixed in. */
+    Recording?: RecordingTrack | null;
 }
 
 /** The sound formats the editor renders itself. */
@@ -83,6 +92,10 @@ export async function renderAudioFiles(jobs: readonly AudioJob[], bankPath: stri
         for (const voice of job.Voices ?? []) {
             [left, right] = mixIn(left, right, decodeWav(fs.readFileSync(voice.wav)), voice.at, WAV_SAMPLE_RATE, voice.gain ?? 1);
             await breathe();
+        }
+        // The recording beside the chart, as Play sounds it with the score (recording-design §7).
+        if (job.Recording) {
+            [left, right] = mixInStereo(left, right, job.Recording, WAV_SAMPLE_RATE);
         }
         fileLevel(left, right);
         const data = format === 'mp3'

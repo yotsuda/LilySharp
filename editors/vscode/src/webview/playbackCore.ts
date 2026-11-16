@@ -466,7 +466,21 @@ export function countIn(notes: readonly PlaybackNote[], start: number, origin: n
 
 /** The practice menu as a preview holds it: the tempo, the parts silenced and the metronome
  *  (Practice), and the count-in. The loop is not here: an export plays the piece once. */
-export interface PracticeState extends Practice { countIn: boolean }
+export interface PracticeState extends Practice {
+    countIn: boolean;
+    /** The recording beside the chart, while it sounds with the score (on and loaded; the
+     *  practice menu's Recording line, docs/recording-design.md §1 7): the bars placed in it, how
+     *  the panel plays it (RecordingSettings with the chart's transpose) and its fader — the
+     *  exports mix it in as Play sounds it (§7, owner's report 2026-11-16). */
+    recording?: RecordingAlong | null;
+}
+
+/** What a page says of the recording it sounds with the score (PracticeState.recording). */
+export interface RecordingAlong {
+    bars: readonly { start: number; end: number }[];
+    sound: { speed: number; octave: number; semitones: number; cents: number; linked: boolean; chart?: number };
+    level: number;
+}
 
 /**
  * The notes a WAV, MP3 or MP4 export sounds (owner's request 2026-11-07: the export follows the

@@ -66,14 +66,15 @@ export async function writeVideos(jobs: readonly AudioJob[], bankPath: string, f
     try {
         for (const job of jobs) {
             // As long as the sound runs, the sung voices included (a voice may outlast the notes).
-            const seconds = fileSeconds(job.Notes, job.Voices);
+            // …and the recording beside the chart, when one is mixed in (the preview plays on to its end).
+            const seconds = fileSeconds(job.Notes, job.Voices, undefined, job.Recording);
             const frames = await drawFrames(job, seconds);
             if (frames.WorkDirectory) { folders.push(frames.WorkDirectory); }
             if (frames.Error || !frames.Frames || !frames.WorkDirectory) {
                 throw new Error(`the pictures of ${path.basename(job.OutputPath)} were not drawn: ${frames.Error ?? 'no list came back'}`);
             }
             const wav = path.join(frames.WorkDirectory, 'sound.wav');
-            await renderAudioFiles([{ OutputPath: wav, Notes: job.Notes, Voices: job.Voices }], bankPath, 'wav');
+            await renderAudioFiles([{ OutputPath: wav, Notes: job.Notes, Voices: job.Voices, Recording: job.Recording }], bankPath, 'wav');
             const lead = frames.Lead ?? 0;
             fs.mkdirSync(path.dirname(job.OutputPath), { recursive: true });
             const failure = await run(ffmpeg, videoArgs(frames.Frames, wav, job.OutputPath, lead, lead + seconds));

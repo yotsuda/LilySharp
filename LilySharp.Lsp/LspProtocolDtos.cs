@@ -282,6 +282,10 @@ public class PlaybackExport
     public string[] Played { get; set; } = [];
     /// <summary>The beats the metronome and the count-in click (<see cref="PlaybackResponse.Beats"/>).</summary>
     public PlaybackBeat[] Beats { get; set; } = [];
+    /// <summary>Where the music's last bar ends (<see cref="PlaybackResponse.BarEnd"/>): with the
+    /// beats, the score's bars that a recording beside the chart lines up with — the editor mixes
+    /// the recording in as the preview plays it (docs/recording-design.md §7).</summary>
+    public double BarEnd { get; set; }
     /// <summary>The score's name, as <see cref="VideoFramesParams.Score"/> names it back for an
     /// MP4's pictures: "" for the unnamed score, null for a file that declares none.</summary>
     public string? Score { get; set; }

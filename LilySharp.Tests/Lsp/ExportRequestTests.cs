@@ -254,6 +254,10 @@ public sealed class ExportRequestTests : IDisposable
         Assert.Equal(8, all.Playbacks[0].Notes.Length);
         Assert.Equal(16, all.Playbacks[1].Notes.Length);
         Assert.Equal(one.Notes.Select(n => (n.T, n.P)), all.Playbacks[1].Notes.Select(n => (n.T, n.P)));
+        // …and where its last bar ends, which with the beats lines a recording beside the chart up
+        // with the score (docs/recording-design.md §7): the last beat's bar, after every note.
+        Assert.All(all.Playbacks, p => Assert.True(p.BarEnd >= p.Notes.Max(n => n.T + n.D) - 1e-6 && p.BarEnd > p.Beats[^1].T,
+            $"{p.OutputPath}: bar end {p.BarEnd}"));
     }
 
     // An MP3 is the editor's alone (it encodes what it renders): asked with PlaybackOnly, each

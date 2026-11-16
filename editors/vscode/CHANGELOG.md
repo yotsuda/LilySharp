@@ -4,6 +4,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Export as WAV, MP3 or MP4 with the recording**: while the recording sounds with the score (the practice menu's Recording line on, its bars placed), the preview's Export — and the Explorer's, for a file a preview shows — mixes it in as Play sounds it: the notes on the recording's bars, the recording at its speed, pitch and fader, after the count-in. The Lily# output channel says each file written with it, or why it was left out.
+- **An MP4 lights the chord names as they sound**, in every score: a chart of chords alone made a video in which nothing lit.
+- **Fixed: an MP4's picture stopped before its sound** — by the length of the last picture (half a second for a song, more where a recording rings on). It now lasts to the end.
 - **A score of chords and lyrics rows alone draws a one-line staff under them**: the line, its bar lines and the meter — the empty bars too, which were blank. It stands above the first lyrics row, else at the bottom.
 - **Play lights the text being played**: while the preview plays, the editor highlights the notes sounding now — each note, chord, drum stroke and chord symbol, in every part at once — as the preview lights them on the score. It goes dark when the playback stops, and after an edit until the next Play (the notes are those of the text as it was). `lilysharp.playback.highlightSource` turns it off.
 - **Importing MusicXML keeps a transposing instrument's transposition**: a B♭ clarinet, a saxophone or a horn comes in with `transposition bes` (or `ees`, `f`, `bes,` …) in its header and plays at the right pitch; it was imported at written pitch with a warning.

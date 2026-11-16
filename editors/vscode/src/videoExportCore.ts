@@ -37,12 +37,16 @@ export function ffmpegProgram(setting: string | undefined): string {
 export function videoArgs(frames: string, wav: string, output: string, lead: number, seconds: number,
     fps = VIDEO_FPS): string[] {
     const delayMs = Math.round(lead * 1000);
+    // The pictures through the fps filter, which keeps the last one for its whole duration: the
+    // output's `-r` alone dropped it (ffmpeg 9.0.2, MEASURED 2026-11-16: a song's video stopped
+    // 0.47 s before its sound, one with a recording that rings past the notes 1.6 s before; a list
+    // of 6 s and then a 3 s picture made 6.03 s of video, 9.00 s through fps — Lab sessions/p1286).
     return [
         '-hide_banner', '-loglevel', 'error', '-y',
         '-f', 'concat', '-safe', '0', '-i', frames,
         '-i', wav,
-        '-filter_complex', `[1:a]adelay=${delayMs}:all=1[a]`,
-        '-map', '0:v', '-map', '[a]',
+        '-filter_complex', `[0:v]fps=${fps}[v];[1:a]adelay=${delayMs}:all=1[a]`,
+        '-map', '[v]', '-map', '[a]',
         '-r', String(fps), '-t', seconds.toFixed(3),
         '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '20', '-tune', 'stillimage',
         '-c:a', 'aac', '-b:a', '192k',

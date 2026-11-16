@@ -124,16 +124,15 @@ Transcribe!（Seventh String）と同じ体験を Lily# のプレビューで（
 - 隣のファイル（形式 2）の項目と、書き手の取り合い（Lily# はマーク・ループ、Dettato は読み直し）。人が小節を足し消しして小節数が合わないとき。
 - 速度・音高・EQ の値をファイルに書くか、表示の状態にするか（Lily# が決めてよい）。
 
-## 7. MP4 の書き出しに録音を入れる（オーナー報告 2026-11-16・第1285 が調べた・未着手）
+## 7. 書き出し（WAV・MP3・MP4）に録音を入れる（オーナー報告 2026-11-16・第1286 で実装）
 
-今の MP4 は楽譜の音だけ（`videoExport.ts` の `writeVideos` → `renderAudioFiles` → `videoExportCore.ts` の `videoArgs`）。プレビューが Recording オンで鳴らす形に合わせる。
+オーナー決定（2026-11-16）: WAV／MP3 にも MP4 と同じく入れる・MP4 のコード名は全部の楽譜で光らせる。
 
-- **時刻**: webview の `practiced()`（extension.ts の 9038 付近）と同じ。音符を `warpNotes(notes, timeWarp(beats, barEnd, rec))` で録音の秒へ移し、速さは `recordingPlan(recSound(), practice.speed * warpFit(warp)).rate`。録音は秒 0 から、`rate`・`semitones`・`gain` × フェーダー（`recLevels.Recording`）で鳴る。
-- **配線**:
-  1. webview の `practiceState` に、`recOn && recording.ready` のとき録音の設定（`recSound()`＝speed／octave／semitones／cents／linked／chart）とレベルを足す。
-  2. LSP の `PlaybackExport` に `BarEnd` を足す（`PlaybackOf` の `PlaybackResponse.BarEnd`・Commands.cs の `new PlaybackExport`）。
-  3. 拡張の `practisedJobs`（extension.ts）で `.dettato.json`（`recordingPathFor`・`parseRecording`・`resolveAudio`）を読み、`exportPlan` の前に warp。job に録音の道と rate／semitones／gain／lead を持たせる。m4a は LSP の復号 WAV（`sendRecording` の cache）を使う。
-  4. `videoArgs` に 3 つ目の入力: `aresample=48000,asetrate=48000*p,aresample=48000` で音高、`atempo`（0.5〜2 を連鎖）で速さ、`volume`、`adelay=lead`、楽譜の音と `amix=normalize=0`。
-- **訊くこと**: WAV／MP3 の書き出しにも入れるか。
+- **時刻**: webview の `practiced()` と同じ＝`recordingExportCore.ts` の `recordedExportPlan`。音符と拍を `timeWarp(beats, BarEnd, bars)` で録音の秒へ移し（`warpNotes`／`warpBeats`）、`recordingPlan(sound, practice.speed × warpFit).rate` を速さにして `exportPlan` に渡す。録音の秒 0 はリストの 0（Count-in の後＝`Lead`）。
+- **配線**: webview は録音が楽譜と鳴る状態（オン・読み込み済み）のとき `practiceState.recording`（小節・`recSound()`・フェーダー）を送る（`postPracticeState`・`showRecording` と読み込みの完了でも送る）。LSP の `PlaybackExport.BarEnd`。拡張の `practisedJobs` が `RecordingPlay` を付け、歌い手の後の `recordJobs` がプレビューに `renderRecording` を頼む → webview は `RecordingPlayer.render`（同じエンジン・rate・shift・gain・リミッター、フェーダーは除く）を OfflineAudioContext で描き、10 秒ずつ `recordingRendered` で返す → `AudioJob.Recording`（ステレオ）→ `renderAudioFiles` が `mixInStereo` で楽譜の音に足す（ゲインはフェーダー ÷ プレビューの master 0.9＝`PREVIEW_MASTER`、その後 `fileLevel`）。MP4 は `writeVideos` が同じ WAV を使い、長さは録音の終わりまで（`fileSeconds`）。プレビューが無い・描けないときは録音なしで書き、出力チャンネルに理由。
+- ⚠️ **描画は復号したバッファ自身のレートで**: Signalsmith は入力を自分のコンテキストのレートの標本として読む＝48 kHz の録音を 44.1 kHz の OfflineAudioContext で描くと ×1.125 が ×1.034 になった（実物の VS Code で実測・Lab `p1286/e2e`）。書き出しが `mixInStereo` で再標本化する。
+- **MP4 の映像の長さ**: concat の最後の 1 枚の長さを `-r` だけでは落としていた（曲で 0.47 s、録音が曲の後まで鳴ると 1.6 s 映像が先に終わる）＝`videoArgs` は `[0:v]fps=30` を通す。
+- **確かめ方**: 網は `recordingExportCore.test.ts`（時刻・Count-in・テンポ・小節なし）と `mixInStereo`／`fileSeconds`。実物の VS Code（CDP・簡易ダイアログ `files.simpleDialog.enable` を操作・Lab `p1286/e2e`）で WAV／MP3／MP4 を書き、録音のクリックが楽譜の小節頭（0.89／2.67／4.89／6.67／8.89 s＝秒 ÷1.125）に来ること・MP4 の映像と音が 12.4 s で揃うことを測った。⚠️ その計器は拡張の写し（`server` に自己完結の LSP を publish）で回す＝リポジトリの `editors/vscode/server` に自己完結版があると `lilysharp.serverPath` より優先される。
+- 残る穴: 歌い手の声は録音の揺れについて行かない（§5 の ⑴ と同じ）。プレビューを閉じた状態の Explorer の書き出しには録音は入らない（録音の状態はプレビューが持つ）。
 
-同じ報告の ⑴: コードだけの楽譜で MP4 のコード名が光らない。`Core/Export/ScoreVideo.cs` の `HeadsByNote` が `notehead` の箱しか拾わない（2026-11-07 の決定「符頭だけ」）。コード行の音の `S`／`O` はコード名の位置なので、`BoxesGenerator` のコード名の箱（Kind を確かめる）も同じ鍵で拾えば光る。プレビューはコード名も光らせる。全部の楽譜で光らせてよいかはオーナーに一言。
+同じ報告の ⑴ は閉じた: `ScoreVideo.HeadsByNote` が `notehead` に加えて `chordName` の箱も拾う（コード行の音の `S`／`O` はコード名の位置）。網 `ScoreVideoLightTests`。

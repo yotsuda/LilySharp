@@ -208,6 +208,66 @@ export class RecordingPlayer {
         }
     }
 
+    /**
+     * The whole recording as {@link play} sounds it from its second 0 at the practice menu's
+     * `tempo` — the same engine, rate, shift, gain and limiter, the fader left out — rendered
+     * offline, for an export to mix in (docs/recording-design.md §7). Null when nothing is
+     * loaded. The stretcher is started a little ahead (`pad`) so its latency is spent before the
+     * recording's 0, and that much is cut off the front: the result's frame 0 is the recording's
+     * second 0.
+     *
+     * ⚠️ AT THE DECODED BUFFER'S OWN RATE (the page's context's), which the result says: the
+     * stretcher reads its input as samples at its context's rate, so a 48 kHz buffer rendered at
+     * 44.1 kHz played 48/44.1 slow — MEASURED 2026-11-16 (Lab sessions/p1286/e2e): the clicks of
+     * a recording to be played at ×1.125 landed as at ×1.034. The export resamples (mixInStereo).
+     */
+    async render(settings: RecordingSettings, tempo: number): Promise<{ left: Float32Array; right: Float32Array; sampleRate: number } | null> {
+        const buffer = this.buffer;
+        if (!buffer) {
+            return null;
+        }
+        const sampleRate = buffer.sampleRate;
+        const plan = recordingPlan(settings, tempo);
+        const stretched = plan.engine !== 'resample';
+        const pad = stretched ? 0.5 : 0;
+        const frames = Math.ceil((buffer.duration / plan.rate + pad + 0.25) * sampleRate);
+        const ctx = new OfflineAudioContext(2, frames, sampleRate);
+        const gain = ctx.createGain();
+        gain.gain.value = plan.gain;
+        const limiter = ctx.createDynamicsCompressor();
+        limiter.threshold.value = -1;
+        limiter.knee.value = 0;
+        limiter.ratio.value = 20;
+        limiter.attack.value = 0.002;
+        limiter.release.value = 0.1;
+        gain.connect(limiter);
+        limiter.connect(ctx.destination);
+        if (!stretched) {
+            const src = ctx.createBufferSource();
+            src.buffer = buffer;
+            src.playbackRate.value = plan.rate;
+            src.connect(gain);
+            src.start(0, 0);
+        } else {
+            this.stretchFactory ??= importStretch(this.stretchUrl);
+            const node = await (await this.stretchFactory)(ctx);
+            node.connect(gain);
+            const channels: Float32Array[] = [];
+            for (let c = 0; c < buffer.numberOfChannels; c++) {
+                channels.push(buffer.getChannelData(c).slice());
+            }
+            await node.addBuffers(channels);
+            // Awaited (the worklet answers every call): the change is in place before the render starts.
+            await Promise.resolve(node.schedule({ active: true, input: 0, rate: plan.rate, semitones: plan.semitones, output: pad }));
+        }
+        const out = await ctx.startRendering();
+        const skip = Math.round(pad * sampleRate);
+        const length = Math.max(0, Math.min(out.length - skip, Math.ceil(buffer.duration / plan.rate * sampleRate)));
+        const left = out.getChannelData(0).slice(skip, skip + length);
+        const right = (out.numberOfChannels > 1 ? out.getChannelData(1) : out.getChannelData(0)).slice(skip, skip + length);
+        return { left, right, sampleRate };
+    }
+
     /** The panel changed while playing: go on from the second now sounding. */
     async update(settings: RecordingSettings): Promise<void> {
         const at = this.position();

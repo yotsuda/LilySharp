@@ -56,7 +56,8 @@ import { onAngleChord, onShapeItem, shapeItemAt, sameDocumentUri } from './shape
 import { TodoMark, parseStarts, todoDeletions } from './todoResolveCore';
 import { cleanHistory, forgetFont, recordFont, samePath, shownFonts } from './soundFontHistoryCore';
 import { AudioFormat, AudioJob, renderAudioFiles } from './audioRender';
-import { VoiceTrack, decodeWav } from './audioRenderCore';
+import { PREVIEW_MASTER, VoiceTrack, WAV_SAMPLE_RATE, decodeWav } from './audioRenderCore';
+import { recordedExportPlan } from './recordingExportCore';
 import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soundStart, voiceEntries } from './webview/playbackCore';
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
@@ -1205,7 +1206,8 @@ export function activate(context: vscode.ExtensionContext) {
         practisedJobs: (jobs, uri) => practisedJobs(jobs, uri ? practiceFor(uri) : undefined),
         // The sung voices, as the preview's Export mixes them (owner's report 2026-11-09, session
         // 1153: the Explorer's Export as MP4 carried no voice).
-        singJobs: (jobs, source, uri) => singJobs(jobs, source, uri ? practiceFor(uri) : undefined),
+        // …and the recording beside the chart, as the preview showing it sounds it (recording-design §7).
+        singJobs: async (jobs, source, uri) => recordJobs(await singJobs(jobs, source, uri ? practiceFor(uri) : undefined), uri),
         practiceSummary: uri => uri ? practiceSummary(practiceFor(uri)) : '',
     });
 
@@ -1823,6 +1825,11 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 // request timing logged by updatePreviewContent, so a slow
                 // update can be laid at the server's door or the page's.
                 outputChannel.appendLine(`PREVIEW ${message.text}`);
+                return;
+            }
+            if (message.type === 'recordingRendered') {
+                // A piece of the recording an export asked the page to render (recordJobs).
+                recordingRendered(message);
                 return;
             }
             if (message.type === 'practiceState') {
@@ -2612,7 +2619,8 @@ async function exportPreview(
                 playbackOnly: audio !== undefined || video,
                 renderName: renderName || null
             });
-            const jobs = answer.Success && answer.Playbacks ? await singJobs(practisedJobs(answer.Playbacks, practice), { textDocument: { uri } }, practice) : null;
+            const jobs = answer.Success && answer.Playbacks
+                ? await recordJobs(await singJobs(practisedJobs(answer.Playbacks, practice), { textDocument: { uri } }, practice), uri) : null;
             if (jobs && audio && soundFont) {
                 await renderAudioFiles(jobs, soundFont, audio);
             } else if (jobs && video && soundFont && ffmpeg) {
@@ -4046,9 +4054,89 @@ async function rememberSoundFont(context: vscode.ExtensionContext, file: string)
  *  (exportNotes; as written when no preview holds a menu for the file). */
 function practisedJobs(jobs: readonly AudioJob[], practice: PracticeState | undefined): AudioJob[] {
     return jobs.map(job => {
-        const plan = exportPlan(job.Notes, job.Parts ?? null, job.Beats ?? null, practice, job.Extra ?? null);
-        return { ...job, Notes: plan.notes, Lead: plan.lead };
+        // With the recording the page sounds with the score: the notes on its seconds, and how it
+        // plays (docs/recording-design.md §7); recordJobs renders it once the voices are in.
+        const plan = recordedExportPlan(job.Notes, job.Parts ?? null, job.Beats ?? null, job.BarEnd, practice, job.Extra ?? null);
+        if (practice?.recording && !plan.recording) {
+            outputChannel.appendLine(`recording: export: its bars do not line up with ${path.basename(job.OutputPath)}'s; written without it`
+                + ` (the score ends at ${job.BarEnd ?? '?'} s, ${job.Beats?.length ?? 0} beats; the recording places ${practice.recording.bars.length} bars)`);
+        }
+        return { ...job, Notes: plan.notes, Lead: plan.lead, RecordingPlay: plan.recording };
     });
+}
+
+/** The renders of the recording a page was asked for (renderRecording), by request id: the
+ *  pieces as they arrive, and what to call once the last has. */
+const recordingRenders = new Map<number, { left: Float32Array[]; right: Float32Array[]; done: (r: { left: Float32Array; right: Float32Array; sampleRate: number } | { error: string }) => void }>();
+let recordingRenderId = 0;
+
+/** A piece of a recording render from a page (recordingRendered). */
+function recordingRendered(message: { id: number; error?: string; index?: number; pieces?: number; length?: number; sampleRate?: number; left?: unknown; right?: unknown }): void {
+    const render = recordingRenders.get(message.id);
+    if (!render) { return; }
+    if (message.error) {
+        recordingRenders.delete(message.id);
+        render.done({ error: message.error });
+        return;
+    }
+    render.left[message.index ?? 0] = floats(message.left);
+    render.right[message.index ?? 0] = floats(message.right);
+    const pieces = message.pieces ?? 1;
+    if (render.left.filter(p => p).length < pieces) { return; }
+    recordingRenders.delete(message.id);
+    const join = (parts: Float32Array[]) => {
+        const all = new Float32Array(message.length ?? parts.reduce((n, p) => n + p.length, 0));
+        let at = 0;
+        for (const p of parts) { all.set(p.subarray(0, Math.max(0, all.length - at)), at); at += p.length; }
+        return all;
+    };
+    render.done({ left: join(render.left), right: join(render.right), sampleRate: message.sampleRate ?? WAV_SAMPLE_RATE });
+
+    // A typed array as the webview sent it: kept as one, or (an older host) an object of indices.
+    function floats(v: unknown): Float32Array {
+        if (v instanceof Float32Array) { return v; }
+        if (ArrayBuffer.isView(v)) { return new Float32Array(v.buffer.slice(v.byteOffset, v.byteOffset + v.byteLength)); }
+        if (v && typeof v === 'object') { return Float32Array.from(Object.values(v as Record<string, number>)); }
+        return new Float32Array(0);
+    }
+}
+
+/**
+ * The recording beside the chart, mixed into each job that plays with it (RecordingPlay): the
+ * preview showing `uri` renders it whole with its own player, as it sounds with the score
+ * (recordingPlayer.render), from the count-in's lead on (docs/recording-design.md §7). A page that
+ * cannot (closed meanwhile, the recording gone): the file without it, said in the output channel.
+ */
+async function recordJobs(jobs: readonly AudioJob[], uri: string | undefined): Promise<AudioJob[]> {
+    const panel = uri ? previewPanels.get(uri) : undefined;
+    const out: AudioJob[] = [];
+    for (const job of jobs) {
+        const play = job.RecordingPlay;
+        if (!play) { out.push(job); continue; }
+        if (!panel) {
+            outputChannel.appendLine(`recording: export: no preview shows ${uri ?? 'the file'}; ${path.basename(job.OutputPath)} is written without the recording`);
+            out.push(job);
+            continue;
+        }
+        const id = ++recordingRenderId;
+        const rendered = await new Promise<{ left: Float32Array; right: Float32Array; sampleRate: number } | { error: string }>(resolve => {
+            recordingRenders.set(id, { left: [], right: [], done: resolve });
+            void panel.webview.postMessage({ type: 'renderRecording', id, tempo: play.tempo });
+            // A page that never answers (closed while rendering): give up after a long while.
+            setTimeout(() => { if (recordingRenders.delete(id)) { resolve({ error: 'the preview did not answer' }); } }, 10 * 60 * 1000);
+        });
+        if ('error' in rendered) {
+            outputChannel.appendLine(`recording: export: ${path.basename(job.OutputPath)} is written without the recording: ${rendered.error}`);
+            out.push(job);
+            continue;
+        }
+        outputChannel.appendLine(`recording: export: ${path.basename(job.OutputPath)} with the recording (${(rendered.left.length / rendered.sampleRate).toFixed(1)} s, tempo ×${play.tempo.toFixed(3)})`);
+        out.push({ ...job, Recording: {
+            left: rendered.left, right: rendered.right, sampleRate: rendered.sampleRate,
+            at: job.Lead ?? 0, gain: play.level / PREVIEW_MASTER,
+        } });
+    }
+    return out;
 }
 
 /**
@@ -9084,13 +9172,37 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             document.getElementById('partsReset').disabled = practice.muted.length === 0 && practice.extraOn.length === 0 && practice.voicesOff.length === 0 && practice.voicesOn.length === 0 && practice.instrumentsOn.length === 0;
             document.getElementById('fadersReset').disabled = Object.keys(practice.levels).length === 0 && Object.keys(practice.voiceLevels).length === 0
                 && Object.keys(recLevels || {}).length === 0;
-            // The exports play as the menu does, the loop aside (owner's request 2026-11-07): the
-            // extension keeps this page's menu for them (previewPractice).
+            postPracticeState();
+        }
+        // The exports play as the menu does, the loop aside (owner's request 2026-11-07): the
+        // extension keeps this page's menu for them (previewPractice) — and the recording, while it
+        // sounds with the score (docs/recording-design.md §7: its bars, the panel and its fader).
+        function postPracticeState() {
+            const along = recOn && recording && recording.ready && !recording.error;
             vscode.postMessage({ type: 'practiceState', practice: {
                 speed: practice.speed, muted: practice.muted.slice(), click: practice.click, countIn: practice.countIn,
                 extraOn: practice.extraOn.slice(), voicesOff: practice.voicesOff.slice(), voicesOn: practice.voicesOn.slice(),
                 instrumentsOn: practice.instrumentsOn.slice(),
-                levels: Object.assign({}, practice.levels), voiceLevels: Object.assign({}, practice.voiceLevels) } });
+                levels: Object.assign({}, practice.levels), voiceLevels: Object.assign({}, practice.voiceLevels),
+                recording: along ? { bars: recording.bars.map(b => ({ start: b.start, end: b.end })), sound: recSound(), level: recLevel() } : null } });
+        }
+        /** The recording rendered whole for an export (recordingPlayer.render), sent back in pieces
+         *  of ten seconds (a song's two channels are tens of megabytes). */
+        async function renderRecordingFor(m) {
+            const send = (extra) => vscode.postMessage(Object.assign({ type: 'recordingRendered', id: m.id }, extra));
+            try {
+                const player = recordingAlong() ? recPlayer : null;
+                const out = player ? await player.render(recSound(), m.tempo) : null;
+                if (!out) { send({ error: 'the recording is not loaded' }); return; }
+                const piece = out.sampleRate * 10;
+                const pieces = Math.max(1, Math.ceil(out.left.length / piece));
+                for (let i = 0; i < pieces; i++) {
+                    send({ index: i, pieces, length: out.left.length, sampleRate: out.sampleRate,
+                        left: out.left.slice(i * piece, (i + 1) * piece), right: out.right.slice(i * piece, (i + 1) * piece) });
+                }
+            } catch (e) {
+                send({ error: String(e && e.message || e) });
+            }
         }
         // A change while playing goes on from the same place in the music: the list's time now
         // (its count-in aside, within the loop's round) to the score's time through the basis the
@@ -9433,6 +9545,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             document.getElementById('recLevelValue').textContent = level === 100 ? '' : level + '%';
             if (recPlayer) recPlayer.setLevel(recLevel());
             for (const refresh of recRefreshers) refresh();
+            postPracticeState();    // (the exports mix the recording in as it sounds now)
         }
         function recLevel() { return levelIn(recLevels, 'Recording'); }
         let recRefreshers = [];     // the practice menu's Recording line, refreshed with the panel's
@@ -9519,6 +9632,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 player.load(m.bytes).then(seconds => {
                     if (!recording || recording.chart !== m.chart) return;
                     recording.ready = true;
+                    postPracticeState();
                     recStatus(Math.floor(seconds / 60) + ':' + String(Math.round(seconds % 60)).padStart(2, '0') + ' — ' + barsSaid);
                 }, err => {
                     if (recording) recording.ready = false;
@@ -10000,6 +10114,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 case 'recording':
                     setRecording(message);
                     showRecording();
+                    break;
+                case 'renderRecording':
+                    void renderRecordingFor(message);
                     break;
                 case 'chartTranspose': {
                     const n = Number(message.semitones) || 0;
