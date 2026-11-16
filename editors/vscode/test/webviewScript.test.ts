@@ -578,16 +578,42 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
 // note at a time centred the voice, then the drums it pushed off, then the voice — the view shook.
 describe('the preview keeps what sounds in view, every part together', () => {
     const rect = (top: number, bottom: number, left = 100, right = 200) => ({ top, bottom, left, right, width: right - left, height: bottom - top });
+    // With no bar box (a page drawn without them), the notes' own extent decides, as before
+    // 2026-11-16; the tall-system rule (below) needs the system's box.
     const follow = () => {
         const scrolls: { top: number; left: number }[] = [];
         const mainContent = {
             getBoundingClientRect: () => rect(0, 600, 0, 800),
             scrollBy: (o: { top: number; left: number }) => scrolls.push(o),
         };
-        const keep = pageFunction('keepSoundingInView', { mainContent }) as (els: unknown[]) => void;
+        const keep = pageFunction('keepSoundingInView', { mainContent, barBoxOf: () => null }) as (els: unknown[]) => void;
         const notes = (...rs: ReturnType<typeof rect>[]) => rs.map(r => ({ getBoundingClientRect: () => r }));
         return { keep, notes, scrolls };
     };
+    // Owner's report 2026-11-16: a big band zoomed in, the system 4427 px in a 673 px view — the
+    // view jumped with whichever staff sounded topmost. Now it keeps its place in the system and
+    // takes the same place in the next one.
+    it('keeps its place in a system taller than the view, and the same place in the next', () => {
+        const view = { scrollTop: 1000, scrollLeft: 0 };
+        let systemTop = -200;     // the system's top, client y (the view''s top is 0)
+        const moves: { top: number; left: number }[] = [];
+        const mainContent = {
+            getBoundingClientRect: () => rect(0, 600, 0, 800),
+            get scrollTop() { return view.scrollTop; }, get scrollLeft() { return view.scrollLeft; },
+            scrollTo: (o: { top: number; left: number }) => { moves.push(o); systemTop -= o.top - view.scrollTop; view.scrollTop = o.top; },
+        };
+        const context: Record<string, unknown> = { mainContent, barBoxOf: () => rect(systemTop, systemTop + 3000, 0, 800),
+            followSystemDocTop: null, followSystemOffset: null, followTopTarget: null };
+        const keep = pageFunction('keepSoundingInView', context) as (els: unknown[]) => void;
+        const at = (top: number) => [{ getBoundingClientRect: () => rect(top, top + 10) }];
+        keep(at(40));                       // the first: the view stands in it, 200 below its top — stays
+        keep(at(500)); keep(at(-150)); keep(at(900));   // the top sounding staff changes: no move
+        assert.equal(moves.length, 0);
+        // The next system, 3500 further down: the view 200 below its top there too.
+        systemTop += 3500;
+        keep(at(systemTop + 100));
+        assert.deepEqual(moves.map(m => m.top), [1000 + 3500]);
+    });
     it('leaves alone what is all in view', () => {
         const { keep, notes, scrolls } = follow();
         keep(notes(rect(100, 110), rect(400, 410)));
