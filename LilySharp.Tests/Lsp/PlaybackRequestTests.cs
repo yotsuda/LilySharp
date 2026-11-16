@@ -216,4 +216,33 @@ public class PlaybackRequestTests
         Assert.DoesNotContain(64, opening);    // not on the e it opened on
         Assert.Equal("Score has errors", server.GetPlaybackText(new PlaybackTextParams { Text = "section A { p1 { c4 d" }).Error);
     }
+
+    /// <summary>
+    /// A `%` bar lights its mark, for the whole bar (owner's request 2026-11-16: the bar it repeats
+    /// lit instead, its notes, as though the music jumped back). Its notes carry the mark's place
+    /// and printed copy, and a light — no sound — spans the bar; a section played twice lights the
+    /// mark's second copy on its second play. `| % % |` marks each light their own bar.
+    /// </summary>
+    [Fact]
+    public void APercentBar_LightsItsMark_ForTheWholeBar()
+    {
+        const string doc = "tempo 4 = 120\ntime 4/4\npart m\nsection A { m { c'8 d e f g4 r | % | % % | } }\nform { A A }\nscore { staff m }\n";
+        var pb = Playback(doc, null);
+        Assert.Null(pb.Error);
+        int[] marks = Enumerable.Range(0, doc.Length).Where(i => doc[i] == '%').ToArray();
+        int written = doc.IndexOf("c'8", StringComparison.Ordinal);
+        var lights = pb.Notes!.Where(n => n.L).OrderBy(n => n.T).ToArray();
+        // three marks, the section played twice: six bars lit, two seconds each, no sound
+        Assert.Equal(6, lights.Length);
+        Assert.All(lights, l => { Assert.Equal(2.0, l.D, 3); Assert.Equal(0, l.V); });
+        Assert.Equal(new[] { 2.0, 4.0, 6.0, 10.0, 12.0, 14.0 }, lights.Select(l => Math.Round(l.T, 3)));
+        Assert.Equal(new[] { marks[0], marks[1], marks[2], marks[0], marks[1], marks[2] }, lights.Select(l => l.S));
+        Assert.Equal(new[] { 0, 0, 0, 1, 1, 1 }, lights.Select(l => l.O));
+        // the notes the marks sound light the mark, not the bar they repeat
+        var sounding = pb.Notes!.Where(n => !n.L && n.P > 0).ToArray();
+        Assert.All(sounding.Where(n => n.T % 8.0 >= 2.0 - 1e-6), n => Assert.Contains(n.S, marks));
+        Assert.All(sounding.Where(n => n.T % 8.0 < 2.0 - 1e-6), n => Assert.DoesNotContain(n.S, marks));
+        Assert.Contains(sounding, n => n.S == written && Math.Abs(n.T) < 1e-6);
+        Assert.DoesNotContain(sounding, n => n.S == written && n.T > 1.0 && n.T < 8.0);
+    }
 }

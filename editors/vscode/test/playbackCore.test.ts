@@ -629,3 +629,21 @@ describe('the follow-along cursor', () => {
         assert.deepEqual(r.sounding.map(x => x.pos), [2]);
     });
 });
+
+// A `%` bar lights its mark for the whole bar (owner's request 2026-11-16): the server sends a
+// light (L) with the bar's time; nothing sounds it, and a seek inside the bar keeps the rest lit.
+describe('a light for a % bar', () => {
+    const light = note(2, 2, 0, { V: 0, S: 52, L: true });
+    const notes = [note(0, 0.5, 60), light, note(2, 0.5, 60, { S: 52 })];
+
+    it('sounds nothing', () => {
+        const ons = toEvents(notes, 0).filter(e => e.kind === 'on');
+        assert.equal(ons.length, 2);
+    });
+
+    it('stays lit for the rest of its bar after a seek inside it', () => {
+        const from = fromOffset(notes, 3);
+        assert.deepEqual(from.map(n => [n.T, n.D, n.S, !!n.L]), [[3, 1, 52, true]]);
+        assert.deepEqual(fromOffset(notes, 4.5), []);
+    });
+});

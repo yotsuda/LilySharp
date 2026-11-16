@@ -256,7 +256,7 @@ public static class ScoreVideo
         for (int pi = 0; pi < pages.Count; pi++)
             foreach (var s in pages[pi].Symbols)
             {
-                if (s.Kind is not ("notehead" or "chordName") || s.Pos < 0) continue;
+                if (s.Kind is not ("notehead" or "chordName" or "percentRepeat") || s.Pos < 0) continue;
                 int bar = BarOf(pi, s.Box);
                 keyed.Add((s.Pos, pi, bar, s.Box));
                 int chord = ChordStart(tree, s.Pos);

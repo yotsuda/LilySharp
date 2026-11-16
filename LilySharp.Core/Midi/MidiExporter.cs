@@ -3062,9 +3062,9 @@ public sealed class MidiExporter
             // that). The music is laid out once, the signs noted where they stand (just above), and
             // the piece unfolded on the score's timeline (PlayFormAsPrinted, Midi.PlayedTimeline).
             // A percent mark in its repeat sounds the bars once more (ProcessPercentRepeat).
-            if (items[i] is PercentMarkSyntax { Parent: PercentRepeatSyntax } && _percentFrames.Count > 0)
+            if (items[i] is PercentMarkSyntax { Parent: PercentRepeatSyntax } mark && _percentFrames.Count > 0)
             {
-                ReplayPercentBody(track, conductorTrack);
+                ReplayPercentBody(track, conductorTrack, mark);
                 continue;
             }
             _spanClosedAt = -1;
@@ -3124,12 +3124,32 @@ public sealed class MidiExporter
         }
     }
 
-    private void ReplayPercentBody(MidiTrack track, MidiTrack conductorTrack)
+    private void ReplayPercentBody(MidiTrack track, MidiTrack conductorTrack, PercentMarkSyntax mark)
     {
         var (body, ordinals, frame) = _percentFrames.Peek();
-        _sourceOrdinals = new Dictionary<int, int>(ordinals);
+        // The mark's own printed copy, counted as a note's is (a section printed twice prints the
+        // mark twice); the body's ordinals restart for the replay, the mark's count kept.
+        int markPos = mark.Span.Start;
+        int markOrdinal = _sourceOrdinals.GetValueOrDefault(markPos);
+        var restored = new Dictionary<int, int>(ordinals);
+        // (every mark of the repeat keeps its count across the others' replays)
+        foreach (var other in mark.Parent!.ChildNodes().OfType<PercentMarkSyntax>())
+            if (_sourceOrdinals.TryGetValue(other.Span.Start, out int k))
+                restored[other.Span.Start] = k;
+        restored[markPos] = markOrdinal + 1;
+        _sourceOrdinals = restored;
         (_currentOctave, _currentNoteName, _defaultDuration) = frame;
+        int start = _currentTick, first = track.Notes.Count;
         ProcessSequence(body, track, conductorTrack);
+        // Each note the mark sounds carries it (MidiNote.Percent): the preview lights the mark, not
+        // the bars' notes it was played from.
+        int length = _currentTick - start;
+        for (int i = first; i < track.Notes.Count; i++)
+        {
+            var n = track.Notes[i];
+            if (n.Percent == null)
+                track.Notes[i] = n with { Percent = new PercentCopy(markPos, markOrdinal, n.StartTick - start, length) };
+        }
     }
 
     /// <summary>Opens a lane's bar grid at the current tick: its first bar is held to

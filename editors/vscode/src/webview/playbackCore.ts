@@ -35,6 +35,9 @@ export interface PlaybackNote {
     U?: boolean;
     /** Who sings the note's section, in a sung part with several singer lines: the voices' keys. */
     W?: string[] | null;
+    /** A light, not a note: a `%` lit for the bars it sounds (PlaybackNote.L; owner's request
+     *  2026-11-16). Nothing sounds it (isLight); the follow-along lights it, a video too. */
+    L?: boolean;
 }
 
 /** A metronome beat as the server sends it: seconds, and whether it opens a bar. */
@@ -161,6 +164,8 @@ const orderOf = (e: MidiEvent) => e.kind === 'pedal' ? (e.v === 0 ? -1 : 2) : KI
 
 /** An entry of the note list that is the sustain pedal changing (LspProtocolDtos.PlaybackNote.PedalPitch), not a note. */
 export const isPedal = (n: { P: number }) => n.P < 0;
+/** An entry of the note list that only lights a mark (PlaybackNote.L): no sound plays it. */
+export const isLight = (n: { L?: boolean }) => n.L === true;
 
 /**
  * The list from `offset` on, for a seek, a loop or a count-in: what starts before it is dropped,
@@ -169,14 +174,17 @@ export const isPedal = (n: { P: number }) => n.P < 0;
  */
 export function fromOffset(notes: readonly PlaybackNote[], offset: number): PlaybackNote[] {
     const held = new Map<number, PlaybackNote>();
+    const lit: PlaybackNote[] = [];
     const out: PlaybackNote[] = [];
     for (const n of notes) {
         if (n.T >= offset - 0.001) { out.push(n); }
         else if (isPedal(n)) {
             if (n.V > 0) { held.set(channelOf(n), n); } else { held.delete(channelOf(n)); }
         }
+        // A `%` lit across the offset stays lit for the rest of its bars.
+        else if (isLight(n) && n.T + n.D > offset + 0.001) { lit.push({ ...n, T: offset, D: n.T + n.D - offset }); }
     }
-    return [...[...held.values()].map(n => ({ ...n, T: offset })), ...out];
+    return [...[...held.values()].map(n => ({ ...n, T: offset })), ...lit, ...out];
 }
 
 /**
@@ -191,7 +199,7 @@ export function toEvents(notes: readonly PlaybackNote[], offset = 0): MidiEvent[
     const events: MidiEvent[] = [];
     const programs = new Map<number, number>();
     for (const n of notes) {
-        if (n.T < offset - 0.001) { continue; }
+        if (n.T < offset - 0.001 || isLight(n)) { continue; }
         const c = channelOf(n);
         if (isPedal(n)) {
             events.push({ t: micro(Math.max(0, n.T - offset)), kind: 'pedal', c, v: n.V });

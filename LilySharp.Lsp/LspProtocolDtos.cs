@@ -559,6 +559,11 @@ public class PlaybackNote
     /// <c>in</c> left it to nobody): the part's instrument plays it, though the part is a voice
     /// (owner's decision 2026-11-12; <c>Midi.SungVoices.Unsung</c>). False everywhere else.</summary>
     public bool U { get; set; }
+    /// <summary>A light, not a note: a `%` lit for the bars it sounds (<c>MidiNote.Percent</c>;
+    /// owner's request 2026-11-16) — its <see cref="S"/> and <see cref="O"/> the mark's, its
+    /// <see cref="T"/> and <see cref="D"/> the bars'. Nothing sounds it (<see cref="P"/> 0,
+    /// <see cref="V"/> 0); the follow-along lights it, a video too.</summary>
+    public bool L { get; set; }
     /// <summary>WHO sings the note's section, in a sung part with several singer lines: the keys
     /// of the voices that sing there (<see cref="SungVoiceDto.Key"/>; <c>Midi.SungVoices.SungBy</c>).
     /// The editor, which knows what this machine can sing, plays on the instrument a section all

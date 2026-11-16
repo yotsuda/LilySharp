@@ -129,8 +129,22 @@ public readonly record struct MidiNote(
     // (MidiExporter.ApplyArticulationType) — 0 for most. The note's WRITTEN end is its end less
     // this: a repeat played again starts with no note that only rings into it (PlayedTimeline).
     // Not written to .mid files.
-    int Overhang = 0
+    int Overhang = 0,
+    // The `%` this note sounds for — a percent repeat plays its bars again for each mark, from the
+    // bars' own notes, which the page prints once; the mark is what the page prints there. Null
+    // for any other note. Not written to .mid files.
+    PercentCopy? Percent = null
 );
+
+/// <summary>
+/// The `%` a note sounds for (<see cref="MidiNote.Percent"/>): the mark's source offset and printed
+/// copy, and where the bars it repeats begin and how long they last — ticks from the note's own
+/// start back to their start (<paramref name="Lead"/>) and their length — so the bars move with
+/// the note when the piece is laid out as it plays (PlayedTimeline). The preview lights the mark
+/// for the length of the bars it sounds (owner's request 2026-11-16: the repeated bar's notes lit
+/// instead, which read as the music jumping back).
+/// </summary>
+public readonly record struct PercentCopy(int Pos, int Ordinal, int Lead, int Length);
 
 /// <summary>
 /// Represents a tempo change event.

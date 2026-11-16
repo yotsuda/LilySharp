@@ -8070,7 +8070,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function voiceFitsPlay(key, list) {
             if (!playEdited) { return true; }
             const track = rawParts ? rawParts.indexOf(key.split('#')[0]) : -1;
-            const onsets = playingNotes.filter(n => n.N === track && !(n.P < 0)).map(n => n.T);
+            const onsets = playingNotes.filter(n => n.N === track && !(n.P < 0) && !n.L).map(n => n.T);
             if (onsets.length === 0) { return false; }
             return list.every(e => e.at < playOffset - 1e-6 || onsets.some(t => Math.abs(t - e.at) < 0.002));
         }
@@ -8531,7 +8531,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // …and where NONE of a part's voices sings a section (n.U, the server's mark: a
             // singer line's in-clause left it to nobody), the instrument plays it — unless the menu
             // switched the part's voices off and its instrument is not on: silence, as above.
-            const played = notes.filter(n => n.U ? unsungSounds(n.N) : instrumentSounds(n.N, sung));
+            const played = notes.filter(n => !n.L && (n.U ? unsungSounds(n.N) : instrumentSounds(n.N, sung)));   // (a lit % plays nothing)
             if (midiOutput && !here && played.length > 0) {
                 // The MIDI output: the server plays the list from the offset and answers
                 // (midiStarted) with the clock the highlight follows; a port that is not

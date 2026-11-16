@@ -1398,8 +1398,9 @@ public sealed partial class LilySharpLanguageServer
                         D = Math.Max(0.03, SecondsAt(n.StartTick + n.DurationTicks) - t0),
                         P = n.Pitch + 0.5 * n.QuarterBend,
                         V = n.Velocity,
-                        S = n.SourcePos,
-                        O = n.SourceOrdinal,
+                        // A note a `%` sounds lights the mark, not the bars it was played from.
+                        S = n.Percent?.Pos ?? n.SourcePos,
+                        O = n.Percent?.Ordinal ?? n.SourceOrdinal,
                         I = n.Timbre,
                         C = n.Channel == 9 ? 9 : x.Channel,
                         G = n.Channel == 9 ? 0 : x.Track.Program ?? 0,
@@ -1420,6 +1421,23 @@ public sealed partial class LilySharpLanguageServer
                     G = x.Track.Program ?? 0,
                     N = ti,
                 })))
+                // Each `%` lit for the whole of the bars it sounds (owner's request 2026-11-16: its
+                // notes alone lit it only while they sounded, and the bars' own notes lit instead).
+                .Concat(tracks.SelectMany((x, ti) => x.Track.Notes
+                    .Where(n => n.Percent != null)
+                    .Select(n => (n.Percent!.Value.Pos, n.Percent!.Value.Ordinal, n.Percent!.Value.Length, Start: n.StartTick - n.Percent!.Value.Lead))
+                    .Distinct()
+                    .Select(m => new PlaybackNote
+                    {
+                        T = SecondsAt(m.Start),
+                        D = Math.Max(0.03, SecondsAt(m.Start + m.Length) - SecondsAt(m.Start)),
+                        S = m.Pos,
+                        O = m.Ordinal,
+                        C = x.Channel,
+                        G = x.Track.Program ?? 0,
+                        N = ti,
+                        L = true,
+                    })))
                 .OrderBy(n => n.T)
                 .ToArray();
 
