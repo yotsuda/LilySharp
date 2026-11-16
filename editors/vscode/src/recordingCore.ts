@@ -223,6 +223,11 @@ export interface RecordingSettings {
     semitones: number;
     cents: number;
     linked: boolean;
+    /** The semitones the chart's own transpose moves the music by (the file's top-level
+     *  `transpose` and the drawn score's, owner's decision 2026-11-16): the recording was made in
+     *  the chart's written key, so it follows — on top of the panel's own pitch, and never by
+     *  speed. Not the panel's: it comes with each picture of the chart. Absent / 0: none. */
+    chart?: number;
 }
 
 export const RECORDING_DEFAULTS: RecordingSettings = { speed: 1, octave: 0, semitones: 0, cents: 0, linked: false };
@@ -242,22 +247,26 @@ function clamp(x: number, [lo, hi]: readonly [number, number]): number {
  *  up by the stretcher peaks over its source (MEASURED 2026-11-15: +1200 cents peaked at 1.177,
  *  Lab sessions/p1283/stretch), so it is turned down 3 dB before the limiter.
  *  `tempo` is the practice menu's (§1 7: its slider works on both, the recording's pitch kept):
- *  it multiplies the rate, and a linked recording played at another tempo is stretched. */
+ *  it multiplies the rate, and a linked recording played at another tempo is stretched.
+ *  The chart's transpose (`chart`) moves the pitch alone: a linked recording under one is
+ *  stretched, its speed the panel's pitch alone sets. */
 export function recordingPlan(s: RecordingSettings, tempo = 1): { engine: 'resample' | 'stretch'; rate: number; semitones: number; gain: number } {
     const shift = clamp(s.octave, RECORDING_LIMITS.octave) * 12 + clamp(s.semitones, RECORDING_LIMITS.semitones)
         + clamp(s.cents, RECORDING_LIMITS.cents) / 100;
+    const chart = clamp(s.chart ?? 0, [-24, 24]);
     const k = Number.isFinite(tempo) && tempo > 0 ? tempo : 1;
+    const gainFor = (semitones: number) => semitones > 0 ? Math.pow(10, -3 / 20) : 1;
     if (s.linked) {
         const rate = Math.pow(2, shift / 12) * k;
-        return k === 1
+        return k === 1 && chart === 0
             ? { engine: 'resample', rate, semitones: shift, gain: 1 }
-            : { engine: 'stretch', rate, semitones: shift, gain: shift > 0 ? Math.pow(10, -3 / 20) : 1 };
+            : { engine: 'stretch', rate, semitones: shift + chart, gain: gainFor(shift + chart) };
     }
     const speed = (clamp(s.speed, RECORDING_LIMITS.speed) || 1) * k;
-    if (shift === 0 && speed === 1) {
+    if (shift + chart === 0 && speed === 1) {
         return { engine: 'resample', rate: 1, semitones: 0, gain: 1 };
     }
-    return { engine: 'stretch', rate: speed, semitones: shift, gain: shift > 0 ? Math.pow(10, -3 / 20) : 1 };
+    return { engine: 'stretch', rate: speed, semitones: shift + chart, gain: gainFor(shift + chart) };
 }
 
 /** One beat of the score's playback (`lilysharp/playback`'s `Beats`): its time in seconds at

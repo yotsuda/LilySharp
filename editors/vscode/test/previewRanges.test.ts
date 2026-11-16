@@ -194,6 +194,18 @@ describe('the preview\'s Range panel', () => {
     // The recording beside a chart sounds with the score (owner's decision 2026-11-16,
     // docs/recording-design.md §1 7): a line of the practice menu's Parts and the recording panel's
     // top line; no waveform button in the toolbar.
+    // The recording follows the chart's own transpose (owner's decision 2026-11-16), on top of the
+    // panel's pitch; the panel's settings are kept per recording.
+    it('plays the recording moved by the chart\'s transpose, and keeps the panel\'s settings', () => {
+        assert.match(html, /function recSound\(\) \{ return Object\.assign\(\{\}, recSettings, \{ chart: chartShift \}\); \}/);
+        assert.doesNotMatch(html, /\.play\(sec, recSettings,|recPlayer\.update\(recSettings\)|recordingPlan\(recSettings/);
+        assert.match(html, /case 'chartTranspose': \{\s*const n = Number\(message\.semitones\) \|\| 0;\s*if \(n !== chartShift\) \{ chartShift = n; recApply\(\); \}/);
+        assert.match(extension, /panel\.webview\.postMessage\(\{ type: 'chartTranspose', semitones: response\.ChartTranspose \?\? 0 \}\);/);
+        assert.match(html, /vscode\.postMessage\(\{ type: 'recordingSettings', chart: recording\.chart, name: recording\.name, settings: recSettings \}\);/);
+        assert.match(html, /if \(!same\) recSettings = Object\.assign\(recDefaults\(\), m\.settings/);
+        assert.match(extension, /keepRecordingSettings\(message\.chart, message\.name, message\.settings\);/);
+    });
+
     it('sounds the recording with the score, from the score\'s clock', () => {
         assert.doesNotMatch(html, /id="recBtn"/);
         assert.match(html, /<div id="recPanel"[^>]*>[\s\S]{0,300}<button type="button" id="recOnBtn"[^>]*>[\s\S]{0,80}<input type="range" id="recLevelSlider" class="fader"/);
@@ -206,7 +218,7 @@ describe('the preview\'s Range panel', () => {
         const body = html.slice(at, html.indexOf('\n        }', at) + '\n        }'.length);
         const plays: unknown[] = [];
         const context = vm.createContext({
-            playBasis: { warp: {}, speed: 0.5 }, countInFix: 0, loopRound: 4, recSettings: {}, practice: { speed: 0.5 },
+            playBasis: { warp: {}, speed: 0.5 }, countInFix: 0, loopRound: 4, recSettings: {}, recSound: () => ({}), practice: { speed: 0.5 },
             recordingAlong: () => true, recLevel: () => 1,
             recPlayer: {
                 duration: 60, loop: null as unknown,

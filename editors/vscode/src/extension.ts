@@ -38,7 +38,7 @@ import { registerStepAudition } from './stepAudition';
 import { registerCaretInfo } from './caretInfo';
 import { registerExportBatch } from './exportBatch';
 import { OmrImportDeps, importFromImage } from './omrImport';
-import { DecodeResult, attachRecording, followRenames, sendRecording } from './recording';
+import { DecodeResult, attachRecording, followRenames, keepRecordingSettings, sendRecording, useRecordingSettingsStore } from './recording';
 import { TimedNote, soundingOf, startSecondsAt } from './playbackStart';
 import { convertRecording, registerDettatoContext } from './dettato';
 import { recordingPathFor } from './recordingCore';
@@ -528,6 +528,8 @@ export function activate(context: vscode.ExtensionContext) {
     outputChannel.appendLine('Lily# extension activating...');
     // The models that refused as VS Code's own, remembered from an earlier session (modelClient).
     rememberRefusalsIn(context.globalState);
+    // The recording panel's settings, kept per chart and recording (recording.ts).
+    useRecordingSettingsStore(context.workspaceState);
     // Copilot Chat's log, which names the model Copilot's Auto answered with (modelClient).
     findCopilotLogFrom(context.logUri);
 
@@ -1835,6 +1837,13 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 else if (onNow !== onBefore) { void prepareVoices(panel, uri, 'play'); }
                 return;
             }
+            // The recording panel's settings changed: kept for this recording (recording.ts).
+            if (message.type === 'recordingSettings') {
+                if (typeof message.chart === 'string' && typeof message.name === 'string') {
+                    keepRecordingSettings(message.chart, message.name, message.settings);
+                }
+                return;
+            }
             if (message.type === 'requestPlayback') {
                 // The webview cannot reach the LSP: fetch note events here and
                 // hand them back for WebAudio scheduling.
@@ -2263,6 +2272,8 @@ async function updatePreviewContent(
         // removed since it was picked) resolves to the default score, and a picker still
         // naming the old one would make the preview look stuck on the default score with
         // nothing to say why. Older servers do not answer this; then the request stands.
+        // What the drawn score transposes the music by: a recording beside the chart follows it.
+        panel.webview.postMessage({ type: 'chartTranspose', semitones: response.ChartTranspose ?? 0 });
         const drawnRender = response.SelectedRender ?? selectedRender ?? '';
         if (drawnRender !== (selectedRender ?? '')) {
             outputChannel.appendLine(`Score ${JSON.stringify(selectedRender ?? null)} is not in this`
@@ -3884,6 +3895,9 @@ interface SvgResponse {
     // no Svg, no Error; the newer response carries the picture. Absent on servers
     // older than 2026-08-27.
     Superseded?: boolean;
+    // The semitones the drawn score moves the music by (the file's top-level transpose and the
+    // score's own): a recording beside the chart is played moved by them.
+    ChartTranspose?: number;
     // Where the server spent this request's time (absent on servers older than
     // 2026-09-04). Same machine, so the client's clock and ServerSentAt compare.
     Timing?: {
@@ -6040,6 +6054,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         <div class="prow"><span class="plbl">Speed</span><span class="tempo"><input type="range" id="recSpeedSlider" min="25" max="150" step="5" value="100" aria-label="Speed"><span id="recSpeedValue" class="tval">100%</span></span></div>
         <div class="prow"><span class="plbl">Octave</span><span class="tempo"><button type="button" id="recOctDown" title="An octave down">−</button><span id="recOctValue" class="tval">0</span><button type="button" id="recOctUp" title="An octave up">+</button></span></div>
         <div class="prow"><span class="plbl">Semitones</span><span class="tempo"><input type="range" id="recSemiSlider" min="-11" max="11" step="1" value="0" aria-label="Semitones"><span id="recSemiValue" class="tval">0</span></span></div>
+        <div class="prow" id="recChartRow" hidden title="The chart's own transpose (the top-level transpose, and the score's) moves the recording too, on top of the settings above"><span class="plbl">Chart</span><span class="tempo"><span id="recChartValue" class="tval">0</span></span></div>
         <div class="prow"><span class="plbl">Cents</span><span class="tempo"><input type="range" id="recCentSlider" min="-50" max="50" step="1" value="0" aria-label="Cents"><span id="recCentValue" class="tval">0</span></span></div>
         <div class="prow"><span class="plbl">Pitch with speed</span><button type="button" id="recLinkBtn" class="toggle" aria-pressed="false" title="Pitch and speed go together, as a tape's speed is set right (no stretching)">Off</button></div>
         <div class="prow presets"><span class="plbl"></span><span class="tempo"><button type="button" id="recReset" title="The recording as it is">Reset</button></span></div>
@@ -8843,7 +8858,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // over a recording of 131.8 plays it at 131/131.8 — times the practice tempo, and the
             // panel's speed on top (recordingPlan). recTempo is what the player is handed.
             const recTempo = warp ? practice.speed * window.LysSynth.warpFit(warp) : practice.speed;
-            playBasis = { warp, recTempo, speed: warp ? window.LysSynth.recordingPlan(recSettings, recTempo).rate : practice.speed };
+            playBasis = { warp, recTempo, speed: warp ? window.LysSynth.recordingPlan(recSound(), recTempo).rate : practice.speed };
             const timed = warp ? window.LysSynth.warpNotes(notes, warp) : notes;
             return window.LysSynth.practiceNotes(timed, rawParts, playedBeats(), Object.assign({}, practice, { speed: playBasis.speed }), rawExtra);
         }
@@ -9183,6 +9198,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             return Object.assign({}, window.LysSynth ? window.LysSynth.RECORDING_DEFAULTS : { speed: 1, octave: 0, semitones: 0, cents: 0, linked: false });
         }
         recSettings = recDefaults();
+        // The chart's own transpose (the file's top-level transpose and the drawn score's, in
+        // semitones — owner's decision 2026-11-16): the recording, made in the chart's written key,
+        // follows it on top of the panel's pitch. The extension says it with each picture.
+        var chartShift = 0;
+        /** What the recording is played with: the panel's settings and the chart's transpose. */
+        function recSound() { return Object.assign({}, recSettings, { chart: chartShift }); }
         function recordingPlayer() {
             const cfg = window.lysSynthConfig;
             if (!recPlayer && window.LysSynth && cfg && cfg.stretch) {
@@ -9198,7 +9219,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function signed(n) { return n > 0 ? '+' + n : String(n); }
         function showRecording() {
             const s = recSettings;
-            const plan = window.LysSynth ? window.LysSynth.recordingPlan(s) : { rate: s.speed, semitones: 0 };
+            const plan = window.LysSynth ? window.LysSynth.recordingPlan(recSound()) : { rate: s.speed, semitones: 0 };
             recSpeedSlider.value = String(Math.round((s.linked ? plan.rate : s.speed) * 100));
             recSpeedSlider.disabled = s.linked;
             document.getElementById('recSpeedValue').textContent = Math.round((s.linked ? plan.rate : s.speed) * 100) + '%';
@@ -9207,6 +9228,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             document.getElementById('recSemiValue').textContent = signed(s.semitones);
             recCentSlider.value = String(s.cents);
             document.getElementById('recCentValue').textContent = signed(s.cents);
+            document.getElementById('recChartRow').hidden = chartShift === 0;
+            document.getElementById('recChartValue').textContent = signed(chartShift);
             recLinkBtn.setAttribute('aria-pressed', String(s.linked));
             recLinkBtn.textContent = s.linked ? 'On' : 'Off';
             // The button says what is not as recorded: the speed, and the pitch in semitones.
@@ -9229,10 +9252,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function recLevel() { return levelIn(recLevels, 'Recording'); }
         let recRefreshers = [];     // the practice menu's Recording line, refreshed with the panel's
         function recChanged() {
+            // Kept for this recording, for the next time it is opened (recording.ts).
+            if (recording) vscode.postMessage({ type: 'recordingSettings', chart: recording.chart, name: recording.name, settings: recSettings });
+            recApply();
+        }
+        /** The sound follows the panel's settings and the chart's transpose as they are now. */
+        function recApply() {
             showRecording();
             // With the score, the score follows the recording's speed: both start again from here.
             if (playClock && playBasis && playBasis.warp) { practiceChanged(practice.speed); return; }
-            if (recPlayer && recPlayer.playing) void recPlayer.update(recSettings);
+            if (recPlayer && recPlayer.playing) void recPlayer.update(recSound());
         }
         /** Whether the recording sounds with the next Play: on, and loaded. */
         function recordingAlong() {
@@ -9266,7 +9295,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (sec < 0) { at = t0 - p0; sec = 0; }
             recPlayer.presetLoop(looping ? { from: origin * k, to: (origin + loopRound) * k } : null);
             recPlayer.setLevel(recLevel());
-            void recPlayer.play(sec, recSettings, { tempo: playBasis.recTempo ?? practice.speed, at });
+            void recPlayer.play(sec, recSound(), { tempo: playBasis.recTempo ?? practice.speed, at });
             return looping ? 0 : recPlayer.duration / k - origin + countInFix;
         }
         function setRecording(m) {
@@ -9283,6 +9312,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const same = recording && recording.chart === m.chart && recording.name === m.name;
             const fresh = !recording;
             recording = { chart: m.chart, name: m.name || '', bars: m.bars || [], pickup: !!m.pickup, ready: same ? recording.ready : false, error: m.error || null };
+            // Another recording: its own settings, as kept the last time (recording.ts), else as recorded.
+            if (!same) recSettings = Object.assign(recDefaults(), m.settings && typeof m.settings === 'object' ? m.settings : {});
             // A chart just made from this recording starts with it on: Play sounds it (owner's
             // request 2026-11-16; the extension says so once, recording.ts justConverted).
             if (m.turnOn) recOn = true;
@@ -9322,7 +9353,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             setPlayUi(true);
             player.presetLoop(null);
             player.setLevel(recLevel());
-            void player.play(sec, recSettings, { tempo: practice.speed });
+            void player.play(sec, recSound(), { tempo: practice.speed });
             return true;
         }
         /** The recording on or off — the practice menu's line and the panel's top line. While
@@ -9773,7 +9804,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     break;
                 case 'recording':
                     setRecording(message);
+                    showRecording();
                     break;
+                case 'chartTranspose': {
+                    const n = Number(message.semitones) || 0;
+                    if (n !== chartShift) { chartShift = n; recApply(); }
+                    break;
+                }
                 case 'partsData':
                     renderParts(message);
                     // Its width is known once filled: keep it inside the window.

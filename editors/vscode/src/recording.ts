@@ -207,7 +207,7 @@ export async function sendRecording(panel: vscode.WebviewPanel, chart: vscode.Ur
         post({ error: `${path.basename(file.fsPath)}: ${rec.error}` });
         return;
     }
-    const base = { name: rec.audio, bars: rec.bars, pickup: rec.pickup };
+    const base = { name: rec.audio, bars: rec.bars, pickup: rec.pickup, settings: recordingSettingsFor(chart.toString(), rec.audio) ?? null };
     if (!audio || !audioKey) {
         post({ ...base, error: `${rec.audio} is not beside the chart` });
         return;
@@ -247,6 +247,39 @@ export async function sendRecording(panel: vscode.WebviewPanel, chart: vscode.Ur
     } catch (e) {
         post({ ...base, error: String(e) });
     }
+}
+
+/** Where the recording panel's settings are kept, per chart and recording (owner's decision
+ *  2026-11-16: its octave, semitones, cents, speed and link are the recording's, kept for the next
+ *  time — nothing the writer edits by hand). Set once by the extension (workspaceState). */
+let settingsStore: vscode.Memento | undefined;
+
+/** Gives the panel's settings their store (see settingsStore). */
+export function useRecordingSettingsStore(store: vscode.Memento): void {
+    settingsStore = store;
+}
+
+function settingsKey(chart: string, audio: string): string {
+    return `lilysharp.recordingSettings:${chartKey(vscode.Uri.parse(chart).fsPath)}|${audio.toLowerCase()}`;
+}
+
+/** The panel settings kept for `audio` beside `chart`, or undefined. */
+export function recordingSettingsFor(chart: string, audio: string): Record<string, unknown> | undefined {
+    const kept = settingsStore?.get<unknown>(settingsKey(chart, audio));
+    return kept && typeof kept === 'object' ? kept as Record<string, unknown> : undefined;
+}
+
+/** Keeps the panel's settings for `audio` beside `chart` (the panel says them as they change): only
+ *  the panel's own numbers, never the chart's transpose, which comes with each picture. */
+export function keepRecordingSettings(chart: string, audio: string, settings: unknown): void {
+    if (!settingsStore || !settings || typeof settings !== 'object') { return; }
+    const s = settings as Record<string, unknown>;
+    const kept: Record<string, number | boolean> = {};
+    for (const k of ['speed', 'octave', 'semitones', 'cents'] as const) {
+        if (typeof s[k] === 'number' && Number.isFinite(s[k])) { kept[k] = s[k] as number; }
+    }
+    if (typeof s.linked === 'boolean') { kept.linked = s.linked; }
+    void settingsStore.update(settingsKey(chart, audio), kept);
 }
 
 /** Forgets what was sent to a preview, so the next update sends the recording again. */

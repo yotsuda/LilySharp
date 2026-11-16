@@ -632,7 +632,8 @@ public sealed partial class LilySharpLanguageServer
                 Pages = pages,
                 Error = errorText,
                 Renders = renders,
-                SelectedRender = drawnRender
+                SelectedRender = drawnRender,
+                ChartTranspose = ChartTransposeOf(tree, @params.RenderName),
             }, timing, receipt);
         }
         catch (OperationCanceledException)
@@ -700,6 +701,16 @@ public sealed partial class LilySharpLanguageServer
             slot.LastPagesVersion = 0;
             return (LilySharp.Core.Svg.SvgGenerator.Generate(tree, options, renderName), null);
         }
+    }
+
+    /// <summary>The semitones the score <paramref name="renderName"/> draws moves the music by: the
+    /// file's top-level <c>transpose</c> and the score's own (<see cref="SvgResponse.ChartTranspose"/>).</summary>
+    internal static int ChartTransposeOf(SyntaxTree tree, string? renderName)
+    {
+        int semitones = LilySharp.Core.Semantics.FileTranspose.ReadSemitones(tree.GetRoot());
+        if (RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), renderName)?.ScoreTranspose is { } t)
+            semitones += LilySharp.Core.Semantics.PitchTransposer.IntervalSemitones(t.step, t.alt, t.oct);
+        return semitones;
     }
 
     /// <summary>The wire shape of a page set: with <paramref name="baseVersion"/>, a delta

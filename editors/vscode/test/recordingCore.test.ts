@@ -148,6 +148,18 @@ describe('the recording panel', () => {
         assert.deepEqual(recordingPlan(RECORDING_DEFAULTS), { engine: 'resample', rate: 1, semitones: 0, gain: 1 });
     });
 
+    // The chart's own transpose (owner's decision 2026-11-16): the recording follows it, by pitch
+    // alone — on top of the panel's, and a linked (tape) recording is stretched rather than sped up.
+    it('follows the chart\'s transpose by pitch alone, linked or not', () => {
+        assert.deepEqual(recordingPlan({ ...RECORDING_DEFAULTS, chart: 2 }), { engine: 'stretch', rate: 1, semitones: 2, gain: Math.pow(10, -3 / 20) });
+        assert.equal(recordingPlan({ ...RECORDING_DEFAULTS, semitones: 1, chart: -3 }).semitones, -2);
+        const tape = recordingPlan({ ...RECORDING_DEFAULTS, linked: true, octave: 1, chart: -2 });
+        assert.equal(tape.engine, 'stretch');
+        assert.ok(Math.abs(tape.rate - 2) < 1e-9);      // the panel's pitch sets the speed …
+        assert.equal(tape.semitones, 10);                // … and the chart moves the pitch alone
+        assert.deepEqual(recordingPlan({ ...RECORDING_DEFAULTS, linked: true, chart: 0 }), { engine: 'resample', rate: 1, semitones: 0, gain: 1 });
+    });
+
     it('stretches for a speed or a pitch apart, turning a raised pitch down 3 dB', () => {
         const slow = recordingPlan({ ...RECORDING_DEFAULTS, speed: 0.5 });
         assert.deepEqual(slow, { engine: 'stretch', rate: 0.5, semitones: 0, gain: 1 });

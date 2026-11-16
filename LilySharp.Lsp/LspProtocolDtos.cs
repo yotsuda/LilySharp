@@ -172,6 +172,10 @@ public class SvgResponse
     /// drops this response instead of painting it.
     /// </summary>
     public bool Superseded { get; set; }
+    /// <summary>The semitones the drawn score moves the music by — the file's top-level
+    /// <c>transpose</c> and the score's own (owner's decision 2026-11-16): a recording beside the
+    /// chart, made in its written key, is played moved by them.</summary>
+    public int ChartTranspose { get; set; }
 }
 
 /// <summary>
