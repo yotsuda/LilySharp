@@ -84,6 +84,7 @@ static int Dispatch(string command, string[] args) => command switch
     "check" => RunCheck(args),
     "review" => RunReview(args),
     "layout" => RunLayout(args),
+    "shape" => RunShape(args),
     _ => UnknownCommand(command)
 };
 
@@ -117,6 +118,7 @@ static void ShowHelp()
           check      Check syntax without output
           review     Review a piece as music: what works, and what to look at
           layout     Print a text summary of the layout (system/line breaks, bars per system)
+          shape      Print the default chord diagram of chord names (lysc shape D Am7 --tuning guitar)
 
         Global Options:
           -h, --help          Show this help
@@ -921,6 +923,78 @@ static int RunHarmonize(string[] args)
         Console.WriteLine(block);
         return 0;
     });
+}
+
+// ============ Shape Command ============
+
+// `lysc shape D Am7 D/F#` (Dettato's request 9, owner's request 2026-11-16): the chord diagram the
+// editor writes first on a chord with none — Ctrl+Shift+Up / Down's first shape, ChordShapes.Default
+// (LilyPond's predefined one, else the first of Lily#'s order) — so a chart written elsewhere can
+// carry it without a second table of shapes. One line a name: the name, a tab, the shape (empty
+// when the name is not a chord the rows read, or no shape plays it). Exit 0 whatever the names; 1
+// for no name or an unknown tuning.
+static int RunShape(string[] args)
+{
+    if (WantsHelp(args))
+    {
+        Console.WriteLine("""
+            Usage: lysc shape <chord>... [--tuning <name>]
+
+            Prints the default chord diagram of each chord name — the shape the editor's
+            Ctrl+Shift+Up / Down writes first on a chord with none — one line a name:
+            the name, a tab, the shape (xx0232; a fret past 9 written -10-). The shape is
+            empty when the name is not a chord a chords row reads, or nothing plays it.
+            Names are read as a chords row reads them (D, Am7, F#m7b5, D/F#).
+
+            Options:
+              --tuning <name>   The instrument's strings (default: guitar), e.g. ukulele,
+                                guitarDropD — any tuning a chordTuning line takes.
+
+            Exit code: 0 (an unreadable name prints an empty shape); 1 for no name or
+            an unknown tuning.
+            """);
+        return 0;
+    }
+    string tuningWord = "guitar";
+    var names = new List<string>();
+    for (int i = 0; i < args.Length; i++)
+    {
+        if (args[i] == "--tuning")
+        {
+            if (i + 1 >= args.Length)
+            {
+                Console.Error.WriteLine("Error: --tuning needs a name, e.g. --tuning ukulele");
+                return 1;
+            }
+            tuningWord = args[++i];
+        }
+        else if (args[i].StartsWith("--", StringComparison.Ordinal))
+            return OptionError($"unknown option '{args[i]}'", "shape");
+        else
+            names.Add(args[i]);
+    }
+    if (names.Count == 0)
+    {
+        Console.Error.WriteLine("Error: no chord name. Try: lysc shape D Am7");
+        return 1;
+    }
+    if (!LilySharp.Core.Tablature.Tunings.Names.Contains(tuningWord))
+    {
+        Console.Error.WriteLine($"Error: unknown tuning '{tuningWord}'. Known: {string.Join(", ", LilySharp.Core.Tablature.Tunings.Names.OrderBy(n => n, StringComparer.Ordinal))}");
+        return 1;
+    }
+    var tuning = LilySharp.Core.Tablature.Tunings.Parse(tuningWord);
+    var output = new System.Text.StringBuilder();
+    foreach (string name in names)
+    {
+        string shape = LilySharp.Core.Music.ChordStructure.TryParseChordEntry(name, out var chord)
+                       && LilySharp.Core.Music.ChordShapes.Default(tuning, chord) is { } chosen
+            ? LilySharp.Core.Music.ChordVoicings.Spell(chosen.Frets)
+            : "";
+        output.Append(name).Append('\t').Append(shape).Append('\n');
+    }
+    Console.Out.Write(output.ToString());
+    return 0;
 }
 
 // ============ Review Command ============

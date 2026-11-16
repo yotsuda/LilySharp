@@ -109,10 +109,19 @@ export function registerDettatoContext(context: vscode.ExtensionContext, output:
 }
 
 /** Runs the reader; resolves to its exit code and what it said on stderr (undefined: cancelled). */
+/** The environment the reader runs in: with `LILYSHARP_LYSC_PATH`, the lysc this extension carries
+ *  (Dettato's request 9, 2026-11-16 — `lysc shape` gives the first chord's default diagram, so the
+ *  chart carries one without Dettato keeping a table of shapes). An environment variable rather
+ *  than an argument: a reader that does not know it is not stopped by it. */
+function readerEnv(lysc: string | undefined): NodeJS.ProcessEnv {
+    return lysc ? { ...process.env, LILYSHARP_LYSC_PATH: lysc } : process.env;
+}
+
 function run(exe: string, args: string[], output: vscode.OutputChannel,
-    progress: vscode.Progress<{ message?: string }>, token: vscode.CancellationToken): Promise<{ code: number | null; stderr: string } | undefined> {
+    progress: vscode.Progress<{ message?: string }>, token: vscode.CancellationToken,
+    lysc?: string): Promise<{ code: number | null; stderr: string } | undefined> {
     return new Promise((resolve, reject) => {
-        const child = cp.spawn(exe, args, { windowsHide: true });
+        const child = cp.spawn(exe, args, { windowsHide: true, env: readerEnv(lysc) });
         let cancelled = false, stderr = '';
         const stop = token.onCancellationRequested(() => { cancelled = true; child.kill(); });
         child.stdout.on('data', (b: Buffer) => output.append(b.toString()));
@@ -135,6 +144,12 @@ function run(exe: string, args: string[], output: vscode.OutputChannel,
 function askVersion(exe: string): Promise<DettatoVersion | undefined> {
     return new Promise(resolve => cp.execFile(exe, ['--version', '--json'], { timeout: 20000, windowsHide: true },
         (err, stdout) => resolve(err ? undefined : parseDettatoVersion(String(stdout)))));
+}
+
+/** The lysc beside the language server in this extension, or undefined when it is not there. */
+function bundledLysc(context: vscode.ExtensionContext): string | undefined {
+    const p = path.join(context.extensionPath, 'server', process.platform === 'win32' ? 'lysc.exe' : 'lysc');
+    return fs.existsSync(p) ? p : undefined;
 }
 
 /** Whether a version string ("0.3.1") is at least major.minor.patch. */
@@ -241,7 +256,7 @@ export async function convertRecording(context: vscode.ExtensionContext, uri: vs
     try {
         done = await vscode.window.withProgress(
             { location: vscode.ProgressLocation.Notification, title: `Lily#: reading ${name}`, cancellable: true },
-            (progress, token) => run(reader.path, dettatoArgs(recording, chart, replace), output, progress, token));
+            (progress, token) => run(reader.path, dettatoArgs(recording, chart, replace), output, progress, token, bundledLysc(context)));
     } catch (e) {
         void vscode.window.showErrorMessage(`Lily#: the Dettato reader could not start: ${(e as Error).message ?? e}`);
         return;

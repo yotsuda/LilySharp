@@ -582,6 +582,33 @@ measure — to stdout. A starting point to drop into your section (referenced wi
 lysc harmonize song.lys               # Prints a chords part
 ```
 
+### shape - A chord name's default diagram
+
+```bash
+lysc shape <chord>... [--tuning <name>]
+```
+
+Prints the chord diagram the editor writes first on a chord with none — the first shape
+Ctrl+Shift+Up / Down gives: LilyPond's predefined one, else the first of Lily#'s order — one line
+a name: the name, a tab, the shape (`xx0232`; a fret past 9 is written `-10-`). Names are read as a
+`chords` row reads them (`D`, `Am7`, `Bm7(b5)`, `D/F#`). The shape is empty when the name is not
+a chord a row reads, or nothing plays it. For a program that writes charts (Dettato puts it on a
+converted chart's first chord; the extension tells it where lysc is in `LILYSHARP_LYSC_PATH`).
+
+**Options:**
+| Option | Description |
+|--------|-------------|
+| `--tuning <name>` | The strings (default `guitar`): any tuning a `chordTuning` line takes, e.g. `ukulele`, `guitarDropD` |
+| `-h, --help` | Show help |
+
+Exit code 0 whatever the names; 1 for no name or an unknown tuning.
+
+**Examples:**
+```bash
+lysc shape D Am7 D/F#                 # D<TAB>xx0232, Am7<TAB>x02010, D/F#<TAB>xx4232
+lysc shape C --tuning ukulele         # C<TAB>0003
+```
+
 ### check - Syntax Check
 
 ```bash
