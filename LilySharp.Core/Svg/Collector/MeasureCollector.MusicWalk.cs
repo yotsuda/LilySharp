@@ -1823,39 +1823,9 @@ public sealed partial class MeasureCollector
                             _v.Meta.TempoText = null;
                         break;
                     }
-                    // The PRINTED count: `tempo "Tempo I" 4 = 92 bare` is in force at 92
-                    // (above) and its mark is the words alone (TempoValue.PrintedBpm).
-                    if (tempoChange.PrintedBpm is int bpm)
-                        _musicMarks.Add(new MusicMarkItem(
-                            MusicMarkType.Tempo, Layout.MetronomeMarkGeometry.CountText(bpm, tempoChange.Value.IsApproximate),
-                            // The declaration's first VALUE — see TempoDataPos.
-                            builder.CurrentMeasureIndex, TempoDataPos(tempoChange),
-                            builder.CurrentItemCount, builder.CurrentMoment)
-                        {
-                            // The mid-music path dropped everything but the
-                            // number — "tempo Lively 4. = 80" rendered ♩=80.
-                            TempoText = tempoChange.Marking,
-                            TempoBeatUnit = tempoChange.BeatUnit ?? 4,
-                            TempoDots = tempoChange.BeatDots,
-                            SwingSubdivision = tempoChange.SwingSubdivision,
-                            TempoPieces = PiecePositions(tempoChange),
-                        });
-                    else if (tempoChange.Marking != null || tempoChange.SwingSubdivision != 0)
-                        // No count: a text-only change ("tempo Meno mosso", bold
-                        // marking) and/or the swing equation ("tempo swing").
-                        _musicMarks.Add(new MusicMarkItem(
-                            MusicMarkType.Tempo, "",
-                            // The declaration's first VALUE — see TempoDataPos.
-                            builder.CurrentMeasureIndex, TempoDataPos(tempoChange),
-                            builder.CurrentItemCount, builder.CurrentMoment)
-                        {
-                            TempoText = tempoChange.Marking,
-                            SwingSubdivision = tempoChange.SwingSubdivision,
-                            TempoPieces = PiecePositions(tempoChange),
-                            // A `bare` count, for the twin alone (MusicMarkItem.HiddenTempoCount).
-                            HiddenTempoCount = tempoChange.Value.CountHidden && tempoChange.Bpm is int played
-                                ? (played, tempoChange.BeatUnit ?? 4, tempoChange.BeatDots) : null,
-                        });
+                    // The mark it prints (TempoMark), at the note that follows it.
+                    if (TempoMark(tempoChange, builder.CurrentMeasureIndex, builder.CurrentItemCount, builder.CurrentMoment) is { } tempoMark)
+                        _musicMarks.Add(tempoMark);
                 }
                 break;
 

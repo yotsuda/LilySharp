@@ -818,6 +818,47 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>
+    /// The mark a tempo change in the music prints — a part's, or a chord row's at a bar's head
+    /// (<see cref="ChordNameCollector"/>, owner's decision 2026-11-16) — at
+    /// <paramref name="measure"/>, before the item <paramref name="itemIndex"/> at
+    /// <paramref name="moment"/>; null when it prints nothing (a bare count with no words).
+    /// </summary>
+    internal static MusicMarkItem? TempoMark(TempoDeclarationSyntax tempoChange, int measure, int itemIndex, Fraction moment)
+    {
+        // The PRINTED count: `tempo "Tempo I" 4 = 92 bare` is in force at 92 and its mark is
+        // the words alone (TempoValue.PrintedBpm).
+        if (tempoChange.PrintedBpm is int bpm)
+            return new MusicMarkItem(
+                MusicMarkType.Tempo, Layout.MetronomeMarkGeometry.CountText(bpm, tempoChange.Value.IsApproximate),
+                // The declaration's first VALUE — see TempoDataPos.
+                measure, TempoDataPos(tempoChange), itemIndex, moment)
+            {
+                // The mid-music path dropped everything but the
+                // number — "tempo Lively 4. = 80" rendered ♩=80.
+                TempoText = tempoChange.Marking,
+                TempoBeatUnit = tempoChange.BeatUnit ?? 4,
+                TempoDots = tempoChange.BeatDots,
+                SwingSubdivision = tempoChange.SwingSubdivision,
+                TempoPieces = PiecePositions(tempoChange),
+            };
+        if (tempoChange.Marking != null || tempoChange.SwingSubdivision != 0)
+            // No count: a text-only change ("tempo Meno mosso", bold
+            // marking) and/or the swing equation ("tempo swing").
+            return new MusicMarkItem(
+                MusicMarkType.Tempo, "",
+                measure, TempoDataPos(tempoChange), itemIndex, moment)
+            {
+                TempoText = tempoChange.Marking,
+                SwingSubdivision = tempoChange.SwingSubdivision,
+                TempoPieces = PiecePositions(tempoChange),
+                // A `bare` count, for the twin alone (MusicMarkItem.HiddenTempoCount).
+                HiddenTempoCount = tempoChange.Value.CountHidden && tempoChange.Bpm is int played
+                    ? (played, tempoChange.BeatUnit ?? 4, tempoChange.BeatDots) : null,
+            };
+        return null;
+    }
+
+    /// <summary>
     /// Where a <c>tempo</c> declaration's metronome mark points its data-pos: at the
     /// declaration's FIRST VALUE, so clicking the mark in the preview lands on the
     /// thing worth editing rather than on the keyword —

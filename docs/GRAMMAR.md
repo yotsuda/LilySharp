@@ -1844,7 +1844,7 @@ LyricText      = { Word , [ '[' , Reading , ']' ] } ;
                     no note; '_' and a detached '~' take one note each, holding the previous
                     syllable. *)
 
-ChordsBlock    = 'chords' , [ Identifier ] , [ 'for' , PartRef ] , '{' , { ChordRowEntry | ChordExtend | ChordRowRest | Barline | ChordRowBreak | ChordRowTime } , '}' ;
+ChordsBlock    = 'chords' , [ Identifier ] , [ 'for' , PartRef ] , '{' , { ChordRowEntry | ChordExtend | ChordRowRest | Barline | ChordRowBreak | ChordRowTime | ChordRowTempo } , '}' ;
                  (* The UNNAMED track (2026-10-09) is placed by a score's bare 'chords' row. *)
                  (* 'for PART' (owner's decision 2026-10-28, Semantics.ChordTrackPitch): the track
                     is typed in PART's letters — under PART's 'pitch', so the player's letters of
@@ -1905,6 +1905,14 @@ ChordRowTime   = TimeSignature ;
                     different one is LYS2005, and the sound and the exports follow. After a chord,
                     a rest or a '.' of its bar it is LYS1073. 'partial' stays the section
                     header's: a pickup opens a section, and the header says it once. *)
+ChordRowTempo  = TempoDecl ;
+                 (* AT A BAR'S HEAD, by ChordRowTime's rule (decided by the owner 2026-11-16):
+                    '| G | tempo "Slower" 4 = 60 C |'. The SCORE'S tempo from that bar, as a
+                    'tempo' in the music of a part: the mark over the bar it opens (one a bar, a
+                    part's first), and the MIDI, the MusicXML and the LilyPond twin from there. Like
+                    any tempo it holds past the section (it is not reset there). The MIDI hears it
+                    when the score places the row. After a chord, a rest or a '.' of its bar it is
+                    LYS1073. *)
 ChordEntry     = ChordRoot , [ Quality ] , [ '(' , AlterationList , ')' ] , [ '/' , ChordRoot ] ;
 ChordRoot      = ( 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' ) , [ '#' | 'b' | '♯' | '♭' ] ;
 ChordExtend    = '.' ;

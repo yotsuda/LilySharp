@@ -7726,7 +7726,7 @@ public sealed class MusicXmlExporter
     /// <remarks>The bars are counted by <see cref="ChordRowBarLines"/>, as <see cref="RowBars"/>
     /// counts them. A row's ending stands flat among its chords (an empty
     /// <see cref="InlineVoltaSyntax"/> and a <see cref="VoltaEndSyntax"/>).</remarks>
-    private static void WriteRowSigns(IReadOnlyList<SyntaxNode> items, Func<int, MusicXmlMeasure?> measureAt)
+    private void WriteRowSigns(IReadOnlyList<SyntaxNode> items, Func<int, MusicXmlMeasure?> measureAt)
     {
         int bars = 0;
         bool holds = false;
@@ -7768,6 +7768,19 @@ public sealed class MusicXmlExporter
                     break;
                 case ChordEntrySyntax or RestSyntax or ChordExtendSyntax:
                     holds = true;
+                    break;
+                // A `tempo` at a bar's head (owner's decision 2026-11-16): the score's, a direction
+                // at the head of the bar it opens, as a part's music writes one.
+                case TempoDeclarationSyntax tempo when !holds && measureAt(bars) is { } head:
+                    {
+                        var was = _currentMeasure;
+                        _currentMeasure = head;
+                        int before = head.Directions.Count;
+                        ProcessTempo(tempo);
+                        for (int d = before; d < head.Directions.Count; d++)
+                            head.Directions[d].Offset = 0;
+                        _currentMeasure = was;
+                    }
                     break;
                 case InlineVoltaSyntax ending:
                     Close(stops: false);

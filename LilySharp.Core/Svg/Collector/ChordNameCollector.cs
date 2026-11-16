@@ -993,6 +993,13 @@ internal sealed class ChordNameCollector
                         : MeasureOfBar(startMeasure, localMeasure, out _);
                     RowScoreMarks.Add(new MusicMarkItem(navType, navMeasure, nav.SourceStart));
                 }
+                // A `tempo` at a bar's head (owner's decision 2026-11-16): the score's mark over the
+                // bar it opens, as a part's. After a chord of its bar it is LYS1073, unread.
+                else if (item is TempoDeclarationSyntax rowTempo && pending.Count == 0)
+                {
+                    if (MeasureCollector.TempoMark(rowTempo, MeasureOfBar(startMeasure, localMeasure, out _), 0, Fraction.Zero) is { } tempoMark)
+                        RowScoreMarks.Add(tempoMark);
+                }
                 else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
                 {
                     pending.Add(item);

@@ -969,6 +969,7 @@ public sealed class MidiExporter
         _keyStarts = midi.KeyStarts;
 
         var conductorTrack = new MidiTrack { Name = "Tempo", Channel = 0 };
+        _conductorTrack = conductorTrack;
         // The default tempo at tick 0; a book's own `tempo` replaces it there (SetTempo:
         // one event per moment).
         conductorTrack.SetTempo(0, BpmToMicroseconds(_tempo));
@@ -2611,6 +2612,16 @@ public sealed class MidiExporter
                     RepeatSignKind.Navigation, Navigation: rowMark.MarkType, Lane: part ?? MusicLane));
                 continue;
             }
+            // A `tempo` at a bar's head (owner's decision 2026-11-16) is the score's from that bar, as
+            // one in a part's music: at the bar's tick. After a chord of its bar it is LYS1073, unread.
+            if (item is TempoDeclarationSyntax rowTempo && bar.Count == 0 && _conductorTrack != null)
+            {
+                int was = _currentTick;
+                _currentTick = barStart;
+                ProcessTempo(rowTempo, _conductorTrack);
+                _currentTick = was;
+                continue;
+            }
             if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
                 bar.Add(item);
         }
@@ -2619,6 +2630,9 @@ public sealed class MidiExporter
         _chordRowLastBar = barIndex > 0 ? barStart - thisBarTicksOfLast : startTick;
         return barStart;
     }
+
+    // The conductor track of the export under way: a chord row's `tempo` writes to it (PlayChordRow).
+    private MidiTrack? _conductorTrack;
 
     // Where the last bar of the chord row PlayChordRow (PlaySectionChordRows: the longest of
     // them) just sounded opened — what RowsAndLanesEnd asks.

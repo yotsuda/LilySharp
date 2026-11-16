@@ -159,4 +159,58 @@ public class ChordRowTimeTests
         Assert.Contains("\\time 2/4 s2 |", ly);
         Assert.DoesNotContain("\\time 1/2", ly);
     }
+
+    // ---------------------------------------------------------------- tempo, by the same rule
+
+    private static string TempoBook(string row = "G C | G | tempo \"Slower\" 4 = 60 C | D |", bool withAPart = false) =>
+        "time 4/4\ntempo 120\noctave absolute\n" + (withAPart ? "part mel { }\n" : "")
+        + $"section A {{\n  chords harmony {{ {row} }}\n"
+        + (withAPart ? "  mel { g'1 | g'1 | g'1 | g'1 | }\n" : "")
+        + "}\nform { A }\nscore { chords harmony" + (withAPart ? "\n staff mel" : "") + " }\n";
+
+    [Fact]
+    public void ATempoAfterAChordOfItsBar_IsTheSameError()
+    {
+        var tree = SyntaxTree.Parse(TempoBook("G tempo 60 C | D |"));
+        var error = Assert.Single(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        Assert.Equal(DiagnosticCodes.ChordsTimeInsideBar, error.Code);
+        Assert.Equal("tempo", tree.Text.Substring(error.Span.Start, error.Span.Length));
+        Assert.Equal(tree.Text, tree.GetRoot().ToFullString());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ATempoAtABarsHead_IsTheScoresMark_OverThatBar(bool withAPart)
+    {
+        var tree = SyntaxTree.Parse(TempoBook(withAPart: withAPart));
+        Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        var score = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
+        var mark = Assert.Single(score.MusicMarks, m => m.Type == MusicMarkType.Tempo && m.MeasureIndex > 0);
+        Assert.Equal(2, mark.MeasureIndex);
+        Assert.Equal("Slower", mark.TempoText);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ATempoAtABarsHead_SoundsFromThatBar(bool withAPart)
+    {
+        var tempos = new MidiExporter().Export(SyntaxTree.Parse(TempoBook(withAPart: withAPart)))
+            .Tracks.SelectMany(t => t.TempoChanges).OrderBy(t => t.Tick)
+            .Select(t => (t.Tick, Bpm: (int)Math.Round(60_000_000.0 / t.MicrosecondsPerBeat))).ToArray();
+        Assert.Equal(new[] { (0, 120), (8 * 480, 60) }, tempos);
+    }
+
+    [Fact]
+    public void ATempoAtABarsHead_IsInTheMusicXml_AndTheTwin()
+    {
+        var xml = new MusicXmlExporter().Export(SyntaxTree.Parse(TempoBook())).ToXml();
+        var bar3 = xml.Descendants("measure").First(m => (string)m.Attribute("number")! == "3");
+        Assert.Equal("60", bar3.Descendants("sound").Single().Attribute("tempo")!.Value);
+        Assert.Equal("Slower", bar3.Descendants("words").Single().Value);
+
+        string ly = new LilyPondExporter().Export(SyntaxTree.Parse(TempoBook()));
+        Assert.Contains("\\tempo \"Slower\" 4 = 60 s1 |", ly);
+    }
 }

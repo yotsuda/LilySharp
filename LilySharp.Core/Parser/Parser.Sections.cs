@@ -713,10 +713,14 @@ internal sealed partial class Parser
         if (item is BreakGreen)
             (breaks ??= new List<(int, TextSpan)>()).Add((items.Count, span));
         // A `time` after an entry of its bar: the row writes a meter at a bar's head only.
-        if (item is TimeSignatureGreen && ChordSlotBefore(items, items.Count))
+        if (item is TimeSignatureGreen or TempoDeclarationGreen && ChordSlotBefore(items, items.Count))
+        {
+            string word = item is TimeSignatureGreen ? "time" : "tempo";
+            string example = item is TimeSignatureGreen ? "| time 2/4 C |" : "| tempo 72 C |";
             _diagnostics.Error(span, DiagnosticCodes.ChordsTimeInsideBar,
-                "'time' stands inside a bar of a chords track, after a chord of it. A chords track "
-                + "changes the meter at a bar's head only: write it right after the '|' (| time 2/4 C |).");
+                $"'{word}' stands inside a bar of a chords track, after a chord of it. A chords track "
+                + $"changes the {(word == "time" ? "meter" : "tempo")} at a bar's head only: write it right after the '|' ({example}).");
+        }
         items.Add(item ?? SkipStrayChordToken());
     }
 
@@ -870,6 +874,10 @@ internal sealed partial class Parser
         // stand: ReportChordTimeInsideABar.
         if (Check(SyntaxKind.TimeKeyword))
             return ParseTimeSignature();
+        // `tempo "Slower" 4 = 72` at a bar's head, the same rule as `time` (owner's decision
+        // 2026-11-16): the score's tempo from there, as a part's music writes it.
+        if (Check(SyntaxKind.TempoKeyword))
+            return ParseTempoDeclaration();
         // A navigation mark, as a part's music writes it: a chart's segno, coda and D.S.
         if (Current.Kind is SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword
             or SyntaxKind.DcKeyword or SyntaxKind.DsKeyword or SyntaxKind.ToKeyword)
