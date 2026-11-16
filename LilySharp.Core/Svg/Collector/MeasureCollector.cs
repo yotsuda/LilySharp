@@ -2724,6 +2724,18 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>
+    /// A score of ONE staff, as the single-staff road wraps it (SvgGenerator.CollectScore), with
+    /// the key in words when that staff shows no signature (<see cref="KeyNameMarks"/>; owner's
+    /// request 2026-11-16: <c>score { staff m as lines 1 }</c> printed no key, which the same
+    /// staff under a chords row did). After every other mark, as CollectMultiStaff adds them.
+    /// </summary>
+    internal MultiStaffScore WithKeyNames(MultiStaffScore score, SyntaxTree tree) =>
+        KeyNameMarks.Wanted(score.StaffGroups)
+            ? score with { MusicMarks = KeyNameMarks.Add(score.MusicMarks, score.StaffGroups,
+                tree.GetRoot(), _sectionHeaders, _sectionState.AllStarts, _rowKeys) }
+            : score;
+
+    /// <summary>
     /// The structure a part contributes is SCORE-LEVEL even when the part isn't drawn: navigation
     /// / rehearsal marks (segno / D.S. / …) and repeat barlines (|: :|) — every part shares the bar
     /// grid and repeats / navigates together. This collects the parts this score OMITS from an

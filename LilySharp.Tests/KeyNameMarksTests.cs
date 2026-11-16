@@ -28,8 +28,10 @@ namespace LilySharp.Tests;
 /// <summary>
 /// The key in words over a score whose staves show no signature (owner's request 2026-11-16):
 /// every staff a one-line staff — the chord chart's — prints "Key: D" over the first bar and
-/// again where the key changes. A staff of more lines (two to four draw the signature themselves:
-/// owner's decision the same day), a tab or a drum staff in the score, and it prints none.
+/// again where the key changes — and so does a score of tab staves, alone or with one-line staves
+/// (owner's request the same day). A staff of more lines that is no tab (two to four draw the
+/// signature themselves: owner's decision the same day) or a drum staff in the score, and it
+/// prints none.
 /// </summary>
 [Trait("Category", "Unit")]
 public class KeyNameMarksTests
@@ -86,6 +88,35 @@ public class KeyNameMarksTests
     [InlineData("chords h  staff l as lines 1  staff l as lines 2")]
     public void AScoreWithAStaffOfMoreLines_PrintsNone(string scoreLine)
         => Assert.Empty(KeyWords(Svg(Book(scoreLine))));
+
+    // A part with music, for the staves that are no chords row's (owner's request 2026-11-16).
+    private const string Played = """
+        title "K"
+        time 4/4
+        key d major
+        part g { instrument guitar }
+        section A { g { d'1 | g'1 | } chords h { D | G | } }
+        section B { key f major  g { f'1 | c''1 | } chords h { F | C | } }
+        form { A B }
+        """;
+
+    /// <summary>A one-line staff written alone (it took the single-staff road, which printed no
+    /// words), a tab staff alone or under a row (a tab shows no signature either), and the two
+    /// together: the key in words at the start and the change (owner's request 2026-11-16).</summary>
+    [Theory]
+    [InlineData("staff g as lines 1")]
+    [InlineData("tab g")]
+    [InlineData("chords h  tab g")]
+    [InlineData("staff g as lines 1  tab g")]
+    public void AOneLineOrTabStaffAlone_PrintsTheKeyInWords(string scoreLine)
+        => Assert.Equal(new[] { "Key: D", "Key: F" }, KeyWords(Svg(Played + $"score {{ {scoreLine} }}\n")).Select(w => w.Text));
+
+    /// <summary>…and a staff of five lines beside the tab says the key itself: none.</summary>
+    [Theory]
+    [InlineData("staff g  tab g")]
+    [InlineData("staff g")]
+    public void ATabBesideAFiveLineStaff_PrintsNone(string scoreLine)
+        => Assert.Empty(KeyWords(Svg(Played + $"score {{ {scoreLine} }}\n")));
 
     [Fact]
     public void AMinorKey_IsNamedAsAChordSymbol()

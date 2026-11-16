@@ -1826,10 +1826,12 @@ internal static class LpGeometryProbes
     /// <c>\new Staff</c> does.
     /// </para>
     /// </remarks>
+    // (No `key`: C major's signature is empty on either side, and a tab score that writes a key
+    // prints it in words over the first bar since 2026-11-16 — LILYSHARP-OWN, KeyNameMarks — which
+    // would stand over the staff this book measures the page's anchor against.)
     private static string TabPageScore(string name, string render) => $$"""
         octave absolute
         time 4/4
-        key c major
 
         part gtr { octave 3 clef treble_8 tuning guitar }
 

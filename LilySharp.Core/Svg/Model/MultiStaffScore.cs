@@ -198,8 +198,9 @@ public sealed record MultiStaffScore
     internal ImmutableDictionary<int, (string Part, ImmutableArray<Measure> Measures)> RowMelodies { get; init; }
         = ImmutableDictionary<int, (string Part, ImmutableArray<Measure> Measures)>.Empty;
 
-    /// <summary>Music marks (segno, coda, fine, D.S., etc.).</summary>
-    public ImmutableArray<MusicMarkItem> MusicMarks { get; }
+    /// <summary>Music marks (segno, coda, fine, D.S., etc.). Init: a one-staff score takes the key's
+    /// words after it is wrapped (MeasureCollector.WithKeyNames).</summary>
+    public ImmutableArray<MusicMarkItem> MusicMarks { get; init; }
 
     /// <summary>Custom text annotations.</summary>
     public ImmutableArray<CustomTextItem> CustomTexts { get; }

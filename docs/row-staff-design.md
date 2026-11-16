@@ -86,6 +86,12 @@
 
 ## 調を文字で（オーナー要望 2026-11-16・第1285）
 
+- **広げた（オーナー要望 2026-11-16・第1286）**: タブ譜も調号を描かない（LilyPond の TabStaff も Key_engraver を外す）ので、
+  **一線譜とタブ譜だけ**の score（タブ譜だけ・コード行＋タブ譜・一線譜＋タブ譜）にも出す。打楽器の譜と、タブ譜でない 2 線以上の譜が
+  あれば出さない（5 線譜＋タブ譜は 5 線譜が調号を描く）。**譜表が 1 本の score**（`score { staff m as lines 1 }`）は別の経路
+  （`SvgGenerator.CollectScore` の単一譜表の包み）を通っていて出ていなかった＝`MeasureCollector.WithKeyNames` を同じ所に通した。
+  台帳の `page.tab-only.first-staff-refpoint` の探り譜（`LpGeometryProbes.TabPageScore`）は `key c major` を外した
+  （ハ長調は両側とも調号が無く、測っているのはページの位置）。
 - **score の譜表（行は除く）が全部一線譜**（自動の一線譜・`as lines 1`）で、タブ譜・打楽器の譜が無ければ
   （2〜4 線の譜は記号を自分で描くので出さない＝オーナー決定 2026-11-16。表記も「Key: D」で決定）、
   最初の小節と転調の小節の頭に **「Key: D」**（短調は「Key: Bm」・♯♭は「F#」「Bb」の ASCII）を出す

@@ -23,24 +23,28 @@ namespace LilySharp.Core.Svg.Collector;
 /// <summary>
 /// The key as words over a score whose staves show no signature — every staff a ONE-LINE staff
 /// (owner's request 2026-11-16, the chord chart's one-line staff; staves of two to four lines draw
-/// the signature themselves and take no words — owner's decision the same day): "Key: D" over the
+/// the signature themselves and take no words — owner's decision the same day) or a TAB staff
+/// (owner's request the same day, with the one-line staff written alone): "Key: D" over the
 /// first bar, and again over a bar the key changes at (<see cref="MusicMarkType.KeyName"/>).
 /// </summary>
 /// <remarks>
 /// LILYSHARP-OWN. A one-line staff is LilyPond's RhythmicStaff, which removes the Key_engraver
 /// (ly/engraver-init.ly), and a staff of two to four lines draws the signature at positions its
 /// lines do not have. The words follow the chord chart: the tonic spelled as a chord symbol's root
-/// ("D", "Bb", "F#"), a minor key with "m" ("Bm"). A tab or drum staff in the score, or any staff
-/// of five lines or more, and the score gets none; so does a key with no tonic (<c>key custom</c>,
-/// <c>key none</c>) and a file that writes no key at all.
+/// ("D", "Bb", "F#"), a minor key with "m" ("Bm"). A drum staff in the score, or any staff of two
+/// lines or more that is no tab, and the score gets none; so does a key with no tonic
+/// (<c>key custom</c>, <c>key none</c>) and a file that writes no key at all. A score of ONE staff
+/// gets them on its own road (<see cref="MeasureCollector.WithKeyNames"/>: until 2026-11-16 only
+/// a score of several staves or rows did, so <c>score { staff m as lines 1 }</c> printed none).
 /// </remarks>
 internal static class KeyNameMarks
 {
     /// <summary>The prefix the words carry.</summary>
     internal const string Prefix = "Key: ";
 
-    /// <summary>Whether the score's staves (rows aside) are all one-line staves, none a tab or
-    /// drum staff, and there is one at least.</summary>
+    /// <summary>Whether the score's staves (rows aside) all show no key signature — one-line
+    /// staves and tab staves (owner's request 2026-11-16: a score of tab alone, as LilyPond's
+    /// TabStaff removes the Key_engraver too) — none a drum staff, and there is one at least.</summary>
     internal static bool Wanted(ImmutableArray<StaffGroup> staffGroups)
     {
         bool any = false;
@@ -49,7 +53,7 @@ internal static class KeyNameMarks
             {
                 if (staff.IsTextRow)
                     continue;
-                if (staff.IsTab || staff.Clef == ClefType.Percussion || staff.Lines != 1)
+                if (staff.Clef == ClefType.Percussion || (!staff.IsTab && staff.Lines != 1))
                     return false;
                 any = true;
             }
