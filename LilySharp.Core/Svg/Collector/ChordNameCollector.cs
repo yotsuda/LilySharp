@@ -772,6 +772,45 @@ internal sealed class ChordNameCollector
     public static int CountSectionBars(SectionDeclarationSyntax section, out bool trailingOpen)
         => CountBars(SectionItems(section), out trailingOpen);
 
+    /// <summary>
+    /// The <c>time</c>s a chord row writes (Dettato's request 13, owner's decision 2026-11-16): each
+    /// at the bar of its row it stands in — counted as <see cref="CountBars(IEnumerable{SyntaxNode}, out bool)"/>
+    /// counts, the one rule — and whether it stands after that bar's first entry (<c>MidBar</c>:
+    /// refused by the validator, and read by nobody). For <see cref="SectionMeterPlan"/>, which makes a
+    /// row's change at a bar's head the score's meter from that bar, as a part's.
+    /// </summary>
+    internal static List<(int Bar, TimeSignatureSyntax Time, bool MidBar)> TimesAtBars(SyntaxNode container)
+    {
+        var found = new List<(int, TimeSignatureSyntax, bool)>();
+        IEnumerable<SyntaxNode> items = container switch
+        {
+            ChordPartBlockSyntax block => block.Items,
+            SectionDeclarationSyntax section => SectionItems(section),
+            _ => [],
+        };
+        int bars = 0;
+        bool pendingEntries = false;
+        foreach (var item in items)
+        {
+            if (item is BarlineSyntax bar)
+            {
+                if (Semantics.ChordRowBarLines.Closes(bar, pendingEntries))
+                    bars++;
+                pendingEntries = false;
+            }
+            else if (item is VoltaEndSyntax end && Semantics.ChordRowBarLines.EndCloses(end, pendingEntries))
+            {
+                bars++;
+                pendingEntries = false;
+            }
+            else if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
+                pendingEntries = true;
+            else if (item is TimeSignatureSyntax time)
+                found.Add((bars, time, pendingEntries));
+        }
+        return found;
+    }
+
     private static int CountBars(IEnumerable<SyntaxNode> items, out bool trailingOpen)
     {
         int bars = 0;

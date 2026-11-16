@@ -108,15 +108,21 @@ internal sealed class SectionMeterPlan
             if (PartNameOf(n) is { } name)
                 parts.Add(name);
         var ownByPart = new Dictionary<(string Section, string Part), HashSet<int>>();
+        bool fromARow = false;   // a change a chord row writes: no part writes it itself
         foreach (var voice in SectionBarCounts.SemanticVoices(root, phrases))
         {
-            if (voice.IsChords || voice.IsLyrics)
+            if (voice.IsLyrics)
                 continue;
+            // A chord row's `time` at a bar's head is the score's too (Dettato's request 13, owner's
+            // decision 2026-11-16): its bars are counted by its bar lines (no beats to split by).
             var written = new List<(int Bar, TimeSignatureSyntax Time, bool MidBar)>();
-            var bars = MeasureModel.Split(voice.Container, phrases, null, written);
+            var bars = voice.IsChords ? null : MeasureModel.Split(voice.Container, phrases, null, written);
+            if (voice.IsChords)
+                written = ChordNameCollector.TimesAtBars(voice.Container);
             if (written.Count == 0)
                 continue;
-            plan.NoteUnmeteredBars(voice.SectionName, bars, written);
+            if (bars != null)
+                plan.NoteUnmeteredBars(voice.SectionName, bars, written);
             if (!plan._changes.TryGetValue(voice.SectionName, out var changes))
                 plan._changes[voice.SectionName] = changes = new SortedDictionary<int, TimeSignatureSyntax>();
             var own = new HashSet<int>();
@@ -134,6 +140,11 @@ internal sealed class SectionMeterPlan
                 changes[bar] = time;
             }
             plan._own[voice.Container] = own;
+            if (voice.IsChords)
+            {
+                fromARow |= own.Count > 0;
+                continue;   // a row is no part: what it writes, every part reads
+            }
             // The single-part shorthand (music straight in a top-level section) is the lone
             // part's, when the book has one.
             if ((PartNameOf(voice.Container) ?? (parts.Count == 1 ? parts.First() : null)) is { } part)
@@ -141,6 +152,8 @@ internal sealed class SectionMeterPlan
         }
         foreach (var (section, changes) in plan._changes)
             plan._timeline[section] = changes;
+        if (fromARow)
+            return plan;
         foreach (var (section, changes) in plan._changes)
             foreach (var bar in changes.Keys)
                 foreach (var part in parts)
@@ -230,6 +243,11 @@ internal sealed class SectionMeterPlan
         SectionDeclarationSyntax { Parent: PartDeclarationSyntax decl } => decl.Name.Text,
         _ => null,
     };
+
+    /// <summary>Every change at a bar's start in <paramref name="section"/> (the score's meter bar by
+    /// bar, <see cref="MeterOfBar"/>'s source), by bar index within it — null when none.</summary>
+    public IReadOnlyDictionary<int, TimeSignatureSyntax>? TimelineOf(string section)
+        => _timeline.TryGetValue(section, out var c) && c.Count > 0 ? c : null;
 
     /// <summary>The changes of <paramref name="section"/>, by bar index within it.</summary>
     public IReadOnlyDictionary<int, TimeSignatureSyntax>? ChangesOf(string section)

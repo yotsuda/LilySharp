@@ -917,6 +917,12 @@ public static class DiagnosticCodes
     /// what may be cut. The word is kept in the tree and breaks nothing.</summary>
     public const string ChordsBreakInsideBar = "LYS1069";
 
+    /// <summary>A <c>time</c> stands after a chord, a rest or a <c>.</c> of its bar in a chords track
+    /// (<c>C time 2/4 F |</c>). A row writes a meter at a bar's head only (Dettato's request 13,
+    /// owner's decision 2026-11-16): the bar it opens is a bar of that meter. Kept in the tree, read
+    /// by nobody.</summary>
+    public const string ChordsTimeInsideBar = "LYS1073";
+
     /// <summary>Two parts (or a part and a chords row) write DIFFERENT repeat signs on the same
     /// bar line of a section — <c>|:</c> in one and <c>:|</c> in the other, or <c>:|*2</c> and
     /// <c>:|*3</c>. A repeat is the score's (docs/inline-repeat-design.md §3.2): a part that

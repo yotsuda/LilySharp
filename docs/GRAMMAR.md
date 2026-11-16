@@ -1844,7 +1844,7 @@ LyricText      = { Word , [ '[' , Reading , ']' ] } ;
                     no note; '_' and a detached '~' take one note each, holding the previous
                     syllable. *)
 
-ChordsBlock    = 'chords' , [ Identifier ] , [ 'for' , PartRef ] , '{' , { ChordRowEntry | ChordExtend | ChordRowRest | Barline | ChordRowBreak } , '}' ;
+ChordsBlock    = 'chords' , [ Identifier ] , [ 'for' , PartRef ] , '{' , { ChordRowEntry | ChordExtend | ChordRowRest | Barline | ChordRowBreak | ChordRowTime } , '}' ;
                  (* The UNNAMED track (2026-10-09) is placed by a score's bare 'chords' row. *)
                  (* 'for PART' (owner's decision 2026-10-28, Semantics.ChordTrackPitch): the track
                     is typed in PART's letters — under PART's 'pitch', so the player's letters of
@@ -1896,6 +1896,15 @@ ChordRowBreak  = 'break' | 'noBreak' | 'pageBreak' | 'noPageBreak' ;
                     takes none of the four words. A break belongs to the SCORE: every score of
                     the piece breaks where any part, shown or not, or any chords track says, and
                     a 'break' against a 'noBreak' at one bar line is LYS4077, the break winning. *)
+ChordRowTime   = TimeSignature ;
+                 (* AT A BAR'S HEAD (Dettato's request 13, decided by the owner 2026-11-16):
+                    right after a bar line, or at the row's start - '| G | time 2/4 C | time 4/4 D |'.
+                    It is the SCORE'S meter from that bar to the section's end, as a 'time' in the
+                    music of a part (SectionMeterPlan): the page engraves it, the row's slots grid
+                    on it, a part that writes no 'time' there reads it, a part that writes a
+                    different one is LYS2005, and the sound and the exports follow. After a chord,
+                    a rest or a '.' of its bar it is LYS1073. 'partial' stays the section
+                    header's: a pickup opens a section, and the header says it once. *)
 ChordEntry     = ChordRoot , [ Quality ] , [ '(' , AlterationList , ')' ] , [ '/' , ChordRoot ] ;
 ChordRoot      = ( 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' ) , [ '#' | 'b' | '♯' | '♭' ] ;
 ChordExtend    = '.' ;

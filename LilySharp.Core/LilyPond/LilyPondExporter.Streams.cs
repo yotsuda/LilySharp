@@ -672,7 +672,12 @@ public sealed partial class LilyPondExporter
             }
             if (!cadenza && length != inForce)
             {
-                AppendToken(line, !home.SenzaMisura && length == home.MeasureDuration
+                // The meter as the page spells it: the bar's own change (a row's `time 2/4` at a
+                // bar's head, Dettato's request 13) — not its length reduced, which wrote 1/2.
+                var spelled = measures[m].Items.OfType<TimeSignatureChangeItem>().FirstOrDefault()?.NewTime;
+                AppendToken(line, spelled is { SenzaMisura: false } own && own.MeasureDuration == length
+                    ? TimeText(new Semantics.Meter(own.Beats, own.BeatType, own.BeatsText, own.Grouping))
+                    : !home.SenzaMisura && length == home.MeasureDuration
                     ? TimeText(new Semantics.Meter(home.Beats, home.BeatType, home.BeatsText, home.Grouping))
                     : "\\time " + length.Numerator + "/" + length.Denominator, "  ");
                 inForce = length;

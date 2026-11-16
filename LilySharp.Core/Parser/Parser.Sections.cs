@@ -712,6 +712,11 @@ internal sealed partial class Parser
         var item = ParseChordBodyItem();
         if (item is BreakGreen)
             (breaks ??= new List<(int, TextSpan)>()).Add((items.Count, span));
+        // A `time` after an entry of its bar: the row writes a meter at a bar's head only.
+        if (item is TimeSignatureGreen && ChordSlotBefore(items, items.Count))
+            _diagnostics.Error(span, DiagnosticCodes.ChordsTimeInsideBar,
+                "'time' stands inside a bar of a chords track, after a chord of it. A chords track "
+                + "changes the meter at a bar's head only: write it right after the '|' (| time 2/4 C |).");
         items.Add(item ?? SkipStrayChordToken());
     }
 
@@ -738,6 +743,21 @@ internal sealed partial class Parser
                 + $"A chords track takes '{word}' at a bar line only: write it before or after the '|' "
                 + "(F break | or | break G), or inside the bar in a part's music, where it breaks the bar.");
         }
+    }
+
+    /// <summary>True when a chord, a rest or a <c>.</c> of the same bar stands before
+    /// <paramref name="at"/> (a bar line or an inner section closes the bar).</summary>
+    internal static bool ChordSlotBefore(IReadOnlyList<GreenNode?> items, int at)
+    {
+        for (int i = at - 1; i >= 0; i--)
+            switch (items[i]?.Kind)
+            {
+                case SyntaxKind.ChordEntry or SyntaxKind.Rest or SyntaxKind.ChordExtend:
+                    return true;
+                case SyntaxKind.Barline or SyntaxKind.SectionDeclaration:
+                    return false;
+            }
+        return false;
     }
 
     /// <summary>True when the break directive at <paramref name="at"/> has a chord, a rest or a
@@ -845,6 +865,11 @@ internal sealed partial class Parser
         }
         if (Check(SyntaxKind.CloseBracket))
             return new VoltaEndGreen(Advance());
+        // `time 2/4` at a bar's head (Dettato's request 13, owner's decision 2026-11-16): the meter
+        // from that bar, for the whole score, as a part's music writes it. Where in the bar it may
+        // stand: ReportChordTimeInsideABar.
+        if (Check(SyntaxKind.TimeKeyword))
+            return ParseTimeSignature();
         // A navigation mark, as a part's music writes it: a chart's segno, coda and D.S.
         if (Current.Kind is SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword
             or SyntaxKind.DcKeyword or SyntaxKind.DsKeyword or SyntaxKind.ToKeyword)

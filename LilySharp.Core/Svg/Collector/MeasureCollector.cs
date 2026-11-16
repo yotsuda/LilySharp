@@ -3955,14 +3955,26 @@ public sealed partial class MeasureCollector
             int meterPos = hasTime ? TimeDataPos(time!) : 0;
             Fraction? headerPickup = _sectionHeaders.Partials.TryGetValue(name, out var partial) && partial.Duration != null
                 ? partial.ToFraction() : null;
+            // A `time` a row writes at a bar's head (SectionMeterPlan: Dettato's request 13) is the
+            // meter from that bar to the section's end, engraved where it stands.
+            var changes = MeterPlan().TimelineOf(name);
             foreach (int start in starts)
+            {
+                var (barMeter, barSig, barPos) = (meter, meterSig, meterPos);
                 for (int k = 0; k < bars && start + k < table.Count; k++)
                 {
+                    if (changes != null && changes.TryGetValue(k, out var change))
+                        (barMeter, barSig, barPos) = change.IsSenzaMisura
+                            ? (barMeter, (TimeSignature?)null, TimeDataPos(change))
+                            : (new Fraction(change.Beats, change.BeatType),
+                               new TimeSignature(change.Beats, change.BeatType, change.BeatsText, false, change.Grouping),
+                               TimeDataPos(change));
                     var pickup = k == 0 ? headerPickup ?? (start == 0 ? _filePartial : null) : null;
                     table[start + k] = pickup is { } length
-                        ? new RowsOnlyBar(length, true, meterSig, meterPos)
-                        : new RowsOnlyBar(meter, false, meterSig, meterPos);
+                        ? new RowsOnlyBar(length, true, barSig, barPos)
+                        : new RowsOnlyBar(barMeter, false, barSig, barPos);
                 }
+            }
         }
         return table;
     }
