@@ -155,6 +155,17 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /if \(m\.turnOn\) recOn = true;/);
     });
 
+    // A system taller than the view (a big band zoomed in; owner's report 2026-11-16: the view
+    // jerked up and down with the topmost sounding staff): the view keeps its place in the system
+    // and takes the same place in the next, both ways in one smooth scroll.
+    it('keeps the view\'s place in a system taller than the view, moving only to the next system', () => {
+        assert.match(html, /if \(system && system\.height > m\.height - 2 \* margin\) \{/);
+        assert.match(html, /if \(!moving\) followSystemOffset = m\.top - system\.top;/);
+        assert.match(html, /followTopTarget = mainContent\.scrollTop \+ system\.top \+ followSystemOffset - m\.top;/);
+        assert.match(html, /mainContent\.scrollTo\(\{ top: topTo, left: mainContent\.scrollLeft \+ dx, behavior: 'smooth' \}\);/);
+        assert.match(html, /followSystemDocTop = null; followSystemOffset = null; followTopTarget = null;/);
+    });
+
     // The playing bar tinted on its staves, as a hover tints a bar (owner's request 2026-11-16).
     it('tints the playing bar on its staves alone, and clears it when the playback stops', () => {
         assert.match(html, /#svgContainer rect\.bar-staff\.caret,\s*#svgContainer rect\.bar-staff\.playing \{/);

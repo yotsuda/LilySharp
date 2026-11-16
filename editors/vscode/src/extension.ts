@@ -7133,10 +7133,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // chords or lyrics row's (data-row), whose band would overlap a one-line staff's. The bar is
         // the one the first lit element stands in (its copy, as the follow-along lit it); a moment
         // with nothing lit keeps the bar there. null takes it away (the playback stopped).
-        function lightPlayingBar(painted) {
-            for (const r of svgContainer.querySelectorAll('rect.bar-staff.playing')) r.classList.remove('playing');
-            if (!painted || painted.length === 0) return;
-            const b = painted[0].getBoundingClientRect();
+        /** The box (client rect) of the bar an element stands in — of all its system's staves — or null. */
+        function barBoxOf(el) {
+            const b = el.getBoundingClientRect();
             const cx = (b.left + b.right) / 2, cy = (b.top + b.bottom) / 2;
             let column = null, bestGap = Infinity;
             for (const r of svgContainer.querySelectorAll('rect.bar-box')) {
@@ -7145,6 +7144,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 const gap = cy < k.top ? k.top - cy : cy > k.bottom ? cy - k.bottom : 0;
                 if (gap < bestGap) { column = k; bestGap = gap; }
             }
+            return column;
+        }
+        function lightPlayingBar(painted) {
+            for (const r of svgContainer.querySelectorAll('rect.bar-staff.playing')) r.classList.remove('playing');
+            if (!painted || painted.length === 0) return;
+            const column = barBoxOf(painted[0]);
             if (!column) return;
             for (const r of svgContainer.querySelectorAll('rect.bar-staff:not([data-row])')) {
                 const k = r.getBoundingClientRect();
@@ -8517,6 +8522,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const relay = notes.some(n => n.R !== undefined);
             relaying = relay;
             if (!relay) follow.start();
+            followSystemDocTop = null; followSystemOffset = null; followTopTarget = null;   // a new Play finds its place anew
             const cursor = new Cursor(notes.map(n => ({ t: n.T - offset, d: n.D, s: relay ? n.R : n.S, o: n.O || 0 })));
             // How evenly the 50 ms tick came (owner's report 2026-10-25: one eighth note lit in
             // four — the tick a second apart, as a browser throttles a page it thinks hidden):
@@ -8560,6 +8566,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // drums it pushed off, then the voice: the view shook up and down). Their union is
         // centred when it fits the view; when it does not, its top is kept near the view's top,
         // moved only when that top is out of sight — so a voice's rest does not move it.
+        // A system taller than the view (a big band zoomed in; owner's report 2026-11-16: the view
+        // jerked up and down as the topmost sounding staff changed with every entry): the view keeps
+        // its place IN the system — not moved within it, wherever the reader has scrolled — and takes
+        // the same place in the next system. followSystemDocTop is the system followed (its top in
+        // the content's own coordinates), followSystemOffset the view's top below it.
+        // followTopTarget: the scrollTop a move to the next system is going to — a smooth scroll the
+        // next sideways move must not cut short (a second smooth scrollBy stops the first where it
+        // is: MEASURED 2026-11-16, the next system reached 2315 of 6483), and not the reader's place
+        // while it runs.
+        var followSystemDocTop = null, followSystemOffset = null, followTopTarget = null;
         function keepSoundingInView(els) {
             let top = Infinity, bottom = -Infinity, left = Infinity, right = -Infinity;
             for (const el of els) {
@@ -8571,6 +8587,33 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (top === Infinity) return;
             const m = mainContent.getBoundingClientRect();
             const margin = 30;
+            const system = barBoxOf(els[0]);
+            if (system && system.height > m.height - 2 * margin) {
+                const docTop = system.top + mainContent.scrollTop;
+                const moving = followTopTarget !== null && Math.abs(mainContent.scrollTop - followTopTarget) > 2;
+                if (!moving) followTopTarget = null;
+                if (followSystemDocTop !== null && Math.abs(docTop - followSystemDocTop) < 1) {
+                    if (!moving) followSystemOffset = m.top - system.top;   // the reader's place, kept
+                } else {
+                    if (followSystemOffset === null) {
+                        // The first: where the view stands in it, or its top at the margin.
+                        followSystemOffset = m.bottom > system.top && m.top < system.bottom ? m.top - system.top : -margin;
+                    }
+                    followSystemOffset = Math.max(-margin, Math.min(system.height - m.height + margin, followSystemOffset));
+                    followTopTarget = mainContent.scrollTop + system.top + followSystemOffset - m.top;
+                }
+                followSystemDocTop = docTop;
+                const wide = right - left <= m.width - 2 * margin;
+                const offH = wide ? left < m.left + margin || right > m.right - margin : left < m.left + margin || left > m.right - 2 * margin;
+                const dx = !offH ? 0 : wide ? (left + right) / 2 - (m.left + m.right) / 2 : left - (m.left + margin);
+                // Where the view goes, both ways at once, so neither cuts the other short.
+                const topTo = followTopTarget !== null ? followTopTarget : mainContent.scrollTop;
+                if (Math.abs(topTo - mainContent.scrollTop) > 1 || dx !== 0) {
+                    mainContent.scrollTo({ top: topTo, left: mainContent.scrollLeft + dx, behavior: 'smooth' });
+                }
+                return;
+            }
+            followSystemDocTop = null;
             const fits = bottom - top <= m.height - 2 * margin;
             const offV = fits
                 ? top < m.top + margin || bottom > m.bottom - margin
