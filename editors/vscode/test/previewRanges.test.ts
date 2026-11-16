@@ -83,6 +83,13 @@ describe('the preview\'s Range panel', () => {
 
     // Play stays pressable while playing; pressed then, it plays again from the editor's caret
     // (owner's request 2026-11-16), as Play from Here does.
+    // …and stopped too (owner's decision 2026-11-16, retiring "after Stop, Play from the top").
+    it('plays from the editor\'s caret when stopped too, and the header says that place', () => {
+        assert.match(html, /setPlayUi\(true\); \/\/ immediate feedback while the request runs[\s\S]{0,500}?pendingStartPos = caretStartPos\(\);/);
+        assert.doesNotMatch(html, /pendingStartPos = lastResolvedPos;/);
+        assert.match(html, /else \{ position = caretStartPos\(\); exact = true; \}/);
+    });
+
     it('plays again from the editor\'s caret when Play is pressed while playing', () => {
         assert.match(html, /document\.getElementById\('playBtn'\)\.disabled = false;/);
         assert.doesNotMatch(html, /getElementById\('playBtn'\)\.disabled = playing/);

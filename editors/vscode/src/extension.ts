@@ -8269,8 +8269,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             try {
                 const span = aiRangeLo >= 0 ? selectedBarsSpan() : null;
                 if (span) position = span[0];
-                else if (lastResolvedPos >= 0) { position = lastResolvedPos; exact = true; }
-                else if (lastHighlightPos >= 0) position = lastHighlightPos;
+                else { position = caretStartPos(); exact = true; }    // as Play starts
             } catch (e) {
                 return;     // (the page's script is still starting: its bindings are not there yet)
             }
@@ -8304,11 +8303,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
             clearHighlights();
             lastHighlightPos = -1;
-            // No note is highlighted once playback ends (naturally or via Stop),
-            // so forget the resolved start point too — otherwise it stays pinned
-            // to the last sounded note and the next Play resumes from the end
-            // instead of restarting from the top. Cursor sync re-sets it when the
-            // caret lands on a note again.
+            // No note is highlighted once playback ends (naturally or via Stop), so the
+            // resolved note goes too (the follow-along had pointed it at the last note sounded).
+            // The next Play does not read it: it starts from the EDITOR's caret (caretStartPos;
+            // owner's decision 2026-11-16 — until then a Play after Stop started from the top).
             lastResolvedPos = -1;
             if (sfPlayer) {
                 sfPlayer = null;
@@ -8708,11 +8706,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 return;
             }
             setPlayUi(true); // immediate feedback while the request runs
-            // A highlighted note (editor sync / preview click) is the start
-            // point: play from its first onset instead of the top. Use the
-            // RESOLVED note position - lastHighlightPos may be a raw editor
-            // cursor offset that matches no playback event.
-            pendingStartPos = lastResolvedPos;
+            // The editor's caret is the start point (owner's decision 2026-11-16, which retires
+            // "after Stop, Play starts from the top"): the note it is on, from its first onset,
+            // else the first note written after it (caretStartPos — the editor's own caret, which
+            // a playback and a Stop leave where it is).
+            pendingStartPos = caretStartPos();
             pendingSpan = aiRangeLo >= 0 ? selectedBarsSpan() : null;
             vscode.postMessage({ type: 'requestPlayback' });
         });
