@@ -927,6 +927,37 @@ internal static class ChordNameEngraver
     internal const double SymbolGap = 0.6;
 
     /// <summary>
+    /// A row symbol's X by its beat (<see cref="ChordNameItem.PlacedByBeat"/>): its moment's share
+    /// of the bar, from the bar's first moment to the next bar's, over the bar's width — beat 3 of
+    /// 4 in the middle — whatever the columns the words widened. Null when the bar's length cannot
+    /// be read (no measure of the row there), and the column grid answers.
+    /// </summary>
+    /// <remarks>LILYSHARP-OWN (owner's decision 2026-11-16). The symbols that would then crowd
+    /// one another are held apart as before (<see cref="ClearOfPrevious"/>).</remarks>
+    private static double? BeatShareX(ChordNameItem chord, MeasureLayout ml, ImmutableArray<Measure> rowMeasures)
+    {
+        if (rowMeasures.IsDefault || chord.MeasureIndex >= rowMeasures.Length)
+            return null;
+        var length = Semantics.Fraction.Zero;
+        foreach (var item in rowMeasures[chord.MeasureIndex].Items)
+            length += item.Duration;
+        if (length <= Semantics.Fraction.Zero)
+            return null;
+        double share = Math.Clamp(chord.Timing.ToDouble() / length.ToDouble(), 0.0, 1.0);
+        // The bar's first beat stands at its column — unless the words pushed that column right
+        // (a long first syllable is centred on it, MEASURED 2026-11-16: 7.52 into the bar, where a
+        // chords row alone puts its first name 2.00 in at a line's start and about 1 in after a
+        // bar line; Lab sessions/p1285/chordlyr). The chord does not follow the word there either.
+        // The beats share the rest of the bar.
+        double lead = Math.Min(ml.GetXForTiming(Semantics.Fraction.Zero), ByBeatLeadCap);
+        return ml.X + lead + share * (ml.Width - lead);
+    }
+
+    /// <summary>The farthest into its bar a by-beat chord's first beat stands: where a chords row
+    /// alone puts its first name at a line's start (2.00, measured beside the meter).</summary>
+    private const double ByBeatLeadCap = 2.0;
+
+    /// <summary>
     /// A symbol's X: chordnames entries carry their own rhythm, so they are placed by
     /// musical moment against the shared column grid (the same X the renderer draws a note
     /// at that timing), exactly as bound-voice lyrics are. The note-attached <c>@chord</c>
@@ -945,6 +976,8 @@ internal static class ChordNameEngraver
     private static double SymbolX(
         ChordNameItem chord, MeasureLayout ml, ImmutableArray<Measure> staffMeasures)
     {
+        if (chord.UseTiming && chord.PlacedByBeat && BeatShareX(chord, ml, staffMeasures) is { } byBeat)
+            return byBeat;
         if (chord.UseTiming)
             return ml.X + ml.GetXForTiming(chord.Timing);
         if (!staffMeasures.IsDefault && chord.MeasureIndex < staffMeasures.Length

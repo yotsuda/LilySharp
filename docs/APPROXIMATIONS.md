@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 456 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **582** | |
+| `OWN` | 458 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **584** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -30,9 +30,9 @@
 | `LilySharp.Core/Svg/Collector/MeasureCollector.cs` | 11 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 10 |
 | `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 9 |
+| `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 8 |
-| `LilySharp.Core/Tablature/Tunings.cs` | 8 |
 
 ## APPROX — LP に対応物はあるが、形が違うと自認しているもの（62 件）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（456 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（458 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -627,6 +627,7 @@
 - **`ChordNameEngraver.ChordRowAboveStaff`** ⚠️ LILYSHARP-OWN. LilyPond cannot spell the configuration: a `ChordNames` context is its
 - **`ChordNameEngraver.ChordLineOfSystem`** ⚠️ LILYSHARP-OWN, all of it. LilyPond cannot spell the configuration: a
 - **`ChordNameEngraver.SymbolGap`** LILYSHARP-OWN: LilyPond does not shift a ChordName off its column at all — a
+- **`ChordNameEngraver.BeatShareX`** LILYSHARP-OWN (owner's decision 2026-11-16). The symbols that would then crowd
 - **`ChordNameEngraver.FootprintWidth`** ⚠️ LILYSHARP-OWN, THE DIAGRAM'S X: its box stands with its LEFT edge on the symbol's
 - **`ChordNameEngraver.GridLineSymbol`** ChordNames line, was declined). LILYSHARP-OWN: LilyPond's ChordNames draws no bar lines.
 ### `LilySharp.Core/Svg/Layout/ChordNameGlyphRun.cs`
@@ -865,6 +866,8 @@
 - **`VoltaBracketEngraver.BarWalk`** ⚠️ LILYSHARP-OWN: the plain bar lines inside a compressed multi-measure rest, which the
 ### `LilySharp.Core/Svg/Model/ArticulationItem.cs`
 - **`ArticulationItem.AccidentalOfOrnament`** LILYSHARP-OWN: LilyPond has no accidental on a Script; its twin writes the accidental
+### `LilySharp.Core/Svg/Model/ChordNameItem.cs`
+- **`ChordNameItem.PlacedByBeat`** LILYSHARP-OWN: LilyPond's ChordName stands on its paper column, which a Lyrics
 ### `LilySharp.Core/Svg/Model/FiguredBassItem.cs`
 - **`FiguredBassItem.ParseFigures`** LILYSHARP-OWN: the @figuredBass(…) SPELLING is Lily#'s, not a port — LilyPond writes
 - **`FiguredBassItem.ParseGroups`** LILYSHARP-OWN: the comma spelling. LilyPond writes each figure event with its own

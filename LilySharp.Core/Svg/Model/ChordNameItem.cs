@@ -196,6 +196,18 @@ public sealed record ChordNameItem
     /// </summary>
     public bool IsChordRow { get; }
 
+    /// <summary>
+    /// A row symbol placed by its BEAT in the bar — at its moment's share of the bar, not at the
+    /// column grid's X — on a score whose only timing beside the chords is a lyrics row that
+    /// spreads its syllables evenly over the bar (owner's decision 2026-11-16: the chords must
+    /// not follow the words; an evenly spread syllable's moment is not a sung one, and the word
+    /// it widened pushed the chord on its beat along). Set by the collector
+    /// (<c>MeasureCollector</c>, <c>ChordsByBeat</c>); read by <c>ChordNameEngraver.SymbolX</c>.
+    /// </summary>
+    /// <remarks>LILYSHARP-OWN: LilyPond's ChordName stands on its paper column, which a Lyrics
+    /// syllable of the same moment shares.</remarks>
+    public bool PlacedByBeat { get; init; }
+
     /// <summary>Creates a chord name symbol for display above the staff.</summary>
     public ChordNameItem(string chordText, int measureIndex, int itemIndex,
         int sourcePosition, int staffIndex = 0,

@@ -1862,6 +1862,7 @@ public sealed partial class MeasureCollector
         // Sings = the row's OWN `sings` target (null = the track's default applies).
         // Key = its entry in staffVoices (RowKey): one track on two rows is two voices.
         var pendingLyricsRows = new List<(string Name, string Key, int StaffIndex, string? Sings)>();
+        bool spreadLyricsRow = false;   // a lyrics row sings no melody: its syllables are spread evenly
         // The melody a row sings when the score shows no staff of it (MultiStaffScore.RowMelodies).
         var rowMelodies = ImmutableDictionary.CreateBuilder<int, (string Part, ImmutableArray<Measure> Measures)>();
         // `staff NAME with chords CHORDPART` attachments, applied post-loop.
@@ -2163,6 +2164,7 @@ public sealed partial class MeasureCollector
                 var rowMeasures = _lyricsCollector.CollectRow(
                     tree.GetRoot(), name, idx, wrapBars, _sectionState.StartMeasure, _v.Meta.TimeBeats, _v.Meta.TimeBeatType,
                     _sectionState.AllStarts);
+                spreadLyricsRow = true;     // its syllables spread evenly over the bar (ChordsByBeat)
                 staffVoices[key] = ImmutableArray.Create(new Voice(key, rowMeasures));
             }
         }
@@ -2705,6 +2707,8 @@ public sealed partial class MeasureCollector
         // A score of one-line staves, which show no signature: the key in words
         // over the first bar and each change (KeyNameMarks; owner's request 2026-11-16). After
         // every other mark, so the indices they are read by stay.
+        if (spreadLyricsRow && ChordsByBeat(staffGroups))
+            content = content with { ChordNames = content.ChordNames.Select(c => c.IsChordRow && c.UseTiming ? c with { PlacedByBeat = true } : c).ToImmutableArray() };
         if (KeyNameMarks.Wanted(staffGroups))
             content = content with { MusicMarks = KeyNameMarks.Add(content.MusicMarks, staffGroups,
                 tree.GetRoot(), _sectionHeaders, _sectionState.AllStarts) };
@@ -6231,6 +6235,22 @@ public sealed partial class MeasureCollector
     };
 
     private IList[]? _cumulativeSideTables;
+
+    /// <summary>
+    /// Whether the chords rows place their symbols by beat (<see cref="ChordNameItem.PlacedByBeat"/>):
+    /// a score with no music in any staff (rows only, or staves with no notes: the automatic
+    /// one-line staff) — beside a lyrics row whose syllables are spread evenly over the bar, the
+    /// only other timing there is (owner's decision 2026-11-16). With music, a chord stands on its
+    /// notes' column, as it should.
+    /// </summary>
+    private static bool ChordsByBeat(ImmutableArray<StaffGroup> staffGroups)
+    {
+        foreach (var group in staffGroups)
+            foreach (var staff in group.Staves)
+                if (!staff.IsTextRow && !MultiStaffScore.CarriesNoMusic(staff))
+                    return false;
+        return true;
+    }
 
     /// <summary>The key timeline for Roman-numeral chord degrees: the initial key at
     /// bar 0 plus each mid-piece modulation, sorted ascending.</summary>
