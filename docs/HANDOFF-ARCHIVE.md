@@ -271,6 +271,21 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1286セッションの経緯
+
+### 1.1 第1286セッション（2026-11-16・YT-DELL2）
+
+base `e2b77fc11`・開始時 full 17475 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17478（Lab `p1286` の `run1.trx`）。REQUESTS: 手で見ていない（§1.0 の「次便の最初」＝オーナー報告の MP4 2 件を先にした）。
+**MP4 の書き出し 2 件（オーナー報告 2026-11-16）＝閉じた**。オーナー決定（同日・AskUserQuestion）: WAV／MP3 にも録音を入れる・コード名は全部の楽譜で光らせる。
+- ⑴ コード名: `ScoreVideo.HeadsByNote` が `chordName` の箱も拾う（`2b1961174`・網 `ScoreVideoLightTests` 2・毒＝旧の `notehead` だけで 2 赤）。
+- ⑵ 録音: `cdd29c520`（形と罠は `docs/recording-design.md` §7）。プレビューが自分のプレイヤーで録音を OfflineAudioContext に描き、拡張がステレオで混ぜる（`recordingExportCore.ts`・`RecordingPlayer.render`・`mixInStereo`・LSP `PlaybackExport.BarEnd`）。実物の VS Code で WAV／MP3／MP4 のクリックが小節頭に来るのを測った（Lab `p1286/e2e`）。その途中で 2 つ踏んだ: 描画のレートは復号したバッファのもの（44.1 kHz で描くと ×1.125 が ×1.034）／MP4 の映像が音より先に終わる既存の不具合（`-r` が最後の絵の長さを落とす＝`fps` フィルタ）。
+- ⚠️ 計器の罠: `editors/vscode/server` に自己完結の LSP（coreclr）があると `lilysharp.serverPath` を無視する＝拡張の写しを作り `server` に publish して `--extensionDevelopmentPath` に渡す（Lab `p1286/e2e` の手順）。保存ダイアログは拡張ごとの API なので run.js から差し替えられない＝`files.simpleDialog.enable` にして CDP で入れる（値が既定の名前で埋まり終わるまで待つ）。
+- **次の一手**: §1.0 のとおり（録音は S5、コード行の印 `@rit` ほか）。耳の確認は `MANUAL-CHECKS` §3.9 の末尾 2 項（オーナー）。
+- オーナー報告「My Life の終わりで録音とずれる」＝Lily# は小節線どおり（測った）・Dettato の拍の時刻が 0.237% 長い＝Dettato REQUESTS 15 `open`（Dettato の repo では未 commit・Lab `p1286/e2e/DRIFT.md`）。
+- 続く報告・要望は閉じた（各 commit と CHANGELOG）: スライダーのリセット・コピー／移動の追従・短いパートの後の小節線・`%` の点灯・tab／1 線譜の Key:（2〜4 線譜は LP どおり＝オーナー決定）・コード行の小節の範囲。
+- **A-B リピート**（`docs/ab-repeat-design.md`）: 段 1〜4 は `8d33ecdd1`・`42ce039d8`・`ca250bdcf`・`39dde78e3`。実物の VS Code で CDP（Lab `p1286/e2e` cdp13〜16）。
+- 終了時 full 17492 合格 / 2 失敗（README・`TheKeystrokePass_DoesNotLayTheScoreOut`＝並行の不安定・単独で緑）/ skip 2。Core は `MidiNote.PrintedBar`・`DrawBarBox` の引数だけ。HEAD `39dde78e3`。
+
 ## 以下は第1285セッションの経緯
 
 ### 1.1 第1285セッション（2026-11-16・YT-DELL2）

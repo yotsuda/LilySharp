@@ -91,7 +91,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **★★★ オーナー決定 2026-11-15（第1264・6 件）**: ①〜④ と、⑥ 評価 4 の案（Lab `p1227/proposals-eval4.md`）の「作る」5 件＝6・7・8-1・2・4 は済み（第1264〜第1272・設計と実際の形は `docs/eval4-features-design.md`。6 の「歌い手が × の音を歌わない」だけ未＝同 §6 の末尾）／⑤ Dettato: 依頼 1＝作る（D3 で形が固まってから・名前「Convert Recording to Lily# (.lys)…」・Windows 以外はメニューを出さない）・依頼 2＝今は作らない（REQUESTS の行に書いた＝Dettato の repo では未 commit）／⑥ の**後で**＝3（`pass 2 { }`・文字は英語固定）・1（持ち替え・「to X」は自動で刷らない）・10（まず診断だけ）＝作る前に設計メモ・**着手してよい**（オーナー 2026-11-15 第1278「ほかに着手すべき候補がなければすぐ着手して良い」。10 の診断は LYS0046 で済み＝残りは 3 → 1）／**見送り**＝5・8-2〜4・9。**次の一手**: 下の行の Lab `sessions/p1242/leftovers.md` の欠陥から（第1272 が見つけた 2 件＝`lysc xml` の part header の `key` と、MusicXML の読み込みの `<transpose>` は第1273・第1275 で閉じた。一覧の先頭から順に）。
 - **★ A-B リピート（オーナー決定 2026-11-17・第1286）＝`docs/ab-repeat-design.md`**: §3 の 1〜5 は全部済み（1〜4 は第1286・5 の帯は第1287＝形は同 §3 の末尾）。残りは実機の確認（`MANUAL-CHECKS` の A-B その 1・その 2＝オーナー）と、帯をファイルの名前の変更・コピーに付いて行かせるか（未決・要望が出たら）。
 - **★ コード行の中に書けるもの（オーナー決定 2026-11-16・第1285）**: `time`・`tempo`・`%`・`key` は済み（§1.1）。**残り＝コードに付ける印 `@rit`／`@accel`／`@rall`（`…@!rit`）・`@fermata`・`@text("…")`**（今は `@todo` だけ）。強弱は見送り。
-- **★ 録音を聴きながら直す（Dettato #4・オーナーの希望 2026-11-15）＝`docs/recording-design.md`**: S1〜S4 と §1 7（楽譜と録音を同時に）・§7（書き出しに録音・第1286）は済み（§1.1 第1284〜第1286）。**次は S5**（帯・`Mark Bar Line Here`・ドラッグ・`byHand`）→ S6（CHANGELOG・Dettato への返事）。耳の確認は `MANUAL-CHECKS` §3.9（オーナー）。
+- **★ 録音を聴きながら直す（Dettato #4・オーナーの希望 2026-11-15）＝`docs/recording-design.md`**: S1〜S4 と §1 7（楽譜と録音を同時に）・§7（書き出しに録音・第1286）は済み（§1.1 第1284〜第1286）。**次は S5**（帯・`Mark Bar Line Here`・ドラッグ・`byHand`）→ S6（CHANGELOG・Dettato への返事）。§8 の録音のパート（Dettato #16）は第1288 で実装＝残りは重さとメモリの実測（オーナーの静かな窓・Lab `p1288/parts/measure.mjs`）。耳の確認は `MANUAL-CHECKS` §3.9（オーナー）。
 - **★ 反復とナビ記号を section の音楽にも書く（オーナー提案 2026-11-14・第1243＝第1249 で段 0〜8 が済み・LYS1034 は phrase だけ）**: 全部 `docs/inline-repeat-design.md`（規則 §3・段取り §4・未決 §6・経過 §7・エディタのコマンド §8）。オーナー決定（2026-11-14）: 対は form に組み立てた列で見る／`| |:` は空小節のまま／歌詞の verse は 5 規則／書き出しはなるべく form 側（Q2）。**次**（順は上から。歌詞の規則 3 と警告の 4 種目は第1253、ending・ナビ記号を全パートに書くコマンドと LYS1070 の quick fix は第1254 で済み＝§1.1）: ⑴ この島（反復とナビ記号を音楽に書く）の「次」は無い＝判断待ちも残りの形も 0。step キー・`PlayForm` の一本化（第1255）、3 番括弧＝3 回（form は第1256・音楽は第1257・コードの行は第1258）は済み。次の一手は下の積み残しから（オーナーに訊く）。段 9（読み込みと OMR の書き出し）は Q2 の決定で今の形のまま＝作業なし。⚠️ Calamo と Dettato の REQUESTS への知らせ（Q2「本体が出てから」）は未＝release のときに書く。実機は `MANUAL-CHECKS` 第1243・第1249・第1253・第1254・第1255。
 - **★ 歌詞と歌い手の文法の作り直し（オーナー決定 2026-11-10・第1217）**: `docs/lyrics-singer-design.md` が全部（§9 が作業順）。①②③④は済み（§1.1 第1217〜第1219）。⚠️ ④の `ん` の聞こえ方はオーナーの実聴待ち（`MANUAL-CHECKS` 第1219）。Cantoria の master は zh／ko を歌う（VSIX の入れ直しはオーナー）。`singer` は 1 行 1 声で score の中にも書ける（第1220）。古い書き方を案内する専用エラーは作らない（オーナー指示）。設計 §10「パート自身の歌詞」（`part sop { lyrics words }`）は第1222 で実装（§1.1 第1222・実機は `MANUAL-CHECKS` 第1222）＝§9 は全部済み。**次の一手の指示はまだ無い＝下の積み残しから選ぶならオーナーに訊く**。積み残し: Calamo の生成コードが `lyrics … sings` のまま（`docs\repro\REQUESTS.md` に連絡済み・Calamo 側は未 commit）／実機確認（`MANUAL-CHECKS` 第1217）／perf ベンチ／コーパス外のオーナーのファイル（Downloads の Tabidachi・Rose Garden など）は未移行で、`LilySharp-Lab\sessions\p1217\migrate\migrate.ps1 -Lys -Files` で書き換えられる／Rose Garden のオクターブ変換はオーナーの回答待ち。
 - **★ 歌詞のある譜表では強弱記号とヘアピンを譜表の上に（オーナー決定 2026-11-11）＝設計 `docs/dynamics-above-lyrics-design.md` §5 の 1〜6 は全部済み（第1224〜第1225・§1.1）**。**D3 は LilyPond の規則に替えた（オーナー決定 2026-11-11「LP に合わせて」）**＝向きを書いた記号が*線*の向きを決め、同じ線の後続（向きを書いていない記号）は従う。歌詞のない譜表でも同じ（`c@f.up@decresc … g@p` の p は上）。残りはオーナー: 実機のプレビュー（`MANUAL-CHECKS` 第1225）と release（CHANGELOG は 2 つとも `## Unreleased`・`[engraving]`）。残る穴: 2 声部の譜表で上の声部のヘアピンの線に下の声部の同じ拍の強弱記号も乗る（ヘアピンが声部を持たない既知の穴＝`DynamicAlignEngraver` の注 ⑵・Lab `p1225/dyn/out/vv.png`）。線の向きは第1260 で声部ごとにした。**次の一手の指示はまだ無い＝上の行の積み残しから選ぶならオーナーに訊く**。
@@ -144,6 +144,13 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1288セッション（2026-11-17・YT-DELL2）
+
+base `3f80e62b9`・開始時 full 17495 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17498（Lab `p1288` の `run1.trx`）。REQUESTS: Calamo の open 0・**Dettato #16 `open`**（録音をパートごとにオン・オフ）＝オーナー了承（2026-11-17）の方針で着手: ① 全部オンなら元の録音・1 本でもオフなら残りの和 ② 伸縮の重さは実測 ③ 楽譜の移動・改名に `.parts` も付いて行く ④ モノラルで足りる ⑤ パートは `parts` の数・順で並べ名前で決め打ちしない（Dettato は 6 パートを予定）。設計は `docs/recording-design.md` §8。
+- **Dettato #16 録音のパート＝`e04df995a`**（形と実測は設計 §8 の「実際の形」）: `parts` を読み、Practice と録音パネルにパートの行。全部オンなら元の録音、どれかオフならパートの和（N チャンネルの 1 本のバッファ・伸縮 1 つ・チャンネルごとの gain）。パートの間の切り替えは gain だけ、元の録音 ⇄ パートは同じ位置から鳴らし直し。移動・コピーで `parts` の道も書き直す。実物の VS Code で My Life の 4 パート（Lab `p1288/e2e/cdp-parts.mjs`）。Dettato の REQUESTS 16 は fixed（Dettato の repo では未 commit）。**次**: 重さとメモリの実測（オーナーに声をかけてから）。
+
+## 以下は第1287セッションの経緯
+
 ### 1.1 第1287セッション（2026-11-17・YT-DELL2）
 
 base `dc7c332e3`・開始時 full 17493 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17496（Lab `p1287` の `run1.trx`）。REQUESTS: Calamo・Dettato とも `open` 0。
@@ -153,21 +160,6 @@ base `dc7c332e3`・開始時 full 17493 合格 / 1 失敗（`ReadmeSampleTests`�
 - オーナー要望: A-B の旗は相手を越えると入れ替わる（形は設計 §1）。CDP の本物のドラッグで確認（Lab `p1287/e2e/cdp-swap.mjs`）。
 - 報告: パート全部オフで録音が消えた＝ループの周が 0 秒。周と窓は全パートで測る（`keepSilent`）。
 - **次の一手**: §1.0 のとおり（録音は S5、コード行の印 `@rit` ほか）。
-
-## 以下は第1286セッションの経緯
-
-### 1.1 第1286セッション（2026-11-16・YT-DELL2）
-
-base `e2b77fc11`・開始時 full 17475 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17478（Lab `p1286` の `run1.trx`）。REQUESTS: 手で見ていない（§1.0 の「次便の最初」＝オーナー報告の MP4 2 件を先にした）。
-**MP4 の書き出し 2 件（オーナー報告 2026-11-16）＝閉じた**。オーナー決定（同日・AskUserQuestion）: WAV／MP3 にも録音を入れる・コード名は全部の楽譜で光らせる。
-- ⑴ コード名: `ScoreVideo.HeadsByNote` が `chordName` の箱も拾う（`2b1961174`・網 `ScoreVideoLightTests` 2・毒＝旧の `notehead` だけで 2 赤）。
-- ⑵ 録音: `cdd29c520`（形と罠は `docs/recording-design.md` §7）。プレビューが自分のプレイヤーで録音を OfflineAudioContext に描き、拡張がステレオで混ぜる（`recordingExportCore.ts`・`RecordingPlayer.render`・`mixInStereo`・LSP `PlaybackExport.BarEnd`）。実物の VS Code で WAV／MP3／MP4 のクリックが小節頭に来るのを測った（Lab `p1286/e2e`）。その途中で 2 つ踏んだ: 描画のレートは復号したバッファのもの（44.1 kHz で描くと ×1.125 が ×1.034）／MP4 の映像が音より先に終わる既存の不具合（`-r` が最後の絵の長さを落とす＝`fps` フィルタ）。
-- ⚠️ 計器の罠: `editors/vscode/server` に自己完結の LSP（coreclr）があると `lilysharp.serverPath` を無視する＝拡張の写しを作り `server` に publish して `--extensionDevelopmentPath` に渡す（Lab `p1286/e2e` の手順）。保存ダイアログは拡張ごとの API なので run.js から差し替えられない＝`files.simpleDialog.enable` にして CDP で入れる（値が既定の名前で埋まり終わるまで待つ）。
-- **次の一手**: §1.0 のとおり（録音は S5、コード行の印 `@rit` ほか）。耳の確認は `MANUAL-CHECKS` §3.9 の末尾 2 項（オーナー）。
-- オーナー報告「My Life の終わりで録音とずれる」＝Lily# は小節線どおり（測った）・Dettato の拍の時刻が 0.237% 長い＝Dettato REQUESTS 15 `open`（Dettato の repo では未 commit・Lab `p1286/e2e/DRIFT.md`）。
-- 続く報告・要望は閉じた（各 commit と CHANGELOG）: スライダーのリセット・コピー／移動の追従・短いパートの後の小節線・`%` の点灯・tab／1 線譜の Key:（2〜4 線譜は LP どおり＝オーナー決定）・コード行の小節の範囲。
-- **A-B リピート**（`docs/ab-repeat-design.md`）: 段 1〜4 は `8d33ecdd1`・`42ce039d8`・`ca250bdcf`・`39dde78e3`。実物の VS Code で CDP（Lab `p1286/e2e` cdp13〜16）。
-- 終了時 full 17492 合格 / 2 失敗（README・`TheKeystrokePass_DoesNotLayTheScoreOut`＝並行の不安定・単独で緑）/ skip 2。Core は `MidiNote.PrintedBar`・`DrawBarBox` の引数だけ。HEAD `39dde78e3`。
 
 ## 2. 開いている作業
 
