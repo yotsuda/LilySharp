@@ -885,6 +885,9 @@ internal sealed class ChordNameCollector
         RowPercents.Clear();
         RowKeys.Clear();
         var measureItems = new Dictionary<int, ImmutableArray<MusicItem>>();
+        // Where each bar's text ends (Commit), and the bar line about to close the bar being read.
+        var measureEnds = new Dictionary<int, int>();
+        int closingAt = -1;
         // Source barline types per measure. A chord row carries its own `|`, `:|`,
         // `||` etc. so a standalone lead sheet draws a real measure grid (and the
         // score-wide barline sync propagates a repeat/final set here into the music
@@ -934,6 +937,20 @@ internal sealed class ChordNameCollector
                 // break, then the rest timed from it; its written end bar line is the
                 // second half's (MidBarBreakTable's remarks).
                 int endMeasure = split != null ? mi + 1 : mi;
+                // Where the bar's text ends — the bar line closing it, else its last entry — as a
+                // part's bar has it (Measure.SourceEnd): the preview lights the bar the editor's
+                // caret is in by it. A row's bar had none, so a bar of one chord held the caret
+                // nowhere and the next bar on the line lit instead (owner's report 2026-11-16: a
+                // click on bar 13 of My Life lit bar 16, the line's one bar of two chords).
+                if (pending.Count > 0)
+                {
+                    // (with no bar line, just past the last entry: a bar of one letter still spans)
+                    int textEnd = closingAt >= 0 ? closingAt : pending[^1].Span.End;
+                    measureEnds[mi] = textEnd;
+                    if (endMeasure != mi)
+                        measureEnds[endMeasure] = textEnd;
+                }
+                closingAt = -1;
                 // `%`: the bar before, again — the sign in the bar, no names (RowPercents).
                 if (pending.Count == 1 && pending[0] is PercentMarkSyntax percent)
                 {
@@ -974,6 +991,7 @@ internal sealed class ChordNameCollector
             {
                 if (item is BarlineSyntax bar)
                 {
+                    closingAt = bar.BarTokenStart;
                     // A '|' OPENING the run closes an EMPTY chord bar, like any other
                     // written barline (the bare-barline rule; same as music and lyrics).
                     // ⚠️ IT USED TO ANCHOR THE START and create nothing. That is what put
@@ -988,6 +1006,7 @@ internal sealed class ChordNameCollector
                         // an empty bar too, as a bare '|' does (Semantics.ChordRowBarLines).
                         if (Semantics.ChordRowBarLines.Closes(bar, pending.Count > 0))
                             Commit(BarlineType.Single);
+                        closingAt = -1;     // (it opens the next bar; no bar line of that one)
                         pendingStart = BarlineType.RepeatStart;
                     }
                     else if (t == BarlineType.RepeatBoth)
@@ -1104,7 +1123,7 @@ internal sealed class ChordNameCollector
                 : ImmutableArray.Create<MusicItem>(new RestItem(barLength, 0, 0) { IsSpacer = true });
             var start = measureStartBar.GetValueOrDefault(i, BarlineType.None);
             var end = isHead ? BarlineType.None : measureEndBar.GetValueOrDefault(i, BarlineType.Single);
-            measures.Add(new Measure(items, start, end, null, 0, 0,
+            measures.Add(new Measure(items, start, end, null, 0, measureEnds.GetValueOrDefault(i),
                 hasBreakAfter: isHead, breaksMidBar: isHead, continuesBar: isTail));
         }
         // ⚠️ NO AUTOMATIC FINAL BARLINE — the same rule (and the same removal) as

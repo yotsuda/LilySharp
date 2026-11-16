@@ -144,6 +144,23 @@ public class BarStaffBoxTests
         Assert.True(bottom - top < 4.0, $"{bottom - top}");
     }
 
+    /// <summary>A chords row's bar spans its own text, from its first chord to the bar line closing
+    /// it (owner's report 2026-11-16: a click on bar 13 of a chord chart lit bar 16). A row's bar
+    /// had no stretch where it held one chord, so the caret on it was in no bar and the preview lit
+    /// the next bar on the line — the one bar of two chords, whose stretch stopped at its second
+    /// chord's start. The last bar, with no bar line after it, ends just past its last chord.</summary>
+    [Fact]
+    public void AChordRowsBars_SpanTheirOwnText()
+    {
+        const string book = "time 4/4\nsection A {\n  chords h {\n    D7 | C7 | A# C@todo(\"or A#?\") | F\n  }\n}\nform { ~A }\nscore { chords h }\n";
+        string preview = SvgGenerator.Generate(SyntaxTree.Parse(book), SvgRenderOptions.Preview());
+        var spans = Regex.Matches(preview, @"data-start=""(\d+)"" data-span=""(\d+) (\d+)"" data-row").Cast<Match>()
+            .Select(m => (S: int.Parse(m.Groups[1].Value), F: int.Parse(m.Groups[2].Value), T: int.Parse(m.Groups[3].Value)))
+            .ToList();
+        Assert.Equal(new[] { "D7 |", "C7 |", "A# C@todo(\"or A#?\") |", "F\n" }, spans.Select(x => book[x.F..(x.T + 1)]));
+        Assert.All(spans, x => Assert.Equal(x.S, x.F));
+    }
+
     // The playing bar is tinted on the staves' boxes alone (owner's request 2026-11-16): a row's
     // box says it is a row's, as the one-line staff a rows-only score draws under it does not.
     [Fact]

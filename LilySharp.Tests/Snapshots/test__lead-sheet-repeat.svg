@@ -13,11 +13,11 @@
   <rect x="25.35" y="16.62" width="0.19" height="2.00" data-pos="0"/>
   <circle cx="26.06" cy="17.17" r="0.23" data-pos="0"/>
   <circle cx="26.06" cy="18.07" r="0.23" data-pos="0"/>
-  <rect x="38.48" y="16.62" width="0.19" height="2.00" data-pos="0"/>
-  <circle cx="49.19" cy="17.17" r="0.23" data-pos="0"/>
-  <circle cx="49.19" cy="18.07" r="0.23" data-pos="0"/>
-  <rect x="49.72" y="16.62" width="0.19" height="2.00" data-pos="0"/>
-  <rect x="50.21" y="16.62" width="0.60" height="2.00" data-pos="0"/>
+  <rect x="38.48" y="16.62" width="0.19" height="2.00" data-pos="695"/>
+  <circle cx="49.19" cy="17.17" r="0.23" data-pos="699"/>
+  <circle cx="49.19" cy="18.07" r="0.23" data-pos="699"/>
+  <rect x="49.72" y="16.62" width="0.19" height="2.00" data-pos="699"/>
+  <rect x="50.21" y="16.62" width="0.60" height="2.00" data-pos="699"/>
   <text x="13.24" y="16.45" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="648">C</text>
   <text x="17.83" y="16.45" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="650">Am</text>
   <text x="27.19" y="16.45" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="690">F</text>

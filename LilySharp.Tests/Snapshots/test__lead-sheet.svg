@@ -9,10 +9,10 @@
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <line x1="8.59" y1="17.02" x2="71.55" y2="17.02" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="9.54" y="17.02" font-size="4.00" data-pos="423"></text>
-  <rect x="29.06" y="16.02" width="0.19" height="2.00" data-pos="0"/>
-  <rect x="44.04" y="16.02" width="0.19" height="2.00" data-pos="0"/>
-  <rect x="61.22" y="16.02" width="0.19" height="2.00" data-pos="0"/>
-  <rect x="71.41" y="16.02" width="0.19" height="2.00" data-pos="0"/>
+  <rect x="29.06" y="16.02" width="0.19" height="2.00" data-pos="463"/>
+  <rect x="44.04" y="16.02" width="0.19" height="2.00" data-pos="471"/>
+  <rect x="61.22" y="16.02" width="0.19" height="2.00" data-pos="478"/>
+  <rect x="71.41" y="16.02" width="0.19" height="2.00" data-pos="484"/>
   <text x="13.91" y="20.52" font-size="2.47" text-anchor="middle" data-pos="505">Twin</text>
   <text x="19.21" y="20.52" font-size="2.47" text-anchor="middle" data-pos="511">kle</text>
   <text x="23.16" y="20.52" font-size="2.47" text-anchor="middle" data-pos="515">lit</text>
