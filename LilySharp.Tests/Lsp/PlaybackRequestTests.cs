@@ -245,4 +245,26 @@ public class PlaybackRequestTests
         Assert.Contains(sounding, n => n.S == written && Math.Abs(n.T) < 1e-6);
         Assert.DoesNotContain(sounding, n => n.S == written && n.T > 1.0 && n.T < 8.0);
     }
+
+    /// <summary>A chord row's `%` lights its mark for the bar too (owner's request 2026-11-16), and
+    /// the chord it sounds again keeps its own printed copies: the second play lights its second.</summary>
+    [Fact]
+    public void AChordRowsPercent_LightsItsMark_ForTheWholeBar()
+    {
+        const string doc = "tempo 4 = 120\ntime 4/4\nsection A { chords h { C | % | G F | % | } }\nform { A A }\nscore { chords h }\n";
+        var pb = Playback(doc, null);
+        Assert.Null(pb.Error);
+        int[] marks = Enumerable.Range(0, doc.Length).Where(i => doc[i] == '%').ToArray();
+        int c = doc.IndexOf("C |", StringComparison.Ordinal);
+        var lights = pb.Notes!.Where(n => n.L).OrderBy(n => n.T).ToArray();
+        Assert.Equal(new[] { 2.0, 6.0, 10.0, 14.0 }, lights.Select(l => Math.Round(l.T, 3)));
+        Assert.All(lights, l => Assert.Equal(2.0, l.D, 3));
+        Assert.Equal(new[] { marks[0], marks[1], marks[0], marks[1] }, lights.Select(l => l.S));
+        Assert.Equal(new[] { 0, 0, 1, 1 }, lights.Select(l => l.O));
+        var sounding = pb.Notes!.Where(n => !n.L && n.P > 0).ToArray();
+        // the % bars' chords light the mark; C lights only in its own bar, its copy 0 then 1
+        Assert.All(sounding.Where(n => n.T % 8.0 is >= 2.0 - 1e-6 and < 4.0 - 1e-6 or >= 6.0 - 1e-6), n => Assert.Contains(n.S, marks));
+        Assert.Equal(new[] { 0, 1 }, sounding.Where(n => n.S == c).Select(n => n.O).Distinct().OrderBy(o => o));
+        Assert.All(sounding.Where(n => n.S == c), n => Assert.True(n.T % 8.0 < 2.0 - 1e-6, $"C at {n.T}"));
+    }
 }

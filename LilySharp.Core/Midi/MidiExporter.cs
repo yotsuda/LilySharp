@@ -2504,8 +2504,15 @@ public sealed class MidiExporter
         var lastBar = new List<SyntaxNode>();
         void Sound()
         {
-            if (bar.Count == 1 && bar[0] is PercentMarkSyntax)
+            // A `%`: the bar before sounds again, its notes carrying the mark (MidiNote.Percent),
+            // so the preview lights the `%` for the bar, not the chords it was played from (owner's
+            // request 2026-11-16, as a part's `%`). The chords' own printed copies are not counted.
+            PercentMarkSyntax? mark = null;
+            int markOrdinal = 0, firstNote = track.Notes.Count;
+            if (bar.Count == 1 && bar[0] is PercentMarkSyntax percentMark)
             {
+                mark = percentMark;
+                markOrdinal = NextOrdinal(mark.Span.Start);
                 bar.Clear();
                 bar.AddRange(lastBar);
             }
@@ -2533,7 +2540,7 @@ public sealed class MidiExporter
                 if (length < 1)
                     continue;
                 int position = entry.SourceStart;
-                int ordinal = NextOrdinal(position);
+                int ordinal = mark == null ? NextOrdinal(position) : 0;
                 // A row that strums to a strokes part (`chords NAME plays STROKES`, owner's design
                 // 2026-11-01) sounds the chord at each stroke within its span, for the stroke's
                 // length cut at the span's end, at the stroke's level (70%, as the row); a span
@@ -2577,6 +2584,12 @@ public sealed class MidiExporter
                     track.Notes.Add(new MidiNote(track.Channel, SoundKey(tone.Midi + _fileShiftSemitones + _scoreTransposeSemitones, position), velocity,
                         onset, length, position, SourceOrdinal: ordinal, Timbre: timbre, Part: part));
             }
+            if (mark != null)
+                for (int i = firstNote; i < track.Notes.Count; i++)
+                    track.Notes[i] = track.Notes[i] with
+                    {
+                        Percent = new PercentCopy(mark.Span.Start, markOrdinal, track.Notes[i].StartTick - barStart, thisBarTicks),
+                    };
             bar.Clear();
         }
 
