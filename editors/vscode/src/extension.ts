@@ -9275,19 +9275,30 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // it than to the line the flag is on (a little more, so it does not flicker between two),
         // sliding there. The flag held is drawn bolder and larger, and a dashed line and a faint
         // flag follow the pointer, so what is held shows while the flag itself has not moved.
+        // The flags stand on bar lines, numbered as the bars: line L is before bar L (and after bar
+        // L-1) — A on line abFrom, B on line abTo + 1. A flag held past the other one swaps with it
+        // (owner's request 2026-11-17): the held one becomes the other letter, the bars between the
+        // two lines are the range.
         let abDrag = null;
-        function abLines(letter) {
+        /** Every place a flag can stand: a bar's left edge is line m, its right edge line m + 1 (at a
+         *  system's end and the next one's start, one line in two places). */
+        function abLines() {
             const out = [];
             for (const b of abBars()) {
                 if (!b) continue;
                 const c = b.rect.getBoundingClientRect();
-                out.push({ m: b.m, x: letter === 'A' ? c.left : c.right, top: c.top, bottom: c.bottom });
+                out.push({ line: b.m, x: c.left, top: c.top, bottom: c.bottom });
+                out.push({ line: b.m + 1, x: c.right, top: c.top, bottom: c.bottom });
             }
             return out;
         }
-        function abLineDistance(l, x, y) {
-            const dy = y < l.top - 40 ? l.top - 40 - y : y > l.bottom ? y - l.bottom : 0;
-            return Math.hypot(l.x - x, dy * 3);   // another system is far: a line of its own system first
+        /** The line the flag (A or B) stands on. */
+        function abLineOf(letter) { return letter === 'A' ? abFrom : abTo + 1; }
+        /** How far the pointer is from a line's system, up and down: 0 over the bar box or the flag
+         *  above it (no taller than the box: zoomed out, the systems stand closer than 40 px). */
+        function abSystemDistance(l, y) {
+            const above = Math.min(40, (l.bottom - l.top) * 0.4);
+            return y < l.top - above ? l.top - above - y : y > l.bottom ? y - l.bottom : 0;
         }
         function abOverlay() {
             let ghost = document.getElementById('abGhost'), rubber = document.getElementById('abRubber');
@@ -9316,7 +9327,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function startAbDrag(e, letter) {
             if (e.button !== 0) return;
             e.preventDefault(); e.stopPropagation();
-            abDrag = { letter, at: letter === 'A' ? abFrom : abTo };
+            abDrag = { letter, at: abLineOf(letter) };
             const f = abFlagEl(letter);
             if (f) f.classList.add('grabbed');
             document.body.classList.add('ab-grabbing');
@@ -9332,26 +9343,35 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const pane = mainContent.getBoundingClientRect();
             if (e.clientY < pane.top + 28) mainContent.scrollTop -= 14;
             else if (e.clientY > pane.bottom - 28) mainContent.scrollTop += 14;
-            const lines = abLines(abDrag.letter);
-            const cur = lines.find(l => l.m === abDrag.at);
-            let best = null, bestD = Infinity;
+            // Any line but the other flag's (no bar between them): past it, the two swap.
+            // The system the pointer is over (the nearest, between two) first, then its line nearest
+            // across: a wide bar's far line is still its own system's, not the next system's
+            // (measured 2026-11-17: zoomed out, a diagonal drag went 4, 9, 5, 10 by the lines' distance).
+            const other = abLineOf(abDrag.letter === 'A' ? 'B' : 'A');
+            const lines = abLines();
+            let near = Infinity;
+            for (const l of lines) { l.dy = abSystemDistance(l, e.clientY); near = Math.min(near, l.dy); }
+            let best = null, bestD = Infinity, curD = Infinity;
             for (const l of lines) {
-                if (abDrag.letter === 'A' ? l.m > abTo : l.m < abFrom) continue;
-                const v = abLineDistance(l, e.clientX, e.clientY);
+                if (l.dy > near + 0.5) continue;
+                const v = Math.abs(l.x - e.clientX);
+                if (l.line === abDrag.at) curD = Math.min(curD, v);
+                if (l.line === other) continue;
                 if (v < bestD) { bestD = v; best = l; }
             }
-            if (best && best.m !== abDrag.at && (!cur || bestD + 4 < abLineDistance(cur, e.clientX, e.clientY))) moveAbFlag(best.m);
+            if (best && best.line !== abDrag.at && bestD + 4 < curD) moveAbFlag(best.line);
             showAbGhost(e);
         }
-        /** The flag held slides to bar line m (its own bar's start for A, end for B). */
-        function moveAbFlag(m) {
-            const letter = abDrag.letter;
-            const before = abFlagEl(letter), from = before && before.querySelector('.ab-pole').getBoundingClientRect();
-            abDrag.at = m;
-            if (letter === 'A') abFrom = m; else abTo = m;
+        /** The flag held slides to the bar line given: before the other flag it is A, after it B. */
+        function moveAbFlag(line) {
+            const before = abFlagEl(abDrag.letter), from = before && before.querySelector('.ab-pole').getBoundingClientRect();
+            const other = abLineOf(abDrag.letter === 'A' ? 'B' : 'A');
+            if (line < other) { abFrom = line; abTo = other - 1; abDrag.letter = 'A'; }
+            else { abFrom = other; abTo = line - 1; abDrag.letter = 'B'; }
+            abDrag.at = line;
             drawAbFlags();
             showAb();
-            const after = abFlagEl(letter);
+            const after = abFlagEl(abDrag.letter);
             if (!after) return;
             after.classList.add('grabbed');
             const pole = after.querySelector('.ab-pole'), to = pole.getBoundingClientRect();
