@@ -9302,7 +9302,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     sayLevel();
                     practiceChanged(practice.speed);
                 });
-                fader.addEventListener('dblclick', () => { fader.value = '100'; fader.dispatchEvent(new Event('change')); });
+                resetOnDoubleClick(fader, () => { fader.value = '100'; fader.dispatchEvent(new Event('change')); });
                 line.appendChild(fader);
                 line.appendChild(num);
                 list.appendChild(line);
@@ -9691,6 +9691,34 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             recStatus(why);
             flashInfo(why, 5000);
         }
+        /**
+         * A slider's double-click puts it back (owner's requests 2026-11-16). Told by the presses
+         * themselves, not the browser's dblclick: the second press of a double-click moved the
+         * thumb to where it landed, and a double-click the system did not count as one (a little
+         * slow, the mouse moved a pixel) left it there (owner's report 2026-11-16). So a second
+         * press soon after the first and near it is no press on the track at all: its default is
+         * stopped (the thumb stays) and the slider is reset.
+         */
+        function resetOnDoubleClick(slider, reset) {
+            let last = -Infinity, lastX = 0;
+            const DOUBLE_MS = 500, NEAR_PX = 6;
+            slider.addEventListener('pointerdown', e => {
+                if (e.button !== 0) return;
+                if (e.timeStamp - last < DOUBLE_MS && Math.abs(e.clientX - lastX) <= NEAR_PX) {
+                    e.preventDefault();
+                    last = -Infinity;
+                    slider.__resetting = true;
+                    if (!slider.disabled) reset();
+                    return;
+                }
+                last = e.timeStamp;
+                lastX = e.clientX;
+            });
+            // (the mouse press behind a stopped pointer press: kept from the slider too)
+            slider.addEventListener('mousedown', e => { if (slider.__resetting) { e.preventDefault(); } });
+            slider.addEventListener('pointerup', () => { setTimeout(() => { slider.__resetting = false; }, 0); });
+            slider.addEventListener('dblclick', e => e.preventDefault());
+        }
         function setRecLevel(v) {
             if (v === 100) delete recLevels.Recording; else recLevels.Recording = v / 100;
             showRecording();
@@ -9701,7 +9729,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             document.getElementById('recLevelValue').textContent = recLevelSlider.value === '100' ? '' : recLevelSlider.value + '%';
         });
         recLevelSlider.addEventListener('change', () => setRecLevel(Number(recLevelSlider.value)));
-        recLevelSlider.addEventListener('dblclick', () => setRecLevel(100));
+        resetOnDoubleClick(recLevelSlider, () => setRecLevel(100));
         function closeRecPanel() {
             recPanel.hidden = true;
             recPanelBtn.setAttribute('aria-expanded', 'false');
@@ -9727,7 +9755,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function recSlider(slider, set, reset) {
             slider.addEventListener('input', () => { set(Number(slider.value)); showRecording(); });
             slider.addEventListener('change', () => { set(Number(slider.value)); recChanged(); });
-            slider.addEventListener('dblclick', () => { if (slider.disabled) return; slider.value = String(reset); set(reset); recChanged(); });
+            resetOnDoubleClick(slider, () => { slider.value = String(reset); set(reset); recChanged(); });
             slider.title = 'Double-click: ' + (reset === 100 ? '100%' : reset);
         }
         recSlider(recSpeedSlider, v => { recSettings.speed = v / 100; }, 100);
@@ -9749,7 +9777,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         });
         tempoSlider.addEventListener('change', () => setSpeed(Number(tempoSlider.value)));
         // A double-click is 100 %, as the reset beside it (owner's request 2026-11-16).
-        tempoSlider.addEventListener('dblclick', () => { tempoSlider.value = '100'; setSpeed(100); showPractice(); });
+        resetOnDoubleClick(tempoSlider, () => { tempoSlider.value = '100'; setSpeed(100); showPractice(); });
         tempoSlider.title = 'Double-click: 100%';
         document.getElementById('tempoReset').addEventListener('click', () => setSpeed(100));
         // The parts as the score shown has them (owner's request 2026-11-09): nothing muted, the
