@@ -517,6 +517,11 @@ function cancelSvgRequest(uri: string) {
 // Settings UI (owner's decision 2026-10-25: a tuning value), so this is the delay unless
 // settings.json still names one. It was 60.
 const DEBOUNCE_DELAY_DEFAULT = 100;
+// The longest a change waits for the preview while more changes keep coming (a held key): the
+// debounce above restarts on each change, this does not (owner's report 2026-11-16).
+const PREVIEW_MAX_WAIT = 120;
+// When the first change still waiting for the preview came, per document (the max-wait's start).
+const pendingRefreshSince = new Map<string, number>();
 const HIGHLIGHT_DISTANCE_THRESHOLD = 50;
 
 export function activate(context: vscode.ExtensionContext) {
@@ -1248,10 +1253,19 @@ export function activate(context: vscode.ExtensionContext) {
                         if (existingTimer) {
                             clearTimeout(existingTimer);
                         }
+                        // …but never later than PREVIEW_MAX_WAIT after the first change still
+                        // waiting (owner's report 2026-11-16): a held step key (Ctrl+Shift+Up on
+                        // `tempo 130`) edits every ~30 ms, each edit pushed the refresh back again,
+                        // and the preview stood still until the key was let go. Now it follows the
+                        // held key, a render each PREVIEW_MAX_WAIT, and the last edit still renders.
+                        const now = Date.now();
+                        const since = pendingRefreshSince.get(uri) ?? now;
+                        pendingRefreshSince.set(uri, since);
                         debounceTimers.set(uri, setTimeout(() => {
+                            pendingRefreshSince.delete(uri);
                             updatePreviewContent(event.document, panel, context);
                             debounceTimers.delete(uri);
-                        }, delay));
+                        }, Math.max(0, Math.min(delay, since + PREVIEW_MAX_WAIT - now))));
                     }
                 }
             }

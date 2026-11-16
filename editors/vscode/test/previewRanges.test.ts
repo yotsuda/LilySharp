@@ -83,6 +83,14 @@ describe('the preview\'s Range panel', () => {
 
     // Play stays pressable while playing; pressed then, it plays again from the editor's caret
     // (owner's request 2026-11-16), as Play from Here does.
+    // A held step key edits every ~30 ms; the preview's debounce restarted on each edit, so it
+    // stood still until the key was let go (owner's report 2026-11-16). A max-wait bounds it.
+    it('follows a held key: the refresh waits no longer than its max-wait after the first change', () => {
+        assert.match(extension, /const PREVIEW_MAX_WAIT = \d+;/);
+        assert.match(extension, /const since = pendingRefreshSince\.get\(uri\) \?\? now;[\s\S]{0,400}?Math\.max\(0, Math\.min\(delay, since \+ PREVIEW_MAX_WAIT - now\)\)/);
+        assert.match(extension, /pendingRefreshSince\.delete\(uri\);\s*updatePreviewContent\(event\.document, panel, context\);/);
+    });
+
     // …and stopped too (owner's decision 2026-11-16, retiring "after Stop, Play from the top").
     it('plays from the editor\'s caret when stopped too, and the header says that place', () => {
         assert.match(html, /setPlayUi\(true\); \/\/ immediate feedback while the request runs[\s\S]{0,500}?pendingStartPos = caretStartPos\(\);/);
