@@ -102,12 +102,39 @@ public class KeyNameMarksTests
     [InlineData("ees minor", "Ebm")]
     [InlineData("c major", "C")]
     [InlineData("a minor", "Am")]
+    // The church modes (owner's report 2026-11-16: `key d ionian` printed "Dm").
+    [InlineData("d ionian", "D")]
+    [InlineData("a aeolian", "Am")]
+    [InlineData("d dorian", "D Dorian")]
+    [InlineData("e phrygian", "E Phrygian")]
+    [InlineData("f lydian", "F Lydian")]
+    [InlineData("g mixolydian", "G Mixolydian")]
+    [InlineData("b locrian", "B Locrian")]
+    [InlineData("bes dorian", "Bb Dorian")]
     [InlineData("custom fis cis", null)]
     [InlineData("none", null)]
     public void TheName_IsTheTonicAsAChordSymbolsRoot(string key, string? name)
     {
         var syntax = SyntaxTree.Parse($"key {key}\n").GetRoot().DescendantNodes().OfType<KeySignatureSyntax>().First();
         Assert.Equal(name, KeyNameMarks.NameOf(syntax));
+    }
+
+    /// <summary>A modal opening key, left and come back to on a written one-line staff: the return
+    /// is the staff's own key change (a section's reset, at no key token), named as the opening by
+    /// its signature — D Dorian's is C major's, no sharp.</summary>
+    [Fact]
+    public void AModalOpeningKey_IsNamedAgainWhereTheMusicReturnsToIt()
+    {
+        string book = """
+            time 4/4
+            key d dorian
+            part l { }
+            section A { chords h { Dm | G | } }
+            section B { key f major  chords h { F | C | } }
+            form { A B A }
+            score { chords h  staff l as lines 1 }
+            """;
+        Assert.Equal(new[] { "Key: D Dorian", "Key: F", "Key: D Dorian" }, KeyWords(Svg(book)).Select(w => w.Text));
     }
 
     /// <summary>A section without a key of its own after one in another key is back in the

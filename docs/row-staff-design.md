@@ -91,7 +91,10 @@
   最初の小節と転調の小節の頭に **「Key: D」**（短調は「Key: Bm」・♯♭は「F#」「Bb」の ASCII）を出す
   （`Svg/Collector/KeyNameMarks.cs`・目印の種類 `MusicMarkType.KeyName`・LILYSHARP-OWN）。5 線以上の譜表が 1 本でもあれば出さない。
   `key custom`／`key none`、`key` を書いていない本も出さない。
-- 名前は書いた `key` の構文から（主音の音名と長調／短調）。最初の調は「0 小節目から始まる section の見出しの `key`、無ければ
+- 旋法（オーナー報告 2026-11-16: `key d ionian` が「Dm」だった）: `major`・`ionian` は「D」、`minor`・`aeolian` は「Dm」、
+  ほかの 5 つは名前を添える＝「D Dorian」「E Phrygian」「F Lydian」「G Mixolydian」「B Locrian」。エディタの表示名
+  （`KeySignatureSyntax.DisplayName`＝アウトラインとホバー）も「major でなければ minor」だったので、書いた語をそのまま出す。
+- 名前は書いた `key` の構文から（主音の音名と旋法）。最初の調は「0 小節目から始まる section の見出しの `key`、無ければ
   section の外の最初の `key`」。転調は譜表に転調の記号があればそこ（元の調への戻りは元の調の名前）、無ければ（自動の一線譜は
   行の骨組みを写すので転調を持たない）section の開始小節ごとに見出しの `key` か元の調を並べ、前と違う所。
 - 見た目: 直立・テキストの大きさ・テンポと同じ横位置に左揃え。**積むのは最後**（`OutsideStaffStacker.PlaceMusicMarks`）＝

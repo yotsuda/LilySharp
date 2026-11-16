@@ -136,15 +136,43 @@ internal static class KeyNameMarks
     }
 
     /// <summary>The key a <c>key</c> writes, as a chord symbol's root: the tonic's letter and
-    /// accidental, "m" for minor. Null for a key with no tonic.</summary>
+    /// accidental, then its mode — nothing for major (and <c>ionian</c>, the same scale), "m" for
+    /// minor (and <c>aeolian</c>), the church mode's name for the other five ("D Dorian"; owner's
+    /// report 2026-11-16: <c>key d ionian</c> printed "Dm", every mode but <c>major</c> read as
+    /// minor). Null for a key with no tonic.</summary>
     internal static string? NameOf(KeySignatureSyntax key)
     {
-        if (key.IsCustom || key.GetChild(2) is not PitchSyntax pitch || pitch.BaseName is not (>= 'a' and <= 'g'))
+        if (key.IsCustom || key.GetChild(2) is not PitchSyntax pitch || pitch.BaseName is not (>= 'a' and <= 'g')
+            || key.GetChild(3) is not SyntaxTokenNode mode)
             return null;
         int alter = pitch.AccidentalOffset;
         string accidental = alter switch { > 0 => new string('#', alter), < 0 => new string('b', -alter), _ => "" };
-        return char.ToUpperInvariant(pitch.BaseName) + accidental + (key.IsMajor ? "" : "m");
+        string suffix = mode.Kind switch
+        {
+            SyntaxKind.MajorKeyword or SyntaxKind.IonianKeyword => "",
+            SyntaxKind.MinorKeyword or SyntaxKind.AeolianKeyword => "m",
+            SyntaxKind.DorianKeyword => " Dorian",
+            SyntaxKind.PhrygianKeyword => " Phrygian",
+            SyntaxKind.LydianKeyword => " Lydian",
+            SyntaxKind.MixolydianKeyword => " Mixolydian",
+            SyntaxKind.LocrianKeyword => " Locrian",
+            _ => "",
+        };
+        return char.ToUpperInvariant(pitch.BaseName) + accidental + suffix;
     }
+
+    /// <summary>A mode's signature against the major scale on the same tonic, in fifths (Dorian
+    /// is two flats from major: D Dorian has C major's signature).</summary>
+    private static int ModeFifths(SyntaxKind mode) => mode switch
+    {
+        SyntaxKind.LydianKeyword => 1,
+        SyntaxKind.MixolydianKeyword => -1,
+        SyntaxKind.DorianKeyword => -2,
+        SyntaxKind.MinorKeyword or SyntaxKind.AeolianKeyword => -3,
+        SyntaxKind.PhrygianKeyword => -4,
+        SyntaxKind.LocrianKeyword => -5,
+        _ => 0,
+    };
 
     private static bool InSection(SyntaxNode node)
     {
@@ -163,6 +191,7 @@ internal static class KeyNameMarks
         int step = "cdefgab".IndexOf(pitch.BaseName);
         if (step < 0)
             return 0;
-        return majorFifths[step] + 7 * pitch.AccidentalOffset - (key.IsMajor ? 0 : 3);
+        return majorFifths[step] + 7 * pitch.AccidentalOffset
+            + (key.GetChild(3) is SyntaxTokenNode mode ? ModeFifths(mode.Kind) : 0);
     }
 }

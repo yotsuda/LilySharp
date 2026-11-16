@@ -286,13 +286,15 @@ public sealed class KeySignatureSyntax : SyntaxNode
     /// <summary>The tonic pitch of a traditional key.</summary>
     public PitchSyntax Pitch => (PitchSyntax)GetChild(2)!;
 
-    /// <summary>How the editor names this key — <c>f major</c>, <c>d minor</c>, or
-    /// <c>custom</c> for a custom signature, which has no tonic.</summary>
+    /// <summary>How the editor names this key — <c>f major</c>, <c>d minor</c>, <c>d dorian</c>,
+    /// or <c>custom</c> for a custom signature, which has no tonic.</summary>
     /// <remarks>The outline and the hover read <see cref="Pitch"/> as if it could be null;
     /// it is a cast, and on <c>key custom …</c> it threw — every book with a custom key lost
-    /// its outline (found by the language-server sweep, session 717).</remarks>
+    /// its outline (found by the language-server sweep, session 717). The mode is the word
+    /// written: until 2026-11-16 it was "major" or else "minor", so <c>key d ionian</c> read
+    /// "d minor" (owner's report, the same misreading as the page's key words).</remarks>
     public string DisplayName => IsNone ? NoneWord : IsCustom ? "custom"
-        : $"{(GetChild(2) as PitchSyntax)?.PitchName} {(IsMajor ? "major" : "minor")}";
+        : $"{(GetChild(2) as PitchSyntax)?.PitchName} {(GetChild(3) as SyntaxTokenNode)?.Text ?? (IsMajor ? "major" : "minor")}";
     /// <summary>The mode token (e.g. <c>major</c>, <c>minor</c>).</summary>
     public SyntaxTokenNode Mode => (SyntaxTokenNode)GetChild(3)!;
 
