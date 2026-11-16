@@ -177,6 +177,23 @@ public class DynamicPlacementTests
         Assert.InRange(reach, 2.5, 10.0);
     }
 
+    // Words on the last note of a line stay on it (owner's report 2026-11-16, chamber.lys:
+    // "Sus. Cym., soft mallets" on the last beat ran off the page). LILYSHARP-OWN: LilyPond's
+    // TextScript keeps its left on the note and hangs past the line.
+    [Fact]
+    public void ExpressiveTextOnTheLastNote_IsKeptOnTheLine()
+    {
+        const string words = "Sus. Cym., soft mallets";
+        var score = Collect("c''1 | c''1 | c''4 c'' c'' c''@text(\"" + words + "\").up");
+        var layout = new LayoutEngine().Layout(score);
+        var txt = layout.DynamicLayouts.Single(d => d.IsExpressiveText);
+        var last = layout.Systems[0].Measures[^1];
+        double half = DynamicEngraver.LabelHalfWidth(score.TextMetrics, words, expressive: true);
+        Assert.True(txt.X + half <= last.X + last.Width + 1e-6, $"{txt.X + half} past {last.X + last.Width}");
+        // …and a short word there keeps its left on its note, as before.
+        var plain = new LayoutEngine().Layout(Collect("c''1 | c''1 | c''4 c'' c'' c''@text(\"p\").up"));
+        Assert.True(plain.DynamicLayouts.Single(d => d.IsExpressiveText).X > txt.X);
+    }
     [Fact]
     public void AboveGrobsSharingAColumn_StackClearInsteadOfOverprinting()
     {
@@ -190,7 +207,9 @@ public class DynamicPlacementTests
         // so it never actually collides with a note's dynamic — that test only
         // passed because a lone-section box happened to occupy the mark's column.
         // Lone-section boxes are now suppressed, exposing the non-overlap.)
-        var score = Collect("c''4@f.up@text(\"cresc\").up");
+        // (Three more notes: a line one quarter long would end before the words do, and words
+        // past a line's end are kept on it — DynamicEngraver.KeptOnTheLine, 2026-11-16.)
+        var score = Collect("c''4@f.up@text(\"cresc\").up c'' c'' c''");
         var layout = new LayoutEngine().Layout(score);
 
         var above = layout.DynamicLayouts.Where(d => d.IsAbove).OrderBy(d => d.YUp).ToList();

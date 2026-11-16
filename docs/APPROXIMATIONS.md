@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 459 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **585** | |
+| `OWN` | 461 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **587** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -31,8 +31,8 @@
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 10 |
 | `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 9 |
+| `LilySharp.Core/Svg/Layout/DynamicEngraver.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 8 |
-| `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 8 |
 
 ## APPROX — LP に対応物はあるが、形が違うと自認しているもの（62 件）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（459 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（461 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -640,11 +640,13 @@
 ### `LilySharp.Core/Svg/Layout/DynamicEngraver.cs`
 - **`DynamicEngraver.MeasuredExpressiveInk`** ⚠️ LILYSHARP-OWN: a string the bundled face cannot spell (CJK — TextFontMetrics reports
 - **`DynamicEngraver.DrumDoubles`** LILYSHARP-OWN: LilyPond's Dynamic_engraver lives in each Voice, and a DrumStaff of two
+- **`DynamicEngraver.Calculate`** last bar's last beat ran off the page). LILYSHARP-OWN: LilyPond's TextScript keeps its
 - **`DynamicEngraver.PlaceOnMultiMeasureRests`** ⚠️ LILYSHARP-OWN: the number is a support of THIS text alone, not ink of the staff's
 - **`DynamicEngraver.SubitoWidth`** word at the expressive-text em and the word space after it. LILYSHARP-OWN (owner's decision
 - **`DynamicEngraver.EditorialParenEm`** LILYSHARP-OWN: without the example's \fontsize #2. MEASURED, 2.26.0
 - **`DynamicEngraver.EditorialParenPens`** LILYSHARP-OWN: each parenthesis is set from the level's INK, not from its advance box:
 - **`DynamicEngraver.SmuflGlyphRun`** the ink the side-position reads. LILYSHARP-OWN: LilyPond reads no SMuFL font and sets its
+- **`DynamicEngraver.KeptOnTheLine`** LILYSHARP-OWN (owner's report 2026-11-16): LilyPond's TextScript keeps its left
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
 - **`ElementCoordinator.BuildTieColumn`** LILYSHARP-OWN: LilyPond boxes the slash head as any head (tie-formatting-problem.cc
 - **`ElementCoordinator.BuildTieSpecification`** LILYSHARP-OWN: no head extent on a tab, so the horizontal-distance term

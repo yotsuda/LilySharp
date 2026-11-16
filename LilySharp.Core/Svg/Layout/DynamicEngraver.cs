@@ -153,6 +153,7 @@ internal static class DynamicEngraver
     /// in staff spaces. See <see cref="GlyphMetrics.TryGetDynamicInk"/>: LilyPond's
     /// DynamicText extent is the drawn glyphs' ink, so it differs per dynamic; free
     /// expressive text's is its own string's, at the TextScript em and face.
+    /// <para>(See also <see cref="KeptOnTheLine"/>, which keeps that text inside its line.)</para>
     /// </summary>
     internal static (double Ascent, double Descent) InkOf(
         Rendering.ScoreTextMetrics fonts, string? text, bool expressive)
@@ -355,6 +356,13 @@ internal static class DynamicEngraver
                 ? LabelHalfWidth(score.TextMetrics, labelText, expressive: true)
                 : DynamicAnchorCentreOffset(
                     dynVoices, dynamic.VoiceIndex, dynamic.MeasureIndex, dynamic.ItemIndex));
+            // Expressive text on a note near the end of a line: its right edge kept at the
+            // line's (owner's report 2026-11-16, chamber.lys: "Sus. Cym., soft mallets" on the
+            // last bar's last beat ran off the page). LILYSHARP-OWN: LilyPond's TextScript keeps its
+            // left on the note and hangs past the line into the margin (and off a cropped page).
+            if (expressive)
+                x = KeptOnTheLine(x, LabelHalfWidth(score.TextMetrics, labelText, expressive: true),
+                    measureLayouts, dynamic.MeasureIndex);
 
             // The supports: EVERY voice's note column at this timing (a lower voice's
             // down-stem must not be overlapped by a dynamic positioned from the upper
@@ -1526,4 +1534,31 @@ internal static class DynamicEngraver
     // avoid_outside_staff_collisions, 0.46, pointwise), the device LilyPond actually
     // has. audit/lp-geometry staff.staff.dynamic-beam-avoid.
 
+    /// <summary>
+    /// A centre <paramref name="x"/> for a label <paramref name="half"/> wide each way, moved
+    /// left as far as its right edge passes the line's — the right of the last measure of the
+    /// system <paramref name="measureIndex"/> stands on — and never left of that line's first
+    /// measure. The measures of one system follow one another rightward; the next system's
+    /// first measure starts again at the left (a smaller X).
+    /// </summary>
+    /// <remarks>LILYSHARP-OWN (owner's report 2026-11-16): LilyPond's TextScript keeps its left
+    /// on its note and lets the words run past the line.</remarks>
+    internal static double KeptOnTheLine(double x, double half,
+        ImmutableArray<MeasureLayout> measureLayouts, int measureIndex)
+    {
+        // (A measure another page lays out has no entry here: null ends the line too.)
+        if (measureLayouts.IsDefaultOrEmpty || measureIndex < 0 || measureIndex >= measureLayouts.Length
+            || measureLayouts[measureIndex] is null)
+            return x;
+        int last = measureIndex, first = measureIndex;
+        while (last + 1 < measureLayouts.Length && measureLayouts[last + 1] is { } nextBar && nextBar.X > measureLayouts[last].X)
+            last++;
+        while (first > 0 && measureLayouts[first - 1] is { } prevBar && prevBar.X < measureLayouts[first].X)
+            first--;
+        double right = measureLayouts[last].X + measureLayouts[last].Width;
+        double left = measureLayouts[first].X;
+        if (x + half <= right)
+            return x;
+        return Math.Max(left + half, right - half);
+    }
 }
