@@ -7312,6 +7312,23 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // { pos, occ }: a phrase's every expansion shares ONE source
         // position, so copy #occ in document order (= chronological within
         // the part's staff) is the note actually sounding now.
+        /** The drawn elements of one entry of highlightPositions (a data-pos, or { pos, occ }),
+         *  painted or not — the follow-along reads the notes about to sound by it (followAlong). */
+        function elementsAt(entry) {
+            const pos = typeof entry === 'object' ? entry.pos : entry;
+            const occ = typeof entry === 'object' ? entry.occ : -1;
+            sourcePositions();
+            let matches = (posElements.get(pos) || []).slice();
+            if (occ >= 0 && matches.length > 1) {
+                const marks = matches.filter(el => el.hasAttribute('data-todo'));
+                const music = marks.length > 0 && marks.length < matches.length
+                    ? matches.filter(el => !el.hasAttribute('data-todo')) : matches;
+                const instances = clusterInstances(music);
+                const picked = instances[Math.min(occ, instances.length - 1)] || music;
+                matches = music !== matches && instances.length === 1 ? picked.concat(marks) : picked;
+            }
+            return matches;
+        }
         function highlightPositions(positions) {
             const color = getHighlightColor();
             const painted = [];
@@ -8524,6 +8541,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (!relay) follow.start();
             followSystemDocTop = null; followSystemOffset = null; followTopTarget = null;   // a new Play finds its place anew
             const cursor = new Cursor(notes.map(n => ({ t: n.T - offset, d: n.D, s: relay ? n.R : n.S, o: n.O || 0 })));
+            // The notes about to sound, FOLLOW_LEAD seconds ahead (owner's request 2026-11-16: a
+            // player must see the next line, or the notes cut off at the side, before they sound —
+            // the view moved only once the next line's first note had sounded). The view is moved
+            // for them and the notes sounding; the notes are lit when they sound.
+            const ahead = relay ? null : new Cursor(notes.map(n => ({ t: n.T - offset, d: n.D, s: n.S, o: n.O || 0 })));
+            let aheadEls = [], soundingEls = [];
             // How evenly the 50 ms tick came (owner's report 2026-10-25: one eighth note lit in
             // four — the tick a second apart, as a browser throttles a page it thinks hidden):
             // the longest gap and whether the page said it was hidden, logged when it stops.
@@ -8537,7 +8560,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 tickWatch.last = now;
                 tickWatch.ticks++;
                 tickWatch.hidden = tickWatch.hidden || document.hidden;
-                const r = cursor.at(elapsed());
+                const playedTo = elapsed();
+                const r = cursor.at(playedTo);
+                const a = ahead ? ahead.at(playedTo + FOLLOW_LEAD) : null;
+                if (a && a.hadNew) {
+                    aheadEls = [];
+                    for (const entry of a.sounding) aheadEls.push.apply(aheadEls, elementsAt(entry));
+                    if (aheadEls.length > 0 && follow.follows()) follow.auto(() => keepSoundingInView(soundingEls, aheadEls));
+                }
                 if (!r.changed) return;
                 if (relay) {
                     vscode.postMessage({ type: 'candidateSounding', sounding: r.sounding.map(x => ({ pos: x.pos, occ: x.occ })) });
@@ -8552,8 +8582,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     lastHighlightPos = r.sounding[0].pos;
                     lastResolvedPos = r.sounding[0].pos;
                 }
-                if (painted.length > 0) follow.sounding(painted);
-                if (r.hadNew && painted.length > 0 && follow.follows()) follow.auto(() => keepSoundingInView(painted));
+                if (painted.length > 0) { follow.sounding(painted); soundingEls = painted; }
+                if (r.hadNew && painted.length > 0 && follow.follows()) follow.auto(() => keepSoundingInView(painted, aheadEls));
                 if (painted.length > 0) lightPlayingBar(painted);
             };
             followTick = tick;
@@ -8576,18 +8606,60 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // is: MEASURED 2026-11-16, the next system reached 2315 of 6483), and not the reader's place
         // while it runs.
         var followSystemDocTop = null, followSystemOffset = null, followTopTarget = null;
-        function keepSoundingInView(els) {
+        // The notes about to sound lead the view (owner's request 2026-11-16): ahead are the
+        // elements of the notes FOLLOW_LEAD seconds on, current those sounding. Both are kept in
+        // view when they fit together; when they do not, the notes to come win — the next line,
+        // or the notes cut off at the side, are on screen before they sound.
+        const FOLLOW_LEAD = 1.5;
+        function extentOf(els) {
             let top = Infinity, bottom = -Infinity, left = Infinity, right = -Infinity;
-            for (const el of els) {
+            for (const el of els || []) {
                 const b = el.getBoundingClientRect();
                 if (b.width === 0 && b.height === 0) continue;
                 top = Math.min(top, b.top); bottom = Math.max(bottom, b.bottom);
                 left = Math.min(left, b.left); right = Math.max(right, b.right);
             }
-            if (top === Infinity) return;
+            return top === Infinity ? null : { top, bottom, left, right };
+        }
+        function keepSoundingInView(current, ahead) {
+            const cur = extentOf(current), next = extentOf(ahead);
+            if (!cur && !next) return;
+            const both = cur && next ? { top: Math.min(cur.top, next.top), bottom: Math.max(cur.bottom, next.bottom),
+                left: Math.min(cur.left, next.left), right: Math.max(cur.right, next.right) } : (cur || next);
             const m = mainContent.getBoundingClientRect();
             const margin = 30;
-            const system = barBoxOf(els[0]);
+            // One way (top/bottom, or left/right): the shift that brings box [lo, hi] into the view's
+            // [vlo, vhi] — centred when it fits and is off, its start at the margin when it is too
+            // long and its start is out of sight.
+            const shift = (lo, hi, vlo, vhi) => {
+                const fits = hi - lo <= vhi - vlo - 2 * margin;
+                const off = fits ? lo < vlo + margin || hi > vhi - margin : lo < vlo + margin || lo > vhi - 2 * margin;
+                return !off ? 0 : fits ? (lo + hi) / 2 - (vlo + vhi) / 2 : lo - (vlo + margin);
+            };
+            // Together when they fit that way, else the notes to come.
+            const pick = (lo, hi, span) => (both[hi] - both[lo] <= span - 2 * margin || !next) ? both : next;
+            // Sideways, in one move (owner's request 2026-11-16: not a little at a time): when the
+            // notes to come would be cut off, or those sounding are out of sight, the note sounding
+            // goes to the leftmost place the view shows — or, the notes to come being to its left
+            // (the next line), they do.
+            // The notes sounding are in sight when their left edge is (several staves' notes together
+            // can be wider than a narrow view: their right edge out of it moved the view by the few
+            // pixels between that left edge and the margin — MEASURED 2026-11-16, 37 px).
+            const offRight = (b) => b && b.right > m.right - margin;
+            const offLeft = (b) => b && b.left < m.left + margin - 1;
+            const startOut = (b) => b && (b.left < m.left + margin - 1 || b.left > m.right - margin);
+            // Notes to come cut off move the view only once the note sounding is past the first third
+            // of it: a jump moves a third of the view or more, never the few pixels the sounding
+            // note went on since the last (MEASURED 2026-11-16 in a 394 px view: 839 → 1259 → 1297).
+            const pastThird = cur && cur.left > m.left + margin + (m.width - 2 * margin) / 3;
+            let dx = 0;
+            if ((offRight(next) && (pastThird || !cur)) || offLeft(next) || startOut(cur)) {
+                const anchor = next && (!cur || next.left < cur.left) ? next.left : (cur || next).left;
+                dx = anchor - (m.left + margin);
+                if (Math.abs(dx) < 1) dx = 0;
+            }
+            const leading = (next && ahead && ahead[0]) || (current && current[0]);
+            const system = leading ? barBoxOf(leading) : null;
             if (system && system.height > m.height - 2 * margin) {
                 const docTop = system.top + mainContent.scrollTop;
                 const moving = followTopTarget !== null && Math.abs(mainContent.scrollTop - followTopTarget) > 2;
@@ -8603,31 +8675,21 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     followTopTarget = mainContent.scrollTop + system.top + followSystemOffset - m.top;
                 }
                 followSystemDocTop = docTop;
-                const wide = right - left <= m.width - 2 * margin;
-                const offH = wide ? left < m.left + margin || right > m.right - margin : left < m.left + margin || left > m.right - 2 * margin;
-                const dx = !offH ? 0 : wide ? (left + right) / 2 - (m.left + m.right) / 2 : left - (m.left + margin);
                 // Where the view goes, both ways at once, so neither cuts the other short.
                 const topTo = followTopTarget !== null ? followTopTarget : mainContent.scrollTop;
-                if (Math.abs(topTo - mainContent.scrollTop) > 1 || dx !== 0) {
-                    mainContent.scrollTo({ top: topTo, left: mainContent.scrollLeft + dx, behavior: 'smooth' });
+                const vertical = Math.abs(topTo - mainContent.scrollTop) > 1;
+                if (vertical || dx !== 0) {
+                    // A sideways move alone is one jump; with a move down they go together, smoothly.
+                    mainContent.scrollTo({ top: topTo, left: mainContent.scrollLeft + dx, behavior: vertical ? 'smooth' : 'auto' });
                 }
                 return;
             }
             followSystemDocTop = null;
-            const fits = bottom - top <= m.height - 2 * margin;
-            const offV = fits
-                ? top < m.top + margin || bottom > m.bottom - margin
-                : top < m.top + margin || top > m.bottom - 2 * margin;
-            const offH = right - left <= m.width - 2 * margin
-                ? left < m.left + margin || right > m.right - margin
-                : left < m.left + margin || left > m.right - 2 * margin;
-            if (!offV && !offH) return;
-            const dy = !offV ? 0 : fits ? (top + bottom) / 2 - (m.top + m.bottom) / 2 : top - (m.top + margin);
-            const dx = !offH ? 0 : (right - left <= m.width - 2 * margin)
-                ? (left + right) / 2 - (m.left + m.right) / 2 : left - (m.left + margin);
-            mainContent.scrollBy({ top: dy, left: dx, behavior: 'smooth' });
+            const down = pick('top', 'bottom', m.height);
+            const dy = shift(down.top, down.bottom, m.top, m.bottom);
+            if (dy === 0 && dx === 0) return;
+            mainContent.scrollBy({ top: dy, left: dx, behavior: dy !== 0 ? 'smooth' : 'auto' });
         }
-
         // The fallback: oscillator patches, one node pair per note, built up front (fine
         // for the short pieces this plays while no sound font is loaded). Timbre families
         // (note.I): waveform + envelope approximations; pluck = exponential decay. The sum

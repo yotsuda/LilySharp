@@ -586,7 +586,7 @@ describe('the preview keeps what sounds in view, every part together', () => {
             getBoundingClientRect: () => rect(0, 600, 0, 800),
             scrollBy: (o: { top: number; left: number }) => scrolls.push(o),
         };
-        const keep = pageFunction('keepSoundingInView', { mainContent, barBoxOf: () => null }) as (els: unknown[]) => void;
+        const keep = pageFunction('keepSoundingInView', { mainContent, barBoxOf: () => null, extentOf: pageFunction('extentOf', {}) }) as (els: unknown[], ahead?: unknown[]) => void;
         const notes = (...rs: ReturnType<typeof rect>[]) => rs.map(r => ({ getBoundingClientRect: () => r }));
         return { keep, notes, scrolls };
     };
@@ -603,7 +603,7 @@ describe('the preview keeps what sounds in view, every part together', () => {
             scrollTo: (o: { top: number; left: number }) => { moves.push(o); systemTop -= o.top - view.scrollTop; view.scrollTop = o.top; },
         };
         const context: Record<string, unknown> = { mainContent, barBoxOf: () => rect(systemTop, systemTop + 3000, 0, 800),
-            followSystemDocTop: null, followSystemOffset: null, followTopTarget: null };
+            followSystemDocTop: null, followSystemOffset: null, followTopTarget: null, extentOf: pageFunction('extentOf', {}) };
         const keep = pageFunction('keepSoundingInView', context) as (els: unknown[]) => void;
         const at = (top: number) => [{ getBoundingClientRect: () => rect(top, top + 10) }];
         keep(at(40));                       // the first: the view stands in it, 200 below its top — stays
@@ -613,6 +613,30 @@ describe('the preview keeps what sounds in view, every part together', () => {
         systemTop += 3500;
         keep(at(systemTop + 100));
         assert.deepEqual(moves.map(m => m.top), [1000 + 3500]);
+    });
+    // The notes about to sound lead (owner's request 2026-11-16): a player sees the next line
+    // before its first note sounds.
+    it('brings the notes about to sound into view before they sound, with those sounding when both fit', () => {
+        const { keep, notes, scrolls } = follow();
+        keep(notes(rect(500, 510)), notes(rect(700, 710)));          // the next line below the view
+        assert.equal(scrolls.length, 1);
+        assert.equal(scrolls[0].top, (500 + 710) / 2 - 300);          // both in view, centred
+        const far = follow();
+        far.keep(far.notes(rect(500, 510)), far.notes(rect(1500, 1510)));   // too far apart: the notes to come
+        assert.equal(far.scrolls[0].top, (1500 + 1510) / 2 - 300);
+        const side = follow();
+        side.keep(side.notes(rect(100, 110, 600, 700)), side.notes(rect(100, 110, 900, 950)));   // cut off at the side
+        // In one move, not a little at a time (owner's request 2026-11-16): the note sounding goes
+        // to the leftmost place the view shows (its margin, 30), at once.
+        assert.deepEqual(JSON.parse(JSON.stringify(side.scrolls)), [{ top: 0, left: 600 - 30, behavior: 'auto' }]);
+        // Still in the first third of the view, it does not move for the notes to come.
+        const early = follow();
+        early.keep(early.notes(rect(100, 110, 200, 260)), early.notes(rect(100, 110, 900, 950)));
+        assert.equal(early.scrolls.length, 0);
+        // The next line, to the left: the notes to come go to the left.
+        const back = follow();
+        back.keep(back.notes(rect(100, 110, 600, 700)), back.notes(rect(300, 310, -400, -350)));
+        assert.equal(back.scrolls[0].left, -400 - 30);
     });
     it('leaves alone what is all in view', () => {
         const { keep, notes, scrolls } = follow();

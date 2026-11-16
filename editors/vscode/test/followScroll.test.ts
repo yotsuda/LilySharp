@@ -190,7 +190,9 @@ describe('whether a Play\'s view follows the notes sounding', () => {
         // The preview: a Play of its own (not a candidate's relayed notes) starts it, a stop ends it.
         assert.match(ext, /const follow = installFollowScroll\(mainContent, document\.getElementById\('followBtn'\)\);/);
         assert.match(ext, /if \(!relay\) follow\.start\(\);/);
-        assert.match(ext, /if \(painted\.length > 0\) follow\.sounding\(painted\);\s*if \(r\.hadNew && painted\.length > 0 && follow\.follows\(\)\) follow\.auto\(\(\) => keepSoundingInView\(painted\)\);/);
+        assert.match(ext, /if \(painted\.length > 0\) \{ follow\.sounding\(painted\); soundingEls = painted; \}\s*if \(r\.hadNew && painted\.length > 0 && follow\.follows\(\)\) follow\.auto\(\(\) => keepSoundingInView\(painted, aheadEls\)\);/);
+        // …and the notes about to sound move it first (owner's request 2026-11-16).
+        assert.match(ext, /if \(aheadEls\.length > 0 && follow\.follows\(\)\) follow\.auto\(\(\) => keepSoundingInView\(soundingEls, aheadEls\)\);/);
         assert.match(ext, /playheadTimer = null;\s*follow\.stop\(\);/);
         assert.match(ext, /follow\.onResume = \(els\) => \{ if \(els\.length > 0\) follow\.auto\(\(\) => keepSoundingInView\(els\)\); \};/);
         // The panel.

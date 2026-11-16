@@ -162,7 +162,7 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /if \(system && system\.height > m\.height - 2 \* margin\) \{/);
         assert.match(html, /if \(!moving\) followSystemOffset = m\.top - system\.top;/);
         assert.match(html, /followTopTarget = mainContent\.scrollTop \+ system\.top \+ followSystemOffset - m\.top;/);
-        assert.match(html, /mainContent\.scrollTo\(\{ top: topTo, left: mainContent\.scrollLeft \+ dx, behavior: 'smooth' \}\);/);
+        assert.match(html, /mainContent\.scrollTo\(\{ top: topTo, left: mainContent\.scrollLeft \+ dx, behavior: vertical \? 'smooth' : 'auto' \}\);/);
         assert.match(html, /followSystemDocTop = null; followSystemOffset = null; followTopTarget = null;/);
     });
 
