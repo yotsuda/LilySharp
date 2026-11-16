@@ -392,7 +392,7 @@ internal sealed class SvgDrawingContext : IDrawingContext
         HitRect(x, y, width, height);
     }
 
-    public void DrawBarBox(int barNumber, double x, double y, double width, double height, int measureIndex = -1)
+    public void DrawBarBox(int barNumber, double x, double y, double width, double height, int measureIndex = -1, string? section = null)
     {
         // Interactive preview only, and no data-pos: it is not a click target, and the
         // highlight recolor must never find it.
@@ -408,6 +408,10 @@ internal sealed class SvgDrawingContext : IDrawingContext
             AppendInt(measureIndex);
             _sb.Append('"');
         }
+        // The section label this bar opens (Measure.SectionLabel): the A-B repeat's "this section
+        // as A-B" runs from it to the next labelled bar.
+        if (!string.IsNullOrEmpty(section))
+            _sb.Append(" data-sec=\"").Append(EscapeAttr(section)).Append('"');
         Attr("x", x);
         Attr("y", y);
         Attr("width", width);

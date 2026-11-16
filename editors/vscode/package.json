@@ -861,6 +861,21 @@
         "title": "Step Down an Octave (octave mark / chord shape / tempo / key / clef / dynamic / articulation / time / octave / transpose)"
       },
       {
+        "command": "lilysharp.previewAbA",
+        "category": "Lily#",
+        "title": "A Here (A-B Repeat)"
+      },
+      {
+        "command": "lilysharp.previewAbB",
+        "category": "Lily#",
+        "title": "B Here (A-B Repeat)"
+      },
+      {
+        "command": "lilysharp.previewAbSection",
+        "category": "Lily#",
+        "title": "This Section as A-B"
+      },
+      {
         "command": "lilysharp.previewPlayFromHere",
         "category": "Lily#",
         "title": "Play from Here"
@@ -1202,6 +1217,18 @@
           "when": "activeWebviewPanelId == 'lilysharpPreview' && lilysharp.previewLocked"
         },
         {
+          "command": "lilysharp.previewAbA",
+          "when": "false"
+        },
+        {
+          "command": "lilysharp.previewAbB",
+          "when": "false"
+        },
+        {
+          "command": "lilysharp.previewAbSection",
+          "when": "false"
+        },
+        {
           "command": "lilysharp.previewPlayFromHere",
           "when": "activeWebviewPanelId == 'lilysharpPreview'"
         },
@@ -1311,6 +1338,21 @@
           "command": "lilysharp.previewStop",
           "when": "webviewId == 'lilysharpPreview' && lysPlaying",
           "group": "2_playback@2"
+        },
+        {
+          "command": "lilysharp.previewAbA",
+          "when": "webviewId == 'lilysharpPreview' && lysAbLine",
+          "group": "2_playback@3"
+        },
+        {
+          "command": "lilysharp.previewAbB",
+          "when": "webviewId == 'lilysharpPreview' && lysAbLine",
+          "group": "2_playback@4"
+        },
+        {
+          "command": "lilysharp.previewAbSection",
+          "when": "webviewId == 'lilysharpPreview' && lysAbSec",
+          "group": "2_playback@5"
         },
         {
           "command": "lilysharp.previewFitWidth",

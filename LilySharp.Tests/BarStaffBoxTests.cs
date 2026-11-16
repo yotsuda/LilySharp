@@ -72,7 +72,7 @@ public class BarStaffBoxTests
 
         // A staff tall, and as wide as the bar's own box.
         Assert.All(boxes, b => Assert.Equal(4, Num(b, 5), 3));
-        var bars = Regex.Matches(preview, @"<rect class=""bar-box"" data-bar=""\d+""(?: data-m=""\d+"")? x=""([^""]+)"" y=""[^""]+"" width=""([^""]+)""");
+        var bars = Regex.Matches(preview, @"<rect class=""bar-box"" data-bar=""\d+""(?: data-m=""\d+"")?(?: data-sec=""[^""]*"")? x=""([^""]+)"" y=""[^""]+"" width=""([^""]+)""");
         Assert.Equal(bars.Select(m => m.Groups[1].Value).OrderBy(x => x),
             boxes.Where(b => Num(b, 3) == top).Select(b => b.Groups[2].Value).OrderBy(x => x));
     }
@@ -173,6 +173,18 @@ public class BarStaffBoxTests
         Assert.Equal(4, rows);       // the chords row's and the lyrics row's, two bars each
         Assert.Equal(2, staves);     // the one-line staff's
         Assert.DoesNotContain("data-row", SvgGenerator.Generate(SyntaxTree.Parse(Book), SvgRenderOptions.Preview()));
+    }
+
+    // A bar that opens a labelled section says so (data-sec): the A-B repeat's "this section as
+    // A-B" runs from it to the bar before the next (docs/ab-repeat-design.md §1).
+    [Fact]
+    public void ABarOpeningASection_NamesIt()
+    {
+        string preview = SvgGenerator.Generate(SyntaxTree.Parse(Book), SvgRenderOptions.Preview());
+        var bars = Regex.Matches(preview, @"<rect class=""bar-box"" data-bar=""\d+"" data-m=""(\d+)""(?: data-sec=""([^""]*)"")?").Cast<Match>()
+            .Select(m => (M: int.Parse(m.Groups[1].Value), Sec: m.Groups[2].Success ? m.Groups[2].Value : null)).ToList();
+        Assert.Equal(new[] { 0, 1, 2, 3 }, bars.Select(b => b.M));
+        Assert.Equal(new[] { "A", null, null, "B" }, bars.Select(b => b.Sec));
     }
 
     [Fact]

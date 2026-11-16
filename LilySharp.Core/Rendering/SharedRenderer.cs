@@ -143,6 +143,7 @@ internal static partial class SharedRenderer
         // drawer's dominant term (session 160).
         var fingeringsByPage = GroupFingeringsByPage(layout);
         var barNumbers = PrintedBarNumbers(score);
+        var sectionLabels = score.PrimaryContentStaff.PrimaryVoice.Measures.Select(m => m.SectionLabel).ToArray();
         var barStarts = BarStartPositions(score);
         bool recordInk = HasTodoMemos(score);
         bool firstPage = true;
@@ -244,7 +245,7 @@ internal static partial class SharedRenderer
                                 DrawSystem(score, layout, drawn, resolver, beamedItems, systemGc, flipBase);
                         // OUTSIDE the capture: a replayed system stands at other bar numbers
                         // once a bar is added before it, and its boxes must say so.
-                        DrawBarBoxes(drawn, barNumbers, barStarts, systemGc, score.TextMetrics, layout.ChordNameLayouts);
+                        DrawBarBoxes(drawn, barNumbers, sectionLabels, barStarts, systemGc, score.TextMetrics, layout.ChordNameLayouts);
                     }
                     finally
                     {
@@ -402,7 +403,7 @@ internal static partial class SharedRenderer
     /// symbols in this system (<c>ChordNameEngraver.SymbolInk</c>, the raised run and the
     /// accidentals with it), one height for the whole row, with <see cref="RowBoxPad"/> round it.
     /// </remarks>
-    private static void DrawBarBoxes(SystemLayout system, ImmutableArray<int> barNumbers,
+    private static void DrawBarBoxes(SystemLayout system, ImmutableArray<int> barNumbers, string?[] sectionLabels,
         BarSource[][] barStarts, IDrawingContext gc,
         ScoreTextMetrics fonts, ImmutableArray<ChordNameLayout> chordNames)
     {
@@ -425,7 +426,8 @@ internal static partial class SharedRenderer
                 continue;
             if (measure.MeasureIndex < barNumbers.Length)
                 gc.DrawBarBox(barNumbers[measure.MeasureIndex], measure.X, system.Y + top,
-                    measure.Width, top - bottom, measure.MeasureIndex);
+                    measure.Width, top - bottom, measure.MeasureIndex,
+                    measure.MeasureIndex < sectionLabels.Length ? sectionLabels[measure.MeasureIndex] : null);
             foreach (var group in system.StaffGroups)
                 foreach (var staff in group.Staves)
                 {

@@ -159,9 +159,9 @@ internal sealed class YFlipDrawingContext : IDrawingContext
         // y is the Y-up top edge; height is a size (extends downward), unchanged.
         => _inner.DrawHitRect(x, F(y), width, height);
 
-    public void DrawBarBox(int barNumber, double x, double y, double width, double height, int measureIndex = -1)
+    public void DrawBarBox(int barNumber, double x, double y, double width, double height, int measureIndex = -1, string? section = null)
         // As DrawHitRect: y is the Y-up top edge, height a size.
-        => _inner.DrawBarBox(barNumber, x, F(y), width, height, measureIndex);
+        => _inner.DrawBarBox(barNumber, x, F(y), width, height, measureIndex, section);
 
     public void DrawBarStaffBox(int sourcePosition, int from, int to, double x, double y, double width, double height, bool row = false)
         => _inner.DrawBarStaffBox(sourcePosition, from, to, x, F(y), width, height, row);

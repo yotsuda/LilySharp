@@ -319,7 +319,7 @@ public interface IDrawingContext
     /// it (LilySharp-Omr proposal C2: the scan and the page side by side, bar by bar). Draws
     /// nothing; static backends emit nothing.
     /// </summary>
-    void DrawBarBox(int barNumber, double x, double y, double width, double height, int measureIndex = -1) { }
+    void DrawBarBox(int barNumber, double x, double y, double width, double height, int measureIndex = -1, string? section = null) { }
 
     /// <summary>
     /// In interactive SVG, an invisible box over one bar of one staff — the bar's X range, the

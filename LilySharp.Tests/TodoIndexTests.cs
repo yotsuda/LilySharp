@@ -80,7 +80,7 @@ public class TodoIndexTests
         var tree = SyntaxTree.Parse(Book);
         string preview = SvgGenerator.Generate(tree, SvgRenderOptions.Preview());
         var boxes = Regex.Matches(preview,
-            @"<rect class=""bar-box"" data-bar=""(\d+)""(?: data-m=""\d+"")? x=""([^""]+)"" y=""([^""]+)"" width=""([^""]+)"" height=""([^""]+)""");
+            @"<rect class=""bar-box"" data-bar=""(\d+)""(?: data-m=""\d+"")?(?: data-sec=""[^""]*"")? x=""([^""]+)"" y=""([^""]+)"" width=""([^""]+)"" height=""([^""]+)""");
         Assert.Equal(new[] { 0, 1, 2, 3 }, boxes.Select(m => int.Parse(m.Groups[1].Value)));
         // Bar after bar: each box starts where the one before it ends.
         for (int i = 1; i < boxes.Count; i++)

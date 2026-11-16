@@ -1026,6 +1026,14 @@ export function activate(context: vscode.ExtensionContext) {
             postToActivePreview('ctxPlayFromHere')),
         vscode.commands.registerCommand('lilysharp.previewStop', () =>
             postToActivePreview('ctxStop')),
+        // The A-B repeat's right-click (docs/ab-repeat-design.md §1): the bar line or the
+        // section right-clicked is the webview's to know.
+        vscode.commands.registerCommand('lilysharp.previewAbA', () =>
+            postToActivePreview('ctxAbA')),
+        vscode.commands.registerCommand('lilysharp.previewAbB', () =>
+            postToActivePreview('ctxAbB')),
+        vscode.commands.registerCommand('lilysharp.previewAbSection', () =>
+            postToActivePreview('ctxAbSection')),
         vscode.commands.registerCommand('lilysharp.previewFitWidth', () =>
             postToActivePreview('ctxFitWidth')),
         vscode.commands.registerCommand('lilysharp.previewResetZoom', () =>
@@ -10581,6 +10589,23 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 case 'ctxFitWidth':
                     fitWidth();
                     break;
+                // The A-B repeat's right-click: A on the bar line right-clicked (the bar after
+                // it), B on it (the bar before it); a section's bars as A-B. A-B turns on; the
+                // other flag stays where it is if it can, else stands four bars off.
+                case 'ctxAbA':
+                case 'ctxAbB':
+                case 'ctxAbSection': {
+                    const c = ctxAb;
+                    if (!c) break;
+                    let from = abOn ? abFrom : -1, to = abOn ? abTo : -1;
+                    if (message.type === 'ctxAbSection') { if (!c.sec) break; from = c.sec[0]; to = c.sec[1]; }
+                    else if (message.type === 'ctxAbA') { from = c.after; if (to < from) to = Math.min(c.last, from + 3); }
+                    else { to = c.before; if (from < 0 || from > to) from = Math.max(0, to - 3); }
+                    if (from < 0 || to < from) break;
+                    abOn = true;
+                    setAb(from, to);
+                    break;
+                }
                 case 'ctxResetZoom':
                     fitMode = null; // back to manual zoom, at 1:1
                     scale = 1;
@@ -10913,6 +10938,39 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
             return -1;
         }
+        // The A-B repeat's right-click (docs/ab-repeat-design.md §1): the bar line nearest the
+        // pointer in the bar under it (or under the heading over it) — A there is the bar after
+        // it, B the bar before — and the labelled section that bar is in (data-sec opens one;
+        // it runs to the bar before the next).
+        let ctxAb = null;
+        function abLineAt(x, y) {
+            const bars = abBars();
+            const last = bars.length - 1;
+            // The bar whose box holds the point, else the nearest one in its column: a heading
+            // over a system is the bar's below it, so the distance up to a box counts for less.
+            let hit = null, hitD = Infinity;
+            for (const b of bars) {
+                if (!b) continue;
+                const c = b.rect.getBoundingClientRect();
+                if (x < c.left || x > c.right) continue;
+                const v = y < c.top ? (c.top - y) * 0.5 : y > c.bottom ? (y - c.bottom) * 2 : 0;
+                if (v < hitD && v <= 24) { hitD = v; hit = { b, c }; }
+            }
+            if (hit) {
+                const b = hit.b, c = hit.c;
+                const m = b.m, right = x - c.left > c.right - x;
+                let sec = null;
+                for (let s = m; s >= 0; s--) {
+                    if (!bars[s] || !bars[s].rect.hasAttribute('data-sec')) continue;
+                    let end = m;
+                    while (end < last && !(bars[end + 1] && bars[end + 1].rect.hasAttribute('data-sec'))) end++;
+                    sec = [s, end];
+                    break;
+                }
+                return { after: Math.min(last, right ? m + 1 : m), before: Math.max(0, right ? m : m - 1), last, sec };
+            }
+            return null;
+        }
         document.addEventListener('contextmenu', (e) => {
             const t = noteUnder(e);
             ctxNotePos = (t && t.hasAttribute && t.hasAttribute('data-pos'))
@@ -10967,6 +11025,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (ctxBarAt < 0) ctxBarAt = ctxNotePos;
             ctxPlayPos = ctxNotePos >= 0 ? ctxNotePos : ctxBarRange ? ctxBarRange[0] : -1;
             const ctxChordEnd = ctxNotePos >= 0 ? chordEndAt(ctxNotePos) : -1;
+            ctxAb = abLineAt(e.clientX, e.clientY);
             document.body.dataset.vscodeContext = JSON.stringify({
                 preventDefaultContextMenuItems: true,
                 // The OMR doors only for a file with a scan (owner, 2026-10-24); the scan
@@ -10985,6 +11044,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 lysBarTodo: ctxTodoStarts.length > 0,
                 lysTodoStarts: ctxTodoStarts.join(','),
                 lysHasTodos: todoMarks.length > 0,
+                lysAbLine: ctxAb !== null,
+                lysAbSec: !!(ctxAb && ctxAb.sec),
                 // The Stop button's enabled state is the playback flag that also
                 // covers the optimistic window between Play and the first events.
                 lysPlaying: !document.getElementById('stopBtn').disabled
