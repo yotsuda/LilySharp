@@ -394,16 +394,33 @@ function carry(from: readonly [number, number][], to: readonly [number, number][
 
 /**
  * How fast the recording plays so that the lined-up bars last as long as the score writes them:
- * the recording's span of them over the score's (at its written tempo). The score's tempo is the
- * one that counts (owner's decision 2026-11-16): a chart that says 131 over a recording of 131.8
+ * the MEDIAN of the bars' own ratios — each bar's length in the recording over its length in the
+ * score (at its written tempo); of an even count, the mean of the middle two. The score's tempo is
+ * the one that counts (owner's decision 2026-11-16): a chart that says 131 over a recording of 131.8
  * plays the recording at 131/131.8, and a tempo written anew moves the recording with it. Bar by
  * bar the two still meet (warpTime); this sets the whole's pace.
+ *
+ * The median, not the spans' ratio (Dettato's request 8, 2026-11-16): a bar read wrong — two bars
+ * read as one, a last bar cut short — or a long gap between songs in a long recording dragged the
+ * whole's pace with it. MEASURED by Dettato (its scratch/fit.py, 172 songs): over 2 % off in 35
+ * songs, at most 39 %, with the spans' ratio; in 3, at most 2.7 %, with the median; a 58-minute
+ * band practice played 1.26× fast and now 0.994×. A pickup counts as any bar: short in both, its
+ * ratio is the music's like the others'.
  */
 export function warpFit(w: TimeWarp): number {
-    const last = w.score.length - 1;
-    const score = w.score[last][1] - w.score[0][0];
-    const rec = w.rec[last][1] - w.rec[0][0];
-    return score > 0 && rec > 0 ? rec / score : 1;
+    const ratios: number[] = [];
+    for (let i = 0; i < w.score.length; i++) {
+        const score = w.score[i][1] - w.score[i][0], rec = w.rec[i][1] - w.rec[i][0];
+        if (score > 0 && rec > 0) {
+            ratios.push(rec / score);
+        }
+    }
+    if (ratios.length === 0) {
+        return 1;
+    }
+    ratios.sort((a, b) => a - b);
+    const mid = ratios.length >> 1;
+    return ratios.length % 2 === 1 ? ratios[mid] : (ratios[mid - 1] + ratios[mid]) / 2;
 }
 
 /** The recording's second for score time t (any t: see carry). */
