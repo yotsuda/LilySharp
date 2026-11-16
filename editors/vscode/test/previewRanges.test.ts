@@ -47,7 +47,7 @@ describe('the preview\'s Range panel', () => {
     it('asks the server for the score shown, and again after every render while open', () => {
         assert.match(extension, /'lilysharp\/ranges', \{ textDocument: \{ uri \}, renderName: selectedRenders\.get\(uri\) \|\| null \}/);
         assert.match(html, /function refreshRanges\(\) \{\s*if \(!rangePanel\.hidden\) vscode\.postMessage\(\{ type: 'requestRanges' \}\);/);
-        assert.match(html, /lightCaretBar\(\);\s*refreshRanges\(\);/);
+        assert.match(html, /lightCaretBar\(\);\s*drawAbFlags\(\);[^\n]*\s*refreshRanges\(\);/);
         assert.match(html, /case 'rangesData':\s*rangeParts = message\.parts \|\| null;/);
     });
 

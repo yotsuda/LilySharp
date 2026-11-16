@@ -5750,6 +5750,23 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             transform-origin: top left;
             transition: transform 0.1s ease-out;
         }
+        /* The A-B repeat's flags and the bars between them (docs/ab-repeat-design.md): drawn in the
+           page's own units beside the bar boxes, so they scroll and zoom with the score. */
+        #svgContainer .ab-shade { fill: rgba(232, 113, 10, 0.10); pointer-events: none; }
+        #svgContainer .ab-flag { cursor: grab; pointer-events: all; }
+        #svgContainer .ab-flag .ab-hit { fill: transparent; }
+        #svgContainer .ab-flag .ab-pole { stroke: #e8710a; stroke-width: 0.25; }
+        #svgContainer .ab-flag .ab-pennant { fill: #e8710a; transform-box: fill-box; transform-origin: center; transition: transform 0.08s; }
+        #svgContainer .ab-flag text { fill: #fff; font: bold 1.15px sans-serif; pointer-events: none; }
+        #svgContainer .ab-flag.grabbed .ab-pole { stroke-width: 0.5; }
+        #svgContainer .ab-flag.grabbed .ab-pennant { transform: scale(1.3); stroke: #7a3a00; stroke-width: 0.15; }
+        #svgContainer .ab-flag.ab-landed .ab-pole { animation: ab-flash 0.35s ease-out; }
+        @keyframes ab-flash { from { stroke-width: 1.1; stroke: #ffb066; } }
+        body.ab-grabbing, body.ab-grabbing * { cursor: grabbing !important; }
+        #abGhost { position: fixed; pointer-events: none; z-index: 1001; opacity: 0.55; background: #e8710a; color: #fff;
+            font: bold 11px sans-serif; padding: 1px 5px; border-radius: 2px; transform: translate(6px, -18px); }
+        #abRubber { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 1000; }
+        #abRubber line { stroke: #e8710a; stroke-width: 1.5; stroke-dasharray: 4 3; }
         #svgContainer svg {
             display: block;
         }
@@ -9099,6 +9116,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             abBtn.setAttribute('aria-pressed', String(abOn));
             abBtn.textContent = abOn ? 'On' : 'Off';
             document.getElementById('abFields').hidden = !abOn;
+            drawAbFlags();
             if (!abOn) return;
             const bars = abBars();
             const num = m => bars[m] ? bars[m].bar : m + 1;
@@ -9153,6 +9171,159 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (m < 0) { showAb(); return; }
             setAb(Math.min(abFrom, m), m);
         });
+
+        // ---- The flags (docs/ab-repeat-design.md §1; owner's requests 2026-11-17). A stands on the
+        // bar line before bar A, its pennant pointing right; B on the bar line after bar B, pointing
+        // left; the bars between are tinted. Drawn into the page beside the bar boxes, in their
+        // units, so they scroll and zoom with the score; drawn again after every picture.
+        const AB_NS = 'http://www.w3.org/2000/svg';
+        function abEl(name, attrs) {
+            const el = document.createElementNS(AB_NS, name);
+            for (const k in attrs) el.setAttribute(k, String(attrs[k]));
+            return el;
+        }
+        function drawAbFlags() {
+            for (const el of svgContainer.querySelectorAll('.ab-mark')) el.remove();
+            if (!abOn || abFrom < 0) return;
+            const bars = abBars();
+            for (let m = abFrom; m <= abTo; m++) {
+                const r = bars[m] && bars[m].rect;
+                if (!r) continue;
+                const shade = abEl('rect', { class: 'ab-mark ab-shade', x: r.getAttribute('x'), y: r.getAttribute('y'),
+                    width: r.getAttribute('width'), height: r.getAttribute('height') });
+                r.parentNode.insertBefore(shade, r);
+            }
+            if (bars[abFrom]) drawAbFlag('A', bars[abFrom].rect, false);
+            if (bars[abTo]) drawAbFlag('B', bars[abTo].rect, true);
+        }
+        function drawAbFlag(letter, rect, atEnd) {
+            const x = parseFloat(rect.getAttribute('x')) + (atEnd ? parseFloat(rect.getAttribute('width')) : 0);
+            const y = parseFloat(rect.getAttribute('y')), h = parseFloat(rect.getAttribute('height'));
+            const dir = atEnd ? -1 : 1, top = y - 3.4;
+            const g = abEl('g', { class: 'ab-mark ab-flag', 'data-flag': letter });
+            g.appendChild(abEl('rect', { class: 'ab-hit', x: x - 1.2, y: top, width: 2.4, height: h + 3.4 }));
+            g.appendChild(abEl('line', { class: 'ab-pole', x1: x, y1: top, x2: x, y2: y + h }));
+            const tip = x + dir * 2.4;
+            g.appendChild(abEl('polygon', { class: 'ab-pennant', points: x + ',' + top + ' ' + tip + ',' + (top + 0.85) + ' ' + x + ',' + (top + 1.7) }));
+            const label = abEl('text', { x: x + dir * 0.85, y: top + 1.25, 'text-anchor': 'middle' });
+            label.textContent = letter;
+            g.appendChild(label);
+            g.addEventListener('pointerdown', e => startAbDrag(e, letter));
+            // (the sheet's own clicks — select, play from here — are not the flag's)
+            for (const type of ['mousedown', 'mouseup', 'click', 'dblclick', 'contextmenu']) g.addEventListener(type, e => e.stopPropagation());
+            rect.parentNode.appendChild(g);
+            return g;
+        }
+        function abFlagEl(letter) { return svgContainer.querySelector('.ab-flag[data-flag="' + letter + '"]'); }
+
+        // Dragging: the flag stays on a bar line and moves to another once the pointer is nearer to
+        // it than to the line the flag is on (a little more, so it does not flicker between two),
+        // sliding there. The flag held is drawn bolder and larger, and a dashed line and a faint
+        // flag follow the pointer, so what is held shows while the flag itself has not moved.
+        let abDrag = null;
+        function abLines(letter) {
+            const out = [];
+            for (const b of abBars()) {
+                if (!b) continue;
+                const c = b.rect.getBoundingClientRect();
+                out.push({ m: b.m, x: letter === 'A' ? c.left : c.right, top: c.top, bottom: c.bottom });
+            }
+            return out;
+        }
+        function abLineDistance(l, x, y) {
+            const dy = y < l.top - 40 ? l.top - 40 - y : y > l.bottom ? y - l.bottom : 0;
+            return Math.hypot(l.x - x, dy * 3);   // another system is far: a line of its own system first
+        }
+        function abOverlay() {
+            let ghost = document.getElementById('abGhost'), rubber = document.getElementById('abRubber');
+            if (!ghost) {
+                ghost = document.createElement('div'); ghost.id = 'abGhost'; document.body.appendChild(ghost);
+                rubber = abEl('svg', { id: 'abRubber' }); rubber.appendChild(abEl('line', {})); document.body.appendChild(rubber);
+            }
+            return { ghost, rubber, line: rubber.querySelector('line') };
+        }
+        function showAbGhost(e) {
+            const o = abOverlay(), f = abDrag && abFlagEl(abDrag.letter);
+            o.ghost.hidden = false; o.rubber.style.display = '';
+            o.ghost.textContent = abDrag.letter;
+            o.ghost.style.left = e.clientX + 'px'; o.ghost.style.top = e.clientY + 'px';
+            const pole = f && f.querySelector('.ab-pole');
+            if (pole) {
+                const c = pole.getBoundingClientRect();
+                o.line.setAttribute('x1', String(c.left + c.width / 2)); o.line.setAttribute('y1', String(c.top + 6));
+                o.line.setAttribute('x2', String(e.clientX)); o.line.setAttribute('y2', String(e.clientY));
+            }
+        }
+        function hideAbGhost() {
+            const o = abOverlay();
+            o.ghost.hidden = true; o.rubber.style.display = 'none';
+        }
+        function startAbDrag(e, letter) {
+            if (e.button !== 0) return;
+            e.preventDefault(); e.stopPropagation();
+            abDrag = { letter, at: letter === 'A' ? abFrom : abTo };
+            const f = abFlagEl(letter);
+            if (f) f.classList.add('grabbed');
+            document.body.classList.add('ab-grabbing');
+            showAbGhost(e);
+            window.addEventListener('pointermove', onAbMove, true);
+            window.addEventListener('pointerup', onAbUp, true);
+            window.addEventListener('pointercancel', onAbUp, true);
+        }
+        function onAbMove(e) {
+            if (!abDrag) return;
+            e.preventDefault();
+            // Near the pane's top or bottom edge, the score scrolls under the pointer.
+            const pane = mainContent.getBoundingClientRect();
+            if (e.clientY < pane.top + 28) mainContent.scrollTop -= 14;
+            else if (e.clientY > pane.bottom - 28) mainContent.scrollTop += 14;
+            const lines = abLines(abDrag.letter);
+            const cur = lines.find(l => l.m === abDrag.at);
+            let best = null, bestD = Infinity;
+            for (const l of lines) {
+                if (abDrag.letter === 'A' ? l.m > abTo : l.m < abFrom) continue;
+                const v = abLineDistance(l, e.clientX, e.clientY);
+                if (v < bestD) { bestD = v; best = l; }
+            }
+            if (best && best.m !== abDrag.at && (!cur || bestD + 4 < abLineDistance(cur, e.clientX, e.clientY))) moveAbFlag(best.m);
+            showAbGhost(e);
+        }
+        /** The flag held slides to bar line m (its own bar's start for A, end for B). */
+        function moveAbFlag(m) {
+            const letter = abDrag.letter;
+            const before = abFlagEl(letter), from = before && before.querySelector('.ab-pole').getBoundingClientRect();
+            abDrag.at = m;
+            if (letter === 'A') abFrom = m; else abTo = m;
+            drawAbFlags();
+            showAb();
+            const after = abFlagEl(letter);
+            if (!after) return;
+            after.classList.add('grabbed');
+            const pole = after.querySelector('.ab-pole'), to = pole.getBoundingClientRect();
+            // From where it stood to where it lands, in the page's units (the same system only:
+            // to another system it lands at once).
+            const unit = (parseFloat(pole.getAttribute('y2')) - parseFloat(pole.getAttribute('y1'))) / Math.max(1, to.height);
+            if (from && Math.abs(from.top - to.top) < 2) {
+                after.style.transition = 'none';
+                after.style.transform = 'translate(' + ((from.left - to.left) * unit) + 'px, 0px)';
+                requestAnimationFrame(() => requestAnimationFrame(() => {
+                    after.style.transition = 'transform 0.12s ease-out';
+                    after.style.transform = '';
+                }));
+            }
+            after.classList.add('ab-landed');
+            setTimeout(() => after.classList.remove('ab-landed'), 400);
+        }
+        function onAbUp() {
+            window.removeEventListener('pointermove', onAbMove, true);
+            window.removeEventListener('pointerup', onAbUp, true);
+            window.removeEventListener('pointercancel', onAbUp, true);
+            document.body.classList.remove('ab-grabbing');
+            hideAbGhost();
+            if (!abDrag) return;
+            abDrag = null;
+            setAb(abFrom, abTo);    // (and from A, if it plays)
+        }
         // A loop's rounds are laid out ahead, ten minutes of them (loopNotes): the player's
         // clock times each round, not a page timer the browser may hold to a second.
         function looped(list) {
@@ -10240,6 +10411,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         collectPages();
                         applyBarFlags();
                         lightCaretBar();
+                        drawAbFlags();      // (the A-B flags are the page's: drawn into each new picture)
                         refreshRanges();
                         vscode.postMessage({ type: 'requestLength' });
                         // Keep the fit across re-renders (this is also what fits
