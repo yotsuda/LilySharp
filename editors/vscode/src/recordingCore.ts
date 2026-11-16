@@ -428,28 +428,39 @@ export function scoreTimeAt(bars: readonly [number, number][], rec: Recording, s
 /** The score's bars and the recording's, lined up bar for bar — what lets the score play with the
  *  recording (docs/recording-design.md §1 7: the score's notes moved, bar by bar, onto the
  *  recording's seconds). Null when they cannot be: no bar placed yet (a recording only attached
- *  sounds alone), or the counts differ (a chart changed by a bar: SIDECAR.md says not to play a bar
- *  that may be the wrong one). Every bar must move forward in both. */
+ *  sounds alone). Every bar must move forward in both.
+ *
+ *  Counts that differ (a chart a bar added or taken out, or being cut into sections) line up as far
+ *  as the shorter goes, the n-th bar with the n-th (Dettato's request 11, the owner 2026-11-16:
+ *  "71 bars of the recording to their end"; SIDECAR.md "After the chart is corrected" — before then
+ *  it said not to play at all). The bars after the one added or taken out are a bar off: the person
+ *  is putting that right. Past the shorter end the score goes on at its last bar's pace (carry). */
 export interface TimeWarp {
     score: [number, number][];
     rec: [number, number][];
+    /** The two counts when they differ — the score's bars and the recording's; absent when equal. */
+    counts?: { score: number; rec: number };
 }
 
 export function timeWarp(beats: readonly ScoreBeat[] | null, scoreEnd: number | null, rec: Pick<Recording, 'bars'>): TimeWarp | null {
     if (!beats || typeof scoreEnd !== 'number' || !(scoreEnd > 0) || rec.bars.length === 0) {
         return null;
     }
-    const score = scoreBars(beats, scoreEnd);
-    if (score.length !== rec.bars.length) {
+    const allScore = scoreBars(beats, scoreEnd);
+    const n = Math.min(allScore.length, rec.bars.length);
+    if (n === 0) {
         return null;
     }
-    const recBars = rec.bars.map(b => [b.start, b.end] as [number, number]);
-    for (let i = 0; i < score.length; i++) {
+    const score = allScore.slice(0, n);
+    const recBars = rec.bars.slice(0, n).map(b => [b.start, b.end] as [number, number]);
+    for (let i = 0; i < n; i++) {
         if (!(score[i][1] > score[i][0]) || !(recBars[i][1] > recBars[i][0])) {
             return null;
         }
     }
-    return { score, rec: recBars };
+    return allScore.length === rec.bars.length
+        ? { score, rec: recBars }
+        : { score, rec: recBars, counts: { score: allScore.length, rec: rec.bars.length } };
 }
 
 /** Moves a time from one line of bars to the other: straight inside a bar; before the first bar

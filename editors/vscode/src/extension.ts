@@ -9560,12 +9560,22 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         /** The recording on but not lined up with the score (playBasis has no warp): it plays alone
          *  from its start, and says why. False when the score is to play. */
         function recordingAlone() {
+            if (playBasis && playBasis.warp && playBasis.warp.counts) recCountsDiffer(playBasis.warp.counts);
             if (!recordingAlong() || (playBasis && playBasis.warp)) return false;
             const why = recAloneReason();
             recStatus(why);
             flashInfo(why, 5000);
             playRecordingFrom(0);
             return true;
+        }
+        /** The score and the recording a bar apart or more (Dettato's request 11, the owner
+         *  2026-11-16): they still play together as far as the shorter goes, and the panel says so. */
+        function recCountsDiffer(counts) {
+            const n = Math.min(counts.score, counts.rec);
+            const why = 'The score plays ' + counts.score + ' bars and the recording places ' + counts.rec
+                + ': they play together to bar ' + n + ' — past a bar added or taken out they are a bar apart';
+            recStatus(why);
+            flashInfo(why, 5000);
         }
         function setRecLevel(v) {
             if (v === 100) delete recLevels.Recording; else recLevels.Recording = v / 100;

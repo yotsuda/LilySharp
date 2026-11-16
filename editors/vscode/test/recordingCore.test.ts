@@ -237,7 +237,20 @@ describe('the score played with the recording (§1 7)', () => {
         const w = timeWarp(beats(2, 3), 5.5, r)!;
         assert.deepEqual(w.score, [[0, 1.5], [1.5, 3.5], [3.5, 5.5]]);
         assert.deepEqual(w.rec, [[0.355, 1.9], [1.9, 3.96], [3.96, 6.0]]);
-        assert.equal(timeWarp(beats(3, 3), 7.5, r), null);           // a bar more in the score
+        // A bar more in the score (Dettato's request 11, the owner 2026-11-16): the two play
+        // together as far as the shorter goes, the n-th bar with the n-th, and say the counts.
+        const more = timeWarp(beats(3, 3), 7.5, r)!;
+        assert.deepEqual(more.score, [[0, 1.5], [1.5, 3.5], [3.5, 5.5]]);
+        assert.deepEqual(more.rec, [[0.355, 1.9], [1.9, 3.96], [3.96, 6.0]]);
+        assert.deepEqual(more.counts, { score: 4, rec: 3 });
+        // …and the score past the shorter end goes on at the last bar's pace.
+        const near = (a: number, b: number) => assert.ok(Math.abs(a - b) < 1e-9, `${a} vs ${b}`);
+        near(warpTime(more, 7.5), 6.0 + (7.5 - 5.5) * (6.0 - 3.96) / 2);
+        // A bar fewer in the score: the recording's extra bar is not played with.
+        const fewer = timeWarp(beats(1, 3), 3.5, r)!;
+        assert.equal(fewer.rec.length, 2);
+        assert.deepEqual(fewer.counts, { score: 2, rec: 3 });
+        assert.equal(w.counts, undefined);                             // equal counts: none
         assert.equal(timeWarp(beats(2, 3), 5.5, { bars: [] }), null);  // only attached: no bar placed
         assert.equal(timeWarp(null, 5.5, r), null);
         assert.equal(timeWarp(beats(2, 3), null, r), null);
