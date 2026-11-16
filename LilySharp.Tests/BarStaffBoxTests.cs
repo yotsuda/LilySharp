@@ -72,7 +72,7 @@ public class BarStaffBoxTests
 
         // A staff tall, and as wide as the bar's own box.
         Assert.All(boxes, b => Assert.Equal(4, Num(b, 5), 3));
-        var bars = Regex.Matches(preview, @"<rect class=""bar-box"" data-bar=""\d+"" x=""([^""]+)"" y=""[^""]+"" width=""([^""]+)""");
+        var bars = Regex.Matches(preview, @"<rect class=""bar-box"" data-bar=""\d+""(?: data-m=""\d+"")? x=""([^""]+)"" y=""[^""]+"" width=""([^""]+)""");
         Assert.Equal(bars.Select(m => m.Groups[1].Value).OrderBy(x => x),
             boxes.Where(b => Num(b, 3) == top).Select(b => b.Groups[2].Value).OrderBy(x => x));
     }

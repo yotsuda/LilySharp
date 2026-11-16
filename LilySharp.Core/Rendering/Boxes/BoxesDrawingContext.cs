@@ -281,7 +281,7 @@ internal sealed class BoxesDrawingContext : IDrawingContext, IDisposable
         Add(TextKind(role), ink.Left / Scale, ink.Top / Scale, ink.Right / Scale, ink.Bottom / Scale, text: text);
     }
 
-    public void DrawBarBox(int barNumber, double x, double y, double width, double height)
+    public void DrawBarBox(int barNumber, double x, double y, double width, double height, int measureIndex = -1)
         => _bars.Add(new BoxBar(barNumber, Page(x, y, x + width, y + height)));
 
     // ---- scopes ----

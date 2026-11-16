@@ -1108,6 +1108,8 @@ public sealed class MidiExporter
             SingLyrics(tree, mainTrack);
         SplitIntoPartTracks(midi, mainTrack);
         AddPedals(midi, mainTrack.Name);
+        // Each note's printed bar, while the notes and the bar lines are still as printed.
+        TagPrintedBars(midi);
         // The music was walked once, as printed: now it is played (PlayedTimeline).
         if (_timeline is { Count: > 0 } marks)
         {
@@ -1122,6 +1124,23 @@ public sealed class MidiExporter
         }
 
         return midi;
+    }
+
+    /// <summary>Gives every note the bar it is printed in (<see cref="MidiNote.PrintedBar"/>): the
+    /// number of printed bar lines at or before its start — so a pickup is bar 0 and the first
+    /// whole bar 1 after it, else the first bar 0, as the page numbers its measures. Called while
+    /// the walk is still as printed (before PlayedTimeline lays the piece out as it plays).</summary>
+    private static void TagPrintedBars(MidiFile midi)
+    {
+        var lines = midi.BarTicks.Where(t => t > 0).ToArray();     // (a SortedSet: ascending)
+        foreach (var track in midi.Tracks)
+            for (int i = 0; i < track.Notes.Count; i++)
+            {
+                var n = track.Notes[i];
+                int at = Array.BinarySearch(lines, n.StartTick);
+                int bar = at >= 0 ? at + 1 : ~at;
+                track.Notes[i] = n with { PrintedBar = bar };
+            }
     }
 
     // Every pedal mark the walk plays, in the order it plays them: the part it is in, and where.

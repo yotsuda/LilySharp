@@ -267,4 +267,21 @@ public class PlaybackRequestTests
         Assert.Equal(new[] { 0, 1 }, sounding.Where(n => n.S == c).Select(n => n.O).Distinct().OrderBy(o => o));
         Assert.All(sounding.Where(n => n.S == c), n => Assert.True(n.T % 8.0 < 2.0 - 1e-6, $"C at {n.T}"));
     }
+
+    /// <summary>
+    /// Each note names the bar it is PRINTED in (M, from 0 — what the page's bar boxes call data-m):
+    /// the A-B repeat picks its bars by it (docs/ab-repeat-design.md). A repeat plays its bars again
+    /// under their printed numbers; a pickup is bar 0; a section the form plays twice is printed
+    /// twice, under new numbers.
+    /// </summary>
+    [Theory]
+    [InlineData("time 4/4\npart m\nsection A { m { |: c'1 | d'1 :| e'1 | } }\nform { A }\nscore { staff m }\n", new[] { 0, 1, 0, 1, 2 })]
+    [InlineData("time 4/4\npart m\nsection A { partial 4  m { g4 | c'1 | d'1 | } }\nform { A }\nscore { staff m }\n", new[] { 0, 1, 2 })]
+    [InlineData("time 4/4\npart m\nsection A { m { c'1 | d'1 | } }\nform { A A }\nscore { staff m }\n", new[] { 0, 1, 2, 3 })]
+    public void EachNote_NamesTheBarItIsPrintedIn(string doc, int[] bars)
+    {
+        var pb = Playback(doc, null);
+        Assert.Null(pb.Error);
+        Assert.Equal(bars, pb.Notes!.Where(n => n.P > 0 && !n.L).OrderBy(n => n.T).Select(n => n.M));
+    }
 }

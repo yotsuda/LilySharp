@@ -35,6 +35,8 @@ export interface PlaybackNote {
     U?: boolean;
     /** Who sings the note's section, in a sung part with several singer lines: the voices' keys. */
     W?: string[] | null;
+    /** The bar the note is printed in, from 0 (PlaybackNote.M): the A-B repeat picks its bars by it. */
+    M?: number;
     /** A light, not a note: a `%` lit for the bars it sounds (PlaybackNote.L; owner's request
      *  2026-11-16). Nothing sounds it (isLight); the follow-along lights it, a video too. */
     L?: boolean;
@@ -259,6 +261,17 @@ export function playSpan(notes: readonly PlaybackNote[], lo: number | null, hi: 
 }
 
 /**
+ * The A-B repeat's stretch (docs/ab-repeat-design.md): the printed bars `from` to `to` (PlaybackNote.M,
+ * from 0, both included), where they first play, every part — and with `once`, as printed: the
+ * bars a repeat inside them plays again, and the bars it jumps back to, are left out and their
+ * time closed up, as a loop of a selection goes round (owner's decision 2026-11-17).
+ */
+export function playBarsWindow(notes: readonly PlaybackNote[], from: number, to: number, once: boolean,
+    bars?: readonly number[]): { notes: PlaybackNote[]; length: number; start: number; pieces: [number, number][] } {
+    return playSpanWindow(notes, null, null, once, bars, n => typeof n.M === 'number' && n.M >= from && n.M <= to);
+}
+
+/**
  * {@link playSpan}, and how long the stretch lasts — what a loop's round is. With `bars` (the
  * times the bars begin, ascending) the stretch runs from the start of the bar its first note
  * is in to the start of the bar after its last note's end, so a round is whole bars, a rest at
@@ -266,7 +279,7 @@ export function playSpan(notes: readonly PlaybackNote[], lo: number | null, hi: 
  * its last.
  */
 export function playSpanWindow(notes: readonly PlaybackNote[], lo: number | null, hi: number | null, once: boolean,
-    bars?: readonly number[]): { notes: PlaybackNote[]; length: number; start: number; pieces: [number, number][] } {
+    bars?: readonly number[], within?: (n: PlaybackNote) => boolean): { notes: PlaybackNote[]; length: number; start: number; pieces: [number, number][] } {
     // A printed note is its place, its copy and its pitch: a chord row's chord sounds its members
     // from one place (owner's report 2026-10-25: taken for repeats, its second and third were
     // dropped and every note fell to 0 — the whole piece sounded at once, round after round).
@@ -282,7 +295,12 @@ export function playSpanWindow(notes: readonly PlaybackNote[], lo: number | null
         if (n.S < 0 || !seen.has(key(n))) { first.add(n); }
         if (n.S >= 0) { seen.add(key(n)); }
     }
-    const inSpan = (n: PlaybackNote) => lo === null || hi === null || (n.S >= lo && n.S <= hi);
+    // `within` in place of the selection: the A-B repeat's printed bars (playBars). Once round, a note of a
+    // printed bar outside it is no part of the stretch either — the bars a repeat inside it jumps back to.
+    const inSpan = within ?? ((n: PlaybackNote) => lo === null || hi === null || (n.S >= lo && n.S <= hi));
+    if (within && once) {
+        for (const n of sorted) { if (typeof n.M === 'number' && n.M >= 0 && !within(n)) { first.delete(n); } }
+    }
     let t0 = Infinity, t1 = -Infinity;
     for (const n of sorted) {
         if (!first.has(n) || !inSpan(n)) { continue; }

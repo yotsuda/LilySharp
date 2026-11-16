@@ -1406,6 +1406,7 @@ public sealed partial class LilySharpLanguageServer
                         G = n.Channel == 9 ? 0 : x.Track.Program ?? 0,
                         N = x.Index,
                         K = n.Strike,
+                        M = n.PrintedBar,
                         U = unsung.TryGetValue(x.Track.Name, out var free) && free.Any(r => n.StartTick >= r.From && n.StartTick < r.To),
                         W = sungBy.TryGetValue(x.Track.Name, out var lines)
                             ? lines.FirstOrDefault(r => n.StartTick >= r.From && n.StartTick < r.To).Keys : null,
@@ -1425,7 +1426,7 @@ public sealed partial class LilySharpLanguageServer
                 // notes alone lit it only while they sounded, and the bars' own notes lit instead).
                 .Concat(tracks.SelectMany((x, ti) => x.Track.Notes
                     .Where(n => n.Percent != null)
-                    .Select(n => (n.Percent!.Value.Pos, n.Percent!.Value.Ordinal, n.Percent!.Value.Length, Start: n.StartTick - n.Percent!.Value.Lead))
+                    .Select(n => (n.Percent!.Value.Pos, n.Percent!.Value.Ordinal, n.Percent!.Value.Length, Start: n.StartTick - n.Percent!.Value.Lead, Bar: n.PrintedBar))
                     .Distinct()
                     .Select(m => new PlaybackNote
                     {
@@ -1437,6 +1438,7 @@ public sealed partial class LilySharpLanguageServer
                         G = x.Track.Program ?? 0,
                         N = ti,
                         L = true,
+                        M = m.Bar,
                     })))
                 .OrderBy(n => n.T)
                 .ToArray();

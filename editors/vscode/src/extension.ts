@@ -6057,6 +6057,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .practice-panel .rec-status { font-size: 11px; opacity: .8; padding-top: 4px; max-width: 300px; }
         .practice-panel .rec-status:empty { display: none; }
         .practice-panel input[type="range"]:disabled { opacity: .4; }
+        .practice-panel .abnum { margin-left: 8px; white-space: nowrap; }
+        .practice-panel .abnum input { width: 4.2em; margin-left: 3px; }
         .range-panel table { border-collapse: collapse; }
         .range-panel th { text-align: left; font-weight: 600; opacity: 0.75; padding: 2px 8px; }
         .range-panel td { padding: 2px 8px; white-space: nowrap; }
@@ -6133,7 +6135,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
     <div id="practicePanel" class="range-panel practice-panel" hidden>
         <button type="button" id="practiceClose" class="panel-close" title="Close" aria-label="Close">×</button>
         <div class="prow"><span class="plbl">Tempo</span><span class="tempo"><input type="range" id="tempoSlider" min="50" max="150" step="5" value="100" aria-label="Tempo"><span id="tempoValue" class="tval">100%</span><button type="button" id="tempoReset" title="Back to the tempo as written (100%)">Reset</button></span></div>
-        <div class="prow"><span class="plbl">Loop</span><button type="button" id="loopBtn" class="toggle" aria-pressed="false" title="Play the selected bars, or the whole score, round and round — the score's repeats ignored">Off</button></div>
+        <div class="prow"><span class="plbl">Repeat</span><button type="button" id="loopBtn" class="toggle" aria-pressed="false" title="Play round and round: the bars A to B when A-B is on, else the whole score as it plays">Off</button></div>
+        <div class="prow"><span class="plbl">A-B</span><span class="tempo"><button type="button" id="abBtn" class="toggle" aria-pressed="false" title="Play the bars A to B (as printed) — from the editor's caret bar, or the selected bars, at first">Off</button><span id="abFields" hidden><label class="abnum">A <input type="number" id="abFromNum" min="0" step="1" aria-label="A: the first bar"></label><label class="abnum">B <input type="number" id="abToNum" min="0" step="1" aria-label="B: the last bar"></label><span id="abInfo" class="tval"></span></span></span></div>
         <div class="prow"><span class="plbl">Metronome</span><button type="button" id="clickBtn" class="toggle" aria-pressed="false">Off</button></div>
         <div class="prow"><span class="plbl">Count-in</span><button type="button" id="countInBtn" class="toggle" aria-pressed="false" title="One bar of clicks before the music starts">Off</button></div>
         <div class="prow"><span class="plbl">Parts</span><span id="partsList" class="parts"></span></div>
@@ -8434,11 +8437,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         var stoppedSeconds = null, positionSeq = 0;
         function askStoppedPosition() {
             if (!document.getElementById('stopBtn').disabled) return;
+            // A-B on: Play starts at A, which the A field says (no time to show for it here).
+            if (abOn) { stoppedSeconds = null; showPosition(); return; }
             let position = -1, exact = false;
             try {
-                const span = aiRangeLo >= 0 ? selectedBarsSpan() : null;
-                if (span) position = span[0];
-                else { position = caretStartPos(); exact = true; }    // as Play starts
+                position = caretStartPos(); exact = true;    // as Play starts (the selection no longer plays: A-B)
             } catch (e) {
                 return;     // (the page's script is still starting: its bindings are not there yet)
             }
@@ -9018,7 +9021,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // else the first note written after it (caretStartPos — the editor's own caret, which
             // a playback and a Stop leave where it is).
             pendingStartPos = caretStartPos();
-            pendingSpan = aiRangeLo >= 0 ? selectedBarsSpan() : null;
+            // A-B on: the bars A to B (docs/ab-repeat-design.md) — which retire "the selected bars"
+            // (owner's decision 2026-11-17: the selection only places A and B the first time).
+            pendingSpan = abOn ? { ab: [abFrom, abTo] } : null;
             vscode.postMessage({ type: 'requestPlayback' });
         });
         document.getElementById('stopBtn').addEventListener('click', () => {
@@ -9032,6 +9037,118 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // Off: what plays ends where it ends. On while playing: from the next Play.
             if (!loopOn) loopList = null;
             showPractice();
+        });
+
+        // ---- The A-B repeat (docs/ab-repeat-design.md; owner's decisions 2026-11-16/17): the bars
+        // A to B, as printed (PlaybackNote.M, from 0 — abFrom/abTo are those measure indices), both
+        // included. A-B and Repeat are two buttons: A-B alone plays the bars once and stops. The
+        // range is the page's own (not kept): the first time A-B goes on, the editor's caret bar and
+        // the three after it, or the selected bars. The numbers are the bar numbers printed.
+        var abOn = false, abFrom = -1, abTo = -1;
+        const abBtn = document.getElementById('abBtn');
+        const abFromNum = document.getElementById('abFromNum');
+        const abToNum = document.getElementById('abToNum');
+        /** The page's bars, by measure index: the printed number and the box (rect.bar-box). */
+        function abBars() {
+            const out = [];
+            for (const r of svgContainer.querySelectorAll('rect.bar-box[data-m]')) {
+                const m = parseInt(r.getAttribute('data-m'), 10);
+                if (Number.isInteger(m) && !out[m]) out[m] = { m, bar: parseInt(r.getAttribute('data-bar'), 10), rect: r };
+            }
+            return out;
+        }
+        /** The measure index of a staff's bar box (rect.bar-staff): the page's bar box in its column. */
+        function measureOfStaffBox(r) {
+            const b = r.getBoundingClientRect();
+            let best = -1, gap = Infinity;
+            for (const bb of svgContainer.querySelectorAll('rect.bar-box[data-m]')) {
+                const c = bb.getBoundingClientRect();
+                if (Math.abs(c.left - b.left) > 1) continue;
+                const d = b.top > c.bottom ? b.top - c.bottom : c.top > b.bottom ? c.top - b.bottom : 0;
+                if (d < gap) { gap = d; best = parseInt(bb.getAttribute('data-m'), 10); }
+            }
+            return best;
+        }
+        /** Where A and B first stand: the selected bars, else the caret's bar and three more. */
+        function abFirstPlace() {
+            const bars = abBars();
+            const last = bars.length - 1;
+            if (last < 0) return null;
+            let lo = Infinity, hi = -1;
+            const span = aiRangeLo >= 0 ? selectedBarsSpan() : null;
+            if (span) {
+                for (const r of svgContainer.querySelectorAll('rect.bar-staff[data-span]')) {
+                    const s = r.getAttribute('data-span').split(' ').map(Number);
+                    if (s[1] < span[0] || s[0] > span[1]) continue;
+                    const m = measureOfStaffBox(r);
+                    if (m >= 0) { lo = Math.min(lo, m); hi = Math.max(hi, m); }
+                }
+            }
+            if (hi < 0) {
+                const c = svgContainer.querySelector('rect.bar-staff.caret');
+                const m = c ? measureOfStaffBox(c) : -1;
+                lo = m >= 0 ? m : 0;
+                hi = Math.min(last, lo + 3);
+            }
+            return [Math.max(0, Math.min(lo, last)), Math.max(0, Math.min(hi, last))];
+        }
+        function showAb() {
+            abBtn.setAttribute('aria-pressed', String(abOn));
+            abBtn.textContent = abOn ? 'On' : 'Off';
+            document.getElementById('abFields').hidden = !abOn;
+            if (!abOn) return;
+            const bars = abBars();
+            const num = m => bars[m] ? bars[m].bar : m + 1;
+            abFromNum.value = String(num(abFrom));
+            abToNum.value = String(num(abTo));
+            const n = abTo - abFrom + 1;
+            document.getElementById('abInfo').textContent = n + (n === 1 ? ' bar' : ' bars');
+        }
+        /** Plays again from the start of what is to play, when something plays (A-B moved). */
+        function replayIfPlaying() {
+            if (document.getElementById('stopBtn').disabled) return;
+            stopPlayback();
+            setPlayUi(true);
+            pendingStartPos = -1;
+            pendingFromHere = false;
+            pendingSpan = abOn ? { ab: [abFrom, abTo] } : null;
+            vscode.postMessage({ type: 'requestPlayback' });
+        }
+        function setAb(from, to) {
+            const last = Math.max(0, abBars().length - 1);
+            abFrom = Math.max(0, Math.min(from, last));
+            abTo = Math.max(abFrom, Math.min(to, last));
+            showAb();
+            showPractice();
+            replayIfPlaying();
+        }
+        abBtn.addEventListener('click', () => {
+            abOn = !abOn;
+            if (abOn && abFrom < 0) {
+                const first = abFirstPlace();
+                if (!first) { abOn = false; flashInfo('No bars to play yet', 3000); showAb(); return; }
+                [abFrom, abTo] = first;
+            }
+            showAb();
+            showPractice();
+            askStoppedPosition();
+            replayIfPlaying();
+        });
+        /** A bar number typed: the measure that prints it (the first, where two print one). */
+        function measureOfNumber(n) {
+            const bars = abBars();
+            for (const b of bars) if (b && b.bar === n) return b.m;
+            return -1;
+        }
+        abFromNum.addEventListener('change', () => {
+            const m = measureOfNumber(parseInt(abFromNum.value, 10));
+            if (m < 0) { showAb(); return; }
+            setAb(m, Math.max(m, abTo));
+        });
+        abToNum.addEventListener('change', () => {
+            const m = measureOfNumber(parseInt(abToNum.value, 10));
+            if (m < 0) { showAb(); return; }
+            setAb(Math.min(abFrom, m), m);
         });
         // A loop's rounds are laid out ahead, ten minutes of them (loopNotes): the player's
         // clock times each round, not a page timer the browser may hold to a second.
@@ -9056,7 +9173,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const bars = beats ? beats.filter(b => b.A).map(b => b.T / speed) : undefined;
             // And where the last bar ends (the server's closing bar line), the last bar's end.
             if (bars && typeof barEnd === 'number' && barEnd > 0) bars.push(barEnd / speed);
-            const w = window.LysSynth.playSpanWindow
+            // The A-B repeat's bars ({ ab: [from, to] }), as printed, once through (playBarsWindow).
+            const w = span && span.ab && window.LysSynth.playBarsWindow
+                ? window.LysSynth.playBarsWindow(notes, span.ab[0], span.ab[1], true, bars)
+                : window.LysSynth.playSpanWindow
                 ? window.LysSynth.playSpanWindow(notes, span ? span[0] : null, span ? span[1] : null, once, bars)
                 : { notes: window.LysSynth.playSpan(notes, span ? span[0] : null, span ? span[1] : null, once), length: 0 };
             loopRound = w.length;
@@ -9158,7 +9278,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             document.getElementById('practiceSpeed').textContent = speedOn ? Math.round(practice.speed * 100) + '%' : '';
             // Pressed in while anything differs from the score as written.
             practiceBtn.setAttribute('aria-pressed', String(speedOn || practice.click || practice.countIn || practice.muted.length > 0
-                || practice.extraOn.length > 0 || practice.voicesOff.length > 0 || practice.voicesOn.length > 0 || practice.instrumentsOn.length > 0 || loopOn
+                || practice.extraOn.length > 0 || practice.voicesOff.length > 0 || practice.voicesOn.length > 0 || practice.instrumentsOn.length > 0 || loopOn || abOn
                 || Object.keys(practice.levels).length > 0 || Object.keys(practice.voiceLevels).length > 0));
             // The loop lives here too (owner's request 2026-10-25), an On/Off as the metronome's.
             loopBtn.setAttribute('aria-pressed', String(loopOn));
@@ -10286,8 +10406,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         pendingStartPos = -1;
                         pendingFromHere = false;
                         lastSpan = span;
-                        lastOnce = loopOn;
-                        const list = spanOf(playbackNotes, span, loopOn);
+                        // The whole score round and round goes as it plays — its repeats and jumps
+                        // (owner's decision 2026-11-17; it went as printed once). A-B goes as printed.
+                        lastOnce = false;
+                        const list = spanOf(playbackNotes, span, false);
                         loopList = loopOn ? list : null;
                         const toPlay = loopOn ? looped(list) : list;
                         voicePlan = { pieces: spanPieces, rounds: loopOn ? loopRoundCount : 1 };

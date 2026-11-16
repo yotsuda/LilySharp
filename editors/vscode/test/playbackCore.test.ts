@@ -20,7 +20,7 @@ import {
     BEND_CENTRE, DRUM_CHANNEL, FAMILY_PROGRAM, Lookahead, PlaybackNote, SoundingCursor,
     CLICK_ACCENT, CLICK_BEAT, channelOf, channelsOf, countIn, endOf, loopNotes, loopRounds, playSpan, playSpanWindow, practiceNotes,
     programOf, toEvents, nextVoiceEntry, strikeKey, strikeKeys, voiceEntries, voiceEntryEarly, VOICE_ENTRY_NOTICE_S, VOICE_ENTRY_EARLY_S,
-    fromOffset, exportNotes, practiceSummary, PracticeState, voiceCues, voiceBadge, soundStart, withVoiceLead,
+    fromOffset, playBarsWindow, exportNotes, practiceSummary, PracticeState, voiceCues, voiceBadge, soundStart, withVoiceLead,
     levelOf, velocityAt,
 } from '../src/webview/playbackCore';
 import { readFileSync } from 'node:fs';
@@ -645,5 +645,31 @@ describe('a light for a % bar', () => {
         const from = fromOffset(notes, 3);
         assert.deepEqual(from.map(n => [n.T, n.D, n.S, !!n.L]), [[3, 1, 52, true]]);
         assert.deepEqual(fromOffset(notes, 4.5), []);
+    });
+});
+
+// The A-B repeat (docs/ab-repeat-design.md; owner's decision 2026-11-17): the printed bars A to B,
+// where they first play, as printed — a repeat inside them is not taken, its time closed up.
+describe('the A-B repeat\'s bars', () => {
+    // `|: bar0 | bar1 | bar2 | bar3 :| bar4 | bar5 |`, a bar a second: played 0 1 2 3 0 1 2 3 4 5.
+    const played = [0, 1, 2, 3, 0, 1, 2, 3, 4, 5];
+    const notes = played.map((m, t) => note(t, 1, 60 + m, { S: 100 + m, O: 0, M: m, N: 0 }));
+    const bars = played.map((_, t) => t).concat([played.length]);
+
+    it('plays the printed bars once through, the repeat\'s second time and its jump back left out', () => {
+        const w = playBarsWindow(notes, 2, 4, true, bars);
+        assert.deepEqual(w.notes.map(n => [n.M, n.T]), [[2, 0], [3, 1], [4, 2]]);
+        assert.equal(w.length, 3);
+    });
+
+    it('takes a single bar, and the bars inside the repeat', () => {
+        assert.deepEqual(playBarsWindow(notes, 1, 1, true, bars).notes.map(n => [n.M, n.T]), [[1, 0]]);
+        const w = playBarsWindow(notes, 0, 3, true, bars);
+        assert.deepEqual(w.notes.map(n => n.M), [0, 1, 2, 3]);
+        assert.equal(w.length, 4);
+    });
+
+    it('is empty for bars that do not sound', () => {
+        assert.deepEqual(playBarsWindow(notes, 7, 9, true, bars).notes, []);
     });
 });

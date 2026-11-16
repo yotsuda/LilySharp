@@ -345,8 +345,8 @@ internal sealed class InkRecorder : IDrawingContext
 
     public void DrawHitRect(double x, double y, double width, double height) => _inner.DrawHitRect(x, y, width, height);
 
-    public void DrawBarBox(int barNumber, double x, double y, double width, double height)
-        => _inner.DrawBarBox(barNumber, x, y, width, height);
+    public void DrawBarBox(int barNumber, double x, double y, double width, double height, int measureIndex = -1)
+        => _inner.DrawBarBox(barNumber, x, y, width, height, measureIndex);
 
     public void DrawBarStaffBox(int sourcePosition, int from, int to, double x, double y, double width, double height, bool row = false)
         => _inner.DrawBarStaffBox(sourcePosition, from, to, x, y, width, height, row);

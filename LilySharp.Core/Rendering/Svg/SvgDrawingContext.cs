@@ -392,7 +392,7 @@ internal sealed class SvgDrawingContext : IDrawingContext
         HitRect(x, y, width, height);
     }
 
-    public void DrawBarBox(int barNumber, double x, double y, double width, double height)
+    public void DrawBarBox(int barNumber, double x, double y, double width, double height, int measureIndex = -1)
     {
         // Interactive preview only, and no data-pos: it is not a click target, and the
         // highlight recolor must never find it.
@@ -400,6 +400,14 @@ internal sealed class SvgDrawingContext : IDrawingContext
         _sb.Append("  <rect class=\"bar-box\" data-bar=\"");
         AppendInt(barNumber);
         _sb.Append('"');
+        // The measure's index as printed, from 0 — what the playback's notes name their bar by
+        // (PlaybackNote.M; the A-B repeat, docs/ab-repeat-design.md).
+        if (measureIndex >= 0)
+        {
+            _sb.Append(" data-m=\"");
+            AppendInt(measureIndex);
+            _sb.Append('"');
+        }
         Attr("x", x);
         Attr("y", y);
         Attr("width", width);

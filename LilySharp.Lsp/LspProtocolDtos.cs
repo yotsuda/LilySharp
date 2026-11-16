@@ -564,6 +564,10 @@ public class PlaybackNote
     /// <see cref="T"/> and <see cref="D"/> the bars'. Nothing sounds it (<see cref="P"/> 0,
     /// <see cref="V"/> 0); the follow-along lights it, a video too.</summary>
     public bool L { get; set; }
+    /// <summary>The bar the note is printed in, from 0 (a pickup is bar 0) as the page numbers its
+    /// measures (<c>MidiNote.PrintedBar</c>): the preview's A-B repeat picks its bars by it
+    /// (docs/ab-repeat-design.md). -1 where unknown (a pedal change).</summary>
+    public int M { get; set; } = -1;
     /// <summary>WHO sings the note's section, in a sung part with several singer lines: the keys
     /// of the voices that sing there (<see cref="SungVoiceDto.Key"/>; <c>Midi.SungVoices.SungBy</c>).
     /// The editor, which knows what this machine can sing, plays on the instrument a section all

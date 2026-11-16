@@ -133,7 +133,12 @@ public readonly record struct MidiNote(
     // The `%` this note sounds for — a percent repeat plays its bars again for each mark, from the
     // bars' own notes, which the page prints once; the mark is what the page prints there. Null
     // for any other note. Not written to .mid files.
-    PercentCopy? Percent = null
+    PercentCopy? Percent = null,
+    // The bar the note is PRINTED in, counted from 0 (a pickup is bar 0) as the page counts its
+    // measures: the walk goes as printed before the piece is laid out as it plays, and the number
+    // rides with the note through that (PlayedTimeline). The preview's A-B repeat picks its bars
+    // by it (docs/ab-repeat-design.md). -1 where unknown. Not written to .mid files.
+    int PrintedBar = -1
 );
 
 /// <summary>

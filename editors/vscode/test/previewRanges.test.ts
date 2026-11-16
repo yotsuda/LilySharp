@@ -51,17 +51,22 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /case 'rangesData':\s*rangeParts = message\.parts \|\| null;/);
     });
 
-    // Play of the selected bars and the loop; the length beside them (owner's request 2026-10-25).
-    it('plays the selected bars, loops while the loop is on, and shows the length', () => {
-        // The whole bars the selection lights, not the notes at its ends.
-        assert.match(html, /pendingSpan = aiRangeLo >= 0 \? selectedBarsSpan\(\) : null;/);
+    // Play of the bars A to B and the repeat; the length beside them (owner's requests 2026-10-25,
+    // and 2026-11-17: the A-B repeat retires the selected bars — the selection places A and B).
+    it('plays the bars A to B, repeats while Repeat is on, and shows the length', () => {
+        assert.match(html, /pendingSpan = abOn \? \{ ab: \[abFrom, abTo\] \} : null;/);
+        assert.doesNotMatch(html, /pendingSpan = aiRangeLo >= 0 \? selectedBarsSpan\(\) : null;/);
+        assert.match(html, /window\.LysSynth\.playBarsWindow\(notes, span\.ab\[0\], span\.ab\[1\], true, bars\)/);
+        // The selection places A and B the first time A-B goes on (abFirstPlace).
         assert.match(html, /function selectedBarsSpan\(\) \{[\s\S]*?rect\.bar-staff\.selected\[data-span\]/);
         // ▶ keeps the selection lit: only a click on the sheet itself clears it.
         assert.match(html, /\} else if \(target && mainContent\.contains\(target\)\) \{\s*\/\/ Clicked empty space/);
-        // The loop is in the practice menu, an On/Off as the metronome's.
-        assert.match(html, /<div id="practicePanel"[\s\S]*<span class="plbl">Loop<\/span><button type="button" id="loopBtn" class="toggle" aria-pressed="false"/);
+        // Repeat and A-B are two toggles in the practice menu, as the metronome's.
+        assert.match(html, /<div id="practicePanel"[\s\S]*<span class="plbl">Repeat<\/span><button type="button" id="loopBtn" class="toggle" aria-pressed="false"/);
+        assert.match(html, /<span class="plbl">A-B<\/span><span class="tempo"><button type="button" id="abBtn" class="toggle" aria-pressed="false"/);
         assert.match(html, /<input type="range" id="tempoSlider" min="50" max="150" step="5" value="100"/);
-        assert.match(html, /const list = spanOf\(playbackNotes, span, loopOn\);/);
+        // The whole score round and round goes as it plays (its repeats kept): once is false.
+        assert.match(html, /const list = spanOf\(playbackNotes, span, false\);/);
         // A loop's rounds laid out ahead, each whole bars long.
         assert.match(html, /window\.LysSynth\.loopNotes\(list, 600, loopRound\)/);
         // ...and the voice follows the stretch and its rounds (docs/singing-design.md §5).
@@ -113,7 +118,9 @@ describe('the preview\'s Range panel', () => {
     it('plays from the editor\'s caret when stopped too, and the header says that place', () => {
         assert.match(html, /setPlayUi\(true\); \/\/ immediate feedback while the request runs[\s\S]{0,500}?pendingStartPos = caretStartPos\(\);/);
         assert.doesNotMatch(html, /pendingStartPos = lastResolvedPos;/);
-        assert.match(html, /else \{ position = caretStartPos\(\); exact = true; \}/);
+        // (the selection no longer plays — A-B does, and with A-B on no place is said)
+        assert.match(html, /position = caretStartPos\(\); exact = true;/);
+        assert.match(html, /if \(abOn\) \{ stoppedSeconds = null; showPosition\(\); return; \}/);
     });
 
     // Where the playback stands, just left of the length (owner's request 2026-11-16), on the

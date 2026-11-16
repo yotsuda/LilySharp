@@ -425,7 +425,7 @@ internal static partial class SharedRenderer
                 continue;
             if (measure.MeasureIndex < barNumbers.Length)
                 gc.DrawBarBox(barNumbers[measure.MeasureIndex], measure.X, system.Y + top,
-                    measure.Width, top - bottom);
+                    measure.Width, top - bottom, measure.MeasureIndex);
             foreach (var group in system.StaffGroups)
                 foreach (var staff in group.Staves)
                 {
