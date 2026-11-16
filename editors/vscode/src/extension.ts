@@ -92,6 +92,11 @@ const previewPanels = new Map<string, vscode.WebviewPanel>();
 // the WAV, MP3 and MP4 exports of the file a page shows play under it (owner's request
 // 2026-11-07). A page's, not a file's — the follower keeps its menu as it turns to another file.
 const previewPractice = new WeakMap<vscode.WebviewPanel, PracticeState>();
+/** The preview's view-only transpose (owner's request 2026-11-16): the recording panel's
+ *  semitones (0 without a recording) and the spelling chosen where the key has two. The score is
+ *  drawn and played moved by it; the file is not edited. */
+interface ViewTransposeState { semitones: number; spelling: 'auto' | 'sharp' | 'flat' }
+const previewView = new WeakMap<vscode.WebviewPanel, ViewTransposeState>();
 /** The practice menu of the preview showing `uri`; undefined when none shows it. */
 function practiceFor(uri: string): PracticeState | undefined {
     const panel = previewPanels.get(uri);
@@ -1835,6 +1840,21 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 else if (onNow !== onBefore) { void prepareVoices(panel, uri, 'play'); }
                 return;
             }
+            // The recording panel's semitones moved, or its spelling, or the recording came or went:
+            // the score is drawn again moved by them (ViewTransposeState).
+            if (message.type === 'viewTranspose') {
+                const was = previewView.get(panel);
+                const now: ViewTransposeState = {
+                    semitones: Math.max(-11, Math.min(11, Math.round(Number(message.semitones) || 0))),
+                    spelling: message.spelling === 'sharp' || message.spelling === 'flat' ? message.spelling : 'auto',
+                };
+                previewView.set(panel, now);
+                if (was?.semitones === now.semitones && was?.spelling === now.spelling) { return; }
+                if (was === undefined && now.semitones === 0) { return; }
+                const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri);
+                if (doc) { void updatePreviewContent(doc, panel, context); }
+                return;
+            }
             if (message.type === 'requestPlayback') {
                 // The webview cannot reach the LSP: fetch note events here and
                 // hand them back for WebAudio scheduling.
@@ -1856,7 +1876,8 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     const pb = await client.sendRequest<{ Notes?: { T: number, D: number, P: number, V: number, N?: number, U?: boolean, W?: string[] | null }[], Error?: string,
                         Parts?: string[] | null, Extra?: string[] | null, Sung?: string[] | null, Played?: string[] | null,
                         Beats?: { T: number; A: boolean }[] | null; BarEnd?: number }>(
-                        'lilysharp/playback', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null });
+                        'lilysharp/playback', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null,
+                            viewSemitones: previewView.get(panel)?.semitones ?? 0 });
                     // The tracks and the beats ride along for the practice menu's parts and metronome;
                     // the parts the score does not sound (Extra) too, off until the menu turns them on;
                     // and which parts the score sings and plays (docs/singing-design.md §3).
@@ -1865,7 +1886,8 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     const notes = pb.Notes ? leftToTheInstrument(pb.Notes, missingVoices.get(panel) ?? []) : null;
                     panel.webview.postMessage({ type: 'playbackData', notes, error: pb.Error ?? null,
                         parts: pb.Parts ?? null, extra: pb.Extra ?? null, sung: pb.Sung ?? null, played: pb.Played ?? null,
-                        beats: pb.Beats ?? null, barEnd: pb.BarEnd ?? null });
+                        beats: pb.Beats ?? null, barEnd: pb.BarEnd ?? null,
+                        viewSemitones: previewView.get(panel)?.semitones ?? 0 });
                     // The lyrics' voice, rendered now — a voice the text's rest had not yet sent to
                     // the engine goes at once — so the next Play finds it (docs/singing-design.md §5).
                     void prepareVoices(panel, uri, 'play');
@@ -2208,7 +2230,9 @@ async function updatePreviewContent(
             renderName: selectedRender || null,
             clientSentAt: requestedAt,
             pageDiff: true,
-            shownVersion
+            shownVersion,
+            viewSemitones: previewView.get(panel)?.semitones ?? 0,
+            viewSpelling: previewView.get(panel)?.spelling ?? null,
         }, requestCancellation.token);
         const hostLag = lagProbe.stop();
 
@@ -2263,6 +2287,9 @@ async function updatePreviewContent(
         // removed since it was picked) resolves to the default score, and a picker still
         // naming the old one would make the preview look stuck on the default score with
         // nothing to say why. Older servers do not answer this; then the request stands.
+        // The key the view transpose lands in, for the recording panel and the header.
+        panel.webview.postMessage({ type: 'viewKey', semitones: previewView.get(panel)?.semitones ?? 0,
+            key: response.ViewKey ?? null, hasTwin: !!response.ViewKeyHasTwin, sharps: response.ViewKeySharps ?? 0 });
         const drawnRender = response.SelectedRender ?? selectedRender ?? '';
         if (drawnRender !== (selectedRender ?? '')) {
             outputChannel.appendLine(`Score ${JSON.stringify(selectedRender ?? null)} is not in this`
@@ -3884,6 +3911,11 @@ interface SvgResponse {
     // no Svg, no Error; the newer response carries the picture. Absent on servers
     // older than 2026-08-27.
     Superseded?: boolean;
+    // With a view transpose (ViewTransposeState): the key it lands in, whether that key has a
+    // twin the spelling toggle can take, and its signature in sharps (negative: flats).
+    ViewKey?: string | null;
+    ViewKeyHasTwin?: boolean;
+    ViewKeySharps?: number;
     // Where the server spent this request's time (absent on servers older than
     // 2026-09-04). Same machine, so the client's clock and ServerSentAt compare.
     Timing?: {
@@ -6009,6 +6041,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
              chart has one. It opens the recording's panel (on/off and volume, speed, pitch, pitch
              with speed); the on/off and the volume are also the practice menu's Recording line. -->
         <button id="recPanelBtn" class="toggle icon practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" hidden aria-label="Recording settings" title="The recording: speed, pitch, pitch with speed"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12"/><circle cx="5" cy="4" r="1.6" fill="currentColor"/><circle cx="10.5" cy="8" r="1.6" fill="currentColor"/><circle cx="7" cy="12" r="1.6" fill="currentColor"/></svg><span id="recSummary"></span></button>
+        <span id="viewKeyInfo" class="length" title="The score is drawn and played moved by the recording panel's semitones; the file is not changed" hidden></span>
         <span id="posInfo" class="length" title="Where the playback stands, in the score's time" hidden></span>
         <span id="lengthInfo" class="length" title="Length, as played"></span>
         </span>
@@ -6039,7 +6072,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         <div class="prow"><span class="plbl">Recording</span><span class="parts"><span class="pline"><button type="button" id="recOnBtn" class="rec-name" aria-pressed="false"><span id="recName"></span></button><input type="range" id="recLevelSlider" class="fader" min="0" max="200" step="1" value="100"><span id="recLevelValue" class="flevel"></span></span></span></div>
         <div class="prow"><span class="plbl">Speed</span><span class="tempo"><input type="range" id="recSpeedSlider" min="25" max="150" step="5" value="100" aria-label="Speed"><span id="recSpeedValue" class="tval">100%</span></span></div>
         <div class="prow"><span class="plbl">Octave</span><span class="tempo"><button type="button" id="recOctDown" title="An octave down">−</button><span id="recOctValue" class="tval">0</span><button type="button" id="recOctUp" title="An octave up">+</button></span></div>
-        <div class="prow"><span class="plbl">Semitones</span><span class="tempo"><input type="range" id="recSemiSlider" min="-11" max="11" step="1" value="0" aria-label="Semitones"><span id="recSemiValue" class="tval">0</span></span></div>
+        <div class="prow"><span class="plbl">Semitones</span><span class="tempo"><input type="range" id="recSemiSlider" min="-11" max="11" step="1" value="0" aria-label="Semitones"><span id="recSemiValue" class="tval">0</span><button type="button" id="recSpellBtn" class="toggle" disabled title="The key the score is drawn in has two spellings only at five or six accidentals; the other spelling of it">♯</button><span id="recKeyValue" class="tval"></span></span></div>
         <div class="prow"><span class="plbl">Cents</span><span class="tempo"><input type="range" id="recCentSlider" min="-50" max="50" step="1" value="0" aria-label="Cents"><span id="recCentValue" class="tval">0</span></span></div>
         <div class="prow"><span class="plbl">Pitch with speed</span><button type="button" id="recLinkBtn" class="toggle" aria-pressed="false" title="Pitch and speed go together, as a tape's speed is set right (no stretching)">Off</button></div>
         <div class="prow presets"><span class="plbl"></span><span class="tempo"><button type="button" id="recReset" title="The recording as it is">Reset</button></span></div>
@@ -9228,8 +9261,53 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
         function recLevel() { return levelIn(recLevels, 'Recording'); }
         let recRefreshers = [];     // the practice menu's Recording line, refreshed with the panel's
+        // The view transpose (owner's request 2026-11-16): the score is drawn and played moved by the
+        // panel's semitones while there is a recording — octaves and cents stay the recording's own —
+        // and the file is not edited. The extension draws it (viewTranspose) and says what key it
+        // lands in (viewKey); where that key has two spellings the panel's ♯/♭ takes the other.
+        var viewSpelling = 'auto';
+        var viewSent = '0|auto';       // what the extension was last told
+        var viewKeyState = { semitones: 0, key: null, hasTwin: false, sharps: 0 };
+        var rawShift = 0;               // the semitones the notes held (rawNotes) sound moved by
+        function viewSemitones() { return recording ? Math.round(recSettings.semitones) : 0; }
+        function sendView() {
+            const s = viewSemitones(), sent = s + '|' + viewSpelling;
+            showViewKey();
+            if (sent === viewSent) return false;
+            viewSent = sent;
+            vscode.postMessage({ type: 'viewTranspose', semitones: s, spelling: viewSpelling });
+            // A playback going on sounds the new key from where it stands; the next Play asks again.
+            if (rawNotes && s !== rawShift) {
+                const d = s - rawShift;
+                for (const n of rawNotes) if (n.C !== 9 && n.P !== -1) n.P += d;
+                rawShift = s;
+                practiceChanged(practice.speed);
+                return true;
+            }
+            return false;
+        }
+        function showViewKey() {
+            const s = viewSemitones();
+            const k = viewKeyState.semitones === s && s !== 0 ? viewKeyState.key : null;
+            const info = document.getElementById('viewKeyInfo');
+            info.hidden = !k;
+            info.textContent = k ? 'Key ' + k + ' (' + signed(s) + ')' : '';
+            document.getElementById('recKeyValue').textContent = k ? '→ ' + k : '';
+            const spell = document.getElementById('recSpellBtn');
+            spell.disabled = !(k && viewKeyState.hasTwin);
+            spell.textContent = viewKeyState.sharps > 0 || !k ? '♯' : '♭';
+            spell.title = spell.disabled
+                ? 'The key the score is drawn in has two spellings only at five or six accidentals'
+                : 'Drawn in ' + k + ' — press for the ' + (viewKeyState.sharps > 0 ? 'flat' : 'sharp') + ' spelling';
+        }
+        document.getElementById('recSpellBtn').addEventListener('click', () => {
+            viewSpelling = viewKeyState.sharps > 0 ? 'flat' : 'sharp';
+            sendView();
+        });
         function recChanged() {
+            const retuned = sendView();     // (a playback going on already started again from here)
             showRecording();
+            if (retuned) return;
             // With the score, the score follows the recording's speed: both start again from here.
             if (playClock && playBasis && playBasis.warp) { practiceChanged(practice.speed); return; }
             if (recPlayer && recPlayer.playing) void recPlayer.update(recSettings);
@@ -9278,6 +9356,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 recPanelBtn.hidden = true;
                 recPanel.hidden = true;
                 if (had && lastPartsMessage) renderParts(lastPartsMessage);
+                sendView();             // no recording, no view transpose
                 return;
             }
             const same = recording && recording.chart === m.chart && recording.name === m.name;
@@ -9287,6 +9366,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // request 2026-11-16; the extension says so once, recording.ts justConverted).
             if (m.turnOn) recOn = true;
             recPanelBtn.hidden = false;
+            sendView();
             if (fresh && lastPartsMessage) renderParts(lastPartsMessage);
             document.getElementById('recName').textContent = recording.name;
             document.getElementById('recName').title = recording.name;
@@ -9392,7 +9472,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         document.getElementById('recOctDown').addEventListener('click', () => { recSettings.octave = Math.max(-2, recSettings.octave - 1); recChanged(); });
         document.getElementById('recOctUp').addEventListener('click', () => { recSettings.octave = Math.min(2, recSettings.octave + 1); recChanged(); });
         recLinkBtn.addEventListener('click', () => { recSettings.linked = !recSettings.linked; recChanged(); });
-        document.getElementById('recReset').addEventListener('click', () => { recSettings = recDefaults(); recChanged(); });
+        document.getElementById('recReset').addEventListener('click', () => { recSettings = recDefaults(); viewSpelling = 'auto'; recChanged(); });
         // The slider says its value as it moves and sets the tempo where it is let go: a
         // playback restarts once, not at every step of a drag.
         function setSpeed(percent) {
@@ -9774,6 +9854,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 case 'recording':
                     setRecording(message);
                     break;
+                case 'viewKey':
+                    viewKeyState = message;
+                    showViewKey();
+                    break;
                 case 'partsData':
                     renderParts(message);
                     // Its width is known once filled: keep it inside the window.
@@ -9894,6 +9978,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         // The selected bars, where they first play — and, looping, the stretch
                         // (or the whole score) as written once, round and round.
                         rawNotes = message.notes; rawParts = message.parts || null; rawBeats = message.beats || null; rawBarEnd = message.barEnd || null; rawExtra = message.extra || null; rawSung = message.sung || null; rawPlayed = message.played || null;
+                        rawShift = message.viewSemitones || 0;
                         playbackNotes = practiced(rawNotes);
                         const span = pendingSpan;
                         pendingSpan = null;
@@ -9912,6 +9997,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     } else {
                         // The practice menu's tempo, parts and metronome, from the notes as written.
                         rawNotes = message.notes; rawParts = message.parts || null; rawBeats = message.beats || null; rawBarEnd = message.barEnd || null; rawExtra = message.extra || null; rawSung = message.sung || null; rawPlayed = message.played || null;
+                        rawShift = message.viewSemitones || 0;
                         playbackNotes = practiced(rawNotes);
                         pendingSpan = null;
                         pendingFromHere = false;

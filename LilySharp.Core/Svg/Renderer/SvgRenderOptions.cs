@@ -73,6 +73,12 @@ public sealed class SvgRenderOptions
     public System.Action<string>? LayoutWarning { get; init; }
 
     /// <summary>
+    /// The preview's view-only transpose (<see cref="Semantics.ViewTranspose"/>): the score is
+    /// drawn moved by it, the file unedited. Null for every caller but the preview.
+    /// </summary>
+    public Semantics.ViewTranspose? ViewTranspose { get; init; }
+
+    /// <summary>
     /// Default options (reference font by name, requires font installed on system).
     /// </summary>
     public static SvgRenderOptions Default => new();

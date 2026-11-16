@@ -61,6 +61,11 @@ public sealed partial class LilySharpLanguageServer
         /// Guarded by <see cref="Gate"/>.</summary>
         public IncrementalCompiler? Session;
 
+        /// <summary>The view transpose <see cref="Session"/> was made with (its options are
+        /// fixed for its life): a request with another one starts a new session. Guarded by
+        /// <see cref="Gate"/>.</summary>
+        public LilySharp.Core.Semantics.ViewTranspose? SessionView;
+
         /// <summary>The newest ticket issued for this selection (via Interlocked, ON the
         /// dispatch thread, so arrival order alone decides which request is newest). A
         /// render whose ticket is stale answers <see cref="SvgResponse.Superseded"/>
@@ -589,7 +594,13 @@ public sealed partial class LilySharpLanguageServer
         try
         {
             // Preview mode: @font-face is defined in HTML, not in SVG
-            var renderOptions = LilySharp.Core.Svg.Renderer.SvgRenderOptions.Preview();
+            var view = ViewOf(@params);
+            var renderOptions = new LilySharp.Core.Svg.Renderer.SvgRenderOptions
+            {
+                OmitFontFace = true,
+                Interactive = true,
+                ViewTranspose = view,
+            };
 
             string? svg;
             SvgPages? pages;
@@ -632,7 +643,10 @@ public sealed partial class LilySharpLanguageServer
                 Pages = pages,
                 Error = errorText,
                 Renders = renders,
-                SelectedRender = drawnRender
+                SelectedRender = drawnRender,
+                ViewKey = view == null ? null : view.KeyName(tree.GetRoot(), DrawnSpec(tree, @params.RenderName)),
+                ViewKeyHasTwin = view != null && view.Keys(tree.GetRoot(), DrawnSpec(tree, @params.RenderName)).HasTwin,
+                ViewKeySharps = view == null ? 0 : view.Keys(tree.GetRoot(), DrawnSpec(tree, @params.RenderName)).To,
             }, timing, receipt);
         }
         catch (OperationCanceledException)
@@ -671,6 +685,12 @@ public sealed partial class LilySharpLanguageServer
         string? renderName = @params.RenderName;
         try
         {
+            if (slot.Session != null && slot.SessionView != options.ViewTranspose)
+            {
+                slot.Session = null;            // made with another view (its options are fixed)
+                slot.LastPagesVersion = 0;
+            }
+            slot.SessionView = options.ViewTranspose;
             slot.Session ??= new IncrementalCompiler(tree, options, renderName);
             if (!@params.PageDiff)
             {
@@ -701,6 +721,21 @@ public sealed partial class LilySharpLanguageServer
             return (LilySharp.Core.Svg.SvgGenerator.Generate(tree, options, renderName), null);
         }
     }
+
+    /// <summary>The request's view-only transpose, or null for none.</summary>
+    internal static LilySharp.Core.Semantics.ViewTranspose? ViewOf(SvgParams @params)
+        => @params.ViewSemitones == 0 ? null
+            : new(Math.Clamp(@params.ViewSemitones, -LilySharp.Core.Semantics.FileShift.Max, LilySharp.Core.Semantics.FileShift.Max),
+                @params.ViewSpelling switch
+                {
+                    "sharp" => LilySharp.Core.Semantics.ViewSpelling.Sharp,
+                    "flat" => LilySharp.Core.Semantics.ViewSpelling.Flat,
+                    _ => LilySharp.Core.Semantics.ViewSpelling.Auto,
+                });
+
+    /// <summary>The score a request for <paramref name="renderName"/> draws (null: none declared).</summary>
+    private static RenderSpec? DrawnSpec(SyntaxTree tree, string? renderName)
+        => RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), renderName);
 
     /// <summary>The wire shape of a page set: with <paramref name="baseVersion"/>, a delta
     /// (markup on the changed pages only); without, every page's markup.</summary>
@@ -1018,7 +1053,22 @@ public sealed partial class LilySharpLanguageServer
         if (doc == null)
             return new PlaybackResponse { Error = "Document not found" };
         var (tree, _) = ExpandUsings(doc, @params.TextDocument.Uri);
-        return PlaybackOf(tree, @params.RenderName);
+        return MovedBy(PlaybackOf(tree, @params.RenderName), @params.ViewSemitones);
+    }
+
+    /// <summary>The playback moved by the preview's view-only transpose (owner's request
+    /// 2026-11-16): every pitched note <paramref name="semitones"/> up (down when negative), as
+    /// the picture is drawn; the drum channel (9) and pedal changes stay. The spelling is the
+    /// picture's business — a sounding pitch needs only the shift.</summary>
+    internal static PlaybackResponse MovedBy(PlaybackResponse playback, int semitones)
+    {
+        semitones = Math.Clamp(semitones, -LilySharp.Core.Semantics.FileShift.Max, LilySharp.Core.Semantics.FileShift.Max);
+        if (semitones == 0 || playback.Notes is not { } notes)
+            return playback;
+        foreach (var n in notes)
+            if (n.C != 9 && n.P != PlaybackNote.PedalPitch)
+                n.P += semitones;
+        return playback;
     }
 
     /// <summary>

@@ -81,8 +81,21 @@ describe('the preview\'s Range panel', () => {
         assert.match(extension, /if \(message\.type === 'requestLength'\)/);
     });
 
-    // Play stays pressable while playing; pressed then, it plays again from the editor's caret
-    // (owner's request 2026-11-16), as Play from Here does.
+    // The view transpose (owner's request 2026-11-16): the recording panel's semitones move the
+    // score's picture and playback, the file unedited; the ♯/♭ works where the key has two names.
+    it('the view transpose: the panel tells the extension, which draws and plays the score moved', () => {
+        assert.match(extension, /function viewSemitones\(\) \{ return recording \? Math\.round\(recSettings\.semitones\) : 0; \}/);
+        assert.match(extension, /vscode\.postMessage\(\{ type: 'viewTranspose', semitones: s, spelling: viewSpelling \}\)/);
+        assert.match(extension, /viewSemitones: previewView\.get\(panel\)\?\.semitones \?\? 0,\s*viewSpelling: previewView\.get\(panel\)\?\.spelling \?\? null,/);
+        assert.match(extension, /'lilysharp\/playback', \{ textDocument: \{ uri \}, renderName: selectedRenders\.get\(uri\) \|\| null,\s*viewSemitones: previewView\.get\(panel\)\?\.semitones \?\? 0 \}\)/);
+        // A playback going on is moved where it stands (the drums stay), not fetched again.
+        assert.match(extension, /for \(const n of rawNotes\) if \(n\.C !== 9 && n\.P !== -1\) n\.P \+= d;/);
+        assert.match(extension, /rawShift = message\.viewSemitones \|\| 0;/);
+        // No recording, no view transpose.
+        assert.match(extension, /if \(had && lastPartsMessage\) renderParts\(lastPartsMessage\);\s*sendView\(\);/);
+        assert.match(extension, /spell\.disabled = !\(k && viewKeyState\.hasTwin\);/);
+    });
+
     // A held step key edits every ~30 ms; the preview's debounce restarted on each edit, so it
     // stood still until the key was let go (owner's report 2026-11-16). A max-wait bounds it.
     it('follows a held key: the refresh waits no longer than its max-wait after the first change', () => {
@@ -91,13 +104,8 @@ describe('the preview\'s Range panel', () => {
         assert.match(extension, /pendingRefreshSince\.delete\(uri\);\s*updatePreviewContent\(event\.document, panel, context\);/);
     });
 
-    // …and stopped too (owner's decision 2026-11-16, retiring "after Stop, Play from the top").
-    it('plays from the editor\'s caret when stopped too, and the header says that place', () => {
-        assert.match(html, /setPlayUi\(true\); \/\/ immediate feedback while the request runs[\s\S]{0,500}?pendingStartPos = caretStartPos\(\);/);
-        assert.doesNotMatch(html, /pendingStartPos = lastResolvedPos;/);
-        assert.match(html, /else \{ position = caretStartPos\(\); exact = true; \}/);
-    });
-
+    // Play stays pressable while playing; pressed then, it plays again from the editor's caret
+    // (owner's request 2026-11-16), as Play from Here does.
     it('plays again from the editor\'s caret when Play is pressed while playing', () => {
         assert.match(html, /document\.getElementById\('playBtn'\)\.disabled = false;/);
         assert.doesNotMatch(html, /getElementById\('playBtn'\)\.disabled = playing/);
@@ -114,6 +122,13 @@ describe('the preview\'s Range panel', () => {
         assert.equal(run('editorCaret = { pos: 25, tokenStart: 24, caret: 25 }; caretStartPos()'), 25);
         assert.equal(run('editorCaret = { pos: -1, tokenStart: -1, caret: 17 }; caretStartPos()'), 17);
         assert.equal(run('editorCaret = { ranges: [[40, 50], [12, 18]], caret: 18 }; caretStartPos()'), 12);
+    });
+
+    // …and stopped too (owner's decision 2026-11-16, retiring "after Stop, Play from the top").
+    it('plays from the editor\'s caret when stopped too, and the header says that place', () => {
+        assert.match(html, /setPlayUi\(true\); \/\/ immediate feedback while the request runs[\s\S]{0,500}?pendingStartPos = caretStartPos\(\);/);
+        assert.doesNotMatch(html, /pendingStartPos = lastResolvedPos;/);
+        assert.match(html, /else \{ position = caretStartPos\(\); exact = true; \}/);
     });
 
     // Where the playback stands, just left of the length (owner's request 2026-11-16), on the

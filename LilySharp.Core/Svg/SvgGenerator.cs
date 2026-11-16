@@ -61,7 +61,8 @@ public static class SvgGenerator
     public static string GenerateScore(SyntaxTree tree, RenderSpec? renderSpec, SvgRenderOptions? options = null)
     {
         options ??= SvgRenderOptions.Default;
-        var (multiScore, layout) = BuildLayout(tree, renderSpec, PaperBaseOf(options), options.PaperOverrides);
+        var (multiScore, layout) = CollectAndLayout(tree, renderSpec, PaperBaseOf(options), options.PaperOverrides,
+            options.ViewTranspose);
         LayoutWarnings.Report(layout, multiScore.Paper, options.LayoutWarning);
         return RenderToSvg(multiScore, layout, options);
     }
@@ -175,11 +176,15 @@ public static class SvgGenerator
     /// score.Paper is the base (LayoutOptions.Default, or the snippet layout) unless the book
     /// wrote `paper { … }`, so a book without one lays out exactly as before.
     /// </remarks>
+    /// <paramref name="view"/> is the preview's view-only transpose (<see cref="Semantics.ViewTranspose"/>).
     internal static (MultiStaffScore Score, ScoreLayout Layout) CollectAndLayout(
         SyntaxTree tree, RenderSpec? renderSpec, LayoutOptions? paperBase = null,
-        Semantics.PaperOverrides? settings = null)
+        Semantics.PaperOverrides? settings = null, Semantics.ViewTranspose? view = null)
     {
-        var score = CollectScore(NewCollector(renderSpec, paperBase, settings), tree, renderSpec);
+        var collector = NewCollector(renderSpec, paperBase, settings);
+        if (view is { Semitones: not 0 })
+            collector.ScoreTranspose = Semantics.ViewTranspose.ScoreInterval(tree.GetRoot(), renderSpec, view);
+        var score = CollectScore(collector, tree, renderSpec);
         return (score, new LayoutEngine(score.Paper).Layout(score));
     }
 

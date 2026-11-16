@@ -1018,7 +1018,7 @@ public sealed class IncrementalCompiler
                 {
                     var resumedCollector = new MeasureCollector
                     {
-                        ScoreTranspose = spec?.ScoreTranspose,
+                        ScoreTranspose = Semantics.ViewTranspose.ScoreInterval(tree.GetRoot(), spec, _options.ViewTranspose),
                         ScoreConcert = spec?.ScoreConcert,
                         StaffPitch = spec?.StaffPitch,
                         PaperBase = SvgGenerator.PaperBaseOf(_options.Snippet, _options.Interactive, cropLonePage: !_options.Interactive),
@@ -1087,7 +1087,7 @@ public sealed class IncrementalCompiler
         var recorder = CollectWalkProbe.Recorder();
         var source = new MeasureCollector
         {
-            ScoreTranspose = spec?.ScoreTranspose,
+            ScoreTranspose = Semantics.ViewTranspose.ScoreInterval(tree.GetRoot(), spec, _options.ViewTranspose),
             ScoreConcert = spec?.ScoreConcert,
             StaffPitch = spec?.StaffPitch,
             // The same paper SvgGenerator starts a book from with these options (the

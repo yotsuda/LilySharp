@@ -46,6 +46,13 @@ public class SvgParams
     /// (<see cref="SvgPages.BaseVersion"/>); null (or a version the server no longer
     /// has) gets every page.</summary>
     public int? ShownVersion { get; set; }
+    /// <summary>The preview's view-only transpose, in semitones (the recording panel's, owner's
+    /// request 2026-11-16; <c>ViewTranspose</c>): the score is drawn moved, the file unedited.
+    /// 0 / omitted for none.</summary>
+    public int ViewSemitones { get; set; }
+    /// <summary>Which spelling the view takes where its key has two: <c>sharp</c>, <c>flat</c>,
+    /// or null / anything else for the one with fewer accidentals.</summary>
+    public string? ViewSpelling { get; set; }
 }
 
 /// <summary>
@@ -172,6 +179,14 @@ public class SvgResponse
     /// drops this response instead of painting it.
     /// </summary>
     public bool Superseded { get; set; }
+    /// <summary>With a view transpose (<see cref="SvgParams.ViewSemitones"/>): the key it lands
+    /// in, as a chart names it (<c>G♭</c>, <c>E♭m</c>) — null without one.</summary>
+    public string? ViewKey { get; set; }
+    /// <summary>Whether that key has a twin the spelling toggle can take (B / C♭, F♯ / G♭,
+    /// D♭ / C♯ and their minors).</summary>
+    public bool ViewKeyHasTwin { get; set; }
+    /// <summary>That key's signature in sharps (negative: flats) — which side of its twin it is.</summary>
+    public int ViewKeySharps { get; set; }
 }
 
 /// <summary>
@@ -345,6 +360,9 @@ public class PlaybackParams
     /// Null or empty = the first score. What plays is that score's form and its parts; until
     /// 2026-09-29 every part of the file sounded whichever score was picked.</summary>
     public string? RenderName { get; set; }
+    /// <summary>The preview's view-only transpose in semitones (<see cref="SvgParams.ViewSemitones"/>):
+    /// every pitched note sounds moved by it; the drum channel does not. 0 / omitted for none.</summary>
+    public int ViewSemitones { get; set; }
 }
 
 /// <summary>Parameters for lilysharp/playbackText: a source to play that is no open document
