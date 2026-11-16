@@ -8824,7 +8824,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function practiced(notes) {
             if (!window.LysSynth || !window.LysSynth.practiceNotes) return notes;
             const warp = warpNow();
-            playBasis = { warp, speed: warp ? window.LysSynth.recordingPlan(recSettings, practice.speed).rate : practice.speed };
+            // With the recording, the SCORE's tempo sets the pace (owner's decision 2026-11-16): the
+            // recording is played at the score's written length over its own (warpFit) — 131 written
+            // over a recording of 131.8 plays it at 131/131.8 — times the practice tempo, and the
+            // panel's speed on top (recordingPlan). recTempo is what the player is handed.
+            const recTempo = warp ? practice.speed * window.LysSynth.warpFit(warp) : practice.speed;
+            playBasis = { warp, recTempo, speed: warp ? window.LysSynth.recordingPlan(recSettings, recTempo).rate : practice.speed };
             const timed = warp ? window.LysSynth.warpNotes(notes, warp) : notes;
             return window.LysSynth.practiceNotes(timed, rawParts, playedBeats(), Object.assign({}, practice, { speed: playBasis.speed }), rawExtra);
         }
@@ -9247,7 +9252,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (sec < 0) { at = t0 - p0; sec = 0; }
             recPlayer.presetLoop(looping ? { from: origin * k, to: (origin + loopRound) * k } : null);
             recPlayer.setLevel(recLevel());
-            void recPlayer.play(sec, recSettings, { tempo: practice.speed, at });
+            void recPlayer.play(sec, recSettings, { tempo: playBasis.recTempo ?? practice.speed, at });
             return looping ? 0 : recPlayer.duration / k - origin + countInFix;
         }
         function setRecording(m) {

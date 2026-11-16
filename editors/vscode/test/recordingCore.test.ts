@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import {
     RECORDING_DEFAULTS, Recording, ScoreBeat, audioPathFor, recordingPlan, audioReader, barAt, chartForRecording, lineUp, newRecording, parseRecording,
-    recordingPathFor, recordingSecondAt, scoreBars, scoreTimeAt, serializeRecording, timeWarp, unwarpTime, warpBeats, warpNotes, warpTime, workForRename,
+    recordingPathFor, recordingSecondAt, scoreBars, scoreTimeAt, serializeRecording, timeWarp, unwarpTime, warpBeats, warpFit, warpNotes, warpTime, workForRename,
 } from '../src/recordingCore';
 
 // Dettato's own example (SIDECAR.md), cut to its first bars.
@@ -196,6 +196,17 @@ describe('the score played with the recording (§1 7)', () => {
         assert.equal(timeWarp(beats(2, 3), 5.5, { bars: [] }), null);  // only attached: no bar placed
         assert.equal(timeWarp(null, 5.5, r), null);
         assert.equal(timeWarp(beats(2, 3), null, r), null);
+    });
+
+    it('plays the recording at the pace the score writes (owner\'s decision 2026-11-16)', () => {
+        // Score 0..5.5 at its tempo; the recording places the same bars over 0.355..6.0.
+        const w = timeWarp(beats(2, 3), 5.5, ok(FORMAT1))!;
+        assert.ok(Math.abs(warpFit(w) - (6.0 - 0.355) / 5.5) < 1e-12);
+        // A chart written at 120 (the helper's beats) over a recording at 121: the recording a
+        // shade slower, 120/121 — whatever lead it has before its first bar.
+        const bars = (n: number, len: number, from = 0) => Array.from({ length: n }, (_, i) => ({ start: from + i * len, end: from + (i + 1) * len }));
+        const w120 = timeWarp(beats(4), 8, { bars: bars(4, 4 * 60 / 121, 1.5) })!;
+        assert.ok(Math.abs(warpFit(w120) - 120 / 121) < 1e-12);
     });
 
     it('moves the score\'s notes onto the recording\'s seconds, bar by bar', () => {

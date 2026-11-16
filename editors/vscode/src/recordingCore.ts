@@ -383,6 +383,20 @@ function carry(from: readonly [number, number][], to: readonly [number, number][
     return t0 + (t - f0) / (f1 - f0) * (t1 - t0);
 }
 
+/**
+ * How fast the recording plays so that the lined-up bars last as long as the score writes them:
+ * the recording's span of them over the score's (at its written tempo). The score's tempo is the
+ * one that counts (owner's decision 2026-11-16): a chart that says 131 over a recording of 131.8
+ * plays the recording at 131/131.8, and a tempo written anew moves the recording with it. Bar by
+ * bar the two still meet (warpTime); this sets the whole's pace.
+ */
+export function warpFit(w: TimeWarp): number {
+    const last = w.score.length - 1;
+    const score = w.score[last][1] - w.score[0][0];
+    const rec = w.rec[last][1] - w.rec[0][0];
+    return score > 0 && rec > 0 ? rec / score : 1;
+}
+
 /** The recording's second for score time t (any t: see carry). */
 export function warpTime(w: TimeWarp, t: number): number {
     return carry(w.score, w.rec, t);
