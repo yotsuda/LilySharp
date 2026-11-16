@@ -247,11 +247,21 @@ public class PlaybackRequestTests
     }
 
     /// <summary>
-    /// A `%` bar's notes say which written note each plays again (R), so the preview's loop and
+    /// A `%` bar's notes say which written note each plays again (Q), so the preview's loop and
     /// A-B repeat tell them apart (owner's report 2026-11-17: A-B over bars whose `%` repeats a bar
     /// of the same two pitches sounded only the first beat — every later note, same S, O and pitch,
     /// was taken for a repeat). The written bar's notes carry no R.
     /// </summary>
+    [Fact]
+    public void TheServersNotes_HaveNoR_WhichMarksARelayedCandidate()
+    {
+        // The preview takes a list with any note's R set for an AI candidate's relayed notes and
+        // lights nothing on its own score (extension.ts followAlong: notes.some(n => n.R !== undefined)).
+        // The `%` notes' source field was first named R: every score with a `%` stopped lighting
+        // its notes while it played (owner's report 2026-11-17).
+        Assert.Null(typeof(LilySharp.Lsp.PlaybackNote).GetProperty("R"));
+    }
+
     [Fact]
     public void APercentBarsNotes_SayTheWrittenNoteEachPlays()
     {
@@ -262,12 +272,12 @@ public class PlaybackRequestTests
         Assert.Equal(24, sounding.Length);
         int bar = doc.IndexOf("d8", StringComparison.Ordinal);
         int[] written = sounding.Take(8).Select(n => n.S).ToArray();
-        Assert.All(sounding.Take(8), n => Assert.Null(n.R));
+        Assert.All(sounding.Take(8), n => Assert.Null(n.Q));
         // each % bar: its eight notes play the eight written ones, in order, each its own
         foreach (var copy in new[] { sounding.Skip(8).Take(8), sounding.Skip(16).Take(8) })
         {
-            Assert.Equal(written.Select(w => (int?)w), copy.Select(n => n.R));
-            Assert.Equal(8, copy.Select(n => (n.S, n.O, n.P, n.K, n.R)).Distinct().Count());
+            Assert.Equal(written.Select(w => (int?)w), copy.Select(n => n.Q));
+            Assert.Equal(8, copy.Select(n => (n.S, n.O, n.P, n.K, n.Q)).Distinct().Count());
         }
         Assert.Equal(bar, written[0]);
     }

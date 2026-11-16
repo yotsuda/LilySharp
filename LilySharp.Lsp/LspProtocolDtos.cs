@@ -574,7 +574,7 @@ public class PlaybackNote
     /// first was taken for a repeat and dropped (owner's report 2026-11-17: only the first beat of
     /// a `%` bar sounded). Null everywhere else, and then not written.</summary>
     [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-    public int? R { get; set; }
+    public int? Q { get; set; }
     /// <summary>WHO sings the note's section, in a sung part with several singer lines: the keys
     /// of the voices that sing there (<see cref="SungVoiceDto.Key"/>; <c>Midi.SungVoices.SungBy</c>).
     /// The editor, which knows what this machine can sing, plays on the instrument a section all

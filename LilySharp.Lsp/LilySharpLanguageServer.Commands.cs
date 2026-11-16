@@ -1402,8 +1402,8 @@ public sealed partial class LilySharpLanguageServer
                         S = n.Percent?.Pos ?? n.SourcePos,
                         O = n.Percent?.Ordinal ?? n.SourceOrdinal,
                         // …and which of the bar's notes it plays, so the loop does not take the
-                        // bar's later notes for repeats of its first (PlaybackNote.R).
-                        R = n.Percent != null ? n.SourcePos : null,
+                        // bar's later notes for repeats of its first (PlaybackNote.Q).
+                        Q = n.Percent != null ? n.SourcePos : null,
                         I = n.Timbre,
                         C = n.Channel == 9 ? 9 : x.Channel,
                         G = n.Channel == 9 ? 0 : x.Track.Program ?? 0,

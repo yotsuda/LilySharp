@@ -674,10 +674,10 @@ describe('the A-B repeat\'s bars', () => {
     });
 
     // Owner's report 2026-11-17 (My Life, A-B over bars 5-8): `d,8 d' d, d' d, d' d, d' | % | % | % |`
-    // — a `%` bar's notes all carry the mark's place (S, O), each the written note it plays (R).
+    // — a `%` bar's notes all carry the mark's place (S, O), each the written note it plays (Q).
     it('sounds every note of a `%` bar, not each pitch\'s first only', () => {
         const written = [0, 1, 2, 3, 4, 5, 6, 7].map(i => note(i * 0.25, 0.25, i % 2 ? 50 : 38, { S: 200 + i * 4, O: 0, M: 4, N: 0 }));
-        const percent = (m: number, mark: number) => written.map((n, i) => ({ ...n, T: (m - 4) * 2 + i * 0.25, S: mark, O: 0, M: m, R: 200 + i * 4 }));
+        const percent = (m: number, mark: number) => written.map((n, i) => ({ ...n, T: (m - 4) * 2 + i * 0.25, S: mark, O: 0, M: m, Q: 200 + i * 4 }));
         const all = [...written, ...percent(5, 300), ...percent(6, 310), ...percent(7, 320)];
         const w = playBarsWindow(all, 4, 7, true, [0, 2, 4, 6, 8]);
         assert.equal(w.notes.length, 32);
