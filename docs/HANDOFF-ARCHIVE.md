@@ -271,6 +271,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1285セッションの経緯
+
+### 1.1 第1285セッション（2026-11-16・YT-DELL2）
+
+base `a902491d1`・開始時 full 17377 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17380（Lab `p1285` の `run1.trx`）。REQUESTS: Calamo の open 0・**Dettato #5 `open`**（m4a の `iTunSMPB`）＝先に閉じた。
+- **Dettato #5**: `Mp4Lead` が編集リストの無い m4a で `iTunSMPB` を読む（`0a083f8cb`・網と毒は commit の説明）。Dettato の REQUESTS の行は `fixed`（Dettato の repo では未 commit）。
+- **S4 と §1 7（楽譜と録音を同時に）**: 形は `docs/recording-design.md` §5 の「S4 の実際の形」。Parts の最後と録音パネルの上に Recording（トグル＋フェーダー）。オンで小節の数が合えば楽譜の音符と拍を小節ごとに録音の秒へ（`recordingCore` の `timeWarp` ほか）、録音は楽譜の `AudioContext` の時刻で鳴る（`startRecordingAlong`）。網は `recordingCore.test.ts`・`previewRanges.test.ts`。実物の VS Code（CDP・Lab `p1285/rec-e2e`）で確認。`MANUAL-CHECKS` §3.9 に耳の確認。`d47a76222`。続き: 変換の直後は Recording オン（`1aed93e53`）・ヘッダに再生位置（`6a078c947`）・▶ はキャレットから（`56a711d97`・`ce268f5a7`）・録音の速さは楽譜のテンポに（`c74d132ee`）・小数のテンポ（`214849cc1`）。
+- **次の一手**: S5（帯・`Mark Bar Line Here`・ドラッグ・`byHand`）→ S6（CHANGELOG・Dettato への返事）。残る穴は設計 §5 の末尾。
+- 終了時 full 17377 合格 / 1 失敗（README）/ skip 2 / 合計 17380（`run2.trx`）。§7 7.5: Core の差 0 行。
+- オーナー報告（同日）: memo つきの `@todo` のコード名が再生中に光らない＝`highlightPositions` の写しの数え方（Lab `p1285/todo-chord`）。
+- オーナー報告 2 件: コード行のホバーの帯（`e8e2b7b09`）・コード譜の section の補完（`4eb319c46`）。
+- オーナー要望: 一線譜だけの score は「Key: D」を最初と転調に（`5816377a6`・`f814041fa`＝2〜4 線は出さない・`bb24bd348`＝旋法・`docs/row-staff-design.md`）。一線譜の転調の記号も消した。行だけの score は行を全 section の小節まで空で埋める（歌詞だけで A・B しか出なかった・`9cc0c7ef7`）。full 17412 / 1 / 2。
+- 後半（経緯は各 commit の説明）: プレビュー＝鍵への追従・コード名は拍の割合で置く・再生中の小節を薄青・痙攣・先読み・キャレットのパートに追従。ビューだけの移調は廃止・`transpose +3 flat`・`shift` 廃止。`KeptOnTheLine`。Dettato #6・#8・#9・#11・#13 は fixed、#10・#12・#14 は便り（Dettato の repo では未 commit）。コード行に `time`（`91187cf45`）・`tempo`（`ff599303a`）・`%`（`5ac567d84`）・`key`（`f37b60694`＝その行だけ・行だけの楽譜で見出しの key がローマ数字に効かなかったのも直した）・LYS1073。終了時 full 17474 合格 / 1 失敗（README）/ skip 2。HEAD `f37b60694`。
+
 ## 以下は第1284セッションの経緯
 
 ### 1.1 第1284セッション（2026-11-15・YT-DELL2）
