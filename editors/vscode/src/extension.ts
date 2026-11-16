@@ -5846,6 +5846,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             font-family: system-ui, sans-serif; font-size: 12px; color: #555;
             font-variant-numeric: tabular-nums;
         }
+        /* "0:00 / 4:38": the position and the length read as one, a space apart — not the
+           group's 8px between two buttons (owner's report 2026-11-16). */
+        .toolbar #posInfo { margin-right: -5px; }
         /* The button that brings a Play's view back to the notes sounding (followScroll.ts). */
         ${FOLLOW_SCROLL_CSS}
         /* The Range panel (owner's request 2026-10-25): each part's lowest and highest note over
