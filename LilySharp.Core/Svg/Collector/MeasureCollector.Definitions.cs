@@ -73,8 +73,6 @@ public sealed partial class MeasureCollector
     /// the players, or (null) in the part's own convention (<see cref="ScoreConcert"/>): its
     /// shift is composed onto the part's transpose here,
     /// beside the part's own, so ApplyTranspose sees one interval.</param>
-    /// <param name="fileTranspose">The file's top-level <c>transpose</c> default, read once per
-    /// collect by <see cref="CollectDefinitions"/> (<see cref="PartTranspose.ReadScoreDefault"/>'s answer).</param>
     /// <param name="fileIsConcert">Whether the file is written at concert pitch, read the same
     /// way (<see cref="ConcertPitch.FileIsConcert"/>'s answer).</param>
     // NOTE (cross-edit resume): the part-level config reads that seed a walk's entry
@@ -84,9 +82,8 @@ public sealed partial class MeasureCollector
     // non-section direct children must be content- and position-stable across the
     // edit), NOT folded into MaxSourceRead. See ProcessSection's matching note.
     private static (string? clef, int? octave, int? explicitOctave, (int step, int alt, int oct)? transpose, int clefPos, KeySignatureSyntax? key) GetPartDefaults(
-        SyntaxNode root, string partName, bool? scoreConcert,
-        (int step, int alt, int oct)? fileTranspose, bool fileIsConcert,
-        (int step, int alt, int oct)? fileShift = null)
+        SyntaxNode root, string partName, bool? scoreConcert, bool fileIsConcert,
+        (int step, int alt, int oct)? fileTranspose = null)
     {
         foreach (var partDecl in root.ChildNodesOfKind<PartDeclarationSyntax>())
         {
@@ -143,15 +140,14 @@ public sealed partial class MeasureCollector
                     octave = oct;
             }
 
-            // The part's transpose (own, else the file default, with a concert-pitch FILE's
-            // instrument shift inside it — PartTranspose.Read), then a concert-pitch SCORE's
-            // shift back to sounding pitch on top: with both, a transposing part prints
-            // what the letters say, as ConcertPitch's table spells out. The two file
-            // defaults come from the definitions walk (see the fields beside it) — asking
+            // The part's transpose (its own, with a concert-pitch FILE's instrument shift inside
+            // it and the file's top-level transpose outside — PartTranspose.Read), then a
+            // concert-pitch SCORE's shift back to sounding pitch on top: with both, a transposing
+            // part prints what the letters say, as ConcertPitch's table spells out. The file's
+            // values come from the definitions walk (see the fields beside it) — asking
             // PartTranspose.Read(root, partName) here walked the whole tree twice per part.
-            // The file's `shift N` rides inside PartTranspose.Read, outermost (FileShift).
             transpose = PitchTransposer.NullIfIdentity(PitchTransposer.Compose(
-                PartTranspose.Read(partDecl, fileTranspose, fileIsConcert, fileShift),
+                PartTranspose.Read(partDecl, fileIsConcert, fileTranspose),
                 ConcertPitch.OutputShift(scoreConcert, fileIsConcert, partDecl)));
 
             // Resolve clef: explicit > instrument > null
@@ -188,29 +184,44 @@ public sealed partial class MeasureCollector
         _v.Meta.KeyPosition = KeyDataPos(key);
     }
 
-    // The file's two part-independent defaults — the top-level `transpose` and `pitch` —
+    // The file's two part-independent values — the top-level `transpose` and `pitch` —
     // read ONCE per collect by the definitions walk below (they are a function of the whole
     // tree, not of the part). GetPartDefaults used to ask PartTranspose.Read(root, part) for
     // them, which walked the whole tree twice per PART per collect — 3.7 ms of a 27 ms
     // resumed collect on perf-plain1k, 14.5 of 71 on perf-fingbeam1k, for a book with ONE
     // part (MEASURED, session 400). Same first-site rule as the whole-tree readers
-    // (PartTranspose.TryReadScoreDefault / ConcertPitch.TryReadFileMode): DefinitionSites
-    // is the same pre-order green walk over the same nodes, so the first site it meets is
-    // the one those readers answer from. CollectDefinitionsFoldTests holds the equality on
-    // every net book.
-    private (int step, int alt, int oct)? _fileTransposeDefault;
-    private bool _fileTransposeDefaultSeen;
+    // (FileTranspose.IsSite / ConcertPitch.TryReadFileMode): DefinitionSites is the same
+    // pre-order green walk over the same nodes, so the first site it meets is the one those
+    // readers answer from. CollectDefinitionsFoldTests holds the equality on every net book.
     private bool _fileIsConcert;
     private bool _fileIsConcertSeen;
-    // The file's `shift N` (FileShift, 2026-10-17): its semitones, read by the same walk, and
-    // the interval they spell — made once per collect, on first use, from the file's first
-    // key (FileShift.FirstKeySharps), which the walk has not necessarily met yet.
-    private int _fileShiftSemitones;
-    private bool _fileShiftSeen;
-    private (int step, int alt, int oct)? _fileShiftInterval;
+    // The file's top-level `transpose` (FileTranspose — the whole piece, `shift N` retired into
+    // it 2026-11-16): its site, read by the same walk, and the interval it spells — made once
+    // per collect, on first use: a numeric one is spelled from the file's first key
+    // (FileTranspose.FirstKeySharps), which the walk has not necessarily met yet.
+    private PropertyAssignmentSyntax? _fileTransposeSite;
+    private bool _fileTransposeIntervalMade;
+    private (int step, int alt, int oct)? _fileTransposeInterval;
     private (int step, int alt, int oct)? FileShiftInterval
-        => _fileShiftSemitones == 0 ? null
-            : _fileShiftInterval ??= FileShift.Interval(_fileShiftSemitones, FileShift.FirstKeySharps(_root!));
+    {
+        get
+        {
+            if (_fileTransposeSite == null)
+                return null;
+            if (!_fileTransposeIntervalMade)
+            {
+                var root = _root!;
+                _fileTransposeInterval = PitchTransposer.NullIfIdentity(
+                    FileTranspose.IntervalOf(_fileTransposeSite, () => FileTranspose.FirstKeySharps(root)));
+                _fileTransposeIntervalMade = true;
+            }
+            return _fileTransposeInterval;
+        }
+    }
+    /// <summary>The file's transpose in semitones, 0 for none (the chord rows' diagrams and MIDI
+    /// read the sound alone).</summary>
+    private int FileShiftSemitones
+        => FileShiftInterval is { } t ? PitchTransposer.IntervalSemitones(t.step, t.alt, t.oct) : 0;
     // The top-level `clef` (null = none): the clef of every part that names neither a clef
     // nor an instrument, on every path — the multi-staff one used to fall to treble.
     private string? _fileClef;
@@ -229,18 +240,16 @@ public sealed partial class MeasureCollector
     /// <summary>The file defaults the definitions walk read (the fields above) — for the net
     /// that holds them equal to the whole-tree readers on every book.</summary>
     internal ((int step, int alt, int oct)? Transpose, bool Concert) FileDefaultsForTest
-        => (_fileTransposeDefault, _fileIsConcert);
+        => (FileShiftInterval, _fileIsConcert);
 
     private void CollectDefinitions(SyntaxNode root)
     {
         _root = root;
-        _fileTransposeDefault = null;
-        _fileTransposeDefaultSeen = false;
         _fileIsConcert = false;
         _fileIsConcertSeen = false;
-        _fileShiftSemitones = 0;
-        _fileShiftSeen = false;
-        _fileShiftInterval = null;
+        _fileTransposeSite = null;
+        _fileTransposeIntervalMade = false;
+        _fileTransposeInterval = null;
         _fileClef = null;
         _fileClefPosition = 0;
         _sectionDeclarationsInOrder.Clear();
@@ -395,22 +404,14 @@ public sealed partial class MeasureCollector
                     break;
 
                 case PropertyAssignmentSyntax prop:
-                    // The file's transpose default and pitch convention (the fields above):
-                    // the first qualifying site wins, exactly as the whole-tree readers answer.
-                    if (!_fileTransposeDefaultSeen && PartTranspose.TryReadScoreDefault(prop, out var fileTranspose))
-                    {
-                        _fileTransposeDefaultSeen = true;
-                        _fileTransposeDefault = fileTranspose;
-                    }
+                    // The file's transpose and pitch convention (the fields above): the first
+                    // qualifying site wins, exactly as the whole-tree readers answer.
+                    if (_fileTransposeSite == null && FileTranspose.IsSite(prop))
+                        _fileTransposeSite = prop;
                     if (!_fileIsConcertSeen && ConcertPitch.TryReadFileMode(prop, out bool concert))
                     {
                         _fileIsConcertSeen = true;
                         _fileIsConcert = concert;
-                    }
-                    if (!_fileShiftSeen && FileShift.TryRead(prop, out int shiftSemitones))
-                    {
-                        _fileShiftSeen = true;
-                        _fileShiftSemitones = shiftSemitones;
                     }
                     break;
 

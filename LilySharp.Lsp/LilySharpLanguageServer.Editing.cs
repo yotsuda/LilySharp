@@ -336,6 +336,8 @@ public sealed partial class LilySharpLanguageServer
                     actions.Add(pitch);
                 if (ScoreNameQuotedAction(doc, uri, diagnostic) is { } bareName)
                     actions.Add(bareName);
+                if (ShiftRetiredAction(doc, uri, diagnostic) is { } retired)
+                    actions.Add(retired);
                 if (RepeatedStaffSelectorAsAction(doc, uri, diagnostic) is { } oneAs)
                     actions.Add(oneAs);
                 if (LilyPondScriptAction(doc, uri, diagnostic) is { } script)
@@ -661,6 +663,24 @@ public sealed partial class LilySharpLanguageServer
             start--;
         return QuickFix("Delete the extra 'as' - one 'as' takes every selector", doc, uri, diagnostic,
             EditOf(doc.Text, start, end, ""));
+    }
+
+    /// <summary>The quick fix for LYS0047, a <c>shift N</c> (retired 2026-11-16): the word
+    /// <c>transpose</c> for <c>shift</c>, the number as written — <c>transpose N</c> moves the whole
+    /// piece as <c>shift N</c> did.</summary>
+    private static CodeAction? ShiftRetiredAction(Document doc, Uri uri, CoreDiagnostic diagnostic)
+    {
+        if (diagnostic.Code != DiagnosticCodes.ShiftRetired)
+            return null;
+        var shift = doc.Tree.GetNodes<PropertyAssignmentSyntax>()
+            .FirstOrDefault(p => p.NameToken.Text == "shift"
+                                 && p.NameToken.Span.Start >= diagnostic.Span.Start && p.NameToken.Span.Start <= diagnostic.Span.End);
+        if (shift == null)
+            return null;
+        var word = shift.NameToken.Span;
+        string rest = string.Concat(shift.Values.OfType<SyntaxTokenNode>().Select(t => t.Text));
+        return QuickFix($"Write 'transpose{(rest.Length > 0 ? " " + rest : "")}'", doc, uri, diagnostic,
+            EditOf(doc.Text, word.Start, word.End, "transpose"));
     }
 
     /// <summary>

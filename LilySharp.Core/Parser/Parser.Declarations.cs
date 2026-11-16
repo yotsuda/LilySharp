@@ -390,6 +390,10 @@ internal sealed partial class Parser
                     [new SyntaxToken(SyntaxKind.Identifier, "", null, null)]);
             }
 
+            // `transpose +3 flat` (2026-11-16): a number of semitones and its spelling.
+            if (propName.Kind == SyntaxKind.TransposeKeyword && StartsTransposeAmount())
+                return new PropertyAssignmentGreen(propName, colon, [.. ParseTransposeAmount()]);
+
             var value = Advance(); // identifier, string, number, or pitch
             // A transpose target may carry octave marks (transpose d' / c,);
             // harmless for the other properties, which never have trailing marks.
@@ -447,12 +451,14 @@ internal sealed partial class Parser
 
     // ========== Properties and Metadata ==========
 
-    // Top-level `transpose d` (bare, like `time 4/4` / `key c major`): a default
-    // transpose applied to every part that does not set its own. Octave marks
-    // (transpose d' / c,) are allowed on the target.
+    // Top-level `transpose d` (bare, like `time 4/4` / `key c major`): the whole piece moved
+    // (Semantics.FileTranspose). Octave marks (transpose d' / c,) are allowed on the target;
+    // `transpose +3 flat` is the numeric form (ParseTransposeAmount).
     private PropertyAssignmentGreen ParseTopLevelTranspose()
     {
         var keyword = Advance(); // transpose
+        if (StartsTransposeAmount())
+            return new PropertyAssignmentGreen(keyword, null, [.. ParseTransposeAmount()]);
         var value = Advance();   // target pitch
         var values = new List<GreenNode?> { value };
         while (Check(SyntaxKind.Apostrophe) || Check(SyntaxKind.Comma))
@@ -460,30 +466,55 @@ internal sealed partial class Parser
         return new PropertyAssignmentGreen(keyword, null, [.. values]);
     }
 
-    // Top-level `shift N` (Semantics.FileShift, 2026-10-17): the whole piece N semitones up
-    // (`shift +1`, `shift 3`) or down (`shift -2`), composed outside every part's own transpose.
-    // The same property-node shape as the top-level `transpose`; the value is checked HERE,
-    // as `pitch`'s is: a missing number or one past eleven is reported at the word, and the
-    // node still carries what was written so the round trip holds.
-    private PropertyAssignmentGreen ParseTopLevelShift()
+    // Whether a `transpose` value is the numeric form: a sign or a number.
+    private bool StartsTransposeAmount()
+        => Check(SyntaxKind.Plus) || Check(SyntaxKind.Minus) || Check(SyntaxKind.IntegerLiteral);
+
+    // `transpose +3`, `transpose -2 flat` (owner's decision 2026-11-16): a sign, a number of
+    // semitones (−11…+11) and, optionally, `sharp` / `flat` — which of a twin key it lands in
+    // (Semantics.FileTranspose). The value is checked HERE, as `pitch`'s is: a missing number or
+    // one past eleven is reported at the word, and the node still carries what was written so the
+    // round trip holds. The spelling word is taken only when it is one of the two.
+    private List<GreenNode?> ParseTransposeAmount()
     {
-        var keyword = Advance(); // shift
         var values = new List<GreenNode?>();
         if (Check(SyntaxKind.Plus) || Check(SyntaxKind.Minus))
             values.Add(Advance());
         if (Check(SyntaxKind.IntegerLiteral))
         {
-            if (!int.TryParse(Current.Text, out int n) || n > Semantics.FileShift.Max)
+            if (!int.TryParse(Current.Text, out int n) || n > Semantics.FileTranspose.Max)
                 _diagnostics.Error(new TextSpan(_textPosition, Math.Max(1, Current.FullWidth)), DiagnosticCodes.ExpectedToken,
-                    $"'shift {Current.Text}' is an octave or more. shift takes -{Semantics.FileShift.Max} to "
-                    + $"+{Semantics.FileShift.Max} semitones; an octave is the part's 'octave N'.");
+                    $"'transpose {Current.Text}' is an octave or more. A number takes -{Semantics.FileTranspose.Max} to "
+                    + $"+{Semantics.FileTranspose.Max} semitones; an octave is a pitch with an octave mark (transpose c-apostrophe), or the part's 'octave N'.");
             values.Add(Advance());
+            if (Current.Kind == SyntaxKind.Identifier
+                && Current.Text is Semantics.TransposeValue.SharpWord or Semantics.TransposeValue.FlatWord)
+                values.Add(Advance());
         }
         else
         {
             _diagnostics.Error(new TextSpan(_textPosition, Math.Max(1, Current.FullWidth)), DiagnosticCodes.ExpectedToken,
-                "shift takes a number of semitones, e.g. 'shift +1' (up a semitone) or 'shift -2' (down a tone).");
+                "A number of semitones goes after the sign, e.g. 'transpose +1' (up a semitone) or 'transpose -2' (down a tone).");
         }
+        return values;
+    }
+
+    // `shift N`, retired 2026-11-16 (owner's decision): the top-level `transpose N` moves the whole
+    // piece as it did. Parsed as before — the node keeps what was written, so the round trip holds
+    // and the quick fix can write `transpose` for the word — and refused at the word.
+    private PropertyAssignmentGreen ParseTopLevelShift()
+    {
+        var span = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
+        var keyword = Advance(); // shift
+        _diagnostics.Error(span, DiagnosticCodes.ShiftRetired,
+            "'shift' was retired: write 'transpose' with the same number ('transpose +1', 'transpose -2') — it moves the "
+            + "whole piece, chord rows included, as shift did. Add 'sharp' or 'flat' after the number to choose "
+            + "between twin keys ('transpose +6 flat' is G♭ from C).");
+        var values = new List<GreenNode?>();
+        if (Check(SyntaxKind.Plus) || Check(SyntaxKind.Minus))
+            values.Add(Advance());
+        if (Check(SyntaxKind.IntegerLiteral))
+            values.Add(Advance());
         return new PropertyAssignmentGreen(keyword, null, [.. values]);
     }
 

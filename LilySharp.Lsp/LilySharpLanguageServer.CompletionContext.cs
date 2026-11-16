@@ -1416,8 +1416,8 @@ public sealed partial class LilySharpLanguageServer
                 // (owner's request 2026-10-26; until then an empty list, which only kept the
                 // popup from proposing the position's keywords there).
                 case "transpose": return CompletionContext.AfterTransposePitch;
-                // `shift |` — a number of semitones follows (`shift +1`), which no list can
-                // offer; an empty list keeps the keywords away (2026-10-17).
+                // `shift |` — retired 2026-11-16 (the parser refuses it with its fix): an empty
+                // list keeps the keywords away.
                 case "shift": return CompletionContext.AfterShiftAmount;
             }
 

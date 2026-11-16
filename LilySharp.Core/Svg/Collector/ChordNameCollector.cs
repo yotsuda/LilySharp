@@ -82,16 +82,16 @@ internal sealed class ChordNameCollector
     /// The structure is moved by it first, so the MIDI, the hover and the diagrams read what sounds.</summary>
     public int RowTypedDrop { get; set; }
 
-    /// <summary>The file's <c>shift N</c> in semitones (<see cref="Semantics.FileShift"/>), 0 for
-    /// none — set by the collector before each row, beside <see cref="RowNameDrop"/>, which
-    /// already carries it for the NAMES. This one decides the DIAGRAMS: under a shift a written
-    /// shape is the written chord's, so the row draws the shifted chord's usual shape instead
-    /// (<see cref="DiagramOf"/>).</summary>
+    /// <summary>The semitones the file's and the score's <c>transpose</c> move the row by
+    /// (<see cref="Semantics.FileTranspose"/>), 0 for none — set by the collector before each row,
+    /// beside <see cref="RowInterval"/>, which moves the NAMES. This one decides the DIAGRAMS:
+    /// under a transpose a written shape is the written chord's, so the row draws the moved
+    /// chord's usual shape instead (<see cref="DiagramOf"/>).</summary>
     public int RowShift { get; set; }
 
-    /// <summary>The c→target interval of the score's own <c>transpose</c>, or null: the row's names
-    /// move by it as the score's notes do (owner's report 2026-11-03). Set with <see cref="RowShift"/>,
-    /// which carries its semitones for the diagrams.</summary>
+    /// <summary>The c→target interval of the file's and the score's own <c>transpose</c>, or null: the
+    /// row's names move by it as the score's notes do (owner's report 2026-11-03; the file's since
+    /// 2026-11-16). Set with <see cref="RowShift"/>, which carries its semitones for the diagrams.</summary>
     public (int Step, int Alter)? RowInterval { get; set; }
 
     /// <summary>
@@ -132,7 +132,7 @@ internal sealed class ChordNameCollector
             || (words.Count == 0 && !DiagramsAll && Table == null)
             || Semantics.ChordDiagramsKey.Resolve(DiagramScope, TuningWord, RowStaffTuning) is not { } tuning)
             return null;
-        // Under the file's `shift` the written shapes are the WRITTEN chord's (FileShift's
+        // Under a transpose the written shapes are the WRITTEN chord's (FileTranspose's
         // remarks): the diagram draws the shifted chord's usual shape — a written shape still
         // asks for a diagram, it just cannot be the one drawn, so the entry is read as if the
         // score drew every chord. The spelling does not matter to a shape (pitch classes
@@ -140,7 +140,7 @@ internal sealed class ChordNameCollector
         bool drawsDefault = DiagramsAll;
         if (RowShift != 0 && structure != null)
         {
-            structure = structure.Pressed(Semantics.FileShift.RowDrop(0, RowShift), 0);
+            structure = structure.Pressed(Semantics.FileTranspose.RowDrop(0, RowShift), 0);
             drawsDefault |= words.Count > 0;
             words = [];
         }

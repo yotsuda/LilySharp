@@ -1999,18 +1999,28 @@ C1 — the octave is the WRITTEN register, LYS1050), and a `tuning` of another i
 strings (`instrument ukulele tuning guitar`, LYS1051; `instrument guitar tuning guitarDropD` is
 an ordinary override and is not warned).
 
-**`transpose PITCH`** is LilyPond's `\transpose c PITCH`: the part's notes and its key
-signature move by the interval from `c` up to that pitch, on the page and in the sound alike.
+**`transpose`** moves notes and key signatures, on the page and in the sound alike. It takes a
+number of semitones or a pitch:
 
 ```
-part high { clef treble  transpose d }      // a tone up: C major prints, and plays, in D major
-part low  { clef treble  transpose bes, }   // a tone down; 'transpose bes' is a minor seventh UP
+transpose +2                                // the whole piece a tone up: C major prints, and plays, in D major
+transpose -1                                // a semitone down: C major is B major
+transpose +6 flat                           // a tritone up, in G♭ rather than F♯
+part high { clef treble  transpose d }      // this part a tone up (LilyPond's \transpose c d)
+part low  { clef treble  transpose bes, }   // this part a tone down; 'transpose bes' is a minor seventh UP
 ```
 
-A top-level `transpose` is the default of every part that writes none, and one on a score
-header (`score high transpose d { … }`) is added to each part's own for that score. A part's
-`transpose` leaves a chords row where it is; a score's, and the top-level `shift N`, move the
-rows too. It is not the way to write a transposing instrument, because nothing in it makes the
+A number (−11…+11) is spelled in the key it lands in: the file's first `key` (C major without
+one) moved, with as few accidentals as possible — from C major `+1` is D♭, `-1` B, `+6` F♯.
+`sharp` / `flat` after it choose between twin keys (B / C♭, F♯ / G♭, D♭ / C♯ and their minors);
+anywhere else the word changes nothing and is warned (LYS4081). A pitch is LilyPond's
+`\transpose c PITCH`, the interval from `c` up to it.
+
+At the top level `transpose` moves the whole piece: every part, its own `transpose` included,
+the key signatures, the chord rows and the `@chord`s. On a score header
+(`score high transpose +2 { … }`) it moves that score, outside the file's. A part's
+`transpose` leaves a chords row where it is. `shift N`, which did the whole-piece move until
+2026-11-16, is refused with a quick fix that writes `transpose N`. It is not the way to write a transposing instrument, because nothing in it makes the
 page and the sound differ: beside an `instrument` preset it is added on top of the preset's
 transposition, and the page and the sound move together.
 

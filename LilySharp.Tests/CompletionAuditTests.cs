@@ -145,21 +145,20 @@ public class CompletionAuditTests
     public void TopLevel_OffersTransposeUsingAndDrummap_AndEachCompiles()
     {
         var items = LilySharpLanguageServer.GetTopLevelCompletions().Items;
-        foreach (string label in new[] { "transpose", "shift", "using", "drummap" })
+        foreach (string label in new[] { "transpose", "using", "drummap" })
         {
             var item = Assert.Single(items, i => i.Label == label);
             Assert.False(string.IsNullOrEmpty(item.Detail), label + " has no help line");
-            // `transpose` wants a pitch, `using` a file name; `shift` carries its own `+1`
-            // placeholder and the drummap snippet is whole.
-            string caret = label switch { "transpose" => "d", "using" => "other.lys", _ => "" };
+            // `transpose` wants a number or a pitch, `using` a file name; the drummap snippet is whole.
+            string caret = label switch { "transpose" => "+2", "using" => "other.lys", _ => "" };
             AssertCompiles(Book(top: Resolved(item, caret)), $"top-level `{label}`");
         }
-        // `transpose` and `shift` are file singletons — dropped once written, as `octave` is.
-        var after = LilySharpLanguageServer.GetTopLevelCompletions("transpose d\nshift +1\n").Items.Select(i => i.Label).ToList();
+        // `shift` was retired into `transpose` (2026-11-16): never offered.
+        Assert.DoesNotContain(items, i => i.Label == "shift");
+        // `transpose` is a file singleton — dropped once written, as `octave` is.
+        var after = LilySharpLanguageServer.GetTopLevelCompletions("transpose d\n").Items.Select(i => i.Label).ToList();
         Assert.DoesNotContain("transpose", after);
-        Assert.DoesNotContain("shift", after);
         Assert.Contains("using", after);
-        Assert.Contains("shift", LilySharpLanguageServer.GetTopLevelCompletions("transpose d\n").Items.Select(i => i.Label));
     }
 
     // ================= transpose / transposition (owner's request 2026-10-26) =================
@@ -167,7 +166,11 @@ public class CompletionAuditTests
     [Fact]
     public void TransposeTargets_CompileInEveryHome_AndSayTheirInterval()
     {
-        var items = LilySharpLanguageServer.GetTransposePitchCompletions().Items;
+        // The numbers first (2026-11-16: TransposeNumberCompletionTests), then the pitches.
+        var all = LilySharpLanguageServer.GetTransposePitchCompletions().Items;
+        foreach (var number in all.Where(i => i.Label![0] is '+' or '-'))
+            AssertCompiles(Book(top: $"transpose {number.Label}"), $"top-level `transpose {number.Label}`");
+        var items = all.Where(i => i.Label![0] is not ('+' or '-')).ToArray();
         Assert.True(items.Length >= 24, "the targets up and down, a semitone to an octave");
         int[] stepSemitone = [0, 2, 4, 5, 7, 9, 11];
         int last = 0;

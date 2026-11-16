@@ -383,14 +383,18 @@ verbatim `@"C:\music"` / `@"say ""hi"""` (backslash as written, `""` = one quote
   typed as they SOUND under `pitch concert` too (a bass's low E `e,,`, E1) and keep their printed
   octave on every page; without a transposing `instrument` the word changes nothing. A composed
   piece is best written at concert pitch: every part by the pitch it sounds.
-- `transpose PITCH` is LilyPond's `\transpose c PITCH`: the part's notes AND its key signature
-  move by the interval from `c` up to that pitch, on the page and in the sound alike.
-  `part m { clef treble transpose d }` prints and plays a C major tune a tone higher, in D major;
-  `transpose bes` is a minor seventh UP, `transpose bes,` a tone down. In a part header it is that
-  part's; at the top level the default of every part that writes none (own replaces it); on a
-  score header (`score high transpose d { … }`) it is added to each part's own for that score. A
-  part's `transpose` moves its music, not a chords row (a score's, and the top-level `shift N`,
-  move the rows too). ⚠️ It is NOT how a transposing instrument is written: nothing in it makes the
+- `transpose` moves music, on the page and in the sound alike, and takes a NUMBER of semitones
+  or a PITCH. `transpose +2` / `transpose -3` (−11…+11) is spelled in the key it lands in — the
+  file's first `key` (C major without one) moved, with as few accidentals as possible: from C
+  major `+1` is D♭ major, `-1` B major, `+6` F♯ major; `sharp` / `flat` after the number picks
+  the other of twin keys (`transpose +6 flat` is G♭ — only B/C♭, F♯/G♭, D♭/C♯ and their minors
+  have twins). `transpose PITCH` is LilyPond's `\transpose c PITCH`: the interval from `c` up to
+  that pitch — `transpose d` a tone up, `transpose bes` a minor seventh UP, `transpose bes,` a
+  tone down. At the TOP LEVEL it moves the whole piece: every part (its own `transpose`
+  included), the key signatures, the chord rows and `@chord`s. In a part header it is that
+  part's (`part m { clef treble transpose d }` prints and plays a C major tune in D major) and
+  leaves a chords row where it is; on a score header (`score high transpose +2 { … }`) it moves
+  that score, rows included. (`shift N` was retired into it: write `transpose N`.) ⚠️ It is NOT how a transposing instrument is written: nothing in it makes the
   page and the sound differ. That difference comes from the `instrument` preset alone (`clarinet`,
   `clarinet-a`, `trumpet`, `horn`, `soprano-sax` `alto-sax` `tenor-sax` `baritone-sax`), and a
   `transpose` beside a preset is added on top of it — the page moves and the sound with it.
@@ -1793,7 +1797,8 @@ score { staff melody }
 **"Transpose up/down …"** — rewrite the notes, the `key` lines and the chord symbols. The part
 property `transpose` does it for one part's notes and key signature without rewriting them
 (`transpose d` = up a tone, print and sound; see Pitches) but leaves a chords row where it is;
-the top-level `shift N` moves the whole piece N semitones, rows included. When you rewrite, the
+the top-level `transpose +2` (or `transpose -1`, `transpose +6 flat`) moves the whole piece,
+rows included. When you rewrite, the
 first note of each section may need new octave marks.
 
 **"Make it triplets"** — `tuplet 3/2 { c8 d e }` (three in the time of two), keeping each bar's
@@ -1830,9 +1835,9 @@ with the `lilysharp_readGuide` tool, topic `composing` (`docs/COMPOSE_FOR_LLM.md
 - A reference's trailing marks shift octaves (`Chorus'` / `Chorus,`). There is no
   per-reference transposition: a glued `'(N)` diatonic interval was removed 2026-08-28,
   and `transpose` is a part property, so a motif quoted at another interval
-  is written out. ⚠️ **`transpose` takes a PITCH, not a number of steps** —
-  `part cl { clef treble transpose bes }`, and `transpose -2` is an error naming the
-  pitch form. Do not confuse it with `transposition`, a *different* part property that
+  is written out. ⚠️ **`transpose` takes a pitch or a number of SEMITONES, not of steps**:
+  `transpose -2` and `transpose bes,` are a tone down, while `transpose bes` is a minor seventh UP.
+  Do not confuse it with `transposition`, a *different* part property that
   takes an octave marker (`8va` / `8vb` / `15ma` / `15mb`) and nothing else (what each does
   to the page and the sound: Pitches). For a B♭
   or E♭ instrument you normally write NO `transpose` at all: name the `instrument` and

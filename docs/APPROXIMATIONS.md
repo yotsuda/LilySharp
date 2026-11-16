@@ -456,8 +456,8 @@
 - **`CapoDirective`** LILYSHARP-OWN: LilyPond 2.26 has no capo property; its \fret-diagram-verbose knows a
 ### `LilySharp.Core/Semantics/CrossStaffCollisionValidator.cs`
 - **`CrossStaffCollisionValidator`** LILYSHARP-OWN: LilyPond says nothing here.
-### `LilySharp.Core/Semantics/FileShift.cs`
-- **`FileShift`** LILYSHARP-OWN: LilyPond has \transpose FROM TO and no number of semitones.
+### `LilySharp.Core/Semantics/FileTranspose.cs`
+- **`FileTranspose`** LILYSHARP-OWN: LilyPond has \transpose FROM TO and no number of semitones.
 ### `LilySharp.Core/Semantics/FontPlanReader.cs`
 - **`FontPlanReader.MaxStep`** LILYSHARP-OWN: a limit of the LANGUAGE, not a geometry — LilyPond's font-size
 - **`FontPlanReader.MinSize,MaxSize`** The range a size may take, in staff spaces. LILYSHARP-OWN, as

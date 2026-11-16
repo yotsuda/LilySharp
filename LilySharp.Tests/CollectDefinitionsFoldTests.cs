@@ -53,7 +53,7 @@ public class CollectDefinitionsFoldTests
             score { staff sax }
             """, out var root);
         var (transpose, concert) = c.FileDefaultsForTest;
-        Assert.Equal(PartTranspose.ReadScoreDefault(root), transpose);
+        Assert.Equal(PitchTransposer.NullIfIdentity(FileTranspose.Read(root)), transpose);
         Assert.Equal((1, 0, 0), transpose);
         Assert.True(concert);
         Assert.True(ConcertPitch.FileIsConcert(root));
@@ -72,7 +72,7 @@ public class CollectDefinitionsFoldTests
         var (transpose, concert) = c.FileDefaultsForTest;
         Assert.Null(transpose);
         Assert.False(concert);
-        Assert.Null(PartTranspose.ReadScoreDefault(root));
+        Assert.Null(PitchTransposer.NullIfIdentity(FileTranspose.Read(root)));
         Assert.False(ConcertPitch.FileIsConcert(root));
     }
 
@@ -92,7 +92,7 @@ public class CollectDefinitionsFoldTests
             books++;
             string book = System.IO.Path.GetFileName(path);
 
-            var expectedTranspose = PartTranspose.ReadScoreDefault(root);
+            var expectedTranspose = PitchTransposer.NullIfIdentity(FileTranspose.Read(root));
             var (transpose, concert) = collector.FileDefaultsForTest;
             Assert.True(expectedTranspose == transpose, $"{book}: transpose default {expectedTranspose} vs {transpose}");
             Assert.True(ConcertPitch.FileIsConcert(root) == concert, $"{book}: file pitch convention");

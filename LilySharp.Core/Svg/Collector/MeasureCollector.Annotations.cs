@@ -190,9 +190,10 @@ public sealed partial class MeasureCollector
             // The file's shape table lists chords that draw wherever they are named, per the
             // section the mark is WRITTEN in (ChordShapeTable); read only when a table exists.
             string? section = _chordDiagramTable != null ? Semantics.ChordDiagramScores.SectionNameOf(site) : null;
-            // A score's own `transpose` moves the name with the notes, name by name, and a written
-            // shape is the written chord's (owner's decision 2026-11-03).
-            var move = Semantics.PitchTransposer.ChordMoveOf(ScoreTranspose);
+            // The file's and the score's own `transpose` move the name with the notes, name by
+            // name, and a written shape is the written chord's (owner's decisions 2026-11-03,
+            // 2026-11-16: the file's transpose moves the whole piece).
+            var move = Semantics.PitchTransposer.ChordMoveOf(PieceMove);
             Music.ChordStructure? Moved(Music.ChordStructure? chord)
                 => move is { } m ? chord?.TransposedBy(m.Step, m.Alter) : chord;
             Music.ChosenShape? DiagramFor(Music.ChordStructure? derived)
@@ -355,7 +356,7 @@ public sealed partial class MeasureCollector
     {
         var words = Music.ShapeChords.Words(chord);
         var tuning = _partFrettedTuning ?? TuningType.Guitar;
-        return Semantics.PitchTransposer.ChordMoveOf(ScoreTranspose) is { } move && words.Structure is { } named
+        return Semantics.PitchTransposer.ChordMoveOf(PieceMove) is { } move && words.Structure is { } named
             ? words.DrawnMoved(tuning, all: true, named.TransposedBy(move.Step, move.Alter), capo: _chordSpelling.Capo) is { } drawn
                 ? Music.ChordVoicings.Spell(drawn.Frets) : null
             : Music.ShapeChords.ShapeFor(words, tuning, _chordSpelling.Capo);
@@ -411,26 +412,30 @@ public sealed partial class MeasureCollector
     /// own <c>for</c> <paramref name="rowFor"/> — names what the track sounds on THIS score's page:
     /// to the reading of the part the row or the track is <c>for</c>
     /// (<see cref="Semantics.ChordTrackPitch.ReaderDrop"/> — the staff below decides nothing,
-    /// owner's decision 2026-10-28), with the file's <c>shift</c> folded in
-    /// (<see cref="Semantics.FileShift.RowDrop"/>: a row over no staff moves with the piece too).</summary>
+    /// owner's decision 2026-10-28). The file's transpose moves the row by its interval instead
+    /// (<see cref="SetRowMove"/>), so the names spell as the notes do.</summary>
     /// <remarks>Also sets the collector's <see cref="ChordNameCollector.RowTypedDrop"/>: the
     /// letters reach what sounds before the reader's reading is taken.</remarks>
     private int ChordRowDrop(SyntaxNode root, string track, string? rowFor)
     {
         _chordNameCollector.RowTypedDrop = Semantics.ChordTrackPitch.TypedDrop(root, track, _fileIsConcert);
-        return Semantics.FileShift.RowDrop(
-            Semantics.ChordTrackPitch.ReaderDrop(root, track, rowFor, _fileIsConcert, PagePitchOf),
-            _fileShiftSemitones);
+        return Semantics.ChordTrackPitch.ReaderDrop(root, track, rowFor, _fileIsConcert, PagePitchOf);
     }
 
-    /// <summary>What moves a chord row besides its reader: the file's <c>shift</c> and this score's
-    /// <c>transpose</c>. Its written shapes are the written chord's under either
+    /// <summary>What moves the whole piece on this score's page: the file's top-level
+    /// <c>transpose</c> (<see cref="Semantics.FileTranspose"/>) with the score's own outside it — the
+    /// interval a chord row, an <c>@chord</c> and a <c>diagram(…)</c> move by, as the notes do.</summary>
+    private (int step, int alt, int oct)? PieceMove
+        => Semantics.PitchTransposer.Compose(FileShiftInterval, ScoreTranspose);
+
+    /// <summary>What moves a chord row besides its reader: the file's <c>transpose</c> and this
+    /// score's (<see cref="PieceMove"/>). Its written shapes are the written chord's under either
     /// (<see cref="ChordNameCollector.RowShift"/>).</summary>
     private void SetRowMove()
     {
-        int score = ScoreTranspose is { } t ? Semantics.PitchTransposer.IntervalSemitones(t.step, t.alt, t.oct) : 0;
-        _chordNameCollector.RowShift = _fileShiftSemitones + score % 12;
-        _chordNameCollector.RowInterval = Semantics.PitchTransposer.ChordMoveOf(ScoreTranspose);
+        var move = PieceMove;
+        _chordNameCollector.RowShift = move is { } t ? Semantics.PitchTransposer.IntervalSemitones(t.step, t.alt, t.oct) % 12 : 0;
+        _chordNameCollector.RowInterval = Semantics.PitchTransposer.ChordMoveOf(move);
     }
 
     /// <summary>Reads the tuning of <paramref name="partName"/> for the names its symbol-less

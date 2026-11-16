@@ -43,7 +43,7 @@ public sealed partial class LilyPondExporter
     /// ⚠️ Read through the same three houses rather than re-derived, because the three
     /// spellings of <c>transpose</c> disagreeing is a defect this repository has already had:
     /// a render block's own transpose used to be counted as the file default as well, so one
-    /// construct gave three answers (PartTranspose.ReadScoreDefault's remarks).
+    /// construct gave three answers (measured 2026-08-16, 第182).
     /// </remarks>
     private static (int step, int alt, int oct)? EffectiveTranspose(
         CompilationUnitSyntax root, string partName, RenderDeclarationSyntax? render)

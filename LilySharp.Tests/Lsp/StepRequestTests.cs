@@ -2727,25 +2727,25 @@ public class StepRequestTests
     }
 
     [Fact]
-    public void AShift_StepsASemitone_AndNamesTheKeyItLandsIn()
+    public void ANumericTranspose_StepsASemitone_AndNamesTheKeyItLandsIn()
     {
         const string Book = "key {0}\n{1}\npart m {{ clef treble }}\nsection A {{ m {{ c4 d e f }} }}\nform {{ A }}\nscore {{ staff m }}\n";
-        string S(string shift, string key = "c major") => string.Format(Book, key, shift);
-        Assert.Equal(S("shift +2"), Step(S("sh‸ift +1"), +1, semitone: true).After);
-        Assert.Equal(S("shift 0"), Step(S("shift +1‸"), -1, semitone: true).After);
-        Assert.Equal(S("shift -1"), Step(S("shift ‸0"), -1).After);
-        Assert.Equal(S("shift -3"), Step(S("shift -‸2"), -1, semitone: true).After);
-        var (up, _) = Step(S("shift ‸0"), +1, semitone: true);
-        Assert.Equal("shift +1: key c major -> des major", up.Message);
-        var (down, _) = Step(S("shift ‸0", "g minor"), -1, semitone: true);
-        Assert.Equal("shift -1: key g minor -> fis minor", down.Message);
-        var (top, same) = Step(S("shift +1‸1"), +1, semitone: true);
+        string S(string transpose, string key = "c major") => string.Format(Book, key, transpose);
+        Assert.Equal(S("transpose +2"), Step(S("tr‸anspose +1"), +1, semitone: true).After);
+        Assert.Equal(S("transpose 0"), Step(S("transpose +1‸"), -1, semitone: true).After);
+        Assert.Equal(S("transpose -1"), Step(S("transpose ‸0"), -1).After);
+        Assert.Equal(S("transpose -3"), Step(S("transpose -‸2"), -1, semitone: true).After);
+        var (up, _) = Step(S("transpose ‸0"), +1, semitone: true);
+        Assert.Equal("transpose +1: key c major -> des major", up.Message);
+        var (down, _) = Step(S("transpose ‸0", "g minor"), -1, semitone: true);
+        Assert.Equal("transpose -1: key g minor -> fis minor", down.Message);
+        var (top, same) = Step(S("transpose +1‸1"), +1, semitone: true);
         Assert.False(top.Fallback);
-        Assert.Equal(S("shift +11"), same);
+        Assert.Equal(S("transpose +11"), same);
         // The completion leaves `+1` SELECTED (owner's report 2026-10-17): a selection within
         // one steppable thing steps it, as does one covering the whole line.
-        Assert.Equal(S("shift +2"), Step(S("shift «+1»"), +1, semitone: true).After);
-        Assert.Equal(S("shift -1"), Step(S("«shift 0»"), -1).After);
+        Assert.Equal(S("transpose +2"), Step(S("transpose «+1»"), +1, semitone: true).After);
+        Assert.Equal(S("transpose -1"), Step(S("«transpose 0»"), -1).After);
     }
 
     [Fact]

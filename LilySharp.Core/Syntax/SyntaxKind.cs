@@ -215,7 +215,8 @@ public enum SyntaxKind : ushort
     TuningKeyword,
     /// <summary>The <c>transpose</c> keyword.</summary>
     TransposeKeyword,
-    /// <summary>The <c>shift</c> keyword (<c>shift +1</c>: the whole piece a semitone up — Semantics.FileShift).</summary>
+    /// <summary>The <c>shift</c> keyword — retired 2026-11-16 into the top-level <c>transpose N</c>
+    /// (Semantics.FileTranspose); still read, to be refused with its quick fix (LYS0047).</summary>
     ShiftKeyword,
     /// <summary>The <c>octave</c> keyword.</summary>
     OctaveKeyword,

@@ -259,14 +259,8 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
                     "an octave number", "a whole number, e.g. 'octave 3'");
                 break;
             case "transpose":
-                // Ask the READER whether it can read this, rather than spelling the
-                // pitch-target grammar a second time here. It also carries the octave
-                // marks (`transpose bes,`), which the joined token text would not.
-                if (PartTranspose.ReadProperty(prop) is null)
-                    Error(valueTokens[0],
-                        $"'{Joined(valueTokens)}' is not a transpose target. transpose takes a "
-                        + "pitch — a letter a–g with an optional is/isis/es/eses and "
-                        + "octave marks (e.g. 'transpose d', 'transpose bes,').");
+                // Every site's value — the top level's and a score's too — is checked by
+                // TransposeValueValidator (2026-11-16: the numeric form).
                 break;
             case "transposition":
                 // NOT "ask the reader" here, and the difference is the whole point:

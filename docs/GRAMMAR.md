@@ -560,29 +560,37 @@ PagePitchMode  = 'transposed' | 'concert' ;  (* a score header and a staff: how 
                     with the fix: 'written' is how notes are typed, 'transposed' how a page
                     prints (owner's decision 2026-10-11, option D — until then both places took
                     'written'). Semantics.ConcertPitch holds the rule. *)
-TransposeDecl  = 'transpose' , PitchToken ;
-                 (* the file default: every part that sets no 'transpose' of its own.
-                    LilyPond's \transpose c PITCH: notes and key signature move by the interval
-                    from c UP to the pitch ('bes' a minor seventh up, 'bes,' a tone down), on
-                    the page and in the sound alike, on top of an 'instrument' preset's own
-                    shift. It is not how a transposing instrument is declared — that is the
-                    preset (the 'transposition' note under PartProperty). *)
+TransposeDecl  = 'transpose' , TransposeValue ;
+TransposeValue = PitchToken
+               | [ '+' | '-' ] , Integer , [ 'sharp' | 'flat' ] ;
+                 (* The whole piece moved (owner's decision 2026-11-16, which retired 'shift N'
+                    into it; Semantics.FileTranspose): every pitched part — its own 'transpose'
+                    and a transposing instrument's shift included, composed INSIDE this — with
+                    its key signatures, the chord rows, '@chord' annotations and 'diagram(…)'
+                    items, on the page and in the sound alike; drum notes are not pitches and
+                    stay. TWO FORMS, one interval. A pitch is LilyPond's \transpose c PITCH: the
+                    interval from c UP to the pitch ('bes' a minor seventh up, 'bes,' a tone
+                    down, 'd'' a ninth). A number is semitones, -11..11, turned into ONE interval
+                    before anything moves: the file's first 'key' (C major without one) moved N
+                    semitones and brought into five flats … six sharps (sharp at the tritone)
+                    names the target key — C major +1 is D-flat major (c→des), −1 is B major, +6
+                    is F-sharp major. Where that key has a twin (B / C♭, F♯ / G♭, D♭ / C♯ and their
+                    minors) 'sharp' / 'flat' after the number takes the one asked for
+                    ('transpose +6 flat' is G-flat); anywhere else the word changes nothing and is
+                    warned (LYS4081). A row's WRITTEN chord shapes belong to the written chord, so
+                    under a transpose its diagrams draw the moved chord's usual shape instead (the
+                    "refret"; a capo is the writer's own 'capo N' line). 12 or more is refused at
+                    the number. It is not how a transposing instrument is declared — that is the
+                    preset (the 'transposition' note under PartProperty). Until 2026-11-16 the
+                    top-level 'transpose' was only the DEFAULT of the parts that wrote none and
+                    moved no chord row. The same TransposeValue is a part header's 'transpose'
+                    (that part, its number spelled from the file's first key) and a score
+                    header's (that score, outside the file's, its number spelled from the key the
+                    file's transpose lands in). *)
 ShiftDecl      = 'shift' , [ '+' | '-' ] , Integer ;
-                 (* The whole piece that many semitones up (or down), -11..11 — the karaoke /
-                    band-chart move (owner's request 2026-10-17; Semantics.FileShift). Unlike
-                    the top-level 'transpose' it is COMPOSED with every part's own 'transpose'
-                    and a transposing instrument's shift, and it moves the chord rows and the
-                    key signatures too; drum notes are not pitches and stay. The number is
-                    turned into ONE interval before anything moves: the file's first 'key'
-                    moved N semitones and brought into five flats … six sharps (the capo's
-                    pressed-name rule, sharp at the tritone) names the target key, and the
-                    music is transposed by the interval that reaches it — so C major +1 is
-                    D-flat major (c→des), −1 is B major, +6 is F-sharp major, and notes, key
-                    signatures and chord names agree. A row's WRITTEN chord shapes belong to
-                    the written chord, so under a shift its diagrams draw the shifted chord's
-                    usual shape instead (the "refret"; a capo is the writer's own
-                    'capo N' line). '@chord' annotations are not moved. Top level
-                    only; 12 or more is refused at the number (an octave is 'octave N'). *)
+                 (* RETIRED 2026-11-16 (owner's decision): refused at the word (LYS0047), with a
+                    quick fix that writes 'transpose' for it — 'transpose N' moves the whole piece
+                    as 'shift N' did. Still a keyword so the refusal can name it. *)
 
 TempoDecl      = 'tempo' , [ '!' ] , [ Marking ] , [ DurationBase , [ Dots ] , '=' ] , [ Integer ] ,
                  [ FeelWord , [ Integer ] ] , [ 'bare' ] ;
@@ -694,7 +702,7 @@ KeyDecl        = 'key' , [ '!' ] , ( PitchBase , [ Accidental-text ] , Mode | 'n
                  (* 'key none' (2026-11-15): no key signature, on EVERY page — a transposed
                     one too, where a file that writes no key prints the transposition of
                     C major (a B♭ clarinet's part in D major). Every accidental is written at
-                    its note; under 'transpose', 'shift' and on a transposed page the notes move
+                    its note; under 'transpose' and on a transposed page the notes move
                     and the signature stays empty; there is no tonic for a degree chord or a phrase's
                     auto-transpose to stand on. It stands wherever a key does (the file, a
                     section's head, a part header — that part alone —, the music) and takes

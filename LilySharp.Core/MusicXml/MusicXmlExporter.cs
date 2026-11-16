@@ -7988,9 +7988,9 @@ public sealed class MusicXmlExporter
                 {
                     var measure = part.Measures[start + k];
                     AddRowHarmonies(measure, bars[k], k, pending, tuning, k == 0 && measure.Implicit ? pending.Pickup : null,
-                        // The file's `shift N` moves the row's names with the piece (FileShift.RowDrop).
-                        Semantics.FileShift.RowDrop(WrittenDrop(header.TranspositionSemitones),
-                            _root != null ? Semantics.FileShift.ReadSemitones(_root) : 0), typedDrop);
+                        // The file's top-level `transpose` moves the row's names with the piece (FileTranspose.RowDrop).
+                        Semantics.FileTranspose.RowDrop(WrittenDrop(header.TranspositionSemitones),
+                            _root != null ? Semantics.FileTranspose.ReadSemitones(_root) : 0), typedDrop);
                 }
                 WriteRowSigns(pending.Items, k => k >= 0 && start + k < part.Measures.Count ? part.Measures[start + k] : null);
             }

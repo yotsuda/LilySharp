@@ -14,25 +14,29 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-using System;
-using System.Linq;
 using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// Reads the <c>transpose</c> target (with its octave marks) for a part:
-/// the part's own option if present, otherwise a top-level <c>transpose</c>
-/// default that applies to every part. Shared by the renderer's collector and
-/// the MIDI / MusicXML exporters so the single transpose grammar has one reader.
+/// Reads the <c>transpose</c> of a part: its own option, with the file's top-level
+/// <c>transpose</c> (<see cref="FileTranspose"/>) composed outside it. Shared by the renderer's
+/// collector and the MIDI / MusicXML / LilyPond exporters so the single transpose grammar has one
+/// reader.
 /// </summary>
+/// <remarks>
+/// Until 2026-11-16 a top-level <c>transpose</c> was the DEFAULT of every part that wrote none (a
+/// part's own replaced it), and <c>shift N</c> moved the whole piece outside it. The owner retired
+/// <c>shift</c> into the top-level <c>transpose</c>, which now moves the whole piece — a part's own
+/// <c>transpose</c> included.
+/// </remarks>
 public static class PartTranspose
 {
     /// <summary>
-    /// The effective transpose for <paramref name="partName"/>, or null: the part's own
-    /// option, else the file default — and, in a file written at concert pitch
-    /// (<see cref="ConcertPitch"/>), the instrument's own written-side shift composed
-    /// inside it, so an alto saxophone's part prints a major sixth above the letters.
+    /// The effective transpose for <paramref name="partName"/>, or null: the part's own option and
+    /// the file's transpose outside it — and, in a file written at concert pitch
+    /// (<see cref="ConcertPitch"/>), the instrument's own written-side shift composed inside both,
+    /// so an alto saxophone's part prints a major sixth above the letters.
     /// </summary>
     /// <remarks>
     /// ⚠️ The concert-pitch shift lives HERE, in the one reader every consumer of a part's
@@ -45,142 +49,59 @@ public static class PartTranspose
     {
         // Part declarations are top-level only (Parser.ParseTopLevelItem), so the
         // root's direct children are the whole search space (SyntaxNode.ChildNodes).
-        // ReadScoreDefault stays on the descendant walk, but no longer counts a
-        // render block's own transpose as the file's default — see there.
         var partDecl = ConcertPitch.FindPart(root, partName);
-        return Read(partDecl, ReadScoreDefault(root), ConcertPitch.FileIsConcert(root), FileShift.Read(root));
+        return Read(partDecl, ConcertPitch.FileIsConcert(root), FileTranspose.Read(root));
     }
 
     /// <summary>
-    /// The same reading for a caller that already holds the file's two defaults —
-    /// <paramref name="scoreDefault"/> is <see cref="ReadScoreDefault"/>'s answer,
-    /// <paramref name="fileIsConcert"/> is <see cref="ConcertPitch.FileIsConcert"/>'s. The
-    /// page's collector reads both ONCE per collect, in the definitions walk it makes anyway
-    /// (they are a function of the whole tree, not of the part), where asking
-    /// <see cref="Read(SyntaxNode, string)"/> per part walked the tree twice for every part
-    /// it collected. <paramref name="fileShift"/> is the file's <c>shift N</c>
-    /// (<see cref="FileShift.Read"/>), composed OUTSIDE all of it — the whole piece moves,
-    /// a part's own transpose included (2026-10-17).
+    /// The same reading for a caller that already holds the file's values —
+    /// <paramref name="fileIsConcert"/> is <see cref="ConcertPitch.FileIsConcert"/>'s answer,
+    /// <paramref name="fileTranspose"/> <see cref="FileTranspose.Read"/>'s. The page's collector
+    /// reads both ONCE per collect, in the definitions walk it makes anyway (they are a function of
+    /// the whole tree, not of the part). The file's transpose is composed OUTSIDE all of it — the
+    /// whole piece moves, a part's own transpose included.
     /// </summary>
     public static (int step, int alt, int oct)? Read(PartDeclarationSyntax? partDecl,
-        (int step, int alt, int oct)? scoreDefault, bool fileIsConcert,
-        (int step, int alt, int oct)? fileShift = null)
+        bool fileIsConcert, (int step, int alt, int oct)? fileTranspose = null)
     {
-        // a part's own transpose overrides the default
-        var written = (partDecl != null ? Read(partDecl) : null) ?? scoreDefault;
+        var written = partDecl != null ? Read(partDecl) : null;
         return PitchTransposer.NullIfIdentity(PitchTransposer.Compose(PitchTransposer.Compose(
-            ConcertPitch.InputShift(fileIsConcert, partDecl), written), fileShift));
+            ConcertPitch.InputShift(fileIsConcert, partDecl), written), fileTranspose));
     }
 
     /// <summary>
-    /// Parses a <c>transpose &lt;pitch&gt;</c> property node (the shared shape used by a
-    /// part header and a per-score transpose) into a c-&gt;target interval, or null.
+    /// Parses a score header's <c>transpose</c> into a c→target interval, or null. A numeric one
+    /// (<c>transpose +2</c>) is spelled from the key the music is in when the score takes it: the
+    /// file's first key after the file's own transpose.
     /// </summary>
     public static (int step, int alt, int oct)? ReadProperty(PropertyAssignmentSyntax prop)
-        => IsTranspose(prop) ? Parse(prop) : null;
+    {
+        if (!TransposeValue.IsTranspose(prop))
+            return null;
+        return FileTranspose.IntervalOf(prop, () =>
+        {
+            var root = RootOf(prop);
+            int from = FileTranspose.FirstKeySharps(root);
+            if (FileTranspose.Read(root) is { } file)
+                from += PitchTransposer.KeySignatureFifthsShift(file.step, file.alt);
+            return from;
+        });
+    }
 
-    /// <summary>Reads the transpose option from a part declaration, or null.</summary>
+    /// <summary>Reads the transpose option from a part declaration, or null. A numeric one is
+    /// spelled from the file's first key.</summary>
     public static (int step, int alt, int oct)? Read(PartDeclarationSyntax partDecl)
     {
         foreach (var prop in partDecl.Properties)
-            if (IsTranspose(prop))
-                return Parse(prop);
+            if (TransposeValue.IsTranspose(prop))
+                return FileTranspose.IntervalOf(prop, () => FileTranspose.FirstKeySharps(RootOf(partDecl)));
         return null;
     }
 
-    /// <summary>
-    /// A free-standing top-level <c>transpose d</c> (not a part-header attribute):
-    /// the score-wide default. Public so callers that already hold each part's
-    /// declaration can compute the default once and combine it themselves
-    /// (own ?? default) rather than re-scanning the tree per part.
-    /// </summary>
-    /// <remarks>
-    /// ⚠️ A <c>score … transpose d { … }</c> is NOT this. It looks like it to a walk
-    /// filtered only on "not inside a part", and being counted here made one construct
-    /// give three answers (measured 2026-08-16, 第182):
-    /// <list type="bullet">
-    /// <item>the score that declares it got the interval TWICE — once from here as the
-    /// file default, once from its own <c>RenderSpec.ScoreTranspose</c>, which the
-    /// collector composes. `transpose d` moved c to E4, a major third, where the
-    /// part-header spelling moves it to D4;</item>
-    /// <item>and every OTHER score in the file got it once, unasked: in a book whose
-    /// first score declares no transpose at all, that score engraved in D major.</item>
-    /// </list>
-    /// Both fall out of one line, so one guard removes both. With it, the three
-    /// spellings of <c>transpose</c> — part header, top level, per score — finally
-    /// agree that <c>d</c> means a major second, which is what
-    /// <c>test/transpose-score.lys</c> and <c>test/transpose-down.lys</c> already
-    /// document against LilyPond's <c>\transpose c d</c>.
-    /// </remarks>
-    public static (int step, int alt, int oct)? ReadScoreDefault(SyntaxNode root)
+    private static SyntaxNode RootOf(SyntaxNode node)
     {
-        // Green finder, not DescendantNodes().OfType<…>(): this reader runs per
-        // part per keystroke, and the red walk materialized a red wrapper for
-        // EVERY descendant just to type-test it — measured as the whole-tree
-        // red-creation cost of the edit keystroke once the collector's own walks
-        // went green (HANDOFF §1 session 153). Same node set, same pre-order;
-        // the matched red carries its Parent chain, so the IsInsidePart guard
-        // is unchanged.
-        foreach (var prop in root.GreenSites(
-                     static g => (g.Kind == SyntaxKind.PropertyAssignment, Descend: true)))
-            if (prop is PropertyAssignmentSyntax pa && TryReadScoreDefault(pa, out var interval))
-                return interval;
-        return null;
-    }
-
-    /// <summary>
-    /// Whether <paramref name="prop"/> is THE site <see cref="ReadScoreDefault"/> answers from —
-    /// a <c>transpose</c> outside every part header and score block — and, when it is, its
-    /// interval (null for a target the parser refused: the site still ends the search). One
-    /// predicate for the whole-tree read above and for the collector's definitions walk, which
-    /// meets every property assignment in the same pre-order and keeps the first such site.
-    /// </summary>
-    public static bool TryReadScoreDefault(PropertyAssignmentSyntax prop, out (int step, int alt, int oct)? interval)
-    {
-        if (IsTranspose(prop) && !IsInsidePart(prop) && !IsInsideRender(prop))
-        {
-            interval = Parse(prop);
-            return true;
-        }
-        interval = null;
-        return false;
-    }
-
-    private static bool IsTranspose(PropertyAssignmentSyntax prop)
-        => string.Equals(prop.NameToken.Text, "transpose", StringComparison.OrdinalIgnoreCase);
-
-    private static bool IsInsidePart(SyntaxNode node) => node.IsInside<PartDeclarationSyntax>();
-
-    /// <summary>A per-score <c>transpose</c> belongs to that score, not to the file.</summary>
-    private static bool IsInsideRender(SyntaxNode node) => node.IsInside<RenderDeclarationSyntax>();
-
-    // Children are: name, [optional colon], value, [octave marks...]. The colon
-    // is now optional, so locate the value/marks by skipping the name and colon
-    // rather than by a fixed slot index.
-    private static (int step, int alt, int oct)? Parse(PropertyAssignmentSyntax prop)
-    {
-        SyntaxTokenNode? valueToken = null;
-        int oct = 0;
-        for (int ci = 1; ci < prop.SlotCount; ci++)
-        {
-            if (prop.GetChild(ci) is not SyntaxTokenNode tok || tok.Kind == SyntaxKind.Colon)
-                continue;
-            if (valueToken == null)
-            {
-                valueToken = tok;
-            }
-            else if (tok.Kind == SyntaxKind.Apostrophe)
-            {
-                oct++;
-            }
-            else if (tok.Kind == SyntaxKind.Comma)
-            {
-                oct--;
-            }
-        }
-
-        if (valueToken == null || !PitchTransposer.TryParseTarget(valueToken.Text, out int step, out int alt))
-            return null;
-        return (step, alt, oct);
+        while (node.Parent != null)
+            node = node.Parent;
+        return node;
     }
 }

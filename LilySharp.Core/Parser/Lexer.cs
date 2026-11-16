@@ -723,8 +723,8 @@ internal sealed class Lexer
 
             // Part options
             "transpose" => SyntaxKind.TransposeKeyword,
-            // `shift +1` — the whole piece N semitones (Semantics.FileShift). Reserved
-            // 2026-10-17: no tracked or Lab book writes the word outside a comment.
+            // `shift +1` — retired 2026-11-16 into the top-level `transpose N`
+            // (Semantics.FileTranspose); still a keyword, so the parser can refuse it with its fix.
             "shift" => SyntaxKind.ShiftKeyword,
             "octave" => SyntaxKind.OctaveKeyword,
             "instrument" => SyntaxKind.InstrumentKeyword,

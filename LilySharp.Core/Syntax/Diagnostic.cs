@@ -334,6 +334,10 @@ public static class DiagnosticCodes
     /// bars under it are measured as that bar (<c>Parser.ParseSecondDenominator</c>; grammar
     /// evaluation 4, 2026-11-14 — it was LYS0030 at the '+', LYS1004 and LYS0016).</summary>
     public const string MeterOfTwoDenominators = "LYS0046";
+    /// <summary>Parser error: a top-level <c>shift N</c>, retired 2026-11-16 into the top-level
+    /// <c>transpose N</c>, which now moves the whole piece as <c>shift</c> did
+    /// (<c>Semantics.FileTranspose</c>). The quick fix writes <c>transpose</c> for <c>shift</c>.</summary>
+    public const string ShiftRetired = "LYS0047";
 
     /// <summary>Lexer error: an unexpected character was encountered.</summary>
     /// <remarks>
@@ -940,6 +944,9 @@ public static class DiagnosticCodes
     /// is printed and not sung), or a pass two verses name (the first is sung). A warning: the
     /// book plays as the sentence says, and each has a quick fix.</summary>
     public const string VerseAgainstRepeat = "LYS4080";
+    /// <summary>Warning: a numeric <c>transpose</c>'s <c>sharp</c> / <c>flat</c> changes nothing — the
+    /// key it lands in has no twin (<c>Semantics.TransposeValueValidator</c>, 2026-11-16).</summary>
+    public const string TransposeSpellingUnused = "LYS4081";
 
     /// <summary>Warning: a <c>chords</c> row entry that is no chord Lily# reads — <c>C7b9</c>,
     /// <c>C-5</c>, a misspelled quality. The row still prints it as written and plays only its

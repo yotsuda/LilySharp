@@ -150,8 +150,9 @@ public static class ConcertPitch
     /// (<see cref="ScoreMode"/>) and is not the file's.
     /// </summary>
     /// <remarks>
-    /// Green finder rather than a red walk, for the reason <see cref="PartTranspose.ReadScoreDefault"/>
-    /// gives: this is asked per part per keystroke.
+    /// Green finder rather than a red walk: this is asked per part per keystroke, and the red walk
+    /// materialized a wrapper for every descendant just to type-test it (as
+    /// <see cref="FileTranspose.Site"/>).
     /// </remarks>
     public static bool FileIsConcert(SyntaxNode root)
     {
@@ -167,7 +168,7 @@ public static class ConcertPitch
     /// <c>pitch</c> outside every part header and score block carrying one of the two words —
     /// and, when it is, the mode. One predicate for the whole-tree read above and for the
     /// collector's definitions walk, which meets every property assignment in the same
-    /// pre-order and keeps the first such site (see <see cref="PartTranspose.TryReadScoreDefault"/>).
+    /// pre-order and keeps the first such site (as <see cref="FileTranspose.IsSite"/>).
     /// </summary>
     public static bool TryReadFileMode(PropertyAssignmentSyntax prop, out bool concert)
     {

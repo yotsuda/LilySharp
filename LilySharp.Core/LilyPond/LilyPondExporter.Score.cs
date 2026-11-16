@@ -46,13 +46,13 @@ public sealed partial class LilyPondExporter
         int drop = (Semantics.ChordTrackPitch.TypedDrop(root, row.PartName, fileIsConcert)
                     + Semantics.ChordTrackPitch.ReaderDrop(root, row.PartName, row.ForTarget, fileIsConcert,
                         p => Semantics.ConcertPitch.PageMode(render, p))) % 12;
-        // The file's `shift N` moves the row too (FileShift.RowDrop); alone, it is spelled as
-        // the notes are (FileShift.Interval) rather than by the drop's flat-leaning table.
-        int shift = Semantics.FileShift.ReadSemitones(root);
+        // The file's top-level `transpose` moves the row too (FileTranspose.RowDrop); alone, it is
+        // spelled as the notes are (FileTranspose.Read) rather than by the drop's flat-leaning table.
+        int shift = Semantics.FileTranspose.ReadSemitones(root);
         (int step, int alt, int oct)? moved = null;
-        if (drop == 0 && Semantics.FileShift.Read(root) is { } shifted)
+        if (drop == 0 && Semantics.FileTranspose.Read(root) is { } shifted)
             moved = shifted;
-        else if (Semantics.FileShift.RowDrop(drop, shift) is var total and not 0)
+        else if (Semantics.FileTranspose.RowDrop(drop, shift) is var total and not 0)
             moved = Semantics.PitchTransposer.IntervalFromSemitones(12 - total);
         // The score's own `transpose` moves the row as it moves the score's notes.
         if (render.Transpose is { } own)

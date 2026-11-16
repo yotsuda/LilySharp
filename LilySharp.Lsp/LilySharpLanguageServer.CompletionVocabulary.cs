@@ -192,7 +192,7 @@ public sealed partial class LilySharpLanguageServer
             ["octave"] = ("Base octave for this part — a whole number, e.g. `octave 3`. "
                           + "The words absolute and relative belong to the TOP-LEVEL octave "
                           + "directive and a part header refuses them", false),
-            ["transpose"] = ("Transpose target pitch, e.g. `transpose d`, `transpose bes,`", true),
+            ["transpose"] = ("Move this part: a number of semitones, e.g. `transpose -2`, `transpose +6 flat`, or a target pitch, e.g. `transpose d`, `transpose bes,`", true),
             ["transposition"] = ("What the part sounds against what it writes — the pitch a written middle C sounds, "
                                  + "e.g. `transposition bes`, `transposition bes,`, or an octave marker "
                                  + $"({string.Join("/", LanguageVocabulary.TranspositionMarkers)}); replaces the preset's", true),
@@ -4242,10 +4242,7 @@ public sealed partial class LilySharpLanguageServer
                 // ParseTopLevelTranspose), the multi-file include (ParseUsingDirective /
                 // UsingExpander) and the drum-table overrides (ParseDrummapDeclaration).
                 // `transpose` is a singleton like `octave`; the other two may recur.
-                new CompletionItem { Label = "transpose", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "transpose $0", Detail = "File-default transpose target pitch, e.g. `transpose d` — every part that sets no transpose of its own", Command = new Command { Title = "Suggest transpose target", CommandIdentifier = "editor.action.triggerSuggest" } },
-                // `shift N` (Semantics.FileShift, 2026-10-17): the whole piece N semitones, every
-                // part's own transpose included — the karaoke / band-chart move `transpose` is not.
-                new CompletionItem { Label = "shift", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "shift ${1:+1}", Detail = "Move the whole piece N semitones up or down, e.g. `shift +1`, `shift -2` — every part (its own transpose included), the key signatures and the chord rows; Ctrl+Shift+Up/Down step it" },
+                new CompletionItem { Label = "transpose", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "transpose $0", Detail = "Move the whole piece, e.g. `transpose +2`, `transpose -1`, `transpose +6 flat` or `transpose d` — every part (its own transpose included), the key signatures and the chord rows; Ctrl+Shift+Up/Down step a number", Command = new Command { Title = "Suggest transpose target", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "using", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "using \"$0\"", Detail = "Include another .lys file: its parts, sections and tracks join this file's (top level only)" },
                 new CompletionItem { Label = "drummap", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "drummap {\n\t${1:hh}: position ${2:6} notehead ${3:x}\n}", Detail = "Override the drum table for a kit name: position (staff line), notehead, midi, mark" },
                 // A pragma (Semantics.CheckPragma, 2026-10-28): the checks open after the space.
@@ -4430,7 +4427,7 @@ public sealed partial class LilySharpLanguageServer
     /// defaults (time/key/tempo/octave). Completion drops them once present; duplicable
     /// keywords are NOT listed here.</summary>
     private static readonly System.Collections.Generic.HashSet<string> GlobalSingletonKeywords =
-        new(StringComparer.Ordinal) { "title", "subtitle", "composer", "poet", "arranger", "copyright", "fonts", "paper", "layout", "tempo", "time", "key", "octave", "pitch", "transpose", "shift" };
+        new(StringComparer.Ordinal) { "title", "subtitle", "composer", "poet", "arranger", "copyright", "fonts", "paper", "layout", "tempo", "time", "key", "octave", "pitch", "transpose" };
 
     /// <summary>True when <paramref name="keyword"/> appears as a whole word at the GLOBAL
     /// scope (brace depth 0) in live code — not inside a block, a string, or a comment.</summary>
@@ -6109,7 +6106,7 @@ public sealed partial class LilySharpLanguageServer
                 Kind = CompletionItemKind.Keyword,
                 InsertTextFormat = InsertTextFormat.Snippet,
                 InsertText = "transpose $0",
-                Detail = "This score's transpose target pitch, composed on each part's own (e.g. `transpose bes`)",
+                Detail = "Move this score, outside the file's and each part's own: a number (`transpose +2`, `transpose -3 flat`) or a target pitch (`transpose bes`)",
                 SortText = "2",
                 Command = new Command { Title = "Suggest transpose target", CommandIdentifier = "editor.action.triggerSuggest" },
             },
@@ -6146,17 +6143,28 @@ public sealed partial class LilySharpLanguageServer
     ];
 
     /// <summary>At <c>transpose |</c> — the top level, a part header, a score header: the
-    /// targets from c, each with its interval (owner's request 2026-10-26; an empty list until
-    /// then, which only kept the position's keywords away).</summary>
+    /// numbers first (owner's decision 2026-11-16: +1, −1, +2 … ±11, spelled in the key they land
+    /// in), then the targets from c, each with its interval (owner's request 2026-10-26; an empty
+    /// list until then, which only kept the position's keywords away).</summary>
     private static readonly CompletionList _transposePitchCompletions = new()
     {
-        Items = TransposeTargets.Select((t, i) => new CompletionItem
-        {
-            Label = t.Target,
-            Kind = CompletionItemKind.EnumMember,
-            Detail = $"{t.Interval} - c becomes {t.Target}",
-            SortText = i.ToString("D2", System.Globalization.CultureInfo.InvariantCulture),
-        }).ToArray(),
+        Items = Enumerable.Range(1, LilySharp.Core.Semantics.FileTranspose.Max)
+            .SelectMany(n => new[] { n, -n })
+            .Select((n, i) => new CompletionItem
+            {
+                Label = n > 0 ? "+" + n : n.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                Kind = CompletionItemKind.Value,
+                Detail = $"{(n > 0 ? "up" : "down")} {Math.Abs(n)} semitone{(Math.Abs(n) == 1 ? "" : "s")}, spelled in the key it lands in"
+                    + " - write sharp or flat after it to choose between twin keys (F♯ / G♭ …)",
+                SortText = "a" + i.ToString("D2", System.Globalization.CultureInfo.InvariantCulture),
+            })
+            .Concat(TransposeTargets.Select((t, i) => new CompletionItem
+            {
+                Label = t.Target,
+                Kind = CompletionItemKind.EnumMember,
+                Detail = $"{t.Interval} - c becomes {t.Target}",
+                SortText = "b" + i.ToString("D2", System.Globalization.CultureInfo.InvariantCulture),
+            })).ToArray(),
     };
 
     internal static CompletionList GetTransposePitchCompletions() => _transposePitchCompletions;

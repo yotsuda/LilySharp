@@ -83,6 +83,7 @@ public static class SemanticValidation
         new ItemCapoValidator(),            // `staff NAME capo N` (a tab's clause), a tab's capo out of range or apart from its part's shapes
         new CustomTuningValidator(),        // a tuning written out ("d, a, d g a d'") that spells none
         new SymbolCaseValidator(),          // wrong-case / unknown header symbols
+        new TransposeValueValidator(),      // every `transpose` value: a pitch or a number (+ sharp/flat)
         new KeyTonicValidator(),            // `key WORD mode` where WORD is not a note
         new FormDeclarationValidator(),// at most one structure per scope
         new LyricSyllableValidator(),       // more syllables than notes
