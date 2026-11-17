@@ -101,6 +101,12 @@ describe('the preview\'s Range panel', () => {
         // A loop's refresh answered with an error (a part half typed) leaves the loop going and
         // the page playing (owner's report 2026-11-17): the next edit asks again.
         assert.match(html, /if \(pendingLoopRefresh\) \{\s*pendingLoopRefresh = false;\s*if \(playingNow\(\)\) break;\s*\}/);
+        // Text that cannot be read plays as it last could be (owner's decision 2026-11-17), a Play
+        // or an audition alike, and Play's edge says so while it sounds.
+        assert.match(html, /if \(\(message\.error \|\| !message\.notes\) && rawNotes\) \{\s*message\.notes = rawNotes;/);
+        assert.match(html, /markUnreadable\(!!\(message\.error \|\| !message\.notes\)\);/);
+        assert.match(html, /playBtn\.classList\.toggle\('stale', playing && scoreUnreadable\);/);
+        assert.match(html, /\.toolbar button#playBtn\.playing\.stale \{/);
         assert.match(html, /refreshRanges\(\);\s*vscode\.postMessage\(\{ type: 'requestLength' \}\);/);
         assert.match(extension, /if \(message\.type === 'requestLength'\)/);
     });

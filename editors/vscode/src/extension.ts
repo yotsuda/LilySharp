@@ -5983,6 +5983,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
         }
         .toolbar button#playBtn.playing:hover { background: #c8ddf5; }
+        /* …and an amber edge while what sounds is the last version of the text that could be read
+           (the text as it is now cannot be: a note half typed). */
+        .toolbar button#playBtn.playing.stale {
+            border-color: #d19a00;
+            box-shadow: inset 0 0 0 1px #d19a00, inset 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
         /* The practice menu open looks as the Range panel open does (owner's request 2026-11-02). */
         .toolbar button.practice[aria-expanded="true"] {
             background: #d6e6f8; border-color: #0078d7; color: #0b4a8b;
@@ -8567,6 +8573,22 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         /** Whether something sounds now (not paused, not stopped). */
         function playingNow() { return !document.getElementById('stopBtn').disabled && !paused; }
         var playStateSaid = false;
+        // The text as it is now cannot be played (the last playback answer was an error: a note
+        // half typed) — what sounds is the last version that could be read. While it plays, Play's
+        // edge turns amber and its tooltip says so (owner's decision 2026-11-17).
+        var scoreUnreadable = false;
+        function markUnreadable(unreadable) {
+            if (unreadable === scoreUnreadable) return;
+            scoreUnreadable = unreadable;
+            paintPlayStale(playingNow());
+        }
+        function paintPlayStale(playing) {
+            const playBtn = document.getElementById('playBtn');
+            playBtn.classList.toggle('stale', playing && scoreUnreadable);
+            playBtn.title = !playing ? 'Play from the A flag (Space while stopped)'
+                : scoreUnreadable ? 'Playing the last version of the text that could be read (the text as it is now cannot be) — press to play again from the A flag'
+                : 'Playing — press to play again from the A flag';
+        }
         function setPlayUi(playing) {
             // The host's follower waits for the music to stop before it turns to another file
             // (said as it changes — not off Stop's state, which a pause keeps live).
@@ -8579,9 +8601,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const playBtn = document.getElementById('playBtn');
             playBtn.disabled = false;
             playBtn.classList.toggle('playing', !!playing && !paused);
-            playBtn.title = playing && !paused
-                ? 'Playing — press to play again from the A flag'
-                : 'Play from the A flag (Space while stopped)';
+            paintPlayStale(!!playing && !paused);
             document.getElementById('stopBtn').disabled = !playing && !paused;
             const pauseBtn = document.getElementById('pauseBtn');
             pauseBtn.disabled = !playing && !paused;
@@ -11239,6 +11259,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         } else {
                             hideErrorBanner();
                         }
+                        // (the text read again: whether it can be played, as the banner says)
+                        markUnreadable(!!message.error);
                         svgContainer.classList.remove('stale');
                         const applyStart = performance.now();
                         const applied = message.pages ? applyPages(message.pages) : applySvg(message.svg);
@@ -11299,6 +11321,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         // DIM it, and show the error in a banner. Only when nothing
                         // has rendered yet do we show the error in place (there is
                         // nothing to preserve).
+                        markUnreadable(true);
                         if (hasPreview) {
                             svgContainer.classList.add('stale');
                             showErrorBanner(message.error);
@@ -11488,6 +11511,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         } else if (message.seq === auditionSeq) pendingAudition = null;
                         break;
                     }
+                    // Whether the text as it is now can be played: the last answer says (the Play
+                    // button's edge, while what sounds is the last version that could — markUnreadable).
+                    markUnreadable(!!(message.error || !message.notes));
                     if (pendingLoopRefresh && !message.error && message.notes) {
                         pendingLoopRefresh = false;
                         refreshLoop(message);
@@ -11504,6 +11530,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         if (playingNow()) break;
                     }
                     pendingLoopRefresh = false;
+                    // Text that cannot be read (a note being typed: "d,8\" before its 3) plays as it
+                    // last could be read — a Play, an audition alike — rather than refusing (owner's
+                    // decision 2026-11-17: what can be read last goes on; stopping at every unreadable
+                    // keystroke and starting again would chop the music being written by ear).
+                    if ((message.error || !message.notes) && rawNotes) {
+                        message.notes = rawNotes; message.parts = rawParts; message.beats = rawBeats; message.barEnd = rawBarEnd;
+                        message.extra = rawExtra; message.sung = rawSung; message.played = rawPlayed;
+                        message.error = null;
+                        if (!pendingAudition) flashInfo('The text cannot be read yet — playing the last version that could be', 3000);
+                    }
                     if (message.error || !message.notes) {
                         setPlayUi(false);
                         pendingAudition = null;
