@@ -10361,6 +10361,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 practicePanel.style.left = Math.max(6, Math.min(b.left, window.innerWidth - practicePanel.offsetWidth - 6)) + 'px';
             }
             practiceBtn.setAttribute('aria-expanded', 'true');
+            // Every group opens folded, its one line of main controls (owner's request 2026-11-17);
+            // a group's name opens it for as long as the panel stays open.
+            foldAll();
             if (recording) showRecording();
             requestParts();
         });
@@ -10387,6 +10390,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             });
         }
         showFolds();
+        // Every group folded, Speed and pitch closed: how the panel opens (the toolbar's button).
+        function foldAll() {
+            for (const g of Array.from(practicePanel.querySelectorAll('.mgroup[data-fold]'))) folds[g.dataset.fold] = true;
+            for (const dt of Array.from(practicePanel.querySelectorAll('details'))) dt.open = false;
+            try { vscode.setState(Object.assign({}, vscode.getState() || {}, { folds })); } catch { /* (kept for this page only) */ }
+            showFolds();
+        }
         // The folded heads' controls (owner's request 2026-11-17): each stands for one inside — a press
         // presses it, a slider moves it — and shows its state (syncMinis, after every showPractice).
         function syncMinis() {
