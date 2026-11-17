@@ -146,7 +146,7 @@ public sealed partial class LilySharpLanguageServer
         if (doc == null)
             return new AddChordTrackResponse { Error = "Document not found." };
 
-        if (SyntaxTree.Parse(doc.Text).HasErrors)
+        if (doc.Tree.HasErrors)     // (the document's own tree: no second parse of the text)
             return new AddChordTrackResponse { Error = "Fix the errors in the score first." };
 
         var richness = @params.Richness?.ToLowerInvariant() switch
@@ -1598,7 +1598,7 @@ public sealed partial class LilySharpLanguageServer
         if (doc == null)
             return new GuessSectionKeyResponse { Error = "Document not found." };
 
-        var tree = SyntaxTree.Parse(doc.Text);
+        var tree = doc.Tree;
         if (tree.HasErrors)
             return new GuessSectionKeyResponse { Error = "Fix the errors in the score first." };
 
@@ -1647,6 +1647,9 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>What "Write a Harmony Part…" asks before it writes: the file's parts, the one
     /// the caret is in, its sections, and the names a new part cannot take.</summary>
     [JsonRpcMethod("lilysharp/harmonyPartChoices", UseSingleObjectParameterDeserialization = true)]
+    public Task<HarmonyPartChoicesResponse> HarmonyPartChoicesAsync(HarmonyPartChoicesParams @params, CancellationToken token)
+        => OffDispatch(() => HarmonyPartChoices(@params), token);   // (it walks the tree: off the dispatch thread, as every other request)
+
     public HarmonyPartChoicesResponse HarmonyPartChoices(HarmonyPartChoicesParams @params)
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
@@ -1973,7 +1976,7 @@ public sealed partial class LilySharpLanguageServer
         // Refuse to convert a file with syntax errors: cell extraction needs a
         // clean, balanced tree, and the client overwrites the whole document with
         // the result — so a malformed file would be mangled. Leave it untouched.
-        if (LilySharp.Core.Syntax.SyntaxTree.Parse(doc.Text).HasErrors)
+        if (doc.Tree.HasErrors)
             return new RegroupResponse
             {
                 Success = false,
