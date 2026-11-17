@@ -1366,6 +1366,15 @@ public class PlaceAtResponse
     public int Version { get; set; }
 }
 
+/// <summary>Response for lilysharp/orMarks: every <c>@or</c>'s span in source order.</summary>
+public class OrMarksResponse
+{
+    public StepSelection[] Marks { get; set; } = System.Array.Empty<StepSelection>();
+    /// <summary>The document version the offsets index into.</summary>
+    public int Version { get; set; }
+    public string? Error { get; set; }
+}
+
 /// <summary>Response for lilysharp/todos: the marks in source order.</summary>
 public class TodosResponse
 {
@@ -1442,6 +1451,12 @@ public class StepResponse
     /// <summary>With <see cref="Strum"/>: each pitch stops as the next is struck, never ringing as a
     /// chord — a bass's strings (<c>NoteStepper.StepResult.Apart</c>).</summary>
     public bool Apart { get; set; }
+    /// <summary>The velocity the pitches play at in the piece (1–127), or -1 for the audition's own —
+    /// an <c>@or</c>'s rotation sounds the chord as its row plays it (<c>NoteStepper.StepResult.Velocity</c>).</summary>
+    public int Velocity { get; set; } = -1;
+    /// <summary>The playback part whose fader the preview puts on the pitches (a chords row's
+    /// "NAME (chords)"), or null.</summary>
+    public string? Part { get; set; }
 }
 
 /// <summary>Parameters for lilysharp/auditionAt: the caret as a 0-based character offset.</summary>

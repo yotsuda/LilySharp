@@ -556,7 +556,9 @@ settled by ear:
 - **Alt+M** plays the bar: with a recording beside the chart, the recording's bar and the
   part the caret is in, together; without one, the part alone.
 - The quick fixes **Keep F** and **Choose Bm** settle it and delete the `@or`; deleting the
-  `@or` by hand settles it too.
+  `@or` by hand settles it too. **Remove All @or** (the editor's and the preview's right-click
+  menu, or the Command Palette) deletes every one in the file at once, each chord as written.
+- The chord tried sounds as the row plays it — the row's sound and loudness, under its fader.
 
 Nothing is printed or exported for it. The preview shows it the way a `@todo` is shown, in
 grey, with the first candidate as the memo (`or Bm?`), and the compiler reports it as

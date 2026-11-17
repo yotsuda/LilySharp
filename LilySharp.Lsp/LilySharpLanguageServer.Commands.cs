@@ -2165,6 +2165,22 @@ public sealed partial class LilySharpLanguageServer
         return ResolvePitches(doc.Text, doc.Tree, @params.Start, @params.End);
     }
 
+    /// <summary>Every <c>@or</c> mark of the document (its span, '@' to ')'), for the editor's Remove
+    /// All @or (owner's request 2026-11-17; <see cref="NoteStepper.OrMarks"/>).</summary>
+    [JsonRpcMethod("lilysharp/orMarks", UseSingleObjectParameterDeserialization = true)]
+    public Task<OrMarksResponse> OrMarksAsync(TodosParams @params, CancellationToken token)
+        => OffDispatch(() =>
+        {
+            var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+            if (doc == null)
+                return new OrMarksResponse { Error = "Document not found" };
+            return new OrMarksResponse
+            {
+                Marks = [.. NoteStepper.OrMarks(doc.Tree).Select(m => new StepSelection { Start = m.Start, End = m.End })],
+                Version = doc.Version,
+            };
+        }, token);
+
     /// <summary>
     /// The document's <c>@todo</c> marks with the bar and the part the score draws each in
     /// (LilySharp-Omr proposal C1): the editor's list of marks, and the way from a mark — or

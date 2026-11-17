@@ -129,6 +129,34 @@ public class OrAnnotationTests
         Assert.Empty(NoteStepper.OrChoices(SyntaxTree.Parse(text), text.IndexOf("| C")));
     }
 
+    [Fact]
+    public void RemoveAll_TakesEveryOr_AndLeavesTheChordsAndTheTodos()
+    {
+        string text = Book("F@or(Bm Dm) | C@or(xyz) | G@or(Em)@todo(\"x\") | Am |");
+        var marks = NoteStepper.OrMarks(SyntaxTree.Parse(text));
+        Assert.Equal(3, marks.Count);
+        foreach (var (s, e) in marks.OrderByDescending(m => m.Start))
+            text = text[..s] + text[e..];
+        Assert.Contains("{ F | C | G@todo(\"x\") | Am | }", text);
+    }
+
+    [Fact]
+    public void TheRotation_SoundsTheChordAsTheRowPlaysIt()
+    {
+        // (owner's report 2026-11-17: the rotation sounded a guitar, the row's playback a piano, louder)
+        string text = Book("F@or(Bm Dm) | C | G | Am |");
+        int caret = text.IndexOf("F@or");
+        var step = NoteStepper.Step(text, SyntaxTree.Parse(text), [(caret, caret)], +1, semitone: true);
+        string after = ApplyAll(text, step.Edits);
+        var row = new MidiExporter().Export(SyntaxTree.Parse(after)).Tracks.Single(t => t.Name == "harmony (chords)");
+        var first = row.Notes.Where(n => n.StartTick == 0).ToList();
+        Assert.Equal(first.Select(n => n.Pitch).OrderBy(p => p), step.Pitches);
+        Assert.Equal(row.Program ?? -1, step.Program);
+        Assert.Equal(first[0].Timbre, step.Timbre);
+        Assert.Equal(first.Max(n => n.Velocity), step.Velocity);
+        Assert.Equal("harmony (chords)", step.Part);
+    }
+
     private static string ApplyAll(string text, System.Collections.Immutable.ImmutableArray<NoteStepper.Edit> edits)
     {
         foreach (var e in edits.OrderByDescending(e => e.Start))

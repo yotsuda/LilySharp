@@ -805,6 +805,11 @@
         "title": "Resolve All TODOs"
       },
       {
+        "command": "lilysharp.removeAllOrMarks",
+        "category": "Lily#",
+        "title": "Remove All @or (keep the chords written)"
+      },
+      {
         "command": "lilysharp.omrFixWithAi",
         "category": "Lily#",
         "icon": "$(sparkle)",
@@ -1078,6 +1083,10 @@
           "when": "false"
         },
         {
+          "command": "lilysharp.removeAllOrMarks",
+          "when": "editorLangId == lilysharp || activeWebviewPanelId == 'lilysharpPreview'"
+        },
+        {
           "command": "lilysharp.openPreview",
           "when": "resourceLangId == lilysharp"
         },
@@ -1330,6 +1339,11 @@
           "group": "1_edit@7"
         },
         {
+          "command": "lilysharp.removeAllOrMarks",
+          "when": "webviewId == 'lilysharpPreview' && !lysOnStaff",
+          "group": "1_edit@8"
+        },
+        {
           "command": "lilysharp.previewPlayFromHere",
           "when": "webviewId == 'lilysharpPreview' && lysPlayFrom",
           "group": "2_playback@1"
@@ -1422,6 +1436,11 @@
           "command": "lilysharp.askAiInChat",
           "when": "resourceLangId == lilysharp",
           "group": "1_modification@1"
+        },
+        {
+          "command": "lilysharp.removeAllOrMarks",
+          "when": "resourceLangId == lilysharp",
+          "group": "1_modification@2"
         },
         {
           "command": "lilysharp.omrFixWithAi",

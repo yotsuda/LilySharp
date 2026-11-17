@@ -411,6 +411,42 @@ async function resolvePreviewTodos(starts: number[] | null): Promise<void> {
     await vscode.workspace.applyEdit(edit);
 }
 
+/** Remove All @or (owner's request 2026-11-17): every `@or(...)` of the file deleted at once, each
+ *  chord left as written — the score in the editor, else the one the active preview shows. The
+ *  marks are read from the server (lilysharp/orMarks) for the text as it is now. */
+async function removeAllOrMarks(): Promise<void> {
+    let document = vscode.window.activeTextEditor?.document;
+    if (!document || document.languageId !== 'lilysharp') {
+        const shown = [...previewPanels.entries()].find(([, p]) => p.active);
+        document = shown ? await vscode.workspace.openTextDocument(vscode.Uri.parse(shown[0])) : undefined;
+    }
+    if (!document || document.languageId !== 'lilysharp' || !client || !clientReady) {
+        return;
+    }
+    let marks: { Start: number; End: number }[] | null = null;
+    try {
+        const resp = await client.sendRequest<{ Marks?: { Start: number; End: number }[]; Version: number; Error?: string | null }>(
+            'lilysharp/orMarks', { textDocument: { uri: document.uri.toString() } });
+        marks = !resp.Error && resp.Version === document.version ? (resp.Marks ?? []) : null;
+    } catch {
+        marks = null;
+    }
+    if (marks === null) {
+        void vscode.window.showInformationMessage('The @or marks could not be read — try again in a moment.');
+        return;
+    }
+    if (marks.length === 0) {
+        vscode.window.setStatusBarMessage('Lily#: no @or in this file.', 4000);
+        return;
+    }
+    const edit = new vscode.WorkspaceEdit();
+    for (const m of marks) {
+        edit.delete(document.uri, new vscode.Range(document.positionAt(m.Start), document.positionAt(m.End)));
+    }
+    await vscode.workspace.applyEdit(edit);
+    vscode.window.setStatusBarMessage(`Lily#: removed ${marks.length} @or — the chords written stay.`, 5000);
+}
+
 // Re-key a live preview from oldUri to newUri (an untitled score saved to a file):
 // the panel and every per-document map entry move together so the preview keeps
 // updating under the saved file's URI instead of the discarded untitled one.
@@ -1179,7 +1215,8 @@ export function activate(context: vscode.ExtensionContext) {
         // the quick fix's edit, applied from the page (todoResolveCore).
         vscode.commands.registerCommand('lilysharp.previewResolveTodo', (m?: { lysTodoStarts?: string }) =>
             resolvePreviewTodos(parseStarts(m?.lysTodoStarts))),
-        vscode.commands.registerCommand('lilysharp.previewResolveAllTodos', () => resolvePreviewTodos(null)));
+        vscode.commands.registerCommand('lilysharp.previewResolveAllTodos', () => resolvePreviewTodos(null)),
+        vscode.commands.registerCommand('lilysharp.removeAllOrMarks', () => removeAllOrMarks()));
     // The Settings screen's "Choose a model…" links name the feature ('edit' | 'ghost'), so the
     // list of features is skipped; the palette asks which.
     context.subscriptions.push(vscode.commands.registerCommand('lilysharp.selectAiModel',
@@ -9155,7 +9192,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // and the strings after the first came out together as a chord (owner's report 2026-10-24).
         // apart (with a strum): each string stops as the next one sounds, so they never ring as a
         // chord — a bass's (owner's request 2026-10-24: a low chord is muddy).
-        function holdNotes(pitches, timbre, program, gapMs, strumS, apart) {
+        function holdNotes(pitches, timbre, program, gapMs, strumS, apart, velocity) {
+            // (the audition's own 100, or the velocity the piece plays the pitches at: playPitches)
+            const vel = velocity > 0 ? Math.max(1, Math.min(127, Math.round(velocity))) : 100;
             const strum = strumS > 0 ? strumS : 0;
             const separate = strum > 0 && !!apart;
             const key = pitches.slice().sort((a, b) => a - b).join(',') + '/' + timbre + '/' + program;
@@ -9176,7 +9215,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     const ctx = audio();
                     const sf = soundFontSynth();
                     if (sf && sf.ready) {
-                        heldChannel = sf.strike(pitches, timbre, program, 100, strum, separate);
+                        heldChannel = sf.strike(pitches, timbre, program, vel, strum, separate);
                         heldPitches = pitches.slice();
                     } else {
                         const master = oscillatorOutput(ctx, 0.22);
@@ -9191,7 +9230,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                             // release cancels the ramp) must not sound at the node's default gain.
                             g.gain.value = 0;
                             g.gain.setValueAtTime(0, t0);
-                            g.gain.linearRampToValueAtTime(0.9, t0 + 0.02);
+                            g.gain.linearRampToValueAtTime(0.9 * vel / 100, t0 + 0.02);
                             if (separate && i + 1 < pitches.length) {
                                 // Apart: fades as the next string sounds.
                                 const next = t0 + strum;
@@ -9286,11 +9325,20 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // ones already ringing (holdNotes times them). Not sorted: a re-entrant ukulele's high 4th
         // string comes first.
         // apart: each string stops as the next sounds (a bass's — holdNotes).
-        function playPitches(pitches, timbre, program, durationMs, strumMs, apart) {
+        // velocity / part (an @or's rotation, owner's report 2026-11-17): the velocity the piece plays
+        // the chord at, under that part's fader — so the chord tried sounds as the row plays it.
+        function playPitches(pitches, timbre, program, durationMs, strumMs, apart, velocity, part) {
             if (!pitches || pitches.length === 0) { return; }
             stopHeldNote();
             const prog = typeof program === 'number' ? program : -1;
-            holdNotes(pitches, timbre || 0, prog, 1e9, pitches.length > 1 ? (strumMs || 0) / 1000 : 0, !!apart);
+            let vel = typeof velocity === 'number' && velocity > 0 ? velocity : -1;
+            if (vel > 0 && part) {
+                const levels = eff().levels || {};
+                const lv = typeof levels[part] === 'number' && isFinite(levels[part]) ? Math.min(2, Math.max(0, levels[part])) : 1;
+                vel = Math.min(127, vel * lv);
+                if (vel < 1) return;   // (its fader all the way down)
+            }
+            holdNotes(pitches, timbre || 0, prog, 1e9, pitches.length > 1 ? (strumMs || 0) / 1000 : 0, !!apart, vel);
             if (heldWatchdog) { clearTimeout(heldWatchdog); }
             heldWatchdog = setTimeout(stopHeldNote, durationMs || 450);
         }
@@ -11437,7 +11485,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     break;
                 }
                 case 'playPitches':
-                    playPitches(message.pitches, message.timbre, message.program, message.durationMs, message.strumMs || 0, !!message.apart);
+                    playPitches(message.pitches, message.timbre, message.program, message.durationMs, message.strumMs || 0, !!message.apart,
+                        message.velocity, message.part);
                     break;
                 // Another text's notes — an AI candidate under review (owner's request
                 // 2026-10-25) — played as the Play button plays this score's, from the top. They

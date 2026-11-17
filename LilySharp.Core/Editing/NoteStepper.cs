@@ -250,7 +250,7 @@ public static partial class NoteStepper
     public sealed record StepResult(
         bool Fallback, ImmutableArray<Edit> Edits, string? Message,
         ImmutableArray<int> Pitches, int Timbre, int Program = -1, OctaveMode? ConvertOctaves = null,
-        bool Strum = false, bool Apart = false);
+        bool Strum = false, bool Apart = false, int Velocity = -1, string? Part = null);
 
     /// <summary>What the caret is on and what it sounds (MIDI, lowest first), with the timbre,
     /// the program and the strum as <see cref="StepResult"/> carries them.</summary>

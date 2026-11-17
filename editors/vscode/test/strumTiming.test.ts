@@ -37,14 +37,14 @@ describe('a strum keeps its time in a hidden preview', () => {
     it('strikes every string at once with its gap, on no page timer but the release', () => {
         const playAt = html.indexOf('function playPitches(');
         const playBody = html.slice(playAt, html.indexOf('\n        }\n', playAt));
-        assert.match(playBody, /holdNotes\(pitches, timbre \|\| 0, prog, 1e9, pitches\.length > 1 \? \(strumMs \|\| 0\) \/ 1000 : 0, !!apart\)/);
+        assert.match(playBody, /holdNotes\(pitches, timbre \|\| 0, prog, 1e9, pitches\.length > 1 \? \(strumMs \|\| 0\) \/ 1000 : 0, !!apart, vel\)/);
         assert.equal(playBody.match(/setTimeout\(/g)?.length, 1, 'only the release watchdog');
         assert.equal(html.includes('addHeldNote'), false);
     });
 
     it('times the strings on the audio clock, or hands the gap to the host for the MIDI output', () => {
         const hold = body('holdNotes', 'auditionNote');
-        assert.match(hold, /sf\.strike\(pitches, timbre, program, 100, strum, separate\)/);
+        assert.match(hold, /sf\.strike\(pitches, timbre, program, vel, strum, separate\)/);
         assert.match(hold, /const t0 = now \+ i \* strum;/);
         assert.match(hold, /gapMs: Math\.round\(strum \* 1000\), apart: separate/);
     });
@@ -60,7 +60,7 @@ describe('a strum keeps its time in a hidden preview', () => {
         const synth = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'webview', 'previewSynth.ts'), 'utf8');
         assert.match(synth, /if \(apart && keys\[i - 1\] !== key\) \{ this\.synth!\.noteOff\(c, keys\[i - 1\], \{ time: at \}\); \}/);
         // And the message carries it from the extension to the page.
-        assert.match(html, /playPitches\(message\.pitches, message\.timbre, message\.program, message\.durationMs, message\.strumMs \|\| 0, !!message\.apart\)/);
+        assert.match(html, /playPitches\(message\.pitches, message\.timbre, message\.program, message\.durationMs, message\.strumMs \|\| 0, !!message\.apart,\s*message\.velocity, message\.part\)/);
     });
 
     it('strums the MIDI output from the host, and a release drops the strings not struck yet', () => {

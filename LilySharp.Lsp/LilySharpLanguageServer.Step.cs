@@ -62,6 +62,8 @@ public sealed partial class LilySharpLanguageServer
                 ConvertOctaves = result.ConvertOctaves?.ToString().ToLowerInvariant(),
                 Strum = result.Strum,
                 Apart = result.Apart,
+                Velocity = result.Velocity,
+                Part = result.Part,
             };
         }
         catch (Exception ex)

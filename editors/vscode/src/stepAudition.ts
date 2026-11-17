@@ -68,6 +68,10 @@ interface StepResponse {
     Strum?: boolean;
     /** With Strum: each stops as the next sounds, never a chord (a bass's strings). */
     Apart?: boolean;
+    /** The velocity the pitches play at in the piece, -1 (or absent) for the audition's own. */
+    Velocity?: number;
+    /** The playback part whose fader goes on them (an @or rotation: "NAME (chords)"), or null. */
+    Part?: string | null;
 }
 
 interface AuditionAtResponse {
@@ -107,7 +111,7 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
 
     /** Sends pitches to the document's preview synth; silent without a preview. */
     const play = (uri: string, pitches: readonly number[], timbre: number, program?: number, strum?: boolean,
-        apart?: boolean) => {
+        apart?: boolean, velocity?: number, part?: string | null) => {
         const panel = deps.getPreview(uri);
         if (!panel || pitches.length === 0) { return; }
         void panel.webview.postMessage({
@@ -115,6 +119,7 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
             durationMs: auditionDurationMs(pitches.length, strum, apart),
             strumMs: strumGapMs(strum),
             apart: !!(strum && apart),
+            velocity: velocity ?? -1, part: part ?? null,
         });
     };
 
@@ -223,7 +228,7 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
         }
         if (auditionEnabled() && response.Pitches.length > 0) {
             const uri = doc.uri.toString();
-            play(uri, response.Pitches, response.Timbre, response.Program, response.Strum, response.Apart);
+            play(uri, response.Pitches, response.Timbre, response.Program, response.Strum, response.Apart, response.Velocity, response.Part);
             // The caret now rests on what just sounded: remember it, so the caret
             // audition does not repeat it. The key is asked for, not guessed.
             const here = await askAt(editor);
