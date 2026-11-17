@@ -9197,15 +9197,45 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const n = abTo - abFrom + 1;
             document.getElementById('abInfo').textContent = n + (n === 1 ? ' bar' : ' bars');
         }
-        /** Plays again from the start of what is to play, when something plays (A-B moved). */
+        /** A-B moved while it plays: the new bars, from where it plays now when that is inside them
+         *  (owner's request 2026-11-17: a flag moved sent it back to A each time), else from A. */
         function replayIfPlaying() {
             if (document.getElementById('stopBtn').disabled) return;
+            if (abOn && resumeInNewBars()) return;
             stopPlayback();
             setPlayUi(true);
             pendingStartPos = -1;
             pendingFromHere = false;
             pendingSpan = abOn ? { ab: [abFrom, abTo] } : null;
             requestPlay();
+        }
+        /** The bars A to B laid out again from the notes in hand (the text has not changed: no request),
+         *  played on from the moment now sounding when it is one of them — else from A. False when
+         *  there is nothing to go on from (the notes not in hand, the recording playing alone). */
+        function resumeInNewBars() {
+            if (!rawNotes || !playClock || relaying || !window.LysSynth) return false;
+            // Where it plays now, in the list's own time (before the stretch was cut out of it; the
+            // whole score, A-B just turned on, is the list's time itself).
+            let tau = Math.max(0, playOffset + playClock() - countInFix);
+            if (loopList && loopRound > 0) tau %= loopRound;
+            const pieces = lastSpan === undefined ? [[0, Infinity]] : spanPieces || [[spanStart, spanStart + loopRound]];
+            let u = pieces.length ? pieces[pieces.length - 1][1] : 0;
+            for (const [a, b] of pieces) { if (tau < b - a) { u = a + tau; break; } tau -= b - a; }
+            playbackNotes = practiced(rawNotes);
+            lastSpan = { ab: [abFrom, abTo] };
+            const list = spanOf(playbackNotes, lastSpan, false);
+            // …and that moment in the new stretch, if it is in it.
+            let at = null, before = 0;
+            for (const [a, b] of spanPieces || [[spanStart, spanStart + loopRound]]) {
+                if (u >= a - 1e-6 && u < b - 1e-6) { at = before + (u - a); break; }
+                before += b - a;
+            }
+            loopList = loopOn ? list : null;
+            const toPlay = loopOn ? looped(list) : list;
+            voicePlan = { pieces: spanPieces, rounds: loopOn ? loopRoundCount : 1 };
+            startPlayback(toPlay, at === null ? 0 : at, false, false, 0, spanStart);
+            loopList = loopOn ? list : null;
+            return true;
         }
         function setAb(from, to) {
             const last = Math.max(0, abBars().length - 1);

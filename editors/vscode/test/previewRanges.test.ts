@@ -244,6 +244,12 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /function requestPlay\(\) \{ vscode\.postMessage\(\{ type: 'requestPlayback', seq: \+\+playSeq \}\); \}/);
         assert.doesNotMatch(html, /postMessage\(\{ type: 'requestPlayback' \}\)/);
         assert.match(html, /case 'playbackData':\s+if \(typeof message\.seq === 'number' && message\.seq !== playSeq\) \{/);
+        // A flag moved while it plays goes on from where it plays when that is in the new bars
+        // (owner's request 2026-11-17), from the notes in hand — no request.
+        assert.match(html, /function replayIfPlaying\(\) \{\s+if \(document\.getElementById\('stopBtn'\)\.disabled\) return;\s+if \(abOn && resumeInNewBars\(\)\) return;/);
+        const resume = html.slice(html.indexOf('function resumeInNewBars()'), html.indexOf('function setAb('));
+        assert.doesNotMatch(resume, /requestPlay\(/);
+        assert.match(resume, /startPlayback\(toPlay, at === null \? 0 : at, false, false, 0, spanStart\);/);
         // Its start: the list's offset in the score's played time (count-in aside) times the speed.
         const at = html.indexOf('function startRecordingAlong(');
         const body = html.slice(at, html.indexOf('\n        }', at) + '\n        }'.length);
