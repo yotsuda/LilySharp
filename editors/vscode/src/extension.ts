@@ -6143,7 +6143,6 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .mixer-panel .msettings { margin-top: 8px; }
         .mixer-panel .msettings summary { cursor: pointer; opacity: 0.85; padding: 2px 0; }
         .mixer-panel #recPartsRow { margin-bottom: 4px; }
-        .mixer-panel .mfile { padding-left: 1.5em; margin: -2px 0 6px; font-size: 11px; opacity: 0.7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .mixer-panel .mgroup > .presets { padding-left: 1.5em; margin-top: 6px; }
         .mixer-panel .mgroup > .presets .plbl { display: none; }
         /* As long as the tempo's slider (owner's request 2026-11-09, session 1159: longer, the 200% end further right). */
@@ -6261,8 +6260,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             <div class="prow presets"><span class="plbl"></span><span class="tempo"><button type="button" id="partsReset" title="The parts as the score has them: its own on, the ones it leaves out off, every voice sung">Reset parts</button><button type="button" id="fadersReset" title="Every fader back to 100%">Reset faders</button></span></div>
         </div>
         <div class="mgroup" id="mixRecGroup" hidden>
-            <div class="mhead"><span class="mtitle">Recording</span><button type="button" id="recOnBtn" class="toggle" aria-pressed="false">All</button><button type="button" id="recSoloBtn" class="toggle msmall msolo" aria-pressed="false" title="Solo: only the lines soloed sound">S</button><input type="range" id="recLevelSlider" class="fader" min="0" max="200" step="1" value="100"><span id="recLevelValue" class="flevel"></span></div>
-            <div id="recName" class="mfile"></div><span id="recPartsRows" class="parts rec-part-rows"></span></div>
+            <div class="mhead"><span class="mtitle">Recording</span><button type="button" id="recOnBtn" class="toggle rec-name" aria-pressed="false"><span id="recName"></span></button><button type="button" id="recSoloBtn" class="toggle msmall msolo" aria-pressed="false" title="Solo: only the lines soloed sound">S</button><input type="range" id="recLevelSlider" class="fader" min="0" max="200" step="1" value="100"><span id="recLevelValue" class="flevel"></span></div>
+            <div id="recPartsRow" hidden><span id="recPartsRows" class="parts rec-part-rows"></span></div>
             <details id="recSettings" class="msettings"><summary>Speed and pitch <span id="recSummary"></span></summary>
             <div class="prow"><span class="plbl">Speed</span><span class="tempo"><input type="range" id="recSpeedSlider" min="25" max="150" step="5" value="100" aria-label="Speed"><span id="recSpeedValue" class="tval">100%</span></span></div>
             <div class="prow"><span class="plbl">Octave</span><span class="tempo"><button type="button" id="recOctDown" title="An octave down">−</button><span id="recOctValue" class="tval">0</span><button type="button" id="recOctUp" title="An octave up">+</button></span></div>
@@ -9901,8 +9900,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             document.getElementById('scoreLevelSlider').value = String(v);
             document.getElementById('scoreLevelValue').textContent = v === 100 ? '' : v + '%';
             document.getElementById('recSoloBtn').setAttribute('aria-pressed', String(solo.has('rec')));
+            // The recording's head button (its file's name) is as the score's All (owner's decision
+            // 2026-11-17): pressed while some part of it sounds.
             document.getElementById('recOnBtn').setAttribute('aria-pressed', String(recAllOn()));
-            document.getElementById('recOnBtn').title = recAllOn() ? 'The recording sounds with the score — press to silence it' : 'Press to sound the recording with the score, every part of it';
+            document.getElementById('recOnBtn').title = recAllOn() ? 'The recording sounds with the score — press to silence it' : 'Press to sound the recording with the score, every part of it on';
             const changed = solo.size > 0 || scoreLevel !== 1 || practice.muted.length > 0 || practice.voicesOff.length > 0
                 || practice.extraOn.length > 0 || practice.voicesOn.length > 0 || practice.instrumentsOn.length > 0
                 || Object.keys(practice.levels).length > 0 || Object.keys(practice.voiceLevels).length > 0 || recOn;
@@ -10361,8 +10362,6 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (shift !== 0) parts.push(signed(shift));
             document.getElementById('recSummary').textContent = parts.join(' ');
             showMixerHead();
-            // All, as the score's (owner's remark 2026-11-17: the two are the same button): pressed while
-            // the recording sounds — on, and not every part of it muted.
             const level = Math.round(levelIn(recLevels, 'Recording') * 100);    // (the fader's own, not the solo's)
             recLevelSlider.value = String(level);
             recLevelSlider.title = 'Volume ' + level + '% (double-click: 100%)';
@@ -10422,15 +10421,25 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             b.title = ready ? 'The recording\\'s ' + name + ' (a part of it): on or off'
                 : (recording && recording.partsError && recording.partsError[name]) || 'The recording\\'s parts are loading';
             b.classList.add('pname');
-            const on = !recPartsOff.includes(name);
+            // (the recording off: every part of it off, as its released head button says)
+            const on = recOn && !recPartsOff.includes(name);
             b.setAttribute('aria-pressed', String(on));
             // M and S, as the score's lines (the mixer, §1 2).
             const mBtn = mixerSmall('M', 'Mute'), sBtn = mixerSmall('S', 'Solo: only the lines soloed sound');
             mBtn.setAttribute('aria-pressed', String(!on));
             sBtn.setAttribute('aria-pressed', String(solo.has('rec:' + name)));
             mBtn.disabled = sBtn.disabled = !ready;
-            line.classList.toggle('unheard', !recOn || !on || (solo.size > 0 && !solo.has('rec:' + name) && !solo.has('rec')));
+            line.classList.toggle('unheard', !on || (solo.size > 0 && !solo.has('rec:' + name) && !solo.has('rec')));
             const mute = () => {
+                if (!recOn) {
+                    // A part turned on with the recording off: the recording on, that part alone sounding.
+                    recOn = true;
+                    recPartsOff = ((recording && recording.parts) || []).filter(n => n !== name);
+                    applyRecParts();
+                    showRecording();
+                    practiceChanged(practice.speed);
+                    return;
+                }
                 recPartsOff = recPartsOff.includes(name) ? recPartsOff.filter(n => n !== name) : recPartsOff.concat([name]);
                 applyRecParts();
                 showMixerHead();
@@ -10622,10 +10631,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             return recOn && !(parts.length > 0 && parts.every(n => recPartsOff.includes(n)));
         }
         function flipRecording() {
-            // Off: silent (its parts kept as they are). On: every part of it on — as the score's All.
+            // As the score's All (owner's decision 2026-11-17): pressed in, every part of it on; released,
+            // every part off (the recording silent).
             recOn = !recAllOn();
-            if (recOn && recPartsOff.length > 0) {
-                recPartsOff = [];
+            const parts = (recording && recording.parts) || [];
+            const off = recOn ? [] : parts.slice();
+            if (off.join('|') !== recPartsOff.join('|')) {
+                recPartsOff = off;
                 if (recPlayer) recPlayer.setPartLevels(recPartMix());
             }
             renderRecParts();
@@ -10697,8 +10709,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         recOnBtn.addEventListener('click', flipRecording);
         // The mixer's group heads (§1 2). The recording's: its on/off (above), its solo, its fader.
         document.getElementById('recSoloBtn').addEventListener('click', () => toggleSolo('rec'));
-        // The score's: All — on while any line is: off, every part and voice silent; on, as the score
-        // has them (Reset parts) — and the group's fader over every line's.
+        // The score's: All (owner's decision 2026-11-17) — pressed while any line sounds; released, every
+        // part and voice off; pressed in, every one on — and the group's fader over every line's.
         document.getElementById('scoreAllBtn').addEventListener('click', () => {
             const m = lastPartsMessage || {};
             if (document.getElementById('scoreAllBtn').getAttribute('aria-pressed') === 'true') {
@@ -10706,7 +10718,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 practice.voicesOff = (m.voices || []).slice();
                 practice.extraOn = []; practice.voicesOn = []; practice.instrumentsOn = [];
             } else {
-                practice.muted = []; practice.extraOn = []; practice.voicesOff = []; practice.voicesOn = []; practice.instrumentsOn = [];
+                practice.muted = []; practice.voicesOff = [];     // (the extras, left off by the score, as they are)
             }
             refreshMixer();
             practiceChanged(practice.speed);
