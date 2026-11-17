@@ -49,6 +49,32 @@ describe('the pointer put in the chat', () => {
         assert.deepEqual(placeAt(text, at(2, 25)), { section: undefined, part: undefined, bar: undefined });
         assert.equal(placeAt(text, at(12, 20)).part, 'vn1');
     });
+    // Session 1295: the cell is named by the word before its brace, not by the first word since
+    // the last brace — a cell after a section's setting was reported as part `key`.
+    it('names a cell that follows a setting, and knows a block that is not a part by its own word', () => {
+        const piece = [
+            'section A {',                                        // 1
+            '  key d major  time 3/4',                            // 2
+            '  vn1 { d\'4 e\' fis\' | g\'2. | }',                 // 3
+            '  break',                                            // 4
+            '  bass { d2. | g,2. | }',                            // 5
+            '  lyrics words language english { la la la | la | }',// 6
+            '  chords prog plays rhythm { D | G | }',             // 7
+            '  strokes rhythm { c4 c c | c2. | }',                // 8
+            '  tuplet { c4 | d4 | }',                             // 9: a part may be named `tuplet`
+            '  ピアノ { c4 | d4 | }',                             // 10
+            '}',
+        ].join('\n');
+        const on = (line: number, col: number) => piece.split('\n').slice(0, line - 1).reduce((n, l) => n + l.length + 1, 0) + col;
+        assert.deepEqual(placeAt(piece, on(3, 24)), { section: 'A', part: 'vn1', bar: 2 });
+        assert.deepEqual(placeAt(piece, on(5, 20)), { section: 'A', part: 'bass', bar: 2 });
+        for (const line of [6, 7, 8]) {
+            assert.deepEqual(placeAt(piece, on(line, piece.split('\n')[line - 1].length - 4)),
+                { section: 'A', part: undefined, bar: undefined }, `line ${line}`);
+        }
+        assert.deepEqual(placeAt(piece, on(9, 18)), { section: 'A', part: 'tuplet', bar: 2 });
+        assert.deepEqual(placeAt(piece, on(10, 10)), { section: 'A', part: 'ピアノ', bar: 1 });
+    });
     it('is offered on the score and in the editor, and put in the chat unsent', () => {
         const root = path.join(__dirname, '..', '..');
         const pkg = fs.readFileSync(path.join(root, 'package.json'), 'utf8');

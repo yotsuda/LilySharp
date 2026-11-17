@@ -2721,11 +2721,13 @@ function voiceSpanOf(text: string, open: number)
 /** The words that open a `{ }` holding music that is NOT a run of bars of its own — a
  * tuplet's and a grace's body, a repeat's alternatives, and blocks of no music at all.
  * A block they open is not counted by rule 32 (a '|' does not belong inside it). */
-const NOT_BARS = new Set(['grace', 'afterGrace', 'acciaccatura', 'appoggiatura', 'alternative',
-    'repeat', 'tuplet', 'score', 'form', 'paper', 'layout', 'header', 'midi', 'markup']);
+const NOT_BARS = new Set(['grace', 'afterGrace', 'acciaccatura', 'appoggiatura',
+    'repeat', 'tuplet', 'score', 'form', 'paper', 'layout']);
 
-/** The words that open a block of settings, which holds no notes at all. */
-const SETTINGS_BLOCKS = new Set(['paper', 'layout', 'fonts', 'header', 'midi', 'markup']);
+/** The words that open a block of settings, which holds no notes at all. (Keywords of Lily#
+ * only — EditorWordTablesTests: `header`, `midi` and `markup` stood here until session 1295,
+ * LilyPond's words, and a part named `midi` lost its smart typing.) */
+const SETTINGS_BLOCKS = new Set(['paper', 'layout', 'fonts']);
 
 /** Whether the caret is inside a block of settings (or a block nested in one): no rule
  * applies there and every key is typed as pressed. The session 1030 audit typed every
