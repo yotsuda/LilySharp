@@ -2166,6 +2166,23 @@ section A { key g major }       // applies to every part playing A
 The editor command **Regroup (by part ⇄ by section)** rewrites a file from one grouping to
 the other.
 
+**Joining sections.** Sections declared one after another — a chart a transcription cut into
+many short sections — can be made one: put the caret on `section A` (or select from one
+section's head into another's) and choose **Join section A with B** / **Join sections A–C into
+A** from the lightbulb, or **Join Sections** from the editor's right-click menu. Each part's,
+chord row's and lyrics track's music runs on in the first section, and every form that played
+them in a row plays the first (`form { A B C }` becomes `form { A }`); a part a middle section
+does not write is given that section's bars of rest (`R*N |`). What a section boundary reset
+is written out at each join — the meter and key the later section opened in, the 4 its first
+note took when it wrote no length, and the octave marks that keep its first pitch where it
+sounded under relative octaves. It is refused, with the reason, where it cannot be done
+faithfully: a section written by part, a later section's header with more than `time` / `key`
+(a `partial`, a `tempo`), music ending inside a bar before a join, a meter, key or clef changed
+inside an earlier section's music, a chord row or words missing from a section before one that
+has them, or a form that plays a later section anywhere but right after the earlier ones. The
+rewrite is checked before it is applied — under every form every part sounds exactly as before
+and the words fall on the same notes — and applied as one edit.
+
 **Splitting the other parts to match.** When one part has cut a section into several
 (`part vn1 { section A { … 16 bars } section B { … 121 bars } }`) while the others still write
 the whole passage in one `section A`, the section is not the same length everywhere

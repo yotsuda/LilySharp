@@ -1366,6 +1366,27 @@ public class PlaceAtResponse
     public int Version { get; set; }
 }
 
+/// <summary>Parameters for lilysharp/joinSections: the sections to join (two or more, in order),
+/// or, without them, the selection whose sections are joined.</summary>
+public class JoinSectionsParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    public string[]? Sections { get; set; }
+    public int Start { get; set; }
+    public int End { get; set; }
+}
+
+/// <summary>Response for lilysharp/joinSections.</summary>
+public class JoinSectionsResponse
+{
+    public bool Success { get; set; }
+    public string? NewText { get; set; }
+    public string? Plan { get; set; }
+    public string? Error { get; set; }
+    /// <summary>The document version the rewrite is of.</summary>
+    public int Version { get; set; }
+}
+
 /// <summary>Response for lilysharp/orMarks: every <c>@or</c>'s span in source order.</summary>
 public class OrMarksResponse
 {

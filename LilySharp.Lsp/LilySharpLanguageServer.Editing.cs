@@ -424,8 +424,39 @@ public sealed partial class LilySharpLanguageServer
             actions.Add(partWords);
         if (WriteSingerPartAction(doc, uri, startOffset) is { } singerPart)
             actions.Add(singerPart);
+        if (JoinSectionsAction(doc, uri, startOffset, endOffset) is { } join)
+            actions.Add(join);
 
         return actions.ToArray();
+    }
+
+    /// <summary>The command "Join Sections" runs — the extension's, which asks the server for the
+    /// rewrite (lilysharp/joinSections, <see cref="LilySharp.Core.Editing.SectionJoiner"/>) and applies it.</summary>
+    internal const string JoinSectionsCommand = "lilysharp.joinSections";
+
+    /// <summary>
+    /// "Join section A with B" on a section's head (the caret on <c>section A</c>), or "Join sections
+    /// A–C into A" on a selection across several (owner's request 2026-11-17). Offered on sight; the
+    /// join is worked out — and checked — when picked.
+    /// </summary>
+    private static CodeAction? JoinSectionsAction(Document doc, Uri uri, int start, int end)
+    {
+        if (start == end)
+        {
+            var head = doc.Tree.GetRoot().ChildNodes().OfType<SectionDeclarationSyntax>()
+                .FirstOrDefault(s => s.SectionKeyword.Span.Start <= start && start <= s.Name.Span.Start + s.Name.Span.Length);
+            if (head == null)
+                return null;
+        }
+        if (LilySharp.Core.Editing.SectionJoiner.SectionsAt(doc.Tree, start, end) is not { } names)
+            return null;
+        string title = LilySharp.Core.Editing.SectionJoiner.Title(names) + "…";
+        return new CodeAction
+        {
+            Title = title,
+            Kind = CodeActionKind.RefactorRewrite,
+            Command = new Command { Title = title, CommandIdentifier = JoinSectionsCommand, Arguments = [uri.ToString(), names.ToArray()] },
+        };
     }
 
     /// <summary>The command the "split to match" quick fix runs — the extension's, which asks

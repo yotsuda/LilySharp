@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Join Sections**: two or more sections declared one after another become one — with the caret on `section A`, the lightbulb offers *Join section A with B*; with a selection across several, *Join sections A–C into A*; the editor's right-click menu has *Join Sections* too. Each part, chord row and lyrics track runs on in the first section, the forms play it where they played the sections in a row, and the piece sounds exactly as before (checked before it is applied; refused with the reason where it cannot be).
+
 - **Ctrl+Shift+PageUp / PageDown on an `@or` plays the chord in its bar**: the candidates turn as with Ctrl+Shift+Up / Down, and instead of the chord alone the bar plays — with a recording beside the chart, the recording's bar and the chords row together, so a candidate is heard in the music; without one, the row's bar. Up / Down stay the quick comparison, the chord alone.
 
 - **Fixed: some `@or` chords did not turn.** On a row line after a comment line (as Dettato writes one at a row's head), Ctrl+Shift+Up on a chord with an `@or` — `D | D | A | G/B@or(Bm)` — stepped its diagram shape instead: the comment counted as part of the line's first chord, which reached over the whole line and was taken for the chord under the caret. Every `@or` now turns where the caret is.

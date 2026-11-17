@@ -1825,6 +1825,25 @@ public sealed partial class LilySharpLanguageServer
         return new ShapeToNotesResponse { Start = r.Start, End = r.End, Replacement = r.Replacement, Error = r.Error };
     }
 
+    /// <summary>"Join Sections" (<see cref="LilySharp.Core.Editing.SectionJoiner"/>, which checks
+    /// the piece sounds as it did before it answers): the sections named, else the ones the
+    /// selection touches (one: it and the next); the rewritten document and its account, or the
+    /// refusal.</summary>
+    [JsonRpcMethod("lilysharp/joinSections", UseSingleObjectParameterDeserialization = true)]
+    public Task<JoinSectionsResponse> JoinSectionsAsync(JoinSectionsParams @params, CancellationToken token)
+        => OffDispatch(() =>
+        {
+            var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+            if (doc == null)
+                return new JoinSectionsResponse { Error = "Document not found" };
+            var names = @params.Sections is { Length: >= 2 } given ? given
+                : LilySharp.Core.Editing.SectionJoiner.SectionsAt(doc.Tree, @params.Start, @params.End);
+            if (names == null)
+                return new JoinSectionsResponse { Error = "Put the caret on a section with one after it, or select the sections to join." };
+            var r = LilySharp.Core.Editing.SectionJoiner.Join(doc.Text, names);
+            return new JoinSectionsResponse { Success = r.NewText != null, NewText = r.NewText, Plan = r.Plan, Error = r.Error, Version = doc.Version };
+        }, token);
+
     [JsonRpcMethod("lilysharp/splitSections", UseSingleObjectParameterDeserialization = true)]
     public Task<SplitSectionsResponse> SplitSectionsAsync(SplitSectionsParams @params, CancellationToken token)
         => OffDispatch(() => SplitSections(@params), token);

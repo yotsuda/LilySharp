@@ -810,6 +810,11 @@
         "title": "Remove All @or (keep the chords written)"
       },
       {
+        "command": "lilysharp.joinSections",
+        "category": "Lily#",
+        "title": "Join Sections (the selected ones, or this one with the next)"
+      },
+      {
         "command": "lilysharp.omrFixWithAi",
         "category": "Lily#",
         "icon": "$(sparkle)",
@@ -1085,6 +1090,10 @@
         {
           "command": "lilysharp.removeAllOrMarks",
           "when": "editorLangId == lilysharp || activeWebviewPanelId == 'lilysharpPreview'"
+        },
+        {
+          "command": "lilysharp.joinSections",
+          "when": "editorLangId == lilysharp"
         },
         {
           "command": "lilysharp.openPreview",
@@ -1441,6 +1450,11 @@
           "command": "lilysharp.removeAllOrMarks",
           "when": "resourceLangId == lilysharp",
           "group": "1_modification@2"
+        },
+        {
+          "command": "lilysharp.joinSections",
+          "when": "resourceLangId == lilysharp",
+          "group": "1_modification@3"
         },
         {
           "command": "lilysharp.omrFixWithAi",

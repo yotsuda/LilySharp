@@ -934,6 +934,8 @@ export function activate(context: vscode.ExtensionContext) {
         }),
         // From the palette with no arguments (the active file, the first section some part
         // subdivides), or from the LYS2007 quick fix with the document and the section.
+        vscode.commands.registerCommand('lilysharp.joinSections',
+            (uri?: string, sections?: string[]) => joinSections(typeof uri === 'string' ? uri : undefined, Array.isArray(sections) ? sections : undefined)),
         vscode.commands.registerCommand('lilysharp.splitSectionsToMatch',
             (uri?: string, section?: string) => splitSectionsToMatch(
                 typeof uri === 'string' ? uri : undefined, typeof section === 'string' ? section : undefined)),
@@ -3240,6 +3242,50 @@ async function splitSectionsToMatch(uriArg?: string, sectionArg?: string) {
         await vscode.workspace.applyEdit(edit);
     } catch (err) {
         vscode.window.showErrorMessage(`Lily#: splitting sections failed: ${err}`);
+    }
+}
+
+/**
+ * Join Sections (owner's request 2026-11-17): the sections named (the code action's), else the
+ * ones the editor's selection touches — one: it and the next — become one section. The server
+ * works the join out and checks the piece sounds as it did (lilysharp/joinSections); a refusal
+ * says why. Applied as one edit (one undo).
+ */
+async function joinSections(uriArg?: string, sections?: string[]) {
+    const editor = vscode.window.activeTextEditor;
+    const doc = uriArg
+        ? vscode.workspace.textDocuments.find(d => sameDocumentUri(d.uri.toString(), uriArg))
+        : editor?.document;
+    if (!doc || doc.languageId !== 'lilysharp' || !client) {
+        return;
+    }
+    const sel = editor && editor.document === doc ? editor.selection : undefined;
+    try {
+        const version = doc.version;
+        const response = await vscode.window.withProgress(
+            { location: vscode.ProgressLocation.Window, title: 'Lily#: checking the join…' },
+            () => client!.sendRequest<{ Success: boolean; NewText?: string | null; Plan?: string | null; Error?: string | null; Version: number }>(
+                'lilysharp/joinSections', {
+                    textDocument: { uri: doc.uri.toString() },
+                    sections: sections && sections.length >= 2 ? sections : null,
+                    start: sel ? doc.offsetAt(sel.start) : 0,
+                    end: sel ? doc.offsetAt(sel.end) : 0,
+                }));
+        if (!response.Success || response.NewText == null) {
+            const refusal = modalText(response.Error ?? 'The sections were not joined.');
+            await vscode.window.showWarningMessage(refusal.message, { modal: true, detail: refusal.detail });
+            return;
+        }
+        if (doc.version !== version || response.Version !== version) {
+            vscode.window.showWarningMessage('Lily#: the file changed while the join was being checked — run it again.');
+            return;
+        }
+        const edit = new vscode.WorkspaceEdit();
+        edit.replace(doc.uri, new vscode.Range(doc.positionAt(0), doc.positionAt(doc.getText().length)), response.NewText);
+        await vscode.workspace.applyEdit(edit);
+        vscode.window.setStatusBarMessage(`Lily#: ${response.Plan ?? 'joined'}`, 6000);
+    } catch (err) {
+        vscode.window.showErrorMessage(`Lily#: joining sections failed: ${err}`);
     }
 }
 
