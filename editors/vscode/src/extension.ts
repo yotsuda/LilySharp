@@ -316,11 +316,20 @@ let scanDeps: OmrScanDeps | undefined;
 // A message posted before the webview has finished loading its HTML is
 // DROPPED by VS Code. The webview script posts 'webviewReady' as its last
 // statement; content updates await that (with a timeout escape hatch).
-const panelReady = new Map<string, { promise: Promise<void>; resolve: () => void }>();
+const panelReady = new Map<string, { promise: Promise<void>; resolve: () => void; done: boolean }>();
 function armPanelReady(uri: string) {
-    let resolve!: () => void;
-    const promise = new Promise<void>(r => { resolve = r; });
-    panelReady.set(uri, { promise, resolve });
+    let settle!: () => void;
+    const promise = new Promise<void>(r => { settle = r; });
+    // `done`: a page that has reported in is not waited for again (updatePreviewContent).
+    const entry = { promise, resolve: () => { entry.done = true; settle(); }, done: false };
+    panelReady.set(uri, entry);
+}
+
+// The `lilysharp` settings as last read, for the places a keystroke reaches (the refresh's
+// delay, the singer's): read again when a setting changes (activate), not on each keystroke.
+let lilysharpSettings: vscode.WorkspaceConfiguration | undefined;
+function settings(): vscode.WorkspaceConfiguration {
+    return lilysharpSettings ??= vscode.workspace.getConfiguration('lilysharp');
 }
 
 // The document a preview renders — REOPENED when its editor tab has been closed.
@@ -768,6 +777,10 @@ export function activate(context: vscode.ExtensionContext) {
     // change would only take effect after a window reload. The notification shape
     // mirrors initializationOptions ({ completion: { flatSpelling } }).
     context.subscriptions.push(
+        // (First of the listeners: the ones after it read what settings() hands out.)
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('lilysharp')) { lilysharpSettings = undefined; }
+        }),
         vscode.workspace.onDidChangeConfiguration(e => {
             const fonts = e.affectsConfiguration('lilysharp.fontPaths');
             if ((!fonts && !e.affectsConfiguration('lilysharp.completion.flatSpelling')) || !client || !clientReady) {
@@ -1327,7 +1340,7 @@ export function activate(context: vscode.ExtensionContext) {
                 if (panel) {
                     lastEditAt.set(uri, Date.now());
                     // Neither is in the Settings UI since 2026-10-25 (settings.json only).
-                    const cfg = vscode.workspace.getConfiguration('lilysharp');
+                    const cfg = settings();
                     const autoRefresh = cfg.get<boolean>('preview.autoRefresh', true);
                     const delay = cfg.get<number>('preview.refreshDelay', DEBOUNCE_DELAY_DEFAULT);
 
@@ -2302,33 +2315,43 @@ async function updatePreviewContent(
 
     outputChannel.appendLine(`updatePreviewContent called for ${uri}, clientReady=${clientReady}`);
 
-    // Never post into a webview that has not loaded its HTML yet — VS Code
-    // drops such messages silently and the panel sticks on "Loading…". The
-    // 3 s race is a safety net against a webview that never reports in.
-    const ready = panelReady.get(uri);
-    if (ready) {
-        await Promise.race([ready.promise, new Promise<void>(r => setTimeout(r, 3000))]);
-    }
-    // Whether the right-click menu offers the OMR doors (owner, 2026-10-24: not for a file
-    // the reader did not write) — asked again with each render, as an import adds the file.
-    // (These three follow the file and the workspace, not the text: posted when they changed —
-    // postIfChanged — and not with every keystroke's refresh.)
-    postIfChanged(panel, { type: 'scanState', hasScan: hasScan(document.uri) });
-    // The A-B repeat's kept ranges of this file (the page draws its eight strips from them).
-    postIfChanged(panel, { type: 'abRanges', chart: uri, ranges: abRangesFor(uri) });
-    // …and its practice panel's folds (null: never opened for this file — it opens all folded).
-    postIfChanged(panel, { type: 'panelFolds', chart: uri, folds: panelFoldsFor(uri) });
-    // Another document or score: its voices replace the last one's, asked for once the server
-    // has answered the render below (prepareVoices; singing-design §5).
-    followVoices(panel, uri);
-    // The chords of the text, for Select Chord on a member right-clicked (owner's request 2026-10-27).
-    void panel.webview.postMessage({ type: 'chordSpans', spans: chordSpans(document.getText()) });
-    // The recording beside the chart (docs/recording-design.md): sent when it or the chart changed.
-    if (document.uri.scheme === 'file') {
-        void sendRecording(panel, document.uri, context.globalStorageUri, decodeRecordingOnServer);
-    }
+    // What the page is told beside the picture. With the server up it runs AFTER the render
+    // request has left (below): until session 1294 all of it — a file looked for, the
+    // workspace's state read twice, the whole text scanned for its chords, the recording's
+    // file looked at — stood between the keystroke and the request (review of session 1291, P5).
+    const besideThePicture = async () => {
+        // Never post into a webview that has not loaded its HTML yet — VS Code
+        // drops such messages silently and the panel sticks on "Loading…". The
+        // 3 s race is a safety net against a webview that never reports in; a page that
+        // has reported in is not waited for (each refresh left a 3 s timer running).
+        const ready = panelReady.get(uri);
+        if (ready && !ready.done) {
+            await Promise.race([ready.promise, new Promise<void>(r => setTimeout(r, 3000))]);
+        }
+        // Whether the right-click menu offers the OMR doors (owner, 2026-10-24: not for a file
+        // the reader did not write) — asked again with each render, as an import adds the file.
+        // (These three follow the file and the workspace, not the text: posted when they changed —
+        // postIfChanged — and not with every keystroke's refresh.)
+        postIfChanged(panel, { type: 'scanState', hasScan: hasScan(document.uri) });
+        // The A-B repeat's kept ranges of this file (the page draws its eight strips from them).
+        postIfChanged(panel, { type: 'abRanges', chart: uri, ranges: abRangesFor(uri) });
+        // …and its practice panel's folds (null: never opened for this file — it opens all folded).
+        postIfChanged(panel, { type: 'panelFolds', chart: uri, folds: panelFoldsFor(uri) });
+        // Another document or score: its voices replace the last one's, asked for once the server
+        // has answered the render below (prepareVoices; singing-design §5).
+        followVoices(panel, uri);
+        // The chords of the text, for Select Chord on a member right-clicked (owner's request 2026-10-27).
+        void panel.webview.postMessage({ type: 'chordSpans', spans: chordSpans(document.getText()) });
+        // The recording beside the chart (docs/recording-design.md): sent when it or the chart changed.
+        if (document.uri.scheme === 'file') {
+            void sendRecording(panel, document.uri, context.globalStorageUri, decodeRecordingOnServer);
+        }
+    };
     // Wait for client to be ready if not already
+    const serverWasUp = clientReady;
     if (!clientReady) {
+        // (Nothing to send a request to yet: the page hears the rest first, as it always did.)
+        await besideThePicture();
         outputChannel.appendLine('Client not ready, sending loading message');
         panel.webview.postMessage({
             type: 'updateContent',
@@ -2394,12 +2417,18 @@ async function updatePreviewContent(
         // The @todo marks of the text, for Resolve This TODO on the bar right-clicked and Resolve
         // All TODOs off the staves (owner's request 2026-10-31). Asked AFTER the render request has
         // left: it was written to the connection ahead of it on every refresh (review of session 1291).
-        void todoMarksOf(document).then(marks => {
+        const marksAsked = todoMarksOf(document);
+        // …and so is everything else the page is told. The answers are posted after it: the
+        // page has loaded by then, and hears these before the picture, as before.
+        const beside = serverWasUp
+            ? besideThePicture().catch(e => outputChannel.appendLine(`Beside the picture: ${e}`))
+            : Promise.resolve();
+        void Promise.all([marksAsked, beside]).then(([marks]) => {
             if (marks && previewPanels.get(uri) === panel) {
                 void panel.webview.postMessage({ type: 'todos', marks: marks.map(m => ({ start: m.Start, hostStart: m.HostStart })) });
             }
         });
-        const response = await rendering;
+        const [response] = await Promise.all([rendering, beside]);
         const hostLag = lagProbe.stop();
 
         // The round trip, split where the server's clock says it went: a stall shows up
@@ -5237,7 +5266,7 @@ async function setUpVoices(guide: VoiceGuide): Promise<void> {
 /** `lilysharp.playback.singer`: the path of a `cantoria` program to run here (a developer's
  *  build), or '' — the usual case — for the Cantoria extension when it is installed. */
 function singerSetting(): string {
-    return vscode.workspace.getConfiguration('lilysharp').get<string>('playback.singer', '').trim();
+    return settings().get<string>('playback.singer', '').trim();
 }
 
 /** The one engine of this host, found on the first voice asked for — the setting's program,
@@ -5287,7 +5316,7 @@ function disposeSinger(): void {
 
 /** `lilysharp.playback.singerPrepare`: when a voice whose text changed goes to the engine. */
 function prepareModeSetting(): PrepareMode {
-    return prepareModeOf(vscode.workspace.getConfiguration('lilysharp').get<string>('playback.singerPrepare'));
+    return prepareModeOf(settings().get<string>('playback.singerPrepare'));
 }
 
 /** What each preview's practice menu last listed of the voices (voiceMenuKey). */

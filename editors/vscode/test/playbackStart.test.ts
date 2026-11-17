@@ -40,8 +40,26 @@ describe('when the sounding notes are asked for', () => {
         assert.match(extension, /'lilysharp\/playback', \{ textDocument: \{ uri \}, renderName, soundingOnly: true \}/);
         // The @todo marks are asked for after the render request has left.
         const svg = extension.indexOf("client.sendRequest<SvgResponse>('lilysharp/svg'");
-        const todos = extension.indexOf('void todoMarksOf(document).then(');
+        const todos = extension.indexOf('const marksAsked = todoMarksOf(document);');
         assert.ok(svg > 0 && todos > svg);
+    });
+
+    it('sends the render before everything else a refresh tells the page (session 1294, review P5)', () => {
+        const extension = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const svg = extension.indexOf("client.sendRequest<SvgResponse>('lilysharp/svg'");
+        const beside = extension.indexOf('? besideThePicture().catch(');
+        assert.ok(svg > 0 && beside > svg);
+        // With no server yet there is no request to send first: the page hears the rest, then waits.
+        assert.match(extension, /if \(!clientReady\) \{\s*\/\/[^\n]*\n\s*await besideThePicture\(\);/);
+        // Both answers wait for it: a page still loading drops what it is posted.
+        assert.match(extension, /void Promise\.all\(\[marksAsked, beside\]\)\.then\(/);
+        assert.match(extension, /const \[response\] = await Promise\.all\(\[rendering, beside\]\);/);
+        // A page that has reported in is not waited for again (no 3 s timer per refresh).
+        assert.match(extension, /resolve: \(\) => \{ entry\.done = true; settle\(\); \}/);
+        assert.match(extension, /if \(ready && !ready\.done\) \{\s*await Promise\.race\(/);
+        // The settings a keystroke reads are kept until one changes.
+        assert.match(extension, /const cfg = settings\(\);\s*const autoRefresh/);
+        assert.match(extension, /if \(e\.affectsConfiguration\('lilysharp'\)\) \{ lilysharpSettings = undefined; \}/);
     });
 
     it('is the caret\'s status line\'s rule too: after an edit it waits for the text to rest, then asks', () => {
