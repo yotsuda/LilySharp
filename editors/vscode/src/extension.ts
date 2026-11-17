@@ -6137,7 +6137,6 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .mixer-panel .parts .pline button.msmall { flex: 0 0 auto; }
         .mixer-panel .parts .rec-part-rows .pline.rec-part { padding-left: 0; }
         .practice-panel button.msmall { padding: 2px 6px; min-width: 24px; font-weight: 600; }
-        .practice-panel button.mmute[aria-pressed="true"] { background: #fde2e2; border-color: #c62828; color: #8e1b1b; }
         .practice-panel button.msolo[aria-pressed="true"] { background: #fff4c2; border-color: #c9a400; color: #6b5600; }
         .mixer-panel .pline.unheard button.pname { opacity: 0.5; }
         .mixer-panel .msettings { margin-top: 8px; }
@@ -6153,6 +6152,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .mixer-panel button.mfold::before { content: '\\25BE\\00A0'; display: inline-block; width: 1em; }
         .mixer-panel .mgroup.folded button.mfold::before { content: '\\25B8\\00A0'; }
         .mixer-panel .mbody > .prow { padding-left: 1.5em; }
+        /* (the rows' sliders take the room there is, so the panel needs no sideways scroll) */
+        .mixer-panel .prow .tempo { flex: 1 1 auto; min-width: 0; }
+        .mixer-panel .prow .tempo input[type="range"] { width: auto; flex: 1 1 100px; min-width: 70px; max-width: 160px; }
         /* Folded, Tempo's and Loop's heads carry their main controls in one line (owner's request 2026-11-17). */
         .mixer-panel .mmini { display: none; align-items: center; gap: 6px; flex: 1 1 0; min-width: 0; justify-content: flex-end; flex-wrap: wrap; }
         .mixer-panel .mgroup.folded .mmini { display: flex; }
@@ -9899,7 +9901,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
             return out;
         }
-        /** A mixer line's small toggle, M or S. */
+        /** A mixer line's small toggle, S (the name is the mute: owner's decision 2026-11-17). */
         function mixerSmall(text, title) {
             const b = document.createElement('button');
             b.type = 'button';
@@ -10110,7 +10112,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // - 0 to 100%, the instrument's velocity or the voice's gain. The number follows the
             // thumb; the sound changes when it is let go (as the tempo's does), 100 means "as
             // written" and is not kept.
-            // In the mixer (docs/transport-mixer-design.md §1 2): the name (a press mutes it too), M and S,
+            // In the mixer (docs/transport-mixer-design.md §1 2): the name (pressed in: it sounds; a press mutes it), S,
             // then the fader. soloKey names the line for the solo (soloed: only the lines soloed sound).
             const toggle = (label, title, isOn, flip, cls, part, levels, levelKey, soloKey) => {
                 const line = document.createElement('span');
@@ -10136,22 +10138,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 if (cls) for (const c of cls.split(' ')) b.classList.add(c);
                 if (part) b.dataset.part = part;
                 b.classList.add('pname');
-                const mBtn = mixerSmall('M', 'Mute');
                 const sBtn = mixerSmall('S', 'Solo: only the lines soloed sound');
                 const paint = () => {
                     const on = isOn();
                     b.setAttribute('aria-pressed', String(on));
-                    mBtn.setAttribute('aria-pressed', String(!on));
                     sBtn.setAttribute('aria-pressed', String(solo.has(soloKey)));
                     line.classList.toggle('unheard', !on || (solo.size > 0 && !solo.has(soloKey)));
                 };
                 paint();
                 const mute = () => { flip(); paint(); showPractice(); practiceChanged(practice.speed); };
                 b.addEventListener('click', mute);
-                mBtn.addEventListener('click', mute);
                 sBtn.addEventListener('click', () => toggleSolo(soloKey));
                 line.appendChild(b);
-                line.appendChild(mBtn);
                 line.appendChild(sBtn);
                 const fader = document.createElement('input');
                 fader.type = 'range'; fader.min = '0'; fader.max = String(FADER_MAX * 100); fader.step = '1';
@@ -10513,10 +10511,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const on = recOn && !recPartsOff.includes(name);
             b.setAttribute('aria-pressed', String(on));
             // M and S, as the score's lines (the mixer, §1 2).
-            const mBtn = mixerSmall('M', 'Mute'), sBtn = mixerSmall('S', 'Solo: only the lines soloed sound');
-            mBtn.setAttribute('aria-pressed', String(!on));
+            // (its name mutes it: no M — owner's decision 2026-11-17)
+            const sBtn = mixerSmall('S', 'Solo: only the lines soloed sound');
             sBtn.setAttribute('aria-pressed', String(solo.has('rec:' + name)));
-            mBtn.disabled = sBtn.disabled = !ready;
+            sBtn.disabled = !ready;
             line.classList.toggle('unheard', !on || (solo.size > 0 && !solo.has('rec:' + name)));
             const mute = () => {
                 if (!recOn) {
@@ -10533,7 +10531,6 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 showMixerHead();
             };
             b.addEventListener('click', mute);
-            mBtn.addEventListener('click', mute);
             sBtn.addEventListener('click', () => toggleSolo('rec:' + name));
             const fader = document.createElement('input');
             fader.type = 'range'; fader.min = '0'; fader.max = String(FADER_MAX * 100); fader.step = '1';
@@ -10556,7 +10553,6 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             });
             resetOnDoubleClick(fader, () => { fader.value = '100'; fader.dispatchEvent(new Event('change')); });
             line.appendChild(b);
-            line.appendChild(mBtn);
             line.appendChild(sBtn);
             line.appendChild(fader);
             line.appendChild(num);
