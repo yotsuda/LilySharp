@@ -1492,7 +1492,7 @@
         {
           "command": "lilysharp.sameBarInPart",
           "when": "resourceLangId == lilysharp",
-          "group": "2_lilysharp@2"
+          "group": "navigation@1.46"
         },
         {
           "submenu": "lilysharp.sections",

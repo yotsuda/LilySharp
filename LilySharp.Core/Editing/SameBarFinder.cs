@@ -35,7 +35,9 @@ namespace LilySharp.Core.Editing;
 /// voice is right after the bar line that closes the bar before. A bar with no bar line of the
 /// voice's own before it — one inside a phrase the voice plays, or inside a <c>R1*4</c> — is
 /// answered with the nearest written line before it, and a voice that writes fewer bars with
-/// its last. Lyrics are not voices here.
+/// its last. A lyrics cell joins them (owner's request 2026-11-17): its bars are its lyric
+/// measures (<see cref="LyricSyllableReader"/>'s, the lone leading <c>|</c> anchor making none),
+/// each closed where its measure ends — a jump goes to its words, and from them to the music.
 /// </remarks>
 public static class SameBarFinder
 {
@@ -54,30 +56,69 @@ public static class SameBarFinder
         var root = tree.GetRoot();
         string text = root.ToFullString();
         var phrases = SectionBarCounts.PhraseBodies(root);
-        var voices = SectionBarCounts.SemanticVoices(root, phrases);
-        int own = voices.FindIndex(v => Contains(v.Container, offset));
+        // The voices and the lyrics cells, each with its bar lines, in document order.
+        var voices = SectionBarCounts.SemanticVoices(root, phrases)
+            .Select(v => (Voice: v, Lines: LinesOf(v, phrases)))
+            .Concat(LyricsCellsOf(root).Select(c => (Voice: c, Lines: LyricLines(c.Container))))
+            .DistinctBy(v => v.Voice.Container.Span.Start)
+            .OrderBy(v => v.Voice.Container.Span.Start)
+            .ToList();
+        int own = voices.FindIndex(v => Contains(v.Voice.Container, offset));
         if (own < 0)
             return null;
         // The innermost voice the caret is in (a by-section part block inside its section).
         for (int i = own + 1; i < voices.Count; i++)
-            if (Contains(voices[i].Container, offset) && voices[i].Container.Span.Length < voices[own].Container.Span.Length)
+            if (Contains(voices[i].Voice.Container, offset) && voices[i].Voice.Container.Span.Length < voices[own].Voice.Container.Span.Length)
                 own = i;
 
-        var here = voices[own];
+        var (here, hereLines) = voices[own];
         int bar = 0;
-        foreach (var (end, bars) in LinesOf(here, phrases))
+        foreach (var (end, bars) in hereLines)
             if (end <= offset)
                 bar = bars;
 
         var others = new List<Place>();
         for (int step = 1; step < voices.Count; step++)
         {
-            var other = voices[(own + step) % voices.Count];
+            var (other, lines) = voices[(own + step) % voices.Count];
             if (other.SectionName != here.SectionName || ReferenceEquals(other.Container, here.Container))
                 continue;
-            others.Add(new Place(other.Label, BarStart(other, LinesOf(other, phrases), bar, text)));
+            others.Add(new Place(other.Label, BarStart(other, lines, bar, text)));
         }
         return new Answer(here.SectionName, bar + 1, here.Label, others);
+    }
+
+    /// <summary>Every lyrics cell: by part (<c>lyrics w { section A { … } }</c>) and by section
+    /// (<c>section A { lyrics w { … } }</c>).</summary>
+    private static IEnumerable<SectionBarCounts.SemanticVoice> LyricsCellsOf(SyntaxNode root)
+    {
+        foreach (var cell in SectionBarCounts.LyricsCells(root))
+            yield return cell;
+        foreach (var block in root.DescendantNodes<LyricsBlockSyntax>())
+            if (!block.HasSections && block.Parent is SectionDeclarationSyntax section)
+                yield return SectionBarCounts.LyricsCell(section.SectionName, block, block, SectionBarCounts.LyricsAnchor(block), groupedByPart: false);
+    }
+
+    /// <summary>A lyrics cell's bar lines: the end of each lyric measure, with the bars before what
+    /// follows it — the plain run, else the first verse's; the lone leading <c>|</c> anchor, a
+    /// measure with no word in it, makes no bar (LyricSyllableReader.CountBars).</summary>
+    private static List<(int End, int Bars)> LyricLines(SyntaxNode container)
+    {
+        var measures = new List<SyntaxNode>();
+        SyntaxNode? firstVerse = null;
+        for (int i = 0; i < container.SlotCount; i++)
+            if (container.GetChild(i) is SyntaxNode m)
+            {
+                if (m.Kind == SyntaxKind.LyricMeasure)
+                    measures.Add(m);
+                else if (m.Kind == SyntaxKind.LyricVerse)
+                    firstVerse ??= m;
+            }
+        if (measures.Count == 0 && firstVerse != null)
+            measures.AddRange(firstVerse.DescendantNodes().Where(n => n.Kind == SyntaxKind.LyricMeasure));
+        if (measures.Count > 0 && measures[0].ToString().Trim() == "|")
+            measures.RemoveAt(0);
+        return [.. measures.Select((m, i) => (m.Span.Start + m.Span.Length, i + 1))];
     }
 
     private static bool Contains(SyntaxNode node, int offset)

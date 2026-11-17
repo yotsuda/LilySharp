@@ -77,7 +77,7 @@ With the separate **Calamo** extension (`yotsuda.calamo`, Windows x64),
 
 The editor's right-click menu shows, at its top, what acts on the thing under the caret — *Split
 Section Here* on a bar line or a `break`, *Join Sections* on a section's head or a selection across
-sections, the chord conversions on a chord — and gathers the rest by purpose:
+sections, the chord conversions on a chord; *Go to the Same Bar in Another Part…* stands right under Go to Definition / Go to References — and gathers the rest by purpose:
 
 - **Lily#: Sections** — Join Sections, Split Section Here, Split Sections to Match a Part, Extract
   Phrase from Section, Regroup (by part ⇄ by section)

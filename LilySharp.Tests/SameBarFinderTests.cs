@@ -68,4 +68,28 @@ public sealed class SameBarFinderTests
     [Fact]
     public void ACaretOutsideEverySectionHasNoBar()
         => Assert.Null(SameBarFinder.At(SyntaxTree.Parse(Book), Book.IndexOf("form")));
+
+    /// <summary>The words' bars too (owner's request 2026-11-17): a lyrics cell, by part or by section,
+    /// is a place to go to — and to come from.</summary>
+    [Fact]
+    public void TheWordsOfTheBar_ByPartAndBySection()
+    {
+        const string byPart = "octave absolute\ntime 4/4\n"
+            + "part m { section S { c''1 | d''1 | e''1 | } }\n"
+            + "lyrics w { section S { one | two | three | } }\n"
+            + "form { S }\nscore { staff m lyrics w on m }\n";
+        var answer = SameBarFinder.At(SyntaxTree.Parse(byPart), byPart.IndexOf("d''1"))!;
+        var words = Assert.Single(answer.Others);
+        Assert.Equal("two", byPart.Substring(words.Offset).Split(' ')[0]);
+        // …and from the words, to the music.
+        var back = SameBarFinder.At(SyntaxTree.Parse(byPart), byPart.IndexOf("three"))!;
+        Assert.Equal(3, back.Bar);
+        Assert.Equal("e''1", byPart.Substring(Assert.Single(back.Others).Offset).Split(' ')[0]);
+
+        const string bySection = "octave absolute\ntime 4/4\npart m { clef treble }\n"
+            + "section S { m { c''1 | d''1 | e''1 | } lyrics w { one | two | three | } }\n"
+            + "form { S }\nscore { staff m lyrics w on m }\n";
+        var again = SameBarFinder.At(SyntaxTree.Parse(bySection), bySection.IndexOf("e''1"))!;
+        Assert.Equal("three", bySection.Substring(Assert.Single(again.Others).Offset).Split(' ')[0]);
+    }
 }

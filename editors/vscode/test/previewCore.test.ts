@@ -214,6 +214,8 @@ describe('the chords of a score', () => {
         assert.ok(!menu.some(m => m.command.startsWith('lilysharp.previewAiTransform')));
         const editor = pkg.contributes.menus['editor/context'] as { command: string; group: string }[];
         assert.equal(editor.find(m => m.command === 'lilysharp.askAiInChat')?.group, '2_lilysharp@1');
+        // Right under Go to Definition / Go to References (owner's request 2026-11-17: easier to find there).
+        assert.equal(editor.find(m => m.command === 'lilysharp.sameBarInPart')?.group, 'navigation@1.46');
         assert.ok(!editor.some(m => m.command === 'lilysharp.aiTransform'));
         // …nor composing: a new piece is begun from File > New File… (owner's decision, the same day).
         assert.ok(!editor.some(m => m.command?.startsWith('lilysharp.composeWithAi')));
