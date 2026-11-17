@@ -9849,6 +9849,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const last = Math.max(0, abBars().length - 1);
             m = Math.max(0, Math.min(m, last));
             const line = atEnd ? m + 1 : m;     // the bar line, as the bar after it
+            // On B's own bar line: B goes — A-B off, as its button turns it off (owner's request
+            // 2026-11-17); B's place is kept for when A-B comes back on.
+            if (abOn && line === abTo + 1) { abBtn.click(); return; }
             abOn = true;
             if (line > abFrom) setAb(abFrom, line - 1);
             else if (line < abFrom) setAb(Math.max(0, line - 1), Math.max(0, line - 1));
