@@ -114,7 +114,7 @@ describe('the preview\'s Range panel', () => {
     // §1 3): stopped, playing or paused alike; the editor's caret has no say ("why does it play
     // from here?"). Pause holds where it plays and goes on from there; Stop goes back to A.
     it('plays from the A flag, stopped, playing or paused alike — not from the editor\'s caret', () => {
-        assert.match(html, /document\.getElementById\('playBtn'\)\.disabled = false;/);
+        assert.match(html, /const playBtn = document\.getElementById\('playBtn'\);\s*playBtn\.disabled = false;/);
         assert.doesNotMatch(html, /getElementById\('playBtn'\)\.disabled = playing/);
         const play = html.slice(html.indexOf("getElementById('playBtn').addEventListener('click'"), html.indexOf("getElementById('stopBtn').addEventListener('click'"));
         assert.match(play, /paused = null;\s*if \(playingNow\(\)\) stopPlayback\(\);/);
@@ -151,6 +151,9 @@ describe('the preview\'s Range panel', () => {
         assert.match(pause, /startPlayback\(p\.notes, p\.at, false, false, p\.countFix, p\.origin\);/);
         assert.match(pause, /notes: playingNotes, at: Math\.max\(0, playOffset \+ playClock\(\)\), origin: playOrigin,/);
         assert.match(html, /function playingNow\(\) \{ return !document\.getElementById\('stopBtn'\)\.disabled && !paused; \}/);
+        // Play is lit while it plays, Pause while paused (owner's choice 2026-11-17).
+        assert.match(html, /playBtn\.classList\.toggle\('playing', !!playing && !paused\);/);
+        assert.match(html, /\.toolbar button#playBtn\.playing \{/);
         assert.match(html, /document\.getElementById\(playingNow\(\) \|\| paused \? 'pauseBtn' : 'playBtn'\)\.click\(\);/);
         // Rewind: the A flag to the top; playing, from there (owner's request 2026-11-17).
         assert.match(html, /getElementById\('rewindBtn'\)\.addEventListener\('click', \(\) => \{\s*setA\(0, false\);\s*if \(playingNow\(\)\) \{ document\.getElementById\('playBtn'\)\.click\(\); return; \}/);

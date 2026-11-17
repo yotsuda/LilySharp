@@ -5975,6 +5975,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
         }
         .toolbar button.toggle[aria-pressed="true"]:hover { background: #c8ddf5; }
+        /* Play lit while it plays, as a tape deck's (owner's choice 2026-11-17: Play stays pressable
+           while playing — it plays again from A — so nothing said it was playing). Paused, Pause is
+           the one lit (its aria-pressed); stopped, neither. */
+        .toolbar button#playBtn.playing {
+            background: #d6e6f8; border-color: #0078d7; color: #0b4a8b;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+        .toolbar button#playBtn.playing:hover { background: #c8ddf5; }
         /* The practice menu open looks as the Range panel open does (owner's request 2026-11-02). */
         .toolbar button.practice[aria-expanded="true"] {
             background: #d6e6f8; border-color: #0078d7; color: #0b4a8b;
@@ -8566,8 +8574,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 playStateSaid = playing;
                 vscode.postMessage({ type: 'playState', playing });
             }
-            // Play stays pressable while playing: pressed then, it plays again from the A flag.
-            document.getElementById('playBtn').disabled = false;
+            // Play stays pressable while playing: pressed then, it plays again from the A flag. It is
+            // lit while it plays (owner's choice 2026-11-17), Pause while paused.
+            const playBtn = document.getElementById('playBtn');
+            playBtn.disabled = false;
+            playBtn.classList.toggle('playing', !!playing && !paused);
+            playBtn.title = playing && !paused
+                ? 'Playing — press to play again from the A flag'
+                : 'Play from the A flag (Space while stopped)';
             document.getElementById('stopBtn').disabled = !playing && !paused;
             const pauseBtn = document.getElementById('pauseBtn');
             pauseBtn.disabled = !playing && !paused;
