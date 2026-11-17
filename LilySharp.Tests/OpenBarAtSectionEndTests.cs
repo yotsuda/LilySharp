@@ -141,4 +141,28 @@ public class OpenBarAtSectionEndTests
         Assert.Contains("d,4 s2. |", openBar);
         Assert.DoesNotContain("\\partial", openBar);
     }
+
+    /// <summary>The twin of the two other shapes: a full section's last bar left open is a whole
+    /// bar where a section with no pickup follows (`g4 s2.`, as the page closes it at the next
+    /// section's head); and where the next section's pickup completes a short last bar, the chord
+    /// row's bar there is as short as the music's (`g2.`, then the pickup's chord). Until 2026-11-17
+    /// both failed LilyPond's bar check (Lab sessions/p1290/mylife/m3, m4).</summary>
+    [Fact]
+    public void TheTwin_ClosesAnOpenLastBar_AndShortensTheRowsBarBeforeAPickup()
+    {
+        var open = new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(Book("d4 r r r | c1 | f1 | g4", bRow: "D | C | F | G |")));
+        Assert.Contains("g4 s2.", open);
+        var pickup = new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse("""
+            time 4/4
+            part bass { instrument bass }
+            section B { chords harmony { D | C | F | G } bass { d1 | c1 | f1 | g2. } }
+            section C { partial 4 chords harmony { A | A | B | } bass { a4 | a1 | b1 | } }
+            form { B C }
+            score { staff bass  chords harmony }
+            """));
+        var chords = System.Text.RegularExpressions.Regex.Match(pickup, @"harmonyChords = \\chordmode \{([^}]*)\}").Groups[1].Value;
+        Assert.Contains("g2. a4 |", System.Text.RegularExpressions.Regex.Replace(chords, @"\s+", " "));
+        // (the open bar the pickup completes is left open: no spacer)
+        Assert.DoesNotContain("g2. s", pickup);
+    }
 }

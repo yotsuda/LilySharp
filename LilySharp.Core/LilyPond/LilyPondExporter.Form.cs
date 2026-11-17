@@ -135,6 +135,7 @@ public sealed partial class LilyPondExporter
         {
             var formItems = FormWalk.Read(form);
             _repeatTiePlays = _repeatTieBars != null ? new HashSet<int>() : RepeatTiePlays(formItems, byName);
+            _closingPlays = ClosingPlays(formItems);
             _lpPlayIndex = 0;
             _firstPlayRestatesTempo = FirstPlayedSection(formItems) is { } first
                 && _sectionHeaders.Tempos.ContainsKey(first);
@@ -151,8 +152,9 @@ public sealed partial class LilyPondExporter
             _firstPlayRestatesKey = inOrder.Count > 0 && OpensWithKey(inOrder[0].Section.SectionName, byName);
             if (_firstPlayRestatesTempo)
                 _tempoStanding = null;
-            foreach (var entry in inOrder)
+            for (int k = 0; k < inOrder.Count; k++)
             {
+                var entry = inOrder[k];
                 // No form: sections play in declaration order and each is labelled with
                 // its declared label, else its own name (MeasureCollector.LabelForDeclarationOrder),
                 // with the same boundary key-restore a formed play gets.
@@ -170,6 +172,8 @@ public sealed partial class LilyPondExporter
                 else
                     result.AddRange(_meterPlan.WithForeignChanges(entry.Section.SectionName,
                         entry.Container, ContainerMusic(entry.Container).ToList()));
+                if (k + 1 < inOrder.Count && !_sectionHeaders.Partials.ContainsKey(inOrder[k + 1].Section.SectionName))
+                    result.AddRange(CloseTheOpenBar(entry.Container, entry.Section.SectionName));
                 result.AddRange(PaddingBars(entry.Container));
                 PlantTheRepeatTies(-1, entry.Section.SectionName, entry.Container, result, playStart);
                 WriteTheScoresRepeatSigns(entry.Section.SectionName, entry.Container, result, playStart);
@@ -451,7 +455,7 @@ public sealed partial class LilyPondExporter
             _lastChordPlay = name;
             int rowStart = result.Count;
             result.AddRange(ChordBars(entry.Container, ChordKeyFor(name), ChordPickupFor(name),
-                SectionBarTimes(name), ShortBars().BySection.GetValueOrDefault(name)));
+                SectionBarTimes(name), RowShortBars(name)));
             result.AddRange(PaddingBars(entry.Container));
             WriteTheScoresRepeatSigns(name, entry.Container, result, rowStart);
             return;
@@ -494,6 +498,8 @@ public sealed partial class LilyPondExporter
             && _sectionBars.Canonical.GetValueOrDefault(name) == voice.Bars
             && ShortLastBar(name, voice) != null)
             _shared.OpenWrittenBars.Add(halfBarLine);
+        if (_closingPlays.Contains(playIndex))
+            result.AddRange(CloseTheOpenBar(entry.Container, name));
         result.AddRange(PaddingBars(entry.Container));
         PlantTheRepeatTies(playIndex, name, entry.Container, result, playStart);
         WriteTheScoresRepeatSigns(name, entry.Container, result, playStart);
@@ -803,6 +809,63 @@ public sealed partial class LilyPondExporter
                 yield return time;
             yield return name != null ? SectionPaddingBar(name, position) : CreateBarline(SyntaxKind.Bar, "|", position, 0);
         }
+    }
+
+    /// <summary>
+    /// The printed plays after which every play that can follow opens WITHOUT a pickup
+    /// (<see cref="Svg.Collector.PlayedOrder.Successors"/>): a bar such a play leaves open is a whole
+    /// bar, as the page closes it where the next section begins (MeasureCollector's prologue,
+    /// CloseOpenBar) and the MIDI too (CloseLaneOf). A play no play follows — the piece's last bar —
+    /// is left as written, and so is one a pickup may complete.
+    /// </summary>
+    private HashSet<int> ClosingPlays(IReadOnlyList<FormWalk.Item> items)
+    {
+        var names = new List<string>();
+        var plays = Svg.Collector.PlayedOrder.PlaysOf(items, names);
+        var successors = Svg.Collector.PlayedOrder.Successors(plays);
+        var result = new HashSet<int>();
+        for (int q = 0; q < plays.Count; q++)
+            if (successors[q].Count > 0 && successors[q].All(s => !_sectionHeaders.Partials.ContainsKey(names[s])))
+                result.Add(q);
+        return result;
+    }
+    private HashSet<int> _closingPlays = new();
+
+    /// <summary>
+    /// A chord row's bars of <paramref name="name"/> that are shorter than the meter: the bars the
+    /// music's `|` closes short (<see cref="ShortBars"/>), and the section's LAST bar when the parts
+    /// leave it short for the next play's pickup to complete (<see cref="ShortLastBarOfSection"/>,
+    /// the length the silent parts take there, AppendSilentPlay). MEASURED before (2026-11-17, Lab
+    /// sessions/p1290/mylife/m4): `… | g2.` then a section under `partial 4` wrote the row's G as
+    /// `g1` and the pickup's chord after it — "bar check failed at: 1/4".
+    /// </summary>
+    private IReadOnlyDictionary<int, Fraction>? RowShortBars(string name)
+    {
+        var shorts = ShortBars().BySection.GetValueOrDefault(name);
+        int bars = _sectionBars.Canonical.GetValueOrDefault(name);
+        if (bars < 2 || _sectionHeaders.Partials.Count == 0 || ShortLastBarOfSection(name, bars) is not { } cut)
+            return shorts;
+        var withLast = shorts != null ? new Dictionary<int, Fraction>(shorts) : new Dictionary<int, Fraction>();
+        withLast[bars - 1] = cut;
+        return withLast;
+    }
+
+    /// <summary>
+    /// The spacer that closes a voice's open last bar — music after its last bar line, a bar still
+    /// being written (`… | f1 | g4`) — when the section has no bar after it to pad (that case is
+    /// <see cref="PaddingBars"/>'s) and the next play opens with no pickup (the caller): the bar is
+    /// a whole one, silent after its music. A pickup still pending (a section's only bar, its header's
+    /// `partial`) is the next play's to complete. MEASURED before (owner's report 2026-11-17, Lab
+    /// sessions/p1290/mylife/m3): `g4` then the next section's `s1 |` — "bar check failed at: 1/4".
+    /// </summary>
+    private IEnumerable<SyntaxNode> CloseTheOpenBar(SyntaxNode container, string sectionName)
+    {
+        if (_chordTrack || _sectionBars.Missing(container, out bool open) > 0 || !open)
+            yield break;
+        if (VoiceOf(container) is { Bars: 1 } && _sectionHeaders.Partials.ContainsKey(sectionName))
+            yield break;
+        if (OpenBarRest(container, sectionName) is { } rest)
+            yield return new ChordBarMarker("s" + ChordModeDuration(rest));
     }
 
     /// <summary>What is left of a voice's open last bar (its music after its last bar line,
