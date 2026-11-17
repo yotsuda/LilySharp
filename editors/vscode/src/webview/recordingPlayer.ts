@@ -81,6 +81,16 @@ export class RecordingPlayer {
     // the parts keep together to the sample; each channel then has its own gain, and they add up
     // in the recording's gain. Played only when a part is off or not at 100% (partLevels): all of
     // them as recorded, the recording itself plays (the separation's error left out).
+    // Decoded only when first played (ensureParts): until then the files' bytes are all there is —
+    // MEASURED 2026-11-17 (Lab sessions/p1288/parts, 48 kHz): a 5-minute song's 4 parts decoded take
+    // ~220 MB and the stretcher's copy as much again, which every chart Dettato writes (with parts)
+    // paid on opening, the parts used or not.
+    private partSources: { name: string; bytes: Uint8Array | ArrayBuffer }[] = [];
+    private partsDecoding: Promise<void> | null = null;
+    /** The parts that could not be decoded, with why ("name: reason"), once decoded. */
+    partsFailed: string[] = [];
+    /** Called when the parts have been decoded (the ones left out in partsFailed). */
+    onPartsDecoded: ((failed: readonly string[]) => void) | null = null;
     private parts: AudioBuffer | null = null;
     private partNames: string[] = [];
     /** Each part's level, as partNames: 0 off, 1 as recorded, up to 2 (its fader). */
@@ -150,14 +160,33 @@ export class RecordingPlayer {
     }
 
     /**
-     * Decodes the recording's parts into one buffer of as many channels (a part in two channels is
-     * made one). A part that cannot be decoded is left out; resolves to the names of the ones in,
-     * with the reasons for the others. Their levels start as recorded.
+     * Takes the recording's parts (their files' bytes), to be decoded when first played
+     * (ensureParts). Their levels start as recorded; the names are the parts' until then.
      */
-    async loadParts(list: readonly { name: string; bytes: Uint8Array | ArrayBuffer }[]): Promise<{ names: string[]; failed: string[] }> {
+    loadParts(list: readonly { name: string; bytes: Uint8Array | ArrayBuffer }[]): string[] {
+        const wasPlaying = this.playingParts && this.anchor !== null;
+        this.dropParts();
+        if (wasPlaying) { this.stop(); }
+        this.partSources = list.slice();
+        this.partNames = list.map(p => p.name);
+        this.partLevels = list.map(() => 1);
+        return this.partNames;
+    }
+
+    /**
+     * Decodes the parts into one buffer of as many channels (a part in two channels is made one),
+     * once. A part that cannot be decoded is left out (partsFailed), its level with it.
+     */
+    private ensureParts(): Promise<void> {
+        if (this.parts || this.partSources.length === 0) { return Promise.resolve(); }
+        this.partsDecoding ??= this.decodeParts(this.partSources);
+        return this.partsDecoding;
+    }
+
+    private async decodeParts(sources: readonly { name: string; bytes: Uint8Array | ArrayBuffer }[]): Promise<void> {
         const decoded: { name: string; data: Float32Array }[] = [];
         const failed: string[] = [];
-        for (const p of list) {
+        for (const p of sources) {
             try {
                 const copy = p.bytes instanceof ArrayBuffer ? p.bytes.slice(0)
                     : (p.bytes.buffer as ArrayBuffer).slice(p.bytes.byteOffset, p.bytes.byteOffset + p.bytes.byteLength);
@@ -176,18 +205,19 @@ export class RecordingPlayer {
                 failed.push(`${p.name}: ${(e as Error)?.message ?? e}`);
             }
         }
-        const wasPlaying = this.playingParts && this.anchor !== null;
-        this.dropParts();
+        if (this.partSources !== sources) { return; }   // (other parts, or none, meanwhile)
+        const level = new Map(this.partNames.map((n, i) => [n, this.partLevels[i] ?? 1]));
         if (decoded.length > 0) {
             const length = Math.max(...decoded.map(d => d.data.length));
             const buffer = this.ctx.createBuffer(decoded.length, length, this.ctx.sampleRate);
             decoded.forEach((d, c) => buffer.getChannelData(c).set(d.data));
             this.parts = buffer;
-            this.partNames = decoded.map(d => d.name);
-            this.partLevels = decoded.map(() => 1);
         }
-        if (wasPlaying) { this.stop(); }
-        return { names: this.partNames, failed };
+        this.partNames = decoded.map(d => d.name);
+        this.partLevels = this.partNames.map(n => level.get(n) ?? 1);
+        this.partsFailed = failed;
+        this.partSources = [];      // (the bytes are not needed again)
+        this.onPartsDecoded?.(failed);
     }
 
     /**
@@ -201,16 +231,22 @@ export class RecordingPlayer {
             return typeof v === 'number' && Number.isFinite(v) ? Math.min(2, Math.max(0, v)) : 1;
         });
         this.partGains.forEach((g, i) => { g.gain.value = this.partLevels[i] ?? 1; });
-        return this.anchor !== null && this.usesParts() !== this.playingParts;
+        // Wanted for the first time: decoded from now, so the play that follows waits less.
+        if (this.usesParts() && !this.parts) { void this.ensureParts(); }
+        // (parts not decoded yet would play the recording again: no change until they are)
+        return this.anchor !== null && (this.usesParts() && this.parts !== null) !== this.playingParts;
     }
 
     /** Whether the parts play (a part off or not at 100 %), not the recording itself. */
     usesParts(): boolean {
-        return this.parts !== null && this.partLevels.some(l => l !== 1);
+        return this.partNames.length > 0 && this.partLevels.some(l => l !== 1);
     }
 
     private dropParts(): void {
         if (this.playingParts) { this.stopSound(); }
+        this.partSources = [];
+        this.partsDecoding = null;
+        this.partsFailed = [];
         this.parts = null;
         this.partNames = [];
         this.partLevels = [];
@@ -292,8 +328,14 @@ export class RecordingPlayer {
         };
         this.gain.gain.value = plan.gain;
         const loop = this.loop;
-        // The parts in the recording's place when one is off or not as recorded (§8).
-        const parts = this.usesParts() ? this.parts! : null;
+        // The parts in the recording's place when one is off or not as recorded (§8). Not decoded
+        // yet (the first time, a second or two): the recording plays on meanwhile, and the page
+        // plays again from where it is once they are (onPartsDecoded) — MEASURED 2026-11-17: waiting
+        // for them left the recording silent for two seconds at the first part turned off.
+        if (this.usesParts() && !this.parts) {
+            void this.ensureParts();
+        }
+        const parts = this.usesParts() && this.parts ? this.parts : null;
         this.playingParts = parts !== null;
         if (plan.engine === 'resample') {
             const src = this.ctx.createBufferSource();
@@ -367,7 +409,8 @@ export class RecordingPlayer {
         gain.connect(limiter);
         limiter.connect(ctx.destination);
         // The parts as they sound now (§8): through a splitter and a gain each, as play does.
-        const parts = this.usesParts() ? this.parts! : null;
+        if (this.usesParts()) { await this.ensureParts(); }
+        const parts = this.usesParts() && this.parts ? this.parts : null;
         let into: AudioNode = gain;
         if (parts) {
             const split = ctx.createChannelSplitter(parts.numberOfChannels);

@@ -10092,6 +10092,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function applyRecParts() {
             renderRecParts();
             showPractice();
+            recReplayIfSwitched();
+        }
+        /** The parts' levels to the player; when that switches what sounds (the recording ⇄ its
+         *  parts), what plays goes on from here. */
+        function recReplayIfSwitched() {
             if (!recPlayer) return;
             if (!recPlayer.setPartLevels(recPartMix())) return;
             if (playClock && playBasis && playBasis.warp) practiceChanged(practice.speed);
@@ -10263,13 +10268,23 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const list = (m.parts || []).filter(p => p.bytes);
             const errors = {};
             for (const p of m.parts || []) if (p.error) errors[p.name] = p.error;
-            const r = await player.loadParts(list);
-            if (recording !== rec) return;
-            for (const f of r.failed) { const i = f.indexOf(':'); errors[f.slice(0, i)] = 'Cannot be decoded:' + f.slice(i + 1); }
-            rec.partsLoaded = r.names;
+            // (decoded when first played — RecordingPlayer.ensureParts; a part that will not decode is said then)
+            rec.partsLoaded = player.loadParts(list).slice();
             rec.partsError = errors;
+            player.onPartsDecoded = failed => {
+                if (recording !== rec) return;
+                for (const f of failed) { const i = f.indexOf(':'); errors[f.slice(0, i)] = 'Cannot be decoded:' + f.slice(i + 1); }
+                rec.partsLoaded = player.partsLoaded.slice();
+                renderRecParts();
+                sayRecPartErrors(errors);
+                // The recording played on while they were decoded: now the parts, from here.
+                recReplayIfSwitched();
+            };
             player.setPartLevels(recPartMix());
             renderRecParts();
+            sayRecPartErrors(errors);
+        }
+        function sayRecPartErrors(errors) {
             const bad = Object.keys(errors);
             if (bad.length > 0) recStatus('Parts not usable: ' + bad.map(n => n + ' (' + errors[n] + ')').join(', '));
         }
