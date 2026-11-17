@@ -6187,7 +6187,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
              instruments are notes too"): a status over the Play it speaks of, drawn as what sings.
              A click still opens the practice menu, where each voice has its own toggle and sign. -->
         <!-- Rewind (owner's request 2026-11-17): the A flag back to the top. -->
-        <button id="rewindBtn" type="button" title="The A flag back to the top (playing: plays from there)">⏪</button>
+        <button id="rewindBtn" type="button" title="The A flag back to the top (playing: plays from there)">⏮</button>
         <span class="play-wrap">
         <button id="playBtn" type="button" title="Play from the A flag (Space while stopped)">▶</button>
         <span id="voiceBadge" class="voice-badge" role="status" hidden aria-label="Voice"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="1.2" width="4" height="7.6" rx="2"/><path d="M3.6 7.4a4.4 4.4 0 0 0 8.8 0"/><path d="M8 11.8v2.6M5.6 14.4h4.8"/></svg></span>
