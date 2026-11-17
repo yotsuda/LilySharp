@@ -148,12 +148,10 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ### 1.1 第1291セッション（2026-11-18・YT-DELL2）
 
 base `c31fd4203`・開始時 full 17556 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17559（Lab `p1291` の `run1.trx`）。**オーナーの指示（2026-11-18）＝コードの包括レビュー・リファクタの余地・プレビュー更新の性能**。
-- **レビューの全文は Lab `sessions/p1291/review.md`**（性能 P1〜P10・リファクタ F1〜F7・行番号つき）。結論: 描画の本体（`GetSvg` → `IncrementalCompiler` → 差分ページ）は詰め切られていて、打鍵ごとの重い仕事は描画の周りにある（第1110 より後に入った todo・状態行・長さ・小節の箱）。数はコードを読んで数えた回数で、計測はしていない（静かな窓はオーナーが後で用意する）。
-- **直した 3 件（オーナーの承認・出力は同じ・網 `KeystrokeSideWorkTests` 5 本・毒 3 本でそれぞれ 1 本赤）**: ⑴ `lilysharp/todos` は @todo が 1 つも無いファイルで collect しない（`TodoIndex.Find` に places を遅延で渡す。それまで更新ごとに score の数だけフル collect）。拡張は描画の依頼を出してから訊く。⑵ ヘッダの長さと停止中の位置が読む音（`soundingNotes`）は `lilysharp/playback` の `SoundingOnly`＝2 回目の MIDI 書き出し（score に無いパートの一覧）をしない。拡張は文字が 300 ms 休んでから訊く（`soundingWait`・それまで更新ごと）。⑶ codeAction は診断パスを自分で回さず、Problems のパスと同じ 1 回を読む（`DocumentDiagnosticsOnce`＝展開後の木がキー・token も通す。それまでキャレット移動ごとに全 validator ＋フル collect）。
-- 終了時 full 17561 合格 / 1 失敗（同じ ReadmeSampleTests）/ skip 2 / 合計 17564（`run4.trx`）。
-- npm 1243 合格。⚠️ 拡張の 2 件（依頼の順・300 ms の待ち）は実物の VS Code で未確認。
-- **続けて 3 件（オーナーの承認）**: ⑷ P7＝`ChordRowInk` は system ごとに全コード名を走るのをやめ、行のコードを小節ごとに 1 回束ねる（`RowChordsByMeasure`・`e`…は commit を見よ）。プレビューの絵 1,152 冊（chords 行のある本 40）が前後でバイト同一（Lab `p1291/preview-{base,head}.txt`＝export の掃きは小節の箱を見ないので、プレビューの絵のハッシュで比べた）。毒 1 本赤。⑸ P5 の一部＝`scanState`・`abRanges`・`panelFolds` は変わったときだけ送る（`postIfChanged`・ページの再読み込みで忘れる）。⑹ F1＝全文を置き換えるコマンド 8 つ（Regroup・Convert Octaves・Remove String Numbers・Extract Phrase・section の key・Respell・Harmony／Singer Part）は `rewriteRequest` を通り、依頼の間に文字が変わっていたら何も変えずにそう言う（それまで待つ間の打鍵が消えた）。npm 1247 合格。
-- **次**: review.md の残り＝P4（`caretInfo` が描画の直前に MIDI 1 ＋ collect 2S）・P5 の残り（描画の依頼の前の `chordSpans`・`sendRecording`）・P6（webview の全体走査）・P7 の残り（小節の箱が fragment の外・R13⒠）・P8（歌い手／using の本のフル parse）・F2〜F7。P4・P6 は順位を計測で決めたい＝静かな窓の後。P9（最初の 1 打は待たずに送る）はオーナー判断。P10（`8fc8e2be1` との前後比較）は静かな窓で。⚠️ 拡張の変更（依頼の順・300 ms の待ち・`postIfChanged`・`rewriteRequest`）は実物の VS Code で未確認＝`MANUAL-CHECKS` に項目を足していない。
+- **レビューの全文は Lab `sessions/p1291/review.md`**（性能 P1〜P10・リファクタ F1〜F7・行番号つき）。結論: 描画の本体は詰め切られていて、打鍵ごとの重い仕事は描画の周り（第1110 より後に入った todo・状態行・長さ・小節の箱）。数は読んで数えた回数＝計測はしていない（静かな窓はオーナーが後で用意する）。
+- **直した 6 件（オーナーの承認・絵と答えは同じ）**: ⑴ `lilysharp/todos` は @todo の無いファイルで collect しない（`TodoIndex.Find` に places を遅延で）・拡張は描画の依頼の後に訊く。⑵ ヘッダの長さの音は `lilysharp/playback` の `SoundingOnly`（2 回目の MIDI 書き出しなし）・拡張は文字が 300 ms 休んでから訊く（`soundingWait`）。⑶ codeAction は診断を自分で回さず Problems のパスと同じ 1 回を読む（`DocumentDiagnosticsOnce`＝展開後の木がキー）。＝`0028b3439`・網 `KeystrokeSideWorkTests` 5 本・毒 3 本。⑷ P7＝`ChordRowInk` は行のコードを小節ごとに 1 回束ねる（`0bbf74e06`・プレビューの絵 1,152 冊がバイト同一＝Lab `p1291/preview-{base,head}.txt`。export の掃きは小節の箱を見ない・毒 1 本）。⑸ `scanState`・`abRanges`・`panelFolds` は変わったときだけ送る（`postIfChanged`）。⑹ F1＝全文を置き換えるコマンド 8 つは `rewriteRequest` を通り、依頼の間に文字が変わっていたら何も変えない（⑸⑹＝`985aa5e23`）。
+- 終了時 full 17561 合格 / 1 失敗（同じ）/ skip 2 / 合計 17564（`run4.trx`）・npm 1247 合格。⚠️ 拡張の変更は実物の VS Code で未確認・`MANUAL-CHECKS` に項目を足していない。
+- **次**: review.md の残り＝P4・P5 の残り・P6・P7 の残り・P8・F2〜F7。P4・P6 は順位を計測で決める＝静かな窓の後。P9 はオーナー判断・P10 は静かな窓で。
 
 ## 以下は第1290セッションの経緯
 
