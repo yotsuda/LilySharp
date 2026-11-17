@@ -408,7 +408,8 @@ public sealed class MidiExporter
     /// the singer's (<see cref="SungVoices.Swells"/>): from the hairpin's first note to the first
     /// level written after it, or two dynamics on where none follows. A hairpin is its PART's —
     /// every voice of the part follows it, as every voice follows the part's levels — and a
-    /// grand staff's hands share it as they share those (<see cref="ShareGrandStaffDynamics"/>).
+    /// grand staff's hands share it as they share those (<see cref="ShareGrandStaffDynamics"/>);
+    /// but where several voices write hairpins of their own, each plays its own (VoiceLines).
     /// The level written stays on the note (<see cref="MidiNote.WrittenVelocity"/>) for the
     /// singer, who swells inside a note too.
     /// </summary>
@@ -443,7 +444,7 @@ public sealed class MidiExporter
                 lines[g] = line = new List<int>();
             line.Add(i);
         }
-        foreach (var line in lines.Values)
+        foreach (var line in lines.Values.SelectMany(VoiceLines))
         {
             if (!line.Exists(i => track.Notes[i].Swell != 0))
                 continue;
@@ -458,6 +459,38 @@ public sealed class MidiExporter
                 if (struck != level)
                     track.Notes[order[k]] = notes[k] with { Velocity = struck, WrittenVelocity = level };
             }
+        }
+
+        // A part's (or a grand staff's) notes as the lines its hairpins are read on: one line when
+        // one voice writes hairpins — every voice follows it, as every voice follows the levels —
+        // and, where SEVERAL voices write their own, a line each, as a voice that writes its own
+        // dynamic at a moment plays its own (ShareSpanDynamics); a voice that writes none follows
+        // the first voice that does. MEASURED before (2026-11-17, Lab sessions/p1290/hpmidi/v2):
+        // `voice { c''4@mf@cresc d'' e'' f'' | g''1@f } { c'4@mf@decresc b a g | c'1@p }` was read
+        // as one line from the first swell of the moment, and the crescendo above sank with the
+        // decrescendo below, 86 82 78 74.
+        List<List<int>> VoiceLines(List<int> line)
+        {
+            var keys = new List<(string? Part, int Voice)>();
+            var swelling = new HashSet<(string? Part, int Voice)>();
+            foreach (int i in line)
+            {
+                var key = (track.Notes[i].Part, track.Notes[i].Voice);
+                if (!keys.Contains(key))
+                    keys.Add(key);
+                if (track.Notes[i].Swell != 0)
+                    swelling.Add(key);
+            }
+            if (swelling.Count < 2)
+                return [line];
+            var lead = keys.First(swelling.Contains);
+            var byKey = keys.Where(swelling.Contains).ToDictionary(k => k, _ => new List<int>());
+            foreach (int i in line)
+            {
+                var key = (track.Notes[i].Part, track.Notes[i].Voice);
+                byKey[swelling.Contains(key) ? key : lead].Add(i);
+            }
+            return byKey.Values.ToList();
         }
     }
 

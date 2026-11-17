@@ -29,7 +29,7 @@ namespace LilySharp.Tests.Midi;
 /// </summary>
 public class InstrumentHairpinMidiTests
 {
-    private const int P = (int)DynamicLevel.P, F = (int)DynamicLevel.F, Sfz = (int)DynamicLevel.SFZ;
+    private const int P = (int)DynamicLevel.P, F = (int)DynamicLevel.F, Sfz = (int)DynamicLevel.SFZ, Mf = (int)DynamicLevel.MF;
 
     private static List<MidiNote> Notes(string src, string part) =>
         new MidiExporter().Export(SyntaxTree.Parse(src)).Tracks
@@ -170,5 +170,19 @@ public class InstrumentHairpinMidiTests
         var v = Notes(OnePart("voice { c''4@cresc d'' e'' f'' | g''1@!cresc | } { c'2 c'2 | c'1 | }"), "fl");
         var lower = v.Where(n => n.Voice == 1).Select(n => n.Velocity).ToList();
         Assert.Equal(new[] { d, Along(d, d + 16, 2, 4), d + 16 }, lower);
+    }
+
+    /// <summary>Two voices writing hairpins of their own each play their own — as a voice that
+    /// writes its own dynamic at a moment plays its own. Until 2026-11-17 the part read them as one
+    /// line from the moment's first swell, and the crescendo above sank with the decrescendo below
+    /// (Lab sessions/p1290/hpmidi/v2).</summary>
+    [Fact]
+    public void TwoVoicesWritingTheirOwnHairpins_EachPlayItsOwn()
+    {
+        var notes = Notes(OnePart("voice { c''4@mf@cresc d'' e'' f'' | g''1@f | } { c'4@mf@decresc b a g | c'1@p | }"), "fl");
+        var upper = notes.Where(n => n.Voice == 0).Select(n => n.Velocity).ToList();
+        var lower = notes.Where(n => n.Voice == 1).Select(n => n.Velocity).ToList();
+        Assert.Equal(new[] { Mf, Along(Mf, F, 1, 4), Along(Mf, F, 2, 4), Along(Mf, F, 3, 4), F }, upper);
+        Assert.Equal(new[] { Mf, Along(Mf, P, 1, 4), Along(Mf, P, 2, 4), Along(Mf, P, 3, 4), P }, lower);
     }
 }

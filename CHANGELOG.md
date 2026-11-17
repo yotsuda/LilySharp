@@ -6,6 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Fixed: two voices with hairpins of their own followed one of them** (`[playback]`). In `voice { … } { … }`, a crescendo in the upper voice over a decrescendo in the lower one sounded both getting softer — the part read its hairpins as one. Where several voices write their own, each now plays its own; a voice that writes none follows the hairpin as before.
 - **Fixed: `lysc ly` split a chord row's bar on the score's beats, not the bar's own** (`[export]`). In a 4/4 score, a 6/8 section's dotted-quarter pickup `C G` went out as `c8 g4` and a 5/8 bar's `C G` as two equal halves; the page, the sound and the MusicXML put them on the bar's own beats (half a dotted quarter each; 3/8 then 1/4). The `.ly` now does too.
 - **The key in words over a score of tab** (`[engraving]`): "Key: D" over the first bar and each change, where every staff shows no signature — tab staves and one-line staves, chord rows aside — and now also over a one-line staff written alone (`score { staff m as lines 1 }`, which printed none).
 - **Fixed: a part written for a section's first bars only lost the chord rows' bar lines after it.** With a bass line added under a chord chart for its first bars, the bars the part leaves out had no bar line in the playback: the metronome stopped accenting them, and a recording played with the score rushed through them (the play position jumped). The part is padded with silence to the section's bars as before; the rows' bar lines now stand over the silence.
