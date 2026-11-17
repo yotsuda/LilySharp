@@ -43,6 +43,14 @@ describe('when the sounding notes are asked for', () => {
         const todos = extension.indexOf('void todoMarksOf(document).then(');
         assert.ok(svg > 0 && todos > svg);
     });
+
+    it('is the caret\'s status line\'s rule too: after an edit it waits for the text to rest, then asks', () => {
+        const caret = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'caretInfo.ts'), 'utf8');
+        const waits = caret.indexOf('soundingWait(lastEdit.get(uri), Date.now())');
+        const asks = caret.indexOf("sendRequest<CaretInfoResponse>('lilysharp/caretInfo'");
+        assert.ok(waits > 0 && asks > waits);
+        assert.match(caret, /onDidChangeTextDocument\(event => \{[\s\S]{0,200}?lastEdit\.set\(event\.document\.uri\.toString\(\), Date\.now\(\)\)/);
+    });
 });
 
 // The header's position while nothing plays (owner's request 2026-11-16): where Play would start.

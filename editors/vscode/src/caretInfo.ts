@@ -23,6 +23,7 @@
 import * as vscode from 'vscode';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import { CARET_DEBOUNCE_MS, Debouncer } from './auditionCore';
+import { soundingWait } from './playbackStart';
 
 export interface CaretInfoDeps {
     getClient: () => LanguageClient | undefined;
@@ -38,6 +39,12 @@ export function registerCaretInfo(context: vscode.ExtensionContext, deps: CaretI
     const item = vscode.window.createStatusBarItem('lilysharp.caretInfo', vscode.StatusBarAlignment.Left, 0);
     item.name = 'Lily# caret info';
     const wait = new Debouncer(CARET_DEBOUNCE_MS);
+    // When each document was last edited. After an edit the line is asked for once the text has
+    // rested (soundingWait, the header's notes' rule): on a note the server's answer is an export
+    // and two collects of the whole score, and asked 80 ms after every keystroke it ran right
+    // before that keystroke's render — MEASURED (session 1291, 59 books × 8 keystrokes): 12.8 ms
+    // beside a render of 5.3. A caret moved with no edit is asked as before.
+    const lastEdit = new Map<string, number>();
 
     const update = (editor: vscode.TextEditor | undefined) => {
         if (!editor || editor.document.languageId !== 'lilysharp' || !editor.selection.isEmpty) {
@@ -51,6 +58,14 @@ export function registerCaretInfo(context: vscode.ExtensionContext, deps: CaretI
             const doc = editor.document;
             const version = doc.version;
             const offset = doc.offsetAt(editor.selection.active);
+            const uri = doc.uri.toString();
+            for (let rest = soundingWait(lastEdit.get(uri), Date.now()); rest > 0;
+                rest = soundingWait(lastEdit.get(uri), Date.now())) {
+                await new Promise(r => setTimeout(r, rest));
+            }
+            // Edited or moved while it waited: that change asks for itself.
+            if (vscode.window.activeTextEditor !== editor || doc.version !== version
+                || doc.offsetAt(editor.selection.active) !== offset) { return; }
             let answer: CaretInfoResponse;
             try {
                 answer = await client.sendRequest<CaretInfoResponse>('lilysharp/caretInfo', {
@@ -77,5 +92,11 @@ export function registerCaretInfo(context: vscode.ExtensionContext, deps: CaretI
         item,
         vscode.window.onDidChangeTextEditorSelection(event => update(event.textEditor)),
         vscode.window.onDidChangeActiveTextEditor(editor => update(editor)),
+        vscode.workspace.onDidChangeTextDocument(event => {
+            if (event.document.languageId === 'lilysharp' && event.contentChanges.length > 0) {
+                lastEdit.set(event.document.uri.toString(), Date.now());
+            }
+        }),
+        vscode.workspace.onDidCloseTextDocument(doc => lastEdit.delete(doc.uri.toString())),
     );
 }
