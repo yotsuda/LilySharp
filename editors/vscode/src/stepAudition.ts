@@ -72,6 +72,9 @@ interface StepResponse {
     Velocity?: number;
     /** The playback part whose fader goes on them (an @or rotation: "NAME (chords)"), or null. */
     Part?: string | null;
+    /** Play the caret's bar once the edits are in (an @or turned by the octave pair): with the
+     *  recording when one is beside the chart. */
+    PlayBar?: boolean;
 }
 
 interface AuditionAtResponse {
@@ -225,6 +228,13 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
                 singerLanded.set(uri, `${caret.line}:with:${JSON.stringify(line.sing)}`);
                 void deps.hearSinger(line.voice);
             }
+        }
+        // An @or turned by the octave pair: its bar, with the recording — Play Current Measure on the
+        // text as it now is (fresh: the page's note list is of the text before the turn). Asked for
+        // as Alt+M is, so the audition setting has no say.
+        if (response.PlayBar && response.Edits.length > 0) {
+            await vscode.commands.executeCommand('lilysharp.playMeasureAtCursor', { fresh: true });
+            return;
         }
         if (auditionEnabled() && response.Pitches.length > 0) {
             const uri = doc.uri.toString();

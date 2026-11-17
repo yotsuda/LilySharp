@@ -250,7 +250,7 @@ public static partial class NoteStepper
     public sealed record StepResult(
         bool Fallback, ImmutableArray<Edit> Edits, string? Message,
         ImmutableArray<int> Pitches, int Timbre, int Program = -1, OctaveMode? ConvertOctaves = null,
-        bool Strum = false, bool Apart = false, int Velocity = -1, string? Part = null);
+        bool Strum = false, bool Apart = false, int Velocity = -1, string? Part = null, bool PlayBar = false);
 
     /// <summary>What the caret is on and what it sounds (MIDI, lowest first), with the timbre,
     /// the program and the strum as <see cref="StepResult"/> carries them.</summary>
@@ -306,9 +306,13 @@ public static partial class NoteStepper
     {
         int dir = direction >= 0 ? 1 : -1;
         // On a chords-row symbol with an @or: its candidates rotate into its place (NoteStepper.Or).
-        if (semitone && selections is [var (orAt, orTo)] && orAt == orTo
+        // The semitone pair sounds the chord that came forward alone; the octave pair plays its bar,
+        // with the recording when one is beside the chart (PlayBar: the editor's Play Current Measure
+        // on the new text) — owner's decision 2026-11-17: compare chords quickly, then check one in
+        // the music. On such a symbol the octave pair no longer walks the key's sevenths.
+        if (selections is [var (orAt, orTo)] && orAt == orTo
             && OrRotateStep(text, tree, orAt, dir, expand, includeStretch) is { } rotated)
-            return rotated;
+            return semitone ? rotated : rotated with { Pitches = [], PlayBar = true };
         // On the shape of an @diagram(SHAPE) over a <…> chord: the other fingerings of its notes.
         if (semitone && selections is [var (caretAt, caretTo)] && caretAt == caretTo
             && DiagramFingeringStep(text, tree, caretAt, -dir) is { } fingering)

@@ -64,6 +64,7 @@ public sealed partial class LilySharpLanguageServer
                 Apart = result.Apart,
                 Velocity = result.Velocity,
                 Part = result.Part,
+                PlayBar = result.PlayBar,
             };
         }
         catch (Exception ex)

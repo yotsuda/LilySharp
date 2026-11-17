@@ -553,6 +553,10 @@ settled by ear:
   `F@or(Bm Dm)` → `Bm@or(Dm F)` — and sounds that chord alone; **Ctrl+Shift+Down** turns the
   other way (`Dm@or(F Bm)`). On a symbol with an `@or` this comes before the shape step the
   keys take on a chord symbol. A shape written on the symbol goes with the chord it was.
+- **Ctrl+Shift+PageUp / PageDown** turns the candidates the same way and plays the chord's bar
+  instead: with a recording beside the chart, the recording's bar and the row together — the
+  chord heard in the music; without one, the row's bar. (On a symbol with an `@or` this pair no
+  longer walks the key's seventh chords.)
 - **Alt+M** plays the bar: with a recording beside the chart, the recording's bar and the
   part the caret is in, together; without one, the part alone.
 - The quick fixes **Keep F** and **Choose Bm** settle it and delete the `@or`; deleting the

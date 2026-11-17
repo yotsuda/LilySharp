@@ -1457,6 +1457,10 @@ public class StepResponse
     /// <summary>The playback part whose fader the preview puts on the pitches (a chords row's
     /// "NAME (chords)"), or null.</summary>
     public string? Part { get; set; }
+    /// <summary>Play the bar the caret is in once the edits are applied (Play Current Measure, with
+    /// the recording when one is beside the chart) instead of the pitches — an <c>@or</c>'s rotation by
+    /// the octave pair (<c>NoteStepper.StepResult.PlayBar</c>).</summary>
+    public bool PlayBar { get; set; }
 }
 
 /// <summary>Parameters for lilysharp/auditionAt: the caret as a 0-based character offset.</summary>

@@ -171,6 +171,27 @@ public class OrAnnotationTests
         Assert.Contains("D | D | A | Bm@or(G/B) | break", ApplyAll(text, step.Edits));
     }
 
+    /// <summary>The octave pair (Ctrl+Shift+PageUp / PageDown) turns the candidates the same way and
+    /// asks for the bar to be played (with the recording, the editor's part) instead of the chord
+    /// alone — owner's decision 2026-11-17; it no longer walks the key's sevenths there.</summary>
+    [Theory]
+    [InlineData(+1, "Bm@or(Dm F)")]
+    [InlineData(-1, "Dm@or(F Bm)")]
+    public void TheOctavePair_Rotates_AndPlaysTheBar(int dir, string turned)
+    {
+        string text = Book("F@or(Bm Dm) | C | G | Am |");
+        int caret = text.IndexOf("F@or");
+        var step = NoteStepper.Step(text, SyntaxTree.Parse(text), [(caret, caret)], dir, semitone: false);
+        Assert.True(step.PlayBar);
+        Assert.Empty(step.Pitches);
+        Assert.Contains("{ " + turned + " | C", ApplyAll(text, step.Edits));
+        // …and a symbol with no @or still walks the key's sevenths.
+        string plain = Book("F | C | G | Am |");
+        var walk = NoteStepper.Step(plain, SyntaxTree.Parse(plain), [(plain.IndexOf("F |"), plain.IndexOf("F |"))], +1, semitone: false);
+        Assert.False(walk.PlayBar);
+        Assert.Contains("G7", ApplyAll(plain, walk.Edits));
+    }
+
     [Fact]
     public void RemoveAll_TakesEveryOr_AndLeavesTheChordsAndTheTodos()
     {

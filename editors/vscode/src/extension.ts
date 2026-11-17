@@ -1056,8 +1056,10 @@ export function activate(context: vscode.ExtensionContext) {
         // whole measure the caret is in. The preview webview is the synth.
         vscode.commands.registerCommand('lilysharp.playNoteAtCursor', () =>
             playAtCursor(context, 'note')),
-        vscode.commands.registerCommand('lilysharp.playMeasureAtCursor', () =>
-            playAtCursor(context, 'measure')),
+        // (fresh: the text just changed under the caret — an @or turned by Ctrl+Shift+PageUp — so the
+        // page's note list is the old text's and is fetched again)
+        vscode.commands.registerCommand('lilysharp.playMeasureAtCursor', (opts?: { fresh?: boolean }) =>
+            playAtCursor(context, 'measure', !!(opts && opts.fresh))),
         // Preview context menu (menus/webview/context). Each one is a thin relay:
         // the state these act on — the right-clicked note, the zoom, the synth —
         // all lives in the webview, so the command only names the action.
@@ -1563,7 +1565,7 @@ let lastPlayNoteFire = 0;
  * measure the caret sits in (mode 'measure'). The synth lives in the preview, so
  * if no preview is open this first press only opens it — press again to play.
  */
-function playAtCursor(context: vscode.ExtensionContext, mode: 'note' | 'measure') {
+function playAtCursor(context: vscode.ExtensionContext, mode: 'note' | 'measure', fresh = false) {
     const editor = vscode.window.activeTextEditor;
     if (!editor || editor.document.languageId !== 'lilysharp') { return; }
     const doc = editor.document;
@@ -1575,7 +1577,7 @@ function playAtCursor(context: vscode.ExtensionContext, mode: 'note' | 'measure'
     const offset = doc.offsetAt(editor.selection.active);
     if (mode === 'measure') {
         const [rangeStart, rangeEnd] = auditionBarRange(doc.getText(), offset);
-        panel.webview.postMessage({ type: 'playAtCursor', mode, rangeStart, rangeEnd });
+        panel.webview.postMessage({ type: 'playAtCursor', mode, rangeStart, rangeEnd, fresh });
     } else {
         const now = Date.now();
         const gapMs = now - lastPlayNoteFire;
@@ -11479,12 +11481,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     // The synth needs a current note list. If it's stale (an edit
                     // cleared it) or absent, fetch it and play once it arrives — but
                     // only one fetch in flight, so a held key's repeats don't pile up.
-                    if (playbackNotes) {
+                    // fresh (an @or turned by Ctrl+Shift+PageUp): the text changed under it, so the
+                    // list in hand — or one already asked for — is the old text's: ask again.
+                    if (playbackNotes && !message.fresh) {
                         runAudition(message);
                     } else {
                         const inFlight = !!pendingAudition;
                         pendingAudition = message;
-                        if (!inFlight) { requestPlay(); auditionSeq = playSeq; }
+                        if (!inFlight || message.fresh) { requestPlay(); auditionSeq = playSeq; }
                     }
                     break;
                 }
