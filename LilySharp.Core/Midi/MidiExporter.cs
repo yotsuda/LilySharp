@@ -209,6 +209,11 @@ public sealed class MidiExporter
     /// </remarks>
     private int Strike(DynamicSyntax dynamic)
     {
+        // A percent repeat's repetition sounds its bars' notes and none of their dynamics: the
+        // page draws the sign there and prints none, and a hairpin runs on through it (owner's
+        // decision 2026-11-15, the MusicXML's HandleDynamicText) — ReplayPercentBody.
+        if (_percentRepeating > 0)
+            return _velocity;
         switch (dynamic.Level)
         {
             case DynamicLevel.SF or DynamicLevel.SFZ or DynamicLevel.FZ or DynamicLevel.SFFZ or DynamicLevel.RF or DynamicLevel.RFZ:
@@ -3217,6 +3222,9 @@ public sealed class MidiExporter
         }
     }
 
+    /// <summary>How deep the walk is in a percent repeat's repetition (<see cref="ReplayPercentBody"/>).</summary>
+    private int _percentRepeating;
+
     private void ReplayPercentBody(MidiTrack track, MidiTrack conductorTrack, PercentMarkSyntax mark)
     {
         var (body, ordinals, frame) = _percentFrames.Peek();
@@ -3233,7 +3241,23 @@ public sealed class MidiExporter
         _sourceOrdinals = restored;
         (_currentOctave, _currentNoteName, _defaultDuration) = frame;
         int start = _currentTick, first = track.Notes.Count, firstRest = track.TextMarks.Count;
-        ProcessSequence(body, track, conductorTrack);
+        // None of the bars' dynamics sound again (Strike), nor do their hairpins start or end
+        // again: the page prints the sign and no dynamic there, and a crescendo runs on through
+        // it (owner's decision 2026-11-15). MEASURED before (2026-11-17, Lab sessions/p1290/pctxml/q2):
+        // `c''4@p d'' e''@cresc f'' | % | g''1@f` played the repeated bar 78 82, then 70 — the
+        // crescendo started again from its p on the third beat — then 82 and f.
+        _percentRepeating++;
+        try
+        {
+            ProcessSequence(body, track, conductorTrack);
+        }
+        finally
+        {
+            _percentRepeating--;
+        }
+        for (int i = first; i < track.Notes.Count; i++)
+            if (track.Notes[i].Swell != 0 || track.Notes[i].SwellEnds)
+                track.Notes[i] = track.Notes[i] with { Swell = 0, SwellEnds = false };
         // The bars' rests are not lit again: the mark is, for the whole of them (its lights).
         track.TextMarks.RemoveRange(firstRest, track.TextMarks.Count - firstRest);
         // Each note the mark sounds carries it (MidiNote.Percent): the preview lights the mark, not

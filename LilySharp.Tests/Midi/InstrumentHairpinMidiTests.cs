@@ -172,6 +172,24 @@ public class InstrumentHairpinMidiTests
         Assert.Equal(new[] { d, Along(d, d + 16, 2, 4), d + 16 }, lower);
     }
 
+    /// <summary>A percent repeat's repetition sounds none of its bars' dynamics — the page prints
+    /// the sign and none there, and the crescendo runs on through it (owner's decision 2026-11-15,
+    /// as the MusicXML writes it). Until 2026-11-17 the repeated bar started the crescendo again from
+    /// its p on its third beat: 78 82 70 82 (Lab sessions/p1290/pctxml/q2).</summary>
+    [Fact]
+    public void APercentRepetition_SoundsNoneOfItsBarsDynamics_TheCrescendoRunsThrough()
+    {
+        var v = Velocities(OnePart("c''4@p d'' e''@cresc f'' | % | g''1@f |"), "fl");
+        Assert.Equal(9, v.Count);
+        Assert.Equal(new[] { P, P }, v.Take(2));
+        for (int i = 2; i < 8; i++)
+            Assert.True(v[i + 1] > v[i], $"note {i + 1} ({v[i + 1]}) after note {i} ({v[i]}): {string.Join(" ", v)}");
+        Assert.Equal(F, v[8]);
+        // A bar whose hairpin closes inside it: its repetition stands at the level reached.
+        var closed = Velocities(OnePart("c''4@p@cresc d'' e'' f''@!cresc | % | g''1@f |"), "fl");
+        Assert.Equal(Enumerable.Repeat(closed[3], 4), closed.Skip(4).Take(4));
+    }
+
     /// <summary>Two voices writing hairpins of their own each play their own — as a voice that
     /// writes its own dynamic at a moment plays its own. Until 2026-11-17 the part read them as one
     /// line from the moment's first swell, and the crescendo above sank with the decrescendo below
