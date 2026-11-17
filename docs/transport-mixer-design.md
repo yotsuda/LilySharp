@@ -77,3 +77,11 @@
 - グループ（`.mgroup[data-fold]`）: **Tempo**（Tempo・Metronome・Count-in）、**Loop**（A-B・Repeat・Ranges）、**Score**、**Recording**（録音があるときだけ）。見出しの名前（`.mfold`・▾/▸）を押すと開閉し、畳むと `.mbody` だけ隠れて見出しの All・フェーダーは使える。開閉はページの状態（`vscode.setState` の `folds`）に覚える。
 - **畳んだときの 1 行**（オーナー要望 2026-11-17「省略表示したとき、重要なボタンだけ一行で」「オクターブだけ省略した状態でも出して」）: Score と Recording は見出しがそのまま（All・フェーダー）。Tempo は畳むと見出しにテンポのスライダーと値・Metronome・Count-in、Loop は A-B・Repeat（`.mmini`・開いているときは出さない）。Speed and pitch は畳んだ行にオクターブの −・値・+（`.moct`）。Speed and pitch と録音の状態の行は Recording の畳まれる部分の外に置き、Recording を畳んでも出る（オーナー要望 2026-11-17。畳むと隠れるのは録音のパートの行だけ）。どれも中の本物の写し（`data-mini`＝押す・動かすと本物を押す・動かす、`data-mini-text`＝本物の文字）で、状態は `syncMinis` が本物から写す（`showPractice` と `showMixerHead` の後）。Speed and pitch の行の中のボタンは `preventDefault` で開閉を起こさない。パネルの最小幅は画面を超えない（`min(400px, 100vw - 16px)`）、畳んだ見出しの名前は幅を詰め、狭ければ折り返す。
 - 実物の VS Code（Lab `p1289/e2e/cdp-mixer.mjs`）で、ミキサーの前の確認すべてが 1 つのパネルで通り、Tempo と Loop を畳むと高さが 33・37 px になり状態に `{tempo: true, loop: true}` が残ること、畳んだ行の Metronome・A-B・テンポのスライダー（80%）が本物を動かすこと、Speed and pitch を閉じたままオクターブの + で +1 になること、を確かめた。
+
+## 7. Shift+クリックで B（第1289）
+
+オーナー（2026-11-17）:「プレビューの楽譜の小節を shift+click したら B の旗を配置するのはどうかな」。小節の Shift+クリックは楽譜の上での範囲選択（2026-10-25 の要望）に使っていたが、オーナー決定で「現在の範囲選択の操作はサポートしないことにする。エディタで範囲選択できれば十分だ」。
+
+- 小節（または音符）の Shift+クリック＝その小節に B（`setB`）。A-B はオンになる。A より前なら A と B が入れ替わる（旗のドラッグと同じ）。鳴らしている途中なら今の位置から続ける（`setAb` → `replayIfPlaying`）。クリックは今までどおり A。
+- 楽譜の Shift+クリック・Shift+ドラッグでの範囲選択（`extendSelectionToBar`・Shift+ドラッグの処理）は外した。Shift を押したままの押下は文字の選択を起こさない（`preventDefault`）。
+- 実物の VS Code（Lab `p1289/e2e/cdp-shiftb.mjs`）で、m2 をクリック → A=2、m5 を Shift+クリック → B=5・A-B オン、m7 → B=7、m0 → A=0・B=2、楽譜の選択は起きない、を確かめた。

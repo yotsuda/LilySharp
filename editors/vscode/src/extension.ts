@@ -6280,7 +6280,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         <div class="mgroup" data-fold="loop">
             <div class="mhead"><button type="button" class="mfold mtitle" aria-expanded="true">Loop</button><span class="mmini"><button type="button" class="toggle" data-mini="abBtn" aria-pressed="false">A-B</button><button type="button" class="toggle" data-mini="loopBtn" aria-pressed="false">Repeat</button></span></div>
             <div class="mbody">
-                <div class="prow"><span class="plbl">A-B</span><span class="tempo"><button type="button" id="abBtn" class="toggle" aria-pressed="false" title="Play the bars A to B (as printed) — from the editor's caret bar, or the selected bars, at first">Off</button><span id="abFields" hidden><label class="abnum">A <input type="number" id="abFromNum" min="0" step="1" aria-label="A: the first bar"></label><label class="abnum">B <input type="number" id="abToNum" min="0" step="1" aria-label="B: the last bar"></label><span id="abInfo" class="tval"></span></span></span></div>
+                <div class="prow"><span class="plbl">A-B</span><span class="tempo"><button type="button" id="abBtn" class="toggle" aria-pressed="false" title="Play the bars A to B (as printed) — a click on a bar sets A, Shift+click sets B">Off</button><span id="abFields" hidden><label class="abnum">A <input type="number" id="abFromNum" min="0" step="1" aria-label="A: the first bar"></label><label class="abnum">B <input type="number" id="abToNum" min="0" step="1" aria-label="B: the last bar"></label><span id="abInfo" class="tval"></span></span></span></div>
                 <div class="prow"><span class="plbl">Repeat</span><button type="button" id="loopBtn" class="toggle" aria-pressed="false" title="Play round and round: the bars A to B when A-B is on, else the whole score as it plays">Off</button></div>
                 <div class="prow"><span class="plbl" title="Kept A-B ranges: click to play one, Shift+click to keep the A-B shown, double-click to name">Ranges</span><span id="abStrips" class="ab-strips"></span></div>
             </div>
@@ -7359,14 +7359,6 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 }
             }
             return lo >= 0 ? [lo, hi] : (isNaN(start) ? null : [start, start]);
-        }
-        // Extends the selection from the anchor to a bar: through its last note when the bar
-        // lies after the anchor, from its first when before.
-        function extendSelectionToBar(r) {
-            const range = barNoteRange(r);
-            if (!range) return;
-            if (aiAnchorPos < 0) aiAnchorPos = range[0];
-            aiSetSelection(aiAnchorPos, range[1] >= aiAnchorPos ? range[1] : range[0]);
         }
         function barStaffAt(clientX, clientY) {
             let best = null, bestDist = Infinity;
@@ -9501,6 +9493,15 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (replay) replayIfPlaying();
             askStoppedPosition();
         }
+        /** The B flag to bar m — a bar Shift+clicked (owner's decision 2026-11-17, docs/transport-mixer-design.md
+         *  §7): A-B turns on; before A, the two change places (as a flag dragged past the other). */
+        function setB(m) {
+            const last = Math.max(0, abBars().length - 1);
+            m = Math.max(0, Math.min(m, last));
+            abOn = true;
+            if (m < abFrom) setAb(m, abFrom); else setAb(abFrom, m);
+            askStoppedPosition();
+        }
         function drawAbFlag(letter, rect, atEnd) {
             const x = parseFloat(rect.getAttribute('x')) + (atEnd ? parseFloat(rect.getAttribute('width')) : 0);
             const y = parseFloat(rect.getAttribute('y')), h = parseFloat(rect.getAttribute('height'));
@@ -11591,51 +11592,23 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             return clickTargetOf(e.target, () => document.elementsFromPoint(x, y), x, y);
         };
 
-        // Shift+drag across bars selects them (owner's request 2026-10-25). A plain drag still
-        // scrolls the sheet (installDragScroll leaves a shifted press alone); the click a
-        // Shift+drag ends with is swallowed, so it does not extend the selection once more.
-        let shiftDrag = null, shiftDragged = false;
+        // Shift+click on a bar places the B flag (owner's decision 2026-11-17, docs/transport-mixer-design.md
+        // §7): the score no longer selects by Shift+click or Shift+drag — the editor selects. A shifted
+        // press over the sheet selects no text.
         svgContainer.addEventListener('pointerdown', (e) => {
-            shiftDragged = false;
-            shiftDrag = null;
             if (e.pointerType !== 'mouse' || e.button !== 0 || !e.shiftKey) return;
             const t = noteUnder(e);
-            const pos = t && t.hasAttribute && t.hasAttribute('data-pos') ? parseInt(t.getAttribute('data-pos'), 10) : NaN;
-            const bar = barStaffAt(e.clientX, e.clientY);
-            const range = !isNaN(pos) ? [pos, pos] : bar ? barNoteRange(bar) : null;
-            if (!range) return;
-            e.preventDefault();   // no native text selection over the sheet
-            shiftDrag = { bar, range };
+            if ((t && t.hasAttribute && t.hasAttribute('data-pos')) || barStaffAt(e.clientX, e.clientY)) e.preventDefault();
         });
-        svgContainer.addEventListener('pointermove', (e) => {
-            if (!shiftDrag || !(e.buttons & 1)) return;
-            const cur = barStaffAt(e.clientX, e.clientY);
-            if (!cur || cur === shiftDrag.bar) return;
-            const r = barNoteRange(cur);
-            if (!r) return;
-            shiftDragged = true;
-            const forward = r[1] >= shiftDrag.range[0];
-            aiAnchorPos = forward ? shiftDrag.range[0] : shiftDrag.range[1];
-            aiSetSelection(aiAnchorPos, forward ? r[1] : r[0]);
-        });
-        window.addEventListener('pointerup', () => { shiftDrag = null; });
-        document.addEventListener('click', (e) => {
-            if (!shiftDragged) return;
-            shiftDragged = false;
-            e.stopPropagation();
-            e.preventDefault();
-        }, true);
 
         document.addEventListener('click', (e) => {
             const target = noteUnder(e);
             if (target && target.hasAttribute && target.hasAttribute('data-pos')) {
                 const pos = parseInt(target.getAttribute('data-pos'), 10);
-                // M3: shift-click extends a score selection from the anchor — it never
-                // seeks/jumps. A prior plain click set the anchor; fall back to this
-                // note if none is set yet.
+                // Shift+click: the B flag to its bar (§7) — it never seeks or jumps.
                 if (e.shiftKey) {
-                    if (aiAnchorPos < 0) { aiAnchorPos = pos; }
-                    aiSetSelection(aiAnchorPos, pos);
+                    const b = barStaffAt(e.clientX, e.clientY); const m = b ? measureOfStaffBox(b) : -1;
+                    if (m >= 0) setB(m);
                     return;
                 }
                 // Plain click: this note becomes the anchor; any prior score
@@ -11652,9 +11625,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 vscode.postMessage({ type: 'jumpToPosition', position: pos });
             } else if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey
                 && target && svgContainer.contains(target) && barStaffAt(e.clientX, e.clientY)) {
-                // Shift+click on a bar extends the selection to the whole bar (owner's request
-                // 2026-10-25: several bars selectable on the score, AI or not).
-                extendSelectionToBar(barStaffAt(e.clientX, e.clientY));
+                // Shift+click on a bar: the B flag there (owner's decision 2026-11-17, §7).
+                { const m = measureOfStaffBox(barStaffAt(e.clientX, e.clientY)); if (m >= 0) setB(m); }
             } else if (!e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey
                 && target && svgContainer.contains(target) && barStaffAt(e.clientX, e.clientY)) {
                 // A bar: its first note's place in the editor — or, while playing, the
