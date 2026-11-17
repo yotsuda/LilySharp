@@ -74,7 +74,14 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /const c = loopRound > 0 \? counted\(\[\], 0, spanStart\) : null;\s*loopGap = c && c\.lead > 0 \? c\.lead : 0;/);
         // ...and the voice follows the stretch and its rounds (docs/singing-design.md §5).
         // (The recording beside a chart, on but not lined up with the score, plays alone instead.)
-        assert.match(html, /if \(loopOn\) \{[^\n]*\n[^\n]*\n\s*const rounds = looped\(list\);\s*voicePlan = loopVoicePlan\(\);\s*if \(recordingAlone\(\)\) break;\s*startPlayback\(rounds, 0, false, false, loopGap, spanStart\);/);
+        assert.match(html, /if \(loopOn\) \{[^\n]*\n[^\n]*\n\s*const rounds = looped\(list\);\s*voicePlan = loopVoicePlan\(\);\s*if \(recordingAlone\(\)\) break;/);
+        assert.match(html, /\s*startPlayback\(rounds, 0, false, false, loopGap, spanStart\);\s*break;/);
+        // Repeat on, A-B off: the first round from the A flag, its own count-in before it (owner's
+        // report 2026-11-17: it started from the top); nothing sung before A, the header at A meanwhile.
+        assert.match(html, /if \(!span && startBar > 0\) \{[\s\S]{0,400}?const at = barStartIn\(list, beats, startBar\);/);
+        assert.match(html, /const music = window\.LysSynth\.fromOffset\(rounds, entry\);/);
+        assert.match(html, /const from = Math\.max\(listTime, voicePlan\.entry \|\| 0\);/);
+        assert.match(html, /if \(loopList && lt < loopEntry\) return \{ tau: Math\.max\(0, loopEntry - countInFix\), counting: null \};/);
         assert.match(html, /function loopVoicePlan\(\) \{ return \{ pieces: spanPieces, rounds: loopRoundCount, gap: loopGap \}; \}/);
         assert.match(html, /voicePlan = \{ pieces: spanPieces, rounds: 1 \};\s*if \(recordingAlone\(\)\) break;\s*const c = counted\(list, 0, spanStart\);/);
         assert.match(html, /else startPlayback\(list, 0, false, false, 0, spanStart\);/);
@@ -161,7 +168,7 @@ describe('the preview\'s Range panel', () => {
             return html.slice(at, html.indexOf('\n        }', at) + '\n        }'.length);
         };
         const context = vm.createContext({
-            playClock: () => 3, playOffset: 1, countInFix: 0, lastSpan: undefined, spanStart: 0, loopList: null, loopRound: 0, loopGap: 0,
+            playClock: () => 3, playOffset: 1, countInFix: 0, lastSpan: undefined, spanStart: 0, loopList: null, loopRound: 0, loopGap: 0, loopEntry: 0,
             playBasis: { warp: null, speed: 0.5 }, practice: { speed: 0.5 }, recPlayer: null,
             window: { LysSynth: { unwarpTime: (_w: unknown, u: number) => u * 10, loopPlace } },
         });
