@@ -160,6 +160,11 @@ describe('the preview\'s Range panel', () => {
         assert.match(pause, /startPlayback\(p\.notes, p\.at, false, false, p\.countFix, p\.origin\);/);
         assert.match(pause, /notes: playingNotes, at: Math\.max\(0, playOffset \+ playClock\(\)\), origin: playOrigin,/);
         assert.match(html, /function playingNow\(\) \{ return !document\.getElementById\('stopBtn'\)\.disabled && !paused; \}/);
+        // A soloed line is heard though muted — its own mute, its group's All off (owner's decision
+        // 2026-11-17: S is "listen to this").
+        assert.match(html, /out\.muted = practice\.muted\.filter\(n => !solo\.has\('part:' \+ n\)\)/);
+        assert.match(html, /out\[name\] = \(soloParts \? !solo\.has\('rec:' \+ name\) : recPartsOff\.includes\(name\)\) \? 0 : levelIn\(recPartLevels, name\);/);
+        assert.match(html, /return !!\(\(recOn \|\| recSoloed\(\)\) && recording && recording\.ready && recordingPlayer\(\)\);/);
         // The practice panel's folds are kept per file; a file's first opening has every group folded
         // (owner's requests 2026-11-17).
         assert.match(html, /practiceBtn\.setAttribute\('aria-expanded', 'true'\);[\s\S]{0,300}applyFolds\(\);/);

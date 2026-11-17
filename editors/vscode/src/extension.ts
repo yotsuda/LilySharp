@@ -10015,11 +10015,19 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const parts = (rawParts || (lastPartsMessage && (lastPartsMessage.parts || []).concat(lastPartsMessage.extra || [])) || []).filter(Boolean);
             const voices = menuVoiceKeys || [];
             if (any) {
-                out.muted = practice.muted.concat(parts.filter(n => !heard('part:' + n) && !practice.muted.includes(n)));
-                out.extraOn = practice.extraOn.filter(n => heard('part:' + n));
+                // A soloed line is HEARD — its own mute, its group's All off, an extra the score leaves
+                // out, all aside (owner's decision 2026-11-17: S is "listen to this"; until then a line
+                // muted by the All stayed silent soloed). The mute itself is kept: S off, it is back.
+                const extras = rawExtra || (lastPartsMessage && lastPartsMessage.extra) || [];
+                out.muted = practice.muted.filter(n => !solo.has('part:' + n))
+                    .concat(parts.filter(n => !heard('part:' + n) && !practice.muted.includes(n)));
+                out.extraOn = practice.extraOn.filter(n => heard('part:' + n))
+                    .concat(extras.filter(n => solo.has('part:' + n) && !practice.extraOn.includes(n)));
                 out.instrumentsOn = practice.instrumentsOn.filter(n => heard('part:' + n));
-                out.voicesOff = practice.voicesOff.concat(voices.filter(k => !heard('voice:' + k) && !practice.voicesOff.includes(k)));
-                out.voicesOn = practice.voicesOn.filter(k => heard('voice:' + k));
+                out.voicesOff = practice.voicesOff.filter(k => !solo.has('voice:' + k))
+                    .concat(voices.filter(k => !heard('voice:' + k) && !practice.voicesOff.includes(k)));
+                out.voicesOn = practice.voicesOn.filter(k => heard('voice:' + k))
+                    .concat(voices.filter(k => solo.has('voice:' + k) && !practice.voicesOn.includes(k)));
             }
             if (scoreLevel !== 1) {
                 out.levels = {};
@@ -10618,8 +10626,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function recPartMix() {
             const out = {};
             // (soloed lines: the parts not soloed silent)
+            // …and a soloed part sounds though it is off (S is "listen to this", owner's decision 2026-11-17)
             const soloParts = recSoloed();
-            for (const name of (recording && recording.parts) || []) out[name] = recPartsOff.includes(name) || (soloParts && !solo.has('rec:' + name)) ? 0 : levelIn(recPartLevels, name);
+            for (const name of (recording && recording.parts) || [])
+                out[name] = (soloParts ? !solo.has('rec:' + name) : recPartsOff.includes(name)) ? 0 : levelIn(recPartLevels, name);
             return out;
         }
         /** A part turned on or off, or its fader moved: between parts the gains change at once;
@@ -10727,7 +10737,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
         /** Whether the recording sounds with the next Play: on, and loaded. */
         function recordingAlong() {
-            return !!(recOn && recording && recording.ready && recordingPlayer());
+            // (on — or one of its parts soloed: a soloed line is heard with its group off, owner's decision 2026-11-17)
+            return !!((recOn || recSoloed()) && recording && recording.ready && recordingPlayer());
         }
         /** The score's bars on the recording's (LysSynth.timeWarp), or null: the recording off or
          *  not loaded, or the two not lined up. */
