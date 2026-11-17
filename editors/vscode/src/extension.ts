@@ -8324,7 +8324,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 if (!voicePlan.pieces) { end = Math.max(end, countInFix + seconds); }
                 else {
                     const length = voicePlan.pieces.reduce((s, p) => s + (p[1] - p[0]), 0);
-                    end = Math.max(end, countInFix + Math.min(seconds, length) * Math.max(1, voicePlan.rounds || 1));
+                    const rounds = Math.max(1, voicePlan.rounds || 1);
+                    end = Math.max(end, countInFix + Math.min(seconds, length) * rounds + (voicePlan.gap || 0) * (rounds - 1));
                 }
             }
             return end;
@@ -8340,7 +8341,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             for (const key of sounding) {
                 const v = voices.get(key);
                 const lead = v.lead || 0;
-                const cues = window.LysSynth.voiceCues(listTime, countInFix, voicePlan.pieces, voicePlan.rounds, v.buffer.duration - lead);
+                const cues = window.LysSynth.voiceCues(listTime, countInFix, voicePlan.pieces, voicePlan.rounds, v.buffer.duration - lead, voicePlan.gap || 0);
                 // The menu's fader for the voice: a gain of its own before the voices' output.
                 const level = levelIn(eff().voiceLevels, key);
                 let out = voiceOutput(ctx);
@@ -8591,9 +8592,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
         function playbackScoreSeconds() {
             if (playClock) {
-                let tau = playOffset + playClock() - countInFix;
+                // (a loop's count-in before a round shows the round's start, as the first count-in does)
+                const tau = lastSpan !== undefined && loopList ? placeNow().tau : playOffset + playClock() - countInFix;
                 const origin = lastSpan === undefined ? 0 : spanStart;
-                if (lastSpan !== undefined && loopList && loopRound > 0 && tau > 0) tau %= loopRound;
                 const basis = playBasis || { warp: null, speed: practice.speed };
                 const u = (origin + tau) * basis.speed;
                 return basis.warp && window.LysSynth && window.LysSynth.unwarpTime
@@ -8775,7 +8776,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // The recording beside the chart, from the same clock (docs/recording-design.md §1 7).
             if (origin !== undefined) end = Math.max(end, startRecordingAlong(t0, offset, origin, !!loopList));
             // A loop's rounds end where they were laid out to, notes or none (the recording alone goes round too).
-            if (loopList && loopRound > 0) end = Math.max(end, loopRound * loopRoundCount);
+            if (loopList && loopRound > 0) end = Math.max(end, (loopRound + loopGap) * loopRoundCount);
             playOrigin = origin;    // (a pause goes on from the same list, the same origin)
             setPlayUi(true);
             // A loop goes round when the last note ends; a plain playback lets it ring a moment.
@@ -9397,8 +9398,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (!rawNotes || !playClock || relaying || !window.LysSynth) return false;
             // Where it plays now, in the list's own time (before the stretch was cut out of it; the
             // whole score, A-B just turned on, is the list's time itself).
-            let tau = Math.max(0, playOffset + playClock() - countInFix);
-            if (loopList && loopRound > 0) tau %= loopRound;
+            const place = placeNow();
+            let tau = place.tau;
             const pieces = lastSpan === undefined ? [[0, Infinity]] : spanPieces || [[spanStart, spanStart + loopRound]];
             let u = pieces.length ? pieces[pieces.length - 1][1] : 0;
             for (const [a, b] of pieces) { if (tau < b - a) { u = a + tau; break; } tau -= b - a; }
@@ -9421,9 +9422,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 before += b - a;
             }
             loopList = loopOn ? list : null;
-            const toPlay = loopOn ? looped(list) : list;
-            voicePlan = { pieces: spanPieces, rounds: loopOn ? loopRoundCount : 1 };
-            startPlayback(toPlay, at === null ? 0 : at, false, false, 0, spanStart);
+            if (loopOn) {
+                // Round and round: on from here — in a count-in, on with it; not in the new
+                // stretch, from its start, its count-in first.
+                const rounds = looped(list);
+                voicePlan = loopVoicePlan();
+                startPlayback(rounds, at === null ? 0 : loopOffset(at, place.counting), false, false, loopGap, spanStart);
+            } else {
+                voicePlan = { pieces: spanPieces, rounds: 1 };
+                startPlayback(list, at === null ? 0 : at, false, false, 0, spanStart);
+            }
             loopList = loopOn ? list : null;
             return true;
         }
@@ -9793,14 +9801,38 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 vscode.postMessage({ type: 'webviewPerf', text: 'loop: the synth script is an old build (no loopNotes) - reload the window' });
                 return list;
             }
-            const rounds = window.LysSynth.loopNotes(list, 600, loopRound);
+            // With the count-in on, every round has one before it (docs/transport-mixer-design.md §1 4,
+            // owner's decision 2026-11-17): the clicks of the stretch's first bar, the music after them.
+            // The list then starts with the first round's count — its countFix is loopGap.
+            const c = loopRound > 0 ? counted([], 0, spanStart) : null;
+            loopGap = c && c.lead > 0 ? c.lead : 0;
+            const gap = loopGap > 0 ? { lead: loopGap, clicks: c.notes } : null;
+            const rounds = window.LysSynth.loopNotes(list, 600, loopRound, gap);
             // (nothing to sound — every part off, the recording alone: as many rounds as loopNotes lays out)
-            loopRoundCount = list.length ? rounds.length / list.length : loopRound > 0 ? Math.max(1, Math.min(500, Math.ceil(600 / loopRound))) : 1;
-            vscode.postMessage({ type: 'webviewPerf', text: 'loop: ' + (list.length ? rounds.length / list.length : 0)
-                + ' rounds of ' + (loopRound || 0).toFixed(3) + ' s, ' + rounds.length + ' notes' });
+            const period = loopRound + loopGap;
+            loopRoundCount = period > 0 && window.LysSynth.loopRounds ? window.LysSynth.loopRounds(600, period)
+                : list.length ? rounds.length / list.length : 1;
+            vscode.postMessage({ type: 'webviewPerf', text: 'loop: ' + loopRoundCount
+                + ' rounds of ' + (loopRound || 0).toFixed(3) + ' s' + (loopGap > 0 ? ' after a count-in of ' + loopGap.toFixed(3) + ' s' : '')
+                + ', ' + rounds.length + ' notes' });
             return rounds;
         }
+        // The plan of a loop's voices: its pieces, its rounds and the count-in before each.
+        function loopVoicePlan() { return { pieces: spanPieces, rounds: loopRoundCount, gap: loopGap }; }
+        // Where the list now sounding is: in a loop, the time into the round's music and, in a
+        // count-in, how far into it (loopPlace); else the list's time less its count-in.
+        function placeNow() {
+            const lt = playOffset + playClock();
+            if (loopList && loopRound > 0 && window.LysSynth.loopPlace) return window.LysSynth.loopPlace(lt, countInFix, loopRound, loopGap);
+            return { tau: Math.max(0, lt - countInFix), counting: null };
+        }
+        // Where a loop's new list (looped: its countFix is loopGap) starts to go on at "at" into
+        // the round's music — or at the same moment of a count-in sounding now ("counting").
+        function loopOffset(at, counting) {
+            return counting !== null && counting !== undefined ? Math.min(counting, loopGap) : loopGap + at;
+        }
         let loopRoundCount = 1;     // how many rounds looped() laid out last — the voice sings each
+        let loopGap = 0;            // the count-in before each of those rounds (seconds of the list; 0: none)
         // The stretch ▶ plays, from its bar's start to the next bar's (playSpanWindow), and how
         // long it lasts — the loop's round. The bars are the metronome's accented beats, in the
         // practice menu's tempo.
@@ -9848,7 +9880,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function refreshLoop(message) {
             if (!playingNow() || !playClock || !loopList || lastSpan === undefined) return;
             const oldRound = loopRound, oldStart = spanStart, oldPieces = spanPieces;
-            const tau = Math.max(0, playOffset + playClock() - countInFix);
+            // (a loop's list is round after round from its 0 — a count-in first in each when there is one)
+            const oldPeriod = loopRound + loopGap, lt = Math.max(0, playOffset + playClock());
             rawNotes = message.notes; rawParts = message.parts || null; rawBeats = message.beats || null; rawBarEnd = message.barEnd || null; rawExtra = message.extra || null; rawSung = message.sung || null; rawPlayed = message.played || null;
             playbackNotes = practiced(rawNotes);
             const list = spanOf(playbackNotes, lastSpan, false);
@@ -9856,8 +9889,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // (the round sounding keeps its own until the switch: the position shown reads them)
             loopRound = oldRound; spanStart = oldStart; spanPieces = oldPieces;
             if (!list.length) return;
-            let remain = oldRound > 0 ? oldRound - (tau % oldRound) : 0;
-            if (remain < 0.25) remain += oldRound;
+            let remain = oldRound > 0 ? oldPeriod - (lt % oldPeriod) : 0;
+            if (remain < 0.25) remain += oldPeriod;
             if (loopSwitchTimer) clearTimeout(loopSwitchTimer);
             const gen = playGeneration;
             // A new list starts 0.15 s after it is handed over (startPlayback): handed over so
@@ -9867,8 +9900,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 if (gen !== playGeneration || !playingNow()) return;
                 loopRound = newRound; spanStart = newStart; spanPieces = newPieces;
                 const rounds = looped(list);
-                voicePlan = { pieces: spanPieces, rounds: loopRoundCount };
-                startPlayback(rounds, 0, false, false, 0, spanStart);
+                voicePlan = loopVoicePlan();
+                startPlayback(rounds, 0, false, false, loopGap, spanStart);
                 loopList = list;
             }, Math.max(0, (remain - 0.15) * 1000));
         }
@@ -9876,7 +9909,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function playEnded() {
             const list = loopOn ? loopList : null;
             if (!list) { stopPlayback(); return; }
-            startPlayback(looped(list), 0, false, false, 0, lastSpan === undefined ? 0 : spanStart);
+            const rounds = looped(list);
+            voicePlan = loopVoicePlan();
+            startPlayback(rounds, 0, false, false, loopGap, lastSpan === undefined ? 0 : spanStart);
             loopList = list;
         }
 
@@ -10100,8 +10135,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (!playing || relaying || !rawNotes || !playClock) return;
             const old = playBasis || { warp: null, speed: oldSpeed };
             const oldOrigin = lastSpan === undefined ? 0 : spanStart;
-            let tau = Math.max(0, playOffset + playClock() - countInFix);
-            if (lastSpan !== undefined && loopList && loopRound > 0) tau %= loopRound;
+            const place = lastSpan !== undefined ? placeNow() : { tau: Math.max(0, playOffset + playClock() - countInFix), counting: null };
+            const tau = place.tau;
             const u = (oldOrigin + tau) * old.speed;
             const t = old.warp ? window.LysSynth.unwarpTime(old.warp, u) : u;
             playbackNotes = practiced(rawNotes);
@@ -10114,10 +10149,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
             const list = spanOf(playbackNotes, lastSpan, lastOnce);
             loopList = loopOn ? list : null;
-            const toPlay = loopOn ? looped(list) : list;
-            voicePlan = { pieces: spanPieces, rounds: loopOn ? loopRoundCount : 1 };
             const at = p - spanStart;
-            startPlayback(toPlay, at >= 0 && (!loopOn || at < loopRound) ? at : 0, false, false, 0, spanStart);
+            const inside = at >= 0 && (!loopOn || at < loopRound);
+            if (loopOn) {
+                const rounds = looped(list);
+                voicePlan = loopVoicePlan();
+                startPlayback(rounds, inside ? loopOffset(at, place.counting) : 0, false, false, loopGap, spanStart);
+            } else {
+                voicePlan = { pieces: spanPieces, rounds: 1 };
+                startPlayback(list, inside ? at : 0, false, false, 0, spanStart);
+            }
             loopList = loopOn ? list : null;
         }
         var lastPartsMessage = null;    // the Parts list's last answer: drawn again when a recording comes or goes
@@ -10625,7 +10666,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const p0 = origin + offset - countInFix;
             let sec = p0 * k, at = t0;
             if (sec < 0) { at = t0 - p0; sec = 0; }
-            recPlayer.presetLoop(looping ? { from: origin * k, to: (origin + loopRound) * k } : null);
+            // A count-in before each round (loopGap): the recording goes on through it as through the
+            // first one — the seconds before the stretch, silence where they are before its 0
+            // (RecordingPlayer: a loop may begin before the recording does).
+            recPlayer.presetLoop(looping ? { from: (origin - loopGap) * k, to: (origin + loopRound) * k } : null);
             recPlayer.setLevel(recLevel());
             void recPlayer.play(sec, recSound(), { tempo: playBasis.recTempo ?? practice.speed, at });
             if (looping) return 0;
@@ -10906,10 +10950,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             practice.click = !practice.click;
             practiceChanged(practice.speed);
         });
-        // The count-in (owner's choice 2026-10-26): from the next Play on, nothing restarts.
+        // The count-in (owner's choice 2026-10-26): from the next Play on, nothing restarts — but a
+        // loop going round lays its rounds out again from here, a count-in before each or none
+        // (docs/transport-mixer-design.md §1 4).
         countInBtn.addEventListener('click', () => {
             practice.countIn = !practice.countIn;
-            showPractice();
+            if (loopList && playingNow()) practiceChanged(practice.speed);
+            else showPractice();
         });
         showPractice();
 
@@ -11452,12 +11499,19 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         lastOnce = false;
                         const list = spanOf(playbackNotes, span, false);
                         loopList = loopOn ? list : null;
-                        const toPlay = loopOn ? looped(list) : list;
-                        voicePlan = { pieces: spanPieces, rounds: loopOn ? loopRoundCount : 1 };
+                        if (loopOn) {
+                            // (looped lays the count-in before every round out itself, the first one too)
+                            const rounds = looped(list);
+                            voicePlan = loopVoicePlan();
+                            if (recordingAlone()) break;
+                            startPlayback(rounds, 0, false, false, loopGap, spanStart);
+                            break;
+                        }
+                        voicePlan = { pieces: spanPieces, rounds: 1 };
                         if (recordingAlone()) break;
-                        const c = counted(toPlay, 0, spanStart);
+                        const c = counted(list, 0, spanStart);
                         if (c) startPlayback(c.notes, 0, false, false, c.lead, spanStart);
-                        else startPlayback(toPlay, 0, false, false, 0, spanStart);
+                        else startPlayback(list, 0, false, false, 0, spanStart);
                     } else {
                         // The practice menu's tempo, parts and metronome, from the notes as written.
                         rawNotes = message.notes; rawParts = message.parts || null; rawBeats = message.beats || null; rawBarEnd = message.barEnd || null; rawExtra = message.extra || null; rawSung = message.sung || null; rawPlayed = message.played || null;

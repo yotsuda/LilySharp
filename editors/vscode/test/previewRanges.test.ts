@@ -19,6 +19,7 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vm from 'node:vm';
+import { loopPlace } from '../src/webview/playbackCore';
 
 // The preview's Range panel (owner's request 2026-10-25): each part's lowest and highest note,
 // asked of the server for the score shown, a click showing one on the score.
@@ -68,18 +69,24 @@ describe('the preview\'s Range panel', () => {
         // The whole score round and round goes as it plays (its repeats kept): once is false.
         assert.match(html, /const list = spanOf\(playbackNotes, span, false\);/);
         // A loop's rounds laid out ahead, each whole bars long.
-        assert.match(html, /window\.LysSynth\.loopNotes\(list, 600, loopRound\)/);
+        // With the count-in on, a count before every round (docs/transport-mixer-design.md §1 4).
+        assert.match(html, /window\.LysSynth\.loopNotes\(list, 600, loopRound, gap\)/);
+        assert.match(html, /const c = loopRound > 0 \? counted\(\[\], 0, spanStart\) : null;\s*loopGap = c && c\.lead > 0 \? c\.lead : 0;/);
         // ...and the voice follows the stretch and its rounds (docs/singing-design.md §5).
         // (The recording beside a chart, on but not lined up with the score, plays alone instead.)
-        assert.match(html, /const toPlay = loopOn \? looped\(list\) : list;\s*voicePlan = \{ pieces: spanPieces, rounds: loopOn \? loopRoundCount : 1 \};\s*if \(recordingAlone\(\)\) break;\s*const c = counted\(toPlay, 0, spanStart\);/);
-        assert.match(html, /else startPlayback\(toPlay, 0, false, false, 0, spanStart\);/);
+        assert.match(html, /if \(loopOn\) \{[^\n]*\n[^\n]*\n\s*const rounds = looped\(list\);\s*voicePlan = loopVoicePlan\(\);\s*if \(recordingAlone\(\)\) break;\s*startPlayback\(rounds, 0, false, false, loopGap, spanStart\);/);
+        assert.match(html, /function loopVoicePlan\(\) \{ return \{ pieces: spanPieces, rounds: loopRoundCount, gap: loopGap \}; \}/);
+        assert.match(html, /voicePlan = \{ pieces: spanPieces, rounds: 1 \};\s*if \(recordingAlone\(\)\) break;\s*const c = counted\(list, 0, spanStart\);/);
+        assert.match(html, /else startPlayback\(list, 0, false, false, 0, spanStart\);/);
         // The practice menu's count-in (owner's choice 2026-10-26): a toggle beside the metronome,
         // and a Play of the whole score or from a note counts in too; a tempo change, the loop's
         // next round and a seek do not.
         assert.match(html, /<span class="plbl">Count-in<\/span><button type="button" id="countInBtn" class="toggle" aria-pressed="false"/);
         assert.match(html, /const c = counted\(playbackNotes, startAt, 0\);\s*if \(c\) startPlayback\(c\.notes, 0, false, false, c\.lead - startAt, 0\);/);
-        assert.match(html, /function playEnded\(\) \{[\s\S]{0,200}?startPlayback\(looped\(list\), 0, false, false, 0, /);
-        assert.match(html, /let tau = Math\.max\(0, playOffset \+ playClock\(\) - countInFix\);/);
+        // (the loop's next rounds count in when the count-in is on: their own count, loopGap)
+        assert.match(html, /function playEnded\(\) \{[\s\S]{0,200}?startPlayback\(rounds, 0, false, false, loopGap, /);
+        assert.match(html, /return \{ tau: Math\.max\(0, lt - countInFix\), counting: null \};/);
+        assert.match(html, /practice\.countIn = !practice\.countIn;\s*if \(loopList && playingNow\(\)\) practiceChanged\(practice\.speed\);/);
         assert.match(html, /playEndTimer = setTimeout\(playEnded, /);
         assert.match(html, /function playEnded\(\) \{\s*const list = loopOn \? loopList : null;/);
         assert.match(html, /refreshRanges\(\);\s*vscode\.postMessage\(\{ type: 'requestLength' \}\);/);
@@ -149,14 +156,16 @@ describe('the preview\'s Range panel', () => {
     // length's yardstick: the score's seconds at the written tempo.
     it('shows where the playback stands beside the length, in the score\'s seconds', () => {
         assert.match(html, /<span id="posInfo" class="length"[^>]*hidden><\/span>\s*<span id="lengthInfo"/);
-        const at = html.indexOf('function playbackScoreSeconds(');
-        const body = html.slice(at, html.indexOf('\n        }', at) + '\n        }'.length);
+        const fn = (name: string) => {
+            const at = html.indexOf('function ' + name + '(');
+            return html.slice(at, html.indexOf('\n        }', at) + '\n        }'.length);
+        };
         const context = vm.createContext({
-            playClock: () => 3, playOffset: 1, countInFix: 0, lastSpan: undefined, spanStart: 0, loopList: null, loopRound: 0,
+            playClock: () => 3, playOffset: 1, countInFix: 0, lastSpan: undefined, spanStart: 0, loopList: null, loopRound: 0, loopGap: 0,
             playBasis: { warp: null, speed: 0.5 }, practice: { speed: 0.5 }, recPlayer: null,
-            window: { LysSynth: { unwarpTime: (_w: unknown, u: number) => u * 10 } },
+            window: { LysSynth: { unwarpTime: (_w: unknown, u: number) => u * 10, loopPlace } },
         });
-        new vm.Script(body).runInContext(context);
+        new vm.Script(fn('playbackScoreSeconds') + '\n' + fn('placeNow')).runInContext(context);
         const run = (code: string) => new vm.Script(code).runInContext(context) as number | null;
         // 4 s into a list played at half speed: 2 s of the score.
         assert.equal(run('playbackScoreSeconds()'), 2);
@@ -166,6 +175,15 @@ describe('the preview\'s Range panel', () => {
         // A looped stretch from played time 6, 4 s a round, 9 s in: the stretch's start plus 1 s.
         run('countInFix = 0; lastSpan = [0, 1]; spanStart = 6; loopList = []; loopRound = 4; playOffset = 0; playClock = () => 9');
         assert.equal(run('playbackScoreSeconds()'), (6 + 1) * 0.5);
+        // …with a count-in of 2 s before each round (docs/transport-mixer-design.md §1 4): rounds of
+        // 6 s from the list's 0, the music 2 s into each; in a count-in, the stretch's start.
+        run('countInFix = 2; loopGap = 2; playClock = () => 4');
+        assert.equal(run('playbackScoreSeconds()'), (6 + 2) * 0.5);
+        run('playClock = () => 7');
+        assert.equal(run('playbackScoreSeconds()'), 6 * 0.5);
+        run('playClock = () => 9');
+        assert.equal(run('playbackScoreSeconds()'), (6 + 1) * 0.5);
+        run('countInFix = 0; loopGap = 0');
         // On the recording's seconds: taken back off them.
         run('lastSpan = undefined; loopList = null; playClock = () => 2; playBasis = { warp: {}, speed: 1 }');
         assert.equal(run('playbackScoreSeconds()'), 20);
@@ -277,13 +295,14 @@ describe('the preview\'s Range panel', () => {
         assert.doesNotMatch(resume, /requestPlay\(/);
         // Repeat turned on or off while it plays: laid out again from here, so B does what Repeat says then.
         assert.match(html, /loopOn = !loopOn;[\s\S]{0,500}if \(!playingNow\(\) \|\| !resumeHere\(\)\) \{/);
-        assert.match(resume, /startPlayback\(toPlay, at === null \? 0 : at, false, false, 0, spanStart\);/);
+        assert.match(resume, /startPlayback\(rounds, at === null \? 0 : loopOffset\(at, place\.counting\), false, false, loopGap, spanStart\);/);
+        assert.match(resume, /startPlayback\(list, at === null \? 0 : at, false, false, 0, spanStart\);/);
         // Its start: the list's offset in the score's played time (count-in aside) times the speed.
         const at = html.indexOf('function startRecordingAlong(');
         const body = html.slice(at, html.indexOf('\n        }', at) + '\n        }'.length);
         const plays: unknown[] = [];
         const context = vm.createContext({
-            playBasis: { warp: {}, speed: 0.5 }, countInFix: 0, loopRound: 4, lastSpan: undefined as unknown, recSettings: {}, recSound: () => ({}), practice: { speed: 0.5 },
+            playBasis: { warp: {}, speed: 0.5 }, countInFix: 0, loopRound: 4, loopGap: 0, lastSpan: undefined as unknown, recSettings: {}, recSound: () => ({}), practice: { speed: 0.5 },
             recordingAlong: () => true, recLevel: () => 1,
             recPlayer: {
                 duration: 60, loop: null as unknown,
@@ -304,6 +323,16 @@ describe('the preview\'s Range panel', () => {
         run('countInFix = 0');
         assert.equal(run('startRecordingAlong(100, 0, 8, true)'), 0);
         assert.deepEqual(JSON.parse(JSON.stringify(plays.pop())), [4, { tempo: 0.5, at: 100 }, { from: 4, to: 6 }]);
+        // A count-in of 1 s before each round: the recording goes on through it, as through the
+        // first — the loop takes in the second before the stretch.
+        run('countInFix = 1; loopGap = 1');
+        run('startRecordingAlong(100, 0, 8, true)');
+        assert.deepEqual(JSON.parse(JSON.stringify(plays.pop())), [3.5, { tempo: 0.5, at: 100 }, { from: 3.5, to: 6 }]);
+        // …and from the score's 0, the loop begins before the recording does (silence there).
+        run('countInFix = 2; loopGap = 2');
+        run('startRecordingAlong(100, 0, 0, true)');
+        assert.deepEqual(JSON.parse(JSON.stringify(plays.pop())), [0, { tempo: 0.5, at: 102 }, { from: -1, to: 2 }]);
+        run('countInFix = 0; loopGap = 0');
         // The A-B bars once (owner's report 2026-11-17): it ends with the stretch, not at the
         // recording's end — Repeat off, the recording went on past B.
         run('lastSpan = { ab: [4, 7] }');

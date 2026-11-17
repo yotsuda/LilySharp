@@ -454,12 +454,13 @@ export function withVoiceLead(cues: readonly VoiceCue[], lead: number, pull: num
  * voice is a WAV in the score's time; the list the instruments play is the score's time moved by
  * `lead` (a count-in's clicks before the music) and, for a stretch, cut to `pieces` — the
  * stretches of the score it plays, in order (playSpanWindow), laid out `rounds` times when the
- * loop is on. `pieces` null is the whole piece from its 0, to the buffer's end. A stretch stops at
+ * loop is on, each round after a count-in of `gap` seconds (loopNotes' gap; the first round's is
+ * `lead`). `pieces` null is the whole piece from its 0, to the buffer's end. A stretch stops at
  * its end, a repeat closed up in it is skipped in the voice too, and a round sings it again; a
  * buffer shorter than the music gives what it has.
  */
 export function voiceCues(listTime: number, lead: number, pieces: readonly (readonly [number, number])[] | null,
-    rounds: number, bufferSeconds: number): VoiceCue[] {
+    rounds: number, bufferSeconds: number, gap = 0): VoiceCue[] {
     const from = Math.max(listTime, lead);      // the list's time the music is heard from
     if (!pieces) {
         const offset = from - lead;
@@ -467,9 +468,10 @@ export function voiceCues(listTime: number, lead: number, pieces: readonly (read
     }
     const length = pieces.reduce((s, [a, b]) => s + (b - a), 0);
     if (!(length > 0)) { return []; }
+    const g = gap > 0 ? gap : 0;
     const cues: VoiceCue[] = [];
     for (let r = 0; r < Math.max(1, rounds); r++) {
-        let t = lead + r * length;              // the list's time this piece begins
+        let t = lead + r * (length + g);        // the list's time this piece begins (after the round's count-in)
         for (const [a, b] of pieces) {
             const end = t + (b - a);
             if (end > from + 1e-6) {
@@ -594,17 +596,43 @@ export function practiceSummary(practice: PracticeState | null | undefined): str
  * times every round. Restarting at a page timer's word went wrong on the MIDI output, where
  * the browser holds the page's timers to a second and a round lost or gained up to three beats.
  */
-export function loopNotes(list: readonly PlaybackNote[], seconds: number, round?: number): PlaybackNote[] {
+export function loopNotes(list: readonly PlaybackNote[], seconds: number, round?: number, gap?: LoopGap | null): PlaybackNote[] {
     // The round: as given (whole bars, playSpanWindow), else as long as the list sounds.
     let length = round ?? 0;
     if (!(length > 0)) { for (const n of list) { length = Math.max(length, n.T + n.D); } }
     if (length <= 0) { return [...list]; }
-    const rounds = loopRounds(seconds, length);
+    // With a count-in each round (docs/transport-mixer-design.md §1 4): the clicks, then the music
+    // `lead` after them — every round as the first, so a round is the count and the music.
+    const lead = gap && gap.lead > 0 ? gap.lead : 0;
+    const period = length + lead;
+    const rounds = loopRounds(seconds, period);
     const out: PlaybackNote[] = [];
     for (let r = 0; r < rounds; r++) {
-        for (const n of list) { out.push(r === 0 ? n : { ...n, T: n.T + r * length }); }
+        if (lead > 0) { for (const c of gap!.clicks) { out.push({ ...c, T: c.T + r * period }); } }
+        for (const n of list) { out.push(r === 0 && lead === 0 ? n : { ...n, T: n.T + r * period + lead }); }
     }
-    return out;
+    return lead > 0 ? out.sort((a, b) => a.T - b.T) : out;
+}
+
+/** A count-in before every round of a loop (loopNotes): its clicks from the count's start, and
+ *  where the music comes in after them — countIn's notes and lead for the round's first bar. */
+export interface LoopGap { lead: number; clicks: readonly PlaybackNote[] }
+
+/**
+ * Where a loop's list is at its time `listTime` (docs/transport-mixer-design.md §1 4): the list
+ * plays rounds of `round` seconds of music, each after a count-in of `gap` seconds (0: none), and
+ * `countFix` is where the first round's music begins (the first count-in; `gap` or 0). `tau` is
+ * the time into the round's music — 0 while a count-in sounds — and `counting` how far into that
+ * count-in it is (null in the music).
+ */
+export function loopPlace(listTime: number, countFix: number, round: number, gap: number): { tau: number; counting: number | null } {
+    const tau = listTime - countFix;
+    if (tau < 0) { return { tau: 0, counting: countFix > 0 ? Math.max(0, listTime) : null }; }
+    if (!(round > 0)) { return { tau, counting: null }; }
+    const g = gap > 0 ? gap : 0;
+    const m = tau % (round + g);
+    if (g > 0 && m >= round - 1e-9) { return { tau: 0, counting: Math.max(0, m - round) }; }
+    return { tau: Math.min(m, round), counting: null };
 }
 
 /** How many rounds of `length` seconds loopNotes lays out to cover `seconds`: at least one, at most 500. */

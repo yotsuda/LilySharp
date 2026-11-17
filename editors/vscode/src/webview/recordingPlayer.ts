@@ -63,6 +63,8 @@ export class RecordingPlayer {
     private stretch: StretchNode | null = null;
     private stretchHas: AudioBuffer | null = null;
     private source: AudioBufferSourceNode | null = null;
+    /** A loop's later rounds, each its own source, when the loop begins before the recording (play). */
+    private rounds: AudioBufferSourceNode[] = [];
     private readonly gain: GainNode;
     /** The fader's level (the practice menu's Recording line, docs/recording-design.md §1 7). */
     private readonly level: GainNode;
@@ -299,7 +301,8 @@ export class RecordingPlayer {
         const raw = this.anchor.sec + Math.max(0, this.ctx.currentTime - this.anchor.at) * this.anchor.rate;
         const loop = this.loop;
         if (loop && raw >= loop.to) {
-            return loop.from + ((raw - loop.from) % (loop.to - loop.from));
+            // (in the silence a loop begins with before the recording's 0: its 0)
+            return Math.max(0, loop.from + ((raw - loop.from) % (loop.to - loop.from)));
         }
         return Math.min(raw, this.duration);
     }
@@ -338,17 +341,41 @@ export class RecordingPlayer {
         const parts = this.usesParts() && this.parts ? this.parts : null;
         this.playingParts = parts !== null;
         if (plan.engine === 'resample') {
-            const src = this.ctx.createBufferSource();
-            src.buffer = parts ?? buffer;
-            src.playbackRate.value = plan.rate;
-            if (loop) {
-                src.loop = true;
-                src.loopStart = loop.from;
-                src.loopEnd = loop.to;
-            }
-            src.connect(parts ? this.partsInput() : this.gain);
+            const make = (): AudioBufferSourceNode => {
+                const s = this.ctx.createBufferSource();
+                s.buffer = parts ?? buffer;
+                s.playbackRate.value = plan.rate;
+                s.connect(parts ? this.partsInput() : this.gain);
+                return s;
+            };
+            const src = make();
             const at = startAt(this.ctx.currentTime + 0.03);
-            src.start(at, sec);
+            if (loop && loop.from < 0) {
+                // A loop that begins before the recording does (a count-in before each round from
+                // its first bar, docs/transport-mixer-design.md §1 4): a buffer source loops only
+                // within its buffer, so each round is a source of its own, laid out ahead on the
+                // context's clock as the score's rounds are (loopNotes: ten minutes, at most 500) —
+                // silence, then the recording from its 0 to the loop's end. (The stretcher reads
+                // before its 0 as silence and loops over it itself.)
+                const period = (loop.to - loop.from) / plan.rate;
+                let end = at + (loop.to - sec) / plan.rate;     // where the first round ends
+                src.start(at, sec);
+                src.stop(end);
+                for (let r = 0; r < 500 && end < at + 600; r++) {
+                    const s = make();
+                    s.start(end - loop.from / plan.rate, 0);
+                    s.stop(end + period);
+                    this.rounds.push(s);
+                    end += period;
+                }
+            } else {
+                if (loop) {
+                    src.loop = true;
+                    src.loopStart = loop.from;
+                    src.loopEnd = loop.to;
+                }
+                src.start(at, sec);
+            }
             this.source = src;
             this.anchor = { at, sec, rate: plan.rate };
         } else {
@@ -472,6 +499,11 @@ export class RecordingPlayer {
             this.source.disconnect();
             this.source = null;
         }
+        for (const s of this.rounds) {
+            try { s.stop(); } catch { /* (not started) */ }
+            s.disconnect();
+        }
+        this.rounds = [];
         this.stretch?.schedule({ active: false });
         this.partsStretch?.schedule({ active: false });
         this.anchor = null;

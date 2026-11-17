@@ -28,7 +28,7 @@
 import { WorkletSynthesizer } from 'spessasynth_lib';
 import {
     BEND_CENTRE, DRUM_CHANNEL, Lookahead, MidiEvent, PlaybackNote, SoundingCursor,
-    channelsOf, countIn, endOf, fromOffset, loopNotes, playBarsWindow, playSpan, playSpanWindow, practiceNotes, programOf, toEvents,
+    channelsOf, countIn, endOf, fromOffset, loopNotes, loopPlace, loopRounds, playBarsWindow, playSpan, playSpanWindow, practiceNotes, programOf, toEvents,
     nextVoiceEntry, soundStart, strikeKey, strikeKeys, voiceBadge, voiceBar, voiceEntryEarly, voiceRound, voiceBarShown, voiceCues, voiceProgress, voiceRowProgress, voiceStillSinging, withVoiceLead,
 } from './playbackCore';
 import { RecordingPlayer } from './recordingPlayer';
@@ -337,6 +337,8 @@ const api = {
     playSpan,
     practiceNotes,
     loopNotes,
+    loopPlace,
+    loopRounds,
     playSpanWindow,
     playBarsWindow,
     countIn,

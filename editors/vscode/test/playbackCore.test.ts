@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import {
     BEND_CENTRE, DRUM_CHANNEL, FAMILY_PROGRAM, Lookahead, PlaybackNote, SoundingCursor,
-    CLICK_ACCENT, CLICK_BEAT, channelOf, channelsOf, countIn, endOf, loopNotes, loopRounds, playSpan, playSpanWindow, practiceNotes,
+    CLICK_ACCENT, CLICK_BEAT, channelOf, channelsOf, countIn, endOf, loopNotes, loopPlace, loopRounds, playSpan, playSpanWindow, practiceNotes,
     programOf, toEvents, nextVoiceEntry, strikeKey, strikeKeys, voiceEntries, voiceEntryEarly, VOICE_ENTRY_NOTICE_S, VOICE_ENTRY_EARLY_S,
     fromOffset, playBarsWindow, exportNotes, practiceSummary, PracticeState, voiceCues, voiceBadge, soundStart, withVoiceLead,
     levelOf, velocityAt,
@@ -237,6 +237,47 @@ describe('where the voice is cut from for a Play', () => {
         assert.equal(loopRounds(600, 0.5), 500);
         const bar = [0, 1, 2, 3].map(t => note(t, 1, 60 + t));
         assert.equal(loopNotes(bar, 10).length / bar.length, loopRounds(10, 4));
+    });
+
+    it('a loop with a count-in before each round sings each round after its count', () => {
+        // Rounds of 4 s after a count of 2 s: the music at 2, 8, 14 of the list.
+        assert.deepEqual(voiceCues(0, 2, [[4, 8]], 3, 100, 2), [2, 8, 14].map(at => ({ at, offset: 4, duration: 4 })));
+        // From inside the second round's count: that round, then the next.
+        assert.deepEqual(voiceCues(7, 2, [[4, 8]], 3, 100, 2), [{ at: 1, offset: 4, duration: 4 }, { at: 7, offset: 4, duration: 4 }]);
+    });
+});
+
+// A count-in before every round of a loop (docs/transport-mixer-design.md §1 4, owner's decision
+// 2026-11-17): Repeat goes round with a bar of clicks before each round, as before the first.
+describe('the count-in before each round of a loop', () => {
+    const beats = Array.from({ length: 12 }, (_, i) => ({ T: i, A: i % 4 === 0 }));
+    // A stretch of two bars from the score's 4, as playSpanWindow cuts it (from 0).
+    const stretch = [0, 1, 2, 3, 4, 5, 6, 7].map(t => note(t, 1, 60 + t, { S: 100 + t }));
+    const gapOf = (origin: number) => { const c = countIn([], 0, origin, beats)!; return { lead: c.lead, clicks: c.notes }; };
+
+    it('lays each round out as the count and then the music', () => {
+        const gap = gapOf(4);
+        assert.equal(gap.lead, 4);
+        const list = loopNotes(stretch, 30, 8, gap);
+        // A round is 12 s: three rounds fill 30.
+        const clicks = list.filter(n => n.S < 0);
+        assert.deepEqual(clicks.map(n => n.T), [0, 1, 2, 3, 12, 13, 14, 15, 24, 25, 26, 27]);
+        assert.deepEqual(clicks.filter(n => n.P === CLICK_ACCENT).map(n => n.T), [0, 12, 24]);
+        assert.deepEqual(list.filter(n => n.S === 100).map(n => n.T), [4, 16, 28]);
+        assert.ok(list.every((n, i) => i === 0 || list[i - 1].T <= n.T), 'in time order');
+        // Without a gap, round after round as before.
+        assert.deepEqual(loopNotes(stretch, 30, 8, null).filter(n => n.S === 100).map(n => n.T), [0, 8, 16, 24]);
+    });
+
+    it('says where a looping list is: in a round\'s music, or how far into its count-in', () => {
+        // The list above: count 0-4, music 4-12, count 12-16, music 16-24…
+        assert.deepEqual(loopPlace(2, 4, 8, 4), { tau: 0, counting: 2 });
+        assert.deepEqual(loopPlace(5, 4, 8, 4), { tau: 1, counting: null });
+        assert.deepEqual(loopPlace(13, 4, 8, 4), { tau: 0, counting: 1 });
+        assert.deepEqual(loopPlace(17.5, 4, 8, 4), { tau: 1.5, counting: null });
+        // No count-in: rounds back to back.
+        assert.deepEqual(loopPlace(9, 0, 8, 0), { tau: 1, counting: null });
+        assert.deepEqual(loopPlace(0, 0, 8, 0), { tau: 0, counting: null });
     });
 });
 
