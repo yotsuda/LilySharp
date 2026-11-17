@@ -71,7 +71,8 @@ public sealed class UsingExpansionCacheTests
     // Each test that wants a cache MISS on its first call must use a text instance no
     // other test shares — the cache is keyed on the string instance, and consts here
     // are interned per assembly. A runtime-built copy is a distinct instance.
-    private static string FreshCopyOf(string text) => string.Concat(text, "");
+    // (Not string.Concat(text, ""): that hands back `text` itself.)
+    private static string FreshCopyOf(string text) => new(text.AsSpan());
 
     [Fact]
     public void UnchangedIncludes_ReuseTheParsedTree()

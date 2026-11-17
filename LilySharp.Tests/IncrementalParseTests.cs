@@ -46,7 +46,7 @@ public class IncrementalParseTests
 
     // ---------- helpers ----------
 
-    private static void AssertTreesEquivalent(SyntaxTree expected, SyntaxTree actual)
+    internal static void AssertTreesEquivalent(SyntaxTree expected, SyntaxTree actual)
     {
         Assert.Equal(expected.Text, actual.Text);
         AssertGreenEqual(expected.Root, actual.Root);

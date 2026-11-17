@@ -1815,7 +1815,7 @@ public static partial class NoteStepper
     /// What a tree sounds, by source position: the MIDI export's pitches (with the timbre and
     /// the track's program) filed under each note's position, the voice of each part that
     /// sounds at all, and the collector's resolved pitch of each written pitch
-    /// (<see cref="ResolvedPitches.ForFile"/>, as MIDI numbers). Built once per tree — the
+    /// (<see cref="ResolvedPitches.ForFile(SyntaxTree)"/>, as MIDI numbers). Built once per tree — the
     /// caret moving over an unchanged document asks the same tree again and again.
     /// </summary>
     private sealed class SoundIndex

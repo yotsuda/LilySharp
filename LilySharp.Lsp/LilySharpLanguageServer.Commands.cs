@@ -245,7 +245,8 @@ public sealed partial class LilySharpLanguageServer
         var made = SingerPartsCache.GetValue(tree, static t =>
         {
             string written = LilySharp.Core.Editing.SingerParts.Expand(t.Text, t, out var said);
-            return new SingerPartsHolder(ReferenceEquals(written, t.Text) ? t : SyntaxTree.Parse(written), said);
+            // (From the tree of what was written a keystroke ago: RecentTrees.)
+            return new SingerPartsHolder(ReferenceEquals(written, t.Text) ? t : RecentTrees.Parse(written, t.Text.Length), said);
         });
         return (made.Tree, made.Diagnostics.Count == 0 ? diagnostics : [.. diagnostics, .. made.Diagnostics]);
     }
@@ -281,11 +282,22 @@ public sealed partial class LilySharpLanguageServer
         if (cached != null && cached.BasePath == basePath && ReadsReplayUnchanged(cached.Reads, readFile))
             return (cached.Tree, cached.Diagnostics);
 
+        // A miss is every keystroke in the document itself (a new text instance), so what a
+        // miss pays is the keystroke's price, and until session 1294 that was a parse of the
+        // main text and of every include only to find their `using`s, then one of everything
+        // (review of session 1291, P8). Now: the main text's directives are read off the tree
+        // in hand, an include's are kept with its content (RecentTrees.IncludedUsings), and the combined
+        // text is parsed from the combined tree of the keystroke before (RecentTrees: the main
+        // text is its prefix, so the window is the edit's own). What is left is the reads and
+        // one string of everything.
         var reads = new List<(string Path, string? Content)>();
         var expanded = LilySharp.Core.Parser.UsingExpander.Expand(text, basePath,
             p => { var content = readFile(p); reads.Add((p, content)); return content; },
-            out var usingDiagnostics);
-        var tree = SyntaxTree.Parse(expanded);
+            out var usingDiagnostics,
+            t => ReferenceEquals(t, unexpanded.Text)
+                ? LilySharp.Core.Parser.UsingExpander.UsingsOf(unexpanded)
+                : RecentTrees.IncludedUsings(t));
+        var tree = RecentTrees.Parse(expanded, text.Length);
         System.Threading.Volatile.Write(ref holder.Snapshot, new UsingExpansionSnapshot
         {
             BasePath = basePath,

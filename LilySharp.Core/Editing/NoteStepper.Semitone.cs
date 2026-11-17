@@ -52,7 +52,7 @@ namespace LilySharp.Core.Editing;
 /// tone next to where it was. A new letter can change the octave a note resolves to —
 /// <c>b'</c> → <c>c''</c> in absolute octaves; <c>f b</c> → <c>f c'</c> in relative ones, where
 /// the nearest c is below the f — so the octave marks are corrected until the compiler's
-/// resolved pitch (<see cref="ResolvedPitches.ForFile"/>) is the one stepped to. The notes after
+/// resolved pitch (<see cref="ResolvedPitches.ForFile(SyntaxTree)"/>) is the one stepped to. The notes after
 /// it follow as they will, as after an octave step. A note no score resolves keeps its marks.
 /// </para>
 /// <para>

@@ -91,17 +91,31 @@ public static class UsingExpander
     /// </remarks>
     public static string Expand(string mainText, string mainPath, Func<string, string?> readFile,
         out IReadOnlyList<Diagnostic> diagnostics)
+        => Expand(mainText, mainPath, readFile, out diagnostics, null);
+
+    /// <summary>
+    /// <see cref="Expand(string, string, Func{string, string?}, out IReadOnlyList{Diagnostic})"/>
+    /// for a caller that knows the directives of some of the texts already — the tree of the
+    /// main text it holds (<see cref="UsingsOf(SyntaxTree)"/>), an included file it read the
+    /// same content of before — so that no text is parsed here only to find them.
+    /// </summary>
+    /// <param name="usingsOf">The <c>using</c> directives of a text the walk meets (the main
+    /// text, then each included file's), or null to have it parsed here.</param>
+    public static string Expand(string mainText, string mainPath, Func<string, string?> readFile,
+        out IReadOnlyList<Diagnostic> diagnostics,
+        Func<string, IReadOnlyList<(string Path, TextSpan Span)>?>? usingsOf)
     {
         var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var sb = new StringBuilder();
         var bag = new DiagnosticBag();
-        Walk(mainPath, mainText, visited, sb, readFile, bag);
+        Walk(mainPath, mainText, visited, sb, readFile, bag, usingsOf);
         diagnostics = bag.ToList();
         return sb.ToString();
     }
 
     private static void Walk(string path, string? text, HashSet<string> visited,
-        StringBuilder sb, Func<string, string?> readFile, DiagnosticBag bag)
+        StringBuilder sb, Func<string, string?> readFile, DiagnosticBag bag,
+        Func<string, IReadOnlyList<(string Path, TextSpan Span)>?>? usingsOf)
     {
         if (text == null)
             return;
@@ -120,7 +134,7 @@ public static class UsingExpander
             sb.Append('\n');
 
         var dir = Path.GetDirectoryName(full) ?? string.Empty;
-        foreach (var (usingPath, span) in FindUsings(text))
+        foreach (var (usingPath, span) in usingsOf?.Invoke(text) ?? FindUsings(text))
         {
             var combined = new TextSpan(baseOffset + span.Start, span.Length);
 
@@ -148,15 +162,20 @@ public static class UsingExpander
                 continue;
             }
 
-            Walk(resolved, included, visited, sb, readFile, bag);
+            Walk(resolved, included, visited, sb, readFile, bag, usingsOf);
         }
     }
 
     // Direct children only, for the same reason HasUsings gives: the parser can only
     // place a `using` at the top level, so this is the whole search space and the two
     // readers of that fact stay spelt the same way.
-    private static IEnumerable<(string Path, TextSpan Span)> FindUsings(string text)
-        => SyntaxTree.Parse(text).GetRoot().ChildNodes()
+    private static IReadOnlyList<(string Path, TextSpan Span)> FindUsings(string text)
+        => UsingsOf(SyntaxTree.Parse(text));
+
+    /// <summary>The <c>using</c> directives of an ALREADY-PARSED text, in order: each one's
+    /// path and where the path is written.</summary>
+    public static IReadOnlyList<(string Path, TextSpan Span)> UsingsOf(SyntaxTree tree)
+        => tree.GetRoot().ChildNodes()
             .OfType<UsingDirectiveSyntax>()
             .Select(d => (d.Path, d.PathToken.Span))
             .ToList();

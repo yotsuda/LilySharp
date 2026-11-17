@@ -86,6 +86,7 @@ public sealed class SyntaxTree
     /// </summary>
     public static SyntaxTree Parse(string text)
     {
+        FullParsesOnThisThread++;
         var lexer = new Lexer(text);
         var tokens = lexer.ScanAllTokens().ToList();
         var parser = new Parser.Parser(tokens);
@@ -165,6 +166,44 @@ public sealed class SyntaxTree
         var root = parser.ParseCompilationUnit();
         return new SyntaxTree(newText, root, MergeDiagnostics(tokens, parser.Diagnostics), tokens,
             parser.AdoptedMembers);
+    }
+
+    /// <summary>How many times <see cref="Parse"/> ran on the calling thread: what a test of a
+    /// keystroke's side work counts (a text read again whole where a tree was at hand).</summary>
+    [ThreadStatic]
+    internal static int FullParsesOnThisThread;
+
+    /// <summary>
+    /// The tree of <paramref name="newText"/>, parsed from <paramref name="oldTree"/> — the tree
+    /// of a text it was made from — where the caller holds the two texts and not the edit
+    /// between them: the text a <c>using</c> expands to, a file's own with what Lily# writes
+    /// after it. The one window the two differ in is found here (what they share at the head
+    /// and at the tail), and <see cref="ParseIncremental"/> reads that window alone;
+    /// <paramref name="oldTree"/> itself where the texts are the same.
+    /// </summary>
+    /// <remarks>
+    /// The window is the smallest ONE that holds every difference, so two edits far apart cost
+    /// the text between them: still no more than <see cref="Parse"/>.
+    /// </remarks>
+    public static SyntaxTree ParseChanged(SyntaxTree oldTree, string newText)
+    {
+        string oldText = oldTree._text;
+        var (head, tail) = SharedEnds(oldText, newText);
+        if (head == oldText.Length && head == newText.Length)
+            return oldTree;
+        return ParseIncremental(oldTree, newText, head, oldText.Length - tail);
+    }
+
+    /// <summary>How many characters <paramref name="a"/> and <paramref name="b"/> share at the
+    /// head, and how many more at the tail (the two never overlap in either text).</summary>
+    public static (int Head, int Tail) SharedEnds(ReadOnlySpan<char> a, ReadOnlySpan<char> b)
+    {
+        int head = a.CommonPrefixLength(b);
+        int most = Math.Min(a.Length, b.Length) - head;
+        int tail = 0;
+        while (tail < most && a[a.Length - 1 - tail] == b[b.Length - 1 - tail])
+            tail++;
+        return (head, tail);
     }
 
     /// <summary>Combines lexical diagnostics (derived from the final token stream by
