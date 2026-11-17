@@ -6186,6 +6186,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
              beside ⏹: "looks like a button but is not one; a note does not say singing, the
              instruments are notes too"): a status over the Play it speaks of, drawn as what sings.
              A click still opens the practice menu, where each voice has its own toggle and sign. -->
+        <!-- Rewind (owner's request 2026-11-17): the A flag back to the top. -->
+        <button id="rewindBtn" type="button" title="The A flag back to the top (playing: plays from there)">⏪</button>
         <span class="play-wrap">
         <button id="playBtn" type="button" title="Play from the A flag (Space while stopped)">▶</button>
         <span id="voiceBadge" class="voice-badge" role="status" hidden aria-label="Voice"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="1.2" width="4" height="7.6" rx="2"/><path d="M3.6 7.4a4.4 4.4 0 0 0 8.8 0"/><path d="M8 11.8v2.6M5.6 14.4h4.8"/></svg></span>
@@ -8158,7 +8160,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function voiceFitsPlay(key, list) {
             if (!playEdited) { return true; }
             const track = rawParts ? rawParts.indexOf(key.split('#')[0]) : -1;
-            const onsets = playingNotes.filter(n => n.N === track && !(n.P < 0) && !n.L).map(n => n.T);
+            const onsets = playingNotes.filter(n => n.N === track && !(n.P < 0) && !n.L && !n.Z).map(n => n.T);
             if (onsets.length === 0) { return false; }
             return list.every(e => e.at < playOffset - 1e-6 || onsets.some(t => Math.abs(t - e.at) < 0.002));
         }
@@ -8649,7 +8651,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // …and where NONE of a part's voices sings a section (n.U, the server's mark: a
             // singer line's in-clause left it to nobody), the instrument plays it — unless the menu
             // switched the part's voices off and its instrument is not on: silence, as above.
-            const played = notes.filter(n => !n.L && (n.U ? unsungSounds(n.N) : instrumentSounds(n.N, sung)));   // (a lit % plays nothing)
+            const played = notes.filter(n => !n.L && !n.Z && (n.U ? unsungSounds(n.N) : instrumentSounds(n.N, sung)));   // (a lit % plays nothing, nor a part turned off)
             if (midiOutput && !here && played.length > 0) {
                 // The MIDI output: the server plays the list from the offset and answers
                 // (midiStarted) with the clock the highlight follows; a port that is not
@@ -8754,7 +8756,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             followStaff = relay ? -1 : followStaffOfCaret();
             // The rests (E) are the editor's text's alone: lit there while they last, not on the score
             // (owner's request 2026-11-17).
-            const onScore = notes.filter(n => !n.E);
+            const onScore = notes.filter(n => !n.E && !n.Z);
+            // …and a part turned off lights nothing of its own, but its notes light the bar while nothing
+            // else sounds — the recording alone, every part off (owner's request 2026-11-17).
+            const quietCursor = relay ? null : new Cursor(notes.filter(n => n.Z && !n.E).map(n => ({ t: n.T - offset, d: n.D, s: n.S, o: n.O || 0 })));
             const cursor = new Cursor(onScore.map(n => ({ t: n.T - offset, d: n.D, s: relay ? n.R : n.S, o: n.O || 0 })));
             const restCursor = relay ? null : new Cursor(notes.filter(n => n.E).map(n => ({ t: n.T - offset, d: n.D, s: n.S, o: n.O || 0 })));
             // The notes about to sound, FOLLOW_LEAD seconds ahead (owner's request 2026-11-16: a
@@ -8785,6 +8790,15 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     if (aheadEls.length > 0 && follow.follows()) follow.auto(() => keepSoundingInView(soundingEls, aheadEls));
                 }
                 const rests = restCursor ? restCursor.at(playedTo) : null;
+                const quiet = quietCursor ? quietCursor.at(playedTo) : null;
+                if (quiet && quiet.changed && r.sounding.length === 0) {
+                    const els = [];
+                    for (const x of quiet.sounding) els.push.apply(els, elementsAt(x));
+                    if (els.length > 0) {
+                        lightPlayingBar(els);
+                        if (quiet.hadNew && follow.follows()) follow.auto(() => keepSoundingInView(els, aheadEls));
+                    }
+                }
                 if (!r.changed && !(rests && rests.changed)) return;
                 if (relay) {
                     vscode.postMessage({ type: 'candidateSounding', sounding: r.sounding.map(x => ({ pos: x.pos, occ: x.occ })) });
@@ -9077,12 +9091,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // The note token nearest the caret (smallest |S - position|).
             let best = null, bestD = Infinity;
             for (const n of playbackNotes) {
-                if (n.S < 0) { continue; }
+                if (n.S < 0 || n.L || n.P < 0) { continue; }   // (a light, a pedal: no pitch to hear)
                 const d = Math.abs(n.S - position);
                 if (d < bestD) { bestD = d; best = n; }
             }
             if (!best) { return; }
-            const pitches = playbackNotes.filter(n => n.S === best.S).map(n => n.P);
+            const pitches = playbackNotes.filter(n => n.S === best.S && !n.L && n.P >= 0).map(n => n.P);
             if (pitches.length) {
                 holdNotes(pitches, best.I || 0, typeof best.G === 'number' ? best.G : -1, gapMs);
             }
@@ -9152,6 +9166,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             paused = null;
             stopPlayback();
             if (recPlayer && recPlayer.playing) { recPlayer.stop(); setPlayUi(false); }
+        });
+        // Rewind (owner's request 2026-11-17): the A flag to the top — with A-B on, B stays. Playing, it
+        // plays from there (Play's rule: from A); paused, it stops there.
+        document.getElementById('rewindBtn').addEventListener('click', () => {
+            setA(0, false);
+            if (playingNow()) { document.getElementById('playBtn').click(); return; }
+            if (paused) { paused = null; setPlayUi(false); }
         });
         // Pause (§1 3): playing, held where it is; paused, on from there. A does not move.
         document.getElementById('pauseBtn').addEventListener('click', () => {
@@ -9696,7 +9717,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             loopRound = w.length;
             spanStart = w.start || 0;
             spanPieces = w.pieces || [[spanStart, spanStart + loopRound]];
-            return w.notes.filter(n => !n.Z);
+            return w.notes;
         }
         let spanStart = 0;          // where the stretch spanOf cut starts in the score's time (the count-in's bar)
         let spanPieces = null;      // the score's times the stretch plays, in order — the voice is cut from them
@@ -9803,7 +9824,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const recTempo = warp ? practice.speed * window.LysSynth.warpFit(warp) : practice.speed;
             playBasis = { warp, recTempo, speed: warp ? window.LysSynth.recordingPlan(recSound(), recTempo).rate : practice.speed };
             const timed = warp ? window.LysSynth.warpNotes(notes, warp) : notes;
-            return window.LysSynth.practiceNotes(timed, rawParts, playedBeats(), Object.assign({}, practice, { speed: playBasis.speed }), rawExtra, !!keepSilent);
+            // The parts turned off stay in the list, marked Z: nothing sounds them, and they still say
+            // where the music is — a loop's round, the A-B window, and the bar lit while only the
+            // recording sounds (owner's request 2026-11-17).
+            return window.LysSynth.practiceNotes(timed, rawParts, playedBeats(), Object.assign({}, practice, { speed: playBasis.speed }), rawExtra, true);
         }
         /** The score's beats and last bar line on the list's time base (playBasis), before the speed. */
         function playedBeats() {

@@ -122,7 +122,7 @@ describe('the editor lights what the preview plays', () => {
         // The notes sounding and the rests lasting (owner's request 2026-11-17: a rest lit in the
         // text while it lasts); the score lights the notes only — the rests (E) have their own cursor.
         assert.match(extension, /sourceLit = true;\s*vscode\.postMessage\(\{ type: 'soundingSource', positions: r\.sounding\.map\(x => x\.pos\)\.concat\(rests \? rests\.sounding\.map\(x => x\.pos\) : \[\]\) \}\);\s*if \(!r\.changed\) return;\s*clearHighlights\(\);\s*const painted = highlightPositions\(r\.sounding\);/);
-        assert.match(extension, /const onScore = notes\.filter\(n => !n\.E\);\s*const cursor = new Cursor\(onScore\.map/);
+        assert.match(extension, /const onScore = notes\.filter\(n => !n\.E && !n\.Z\);[\s\S]{0,400}?const cursor = new Cursor\(onScore\.map/);
         assert.match(extension, /const restCursor = relay \? null : new Cursor\(notes\.filter\(n => n\.E\)\.map/);
         assert.match(extension, /if \(sourceLit\) \{\s*sourceLit = false;\s*vscode\.postMessage\(\{ type: 'soundingSource', positions: \[\], ended: true \}\);/);
         assert.match(extension, /if \(message\.type === 'soundingSource'\) \{\s*showSoundingSource\(panel, uri,/);

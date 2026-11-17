@@ -136,6 +136,11 @@ describe('the preview\'s Range panel', () => {
         assert.match(pause, /notes: playingNotes, at: Math\.max\(0, playOffset \+ playClock\(\)\), origin: playOrigin,/);
         assert.match(html, /function playingNow\(\) \{ return !document\.getElementById\('stopBtn'\)\.disabled && !paused; \}/);
         assert.match(html, /document\.getElementById\(playingNow\(\) \|\| paused \? 'pauseBtn' : 'playBtn'\)\.click\(\);/);
+        // Rewind: the A flag to the top; playing, from there (owner's request 2026-11-17).
+        assert.match(html, /getElementById\('rewindBtn'\)\.addEventListener\('click', \(\) => \{\s*setA\(0, false\);\s*if \(playingNow\(\)\) \{ document\.getElementById\('playBtn'\)\.click\(\); return; \}/);
+        // The parts turned off stay in the list (Z): silent, and lighting the bar while nothing else sounds.
+        assert.match(html, /practiceNotes\(timed, rawParts, playedBeats\(\), Object\.assign\(\{\}, practice, \{ speed: playBasis\.speed \}\), rawExtra, true\);/);
+        assert.match(html, /if \(quiet && quiet\.changed && r\.sounding\.length === 0\) \{[\s\S]{0,300}lightPlayingBar\(els\);/);
         // A click on a bar (or a note of it) takes the A flag there.
         assert.match(html, /\{ const m = measureOfStaffBox\(bar\); if \(m >= 0\) setA\(m, false\); \}/);
     });
