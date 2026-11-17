@@ -160,9 +160,13 @@ describe('the preview\'s Range panel', () => {
         assert.match(pause, /startPlayback\(p\.notes, p\.at, false, false, p\.countFix, p\.origin\);/);
         assert.match(pause, /notes: playingNotes, at: Math\.max\(0, playOffset \+ playClock\(\)\), origin: playOrigin,/);
         assert.match(html, /function playingNow\(\) \{ return !document\.getElementById\('stopBtn'\)\.disabled && !paused; \}/);
-        // The practice panel opens with every group folded (owner's request 2026-11-17).
-        assert.match(html, /practiceBtn\.setAttribute\('aria-expanded', 'true'\);[\s\S]{0,300}foldAll\(\);/);
-        assert.match(html, /function foldAll\(\) \{\s*for \(const g of Array\.from\(practicePanel\.querySelectorAll\('\.mgroup\[data-fold\]'\)\)\) folds\[g\.dataset\.fold\] = true;/);
+        // The practice panel's folds are kept per file; a file's first opening has every group folded
+        // (owner's requests 2026-11-17).
+        assert.match(html, /practiceBtn\.setAttribute\('aria-expanded', 'true'\);[\s\S]{0,300}applyFolds\(\);/);
+        assert.match(html, /folds\[g\.dataset\.fold\] = all \? true : !!foldsKept\[g\.dataset\.fold\];/);
+        assert.match(html, /vscode\.postMessage\(\{ type: 'panelFolds', chart: foldsChart, folds: foldsKept \}\);/);
+        assert.match(extension, /void panel\.webview\.postMessage\(\{ type: 'panelFolds', chart: uri, folds: panelFoldsFor\(uri\) \}\);/);
+        assert.match(extension, /if \(message\.type === 'panelFolds'\) \{\s*if \(typeof message\.chart === 'string'\) \{ keepPanelFolds\(message\.chart, message\.folds\); \}/);
         // Play is lit while it plays, Pause while paused (owner's choice 2026-11-17).
         assert.match(html, /playBtn\.classList\.toggle\('playing', !!playing && !paused\);/);
         assert.match(html, /\.toolbar button#playBtn\.playing \{/);

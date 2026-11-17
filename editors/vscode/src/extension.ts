@@ -1862,6 +1862,10 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 if (typeof message.chart === 'string') { keepAbRanges(message.chart, message.ranges); }
                 return;
             }
+            if (message.type === 'panelFolds') {
+                if (typeof message.chart === 'string') { keepPanelFolds(message.chart, message.folds); }
+                return;
+            }
             // The recording panel's settings changed: kept for this recording (recording.ts).
             if (message.type === 'recordingSettings') {
                 if (typeof message.chart === 'string' && typeof message.name === 'string') {
@@ -2160,6 +2164,26 @@ function keepAbRanges(uri: string, ranges: unknown): void {
     void abRangesStore.update(abRangesKey(uri), kept.some(r => r) ? kept : undefined);
 }
 
+/** The practice panel's folds kept for `uri` (owner's request 2026-11-17: per file; a file whose
+ *  panel was never opened has none, and opens all folded): group key → folded, `_sp` → Speed
+ *  and pitch open. Kept beside the A-B ranges, in the workspace's state. */
+function panelFoldsKey(uri: string): string {
+    return abRangesKey(uri).replace(/^lilysharp\.abRanges:/, 'lilysharp.panelFolds:');
+}
+function panelFoldsFor(uri: string): Record<string, boolean> | null {
+    const kept = abRangesStore?.get<unknown>(panelFoldsKey(uri));
+    if (!kept || typeof kept !== 'object') { return null; }
+    const out: Record<string, boolean> = {};
+    for (const [k, v] of Object.entries(kept as Record<string, unknown>)) { if (typeof v === 'boolean') { out[k] = v; } }
+    return out;
+}
+function keepPanelFolds(uri: string, folds: unknown): void {
+    if (!abRangesStore || !folds || typeof folds !== 'object') { return; }
+    const out: Record<string, boolean> = {};
+    for (const [k, v] of Object.entries(folds as Record<string, unknown>)) { if (typeof v === 'boolean' && k.length < 32) { out[k] = v; } }
+    void abRangesStore.update(panelFoldsKey(uri), out);
+}
+
 async function updatePreviewContent(
     document: vscode.TextDocument,
     panel: vscode.WebviewPanel,
@@ -2191,6 +2215,8 @@ async function updatePreviewContent(
     void panel.webview.postMessage({ type: 'scanState', hasScan: hasScan(document.uri) });
     // The A-B repeat's kept ranges of this file (the page draws its eight strips from them).
     void panel.webview.postMessage({ type: 'abRanges', chart: uri, ranges: abRangesFor(uri) });
+    // …and its practice panel's folds (null: never opened for this file — it opens all folded).
+    void panel.webview.postMessage({ type: 'panelFolds', chart: uri, folds: panelFoldsFor(uri) });
     // Another document or score: its voices replace the last one's, asked for once the server
     // has answered the render below (prepareVoices; singing-design §5).
     followVoices(panel, uri);
@@ -10361,19 +10387,34 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 practicePanel.style.left = Math.max(6, Math.min(b.left, window.innerWidth - practicePanel.offsetWidth - 6)) + 'px';
             }
             practiceBtn.setAttribute('aria-expanded', 'true');
-            // Every group opens folded, its one line of main controls (owner's request 2026-11-17);
-            // a group's name opens it for as long as the panel stays open.
-            foldAll();
+            // The file's own folds, as last left; a file whose panel opens for the first time opens
+            // with every group folded (owner's requests 2026-11-17).
+            applyFolds();
             if (recording) showRecording();
             requestParts();
         });
         // It closes as the Range panel does, by its × and its button, and stays open beside the
         // score (owner's request 2026-11-02: a click on the score closed it).
         document.getElementById('practiceClose').addEventListener('click', closePractice);
-        // Each group folded or opened by its name (owner's decision 2026-11-17, §6), remembered in the
-        // page's state; folded, its head (All, the fader) stays.
-        let folds = {};
-        try { folds = Object.assign({}, (vscode.getState() || {}).folds || {}); } catch { /* (none kept) */ }
+        // Each group folded or opened by its name (owner's decision 2026-11-17, §6), kept PER FILE in the
+        // workspace by the extension (panelFolds, beside the A-B ranges); folded, its head (All, the
+        // fader) stays. A file whose panel was never opened opens with every group folded.
+        var folds = {};
+        var foldsChart = null, foldsKept = null;    // the file shown, and its folds as the extension kept them (null: none)
+        function applyFolds() {
+            const all = !foldsKept;
+            folds = {};
+            for (const g of Array.from(practicePanel.querySelectorAll('.mgroup[data-fold]')))
+                folds[g.dataset.fold] = all ? true : !!foldsKept[g.dataset.fold];
+            for (const dt of Array.from(practicePanel.querySelectorAll('details'))) dt.open = !all && !!foldsKept._sp;
+            if (all) keepFolds();   // (opened once: from now on, as left)
+            showFolds();
+        }
+        function keepFolds() {
+            const sp = practicePanel.querySelector('details');
+            foldsKept = Object.assign({}, folds, { _sp: !!(sp && sp.open) });
+            if (foldsChart) vscode.postMessage({ type: 'panelFolds', chart: foldsChart, folds: foldsKept });
+        }
         function showFolds() {
             for (const g of Array.from(practicePanel.querySelectorAll('.mgroup[data-fold]'))) {
                 const folded = !!folds[g.dataset.fold];
@@ -10385,18 +10426,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             b.addEventListener('click', () => {
                 const key = b.closest('.mgroup').dataset.fold;
                 folds[key] = !folds[key];
-                try { vscode.setState(Object.assign({}, vscode.getState() || {}, { folds })); } catch { /* (kept for this page only) */ }
+                keepFolds();
                 showFolds();
             });
         }
+        for (const dt of Array.from(practicePanel.querySelectorAll('details')))
+            dt.addEventListener('toggle', () => { if (!practicePanel.hidden) keepFolds(); });
         showFolds();
-        // Every group folded, Speed and pitch closed: how the panel opens (the toolbar's button).
-        function foldAll() {
-            for (const g of Array.from(practicePanel.querySelectorAll('.mgroup[data-fold]'))) folds[g.dataset.fold] = true;
-            for (const dt of Array.from(practicePanel.querySelectorAll('details'))) dt.open = false;
-            try { vscode.setState(Object.assign({}, vscode.getState() || {}, { folds })); } catch { /* (kept for this page only) */ }
-            showFolds();
-        }
         // The folded heads' controls (owner's request 2026-11-17): each stands for one inside — a press
         // presses it, a slider moves it — and shows its state (syncMinis, after every showPractice).
         function syncMinis() {
@@ -11230,6 +11266,15 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     break;
                 case 'scanState':
                     docHasScan = !!message.hasScan;
+                    break;
+                case 'panelFolds':
+                    // The practice panel's folds kept for the file shown (each render). Taken when the
+                    // file changes — the page's own are newer than a render's copy of the same file's.
+                    if (message.chart !== foldsChart) {
+                        foldsChart = typeof message.chart === 'string' ? message.chart : null;
+                        foldsKept = message.folds && typeof message.folds === 'object' ? message.folds : null;
+                        if (!practicePanel.hidden) applyFolds();
+                    }
                     break;
                 case 'abRanges':
                     // The file's kept ranges (each render: another file has its own eight).
