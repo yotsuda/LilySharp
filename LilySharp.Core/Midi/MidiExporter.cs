@@ -1020,6 +1020,7 @@ public sealed class MidiExporter
         // counter): a part voice that writes fewer bars than its section-mates is padded
         // with silence when its play ends (PaddingTicks), as the page pads its staff.
         _sectionBars = Svg.Collector.SectionBarCounts.BuildSemanticIndex(_root);
+        _phraseBodiesOfRoot = null;
         _meterPlan = Svg.Collector.SectionMeterPlan.Build(_root);
         _phraseBodies = new Dictionary<string, SyntaxNode>();
         _sections = new Dictionary<string, List<SectionDeclarationSyntax>>();
@@ -2344,6 +2345,52 @@ public sealed class MidiExporter
     // The meters other parts write into each section's bars (SectionMeterPlan), read once per Export.
     private Svg.Collector.SectionMeterPlan _meterPlan = Svg.Collector.SectionMeterPlan.Empty;
 
+    /// <summary>
+    /// The music's bar at each bar of <paramref name="sectionName"/>'s play where it is SHORTER than
+    /// the meter's — a bar its `|` closes short (`… | g1 | d,4 |`, LYS2001: the bar line is the bar)
+    /// — else null: what a chord row's bar there is spread over (PlayChordRow's musicBar), as the
+    /// page fits the row's bar to the longest music bar at its index (FitRowsToMusicBars). A voice
+    /// that writes no bar there is padded with a whole one, and its last bar left open is closed a
+    /// whole one (CloseLaneOf): each counts the meter's. Null for a section no part voice writes.
+    /// </summary>
+    private Func<int, Fraction?>? SectionMusicBars(string sectionName, Func<int, (int Beats, int BeatType)>? meterOfBar)
+    {
+        if (_root == null)
+            return null;
+        List<Svg.Collector.SectionBarCounts.SemanticVoice>? voices = null;
+        foreach (var v in _sectionBars.ByContainer.Values)
+            if (v.SectionName == sectionName && !v.IsChords && !v.IsLyrics)
+                (voices ??= new()).Add(v);
+        if (voices == null)
+            return null;
+        _phraseBodiesOfRoot ??= Svg.Collector.SectionBarCounts.PhraseBodies(_root);
+        var opening = _sectionHeaders.Times.GetValueOrDefault(sectionName) is { IsSenzaMisura: false } time
+            ? new Fraction(time.Beats, time.BeatType) : _bars.MeterLength;
+        var lists = new List<List<Semantics.MeasureModel.Bar>>();
+        foreach (var v in voices)
+        {
+            var voice = v;
+            Func<int, TimeSignatureSyntax?>? planned = _meterPlan.IsEmpty ? null
+                : bar => _meterPlan.ForeignChangeAt(voice.SectionName, bar, voice.Container);
+            lists.Add(Semantics.MeasureModel.Split(voice.Container, _phraseBodiesOfRoot, opening, plannedMeterAt: planned));
+        }
+        return index =>
+        {
+            var meter = meterOfBar != null ? meterOfBar(index) : (_bars.Meter.Beats, _bars.Meter.BeatType);
+            var whole = new Fraction(meter.Beats, meter.BeatType);
+            var longest = Fraction.Zero;
+            foreach (var bars in lists)
+            {
+                var b = index < bars.Count ? bars[index] : default;
+                var length = index < bars.Count && b.BarLineEnd >= 0 && !b.IsEmpty && b.Duration > Fraction.Zero ? b.Duration : whole;
+                if (length > longest)
+                    longest = length;
+            }
+            return longest < whole ? longest : null;
+        };
+    }
+    private IReadOnlyDictionary<string, SyntaxNode>? _phraseBodiesOfRoot;
+
     /// <summary>Sounds every chord-track cell written directly in <paramref name="section"/>
     /// whose row the score places, each from the current tick (the section's start), and
     /// returns where the longest ends — the current tick when there is none. The tick is
@@ -2352,6 +2399,7 @@ public sealed class MidiExporter
     {
         int start = _currentTick, end = _currentTick, lastBar = _currentTick;
         var meterOfBar = SectionMeterOfBar(section.SectionName);
+        var musicBar = SectionMusicBars(section.SectionName, meterOfBar);
         void Row(int rowEnd)
         {
             if (rowEnd > end)
@@ -2360,13 +2408,13 @@ public sealed class MidiExporter
         for (int i = 0; i < section.SlotCount; i++)
             if (section.GetChild(i) is ChordPartBlockSyntax { HasSections: false, PartName: { } row } cell
                 && _soundingChordRows.Contains(row))
-                Row(PlayChordRow(cell.Items, row, start, track, _strokesByRow.GetValueOrDefault(row), meterOfBar));
+                Row(PlayChordRow(cell.Items, row, start, track, _strokesByRow.GetValueOrDefault(row), meterOfBar, musicBar));
         // A flat chord track gives this play the bars it prints. A section declared twice is one play.
         if (_flatRowsPlay != _sectionPlaySerial)
         {
             _flatRowsPlay = _sectionPlaySerial;
             foreach (var (flat, items) in _flatRows.Take(_sectionBars.Canonical.GetValueOrDefault(section.SectionName)))
-                Row(PlayChordRow(items, flat, start, track, _strokesByRow.GetValueOrDefault(flat), meterOfBar));
+                Row(PlayChordRow(items, flat, start, track, _strokesByRow.GetValueOrDefault(flat), meterOfBar, musicBar));
         }
         _chordRowLastBar = lastBar;
         return end;
@@ -2532,7 +2580,8 @@ public sealed class MidiExporter
     /// every bar took the meter the section opened with, so under a <c>time 3/4</c> written in
     /// the music the row ran a beat long a bar (Lab sessions/p1120/probe/m-flat).</param>
     private int PlayChordRow(IEnumerable<SyntaxNode> items, string rowName, int startTick, MidiTrack track,
-        IReadOnlyList<Stroke>? strokes = null, Func<int, (int Beats, int BeatType)>? meterOfBar = null)
+        IReadOnlyList<Stroke>? strokes = null, Func<int, (int Beats, int BeatType)>? meterOfBar = null,
+        Func<int, Fraction?>? musicBar = null)
     {
         string part = rowName + ChordRowTrackSuffix;
         int timbre = PartTimbre(part);
@@ -2542,12 +2591,25 @@ public sealed class MidiExporter
         int barIndex = 0;
         int gridBeats = _bars.Meter.Beats, gridBeatType = _bars.Meter.BeatType;
         int barTicks = FractionToTicks(_bars.MeterLength);
+        // The bar's slots are spread over the MUSIC's bar where that is another length than the
+        // meter's (musicBar: a bar its `|` closed short), share for share — as the page fits a row's
+        // bar to the music's (MeasureCollector.FitRowsToMusicBars) and the LilyPond twin scales it.
+        // MEASURED before (2026-11-17, Lab sessions/p1290/mylife/m2): under `… | g1 | d,4 |` the row's
+        // D sounded a whole bar where the page drew it over the bar's one beat, and every chord after
+        // it a bar and three beats late of the page, the section's last one cut.
+        double barScale = 1;
         void ArmBar()
         {
-            if (meterOfBar == null)
-                return;
-            (gridBeats, gridBeatType) = meterOfBar(barIndex);
-            barTicks = FractionToTicks(new Fraction(gridBeats, gridBeatType));
+            if (meterOfBar != null)
+                (gridBeats, gridBeatType) = meterOfBar(barIndex);
+            int meterTicks = FractionToTicks(new Fraction(gridBeats, gridBeatType));
+            barTicks = meterTicks;
+            barScale = 1;
+            if (musicBar?.Invoke(barIndex) is { } music && music > Fraction.Zero)
+            {
+                barTicks = FractionToTicks(music);
+                barScale = (double)barTicks / meterTicks;
+            }
         }
         ArmBar();
         // A section's pickup shortens the row's FIRST bar as it shortens every part's (the
@@ -2557,6 +2619,8 @@ public sealed class MidiExporter
         int thisBarTicks = _bars.BarLength != _bars.MeterLength ? FractionToTicks(_bars.BarLength) : barTicks;
         // …and its slots are that pickup's (SlotGroups' pickup): the first bar only.
         Fraction? thisBarPickup = _bars.BarLength != _bars.MeterLength ? _bars.BarLength : null;
+        if (thisBarPickup != null)
+            barScale = 1;   // (a pickup is gridded on its own beats, not scaled)
         int tonicStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
         // The key the row's degrees are read in: the piece's here, then the row's own `key` from its
         // bar (owner's decision 2026-11-16: a row's key is that row's alone).
@@ -2607,8 +2671,8 @@ public sealed class MidiExporter
                         is not { } typed)
                     continue;
                 var chord = Semantics.ChordTrackPitch.Sounding(typed, entry.SymbolText, typedDrop.Value, rowSharps);
-                int onset = barStart + FractionToTicks(timing);
-                int length = Math.Min(FractionToTicks(duration), barStart + thisBarTicks - onset);
+                int onset = barStart + (int)Math.Round(FractionToTicks(timing) * barScale);
+                int length = Math.Min((int)Math.Round(FractionToTicks(duration) * barScale), barStart + thisBarTicks - onset);
                 if (length < 1)
                     continue;
                 int position = entry.SourceStart;

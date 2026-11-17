@@ -102,4 +102,24 @@ public class OpenBarAtSectionEndTests
         int bar = 4 * midi.TicksPerQuarterNote;
         Assert.Equal(Enumerable.Range(0, bars).Select(i => i * bar), chords);
     }
+
+    /// <summary>A bar its `|` closes SHORT (the bar line is the bar, LYS2001) is that short under the
+    /// chord row too: the page draws the row's D over the bar's one beat and the next chords after
+    /// it, and the sound plays them so. Until 2026-11-17 the row's bar stayed a whole one — D for a
+    /// bar, every later chord of the section a bar and three beats late, its last one cut
+    /// (Lab sessions/p1290/mylife/m2).</summary>
+    [Fact]
+    public void ABarClosedShort_IsThatShortUnderTheChordRow_InTheSound()
+    {
+        var midi = new MidiExporter().Export(SyntaxTree.Parse(Book("d4 r r r | c1 | f1 | g1 | d,4 |")));
+        var notes = midi.Tracks.Single(t => t.Name == "harmony (chords)").Notes;
+        int q = midi.TicksPerQuarterNote, bar = 4 * q;
+        var onsets = notes.Select(n => n.StartTick).Distinct().OrderBy(t => t).ToArray();
+        // B: four whole bars, the short one (a beat), three whole; then C's four.
+        int shortAt = 4 * bar, after = shortAt + q;
+        Assert.Equal(new[] { 0, bar, 2 * bar, 3 * bar, shortAt, after, after + bar, after + 2 * bar,
+            after + 3 * bar, after + 4 * bar, after + 5 * bar, after + 6 * bar }, onsets);
+        // The short bar's D lasts its beat.
+        Assert.All(notes.Where(n => n.StartTick == shortAt), n => Assert.Equal(q, n.DurationTicks));
+    }
 }
