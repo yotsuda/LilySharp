@@ -2183,6 +2183,19 @@ has them, or a form that plays a later section anywhere but right after the earl
 rewrite is checked before it is applied — under every form every part sounds exactly as before
 and the words fall on the same notes — and applied as one edit.
 
+**Splitting a section where you choose.** Put the caret on a bar line inside a section (or just
+after one) and choose **Split section A here (after bar N)** from the lightbulb, or **Split Section
+Here** from the editor's right-click menu: the section is cut at that bar in every part, chord
+row and lyrics track, the bars after it become a new section declared right after it (its name
+asked for; a free `A2`, `A3`, … offered), and every form plays the two where it played the one
+(`form { A }` → `form { A A2 }`, `~A` → `~A ~A2`). What the new section would reset is written
+out at its head — the section's header `time` / `key`, a meter, key or clef changed earlier in a
+part's music, the running note value, the octave marks under relative octaves — and a run of bar
+repeats (`| % | %`) cut in its middle opens the new section with the repeated bar written out. It is
+refused, with the reason, for a section written by part, an inline repeat (`|:`) in it, words with
+no bar lines to cut by, a tie the new section would break, or a name already taken; and checked
+before it is applied, as the join is.
+
 **Splitting the other parts to match.** When one part has cut a section into several
 (`part vn1 { section A { … 16 bars } section B { … 121 bars } }`) while the others still write
 the whole passage in one `section A`, the section is not the same length everywhere

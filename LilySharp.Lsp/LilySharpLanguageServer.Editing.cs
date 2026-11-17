@@ -426,8 +426,35 @@ public sealed partial class LilySharpLanguageServer
             actions.Add(singerPart);
         if (JoinSectionsAction(doc, uri, startOffset, endOffset) is { } join)
             actions.Add(join);
+        if (startOffset == endOffset && CutSectionAction(doc, uri, startOffset) is { } cut)
+            actions.Add(cut);
 
         return actions.ToArray();
+    }
+
+    /// <summary>The command "Split Section Here" runs — the extension's, which asks for the new
+    /// section's name and the rewrite (lilysharp/cutSection) and applies it.</summary>
+    internal const string CutSectionCommand = "lilysharp.splitSectionHere";
+
+    /// <summary>"Split section A here (after bar k)" with the caret on a bar line of a section's cell, or
+    /// just after one (owner's request 2026-11-17). Offered on sight; worked out and checked when picked.</summary>
+    private static CodeAction? CutSectionAction(Document doc, Uri uri, int offset)
+    {
+        int i = offset;
+        while (i > 0 && doc.Text[i - 1] is ' ' or '\t') i--;
+        bool onBarLine = (offset < doc.Text.Length && doc.Text[offset] == '|') || (i > 0 && doc.Text[i - 1] == '|');
+        if (!onBarLine)
+            return null;
+        int at = offset < doc.Text.Length && doc.Text[offset] == '|' ? offset + 1 : offset;
+        if (LilySharp.Core.Editing.SectionCutter.PlaceAt(doc.Tree, at) is not { } place)
+            return null;
+        string title = $"Split section {place.Section} here (after bar {place.Bars})…";
+        return new CodeAction
+        {
+            Title = title,
+            Kind = CodeActionKind.RefactorRewrite,
+            Command = new Command { Title = title, CommandIdentifier = CutSectionCommand, Arguments = [uri.ToString(), place.Section, place.Bars] },
+        };
     }
 
     /// <summary>The command "Join Sections" runs — the extension's, which asks the server for the

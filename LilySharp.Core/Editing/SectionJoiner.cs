@@ -317,7 +317,7 @@ public static class SectionJoiner
 
     /// <summary>Each pinned pitch (candidate offset → source offset) re-marked by the octaves its
     /// note now sounds away from where it sounded — the rest of its run follows it in the frame.</summary>
-    private static string Repin(string source, string candidate, Dictionary<int, int> pinned)
+    internal static string Repin(string source, string candidate, Dictionary<int, int> pinned)
     {
         if (pinned.Count == 0)
             return candidate;
@@ -363,7 +363,7 @@ public static class SectionJoiner
 
     /// <summary>The first sounding pitch of each written note, by its source offset (every form's plays agree on a
     /// note's first pitch under the default form).</summary>
-    private static Dictionary<int, int> PitchBySource(SyntaxTree tree)
+    internal static Dictionary<int, int> PitchBySource(SyntaxTree tree)
     {
         var result = new Dictionary<int, int>();
         foreach (var n in new MidiExporter().Export(tree).Tracks.SelectMany(t => t.Notes).OrderBy(n => n.StartTick))
@@ -377,7 +377,7 @@ public static class SectionJoiner
 
     // --- the check ------------------------------------------------------------------------------
 
-    private static string? Verify(SyntaxTree original, string candidate)
+    internal static string? Verify(SyntaxTree original, string candidate)
     {
         var after = SyntaxTree.Parse(candidate);
         if (after.HasErrors)
@@ -449,23 +449,23 @@ public static class SectionJoiner
 
     // --- helpers --------------------------------------------------------------------------------
 
-    private static bool IsReference(SyntaxNode n) => n.Kind is SyntaxKind.SectionReference or SyntaxKind.SilentSectionReference;
+    internal static bool IsReference(SyntaxNode n) => n.Kind is SyntaxKind.SectionReference or SyntaxKind.SilentSectionReference;
 
-    private static string RefName(SyntaxNode n)
+    internal static string RefName(SyntaxNode n)
         => n is SectionReferenceSyntax r ? r.SectionName
             : n.DescendantNodes().OfType<SyntaxTokenNode>().FirstOrDefault(t => t.Kind == SyntaxKind.Identifier)?.Text ?? "";
 
     /// <summary>A reference with nothing but its name (and a <c>~</c>): no label, no octave marks.</summary>
-    private static bool PlainReference(string source, SyntaxNode n)
+    internal static bool PlainReference(string source, SyntaxNode n)
         => Regex.IsMatch(Short(source, n), @"^~?[A-Za-z_][A-Za-z0-9_\-]*$");
 
-    private static string Short(string source, SyntaxNode n)
+    internal static string Short(string source, SyntaxNode n)
     {
         string t = Regex.Replace(source[InkStart(n)..InkEnd(n)], @"\s+", " ");
         return t.Length > 60 ? t[..57] + "…" : t;
     }
 
-    private static string Where(string source, SyntaxNode n) => $"line {source[..InkStart(n)].Count(c => c == '\n') + 1}";
+    internal static string Where(string source, SyntaxNode n) => $"line {source[..InkStart(n)].Count(c => c == '\n') + 1}";
 
     private static bool EndsOnABarLine(string text)
     {
@@ -475,11 +475,11 @@ public static class SectionJoiner
     }
 
     /// <summary>The first note, rest or chord of a cell's music (a bare multi-bar <c>R</c> moves no running length and is not one).</summary>
-    private static SyntaxNode? FirstTimedLeaf(SyntaxNode cell)
+    internal static SyntaxNode? FirstTimedLeaf(SyntaxNode cell)
         => cell.DescendantNodes().FirstOrDefault(n => n is NoteSyntax or ChordSyntax || (n is RestSyntax r && !r.ToString().TrimStart().StartsWith('R')));
 
     /// <summary>Where a length would be written on a leaf that has none, or null when it has one.</summary>
-    private static int? LengthGap(SyntaxNode leaf)
+    internal static int? LengthGap(SyntaxNode leaf)
     {
         switch (leaf)
         {
@@ -503,7 +503,7 @@ public static class SectionJoiner
         }
     }
 
-    private static string IndentOf(string source, int at)
+    internal static string IndentOf(string source, int at)
     {
         int lineStart = source.LastIndexOf('\n', Math.Max(0, at - 1)) + 1;
         int i = lineStart;
@@ -511,7 +511,7 @@ public static class SectionJoiner
         return source[lineStart..i];
     }
 
-    private static IEnumerable<SyntaxNode> BodyItems(SyntaxNode body)
+    internal static IEnumerable<SyntaxNode> BodyItems(SyntaxNode body)
     {
         bool inBody = false;
         for (int i = 0; i < body.SlotCount; i++)
@@ -528,17 +528,17 @@ public static class SectionJoiner
 
     /// <summary>[just after a cell's opening brace, its closing brace's start): the first '{' of the
     /// cell's text and its last token, a '}' (a part's block holds its braces in a child node).</summary>
-    private static (int Start, int End) BodyRange(SyntaxNode body)
+    internal static (int Start, int End) BodyRange(SyntaxNode body)
         => (OpenBraceEnd(body), LastToken(body) is { Kind: SyntaxKind.CloseBrace } close ? close.Span.Start : -1);
 
-    private static SyntaxTokenNode? OpenBrace(SyntaxNode body)
+    internal static SyntaxTokenNode? OpenBrace(SyntaxNode body)
         => body.DescendantNodes().OfType<SyntaxTokenNode>().FirstOrDefault(t => t.Kind == SyntaxKind.OpenBrace && t.Width > 0);
 
-    private static int OpenBraceEnd(SyntaxNode body) => OpenBrace(body) is { } open ? open.Span.Start + open.Span.Length : -1;
+    internal static int OpenBraceEnd(SyntaxNode body) => OpenBrace(body) is { } open ? open.Span.Start + open.Span.Length : -1;
 
-    private static int OpenBraceStart(SyntaxNode body) => OpenBrace(body)?.Span.Start ?? -1;
+    internal static int OpenBraceStart(SyntaxNode body) => OpenBrace(body)?.Span.Start ?? -1;
 
-    private static SyntaxTokenNode? LastToken(SyntaxNode node)
+    internal static SyntaxTokenNode? LastToken(SyntaxNode node)
     {
         if (node is SyntaxTokenNode t)
             return t.Width > 0 ? t : null;
@@ -548,7 +548,7 @@ public static class SectionJoiner
         return null;
     }
 
-    private static SyntaxTokenNode? FirstToken(SyntaxNode node)
+    internal static SyntaxTokenNode? FirstToken(SyntaxNode node)
     {
         if (node is SyntaxTokenNode t)
             return t.Width > 0 ? t : null;
@@ -558,13 +558,13 @@ public static class SectionJoiner
         return null;
     }
 
-    private static int InkStart(SyntaxNode node) => FirstToken(node)?.Span.Start ?? node.Span.Start;
+    internal static int InkStart(SyntaxNode node) => FirstToken(node)?.Span.Start ?? node.Span.Start;
 
-    private static int InkEnd(SyntaxNode node) => LastToken(node) is { } t ? t.Span.Start + t.Span.Length : node.Span.Start + node.Span.Length;
+    internal static int InkEnd(SyntaxNode node) => LastToken(node) is { } t ? t.Span.Start + t.Span.Length : node.Span.Start + node.Span.Length;
 
-    private readonly record struct Edit(int Start, int End, string Text);
+    internal readonly record struct Edit(int Start, int End, string Text);
 
-    private static string Apply(string source, List<Edit> edits)
+    internal static string Apply(string source, List<Edit> edits)
     {
         var sb = new StringBuilder(source.Length + 256);
         int at = 0;

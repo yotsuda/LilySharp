@@ -1844,6 +1844,32 @@ public sealed partial class LilySharpLanguageServer
             return new JoinSectionsResponse { Success = r.NewText != null, NewText = r.NewText, Plan = r.Plan, Error = r.Error, Version = doc.Version };
         }, token);
 
+    /// <summary>"Split Section Here" (<see cref="LilySharp.Core.Editing.SectionCutter"/>, which checks the
+    /// piece sounds as it did): with no name, where the caret cuts and a free name to offer; with one,
+    /// the rewrite or the refusal.</summary>
+    [JsonRpcMethod("lilysharp/cutSection", UseSingleObjectParameterDeserialization = true)]
+    public Task<CutSectionResponse> CutSectionAsync(CutSectionParams @params, CancellationToken token)
+        => OffDispatch(() =>
+        {
+            var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+            if (doc == null)
+                return new CutSectionResponse { Error = "Document not found" };
+            string? section = @params.Section;
+            int bars = @params.Bars;
+            if (section == null || bars <= 0)
+            {
+                if (LilySharp.Core.Editing.SectionCutter.PlaceAt(doc.Tree, @params.Offset) is not { } place)
+                    return new CutSectionResponse { Error = "Put the caret on a bar line inside a section (not before its first bar line or after its last) — the section is cut there." };
+                (section, bars) = place;
+            }
+            if (string.IsNullOrWhiteSpace(@params.Name))
+                return new CutSectionResponse { Section = section, Bars = bars, Version = doc.Version,
+                    Suggested = LilySharp.Core.Editing.SectionCutter.SuggestName(doc.Tree, section) };
+            var r = LilySharp.Core.Editing.SectionCutter.Cut(doc.Text, section, bars, @params.Name.Trim());
+            return new CutSectionResponse { Success = r.NewText != null, NewText = r.NewText, Plan = r.Plan, Error = r.Error,
+                Section = section, Bars = bars, Version = doc.Version };
+        }, token);
+
     [JsonRpcMethod("lilysharp/splitSections", UseSingleObjectParameterDeserialization = true)]
     public Task<SplitSectionsResponse> SplitSectionsAsync(SplitSectionsParams @params, CancellationToken token)
         => OffDispatch(() => SplitSections(@params), token);

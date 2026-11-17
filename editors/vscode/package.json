@@ -815,6 +815,11 @@
         "title": "Join Sections (the selected ones, or this one with the next)"
       },
       {
+        "command": "lilysharp.splitSectionHere",
+        "category": "Lily#",
+        "title": "Split Section Here (at the bar line by the caret)"
+      },
+      {
         "command": "lilysharp.omrFixWithAi",
         "category": "Lily#",
         "icon": "$(sparkle)",
@@ -1093,6 +1098,10 @@
         },
         {
           "command": "lilysharp.joinSections",
+          "when": "editorLangId == lilysharp"
+        },
+        {
+          "command": "lilysharp.splitSectionHere",
           "when": "editorLangId == lilysharp"
         },
         {
@@ -1455,6 +1464,11 @@
           "command": "lilysharp.joinSections",
           "when": "resourceLangId == lilysharp",
           "group": "1_modification@3"
+        },
+        {
+          "command": "lilysharp.splitSectionHere",
+          "when": "resourceLangId == lilysharp",
+          "group": "1_modification@4"
         },
         {
           "command": "lilysharp.omrFixWithAi",

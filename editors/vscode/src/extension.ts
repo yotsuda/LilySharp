@@ -934,6 +934,10 @@ export function activate(context: vscode.ExtensionContext) {
         }),
         // From the palette with no arguments (the active file, the first section some part
         // subdivides), or from the LYS2007 quick fix with the document and the section.
+        vscode.commands.registerCommand('lilysharp.splitSectionHere',
+            (uri?: string, section?: string, bars?: number, name?: string) => splitSectionHere(typeof uri === 'string' ? uri : undefined,
+                typeof section === 'string' ? section : undefined, typeof bars === 'number' ? bars : undefined,
+                typeof name === 'string' ? name : undefined)),
         vscode.commands.registerCommand('lilysharp.joinSections',
             (uri?: string, sections?: string[]) => joinSections(typeof uri === 'string' ? uri : undefined, Array.isArray(sections) ? sections : undefined)),
         vscode.commands.registerCommand('lilysharp.splitSectionsToMatch',
@@ -3286,6 +3290,67 @@ async function joinSections(uriArg?: string, sections?: string[]) {
         vscode.window.setStatusBarMessage(`Lily#: ${response.Plan ?? 'joined'}`, 6000);
     } catch (err) {
         vscode.window.showErrorMessage(`Lily#: joining sections failed: ${err}`);
+    }
+}
+
+/**
+ * Split Section Here (owner's request 2026-11-17): the section cut at the caret's bar line (or the
+ * bar given by the code action), the rest a new section whose name is asked for (a free one
+ * offered). The server cuts every part, chord row and words there and checks the piece sounds as
+ * it did (lilysharp/cutSection); a refusal says why. One edit (one undo).
+ */
+async function splitSectionHere(uriArg?: string, section?: string, bars?: number, nameArg?: string) {
+    const editor = vscode.window.activeTextEditor;
+    const doc = uriArg
+        ? vscode.workspace.textDocuments.find(d => sameDocumentUri(d.uri.toString(), uriArg))
+        : editor?.document;
+    if (!doc || doc.languageId !== 'lilysharp' || !client) {
+        return;
+    }
+    type CutAnswer = { Success: boolean; NewText?: string | null; Plan?: string | null; Error?: string | null;
+        Section?: string | null; Bars: number; Suggested?: string | null; Version: number };
+    const ask = (name: string | null, s?: string, b?: number) => client!.sendRequest<CutAnswer>('lilysharp/cutSection', {
+        textDocument: { uri: doc.uri.toString() },
+        section: s ?? null, bars: b ?? 0,
+        offset: editor && editor.document === doc ? doc.offsetAt(editor.selection.active) : 0,
+        name,
+    });
+    try {
+        const version = doc.version;
+        const where = await ask(null, section, bars);
+        if (where.Error || !where.Section) {
+            const refusal = modalText(where.Error ?? 'The section was not split.');
+            await vscode.window.showWarningMessage(refusal.message, { modal: true, detail: refusal.detail });
+            return;
+        }
+        // (a name handed in — a script's — is taken as it is)
+        const name = nameArg ?? await vscode.window.showInputBox({
+            title: `Lily#: split section ${where.Section} after bar ${where.Bars}`,
+            prompt: 'The name of the new section (the bars after the cut)',
+            value: where.Suggested ?? '',
+            validateInput: v => /^[A-Za-z_][A-Za-z0-9_\-]*$/.test(v.trim()) ? undefined : 'A letter, then letters, digits, _ and -',
+        });
+        if (!name) {
+            return;
+        }
+        const response = await vscode.window.withProgress(
+            { location: vscode.ProgressLocation.Window, title: 'Lily#: checking the split…' },
+            () => ask(name.trim(), where.Section ?? undefined, where.Bars));
+        if (!response.Success || response.NewText == null) {
+            const refusal = modalText(response.Error ?? 'The section was not split.');
+            await vscode.window.showWarningMessage(refusal.message, { modal: true, detail: refusal.detail });
+            return;
+        }
+        if (doc.version !== version || response.Version !== version) {
+            vscode.window.showWarningMessage('Lily#: the file changed while the split was being checked — run it again.');
+            return;
+        }
+        const edit = new vscode.WorkspaceEdit();
+        edit.replace(doc.uri, new vscode.Range(doc.positionAt(0), doc.positionAt(doc.getText().length)), response.NewText);
+        await vscode.workspace.applyEdit(edit);
+        vscode.window.setStatusBarMessage(`Lily#: ${response.Plan ?? 'split'}`, 6000);
+    } catch (err) {
+        vscode.window.showErrorMessage(`Lily#: splitting the section failed: ${err}`);
     }
 }
 

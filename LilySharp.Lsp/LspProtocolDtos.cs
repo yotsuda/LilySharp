@@ -1376,6 +1376,31 @@ public class JoinSectionsParams
     public int End { get; set; }
 }
 
+/// <summary>Parameters for lilysharp/cutSection: the section and the bars before the cut, or, without
+/// them, the caret that says where; and the new section's name (without it, the answer asks for one).</summary>
+public class CutSectionParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    public string? Section { get; set; }
+    public int Bars { get; set; }
+    public int Offset { get; set; }
+    public string? Name { get; set; }
+}
+
+/// <summary>Response for lilysharp/cutSection: the rewrite, or what the cut needs (a name: the
+/// section, the bars and a free name to offer), or the refusal.</summary>
+public class CutSectionResponse
+{
+    public bool Success { get; set; }
+    public string? NewText { get; set; }
+    public string? Plan { get; set; }
+    public string? Error { get; set; }
+    public string? Section { get; set; }
+    public int Bars { get; set; }
+    public string? Suggested { get; set; }
+    public int Version { get; set; }
+}
+
 /// <summary>Response for lilysharp/joinSections.</summary>
 public class JoinSectionsResponse
 {
