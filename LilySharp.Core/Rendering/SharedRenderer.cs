@@ -145,6 +145,9 @@ internal static partial class SharedRenderer
         var barNumbers = PrintedBarNumbers(score);
         var sectionLabels = score.PrimaryContentStaff.PrimaryVoice.Measures.Select(m => m.SectionLabel).ToArray();
         var barStarts = BarStartPositions(score);
+        // The chords rows' symbols by bar, ONCE (the fingerings' reason above): each system's
+        // box asked the whole array for its own.
+        var rowChords = RowChordsByMeasure(layout.ChordNameLayouts);
         bool recordInk = HasTodoMemos(score);
         bool firstPage = true;
         int pageIndex = -1;
@@ -245,7 +248,7 @@ internal static partial class SharedRenderer
                                 DrawSystem(score, layout, drawn, resolver, beamedItems, systemGc, flipBase);
                         // OUTSIDE the capture: a replayed system stands at other bar numbers
                         // once a bar is added before it, and its boxes must say so.
-                        DrawBarBoxes(drawn, barNumbers, sectionLabels, barStarts, systemGc, score.TextMetrics, layout.ChordNameLayouts);
+                        DrawBarBoxes(drawn, barNumbers, sectionLabels, barStarts, systemGc, score.TextMetrics, rowChords);
                     }
                     finally
                     {
@@ -405,11 +408,11 @@ internal static partial class SharedRenderer
     /// </remarks>
     private static void DrawBarBoxes(SystemLayout system, ImmutableArray<int> barNumbers, string?[] sectionLabels,
         BarSource[][] barStarts, IDrawingContext gc,
-        ScoreTextMetrics fonts, ImmutableArray<ChordNameLayout> chordNames)
+        ScoreTextMetrics fonts, Dictionary<int, List<ChordNameLayout>>? rowChords)
     {
         if (system.StaffGroups.IsDefaultOrEmpty)
             return;
-        var rowInk = ChordRowInk(system, fonts, chordNames);
+        var rowInk = ChordRowInk(system, fonts, rowChords);
         double top = double.NegativeInfinity, bottom = double.PositiveInfinity;
         foreach (var group in system.StaffGroups)
             foreach (var staff in group.Staves)
@@ -452,25 +455,54 @@ internal static partial class SharedRenderer
 
     /// <summary>Each chords row's symbols' ink in this system, Y-up from the system top: the
     /// lowest bottom and the highest top of the symbols printed on the row's line.</summary>
+    /// <remarks>
+    /// Read off <paramref name="rowChords"/> (<see cref="RowChordsByMeasure"/>), the system's own
+    /// bars' symbols. It used to walk every chord name of the score for each system — systems ×
+    /// chord names on every keystroke, a book with no chords row included (review of session 1291).
+    /// </remarks>
     private static Dictionary<int, (double Bottom, double Top)> ChordRowInk(SystemLayout system,
-        ScoreTextMetrics fonts, ImmutableArray<ChordNameLayout> chordNames)
+        ScoreTextMetrics fonts, Dictionary<int, List<ChordNameLayout>>? rowChords)
     {
+        if (rowChords == null)
+            return NoRowInk;
         var ink = new Dictionary<int, (double Bottom, double Top)>();
-        if (chordNames.IsDefaultOrEmpty)
-            return ink;
-        var measures = new HashSet<int>();
         foreach (var m in system.Measures)
-            measures.Add(m.MeasureIndex);
-        foreach (var c in chordNames)
         {
-            if (c.RowStaffIndex < 0 || !measures.Contains(c.MeasureIndex) || string.IsNullOrEmpty(c.ChordText))
+            // (a bar listed twice changes nothing: the ink is a lowest and a highest)
+            if (!rowChords.TryGetValue(m.MeasureIndex, out var chords))
                 continue;
-            var (bottom, top) = ChordNameEngraver.SymbolInk(fonts, c);
-            (double b, double t) = (c.YUp + bottom, c.YUp + top);
-            ink[c.RowStaffIndex] = ink.TryGetValue(c.RowStaffIndex, out var cur)
-                ? (Math.Min(cur.Bottom, b), Math.Max(cur.Top, t)) : (b, t);
+            foreach (var c in chords)
+            {
+                var (bottom, top) = ChordNameEngraver.SymbolInk(fonts, c);
+                (double b, double t) = (c.YUp + bottom, c.YUp + top);
+                ink[c.RowStaffIndex] = ink.TryGetValue(c.RowStaffIndex, out var cur)
+                    ? (Math.Min(cur.Bottom, b), Math.Max(cur.Top, t)) : (b, t);
+            }
         }
         return ink;
+    }
+
+    /// <summary>The ink of a score with no chords row: none. Never written to.</summary>
+    private static readonly Dictionary<int, (double Bottom, double Top)> NoRowInk = new();
+
+    /// <summary>The chords rows' printed symbols by the bar each stands in, for
+    /// <see cref="ChordRowInk"/>; null when the score has none (no chords row, or only chord
+    /// names over a staff).</summary>
+    internal static Dictionary<int, List<ChordNameLayout>>? RowChordsByMeasure(ImmutableArray<ChordNameLayout> chordNames)
+    {
+        if (chordNames.IsDefaultOrEmpty)
+            return null;
+        Dictionary<int, List<ChordNameLayout>>? byMeasure = null;
+        foreach (var c in chordNames)
+        {
+            if (c.RowStaffIndex < 0 || string.IsNullOrEmpty(c.ChordText))
+                continue;
+            byMeasure ??= new();
+            if (!byMeasure.TryGetValue(c.MeasureIndex, out var list))
+                byMeasure[c.MeasureIndex] = list = new();
+            list.Add(c);
+        }
+        return byMeasure;
     }
 
     // ---------- Header ----------
