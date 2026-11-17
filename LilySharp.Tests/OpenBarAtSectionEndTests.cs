@@ -123,6 +123,35 @@ public class OpenBarAtSectionEndTests
         Assert.All(notes.Where(n => n.StartTick == shortAt), n => Assert.Equal(q, n.DurationTicks));
     }
 
+    /// <summary>The same short bar under a chord track written BY PART (`chords h { section B { … } }`),
+    /// in the sound and the MusicXML: the row's bar there is the music's beat, its two chords half of
+    /// it each (Lab sessions/p1290/mylife/m7).</summary>
+    [Fact]
+    public void ABarClosedShort_UnderAChordTrackWrittenByPart_IsThatShort()
+    {
+        const string book = """
+            time 4/4
+            part bass { instrument bass }
+            chords harmony {
+              section B { D | C | F | G | D A | C | F | G | }
+              section C { A | A | B | B | }
+            }
+            section B { bass { d4 r r r | c1 | f1 | g1 | d,4 | } }
+            section C { bass { a1 | a1 | b1 | b1 | } }
+            form { B C }
+            score { staff bass  chords harmony }
+            """;
+        var midi = new MidiExporter().Export(SyntaxTree.Parse(book));
+        int q = midi.TicksPerQuarterNote, bar = 4 * q, shortAt = 4 * bar, after = shortAt + q;
+        var onsets = midi.Tracks.Single(t => t.Name == "harmony (chords)").Notes.Select(n => n.StartTick).Distinct().OrderBy(t => t).ToArray();
+        Assert.Equal(new[] { 0, bar, 2 * bar, 3 * bar, shortAt, shortAt + q / 2, after, after + bar, after + 2 * bar,
+            after + 3 * bar, after + 4 * bar, after + 5 * bar, after + 6 * bar }, onsets);
+        var xml = new LilySharp.Core.MusicXml.MusicXmlExporter().Export(SyntaxTree.Parse(book)).ToXml().ToString();
+        var fifth = System.Text.RegularExpressions.Regex.Match(xml, @"(?s)<measure number=""5""[^>]*>.*?</measure>").Value;
+        int divisions = int.Parse(System.Text.RegularExpressions.Regex.Match(xml, @"<divisions>(\d+)</divisions>").Groups[1].Value);
+        Assert.Contains($"<offset>{divisions / 2}</offset>", fifth);
+    }
+
     /// <summary>The LilyPond twin of the same two shapes. LilyPond's `|` is a check, so a bar its `|`
     /// closes short is said to be short before its first note — `\partial 4`, which LilyPond 2.26.0
     /// takes mid-piece — and the chord row's bar there is that beat (`d4`); a bar left open is a

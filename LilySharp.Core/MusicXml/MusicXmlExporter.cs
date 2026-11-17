@@ -8049,6 +8049,18 @@ public sealed class MusicXmlExporter
         int insertAt = 0;
         var (beats, beatType) = pending.MeterOf(barIndex);
         var (tonicStep, sharps) = pending.KeyOf(barIndex);
+        // A measure its `|` closes SHORT (the bar line is the bar, LYS2001) holds the row's bar
+        // spread over its length, share for share, as the page fits a row's bar to the music's
+        // (MeasureCollector.FitRowsToMusicBars), the MIDI and the LilyPond twin too. MEASURED before
+        // (2026-11-17, Lab sessions/p1290/mylife/m5): `D A` over a one-beat bar wrote the A at 48
+        // divisions of 24 — two beats past the measure's end.
+        double scale = 1;
+        if (pickup == null && MeasureLength(measure) is var length && length > 0)
+        {
+            int meterTicks = FractionToTicks(new Fraction(beats, beatType));
+            if (length < meterTicks)
+                scale = (double)length / meterTicks;
+        }
         foreach (var (node, timing, _) in Svg.Collector.ChordNameCollector.SlotGroups(bar, beats, beatType, out _, pickup))
         {
             if (node is not ChordEntrySyntax entry)
@@ -8079,7 +8091,7 @@ public sealed class MusicXmlExporter
                 if (drawn != null && BuildFrame(drawn.FrameSpec) is { } frame)
                     harmony.Add(frame);
             }
-            int offset = FractionToTicks(timing);
+            int offset = (int)Math.Round(FractionToTicks(timing) * scale);
             if (offset > 0)
                 harmony.Add(new System.Xml.Linq.XElement("offset", offset));
             foreach (var (note, onset) in existing)
@@ -8092,6 +8104,21 @@ public sealed class MusicXmlExporter
     /// <summary>How many semitones down a sounding chord is written in a part whose
     /// <c>&lt;transpose&gt;</c> is <paramref name="soundingShift"/> (written to sounding): 0..11.</summary>
     private static int WrittenDrop(int soundingShift) => ((soundingShift % 12) + 12) % 12;
+
+    /// <summary>How long the measure's music is, in divisions: the furthest its notes reach
+    /// (backups taken back, chord members and graces taking no time); 0 for none.</summary>
+    private static int MeasureLength(MusicXmlMeasure measure)
+    {
+        int position = 0, furthest = 0;
+        foreach (var n in measure.Notes)
+        {
+            if (n.RawElement != null || n.IsGrace || n.IsChord)
+                continue;
+            position += n.IsBackup ? -n.Duration : n.Duration;
+            furthest = Math.Max(furthest, position);
+        }
+        return furthest;
+    }
 
     /// <summary>The measure's harmonies with the position (divisions from the bar's head) each
     /// stands at: its place in the stream, plus its own offset.</summary>

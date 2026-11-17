@@ -2115,8 +2115,13 @@ public sealed class MidiExporter
         if (section.Parent is ChordPartBlockSyntax chordTrack)
         {
             if (chordTrack.PartName is { } row && _soundingChordRows.Contains(row))
+            {
+                // (a bar the music's `|` closes short is that short under the row too: SectionMusicBars)
+                var meterOfBar = SectionMeterOfBar(section.SectionName);
                 _currentTick = PlayChordRow(Svg.Collector.ChordNameCollector.SectionItems(section),
-                    row, _currentTick, track, _strokesByRow.GetValueOrDefault(row), SectionMeterOfBar(section.SectionName));
+                    row, _currentTick, track, _strokesByRow.GetValueOrDefault(row), meterOfBar,
+                    SectionMusicBars(section.SectionName, meterOfBar));
+            }
             return;
         }
 
