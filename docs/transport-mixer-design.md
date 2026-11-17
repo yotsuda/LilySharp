@@ -75,4 +75,5 @@
 
 - ツールバーのボタンは練習のボタン 1 つ（「Practice and mixer」）。ミキサーのボタンとパネル（`recPanelBtn`・`recClose`）は消し、JS の `recPanel` は `practicePanel` を指す。ボタンの押し込みは練習の変更（`practiceOn`）かミキサーの変更（`mixerChanged`）があるとき（`paintPracticeBtn`）。
 - グループ（`.mgroup[data-fold]`）: **Tempo**（Tempo・Metronome・Count-in）、**Loop**（A-B・Repeat・Ranges）、**Score**、**Recording**（録音があるときだけ）。見出しの名前（`.mfold`・▾/▸）を押すと開閉し、畳むと `.mbody` だけ隠れて見出しの All・フェーダーは使える。開閉はページの状態（`vscode.setState` の `folds`）に覚える。
-- 実物の VS Code（Lab `p1289/e2e/cdp-mixer.mjs`）で、ミキサーの前の確認すべてが 1 つのパネルで通り、Tempo と Loop を畳むと高さが 33・37 px になり状態に `{tempo: true, loop: true}` が残ることを確かめた。
+- **畳んだときの 1 行**（オーナー要望 2026-11-17「省略表示したとき、重要なボタンだけ一行で」「オクターブだけ省略した状態でも出して」）: Score と Recording は見出しがそのまま（All・フェーダー）。Tempo は畳むと見出しにテンポのスライダーと値・Metronome・Count-in、Loop は A-B・Repeat（`.mmini`・開いているときは出さない）。Speed and pitch は畳んだ行にオクターブの −・値・+（`.moct`）。どれも中の本物の写し（`data-mini`＝押す・動かすと本物を押す・動かす、`data-mini-text`＝本物の文字）で、状態は `syncMinis` が本物から写す（`showPractice` と `showMixerHead` の後）。Speed and pitch の行の中のボタンは `preventDefault` で開閉を起こさない。パネルの最小幅は画面を超えない（`min(400px, 100vw - 16px)`）、畳んだ見出しの名前は幅を詰め、狭ければ折り返す。
+- 実物の VS Code（Lab `p1289/e2e/cdp-mixer.mjs`）で、ミキサーの前の確認すべてが 1 つのパネルで通り、Tempo と Loop を畳むと高さが 33・37 px になり状態に `{tempo: true, loop: true}` が残ること、畳んだ行の Metronome・A-B・テンポのスライダー（80%）が本物を動かすこと、Speed and pitch を閉じたままオクターブの + で +1 になること、を確かめた。
