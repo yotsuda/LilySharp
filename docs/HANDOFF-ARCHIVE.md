@@ -84,6 +84,12 @@
 - **門**: site の例 4 冊（`chord-all`／`chord-capo`／`chord-list`／`chord-table`）を新綴りに書き換え、**旧 exe × 旧 .lys と新 exe × 新 .lys の svg／ly／mid／xml が data-pos 以外バイト一致**（Lab `sessions/p1036/gate/`）。網: `ChordDiagramTests`（旧綴り 7 形の LYS1061・quick fix 5 形＋score 内・`capo` 単体・`chordShapes` 単体・2 行目・「Capo N」の行の条件・`chordTuning`）ほか。文書: GRAMMAR（§2.2 CapoDecl／ChordShapesDecl・§2.6）・GRAMMAR_FOR_LLM・SYNTAX_REFERENCE・site（chords／manual／build-preview／build-examples）・README・MANUAL-CHECKS §2.2 に `[ ]` 4 項・HANDOFF §2 K0／K2／K5。
 - ⚠️ **罠**: ⑴ pwsh の var1 で書いたテストの期待文字列は hover の区切り（空白＋**NBSP**）を落とす＝`" "` で書く。⑵ C# の raw string literal（`"""`）の改行はソースの CRLF＝`.Replace("capo 3\n", "")` は当たらない。⑶ `Session-Check -Start` のあとに `Remove-LinesFromFile` でファイルを変えると Edit ツールは「modified since read」で止まる＝読み直す。⑷ layout の鍵を足すと赤くなる網は第1035 の 2 本に加え `LayoutBlockTests.TheVocabularyIsPublished`・`EditorColouringTests.TheLayoutBlock_…` の key/word 表。
 
+## §1.0 から移した閉じた段落（2026-11-18・第1294 に移した）← §1 の 20,000 字の門を超えたので出した
+
+- **section の外のコード行（`chords X { C | G7 | }`・`Semantics.FlatChordRows`）の残り＝第1120〜1121 で全部閉じた**: ⑴ 小節ごとの拍子は `SectionMeterPlan.MeterOfBar` の 1 か所から（ページの格子・MIDI・XML・`.ly` の 4 読み手・§1.1 第1120）／⑶ form の無い `.ly` は宣言順に section を歩く（同）／⑵ **音楽より長い行の余りの小節は全部出す（オーナー決定 2026-11-07・第1121）**＝score の拍子・home の調の小節として、ページは譜表を空の小節で延ばし（`ExtendStavesToTheRows`・拍子が違えば戻しを描く）、XML は小節を足し（`EmitFlatRowsPastTheMusic`）、MIDI は home に戻して鳴らし、`.ly` は `\time` の戻しを書く（§1.1 第1121）。残る注: section の中の inline の `repeat` と flat の行（`Canonical` は演奏長・ページは 1 回印刷）は未実測・本 0。
+- **★ 打鍵の増加の監査＝第1108〜1110 で閉じた（§1.1 第1109・第1110）。** 1000 小節の本の床は `fingbeam1k` 118 → 44 ms／`plain1k`＋小節の挿入 98 → 63 ms／`plain1k` 36 → 30 ms／`v2bow1k` 67 → 52 ms。518 冊の打鍵は第1110 の分で 3.69 → 3.59 ms。第1107 の最悪ケースの増分（`perf-3vdot300`・`perf-kitmix300`、数 ms）は受け入れた（オーナー決定 2026-11-06）。**skyline の残りは急がない**（`docs/skyline-merge-design.md` §3・§4）。**Release の lysc は `8fc8e2be1`**（オーナー決定 2026-11-06。前は `0d09b8f61`。全 svg 1262 枚のうち前の Release と違うのは `Untitled-1.lys` の 1 枚で、第1108〜1110 の高速化の分は差 0。OMR の REQUESTS にお知らせを書いた＝OMR の repo では未 commit）。
+- **作曲ガイダンス（Copilot のチャットで作曲 → Lily# が音楽として検査）＝第1042 でクローズ（上の行）**: 流れ・検査の一覧・差し戻しの規則・**講評の手順**（オーナーが Downloads の .lys を送る → ログ `~\.copilot\session-state\*\events.jsonl` → 検査を DLL で → `lysc octave --absolute` → 日本語で講評し「入れて」で実装）・残りは **`docs/compose-in-chat-design.md`**。
+
 ## §1.0 から移した閉じた段落（2026-11-15・第1268 に移した）← §1 の 20,000 字の門を超えたので出した
 
 - **オーナー指示 2026-11-04「横幅と付点の差を順に着手」は第1094 で閉じた**（語りは ARCHIVE に出る前の §1.1）。第1095 は MusicXML の `@cross`、第1096 は連符の時刻（`lysc xml`・MIDI）とスコアごとのパート、第1097 は読み込みの `lysc check` 16 件 → 0・線とタイの往復・1 音の hairpin・弱起の宣言・歌詞、第1098 は歌詞の綴りと書き出しの一本化（§1.1）。次の一手の指示はまだ無い＝下の残りから選ぶならオーナーに訊く。第1100 は連符の本体に書けるものと入れ子の連符の上下を閉じた（§1.1）。OMR の `open` は 0。点の列の共有は第1101 で閉じた（§1.1）。休符の声部の wish は第1102 で閉じた（§1.1）。付点のない声部の符尾は第1103 で閉じた（§1.1）。`lysc ly` のフレーズのドラムは第1104 で閉じた（§1.1）。ドラムの和音の揃え方は第1105 で閉じた（§1.1）。`Untitled-1` の段割れの差は名前の字下げと第1106 で分かった（§1.1）。**Release の lysc は `d6fd3b912`**（オーナー決定 2026-11-04・第1098。OMR の REQUESTS にお知らせを書いた）。#22（声部の中の `clef`）は第1099 で `fixed`＝OMR の `open` は 0。**Release の lysc は `1200c035a`**（オーナー決定 2026-11-04・第1099。OMR の REQUESTS #22 の行に書いた＝OMR の repo では未 commit）。
@@ -270,6 +276,18 @@
 
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
+
+## 以下は第1292セッションの経緯
+
+### 1.1 第1292セッション（2026-11-18・YT-DELL2）
+
+base `3ce28d3d0`・開始時 full 17562 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17565（Lab `p1292` の `run1.trx`）。REQUESTS: Calamo の open 0・Dettato は #18・#19。
+- **Dettato #18＝`f6256c026`**: 譜表のない score（コードの行だけ）で、行の `time` と section の見出しの `time` がスロットの割り振りに届かなかった（`time 3/4 E . F` が LYS2009・絵の F は小節の 2/3）。`MeasureCollector.RowMeterTimeline` が小節 0 個の一線譜の voice を音楽と読み、`RowsOnlyBarLengths` の表を見なかった＝第1120 の「見出しの拍子で割る」も同じ所で効いていなかった。網 `ChordRowTimeTests` 3 本（毒で 2 本赤）・全 svg 1268 枚で差 0（この形の本が無い・探り譜は Lab `p1292/d18`）。
+- **Dettato #19 は第1289 の `2882ef7e9` で直っていた**＝行を `fixed` に。⚠️ REQUESTS の 2 行は Dettato の repo で未 commit。
+- **改行に依存する網 4 本＝`a3d1dc4b5`**（review.md §4.3 の疑い）: 生文字列を `"\n"` で切る網が、autocrlf の fresh clone と CI の windows の脚で赤。作業ツリーで LF だった 155 ファイルを CRLF にして full で見つけた（手順は Lab `CLAUDE-OPERATIONS` §1 の末尾・一覧 `p1292/lf-to-crlf-list.txt`）。
+- **CI の赤は `ReadmeSampleTests` だけ**（run `44023136563` の ubuntu の脚・windows の脚は巻き添え）＝§1.0 の「オーナー待ち」。
+- 終了時 full 17565 合格 / 1 失敗（同じ）/ skip 2 / 合計 17568（`run4.trx`）・npm 1248 合格。
+- **次**: REQUESTS の open は 0。訊かずに着手してよいのは `p1242/leftovers.md` の欠陥（⚠️ 一覧は古い所がある＝「後の声部の `@finger`」は第1265 で閉じている。着手前に git log と実物で確かめる）。review.md の残りと §1.0 の候補（録音の S5・コード行の印）はオーナーに訊いてから。
 
 ## 以下は第1291セッションの経緯
 
