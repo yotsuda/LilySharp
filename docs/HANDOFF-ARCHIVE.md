@@ -277,6 +277,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1293セッションの経緯
+
+### 1.1 第1293セッション（2026-11-18・YT-DELL2）
+
+base `1591a32e2`・開始時 full 17565 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17568（Lab `p1293` の `run1.trx`）。**オーナーの指示（2026-11-18）＝包括レビュー（Lab `p1291/review.md`）の残りを続ける**＝P4・P5 の残り・P6・P7 の残り・P8・F2〜F7 は訊かずに着手してよい（P9 はオーナー判断・計測は静かな窓）。
+- **P4＝`95a5483aa`**: キャレットが音符の上のとき、音（`SoundIndex` の `ResolvedPitches.ForFile`）と場所（`NotePlaces`）が別々に全 score を collect していた（2S 回）→ 木ごとの `Editing.FileReadings` が score ごとに 1 回（`ResolvedPitches.ForFile(tree, each)` が collect を渡す）。移調する score（`transpose`・`concert`・譜表の pitch）だけは場所のためにもう 1 回（場所は書いたとおりの音高を読む＝前と同じ）。`using`・歌い手の譜のある本は音と場所が別の木なので前のまま。網 `KeystrokeSideWorkTests.TheCaretOnANote_…`（`SvgGenerator.CollectsOnThisThread` で数える: 2 score で 4 → 2・毒 2 本とも赤）。MIDI の書き出し 1 回は残る。ms は未計測。
+- **小さいもの**: `addChordTrack`・`guessSectionKey`・`regroup` は `doc.Tree` を読む（全文の parse をやめた）・F5 の `harmonyPartChoices` は `OffDispatch`。
+- 終了時 full 17567 合格 / 1 失敗（同じ `ReadmeSampleTests`）/ skip 2 / 合計 17570（`run3.trx`・増えた 2 本は P4 の網）。小さいものは `HEAD~1`（docs の前の commit）。
+- **次（review.md の残り・訊かずに着手してよい）**: P8（`using`・歌い手のある本の打鍵ごとのフル parse）→ P5 の残り（`getConfiguration`・3 秒の race のタイマー・`sendRequest` を先に）→ F2（`PreviewSession`）→ F5 の残り（`Commands.cs` を partial に・文書を取る型の不揃い）→ F7 → F3・F4。P4 の残り＝`caretInfo` の MIDI 書き出し 1 回と、`using` の本の 2 本目の collect。P6・P7 の残り・P10 は静かな窓で順位を測ってから。小さいもののうち completion の再 parse 5 か所・semantic tokens の割当・`prepareVoices` の `clearVoices` は未着手。
+
 ## 以下は第1292セッションの経緯
 
 ### 1.1 第1292セッション（2026-11-18・YT-DELL2）
