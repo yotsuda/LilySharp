@@ -12217,6 +12217,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 if (!abOn && seekToCopy(pos, inBar)) return;
                 clearHighlights();
                 vscode.postMessage({ type: 'jumpToPosition', position: pos });
+            } else if (!e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey
+                && target && svgContainer.contains(target) && lineEndBarAt(e.clientX, e.clientY)) {
+                // Right of a line's last bar line: A on that bar line — the next line's first bar
+                // (owner's request 2026-11-17), as a Shift+click there puts B on it. (The piece's last
+                // line: A on its last bar, the furthest A stands.)
+                const m = measureOfStaffBox(lineEndBarAt(e.clientX, e.clientY));
+                if (m >= 0) setA(m + 1);
             } else if (target && mainContent.contains(target)) {
                 // Clicked empty space / a non-clickable grob: just drop the
                 // highlight. Don't move the editor cursor (no message sent), and

@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A click right of a line's last bar line puts A there**: clicking the margin right of a staff line's last bar line now moves the A flag to that bar line — the next line's first bar — as a Shift+click there puts B on it.
+
 - **Shift+click on B's bar line takes B away**: with A-B on, a Shift+click on the bar line B stands on (the bar right of it, or the margin right of a line's last bar line) turns A-B off, as its button does — B's place is kept for when A-B comes back on.
 
 - **A flag dragged to the pane's edge scrolls the score smoothly**: held near the top or bottom of the preview, or taken past it, the score now scrolls on by itself frame after frame — faster the further out — and the flag follows the bars passing under the pointer. It scrolled only as the mouse moved, 14 px a move. (A release outside the preview is not heard there: the drag ends when the pointer comes back.)
