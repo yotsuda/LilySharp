@@ -200,9 +200,30 @@ internal static class SectionBarCounts
         Fraction time, IReadOnlyDictionary<string, SyntaxNode> phrases, bool groupedByPart)
     {
         // A voice span as long as its longest voice, as the page draws it (owner's decision 2026-10-30).
-        int bars = MeasureModel.Split(container, phrases, time, longestVoice: true).Count;
+        // A span with its bar lines left out (LYS2017: `e'1 e'`, every note kept in bars of the meter,
+        // owner's decision 2026-10-14) is as many bars as the page and the sound make of it
+        // (Semantics.WrittenBar.MissingBarLines). Counted as one, the section was padded with a bar
+        // too many in the sound — every later section a bar late, the metronome's accent lost between
+        // the two, a recording lined up bar by bar playing eight beats in one of its bars (owner's
+        // report 2026-11-17, My Life: "the metronome's tempo doubles") — and LYS2007 said a bar short.
+        int bars = BarsDrawn(MeasureModel.Split(container, phrases, time, longestVoice: true));
         MeasureCollector.CountBarsInScope(container, out bool open);
         return new SemanticVoice(section, label, false, container, anchor, bars, open, groupedByPart);
+    }
+
+    /// <summary>The bars a voice's bar model is drawn and played as: one each, and a span with
+    /// its bar lines left out (LYS2017) as many as it fills (<see cref="Semantics.WrittenBar.MissingBarLines"/>).
+    /// The one count every reader of a section's length takes (this index, the cross-part check).</summary>
+    internal static int BarsDrawn(IReadOnlyList<MeasureModel.Bar> split)
+    {
+        int bars = 0;
+        foreach (var b in split)
+        {
+            bars++;
+            if (!b.Flowed && !b.IsEmpty && b.Meter is { } meter && meter > Fraction.Zero)
+                bars += Semantics.WrittenBar.MissingBarLines(b.Duration.ToDouble(), meter.ToDouble(), meter.ToDouble());
+        }
+        return bars;
     }
 
     private static SemanticVoice Chords(string section, string label, SyntaxNode container, TextSpan anchor, bool groupedByPart)

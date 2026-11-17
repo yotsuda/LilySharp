@@ -3477,6 +3477,19 @@ public sealed class MidiExporter
         bool fills = _barFlows || Semantics.WrittenBar.MissingBarLines(elapsed, length, meter) > 0;
         int more = !fills || meter <= 0 || elapsed <= length ? 0 : (elapsed - length + meter - 1) / meter;
         int end = _barStart + length + more * meter;
+        // The bars a span with its bar lines left out fills (LYS2017) have their bar lines, as the
+        // page draws them: the metronome accents each, and a recording lined up bar by bar
+        // (timeWarp counts the accents) gives each one of its bars. MEASURED before (owner's report
+        // 2026-11-17, MissingBarLineBeatsTests): `e'1 e'` stood one bar line for its two bars —
+        // eight beats laid over one bar of the recording, the metronome at twice the tempo. Closing
+        // a lane (no written bar line after the span) stands the last one too.
+        if (fills && more > 0 && _barTicks != null && !_barFlows)
+        {
+            for (int t = _barStart + length; t < end; t += meter)
+                _barTicks.Add(t);
+            if (items == null)
+                _barTicks.Add(end);
+        }
         if (_currentTick == end || fills && _currentTick > end)
             return;
         if (_currentTick < end)

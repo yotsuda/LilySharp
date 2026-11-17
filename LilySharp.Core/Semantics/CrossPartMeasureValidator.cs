@@ -530,7 +530,8 @@ internal sealed class CrossPartMeasureValidator
         List<(string Name, Fraction Time, TextSpan TimeSpan, List<MeasureModel.Bar> Measures)> parts,
         List<SectionVoice> chordVoices)
     {
-        var voices = parts.Select(p => SectionVoice.Part(p.Name, p.Measures.Count, p.TimeSpan,
+        // (bars drawn: a span with its bar lines left out, LYS2017, as the bars it fills — SectionBarCounts.BarsDrawn)
+        var voices = parts.Select(p => SectionVoice.Part(p.Name, Svg.Collector.SectionBarCounts.BarsDrawn(p.Measures), p.TimeSpan,
             section.ChildNodes().OfType<PartBlockSyntax>().FirstOrDefault(b => b.Name == p.Name))).ToList();
         voices.AddRange(chordVoices);
         ReportBarCountMismatch(section.SectionName, voices);
