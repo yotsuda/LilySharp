@@ -204,7 +204,9 @@ public sealed class BreaksAnywhereTests
 
     // ───────────────────────── any part, shown or not ─────────────────────────
 
-    private const string ThreeParts = """
+    // (LF whatever this file's own line endings are: the tests cut lines out of it by "\n", and a
+    // checkout with autocrlf hands the raw string CRLF — the twin's test was red on a fresh Windows clone.)
+    private static readonly string ThreeParts = """
         octave absolute
         time 4/4
         part a { clef treble }
@@ -220,7 +222,7 @@ public sealed class BreaksAnywhereTests
         score { staff a  staff b  staff c }
         score duo { staff a  staff b }
         score solo { staff a }
-        """;
+        """.ReplaceLineEndings("\n");
 
     [Fact]
     public void ABreakInTheSecondAndThirdPart_BreaksTheScore()

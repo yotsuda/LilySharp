@@ -56,7 +56,8 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public sealed class HeaderLinesTests
 {
-    private const string P1 = """
+    // (LF whatever this file's line endings are: the tests cut lines out of it by "\n" — red on a checkout with autocrlf.)
+    private static readonly string P1 = """
         title "Morning Song"
         subtitle "Sub"
         poet "A. Poet"
@@ -69,7 +70,7 @@ public sealed class HeaderLinesTests
         section A { m { c'4 d' e' f' | g'1 | c'4 d' e' f' | g'1 | break c'4 d' e' f' | g'1 | c'4 d' e' f' | g'1 | } }
         form { ~A }
         score { staff m }
-        """;
+        """.ReplaceLineEndings("\n");
 
     private static ScoreLayout Laid(string source)
     {

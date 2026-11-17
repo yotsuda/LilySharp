@@ -40,7 +40,7 @@ public class PartWordsNamerTests
         {{singer}}
         form { A }
         score { staff lead  lyrics words }
-        """;
+        """.ReplaceLineEndings("\n");   // (LF whatever this file's line endings are)
 
     private static string? Named(string source, string at)
     {
