@@ -170,7 +170,7 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /practiceBtn\.setAttribute\('aria-expanded', 'true'\);[\s\S]{0,300}applyFolds\(\);/);
         assert.match(html, /folds\[g\.dataset\.fold\] = all \? true : !!foldsKept\[g\.dataset\.fold\];/);
         assert.match(html, /vscode\.postMessage\(\{ type: 'panelFolds', chart: foldsChart, folds: foldsKept \}\);/);
-        assert.match(extension, /void panel\.webview\.postMessage\(\{ type: 'panelFolds', chart: uri, folds: panelFoldsFor\(uri\) \}\);/);
+        assert.match(extension, /postIfChanged\(panel, \{ type: 'panelFolds', chart: uri, folds: panelFoldsFor\(uri\) \}\);/);
         assert.match(extension, /if \(message\.type === 'panelFolds'\) \{\s*if \(typeof message\.chart === 'string'\) \{ keepPanelFolds\(message\.chart, message\.folds\); \}/);
         // Play is lit while it plays, Pause while paused (owner's choice 2026-11-17).
         assert.match(html, /playBtn\.classList\.toggle\('playing', !!playing && !paused\);/);

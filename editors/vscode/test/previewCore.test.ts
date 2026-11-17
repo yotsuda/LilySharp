@@ -16,9 +16,50 @@
 
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { svgPostKey, pagesSummary, previewOnEditorShown, sourceGroupToReveal, sourceGroupToOpen, newPreviewColumn, scoreGroupFor, ShownEditor, jumpOffsetFor, chordSpans, chordAtCaret, soundingRange, soundingRanges, soundingLight, auditionBarRange } from '../src/previewCore';
+import { svgPostKey, pagesSummary, previewOnEditorShown, sourceGroupToReveal, sourceGroupToOpen, newPreviewColumn, scoreGroupFor, ShownEditor, jumpOffsetFor, chordSpans, chordAtCaret, soundingRange, soundingRanges, soundingLight, auditionBarRange, messageChanged, rewriteIsStale } from '../src/previewCore';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+
+// A command whose answer replaces the whole file does not apply it to a text that moved on
+// (review of session 1291: a keystroke typed while Regroup was out was taken back).
+describe('a rewrite of the whole document', () => {
+    it('is stale when the document changed while it was asked', () => {
+        assert.equal(rewriteIsStale(7, 7), false);
+        assert.equal(rewriteIsStale(7, 8), true);
+    });
+
+    it('is asked through the one door by every command that replaces the file', () => {
+        const extension = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        for (const method of ['regroup', 'convertOctaves', 'removeStringNumbers', 'extractPhrase', 'setSectionKey', 'respellToKey']) {
+            assert.match(extension, new RegExp(`rewriteRequest<\\w+>\\(doc, 'lilysharp/${method}'`), method);
+            assert.doesNotMatch(extension, new RegExp(`sendRequest<\\w+>\\('lilysharp/${method}'`), method);
+        }
+        assert.equal((extension.match(/rewriteRequest<HarmonyPartResponse>\(doc, 'lilysharp\/harmonyPart'/g) ?? []).length, 2);
+        assert.match(extension, /if \(rewriteIsStale\(version, doc\.version\)\) \{\s*vscode\.window\.showWarningMessage/);
+    });
+});
+
+// What follows the file and the workspace, not the text, is posted to the page when it changed —
+// not with every keystroke's refresh (review of session 1291).
+describe('a message the page already holds', () => {
+    it('is not posted again, and one that changed is', () => {
+        const kept = new Map<string, string>();
+        assert.equal(messageChanged(kept, { type: 'abRanges', chart: 'a', ranges: [null, { from: 1, to: 2 }] }), true);
+        assert.equal(messageChanged(kept, { type: 'abRanges', chart: 'a', ranges: [null, { from: 1, to: 2 }] }), false);
+        assert.equal(messageChanged(kept, { type: 'scanState', hasScan: false }), true);     // another type: its own memory
+        assert.equal(messageChanged(kept, { type: 'abRanges', chart: 'a', ranges: [null, { from: 1, to: 3 }] }), true);
+        assert.equal(messageChanged(kept, { type: 'abRanges', chart: 'b', ranges: [null, { from: 1, to: 3 }] }), true);     // another file
+        assert.equal(messageChanged(new Map(), { type: 'scanState', hasScan: false }), true);   // a reloaded page holds nothing
+    });
+
+    it('is what the preview does for the three, and forgets when the page reloads', () => {
+        const extension = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        for (const type of ['scanState', 'abRanges', 'panelFolds']) {
+            assert.match(extension, new RegExp(`postIfChanged\\(panel, \\{ type: '${type}'`));
+        }
+        assert.match(extension, /if \(message\.type === 'webviewReady'\) \{[\s\S]{0,600}?postedToPage\.delete\(panel\);/);
+    });
+});
 
 // Owner's request 2026-11-15: while the preview plays, the editor lights the text of what
 // sounds — as Shosa's editor lights the word being performed. A playback note's offset is its

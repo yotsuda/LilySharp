@@ -84,6 +84,31 @@ export function pagesSummary(pages: SvgPages): string {
  * Never across a line break.
  */
 /**
+ * Whether a rewrite of the whole document, asked of version `asked`, is no longer the document's
+ * (`now`, its version when the answer came): replacing the file with it would take back what was
+ * typed while the request was out.
+ */
+export function rewriteIsStale(asked: number, now: number): boolean {
+    return asked !== now;
+}
+
+/**
+ * Whether `message` differs from the last one of its type posted to a page (`kept`: type →
+ * the message as JSON), and remembers it. For what the preview is told with every refresh
+ * though it follows the file and the workspace, not the text (scanState, abRanges, panelFolds):
+ * a page that holds the same message is not sent it again (review of session 1291). `kept`
+ * is forgotten when the page reloads.
+ */
+export function messageChanged(kept: Map<string, string>, message: { type: string; [key: string]: unknown }): boolean {
+    const json = JSON.stringify(message);
+    if (kept.get(message.type) === json) {
+        return false;
+    }
+    kept.set(message.type, json);
+    return true;
+}
+
+/**
  * Every chord `<…>` of `text`, as [its `<`, its `>`] offsets, in order — for the preview's
  * Select Chord on a member right-clicked (owner's request 2026-10-27). A chord is on one line;
  * `<<`/`>>` (simultaneous music), `\<`/`\>` (hairpins), and what comments and strings hold

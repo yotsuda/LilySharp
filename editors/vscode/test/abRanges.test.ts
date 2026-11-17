@@ -72,7 +72,7 @@ describe('the A-B repeat\'s kept ranges', () => {
             assert.match(synth, new RegExp('^\\s+' + name + ',$', 'm'), name + ' is in LysSynth');
         }
         assert.match(src, /id="abStrips"/);
-        assert.match(src, /postMessage\(\{ type: 'abRanges', chart: uri, ranges: abRangesFor\(uri\) \}\)/);
+        assert.match(src, /postIfChanged\(panel, \{ type: 'abRanges', chart: uri, ranges: abRangesFor\(uri\) \}\)/);
         assert.match(src, /message\.type === 'abRanges'[\s\S]{0,120}keepAbRanges\(message\.chart, message\.ranges\)/);
     });
 });

@@ -48,7 +48,7 @@ import { OmrScanDeps, hasScan, previewHoversBar, previewReady, previewShowsBar, 
 import { registerOmrAiFix } from './omrAiFix';
 import { registerVerifyOnSave } from './omrVerify';
 import { markdownItExtensionApi } from './markdownFence';
-import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, sourceGroupToOpen, SourceTab, jumpOffsetFor, chordSpans, chordAtCaret, soundingLight, SoundingSession, auditionBarRange } from './previewCore';
+import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, sourceGroupToOpen, SourceTab, jumpOffsetFor, chordSpans, chordAtCaret, soundingLight, SoundingSession, auditionBarRange, messageChanged, rewriteIsStale } from './previewCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 import { PLAIN_TONES_JS } from './plainTones';
 import { FOLLOW_SCROLL_CSS, FOLLOW_SCROLL_JS } from './followScroll';
@@ -1874,6 +1874,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 // and the page version, so the next answer carries every page.
                 lastPostedSvg.delete(uri);
                 shownPagesVersion.delete(uri);
+                postedToPage.delete(panel);
                 panelReady.get(uri)?.resolve();
                 if (scanDeps) { previewReady(uri, scanDeps); }
                 return;
@@ -2270,6 +2271,18 @@ function keepPanelFolds(uri: string, folds: unknown): void {
     void abRangesStore.update(panelFoldsKey(uri), out);
 }
 
+/** The last message of each type a page was posted (messageChanged); forgotten when it reloads. */
+const postedToPage = new WeakMap<vscode.WebviewPanel, Map<string, string>>();
+
+/** Posts `message` to the page unless it holds the same one of that type already. */
+function postIfChanged(panel: vscode.WebviewPanel, message: { type: string; [key: string]: unknown }): void {
+    let kept = postedToPage.get(panel);
+    if (!kept) { postedToPage.set(panel, kept = new Map()); }
+    if (messageChanged(kept, message)) {
+        void panel.webview.postMessage(message);
+    }
+}
+
 async function updatePreviewContent(
     document: vscode.TextDocument,
     panel: vscode.WebviewPanel,
@@ -2298,11 +2311,13 @@ async function updatePreviewContent(
     }
     // Whether the right-click menu offers the OMR doors (owner, 2026-10-24: not for a file
     // the reader did not write) — asked again with each render, as an import adds the file.
-    void panel.webview.postMessage({ type: 'scanState', hasScan: hasScan(document.uri) });
+    // (These three follow the file and the workspace, not the text: posted when they changed —
+    // postIfChanged — and not with every keystroke's refresh.)
+    postIfChanged(panel, { type: 'scanState', hasScan: hasScan(document.uri) });
     // The A-B repeat's kept ranges of this file (the page draws its eight strips from them).
-    void panel.webview.postMessage({ type: 'abRanges', chart: uri, ranges: abRangesFor(uri) });
+    postIfChanged(panel, { type: 'abRanges', chart: uri, ranges: abRangesFor(uri) });
     // …and its practice panel's folds (null: never opened for this file — it opens all folded).
-    void panel.webview.postMessage({ type: 'panelFolds', chart: uri, folds: panelFoldsFor(uri) });
+    postIfChanged(panel, { type: 'panelFolds', chart: uri, folds: panelFoldsFor(uri) });
     // Another document or score: its voices replace the last one's, asked for once the server
     // has answered the render below (prepareVoices; singing-design §5).
     followVoices(panel, uri);
@@ -2958,9 +2973,10 @@ async function regroup() {
 
     const doc = editor.document;
     try {
-        const response = await client.sendRequest<RegroupResponse>('lilysharp/regroup', {
+        const response = await rewriteRequest<RegroupResponse>(doc, 'lilysharp/regroup', {
             textDocument: { uri: doc.uri.toString() }
         });
+        if (!response) { return; }
         if (response.Success && response.NewText != null) {
             const fullRange = new vscode.Range(
                 doc.positionAt(0), doc.positionAt(doc.getText().length));
@@ -3003,10 +3019,11 @@ async function convertOctaves(absolute: boolean) {
     const doc = editor.document;
     const mode = absolute ? 'absolute' : 'relative';
     try {
-        const response = await client.sendRequest<ConvertOctavesResponse>('lilysharp/convertOctaves', {
+        const response = await rewriteRequest<ConvertOctavesResponse>(doc, 'lilysharp/convertOctaves', {
             textDocument: { uri: doc.uri.toString() },
             absolute
         });
+        if (!response) { return; }
         if (response.Success && response.NewText != null) {
             if (response.NewText === doc.getText()) {
                 vscode.window.showInformationMessage(`Lily#: the octaves are already ${mode}.`);
@@ -3164,9 +3181,10 @@ async function removeStringNumbers() {
 
     const doc = editor.document;
     try {
-        const response = await client.sendRequest<RemoveStringNumbersResponse>('lilysharp/removeStringNumbers', {
+        const response = await rewriteRequest<RemoveStringNumbersResponse>(doc, 'lilysharp/removeStringNumbers', {
             textDocument: { uri: doc.uri.toString() }
         });
+        if (!response) { return; }
         if (response.NewText == null) {
             vscode.window.showErrorMessage(`Lily#: ${response.Error}`);
             return;
@@ -3454,12 +3472,13 @@ async function extractPhrase() {
     const doc = editor.document;
     const sel = editor.selection;
     try {
-        const response = await client.sendRequest<ExtractPhraseResponse>('lilysharp/extractPhrase', {
+        const response = await rewriteRequest<ExtractPhraseResponse>(doc, 'lilysharp/extractPhrase', {
             textDocument: { uri: doc.uri.toString() },
             selectionStart: doc.offsetAt(sel.start),
             selectionEnd: doc.offsetAt(sel.end),
             name,
         });
+        if (!response) { return; }
         if (response.Success && response.NewText != null) {
             const fullRange = new vscode.Range(
                 doc.positionAt(0), doc.positionAt(doc.getText().length));
@@ -3582,6 +3601,23 @@ function displayKey(key: string): string {
     return `${tonic[0].toUpperCase()}${accidental} ${mode}`;
 }
 
+/**
+ * Asks the server for a rewrite of the whole document, and gives the answer back only if the
+ * document is still the text it was asked of: undefined (said to the writer) when it changed
+ * while the request was out. The answer replaces the whole file, so applied to a later text it
+ * took back whatever was typed meanwhile (review of session 1291: Regroup, Convert Octaves,
+ * Remove String Numbers and the others asked and replaced with no such look; Join and Split had it).
+ */
+async function rewriteRequest<T>(doc: vscode.TextDocument, method: string, params: object): Promise<T | undefined> {
+    const version = doc.version;
+    const response = await client!.sendRequest<T>(method, params);
+    if (rewriteIsStale(version, doc.version)) {
+        vscode.window.showWarningMessage('Lily#: the file changed while this was being worked out — nothing was changed; run it again.');
+        return undefined;
+    }
+    return response;
+}
+
 /** Replaces the whole document with the server's rewrite. */
 async function replaceDocument(doc: vscode.TextDocument, text: string) {
     const fullRange = new vscode.Range(doc.positionAt(0), doc.positionAt(doc.getText().length));
@@ -3689,11 +3725,12 @@ async function guessSectionKey() {
             if (!picked) { continue; }
 
             if (picked.key !== section.CurrentKey) {
-                const set = await client!.sendRequest<SetSectionKeyResponse>('lilysharp/setSectionKey', {
+                const set = await rewriteRequest<SetSectionKeyResponse>(doc, 'lilysharp/setSectionKey', {
                     textDocument: { uri: doc.uri.toString() },
                     section: section.Section,
                     key: picked.key,
                 });
+                if (!set) { return; }
                 if (set.NewText == null) {
                     vscode.window.showErrorMessage(`Lily#: ${set.Error ?? 'could not write the key.'}`);
                     return;
@@ -3747,10 +3784,11 @@ async function offerRespell(doc: vscode.TextDocument, section: string, key: stri
     });
     if (!chosen || chosen.length === 0) { return; }
 
-    const response = await client!.sendRequest<RespellToKeyResponse>('lilysharp/respellToKey', {
+    const response = await rewriteRequest<RespellToKeyResponse>(doc, 'lilysharp/respellToKey', {
         textDocument: { uri: doc.uri.toString() }, section, key,
         accepted: chosen.map(c => c.id),
     });
+    if (!response) { return; }
     if (response.NewText == null) {
         vscode.window.showErrorMessage(`Lily#: ${response.Error ?? 'could not respell.'}`);
         return;
@@ -3861,10 +3899,11 @@ async function writeHarmonyPart() {
                 : choices.Taken.includes(v) ? `'${v}' is in the score already.` : undefined,
         });
         if (!name) { return; }
-        const response = await client!.sendRequest<HarmonyPartResponse>('lilysharp/harmonyPart', {
+        const response = await rewriteRequest<HarmonyPartResponse>(doc, 'lilysharp/harmonyPart', {
             textDocument: { uri: doc.uri.toString() }, from, name,
             interval: how.interval, octaves: how.octaves, sections,
         });
+        if (!response) { return; }
         if (response.NewText == null) {
             vscode.window.showErrorMessage(`Lily#: ${response.Error ?? 'the harmony could not be written.'}`);
             return;
@@ -3894,9 +3933,10 @@ async function writeSingerPart(uri?: string, singer?: string) {
         return;
     }
     try {
-        const response = await client.sendRequest<HarmonyPartResponse>('lilysharp/harmonyPart', {
+        const response = await rewriteRequest<HarmonyPartResponse>(doc, 'lilysharp/harmonyPart', {
             textDocument: { uri: doc.uri.toString() }, singer,
         });
+        if (!response) { return; }
         if (response.NewText == null) {
             vscode.window.showErrorMessage(`Lily#: ${response.Error ?? 'the notes could not be written out.'}`);
             return;
