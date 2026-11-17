@@ -275,7 +275,7 @@ the server, and the sound font plays only while no port is named or the named po
 
 | What | Where |
 |---|---|
-| The note list, channel and program | `LilySharp.Lsp/LilySharpLanguageServer.Commands.cs` (`GetPlayback`), `LspProtocolDtos.cs` (`PlaybackNote`) |
+| The note list, channel and program | `LilySharp.Lsp/LilySharpLanguageServer.Playback.cs` (`GetPlayback`), `LspProtocolDtos.cs` (`PlaybackNote`) |
 | The audition's program | `LilySharp.Core/Editing/NoteStepper.cs` (`Voice`, `SoundIndex.Program`), `LilySharpLanguageServer.Step.cs` |
 | The events, the lookahead, the highlight cursor | `editors/vscode/src/webview/playbackCore.ts` (+ `test/playbackCore.test.ts`) |
 | The synth, the player, the font loading | `editors/vscode/src/webview/previewSynth.ts` → `out/synth/preview-synth.js` |

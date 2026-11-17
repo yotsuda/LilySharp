@@ -499,7 +499,7 @@ Open for the owner before stage 3 (as decided since):
 | The engine, its contract, the backends | `C:\MyProj\cantoria` — `README.md`, `docs/design.md`, `src/Cantoria.Core` (`SungScore`, `ISinger`, `Neutrino/`), `src/Cantoria.Cli` |
 | Which note a syllable stands on | `LilySharp.Core/Svg/Collector/SungSyllables.cs`; the MIDI's events `MidiExporter.SingLyrics`; the MusicXML's `MusicXmlExporter` (`syllabic`, `extend`) |
 | The connector and the holders | `Svg/Model/LyricItem.cs` (`ConnectorType`), `Svg/Collector/LyricSyllableReader.cs` (`Marker`) |
-| The seconds | `LilySharp.Lsp/LilySharpLanguageServer.Commands.cs` (`PlaybackOf`, `SecondsAt`) |
+| The seconds | `LilySharp.Lsp/LilySharpLanguageServer.Playback.cs` (`PlaybackOf`, `SecondsAt`) |
 | The preview's clock, Play, the limiter, MIDI out | `editors/vscode/src/extension.ts` (`startPlayback`, `midiStarted`), `src/webview/previewSynth.ts` |
 | The practice menu on a list | `editors/vscode/src/webview/playbackCore.ts` (`practised`) |
 | The offline render | `editors/vscode/src/audioRender.ts`, `audioRenderCore.ts` |
