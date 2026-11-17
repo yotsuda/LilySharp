@@ -139,7 +139,7 @@ describe('the preview\'s Range panel', () => {
         // Rewind: the A flag to the top; playing, from there (owner's request 2026-11-17).
         assert.match(html, /getElementById\('rewindBtn'\)\.addEventListener\('click', \(\) => \{\s*setA\(0, false\);\s*if \(playingNow\(\)\) \{ document\.getElementById\('playBtn'\)\.click\(\); return; \}/);
         // The parts turned off stay in the list (Z): silent, and lighting the bar while nothing else sounds.
-        assert.match(html, /practiceNotes\(timed, rawParts, playedBeats\(\), Object\.assign\(\{\}, practice, \{ speed: playBasis\.speed \}\), rawExtra, true\);/);
+        assert.match(html, /practiceNotes\(timed, rawParts, playedBeats\(\), Object\.assign\(\{\}, eff\(\), \{ speed: playBasis\.speed \}\), rawExtra, true\);/);
         assert.match(html, /if \(quiet && quiet\.changed && r\.sounding\.length === 0\) \{[\s\S]{0,300}lightPlayingBar\(els\);/);
         // A click on a bar (or a note of it) takes the A flag there.
         assert.match(html, /\{ const m = measureOfStaffBox\(bar\); if \(m >= 0\) setA\(m, false\); \}/);
@@ -256,8 +256,12 @@ describe('the preview\'s Range panel', () => {
 
     it('sounds the recording with the score, from the score\'s clock', () => {
         assert.doesNotMatch(html, /id="recBtn"/);
-        assert.match(html, /<div id="recPanel"[^>]*>[\s\S]{0,300}<button type="button" id="recOnBtn"[^>]*>[\s\S]{0,80}<input type="range" id="recLevelSlider" class="fader"/);
-        assert.match(html, /toggle\('Recording', [\s\S]{0,400}'recording', '', recLevels, 'Recording'\);/);
+        assert.match(html, /<div id="recPanel"[^>]*>[\s\S]{0,1600}<button type="button" id="recOnBtn"[^>]*>[\s\S]{0,300}<input type="range" id="recLevelSlider" class="fader"/);   // (the mixer's recording group head: §1 2)
+        // The recording is the mixer's own group (docs/transport-mixer-design.md §1 1-2): its head holds its
+        // on/off, its solo and its fader — no longer a line among the score's parts.
+        assert.doesNotMatch(html, /toggle\('Recording', /);
+        assert.match(html, /<div class="mgroup" id="mixRecGroup" hidden>\s*<div class="mhead"><span class="mtitle">Recording<\/span><button type="button" id="recOnBtn"[^>]*>[\s\S]{0,120}id="recSoloBtn"/);
+        assert.match(html, /function recLevel\(\) \{ return solo\.size > 0 && !recSoloed\(\) \? 0 : levelIn\(recLevels, 'Recording'\); \}/);
         assert.match(html, /delete recLevels\.Recording;/);
         assert.match(html, /if \(origin !== undefined\) end = Math\.max\(end, startRecordingAlong\(t0, offset, origin, !!loopList\)\);/);
         assert.match(html, /const timed = warp \? window\.LysSynth\.warpNotes\(notes, warp\) : notes;/);

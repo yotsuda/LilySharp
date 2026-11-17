@@ -1312,7 +1312,7 @@ describe('a section none of a part\'s voices sings', () => {
         // (a lit % plays nothing: !n.L first, owner's request 2026-11-16)
         assert.match(ext, /const played = notes\.filter\(n => !n\.L && !n\.Z && \(n\.U \? unsungSounds\(n\.N\) : instrumentSounds\(n\.N, sung\)\)\);/);
         // Silent only when the menu switched the part's voices off and its instrument is not on.
-        assert.match(ext, /function unsungSounds\(i\) \{[\s\S]{0,260}return practice\.instrumentsOn\.includes\(name\) \|\| !menuVoicesOf\(name\)\.every\(k => practice\.voicesOff\.includes\(k\)\);/);
+        assert.match(ext, /function unsungSounds\(i\) \{[\s\S]{0,260}const e = eff\(\); return e\.instrumentsOn\.includes\(name\) \|\| !menuVoicesOf\(name\)\.every\(k => e\.voicesOff\.includes\(k\)\);/);
         assert.match(ext, /sfPlayer\.silence\(playingNotes\.filter\(n => tracks\.has\(n\.N\) && !n\.U && n\.T >= entry\.at - 1e-6\)\);/);
     });
 

@@ -6121,6 +6121,30 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .practice-panel .rec-part-rows { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
         .practice-panel .parts .rec-part-rows .pline.rec-part { padding-left: 14px; }
         .practice-panel .rec-part-rows:empty { display: none; }
+        /* The mixer (docs/transport-mixer-design.md §1 1-2): two groups, each with its head (its name, all
+           on or off, its fader), then a line a part: the name, M, S, the fader. A line not heard (muted, or
+           others soloed) is dimmed. */
+        .mixer-panel .mgroup { padding: 4px 2px 8px; clear: both; }   /* (under the floated ×, not around it) */
+        .mixer-panel .mgroup + .mgroup { border-top: 1px solid rgba(128, 128, 128, 0.35); padding-top: 8px; }
+        .mixer-panel { min-width: 400px; }
+        .mixer-panel .mhead { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+        .mixer-panel .mtitle { width: 5.5em; flex: 0 0 auto; font-weight: 600; opacity: 0.75; }
+        .mixer-panel .mhead > button.toggle:not(.msmall) { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+        .mixer-panel .mhead .fader { width: 160px; flex: 0 0 auto; margin: 0; accent-color: #0078d7; cursor: pointer; }
+        .mixer-panel .mhead .flevel { width: 2.8em; flex: 0 0 auto; text-align: right; font-size: 11px; opacity: 0.8; font-variant-numeric: tabular-nums; }
+        .mixer-panel .parts { display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding-left: 1.5em; }
+        .mixer-panel .parts .pline button.pname { flex: 1 1 auto; min-width: 5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+        .mixer-panel .parts .pline button.msmall { flex: 0 0 auto; }
+        .mixer-panel .parts .rec-part-rows .pline.rec-part { padding-left: 0; }
+        .practice-panel button.msmall { padding: 2px 6px; min-width: 24px; font-weight: 600; }
+        .practice-panel button.mmute[aria-pressed="true"] { background: #fde2e2; border-color: #c62828; color: #8e1b1b; }
+        .practice-panel button.msolo[aria-pressed="true"] { background: #fff4c2; border-color: #c9a400; color: #6b5600; }
+        .mixer-panel .pline.unheard button.pname { opacity: 0.5; }
+        .mixer-panel .msettings { margin-top: 8px; }
+        .mixer-panel .msettings summary { cursor: pointer; opacity: 0.85; padding: 2px 0; }
+        .mixer-panel #recPartsRow { margin-bottom: 4px; }
+        .mixer-panel .mgroup > .presets { padding-left: 1.5em; margin-top: 6px; }
+        .mixer-panel .mgroup > .presets .plbl { display: none; }
         /* As long as the tempo's slider (owner's request 2026-11-09, session 1159: longer, the 200% end further right). */
         .practice-panel .parts input.fader { width: 160px; flex: 0 0 auto; margin: 0; accent-color: #0078d7; cursor: pointer; }
         .practice-panel .parts .flevel { width: 2.8em; flex: 0 0 auto; text-align: right; font-size: 11px; opacity: 0.8; font-variant-numeric: tabular-nums; }
@@ -6196,11 +6220,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         <!-- Pause (docs/transport-mixer-design.md §1 3): where it plays, held; pressed again, on from there. -->
         <button id="pauseBtn" class="toggle" type="button" aria-pressed="false" title="Pause — pressed again, go on from there (Space)" disabled>⏸</button>
         <button id="stopBtn" type="button" title="Stop, back to the A flag" disabled>⏹</button>
-        <button id="practiceBtn" class="toggle icon practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" aria-label="Practice" title="Tempo, loop, metronome, parts"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M3.6 14.8 6.3 1.4h3.4l2.7 13.4zM7.3 3 5.9 10.2h4.2L8.7 3z"/><path d="M7.7 11.2 12.4 3.9l1 .65-4.7 7.3z"/></svg><span id="practiceSpeed"></span></button>
-        <!-- The recording beside the chart (docs/recording-design.md §1 3, §1 7): shown only when the
-             chart has one. It opens the recording's panel (on/off and volume, speed, pitch, pitch
-             with speed); the on/off and the volume are also the practice menu's Recording line. -->
-        <button id="recPanelBtn" class="toggle icon practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" hidden aria-label="Recording settings" title="The recording: speed, pitch, pitch with speed"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12"/><circle cx="5" cy="4" r="1.6" fill="currentColor"/><circle cx="10.5" cy="8" r="1.6" fill="currentColor"/><circle cx="7" cy="12" r="1.6" fill="currentColor"/></svg><span id="recSummary"></span></button>
+        <button id="practiceBtn" class="toggle icon practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" aria-label="Practice" title="Practice: tempo, repeat, A-B, metronome, count-in"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M3.6 14.8 6.3 1.4h3.4l2.7 13.4zM7.3 3 5.9 10.2h4.2L8.7 3z"/><path d="M7.7 11.2 12.4 3.9l1 .65-4.7 7.3z"/></svg><span id="practiceSpeed"></span></button>
+        <!-- The mixer (docs/transport-mixer-design.md §1 1): the score's parts and the recording's — it
+             was the recording's panel, shown only with a recording. -->
+        <button id="recPanelBtn" class="toggle icon practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" aria-label="Mixer" title="Mixer: the score's parts and the recording — mute, solo, volume"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12"/><circle cx="5" cy="4" r="1.6" fill="currentColor"/><circle cx="10.5" cy="8" r="1.6" fill="currentColor"/><circle cx="7" cy="12" r="1.6" fill="currentColor"/></svg></button>
         <span id="posInfo" class="length" title="Where the playback stands, in the score's time" hidden></span>
         <span id="lengthInfo" class="length" title="Length, as played"></span>
         </span>
@@ -6224,22 +6247,32 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         <div class="prow"><span class="plbl">A-B</span><span class="tempo"><button type="button" id="abBtn" class="toggle" aria-pressed="false" title="Play the bars A to B (as printed) — from the editor's caret bar, or the selected bars, at first">Off</button><span id="abFields" hidden><label class="abnum">A <input type="number" id="abFromNum" min="0" step="1" aria-label="A: the first bar"></label><label class="abnum">B <input type="number" id="abToNum" min="0" step="1" aria-label="B: the last bar"></label><span id="abInfo" class="tval"></span></span></span></div>
         <div class="prow"><span class="plbl">Metronome</span><button type="button" id="clickBtn" class="toggle" aria-pressed="false">Off</button></div>
         <div class="prow"><span class="plbl">Count-in</span><button type="button" id="countInBtn" class="toggle" aria-pressed="false" title="One bar of clicks before the music starts">Off</button></div>
-        <div class="prow"><span class="plbl">Parts</span><span id="partsList" class="parts"></span></div>
-        <div class="prow presets"><span class="plbl"></span><span class="tempo"><button type="button" id="partsReset" title="The parts as the score has them: its own on, the ones it leaves out off, every voice sung">Reset parts</button><button type="button" id="fadersReset" title="Every fader back to 100%">Reset faders</button></span></div>
         <div class="prow"><span class="plbl" title="Kept A-B ranges: click to play one, Shift+click to keep the A-B shown, double-click to name">Ranges</span><span id="abStrips" class="ab-strips"></span></div>
     </div>
-    <div id="recPanel" class="range-panel practice-panel" hidden>
+    <!-- The mixer (docs/transport-mixer-design.md §1 1-2; owner's decisions 2026-11-17): the score's parts and
+         the recording's, each line muted, soloed and faded; each group all on or off and faded as one.
+         The recording's speed and pitch fold under it (the recording panel it was). -->
+    <div id="recPanel" class="range-panel practice-panel mixer-panel" hidden>
         <button type="button" id="recClose" class="panel-close" title="Close" aria-label="Close">×</button>
-        <div class="prow"><span class="plbl">Recording</span><span class="parts"><span class="pline"><button type="button" id="recOnBtn" class="rec-name" aria-pressed="false"><span id="recName"></span></button><input type="range" id="recLevelSlider" class="fader" min="0" max="200" step="1" value="100"><span id="recLevelValue" class="flevel"></span></span></span></div>
-        <div class="prow" id="recPartsRow" hidden><span class="plbl">Parts</span><span id="recPartsRows" class="parts rec-part-rows"></span></div>
-        <div class="prow"><span class="plbl">Speed</span><span class="tempo"><input type="range" id="recSpeedSlider" min="25" max="150" step="5" value="100" aria-label="Speed"><span id="recSpeedValue" class="tval">100%</span></span></div>
-        <div class="prow"><span class="plbl">Octave</span><span class="tempo"><button type="button" id="recOctDown" title="An octave down">−</button><span id="recOctValue" class="tval">0</span><button type="button" id="recOctUp" title="An octave up">+</button></span></div>
-        <div class="prow"><span class="plbl">Semitones</span><span class="tempo"><input type="range" id="recSemiSlider" min="-11" max="11" step="1" value="0" aria-label="Semitones"><span id="recSemiValue" class="tval">0</span></span></div>
-        <div class="prow" id="recChartRow" hidden title="The chart's own transpose (the top-level transpose, and the score's) moves the recording too, on top of the settings above"><span class="plbl">Chart</span><span class="tempo"><span id="recChartValue" class="tval">0</span></span></div>
-        <div class="prow"><span class="plbl">Cents</span><span class="tempo"><input type="range" id="recCentSlider" min="-50" max="50" step="1" value="0" aria-label="Cents"><span id="recCentValue" class="tval">0</span></span></div>
-        <div class="prow"><span class="plbl">Pitch with speed</span><button type="button" id="recLinkBtn" class="toggle" aria-pressed="false" title="Pitch and speed go together, as a tape's speed is set right (no stretching)">Off</button></div>
-        <div class="prow presets"><span class="plbl"></span><span class="tempo"><button type="button" id="recReset" title="The recording as it is">Reset</button></span></div>
-        <div id="recStatus" class="rec-status" role="status"></div>
+        <div class="mgroup">
+            <div class="mhead"><span class="mtitle">Score</span><button type="button" id="scoreAllBtn" class="toggle" aria-pressed="true" title="Every part of the score on, as the score has them — or every one off">All</button><input type="range" id="scoreLevelSlider" class="fader" min="0" max="200" step="1" value="100" aria-label="Score volume"><span id="scoreLevelValue" class="flevel"></span></div>
+            <span id="partsList" class="parts"></span>
+            <div class="prow presets"><span class="plbl"></span><span class="tempo"><button type="button" id="partsReset" title="The parts as the score has them: its own on, the ones it leaves out off, every voice sung">Reset parts</button><button type="button" id="fadersReset" title="Every fader back to 100%">Reset faders</button></span></div>
+        </div>
+        <div class="mgroup" id="mixRecGroup" hidden>
+            <div class="mhead"><span class="mtitle">Recording</span><button type="button" id="recOnBtn" class="toggle rec-name" aria-pressed="false"><span id="recName"></span></button><button type="button" id="recSoloBtn" class="toggle msmall msolo" aria-pressed="false" title="Solo: only the lines soloed sound">S</button><input type="range" id="recLevelSlider" class="fader" min="0" max="200" step="1" value="100"><span id="recLevelValue" class="flevel"></span></div>
+            <div id="recPartsRow" hidden><span id="recPartsRows" class="parts rec-part-rows"></span></div>
+            <details id="recSettings" class="msettings"><summary>Speed and pitch <span id="recSummary"></span></summary>
+            <div class="prow"><span class="plbl">Speed</span><span class="tempo"><input type="range" id="recSpeedSlider" min="25" max="150" step="5" value="100" aria-label="Speed"><span id="recSpeedValue" class="tval">100%</span></span></div>
+            <div class="prow"><span class="plbl">Octave</span><span class="tempo"><button type="button" id="recOctDown" title="An octave down">−</button><span id="recOctValue" class="tval">0</span><button type="button" id="recOctUp" title="An octave up">+</button></span></div>
+            <div class="prow"><span class="plbl">Semitones</span><span class="tempo"><input type="range" id="recSemiSlider" min="-11" max="11" step="1" value="0" aria-label="Semitones"><span id="recSemiValue" class="tval">0</span></span></div>
+            <div class="prow" id="recChartRow" hidden title="The chart's own transpose (the top-level transpose, and the score's) moves the recording too, on top of the settings above"><span class="plbl">Chart</span><span class="tempo"><span id="recChartValue" class="tval">0</span></span></div>
+            <div class="prow"><span class="plbl">Cents</span><span class="tempo"><input type="range" id="recCentSlider" min="-50" max="50" step="1" value="0" aria-label="Cents"><span id="recCentValue" class="tval">0</span></span></div>
+            <div class="prow"><span class="plbl">Pitch with speed</span><button type="button" id="recLinkBtn" class="toggle" aria-pressed="false" title="Pitch and speed go together, as a tape's speed is set right (no stretching)">Off</button></div>
+            <div class="prow presets"><span class="plbl"></span><span class="tempo"><button type="button" id="recReset" title="The recording as it is">Reset</button></span></div>
+            </details>
+            <div id="recStatus" class="rec-status" role="status"></div>
+        </div>
     </div>
     <div class="main-content">
         <div class="container">
@@ -8113,8 +8146,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 for (const key of voiceKeysOf(name)) {
                     const v = voices.get(key);
                     const own = !rawSung || rawSung.includes(name);
-                    const on = own ? !practice.voicesOff.includes(key) : practice.voicesOn.includes(key);
-                    if (Math.abs(v.speed - practice.speed) < 1e-6 && on && levelIn(practice.voiceLevels, key) > 0) { keys.push(key); }
+                    const e = eff(), on = own ? !e.voicesOff.includes(key) : e.voicesOn.includes(key);
+                    if (Math.abs(v.speed - practice.speed) < 1e-6 && on && levelIn(e.voiceLevels, key) > 0) { keys.push(key); }
                 }
             }
             return keys;
@@ -8186,7 +8219,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const t0 = audioCtx.currentTime - playClock();
             const when = t0 + (entry.at - playOffset) - early;
             // The menu's fader for the voice (at most 1 here, as startVoices), faded in.
-            const level = Math.min(1, levelIn(practice.voiceLevels, key));
+            const level = Math.min(1, levelIn(eff().voiceLevels, key));
             const g = audioCtx.createGain();
             g.gain.setValueAtTime(0, when);
             g.gain.linearRampToValueAtTime(level, when + 0.03);
@@ -8222,15 +8255,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function unsungSounds(i) {
             if (!rawParts || typeof i !== 'number' || i < 0) { return true; }
             const name = rawParts[i];
-            return practice.instrumentsOn.includes(name) || !menuVoicesOf(name).every(k => practice.voicesOff.includes(k));
+            { const e = eff(); return e.instrumentsOn.includes(name) || !menuVoicesOf(name).every(k => e.voicesOff.includes(k)); }
         }
         function instrumentSounds(i, sung) {
             if (!rawParts || typeof i !== 'number' || i < 0) { return true; }
             const name = rawParts[i];
             const sungOnly = rawSung && rawSung.includes(name) && !(rawPlayed && rawPlayed.includes(name));
             if (!sungOnly) { return true; }
-            if (practice.instrumentsOn.includes(name)) { return true; }
-            if (menuVoicesOf(name).every(k => practice.voicesOff.includes(k))) { return false; }    // both switched off: silence
+            const e = eff();
+            if (e.instrumentsOn.includes(name)) { return true; }
+            if (menuVoicesOf(name).every(k => e.voicesOff.includes(k))) { return false; }    // both switched off: silence
             return !sung.has(i);      // the stand-in, until the voice is there
         }
         // Where the voices end in the list's time: the whole buffer after the count-in's lead, or
@@ -8262,7 +8296,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 const lead = v.lead || 0;
                 const cues = window.LysSynth.voiceCues(listTime, countInFix, voicePlan.pieces, voicePlan.rounds, v.buffer.duration - lead);
                 // The menu's fader for the voice: a gain of its own before the voices' output.
-                const level = levelIn(practice.voiceLevels, key);
+                const level = levelIn(eff().voiceLevels, key);
                 let out = voiceOutput(ctx);
                 if (level < 1) {
                     const g = ctx.createGain();
@@ -9797,6 +9831,80 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // them itself; session 1163).
         // instrumentsOn: the instruments turned on for parts the score only sings (session 1165).
         const practice = { speed: 1, muted: [], click: false, countIn: false, extraOn: [], voicesOff: [], voicesOn: [], instrumentsOn: [], levels: {}, voiceLevels: {} };
+        // ---- The mixer (docs/transport-mixer-design.md §1 1-2; owner's decisions 2026-11-17): each line
+        // muted (its toggle, as before), soloed (solo: when any line is, only those sound — the score's
+        // parts and voices, the recording and its parts alike) and faded; the score's group faded as
+        // one (scoreLevel) and all on or off at once. What sounds is eff(): the menu's own state with
+        // the solo and the group's fader applied — the lines themselves show their own.
+        var solo = new Set();          // 'part:NAME', 'voice:KEY', 'rec' (the recording), 'rec:PART'
+        var scoreLevel = 1;            // the score group's fader, 0..2
+        function recSoloed() { for (const k of solo) { if (k === 'rec' || k.startsWith('rec:')) return true; } return false; }
+        function eff() {
+            const any = solo.size > 0;
+            if (!any && scoreLevel === 1) return practice;
+            const heard = k => !any || solo.has(k);
+            const out = Object.assign({}, practice);
+            const parts = (rawParts || (lastPartsMessage && (lastPartsMessage.parts || []).concat(lastPartsMessage.extra || [])) || []).filter(Boolean);
+            const voices = menuVoiceKeys || [];
+            if (any) {
+                out.muted = practice.muted.concat(parts.filter(n => !heard('part:' + n) && !practice.muted.includes(n)));
+                out.extraOn = practice.extraOn.filter(n => heard('part:' + n));
+                out.instrumentsOn = practice.instrumentsOn.filter(n => heard('part:' + n));
+                out.voicesOff = practice.voicesOff.concat(voices.filter(k => !heard('voice:' + k) && !practice.voicesOff.includes(k)));
+                out.voicesOn = practice.voicesOn.filter(k => heard('voice:' + k));
+            }
+            if (scoreLevel !== 1) {
+                out.levels = {};
+                for (const n of parts) out.levels[n] = levelIn(practice.levels, n) * scoreLevel;
+                out.voiceLevels = {};
+                for (const k of voices) out.voiceLevels[k] = levelIn(practice.voiceLevels, k) * scoreLevel;
+            }
+            return out;
+        }
+        /** A mixer line's small toggle, M or S. */
+        function mixerSmall(text, title) {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'toggle msmall ' + (text === 'S' ? 'msolo' : 'mmute');
+            b.textContent = text;
+            b.title = title;
+            b.setAttribute('aria-pressed', 'false');
+            return b;
+        }
+        /** A line soloed or let go: every line repainted, what plays from here on with it. */
+        function toggleSolo(key) {
+            if (!key) return;
+            if (solo.has(key)) solo.delete(key); else solo.add(key);
+            refreshMixer();
+            if (recPlayer) recPlayer.setLevel(recLevel());
+            recReplayIfSwitched();
+            practiceChanged(practice.speed);
+        }
+        function refreshMixer() {
+            for (const refresh of partRefreshers) refresh();
+            renderRecParts();
+            showRecording();
+            showPractice();
+            showMixerHead();
+        }
+        /** The score group's head: All pressed while any of its lines is on; its fader. */
+        function showMixerHead() {
+            const m = lastPartsMessage || {};
+            const own = (m.parts || []).filter(n => !(m.sungOnly || []).includes(n));
+            const voicesOwn = (m.voicesInScore || m.voices || []);
+            const anyOn = own.some(n => !practice.muted.includes(n)) || voicesOwn.some(k => !practice.voicesOff.includes(k))
+                || practice.extraOn.length > 0 || practice.instrumentsOn.length > 0 || practice.voicesOn.length > 0;
+            const all = document.getElementById('scoreAllBtn');
+            all.setAttribute('aria-pressed', String(anyOn));
+            const v = Math.round(scoreLevel * 100);
+            document.getElementById('scoreLevelSlider').value = String(v);
+            document.getElementById('scoreLevelValue').textContent = v === 100 ? '' : v + '%';
+            document.getElementById('recSoloBtn').setAttribute('aria-pressed', String(solo.has('rec')));
+            const changed = solo.size > 0 || scoreLevel !== 1 || practice.muted.length > 0 || practice.voicesOff.length > 0
+                || practice.extraOn.length > 0 || practice.voicesOn.length > 0 || practice.instrumentsOn.length > 0
+                || Object.keys(practice.levels).length > 0 || Object.keys(practice.voiceLevels).length > 0 || recOn;
+            document.getElementById('recPanelBtn').setAttribute('aria-pressed', String(changed));
+        }
         // A fader runs 0 to 200% (owner's request 2026-11-09, session 1157): levelIn clamps to that.
         const FADER_MAX = 2;
         function levelIn(levels, name) {
@@ -9839,7 +9947,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // The parts turned off stay in the list, marked Z: nothing sounds them, and they still say
             // where the music is — a loop's round, the A-B window, and the bar lit while only the
             // recording sounds (owner's request 2026-11-17).
-            return window.LysSynth.practiceNotes(timed, rawParts, playedBeats(), Object.assign({}, practice, { speed: playBasis.speed }), rawExtra, true);
+            return window.LysSynth.practiceNotes(timed, rawParts, playedBeats(), Object.assign({}, eff(), { speed: playBasis.speed }), rawExtra, true);
         }
         /** The score's beats and last bar line on the list's time base (playBasis), before the speed. */
         function playedBeats() {
@@ -9861,10 +9969,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const speedOn = practice.speed !== 1;
             document.getElementById('practiceSpeed').textContent = speedOn ? Math.round(practice.speed * 100) + '%' : '';
             // Pressed in while anything differs from the score as written.
-            practiceBtn.setAttribute('aria-pressed', String(speedOn || practice.click || practice.countIn || practice.muted.length > 0
-                || practice.extraOn.length > 0 || practice.voicesOff.length > 0 || practice.voicesOn.length > 0 || practice.instrumentsOn.length > 0 || loopOn || abOn
-                || Object.keys(practice.levels).length > 0 || Object.keys(practice.voiceLevels).length > 0
-                || (recPartsOff || []).length > 0 || Object.keys(recPartLevels || {}).length > 0));
+            // (the parts are the mixer's, its own button says them: showMixerHead)
+            practiceBtn.setAttribute('aria-pressed', String(speedOn || practice.click || practice.countIn || loopOn || abOn));
+            if (typeof showMixerHead === 'function' && document.getElementById('scoreAllBtn')) showMixerHead();
             // The loop lives here too (owner's request 2026-10-25), an On/Off as the metronome's.
             loopBtn.setAttribute('aria-pressed', String(loopOn));
             loopBtn.textContent = loopOn ? 'On' : 'Off';
@@ -9887,11 +9994,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // sounds with the score (docs/recording-design.md §7: its bars, the panel and its fader).
         function postPracticeState() {
             const along = recOn && recording && recording.ready && !recording.error;
+            const e = eff();    // (the exports sound as the mixer does: the solo, the group's fader)
             vscode.postMessage({ type: 'practiceState', practice: {
-                speed: practice.speed, muted: practice.muted.slice(), click: practice.click, countIn: practice.countIn,
-                extraOn: practice.extraOn.slice(), voicesOff: practice.voicesOff.slice(), voicesOn: practice.voicesOn.slice(),
-                instrumentsOn: practice.instrumentsOn.slice(),
-                levels: Object.assign({}, practice.levels), voiceLevels: Object.assign({}, practice.voiceLevels),
+                speed: practice.speed, muted: e.muted.slice(), click: practice.click, countIn: practice.countIn,
+                extraOn: e.extraOn.slice(), voicesOff: e.voicesOff.slice(), voicesOn: e.voicesOn.slice(),
+                instrumentsOn: e.instrumentsOn.slice(),
+                levels: Object.assign({}, e.levels), voiceLevels: Object.assign({}, e.voiceLevels),
                 recording: along ? { bars: recording.bars.map(b => ({ start: b.start, end: b.end })), sound: recSound(), level: recLevel() } : null } });
         }
         /** The recording rendered whole for an export (recordingPlayer.render), sent back in pieces
@@ -9950,7 +10058,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             partRefreshers = [];
             recRefreshers = [];
             const parts = message.parts || [], voices = message.voices || [], extra = message.extra || [];
-            if (parts.length + voices.length + extra.length === 0 && !recording) { list.textContent = '—'; return; }
+            if (parts.length + voices.length + extra.length === 0) { list.textContent = '—'; return; }
             // One toggle each, pressed in while it sounds; the lists are by name, so a part muted
             // in another score stays muted.
             const without = (names, name) => names.filter(n => n !== name);
@@ -9958,7 +10066,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // - 0 to 100%, the instrument's velocity or the voice's gain. The number follows the
             // thumb; the sound changes when it is let go (as the tempo's does), 100 means "as
             // written" and is not kept.
-            const toggle = (label, title, isOn, flip, cls, part, levels, levelKey) => {
+            // In the mixer (docs/transport-mixer-design.md §1 2): the name (a press mutes it too), M and S,
+            // then the fader. soloKey names the line for the solo (soloed: only the lines soloed sound).
+            const toggle = (label, title, isOn, flip, cls, part, levels, levelKey, soloKey) => {
                 const line = document.createElement('span');
                 line.className = 'pline';
                 const b = document.createElement('button');
@@ -9981,13 +10091,24 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 if (title) { b.title = title; b.dataset.title = title; }
                 if (cls) for (const c of cls.split(' ')) b.classList.add(c);
                 if (part) b.dataset.part = part;
-                b.setAttribute('aria-pressed', String(isOn()));
-                b.addEventListener('click', () => {
-                    flip();
-                    b.setAttribute('aria-pressed', String(isOn()));
-                    practiceChanged(practice.speed);
-                });
+                b.classList.add('pname');
+                const mBtn = mixerSmall('M', 'Mute');
+                const sBtn = mixerSmall('S', 'Solo: only the lines soloed sound');
+                const paint = () => {
+                    const on = isOn();
+                    b.setAttribute('aria-pressed', String(on));
+                    mBtn.setAttribute('aria-pressed', String(!on));
+                    sBtn.setAttribute('aria-pressed', String(solo.has(soloKey)));
+                    line.classList.toggle('unheard', !on || (solo.size > 0 && !solo.has(soloKey)));
+                };
+                paint();
+                const mute = () => { flip(); paint(); showPractice(); practiceChanged(practice.speed); };
+                b.addEventListener('click', mute);
+                mBtn.addEventListener('click', mute);
+                sBtn.addEventListener('click', () => toggleSolo(soloKey));
                 line.appendChild(b);
+                line.appendChild(mBtn);
+                line.appendChild(sBtn);
                 const fader = document.createElement('input');
                 fader.type = 'range'; fader.min = '0'; fader.max = String(FADER_MAX * 100); fader.step = '1';
                 fader.className = 'fader';
@@ -10015,7 +10136,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 line.appendChild(num);
                 list.appendChild(line);
                 partRefreshers.push(() => {
-                    b.setAttribute('aria-pressed', String(isOn()));
+                    paint();
                     fader.value = String(Math.round(levelIn(levels, levelKey) * 100));
                     sayLevel();
                 });
@@ -10030,11 +10151,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     toggle(name, 'Sung by its voice - press for its instrument too', () => practice.instrumentsOn.includes(name),
                         // (A mute left by another score, where this part is played, would keep it silent: it goes.)
                         () => { practice.muted = without(practice.muted, name); practice.instrumentsOn = practice.instrumentsOn.includes(name) ? without(practice.instrumentsOn, name) : practice.instrumentsOn.concat([name]); },
-                        '', '', practice.levels, name);
+                        '', '', practice.levels, name, 'part:' + name);
                 } else {
                     toggle(name, '', () => !practice.muted.includes(name),
                         () => { practice.muted = practice.muted.includes(name) ? without(practice.muted, name) : practice.muted.concat([name]); },
-                        '', '', practice.levels, name);
+                        '', '', practice.levels, name, 'part:' + name);
                 }
             }
             // The sung lyrics, one a part with a voice, beside the parts (owner's request
@@ -10055,41 +10176,24 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 if (!inScore.has(name)) continue;
                 toggle(voiceLabel(name), voiceTitle(name), () => !practice.voicesOff.includes(name),
                     () => { practice.voicesOff = practice.voicesOff.includes(name) ? without(practice.voicesOff, name) : practice.voicesOff.concat([name]); },
-                    'voice', name, practice.voiceLevels, name);
+                    'voice', name, practice.voiceLevels, name, 'voice:' + name);
             }
             for (const name of voices) {
                 if (inScore.has(name)) continue;
                 toggle(voiceLabel(name), voiceTitle(name) + ' (not in this score)', () => practice.voicesOn.includes(name),
                     () => { practice.voicesOn = practice.voicesOn.includes(name) ? without(practice.voicesOn, name) : practice.voicesOn.concat([name]); },
-                    'voice extra', name, practice.voiceLevels, name);
+                    'voice extra', name, practice.voiceLevels, name, 'voice:' + name);
             }
             // The file's other parts, which this score does not sound: off until pressed (owner's
             // request 2026-11-08).
             for (const name of extra) {
                 toggle(name, 'Not in this score — silent unless pressed', () => practice.extraOn.includes(name),
                     () => { practice.extraOn = practice.extraOn.includes(name) ? without(practice.extraOn, name) : practice.extraOn.concat([name]); },
-                    'extra', '', practice.levels, name);
+                    'extra', '', practice.levels, name, 'part:' + name);
             }
-            // The recording beside the chart, when it has one (owner's decision 2026-11-16,
-            // docs/recording-design.md §1 7): on, it sounds with the score; its fader is its
-            // volume against the parts'. The recording panel's top line is the same two.
-            if (recording) {
-                toggle('Recording', 'The recording beside the chart (' + recording.name + '): on, it sounds with the score', () => recOn,
-                    () => {
-                        recOn = !recOn;
-                        showRecording();
-                        if (!recOn && !playClock && recPlayer && recPlayer.playing) { recPlayer.stop(); setPlayUi(false); }
-                    },
-                    'recording', '', recLevels, 'Recording');
-                recRefreshers = [partRefreshers[partRefreshers.length - 1]];
-                // Its parts under it, when it has them (§8).
-                const sub = document.createElement('span');
-                sub.id = 'recPartsInPractice';
-                sub.className = 'rec-part-rows';
-                list.appendChild(sub);
-                renderRecParts();
-            }
+            // (the recording has its own group in the mixer: its on/off, solo and fader, its parts — §1 1)
             renderVoiceBadge();     // the voices' signs on their fresh toggles
+            showMixerHead();        // (the group's All, now that its lines are known)
         }
         function closePractice() {
             practicePanel.hidden = true;
@@ -10253,10 +10357,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const shift = Math.round(plan.semitones * 100) / 100;
             if (shift !== 0) parts.push(signed(shift));
             document.getElementById('recSummary').textContent = parts.join(' ');
-            recPanelBtn.setAttribute('aria-pressed', String(recOn));
+            showMixerHead();
             recOnBtn.setAttribute('aria-pressed', String(recOn));
             recOnBtn.title = recOn ? 'The recording sounds with the score — press to silence it' : 'Press to sound the recording with the score';
-            const level = Math.round(recLevel() * 100);
+            const level = Math.round(levelIn(recLevels, 'Recording') * 100);    // (the fader's own, not the solo's)
             recLevelSlider.value = String(level);
             recLevelSlider.title = 'Volume ' + level + '% (double-click: 100%)';
             recLevelSlider.setAttribute('aria-label', 'Recording volume ' + level + '%');
@@ -10265,11 +10369,15 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             for (const refresh of recRefreshers) refresh();
             postPracticeState();    // (the exports mix the recording in as it sounds now)
         }
-        function recLevel() { return levelIn(recLevels, 'Recording'); }
+        /** The recording's level as it sounds: its fader — silent while lines are soloed and none of
+         *  the recording's is (the mixer's solo, §1 2). */
+        function recLevel() { return solo.size > 0 && !recSoloed() ? 0 : levelIn(recLevels, 'Recording'); }
         /** Each part's level for the player: 0 off, else its fader (§8). */
         function recPartMix() {
             const out = {};
-            for (const name of (recording && recording.parts) || []) out[name] = recPartsOff.includes(name) ? 0 : levelIn(recPartLevels, name);
+            // (soloed lines: the parts not soloed silent, unless the recording as a whole is)
+            const soloParts = [...solo].some(k => k.startsWith('rec:')) && !solo.has('rec');
+            for (const name of (recording && recording.parts) || []) out[name] = recPartsOff.includes(name) || (soloParts && !solo.has('rec:' + name)) ? 0 : levelIn(recPartLevels, name);
             return out;
         }
         /** A part turned on or off, or its fader moved: between parts the gains change at once;
@@ -10310,11 +10418,23 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             b.disabled = !ready;
             b.title = ready ? 'The recording\\'s ' + name + ' (a part of it): on or off'
                 : (recording && recording.partsError && recording.partsError[name]) || 'The recording\\'s parts are loading';
-            b.setAttribute('aria-pressed', String(!recPartsOff.includes(name)));
-            b.addEventListener('click', () => {
+            b.classList.add('pname');
+            const on = !recPartsOff.includes(name);
+            b.setAttribute('aria-pressed', String(on));
+            // M and S, as the score's lines (the mixer, §1 2).
+            const mBtn = mixerSmall('M', 'Mute'), sBtn = mixerSmall('S', 'Solo: only the lines soloed sound');
+            mBtn.setAttribute('aria-pressed', String(!on));
+            sBtn.setAttribute('aria-pressed', String(solo.has('rec:' + name)));
+            mBtn.disabled = sBtn.disabled = !ready;
+            line.classList.toggle('unheard', !on || (solo.size > 0 && !solo.has('rec:' + name) && !solo.has('rec')));
+            const mute = () => {
                 recPartsOff = recPartsOff.includes(name) ? recPartsOff.filter(n => n !== name) : recPartsOff.concat([name]);
                 applyRecParts();
-            });
+                showMixerHead();
+            };
+            b.addEventListener('click', mute);
+            mBtn.addEventListener('click', mute);
+            sBtn.addEventListener('click', () => toggleSolo('rec:' + name));
             const fader = document.createElement('input');
             fader.type = 'range'; fader.min = '0'; fader.max = String(FADER_MAX * 100); fader.step = '1';
             fader.className = 'fader';
@@ -10336,6 +10456,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             });
             resetOnDoubleClick(fader, () => { fader.value = '100'; fader.dispatchEvent(new Event('change')); });
             line.appendChild(b);
+            line.appendChild(mBtn);
+            line.appendChild(sBtn);
             line.appendChild(fader);
             line.appendChild(num);
             return line;
@@ -10399,8 +10521,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 const had = !!recording;
                 recording = null;
                 recOn = false;
-                recPanelBtn.hidden = true;
-                recPanel.hidden = true;
+                document.getElementById('mixRecGroup').hidden = true;   // (the mixer's recording group: §1 1)
                 if (had && lastPartsMessage) renderParts(lastPartsMessage);
                 return;
             }
@@ -10416,7 +10537,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // A chart just made from this recording starts with it on: Play sounds it (owner's
             // request 2026-11-16; the extension says so once, recording.ts justConverted).
             if (m.turnOn) recOn = true;
-            recPanelBtn.hidden = false;
+            document.getElementById('mixRecGroup').hidden = false;
             if (fresh && lastPartsMessage) renderParts(lastPartsMessage);
             document.getElementById('recName').textContent = recording.name;
             document.getElementById('recName').title = recording.name;
@@ -10560,6 +10681,34 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             showPractice();
         }
         recOnBtn.addEventListener('click', flipRecording);
+        // The mixer's group heads (§1 2). The recording's: its on/off (above), its solo, its fader.
+        document.getElementById('recSoloBtn').addEventListener('click', () => toggleSolo('rec'));
+        // The score's: All — on while any line is: off, every part and voice silent; on, as the score
+        // has them (Reset parts) — and the group's fader over every line's.
+        document.getElementById('scoreAllBtn').addEventListener('click', () => {
+            const m = lastPartsMessage || {};
+            if (document.getElementById('scoreAllBtn').getAttribute('aria-pressed') === 'true') {
+                practice.muted = (m.parts || []).slice();
+                practice.voicesOff = (m.voices || []).slice();
+                practice.extraOn = []; practice.voicesOn = []; practice.instrumentsOn = [];
+            } else {
+                practice.muted = []; practice.extraOn = []; practice.voicesOff = []; practice.voicesOn = []; practice.instrumentsOn = [];
+            }
+            refreshMixer();
+            practiceChanged(practice.speed);
+        });
+        const scoreLevelSlider = document.getElementById('scoreLevelSlider');
+        scoreLevelSlider.addEventListener('input', () => {
+            document.getElementById('scoreLevelValue').textContent = scoreLevelSlider.value === '100' ? '' : scoreLevelSlider.value + '%';
+        });
+        function setScoreLevel(v) {
+            scoreLevel = Math.min(FADER_MAX, Math.max(0, v / 100));
+            showMixerHead();
+            showPractice();
+            practiceChanged(practice.speed);
+        }
+        scoreLevelSlider.addEventListener('change', () => setScoreLevel(Number(scoreLevelSlider.value)));
+        resetOnDoubleClick(scoreLevelSlider, () => setScoreLevel(100));
         recLevelSlider.addEventListener('input', () => {
             document.getElementById('recLevelValue').textContent = recLevelSlider.value === '100' ? '' : recLevelSlider.value + '%';
         });
@@ -10582,6 +10731,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
             recPanelBtn.setAttribute('aria-expanded', 'true');
             showRecording();
+            requestParts();     // (the score's parts, in the mixer: §1 1)
         });
         document.getElementById('recClose').addEventListener('click', closeRecPanel);
         // The sliders say their value as they move and set it where they are let go; a
@@ -10883,7 +11033,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     updateRenderSelect(message.renders, message.selectedRender);
                     if (message.scoreKey) {
                         lastScoreKey = message.scoreKey;
-                        if (!practicePanel.hidden && partsKey !== lastScoreKey) requestParts();
+                        if (!recPanel.hidden && partsKey !== lastScoreKey) requestParts();
                     }
                     const hasPreview = !!svgContainer.querySelector('svg');
                     if (message.loading) {
@@ -11001,7 +11151,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     if (followTick) followTick();
                     break;
                 case 'voiceLinesChanged':
-                    if (!practicePanel.hidden) requestParts();
+                    if (!recPanel.hidden) requestParts();
                     break;
                 case 'recording':
                     setRecording(message);

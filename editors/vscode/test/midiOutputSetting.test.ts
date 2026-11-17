@@ -85,7 +85,7 @@ describe('the preview routes its sounds to the MIDI output', () => {
         const practice = { instrumentsOn: [] as string[], voicesOff: [] as string[] };
         let listed: string[] = ['melody'];
         const sounds = new vm.Script('(' + html.slice(at, close) + ')').runInNewContext({
-            rawParts: ['Tempo', 'melody', 'm2'], rawSung: ['melody'], rawPlayed: ['m2'], practice,
+            rawParts: ['Tempo', 'melody', 'm2'], rawSung: ['melody'], rawPlayed: ['m2'], practice, eff: () => practice,
             menuVoicesOf: () => listed,
         }) as (i: number, sung: Set<number>) => boolean;
         assert.equal(sounds(2, new Set([1])), true, 'a played part sounds');

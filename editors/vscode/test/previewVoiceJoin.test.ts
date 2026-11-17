@@ -81,6 +81,7 @@ describe('a voice that lands while the preview plays', () => {
             cut('function voiceKeysOf(part)'), cut('function soundingVoices()'), cut('function sungTracks()'),
             cut('function menuVoicesOf(part)'), cut('function instrumentSounds(i, sung)'), cut('function voiceFitsPlay(key, list)'),
             cut('function joinVoice(key, entries, sungBefore)'),
+            'function eff() { return practice; }',   // (no solo, no group fader: the menu as it is)
         ].join('\n')).runInContext(context);
         const join = (entries: { at: number; room: number }[], sungBefore: number[] = []) => {
             context.entries = entries;
