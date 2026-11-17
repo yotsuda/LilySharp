@@ -1428,11 +1428,14 @@ public sealed partial class MeasureCollector
         Dictionary<string, ImmutableArray<Voice>> staffVoices, IReadOnlySet<string> rowNames,
         IReadOnlyList<RowsOnlyBar>? rowsOnlyBars)
     {
+        // (A voice with no measure is no music: a rows-only sheet's one-line staff is in the table
+        // with none, and with it taken for the music a row's own `time` — `| time 3/4 E . F |` —
+        // was gridded on the score's meter; LYS2009 said so, Dettato's request 18.)
         Voice? longest = null;
         foreach (var (name, voices) in staffVoices)
             if (!rowNames.Contains(name))
                 foreach (var v in voices)
-                    if (longest == null || v.Measures.Length > longest.Measures.Length)
+                    if (v.Measures.Length > 0 && (longest == null || v.Measures.Length > longest.Measures.Length))
                         longest = v;
         if (longest != null)
         {

@@ -103,6 +103,49 @@ public class ChordRowTimeTests
         Assert.Null(meters[4]);
     }
 
+    // Dettato's request 18: on a rows-only sheet the slots of the bar a row's `time` opens were
+    // gridded on the score's meter — `time 3/4 E . F` was "3 chord slot(s) in a 4/4 bar" (LYS2009)
+    // and F stood two thirds of the way through the bar, not on its third beat.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TheSlotsOfTheBarItOpens_GridOnTheRowsMeter(bool withAPart)
+    {
+        const string row = "C | D | time 3/4 E . F | time 4/4 G . . A |";
+        string book = withAPart
+            ? "time 4/4\noctave absolute\npart mel { }\nsection A {\n  chords harmony { " + row + " }\n"
+              + "  mel { g'1 | g'1 | g'2. | g'1 | }\n}\nform { A }\nscore { chords harmony\n staff mel }\n"
+            : RowsOnly(row);
+        var tree = SyntaxTree.Parse(book);
+        var collector = new MeasureCollector();
+        var score = collector.CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
+        Assert.Empty(collector.ChordRowGridWarnings);
+        var f = Assert.Single(score.ChordNames, c => c.ChordText == "F");
+        Assert.Equal(new Fraction(2, 4), f.Timing);
+        var a = Assert.Single(score.ChordNames, c => c.ChordText == "A");
+        Assert.Equal(new Fraction(3, 4), a.Timing);
+
+        var v = new ChordRowGridValidator();
+        v.Validate(tree);
+        Assert.Empty(v.Diagnostics);
+    }
+
+    // The same table carries a section header's meter on a rows-only sheet (session 1120's rule):
+    // the one-line staff's empty voice hid it too, and `E . F` under the header's 3/4 was LYS2009.
+    [Fact]
+    public void OnARowsOnlySheet_TheSlotsGridOnTheSectionHeadersMeter()
+    {
+        const string book = "time 4/4\nsection A {\n  chords harmony { C | D | }\n}\n"
+            + "section B {\n  time 3/4\n  chords harmony { E . F | G | }\n}\n"
+            + "form { A B }\nscore { chords harmony }\n";
+        var tree = SyntaxTree.Parse(book);
+        var collector = new MeasureCollector();
+        var score = collector.CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
+        Assert.Empty(collector.ChordRowGridWarnings);
+        var f = Assert.Single(score.ChordNames, c => c.ChordText == "F");
+        Assert.Equal(new Fraction(2, 4), f.Timing);
+    }
+
     [Fact]
     public void APartThatDoesNotWriteIt_ReadsTheRowsMeter()
     {

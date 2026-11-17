@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Fixed: a wrong LYS2009 on a chord chart's bar in another meter.** In a score of chord rows alone, `time 3/4 E . F` at a bar's head — or `E . F` in a section whose header says `time 3/4` — was counted on the score's 4/4: "3 chord slot(s) in a 4/4 bar fit no beat", and F was drawn two thirds of the way through the bar. The bar is now read in its own meter; F stands on the third beat.
+
 - **Shift+click puts B after the bar**: the B flag now goes to the bar line right of the bar Shift+clicked, so that bar is in the range — click M5, Shift+click M8, and the range is M5–M8 — as a click puts its own bar in for A. (It went to the bar's left line; a Shift+click in the margin right of a line's last bar line, which set B there, is gone — Shift+click the line's last bar.)
 
 - **Shift+click on B's bar line takes B away**: with A-B on, a Shift+click on the range's last bar turns A-B off, as its button does — B's place is kept for when A-B comes back on.
