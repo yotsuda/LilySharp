@@ -9823,14 +9823,15 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (bars[abFrom]) drawAbFlag('A', bars[abFrom].rect, false);
         }
         /** The A flag to bar m — a bar clicked, A Here (docs/transport-mixer-design.md §1 3). With
-         *  A-B on and m past B, the two change places as a dragged flag does (owner's decision
-         *  2026-11-17; it carried the range): A on the old B's bar line, B after bar m. Off, a B left
-         *  before it is forgotten (placed anew when A-B goes on). Plays on from where it plays when
-         *  that is still in what is to play, else from A (replayIfPlaying). */
+         *  A-B on and m past B, A stands on bar m and B after it — that bar alone (owner's report
+         *  2026-11-17: M10–M11 chosen, M21 clicked, the flags changed places as a drag does and A went
+         *  to M11, on the system above; before that it carried the range, M5–M8 and M9 gave M9–M12).
+         *  Off, a B left before it is forgotten (placed anew when A-B goes on). Plays on from where it
+         *  plays when that is still in what is to play, else from A (replayIfPlaying). */
         function setA(m, replay = true) {
             const last = Math.max(0, abBars().length - 1);
             m = Math.max(0, Math.min(m, last));
-            if (abOn && m > abTo) { const from = abTo + 1; abTo = m; m = from; }
+            if (abOn && m > abTo) abTo = m;
             abFrom = m;
             if (!abOn && abTo < m) abTo = -1;
             showAb();
