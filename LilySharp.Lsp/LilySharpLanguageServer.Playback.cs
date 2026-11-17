@@ -48,7 +48,7 @@ public sealed partial class LilySharpLanguageServer
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
         if (doc == null)
-            return new PlaybackResponse { Error = "Document not found" };
+            return new PlaybackResponse { Error = DocumentNotFound };
         var (tree, _) = ExpandUsings(doc, @params.TextDocument.Uri);
         return PlaybackOf(tree, @params.RenderName, @params.SoundingOnly);
     }
@@ -277,7 +277,7 @@ public sealed partial class LilySharpLanguageServer
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
         if (doc == null)
-            return new RangesResponse { Error = "Document not found" };
+            return new RangesResponse { Error = DocumentNotFound };
         var (tree, _) = ExpandUsings(doc, @params.TextDocument.Uri);
         if (tree.HasErrors)
             return new RangesResponse { Error = "Score has errors" };

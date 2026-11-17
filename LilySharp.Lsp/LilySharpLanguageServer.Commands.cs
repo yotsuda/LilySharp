@@ -63,7 +63,7 @@ public sealed partial class LilySharpLanguageServer
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
         if (doc == null)
-            return new AddChordTrackResponse { Error = "Document not found." };
+            return new AddChordTrackResponse { Error = DocumentNotFound };
 
         if (doc.Tree.HasErrors)     // (the document's own tree: no second parse of the text)
             return new AddChordTrackResponse { Error = "Fix the errors in the score first." };
@@ -153,7 +153,7 @@ public sealed partial class LilySharpLanguageServer
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
         if (doc == null)
-            return new ExtractPhraseResponse { Success = false, Error = "Document not found" };
+            return new ExtractPhraseResponse { Success = false, Error = DocumentNotFound };
 
         var result = LilySharp.Core.Editing.PhraseExtractor.Extract(
             doc.Text, @params.SelectionStart, @params.SelectionEnd, @params.Name);
@@ -174,7 +174,7 @@ public sealed partial class LilySharpLanguageServer
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
         if (doc == null)
-            return new GuessSectionKeyResponse { Error = "Document not found." };
+            return new GuessSectionKeyResponse { Error = DocumentNotFound };
 
         var tree = doc.Tree;
         if (tree.HasErrors)
@@ -214,7 +214,7 @@ public sealed partial class LilySharpLanguageServer
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
         if (doc == null)
-            return new SetSectionKeyResponse { Error = "Document not found." };
+            return new SetSectionKeyResponse { Error = DocumentNotFound };
 
         var text = LilySharp.Core.Harmony.KeyEstimator.SetSectionKey(doc.Text, @params.Section, @params.Key);
         return text != null
@@ -259,7 +259,7 @@ public sealed partial class LilySharpLanguageServer
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
         if (doc == null)
-            return new HarmonyPartResponse { Error = "Document not found." };
+            return new HarmonyPartResponse { Error = DocumentNotFound };
         var result = @params.Singer is { Length: > 0 } singer
             ? LilySharp.Core.Editing.HarmonyPartWriter.WriteSinger(doc.Text, singer)
             : LilySharp.Core.Editing.HarmonyPartWriter.WritePart(doc.Text, @params.From ?? "", @params.Name ?? "",
@@ -296,7 +296,7 @@ public sealed partial class LilySharpLanguageServer
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
         if (doc == null)
-            return new RespellToKeyResponse { Error = "Document not found." };
+            return new RespellToKeyResponse { Error = DocumentNotFound };
         var result = LilySharp.Core.Editing.KeyRespeller.Respell(
             doc.Text, @params.Section, @params.Key, @params.Accepted);
         return new RespellToKeyResponse { NewText = result.NewText, Error = result.Error, Changed = result.ChangedPitches };
@@ -314,7 +314,7 @@ public sealed partial class LilySharpLanguageServer
         string? text = @params.Text
             ?? (@params.TextDocument is { } id ? _documentManager.GetDocument(id.Uri)?.Text : null);
         if (text == null)
-            return new ConvertOctavesResponse { Success = false, Error = "Document not found" };
+            return new ConvertOctavesResponse { Success = false, Error = DocumentNotFound };
 
         if (@params.DropPartOctaves)
         {
@@ -390,7 +390,7 @@ public sealed partial class LilySharpLanguageServer
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
         if (doc == null)
-            return new RemoveStringNumbersResponse { Error = "Document not found" };
+            return new RemoveStringNumbersResponse { Error = DocumentNotFound };
         var result = LilySharp.Core.Editing.StringNumberRemover.Remove(doc.Text);
         return new RemoveStringNumbersResponse { NewText = result.NewText, Removed = result.Removed };
     }
@@ -406,7 +406,7 @@ public sealed partial class LilySharpLanguageServer
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
         if (doc == null)
-            return new ShapeToNotesResponse { Error = "Document not found" };
+            return new ShapeToNotesResponse { Error = DocumentNotFound };
         var r = LilySharp.Core.Editing.ShapeChordConverter.ToNotes(doc.Text, @params.Offset);
         return new ShapeToNotesResponse { Start = r.Start, End = r.End, Replacement = r.Replacement, Error = r.Error };
     }
@@ -422,7 +422,7 @@ public sealed partial class LilySharpLanguageServer
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
         if (doc == null)
-            return new ShapeToNotesResponse { Error = "Document not found" };
+            return new ShapeToNotesResponse { Error = DocumentNotFound };
         var r = LilySharp.Core.Editing.ShapeChordConverter.AddDiagram(doc.Text, @params.Offset);
         return new ShapeToNotesResponse { Start = r.Start, End = r.End, Replacement = r.Replacement, Error = r.Error };
     }
@@ -438,7 +438,7 @@ public sealed partial class LilySharpLanguageServer
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
         if (doc == null)
-            return new ShapeToNotesResponse { Error = "Document not found" };
+            return new ShapeToNotesResponse { Error = DocumentNotFound };
         var r = LilySharp.Core.Editing.ShapeChordConverter.ToChordItem(doc.Text, @params.Offset);
         return new ShapeToNotesResponse { Start = r.Start, End = r.End, Replacement = r.Replacement, Error = r.Error };
     }
@@ -453,7 +453,7 @@ public sealed partial class LilySharpLanguageServer
         {
             var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
             if (doc == null)
-                return new JoinSectionsResponse { Error = "Document not found" };
+                return new JoinSectionsResponse { Error = DocumentNotFound };
             var names = @params.Sections is { Length: >= 2 } given ? given
                 : LilySharp.Core.Editing.SectionJoiner.SectionsAt(doc.Tree, @params.Start, @params.End);
             if (names == null)
@@ -471,7 +471,7 @@ public sealed partial class LilySharpLanguageServer
         {
             var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
             if (doc == null)
-                return new CutSectionResponse { Error = "Document not found" };
+                return new CutSectionResponse { Error = DocumentNotFound };
             string? section = @params.Section;
             int bars = @params.Bars;
             if (section == null || bars <= 0)
@@ -513,7 +513,7 @@ public sealed partial class LilySharpLanguageServer
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
         if (doc == null)
-            return new SplitSectionsResponse { Success = false, Error = "Document not found" };
+            return new SplitSectionsResponse { Success = false, Error = DocumentNotFound };
 
         var result = LilySharp.Core.Editing.SectionSplitter.Split(doc.Text, @params.Section, @params.Reference);
         if (result.NewText != null)
@@ -549,7 +549,7 @@ public sealed partial class LilySharpLanguageServer
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
         if (doc == null)
-            return new RegroupResponse { Success = false, Error = "Document not found" };
+            return new RegroupResponse { Success = false, Error = DocumentNotFound };
 
         // Refuse to convert a file with syntax errors: cell extraction needs a
         // clean, balanced tree, and the client overwrites the whole document with
@@ -622,7 +622,7 @@ public sealed partial class LilySharpLanguageServer
         {
             var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
             if (doc == null)
-                return new OrMarksResponse { Error = "Document not found" };
+                return new OrMarksResponse { Error = DocumentNotFound };
             return new OrMarksResponse
             {
                 Marks = [.. NoteStepper.OrMarks(doc.Tree).Select(m => new StepSelection { Start = m.Start, End = m.End })],
@@ -643,7 +643,7 @@ public sealed partial class LilySharpLanguageServer
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
         if (doc == null)
-            return new TodosResponse { Error = "Document not found" };
+            return new TodosResponse { Error = DocumentNotFound };
         try
         {
             return new TodosResponse

@@ -256,7 +256,7 @@ public sealed partial class LilySharpLanguageServer
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
         if (doc == null)
-            return new FactsForRangeResponse { Error = "Document not found" };
+            return new FactsForRangeResponse { Error = DocumentNotFound };
 
         return ResolvePitches(doc.Text, doc.Tree, @params.Start, @params.End);
     }

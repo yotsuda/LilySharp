@@ -261,6 +261,16 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>The open document at <paramref name="uri"/>, or null. For tests.</summary>
     internal Document? DocumentAt(Uri uri) => _documentManager.GetDocument(uri);
 
+    /// <summary>What a request that names a document answers in its <c>Error</c> when the server
+    /// does not hold that document. ONE spelling, because the editor reads it: the preview asks
+    /// again while a just-opened file is not registered yet, and knows that window by this very
+    /// text (<c>editors/vscode/src/extension.ts</c>, <c>response.Error === 'Document not found'</c>
+    /// — <c>DocumentNotFoundTests</c> reads both sides). Five commands wrote it with a full stop
+    /// until session 1295. A request whose answer has no <c>Error</c> (the caret's questions:
+    /// its place, its bar, its status line) answers the empty answer instead — "nothing here" is
+    /// all its caller can use.</summary>
+    internal const string DocumentNotFound = "Document not found";
+
     /// <summary>
     /// The preview's collect of <paramref name="tree"/> for the document at
     /// <paramref name="uri"/>, from whichever of its render sessions collected exactly

@@ -41,7 +41,7 @@ public sealed partial class LilySharpLanguageServer
         var uri = @params.TextDocument.Uri;
         var doc = _documentManager.GetDocument(uri);
         if (doc == null)
-            return new StepResponse { Fallback = true, Error = "Document not found" };
+            return new StepResponse { Fallback = true, Error = DocumentNotFound };
         try
         {
             string basePath = uri.IsFile ? uri.LocalPath : string.Empty;

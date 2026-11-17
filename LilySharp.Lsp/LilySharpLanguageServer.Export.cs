@@ -67,7 +67,7 @@ public sealed partial class LilySharpLanguageServer
             var uri = document.Uri;
             var doc = _documentManager.GetDocument(uri);
             if (doc == null)
-                return "Document not found";
+                return DocumentNotFound;
             (tree, _) = ExpandUsings(doc, uri);
             stem = Path.GetFileNameWithoutExtension(uri.IsFile ? uri.LocalPath : uri.ToString());
         }

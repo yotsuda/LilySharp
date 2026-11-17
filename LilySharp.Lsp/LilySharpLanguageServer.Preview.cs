@@ -225,7 +225,7 @@ public sealed partial class LilySharpLanguageServer
             return WithTiming(new SvgResponse
             {
                 Svg = null,
-                Error = "Document not found"
+                Error = DocumentNotFound
             }, timing, receipt);
         }
 
