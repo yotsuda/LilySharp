@@ -1889,14 +1889,17 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     // until the server was told which score (user report 2026-09-29).
                     const pb = await client.sendRequest<{ Notes?: { T: number, D: number, P: number, V: number, N?: number, U?: boolean, W?: string[] | null }[], Error?: string,
                         Parts?: string[] | null, Extra?: string[] | null, Sung?: string[] | null, Played?: string[] | null,
-                        Beats?: { T: number; A: boolean }[] | null; BarEnd?: number }>(
+                        Beats?: { T: number; A: boolean }[] | null; BarEnd?: number; Lights?: { T: number, D: number, P: number, V: number }[] | null }>(
                         'lilysharp/playback', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null });
                     // The tracks and the beats ride along for the practice menu's parts and metronome;
                     // the parts the score does not sound (Extra) too, off until the menu turns them on;
                     // and which parts the score sings and plays (docs/singing-design.md §3).
                     // A line of a part that is not sung here (nobody installed can sing it) leaves
                     // its sections to the instrument where another line of the part sings.
-                    const notes = pb.Notes ? leftToTheInstrument(pb.Notes, missingVoices.get(panel) ?? []) : null;
+                    // The editor's text's own lights (rests, the form's names, the words: Lights) go
+                    // among the notes, so the page's timing — tempo, A-B, loop, the recording's bars —
+                    // reaches them as it does the notes; nothing sounds them, the score draws none.
+                    const notes = pb.Notes ? leftToTheInstrument(pb.Notes, missingVoices.get(panel) ?? []).concat(pb.Lights ?? []) : null;
                     // (seq: the page's request, said back — it plays only the answer to its latest)
                     panel.webview.postMessage({ type: 'playbackData', seq: message.seq, notes, error: pb.Error ?? null,
                         parts: pb.Parts ?? null, extra: pb.Extra ?? null, sung: pb.Sung ?? null, played: pb.Played ?? null,
@@ -8716,12 +8719,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (!relay) follow.start();
             followSystemDocTop = null; followSystemOffset = null; followTopTarget = null;   // a new Play finds its place anew
             followStaff = relay ? -1 : followStaffOfCaret();
-            const cursor = new Cursor(notes.map(n => ({ t: n.T - offset, d: n.D, s: relay ? n.R : n.S, o: n.O || 0 })));
+            // The rests (E) are the editor's text's alone: lit there while they last, not on the score
+            // (owner's request 2026-11-17).
+            const onScore = notes.filter(n => !n.E);
+            const cursor = new Cursor(onScore.map(n => ({ t: n.T - offset, d: n.D, s: relay ? n.R : n.S, o: n.O || 0 })));
+            const restCursor = relay ? null : new Cursor(notes.filter(n => n.E).map(n => ({ t: n.T - offset, d: n.D, s: n.S, o: n.O || 0 })));
             // The notes about to sound, FOLLOW_LEAD seconds ahead (owner's request 2026-11-16: a
             // player must see the next line, or the notes cut off at the side, before they sound —
             // the view moved only once the next line's first note had sounded). The view is moved
             // for them and the notes sounding; the notes are lit when they sound.
-            const ahead = relay ? null : new Cursor(notes.map(n => ({ t: n.T - offset, d: n.D, s: n.S, o: n.O || 0 })));
+            const ahead = relay ? null : new Cursor(onScore.map(n => ({ t: n.T - offset, d: n.D, s: n.S, o: n.O || 0 })));
             let aheadEls = [], soundingEls = [];
             // How evenly the 50 ms tick came (owner's report 2026-10-25: one eighth note lit in
             // four — the tick a second apart, as a browser throttles a page it thinks hidden):
@@ -8744,16 +8751,19 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     for (const entry of a.sounding) aheadEls.push.apply(aheadEls, elementsAt(entry));
                     if (aheadEls.length > 0 && follow.follows()) follow.auto(() => keepSoundingInView(soundingEls, aheadEls));
                 }
-                if (!r.changed) return;
+                const rests = restCursor ? restCursor.at(playedTo) : null;
+                if (!r.changed && !(rests && rests.changed)) return;
                 if (relay) {
                     vscode.postMessage({ type: 'candidateSounding', sounding: r.sounding.map(x => ({ pos: x.pos, occ: x.occ })) });
                     return;
                 }
+                // …the host lights their text in the editor (the same notes, by their offsets), and
+                // the rests lasting now with them.
+                sourceLit = true;
+                vscode.postMessage({ type: 'soundingSource', positions: r.sounding.map(x => x.pos).concat(rests ? rests.sounding.map(x => x.pos) : []) });
+                if (!r.changed) return;
                 clearHighlights();
                 const painted = highlightPositions(r.sounding);
-                // …and the host lights their text in the editor (the same notes, by their offsets).
-                sourceLit = true;
-                vscode.postMessage({ type: 'soundingSource', positions: r.sounding.map(x => x.pos) });
                 if (r.sounding.length > 0) {
                     lastHighlightPos = r.sounding[0].pos;
                     lastResolvedPos = r.sounding[0].pos;

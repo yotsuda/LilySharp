@@ -564,6 +564,11 @@ public class PlaybackNote
     /// <see cref="T"/> and <see cref="D"/> the bars'. Nothing sounds it (<see cref="P"/> 0,
     /// <see cref="V"/> 0); the follow-along lights it, a video too.</summary>
     public bool L { get; set; }
+    /// <summary>A light the editor's text shows and the score does not: a rest, lit in the text
+    /// while it lasts (owner's request 2026-11-17; <c>MidiTrack.TextMarks</c>) — always with
+    /// <see cref="L"/>. False everywhere else, and then not written.</summary>
+    [Newtonsoft.Json.JsonProperty(DefaultValueHandling = Newtonsoft.Json.DefaultValueHandling.Ignore)]
+    public bool E { get; set; }
     /// <summary>The bar the note is printed in, from 0 (a pickup is bar 0) as the page numbers its
     /// measures (<c>MidiNote.PrintedBar</c>): the preview's A-B repeat picks its bars by it
     /// (docs/ab-repeat-design.md). -1 where unknown (a pedal change).</summary>
@@ -597,6 +602,13 @@ public class PlaybackBeat
 public class PlaybackResponse
 {
     public PlaybackNote[]? Notes { get; set; }
+    /// <summary>What the editor's text lights while it plays besides the notes (owner's requests
+    /// 2026-11-17): the rests, the form's section names and the syllables sung — each a light
+    /// (<see cref="PlaybackNote.L"/>, <see cref="PlaybackNote.E"/>), in time order. Apart from
+    /// <see cref="Notes"/>, which the exports and every reader of the notes take as they are; the
+    /// editor puts them among the notes it plays, where the page's timing reaches them too.</summary>
+    [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+    public PlaybackNote[]? Lights { get; set; }
     /// <summary>The name of each track the notes play on (<see cref="PlaybackNote.N"/>): a part's,
     /// a chord row's (<c>NAME (chords)</c>), in the export's track order.</summary>
     public string[]? Parts { get; set; }

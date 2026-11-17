@@ -34,6 +34,13 @@ public readonly record struct PedalChange(int Tick, bool Down, int Controller = 
     public const int Soft = 67;
 }
 
+/// <summary>A place in the text the editor lights while the music there lasts
+/// (<see cref="MidiTrack.TextMarks"/>; owner's requests 2026-11-17) — a rest, or a section's name
+/// in the form: when it lasts and where it stands in the text — its offset and printed copy, as a
+/// note's (<see cref="MidiNote.SourcePos"/>, <see cref="MidiNote.SourceOrdinal"/>) — its part (null
+/// for a form's name), and the bar it starts in (<see cref="MidiNote.PrintedBar"/>, -1 until told).</summary>
+public readonly record struct TextMark(int StartTick, int DurationTicks, int SourcePos, int SourceOrdinal, string? Part, int PrintedBar = -1);
+
 /// <summary>
 /// Represents a MIDI note event.
 /// </summary>
@@ -191,5 +198,6 @@ public readonly record struct LyricEvent(
     bool Hyphen = false,        // the next syllable is of the same word; not written to .mid
     bool Voiced = true,         // a voice was asked for them (Music.LyricSinger.SungReaderOf); not written to .mid
     string? Track = null,       // the lyrics track they are written in, as named there; not written to .mid
-    string? Sing = null         // how each voice sings them, its line's `with …` (Music.LyricSinger.SettingsReaderOf); not written to .mid
+    string? Sing = null,        // how each voice sings them, its line's `with …` (Music.LyricSinger.SettingsReaderOf); not written to .mid
+    int SourcePos = -1          // where the syllable stands in the text, for the editor to light it while it is sung (owner's request 2026-11-17); -1 from a file; not written to .mid
 );

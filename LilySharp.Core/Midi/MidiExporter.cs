@@ -1099,7 +1099,10 @@ public sealed class MidiExporter
         // the one the page has, and only the notes of the unseen parts leave it. Stripping
         // before the split also keeps them off the channel plan.
         if (_soundingParts is { } sounding)
+        {
             mainTrack.Notes.RemoveAll(n => n.Part is { } part && !IsChordRowTrack(part) && !sounding.Contains(part));
+            mainTrack.TextMarks.RemoveAll(r => r.Part is { } part && !IsChordRowTrack(part) && !sounding.Contains(part));
+        }
 
         // A book played along its timeline (below) takes its words afterwards, on the notes as
         // they are PLAYED: a verse is the words of a pass, and the printed timeline has one.
@@ -1140,6 +1143,13 @@ public sealed class MidiExporter
                 int at = Array.BinarySearch(lines, n.StartTick);
                 int bar = at >= 0 ? at + 1 : ~at;
                 track.Notes[i] = n with { PrintedBar = bar };
+            }
+        foreach (var track in midi.Tracks)
+            for (int i = 0; i < track.TextMarks.Count; i++)
+            {
+                var r = track.TextMarks[i];
+                int at = Array.BinarySearch(lines, r.StartTick);
+                track.TextMarks[i] = r with { PrintedBar = at >= 0 ? at + 1 : ~at };
             }
     }
 
@@ -1324,6 +1334,11 @@ public sealed class MidiExporter
                 track.Lyrics.AddRange(mainTrack.Lyrics);
                 first = false;
             }
+            // The part's rests with its notes (a part of rests alone has no track: nothing of it
+            // plays); the ones of no part (the form's section names) where the notes of no part
+            // are, else on the first track.
+            track.TextMarks.AddRange(mainTrack.TextMarks.Where(r => r.Part == part
+                || (r.Part is null && index == 0 && !order.Contains(null))));
             midi.Tracks.Add(track);
         }
     }
@@ -1665,7 +1680,7 @@ public sealed class MidiExporter
             case RestSyntax rest:
                 if (rest.MeasureCount > 1)
                     _barFlows = true;
-                ProcessRest(rest, conductorTrack);
+                ProcessRest(rest, conductorTrack, track);
                 break;
 
             case ChordSyntax chord:
@@ -2809,6 +2824,19 @@ public sealed class MidiExporter
             _timeline.Add(new RepeatSign(tick, RepeatSignKind.RepeatStart, Lane: lane));
     }
 
+    /// <summary>A section the form names, played — and its name in the form marked for the editor
+    /// to light while the section plays (MidiTrack.TextMarks; owner's request 2026-11-17).</summary>
+    private void PlayFormSection(FormWalk.SectionRef s, MidiTrack track, MidiTrack conductorTrack)
+    {
+        // The name itself: the reference's first token, or after the `~` of a silent one.
+        int pos = s.Node is SectionReferenceSyntax ? s.Node.SourceStart
+            : s.Node.GetChild(1) is SyntaxTokenNode name ? name.SourceStart : s.Node.SourceStart;
+        int start = _currentTick, ordinal = NextOrdinal(pos);
+        PlaySectionByName(s.Name, track, conductorTrack, s.OctaveOffset);
+        if (_currentTick > start)
+            track.TextMarks.Add(new TextMark(start, _currentTick - start, pos, ordinal, Part: null));
+    }
+
     /// <summary>The form walked ONCE, in the order the page prints it, its own repeat signs,
     /// endings and navigation marks noted on the timeline beside the ones the music writes —
     /// one sequence, so a <c>|:</c> in a section pairs with a <c>:|</c> wherever it stands
@@ -2820,7 +2848,7 @@ public sealed class MidiExporter
             switch (item)
             {
                 case FormWalk.SectionRef s:
-                    PlaySectionByName(s.Name, track, conductorTrack, s.OctaveOffset);
+                    PlayFormSection(s, track, conductorTrack);
                     break;
                 case FormWalk.Repeat repeat:
                     _timeline.Add(new RepeatSign(_currentTick, RepeatSignKind.RepeatStart));
@@ -2837,7 +2865,7 @@ public sealed class MidiExporter
                 case FormWalk.Ending e:
                     _timeline.Add(new RepeatSign(_currentTick, RepeatSignKind.EndingStart, Passes: PassSet.Of(e.Node.Numbers)));
                     foreach (var s in e.Sections)
-                        PlaySectionByName(s.Name, track, conductorTrack, s.OctaveOffset);
+                        PlayFormSection(s, track, conductorTrack);
                     _timeline.Add(new RepeatSign(_currentTick, RepeatSignKind.EndingEnd));
                     break;
                 case FormWalk.LoneRepeatEnd:
@@ -3171,8 +3199,10 @@ public sealed class MidiExporter
         restored[markPos] = markOrdinal + 1;
         _sourceOrdinals = restored;
         (_currentOctave, _currentNoteName, _defaultDuration) = frame;
-        int start = _currentTick, first = track.Notes.Count;
+        int start = _currentTick, first = track.Notes.Count, firstRest = track.TextMarks.Count;
         ProcessSequence(body, track, conductorTrack);
+        // The bars' rests are not lit again: the mark is, for the whole of them (its lights).
+        track.TextMarks.RemoveRange(firstRest, track.TextMarks.Count - firstRest);
         // Each note the mark sounds carries it (MidiNote.Percent): the preview lights the mark, not
         // the bars' notes it was played from.
         int length = _currentTick - start;
@@ -3698,7 +3728,17 @@ public sealed class MidiExporter
         _currentTick += durationTicks;
     }
 
-    private void ProcessRest(RestSyntax rest, MidiTrack? conductorTrack = null)
+    private void ProcessRest(RestSyntax rest, MidiTrack? conductorTrack = null, MidiTrack? track = null)
+    {
+        // Where it stands and how long it lasts, for the editor to light it while it lasts
+        // (MidiTrack.TextMarks; owner's request 2026-11-17) — kept however the clock moves below.
+        int start = _currentTick, ordinal = NextOrdinal(rest.SourceStart);
+        ProcessRestTime(rest, conductorTrack);
+        if (track != null && _currentTick > start)
+            track.TextMarks.Add(new TextMark(start, _currentTick - start, rest.SourceStart, ordinal, _currentPart));
+    }
+
+    private void ProcessRestTime(RestSyntax rest, MidiTrack? conductorTrack)
     {
         // A bare `R*N` with another part's `time` inside it: each bar is a bar of the score's
         // meter there, as the page lays it (SectionMeterPlan.ChangesInsideRun) — bar by bar,
@@ -4870,7 +4910,7 @@ public sealed class MidiExporter
                     && (verse.Own.Contains(pass)
                         || (!verse.Cell.Contains(pass) && verse.Own.Contains(verse.Cell.Where(w => w < pass).DefaultIfEmpty(0).Max())))).ToList();
             foreach (int tick in ticks)
-                track.Lyrics.Add(new LyricEvent(tick, lyric.Text, part, reading, languageOf(sungTrack), singerOf(sungTrack, part), genderOf(singerOf(sungTrack, part), part), lyric.ConnectorType == Svg.Model.LyricConnectorType.Hyphen, sings(sungTrack, part), sungTrack, settingsOf(sungTrack, part)));
+                track.Lyrics.Add(new LyricEvent(tick, lyric.Text, part, reading, languageOf(sungTrack), singerOf(sungTrack, part), genderOf(singerOf(sungTrack, part), part), lyric.ConnectorType == Svg.Model.LyricConnectorType.Hyphen, sings(sungTrack, part), sungTrack, settingsOf(sungTrack, part), lyric.SourcePosition));
         }
     }
 }

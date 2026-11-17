@@ -47,6 +47,38 @@ public class SungRequestTests
         score unseen { staff melody hidden  staff bass  lyrics verse on melody }
         """;
 
+    /// <summary>
+    /// What the editor lights while it plays besides the notes (owner's requests 2026-11-17): the
+    /// section's name in the form for the whole of it, each syllable for its note, each rest for
+    /// itself — lights (nothing sounds them) the score does not draw (E).
+    /// </summary>
+    [Fact]
+    public void ThePlayback_LightsTheFormsName_TheWords_AndTheRests_InTheEditorOnly()
+    {
+        var server = Open(out var uri);
+        var playback = server.GetPlayback(new PlaybackParams { TextDocument = new TextDocumentIdentifier { Uri = uri } });
+        Assert.Null(playback.Error);
+        var lights = playback.Lights!;
+        Assert.DoesNotContain(playback.Notes!, n => n.E);   // (the notes as every reader takes them)
+        Assert.All(lights, n => { Assert.True(n.L); Assert.Equal(0, n.V); });
+        PlaybackNote At(string text, int from = 0) => Assert.Single(lights, n => n.S == Doc.IndexOf(text, from, StringComparison.Ordinal));
+        var form = At("A }", Doc.IndexOf("form", StringComparison.Ordinal));
+        Assert.Equal(0, form.T, 3);
+        Assert.Equal(2.0, form.D, 3);
+        var yu = At("ゆ");
+        Assert.Equal(0, yu.T, 3);
+        Assert.Equal(0.375, yu.D, 3);
+        var kon = At("こん");
+        Assert.Equal(1.0, kon.T, 3);
+        Assert.Equal(0.5, kon.D, 3);
+        Assert.Equal(playback.Parts![kon.N], "melody");
+        var rest = At("r |");
+        Assert.Equal(1.75, rest.T, 3);
+        Assert.Equal(0.25, rest.D, 3);
+        // …and no note's place among them.
+        Assert.DoesNotContain(lights, n => n.S == Doc.IndexOf("c'8.", StringComparison.Ordinal));
+    }
+
     private static LilySharpLanguageServer Open(out Uri uri)
     {
         var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
@@ -75,7 +107,7 @@ public class SungRequestTests
         // The score sings the melody (the words under its staff) and plays the bass.
         Assert.Equal(new[] { "melody" }, playback.Sung);
         Assert.Equal(new[] { "bass" }, playback.Played);
-        var melody = playback.Notes!.Where(n => n.P != PlaybackNote.PedalPitch && playback.Parts![n.N] == "melody").ToArray();
+        var melody = playback.Notes!.Where(n => n.P != PlaybackNote.PedalPitch && !n.L && playback.Parts![n.N] == "melody").ToArray();
         Assert.Equal(melody.Select(n => n.T), voice.Notes.Select(n => n.T));
         Assert.Equal(melody.Select(n => n.S), voice.Notes.Select(n => n.S));
     }
@@ -307,7 +339,7 @@ public class SungRequestTests
         var other = Assert.Single(server.GetSung(new SungParams { TextDocument = new TextDocumentIdentifier { Uri = uri }, Text = resung }).Voices!);
         Assert.Equal(new[] { "は", null, "る", "の", "こん", "こ" }, other.Notes.Select(n => n.L));
         var playback = server.GetPlaybackText(new PlaybackTextParams { Text = resung, Uri = uri });
-        var melody = playback.Notes!.Where(n => n.P != PlaybackNote.PedalPitch && playback.Parts![n.N] == "melody").ToArray();
+        var melody = playback.Notes!.Where(n => n.P != PlaybackNote.PedalPitch && !n.L && playback.Parts![n.N] == "melody").ToArray();
         Assert.Equal(melody.Select(n => n.T), other.Notes.Select(n => n.T));
         Assert.Equal(new[] { "melody" }, playback.Sung);
 
@@ -336,7 +368,7 @@ public class SungRequestTests
         Assert.Equal(new[] { "bass" }, playback.Played);
         Assert.Contains("melody", playback.Parts!);
         Assert.Empty(playback.Extra!);
-        var melody = playback.Notes!.Where(n => n.P != PlaybackNote.PedalPitch && playback.Parts![n.N] == "melody").ToArray();
+        var melody = playback.Notes!.Where(n => n.P != PlaybackNote.PedalPitch && !n.L && playback.Parts![n.N] == "melody").ToArray();
         Assert.Equal(melody.Select(n => n.T), voice.Notes.Select(n => n.T));
     }
 

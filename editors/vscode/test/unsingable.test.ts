@@ -198,7 +198,7 @@ describe('the editor and a line nobody can sing', () => {
     it('leaves such a line\'s sections to the instrument where another line of its part sings', () => {
         // Play: the preview's missing voices mark the notes it hands the page.
         assert.match(ext, /missingVoices\.set\(panel, new Set\(unsingable\.keys\(\)\)\);/);
-        assert.match(ext, /const notes = pb\.Notes \? leftToTheInstrument\(pb\.Notes, missingVoices\.get\(panel\) \?\? \[\]\) : null;\s+(?:\/\/[^\n]*\n\s+)?panel\.webview\.postMessage\(\{ type: 'playbackData', seq: message\.seq, notes,/);
+        assert.match(ext, /const notes = pb\.Notes \? leftToTheInstrument\(pb\.Notes, missingVoices\.get\(panel\) \?\? \[\]\)\.concat\(pb\.Lights \?\? \[\]\) : null;\s+(?:\/\/[^\n]*\n\s+)?panel\.webview\.postMessage\(\{ type: 'playbackData', seq: message\.seq, notes,/);
         // Another document or score: the last one's missing voices are forgotten with its voices.
         assert.match(ext, /function followVoices\([^)]*\): boolean \{[\s\S]{0,300}missingVoices\.delete\(panel\);/);
         // Export: the voices asked that did not sing, then the same marking before the part's notes leave.

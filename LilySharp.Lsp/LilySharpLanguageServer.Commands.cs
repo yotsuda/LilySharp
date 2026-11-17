@@ -997,7 +997,8 @@ public sealed partial class LilySharpLanguageServer
             var look = LilySharp.Core.Export.ScoreVideoOptions.Default;
             directory = Path.Combine(Path.GetTempPath(), "lilysharp-video-" + Guid.NewGuid().ToString("N"));
             var frames = LilySharp.Core.Export.ScoreVideo.WriteFrames(tree, score,
-                @params.Notes.Where(n => n.P >= 0)
+                // (a rest is the editor's text's light alone, PlaybackNote.E: not lit on the score)
+                @params.Notes.Where(n => n.P >= 0 && !n.E)
                     .Select(n => new LilySharp.Core.Export.VideoNote(n.T, n.T + n.D, n.S, n.O)).ToList(),
                 @params.Seconds, directory, look);
             return new VideoFramesResponse
@@ -1446,6 +1447,59 @@ public sealed partial class LilySharpLanguageServer
                 .OrderBy(n => n.T)
                 .ToArray();
 
+            // What the editor's text lights besides the notes (PlaybackResponse.Lights; owner's
+            // requests 2026-11-17): each rest and each section's name in the form while it lasts
+            // (MidiTrack.TextMarks), each syllable while its note does — lights (nothing sounds
+            // them) the page does not draw on the score (E).
+            var lights = tracks.SelectMany((x, ti) => x.Track.TextMarks.Select(r => new PlaybackNote
+                {
+                    T = SecondsAt(r.StartTick),
+                    D = Math.Max(0.03, SecondsAt(r.StartTick + r.DurationTicks) - SecondsAt(r.StartTick)),
+                    S = r.SourcePos,
+                    O = r.SourceOrdinal,
+                    C = x.Channel,
+                    G = x.Track.Program ?? 0,
+                    N = ti,
+                    L = true,
+                    E = true,
+                    M = r.PrintedBar,
+                }))
+                .Concat(LyricLights())
+                .OrderBy(n => n.T)
+                .ToArray();
+
+            // Each syllable sung, lit in the editor's text while its note lasts (owner's request
+            // 2026-11-17) — on its part's track, so a part turned off takes its words' lights along.
+            IEnumerable<PlaybackNote> LyricLights()
+            {
+                var noteLength = new Dictionary<(string?, int), int>();
+                foreach (var n in tracks.SelectMany(x => x.Track.Notes))
+                    noteLength[(n.Part, n.StartTick)] = Math.Max(n.DurationTicks, noteLength.GetValueOrDefault((n.Part, n.StartTick)));
+                var trackOf = tracks.Select((x, ti) => (x.Track.Name, ti)).GroupBy(p => p.Name).ToDictionary(g => g.Key, g => g.First().ti);
+                foreach (var (x, ti) in tracks.Select((x, ti) => (x, ti)))
+                {
+                    var words = x.Track.Lyrics.Where(l => l.SourcePos >= 0).OrderBy(l => l.Tick).ToList();
+                    for (int i = 0; i < words.Count; i++)
+                    {
+                        var w = words[i];
+                        int next = words.Skip(i + 1).Where(o => o.Part == w.Part && o.Tick > w.Tick).Select(o => o.Tick).DefaultIfEmpty(-1).First();
+                        int length = noteLength.TryGetValue((w.Part, w.Tick), out int d) ? d : next > 0 ? next - w.Tick : tpq;
+                        int track = w.Part != null && trackOf.TryGetValue(w.Part, out int own) ? own : ti;
+                        yield return new PlaybackNote
+                        {
+                            T = SecondsAt(w.Tick),
+                            D = Math.Max(0.03, SecondsAt(w.Tick + length) - SecondsAt(w.Tick)),
+                            S = w.SourcePos,
+                            C = tracks[track].Channel,
+                            G = tracks[track].Track.Program ?? 0,
+                            N = track,
+                            L = true,
+                            E = true,
+                        };
+                    }
+                }
+            }
+
             var beats = MetronomeBeats(midi, tpq, out int barEnd).Select(b => new PlaybackBeat { T = SecondsAt(b.Tick), A = b.Accent }).ToArray();
             // Which parts the score sings and which it plays, off its rows (a file with no score
             // block plays every part).
@@ -1454,6 +1508,7 @@ public sealed partial class LilySharpLanguageServer
             return new PlaybackResponse
             {
                 Notes = notes,
+                Lights = lights,
                 Parts = tracks.Select(x => x.Track.Name).ToArray(),
                 Extra = extra.ToArray(),
                 Sung = sounds?.Sung.ToArray() ?? [],

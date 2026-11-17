@@ -52,6 +52,10 @@ public class MidiTrack
     /// (<see cref="PedalChange.Controller"/>). The notes keep
     /// their written lengths: the checks read those, and a DAW edits the pedal as a pedal.</summary>
     public List<PedalChange> Pedals { get; } = [];
+    /// <summary>The places in the text the editor lights while their music lasts — this track's
+    /// rests, and (on the first track) the form's section names — as played (the repeats laid
+    /// out; owner's requests 2026-11-17). Nothing sounds them, and a written file has none.</summary>
+    public List<TextMark> TextMarks { get; } = [];
 
     /// <summary>
     /// Sets the tempo from <paramref name="tick"/> on: ONE event per moment — a tempo already

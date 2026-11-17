@@ -234,6 +234,14 @@ public class PlaybackRequestTests
         var lights = pb.Notes!.Where(n => n.L).OrderBy(n => n.T).ToArray();
         // three marks, the section played twice: six bars lit, two seconds each, no sound
         Assert.Equal(6, lights.Length);
+        // The written bar's rest, lit in the editor while it lasts (E) on each play of the section —
+        // and not in the bars the marks sound again (the mark is lit there).
+        int rest = doc.IndexOf(" r |", StringComparison.Ordinal) + 1;
+        var rests = pb.Lights!.Where(n => n.S == rest).OrderBy(n => n.T).ToArray();
+        Assert.All(rests, r => { Assert.True(r.L); Assert.Equal(rest, r.S); Assert.Equal(0.5, r.D, 3); Assert.Equal(0, r.V); });
+        Assert.Equal(new[] { 1.5, 9.5 }, rests.Select(r => Math.Round(r.T, 3)));
+        Assert.Equal(new[] { 0, 1 }, rests.Select(r => r.O));
+        Assert.Equal(new[] { 0, 4 }, rests.Select(r => r.M));
         Assert.All(lights, l => { Assert.Equal(2.0, l.D, 3); Assert.Equal(0, l.V); });
         Assert.Equal(new[] { 2.0, 4.0, 6.0, 10.0, 12.0, 14.0 }, lights.Select(l => Math.Round(l.T, 3)));
         Assert.Equal(new[] { marks[0], marks[1], marks[2], marks[0], marks[1], marks[2] }, lights.Select(l => l.S));

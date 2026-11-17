@@ -113,6 +113,8 @@ internal static class PlayedTimeline
             var keys = track.KeySignatures.ToList();
             var words = track.Lyrics.ToList();
             var pedals = track.Pedals.ToList();
+            var marks = track.TextMarks.ToList();
+            track.TextMarks.Clear();
             track.Notes.Clear();
             track.TempoChanges.Clear();
             track.TimeSignatures.Clear();
@@ -191,6 +193,20 @@ internal static class PlayedTimeline
                 foreach (var word in words)
                     if (word.Tick >= from && word.Tick < to)
                         track.Lyrics.Add(word with { Tick = word.Tick + shift });
+
+                // A place the editor lights (a rest, a section's name in the form) for as much of it
+                // as each stretch plays: a section with a repeat inside it keeps its name lit on
+                // every stretch of it.
+                foreach (var mark in marks)
+                {
+                    int markEnd = mark.StartTick + mark.DurationTicks;
+                    if (mark.StartTick >= to || markEnd <= from)
+                        continue;
+                    int start = Math.Max(mark.StartTick, from);
+                    int stop = last ? markEnd : Math.Min(markEnd, to);
+                    if (stop > start)
+                        track.TextMarks.Add(mark with { StartTick = start + shift, DurationTicks = stop - start });
+                }
 
                 // A pedal is where the printed music has it at the place jumped to.
                 if (k > 0)
