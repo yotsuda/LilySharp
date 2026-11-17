@@ -36,7 +36,7 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /getElementById\('rangeClose'\)\.addEventListener\('click', \(\) => \{\s*rangePanel\.hidden = true;\s*rangeBtn\.setAttribute\('aria-pressed', 'false'\);/);
         assert.doesNotMatch(html, /rangePanel\.(textContent|appendChild)/);
         // The practice panel's × closes it.
-        assert.match(html, /<div id="practicePanel" class="range-panel practice-panel" hidden>\s*<button type="button" id="practiceClose" class="panel-close"/);
+        assert.match(html, /<div id="practicePanel" class="range-panel practice-panel mixer-panel" hidden>\s*<button type="button" id="practiceClose" class="panel-close"/);
         assert.match(html, /getElementById\('practiceClose'\)\.addEventListener\('click', closePractice\);/);
         assert.match(html, /\.range-panel \.panel-close \{\s*float: right; position: sticky; top: 0;/);
         for (const m of html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)) {
@@ -256,11 +256,11 @@ describe('the preview\'s Range panel', () => {
 
     it('sounds the recording with the score, from the score\'s clock', () => {
         assert.doesNotMatch(html, /id="recBtn"/);
-        assert.match(html, /<div id="recPanel"[^>]*>[\s\S]{0,1600}<button type="button" id="recOnBtn"[^>]*>[\s\S]{0,300}<input type="range" id="recLevelSlider" class="fader"/);   // (the mixer's recording group head: §1 2)
+        assert.match(html, /<div class="mgroup" id="mixRecGroup"[^>]*>[\s\S]{0,300}<button type="button" id="recOnBtn"[^>]*>[\s\S]{0,300}<input type="range" id="recLevelSlider" class="fader"/);   // (the mixer's recording group head: §1 2)
         // The recording is the mixer's own group (docs/transport-mixer-design.md §1 1-2): its head holds its
         // on/off, its solo and its fader — no longer a line among the score's parts.
         assert.doesNotMatch(html, /toggle\('Recording', /);
-        assert.match(html, /<div class="mgroup" id="mixRecGroup" hidden>\s*<div class="mhead"><span class="mtitle">Recording<\/span><button type="button" id="recOnBtn"[^>]*><span id="recName"><\/span><\/button><input type="range" id="recLevelSlider"/);
+        assert.match(html, /<div class="mgroup" id="mixRecGroup" data-fold="rec" hidden>\s*<div class="mhead"><button type="button" class="mfold mtitle" aria-expanded="true">Recording<\/button><button type="button" id="recOnBtn"[^>]*><span id="recName"><\/span><\/button><input type="range" id="recLevelSlider"/);
         assert.match(html, /function recLevel\(\) \{ return solo\.size > 0 && !recSoloed\(\) \? 0 : levelIn\(recLevels, 'Recording'\); \}/);
         assert.match(html, /delete recLevels\.Recording;/);
         assert.match(html, /if \(origin !== undefined\) end = Math\.max\(end, startRecordingAlong\(t0, offset, origin, !!loopList\)\);/);

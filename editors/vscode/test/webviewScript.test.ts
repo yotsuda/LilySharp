@@ -564,10 +564,10 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
     });
     it('is installed on both panels, left alone by their inputs, and kept on a resize', () => {
         const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
-        assert.match(source, /installPanelDrag\(rangePanel\);\s*installPanelDrag\(practicePanel\);\s*installPanelDrag\(recPanel\);/);
+        assert.match(source, /installPanelDrag\(rangePanel\);\s*installPanelDrag\(practicePanel\);/);
         assert.match(source, /e\.target\.closest\('input, select, textarea'\)\) return;/);
-        assert.match(source, /window\.addEventListener\('resize', \(\) => \{ clampPanel\(rangePanel\); clampPanel\(practicePanel\); clampPanel\(recPanel\); \}\);/);
-        assert.match(source, /if \(recPanel\.dataset\.moved\) clampPanel\(recPanel\);/);
+        assert.match(source, /window\.addEventListener\('resize', \(\) => \{ clampPanel\(rangePanel\); clampPanel\(practicePanel\); \}\);/);
+        assert.doesNotMatch(source, /installPanelDrag\(recPanel\)/);   // (one panel: the mixer is in the practice panel, §6)
         // Opened again, a moved panel stays where it was put.
         assert.match(source, /if \(rangePanel\.dataset\.moved\) clampPanel\(rangePanel\);/);
         assert.match(source, /if \(practicePanel\.dataset\.moved\) clampPanel\(practicePanel\);/);

@@ -6128,7 +6128,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .mixer-panel .mgroup + .mgroup { border-top: 1px solid rgba(128, 128, 128, 0.35); padding-top: 8px; }
         .mixer-panel { min-width: 400px; }
         .mixer-panel .mhead { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-        .mixer-panel .mtitle { width: 5.5em; flex: 0 0 auto; font-weight: 600; opacity: 0.75; }
+        .mixer-panel .mtitle { width: 6.5em; flex: 0 0 auto; }
         .mixer-panel .mhead > button.toggle:not(.msmall) { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
         .mixer-panel .mhead .fader { width: 160px; flex: 0 0 auto; margin: 0; accent-color: #0078d7; cursor: pointer; }
         .mixer-panel .mhead .flevel { width: 2.8em; flex: 0 0 auto; text-align: right; font-size: 11px; opacity: 0.8; font-variant-numeric: tabular-nums; }
@@ -6143,8 +6143,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .mixer-panel .msettings { margin-top: 8px; }
         .mixer-panel .msettings summary { cursor: pointer; opacity: 0.85; padding: 2px 0; }
         .mixer-panel #recPartsRow { margin-bottom: 4px; }
-        .mixer-panel .mgroup > .presets { padding-left: 1.5em; margin-top: 6px; }
-        .mixer-panel .mgroup > .presets .plbl { display: none; }
+        .mixer-panel .mbody > .presets { padding-left: 1.5em; margin-top: 6px; }
+        .mixer-panel .mbody > .presets .plbl { display: none; }
+        /* Each group folded by its name (§6): the head stays, the body goes. */
+        .mixer-panel .mgroup.folded > .mbody { display: none; }
+        .mixer-panel .mgroup.folded > .mhead { margin-bottom: 0; }
+        .mixer-panel button.mfold { border: none; background: transparent; color: inherit; padding: 2px 0; text-align: left; cursor: pointer; font-weight: 600; opacity: 0.85; }
+        .mixer-panel button.mfold:hover { opacity: 1; }
+        .mixer-panel button.mfold::before { content: '\\25BE\\00A0'; display: inline-block; width: 1em; }
+        .mixer-panel .mgroup.folded button.mfold::before { content: '\\25B8\\00A0'; }
+        .mixer-panel .mbody > .prow { padding-left: 1.5em; }
         .mixer-panel .mfoot { clear: both; border-top: 1px solid rgba(128, 128, 128, 0.35); padding: 8px 2px 2px; text-align: right; }
         /* As long as the tempo's slider (owner's request 2026-11-09, session 1159: longer, the 200% end further right). */
         .practice-panel .parts input.fader { width: 160px; flex: 0 0 auto; margin: 0; accent-color: #0078d7; cursor: pointer; }
@@ -6221,10 +6229,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         <!-- Pause (docs/transport-mixer-design.md §1 3): where it plays, held; pressed again, on from there. -->
         <button id="pauseBtn" class="toggle" type="button" aria-pressed="false" title="Pause — pressed again, go on from there (Space)" disabled>⏸</button>
         <button id="stopBtn" type="button" title="Stop, back to the A flag" disabled>⏹</button>
-        <button id="practiceBtn" class="toggle icon practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" aria-label="Practice" title="Practice: tempo, repeat, A-B, metronome, count-in"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M3.6 14.8 6.3 1.4h3.4l2.7 13.4zM7.3 3 5.9 10.2h4.2L8.7 3z"/><path d="M7.7 11.2 12.4 3.9l1 .65-4.7 7.3z"/></svg><span id="practiceSpeed"></span></button>
-        <!-- The mixer (docs/transport-mixer-design.md §1 1): the score's parts and the recording's — it
-             was the recording's panel, shown only with a recording. -->
-        <button id="recPanelBtn" class="toggle icon practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" aria-label="Mixer" title="Mixer: the score's parts and the recording — mute, solo, volume"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12"/><circle cx="5" cy="4" r="1.6" fill="currentColor"/><circle cx="10.5" cy="8" r="1.6" fill="currentColor"/><circle cx="7" cy="12" r="1.6" fill="currentColor"/></svg></button>
+        <button id="practiceBtn" class="toggle icon practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" aria-label="Practice and mixer" title="Practice and mixer: tempo, loop, the parts, the recording"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M3.6 14.8 6.3 1.4h3.4l2.7 13.4zM7.3 3 5.9 10.2h4.2L8.7 3z"/><path d="M7.7 11.2 12.4 3.9l1 .65-4.7 7.3z"/></svg><span id="practiceSpeed"></span></button>
         <span id="posInfo" class="length" title="Where the playback stands, in the score's time" hidden></span>
         <span id="lengthInfo" class="length" title="Length, as played"></span>
         </span>
@@ -6241,38 +6246,49 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
     <div id="errorBanner" class="error-banner" role="alert"></div>
     <button id="followBtn" class="follow-btn" type="button" title="Scroll back to the notes sounding, and follow them again" hidden>↓ Follow</button>
     <div id="rangePanel" class="range-panel" hidden><button type="button" id="rangeClose" class="panel-close" title="Close" aria-label="Close">×</button><div id="rangeBody"></div></div>
-    <div id="practicePanel" class="range-panel practice-panel" hidden>
+    <!-- Practice and the mixer in one panel (docs/transport-mixer-design.md §6; owner's decision 2026-11-17): a group a
+         heading, each folded or opened by its name (remembered); a group's head — its All, its fader — stays
+         usable folded. -->
+    <div id="practicePanel" class="range-panel practice-panel mixer-panel" hidden>
         <button type="button" id="practiceClose" class="panel-close" title="Close" aria-label="Close">×</button>
-        <div class="prow"><span class="plbl">Tempo</span><span class="tempo"><input type="range" id="tempoSlider" min="50" max="150" step="5" value="100" aria-label="Tempo"><span id="tempoValue" class="tval">100%</span><button type="button" id="tempoReset" title="Back to the tempo as written (100%)">Reset</button></span></div>
-        <div class="prow"><span class="plbl">Repeat</span><button type="button" id="loopBtn" class="toggle" aria-pressed="false" title="Play round and round: the bars A to B when A-B is on, else the whole score as it plays">Off</button></div>
-        <div class="prow"><span class="plbl">A-B</span><span class="tempo"><button type="button" id="abBtn" class="toggle" aria-pressed="false" title="Play the bars A to B (as printed) — from the editor's caret bar, or the selected bars, at first">Off</button><span id="abFields" hidden><label class="abnum">A <input type="number" id="abFromNum" min="0" step="1" aria-label="A: the first bar"></label><label class="abnum">B <input type="number" id="abToNum" min="0" step="1" aria-label="B: the last bar"></label><span id="abInfo" class="tval"></span></span></span></div>
-        <div class="prow"><span class="plbl">Metronome</span><button type="button" id="clickBtn" class="toggle" aria-pressed="false">Off</button></div>
-        <div class="prow"><span class="plbl">Count-in</span><button type="button" id="countInBtn" class="toggle" aria-pressed="false" title="One bar of clicks before the music starts">Off</button></div>
-        <div class="prow"><span class="plbl" title="Kept A-B ranges: click to play one, Shift+click to keep the A-B shown, double-click to name">Ranges</span><span id="abStrips" class="ab-strips"></span></div>
-    </div>
-    <!-- The mixer (docs/transport-mixer-design.md §1 1-2; owner's decisions 2026-11-17): the score's parts and
-         the recording's, each line muted, soloed and faded; each group all on or off and faded as one.
-         The recording's speed and pitch fold under it (the recording panel it was). -->
-    <div id="recPanel" class="range-panel practice-panel mixer-panel" hidden>
-        <button type="button" id="recClose" class="panel-close" title="Close" aria-label="Close">×</button>
-        <div class="mgroup">
-            <div class="mhead"><span class="mtitle">Score</span><button type="button" id="scoreAllBtn" class="toggle" aria-pressed="true" title="Every part of the score on, as the score has them — or every one off">All</button><input type="range" id="scoreLevelSlider" class="fader" min="0" max="200" step="1" value="100" aria-label="Score volume"><span id="scoreLevelValue" class="flevel"></span></div>
-            <span id="partsList" class="parts"></span>
-            <div class="prow presets"><span class="plbl"></span><span class="tempo"><button type="button" id="partsReset" title="The parts the selected score plays">As scored</button></span></div>
+        <div class="mgroup" data-fold="tempo">
+            <div class="mhead"><button type="button" class="mfold mtitle" aria-expanded="true">Tempo</button></div>
+            <div class="mbody">
+                <div class="prow"><span class="plbl">Tempo</span><span class="tempo"><input type="range" id="tempoSlider" min="50" max="150" step="5" value="100" aria-label="Tempo"><span id="tempoValue" class="tval">100%</span><button type="button" id="tempoReset" title="Back to the tempo as written (100%)">Reset</button></span></div>
+                <div class="prow"><span class="plbl">Metronome</span><button type="button" id="clickBtn" class="toggle" aria-pressed="false">Off</button></div>
+                <div class="prow"><span class="plbl">Count-in</span><button type="button" id="countInBtn" class="toggle" aria-pressed="false" title="One bar of clicks before the music starts">Off</button></div>
+            </div>
         </div>
-        <div class="mgroup" id="mixRecGroup" hidden>
-            <div class="mhead"><span class="mtitle">Recording</span><button type="button" id="recOnBtn" class="toggle rec-name" aria-pressed="false"><span id="recName"></span></button><input type="range" id="recLevelSlider" class="fader" min="0" max="200" step="1" value="100"><span id="recLevelValue" class="flevel"></span></div>
-            <div id="recPartsRow" hidden><span id="recPartsRows" class="parts rec-part-rows"></span></div>
-            <details id="recSettings" class="msettings"><summary>Speed and pitch <span id="recSummary"></span></summary>
-            <div class="prow"><span class="plbl">Speed</span><span class="tempo"><input type="range" id="recSpeedSlider" min="25" max="150" step="5" value="100" aria-label="Speed"><span id="recSpeedValue" class="tval">100%</span></span></div>
-            <div class="prow"><span class="plbl">Octave</span><span class="tempo"><button type="button" id="recOctDown" title="An octave down">−</button><span id="recOctValue" class="tval">0</span><button type="button" id="recOctUp" title="An octave up">+</button></span></div>
-            <div class="prow"><span class="plbl">Semitones</span><span class="tempo"><input type="range" id="recSemiSlider" min="-11" max="11" step="1" value="0" aria-label="Semitones"><span id="recSemiValue" class="tval">0</span></span></div>
-            <div class="prow" id="recChartRow" hidden title="The chart's own transpose (the top-level transpose, and the score's) moves the recording too, on top of the settings above"><span class="plbl">Chart</span><span class="tempo"><span id="recChartValue" class="tval">0</span></span></div>
-            <div class="prow"><span class="plbl">Cents</span><span class="tempo"><input type="range" id="recCentSlider" min="-50" max="50" step="1" value="0" aria-label="Cents"><span id="recCentValue" class="tval">0</span></span></div>
-            <div class="prow"><span class="plbl">Pitch with speed</span><button type="button" id="recLinkBtn" class="toggle" aria-pressed="false" title="Pitch and speed go together, as a tape's speed is set right (no stretching)">Off</button></div>
-            <div class="prow presets"><span class="plbl"></span><span class="tempo"><button type="button" id="recReset" title="The recording as it is">Reset</button></span></div>
-            </details>
-            <div id="recStatus" class="rec-status" role="status"></div>
+        <div class="mgroup" data-fold="loop">
+            <div class="mhead"><button type="button" class="mfold mtitle" aria-expanded="true">Loop</button></div>
+            <div class="mbody">
+                <div class="prow"><span class="plbl">A-B</span><span class="tempo"><button type="button" id="abBtn" class="toggle" aria-pressed="false" title="Play the bars A to B (as printed) — from the editor's caret bar, or the selected bars, at first">Off</button><span id="abFields" hidden><label class="abnum">A <input type="number" id="abFromNum" min="0" step="1" aria-label="A: the first bar"></label><label class="abnum">B <input type="number" id="abToNum" min="0" step="1" aria-label="B: the last bar"></label><span id="abInfo" class="tval"></span></span></span></div>
+                <div class="prow"><span class="plbl">Repeat</span><button type="button" id="loopBtn" class="toggle" aria-pressed="false" title="Play round and round: the bars A to B when A-B is on, else the whole score as it plays">Off</button></div>
+                <div class="prow"><span class="plbl" title="Kept A-B ranges: click to play one, Shift+click to keep the A-B shown, double-click to name">Ranges</span><span id="abStrips" class="ab-strips"></span></div>
+            </div>
+        </div>
+        <div class="mgroup" data-fold="score">
+            <div class="mhead"><button type="button" class="mfold mtitle" aria-expanded="true">Score</button><button type="button" id="scoreAllBtn" class="toggle" aria-pressed="true" title="Every part of the score on, as the score has them — or every one off">All</button><input type="range" id="scoreLevelSlider" class="fader" min="0" max="200" step="1" value="100" aria-label="Score volume"><span id="scoreLevelValue" class="flevel"></span></div>
+            <div class="mbody">
+                <span id="partsList" class="parts"></span>
+                <div class="prow presets"><span class="plbl"></span><span class="tempo"><button type="button" id="partsReset" title="The parts the selected score plays">As scored</button></span></div>
+            </div>
+        </div>
+        <div class="mgroup" id="mixRecGroup" data-fold="rec" hidden>
+            <div class="mhead"><button type="button" class="mfold mtitle" aria-expanded="true">Recording</button><button type="button" id="recOnBtn" class="toggle rec-name" aria-pressed="false"><span id="recName"></span></button><input type="range" id="recLevelSlider" class="fader" min="0" max="200" step="1" value="100"><span id="recLevelValue" class="flevel"></span></div>
+            <div class="mbody">
+                <div id="recPartsRow" hidden><span id="recPartsRows" class="parts rec-part-rows"></span></div>
+                <details id="recSettings" class="msettings"><summary>Speed and pitch <span id="recSummary"></span></summary>
+                <div class="prow"><span class="plbl">Speed</span><span class="tempo"><input type="range" id="recSpeedSlider" min="25" max="150" step="5" value="100" aria-label="Speed"><span id="recSpeedValue" class="tval">100%</span></span></div>
+                <div class="prow"><span class="plbl">Octave</span><span class="tempo"><button type="button" id="recOctDown" title="An octave down">−</button><span id="recOctValue" class="tval">0</span><button type="button" id="recOctUp" title="An octave up">+</button></span></div>
+                <div class="prow"><span class="plbl">Semitones</span><span class="tempo"><input type="range" id="recSemiSlider" min="-11" max="11" step="1" value="0" aria-label="Semitones"><span id="recSemiValue" class="tval">0</span></span></div>
+                <div class="prow" id="recChartRow" hidden title="The chart's own transpose (the top-level transpose, and the score's) moves the recording too, on top of the settings above"><span class="plbl">Chart</span><span class="tempo"><span id="recChartValue" class="tval">0</span></span></div>
+                <div class="prow"><span class="plbl">Cents</span><span class="tempo"><input type="range" id="recCentSlider" min="-50" max="50" step="1" value="0" aria-label="Cents"><span id="recCentValue" class="tval">0</span></span></div>
+                <div class="prow"><span class="plbl">Pitch with speed</span><button type="button" id="recLinkBtn" class="toggle" aria-pressed="false" title="Pitch and speed go together, as a tape's speed is set right (no stretching)">Off</button></div>
+                <div class="prow presets"><span class="plbl"></span><span class="tempo"><button type="button" id="recReset" title="The recording as it is">Reset</button></span></div>
+                </details>
+                <div id="recStatus" class="rec-status" role="status"></div>
+            </div>
         </div>
         <div class="mfoot"><button type="button" id="fadersReset" title="Every fader to 100%">Faders 100%</button></div>
     </div>
@@ -9840,6 +9856,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // the solo and the group's fader applied — the lines themselves show their own.
         var solo = new Set();          // 'part:NAME', 'voice:KEY', 'rec:PART'
         var scoreLevel = 1;            // the score group's fader, 0..2
+        // The panel's button pressed while anything in it is not as it was (§6): the practice's or the mixer's.
+        var practiceOn = false, mixerChanged = false;
+        function paintPracticeBtn() { document.getElementById('practiceBtn').setAttribute('aria-pressed', String(practiceOn || mixerChanged)); }
         function recSoloed() { for (const k of solo) { if (k.startsWith('rec:')) return true; } return false; }
         function eff() {
             const any = solo.size > 0;
@@ -9908,7 +9927,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const changed = solo.size > 0 || scoreLevel !== 1 || practice.muted.length > 0 || practice.voicesOff.length > 0
                 || practice.extraOn.length > 0 || practice.voicesOn.length > 0 || practice.instrumentsOn.length > 0
                 || Object.keys(practice.levels).length > 0 || Object.keys(practice.voiceLevels).length > 0 || recOn;
-            document.getElementById('recPanelBtn').setAttribute('aria-pressed', String(changed));
+            mixerChanged = changed;
+            paintPracticeBtn();
         }
         // A fader runs 0 to 200% (owner's request 2026-11-09, session 1157): levelIn clamps to that.
         const FADER_MAX = 2;
@@ -9966,7 +9986,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function playedSpeed() { return playBasis ? playBasis.speed : practice.speed; }
         const practiceBtn = document.getElementById('practiceBtn');
         const practicePanel = document.getElementById('practicePanel');
-        const recPanel = document.getElementById('recPanel');
+        const recPanel = practicePanel;      // (the mixer is in the practice panel: §6)
         const clickBtn = document.getElementById('clickBtn');
         const countInBtn = document.getElementById('countInBtn');
         const tempoSlider = document.getElementById('tempoSlider');
@@ -9975,7 +9995,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             document.getElementById('practiceSpeed').textContent = speedOn ? Math.round(practice.speed * 100) + '%' : '';
             // Pressed in while anything differs from the score as written.
             // (the parts are the mixer's, its own button says them: showMixerHead)
-            practiceBtn.setAttribute('aria-pressed', String(speedOn || practice.click || practice.countIn || loopOn || abOn));
+            practiceOn = speedOn || practice.click || practice.countIn || loopOn || abOn;
+            paintPracticeBtn();
             if (typeof showMixerHead === 'function' && document.getElementById('scoreAllBtn')) showMixerHead();
             // The loop lives here too (owner's request 2026-10-25), an On/Off as the metronome's.
             loopBtn.setAttribute('aria-pressed', String(loopOn));
@@ -10215,11 +10236,33 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 practicePanel.style.left = Math.max(6, Math.min(b.left, window.innerWidth - practicePanel.offsetWidth - 6)) + 'px';
             }
             practiceBtn.setAttribute('aria-expanded', 'true');
+            if (recording) showRecording();
             requestParts();
         });
         // It closes as the Range panel does, by its × and its button, and stays open beside the
         // score (owner's request 2026-11-02: a click on the score closed it).
         document.getElementById('practiceClose').addEventListener('click', closePractice);
+        // Each group folded or opened by its name (owner's decision 2026-11-17, §6), remembered in the
+        // page's state; folded, its head (All, the fader) stays.
+        let folds = {};
+        try { folds = Object.assign({}, (vscode.getState() || {}).folds || {}); } catch { /* (none kept) */ }
+        function showFolds() {
+            for (const g of Array.from(practicePanel.querySelectorAll('.mgroup[data-fold]'))) {
+                const folded = !!folds[g.dataset.fold];
+                g.classList.toggle('folded', folded);
+                g.querySelector('.mfold').setAttribute('aria-expanded', String(!folded));
+            }
+        }
+        for (const b of Array.from(practicePanel.querySelectorAll('.mfold'))) {
+            b.addEventListener('click', () => {
+                const key = b.closest('.mgroup').dataset.fold;
+                folds[key] = !folds[key];
+                try { vscode.setState(Object.assign({}, vscode.getState() || {}, { folds })); } catch { /* (kept for this page only) */ }
+                showFolds();
+            });
+        }
+        showFolds();
+
 
         // The Range and practice panels move where they are dragged (owner's request
         // 2026-10-29), inside the preview: what goes past its edge is cut off there, and a panel
@@ -10287,8 +10330,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
         installPanelDrag(rangePanel);
         installPanelDrag(practicePanel);
-        installPanelDrag(recPanel);
-        window.addEventListener('resize', () => { clampPanel(rangePanel); clampPanel(practicePanel); clampPanel(recPanel); });
+        window.addEventListener('resize', () => { clampPanel(rangePanel); clampPanel(practicePanel); });
 
         // ---- The recording beside the chart (docs/recording-design.md) ----------------------
         // The extension sends 'recording' when the chart has a file beside it (or no longer has):
@@ -10312,7 +10354,6 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         let recSettings = null;
         const recOnBtn = document.getElementById('recOnBtn');
         const recLevelSlider = document.getElementById('recLevelSlider');
-        const recPanelBtn = document.getElementById('recPanelBtn');
         const recSpeedSlider = document.getElementById('recSpeedSlider');
         const recSemiSlider = document.getElementById('recSemiSlider');
         const recCentSlider = document.getElementById('recCentSlider');
@@ -10740,26 +10781,6 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         });
         recLevelSlider.addEventListener('change', () => setRecLevel(Number(recLevelSlider.value)));
         resetOnDoubleClick(recLevelSlider, () => setRecLevel(100));
-        function closeRecPanel() {
-            recPanel.hidden = true;
-            recPanelBtn.setAttribute('aria-expanded', 'false');
-        }
-        recPanelBtn.addEventListener('click', () => {
-            if (!recPanel.hidden) { closeRecPanel(); return; }
-            const b = recPanelBtn.getBoundingClientRect();
-            recPanel.hidden = false;
-            raisePanel(recPanel);
-            if (recPanel.dataset.moved) clampPanel(recPanel);
-            else {
-                recPanel.style.top = (document.querySelector('.toolbar').getBoundingClientRect().bottom + 6) + 'px';
-                recPanel.style.right = 'auto';
-                recPanel.style.left = Math.max(6, Math.min(b.left, window.innerWidth - recPanel.offsetWidth - 6)) + 'px';
-            }
-            recPanelBtn.setAttribute('aria-expanded', 'true');
-            showRecording();
-            requestParts();     // (the score's parts, in the mixer: §1 1)
-        });
-        document.getElementById('recClose').addEventListener('click', closeRecPanel);
         // The sliders say their value as they move and set it where they are let go; a
         // double-click puts it back as recorded (owner's request 2026-11-16: every slider of the
         // practice menu and the recording panel resets on a double-click).
