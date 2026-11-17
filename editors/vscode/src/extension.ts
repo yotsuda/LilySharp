@@ -9677,10 +9677,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             let page = rect.ownerSVGElement;
             while (page && page.ownerSVGElement && svgContainer.contains(page.ownerSVGElement)) page = page.ownerSVGElement;
             const from = parent.getScreenCTM && parent.getScreenCTM(), to = page && page.getScreenCTM && page.getScreenCTM();
+            // The matrix goes on a holder round the flag, not on the flag: a dragged flag slides by a
+            // CSS transform on itself (moveAbFlag), which would replace a transform attribute there —
+            // until 2026-11-17 the flag passed by the page's top while it slid (owner's report).
             if (page && page !== parent && from && to) {
                 const m = to.inverse().multiply(from);
-                g.setAttribute('transform', 'matrix(' + [m.a, m.b, m.c, m.d, m.e, m.f].join(' ') + ')');
-                page.appendChild(g);
+                const holder = abEl('g', { class: 'ab-mark ab-holder', transform: 'matrix(' + [m.a, m.b, m.c, m.d, m.e, m.f].join(' ') + ')' });
+                holder.appendChild(g);
+                page.appendChild(holder);
             } else parent.appendChild(g);
             return g;
         }
