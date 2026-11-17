@@ -1866,7 +1866,12 @@ public sealed partial class LilySharpLanguageServer
                     while (offset < doc.Text.Length && doc.Text[offset] is '|' or '.' or ':') offset++;
                 }
                 if (LilySharp.Core.Editing.SectionCutter.PlaceAt(doc.Tree, offset) is not { } place)
-                    return new CutSectionResponse { Error = "Put the caret on a bar line inside a section (not before its first bar line or after its last) — the section is cut there." };
+                    return new CutSectionResponse
+                    {
+                        Error = LilySharp.Core.Editing.SectionCutter.SectionAt(doc.Tree, offset) is { } inSection
+                            ? $"Section {inSection} has no bar after this point (or none before it) — there is nothing to make a new section of here. Put the caret on a bar line between two of its bars."
+                            : "Put the caret on a bar line inside a section — the section is cut there.",
+                    };
                 (section, bars) = place;
             }
             if (string.IsNullOrWhiteSpace(@params.Name))

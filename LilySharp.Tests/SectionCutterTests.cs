@@ -184,6 +184,37 @@ public class SectionCutterTests
         Assert.Equal("A2", after.Suggested);
     }
 
+    /// <summary>Words written as empty bars (`| | | |`, as Dettato writes a section's lyrics to be filled
+    /// in) are cut by their bars — their lyric measures (owner's report 2026-11-17: at the end of a
+    /// `| break` line every cut was refused as "the words have no bar lines").</summary>
+    [Fact]
+    public void WordsOfEmptyBars_AreCutByTheirBars()
+    {
+        const string src = """
+            time 4/4
+            part bass { instrument bass }
+            section A {
+              chords harmony {
+                C | F | break
+                G | C | break
+              }
+              lyrics words {
+                | | | |
+              }
+              bass {
+                c1 | f1 | g1 | c1 |
+              }
+            }
+            form { A }
+            score { chords harmony  staff bass  lyrics words on bass }
+            """;
+        int lineEnd = src.IndexOf("F | break") + "F | break".Length;
+        Assert.Equal(("A", 2), SectionCutter.PlaceAt(SyntaxTree.Parse(src), lineEnd));
+        string text = Cut(src, "A", 2, "A2");
+        // (an empty lyric bar is one `|`: two bars each side)
+        Assert.True(Regex.IsMatch(text, @"section A \{[\s\S]*lyrics words \{\s*\| \|\s*\}[\s\S]*section A2 \{[\s\S]*lyrics words \{\s*\| \|\s*\}"), text);
+    }
+
     [Fact]
     public void CutThenJoined_IsTheSameMusic()
     {

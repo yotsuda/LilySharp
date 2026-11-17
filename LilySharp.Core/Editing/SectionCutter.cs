@@ -70,6 +70,12 @@ public static class SectionCutter
         return null;
     }
 
+    /// <summary>The top-level section whose text holds <paramref name="offset"/>, or null — for saying why
+    /// a caret there cuts nothing.</summary>
+    public static string? SectionAt(SyntaxTree tree, int offset)
+        => tree.GetRoot().ChildNodes().OfType<SectionDeclarationSyntax>()
+            .FirstOrDefault(s => InkStart(s) <= offset && offset <= InkEnd(s))?.SectionName;
+
     /// <summary>A free name for the second half: <c>A2</c>, <c>A3</c>, … (an <c>A2</c> cut gives <c>A3</c>).</summary>
     public static string SuggestName(SyntaxTree tree, string section)
     {
@@ -248,6 +254,11 @@ public static class SectionCutter
     /// closes a bar: an empty bar's too).</summary>
     internal static List<int> BarEnds(SyntaxNode cell)
     {
+        // A lyrics cell's bars are its lyric measures, each closed by its own `|` (SameBarFinder.LyricLines):
+        // no BarlineSyntax stands there. MEASURED (owner's report 2026-11-17, "03 Open Arms.lys", whose
+        // words are `| | | …`): every cut was refused as "the words have no bar lines".
+        if (cell is LyricsBlockSyntax)
+            return [.. SameBarFinder.LyricLines(cell).Select(l => l.End)];
         var container = OpenBrace(cell)?.Parent ?? cell;
         var ends = new List<int>();
         // (a bar repeat's run holds its own bar lines — `d8 … | % | % | %` is ONE node — so its bars

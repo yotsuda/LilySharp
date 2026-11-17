@@ -36,7 +36,7 @@ namespace LilySharp.Core.Editing;
 /// voice's own before it — one inside a phrase the voice plays, or inside a <c>R1*4</c> — is
 /// answered with the nearest written line before it, and a voice that writes fewer bars with
 /// its last. A lyrics cell joins them (owner's request 2026-11-17): its bars are its lyric
-/// measures (<see cref="LyricSyllableReader"/>'s, the lone leading <c>|</c> anchor making none),
+/// measures (<see cref="LyricSyllableReader"/>'s, every parsed measure one bar),
 /// each closed where its measure ends — a jump goes to its words, and from them to the music.
 /// </remarks>
 public static class SameBarFinder
@@ -100,9 +100,8 @@ public static class SameBarFinder
     }
 
     /// <summary>A lyrics cell's bar lines: the end of each lyric measure, with the bars before what
-    /// follows it — the plain run, else the first verse's; the lone leading <c>|</c> anchor, a
-    /// measure with no word in it, makes no bar (LyricSyllableReader.CountBars).</summary>
-    private static List<(int End, int Bars)> LyricLines(SyntaxNode container)
+    /// follows it — the plain run, else the first verse's (LyricSyllableReader.CountBars).</summary>
+    internal static List<(int End, int Bars)> LyricLines(SyntaxNode container)
     {
         var measures = new List<SyntaxNode>();
         SyntaxNode? firstVerse = null;
@@ -116,8 +115,8 @@ public static class SameBarFinder
             }
         if (measures.Count == 0 && firstVerse != null)
             measures.AddRange(firstVerse.DescendantNodes().Where(n => n.Kind == SyntaxKind.LyricMeasure));
-        if (measures.Count > 0 && measures[0].ToString().Trim() == "|")
-            measures.RemoveAt(0);
+        // (every parsed measure is one bar, as LyricSyllableReader.CountRun counts them: the parser
+        // has already folded a lone opening `|` into its run)
         return [.. measures.Select((m, i) => (m.Span.Start + m.Span.Length, i + 1))];
     }
 
