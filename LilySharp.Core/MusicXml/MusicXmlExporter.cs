@@ -411,6 +411,7 @@ public sealed class MusicXmlExporter
             BuildSectionHeaderRegistry(root);
             ProcessSections(root);
             NumberTheBarsASignCuts();
+            FillTheShortMeasuresOthersWriteWhole();
             // A flat top-level chord track's bars past the music (FlatChordRows.Rest), then the
             // chord rows, once every part has written its bars (their measures are the rows' homes).
             EmitFlatRowsPastTheMusic();
@@ -8105,13 +8106,51 @@ public sealed class MusicXmlExporter
     /// <c>&lt;transpose&gt;</c> is <paramref name="soundingShift"/> (written to sounding): 0..11.</summary>
     private static int WrittenDrop(int soundingShift) => ((soundingShift % 12) + 12) % 12;
 
+    /// <summary>
+    /// A bar is as long as the longest the parts write there (owner's decision 2026-11-17): a
+    /// measure a part's `|` closes short beside one another part writes whole (its notes, or an
+    /// empty bar `| |`) is filled out with a <c>&lt;forward&gt;</c> — silent after its music — as
+    /// the MIDI plays it and the twin writes it (`d,4 s2.`). Measures are matched by place, and
+    /// only where every part has as many (a part that writes nothing there is padded to the
+    /// section's bars already, PadVoice); a pickup (implicit) measure is left as it is.
+    /// MEASURED before (Lab sessions/p1290/mylife/m9): the bass's measure 5 held 24 divisions
+    /// and the guitar's empty bar 96.
+    /// </summary>
+    private void FillTheShortMeasuresOthersWriteWhole()
+    {
+        var parts = Document.Parts.Where(p => p.Measures.Count > 0).ToList();
+        if (parts.Count < 2 || parts.Any(p => p.Measures.Count != parts[0].Measures.Count))
+            return;
+        for (int i = 0; i < parts[0].Measures.Count; i++)
+        {
+            if (parts.Any(p => p.Measures[i].Implicit))
+                continue;
+            var lengths = parts.Select(p => MeasureLength(p.Measures[i])).ToList();
+            int whole = lengths.Max();
+            for (int k = 0; k < parts.Count; k++)
+                if (lengths[k] > 0 && lengths[k] < whole)
+                    parts[k].Measures[i].Notes.Add(new MusicXmlNote
+                    {
+                        RawElement = new System.Xml.Linq.XElement("forward",
+                            new System.Xml.Linq.XElement("duration", whole - lengths[k]))
+                    });
+        }
+    }
+
     /// <summary>How long the measure's music is, in divisions: the furthest its notes reach
-    /// (backups taken back, chord members and graces taking no time); 0 for none.</summary>
+    /// (backups taken back, a <c>&lt;forward&gt;</c> taken on, chord members and graces taking
+    /// no time); 0 for none.</summary>
     private static int MeasureLength(MusicXmlMeasure measure)
     {
         int position = 0, furthest = 0;
         foreach (var n in measure.Notes)
         {
+            if (n.RawElement is { Name.LocalName: "forward" } forward)
+            {
+                position += (int?)forward.Element("duration") ?? 0;
+                furthest = Math.Max(furthest, position);
+                continue;
+            }
             if (n.RawElement != null || n.IsGrace || n.IsChord)
                 continue;
             position += n.IsBackup ? -n.Duration : n.Duration;

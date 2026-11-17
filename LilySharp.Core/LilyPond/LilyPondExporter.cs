@@ -581,6 +581,7 @@ public sealed partial class LilyPondExporter
         // (the bars a `|` closes short: read when first asked, once the section headers are in — ShortBars)
         _shortBars = null;
         _shortBarWriters.Clear();
+        _filledShortBars.Clear();
         _shortBarsRoot = root;
 
         // Octave mode is a file-level directive; default is relative (Lily#'s default).

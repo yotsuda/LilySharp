@@ -378,7 +378,13 @@ internal sealed class CrossPartMeasureValidator
                         $"Part '{part.Name}' rests {crossed.Bars} bars of {part.Measures[i].Duration} each here, but the meter changes to "
                         + $"{crossed.Time.Beats}/{crossed.Time.BeatType} inside the rest, at measure {crossed.Bar + 1}: from there its bars are not "
                         + $"{part.Measures[i].Duration} long — parts will not align. Write 'R*{crossed.Bars}', whose bars follow the meter");
-            var present = parts.Where(p => i < p.Measures.Count && !p.Measures[i].IsEmpty && !p.Measures[i].IsBareRest
+            // ⚠️ AN EMPTY BAR IS A WHOLE BAR, against a bar another part's `|` closes short (owner's
+            // decision 2026-11-17): the bar is as long as the longest the parts write there, and the
+            // exporters play and write it whole. So it is compared where it has a length (not
+            // under `time none`) and some part writes music in that bar.
+            bool someWrite = parts.Any(p => i < p.Measures.Count && !p.Measures[i].IsEmpty && !p.Measures[i].IsBareRest);
+            var present = parts.Where(p => i < p.Measures.Count && !p.Measures[i].IsBareRest
+                && (!p.Measures[i].IsEmpty || (someWrite && p.Measures[i].Duration > Fraction.Zero))
                 && p.Measures[i].RunCrossesMeter == null).ToList();
             if (present.Count < 2)
                 continue;
@@ -397,7 +403,19 @@ internal sealed class CrossPartMeasureValidator
                     continue;
                 var span = part.Measures[i].Span;
                 if (_warnedSpans.Contains((span.Start, span.Length)))
-                    continue; // already explained by a fullness warning
+                {
+                    // Already explained by a fullness warning — except where the whole bar beside it
+                    // is an EMPTY bar (`| |`): that it makes the short bar whole is easy to miss, so
+                    // it is said once, on the empty bar, which wins.
+                    var whole = reference.Measures[i].Span;
+                    if (reference.Measures[i].IsEmpty && part.Measures[i].Duration < reference.Measures[i].Duration
+                        && _warnedSpans.Add((whole.Start, whole.Length)))
+                        _diagnostics.Warning(whole, DiagnosticCodes.MeasureDurationMismatch,
+                            $"Measure {i + 1} of part '{reference.Name}' is an empty bar, a whole bar ({reference.Measures[i].Duration}), "
+                            + $"but part '{part.Name}' closes it at {part.Measures[i].Duration} — the bar is played whole, silent after "
+                            + $"'{part.Name}''s music. Leave '{reference.Name}' out of the section to keep the bar short");
+                    continue;
+                }
                 _warnedSpans.Add((span.Start, span.Length));
                 _diagnostics.Warning(span, DiagnosticCodes.MeasureDurationMismatch,
                     $"Measure {i + 1} of part '{part.Name}' lasts {part.Measures[i].Duration} but part '{reference.Name}' has {reference.Measures[i].Duration} — parts will not align");

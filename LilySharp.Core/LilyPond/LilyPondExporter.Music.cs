@@ -327,6 +327,9 @@ public sealed partial class LilyPondExporter
             }
             else if (item is BarlineSyntax gapBar && !_chordTrack)
             {
+                // A short bar another part writes whole: silent to the bar's end (ShortBars).
+                if (_timeSinceBoundary && ShortBars() is var _ && _filledShortBars.TryGetValue(gapBar.Span.End, out var fill))
+                    AppendToken(line, "s" + ChordModeDuration(fill), indent);
                 var kind = gapBar.BarToken.Kind;
                 // A form's `|:` stands at a section boundary — the section-play marker follows
                 // it — and is the structural bar line the page never pairs with the bar before

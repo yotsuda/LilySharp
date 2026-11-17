@@ -152,6 +152,44 @@ public class OpenBarAtSectionEndTests
         Assert.Contains($"<offset>{divisions / 2}</offset>", fifth);
     }
 
+    /// <summary>A short bar ANOTHER part writes whole — here as an empty bar, which Lily# reads as a
+    /// whole bar (LilyPond has none) — is as long as the longest (owner's decision 2026-11-17): the
+    /// sound plays it whole, the twin fills the short voice out (`d,4 s2.`) with no `\partial`, the
+    /// MusicXML forwards it to the bar's end, and the check says so on the whole bar. Until then the
+    /// twin wrote `\partial 4` for the bass and `s1` for the guitar — "bar check failed at: 3/4"
+    /// (Lab sessions/p1290/mylife/m9). A part that writes nothing there decides nothing (m8).</summary>
+    [Fact]
+    public void AShortBarAnotherPartWritesWhole_IsAWholeBar()
+    {
+        const string book = """
+            time 4/4
+            part bass { instrument bass }
+            part gt { instrument guitar }
+            section B { chords harmony { D | C | F | G | D | } bass { d4 r r r | c1 | f1 | g1 | d,4 | } gt { | | | | | } }
+            section C { chords harmony { A | B | } bass { a1 | b1 | } gt { a1 | b1 | } }
+            form { B C }
+            score { staff bass  staff gt  chords harmony }
+            """;
+        var ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(book));
+        Assert.Contains("d,4 s2. |", ly);
+        Assert.DoesNotContain("\\partial", ly);
+        var midi = new MidiExporter().Export(SyntaxTree.Parse(book));
+        int bar = 4 * midi.TicksPerQuarterNote;
+        Assert.Equal(5 * bar, midi.Tracks.Single(t => t.Name == "gt").Notes.Min(n => n.StartTick));
+        var xml = new LilySharp.Core.MusicXml.MusicXmlExporter().Export(SyntaxTree.Parse(book)).ToXml().ToString();
+        int divisions = int.Parse(System.Text.RegularExpressions.Regex.Match(xml, @"<divisions>(\d+)</divisions>").Groups[1].Value);
+        var bassFifth = System.Text.RegularExpressions.Regex.Match(xml, @"(?s)<part id=""P1"">.*?<measure number=""5""[^>]*>(.*?)</measure>").Groups[1].Value;
+        Assert.Matches($@"<forward>\s*<duration>{3 * divisions}</duration>", bassFifth);
+        var validator = new LilySharp.Core.Semantics.MeasureValidator();
+        validator.Validate(SyntaxTree.Parse(book));
+        Assert.Contains(validator.Diagnostics, d => d.Code == LilySharp.Core.Syntax.DiagnosticCodes.MeasureDurationMismatch
+            && d.Message.Contains("is an empty bar, a whole bar") && d.Message.Contains("'gt'"));
+
+        var silent = book.Replace("gt { | | | | | } ", "");
+        var lySilent = new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(silent));
+        Assert.Contains("\\partial 4 d,4 |", lySilent);
+    }
+
     /// <summary>The LilyPond twin of the same two shapes. LilyPond's `|` is a check, so a bar its `|`
     /// closes short is said to be short before its first note — `\partial 4`, which LilyPond 2.26.0
     /// takes mid-piece — and the chord row's bar there is that beat (`d4`); a bar left open is a

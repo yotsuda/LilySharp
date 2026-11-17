@@ -560,6 +560,7 @@ public sealed partial class LilyPondExporter
         var signCut = _shortBarsRoot != null ? Semantics.SignCutBars.HalvesInEveryForm(_shortBarsRoot) : new HashSet<int>();
         var boundaries = _shortBarsRoot != null ? new Semantics.SectionBoundaryBars(_shortBarsRoot, _phraseBodies, _sectionHeaders) : null;
         var voicesOf = new Dictionary<string, int>(StringComparer.Ordinal);
+        var candidates = new List<(string Section, int Index, int Start, int BarLineEnd, Fraction Length, Fraction Meter)>();
         foreach (var voice in _sectionBars.ByContainer.Values)
         {
             if (voice.IsChords || voice.IsLyrics)
@@ -590,8 +591,13 @@ public sealed partial class LilyPondExporter
                     && ((i == 0 && boundaries.FirstBarCompletesEveryPredecessor(cell, b.Duration, meter))
                         || (i == bars.Count - 1 && boundaries.LastBarCompletedByEverySuccessor(cell, b.Duration, meter, meter))))
                     shortBar = false;
+                // (a voice span in the bar is not filled: its later voices may run on past what the
+                // bar model counts — `voice { s4 } { s1 } { R1 }`, LYS2019 — and LilyPond hears the
+                // longest; MEASURED: audit/lpreg/pcsm-probe.lys went "bar check failed at: 3/4")
                 if (shortBar)
-                    starts.TryAdd(b.Span.Start, b.Duration);
+                    candidates.Add((name, i, b.Span.Start,
+                        voice.Container.DescendantNodes<ParallelExpressionSyntax>().Any(p => p.Span.Start >= from && p.Span.Start < b.Span.End) ? -1 : b.BarLineEnd,
+                        b.Duration, meter));
                 // The longest the section's voices sound here; a voice that writes no bar here
                 // pads a whole one (counted by the writers below).
                 var length = shortBar ? b.Duration : meter;
@@ -604,12 +610,32 @@ public sealed partial class LilyPondExporter
             foreach (var (i, (length, meter)) in table)
                 if (length < meter && _shortBarWriters.GetValueOrDefault((name, i)) == voicesOf[name])
                     (bySection.TryGetValue(name, out var d) ? d : bySection[name] = new()).Add(i, length);
+        // A bar is as long as the longest the section's parts write there (owner's decision
+        // 2026-11-17): a voice's bar its `|` closes short is said short (`\partial`) only where
+        // every voice of the section is that short; where another writes the bar whole (its
+        // notes, or an empty bar `| |`, which is a whole bar), the short one is filled out
+        // before its bar line, silent after its music (`d,4 s2. |`), as the MIDI sounds it.
+        foreach (var c in candidates)
+        {
+            if (bySection.GetValueOrDefault(c.Section)?.GetValueOrDefault(c.Index) is { } bar && bar > Fraction.Zero)
+            {
+                // (LilyPond's measure is the staves' one: the longest short voice says it)
+                starts.TryAdd(c.Start, bar);
+                if (bar > c.Length && c.BarLineEnd >= 0)
+                    _filledShortBars.TryAdd(c.BarLineEnd, bar - c.Length);
+            }
+            else if (c.BarLineEnd >= 0)
+                _filledShortBars.TryAdd(c.BarLineEnd, c.Meter - c.Length);
+        }
         _shortBars = (starts, bySection);
         return _shortBars.Value;
     }
     private (Dictionary<int, Fraction> Starts, Dictionary<string, Dictionary<int, Fraction>> BySection)? _shortBars;
     private SyntaxNode? _shortBarsRoot;
     private readonly Dictionary<(string, int), int> _shortBarWriters = new();
+    /// <summary>A bar line (its end position) closing a voice's short bar that another part of
+    /// the section writes whole → the spacer the stream writes before it (<see cref="ShortBars"/>).</summary>
+    private readonly Dictionary<int, Fraction> _filledShortBars = new();
 
     /// <summary>
     /// <see cref="SectionBarMeters"/> as the meters themselves — what a chord row's bar is
