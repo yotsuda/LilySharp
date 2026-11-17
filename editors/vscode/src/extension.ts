@@ -6154,9 +6154,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .mixer-panel .mgroup.folded button.mfold::before { content: '\\25B8\\00A0'; }
         .mixer-panel .mbody > .prow { padding-left: 1.5em; }
         /* Folded, Tempo's and Loop's heads carry their main controls in one line (owner's request 2026-11-17). */
-        .mixer-panel .mmini { display: none; align-items: center; gap: 6px; flex: 1 1 auto; justify-content: flex-end; flex-wrap: wrap; }
+        .mixer-panel .mmini { display: none; align-items: center; gap: 6px; flex: 1 1 0; min-width: 0; justify-content: flex-end; flex-wrap: wrap; }
         .mixer-panel .mgroup.folded .mmini { display: flex; }
-        .mixer-panel .mmini .fader { width: 70px; }
+        .mixer-panel .mmini .fader { width: auto; flex: 1 1 70px; min-width: 70px; max-width: 120px; }   /* (the room left, to its left: owner's request 2026-11-17) */
         .mixer-panel .mgroup.folded:has(.mmini) > .mhead { flex-wrap: wrap; row-gap: 4px; }
         .mixer-panel .mgroup.folded:has(.mmini) .mtitle { width: auto; }
         .mixer-panel .msettings .moct .tval { width: auto; min-width: 1.6em; text-align: center; }
