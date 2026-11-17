@@ -451,7 +451,7 @@ public sealed partial class LilyPondExporter
             _lastChordPlay = name;
             int rowStart = result.Count;
             result.AddRange(ChordBars(entry.Container, ChordKeyFor(name), ChordPickupFor(name),
-                SectionBarMeters(name)));
+                SectionBarTimes(name)));
             result.AddRange(PaddingBars(entry.Container));
             WriteTheScoresRepeatSigns(name, entry.Container, result, rowStart);
             return;
@@ -641,7 +641,7 @@ public sealed partial class LilyPondExporter
             if (_flatChordBars != null)
             {
                 flatBars = Math.Min(bars, _flatChordBars.BarsLeft);
-                result.AddRange(ChordBarsOf(_flatChordBars.Take(bars).SelectMany(r => r.Items), ChordKeyFor(name), pickup, meters));
+                result.AddRange(ChordBarsOf(_flatChordBars.Take(bars).SelectMany(r => r.Items), ChordKeyFor(name), pickup, SectionBarTimes(name)));
             }
             for (int i = flatBars; i < bars; i++)
             {

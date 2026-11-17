@@ -536,6 +536,23 @@ public sealed partial class LilyPondExporter
     }
 
     /// <summary>
+    /// <see cref="SectionBarMeters"/> as the meters themselves — what a chord row's bar is
+    /// gridded on (<see cref="ChordBarText"/>), as the page, the MIDI and the MusicXML grid it:
+    /// the bar's own beats, not the score's (a 6/8 bar's two dotted quarters, a 5/8 bar's 3+2).
+    /// </summary>
+    private List<(int Beats, int BeatType)> SectionBarTimes(string sectionName)
+    {
+        var opening = (_bars.HomeMeter.Beats, _bars.HomeMeter.BeatType);
+        if (_sectionHeaders.Times.GetValueOrDefault(sectionName) is { IsSenzaMisura: false } headerTime)
+            opening = (headerTime.Beats, headerTime.BeatType);
+        int bars = Math.Max(1, _sectionBars.Canonical.GetValueOrDefault(sectionName));
+        var times = new List<(int Beats, int BeatType)>(bars);
+        for (int i = 0; i < bars; i++)
+            times.Add(_meterPlan.MeterOfBar(sectionName, i, opening));
+        return times;
+    }
+
+    /// <summary>
     /// One chord container's bars as stream items: each bar's slots pre-spelled into ONE
     /// <see cref="ChordBarMarker"/>, its written bar lines kept as the nodes they are — so
     /// <see cref="EmitMusicStream"/> groups an inline <c>|: … :|</c> exactly as it does for
@@ -546,7 +563,7 @@ public sealed partial class LilyPondExporter
     /// <paramref name="pickup"/> when it is the play's first.
     /// </summary>
     private IEnumerable<SyntaxNode> ChordBars(SyntaxNode container, (int TonicStep, int Sharps) key,
-        Fraction? pickup = null, IReadOnlyList<Fraction>? meters = null)
+        Fraction? pickup = null, IReadOnlyList<(int Beats, int BeatType)>? meters = null)
     {
         IEnumerable<SyntaxNode> items = container switch
         {
@@ -558,7 +575,7 @@ public sealed partial class LilyPondExporter
     }
 
     private IEnumerable<SyntaxNode> ChordBarsOf(IEnumerable<SyntaxNode> items, (int TonicStep, int Sharps) key,
-        Fraction? pickup = null, IReadOnlyList<Fraction>? meters = null)
+        Fraction? pickup = null, IReadOnlyList<(int Beats, int BeatType)>? meters = null)
     {
         var result = new List<SyntaxNode>();
         var pending = new List<SyntaxNode>();
@@ -583,14 +600,13 @@ public sealed partial class LilyPondExporter
             // The bar is as long as the MUSIC's bar at this point of the section (see
             // SectionBarMeters): a chord row written under a `time 7/8` bar still said `a1:m`,
             // a whole 4/4 bar, and LilyPond's bar check failed there (Lab probes/complex-lys/06).
-            var home = _bars.HomeMeter.Length;
-            var barMeter = meters is { Count: > 0 }
-                ? meters[Math.Min(barIndex, meters.Count - 1)] : home;
+            var barTime = meters is { Count: > 0 }
+                ? meters[Math.Min(barIndex, meters.Count - 1)] : (_bars.HomeMeter.Beats, _bars.HomeMeter.BeatType);
             barIndex++;
-            var barLength = firstBar && pickup is { } p ? p : barMeter;
+            var barLength = firstBar && pickup is { } p ? p : new Fraction(barTime.Beats, barTime.BeatType);
             result.Add(new ChordBarMarker(pending.Count == 0
                 ? "s" + ChordModeDuration(barLength)
-                : ChordBarText(pending, key, barLength, firstBar && pickup != null)));
+                : ChordBarText(pending, key, barLength, barTime, firstBar && pickup != null)));
             pending.Clear();
             firstBar = false;
             // The bar's own breaks stand after its chords, before its bar line.
@@ -651,19 +667,23 @@ public sealed partial class LilyPondExporter
     /// (LILYPOND-REF: ly/engraver-init.ly:943-952 chordNameFunction = #ignatzek-chord-names …
     /// noChordSymbol = "N.C."), the page's own text. (A
     /// chord row has no <c>s</c> slot since 2026-09-04, LYS1028.) The grid is the score
-    /// meter's, as the page reads it.
+    /// meter's — the bar's own, <paramref name="barTime"/> — as the page reads it.
     /// </summary>
     private string ChordBarText(List<SyntaxNode> slots, (int TonicStep, int Sharps) key, Fraction barLength,
-        bool isPickup = false)
+        (int Beats, int BeatType) barTime, bool isPickup = false)
     {
-        // The page grids every bar on the meter (ChordRhythm). A PICKUP bar is gridded on the
-        // beats it has (ChordRhythm.BeatsOf, the page's PickupByMeasure); a bar of another
-        // length is scaled to it so the chords keep their share of the bar they stand in.
-        var meter = _bars.HomeMeter.Length;
+        // The page grids every bar on ITS meter (ChordNameCollector.MeterAt; the MIDI and the
+        // MusicXML the same). A PICKUP bar is gridded on the beats it has (ChordRhythm.BeatsOf,
+        // the page's PickupByMeasure); a bar of another length is scaled to it so the chords keep
+        // their share of the bar they stand in. MEASURED before (2026-11-17, Lab
+        // sessions/p1290/rowmeter): gridded on the SCORE's meter and scaled, a 6/8 section's
+        // dotted-quarter pickup `C G` went out as `c8 g4` (the page: 3/16 each) and a 5/8 bar's
+        // `C G` as 5/16 each (the page: 3/8 + 1/4).
+        var meter = new Fraction(barTime.Beats, barTime.BeatType);
         bool pickupGrid = isPickup && barLength < meter;
         var sb = new StringBuilder();
         foreach (var (node, _, gridDur) in Svg.Collector.ChordNameCollector.SlotGroups(
-                     slots, _bars.HomeMeter.Beats, _bars.HomeMeter.BeatType, out _, pickupGrid ? barLength : null))
+                     slots, barTime.Beats, barTime.BeatType, out _, pickupGrid ? barLength : null))
         {
             var dur = pickupGrid || barLength.Equals(meter) ? gridDur : gridDur * barLength / meter;
             if (sb.Length > 0)
