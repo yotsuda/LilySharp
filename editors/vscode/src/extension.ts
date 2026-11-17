@@ -6157,7 +6157,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .mixer-panel .mmini { display: none; align-items: center; gap: 6px; flex: 1 1 auto; justify-content: flex-end; flex-wrap: wrap; }
         .mixer-panel .mgroup.folded .mmini { display: flex; }
         .mixer-panel .mmini .fader { width: 70px; }
-        .mixer-panel .mgroup.folded > .mhead { flex-wrap: wrap; row-gap: 4px; }
+        .mixer-panel .mgroup.folded:has(.mmini) > .mhead { flex-wrap: wrap; row-gap: 4px; }
         .mixer-panel .mgroup.folded:has(.mmini) .mtitle { width: auto; }
         .mixer-panel .msettings .moct .tval { width: auto; min-width: 1.6em; text-align: center; }
         .mixer-panel .mmini button { white-space: nowrap; }
@@ -6294,17 +6294,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             <div class="mhead"><button type="button" class="mfold mtitle" aria-expanded="true">Recording</button><button type="button" id="recOnBtn" class="toggle rec-name" aria-pressed="false"><span id="recName"></span></button><input type="range" id="recLevelSlider" class="fader" min="0" max="200" step="1" value="100"><span id="recLevelValue" class="flevel"></span></div>
             <div class="mbody">
                 <div id="recPartsRow" hidden><span id="recPartsRows" class="parts rec-part-rows"></span></div>
-                <details id="recSettings" class="msettings"><summary>Speed and pitch <span id="recSummary"></span><span class="moct">Octave <button type="button" data-mini="recOctDown">−</button><span class="tval" data-mini-text="recOctValue">0</span><button type="button" data-mini="recOctUp">+</button></span></summary>
-                <div class="prow"><span class="plbl">Speed</span><span class="tempo"><input type="range" id="recSpeedSlider" min="25" max="150" step="5" value="100" aria-label="Speed"><span id="recSpeedValue" class="tval">100%</span></span></div>
-                <div class="prow"><span class="plbl">Octave</span><span class="tempo"><button type="button" id="recOctDown" title="An octave down">−</button><span id="recOctValue" class="tval">0</span><button type="button" id="recOctUp" title="An octave up">+</button></span></div>
-                <div class="prow"><span class="plbl">Semitones</span><span class="tempo"><input type="range" id="recSemiSlider" min="-11" max="11" step="1" value="0" aria-label="Semitones"><span id="recSemiValue" class="tval">0</span></span></div>
-                <div class="prow" id="recChartRow" hidden title="The chart's own transpose (the top-level transpose, and the score's) moves the recording too, on top of the settings above"><span class="plbl">Chart</span><span class="tempo"><span id="recChartValue" class="tval">0</span></span></div>
-                <div class="prow"><span class="plbl">Cents</span><span class="tempo"><input type="range" id="recCentSlider" min="-50" max="50" step="1" value="0" aria-label="Cents"><span id="recCentValue" class="tval">0</span></span></div>
-                <div class="prow"><span class="plbl">Pitch with speed</span><button type="button" id="recLinkBtn" class="toggle" aria-pressed="false" title="Pitch and speed go together, as a tape's speed is set right (no stretching)">Off</button></div>
-                <div class="prow presets"><span class="plbl"></span><span class="tempo"><button type="button" id="recReset" title="The recording as it is">Reset</button></span></div>
-                </details>
-                <div id="recStatus" class="rec-status" role="status"></div>
             </div>
+            <!-- (outside the fold: Recording folded hides its parts, its speed and pitch and its status stay — owner's request 2026-11-17) -->
+            <details id="recSettings" class="msettings"><summary>Speed and pitch <span id="recSummary"></span><span class="moct">Octave <button type="button" data-mini="recOctDown">−</button><span class="tval" data-mini-text="recOctValue">0</span><button type="button" data-mini="recOctUp">+</button></span></summary>
+            <div class="prow"><span class="plbl">Speed</span><span class="tempo"><input type="range" id="recSpeedSlider" min="25" max="150" step="5" value="100" aria-label="Speed"><span id="recSpeedValue" class="tval">100%</span></span></div>
+            <div class="prow"><span class="plbl">Octave</span><span class="tempo"><button type="button" id="recOctDown" title="An octave down">−</button><span id="recOctValue" class="tval">0</span><button type="button" id="recOctUp" title="An octave up">+</button></span></div>
+            <div class="prow"><span class="plbl">Semitones</span><span class="tempo"><input type="range" id="recSemiSlider" min="-11" max="11" step="1" value="0" aria-label="Semitones"><span id="recSemiValue" class="tval">0</span></span></div>
+            <div class="prow" id="recChartRow" hidden title="The chart's own transpose (the top-level transpose, and the score's) moves the recording too, on top of the settings above"><span class="plbl">Chart</span><span class="tempo"><span id="recChartValue" class="tval">0</span></span></div>
+            <div class="prow"><span class="plbl">Cents</span><span class="tempo"><input type="range" id="recCentSlider" min="-50" max="50" step="1" value="0" aria-label="Cents"><span id="recCentValue" class="tval">0</span></span></div>
+            <div class="prow"><span class="plbl">Pitch with speed</span><button type="button" id="recLinkBtn" class="toggle" aria-pressed="false" title="Pitch and speed go together, as a tape's speed is set right (no stretching)">Off</button></div>
+            <div class="prow presets"><span class="plbl"></span><span class="tempo"><button type="button" id="recReset" title="The recording as it is">Reset</button></span></div>
+            </details>
+            <div id="recStatus" class="rec-status" role="status"></div>
         </div>
         <div class="mfoot"><button type="button" id="fadersReset" title="Every fader to 100%">Faders 100%</button></div>
     </div>
