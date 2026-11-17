@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Fixed: some `@or` chords did not turn.** On a row line after a comment line (as Dettato writes one at a row's head), Ctrl+Shift+Up on a chord with an `@or` — `D | D | A | G/B@or(Bm)` — stepped its diagram shape instead: the comment counted as part of the line's first chord, which reached over the whole line and was taken for the chord under the caret. Every `@or` now turns where the caret is.
+
 - **Remove All @or**: one command (the editor's and the preview's right-click menu, and the Command Palette) deletes every `@or(…)` in the file, each chord staying as written; a `@todo` beside one stays.
 - **The chord an `@or` rotation sounds is the row's**: Ctrl+Shift+Up / Down on `F@or(Bm Dm)` played the chord on a guitar at the audition's loudness, while Play sounds the chords row on its own sound (a piano by default) and softer. The chord tried now sounds as the row plays it — its sound, its loudness, and the row's fader in the practice panel.
 

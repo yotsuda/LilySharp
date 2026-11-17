@@ -71,9 +71,13 @@ public static partial class NoteStepper
     private static StepResult? OrRotateStep(string text, SyntaxTree tree, int caret, int dir,
         Func<string, SyntaxTree>? expand, bool includeStretch)
     {
+        // The entry the caret is on, by its OWN text (Span, '@or(…)' included) — not its Width, which
+        // carries its trivia: a comment line before a row's first entry ran its reach over the line,
+        // and that entry, with no @or, was found before the one under the caret (owner's report
+        // 2026-11-17, Dettato's "03 Open Arms.lys": G/B@or(Bm) after such a line did not turn).
         ChordEntrySyntax? entry = null;
         foreach (var e in tree.GetNodes<ChordEntrySyntax>())
-            if (e.SourceStart <= caret && caret <= e.SourceStart + e.Width)
+            if (e.Span.Start <= caret && caret <= e.Span.Start + e.Span.Length)
             {
                 entry = e;
                 break;

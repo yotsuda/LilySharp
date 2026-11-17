@@ -129,6 +129,48 @@ public class OrAnnotationTests
         Assert.Empty(NoteStepper.OrChoices(SyntaxTree.Parse(text), text.IndexOf("| C")));
     }
 
+    /// <summary>A slash chord turns too (owner's report 2026-11-17: G/B@or(Bm) did not), wherever the
+    /// caret stands on it — on the root, the slash, the bass, the mark.</summary>
+    [Theory]
+    [InlineData("G/B@or(Bm)", "Bm@or(G/B)", 0)]
+    [InlineData("G/B@or(Bm)", "Bm@or(G/B)", 1)]
+    [InlineData("G/B@or(Bm)", "Bm@or(G/B)", 2)]
+    [InlineData("G/B@or(Bm)", "Bm@or(G/B)", 3)]
+    [InlineData("G/B@or(Bm)", "Bm@or(G/B)", 6)]
+    [InlineData("Bm@or(G/B)", "G/B@or(Bm)", 0)]
+    [InlineData("F#m7b5@or(D7/F#)", "D7/F#@or(F#m7b5)", 2)]
+    public void ASlashChord_Rotates(string written, string turned, int at)
+    {
+        string text = Book(written + " | C | G | Am |");
+        int caret = text.IndexOf(written) + at;
+        var step = NoteStepper.Step(text, SyntaxTree.Parse(text), [(caret, caret)], +1, semitone: true);
+        Assert.Contains("{ " + turned + " | C", ApplyAll(text, step.Edits));
+    }
+
+    /// <summary>After a comment line in the row (owner's report 2026-11-17, Dettato's "03 Open Arms.lys"):
+    /// the comment was the line's first entry's trivia, its reach ran over the line, and that entry —
+    /// with no @or — was taken for the one under the caret: G/B@or(Bm) did not turn.</summary>
+    [Fact]
+    public void AnOrAfterACommentLine_Rotates()
+    {
+        string text = """
+            time 3/4
+            part bass { instrument bass }
+            section A {
+              chords harmony {
+                // Shift+Ctrl+Up/Down on a chord name shows its guitar chord diagram; on X@or(Y), swaps in Y and plays it
+                D | D | A | G/B@or(Bm) | break
+              }
+              bass { d2. | d2. | a2. | b2. | }
+            }
+            form { A }
+            score { chords harmony  staff bass }
+            """;
+        int caret = text.IndexOf("G/B@or");
+        var step = NoteStepper.Step(text, SyntaxTree.Parse(text), [(caret, caret)], +1, semitone: true);
+        Assert.Contains("D | D | A | Bm@or(G/B) | break", ApplyAll(text, step.Edits));
+    }
+
     [Fact]
     public void RemoveAll_TakesEveryOr_AndLeavesTheChordsAndTheTodos()
     {
