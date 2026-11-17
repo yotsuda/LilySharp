@@ -9808,14 +9808,17 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (!after) return;
             after.classList.add('grabbed');
             const pole = after.querySelector('.ab-pole'), to = pole.getBoundingClientRect();
-            // From where it stood to where it lands, in the page's units (the same system only:
-            // to another system it lands at once).
+            // From where it stood to where it lands, in the page's units — along the line, or across
+            // to another system, up or down (owner's request 2026-11-17: to another system it jumped
+            // there at once, where along a line it slid).
             const unit = (parseFloat(pole.getAttribute('y2')) - parseFloat(pole.getAttribute('y1'))) / Math.max(1, to.height);
-            if (from && Math.abs(from.top - to.top) < 2) {
+            if (from) {
                 after.style.transition = 'none';
-                after.style.transform = 'translate(' + ((from.left - to.left) * unit) + 'px, 0px)';
+                after.style.transform = 'translate(' + ((from.left - to.left) * unit) + 'px, ' + ((from.top - to.top) * unit) + 'px)';
+                // (across systems the way is longer: a little more time, so it still reads as a slide)
+                const across = Math.abs(from.top - to.top) >= 2;
                 requestAnimationFrame(() => requestAnimationFrame(() => {
-                    after.style.transition = 'transform 0.12s ease-out';
+                    after.style.transition = 'transform ' + (across ? '0.2s' : '0.12s') + ' ease-out';
                     after.style.transform = '';
                 }));
             }
