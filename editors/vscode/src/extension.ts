@@ -9768,10 +9768,47 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // The A flag always stands — where Play starts, the top at first — and B with the bars
         // between tinted only while A-B is on (owner's decisions 2026-11-17,
         // docs/transport-mixer-design.md §1 3).
+        // The line each flag was last drawn on, and where its pole stood: a flag that moves to another
+        // line other than by a drag (a bar clicked, A Here, a range called up) slides there as a dragged
+        // flag does (owner's request 2026-11-17) — a redraw on the same line (a zoom, a new page) does not.
+        let abDrawnLine = { A: -1, B: -1 };
         function drawAbFlags() {
+            const before = {}, sliding = {};
+            for (const letter of ['A', 'B']) {
+                const f = abFlagEl(letter), pole = f && f.querySelector('.ab-pole');
+                if (pole) before[letter] = pole.getBoundingClientRect();
+                // (a flag redrawn while it slides goes on sliding from where it has got to)
+                sliding[letter] = !!(f && f.dataset.sliding === '1');
+            }
             for (const el of svgContainer.querySelectorAll('.ab-mark')) el.remove();
             const bars = abBars();
             if (bars.length === 0) return;
+            drawAbFlagsOn(bars);
+            const now = { A: abFrom, B: abOn ? abTo + 1 : -1 };
+            for (const letter of ['A', 'B']) {
+                const f = abFlagEl(letter);
+                if (f && before[letter] && !abDrag && ((now[letter] !== abDrawnLine[letter] && abDrawnLine[letter] >= 0) || sliding[letter]))
+                    slideAbFlag(f, before[letter]);
+            }
+            abDrawnLine = now;
+        }
+        /** Slides a flag just drawn from where its pole stood (a screen rect) to where it stands now —
+         *  along the line, or across to another system (moveAbFlag's slide, a drag's). */
+        function slideAbFlag(after, from) {
+            const pole = after.querySelector('.ab-pole'), to = pole.getBoundingClientRect();
+            const unit = (parseFloat(pole.getAttribute('y2')) - parseFloat(pole.getAttribute('y1'))) / Math.max(1, to.height);
+            if (Math.abs(from.left - to.left) < 0.5 && Math.abs(from.top - to.top) < 0.5) return;
+            const across = Math.abs(from.top - to.top) >= 2;
+            after.dataset.sliding = '1';
+            after.style.transition = 'none';
+            after.style.transform = 'translate(' + ((from.left - to.left) * unit) + 'px, ' + ((from.top - to.top) * unit) + 'px)';
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                after.style.transition = 'transform ' + (across ? '0.2s' : '0.12s') + ' ease-out';
+                after.style.transform = '';
+                setTimeout(() => { delete after.dataset.sliding; }, across ? 220 : 140);
+            }));
+        }
+        function drawAbFlagsOn(bars) {
             if (abFrom < 0 || abFrom >= bars.length) abFrom = Math.max(0, Math.min(abFrom, bars.length - 1));
             if (abOn) {
                 for (let m = abFrom; m <= abTo; m++) {
@@ -9966,21 +10003,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const after = abFlagEl(abDrag.letter);
             if (!after) return;
             after.classList.add('grabbed');
-            const pole = after.querySelector('.ab-pole'), to = pole.getBoundingClientRect();
-            // From where it stood to where it lands, in the page's units — along the line, or across
-            // to another system, up or down (owner's request 2026-11-17: to another system it jumped
-            // there at once, where along a line it slid).
-            const unit = (parseFloat(pole.getAttribute('y2')) - parseFloat(pole.getAttribute('y1'))) / Math.max(1, to.height);
-            if (from) {
-                after.style.transition = 'none';
-                after.style.transform = 'translate(' + ((from.left - to.left) * unit) + 'px, ' + ((from.top - to.top) * unit) + 'px)';
-                // (across systems the way is longer: a little more time, so it still reads as a slide)
-                const across = Math.abs(from.top - to.top) >= 2;
-                requestAnimationFrame(() => requestAnimationFrame(() => {
-                    after.style.transition = 'transform ' + (across ? '0.2s' : '0.12s') + ' ease-out';
-                    after.style.transform = '';
-                }));
-            }
+            // From where it stood to where it lands — along the line, or across to another system, up
+            // or down (owner's request 2026-11-17: to another system it jumped there at once).
+            if (from) slideAbFlag(after, from);
             after.classList.add('ab-landed');
             setTimeout(() => after.classList.remove('ab-landed'), 400);
         }
