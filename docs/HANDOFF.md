@@ -145,6 +145,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1292セッション（2026-11-18・YT-DELL2）
+
+base `3ce28d3d0`・開始時 full 17562 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17565（Lab `p1292` の `run1.trx`）。REQUESTS: Calamo の open 0・Dettato は #18・#19。
+- **Dettato #18＝`f6256c026`**: 譜表のない score（コードの行だけ）で、行の `time` と section の見出しの `time` がスロットの割り振りに届かなかった（`time 3/4 E . F` が LYS2009・絵の F は小節の 2/3）。`MeasureCollector.RowMeterTimeline` が小節 0 個の一線譜の voice を音楽と読み、`RowsOnlyBarLengths` の表を見なかった＝第1120 の「見出しの拍子で割る」も同じ所で効いていなかった。網 `ChordRowTimeTests` 3 本（毒で 2 本赤）・全 svg 1268 枚で差 0（この形の本が無い・探り譜は Lab `p1292/d18`）。
+- **Dettato #19 は第1289 の `2882ef7e9` で直っていた**＝行を `fixed` に。⚠️ REQUESTS の 2 行は Dettato の repo で未 commit。
+- **改行に依存する網 4 本＝`a3d1dc4b5`**（review.md §4.3 の疑い）: 生文字列を `"\n"` で切る網が、autocrlf の fresh clone と CI の windows の脚で赤。作業ツリーで LF だった 155 ファイルを CRLF にして full で見つけた（手順は Lab `CLAUDE-OPERATIONS` §1 の末尾・一覧 `p1292/lf-to-crlf-list.txt`）。
+- **CI の赤は `ReadmeSampleTests` だけ**（run `44023136563` の ubuntu の脚・windows の脚は巻き添え）＝§1.0 の「オーナー待ち」。
+- 終了時 full 17565 合格 / 1 失敗（同じ）/ skip 2 / 合計 17568（`run4.trx`）・npm 1248 合格。
+- **次**: REQUESTS の open は 0。訊かずに着手してよいのは `p1242/leftovers.md` の欠陥（⚠️ 一覧は古い所がある＝「後の声部の `@finger`」は第1265 で閉じている。着手前に git log と実物で確かめる）。review.md の残りと §1.0 の候補（録音の S5・コード行の印）はオーナーに訊いてから。
+
+## 以下は第1291セッションの経緯
+
 ### 1.1 第1291セッション（2026-11-18・YT-DELL2）
 
 base `c31fd4203`・開始時 full 17556 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17559（Lab `p1291` の `run1.trx`）。**オーナーの指示（2026-11-18）＝コードの包括レビュー・リファクタの余地・プレビュー更新の性能**。
@@ -153,19 +165,6 @@ base `c31fd4203`・開始時 full 17556 合格 / 1 失敗（`ReadmeSampleTests`�
 - **計測（静かな窓・数は review.md §4）**: ⑺ 描画の collect 段が `8fc8e2be1` から 1.2 → 2.0 ms／打鍵・`dae137e71`＝break の語を強制の小節線ごとに探していた → 誰かが禁じた所だけ（`395e5fc1b`・1.46 ms・描画 5.19 → 4.65）。⑻ `caretInfo`（描画の 2.4 倍）は編集の後 300 ms 休んでから訊く（`f51720b8a`）。
 - 終了時 full 17562 合格 / 1 失敗（同じ）/ skip 2 / 合計 17565（`run5.trx`）・npm 1248 合格。⚠️ 拡張の変更は実機で未確認（`MANUAL-CHECKS` も未）。
 - **次**: review.md の残り＝P4・P5 の残り・P6・P7 の残り・P8・F2〜F7。P4・P6 は順位を計測で決める＝静かな窓の後。P9 はオーナー判断・P10 は静かな窓で。
-
-## 以下は第1290セッションの経緯
-
-### 1.1 第1290セッション（2026-11-17・YT-DELL2）
-
-base `94397dd6b`・開始時 full 17496 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17499（Lab `p1290` の `run1.trx`）。REQUESTS: Calamo の open 0・Dettato は #4（question・録音の島）だけ。
-- **周ごとのカウントイン＝`8bf435b27`**（`docs/transport-mixer-design.md` §8）: Count-in と Repeat がオンなら毎周「1 小節のクリック → 音楽」（`loopNotes` の gap）。周の読みは `loopPlace` 1 か所（`placeNow`・`loopOffset`）、声の区間・終わりの時刻・録音のループも同じ周の長さ。録音はカウントの間も A の前が流れる（最初のカウントインと同じ＝Claude の判断・オーナーに伝えた）。素のバッファ再生で録音の 0 より前から始まるループは周ごとの source。実物の VS Code で一覧・ヘッダ・録音の打音の時刻を測った（Lab `p1290/e2e/cdp-countin.mjs`・`go.ps1 -Ws ws|ws2`）。npm 1232 合格。
-- **直し: Repeat オン・A-B オフの ▶ が A を見ず頭から**（オーナーの報告・同 §4 の末尾）＝最初の周を A の小節から。カウント中のヘッダは常に A（Repeat オフも）。実機で直す前と後を測った（Lab `p1290/e2e/cdp-astart.mjs`）。
-- **leftovers（`p1242/leftovers.md`）から 3 件直した**: `.ly` の和音の行をその小節の拍子で割る（`e2513242e`）／MIDI のヘアピンを声部ごとに（`c0e98c22c`）／`%` の繰り返しは強弱を鳴らさない（`846343c78`・オーナー決定 11-15 に音を揃えた）／`|` で閉じた短い小節（MIDI `d733bc37f`・`.ly` の `\partial` `7c4472927` `e38fa2aed`＝双子の小節検査の失敗 40→5・MusicXML `d519fbedf`）／書き忘れの小節線でメトロノームが倍（`cf38ed108`）
-- **直し: section の終わりの書きかけの小節（`| d,4` に `|` なし）で譜面が壊れた**（オーナーの報告・`aa8a8195f`）＝開いた小節を 1 小節として閉じる（ページ・MIDI）。全 svg の掃き 1268 枚で差 0。
-- **これで transport-mixer の段 1〜3 は全部済み**。残りはオーナーの実機（`MANUAL-CHECKS` 第1289・第1290）。**次の一手はオーナーに訊く**（§1.0 の候補＝録音の S5・コード行の印 `@rit` ほか。`p1242/leftovers.md` の欠陥は訊かずに着手してよい）。
-- **プレビューの直し（オーナー報告・要望・実機 CDP＝Lab `p1290/e2e`）**: ▶ は鳴る間点灯（`1a048e080`）／読めない間（`d,8\` の途中）は直前の版を鳴らし ▶ の縁が黄（`ba4a25ae4`・`fa02bd1d4`＝録音だけ鳴り残る件も）／パネルの開閉はファイル別・初回は全部畳む（`22dcc8829`）／S の行はミュートでも鳴る（`c80f4f5f9`）。
-- 終了時 full 17505 合格 / 1 失敗（同じ `ReadmeSampleTests`）/ skip 2 / 合計 17508（`run7.trx`）。
 
 ## 2. 開いている作業
 
