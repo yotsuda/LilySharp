@@ -381,6 +381,7 @@ public sealed partial class LilySharpLanguageServer
         out bool lentByPreview)
     {
         bool lent = false;
+        System.Threading.Interlocked.Increment(ref _diagnosticPasses);
         var result = DocumentDiagnostics(doc.Text, doc.Tree,
             doc.Uri.IsFile ? doc.Uri.LocalPath : string.Empty,
             p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null,
@@ -394,6 +395,40 @@ public sealed partial class LilySharpLanguageServer
         lentByPreview = lent;
         return result;
     }
+
+    /// <summary>
+    /// <see cref="DocumentDiagnostics(Document, CancellationToken, out bool)"/>, computed once for
+    /// each expansion of the document and kept with it: the Problems panel's pass and every code
+    /// action asked on that text read one list.
+    /// </summary>
+    /// <remarks>
+    /// The editor asks for the code actions on every caret move, and each request ran the whole
+    /// pass again — every validator and a collect of its own, with no token and no yield to the
+    /// preview (review of session 1291). The list is a function of the expanded tree: the document's
+    /// text is its prefix, and <see cref="ExpandUsings(Document, Uri)"/> hands out the same tree
+    /// while the text and what its <c>using</c>s read stand, so the tree is the key and an entry
+    /// dies with the edit. A pass given up (cancelled) keeps nothing.
+    /// </remarks>
+    internal IReadOnlyList<CoreDiagnostic> DocumentDiagnosticsOnce(Document doc, CancellationToken token)
+    {
+        var (tree, _) = ExpandUsings(doc, doc.Uri);
+        if (DiagnosticsOfTree.TryGetValue(tree, out var kept))
+            return kept;
+        var result = DocumentDiagnostics(doc, token, out _);
+        // Kept only when the pass read this very expansion (an include saved meanwhile is another).
+        if (ReferenceEquals(ExpandUsings(doc, doc.Uri).Tree, tree))
+            DiagnosticsOfTree.AddOrUpdate(tree, result);
+        return result;
+    }
+
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<SyntaxTree, IReadOnlyList<CoreDiagnostic>>
+        DiagnosticsOfTree = new();
+
+    /// <summary>How many times <see cref="DocumentDiagnostics(Document, CancellationToken, out bool)"/>
+    /// has run its pass — for tests.</summary>
+    internal int DiagnosticPasses => System.Threading.Volatile.Read(ref _diagnosticPasses);
+
+    private int _diagnosticPasses;
 
     /// <summary>The open document at <paramref name="uri"/>, or null. For tests.</summary>
     internal Document? DocumentAt(Uri uri) => _documentManager.GetDocument(uri);
@@ -1030,7 +1065,7 @@ public sealed partial class LilySharpLanguageServer
         if (doc == null)
             return new PlaybackResponse { Error = "Document not found" };
         var (tree, _) = ExpandUsings(doc, @params.TextDocument.Uri);
-        return PlaybackOf(tree, @params.RenderName);
+        return PlaybackOf(tree, @params.RenderName, @params.SoundingOnly);
     }
 
     /// <summary>
@@ -1310,7 +1345,7 @@ public sealed partial class LilySharpLanguageServer
 
     /// <summary>The note events a tree plays, in seconds — what <c>lilysharp/playback</c> and
     /// <c>lilysharp/playbackText</c> answer.</summary>
-    private static PlaybackResponse PlaybackOf(SyntaxTree tree, string? renderName)
+    private static PlaybackResponse PlaybackOf(SyntaxTree tree, string? renderName, bool soundingOnly = false)
     {
         if (tree.HasErrors)
             return new PlaybackResponse { Error = "Score has errors" };
@@ -1326,14 +1361,14 @@ public sealed partial class LilySharpLanguageServer
         {
             return new PlaybackResponse { Error = ex.Message };
         }
-        return PlaybackOf(tree, score);
+        return PlaybackOf(tree, score, soundingOnly);
     }
 
     /// <summary>The note events of one score (null: a file with no <c>score</c> block — its
     /// primary form, every part), as <see cref="PlaybackOf(SyntaxTree, string?)"/> gives them
     /// for the score it chooses. The WAV the editor renders asks for each score it writes
     /// (<see cref="ExportParams.PlaybackOnly"/>).</summary>
-    private static PlaybackResponse PlaybackOf(SyntaxTree tree, RenderSpec? score)
+    private static PlaybackResponse PlaybackOf(SyntaxTree tree, RenderSpec? score, bool soundingOnly = false)
     {
         if (tree.HasErrors)
             return new PlaybackResponse { Error = "Score has errors" };
@@ -1357,7 +1392,9 @@ public sealed partial class LilySharpLanguageServer
             // 2026-11-09: "only the score's parts are listed").
             var tracks = midi.Tracks.Select(t => (Track: t, Channel: t.Channel)).ToList();
             var extra = new List<string>();
-            if (score != null)
+            // Not for a caller that reads the sounding notes alone (PlaybackParams.SoundingOnly):
+            // the second export below is the whole price of the list.
+            if (score != null && !soundingOnly)
             {
                 var all = new LilySharp.Core.Midi.MidiExporter { Form = score.Form, Score = score, AllParts = true }.Export(tree);
                 var names = midi.Tracks.Select(t => t.Name).ToHashSet(StringComparer.Ordinal);
@@ -2256,7 +2293,9 @@ public sealed partial class LilySharpLanguageServer
         {
             return new TodosResponse
             {
-                Todos = TodoIndex.Find(doc.Tree, PlacesOf(@params.TextDocument.Uri, doc)).Select(t => new TodoInfo
+                // The places only once a mark is found (TodoIndex.Find): the preview asks with
+                // every refresh, and a file with no mark must not pay a collect of every score.
+                Todos = TodoIndex.Find(doc.Tree, () => PlacesOf(@params.TextDocument.Uri, doc)).Select(t => new TodoInfo
                 {
                     Key = t.Key, Memo = t.Memo, Start = t.Start, End = t.End,
                     HostStart = t.HostStart, HostEnd = t.HostEnd, Measure = t.Measure, Part = t.Part,
@@ -2369,11 +2408,17 @@ public sealed partial class LilySharpLanguageServer
     private readonly object _placesLock = new();
     private (Uri Uri, int Version, IReadOnlyList<ItemPlace> Places)? _places;
 
+    /// <summary>How many times the places were collected (<see cref="TodoIndex.Places"/>) — for tests.</summary>
+    internal int PlacesCollects => System.Threading.Volatile.Read(ref _placesCollects);
+
+    private int _placesCollects;
+
     private IReadOnlyList<ItemPlace> PlacesOf(Uri uri, Document doc)
     {
         lock (_placesLock)
             if (_places is { } cached && cached.Uri == uri && cached.Version == doc.Version)
                 return cached.Places;
+        System.Threading.Interlocked.Increment(ref _placesCollects);
         var places = TodoIndex.Places(doc.Tree);
         lock (_placesLock)
             _places = (uri, doc.Version, places);

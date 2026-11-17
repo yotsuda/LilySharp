@@ -353,6 +353,11 @@ public class PlaybackParams
     /// Null or empty = the first score. What plays is that score's form and its parts; until
     /// 2026-09-29 every part of the file sounded whichever score was picked.</summary>
     public string? RenderName { get; set; }
+    /// <summary>True for a caller that reads the score's own notes alone — the header's length
+    /// and its position while stopped, asked after every refresh of the preview: the parts the
+    /// score leaves out (<see cref="PlaybackResponse.Extra"/>) are not listed, which spares the
+    /// second export that finds them. The score's notes are the same either way.</summary>
+    public bool SoundingOnly { get; set; }
 }
 
 /// <summary>Parameters for lilysharp/playbackText: a source to play that is no open document

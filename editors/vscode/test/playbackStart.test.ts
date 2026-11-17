@@ -16,7 +16,34 @@
 
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { soundingOf, startSecondsAt } from '../src/playbackStart';
+import { SOUNDING_IDLE_MS, soundingOf, soundingWait, startSecondsAt } from '../src/playbackStart';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+
+// The header's notes are an export of the whole score: asked once the text has rested, and for the
+// score's own notes alone (review of session 1291).
+describe('when the sounding notes are asked for', () => {
+    it('asks at once of a text never edited or one that has rested', () => {
+        assert.equal(soundingWait(undefined, 5000), 0);
+        assert.equal(soundingWait(1000, 1000 + SOUNDING_IDLE_MS), 0);
+        assert.equal(soundingWait(1000, 9000), 0);
+    });
+
+    it('waits out the rest of the idle time after an edit', () => {
+        assert.equal(soundingWait(1000, 1000), SOUNDING_IDLE_MS);
+        assert.equal(soundingWait(1000, 1100), SOUNDING_IDLE_MS - 100);
+    });
+
+    it('is what the preview does: waits, asks for the sounding notes only, and sends the render first', () => {
+        const extension = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(extension, /soundingWait\(lastEditAt\.get\(uri\), Date\.now\(\)\)/);
+        assert.match(extension, /'lilysharp\/playback', \{ textDocument: \{ uri \}, renderName, soundingOnly: true \}/);
+        // The @todo marks are asked for after the render request has left.
+        const svg = extension.indexOf("client.sendRequest<SvgResponse>('lilysharp/svg'");
+        const todos = extension.indexOf('void todoMarksOf(document).then(');
+        assert.ok(svg > 0 && todos > svg);
+    });
+});
 
 // The header's position while nothing plays (owner's request 2026-11-16): where Play would start.
 describe('where Play would start, in the score\'s seconds', () => {

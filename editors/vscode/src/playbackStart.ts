@@ -51,6 +51,19 @@ export function startSecondsAt(notes: readonly TimedNote[], position: number, ex
     return first === Infinity ? 0 : first;
 }
 
+/** How long the text rests after an edit before the header's notes are asked for again. */
+export const SOUNDING_IDLE_MS = 300;
+
+/**
+ * How long to wait yet before asking for the sounding notes (the header's length and its position
+ * while stopped): until the text has rested SOUNDING_IDLE_MS since its last edit. 0: ask now — a
+ * text never edited, or one that has rested. The notes are an export of the whole score, and
+ * asked with every refresh they ran beside the next keystroke's render (review of session 1291).
+ */
+export function soundingWait(lastEditAt: number | undefined, now: number): number {
+    return lastEditAt === undefined ? 0 : Math.max(0, lastEditAt + SOUNDING_IDLE_MS - now);
+}
+
 /** The notes that sound: the parts the score leaves out (`extra`, by name) dropped. */
 export function soundingOf(notes: readonly TimedNote[], parts: readonly string[] | null | undefined,
     extra: readonly string[] | null | undefined): TimedNote[] {

@@ -306,9 +306,9 @@ public sealed partial class LilySharpLanguageServer
 
     [JsonRpcMethod(Methods.TextDocumentCodeActionName, UseSingleObjectParameterDeserialization = true)]
     public Task<CodeAction[]?> GetCodeActionsAsync(CodeActionParams @params, CancellationToken token)
-        => OffDispatch(() => GetCodeActions(@params), token);
+        => OffDispatch(() => GetCodeActions(@params, token), token);
 
-    public CodeAction[]? GetCodeActions(CodeActionParams @params)
+    public CodeAction[]? GetCodeActions(CodeActionParams @params, CancellationToken token = default)
     {
         var uri = @params.TextDocument.Uri;
         var doc = _documentManager.GetDocument(uri);
@@ -352,9 +352,9 @@ public sealed partial class LilySharpLanguageServer
         // Guarded like the publish path: a validator crash must not take the lightbulb down.
         try
         {
-            var semantic = DocumentDiagnostics(doc.Text, doc.Tree,
-                uri.IsFile ? uri.LocalPath : string.Empty,
-                p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null).ToList();
+            // The list the Problems panel's pass made of this text, when it has (or the one this
+            // makes, kept for it): not a pass of its own per caret move (DocumentDiagnosticsOnce).
+            var semantic = DocumentDiagnosticsOnce(doc, token).ToList();
             bool todoOffered = false;
             foreach (var diagnostic in semantic)
             {
@@ -402,6 +402,11 @@ public sealed partial class LilySharpLanguageServer
                     actions.AddRange(ResolveTodoActions(doc, uri, diagnostic, semantic));
                 }
             }
+        }
+        catch (OperationCanceledException)
+        {
+            // The editor no longer wants this answer ($/cancelRequest mid-pass).
+            throw;
         }
         catch
         {

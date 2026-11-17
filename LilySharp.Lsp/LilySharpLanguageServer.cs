@@ -487,7 +487,7 @@ public sealed partial class LilySharpLanguageServer
         try
         {
             var semantic = new List<(LilySharp.Core.Syntax.Diagnostic Core, LilySharp.Lsp.Protocol.Diagnostic Lsp)>();
-            foreach (var d in DocumentDiagnostics(doc, token, out _))
+            foreach (var d in DocumentDiagnosticsOnce(doc, token))
                 semantic.Add((d, ConvertDiagnostic(d, doc.Text, doc.Uri)));
             RaiseUnsureMarks(doc.Tree, doc.Uri, semantic);
             diagnostics.AddRange(semantic.Select(s => s.Lsp));

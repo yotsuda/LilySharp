@@ -49,7 +49,7 @@ public readonly record struct ItemPlace(int Position, int Measure, string Part);
 /// Where the score draws what a document writes (LilySharp-Omr proposal C1: which bar of the
 /// page a mark, or the caret, is in): every item's printed
 /// bar and part (<see cref="Places"/>), the bar at a caret (<see cref="PlaceAt"/>), and the
-/// <c>@todo</c> marks located (<see cref="Find"/>).
+/// <c>@todo</c> marks located (<see cref="Find(SyntaxTree, IReadOnlyList{ItemPlace}?)"/>).
 /// </summary>
 /// <remarks>
 /// The bar number is the one the page PRINTS — <see cref="BarNumberEngraver.NumberMeasures"/>
@@ -132,13 +132,24 @@ public static class TodoIndex
     /// <summary>Every <c>@todo</c> of <paramref name="tree"/>, located through
     /// <paramref name="places"/> (<see cref="Places"/> of the same tree; collected here when null).</summary>
     public static IReadOnlyList<TodoEntry> Find(SyntaxTree tree, IReadOnlyList<ItemPlace>? places = null)
+        => Find(tree, places == null ? null : () => places);
+
+    /// <summary><see cref="Find(SyntaxTree, IReadOnlyList{ItemPlace}?)"/> with the places asked for
+    /// only once a mark is found: a file with no <c>@todo</c> collects nothing.</summary>
+    /// <remarks>
+    /// The preview asks for the marks with every refresh, and the places are a collect of every
+    /// score of the file (<see cref="Places"/>): handed over as a list, they were collected on
+    /// each keystroke of a file that has no mark at all (review of session 1291).
+    /// </remarks>
+    public static IReadOnlyList<TodoEntry> Find(SyntaxTree tree, Func<IReadOnlyList<ItemPlace>>? placesOf)
     {
         var entries = new List<TodoEntry>();
+        IReadOnlyList<ItemPlace>? places = null;
         foreach (var node in tree.GetRoot().DescendantNodesOfKinds(AnnotationNameValidator.AnnotationKinds))
         {
             if (TodoAnnotation.Of(node) is not { } todo || node.Parent is not { } host)
                 continue;
-            places ??= Places(tree);
+            places ??= placesOf?.Invoke() ?? Places(tree);
             ItemPlace? place = null;
             foreach (var p in places)
                 if (p.Position >= host.Span.Start && p.Position < host.Span.End)

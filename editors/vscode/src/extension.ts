@@ -39,7 +39,7 @@ import { registerCaretInfo } from './caretInfo';
 import { registerExportBatch } from './exportBatch';
 import { OmrImportDeps, importFromImage } from './omrImport';
 import { DecodeResult, attachRecording, followCopies, followRenames, keepRecordingSettings, sendRecording, useRecordingSettingsStore } from './recording';
-import { TimedNote, soundingOf, startSecondsAt } from './playbackStart';
+import { TimedNote, soundingOf, soundingWait, startSecondsAt } from './playbackStart';
 import { convertRecording, registerDettatoContext } from './dettato';
 import { recordingPathFor } from './recordingCore';
 import { normalizeAbRanges } from './abRangesCore';
@@ -571,6 +571,8 @@ const DEBOUNCE_DELAY_DEFAULT = 100;
 const PREVIEW_MAX_WAIT = 120;
 // When the first change still waiting for the preview came, per document (the max-wait's start).
 const pendingRefreshSince = new Map<string, number>();
+// When each document was last edited: the header's notes wait for the text to rest (soundingWait).
+const lastEditAt = new Map<string, number>();
 const HIGHLIGHT_DISTANCE_THRESHOLD = 50;
 
 export function activate(context: vscode.ExtensionContext) {
@@ -1323,6 +1325,7 @@ export function activate(context: vscode.ExtensionContext) {
                 const uri = event.document.uri.toString();
                 const panel = previewPanels.get(uri);
                 if (panel) {
+                    lastEditAt.set(uri, Date.now());
                     // Neither is in the Settings UI since 2026-10-25 (settings.json only).
                     const cfg = vscode.workspace.getConfiguration('lilysharp');
                     const autoRefresh = cfg.get<boolean>('preview.autoRefresh', true);
@@ -1785,19 +1788,31 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     });
     // The sounding notes of the text and score this panel shows, kept per version: the header's
     // length and its position while stopped read them (a caret move must not export again).
-    let soundingCache: { key: string; notes: Promise<TimedNote[] | null> } | undefined;
+    // Asked once the text has rested (soundingWait): `undefined` is an answer the text has
+    // moved on from while it waited — the next refresh asks again, and nothing is posted.
+    let soundingCache: { key: string; notes: Promise<TimedNote[] | null | undefined> } | undefined;
     panel.webview.onDidReceiveMessage(
         async message => {
             // The file the panel shows NOW: the follower turns, and an untitled save re-keys.
             const uri = panelKey(panel) ?? openedUri;
-            const soundingNotes = (): Promise<TimedNote[] | null> => {
-                const version = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri)?.version ?? -1;
+            const soundingNotes = (): Promise<TimedNote[] | null | undefined> => {
+                const versionNow = () => vscode.workspace.textDocuments.find(d => d.uri.toString() === uri)?.version ?? -1;
+                const version = versionNow();
                 const renderName = selectedRenders.get(uri) || null;
                 const key = `${uri}\n${version}\n${renderName ?? ''}`;
                 if (soundingCache?.key !== key) {
-                    const notes = client!.sendRequest<{ Notes?: TimedNote[] | null; Parts?: string[] | null; Extra?: string[] | null }>(
-                        'lilysharp/playback', { textDocument: { uri }, renderName })
-                        .then(pb => pb.Notes ? soundingOf(pb.Notes, pb.Parts, pb.Extra) : null);
+                    const notes = (async () => {
+                        for (let wait = soundingWait(lastEditAt.get(uri), Date.now()); wait > 0;
+                            wait = soundingWait(lastEditAt.get(uri), Date.now())) {
+                            await new Promise(r => setTimeout(r, wait));
+                        }
+                        if (versionNow() !== version) { return undefined; }
+                        // (soundingOnly: the parts the score leaves out are dropped below anyway,
+                        // and listing them costs the server a second export)
+                        const pb = await client!.sendRequest<{ Notes?: TimedNote[] | null; Parts?: string[] | null; Extra?: string[] | null }>(
+                            'lilysharp/playback', { textDocument: { uri }, renderName, soundingOnly: true });
+                        return pb.Notes ? soundingOf(pb.Notes, pb.Parts, pb.Extra) : null;
+                    })();
                     // (a failed fetch is not kept: the next asks again)
                     notes.catch(() => { if (soundingCache?.key === key) { soundingCache = undefined; } });
                     soundingCache = { key, notes };
@@ -2027,6 +2042,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 if (!client || !clientReady) { return; }
                 try {
                     const notes = await soundingNotes();
+                    if (notes === undefined) { return; }
                     const seconds = (notes ?? []).reduce((end, n) => Math.max(end, n.T + n.D), 0);
                     panel.webview.postMessage({ type: 'lengthData', seconds: notes ? seconds : null });
                 } catch {
@@ -2042,6 +2058,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 if (!client || !clientReady) { return; }
                 try {
                     const notes = await soundingNotes();
+                    if (notes === undefined) { return; }
                     panel.webview.postMessage({ type: 'positionTime', seq: message.seq,
                         seconds: notes ? startSecondsAt(notes, message.position, !!message.exact) : null });
                 } catch {
@@ -2295,14 +2312,6 @@ async function updatePreviewContent(
     if (document.uri.scheme === 'file') {
         void sendRecording(panel, document.uri, context.globalStorageUri, decodeRecordingOnServer);
     }
-    // The @todo marks of the text, for Resolve This TODO on the bar right-clicked and Resolve
-    // All TODOs off the staves (owner's request 2026-10-31) — once the server is up to answer.
-    void todoMarksOf(document).then(marks => {
-        if (marks) {
-            void panel.webview.postMessage({ type: 'todos', marks: marks.map(m => ({ start: m.Start, hostStart: m.HostStart })) });
-        }
-    });
-
     // Wait for client to be ready if not already
     if (!clientReady) {
         outputChannel.appendLine('Client not ready, sending loading message');
@@ -2360,13 +2369,22 @@ async function updatePreviewContent(
         // The version the webview holds when the request leaves; the answer is checked
         // against what it holds when the answer arrives (a reload in between blanks it).
         const shownVersion = shownPagesVersion.get(uri) ?? null;
-        const response = await client.sendRequest<SvgResponse>('lilysharp/svg', {
+        const rendering = client.sendRequest<SvgResponse>('lilysharp/svg', {
             textDocument: { uri: uri },
             renderName: selectedRender || null,
             clientSentAt: requestedAt,
             pageDiff: true,
             shownVersion
         }, requestCancellation.token);
+        // The @todo marks of the text, for Resolve This TODO on the bar right-clicked and Resolve
+        // All TODOs off the staves (owner's request 2026-10-31). Asked AFTER the render request has
+        // left: it was written to the connection ahead of it on every refresh (review of session 1291).
+        void todoMarksOf(document).then(marks => {
+            if (marks && previewPanels.get(uri) === panel) {
+                void panel.webview.postMessage({ type: 'todos', marks: marks.map(m => ({ start: m.Start, hostStart: m.HostStart })) });
+            }
+        });
+        const response = await rendering;
         const hostLag = lagProbe.stop();
 
         // The round trip, split where the server's clock says it went: a stall shows up
