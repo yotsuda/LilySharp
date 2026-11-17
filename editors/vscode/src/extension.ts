@@ -48,6 +48,7 @@ import { OmrScanDeps, hasScan, previewHoversBar, previewReady, previewShowsBar, 
 import { registerOmrAiFix } from './omrAiFix';
 import { registerVerifyOnSave } from './omrVerify';
 import { markdownItExtensionApi } from './markdownFence';
+import { PreviewSession } from './previewSession';
 import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, sourceGroupToOpen, SourceTab, jumpOffsetFor, chordSpans, chordAtCaret, soundingLight, SoundingSession, auditionBarRange, messageChanged, rewriteIsStale } from './previewCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 import { PLAIN_TONES_JS } from './plainTones';
@@ -183,18 +184,8 @@ function retargetPreview(panel: vscode.WebviewPanel, document: vscode.TextDocume
     pendingFollow = undefined;
     previewPanels.delete(from);
     previewPanels.set(to, panel);
-    const ready = panelReady.get(from);
-    panelReady.delete(from);
-    if (ready) { panelReady.set(to, ready); }
     // The page holds neither file's picture as far as the dedup and the page versions go.
-    for (const key of [from, to]) {
-        lastPostedSvg.delete(key);
-        shownPagesVersion.delete(key);
-    }
-    cancelSvgRequest(from);
-    svgRequestGeneration.delete(from);
-    const timer = debounceTimers.get(from);
-    if (timer) { clearTimeout(timer); debounceTimers.delete(from); }
+    sessionOf(panel).turned(false);
     panel.title = previewTitle(to, panel);
     outputChannel.appendLine(`Preview follows ${from} -> ${to}`);
     void panel.webview.postMessage({ type: 'retarget', from, to });
@@ -313,16 +304,17 @@ async function openPreviewSource(panel: vscode.WebviewPanel, key: string): Promi
 
 // The scan view's hooks (omrScan.ts, set in activate): a preview reports the bar it scrolled to.
 let scanDeps: OmrScanDeps | undefined;
-// A message posted before the webview has finished loading its HTML is
-// DROPPED by VS Code. The webview script posts 'webviewReady' as its last
-// statement; content updates await that (with a timeout escape hatch).
-const panelReady = new Map<string, { promise: Promise<void>; resolve: () => void; done: boolean }>();
-function armPanelReady(uri: string) {
-    let settle!: () => void;
-    const promise = new Promise<void>(r => { settle = r; });
-    // `done`: a page that has reported in is not waited for again (updatePreviewContent).
-    const entry = { promise, resolve: () => { entry.done = true; settle(); }, done: false };
-    panelReady.set(uri, entry);
+// What the host keeps of each preview panel (previewSession.ts): whether its page has loaded
+// — a message posted before the webview has finished loading its HTML is DROPPED by VS Code;
+// the webview script posts 'webviewReady' as its last statement, and content updates await
+// that (with a timeout escape hatch) — the refresh waiting, the request on its way, and what
+// the page shows. The panel's, not the document's: a panel that turns to another file
+// (retargetPreview, migratePreviewKey) takes it along.
+const previewSessions = new WeakMap<vscode.WebviewPanel, PreviewSession>();
+function sessionOf(panel: vscode.WebviewPanel): PreviewSession {
+    let session = previewSessions.get(panel);
+    if (!session) { previewSessions.set(panel, session = new PreviewSession()); }
+    return session;
 }
 
 // The `lilysharp` settings as last read, for the places a keystroke reaches (the refresh's
@@ -475,24 +467,14 @@ function migratePreviewKey(oldUri: string, newUri: string) {
     if (!panel || oldUri === newUri) { return; }
     previewPanels.delete(oldUri);
     previewPanels.set(newUri, panel);
-    const ready = panelReady.get(oldUri);
-    if (ready) { panelReady.delete(oldUri); panelReady.set(newUri, ready); }
     const render = selectedRenders.get(oldUri);
     if (render !== undefined) { selectedRenders.delete(oldUri); selectedRenders.set(newUri, render); }
-    const posted = lastPostedSvg.get(oldUri);
-    if (posted !== undefined) { lastPostedSvg.delete(oldUri); lastPostedSvg.set(newUri, posted); }
-    // The server's session for the old URI is gone with its didClose; the new URI's starts
-    // over and cannot recognise the version, so it is not worth carrying.
-    shownPagesVersion.delete(oldUri);
-    // Drop any pending debounce refresh: its callback captured the now-closed untitled
-    // document, so letting it fire would render the wrong (stale) doc. A later edit to
-    // the saved file schedules a fresh one under the new key.
-    const timer = debounceTimers.get(oldUri);
-    if (timer !== undefined) { clearTimeout(timer); debounceTimers.delete(oldUri); }
-    // An in-flight svg request under the old URI can only answer about the closed
-    // document — cancel it; the migrated panel's refresh starts fresh under the new key.
-    cancelSvgRequest(oldUri);
-    svgRequestGeneration.delete(oldUri);
+    // The page still shows the picture (it is not posted again), but: the server's session for
+    // the old URI is gone with its didClose, and the new URI's starts over and cannot recognise
+    // the pages' version; a refresh still waiting captured the now-closed untitled document,
+    // so letting it fire would render the wrong (stale) doc — a later edit to the saved file
+    // schedules a fresh one; and a request on its way can only answer about the closed document.
+    sessionOf(panel).turned(true);
 }
 
 // Content for the "Lily#: New Score" command (File ▸ New File… ▸ Lily# Score).
@@ -534,41 +516,21 @@ score {
   staff melody
 }
 `;
-let debounceTimers = new Map<string, NodeJS.Timeout>();
 const outputChannel = vscode.window.createOutputChannel('Lily# Extension');
 
-// Track selected render per document
+// Track selected render per document (the document's, not a panel's: a file the follower
+// turned away from keeps its picked score for when it comes back)
 const selectedRenders = new Map<string, string>();
 
-// The last SVG (per URI) actually posted to a webview. The webview retains its content
-// (retainContextWhenHidden), so re-posting a byte-identical SVG is pure waste — a toggle
-// or save that recompiles to the same picture would otherwise push the whole (often
-// hundreds-of-KB) string across the extension→webview channel again. Invalidated when the
-// webview reloads (webviewReady) and when a panel is disposed / re-keyed.
-const lastPostedSvg = new Map<string, string>();
-
-// The page-set version (per URI) the webview holds — SvgPages.Version of the last page
-// answer posted to it. Sent with the next lilysharp/svg request as shownVersion, so the
-// server answers with only the pages that changed since (a delta against that version);
-// the webview keeps or shifts the rest. Forgotten when the webview reloads (it holds
-// nothing), when the webview asks for the whole picture (requestFull) and when a panel is
-// disposed / re-keyed — a version the server does not recognise costs one full answer.
-const shownPagesVersion = new Map<string, number>();
-
-// One live lilysharp/svg request per URI. The generation stamps each request as it is
-// sent; a response arriving after a newer request has been issued is DROPPED instead of
-// painting an older picture over a newer one (responses can interleave now that the
-// server dispatches requests off its read loop). The token source actively cancels the
-// superseded request ($/cancelRequest), so the server abandons it at the render gate
-// instead of spending a render on a thrown-away answer.
-const svgRequestGeneration = new Map<string, number>();
-const svgRequestCancellation = new Map<string, vscode.CancellationTokenSource>();
-
-// Cancels (and disposes) the URI's in-flight svg request source, if any.
-function cancelSvgRequest(uri: string) {
-    const cts = svgRequestCancellation.get(uri);
-    if (cts) { cts.cancel(); cts.dispose(); svgRequestCancellation.delete(uri); }
-}
+// (The rest of what a preview keeps is its panel's PreviewSession: the picture last posted —
+// the webview retains its content (retainContextWhenHidden), so re-posting a byte-identical
+// SVG is pure waste, often hundreds of KB across the extension→webview channel — the pages'
+// version the webview holds, sent with the next lilysharp/svg request as shownVersion so the
+// server answers with only the pages that changed since; and the one live request, stamped
+// so that a response arriving after a newer request has been issued is DROPPED instead of
+// painting an older picture over a newer one (responses can interleave now that the server
+// dispatches requests off its read loop) and actively cancelled ($/cancelRequest), so the
+// server abandons it at the render gate instead of spending a render on a thrown-away answer.)
 
 // Constants
 // The preview's refresh debounce. `lilysharp.preview.refreshDelay` is no longer in the
@@ -578,8 +540,6 @@ const DEBOUNCE_DELAY_DEFAULT = 100;
 // The longest a change waits for the preview while more changes keep coming (a held key): the
 // debounce above restarts on each change, this does not (owner's report 2026-11-16).
 const PREVIEW_MAX_WAIT = 120;
-// When the first change still waiting for the preview came, per document (the max-wait's start).
-const pendingRefreshSince = new Map<string, number>();
 // When each document was last edited: the header's notes wait for the text to rest (soundingWait).
 const lastEditAt = new Map<string, number>();
 const HIGHLIGHT_DISTANCE_THRESHOLD = 50;
@@ -1345,23 +1305,13 @@ export function activate(context: vscode.ExtensionContext) {
                     const delay = cfg.get<number>('preview.refreshDelay', DEBOUNCE_DELAY_DEFAULT);
 
                     if (autoRefresh) {
-                        const existingTimer = debounceTimers.get(uri);
-                        if (existingTimer) {
-                            clearTimeout(existingTimer);
-                        }
                         // …but never later than PREVIEW_MAX_WAIT after the first change still
                         // waiting (owner's report 2026-11-16): a held step key (Ctrl+Shift+Up on
                         // `tempo 130`) edits every ~30 ms, each edit pushed the refresh back again,
                         // and the preview stood still until the key was let go. Now it follows the
                         // held key, a render each PREVIEW_MAX_WAIT, and the last edit still renders.
-                        const now = Date.now();
-                        const since = pendingRefreshSince.get(uri) ?? now;
-                        pendingRefreshSince.set(uri, since);
-                        debounceTimers.set(uri, setTimeout(() => {
-                            pendingRefreshSince.delete(uri);
-                            updatePreviewContent(event.document, panel, context);
-                            debounceTimers.delete(uri);
-                        }, Math.max(0, Math.min(delay, since + PREVIEW_MAX_WAIT - now))));
+                        sessionOf(panel).refreshAfter(delay, PREVIEW_MAX_WAIT, Date.now(),
+                            () => updatePreviewContent(event.document, panel, context));
                     }
                 }
             }
@@ -1724,7 +1674,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     );
 
     previewPanels.set(uri, panel);
-    armPanelReady(uri);
+    previewSessions.set(panel, new PreviewSession());
     // With no follower open, the new preview is it.
     followerPanel = panel;
     followerLocked = false;
@@ -1758,19 +1708,11 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
             outputChannel.appendLine(`Preview panel disposed: ${key}`);
             dismissedPreviews.add(key);
             previewPanels.delete(key);
-            panelReady.delete(key);
             selectedRenders.delete(key);
             forgetVoices(panel);
-            lastPostedSvg.delete(key);
-            shownPagesVersion.delete(key);
-            cancelSvgRequest(key);
-            svgRequestGeneration.delete(key);
-            const timer = debounceTimers.get(key);
-            if (timer) {
-                clearTimeout(timer);
-                debounceTimers.delete(key);
-            }
         }
+        previewSessions.get(panel)?.dispose();
+        previewSessions.delete(panel);
     });
 
     // Handle messages from webview
@@ -1885,10 +1827,8 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 // A (re)loaded webview is blank — drop the dedup memory so the next render
                 // always re-posts, even if the SVG matches what a previous instance showed,
                 // and the page version, so the next answer carries every page.
-                lastPostedSvg.delete(uri);
-                shownPagesVersion.delete(uri);
+                sessionOf(panel).pageLoaded();
                 postedToPage.delete(panel);
-                panelReady.get(uri)?.resolve();
                 if (scanDeps) { previewReady(uri, scanDeps); }
                 return;
             }
@@ -1897,7 +1837,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 // is in `why`): forget the version it was against and render again — the
                 // server answers with every page.
                 outputChannel.appendLine(`Webview asks for the whole picture: ${message.why}`);
-                shownPagesVersion.delete(uri);
+                sessionOf(panel).shownPagesVersion = undefined;
                 const doc = await previewDocument(uri);
                 if (doc) {
                     updatePreviewContent(doc, panel, context);
@@ -2304,6 +2244,7 @@ async function updatePreviewContent(
 ) {
     const uri = document.uri.toString();
     const selectedRender = selectedRenders.get(uri);
+    const session = sessionOf(panel);
 
     // A closed document can never be rendered — the server dropped it on didClose.
     // This happens for an untitled buffer just saved to a file (its URI is gone) or a
@@ -2324,9 +2265,8 @@ async function updatePreviewContent(
         // drops such messages silently and the panel sticks on "Loading…". The
         // 3 s race is a safety net against a webview that never reports in; a page that
         // has reported in is not waited for (each refresh left a 3 s timer running).
-        const ready = panelReady.get(uri);
-        if (ready && !ready.done) {
-            await Promise.race([ready.promise, new Promise<void>(r => setTimeout(r, 3000))]);
+        if (!session.pageHasLoaded) {
+            await Promise.race([session.loaded, new Promise<void>(r => setTimeout(r, 3000))]);
         }
         // Whether the right-click menu offers the OMR doors (owner, 2026-10-24: not for a file
         // the reader did not write) — asked again with each render, as an import adds the file.
@@ -2396,17 +2336,20 @@ async function updatePreviewContent(
     // collapses a queued burst to the newest ticket by itself, but only a client-side
     // generation can order the RESPONSES — without it, a slow old answer arriving
     // after a fast new one would paint the older picture last.
-    const generation = (svgRequestGeneration.get(uri) ?? 0) + 1;
-    svgRequestGeneration.set(uri, generation);
-    cancelSvgRequest(uri);
+    // The panel turned to another document while this call waited (for the server to start):
+    // the request on its way is that document's, and is not this call's to cancel.
+    if (previewPanels.get(uri) !== panel) {
+        outputChannel.appendLine(`The preview no longer shows ${uri}`);
+        return;
+    }
     const requestCancellation = new vscode.CancellationTokenSource();
-    svgRequestCancellation.set(uri, requestCancellation);
+    const generation = session.beginRequest(requestCancellation);
     const lagProbe = new EventLoopLagProbe();
     lagProbe.start();
     try {
         // The version the webview holds when the request leaves; the answer is checked
         // against what it holds when the answer arrives (a reload in between blanks it).
-        const shownVersion = shownPagesVersion.get(uri) ?? null;
+        const shownVersion = session.shownPagesVersion ?? null;
         const rendering = client.sendRequest<SvgResponse>('lilysharp/svg', {
             textDocument: { uri: uri },
             renderName: selectedRender || null,
@@ -2451,7 +2394,7 @@ async function updatePreviewContent(
             + ` (${Date.now() - requestedAt} ms round trip${split}; host lag max ${hostLag} ms)`);
 
         // A newer request owns the preview now — its response paints, this one drops.
-        if (svgRequestGeneration.get(uri) !== generation) {
+        if (!session.isLatest(generation)) {
             outputChannel.appendLine('Dropping svg response: a newer request was issued');
             return;
         }
@@ -2498,11 +2441,11 @@ async function updatePreviewContent(
             // that forgot the version raced this one), the delta is unusable — ask again
             // with no version, which gets every page.
             const pages = response.Pages;
-            const held = shownPagesVersion.get(uri) ?? null;
+            const held = session.shownPagesVersion ?? null;
             if (pages.BaseVersion != null && pages.BaseVersion !== held) {
                 outputChannel.appendLine(`Page delta is against version ${pages.BaseVersion}, the webview holds `
                     + `${held}; asking for every page`);
-                shownPagesVersion.delete(uri);
+                session.shownPagesVersion = undefined;
                 if (retries > 0) {
                     setTimeout(() => updatePreviewContent(document, panel, context, retries - 1), 0);
                 }
@@ -2511,8 +2454,8 @@ async function updatePreviewContent(
             // A page answer is a few hundred bytes when nothing changed, so it is posted
             // every time (the picker's list and the banner ride with it); the one-string
             // dedup memory no longer describes what the webview shows.
-            lastPostedSvg.delete(uri);
-            shownPagesVersion.set(uri, pages.Version);
+            session.lastPostedSvg = undefined;
+            session.shownPagesVersion = pages.Version;
             outputChannel.appendLine(`Sending pages to webview (${pagesSummary(pages)}`
                 + `${response.Error ? ', with error banner' : ''})`);
             panel.webview.postMessage({
@@ -2540,14 +2483,14 @@ async function updatePreviewContent(
             // unchanged is cheap on the webview side (the page markup compares
             // equal and every page is kept).
             const key = svgPostKey(response.Svg, response.Error, response.Renders, drawnRender);
-            if (lastPostedSvg.get(uri) === key) {
+            if (session.lastPostedSvg === key) {
                 outputChannel.appendLine(`SVG unchanged (length=${response.Svg.length}), skipping post`);
             } else {
                 outputChannel.appendLine(`Sending SVG to webview (length=${response.Svg.length}`
                     + `${response.Error ? ', with error banner' : ''})`);
-                lastPostedSvg.set(uri, key);
+                session.lastPostedSvg = key;
                 // A one-string picture is not a version the next delta can be against.
-                shownPagesVersion.delete(uri);
+                session.shownPagesVersion = undefined;
                 panel.webview.postMessage({
                     type: 'updateContent',
                     svg: response.Svg,
@@ -2566,7 +2509,7 @@ async function updatePreviewContent(
             // is always posted — otherwise, fixing an error back to a picture
             // identical to the pre-error one hits the "unchanged, skip" path above
             // and the error stays on screen forever.
-            lastPostedSvg.delete(uri);
+            session.lastPostedSvg = undefined;
             panel.webview.postMessage({
                 type: 'updateContent',
                 error: response.Error,
@@ -2585,7 +2528,7 @@ async function updatePreviewContent(
     } catch (error) {
         // Our own cancellation (a newer request took over, or the panel/URI went
         // away): expected, and the newer request repaints — no error banner.
-        if (svgRequestGeneration.get(uri) !== generation
+        if (!session.isLatest(generation)
             || requestCancellation.token.isCancellationRequested) {
             outputChannel.appendLine(`Svg request cancelled by a newer one: ${error}`);
             return;
@@ -2594,7 +2537,7 @@ async function updatePreviewContent(
         if (previewPanels.has(uri)) {
             // Same reason as the error branch above: an error replaces the SVG on screen, so
             // drop the cache or the next identical render is skipped and the error persists.
-            lastPostedSvg.delete(uri);
+            session.lastPostedSvg = undefined;
             panel.webview.postMessage({
                 type: 'updateContent',
                 error: `Failed to generate preview: ${error}`,
@@ -12496,8 +12439,7 @@ function serverSettings(config: vscode.WorkspaceConfiguration) {
 
 export function deactivate(): Thenable<void> | undefined {
     // Clear all debounce timers
-    debounceTimers.forEach(timer => clearTimeout(timer));
-    debounceTimers.clear();
+    previewPanels.forEach(panel => previewSessions.get(panel)?.cancelRefresh());
     // The singing engine, and its own server with it.
     voiceRenderer?.dispose();
     voiceRenderer = undefined;

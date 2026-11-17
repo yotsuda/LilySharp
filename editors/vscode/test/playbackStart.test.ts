@@ -55,8 +55,7 @@ describe('when the sounding notes are asked for', () => {
         assert.match(extension, /void Promise\.all\(\[marksAsked, beside\]\)\.then\(/);
         assert.match(extension, /const \[response\] = await Promise\.all\(\[rendering, beside\]\);/);
         // A page that has reported in is not waited for again (no 3 s timer per refresh).
-        assert.match(extension, /resolve: \(\) => \{ entry\.done = true; settle\(\); \}/);
-        assert.match(extension, /if \(ready && !ready\.done\) \{\s*await Promise\.race\(/);
+        assert.match(extension, /if \(!session\.pageHasLoaded\) \{\s*await Promise\.race\(\[session\.loaded,/);
         // The settings a keystroke reads are kept until one changes.
         assert.match(extension, /const cfg = settings\(\);\s*const autoRefresh/);
         assert.match(extension, /if \(e\.affectsConfiguration\('lilysharp'\)\) \{ lilysharpSettings = undefined; \}/);

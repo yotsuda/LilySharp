@@ -115,8 +115,8 @@ describe('the preview\'s Range panel', () => {
     // stood still until the key was let go (owner's report 2026-11-16). A max-wait bounds it.
     it('follows a held key: the refresh waits no longer than its max-wait after the first change', () => {
         assert.match(extension, /const PREVIEW_MAX_WAIT = \d+;/);
-        assert.match(extension, /const since = pendingRefreshSince\.get\(uri\) \?\? now;[\s\S]{0,400}?Math\.max\(0, Math\.min\(delay, since \+ PREVIEW_MAX_WAIT - now\)\)/);
-        assert.match(extension, /pendingRefreshSince\.delete\(uri\);\s*updatePreviewContent\(event\.document, panel, context\);/);
+        // (The rule itself is PreviewSession.refreshAfter's: previewSession.test.ts.)
+        assert.match(extension, /sessionOf\(panel\)\.refreshAfter\(delay, PREVIEW_MAX_WAIT, Date\.now\(\),\s*\(\) => updatePreviewContent\(event\.document, panel, context\)\);/);
     });
 
     // Play always from the A flag (owner's decisions 2026-11-17, docs/transport-mixer-design.md
