@@ -160,6 +160,30 @@ public class SectionCutterTests
         Assert.Equal(offered, actions.Any(a => a.Title.StartsWith("Split section A here", System.StringComparison.Ordinal)));
     }
 
+    /// <summary>The preview's right-click hands a bar's first note (before it) or the end of its text
+    /// with Snap (after it, on its bar line) — owner's decision 2026-11-17, the menus' reorganisation.</summary>
+    [Fact]
+    public void ThePreviewsPlace_CutsBeforeOrAfterTheBar()
+    {
+        var server = new LilySharp.Lsp.LilySharpLanguageServer(System.IO.Stream.Null, System.IO.Stream.Null);
+        var uri = new System.Uri("file:///cut-preview.lys");
+        server.DidOpen(new LilySharp.Lsp.Protocol.DidOpenTextDocumentParams
+        {
+            TextDocument = new LilySharp.Lsp.Protocol.TextDocumentItem { Uri = uri, Text = Song, LanguageId = "lilysharp", Version = 1 },
+        });
+        LilySharp.Lsp.CutSectionResponse Ask(int offset, bool snap) => server.CutSectionAsync(new LilySharp.Lsp.CutSectionParams
+        {
+            TextDocument = new LilySharp.Lsp.Protocol.TextDocumentIdentifier { Uri = uri }, Offset = offset, Snap = snap,
+        }, System.Threading.CancellationToken.None).Result;
+        // Before bar 3 (the bass's g,): 2 bars before the cut.
+        Assert.Equal(("A", 2), (Ask(Song.IndexOf("g, b"), false).Section, Ask(Song.IndexOf("g, b"), false).Bars));
+        // After bar 3: the end of its text, snapped on past its bar line.
+        int end = Song.IndexOf("d b") + "d b".Length;
+        var after = Ask(end, true);
+        Assert.Equal(("A", 3), (after.Section, after.Bars));
+        Assert.Equal("A2", after.Suggested);
+    }
+
     [Fact]
     public void CutThenJoined_IsTheSameMusic()
     {

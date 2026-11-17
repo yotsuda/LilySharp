@@ -1384,6 +1384,9 @@ public class CutSectionParams
     public string? Section { get; set; }
     public int Bars { get; set; }
     public int Offset { get; set; }
+    /// <summary>The offset is the end of a bar's text (the preview's right-click on its right): the cut is
+    /// the bar line that follows it.</summary>
+    public bool Snap { get; set; }
     public string? Name { get; set; }
 }
 

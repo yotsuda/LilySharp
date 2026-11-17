@@ -194,7 +194,7 @@ export function autoPick(models: readonly vscode.LanguageModelChat[], use: Model
 
 /**
  * "Lily#: Select AI Model" — first which feature, then the models VS Code offers; the pick is
- * saved to `lilysharp.ai.editModel` (Lily#: Ask AI… and Fix OMR Marks) or `lilysharp.ai.ghostModel`
+ * saved to `lilysharp.ai.editModel` (Lily#: Rewrite with AI… and Fix OMR Marks) or `lilysharp.ai.ghostModel`
  * (Ghost Completion). Given `only` (a Settings link's), that feature's list comes at once.
  */
 export async function pickAiModel(only?: ModelUse): Promise<void> {
@@ -212,7 +212,7 @@ export async function pickAiModel(only?: ModelUse): Promise<void> {
         // Lily#'s own features that write music (owner's requests 2026-10-28: one "AI" for all of
         // them in the label; 2026-11-07: Compose with AI went, composing is Copilot's chat's, and
         // the chat — Ctrl+I's Ask AI in Chat too — uses the model picked in the chat, said here).
-        { label: 'Ask AI and Fix OMR Marks with AI…', description: shown('edit'), detail: 'Lily#: Ask AI… (the command palette) and the scan fixes: a strong model is worth waiting for. Copilot\'s chat — Ctrl+I, Compose with Copilot — uses the model picked in the chat.', use: 'edit' },
+        { label: 'Rewrite with AI and Fix OMR Marks with AI…', description: shown('edit'), detail: 'Lily#: Rewrite with AI… (the command palette) and the scan fixes: a strong model is worth waiting for. Copilot\'s chat — Ctrl+I, Compose with Copilot — uses the model picked in the chat.', use: 'edit' },
         { label: 'Ghost Completion', description: shown('ghost'), detail: 'Answers as you type: a fast model, or the suggestion is cancelled before it shows.', use: 'ghost' },
     ];
     const which = only

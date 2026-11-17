@@ -63,8 +63,9 @@ describe('the preview\'s Resolve TODO doors (owner\'s request 2026-10-31)', () =
         const all = menu.find(m => m.command === 'lilysharp.previewResolveAllTodos');
         assert.equal(one?.when, "webviewId == 'lilysharpPreview' && lysBarTodo");
         assert.equal(all?.when, "webviewId == 'lilysharpPreview' && !lysOnStaff && lysHasTodos");
-        assert.equal(one?.group, '1_edit@6');
-        assert.equal(all?.group, '1_edit@7');
+        // (the marks' own group since the menus' reorganisation, owner's decision 2026-11-17)
+        assert.equal(one?.group, '4_marks@1');
+        assert.equal(all?.group, '4_marks@2');
         const commands = pkg.contributes.commands as { command: string; title: string }[];
         assert.equal(commands.find(c => c.command === 'lilysharp.previewResolveTodo')?.title, 'Resolve This TODO (remove @todo)');
         assert.equal(commands.find(c => c.command === 'lilysharp.previewResolveAllTodos')?.title, 'Resolve All TODOs');

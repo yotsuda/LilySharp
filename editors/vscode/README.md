@@ -54,7 +54,7 @@ Uses the language models VS Code offers — GitHub Copilot's, or another provide
 - **Compose with Copilot** (File > New File… → *Lily# Score, Composed with Copilot…*, or just ask
   in Copilot's chat): the chat composes a new piece into a new, unsaved score named after its
   title — never over the score that is open. Pick a strong model in the chat's model menu.
-- **Lily#: Ask AI…** (the command palette): Lily#'s own, without the chat — say what to change ("add a bass
+- **Lily#: Rewrite with AI…** (the command palette): Lily#'s own, without the chat — say what to change ("add a bass
   line", "make bar 5 a fill") and the AI rewrites the score. A selection — text in the editor, or bars, a bar or a note on the score
   — is a hint of where to look; the whole score stays open to change. Every answer is compiled
   and checked first, then shown **before** anything is written: the score as it is and as it
@@ -75,10 +75,22 @@ With the separate **Calamo** extension (`yotsuda.calamo`, Windows x64),
 
 ### More commands
 
-New Score (from a template you can make your own: *Edit New Score Template*), Import
-MusicXML…, Regroup (by part ⇄ by section), Convert Octaves to Absolute / Relative, Extract
-Phrase from Section, Add Chord Track…, Guess Section Key…, Respell Notes to
-Key…, Remove All String Numbers. Every command, with examples:
+The editor's right-click menu shows, at its top, what acts on the thing under the caret — *Split
+Section Here* on a bar line or a `break`, *Join Sections* on a section's head or a selection across
+sections, the chord conversions on a chord — and gathers the rest by purpose:
+
+- **Lily#: Sections** — Join Sections, Split Section Here, Split Sections to Match a Part, Extract
+  Phrase from Section, Regroup (by part ⇄ by section)
+- **Lily#: Parts & Tracks** — Add Chord Track…, Write a Harmony Part…, Write a Singer's Notes Out
+  as a Part, Write Repeat Signs in Every Part, Keep Repeat Signs in One Part
+- **Lily#: Notation** — Convert Octaves to Absolute / Relative, Respell Notes to Key…, Guess Section Key…
+- **Lily#: Clean Up** (when the file has any) — Resolve All TODOs, Remove All @or, Remove All String Numbers
+- **Lily#: Scan** (with a scan beside the file) — Fix OMR Marks with AI…, Edit Bars Beside the Scan, Show Original Scan
+
+The preview's right-click menu groups its own: the selection, playback, the section (*Split Section
+Here* on the bar line nearer the pointer), the marks (TODOs, `@or`) and the view. New Score (from a
+template you can make your own: *Edit New Score Template*) and Import MusicXML… are in the Command
+Palette. Every command, with examples:
 [the editor commands](https://yotsuda.github.io/LilySharp/commands.html).
 
 ### Writing

@@ -45,12 +45,12 @@
   subject is: on a file in the Explorer, or in the preview.</p>
   <table class="g">
     <tr><th>Where</th><th>What is there</th></tr>
-    <tr><td>Right-click in a <code>.lys</code> editor</td><td>Ask AI… · Regroup · Split Sections to Match a Part · Convert Octaves to Absolute / to Relative · Remove All String Numbers · Extract Phrase from Section · Add Chord Track · Guess Section Key… · Respell Notes to Key… — and, in a score read from a scan, Fix OMR Marks with AI… · Edit Bars Beside the Scan</td></tr>
+    <tr><td>Right-click in a <code>.lys</code> editor</td><td>At the top, what acts on the thing under the caret: Split Section Here (on a bar line or a <code>break</code>) · Join Sections (on a section&#39;s head or a selection across sections) · the chord conversions (on a chord). Then Ask AI in Chat… · Go to the Same Bar in Another Part…, and five submenus — <b>Sections</b>: Join Sections · Split Section Here · Split Sections to Match a Part · Extract Phrase from Section · Regroup; <b>Parts &amp; Tracks</b>: Add Chord Track… · Write a Harmony Part… · Write a Singer&#39;s Notes Out as a Part · Write Repeat Signs in Every Part · Keep Repeat Signs in One Part; <b>Notation</b>: Convert Octaves to Absolute / to Relative · Respell Notes to Key… · Guess Section Key…; <b>Clean Up</b> (when the file has any): Resolve All TODOs · Remove All @or · Remove All String Numbers; <b>Scan</b> (in a score read from a scan): Fix OMR Marks with AI… · Edit Bars Beside the Scan · Show Original Scan</td></tr>
     <tr><td>Right-click a file in the Explorer</td><td>on a <code>.lys</code>: the <i>Lily#: Export</i> submenu · on a <code>.xml</code> / <code>.musicxml</code> / <code>.mxl</code>: Import MusicXML or MIDI… · on a scan or PDF: Convert Image/PDF to Lily# (.lys)… (when the reader is installed)</td></tr>
-    <tr><td>Right-click in the preview</td><td>Ask AI… with the note, bar or selection under the pointer as its hint · Select Chord (on a note of a chord: the caret just after its <code>&gt;</code>) · Select This Bar · Clear Selection · Play from Here (on a note or a bar) · Stop Playback · Fit Width · Reset Zoom (100%) — and, in a score read from a scan, Edit Bars Beside the Scan on the bar</td></tr>
+    <tr><td>Right-click in the preview</td><td>Rewrite with AI… with the note, bar or selection under the pointer as its hint · Select Chord (on a note of a chord: the caret just after its <code>&gt;</code>) · Select This Bar · Clear Selection · Play from Here (on a note or a bar) · Stop Playback · Fit Width · Reset Zoom (100%) — and, in a score read from a scan, Edit Bars Beside the Scan on the bar</td></tr>
     <tr><td>The editor's title bar</td><td>Open Preview to Side · the lock that keeps the preview on one file</td></tr>
     <tr><td><i>File → New File…</i></td><td>Lily# Score (.lys)</td></tr>
-    <tr><td>Keys</td><td><kbd>Ctrl+Shift+V</kbd> preview · <kbd>Ctrl+K</kbd> <kbd>V</kbd> preview to the side · <kbd>Alt+P</kbd> play note · <kbd>Alt+M</kbd> play measure · <kbd>Ctrl+Shift+Up/Down</kbd> step to the next note of the key (or a tempo, key, clef, dynamic, time…) · <kbd>Ctrl+Shift+PageUp/PageDown</kbd> step an octave · <kbd>Ctrl+I</kbd> Ask AI…</td></tr>
+    <tr><td>Keys</td><td><kbd>Ctrl+Shift+V</kbd> preview · <kbd>Ctrl+K</kbd> <kbd>V</kbd> preview to the side · <kbd>Alt+P</kbd> play note · <kbd>Alt+M</kbd> play measure · <kbd>Ctrl+Shift+Up/Down</kbd> step to the next note of the key (or a tempo, key, clef, dynamic, time…) · <kbd>Ctrl+Shift+PageUp/PageDown</kbd> step an octave · <kbd>Ctrl+I</kbd> Rewrite with AI…</td></tr>
   </table>
   <p class="note">To give a command a key of your own, open <i>Keyboard Shortcuts</i>
   (<kbd>Ctrl+K</kbd> <kbd>Ctrl+S</kbd>) and search for <code>lilysharp.</code>.</p>
@@ -352,7 +352,7 @@ ges'4 aes' bes' ces'' | des''4 ees'' f'' ges'' | ges'1 |</pre>
     <tr><td>Lock Preview to This File · Unlock</td><td>the lock in the preview's title bar: a locked preview stays on its file instead of following the one in front</td></tr>
     <tr><td>Play from Here · Stop Playback</td><td>right-click on a note (from it) or a bar (from its first note) in the preview</td></tr>
     <tr><td>Select This Bar · Clear Selection</td><td>right-click on a bar: starts a selection on the score, which <kbd>Shift</kbd>+click and <kbd>Shift</kbd>+drag extend; ▶ plays it and Ask AI takes it as its hint</td></tr>
-    <tr><td>Ask AI…</td><td>right-click anywhere on the score: the selection, the note or the bar under the pointer is the hint, named in the menu (<i>Ask AI, This Bar as a Hint…</i>)</td></tr>
+    <tr><td>Rewrite with AI…</td><td>right-click anywhere on the score: the selection, the note or the bar under the pointer is the hint, named in the menu (<i>Rewrite with AI, This Bar as a Hint…</i>)</td></tr>
     <tr><td>Fit Width · Reset Zoom (100%)</td><td>right-click anywhere in the preview</td></tr>
   </table>
   <p>Everything else the preview does — the link between notes and source, the score picker,
@@ -387,7 +387,7 @@ ges'4 aes' bes' ces'' | des''4 ees'' f'' ges'' | ges'1 |</pre>
 
 <section id="ai">
   <h2>Ask AI, and fixing a scan's marks</h2>
-  <p><i>Ask AI…</i> (<kbd>Ctrl+I</kbd>, ✨ in the preview, and both right-click menus) changes
+  <p><i>Rewrite with AI…</i> (<kbd>Ctrl+I</kbd>, ✨ in the preview, and both right-click menus) changes
   the score as you ask in words — a selection is a hint of where to look — and shows the
   answer engraved beside the score as it is, what changed in green, before anything is
   written. <i>Compose with Copilot…</i> (also <i>File › New File…</i> → <i>Lily# Score,

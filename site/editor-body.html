@@ -53,7 +53,7 @@
     <tr><td><kbd>Alt+M</kbd></td><td>play the measure the caret is in</td></tr>
     <tr><td><kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd></td><td>step a note to the next note of the key, a chord shape, a tempo by 1, a key a fifth, a clef, a dynamic, a <code>time</code>, an <code>octave</code> or a <code>transpose</code> — <a href="#step">below</a></td></tr>
     <tr><td><kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd></td><td>step a note an octave mark, a chord shape, or a tempo by 10; switch a key to its parallel / relative key, a treble or bass clef an octave, a dynamic a level, a <code>time</code> to the next common meter, an <code>octave</code> by 1 or a <code>transpose</code> an octave</td></tr>
-    <tr><td><kbd>Ctrl+I</kbd></td><td><i>Ask AI…</i>: say what to change, a selection as a hint of where — <a href="#ai">below</a></td></tr>
+    <tr><td><kbd>Ctrl+I</kbd></td><td><i>Rewrite with AI…</i>: say what to change, a selection as a hint of where — <a href="#ai">below</a></td></tr>
   </table>
   <p class="note">On macOS read <kbd>Cmd</kbd> for <kbd>Ctrl</kbd> in the first two and the
   last; the stepping keys are <kbd>Ctrl+Shift+Up/Down</kbd> and <kbd>Ctrl+Shift+PageUp/PageDown</kbd>
@@ -539,7 +539,7 @@
     <tr><td>Step Up · Step Down an Octave</td><td><kbd>Ctrl+Shift+PageUp</kbd> · <kbd>Ctrl+Shift+PageDown</kbd> — <a href="#step">above</a></td></tr>
     <tr><td>Open Preview · Open Preview to Side</td><td><kbd>Ctrl+Shift+V</kbd> · <kbd>Ctrl+K</kbd> <kbd>V</kbd></td></tr>
     <tr><td>Export as PDF / SVG / PNG / LilyPond / MusicXML / MIDI / WAV / MP3 / MP4 Video / VOCALOID</td><td>writes the file's scores</td></tr>
-    <tr><td>Ask AI… · Compose with Copilot… · Select AI Model…</td><td><kbd>Ctrl+I</kbd> — <a href="#ai">below</a></td></tr>
+    <tr><td>Rewrite with AI… · Compose with Copilot… · Select AI Model…</td><td><kbd>Ctrl+I</kbd> — <a href="#ai">below</a></td></tr>
   </table>
   <!-- VIDEO editor-split-sections: a file grouped by part — vn1 has `section A` (2 bars) and
        `section B` (2 bars), vn2 still writes all 4 bars in `section A`, form { A }. Hover
@@ -592,7 +592,7 @@
   5 a fill”</i>, <i>“harmonize the melody in thirds”</i>, <i>“transpose up a fourth”</i>. Press
   <kbd>Ctrl+I</kbd> (<kbd>Cmd+I</kbd>) in the editor or the preview, click ✨ in the preview's
   header, or right-click the score: the menu names what it will take as its hint — <i>Ask AI,
-  This Note as a Hint…</i>, <i>This Bar…</i>, <i>the Selection…</i>, or plain <i>Ask AI…</i> off
+  This Note as a Hint…</i>, <i>This Bar…</i>, <i>the Selection…</i>, or plain <i>Rewrite with AI…</i> off
   the staves.</p>
   <ul>
     <li><b>A selection is a hint of where to look, not a fence.</b> Text selected in the
@@ -668,7 +668,7 @@
 
   <h3>Choosing the model</h3>
   <p><i>Lily#: Select AI Model…</i> picks one for good: <code>lilysharp.ai.editModel</code> for
-  Lily#'s own <i>Ask AI…</i> (the command palette) and Fix OMR Marks, <code>lilysharp.ai.ghostModel</code>
+  Lily#'s own <i>Rewrite with AI…</i> (the command palette) and Fix OMR Marks, <code>lilysharp.ai.ghostModel</code>
   for ghost completion. Without a choice, Ask AI takes the largest model on offer and passes over
   the small ones, which write poor Lily#; ghost completion takes a small, fast one. Copilot's chat —
   <i>Ask AI in Chat</i> (<kbd>Ctrl+I</kbd>) and <i>Compose with Copilot</i> — uses the model picked in

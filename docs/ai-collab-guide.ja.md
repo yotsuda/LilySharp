@@ -38,7 +38,7 @@
 
 1. 必要なら、変えたい場所を**選択**（例：melody の 4 小節）。選択は「どこを見るか」のヒントで、AI は楽譜全体を読み、必要ならその外も変えます（ハモりのパートを足すなら、新しいパートと score の行も）。何も選ばなければ楽譜全体についての依頼になります。
 2. **`Ctrl+I`**（macOS は `Cmd+I`）。画面上部に入力欄が出ます。
-   - エディタの右クリックメニュー、コマンドパレットの **「Lily#: Ask AI…」**、プレビューのヘッダの **✨**、プレビューの右クリックからも起動できます。
+   - エディタの右クリックメニュー、コマンドパレットの **「Lily#: Rewrite with AI…」**、プレビューのヘッダの **✨**、プレビューの右クリックからも起動できます。
 3. **やりたいことを自然言語で入力**。例：
    - `ベースラインを足して` / `add a bass line`
    - `3度でハモらせて` / `harmonize a third above`
@@ -66,7 +66,7 @@
 プレビュー（`Ctrl+K V` などで開く譜面）でも同じように頼めます。
 
 1. プレビュー上の小節か音符を **Shift＋クリック**（または **Shift＋ドラッグ**、右クリックの **Select This Bar**）して小節を選ぶ。選んだ小節が薄い青になります（**`Esc`** か **Clear Selection** で解除）。
-2. ヘッダの **✨**（またはプレビュー内で **`Ctrl+I`**）を押す。右クリックなら、**Ask AI, This Note as a Hint…** / **This Bar…** / **the Selection…** のように、何をヒントにするかがメニューに出ます。
+2. ヘッダの **✨**（またはプレビュー内で **`Ctrl+I`**）を押す。右クリックなら、**Rewrite with AI, This Note as a Hint…** / **This Bar…** / **the Selection…** のように、何をヒントにするかがメニューに出ます。
 3. **あとは上記 3〜6 と同じ**流れになります。
 
 > テキストから選んでも、譜面から選んでも、以降の体験は 1 つです。
@@ -114,7 +114,7 @@ Lily# の AI 機能は **VS Code の言語モデル API（`vscode.lm`）**を使
 
 | 設定キー | 既定 | 説明 |
 |---|---|---|
-| `lilysharp.ai.editModel` | `""` | Ask AI…（Ctrl+I）と「Fix OMR Marks with AI…」が使うモデル。空＝自動（いちばん大きいモデル）。「Lily#: Select AI Model…」で選ぶ。 |
+| `lilysharp.ai.editModel` | `""` | Rewrite with AI…（Ctrl+I）と「Fix OMR Marks with AI…」が使うモデル。空＝自動（いちばん大きいモデル）。「Lily#: Select AI Model…」で選ぶ。 |
 | `lilysharp.ai.ghostModel` | `""` | ゴースト補完が使うモデル。空＝自動（小さく速いモデル）。 |
 | `lilysharp.ai.ghostCompletion` | `false` | 入力中の「次の小節」ゴースト補完のオン/オフ。 |
 
@@ -126,7 +126,7 @@ Lily# の AI 機能は **VS Code の言語モデル API（`vscode.lm`）**を使
 
 | コマンド | 内容 | 起動 |
 |---|---|---|
-| `lilysharp.aiTransform` | Ask AI…：選択範囲（無ければ曲全体）について AI に頼む | `Ctrl+I` / `Cmd+I`、右クリック、プレビューの ✨ Ask AI…、パレット |
+| `lilysharp.aiTransform` | Rewrite with AI…：選択範囲（無ければ曲全体）について AI に頼む | `Ctrl+I` / `Cmd+I`、右クリック、プレビューの ✨ Rewrite with AI…、パレット |
 | `lilysharp.omrFixWithAi` | Fix OMR Marks with AI…：スキャンから読んだ楽譜の `@todo` の小節を、スキャンの画像と照らして AI が直す案を出す（記録は「Lily# AI」出力チャネル） | 右クリック（スキャンのある `.lys`）、スキャン画面の「Fix N marks with AI…」、パレット |
 | `lilysharp.selectAiModel` | 機能ごとに使うモデルを選ぶ | パレット「Lily#: Select AI Model…」 |
 

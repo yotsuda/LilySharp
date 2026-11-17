@@ -54,6 +54,15 @@ import { PLAIN_TONES_JS } from './plainTones';
 import { FOLLOW_SCROLL_CSS, FOLLOW_SCROLL_JS } from './followScroll';
 import { SplitSectionsChoice, modalText, splitChoiceItems } from './splitSectionsCore';
 import { onAngleChord, onShapeItem, shapeItemAt, sameDocumentUri } from './shapeItemCore';
+import { caretMenuContext, fileMenuContext, selectionSpansSections } from './menuContextCore';
+
+/** A menu context key, set only when it changes (setContext is a round trip to the workbench). */
+const menuContextNow = new Map<string, boolean>();
+function setMenuContext(key: string, value: boolean): void {
+    if (menuContextNow.get(key) === value) { return; }
+    menuContextNow.set(key, value);
+    void vscode.commands.executeCommand('setContext', key, value);
+}
 import { TodoMark, parseStarts, todoDeletions } from './todoResolveCore';
 import { cleanHistory, forgetFont, recordFont, samePath, shownFonts } from './soundFontHistoryCore';
 import { AudioFormat, AudioJob, renderAudioFiles } from './audioRender';
@@ -389,12 +398,14 @@ async function todoMarksOf(document: vscode.TextDocument): Promise<TodoMark[] | 
  *  that begin at `starts` — every mark when null — deleted from the shown document, as the
  *  editor's quick fix deletes one. The marks are re-read from the server first, so a mark that
  *  moved or went since the right-click is left alone. */
-async function resolvePreviewTodos(starts: number[] | null): Promise<void> {
+async function resolvePreviewTodos(starts: number[] | null, inEditor = false): Promise<void> {
+    // (inEditor: the editor's Clean Up menu — the file in the active editor, owner's decision 2026-11-17)
+    const editorDoc = vscode.window.activeTextEditor?.document;
     const shown = [...previewPanels.entries()].find(([, p]) => p.active);
-    if (!shown || (starts !== null && starts.length === 0)) {
+    if (inEditor ? !editorDoc || editorDoc.languageId !== 'lilysharp' : !shown || (starts !== null && starts.length === 0)) {
         return;
     }
-    const document = await vscode.workspace.openTextDocument(vscode.Uri.parse(shown[0]));
+    const document = inEditor ? editorDoc! : await vscode.workspace.openTextDocument(vscode.Uri.parse(shown![0]));
     const marks = await todoMarksOf(document);
     if (!marks) {
         void vscode.window.showInformationMessage('The @todo marks could not be read — try again once the preview has rendered.');
@@ -938,6 +949,12 @@ export function activate(context: vscode.ExtensionContext) {
             (uri?: string, section?: string, bars?: number, name?: string) => splitSectionHere(typeof uri === 'string' ? uri : undefined,
                 typeof section === 'string' ? section : undefined, typeof bars === 'number' ? bars : undefined,
                 typeof name === 'string' ? name : undefined)),
+        // The preview's right-click on a bar line (owner's decision 2026-11-17): the file it shows, cut there.
+        vscode.commands.registerCommand('lilysharp.previewSplitSectionHere', (m?: { lysCutAt?: number; lysCutSnap?: boolean }) => {
+            const shown = [...previewPanels.entries()].find(([, p]) => p.active);
+            if (!shown || typeof m?.lysCutAt !== 'number' || m.lysCutAt < 0) { return; }
+            return splitSectionHere(shown[0], undefined, undefined, undefined, m.lysCutAt, !!m.lysCutSnap);
+        }),
         vscode.commands.registerCommand('lilysharp.joinSections',
             (uri?: string, sections?: string[]) => joinSections(typeof uri === 'string' ? uri : undefined, Array.isArray(sections) ? sections : undefined)),
         vscode.commands.registerCommand('lilysharp.splitSectionsToMatch',
@@ -1224,6 +1241,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('lilysharp.previewResolveTodo', (m?: { lysTodoStarts?: string }) =>
             resolvePreviewTodos(parseStarts(m?.lysTodoStarts))),
         vscode.commands.registerCommand('lilysharp.previewResolveAllTodos', () => resolvePreviewTodos(null)),
+        vscode.commands.registerCommand('lilysharp.resolveAllTodos', () => resolvePreviewTodos(null, true)),
         vscode.commands.registerCommand('lilysharp.removeAllOrMarks', () => removeAllOrMarks()));
     // The Settings screen's "Choose a model…" links name the feature ('edit' | 'ghost'), so the
     // list of features is skipped; the palette asks which.
@@ -1472,6 +1490,33 @@ export function activate(context: vscode.ExtensionContext) {
                 wasOnAngleChord = onChord;
                 void vscode.commands.executeCommand('setContext', 'lilysharp.onAngleChord', onChord);
             }
+            // The menus' caret context (owner's decision 2026-11-17, menuContextCore): a bar line or a
+            // break (Split Section Here), a section's head or a selection across heads (Join Sections).
+            const sel = event.selections[0];
+            const where = line !== undefined ? caretMenuContext(line, at!.character) : { onBarLine: false, onSectionHead: false };
+            const spans = line !== undefined && sel !== undefined && !sel.isEmpty
+                && selectionSpansSections(doc.getText(), doc.offsetAt(sel.start), doc.offsetAt(sel.end));
+            setMenuContext('lilysharp.onBarLine', where.onBarLine && (sel?.isEmpty ?? true));
+            setMenuContext('lilysharp.canJoinSections', (where.onSectionHead && (sel?.isEmpty ?? true)) || spans);
+        }));
+    // What the file holds for the Clean Up menu (owner's decision 2026-11-17): read when the active
+    // editor changes and as it is edited, a moment after the last keystroke.
+    let fileContextTimer: ReturnType<typeof setTimeout> | undefined;
+    const updateFileContext = () => {
+        const doc = vscode.window.activeTextEditor?.document;
+        const marks = doc && doc.languageId === 'lilysharp' ? fileMenuContext(doc.getText())
+            : { hasOrMarks: false, hasTodos: false, hasStringNumbers: false };
+        setMenuContext('lilysharp.hasOrMarks', marks.hasOrMarks);
+        setMenuContext('lilysharp.hasTodos', marks.hasTodos);
+        setMenuContext('lilysharp.hasStringNumbers', marks.hasStringNumbers);
+    };
+    updateFileContext();
+    context.subscriptions.push(
+        vscode.window.onDidChangeActiveTextEditor(() => updateFileContext()),
+        vscode.workspace.onDidChangeTextDocument(e => {
+            if (e.document !== vscode.window.activeTextEditor?.document) { return; }
+            if (fileContextTimer) { clearTimeout(fileContextTimer); }
+            fileContextTimer = setTimeout(updateFileContext, 400);
         }));
 
     // Watch for cursor position changes
@@ -3299,7 +3344,8 @@ async function joinSections(uriArg?: string, sections?: string[]) {
  * offered). The server cuts every part, chord row and words there and checks the piece sounds as
  * it did (lilysharp/cutSection); a refusal says why. One edit (one undo).
  */
-async function splitSectionHere(uriArg?: string, section?: string, bars?: number, nameArg?: string) {
+async function splitSectionHere(uriArg?: string, section?: string, bars?: number, nameArg?: string,
+    offsetArg?: number, snap = false) {
     const editor = vscode.window.activeTextEditor;
     const doc = uriArg
         ? vscode.workspace.textDocuments.find(d => sameDocumentUri(d.uri.toString(), uriArg))
@@ -3312,7 +3358,9 @@ async function splitSectionHere(uriArg?: string, section?: string, bars?: number
     const ask = (name: string | null, s?: string, b?: number) => client!.sendRequest<CutAnswer>('lilysharp/cutSection', {
         textDocument: { uri: doc.uri.toString() },
         section: s ?? null, bars: b ?? 0,
-        offset: editor && editor.document === doc ? doc.offsetAt(editor.selection.active) : 0,
+        // (the preview's right-click hands its own place: a bar's first note, or the end of its text to snap on to its bar line)
+        offset: typeof offsetArg === 'number' ? offsetArg : editor && editor.document === doc ? doc.offsetAt(editor.selection.active) : 0,
+        snap,
         name,
     });
     try {
@@ -12194,10 +12242,21 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // selection when there is one, else the note under the pointer, else the bar under
             // it, else — off the staves — the whole score, as Ctrl+I on an empty line does.
             ctxBarRange = null;
+            // Where Split Section Here cuts (owner's decision 2026-11-17, the menus' reorganisation): the
+            // bar line nearer the pointer — before the bar (its first note: data-start) or after it (the
+            // end of its text, then on to its bar line: snap).
+            let ctxCutAt = -1, ctxCutSnap = false;
             for (const r of document.querySelectorAll('rect.bar-staff')) {
                 const b = r.getBoundingClientRect();
                 if (e.clientX >= b.left && e.clientX <= b.right && e.clientY >= b.top && e.clientY <= b.bottom) {
                     ctxBarRange = barNoteRange(r);
+                    const span = (r.getAttribute('data-span') || '').split(' ').map(Number);
+                    const start = parseInt(r.getAttribute('data-start'), 10);
+                    if (e.clientX - b.left > b.right - e.clientX) {
+                        if (span.length === 2 && !isNaN(span[1])) { ctxCutAt = span[1]; ctxCutSnap = true; }
+                    } else if (!isNaN(start)) {
+                        ctxCutAt = start;
+                    }
                     if (ctxBarRange) break;
                 }
             }
@@ -12236,6 +12295,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 lysHasTodos: todoMarks.length > 0,
                 lysAbLine: ctxAb !== null,
                 lysAbSec: !!(ctxAb && ctxAb.sec),
+                lysCanCut: ctxCutAt >= 0,
+                lysCutAt: ctxCutAt,
+                lysCutSnap: ctxCutSnap,
                 // The Stop button's enabled state is the playback flag that also
                 // covers the optimistic window between Play and the first events.
                 lysPlaying: playingNow()

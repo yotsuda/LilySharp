@@ -523,7 +523,7 @@
           "lilysharp.ai.editModel": {
             "type": "string",
             "default": "",
-            "markdownDescription": "The language model Lily#'s own features that change the music use — *Lily#: Ask AI…* (the command palette) and *Fix OMR Marks with AI…*: a model id or family from **Lily#: Select AI Model…**. Copilot's chat — *Ask AI in Chat* (Ctrl+I) and *Compose with Copilot…* — uses the model picked in the chat instead. Empty chooses automatically — the largest model on offer, passing over the small ones (mini, nano, lite, …), which write poor Lily#. Ghost Completion has its own: `#lilysharp.ai.ghostModel#`.\n\n**[Choose a model…](command:lilysharp.selectAiModel?%5B%22edit%22%5D)**"
+            "markdownDescription": "The language model Lily#'s own features that change the music use — *Lily#: Rewrite with AI…* (the command palette) and *Fix OMR Marks with AI…*: a model id or family from **Lily#: Select AI Model…**. Copilot's chat — *Ask AI in Chat* (Ctrl+I) and *Compose with Copilot…* — uses the model picked in the chat instead. Empty chooses automatically — the largest model on offer, passing over the small ones (mini, nano, lite, …), which write poor Lily#. Ghost Completion has its own: `#lilysharp.ai.ghostModel#`.\n\n**[Choose a model…](command:lilysharp.selectAiModel?%5B%22edit%22%5D)**"
           },
           "lilysharp.ai.ghostModel": {
             "type": "string",
@@ -735,7 +735,7 @@
         "command": "lilysharp.aiTransform",
         "category": "Lily#",
         "icon": "$(sparkle)",
-        "title": "Ask AI…"
+        "title": "Rewrite with AI…"
       },
       {
         "command": "lilysharp.askAiInChat",
@@ -759,25 +759,25 @@
         "command": "lilysharp.previewAiTransform",
         "category": "Lily#",
         "icon": "$(sparkle)",
-        "title": "Ask AI, the Selection as a Hint…"
+        "title": "Rewrite with AI, the Selection as a Hint…"
       },
       {
         "command": "lilysharp.previewAiTransformNote",
         "category": "Lily#",
         "icon": "$(sparkle)",
-        "title": "Ask AI, This Note as a Hint…"
+        "title": "Rewrite with AI, This Note as a Hint…"
       },
       {
         "command": "lilysharp.previewAiTransformBar",
         "category": "Lily#",
         "icon": "$(sparkle)",
-        "title": "Ask AI, This Bar as a Hint…"
+        "title": "Rewrite with AI, This Bar as a Hint…"
       },
       {
         "command": "lilysharp.previewAiTransformScore",
         "category": "Lily#",
         "icon": "$(sparkle)",
-        "title": "Ask AI…"
+        "title": "Rewrite with AI…"
       },
       {
         "command": "lilysharp.previewSelectBar",
@@ -807,17 +807,27 @@
       {
         "command": "lilysharp.removeAllOrMarks",
         "category": "Lily#",
-        "title": "Remove All @or (keep the chords written)"
+        "title": "Remove All @or"
+      },
+      {
+        "command": "lilysharp.resolveAllTodos",
+        "category": "Lily#",
+        "title": "Resolve All TODOs"
+      },
+      {
+        "command": "lilysharp.previewSplitSectionHere",
+        "category": "Lily#",
+        "title": "Split Section Here"
       },
       {
         "command": "lilysharp.joinSections",
         "category": "Lily#",
-        "title": "Join Sections (the selected ones, or this one with the next)"
+        "title": "Join Sections"
       },
       {
         "command": "lilysharp.splitSectionHere",
         "category": "Lily#",
-        "title": "Split Section Here (at the bar line by the caret)"
+        "title": "Split Section Here"
       },
       {
         "command": "lilysharp.omrFixWithAi",
@@ -858,22 +868,22 @@
       {
         "command": "lilysharp.stepSemitoneUp",
         "category": "Lily#",
-        "title": "Step Up in the Key (note / chord shape / tempo / key / clef / dynamic / articulation / time / octave / transpose)"
+        "title": "Step Up in the Key"
       },
       {
         "command": "lilysharp.stepSemitoneDown",
         "category": "Lily#",
-        "title": "Step Down in the Key (note / chord shape / tempo / key / clef / dynamic / articulation / time / octave / transpose)"
+        "title": "Step Down in the Key"
       },
       {
         "command": "lilysharp.stepUp",
         "category": "Lily#",
-        "title": "Step Up an Octave (octave mark / chord shape / tempo / key / clef / dynamic / articulation / time / octave / transpose)"
+        "title": "Step Up an Octave"
       },
       {
         "command": "lilysharp.stepDown",
         "category": "Lily#",
-        "title": "Step Down an Octave (octave mark / chord shape / tempo / key / clef / dynamic / articulation / time / octave / transpose)"
+        "title": "Step Down an Octave"
       },
       {
         "command": "lilysharp.previewAbA",
@@ -972,6 +982,11 @@
       }
     ],
     "submenus": [
+      { "id": "lilysharp.sections", "label": "Lily#: Sections" },
+      { "id": "lilysharp.parts", "label": "Lily#: Parts & Tracks" },
+      { "id": "lilysharp.notation", "label": "Lily#: Notation" },
+      { "id": "lilysharp.cleanup", "label": "Lily#: Clean Up" },
+      { "id": "lilysharp.scan", "label": "Lily#: Scan" },
       {
         "id": "lilysharp.export",
         "label": "Lily#: Export"
@@ -1090,6 +1105,10 @@
         },
         {
           "command": "lilysharp.previewResolveAllTodos",
+          "when": "false"
+        },
+        {
+          "command": "lilysharp.previewSplitSectionHere",
           "when": "false"
         },
         {
@@ -1347,19 +1366,24 @@
           "group": "1_edit@5"
         },
         {
+          "command": "lilysharp.previewSplitSectionHere",
+          "when": "webviewId == 'lilysharpPreview' && lysCanCut",
+          "group": "3_sections@1"
+        },
+        {
           "command": "lilysharp.previewResolveTodo",
           "when": "webviewId == 'lilysharpPreview' && lysBarTodo",
-          "group": "1_edit@6"
+          "group": "4_marks@1"
         },
         {
           "command": "lilysharp.previewResolveAllTodos",
           "when": "webviewId == 'lilysharpPreview' && !lysOnStaff && lysHasTodos",
-          "group": "1_edit@7"
+          "group": "4_marks@2"
         },
         {
           "command": "lilysharp.removeAllOrMarks",
-          "when": "webviewId == 'lilysharpPreview' && !lysOnStaff",
-          "group": "1_edit@8"
+          "when": "webviewId == 'lilysharpPreview' && !lysOnStaff && lilysharp.hasOrMarks",
+          "group": "4_marks@3"
         },
         {
           "command": "lilysharp.previewPlayFromHere",
@@ -1389,22 +1413,22 @@
         {
           "command": "lilysharp.previewFitWidth",
           "when": "webviewId == 'lilysharpPreview'",
-          "group": "3_view@1"
+          "group": "5_view@1"
         },
         {
           "command": "lilysharp.previewResetZoom",
           "when": "webviewId == 'lilysharpPreview'",
-          "group": "3_view@2"
+          "group": "5_view@2"
         },
         {
           "command": "lilysharp.scanFitWidth",
           "when": "webviewId == 'lilysharpScan'",
-          "group": "3_view@1"
+          "group": "5_view@1"
         },
         {
           "command": "lilysharp.scanResetZoom",
           "when": "webviewId == 'lilysharpScan'",
-          "group": "3_view@2"
+          "group": "5_view@2"
         }
       ],
       "explorer/context": [
@@ -1436,110 +1460,95 @@
       ],
       "editor/context": [
         {
+          "command": "lilysharp.splitSectionHere",
+          "when": "resourceLangId == lilysharp && lilysharp.onBarLine",
+          "group": "1_here@1"
+        },
+        {
+          "command": "lilysharp.joinSections",
+          "when": "resourceLangId == lilysharp && lilysharp.canJoinSections",
+          "group": "1_here@2"
+        },
+        {
           "command": "lilysharp.convertShapeToNotes",
           "when": "resourceLangId == lilysharp && lilysharp.onShapeItem",
-          "group": "1_modification@0"
+          "group": "1_here@3"
         },
         {
           "command": "lilysharp.addChordDiagram",
           "when": "resourceLangId == lilysharp && lilysharp.onAngleChord",
-          "group": "1_modification@0"
+          "group": "1_here@3"
         },
         {
           "command": "lilysharp.convertNotesToChord",
           "when": "resourceLangId == lilysharp && lilysharp.onAngleChord",
-          "group": "1_modification@1"
+          "group": "1_here@4"
         },
         {
           "command": "lilysharp.askAiInChat",
           "when": "resourceLangId == lilysharp",
-          "group": "1_modification@1"
-        },
-        {
-          "command": "lilysharp.removeAllOrMarks",
-          "when": "resourceLangId == lilysharp",
-          "group": "1_modification@2"
-        },
-        {
-          "command": "lilysharp.joinSections",
-          "when": "resourceLangId == lilysharp",
-          "group": "1_modification@3"
-        },
-        {
-          "command": "lilysharp.splitSectionHere",
-          "when": "resourceLangId == lilysharp",
-          "group": "1_modification@4"
-        },
-        {
-          "command": "lilysharp.omrFixWithAi",
-          "when": "resourceLangId == lilysharp && lilysharp.hasScan",
-          "group": "1_modification@1"
-        },
-        {
-          "command": "lilysharp.editBarsBesideScan",
-          "when": "resourceLangId == lilysharp && lilysharp.hasScan",
-          "group": "1_modification@1"
-        },
-        {
-          "command": "lilysharp.regroup",
-          "when": "resourceLangId == lilysharp",
-          "group": "1_modification@2"
-        },
-        {
-          "command": "lilysharp.splitSectionsToMatch",
-          "when": "resourceLangId == lilysharp",
-          "group": "1_modification@2"
-        },
-        {
-          "command": "lilysharp.convertOctavesToAbsolute",
-          "when": "resourceLangId == lilysharp",
-          "group": "1_modification@2"
-        },
-        {
-          "command": "lilysharp.convertOctavesToRelative",
-          "when": "resourceLangId == lilysharp",
-          "group": "1_modification@2"
-        },
-        {
-          "command": "lilysharp.removeStringNumbers",
-          "when": "resourceLangId == lilysharp",
-          "group": "1_modification@2"
+          "group": "2_lilysharp@1"
         },
         {
           "command": "lilysharp.sameBarInPart",
           "when": "resourceLangId == lilysharp",
-          "group": "navigation@9"
+          "group": "2_lilysharp@2"
         },
         {
-          "command": "lilysharp.writeRepeatSignsInEveryPart",
+          "submenu": "lilysharp.sections",
           "when": "resourceLangId == lilysharp",
-          "group": "1_modification@3"
+          "group": "3_lilysharp@1"
         },
         {
-          "command": "lilysharp.keepRepeatSignsInOnePart",
+          "submenu": "lilysharp.parts",
           "when": "resourceLangId == lilysharp",
-          "group": "1_modification@3"
+          "group": "3_lilysharp@2"
         },
         {
-          "command": "lilysharp.extractPhrase",
+          "submenu": "lilysharp.notation",
           "when": "resourceLangId == lilysharp",
-          "group": "1_modification@3"
+          "group": "3_lilysharp@3"
         },
         {
-          "command": "lilysharp.addChordTrack",
-          "when": "resourceLangId == lilysharp",
-          "group": "1_modification@3"
+          "submenu": "lilysharp.cleanup",
+          "when": "resourceLangId == lilysharp && (lilysharp.hasTodos || lilysharp.hasOrMarks || lilysharp.hasStringNumbers)",
+          "group": "3_lilysharp@4"
         },
         {
-          "command": "lilysharp.guessSectionKey",
-          "when": "resourceLangId == lilysharp",
-          "group": "1_modification@3"
-        },
-        {
-          "command": "lilysharp.respellNotesToKey",
-          "when": "resourceLangId == lilysharp",
-          "group": "1_modification@3"
+          "submenu": "lilysharp.scan",
+          "when": "resourceLangId == lilysharp && lilysharp.hasScan",
+          "group": "3_lilysharp@5"
         }
+      ],
+      "lilysharp.sections": [
+        { "command": "lilysharp.joinSections", "group": "1_sections@1" },
+        { "command": "lilysharp.splitSectionHere", "group": "1_sections@2" },
+        { "command": "lilysharp.splitSectionsToMatch", "group": "1_sections@3" },
+        { "command": "lilysharp.extractPhrase", "group": "2_layout@1" },
+        { "command": "lilysharp.regroup", "group": "2_layout@2" }
+      ],
+      "lilysharp.parts": [
+        { "command": "lilysharp.addChordTrack", "group": "1_parts@1" },
+        { "command": "lilysharp.writeHarmonyPart", "group": "1_parts@2" },
+        { "command": "lilysharp.writeSingerPart", "group": "1_parts@3" },
+        { "command": "lilysharp.writeRepeatSignsInEveryPart", "group": "2_repeats@1" },
+        { "command": "lilysharp.keepRepeatSignsInOnePart", "group": "2_repeats@2" }
+      ],
+      "lilysharp.notation": [
+        { "command": "lilysharp.convertOctavesToAbsolute", "group": "1_octaves@1" },
+        { "command": "lilysharp.convertOctavesToRelative", "group": "1_octaves@2" },
+        { "command": "lilysharp.respellNotesToKey", "group": "2_key@1" },
+        { "command": "lilysharp.guessSectionKey", "group": "2_key@2" }
+      ],
+      "lilysharp.cleanup": [
+        { "command": "lilysharp.resolveAllTodos", "when": "lilysharp.hasTodos", "group": "1_cleanup@1" },
+        { "command": "lilysharp.removeAllOrMarks", "when": "lilysharp.hasOrMarks", "group": "1_cleanup@2" },
+        { "command": "lilysharp.removeStringNumbers", "when": "lilysharp.hasStringNumbers", "group": "1_cleanup@3" }
+      ],
+      "lilysharp.scan": [
+        { "command": "lilysharp.omrFixWithAi", "group": "1_scan@1" },
+        { "command": "lilysharp.editBarsBesideScan", "group": "1_scan@2" },
+        { "command": "lilysharp.showScan", "group": "1_scan@3" }
       ],
       "editor/title": [
         {

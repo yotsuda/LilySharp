@@ -197,27 +197,30 @@ describe('the chords of a score', () => {
     });
 
     // Owner's report 2026-10-27: the menu's groups held one item each. Three groups: what changes
-    // the music (the AI, the selection, the scan), playback, the view.
-    it('groups the preview\'s menu as editing, playback and view', () => {
+    // the music (the AI, the selection, the scan), playback, the view — and, with the menus'
+    // reorganisation (owner's decision 2026-11-17), the sections (cut here) and the marks (TODOs, @or).
+    it('groups the preview\'s menu as editing, playback, sections, marks and view', () => {
         const fs = require('node:fs') as typeof import('node:fs');
         const path = require('node:path') as typeof import('node:path');
         const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
         const menu = pkg.contributes.menus['webview/context'] as { command: string; group: string }[];
         const groups = [...new Set(menu.map(m => m.group.split('@')[0]))].sort();
-        assert.deepEqual(groups, ['1_edit', '2_playback', '3_view']);
+        assert.deepEqual(groups, ['1_edit', '2_playback', '3_sections', '4_marks', '5_view']);
+        assert.equal(menu.find(m => m.command === 'lilysharp.previewSplitSectionHere')?.group, '3_sections@1');
+        assert.equal(menu.find(m => m.command === 'lilysharp.previewResolveAllTodos')?.group, '4_marks@2');
         const of = (c: string) => menu.find(m => m.command === c)?.group;
         // Owner's request 2026-10-29: the AI on the menu is the chat's; Lily#'s own Ask AI left it.
         assert.equal(of('lilysharp.previewAskAiInChat'), '1_edit@1');
         assert.ok(!menu.some(m => m.command.startsWith('lilysharp.previewAiTransform')));
         const editor = pkg.contributes.menus['editor/context'] as { command: string; group: string }[];
-        assert.equal(editor.find(m => m.command === 'lilysharp.askAiInChat')?.group, '1_modification@1');
+        assert.equal(editor.find(m => m.command === 'lilysharp.askAiInChat')?.group, '2_lilysharp@1');
         assert.ok(!editor.some(m => m.command === 'lilysharp.aiTransform'));
         // …nor composing: a new piece is begun from File > New File… (owner's decision, the same day).
-        assert.ok(!editor.some(m => m.command.startsWith('lilysharp.composeWithAi')));
+        assert.ok(!editor.some(m => m.command?.startsWith('lilysharp.composeWithAi')));
         assert.equal(of('lilysharp.previewSelectChord'), '1_edit@2');
         assert.equal(of('lilysharp.editBarsBesideScan'), '1_edit@5');
         assert.equal(of('lilysharp.previewPlayFromHere'), '2_playback@1');
-        assert.equal(of('lilysharp.previewFitWidth'), '3_view@1');
+        assert.equal(of('lilysharp.previewFitWidth'), '5_view@1');
     });
 });
 
