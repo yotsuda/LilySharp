@@ -424,7 +424,7 @@ describe('the preview offers Play from Here on a note and on a bar', () => {
     });
     it('starts from the note right-clicked, else from the first note of the bar', () => {
         assert.match(source, /ctxPlayPos = ctxNotePos >= 0 \? ctxNotePos : ctxBarRange \? ctxBarRange\[0\] : -1;/);
-        assert.match(source, /case 'ctxPlayFromHere':\s*if \(ctxPlayPos >= 0\) \{\s*pendingStartPos = ctxPlayPos;/);
+        assert.match(source, /case 'ctxPlayFromHere':\s*if \(ctxPlayPos >= 0\) \{\s*paused = null;\s*pendingStartBar = -1;\s*pendingStartPos = ctxPlayPos;/);
     });
 });
 

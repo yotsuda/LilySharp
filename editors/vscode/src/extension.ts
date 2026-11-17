@@ -6187,11 +6187,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
              instruments are notes too"): a status over the Play it speaks of, drawn as what sings.
              A click still opens the practice menu, where each voice has its own toggle and sign. -->
         <span class="play-wrap">
-        <button id="playBtn" type="button" title="Play (while playing: again from the editor's caret)">▶</button>
+        <button id="playBtn" type="button" title="Play from the A flag (Space while stopped)">▶</button>
         <span id="voiceBadge" class="voice-badge" role="status" hidden aria-label="Voice"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="1.2" width="4" height="7.6" rx="2"/><path d="M3.6 7.4a4.4 4.4 0 0 0 8.8 0"/><path d="M8 11.8v2.6M5.6 14.4h4.8"/></svg></span>
         <span id="voiceBar" class="voice-bar" hidden aria-hidden="true"><span></span></span>
         </span>
-        <button id="stopBtn" type="button" title="Stop" disabled>⏹</button>
+        <!-- Pause (docs/transport-mixer-design.md §1 3): where it plays, held; pressed again, on from there. -->
+        <button id="pauseBtn" class="toggle" type="button" aria-pressed="false" title="Pause — pressed again, go on from there (Space)" disabled>⏸</button>
+        <button id="stopBtn" type="button" title="Stop, back to the A flag" disabled>⏹</button>
         <button id="practiceBtn" class="toggle icon practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" aria-label="Practice" title="Tempo, loop, metronome, parts"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M3.6 14.8 6.3 1.4h3.4l2.7 13.4zM7.3 3 5.9 10.2h4.2L8.7 3z"/><path d="M7.7 11.2 12.4 3.9l1 .65-4.7 7.3z"/></svg><span id="practiceSpeed"></span></button>
         <!-- The recording beside the chart (docs/recording-design.md §1 3, §1 7): shown only when the
              chart has one. It opens the recording's panel (on/off and volume, speed, pitch, pitch
@@ -8296,7 +8298,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         let pendingFromHere = false;    // the menu's Play from Here: from the note, never the loop
         let loopOn = false;
         let loopList = null;
-        let pendingStartPos = -1;   // play-button start point (the highlighted note)
+        let pendingStartPos = -1;   // a start point by a note's place (Play from Here)
+        let pendingStartBar = -1;   // …or by a printed bar, the A flag's (Play; barStartIn)
         let lastResolvedPos = -1;   // the note the current highlight actually resolved to
 
         // ---- The Range panel (owner's request 2026-10-25): each part's lowest and highest note
@@ -8462,15 +8465,27 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             renderRanges();
         }
 
+        // Paused (docs/transport-mixer-design.md §1 3): what played and where, to go on from —
+        // { notes, at, origin, countFix, loop, seconds } of the score's list, or { recAt } of the
+        // recording playing alone. Stop is live while paused; nothing sounds.
+        var paused = null;
+        var playOrigin = undefined;     // the origin startPlayback was last given (a stretch's start, or 0)
+        /** Whether something sounds now (not paused, not stopped). */
+        function playingNow() { return !document.getElementById('stopBtn').disabled && !paused; }
+        var playStateSaid = false;
         function setPlayUi(playing) {
-            // The host's follower waits for the music to stop before it turns to another file.
-            if (playing !== !document.getElementById('stopBtn').disabled) {
+            // The host's follower waits for the music to stop before it turns to another file
+            // (said as it changes — not off Stop's state, which a pause keeps live).
+            if (playing !== playStateSaid) {
+                playStateSaid = playing;
                 vscode.postMessage({ type: 'playState', playing });
             }
-            // Play stays pressable while playing: pressed then, it plays again from the editor's
-            // caret (owner's request 2026-11-16; the click handler).
+            // Play stays pressable while playing: pressed then, it plays again from the A flag.
             document.getElementById('playBtn').disabled = false;
-            document.getElementById('stopBtn').disabled = !playing;
+            document.getElementById('stopBtn').disabled = !playing && !paused;
+            const pauseBtn = document.getElementById('pauseBtn');
+            pauseBtn.disabled = !playing && !paused;
+            pauseBtn.setAttribute('aria-pressed', String(!!paused));
             // Where the playback stands, beside the length (owner's request 2026-11-16).
             clearInterval(positionTimer);
             positionTimer = playing ? setInterval(showPosition, 200) : null;
@@ -8507,28 +8522,45 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
         function showPosition() {
             const el = document.getElementById('posInfo');
-            const playing = !document.getElementById('stopBtn').disabled;
-            const s = playing ? playbackScoreSeconds() : stoppedSeconds;
+            const s = playingNow() ? playbackScoreSeconds() : paused && typeof paused.seconds === 'number' ? paused.seconds : stoppedSeconds;
             el.hidden = typeof s !== 'number' || !isFinite(s);
             el.textContent = el.hidden ? '' : clockText(s) + ' /';
         }
-        // …and while nothing plays, where Play would start (owner's request 2026-11-16): the
-        // selected bars' start, else the note the caret is on (its first onset, as Play's start),
-        // else the first note written after the caret; the top when there is no caret. The
-        // extension reads it off the length's notes (requestPositionTime → positionTime); a newer
-        // question makes an older answer stale (seq).
+        /**
+         * When printed bar m (a measure index, as the flags count) first plays, on a list's own time
+         * base: its first event (a note, a rest's light) taken back to the bar line before it — a bar
+         * with none, the next bar that has one. The beats are the list's (bar lines accented).
+         */
+        function barStartIn(list, beats, m) {
+            let t = Infinity, bestM = Infinity;
+            for (const n of list || []) {
+                if (typeof n.M !== 'number' || n.M < m) continue;
+                if (n.M < bestM || (n.M === bestM && n.T < t)) { bestM = n.M; t = n.T; }
+            }
+            if (t === Infinity) return 0;
+            let start = 0;
+            for (const b of beats || []) { if (b.T > t + 1e-6) break; if (b.A) start = b.T; }
+            return start;
+        }
+        // …and while nothing plays, where Play starts — the A flag's bar (docs/transport-mixer-design.md
+        // §1 3; until then the editor's caret, owner's decision 2026-11-17) — off the notes in hand
+        // (the score's seconds as the length counts them), else asked of the extension
+        // (requestPositionTime → positionTime; a newer question makes an older answer stale, seq).
         var stoppedSeconds = null, positionSeq = 0;
         function askStoppedPosition() {
-            if (!document.getElementById('stopBtn').disabled) return;
-            // A-B on: Play starts at A, which the A field says (no time to show for it here).
-            if (abOn) { stoppedSeconds = null; showPosition(); return; }
-            let position = -1, exact = false;
+            if (playingNow() || paused) return;
+            const m = Math.max(0, abFrom);
+            if (rawNotes) { stoppedSeconds = barStartIn(rawNotes, rawBeats, m); showPosition(); return; }
+            let position = -1;
             try {
-                position = caretStartPos(); exact = true;    // as Play starts (the selection no longer plays: A-B)
+                for (const r of svgContainer.querySelectorAll('rect.bar-staff[data-start]')) {
+                    if (measureOfStaffBox(r) === m) { position = parseInt(r.getAttribute('data-start'), 10); break; }
+                }
             } catch (e) {
                 return;     // (the page's script is still starting: its bindings are not there yet)
             }
-            vscode.postMessage({ type: 'requestPositionTime', position, exact, seq: ++positionSeq });
+            if (position < 0) { stoppedSeconds = m === 0 ? 0 : null; showPosition(); return; }
+            vscode.postMessage({ type: 'requestPositionTime', position, exact: false, seq: ++positionSeq });
         }
 
         function stopPlayback() {
@@ -8662,6 +8694,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (origin !== undefined) end = Math.max(end, startRecordingAlong(t0, offset, origin, !!loopList));
             // A loop's rounds end where they were laid out to, notes or none (the recording alone goes round too).
             if (loopList && loopRound > 0) end = Math.max(end, loopRound * loopRoundCount);
+            playOrigin = origin;    // (a pause goes on from the same list, the same origin)
             setPlayUi(true);
             // A loop goes round when the last note ends; a plain playback lets it ring a moment.
             playEndTimer = setTimeout(playEnded, (end - offset + (loopList ? 0 : 0.5)) * 1000);
@@ -9099,29 +9132,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (recOn && recording && !recording.ready) {
                 flashInfo(recording.error || 'The recording is not loaded yet: the score alone', 4000);
             }
-            // Pressed while playing: again from the editor's caret (owner's request 2026-11-16) —
-            // as the menu's Play from Here does: from that note, not the selection, not round the
-            // loop. The caret is the editor's own (editorCaret): the page's resolved note follows
-            // the sound while it plays.
-            if (!document.getElementById('stopBtn').disabled) {
-                const from = caretStartPos();
-                stopPlayback();
-                pendingStartPos = from;
-                pendingSpan = null;
-                pendingFromHere = true;
-                pendingLoopRefresh = false;
-                setPlayUi(true);
-                requestPlay();
-                return;
-            }
+            // Always from the A flag (docs/transport-mixer-design.md §1 3; owner's decisions
+            // 2026-11-17) — stopped, playing or paused alike: the bars A to B with A-B on, else
+            // the score from A's bar on. The editor's caret has no say (it was the start point from
+            // 2026-11-16: "why does it play from here?").
+            paused = null;
+            if (playingNow()) stopPlayback();
             setPlayUi(true); // immediate feedback while the request runs
-            // The editor's caret is the start point (owner's decision 2026-11-16, which retires
-            // "after Stop, Play starts from the top"): the note it is on, from its first onset,
-            // else the first note written after it (caretStartPos — the editor's own caret, which
-            // a playback and a Stop leave where it is).
-            pendingStartPos = caretStartPos();
-            // A-B on: the bars A to B (docs/ab-repeat-design.md) — which retire "the selected bars"
-            // (owner's decision 2026-11-17: the selection only places A and B the first time).
+            pendingStartPos = -1;
+            pendingStartBar = abOn ? -1 : Math.max(0, abFrom);
+            pendingFromHere = false;
             pendingSpan = abOn ? { ab: [abFrom, abTo] } : null;
             pendingLoopRefresh = false;     // (this Play's notes are its own, not a loop's next round)
             requestPlay();
@@ -9129,8 +9149,46 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         document.getElementById('stopBtn').addEventListener('click', () => {
             pendingLoopRefresh = false;     // (a loop's next round with the new text: off with it)
             loopList = null;
+            paused = null;
             stopPlayback();
             if (recPlayer && recPlayer.playing) { recPlayer.stop(); setPlayUi(false); }
+        });
+        // Pause (§1 3): playing, held where it is; paused, on from there. A does not move.
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            if (paused) {
+                const p = paused;
+                paused = null;
+                if (p.recAt !== undefined) {
+                    if (!playRecordingFrom(p.recAt)) setPlayUi(false);
+                    return;
+                }
+                loopList = p.loop;
+                startPlayback(p.notes, p.at, false, false, p.countFix, p.origin);
+                loopList = p.loop;
+                return;
+            }
+            if (!playingNow()) return;
+            if (playClock && playingNotes) {
+                const p = { notes: playingNotes, at: Math.max(0, playOffset + playClock()), origin: playOrigin,
+                    countFix: countInFix, loop: loopList, seconds: playbackScoreSeconds() };
+                pendingLoopRefresh = false;
+                stopPlayback();
+                paused = p;
+                setPlayUi(false);
+            } else if (recPlayer && recPlayer.playing) {
+                const at = recPlayer.position();
+                recPlayer.stop();
+                paused = { recAt: at || 0, seconds: at };
+                setPlayUi(false);
+            }
+        });
+        // Space, with the page in focus (not in a field): stopped, Play; playing or paused, Pause.
+        window.addEventListener('keydown', (e) => {
+            if (e.key !== ' ' || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+            const t = e.target;
+            if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+            e.preventDefault();
+            document.getElementById(playingNow() || paused ? 'pauseBtn' : 'playBtn').click();
         });
         const loopBtn = document.getElementById('loopBtn');
         loopBtn.addEventListener('click', () => {
@@ -9139,7 +9197,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // the end) does what it says when it is reached: back to A on, stop off (owner's request
             // 2026-11-17: turned on while the bars played, it still stopped at B). Nothing to go on
             // from (the recording alone): off ends what plays where it ends.
-            if (document.getElementById('stopBtn').disabled || !resumeHere()) {
+            if (!playingNow() || !resumeHere()) {
                 if (!loopOn) loopList = null;
             }
             showPractice();
@@ -9215,11 +9273,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         /** A-B moved while it plays: the new bars, from where it plays now when that is inside them
          *  (owner's request 2026-11-17: a flag moved sent it back to A each time), else from A. */
         function replayIfPlaying() {
-            if (document.getElementById('stopBtn').disabled) return;
-            if (abOn && resumeHere()) return;
+            if (!playingNow()) return;
+            if (resumeHere()) return;
             stopPlayback();
             setPlayUi(true);
             pendingStartPos = -1;
+            pendingStartBar = abOn ? -1 : Math.max(0, abFrom);
             pendingFromHere = false;
             pendingSpan = abOn ? { ab: [abFrom, abTo] } : null;
             requestPlay();
@@ -9275,7 +9334,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
         abBtn.addEventListener('click', () => {
             abOn = !abOn;
-            if (abOn && abFrom < 0) {
+            // B where it was, else placed now (A stands already: from it, or the selected bars).
+            if (abOn && abTo < abFrom) {
                 const first = abFirstPlace();
                 if (!first) { abOn = false; flashInfo('No bars to play yet', 3000); showAb(); return; }
                 [abFrom, abTo] = first;
@@ -9312,19 +9372,40 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             for (const k in attrs) el.setAttribute(k, String(attrs[k]));
             return el;
         }
+        // The A flag always stands — where Play starts, the top at first — and B with the bars
+        // between tinted only while A-B is on (owner's decisions 2026-11-17,
+        // docs/transport-mixer-design.md §1 3).
         function drawAbFlags() {
             for (const el of svgContainer.querySelectorAll('.ab-mark')) el.remove();
-            if (!abOn || abFrom < 0) return;
             const bars = abBars();
-            for (let m = abFrom; m <= abTo; m++) {
-                const r = bars[m] && bars[m].rect;
-                if (!r) continue;
-                const shade = abEl('rect', { class: 'ab-mark ab-shade', x: r.getAttribute('x'), y: r.getAttribute('y'),
-                    width: r.getAttribute('width'), height: r.getAttribute('height') });
-                r.parentNode.insertBefore(shade, r);
+            if (bars.length === 0) return;
+            if (abFrom < 0 || abFrom >= bars.length) abFrom = Math.max(0, Math.min(abFrom, bars.length - 1));
+            if (abOn) {
+                for (let m = abFrom; m <= abTo; m++) {
+                    const r = bars[m] && bars[m].rect;
+                    if (!r) continue;
+                    const shade = abEl('rect', { class: 'ab-mark ab-shade', x: r.getAttribute('x'), y: r.getAttribute('y'),
+                        width: r.getAttribute('width'), height: r.getAttribute('height') });
+                    r.parentNode.insertBefore(shade, r);
+                }
+                if (bars[abTo]) drawAbFlag('B', bars[abTo].rect, true);
             }
             if (bars[abFrom]) drawAbFlag('A', bars[abFrom].rect, false);
-            if (bars[abTo]) drawAbFlag('B', bars[abTo].rect, true);
+        }
+        /** The A flag to bar m — a bar clicked, A Here (docs/transport-mixer-design.md §1 3). With
+         *  A-B on, B goes along past it, keeping the bars between (the range carried); off, a B
+         *  left before it is forgotten (placed anew when A-B goes on). Plays on from where it plays
+         *  when that is still in what is to play (replayIfPlaying). */
+        function setA(m, replay = true) {
+            const last = Math.max(0, abBars().length - 1);
+            m = Math.max(0, Math.min(m, last));
+            if (abOn && m > abTo) { abTo = Math.min(last, m + (abTo - abFrom)); }
+            abFrom = m;
+            if (!abOn && abTo < m) abTo = -1;
+            showAb();
+            showPractice();
+            if (replay) replayIfPlaying();
+            askStoppedPosition();
         }
         function drawAbFlag(letter, rect, atEnd) {
             const x = parseFloat(rect.getAttribute('x')) + (atEnd ? parseFloat(rect.getAttribute('width')) : 0);
@@ -9422,8 +9503,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // The system the pointer is over (the nearest, between two) first, then its line nearest
             // across: a wide bar's far line is still its own system's, not the next system's
             // (measured 2026-11-17: zoomed out, a diagonal drag went 4, 9, 5, 10 by the lines' distance).
-            const other = abLineOf(abDrag.letter === 'A' ? 'B' : 'A');
-            const lines = abLines();
+            // (A-B off: A alone stands — no other flag to pass, and no line after the last bar)
+            const other = abOn ? abLineOf(abDrag.letter === 'A' ? 'B' : 'A') : Infinity;
+            const lines = abOn ? abLines() : abLines().filter(l => l.line < abBars().length);
             let near = Infinity;
             for (const l of lines) { l.dy = abSystemDistance(l, e.clientY); near = Math.min(near, l.dy); }
             let best = null, bestD = Infinity, curD = Infinity;
@@ -9440,8 +9522,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         /** The flag held slides to the bar line given: before the other flag it is A, after it B. */
         function moveAbFlag(line) {
             const before = abFlagEl(abDrag.letter), from = before && before.querySelector('.ab-pole').getBoundingClientRect();
-            const other = abLineOf(abDrag.letter === 'A' ? 'B' : 'A');
-            if (line < other) { abFrom = line; abTo = other - 1; abDrag.letter = 'A'; }
+            const other = abOn ? abLineOf(abDrag.letter === 'A' ? 'B' : 'A') : Infinity;
+            if (!abOn) { abFrom = line; }
+            else if (line < other) { abFrom = line; abTo = other - 1; abDrag.letter = 'A'; }
             else { abFrom = other; abTo = line - 1; abDrag.letter = 'B'; }
             abDrag.at = line;
             drawAbFlags();
@@ -9472,7 +9555,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             hideAbGhost();
             if (!abDrag) return;
             abDrag = null;
-            setAb(abFrom, abTo);    // (and from A, if it plays)
+            if (abOn) setAb(abFrom, abTo);    // (on from where it plays, if it is in the new bars)
+            else setA(abFrom);
         }
 
         // ---- The eight kept ranges (docs/ab-repeat-design.md §1, step 5): strips at the foot of
@@ -9634,7 +9718,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // comes too late for it waits for the end of the next.
         var pendingLoopRefresh = false, loopSwitchTimer = null;
         function refreshLoop(message) {
-            if (document.getElementById('stopBtn').disabled || !playClock || !loopList || lastSpan === undefined) return;
+            if (!playingNow() || !playClock || !loopList || lastSpan === undefined) return;
             const oldRound = loopRound, oldStart = spanStart, oldPieces = spanPieces;
             const tau = Math.max(0, playOffset + playClock() - countInFix);
             rawNotes = message.notes; rawParts = message.parts || null; rawBeats = message.beats || null; rawBarEnd = message.barEnd || null; rawExtra = message.extra || null; rawSung = message.sung || null; rawPlayed = message.played || null;
@@ -9652,7 +9736,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // much before the round's end.
             loopSwitchTimer = setTimeout(() => {
                 loopSwitchTimer = null;
-                if (gen !== playGeneration || document.getElementById('stopBtn').disabled) return;
+                if (gen !== playGeneration || !playingNow()) return;
                 loopRound = newRound; spanStart = newStart; spanPieces = newPieces;
                 const rounds = looped(list);
                 voicePlan = { pieces: spanPieces, rounds: loopRoundCount };
@@ -9798,7 +9882,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // and back through the new one. (oldSpeed is the caller's: the old basis already has it.)
         function practiceChanged(oldSpeed) {
             showPractice();
-            const playing = !document.getElementById('stopBtn').disabled;
+            const playing = playingNow();
             if (!playing || relaying || !rawNotes || !playClock) return;
             const old = playBasis || { warp: null, speed: oldSpeed };
             const oldOrigin = lastSpan === undefined ? 0 : spanStart;
@@ -10730,6 +10814,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     pendingAudition = null;
                     playbackNotes = null;
                     pendingStartPos = -1;
+                    pendingStartBar = -1;
+                    paused = null;
                     lastResolvedPos = -1;
                     lastHighlightPos = -1;
                     lastHighlightTokenStart = -1;
@@ -10801,7 +10887,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         playEdited = true;
                         // Going round a loop: the next round sounds the new text (owner's request
                         // 2026-11-17 — a bar looped while it is written by ear; refreshLoop).
-                        if (loopOn && loopList && lastSpan !== undefined && playClock && !document.getElementById('stopBtn').disabled) {
+                        if (loopOn && loopList && lastSpan !== undefined && playClock && playingNow()) {
                             pendingLoopRefresh = true;
                             requestPlay();
                         }
@@ -10968,6 +11054,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 // highlighted note does.
                 case 'ctxPlayFromHere':
                     if (ctxPlayPos >= 0) {
+                        paused = null;
+                        pendingStartBar = -1;
                         pendingStartPos = ctxPlayPos;
                         // From the note, as asked — not the selection, not round the loop.
                         pendingSpan = null;
@@ -10991,7 +11079,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 case 'ctxAbSection': {
                     const c = ctxAb;
                     if (!c) break;
-                    let from = abOn ? abFrom : -1, to = abOn ? abTo : -1;
+                    // A Here moves the A flag only — it always stands, A-B on or off
+                    // (docs/transport-mixer-design.md §1 3).
+                    if (message.type === 'ctxAbA') { setA(c.after); break; }
+                    let from = abFrom, to = abOn ? abTo : -1;
                     if (message.type === 'ctxAbSection') { if (!c.sec) break; from = c.sec[0]; to = c.sec[1]; }
                     else if (message.type === 'ctxAbA') { from = c.after; if (to < from) to = Math.min(c.last, from + 3); }
                     else { to = c.before; if (from < 0 || from > to) from = Math.max(0, to - 3); }
@@ -11077,6 +11168,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         loopList = null;
                         voicePlan = { pieces: null, rounds: 1 };
                         let startAt = 0;
+                        if (pendingStartPos < 0 && pendingStartBar >= 0) {
+                            // From the A flag's bar where it first plays (§1 3), on this list's time.
+                            const speed = playedSpeed();
+                            startAt = barStartIn(playbackNotes, (playedBeats() || []).map(b => ({ T: b.T / speed, A: b.A })), pendingStartBar);
+                        }
+                        pendingStartBar = -1;
                         if (pendingStartPos >= 0) {
                             let first = Infinity;
                             for (const n of playbackNotes) {
@@ -11266,7 +11363,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     return;
                 }
                 // Plain click: this note becomes the anchor; any prior score
-                // selection is dropped.
+                // selection is dropped. Its bar takes the A flag, where Play starts (the
+                // playing goes on from the note, seeking below).
+                { const b = barStaffAt(e.clientX, e.clientY); const m = b ? measureOfStaffBox(b) : -1; if (m >= 0) setA(m, false); }
                 aiAnchorPos = pos;
                 aiRangeLo = -1; aiRangeHi = -1;
                 lightSelectedBars();
@@ -11286,6 +11385,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 // bar's own copy of that note (a section played twice prints it twice).
                 const bar = barStaffAt(e.clientX, e.clientY);
                 const pos = parseInt(bar.getAttribute('data-start'), 10);
+                // The bar takes the A flag: Play starts there (docs/transport-mixer-design.md §1 3).
+                { const m = measureOfStaffBox(bar); if (m >= 0) setA(m, false); }
                 lastHighlightPos = -1;
                 aiClearSelection();
                 aiAnchorPos = (barNoteRange(bar) || [pos])[0];
@@ -11451,7 +11552,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 lysAbSec: !!(ctxAb && ctxAb.sec),
                 // The Stop button's enabled state is the playback flag that also
                 // covers the optimistic window between Play and the first events.
-                lysPlaying: !document.getElementById('stopBtn').disabled
+                lysPlaying: playingNow()
             });
         }, true);
 

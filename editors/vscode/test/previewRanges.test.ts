@@ -94,33 +94,50 @@ describe('the preview\'s Range panel', () => {
         assert.match(extension, /pendingRefreshSince\.delete\(uri\);\s*updatePreviewContent\(event\.document, panel, context\);/);
     });
 
-    // Play stays pressable while playing; pressed then, it plays again from the editor's caret
-    // (owner's request 2026-11-16), as Play from Here does.
-    it('plays again from the editor\'s caret when Play is pressed while playing', () => {
+    // Play always from the A flag (owner's decisions 2026-11-17, docs/transport-mixer-design.md
+    // §1 3): stopped, playing or paused alike; the editor's caret has no say ("why does it play
+    // from here?"). Pause holds where it plays and goes on from there; Stop goes back to A.
+    it('plays from the A flag, stopped, playing or paused alike — not from the editor\'s caret', () => {
         assert.match(html, /document\.getElementById\('playBtn'\)\.disabled = false;/);
         assert.doesNotMatch(html, /getElementById\('playBtn'\)\.disabled = playing/);
-        assert.match(html, /if \(!document\.getElementById\('stopBtn'\)\.disabled\) \{\s*const from = caretStartPos\(\);\s*stopPlayback\(\);\s*pendingStartPos = from;\s*pendingSpan = null;\s*pendingFromHere = true;/);
-        assert.match(html, /case 'highlightPosition':\s*editorCaret = \{ pos: message\.position, tokenStart: message\.tokenStart, caret: message\.caret \};/);
-        // The caret's note, by the highlight's rule; its own place when on no note; a selection's start.
-        const at = html.indexOf('function caretStartPos(');
-        const body = html.slice(at, html.indexOf('\n        }', at) + '\n        }'.length);
-        const context = vm.createContext({ editorCaret: null, posSorted: [10, 20, 30], HIGHLIGHT_THRESHOLD: 50, sourcePositions() { /* */ } });
-        new vm.Script(body).runInContext(context);
-        const run = (code: string) => new vm.Script(code).runInContext(context) as number;
-        assert.equal(run('caretStartPos()'), -1);
-        assert.equal(run('editorCaret = { pos: 22, tokenStart: 20, caret: 22 }; caretStartPos()'), 20);
-        assert.equal(run('editorCaret = { pos: 25, tokenStart: 24, caret: 25 }; caretStartPos()'), 25);
-        assert.equal(run('editorCaret = { pos: -1, tokenStart: -1, caret: 17 }; caretStartPos()'), 17);
-        assert.equal(run('editorCaret = { ranges: [[40, 50], [12, 18]], caret: 18 }; caretStartPos()'), 12);
+        const play = html.slice(html.indexOf("getElementById('playBtn').addEventListener('click'"), html.indexOf("getElementById('stopBtn').addEventListener('click'"));
+        assert.match(play, /paused = null;\s*if \(playingNow\(\)\) stopPlayback\(\);/);
+        assert.match(play, /pendingStartBar = abOn \? -1 : Math\.max\(0, abFrom\);/);
+        assert.match(play, /pendingSpan = abOn \? \{ ab: \[abFrom, abTo\] \} : null;/);
+        assert.doesNotMatch(play, /caretStartPos\(\)/);
+        // The answer starts at the A bar's first play, on the list's time.
+        assert.match(html, /if \(pendingStartPos < 0 && pendingStartBar >= 0\) \{[\s\S]{0,300}startAt = barStartIn\(playbackNotes, /);
+        // Stopped, the header says A's bar's time — off the notes in hand, no caret.
+        const ask = html.slice(html.indexOf('function askStoppedPosition()'), html.indexOf('function stopPlayback()'));
+        assert.doesNotMatch(ask, /caretStartPos/);
+        assert.match(ask, /if \(rawNotes\) \{ stoppedSeconds = barStartIn\(rawNotes, rawBeats, m\);/);
     });
 
-    // …and stopped too (owner's decision 2026-11-16, retiring "after Stop, Play from the top").
-    it('plays from the editor\'s caret when stopped too, and the header says that place', () => {
-        assert.match(html, /setPlayUi\(true\); \/\/ immediate feedback while the request runs[\s\S]{0,500}?pendingStartPos = caretStartPos\(\);/);
-        assert.doesNotMatch(html, /pendingStartPos = lastResolvedPos;/);
-        // (the selection no longer plays — A-B does, and with A-B on no place is said)
-        assert.match(html, /position = caretStartPos\(\); exact = true;/);
-        assert.match(html, /if \(abOn\) \{ stoppedSeconds = null; showPosition\(\); return; \}/);
+    it('finds where a printed bar first plays, back to its bar line', () => {
+        const at = html.indexOf('function barStartIn(');
+        const body = html.slice(at, html.indexOf('\n        }', at) + '\n        }'.length);
+        const context = vm.createContext({});
+        new vm.Script(body).runInContext(context);
+        const run = (code: string) => new vm.Script(code).runInContext(context) as number;
+        // Bars of 2 s; bar 1 printed once but played twice (a repeat): its first play.
+        run(`var list = [{ T: 0.5, M: 0 }, { T: 2.5, M: 1 }, { T: 6.5, M: 1 }, { T: 9, M: 3 }];
+             var beats = [0, 2, 4, 6, 8, 10].map(T => ({ T, A: true })).concat([{ T: 3, A: false }]).sort((a, b) => a.T - b.T);`);
+        assert.equal(run('barStartIn(list, beats, 1)'), 2);
+        assert.equal(run('barStartIn(list, beats, 0)'), 0);
+        // A bar with nothing in it: the next bar that has something.
+        assert.equal(run('barStartIn(list, beats, 2)'), 8);
+        assert.equal(run('barStartIn(list, beats, 9)'), 0);
+    });
+
+    it('pauses where it plays and goes on from there; Stop goes back to A; Space plays or pauses', () => {
+        assert.match(html, /id="pauseBtn"/);
+        const pause = html.slice(html.indexOf("getElementById('pauseBtn').addEventListener('click'"));
+        assert.match(pause, /startPlayback\(p\.notes, p\.at, false, false, p\.countFix, p\.origin\);/);
+        assert.match(pause, /notes: playingNotes, at: Math\.max\(0, playOffset \+ playClock\(\)\), origin: playOrigin,/);
+        assert.match(html, /function playingNow\(\) \{ return !document\.getElementById\('stopBtn'\)\.disabled && !paused; \}/);
+        assert.match(html, /document\.getElementById\(playingNow\(\) \|\| paused \? 'pauseBtn' : 'playBtn'\)\.click\(\);/);
+        // A click on a bar (or a note of it) takes the A flag there.
+        assert.match(html, /\{ const m = measureOfStaffBox\(bar\); if \(m >= 0\) setA\(m, false\); \}/);
     });
 
     // Where the playback stands, just left of the length (owner's request 2026-11-16), on the
@@ -246,11 +263,11 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /case 'playbackData':\s+if \(typeof message\.seq === 'number' && message\.seq !== playSeq\) \{/);
         // A flag moved while it plays goes on from where it plays when that is in the new bars
         // (owner's request 2026-11-17), from the notes in hand — no request.
-        assert.match(html, /function replayIfPlaying\(\) \{\s+if \(document\.getElementById\('stopBtn'\)\.disabled\) return;\s+if \(abOn && resumeHere\(\)\) return;/);
+        assert.match(html, /function replayIfPlaying\(\) \{\s+if \(!playingNow\(\)\) return;\s+if \(resumeHere\(\)\) return;/);
         const resume = html.slice(html.indexOf('function resumeHere()'), html.indexOf('function setAb('));
         assert.doesNotMatch(resume, /requestPlay\(/);
         // Repeat turned on or off while it plays: laid out again from here, so B does what Repeat says then.
-        assert.match(html, /loopOn = !loopOn;[\s\S]{0,500}if \(document\.getElementById\('stopBtn'\)\.disabled \|\| !resumeHere\(\)\) \{/);
+        assert.match(html, /loopOn = !loopOn;[\s\S]{0,500}if \(!playingNow\(\) \|\| !resumeHere\(\)\) \{/);
         assert.match(resume, /startPlayback\(toPlay, at === null \? 0 : at, false, false, 0, spanStart\);/);
         // Its start: the list's offset in the score's played time (count-in aside) times the speed.
         const at = html.indexOf('function startRecordingAlong(');
