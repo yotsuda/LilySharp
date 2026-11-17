@@ -9962,17 +9962,60 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (f) f.classList.add('grabbed');
             document.body.classList.add('ab-grabbing');
             showAbGhost(e);
+            // (no pointer capture: it brought no moves from out of the frame, and it held back the
+            // mouseout the scroll below goes on by — MEASURED in a real VS Code, Lab p1290/e2e/cdp-flagscroll.mjs)
+            abPointer = { clientX: e.clientX, clientY: e.clientY };
             window.addEventListener('pointermove', onAbMove, true);
             window.addEventListener('pointerup', onAbUp, true);
             window.addEventListener('pointercancel', onAbUp, true);
         }
+        // Where the pointer last was, the capture, and the scroll that runs while it is near or past
+        // the pane's top or bottom (owner's request 2026-11-17: dragged out of the pane, the preview
+        // scrolled only as the mouse moved, 14 px a move): every frame, faster the further out.
+        let abPointer = null, abCaptured = null, abScrollFrame = 0, abSwallowClick = false;
+        window.addEventListener('click', e => {
+            if (!abSwallowClick) return;
+            abSwallowClick = false;
+            e.stopPropagation(); e.preventDefault();
+        }, true);
+        function abScrollStep() {
+            abScrollFrame = 0;
+            if (!abDrag || !abPointer) return;
+            const pane = mainContent.getBoundingClientRect(), zone = 40;
+            const y = abPointer.clientY;
+            // px a frame: up to 10 inside the edge zone, on to 40 well past it
+            const reach = y < pane.top + zone ? y - (pane.top + zone) : y > pane.bottom - zone ? y - (pane.bottom - zone) : 0;
+            if (reach === 0) return;
+            const speed = Math.sign(reach) * Math.min(40, Math.abs(reach) / zone * 10);
+            const before = mainContent.scrollTop;
+            mainContent.scrollTop += speed;
+            if (mainContent.scrollTop === before) return;     // at the top or the bottom already
+            abTrack(abPointer);                                  // the score moved under the pointer
+            abScrollFrame = requestAnimationFrame(abScrollStep);
+        }
+        // Out of the preview's frame its moves no longer come (MEASURED: a pointer taken below the frame
+        // sent nothing more): the scroll goes on toward the side it left by, at full speed; and a release
+        // out there is not heard either, so the drag ends when the pointer comes back with no button
+        // down, or the window loses the focus.
+        window.addEventListener('mouseout', e => {
+            if (!abDrag || !abPointer || e.relatedTarget) return;
+            const pane = mainContent.getBoundingClientRect();
+            const mid = (pane.top + pane.bottom) / 2;
+            abPointer = { clientX: abPointer.clientX, clientY: e.clientY < mid ? pane.top - 400 : pane.bottom + 400 };
+            if (!abScrollFrame) abScrollFrame = requestAnimationFrame(abScrollStep);
+        });
+        window.addEventListener('blur', () => { if (abDrag) onAbUp(); });
         function onAbMove(e) {
             if (!abDrag) return;
+            if (e.buttons === 0) { onAbUp(); return; }     // let go out of the frame
             e.preventDefault();
-            // Near the pane's top or bottom edge, the score scrolls under the pointer.
-            const pane = mainContent.getBoundingClientRect();
-            if (e.clientY < pane.top + 28) mainContent.scrollTop -= 14;
-            else if (e.clientY > pane.bottom - 28) mainContent.scrollTop += 14;
+            abPointer = { clientX: e.clientX, clientY: e.clientY };
+            abTrack(abPointer);
+            if (!abScrollFrame) abScrollFrame = requestAnimationFrame(abScrollStep);
+        }
+        /** The line the held flag goes to for a pointer at (clientX, clientY), and the ghost there. */
+        function abTrack(e) {
+            if (!abDrag) return;
             // Any line but the other flag's (no bar between them): past it, the two swap.
             // The system the pointer is over (the nearest, between two) first, then its line nearest
             // across: a wide bar's far line is still its own system's, not the next system's
@@ -10018,6 +10061,15 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             window.removeEventListener('pointercancel', onAbUp, true);
             document.body.classList.remove('ab-grabbing');
             hideAbGhost();
+            if (abScrollFrame) { cancelAnimationFrame(abScrollFrame); abScrollFrame = 0; }
+            if (abCaptured) {
+                try { abCaptured.el.releasePointerCapture(abCaptured.id); } catch (err) { /* released */ }
+                abCaptured = null;
+                // The click the release makes lands on the pane (it held the pointer): not a bar's click.
+                abSwallowClick = true;
+                setTimeout(() => { abSwallowClick = false; }, 300);
+            }
+            abPointer = null;
             if (!abDrag) return;
             abDrag = null;
             if (abOn) setAb(abFrom, abTo);    // (on from where it plays, if it is in the new bars)
