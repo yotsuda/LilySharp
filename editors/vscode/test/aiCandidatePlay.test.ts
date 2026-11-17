@@ -21,6 +21,7 @@ import * as path from 'node:path';
 import * as vm from 'node:vm';
 import { PLAIN_TONES_JS } from '../src/plainTones';
 import { nextVoiceEntry, voiceEntryEarly } from '../src/webview/playbackCore';
+import { extensionSource } from './extensionSource';
 
 // An AI candidate can be heard before it is accepted (owner's request 2026-10-25): the candidate
 // panel's Play asks the server for the notes of the text shown (lilysharp/playbackText) and the
@@ -28,7 +29,7 @@ import { nextVoiceEntry, voiceEntryEarly } from '../src/webview/playbackCore';
 describe('an AI candidate plays before it is accepted', () => {
     const src = (f: string) => fs.readFileSync(path.join(__dirname, '..', '..', 'src', f), 'utf8');
     const transform = src('aiTransform.ts');
-    const extension = src('extension.ts');
+    const extension = extensionSource();
 
     it('has Play and Stop in the panel, Play sounding the pane shown', () => {
         assert.match(transform, /<button id="play"[^>]*>▶ Play<\/button>/);
@@ -328,7 +329,7 @@ describe('the AI candidate panel\'s page script', () => {
         assert.match(transform, /if \(synth && synth\.script\.length > 0\) \{[\s\S]{0,1700}void panel\.webview\.postMessage\(\{\s*type: 'playNotes', which, notes,/);
         // The plain tones are one text for the preview and the panel.
         assert.match(transform, /let playingOscs = \[\];\s*\$\{PLAIN_TONES_JS\}/);
-        assert.match(fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8'), /\n {8}\$\{PLAIN_TONES_JS\}\r?\n/);
+        assert.match(extensionSource(), /\n {8}\$\{PLAIN_TONES_JS\}\r?\n/);
         const tones = PLAIN_TONES_JS;
         assert.doesNotThrow(() => new vm.Script('let playingOscs = [];\n' + tones));
         assert.match(tones, /function startOscillators\(ctx, notes, offset, t0\)/);
@@ -338,7 +339,7 @@ describe('the AI candidate panel\'s page script', () => {
         // …a port that is not there is said, and the panel's own synth plays instead.
         assert.match(transform, /if \(synth\.script\.length > 0\) \{\s*void panel\.webview\.postMessage\(\{ type: 'playNotes', which, notes,\s*said: `MIDI output \$\{synth\.midiOutput\}: \$\{sent\.error \?\? 'not started'\} — played here instead\.` \}\);/);
         assert.match(transform, /\} else if \(m\?\.action === 'stop' && candidateOnMidi\) \{\s*stopCandidateMidi\(deps\);/);
-        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const ext = extensionSource();
         assert.match(ext, /midiPlay: async \(port: string, notes: unknown\[\]\) => \{[\s\S]{0,260}'lilysharp\/midiOut\/play', \{ port, notes, offset: 0 \}\);/);
         assert.match(ext, /midiStop: \(\) => \{ void midiOutRequest\('lilysharp\/midiOut\/stop', \{\}\); \},/);
         new vm.Script(cut('function playMidi(w, notes, t0Ms, end)')).runInContext(context);
@@ -502,7 +503,7 @@ describe('the AI candidate panel\'s page script', () => {
         // The host: the voices of the text played, asked with what its playback sings and plays.
         assert.match(page, /playOwn\(e\.data\.which === 'before' \? 'before' : 'after', e\.data\.notes \|\| \[\],\s*\{ voices: e\.data\.voices \|\| \[\], silenced: e\.data\.silenced \|\| \[\], start: e\.data\.start \|\| 0, said: e\.data\.said \|\| '' \}\);/);
         assert.match(transform, /const sung = await deps\.voicesFor\?\.\(text, play\.uri, deps\.renderNameOf\?\.\(play\.uri\), sounds, voice => \{/);
-        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const ext = extensionSource();
         assert.match(ext, /voicesFor: candidateVoices,/);
         assert.match(ext, /sendRequest\('lilysharp\/sung', \{ textDocument: \{ uri: uri\.toString\(\) \}, text, renderName: renderName \?\? null \}\);/);
         // A voice the renderer holds is there at once; one to be sung is waited for briefly, then left to land later.

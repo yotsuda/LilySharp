@@ -20,6 +20,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { CantoriaApi, CantoriaVoice, PlanAsk, SungVoiceDto, VOICE_INSTALL_GUIDE, languageRefusal, leftToTheInstrument, planAsked, unsingableGuide, unsingableIn, unsingableReason } from '../src/singerCore';
 import { CantoriaExtensionBackend, PLAN_KEPT_MS, VoiceRenderer } from '../src/singer';
+import { extensionSource } from './extensionSource';
 
 // Owner's decisions 2026-11-13: a line no installed voice can sing (a Latin alto, with no voice
 // that sings Latin) is said to the writer - once a session for each reason, with the way to a
@@ -179,7 +180,7 @@ describe('the sections of a line that is not sung here', () => {
 });
 
 describe('the editor and a line nobody can sing', () => {
-    const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const ext = extensionSource();
 
     it('says it once a session for each reason, and in the output each time', () => {
         assert.match(ext, /function tellUnsingable\(voice: string, reason: string\): void \{\s+outputChannel\.appendLine\([^\n]+\);\s+offerVoiceSetup\(unsingableGuide\(reason\)\);/);

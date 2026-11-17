@@ -18,6 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { extensionSource } from './extensionSource';
 
 // Owner's decision 2026-11-11: a good sound from the start, in a package of its own — the
 // MuseScore_General sound font, unchanged, with its authors' notices, under a name that says both
@@ -98,7 +99,7 @@ describe('the Lily# Sound Font extension', () => {
     });
 
     it('is what Lily# plays through by default when it is installed, ahead of the OS\'s bank', () => {
-        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const ext = extensionSource();
         assert.match(ext, /const SOUND_FONT_EXTENSION = 'yotsuda\.lilysharp-soundfont';/);
         assert.equal(`${pkg.publisher}.${pkg.name}`, 'yotsuda.lilysharp-soundfont');
         assert.match(ext, /return packagedSoundFont\(\) \?\? osSoundFonts\(\)\[0\] \?\? null;/);

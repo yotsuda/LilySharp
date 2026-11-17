@@ -19,6 +19,7 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { chatPointer, placeAt } from '../src/chatPointerCore';
+import { extensionSource } from './extensionSource';
 
 // Owner's request 2026-10-29: the place a chat request is about — the file alone, or with bars,
 // their lines, section, part and bars.
@@ -80,7 +81,7 @@ describe('the pointer put in the chat', () => {
         const pkg = fs.readFileSync(path.join(root, 'package.json'), 'utf8');
         assert.match(pkg, /"command": "lilysharp\.previewAskAiInChat",\s*"when": "webviewId == 'lilysharpPreview'"/);
         assert.match(pkg, /"command": "lilysharp\.askAiInChat",\s*"when": "resourceLangId == lilysharp"/);
-        const ext = fs.readFileSync(path.join(root, 'src', 'extension.ts'), 'utf8');
+        const ext = extensionSource();
         assert.match(ext, /executeCommand\('workbench\.action\.chat\.open', \{ query, isPartialQuery: true, mode: 'agent' \}\)/);
         // A saved score by its whole path (owner's request 2026-10-29: one name in two folders).
         // …and one with changes not saved says so, with the tool that reads them.
@@ -89,7 +90,7 @@ describe('the pointer put in the chat', () => {
     // Owner's requests 2026-10-29: the preview header's ✨ opens the chat, and so does Ctrl+I, in the
     // preview and in the editor.
     it('is what the preview header\'s ✨ and Ctrl+I do, the selected bars with it', () => {
-        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const ext = extensionSource();
         assert.match(ext, /<button id="aiTransformBtn" class="ai icon" type="button" title="Ask AI in Chat \(Ctrl\+I\)">✨<\/button>/);
         assert.match(ext, /aiTransformBtn\.addEventListener\('click', askInChat\);/);
         assert.match(ext, /vscode\.postMessage\(\{ type: 'askAiInChat', startPos: aiRangeLo, endPos: aiRangeHi \}\);/);

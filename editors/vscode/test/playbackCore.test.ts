@@ -25,6 +25,7 @@ import {
 } from '../src/webview/playbackCore';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { extensionSource } from './extensionSource';
 
 const note = (t: number, d: number, p: number, extra: Partial<PlaybackNote> = {}): PlaybackNote =>
     ({ T: t, D: d, P: p, V: 90, S: 10 * t, O: 0, I: 0, C: 0, G: 0, ...extra });
@@ -560,7 +561,7 @@ describe('the sustain pedal in the list (docs/pedal-playback-design.md)', () => 
         const src = readFileSync(join(__dirname, '..', '..', 'src', 'webview', 'previewSynth.ts'), 'utf8');
         assert.match(src, /case 'pedal': this\.synth\.controllerChange\(e\.c, SUSTAIN, e\.v, at\)/);
         assert.match(src, /this\.synth\.controllerChange\(c, SUSTAIN, 0, \{ time: quietAt \}\)/);
-        const page = readFileSync(join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const page = extensionSource();
         assert.match(page, /window\.LysSynth\.fromOffset\(notes, offset\)/);
         // The plain tones are one text for the preview and the candidate panel (plainTones.ts).
         assert.match(readFileSync(join(__dirname, '..', '..', 'src', 'plainTones.ts'), 'utf8'), /if \(n\.P < 0\) \{ continue; \}/);

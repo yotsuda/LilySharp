@@ -500,7 +500,7 @@ Open for the owner before stage 3 (as decided since):
 | Which note a syllable stands on | `LilySharp.Core/Svg/Collector/SungSyllables.cs`; the MIDI's events `MidiExporter.SingLyrics`; the MusicXML's `MusicXmlExporter` (`syllabic`, `extend`) |
 | The connector and the holders | `Svg/Model/LyricItem.cs` (`ConnectorType`), `Svg/Collector/LyricSyllableReader.cs` (`Marker`) |
 | The seconds | `LilySharp.Lsp/LilySharpLanguageServer.Playback.cs` (`PlaybackOf`, `SecondsAt`) |
-| The preview's clock, Play, the limiter, MIDI out | `editors/vscode/src/extension.ts` (`startPlayback`, `midiStarted`), `src/webview/previewSynth.ts` |
+| The preview's clock, Play, the limiter, MIDI out | `editors/vscode/src/previewHtml.ts` (`startPlayback`, `midiStarted`), `src/webview/previewSynth.ts` |
 | The practice menu on a list | `editors/vscode/src/webview/playbackCore.ts` (`practised`) |
 | The offline render | `editors/vscode/src/audioRender.ts`, `audioRenderCore.ts` |
 | The probes of 2026-11-08 | Lab `sessions/p1124/utau/` (MIDI and MusicXML exports, NEUTRINO's labels and WAVs, the first Cantoria WAV) |

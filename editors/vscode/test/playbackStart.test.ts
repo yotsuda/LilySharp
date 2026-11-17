@@ -19,6 +19,7 @@ import * as assert from 'node:assert/strict';
 import { SOUNDING_IDLE_MS, soundingOf, soundingWait, startSecondsAt } from '../src/playbackStart';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { extensionSource } from './extensionSource';
 
 // The header's notes are an export of the whole score: asked once the text has rested, and for the
 // score's own notes alone (review of session 1291).
@@ -35,7 +36,7 @@ describe('when the sounding notes are asked for', () => {
     });
 
     it('is what the preview does: waits, asks for the sounding notes only, and sends the render first', () => {
-        const extension = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const extension = extensionSource();
         assert.match(extension, /soundingWait\(lastEditAt\.get\(uri\), Date\.now\(\)\)/);
         assert.match(extension, /'lilysharp\/playback', \{ textDocument: \{ uri \}, renderName, soundingOnly: true \}/);
         // The @todo marks are asked for after the render request has left.
@@ -45,7 +46,7 @@ describe('when the sounding notes are asked for', () => {
     });
 
     it('sends the render before everything else a refresh tells the page (session 1294, review P5)', () => {
-        const extension = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const extension = extensionSource();
         const svg = extension.indexOf("client.sendRequest<SvgResponse>('lilysharp/svg'");
         const beside = extension.indexOf('? besideThePicture().catch(');
         assert.ok(svg > 0 && beside > svg);

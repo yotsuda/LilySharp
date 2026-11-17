@@ -19,6 +19,7 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { AB_SLOTS, abRangeBand, abRangeLabel, normalizeAbRange, normalizeAbRanges } from '../src/abRangesCore';
+import { extensionSource } from './extensionSource';
 
 // The A-B repeat's eight kept ranges (docs/ab-repeat-design.md §1, step 5).
 describe('the A-B repeat\'s kept ranges', () => {
@@ -66,7 +67,7 @@ describe('the A-B repeat\'s kept ranges', () => {
     });
 
     it('are drawn by the page from the script bundle, and kept by the extension per file', () => {
-        const src = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const src = extensionSource();
         const synth = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'webview', 'previewSynth.ts'), 'utf8');
         for (const name of ['AB_SLOTS', 'normalizeAbRanges', 'abRangeLabel', 'abRangeBand']) {
             assert.match(synth, new RegExp('^\\s+' + name + ',$', 'm'), name + ' is in LysSynth');

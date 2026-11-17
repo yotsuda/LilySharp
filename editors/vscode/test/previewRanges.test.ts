@@ -20,11 +20,12 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vm from 'node:vm';
 import { loopPlace } from '../src/webview/playbackCore';
+import { extensionSource } from './extensionSource';
 
 // The preview's Range panel (owner's request 2026-10-25): each part's lowest and highest note,
 // asked of the server for the score shown, a click showing one on the score.
 describe('the preview\'s Range panel', () => {
-    const extension = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const extension = extensionSource();
     const start = extension.indexOf('return `<!DOCTYPE html>') + 'return '.length;
     const end = extension.indexOf('</html>`;', start) + '</html>`'.length;
     const html = new vm.Script(extension.slice(start, end).replace(/\$\{[^}]*\}/g, '0')).runInNewContext({}) as string;

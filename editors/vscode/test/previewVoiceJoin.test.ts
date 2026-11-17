@@ -20,12 +20,13 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vm from 'node:vm';
 import { nextVoiceEntry, voiceEntryEarly } from '../src/webview/playbackCore';
+import { extensionSource } from './extensionSource';
 
 // Owner's request 2026-11-11: a Play starts while a voice is still being sung, its part on the
 // instrument that stands in; when the voice lands, it comes in after the part's next rest and the
 // instrument gives way there. The preview's page script (extension.ts, a template literal).
 describe('a voice that lands while the preview plays', () => {
-    const extension = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const extension = extensionSource();
     const cut = (head: string) => {
         const at = extension.indexOf(head);
         assert.ok(at >= 0, head);
@@ -221,7 +222,7 @@ describe('a voice that lands while the preview plays', () => {
 // Owner's report 2026-11-11: a voice chosen before the preview had been clicked said nothing, and
 // its phrase (こんにちは) came out over the song at the next Play.
 describe('a chosen voice\'s phrase on the preview', () => {
-    const extension = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const extension = extensionSource();
     const head = 'function playVoiceSample(message)';
     const at = extension.indexOf(head);
     let depth = 0, end = -1;

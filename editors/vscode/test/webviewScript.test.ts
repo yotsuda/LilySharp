@@ -29,11 +29,11 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vm from 'node:vm';
+import { extensionSource } from './extensionSource';
 
 describe('the preview page script', () => {
     it('parses once the template literal that carries it has been evaluated', () => {
-        const source = fs.readFileSync(
-            path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const source = extensionSource();
         const open = 'return `<!DOCTYPE html>';
         const start = source.indexOf(open) + 'return '.length;
         const end = source.indexOf('</html>`;', start) + '</html>`'.length;
@@ -56,7 +56,7 @@ describe('the preview page script', () => {
 // available here, so the function is taken out of the evaluated page script and handed
 // pages made of plain objects: what it reads is each element's attributes, in order.
 describe('the preview reads its offsets back after a reconcile', () => {
-    const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const source = extensionSource();
     const start = source.indexOf('return `<!DOCTYPE html>') + 'return '.length;
     const end = source.indexOf('</html>`;', start) + '</html>`'.length;
     const html = new vm.Script(source.slice(start, end).replace(/\$\{[^}]*\}/g, 'X')).runInNewContext({}) as string;
@@ -105,7 +105,7 @@ describe('the preview reads its offsets back after a reconcile', () => {
 // the click that jumps to the editor: the function is taken out of the page script and handed
 // a scroller and a document made of plain objects that record their listeners.
 describe('the preview scrolls when the sheet is dragged', () => {
-    const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const source = extensionSource();
     const start = source.indexOf('return `<!DOCTYPE html>') + 'return '.length;
     const end = source.indexOf('</html>`;', start) + '</html>`'.length;
     const html = new vm.Script(source.slice(start, end).replace(/\$\{[^}]*\}/g, 'X')).runInNewContext({}) as string;
@@ -187,7 +187,7 @@ describe('the preview scrolls when the sheet is dragged', () => {
 // hiddenTodoCss turns the keys into one stylesheet. Lifted out of the page script like the
 // functions above.
 describe('the preview hides the marks the scan view hides', () => {
-    const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const source = extensionSource();
     const start = source.indexOf('return `<!DOCTYPE html>') + 'return '.length;
     const end = source.indexOf('</html>`;', start) + '</html>`'.length;
     const html = new vm.Script(source.slice(start, end).replace(/\$\{[^}]*\}/g, 'X')).runInNewContext({}) as string;
@@ -220,7 +220,7 @@ describe('the preview hides the marks the scan view hides', () => {
 // click by its geometry. Lifted out of the page script like the functions above and handed a
 // container of plain boxes.
 describe('the preview finds the bar a click lands on', () => {
-    const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const source = extensionSource();
     const start = source.indexOf('return `<!DOCTYPE html>') + 'return '.length;
     const end = source.indexOf('</html>`;', start) + '</html>`'.length;
     const html = new vm.Script(source.slice(start, end).replace(/\$\{[^}]*\}/g, 'X')).runInNewContext({}) as string;
@@ -261,7 +261,7 @@ describe('the preview finds the bar a click lands on', () => {
 // whose written stretch (data-span) holds the caret, or just after its closing bar line, or the
 // start of the token under the caret. Lifted out of the page script like the functions above.
 describe('the preview lights the bar the caret is in', () => {
-    const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const source = extensionSource();
     const start = source.indexOf('return `<!DOCTYPE html>') + 'return '.length;
     const end = source.indexOf('</html>`;', start) + '</html>`'.length;
     const html = new vm.Script(source.slice(start, end).replace(/\$\{[^}]*\}/g, 'X')).runInNewContext({}) as string;
@@ -314,7 +314,7 @@ describe('the preview lights the bar the caret is in', () => {
 // on one of the mark's lines, or, for a mark the scan does not know, the one whose written
 // stretch holds where it is written.
 describe('the preview frames what the scan boxes', () => {
-    const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const source = extensionSource();
     const start = source.indexOf('return `<!DOCTYPE html>') + 'return '.length;
     const end = source.indexOf('</html>`;', start) + '</html>`'.length;
     const html = new vm.Script(source.slice(start, end).replace(/\$\{[^}]*\}/g, 'X')).runInNewContext({}) as string;
@@ -413,7 +413,7 @@ describe('the preview frames what the scan boxes', () => {
 // can start — on a note, from it; on a bar, from its first note — and the manifest gates it on
 // the key the page publishes.
 describe('the preview offers Play from Here on a note and on a bar', () => {
-    const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const source = extensionSource();
     const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
     it('gates the item on lysPlayFrom, which the page publishes', () => {
         const item = manifest.contributes.menus['webview/context'].find((m: { command: string }) => m.command === 'lilysharp.previewPlayFromHere');
@@ -430,7 +430,7 @@ describe('the preview offers Play from Here on a note and on a bar', () => {
 
 // The page script's own function, taken out of the evaluated template.
 function pageFunction(name: string, context: Record<string, unknown>): unknown {
-    const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const source = extensionSource();
     const start = source.indexOf('return `<!DOCTYPE html>') + 'return '.length;
     const end = source.indexOf('</html>`;', start) + '</html>`'.length;
     const html = new vm.Script(source.slice(start, end).replace(/\$\{[^}]*\}/g, 'X')).runInNewContext({}) as string;
@@ -528,12 +528,12 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         assert.deepEqual(at(up), [200, 40 + 48 - up.height]);
     });
     it('stands behind the toolbar, which stays whole', () => {
-        const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const source = extensionSource();
         const z = (rule: string) => Number(new RegExp(`${rule} \\{[^}]*?z-index: (\\d+)`).exec(source)?.[1]);
         assert.ok(z('\\.range-panel') < z('\\.toolbar'), `${z('\\.range-panel')} / ${z('\\.toolbar')}`);
     });
     it('keeps its own width wherever it stands, so nothing inside moves at the window\'s edge', () => {
-        const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const source = extensionSource();
         assert.match(source, /\.range-panel \{[^}]*?width: max-content;/);
     });
     it('does not touch a panel never moved, or one hidden', () => {
@@ -557,13 +557,13 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         raise(rec);
         assert.ok(Number(rec.style.zIndex) > Number(practice.style.zIndex));
         assert.ok(Number(rec.style.zIndex) < 10);
-        const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const source = extensionSource();
         assert.match(source, /addEventListener\('pointerdown', \(e\) => \{\s*raisePanel\(panel\);/);
         assert.match(source, /if \(rangePanel\.hidden\) return;\s*raisePanel\(rangePanel\);/);
         assert.match(source, /practicePanel\.hidden = false;\s*raisePanel\(practicePanel\);/);
     });
     it('is installed on both panels, left alone by their inputs, and kept on a resize', () => {
-        const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const source = extensionSource();
         assert.match(source, /installPanelDrag\(rangePanel\);\s*installPanelDrag\(practicePanel\);/);
         assert.match(source, /e\.target\.closest\('input, select, textarea'\)\) return;/);
         assert.match(source, /window\.addEventListener\('resize', \(\) => \{ clampPanel\(rangePanel\); clampPanel\(practicePanel\); \}\);/);
@@ -696,7 +696,7 @@ describe('the preview means by a click on a chord the nearest head', () => {
         assert.equal(clickOf(mark, () => [mark, lower, page], 2, 15), mark);      // in its margin
         assert.equal(clickOf(page, never, 2, 12), page);
         assert.equal(clickOf(null, never, 2, 12), null);
-        const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const source = extensionSource();
         assert.match(source, /window\.addEventListener\('pointerdown', \(e\) => \{\s+pressedAt = \{ x: e\.clientX, y: e\.clientY \};/);
         assert.match(source, /addEventListener\('click', \(e\) => \{\s+const target = noteUnder\(e\);/);
         assert.match(source, /addEventListener\('contextmenu', \(e\) => \{\s+const t = noteUnder\(e\);/);

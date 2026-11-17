@@ -264,7 +264,7 @@ public class PlaybackRequestTests
     public void TheServersNotes_HaveNoR_WhichMarksARelayedCandidate()
     {
         // The preview takes a list with any note's R set for an AI candidate's relayed notes and
-        // lights nothing on its own score (extension.ts followAlong: notes.some(n => n.R !== undefined)).
+        // lights nothing on its own score (previewHtml.ts followAlong: notes.some(n => n.R !== undefined)).
         // The `%` notes' source field was first named R: every score with a `%` stopped lighting
         // its notes while it played (owner's report 2026-11-17).
         Assert.Null(typeof(LilySharp.Lsp.PlaybackNote).GetProperty("R"));

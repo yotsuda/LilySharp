@@ -19,13 +19,14 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vm from 'node:vm';
+import { extensionSource } from './extensionSource';
 
 // A tuning's strum (owner's report 2026-10-24: a single note, then a chord): the strings after
 // the first were each a setTimeout in the page, which a hidden preview fires about once a
 // second, so they came out together. They are timed on the audio clock now (the SoundFont
 // synth's queue, the oscillators' start times) and, for the MIDI output, on the host's timers.
 describe('a strum keeps its time in a hidden preview', () => {
-    const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const source = extensionSource();
     const start = source.indexOf('return `<!DOCTYPE html>') + 'return '.length;
     const end = source.indexOf('</html>`;', start) + '</html>`'.length;
     const html = new vm.Script(source.slice(start, end).replace(/\$\{[^}]*\}/g, 'X')).runInNewContext({}) as string;

@@ -19,7 +19,7 @@ hosting a VST ourselves. LILYSHARP-OWN throughout — LilyPond writes a `.mid` a
   track, a channel and a program: its `midiInstrument`, else its preset's, else 0; drums are
   channel 9). So the preview sounds the instruments the export does, and a part keeps one
   sound.
-- **The webview owns the AudioContext and the UI** (the page script in `extension.ts`,
+- **The webview owns the AudioContext and the UI** (the page script in `previewHtml.ts`,
   `getPreviewHtml`): one context for the page's life, resumed from the first click or key in
   the preview (the browser's autoplay policy; the editor's keys do not count — the status bar
   says "click the preview once" when a strike finds it suspended).
@@ -221,7 +221,7 @@ setting's description links to it. Windows then plays through the Microsoft GS W
 with no setup, and a virtual port — loopMIDI on Windows, an IAC bus on a Mac, the ALSA
 sequencer's own graph on Linux — carries the stream to a DAW, Cantabile, Carla or any VST host,
 where the user's instruments are. **With both settings set, the port wins**: the webview's one
-test (`midiOutput` non-empty, `extension.ts` `startPlayback` / the strike) sends the sound to
+test (`midiOutput` non-empty, `previewHtml.ts` `startPlayback` / the strike) sends the sound to
 the server, and the sound font plays only while no port is named or the named port is not there
 (the fallback below).
 
@@ -279,10 +279,10 @@ the server, and the sound font plays only while no port is named or the named po
 | The audition's program | `LilySharp.Core/Editing/NoteStepper.cs` (`Voice`, `SoundIndex.Program`), `LilySharpLanguageServer.Step.cs` |
 | The events, the lookahead, the highlight cursor | `editors/vscode/src/webview/playbackCore.ts` (+ `test/playbackCore.test.ts`) |
 | The synth, the player, the font loading | `editors/vscode/src/webview/previewSynth.ts` → `out/synth/preview-synth.js` |
-| The page: context, Play/Stop, follow-along, auditions, oscillator fallback | `editors/vscode/src/extension.ts`, the page script's "Playback and audition" section |
-| The URLs, the roots, the setting, the CSP | `extension.ts`: `synthRoot`, `soundFontFile`, `previewResourceRoots`, `synthUrls`, `getPreviewHtml` |
+| The page: context, Play/Stop, follow-along, auditions, oscillator fallback | `editors/vscode/src/previewHtml.ts`, the page script's "Playback and audition" section |
+| The URLs, the roots, the setting, the CSP | `extension.ts`: `synthRoot`, `soundFontFile`, `previewResourceRoots`, `synthUrls`; `previewHtml.ts`: `getPreviewHtml` |
 | The bundle | `editors/vscode/esbuild.js` (`copyWorkletProcessor`, the second context) |
 | The font | none bundled — `soundFontFile` / `osSoundFonts` in `extension.ts`; the advice for users: `site/editor-body.html` `#soundfonts` |
 | MIDI out: the ports, the events, the player | `LilySharp.Lsp/MidiOut/` — `MidiOutPorts` (+ `WinMmPort`, `CoreMidiPort`, `AlsaSeqPort`), `MidiOutEvents`, `MidiOutPlayer`; the requests `LilySharpLanguageServer.MidiOut.cs`, the DTOs `MidiOut/MidiOutDtos.cs`; the close on exit `Program.cs` |
-| MIDI out: the setting, the picker, the relay, the page | `extension.ts`: `midiOutputSetting`, `chooseMidiOutput`, `midiOutRequest`, `reportMidiOutError`, the `midiPlay` / `midiStop` / `midiStrike` / `midiRelease` messages; the page script's `setMidiOutput`, `midiStarted`, `startPlayback`'s port branch, `holdNotes` / `stopHeldNote` |
+| MIDI out: the setting, the picker, the relay, the page | `extension.ts`: `midiOutputSetting`, `chooseMidiOutput`, `midiOutRequest`, `reportMidiOutError`, the `midiPlay` / `midiStop` / `midiStrike` / `midiRelease` messages; the page script's (`previewHtml.ts`) `setMidiOutput`, `midiStarted`, `startPlayback`'s port branch, `holdNotes` / `stopHeldNote` |
 | The nets | `PlaybackRequestTests`, `StepRequestTests.TheAudition_NamesTheProgramThePartPlays`, `MidiOutTests`, `test/playbackCore.test.ts`, `test/midiOutputSetting.test.ts`, `test/webviewScript.test.ts` (the page script still parses) |

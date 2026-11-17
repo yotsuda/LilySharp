@@ -19,6 +19,7 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { joinStarts, parseStarts, todoDeletions, todoStartsInBar } from '../src/todoResolveCore';
+import { extensionSource } from './extensionSource';
 
 // `c4@todo d e@todo("x") f | g4 a b c |` — two marks in the first bar, none in the second.
 const marks = [
@@ -51,7 +52,7 @@ describe('the preview\'s Resolve TODO doors (owner\'s request 2026-10-31)', () =
     });
     it('is wired: the marks go to the page with each render, the bar\'s marks into the menu, two commands', () => {
         const root = path.join(__dirname, '..', '..');
-        const ext = fs.readFileSync(path.join(root, 'src', 'extension.ts'), 'utf8');
+        const ext = extensionSource();
         const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
         assert.match(ext, /type: 'todos', marks: /);
         assert.match(ext, /lysBarTodo: ctxTodoStarts\.length > 0,\s*lysTodoStarts: ctxTodoStarts\.join\(','\),\s*lysHasTodos: todoMarks\.length > 0,/);

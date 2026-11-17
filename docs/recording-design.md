@@ -95,7 +95,7 @@ Transcribe!（Seventh String）と同じ体験を Lily# のプレビューで（
 
 ## 5. 段取り（最初の版）
 
-段ごとに網を付け、段の終わりで full と拡張のテストを回す。手本は歌い手の声（外から来た音のバッファを楽譜と同期して鳴らす道・`extension.ts` の `voice`／`playVoiceSample`）。
+段ごとに網を付け、段の終わりで full と拡張のテストを回す。手本は歌い手の声（外から来た音のバッファを楽譜と同期して鳴らす道・`previewHtml.ts` の `voice`／`playVoiceSample`）。
 
 | 段 | 中身 | 確かめ方 |
 |---|---|---|

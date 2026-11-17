@@ -20,6 +20,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vm from 'node:vm';
 import { FOLLOW_SCROLL_CSS, FOLLOW_SCROLL_JS } from '../src/followScroll';
+import { extensionSource } from './extensionSource';
 
 // Owner's request 2026-11-11: a score dragged away while it played jumped back to the sounding
 // note the moment it was dropped. A scroll of the user's own that leaves the sounding notes out
@@ -180,7 +181,7 @@ describe('whether a Play\'s view follows the notes sounding', () => {
         assert.equal(button.textContent, 'Follow');
     });
     it('is one text for the preview and the candidate panel, each asking before it moves the view', () => {
-        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const ext = extensionSource();
         const panel = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
         for (const src of [ext, panel]) {
             assert.match(src, /\$\{FOLLOW_SCROLL_JS\}/);

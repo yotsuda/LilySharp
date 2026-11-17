@@ -20,6 +20,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { singerLineOf, onSingerGender, singersWritten, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantoriaApiOf, cantoriaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveCancelLine, serveRequestLine, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitle, voiceMenuTitleOf, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungKey, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from '../src/singerCore';
 import { VoiceBarPart, voiceBar, voiceBarShown, voiceProgress, voiceRound, voiceRowProgress, voiceStillSinging, voiceToldFraction } from '../src/webview/playbackCore';
+import { extensionSource } from './extensionSource';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
 // engine's score, the key names the render, the engine's lines are read, and the Cantoria
@@ -110,7 +111,7 @@ describe('the singer choices', () => {
     });
 
     it('offers Cantoria only where a voice was asked for, once', () => {
-        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const ext = extensionSource();
         assert.match(ext, /if \(cantoriaOffered \|\| vscode\.extensions\.getExtension\(CANTORIA_EXTENSION_ID\)\) \{ return; \}/);
         assert.match(ext, /'workbench\.extensions\.installExtension', CANTORIA_EXTENSION_ID/);
         assert.match(ext, /if \(reason === 'play' && writesSinger\(/);
@@ -746,7 +747,7 @@ describe('a voice taken at the top level goes on to sings', () => {
     });
     const server0 = () => fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'LilySharp.Lsp', 'LilySharpLanguageServer.Completion.cs'), 'utf8');
     it('writes the name closed and ` on ` after it, asks the list again and hears the voice where the name stands', () => {
-        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const ext = extensionSource();
         // The closing quote is part of what the item replaces, so ` on ` lands past it (the part
         // before the words, since 2026-11-12: after the voice the line goes on to its part).
         assert.match(ext, /close >= 0 \? close \+ \(goesOn \? 1 : 0\) : position\.character\)/);
@@ -839,7 +840,7 @@ describe('the voice bar counts what is sung anew', () => {
     });
 
     it('is told by the engine through the host, the count held by the render\'s key', () => {
-        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const ext = extensionSource();
         // The host: every word of the engine goes to the pages waiting for THAT voice, by its key,
         // with the pace learnt - whichever job asked (owner's decision 2026-11-13: a job replaced
         // meanwhile kept the count to itself, and the bar ran on its estimate).
@@ -941,12 +942,12 @@ describe('a singer line\'s settings', () => {
         // A setting that takes a name says so, with the first of its names.
         const named = singParameterDetail({ name: 'support', scope: 'voice', what: 'Support', word: true, values: ['A', 'B', 'C', 'D', 'E', 'F', 'G'] } as never);
         assert.equal(named, 'Support — a name: A, B, C, D, E, F, … — one value for the voice');
-        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const ext = extensionSource();
         assert.match(ext, /const of = taken\.find\(p => p\.name === slot\.of\);[\s\S]{0,200}return \(of\.values \?\? \[\]\)\.map\(/);
     });
 
     it('are the voice\'s own to list, and what it does not take is said as a warning', () => {
-        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const ext = extensionSource();
         assert.match(ext, /registerCompletionItemProvider\(\{ language: 'lilysharp' \}, singerSettingCompletion, ' '\)/);
         assert.match(ext, /voice = await backend\.voiceName\(named\?\.\[2\] \|\| named\?\.\[1\] \|\| null, where\?\.Language \?\? undefined, where\?\.Gender\);\s*taken = await backend\.parameters\(voice\);/);
         assert.match(ext, /return taken\.filter\(p => !slot\.written\.includes\(p\.name\)\)\.map\(/);
@@ -1003,7 +1004,7 @@ describe('a note\'s @sing', () => {
         const file = 'part lead { }\nsinger female "diffsinger/Nishiren/2P" sings words on lead\n// singer "x/y" sings z\nsinger male sings other on bass\nsinger "diffsinger/Nishiren/2P" sings third\nsinger sings fourth\n';
         assert.deepEqual(singersWritten(file), ['diffsinger/Nishiren/2P', 'male', '']);
         assert.deepEqual(singersWritten('part lead { }\n'), []);
-        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const ext = extensionSource();
         assert.match(ext, /registerCompletionItemProvider\(\{ language: 'lilysharp' \}, singMarkCompletion, '\(', ' '\)/);
         // Inside the music what can change there: all but the settings that are one value for the voice.
         assert.match(ext, /if \(p\.scope !== 'voice' && !taken\.has\(p\.name\)\) \{ taken\.set\(p\.name, p\); \}/);
@@ -1060,7 +1061,7 @@ describe('a voice\'s settings are checked where they are written', () => {
     });
 
     it('is asked a moment after the text rests, of a Cantoria that says what a voice takes', () => {
-        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const ext = extensionSource();
         assert.match(ext, /client\.sendRequest\('lilysharp\/singSettings', \{ textDocument: \{ uri: document\.uri\.toString\(\) \} \}\);/);
         // A document that sets nothing asks no engine; an older Cantoria's silence is not "takes nothing".
         assert.match(ext, /if \(!written\.Settings \|\| written\.Settings\.length === 0\) \{ singDiagnostics\.delete\(document\.uri\); return; \}\s*const engine = await renderer\(\);/);
@@ -1141,7 +1142,7 @@ describe('a singer line is heard as it says the voice sings', () => {
     });
 
     it('is asked when a value is stepped and when the caret comes to the settings', () => {
-        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const ext = extensionSource();
         const step = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'stepAudition.ts'), 'utf8');
         // The phrase is sung with the line's settings, and kept by them.
         assert.match(ext, /if \(sing && Object\.keys\(sing\)\.length > 0\) \{ score\.sing = sing; \}/);
@@ -1179,7 +1180,7 @@ describe('the step keys on a singer line\'s gender', () => {
     });
 
     it('leaves the word to the server before it looks for a voice to step', () => {
-        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const ext = extensionSource();
         assert.match(ext, /if \(onSingerGender\(doc\.lineAt\(line\)\.text, editor\.selection\.active\.character\)\) \{ return false; \}\s*const at = singerValueAt\(/);
     });
 });
@@ -1188,7 +1189,7 @@ describe('the step keys on a singer line\'s gender', () => {
 // and the rest were looked for. The list is the settings of the voice the LINE sings with, and it
 // says which voice that is.
 describe('whose settings a singer line lists', () => {
-    const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const ext = extensionSource();
 
     it('finds the line\'s voice as the score\'s own is found: by the words\' language and the part\'s gender too', () => {
         assert.match(ext, /voice = await backend\.voiceName\(named\?\.\[2\] \|\| named\?\.\[1\] \|\| null, where\?\.Language \?\? undefined, where\?\.Gender\);\s*taken = await backend\.parameters\(voice\);/);
@@ -1244,7 +1245,7 @@ describe('the values offered where a setting\'s number is written', () => {
     });
 
     it('is listed on a singer line and inside a note\'s @sing, the sign written so far replaced with the item', () => {
-        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const ext = extensionSource();
         assert.match(ext, /if \(!of\) \{ return undefined; \}\s*if \(of\.word\) \{[\s\S]{0,400}\}\s*return singValueItems\(of, document, position\);/);
         assert.match(ext, /if \(of\) \{ numbers = singValueItems\(of, document, position\); break; \}/);
         assert.match(ext, /return \[\.\.\.numbers, back, to\];/);
@@ -1305,7 +1306,7 @@ describe('a singer line that says what of the part it sings', () => {
 // server marks those notes (PlaybackNote.U); every place that keeps a sung part's instrument out
 // lets them through.
 describe('a section none of a part\'s voices sings', () => {
-    const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const ext = extensionSource();
     const panel = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
 
     it('is played on the instrument in the preview, and not taken back when a voice comes in', () => {

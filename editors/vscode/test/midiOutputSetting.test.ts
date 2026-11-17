@@ -19,6 +19,7 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vm from 'node:vm';
+import { extensionSource } from './extensionSource';
 
 // The manifest's side of `lilysharp.playback.midiOutput` (docs/playback-design.md §6, MIDI out):
 // the setting, the command that lists the machine's ports for it, and the link from the one
@@ -52,7 +53,7 @@ describe('the MIDI output setting', () => {
 // the same list here; a strike goes to the host too and its release names the channel.
 // The functions are lifted out of the page script as webviewScript.test.ts lifts others.
 describe('the preview routes its sounds to the MIDI output', () => {
-    const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const source = extensionSource();
     const start = source.indexOf('return `<!DOCTYPE html>') + 'return '.length;
     const end = source.indexOf('</html>`;', start) + '</html>`'.length;
     const html = new vm.Script(source.slice(start, end).replace(/\$\{[^}]*\}/g, 'X')).runInNewContext({}) as string;

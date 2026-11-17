@@ -19,6 +19,7 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { PreviewSession, Cancellable } from '../src/previewSession';
+import { extensionSource } from './extensionSource';
 
 /** A request that says whether it was cancelled and let go. */
 function request(): Cancellable & { cancelled: number; disposed: number } {
@@ -146,7 +147,7 @@ describe('a preview panel\'s session', () => {
     });
 
     it('is what the host keeps: the three places say what happened in one call, and no map by URI is left', () => {
-        const extension = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const extension = extensionSource();
         assert.match(extension, /function retargetPreview\([\s\S]{0,700}?sessionOf\(panel\)\.turned\(false\);/);
         assert.match(extension, /function migratePreviewKey\([\s\S]{0,1200}?sessionOf\(panel\)\.turned\(true\);/);
         assert.match(extension, /previewSessions\.get\(panel\)\?\.dispose\(\);\s*previewSessions\.delete\(panel\);/);

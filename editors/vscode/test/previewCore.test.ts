@@ -19,6 +19,7 @@ import * as assert from 'node:assert/strict';
 import { svgPostKey, pagesSummary, previewOnEditorShown, sourceGroupToReveal, sourceGroupToOpen, newPreviewColumn, scoreGroupFor, ShownEditor, jumpOffsetFor, chordSpans, chordAtCaret, soundingRange, soundingRanges, soundingLight, auditionBarRange, messageChanged, rewriteIsStale } from '../src/previewCore';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { extensionSource } from './extensionSource';
 
 // A command whose answer replaces the whole file does not apply it to a text that moved on
 // (review of session 1291: a keystroke typed while Regroup was out was taken back).
@@ -29,7 +30,7 @@ describe('a rewrite of the whole document', () => {
     });
 
     it('is asked through the one door by every command that replaces the file', () => {
-        const extension = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const extension = extensionSource();
         for (const method of ['regroup', 'convertOctaves', 'removeStringNumbers', 'extractPhrase', 'setSectionKey', 'respellToKey']) {
             assert.match(extension, new RegExp(`rewriteRequest<\\w+>\\(doc, 'lilysharp/${method}'`), method);
             assert.doesNotMatch(extension, new RegExp(`sendRequest<\\w+>\\('lilysharp/${method}'`), method);
@@ -53,7 +54,7 @@ describe('a message the page already holds', () => {
     });
 
     it('is what the preview does for the three, and forgets when the page reloads', () => {
-        const extension = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const extension = extensionSource();
         for (const type of ['scanState', 'abRanges', 'panelFolds']) {
             assert.match(extension, new RegExp(`postIfChanged\\(panel, \\{ type: '${type}'`));
         }
@@ -181,7 +182,7 @@ describe('the editor lights what the preview plays', () => {
     // The wiring, in the source: the page reports what its follow-along lights and says when
     // the playback stops; the host lights the editors of the panel's file.
     it('is told by the page at every change of what sounds, and at the stop', () => {
-        const extension = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const extension = extensionSource();
         // The notes sounding and the rests lasting (owner's request 2026-11-17: a rest lit in the
         // text while it lasts); the score lights the notes only — the rests (E) have their own cursor.
         assert.match(extension, /sourceLit = true;\s*vscode\.postMessage\(\{ type: 'soundingSource', positions: r\.sounding\.map\(x => x\.pos\)\.concat\(rests \? rests\.sounding\.map\(x => x\.pos\) : \[\]\) \}\);\s*if \(!r\.changed\) return;\s*clearHighlights\(\);\s*const painted = highlightPositions\(r\.sounding\);/);
@@ -225,7 +226,7 @@ describe('the chords of a score', () => {
         const fs = require('node:fs') as typeof import('node:fs');
         const path = require('node:path') as typeof import('node:path');
         const root = path.join(__dirname, '..', '..');
-        const ext = fs.readFileSync(path.join(root, 'src', 'extension.ts'), 'utf8');
+        const ext = extensionSource();
         const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
         assert.match(ext, /const ctxChordEnd = ctxNotePos >= 0 \? chordEndAt\(ctxNotePos\) : -1;/);
         assert.match(ext, /lysOnChord: ctxChordEnd >= 0,\s*lysChordEnd: ctxChordEnd,/);
@@ -403,7 +404,7 @@ describe('an editor coming to the front', () => {
     it('forgets a closed preview and the first showing once the score\'s last tab is closed', () => {
         const fs = require('node:fs') as typeof import('node:fs');
         const path = require('node:path') as typeof import('node:path');
-        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const ext = extensionSource();
         assert.match(ext, /if \(uri && !open\.has\(uri\)\) \{\s*shownDocs\.delete\(uri\);\s*dismissedPreviews\.delete\(uri\);/);
         assert.match(ext, /vscode\.window\.tabGroups\.onDidChangeTabs\(forgetClosedScores\),/);
     });

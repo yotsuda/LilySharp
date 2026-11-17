@@ -19,6 +19,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { describe, it } from 'node:test';
 import { reviewPointsOf } from '../src/reviewCore';
+import { extensionSource } from './extensionSource';
 
 const report = (findings: unknown[], compiles = true) => JSON.stringify({ compiles, findings });
 const text = 'title "T"\n\n\npart fl { instrument flute }\n  part vc { instrument cello }\n';
@@ -61,7 +62,7 @@ describe('the review in the Problems panel', () => {
         const pkg = fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8');
         assert.match(pkg, /"command": "lilysharp\.reviewScore",\s*"category": "Lily#",\s*"title": "Review Score"/);
         assert.match(pkg, /"command": "lilysharp\.reviewScore",\s*"when": "resourceLangId == lilysharp"/);
-        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const ext = extensionSource();
         assert.match(ext, /registerCommand\('lilysharp\.reviewScore', \(\) => reviewScoreCommand\(context\)\)/);
         assert.match(ext, /createDiagnosticCollection\('Lily# review'\)/);
     });

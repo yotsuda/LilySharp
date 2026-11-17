@@ -19,6 +19,7 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { REVIEW_READING, asksForOneStaff, carrySelection, cleanTitle, isPlaceholderTitle, isProblem, partCount, titleOf, toCandidateEdit, withTitle, guidePages } from '../src/aiTransformCore';
+import { extensionSource } from './extensionSource';
 
 /** The grammar and the composing guide, as the composer is sent them (owner's decision 2026-10-29:
  *  the guide is a document of its own, sent with Compose with AI alone). */
@@ -355,7 +356,7 @@ describe('the composing guide', () => {
         assert.match(transform, /const SCORE_PAGE_BYTES = 6500;/);
         const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');
         assert.match(build, /'\*\*Reading a \.lys file\*\*: read it through the `lilysharp_readScore` tool \(#readScore\), not from the disk —',/);
-        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const ext = extensionSource();
         assert.match(ext, /`\$\{doc\.uri\.fsPath\} \(not saved — read it with #readScore\)`/);
     });
     // Owner's proposal 2026-10-30: the composing checks, for a person who asks for a review.
@@ -517,7 +518,7 @@ describe('the composing guide', () => {
         assert.match(pkg, /"name": "lilysharp_readScan",\s*"toolReferenceName": "readScan"/);
         assert.match(pkg, /"name": "lilysharp_fixScanBars",\s*"toolReferenceName": "fixScanBars"/);
         assert.match(pkg, /"onLanguageModelTool:lilysharp_readScan",\s*"onLanguageModelTool:lilysharp_fixScanBars"/);
-        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const ext = extensionSource();
         assert.match(ext, /lm\.registerTool<\{ files: string\[\] \}>\('lilysharp_readScan'/);
         assert.match(ext, /const read = await importFromImage\(context, omrImportDeps, uris\[0\], uris\);/);
         const fix = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'omrAiFix.ts'), 'utf8');
@@ -884,7 +885,7 @@ describe('the composer\'s prompt', () => {
         assert.match(client, /if \(kept && kept\.version === vscode\.version\) \{\s*kept\.ids\.forEach\(id => coreOnly\.add\(id\)\);/);
         assert.match(client, /noteRefusal\(model\.id, isAutoModel\(model\)\);/);
         assert.match(client, /return \[\.\.\.copilot, \.\.\.rest\]\.filter\(m => !isCoreTaskModel\(m\) && !coreOnly\.has\(m\.id\)\);/);
-        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const ext = extensionSource();
         assert.match(ext, /rememberRefusalsIn\(context\.globalState\);/);
         assert.match(client, /model = next;\s*return await this\.send\(messages, token\);/);
         // Copilot's Auto says so, and signs no composer line (owner's report 2026-10-27).

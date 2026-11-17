@@ -18,10 +18,11 @@ import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { extensionSource } from './extensionSource';
 
 // The preview's header is in extension.ts's page, which needs a VS Code to run: its shape is read
 // from the source (owner's request 2026-11-02: the metronome button as the Range button is).
-const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+const source = extensionSource();
 const button = (id: string) => new RegExp(`<button id="${id}"[^]*?</button>`).exec(source)?.[0] ?? '';
 
 test('the metronome button is an icon button as the Range button is, with no arrow', () => {
