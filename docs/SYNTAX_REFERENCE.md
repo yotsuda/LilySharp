@@ -2184,7 +2184,8 @@ rewrite is checked before it is applied — under every form every part sounds e
 and the words fall on the same notes — and applied as one edit.
 
 **Splitting a section where you choose.** Put the caret on a bar line inside a section (or just
-after one) and choose **Split section A here (after bar N)** from the lightbulb, or **Split Section
+after one, or on a `break` / `pageBreak` — the cut is the bar line before it, and the break stays
+with the first half) and choose **Split section A here (after bar N)** from the lightbulb, or **Split Section
 Here** from the editor's right-click menu: the section is cut at that bar in every part, chord
 row and lyrics track, the bars after it become a new section declared right after it (its name
 asked for; a free `A2`, `A3`, … offered), and every form plays the two where it played the one

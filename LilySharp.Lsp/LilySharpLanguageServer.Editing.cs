@@ -436,14 +436,22 @@ public sealed partial class LilySharpLanguageServer
     /// section's name and the rewrite (lilysharp/cutSection) and applies it.</summary>
     internal const string CutSectionCommand = "lilysharp.splitSectionHere";
 
-    /// <summary>"Split section A here (after bar k)" with the caret on a bar line of a section's cell, or
-    /// just after one (owner's request 2026-11-17). Offered on sight; worked out and checked when picked.</summary>
+    /// <summary>"Split section A here (after bar k)" with the caret on a bar line of a section's cell, just
+    /// after one, or on a <c>break</c> / <c>pageBreak</c> (owner's requests 2026-11-17). Offered on sight;
+    /// worked out and checked when picked.</summary>
     private static CodeAction? CutSectionAction(Document doc, Uri uri, int offset)
     {
         int i = offset;
         while (i > 0 && doc.Text[i - 1] is ' ' or '\t') i--;
         bool onBarLine = (offset < doc.Text.Length && doc.Text[offset] == '|') || (i > 0 && doc.Text[i - 1] == '|');
-        if (!onBarLine)
+        // …or on a line or page break (owner's request 2026-11-17): where the writer turned the line
+        // is where a section often wants cutting. The cut is the bar line before it; the break stays
+        // with the first half (SectionCutter).
+        int w0 = offset, w1 = offset;
+        while (w0 > 0 && char.IsAsciiLetter(doc.Text[w0 - 1])) w0--;
+        while (w1 < doc.Text.Length && char.IsAsciiLetter(doc.Text[w1])) w1++;
+        bool onBreak = doc.Text[w0..w1] is "break" or "pageBreak";
+        if (!onBarLine && !onBreak)
             return null;
         int at = offset < doc.Text.Length && doc.Text[offset] == '|' ? offset + 1 : offset;
         if (LilySharp.Core.Editing.SectionCutter.PlaceAt(doc.Tree, at) is not { } place)

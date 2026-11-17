@@ -132,6 +132,34 @@ public class SectionCutterTests
         Assert.True(Regex.IsMatch(text, @"section B \{\s*chords harmony \{ D \| D \| \}\s*bass \{ d'?8 d' d, d' d, d' d, d' \| % \| \}"), text);
     }
 
+    /// <summary>The lightbulb offers the cut on a bar line, just after one, and on a <c>break</c> /
+    /// <c>pageBreak</c> (owner's request 2026-11-17) — nowhere else inside the music.</summary>
+    [Theory]
+    [InlineData("| pageBreak", 0, true)]           // on the bar line after F
+    [InlineData("| pageBreak", 1, true)]           // just after it
+    [InlineData("pageBreak", 4, true)]             // in the middle of the page break
+    [InlineData("break }", 2, false)]              // the section's last break: nothing after it to cut off
+    [InlineData("g, b", 1, false)]                 // inside a bar
+    public void TheLightbulb_OffersTheCut_OnABarLineOrABreak(string near, int into, bool offered)
+    {
+        string text = Song.Replace("C | F | G | C | break", "C | F | pageBreak G | C | break");
+        int at = text.IndexOf(near, System.StringComparison.Ordinal) + into;
+        Assert.True(at >= into, near);
+        var server = new LilySharp.Lsp.LilySharpLanguageServer(System.IO.Stream.Null, System.IO.Stream.Null);
+        var uri = new System.Uri("file:///cut-here.lys");
+        server.DidOpen(new LilySharp.Lsp.Protocol.DidOpenTextDocumentParams
+        {
+            TextDocument = new LilySharp.Lsp.Protocol.TextDocumentItem { Uri = uri, Text = text, LanguageId = "lilysharp", Version = 1 },
+        });
+        var (line, character) = LilySharp.Lsp.LilySharpLanguageServer.GetLineAndCharacter(text, at);
+        var actions = server.GetCodeActions(new LilySharp.Lsp.Protocol.CodeActionParams
+        {
+            TextDocument = new LilySharp.Lsp.Protocol.TextDocumentIdentifier { Uri = uri },
+            Range = new LilySharp.Lsp.Protocol.Range { Start = new LilySharp.Lsp.Protocol.Position(line, character), End = new LilySharp.Lsp.Protocol.Position(line, character) },
+        }) ?? [];
+        Assert.Equal(offered, actions.Any(a => a.Title.StartsWith("Split section A here", System.StringComparison.Ordinal)));
+    }
+
     [Fact]
     public void CutThenJoined_IsTheSameMusic()
     {

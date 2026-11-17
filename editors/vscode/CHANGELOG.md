@@ -4,7 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
-- **Split Section Here**: with the caret on a bar line inside a section, the lightbulb offers *Split section A here (after bar N)*; the editor's right-click menu has *Split Section Here*. It asks the new section's name (a free `A2`, … offered), cuts every part, chord row and lyrics track at that bar, and the forms play both halves where they played the section. The piece sounds exactly as before (checked before it is applied; refused with the reason where it cannot be, such as a tie across the bar line).
+- **Split Section Here**: with the caret on a bar line inside a section, or on a `break` / `pageBreak`, the lightbulb offers *Split section A here (after bar N)*; the editor's right-click menu has *Split Section Here*. It asks the new section's name (a free `A2`, … offered), cuts every part, chord row and lyrics track at that bar, and the forms play both halves where they played the section. The piece sounds exactly as before (checked before it is applied; refused with the reason where it cannot be, such as a tie across the bar line).
 
 - **Join Sections**: two or more sections declared one after another become one — with the caret on `section A`, the lightbulb offers *Join section A with B*; with a selection across several, *Join sections A–C into A*; the editor's right-click menu has *Join Sections* too. Each part, chord row and lyrics track runs on in the first section, the forms play it where they played the sections in a row, and the piece sounds exactly as before (checked before it is applied; refused with the reason where it cannot be).
 
