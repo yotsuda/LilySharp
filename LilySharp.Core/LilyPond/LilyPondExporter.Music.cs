@@ -358,6 +358,11 @@ public sealed partial class LilyPondExporter
             }
             else if (TakesMeasureTime(item))
             {
+                // A bar its `|` closes SHORT (the bar line is the bar, LYS2001): LilyPond's `|` is a
+                // check, so the bar is said to be that long before its first note — `\partial`, which
+                // LilyPond 2.26.0 takes mid-piece (ShortBars).
+                if (!_timeSinceBoundary && !_chordTrack && ShortBars().Starts.TryGetValue(item.Span.Start, out var shortBar))
+                    AppendToken(line, "\\partial " + ChordModeDuration(shortBar), indent);
                 // ⚠️ A VOICE SPAN WHOSE FIRST VOICE ENDED ON ITS OWN BAR LINE has closed the
                 // staff's bar: the `|` written after it is the second of a pair — an empty
                 // bar on the page — and not the line that closes the span's bar.

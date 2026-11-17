@@ -122,4 +122,23 @@ public class OpenBarAtSectionEndTests
         // The short bar's D lasts its beat.
         Assert.All(notes.Where(n => n.StartTick == shortAt), n => Assert.Equal(q, n.DurationTicks));
     }
+
+    /// <summary>The LilyPond twin of the same two shapes. LilyPond's `|` is a check, so a bar its `|`
+    /// closes short is said to be short before its first note — `\partial 4`, which LilyPond 2.26.0
+    /// takes mid-piece — and the chord row's bar there is that beat (`d4`); a bar left open is a
+    /// whole bar, silent after its music (`d,4 s2.`). Until 2026-11-17 both went out as `d,4 |`:
+    /// "bar check failed at: 1/4", every later bar three beats off (Lab sessions/p1290/mylife).</summary>
+    [Fact]
+    public void TheTwin_SaysABarClosedShort_AndFillsABarLeftOpen()
+    {
+        var shortBar = new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(Book("d4 r r r | c1 | f1 | g1 | d,4 |")));
+        Assert.Contains("\\partial 4 d,4 |", shortBar);
+        var chords = System.Text.RegularExpressions.Regex.Match(shortBar, @"harmonyChords = \\chordmode \{([^}]*)\}").Groups[1].Value
+            .Split('|').Select(b => b.Trim()).Where(b => b.Length > 0).ToArray();
+        Assert.Equal("d4", chords[4]);
+        Assert.Equal("c1", chords[5]);
+        var openBar = new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(Book("d4 r r r | c1 | f1 | g1 | d,4")));
+        Assert.Contains("d,4 s2. |", openBar);
+        Assert.DoesNotContain("\\partial", openBar);
+    }
 }

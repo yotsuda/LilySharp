@@ -451,7 +451,7 @@ public sealed partial class LilyPondExporter
             _lastChordPlay = name;
             int rowStart = result.Count;
             result.AddRange(ChordBars(entry.Container, ChordKeyFor(name), ChordPickupFor(name),
-                SectionBarTimes(name)));
+                SectionBarTimes(name), ShortBars().BySection.GetValueOrDefault(name)));
             result.AddRange(PaddingBars(entry.Container));
             WriteTheScoresRepeatSigns(name, entry.Container, result, rowStart);
             return;
@@ -641,11 +641,15 @@ public sealed partial class LilyPondExporter
             if (_flatChordBars != null)
             {
                 flatBars = Math.Min(bars, _flatChordBars.BarsLeft);
-                result.AddRange(ChordBarsOf(_flatChordBars.Take(bars).SelectMany(r => r.Items), ChordKeyFor(name), pickup, SectionBarTimes(name)));
+                result.AddRange(ChordBarsOf(_flatChordBars.Take(bars).SelectMany(r => r.Items), ChordKeyFor(name), pickup, SectionBarTimes(name),
+                    ShortBars().BySection.GetValueOrDefault(name)));
             }
             for (int i = flatBars; i < bars; i++)
             {
                 var barMeter = meters is { Count: > 0 } ? meters[Math.Min(i, meters.Count - 1)] : meter;
+                // (a bar the music's `|` closes short is that short here too: ShortBars)
+                if (ShortBars().BySection.GetValueOrDefault(name) is { } shorts && shorts.TryGetValue(i, out var shortBar))
+                    barMeter = shortBar;
                 result.Add(new ChordBarMarker("s" + ChordModeDuration(i == 0 && pickup is { } p ? p : barMeter)));
                 result.Add(CreateBarline(SyntaxKind.Bar, "|", 0, 0));
             }
@@ -684,6 +688,10 @@ public sealed partial class LilyPondExporter
                 _shared.UnmeteredPaddingBars[padding.Green] = cut;
                 _shared.OpenPaddingBars.Add(padding.Green);
             }
+            // …and a bar another part's `|` closes short is that short here (ShortBars; the
+            // `\partial` that tells LilyPond's Timing so is in that part's stream).
+            else if (ShortBars().BySection.GetValueOrDefault(name) is { } shorts && shorts.TryGetValue(i, out var shortBar))
+                _shared.UnmeteredPaddingBars[padding.Green] = shortBar;
             result.Add(padding);
         }
         WriteTheScoresRepeatSigns(name, null, result, silentStart);
@@ -759,6 +767,10 @@ public sealed partial class LilyPondExporter
             {
                 var meter = meters is { Count: > 0 }
                     ? meters[Math.Min(written + i, meters.Count - 1)] : _bars.HomeMeter.Length;
+                // (a bar another part's `|` closes short is that short here too: ShortBars)
+                if (SectionOf(container) is { } inSection && ShortBars().BySection.GetValueOrDefault(inSection.SectionName) is { } shorts
+                    && shorts.TryGetValue(written + i, out var shortBar))
+                    meter = shortBar;
                 yield return new ChordBarMarker("s" + ChordModeDuration(meter));
                 yield return CreateBarline(SyntaxKind.Bar, "|", position, 0);
             }
@@ -775,6 +787,13 @@ public sealed partial class LilyPondExporter
         if (!open)
             yield return new ClosedBarMarker();
         var name = SectionOf(container)?.SectionName;
+        // A last bar left OPEN — music after the voice's last bar line, a bar still being written
+        // (`… | g1 | d,4`) — is a whole bar, silent after its music, where bars follow it: the page
+        // closes it so (MeasureCollector.CloseOpenBar) and the MIDI too (CloseLaneOf). The `|` below
+        // only closed it, a bar check LilyPond failed at 1/4 and every later bar off by the rest
+        // (owner's report 2026-11-17, Lab sessions/p1290/mylife/m1).
+        if (open && OpenBarRest(container, name) is { } rest)
+            yield return new ChordBarMarker("s" + ChordModeDuration(rest));
         for (int i = 0; i < missing + (open ? 1 : 0); i++)
         {
             // The bar this `|` writes empty (with an open last bar, the first `|` only closes
@@ -784,6 +803,25 @@ public sealed partial class LilyPondExporter
                 yield return time;
             yield return name != null ? SectionPaddingBar(name, position) : CreateBarline(SyntaxKind.Bar, "|", position, 0);
         }
+    }
+
+    /// <summary>What is left of a voice's open last bar (its music after its last bar line,
+    /// <see cref="Semantics.MeasureModel.Split"/>), or null: none, or no room (a bar as long as
+    /// its meter, or under <c>time none</c>).</summary>
+    private Fraction? OpenBarRest(SyntaxNode container, string? sectionName)
+    {
+        if (container is MusicBlockSyntax { Parent: PartBlockSyntax block })
+            container = block;
+        var opening = sectionName != null && _sectionHeaders.Times.GetValueOrDefault(sectionName) is { IsSenzaMisura: false } time
+            ? new Fraction(time.Beats, time.BeatType) : _bars.HomeMeter.Length;
+        Func<int, TimeSignatureSyntax?>? planned = _meterPlan.IsEmpty || sectionName == null ? null
+            : bar => _meterPlan.ForeignChangeAt(sectionName, bar, container);
+        var bars = Semantics.MeasureModel.Split(container, _phraseBodies, opening, plannedMeterAt: planned);
+        if (bars.Count == 0 || bars[^1] is not { BarLineEnd: < 0, IsEmpty: false } last || last.Meter is not { } meter)
+            return null;
+        // (a section's lone pickup bar is its header's length, not the meter's)
+        var length = bars.Count == 1 && sectionName != null && ChordPickupFor(sectionName) is { } p ? p : meter;
+        return last.Duration < length ? length - last.Duration : null;
     }
 
     /// <summary>The bars a voice container writes (the semantic count), 0 when the index

@@ -536,6 +536,82 @@ public sealed partial class LilyPondExporter
     }
 
     /// <summary>
+    /// The bars a written <c>|</c> closes SHORT — shorter than the meter there, the bar line being
+    /// the bar (LYS2001; owner's decision 2026-10-14, session 904) — read once per Export off every
+    /// part voice (<see cref="Semantics.MeasureModel.Split"/>): where each starts (its first item's
+    /// position → its length; the music stream writes <c>\partial</c> before it), and per section
+    /// the longest music bar at each index where that is shorter than the meter (a chord row's bar
+    /// there is that long, as the page fits it, MeasureCollector.FitRowsToMusicBars). A section's
+    /// opening pickup (its header's <c>partial</c>) is the header's to write, and is left out.
+    /// </summary>
+    /// <remarks>MEASURED before (2026-11-17, Lab sessions/p1290/mylife/m2): `… | g1 | d,4 |` went out as
+    /// `d,4 |` — LilyPond's `|` is a check, so "bar check failed at: 1/4" and everything after it
+    /// three beats off the page — and the chord row's bar as `d1`. LilyPond 2.26.0 takes a
+    /// <c>\partial</c> mid-piece and draws the short bar the page draws (Lab sessions/p1290/shortbar/pa.ly).</remarks>
+    private (Dictionary<int, Fraction> Starts, Dictionary<string, Dictionary<int, Fraction>> BySection) ShortBars()
+    {
+        if (_shortBars is { } known)
+            return known;
+        var starts = new Dictionary<int, Fraction>();
+        var longest = new Dictionary<string, Dictionary<int, (Fraction Length, Fraction Meter)>>(StringComparer.Ordinal);
+        // The halves of ONE bar are not short bars, as the check (MeasureValidator) does not call
+        // them so: a bar a sign in the music cuts (`g a b :| g4`, SignCutBars) and a bar a section
+        // boundary cuts (A ends on its half, the next section opens with the rest, SectionBoundaryBars).
+        var signCut = _shortBarsRoot != null ? Semantics.SignCutBars.HalvesInEveryForm(_shortBarsRoot) : new HashSet<int>();
+        var boundaries = _shortBarsRoot != null ? new Semantics.SectionBoundaryBars(_shortBarsRoot, _phraseBodies, _sectionHeaders) : null;
+        var voicesOf = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var voice in _sectionBars.ByContainer.Values)
+        {
+            if (voice.IsChords || voice.IsLyrics)
+                continue;
+            var name = voice.SectionName;
+            voicesOf[name] = voicesOf.GetValueOrDefault(name) + 1;
+            var opening = _sectionHeaders.Times.GetValueOrDefault(name) is { IsSenzaMisura: false } time
+                ? new Fraction(time.Beats, time.BeatType) : _bars.HomeMeter.Length;
+            Func<int, TimeSignatureSyntax?>? planned = _meterPlan.IsEmpty ? null
+                : bar => _meterPlan.ForeignChangeAt(name, bar, voice.Container);
+            var bars = Semantics.MeasureModel.Split(voice.Container, _phraseBodies, opening, plannedMeterAt: planned);
+            bool pickup = _sectionHeaders.Partials.ContainsKey(name);
+            // A `partial` written in the music makes its bar a pickup the stream writes itself
+            // (EmitPartial); the bar model does not know it (MeasureModel's IsBareRest note).
+            var inlinePartials = voice.Container.DescendantNodes<PartialDeclarationSyntax>().Select(p => p.Span.Start).ToList();
+            if (!longest.TryGetValue(name, out var table))
+                longest[name] = table = new Dictionary<int, (Fraction, Fraction)>();
+            for (int i = 0; i < bars.Count; i++)
+            {
+                var b = bars[i];
+                var meter = b.Meter ?? opening;
+                int from = i > 0 ? bars[i - 1].Span.End : voice.Container.Span.Start;
+                bool shortBar = b.BarLineEnd >= 0 && !b.IsEmpty && !b.Flowed && !b.IsBareRest && b.Meter != null
+                    && b.Duration > Fraction.Zero && b.Duration < meter && !(i == 0 && pickup)
+                    && !inlinePartials.Any(p => p >= from && p < b.Span.End)
+                    && !signCut.Contains(b.Span.Start);
+                if (shortBar && boundaries != null && Semantics.SectionBoundaryBars.CellOf(voice.Container) is { } cell
+                    && ((i == 0 && boundaries.FirstBarCompletesEveryPredecessor(cell, b.Duration, meter))
+                        || (i == bars.Count - 1 && boundaries.LastBarCompletedByEverySuccessor(cell, b.Duration, meter, meter))))
+                    shortBar = false;
+                if (shortBar)
+                    starts.TryAdd(b.Span.Start, b.Duration);
+                // The longest the section's voices sound here; a voice that writes no bar here
+                // pads a whole one (counted by the writers below).
+                var length = shortBar ? b.Duration : meter;
+                table[i] = table.TryGetValue(i, out var had) && had.Length > length ? had : (length, meter);
+                _shortBarWriters[(name, i)] = _shortBarWriters.GetValueOrDefault((name, i)) + 1;
+            }
+        }
+        var bySection = new Dictionary<string, Dictionary<int, Fraction>>(StringComparer.Ordinal);
+        foreach (var (name, table) in longest)
+            foreach (var (i, (length, meter)) in table)
+                if (length < meter && _shortBarWriters.GetValueOrDefault((name, i)) == voicesOf[name])
+                    (bySection.TryGetValue(name, out var d) ? d : bySection[name] = new()).Add(i, length);
+        _shortBars = (starts, bySection);
+        return _shortBars.Value;
+    }
+    private (Dictionary<int, Fraction> Starts, Dictionary<string, Dictionary<int, Fraction>> BySection)? _shortBars;
+    private SyntaxNode? _shortBarsRoot;
+    private readonly Dictionary<(string, int), int> _shortBarWriters = new();
+
+    /// <summary>
     /// <see cref="SectionBarMeters"/> as the meters themselves — what a chord row's bar is
     /// gridded on (<see cref="ChordBarText"/>), as the page, the MIDI and the MusicXML grid it:
     /// the bar's own beats, not the score's (a 6/8 bar's two dotted quarters, a 5/8 bar's 3+2).
@@ -563,7 +639,8 @@ public sealed partial class LilyPondExporter
     /// <paramref name="pickup"/> when it is the play's first.
     /// </summary>
     private IEnumerable<SyntaxNode> ChordBars(SyntaxNode container, (int TonicStep, int Sharps) key,
-        Fraction? pickup = null, IReadOnlyList<(int Beats, int BeatType)>? meters = null)
+        Fraction? pickup = null, IReadOnlyList<(int Beats, int BeatType)>? meters = null,
+        IReadOnlyDictionary<int, Fraction>? shortBars = null)
     {
         IEnumerable<SyntaxNode> items = container switch
         {
@@ -571,11 +648,14 @@ public sealed partial class LilyPondExporter
             SectionDeclarationSyntax section => Svg.Collector.ChordNameCollector.SectionItems(section),
             _ => Enumerable.Empty<SyntaxNode>(),
         };
-        return ChordBarsOf(items, key, pickup, meters);
+        return ChordBarsOf(items, key, pickup, meters, shortBars);
     }
 
+    /// <param name="shortBars">The section's bars a `|` closes short in its music, by index
+    /// (<see cref="ShortBars"/>): the row's bar there is that long, its chords spread over it.</param>
     private IEnumerable<SyntaxNode> ChordBarsOf(IEnumerable<SyntaxNode> items, (int TonicStep, int Sharps) key,
-        Fraction? pickup = null, IReadOnlyList<(int Beats, int BeatType)>? meters = null)
+        Fraction? pickup = null, IReadOnlyList<(int Beats, int BeatType)>? meters = null,
+        IReadOnlyDictionary<int, Fraction>? shortBars = null)
     {
         var result = new List<SyntaxNode>();
         var pending = new List<SyntaxNode>();
@@ -602,8 +682,9 @@ public sealed partial class LilyPondExporter
             // a whole 4/4 bar, and LilyPond's bar check failed there (Lab probes/complex-lys/06).
             var barTime = meters is { Count: > 0 }
                 ? meters[Math.Min(barIndex, meters.Count - 1)] : (_bars.HomeMeter.Beats, _bars.HomeMeter.BeatType);
+            var musicShort = shortBars != null && shortBars.TryGetValue(barIndex, out var s) ? s : (Fraction?)null;
             barIndex++;
-            var barLength = firstBar && pickup is { } p ? p : new Fraction(barTime.Beats, barTime.BeatType);
+            var barLength = firstBar && pickup is { } p ? p : musicShort ?? new Fraction(barTime.Beats, barTime.BeatType);
             result.Add(new ChordBarMarker(pending.Count == 0
                 ? "s" + ChordModeDuration(barLength)
                 : ChordBarText(pending, key, barLength, barTime, firstBar && pickup != null)));

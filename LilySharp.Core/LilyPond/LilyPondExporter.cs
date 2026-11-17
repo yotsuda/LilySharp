@@ -578,6 +578,10 @@ public sealed partial class LilyPondExporter
         // The meters other parts write into each section's bars (HANDOFF §2 F-partmeter ⒜):
         // a voice's silent bars are written in them (AppendSilentPlay, PaddingBars).
         _meterPlan = Svg.Collector.SectionMeterPlan.Build(root, _phraseBodies);
+        // (the bars a `|` closes short: read when first asked, once the section headers are in — ShortBars)
+        _shortBars = null;
+        _shortBarWriters.Clear();
+        _shortBarsRoot = root;
 
         // Octave mode is a file-level directive; default is relative (Lily#'s default).
         var octaveDir = root.DescendantNodes<OctaveDirectiveSyntax>().FirstOrDefault();

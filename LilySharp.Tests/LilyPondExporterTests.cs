@@ -2910,7 +2910,7 @@ public class LilyPondExporterTests
             part m { clef treble }
             section A {
               partial 4
-              m { d'4 | g'2 b'8 g'8 | g'2 d'4 | }
+              m { d'4 | g'2 b'4 g'4 | g'2. d'4 | }
               chords prog { | G | G | }
             }
             form { A }
