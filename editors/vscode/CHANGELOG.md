@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **The A and B flags stand in front of everything**: a flag on the bar a section opens was hidden behind the section's mark. The flags are now drawn last on the page, over the marks.
 - **Try the chords a symbol may be (`@or`)**: on a chord symbol written `F@or(Bm Dm)`, Ctrl+Shift+Up brings the next candidate into its place (`Bm@or(Dm F)`) and sounds that chord alone, so you hear one against the other in a moment; Ctrl+Shift+Down turns the other way. The preview shows the symbol ringed in grey with its first candidate (`or Bm?`); the quick fixes *Keep F* and *Choose Bm* settle it and remove the `@or`. Nothing prints.
 - **Alt+M plays the bar with the recording**: with a recording beside the chart, Play Current Measure plays the recording's bar together with the part the caret is in, bar line to bar line. Without a recording it plays the part alone, as before.
 - **S means "listen to this"**: a soloed line now sounds even when it is muted — by its own name or by its group's All (or the recording's button) turned off. With the score's All off and the recording playing, S on the score's bass plays that bass alone; S on the recording's bass too, and you hear the two basses side by side. Letting S go puts the line back as it was.

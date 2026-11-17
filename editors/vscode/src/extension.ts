@@ -9631,7 +9631,19 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             g.addEventListener('pointerdown', e => startAbDrag(e, letter));
             // (the sheet's own clicks — select, play from here — are not the flag's)
             for (const type of ['mousedown', 'mouseup', 'click', 'dblclick', 'contextmenu']) g.addEventListener(type, e => e.stopPropagation());
-            rect.parentNode.appendChild(g);
+            // In front of everything on the page (owner's request 2026-11-17: a section's mark drawn
+            // after the system hid the flag): the last child of the page's outermost svg, carried
+            // into the bar rect's coordinates by the matrix between the two. A page not laid out
+            // (no matrix) keeps the flag beside the rect.
+            const parent = rect.parentNode;
+            let page = rect.ownerSVGElement;
+            while (page && page.ownerSVGElement && svgContainer.contains(page.ownerSVGElement)) page = page.ownerSVGElement;
+            const from = parent.getScreenCTM && parent.getScreenCTM(), to = page && page.getScreenCTM && page.getScreenCTM();
+            if (page && page !== parent && from && to) {
+                const m = to.inverse().multiply(from);
+                g.setAttribute('transform', 'matrix(' + [m.a, m.b, m.c, m.d, m.e, m.f].join(' ') + ')');
+                page.appendChild(g);
+            } else parent.appendChild(g);
             return g;
         }
         function abFlagEl(letter) { return svgContainer.querySelector('.ab-flag[data-flag="' + letter + '"]'); }
