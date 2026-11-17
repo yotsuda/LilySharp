@@ -6280,7 +6280,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         <div class="mgroup" data-fold="loop">
             <div class="mhead"><button type="button" class="mfold mtitle" aria-expanded="true">Loop</button><span class="mmini"><button type="button" class="toggle" data-mini="abBtn" aria-pressed="false">A-B</button><button type="button" class="toggle" data-mini="loopBtn" aria-pressed="false">Repeat</button></span></div>
             <div class="mbody">
-                <div class="prow"><span class="plbl">A-B</span><span class="tempo"><button type="button" id="abBtn" class="toggle" aria-pressed="false" title="Play the bars A to B (as printed) — a click on a bar sets A, Shift+click sets B">Off</button><span id="abFields" hidden><label class="abnum">A <input type="number" id="abFromNum" min="0" step="1" aria-label="A: the first bar"></label><label class="abnum">B <input type="number" id="abToNum" min="0" step="1" aria-label="B: the last bar"></label><span id="abInfo" class="tval"></span></span></span></div>
+                <div class="prow"><span class="plbl">A-B</span><span class="tempo"><button type="button" id="abBtn" class="toggle" aria-pressed="false" title="Play the bars A to B (as printed) — a click on a bar sets A, Shift+click sets B on its left bar line (right of a line: on its last)">Off</button><span id="abFields" hidden><label class="abnum">A <input type="number" id="abFromNum" min="0" step="1" aria-label="A: the first bar"></label><label class="abnum">B <input type="number" id="abToNum" min="0" step="1" aria-label="B: the last bar"></label><span id="abInfo" class="tval"></span></span></span></div>
                 <div class="prow"><span class="plbl">Repeat</span><button type="button" id="loopBtn" class="toggle" aria-pressed="false" title="Play round and round: the bars A to B when A-B is on, else the whole score as it plays">Off</button></div>
                 <div class="prow"><span class="plbl" title="Kept A-B ranges: click to play one, Shift+click to keep the A-B shown, double-click to name">Ranges</span><span id="abStrips" class="ab-strips"></span></div>
             </div>
@@ -7359,6 +7359,23 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 }
             }
             return lo >= 0 ? [lo, hi] : (isNaN(start) ? null : [start, start]);
+        }
+        /** The bar ending the line at (clientX, clientY) when the point is right of that line's last
+         *  bar line, on the same page (owner's decision 2026-11-17: Shift+click there puts B on it). */
+        function lineEndBarAt(clientX, clientY) {
+            let best = null, bestRight = -Infinity;
+            for (const r of svgContainer.querySelectorAll('rect.bar-staff')) {
+                const b = r.getBoundingClientRect();
+                const d = clientY < b.top ? b.top - clientY : clientY > b.bottom ? clientY - b.bottom : 0;
+                if (d > 2 * b.height) continue;
+                if (clientX >= b.left) {
+                    if (clientX <= b.right) return null;      // on a bar: not right of the line
+                    if (b.right > bestRight) { best = r; bestRight = b.right; }
+                }
+            }
+            if (!best) return null;
+            const page = best.ownerSVGElement ? best.ownerSVGElement.getBoundingClientRect() : null;
+            return page && clientX <= page.right ? best : null;
         }
         function barStaffAt(clientX, clientY) {
             let best = null, bestDist = Infinity;
@@ -9493,13 +9510,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (replay) replayIfPlaying();
             askStoppedPosition();
         }
-        /** The B flag to bar m — a bar Shift+clicked (owner's decision 2026-11-17, docs/transport-mixer-design.md
-         *  §7): A-B turns on; before A, the two change places (as a flag dragged past the other). */
-        function setB(m) {
+        /** The B flag for a bar Shift+clicked (owner's decisions 2026-11-17, docs/transport-mixer-design.md
+         *  §7): on the bar line at bar m's left, as A stands at its own — or, atEnd (a click right of a
+         *  line's last bar line), on the bar line at its right. A bar line before A's: the two change
+         *  places; on A's own: that bar alone. A-B turns on. */
+        function setB(m, atEnd) {
             const last = Math.max(0, abBars().length - 1);
             m = Math.max(0, Math.min(m, last));
+            const line = atEnd ? m + 1 : m;     // the bar line, as the bar after it
             abOn = true;
-            if (m < abFrom) setAb(m, abFrom); else setAb(abFrom, m);
+            if (line > abFrom) setAb(abFrom, line - 1);
+            else if (line < abFrom) setAb(line, abFrom - 1);
+            else setAb(abFrom, abFrom);
             askStoppedPosition();
         }
         function drawAbFlag(letter, rect, atEnd) {
@@ -11598,7 +11620,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         svgContainer.addEventListener('pointerdown', (e) => {
             if (e.pointerType !== 'mouse' || e.button !== 0 || !e.shiftKey) return;
             const t = noteUnder(e);
-            if ((t && t.hasAttribute && t.hasAttribute('data-pos')) || barStaffAt(e.clientX, e.clientY)) e.preventDefault();
+            if ((t && t.hasAttribute && t.hasAttribute('data-pos')) || barStaffAt(e.clientX, e.clientY) || lineEndBarAt(e.clientX, e.clientY)) e.preventDefault();
         });
 
         document.addEventListener('click', (e) => {
@@ -11608,7 +11630,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 // Shift+click: the B flag to its bar (§7) — it never seeks or jumps.
                 if (e.shiftKey) {
                     const b = barStaffAt(e.clientX, e.clientY); const m = b ? measureOfStaffBox(b) : -1;
-                    if (m >= 0) setB(m);
+                    if (m >= 0) setB(m, false);
                     return;
                 }
                 // Plain click: this note becomes the anchor; any prior score
@@ -11624,9 +11646,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 if (seekToCopy(pos, (copy) => copy === target)) return;
                 vscode.postMessage({ type: 'jumpToPosition', position: pos });
             } else if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey
-                && target && svgContainer.contains(target) && barStaffAt(e.clientX, e.clientY)) {
-                // Shift+click on a bar: the B flag there (owner's decision 2026-11-17, §7).
-                { const m = measureOfStaffBox(barStaffAt(e.clientX, e.clientY)); if (m >= 0) setB(m); }
+                && target && svgContainer.contains(target) && (barStaffAt(e.clientX, e.clientY) || lineEndBarAt(e.clientX, e.clientY))) {
+                // Shift+click on a bar: the B flag on its left bar line; right of a line's last bar
+                // line: on that bar line (owner's decisions 2026-11-17, §7).
+                const bar = barStaffAt(e.clientX, e.clientY);
+                if (bar) { const m = measureOfStaffBox(bar); if (m >= 0) setB(m, false); }
+                else { const m = measureOfStaffBox(lineEndBarAt(e.clientX, e.clientY)); if (m >= 0) setB(m, true); }
             } else if (!e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey
                 && target && svgContainer.contains(target) && barStaffAt(e.clientX, e.clientY)) {
                 // A bar: its first note's place in the editor — or, while playing, the
