@@ -322,6 +322,40 @@ public sealed class BreaksAnywhereTests
         Assert.All(Permissions(score), v => Assert.Equal(BreakPermission.Force, v.Page[2]));
     }
 
+    /// <summary>The break words are looked up in the text only at a bar line somebody forbids
+    /// (session 1291: every <c>break</c> of a book was looked up on every keystroke's collect,
+    /// conflict or none — the collect stage 1.34 → 1.89 ms a keystroke over the reader's corpus).
+    /// Counted, not timed.</summary>
+    [Fact]
+    public void TheBreakWords_AreLookedUpOnlyWhereSomeoneForbids()
+    {
+        const string Book = """
+            octave absolute
+            time 4/4
+            part a { clef treble }
+            part b { clef treble }
+            section A {
+              a { c'1 | d'1 break | e'1 | f'1 pageBreak | g'1 | }
+              b { c'1 break | d'1 break | e'1 | f'1 | g'1 | }
+            }
+            form { A }
+            score { staff a  staff b }
+            """;
+        var tree = SyntaxTree.Parse(Book);
+        var collector = new MeasureCollector();
+        var score = SvgGenerator.CollectScore(collector, tree, RenderSpecParser.FindFirst(tree));
+        Assert.Equal([1, 2, 4], ForcedAfter(score));
+        Assert.Empty(collector.BreakConflicts);
+        Assert.Equal(0, collector.BreakWordLookups);
+
+        // One bar line forbidden: its places are looked up, and the conflict is recorded.
+        var against = SyntaxTree.Parse(Book.Replace("c'1 break | d'1 break |", "c'1 break | d'1 noBreak |"));
+        var asked = new MeasureCollector();
+        SvgGenerator.CollectScore(asked, against, RenderSpecParser.FindFirst(against));
+        Assert.Single(asked.BreakConflicts);
+        Assert.InRange(asked.BreakWordLookups, 2, 2);
+    }
+
     [Fact]
     public void TwoPlacesThatAgree_OrOnePartSayingBoth_IsNoConflict()
     {

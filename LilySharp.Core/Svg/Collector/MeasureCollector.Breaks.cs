@@ -197,6 +197,15 @@ public sealed partial class MeasureCollector
             {
                 if (merged[i] != BreakPermission.Force)
                     continue;
+                // No place forbids this bar line: nothing to record, and nothing below is
+                // asked. ⚠️ The loop below looks each word up (BreakWordOf — a walk of the
+                // file's break words over the tree's index) for EVERY place that says anything
+                // at a forced bar line, the winner's included; without this gate every `break`
+                // of a book paid that on every keystroke's collect, conflict or none. MEASURED
+                // (session 1291, the reader's corpus, 235 books × 8 keystrokes): the collect
+                // stage went 1.34 → 1.89 ms a keystroke with the commit that added the loop.
+                if (!SomeoneForbids(voices, chordBreaks, i, pageBreak))
+                    continue;
                 (string Place, int Position)? winner = null;
                 List<(string Place, int Position)>? losers = null;
                 foreach (var (key, voice) in voices)
@@ -207,6 +216,7 @@ public sealed partial class MeasureCollector
                     if (said == BreakPermission.Allow)
                         continue;
                     string place = $"part '{(key.StartsWith("omit:", StringComparison.Ordinal) ? key[5..] : voice.Name)}'";
+                    BreakWordLookups++;
                     int at = BreakWordOf(root, voice.Measures, i, pageBreak, said == BreakPermission.Forbid);
                     if (said == BreakPermission.Force)
                         winner ??= (place, at);
@@ -240,6 +250,35 @@ public sealed partial class MeasureCollector
                 }
             }
         }
+    }
+
+    /// <summary>How many times this collect looked a break word up in the text
+    /// (<see cref="BreakWordOf"/>) — for tests: 0 for a book whose breaks nobody forbids.</summary>
+    internal int BreakWordLookups { get; private set; }
+
+    /// <summary>Whether any voice or chords track forbids the line (or page) break at bar line
+    /// <paramref name="index"/> — the only way <see cref="RecordBreakConflicts"/> has a loser there.</summary>
+    private static bool SomeoneForbids(Dictionary<string, Voice> voices, List<WrittenBreak>? chordBreaks,
+        int index, bool pageBreak)
+    {
+        foreach (var voice in voices.Values)
+        {
+            if (index >= voice.Measures.Length)
+                continue;
+            var said = pageBreak ? voice.Measures[index].PageBreakPermission : voice.Measures[index].LineBreakPermission;
+            if (said == BreakPermission.Forbid)
+                return true;
+        }
+        if (chordBreaks != null)
+            foreach (var b in chordBreaks)
+            {
+                if (b.MeasureIndex != index)
+                    continue;
+                var (l, p) = PermissionsOf(b.Kind);
+                if ((pageBreak ? p : l) == BreakPermission.Forbid)
+                    return true;
+            }
+        return false;
     }
 
     /// <summary>
