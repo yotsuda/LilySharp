@@ -684,6 +684,29 @@ describe('the A-B repeat\'s bars', () => {
         assert.deepEqual(playBarsWindow(notes, 7, 9, true, bars).notes, []);
     });
 
+    // Owner's report 2026-11-17 (ずんだもんとめたん, A-B over bars 5-6 with Repeat on, the voice sang on past
+    // B): bar 5 begins Verse1, and the light of the form's section name (E) lasts the section's eight
+    // bars — the stretch, the loop's round and the voice's pieces ran to the section's end. A light
+    // counts by where it begins, and lasts no longer than the stretch.
+    it('is not made longer by a light that lasts past it (a form section\'s name)', () => {
+        const section = { ...note(8, 6, 0, { S: 900, O: 0, M: 4, N: -1 }), E: 1 } as typeof notes[number];
+        for (const once of [true, false]) {
+            const w = playBarsWindow([...notes, section], 4, 5, once, bars);
+            assert.equal(w.length, 2, 'two bars, once ' + once);
+            assert.deepEqual(w.pieces, [[8, 10]]);
+            const light = w.notes.find(n => n.E);
+            assert.ok(light, 'the light is in the stretch');
+            assert.deepEqual([light!.T, light!.D], [0, 2], 'cut at the stretch\'s end');
+        }
+    });
+
+    it('keeps a bar of rests at its end (a rest\'s light begins it)', () => {
+        const rest = { ...note(9, 1, 0, { S: 950, O: 0, M: 5, N: 0 }), E: 1 } as typeof notes[number];
+        const only = notes.filter(n => n.M !== 5).concat([rest]);
+        const w = playBarsWindow(only, 4, 5, true, bars);
+        assert.equal(w.length, 2);
+    });
+
     // Owner's report 2026-11-17 (My Life, A-B over bars 5-8): `d,8 d' d, d' d, d' d, d' | % | % | % |`
     // — a `%` bar's notes all carry the mark's place (S, O), each the written note it plays (Q).
     it('sounds every note of a `%` bar, not each pitch\'s first only', () => {

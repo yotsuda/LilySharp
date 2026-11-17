@@ -46,6 +46,9 @@ export interface PlaybackNote {
     /** A light, not a note: a `%` lit for the bars it sounds (PlaybackNote.L; owner's request
      *  2026-11-16). Nothing sounds it (isLight); the follow-along lights it, a video too. */
     L?: boolean;
+    /** A light for the editor only (PlaybackResponse.Lights): a rest, a form section's name, a
+     *  syllable, lit in the text while it lasts — never sounded, nor lit on the score. */
+    E?: number | boolean;
 }
 
 /** A metronome beat as the server sends it: seconds, and whether it opens a bar. */
@@ -319,10 +322,14 @@ export function playSpanWindow(notes: readonly PlaybackNote[], lo: number | null
         for (const n of sorted) { if (typeof n.M === 'number' && n.M >= 0 && !within(n)) { first.delete(n); } }
     }
     let t0 = Infinity, t1 = -Infinity;
+    // A light (E: a rest, a form section's name, a syllable) counts by where it begins — a section's
+    // name lasts its whole section (owner's report 2026-11-17: A-B over the first two bars of a
+    // section went round in the section's eight, the voice singing on past B). A bar of rests is
+    // kept whole by the bar lines below.
     for (const n of sorted) {
         if (!first.has(n) || !inSpan(n)) { continue; }
         t0 = Math.min(t0, n.T);
-        t1 = Math.max(t1, n.T + n.D);
+        t1 = Math.max(t1, n.E ? n.T + Math.min(n.D, 1e-3) : n.T + n.D);
     }
     if (t0 === Infinity) { return { notes: [], length: 0, start: 0, pieces: [] }; }
     if (bars && bars.length > 0) {
@@ -337,6 +344,11 @@ export function playSpanWindow(notes: readonly PlaybackNote[], lo: number | null
     // A pedal held into the stretch goes down at its start; one held out of it lifts at its end, or
     // a loop's next round would ring on from the last.
     const window = fromOffset(sorted, t0).filter(n => n.T < t1 - 1e-6);
+    // …and lasts no longer than the stretch (it would light on past the round's end).
+    for (let i = 0; i < window.length; i++) {
+        const n = window[i];
+        if (n.E && n.T + n.D > t1 + 1e-6) { const c = { ...n, D: t1 - n.T }; if (first.has(n)) { first.add(c); } window[i] = c; }
+    }
     const down = new Map<number, PlaybackNote>();
     for (const n of window) {
         if (isPedal(n)) { first.add(n); if (n.V > 0) { down.set(channelOf(n), n); } else { down.delete(channelOf(n)); } }
