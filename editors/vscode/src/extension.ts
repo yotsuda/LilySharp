@@ -9839,12 +9839,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (replay) replayIfPlaying();
             askStoppedPosition();
         }
-        /** The B flag for a bar Shift+clicked (owner's decisions 2026-11-17, docs/transport-mixer-design.md
-         *  §7): on the bar line at bar m's left, as A stands at its own — or, atEnd (a click right of a
-         *  line's last bar line), on the bar line at its right. A bar line before A's: B stands there
-         *  and A one bar before it — that bar alone, as a click past B does for A (owner's request
-         *  2026-11-17: a Shift+click means to move B; the two used to change places, and B went to A's
-         *  old line); the very first bar line, the first bar. On A's own: that bar alone. A-B turns on. */
+        /** The B flag (owner's decisions 2026-11-17, docs/transport-mixer-design.md §7): atEnd — a bar
+         *  Shift+clicked, or the margin right of a line's last bar line — on the bar line at bar m's
+         *  right, so the bar is in the range as a click puts its own in (the owner's revision of the
+         *  left line, the same day); else on the line at its left. A bar line at or before A's: B there
+         *  and A one bar before it — that bar alone, as a click past B does for A (a Shift+click means to
+         *  move B; the two used to change places); the very first bar line, the first bar. On B's own
+         *  line (the range's last bar Shift+clicked): B goes, A-B off. A-B turns on. */
         function setB(m, atEnd) {
             const last = Math.max(0, abBars().length - 1);
             m = Math.max(0, Math.min(m, last));
@@ -9854,8 +9855,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (abOn && line === abTo + 1) { abBtn.click(); return; }
             abOn = true;
             if (line > abFrom) setAb(abFrom, line - 1);
-            else if (line < abFrom) setAb(Math.max(0, line - 1), Math.max(0, line - 1));
-            else setAb(abFrom, abFrom);
+            else setAb(Math.max(0, line - 1), Math.max(0, line - 1));
             askStoppedPosition();
         }
         function drawAbFlag(letter, rect, atEnd) {
@@ -12171,7 +12171,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 // Shift+click: the B flag to its bar (§7) — it never seeks or jumps.
                 if (e.shiftKey) {
                     const b = barStaffAt(e.clientX, e.clientY); const m = b ? measureOfStaffBox(b) : -1;
-                    if (m >= 0) setB(m, false);
+                    if (m >= 0) setB(m, true);
                     return;
                 }
                 // Plain click: this note becomes the anchor; any prior score
@@ -12188,10 +12188,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 vscode.postMessage({ type: 'jumpToPosition', position: pos });
             } else if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey
                 && target && svgContainer.contains(target) && (barStaffAt(e.clientX, e.clientY) || lineEndBarAt(e.clientX, e.clientY))) {
-                // Shift+click on a bar: the B flag on its left bar line; right of a line's last bar
-                // line: on that bar line (owner's decisions 2026-11-17, §7).
+                // Shift+click on a bar: the B flag on its RIGHT bar line, the bar in the range as a
+                // click puts its bar in (owner's decision 2026-11-17, revising the left line); right of
+                // a line's last bar line: on that bar line (§7).
                 const bar = barStaffAt(e.clientX, e.clientY);
-                if (bar) { const m = measureOfStaffBox(bar); if (m >= 0) setB(m, false); }
+                if (bar) { const m = measureOfStaffBox(bar); if (m >= 0) setB(m, true); }
                 else { const m = measureOfStaffBox(lineEndBarAt(e.clientX, e.clientY)); if (m >= 0) setB(m, true); }
             } else if (!e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey
                 && target && svgContainer.contains(target) && barStaffAt(e.clientX, e.clientY)) {
