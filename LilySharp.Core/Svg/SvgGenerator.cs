@@ -209,6 +209,13 @@ public static class SvgGenerator
             PaperOverrides = settings,
         };
 
+    /// <summary>How many full collects of a score this thread has started (every road to one
+    /// comes through <see cref="CollectScore(MeasureCollector, SyntaxTree, RenderSpec?)"/>) — for the
+    /// nets that count what a request costs (<c>KeystrokeSideWorkTests</c>). Per thread, so tests
+    /// running side by side do not count each other's.</summary>
+    [System.ThreadStatic]
+    internal static int CollectsOnThisThread;
+
     /// <summary>
     /// Collects into the GIVEN collector, so a caller that needs the collector's
     /// recorded side effects (the shared-collect validators read back
@@ -217,6 +224,7 @@ public static class SvgGenerator
     /// </summary>
     internal static MultiStaffScore CollectScore(MeasureCollector collector, SyntaxTree tree, RenderSpec? renderSpec)
     {
+        CollectsOnThisThread++;
         // The score's own `title` / `composer`, if it states any. Set here rather than
         // on either branch below because BOTH collect definitions, and the single-staff
         // path takes no RenderSpec at all.

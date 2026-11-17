@@ -94,6 +94,14 @@ public static class ResolvedPitches
     /// enough that the caller should report its errors instead).
     /// </summary>
     public static IReadOnlyList<MeasureCollector.PitchTraceEntry>? ForFile(SyntaxTree tree)
+        => ForFile(tree, null);
+
+    /// <summary>As <see cref="ForFile(SyntaxTree)"/>, handing each score's collect to
+    /// <paramref name="each"/> as it is made (its spec — null for a scoreless file — and the
+    /// collector, <c>Collected</c> set): a reader that wants something else off the same
+    /// collects takes it here and pays no collect of its own (<c>Editing.FileReadings</c>).</summary>
+    internal static IReadOnlyList<MeasureCollector.PitchTraceEntry>? ForFile(SyntaxTree tree,
+        System.Action<RenderSpec?, MeasureCollector>? each)
     {
         var specs = RenderSpecParser.FindAll(tree);
         var resolved = new SortedDictionary<int, string>();
@@ -115,6 +123,7 @@ public static class ResolvedPitches
             if (collector == null)
                 continue;
             collected++;
+            each?.Invoke(spec, collector);
             foreach (var e in collector.PitchTrace)
                 resolved.TryAdd(e.Position, e.Pitch);
         }

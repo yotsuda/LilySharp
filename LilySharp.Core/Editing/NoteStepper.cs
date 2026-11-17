@@ -1885,7 +1885,8 @@ public static partial class NoteStepper
             try
             {
                 string text = tree.Text;
-                foreach (var e in ResolvedPitches.ForFile(tree) ?? [])
+                // (the tree's one collect of each score, which the note's place reads too)
+                foreach (var e in FileReadings.Of(tree).Trace ?? [])
                 {
                     int p = e.Position;
                     while (p < text.Length && char.IsWhiteSpace(text[p]))

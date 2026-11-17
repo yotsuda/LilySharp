@@ -79,6 +79,30 @@ public class KeystrokeSideWorkTests
         Assert.Equal(1, server.PlacesCollects);
     }
 
+    // P4 of the review: the caret on a note asked for its sound (the resolved pitches) and its
+    // place (bar and beat) by two walks, each a full collect of every score.
+    [Theory]
+    [InlineData(false, 2)]      // two scores, each collected once
+    [InlineData(true, 3)]       // …and a score that transposes once more, for the pitch as written
+    public void TheCaretOnANote_CollectsEachScoreOnce_ForItsSoundAndItsPlace(bool transposing, int collects)
+    {
+        string text = transposing ? Doc.Replace("score solo { staff vn }", "score solo transpose d { staff vn }") : Doc;
+        var server = Open(text, out var uri, "caret" + transposing);
+        var ask = new AuditionAtParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = uri },
+            Offset = text.IndexOf("d e f |", StringComparison.Ordinal),
+        };
+        int before = LilySharp.Core.Svg.SvgGenerator.CollectsOnThisThread;
+        var info = server.CaretInfo(ask);
+        Assert.Equal(collects, LilySharp.Core.Svg.SvgGenerator.CollectsOnThisThread - before);
+        Assert.Contains("bar 1", info.Text);
+        Assert.Contains("D5", info.Text);
+        // …and asked again of the same text, none.
+        server.CaretInfo(ask);
+        Assert.Equal(collects, LilySharp.Core.Svg.SvgGenerator.CollectsOnThisThread - before);
+    }
+
     private static string[] Lines(PlaybackResponse pb, Func<PlaybackNote, bool> keep)
         => [.. pb.Notes!.Where(keep).Select(n => $"{n.T}|{n.D}|{n.P}|{n.V}|{n.S}|{n.O}|{n.C}|{n.G}|{n.N}|{n.M}")];
 

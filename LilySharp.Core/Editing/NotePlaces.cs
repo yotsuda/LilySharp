@@ -50,30 +50,54 @@ public sealed class NotePlaces
     private NotePlaces(List<NotePlace> places, Dictionary<int, string> written)
         => (_places, _written) = (places, written);
 
-    /// <summary>A document's places; empty when it cannot be collected.</summary>
-    public static NotePlaces Of(SyntaxTree tree)
+    /// <summary>A document's places; empty when it cannot be collected. Read off the tree's one
+    /// collect of each score (<see cref="FileReadings"/>), which the caret's sound reads too.</summary>
+    public static NotePlaces Of(SyntaxTree tree) => FileReadings.Of(tree).Places;
+
+    /// <summary>The places as they are gathered, score by score in the file's order (the first
+    /// score to draw a position places it).</summary>
+    internal sealed class Builder
     {
-        var byPosition = new Dictionary<int, NotePlace>();
-        var written = new Dictionary<int, string>();
-        try
+        private readonly Dictionary<int, NotePlace> _byPosition = new();
+        private readonly Dictionary<int, string> _written = new();
+
+        /// <summary>One score's places and written pitches, off a collect already made.</summary>
+        public void Add(MultiStaffScore score, IReadOnlyList<MeasureCollector.PitchTraceEntry> trace)
         {
-            var all = RenderSpecParser.FindAll(tree);
-            RenderSpec?[] specs = all.Count > 0 ? [.. all] : [null];
-            foreach (var spec in specs)
+            try
             {
-                var collector = new MeasureCollector();
-                Collect(SvgGenerator.CollectScore(collector, tree, spec), byPosition);
-                foreach (var e in collector.PitchTrace)
-                    written.TryAdd(e.Position, e.Pitch);
+                Collect(score, _byPosition);
+                foreach (var e in trace)
+                    _written.TryAdd(e.Position, e.Pitch);
+            }
+            catch (Exception)
+            {
+                // A score the walk cannot read places nothing.
             }
         }
-        catch (Exception)
+
+        /// <summary>One score's, off a collect of its own that reads none of the score's
+        /// <c>transpose</c> / <c>concert</c> / staff pitch — what the places have always read
+        /// (the written pitch as the part writes it), where the shared collect read them.</summary>
+        public void AddUntransposed(SyntaxTree tree, RenderSpec? spec)
         {
-            // A document the collector cannot walk has no places.
+            try
+            {
+                var collector = new MeasureCollector();
+                Add(SvgGenerator.CollectScore(collector, tree, spec), collector.PitchTrace);
+            }
+            catch (Exception)
+            {
+                // A document the collector cannot walk has no places.
+            }
         }
-        var places = byPosition.Values.ToList();
-        places.Sort((a, b) => a.Position.CompareTo(b.Position));
-        return new NotePlaces(places, written);
+
+        public NotePlaces Build()
+        {
+            var places = _byPosition.Values.ToList();
+            places.Sort((a, b) => a.Position.CompareTo(b.Position));
+            return new NotePlaces(places, _written);
+        }
     }
 
     private static void Collect(MultiStaffScore score, Dictionary<int, NotePlace> byPosition)
