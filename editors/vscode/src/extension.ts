@@ -11493,6 +11493,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         refreshLoop(message);
                         break;
                     }
+                    // A loop's next round asked for text that does not play yet — a part being
+                    // typed, "bass {" with its brace not closed: the loop goes on as it was and the
+                    // next edit asks again. MEASURED before (owner's report 2026-11-17, Lab
+                    // sessions/p1290/e2e/cdp-loopadd2.mjs): the answer's error took the page out of
+                    // playing (setPlayUi(false)) while the old rounds still sounded, so no later edit
+                    // reached the loop — the part, written out, was never added — and Stop was greyed.
+                    if (pendingLoopRefresh) {
+                        pendingLoopRefresh = false;
+                        if (playingNow()) break;
+                    }
                     pendingLoopRefresh = false;
                     if (message.error || !message.notes) {
                         setPlayUi(false);

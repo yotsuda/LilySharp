@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Fixed: a part typed into a looping section never joined the loop.** While a bar went round, typing `bass {` into its section — the brace not closed yet — took the preview out of playing (▶ and ⏹ as if stopped) though the old rounds went on sounding, so the part, once written out, was never heard until Play was pressed again. Text that does not play yet now leaves the loop going as it was; the next round after the part is complete plays it.
 - **Play is lit while it plays**: ▶ stays pressable while playing (pressed, it plays again from the A flag), so it now shows the state instead — lit (pressed in) while the music plays, ⏸ lit while paused, neither when stopped. Its tooltip says what a press does while playing.
 - **Fixed: the preview broke while a bar was being typed at a section's end.** Adding a bass line under a chord chart, a note typed after the last `|` (`… | g1 | d,4`) put the chords of every later section over the last few bars, and Play ran them early. The bar being written is now a whole bar — what is typed, then silence — and the rest of the score stays in place.
 - **A count-in before every round**: with Count-in and Repeat on, each round of the loop starts with a bar of clicks, as the first one does — a breath between rounds, then in on the count. The recording plays on through the count as it does through the first (the bars before A; silence before its start). Turning Count-in on or off while it goes round takes effect from the next round.
