@@ -8766,7 +8766,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // player must see the next line, or the notes cut off at the side, before they sound —
             // the view moved only once the next line's first note had sounded). The view is moved
             // for them and the notes sounding; the notes are lit when they sound.
-            const ahead = relay ? null : new Cursor(onScore.map(n => ({ t: n.T - offset, d: n.D, s: n.S, o: n.O || 0 })));
+            // (the parts turned off too: they still say where the music goes, for the view)
+            const ahead = relay ? null : new Cursor(notes.filter(n => !n.E).map(n => ({ t: n.T - offset, d: n.D, s: n.S, o: n.O || 0 })));
             let aheadEls = [], soundingEls = [];
             // How evenly the 50 ms tick came (owner's report 2026-10-25: one eighth note lit in
             // four — the tick a second apart, as a browser throttles a page it thinks hidden):
@@ -9152,6 +9153,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // 2026-11-16: "why does it play from here?").
             paused = null;
             if (playingNow()) stopPlayback();
+            showAFlag();
             setPlayUi(true); // immediate feedback while the request runs
             pendingStartPos = -1;
             pendingStartBar = abOn ? -1 : Math.max(0, abFrom);
@@ -9447,6 +9449,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             return g;
         }
         function abFlagEl(letter) { return svgContainer.querySelector('.ab-flag[data-flag="' + letter + '"]'); }
+        /** The view to the A flag — where Play starts (owner's request 2026-11-17: Play brings the page
+         *  back to the flag, then follows what plays). A scroll of the page's own (follow.auto). */
+        function showAFlag() {
+            const f = abFlagEl('A');
+            if (!f) return;
+            const b = f.getBoundingClientRect(), m = mainContent.getBoundingClientRect(), margin = 30;
+            const dy = b.top < m.top + margin || b.bottom > m.bottom - margin ? b.top - (m.top + margin) : 0;
+            const dx = b.left < m.left + margin || b.left > m.right - margin ? b.left - (m.left + margin) : 0;
+            if (Math.abs(dx) >= 1 || Math.abs(dy) >= 1) follow.auto(() => mainContent.scrollBy({ left: dx, top: dy }));
+        }
 
         // Dragging: the flag stays on a bar line and moves to another once the pointer is nearer to
         // it than to the line the flag is on (a little more, so it does not flicker between two),
