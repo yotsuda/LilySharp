@@ -148,7 +148,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 base `94397dd6b`・開始時 full 17496 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17499（Lab `p1290` の `run1.trx`）。REQUESTS: Calamo の open 0・Dettato は #4（question・録音の島）だけ。
 - **周ごとのカウントイン＝`8bf435b27`**（`docs/transport-mixer-design.md` §8）: Count-in と Repeat がオンなら毎周「1 小節のクリック → 音楽」（`loopNotes` の gap）。周の読みは `loopPlace` 1 か所（`placeNow`・`loopOffset`）、声の区間・終わりの時刻・録音のループも同じ周の長さ。録音はカウントの間も A の前が流れる（最初のカウントインと同じ＝Claude の判断・オーナーに伝えた）。素のバッファ再生で録音の 0 より前から始まるループは周ごとの source。実物の VS Code で一覧・ヘッダ・録音の打音の時刻を測った（Lab `p1290/e2e/cdp-countin.mjs`・`go.ps1 -Ws ws|ws2`）。npm 1232 合格。
-- **直し: Repeat オン・A-B オフの ▶ が A を見ず頭から**（オーナーの報告・同 §4 の末尾）＝最初の周を A の小節から。実機で直す前と後を測った（Lab `p1290/e2e/cdp-astart.mjs`）。
+- **直し: Repeat オン・A-B オフの ▶ が A を見ず頭から**（オーナーの報告・同 §4 の末尾）＝最初の周を A の小節から。カウント中のヘッダは常に A（Repeat オフも）。実機で直す前と後を測った（Lab `p1290/e2e/cdp-astart.mjs`）。
 - **これで transport-mixer の段 1〜3 は全部済み**。残りはオーナーの実機（`MANUAL-CHECKS` 第1289・第1290）。**次の一手はオーナーに訊く**（§1.0 の候補＝録音の S5・コード行の印 `@rit` ほか。`p1242/leftovers.md` の欠陥は訊かずに着手してよい）。
 - 終了時 full 17496 合格 / 1 失敗（同じ `ReadmeSampleTests`）/ skip 2 / 合計 17499（`run2.trx`）。§7 の門は全部 OK（Core の差 0）。
 

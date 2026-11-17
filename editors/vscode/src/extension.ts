@@ -8596,7 +8596,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function playbackScoreSeconds() {
             if (playClock) {
                 // (a loop's count-in before a round shows the round's start, as the first count-in does)
-                const tau = lastSpan !== undefined && loopList ? placeNow().tau : playOffset + playClock() - countInFix;
+                const tau = lastSpan !== undefined && loopList ? placeNow().tau : Math.max(playOffset + playClock(), loopEntry) - countInFix;
                 const origin = lastSpan === undefined ? 0 : spanStart;
                 const basis = playBasis || { warp: null, speed: practice.speed };
                 const u = (origin + tau) * basis.speed;
@@ -9828,8 +9828,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // count-in, how far into it (loopPlace); else the list's time less its count-in.
         function placeNow() {
             const lt = playOffset + playClock();
-            // (the first round from the A flag: its count-in shows A, as a count-in does)
-            if (loopList && lt < loopEntry) return { tau: Math.max(0, loopEntry - countInFix), counting: null };
+            // (a count-in before the music that starts at A — a first round from the A flag, or a Play
+            // from A with Repeat off: the count shows A)
+            if (lt < loopEntry) return { tau: Math.max(0, loopEntry - countInFix), counting: null };
             if (loopList && loopRound > 0 && window.LysSynth.loopPlace) return window.LysSynth.loopPlace(lt, countInFix, loopRound, loopGap);
             return { tau: Math.max(0, lt - countInFix), counting: null };
         }
@@ -10143,7 +10144,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (!playing || relaying || !rawNotes || !playClock) return;
             const old = playBasis || { warp: null, speed: oldSpeed };
             const oldOrigin = lastSpan === undefined ? 0 : spanStart;
-            const place = lastSpan !== undefined ? placeNow() : { tau: Math.max(0, playOffset + playClock() - countInFix), counting: null };
+            const place = placeNow();
             const tau = place.tau;
             const u = (oldOrigin + tau) * old.speed;
             const t = old.warp ? window.LysSynth.unwarpTime(old.warp, u) : u;
@@ -11544,7 +11545,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         voicePlan = { pieces: spanPieces, rounds: 1 };
                         if (recordingAlone()) break;
                         const c = counted(list, 0, spanStart);
-                        if (c) startPlayback(c.notes, 0, false, false, c.lead, spanStart);
+                        if (c) { startPlayback(c.notes, 0, false, false, c.lead, spanStart); loopEntry = c.lead; }
                         else startPlayback(list, 0, false, false, 0, spanStart);
                     } else {
                         // The practice menu's tempo, parts and metronome, from the notes as written.
@@ -11583,7 +11584,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         pendingStartPos = -1;
                         if (recordingAlone()) break;
                         const c = counted(playbackNotes, startAt, 0);
-                        if (c) startPlayback(c.notes, 0, false, false, c.lead - startAt, 0);
+                        if (c) { startPlayback(c.notes, 0, false, false, c.lead - startAt, 0); loopEntry = c.lead; }
                         else startPlayback(playbackNotes, startAt, false, false, 0, 0);
                     }
                     break;

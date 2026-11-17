@@ -81,7 +81,7 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /if \(!span && startBar > 0\) \{[\s\S]{0,400}?const at = barStartIn\(list, beats, startBar\);/);
         assert.match(html, /const music = window\.LysSynth\.fromOffset\(rounds, entry\);/);
         assert.match(html, /const from = Math\.max\(listTime, voicePlan\.entry \|\| 0\);/);
-        assert.match(html, /if \(loopList && lt < loopEntry\) return \{ tau: Math\.max\(0, loopEntry - countInFix\), counting: null \};/);
+        assert.match(html, /if \(lt < loopEntry\) return \{ tau: Math\.max\(0, loopEntry - countInFix\), counting: null \};/);
         assert.match(html, /function loopVoicePlan\(\) \{ return \{ pieces: spanPieces, rounds: loopRoundCount, gap: loopGap \}; \}/);
         assert.match(html, /voicePlan = \{ pieces: spanPieces, rounds: 1 \};\s*if \(recordingAlone\(\)\) break;\s*const c = counted\(list, 0, spanStart\);/);
         assert.match(html, /else startPlayback\(list, 0, false, false, 0, spanStart\);/);
@@ -89,7 +89,9 @@ describe('the preview\'s Range panel', () => {
         // and a Play of the whole score or from a note counts in too; a tempo change, the loop's
         // next round and a seek do not.
         assert.match(html, /<span class="plbl">Count-in<\/span><button type="button" id="countInBtn" class="toggle" aria-pressed="false"/);
-        assert.match(html, /const c = counted\(playbackNotes, startAt, 0\);\s*if \(c\) startPlayback\(c\.notes, 0, false, false, c\.lead - startAt, 0\);/);
+        // (the count shows A meanwhile: loopEntry, where the music comes in)
+        assert.match(html, /const c = counted\(playbackNotes, startAt, 0\);\s*if \(c\) \{ startPlayback\(c\.notes, 0, false, false, c\.lead - startAt, 0\); loopEntry = c\.lead; \}/);
+        assert.match(html, /if \(c\) \{ startPlayback\(c\.notes, 0, false, false, c\.lead, spanStart\); loopEntry = c\.lead; \}/);
         // (the loop's next rounds count in when the count-in is on: their own count, loopGap)
         assert.match(html, /function playEnded\(\) \{[\s\S]{0,200}?startPlayback\(rounds, 0, false, false, loopGap, /);
         assert.match(html, /return \{ tau: Math\.max\(0, lt - countInFix\), counting: null \};/);
@@ -179,6 +181,13 @@ describe('the preview\'s Range panel', () => {
         // A count-in of 1 s is not the score's.
         run('countInFix = 1');
         assert.equal(run('playbackScoreSeconds()'), 1.5);
+        // A Play from A (played time 2) after a count-in whose music comes in at the list's 6:
+        // the count shows A, not the seconds before it; then on from A.
+        run('countInFix = 4; loopEntry = 6');
+        assert.equal(run('playbackScoreSeconds()'), 2 * 0.5);
+        run('playClock = () => 6');
+        assert.equal(run('playbackScoreSeconds()'), 3 * 0.5);
+        run('countInFix = 1; loopEntry = 0; playClock = () => 3');
         // A looped stretch from played time 6, 4 s a round, 9 s in: the stretch's start plus 1 s.
         run('countInFix = 0; lastSpan = [0, 1]; spanStart = 6; loopList = []; loopRound = 4; playOffset = 0; playClock = () => 9');
         assert.equal(run('playbackScoreSeconds()'), (6 + 1) * 0.5);
