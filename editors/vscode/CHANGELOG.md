@@ -4,7 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
-- **A click past B chooses that bar**: with A-B on, clicking a bar after B now puts A on that bar and B after it — the bar alone. Until now the two flags changed places as a drag does, so A went to where B had been (choosing M10–M11 and clicking M21 left A on M11, a system above).
+- **A click past B chooses that bar**: with A-B on, clicking a bar after B now puts A on that bar and B after it — the bar alone. Until now the two flags changed places as a drag does, so A went to where B had been (choosing M10–M11 and clicking M21 left A on M11, a system above). A Shift+click before A, which means to move B, does the same the other way: B on that bar line and A one bar before it.
 
 - **Fixed: Split Section Here refused a section with words written as empty bars.** Words laid out as `| | | |` to be filled in (as Dettato writes them) were taken for words with no bar lines, so every cut in such a section — at the end of a `| break` line, or anywhere — was refused. They are cut by their bars now. At the end of a section's last line the refusal now says that the section ends there, with nothing after it to make a new section of.
 

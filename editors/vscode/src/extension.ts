@@ -9841,15 +9841,17 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
         /** The B flag for a bar Shift+clicked (owner's decisions 2026-11-17, docs/transport-mixer-design.md
          *  §7): on the bar line at bar m's left, as A stands at its own — or, atEnd (a click right of a
-         *  line's last bar line), on the bar line at its right. A bar line before A's: the two change
-         *  places; on A's own: that bar alone. A-B turns on. */
+         *  line's last bar line), on the bar line at its right. A bar line before A's: B stands there
+         *  and A one bar before it — that bar alone, as a click past B does for A (owner's request
+         *  2026-11-17: a Shift+click means to move B; the two used to change places, and B went to A's
+         *  old line); the very first bar line, the first bar. On A's own: that bar alone. A-B turns on. */
         function setB(m, atEnd) {
             const last = Math.max(0, abBars().length - 1);
             m = Math.max(0, Math.min(m, last));
             const line = atEnd ? m + 1 : m;     // the bar line, as the bar after it
             abOn = true;
             if (line > abFrom) setAb(abFrom, line - 1);
-            else if (line < abFrom) setAb(line, abFrom - 1);
+            else if (line < abFrom) setAb(Math.max(0, line - 1), Math.max(0, line - 1));
             else setAb(abFrom, abFrom);
             askStoppedPosition();
         }
