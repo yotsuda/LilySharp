@@ -142,7 +142,7 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /practiceNotes\(timed, rawParts, playedBeats\(\), Object\.assign\(\{\}, eff\(\), \{ speed: playBasis\.speed \}\), rawExtra, true\);/);
         assert.match(html, /if \(quiet && quiet\.changed && r\.sounding\.length === 0\) \{[\s\S]{0,300}lightPlayingBar\(els\);/);
         // A click on a bar (or a note of it) takes the A flag there.
-        assert.match(html, /\{ const m = measureOfStaffBox\(bar\); if \(m >= 0\) setA\(m, false\); \}/);
+        assert.match(html, /\{ const m = measureOfStaffBox\(bar\); if \(m >= 0\) setA\(m\); \}/);
     });
 
     // Where the playback stands, just left of the length (owner's request 2026-11-16), on the

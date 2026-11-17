@@ -9496,13 +9496,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (bars[abFrom]) drawAbFlag('A', bars[abFrom].rect, false);
         }
         /** The A flag to bar m — a bar clicked, A Here (docs/transport-mixer-design.md §1 3). With
-         *  A-B on, B goes along past it, keeping the bars between (the range carried); off, a B
-         *  left before it is forgotten (placed anew when A-B goes on). Plays on from where it plays
-         *  when that is still in what is to play (replayIfPlaying). */
+         *  A-B on and m past B, the two change places as a dragged flag does (owner's decision
+         *  2026-11-17; it carried the range): A on the old B's bar line, B after bar m. Off, a B left
+         *  before it is forgotten (placed anew when A-B goes on). Plays on from where it plays when
+         *  that is still in what is to play, else from A (replayIfPlaying). */
         function setA(m, replay = true) {
             const last = Math.max(0, abBars().length - 1);
             m = Math.max(0, Math.min(m, last));
-            if (abOn && m > abTo) { abTo = Math.min(last, m + (abTo - abFrom)); }
+            if (abOn && m > abTo) { const from = abTo + 1; abTo = m; m = from; }
             abFrom = m;
             if (!abOn && abTo < m) abTo = -1;
             showAb();
@@ -11636,14 +11637,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 // Plain click: this note becomes the anchor; any prior score
                 // selection is dropped. Its bar takes the A flag, where Play starts (the
                 // playing goes on from the note, seeking below).
-                { const b = barStaffAt(e.clientX, e.clientY); const m = b ? measureOfStaffBox(b) : -1; if (m >= 0) setA(m, false); }
+                { const b = barStaffAt(e.clientX, e.clientY); const m = b ? measureOfStaffBox(b) : -1; if (m >= 0) setA(m); }
                 aiAnchorPos = pos;
                 aiRangeLo = -1; aiRangeHi = -1;
                 lightSelectedBars();
                 // During playback a click on a played note SEEKS there instead
                 // of jumping the editor (listening mode). Non-note grobs
                 // (barlines, marks) fall through to the normal click.
-                if (seekToCopy(pos, (copy) => copy === target)) return;
+                if (!abOn && seekToCopy(pos, (copy) => copy === target)) return;     // (A-B on: laid out by setA)
                 vscode.postMessage({ type: 'jumpToPosition', position: pos });
             } else if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey
                 && target && svgContainer.contains(target) && (barStaffAt(e.clientX, e.clientY) || lineEndBarAt(e.clientX, e.clientY))) {
@@ -11659,7 +11660,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 const bar = barStaffAt(e.clientX, e.clientY);
                 const pos = parseInt(bar.getAttribute('data-start'), 10);
                 // The bar takes the A flag: Play starts there (docs/transport-mixer-design.md §1 3).
-                { const m = measureOfStaffBox(bar); if (m >= 0) setA(m, false); }
+                // (playing: laid out again as the flags now say, as a dragged flag — owner's report 2026-11-17)
+                { const m = measureOfStaffBox(bar); if (m >= 0) setA(m); }
                 lastHighlightPos = -1;
                 aiClearSelection();
                 aiAnchorPos = (barNoteRange(bar) || [pos])[0];
@@ -11670,7 +11672,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     return cx >= box.left && cx <= box.right
                         && cy >= box.top - box.height && cy <= box.bottom + box.height;
                 };
-                if (seekToCopy(pos, inBar)) return;
+                // (A-B on: the bars as the flags now say are already laid out above — a seek would go
+                // through the whole score, out past B: owner's report 2026-11-17)
+                if (!abOn && seekToCopy(pos, inBar)) return;
                 clearHighlights();
                 vscode.postMessage({ type: 'jumpToPosition', position: pos });
             } else if (target && mainContent.contains(target)) {
