@@ -9125,8 +9125,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         const loopBtn = document.getElementById('loopBtn');
         loopBtn.addEventListener('click', () => {
             loopOn = !loopOn;
-            // Off: what plays ends where it ends. On while playing: from the next Play.
-            if (!loopOn) loopList = null;
+            // While playing, what plays is laid out again from here as Repeat now says, so B (or
+            // the end) does what it says when it is reached: back to A on, stop off (owner's request
+            // 2026-11-17: turned on while the bars played, it still stopped at B). Nothing to go on
+            // from (the recording alone): off ends what plays where it ends.
+            if (document.getElementById('stopBtn').disabled || !resumeHere()) {
+                if (!loopOn) loopList = null;
+            }
             showPractice();
         });
 
@@ -9201,7 +9206,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
          *  (owner's request 2026-11-17: a flag moved sent it back to A each time), else from A. */
         function replayIfPlaying() {
             if (document.getElementById('stopBtn').disabled) return;
-            if (abOn && resumeInNewBars()) return;
+            if (abOn && resumeHere()) return;
             stopPlayback();
             setPlayUi(true);
             pendingStartPos = -1;
@@ -9209,10 +9214,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             pendingSpan = abOn ? { ab: [abFrom, abTo] } : null;
             requestPlay();
         }
-        /** The bars A to B laid out again from the notes in hand (the text has not changed: no request),
-         *  played on from the moment now sounding when it is one of them — else from A. False when
-         *  there is nothing to go on from (the notes not in hand, the recording playing alone). */
-        function resumeInNewBars() {
+        /** What plays laid out again from the notes in hand as A-B and Repeat now say (the text has
+         *  not changed: no request) — the bars A to B (A-B on), the whole score round and round
+         *  (Repeat on), or the whole score once — played on from the moment now sounding when it is
+         *  in what is laid out, else from its start. So a flag moved, or Repeat turned on or off,
+         *  while it plays decides what happens at B (owner's requests 2026-11-17: back to A each
+         *  time a flag moved; Repeat turned on while playing still stopped at B). False when there
+         *  is nothing to go on from (the notes not in hand, the recording playing alone). */
+        function resumeHere() {
             if (!rawNotes || !playClock || relaying || !window.LysSynth) return false;
             // Where it plays now, in the list's own time (before the stretch was cut out of it; the
             // whole score, A-B just turned on, is the list's time itself).
@@ -9222,8 +9231,17 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             let u = pieces.length ? pieces[pieces.length - 1][1] : 0;
             for (const [a, b] of pieces) { if (tau < b - a) { u = a + tau; break; } tau -= b - a; }
             playbackNotes = practiced(rawNotes);
-            lastSpan = { ab: [abFrom, abTo] };
-            const list = spanOf(playbackNotes, lastSpan, false);
+            const span = abOn ? { ab: [abFrom, abTo] } : loopOn ? null : undefined;
+            lastSpan = span;
+            if (span === undefined) {
+                // The whole score once, from the moment now sounding (as a Play from there).
+                loopList = null;
+                voicePlan = { pieces: null, rounds: 1 };
+                startPlayback(playbackNotes, u, false, false, 0, 0);
+                return true;
+            }
+            lastOnce = false;
+            const list = spanOf(playbackNotes, span, false);
             // …and that moment in the new stretch, if it is in it.
             let at = null, before = 0;
             for (const [a, b] of spanPieces || [[spanStart, spanStart + loopRound]]) {
