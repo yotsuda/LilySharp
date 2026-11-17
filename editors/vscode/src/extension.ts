@@ -48,7 +48,7 @@ import { OmrScanDeps, hasScan, previewHoversBar, previewReady, previewShowsBar, 
 import { registerOmrAiFix } from './omrAiFix';
 import { registerVerifyOnSave } from './omrVerify';
 import { markdownItExtensionApi } from './markdownFence';
-import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, sourceGroupToOpen, SourceTab, jumpOffsetFor, chordSpans, chordAtCaret, soundingLight, SoundingSession } from './previewCore';
+import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, sourceGroupToOpen, SourceTab, jumpOffsetFor, chordSpans, chordAtCaret, soundingLight, SoundingSession, auditionBarRange } from './previewCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 import { PLAIN_TONES_JS } from './plainTones';
 import { FOLLOW_SCROLL_CSS, FOLLOW_SCROLL_JS } from './followScroll';
@@ -1537,7 +1537,7 @@ function playAtCursor(context: vscode.ExtensionContext, mode: 'note' | 'measure'
     }
     const offset = doc.offsetAt(editor.selection.active);
     if (mode === 'measure') {
-        const [rangeStart, rangeEnd] = measureRangeAt(doc.getText(), offset);
+        const [rangeStart, rangeEnd] = auditionBarRange(doc.getText(), offset);
         panel.webview.postMessage({ type: 'playAtCursor', mode, rangeStart, rangeEnd });
     } else {
         const now = Date.now();
@@ -1545,27 +1545,6 @@ function playAtCursor(context: vscode.ExtensionContext, mode: 'note' | 'measure'
         lastPlayNoteFire = now;
         panel.webview.postMessage({ type: 'playAtCursor', mode, position: offset, gapMs });
     }
-}
-
-/**
- * The source range [start, end) of the measure containing `offset`: the span
- * between the surrounding barlines (`|`), bounded by the enclosing music block
- * (`{`…`}`) so a measure never spills into another part/section. Good enough for
- * the common one-stream-per-line layout.
- */
-function measureRangeAt(text: string, offset: number): [number, number] {
-    const clamped = Math.max(0, Math.min(offset, text.length));
-    let start = 0;
-    for (let i = clamped - 1; i >= 0; i--) {
-        const c = text[i];
-        if (c === '|' || c === '{' || c === '}') { start = i + 1; break; }
-    }
-    let end = text.length;
-    for (let i = clamped; i < text.length; i++) {
-        const c = text[i];
-        if (c === '|' || c === '{' || c === '}') { end = i; break; }
-    }
-    return [start, end];
 }
 
 // `preserveFocus`: the automatic opening (a .lys just opened) leaves the caret in the editor.
@@ -9281,6 +9260,17 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             startPlayback(sub.map(n => Object.assign({}, n, { T: n.T - minT })), 0);
         }
 
+        /** A note list fetched for an audition, taken as Play takes one: kept as the last that could
+         *  be read (so text being typed still auditions, from it) and put through the practice menu
+         *  — the tempo, the parts turned off, the recording's time (practiced). Until 2026-11-17 the
+         *  list was used as it came: Alt+M played at the written tempo whatever the menu said, and
+         *  with no Play pressed yet, unreadable text left it silent (nothing kept to fall back on). */
+        function takeAuditionNotes(message) {
+            rawNotes = message.notes; rawParts = message.parts || null; rawBeats = message.beats || null; rawBarEnd = message.barEnd || null;
+            rawExtra = message.extra || null; rawSung = message.sung || null; rawPlayed = message.played || null;
+            playbackNotes = practiced(rawNotes);
+        }
+
         function runAudition(a) {
             if (a.mode === 'measure') { auditionMeasure(a.rangeStart, a.rangeEnd); }
             else { auditionNote(a.position, a.gapMs); }
@@ -11604,7 +11594,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     if (typeof message.seq === 'number' && message.seq !== playSeq) {
                         // A later request replaced it: not played — an audition's own answer aside.
                         if (pendingAudition && message.seq === auditionSeq && !message.error && message.notes) {
-                            playbackNotes = message.notes;
+                            takeAuditionNotes(message);
                             const a = pendingAudition; pendingAudition = null;
                             runAudition(a);
                         } else if (message.seq === auditionSeq) pendingAudition = null;
@@ -11649,7 +11639,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         }
                     } else if (pendingAudition && (typeof message.seq !== 'number' || message.seq === auditionSeq)) {
                         // These notes were fetched for an audition, not the Play button.
-                        playbackNotes = message.notes;
+                        takeAuditionNotes(message);
                         const a = pendingAudition; pendingAudition = null;
                         runAudition(a);
                     } else if ((pendingSpan || (loopOn && !pendingFromHere)) && window.LysSynth && window.LysSynth.playSpan) {

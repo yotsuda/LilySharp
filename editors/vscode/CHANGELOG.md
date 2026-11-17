@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Fixed: Alt+M at the end of a line played nothing.** With the caret after a line's last `|` — on its `break`, or at the line's end — Play Current Measure took what lay between that bar line and the next one: on a block's last line (a chords row's last line, before its `}`) nothing at all, elsewhere the next line's first bar. It now plays the bar the caret follows. And a bar played before Play was ever pressed now follows the practice menu (its tempo, the parts turned off) as Play does.
 - **The A and B flags stand in front of everything**: a flag on the bar a section opens was hidden behind the section's mark. The flags are now drawn last on the page, over the marks.
 - **Try the chords a symbol may be (`@or`)**: on a chord symbol written `F@or(Bm Dm)`, Ctrl+Shift+Up brings the next candidate into its place (`Bm@or(Dm F)`) and sounds that chord alone, so you hear one against the other in a moment; Ctrl+Shift+Down turns the other way. The preview shows the symbol ringed in grey with its first candidate (`or Bm?`); the quick fixes *Keep F* and *Choose Bm* settle it and remove the `@or`. Nothing prints.
 - **Alt+M plays the bar with the recording**: with a recording beside the chart, Play Current Measure plays the recording's bar together with the part the caret is in, bar line to bar line. Without a recording it plays the part alone, as before.

@@ -129,6 +129,42 @@ function chordCloseFrom(text: string, open: number): number {
 }
 
 /**
+ * The source range [start, end) of the bar Play Current Measure (Alt+M) plays for a caret at
+ * `offset`: the span between the surrounding bar lines (`|`), bounded by the enclosing block
+ * (`{`…`}`) so a bar never spills into another part or section. A caret PAST a line's last bar
+ * line — on its `break`, after a comment, at the line's end — means the bar it follows: the line's
+ * part of that span has nothing to play, and the span would otherwise run on to the next line's
+ * first bar, or, on a block's last line, to its `}` with nothing in it (owner's report
+ * 2026-11-17: Alt+M in a chords { } row sometimes played nothing).
+ */
+export function auditionBarRange(text: string, offset: number): [number, number] {
+    const span = (at: number): [number, number] => {
+        let start = 0;
+        for (let i = at - 1; i >= 0; i--) {
+            const c = text[i];
+            if (c === '|' || c === '{' || c === '}') { start = i + 1; break; }
+        }
+        let end = text.length;
+        for (let i = at; i < text.length; i++) {
+            const c = text[i];
+            if (c === '|' || c === '{' || c === '}') { end = i; break; }
+        }
+        return [start, end];
+    };
+    const at = Math.max(0, Math.min(offset, text.length));
+    const [start, end] = span(at);
+    const lineStart = text.lastIndexOf('\n', at - 1) + 1;
+    let lineEnd = text.indexOf('\n', at);
+    if (lineEnd < 0) { lineEnd = text.length; }
+    const onLine = text.slice(Math.max(start, lineStart), Math.min(end, lineEnd));
+    const music = onLine.replace(/\/\/.*$/, '').replace(/\b(break|pageBreak|noBreak)\b/g, '').trim();
+    // Nothing of the bar on the caret's line, a bar line before the caret on it and none after it
+    // there: the bar before. (`| |` on one line is an empty bar, and stays the one meant.)
+    const closedOnLine = end < lineEnd && text[end] === '|';
+    return music.length === 0 && !closedOnLine && start > lineStart && text[start - 1] === '|' ? span(start - 1) : [start, end];
+}
+
+/**
  * The chord a caret on `line` at `col` points at AS A WHOLE, as [its `<`, its `>`] columns: on
  * its `<` (`|<c e g>`), just past its `>` (`<c e g>|`, where its octave marks and decorations are
  * written), or in what is written glued after the `>` (duration, dots, `@` marks) — as the step

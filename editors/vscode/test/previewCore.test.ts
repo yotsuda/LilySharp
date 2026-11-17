@@ -16,13 +16,35 @@
 
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { svgPostKey, pagesSummary, previewOnEditorShown, sourceGroupToReveal, sourceGroupToOpen, newPreviewColumn, scoreGroupFor, ShownEditor, jumpOffsetFor, chordSpans, chordAtCaret, soundingRange, soundingRanges, soundingLight } from '../src/previewCore';
+import { svgPostKey, pagesSummary, previewOnEditorShown, sourceGroupToReveal, sourceGroupToOpen, newPreviewColumn, scoreGroupFor, ShownEditor, jumpOffsetFor, chordSpans, chordAtCaret, soundingRange, soundingRanges, soundingLight, auditionBarRange } from '../src/previewCore';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 // Owner's request 2026-11-15: while the preview plays, the editor lights the text of what
 // sounds — as Shosa's editor lights the word being performed. A playback note's offset is its
 // node's full-span start, so the leading spaces are skipped and the word is what is lit.
+describe('the bar Alt+M plays', () => {
+    const text = 'chords h {\n  D | Em | break\n  G | A | break\n}\n';
+    // (what is in the span besides spaces and a `break`: the bar's music)
+    const bar = (caret: number) => { const [a, b] = auditionBarRange(text, caret); return text.slice(a, b).replace(/break/g, '').trim(); };
+    it('is the bar the caret is in', () => {
+        assert.equal(bar(text.indexOf('Em') + 1), 'Em');
+        assert.equal(bar(text.indexOf('G')), 'G');
+    });
+    // Owner's report 2026-11-17: in a chords row Alt+M sometimes played nothing — a caret past a
+    // line's last bar line took the span to the block's '}' (or to the next line's first bar).
+    it('is the bar before for a caret past a line\'s last bar line', () => {
+        assert.equal(bar(text.indexOf('break')), 'Em');
+        assert.equal(bar(text.indexOf('| break\n}') + 2), 'A');
+        assert.equal(bar(text.indexOf('A | break') + 9), 'A');   // the line's end
+    });
+    it('keeps an empty bar written on one line', () => {
+        const empty = 'a { c1 | | d1 | }';
+        const [s, e] = auditionBarRange(empty, empty.indexOf('| |') + 1);
+        assert.equal(empty.slice(s, e).trim(), '');
+    });
+});
+
 describe('the text of a note that sounds', () => {
     const lit = (text: string, pos: number) => { const r = soundingRange(text, pos); return r ? text.slice(r[0], r[1]) : undefined; };
 
