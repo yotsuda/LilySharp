@@ -7577,23 +7577,6 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
             return lo >= 0 ? [lo, hi] : (isNaN(start) ? null : [start, start]);
         }
-        /** The bar ending the line at (clientX, clientY) when the point is right of that line's last
-         *  bar line, on the same page (owner's decision 2026-11-17: Shift+click there puts B on it). */
-        function lineEndBarAt(clientX, clientY) {
-            let best = null, bestRight = -Infinity;
-            for (const r of svgContainer.querySelectorAll('rect.bar-staff')) {
-                const b = r.getBoundingClientRect();
-                const d = clientY < b.top ? b.top - clientY : clientY > b.bottom ? clientY - b.bottom : 0;
-                if (d > 2 * b.height) continue;
-                if (clientX >= b.left) {
-                    if (clientX <= b.right) return null;      // on a bar: not right of the line
-                    if (b.right > bestRight) { best = r; bestRight = b.right; }
-                }
-            }
-            if (!best) return null;
-            const page = best.ownerSVGElement ? best.ownerSVGElement.getBoundingClientRect() : null;
-            return page && clientX <= page.right ? best : null;
-        }
         function barStaffAt(clientX, clientY) {
             let best = null, bestDist = Infinity;
             for (const r of svgContainer.querySelectorAll('rect.bar-staff')) {
@@ -9840,7 +9823,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             askStoppedPosition();
         }
         /** The B flag (owner's decisions 2026-11-17, docs/transport-mixer-design.md §7): atEnd — a bar
-         *  Shift+clicked, or the margin right of a line's last bar line — on the bar line at bar m's
+         *  Shift+clicked — on the bar line at bar m's
          *  right, so the bar is in the range as a click puts its own in (the owner's revision of the
          *  left line, the same day); else on the line at its left. A bar line at or before A's: B there
          *  and A one bar before it — that bar alone, as a click past B does for A (a Shift+click means to
@@ -12161,7 +12144,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         svgContainer.addEventListener('pointerdown', (e) => {
             if (e.pointerType !== 'mouse' || e.button !== 0 || !e.shiftKey) return;
             const t = noteUnder(e);
-            if ((t && t.hasAttribute && t.hasAttribute('data-pos')) || barStaffAt(e.clientX, e.clientY) || lineEndBarAt(e.clientX, e.clientY)) e.preventDefault();
+            if ((t && t.hasAttribute && t.hasAttribute('data-pos')) || barStaffAt(e.clientX, e.clientY)) e.preventDefault();
         });
 
         document.addEventListener('click', (e) => {
@@ -12187,13 +12170,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 if (!abOn && seekToCopy(pos, (copy) => copy === target)) return;     // (A-B on: laid out by setA)
                 vscode.postMessage({ type: 'jumpToPosition', position: pos });
             } else if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey
-                && target && svgContainer.contains(target) && (barStaffAt(e.clientX, e.clientY) || lineEndBarAt(e.clientX, e.clientY))) {
+                && target && svgContainer.contains(target) && barStaffAt(e.clientX, e.clientY)) {
                 // Shift+click on a bar: the B flag on its RIGHT bar line, the bar in the range as a
-                // click puts its bar in (owner's decision 2026-11-17, revising the left line); right of
-                // a line's last bar line: on that bar line (§7).
+                // click puts its bar in (owner's decision 2026-11-17, revising the left line). (The
+                // margin right of a line's last bar line took B too, and a click there A — gone the same
+                // day, owner's decision: the line's last bar, Shift+clicked, puts B there.)
                 const bar = barStaffAt(e.clientX, e.clientY);
-                if (bar) { const m = measureOfStaffBox(bar); if (m >= 0) setB(m, true); }
-                else { const m = measureOfStaffBox(lineEndBarAt(e.clientX, e.clientY)); if (m >= 0) setB(m, true); }
+                const m = measureOfStaffBox(bar);
+                if (m >= 0) setB(m, true);
             } else if (!e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey
                 && target && svgContainer.contains(target) && barStaffAt(e.clientX, e.clientY)) {
                 // A bar: its first note's place in the editor — or, while playing, the
@@ -12218,13 +12202,6 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 if (!abOn && seekToCopy(pos, inBar)) return;
                 clearHighlights();
                 vscode.postMessage({ type: 'jumpToPosition', position: pos });
-            } else if (!e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey
-                && target && svgContainer.contains(target) && lineEndBarAt(e.clientX, e.clientY)) {
-                // Right of a line's last bar line: A on that bar line — the next line's first bar
-                // (owner's request 2026-11-17), as a Shift+click there puts B on it. (The piece's last
-                // line: A on its last bar, the furthest A stands.)
-                const m = measureOfStaffBox(lineEndBarAt(e.clientX, e.clientY));
-                if (m >= 0) setA(m + 1);
             } else if (target && mainContent.contains(target)) {
                 // Clicked empty space / a non-clickable grob: just drop the
                 // highlight. Don't move the editor cursor (no message sent), and
