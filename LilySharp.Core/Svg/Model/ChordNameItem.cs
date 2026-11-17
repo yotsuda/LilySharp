@@ -188,6 +188,10 @@ public sealed record ChordNameItem
     /// <inheritdoc cref="MusicItem.TodoBelow"/>
     public bool TodoBelow { get; init; }
 
+    /// <summary>The mark is an <c>@or</c> alone (no <c>@todo</c> beside it): drawn in grey, its memo
+    /// the first candidate (<c>or Bm?</c>; Dettato request 17, owner's decision 2026-11-17).</summary>
+    public bool TodoGrey { get; init; }
+
     /// <summary>
     /// True when this symbol belongs to an independent chord ROW (a <c>chords name
     /// { }</c> part placed via <c>chords name</c> in a score). The engraver then

@@ -47,17 +47,39 @@ internal sealed class TodoValidator : ISemanticValidator
                     $"the todo key '{key}' is written twice in this file; a key names one mark.");
         }
 
-        // A chords row takes one mark, @todo (owner's decision 2026-10-11, the parser's
-        // ChordRowMarks): any other is kept in the tree by the parser and refused here.
+        // An @or is a chords-row symbol's (OrAnnotation): reported as a chord left to decide,
+        // and refused anywhere else.
+        foreach (var node in tree.GetRoot().DescendantNodesOfKinds(AnnotationNameValidator.AnnotationKinds))
+        {
+            if (OrAnnotation.Of(node) is not { } or)
+                continue;
+            if (node.Parent is not { Kind: SyntaxKind.ChordEntry } entry)
+            {
+                _diagnostics.Warning(node.Span, DiagnosticCodes.OrArgument,
+                    "@or marks a chord symbol in a 'chords' row (F@or(Bm Dm)); here it is ignored.");
+                continue;
+            }
+            if (or.Problem is { } problem)
+            {
+                _diagnostics.Warning(node.Span, DiagnosticCodes.OrArgument, problem);
+                continue;
+            }
+            string symbol = entry is ChordEntrySyntax e ? e.SymbolText : "";
+            _diagnostics.Add(Diagnostic.Info(node.Span, DiagnosticCodes.OrMark,
+                $"{symbol} or {string.Join(", ", or.Candidates)}? — Ctrl+Shift+Up / Down tries the others"));
+        }
+
+        // A chords row takes two marks, @todo and @or (owner's decisions 2026-10-11, 2026-11-17;
+        // the parser's ChordRowMarks): any other is kept in the tree by the parser and refused here.
         foreach (var host in tree.GetRoot().DescendantNodesOfKinds(SyntaxKind.ChordEntry, SyntaxKind.Rest))
         {
             if (host.Kind == SyntaxKind.Rest && !InChordsRow(host))
                 continue;
             foreach (var child in host.ChildNodes())
                 if (child.Kind is SyntaxKind.Articulation or SyntaxKind.MusicMark or SyntaxKind.Dynamic
-                    && TodoAnnotation.Of(child) == null)
+                    && TodoAnnotation.Of(child) == null && (host.Kind == SyntaxKind.Rest || OrAnnotation.Of(child) == null))
                     _diagnostics.Error(child.Span, DiagnosticCodes.ChordBlockBadMember,
-                        $"a chord in a 'chords' row takes one mark, @todo; "
+                        $"a chord in a 'chords' row takes two marks, @todo and @or; "
                         + $"'{tree.Text.Substring(child.Span.Start, child.Span.Length)}' marks a note, not a chord symbol.");
         }
     }

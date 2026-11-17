@@ -384,6 +384,11 @@ public sealed partial class LilySharpLanguageServer
                     actions.Add(spanEnd);
                 if (ChordToneAction(doc, uri, diagnostic) is { } chordName)
                     actions.Add(chordName);
+                // An undecided chord (@or): settle it — keep the symbol, or take a candidate.
+                if (diagnostic.Code == DiagnosticCodes.OrMark)
+                    foreach (var (choice, kept, edits) in NoteStepper.OrChoices(doc.Tree, diagnostic.Span.Start))
+                        actions.Add(QuickFix(kept ? $"Keep {choice} (remove the @or)" : $"Choose {choice}", doc, uri, diagnostic,
+                            [.. edits.Select(e => EditOf(doc.Text, e.Start, e.End, e.NewText))]));
                 if (OwnDiagramAction(doc, uri, diagnostic) is { } ownDiagram)
                     actions.Add(ownDiagram);
                 if (TabOctaveAction(doc, uri, diagnostic) is { } tabOctave)

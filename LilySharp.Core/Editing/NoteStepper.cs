@@ -305,6 +305,10 @@ public static partial class NoteStepper
         Func<string, IReadOnlyList<string>>? textFaces = null)
     {
         int dir = direction >= 0 ? 1 : -1;
+        // On a chords-row symbol with an @or: its candidates rotate into its place (NoteStepper.Or).
+        if (semitone && selections is [var (orAt, orTo)] && orAt == orTo
+            && OrRotateStep(text, tree, orAt, dir, expand, includeStretch) is { } rotated)
+            return rotated;
         // On the shape of an @diagram(SHAPE) over a <…> chord: the other fingerings of its notes.
         if (semitone && selections is [var (caretAt, caretTo)] && caretAt == caretTo
             && DiagramFingeringStep(text, tree, caretAt, -dir) is { } fingering)

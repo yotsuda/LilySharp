@@ -1857,7 +1857,7 @@ ChordsBlock    = 'chords' , [ Identifier ] , [ 'for' , PartRef ] , '{' , { Chord
                     part is LYS7007; a PART that is no part is LYS7006. 'for' is contextual,
                     as a SingerDecl's 'sings' is. Switching PART's typed 'pitch' (the step keys)
                     respells the track with PART's notes. *)
-ChordRowEntry  = ( ChordEntry | RomanEntry ) , [ '(' , ShapeWords , ')' ] , [ TodoMark ] ;   (* '(' GLUED to the symbol;
+ChordRowEntry  = ( ChordEntry | RomanEntry ) , [ '(' , ShapeWords , ')' ] , { TodoMark | OrMark } ;   (* '(' GLUED to the symbol;
                                                                     the symbol's own '(' list (C7(b9, #11)) comes
                                                                     first, the shapes in a second group *)
 ChordRowRest   = ( 'r' | 'R' ) , [ TodoMark ] ;
@@ -1866,10 +1866,21 @@ TodoMark       = Annotation ;   (* GLUED: '@todo', '@todo(key)', '@todo("memo")'
                  (* A MARK ON A CHORD (owner's decision 2026-10-11, docs/todo-memo-design.md §5):
                     a chord chart has no notes, so a doubt about a chord sits on its symbol —
                     `Am7@todo("Am7 or C?")`, `F(133211)@todo(o12 "barre?")`, `r@todo`. The mark is
-                    read as a note's marks are; a chords row takes @todo and NO OTHER annotation
-                    (one written there is LYS1028). It is
+                    read as a note's marks are; a chords row takes @todo and @or (OrMark, below) and
+                    NO OTHER annotation (one written there is LYS1028). It is
                     reported as a note's @todo (LYS4026) and ringed in the preview round the
                     symbol's ink. A '@' after a space belongs to no entry (the stray report). *)
+OrMark         = '@or' , '(' , ChordSymbolText , { ChordSymbolText } , ')' ;   (* GLUED, the candidates
+                    space-separated: F@or(Bm Dm), C@or(F#m7b5 C/E) *)
+                 (* A CHORD STILL UNDECIDED (Dettato request 17, owner's decisions 2026-11-17): the
+                    chords the symbol may be instead. The symbol written is the chord — it prints
+                    and plays; the candidates change nothing on paper or in the sound. Reported as
+                    information (LYS4082); a candidate that is not a chord symbol, or an @or that is
+                    not on a chords-row symbol, is LYS4083. The preview shows it as a GREY @todo
+                    whose memo is the first candidate (`or Bm?`); beside a @todo the todo's red ring
+                    stands and the candidate follows its memo. Ctrl+Shift+Up / Down rotates the
+                    candidates through the symbol's place (F@or(Bm Dm) → Bm@or(Dm F) / Dm@or(F Bm))
+                    and sounds the chord that came forward; the quick fixes keep one and delete it. *)
                  (* The chord diagram's shapes (owner's design 2026-09-28): F(133211),
                     F(133211 2010), F(guitar 133211 ukulele 2010), F/A(x03211). ShapeWords
                     is ChordArgument's (§8.4): each unnamed shape goes to the diagram tuning

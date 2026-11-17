@@ -119,6 +119,9 @@ internal static partial class SharedRenderer
     // The preview's ink (owner's decision 2026-10-10 — the same red as the scan view's boxes).
     internal static readonly Color TodoInk = new(0xE5, 0x39, 0x35);
 
+    // An @or's ink: grey, the chord's candidates (ChordNameItem.TodoGrey; owner's decision 2026-11-17).
+    internal static readonly Color OrInk = new(0x8A, 0x8A, 0x8A);
+
     /// <summary>
     /// The preview's <c>@todo</c> marks, drawn OVER the page after every overlay — the ring
     /// around a marked head, rest or chord (one ring about every head of a chord) and, for a
@@ -244,13 +247,15 @@ internal static partial class SharedRenderer
             double rx = width / 2 + TodoMemoStyle.RingPadding;
             double ry = (inkTop - inkBottom) / 2 + TodoMemoStyle.RingPadding;
             int staffIndex = c.RowStaffIndex >= 0 ? c.RowStaffIndex : chord.StaffIndex;
+            // An @or alone is grey: a chord with candidates, not a doubt to fix (owner's decision 2026-11-17).
+            Color? markInk = chord.TodoGrey ? OrInk : null;
             using (gc.Staff(staffIndex))
             using (gc.Source(chord.SourcePosition))
             using (gc.Todo(key))
-                DrawHandRing(gc, cx, cy, rx, ry, TodoMemoStyle.Pen, chord.SourcePosition);
+                DrawHandRing(gc, cx, cy, rx, ry, TodoMemoStyle.Pen, chord.SourcePosition, markInk);
             if (chord.TodoMemo is { Length: > 0 } memo)
                 callouts.Add(new TodoCallout(system, staffIndex, c.MeasureIndex, chord.SourcePosition, key, memo,
-                    chord.TodoBelow, cx, cy, rx, ry, 1.0));
+                    chord.TodoBelow, cx, cy, rx, ry, 1.0, markInk));
         }
         if (callouts.Count == 0)
             return;
@@ -508,17 +513,18 @@ internal static partial class SharedRenderer
                 placedMemos.Add((left, right, baseline - f.BoxDown, baseline + f.BoxUp));
                 placedLeaders.Add((onRingX, onRingY, centreX, attachY));
                 double pen = TodoMemoStyle.Pen * c.Scale;
+                var color = c.Ink ?? TodoInk;
                 using (gc.Staff(c.StaffIndex))
                 using (gc.Source(c.SourcePosition))
                 using (gc.Todo(c.Key))
                 {
-                    gc.DrawLine(left, underlineY, right, underlineY, stroke: TodoInk, strokeWidth: pen, cap: LineCap.Round);
+                    gc.DrawLine(left, underlineY, right, underlineY, stroke: color, strokeWidth: pen, cap: LineCap.Round);
                     // The leader is not recorded: its long slanted box would fence off the
                     // margin it crosses for the memos after it.
                     using (ink?.Suspend())
-                        gc.DrawLine(onRingX, onRingY, centreX, attachY, stroke: TodoInk, strokeWidth: pen, cap: LineCap.Round);
+                        gc.DrawLine(onRingX, onRingY, centreX, attachY, stroke: color, strokeWidth: pen, cap: LineCap.Round);
                     gc.DrawText(c.Memo, left, baseline, f.Em, DynamicEngraver.LabelRole(true),
-                        DynamicEngraver.LabelStyle(fonts, true), TextAnchor.Start, TodoInk);
+                        DynamicEngraver.LabelStyle(fonts, true), TextAnchor.Start, color);
                 }
             }
         }
@@ -580,7 +586,7 @@ internal static partial class SharedRenderer
     /// ring's centre and radii on the page (Y-up).</summary>
     private readonly record struct TodoCallout(SystemLayout System, int StaffIndex, int MeasureIndex,
         int SourcePosition, string Key, string Memo, bool Below, double RingX, double RingY,
-        double RingRx, double RingRy, double Scale);
+        double RingRx, double RingRy, double Scale, Color? Ink = null);
 
     /// <summary>
     /// A ring as a hand draws one round something on a page: a wobbly loop that starts at the
@@ -591,8 +597,9 @@ internal static partial class SharedRenderer
     /// alike. Eight round-capped cubic segments, tangent-matched.
     /// </summary>
     private static void DrawHandRing(IDrawingContext gc, double cx, double cy, double rx, double ry,
-        double pen, int seed)
+        double pen, int seed, Color? inkColor = null)
     {
+        var color = inkColor ?? TodoInk;
         const int Segments = 8;
         const double Overlap = 0.55;        // the pen runs this far past its start (radians)
         const double Start = Math.PI * 0.62; // upper left (the frame is Y-up)
@@ -622,7 +629,7 @@ internal static partial class SharedRenderer
             // The tangents, by one-sided differences, each a third of the segment long.
             var c1 = (a0.X + (d0.X - a0.X) / eps * step / 3, a0.Y + (d0.Y - a0.Y) / eps * step / 3);
             var c2 = (a1.X + (d1.X - a1.X) / eps * step / 3, a1.Y + (d1.Y - a1.Y) / eps * step / 3);
-            gc.DrawBezier(a0, c1, c2, a1, TodoInk, pen);
+            gc.DrawBezier(a0, c1, c2, a1, color, pen);
         }
     }
 

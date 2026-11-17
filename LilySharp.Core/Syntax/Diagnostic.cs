@@ -953,6 +953,14 @@ public static class DiagnosticCodes
     /// <summary>Warning: a numeric <c>transpose</c>'s <c>sharp</c> / <c>flat</c> changes nothing — the
     /// key it lands in has no twin (<c>Semantics.TransposeValueValidator</c>, 2026-11-16).</summary>
     public const string TransposeSpellingUnused = "LYS4081";
+    /// <summary>Information: a chord still undecided — an <c>@or</c> on a chords-row symbol, with its
+    /// candidates (<c>Semantics.OrAnnotation</c>; Dettato request 17, owner's decisions 2026-11-17).
+    /// Information, as a <see cref="TodoMark"/> is: F8 and the Problems list reach every chord left
+    /// to decide.</summary>
+    public const string OrMark = "LYS4082";
+    /// <summary>Warning: an <c>@or</c> whose arguments are not chord symbols, or that stands where no
+    /// chords-row symbol is (<c>Semantics.TodoValidator</c>).</summary>
+    public const string OrArgument = "LYS4083";
 
     /// <summary>Warning: a <c>chords</c> row entry that is no chord Lily# reads — <c>C7b9</c>,
     /// <c>C-5</c>, a misspelled quality. The row still prints it as written and plays only its

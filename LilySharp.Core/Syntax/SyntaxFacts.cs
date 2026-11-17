@@ -796,6 +796,8 @@ internal static class SyntaxFacts
             "ds", "dc", "to",
             // @todo / @todo("memo") — a plain mark too, for the same reason.
             "todo",
+            // @or(Bm Dm) — the chords a chords-row symbol may be instead (OrAnnotation).
+            "or",
             // @vibrato / @vibrato(60) / @vibrato(60, 6) — a sung note's vibrato (a trial;
             // AnnotationValues.Vibrato): plain too.
             "vibrato",

@@ -8766,11 +8766,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         let playGeneration = 0;
         // origin: given by the score's own Play (and its changes and loop rounds) — the score's
         // played time the list's 0 is — and then the recording sounds with it (startRecordingAlong).
-        function startPlayback(notes, offset, plainTones, here, countFix, origin) {
+        function startPlayback(notes, offset, plainTones, here, countFix, origin, span) {
             offset = offset || 0;
             stopPlayback();
             // A voice's phrase still sounding gives way to the score (playVoiceSample).
             if (voiceSampleSource) { try { voiceSampleSource.stop(); } catch (e) { /* ended */ } voiceSampleSource = null; }
+            playSpan = span || 0;   // (a stretch the recording stops with: Alt+M's bar)
             countInFix = countFix || 0;
             loopEntry = 0;          // (the caller that starts a round from the A flag sets it after)
             // A list with no note still plays when a voice sings (owner's report 2026-11-09,
@@ -8817,7 +8818,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 sf.whenReady(8000).then(ok => {
                     if (gen !== playGeneration) { return; }
                     if (!ok) { flashInfo('The sound font is not ready: plain tones this time'); }
-                    startPlayback(notes, offset, !ok, here, countFix, origin);
+                    startPlayback(notes, offset, !ok, here, countFix, origin, span);
                 });
                 return;
             }
@@ -9254,6 +9255,23 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (sub.length === 0) { return; }
             let minT = Infinity, maxEnd = 0;
             for (const n of sub) { if (n.T < minT) { minT = n.T; } if (n.T + n.D > maxEnd) { maxEnd = n.T + n.D; } }
+            // With the recording loaded and lined up, the bar plays WITH it: the recording's bar and
+            // this part's notes, bar line to bar line (owner's decision 2026-11-17, Dettato request 17:
+            // a chord is judged against the recording, as Transcribe! lets one).
+            if (recordingAlong() && playBasis && playBasis.warp) {
+                const sp = playedSpeed();
+                let from = minT, to = -1;
+                for (const b of playedBeats() || []) {
+                    if (!b.A) continue;
+                    const t = b.T / sp;
+                    if (t <= minT + 1e-6) from = t;
+                    else { to = t; break; }
+                }
+                if (to < 0) { const e = playedBarEnd(); to = typeof e === 'number' ? e / sp : maxEnd; }
+                voicePlan = { pieces: [[from, to]], rounds: 1 };
+                startPlayback(sub.map(n => Object.assign({}, n, { T: n.T - from })), 0, undefined, undefined, 0, from, to - from);
+                return;
+            }
             // The sung voice is cut to the bar too (owner's report 2026-11-09, session 1150: Alt+M
             // sang the first bar's words — the voice plan was the last Play's, the whole piece from
             // its 0, while the instruments played the bar moved to 0). One piece: the bar's stretch
@@ -10115,6 +10133,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // the times were divided by (with the recording, the recording's own rate: the practice
         // tempo times its panel's speed — the score follows the recording).
         let playBasis = null;
+        var playSpan = 0;   // (startPlayback's stretch the recording ends with, 0 for none)
         function practiced(notes, keepSilent) {
             if (!window.LysSynth || !window.LysSynth.practiceNotes) return notes;
             const warp = warpNow();
@@ -10773,6 +10792,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             recPlayer.setLevel(recLevel());
             void recPlayer.play(sec, recSound(), { tempo: playBasis.recTempo ?? practice.speed, at });
             if (looping) return 0;
+            // A bar heard with the recording (Alt+M): the recording stops with the bar.
+            if (playSpan) return playSpan + countInFix;
             // A stretch (the A-B bars) once: it ends where the stretch does, the recording with it —
             // not at the recording's end (owner's report 2026-11-17: Repeat off, the recording went
             // on past B, and nothing lit, the score's notes over).

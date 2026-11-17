@@ -108,13 +108,22 @@ internal sealed class ChordNameCollector
     /// as <see cref="ChordNameItem.TodoKey"/> / <see cref="ChordNameItem.TodoMemo"/> /
     /// <see cref="ChordNameItem.TodoBelow"/> hold it — read the way a note's is
     /// (<c>MeasureCollector.TodoKeyOf</c>): the marks are the host's child nodes.</summary>
-    private static (string? Key, string? Memo, bool Below) TodoOf(SyntaxNode host)
+    /// <remarks>An <c>@or</c> (<see cref="Semantics.OrAnnotation"/>) is shown the same way, in grey,
+    /// its memo the first candidate (<c>or Bm?</c>) — owner's decision 2026-11-17, the way Dettato
+    /// had written <c>@todo("or Bm?")</c>. Beside a <c>@todo</c>, the todo's red ring stands and the
+    /// candidate follows its memo.</remarks>
+    private static (string? Key, string? Memo, bool Below, bool Grey) TodoOf(SyntaxNode host)
     {
+        string? orMemo = Semantics.OrAnnotation.OfHost(host) is { Problem: null } or ? or.Memo : null;
         foreach (var child in host.ChildNodes())
             if (Semantics.TodoAnnotation.Of(child) is { } todo)
-                return (todo.Key ?? "", string.IsNullOrEmpty(todo.Memo) ? null : todo.Memo,
-                        child is MusicMarkSyntax mark && mark.ForcedAbove == false);
-        return (null, null, false);
+            {
+                string? memo = string.IsNullOrEmpty(todo.Memo) ? null : todo.Memo;
+                if (orMemo != null)
+                    memo = memo == null ? orMemo : memo + "  " + orMemo;
+                return (todo.Key ?? "", memo, child is MusicMarkSyntax mark && mark.ForcedAbove == false, false);
+            }
+        return orMemo != null ? ("", orMemo, false, true) : (null, null, false, false);
     }
 
     /// <summary>
@@ -484,22 +493,22 @@ internal sealed class ChordNameCollector
             {
                 if (node is RestSyntax rest)
                 {
-                    var (key, memo, below) = TodoOf(rest);
+                    var (key, memo, below, grey) = TodoOf(rest);
                     _items.Add(new ChordNameItem(
                         "N.C.", mi, itemIndex: -1, rest.RestToken.SourceStart, staffIndex,
                         useTiming: true, timing: timing)
-                    { TodoKey = key, TodoMemo = memo, TodoBelow = below });
+                    { TodoKey = key, TodoMemo = memo, TodoBelow = below, TodoGrey = grey });
                 }
                 else if (node is ChordEntrySyntax entry)
                 {
                     var (sym, structure) = ResolveChordEntry(entry, mi);
                     string? diagram = DiagramOf(entry, structure);
-                    var (key, memo, below) = TodoOf(entry);
+                    var (key, memo, below, grey) = TodoOf(entry);
                     _items.Add(new ChordNameItem(
                         sym.Text, mi, itemIndex: -1, entry.SourceStart, staffIndex,
                         useTiming: true, timing: timing, structure: structure)
                     {
-                        TodoKey = key, TodoMemo = memo, TodoBelow = below,
+                        TodoKey = key, TodoMemo = memo, TodoBelow = below, TodoGrey = grey,
                         SuperFrom = sym.SuperFrom,
                         BracketSuperFrom = sym.BracketSuperFrom,
                         RomanText = Roman(structure, mi),
@@ -1153,13 +1162,13 @@ internal sealed class ChordNameCollector
             {
                 var (sym, structure) = ResolveChordEntry(entry, measureIndex);
                 string? diagram = DiagramOf(entry, structure);
-                var (key, memo, below) = TodoOf(entry);
+                var (key, memo, below, grey) = TodoOf(entry);
                 _items.Add(new ChordNameItem(
                     sym.Text, measureIndex, itemIndex: -1, position,
                     staffIndex: staffIndex, useTiming: true, timing: timing, structure: structure,
                     isChordRow: true)
                 {
-                    TodoKey = key, TodoMemo = memo, TodoBelow = below,
+                    TodoKey = key, TodoMemo = memo, TodoBelow = below, TodoGrey = grey,
                     SuperFrom = sym.SuperFrom,
                     BracketSuperFrom = sym.BracketSuperFrom,
                     RomanText = Roman(structure, measureIndex),
@@ -1172,12 +1181,12 @@ internal sealed class ChordNameCollector
             {
                 // r / R print "N.C." at their slot and occupy it (see ProcessRun's
                 // remark). A bar-head '.' group prints nothing and occupies its slot too.
-                var (key, memo, below) = TodoOf(restNode);
+                var (key, memo, below, grey) = TodoOf(restNode);
                 _items.Add(new ChordNameItem(
                     "N.C.", measureIndex, itemIndex: -1, position,
                     staffIndex: staffIndex, useTiming: true, timing: timing,
                     isChordRow: true)
-                { TodoKey = key, TodoMemo = memo, TodoBelow = below });
+                { TodoKey = key, TodoMemo = memo, TodoBelow = below, TodoGrey = grey });
             }
             // BaseDuration = the resolved fraction (Dots 0): only its Duration drives
             // the spacing spring, so a dotted/compound value spaces correctly too.

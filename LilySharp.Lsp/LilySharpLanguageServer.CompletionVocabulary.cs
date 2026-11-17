@@ -5379,6 +5379,16 @@ public sealed partial class LilySharpLanguageServer
                     SortText = "0todo",
                 },
 
+                // A chord still undecided (OrAnnotation): on a chords-row symbol, the chords it may
+                // be instead — Ctrl+Shift+Up / Down tries them (Dettato request 17, 2026-11-17).
+                new CompletionItem
+                {
+                    Label = "or", Kind = CompletionItemKind.Value,
+                    Detail = "On a chord symbol: the chords it may be instead, F@or(Bm Dm) — Ctrl+Shift+Up / Down tries them; nothing prints",
+                    InsertText = "or($0)", InsertTextFormat = InsertTextFormat.Snippet,
+                    SortText = "1or",
+                },
+
                 // Ornaments
                 new CompletionItem { Label = "trill", Kind = CompletionItemKind.Value, Detail = "Trill ornament; @trill(sharp) / (flat) / (natural) draws the accidental over it", SortText = "1trill" },
                 new CompletionItem { Label = "mordent", Kind = CompletionItemKind.Value, Detail = "Mordent ornament", SortText = "1mordent" },

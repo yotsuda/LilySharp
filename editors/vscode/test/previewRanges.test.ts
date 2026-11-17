@@ -342,7 +342,7 @@ describe('the preview\'s Range panel', () => {
         const body = html.slice(at, html.indexOf('\n        }', at) + '\n        }'.length);
         const plays: unknown[] = [];
         const context = vm.createContext({
-            playBasis: { warp: {}, speed: 0.5 }, countInFix: 0, loopRound: 4, loopGap: 0, lastSpan: undefined as unknown, recSettings: {}, recSound: () => ({}), practice: { speed: 0.5 },
+            playBasis: { warp: {}, speed: 0.5 }, countInFix: 0, loopRound: 4, loopGap: 0, lastSpan: undefined as unknown, playSpan: 0, recSettings: {}, recSound: () => ({}), practice: { speed: 0.5 },
             recordingAlong: () => true, recLevel: () => 1,
             recPlayer: {
                 duration: 60, loop: null as unknown,
@@ -377,6 +377,11 @@ describe('the preview\'s Range panel', () => {
         // recording's end — Repeat off, the recording went on past B.
         run('lastSpan = { ab: [4, 7] }');
         assert.equal(run('startRecordingAlong(100, 0, 8, false)'), 4);
+        // A bar heard with the recording (Alt+M, owner's decision 2026-11-17): it ends with the bar.
+        run('lastSpan = undefined; playSpan = 1.5');
+        assert.equal(run('startRecordingAlong(100, 0, 8, false)'), 1.5);
+        assert.deepEqual(JSON.parse(JSON.stringify(plays.pop())), [4, { tempo: 0.5, at: 100 }, null]);
+        run('playSpan = 0; lastSpan = { ab: [4, 7] }');
         run('countInFix = 2');
         assert.equal(run('startRecordingAlong(100, 0, 8, false)'), 6);
         run('countInFix = 0; lastSpan = undefined');

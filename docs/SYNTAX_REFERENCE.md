@@ -530,7 +530,7 @@ c'4@todo(o1203 "smudged") e'4@todo g'2 |
 
 A chord chart has no notes, so a **chords-row symbol** takes the mark too, glued after the
 symbol and after its shape group, and so does a no-chord `r`; the preview rings the symbol.
-It is the only annotation a chords row accepts:
+It and `@or` (below) are the only annotations a chords row accepts:
 
 ```
 part melody { clef treble }
@@ -540,6 +540,33 @@ section A {
 }
 form { ~A }
 score { chords prog  staff melody }
+```
+
+#### A chord still undecided (`@or`)
+
+A chords-row symbol may also carry the chords it might be instead: `F@or(Bm Dm)` — the
+symbol written is the chord (it prints and plays), the candidates follow, space-separated.
+It is written by a transcription that is unsure (Dettato) or by hand, and it is there to be
+settled by ear:
+
+- **Ctrl+Shift+Up** on the symbol brings the first candidate forward —
+  `F@or(Bm Dm)` → `Bm@or(Dm F)` — and sounds that chord alone; **Ctrl+Shift+Down** turns the
+  other way (`Dm@or(F Bm)`). On a symbol with an `@or` this comes before the shape step the
+  keys take on a chord symbol. A shape written on the symbol goes with the chord it was.
+- **Alt+M** plays the bar: with a recording beside the chart, the recording's bar and the
+  part the caret is in, together; without one, the part alone.
+- The quick fixes **Keep F** and **Choose Bm** settle it and delete the `@or`; deleting the
+  `@or` by hand settles it too.
+
+Nothing is printed or exported for it. The preview shows it the way a `@todo` is shown, in
+grey, with the first candidate as the memo (`or Bm?`), and the compiler reports it as
+information (LYS4082: `F or Bm, Dm?`), so F8 and the Problems list reach every chord left to
+decide. A candidate that is not a chord symbol, or an `@or` anywhere but on a chords-row symbol,
+is LYS4083. It may stand beside a `@todo` (`F@or(Bm)@todo("check the bass")`); the preview then
+shows the todo's red ring, the candidate after its memo.
+
+```
+chords prog { C | F@or(Bm Dm) | G7@or(Bdim) | C |. }
 ```
 
 It goes where any `@` goes — on an item with a place in time. A lyric syllable, a `key`,

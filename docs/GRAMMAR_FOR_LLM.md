@@ -851,8 +851,12 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   **When you rewrite music that carries `@todo`, keep every mark you did not resolve, on the
   same note; drop a mark only where your change answers it.** Never invent a key.
   A chords-row symbol or no-chord `r` takes the same mark, GLUED after the symbol (and after its
-  shape group): `| C Am7@todo("Am7 or C?") |`, `F(133211)@todo(o12 "barre?")`, `r@todo` — the ONLY
-  annotation a chords row accepts (any other is LYS1028).
+  shape group): `| C Am7@todo("Am7 or C?") |`, `F(133211)@todo(o12 "barre?")`, `r@todo` — with
+  `@or`, the ONLY annotations a chords row accepts (any other is LYS1028).
+- A chord still undecided: `F@or(Bm Dm)` on a chords-row symbol — the symbol is the chord (it
+  prints and plays), the candidates space-separated after it; nothing on paper or in the sound
+  changes (LYS4082 reports it). Write it where a transcription is unsure instead of
+  `@todo("or Bm?")`; it may stand beside a `@todo`. **Keep every `@or` you did not settle.**
 
 ```
 c4@staccato d4@accent <e g>4@arpeggio |
