@@ -1873,7 +1873,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 // The webview cannot reach the LSP: fetch note events here and
                 // hand them back for WebAudio scheduling.
                 if (!client || !clientReady) {
-                    panel.webview.postMessage({ type: 'playbackData', error: 'language server not running' });
+                    panel.webview.postMessage({ type: 'playbackData', seq: message.seq, error: 'language server not running' });
                     return;
                 }
                 // Another file, or another score of it: the page's voices are the last one's, kept
@@ -1897,14 +1897,15 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     // A line of a part that is not sung here (nobody installed can sing it) leaves
                     // its sections to the instrument where another line of the part sings.
                     const notes = pb.Notes ? leftToTheInstrument(pb.Notes, missingVoices.get(panel) ?? []) : null;
-                    panel.webview.postMessage({ type: 'playbackData', notes, error: pb.Error ?? null,
+                    // (seq: the page's request, said back — it plays only the answer to its latest)
+                    panel.webview.postMessage({ type: 'playbackData', seq: message.seq, notes, error: pb.Error ?? null,
                         parts: pb.Parts ?? null, extra: pb.Extra ?? null, sung: pb.Sung ?? null, played: pb.Played ?? null,
                         beats: pb.Beats ?? null, barEnd: pb.BarEnd ?? null });
                     // The lyrics' voice, rendered now — a voice the text's rest had not yet sent to
                     // the engine goes at once — so the next Play finds it (docs/singing-design.md §5).
                     void prepareVoices(panel, uri, 'play');
                 } catch (e) {
-                    panel.webview.postMessage({ type: 'playbackData', error: String(e) });
+                    panel.webview.postMessage({ type: 'playbackData', seq: message.seq, error: String(e) });
                 }
                 return;
             }
@@ -8937,6 +8938,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         let heldKey = '';           // what rings, so a fast repeat sustains instead of re-striking
         let heldWatchdog = null;
         let pendingAudition = null; // audition awaiting a fresh note list
+        // Each request for the notes is numbered, and the extension says the number back: only the answer
+        // to the latest is played (owner's report 2026-11-17: A-B flags moved while it played — two
+        // requests in flight, the first answer took the A-B span and the second played the whole score
+        // from its start, past B). An audition's own answer still goes to the audition (auditionSeq).
+        let playSeq = 0, auditionSeq = -1;
+        function requestPlay() { vscode.postMessage({ type: 'requestPlayback', seq: ++playSeq }); }
         const AUD_WAVE = ['triangle','sine','square','sawtooth','triangle','sine','sawtooth','square','sine','triangle'];
 
         function stopHeldNote() {
@@ -9094,7 +9101,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 pendingFromHere = true;
                 pendingLoopRefresh = false;
                 setPlayUi(true);
-                vscode.postMessage({ type: 'requestPlayback' });
+                requestPlay();
                 return;
             }
             setPlayUi(true); // immediate feedback while the request runs
@@ -9107,7 +9114,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // (owner's decision 2026-11-17: the selection only places A and B the first time).
             pendingSpan = abOn ? { ab: [abFrom, abTo] } : null;
             pendingLoopRefresh = false;     // (this Play's notes are its own, not a loop's next round)
-            vscode.postMessage({ type: 'requestPlayback' });
+            requestPlay();
         });
         document.getElementById('stopBtn').addEventListener('click', () => {
             pendingLoopRefresh = false;     // (a loop's next round with the new text: off with it)
@@ -9198,7 +9205,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             pendingStartPos = -1;
             pendingFromHere = false;
             pendingSpan = abOn ? { ab: [abFrom, abTo] } : null;
-            vscode.postMessage({ type: 'requestPlayback' });
+            requestPlay();
         }
         function setAb(from, to) {
             const last = Math.max(0, abBars().length - 1);
@@ -10201,7 +10208,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             recPlayer.presetLoop(looping ? { from: origin * k, to: (origin + loopRound) * k } : null);
             recPlayer.setLevel(recLevel());
             void recPlayer.play(sec, recSound(), { tempo: playBasis.recTempo ?? practice.speed, at });
-            return looping ? 0 : recPlayer.duration / k - origin + countInFix;
+            if (looping) return 0;
+            // A stretch (the A-B bars) once: it ends where the stretch does, the recording with it —
+            // not at the recording's end (owner's report 2026-11-17: Repeat off, the recording went
+            // on past B, and nothing lit, the score's notes over).
+            if (lastSpan) return loopRound + countInFix;
+            return recPlayer.duration / k - origin + countInFix;
         }
         function setRecording(m) {
             if (m.none) {
@@ -10733,7 +10745,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         // 2026-11-17 — a bar looped while it is written by ear; refreshLoop).
                         if (loopOn && loopList && lastSpan !== undefined && playClock && !document.getElementById('stopBtn').disabled) {
                             pendingLoopRefresh = true;
-                            vscode.postMessage({ type: 'requestPlayback' });
+                            requestPlay();
                         }
                         collectPages();
                         applyBarFlags();
@@ -10794,7 +10806,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     } else {
                         const inFlight = !!pendingAudition;
                         pendingAudition = message;
-                        if (!inFlight) { vscode.postMessage({ type: 'requestPlayback' }); }
+                        if (!inFlight) { requestPlay(); auditionSeq = playSeq; }
                     }
                     break;
                 }
@@ -10904,7 +10916,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         pendingFromHere = true;
                         pendingLoopRefresh = false;
                         setPlayUi(true);
-                        vscode.postMessage({ type: 'requestPlayback' });
+                        requestPlay();
                     }
                     break;
                 case 'ctxStop':
@@ -10948,6 +10960,15 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     clearHighlights();
                     break;
                 case 'playbackData':
+                    if (typeof message.seq === 'number' && message.seq !== playSeq) {
+                        // A later request replaced it: not played — an audition's own answer aside.
+                        if (pendingAudition && message.seq === auditionSeq && !message.error && message.notes) {
+                            playbackNotes = message.notes;
+                            const a = pendingAudition; pendingAudition = null;
+                            runAudition(a);
+                        } else if (message.seq === auditionSeq) pendingAudition = null;
+                        break;
+                    }
                     if (pendingLoopRefresh && !message.error && message.notes) {
                         pendingLoopRefresh = false;
                         refreshLoop(message);
@@ -10962,7 +10983,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                             zoomInfo.classList.add('visible');
                             setTimeout(() => zoomInfo.classList.remove('visible'), 2500);
                         }
-                    } else if (pendingAudition) {
+                    } else if (pendingAudition && (typeof message.seq !== 'number' || message.seq === auditionSeq)) {
                         // These notes were fetched for an audition, not the Play button.
                         playbackNotes = message.notes;
                         const a = pendingAudition; pendingAudition = null;

@@ -239,12 +239,17 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /delete recLevels\.Recording;/);
         assert.match(html, /if \(origin !== undefined\) end = Math\.max\(end, startRecordingAlong\(t0, offset, origin, !!loopList\)\);/);
         assert.match(html, /const timed = warp \? window\.LysSynth\.warpNotes\(notes, warp\) : notes;/);
+        // Only the answer to the latest request plays (owner's report 2026-11-17: A-B flags moved
+        // while it played, a first answer took the span and a second played the whole score past B).
+        assert.match(html, /function requestPlay\(\) \{ vscode\.postMessage\(\{ type: 'requestPlayback', seq: \+\+playSeq \}\); \}/);
+        assert.doesNotMatch(html, /postMessage\(\{ type: 'requestPlayback' \}\)/);
+        assert.match(html, /case 'playbackData':\s+if \(typeof message\.seq === 'number' && message\.seq !== playSeq\) \{/);
         // Its start: the list's offset in the score's played time (count-in aside) times the speed.
         const at = html.indexOf('function startRecordingAlong(');
         const body = html.slice(at, html.indexOf('\n        }', at) + '\n        }'.length);
         const plays: unknown[] = [];
         const context = vm.createContext({
-            playBasis: { warp: {}, speed: 0.5 }, countInFix: 0, loopRound: 4, recSettings: {}, recSound: () => ({}), practice: { speed: 0.5 },
+            playBasis: { warp: {}, speed: 0.5 }, countInFix: 0, loopRound: 4, lastSpan: undefined as unknown, recSettings: {}, recSound: () => ({}), practice: { speed: 0.5 },
             recordingAlong: () => true, recLevel: () => 1,
             recPlayer: {
                 duration: 60, loop: null as unknown,
@@ -265,6 +270,14 @@ describe('the preview\'s Range panel', () => {
         run('countInFix = 0');
         assert.equal(run('startRecordingAlong(100, 0, 8, true)'), 0);
         assert.deepEqual(JSON.parse(JSON.stringify(plays.pop())), [4, { tempo: 0.5, at: 100 }, { from: 4, to: 6 }]);
+        // The A-B bars once (owner's report 2026-11-17): it ends with the stretch, not at the
+        // recording's end — Repeat off, the recording went on past B.
+        run('lastSpan = { ab: [4, 7] }');
+        assert.equal(run('startRecordingAlong(100, 0, 8, false)'), 4);
+        run('countInFix = 2');
+        assert.equal(run('startRecordingAlong(100, 0, 8, false)'), 6);
+        run('countInFix = 0; lastSpan = undefined');
+        plays.length = 0;
         // Not lined up: nothing.
         run('playBasis = { warp: null, speed: 1 }');
         assert.equal(run('startRecordingAlong(100, 0, 0, false)'), 0);
