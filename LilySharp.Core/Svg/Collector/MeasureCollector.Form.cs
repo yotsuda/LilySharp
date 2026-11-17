@@ -482,6 +482,18 @@ public sealed partial class MeasureCollector
         _v.DefaultDuration = Fraction.Quarter;
         _v.DefaultDots = 0;
 
+        // A bar the last play left open (music after its last bar line) is closed with silence
+        // here — unless this section opens with a pickup (`partial`), which completes it: the
+        // one way a section starts inside a bar (LYS2022). A bar being written at the end of a
+        // section (`… | f1 | g4`) otherwise took the next section's bars into it, and a part that
+        // writes nothing there was never padded (owner's report 2026-11-17, Lab
+        // sessions/p1290/mylife/m3). The piece's last bar, with no play after it, is left as written,
+        // and so is a PICKUP still pending (`section P { partial 2 }` whose body is `r8`): the next
+        // section's music fills the rest of it (SectionBoundaryMeterRevertTests).
+        if (_voiceName != null && builder.HasMeasureContent && !builder.PickupPending
+            && !_sectionHeaders.Partials.ContainsKey(section.SectionName))
+            await CloseOpenBar(builder, section.SourceStart);
+
         // A section is self-contained: settle the boundary so a section that OPENS with a
         // `|` closes an EMPTY measure of its own (owner's decision, 2026-08-28) rather than
         // pairing with — or anchoring against — whatever the previous section wrote.
@@ -830,6 +842,26 @@ public sealed partial class MeasureCollector
         // later bar slid left (HANDOFF §2 F-hdrsilent: 4 bars drawn of 6, `lysc check`
         // silent). Each filler bar is worth what an empty bar is worth HERE (BarLength: the
         // header's meter, its pickup first), not the score meter in _v.Meta.
+        // A bar this voice left OPEN at the section's end — music after its last bar line, as a
+        // bar being written is (`… | g1 | d,4` while the next note is still to come) — is closed
+        // with silence when the section has bars past it, so the padding below fills them: the
+        // open bar cannot be a short bar the next play's pickup completes, with bars still to
+        // come in this play. Owner's report 2026-11-17 (My Life, a bass line written by hand under
+        // a chord chart): without its `|` the padding was skipped, the bar never closed, and every
+        // later section's bars fell into it — the staff ended at the section, the chords of the
+        // rest of the piece crowded over its last bars (Lab sessions/p1290/mylife/m1).
+        if (_voiceName != null && builder.HasMeasureContent && ExpansionBudgetExceededAt == null)
+        {
+            int canonicalBars = GetCanonicalSectionBars(section);
+            if (_probeRecording != null)
+            {
+                _walkMaxSourceRead = Math.Max(_walkMaxSourceRead, section.SourceStart + 1);
+                _walkCanonicalReads.Add((section.SectionName, canonicalBars));
+            }
+            if (builder.CurrentMeasureIndex - startMeasure + 1 < canonicalBars)
+                await CloseOpenBar(builder, section.SourceStart);
+        }
+
         if (_voiceName != null && !builder.HasMeasureContent)
         {
             // Record mode: the canonical bar count is a function of EVERY part's
@@ -886,6 +918,25 @@ public sealed partial class MeasureCollector
             }
         }
         _meterCursor = null;
+    }
+
+    /// <summary>
+    /// Closes the bar a voice left open — music after its last bar line — with a silent spacer
+    /// to the bar's length (under <c>time none</c>, where no clock fills a bar, with a bar line
+    /// where it stands): what the bar holds is drawn, the rest of it stays empty, as a bar still
+    /// being written is. The model of the bars reads such a bar the same way — one bar, a short
+    /// one (LYS2001 says so) — and so does the cross-part check that pads the rest of the section.
+    /// </summary>
+    private async ValueTask CloseOpenBar(MeasureBuilder builder, int sourcePosition)
+    {
+        if (!builder.SenzaMisura)
+        {
+            var left = builder.CurrentMeasureLength - builder.CurrentDuration;
+            if (left > Fraction.Zero)
+                await AddItemAsync(builder, new RestItem(left, 0, sourcePosition) { IsSpacer = true });
+        }
+        if (builder.HasMeasureContent)
+            builder.HandleBarline(BarlineType.Single, sourcePosition);
     }
 
     // The short last bar of each section a silent part was padded through (SectionShortEnds),

@@ -575,6 +575,10 @@ internal sealed class MeasureBuilder
     /// drawn (the <c>clef treble x | …</c> case).</summary>
     public bool HasMeasureContent => _hasMeasureContent;
 
+    /// <summary>The bar in progress is a pickup (<c>partial</c>) still pending: music after it —
+    /// the next section's included — goes on filling it.</summary>
+    public bool PickupPending => _bars.Partial is not null;
+
     public string? SectionLabel
     {
         get => _sectionLabel;

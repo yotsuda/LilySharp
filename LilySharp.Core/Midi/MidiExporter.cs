@@ -2139,7 +2139,7 @@ public sealed class MidiExporter
                     {
                         ProcessSequence(WithPlannedMeters(section.SectionName, section, ChildrenOf(section)),
                             track, conductorTrack);
-                        CloseLane(track);
+                        CloseLaneOf(track, section);
                     },
                     octaveOffset);
                 return;
@@ -2155,7 +2155,7 @@ public sealed class MidiExporter
             PlayInPart(bareOwner, () =>
                 {
                     ProcessChildren(section, track, conductorTrack);
-                    CloseLane(track);
+                    CloseLaneOf(track, section);
                 },
                 octaveOffset);
             _currentTick = RowsAndLanesEnd(_currentTick, rowsEnd, rowsLastBar, track, rowNotes);
@@ -2227,7 +2227,7 @@ public sealed class MidiExporter
                 OpenBarGrid(track, tickLanes.ContainsKey(pname) ? null
                     : firstBars.TryGetValue(pname, out int firstBar) ? firstBar : null);
                 ProcessNode(sectionPart, track, conductorTrack);
-                CloseLane(track);
+                CloseLaneOf(track, sectionPart);
                 _pendingGraceSteal = 0;
                 _currentPart = outerPart;
                 _partPitchLanes[pname] = (_currentNoteName, _currentOctave, _defaultDuration);
@@ -2839,8 +2839,30 @@ public sealed class MidiExporter
         // SectionRef like any other — the bite this method's remark records), and the
         // ROUTE through them once, by FormRoute.
         var items = FormWalk.Read(structure);
+        _playOrder.Clear();
+        FlattenPlays(items, _playOrder);
+        _playIndex = 0;
         PlayFormAsPrinted(items, track, conductorTrack);
+        _playOrder.Clear();
+
+        static void FlattenPlays(IReadOnlyList<FormWalk.Item> walk, List<string> into)
+        {
+            foreach (var item in walk)
+                switch (item)
+                {
+                    case FormWalk.SectionRef s: into.Add(s.Name); break;
+                    case FormWalk.Repeat r: FlattenPlays(r.Children, into); break;
+                    case FormWalk.Ending e: foreach (var s in e.Sections) into.Add(s.Name); break;
+                }
+        }
     }
+
+    // The form's plays in the order PlayFormAsPrinted walks them, and how far it has come: a
+    // section's end may stop inside its rows' last bar only where the NEXT play opens with a
+    // pickup that completes the bar, or where none follows (RowsAndLanesEnd).
+    private readonly List<string> _playOrder = new();
+    private int _playIndex;
+    private bool _nextPlayCompletesTheBar = true;
 
     // The repeat signs, endings and navigation marks of the PRINTED timeline, each at its tick:
     // every book is walked once, as the page prints it, and played afterwards along the marks
@@ -2870,7 +2892,10 @@ public sealed class MidiExporter
         int pos = s.Node is SectionReferenceSyntax ? s.Node.SourceStart
             : s.Node.GetChild(1) is SyntaxTokenNode name ? name.SourceStart : s.Node.SourceStart;
         int start = _currentTick, ordinal = NextOrdinal(pos);
+        int next = ++_playIndex;
+        _nextPlayCompletesTheBar = next >= _playOrder.Count || _sectionHeaders.Partials.ContainsKey(_playOrder[next]);
         PlaySectionByName(s.Name, track, conductorTrack, s.OctaveOffset);
+        _nextPlayCompletesTheBar = true;
         if (_currentTick > start)
             track.TextMarks.Add(new TextMark(start, _currentTick - start, pos, ordinal, Part: null));
     }
@@ -3291,6 +3316,31 @@ public sealed class MidiExporter
     {
         if (_currentTick > _barStart)
             AlignBarLine(track, null, -1);
+    }
+
+    /// <summary>
+    /// <see cref="CloseLane"/> for a part's play of a section (<paramref name="voice"/>, what its
+    /// padding is counted for): a bar the part left OPEN — music after its last bar line, as a bar
+    /// being written is — is a whole bar, silent after its music, where the section has bars past
+    /// it (the padding follows) or the next play does not open with a pickup to complete it — as
+    /// the page closes it (MeasureCollector.CloseOpenBar). A bar its `|` closed short stays short
+    /// (the bar line is the bar). Owner's report 2026-11-17 (Lab sessions/p1290/mylife): `… | g1 |
+    /// d,4` with no `|` under eight bars of chords ran the section to 7¼ bars, and every later
+    /// section sounded a bar and three beats early.
+    /// </summary>
+    private void CloseLaneOf(MidiTrack track, SyntaxNode voice)
+    {
+        // (A pickup still pending — `section P { partial 2 }` whose body is `r8` — is the next
+        // section's to fill, as the page leaves it: only the padding closes it.)
+        if (_currentTick > _barStart && !_bars.SenzaMisura
+            && ((!_nextPlayCompletesTheBar && _bars.Partial == null) || PaddingTicks(voice) > 0))
+        {
+            bool known = _barKnown || _bars.Partial != null;
+            int length = known && _bars.Partial == null && _firstBarTicks is { } first ? first : MeasureTicks();
+            if (length > 0 && _currentTick < _barStart + length)
+                _currentTick = _barStart + length;
+        }
+        CloseLane(track);
     }
 
     // The bar lines' ticks of the file being exported (MidiFile.BarTicks).
