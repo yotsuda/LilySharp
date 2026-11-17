@@ -150,8 +150,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 base `c31fd4203`・開始時 full 17556 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17559（Lab `p1291` の `run1.trx`）。**オーナーの指示（2026-11-18）＝コードの包括レビュー・リファクタの余地・プレビュー更新の性能**。
 - **レビューの全文は Lab `sessions/p1291/review.md`**（性能 P1〜P10・リファクタ F1〜F7・行番号つき）。結論: 打鍵ごとの重い仕事は描画の周り（第1110 より後に入った todo・状態行・長さ・小節の箱）。
 - **直した 6 件（絵と答えは同じ）**: ⑴ `lilysharp/todos` は @todo の無いファイルで collect しない（`TodoIndex.Find` に places を遅延で）・拡張は描画の依頼の後に訊く。⑵ ヘッダの長さの音は `lilysharp/playback` の `SoundingOnly`（2 回目の MIDI 書き出しなし）・拡張は文字が 300 ms 休んでから訊く（`soundingWait`）。⑶ codeAction は診断を自分で回さず Problems のパスと同じ 1 回を読む（`DocumentDiagnosticsOnce`＝展開後の木がキー）。＝`0028b3439`・網 `KeystrokeSideWorkTests` 5 本・毒 3 本。⑷ P7＝`ChordRowInk` は行のコードを小節ごとに 1 回束ねる（`0bbf74e06`・プレビューの絵 1,152 冊がバイト同一＝Lab `p1291/preview-{base,head}.txt`。export の掃きは小節の箱を見ない・毒 1 本）。⑸ `scanState`・`abRanges`・`panelFolds` は変わったときだけ送る（`postIfChanged`）。⑹ F1＝全文を置き換えるコマンド 8 つは `rewriteRequest` を通り、依頼の間に文字が変わっていたら何も変えない（⑸⑹＝`985aa5e23`）。
-- **計測（静かな窓・数は review.md §4）**: ⑺ 描画の collect 段が `8fc8e2be1` から 1.2 → 2.0 ms／打鍵（235 冊 × 8）・二分探索で `dae137e71`＝break の語を強制の小節線ごとに探していた → 誰かが禁じた所だけ（`395e5fc1b`・1.46 ms・描画 5.19 → 4.65）。⑻ 残る最大の寄り道は `caretInfo`（描画の 2.4 倍の時間）。
-- 終了時 full 17562 合格 / 1 失敗（同じ）/ skip 2 / 合計 17565（`run5.trx`）・npm 1247 合格。⚠️ 拡張の変更は実機で未確認（`MANUAL-CHECKS` も未）。
+- **計測（静かな窓・数は review.md §4）**: ⑺ 描画の collect 段が `8fc8e2be1` から 1.2 → 2.0 ms／打鍵・`dae137e71`＝break の語を強制の小節線ごとに探していた → 誰かが禁じた所だけ（`395e5fc1b`・1.46 ms・描画 5.19 → 4.65）。⑻ `caretInfo`（描画の 2.4 倍）は編集の後 300 ms 休んでから訊く（`f51720b8a`）。
+- 終了時 full 17562 合格 / 1 失敗（同じ）/ skip 2 / 合計 17565（`run5.trx`）・npm 1248 合格。⚠️ 拡張の変更は実機で未確認（`MANUAL-CHECKS` も未）。
 - **次**: review.md の残り＝P4・P5 の残り・P6・P7 の残り・P8・F2〜F7。P4・P6 は順位を計測で決める＝静かな窓の後。P9 はオーナー判断・P10 は静かな窓で。
 
 ## 以下は第1290セッションの経緯
