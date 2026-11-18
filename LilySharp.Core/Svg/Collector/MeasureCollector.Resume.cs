@@ -265,16 +265,25 @@ public sealed partial class MeasureCollector
         // source's FINAL lists (append-only across the collect, so entries
         // [0..count) are the prefix regardless of what later walks appended).
         // Entries below the current count were appended by THIS collect's own
-        // earlier walks and are identical by determinism.
+        // earlier walks and are identical by determinism — or, in a sanity sink
+        // whose count an earlier walk changed (_walkTableDrift), they are that
+        // walk's own: the watermark is read as this collect's index, and the
+        // source's entry stands the drift below it. (NO OBSERVER for that last
+        // index, session 1300: the sinks are filled after a voice's walk, so a
+        // drifting table has nothing between the count and its watermark to copy —
+        // the poison `src[t][j]` runs green. The watermark's own drift is pinned:
+        // ALaterPartResumes_WhenAnEarlierPartsComplaintComesOrGoes.)
         var src = plan.Source.CumulativeSideTables();
         var dst = CumulativeSideTables();
         for (int t = 0; t < dst.Length; t++)
         {
-            if (dst[t].Count > ck.TableCounts[t])
+            int drift = _walkTableDrift?[t] ?? 0;
+            int watermark = ck.TableCounts[t] + drift;
+            if (dst[t].Count > watermark)
                 throw new CollectResumeAbortException(
                     $"resume: side table {t} is already past its checkpoint watermark");
-            for (int j = dst[t].Count; j < ck.TableCounts[t]; j++)
-                dst[t].Add(src[t][j]);
+            for (int j = dst[t].Count; j < watermark; j++)
+                dst[t].Add(src[t][j - drift]);
         }
 
         // Builder: adopt the pre-finalize prefix measures, with the boundary-time
@@ -780,9 +789,11 @@ public sealed partial class MeasureCollector
         // Watermark equality = "the window produced exactly the recorded item
         // counts", which is what makes the adopted tail slices land at the same
         // indices — and is the Δm≠0 bail for this walk's own measures/items.
+        // (Read as this collect's index: a sanity sink may stand an earlier
+        // walk's drift away from the recording — LiveWatermark.)
         var tables = CumulativeSideTables();
         for (int t = 0; t < tables.Length; t++)
-            if (tables[t].Count != ck.TableCounts[t])
+            if (tables[t].Count != LiveWatermark(t, ck.TableCounts[t]))
                 return DeclineSplice("a side-table count differs");
 
         if (_v.PendingInlineVoltas.Count != ck.PendingInlineVoltaCount)

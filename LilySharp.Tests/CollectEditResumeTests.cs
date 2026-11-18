@@ -649,6 +649,69 @@ section S {
         Assert.All(resumer.ResumePlans.Values, p => Assert.Equal(0, p.SplicedMeasures));
     }
 
+    [Theory]
+    [InlineData("c'2~ c2", "c'2~ d2", false)] // the complaint comes
+    [InlineData("c'2~ d2", "c'2~ c2", false)] // ...and goes
+    [InlineData("c'2( d2)", "c'2( d2(", false)] // a slur's end is mistyped: two are left open
+    [InlineData("c'2~ c2", "c'2~ d2", true)] // vb written above va: its bars are the PREFIX
+    [InlineData("c'2~ d2", "c'2~ c2", true)]
+    public void ALaterPartResumes_WhenAnEarlierPartsComplaintComesOrGoes(string before, string after, bool laterPartWrittenFirst)
+    {
+        // The complaints about a finished voice (a tie between two pitches, a slur left
+        // open) are appended to collector-wide lists after each voice's walk, so vb's walk
+        // finds one more or one fewer than its recording did — and nothing else of vb's
+        // has moved. Until session 1300 that count was compared like every other side
+        // table's at walk entry and the whole book was collected again: 63 of 1,880
+        // keystrokes over the owner's corpus, every abort the run saw. Poison:
+        // IsVoiceSanitySink => false throws CollectResumeAbortException here.
+        // The score walks va first wherever the cells are written. With vb's cell BELOW
+        // va's, vb's bars are met past the edit (the suffix splice compares its counts
+        // through the drift); with vb's cell ABOVE, they are the unchanged prefix (the
+        // restore reads its watermark through it — without, "already past its watermark").
+        const string vaCell = "  va { FIRST | d'1 | e'1 | f'1 | }";
+        const string vbCell = "  vb { c4 b, a, g, | c4 b, a, g, | c4 b, a, g, | c4 b, a, g, | }";
+        string Book(string firstBar) => string.Join("\n",
+            "part va { clef treble }",
+            "part vb { clef bass }",
+            "",
+            "score duo { staff va staff vb }",
+            "",
+            "section S {",
+            laterPartWrittenFirst ? vbCell : vaCell.Replace("FIRST", firstBar),
+            laterPartWrittenFirst ? vaCell.Replace("FIRST", firstBar) : vbCell,
+            "}",
+            "");
+        string oldText = Book(before), newText = Book(after);
+
+        var recorder = CollectWalkProbe.Recorder();
+        var source = new MeasureCollector { WalkProbe = recorder };
+        var oldTree = SyntaxTree.Parse(oldText);
+        SvgGenerator.CollectScore(source, oldTree, RenderSpecParser.FindFirst(oldTree));
+
+        var newTree = SyntaxTree.Parse(newText);
+        var newSpec = RenderSpecParser.FindFirst(newTree);
+        var full = new MeasureCollector();
+        var fullNew = SvgGenerator.CollectScore(full, newTree, newSpec);
+        static int Complaints(MeasureCollector c) => c.TieTargetWarnings.Count + c.UnpairedSlurWarnings.Count;
+        Assert.True(Complaints(source) != Complaints(full),
+            $"the edit moved no complaint ({Complaints(source)} before and after) — the test tests nothing");
+
+        var resumer = CollectResumePlanner.Plan(oldTree, newTree, recorder, source);
+        Assert.True(resumer != null, "the edit produced no plan at all");
+        var collector = new MeasureCollector { WalkProbe = resumer };
+        var resumed = SvgGenerator.CollectScore(collector, newTree, newSpec);
+
+        var diff = ModelDeepDiff.FirstDifference(fullNew, resumed, "score");
+        Assert.True(diff == null, $"resumed differs from full: {diff}");
+        Assert.Equal(full.TieTargetWarnings.Select(w => w.ToString()), collector.TieTargetWarnings.Select(w => w.ToString()));
+        Assert.Equal(full.UnpairedSlurWarnings.Select(w => w.ToString()), collector.UnpairedSlurWarnings.Select(w => w.ToString()));
+        var later = resumer!.ResumePlans.Values.Where(p => p.Recording.VoiceName == "vb").ToList();
+        Assert.True(later.Count == 1, $"{later.Count} plans for vb");
+        int prefix = later[0].Consumed ? later[0].Checkpoint!.MeasureCount : 0;
+        Assert.True(laterPartWrittenFirst ? prefix >= 3 : later[0].SplicedMeasures == 3,
+            $"vb adopted {prefix} of its four bars as the prefix and {later[0].SplicedMeasures} as the tail; the last decline: {later[0].LastSpliceDecline}");
+    }
+
     [Fact]
     public void PrefixResume_RestoresTheKeyTimeline_AcrossAModulation()
     {
