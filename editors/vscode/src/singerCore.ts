@@ -335,11 +335,13 @@ export interface VoiceGuide { label: string; detail: string; documentation: stri
 export const VOICE_INSTALL_GUIDE = 'https://yotsuda.github.io/LilySharp/sing.html#install';
 const HOW_TO_INSTALL = { label: 'How to Install a Voice', url: VOICE_INSTALL_GUIDE };
 const CHOOSE_DIFFSINGER = { label: 'Choose DiffSinger Folder…', command: 'cantoria.chooseVoicesFolder' };
+// The buttons of a guide stand in the alphabet's order (the owner asked, 2026-11-18; the guide
+// to installing led them from 2026-11-12 until then).
 const VOICE_SETUP_ACTIONS: VoiceGuide['actions'] = [
-    HOW_TO_INSTALL,
-    { label: 'Choose NEUTRINO Folder…', command: 'cantoria.chooseNeutrinoFolder' },
     CHOOSE_DIFFSINGER,
+    { label: 'Choose NEUTRINO Folder…', command: 'cantoria.chooseNeutrinoFolder' },
     { label: 'Choose VOICEVOX Folder…', command: 'cantoria.chooseVoicevoxFolder' },
+    HOW_TO_INSTALL,
 ];
 const GUIDE_LINK = `[How to install a voice](${VOICE_INSTALL_GUIDE})`;
 const ENGINE_LINKS = '[NEUTRINO](https://studio-neutrino.com/), [DiffSinger](https://github.com/openvpi/DiffSinger) or [VOICEVOX](https://voicevox.hiroshiba.jp/)';
@@ -387,7 +389,7 @@ export function noLanguageGuide(language: string, voices: readonly CantoriaVoice
         return { ...base,
             documentation: `${installed} A [DiffSinger](https://github.com/openvpi/DiffSinger) voice with a \`dsdict-${language}.yaml\` sings ${wanted}: install one, then choose its folder. ${words}\n\n${GUIDE_LINK}.\n\n${STILL_WRITTEN}`,
             message: `Lily#: no installed voice sings ${wanted}. A DiffSinger voice with a dsdict-${language}.yaml does: install one, then choose its folder.`,
-            actions: [HOW_TO_INSTALL, CHOOSE_DIFFSINGER] };
+            actions: [CHOOSE_DIFFSINGER, HOW_TO_INSTALL] };
     }
     return { ...base,
         detail: `Cantoria does not sing ${wanted} yet`,

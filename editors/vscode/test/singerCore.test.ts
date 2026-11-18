@@ -619,11 +619,21 @@ describe('noVoiceGuide', () => {
         const guide = noVoiceGuide(true);
         assert.match(guide.label, /No singing voice is installed/);
         for (const engine of ['NEUTRINO', 'DiffSinger', 'VOICEVOX']) { assert.match(guide.documentation, new RegExp(engine)); assert.match(guide.message, new RegExp(engine)); }
-        assert.deepEqual(guide.actions.flatMap(a => a.command ? [a.command] : []), ['cantoria.chooseNeutrinoFolder', 'cantoria.chooseVoicesFolder', 'cantoria.chooseVoicevoxFolder']);
+        assert.deepEqual(guide.actions.flatMap(a => a.command ? [a.command] : []), ['cantoria.chooseVoicesFolder', 'cantoria.chooseNeutrinoFolder', 'cantoria.chooseVoicevoxFolder']);
     });
-    it('leads with the guide to installing a voice (the owner asked, 2026-11-12)', () => {
+    it('sets its buttons in the alphabet\'s order (the owner asked, 2026-11-18)', () => {
+        assert.deepEqual(noVoiceGuide(true).actions.map(a => a.label),
+            ['Choose DiffSinger Folder…', 'Choose NEUTRINO Folder…', 'Choose VOICEVOX Folder…', 'How to Install a Voice']);
+        const voices = [{ id: 'neutrino/X', engine: 'neutrino', name: 'X', language: 'ja' }];
+        for (const g of [noVoiceGuide(true), ...['ja', 'en', 'zh', 'ko'].map(l => noLanguageGuide(l, voices))]) {
+            const labels = g.actions.map(a => a.label);
+            assert.ok(labels.length > 1);
+            assert.deepEqual(labels, [...labels].sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' })));
+        }
+    });
+    it('offers the guide to installing a voice (the owner asked, 2026-11-12)', () => {
         const guide = noVoiceGuide(true);
-        assert.deepEqual(guide.actions[0], { label: 'How to Install a Voice', url: 'https://yotsuda.github.io/LilySharp/sing.html#install' });
+        assert.deepEqual(guide.actions.at(-1), { label: 'How to Install a Voice', url: 'https://yotsuda.github.io/LilySharp/sing.html#install' });
         for (const g of [guide, noVoiceGuide(false)]) { assert.match(g.documentation, /\[How to install a voice\]\(https:\/\/yotsuda\.github\.io\/LilySharp\/sing\.html#install\)/); }
     });
     it('without Cantoria, says the extension is the first step', () => {
