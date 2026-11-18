@@ -239,7 +239,10 @@ describe('the recording panel', () => {
         assert.equal(tuningOf({ tuning: -12 }), -12);
         assert.equal(tuningOf({ tuning: 49 }), 49);
         assert.equal(tuningOf({ tuning: 80 }), 50);
-        for (const none of [{}, { tuning: '12' }, { tuning: null }, { tuning: NaN }]) {
+        assert.equal(tuningOf({ tuning: 10 }), 10);
+        assert.equal(tuningOf({ tuning: -10 }), -10);
+        // Nearer A = 440 than 10 cents is in tune (a studio recording read +4: no button for it).
+        for (const none of [{}, { tuning: '12' }, { tuning: null }, { tuning: NaN }, { tuning: 4 }, { tuning: -9 }, { tuning: 0 }]) {
             assert.equal(tuningOf(none), 0, JSON.stringify(none));
         }
     });

@@ -462,11 +462,18 @@ function clamp(x: number, [lo, hi]: readonly [number, number]): number {
     return Number.isFinite(x) ? Math.min(hi, Math.max(lo, x)) : 0;
 }
 
+/** The least a recording is off A = 440 Hz, in cents, for it to be called off it. Nearer than
+ *  this is a recording in tune: Dettato measured -9 to +4 on RWC's studio recordings (its
+ *  HANDOFF), and the owner's 1997 single read +4 (2026-11-19: "is its A not 440?"). */
+export const TUNING_NOTICED = 10;
+
 /** How far a file beside a chart says its recording is from A = 440 Hz (Dettato's `tuning`,
- *  SIDECAR.md: whole cents, -50 to 49; -12 is 12 cents flat); 0 when it says nothing usable. */
+ *  SIDECAR.md: whole cents, -50 to 49; -12 is 12 cents flat); 0 when it says nothing usable, or
+ *  less than TUNING_NOTICED — the recording is then in tune, and nothing offers to turn it. */
 export function tuningOf(raw: Record<string, unknown>): number {
     const t = raw.tuning;
-    return typeof t === 'number' && Number.isFinite(t) ? clamp(t, RECORDING_LIMITS.tuning) : 0;
+    if (typeof t !== 'number' || !Number.isFinite(t) || Math.abs(t) < TUNING_NOTICED) { return 0; }
+    return clamp(t, RECORDING_LIMITS.tuning);
 }
 
 /** What the player does for the settings: resample (the plain source's playback rate — the tape

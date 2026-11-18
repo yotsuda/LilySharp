@@ -719,7 +719,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                  request 2026-11-17. The octave alone is left of Speed and pitch — owner's decision 2026-11-19:
                  the tempo is the Tempo group's, and the cents are the file's own tuning — turned back, as a tape's speed
                  is, while A = 440 is pressed: a button shown when the file says the recording is off it.) -->
-            <div class="prow moctrow" id="recOctRow"><span class="plbl">Octave</span><span class="tempo"><button type="button" id="recOctDown" title="An octave down">−</button><span id="recOctValue" class="tval">0</span><button type="button" id="recOctUp" title="An octave up">+</button><button type="button" id="recTuneBtn" class="toggle" aria-pressed="false" hidden>A = 440</button></span></div>
+            <div class="prow moctrow" id="recOctRow"><span class="plbl">Octave</span><span class="tempo"><button type="button" id="recOctDown" title="An octave down">−</button><span id="recOctValue" class="tval">0</span><button type="button" id="recOctUp" title="An octave up">+</button><button type="button" id="recTuneBtn" class="toggle" aria-pressed="false" hidden>Tune to A = 440</button></span></div>
             <div id="recStatus" class="rec-status" role="status"></div>
         </div>
         <div class="mfoot"><button type="button" id="fadersReset" title="Every fader to 100%">Faders 100%</button></div>

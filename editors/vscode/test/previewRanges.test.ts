@@ -314,7 +314,7 @@ describe('the preview\'s Range panel', () => {
         // …while A = 440 is pressed, not by itself (an old recording may simply have been tuned so).
         assert.match(html, /function recSound\(\) \{ return \{ octave: recSettings\.octave, tuning: recSettings\.tuned \? recTuning : 0, chart: chartShift \}; \}/);
         assert.match(html, /let recSettings = \{ octave: 0, tuned: false \};/);
-        assert.match(html, /<button type="button" id="recTuneBtn" class="toggle" aria-pressed="false" hidden>A = 440<\/button>/);
+        assert.match(html, /<button type="button" id="recTuneBtn" class="toggle" aria-pressed="false" hidden>Tune to A = 440<\/button>/);
         assert.match(html, /tune\.hidden = recTuning === 0;/);
         assert.match(html, /recTuning = Number\(m\.tuning\) \|\| 0;/);
         const glue = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'recording.ts'), 'utf8');
