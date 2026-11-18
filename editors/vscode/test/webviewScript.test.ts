@@ -699,3 +699,30 @@ describe('the preview means by a click on a chord the nearest head', () => {
         assert.match(source, /!e\.shiftKey\) return;\s+const t = noteUnder\(e\);/);
     });
 });
+
+// The score group's on/off (owner's request 2026-11-18): off, nothing of the score sounds and the
+// lines' own on/off are kept — a soloed line is heard all the same.
+describe('the mixer\'s score group turned off', () => {
+    const practice = { speed: 1, muted: ['bass'], voicesOff: [] as string[], extraOn: ['horn'], voicesOn: [] as string[], instrumentsOn: [] as string[],
+        levels: {}, voiceLevels: {} };
+    const scope = (scoreOn: boolean, solo: string[]) => ({ solo: new Set(solo), scoreLevel: 1, scoreOn, practice, rawParts: ['gtr', 'bass'],
+        rawExtra: ['horn'], lastPartsMessage: null, menuVoiceKeys: ['lead'], levelIn: () => 1, Object });
+    type Eff = () => typeof practice;
+
+    it('is the menu itself while on', () => {
+        assert.equal((pageFunction('eff', scope(true, [])) as Eff)(), practice);
+    });
+    it('silences every part and voice, and leaves the menu as it was', () => {
+        const e = (pageFunction('eff', scope(false, [])) as Eff)();
+        assert.deepEqual([...e.muted], ['gtr', 'bass']);
+        assert.deepEqual([...e.voicesOff], ['lead']);
+        assert.deepEqual([...e.extraOn], []);
+        assert.deepEqual(practice.muted, ['bass']);
+        assert.deepEqual(practice.extraOn, ['horn']);
+    });
+    it('still sounds a soloed line', () => {
+        const e = (pageFunction('eff', scope(false, ['part:gtr'])) as Eff)();
+        assert.deepEqual([...e.muted], ['bass']);
+        assert.deepEqual([...e.voicesOff], ['lead']);
+    });
+});

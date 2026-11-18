@@ -163,7 +163,7 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /function playingNow\(\) \{ return !document\.getElementById\('stopBtn'\)\.disabled && !paused; \}/);
         // A soloed line is heard though muted — its own mute, its group's All off (owner's decision
         // 2026-11-17: S is "listen to this").
-        assert.match(html, /out\.muted = practice\.muted\.filter\(n => !solo\.has\('part:' \+ n\)\)/);
+        assert.match(html, /out\.muted = own\.muted\.filter\(n => !solo\.has\('part:' \+ n\)\)/);
         assert.match(html, /out\[name\] = \(soloParts \? !solo\.has\('rec:' \+ name\) : recPartsOff\.includes\(name\)\) \? 0 : levelIn\(recPartLevels, name\);/);
         assert.match(html, /return !!\(\(recOn \|\| recSoloed\(\)\) && recording && recording\.ready && recordingPlayer\(\)\);/);
         // The practice panel's folds are kept per file; a file's first opening has every group folded
@@ -319,7 +319,12 @@ describe('the preview\'s Range panel', () => {
         // The recording is the mixer's own group (docs/transport-mixer-design.md §1 1-2): its head holds its
         // on/off, its solo and its fader — no longer a line among the score's parts.
         assert.doesNotMatch(html, /toggle\('Recording', /);
-        assert.match(html, /<div class="mgroup" id="mixRecGroup" data-fold="rec" hidden>\s*<div class="mhead"><button type="button" class="mfold mtitle" aria-expanded="true">Recording<\/button><button type="button" id="recOnBtn"[^>]*><span id="recName"><\/span><\/button><input type="range" id="recLevelSlider"/);
+        assert.match(html, /<div class="mgroup" id="mixRecGroup" data-fold="rec" hidden>\s*<div class="mhead"><button type="button" class="mfold mtitle" aria-expanded="true">Recording<\/button><button type="button" id="recOnBtn"[^>]*><span id="recName"><\/span><\/button><button type="button" id="recAllBtn"[^>]*>All<\/button><input type="range" id="recLevelSlider"/);
+        // Each group's head has two buttons (owner's request 2026-11-18): its on/off, which keeps the
+        // lines' own on/off, and All.
+        assert.match(html, /<button type="button" id="scoreOnBtn"[^>]*>On<\/button><button type="button" id="scoreAllBtn"[^>]*>All<\/button><input type="range" id="scoreLevelSlider"/);
+        assert.match(html, /function flipRecording\(\) \{\s*(\/\/[^\n]*\s*)*recOn = !recOn;\s*renderRecParts\(\);/);
+        assert.match(html, /const on = !recPartsOff\.includes\(name\);/);
         assert.match(html, /function recLevel\(\) \{ return solo\.size > 0 && !recSoloed\(\) \? 0 : levelIn\(recLevels, 'Recording'\); \}/);
         assert.match(html, /delete recLevels\.Recording;/);
         assert.match(html, /if \(origin !== undefined\) end = Math\.max\(end, startRecordingAlong\(t0, offset, origin, !!loopList\)\);/);
