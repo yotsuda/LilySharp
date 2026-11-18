@@ -355,8 +355,10 @@ export function voiceListText(voices: readonly CantoriaVoice[], filter: { provid
 export interface VoiceGuide { label: string; detail: string; documentation: string; message: string; actions: readonly { label: string; command?: string; url?: string }[] }
 
 /** The steps to install each engine: this extension's own walkthrough (package.json "singing"),
- *  opened by its command. Until 2026-11-18 a page of the site, and the engines' own sites in what
- *  is said below: the way to a first voice no longer hangs on a link (the owner asked). */
+ *  opened by its command, and until 2026-11-18 a page of the site. What is linked is only an
+ *  address that does not move: an engine's own site by its domain, a project by its repository
+ *  (the owner, 2026-11-18: those are kinder to the reader than a name to search for; a page
+ *  deep in a site is not linked). singingWalkthrough.test.ts holds the list. */
 const HOW_TO_INSTALL = { label: 'How to Install a Voice', command: 'lilysharp.voiceInstallGuide' };
 const CHOOSE_DIFFSINGER = { label: 'Choose DiffSinger Folder…', command: 'cantoria.chooseVoicesFolder' };
 const CHOOSE_VOCODER = { label: 'Choose Vocoder Folder…', command: 'cantoria.chooseVocoderFolder' };
@@ -369,7 +371,7 @@ const VOICE_SETUP_ACTIONS: VoiceGuide['actions'] = [
     { label: 'Choose VOICEVOX Folder…', command: 'cantoria.chooseVoicevoxFolder' },
 ];
 const GUIDE_LINK = 'The steps for each engine: **Lily#: How to Install a Singing Voice**, in the command palette';
-const ENGINE_LINKS = 'DiffSinger, NEUTRINO or VOICEVOX';
+const ENGINE_LINKS = '[DiffSinger](https://github.com/openvpi/DiffSinger), [NEUTRINO](https://studio-neutrino.com/) or [VOICEVOX](https://voicevox.hiroshiba.jp/)';
 const STILL_WRITTEN = 'The score can still be written: a name here is sung once that voice is installed.';
 
 /** What the editor says when no singing voice is installed: with the Cantoria extension, that an engine
@@ -412,7 +414,7 @@ export function noLanguageGuide(language: string, voices: readonly CantoriaVoice
     }
     if (language === 'en' || language === 'zh' || language === 'ko') {
         return { ...base,
-            documentation: `${installed} A DiffSinger voice with a \`dsdict-${language}.yaml\` sings ${wanted}: install one, then choose its folder. ${words}\n\n${GUIDE_LINK}.\n\n${STILL_WRITTEN}`,
+            documentation: `${installed} A [DiffSinger](https://github.com/openvpi/DiffSinger) voice with a \`dsdict-${language}.yaml\` sings ${wanted}: install one, then choose its folder. ${words}\n\n${GUIDE_LINK}.\n\n${STILL_WRITTEN}`,
             message: `Lily#: no installed voice sings ${wanted}. A DiffSinger voice with a dsdict-${language}.yaml does: install one, then choose its folder.`,
             actions: [HOW_TO_INSTALL, CHOOSE_DIFFSINGER] };
     }

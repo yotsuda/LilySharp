@@ -638,7 +638,8 @@ describe('noVoiceGuide', () => {
         assert.deepEqual(guide.actions[0], { label: 'How to Install a Voice', command: 'lilysharp.voiceInstallGuide' });
         for (const g of [guide, noVoiceGuide(false)]) {
             assert.match(g.documentation, /Lily#: How to Install a Singing Voice/);
-            assert.doesNotMatch(g.documentation + g.message, /https?:/);
+            assert.doesNotMatch(g.message, /https?:/);
+            assert.doesNotMatch(g.documentation, /sing\.html/);
         }
     });
     it('without Cantoria, says the extension is the first step', () => {

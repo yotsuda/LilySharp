@@ -464,7 +464,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 
 #### 歌のウォークスルー（2026-11-18・コマンドの動きは機械で確認済み＝Lab `sessions/p1304/vscode-e2e`。見た目は未確認）
 
-- [ ] **W1**: Cantoria を入れていない VS Code で **Lily#: How to Install a Singing Voice** → Welcome のタブに「Have Lily# sing a score」が 4 段で開く（Install the Cantoria extension／Set up one singing engine／Check that a voice is ready／Open a first song and play it）。右側に各段の説明のページが出る。リンクは 1 つも無い。
+- [ ] **W1**: Cantoria を入れていない VS Code で **Lily#: How to Install a Singing Voice** → Welcome のタブに「Have Lily# sing a score」が 4 段で開く（Install the Cantoria extension／Set up one singing engine／Check that a voice is ready／Open a first song and play it）。右側に各段の説明のページが出る。リンクはエンジンのサイト（ドメイン）とリポジトリの根だけで、押すとブラウザで開く。
 - [ ] **W2**: 1 段目の **Install Cantoria** → Cantoria が入り、段にチェックが付く。
 - [ ] **W3**: 2 段目の 3 つのボタンのどれか → Cantoria のフォルダ選択が開く。選ぶと段にチェックが付く。
 - [ ] **W4**: 3 段目の **Check Setup** → Cantoria が「ready」か、足りないものを言う。

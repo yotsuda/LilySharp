@@ -4,7 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
-- **Have Lily# sing a score: the steps are in the editor.** **Lily#: How to Install a Singing Voice**, and the first button of every message that says no voice can sing, opened a page of the website. They now open a walkthrough inside VS Code: install the Cantoria extension, set up one engine (the steps for DiffSinger, NEUTRINO and VOICEVOX beside buttons that choose each one's folder), check that a voice is ready, and open a first song to play. Each step is checked off as it is done, and nothing in it is a link. The new **Lily#: Open a First Song to Sing** opens that song by itself.
+- **Have Lily# sing a score: the steps are in the editor.** **Lily#: How to Install a Singing Voice**, and the first button of every message that says no voice can sing, opened a page of the website. They now open a walkthrough inside VS Code: install the Cantoria extension, set up one engine (the steps for DiffSinger, NEUTRINO and VOICEVOX beside buttons that choose each one's folder), check that a voice is ready, and open a first song to play. Each step is checked off as it is done. What it links is only an address that does not move: each engine's own site by its domain, a project by its repository. The new **Lily#: Open a First Song to Sing** opens that song by itself.
 
 - **A singer line names one voice.** `singer "neutrino/MERROW+diffsinger/TIGER" on lead` reached Cantoria as it stood and was sung by both voices; Cantoria no longer joins voices by `+`, and the line is now an error that says what to write: a `singer` line for each voice.
 

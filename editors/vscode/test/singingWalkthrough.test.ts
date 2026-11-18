@@ -23,12 +23,18 @@ import { extensionSource } from './extensionSource';
 
 // The way from nothing installed to a first voice (owner's request 2026-11-18, after a look at
 // what a one-installer singing program asks of its user): the steps are this extension's own
-// walkthrough, its buttons the commands that do each step, and nothing in it is a link.
+// walkthrough, its buttons the commands that do each step. What it links is only an address that
+// does not move - an engine's site by its domain, a project by its repository - and no page deep
+// in a site (the owner, the same day).
 describe('the singing walkthrough', () => {
     const root = path.join(__dirname, '..', '..');
     const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
     const walkthrough = manifest.contributes.walkthroughs.find((w: { id: string }) => w.id === 'singing');
     const steps: { id: string; description: string; media: { markdown: string }; completionEvents: string[] }[] = walkthrough.steps;
+    // The addresses that may be linked: a domain, or a repository's root.
+    const STANDING = ['https://github.com/openvpi/DiffSinger', 'https://github.com/openvpi/vocoders', 'https://github.com/stakira/OpenUtau',
+        'https://studio-neutrino.com/', 'https://voicevox.hiroshiba.jp/'];
+    const movingLinks = (text: string) => [...text.matchAll(/https?:\/\/[^\s)\]]+/g)].map(m => m[0]).filter(u => !STANDING.includes(u));
     const commandsOf = (text: string) => [...text.matchAll(/\]\(command:([\w.]+)\)/g)].map(m => m[1]);
 
     it('goes from the extension to an engine to a first song', () => {
@@ -66,11 +72,14 @@ describe('the singing walkthrough', () => {
         }
     });
 
-    it('carries its pages and its song, and none of them leans on a link', () => {
+    it('carries its pages and its song, and links only an address that does not move', () => {
         for (const step of steps) {
             const page = fs.readFileSync(path.join(root, step.media.markdown), 'utf8');
-            assert.doesNotMatch(page + step.description, /https?:/, step.id);
+            assert.deepEqual(movingLinks(page + step.description), [], step.id);
         }
+        // …and the engines' page does link each engine's own site.
+        const engines = fs.readFileSync(path.join(root, 'walkthrough', 'engines.md'), 'utf8');
+        for (const address of ['https://github.com/openvpi/DiffSinger', 'https://studio-neutrino.com/', 'https://voicevox.hiroshiba.jp/']) { assert.ok(engines.includes(address), address); }
         const song = fs.readFileSync(path.join(root, 'walkthrough', 'first-song.lys'), 'utf8');
         assert.match(song, /^singer female on melody$/m);
         assert.match(song, /lyrics words \{/);
@@ -85,6 +94,7 @@ describe('the singing walkthrough', () => {
             assert.deepEqual(g.actions[0], { label: 'How to Install a Voice', command: 'lilysharp.voiceInstallGuide' });
             assert.ok(g.actions.every(a => !('url' in a)), g.message);
             assert.doesNotMatch(g.message, /https?:/);
+            if ('documentation' in g) { assert.deepEqual(movingLinks((g as { documentation: string }).documentation), []); }
         }
     });
 });
