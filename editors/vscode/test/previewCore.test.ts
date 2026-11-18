@@ -45,17 +45,17 @@ describe('a rewrite of the whole document', () => {
 describe('a message the page already holds', () => {
     it('is not posted again, and one that changed is', () => {
         const kept = new Map<string, string>();
-        assert.equal(messageChanged(kept, { type: 'abRanges', chart: 'a', ranges: [null, { from: 1, to: 2 }] }), true);
-        assert.equal(messageChanged(kept, { type: 'abRanges', chart: 'a', ranges: [null, { from: 1, to: 2 }] }), false);
+        assert.equal(messageChanged(kept, { type: 'panelFolds', chart: 'a', folds: { tempo: true, score: false } }), true);
+        assert.equal(messageChanged(kept, { type: 'panelFolds', chart: 'a', folds: { tempo: true, score: false } }), false);
         assert.equal(messageChanged(kept, { type: 'scanState', hasScan: false }), true);     // another type: its own memory
-        assert.equal(messageChanged(kept, { type: 'abRanges', chart: 'a', ranges: [null, { from: 1, to: 3 }] }), true);
-        assert.equal(messageChanged(kept, { type: 'abRanges', chart: 'b', ranges: [null, { from: 1, to: 3 }] }), true);     // another file
+        assert.equal(messageChanged(kept, { type: 'panelFolds', chart: 'a', folds: { tempo: true, score: true } }), true);
+        assert.equal(messageChanged(kept, { type: 'panelFolds', chart: 'b', folds: { tempo: true, score: true } }), true);     // another file
         assert.equal(messageChanged(new Map(), { type: 'scanState', hasScan: false }), true);   // a reloaded page holds nothing
     });
 
-    it('is what the preview does for the three, and forgets when the page reloads', () => {
+    it('is what the preview does for the two, and forgets when the page reloads', () => {
         const extension = extensionSource();
-        for (const type of ['scanState', 'abRanges', 'panelFolds']) {
+        for (const type of ['scanState', 'panelFolds']) {
             assert.match(extension, new RegExp(`postIfChanged\\(panel, \\{ type: '${type}'`));
         }
         assert.match(extension, /if \(message\.type === 'webviewReady'\) \{[\s\S]{0,600}?postedToPage\.delete\(panel\);/);
@@ -290,7 +290,14 @@ describe('the chords of a score', () => {
         assert.ok(!editor.some(m => m.command?.startsWith('lilysharp.composeWithAi')));
         assert.equal(of('lilysharp.previewSelectChord'), '1_edit@2');
         assert.equal(of('lilysharp.editBarsBesideScan'), '1_edit@5');
-        assert.equal(of('lilysharp.previewPlayFromHere'), '2_playback@1');
+        // Play from Here, A Here and B Here left the menu (owner's decision 2026-11-19: a click on a
+        // bar is A, where Play starts; a Shift+click is B).
+        for (const gone of ['lilysharp.previewPlayFromHere', 'lilysharp.previewAbA', 'lilysharp.previewAbB']) {
+            assert.equal(of(gone), undefined);
+            assert.ok(!pkg.contributes.commands.some((c: { command: string }) => c.command === gone), gone);
+        }
+        assert.equal(of('lilysharp.previewStop'), '2_playback@2');
+        assert.equal(of('lilysharp.previewAbSection'), '2_playback@5');
         assert.equal(of('lilysharp.previewFitWidth'), '5_view@1');
     });
 });

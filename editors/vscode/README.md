@@ -26,7 +26,7 @@ same number. See the [changelog](https://github.com/yotsuda/LilySharp/blob/maste
   and its note lights. `Shift+click` a bar or a note, `Shift+drag` across bars, or right-click
   *Select This Bar* to select bars on the score (`Esc` clears).
 - **The header**: the score to show, Export (PDF, SVG, PNG, MIDI, MusicXML, LilyPond `.ly`,
-  WAV through a SoundFont 2, VOCALOID `.vsqx`), ✨ Ask AI, Range, ▶ ⏹, the practice menu, the score's length, the pages.
+  WAV through a SoundFont 2, VOCALOID `.vsqx`), ✨ Ask AI, Range, ▶ ⏹ and Repeat, the practice menu, the score's length, the pages.
   On a narrow pane the header's groups wrap onto the next row.
 - **Range**: each part's lowest (▼) and highest (▲) note, spelled as written, with the bar it
   stands in — click to find it on the score — and its **tessitura**, where it spends four-fifths
@@ -37,9 +37,7 @@ same number. See the [changelog](https://github.com/yotsuda/LilySharp/blob/maste
 - **▶ plays the score**, or with bars selected, **those bars**, every part sounding there. The
   notes playing light as they sound. Hold `Alt+P` to hear the note under the caret; `Alt+M`
   plays its bar.
-- **The practice menu** (the metronome beside ⏹): the **tempo** on a slider, 50–150%; the
-  **loop**, round and round the selected bars or the whole score, the score's repeats not
-  taken; the **metronome**, a click on every beat, the bar's first louder; the **count-in**, one
+- **The practice menu** (the metronome beside ⏹): the **tempo** on a slider, 50–150%; the **metronome**, a click on every beat, the bar's first louder; the **count-in**, one
   bar of clicks before the music comes in; and **each part on or off** — sing yours against the others. A change while playing goes on from the same place.
 
 (The sound — a SoundFont, or your own MIDI instruments — is under [Sound](#sound) below.)

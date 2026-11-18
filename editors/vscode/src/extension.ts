@@ -38,7 +38,6 @@ import { TimedNote, soundingOf, soundingWait, startSecondsAt } from './playbackS
 import { convertRecording, findDettato, registerDettatoContext } from './dettato';
 import { newScoreSources } from './menuContextCore';
 import { recordingPathFor } from './recordingCore';
-import { normalizeAbRanges } from './abRangesCore';
 import { findOmr, registerOmrContexts } from './omrReader';
 import { OmrScanDeps, hasScan, previewHoversBar, previewReady, previewShowsBar, registerScanFollow, scanBarAt, scanColumnOf, scanSideOf, scanThresholdOf, showScan } from './omrScan';
 import { registerOmrAiFix } from './omrAiFix';
@@ -517,8 +516,8 @@ export function activate(context: vscode.ExtensionContext) {
             return panel ? openPreviewSource(panel, uri) : undefined;
         },
     });
-    // The A-B repeat's eight kept ranges, per file (docs/ab-repeat-design.md, step 5).
-    abRangesStore = context.workspaceState;
+    // The practice panel's folds, per file.
+    panelFoldsStore = context.workspaceState;
     // Copilot Chat's log, which names the model Copilot's Auto answered with (modelClient).
     findCopilotLogFrom(context.logUri);
 
@@ -937,16 +936,10 @@ export function activate(context: vscode.ExtensionContext) {
         // Preview context menu (menus/webview/context). Each one is a thin relay:
         // the state these act on — the right-clicked note, the zoom, the synth —
         // all lives in the webview, so the command only names the action.
-        vscode.commands.registerCommand('lilysharp.previewPlayFromHere', () =>
-            postToActivePreview('ctxPlayFromHere')),
         vscode.commands.registerCommand('lilysharp.previewStop', () =>
             postToActivePreview('ctxStop')),
-        // The A-B repeat's right-click (docs/ab-repeat-design.md §1): the bar line or the
-        // section right-clicked is the webview's to know.
-        vscode.commands.registerCommand('lilysharp.previewAbA', () =>
-            postToActivePreview('ctxAbA')),
-        vscode.commands.registerCommand('lilysharp.previewAbB', () =>
-            postToActivePreview('ctxAbB')),
+        // The A-B repeat's right-click (docs/ab-repeat-design.md §1): the section right-clicked
+        // is the webview's to know.
         vscode.commands.registerCommand('lilysharp.previewAbSection', () =>
             postToActivePreview('ctxAbSection')),
         vscode.commands.registerCommand('lilysharp.previewFitWidth', () =>
@@ -1698,11 +1691,6 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 else if (onNow !== onBefore) { void prepareVoices(panel, uri, 'play'); }
                 return;
             }
-            // A strip of the A-B repeat kept, renamed or cleared: the file's eight, kept.
-            if (message.type === 'abRanges') {
-                if (typeof message.chart === 'string') { keepAbRanges(message.chart, message.ranges); }
-                return;
-            }
             if (message.type === 'panelFolds') {
                 if (typeof message.chart === 'string') { keepPanelFolds(message.chart, message.folds); }
                 return;
@@ -1985,46 +1973,28 @@ function watchRecordings(context: vscode.ExtensionContext): vscode.Disposable {
     return vscode.Disposable.from(watcher, watcher.onDidChange(changed), watcher.onDidCreate(changed), watcher.onDidDelete(changed));
 }
 
-/** Where the A-B repeat's kept ranges live (docs/ab-repeat-design.md §1: the strips under the
- *  practice menu, kept per file in the workspace — the A-B the flags set is the page's and not kept). */
-let abRangesStore: vscode.Memento | undefined;
-
-/** The workspace-state key of a file's ranges: its path, case aside, or the URI of a file not on disk. */
-function abRangesKey(uri: string): string {
-    const u = vscode.Uri.parse(uri);
-    return 'lilysharp.abRanges:' + (u.scheme === 'file' ? path.resolve(u.fsPath).toLowerCase() : uri);
-}
-
-/** The eight strips kept for `uri`, empty ones null. */
-function abRangesFor(uri: string) {
-    return normalizeAbRanges(abRangesStore?.get<unknown>(abRangesKey(uri)));
-}
-
-/** Keeps the eight strips the page sent for `uri` (all empty: forgotten). */
-function keepAbRanges(uri: string, ranges: unknown): void {
-    if (!abRangesStore) { return; }
-    const kept = normalizeAbRanges(ranges);
-    void abRangesStore.update(abRangesKey(uri), kept.some(r => r) ? kept : undefined);
-}
+/** Where the practice panel's folds are kept: the workspace's state. */
+let panelFoldsStore: vscode.Memento | undefined;
 
 /** The practice panel's folds kept for `uri` (owner's request 2026-11-17: per file; a file whose
  *  panel was never opened has none, and opens all folded): group key → folded, `_sp` → Speed
- *  and pitch open. Kept beside the A-B ranges, in the workspace's state. */
+ *  and pitch open. The key is the file's path, case aside, or the URI of a file not on disk. */
 function panelFoldsKey(uri: string): string {
-    return abRangesKey(uri).replace(/^lilysharp\.abRanges:/, 'lilysharp.panelFolds:');
+    const u = vscode.Uri.parse(uri);
+    return 'lilysharp.panelFolds:' + (u.scheme === 'file' ? path.resolve(u.fsPath).toLowerCase() : uri);
 }
 function panelFoldsFor(uri: string): Record<string, boolean> | null {
-    const kept = abRangesStore?.get<unknown>(panelFoldsKey(uri));
+    const kept = panelFoldsStore?.get<unknown>(panelFoldsKey(uri));
     if (!kept || typeof kept !== 'object') { return null; }
     const out: Record<string, boolean> = {};
     for (const [k, v] of Object.entries(kept as Record<string, unknown>)) { if (typeof v === 'boolean') { out[k] = v; } }
     return out;
 }
 function keepPanelFolds(uri: string, folds: unknown): void {
-    if (!abRangesStore || !folds || typeof folds !== 'object') { return; }
+    if (!panelFoldsStore || !folds || typeof folds !== 'object') { return; }
     const out: Record<string, boolean> = {};
     for (const [k, v] of Object.entries(folds as Record<string, unknown>)) { if (typeof v === 'boolean' && k.length < 32) { out[k] = v; } }
-    void abRangesStore.update(panelFoldsKey(uri), out);
+    void panelFoldsStore.update(panelFoldsKey(uri), out);
 }
 
 /** The last message of each type a page was posted (messageChanged); forgotten when it reloads. */
@@ -2073,12 +2043,10 @@ async function updatePreviewContent(
         }
         // Whether the right-click menu offers the OMR doors (owner, 2026-10-24: not for a file
         // the reader did not write) — asked again with each render, as an import adds the file.
-        // (These three follow the file and the workspace, not the text: posted when they changed —
+        // (These two follow the file and the workspace, not the text: posted when they changed —
         // postIfChanged — and not with every keystroke's refresh.)
         postIfChanged(panel, { type: 'scanState', hasScan: hasScan(document.uri) });
-        // The A-B repeat's kept ranges of this file (the page draws its eight strips from them).
-        postIfChanged(panel, { type: 'abRanges', chart: uri, ranges: abRangesFor(uri) });
-        // …and its practice panel's folds (null: never opened for this file — it opens all folded).
+        // The file's practice panel's folds (null: never opened for this file — it opens all folded).
         postIfChanged(panel, { type: 'panelFolds', chart: uri, folds: panelFoldsFor(uri) });
         // Another document or score: its voices replace the last one's, asked for once the server
         // has answered the render below (prepareVoices; singing-design §5).

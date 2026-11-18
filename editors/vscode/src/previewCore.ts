@@ -97,7 +97,7 @@ export function rewriteIsStale(asked: number, now: number): boolean {
 /**
  * Whether `message` differs from the last one of its type posted to a page (`kept`: type →
  * the message as JSON), and remembers it. For what the preview is told with every refresh
- * though it follows the file and the workspace, not the text (scanState, abRanges, panelFolds):
+ * though it follows the file and the workspace, not the text (scanState, panelFolds):
  * a page that holds the same message is not sent it again (review of session 1291). `kept`
  * is forgotten when the page reloads.
  */

@@ -242,19 +242,6 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             font: bold 11px sans-serif; padding: 1px 5px; border-radius: 2px; transform: translate(6px, -18px); }
         #abRubber { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 1000; }
         #abRubber line { stroke: #e8710a; stroke-width: 1.5; stroke-dasharray: 4 3; }
-        /* The eight kept ranges at the practice menu's foot (step 5): each strip is the whole score,
-           its range in the flags' colour. */
-        .ab-strips { display: flex; flex-direction: column; gap: 3px; min-width: 180px; flex: 1; }
-        /* (in the practice menu's own colours, as its buttons: .practice-panel button) */
-        .practice-panel .ab-strip { position: relative; display: block; width: 100%; height: 18px; padding: 0; margin: 0; overflow: hidden;
-            border: 1px solid #c8c8c8; border-radius: 2px; background: #fff; color: #333; text-align: left; }
-        .practice-panel .ab-strip.empty { border-style: dashed; background: transparent; color: #888; }
-        .practice-panel .ab-strip.current { border-color: #e8710a; box-shadow: 0 0 0 1px #e8710a; }
-        .practice-panel .ab-strip:hover { border-color: #e8710a; }
-        .ab-strip-fill { position: absolute; top: 0; bottom: 0; background: rgba(232, 113, 10, 0.55); pointer-events: none; }
-        .ab-strip-name { position: relative; padding: 0 5px; font-size: 11px; line-height: 16px; white-space: nowrap; pointer-events: none;
-            text-shadow: 0 0 2px #fff; }
-        .ab-strip-edit { width: 100%; height: 18px; box-sizing: border-box; font-size: 11px; padding: 0 4px; }
         #svgContainer svg {
             display: block;
         }
@@ -636,8 +623,6 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         .practice-panel .rec-status { font-size: 11px; opacity: .8; padding-top: 4px; max-width: 300px; }
         .practice-panel .rec-status:empty { display: none; }
         .practice-panel input[type="range"]:disabled { opacity: .4; }
-        .practice-panel .abnum { margin-left: 8px; white-space: nowrap; }
-        .practice-panel .abnum input { width: 4.2em; margin-left: 3px; }
         .range-panel table { border-collapse: collapse; }
         .range-panel th { text-align: left; font-weight: 600; opacity: 0.75; padding: 2px 8px; }
         .range-panel td { padding: 2px 8px; white-space: nowrap; }
@@ -658,10 +643,10 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
      default webview context menu (Copy / Cut / Paste) has nothing to act on:
      Cut and Paste can never apply, and Copy only ever picked up stray SVG text.
      preventDefaultContextMenuItems drops those built-in entries, leaving only
-     what this extension contributes under menus/webview/context. lysPlayFrom and
-     lysPlaying are the when-clause keys those items gate on; the contextmenu
-     handler below refreshes them for each click. -->
-<body data-vscode-context='{"preventDefaultContextMenuItems": true, "lysPlayFrom": false, "lysPlaying": false}'>
+     what this extension contributes under menus/webview/context. lysPlaying is
+     one of the when-clause keys those items gate on; the contextmenu handler
+     below refreshes them for each click. -->
+<body data-vscode-context='{"preventDefaultContextMenuItems": true, "lysPlaying": false}'>
     <div class="toolbar">
         <!-- Each group wraps as one when the preview is narrow (owner's request 2026-10-25). -->
         <span class="group">
@@ -692,9 +677,11 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         <span id="voiceBar" class="voice-bar" hidden aria-hidden="true"><span></span></span>
         </span>
         <!-- Pause (docs/transport-mixer-design.md §1 3): where it plays, held; pressed again, on from there. -->
-        <button id="pauseBtn" class="toggle" type="button" aria-pressed="false" title="Pause — pressed again, go on from there (Space)" disabled>⏸</button>
+        <button id="pauseBtn" class="toggle icon" type="button" aria-pressed="false" title="Pause — pressed again, go on from there (Space)" aria-label="Pause" disabled><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="3" y="2.5" width="3.6" height="11" rx=".6"/><rect x="9.4" y="2.5" width="3.6" height="11" rx=".6"/></svg></button>
         <button id="stopBtn" type="button" title="Stop, back to the A flag" disabled>⏹</button>
-        <button id="practiceBtn" class="toggle icon practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" aria-label="Practice and mixer" title="Practice and mixer: tempo, loop, the parts, the recording"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M3.6 14.8 6.3 1.4h3.4l2.7 13.4zM7.3 3 5.9 10.2h4.2L8.7 3z"/><path d="M7.7 11.2 12.4 3.9l1 .65-4.7 7.3z"/></svg><span id="practiceSpeed"></span></button>
+        <!-- Repeat (owner's decision 2026-11-19: here, the practice panel's Loop group gone). -->
+        <button id="loopBtn" class="toggle icon" type="button" aria-pressed="false" aria-label="Repeat" title="Repeat: play round and round — the bars A to B when A-B is on, else the whole score as it plays"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.8 7.2V6.4a2.2 2.2 0 0 1 2.2-2.2h7.6"/><path d="M10.4 2l2.2 2.2-2.2 2.2"/><path d="M13.2 8.8v.8a2.2 2.2 0 0 1-2.2 2.2H3.4"/><path d="M5.6 14l-2.2-2.2 2.2-2.2"/></svg></button>
+        <button id="practiceBtn" class="toggle icon practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" aria-label="Practice and mixer" title="Practice and mixer: tempo, the parts, the recording"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M3.6 14.8 6.3 1.4h3.4l2.7 13.4zM7.3 3 5.9 10.2h4.2L8.7 3z"/><path d="M7.7 11.2 12.4 3.9l1 .65-4.7 7.3z"/></svg><span id="practiceSpeed"></span></button>
         <span id="posInfo" class="length" title="Where the playback stands, in the score's time" hidden></span>
         <span id="lengthInfo" class="length" title="Length, as played"></span>
         </span>
@@ -722,14 +709,6 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 <div class="prow"><span class="plbl">Tempo</span><span class="tempo"><input type="range" id="tempoSlider" min="50" max="150" step="5" value="100" aria-label="Tempo"><span id="tempoValue" class="tval">100%</span><button type="button" id="tempoReset" title="Back to the tempo as written (100%)">Reset</button></span></div>
                 <div class="prow"><span class="plbl">Metronome</span><button type="button" id="clickBtn" class="toggle" aria-pressed="false">Off</button></div>
                 <div class="prow"><span class="plbl">Count-in</span><button type="button" id="countInBtn" class="toggle" aria-pressed="false" title="One bar of clicks before the music starts">Off</button></div>
-            </div>
-        </div>
-        <div class="mgroup" data-fold="loop">
-            <div class="mhead"><button type="button" class="mfold mtitle" aria-expanded="true">Loop</button><span class="mmini"><button type="button" class="toggle" data-mini="abBtn" aria-pressed="false">A-B</button><button type="button" class="toggle" data-mini="loopBtn" aria-pressed="false">Repeat</button></span></div>
-            <div class="mbody">
-                <div class="prow"><span class="plbl">A-B</span><span class="tempo"><button type="button" id="abBtn" class="toggle" aria-pressed="false" title="Play the bars A to B (as printed) — a click on a bar sets A, Shift+click sets B on its left bar line (right of a line: on its last)">Off</button><span id="abFields" hidden><label class="abnum">A <input type="number" id="abFromNum" min="0" step="1" aria-label="A: the first bar"></label><label class="abnum">B <input type="number" id="abToNum" min="0" step="1" aria-label="B: the last bar"></label><span id="abInfo" class="tval"></span></span></span></div>
-                <div class="prow"><span class="plbl">Repeat</span><button type="button" id="loopBtn" class="toggle" aria-pressed="false" title="Play round and round: the bars A to B when A-B is on, else the whole score as it plays">Off</button></div>
-                <div class="prow"><span class="plbl" title="Kept A-B ranges: click to play one, Shift+click to keep the A-B shown, double-click to name">Ranges</span><span id="abStrips" class="ab-strips"></span></div>
             </div>
         </div>
         <div class="mgroup" data-fold="score">
@@ -1859,19 +1838,6 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         // heights away.
         // A bar's notes as a selection: the first and last data-pos inside its written stretch
         // (data-span), or its start when it holds none.
-        // What ▶ plays of a score selection: the WHOLE bars it lights (owner's report
-        // 2026-10-25: a selection made from a note in bar 1 to a note in bar 4 lit four bars and
-        // played from that note to that one — three beats short at either end of the loop).
-        function selectedBarsSpan() {
-            let lo = Infinity, hi = -Infinity;
-            for (const r of svgContainer.querySelectorAll('rect.bar-staff.selected[data-span]')) {
-                const span = r.getAttribute('data-span').split(' ').map(Number);
-                if (span.length !== 2 || isNaN(span[0]) || isNaN(span[1])) continue;
-                lo = Math.min(lo, span[0]);
-                hi = Math.max(hi, span[1] - 1);
-            }
-            return lo <= hi ? [lo, hi] : [aiRangeLo, aiRangeHi];
-        }
         function barNoteRange(r) {
             const span = (r.getAttribute('data-span') || '').split(' ').map(Number);
             const start = parseInt(r.getAttribute('data-start'), 10);
@@ -2901,11 +2867,9 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         // source range, kept until the notes come. The header's loop plays the stretch (or the
         // whole score) round and round, its repeats ignored — loopList is what goes round.
         let pendingSpan = null;
-        let pendingFromHere = false;    // the menu's Play from Here: from the note, never the loop
         let loopOn = false;
         let loopList = null;
-        let pendingStartPos = -1;   // a start point by a note's place (Play from Here)
-        let pendingStartBar = -1;   // …or by a printed bar, the A flag's (Play; barStartIn)
+        let pendingStartBar = -1;   // a start point by a printed bar, the A flag's (Play; barStartIn)
 
         // ---- The Range panel (owner's request 2026-10-25): each part's lowest and highest note
         // (lilysharp/ranges — what Play sounds), to check a part's range and find a singer's top
@@ -3815,9 +3779,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             if (playingNow()) stopPlayback();
             showAFlag();
             setPlayUi(true); // immediate feedback while the request runs
-            pendingStartPos = -1;
             pendingStartBar = abOn ? -1 : Math.max(0, abFrom);
-            pendingFromHere = false;
             pendingSpan = abOn ? { ab: [abFrom, abTo] } : null;
             pendingLoopRefresh = false;     // (this Play's notes are its own, not a loop's next round)
             requestPlay();
@@ -3889,13 +3851,12 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
 
         // ---- The A-B repeat (docs/ab-repeat-design.md; owner's decisions 2026-11-16/17): the bars
         // A to B, as printed (PlaybackNote.M, from 0 — abFrom/abTo are those measure indices), both
-        // included. A-B and Repeat are two buttons: A-B alone plays the bars once and stops. The
-        // range is the page's own (not kept): the first time A-B goes on, the editor's caret bar and
-        // the three after it, or the selected bars. The numbers are the bar numbers printed.
+        // included. A-B alone plays the bars once and stops; with Repeat (the header's button), round
+        // and round. The range is the page's own (not kept), set on the page itself: a click on a bar
+        // is A, a Shift+click B (A-B on), the range's last bar Shift+clicked again A-B off; the flags
+        // are dragged. (Owner's decision 2026-11-19: the panel's A-B button, its bar numbers and the
+        // eight kept ranges are gone.)
         var abOn = false, abFrom = -1, abTo = -1;
-        const abBtn = document.getElementById('abBtn');
-        const abFromNum = document.getElementById('abFromNum');
-        const abToNum = document.getElementById('abToNum');
         /** The page's bars, by measure index: the printed number and the box (rect.bar-box). */
         function abBars() {
             const out = [];
@@ -3915,43 +3876,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             }
             return best;
         }
-        /** Where A and B first stand: the selected bars, else the caret's bar and three more. */
-        function abFirstPlace() {
-            const bars = abBars();
-            const last = bars.length - 1;
-            if (last < 0) return null;
-            let lo = Infinity, hi = -1;
-            const span = aiRangeLo >= 0 ? selectedBarsSpan() : null;
-            if (span) {
-                for (const r of svgContainer.querySelectorAll('rect.bar-staff[data-span]')) {
-                    const s = r.getAttribute('data-span').split(' ').map(Number);
-                    if (s[1] < span[0] || s[0] > span[1]) continue;
-                    const m = measureOfStaffBox(r);
-                    if (m >= 0) { lo = Math.min(lo, m); hi = Math.max(hi, m); }
-                }
-            }
-            if (hi < 0) {
-                const c = svgContainer.querySelector('rect.bar-staff.caret');
-                const m = c ? measureOfStaffBox(c) : -1;
-                lo = m >= 0 ? m : 0;
-                hi = Math.min(last, lo + 3);
-            }
-            return [Math.max(0, Math.min(lo, last)), Math.max(0, Math.min(hi, last))];
-        }
-        function showAb() {
-            abBtn.setAttribute('aria-pressed', String(abOn));
-            abBtn.textContent = abOn ? 'On' : 'Off';
-            document.getElementById('abFields').hidden = !abOn;
-            drawAbFlags();
-            renderAbStrips();
-            if (!abOn) return;
-            const bars = abBars();
-            const num = m => bars[m] ? bars[m].bar : m + 1;
-            abFromNum.value = String(num(abFrom));
-            abToNum.value = String(num(abTo));
-            const n = abTo - abFrom + 1;
-            document.getElementById('abInfo').textContent = n + (n === 1 ? ' bar' : ' bars');
-        }
+        function showAb() { drawAbFlags(); }
         /** A-B moved while it plays: the new bars, from where it plays now when that is inside them
          *  (owner's request 2026-11-17: a flag moved sent it back to A each time), else from A. */
         function replayIfPlaying() {
@@ -3959,9 +3884,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             if (resumeHere()) return;
             stopPlayback();
             setPlayUi(true);
-            pendingStartPos = -1;
             pendingStartBar = abOn ? -1 : Math.max(0, abFrom);
-            pendingFromHere = false;
             pendingSpan = abOn ? { ab: [abFrom, abTo] } : null;
             requestPlay();
         }
@@ -4021,35 +3944,15 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             showPractice();
             replayIfPlaying();
         }
-        abBtn.addEventListener('click', () => {
-            abOn = !abOn;
-            // B where it was, else placed now (A stands already: from it, or the selected bars).
-            if (abOn && abTo < abFrom) {
-                const first = abFirstPlace();
-                if (!first) { abOn = false; flashInfo('No bars to play yet', 3000); showAb(); return; }
-                [abFrom, abTo] = first;
-            }
+        /** A-B off (B's own bar line Shift+clicked): the B flag goes, A stays; what plays goes on as
+         *  the score from here. */
+        function abOff() {
+            abOn = false;
             showAb();
             showPractice();
             askStoppedPosition();
             replayIfPlaying();
-        });
-        /** A bar number typed: the measure that prints it (the first, where two print one). */
-        function measureOfNumber(n) {
-            const bars = abBars();
-            for (const b of bars) if (b && b.bar === n) return b.m;
-            return -1;
         }
-        abFromNum.addEventListener('change', () => {
-            const m = measureOfNumber(parseInt(abFromNum.value, 10));
-            if (m < 0) { showAb(); return; }
-            setAb(m, Math.max(m, abTo));
-        });
-        abToNum.addEventListener('change', () => {
-            const m = measureOfNumber(parseInt(abToNum.value, 10));
-            if (m < 0) { showAb(); return; }
-            setAb(Math.min(abFrom, m), m);
-        });
 
         // ---- The flags (docs/ab-repeat-design.md §1; owner's requests 2026-11-17). A stands on the
         // bar line before bar A, its pennant pointing right; B on the bar line after bar B, pointing
@@ -4146,9 +4049,8 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             const last = Math.max(0, abBars().length - 1);
             m = Math.max(0, Math.min(m, last));
             const line = atEnd ? m + 1 : m;     // the bar line, as the bar after it
-            // On B's own bar line: B goes — A-B off, as its button turns it off (owner's request
-            // 2026-11-17); B's place is kept for when A-B comes back on.
-            if (abOn && line === abTo + 1) { abBtn.click(); return; }
+            // On B's own bar line: B goes — A-B off (owner's request 2026-11-17).
+            if (abOn && line === abTo + 1) { abOff(); return; }
             abOn = true;
             if (line > abFrom) setAb(abFrom, line - 1);
             else setAb(Math.max(0, line - 1), Math.max(0, line - 1));
@@ -4375,105 +4277,6 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             else setA(abFrom);
         }
 
-        // ---- The eight kept ranges (docs/ab-repeat-design.md §1, step 5): strips at the foot of
-        // the practice menu, each the whole score's length with its range coloured. A click calls
-        // the range up (the flags move there, A-B on); Shift+click keeps the A-B shown in it (over
-        // what was there); a double-click names it (unnamed, it says its bar numbers); Alt+click
-        // empties it. Kept per file in the workspace by the extension (abRanges messages).
-        let abSlots = [], abSlotsChart = null;
-        const abStripsEl = document.getElementById('abStrips');
-        function abSlotsReady() { return window.LysSynth && window.LysSynth.normalizeAbRanges; }
-        function keepAbSlots() {
-            if (abSlotsChart) vscode.postMessage({ type: 'abRanges', chart: abSlotsChart, ranges: abSlots });
-            renderAbStrips();
-        }
-        function renderAbStrips() {
-            if (!abStripsEl || !abSlotsReady()) return;
-            const S = window.LysSynth;
-            if (abSlots.length !== S.AB_SLOTS) abSlots = S.normalizeAbRanges(abSlots);
-            const bars = abBars(), n = bars.length;
-            const printed = m => bars[m] ? bars[m].bar : undefined;
-            if (abStripsEl.querySelector('input.ab-strip-edit')) return;    // (not while one is being named)
-            abStripsEl.textContent = '';
-            abSlots.forEach((r, i) => {
-                const b = document.createElement('button');
-                b.type = 'button';
-                b.className = 'ab-strip' + (r ? '' : ' empty') + (r && abOn && r.from === abFrom && r.to === abTo ? ' current' : '');
-                b.dataset.slot = String(i);
-                const band = r ? S.abRangeBand(r, n) : null;
-                if (band) {
-                    const fill = document.createElement('span');
-                    fill.className = 'ab-strip-fill';
-                    fill.style.left = band.left + '%';
-                    fill.style.width = Math.max(band.width, 0.8) + '%';
-                    b.appendChild(fill);
-                }
-                const name = document.createElement('span');
-                name.className = 'ab-strip-name';
-                name.textContent = r ? S.abRangeLabel(r, printed) : String(i + 1);
-                b.appendChild(name);
-                b.title = r
-                    ? 'Bars ' + S.abRangeLabel(Object.assign({}, r, { name: undefined }), printed) + (r.name ? ' (' + r.name + ')' : '')
-                        + ': click to play them (A-B); Shift+click keeps the A-B shown here instead; double-click names it; Alt+click empties it'
-                    : 'Empty: Shift+click keeps the A-B shown here';
-                b.addEventListener('click', e => onAbStripClick(e, i));
-                b.addEventListener('dblclick', e => { e.preventDefault(); if (abSlots[i]) nameAbStrip(b, i); });
-                abStripsEl.appendChild(b);
-            });
-        }
-        function onAbStripClick(e, i) {
-            if (e.detail > 1) return;   // (the second click of a double-click: naming, not calling again)
-            const r = abSlots[i];
-            if (e.altKey) {
-                if (r) { abSlots[i] = null; keepAbSlots(); }
-                return;
-            }
-            if (e.shiftKey) {
-                if (!abOn || abFrom < 0) { flashInfo('Turn A-B on first: the strip keeps the bars A to B', 3000); return; }
-                const bars = abBars();
-                abSlots[i] = { from: abFrom, to: abTo,
-                    fromBar: bars[abFrom] ? bars[abFrom].bar : undefined, toBar: bars[abTo] ? bars[abTo].bar : undefined };
-                keepAbSlots();
-                return;
-            }
-            if (!r) { flashInfo('Empty: Shift+click keeps the A-B shown here', 3000); return; }
-            const last = abBars().length - 1;
-            if (last < 0 || r.from > last) { flashInfo('The score has no bar ' + (r.fromBar ?? r.from + 1) + ' now', 3000); return; }
-            const wasOn = abOn;
-            abOn = true;
-            setAb(r.from, r.to);
-            if (!wasOn) askStoppedPosition();
-        }
-        function nameAbStrip(b, i) {
-            const r = abSlots[i];
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.className = 'ab-strip-edit';
-            input.value = r.name || '';
-            input.placeholder = window.LysSynth.abRangeLabel(Object.assign({}, r, { name: undefined }), m => { const bs = abBars(); return bs[m] ? bs[m].bar : undefined; });
-            input.maxLength = 80;
-            input.setAttribute('aria-label', 'The strip\\'s name');
-            b.replaceWith(input);
-            input.focus();
-            input.select();
-            let done = false;
-            const finish = keep => {
-                if (done) return;
-                done = true;
-                if (keep && abSlots[i]) {
-                    const v = input.value.trim();
-                    abSlots[i] = Object.assign({}, abSlots[i], { name: v || undefined });
-                }
-                input.remove();
-                keepAbSlots();
-            };
-            input.addEventListener('keydown', e => {
-                e.stopPropagation();
-                if (e.key === 'Enter') { e.preventDefault(); finish(true); }
-                else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
-            });
-            input.addEventListener('blur', () => finish(true));
-        }
         // A loop's rounds are laid out ahead, ten minutes of them (loopNotes): the player's
         // clock times each round, not a page timer the browser may hold to a second.
         function looped(list) {
@@ -4781,14 +4584,14 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             const speedOn = practice.speed !== 1;
             document.getElementById('practiceSpeed').textContent = speedOn ? Math.round(practice.speed * 100) + '%' : '';
             // Pressed in while anything differs from the score as written.
-            // (the parts are the mixer's, its own button says them: showMixerHead)
-            practiceOn = speedOn || practice.click || practice.countIn || loopOn || abOn;
+            // (the parts are the mixer's, its own button says them: showMixerHead; Repeat has its
+            // own button in the header, and A-B its flags on the page)
+            practiceOn = speedOn || practice.click || practice.countIn;
             paintPracticeBtn();
             if (typeof syncMinis === 'function') syncMinis();
             if (typeof showMixerHead === 'function' && document.getElementById('scoreAllBtn')) showMixerHead();
-            // The loop lives here too (owner's request 2026-10-25), an On/Off as the metronome's.
+            // Repeat, the header's button (owner's decision 2026-11-19; it was a row of the panel).
             loopBtn.setAttribute('aria-pressed', String(loopOn));
-            loopBtn.textContent = loopOn ? 'On' : 'Off';
             tempoSlider.value = String(Math.round(practice.speed * 100));
             document.getElementById('tempoValue').textContent = Math.round(practice.speed * 100) + '%';
             document.getElementById('tempoReset').disabled = !speedOn;
@@ -5886,7 +5689,6 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                     stopPlayback();
                     pendingAudition = null;
                     playbackNotes = null;
-                    pendingStartPos = -1;
                     pendingStartBar = -1;
                     paused = null;
                     lastHighlightPos = -1;
@@ -5911,12 +5713,6 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                         foldsKept = message.folds && typeof message.folds === 'object' ? message.folds : null;
                         if (!practicePanel.hidden) applyFolds();
                     }
-                    break;
-                case 'abRanges':
-                    // The file's kept ranges (each render: another file has its own eight).
-                    abSlotsChart = typeof message.chart === 'string' ? message.chart : null;
-                    abSlots = Array.isArray(message.ranges) ? message.ranges : [];
-                    renderAbStrips();
                     break;
                 case 'chordSpans':
                     chordSpanList = Array.isArray(message.spans) ? message.spans : [];
@@ -5991,7 +5787,6 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                         lightCaretBar();
                         lap('bars');
                         drawAbFlags();      // (the A-B flags are the page's: drawn into each new picture)
-                        renderAbStrips();   // (and the strips' length is the new picture's bars)
                         refreshRanges();
                         vscode.postMessage({ type: 'requestLength' });
                         lap('A-B');
@@ -6156,47 +5951,21 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 case 'midiStarted':
                     midiStarted(message);
                     break;
-                // Context-menu actions. Play reuses the Play button's path
-                // exactly (fetch the events, then start at pendingStartPos), so
-                // the right-clicked note resolves to an onset the same way a
-                // highlighted note does.
-                case 'ctxPlayFromHere':
-                    if (ctxPlayPos >= 0) {
-                        paused = null;
-                        pendingStartBar = -1;
-                        pendingStartPos = ctxPlayPos;
-                        // From the note, as asked — not the selection, not round the loop.
-                        pendingSpan = null;
-                        pendingFromHere = true;
-                        pendingLoopRefresh = false;
-                        setPlayUi(true);
-                        requestPlay();
-                    }
-                    break;
+                // Context-menu actions.
                 case 'ctxStop':
                     stopPlayback();
                     break;
                 case 'ctxFitWidth':
                     fitWidth();
                     break;
-                // The A-B repeat's right-click: A on the bar line right-clicked (the bar after
-                // it), B on it (the bar before it); a section's bars as A-B. A-B turns on; the
-                // other flag stays where it is if it can, else stands four bars off.
-                case 'ctxAbA':
-                case 'ctxAbB':
+                // The A-B repeat's right-click: the bars of the section right-clicked as A-B, which
+                // turns on. (A Here and B Here are gone — owner's decision 2026-11-19: a click on a
+                // bar is A, a Shift+click B.)
                 case 'ctxAbSection': {
-                    const c = ctxAb;
-                    if (!c) break;
-                    // A Here moves the A flag only — it always stands, A-B on or off
-                    // (docs/transport-mixer-design.md §1 3).
-                    if (message.type === 'ctxAbA') { setA(c.after); break; }
-                    let from = abFrom, to = abOn ? abTo : -1;
-                    if (message.type === 'ctxAbSection') { if (!c.sec) break; from = c.sec[0]; to = c.sec[1]; }
-                    else if (message.type === 'ctxAbA') { from = c.after; if (to < from) to = Math.min(c.last, from + 3); }
-                    else { to = c.before; if (from < 0 || from > to) from = Math.max(0, to - 3); }
-                    if (from < 0 || to < from) break;
+                    const sec = ctxAbSec;
+                    if (!sec || sec[1] < sec[0]) break;
                     abOn = true;
-                    setAb(from, to);
+                    setAb(sec[0], sec[1]);
                     break;
                 }
                 case 'ctxResetZoom':
@@ -6264,15 +6033,13 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                         takeAuditionNotes(message);
                         const a = pendingAudition; pendingAudition = null;
                         runAudition(a);
-                    } else if ((pendingSpan || (loopOn && !pendingFromHere)) && window.LysSynth && window.LysSynth.playSpan) {
+                    } else if ((pendingSpan || loopOn) && window.LysSynth && window.LysSynth.playSpan) {
                         // The selected bars, where they first play — and, looping, the stretch
                         // (or the whole score) as written once, round and round.
                         rawNotes = message.notes; rawParts = message.parts || null; rawBeats = message.beats || null; rawBarEnd = message.barEnd || null; rawExtra = message.extra || null; rawSung = message.sung || null; rawPlayed = message.played || null;
                         playbackNotes = practiced(rawNotes);
                         const span = pendingSpan;
                         pendingSpan = null;
-                        pendingStartPos = -1;
-                        pendingFromHere = false;
                         lastSpan = span;
                         // The whole score round and round goes as it plays — its repeats and jumps
                         // (owner's decision 2026-11-17; it went as printed once). A-B goes as printed.
@@ -6323,36 +6090,16 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                         rawNotes = message.notes; rawParts = message.parts || null; rawBeats = message.beats || null; rawBarEnd = message.barEnd || null; rawExtra = message.extra || null; rawSung = message.sung || null; rawPlayed = message.played || null;
                         playbackNotes = practiced(rawNotes);
                         pendingSpan = null;
-                        pendingFromHere = false;
                         lastSpan = undefined;
                         loopList = null;
                         voicePlan = { pieces: null, rounds: 1 };
                         let startAt = 0;
-                        if (pendingStartPos < 0 && pendingStartBar >= 0) {
+                        if (pendingStartBar >= 0) {
                             // From the A flag's bar where it first plays (§1 3), on this list's time.
                             const speed = playedSpeed();
                             startAt = barStartIn(playbackNotes, (playedBeats() || []).map(b => ({ T: b.T / speed, A: b.A })), pendingStartBar);
                         }
                         pendingStartBar = -1;
-                        if (pendingStartPos >= 0) {
-                            let first = Infinity;
-                            for (const n of playbackNotes) {
-                                if (n.S === pendingStartPos && n.T < first) first = n.T;
-                            }
-                            if (first === Infinity) {
-                                // Nothing plays exactly there (mark, rest…):
-                                // start at the next sounding event after it.
-                                let bestS = Infinity;
-                                for (const n of playbackNotes) {
-                                    if (n.S >= pendingStartPos && (n.S < bestS || (n.S === bestS && n.T < first))) {
-                                        bestS = n.S;
-                                        first = n.T;
-                                    }
-                                }
-                            }
-                            if (first !== Infinity) startAt = first;
-                        }
-                        pendingStartPos = -1;
                         if (recordingAlone()) break;
                         const c = counted(playbackNotes, startAt, 0);
                         if (c) { startPlayback(c.notes, 0, false, false, c.lead - startAt, 0); loopEntry = c.lead; }
@@ -6555,10 +6302,6 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         // listener, so this one runs in the CAPTURE phase to get there first.
         let ctxNotePos = -1;
         let ctxBarRange = null;   // the bar right-clicked, as its first and last note (ctxSelectBar)
-        // Where the menu's Play from Here starts: the note right-clicked, else the first note of
-        // the bar right-clicked (owner's request 2026-10-26: the menu on a bar too) — a rest
-        // there starts at the next sounding note, as the Play path resolves any start.
-        let ctxPlayPos = -1;
         let docHasScan = false;   // the file has an OMR side file (scanState, with each render)
         // The chords of the text, [its "<", its ">"] in order (chordSpans, with each render):
         // Select Chord on a member right-clicked puts the caret past the ">" (owner's request
@@ -6578,12 +6321,11 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             }
             return -1;
         }
-        // The A-B repeat's right-click (docs/ab-repeat-design.md §1): the bar line nearest the
-        // pointer in the bar under it (or under the heading over it) — A there is the bar after
-        // it, B the bar before — and the labelled section that bar is in (data-sec opens one;
-        // it runs to the bar before the next).
-        let ctxAb = null;
-        function abLineAt(x, y) {
+        // The A-B repeat's right-click (docs/ab-repeat-design.md §1): the labelled section the bar
+        // under the pointer (or under the heading over it) is in, as its first and last bar
+        // (data-sec opens one; it runs to the bar before the next); null when it is in none.
+        let ctxAbSec = null;
+        function abSectionAt(x, y) {
             const bars = abBars();
             const last = bars.length - 1;
             // The bar whose box holds the point, else the nearest one in its column: a heading
@@ -6596,18 +6338,13 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 const v = y < c.top ? (c.top - y) * 0.5 : y > c.bottom ? (y - c.bottom) * 2 : 0;
                 if (v < hitD && v <= 24) { hitD = v; hit = { b, c }; }
             }
-            if (hit) {
-                const b = hit.b, c = hit.c;
-                const m = b.m, right = x - c.left > c.right - x;
-                let sec = null;
-                for (let s = m; s >= 0; s--) {
-                    if (!bars[s] || !bars[s].rect.hasAttribute('data-sec')) continue;
-                    let end = m;
-                    while (end < last && !(bars[end + 1] && bars[end + 1].rect.hasAttribute('data-sec'))) end++;
-                    sec = [s, end];
-                    break;
-                }
-                return { after: Math.min(last, right ? m + 1 : m), before: Math.max(0, right ? m : m - 1), last, sec };
+            if (!hit) return null;
+            const m = hit.b.m;
+            for (let s = m; s >= 0; s--) {
+                if (!bars[s] || !bars[s].rect.hasAttribute('data-sec')) continue;
+                let end = m;
+                while (end < last && !(bars[end + 1] && bars[end + 1].rect.hasAttribute('data-sec'))) end++;
+                return [s, end];
             }
             return null;
         }
@@ -6674,9 +6411,8 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 ctxAiSelected = '1 bar selected';
             }
             if (ctxBarAt < 0) ctxBarAt = ctxNotePos;
-            ctxPlayPos = ctxNotePos >= 0 ? ctxNotePos : ctxBarRange ? ctxBarRange[0] : -1;
             const ctxChordEnd = ctxNotePos >= 0 ? chordEndAt(ctxNotePos) : -1;
-            ctxAb = abLineAt(e.clientX, e.clientY);
+            ctxAbSec = abSectionAt(e.clientX, e.clientY);
             document.body.dataset.vscodeContext = JSON.stringify({
                 preventDefaultContextMenuItems: true,
                 // The OMR doors only for a file with a scan (owner, 2026-10-24); the scan
@@ -6689,14 +6425,12 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 lysAiSelected: ctxAiSelected,
                 lysOnStaff: ctxBarRange !== null,
                 lysHasSel: aiRangeLo >= 0,
-                lysPlayFrom: ctxPlayPos >= 0,
                 lysOnChord: ctxChordEnd >= 0,
                 lysChordEnd: ctxChordEnd,
                 lysBarTodo: ctxTodoStarts.length > 0,
                 lysTodoStarts: ctxTodoStarts.join(','),
                 lysHasTodos: todoMarks.length > 0,
-                lysAbLine: ctxAb !== null,
-                lysAbSec: !!(ctxAb && ctxAb.sec),
+                lysAbSec: ctxAbSec !== null,
                 lysCanCut: ctxCutAt >= 0,
                 lysCutAt: ctxCutAt,
                 lysCutSnap: ctxCutSnap,

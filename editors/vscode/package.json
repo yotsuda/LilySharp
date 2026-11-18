@@ -968,24 +968,9 @@
         "title": "Step Down an Octave"
       },
       {
-        "command": "lilysharp.previewAbA",
-        "category": "Lily#",
-        "title": "A Here (A-B Repeat)"
-      },
-      {
-        "command": "lilysharp.previewAbB",
-        "category": "Lily#",
-        "title": "B Here (A-B Repeat)"
-      },
-      {
         "command": "lilysharp.previewAbSection",
         "category": "Lily#",
         "title": "This Section as A-B"
-      },
-      {
-        "command": "lilysharp.previewPlayFromHere",
-        "category": "Lily#",
-        "title": "Play from Here"
       },
       {
         "command": "lilysharp.previewStop",
@@ -1353,20 +1338,8 @@
           "when": "activeWebviewPanelId == 'lilysharpPreview' && lilysharp.previewLocked"
         },
         {
-          "command": "lilysharp.previewAbA",
-          "when": "false"
-        },
-        {
-          "command": "lilysharp.previewAbB",
-          "when": "false"
-        },
-        {
           "command": "lilysharp.previewAbSection",
           "when": "false"
-        },
-        {
-          "command": "lilysharp.previewPlayFromHere",
-          "when": "activeWebviewPanelId == 'lilysharpPreview'"
         },
         {
           "command": "lilysharp.previewStop",
@@ -1476,24 +1449,9 @@
           "group": "4_marks@3"
         },
         {
-          "command": "lilysharp.previewPlayFromHere",
-          "when": "webviewId == 'lilysharpPreview' && lysPlayFrom",
-          "group": "2_playback@1"
-        },
-        {
           "command": "lilysharp.previewStop",
           "when": "webviewId == 'lilysharpPreview' && lysPlaying",
           "group": "2_playback@2"
-        },
-        {
-          "command": "lilysharp.previewAbA",
-          "when": "webviewId == 'lilysharpPreview' && lysAbLine",
-          "group": "2_playback@3"
-        },
-        {
-          "command": "lilysharp.previewAbB",
-          "when": "webviewId == 'lilysharpPreview' && lysAbLine",
-          "group": "2_playback@4"
         },
         {
           "command": "lilysharp.previewAbSection",

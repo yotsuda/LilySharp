@@ -411,22 +411,14 @@ describe('the preview frames what the scan boxes', () => {
     });
 });
 
-// Play from Here on a bar too (owner's request 2026-10-26): the menu item shows wherever a play
-// can start — on a note, from it; on a bar, from its first note — and the manifest gates it on
-// the key the page publishes.
-describe('the preview offers Play from Here on a note and on a bar', () => {
+// Play from Here left the menu (owner's decision 2026-11-19; it was there from 2026-10-26): Play
+// starts at the A flag, which a click on a bar moves.
+describe('the preview no longer offers Play from Here', () => {
     const source = extensionSource();
     const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
-    it('gates the item on lysPlayFrom, which the page publishes', () => {
-        const item = manifest.contributes.menus['webview/context'].find((m: { command: string }) => m.command === 'lilysharp.previewPlayFromHere');
-        assert.equal(item.when, "webviewId == 'lilysharpPreview' && lysPlayFrom");
-        assert.match(source, /lysPlayFrom: ctxPlayPos >= 0,/);
-        assert.match(source, /"lysPlayFrom": false/);
-        assert.doesNotMatch(source, /lysNote/);
-    });
-    it('starts from the note right-clicked, else from the first note of the bar', () => {
-        assert.match(source, /ctxPlayPos = ctxNotePos >= 0 \? ctxNotePos : ctxBarRange \? ctxBarRange\[0\] : -1;/);
-        assert.match(source, /case 'ctxPlayFromHere':\s*if \(ctxPlayPos >= 0\) \{\s*paused = null;\s*pendingStartBar = -1;\s*pendingStartPos = ctxPlayPos;/);
+    it('has neither the menu item, nor its key, nor its start point', () => {
+        assert.ok(!manifest.contributes.menus['webview/context'].some((m: { command: string }) => m.command === 'lilysharp.previewPlayFromHere'));
+        assert.doesNotMatch(source, /lysPlayFrom|ctxPlayPos|ctxPlayFromHere|pendingStartPos|pendingFromHere|lysNote/);
     });
 });
 

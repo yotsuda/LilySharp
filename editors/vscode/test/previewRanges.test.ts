@@ -49,7 +49,7 @@ describe('the preview\'s Range panel', () => {
     it('asks the server for the score shown, and again after every render while open', () => {
         assert.match(extension, /'lilysharp\/ranges', \{ textDocument: \{ uri \}, renderName: selectedRenders\.get\(uri\) \|\| null \}/);
         assert.match(html, /function refreshRanges\(\) \{\s*if \(!rangePanel\.hidden\) vscode\.postMessage\(\{ type: 'requestRanges' \}\);/);
-        assert.match(html, /lightCaretBar\(\);\s*(?:lap\('[^']*'\);\s*)?drawAbFlags\(\);[^\n]*\s*renderAbStrips\(\);[^\n]*\s*refreshRanges\(\);/);
+        assert.match(html, /lightCaretBar\(\);\s*(?:lap\('[^']*'\);\s*)?drawAbFlags\(\);[^\n]*\s*refreshRanges\(\);/);
         assert.match(html, /case 'rangesData':\s*rangeParts = message\.parts \|\| null;/);
     });
 
@@ -59,13 +59,19 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /pendingSpan = abOn \? \{ ab: \[abFrom, abTo\] \} : null;/);
         assert.doesNotMatch(html, /pendingSpan = aiRangeLo >= 0 \? selectedBarsSpan\(\) : null;/);
         assert.match(html, /window\.LysSynth\.playBarsWindow\(notes, span\.ab\[0\], span\.ab\[1\], true, bars\)/);
-        // The selection places A and B the first time A-B goes on (abFirstPlace).
-        assert.match(html, /function selectedBarsSpan\(\) \{[\s\S]*?rect\.bar-staff\.selected\[data-span\]/);
         // ▶ keeps the selection lit: only a click on the sheet itself clears it.
         assert.match(html, /\} else if \(target && mainContent\.contains\(target\)\) \{\s*\/\/ Clicked empty space/);
-        // Repeat and A-B are two toggles in the practice menu, as the metronome's.
-        assert.match(html, /<div id="practicePanel"[\s\S]*<span class="plbl">Repeat<\/span><button type="button" id="loopBtn" class="toggle" aria-pressed="false"/);
-        assert.match(html, /<span class="plbl">A-B<\/span><span class="tempo"><button type="button" id="abBtn" class="toggle" aria-pressed="false"/);
+        // Repeat is the header's button, after Stop (owner's decision 2026-11-19): the practice
+        // panel's Loop group — the A-B button, its bar numbers, the eight kept ranges — is gone, A-B
+        // being set on the page (a click A, a Shift+click B, B's own bar line again: off).
+        assert.match(html, /<button id="stopBtn"[^>]*>[^<]*<\/button>\s*(<!--[^>]*-->\s*)?<button id="loopBtn" class="toggle icon" type="button" aria-pressed="false" aria-label="Repeat"/);
+        assert.doesNotMatch(html, /data-fold="loop"|id="abBtn"|id="abStrips"|id="abFromNum"|abSlots|selectedBarsSpan|abFirstPlace/);
+        assert.match(html, /loopBtn\.setAttribute\('aria-pressed', String\(loopOn\)\);/);
+        assert.doesNotMatch(html, /loopBtn\.textContent/);
+        assert.match(html, /if \(abOn && line === abTo \+ 1\) \{ abOff\(\); return; \}/);
+        assert.match(html, /practiceOn = speedOn \|\| practice\.click \|\| practice\.countIn;/);
+        // Pause is drawn (two bars), not the thin glyph (owner's report 2026-11-19).
+        assert.match(html, /<button id="pauseBtn" class="toggle icon"[^>]*><svg [^>]*fill="currentColor"[^>]*><rect [^>]*\/><rect [^>]*\/><\/svg><\/button>/);
         assert.match(html, /<input type="range" id="tempoSlider" min="50" max="150" step="5" value="100"/);
         // The whole score round and round goes as it plays (its repeats kept): once is false.
         assert.match(html, /const list = spanOf\(playbackNotes, span, false\);/);
@@ -132,7 +138,7 @@ describe('the preview\'s Range panel', () => {
         assert.match(play, /pendingSpan = abOn \? \{ ab: \[abFrom, abTo\] \} : null;/);
         assert.doesNotMatch(play, /caretStartPos\(\)/);
         // The answer starts at the A bar's first play, on the list's time.
-        assert.match(html, /if \(pendingStartPos < 0 && pendingStartBar >= 0\) \{[\s\S]{0,300}startAt = barStartIn\(playbackNotes, /);
+        assert.match(html, /if \(pendingStartBar >= 0\) \{[\s\S]{0,300}startAt = barStartIn\(playbackNotes, /);
         // Stopped, the header says A's bar's time — off the notes in hand, no caret.
         const ask = html.slice(html.indexOf('function askStoppedPosition()'), html.indexOf('function stopPlayback()'));
         assert.doesNotMatch(ask, /caretStartPos/);
