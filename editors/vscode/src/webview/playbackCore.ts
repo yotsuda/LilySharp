@@ -535,7 +535,7 @@ export interface PracticeState extends Practice {
 /** What a page says of the recording it sounds with the score (PracticeState.recording). */
 export interface RecordingAlong {
     bars: readonly { start: number; end: number }[];
-    sound: { speed: number; octave: number; semitones: number; cents: number; linked: boolean; chart?: number };
+    sound: { octave: number; tuning?: number; chart?: number };     // (recordingCore's RecordingSettings)
     level: number;
 }
 

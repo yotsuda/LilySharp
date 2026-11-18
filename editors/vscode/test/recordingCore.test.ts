@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import {
     RECORDING_DEFAULTS, Recording, ScoreBeat, audioPathFor, recordingPlan, audioReader, barAt, chartForRecording, lineUp, newRecording, parseRecording,
-    CopySource, chartPathFor, copiedRecordingText, rebasedParts, shownPartOrder, sourceForCopy,
+    CopySource, chartPathFor, copiedRecordingText, rebasedParts, shownPartOrder, sourceForCopy, tuningOf,
     audioRef, recordingPathFor, recordingSecondAt, resolveAudio, samePath, scoreBars, scoreTimeAt, serializeRecording, timeWarp, unwarpTime, warpBeats, warpFit, warpNotes, warpTime, workForRename,
 } from '../src/recordingCore';
 
@@ -198,40 +198,50 @@ describe('the recording panel', () => {
         assert.deepEqual(recordingPlan(RECORDING_DEFAULTS), { engine: 'resample', rate: 1, semitones: 0, gain: 1 });
     });
 
-    // The chart's own transpose (owner's decision 2026-11-16): the recording follows it, by pitch
-    // alone — on top of the panel's, and a linked (tape) recording is stretched rather than sped up.
-    it('follows the chart\'s transpose by pitch alone, linked or not', () => {
+    // The chart's own transpose (owner's decision 2026-11-16): the recording follows it, by pitch alone.
+    it('follows the chart\'s transpose by pitch alone', () => {
         assert.deepEqual(recordingPlan({ ...RECORDING_DEFAULTS, chart: 2 }), { engine: 'stretch', rate: 1, semitones: 2, gain: Math.pow(10, -3 / 20) });
-        assert.equal(recordingPlan({ ...RECORDING_DEFAULTS, semitones: 1, chart: -3 }).semitones, -2);
-        const tape = recordingPlan({ ...RECORDING_DEFAULTS, linked: true, octave: 1, chart: -2 });
-        assert.equal(tape.engine, 'stretch');
-        assert.ok(Math.abs(tape.rate - 2) < 1e-9);      // the panel's pitch sets the speed …
-        assert.equal(tape.semitones, 10);                // … and the chart moves the pitch alone
-        assert.deepEqual(recordingPlan({ ...RECORDING_DEFAULTS, linked: true, chart: 0 }), { engine: 'resample', rate: 1, semitones: 0, gain: 1 });
+        assert.equal(recordingPlan({ octave: 1, chart: -2 }).semitones, 10);
+        assert.equal(recordingPlan({ octave: 1, chart: -2 }).rate, 1);
     });
 
-    it('stretches for a speed or a pitch apart, turning a raised pitch down 3 dB', () => {
-        const slow = recordingPlan({ ...RECORDING_DEFAULTS, speed: 0.5 });
-        assert.deepEqual(slow, { engine: 'stretch', rate: 0.5, semitones: 0, gain: 1 });
-        const up = recordingPlan({ ...RECORDING_DEFAULTS, octave: 1, semitones: 2, cents: -30 });
-        assert.equal(up.engine, 'stretch');
-        assert.ok(Math.abs(up.semitones - 13.7) < 1e-9);
+    // The octave is the panel's one setting (owner's decision 2026-11-19): a bass line an octave up.
+    it('moves the octave by pitch alone, turning a raised pitch down 3 dB', () => {
+        const up = recordingPlan({ octave: 1 });
+        assert.deepEqual([up.engine, up.rate, up.semitones], ['stretch', 1, 12]);
         assert.ok(Math.abs(up.gain - 0.7079) < 1e-4);
-        assert.equal(recordingPlan({ ...RECORDING_DEFAULTS, octave: -1 }).gain, 1);
+        assert.equal(recordingPlan({ octave: -1 }).gain, 1);
+        assert.equal(recordingPlan({ octave: 5 }).semitones, 24);       // (kept in its range)
+        assert.equal(recordingPlan({ octave: NaN }).semitones, 0);
     });
 
-    it('resamples when pitch and speed go together: a tape set right', () => {
-        const tape = recordingPlan({ ...RECORDING_DEFAULTS, cents: 30, speed: 0.5, linked: true });
-        assert.equal(tape.engine, 'resample');
-        assert.ok(Math.abs(tape.rate - Math.pow(2, 0.3 / 12)) < 1e-12);
-        assert.equal(recordingPlan({ ...RECORDING_DEFAULTS, octave: 1, linked: true }).rate, 2);
+    // The file's tuning is turned back by itself, as a tape that ran fast or slow is set right:
+    // pitch and speed together (owner's decision 2026-11-19; it was the panel's Cents and its
+    // "Pitch with speed", set by hand).
+    it('turns the file\'s tuning back, pitch and speed together', () => {
+        // 12 cents flat: 12 cents up and that much faster — resampling alone, no stretcher.
+        const flat = recordingPlan({ octave: 0, tuning: -12 });
+        assert.equal(flat.engine, 'resample');
+        assert.ok(Math.abs(flat.rate - Math.pow(2, 0.12 / 12)) < 1e-12);
+        assert.ok(Math.abs(flat.semitones - 0.12) < 1e-12);
+        const sharp = recordingPlan({ octave: 0, tuning: 30 });
+        assert.ok(sharp.rate < 1 && Math.abs(sharp.semitones + 0.3) < 1e-12);
+        // With the octave too: the tape's rate, and both pitches — stretched.
+        const both = recordingPlan({ octave: 1, tuning: -12 });
+        assert.equal(both.engine, 'stretch');
+        assert.ok(Math.abs(both.rate - Math.pow(2, 0.12 / 12)) < 1e-12);
+        assert.ok(Math.abs(both.semitones - 12.12) < 1e-9);
+        // Out of what a tuning can be: kept to half a semitone.
+        assert.ok(Math.abs(recordingPlan({ octave: 0, tuning: 900 }).semitones + 0.5) < 1e-12);
     });
 
-    it('keeps the settings in the panel\'s ranges', () => {
-        const p = recordingPlan({ speed: 9, octave: 5, semitones: 40, cents: 900, linked: false });
-        assert.equal(p.rate, 1.5);
-        assert.ok(Math.abs(p.semitones - (24 + 11 + 0.5)) < 1e-9);
-        assert.equal(recordingPlan({ ...RECORDING_DEFAULTS, speed: NaN }).rate, 1);
+    it('reads the tuning the file says, and none from a file that says nothing usable', () => {
+        assert.equal(tuningOf({ tuning: -12 }), -12);
+        assert.equal(tuningOf({ tuning: 49 }), 49);
+        assert.equal(tuningOf({ tuning: 80 }), 50);
+        for (const none of [{}, { tuning: '12' }, { tuning: null }, { tuning: NaN }]) {
+            assert.equal(tuningOf(none), 0, JSON.stringify(none));
+        }
     });
 
     it('plays at the practice menu\'s tempo too, the pitch kept (§1 7)', () => {
@@ -239,10 +249,11 @@ describe('the recording panel', () => {
         assert.equal(slow.engine, 'stretch');
         assert.equal(slow.rate, 0.8);
         assert.equal(slow.semitones, 0);
-        assert.equal(recordingPlan({ ...RECORDING_DEFAULTS, speed: 0.5 }, 0.8).rate, 0.4);
-        // A tape set right, at another tempo: its pitch as the tape's, its rate times the tempo — stretched.
-        const tape = recordingPlan({ ...RECORDING_DEFAULTS, octave: 1, linked: true }, 0.5);
-        assert.deepEqual([tape.engine, tape.rate, tape.semitones], ['stretch', 1, 12]);
+        // A tape set right, at another tempo: its rate times the tempo, its pitch the tape's — stretched.
+        const tape = recordingPlan({ octave: 0, tuning: -12 }, 0.5);
+        assert.equal(tape.engine, 'stretch');
+        assert.ok(Math.abs(tape.rate - 0.5 * Math.pow(2, 0.12 / 12)) < 1e-12);
+        assert.ok(Math.abs(tape.semitones - 0.12) < 1e-12);
         assert.deepEqual(recordingPlan(RECORDING_DEFAULTS, 1), recordingPlan(RECORDING_DEFAULTS));
         assert.equal(recordingPlan(RECORDING_DEFAULTS, NaN).rate, 1);
     });

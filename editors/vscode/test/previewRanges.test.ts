@@ -308,14 +308,25 @@ describe('the preview\'s Range panel', () => {
     // docs/recording-design.md §1 7): a line of the practice menu's Parts and the recording panel's
     // top line; no waveform button in the toolbar.
     // The recording follows the chart's own transpose (owner's decision 2026-11-16), on top of the
-    // panel's pitch; the panel's settings are kept per recording.
-    it('plays the recording moved by the chart\'s transpose, and keeps the panel\'s settings', () => {
-        assert.match(html, /function recSound\(\) \{ return Object\.assign\(\{\}, recSettings, \{ chart: chartShift \}\); \}/);
+    // panel's octave; the octave is kept per recording. The file's tuning is turned back by itself
+    // (owner's decision 2026-11-19: Speed and pitch is gone but for the octave).
+    it('plays the recording moved by the chart\'s transpose and the file\'s tuning, and keeps the panel\'s octave', () => {
+        // …while A = 440 is pressed, not by itself (an old recording may simply have been tuned so).
+        assert.match(html, /function recSound\(\) \{ return \{ octave: recSettings\.octave, tuning: recSettings\.tuned \? recTuning : 0, chart: chartShift \}; \}/);
+        assert.match(html, /let recSettings = \{ octave: 0, tuned: false \};/);
+        assert.match(html, /<button type="button" id="recTuneBtn" class="toggle" aria-pressed="false" hidden>A = 440<\/button>/);
+        assert.match(html, /tune\.hidden = recTuning === 0;/);
+        assert.match(html, /recTuning = Number\(m\.tuning\) \|\| 0;/);
+        const glue = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'recording.ts'), 'utf8');
+        assert.match(glue, /parts: shownPartOrder\(parts\.map\(p => p\.name\)\), tuning: tuningOf\(rec\.raw\) \};/);
+        assert.match(html, /<div class="prow moctrow" id="recOctRow"><span class="plbl">Octave<\/span>/);
+        assert.doesNotMatch(html, /recSpeedSlider|recSemiSlider|recCentSlider|recLinkBtn|recChartRow|recReset|recSummary|id="recSettings"|<details/);
         assert.doesNotMatch(html, /\.play\(sec, recSettings,|recPlayer\.update\(recSettings\)|recordingPlan\(recSettings/);
         assert.match(html, /case 'chartTranspose': \{\s*const n = Number\(message\.semitones\) \|\| 0;\s*if \(n !== chartShift\) \{ chartShift = n; recApply\(\); \}/);
         assert.match(extension, /panel\.webview\.postMessage\(\{ type: 'chartTranspose', semitones: response\.ChartTranspose \?\? 0 \}\);/);
         assert.match(html, /vscode\.postMessage\(\{ type: 'recordingSettings', chart: recording\.chart, name: recording\.name, settings: recSettings \}\);/);
-        assert.match(html, /if \(!same\) recSettings = Object\.assign\(recDefaults\(\), m\.settings/);
+        assert.match(html, /const kept = m\.settings && typeof m\.settings === 'object' \? Number\(m\.settings\.octave\) : 0;/);
+        assert.match(glue, /void settingsStore\.update\(settingsKey\(chart, audio\), octave === 0 && !tuned \? undefined : \{ octave, tuned \}\);/);
         assert.match(extension, /keepRecordingSettings\(message\.chart, message\.name, message\.settings\);/);
     });
 

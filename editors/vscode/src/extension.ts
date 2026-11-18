@@ -1977,8 +1977,7 @@ function watchRecordings(context: vscode.ExtensionContext): vscode.Disposable {
 let panelFoldsStore: vscode.Memento | undefined;
 
 /** The practice panel's folds kept for `uri` (owner's request 2026-11-17: per file; a file whose
- *  panel was never opened has none, and opens all folded): group key → folded, `_sp` → Speed
- *  and pitch open. The key is the file's path, case aside, or the URI of a file not on disk. */
+ *  panel was never opened has none, and opens all folded): group key → folded. The key is the file's path, case aside, or the URI of a file not on disk. */
 function panelFoldsKey(uri: string): string {
     const u = vscode.Uri.parse(uri);
     return 'lilysharp.panelFolds:' + (u.scheme === 'file' ? path.resolve(u.fsPath).toLowerCase() : uri);

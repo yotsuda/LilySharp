@@ -432,59 +432,62 @@ function round(s: number): number {
     return Math.round(s * 10000) / 10000;
 }
 
-/** How the recording panel plays the recording (docs/recording-design.md §1 3): its speed (pitch
- *  kept), its pitch in octaves, semitones and cents, and whether pitch and speed go together — a
- *  tape's speed set right, which is resampling alone (§3: no stretcher, no sound lost). */
+/** How the recording is played (docs/recording-design.md §1 3; owner's decision 2026-11-19: the
+ *  panel keeps the octave and one button, A = 440 — its speed, semitones, cents and "pitch with
+ *  speed" are gone, the tempo being the practice panel's and the cents the file's own). */
 export interface RecordingSettings {
-    speed: number;
+    /** The panel's: octaves up or down (a bass line heard an octave up). */
     octave: number;
-    semitones: number;
-    cents: number;
-    linked: boolean;
+    /** The cents the recording is turned back by: the file's `tuning` (tuningOf: how far it is
+     *  from A = 440 Hz) while the panel's A = 440 button is pressed — pitch and speed together,
+     *  as a tape that ran fast or slow is set right: the performance as it was played. Not by
+     *  itself (owner's decision 2026-11-19: an old recording may simply have been tuned so).
+     *  Absent / 0: as recorded. */
+    tuning?: number;
     /** The semitones the chart's own transpose moves the music by (the file's top-level
      *  `transpose` and the drawn score's, owner's decision 2026-11-16): the recording was made in
-     *  the chart's written key, so it follows — on top of the panel's own pitch, and never by
-     *  speed. Not the panel's: it comes with each picture of the chart. Absent / 0: none. */
+     *  the chart's written key, so it follows. Not the panel's: it comes with each picture of the
+     *  chart. Absent / 0: none. */
     chart?: number;
 }
 
-export const RECORDING_DEFAULTS: RecordingSettings = { speed: 1, octave: 0, semitones: 0, cents: 0, linked: false };
+export const RECORDING_DEFAULTS: RecordingSettings = { octave: 0 };
 
-/** The panel's ranges. */
+/** The settings' ranges. */
 export const RECORDING_LIMITS = {
-    speed: [0.25, 1.5], octave: [-2, 2], semitones: [-11, 11], cents: [-50, 50],
+    octave: [-2, 2], tuning: [-50, 50],
 } as const;
 
 function clamp(x: number, [lo, hi]: readonly [number, number]): number {
     return Number.isFinite(x) ? Math.min(hi, Math.max(lo, x)) : 0;
 }
 
-/** What the player does for the panel's settings: resample (the plain source's playback rate —
- *  linked, or nothing changed at all) or stretch (Signalsmith: rate and semitones apart), at what
- *  rate (recording seconds per second of sound), shifted how far, and at what gain: a sound shifted
- *  up by the stretcher peaks over its source (MEASURED 2026-11-15: +1200 cents peaked at 1.177,
- *  Lab sessions/p1283/stretch), so it is turned down 3 dB before the limiter.
- *  `tempo` is the practice menu's (§1 7: its slider works on both, the recording's pitch kept):
- *  it multiplies the rate, and a linked recording played at another tempo is stretched.
- *  The chart's transpose (`chart`) moves the pitch alone: a linked recording under one is
- *  stretched, its speed the panel's pitch alone sets. */
+/** How far a file beside a chart says its recording is from A = 440 Hz (Dettato's `tuning`,
+ *  SIDECAR.md: whole cents, -50 to 49; -12 is 12 cents flat); 0 when it says nothing usable. */
+export function tuningOf(raw: Record<string, unknown>): number {
+    const t = raw.tuning;
+    return typeof t === 'number' && Number.isFinite(t) ? clamp(t, RECORDING_LIMITS.tuning) : 0;
+}
+
+/** What the player does for the settings: resample (the plain source's playback rate — the tape
+ *  set right, or nothing changed at all) or stretch (Signalsmith: rate and semitones apart), at
+ *  what rate (recording seconds per second of sound), shifted how far, and at what gain: a sound
+ *  shifted up by the stretcher peaks over its source (MEASURED 2026-11-15: +1200 cents peaked at
+ *  1.177, Lab sessions/p1283/stretch), so it is turned down 3 dB before the limiter.
+ *  - The tuning is turned back as a tape's speed is: pitch and rate together (12 cents flat plays
+ *    0.7% faster and 12 cents higher).
+ *  - The octave and the chart's transpose move the pitch alone.
+ *  - `tempo` is the practice panel's (§1 7: its slider works on the score and the recording, the
+ *    recording's pitch kept): it multiplies the rate. */
 export function recordingPlan(s: RecordingSettings, tempo = 1): { engine: 'resample' | 'stretch'; rate: number; semitones: number; gain: number } {
-    const shift = clamp(s.octave, RECORDING_LIMITS.octave) * 12 + clamp(s.semitones, RECORDING_LIMITS.semitones)
-        + clamp(s.cents, RECORDING_LIMITS.cents) / 100;
-    const chart = clamp(s.chart ?? 0, [-24, 24]);
+    const tape = 0 - clamp(s.tuning ?? 0, RECORDING_LIMITS.tuning) / 100;      // (0 - x: no -0)
+    const pitch = clamp(s.octave, RECORDING_LIMITS.octave) * 12 + clamp(s.chart ?? 0, [-24, 24]);
     const k = Number.isFinite(tempo) && tempo > 0 ? tempo : 1;
-    const gainFor = (semitones: number) => semitones > 0 ? Math.pow(10, -3 / 20) : 1;
-    if (s.linked) {
-        const rate = Math.pow(2, shift / 12) * k;
-        return k === 1 && chart === 0
-            ? { engine: 'resample', rate, semitones: shift, gain: 1 }
-            : { engine: 'stretch', rate, semitones: shift + chart, gain: gainFor(shift + chart) };
+    const rate = Math.pow(2, tape / 12) * k;
+    if (pitch === 0 && k === 1) {
+        return { engine: 'resample', rate, semitones: tape, gain: 1 };
     }
-    const speed = (clamp(s.speed, RECORDING_LIMITS.speed) || 1) * k;
-    if (shift + chart === 0 && speed === 1) {
-        return { engine: 'resample', rate: 1, semitones: 0, gain: 1 };
-    }
-    return { engine: 'stretch', rate: speed, semitones: shift + chart, gain: gainFor(shift + chart) };
+    return { engine: 'stretch', rate, semitones: tape + pitch, gain: tape + pitch > 0 ? Math.pow(10, -3 / 20) : 1 };
 }
 
 /** One beat of the score's playback (`lilysharp/playback`'s `Beats`): its time in seconds at

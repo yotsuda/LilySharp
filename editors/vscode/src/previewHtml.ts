@@ -571,8 +571,11 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         .practice-panel button.msmall { padding: 2px 6px; min-width: 24px; font-weight: 600; }
         .practice-panel button.msolo[aria-pressed="true"] { background: #fff4c2; border-color: #c9a400; color: #6b5600; }
         .mixer-panel .pline.unheard button.pname { opacity: 0.5; }
-        .mixer-panel .msettings { margin-top: 8px; }
-        .mixer-panel .msettings summary { cursor: pointer; opacity: 0.85; padding: 2px 0; }
+        /* The recording's octave, under its group's head (folded too): the number between its − and +. */
+        .mixer-panel .moctrow { padding-left: 1.5em; align-items: center; }
+        .mixer-panel .moctrow .tempo { gap: 4px; }
+        .mixer-panel #recOctValue { width: auto; min-width: 1.6em; text-align: center; }
+        .mixer-panel #recTuneBtn { margin-left: 12px; white-space: nowrap; }
         .mixer-panel #recPartsRow { margin-bottom: 4px; }
         .mixer-panel .mbody > .presets { padding-left: 1.5em; margin-top: 6px; }
         .mixer-panel .mbody > .presets .plbl { display: none; }
@@ -593,18 +596,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         .mixer-panel .mmini .fader { width: auto; flex: 1 1 70px; min-width: 70px; max-width: 120px; }   /* (the room left, to its left: owner's request 2026-11-17) */
         .mixer-panel .mgroup.folded:has(.mmini) > .mhead { flex-wrap: wrap; row-gap: 4px; }
         .mixer-panel .mgroup.folded:has(.mmini) .mtitle { width: auto; }
-        /* (the octave between its − and +, folded and open alike: owner's report 2026-11-19 — open, the
-           number stood at the right of a value's width, far from the −) */
-        .mixer-panel .msettings .moct .tval, .mixer-panel .msettings #recOctValue { width: auto; min-width: 1.6em; text-align: center; }
         .mixer-panel .mmini button { white-space: nowrap; }
-        /* Folded, Speed and pitch keeps its octave in its line (owner's request 2026-11-17). */
-        .mixer-panel .msettings summary { display: flex; align-items: center; gap: 8px; }
-        .mixer-panel .msettings summary::before { content: '\\25B8'; width: 1em; }
-        .mixer-panel .msettings[open] summary::before { content: '\\25BE'; }
-        .mixer-panel .msettings summary::-webkit-details-marker { display: none; }
-        .mixer-panel .msettings summary { list-style: none; }
-        .mixer-panel .msettings .moct { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; }
-        .mixer-panel .msettings[open] .moct { display: none; }
         .mixer-panel .mfoot { clear: both; border-top: 1px solid rgba(128, 128, 128, 0.35); padding: 8px 2px 2px; text-align: right; }
         /* As long as the tempo's slider (owner's request 2026-11-09, session 1159: longer, the 200% end further right). */
         .practice-panel .parts input.fader { width: 160px; flex: 0 0 auto; margin: 0; accent-color: #0078d7; cursor: pointer; }
@@ -723,16 +715,11 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             <div class="mbody">
                 <div id="recPartsRow" hidden><span id="recPartsRows" class="parts rec-part-rows"></span></div>
             </div>
-            <!-- (outside the fold: Recording folded hides its parts, its speed and pitch and its status stay — owner's request 2026-11-17) -->
-            <details id="recSettings" class="msettings"><summary>Speed and pitch <span id="recSummary"></span><span class="moct">Octave <button type="button" data-mini="recOctDown">−</button><span class="tval" data-mini-text="recOctValue">0</span><button type="button" data-mini="recOctUp">+</button></span></summary>
-            <div class="prow"><span class="plbl">Speed</span><span class="tempo"><input type="range" id="recSpeedSlider" min="25" max="150" step="5" value="100" aria-label="Speed"><span id="recSpeedValue" class="tval">100%</span></span></div>
-            <div class="prow"><span class="plbl">Octave</span><span class="tempo"><button type="button" id="recOctDown" title="An octave down">−</button><span id="recOctValue" class="tval">0</span><button type="button" id="recOctUp" title="An octave up">+</button></span></div>
-            <div class="prow"><span class="plbl">Semitones</span><span class="tempo"><input type="range" id="recSemiSlider" min="-11" max="11" step="1" value="0" aria-label="Semitones"><span id="recSemiValue" class="tval">0</span></span></div>
-            <div class="prow" id="recChartRow" hidden title="The chart's own transpose (the top-level transpose, and the score's) moves the recording too, on top of the settings above"><span class="plbl">Chart</span><span class="tempo"><span id="recChartValue" class="tval">0</span></span></div>
-            <div class="prow"><span class="plbl">Cents</span><span class="tempo"><input type="range" id="recCentSlider" min="-50" max="50" step="1" value="0" aria-label="Cents"><span id="recCentValue" class="tval">0</span></span></div>
-            <div class="prow"><span class="plbl">Pitch with speed</span><button type="button" id="recLinkBtn" class="toggle" aria-pressed="false" title="Pitch and speed go together, as a tape's speed is set right (no stretching)">Off</button></div>
-            <div class="prow presets"><span class="plbl"></span><span class="tempo"><button type="button" id="recReset" title="The recording as it is">Reset</button></span></div>
-            </details>
+            <!-- (outside the fold: Recording folded hides its parts; its octave and its status stay — owner's
+                 request 2026-11-17. The octave alone is left of Speed and pitch — owner's decision 2026-11-19:
+                 the tempo is the Tempo group's, and the cents are the file's own tuning — turned back, as a tape's speed
+                 is, while A = 440 is pressed: a button shown when the file says the recording is off it.) -->
+            <div class="prow moctrow" id="recOctRow"><span class="plbl">Octave</span><span class="tempo"><button type="button" id="recOctDown" title="An octave down">−</button><span id="recOctValue" class="tval">0</span><button type="button" id="recOctUp" title="An octave up">+</button><button type="button" id="recTuneBtn" class="toggle" aria-pressed="false" hidden>A = 440</button></span></div>
             <div id="recStatus" class="rec-status" role="status"></div>
         </div>
         <div class="mfoot"><button type="button" id="fadersReset" title="Every fader to 100%">Faders 100%</button></div>
@@ -4848,13 +4835,11 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             folds = {};
             for (const g of Array.from(practicePanel.querySelectorAll('.mgroup[data-fold]')))
                 folds[g.dataset.fold] = all ? true : !!foldsKept[g.dataset.fold];
-            for (const dt of Array.from(practicePanel.querySelectorAll('details'))) dt.open = !all && !!foldsKept._sp;
             if (all) keepFolds();   // (opened once: from now on, as left)
             showFolds();
         }
         function keepFolds() {
-            const sp = practicePanel.querySelector('details');
-            foldsKept = Object.assign({}, folds, { _sp: !!(sp && sp.open) });
+            foldsKept = Object.assign({}, folds);
             if (foldsChart) vscode.postMessage({ type: 'panelFolds', chart: foldsChart, folds: foldsKept });
         }
         function showFolds() {
@@ -4872,8 +4857,6 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 showFolds();
             });
         }
-        for (const dt of Array.from(practicePanel.querySelectorAll('details')))
-            dt.addEventListener('toggle', () => { if (!practicePanel.hidden) keepFolds(); });
         showFolds();
         // The folded heads' controls (owner's request 2026-11-17): each stands for one inside — a press
         // presses it, a slider moves it — and shows its state (syncMinis, after every showPractice).
@@ -4901,7 +4884,6 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 // — owner's report 2026-11-19). (m.value by hand: syncMinis leaves the focused one.)
                 resetOnDoubleClick(m, () => { const r = real(); if (r.__reset) r.__reset(); m.value = r.value; syncMinis(); });
             } else {
-                // (preventDefault: a press in Speed and pitch's line does not open it)
                 m.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); real().click(); syncMinis(); });
             }
         }
@@ -4994,23 +4976,23 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         // and the faders not at 100% — the page's own, as the score's parts are (not kept).
         var recPartsOff = [];
         var recPartLevels = {};
-        let recSettings = null;
+        // The panel's own settings: the octave, and whether the recording is tuned to A = 440 (owner's
+        // decision 2026-11-19 — the speed, the semitones, the cents and "pitch with speed" are gone),
+        // kept per recording by the extension.
+        let recSettings = { octave: 0, tuned: false };
+        // The file's tuning, in cents from A = 440 Hz (Dettato's "tuning"). While A = 440 is pressed
+        // the recording is turned back by it — pitch and speed together, as a tape's speed is set
+        // right. Not by itself (owner's decision 2026-11-19: an old recording may simply have been
+        // tuned so). It comes with the recording.
+        var recTuning = 0;
         const recOnBtn = document.getElementById('recOnBtn');
         const recLevelSlider = document.getElementById('recLevelSlider');
-        const recSpeedSlider = document.getElementById('recSpeedSlider');
-        const recSemiSlider = document.getElementById('recSemiSlider');
-        const recCentSlider = document.getElementById('recCentSlider');
-        const recLinkBtn = document.getElementById('recLinkBtn');
-        function recDefaults() {
-            return Object.assign({}, window.LysSynth ? window.LysSynth.RECORDING_DEFAULTS : { speed: 1, octave: 0, semitones: 0, cents: 0, linked: false });
-        }
-        recSettings = recDefaults();
         // The chart's own transpose (the file's top-level transpose and the drawn score's, in
         // semitones — owner's decision 2026-11-16): the recording, made in the chart's written key,
-        // follows it on top of the panel's pitch. The extension says it with each picture.
+        // follows it on top of the panel's octave. The extension says it with each picture.
         var chartShift = 0;
-        /** What the recording is played with: the panel's settings and the chart's transpose. */
-        function recSound() { return Object.assign({}, recSettings, { chart: chartShift }); }
+        /** What the recording is played with: the panel's octave, the file's tuning and the chart's transpose. */
+        function recSound() { return { octave: recSettings.octave, tuning: recSettings.tuned ? recTuning : 0, chart: chartShift }; }
         function recordingPlayer() {
             const cfg = window.lysSynthConfig;
             if (!recPlayer && window.LysSynth && cfg && cfg.stretch) {
@@ -5025,26 +5007,16 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         }
         function signed(n) { return n > 0 ? '+' + n : String(n); }
         function showRecording() {
-            const s = recSettings;
-            const plan = window.LysSynth ? window.LysSynth.recordingPlan(recSound()) : { rate: s.speed, semitones: 0 };
-            recSpeedSlider.value = String(Math.round((s.linked ? plan.rate : s.speed) * 100));
-            recSpeedSlider.disabled = s.linked;
-            document.getElementById('recSpeedValue').textContent = Math.round((s.linked ? plan.rate : s.speed) * 100) + '%';
-            document.getElementById('recOctValue').textContent = signed(s.octave);
-            recSemiSlider.value = String(s.semitones);
-            document.getElementById('recSemiValue').textContent = signed(s.semitones);
-            recCentSlider.value = String(s.cents);
-            document.getElementById('recCentValue').textContent = signed(s.cents);
-            document.getElementById('recChartRow').hidden = chartShift === 0;
-            document.getElementById('recChartValue').textContent = signed(chartShift);
-            recLinkBtn.setAttribute('aria-pressed', String(s.linked));
-            recLinkBtn.textContent = s.linked ? 'On' : 'Off';
-            // The button says what is not as recorded: the speed, and the pitch in semitones.
-            const parts = [];
-            if (!s.linked && s.speed !== 1) parts.push(Math.round(s.speed * 100) + '%');
-            const shift = Math.round(plan.semitones * 100) / 100;
-            if (shift !== 0) parts.push(signed(shift));
-            document.getElementById('recSummary').textContent = parts.join(' ');
+            document.getElementById('recOctValue').textContent = signed(recSettings.octave);
+            // A = 440: only for a recording the file says is off it.
+            const tune = document.getElementById('recTuneBtn');
+            tune.hidden = recTuning === 0;
+            tune.setAttribute('aria-pressed', String(recSettings.tuned && recTuning !== 0));
+            tune.title = 'The recording is ' + Math.abs(recTuning) + ' cents ' + (recTuning < 0 ? 'flat' : 'sharp') + ' of A = 440 Hz. '
+                + 'Pressed: turned back by that, pitch and speed together, as a tape that ran ' + (recTuning < 0 ? 'slow' : 'fast') + ' is set right. Released: as recorded.';
+            // (the score's transpose has no control here: said on the row)
+            document.getElementById('recOctRow').title = chartShift !== 0
+                ? 'The recording follows the score\\'s transpose (' + signed(chartShift) + ' semitones)' : '';
             showMixerHead();
             const level = Math.round(levelIn(recLevels, 'Recording') * 100);    // (the fader's own, not the solo's)
             recLevelSlider.value = String(level);
@@ -5219,8 +5191,13 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             recording = { chart: m.chart, name: m.name || '', bars: m.bars || [], pickup: !!m.pickup, ready: same ? recording.ready : false, error: m.error || null,
                 // Its parts by name (§8); loaded when recordingParts comes (after the sound).
                 parts: Array.isArray(m.parts) ? m.parts : [], partsLoaded: same ? before.partsLoaded : null, partsError: same ? before.partsError : null };
-            // Another recording: its own settings, as kept the last time (recording.ts), else as recorded.
-            if (!same) recSettings = Object.assign(recDefaults(), m.settings && typeof m.settings === 'object' ? m.settings : {});
+            // Another recording: its own octave and A = 440, as kept the last time (recording.ts), else as recorded.
+            if (!same) {
+                const kept = m.settings && typeof m.settings === 'object' ? Number(m.settings.octave) : 0;
+                recSettings = { octave: Number.isFinite(kept) ? Math.max(-2, Math.min(2, Math.round(kept))) : 0,
+                    tuned: !!(m.settings && typeof m.settings === 'object' && m.settings.tuned === true) };
+            }
+            recTuning = Number(m.tuning) || 0;
             if (!same) { recPartsOff = []; recPartLevels = {}; }
             // A chart just made from this recording starts with it on: Play sounds it (owner's
             // request 2026-11-16; the extension says so once, recording.ts justConverted).
@@ -5418,22 +5395,9 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         });
         recLevelSlider.addEventListener('change', () => setRecLevel(Number(recLevelSlider.value)));
         resetOnDoubleClick(recLevelSlider, () => setRecLevel(100));
-        // The sliders say their value as they move and set it where they are let go; a
-        // double-click puts it back as recorded (owner's request 2026-11-16: every slider of the
-        // panel resets on a double-click).
-        function recSlider(slider, set, reset) {
-            slider.addEventListener('input', () => { set(Number(slider.value)); showRecording(); });
-            slider.addEventListener('change', () => { set(Number(slider.value)); recChanged(); });
-            resetOnDoubleClick(slider, () => { slider.value = String(reset); set(reset); recChanged(); });
-            slider.title = 'Double-click: ' + (reset === 100 ? '100%' : reset);
-        }
-        recSlider(recSpeedSlider, v => { recSettings.speed = v / 100; }, 100);
-        recSlider(recSemiSlider, v => { recSettings.semitones = v; }, 0);
-        recSlider(recCentSlider, v => { recSettings.cents = v; }, 0);
         document.getElementById('recOctDown').addEventListener('click', () => { recSettings.octave = Math.max(-2, recSettings.octave - 1); recChanged(); });
         document.getElementById('recOctUp').addEventListener('click', () => { recSettings.octave = Math.min(2, recSettings.octave + 1); recChanged(); });
-        recLinkBtn.addEventListener('click', () => { recSettings.linked = !recSettings.linked; recChanged(); });
-        document.getElementById('recReset').addEventListener('click', () => { recSettings = recDefaults(); recChanged(); });
+        document.getElementById('recTuneBtn').addEventListener('click', () => { recSettings.tuned = !recSettings.tuned; recChanged(); });
         // The slider says its value as it moves and sets the tempo where it is let go: a
         // playback restarts once, not at every step of a drag.
         function setSpeed(percent) {
