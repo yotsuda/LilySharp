@@ -28,7 +28,7 @@ import type { LanguageClient } from 'vscode-languageclient/node';
 import { CandidateSounds, CandidateVoice, CandidateVoices, candidateSilencedTrack, candidateSings } from './aiTransformCore';
 import { PracticeState, VOICE_LEAD_S, voiceEntries } from './webview/playbackCore';
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { SINGER_NAME, SINGER_LANGUAGE, onSingerGender, singValueChoices, singerGoesOnToSings, singerLineOf, singerSettingSlot, singMarkSlot, singersWritten, singParameterDetail, singProblems, SingSettingDto, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuKey, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger, unsingableGuide, unsingableReason } from './singerCore';
+import { SINGER_NAME, SINGER_LANGUAGE, onSingerGender, singValueChoices, singerGoesOnToSings, singerLineOf, singerSettingSlot, singMarkSlot, singersWritten, singParameterDetail, singProblems, SingSettingDto, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, EngineWatch, prepareAllowanceMs, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuKey, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger, unsingableGuide, unsingableReason } from './singerCore';
 import { VoiceProblems, engineFailureProblem, engineSaid, noVocoderGuide, singerFailureText, vocoderMissing, voiceWho, wordsProblems } from './singerCore';
 
 export interface SingingDeps {
@@ -805,6 +805,11 @@ export function tellUnsingable(voice: string, reason: string): void {
 /** The engine's speed as last timed, and when it last answered: the bar's estimates (session 1178). */
 let voiceRenderRate = VOICE_RENDER_FIRST_RATE;
 let voiceLastLanded = 0;
+/** Whether voiceRenderRate is a render's, not the first guess: until it is, the patience with the
+ *  engine assumes a CPU (prepareAllowanceMs). */
+let voiceRenderTimed = false;
+/** The patience with the engine, for every voice waiting on it (singerCore.EngineWatch). */
+const engineWatch = new EngineWatch();
 
 /** How long the engine should take over this voice at `speed`, for the bar under Play. */
 function voiceEstimateMs(voice: SungVoiceDto, speed: number): number {
@@ -1016,7 +1021,7 @@ function singingProgress(key: string, p: SingProgress): void {
 /**
  * One queued voice: rendered by the engine unless rendered before, and handed to the page as WAV
  * bytes (`voice`), with `preparing` on the badge while the engine sings and `failed` when it
- * cannot, or when it has not answered in PREPARE_TIMEOUT_MS. A voice whose preview turned to
+ * cannot, or when the engine has said nothing for longer than prepareAllowanceMs. A voice whose preview turned to
  * another document, whose part the score sings no more, or whose part has a newer text waiting
  * in the queue, is dropped on landing.
  */
@@ -1037,8 +1042,8 @@ async function renderVoice(job: PrepareJob): Promise<void> {
     let told: SingProgress | undefined;
     // (The page hears it by the voice's key, from singingProgress: a job a newer prepare has
     // replaced goes on being sung for the one that waits, and the bar must still be counted.
-    // Here it is kept for the pace learnt below.)
-    const onProgress = (p: SingProgress) => { told = p; };
+    // Here it is kept for the pace learnt below, and for how long the engine may yet take.)
+    const onProgress = (p: SingProgress) => { told = p; engineWatch.heard(); };
     try {
         outputChannel.appendLine(`singer: ${clockNow()} ${id}: to the engine`);
         ({ key, rendered, cached } = await engine.render(voice, speed, job.letGo.signal, onProgress));
@@ -1052,13 +1057,21 @@ async function renderVoice(job: PrepareJob): Promise<void> {
     if (!wanted()) { return; }
     if (!cached) { void panel.webview.postMessage({ type: 'voiceState', part: id, speed, state: 'preparing', estimateMs: voiceEstimateMs(voice, speed), singing: true, key: job.key }); }
     const askedAt = Date.now();
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const timeout = new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error(`the engine gave no answer in ${PREPARE_TIMEOUT_MS / 1000} s`)), PREPARE_TIMEOUT_MS);
-    });
+    // Given up when the engine has said nothing for as long as what is left of this voice should
+    // take (prepareAllowanceMs), the clock set again whenever it is heard of; and when given up,
+    // the engine is told to let go of it, or it goes on singing a voice nobody waits for and every
+    // voice after waits behind it (owner's report 2026-11-18).
+    let gaveUp = false;
+    let giveUp: (e: Error) => void = () => undefined;
+    const timeout = new Promise<never>((_, reject) => { giveUp = reject; });
+    const secondsLeft = () => told ? told.toSing - told.sung : sungSeconds(voice, speed);
+    const unwatch = cached ? () => undefined : engineWatch.watch(() => prepareAllowanceMs(secondsLeft(), voiceRenderRate, voiceRenderTimed),
+        ms => { gaveUp = true; giveUp(new Error(`the engine gave no answer in ${Math.round(ms / 1000)} s`)); });
     const singing = (async () => {
         try {
-            const v = await Promise.race([rendered, timeout]);
+            const v = await (cached ? rendered : Promise.race([rendered, timeout]));
+            unwatch();
+            engineWatch.heard();
             // What the engine had to say of the score: a setting of the singer line the voice
             // does not take is not sung, and the writer is told which - once, where it is seen.
             for (const note of v.notes ?? []) { tellSingerSetting(note); }
@@ -1070,7 +1083,8 @@ async function renderVoice(job: PrepareJob): Promise<void> {
                 // over the whole score, and one that sang next to nothing teaches nothing).
                 const sungSecondsNow = told ? told.toSing : v.duration;
                 if (!told || told.toSing >= 1) {
-                    voiceRenderRate = learnRenderRate(voiceRenderRate, now - Math.max(askedAt, voiceLastLanded), sungSecondsNow);
+                    voiceRenderRate = learnRenderRate(voiceRenderRate, now - Math.max(askedAt, voiceLastLanded), sungSecondsNow, voiceRenderTimed);
+                    voiceRenderTimed = true;
                 }
                 voiceLastLanded = now;
             }
@@ -1087,8 +1101,10 @@ async function renderVoice(job: PrepareJob): Promise<void> {
             outputChannel.appendLine(`singer: ${clockNow()} ${id} ${cached ? 'from the cache' : 'sung'} (${v.duration.toFixed(1)} s at speed ${speed})`);
         } catch (e) {
             if (wanted()) { failVoice(panel, id, speed, engineSaid(e), voice); }
+            // Said first: a voice let go of is not `wanted`, and its failure would go unsaid.
+            if (gaveUp) { job.letGo.abort(); }
         } finally {
-            if (timer !== undefined) { clearTimeout(timer); }
+            unwatch();
         }
     })();
     if (!cached) { vscode.window.setStatusBarMessage(`Lily#: singing ${voice.Part}…`, singing); }

@@ -636,11 +636,17 @@ export function voiceRenderEstimateMs(seconds: number, rate: number): number {
     return VOICE_RENDER_BASE_MS + seconds * rate;
 }
 
-/** The engine's speed after a render of `seconds` took `elapsedMs`, the earlier speed counting half. */
-export function learnRenderRate(rate: number, elapsedMs: number, seconds: number): number {
+/** The engine's speed after a render of `seconds` took `elapsedMs`, the earlier speed counting half
+ *  — but not the first guess (`timed` false), a GPU's: half of it made a CPU's NEUTRINO half as slow
+ *  as it is, and the patience with it (prepareAllowanceMs) too short (2026-11-18: 412 s sung of
+ *  501 allowed, on a machine also singing something else). */
+export function learnRenderRate(rate: number, elapsedMs: number, seconds: number, timed = true): number {
     if (seconds <= 0) { return rate; }
     const measured = Math.max(0, elapsedMs - VOICE_RENDER_BASE_MS) / seconds;
-    return Math.min(3000, Math.max(10, (rate + measured) / 2));
+    if (!timed) { return Math.min(30_000, Math.max(10, measured)); }
+    // The ceiling well above a CPU's NEUTRINO (about 9 s a second sung, 2026-11-18): at 3 s it
+    // was, the bar and the patience (prepareAllowanceMs) were a third of what such a machine takes.
+    return Math.min(30_000, Math.max(10, (rate + measured) / 2));
 }
 
 /** Bumped when the phrase below changes, or how it is sung (5: VOICEVOX's low notes, 2026-11-10):
@@ -885,10 +891,51 @@ export function cantoriaScore(voice: SungVoiceDto, speed: number): CantoriaScore
  *  2026-11-08, session 1148): typing never asks the engine; a pause does. */
 export const PREPARE_IDLE_MS = 1500;
 
-/** How long the engine may take over one voice before the preview gives it up as `failed`
- *  (the microphone pulsed for ever over an engine that never answered; a long score on the
- *  CPU's DiffSinger takes tens of seconds, so two minutes). */
-export const PREPARE_TIMEOUT_MS = 120_000;
+/** How long the engine may say nothing — no phrase sung, of this voice or another — before the
+ *  preview gives the voice up as `failed` (the microphone pulsed for ever over an engine that
+ *  never answered): two minutes, and what is left to sing at the engine's pace three times over;
+ *  an engine not yet timed is given a CPU's pace. Two fixed minutes failed every voice on a
+ *  machine with no GPU (owner's report 2026-11-18: NEUTRINO on an Intel Iris Xe sang 37 s of song
+ *  in 5 min 40 s). `rate` is in milliseconds a second sung (learnRenderRate). */
+export function prepareAllowanceMs(secondsLeft: number, rate: number, timed: boolean): number {
+    return PREPARE_FLOOR_MS + Math.max(0, secondsLeft) * (timed ? rate : Math.max(rate, PREPARE_UNTIMED_RATE)) * 3;
+}
+const PREPARE_FLOOR_MS = 120_000;
+/** The CPU's pace measured above (341 s for 37 s), rounded up: milliseconds a second sung. */
+const PREPARE_UNTIMED_RATE = 12_000;
+
+/**
+ * The patience with the engine for the voices waiting on it (prepareAllowanceMs): each is given
+ * up when the engine has said nothing for its allowance, and every clock starts again whenever the
+ * engine is heard of — a phrase of any voice sung, one landing — so that a voice waiting its turn
+ * behind another is not given up on while the engine works.
+ */
+export class EngineWatch {
+    private readonly watched = new Set<() => void>();
+
+    constructor(private readonly timers: PrepareTimers = { setTimeout: (fn, ms) => setTimeout(fn, ms), clearTimeout: h => clearTimeout(h as ReturnType<typeof setTimeout>) }) {}
+
+    /** Watches one voice: `giveUp(ms)` once the engine has said nothing for `allowance()` ms
+     *  (asked again at each start of the clock). Returns what ends the watch. */
+    watch(allowance: () => number, giveUp: (ms: number) => void): () => void {
+        let timer: unknown;
+        const stop = () => {
+            this.watched.delete(wind);
+            if (timer !== undefined) { this.timers.clearTimeout(timer); timer = undefined; }
+        };
+        const wind = () => {
+            if (timer !== undefined) { this.timers.clearTimeout(timer); }
+            const ms = allowance();
+            timer = this.timers.setTimeout(() => { timer = undefined; stop(); giveUp(ms); }, ms);
+        };
+        wind();
+        this.watched.add(wind);
+        return stop;
+    }
+
+    /** The engine was heard of: every voice's clock starts again. */
+    heard(): void { for (const wind of [...this.watched]) { wind(); } }
+}
 
 /** When an edited voice is prepared: as the text rests (`afterEdit`, the default), or only when
  *  Play is pressed (`onPlay`: for a slow engine — the CPU's DiffSinger — where every pause would
