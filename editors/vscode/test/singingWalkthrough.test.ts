@@ -130,6 +130,14 @@ describe('the singing walkthrough', () => {
             assert.match(text, words[language], file);
             assert.match(text, /public domain|traditional/, file);
         }
+        // …under its title, and whole (the owner, the same day): the first verse to its last bar.
+        const titles: Record<string, string> = { ja: 'ふるさと', en: 'Twinkle, Twinkle, Little Star', zh: '送别', ko: '아리랑' };
+        const lastWords: Record<string, RegExp> = { ja: /ふ る さ \| と \|/, en: /what you are! \|\s+\}/, zh: /今 宵 别 梦 \| 寒 \|/, ko: /발 병 난 \| 다 \|/ };
+        for (const [language, file] of Object.entries(FIRST_SONGS)) {
+            const text = fs.readFileSync(path.join(root, 'walkthrough', file), 'utf8');
+            assert.ok(text.includes(`\ntitle "${titles[language]}"\n`), file);
+            assert.match(text, lastWords[language], file);
+        }
         assert.match(extensionSource(), /joinPath\(context\.extensionUri, 'walkthrough', await firstSongFile\(\)\)/);
     });
 

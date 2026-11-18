@@ -9,9 +9,9 @@ score { staff melody  lyrics words }             // the row prints them
 singer female on melody                          // this line sings them
 ```
 
-**Open a First Song** opens such a song, in a language your voices sing: the opening of
-ふるさと in Japanese, *Twinkle, Twinkle, Little Star* in English, 送别 in Chinese or 아리랑 in
-Korean. All four are in the public domain. Words that are not Japanese say their language:
+**Open a First Song** opens such a song, in a language your voices sing: ふるさと in
+Japanese, *Twinkle, Twinkle, Little Star* in English, 送别 in Chinese or 아리랑 in Korean,
+each with its title and sung to its end. All four are in the public domain. Words that are not Japanese say their language:
 `lyrics words language english { Twin- kle, twin- kle, | lit- tle star, | }`.
 
 Open its preview (the icon at the editor's top
