@@ -277,6 +277,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1301セッションの経緯
+
+### 1.1 第1301セッション（2026-11-18・YT-DELL2）
+
+base `e084f9b20`・開始時 full 17613 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17616（Lab `p1301` の `run1.trx`）。REQUESTS の open は第1300 の頭で 0（同じ日・見直していない）。
+- **第1300 の残りの 1 つ目＝`887badecc`**: 前のパートが side table に残す件数が録った時と違っても、後ろのパートの walk は resume する——警告の 4 表だけでなく全部の表で。録った側が表について持つのは件数（入口の数と checkpoint の watermark）だけで、その間の entry は walk 自身の文字から出来た物、ほかの添字（譜ごとの強弱と印の範囲・`_musicMarkPositionsSynced`）は生きている collect の表から読む＝第1300 の `_walkTableDrift`／`LiveWatermark` をそのまま全表に使い、`IsVoiceSanitySink` は消した。網 `ResumedCollect_MatchesFullCollect_WhenAnEarlyMarkComesOrGoes`（網の本の前 1/10 と 1/3 の音に `@f`・`@staccato`・`@finger(2)`・`@arpeggio`・`@fermata` を足す・そこの最初の印を消す＝1,571 編集）: 前は resume 812・abort 242、後は resume 1,054・abort 0・フルとの食い違い 0（採った小節 1,068 → 1,637）。毒 6 / 6（Lab `p1301/poisons.ps1`・第1300 で観測者なしだった「写す添字」は `…AcrossSyntheticEdits` が赤＝UNWATCHED の註は消した）。実コーパスの数は同じ（`p1301/lat-all.log`＝フル 52 / 1,880・abort 0。計器の編集は音名だけ）。
+- ⚠️ 入口でまだ等しさを求めるもの: 調と section の頭の journal（`StartKeyLogCount`・`StartSectionStartLogCount`＝前のパートに `key` を足す打鍵）と section の meter plan のある本。journal は後の walk が*値として*読む表なので、件数のずれを通すなら読み手を確かめてから（実コーパスの abort は 0）。
+- 終了時 full 17614 合格 / 1 失敗（同じ）/ skip 2 / 合計 17617（`run2.trx`・+1＝網）。拡張は触っていない。
+- **次（review.md の残り・訊かずに着手してよい）**: P8 の残り（`using` の本は毎打鍵、結合した文字列と `RecentTrees` の `headFirst` で本＋include の長さの文字列を 2 本作る＝値段は未測定・include が変わっていなければ `headFirst` は要らない）。小節の途中に break のある本は録らない（`mid-bar-break`・第1300）。F4 の残りは状態ごと移す設計が先（第1299 の末尾＝ARCHIVE）。P6・P7 の箱（第1300 が数えた 9.2%）・P10 は静かな窓で。F3 段 2 と P9 はオーナー判断。
+
 ## 以下は第1300セッションの経緯
 
 ### 1.1 第1300セッション（2026-11-18・YT-DELL2）
