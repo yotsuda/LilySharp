@@ -1804,7 +1804,8 @@ public static class DiagnosticCodes
     /// (<see cref="Music.LyricLanguage"/>). The parser.</summary>
     public const string LyricLanguageUnknown = "LYS4038";
 
-    /// <summary>Lyric error: a lyrics track's or row's <c>singer ""</c> names nobody
+    /// <summary>Lyric error: a lyrics track's or row's <c>singer ""</c> names nobody, or its
+    /// string names more than one voice (a <c>+</c> in it)
     /// (<see cref="Music.LyricSinger"/>). The parser.</summary>
     public const string SingerEmpty = "LYS4039";
 

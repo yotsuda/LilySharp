@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **A singer line names one voice** (`[language]`). `singer "neutrino/MERROW+diffsinger/TIGER" on lead` was never part of the language, but the string went to Cantoria as it stood, and Cantoria sang both voices. Cantoria no longer joins voices by `+`, and the line is now an error (LYS4039) that says what to write: a `singer` line for each voice, which is how two voices have always sung one part together — and each line takes its own `up 3`, `octave` and `in SECTION`.
+
 - **Import ABC notation** (`[cli]` `[editor]`). `lysc import tune.abc` and the editor's *Import MusicXML, MIDI or ABC…* read ABC 2.1 through the same writer as MusicXML and MIDI — a tune book as a `.lys` per tune, in a folder named after the file (`reels/001-speed-the-plough.lys`) — each tune with its header (`T:` `C:` `M:` `L:` `Q:` `K:`, modes too), notes, chords, ties, slurs, tuplets, grace notes, broken rhythms, repeats and endings, decorations and dynamics, chord names, words (`w:`) and voices (`V:`, a staff each). What it leaves out is listed in the import's report (`docs/abc-import-design.md`).
 
 - **An import writes back-to-back repeats as one barline** (`[cli]` `[editor]`). Where a repeat closes and the next opens at once, the imported `form` reads `|: ~Sec1 :|: ~Sec2 :|`, not `|: ~Sec1 :| |: ~Sec2 :|` — from ABC and MusicXML alike. The two play and print the same.

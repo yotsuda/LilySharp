@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A singer line names one voice.** `singer "neutrino/MERROW+diffsinger/TIGER" on lead` reached Cantoria as it stood and was sung by both voices; Cantoria no longer joins voices by `+`, and the line is now an error that says what to write: a `singer` line for each voice.
+
 - **The scan and recording pickers offer each kind.** *Convert Image/PDF to Lily# (.lys)…*, *Convert Recording to Lily# (.lys)…*, *Attach Recording…* and *Locate Recording…* open their file picker with every kind first and then each alone — PNG, JPEG, BMP, TIFF, PDF; WAV, MP3, M4A, MP4, AAC, FLAC, WMA for Dettato (what it says it reads); WAV, MP3, FLAC, OGG and, on Windows, M4A, MP4, AAC, WMA for a recording beside a chart — as *Import MusicXML, MIDI or ABC…* does.
 
 - **Import ABC notation.** *Import MusicXML, MIDI or ABC…* (the command was *Import MusicXML or MIDI…*) reads an `.abc` file too — from the file picker, or a right-click on an `.abc` in the Explorer. A tune comes back with its title, meter, key (modes too), tempo, repeats and endings, chord names, ties, slurs, triplets, grace notes, decorations and dynamics, words (`w:`, verse by verse) and voices (`V:`, a staff each). A file of several tunes becomes a `.lys` per tune in a folder named after it (`reels.abc` → `reels/001-speed-the-plough.lys`, …); the first tune opens, and the message offers Reveal Folder. What it leaves out — the order of the parts (`P:`), words after the tune (`W:`), macros, voice overlays (`&`) — is listed in the warning.
