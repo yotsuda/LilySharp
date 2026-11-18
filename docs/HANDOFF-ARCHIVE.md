@@ -277,6 +277,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1296セッションの経緯
+
+### 1.1 第1296セッション（2026-11-18・YT-DELL2）
+
+base `098675fb6`・開始時 full 17594 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17597（Lab `p1296` の `run1.trx`）。REQUESTS の open は Calamo・Dettato とも 0。
+- **F4（歌）＝`2d7d4ace5`**: `extension.ts` の「The singing voice」の節と activate の中の登録を `editors/vscode/src/singing.ts` へ移した（`extension.ts` 5,863 → 4,794 行）。計器 Lab `p1296/split-singing.ps1`。変えたのは: 拡張の状態は `SingingDeps`（`registerSinging`）から受ける・`client`／`clientReady` の 7 か所は `server()` を訊く・11 の名前を export。host の文を読む試験は `singing.ts` も読む（`extensionSource.ts`）。実機＝隔離した VS Code（Cantoria なし・Lab `p1296/vscode-e2e`）。⚠️ エンジンのある側（声を歌う・サンプル）は実機で見ていない。
+- **P4 の残り＝`1e69e4433`**（`using` の本）: キャレットの状態行は音を展開後の木から、場所を文書だけの木から読んでいた＝score ごとに collect 2 回、かつ場所は取り込みのない文のもの（取り込んだ section の後の音が「bar 1」。正しくは bar 3）。`lilysharp/placeAt` と `@todo` の小節（`PlacesOf`）も同じ（版で持っていたので取り込み先を保存しても変わらなかった）。→ どれも曲を描く木（`ExpandUsings`・文書の文が prefix なので位置は同じ）から読む・木で持つ。ついでに見つけた競合: 同じ文の展開が 2 本並走すると（キャレットと Problems のパス）後から終わった方の木が残り、木で持つ物が全部 2 回作られる（新しい網が 2 回に 1 回赤）。→ 先に終わった方を両方が使う（`CompareExchange`）。網 `KeystrokeSideWorkTests.TheCaretOnANote_OfABookWithIncludes_…`・`UsingExpansionCacheTests.TwoRequestsExpandingOneTextAtOnce_…`・毒 3 本赤（Lab `p1296/poison-p4.ps1`）。CHANGELOG 2 つ（`[editor]`）。Core は註だけ。
+- **P4 の MIDI 書き出し 1 回は残した**: `caretInfo` は編集の後は文が休むまで訊かない（`soundingWait`＝打鍵ごとではない）。書き出しは `SoundIndex` が木ごとに 1 回で `auditionAt` と共有。長さ用の `lilysharp/playback` の書き出しと 1 つにするには、Score なしの `Export(tree)` と `{ Form, Score }` つきが同じ物だと言える条件が要る＝未着手。
+- **小さいもの＝`2e61248e5`・`b692a58d2`**: 歌のエンジンが無いとき、プレビューに「声は無い」と言うのは 1 回（打鍵ごとに `clearVoices` とログ 1 行を送っていた・`toldNoEngine`・実機 19 項目）。completion の 7 つの一覧が文書の文を parse し直していた → `Document.TreeOf(text)`（文字列の instance で持つ）。網 `CompletionTreeTests` 2 本・毒 7 本赤（Lab `p1296/poison-completion.ps1`）。
+- 終了時 full 17598 合格 / 1 失敗（同じ）/ skip 2 / 合計 17601（`run4.trx`・+4＝P4 の 2・completion の 2）・npm 1260 合格 / skip 1。
+- **次（review.md の残り・訊かずに着手してよい）**: F4 の続き（`extension.ts` 4,794 行の残り。候補＝書き出し `exportPreview`／`singJobs`／`recordJobs`・音源 `chooseSoundFont` まわり・編集コマンドの束 `regroup`〜`writeHarmonyPart`）。P8 の残り＝結合した文字列を毎打鍵作る。P6（ページの索引・強制レイアウト）・P7 の残り・P10 は静かな窓で。小さいもの: semantic tokens の割当。F3 段 2 と P9 はオーナー判断。
+
 ## 以下は第1295セッションの経緯
 
 ### 1.1 第1295セッション（2026-11-18・YT-DELL2）
