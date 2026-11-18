@@ -731,7 +731,7 @@
         "title": "Write a Harmony Part…"
       },
       {
-        "command": "lilysharp.voiceInstallGuide",
+        "command": "lilysharp.setUpSingingVoice",
         "category": "Lily#",
         "title": "Set Up a Singing Voice"
       },

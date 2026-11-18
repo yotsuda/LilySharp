@@ -359,7 +359,7 @@ export interface VoiceGuide { label: string; detail: string; documentation: stri
  *  address that does not move: an engine's own site by its domain, a project by its repository
  *  (the owner, 2026-11-18: those are kinder to the reader than a name to search for; a page
  *  deep in a site is not linked). singingWalkthrough.test.ts holds the list. */
-const HOW_TO_INSTALL = { label: 'How to Install a Voice', command: 'lilysharp.voiceInstallGuide' };
+const HOW_TO_INSTALL = { label: 'How to Install a Voice', command: 'lilysharp.setUpSingingVoice' };
 const CHOOSE_DIFFSINGER = { label: 'Choose DiffSinger Folder…', command: 'cantoria.chooseVoicesFolder' };
 const CHOOSE_VOCODER = { label: 'Choose Vocoder Folder…', command: 'cantoria.chooseVocoderFolder' };
 // The guide to installing leads (the owner asked, 2026-11-12), and the engines' folders after it

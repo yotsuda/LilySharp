@@ -695,7 +695,7 @@ describe('noVoiceGuide', () => {
     it('leads with the guide to installing a voice (the owner asked, 2026-11-12)', () => {
         const guide = noVoiceGuide(true);
         // …which is this extension's own walkthrough, opened by its command (2026-11-18): no link.
-        assert.deepEqual(guide.actions[0], { label: 'How to Install a Voice', command: 'lilysharp.voiceInstallGuide' });
+        assert.deepEqual(guide.actions[0], { label: 'How to Install a Voice', command: 'lilysharp.setUpSingingVoice' });
         for (const g of [guide, noVoiceGuide(false)]) {
             assert.match(g.documentation, /Lily#: Set Up a Singing Voice/);
             assert.doesNotMatch(g.message, /https?:/);

@@ -91,7 +91,7 @@ describe('the singing walkthrough', () => {
         const voices = [{ id: 'neutrino/X', engine: 'neutrino', name: 'X', language: 'ja' }];
         const guides = [noVoiceGuide(true), noLanguageGuide('ja', voices), noLanguageGuide('en', voices), noVocoderGuide('the voice bundles no vocoder'), unsingableGuide('no installed voice sings Latin (la)')];
         for (const g of guides) {
-            assert.deepEqual(g.actions[0], { label: 'How to Install a Voice', command: 'lilysharp.voiceInstallGuide' });
+            assert.deepEqual(g.actions[0], { label: 'How to Install a Voice', command: 'lilysharp.setUpSingingVoice' });
             assert.ok(g.actions.every(a => !('url' in a)), g.message);
             assert.doesNotMatch(g.message, /https?:/);
             if ('documentation' in g) { assert.deepEqual(movingLinks((g as { documentation: string }).documentation), []); }

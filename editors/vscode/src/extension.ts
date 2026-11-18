@@ -805,7 +805,7 @@ export function activate(context: vscode.ExtensionContext) {
         // not hang on a link. The walkthrough is hidden until it is asked for (its `when`), so
         // that installing Lily# does not open a page about singing; where VS Code cannot open
         // it, the engines' page is shown as it is written.
-        vscode.commands.registerCommand('lilysharp.voiceInstallGuide', async () => {
+        vscode.commands.registerCommand('lilysharp.setUpSingingVoice', async () => {
             await vscode.commands.executeCommand('setContext', 'lilysharp.singingGuide', true);
             try {
                 await vscode.commands.executeCommand('workbench.action.openWalkthrough', `${context.extension.id}#singing`, false);
