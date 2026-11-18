@@ -339,6 +339,12 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /<div class="prow moctrow" id="recOctRow"><span class="plbl">Octave<\/span>/);
         assert.doesNotMatch(html, /recSpeedSlider|recSemiSlider|recCentSlider|recLinkBtn|recChartRow|recReset|recSummary|id="recSettings"|<details|recTuneBtn|recTuning/);
         assert.doesNotMatch(glue, /tuning/);
+        // The chart shown last decides what the page hears of a recording (owner's report 2026-11-19:
+        // a chart with none, shown after one with a recording, kept that recording in its panel — its
+        // "none" was posted first, the other's files still being looked at). Seen in a real VS Code:
+        // five switches of five wrong before, none after.
+        assert.match(glue, /const turn = \(sendTurns\.get\(panel\) \?\? 0\) \+ 1;\s*sendTurns\.set\(panel, turn\);\s*const file = /);
+        assert.match(glue, /const key = [^\n]*\n\s*if \(sendTurns\.get\(panel\) !== turn\) \{\s*return;[^\n]*\n\s*\}\s*if \(!force && sentKeys\.get\(panel\) === key\)/);
         // Faders 100% stands at the right of the Octave row — beside As scored with no recording — and
         // the panel has no foot line for it (owner's request 2026-11-19).
         assert.match(html, /const row = document\.querySelector\(recording \? '#recOctRow \.tempo' : '#partsReset'\)\.closest\('\.tempo'\);\s*row\.appendChild\(document\.getElementById\('fadersReset'\)\);/);

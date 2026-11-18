@@ -137,6 +137,9 @@ export async function attachRecording(uri?: vscode.Uri, onAttached?: (chart: vsc
 export interface DecodeResult { Ok: boolean; Error?: string | null; Seconds?: number }
 
 const sentKeys = new WeakMap<vscode.WebviewPanel, string>();
+/** Each preview's count of sendRecording calls: one still looking at its files when a later one is
+ *  asked for gives way to it (see sendRecording). */
+const sendTurns = new WeakMap<vscode.WebviewPanel, number>();
 
 async function statKey(uri: vscode.Uri): Promise<string | undefined> {
     try {
@@ -170,6 +173,13 @@ export function markJustConverted(chart: string): void {
  */
 export async function sendRecording(panel: vscode.WebviewPanel, chart: vscode.Uri, storage: vscode.Uri,
     decode: (input: string, output: string) => Promise<DecodeResult>, force = false): Promise<void> {
+    // The chart shown last decides (owner's report 2026-11-19: a chart with a recording, then one
+    // with none — the page's score changed and its panel kept the first chart's recording). The
+    // files are looked at over several awaits — nine for a recording in six parts, one for a chart
+    // with none — so the second chart's "none" was posted first and the first chart's recording
+    // after it. A call a later one has overtaken stops before it says anything.
+    const turn = (sendTurns.get(panel) ?? 0) + 1;
+    sendTurns.set(panel, turn);
     const file = vscode.Uri.file(recordingPathFor(chart.fsPath));
     const fileKey = await statKey(file);
     const text = fileKey ? await readText(file) : undefined;
@@ -183,6 +193,9 @@ export async function sendRecording(panel: vscode.WebviewPanel, chart: vscode.Ur
     const partKeys: (string | undefined)[] = [];
     for (const p of parts) { partKeys.push(await statKey(p.uri)); }
     const key = `${chart.toString()}\n${fileKey}\n${audioKey}\n${partKeys.join('|')}`;
+    if (sendTurns.get(panel) !== turn) {
+        return;   // (a later call is on its way: it says what the page shows now)
+    }
     if (!force && sentKeys.get(panel) === key) {
         return;
     }
