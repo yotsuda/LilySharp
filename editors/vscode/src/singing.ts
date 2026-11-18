@@ -696,9 +696,15 @@ export function followVoices(panel: vscode.WebviewPanel, uri: string): boolean {
     missingVoices.delete(panel);
     voiceTurned.add(panel);
     prepareQueue.cancel(`${panelId(panel)}/`);
+    toldNoEngine.delete(panel);
     void panel.webview.postMessage({ type: 'clearVoices', pending: true });
     return true;
 }
+/** The previews told, with no engine, that they hold no voice — and told nothing of voices since
+ *  (followVoices' placeholder, an engine found). Most people have no engine and every refresh
+ *  asks for the voices: until session 1296 each keystroke sent the page a `clearVoices` and wrote
+ *  a line to the output channel, to say again what had not changed. */
+const toldNoEngine = new WeakSet<vscode.WebviewPanel>();
 /** A preview closed: nothing more is sung for it, and a voice in flight is dropped on landing. */
 export function forgetVoices(panel: vscode.WebviewPanel): void {
     voiceDocs.delete(panel);
@@ -847,12 +853,16 @@ export async function prepareVoices(panel: vscode.WebviewPanel, uri: string, rea
     const engine = await renderer();
     if (!current()) { log('the preview turned meanwhile'); return; }
     if (!engine) {
-        log('no engine: the voices are dropped');
         if (reason === 'play' && writesSinger(vscode.workspace.textDocuments.find(d => d.uri.toString() === uri)?.getText() ?? '')) { offerCantoria(); }
+        // Said once to a page: it holds nothing until an engine is found or it turns (toldNoEngine).
+        if (toldNoEngine.has(panel)) { return; }
+        toldNoEngine.add(panel);
+        log('no engine: the voices are dropped');
         postedVoices.delete(panel);
         void panel.webview.postMessage({ type: 'clearVoices' });
         return;
     }
+    toldNoEngine.delete(panel);
     let sung: { Voices?: SungVoiceDto[] | null; PrintedWords?: string[] | null; Error?: string | null };
     try {
         sung = await client.sendRequest('lilysharp/sung', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null, allLyrics: true });
