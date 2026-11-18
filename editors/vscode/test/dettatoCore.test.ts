@@ -138,5 +138,10 @@ describe('Dettato, the recording reader', () => {
             .filter((c: { command: string }) => c.command === 'lilysharp.importImage' || c.command === 'lilysharp.convertRecording')
             .map((c: { title: string }) => c.title);
         for (const t of titles) assert.match(t, /… \(Preview\)$/, t);
+        // Named in New File… as its neighbours are, by their short titles: "Lily# Score …".
+        const entries = pkg.contributes.commands
+            .filter((c: { command: string }) => newFile.includes(c.command))
+            .map((c: { command: string; shortTitle?: string }) => c.shortTitle ?? c.command);
+        for (const s of entries) assert.match(s, /^Lily# Score\b/, s);
     });
 });

@@ -1015,6 +1015,21 @@ public class ImportMusicXmlResponse
     public string? Lys { get; set; }
     public string[] Warnings { get; set; } = System.Array.Empty<string>();
     public string? Error { get; set; }
+    /// <summary>The pieces of a file that holds several (an ABC tune book), each written as a
+    /// <c>.lys</c> of its own; null for a file that is one piece (<see cref="Lys"/>).
+    /// <see cref="Lys"/> and <see cref="Warnings"/> are then the first piece's.</summary>
+    public ImportedPieceDto[]? Pieces { get; set; }
+}
+
+/// <summary>One piece of an imported file: the file name it is written as (no <c>.lys</c>), its
+/// title, its source (null when it could not be read, with <see cref="Error"/>) and its report.</summary>
+public class ImportedPieceDto
+{
+    public string Name { get; set; } = "";
+    public string? Title { get; set; }
+    public string? Lys { get; set; }
+    public string[] Warnings { get; set; } = System.Array.Empty<string>();
+    public string? Error { get; set; }
 }
 
 // ============================================================

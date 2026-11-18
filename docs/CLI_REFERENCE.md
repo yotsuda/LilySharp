@@ -480,10 +480,10 @@ phonemes, ties merge, and rests become gaps.
 lysc vsqx song.lys                    # Creates song.vsqx
 ```
 
-### import - Import MusicXML or MIDI
+### import - Import MusicXML, MIDI or ABC
 
 ```bash
-lysc import [options] <input.(xml|musicxml|mxl|mid)>
+lysc import [options] <input.(xml|musicxml|mxl|mid|abc)>
 ```
 
 Reads a MusicXML score (or an `.mxl` zip) and writes an idiomatic Lily# source file,
@@ -511,6 +511,16 @@ writer. A .mid is a performance and not a page, so more of the result is a readi
 - **Not read**: dynamics from velocities, the pedal, pitch bends, repeats (a .mid is played
   out: the result is one section).
 
+**ABC notation** (`.abc`, ABC 2.1, told by what it holds: a field such as `X:` first and a `K:`
+line) is read through the same writer. A file of several tunes (a tune book, `X:` by `X:`) gives
+a `.lys` per tune — a Lily# file is one piece — in a folder named after the file:
+`reels.abc` → `reels/001-speed-the-plough.lys`, `reels/002-….lys` (the `X:` number and the
+title; field lines before the first tune hold for every tune). A tune that cannot be read is
+named and skipped, and the exit code is then 1. Its header (`T:` `C:` `M:` `L:` `Q:` `K:` with modes), notes, chords, ties,
+slurs, tuplets, grace notes, broken rhythms, repeats and endings, decorations and dynamics, chord
+names, words (`w:`) and voices (`V:`, one staff each) come back; `P:`, `W:`, `s:`, macros and
+voice overlays (`&`) are reported and left out. The whole list is in `docs/abc-import-design.md`.
+
 **Options:**
 | Option | Description |
 |--------|-------------|
@@ -524,6 +534,8 @@ lysc import song.xml                  # Creates song.lys
 lysc import -d books song.mxl         # From a compressed MusicXML, into books/
 lysc import --relative song.xml       # Relative-octave output
 lysc import song.mid                  # From a MIDI file
+lysc import tune.abc                  # From ABC notation
+lysc import reels.abc                 # A tune book: reels/001-speed-the-plough.lys, ...
 ```
 
 ### octave - Convert between absolute and relative octaves

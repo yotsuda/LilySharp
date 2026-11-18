@@ -111,7 +111,7 @@ static void ShowHelp()
 
           xml        Convert to MusicXML
           ly         Convert to LilyPond (.ly) source
-          import     Import MusicXML (.xml/.musicxml/.mxl) or MIDI (.mid) to a Lily# source file
+          import     Import MusicXML (.xml/.musicxml/.mxl), MIDI (.mid) or ABC (.abc) to a Lily# source file
           octave     Rewrite a Lily# file into absolute or relative octaves
 
           harmonize  Suggest a diatonic chord track for the melody (prints a chords part)
@@ -751,9 +751,9 @@ static int RunImport(string[] args)
     if (WantsHelp(args))
     {
         Console.WriteLine("""
-            Import MusicXML or a MIDI file into a Lily# source file
+            Import MusicXML, a MIDI file or ABC notation into a Lily# source file
 
-            Usage: lysc import [options] <input.(xml|musicxml|mxl|mid)>
+            Usage: lysc import [options] <input.(xml|musicxml|mxl|mid|abc)>
 
             Reads a MusicXML score (or an .mxl zip) and writes an idiomatic Lily#
             source file, <input>.lys, that renders the same music. Import is an
@@ -766,6 +766,11 @@ static int RunImport(string[] args)
             two voices at most, and spelling, key (where none is stated) and clefs are
             Lily#'s reading. Its tracks' names, sounds, words and tempos are kept.
 
+            ABC notation (.abc, ABC 2.1) is read too, with its repeats and endings,
+            chord names, words (w:) and voices (V:). A file of several tunes (X:) gives
+            a .lys per tune, in a folder named after the file: tunes/001-title.lys.
+            What it leaves out (P:, W:, macros, voice overlays) goes to the report.
+
             Options:
               -d, --out-dir <folder> Write into this folder (default: the input's folder)
               -r, --relative         Emit relative-octave notes (default: absolute)
@@ -776,6 +781,8 @@ static int RunImport(string[] args)
               lysc import -d books song.mxl
               lysc import --relative song.xml
               lysc import song.mid
+              lysc import tune.abc
+              lysc import reels.abc                 # several tunes: reels/001-....lys, ...
             """);
         return 0;
     }
@@ -791,18 +798,44 @@ static int RunImport(string[] args)
     try
     {
         var bytes = File.ReadAllBytes(inputPath!);
-        var (lys, report) = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().ImportBytes(bytes, r.Has("relative"));
-        string outputPath = OutputPathFor(inputPath!, dir!, ".lys");
-        File.WriteAllText(outputPath, lys);
-
-        Console.WriteLine($"Created: {outputPath}");
-        if (report.HasWarnings)
+        var pieces = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().ImportPieces(bytes, r.Has("relative"));
+        static void Report(LilySharp.Core.MusicXmlImport.ImportReport report, string indent)
         {
-            Console.WriteLine($"  Imported with {report.Warnings.Count} approximation(s):");
+            if (!report.HasWarnings)
+                return;
+            Console.WriteLine($"{indent}Imported with {report.Warnings.Count} approximation(s):");
             foreach (var w in report.Warnings)
-                Console.WriteLine($"    - {w}");
+                Console.WriteLine($"{indent}  - {w}");
         }
-        return 0;
+        if (pieces.Count == 1)
+        {
+            string outputPath = OutputPathFor(inputPath!, dir!, ".lys");
+            File.WriteAllText(outputPath, pieces[0].Lys);
+            Console.WriteLine($"Created: {outputPath}");
+            Report(pieces[0].Report, "  ");
+            return 0;
+        }
+
+        // An ABC tune book: a .lys per tune, in a folder named after the book (owner's decision
+        // 2026-11-18, docs/abc-import-design.md §3).
+        string folder = Path.Combine(dir!, Path.GetFileNameWithoutExtension(inputPath!));
+        Directory.CreateDirectory(folder);
+        int written = 0;
+        foreach (var piece in pieces)
+        {
+            if (piece.Lys == null)
+            {
+                Console.Error.WriteLine($"  Not read: {piece.Name}: {piece.Error}");
+                continue;
+            }
+            string outputPath = Path.Combine(folder, piece.Name + ".lys");
+            File.WriteAllText(outputPath, piece.Lys);
+            written++;
+            Console.WriteLine($"Created: {outputPath}");
+            Report(piece.Report, "  ");
+        }
+        Console.WriteLine($"{written} of {pieces.Count} tunes written to {folder}");
+        return written == pieces.Count ? 0 : 1;
     }
     catch (Exception ex)
     {

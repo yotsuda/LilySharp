@@ -9,7 +9,7 @@
   <p class="grp">Starting a score</p>
   <ol>
     <li><a href="#new-score">New Score</a></li>
-    <li><a href="#import-musicxml">Import MusicXML or MIDI…</a></li>
+    <li><a href="#import-musicxml">Import MusicXML, MIDI or ABC…</a></li>
     <li><a href="#import-image">Convert Image/PDF to Lily# (.lys)…</a></li>
   </ol>
   <p class="grp">Reshaping the file</p>
@@ -46,7 +46,7 @@
   <table class="g">
     <tr><th>Where</th><th>What is there</th></tr>
     <tr><td>Right-click in a <code>.lys</code> editor</td><td>At the top, what acts on the thing under the caret: Split Section Here (on a bar line or a <code>break</code>) · Join Sections (on a section&#39;s head or a selection across sections) · the chord conversions (on a chord). Then Ask AI in Chat… · Go to the Same Bar in Another Part…, and five submenus — <b>Sections</b>: Join Sections · Split Section Here · Split Sections to Match a Part · Extract Phrase from Section · Regroup; <b>Parts &amp; Tracks</b>: Add Chord Track… · Write a Harmony Part… · Write a Singer&#39;s Notes Out as a Part · Write Repeat Signs in Every Part · Keep Repeat Signs in One Part; <b>Notation</b>: Convert Octaves to Absolute / to Relative · Respell Notes to Key… · Guess Section Key…; <b>Clean Up</b> (when the file has any): Resolve All TODOs · Remove All @or · Remove All String Numbers; <b>Scan</b> (in a score read from a scan): Fix OMR Marks with AI… · Edit Bars Beside the Scan · Show Original Scan</td></tr>
-    <tr><td>Right-click a file in the Explorer</td><td>on a <code>.lys</code>: the <i>Lily#: Export</i> submenu · on a <code>.xml</code> / <code>.musicxml</code> / <code>.mxl</code>: Import MusicXML or MIDI… · on a scan or PDF: Convert Image/PDF to Lily# (.lys)… (when the reader is installed)</td></tr>
+    <tr><td>Right-click a file in the Explorer</td><td>on a <code>.lys</code>: the <i>Lily#: Export</i> submenu · on a <code>.xml</code> / <code>.musicxml</code> / <code>.mxl</code> / <code>.mid</code> / <code>.abc</code>: Import MusicXML, MIDI or ABC… · on a scan or PDF: Convert Image/PDF to Lily# (.lys)… (when the reader is installed)</td></tr>
     <tr><td>Right-click in the preview</td><td>Rewrite with AI… with the note, bar or selection under the pointer as its hint · Select Chord (on a note of a chord: the caret just after its <code>&gt;</code>) · Select This Bar · Clear Selection · Play from Here (on a note or a bar) · Stop Playback · Fit Width · Reset Zoom (100%) — and, in a score read from a scan, Edit Bars Beside the Scan on the bar</td></tr>
     <tr><td>The editor's title bar</td><td>Open Preview to Side · the lock that keeps the preview on one file</td></tr>
     <tr><td><i>File → New File…</i></td><td>Lily# Score (.lys)</td></tr>
@@ -85,7 +85,7 @@
 </section>
 
 <section id="import-musicxml">
-  <h2>Import MusicXML or MIDI…</h2>
+  <h2>Import MusicXML, MIDI or ABC…</h2>
   <p>Turns a MusicXML file — <code>.xml</code>, <code>.musicxml</code> or the compressed
   <code>.mxl</code> — into Lily#. From the command palette it asks for the file and opens the
   result as a new untitled <code>.lys</code>; from the Explorer's right-click menu it writes
@@ -101,6 +101,14 @@
   played file is quantized), a part is read as two voices at most, and the spelling, the clefs
   and — where the file states none — the key are worked out. The tracks' names, sounds, words
   and tempos are kept, drums come back as a drum part, and the result is one section.</p>
+  <p>ABC notation (<code>.abc</code>) is imported by the same command too, with its repeats and
+  endings, chord names, words (<code>w:</code>) and voices (<code>V:</code>, a staff each). A file
+  of several tunes becomes a <code>.lys</code> per tune, in a folder named after the file
+  (<code>reels.abc</code> → <code>reels/001-speed-the-plough.lys</code>, …), and the first tune
+  opens. What it leaves out — the order of the parts (<code>P:</code>),
+  words after the tune (<code>W:</code>), macros, voice overlays — is listed in the warning.</p>
+  <p>File &gt; New File… offers all the imports as one entry, <i>Lily# Score from File (MusicXML,
+  MIDI, ABC, Scan, Recording)…</i>, which asks what to make the score from.</p>
 </section>
 
 <section id="import-image">

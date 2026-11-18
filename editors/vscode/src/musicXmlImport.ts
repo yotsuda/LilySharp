@@ -16,7 +16,7 @@
 
 // Import MusicXML — the half that talks to VS Code: the file picker (or the Explorer's file), the
 // request to the server, the .lys written beside the source or opened untitled, the preview, and
-// the import's report. A Standard MIDI File goes the same way. It stood in extension.ts until
+// the import's report. A Standard MIDI File and ABC notation (docs/abc-import-design.md) go the same way. It stood in extension.ts until
 // session 1298; what it reads of the extension's own state comes through MusicXmlImportDeps.
 
 import * as vscode from 'vscode';
@@ -41,10 +41,20 @@ export function useMusicXmlImportHost(deps: MusicXmlImportDeps): void {
     startedClient = deps.getClient;
 }
 
+interface ImportedPiece {
+    Name: string;
+    Title: string | null;
+    Lys: string | null;
+    Warnings: string[];
+    Error: string | null;
+}
+
 interface ImportMusicXmlResponse {
     Lys: string | null;
     Warnings: string[];
     Error: string | null;
+    /** An ABC tune book: a .lys per tune (docs/abc-import-design.md §3). */
+    Pieces?: ImportedPiece[] | null;
 }
 
 /**
@@ -68,8 +78,12 @@ export async function importMusicXml(context: vscode.ExtensionContext, sourceUri
         const picked = await vscode.window.showOpenDialog({
             canSelectMany: false,
             openLabel: 'Import',
-            // A Standard MIDI File goes through the same request: the server tells it by its header.
-            filters: { 'MusicXML or MIDI': ['xml', 'musicxml', 'mxl', 'mid', 'midi'], 'MusicXML': ['xml', 'musicxml', 'mxl'], 'MIDI': ['mid', 'midi'] },
+            // A Standard MIDI File and ABC notation go through the same request: the server tells
+            // them by what they hold.
+            filters: {
+                'MusicXML, MIDI or ABC': ['xml', 'musicxml', 'mxl', 'mid', 'midi', 'abc'],
+                'MusicXML': ['xml', 'musicxml', 'mxl'], 'MIDI': ['mid', 'midi'], 'ABC': ['abc'],
+            },
         });
         if (!picked || picked.length === 0) {
             return;
@@ -95,12 +109,16 @@ export async function importMusicXml(context: vscode.ExtensionContext, sourceUri
             vscode.window.showErrorMessage(`Lily#: import failed: ${response.Error ?? 'no output.'}`);
             return;
         }
+        if (response.Pieces && response.Pieces.length > 1) {
+            await writeTuneBook(context, fileUri, sourceName, response.Pieces);
+            return;
+        }
 
         let doc: vscode.TextDocument;
         if (fromExplorer) {
             // Write <name>.lys next to the source and open it.
             const targetUri = fileUri.with({
-                path: fileUri.path.replace(/\.(xml|musicxml|mxl|mid|midi)$/i, '') + '.lys',
+                path: fileUri.path.replace(/\.(xml|musicxml|mxl|mid|midi|abc)$/i, '') + '.lys',
             });
             await vscode.workspace.fs.writeFile(targetUri, Buffer.from(response.Lys, 'utf8'));
             doc = await vscode.workspace.openTextDocument(targetUri);
@@ -140,4 +158,51 @@ export async function importMusicXml(context: vscode.ExtensionContext, sourceUri
     } catch (err) {
         vscode.window.showErrorMessage(`Lily#: import failed: ${err}`);
     }
+}
+
+/**
+ * An ABC file of several tunes: a .lys per tune — a Lily# file is one piece — in a folder beside
+ * the source named after it (`reels.abc` → `reels/001-speed-the-plough.lys`), from the palette as
+ * from the Explorer (owner's decision 2026-11-18). The first tune opens with its preview; what each
+ * tune left out goes to the output channel.
+ */
+async function writeTuneBook(context: vscode.ExtensionContext, source: vscode.Uri, sourceName: string, pieces: ImportedPiece[]) {
+    const folderName = sourceName.replace(/\.[^.]+$/, '');
+    const folder = vscode.Uri.joinPath(source, '..', folderName);
+    await vscode.workspace.fs.createDirectory(folder);
+    let first: vscode.Uri | undefined;
+    let written = 0;
+    const notes: string[] = [];
+    for (const piece of pieces) {
+        if (piece.Lys == null) {
+            notes.push(`  ${piece.Name}: not read — ${piece.Error ?? 'no output'}`);
+            continue;
+        }
+        const target = vscode.Uri.joinPath(folder, `${piece.Name}.lys`);
+        await vscode.workspace.fs.writeFile(target, Buffer.from(piece.Lys, 'utf8'));
+        first ??= target;
+        written++;
+        for (const w of piece.Warnings ?? []) {
+            notes.push(`  ${piece.Name}: ${w}`);
+        }
+    }
+    if (first) {
+        await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(first));
+        openPreview(context, vscode.ViewColumn.Beside);
+    }
+    const message = `Lily#: ${sourceName} holds ${pieces.length} tunes: ${written} written to ${folderName}/` +
+        (written < pieces.length ? ` (${pieces.length - written} could not be read)` : '') + ' — the first is open.';
+    const show = (choice: string | undefined) => {
+        if (choice === 'Show Details') {
+            outputChannel.appendLine(`Import report (${sourceName}):`);
+            for (const line of notes) {
+                outputChannel.appendLine(line);
+            }
+            outputChannel.show(true);
+        } else if (choice === 'Reveal Folder') {
+            void vscode.commands.executeCommand('revealInExplorer', folder);
+        }
+    };
+    const buttons = notes.length > 0 ? ['Show Details', 'Reveal Folder'] : ['Reveal Folder'];
+    (notes.length > 0 ? vscode.window.showWarningMessage(message, ...buttons) : vscode.window.showInformationMessage(message, ...buttons)).then(show);
 }

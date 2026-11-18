@@ -99,7 +99,8 @@ public sealed partial class LilySharpLanguageServer
     /// directly; raw <c>XmlText</c> is the fallback. Import is opinionated and
     /// non-unique: the result is a faithful STARTING POINT, and every dropped or
     /// approximated construct comes back in <c>Warnings</c> (the import report).
-    /// Powers the "Lily#: Import MusicXML…" editor command.
+    /// Powers the "Lily#: Import MusicXML, MIDI or ABC…" editor command (a MIDI file and ABC
+    /// notation are told by what they hold, <c>MusicXmlImporter.ImportBytes</c>).
     /// </summary>
     [JsonRpcMethod("lilysharp/importMusicXml", UseSingleObjectParameterDeserialization = true)]
     public Task<ImportMusicXmlResponse> ImportMusicXmlAsync(ImportMusicXmlParams @params, CancellationToken token)
@@ -115,7 +116,27 @@ public sealed partial class LilySharpLanguageServer
             {
                 if (!System.IO.File.Exists(@params.FilePath))
                     return new ImportMusicXmlResponse { Error = $"File not found: {@params.FilePath}" };
-                result = importer.ImportBytes(System.IO.File.ReadAllBytes(@params.FilePath), @params.RelativeOctave);
+                var pieces = importer.ImportPieces(System.IO.File.ReadAllBytes(@params.FilePath), @params.RelativeOctave);
+                if (pieces.Count > 1)
+                {
+                    // An ABC tune book: the extension writes a .lys per tune (docs/abc-import-design.md §3).
+                    var first = pieces.FirstOrDefault(p => p.Lys != null);
+                    return new ImportMusicXmlResponse
+                    {
+                        Lys = first?.Lys,
+                        Warnings = first?.Report.Warnings.ToArray() ?? [],
+                        Error = first == null ? "No tune of the file could be read." : null,
+                        Pieces = pieces.Select(p => new ImportedPieceDto
+                        {
+                            Name = p.Name ?? "",
+                            Title = p.Title,
+                            Lys = p.Lys,
+                            Warnings = p.Report.Warnings.ToArray(),
+                            Error = p.Error,
+                        }).ToArray(),
+                    };
+                }
+                result = (pieces[0].Lys!, pieces[0].Report);
             }
             else if (!string.IsNullOrEmpty(@params.XmlText))
             {

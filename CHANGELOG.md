@@ -6,7 +6,9 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
-- **A score from another file, from File > New File…** (`[editor]`). *Score from File (MusicXML, MIDI, Scan, Recording)…* joins *New Score* there (and in the Welcome page's *New File…*); it asks what to read — MusicXML or MIDI, an image or PDF, or a recording — and runs that reader's command. *Convert Image/PDF to Lily# (.lys)…* now reads *(Preview)* instead of *(Beta)*.
+- **Import ABC notation** (`[cli]` `[editor]`). `lysc import tune.abc` and the editor's *Import MusicXML, MIDI or ABC…* read ABC 2.1 through the same writer as MusicXML and MIDI — a tune book as a `.lys` per tune, in a folder named after the file (`reels/001-speed-the-plough.lys`) — each tune with its header (`T:` `C:` `M:` `L:` `Q:` `K:`, modes too), notes, chords, ties, slurs, tuplets, grace notes, broken rhythms, repeats and endings, decorations and dynamics, chord names, words (`w:`) and voices (`V:`, a staff each). What it leaves out is listed in the import's report (`docs/abc-import-design.md`).
+
+- **A score from another file, from File > New File…** (`[editor]`). *Lily# Score from File (MusicXML, MIDI, ABC, Scan, Recording)…* joins *Lily# Score (.lys)* there (and in the Welcome page's *New File…*); it asks what to read — MusicXML, MIDI or ABC, an image or PDF, or a recording — and runs that reader's command. *Convert Image/PDF to Lily# (.lys)…* now reads *(Preview)* instead of *(Beta)*.
 
 - **A syllable for every note: `sings "la"`** (`[language]` `[playback]` `[engraving]` `[editor]`). A string where a singer line or a score's lyrics row names its words is a syllable put on every note: `singer female on sop sings "la"` sings the part on la, and `lyrics "la" on sop` prints it under each note. Any syllable can be written — `"ラ"`, `"ル"`, `"ah"`, `"doo"` — in the script the voice sings, with no `lyrics { }` block and no new reserved name (`hum` and `solfege` stay as they are). The lists after `sings` and after a row's `lyrics` offer the usual ones in the file's language. An empty string is an error.
 

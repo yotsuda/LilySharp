@@ -708,12 +708,13 @@
       {
         "command": "lilysharp.newScoreFromFile",
         "category": "Lily#",
-        "title": "Score from File (MusicXML, MIDI, Scan, Recording)…"
+        "title": "Score from File (MusicXML, MIDI, ABC, Scan, Recording)…",
+        "shortTitle": "Lily# Score from File (MusicXML, MIDI, ABC, Scan, Recording)…"
       },
       {
         "command": "lilysharp.importMusicXml",
         "category": "Lily#",
-        "title": "Import MusicXML or MIDI…"
+        "title": "Import MusicXML, MIDI or ABC…"
       },
       {
         "command": "lilysharp.attachRecording",
@@ -1452,7 +1453,7 @@
         },
         {
           "command": "lilysharp.importMusicXml",
-          "when": "resourceExtname == .xml || resourceExtname == .musicxml || resourceExtname == .mxl || resourceExtname == .mid || resourceExtname == .midi",
+          "when": "resourceExtname == .xml || resourceExtname == .musicxml || resourceExtname == .mxl || resourceExtname == .mid || resourceExtname == .midi || resourceExtname == .abc",
           "group": "7_modification"
         },
         {

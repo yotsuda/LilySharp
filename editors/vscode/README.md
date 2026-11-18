@@ -89,8 +89,9 @@ sections, the chord conversions on a chord; *Go to the Same Bar in Another Part�
 
 The preview's right-click menu groups its own: the selection, playback, the section (*Split Section
 Here* on the bar line nearer the pointer), the marks (TODOs, `@or`) and the view. New Score (from a
-template you can make your own: *Edit New Score Template*) and Import MusicXML… are in the Command
-Palette. Every command, with examples:
+template you can make your own: *Edit New Score Template*) and Import MusicXML, MIDI or ABC… are in the
+Command Palette; File > New File… offers New Score, Compose with Copilot, and *Lily# Score from File
+(MusicXML, MIDI, ABC, Scan, Recording)…*. Every command, with examples:
 [the editor commands](https://yotsuda.github.io/LilySharp/commands.html).
 
 ### Writing

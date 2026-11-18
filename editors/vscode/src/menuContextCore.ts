@@ -73,7 +73,7 @@ export function fileMenuContext(text: string): { hasOrMarks: boolean; hasTodos: 
 export interface NewScoreSource { command: string; label: string; detail: string }
 export function newScoreSources(onWindows: boolean, omrFound: boolean, dettatoFound: boolean): NewScoreSource[] {
     const sources: NewScoreSource[] = [
-        { command: 'lilysharp.importMusicXml', label: 'MusicXML or MIDI…', detail: '.musicxml · .mxl · .xml · .mid · .midi' },
+        { command: 'lilysharp.importMusicXml', label: 'MusicXML, MIDI or ABC…', detail: '.musicxml · .mxl · .xml · .mid · .midi · .abc' },
     ];
     if (onWindows || omrFound) {
         sources.push({ command: 'lilysharp.importImage', label: 'Image or PDF (Scan)… (Preview)', detail: 'printed music read by Calamo' });
