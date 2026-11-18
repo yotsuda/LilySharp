@@ -277,6 +277,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1305セッションの経緯
+
+### 1.1 第1305セッション（2026-11-18・YT-LAPTOP4・第1304 とは別の会話）
+
+base `a5020e133`（オーナーの pull の後）。**`Session-Check -Start` は回していない**（オーナーの報告から入った便）＝開始時の full は無い・§7 3.5 のアーカイブは終わりに `-Archive 1303` で回した。CI は第1304 の `c49afc9ab` で `failure`（run `44249764964`・この便は読んでいない）。REQUESTS は見ていない。
+- **GPU の無い PC で NEUTRINO が歌えない（オーナーの報告）＝Cantoria の commit「NEUTRINO on a CPU」・Lily# `84ca9a6b6`**: この PC（Intel Iris Xe・NVIDIA なし）では NEUTRINO の `-m` が CPU に落ち、37 s の歌に 5 分 40 秒。原因は 3 つ: ⑴ Lily# は 120 s 固定で声を見捨てた（`PREPARE_TIMEOUT_MS`）・Cantoria も 5 分固定で打ち切った ⑵ cancel は*フレーズの切れ目*でしか効かない（歌いかけのフレーズは必ず歌い終える）＝CPU では数分 ⑶ `cantoria serve` は歌も問い合わせも 1 列＝編集の後の `plan` が歌の後ろで数分待ち、cancel はその後にしか送られない。直し: Cantoria＝手放したフレーズは次の依頼が決める（`LeftPhrase`＝同じフレーズを歌うなら引き取る・歌わないなら止める・どの声部の依頼でも）・打ち切りは歌の長さ × 実測の速さ × 3（`NeutrinoOptions.RenderAllowance`）・止めるときは server 版はサーバーごと止める（client だけ止めると次が `BUSY: inference is running`）・`voices`／`plan`／`parameters` は別の列。Lily#＝`prepareAllowanceMs`（2 分＋残り × 学んだ速さ × 3・測る前は CPU の速さ）を `EngineWatch` が、エンジンから何か聞こえるたびに巻き直す・諦めたら `letGo` で cancel・`learnRenderRate` の上限 3,000 → 30,000 と最初の測定は初期値と混ぜない。実測（exe 版 v3.2.2 と server 版 v3.2.6 の両方）は Lab `p1305/singer-cpu`: `letgo-probe.ps1`（serve を直接）・`outoftime/`（4 s に絞った打ち切り）・`e2e/prep.ps1`（隔離 VS Code に両拡張の新しい版）。数は commit message。
+- **案内ページ＝`eac3efa0e`**: GPU が無いなら同梱版（36 s のパートが同梱版 135 s・通常版 240 s）・`singerPrepare: onPlay` の使い方（開いたときは 1 回歌う＝`voiceTurned`）。
+- 全 full は回していない（VS Code 拡張の 1277 合格 / 0 失敗・Cantoria 249 合格だけ）。Lily# の C# は触っていない。
+- ⚠️ **オーナーの VS Code はまだ古い拡張**（Cantoria 0.4.0・Lily# 0.16.0）＝症状はそのまま。Cantoria `tools\deploy-extension.ps1` と Lily# の VSIX の作り直し・Reload はオーナー。Cantoria は未 push。
+- **残り**: VS Code の中で「歌いかけのフレーズを次の依頼が引き取る」形は見ていない（nocturne の rh は 1 フレーズ＝止める側だけ・引き取る側は serve で確認）。GPU のある機械では測っていない。exe 版と server 版の速さの差（1.8 倍）のうち、モデルの読み込みの分と版（v3.2.2 と v3.2.6）の分は分けていない。
+- **次**: 第1304 の「次」のまま（下）。
+
 ## 以下は第1304セッションの経緯
 
 ### 1.1 第1304セッション（2026-11-18・YT-DELL2・第1303 と同じ会話）

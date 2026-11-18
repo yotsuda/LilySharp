@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 462 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **589** | |
+| `OWN` | 464 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **591** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -23,7 +23,7 @@
 |---|---:|
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 23 |
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 22 |
-| `LilySharp.Core/Svg/Layout/ProseBand.cs` | 18 |
+| `LilySharp.Core/Svg/Layout/ProseBand.cs` | 19 |
 | `LilySharp.Core/Midi/MidiExporter.cs` | 17 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 16 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
@@ -248,7 +248,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（462 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（464 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -402,6 +402,7 @@
 ### `LilySharp.Core/Rendering/Prose.cs`
 - **`Prose`** LILYSHARP-OWN: LilyPond has no Markdown; its markup is what the twin writes from this.
 - **`Prose.HeadingLevels`** LILYSHARP-OWN (docs/markdown-text-design.md section 3: "headings, two
+- **`Prose.JoinsWithoutSpace`** LILYSHARP-OWN (the join itself is: LilyPond's markup is handed whole lines). ⚠️ NOT HANGUL: Korean is set a square a syllable () and written WITH
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **`SharedRenderer.DrawBeam`** LILYSHARP-OWN: LP shortens unconditionally (beam.cc has
 ### `LilySharp.Core/Rendering/SharedRenderer.cs`
@@ -797,6 +798,7 @@
 - **`ProseBand.Build`** a list keeps its hanging shape from the text's left edge. LILYSHARP-OWN.
 - **`ProseBand.Break`** LILYSHARP-OWN. A line ends at a space, or between two wide characters (kana,
 - **`ProseBand.Break`** LILYSHARP-OWN: the em grid (LilyPond's twin is handed whole strings and sets
+- **`ProseBand.Break`** LILYSHARP-OWN: ⚠️ NO PIECE WITH WORDS BEGINS WITH A SPACE: the spaces a piece would begin with are a
 ### `LilySharp.Core/Svg/Layout/ScoreSideTables.cs`
 - **`ScoreSideTables.PercentSignBarRods`** LILYSHARP-OWN (the multi-bar sign is, PercentRepeatItem.Bars, session 905): LilyPond's
 ### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`

@@ -97,7 +97,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **★ 歌詞と歌い手の文法の作り直し（オーナー決定 2026-11-10・第1217）**: `docs/lyrics-singer-design.md` が全部（§9 が作業順）。①②③④は済み（§1.1 第1217〜第1219）。⚠️ ④の `ん` の聞こえ方はオーナーの実聴待ち（`MANUAL-CHECKS` 第1219）。Cantoria の master は zh／ko を歌う（VSIX の入れ直しはオーナー）。`singer` は 1 行 1 声で score の中にも書ける（第1220）。古い書き方を案内する専用エラーは作らない（オーナー指示）。設計 §10「パート自身の歌詞」（`part sop { lyrics words }`）は第1222 で実装（§1.1 第1222・実機は `MANUAL-CHECKS` 第1222）＝§9 は全部済み。**次の一手の指示はまだ無い＝下の積み残しから選ぶならオーナーに訊く**。積み残し: Calamo の生成コードが `lyrics … sings` のまま（`docs\repro\REQUESTS.md` に連絡済み・Calamo 側は未 commit）／実機確認（`MANUAL-CHECKS` 第1217）／perf ベンチ／コーパス外のオーナーのファイル（Downloads の Tabidachi・Rose Garden など）は未移行で、`LilySharp-Lab\sessions\p1217\migrate\migrate.ps1 -Lys -Files` で書き換えられる／Rose Garden のオクターブ変換はオーナーの回答待ち。
 - **★ 歌詞のある譜表では強弱記号とヘアピンを譜表の上に（オーナー決定 2026-11-11）＝設計 `docs/dynamics-above-lyrics-design.md` §5 の 1〜6 は全部済み（第1224〜第1225・§1.1）**。**D3 は LilyPond の規則に替えた（オーナー決定 2026-11-11「LP に合わせて」）**＝向きを書いた記号が*線*の向きを決め、同じ線の後続（向きを書いていない記号）は従う。歌詞のない譜表でも同じ（`c@f.up@decresc … g@p` の p は上）。残りはオーナー: 実機のプレビュー（`MANUAL-CHECKS` 第1225）と release（CHANGELOG は 2 つとも `## Unreleased`・`[engraving]`）。残る穴: 2 声部の譜表で上の声部のヘアピンの線に下の声部の同じ拍の強弱記号も乗る（ヘアピンが声部を持たない既知の穴＝`DynamicAlignEngraver` の注 ⑵・Lab `p1225/dyn/out/vv.png`）。線の向きは第1260 で声部ごとにした。**次の一手の指示はまだ無い＝上の行の積み残しから選ぶならオーナーに訊く**。
 - **★ 評価 4（2026-11-13）の残り＝⑴ 書き出し・⑵ 誤った診断・⑷ 文書は第1227 で閉じた（§1.1）**。書き手のメモと再現は Lab `sessions/p1226/md/eval4/{bigband,choral,chamber,rock}`。⑶ `lysc review` は第1228 で閉じた（§1.1）。**残り**: ⑸ 欠けている機能は上のオーナー決定 ⑥。**残っているもの**（どれも未着手・値段は未測定）: **一覧は Lab `sessions/p1242/leftovers.md`**（**オーナー指示 2026-11-14・第1231「残りの欠陥を順に」＝この一覧の「残り（欠陥）」と「第1231〜第1235 が見つけて残したもの」は訊かずに着手してよい**。機能の追加は訊く）。残りの先頭（一覧）: combinedStaff の印は re-address されない／別の声部のヘアピンと出会う形の絵／黙っている段の wish の測っていない形（装飾音で始まる小節・段の最初の小節）／`lysc review` の 3 件。MusicXML の四分音の `<accidental>` は他のリーダーの読みを確かめてから（一覧に理由）。見送ったものの理由もそこ。小残り（第1226 から）: condensedStaff の数字付き低音など 3 種の再住所・tab のアルペジオ線が自分の数字に 0.035・小文字だけの枠の中央が 0.23〜0.51 下・`md end` は既定の yMargin では動かない・箇条書きのリンク・不安定な網 2 種（`ScoreVideoShapeTests`、まれに `SvgSnapshotTests`）。**補助は同じモデルで 3〜5 件ずつ順番に・数行は自分で・全 full は自分が 1 回**（memory）。
-- **オーナー待ち（2026-11-18・歌声の設定まわり）＝Lab `sessions/p1304/owner-checks.md`**: push・拡張の入れ直しの後の実機（ウォークスルー W1〜W7・Cantoria の設定画面と Find Engines）・判断 2 つ（ウォークスルーを常に一覧に出すか・ボタンの名前）・確認用に入れた VOICEVOX の始末。
+- **オーナー待ち（2026-11-18・歌声の設定まわり）＝Lab `sessions/p1304/owner-checks.md`**: ＋第1307: `MANUAL-CHECKS` W8〜W10・最初の歌 4 曲の耳の確認・中国語と韓国語の文の確認・Cantoria の Marketplace 公開後の Upgrade の確認（§1.1 第1307）。 push・拡張の入れ直しの後の実機（ウォークスルー W1〜W7・Cantoria の設定画面と Find Engines）・判断 2 つ（ウォークスルーを常に一覧に出すか・ボタンの名前）・確認用に入れた VOICEVOX の始末。
 - **オーナー待ち（第1226）**: `samples/harbour-lights.lys`・`README.md` はオーナーの作業中の変更＝**commit しない**（歌を聴いてから。歌詞とリズムは Claude が直し済み・`ReadmeSampleTests` はそれで赤）／`tools\Deploy-Lsp.ps1`・Cantoria `deploy-extension.ps1`／実機（`MANUAL-CHECKS` 第1226: 補完・問題パネルの歌い手の失敗・LYS4078・プログレスバー・フェンスの色と Enter／囲み）／初回の声のダウンロード・Cantoria の声の解決の一本化・言語に合わせた既定の声＝未決。
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - **★ 歌わせる（Cantilena）＝第1124 設計・第1125 段 2（`lilysharp/sung`）・第1126 段 3（エディタ）・第1127 で Cantilena は拡張 `yotsuda.cantilena` になり Lily# は API で呼ぶ（§1.1 第1127）**: 第1128 で practice メニューに声（`♪ part`）と score に無いパート（既定オフ・`Extra`）のトグル。**第1129 オーナー決定＝歌うパートは歌い手・1 パート 1 音**（声が鳴れば楽器は鳴らない・楽器は代役・無名の歌い手は Choir Aahs・`♪` は歌う／弾くの切り替え）。**第1130＝1 段 1 音・言葉はその上の譜のもの**（`SungStaves`・`Sung`／`Played`・同じパートの言葉の無い段は楽器＝両方鳴らせる）。第1131 で段 4＝Export（WAV/MP3/MP4）に声を混ぜた。**第1132 で span の終わり・ループ・count-in の声を閉じ、ロードマップを `docs/singing-roadmap.md`（長期 A〜G・短期 8 行・オーナーの決定 5 つ）と Cantilena `docs/roadmap.md` に書いた。**第1133 で `engine/voice` の命名と `voices()`（Cantilena 0.2.0・VSIX の入れ直しはオーナー）**・第1134〜1136 で DiffSinger（Cantilena roadmap B1・B2・B4）・**第1137 で `lysc wav --singer <cantilena>`**・**第1138 で漢字の読み `漢[かん]`**（オーナー決定 2026-11-08・`.mid` は漢字・ルビは刷らない）・**第1139 で B3＝DirectML・第1140 で B5＝linux-x64／osx-arm64 の VSIX**（Cantilena 0.4.0・3 target・未公開・Linux／mac は未聴）＝次は Cantilena の公開（オーナー）・ローマ字→かな（Cantilena 側）・Phase C（歌詞ブロックの言語）。**第1141〜1148 でエディタの声のバッジ（▶ の隅のマイク）・本の切り替え・曲頭の子音・声を用意する時機（1.5 s の休み・`lilysharp.playback.singerPrepare`・`waiting`）＝singing-design §3・§5・実機は MANUAL-CHECKS §3.7（オーナー）**。****実機確認はオーナー（MANUAL-CHECKS §3.7）・Cantilena の VSIX の公開もオーナー**。問い 3 つ（漢字歌詞のかな・複数パート・置き換えか重ねか）はオーナー＝仮置きはかなだけ・全部・置き換え。Cantilena は `C:\MyProj\cantilena`（Apache-2.0・未 push）。**OMR #23 は `question`**（オーナー決定 2026-10-14 の規則そのもの＝オーナー判断待ち）。
@@ -146,6 +146,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1307セッション（2026-11-18・YT-DELL2・第1306 とは別の会話）
+
+オーナーの報告から入った便（`-Start` は終わりに回した）。終了時 full 17704 合格 / 0 失敗 / skip 2 / 合計 17706（Lab `p1307` `run1.trx`）・拡張 1298 / 0 / skip 1。REQUESTS は見ていない。Lily# の commit は `5b399b052` からの 11 個・Cantoria は「A folder that cannot be used is not set」＝どれも未 push。経緯は各 commit message に在る。
+- **Cantoria**: 使えないフォルダを選んだときの問いを「Choose Another Folder…」と Cancel に（`chooseFolder`・4 つのフォルダ選択すべて）。
+- **ウォークスルー**: 古い Cantoria なら最初のステップが Upgrade（context `lilysharp.cantoriaOutdated`・最新は `product.json` の gallery に訊く。⚠️ 更新が実際に入るかは Marketplace 公開後に確認）。`Deploy-Lsp.ps1` は `walkthrough` も入れる。
+- **最初の歌**: `walkthrough/first-song-{ja,en,zh,ko}.lys`（ふるさと・Twinkle・送别・아리랑の 1 番・題名と `md box` のメモつき）と各 `-short.lys`（出だし）。選び方は `singerCore.firstSongFor`（声が歌う言語）と `hasNvidiaGpu`（あれば全曲）。旋律は Wikipedia の記事の `<score>` と音高を照合・`lysc wav --singer` で 4 曲とも歌った（耳では未確認）。読みは `は[わ]`・`长[chang]` `地[di]`・`넘[너] 어[머]` ほか。中国語と韓国語の文は Claude が書いた＝読める人の確認待ち。
+- **本体の欠陥 3 つ**: `md` フェンスの太字の後の空白がブラウザで消える（空白で始まる SVG の `<text>`）／LYS4037 が歌詞の言語を見ていなかった（`LyricReadingKanaValidator` へ）／韓国語の文の行末が空白にならない（`Prose.JoinsWithoutSpace`）。網 +7・snapshot は動かず・毒は回していない。
+- **作らなかったもの**: Cantoria を 4 言語以外へ＝OpenUtau の発音変換データ（`G2p/Data` の zip）に出どころとライセンスの記載が無い。オーナーと「今は作らない」。
+- **測ったもの**: フォルダを選んだ後の問いが遅い＝Windows のフォルダ選択ダイアログの返事（初回 41.6 s・Lab `p1307/slow-dialog`）。Cantoria は 0 ms。
+- **残り**: 実機（`MANUAL-CHECKS` W8〜W10）と拡張の入れ直しはオーナー。NVIDIA 以外の GPU は短い版が先／`.lys` の全角の句読点に VS Code の黄色い枠（抑えるかは未決）。**次**: 第1306 の「次」のまま（下）。
+
+## 以下は第1306セッションの経緯
+
 ### 1.1 第1306セッション（2026-11-18・YT-DELL2・新しい会話）
 
 base `1fc8305c7`・開始時 full 17683 合格 / 0 失敗 / skip 2 / 合計 17685（Lab `p1306` の `start.log`・`run1.trx`）。REQUESTS の open は Calamo・Dettato とも 0。CI は `d236aab43` で success。
@@ -154,18 +167,6 @@ base `1fc8305c7`・開始時 full 17683 合格 / 0 失敗 / skip 2 / 合計 1768
 - ⚠️ 残したまま: `.ly` はこのヘアピンに `\!` を書かない（`LilyPondExporter.EmitDynamic` の注が宣言している方針）＝ページは描き、LilyPond は unterminated と言って描かない。別の声部の*強弱*で終わる形（第1239 の t1）は今までどおりその文字が端。出会う瞬間が装飾音の形は未測定。
 - 終了時 full 17697 合格 / 1 失敗 / skip 2 / 合計 17700（`run3.trx`・+15＝網。1 失敗は §1 の字数の門＝この語りを 170 字超えて書いていた・削って単独で緑）。途中の 1 回（掃きと並走）は `ScoreVideoShapeTests` の 1 本も赤（単独 4 / 4 緑＝不安定な網）。拡張は触っていない。
 - **次**: leftovers の「第1239」の残り（condensedStaff の終わりは「立っている写し」の場所・刻印の網が無い運び手・「item の時刻」の綴り 3 つ・3 声部の強弱の並び）→「第1238」の残り（combinedStaff の印の re-address・drum 譜の落ちた側のヘアピン・段の部屋の予約の網）。その先は review.md の設計が先の 3 つ（`mid-bar-break`・F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。
-
-## 以下は第1305セッションの経緯
-
-### 1.1 第1305セッション（2026-11-18・YT-LAPTOP4・第1304 とは別の会話）
-
-base `a5020e133`（オーナーの pull の後）。**`Session-Check -Start` は回していない**（オーナーの報告から入った便）＝開始時の full は無い・§7 3.5 のアーカイブは終わりに `-Archive 1303` で回した。CI は第1304 の `c49afc9ab` で `failure`（run `44249764964`・この便は読んでいない）。REQUESTS は見ていない。
-- **GPU の無い PC で NEUTRINO が歌えない（オーナーの報告）＝Cantoria の commit「NEUTRINO on a CPU」・Lily# `84ca9a6b6`**: この PC（Intel Iris Xe・NVIDIA なし）では NEUTRINO の `-m` が CPU に落ち、37 s の歌に 5 分 40 秒。原因は 3 つ: ⑴ Lily# は 120 s 固定で声を見捨てた（`PREPARE_TIMEOUT_MS`）・Cantoria も 5 分固定で打ち切った ⑵ cancel は*フレーズの切れ目*でしか効かない（歌いかけのフレーズは必ず歌い終える）＝CPU では数分 ⑶ `cantoria serve` は歌も問い合わせも 1 列＝編集の後の `plan` が歌の後ろで数分待ち、cancel はその後にしか送られない。直し: Cantoria＝手放したフレーズは次の依頼が決める（`LeftPhrase`＝同じフレーズを歌うなら引き取る・歌わないなら止める・どの声部の依頼でも）・打ち切りは歌の長さ × 実測の速さ × 3（`NeutrinoOptions.RenderAllowance`）・止めるときは server 版はサーバーごと止める（client だけ止めると次が `BUSY: inference is running`）・`voices`／`plan`／`parameters` は別の列。Lily#＝`prepareAllowanceMs`（2 分＋残り × 学んだ速さ × 3・測る前は CPU の速さ）を `EngineWatch` が、エンジンから何か聞こえるたびに巻き直す・諦めたら `letGo` で cancel・`learnRenderRate` の上限 3,000 → 30,000 と最初の測定は初期値と混ぜない。実測（exe 版 v3.2.2 と server 版 v3.2.6 の両方）は Lab `p1305/singer-cpu`: `letgo-probe.ps1`（serve を直接）・`outoftime/`（4 s に絞った打ち切り）・`e2e/prep.ps1`（隔離 VS Code に両拡張の新しい版）。数は commit message。
-- **案内ページ＝`eac3efa0e`**: GPU が無いなら同梱版（36 s のパートが同梱版 135 s・通常版 240 s）・`singerPrepare: onPlay` の使い方（開いたときは 1 回歌う＝`voiceTurned`）。
-- 全 full は回していない（VS Code 拡張の 1277 合格 / 0 失敗・Cantoria 249 合格だけ）。Lily# の C# は触っていない。
-- ⚠️ **オーナーの VS Code はまだ古い拡張**（Cantoria 0.4.0・Lily# 0.16.0）＝症状はそのまま。Cantoria `tools\deploy-extension.ps1` と Lily# の VSIX の作り直し・Reload はオーナー。Cantoria は未 push。
-- **残り**: VS Code の中で「歌いかけのフレーズを次の依頼が引き取る」形は見ていない（nocturne の rh は 1 フレーズ＝止める側だけ・引き取る側は serve で確認）。GPU のある機械では測っていない。exe 版と server 版の速さの差（1.8 倍）のうち、モデルの読み込みの分と版（v3.2.2 と v3.2.6）の分は分けていない。
-- **次**: 第1304 の「次」のまま（下）。
 
 ## 2. 開いている作業
 

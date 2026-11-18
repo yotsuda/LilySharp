@@ -599,7 +599,7 @@ internal sealed record ProseBand(
             // position IS the drawn one, in the SVG, the PDF and the PNG alike.
             // LILYSHARP-OWN: the em grid (LilyPond's twin is handed whole strings and sets
             // them by its own face: EmitTextLine joins the pieces again).
-            // ⚠️ NO PIECE WITH WORDS BEGINS WITH A SPACE: the spaces a piece would begin with are a
+            // LILYSHARP-OWN: ⚠️ NO PIECE WITH WORDS BEGINS WITH A SPACE: the spaces a piece would begin with are a
             // piece of their own, which the page does not draw. An SVG <text> loses the white it
             // begins with in a browser (the default white-space handling), so "**words.** It"
             // — the space the first thing of the regular piece — was set "words.It" in the

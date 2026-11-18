@@ -254,7 +254,7 @@ internal sealed record Prose(ImmutableArray<ProseBlock> Blocks, ImmutableArray<P
     /// no space: two characters of a script written without spaces between its words.
     /// </summary>
     /// <remarks>
-    /// ⚠️ NOT HANGUL: Korean is set a square a syllable (<see cref="IsWide"/>) and written WITH
+    /// LILYSHARP-OWN (the join itself is: LilyPond's markup is handed whole lines). ⚠️ NOT HANGUL: Korean is set a square a syllable (<see cref="IsWide"/>) and written WITH
     /// spaces between its words, so a line end beside a Hangul syllable is a space as it is in
     /// English. Until 2026-11-18 it was joined as kana is — "그중⏎가장" printed 그중가장 (seen
     /// on the page of the singing walkthrough's Korean first song, whose note is written a
