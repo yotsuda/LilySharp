@@ -5091,7 +5091,10 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 for (const kind of ['input', 'change']) {
                     m.addEventListener(kind, () => { const r = real(); r.value = m.value; r.dispatchEvent(new Event(kind)); syncMinis(); });
                 }
-                m.addEventListener('dblclick', () => { real().dispatchEvent(new MouseEvent('dblclick')); syncMinis(); });
+                // A double-click puts the real one back, and this one with it (resetOnDoubleClick goes
+                // by the presses, not by dblclick: a dblclick passed on to the real slider did nothing
+                // — owner's report 2026-11-19). (m.value by hand: syncMinis leaves the focused one.)
+                resetOnDoubleClick(m, () => { const r = real(); if (r.__reset) r.__reset(); m.value = r.value; syncMinis(); });
             } else {
                 // (preventDefault: a press in Speed and pitch's line does not open it)
                 m.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); real().click(); syncMinis(); });
@@ -5540,6 +5543,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         function resetOnDoubleClick(slider, reset) {
             let last = -Infinity, lastX = 0;
             const DOUBLE_MS = 500, NEAR_PX = 6;
+            slider.__reset = reset;     // (for the folded head's copy of this slider: syncMinis)
             slider.addEventListener('pointerdown', e => {
                 if (e.button !== 0) return;
                 if (e.timeStamp - last < DOUBLE_MS && Math.abs(e.clientX - lastX) <= NEAR_PX) {

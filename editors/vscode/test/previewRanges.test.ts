@@ -325,6 +325,11 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /<button type="button" id="scoreOnBtn"[^>]*>Play<\/button><button type="button" id="scoreAllBtn"[^>]*>All<\/button><input type="range" id="scoreLevelSlider"/);
         assert.match(html, /function flipRecording\(\) \{\s*(\/\/[^\n]*\s*)*recOn = !recOn;\s*renderRecParts\(\);/);
         assert.match(html, /const on = !recPartsOff\.includes\(name\);/);
+        // The folded Tempo head's slider resets on a double-click as the real one does (owner's report
+        // 2026-11-19: it passed a dblclick on, which resetOnDoubleClick does not go by).
+        assert.match(html, /resetOnDoubleClick\(m, \(\) => \{ const r = real\(\); if \(r\.__reset\) r\.__reset\(\); m\.value = r\.value; syncMinis\(\); \}\);/);
+        assert.match(html, /slider\.__reset = reset;/);
+        assert.doesNotMatch(html, /new MouseEvent\('dblclick'\)/);
         assert.match(html, /function recLevel\(\) \{ return solo\.size > 0 && !recSoloed\(\) \? 0 : levelIn\(recLevels, 'Recording'\); \}/);
         assert.match(html, /delete recLevels\.Recording;/);
         assert.match(html, /if \(origin !== undefined\) end = Math\.max\(end, startRecordingAlong\(t0, offset, origin, !!loopList\)\);/);
