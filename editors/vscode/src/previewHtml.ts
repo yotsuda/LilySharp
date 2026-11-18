@@ -1869,20 +1869,20 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             }
             return box;
         }
-        // The bar playing, as its measure index (the header's "Bar 12 / 118", showBar): litBar while
+        // The bar playing, as its measure index (the header's "Bar 12 / 118", showBarInfo): litBar while
         // a bar is lit, lastLitBar the one lit when the playing stopped (a pause shows it still).
         var litBar = -1, lastLitBar = -1;
         function lightPlayingBar(painted) {
             for (const r of svgContainer.querySelectorAll('rect.bar-staff.playing')) r.classList.remove('playing');
             if (!painted || painted.length === 0) {
-                if (!painted) { if (litBar >= 0) lastLitBar = litBar; litBar = -1; showBar(); }
+                if (!painted) { if (litBar >= 0) lastLitBar = litBar; litBar = -1; showBarInfo(); }
                 return;
             }
             const box = barBoxElOf(painted[0]);
             const column = box ? box.getBoundingClientRect() : null;
             if (!column) return;
             const m = parseInt(box.getAttribute('data-m'), 10);
-            if (Number.isInteger(m) && m !== litBar) { litBar = m; showBar(); }
+            if (Number.isInteger(m) && m !== litBar) { litBar = m; showBarInfo(); }
             for (const r of svgContainer.querySelectorAll('rect.bar-staff:not([data-row])')) {
                 const k = r.getBoundingClientRect();
                 const mx = (k.left + k.right) / 2, my = (k.top + k.bottom) / 2;
@@ -3111,12 +3111,12 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             const s = playingNow() ? playbackScoreSeconds() : paused && typeof paused.seconds === 'number' ? paused.seconds : stoppedSeconds;
             el.hidden = typeof s !== 'number' || !isFinite(s);
             el.textContent = el.hidden ? '' : clockText(s) + ' /';
-            if (!playingNow()) showBar();    // (playing, the lit bar says it: lightPlayingBar)
+            if (!playingNow()) showBarInfo();    // (playing, the lit bar says it: lightPlayingBar)
         }
         /** The bar over the time (owner's request 2026-11-19: it was the practice panel's last line,
          *  "118 bars placed"): the bar playing — paused, the one it stopped in; stopped, the A flag's,
          *  where Play starts — of the bars printed, by the numbers printed. */
-        function showBar() {
+        function showBarInfo() {
             const el = document.getElementById('barInfo');
             let bars;
             try { bars = abBars(); } catch (e) { return; }     // (the page's script is still starting)
@@ -5192,7 +5192,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             document.getElementById('recName').textContent = recording.name;
             document.getElementById('recName').title = recording.name;
             // (said only when something is to be said — owner's request 2026-11-19: "4:15 — 118 bars
-            // placed" took a line of the panel; the bars are in the header, showBar)
+            // placed" took a line of the panel; the bars are in the header, showBarInfo)
             const barsSaid = recording.bars.length > 0 ? '' : 'No bars placed yet: the recording plays alone';
             if (m.error) {
                 recording.ready = false;
@@ -5735,7 +5735,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                         lightCaretBar();
                         lap('bars');
                         drawAbFlags();      // (the A-B flags are the page's: drawn into each new picture)
-                        showBar();          // (and the header's bar: the picture's bars may be others)
+                        showBarInfo();          // (and the header's bar: the picture's bars may be others)
                         refreshRanges();
                         vscode.postMessage({ type: 'requestLength' });
                         lap('A-B');
