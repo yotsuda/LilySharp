@@ -66,7 +66,7 @@ import { registerSinging, deactivateSinging, hearSinger, stepSingerAt, renderer,
 import { useSoundFontLog, rememberSoundFont, wavSoundFont, chooseSoundFont, previewResourceRoots, synthUrls } from './soundFont';
 import { useMidiOutHost, midiOutputSetting, midiOutRequest, reportMidiOutError, chooseMidiOutput } from './midiOut';
 import { useExportHost, openInDefaultApp, exportPreview, practisedJobs, recordingRendered, recordJobs, singJobs, drawFramesFor, videoFfmpeg } from './exportPreview';
-import { aiTransformWholeScore, aiTransformFromScore, askAiInChat, noteSelectionEnd } from './aiEntry';
+import { useAiEntryHost, aiTransformWholeScore, aiTransformFromScore, askAiInChat, noteSelectionEnd } from './aiEntry';
 import { useMusicXmlImportHost, importMusicXml } from './musicXmlImport';
 import { NEW_SCORE_TEMPLATE, newScoreTemplateUri, uriExists, newScoreTemplate, newScoreTitleRange, applyScoreTemplate } from './newScore';
 import { registerEditCommands } from './editCommands';
@@ -514,6 +514,14 @@ export function activate(context: vscode.ExtensionContext) {
     useExportHost({ getClient: () => client, isReady: () => clientReady, outputChannel, previewPanels, practiceFor });
     // The MusicXML and MIDI import (musicXmlImport.ts).
     useMusicXmlImportHost({ getClient: () => client, outputChannel, openPreview });
+    // The ways into the AI from a score (aiEntry.ts): a score with no tab open is opened as a
+    // click on its preview opens it.
+    useAiEntryHost({
+        reopenSource: async uri => {
+            const panel = previewPanels.get(uri);
+            return panel ? openPreviewSource(panel, uri) : undefined;
+        },
+    });
     // The A-B repeat's eight kept ranges, per file (docs/ab-repeat-design.md, step 5).
     abRangesStore = context.workspaceState;
     // Copilot Chat's log, which names the model Copilot's Auto answered with (modelClient).

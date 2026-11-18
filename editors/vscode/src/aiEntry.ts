@@ -17,11 +17,25 @@
 // The ways into the AI from a score: the notes picked on the preview (or the whole score) made
 // the editor's selection and handed to the transform command (aiTransform.ts), and Ask AI in
 // Chat, which puts the place the request is about in the chat's input (chatPointerCore.ts). It
-// stood in extension.ts until session 1298; it reads nothing of the extension's own state.
+// stood in extension.ts until session 1298; the one thing it asks of the extension — a closed
+// score opened again beside its preview — comes through AiEntryDeps.
 
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { chatPointer } from './chatPointerCore';
+
+export interface AiEntryDeps {
+    /** Opens the score a preview shows when no tab of it is open, where a click on that preview
+     *  opens it; undefined when no preview shows `uri` or the score is gone. */
+    reopenSource: (uri: string) => Promise<vscode.TextEditor | undefined>;
+}
+
+let reopenSource: AiEntryDeps['reopenSource'] = () => Promise.resolve(undefined);
+
+/** Called once from activate, before anything here can be asked for. */
+export function useAiEntryHost(deps: AiEntryDeps): void {
+    ({ reopenSource } = deps);
+}
 
 /**
  * Shows `doc` where it already is: in its own editor when that is the active one, else in the
@@ -31,16 +45,24 @@ import { chatPointer } from './chatPointerCore';
  * opens a document when it is given no column — over the preview. The extension then moves that
  * tab back to the scores' group (moveScoreTab), but the selection the caller makes on the editor
  * it was handed is made on the tab that is about to be closed: the editor that stays showed no
- * selection (seen in a real VS Code, session 1298). With no tab of it anywhere the column is
- * left to VS Code, as before.
+ * selection (seen in a real VS Code, session 1298). With no tab of it anywhere — the score
+ * closed, its preview left open — it is opened as a click on that preview opens it (reopenSource:
+ * a group of scores, never the preview's), and only a score with no preview either is left to
+ * VS Code's choice of a column.
  */
-function showSource(doc: vscode.TextDocument, preserveFocus: boolean): Thenable<vscode.TextEditor> {
+async function showSource(doc: vscode.TextDocument, preserveFocus: boolean): Promise<vscode.TextEditor> {
     const key = doc.uri.toString();
     const active = vscode.window.activeTextEditor;
     const viewColumn = active?.document === doc ? active.viewColumn
         : vscode.window.visibleTextEditors.find(e => e.document === doc)?.viewColumn
         ?? vscode.window.tabGroups.all.find(g => g.tabs.some(t =>
             t.input instanceof vscode.TabInputText && t.input.uri.toString() === key))?.viewColumn;
+    if (viewColumn === undefined) {
+        const reopened = await reopenSource(key);
+        if (reopened) {
+            return reopened;
+        }
+    }
     return vscode.window.showTextDocument(doc, { viewColumn, preserveFocus });
 }
 
