@@ -41,7 +41,7 @@ public class ReadmeSampleTests
         string sample = File.ReadAllText(Path.Combine(root, "samples", "harbour-lights.lys"));
 
         var m = Regex.Match(readme,
-            @"<!-- README-SAMPLE:harbour-lights[^>]*-->\r?\n```lilysharp\r?\n(.*?)```", RegexOptions.Singleline);
+            @"<!-- README-SAMPLE:harbour-lights[^>]*-->\r?\n```lily#\r?\n(.*?)```", RegexOptions.Singleline);
         Assert.True(m.Success, "README.md lost its README-SAMPLE:harbour-lights block");
         Assert.Equal(Normalize(sample), Normalize(m.Groups[1].Value));
 

@@ -452,6 +452,7 @@ SingerGender   = 'male' | 'female' ;
                     several lines with the same words on one part sing it together.
                     A gender before a name narrows what the editor offers; with no name (or an
                     empty one, LYS4039 otherwise) that gender's default voice sings. A name is
+                    one voice's: a '+' in it is LYS4039 too (two voices are two lines). It is
                     never checked against a machine: a voice that is not there sings as the
                     default voice of the part's gender, said once. A default voice's gender is
                     the line's word, else the instrument's, else the clef's: bass, baritone,

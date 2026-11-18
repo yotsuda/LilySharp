@@ -421,8 +421,7 @@ async function singVoiceSample(key: string): Promise<void> {
     const backend = engine?.backend instanceof CantoriaExtensionBackend ? engine.backend : undefined;
     if (!backend?.api.voices) { throw new Error('no engine that lists its voices'); }
     const { id, language: asked, octave, sing } = parseVoiceSampleKey(key);
-    const first = id.split('+')[0].trim();      // voices singing together: the first says the language
-    const voice = (await backend.api.voices()).find(v => v.id === first);
+    const voice = (await backend.api.voices()).find(v => v.id === id);
     const language = asked ?? voice?.language;
     const score = language ? voiceSampleScore(language, octave) : undefined;
     if (!score) { throw new Error(`no sample phrase for the language ${language ?? 'it does not name'}`); }
@@ -438,10 +437,8 @@ async function singVoiceSample(key: string): Promise<void> {
 /** Lets the document's preview say a short phrase in `id` (with no preview open it is silent, as every audition is). */
 async function auditionVoice(uri: string, id: string, clock: StageClock, language?: string, lineGender?: string | null,
     sing?: Record<string, number | string>): Promise<void> {
-    // Voices singing together: the first says the octave, as it says the language.
-    const first = id.split('+')[0].trim();
     const engine = await renderer();
-    const voice = engine?.backend instanceof CantoriaExtensionBackend ? (await engine.backend.api.voices?.())?.find(v => v.id === first) : undefined;
+    const voice = engine?.backend instanceof CantoriaExtensionBackend ? (await engine.backend.api.voices?.())?.find(v => v.id === id) : undefined;
     const key = voiceSampleKey(id, sampleOctave(voice?.gender, lineGender), language, sing);
     voiceSampleWanted = key;
     const songAtStart = voiceRenderer?.singing ? 'being sung' : 'not being sung';

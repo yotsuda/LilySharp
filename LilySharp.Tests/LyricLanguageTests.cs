@@ -401,6 +401,9 @@ public class LyricLanguageTests
     [InlineData("singer carol man \"x\" sings w", DiagnosticCodes.SingerGenderUnknown)]
     [InlineData("singer Male \"x\" sings w", DiagnosticCodes.SingerGenderUnknown)]
     [InlineData("singer \"\" sings w", DiagnosticCodes.SingerEmpty)]
+    // One voice a line (owner's decision 2026-11-18): two voices are two lines.
+    [InlineData("singer \"neutrino/MERROW+diffsinger/TIGER\" sings w", DiagnosticCodes.SingerEmpty)]
+    [InlineData("singer female \"a/b + c/d\" sings w", DiagnosticCodes.SingerEmpty)]
     public void ABadGenderOrAnEmptyName_IsAnError(string singer, string code)
     {
         var error = Assert.Single(SyntaxTree.Parse(Book("", Words, singer)).Diagnostics, d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error);

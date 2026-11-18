@@ -216,14 +216,24 @@ internal sealed partial class Parser
                 $"'{gender.Text}' is no gender of a singer, and no language: write male or female, and a language ({string.Join(", ", Music.LyricLanguage.Names)}), before the voice — singer male \"neutrino/SOMA\", singer alice female japanese.");
     }
 
-    /// <summary>The singer's string; an empty one is refused (LYS4039), a name is the engine's to resolve.</summary>
+    /// <summary>The singer's string; an empty one is refused (LYS4039), a name is the engine's to resolve.
+    /// One voice a line: a <c>+</c> in it is refused too (owner's decision 2026-11-18). Cantoria took
+    /// voices joined by one until then, and such a string reached it unread; the part's lyric event
+    /// joins its lines' voices by that sign (<see cref="Music.LyricSinger.Joiner"/>), so a name
+    /// cannot hold one.</summary>
     private SyntaxToken ParseSingerName(bool allowEmpty)
     {
         var value = Advance();
-        if (!allowEmpty && Music.LyricSinger.ValueOf(value.Text).Length == 0)
+        string name = Music.LyricSinger.ValueOf(value.Text);
+        if (!allowEmpty && name.Length == 0)
             _diagnostics.Error(new TextSpan(_textPosition - value.FullWidth + value.LeadingTriviaWidth, Math.Max(1, value.Width)),
                 DiagnosticCodes.SingerEmpty,
                 "'singer' names a voice as engine/name, singer \"neutrino/MERROW\" sings WORDS.");
+        else if (name.Contains(Music.LyricSinger.Joiner))
+            _diagnostics.Error(new TextSpan(_textPosition - value.FullWidth + value.LeadingTriviaWidth, Math.Max(1, value.Width)),
+                DiagnosticCodes.SingerEmpty,
+                "A singer line names one voice. To have two voices sing a part together, write a line for each: "
+                + "singer \"neutrino/MERROW\" on PART, and under it singer \"diffsinger/TIGER\" on PART.");
         return value;
     }
 
