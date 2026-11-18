@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Fixed: Change with AI and Ask AI in Chat, from the preview, lost the selection in the editor** (`[editor]`). Right-click a note, a bar or a selection on the score and pick Change … with AI or Ask AI in Chat: the notes are selected in the editor first. The score's text was opened for that in the preview's own group — a tab over the preview, moved back to the editors a moment later — and the selection was made on the tab that was about to close, so the editor that stayed showed none. The text is now shown where it already is.
+
 - **Fixed: the status bar named the wrong bar for a note in a file with `using`** (`[editor]`). With the caret on a note the status bar says where it stands — `m · bar 3 · beat 2 · F4`. In a file that includes another, the bar was counted in the file's own text alone: a note after a section the included file writes was said to be in bar 1. It is now counted in the piece the preview draws — and so are the bar a `@todo` is listed under and the bars Ask AI in Chat names, which were wrong the same way.
 
 - **Fixed: Ask AI in Chat named the wrong part after a section's setting** (`[editor]`). With bars picked, the chat's input names where they stand — `(section A, part vn1, bars 3–4)`. A cell written after a section's `key`, `time`, `tempo` or `partial` (`section A { key d major  vn1 { … } }`) was named by the setting's word (`part key`), and a `strokes` block counted as a part. The cell is now named by the word before its brace, and what cannot be a part is the language's own list. Smart typing also no longer goes quiet inside a part named `header`, `midi` or `markup` — LilyPond's block words, which Lily# does not have.

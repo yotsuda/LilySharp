@@ -23,13 +23,34 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { chatPointer } from './chatPointerCore';
 
+/**
+ * Shows `doc` where it already is: in its own editor when that is the active one, else in the
+ * editor that shows it, else in the group that holds a tab of it.
+ *
+ * Asked from a preview, the active group is the PREVIEW's, and that is where showTextDocument
+ * opens a document when it is given no column — over the preview. The extension then moves that
+ * tab back to the scores' group (moveScoreTab), but the selection the caller makes on the editor
+ * it was handed is made on the tab that is about to be closed: the editor that stays showed no
+ * selection (seen in a real VS Code, session 1298). With no tab of it anywhere the column is
+ * left to VS Code, as before.
+ */
+function showSource(doc: vscode.TextDocument, preserveFocus: boolean): Thenable<vscode.TextEditor> {
+    const key = doc.uri.toString();
+    const active = vscode.window.activeTextEditor;
+    const viewColumn = active?.document === doc ? active.viewColumn
+        : vscode.window.visibleTextEditors.find(e => e.document === doc)?.viewColumn
+        ?? vscode.window.tabGroups.all.find(g => g.tabs.some(t =>
+            t.input instanceof vscode.TabInputText && t.input.uri.toString() === key))?.viewColumn;
+    return vscode.window.showTextDocument(doc, { viewColumn, preserveFocus });
+}
+
 export async function aiTransformWholeScore(uri: string): Promise<void> {
     const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri);
     if (!doc) {
         vscode.window.showErrorMessage('Lily#: open the .lys file to change it with AI.');
         return;
     }
-    await vscode.window.showTextDocument(doc, { preserveFocus: false });
+    await showSource(doc, false);
     await vscode.commands.executeCommand('lilysharp.aiTransform', { whole: true });
 }
 
@@ -65,7 +86,7 @@ export async function aiTransformFromScore(uri: string, startPos: number, endPos
     }
 
     const range = new vscode.Range(doc.positionAt(start), doc.positionAt(end));
-    const editor = await vscode.window.showTextDocument(doc, { preserveFocus: false });
+    const editor = await showSource(doc, false);
     editor.selection = new vscode.Selection(range.start, range.end);
     editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
     await vscode.commands.executeCommand('lilysharp.aiTransform', { selected });
@@ -89,7 +110,7 @@ export async function askAiInChat(doc: vscode.TextDocument, from?: number, to?: 
         const end = Math.max(start, Math.min(to, text.length));
         if (end > start) {
             range = { from: start, to: end };
-            const editor = await vscode.window.showTextDocument(doc, { preserveFocus: true });
+            const editor = await showSource(doc, true);
             const r = new vscode.Range(doc.positionAt(start), doc.positionAt(end));
             editor.selection = new vscode.Selection(r.start, r.end);
             editor.revealRange(r, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
