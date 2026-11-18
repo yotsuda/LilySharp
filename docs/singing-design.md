@@ -464,7 +464,7 @@ The score spellings here (`lyrics NAME sings PART`) were replaced on 2026-11-10:
    sung anew played by its instrument until its voice lands — then cut in at the next note it
    sings, no rest waited for (owner's report on the first build, which did: `voiceEntries`,
    `nextVoiceEntry`, `voiceEntryEarly`; faded in over 30 ms), the instrument's later strikes left out
-   (`Player.silence`); `extension.ts candidateVoices` and the panel page's `startVoices` /
+   (`Player.silence`); `singing.ts candidateVoices` and the panel page's `startVoices` /
    `joinVoice`. The preview does the same since the same day (its own `joinVoice`, asked when a
    `voice` is decoded: a whole-piece Play on the synth only — not a stretch, a loop, the MIDI
    output or the plain tones. A score edited under the Play (`playEdited`) is the usual case of a voice landing mid-Play — the singer or a word changed — and its voice is cut in where it still fits: every note it sings begins with a note of its part in the list played (`voiceFitsPlay`); the voice that was singing stops there (`voiceKey` on its sources)) and after a

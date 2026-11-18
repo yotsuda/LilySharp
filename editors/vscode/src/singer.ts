@@ -19,7 +19,7 @@
 // NEUTRINO's folder), or a `cantoria` program named in lilysharp.playback.singer, run here as
 // one resident `cantoria serve` spoken to in JSON lines (a developer's build). Both give a WAV
 // per voice, kept by the key of its score so a phrase is sung once. No vscode here: the
-// settings, the extension lookup, the status bar and the previews are extension.ts's.
+// settings, the extension lookup, the status bar and the previews are singing.ts's.
 
 import * as cp from 'child_process';
 import * as fs from 'fs';
