@@ -89,7 +89,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
 - **★★★ オーナー決定 2026-11-15（第1264・6 件）**: ①〜④ と、⑥ 評価 4 の案（Lab `p1227/proposals-eval4.md`）の「作る」5 件＝6・7・8-1・2・4 は済み（第1264〜第1272・設計と実際の形は `docs/eval4-features-design.md`。6 の「歌い手が × の音を歌わない」だけ未＝同 §6 の末尾）／⑤ Dettato: 依頼 1＝作る（D3 で形が固まってから・名前「Convert Recording to Lily# (.lys)…」・Windows 以外はメニューを出さない）・依頼 2＝今は作らない（REQUESTS の行に書いた＝Dettato の repo では未 commit）／⑥ の**後で**＝3（`pass 2 { }`・文字は英語固定）・1（持ち替え・「to X」は自動で刷らない）・10（まず診断だけ）＝作る前に設計メモ・**着手してよい**（オーナー 2026-11-15 第1278「ほかに着手すべき候補がなければすぐ着手して良い」。10 の診断は LYS0046 で済み＝残りは 3 → 1）／**見送り**＝5・8-2〜4・9。**次の一手**: 下の行の Lab `sessions/p1242/leftovers.md` の欠陥から（第1272 が見つけた 2 件＝`lysc xml` の part header の `key` と、MusicXML の読み込みの `<transpose>` は第1273・第1275 で閉じた。一覧の先頭から順に）。
-- **★ 包括レビュー（オーナーの指示 2026-11-18・第1291）＝Lab `sessions/p1291/review.md`**: プレビュー更新の性能 P1〜P10 とリファクタ F1〜F7。P1〜P5・P7（一部）・P8・F1・F2・F3 段 1・F4 の歌・編集コマンド・音源・MIDI 出力・Export・New Score・MusicXML の取り込み・AI の入口・サーバの起動・メニューの context・F5・F7・semantic tokens の割当・include の読み直しは済み。残りは訊かずに着手してよい（オーナー 2026-11-18・次の順は §1.1 第1299 の末尾。P9 と F3 段 2 はオーナー判断・P10 は静かな窓）。
+- **★ 包括レビュー（オーナーの指示 2026-11-18・第1291）＝Lab `sessions/p1291/review.md`**: プレビュー更新の性能 P1〜P10 とリファクタ F1〜F7。P1〜P5・P7（一部）・P8・F1・F2・F3 段 1・F4 の歌・編集コマンド・音源・MIDI 出力・Export・New Score・MusicXML の取り込み・AI の入口・サーバの起動・メニューの context・F5・F7・semantic tokens の割当・include の読み直し・§4.2 のフル collect（警告の件数の abort）は済み。残りは訊かずに着手してよい（オーナー 2026-11-18・次の順は §1.1 第1300 の末尾。P9 と F3 段 2 はオーナー判断・P10 は静かな窓）。
 - **★ A-B リピート（オーナー決定 2026-11-17・第1286）＝`docs/ab-repeat-design.md`**: §3 の 1〜5 は全部済み（1〜4 は第1286・5 の帯は第1287＝形は同 §3 の末尾）。残りは実機の確認（`MANUAL-CHECKS` の A-B その 1・その 2＝オーナー）と、帯をファイルの名前の変更・コピーに付いて行かせるか（未決・要望が出たら）。
 - **★ コード行の中に書けるもの（オーナー決定 2026-11-16・第1285）**: `time`・`tempo`・`%`・`key` は済み（§1.1）。**残り＝コードに付ける印 `@rit`／`@accel`／`@rall`（`…@!rit`）・`@fermata`・`@text("…")`**（今は `@todo` だけ）。強弱は見送り。
 - **★ 録音を聴きながら直す（Dettato #4・オーナーの希望 2026-11-15）＝`docs/recording-design.md`**: S1〜S4 と §1 7（楽譜と録音を同時に）・§7（書き出しに録音・第1286）は済み（§1.1 第1284〜第1286）。**次は S5**（帯・`Mark Bar Line Here`・ドラッグ・`byHand`）→ S6（CHANGELOG・Dettato への返事）。§8 の録音のパート（Dettato #16）は第1288 で実装・実測済み・使っている間のメモリは今のまま（オーナー決定 2026-11-17）＝残りは耳の確認（`MANUAL-CHECKS`「録音のパート」）。耳の確認は `MANUAL-CHECKS` §3.9（オーナー）。
@@ -128,7 +128,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 **⒝ 土台の変更・要設計（1 便では閉じない）**
 
-- ★ **⒵ perf は第615 で区切り（ユーザー判断）**: render −24%・割当 −31%（第598〜第615＝ARCHIVE）。照合の基準は `SvgGenerator.Generate`（Lab `sessions/p611/verify-all.ps1`）・打鍵ごとの計器は Lab `sessions/p613/lathost`。残る大物は設計級＝長い score の段ごと引き継ぎと collect の尾の `_tieTargetWarnings` abort（第613 ⒝）。⚠️ 弱参照の表で全 item を memo する形は GC で負ける（第602）
+- ★ **⒵ perf は第615 で区切り（ユーザー判断）**: render −24%・割当 −31%（第598〜第615＝ARCHIVE）。照合の基準は `SvgGenerator.Generate`（Lab `sessions/p611/verify-all.ps1`）・打鍵ごとの計器は Lab `sessions/p613/lathost`。残る大物は設計級＝長い score の段ごと引き継ぎ（collect の尾の `_tieTargetWarnings` abort＝第613 ⒝ は第1300 `bb8df3343` で閉じた）。⚠️ 弱参照の表で全 item を memo する形は GC で負ける（第602）
 
 - ⚠️ **段を束ねた小節線（PianoStaff 等）は未移植・値付け済み＝提案しない**（第739）: LP は span bar でつながる側だけ小節線を 0.05 長くし（scm/bar-line.scm:693-714 `bar-line::widen-bar-extent-on-span`）、箱の伸びの 1.01 の上限も外す（scm/output-lib.scm:965-974 `account-for-span-bar`）。PianoStaff と 2 段の同じ音楽を LP で比べた差は**最大 0.0011（普通の形）・0.0029（加線の音を小節線に接して並べた極端な形）**（Lab `sessions/p739/span`）＝間隔の全経路と cache の鍵へ段のつながりを通す配管に見合わない（`ColumnOpticalCorrectionTests` の 0.0014 も同じ族）。／小節線をまたぐ梁は小節ごとに半分で読む
 - ⚠️ **tab のタイの行き先の数字は*描かない*＝意図した LP からの逸脱（ユーザー決定・§2 T の冒頭にも在る・第636 で再確認）**。LP の `\tabFullNotation` は描く（scheme-engravers.scm:2196-2200）が、**Lily# は tab の種類を問わず消す＝欠陥として起票しない・提案しない**（`SharedRenderer.Tab.cs` の該当行に LILYSHARP-OWN の註を置いた）
@@ -145,6 +145,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1300セッション（2026-11-18・YT-DELL2）
+
+base `9f198417f`・開始時 full 17608 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17611（Lab `p1300` の `run1.trx`）。REQUESTS の open は Calamo・Dettato とも 0。
+- **review.md §4.2 の「8 打鍵のうち 4 打鍵がフル collect」＝`bb8df3343`**: 実コーパス 235 冊 × 8 打鍵＝1,880 打鍵のうちフル collect は 114 回で、63 回が同じ 1 つの abort だった（残りは予定された re-record 42・plan なし 9）。タイ・スラー・連桁・cue の境の警告は walk の後の scanner（`ScanVoiceSanity`）が collector 全体の 4 表に足す＝前のパートで 1 件増減すると、後ろのパートの walk は入口の件数が録った時と違い、本を全部 collect し直していた（タイの 2 音を 1 音ずつ打ち直すと 2 回）。その 4 表だけは入口の件数が違ってよく、walk は自分の watermark をその分ずらして読む（`IsVoiceSanitySink`・`_walkTableDrift`・`LiveWatermark`）。後: フル 52 回・abort 0。網 5 例（`ALaterPartResumes_WhenAnEarlierPartsComplaintComesOrGoes`）・毒 5 / 6（6 本目＝ずれた watermark の下へ写す添字は観測者なし＝4 表は walk の途中で増えない。註と `APPROXIMATIONS` に UNWATCHED 1 件）。計器は Lab `p1300/lat`（p613 の lathost に、打鍵の前の plan・re-record と abort の数え）・所見は Lab `p1300/notes.md`。
+- ⚠️ 残り（同 notes §2）: ほかの表（強弱・奏法など）の件数が前のパートで変わる打鍵は今も入口で abort＝フル 1 回（録り直すので続かない・計器の編集は音名だけなので数に出ない。section の強弱と印は添字の範囲で持たれている＝表ごとに読み手を確かめれば同じ形で通せる）。小節の途中に break のある本は録らない＝どの打鍵もフル（235 冊中 1 冊）。
+- **小節の箱（review P7 の残り）の値段を数えた**: プレビューの options で、ページの文字の 9.2% が `bar-box`／`bar-staff` の rect（1 冊 235 個・1 個 144 字・double 4 つ）で、capture の外なので replay した段のぶんも毎打鍵書く。時間は未測定（静かな窓）。capture に入れられない理由は小節番号と `data-start`／`data-span`（文字を足す打鍵で後ろの全小節がずれる）。
+- 終了時 full 17613 合格 / 1 失敗（同じ）/ skip 2 / 合計 17616（`run2.trx`・+5＝網）。拡張は触っていない。
+- **次（review.md の残り・訊かずに着手してよい）**: 上の ⚠️ の 1 つ目（ほかの表のずれ）。P8 の残り（`using` の本は毎打鍵、結合した文字列と `RecentTrees` の `headFirst` で本＋include の長さの文字列を 2 本作る＝値段は未測定・include が変わっていなければ `headFirst` は要らない）。F4 の残りは状態ごと移す設計が先（第1299 の末尾）。P6・P7 の箱・P10 は静かな窓で。F3 段 2 と P9 はオーナー判断。
+
+## 以下は第1299セッションの経緯
+
 ### 1.1 第1299セッション（2026-11-18・YT-DELL2）
 
 base `3740a23e6`・開始時 full 17598 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17601（Lab `p1299` の `run1.trx`）。REQUESTS の open は Calamo・Dettato とも 0。
@@ -156,22 +167,6 @@ base `3740a23e6`・開始時 full 17598 合格 / 1 失敗（`ReadmeSampleTests`�
 - ⚠️ 実機で見ていない: apphost と PATH の道・`hasOrMarks`／`hasStringNumbers`・実物の `.omr.json`・include がプレビューの絵に出ること（診断で見た）。⚠️ **オーナーの VS Code に入っているサーバは古いまま＝`using` が読めるのは `tools\Deploy-Lsp.ps1`（オーナー）の後。**
 - 終了時 full 17608 合格 / 1 失敗（同じ）/ skip 2 / 合計 17611（`run5.trx`・+10＝網 1＋6＋3）・npm 1261 合格 / skip 1（+1）。
 - **次（review.md の残り・訊かずに着手してよい）**: F4 はプレビューの状態を読まない塊を出し切った＝残り（`activate` 831 行・`openPreview` 553 行・`updatePreviewContent` 約 315 行）はプレビューの host で、分けるなら状態ごと移す設計が先（急がない）。P6・P7 の残り・P10 は静かな窓で。F3 段 2 と P9 はオーナー判断。小さいものの残りは review.md §1 の末尾。
-
-## 以下は第1298セッションの経緯
-
-### 1.1 第1298セッション（2026-11-18・YT-DELL2）
-
-base `87a0e0676`・開始時 full 17598 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17601（Lab `p1298` の `run1.trx`）。REQUESTS の open は Calamo・Dettato とも 0。
-- **F4 の続き＝`7b7418592`・`3a6e3aa83`・`d4d3db3dd`**: `extension.ts` 2,964 → 2,584 行（そのあと `useAiEntryHost` の呼び出しで 2,592）。3 つとも移動（違う行は計器が数える・commit の本文に全部）。計器は Lab `p1298/split.ps1 -Which newscore`／`musicxml`／`ai`（この順）。
-  - `newScore.ts`: New Score のテンプレートと `applyScoreTemplate` ほか 4 関数。deps なし。C# の網 `NewScoreTemplateTests` はテンプレートをここから読む（`newScoreTitleRange(doc)` の呼び出しは `extension.ts`）。
-  - `musicXmlImport.ts`: `importMusicXml`。client（up かを見ない＝元のまま）・出力チャネル・`openPreview` は `useMusicXmlImportHost`。
-  - `aiEntry.ts`: `aiTransformWholeScore`・`aiTransformFromScore`・`askAiInChat`・`noteSelectionEnd`。
-  - host の文を読む試験は 3 ファイルも読む（`test/extensionSource.ts`）。
-- **実機で見つけた不具合＝`caf258185`・`76931bac4`**: プレビューから Change … with AI／Ask AI in Chat を選ぶと、ソースを列の指定なしで開いていた＝プレビューの列に開き、タブの番（`moveScoreTab`）が戻す。選択は閉じられる側のタブに付き、残るエディタには無かった（移動前の `87a0e0676` でも同じ）。→ `showSource`（`aiEntry.ts`）＝既に在る場所に開く。タブがどこにも無ければ `openPreviewSource`（`AiEntryDeps.reopenSource`）。CHANGELOG 2 つ（`[editor]`）。
-- **実機＝隔離した VS Code（Lab `p1298/vscode-e2e`・26 / 26）**: New Score（組み込み・自分のテンプレート・Edit／Reset）・テンプレートの適用・Explorer からの MusicXML の取り込み・Ask AI in Chat（エディタ・スコア）・Change with AI（音・全体・ソースを閉じた形）。モーダルの問いと `executeCommand` は試験が答える（Lab `notes/CLAUDE-OPERATIONS.md` §3）。
-- ⚠️ 実機で見ていない: パレットからの取り込み（ファイルの dialog）・MIDI の取り込み・Show Details・`lilysharp.aiTransform` の本体と Copilot のチャット（試験が受け止めた）・プレビューの ✨ と Ctrl+I（webview の message）・プレビューの列しか無い形でソースを開き直す道。
-- 終了時 full 17598 合格 / 1 失敗（同じ）/ skip 2 / 合計 17601（`run3.trx`・増減 0＝C# は註と網の読み先だけ）・npm 1260 合格 / skip 1（増減 0）。
-- **次（review.md の残り・訊かずに着手してよい）**: F4 の残り＝`extension.ts` 2,592 行のうち `activate` 約 990 行・`openPreview` 553 行・`updatePreviewContent` 314 行で 72%。名前の付いた塊はもう無い＝残りは `activate` の中の登録を機能ごとに出す仕事（プレビューの状態を読む物が多い）。P8 の残り＝結合した文字列を毎打鍵作る。P6（ページの索引・強制レイアウト）・P7 の残り・P10 は静かな窓で。小さいもの: semantic tokens の割当。F3 段 2 と P9 はオーナー判断。
 
 ## 2. 開いている作業
 

@@ -277,6 +277,22 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1298セッションの経緯
+
+### 1.1 第1298セッション（2026-11-18・YT-DELL2）
+
+base `87a0e0676`・開始時 full 17598 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17601（Lab `p1298` の `run1.trx`）。REQUESTS の open は Calamo・Dettato とも 0。
+- **F4 の続き＝`7b7418592`・`3a6e3aa83`・`d4d3db3dd`**: `extension.ts` 2,964 → 2,584 行（そのあと `useAiEntryHost` の呼び出しで 2,592）。3 つとも移動（違う行は計器が数える・commit の本文に全部）。計器は Lab `p1298/split.ps1 -Which newscore`／`musicxml`／`ai`（この順）。
+  - `newScore.ts`: New Score のテンプレートと `applyScoreTemplate` ほか 4 関数。deps なし。C# の網 `NewScoreTemplateTests` はテンプレートをここから読む（`newScoreTitleRange(doc)` の呼び出しは `extension.ts`）。
+  - `musicXmlImport.ts`: `importMusicXml`。client（up かを見ない＝元のまま）・出力チャネル・`openPreview` は `useMusicXmlImportHost`。
+  - `aiEntry.ts`: `aiTransformWholeScore`・`aiTransformFromScore`・`askAiInChat`・`noteSelectionEnd`。
+  - host の文を読む試験は 3 ファイルも読む（`test/extensionSource.ts`）。
+- **実機で見つけた不具合＝`caf258185`・`76931bac4`**: プレビューから Change … with AI／Ask AI in Chat を選ぶと、ソースを列の指定なしで開いていた＝プレビューの列に開き、タブの番（`moveScoreTab`）が戻す。選択は閉じられる側のタブに付き、残るエディタには無かった（移動前の `87a0e0676` でも同じ）。→ `showSource`（`aiEntry.ts`）＝既に在る場所に開く。タブがどこにも無ければ `openPreviewSource`（`AiEntryDeps.reopenSource`）。CHANGELOG 2 つ（`[editor]`）。
+- **実機＝隔離した VS Code（Lab `p1298/vscode-e2e`・26 / 26）**: New Score（組み込み・自分のテンプレート・Edit／Reset）・テンプレートの適用・Explorer からの MusicXML の取り込み・Ask AI in Chat（エディタ・スコア）・Change with AI（音・全体・ソースを閉じた形）。モーダルの問いと `executeCommand` は試験が答える（Lab `notes/CLAUDE-OPERATIONS.md` §3）。
+- ⚠️ 実機で見ていない: パレットからの取り込み（ファイルの dialog）・MIDI の取り込み・Show Details・`lilysharp.aiTransform` の本体と Copilot のチャット（試験が受け止めた）・プレビューの ✨ と Ctrl+I（webview の message）・プレビューの列しか無い形でソースを開き直す道。
+- 終了時 full 17598 合格 / 1 失敗（同じ）/ skip 2 / 合計 17601（`run3.trx`・増減 0＝C# は註と網の読み先だけ）・npm 1260 合格 / skip 1（増減 0）。
+- **次（review.md の残り・訊かずに着手してよい）**: F4 の残り＝`extension.ts` 2,592 行のうち `activate` 約 990 行・`openPreview` 553 行・`updatePreviewContent` 314 行で 72%。名前の付いた塊はもう無い＝残りは `activate` の中の登録を機能ごとに出す仕事（プレビューの状態を読む物が多い）。P8 の残り＝結合した文字列を毎打鍵作る。P6（ページの索引・強制レイアウト）・P7 の残り・P10 は静かな窓で。小さいもの: semantic tokens の割当。F3 段 2 と P9 はオーナー判断。
+
 ## 以下は第1297セッションの経緯
 
 ### 1.1 第1297セッション（2026-11-18・YT-DELL2）
