@@ -650,6 +650,9 @@ internal static class ArticulationEngraver
         // Built on the first write, which only a mover-carrying page makes (session 534: 1.88
         // a keystroke, 99.5% empty at drain, 152 B each keystroke).
         Dictionary<(int, int, int, bool), (double? InitialOsp, double? CurrentOsp)>? lastOnKey = null;
+        // How many scripts each note carries: built on the first ask, which only a staccato
+        // on its stem's side makes (IsTheOnlyScriptOfItsNote).
+        Dictionary<(int, int, int, int), int>? scriptsOfNotes = null;
         // The bump can only ever fire when SOME script declares a priority (a mover is
         // what converts its followers), so a mover-less page — the common one — skips
         // the last-script bookkeeping entirely: one flag test per script instead of
@@ -1529,6 +1532,29 @@ internal static class ArticulationEngraver
                 seedBBox = ThumbInkBox(scriptStep);
             // A chord diagram is a TextScript markup, not a centred script: its grid centre
             // stands where LilyPond's fret-diagram alignment puts it off the column's origin.
+            // A staccato or staccatissimo on its STEM's side stands on the stem, not on the
+            // head — unless another script shares its note, which keeps it on the head.
+            // LILYPOND-REF: scm/output-lib.scm:1883-1927 script-interface::calc-x-offset —
+            //   head + shift × (stem − head) when the script's direction is the stem's; the
+            //   shift is toward-stem-shift, or toward-stem-shift-in-column when the note's
+            //   ScriptColumn holds another script (on either side)
+            // LILYPOND-REF: scm/script.scm:386-408 staccatissimo, staccato — toward-stem-shift
+            //   1.0, toward-stem-shift-in-column 0.0 (no other script declares either)
+            // A whole note's invisible stem stands at its head's centre (InvisibleStemX's
+            // citation), so there the shift moves nothing.
+            // MEASURED (2.26.0, Lab sessions/p1303/st k1-k8): the lower voice's `c''2-.` has
+            // its dot at 21.261..21.661 about the stem's 21.396..21.526; with a tenuto, an
+            // accent or a fermata on the note it stays about the head's centre. Until session
+            // 1303 Lily# centred every one on the head (22.08).
+            if (effArt.Type is ArticulationType.Staccato or ArticulationType.Staccatissimo
+                && effArt.IsAbove == stemUp
+                && NoteColumnLayout.Of(item, stemUp) is { HasStem: true } stemColumn
+                && IsTheOnlyScriptOfItsNote(articulations, articulation, ref scriptsOfNotes))
+            {
+                x += LayoutUtilities.StemAttachX(stemUp, stemColumn.NoteValue, stemColumn.Notehead,
+                        item.GraceTime ? GrobFontSize.FontOf(item, SizedGrob.NoteHead) : null)
+                    - NoteheadHalfWidth(item);
+            }
             if (effArt.Type == ArticulationType.FretFrame)
                 x += FretFrameGeometry.GridCentreFromColumnOrigin(seedBBox) - NoteheadHalfWidth(item);
             else if (!effArt.IsEditorialAccidental)
@@ -2353,6 +2379,45 @@ internal static class ArticulationEngraver
         type is not (ArticulationType.Fall or ArticulationType.Doit
             or ArticulationType.Bend or ArticulationType.Scoop or ArticulationType.Plop
             or ArticulationType.Breath or ArticulationType.Caesura);
+
+    /// <summary>
+    /// True when <paramref name="script"/> is the only Script grob of its note — LilyPond's
+    /// "no ScriptColumn, or one that holds no other script": the column is one per voice and
+    /// moment (Script_column_engraver lives in the Voice) and holds both sides' scripts.
+    /// </summary>
+    /// <remarks>
+    /// What counts is a grob with the script-interface: every mark <see cref="SlurAvoidanceOf"/>
+    /// knows as a Script, less the thumb (a Fingering) and an editorial accidental (an
+    /// AccidentalSuggestion, which the callback names and skips). A digit, a text, a chord
+    /// diagram are in the column and are not scripts.
+    /// LILYPOND-REF: scm/output-lib.scm:1893-1904 script-interface::calc-x-offset — any other
+    ///   member of the script-column's scripts that has the script-interface and not the
+    ///   accidental-suggestion-interface
+    /// LILYPOND-REF: lily/script-column-engraver.cc:68-83 acknowledge_side_position,
+    ///   process_acknowledged — a ScriptColumn is made of two side-positioned items or more
+    /// </remarks>
+    private static bool IsTheOnlyScriptOfItsNote(
+        ImmutableArray<ArticulationItem> all, ArticulationItem script,
+        ref Dictionary<(int, int, int, int), int>? scriptsOfNotes)
+    {
+        if (scriptsOfNotes is null)
+        {
+            scriptsOfNotes = new Dictionary<(int, int, int, int), int>();
+            foreach (var a in all)
+            {
+                if (!IsScriptGrob(a))
+                    continue;
+                var key = (a.StaffIndex, a.VoiceIndex, a.MeasureIndex, a.ItemIndex);
+                scriptsOfNotes[key] = scriptsOfNotes.GetValueOrDefault(key) + 1;
+            }
+        }
+        return scriptsOfNotes.GetValueOrDefault(
+            (script.StaffIndex, script.VoiceIndex, script.MeasureIndex, script.ItemIndex)) <= 1;
+    }
+
+    private static bool IsScriptGrob(ArticulationItem a) =>
+        a.Type != ArticulationType.Thumb && !a.IsEditorialAccidental
+        && SlurAvoidanceOf(a.Type) != SlurAvoid.Ignore;
 
     // LilyPond script-priority: lower = closer to the note. Only some scripts set
     // it explicitly; the rest use the Script grob default (0). These five arms are
