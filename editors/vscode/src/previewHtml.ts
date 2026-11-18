@@ -731,7 +731,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             </div>
         </div>
         <div class="mgroup" data-fold="score">
-            <div class="mhead"><button type="button" class="mfold mtitle" aria-expanded="true">Score</button><button type="button" id="scoreOnBtn" class="toggle" aria-pressed="true" title="The score sounds: the parts turned on below — press to silence it, each part's own on or off kept">On</button><button type="button" id="scoreAllBtn" class="toggle mall" aria-pressed="true" title="Every part of the score on, as the score has them — or every one off">All</button><input type="range" id="scoreLevelSlider" class="fader" min="0" max="200" step="1" value="100" aria-label="Score volume"><span id="scoreLevelValue" class="flevel"></span></div>
+            <div class="mhead"><button type="button" class="mfold mtitle" aria-expanded="true">Score</button><button type="button" id="scoreOnBtn" class="toggle" aria-pressed="true" title="The score sounds: the parts turned on below — press to silence it, each part's own on or off kept">Play</button><button type="button" id="scoreAllBtn" class="toggle mall" aria-pressed="true" title="Every part of the score on, as the score has them — or every one off">All</button><input type="range" id="scoreLevelSlider" class="fader" min="0" max="200" step="1" value="100" aria-label="Score volume"><span id="scoreLevelValue" class="flevel"></span></div>
             <div class="mbody">
                 <span id="partsList" class="parts"></span>
                 <div class="prow presets"><span class="plbl"></span><span class="tempo"><button type="button" id="partsReset" title="The parts the selected score plays">As scored</button></span></div>

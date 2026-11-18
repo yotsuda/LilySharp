@@ -322,7 +322,7 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /<div class="mgroup" id="mixRecGroup" data-fold="rec" hidden>\s*<div class="mhead"><button type="button" class="mfold mtitle" aria-expanded="true">Recording<\/button><button type="button" id="recOnBtn"[^>]*><span id="recName"><\/span><\/button><button type="button" id="recAllBtn"[^>]*>All<\/button><input type="range" id="recLevelSlider"/);
         // Each group's head has two buttons (owner's request 2026-11-18): its on/off, which keeps the
         // lines' own on/off, and All.
-        assert.match(html, /<button type="button" id="scoreOnBtn"[^>]*>On<\/button><button type="button" id="scoreAllBtn"[^>]*>All<\/button><input type="range" id="scoreLevelSlider"/);
+        assert.match(html, /<button type="button" id="scoreOnBtn"[^>]*>Play<\/button><button type="button" id="scoreAllBtn"[^>]*>All<\/button><input type="range" id="scoreLevelSlider"/);
         assert.match(html, /function flipRecording\(\) \{\s*(\/\/[^\n]*\s*)*recOn = !recOn;\s*renderRecParts\(\);/);
         assert.match(html, /const on = !recPartsOff\.includes\(name\);/);
         assert.match(html, /function recLevel\(\) \{ return solo\.size > 0 && !recSoloed\(\) \? 0 : levelIn\(recLevels, 'Recording'\); \}/);
