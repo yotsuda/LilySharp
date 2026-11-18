@@ -562,9 +562,8 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         /* One line a part: the toggle, then its fader (owner's request 2026-11-09). */
         .practice-panel .parts .pline { display: flex; align-items: center; gap: 8px; }
         .practice-panel .parts .pline button { flex: 1 1 auto; min-width: 0; }
-        /* The recording's parts under its line (docs/recording-design.md §8), set in a little. */
+        /* The recording's parts under its line (docs/recording-design.md §8). */
         .practice-panel .rec-part-rows { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
-        .practice-panel .parts .rec-part-rows .pline.rec-part { padding-left: 14px; }
         .practice-panel .rec-part-rows:empty { display: none; }
         /* The mixer (docs/transport-mixer-design.md §1 1-2): two groups, each with its head (its name, all
            on or off, its fader), then a line a part: the name, M, S, the fader. A line not heard (muted, or
@@ -580,7 +579,6 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         .mixer-panel .parts { display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding-left: 1.5em; }
         .mixer-panel .parts .pline button.pname { flex: 1 1 auto; min-width: 5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
         .mixer-panel .parts .pline button.msmall { flex: 0 0 auto; }
-        .mixer-panel .parts .rec-part-rows .pline.rec-part { padding-left: 0; }
         .practice-panel button.msmall { padding: 2px 6px; min-width: 24px; font-weight: 600; }
         .practice-panel button.msolo[aria-pressed="true"] { background: #fff4c2; border-color: #c9a400; color: #6b5600; }
         .mixer-panel .pline.unheard button.pname { opacity: 0.5; }
@@ -794,10 +792,9 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         // selection from the anchor. The "Transform with AI" action then maps the
         // selected source offsets to a text range in the editor (§6). ---
         const aiTransformBtn = document.getElementById('aiTransformBtn');
-        let aiAnchorPos = -1;                 // last plainly-clicked note = range anchor
         let aiRangeLo = -1, aiRangeHi = -1;   // current score selection (source offsets)
         function aiClearSelection() {
-            aiAnchorPos = -1; aiRangeLo = -1; aiRangeHi = -1;
+            aiRangeLo = -1; aiRangeHi = -1;
             lightSelectedBars();
             askStoppedPosition();
         }
@@ -1699,8 +1696,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             });
         }
 
-        // The editor's caret as the extension last said it (highlightPosition / highlightRange),
-        // kept apart from lastResolvedPos, which the follow-along points at the note sounding.
+        // The editor's caret as the extension last said it (highlightPosition / highlightRange).
         var editorCaret = null;
         /** Where a Play pressed while playing starts: the note the editor's caret is on (the
          *  rule highlightNearestElement lights it by), else the caret's own place (the next note
@@ -1724,7 +1720,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         function highlightNearestElement(cursorPos, tokenStart) {
             // Clear previous highlights
             clearHighlights();
-            if (cursorPos < 0) { lastResolvedPos = -1; return; }
+            if (cursorPos < 0) return;
 
             // The note the caret is on = the nearest one AT or before the caret that also
             // lies within the caret's own token (data-pos >= tokenStart). The tokenStart
@@ -1750,9 +1746,6 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             // Highlight ALL elements with that data-pos
             if (nearestPos >= 0 && nearestDist < HIGHLIGHT_THRESHOLD) {
                 highlightPositions([nearestPos]);
-                lastResolvedPos = nearestPos;
-            } else {
-                lastResolvedPos = -1;
             }
             askStoppedPosition();   // the header's position follows the caret while stopped
         }
@@ -1777,7 +1770,6 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             if (positions.length > 0) {
                 highlightPositions(positions);
             }
-            lastResolvedPos = -1;   // a range has no single resolved note
             askStoppedPosition();
         }
 
@@ -2910,7 +2902,6 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         let loopList = null;
         let pendingStartPos = -1;   // a start point by a note's place (Play from Here)
         let pendingStartBar = -1;   // …or by a printed bar, the A flag's (Play; barStartIn)
-        let lastResolvedPos = -1;   // the note the current highlight actually resolved to
 
         // ---- The Range panel (owner's request 2026-10-25): each part's lowest and highest note
         // (lilysharp/ranges — what Play sounds), to check a part's range and find a singer's top
@@ -3221,11 +3212,8 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             clearHighlights();
             lightPlayingBar(null);
             lastHighlightPos = -1;
-            // No note is highlighted once playback ends (naturally or via Stop), so the
-            // resolved note goes too (the follow-along had pointed it at the last note sounded).
-            // The next Play does not read it: it starts from the EDITOR's caret (caretStartPos;
-            // owner's decision 2026-11-16 — until then a Play after Stop started from the top).
-            lastResolvedPos = -1;
+            // (The next Play starts from the EDITOR's caret — caretStartPos; owner's decision
+            // 2026-11-16 — until then a Play after Stop started from the top.)
             if (sfPlayer) {
                 sfPlayer = null;
                 if (sfSynth) { sfSynth.stop(); }
@@ -3444,7 +3432,6 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 const painted = highlightPositions(r.sounding);
                 if (r.sounding.length > 0) {
                     lastHighlightPos = r.sounding[0].pos;
-                    lastResolvedPos = r.sounding[0].pos;
                 }
                 if (painted.length > 0) { follow.sounding(painted); soundingEls = painted; }
                 if (r.hadNew && painted.length > 0 && follow.follows()) follow.auto(() => keepSoundingInView(painted, aheadEls));
@@ -4767,7 +4754,6 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         function playedSpeed() { return playBasis ? playBasis.speed : practice.speed; }
         const practiceBtn = document.getElementById('practiceBtn');
         const practicePanel = document.getElementById('practicePanel');
-        const recPanel = practicePanel;      // (the mixer is in the practice panel: §6)
         const clickBtn = document.getElementById('clickBtn');
         const countInBtn = document.getElementById('countInBtn');
         const tempoSlider = document.getElementById('tempoSlider');
@@ -4869,7 +4855,6 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             const list = document.getElementById('partsList');
             list.textContent = '';
             partRefreshers = [];
-            recRefreshers = [];
             const parts = message.parts || [], voices = message.voices || [], extra = message.extra || [];
             if (parts.length + voices.length + extra.length === 0) { list.textContent = '—'; return; }
             // One toggle each, pressed in while it sounds; the lists are by name, so a part muted
@@ -5116,7 +5101,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         // 2026-11-02: the practice panel always did, being later in the page). Both stay under
         // the toolbar's z-index.
         function raisePanel(panel) {
-            for (const p of [rangePanel, practicePanel, recPanel]) p.style.zIndex = p === panel ? '6' : '5';
+            for (const p of [rangePanel, practicePanel]) p.style.zIndex = p === panel ? '6' : '5';
         }
         // A press anywhere but an input starts it, once it has gone 4 px: a click on a
         // button or a cell stays a click, and the click a drag ends with does nothing.
@@ -5166,9 +5151,8 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
 
         // ---- The recording beside the chart (docs/recording-design.md) ----------------------
         // The extension sends 'recording' when the chart has a file beside it (or no longer has):
-        // its bars and its sound. The panel's button shows only then. The recording is a line of
-        // the practice menu's Parts (and the panel's top line: the same on/off and fader — owner's
-        // decision 2026-11-16, docs/recording-design.md §1 7). On, Play sounds it with the score
+        // its bars and its sound. The recording is a group of the practice panel (its head: on/off
+        // and its fader — docs/recording-design.md §1 7). On, Play sounds it with the score
         // through LysSynth.RecordingPlayer (resampled, or stretched by Signalsmith Stretch), on the
         // score's clock: the score's notes are moved bar by bar onto the recording's seconds
         // (timeWarp), so the score plays as the recording does, and a bar clicked or the bars
@@ -5241,7 +5225,6 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             recLevelSlider.setAttribute('aria-label', 'Recording volume ' + level + '%');
             document.getElementById('recLevelValue').textContent = level === 100 ? '' : level + '%';
             if (recPlayer) recPlayer.setLevel(recLevel());
-            for (const refresh of recRefreshers) refresh();
             postPracticeState();    // (the exports mix the recording in as it sounds now)
         }
         /** The recording's level as it sounds: its fader — silent while lines are soloed and none of
@@ -5272,18 +5255,15 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             if (playClock && playBasis && playBasis.warp) practiceChanged(practice.speed);
             else if (recPlayer.playing) void recPlayer.update(recSound());
         }
-        /** The parts' lines — under the practice menu's Recording line and the panel's (the same
-         *  values in both): a toggle and a fader each, in the order sent (shownPartOrder), greyed until loaded. */
+        /** The parts' lines under the panel's Recording line: a toggle and a fader each, in the
+         *  order sent (shownPartOrder), greyed until loaded. */
         function renderRecParts() {
             const names = (recording && recording.parts) || [];
             const loaded = (recording && recording.partsLoaded) || null;
-            const row = document.getElementById('recPartsRow');
-            if (row) row.hidden = names.length === 0;
-            for (const box of [document.getElementById('recPartsRows'), document.getElementById('recPartsInPractice')]) {
-                if (!box) continue;
-                box.textContent = '';
-                for (const name of names) box.appendChild(recPartLine(name, !!loaded && loaded.includes(name)));
-            }
+            document.getElementById('recPartsRow').hidden = names.length === 0;
+            const box = document.getElementById('recPartsRows');
+            box.textContent = '';
+            for (const name of names) box.appendChild(recPartLine(name, !!loaded && loaded.includes(name)));
         }
         function recPartLine(name, ready) {
             const line = document.createElement('span');
@@ -5347,7 +5327,6 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             line.appendChild(num);
             return line;
         }
-        let recRefreshers = [];     // the practice menu's Recording line, refreshed with the panel's
         function recChanged() {
             // Kept for this recording, for the next time it is opened (recording.ts).
             if (recording) vscode.postMessage({ type: 'recordingSettings', chart: recording.chart, name: recording.name, settings: recSettings });
@@ -5502,8 +5481,8 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             void player.play(sec, recSound(), { tempo: practice.speed });
             return true;
         }
-        /** The recording on or off — the practice menu's line and the panel's top line. While
-         *  playing, what plays goes on from the same place with the recording or without it. */
+        /** The recording on or off (its group's head button). While playing, what plays goes on
+         *  from the same place with the recording or without it. */
         /** The recording's All pressed: it is on, and some part of it (or itself, without parts) sounds. */
         function recAllOn() {
             const parts = (recording && recording.parts) || [];
@@ -5621,7 +5600,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         resetOnDoubleClick(recLevelSlider, () => setRecLevel(100));
         // The sliders say their value as they move and set it where they are let go; a
         // double-click puts it back as recorded (owner's request 2026-11-16: every slider of the
-        // practice menu and the recording panel resets on a double-click).
+        // panel resets on a double-click).
         function recSlider(slider, set, reset) {
             slider.addEventListener('input', () => { set(Number(slider.value)); showRecording(); });
             slider.addEventListener('change', () => { set(Number(slider.value)); recChanged(); });
@@ -5892,7 +5871,6 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                     pendingStartPos = -1;
                     pendingStartBar = -1;
                     paused = null;
-                    lastResolvedPos = -1;
                     lastHighlightPos = -1;
                     lastHighlightTokenStart = -1;
                     lastHighlightRanges = null;
@@ -5932,7 +5910,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                     updateRenderSelect(message.renders, message.selectedRender);
                     if (message.scoreKey) {
                         lastScoreKey = message.scoreKey;
-                        if (!recPanel.hidden && partsKey !== lastScoreKey) requestParts();
+                        if (!practicePanel.hidden && partsKey !== lastScoreKey) requestParts();
                     }
                     const hasPreview = !!svgContainer.querySelector('svg');
                     if (message.loading) {
@@ -6077,7 +6055,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                     if (followTick) followTick();
                     break;
                 case 'voiceLinesChanged':
-                    if (!recPanel.hidden) requestParts();
+                    if (!practicePanel.hidden) requestParts();
                     break;
                 case 'recording':
                     setRecording(message);
@@ -6209,12 +6187,8 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                     updateZoom();
                     break;
                 case 'ctxSelectBar':
-                    // The bar the menu was opened on becomes the selection and the anchor
-                    // Shift+click / Shift+drag extend from.
-                    if (ctxBarRange) {
-                        aiAnchorPos = ctxBarRange[0];
-                        aiSetSelection(ctxBarRange[0], ctxBarRange[1]);
-                    }
+                    // The bar the menu was opened on becomes the selection.
+                    if (ctxBarRange) aiSetSelection(ctxBarRange[0], ctxBarRange[1]);
                     break;
                 case 'ctxClearSelection':
                     aiClearSelection();
@@ -6502,11 +6476,9 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                     if (m >= 0) setB(m, true);
                     return;
                 }
-                // Plain click: this note becomes the anchor; any prior score
-                // selection is dropped. Its bar takes the A flag, where Play starts (the
-                // playing goes on from the note, seeking below).
+                // Plain click: any prior score selection is dropped. The note's bar takes
+                // the A flag, where Play starts (the playing goes on from the note, seeking below).
                 { const b = barStaffAt(e.clientX, e.clientY); const m = b ? measureOfStaffBox(b) : -1; if (m >= 0) setA(m); }
-                aiAnchorPos = pos;
                 aiRangeLo = -1; aiRangeHi = -1;
                 lightSelectedBars();
                 // During playback a click on a played note SEEKS there instead
@@ -6534,7 +6506,6 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 { const m = measureOfStaffBox(bar); if (m >= 0) setA(m); }
                 lastHighlightPos = -1;
                 aiClearSelection();
-                aiAnchorPos = (barNoteRange(bar) || [pos])[0];
                 const box = bar.getBoundingClientRect();
                 const inBar = (copy) => {
                     const b = copy.getBoundingClientRect();

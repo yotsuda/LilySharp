@@ -547,18 +547,12 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
     it('stands the panel pressed or opened last in front of the other, both under the toolbar', () => {
         const range = { style: {} as { zIndex?: string } };
         const practice = { style: {} as { zIndex?: string } };
-        const rec = { style: {} as { zIndex?: string } };
-        const raise = pageFunction('raisePanel', { rangePanel: range, practicePanel: practice, recPanel: rec }) as (p: unknown) => void;
+        const raise = pageFunction('raisePanel', { rangePanel: range, practicePanel: practice }) as (p: unknown) => void;
         raise(range);
         assert.ok(Number(range.style.zIndex) > Number(practice.style.zIndex));
-        assert.ok(Number(range.style.zIndex) > Number(rec.style.zIndex));
         raise(practice);
         assert.ok(Number(practice.style.zIndex) > Number(range.style.zIndex));
         assert.ok(Number(practice.style.zIndex) < 10, 'the toolbar is 10');
-        // The recording's panel (docs/recording-design.md) is the third.
-        raise(rec);
-        assert.ok(Number(rec.style.zIndex) > Number(practice.style.zIndex));
-        assert.ok(Number(rec.style.zIndex) < 10);
         const source = extensionSource();
         assert.match(source, /addEventListener\('pointerdown', \(e\) => \{\s*raisePanel\(panel\);/);
         assert.match(source, /if \(rangePanel\.hidden\) return;\s*raisePanel\(rangePanel\);/);
@@ -569,7 +563,7 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         assert.match(source, /installPanelDrag\(rangePanel\);\s*installPanelDrag\(practicePanel\);/);
         assert.match(source, /e\.target\.closest\('input, select, textarea'\)\) return;/);
         assert.match(source, /window\.addEventListener\('resize', \(\) => \{ clampPanel\(rangePanel\); clampPanel\(practicePanel\); \}\);/);
-        assert.doesNotMatch(source, /installPanelDrag\(recPanel\)/);   // (one panel: the mixer is in the practice panel, §6)
+        assert.doesNotMatch(source, /recPanel/);   // (one panel: the mixer is in the practice panel, §6)
         // Opened again, a moved panel stays where it was put.
         assert.match(source, /if \(rangePanel\.dataset\.moved\) clampPanel\(rangePanel\);/);
         assert.match(source, /if \(practicePanel\.dataset\.moved\) clampPanel\(practicePanel\);/);
