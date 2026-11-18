@@ -471,10 +471,15 @@ const selectedRenders = new Map<string, string>();
 // server abandons it at the render gate instead of spending a render on a thrown-away answer.)
 
 // Constants
-// The preview's refresh debounce. `lilysharp.preview.refreshDelay` is no longer in the
-// Settings UI (owner's decision 2026-10-25: a tuning value), so this is the delay unless
-// settings.json still names one. It was 60.
+// The LONGEST a change waits for the next one before the preview is refreshed. The wait itself is
+// as long as the last incremental refreshes of that preview took (PreviewSession.refreshDelay,
+// owner's decision 2026-11-18): 20-odd ms on a score of a few pages, this on one too slow to
+// follow the hand, and on a preview just opened. `lilysharp.preview.refreshDelay` is no longer in
+// the Settings UI (owner's decision 2026-10-25: a tuning value), so this is the ceiling unless
+// settings.json still names one. It was the wait itself until session 1302 (and 60 before).
 const DEBOUNCE_DELAY_DEFAULT = 100;
+// The wait last said in the output channel, by panel: said again when it has changed.
+const saidRefreshDelay = new WeakMap<vscode.WebviewPanel, number>();
 // The longest a change waits for the preview while more changes keep coming (a held key): the
 // debounce above restarts on each change, this does not (owner's report 2026-11-16).
 const PREVIEW_MAX_WAIT = 120;
@@ -1130,7 +1135,9 @@ export function activate(context: vscode.ExtensionContext) {
                     // Neither is in the Settings UI since 2026-10-25 (settings.json only).
                     const cfg = settings();
                     const autoRefresh = cfg.get<boolean>('preview.autoRefresh', true);
-                    const delay = cfg.get<number>('preview.refreshDelay', DEBOUNCE_DELAY_DEFAULT);
+                    const ceiling = cfg.get<number>('preview.refreshDelay', DEBOUNCE_DELAY_DEFAULT);
+                    // As long as a refresh of this score takes, the setting at most (refreshDelay).
+                    const delay = sessionOf(panel).refreshDelay(ceiling);
 
                     if (autoRefresh) {
                         // …but never later than PREVIEW_MAX_WAIT after the first change still
@@ -1614,6 +1621,11 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 // request timing logged by updatePreviewContent, so a slow
                 // update can be laid at the server's door or the page's.
                 outputChannel.appendLine(`PREVIEW ${message.text}`);
+                // What an incremental update took of the page: half of what the next refresh
+                // waits by (the other is the request's round trip, updatePreviewContent).
+                if (typeof message.took === 'number' && message.whole === false) {
+                    sessionOf(panel).pageTook(message.took);
+                }
                 return;
             }
             if (message.type === 'recordingRendered') {
@@ -2194,6 +2206,18 @@ async function updatePreviewContent(
             // dedup memory no longer describes what the webview shows.
             session.lastPostedSvg = undefined;
             session.shownPagesVersion = pages.Version;
+            // A delta that is shown: what an incremental refresh of this score costs, which the
+            // next change's wait is read off (PreviewSession.refreshDelay).
+            if (pages.BaseVersion != null) {
+                session.tookRoundTrip(Date.now() - requestedAt);
+                const ceiling = settings().get<number>('preview.refreshDelay', DEBOUNCE_DELAY_DEFAULT);
+                const wait = session.refreshDelay(ceiling);
+                if (saidRefreshDelay.get(panel) !== wait) {
+                    saidRefreshDelay.set(panel, wait);
+                    outputChannel.appendLine(`Preview refresh waits ${wait} ms after a change`
+                        + ` (a refresh costs ${session.refreshCost === undefined ? 'not known yet' : Math.round(session.refreshCost) + ' ms'}, the ceiling is ${ceiling})`);
+                }
+            }
             outputChannel.appendLine(`Sending pages to webview (${pagesSummary(pages)}`
                 + `${response.Error ? ', with error banner' : ''})`);
             panel.webview.postMessage({

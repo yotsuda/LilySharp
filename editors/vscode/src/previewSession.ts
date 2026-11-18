@@ -30,6 +30,21 @@ export interface Cancellable {
     dispose(): void;
 }
 
+/** How many of the latest incremental renders the refresh's wait is read off (their median). */
+const COST_SAMPLES = 5;
+/** …and how many there must be before it is read off them: until then the ceiling stands. */
+const COST_SAMPLES_MIN = 3;
+/**
+ * The shortest wait. One keystroke can be two edits — smart typing's own follows the typed
+ * character a round trip later — and a wait this long draws them as one.
+ */
+export const REFRESH_DELAY_FLOOR = 20;
+
+function median(values: number[]): number {
+    const sorted = [...values].sort((a, b) => a - b);
+    return sorted[Math.floor(sorted.length / 2)];
+}
+
 export class PreviewSession {
     /** Settles when the page has loaded its HTML: a message posted before that is dropped. */
     readonly loaded: Promise<void>;
@@ -53,6 +68,8 @@ export class PreviewSession {
     private request: Cancellable | undefined;
     private timer: ReturnType<typeof setTimeout> | undefined;
     private waitingSince: number | undefined;
+    private roundTrips: number[] = [];
+    private pageWorks: number[] = [];
 
     constructor() {
         this.loaded = new Promise<void>(resolve => { this.settleLoaded = resolve; });
@@ -114,6 +131,50 @@ export class PreviewSession {
         }, Math.max(0, Math.min(delay, since + maxWait - now)));
     }
 
+    /** An incremental render's answer came `ms` after its request left (a page delta, posted). */
+    tookRoundTrip(ms: number): void { PreviewSession.keep(this.roundTrips, ms); }
+
+    /** The page spent `ms` showing an incremental render (its own account: the swap and what follows). */
+    pageTook(ms: number): void { PreviewSession.keep(this.pageWorks, ms); }
+
+    private static keep(samples: number[], ms: number): void {
+        if (!Number.isFinite(ms) || ms < 0) { return; }
+        samples.push(ms);
+        if (samples.length > COST_SAMPLES) { samples.shift(); }
+    }
+
+    /**
+     * What a refresh of this panel's score costs now, request to settled page: the median of the
+     * latest round trips plus the median of the page's work. Undefined until enough were seen.
+     */
+    get refreshCost(): number | undefined {
+        if (this.roundTrips.length < COST_SAMPLES_MIN) { return undefined; }
+        return median(this.roundTrips) + (this.pageWorks.length > 0 ? median(this.pageWorks) : 0);
+    }
+
+    /**
+     * How long a change waits for the next one before it is drawn: AS LONG AS A REFRESH TAKES
+     * (refreshCost), no shorter than REFRESH_DELAY_FLOOR and no longer than `ceiling` — the
+     * fixed wait this replaces (owner's decision 2026-11-18: "adjust the next debounce to what the
+     * last incremental renders took"). MEASURED in a real VS Code (session 1302): of the 140 ms
+     * from a keystroke to the settled page, the fixed wait was 100, the render's round trip
+     * 10–15 and the page 9–12.
+     * Why the cost itself: a change is drawn when no other came for that long, so the request
+     * leaves `cost` after the key and the page has settled `2 × cost` after it — and the next
+     * key's request, which leaves no sooner than `cost` after THAT key, finds the one before it
+     * done whenever the keys are further apart than the wait. A hand slower than the render sees
+     * every keystroke drawn and no render is thrown away; a hand faster than it is waited for, as
+     * before. A score too slow for that (cost over the ceiling) keeps the fixed wait.
+     * Until COST_SAMPLES_MIN incremental renders were seen (a preview just opened, a panel that
+     * turned to another file) the ceiling stands: the first picture is a whole compile, not a
+     * sample of what a keystroke costs.
+     */
+    refreshDelay(ceiling: number): number {
+        const cost = this.refreshCost;
+        if (cost === undefined) { return ceiling; }
+        return Math.min(ceiling, Math.max(REFRESH_DELAY_FLOOR, Math.round(cost)));
+    }
+
     /** Drops a refresh still waiting, and with it when its wait began. */
     cancelRefresh(): void {
         if (this.timer !== undefined) { clearTimeout(this.timer); }
@@ -132,7 +193,14 @@ export class PreviewSession {
     turned(samePicture: boolean): void {
         this.cancelRequest();
         this.cancelRefresh();
-        if (samePicture) { this.shownPagesVersion = undefined; } else { this.forgetPage(); }
+        if (samePicture) {
+            this.shownPagesVersion = undefined;
+        } else {
+            this.forgetPage();
+            // (another score: what the one before cost says nothing of it)
+            this.roundTrips = [];
+            this.pageWorks = [];
+        }
     }
 
     /** The panel closed. */

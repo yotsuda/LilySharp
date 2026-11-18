@@ -6027,7 +6027,11 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                         const chars = message.pages ? pagesChars(message.pages) : message.svg.length;
                         vscode.postMessage({ type: 'webviewPerf', text: 'update: ' + applied
                             + ' in ' + (applyEnd - applyStart).toFixed(1) + ' ms, then pages/fit/highlight '
-                            + (settled - applyEnd).toFixed(1) + ' ms (' + chars + ' chars): ' + laps.join(', ') });
+                            + (settled - applyEnd).toFixed(1) + ' ms (' + chars + ' chars): ' + laps.join(', '),
+                            // (what this update took of the page, for the host's wait before the
+                            // next refresh — PreviewSession.refreshDelay; a whole new picture is
+                            // not what a keystroke costs)
+                            took: settled - applyStart, whole: applied.indexOf('whole document') === 0 });
                     } else if (message.error) {
                         // Nothing could render at all. Keep the last good preview,
                         // DIM it, and show the error in a banner. Only when nothing

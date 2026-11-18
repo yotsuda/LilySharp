@@ -18,7 +18,7 @@ import { describe, it, mock } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { PreviewSession, Cancellable } from '../src/previewSession';
+import { PreviewSession, Cancellable, REFRESH_DELAY_FLOOR } from '../src/previewSession';
 import { extensionSource } from './extensionSource';
 
 /** A request that says whether it was cancelled and let go. */
@@ -144,6 +144,65 @@ describe('a preview panel\'s session', () => {
         } finally {
             mock.timers.reset();
         }
+    });
+
+    // The wait before a refresh follows what the refreshes cost (owner's decision 2026-11-18,
+    // session 1302: of the 140 ms from a keystroke to the settled page the fixed wait was 100).
+    it('waits the ceiling until three incremental renders were seen', () => {
+        const session = new PreviewSession();
+        assert.equal(session.refreshCost, undefined);
+        assert.equal(session.refreshDelay(100), 100);
+        session.tookRoundTrip(12);
+        session.tookRoundTrip(14);
+        session.pageTook(9);
+        assert.equal(session.refreshDelay(100), 100);
+        session.tookRoundTrip(16);
+        assert.equal(session.refreshCost, 14 + 9);
+        assert.equal(session.refreshDelay(100), 23);
+    });
+
+    it('waits as long as a refresh takes: the round trips\' median and the page\'s, of the last five', () => {
+        const session = new PreviewSession();
+        for (const ms of [40, 42, 44]) { session.tookRoundTrip(ms); }
+        for (const ms of [10, 12, 11]) { session.pageTook(ms); }
+        assert.equal(session.refreshDelay(100), 42 + 11);
+        // One slow render (a whole collect) among five does not move it…
+        session.tookRoundTrip(400);
+        assert.equal(session.refreshDelay(100), 44 + 11);
+        // …and a score that has become slow does, once most of the five say so: the ceiling at most.
+        for (const ms of [70, 75, 80]) { session.tookRoundTrip(ms); }
+        assert.equal(session.refreshCost, 75 + 11);                 // (of 44, 400, 70, 75, 80)
+        assert.equal(session.refreshDelay(100), 86);
+        for (const ms of [300, 310, 320]) { session.tookRoundTrip(ms); }
+        assert.equal(session.refreshDelay(100), 100);
+        // The setting is the ceiling, whatever it is.
+        assert.equal(session.refreshDelay(60), 60);
+        assert.equal(session.refreshDelay(0), 0);
+    });
+
+    it('never waits less than the floor, and takes no nonsense for a sample', () => {
+        const session = new PreviewSession();
+        for (const ms of [3, 4, 5]) { session.tookRoundTrip(ms); }
+        assert.equal(session.refreshDelay(100), REFRESH_DELAY_FLOOR);
+        for (const ms of [NaN, -1, Infinity]) { session.tookRoundTrip(ms); session.pageTook(ms); }
+        assert.equal(session.refreshCost, 4);
+    });
+
+    it('forgets what the score before cost when the panel turns to another, not when a score is saved', () => {
+        const session = new PreviewSession();
+        for (const ms of [30, 30, 30]) { session.tookRoundTrip(ms); session.pageTook(10); }
+        session.turned(true);
+        assert.equal(session.refreshDelay(100), 40);
+        session.turned(false);
+        assert.equal(session.refreshDelay(100), 100);
+    });
+
+    it('is fed by the host: a shown delta\'s round trip, the page\'s own account of an incremental update', () => {
+        const extension = extensionSource();
+        assert.match(extension, /const delay = sessionOf\(panel\)\.refreshDelay\(ceiling\);/);
+        assert.match(extension, /if \(pages\.BaseVersion != null\) \{\s*session\.tookRoundTrip\(Date\.now\(\) - requestedAt\);/);
+        assert.match(extension, /if \(typeof message\.took === 'number' && message\.whole === false\) \{\s*sessionOf\(panel\)\.pageTook\(message\.took\);/);
+        assert.match(extension, /took: settled - applyStart, whole: applied\.indexOf\('whole document'\) === 0 \}\);/);
     });
 
     it('is what the host keeps: the three places say what happened in one call, and no map by URI is left', () => {
