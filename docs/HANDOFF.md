@@ -89,7 +89,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
 - **★★★ オーナー決定 2026-11-15（第1264・6 件）**: ①〜④ と、⑥ 評価 4 の案（Lab `p1227/proposals-eval4.md`）の「作る」5 件＝6・7・8-1・2・4 は済み（第1264〜第1272・設計と実際の形は `docs/eval4-features-design.md`。6 の「歌い手が × の音を歌わない」だけ未＝同 §6 の末尾）／⑤ Dettato: 依頼 1＝作る（D3 で形が固まってから・名前「Convert Recording to Lily# (.lys)…」・Windows 以外はメニューを出さない）・依頼 2＝今は作らない（REQUESTS の行に書いた＝Dettato の repo では未 commit）／⑥ の**後で**＝3（`pass 2 { }`・文字は英語固定）・1（持ち替え・「to X」は自動で刷らない）・10（まず診断だけ）＝作る前に設計メモ・**着手してよい**（オーナー 2026-11-15 第1278「ほかに着手すべき候補がなければすぐ着手して良い」。10 の診断は LYS0046 で済み＝残りは 3 → 1）／**見送り**＝5・8-2〜4・9。**次の一手**: 下の行の Lab `sessions/p1242/leftovers.md` の欠陥から（第1272 が見つけた 2 件＝`lysc xml` の part header の `key` と、MusicXML の読み込みの `<transpose>` は第1273・第1275 で閉じた。一覧の先頭から順に）。
-- **★ 包括レビュー（オーナーの指示 2026-11-18・第1291）＝Lab `sessions/p1291/review.md`**: プレビュー更新の性能 P1〜P10 とリファクタ F1〜F7。P1〜P10・F1・F2・F3 段 1・F5・F7 と F4 の大半は済み（経緯は ARCHIVE の第1291〜第1301 と §1.1・数字は Lab `sessions/p1302/notes.md`）。残り＝設計が先の 3 つ（`mid-bar-break`・F4 の残り・`shiftPage`）と F3 段 2。残りは訊かずに着手してよい（オーナー 2026-11-18・次の順は §1.1 第1303 の末尾。F3 段 2 はオーナー判断）。
+- **★ 包括レビュー（オーナーの指示 2026-11-18・第1291）＝Lab `sessions/p1291/review.md`**: プレビュー更新の性能 P1〜P10 とリファクタ F1〜F7。P1〜P10・F1・F2・F3 段 1・F5・F7 と F4 の大半は済み（経緯は ARCHIVE の第1291〜第1301 と §1.1・数字は Lab `sessions/p1302/notes.md`）。残り＝設計が先の 3 つ（`mid-bar-break`・F4 の残り・`shiftPage`）と F3 段 2。残りは訊かずに着手してよい（オーナー 2026-11-18・次の順は §1.1 第1304 の末尾。F3 段 2 はオーナー判断）。
 - **★ A-B リピート（オーナー決定 2026-11-17・第1286）＝`docs/ab-repeat-design.md`**: §3 の 1〜5 は全部済み（1〜4 は第1286・5 の帯は第1287＝形は同 §3 の末尾）。残りは実機の確認（`MANUAL-CHECKS` の A-B その 1・その 2＝オーナー）と、帯をファイルの名前の変更・コピーに付いて行かせるか（未決・要望が出たら）。
 - **★ コード行の中に書けるもの（オーナー決定 2026-11-16・第1285）**: `time`・`tempo`・`%`・`key` は済み（§1.1）。**残り＝コードに付ける印 `@rit`／`@accel`／`@rall`（`…@!rit`）・`@fermata`・`@text("…")`**（今は `@todo` だけ）。強弱は見送り。
 - **★ 録音を聴きながら直す（Dettato #4・オーナーの希望 2026-11-15）＝`docs/recording-design.md`**: S1〜S4 と §1 7（楽譜と録音を同時に）・§7（書き出しに録音・第1286）は済み（§1.1 第1284〜第1286）。**次は S5**（帯・`Mark Bar Line Here`・ドラッグ・`byHand`）→ S6（CHANGELOG・Dettato への返事）。§8 の録音のパート（Dettato #16）は第1288 で実装・実測済み・使っている間のメモリは今のまま（オーナー決定 2026-11-17）＝残りは耳の確認（`MANUAL-CHECKS`「録音のパート」）。耳の確認は `MANUAL-CHECKS` §3.9（オーナー）。
@@ -145,6 +145,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1304セッション（2026-11-18・YT-DELL2・第1303 と同じ会話）
+
+base `60639b0dd`・開始時 full 17624 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17627（Lab `p1304` の `start.log`）。REQUESTS の open は第1303 の頭で 0（同じ日・見直していない）。便の途中でオーナーが push した＝`origin/master` は `60639b0dd`（この便の commit は未 push）。
+- **ottava の括弧の両端は譜表の列＝`41e4133ba`**（leftovers の第1263 が残した右端）: LilyPond の `Ottava_spanner_engraver` は Staff に居て、左の bound は最初に知らされた NoteColumn・右は最後に知らされた NoteColumn＝同じ瞬間の列は声部の順に来る。Lily# は右端を「最後の瞬間の*最初*の声部の列・ずれなし」で読んでいた（下の声部が 2 度下にずれる `voice { c''2 d''2 } { b'2@8vb c''2@!8vb }` で 1.377 短い・上が 2 分で下が 4 分なら符頭の幅が違う・上が休符なら黒い符頭の幅）。左端は印を書いた声部の列・ずれなし（声部が交差して 1 声部目の符頭がずれる形で 1.102 左）。今は `StaffLastColumnBefore` が同じ瞬間なら後の声部を取って `HairpinEngraver.CollisionShift` を足し、左は `StaffFirstColumnAt`。探り譜 Lab `p1304/ot`（o0〜o10・`probe.ps1`）は両端とも 0.005 以内（LilyPond の右の extent は鉤の中心線の 0.05 外＝対照 o0 も同じ）。網 `OttavaStaffBoundsTests` 11 冊・毒 5 / 5 赤（`p1304/poisons.ps1`）・全 svg の掃きは 0 / 1268（追跡コーパスにこの形は無い）。⚠️ 残したまま: 段をまたいだ続きの左端・小節の終わりまで走る括弧の右端（小節の右端 − 0.6 の近似）・最後の列が休符のときの幅（元からの注）。⚠️ Lab `p723/svg2/sweep-all.ps1` は差が 0 のとき前の `diff.txt` を残す（空の列を `Set-Content` に流すと書かない）＝「compared N / differ 0」の行を読む。
+- 終了時 full 17635 合格 / 1 失敗（同じ）/ skip 2 / 合計 17638（`run3.trx`・+11＝網）。途中の 1 回は `ScoreVideoShapeTests.AScoreOfOnePage_IsItsMusic_NotTheSheet` も赤（単独 3 / 3 緑＝不安定な網）。拡張は触っていない。
+- **次**: leftovers の第1263 の残り＝ずれた声部の運指（第 1 声）・コード名・`@text` の X（未測定＝まず探り譜）。その先は leftovers の「第1239」「第1238」の残り（別の声部のヘアピンと出会う形の絵・combinedStaff の印の re-address）。review.md の残りは設計が先の 3 つ（`mid-bar-break`＝§1.1 第1303・F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。
+
+## 以下は第1303セッションの経緯
+
 ### 1.1 第1303セッション（2026-11-18・YT-DELL2）
 
 base `5781108ed`・開始時 full 17614 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17617（Lab `p1303` の `start.log`）。REQUESTS の open は 0（Calamo・Dettato）。
@@ -153,19 +162,6 @@ base `5781108ed`・開始時 full 17614 合格 / 1 失敗（`ReadmeSampleTests`�
 - **茎側の staccato は符尾の上＝`f93df7e2e`**（leftovers の第1263 が残した `toward-stem-shift`）: 自分の符尾の側に立つ staccato／staccatissimo（2 声部目と 1 声部目の 1 つだけの点・`@staccato.down` のように書いた側）は符頭の中心に立っていた＝符尾の横へ半符頭ずれる。LilyPond は符尾の中心（`script-interface::calc-x-offset`＝shift 1.0）・同じ音にほかの script があれば符頭のまま（`toward-stem-shift-in-column` 0.0・反対側の fermata でも・別の声部の script は数えない・thumb と運指は script ではない）・全音符は動かない。探り譜 Lab `p1303/st`（k1〜k10・`probe.ps1`・`dump.ily`）は全部 0.005 以内。網 `StemSideStaccatoTests` 10 冊・毒 9 / 9 赤（`p1303/poisons.ps1`）・全 svg の掃きは 3 / 1268（test の 3 冊＝snapshot を取り直した。`voice-dynamics-offbeat` は点の下の f が 0.54 上がって LilyPond の −6.776）。tab の譜は元から列の中心。⚠️ 装飾音の茎側の点は同じ式（grace の head の font）だが LilyPond と測っていない。
 - 終了時 full 17624 合格 / 1 失敗（同じ）/ skip 2 / 合計 17627（`run3.trx`・+10＝網）。拡張は触っていない。
 - **次**: leftovers の第1263 の残り＝ottava の右端（LilyPond は最初に来た列〜最後に来た列＝規則を移す仕事）・ずれた声部の運指（第 1 声）とコード名と `@text` の X（未測定）。review.md の残りは設計が先の 3 つ（`mid-bar-break`＝上・F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。
-
-## 以下は第1302セッションの経緯
-
-### 1.1 第1302セッション（2026-11-18・YT-DELL2・静かな窓）
-
-base `8f7c38ffc`・開始時 full 17614 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17617（Lab `p1302` の `run1.trx`）。REQUESTS の open は 0。静かな窓で review.md の 3 件を測り、P9 を入れた。表は Lab `p1302/notes.md`。
-- **P10＝描画は `8fc8e2be1` と同じ速さに戻っている**: 実コーパス 235 冊 × 8 打鍵・export の options で 4.26 / 4.25 ms／打鍵（collect 1.30 / 1.27）。`8fc8e2be1` は 4.42 / 4.31。
-- **P7 の小節の箱＝上限 0.19 ms／打鍵（描画の 4%）＝畳んだ**: プレビューの options で render 段 0.565 → 0.745 ms＝箱はその差の一部・capture に入れる設計は提案しない。
-- **P6＝実機の VS Code で測って直した（`1ae5e8028`）**: 計器は Lab `p1302/vscode-e2e`・`webviewPerf` は差し替えの後をラップで言う。⑴ bars・A-B・highlight は 1 ページしか変わらなくても本全体を読んでいた → ページごとの控え（`pageFacts`）。⑵ **CSS の `.main-content [data-pos]` の規則があると、`data-pos` を書き換えた全要素をブラウザが restyle する**＝長さの変わる打鍵（ほぼ全部）は後ろの全ページを書き換える（`shiftPage`）ので、1000 小節・16 頁の本で layout 18.1 ms（規則を外すと 5.0）→ ポインタはマウスのハンドラが付けるクラス（`over-note`）。差し替えの後の仕事（ms／更新・長さの変わる編集）: 6 頁の本 9.20 → 5.57・3 頁 8.46 → 6.78・1000 小節 p50 34.1 → 11.8。網 `previewPageFacts.test.ts` 9 本・毒 9 / 9 赤。⚠️ カーソルの形は機械で見ていない（`MANUAL-CHECKS` §3 の末尾）。
-- **P9＝プレビューの待ちは直近の差分レンダの値段（オーナー決定 2026-11-18・`9be67accb`）**: 固定の 100 ms（`preview.refreshDelay`）は天井になり、待つのは直近 5 回の「往復＋ページの仕事」の中央値（下限 20 ms・差分レンダが 3 回たまるまでと別のファイルへ移った後は天井＝`PreviewSession.refreshDelay`）。打鍵 → 落ち着くまで 144 → 85 ms・139 → 66 ms・1000 小節 208 → 181 ms（待ちは 100 → 20 ms へ下がる）。90 ms おきの 20 打で絵が 11 → 20 枚（1000 小節は 11 のまま）。網 5 本・毒 7 / 7 赤。実機は `MANUAL-CHECKS` §3 の末尾。
-- ⚠️ 残り: `shiftPage` の JS そのもの（1000 小節・8 頁で約 8 ms＝「ページごとのずれを持って読むときに足す」設計が要る・`data-pos` の読み手は約 20 か所）＝実コーパス（3〜6 頁）では 1 ms 未満。`caretInfo` 6.69 ms はプレビューの collect を借りられない（`RecordsPitchTrace = false`）。
-- 終了時 full 17613 合格 / 2 失敗 / skip 2 / 合計 17617（`run2.trx`）＝既知の 1 本と `IncludeFilesTests.ABooksInclude_SavedAgain_ShowsAtTheNextRequest`（単独 6 / 6 緑・C# は触っていない＝不安定な網。その前の回は `ScoreVideoShapeTests` が 1 回）。npm 1275 合格 / skip 1（+14＝網）。
-- **次（review.md の残り・訊かずに着手してよい）**: P8 の残り（第1301 の末尾）。`mid-bar-break` の本（第1300）。F4 の残りと上の `shiftPage` は設計が先。F3 段 2 はオーナー判断。
 
 ## 2. 開いている作業
 

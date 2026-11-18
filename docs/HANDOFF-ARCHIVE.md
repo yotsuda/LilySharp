@@ -277,6 +277,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1302セッションの経緯
+
+### 1.1 第1302セッション（2026-11-18・YT-DELL2・静かな窓）
+
+base `8f7c38ffc`・開始時 full 17614 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17617（Lab `p1302` の `run1.trx`）。REQUESTS の open は 0。静かな窓で review.md の 3 件を測り、P9 を入れた。表は Lab `p1302/notes.md`。
+- **P10＝描画は `8fc8e2be1` と同じ速さに戻っている**: 実コーパス 235 冊 × 8 打鍵・export の options で 4.26 / 4.25 ms／打鍵（collect 1.30 / 1.27）。`8fc8e2be1` は 4.42 / 4.31。
+- **P7 の小節の箱＝上限 0.19 ms／打鍵（描画の 4%）＝畳んだ**: プレビューの options で render 段 0.565 → 0.745 ms＝箱はその差の一部・capture に入れる設計は提案しない。
+- **P6＝実機の VS Code で測って直した（`1ae5e8028`）**: 計器は Lab `p1302/vscode-e2e`・`webviewPerf` は差し替えの後をラップで言う。⑴ bars・A-B・highlight は 1 ページしか変わらなくても本全体を読んでいた → ページごとの控え（`pageFacts`）。⑵ **CSS の `.main-content [data-pos]` の規則があると、`data-pos` を書き換えた全要素をブラウザが restyle する**＝長さの変わる打鍵（ほぼ全部）は後ろの全ページを書き換える（`shiftPage`）ので、1000 小節・16 頁の本で layout 18.1 ms（規則を外すと 5.0）→ ポインタはマウスのハンドラが付けるクラス（`over-note`）。差し替えの後の仕事（ms／更新・長さの変わる編集）: 6 頁の本 9.20 → 5.57・3 頁 8.46 → 6.78・1000 小節 p50 34.1 → 11.8。網 `previewPageFacts.test.ts` 9 本・毒 9 / 9 赤。⚠️ カーソルの形は機械で見ていない（`MANUAL-CHECKS` §3 の末尾）。
+- **P9＝プレビューの待ちは直近の差分レンダの値段（オーナー決定 2026-11-18・`9be67accb`）**: 固定の 100 ms（`preview.refreshDelay`）は天井になり、待つのは直近 5 回の「往復＋ページの仕事」の中央値（下限 20 ms・差分レンダが 3 回たまるまでと別のファイルへ移った後は天井＝`PreviewSession.refreshDelay`）。打鍵 → 落ち着くまで 144 → 85 ms・139 → 66 ms・1000 小節 208 → 181 ms（待ちは 100 → 20 ms へ下がる）。90 ms おきの 20 打で絵が 11 → 20 枚（1000 小節は 11 のまま）。網 5 本・毒 7 / 7 赤。実機は `MANUAL-CHECKS` §3 の末尾。
+- ⚠️ 残り: `shiftPage` の JS そのもの（1000 小節・8 頁で約 8 ms＝「ページごとのずれを持って読むときに足す」設計が要る・`data-pos` の読み手は約 20 か所）＝実コーパス（3〜6 頁）では 1 ms 未満。`caretInfo` 6.69 ms はプレビューの collect を借りられない（`RecordsPitchTrace = false`）。
+- 終了時 full 17613 合格 / 2 失敗 / skip 2 / 合計 17617（`run2.trx`）＝既知の 1 本と `IncludeFilesTests.ABooksInclude_SavedAgain_ShowsAtTheNextRequest`（単独 6 / 6 緑・C# は触っていない＝不安定な網。その前の回は `ScoreVideoShapeTests` が 1 回）。npm 1275 合格 / skip 1（+14＝網）。
+- **次（review.md の残り・訊かずに着手してよい）**: P8 の残り（第1301 の末尾）。`mid-bar-break` の本（第1300）。F4 の残りと上の `shiftPage` は設計が先。F3 段 2 はオーナー判断。
+
 ## 以下は第1301セッションの経緯
 
 ### 1.1 第1301セッション（2026-11-18・YT-DELL2）
