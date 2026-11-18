@@ -1636,6 +1636,12 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 }
                 return;
             }
+            if (message.type === 'webviewBoot') {
+                // The page's script ran its first statement: a blank preview without this line is
+                // a script that never started (CSP, a syntax error), with it something later.
+                outputChannel.appendLine('Preview page started');
+                return;
+            }
             if (message.type === 'webviewError') {
                 outputChannel.appendLine(
                     `WEBVIEW ERROR: ${message.message} (line ${message.line})`);
