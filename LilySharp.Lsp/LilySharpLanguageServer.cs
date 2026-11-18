@@ -602,7 +602,7 @@ public sealed partial class LilySharpLanguageServer
     {
         var (tree, _) = ExpandUsings(doc.Text, doc.Tree,
             doc.Uri.IsFile ? doc.Uri.LocalPath : string.Empty,
-            p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null);
+            IncludeFiles.Read);
         var result = new List<LilySharp.Core.Syntax.Diagnostic>();
         foreach (var d in SemanticValidation.RunPageChecks(tree, token))
             if (d.Span.Start < doc.Text.Length)

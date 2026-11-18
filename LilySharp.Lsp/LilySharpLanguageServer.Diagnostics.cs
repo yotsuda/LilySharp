@@ -86,11 +86,12 @@ public sealed partial class LilySharpLanguageServer
         // review, appendix F finding 4). The expansion is a pure function of (main text,
         // base path, what readFile answered for the paths the expander asked), so the
         // snapshot records those reads and a later call REPLAYS them: same answers ⇒ the
-        // expander would walk identically ⇒ reuse the parsed tree. Replay re-reads the
-        // include files on purpose — the deliberate spec is that an include edited on
+        // expander would walk identically ⇒ reuse the parsed tree. Replay asks for the
+        // include files again on purpose — the deliberate spec is that an include edited on
         // disk (an unsaved sibling saved, a generator rerun) invalidates by CONTENT, so
-        // the price of a hit is one read + string compare per include, not a re-parse of
-        // anything. Keyed on the text INSTANCE (DocumentManager hands out one string per
+        // the price of a hit is one question + string compare per include, not a re-parse of
+        // anything (and since session 1299 the question is a look at the file's stamp, not a
+        // read of it, while the file stands: IncludeFiles). Keyed on the text INSTANCE (DocumentManager hands out one string per
         // version), so entries die with the edit; the volatile snapshot makes concurrent
         // requests race benignly (both compute, one wins, both answers correct).
         var holder = UsingExpansionCache.GetValue(text, static _ => new UsingExpansionHolder());
@@ -104,8 +105,8 @@ public sealed partial class LilySharpLanguageServer
         // (review of session 1291, P8). Now: the main text's directives are read off the tree
         // in hand, an include's are kept with its content (RecentTrees.IncludedUsings), and the combined
         // text is parsed from the combined tree of the keystroke before (RecentTrees: the main
-        // text is its prefix, so the window is the edit's own). What is left is the reads and
-        // one string of everything.
+        // text is its prefix, so the window is the edit's own). What is left is one string of
+        // everything (the includes' texts are kept while their files stand: IncludeFiles).
         var reads = new List<(string Path, string? Content)>();
         var expanded = LilySharp.Core.Parser.UsingExpander.Expand(text, basePath,
             p => { var content = readFile(p); reads.Add((p, content)); return content; },
@@ -174,7 +175,7 @@ public sealed partial class LilySharpLanguageServer
     private static (SyntaxTree Tree, IReadOnlyList<CoreDiagnostic> UsingDiagnostics) ExpandUsings(
         Document doc, Uri uri)
         => ExpandUsings(doc.Text, doc.Tree, uri.IsFile ? uri.LocalPath : string.Empty,
-            p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null);
+            IncludeFiles.Read);
 
     /// <summary>
     /// Every diagnostic that belongs to THIS document: the include-resolution warnings and
@@ -226,7 +227,7 @@ public sealed partial class LilySharpLanguageServer
         System.Threading.Interlocked.Increment(ref _diagnosticPasses);
         var result = DocumentDiagnostics(doc.Text, doc.Tree,
             doc.Uri.IsFile ? doc.Uri.LocalPath : string.Empty,
-            p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null,
+            IncludeFiles.Read,
             token,
             tree =>
             {

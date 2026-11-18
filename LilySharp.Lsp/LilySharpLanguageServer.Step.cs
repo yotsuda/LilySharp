@@ -48,7 +48,7 @@ public sealed partial class LilySharpLanguageServer
             var result = NoteStepper.Step(doc.Text, doc.Tree,
                 @params.Selections.Select(s => (s.Start, s.End)).ToList(), @params.Direction,
                 text => ExpandUsings(text, SyntaxTree.Parse(text), basePath,
-                    p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null).Tree,
+                    IncludeFiles.Read).Tree,
                 @params.IncludeStretch, @params.Semitone, FacesForStep);
             return new StepResponse
             {

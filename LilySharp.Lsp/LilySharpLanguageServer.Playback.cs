@@ -68,7 +68,7 @@ public sealed partial class LilySharpLanguageServer
         string text = @params.Text ?? "";
         string basePath = @params.Uri is { IsFile: true } uri ? uri.LocalPath : string.Empty;
         var tree = ExpandUsings(text, SyntaxTree.Parse(text), basePath,
-            p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null).Tree;
+            IncludeFiles.Read).Tree;
         return PlaybackOf(tree, @params.RenderName);
     }
 
@@ -186,7 +186,7 @@ public sealed partial class LilySharpLanguageServer
             // lilysharp/playbackText reads it, so the voices land on the notes that answer gives.
             string basePath = @params.TextDocument?.Uri is { IsFile: true } beside ? beside.LocalPath : string.Empty;
             tree = ExpandUsings(text, SyntaxTree.Parse(text), basePath,
-                p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null).Tree;
+                IncludeFiles.Read).Tree;
         }
         // The open document, or a file on the disk the folder export names (session 1153).
         else if (ExportTreeOf(@params.TextDocument, @params.Path, out tree, out _) is { } problem)
