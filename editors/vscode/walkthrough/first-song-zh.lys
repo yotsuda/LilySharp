@@ -1,0 +1,20 @@
+// A first song: the opening of 送别 (Songbie; words Li Shutong, 1915, to John P. Ordway's
+// "Dreaming of Home and Mother", 1868; in the public domain). The part names its words,
+// `lyrics` holds them, the score's row prints them, and the `singer` line is what makes them
+// heard. A slur carries one word over two notes. Open the preview and press Play.
+octave relative
+time 4/4
+key c major
+tempo 80
+part melody { instrument alto  lyrics words }
+section A {
+  melody {
+    g'4 e8 g c2 | a4 c g2 | g4 c,8( d) e4 d8( c) | d1 |
+  }
+  lyrics words language chinese {
+    长 亭 外 | 古 道 边 | 芳 草 碧 连 | 天 |
+  }
+}
+form { A }
+singer female on melody
+score { staff melody  lyrics words }

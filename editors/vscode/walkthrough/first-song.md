@@ -4,12 +4,17 @@ Four statements, one job each:
 
 ```lily#
 part melody { instrument alto  lyrics words }   // the part names its words
-lyrics words { あ か る い | そ ら | }            // the words, a syllable a note
+lyrics words { う さ ぎ | お い し | }            // the words, a syllable a note
 score { staff melody  lyrics words }             // the row prints them
 singer female on melody                          // this line sings them
 ```
 
-**Open a First Song** opens such a song. Open its preview (the icon at the editor's top
+**Open a First Song** opens such a song, in a language your voices sing: the opening of
+ふるさと in Japanese, *Twinkle, Twinkle, Little Star* in English, 送别 in Chinese or 아리랑 in
+Korean. All four are in the public domain. Words that are not Japanese say their language:
+`lyrics words language english { Twin- kle, twin- kle, | lit- tle star, | }`.
+
+Open its preview (the icon at the editor's top
 right, or **Lily#: Open Preview to the Side**) and press **Play**: the first time, the
 engine loads the voice, which can take up to a minute; after that a change is heard at once.
 

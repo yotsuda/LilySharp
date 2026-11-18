@@ -1,16 +1,17 @@
-// A first song. The part names its words, `lyrics` holds them, the score's row prints them,
-// and the `singer` line is what makes them heard. Open the preview and press Play.
+// A first song: the opening of ふるさと (Furusato, 1914; words Takano Tatsuyuki, music Okano
+// Teiichi; in the public domain). The part names its words, `lyrics` holds them, the score's
+// row prints them, and the `singer` line is what makes them heard. Open the preview and press Play.
 octave relative
-time 4/4
-key c major
-tempo 96
+time 3/4
+key g major
+tempo 80
 part melody { instrument alto  lyrics words }
 section A {
   melody {
-    c'4 d e f | g2 g | a4 a g2 | f4 f e2 | d2 c |
+    g'4 g g | a4. b8 a4 | b4 b c | d2. |
   }
   lyrics words {
-    あ か る い | そ ら | う た を | う た お | う よ |
+    う さ ぎ | お い し | か の や | ま |
   }
 }
 form { A }

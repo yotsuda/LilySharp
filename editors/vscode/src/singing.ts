@@ -29,7 +29,7 @@ import { CandidateSounds, CandidateVoice, CandidateVoices, candidateSilencedTrac
 import { PracticeState, VOICE_LEAD_S, voiceEntries } from './webview/playbackCore';
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
 import { SINGER_NAME, SINGER_LANGUAGE, onSingerGender, singValueChoices, singerGoesOnToSings, singerLineOf, singerSettingSlot, singMarkSlot, singersWritten, singParameterDetail, singProblems, SingSettingDto, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, EngineWatch, prepareAllowanceMs, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuKey, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger, unsingableGuide, unsingableReason } from './singerCore';
-import { CANTORIA_OUTDATED_CONTEXT, cantoriaIsOutdated, galleryQuery, newestInGallery } from './singerCore';
+import { CANTORIA_OUTDATED_CONTEXT, CantoriaVoice, cantoriaIsOutdated, firstSongFor, galleryQuery, newestInGallery } from './singerCore';
 import { VoiceProblems, engineFailureProblem, engineSaid, noVocoderGuide, singerFailureText, vocoderMissing, voiceWho, wordsProblems } from './singerCore';
 
 export interface SingingDeps {
@@ -569,6 +569,22 @@ export async function installCantoria(): Promise<void> {
         // Not reachable from here (offline, or a gallery that does not list it): show the search.
         await vscode.commands.executeCommand('workbench.extensions.search', `@id:${CANTORIA_EXTENSION_ID}`);
     }
+}
+
+/** The walkthrough's first song for the voices installed here (firstSongFor): Cantoria is asked
+ *  what its voices sing; not installed, or not answering within a few seconds, the Japanese one. */
+export async function firstSongFile(): Promise<string> {
+    let voices: CantoriaVoice[] = [];
+    try {
+        const asked = (async () => {
+            const engine = await renderer();
+            return engine?.backend instanceof CantoriaExtensionBackend ? await engine.backend.api.voices?.() ?? [] : [];
+        })();
+        voices = await Promise.race([asked, new Promise<CantoriaVoice[]>(resolve => setTimeout(() => resolve([]), 5000))]);
+    } catch {
+        // No engine to ask: the default.
+    }
+    return firstSongFor(voices, vscode.env.language);
 }
 
 /** The newest Cantoria its gallery lists, as last asked (undefined: not asked, not answered, not listed). */

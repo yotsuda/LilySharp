@@ -105,6 +105,23 @@ export function cantoriaIsOutdated(installed: string | undefined, newest: string
  *  `sing` takes and its setting holds. */
 export interface CantoriaVoice { id: string; engine: string; name: string; label?: string; language?: string; languages?: string[]; gender?: string; licence?: string }
 
+/** The walkthrough's first song in each language Cantoria sings, by the language's tag: the
+ *  opening of a song in the public domain (ふるさと, Twinkle Twinkle Little Star, 送别, 아리랑),
+ *  files of the extension's `walkthrough` folder. */
+export const FIRST_SONGS: Readonly<Record<string, string>> = { ja: 'first-song.lys', en: 'first-song-en.lys', zh: 'first-song-zh.lys', ko: 'first-song-ko.lys' };
+
+/** The first song to open: one the voices installed can sing (owner's request 2026-11-18 — the
+ *  song was Japanese whatever the voice, and a voice that sings no Japanese played it on the
+ *  instrument). The editor's own language first, where a voice sings it; else the first of
+ *  Japanese, English, Chinese and Korean that one does. With no voice that says what it sings
+ *  (none installed yet, or an engine not running), the Japanese one: every engine the steps set
+ *  up sings Japanese. */
+export function firstSongFor(voices: readonly Pick<CantoriaVoice, 'language' | 'languages'>[], uiLanguage: string): string {
+    const ui = uiLanguage.toLowerCase().split('-')[0];
+    const order = [...new Set([ui, 'ja', 'en', 'zh', 'ko'])].filter(l => l in FIRST_SONGS);
+    return FIRST_SONGS[order.find(l => voices.some(v => singsLanguage(v, l))) ?? 'ja'];
+}
+
 /** Whether a voice says it sings `language`: its list of languages, else its one. */
 export function singsLanguage(voice: Pick<CantoriaVoice, 'language' | 'languages'>, language: string): boolean {
     return voice.languages?.includes(language) ?? voice.language === language;

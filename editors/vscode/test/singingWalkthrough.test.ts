@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CANTORIA_OUTDATED_CONTEXT, cantoriaIsOutdated, galleryQuery, newestInGallery, noLanguageGuide,noVocoderGuide, noVoiceGuide, unsingableGuide } from '../src/singerCore';
+import { CANTORIA_OUTDATED_CONTEXT, FIRST_SONGS, cantoriaIsOutdated, firstSongFor,galleryQuery, newestInGallery, noLanguageGuide,noVocoderGuide, noVoiceGuide, unsingableGuide } from '../src/singerCore';
 import { extensionSource } from './extensionSource';
 
 // The way from nothing installed to a first voice (owner's request 2026-11-18, after a look at
@@ -120,6 +120,31 @@ describe('the singing walkthrough', () => {
         const song = fs.readFileSync(path.join(root, 'walkthrough', 'first-song.lys'), 'utf8');
         assert.match(song, /^singer female on melody$/m);
         assert.match(song, /lyrics words \{/);
+        // A song for each language Cantoria sings (owner's request 2026-11-18), each the opening
+        // of a song in the public domain, its words saying their language where it is not Japanese.
+        assert.deepEqual(FIRST_SONGS, { ja: 'first-song.lys', en: 'first-song-en.lys', zh: 'first-song-zh.lys', ko: 'first-song-ko.lys' });
+        const words: Record<string, RegExp> = { ja: /lyrics words \{\s+う さ ぎ \|/, en: /lyrics words language english \{\s+Twin- kle,/, zh: /lyrics words language chinese \{\s+长 亭 外 \|/, ko: /lyrics words language korean \{\s+아 리 랑 \|/ };
+        for (const [language, file] of Object.entries(FIRST_SONGS)) {
+            const text = fs.readFileSync(path.join(root, 'walkthrough', file), 'utf8');
+            assert.match(text, /^singer female on melody$/m, file);
+            assert.match(text, words[language], file);
+            assert.match(text, /public domain|traditional/, file);
+        }
+        assert.match(extensionSource(), /joinPath\(context\.extensionUri, 'walkthrough', await firstSongFile\(\)\)/);
+    });
+
+    it('opens the first song in a language the voices installed sing', () => {
+        const ja = { language: 'ja' }, tiger = { language: 'ja', languages: ['ja', 'en', 'zh'] }, zh = { language: 'zh' }, ko = { languages: ['ko'] }, silent = {};
+        assert.equal(firstSongFor([], 'en'), 'first-song.lys');                 // nothing installed yet: every engine of the steps sings Japanese
+        assert.equal(firstSongFor([silent], 'en'), 'first-song.lys');           // a voice that does not say what it sings
+        assert.equal(firstSongFor([ja], 'en'), 'first-song.lys');
+        assert.equal(firstSongFor([tiger], 'en'), 'first-song-en.lys');         // the editor's language first, where a voice sings it
+        assert.equal(firstSongFor([tiger], 'zh-CN'), 'first-song-zh.lys');
+        assert.equal(firstSongFor([tiger], 'fr'), 'first-song.lys');            // …else Japanese before English, Chinese, Korean
+        assert.equal(firstSongFor([zh], 'ja'), 'first-song-zh.lys');            // no Japanese voice: what there is
+        assert.equal(firstSongFor([ko, zh], 'ja'), 'first-song-zh.lys');
+        assert.equal(firstSongFor([ko], 'en-US'), 'first-song-ko.lys');
+        assert.equal(firstSongFor([ja, ko], 'KO'), 'first-song-ko.lys');
         // Packaged: nothing in .vscodeignore leaves the folder out.
         assert.doesNotMatch(fs.readFileSync(path.join(root, '.vscodeignore'), 'utf8'), /^walkthrough/m);
     });

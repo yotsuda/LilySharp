@@ -53,7 +53,7 @@ import { TodoMark, parseStarts, todoDeletions } from './todoResolveCore';
 import { renderAudioFiles } from './audioRender';
 import { PracticeState, practiceSummary } from './webview/playbackCore';
 import { writeVideos } from './videoExport';
-import { registerSinging, deactivateSinging, installCantoria, upgradeCantoria, checkCantoriaUpgrade,hearSinger, stepSingerAt, renderer, disposeSinger, menuVoices, missingVoices, followVoices, forgetVoices, prepareVoices, candidateVoices } from './singing';
+import { registerSinging, deactivateSinging, installCantoria, upgradeCantoria, checkCantoriaUpgrade, firstSongFile, hearSinger, stepSingerAt, renderer, disposeSinger, menuVoices, missingVoices, followVoices, forgetVoices, prepareVoices, candidateVoices } from './singing';
 import { useSoundFontLog, rememberSoundFont, wavSoundFont, chooseSoundFont, previewResourceRoots, synthUrls } from './soundFont';
 import { useMidiOutHost, midiOutputSetting, midiOutRequest, reportMidiOutError, chooseMidiOutput } from './midiOut';
 import { useExportHost, openInDefaultApp, exportPreview, practisedJobs, recordingRendered, recordJobs, singJobs, drawFramesFor, videoFfmpeg } from './exportPreview';
@@ -819,9 +819,9 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('lilysharp.installCantoria', () => installCantoria()),
         vscode.commands.registerCommand('lilysharp.upgradeCantoria', () => upgradeCantoria()),
         // The walkthrough's last step: a short song with its words and a singer line, as a new
-        // document, to play in the preview.
+        // document, to play in the preview — in a language the voices installed sing (firstSongFile).
         vscode.commands.registerCommand('lilysharp.openFirstSong', async () => {
-            const sample = await vscode.workspace.fs.readFile(vscode.Uri.joinPath(context.extensionUri, 'walkthrough', 'first-song.lys'));
+            const sample = await vscode.workspace.fs.readFile(vscode.Uri.joinPath(context.extensionUri, 'walkthrough', await firstSongFile()));
             const doc = await vscode.workspace.openTextDocument({ language: 'lilysharp', content: Buffer.from(sample).toString('utf8') });
             await vscode.window.showTextDocument(doc);
         }),
