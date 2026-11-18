@@ -49,7 +49,7 @@ describe('the preview\'s Range panel', () => {
     it('asks the server for the score shown, and again after every render while open', () => {
         assert.match(extension, /'lilysharp\/ranges', \{ textDocument: \{ uri \}, renderName: selectedRenders\.get\(uri\) \|\| null \}/);
         assert.match(html, /function refreshRanges\(\) \{\s*if \(!rangePanel\.hidden\) vscode\.postMessage\(\{ type: 'requestRanges' \}\);/);
-        assert.match(html, /lightCaretBar\(\);\s*(?:lap\('[^']*'\);\s*)?drawAbFlags\(\);[^\n]*\s*refreshRanges\(\);/);
+        assert.match(html, /lightCaretBar\(\);\s*(?:lap\('[^']*'\);\s*)?drawAbFlags\(\);[^\n]*\s*showBar\(\);[^\n]*\s*refreshRanges\(\);/);
         assert.match(html, /case 'rangesData':\s*rangeParts = message\.parts \|\| null;/);
     });
 
@@ -200,6 +200,12 @@ describe('the preview\'s Range panel', () => {
     // length's yardstick: the score's seconds at the written tempo.
     it('shows where the playback stands beside the length, in the score\'s seconds', () => {
         assert.match(html, /<span id="posInfo" class="length"[^>]*hidden><\/span>\s*<span id="lengthInfo"/);
+        // …and over them the bar, "Bar 12 / 118" (owner's request 2026-11-19: the practice panel's
+        // "118 bars placed" line took room there): the bar lit while it plays, else the A flag's.
+        assert.match(html, /<span class="where"><span id="barInfo" class="length"[^>]*hidden><\/span><span class="clock"><span id="posInfo"/);
+        assert.match(html, /el\.textContent = 'Bar ' \+ num\(Math\.min\(m, last\)\) \+ ' \/ ' \+ num\(last\);/);
+        assert.match(html, /if \(Number\.isInteger\(m\) && m !== litBar\) \{ litBar = m; showBar\(\); \}/);
+        assert.doesNotMatch(html, /bars placed'/);
         const fn = (name: string) => {
             const at = html.indexOf('function ' + name + '(');
             return html.slice(at, html.indexOf('\n        }', at) + '\n        }'.length);

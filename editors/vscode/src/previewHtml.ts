@@ -472,8 +472,11 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             font-variant-numeric: tabular-nums;
         }
         /* "0:00 / 4:38": the position and the length read as one, a space apart — not the
-           group's 8px between two buttons (owner's report 2026-11-16). */
-        .toolbar #posInfo { margin-right: -5px; }
+           group's 8px between two buttons (owner's report 2026-11-16) — and over them the bar,
+           "Bar 12 / 118" (owner's request 2026-11-19): two small lines in the header's one. */
+        .toolbar .where { display: inline-flex; flex-direction: column; align-items: flex-start; justify-content: center; line-height: 1.15; }
+        .toolbar .where .length { font-size: 11px; white-space: nowrap; }
+        .toolbar .where .clock { display: inline-flex; gap: 3px; }
         /* The button that brings a Play's view back to the notes sounding (followScroll.ts). */
         ${FOLLOW_SCROLL_CSS}
         /* The Range panel (owner's request 2026-10-25): each part's lowest and highest note over
@@ -673,8 +676,8 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         <!-- Repeat (owner's decision 2026-11-19: here, the practice panel's Loop group gone). -->
         <button id="loopBtn" class="toggle icon" type="button" aria-pressed="false" aria-label="Repeat" title="Repeat: play round and round — the bars A to B when A-B is on, else the whole score as it plays"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.8 7.2V6.4a2.2 2.2 0 0 1 2.2-2.2h7.6"/><path d="M10.4 2l2.2 2.2-2.2 2.2"/><path d="M13.2 8.8v.8a2.2 2.2 0 0 1-2.2 2.2H3.4"/><path d="M5.6 14l-2.2-2.2 2.2-2.2"/></svg></button>
         <button id="practiceBtn" class="toggle icon practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" aria-label="Practice and mixer" title="Practice and mixer: tempo, the parts, the recording"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M3.6 14.8 6.3 1.4h3.4l2.7 13.4zM7.3 3 5.9 10.2h4.2L8.7 3z"/><path d="M7.7 11.2 12.4 3.9l1 .65-4.7 7.3z"/></svg><span id="practiceSpeed"></span></button>
-        <span id="posInfo" class="length" title="Where the playback stands, in the score's time" hidden></span>
-        <span id="lengthInfo" class="length" title="Length, as played"></span>
+        <!-- The bar over the time (owner's request 2026-11-19): "Bar 12 / 118" over "0:21 / 4:38". -->
+        <span class="where"><span id="barInfo" class="length" title="The bar playing — stopped, the A flag's bar, where Play starts — and the last bar printed" hidden></span><span class="clock"><span id="posInfo" class="length" title="Where the playback stands, in the score's time" hidden></span><span id="lengthInfo" class="length" title="Length, as played"></span></span></span>
         </span>
         <span class="sep"></span>
         <span class="group">
@@ -1850,22 +1853,36 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         // with nothing lit keeps the bar there. null takes it away (the playback stopped).
         /** The box (client rect) of the bar an element stands in — of all its system's staves — or null. */
         function barBoxOf(el) {
+            const box = barBoxElOf(el);
+            return box ? box.getBoundingClientRect() : null;
+        }
+        /** …and the box itself (rect.bar-box), which says its measure (data-m). */
+        function barBoxElOf(el) {
             const b = el.getBoundingClientRect();
             const cx = (b.left + b.right) / 2, cy = (b.top + b.bottom) / 2;
-            let column = null, bestGap = Infinity;
+            let box = null, bestGap = Infinity;
             for (const r of svgContainer.querySelectorAll('rect.bar-box')) {
                 const k = r.getBoundingClientRect();
                 if (cx < k.left || cx > k.right) continue;
                 const gap = cy < k.top ? k.top - cy : cy > k.bottom ? cy - k.bottom : 0;
-                if (gap < bestGap) { column = k; bestGap = gap; }
+                if (gap < bestGap) { box = r; bestGap = gap; }
             }
-            return column;
+            return box;
         }
+        // The bar playing, as its measure index (the header's "Bar 12 / 118", showBar): litBar while
+        // a bar is lit, lastLitBar the one lit when the playing stopped (a pause shows it still).
+        var litBar = -1, lastLitBar = -1;
         function lightPlayingBar(painted) {
             for (const r of svgContainer.querySelectorAll('rect.bar-staff.playing')) r.classList.remove('playing');
-            if (!painted || painted.length === 0) return;
-            const column = barBoxOf(painted[0]);
+            if (!painted || painted.length === 0) {
+                if (!painted) { if (litBar >= 0) lastLitBar = litBar; litBar = -1; showBar(); }
+                return;
+            }
+            const box = barBoxElOf(painted[0]);
+            const column = box ? box.getBoundingClientRect() : null;
             if (!column) return;
+            const m = parseInt(box.getAttribute('data-m'), 10);
+            if (Number.isInteger(m) && m !== litBar) { litBar = m; showBar(); }
             for (const r of svgContainer.querySelectorAll('rect.bar-staff:not([data-row])')) {
                 const k = r.getBoundingClientRect();
                 const mx = (k.left + k.right) / 2, my = (k.top + k.bottom) / 2;
@@ -3094,6 +3111,23 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             const s = playingNow() ? playbackScoreSeconds() : paused && typeof paused.seconds === 'number' ? paused.seconds : stoppedSeconds;
             el.hidden = typeof s !== 'number' || !isFinite(s);
             el.textContent = el.hidden ? '' : clockText(s) + ' /';
+            if (!playingNow()) showBar();    // (playing, the lit bar says it: lightPlayingBar)
+        }
+        /** The bar over the time (owner's request 2026-11-19: it was the practice panel's last line,
+         *  "118 bars placed"): the bar playing — paused, the one it stopped in; stopped, the A flag's,
+         *  where Play starts — of the bars printed, by the numbers printed. */
+        function showBar() {
+            const el = document.getElementById('barInfo');
+            let bars;
+            try { bars = abBars(); } catch (e) { return; }     // (the page's script is still starting)
+            let last = -1;
+            for (const b of bars) if (b) last = b.m;
+            const m = playingNow() ? (litBar >= 0 ? litBar : Math.max(0, abFrom))
+                : paused && lastLitBar >= 0 ? lastLitBar : Math.max(0, abFrom);
+            el.hidden = last < 0;
+            if (el.hidden) { el.textContent = ''; return; }
+            const num = i => bars[i] && Number.isInteger(bars[i].bar) ? bars[i].bar : i + 1;
+            el.textContent = 'Bar ' + num(Math.min(m, last)) + ' / ' + num(last);
         }
         /**
          * When printed bar m (a measure index, as the flags count) first plays, on a list's own time
@@ -5157,7 +5191,9 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             if (fresh && lastPartsMessage) renderParts(lastPartsMessage);
             document.getElementById('recName').textContent = recording.name;
             document.getElementById('recName').title = recording.name;
-            const barsSaid = recording.bars.length > 0 ? recording.bars.length + ' bars placed' : 'no bars placed yet';
+            // (said only when something is to be said — owner's request 2026-11-19: "4:15 — 118 bars
+            // placed" took a line of the panel; the bars are in the header, showBar)
+            const barsSaid = recording.bars.length > 0 ? '' : 'No bars placed yet: the recording plays alone';
             if (m.error) {
                 recording.ready = false;
                 recStatus(m.error);
@@ -5173,7 +5209,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                     if (!recording || recording.chart !== m.chart) return;
                     recording.ready = true;
                     postPracticeState();
-                    recStatus(Math.floor(seconds / 60) + ':' + String(Math.round(seconds % 60)).padStart(2, '0') + ' — ' + barsSaid);
+                    recStatus(barsSaid);
                 }, err => {
                     if (recording) recording.ready = false;
                     recStatus('The recording cannot be decoded: ' + (err && err.message || err));
@@ -5699,6 +5735,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                         lightCaretBar();
                         lap('bars');
                         drawAbFlags();      // (the A-B flags are the page's: drawn into each new picture)
+                        showBar();          // (and the header's bar: the picture's bars may be others)
                         refreshRanges();
                         vscode.postMessage({ type: 'requestLength' });
                         lap('A-B');
