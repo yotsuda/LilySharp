@@ -606,7 +606,9 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         .mixer-panel .mmini .fader { width: auto; flex: 1 1 70px; min-width: 70px; max-width: 120px; }   /* (the room left, to its left: owner's request 2026-11-17) */
         .mixer-panel .mgroup.folded:has(.mmini) > .mhead { flex-wrap: wrap; row-gap: 4px; }
         .mixer-panel .mgroup.folded:has(.mmini) .mtitle { width: auto; }
-        .mixer-panel .msettings .moct .tval { width: auto; min-width: 1.6em; text-align: center; }
+        /* (the octave between its − and +, folded and open alike: owner's report 2026-11-19 — open, the
+           number stood at the right of a value's width, far from the −) */
+        .mixer-panel .msettings .moct .tval, .mixer-panel .msettings #recOctValue { width: auto; min-width: 1.6em; text-align: center; }
         .mixer-panel .mmini button { white-space: nowrap; }
         /* Folded, Speed and pitch keeps its octave in its line (owner's request 2026-11-17). */
         .mixer-panel .msettings summary { display: flex; align-items: center; gap: 8px; }
