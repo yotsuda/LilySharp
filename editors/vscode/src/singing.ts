@@ -29,6 +29,7 @@ import { CandidateSounds, CandidateVoice, CandidateVoices, candidateSilencedTrac
 import { PracticeState, VOICE_LEAD_S, voiceEntries } from './webview/playbackCore';
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
 import { SINGER_NAME, SINGER_LANGUAGE, onSingerGender, singValueChoices, singerGoesOnToSings, singerLineOf, singerSettingSlot, singMarkSlot, singersWritten, singParameterDetail, singProblems, SingSettingDto, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, EngineWatch, prepareAllowanceMs, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuKey, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger, unsingableGuide, unsingableReason } from './singerCore';
+import { CANTORIA_OUTDATED_CONTEXT, cantoriaIsOutdated, galleryQuery, newestInGallery } from './singerCore';
 import { VoiceProblems, engineFailureProblem, engineSaid, noVocoderGuide, singerFailureText, vocoderMissing, voiceWho, wordsProblems } from './singerCore';
 
 export interface SingingDeps {
@@ -68,7 +69,7 @@ export function registerSinging(context: vscode.ExtensionContext, deps: SingingD
         vscode.workspace.onDidCloseTextDocument(d => singDiagnostics.delete(d.uri)),
         voiceDiagnostics,
         vscode.workspace.onDidCloseTextDocument(d => { voiceProblems.forget(d.uri.toString()); voiceDiagnostics.delete(d.uri); }),
-        vscode.extensions.onDidChange(() => { for (const d of vscode.workspace.textDocuments) { scheduleSingProblems(d); } }));
+        vscode.extensions.onDidChange(() => { void setCantoriaOutdated(); for (const d of vscode.workspace.textDocuments) { scheduleSingProblems(d); } }));
     for (const d of vscode.workspace.textDocuments) { scheduleSingProblems(d); }
     voiceSamplesDir = path.join(context.globalStorageUri.fsPath, 'voice-samples');
     context.subscriptions.push(vscode.commands.registerCommand('lilysharp.hearSinger', hearSinger));
@@ -568,6 +569,70 @@ export async function installCantoria(): Promise<void> {
         // Not reachable from here (offline, or a gallery that does not list it): show the search.
         await vscode.commands.executeCommand('workbench.extensions.search', `@id:${CANTORIA_EXTENSION_ID}`);
     }
+}
+
+/** The newest Cantoria its gallery lists, as last asked (undefined: not asked, not answered, not listed). */
+let cantoriaNewest: string | undefined;
+/** The version {@link upgradeCantoria} installed this session: the one running still says its old version. */
+let cantoriaUpgradedTo: string | undefined;
+
+/** The gallery this VS Code installs from, as its product.json names it (the Marketplace, or
+ *  another that speaks as it does), or undefined for a build with none. */
+function galleryServiceUrl(): string | undefined {
+    try {
+        const product = JSON.parse(fs.readFileSync(path.join(vscode.env.appRoot, 'product.json'), 'utf8'));
+        const url = product?.extensionsGallery?.serviceUrl;
+        return typeof url === 'string' && /^https:\/\//.test(url) ? url.replace(/\/+$/, '') : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+function setCantoriaOutdated(): Thenable<unknown> {
+    const installed = vscode.extensions.getExtension(CANTORIA_EXTENSION_ID)?.packageJSON?.version;
+    return vscode.commands.executeCommand('setContext', CANTORIA_OUTDATED_CONTEXT, cantoriaIsOutdated(installed, cantoriaNewest, cantoriaUpgradedTo));
+}
+
+/** Asks the gallery for Cantoria's newest version and sets {@link CANTORIA_OUTDATED_CONTEXT}: the
+ *  walkthrough's first step is "Upgrade" while the one installed is older (owner's request
+ *  2026-11-18). Only an installed Cantoria is asked about, and only its name is sent. No answer
+ *  within `waitMs` (offline, a gallery that does not list it) leaves the step "Install", which an
+ *  installed Cantoria has checked off; an answer that comes later still sets the step. */
+export async function checkCantoriaUpgrade(waitMs = 2500): Promise<void> {
+    const service = vscode.extensions.getExtension(CANTORIA_EXTENSION_ID) ? galleryServiceUrl() : undefined;
+    if (!service) { await setCantoriaOutdated(); return; }
+    const asked = (async () => {
+        try {
+            const answer = await fetch(`${service}/extensionquery`, {
+                method: 'POST', signal: AbortSignal.timeout(15000),
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json;api-version=3.0-preview.1' },
+                body: JSON.stringify(galleryQuery(CANTORIA_EXTENSION_ID)),
+            });
+            if (answer.ok) { cantoriaNewest = newestInGallery(await answer.json(), CANTORIA_EXTENSION_ID) ?? cantoriaNewest; }
+        } catch {
+            // Offline, or no such gallery: what was known stays.
+        }
+        await setCantoriaOutdated();
+    })();
+    await Promise.race([asked, new Promise<void>(resolve => setTimeout(resolve, waitMs))]);
+}
+
+/** The walkthrough's "Upgrade Cantoria": installs the gallery's newest over the one installed. The
+ *  step goes back to "Install" (checked off), and the new version sings once the extensions are restarted. */
+export async function upgradeCantoria(): Promise<void> {
+    const was = vscode.extensions.getExtension(CANTORIA_EXTENSION_ID)?.packageJSON?.version;
+    try {
+        await vscode.commands.executeCommand('workbench.extensions.installExtension', CANTORIA_EXTENSION_ID);
+    } catch {
+        await vscode.commands.executeCommand('workbench.extensions.search', `@id:${CANTORIA_EXTENSION_ID}`);
+        return;
+    }
+    cantoriaUpgradedTo = cantoriaNewest;
+    await setCantoriaOutdated();
+    const restart = 'Restart Extensions';
+    const choice = await vscode.window.showInformationMessage(
+        `Lily#: Cantoria ${cantoriaNewest ?? ''} is installed${was ? ` over ${was}` : ''}. It sings once the extensions are restarted.`.replace('  ', ' '), restart);
+    if (choice === restart) { await vscode.commands.executeCommand('workbench.action.restartExtensionHost'); }
 }
 
 /** What this session has already said about voices that cannot be listed. */

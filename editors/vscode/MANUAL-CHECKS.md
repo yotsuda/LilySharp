@@ -471,6 +471,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] **W5**: 4 段目の **Open a First Song** → 新しい文書に短い曲が開く。プレビューを開いて Play → 既定の女声が「あかるいそら…」を歌う。
 - [ ] **W6**: Lily# を入れた直後（歌の案内を一度も開いていない状態）には、このウォークスルーが勝手に開かない・Welcome の一覧にも出ない。
 - [ ] **W7**: 声が無い状態で `singer "` の一覧の案内を取る／声の無い singer 行を再生する → 通知の先頭のボタン **How to Install a Voice** が同じウォークスルーを開く（ブラウザは開かない）。
+- [ ] **W8**（2026-11-18）: 入っている Cantoria が gallery の最新より古い状態で **Lily#: Set Up a Singing Voice** → 最初のステップが **Upgrade the Cantoria extension**・ボタンは **Upgrade Cantoria**。押すと更新が入り、ステップは **Install the Cantoria extension**（チェック済み）に戻り、通知の **Restart Extensions** で新しい版が動く。最新が入っているとき・オフラインのときは今までどおり Install（チェック済み）。⚠️ Cantoria が Marketplace に出てからでないと確かめられない（出ていない gallery では常に Install）。
 
 ### 3.8 頁の本文（```` ```md ````）の色と編集補助（2026-11-13・この節は全部未確認）
 

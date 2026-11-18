@@ -570,7 +570,16 @@
             "title": "Install the Cantoria extension",
             "description": "Voices are sung by Cantoria, a separate free extension that drives a singing engine on this computer.\n[Install Cantoria](command:lilysharp.installCantoria)",
             "media": { "markdown": "walkthrough/cantoria.md" },
-            "completionEvents": [ "extensionInstalled:yotsuda.cantoria" ]
+            "completionEvents": [ "extensionInstalled:yotsuda.cantoria" ],
+            "when": "!lilysharp.cantoriaOutdated"
+          },
+          {
+            "id": "cantoria-upgrade",
+            "title": "Upgrade the Cantoria extension",
+            "description": "Cantoria is installed, and a newer version of it is out. Voices are sung by Cantoria, a separate free extension that drives a singing engine on this computer.\n[Upgrade Cantoria](command:lilysharp.upgradeCantoria)",
+            "media": { "markdown": "walkthrough/cantoria.md" },
+            "completionEvents": [ "onContext:lilysharp.cantoriaUpgraded" ],
+            "when": "lilysharp.cantoriaOutdated"
           },
           {
             "id": "engine",
@@ -610,6 +619,11 @@
         "command": "lilysharp.installCantoria",
         "category": "Lily#",
         "title": "Install the Cantoria Singing Voice Extension"
+      },
+      {
+        "command": "lilysharp.upgradeCantoria",
+        "category": "Lily#",
+        "title": "Upgrade the Cantoria Singing Voice Extension"
       },
       {
         "command": "lilysharp.openPreview",

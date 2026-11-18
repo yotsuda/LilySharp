@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { noLanguageGuide, noVocoderGuide, noVoiceGuide, unsingableGuide } from '../src/singerCore';
+import { CANTORIA_OUTDATED_CONTEXT, cantoriaIsOutdated, galleryQuery, newestInGallery, noLanguageGuide,noVocoderGuide, noVoiceGuide, unsingableGuide } from '../src/singerCore';
 import { extensionSource } from './extensionSource';
 
 // The way from nothing installed to a first voice (owner's request 2026-11-18, after a look at
@@ -38,12 +38,49 @@ describe('the singing walkthrough', () => {
     const commandsOf = (text: string) => [...text.matchAll(/\]\(command:([\w.]+)\)/g)].map(m => m[1]);
 
     it('goes from the extension to an engine to a first song', () => {
-        assert.deepEqual(steps.map(s => s.id), ['cantoria', 'engine', 'check', 'first-song']);
+        assert.deepEqual(steps.map(s => s.id), ['cantoria', 'cantoria-upgrade', 'engine', 'check', 'first-song']);
+    });
+
+    // Owner's request 2026-11-18: with a Cantoria installed that is not the newest, the first step
+    // says "Upgrade". A step's words cannot change, so there are two steps and a context shows one.
+    it('says Upgrade for the first step while the Cantoria installed is not the newest', () => {
+        const when = (id: string) => (steps.find(s => s.id === id) as { when?: string }).when;
+        assert.equal(CANTORIA_OUTDATED_CONTEXT, 'lilysharp.cantoriaOutdated');
+        assert.equal(when('cantoria'), '!lilysharp.cantoriaOutdated');
+        assert.equal(when('cantoria-upgrade'), 'lilysharp.cantoriaOutdated');
+        const upgrade = steps.find(s => s.id === 'cantoria-upgrade')!;
+        assert.deepEqual(commandsOf(upgrade.description), ['lilysharp.upgradeCantoria']);
+        assert.match(upgrade.description, /\[Upgrade Cantoria\]/);
+        // VS Code keeps a checked step checked for good, and the next newer version must find this
+        // one unchecked: its event is a context nothing sets. Upgraded, the context goes false and
+        // the step shown is "Install" again, which an installed Cantoria has checked off.
+        assert.deepEqual(upgrade.completionEvents, ['onContext:lilysharp.cantoriaUpgraded']);
+        assert.doesNotMatch(extensionSource(), /cantoriaUpgraded\b/);
+        // The gallery is asked each time the steps are opened, before they are.
+        assert.match(extensionSource(), /'lilysharp\.singingGuide', true\);[^;]*?await checkCantoriaUpgrade\(\);\s+try \{/);
+    });
+
+    it('knows the newest Cantoria from the gallery\'s answer, and when the one installed is older', () => {
+        assert.deepEqual(galleryQuery('yotsuda.cantoria'), { filters: [{ criteria: [{ filterType: 7, value: 'yotsuda.cantoria' }] }], flags: 17 });
+        const pre = [{ key: 'Microsoft.VisualStudio.Code.PreRelease', value: 'true' }];
+        const answer = { results: [{ extensions: [
+            { publisher: { publisherName: 'someone' }, extensionName: 'cantoria', versions: [{ version: '9.0.0' }] },
+            { publisher: { publisherName: 'Yotsuda' }, extensionName: 'cantoria', versions: [
+                { version: '0.11.0', properties: pre }, { version: '0.4.0' }, { version: '0.10.1', properties: [] }, { version: '0.10.1' }, { version: 'next' }] }] }] };
+        assert.equal(newestInGallery(answer, 'yotsuda.cantoria'), '0.10.1');     // by numbers (0.10 after 0.4), no pre-release, its own publisher's
+        for (const none of [undefined, null, 'offline', {}, { results: [] }, { results: [{ extensions: [] }] }, { results: [{}] }]) { assert.equal(newestInGallery(none, 'yotsuda.cantoria'), undefined); }
+        assert.equal(cantoriaIsOutdated('0.4.0', '0.10.1'), true);
+        assert.equal(cantoriaIsOutdated('0.10.1', '0.10.1'), false);
+        assert.equal(cantoriaIsOutdated('0.11.0', '0.10.1'), false);            // a build newer than the gallery's (the developer's)
+        assert.equal(cantoriaIsOutdated(undefined, '0.10.1'), false);           // not installed: the step is Install
+        assert.equal(cantoriaIsOutdated('0.4.0', undefined), false);            // the gallery did not answer
+        assert.equal(cantoriaIsOutdated('0.4.0', '0.10.1', '0.10.1'), false);   // upgraded this session; the one running still says 0.4.0
+        assert.equal(cantoriaIsOutdated('0.4.0', '0.10.2', '0.10.1'), true);    // …and a newer one came out since
     });
 
     it('is not opened by installing Lily#: it is hidden until it is asked for', () => {
         assert.equal(walkthrough.when, 'lilysharp.singingGuide');
-        assert.match(extensionSource(), /executeCommand\('setContext', 'lilysharp\.singingGuide', true\);\s+try \{\s+await vscode\.commands\.executeCommand\('workbench\.action\.openWalkthrough', `\$\{context\.extension\.id\}#singing`, false\);/);
+        assert.match(extensionSource(), /executeCommand\('setContext', 'lilysharp\.singingGuide', true\);[^;]*?await checkCantoriaUpgrade\(\);\s+try \{\s+await vscode\.commands\.executeCommand\('workbench\.action\.openWalkthrough', `\$\{context\.extension\.id\}#singing`, false\);/);
     });
 
     it('has a button for every step, on a command that is there', () => {
@@ -58,7 +95,7 @@ describe('the singing walkthrough', () => {
                 if (c.startsWith('lilysharp.')) { assert.match(extensionSource(), new RegExp(`registerCommand\\('${c.replace('.', '\\.')}'`)); }
             }
         }
-        assert.deepEqual(commandsOf(steps[1].description), ['cantoria.findEngines', 'cantoria.chooseVoicesFolder', 'cantoria.chooseNeutrinoFolder', 'cantoria.chooseVoicevoxFolder']);
+        assert.deepEqual(commandsOf(steps.find(s => s.id === 'engine')!.description), ['cantoria.findEngines', 'cantoria.chooseVoicesFolder', 'cantoria.chooseNeutrinoFolder', 'cantoria.chooseVoicevoxFolder']);
     });
 
     it('checks a step off by what the step does', () => {

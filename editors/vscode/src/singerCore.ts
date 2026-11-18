@@ -53,6 +53,54 @@ export const VOICE_SAMPLE_RATE = 48000;
 /** The Cantoria extension, the engine's own home on the Marketplace (docs/singing-design.md §5). */
 export const CANTORIA_EXTENSION_ID = 'yotsuda.cantoria';
 
+/** True while the Cantoria installed here is older than the newest its gallery lists: the
+ *  walkthrough's first step is then "Upgrade" where it is "Install" (owner's request 2026-11-18). */
+export const CANTORIA_OUTDATED_CONTEXT = 'lilysharp.cantoriaOutdated';
+
+/** What a gallery (the Marketplace, or one that speaks as it does) is asked for an extension's
+ *  versions: the extension by its name (filter 7), with its versions (1) and their properties (16),
+ *  which say whether a version is a pre-release. */
+export function galleryQuery(id: string): { filters: { criteria: { filterType: number; value: string }[] }[]; flags: number } {
+    return { filters: [{ criteria: [{ filterType: 7, value: id }] }], flags: 17 };
+}
+
+/** The newest released version of `id` in a gallery's answer to {@link galleryQuery}, or undefined
+ *  when the answer does not list it (not published there, or not an answer at all). A pre-release
+ *  is not counted: VS Code does not update to one unasked. */
+export function newestInGallery(answer: unknown, id: string): string | undefined {
+    type Listed = { publisher?: { publisherName?: string }; extensionName?: string; versions?: { version?: string; properties?: { key?: string; value?: string }[] }[] };
+    const results = (answer as { results?: { extensions?: Listed[] }[] } | null)?.results;
+    if (!Array.isArray(results)) { return undefined; }
+    let newest: string | undefined;
+    for (const e of results.flatMap(r => Array.isArray(r?.extensions) ? r.extensions : [])) {
+        if (`${e.publisher?.publisherName}.${e.extensionName}`.toLowerCase() !== id.toLowerCase() || !Array.isArray(e.versions)) { continue; }
+        for (const v of e.versions) {
+            if (typeof v.version !== 'string' || !/^\d+(\.\d+)*$/.test(v.version)) { continue; }
+            if (v.properties?.some(p => p.key === 'Microsoft.VisualStudio.Code.PreRelease' && p.value === 'true')) { continue; }
+            if (newest === undefined || olderVersion(newest, v.version)) { newest = v.version; }
+        }
+    }
+    return newest;
+}
+
+/** Whether "a.b.c" is a version before "x.y.z", by its numbers. */
+function olderVersion(a: string, b: string): boolean {
+    const pa = a.split('.').map(Number), pb = b.split('.').map(Number);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+        const d = (pa[i] ?? 0) - (pb[i] ?? 0);
+        if (d !== 0) { return d < 0; }
+    }
+    return false;
+}
+
+/** Whether to offer Cantoria's upgrade: it is installed, the gallery's newest is known and is
+ *  newer, and that newest was not installed this session already (`upgradedTo`: the extension
+ *  running goes on saying its old version until the extensions are restarted). */
+export function cantoriaIsOutdated(installed: string | undefined, newest: string | undefined, upgradedTo?: string): boolean {
+    if (!installed || !newest || !/^\d+(\.\d+)*$/.test(installed)) { return false; }
+    return olderVersion(installed, newest) && upgradedTo !== newest;
+}
+
 /** A voice the Cantoria extension lists: `id` is `engine/name` (`neutrino/MERROW`), what its
  *  `sing` takes and its setting holds. */
 export interface CantoriaVoice { id: string; engine: string; name: string; label?: string; language?: string; languages?: string[]; gender?: string; licence?: string }

@@ -53,7 +53,7 @@ import { TodoMark, parseStarts, todoDeletions } from './todoResolveCore';
 import { renderAudioFiles } from './audioRender';
 import { PracticeState, practiceSummary } from './webview/playbackCore';
 import { writeVideos } from './videoExport';
-import { registerSinging, deactivateSinging, installCantoria, hearSinger, stepSingerAt, renderer, disposeSinger, menuVoices, missingVoices, followVoices, forgetVoices, prepareVoices, candidateVoices } from './singing';
+import { registerSinging, deactivateSinging, installCantoria, upgradeCantoria, checkCantoriaUpgrade,hearSinger, stepSingerAt, renderer, disposeSinger, menuVoices, missingVoices, followVoices, forgetVoices, prepareVoices, candidateVoices } from './singing';
 import { useSoundFontLog, rememberSoundFont, wavSoundFont, chooseSoundFont, previewResourceRoots, synthUrls } from './soundFont';
 import { useMidiOutHost, midiOutputSetting, midiOutRequest, reportMidiOutError, chooseMidiOutput } from './midiOut';
 import { useExportHost, openInDefaultApp, exportPreview, practisedJobs, recordingRendered, recordJobs, singJobs, drawFramesFor, videoFfmpeg } from './exportPreview';
@@ -807,6 +807,9 @@ export function activate(context: vscode.ExtensionContext) {
         // it, the engines' page is shown as it is written.
         vscode.commands.registerCommand('lilysharp.setUpSingingVoice', async () => {
             await vscode.commands.executeCommand('setContext', 'lilysharp.singingGuide', true);
+            // The first step is "Upgrade" where the Cantoria installed is not the newest (owner's
+            // request 2026-11-18): asked of the gallery here, each time the steps are opened.
+            await checkCantoriaUpgrade();
             try {
                 await vscode.commands.executeCommand('workbench.action.openWalkthrough', `${context.extension.id}#singing`, false);
             } catch {
@@ -814,6 +817,7 @@ export function activate(context: vscode.ExtensionContext) {
             }
         }),
         vscode.commands.registerCommand('lilysharp.installCantoria', () => installCantoria()),
+        vscode.commands.registerCommand('lilysharp.upgradeCantoria', () => upgradeCantoria()),
         // The walkthrough's last step: a short song with its words and a singer line, as a new
         // document, to play in the preview.
         vscode.commands.registerCommand('lilysharp.openFirstSong', async () => {
