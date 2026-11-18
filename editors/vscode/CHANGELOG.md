@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Fixed: an ottava bracket over two voices ended short of the last note.** Where the lower voice stands a second under the upper — its heads set a head's width aside — `voice { c''2 d''2 } { b'2@8vb c''2@!8vb }` ended the bracket over the upper voice's note, 1.4 short of the lower voice's last head. The bracket now runs from the staff's first note of its first moment to after the staff's last note of its last, each where it is drawn, as LilyPond's does.
+
 - **Fixed: a staccato dot on the stem's side stood beside the stem.** A staccato or staccatissimo at the end of its note's stem — every lone dot of a second voice (`voice { … } { c''2@staccato }`), of an upper voice, and one written to that side (`c''4@staccato.down`) — was centred on the note head, half a head beside the stem it stands under. It is centred on the stem, as LilyPond sets it; with another mark on the note (`@staccato@tenuto`, an accent, a fermata) it stays on the head.
 
 - **Faster: the preview follows the keys.** After a keystroke the preview used to wait a fixed tenth of a second for the next one before it drew. It now waits as long as the last few updates of that score took — about a fiftieth of a second on a score of a few pages — and the tenth of a second is only the longest it waits, on a score too long to be drawn between two keystrokes and for the first moments after the preview opens. Measured in VS Code: from a keystroke to the finished picture 140 ms before, 65–85 ms now (less once the language server has warmed up); typing ten notes a second, every note is now drawn as it is typed, where every other one was.

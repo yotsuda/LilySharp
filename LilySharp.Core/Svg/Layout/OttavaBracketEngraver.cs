@@ -369,10 +369,21 @@ internal static class OttavaBracketEngraver
                 // ⚠️ A CONTINUATION piece keeps the measure's origin: its bound is broken,
                 //   and LilyPond's broken branch takes generic_bound_extent and sets
                 //   shorten to 0, which is a different arithmetic with no point on it yet.
+                // …and the column is the STAFF's, not the voice's that wrote the mark: the first
+                // voice's that has one at that moment, where the note collision put it.
+                // LILYPOND-REF: lily/ottava-engraver.cc:138-151 acknowledge_note_column — the
+                //   Staff's engraver takes the first NoteColumn it is told of as the LEFT bound,
+                //   and the voices' columns of one moment come in the voices' order.
+                // MEASURED (2.26.0, Lab sessions/p1304/ot o8, o9): `voice { b'2 c''2 } { c''2@8vb
+                //   d''2@!8vb }` — the upper voice's b' is set 1.102 right of the c'' under it,
+                //   and the bracket begins at 17.423, 0.8 left of THAT head (18.223); Lily# began
+                //   it 0.8 left of the mark's own c'' (16.32) until session 1304.
                 double startX = segment.IsFirst
-                        && ItemX(segStartMeasure, ottavaVoices, bracket.VoiceIndex,
-                            bracket.StartMeasureIndex, bracket.StartItemIndex,
-                            graceNotes, bracket.StaffIndex) is { } startItemX
+                        && (StaffFirstColumnAt(segStartMeasure, ottavaVoices, bracket.VoiceIndex,
+                                bracket.StartMeasureIndex, bracket.StartItemIndex)
+                            ?? ItemX(segStartMeasure, ottavaVoices, bracket.VoiceIndex,
+                                bracket.StartMeasureIndex, bracket.StartItemIndex,
+                                graceNotes, bracket.StaffIndex)) is { } startItemX
                     ? segStartMeasure.X + startItemX + LeftShorten
                     : segStartMeasure.X + LeftShorten;
                 var lastStaffColumn = segment.IsLast && bracket.EndMoment is { } staffEndMoment
@@ -504,6 +515,13 @@ internal static class OttavaBracketEngraver
     ///   every staff shares: a right hand's sixteenth between a left hand's last covered note and
     ///   its closing chord became the bound, and the hook stood past the chord — read as under
     ///   the line (OMR follow-up 2026-10-20, `ottava-hook-over-next-2026-10-20.lys`).
+    /// Of the voices' columns at that last moment it is the LAST voice's — the last the
+    /// engraver was told of (<c>note_col_ = it</c>, :149) — standing where the note collision
+    /// put it. MEASURED (2.26.0, Lab sessions/p1304/ot): o1 <c>voice { c''2 d''2 } { b'2@8vb
+    /// c''2@!8vb }</c> ends 0.6 right of the lower voice's shifted head (24.840; Lily# ended
+    /// it at the unshifted column's, 1.377 short, until session 1304); o5 ends after the
+    /// lower voice's quarter head and not the upper's half; o10 after the lower voice's head
+    /// where the upper voice rests.
     /// </remarks>
     private static (double X, MusicItem Item)? StaffLastColumnBefore(MeasureLayout measure, ImmutableArray<Voice> voices,
         int measureIndex, Fraction endMoment)
@@ -525,16 +543,56 @@ internal static class OttavaBracketEngraver
                 var item = items[ii];
                 bool column = !item.GraceTime
                     && item is NoteItem or ChordItem or RestItem { IsSpacer: false };
-                if (column && onset < endMoment && (best is null || onset > best.Value))
+                if (column && onset < endMoment && (best is null || onset >= best.Value))
                 {
                     best = onset;
-                    bestX = measure.X + LayoutUtilities.GetItemXOffset(measures, measureIndex, ii, measure);
+                    bestX = measure.X + LayoutUtilities.GetItemXOffset(measures, measureIndex, ii, measure)
+                        + HairpinEngraver.CollisionShift(voices, vi, measureIndex, ii);
                     bestItem = item;
                 }
                 onset += item.Duration;
             }
         }
         return best is null || bestItem is null ? null : (bestX, bestItem);
+    }
+
+    /// <summary>
+    /// The measure-relative X of the first note column OF THIS STAFF at the moment the mark's
+    /// own item starts — the first voice's that has a note, chord or rest there, where the
+    /// note collision put it — or null when there is none to read (no voices supplied, a grace
+    /// start: <see cref="ItemX"/> answers those).
+    /// </summary>
+    /// <remarks>The left bound's citation and measurement stand at the call.</remarks>
+    private static double? StaffFirstColumnAt(MeasureLayout measure, ImmutableArray<Voice> voices,
+        int voiceIndex, int measureIndex, int itemIndex)
+    {
+        if (voices.IsDefaultOrEmpty || voiceIndex < 0 || voiceIndex >= voices.Length || measureIndex < 0)
+            return null;
+        var own = voices[voiceIndex].Measures;
+        if (measureIndex >= own.Length || itemIndex < 0 || itemIndex >= own[measureIndex].Items.Length
+            || own[measureIndex].Items[itemIndex].GraceTime)
+            return null;
+        var start = Fraction.Zero;
+        for (int i = 0; i < itemIndex; i++)
+            start += own[measureIndex].Items[i].Duration;
+        for (int vi = 0; vi < voices.Length; vi++)
+        {
+            var measures = voices[vi].Measures;
+            if (measureIndex >= measures.Length)
+                continue;
+            var items = measures[measureIndex].Items;
+            var onset = Fraction.Zero;
+            for (int ii = 0; ii < items.Length && onset <= start; ii++)
+            {
+                var item = items[ii];
+                if (onset == start && !item.GraceTime
+                    && item is NoteItem or ChordItem or RestItem { IsSpacer: false })
+                    return LayoutUtilities.GetItemXOffset(measures, measureIndex, ii, measure)
+                        + HairpinEngraver.CollisionShift(voices, vi, measureIndex, ii);
+                onset += item.Duration;
+            }
+        }
+        return null;
     }
 
     /// <summary>
