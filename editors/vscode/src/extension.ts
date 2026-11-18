@@ -2499,14 +2499,6 @@ async function updatePreviewContent(
     }
 }
 
-/**
- * The text INSIDE the quotes of the document's `title "…"` line, or null if it has none.
- *
- * Read out of the document rather than counted off the template constant: the offset of a
- * hard-coded line and column is a second spelling of the template's shape, and the two
- * would drift the first time a line moved above it. A title with nothing between its quotes
- * returns null — selecting a zero-width range would look exactly like nothing happened.
- */
 /** Where the writer's own New Score template is kept (Edit New Score Template). */
 function newScoreTemplateUri(context: vscode.ExtensionContext): vscode.Uri {
     return vscode.Uri.joinPath(context.globalStorageUri, 'new-score-template.lys');
@@ -2535,6 +2527,14 @@ async function newScoreTemplate(context: vscode.ExtensionContext): Promise<strin
     return NEW_SCORE_TEMPLATE;
 }
 
+/**
+ * The text INSIDE the quotes of the document's `title "…"` line, or null if it has none.
+ *
+ * Read out of the document rather than counted off the template constant: the offset of a
+ * hard-coded line and column is a second spelling of the template's shape, and the two
+ * would drift the first time a line moved above it. A title with nothing between its quotes
+ * returns null — selecting a zero-width range would look exactly like nothing happened.
+ */
 function newScoreTitleRange(doc: vscode.TextDocument): vscode.Range | null {
     const match = /^title "([^"]*)"/m.exec(doc.getText());
     if (!match || match[1].length === 0) {
