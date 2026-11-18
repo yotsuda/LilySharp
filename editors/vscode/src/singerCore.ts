@@ -108,7 +108,7 @@ export interface CantoriaVoice { id: string; engine: string; name: string; label
 /** The walkthrough's first song in each language Cantoria sings, by the language's tag: the
  *  opening of a song in the public domain (ふるさと, Twinkle Twinkle Little Star, 送别, 아리랑),
  *  files of the extension's `walkthrough` folder. */
-export const FIRST_SONGS: Readonly<Record<string, string>> = { ja: 'first-song.lys', en: 'first-song-en.lys', zh: 'first-song-zh.lys', ko: 'first-song-ko.lys' };
+export const FIRST_SONGS: Readonly<Record<string, string>> = { ja: 'first-song-ja.lys', en: 'first-song-en.lys', zh: 'first-song-zh.lys', ko: 'first-song-ko.lys' };
 
 /** The first song to open: one the voices installed can sing (owner's request 2026-11-18 — the
  *  song was Japanese whatever the voice, and a voice that sings no Japanese played it on the

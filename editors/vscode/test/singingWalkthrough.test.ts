@@ -117,12 +117,12 @@ describe('the singing walkthrough', () => {
         // …and the engines' page does link each engine's own site.
         const engines = fs.readFileSync(path.join(root, 'walkthrough', 'engines.md'), 'utf8');
         for (const address of ['https://github.com/openvpi/DiffSinger', 'https://studio-neutrino.com/', 'https://voicevox.hiroshiba.jp/']) { assert.ok(engines.includes(address), address); }
-        const song = fs.readFileSync(path.join(root, 'walkthrough', 'first-song.lys'), 'utf8');
+        const song = fs.readFileSync(path.join(root, 'walkthrough', 'first-song-ja.lys'), 'utf8');
         assert.match(song, /^singer female on melody$/m);
         assert.match(song, /lyrics words \{/);
         // A song for each language Cantoria sings (owner's request 2026-11-18), each the opening
         // of a song in the public domain, its words saying their language where it is not Japanese.
-        assert.deepEqual(FIRST_SONGS, { ja: 'first-song.lys', en: 'first-song-en.lys', zh: 'first-song-zh.lys', ko: 'first-song-ko.lys' });
+        assert.deepEqual(FIRST_SONGS, { ja: 'first-song-ja.lys', en: 'first-song-en.lys', zh: 'first-song-zh.lys', ko: 'first-song-ko.lys' });
         const words: Record<string, RegExp> = { ja: /lyrics words \{\s+う さ ぎ \|/, en: /lyrics words language english \{\s+Twin- kle,/, zh: /lyrics words language chinese \{\s+长 亭 外 \|/, ko: /lyrics words language korean \{\s+아 리 랑 \|/ };
         for (const [language, file] of Object.entries(FIRST_SONGS)) {
             const text = fs.readFileSync(path.join(root, 'walkthrough', file), 'utf8');
@@ -143,12 +143,12 @@ describe('the singing walkthrough', () => {
 
     it('opens the first song in a language the voices installed sing', () => {
         const ja = { language: 'ja' }, tiger = { language: 'ja', languages: ['ja', 'en', 'zh'] }, zh = { language: 'zh' }, ko = { languages: ['ko'] }, silent = {};
-        assert.equal(firstSongFor([], 'en'), 'first-song.lys');                 // nothing installed yet: every engine of the steps sings Japanese
-        assert.equal(firstSongFor([silent], 'en'), 'first-song.lys');           // a voice that does not say what it sings
-        assert.equal(firstSongFor([ja], 'en'), 'first-song.lys');
+        assert.equal(firstSongFor([], 'en'), 'first-song-ja.lys');                 // nothing installed yet: every engine of the steps sings Japanese
+        assert.equal(firstSongFor([silent], 'en'), 'first-song-ja.lys');           // a voice that does not say what it sings
+        assert.equal(firstSongFor([ja], 'en'), 'first-song-ja.lys');
         assert.equal(firstSongFor([tiger], 'en'), 'first-song-en.lys');         // the editor's language first, where a voice sings it
         assert.equal(firstSongFor([tiger], 'zh-CN'), 'first-song-zh.lys');
-        assert.equal(firstSongFor([tiger], 'fr'), 'first-song.lys');            // …else Japanese before English, Chinese, Korean
+        assert.equal(firstSongFor([tiger], 'fr'), 'first-song-ja.lys');            // …else Japanese before English, Chinese, Korean
         assert.equal(firstSongFor([zh], 'ja'), 'first-song-zh.lys');            // no Japanese voice: what there is
         assert.equal(firstSongFor([ko, zh], 'ja'), 'first-song-zh.lys');
         assert.equal(firstSongFor([ko], 'en-US'), 'first-song-ko.lys');
