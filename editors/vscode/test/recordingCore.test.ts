@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import {
     RECORDING_DEFAULTS, Recording, ScoreBeat, audioPathFor, recordingPlan, audioReader, barAt, chartForRecording, lineUp, newRecording, parseRecording,
-    CopySource, chartPathFor, copiedRecordingText, rebasedParts, shownPartOrder, sourceForCopy, tuningOf,
+    CopySource, chartPathFor, copiedRecordingText, rebasedParts, shownPartOrder, sourceForCopy,
     audioRef, recordingPathFor, recordingSecondAt, resolveAudio, samePath, scoreBars, scoreTimeAt, serializeRecording, timeWarp, unwarpTime, warpBeats, warpFit, warpNotes, warpTime, workForRename,
 } from '../src/recordingCore';
 
@@ -215,48 +215,14 @@ describe('the recording panel', () => {
         assert.equal(recordingPlan({ octave: NaN }).semitones, 0);
     });
 
-    // The file's tuning is turned back by itself, as a tape that ran fast or slow is set right:
-    // pitch and speed together (owner's decision 2026-11-19; it was the panel's Cents and its
-    // "Pitch with speed", set by hand).
-    it('turns the file\'s tuning back, pitch and speed together', () => {
-        // 12 cents flat: 12 cents up and that much faster — resampling alone, no stretcher.
-        const flat = recordingPlan({ octave: 0, tuning: -12 });
-        assert.equal(flat.engine, 'resample');
-        assert.ok(Math.abs(flat.rate - Math.pow(2, 0.12 / 12)) < 1e-12);
-        assert.ok(Math.abs(flat.semitones - 0.12) < 1e-12);
-        const sharp = recordingPlan({ octave: 0, tuning: 30 });
-        assert.ok(sharp.rate < 1 && Math.abs(sharp.semitones + 0.3) < 1e-12);
-        // With the octave too: the tape's rate, and both pitches — stretched.
-        const both = recordingPlan({ octave: 1, tuning: -12 });
-        assert.equal(both.engine, 'stretch');
-        assert.ok(Math.abs(both.rate - Math.pow(2, 0.12 / 12)) < 1e-12);
-        assert.ok(Math.abs(both.semitones - 12.12) < 1e-9);
-        // Out of what a tuning can be: kept to half a semitone.
-        assert.ok(Math.abs(recordingPlan({ octave: 0, tuning: 900 }).semitones + 0.5) < 1e-12);
-    });
-
-    it('reads the tuning the file says, and none from a file that says nothing usable', () => {
-        assert.equal(tuningOf({ tuning: -12 }), -12);
-        assert.equal(tuningOf({ tuning: 49 }), 49);
-        assert.equal(tuningOf({ tuning: 80 }), 50);
-        assert.equal(tuningOf({ tuning: 10 }), 10);
-        assert.equal(tuningOf({ tuning: -10 }), -10);
-        // Nearer A = 440 than 10 cents is in tune (a studio recording read +4: no button for it).
-        for (const none of [{}, { tuning: '12' }, { tuning: null }, { tuning: NaN }, { tuning: 4 }, { tuning: -9 }, { tuning: 0 }]) {
-            assert.equal(tuningOf(none), 0, JSON.stringify(none));
-        }
-    });
-
     it('plays at the practice menu\'s tempo too, the pitch kept (§1 7)', () => {
         const slow = recordingPlan(RECORDING_DEFAULTS, 0.8);
         assert.equal(slow.engine, 'stretch');
         assert.equal(slow.rate, 0.8);
         assert.equal(slow.semitones, 0);
-        // A tape set right, at another tempo: its rate times the tempo, its pitch the tape's — stretched.
-        const tape = recordingPlan({ octave: 0, tuning: -12 }, 0.5);
-        assert.equal(tape.engine, 'stretch');
-        assert.ok(Math.abs(tape.rate - 0.5 * Math.pow(2, 0.12 / 12)) < 1e-12);
-        assert.ok(Math.abs(tape.semitones - 0.12) < 1e-12);
+        // An octave up at another tempo: the tempo is the rate, the octave the pitch.
+        const up = recordingPlan({ octave: 1 }, 0.5);
+        assert.deepEqual([up.engine, up.rate, up.semitones], ['stretch', 0.5, 12]);
         assert.deepEqual(recordingPlan(RECORDING_DEFAULTS, 1), recordingPlan(RECORDING_DEFAULTS));
         assert.equal(recordingPlan(RECORDING_DEFAULTS, NaN).rate, 1);
     });

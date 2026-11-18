@@ -21,7 +21,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import {
     CopySource, WEBVIEW_AUDIO, WINDOWS_AUDIO, audioReader, audioRef, chartForRecording, chartPathFor, copiedRecordingText, newRecording,
-    parseRecording, rebasedParts, recordingPathFor, resolveAudio, samePath, serializeRecording, shownPartOrder, sourceForCopy, tuningOf, workForRename,
+    parseRecording, rebasedParts, recordingPathFor, resolveAudio, samePath, serializeRecording, shownPartOrder, sourceForCopy, workForRename,
 } from './recordingCore';
 import { importFilters } from './fileFilters';
 
@@ -198,8 +198,7 @@ export async function sendRecording(panel: vscode.WebviewPanel, chart: vscode.Ur
     }
     const shown = path.basename(audio!.fsPath);
     const base = { name: shown, bars: rec.bars, pickup: rec.pickup, settings: recordingSettingsFor(chart.toString(), shown) ?? null,
-        // (the file's tuning: the page turns the recording back by it while its A = 440 button is pressed)
-        parts: shownPartOrder(parts.map(p => p.name)), tuning: tuningOf(rec.raw) };
+        parts: shownPartOrder(parts.map(p => p.name)) };
     if (!audio || !audioKey) {
         // Moved, renamed outside VS Code, or on a drive not here: say where it was looked for, and
         // let it be found again (Dettato's request 6).
@@ -269,9 +268,9 @@ export async function sendRecording(panel: vscode.WebviewPanel, chart: vscode.Ur
     void panel.webview.postMessage({ type: 'recordingParts', chart: chart.toString(), name: shown, parts: sent });
 }
 
-/** Where the recording panel's settings are kept, per chart and recording (owner's decisions
- *  2026-11-16 and 2026-11-19: its octave and its A = 440 button are the recording's, kept for the
- *  next time — nothing the writer edits by hand). Set once by the extension (workspaceState). */
+/** Where the recording panel's setting is kept, per chart and recording (owner's decisions
+ *  2026-11-16 and 2026-11-19: its octave is the recording's, kept for the next time — nothing the
+ *  writer edits by hand). Set once by the extension (workspaceState). */
 let settingsStore: vscode.Memento | undefined;
 
 /** Gives the panel's settings their store (see settingsStore). */
@@ -289,17 +288,15 @@ export function recordingSettingsFor(chart: string, audio: string): Record<strin
     return kept && typeof kept === 'object' ? kept as Record<string, unknown> : undefined;
 }
 
-/** Keeps the panel's settings for `audio` beside `chart` (the panel says them as they change): the
- *  octave, and whether the recording is tuned to A = 440 — never the file's tuning itself or the
- *  chart's transpose, which come with the file and with each picture. (What an earlier build kept
- *  beside them — speed, semitones, cents, linked — is dropped with the next change kept, and not
- *  read meanwhile.) */
+/** Keeps the panel's setting for `audio` beside `chart` (the panel says it as it changes): the
+ *  octave alone — never the chart's transpose, which comes with each picture. (What an earlier
+ *  build kept beside it — speed, semitones, cents, linked — is dropped with the next octave kept,
+ *  and not read meanwhile.) */
 export function keepRecordingSettings(chart: string, audio: string, settings: unknown): void {
     if (!settingsStore || !settings || typeof settings !== 'object') { return; }
-    const s = settings as Record<string, unknown>;
-    const octave = typeof s.octave === 'number' && Number.isFinite(s.octave) ? s.octave : 0;
-    const tuned = s.tuned === true;
-    void settingsStore.update(settingsKey(chart, audio), octave === 0 && !tuned ? undefined : { octave, tuned });
+    const octave = (settings as Record<string, unknown>).octave;
+    if (typeof octave !== 'number' || !Number.isFinite(octave)) { return; }
+    void settingsStore.update(settingsKey(chart, audio), octave === 0 ? undefined : { octave });
 }
 
 /** The recordings already asked about, so a preview re-rendering does not ask again. */

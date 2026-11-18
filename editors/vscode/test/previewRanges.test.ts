@@ -72,7 +72,7 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /practiceOn = speedOn \|\| practice\.click \|\| practice\.countIn;/);
         // Pause is drawn (two bars), not the thin glyph (owner's report 2026-11-19).
         assert.match(html, /<button id="pauseBtn" class="toggle icon"[^>]*><svg [^>]*fill="currentColor"[^>]*><rect [^>]*\/><rect [^>]*\/><\/svg><\/button>/);
-        assert.match(html, /<input type="range" id="tempoSlider" min="50" max="150" step="5" value="100"/);
+        assert.match(html, /<input type="range" id="tempoSlider" class="fader" min="50" max="150" step="5" value="100"/);
         // The whole score round and round goes as it plays (its repeats kept): once is false.
         assert.match(html, /const list = spanOf\(playbackNotes, span, false\);/);
         // A loop's rounds laid out ahead, each whole bars long.
@@ -95,7 +95,11 @@ describe('the preview\'s Range panel', () => {
         // The practice menu's count-in (owner's choice 2026-10-26): a toggle beside the metronome,
         // and a Play of the whole score or from a note counts in too; a tempo change, the loop's
         // next round and a seek do not.
-        assert.match(html, /<span class="plbl">Count-in<\/span><button type="button" id="countInBtn" class="toggle" aria-pressed="false"/);
+        // Tempo is one line, never folded (owner's decision 2026-11-19): its slider, Metronome and
+        // Count-in themselves — no copies of them for a folded head, no Reset (a double-click is 100%).
+        assert.match(html, /<div class="mhead mtempo"><span class="mtitle mlabel">Tempo<\/span><input type="range" id="tempoSlider" class="fader" min="50" max="150" step="5" value="100" aria-label="Tempo"><span id="tempoValue" class="flevel">100%<\/span><button type="button" id="clickBtn" class="toggle" aria-pressed="false"[^>]*>Metronome<\/button><button type="button" id="countInBtn" class="toggle" aria-pressed="false"[^>]*>Count-in<\/button><\/div>/);
+        assert.doesNotMatch(html, /data-fold="tempo"|data-mini|syncMinis|tempoReset|clickBtn\.textContent|countInBtn\.textContent/);
+        assert.match(html, /resetOnDoubleClick\(tempoSlider, \(\) => \{ tempoSlider\.value = '100'; setSpeed\(100\); showPractice\(\); \}\);/);
         // (the count shows A meanwhile: loopEntry, where the music comes in)
         assert.match(html, /const c = counted\(playbackNotes, startAt, 0\);\s*if \(c\) \{ startPlayback\(c\.notes, 0, false, false, c\.lead - startAt, 0\); loopEntry = c\.lead; \}/);
         assert.match(html, /if \(c\) \{ startPlayback\(c\.notes, 0, false, false, c\.lead, spanStart\); loopEntry = c\.lead; \}/);
@@ -308,25 +312,22 @@ describe('the preview\'s Range panel', () => {
     // docs/recording-design.md §1 7): a line of the practice menu's Parts and the recording panel's
     // top line; no waveform button in the toolbar.
     // The recording follows the chart's own transpose (owner's decision 2026-11-16), on top of the
-    // panel's octave; the octave is kept per recording. The file's tuning is turned back by itself
-    // (owner's decision 2026-11-19: Speed and pitch is gone but for the octave).
-    it('plays the recording moved by the chart\'s transpose and the file\'s tuning, and keeps the panel\'s octave', () => {
-        // …while A = 440 is pressed, not by itself (an old recording may simply have been tuned so).
-        assert.match(html, /function recSound\(\) \{ return \{ octave: recSettings\.octave, tuning: recSettings\.tuned \? recTuning : 0, chart: chartShift \}; \}/);
-        assert.match(html, /let recSettings = \{ octave: 0, tuned: false \};/);
-        assert.match(html, /<button type="button" id="recTuneBtn" class="toggle" aria-pressed="false" hidden>Tune to A = 440<\/button>/);
-        assert.match(html, /tune\.hidden = recTuning === 0;/);
-        assert.match(html, /recTuning = Number\(m\.tuning\) \|\| 0;/);
+    // panel's octave; the octave is kept per recording. (Owner's decisions 2026-11-19: Speed and
+    // pitch is gone but for the octave, and the file's tuning is not used — no button turns the
+    // recording to A = 440, docs/recording-design.md §3 2.)
+    it('plays the recording moved by the chart\'s transpose, and keeps the panel\'s octave', () => {
+        assert.match(html, /function recSound\(\) \{ return \{ octave: recSettings\.octave, chart: chartShift \}; \}/);
+        assert.match(html, /let recSettings = \{ octave: 0 \};/);
         const glue = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'recording.ts'), 'utf8');
-        assert.match(glue, /parts: shownPartOrder\(parts\.map\(p => p\.name\)\), tuning: tuningOf\(rec\.raw\) \};/);
         assert.match(html, /<div class="prow moctrow" id="recOctRow"><span class="plbl">Octave<\/span>/);
-        assert.doesNotMatch(html, /recSpeedSlider|recSemiSlider|recCentSlider|recLinkBtn|recChartRow|recReset|recSummary|id="recSettings"|<details/);
+        assert.doesNotMatch(html, /recSpeedSlider|recSemiSlider|recCentSlider|recLinkBtn|recChartRow|recReset|recSummary|id="recSettings"|<details|recTuneBtn|recTuning/);
+        assert.doesNotMatch(glue, /tuning/);
         assert.doesNotMatch(html, /\.play\(sec, recSettings,|recPlayer\.update\(recSettings\)|recordingPlan\(recSettings/);
         assert.match(html, /case 'chartTranspose': \{\s*const n = Number\(message\.semitones\) \|\| 0;\s*if \(n !== chartShift\) \{ chartShift = n; recApply\(\); \}/);
         assert.match(extension, /panel\.webview\.postMessage\(\{ type: 'chartTranspose', semitones: response\.ChartTranspose \?\? 0 \}\);/);
         assert.match(html, /vscode\.postMessage\(\{ type: 'recordingSettings', chart: recording\.chart, name: recording\.name, settings: recSettings \}\);/);
         assert.match(html, /const kept = m\.settings && typeof m\.settings === 'object' \? Number\(m\.settings\.octave\) : 0;/);
-        assert.match(glue, /void settingsStore\.update\(settingsKey\(chart, audio\), octave === 0 && !tuned \? undefined : \{ octave, tuned \}\);/);
+        assert.match(glue, /void settingsStore\.update\(settingsKey\(chart, audio\), octave === 0 \? undefined : \{ octave \}\);/);
         assert.match(extension, /keepRecordingSettings\(message\.chart, message\.name, message\.settings\);/);
     });
 
@@ -342,11 +343,6 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /<button type="button" id="scoreOnBtn"[^>]*>Play<\/button><button type="button" id="scoreAllBtn"[^>]*>All<\/button><input type="range" id="scoreLevelSlider"/);
         assert.match(html, /function flipRecording\(\) \{\s*(\/\/[^\n]*\s*)*recOn = !recOn;\s*renderRecParts\(\);/);
         assert.match(html, /const on = !recPartsOff\.includes\(name\);/);
-        // The folded Tempo head's slider resets on a double-click as the real one does (owner's report
-        // 2026-11-19: it passed a dblclick on, which resetOnDoubleClick does not go by).
-        assert.match(html, /resetOnDoubleClick\(m, \(\) => \{ const r = real\(\); if \(r\.__reset\) r\.__reset\(\); m\.value = r\.value; syncMinis\(\); \}\);/);
-        assert.match(html, /slider\.__reset = reset;/);
-        assert.doesNotMatch(html, /new MouseEvent\('dblclick'\)/);
         assert.match(html, /function recLevel\(\) \{ return solo\.size > 0 && !recSoloed\(\) \? 0 : levelIn\(recLevels, 'Recording'\); \}/);
         assert.match(html, /delete recLevels\.Recording;/);
         assert.match(html, /if \(origin !== undefined\) end = Math\.max\(end, startRecordingAlong\(t0, offset, origin, !!loopList\)\);/);
