@@ -4036,7 +4036,7 @@ public sealed partial class LilySharpLanguageServer
     //
     // ⚠️ These strings are the ONE home for the template text — it travels to the editor
     // as a command argument, so adding a template here needs no change in the extension.
-    // (`editors/vscode/src/extension.ts` has its OWN Twinkle in NEW_SCORE_TEMPLATE: that
+    // (`editors/vscode/src/newScore.ts` has its OWN Twinkle in NEW_SCORE_TEMPLATE: that
     // one seeds an untitled document for "Lily#: New Score" and carries the teaching
     // comments this one does not. Two texts, two jobs — but they are two spellings of one
     // song, and the pair will drift.)

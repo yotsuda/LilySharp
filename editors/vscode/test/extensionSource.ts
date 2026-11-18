@@ -20,10 +20,12 @@ import * as path from 'node:path';
 /**
  * The extension's host (src/extension.ts, the singing voice's half of it, src/singing.ts, the
  * commands that rewrite the score, src/editCommands.ts, the preview's sound font, src/soundFont.ts,
- * the MIDI output, src/midiOut.ts, and the preview's Export, src/exportPreview.ts) and the
+ * the MIDI output, src/midiOut.ts, the preview's Export, src/exportPreview.ts, and what a score
+ * starts from, src/newScore.ts) and the
  * preview's page it writes (src/previewHtml.ts), as one text. The page was a template literal
  * inside extension.ts until session 1295, the singing voice stood there until session 1296 and
- * the rewriting commands, the sound font, the MIDI output and the Export until session 1297, and
+ * the rewriting commands, the sound font, the MIDI output and the Export until session 1297, the
+ * rest of the list until session 1298, and
  * the tests that read the source — to cut a function of the page out and run it, to see
  * a button is there, to see a name is gone — read them together: a test that says a name is NOT
  * there must look where it could be.
@@ -36,5 +38,6 @@ export function extensionSource(): string {
         + fs.readFileSync(path.join(src, 'soundFont.ts'), 'utf8') + '\n'
         + fs.readFileSync(path.join(src, 'midiOut.ts'), 'utf8') + '\n'
         + fs.readFileSync(path.join(src, 'exportPreview.ts'), 'utf8') + '\n'
+        + fs.readFileSync(path.join(src, 'newScore.ts'), 'utf8') + '\n'
         + fs.readFileSync(path.join(src, 'previewHtml.ts'), 'utf8');
 }

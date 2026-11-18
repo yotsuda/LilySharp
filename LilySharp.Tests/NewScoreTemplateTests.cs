@@ -48,11 +48,11 @@ public class NewScoreTemplateTests
     /// the editor inserts is LF whatever the checkout did to the source.</summary>
     private static string NewScoreTemplate()
     {
-        var ts = File.ReadAllText(RepoFile("editors/vscode/src/extension.ts"));
+        var ts = File.ReadAllText(RepoFile("editors/vscode/src/newScore.ts"));
         var match = Regex.Match(ts, @"const NEW_SCORE_TEMPLATE = `([^`]*)`", RegexOptions.Singleline);
 
         Assert.True(match.Success,
-            "NEW_SCORE_TEMPLATE is no longer a plain template literal in extension.ts — this "
+            "NEW_SCORE_TEMPLATE is no longer a plain template literal in newScore.ts — this "
           + "test reads it as text and cannot see whatever it became.");
 
         return match.Groups[1].Value.Replace("\r\n", "\n");
