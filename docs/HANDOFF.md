@@ -89,7 +89,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
 - **★★★ オーナー決定 2026-11-15（第1264・6 件）**: ①〜④ と、⑥ 評価 4 の案（Lab `p1227/proposals-eval4.md`）の「作る」5 件＝6・7・8-1・2・4 は済み（第1264〜第1272・設計と実際の形は `docs/eval4-features-design.md`。6 の「歌い手が × の音を歌わない」だけ未＝同 §6 の末尾）／⑤ Dettato: 依頼 1＝作る（D3 で形が固まってから・名前「Convert Recording to Lily# (.lys)…」・Windows 以外はメニューを出さない）・依頼 2＝今は作らない（REQUESTS の行に書いた＝Dettato の repo では未 commit）／⑥ の**後で**＝3（`pass 2 { }`・文字は英語固定）・1（持ち替え・「to X」は自動で刷らない）・10（まず診断だけ）＝作る前に設計メモ・**着手してよい**（オーナー 2026-11-15 第1278「ほかに着手すべき候補がなければすぐ着手して良い」。10 の診断は LYS0046 で済み＝残りは 3 → 1）／**見送り**＝5・8-2〜4・9。**次の一手**: 下の行の Lab `sessions/p1242/leftovers.md` の欠陥から（第1272 が見つけた 2 件＝`lysc xml` の part header の `key` と、MusicXML の読み込みの `<transpose>` は第1273・第1275 で閉じた。一覧の先頭から順に）。
-- **★ 包括レビュー（オーナーの指示 2026-11-18・第1291）＝Lab `sessions/p1291/review.md`**: プレビュー更新の性能 P1〜P10 とリファクタ F1〜F7。P1〜P5・P7（一部）・P8・F1・F2・F3 段 1・F4 の歌・F5・F7 は済み。残りは訊かずに着手してよい（オーナー 2026-11-18・次の順は §1.1 第1296 の末尾。P9 と F3 段 2 はオーナー判断・P10 は静かな窓）。
+- **★ 包括レビュー（オーナーの指示 2026-11-18・第1291）＝Lab `sessions/p1291/review.md`**: プレビュー更新の性能 P1〜P10 とリファクタ F1〜F7。P1〜P5・P7（一部）・P8・F1・F2・F3 段 1・F4 の歌・編集コマンド・音源・MIDI 出力・Export・F5・F7 は済み。残りは訊かずに着手してよい（オーナー 2026-11-18・次の順は §1.1 第1297 の末尾。P9 と F3 段 2 はオーナー判断・P10 は静かな窓）。
 - **★ A-B リピート（オーナー決定 2026-11-17・第1286）＝`docs/ab-repeat-design.md`**: §3 の 1〜5 は全部済み（1〜4 は第1286・5 の帯は第1287＝形は同 §3 の末尾）。残りは実機の確認（`MANUAL-CHECKS` の A-B その 1・その 2＝オーナー）と、帯をファイルの名前の変更・コピーに付いて行かせるか（未決・要望が出たら）。
 - **★ コード行の中に書けるもの（オーナー決定 2026-11-16・第1285）**: `time`・`tempo`・`%`・`key` は済み（§1.1）。**残り＝コードに付ける印 `@rit`／`@accel`／`@rall`（`…@!rit`）・`@fermata`・`@text("…")`**（今は `@todo` だけ）。強弱は見送り。
 - **★ 録音を聴きながら直す（Dettato #4・オーナーの希望 2026-11-15）＝`docs/recording-design.md`**: S1〜S4 と §1 7（楽譜と録音を同時に）・§7（書き出しに録音・第1286）は済み（§1.1 第1284〜第1286）。**次は S5**（帯・`Mark Bar Line Here`・ドラッグ・`byHand`）→ S6（CHANGELOG・Dettato への返事）。§8 の録音のパート（Dettato #16）は第1288 で実装・実測済み・使っている間のメモリは今のまま（オーナー決定 2026-11-17）＝残りは耳の確認（`MANUAL-CHECKS`「録音のパート」）。耳の確認は `MANUAL-CHECKS` §3.9（オーナー）。
@@ -145,6 +145,22 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1297セッション（2026-11-18・YT-DELL2）
+
+base `9ff2359a4`・開始時 full 17598 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17601（Lab `p1297` の `run1.trx`）。REQUESTS の open は Calamo・Dettato とも 0。
+- **F4 の続き＝`888e600cc`・`5e7a2eec0`・`da24161d6`**: `extension.ts` 4,794 → 2,964 行。3 つとも移動で、旧ファイルの行＝新ファイルの行（違う行は commit の本文に全部）。計器は Lab `p1297/split-{editcommands,sound,export}.ps1`。
+  - `editCommands.ts`（1,128 行）: 文を書き換えるコマンドの 41 宣言と登録 23（Regroup〜Write a Harmony Part・singer のパート）。client を読む 18 関数は頭で `server()` を 1 回訊く。
+  - `soundFont.ts`（274 行）・`midiOut.ts`（117 行）: 登録と設定の listener は `extension.ts` に残した（プレビューの物と並んでいる）。`useSoundFontLog`・`useMidiOutHost` を activate の頭で呼ぶ。
+  - `exportPreview.ts`（539 行）: プレビューの Export と、一括 Export と共有する job の作り手（`practisedJobs`・`recordingRendered`・`recordJobs`・`singJobs`・`drawFramesFor`・`videoFfmpeg`）。`useExportHost`。`drawFramesFor` だけは up かどうかを見ない client を読んでいた＝そのまま（`startedClient()`）。
+  - host の文を読む試験は 4 ファイルも読む（`test/extensionSource.ts`）。C# の網が読む物は `extension.ts` に残っている。
+- **別の宣言の上に取り残された doc コメント 3 つ**を自分の関数へ戻した（間に別の宣言が書かれた形）: `removeStringNumbers`・`guessSectionKey`（移動の commit）・`newScoreTitleRange`（`5f6a71b07`）。
+- **実機＝隔離した VS Code（Lab `p1297/vscode-e2e`）**: `run.js` 16 項目（編集コマンド 13 本がサーバに届き答えを当てる）・`run2.js` 13 項目（プレビュー・無い音源の 1 行・2 つのピッカー・MIDI 出力の設定）・`run3.js` 8 項目（一括 Export が MIDI・PDF・WAV を書く）。フォルダの dialog は試験が答える（拡張のフォルダの中の loader から回すと拡張自身の `vscode` が渡る＝Lab `notes/CLAUDE-OPERATIONS.md` §3）。
+- ⚠️ 実機で見ていない: プレビュー自身の Export ボタン・MP4・歌や録音の入った export・MIDI ポートへの音・問いから始まるコマンド 4 つ・Split Sections to Match（一覧は commit の本文）。
+- 終了時 full 17598 合格 / 1 失敗（同じ）/ skip 2 / 合計 17601（`run6.trx`・増減 0＝C# は触っていない）・npm 1260 合格 / skip 1。
+- **次（review.md の残り・訊かずに着手してよい）**: F4 の残り＝`extension.ts` 2,964 行のうち `activate` 994 行・`openPreview` 553 行・`updatePreviewContent` 315 行で 63%。まだ切り出せる塊は New Score のテンプレートと MusicXML の取り込み（`newScoreTemplateUri`〜`importMusicXml`・約 210 行）と AI の入口（`aiTransformWholeScore`〜`noteSelectionEnd`・約 210 行）。その先は `activate` の中の登録を機能ごとに出す仕事（プレビューの状態を読む物が多い）。P8 の残り＝結合した文字列を毎打鍵作る。P6（ページの索引・強制レイアウト）・P7 の残り・P10 は静かな窓で。小さいもの: semantic tokens の割当。F3 段 2 と P9 はオーナー判断。
+
+## 以下は第1296セッションの経緯
+
 ### 1.1 第1296セッション（2026-11-18・YT-DELL2）
 
 base `098675fb6`・開始時 full 17594 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17597（Lab `p1296` の `run1.trx`）。REQUESTS の open は Calamo・Dettato とも 0。
@@ -154,17 +170,6 @@ base `098675fb6`・開始時 full 17594 合格 / 1 失敗（`ReadmeSampleTests`�
 - **小さいもの＝`2e61248e5`・`b692a58d2`**: 歌のエンジンが無いとき、プレビューに「声は無い」と言うのは 1 回（打鍵ごとに `clearVoices` とログ 1 行を送っていた・`toldNoEngine`・実機 19 項目）。completion の 7 つの一覧が文書の文を parse し直していた → `Document.TreeOf(text)`（文字列の instance で持つ）。網 `CompletionTreeTests` 2 本・毒 7 本赤（Lab `p1296/poison-completion.ps1`）。
 - 終了時 full 17598 合格 / 1 失敗（同じ）/ skip 2 / 合計 17601（`run4.trx`・+4＝P4 の 2・completion の 2）・npm 1260 合格 / skip 1。
 - **次（review.md の残り・訊かずに着手してよい）**: F4 の続き（`extension.ts` 4,794 行の残り。候補＝書き出し `exportPreview`／`singJobs`／`recordJobs`・音源 `chooseSoundFont` まわり・編集コマンドの束 `regroup`〜`writeHarmonyPart`）。P8 の残り＝結合した文字列を毎打鍵作る。P6（ページの索引・強制レイアウト）・P7 の残り・P10 は静かな窓で。小さいもの: semantic tokens の割当。F3 段 2 と P9 はオーナー判断。
-
-## 以下は第1295セッションの経緯
-
-### 1.1 第1295セッション（2026-11-18・YT-DELL2）
-
-base `f5d15f96a`・開始時 full 17582 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17585（Lab `p1295` の `run1.trx`）。REQUESTS の open は Calamo・Dettato とも 0。
-- **F5＝`736177631`・`a2afc6a2a`**: `LilySharpLanguageServer.Commands.cs`（2,524 行）を機能別の partial 6 枚に移した（`Preview`・`Diagnostics`・`Export`・`Playback`・`AiCollab`・`Commands`＝編集コマンドだけ 782 行）。移動だけ＝行の multiset が同じ（Lab `p1295/split-commands.ps1`）。「Document not found」は `LilySharpLanguageServer.DocumentNotFound` の 1 か所（23 か所が読む・5 つは `.` 付きだった・拡張の再試行がこの文字を読む）。網 `DocumentNotFoundTests` 3 本・毒 2 本赤。変えなかったもの（`Error` のない答え・`Version` の有無）は commit の本文。
-- **F7＝`3d43d0880`**: 拡張の `*Core.ts` が手で書いているブロックの語の表を C# の網が読む（`EditorWordTablesTests` 9 本）。食い違い: Lily# に無い語 5 つ（`header`・`midi`・`markup`・`alternative`・`tremolo`＝その名前のパートで smart typing が黙る／パートに見えない）・chat pointer の「パートでない語」は `PartNameReservedVocabulary` の 50 語のうち 37 が無く 4 語が余分。直し: `NOT_A_PART`＝C# の表そのまま・セルの名前は `{` の直前の語（今までは最後の括弧からの最初の語＝`section A { key d major  vn1 {` が「part key」だった）・設定と改行の指示（`DIRECTIVES`）は読み飛ばす。`STAFF_GROUPS` は parser に 1 語ずつ訊いた群と同じ。毒 6 本赤（Lab `p1295/poisons-f7.ps1`）。CHANGELOG 2 つ（`[editor]`）。残り: 表は TS に手書きのまま・`placeAt` は by-part の書き方（`part vn1 { section A {`）をセルと読まない。
-- **F3 段 1＝`1f5bbdfa6`**: `getPreviewHtml`（6,573 行のテンプレート）を `editors/vscode/src/previewHtml.ts` へ移した（`extension.ts` 12,453 → 5,863 行）。テンプレートは 1 文字も変えていない・旧関数と新関数が同じ引数 3 組で同じ HTML（Lab `p1295/html-identity.js`）。node でページを組める＝網 `previewHtml.test.ts` 3 本。`extension.ts` を読む試験 20 ファイル・56 か所は `extensionSource()`（host＋page を 1 つの文字列・`test/extensionSource.ts`）を読む。実機＝隔離した VS Code で第1294 の 16 項目が合格（Lab `p1295/vscode-e2e`）。段 2（script を `media/preview.js` に・CSP が変わる）はオーナー判断。
-- 終了時 full 17594 合格 / 1 失敗（同じ）/ skip 2 / 合計 17597（`run6.trx`・+12＝F5 の 3・F7 の 9）・npm 1260 合格 / skip 1。Core の + は 0 行。
-- **次（review.md の残り・訊かずに着手してよい）**: F4（`extension.ts` の残りを `x.ts`＋`xCore.ts` の型で分ける・歌が最初の候補＝今は 4673 行目あたりから）。P4 の残り＝`caretInfo` の MIDI 書き出し 1 回・`using` の本の 2 本目の collect。P8 の残り＝結合した文字列を毎打鍵作る。P6（ページの索引・強制レイアウト＝`previewHtml.ts` になったので触りやすい）・P7 の残り・P10 は静かな窓で。小さいもの（completion の再 parse 5 か所・semantic tokens の割当・`prepareVoices` の `clearVoices`）は未着手。F3 段 2 と P9 はオーナー判断。
 
 ## 2. 開いている作業
 

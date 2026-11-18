@@ -277,6 +277,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1295セッションの経緯
+
+### 1.1 第1295セッション（2026-11-18・YT-DELL2）
+
+base `f5d15f96a`・開始時 full 17582 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17585（Lab `p1295` の `run1.trx`）。REQUESTS の open は Calamo・Dettato とも 0。
+- **F5＝`736177631`・`a2afc6a2a`**: `LilySharpLanguageServer.Commands.cs`（2,524 行）を機能別の partial 6 枚に移した（`Preview`・`Diagnostics`・`Export`・`Playback`・`AiCollab`・`Commands`＝編集コマンドだけ 782 行）。移動だけ＝行の multiset が同じ（Lab `p1295/split-commands.ps1`）。「Document not found」は `LilySharpLanguageServer.DocumentNotFound` の 1 か所（23 か所が読む・5 つは `.` 付きだった・拡張の再試行がこの文字を読む）。網 `DocumentNotFoundTests` 3 本・毒 2 本赤。変えなかったもの（`Error` のない答え・`Version` の有無）は commit の本文。
+- **F7＝`3d43d0880`**: 拡張の `*Core.ts` が手で書いているブロックの語の表を C# の網が読む（`EditorWordTablesTests` 9 本）。食い違い: Lily# に無い語 5 つ（`header`・`midi`・`markup`・`alternative`・`tremolo`＝その名前のパートで smart typing が黙る／パートに見えない）・chat pointer の「パートでない語」は `PartNameReservedVocabulary` の 50 語のうち 37 が無く 4 語が余分。直し: `NOT_A_PART`＝C# の表そのまま・セルの名前は `{` の直前の語（今までは最後の括弧からの最初の語＝`section A { key d major  vn1 {` が「part key」だった）・設定と改行の指示（`DIRECTIVES`）は読み飛ばす。`STAFF_GROUPS` は parser に 1 語ずつ訊いた群と同じ。毒 6 本赤（Lab `p1295/poisons-f7.ps1`）。CHANGELOG 2 つ（`[editor]`）。残り: 表は TS に手書きのまま・`placeAt` は by-part の書き方（`part vn1 { section A {`）をセルと読まない。
+- **F3 段 1＝`1f5bbdfa6`**: `getPreviewHtml`（6,573 行のテンプレート）を `editors/vscode/src/previewHtml.ts` へ移した（`extension.ts` 12,453 → 5,863 行）。テンプレートは 1 文字も変えていない・旧関数と新関数が同じ引数 3 組で同じ HTML（Lab `p1295/html-identity.js`）。node でページを組める＝網 `previewHtml.test.ts` 3 本。`extension.ts` を読む試験 20 ファイル・56 か所は `extensionSource()`（host＋page を 1 つの文字列・`test/extensionSource.ts`）を読む。実機＝隔離した VS Code で第1294 の 16 項目が合格（Lab `p1295/vscode-e2e`）。段 2（script を `media/preview.js` に・CSP が変わる）はオーナー判断。
+- 終了時 full 17594 合格 / 1 失敗（同じ）/ skip 2 / 合計 17597（`run6.trx`・+12＝F5 の 3・F7 の 9）・npm 1260 合格 / skip 1。Core の + は 0 行。
+- **次（review.md の残り・訊かずに着手してよい）**: F4（`extension.ts` の残りを `x.ts`＋`xCore.ts` の型で分ける・歌が最初の候補＝今は 4673 行目あたりから）。P4 の残り＝`caretInfo` の MIDI 書き出し 1 回・`using` の本の 2 本目の collect。P8 の残り＝結合した文字列を毎打鍵作る。P6（ページの索引・強制レイアウト＝`previewHtml.ts` になったので触りやすい）・P7 の残り・P10 は静かな窓で。小さいもの（completion の再 parse 5 か所・semantic tokens の割当・`prepareVoices` の `clearVoices`）は未着手。F3 段 2 と P9 はオーナー判断。
+
 ## 以下は第1294セッションの経緯
 
 ### 1.1 第1294セッション（2026-11-18・YT-DELL2）
