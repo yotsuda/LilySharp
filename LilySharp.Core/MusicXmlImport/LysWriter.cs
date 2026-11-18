@@ -885,7 +885,10 @@ internal static class LysWriter
                 + "so it is dropped.");
         }
 
-        return new VoltaLayout(segments, structure.ToString());
+        // A repeat that closes where the next opens is one barline, ':|:' (owner's request
+        // 2026-11-18: not ':| |:'). The two spell the same bars (FormVoltaTests), and the names
+        // here never hold a sign.
+        return new VoltaLayout(segments, structure.ToString().Replace(":| |:", ":|:", StringComparison.Ordinal));
     }
 
     /// <summary>

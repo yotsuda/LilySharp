@@ -103,6 +103,20 @@ public class AbcImportTests
         Assert.Contains("acciaccatura { a'8 } g'4", lys);
     }
 
+    [Theory]
+    [InlineData("C8:|:D8:|]", "~Sec1 :|: ~Sec2 :|")]                 // a one-sided repeat, then the next
+    [InlineData("|:C8:|:D8:|]", "|: ~Sec1 :|: ~Sec2 :|")]
+    [InlineData("|:C8:||:D8:|]", "|: ~Sec1 :|: ~Sec2 :|")]           // written apart in the source, one barline here
+    [InlineData("|:C8:|E8|:D8:|]", "|: ~Sec1 :| ~Sec2 |: ~Sec3 :|")]  // music between: two signs
+    public void ARepeatThatClosesWhereTheNextOpens_IsOneBarline(string body, string form)
+    {
+        // Owner's request 2026-11-18: `:|:`, not `:| |:`.
+        var (lys, _) = Import(Tune(body));
+        Sounds(lys);
+        Assert.Contains("form {\n  " + form + "\n}", lys.Replace("\r", ""));
+        Assert.DoesNotContain(":| |:", lys);
+    }
+
     [Fact]
     public void APickupIsAPartialBar()
     {
