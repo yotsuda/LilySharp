@@ -277,6 +277,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1299セッションの経緯
+
+### 1.1 第1299セッション（2026-11-18・YT-DELL2）
+
+base `3740a23e6`・開始時 full 17598 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17601（Lab `p1299` の `run1.trx`）。REQUESTS の open は Calamo・Dettato とも 0。
+- **F4 の続き＝`df48d3dc3`**: `extension.ts` 2,593 → 2,409 行・`activate` 990 → 831 行（計器は Lab `p1299/split.ps1 -Which server`／`menu`）。`serverLaunch.ts`＝サーバの場所と起動の仕方（`resolveServerLaunch`）、`menuContext.ts`＝メニューの context キー（`registerMenuContexts`）、`previewCore.caretHighlight`＝選択のないキャレットがプレビューへ送る message（移動ではなく関数にした・網 1 本・毒 4 / 4）。
+- **semantic tokens の割当＝`f722e7326`**: 1 token 157 → 65 B（全 1,281 冊・764,203 token・木は歩いた後。送る数列は全冊で同じ）。token は 3 数、順は鍵の配列 1 本、数列は 1 回で書く（`SemanticTokenData`）。計器は Lab `p1299/Zz1299SemTok.cs.txt`。網 1 本・毒 4 / 4。
+- **P8 の残りのうち include の読み直し＝`c5a071bed`**: `using` のある本は 1 打鍵に何度も expand され、そのたびに include を全部読んでいた（arrival × include 回）。`IncludeFiles.Read`＝長さと書き込み時刻が同じなら前の文字列を返す・書かれて 3 秒以内のファイルは持たない。網 6 本・毒 5 / 5。⚠️ 結合した文字列 1 本を毎打鍵作るのは残る（値段は未測定）。
+- **実機で見つけた不具合＝`e50feeb89`**: VS Code は Windows のドライブを `file:///c%3A/…` と送り、`Uri.LocalPath` はそれを `/c:/…` と読む＝サーバは文書の隣のファイルを見つけられなかった（エディタの `using` は全部 LYS0028・scan の `x.omr.json` も）。この便の前のサーバでも同じ。`FilePathOf(Uri?)`が `LocalPath` のただ 1 人の読み手で、9 か所がそこへ訊く。網 3 本（直す前に赤を見た）。CHANGELOG 2 つ（`[editor]`）。⚠️ C# の網は文書を `new Uri(path)` で名付ける＝エディタが送る形ではない。
+- **実機＝隔離した VS Code（Lab `p1299/vscode-e2e`）**: `go.ps1` 21 / 21（サーバの起動・context キー・キャレットと選択がプレビューへ送る message）、`go2.ps1` 9 / 9（semantic tokens・include を読む・保存し直すと読み直す。サーバは repo の Debug＝設定 `lilysharp.serverPath`）。（Lab `notes/CLAUDE-OPERATIONS.md` §3）
+- ⚠️ 実機で見ていない: apphost と PATH の道・`hasOrMarks`／`hasStringNumbers`・実物の `.omr.json`・include がプレビューの絵に出ること（診断で見た）。⚠️ **オーナーの VS Code に入っているサーバは古いまま＝`using` が読めるのは `tools\Deploy-Lsp.ps1`（オーナー）の後。**
+- 終了時 full 17608 合格 / 1 失敗（同じ）/ skip 2 / 合計 17611（`run5.trx`・+10＝網 1＋6＋3）・npm 1261 合格 / skip 1（+1）。
+- **次（review.md の残り・訊かずに着手してよい）**: F4 はプレビューの状態を読まない塊を出し切った＝残り（`activate` 831 行・`openPreview` 553 行・`updatePreviewContent` 約 315 行）はプレビューの host で、分けるなら状態ごと移す設計が先（急がない）。P6・P7 の残り・P10 は静かな窓で。F3 段 2 と P9 はオーナー判断。小さいものの残りは review.md §1 の末尾。
+
 ## 以下は第1298セッションの経緯
 
 ### 1.1 第1298セッション（2026-11-18・YT-DELL2）
