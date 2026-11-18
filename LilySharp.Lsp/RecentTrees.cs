@@ -63,6 +63,11 @@ internal sealed class RecentTrees
 
     private static RecentTrees Store => OfThisThread ?? Shared;
 
+    /// <summary>How many made texts the calling thread parsed in two windows, each by way of
+    /// one more text of its whole length: what a test of a keystroke's side work counts.</summary>
+    [ThreadStatic]
+    internal static int TwoWindowParsesOnThisThread;
+
     /// <summary>The tree of <paramref name="text"/>, a made text.</summary>
     /// <param name="text">The made text.</param>
     /// <param name="own">How much of it, from its head, is the text it was made of: what was
@@ -104,9 +109,22 @@ internal sealed class RecentTrees
             // written again at the file's end, and one window from the one to the other is
             // most of the file. So the new head with the old rest first (a text nobody reads),
             // then the new rest; where the rest stands, the first is the whole of it.
+            //
+            // Where the rest stands as it was — every keystroke of a book with includes, whose
+            // files were not saved meanwhile, and a note no singer sings — the first of the
+            // two texts IS the text: one window, and no second string of everything (until
+            // session 1303 one was made and compared on every keystroke; review of 1291, P8).
             var old = from.Value;
-            string headFirst = string.Concat(text.AsSpan(0, own), old.Tree.Text.AsSpan(old.Own));
-            parsed = SyntaxTree.ParseChanged(SyntaxTree.ParseChanged(old.Tree, headFirst), text);
+            if (text.AsSpan(own).SequenceEqual(old.Tree.Text.AsSpan(old.Own)))
+            {
+                parsed = SyntaxTree.ParseChanged(old.Tree, text);
+            }
+            else
+            {
+                TwoWindowParsesOnThisThread++;
+                string headFirst = string.Concat(text.AsSpan(0, own), old.Tree.Text.AsSpan(old.Own));
+                parsed = SyntaxTree.ParseChanged(SyntaxTree.ParseChanged(old.Tree, headFirst), text);
+            }
         }
         else
         {

@@ -89,11 +89,15 @@ public sealed class MadeTextParseTests : IDisposable
 
         var typed = Typed(main, "4/4", "3/4");
         int before = SyntaxTree.FullParsesOnThisThread;
+        int twoWindows = RecentTrees.TwoWindowParsesOnThisThread;
         var (tree, _) = Expand(typed, files);
         int parses = SyntaxTree.FullParsesOnThisThread - before;
 
         // Not the main text, not the include, not the two together.
         Assert.Equal(0, parses);
+        // …and the include stands as it was: one window, the keystroke's, and no second text
+        // of the book and its includes made to find it.
+        Assert.Equal(0, RecentTrees.TwoWindowParsesOnThisThread - twoWindows);
         // form, score, and the include's part and two sections: taken as they stood.
         Assert.True(tree.AdoptedTopLevelItems >= 5, $"adopted {tree.AdoptedTopLevelItems}");
         Assert.Contains("section B", tree.Text, StringComparison.Ordinal);
@@ -154,7 +158,10 @@ public sealed class MadeTextParseTests : IDisposable
 
         // A note of the Verse, which carol does not sing: her part's bars there stay at rest.
         var typed = Typed(main, "e'4 e d c", "e'4 e d d");
+        int twoWindows = RecentTrees.TwoWindowParsesOnThisThread;
         var (tree, _) = Expand(typed, []);
+        // What is written after the text did not move: one window.
+        Assert.Equal(0, RecentTrees.TwoWindowParsesOnThisThread - twoWindows);
 
         Assert.Contains("e'4 e d d", tree.Text, StringComparison.Ordinal);
         Assert.Contains(LilySharp.Core.Editing.SingerParts.Marker, tree.Text, StringComparison.Ordinal);
@@ -167,6 +174,7 @@ public sealed class MadeTextParseTests : IDisposable
         // there — the form, her line and the score between them are taken as they stood.
         var sung = Typed(typed, "g'4 g a g", "g'4 g a b");
         var (moved, _) = Expand(sung, []);
+        Assert.Equal(1, RecentTrees.TwoWindowParsesOnThisThread - twoWindows);
         Assert.Contains("b'4 b c d", moved.Text[LilySharp.Core.Editing.SingerParts.MadeFrom(moved.Text)..], StringComparison.Ordinal);
         Assert.True(moved.AdoptedTopLevelItems >= 9, $"adopted {moved.AdoptedTopLevelItems}");
         IncrementalParseTests.AssertTreesEquivalent(SyntaxTree.Parse(moved.Text), moved);
