@@ -44,10 +44,11 @@
     all is well.</li>
   </ol>
   <p><b>A GPU makes the difference.</b> NEUTRINO sings on an NVIDIA GPU, and a DiffSinger voice on any
-  DirectX 12 GPU on Windows; with none they sing on the CPU, far slower. Measured with NEUTRINO: 43
-  seconds of song in 7 seconds on a fast NVIDIA GPU, and 37 seconds of song in 5 minutes 40 seconds
-  on a laptop with none. On such a PC a song is minutes the first time. What was sung is kept, so
-  after that only a phrase you change is sung again.</p>
+  DirectX 12 GPU on Windows: there 43 seconds of song are sung in about 7. With no such GPU a voice
+  sings on the processor, and NEUTRINO then takes several times as long as the song itself (its
+  steps below have what was measured). What was sung is kept, so after the first time only a
+  phrase you change is sung again, and <a href="#slow">On a slow computer</a> says how to have the
+  editor sing only when you press ▶.</p>
   <table class="g">
     <tr><th>Engine</th><th>What it is</th><th>Sings</th></tr>
     <tr><td><a href="#install-diffsinger"><b>DiffSinger</b></a></td>
@@ -73,7 +74,7 @@
     that turns what the voice computes into sound. Download the <code>.oudep</code> file of the one the
     voice's readme names (for <code>nsf_hifigan</code>, the usual one,
     <code>nsf_hifigan_44.1k_hop512_128bin_2024.02.oudep</code>) from
-    <a href="https://github.com/openvpi/vocoders/releases">the DiffSinger community vocoders</a>,
+    <a href="https://github.com/openvpi/vocoders">the DiffSinger community vocoders</a> (their releases),
     rename it to <code>.zip</code>, unpack it into a folder, and choose that folder with
     <b>Cantoria: Choose Vocoder Folder… (DiffSinger)</b>. The vocoders have terms of their own, in the
     <code>NOTICE.txt</code> they come with.</li>
