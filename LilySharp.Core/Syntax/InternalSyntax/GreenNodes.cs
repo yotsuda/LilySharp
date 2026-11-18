@@ -746,6 +746,18 @@ internal sealed class PercentRepeatGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// A beat repeat: the figure's block, then its marks — the source's own nodes in their order
+/// (<c>{ c16 d e f } % % %</c>; docs/percent-repeat-design.md §5).
+/// </summary>
+internal sealed class BeatRepeatGreen : GreenSyntaxNode
+{
+    public BeatRepeatGreen(GreenNode figure, GreenNode?[] marks)
+        : base(SyntaxKind.BeatRepeat, [figure, .. marks])
+    {
+    }
+}
+
+/// <summary>
 /// Parallel expression: <c>&lt;&lt; expr \\ expr &gt;&gt;</c>
 /// </summary>
 internal sealed class ParallelExpressionGreen : GreenSyntaxNode

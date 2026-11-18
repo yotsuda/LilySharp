@@ -616,4 +616,8 @@ public enum SyntaxKind : ushort
     /// <summary>A percent repeat: the bars it repeats, then its marks (<c>c4 d e f | % | %</c>),
     /// the source's own nodes grouped in their order.</summary>
     PercentRepeat,
+    /// <summary>A beat repeat: a figure shorter than a bar in braces, then one <c>%</c> a
+    /// repetition, inside the bar (<c>{ c16 d e f } % % %</c>; owner's decision 2026-11-19,
+    /// Calamo's request 27).</summary>
+    BeatRepeat,
 }

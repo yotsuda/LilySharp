@@ -218,6 +218,15 @@ internal static class MeasureDurations
                 return body * new Fraction(percent.Count, 1);
             }
 
+            case BeatRepeatSyntax beat:
+            {
+                // The figure once as written and once more for each mark, all inside the bar.
+                var figure = Fraction.Zero;
+                foreach (var figureItem in beat.Figure.Items)
+                    figure += ItemDuration(figureItem, ref defaultDuration, onTuplet);
+                return figure * new Fraction(beat.Count, 1);
+            }
+
             default:
                 return Fraction.Zero;
         }

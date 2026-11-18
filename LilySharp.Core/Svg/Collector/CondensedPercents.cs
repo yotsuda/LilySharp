@@ -78,6 +78,9 @@ internal static class CondensedPercents
             var bars = MeasureModel.Split(voice.Container, phrases);
             foreach (var mark in voice.Container.DescendantNodesOfKinds(SyntaxKind.PercentMarkItem))
             {
+                // (a beat repeat's marks stand inside their bar: they cover no bar of the staff)
+                if (mark.Parent is BeatRepeatSyntax)
+                    continue;
                 int first = bars.FindIndex(b => b.Span.Contains(mark.SourceStart));
                 int last = bars.FindLastIndex(b => b.Span.Contains(mark.SourceStart));
                 if (first >= 0)

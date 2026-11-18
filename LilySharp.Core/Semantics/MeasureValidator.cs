@@ -343,6 +343,13 @@ internal sealed class MeasureValidator : ISemanticValidator
             // 2026-08-13, scratch/ベースタブLy/1stbarline.lys).
             RepeatExpressionSyntax => true,
 
+            // A beat repeat's figure is part of its bar, counted there with its marks
+            // (MeasureDurations.ItemDuration) — not a stream of its own with bars to check. The
+            // same for braces no mark follows (reported, BeatRepeatMisspelled): the enclosing
+            // stream reads them in place (SplitIntoMeasures).
+            BeatRepeatSyntax => true,
+            MusicBlockSyntax { Parent: MusicBlockSyntax or InlineVoltaSyntax } => true,
+
             // LYS0010 recovery: a nested voice's block INLINES into the enclosing
             // voice (SplitIntoMeasures expands it there) — validating it as a
             // standalone block would re-add the phantom short-bar warnings.
@@ -1442,6 +1449,7 @@ internal sealed class MeasureValidator : ISemanticValidator
             or KeySignatureSyntax or ClefDeclarationSyntax or BreakSyntax => true,
         RestSyntax rest => rest.MeasureCount <= 1,
         RepeatExpressionSyntax trem => trem.RepeatType.Text == "tremolo" && int.TryParse(trem.Count.Text, out _),
+        BeatRepeatSyntax beat => beat.Figure.Items.All(i => PricedInPlace(i, open)),
         VariableReferenceSyntax nested => FlowingPhraseBody(nested, open) != null,
         ParallelExpressionSyntax span => span.Voices.FirstOrDefault() is MusicBlockSyntax lead
             && lead.Items.All(i => PricedInPlace(i, open)),
@@ -1505,6 +1513,11 @@ internal sealed class MeasureValidator : ISemanticValidator
                         currentItems = [];
                     }
                     startPos = item.Position + item.FullWidth;
+                }
+                else if (item is MusicBlockSyntax bareFigure)
+                {
+                    // Braces no mark follows (reported, BeatRepeatMisspelled): transparent.
+                    AddItems(bareFigure.Items);
                 }
                 else if (item is NestedVoiceRecoverySyntax)
                 {

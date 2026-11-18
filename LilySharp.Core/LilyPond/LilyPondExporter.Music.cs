@@ -866,6 +866,9 @@ public sealed partial class LilyPondExporter
         CueExpressionSyntax cue => EmitCue(cue),
         RepeatExpressionSyntax rep => EmitRepeat(rep),
         PercentRepeatSyntax percent => EmitPercentRepeat(percent),
+        BeatRepeatSyntax beat => EmitBeatRepeat(beat),
+        // Braces no mark follows (LYS1074): the music in them once.
+        MusicBlockSyntax bare => EmitBareBlock(bare),
         // A mark that repeats nothing (LYS1048): the bars it stands for, empty.
         PercentMarkSyntax stray => "s" + Music.BarRest.LilyPondDuration(_bars.MeterLength)
             + (stray.Bars > 1 ? $"*{stray.Bars}" : ""),
@@ -2783,6 +2786,26 @@ public sealed partial class LilyPondExporter
         CarryFrameBack(buf);
         string body = NestedText(buf);
         return $"\\repeat percent {percent.Count} {{ {body} }}";
+    }
+
+    /// <summary>A beat repeat, <c>{ … } % % %</c>: LilyPond's <c>\repeat percent N { … }</c> over
+    /// the figure — a body shorter than a bar, which LilyPond draws as the beat slash
+    /// (docs/percent-repeat-design.md §5).</summary>
+    private string EmitBeatRepeat(BeatRepeatSyntax beat)
+    {
+        var buf = OpenNested();
+        buf.EmitMusicStream(MusicItems(beat.Figure).ToList(), "");
+        CarryFrameBack(buf);
+        string body = NestedText(buf);
+        return $"\\repeat percent {beat.Count} {{ {body} }}";
+    }
+
+    private string EmitBareBlock(MusicBlockSyntax block)
+    {
+        var buf = OpenNested();
+        buf.EmitMusicStream(MusicItems(block).ToList(), "");
+        CarryFrameBack(buf);
+        return NestedText(buf);
     }
 
     private string Skip(SyntaxNode item)

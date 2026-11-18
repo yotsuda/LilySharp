@@ -994,6 +994,11 @@ score { staff melody }
   `c4 d e f | % | % | % |` (the bar four times), `a2 b | c'2 d' | %2 | %2 |` (two bars three
   times). The bars repeated must be whole bars; a mark of another length cannot follow a run
   of marks. `repeat percent` / `repeat unfold` are gone (LYS1047; the editor's quick fix rewrites them).
+- Beat repeat (a figure SHORTER than a bar, repeated inside the bar): the figure in braces, then
+  one plain `%` per repetition — `c4 { d8 e } % %` is one 4/4 bar (the figure three times),
+  `{ c16 d e f } % % %` a bar of four. Each `%` is as long as the figure; the figure and its
+  marks must fit the bar like notes. Braces with no `%` after them are an error (LYS1074), and
+  `%2` after braces is too (it counts bars). Whole bars are still repeated by `| % |`.
 - Tremolo. On ONE note, `:N` after the duration strikes the stem (`c4:16` — one stroke per
   beam of N: `:8` one, `:16` two, `:32` three). Between TWO notes, `repeat tremolo N { a16 b }`
   alternates them, and lasts N times the body: `repeat tremolo 4 { c16 e }` = 4 × an eighth =

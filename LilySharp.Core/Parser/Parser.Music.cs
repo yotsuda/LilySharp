@@ -68,6 +68,7 @@ internal sealed partial class Parser
     /// </remarks>
     private static void GroupPercentRepeats(List<GreenNode?> items)
     {
+        GroupBeatRepeats(items);
         ReadBarLinesLeftOutBetweenMarks(items);
         for (int i = 1; i < items.Count; i++)
         {
@@ -134,6 +135,49 @@ internal sealed partial class Parser
         {
             int after = SkipBreaks(list, at + 1, +1);
             return after >= list.Count || list[after]?.Kind == SyntaxKind.Barline;
+        }
+    }
+
+    /// <summary>
+    /// A <c>{ … }</c> written as an item of music: a beat repeat's figure, which the marks after
+    /// it repeat. Braces no mark follows are reported here (LYS1074) and kept as a block, read
+    /// as its music once — a parse error, as the stray <c>{</c> was before the figure existed,
+    /// so a file with one is still a file that does not compile.
+    /// </summary>
+    private MusicBlockGreen ParseFigure()
+    {
+        int open = _textPosition + Current.LeadingTriviaWidth;
+        var block = ParseMusicBlock();
+        if (!Check(SyntaxKind.PercentMark))
+            _diagnostics.Error(new TextSpan(open, 1), DiagnosticCodes.BeatRepeatMisspelled,
+                "Braces in the music are a figure to repeat inside the bar, and no '%' follows these: "
+                + "write one '%' a repetition after them — '{ c16 d e f } % % %' is the figure four times. "
+                + "Read here as its music once.");
+        return block;
+    }
+
+    /// <summary>
+    /// Groups a figure in braces with the <c>%</c> marks written right after it into one
+    /// <see cref="BeatRepeatGreen"/>, in place: <c>{ c16 d e f } % % %</c> (owner's decision
+    /// 2026-11-19, docs/percent-repeat-design.md §5). Only a plain <c>%</c> joins — a
+    /// <c>%N</c> counts bars, and a figure has none. A block no mark follows stays a bare
+    /// block, and a <c>%N</c> after one stays a bare mark, for the validator to report
+    /// (LYS1074, LYS1048). Before the bars' grouping: the marks taken here are no bar's.
+    /// </summary>
+    private static void GroupBeatRepeats(List<GreenNode?> items)
+    {
+        for (int i = 0; i + 1 < items.Count; i++)
+        {
+            if (items[i] is not MusicBlockGreen figure)
+                continue;
+            int end = i;
+            while (end + 1 < items.Count && items[end + 1] is PercentMarkGreen mark && mark.GetSlot(0)!.Text == "%")
+                end++;
+            if (end == i)
+                continue;
+            var marks = items.GetRange(i + 1, end - i).ToArray();
+            items.RemoveRange(i, end - i + 1);
+            items.Insert(i, new BeatRepeatGreen(figure, marks));
         }
     }
 
@@ -309,6 +353,9 @@ internal sealed partial class Parser
             // `%` / `%N` — grouped with the bars it repeats once the list is read
             // (GroupPercentRepeats).
             SyntaxKind.PercentMark => new PercentMarkGreen(Advance()),
+            // `{ … }` in the music — a beat repeat's figure, grouped with the `%` marks after
+            // it once the list is read (GroupBeatRepeats).
+            SyntaxKind.OpenBrace => ParseFigure(),
             SyntaxKind.TupletKeyword => ParseTupletExpression(),
             SyntaxKind.KeyKeyword => ParseKeySignature(),
             SyntaxKind.ClefKeyword => ParseClefDeclaration(),

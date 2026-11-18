@@ -791,7 +791,8 @@ internal sealed partial class Parser
         {
             int end = GluedNameRunEnd(i);
             if (end < 0) continue;
-            if ((i > 0 && TakesAName(_tokens[i - 1].Kind)) || _tokens[end].Kind == SyntaxKind.OpenBrace)
+            if ((i > 0 && TakesAName(_tokens[i - 1].Kind))
+                || (_tokens[end].Kind == SyntaxKind.OpenBrace && !OpensABeatRepeatsFigure(end)))
             {
                 (sites ??= []).Add((i, end));
                 (names ??= new HashSet<string>(StringComparer.Ordinal)).Add(GluedText(i, end));
@@ -839,6 +840,25 @@ internal sealed partial class Parser
         }
         _tokens.Clear();
         _tokens.AddRange(merged);
+    }
+
+    /// <summary>
+    /// Whether the <c>{</c> at <paramref name="open"/> opens a beat repeat's figure: its
+    /// <c>}</c> is followed by a <c>%</c> (<c>c4 { d8 e } %</c> — docs/percent-repeat-design.md
+    /// §5). The one place music stands before a <c>{</c>: the note before the figure stays a
+    /// note, where <c>a1 { … }</c> with no mark after it is a name that reads as music.
+    /// </summary>
+    private bool OpensABeatRepeatsFigure(int open)
+    {
+        int depth = 0;
+        for (int i = open; i < _tokens.Count; i++)
+        {
+            if (_tokens[i].Kind == SyntaxKind.OpenBrace)
+                depth++;
+            else if (_tokens[i].Kind == SyntaxKind.CloseBrace && --depth == 0)
+                return i + 1 < _tokens.Count && _tokens[i + 1].Kind == SyntaxKind.PercentMark;
+        }
+        return false;
     }
 
     /// <summary>The words a NAME follows, in a declaration or in a score's row.</summary>

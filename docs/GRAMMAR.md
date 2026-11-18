@@ -2822,7 +2822,7 @@ DisplayName    = String ;
 MusicBlock     = '{' , { MusicItem } , '}' ;
 
 MusicItem      = Note | Rest | Chord | Arpeggio | Barline | PhraseRef
-               | SlashNote | BareDuration | PercentMark
+               | SlashNote | BareDuration | PercentMark | BeatRepeat
                | Slur | Tie | Beam | Tuplet | Grace | Cue | MidMusicCommand
                | DrumChart                        (* §5.2 *)
                | InlineVolta | NavMark ;          (* a section's music and a chords row;
@@ -3816,7 +3816,28 @@ PercentMark    = '%' , [ Integer ] ;                 (* no space: '%2' *)
                     How many slashes that last sign carries comes from the body's WRITTEN
                     durations (calc-repeat-slash-count): all equal gives a plain slash,
                     unequal gives the double slash. A body shorter than a bar — LilyPond's
-                    beat repeat — cannot be written: write the notes out. *)
+                    beat repeat — is a BeatRepeat, below. *)
+BeatRepeat     = MusicBlock , PercentMark , { PercentMark } ;      (* each mark a plain '%' *)
+                 (* A FIGURE SHORTER THAN A BAR, repeated inside the bar (owner's decision
+                    2026-11-19; docs/percent-repeat-design.md §5): the figure in braces, then
+                    one '%' a repetition —
+                      c4 { d8 e } % %                the figure three times: one bar of 4/4
+                      fis16 { <fis b>64 dis' <fis b> dis' } % % %   …a sixteenth, four times
+                    The braces say what is repeated; a figure written out before them is
+                    ordinary music ('d8 e { d8 e } % %'). Each mark is as long as the
+                    figure, sounds it again from the frame the figure opened in, and prints
+                    LilyPond's beat slash: as many slashes as the figure's notes have beams
+                    when they are of one value, the double slash with dots when they are not
+                    (calc-repeat-slash-count). The figure and its marks stand in ONE bar — they
+                    count toward it like notes, and a bar they overfill is told as any other
+                    (LYS2002). Bars are repeated by '| % |', not by this.
+                    Only a plain '%' joins a figure: '%2' counts bars (LYS1048 says so).
+                    Braces no mark follows are a parse error (LYS1074), read as their music
+                    once. A note written right before the figure stays a note ('c4 { … } %'),
+                    where 'a1 { … }' with no mark after it is a name that reads as music
+                    (LYS0045).
+                    The twin writes \repeat percent N { … } (N = marks + 1); MusicXML and MIDI
+                    carry the notes of every repetition. *)
 Cue            = 'cue' , [ ClefName ] , MusicBlock ;
                  (* Small cue notes. A cue is a REGION, not a note annotation — it maps
                     onto LilyPond's CueVoice context, whose size is a context property,

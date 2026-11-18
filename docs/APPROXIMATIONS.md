@@ -541,8 +541,8 @@
 - **`MeasureCollector.SolveCrossCollisions`** LILYSHARP-OWN: the moved voice's slot. LilyPond keeps the Voice's own horizontal-shift,
 - **`MeasureCollector.DefaultExpansionBudgetCap`** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
 - **`MeasureCollector.ExtractNoteheadStyle`** own @notehead, above, wins. LILYSHARP-OWN (Semantics.ArticulationRuns).
-- **`MeasureCollector.ProcessPercentRepeat`** LILYSHARP-OWN, owner's decision 2026-10-14, session 905). Whole bars: the body opens
-- **`MeasureCollector.ProcessPercentRepeat`** notes stand (CondensedPercents; grammar evaluation 3, 2026-11-13). LILYSHARP-OWN.
+- **`MeasureCollector.ProcessPercentRun`** LILYSHARP-OWN, owner's decision 2026-10-14, session 905). Whole bars: the body opens
+- **`MeasureCollector.ProcessPercentRun`** notes stand (CondensedPercents; grammar evaluation 3, 2026-11-13). LILYSHARP-OWN.
 - **`MeasureCollector.ProcessGraceRegion`** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Definitions.cs`
 - **`MeasureCollector.CollectDefinitions`** "as the plain words do"; LILYSHARP-OWN that the two spellings of one line go

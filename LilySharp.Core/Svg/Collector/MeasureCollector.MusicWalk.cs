@@ -1856,6 +1856,10 @@ public sealed partial class MeasureCollector
                 await ProcessPercentRepeat(percent, builder);
                 break;
 
+            case BeatRepeatSyntax beat:
+                await ProcessBeatRepeat(beat, builder);
+                break;
+
             case PercentMarkSyntax stray:
                 // A mark the parser could not group (reported, PercentMarkUngrouped): a bar
                 // of nothing, as the design says — the bar stays, nothing is invented.

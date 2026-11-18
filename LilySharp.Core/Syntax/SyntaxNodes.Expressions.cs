@@ -154,6 +154,39 @@ public sealed class PercentRepeatSyntax : SyntaxNode
 }
 
 /// <summary>
+/// A beat repeat (owner's decision 2026-11-19, Calamo's request 27; docs/percent-repeat-design.md
+/// §5): a figure shorter than a bar written in braces, then one <c>%</c> a repetition, all inside
+/// the bar — <c>c16 { d32 e d e } % % %</c> is the figure four times. Each mark is as long as the
+/// figure and is drawn as LilyPond's beat slash; it sounds the figure again. The parser groups the
+/// block with the marks that follow it (Parser.GroupBeatRepeats); a block no mark follows stays a
+/// bare <see cref="MusicBlockSyntax"/>, reported (LYS1074).
+/// </summary>
+public sealed class BeatRepeatSyntax : SyntaxNode
+{
+    internal BeatRepeatSyntax(InternalSyntax.BeatRepeatGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>The figure: the block before the marks.</summary>
+    public MusicBlockSyntax Figure => (MusicBlockSyntax)GetChild(0)!;
+
+    /// <summary>The marks, one per repetition.</summary>
+    public IEnumerable<PercentMarkSyntax> Marks
+    {
+        get
+        {
+            for (int i = 1; i < SlotCount; i++)
+                if (GetChild(i) is PercentMarkSyntax mark)
+                    yield return mark;
+        }
+    }
+
+    /// <summary>How many times the figure is heard: once written, once per mark.</summary>
+    public int Count => SlotCount;
+}
+
+/// <summary>
 /// Parallel expression: <c>&lt;&lt; expr \\ expr &gt;&gt;</c>
 /// </summary>
 public sealed class ParallelExpressionSyntax : SyntaxNode

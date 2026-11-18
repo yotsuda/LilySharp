@@ -7010,7 +7010,7 @@ public sealed partial class MeasureCollector
             or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
             or GraceExpressionSyntax or CueExpressionSyntax
             or TupletExpressionSyntax or RepeatExpressionSyntax
-            or PercentRepeatSyntax or PercentMarkSyntax
+            or PercentRepeatSyntax or PercentMarkSyntax or BeatRepeatSyntax
             or ParallelExpressionSyntax or InlineVoltaSyntax or MusicMarkSyntax
             or NavigationMarkSyntax
             or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax
@@ -7079,7 +7079,7 @@ public sealed partial class MeasureCollector
     /// </summary>
     internal static bool IsProcessedContainer(SyntaxNode p, bool includeParallel) =>
         p is TupletExpressionSyntax or RepeatExpressionSyntax or GraceExpressionSyntax
-            or InlineVoltaSyntax or OnceModifierSyntax or ArpeggioSyntax or PercentRepeatSyntax
+            or InlineVoltaSyntax or OnceModifierSyntax or ArpeggioSyntax or PercentRepeatSyntax or BeatRepeatSyntax
             // A cue REGION owns its body's walk (ProcessCueRegion), and the region is the
             // only thing that knows the notes are cue-sized. Letting the outer walk flatten
             // it drops the region silently: the notes still render, at FULL size, and the
@@ -7098,7 +7098,7 @@ public sealed partial class MeasureCollector
     private static bool IsProcessedContainerKind(SyntaxKind kind, bool includeParallel) => kind is
         SyntaxKind.TupletExpression or SyntaxKind.RepeatExpression or SyntaxKind.GraceExpression
             or SyntaxKind.InlineVolta or SyntaxKind.OnceModifier or SyntaxKind.Arpeggio
-            or SyntaxKind.CueExpression or SyntaxKind.PercentRepeat
+            or SyntaxKind.CueExpression or SyntaxKind.PercentRepeat or SyntaxKind.BeatRepeat
         || (includeParallel && kind is SyntaxKind.ParallelExpression);
 
     /// <summary>Kind-level mirror of <see cref="IsCollectableMusicNode"/> plus
@@ -7116,7 +7116,7 @@ public sealed partial class MeasureCollector
             or SyntaxKind.BeamMarker
             or SyntaxKind.GraceExpression or SyntaxKind.CueExpression
             or SyntaxKind.TupletExpression or SyntaxKind.RepeatExpression
-            or SyntaxKind.PercentRepeat or SyntaxKind.PercentMarkItem
+            or SyntaxKind.PercentRepeat or SyntaxKind.PercentMarkItem or SyntaxKind.BeatRepeat
             or SyntaxKind.ParallelExpression or SyntaxKind.InlineVolta or SyntaxKind.MusicMark
             or SyntaxKind.NavigationMark
             or SyntaxKind.OverrideDeclaration or SyntaxKind.RevertDeclaration
@@ -7731,21 +7731,52 @@ public sealed partial class MeasureCollector
     /// marks are walked as written, so a repetition of N bars is N bars between two of them.
     /// </para>
     /// </remarks>
-    private async ValueTask ProcessPercentRepeat(PercentRepeatSyntax repeat, MeasureBuilder builder)
+    private ValueTask ProcessPercentRepeat(PercentRepeatSyntax repeat, MeasureBuilder builder)
+    {
+        var bodyEndBar = repeat.BodyEndBar;
+        // What follows the body: its marks, the bar lines between them, a line break beside one.
+        var afterBody = repeat.ChildNodes().SkipWhile(c => c.Position != bodyEndBar.Position).Skip(1);
+        return ProcessPercentRun(repeat.BodyItems, bodyEndBar, afterBody, builder);
+    }
+
+    /// <summary>
+    /// Processes a beat repeat, <c>{ … } % % %</c>: the figure once, then each mark as one
+    /// repetition — a spacer of the figure's length carrying LilyPond's beat slash
+    /// (docs/percent-repeat-design.md §5; owner's decision 2026-11-19).
+    /// </summary>
+    /// <remarks>
+    /// The same walk as a percent repeat of bars (<see cref="ProcessPercentRun"/>): a body
+    /// shorter than a bar is the shape that takes the RepeatSlash there, and no bar line
+    /// closes it.
+    /// LILYPOND-REF: lily/percent-repeat-iterator.cc:86-99 next_element — a body that is
+    ///   neither one measure nor two takes the repeat slash.
+    /// </remarks>
+    private ValueTask ProcessBeatRepeat(BeatRepeatSyntax beat, MeasureBuilder builder) =>
+        ProcessPercentRun(beat.Figure.Items, null, beat.Marks, builder);
+
+    /// <summary>The walk a percent repeat of bars and a beat repeat share: the body once (with
+    /// the bar line closing it, when it has one), then what follows it — each mark a
+    /// repetition, anything else walked as written.</summary>
+    private async ValueTask ProcessPercentRun(IEnumerable<SyntaxNode> bodyItems, BarlineSyntax? bodyEndBar,
+        IEnumerable<SyntaxNode> afterBody, MeasureBuilder builder)
     {
         // The body's phrase references expanded once, as a repeat body's were (see
         // ProcessRepeatExpression), and the bar line closing it walked with it.
         var bodyNodes = RentRepeatBody();
-        foreach (var item in repeat.BodyItems)
+        foreach (var item in bodyItems)
         {
             if (item is VariableReferenceSyntax varRef)
                 ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, bodyNodes, varRef);
             else
                 bodyNodes.Add(new GreenSite(item));
         }
-        var bodyEndBar = repeat.BodyEndBar;
         async ValueTask ProcessBodyOnce()
         {
+            if (bodyEndBar == null)
+            {
+                await ProcessMusicNodeSequence(bodyNodes, builder);
+                return;
+            }
             bodyNodes.Add(new GreenSite(bodyEndBar));
             await ProcessMusicNodeSequence(bodyNodes, builder);
             bodyNodes.RemoveAt(bodyNodes.Count - 1);
@@ -7905,14 +7936,8 @@ public sealed partial class MeasureCollector
         // Each mark: one event's worth of spacers, marked with the sign at the mark; the bar
         // lines between the marks are walked as written.
         var barSite = new List<GreenSite>(1);
-        bool afterBody = false;
-        foreach (var child in repeat.ChildNodes())
+        foreach (var child in afterBody)
         {
-            if (!afterBody)
-            {
-                afterBody = child.Position == bodyEndBar.Position;
-                continue;
-            }
             // A bar line, or a line break beside a mark: walked as written.
             if (child is not PercentMarkSyntax mark)
             {

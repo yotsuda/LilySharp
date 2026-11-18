@@ -71,6 +71,6 @@ internal sealed class SectionMusicNeedsPartValidator : ISemanticValidator
         NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax or ChordRepetitionSyntax
         or ArpeggioSyntax
         or TupletExpressionSyntax or GraceExpressionSyntax or RepeatExpressionSyntax
-        or PercentRepeatSyntax or PercentMarkSyntax
+        or PercentRepeatSyntax or PercentMarkSyntax or BeatRepeatSyntax
         or VariableReferenceSyntax or BarlineSyntax;
 }

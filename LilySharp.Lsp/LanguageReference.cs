@@ -144,6 +144,8 @@ internal static class LanguageReference
             PercentMarkSyntax { Parent: PercentRepeatSyntax group } mark =>
                 $"**Percent repeat**: `{mark.Mark.Text}` — the {(group.Bars == 1 ? "bar" : $"{group.Bars} bars")} before it once more "
                 + $"(heard {group.Count} times in all)",
+            PercentMarkSyntax { Parent: BeatRepeatSyntax beat } mark =>
+                $"**Beat repeat**: `{mark.Mark.Text}` — the figure in braces before it once more (heard {beat.Count} times in all)",
             PercentMarkSyntax mark => $"**Percent mark** `{mark.Mark.Text}`: repeats the bars written before it — here it repeats nothing (LYS1048)",
             ParallelExpressionSyntax => "**Parallel**: Multiple voices played simultaneously",
             TimeSignatureSyntax ts => $"**Time Signature**: {ts.Beats}/{ts.BeatType}",

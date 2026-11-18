@@ -808,6 +808,13 @@ public static class DiagnosticCodes
     /// repetition is as long as they are.</summary>
     public const string PercentBodyNotWholeBars = "LYS1049";
 
+    /// <summary>Parse error: a <c>{ … }</c> written in the music with no <c>%</c> after it. Braces
+    /// there are a beat repeat's figure, repeated by the marks after it
+    /// (<c>{ c16 d e f } % %</c>). The block is read as its music once.</summary>
+    /// <remarks>Owner's decision 2026-11-19 (Calamo's request 27): the beat repeat, gone since
+    /// 2026-10-14, is written where it is drawn — the figure, then a mark a repetition.</remarks>
+    public const string BeatRepeatMisspelled = "LYS1074";
+
     /// <summary>Warning: a part's <c>octave N</c> below the default 3 under an <c>instrument</c> preset,
     /// where the part already sounds an octave or more below the page — <c>instrument bass
     /// octave 2</c>: a bare <c>c</c> is written C2 and sounds C1. The octave is the WRITTEN

@@ -1354,7 +1354,7 @@ public sealed partial class LilyPondExporter
                 or ChordRepetitionSyntax or SlashNoteSyntax or BareDurationSyntax
                 or ArpeggioSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax
                 or BeamMarkerSyntax or GraceExpressionSyntax or TupletExpressionSyntax
-                or RepeatExpressionSyntax or PercentRepeatSyntax or PercentMarkSyntax
+                or RepeatExpressionSyntax or PercentRepeatSyntax or PercentMarkSyntax or BeatRepeatSyntax
                 or ParallelExpressionSyntax or InlineVoltaSyntax
                 or MusicMarkSyntax or NavigationMarkSyntax or ClefDeclarationSyntax
                 or OctaveDirectiveSyntax or KeySignatureSyntax or TimeSignatureSyntax

@@ -396,6 +396,9 @@ public static partial class NoteStepper
     /// number of bars (<c>%0</c>) steps from 1.</summary>
     private static (Edit? Edit, string Message) PercentEdit(PercentMarkSyntax percent, int dir)
     {
+        // A beat repeat's mark repeats the figure in braces before it: it has no count to step.
+        if (percent.Parent is BeatRepeatSyntax)
+            return (null, "%: repeats the figure in braces before it - one '%' a repetition");
         int bars = Math.Max(percent.Bars, 1);
         int next = percent.Bars == 0 ? 1 : bars + dir;
         if (next < 1 || next > PercentMarkSyntax.MaxBars)

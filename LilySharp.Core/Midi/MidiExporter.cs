@@ -1784,6 +1784,10 @@ public sealed class MidiExporter
                 ProcessPercentRepeat(percent, track, conductorTrack);
                 break;
 
+            case BeatRepeatSyntax beat:
+                ProcessBeatRepeat(beat, track, conductorTrack);
+                break;
+
             case PercentMarkSyntax stray:
                 // A mark that repeats nothing (LYS1048): the bars it stands for, silent, as
                 // the page draws them empty.
@@ -3254,7 +3258,7 @@ public sealed class MidiExporter
             // that). The music is laid out once, the signs noted where they stand (just above), and
             // the piece unfolded on the score's timeline (PlayFormAsPrinted, Midi.PlayedTimeline).
             // A percent mark in its repeat sounds the bars once more (ProcessPercentRepeat).
-            if (items[i] is PercentMarkSyntax { Parent: PercentRepeatSyntax } mark && _percentFrames.Count > 0)
+            if (items[i] is PercentMarkSyntax { Parent: PercentRepeatSyntax or BeatRepeatSyntax } mark && _percentFrames.Count > 0)
             {
                 ReplayPercentBody(track, conductorTrack, mark);
                 continue;
@@ -3309,6 +3313,26 @@ public sealed class MidiExporter
         try
         {
             ProcessSequence(percent.ChildNodes().ToList(), track, conductorTrack);
+        }
+        finally
+        {
+            _percentFrames.Pop();
+        }
+    }
+
+    /// <summary>
+    /// A beat repeat, <c>{ … } % % %</c>: the figure, then each mark sounding it once more
+    /// (<see cref="ReplayPercentBody"/>) — as a percent repeat's marks sound its bars, from the
+    /// frame the figure opened in (docs/percent-repeat-design.md §5).
+    /// </summary>
+    private void ProcessBeatRepeat(BeatRepeatSyntax beat, MidiTrack track, MidiTrack conductorTrack)
+    {
+        var figure = beat.Figure.Items.ToList();
+        _percentFrames.Push((figure, new Dictionary<int, int>(_sourceOrdinals),
+            (_currentOctave, _currentNoteName, _defaultDuration)));
+        try
+        {
+            ProcessSequence([.. figure, .. beat.Marks], track, conductorTrack);
         }
         finally
         {

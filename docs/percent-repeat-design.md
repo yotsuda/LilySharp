@@ -48,8 +48,9 @@ a2 b | c d | %2 | %2 |            the two-bar pattern twice more      (old: repe
 - **There is no count suffix** (`%*7`): seven more turns of a one-bar pattern are seven marks —
   each a bar the reader sees. (`R1*N` is the one multi-bar token left; a rest has nothing to
   write in each bar.)
-- **A beat repeat (a body shorter than a bar) is gone.** Four bodies in the owner's 334 books;
-  the migration writes their notes out.
+- **A beat repeat (a body shorter than a bar) was gone** from this day to 2026-11-19 (four bodies
+  in the owner's 334 books; the migration wrote their notes out). It is back, written where it is
+  drawn: §5.
 - **`repeat unfold` is gone.** One use in 334 books; a phrase written N times says the same and
   is drawn the same (`ground | ground |`).
 - **`repeat tremolo` stays** — it is not a repeat of bars but a way of writing a tremolo.
@@ -110,3 +111,62 @@ compared), and `lysc check` the same in every book but those (the same bar-line 
 by the written-out bars). The repository's own books, fixtures, samples and audit probes are
 rewritten; the same comparison over the 679 tracked books differs only where a beat repeat was
 written out and in `repeat volta` (a LilyPond spelling, already an error) now read once.
+
+## 5. The beat repeat — `{ … } % % %` (owner's decision 2026-11-19, Calamo's request 27)
+
+§1 took the beat repeat out with the old spelling. It is back because scores have it: Kücken
+Op. 47-3 (Fr. Kistner 1711), bar 66, writes a group of four 64ths twice and then three signs,
+and the reader of scanned scores had no way to write what the page shows — its truth files
+wrote a tremolo of the same length, and its generator could not draw the sign for the detector
+to learn (`C:\MyProj\Calamo\docs\repro\beat-repeat-2026-11-19.md`).
+
+**The spelling** is §1's own rule — written where it is drawn, the music once and then the
+marks: the figure in braces, then one `%` a repetition, inside the bar.
+
+```
+c4 { d8 e } % %                                   the figure three times: one bar of 4/4
+fis16 <fis b>64 dis' <fis b> dis' { <fis b>64 dis' <fis b> dis' } % % %     Kücken's bar
+```
+
+- The braces say WHAT is repeated — a mark inside a bar has no bar lines to count back over,
+  and "the beat before it" is not a length the meter gives (a 64th group in 6/8 is no beat).
+  A bare `{ }` in the music meant nothing before, so no spelling changes its reading.
+- Each mark is one repetition, as long as the figure; only a plain `%` joins (`%N` counts
+  bars — LYS1048 says so after a figure). Braces no mark follows are LYS1074, a parse error
+  as the stray `{` was, read as their music once.
+- The figure and its marks count toward their bar like notes. Nothing checks that they stay
+  inside it but the bar check itself (a bar they overfill is LYS2002 / LYS2017).
+- `| % |` is untouched, and a bar holding a beat repeat is repeated by it like any bar.
+- **The one collision** was the name that reads as music: `a1 { … }` in a section is a part's
+  cell named a1 (LYS0045, read as the name). Before a figure the same letters are a note
+  (`c4 { d8 e } %`). The token pass tells them apart by what follows the closing brace: a `%`
+  is a figure (`Parser.OpensABeatRepeatsFigure`).
+
+**The tree.** `BeatRepeatSyntax`: the figure's block, then its marks — the source's own nodes
+(`Parser.GroupBeatRepeats`, run before the bars' grouping so the marks are no bar's).
+
+**The readers.**
+- The page: `MeasureCollector.ProcessBeatRepeat` is the walk a percent repeat of bars takes
+  (`ProcessPercentRun`) with no bar line closing the body — a body shorter than a bar was
+  always the shape that takes LilyPond's RepeatSlash there, and that engraving (the slash
+  count, the spacer that carries the grob, its spacing) was never removed. The node is a
+  processed container and a collectable music node (four lists: red and green).
+- The bars: one item of its bar, the figure's length times its count
+  (`MeasureDurations.ItemDuration`; `MeasureModel.Flatten`; `MeasureValidator` does not enter
+  the figure as a stream of its own).
+- The sound: `MidiExporter.ProcessBeatRepeat` — each mark replays the figure from the frame
+  it opened in, as a bars' mark replays its bars (`ReplayPercentBody`: no dynamic struck
+  again).
+- MusicXML: the notes of every repetition, none of the figure's dynamics again. (Not
+  `<beat-repeat>`, which hides the notes behind a slash an importer may not draw.)
+- The LilyPond twin: `\repeat percent N { figure }`.
+
+**Seen.** `lysc png` of Kücken's bar: the group twice, three signs of four slashes, the
+tremolo — the same row as LilyPond 2.26.0 draws from Calamo's hand-written `.ly`
+(Lab `sessions/p-beat/b1.png` beside Calamo's `out/repro/beat-repeat-2026-11-19-lp.cropped.png`);
+`lysc ly` writes that file's own `\repeat percent 4 { … }`.
+
+**Not done.** The old print's sign is a row of thick upright strokes; this draws LilyPond's
+slanted slashes (owner's decision: not now). The editor offers nothing for it yet (no
+completion, no step key on its marks — a mark of a figure has no count to step). A drum
+chart's lines do not read a figure.

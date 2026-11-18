@@ -3478,6 +3478,26 @@ public sealed class MusicXmlExporter
                 ProcessPercentRepeat(percent);
                 break;
 
+            case BeatRepeatSyntax beat:
+                {
+                    // A beat repeat, `{ … } % % %`: the figure's notes written for each mark — what
+                    // sounds. (MusicXML's <beat-repeat> hides them behind a slash; the file states
+                    // the notes, as it does for a body longer than two bars.) Every repetition is
+                    // the one copy the page draws: it re-enters the frame the figure opened in, and
+                    // prints none of its dynamics again (ProcessPercentRepeat).
+                    var frame = (_currentOctave, _currentStep, _defaultDuration);
+                    ProcessNode(beat.Figure);
+                    bool outerRepetition = _inPercentRepetition;
+                    _inPercentRepetition = true;
+                    foreach (var _ in beat.Marks)
+                    {
+                        (_currentOctave, _currentStep, _defaultDuration) = frame;
+                        ProcessNode(beat.Figure);
+                    }
+                    _inPercentRepetition = outerRepetition;
+                }
+                break;
+
             case PercentMarkSyntax stray:
                 // A mark that repeats nothing (LYS1048): the bars it stands for, empty — an
                 // unprinted whole-bar rest each, as the page draws them.

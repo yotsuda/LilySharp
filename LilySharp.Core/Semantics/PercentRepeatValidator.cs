@@ -42,7 +42,7 @@ internal sealed class PercentRepeatValidator : ISemanticValidator
                 if (WhyNotARowsRepeat(rowMark) is { } why)
                     _diagnostics.Error(rowMark.Span, DiagnosticCodes.PercentMarkUngrouped, why);
             }
-            else if (node is PercentMarkSyntax mark && node.Parent is not PercentRepeatSyntax)
+            else if (node is PercentMarkSyntax mark && node.Parent is not (PercentRepeatSyntax or BeatRepeatSyntax))
                 _diagnostics.Error(mark.Span, DiagnosticCodes.PercentMarkUngrouped, WhyUngrouped(mark));
         }
     }
@@ -68,6 +68,9 @@ internal sealed class PercentRepeatValidator : ISemanticValidator
 
         var siblings = mark.Parent!.ChildNodes().Where(n => n is not SyntaxTokenNode).ToList();
         int at = siblings.FindIndex(s => s.Position == mark.Position);
+        // After a figure in braces: a figure is repeated by plain marks (a '%N' counts bars).
+        if (at > 0 && siblings[at - 1] is MusicBlockSyntax or BeatRepeatSyntax)
+            return $"A figure in braces is repeated by '%', one a repetition: '{{ c16 d e f }} % % %'. '{text}' counts bars.";
         int before = at - 1;
         while (before >= 0 && siblings[before] is BreakSyntax)
             before--;

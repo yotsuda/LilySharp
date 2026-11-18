@@ -569,7 +569,8 @@ internal static class MeasureModel
             // as themselves. Repeat interiors are expanded by the case below.
             // (A percent repeat is not among them: its body and bar lines are written music.)
             if (IsInside<TupletExpressionSyntax>(n, scope) || IsInside<GraceExpressionSyntax>(n, scope)
-                || IsInside<RepeatExpressionSyntax>(n, scope) || IsInside<ArpeggioSyntax>(n, scope))
+                || IsInside<RepeatExpressionSyntax>(n, scope) || IsInside<ArpeggioSyntax>(n, scope)
+                || IsInside<BeatRepeatSyntax>(n, scope))
                 continue;
 
             // A voice span's voices sound SIMULTANEOUSLY, so only voice 1 advances the
@@ -611,6 +612,16 @@ internal static class MeasureModel
                 // f'2` read as a 3/4 bar and a grand staff drew LYS2004 against the full
                 // bar beside it (2026-09-26).
                 case ArpeggioSyntax:
+                    if (!Emit(n))
+                        return;
+                    break;
+
+                // A beat repeat is ONE item inside its bar: the figure and a repetition for each
+                // mark (MeasureDurations.ItemDuration), charged by the figure's size as the
+                // collector charges a repetition.
+                case BeatRepeatSyntax beat:
+                    if (!budget.Charge(Math.Max(1, beat.Figure.Items.Count()) * Math.Max(1, beat.Count - 1)))
+                        return;
                     if (!Emit(n))
                         return;
                     break;
