@@ -192,13 +192,18 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                one while it moves, and the pointer over what a click jumps to. */
             cursor: grab;
         }
-        .main-content.dragging,
-        .main-content.dragging [data-pos] {
-            cursor: grabbing;
-        }
-        .main-content [data-pos],
+        /* The pointer over a note is a class the mouse's own handler sets (over-note, installBarHover),
+           NOT a rule on [data-pos]: a selector that names the attribute has the browser restyle every
+           element whose data-pos is written, and a keystroke that makes the text longer writes it on
+           every page after the caret's (shiftPage). MEASURED in a real VS Code (session 1302, a
+           1000-bar book, 8 of 16 pages shifted): the layout after the swap 18.1 ms with the rule,
+           5.0 without. The closed hand comes after the pointer, so a drag wins over both. */
+        .main-content.over-note,
         .main-content.over-bar {
             cursor: pointer;
+        }
+        .main-content.dragging {
+            cursor: grabbing;
         }
         /* The bar a click would go to (barStaffAt), its staff tinted in the colour the scan view
            lights a bar in (omrScan.ts rect.light; the owner's request 2026-10-14: the two alike). */
@@ -1422,14 +1427,19 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                     if (pos === null) continue;
                     const m = shiftOffset(parseInt(pos, 10), w);
                     if (!Number.isFinite(m)) return false;
-                    el.setAttribute(name, String(m));
+                    // (written only where it moved: what is written before the edit — another
+                    // part's bars on this page — keeps its offset, and an attribute not written
+                    // is an element the browser does not look at again)
+                    const moved = String(m);
+                    if (moved !== pos) el.setAttribute(name, moved);
                 }
                 for (const name of ['data-alt', 'data-span']) {
                     const list = el.getAttribute(name);
                     if (!list) continue;
                     const parts = list.split(' ').map(a => shiftOffset(parseInt(a, 10), w));
                     if (parts.some(m => !Number.isFinite(m))) return false;
-                    el.setAttribute(name, parts.join(' '));
+                    const moved = parts.join(' ');
+                    if (moved !== list) el.setAttribute(name, moved);
                 }
             }
             return true;
@@ -1463,6 +1473,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                         return requestFull('page ' + i + ' holds an offset the window has no image for');
                     }
                     shownPages[i].stale = true;
+                    shiftPageFacts(livePages[i], ps.Window);
                     pagesShifted++;
                     continue;
                 }
@@ -1513,6 +1524,89 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             posElements = new Map();
         }
 
+        // What ONE page carries, read off its elements once and kept with the page (its
+        // g.page element). The index used to be read off every element of the picture after
+        // every update, the pages that update left alone included: MEASURED in a real VS Code
+        // (session 1302, a 1000-bar book of 16 pages, one page changed by the keystroke) the
+        // read was 10 ms of the page's 22 after a swap of 3.7. A page's facts stand for as long
+        // as the page shows the markup they were read from — shownPages[i], the very object: a
+        // changed or re-stamped page is given a new one, a replaced page is another element, a
+        // whole new picture is all new elements — and a page the server calls shifted has them
+        // mapped through the window its attributes are mapped through (shiftPageFacts). With no
+        // record of the pages shown nothing is kept and every page is read, as before.
+        const pageFactsOf = new WeakMap();
+        // pos: [offset, element, offset, element, …] in the page's order — the element null
+        // where it carries the offset and is never painted (sourcePositions says which).
+        // spans: [rect, from, to, …] — each staff's bar that says where it is written
+        // (rect.bar-staff's data-span), for the caret's bar. bars: the bar boxes that say their
+        // measure ({ m, bar, rect } off rect.bar-box's data-m and data-bar), for the A-B flags.
+        function readPageFacts(root) {
+            const pos = [], spans = [], bars = [];
+            for (const el of root.querySelectorAll('[data-pos], [data-alt], rect.bar-staff[data-span], rect.bar-box[data-m]')) {
+                if (el.classList.contains('bar-box')) {
+                    const m = parseInt(el.getAttribute('data-m'), 10);
+                    if (Number.isInteger(m)) bars.push({ m, bar: parseInt(el.getAttribute('data-bar'), 10), rect: el });
+                    continue;
+                }
+                if (el.classList.contains('bar-staff')) {
+                    const span = (el.getAttribute('data-span') || '').split(' ');
+                    if (span.length === 2) spans.push(el, parseInt(span[0], 10), parseInt(span[1], 10));
+                    continue;
+                }
+                const paintable = !el.classList.contains('nh-hit')
+                    && !(el.tagName.toLowerCase() === 'rect'
+                        && !el.getAttribute('stroke') && el.getAttribute('fill'));
+                const keep = paintable ? el : null;
+                const n = parseInt(el.getAttribute('data-pos'), 10);
+                if (Number.isFinite(n)) pos.push(n, keep);
+                const alt = el.getAttribute('data-alt');
+                if (alt) {
+                    for (const a of alt.split(' ')) {
+                        const m = parseInt(a, 10);
+                        if (Number.isFinite(m)) pos.push(m, keep);
+                    }
+                }
+            }
+            return { pos, spans, bars, shown: null };
+        }
+        // Every page's facts, in the pages' order (a picture with no page groups is one page,
+        // read each time; none with no picture).
+        function livePageFacts() {
+            const svg = svgContainer.querySelector('svg');
+            if (!svg) return [];
+            const groups = svg.querySelectorAll(':scope > g.page');
+            if (groups.length === 0) return [readPageFacts(svg)];
+            const all = [];
+            for (let i = 0; i < groups.length; i++) all.push(pageFacts(groups[i], i));
+            return all;
+        }
+        function pageFacts(page, i) {
+            const shown = shownPages ? shownPages[i] : null;
+            const kept = pageFactsOf.get(page);
+            if (kept && shown && kept.shown === shown) return kept;
+            const facts = readPageFacts(page);
+            facts.shown = shown;
+            pageFactsOf.set(page, facts);
+            return facts;
+        }
+        // A shifted page's facts, through the window shiftPage has just taken its attributes
+        // through (the same arithmetic, so the two agree offset for offset).
+        function shiftPageFacts(page, w) {
+            const facts = pageFactsOf.get(page);
+            if (!facts) return;
+            for (let k = 0; k < facts.pos.length; k += 2) {
+                const m = shiftOffset(facts.pos[k], w);
+                if (!Number.isFinite(m)) { pageFactsOf.delete(page); return; }
+                facts.pos[k] = m;
+            }
+            for (let k = 0; k < facts.spans.length; k += 3) {
+                const from = shiftOffset(facts.spans[k + 1], w), to = shiftOffset(facts.spans[k + 2], w);
+                if (!Number.isFinite(from) || !Number.isFinite(to)) { pageFactsOf.delete(page); return; }
+                facts.spans[k + 1] = from;
+                facts.spans[k + 2] = to;
+            }
+        }
+
         // The elements sharing one data-pos are indexed here as well, so a caret
         // movement paints its note from a Map lookup: the attribute selector it
         // used to run ('[data-pos="N"], [data-alt~="N"]') walks EVERY element of
@@ -1542,17 +1636,14 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             };
             const svg = svgContainer.querySelector('svg');
             if (svg) {
-                for (const el of svg.querySelectorAll('[data-pos], [data-alt]')) {
-                    const paintable = !el.classList.contains('nh-hit')
-                        && !(el.tagName.toLowerCase() === 'rect'
-                            && !el.getAttribute('stroke') && el.getAttribute('fill'));
-                    const keep = paintable ? el : null;
-                    add(parseInt(el.getAttribute('data-pos'), 10), keep);
-                    const alt = el.getAttribute('data-alt');
-                    if (alt) {
-                        for (const a of alt.split(' ')) add(parseInt(a, 10), keep);
-                    }
-                }
+                // Page by page, each page's own offsets read once (pageFacts); a picture with
+                // no page groups is read whole, as it always was.
+                const groups = svg.querySelectorAll(':scope > g.page');
+                const each = facts => {
+                    for (let k = 0; k < facts.pos.length; k += 2) add(facts.pos[k], facts.pos[k + 1]);
+                };
+                if (groups.length === 0) each(readPageFacts(svg));
+                else for (let i = 0; i < groups.length; i++) each(pageFacts(groups[i], i));
             }
             posSorted = Array.from(seen).sort((a, b) => a - b);
             posElements = byPos;
@@ -1869,12 +1960,15 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             if (caretAt < 0) return;
             let lit = false, next = Infinity;
             const spans = [];
-            for (const r of svgContainer.querySelectorAll('rect.bar-staff[data-span]')) {
-                const span = r.getAttribute('data-span').split(' ');
-                const from = parseInt(span[0], 10), to = parseInt(span[1], 10);
-                spans.push([r, from]);
-                if ((caretAt >= from && caretAt <= to + 1) || (caretToken >= from && caretToken <= to)) { r.classList.add('caret'); lit = true; }
-                else if (from > caretAt && from <= caretLineEnd && from < next) next = from;
+            // (the bars' stretches off the pages' facts: read off the page once, not every caret)
+            for (const facts of livePageFacts()) {
+                const s = facts.spans;
+                for (let k = 0; k < s.length; k += 3) {
+                    const r = s[k], from = s[k + 1], to = s[k + 2];
+                    spans.push([r, from]);
+                    if ((caretAt >= from && caretAt <= to + 1) || (caretToken >= from && caretToken <= to)) { r.classList.add('caret'); lit = true; }
+                    else if (from > caretAt && from <= caretLineEnd && from < next) next = from;
+                }
             }
             if (!lit && next !== Infinity) {
                 for (const [r, from] of spans) if (from === next) r.classList.add('caret');
@@ -1900,11 +1994,18 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                     pending = null;
                     const t = ev.target;
                     const onNote = t && t.hasAttribute && t.hasAttribute('data-pos');
+                    // (the pointer over what a click jumps to — the style's over-note; a glyph's
+                    // own child counts as the glyph, as it did when the rule was on [data-pos])
+                    mainContent.classList.toggle('over-note', !!(t && t.closest && t.closest('[data-pos]')));
                     hoverBar(onNote || ev.buttons !== 0 || ev.shiftKey || mainContent.classList.contains('dragging')
                         ? null : barStaffAt(ev.clientX, ev.clientY));
                 });
             });
-            svgContainer.addEventListener('mouseleave', () => { pending = null; hoverBar(null); });
+            svgContainer.addEventListener('mouseleave', () => {
+                pending = null;
+                mainContent.classList.remove('over-note');
+                hoverBar(null);
+            });
         }
 
         // Groups all elements sharing one data-pos into printed instances
@@ -3807,10 +3908,8 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         /** The page's bars, by measure index: the printed number and the box (rect.bar-box). */
         function abBars() {
             const out = [];
-            for (const r of svgContainer.querySelectorAll('rect.bar-box[data-m]')) {
-                const m = parseInt(r.getAttribute('data-m'), 10);
-                if (Number.isInteger(m) && !out[m]) out[m] = { m, bar: parseInt(r.getAttribute('data-bar'), 10), rect: r };
-            }
+            for (const facts of livePageFacts())
+                for (const b of facts.bars) if (!out[b.m]) out[b.m] = b;
             return out;
         }
         /** The measure index of a staff's bar box (rect.bar-staff): the page's bar box in its column. */
@@ -5661,6 +5760,8 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         }
         function applyBarFlags() {
             for (const f of svgContainer.querySelectorAll('.flag-frame')) f.remove();
+            // (no mark, no frame: a score nobody flagged does not have its bars read)
+            if (flaggedMarks.length === 0) return;
             let memos = null;
             // What is left of [from, to] once the gaps are taken out.
             const pieces = (from, to, gaps) => {
@@ -5859,6 +5960,17 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                         const applyStart = performance.now();
                         const applied = message.pages ? applyPages(message.pages) : applySvg(message.svg);
                         const applyEnd = performance.now();
+                        // What follows the swap, lap by lap (each lap's ms go into the account
+                        // below): which of them an update pays for is read, not guessed. The first
+                        // lap, 'pages', is the browser's layout of the new picture — collectPages
+                        // asks where the view is scrolled to, and that needs it (session 1302).
+                        let lapAt = applyEnd;
+                        const laps = [];
+                        const lap = name => {
+                            const now = performance.now();
+                            laps.push(name + ' ' + (now - lapAt).toFixed(1));
+                            lapAt = now;
+                        };
                         if (applied === null) {
                             // The delta could not be applied to what is shown; the
                             // whole picture has been asked for and will replace it.
@@ -5878,12 +5990,15 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                             requestPlay();
                         }
                         collectPages();
+                        lap('pages');
                         applyBarFlags();
                         lightCaretBar();
+                        lap('bars');
                         drawAbFlags();      // (the A-B flags are the page's: drawn into each new picture)
                         renderAbStrips();   // (and the strips' length is the new picture's bars)
                         refreshRanges();
                         vscode.postMessage({ type: 'requestLength' });
+                        lap('A-B');
                         // Keep the fit across re-renders (this is also what fits
                         // the FIRST render of a freshly opened preview); otherwise
                         // re-apply the current manual zoom to the fresh SVG.
@@ -5899,17 +6014,20 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                             pendingView = null;
                             updatePageInfo();
                         }
+                        lap('fit');
                         if (lastHighlightRanges) {
                             highlightRange(lastHighlightRanges);
                         } else if (lastHighlightPos >= 0) {
                             highlightNearestElement(lastHighlightPos, lastHighlightTokenStart);
                         }
+                        lap('highlight');
                         lightSelectedBars();
+                        lap('selection');
                         const settled = performance.now();
                         const chars = message.pages ? pagesChars(message.pages) : message.svg.length;
                         vscode.postMessage({ type: 'webviewPerf', text: 'update: ' + applied
                             + ' in ' + (applyEnd - applyStart).toFixed(1) + ' ms, then pages/fit/highlight '
-                            + (settled - applyEnd).toFixed(1) + ' ms (' + chars + ' chars)' });
+                            + (settled - applyEnd).toFixed(1) + ' ms (' + chars + ' chars): ' + laps.join(', ') });
                     } else if (message.error) {
                         // Nothing could render at all. Keep the last good preview,
                         // DIM it, and show the error in a banner. Only when nothing

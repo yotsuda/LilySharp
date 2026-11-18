@@ -279,8 +279,10 @@ describe('the preview lights the bar the caret is in', () => {
     // its first note to its bar line — is 25..31.
     const bars = [bar('10 15'), bar('25 31')];
     const svgContainer = { querySelectorAll: (sel: string) => sel.includes('.caret') ? bars.filter(b => b.cls.has('caret')) : bars };
+    // The bars' stretches as the page keeps them, page by page (livePageFacts: [rect, from, to, …]) — two pages here.
+    const livePageFacts = () => bars.map(b => ({ spans: [b, ...b.getAttribute().split(' ').map(Number)] }));
     const light = new vm.Script('(() => { let caretAt = -1, caretToken = -1, caretLineEnd = -1; return ' + html.slice(at, close) + '; })()')
-        .runInNewContext({ svgContainer, Number, parseInt, Infinity }) as (caret?: number, token?: number, lineEnd?: number) => void;
+        .runInNewContext({ svgContainer, livePageFacts, Number, parseInt, Infinity }) as (caret?: number, token?: number, lineEnd?: number) => void;
     const lit = () => bars.map(b => b.cls.has('caret'));
 
     it('finds the function in the page script', () => {
