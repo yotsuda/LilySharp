@@ -99,4 +99,72 @@ public class VoiceShiftedMarksTests
         Assert.Equal(Assert.Single(alone.ArticulationLayouts).X, Assert.Single(shifted.ArticulationLayouts).X, 6);
         Assert.Equal(Assert.Single(alone.TextSpannerLayouts).StartX, Assert.Single(shifted.TextSpannerLayouts).StartX, 6);
     }
+
+    /// <summary>Where the voices CROSS, the first voice is the shifted one (it stands a second
+    /// under the second): its digits are centred on its shifted heads, and the second voice's
+    /// on its own, which did not move. MEASURED (LilyPond 2.26.0, Lab sessions/p1306/shift g1,
+    /// g5): Fingering 18.502..19.321 and 23.311..24.165; g5 17.400..18.219 and
+    /// 22.209..23.063.</summary>
+    [Fact]
+    public void TheFirstVoicesDigits_RideItsShift_WhereTheVoicesCross()
+    {
+        var digits = LayoutOf("voice { b'2@finger(1) c''2@finger(2) } { c''2 d''2 } |").FingeringLayouts;
+        Assert.Equal(2, digits.Length);
+        Assert.Equal(18.9115, digits.Single(d => d.Number == 1).X, 0.005);
+        Assert.Equal(23.738, digits.Single(d => d.Number == 2).X, 0.005);
+
+        var under = LayoutOf("voice { b'2 c''2 } { c''2@finger(1) d''2@finger(2) } |").FingeringLayouts;
+        Assert.Equal(2, under.Length);
+        Assert.Equal(17.8095, under.Single(d => d.Number == 1).X, 0.005);
+        Assert.Equal(22.636, under.Single(d => d.Number == 2).X, 0.005);
+    }
+
+    private static double TextX(ScoreLayout layout, string text)
+        => layout.DynamicLayouts.Single(t => t.IsExpressiveText && t.Text == text).X;
+
+    /// <summary>A free text (it rides the dynamics' pipeline) stands on its note's head, where the collision put it. MEASURED
+    /// (LilyPond 2.26.0, Lab sessions/p1306/shift): the lower voice's TextScript begins at
+    /// 18.498 and 23.462 (t1) against 17.121 and 21.396 unshifted (t0); the first voice's, where
+    /// the voices cross, at 18.223 and 23.049 (t2) against 17.121 and 21.396 (t3); and the
+    /// unshifted upper voice's at 17.121 and 22.085 (t5) — the bar's 0.689 alone.</summary>
+    [Fact]
+    public void AShiftedVoicesText_BeginsAtItsShiftedHead()
+    {
+        var shifted = Book(Shifted, "@text(\"x\")", "@text(\"y\")");
+        var control = Book(Control, "@text(\"x\")", "@text(\"y\")");
+        Assert.Equal(2, shifted.DynamicLayouts.Length);
+        Assert.Equal(1.377, TextX(shifted, "x") - TextX(control, "x"), 0.005);
+        Assert.Equal(2.066, TextX(shifted, "y") - TextX(control, "y"), 0.005);
+
+        var above = LayoutOf("voice { d''2@text(\"x\").up e''2@text(\"y\").up } { b'2 c''2 } |");
+        var crossed = LayoutOf("voice { b'2@text(\"x\").up c''2@text(\"y\").up } { c''2 d''2 } |");
+        Assert.Equal(1.102, TextX(crossed, "x") - TextX(above, "x"), 0.005);
+        Assert.Equal(1.653, TextX(crossed, "y") - TextX(above, "y"), 0.005);
+
+        var unshifted = LayoutOf("voice { c''2@text(\"x\").up d''2@text(\"y\").up } { b'2 c''2 } |");
+        Assert.Equal(0.0, TextX(unshifted, "x") - TextX(above, "x"), 0.005);
+        Assert.Equal(0.689, TextX(unshifted, "y") - TextX(above, "y"), 0.005);
+    }
+
+    /// <summary>A chord name is NOT its note's: it stands at the column the voices share,
+    /// whichever head the collision moved — a row's symbol and a note's <c>@chord</c> alike.
+    /// MEASURED (LilyPond 2.26.0, Lab sessions/p1306/shift): ChordName begins at 17.121 and
+    /// 22.085 over the lower voice shifted (h1 the row, c1 the shifted voice's own @chord) and
+    /// at 17.121 and 21.947 where the voices cross (h2, c2).</summary>
+    [Theory]
+    [InlineData("h1", "chords prog { C G7 | }\n", "voice { c''2 d''2 } { b'2 c''2 } |", 22.085)]
+    [InlineData("h2", "chords prog { C G7 | }\n", "voice { b'2 c''2 } { c''2 d''2 } |", 21.947)]
+    [InlineData("c1", "", "voice { c''2 d''2 } { b'2@chord(C) c''2@chord(G7) } |", 22.085)]
+    [InlineData("c2", "", "voice { b'2@chord(C) c''2@chord(G7) } { c''2 d''2 } |", 21.947)]
+    public void AChordName_StandsAtTheSharedColumn_NotAtAShiftedHead(string book, string row, string bars, double second)
+    {
+        var tree = SyntaxTree.Parse("octave absolute\ntime 4/4\npaper { raggedRight }\npart m { clef treble }\n"
+            + "section A {\n" + row + "m {\n" + bars + "\n} }\nform { A }\nscore { "
+            + (row.Length > 0 ? "chords prog " : "") + "staff m }\n");
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+        var names = new LayoutEngine().Layout(SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree))).ChordNameLayouts;
+        Assert.Equal(2, names.Length);
+        Assert.True(System.Math.Abs(17.121 - names.Single(n => n.ChordText == "C").X) <= 0.005, $"{book} C: {names.Single(n => n.ChordText == "C").X:F3}");
+        Assert.True(System.Math.Abs(second - names.Single(n => n.ChordText == "G7").X) <= 0.005, $"{book} G7: {names.Single(n => n.ChordText == "G7").X:F3}");
+    }
 }
