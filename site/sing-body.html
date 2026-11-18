@@ -108,8 +108,8 @@
     <code>singer "</code> shows every voice it has.</li>
   </ol>
 
-  <p>A voice is named <code>engine/name</code>: <code>neutrino/MERROW</code>,
-  <code>diffsinger/TIGER</code>, <code>voicevox/ずんだもん-ノーマル</code>. <b>Cantoria: Choose Default
+  <p>A voice is named <code>engine/name</code>: <code>diffsinger/TIGER</code>,
+  <code>neutrino/MERROW</code>, <code>voicevox/ずんだもん-ノーマル</code>. <b>Cantoria: Choose Default
   Female Voice…</b> and <b>Choose Default Male Voice…</b> pick the voices used when a score does not
   name one.</p>
 </section>
@@ -185,9 +185,9 @@ singer female on sop</pre>
   Lily# Studio says so once, so a score you share still sings for someone with other voices.</p>
   <p><b>A choir</b> takes one line a part. <b>Two lines with the same words on one part</b> sing it
   together, and the voices may come from different engines:</p>
-<pre>singer female "diffsinger/Nishiren" on sop sings words
-singer female "voicevox/ずんだもん-ノーマル" on sop sings words
-singer male "neutrino/SOMA" on bas sings words</pre>
+<pre>singer male "diffsinger/TIGER" on bas sings words
+singer female "neutrino/MERROW" on sop sings words
+singer female "voicevox/ずんだもん-ノーマル" on sop sings words</pre>
   <p>A line inside a <code>score { }</code> takes the place of top-level lines in that score: a named
   singer's line replaces that singer's, and the others go on; a line with no name replaces every line for its part. So
   one score can sing the Japanese words and another the English ones.</p>
