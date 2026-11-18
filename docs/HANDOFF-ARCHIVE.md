@@ -277,6 +277,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1294セッションの経緯
+
+### 1.1 第1294セッション（2026-11-18・YT-DELL2）
+
+base `0ef9ca978`・開始時 full 17567 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17570（Lab `p1294` の `run1.trx`）。REQUESTS の open は Calamo・Dettato とも 0。
+- **P8＝`98e6152ce`**（`using`・歌い手を刷る本）: 打鍵ごとに本文と include を `using` を探すためだけに parse し、作った文を丸ごと parse していた。→ 本文の `using` は手元の木から（`UsingExpander.UsingsOf`）・include は中身ごとに 1 回・作った文は 1 打鍵前の作った木から増分（`RecentTrees.Parse(text, own)` → `SyntaxTree.ParseChanged`＝頭と尾の一致から窓を見つける）。鍵なし＝残した 6 本のうち元の文がいちばん重なる木（半分未満は丸ごと）。窓は 2 つ（本文の打鍵・書き足した側）＝歌い手が歌う音は末尾の譜にも書かれ、窓 1 つだと大半になる（採用した item 6 → 10）。同じ文は別の木（木を鍵にした診断は 1 文書のもの）。網 `MadeTextParseTests` 15 本（`SyntaxTree.FullParsesOnThisThread`: 1 打鍵のフル parse 3 → 0・フル parse の木と一致・プレビューの増分＝フル描画・2 冊を交互に。試験は `RecentTrees.OfThisThread`）・毒 7 本赤（Lab `p1294/poisons.ps1`）。Core の + は parse の配管だけ（LP の出所なし）。ms は未計測。ついで: `FreshCopyOf` が同じ instance を返していた・Core の CS0419 2 件。
+- **P5 の残り＝`6a610e823`**: refresh は描画の依頼を先に送る（ファイルの有無・workspaceState・全文の `chordSpans`・録音の stat は依頼の後＝`besideThePicture`・答えの post はその後なのでページが聞く順は同じ）。読み込み済みのページは待たない（refresh ごとに 3 秒のタイマーが残っていた）。打鍵が読む設定は `settings()`。
+- **F2＝`28d04a401`**: uri キーの Map 7 枚をパネルごとの `PreviewSession`（`previewSession.ts`）に。retarget＝`turned(false)`・untitled の保存＝`turned(true)`・閉じる＝`dispose()`。`selectedRenders` は文書のものなので残した。サーバーを待つ間に別のファイルへ移った呼び出しは依頼を送らない。網 `previewSession.test.ts` 7 本。
+- **実機**: 隔離した VS Code（Lab `p1294/vscode-e2e`・出力チャンネルのログを読む）で 16 項目（初回・打鍵・連打・`autoRefresh`・follower の移動と戻り）。⚠️ 使うのは repo の `editors\vscode\server`（自己完結の apphost があると `serverPath` は無視）＝P8 のサーバーは実機では未確認（`Deploy-Lsp.ps1` はオーナー）。
+- 終了時 full 17582 合格 / 1 失敗（同じ）/ skip 2 / 合計 17585（`run2.trx`・+15 は P8 の網）・npm 1256 合格 / skip 1。
+- **次（review.md の残り・訊かずに着手してよい）**: F5 の残り（`Commands.cs` を partial に・文書を取る型の不揃い）→ F7 → F3（段 1: `previewHtml.ts` へ移すだけ・生成 HTML のバイト一致）→ F4。P4 の残り＝`caretInfo` の MIDI 書き出し 1 回・`using` の本の 2 本目の collect。P8 の残り＝結合した文字列を毎打鍵作る。P6・P7 の残り・P10 は静かな窓で。小さいもの（completion の再 parse 5 か所・semantic tokens の割当・`prepareVoices` の `clearVoices`）は未着手。
+
 ## 以下は第1293セッションの経緯
 
 ### 1.1 第1293セッション（2026-11-18・YT-DELL2）

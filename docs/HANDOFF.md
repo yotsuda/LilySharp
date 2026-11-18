@@ -89,7 +89,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
 - **★★★ オーナー決定 2026-11-15（第1264・6 件）**: ①〜④ と、⑥ 評価 4 の案（Lab `p1227/proposals-eval4.md`）の「作る」5 件＝6・7・8-1・2・4 は済み（第1264〜第1272・設計と実際の形は `docs/eval4-features-design.md`。6 の「歌い手が × の音を歌わない」だけ未＝同 §6 の末尾）／⑤ Dettato: 依頼 1＝作る（D3 で形が固まってから・名前「Convert Recording to Lily# (.lys)…」・Windows 以外はメニューを出さない）・依頼 2＝今は作らない（REQUESTS の行に書いた＝Dettato の repo では未 commit）／⑥ の**後で**＝3（`pass 2 { }`・文字は英語固定）・1（持ち替え・「to X」は自動で刷らない）・10（まず診断だけ）＝作る前に設計メモ・**着手してよい**（オーナー 2026-11-15 第1278「ほかに着手すべき候補がなければすぐ着手して良い」。10 の診断は LYS0046 で済み＝残りは 3 → 1）／**見送り**＝5・8-2〜4・9。**次の一手**: 下の行の Lab `sessions/p1242/leftovers.md` の欠陥から（第1272 が見つけた 2 件＝`lysc xml` の part header の `key` と、MusicXML の読み込みの `<transpose>` は第1273・第1275 で閉じた。一覧の先頭から順に）。
-- **★ 包括レビュー（オーナーの指示 2026-11-18・第1291）＝Lab `sessions/p1291/review.md`**: プレビュー更新の性能 P1〜P10 とリファクタ F1〜F7。P1〜P5・P7（一部）・P8・F1・F2・F3 段 1・F5・F7 は済み。残りは訊かずに着手してよい（オーナー 2026-11-18・次の順は §1.1 第1295 の末尾。P9 と F3 段 2 はオーナー判断・P10 は静かな窓）。
+- **★ 包括レビュー（オーナーの指示 2026-11-18・第1291）＝Lab `sessions/p1291/review.md`**: プレビュー更新の性能 P1〜P10 とリファクタ F1〜F7。P1〜P5・P7（一部）・P8・F1・F2・F3 段 1・F4 の歌・F5・F7 は済み。残りは訊かずに着手してよい（オーナー 2026-11-18・次の順は §1.1 第1296 の末尾。P9 と F3 段 2 はオーナー判断・P10 は静かな窓）。
 - **★ A-B リピート（オーナー決定 2026-11-17・第1286）＝`docs/ab-repeat-design.md`**: §3 の 1〜5 は全部済み（1〜4 は第1286・5 の帯は第1287＝形は同 §3 の末尾）。残りは実機の確認（`MANUAL-CHECKS` の A-B その 1・その 2＝オーナー）と、帯をファイルの名前の変更・コピーに付いて行かせるか（未決・要望が出たら）。
 - **★ コード行の中に書けるもの（オーナー決定 2026-11-16・第1285）**: `time`・`tempo`・`%`・`key` は済み（§1.1）。**残り＝コードに付ける印 `@rit`／`@accel`／`@rall`（`…@!rit`）・`@fermata`・`@text("…")`**（今は `@todo` だけ）。強弱は見送り。
 - **★ 録音を聴きながら直す（Dettato #4・オーナーの希望 2026-11-15）＝`docs/recording-design.md`**: S1〜S4 と §1 7（楽譜と録音を同時に）・§7（書き出しに録音・第1286）は済み（§1.1 第1284〜第1286）。**次は S5**（帯・`Mark Bar Line Here`・ドラッグ・`byHand`）→ S6（CHANGELOG・Dettato への返事）。§8 の録音のパート（Dettato #16）は第1288 で実装・実測済み・使っている間のメモリは今のまま（オーナー決定 2026-11-17）＝残りは耳の確認（`MANUAL-CHECKS`「録音のパート」）。耳の確認は `MANUAL-CHECKS` §3.9（オーナー）。
@@ -145,6 +145,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1296セッション（2026-11-18・YT-DELL2）
+
+base `098675fb6`・開始時 full 17594 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17597（Lab `p1296` の `run1.trx`）。REQUESTS の open は Calamo・Dettato とも 0。
+- **F4（歌）＝`2d7d4ace5`**: `extension.ts` の「The singing voice」の節と activate の中の登録を `editors/vscode/src/singing.ts` へ移した（`extension.ts` 5,863 → 4,794 行）。計器 Lab `p1296/split-singing.ps1`。変えたのは: 拡張の状態は `SingingDeps`（`registerSinging`）から受ける・`client`／`clientReady` の 7 か所は `server()` を訊く・11 の名前を export。host の文を読む試験は `singing.ts` も読む（`extensionSource.ts`）。実機＝隔離した VS Code（Cantoria なし・Lab `p1296/vscode-e2e`）。⚠️ エンジンのある側（声を歌う・サンプル）は実機で見ていない。
+- **P4 の残り＝`1e69e4433`**（`using` の本）: キャレットの状態行は音を展開後の木から、場所を文書だけの木から読んでいた＝score ごとに collect 2 回、かつ場所は取り込みのない文のもの（取り込んだ section の後の音が「bar 1」。正しくは bar 3）。`lilysharp/placeAt` と `@todo` の小節（`PlacesOf`）も同じ（版で持っていたので取り込み先を保存しても変わらなかった）。→ どれも曲を描く木（`ExpandUsings`・文書の文が prefix なので位置は同じ）から読む・木で持つ。ついでに見つけた競合: 同じ文の展開が 2 本並走すると（キャレットと Problems のパス）後から終わった方の木が残り、木で持つ物が全部 2 回作られる（新しい網が 2 回に 1 回赤）。→ 先に終わった方を両方が使う（`CompareExchange`）。網 `KeystrokeSideWorkTests.TheCaretOnANote_OfABookWithIncludes_…`・`UsingExpansionCacheTests.TwoRequestsExpandingOneTextAtOnce_…`・毒 3 本赤（Lab `p1296/poison-p4.ps1`）。CHANGELOG 2 つ（`[editor]`）。Core は註だけ。
+- **P4 の MIDI 書き出し 1 回は残した**: `caretInfo` は編集の後は文が休むまで訊かない（`soundingWait`＝打鍵ごとではない）。書き出しは `SoundIndex` が木ごとに 1 回で `auditionAt` と共有。長さ用の `lilysharp/playback` の書き出しと 1 つにするには、Score なしの `Export(tree)` と `{ Form, Score }` つきが同じ物だと言える条件が要る＝未着手。
+- **小さいもの＝`2e61248e5`・`b692a58d2`**: 歌のエンジンが無いとき、プレビューに「声は無い」と言うのは 1 回（打鍵ごとに `clearVoices` とログ 1 行を送っていた・`toldNoEngine`・実機 19 項目）。completion の 7 つの一覧が文書の文を parse し直していた → `Document.TreeOf(text)`（文字列の instance で持つ）。網 `CompletionTreeTests` 2 本・毒 7 本赤（Lab `p1296/poison-completion.ps1`）。
+- 終了時 full 17598 合格 / 1 失敗（同じ）/ skip 2 / 合計 17601（`run4.trx`・+4＝P4 の 2・completion の 2）・npm 1260 合格 / skip 1。
+- **次（review.md の残り・訊かずに着手してよい）**: F4 の続き（`extension.ts` 4,794 行の残り。候補＝書き出し `exportPreview`／`singJobs`／`recordJobs`・音源 `chooseSoundFont` まわり・編集コマンドの束 `regroup`〜`writeHarmonyPart`）。P8 の残り＝結合した文字列を毎打鍵作る。P6（ページの索引・強制レイアウト）・P7 の残り・P10 は静かな窓で。小さいもの: semantic tokens の割当。F3 段 2 と P9 はオーナー判断。
+
+## 以下は第1295セッションの経緯
+
 ### 1.1 第1295セッション（2026-11-18・YT-DELL2）
 
 base `f5d15f96a`・開始時 full 17582 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17585（Lab `p1295` の `run1.trx`）。REQUESTS の open は Calamo・Dettato とも 0。
@@ -153,18 +165,6 @@ base `f5d15f96a`・開始時 full 17582 合格 / 1 失敗（`ReadmeSampleTests`�
 - **F3 段 1＝`1f5bbdfa6`**: `getPreviewHtml`（6,573 行のテンプレート）を `editors/vscode/src/previewHtml.ts` へ移した（`extension.ts` 12,453 → 5,863 行）。テンプレートは 1 文字も変えていない・旧関数と新関数が同じ引数 3 組で同じ HTML（Lab `p1295/html-identity.js`）。node でページを組める＝網 `previewHtml.test.ts` 3 本。`extension.ts` を読む試験 20 ファイル・56 か所は `extensionSource()`（host＋page を 1 つの文字列・`test/extensionSource.ts`）を読む。実機＝隔離した VS Code で第1294 の 16 項目が合格（Lab `p1295/vscode-e2e`）。段 2（script を `media/preview.js` に・CSP が変わる）はオーナー判断。
 - 終了時 full 17594 合格 / 1 失敗（同じ）/ skip 2 / 合計 17597（`run6.trx`・+12＝F5 の 3・F7 の 9）・npm 1260 合格 / skip 1。Core の + は 0 行。
 - **次（review.md の残り・訊かずに着手してよい）**: F4（`extension.ts` の残りを `x.ts`＋`xCore.ts` の型で分ける・歌が最初の候補＝今は 4673 行目あたりから）。P4 の残り＝`caretInfo` の MIDI 書き出し 1 回・`using` の本の 2 本目の collect。P8 の残り＝結合した文字列を毎打鍵作る。P6（ページの索引・強制レイアウト＝`previewHtml.ts` になったので触りやすい）・P7 の残り・P10 は静かな窓で。小さいもの（completion の再 parse 5 か所・semantic tokens の割当・`prepareVoices` の `clearVoices`）は未着手。F3 段 2 と P9 はオーナー判断。
-
-## 以下は第1294セッションの経緯
-
-### 1.1 第1294セッション（2026-11-18・YT-DELL2）
-
-base `0ef9ca978`・開始時 full 17567 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17570（Lab `p1294` の `run1.trx`）。REQUESTS の open は Calamo・Dettato とも 0。
-- **P8＝`98e6152ce`**（`using`・歌い手を刷る本）: 打鍵ごとに本文と include を `using` を探すためだけに parse し、作った文を丸ごと parse していた。→ 本文の `using` は手元の木から（`UsingExpander.UsingsOf`）・include は中身ごとに 1 回・作った文は 1 打鍵前の作った木から増分（`RecentTrees.Parse(text, own)` → `SyntaxTree.ParseChanged`＝頭と尾の一致から窓を見つける）。鍵なし＝残した 6 本のうち元の文がいちばん重なる木（半分未満は丸ごと）。窓は 2 つ（本文の打鍵・書き足した側）＝歌い手が歌う音は末尾の譜にも書かれ、窓 1 つだと大半になる（採用した item 6 → 10）。同じ文は別の木（木を鍵にした診断は 1 文書のもの）。網 `MadeTextParseTests` 15 本（`SyntaxTree.FullParsesOnThisThread`: 1 打鍵のフル parse 3 → 0・フル parse の木と一致・プレビューの増分＝フル描画・2 冊を交互に。試験は `RecentTrees.OfThisThread`）・毒 7 本赤（Lab `p1294/poisons.ps1`）。Core の + は parse の配管だけ（LP の出所なし）。ms は未計測。ついで: `FreshCopyOf` が同じ instance を返していた・Core の CS0419 2 件。
-- **P5 の残り＝`6a610e823`**: refresh は描画の依頼を先に送る（ファイルの有無・workspaceState・全文の `chordSpans`・録音の stat は依頼の後＝`besideThePicture`・答えの post はその後なのでページが聞く順は同じ）。読み込み済みのページは待たない（refresh ごとに 3 秒のタイマーが残っていた）。打鍵が読む設定は `settings()`。
-- **F2＝`28d04a401`**: uri キーの Map 7 枚をパネルごとの `PreviewSession`（`previewSession.ts`）に。retarget＝`turned(false)`・untitled の保存＝`turned(true)`・閉じる＝`dispose()`。`selectedRenders` は文書のものなので残した。サーバーを待つ間に別のファイルへ移った呼び出しは依頼を送らない。網 `previewSession.test.ts` 7 本。
-- **実機**: 隔離した VS Code（Lab `p1294/vscode-e2e`・出力チャンネルのログを読む）で 16 項目（初回・打鍵・連打・`autoRefresh`・follower の移動と戻り）。⚠️ 使うのは repo の `editors\vscode\server`（自己完結の apphost があると `serverPath` は無視）＝P8 のサーバーは実機では未確認（`Deploy-Lsp.ps1` はオーナー）。
-- 終了時 full 17582 合格 / 1 失敗（同じ）/ skip 2 / 合計 17585（`run2.trx`・+15 は P8 の網）・npm 1256 合格 / skip 1。
-- **次（review.md の残り・訊かずに着手してよい）**: F5 の残り（`Commands.cs` を partial に・文書を取る型の不揃い）→ F7 → F3（段 1: `previewHtml.ts` へ移すだけ・生成 HTML のバイト一致）→ F4。P4 の残り＝`caretInfo` の MIDI 書き出し 1 回・`using` の本の 2 本目の collect。P8 の残り＝結合した文字列を毎打鍵作る。P6・P7 の残り・P10 は静かな窓で。小さいもの（completion の再 parse 5 か所・semantic tokens の割当・`prepareVoices` の `clearVoices`）は未着手。
 
 ## 2. 開いている作業
 
