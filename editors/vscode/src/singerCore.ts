@@ -137,12 +137,35 @@ export function languageRefusal(voiceId: string, language: string, voices: reado
  *  voice sings — and not that a render went wrong: its sentence then, without the error's wrapping. */
 export function unsingableReason(error: unknown): string | undefined {
     const text = (error instanceof Error ? error.message : String(error)).replace(/^(Error: )+/, '').trim();
-    return /\bsings\b.*\band these words are\b/i.test(text) || /^no installed voice\b/i.test(text) ? text.replace(/\.$/, '') : undefined;
+    return /\bsings\b.*\band these words are\b/i.test(text) || /^no installed voice\b/i.test(text) || vocoderMissing(text) ? text.replace(/\.$/, '') : undefined;
+}
+
+/** Whether what Cantoria said of a voice is that a DiffSinger voice has no vocoder to sing with
+ *  (owner's request 2026-11-18): the voice bundles none and no vocoder folder is chosen, or the
+ *  folder chosen holds none. Cantoria's two sentences (its DiffSingerOptions.Validate), from its
+ *  plan or from what its sing refused with. A setting gives the voice, not another voice. */
+export function vocoderMissing(reason: unknown): boolean {
+    return /\bbundles no vocoder\b|\bno vocoder\.yaml under\b/i.test(reason instanceof Error ? reason.message : String(reason));
+}
+
+/** What the editor says of a DiffSinger voice that has no vocoder, with the way to one: the steps
+ *  (the page's DiffSinger part) and Cantoria's command that chooses the folder. `voice` where it is
+ *  known (a name taken from the `singer` list), so that each such voice is said once a session. */
+export function noVocoderGuide(reason: string, voice?: string): Pick<VoiceGuide, 'message' | 'actions'> {
+    const who = voice ? `the voice ${voice}` : 'a DiffSinger voice';
+    const why = /\bno vocoder\.yaml under\b/i.test(reason)
+        ? 'the vocoder folder chosen holds no vocoder.yaml'
+        : 'it has no vocoder of its own (a dsvocoder folder) and no vocoder folder is chosen';
+    return {
+        message: `Lily#: ${who} cannot sing yet: ${why}. Download the vocoder the voice's readme names, then choose its folder.`,
+        actions: [{ label: HOW_TO_INSTALL.label, url: `${VOICE_INSTALL_GUIDE}-diffsinger` }, CHOOSE_VOCODER],
+    };
 }
 
 /** What the editor says, once a session for each reason, of a singer line nobody installed can
  *  sing, with the way to a voice that could. */
 export function unsingableGuide(reason: string): Pick<VoiceGuide, 'message' | 'actions'> {
+    if (vocoderMissing(reason)) { return noVocoderGuide(reason); }
     return { message: `Lily#: a singer line is not sung: ${reason.trim().replace(/\.$/, '')}. The part's instrument plays instead.`, actions: [HOW_TO_INSTALL] };
 }
 
@@ -335,6 +358,7 @@ export interface VoiceGuide { label: string; detail: string; documentation: stri
 export const VOICE_INSTALL_GUIDE = 'https://yotsuda.github.io/LilySharp/sing.html#install';
 const HOW_TO_INSTALL = { label: 'How to Install a Voice', url: VOICE_INSTALL_GUIDE };
 const CHOOSE_DIFFSINGER = { label: 'Choose DiffSinger Folder…', command: 'cantoria.chooseVoicesFolder' };
+const CHOOSE_VOCODER = { label: 'Choose Vocoder Folder…', command: 'cantoria.chooseVocoderFolder' };
 // The guide to installing leads (the owner asked, 2026-11-12), and the engines' folders after it
 // stand in the alphabet's order (2026-11-18).
 const VOICE_SETUP_ACTIONS: VoiceGuide['actions'] = [

@@ -29,7 +29,7 @@ import { CandidateSounds, CandidateVoice, CandidateVoices, candidateSilencedTrac
 import { PracticeState, VOICE_LEAD_S, voiceEntries } from './webview/playbackCore';
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
 import { SINGER_NAME, SINGER_LANGUAGE, onSingerGender, singValueChoices, singerGoesOnToSings, singerLineOf, singerSettingSlot, singMarkSlot, singersWritten, singParameterDetail, singProblems, SingSettingDto, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuKey, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger, unsingableGuide, unsingableReason } from './singerCore';
-import { VoiceProblems, engineFailureProblem, engineSaid, singerFailureText, voiceWho, wordsProblems } from './singerCore';
+import { VoiceProblems, engineFailureProblem, engineSaid, noVocoderGuide, singerFailureText, vocoderMissing, voiceWho, wordsProblems } from './singerCore';
 
 export interface SingingDeps {
     getClient: () => LanguageClient | undefined;
@@ -408,7 +408,12 @@ function trimTriedSamples(): void {
 
 function samples(): VoiceSampleQueue {
     return voiceSampleQueue ??= new VoiceSampleQueue(id => fs.existsSync(voiceSampleFile(id)), singVoiceSample,
-        (id, e) => outputChannel.appendLine(`singer: the sample of ${id} was not sung: ${String(e)}`));
+        (id, e) => {
+            outputChannel.appendLine(`singer: the sample of ${id} was not sung: ${String(e)}`);
+            // A DiffSinger voice taken from the list that has no vocoder: said with the way to one,
+            // once a session for each such voice (owner's request 2026-11-18).
+            if (vocoderMissing(e)) { offerVoiceSetup(noVocoderGuide(String(e), parseVoiceSampleKey(id).id)); }
+        });
 }
 
 async function singVoiceSample(key: string): Promise<void> {

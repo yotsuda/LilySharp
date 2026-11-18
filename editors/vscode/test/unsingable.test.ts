@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CantoriaApi, CantoriaVoice, PlanAsk, SungVoiceDto, VOICE_INSTALL_GUIDE, languageRefusal, leftToTheInstrument, planAsked, unsingableGuide, unsingableIn, unsingableReason } from '../src/singerCore';
+import { CantoriaApi, CantoriaVoice, PlanAsk, SungVoiceDto, VOICE_INSTALL_GUIDE, languageRefusal, leftToTheInstrument, planAsked, noVocoderGuide, unsingableGuide, unsingableIn, unsingableReason, vocoderMissing } from '../src/singerCore';
 import { CantoriaExtensionBackend, PLAN_KEPT_MS, VoiceRenderer } from '../src/singer';
 import { extensionSource } from './extensionSource';
 
@@ -137,6 +137,36 @@ describe('what is said of a line nobody can sing', () => {
         assert.equal(unsingableReason('Error: no installed voice sings Latin (la); installed voices sing ja.'), 'no installed voice sings Latin (la); installed voices sing ja');
         assert.equal(unsingableReason(new Error('the engine gave no answer in 180 s')), undefined);
         assert.equal(unsingableReason('cancelled'), undefined);
+    });
+
+    // Cantoria's own two sentences (its DiffSingerOptions.Validate; read off `cantoria plan` and
+    // `cantoria sing` with a voice folder that has no dsvocoder, 2026-11-18).
+    const NO_VOCODER = 'the voice bundles no vocoder (dsvocoder/vocoder.yaml); name one';
+    const EMPTY_VOCODER = 'no vocoder.yaml under C:\\vocoders\\nsf';
+
+    it('a DiffSinger voice with no vocoder is told with the way to one (the owner asked, 2026-11-18)', () => {
+        const actions = [{ label: 'How to Install a Voice', url: `${VOICE_INSTALL_GUIDE}-diffsinger` }, { label: 'Choose Vocoder Folder…', command: 'cantoria.chooseVocoderFolder' }];
+        for (const said of [NO_VOCODER, EMPTY_VOCODER, new Error(NO_VOCODER), `Error: ${EMPTY_VOCODER}`]) { assert.equal(vocoderMissing(said), true); }
+        for (const said of [LATIN, 'the engine gave no answer in 180 s', 'the voice has no duration model (dsdur/dsconfig.yaml): C:\\v\\X']) { assert.equal(vocoderMissing(said), false); }
+
+        // From a name taken in the `singer` list: the voice is named, so each is said once.
+        const taken = noVocoderGuide(NO_VOCODER, 'diffsinger/TIGER');
+        assert.equal(taken.message, "Lily#: the voice diffsinger/TIGER cannot sing yet: it has no vocoder of its own (a dsvocoder folder) and no vocoder folder is chosen. Download the vocoder the voice's readme names, then choose its folder.");
+        assert.deepEqual(taken.actions, actions);
+        assert.notEqual(noVocoderGuide(NO_VOCODER, 'diffsinger/OTHER').message, taken.message);
+        assert.match(noVocoderGuide(EMPTY_VOCODER, 'diffsinger/TIGER').message, /the vocoder folder chosen holds no vocoder\.yaml/);
+
+        // From the score's own singing (Cantoria's plan, or what its sing refused with): the same
+        // guide, in the place of the one that only names the page.
+        assert.equal(unsingableReason(new Error(NO_VOCODER)), NO_VOCODER);
+        const sung = unsingableGuide(NO_VOCODER);
+        assert.match(sung.message, /^Lily#: a DiffSinger voice cannot sing yet: it has no vocoder of its own/);
+        assert.deepEqual(sung.actions, actions);
+    });
+
+    it('the list\'s sample that was not sung for want of a vocoder offers the guide', () => {
+        const ext = extensionSource();
+        assert.match(ext, /if \(vocoderMissing\(e\)\) \{ offerVoiceSetup\(noVocoderGuide\(String\(e\), parseVoiceSampleKey\(id\)\.id\)\); \}/);
     });
 
     it('a voice says what it does not sing only when it says what it sings', () => {
