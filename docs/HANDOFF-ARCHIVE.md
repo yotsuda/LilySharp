@@ -277,6 +277,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1300セッションの経緯
+
+### 1.1 第1300セッション（2026-11-18・YT-DELL2）
+
+base `9f198417f`・開始時 full 17608 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17611（Lab `p1300` の `run1.trx`）。REQUESTS の open は Calamo・Dettato とも 0。
+- **review.md §4.2 の「8 打鍵のうち 4 打鍵がフル collect」＝`bb8df3343`**: 実コーパス 235 冊 × 8 打鍵＝1,880 打鍵のうちフル collect は 114 回で、63 回が同じ 1 つの abort だった（残りは予定された re-record 42・plan なし 9）。タイ・スラー・連桁・cue の境の警告は walk の後の scanner（`ScanVoiceSanity`）が collector 全体の 4 表に足す＝前のパートで 1 件増減すると、後ろのパートの walk は入口の件数が録った時と違い、本を全部 collect し直していた（タイの 2 音を 1 音ずつ打ち直すと 2 回）。その 4 表だけは入口の件数が違ってよく、walk は自分の watermark をその分ずらして読む（`IsVoiceSanitySink`・`_walkTableDrift`・`LiveWatermark`）。後: フル 52 回・abort 0。網 5 例（`ALaterPartResumes_WhenAnEarlierPartsComplaintComesOrGoes`）・毒 5 / 6（6 本目＝ずれた watermark の下へ写す添字は観測者なし＝4 表は walk の途中で増えない。註と `APPROXIMATIONS` に UNWATCHED 1 件）。計器は Lab `p1300/lat`（p613 の lathost に、打鍵の前の plan・re-record と abort の数え）・所見は Lab `p1300/notes.md`。
+- ⚠️ 残り（同 notes §2）: ほかの表（強弱・奏法など）の件数が前のパートで変わる打鍵は今も入口で abort＝フル 1 回（録り直すので続かない・計器の編集は音名だけなので数に出ない。section の強弱と印は添字の範囲で持たれている＝表ごとに読み手を確かめれば同じ形で通せる）。小節の途中に break のある本は録らない＝どの打鍵もフル（235 冊中 1 冊）。
+- **小節の箱（review P7 の残り）の値段を数えた**: プレビューの options で、ページの文字の 9.2% が `bar-box`／`bar-staff` の rect（1 冊 235 個・1 個 144 字・double 4 つ）で、capture の外なので replay した段のぶんも毎打鍵書く。時間は未測定（静かな窓）。capture に入れられない理由は小節番号と `data-start`／`data-span`（文字を足す打鍵で後ろの全小節がずれる）。
+- 終了時 full 17613 合格 / 1 失敗（同じ）/ skip 2 / 合計 17616（`run2.trx`・+5＝網）。拡張は触っていない。
+- **次（review.md の残り・訊かずに着手してよい）**: 上の ⚠️ の 1 つ目（ほかの表のずれ）。P8 の残り（`using` の本は毎打鍵、結合した文字列と `RecentTrees` の `headFirst` で本＋include の長さの文字列を 2 本作る＝値段は未測定・include が変わっていなければ `headFirst` は要らない）。F4 の残りは状態ごと移す設計が先（第1299 の末尾）。P6・P7 の箱・P10 は静かな窓で。F3 段 2 と P9 はオーナー判断。
+
 ## 以下は第1299セッションの経緯
 
 ### 1.1 第1299セッション（2026-11-18・YT-DELL2）
