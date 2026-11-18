@@ -277,6 +277,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1303セッションの経緯
+
+### 1.1 第1303セッション（2026-11-18・YT-DELL2）
+
+base `5781108ed`・開始時 full 17614 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17617（Lab `p1303` の `start.log`）。REQUESTS の open は 0（Calamo・Dettato）。
+- **P8 の残り＝`4feb15db1`**: `RecentTrees.TreeOf` は、後ろ（include の中身・歌い手のパート）が前の打鍵と同じなら `headFirst` を作らず 1 つの窓で読む＝include のある本の打鍵が作る「本＋include の長さの文字列」は 2 本 → 1 本（結合した本文そのもの）。後ろが同じかは span の比較 1 回。網は `MadeTextParseTests` の 2 本に数を足した（`RecentTrees.TwoWindowParsesOnThisThread`＝include の本の打鍵 0・歌い手が歌わない音 0・歌う音 1）。毒 1 本で 2 / 2 赤。時間は測っていない（回数だけ）。
+- **`mid-bar-break` の本は設計が先＝コードは触っていない**: 表は 1 回目の collect の*割っていない* voice から決まる（`MidBarBreakTable.Build`＝offset をまたぐ音・連桁・連符・percent）ので、2 回目だけを resume しても、打鍵が表を変えたか（break の小節の 4 分 2 つを 2 分 1 つにする、など）を言えない。要る形: 1 回目（`SeededMidBarBreaks` なし・発見だけ）と 2 回目（表を seed）を別の collector・別の録りにし、1 回目を resume → 表を作り直す → 前と同じなら 2 回目を resume。触る所は `Collect`／`CollectMultiStaff` の 2 回まわし・`IncrementalCompiler.CollectWithResume`・nested の channel（`CollectNested` は seed が空でないと録りを捨てる）・resume した 1 回目に前半の `_midBarBreakRequests` を戻す件数の控え・表の等しさ（`SourcePosition` は打鍵でずれる）。
+- **茎側の staccato は符尾の上＝`f93df7e2e`**（leftovers の第1263 が残した `toward-stem-shift`）: 自分の符尾の側に立つ staccato／staccatissimo（2 声部目と 1 声部目の 1 つだけの点・`@staccato.down` のように書いた側）は符頭の中心に立っていた＝符尾の横へ半符頭ずれる。LilyPond は符尾の中心（`script-interface::calc-x-offset`＝shift 1.0）・同じ音にほかの script があれば符頭のまま（`toward-stem-shift-in-column` 0.0・反対側の fermata でも・別の声部の script は数えない・thumb と運指は script ではない）・全音符は動かない。探り譜 Lab `p1303/st`（k1〜k10・`probe.ps1`・`dump.ily`）は全部 0.005 以内。網 `StemSideStaccatoTests` 10 冊・毒 9 / 9 赤（`p1303/poisons.ps1`）・全 svg の掃きは 3 / 1268（test の 3 冊＝snapshot を取り直した。`voice-dynamics-offbeat` は点の下の f が 0.54 上がって LilyPond の −6.776）。tab の譜は元から列の中心。⚠️ 装飾音の茎側の点は同じ式（grace の head の font）だが LilyPond と測っていない。
+- 終了時 full 17624 合格 / 1 失敗（同じ）/ skip 2 / 合計 17627（`run3.trx`・+10＝網）。拡張は触っていない。
+- **次**: leftovers の第1263 の残り＝ottava の右端（LilyPond は最初に来た列〜最後に来た列＝規則を移す仕事）・ずれた声部の運指（第 1 声）とコード名と `@text` の X（未測定）。review.md の残りは設計が先の 3 つ（`mid-bar-break`＝上・F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。
+
 ## 以下は第1302セッションの経緯
 
 ### 1.1 第1302セッション（2026-11-18・YT-DELL2・静かな窓）

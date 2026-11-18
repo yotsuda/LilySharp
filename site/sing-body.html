@@ -85,9 +85,13 @@
     <li>Download <a href="https://studio-neutrino.com/">NEUTRINO</a> (Tau, v3.2 or later) from its
     site and unpack it: the Windows package <b>with the tuning tool</b> (調声支援ツール同梱版). Cantoria
     drives it on Windows only. It is free under its own terms. That package has a server that keeps
-    the voice loaded, so a phrase you change is sung again in well under a second; the plain package
-    sings too, but loads the voice for every phrase. The package with the
+    the voice loaded, so on an NVIDIA GPU a phrase you change is sung again in well under a second;
+    the plain package sings too, but loads the voice for every phrase. The package with the
     tuning tool comes with the voice MERROW, the plain one with five; the last step adds more.</li>
+    <li><b>No NVIDIA GPU?</b> NEUTRINO then sings on the processor, which takes several times as long
+    as the song itself, and the package with the tuning tool matters all the more: on a laptop with
+    Intel graphics it sang a 36-second part in about 2¼ minutes, where the plain package took 4.
+    Set the editor to sing only when you press ▶ (<a href="#slow">On a slow computer</a>, below).</li>
     <li>Run <b>Cantoria: Choose NEUTRINO Folder…</b> and choose the folder that holds
     <code>bin</code>, <code>model</code> and <code>settings</code> (in the package with the tuning
     tool, the inner folder <code>NEUTRINO 調声支援ツール</code>).</li>
@@ -356,9 +360,19 @@ score { staff sop  lyrics "ラ" }       // prints it under the notes</pre>
     ready while the piece plays comes in at the next note it sings.</li>
     <li><b>Edits sing only what changed.</b> About a second and a half after you stop typing, the
     engine sings the phrases you changed and keeps the rest. A phrase ends at a rest. If it was still
-    singing an older text, it finishes the phrase it is on and moves on; pressing ▶ skips the wait.
-    On a slow computer, set <code>lilysharp.playback.singerPrepare</code> to <code>onPlay</code> so that
-    the voice is sung only when you press ▶.</li>
+    singing an older text, it lets go of it at once — a phrase it was on is finished only if the new
+    text sings it too; pressing ▶ skips the wait.</li>
+    <li id="slow"><b>On a slow computer</b> — NEUTRINO or a DiffSinger voice with no GPU to run on —
+    singing again after every pause keeps the machine busy for minutes. Set the editor to sing only
+    when you press ▶: open the settings (<kbd>Ctrl+,</kbd>), search for <code>singerPrepare</code> and
+    choose <b>onPlay</b>, or write <code>"lilysharp.playback.singerPrepare": "onPlay"</code> in
+    <code>settings.json</code>. The score is still sung once when you open it; after that, an edit sings
+    nothing: the microphone turns grey, and the part plays on its instrument. Press ▶ when you want
+    to hear the voice again: that Play still plays the instrument while the engine sings, the bar
+    under the microphone shows how far it is, and the voice can come in at the next note it sings
+    once it is ready — or press ▶ again then. What it sang is kept, so only the phrases you changed
+    are sung. The default,
+    <b>afterEdit</b>, sings after each pause in your typing, so the voice is ready by the time you play.</li>
     <li><b>The practice menu</b> has a line for each voice, with a switch, a fader and a microphone of
     its own (<a href="editor.html#practice">Practice</a>).</li>
     <li><b>What is kept.</b> Sung phrases stay on disk between sessions, up to

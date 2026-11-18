@@ -145,6 +145,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1305セッション（2026-11-18・YT-LAPTOP4・第1304 とは別の会話）
+
+base `a5020e133`（オーナーの pull の後）。**`Session-Check -Start` は回していない**（オーナーの報告から入った便）＝開始時の full は無い・§7 3.5 のアーカイブは終わりに `-Archive 1303` で回した。CI は第1304 の `c49afc9ab` で `failure`（run `44249764964`・この便は読んでいない）。REQUESTS は見ていない。
+- **GPU の無い PC で NEUTRINO が歌えない（オーナーの報告）＝Cantoria `5b232a3`・Lily# `84ca9a6b6`**: この PC（Intel Iris Xe・NVIDIA なし）では NEUTRINO の `-m` が CPU に落ち、37 s の歌に 5 分 40 秒。原因は 3 つ: ⑴ Lily# は 120 s 固定で声を見捨てた（`PREPARE_TIMEOUT_MS`）・Cantoria も 5 分固定で打ち切った ⑵ cancel は*フレーズの切れ目*でしか効かない（歌いかけのフレーズは必ず歌い終える）＝CPU では数分 ⑶ `cantoria serve` は歌も問い合わせも 1 列＝編集の後の `plan` が歌の後ろで数分待ち、cancel はその後にしか送られない。直し: Cantoria＝手放したフレーズは次の依頼が決める（`LeftPhrase`＝同じフレーズを歌うなら引き取る・歌わないなら止める・どの声部の依頼でも）・打ち切りは歌の長さ × 実測の速さ × 3（`NeutrinoOptions.RenderAllowance`）・止めるときは server 版はサーバーごと止める（client だけ止めると次が `BUSY: inference is running`）・`voices`／`plan`／`parameters` は別の列。Lily#＝`prepareAllowanceMs`（2 分＋残り × 学んだ速さ × 3・測る前は CPU の速さ）を `EngineWatch` が、エンジンから何か聞こえるたびに巻き直す・諦めたら `letGo` で cancel・`learnRenderRate` の上限 3,000 → 30,000 と最初の測定は初期値と混ぜない。実測（exe 版 v3.2.2 と server 版 v3.2.6 の両方）は Lab `p1305/singer-cpu`: `letgo-probe.ps1`（serve を直接）・`outoftime/`（4 s に絞った打ち切り）・`e2e/prep.ps1`（隔離 VS Code に両拡張の新しい版）。数は commit message。
+- **案内ページ＝`eac3efa0e`**: GPU が無いなら同梱版（36 s のパートが同梱版 135 s・通常版 240 s）・`singerPrepare: onPlay` の使い方（開いたときは 1 回歌う＝`voiceTurned`）。
+- 全 full は回していない（VS Code 拡張の 1277 合格 / 0 失敗・Cantoria 249 合格だけ）。Lily# の C# は触っていない。
+- ⚠️ **オーナーの VS Code はまだ古い拡張**（Cantoria 0.4.0・Lily# 0.16.0）＝症状はそのまま。Cantoria `tools\deploy-extension.ps1` と Lily# の VSIX の作り直し・Reload はオーナー。Cantoria は未 push。
+- **残り**: VS Code の中で「歌いかけのフレーズを次の依頼が引き取る」形は見ていない（nocturne の rh は 1 フレーズ＝止める側だけ・引き取る側は serve で確認）。GPU のある機械では測っていない。exe 版と server 版の速さの差（1.8 倍）のうち、モデルの読み込みの分と版（v3.2.2 と v3.2.6）の分は分けていない。
+- **次**: 第1304 の「次」のまま（下）。
+
+## 以下は第1304セッションの経緯
+
 ### 1.1 第1304セッション（2026-11-18・YT-DELL2・第1303 と同じ会話）
 
 base `60639b0dd`・開始時 full 17624 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17627（Lab `p1304` の `start.log`）。REQUESTS の open は第1303 の頭で 0（同じ日・見直していない）。便の途中でオーナーが push した＝`origin/master` は `60639b0dd`（この便の commit は未 push）。
@@ -153,17 +165,6 @@ base `60639b0dd`・開始時 full 17624 合格 / 1 失敗（`ReadmeSampleTests`�
 - **同じ会話の続き（オーナーの依頼）**: 「no singing voice」のボタンは案内が先頭・エンジンは ABC 順（`96a8d06cf`）。Cantoria は通常版の NEUTRINO（`neutrino.exe`・サーバなし）も歌う（Cantoria は未 push・実測は Lab `p1304/neutrino`＝1 フレーズ約 3.6 秒・サーバは曲全体 2.2 秒）。案内ページは同梱版を名指し・声の足し方も（`site/sing-body.html`）。残り: 新しいフレーズを 1 回で歌う道（Cantoria `docs/design.md` §3.1）。
 - **続き 2**: vocoder の無い DiffSinger の声は通知で設定を促す（`20557afdb`・実機は未確認）。**音節で歌う＝`sings "ラ"`・`lyrics "ラ" on PART`**（オーナー決定 2026-11-18・`706afc2ee`）＝track 名は引用符ごとの文字列（`GeneratedLyrics.IsSyllable`）。残り: ステップキーは音節へ動かない。
 - **次**: leftovers の第1263 の残り＝ずれた声部の運指（第 1 声）・コード名・`@text` の X（未測定＝まず探り譜）。その先は leftovers の「第1239」「第1238」の残り（別の声部のヘアピンと出会う形の絵・combinedStaff の印の re-address）。review.md の残りは設計が先の 3 つ（`mid-bar-break`＝§1.1 第1303・F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。
-
-## 以下は第1303セッションの経緯
-
-### 1.1 第1303セッション（2026-11-18・YT-DELL2）
-
-base `5781108ed`・開始時 full 17614 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17617（Lab `p1303` の `start.log`）。REQUESTS の open は 0（Calamo・Dettato）。
-- **P8 の残り＝`4feb15db1`**: `RecentTrees.TreeOf` は、後ろ（include の中身・歌い手のパート）が前の打鍵と同じなら `headFirst` を作らず 1 つの窓で読む＝include のある本の打鍵が作る「本＋include の長さの文字列」は 2 本 → 1 本（結合した本文そのもの）。後ろが同じかは span の比較 1 回。網は `MadeTextParseTests` の 2 本に数を足した（`RecentTrees.TwoWindowParsesOnThisThread`＝include の本の打鍵 0・歌い手が歌わない音 0・歌う音 1）。毒 1 本で 2 / 2 赤。時間は測っていない（回数だけ）。
-- **`mid-bar-break` の本は設計が先＝コードは触っていない**: 表は 1 回目の collect の*割っていない* voice から決まる（`MidBarBreakTable.Build`＝offset をまたぐ音・連桁・連符・percent）ので、2 回目だけを resume しても、打鍵が表を変えたか（break の小節の 4 分 2 つを 2 分 1 つにする、など）を言えない。要る形: 1 回目（`SeededMidBarBreaks` なし・発見だけ）と 2 回目（表を seed）を別の collector・別の録りにし、1 回目を resume → 表を作り直す → 前と同じなら 2 回目を resume。触る所は `Collect`／`CollectMultiStaff` の 2 回まわし・`IncrementalCompiler.CollectWithResume`・nested の channel（`CollectNested` は seed が空でないと録りを捨てる）・resume した 1 回目に前半の `_midBarBreakRequests` を戻す件数の控え・表の等しさ（`SourcePosition` は打鍵でずれる）。
-- **茎側の staccato は符尾の上＝`f93df7e2e`**（leftovers の第1263 が残した `toward-stem-shift`）: 自分の符尾の側に立つ staccato／staccatissimo（2 声部目と 1 声部目の 1 つだけの点・`@staccato.down` のように書いた側）は符頭の中心に立っていた＝符尾の横へ半符頭ずれる。LilyPond は符尾の中心（`script-interface::calc-x-offset`＝shift 1.0）・同じ音にほかの script があれば符頭のまま（`toward-stem-shift-in-column` 0.0・反対側の fermata でも・別の声部の script は数えない・thumb と運指は script ではない）・全音符は動かない。探り譜 Lab `p1303/st`（k1〜k10・`probe.ps1`・`dump.ily`）は全部 0.005 以内。網 `StemSideStaccatoTests` 10 冊・毒 9 / 9 赤（`p1303/poisons.ps1`）・全 svg の掃きは 3 / 1268（test の 3 冊＝snapshot を取り直した。`voice-dynamics-offbeat` は点の下の f が 0.54 上がって LilyPond の −6.776）。tab の譜は元から列の中心。⚠️ 装飾音の茎側の点は同じ式（grace の head の font）だが LilyPond と測っていない。
-- 終了時 full 17624 合格 / 1 失敗（同じ）/ skip 2 / 合計 17627（`run3.trx`・+10＝網）。拡張は触っていない。
-- **次**: leftovers の第1263 の残り＝ottava の右端（LilyPond は最初に来た列〜最後に来た列＝規則を移す仕事）・ずれた声部の運指（第 1 声）とコード名と `@text` の X（未測定）。review.md の残りは設計が先の 3 つ（`mid-bar-break`＝上・F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。
 
 ## 2. 開いている作業
 

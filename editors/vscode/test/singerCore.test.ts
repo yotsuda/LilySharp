@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { singerLineOf, onSingerGender, singersWritten, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantoriaApiOf, cantoriaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveCancelLine, serveRequestLine, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitle, voiceMenuTitleOf, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungKey, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from '../src/singerCore';
+import { singerLineOf, onSingerGender, singersWritten, CANTORIA_EXTENSION_ID, EngineWatch, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantoriaApiOf, cantoriaScore, fitsGender, learnRenderRate, parseServeLine, prepareAllowanceMs, prepareModeOf, serveCancelLine, serveRequestLine, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitle, voiceMenuTitleOf, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungKey, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from '../src/singerCore';
 import { VoiceBarPart, voiceBar, voiceBarShown, voiceProgress, voiceRound, voiceRowProgress, voiceStillSinging, voiceToldFraction } from '../src/webview/playbackCore';
 import { extensionSource } from './extensionSource';
 
@@ -409,6 +409,20 @@ describe('the bar under Play', () => {
         assert.equal(learnRenderRate(100, 11500, 100), 100);
         assert.equal(learnRenderRate(100, 21500, 100), 150);
         assert.equal(learnRenderRate(100, 21500, 0), 100);
+        // A CPU's NEUTRINO (about 9 s a second sung) is learnt, not held at a GPU's ceiling.
+        assert.equal(learnRenderRate(9000, 361500, 40), 9000);
+        // The first timing is the engine's own, not half the first guess's.
+        assert.equal(learnRenderRate(100, 361500, 40, false), 9000);
+    });
+
+    // Owner's report 2026-11-18: two fixed minutes failed every voice on a machine with no GPU.
+    it('waits on the engine for what is left to sing at its pace, a CPU\'s until it is timed', () => {
+        assert.equal(prepareAllowanceMs(0, 100, true), 120_000);
+        assert.equal(prepareAllowanceMs(10, 100, true), 123_000);
+        // Not timed: 37 s of song on a CPU took 341 s; the patience is three times a CPU's pace.
+        assert.equal(prepareAllowanceMs(37, 100, false), 120_000 + 37 * 12_000 * 3);
+        assert.ok(prepareAllowanceMs(37, 100, false) > 341_000);
+        assert.equal(prepareAllowanceMs(-1, 100, true), 120_000);
     });
 });
 
@@ -526,6 +540,52 @@ describe('the prepare queue', () => {
         assert.deepEqual(told, []);
         q.schedule('p/alt', 'y', 0);
         assert.deepEqual(told, ['x']);
+    });
+
+    // Owner's report 2026-11-18: a fixed two minutes gave up voices the engine was working on.
+    it('gives a voice up only when the engine has said nothing for its allowance', () => {
+        const t = timers();
+        const watch = new EngineWatch(t.api);
+        const gaveUp: number[] = [];
+        watch.watch(() => 1000, ms => gaveUp.push(ms));
+        t.tick(900);
+        watch.heard();                          // a phrase sung: the clock starts again
+        t.tick(900);
+        assert.deepEqual(gaveUp, []);
+        t.tick(100);
+        assert.deepEqual(gaveUp, [1000]);
+        watch.heard();                          // given up once, not again
+        t.tick(5000);
+        assert.deepEqual(gaveUp, [1000]);
+    });
+
+    it('starts every waiting voice\'s clock again when the engine is heard of, each with its own allowance', () => {
+        const t = timers();
+        const watch = new EngineWatch(t.api);
+        const gaveUp: string[] = [];
+        let left = 3000;                        // what is left of the first voice shrinks as it is sung
+        watch.watch(() => left, () => gaveUp.push('sung'));
+        watch.watch(() => 2000, () => gaveUp.push('waiting'));
+        t.tick(1500);
+        left = 500;
+        watch.heard();                          // the first voice's phrase: the one waiting behind it waits on
+        t.tick(600);
+        assert.deepEqual(gaveUp, ['sung']);
+        t.tick(1300);
+        assert.deepEqual(gaveUp, ['sung'], 'the waiting voice\'s clock started again at 1500');
+        t.tick(200);
+        assert.deepEqual(gaveUp, ['sung', 'waiting']);
+    });
+
+    it('a voice no longer watched is not given up on', () => {
+        const t = timers();
+        const watch = new EngineWatch(t.api);
+        const gaveUp: number[] = [];
+        const stop = watch.watch(() => 1000, ms => gaveUp.push(ms));
+        stop();
+        watch.heard();
+        t.tick(5000);
+        assert.deepEqual(gaveUp, []);
     });
 
     it('the wire says which request to let go of', () => {
