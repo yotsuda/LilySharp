@@ -70,6 +70,24 @@ export function partsOf(raw: Record<string, unknown>): RecordingPart[] | undefin
     return out.length > 0 ? out : undefined;
 }
 
+/** The order the parts' lines are shown in (owner's decision 2026-11-18): the voice, the chord
+ *  instruments, the rest, then the rhythm section. A name is matched whatever its case, with or
+ *  without a plural `s` (Dettato writes `vocals`). */
+const SHOWN_PART_ORDER = ['vocal', 'guitar', 'piano', 'other', 'bass', 'drum'];
+
+/** The parts' names in the order their lines are shown: the known ones as SHOWN_PART_ORDER says,
+ *  then the others in the file's order. (Only the lines: the file keeps its order.) */
+export function shownPartOrder(names: readonly string[]): string[] {
+    const rank = (name: string): number => {
+        const n = name.trim().toLowerCase();
+        const i = SHOWN_PART_ORDER.findIndex(k => n === k || n === k + 's');
+        return i < 0 ? SHOWN_PART_ORDER.length : i;
+    };
+    return names.map((name, at) => ({ name, at, rank: rank(name) }))
+        .sort((a, b) => a.rank - b.rank || a.at - b.at)
+        .map(x => x.name);
+}
+
 /** The parts' ways written from the file's new place (it moved from `fromFile` to `toFile`), as
  *  `audio` is (audioRef): the file's raw items with `parts` rewritten; the same object when there
  *  is nothing to rewrite. */

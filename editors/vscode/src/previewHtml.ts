@@ -5273,7 +5273,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             else if (recPlayer.playing) void recPlayer.update(recSound());
         }
         /** The parts' lines — under the practice menu's Recording line and the panel's (the same
-         *  values in both): a toggle and a fader each, in the file's order, greyed until loaded. */
+         *  values in both): a toggle and a fader each, in the order sent (shownPartOrder), greyed until loaded. */
         function renderRecParts() {
             const names = (recording && recording.parts) || [];
             const loaded = (recording && recording.partsLoaded) || null;

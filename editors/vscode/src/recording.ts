@@ -21,7 +21,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import {
     CopySource, WEBVIEW_AUDIO, WINDOWS_AUDIO, audioReader, audioRef, chartForRecording, chartPathFor, copiedRecordingText, newRecording,
-    parseRecording, rebasedParts, recordingPathFor, resolveAudio, samePath, serializeRecording, sourceForCopy, workForRename,
+    parseRecording, rebasedParts, recordingPathFor, resolveAudio, samePath, serializeRecording, shownPartOrder, sourceForCopy, workForRename,
 } from './recordingCore';
 import { importFilters } from './fileFilters';
 
@@ -198,7 +198,7 @@ export async function sendRecording(panel: vscode.WebviewPanel, chart: vscode.Ur
     }
     const shown = path.basename(audio!.fsPath);
     const base = { name: shown, bars: rec.bars, pickup: rec.pickup, settings: recordingSettingsFor(chart.toString(), shown) ?? null,
-        parts: parts.map(p => p.name) };
+        parts: shownPartOrder(parts.map(p => p.name)) };
     if (!audio || !audioKey) {
         // Moved, renamed outside VS Code, or on a drive not here: say where it was looked for, and
         // let it be found again (Dettato's request 6).

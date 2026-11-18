@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import {
     RECORDING_DEFAULTS, Recording, ScoreBeat, audioPathFor, recordingPlan, audioReader, barAt, chartForRecording, lineUp, newRecording, parseRecording,
-    CopySource, chartPathFor, copiedRecordingText, rebasedParts, sourceForCopy,
+    CopySource, chartPathFor, copiedRecordingText, rebasedParts, shownPartOrder, sourceForCopy,
     audioRef, recordingPathFor, recordingSecondAt, resolveAudio, samePath, scoreBars, scoreTimeAt, serializeRecording, timeWarp, unwarpTime, warpBeats, warpFit, warpNotes, warpTime, workForRename,
 } from '../src/recordingCore';
 
@@ -414,6 +414,13 @@ describe('the recording\'s parts', () => {
         assert.deepEqual(r.parts!.map(p => p.name), ['drums', 'bass', 'other', 'vocals', 'guitar', 'piano']);
         assert.equal(r.parts![1].file, 'song.parts/bass.flac');
         assert.equal(resolveAudio('C:/a/song.dettato.json', r.parts![1].file), 'C:/a/song.parts/bass.flac');
+    });
+
+    it('are shown the voice first and the drums last, the unknown ones after in the file\'s order', () => {
+        assert.deepEqual(shownPartOrder(['drums', 'bass', 'other', 'vocals', 'guitar', 'piano']),
+            ['vocals', 'guitar', 'piano', 'other', 'bass', 'drums']);
+        assert.deepEqual(shownPartOrder(['Drums', 'strings', 'Vocal', 'brass', 'bass']), ['Vocal', 'bass', 'Drums', 'strings', 'brass']);
+        assert.deepEqual(shownPartOrder([]), []);
     });
 
     it('leave out an entry that is not a file, and are absent when none is', () => {
