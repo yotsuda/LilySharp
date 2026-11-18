@@ -17,6 +17,8 @@
 // Pure pieces of the preview host (no vscode import), so they can be tested with
 // node:test like the other *Core modules.
 
+import { shapeItemAt } from './shapeItemCore';
+
 /** One entry of the preview's score picker, as the server names it. */
 export interface RenderEntry {
     Name: string;
@@ -216,6 +218,58 @@ export function chordAtCaret(line: string, col: number): [number, number] | unde
         }
     }
     return undefined;
+}
+
+/** What the preview is told when the caret (no selection) lands: the notes to light, or the place alone. */
+export type CaretHighlight =
+    | { type: 'highlightRange'; ranges: [number, number][]; caret: number }
+    | { type: 'highlightPosition'; position: number; tokenStart: number; caret: number; lineEnd: number };
+
+/**
+ * The preview's light for a caret at column `col` of `line`, `offset` into the file. The caret's
+ * LINE is all that is read: a token never crosses a line break, and this runs on every caret
+ * movement — the whole document was being rebuilt for each arrow key on a long score.
+ */
+export function caretHighlight(line: string, col: number, offset: number): CaretHighlight {
+    const lineStart = offset - col;
+    // A caret on a chord as a whole — its "<", just past its ">", or what is
+    // glued after it — lights every head of it (owner's request 2026-10-27), as
+    // the step keys move it whole there.
+    const chord = chordAtCaret(line, col);
+    if (chord) {
+        return { type: 'highlightRange', ranges: [[lineStart + chord[0], lineStart + chord[1] + 1]], caret: offset };
+    }
+    // A caret anywhere on a chord(…) / diagram(…) item — its word, inside its
+    // parentheses, on its duration — lights the item's notes (owner's request
+    // 2026-10-31): the token under the caret alone (`133211)4`) holds no note.
+    const item = shapeItemAt(line, col);
+    if (item) {
+        return { type: 'highlightRange', ranges: [[lineStart + item[0], lineStart + item[1]]], caret: offset };
+    }
+    const isWs = (c: string | undefined) =>
+        c === undefined || c === ' ' || c === '\t' || c === '\n' || c === '\r';
+    // The caret's note is the one whose source lies INSIDE the
+    // whitespace-delimited token under the caret. Send that token's start so
+    // the preview highlights a note only when it belongs to THAT token —
+    // never the nearest PRECEDING note when the caret is on a barline,
+    // keyword, brace or a gap (their token holds no note, so the preview
+    // clears). A caret in pure whitespace corresponds to no note.
+    let tokenStart = -1;
+    if (!isWs(line[col]) || !isWs(line[col - 1])) {
+        let startCol = col;
+        while (startCol > 0 && !isWs(line[startCol - 1])) { startCol--; }
+        tokenStart = offset - (col - startCol);
+    }
+    return {
+        type: 'highlightPosition',
+        position: tokenStart >= 0 ? offset : -1,
+        tokenStart,
+        // The caret itself, wherever it is: its bar stays lit (lightCaretBar).
+        caret: offset,
+        // Where its line ends: a caret before a bar's first note on that line
+        // (on `voice {`) lights the bar too.
+        lineEnd: lineStart + line.length,
+    };
 }
 
 export function jumpOffsetFor(text: string, pos: number): number {

@@ -16,7 +16,7 @@
 
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { svgPostKey, pagesSummary, previewOnEditorShown, sourceGroupToReveal, sourceGroupToOpen, newPreviewColumn, scoreGroupFor, ShownEditor, jumpOffsetFor, chordSpans, chordAtCaret, soundingRange, soundingRanges, soundingLight, auditionBarRange, messageChanged, rewriteIsStale } from '../src/previewCore';
+import { svgPostKey, pagesSummary, previewOnEditorShown, sourceGroupToReveal, sourceGroupToOpen, newPreviewColumn, scoreGroupFor, ShownEditor, jumpOffsetFor, chordSpans, chordAtCaret, caretHighlight, soundingRange, soundingRanges, soundingLight, auditionBarRange, messageChanged, rewriteIsStale } from '../src/previewCore';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { extensionSource } from './extensionSource';
@@ -222,6 +222,33 @@ describe('the chords of a score', () => {
         assert.equal(chordAtCaret('c\\> d', 3), undefined);
     });
 
+    // What the caret's landing tells the preview (the editor's selection listener, a function of
+    // the caret's line since session 1299): offsets into the file, the line starting at 100 here.
+    it('light whole under the caret, as a chord(…) item does; else the caret\'s token, or its place alone', () => {
+        const line = '    <c e g>4. d4 chord(F 133211)4 |  e';
+        const at = (col: number) => caretHighlight(line, col, 100 + col);
+        // Past the chord's ">": every head of it, "<" to ">" inclusive.
+        assert.deepEqual(at(11), { type: 'highlightRange', ranges: [[104, 111]], caret: 111 });
+        // Inside a chord(…) item's parentheses: the item, its duration with it.
+        const item = line.indexOf('chord(');
+        assert.deepEqual(at(line.indexOf('1332')),
+            { type: 'highlightRange', ranges: [[100 + item, 100 + line.indexOf(')4') + 2]], caret: 100 + line.indexOf('1332') });
+        // In a note's token (d|4): the caret, and where its token starts.
+        const d = line.indexOf('d4');
+        assert.deepEqual(at(d + 1),
+            { type: 'highlightPosition', position: 100 + d + 1, tokenStart: 100 + d, caret: 100 + d + 1, lineEnd: 100 + line.length });
+        // A member of the chord (<c e| g>): its own token, not the chord.
+        assert.deepEqual(at(8),
+            { type: 'highlightPosition', position: 108, tokenStart: 107, caret: 108, lineEnd: 100 + line.length });
+        // Between two blanks: no token, so no note — the caret alone, for its bar.
+        const gap = line.indexOf('|') + 2;
+        assert.deepEqual(at(gap),
+            { type: 'highlightPosition', position: -1, tokenStart: -1, caret: 100 + gap, lineEnd: 100 + line.length });
+        // At the line's end, glued to the last token.
+        assert.deepEqual(at(line.length),
+            { type: 'highlightPosition', position: 100 + line.length, tokenStart: 100 + line.length - 1, caret: 100 + line.length, lineEnd: 100 + line.length });
+    });
+
     it('are wired: the menu on a member, the caret past the ">", the whole chord lit there', () => {
         const fs = require('node:fs') as typeof import('node:fs');
         const path = require('node:path') as typeof import('node:path');
@@ -231,7 +258,7 @@ describe('the chords of a score', () => {
         assert.match(ext, /const ctxChordEnd = ctxNotePos >= 0 \? chordEndAt\(ctxNotePos\) : -1;/);
         assert.match(ext, /lysOnChord: ctxChordEnd >= 0,\s*lysChordEnd: ctxChordEnd,/);
         assert.match(ext, /const position = editor\.document\.positionAt\(m\.lysChordEnd!\);/);
-        assert.match(ext, /const chord = chordAtCaret\(line, col\);\s*if \(chord\) \{/);
+        assert.match(ext, /panel\.webview\.postMessage\(caretHighlight\(doc\.lineAt\(active\.line\)\.text, active\.character, doc\.offsetAt\(active\)\)\);/);
         assert.match(ext, /type: 'chordSpans', spans: chordSpans\(document\.getText\(\)\)/);
         const item = (pkg.contributes.menus['webview/context'] as { command: string; when: string }[])
             .find(m => m.command === 'lilysharp.previewSelectChord');

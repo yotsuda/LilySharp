@@ -26,7 +26,8 @@ import * as path from 'node:path';
  * preview's page it writes (src/previewHtml.ts), as one text. The page was a template literal
  * inside extension.ts until session 1295, the singing voice stood there until session 1296 and
  * the rewriting commands, the sound font, the MIDI output and the Export until session 1297, the
- * rest of the list until session 1298, and
+ * rest of the list until session 1298 (and how the server is run, src/serverLaunch.ts, and the
+ * menus' context keys, src/menuContext.ts, until session 1299), and
  * the tests that read the source — to cut a function of the page out and run it, to see
  * a button is there, to see a name is gone — read them together: a test that says a name is NOT
  * there must look where it could be.
@@ -42,5 +43,7 @@ export function extensionSource(): string {
         + fs.readFileSync(path.join(src, 'newScore.ts'), 'utf8') + '\n'
         + fs.readFileSync(path.join(src, 'musicXmlImport.ts'), 'utf8') + '\n'
         + fs.readFileSync(path.join(src, 'aiEntry.ts'), 'utf8') + '\n'
+        + fs.readFileSync(path.join(src, 'serverLaunch.ts'), 'utf8') + '\n'
+        + fs.readFileSync(path.join(src, 'menuContext.ts'), 'utf8') + '\n'
         + fs.readFileSync(path.join(src, 'previewHtml.ts'), 'utf8');
 }

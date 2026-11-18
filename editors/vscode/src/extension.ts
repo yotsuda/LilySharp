@@ -17,7 +17,6 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as cp from 'child_process';
 import {
     LanguageClient,
     LanguageClientOptions,
@@ -45,19 +44,10 @@ import { registerOmrAiFix } from './omrAiFix';
 import { registerVerifyOnSave } from './omrVerify';
 import { markdownItExtensionApi } from './markdownFence';
 import { PreviewSession } from './previewSession';
-import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, sourceGroupToOpen, SourceTab, jumpOffsetFor, chordSpans, chordAtCaret, soundingLight, SoundingSession, auditionBarRange, messageChanged } from './previewCore';
+import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, sourceGroupToOpen, SourceTab, jumpOffsetFor, chordSpans, caretHighlight, soundingLight, SoundingSession, auditionBarRange, messageChanged } from './previewCore';
 import { textFontFaceCss } from './scoreFonts';
 import { getPreviewHtml } from './previewHtml';
-import { onAngleChord, onShapeItem, shapeItemAt } from './shapeItemCore';
-import { caretMenuContext, fileMenuContext, selectionSpansSections } from './menuContextCore';
 
-/** A menu context key, set only when it changes (setContext is a round trip to the workbench). */
-const menuContextNow = new Map<string, boolean>();
-function setMenuContext(key: string, value: boolean): void {
-    if (menuContextNow.get(key) === value) { return; }
-    menuContextNow.set(key, value);
-    void vscode.commands.executeCommand('setContext', key, value);
-}
 import { TodoMark, parseStarts, todoDeletions } from './todoResolveCore';
 import { renderAudioFiles } from './audioRender';
 import { PracticeState, practiceSummary } from './webview/playbackCore';
@@ -70,18 +60,9 @@ import { useAiEntryHost, aiTransformWholeScore, aiTransformFromScore, askAiInCha
 import { useMusicXmlImportHost, importMusicXml } from './musicXmlImport';
 import { NEW_SCORE_TEMPLATE, newScoreTemplateUri, uriExists, newScoreTemplate, newScoreTitleRange, applyScoreTemplate } from './newScore';
 import { registerEditCommands } from './editCommands';
+import { registerMenuContexts } from './menuContext';
+import { resolveServerLaunch } from './serverLaunch';
 import { VOICE_INSTALL_GUIDE, leftToTheInstrument, SungVoiceDto, sungKey, voiceMenuLabels, voiceMenuKey, voiceMenuTitleOf } from './singerCore';
-
-// True if `cmd` resolves on PATH (used to give a clear error when the
-// framework-dependent dev server needs `dotnet` but it is not installed).
-function commandExists(cmd: string): boolean {
-    const probe = process.platform === 'win32' ? 'where' : 'which';
-    try {
-        return cp.spawnSync(probe, [cmd], { stdio: 'ignore' }).status === 0;
-    } catch {
-        return false;
-    }
-}
 
 let client: LanguageClient;
 let clientReady = false;
@@ -528,92 +509,17 @@ export function activate(context: vscode.ExtensionContext) {
     findCopilotLogFrom(context.logUri);
 
     const config = vscode.workspace.getConfiguration('lilysharp');
-    // A server built by hand: settings.json only, not in the Settings UI since 2026-10-25
-    // (as `lilysharp.trace.server`, which the language client reads by itself).
-    let serverPath = config.get<string>('serverPath');
-
-    outputChannel.appendLine(`Config serverPath: "${serverPath}"`);
-
-    const serverDir = path.join(context.extensionPath, 'server');
-    const apphostName = process.platform === 'win32' ? 'lilysharp-lsp.exe' : 'lilysharp-lsp';
-
-    // Priority: 1. User-configured path, 2. bundled apphost, 3. bundled dll, 4. PATH.
-    if (!serverPath || serverPath.trim() === '') {
-        const bundledApphost = path.join(serverDir, apphostName);
-        const bundledDll = path.join(serverDir, 'lilysharp-lsp.dll');
-        if (fs.existsSync(bundledApphost)) {
-            serverPath = bundledApphost;
-            outputChannel.appendLine(`Using bundled server: ${serverPath}`);
-        } else if (fs.existsSync(bundledDll)) {
-            serverPath = bundledDll;
-            outputChannel.appendLine(`Using bundled server (dll): ${serverPath}`);
-        } else {
-            serverPath = 'lilysharp-lsp';
-            outputChannel.appendLine(`Using PATH: ${serverPath}`);
-        }
-    } else {
-        outputChannel.appendLine(`Using configured path: ${serverPath}`);
-    }
-
-    if (path.isAbsolute(serverPath) && !fs.existsSync(serverPath)) {
-        outputChannel.appendLine(`ERROR: Server executable not found: ${serverPath}`);
-        vscode.window.showErrorMessage(`Lily# LSP server not found: ${serverPath}`);
+    // Where the server is and how it is run (serverLaunch.ts).
+    const launch = resolveServerLaunch(context, config, outputChannel);
+    if (!launch) {
         return;
     }
 
-    // A self-contained deployment ships its own .NET runtime next to the apphost
-    // (marked by coreclr), so the apphost is run DIRECTLY — no system .NET needed.
-    // A framework-dependent build (local dev) is run via `dotnet <dll>` instead; if
-    // `dotnet` is then missing we surface a clear, actionable error.
-    const runtimeLib = process.platform === 'win32' ? 'coreclr.dll'
-        : process.platform === 'darwin' ? 'libcoreclr.dylib' : 'libcoreclr.so';
-    const selfContained = fs.existsSync(path.join(serverDir, runtimeLib));
-    const bundledApphostPath = path.join(serverDir, apphostName);
-
-    let serverCommand: string;
-    let serverArgs: string[];
-    let serverEnv: { [key: string]: string } | undefined;
-
-    if (selfContained && fs.existsSync(bundledApphostPath)) {
-        // Self-contained: launch the apphost directly.
-        serverCommand = bundledApphostPath;
-        serverArgs = [];
-        outputChannel.appendLine(`Running self-contained apphost: ${serverCommand}`);
-    } else if (serverPath.endsWith('.exe') || serverPath.endsWith('.dll')) {
-        // Framework-dependent: run the .dll via dotnet (an .exe maps to its .dll).
-        const dllPath = serverPath.endsWith('.dll') ? serverPath : serverPath.replace(/\.exe$/, '.dll');
-        const userDotnetPath = path.join(process.env.LOCALAPPDATA || '', 'Microsoft', 'dotnet');
-        const userDotnetExe = path.join(userDotnetPath, 'dotnet.exe');
-        if (fs.existsSync(userDotnetExe)) {
-            serverCommand = userDotnetExe;
-            serverArgs = [dllPath];
-            serverEnv = { ...process.env, DOTNET_ROOT: userDotnetPath } as { [key: string]: string };
-            outputChannel.appendLine(`Running via user dotnet: ${userDotnetExe}`);
-        } else if (commandExists('dotnet')) {
-            serverCommand = 'dotnet';
-            serverArgs = [dllPath];
-            outputChannel.appendLine(`Running via system dotnet: ${dllPath}`);
-        } else {
-            const msg = 'Lily#: the language server needs the .NET runtime, which was not found. '
-                + 'Install .NET, or reinstall the platform-specific Lily# build (it bundles its own runtime).';
-            outputChannel.appendLine(`ERROR: ${msg}`);
-            vscode.window.showErrorMessage(msg, 'Get .NET').then(pick => {
-                if (pick === 'Get .NET') {
-                    vscode.env.openExternal(vscode.Uri.parse('https://dotnet.microsoft.com/download'));
-                }
-            });
-            return;
-        }
-    } else {
-        serverCommand = serverPath;
-        serverArgs = [];
-    }
-
     const runOptions = {
-        command: serverCommand,
-        args: serverArgs,
+        command: launch.command,
+        args: launch.args,
         transport: TransportKind.stdio,
-        options: serverEnv ? { env: serverEnv } : undefined
+        options: launch.env ? { env: launch.env } : undefined
     };
 
     const serverOptions: ServerOptions = {
@@ -1360,52 +1266,8 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }));
 
-    // "Convert to Chord Notes" stands in the context menu only on a chord(…) / diagram(…) item,
-    // "Add Guitar Diagram" only on a <…> chord.
-    let wasOnShapeItem = false, wasOnAngleChord = false;
-    context.subscriptions.push(
-        vscode.window.onDidChangeTextEditorSelection(event => {
-            const doc = event.textEditor.document;
-            const at = event.selections[0]?.active;
-            const line = doc.languageId === 'lilysharp' && at !== undefined ? doc.lineAt(at.line).text : undefined;
-            const onItem = line !== undefined && onShapeItem(line, at!.character);
-            const onChord = line !== undefined && !onItem && onAngleChord(line, at!.character);
-            if (onItem !== wasOnShapeItem) {
-                wasOnShapeItem = onItem;
-                void vscode.commands.executeCommand('setContext', 'lilysharp.onShapeItem', onItem);
-            }
-            if (onChord !== wasOnAngleChord) {
-                wasOnAngleChord = onChord;
-                void vscode.commands.executeCommand('setContext', 'lilysharp.onAngleChord', onChord);
-            }
-            // The menus' caret context (owner's decision 2026-11-17, menuContextCore): a bar line or a
-            // break (Split Section Here), a section's head or a selection across heads (Join Sections).
-            const sel = event.selections[0];
-            const where = line !== undefined ? caretMenuContext(line, at!.character) : { onBarLine: false, onSectionHead: false };
-            const spans = line !== undefined && sel !== undefined && !sel.isEmpty
-                && selectionSpansSections(doc.getText(), doc.offsetAt(sel.start), doc.offsetAt(sel.end));
-            setMenuContext('lilysharp.onBarLine', where.onBarLine && (sel?.isEmpty ?? true));
-            setMenuContext('lilysharp.canJoinSections', (where.onSectionHead && (sel?.isEmpty ?? true)) || spans);
-        }));
-    // What the file holds for the Clean Up menu (owner's decision 2026-11-17): read when the active
-    // editor changes and as it is edited, a moment after the last keystroke.
-    let fileContextTimer: ReturnType<typeof setTimeout> | undefined;
-    const updateFileContext = () => {
-        const doc = vscode.window.activeTextEditor?.document;
-        const marks = doc && doc.languageId === 'lilysharp' ? fileMenuContext(doc.getText())
-            : { hasOrMarks: false, hasTodos: false, hasStringNumbers: false };
-        setMenuContext('lilysharp.hasOrMarks', marks.hasOrMarks);
-        setMenuContext('lilysharp.hasTodos', marks.hasTodos);
-        setMenuContext('lilysharp.hasStringNumbers', marks.hasStringNumbers);
-    };
-    updateFileContext();
-    context.subscriptions.push(
-        vscode.window.onDidChangeActiveTextEditor(() => updateFileContext()),
-        vscode.workspace.onDidChangeTextDocument(e => {
-            if (e.document !== vscode.window.activeTextEditor?.document) { return; }
-            if (fileContextTimer) { clearTimeout(fileContextTimer); }
-            fileContextTimer = setTimeout(updateFileContext, 400);
-        }));
+    // The menus' context keys: what the caret is on, what the file holds (menuContext.ts).
+    registerMenuContexts(context);
 
     // Watch for cursor position changes
     context.subscriptions.push(
@@ -1428,54 +1290,8 @@ export function activate(context: vscode.ExtensionContext) {
                     }
 
                     const active = event.selections[0].active;
-                    const offset = doc.offsetAt(active);
-                    // The caret's LINE is all that is read: a token never crosses a line
-                    // break, and this runs on every caret movement — the whole document
-                    // (getText) was being rebuilt for each arrow key on a long score.
-                    const line = doc.lineAt(active.line).text;
-                    const col = active.character;
-                    // A caret on a chord as a whole — its "<", just past its ">", or what is
-                    // glued after it — lights every head of it (owner's request 2026-10-27), as
-                    // the step keys move it whole there.
-                    const chord = chordAtCaret(line, col);
-                    if (chord) {
-                        const lineStart = offset - col;
-                        panel.webview.postMessage({ type: 'highlightRange', ranges: [[lineStart + chord[0], lineStart + chord[1] + 1]], caret: offset });
-                        return;
-                    }
-                    // A caret anywhere on a chord(…) / diagram(…) item — its word, inside its
-                    // parentheses, on its duration — lights the item's notes (owner's request
-                    // 2026-10-31): the token under the caret alone (`133211)4`) holds no note.
-                    const item = shapeItemAt(line, col);
-                    if (item) {
-                        const lineStart = offset - col;
-                        panel.webview.postMessage({ type: 'highlightRange', ranges: [[lineStart + item[0], lineStart + item[1]]], caret: offset });
-                        return;
-                    }
-                    const isWs = (c: string | undefined) =>
-                        c === undefined || c === ' ' || c === '\t' || c === '\n' || c === '\r';
-                    // The caret's note is the one whose source lies INSIDE the
-                    // whitespace-delimited token under the caret. Send that token's start so
-                    // the preview highlights a note only when it belongs to THAT token —
-                    // never the nearest PRECEDING note when the caret is on a barline,
-                    // keyword, brace or a gap (their token holds no note, so the preview
-                    // clears). A caret in pure whitespace corresponds to no note.
-                    let tokenStart = -1;
-                    if (!isWs(line[col]) || !isWs(line[col - 1])) {
-                        let startCol = col;
-                        while (startCol > 0 && !isWs(line[startCol - 1])) { startCol--; }
-                        tokenStart = offset - (col - startCol);
-                    }
-                    panel.webview.postMessage({
-                        type: 'highlightPosition',
-                        position: tokenStart >= 0 ? offset : -1,
-                        tokenStart,
-                        // The caret itself, wherever it is: its bar stays lit (lightCaretBar).
-                        caret: offset,
-                        // Where its line ends: a caret before a bar's first note on that line
-                        // (on `voice {`) lights the bar too.
-                        lineEnd: offset - col + line.length,
-                    });
+                    // The caret alone: its chord, its chord(...) item or its token (caretHighlight).
+                    panel.webview.postMessage(caretHighlight(doc.lineAt(active.line).text, active.character, doc.offsetAt(active)));
                 }
             }
         })
