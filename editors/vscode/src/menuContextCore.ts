@@ -64,6 +64,26 @@ export function fileMenuContext(text: string): { hasOrMarks: boolean; hasTodos: 
     };
 }
 
+/** The second step of "Score from File (MusicXML, MIDI, Scan, Recording)…" (owner's decision
+ *  2026-11-18: File > New File… lists one entry, as VS Code's New File… picker drops submenus —
+ *  vscode newFile.contribution.ts keeps only MenuItemAction). The entry itself is hidden from the
+ *  palette, where the three commands are found by their own names (owner's decision 2026-11-18).
+ *  Each source shows where its own command shows in the palette: the scan and the recording on
+ *  Windows (the command offers the reader's extension) or wherever their reader is found. */
+export interface NewScoreSource { command: string; label: string; detail: string }
+export function newScoreSources(onWindows: boolean, omrFound: boolean, dettatoFound: boolean): NewScoreSource[] {
+    const sources: NewScoreSource[] = [
+        { command: 'lilysharp.importMusicXml', label: 'MusicXML or MIDI…', detail: '.musicxml · .mxl · .xml · .mid · .midi' },
+    ];
+    if (onWindows || omrFound) {
+        sources.push({ command: 'lilysharp.importImage', label: 'Image or PDF (Scan)… (Preview)', detail: 'printed music read by Calamo' });
+    }
+    if (onWindows || dettatoFound) {
+        sources.push({ command: 'lilysharp.convertRecording', label: 'Recording… (Preview)', detail: 'a chord chart heard by Dettato' });
+    }
+    return sources;
+}
+
 function stripComment(line: string): string {
     const at = line.indexOf('//');
     return at < 0 ? line : line.slice(0, at) + ' '.repeat(line.length - at);

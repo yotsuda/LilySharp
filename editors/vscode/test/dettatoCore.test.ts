@@ -22,6 +22,7 @@ import {
     DETTATO_INPUTS, chartForConversion, dettatoArgs, dettatoFailure, judgeDettato, locateDettato, parseDettatoVersion,
     besideChart, replaceQuestion,
 } from '../src/dettatoCore';
+import { newScoreSources } from '../src/menuContextCore';
 
 describe('Dettato, the recording reader', () => {
     it('is found by the variable first, then by its extension when its reader is on disk', () => {
@@ -110,5 +111,32 @@ describe('Dettato, the recording reader', () => {
         const mine = palette.find((m: { command: string }) => m.command === 'lilysharp.convertRecording');
         const theirs = palette.find((m: { command: string }) => m.command === 'lilysharp.importImage');
         assert.equal(mine.when.replace('dettatoAvailable', 'X'), theirs.when.replace('omrAvailable', 'X'));
+    });
+
+    it('keeps Score from File… out of the palette, where the three commands are found by name (owner\'s decision 2026-11-18)', () => {
+        const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
+        const palette = pkg.contributes.menus.commandPalette;
+        assert.equal(palette.find((m: { command: string }) => m.command === 'lilysharp.newScoreFromFile')?.when, 'false');
+        for (const c of ['lilysharp.importMusicXml', 'lilysharp.importImage', 'lilysharp.convertRecording']) {
+            assert.notEqual(palette.find((m: { command: string }) => m.command === c)?.when, 'false', c);
+        }
+    });
+
+    it('lists one entry in File > New File… for the three readers, whose picker follows the palette (owner\'s decision 2026-11-18)', () => {
+        const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
+        const newFile = pkg.contributes.menus['file/newFile'].map((m: { command: string }) => m.command);
+        assert.ok(newFile.includes('lilysharp.newScoreFromFile'));
+        for (const c of ['lilysharp.importMusicXml', 'lilysharp.importImage', 'lilysharp.convertRecording']) {
+            assert.ok(!newFile.includes(c), `${c} is in the picker, not the list`);
+        }
+        const all = (w: boolean, o: boolean, d: boolean) => newScoreSources(w, o, d).map(s => s.command);
+        assert.deepEqual(all(true, false, false), ['lilysharp.importMusicXml', 'lilysharp.importImage', 'lilysharp.convertRecording']);
+        assert.deepEqual(all(false, false, false), ['lilysharp.importMusicXml']);
+        assert.deepEqual(all(false, true, false), ['lilysharp.importMusicXml', 'lilysharp.importImage']);
+        assert.deepEqual(all(false, false, true), ['lilysharp.importMusicXml', 'lilysharp.convertRecording']);
+        const titles = pkg.contributes.commands
+            .filter((c: { command: string }) => c.command === 'lilysharp.importImage' || c.command === 'lilysharp.convertRecording')
+            .map((c: { title: string }) => c.title);
+        for (const t of titles) assert.match(t, /… \(Preview\)$/, t);
     });
 });

@@ -706,6 +706,11 @@
         "title": "Reset New Score Template"
       },
       {
+        "command": "lilysharp.newScoreFromFile",
+        "category": "Lily#",
+        "title": "Score from File (MusicXML, MIDI, Scan, Recording)…"
+      },
+      {
         "command": "lilysharp.importMusicXml",
         "category": "Lily#",
         "title": "Import MusicXML or MIDI…"
@@ -718,7 +723,7 @@
       {
         "command": "lilysharp.importImage",
         "category": "Lily#",
-        "title": "Convert Image/PDF to Lily# (.lys)… (Beta)"
+        "title": "Convert Image/PDF to Lily# (.lys)… (Preview)"
       },
       {
         "command": "lilysharp.convertRecording",
@@ -1043,6 +1048,10 @@
         {
           "command": "lilysharp.composeWithAiInChat",
           "group": "file@2"
+        },
+        {
+          "command": "lilysharp.newScoreFromFile",
+          "group": "file@3"
         }
       ],
       "commandPalette": [
@@ -1197,6 +1206,10 @@
         },
         {
           "command": "lilysharp.writeSingerPart",
+          "when": "false"
+        },
+        {
+          "command": "lilysharp.newScoreFromFile",
           "when": "false"
         },
         {

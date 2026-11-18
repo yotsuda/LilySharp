@@ -55,7 +55,7 @@ Transcribe!（Seventh String）と同じ体験を Lily# のプレビューで（
   `dettato.transcribe`「Dettato: Transcribe Recording to Lily# Chord Chart (.lys)… (Preview)」は仮置きで、
   Lily# のメニューが出た版で外してもらう（REQUESTS で知らせる）。
 - 音源ファイルの右クリックとコマンドパレットに 2 つ:
-  - **Convert Recording to Lily# (.lys)… (Preview)**（「(Preview)」はオーナー決定 2026-11-15・Calamo の「(Beta)」に揃える）— Windows では Dettato が無くても出す（`lilysharp.dettatoAvailable || isWindows`＝Calamo と同じ条件）。`.lys` と隣のファイルを作って開く。
+  - **Convert Recording to Lily# (.lys)… (Preview)**（「(Preview)」はオーナー決定 2026-11-15。Calamo のメニューも 2026-11-18 のオーナー決定で「(Beta)」から「(Preview)」に揃えた）— Windows では Dettato が無くても出す（`lilysharp.dettatoAvailable || isWindows`＝Calamo と同じ条件）。`.lys` と隣のファイルを作って開く。
   - **Attach Recording…** — 今ある `.lys` に録音を紐づけ、隣のファイルを作る（Dettato は要らない）。
 - どちらも結果は「隣のファイルがある `.lys`」＝その先の帯とパネルは 1 つの道。
 - **（オーナー要望 2026-11-16）変換した直後のプレビューは Recording がオンで始まる**＝▶ で録音が鳴る。変換が譜面に印を付け（`recording.ts` の `markJustConverted`）、音を送る最初の 1 回に `turnOn` を添える。以後は Practice のトグルが決める（Attach Recording… と、開き直した譜面はオフで始まる）。

@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A score from another file, from File > New File….** *Score from File (MusicXML, MIDI, Scan, Recording)…* joins *New Score* in File > New File… and the Welcome page's *New File…*, so a score can be started with no `.lys` open. It asks what to make the score from — MusicXML or MIDI, an image or PDF, or a recording — and runs the same command as the palette's *Import MusicXML or MIDI…*, *Convert Image/PDF to Lily# (.lys)…* or *Convert Recording to Lily# (.lys)…*. The image/PDF command now reads *(Preview)*, like the recording one, instead of *(Beta)*.
+
 - **A syllable for every note: `sings "la"`.** A string where a singer line or a score's lyrics row names its words is a syllable put on every note: `singer female on sop sings "la"` sings the part on la, and `lyrics "la" on sop` prints it under each note. Any syllable can be written — `"ラ"`, `"ル"`, `"ah"`, `"doo"` — in the script the voice sings, with no `lyrics { }` block. The lists after `sings` and after a row's `lyrics` offer the usual ones in the file's language.
 
 - **A DiffSinger voice with no vocoder says so, with the way to one.** A DiffSinger voice that brings no vocoder of its own (no `dsvocoder` folder) cannot sing until a vocoder folder is chosen in Cantoria. Taking such a voice from the `singer` list was silent — its sample was not heard, and only the output channel said why — and a score that named one played the part's instrument with a note that pointed at the install page. Both now say that the voice has no vocoder, with two buttons: How to Install a Voice (the DiffSinger steps) and Choose Vocoder Folder….

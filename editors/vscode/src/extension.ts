@@ -35,10 +35,11 @@ import { registerExportBatch } from './exportBatch';
 import { OmrImportDeps, importFromImage } from './omrImport';
 import { DecodeResult, attachRecording, followCopies, followRenames, keepRecordingSettings, sendRecording, useRecordingSettingsStore } from './recording';
 import { TimedNote, soundingOf, soundingWait, startSecondsAt } from './playbackStart';
-import { convertRecording, registerDettatoContext } from './dettato';
+import { convertRecording, findDettato, registerDettatoContext } from './dettato';
+import { newScoreSources } from './menuContextCore';
 import { recordingPathFor } from './recordingCore';
 import { normalizeAbRanges } from './abRangesCore';
-import { registerOmrContexts } from './omrReader';
+import { findOmr, registerOmrContexts } from './omrReader';
 import { OmrScanDeps, hasScan, previewHoversBar, previewReady, previewShowsBar, registerScanFollow, scanBarAt, scanColumnOf, scanSideOf, scanThresholdOf, showScan } from './omrScan';
 import { registerOmrAiFix } from './omrAiFix';
 import { registerVerifyOnSave } from './omrVerify';
@@ -861,6 +862,20 @@ export function activate(context: vscode.ExtensionContext) {
             importFromImage(context, omrImportDeps, uri, uris)),
         vscode.commands.registerCommand('lilysharp.showScan', (uri?: vscode.Uri) =>
             showScan(context, deps, uri instanceof vscode.Uri ? uri : undefined)),
+        // File > New File…'s one entry for the three readers above (owner's decision 2026-11-18):
+        // a second picker, as New File… cannot hold a submenu (menuContextCore.newScoreSources).
+        vscode.commands.registerCommand('lilysharp.newScoreFromFile', async () => {
+            const onWindows = process.platform === 'win32';
+            const [omr, dettato] = onWindows ? [undefined, undefined] : await Promise.all([findOmr(context), findDettato()]);
+            const sources = newScoreSources(onWindows, omr !== undefined, dettato !== undefined);
+            const picked = await vscode.window.showQuickPick(sources, {
+                title: 'New Score from…',
+                placeHolder: 'What to make the score from',
+            });
+            if (picked) {
+                await vscode.commands.executeCommand(picked.command);
+            }
+        }),
         vscode.commands.registerCommand('lilysharp.importMusicXml', (uri?: vscode.Uri) => {
             outputChannel.appendLine('importMusicXml command triggered');
             importMusicXml(context, uri);

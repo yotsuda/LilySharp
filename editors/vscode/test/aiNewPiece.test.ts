@@ -641,8 +641,8 @@ describe('a new piece in place of the score', () => {
         const pkg = fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8');
         assert.doesNotMatch(pkg, /"lilysharp\.composeWithAi"/);
         // Found where a piece is begun (owner's request 2026-10-29): File > New File… beside New
-        // Score, New Score first — by order, not by title.
-        assert.match(pkg, /"command": "lilysharp\.newScore",\s*"group": "file@1"\s*\},\s*\{\s*"command": "lilysharp\.composeWithAiInChat",\s*"group": "file@2"\s*\}\s*\]/);
+        // Score, New Score first — by order, not by title (Score from File… follows, owner's decision 2026-11-18).
+        assert.match(pkg, /"command": "lilysharp\.newScore",\s*"group": "file@1"\s*\},\s*\{\s*"command": "lilysharp\.composeWithAiInChat",\s*"group": "file@2"\s*\},\s*\{\s*"command": "lilysharp\.newScoreFromFile",\s*"group": "file@3"\s*\}\s*\]/);
     });
 });
 

@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// "Convert Recording to Lily# (.lys)… (Preview)" — Dettato is a Preview, as Calamo's menu says
-// "(Beta)" (owner's decision 2026-11-15): runs Dettato on a recording and opens the chart it writes,
+// "Convert Recording to Lily# (.lys)… (Preview)" — Dettato is a Preview (owner's decision 2026-11-15;
+// Calamo's menu says "(Preview)" too since 2026-11-18): runs Dettato on a recording and opens the chart it writes,
 // with the file beside it (`x.dettato.json`) that the preview plays the recording by
 // (docs/recording-design.md §2). The menu shows on Windows whether or not Dettato is installed; run
 // without it, it offers to install it (owner's decision 2026-11-15). dettatoCore.ts decides.
