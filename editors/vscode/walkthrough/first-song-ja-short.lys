@@ -6,18 +6,37 @@ title "ふるさと"
 poet "高野辰之"
 composer "岡野貞一"
 octave relative
+
+```md box
+**「うさぎ追いし」は「うさぎ美味しい」ではありません。** 野山でうさぎを追いかけた、
+子どものころの思い出です。
+
+- これは出だしだけの短い版です。案内のステップの the whole song で、最後まで歌う版が開きます。
+- 3 拍子の曲です。「いち・に・さん」と数えながら聴くと、ゆったり揺れるのがわかります。
+
+**試してみよう**: 下のほうの singer female を singer male に変えると、男声が歌います。
+tempo 80 を tempo 60 にすると、もっとしみじみします。
+```
+
 time 3/4
 key g major
 tempo 80
+
 part melody { instrument alto  lyrics words }
+singer female on melody
+
 section A {
   melody {
     g'4 g g | a4. b8 a4 | b4 b c | d2 r4 |
   }
-  lyrics words {
+  lyrics words language japanese {
     う さ ぎ | お い し | か の や | ま |
   }
 }
+
 form { A }
-singer female on melody
-score { staff melody  lyrics words }
+
+score {
+  staff melody
+  lyrics words
+}

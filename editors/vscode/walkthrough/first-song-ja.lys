@@ -13,6 +13,7 @@ octave relative
 - 1914 年（大正 3 年）、小学 6 年生の唱歌の教科書に載りました。当時は作者の名前が
   伏せられていて、高野辰之と岡野貞一の作とわかったのは 1960 年代です。
 - 3 拍子の曲です。「いち・に・さん」と数えながら聴くと、ゆったり揺れるのがわかります。
+- 「ゆめは」の は[わ] は、「は」と刷って「わ」と歌わせる書き方です。かっこの中が歌う音です。
 
 **試してみよう**: 下のほうの singer female を singer male に変えると、男声が歌います。
 tempo 80 を tempo 60 にすると、もっとしみじみします。
@@ -21,7 +22,10 @@ tempo 80 を tempo 60 にすると、もっとしみじみします。
 time 3/4
 key g major
 tempo 80
+
 part melody { instrument alto  lyrics words }
+singer female on melody
+
 section A {
   melody {
     g'4 g g | a4. b8 a4 | b4 b c | d2 r4 |
@@ -29,13 +33,17 @@ section A {
     a8( g) a4 d, | g8( a) b4 b | c8( b) c4.( e8) | d8( c) b4 r |
     d4 d d | g,4. a8 b4 | c4 c a | g2 r4 |
   }
-  lyrics words {
+  lyrics words language japanese {
     う さ ぎ | お い し | か の や | ま |
     こ ぶ な | つ り し | か の か | わ |
     ゆ め は[わ] | い ま も | め ぐ | り て |
     わ す れ | が た き | ふ る さ | と |
   }
 }
+
 form { A }
-singer female on melody
-score { staff melody  lyrics words }
+
+score {
+  staff melody
+  lyrics words
+}

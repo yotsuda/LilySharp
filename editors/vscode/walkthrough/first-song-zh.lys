@@ -6,10 +6,26 @@ title "送别"
 poet "李叔同"
 composer "John P. Ordway"
 octave relative
+
+```md box
+**曲子来自美国，歌词写于中国。** 旋律是约翰·奥德威 1868 年的《梦见家和母亲》，李叔同在
+1915 年为它填了这首词。
+
+- 同一支旋律在日本叫《旅愁》，也是一首家喻户晓的歌。
+- 「长」在这里读 cháng，「地」读 dì。乐谱里写作 长[chang]、地[di]：方括号里是唱的读音，
+  印出来的仍是汉字。
+
+**试一试**：把下面的 singer female 改成 singer male，就换成男声来唱。把 tempo 96 改成
+tempo 72，离别的味道更浓。
+```
+
 time 4/4
 key c major
 tempo 96
+
 part melody { instrument alto  lyrics words }
+singer female on melody
+
 section A {
   melody {
     g'4 e8( g) c2 | a4 c g2 | g4 c,8( d) e4 d8( c) | d2. r4 |
@@ -18,12 +34,16 @@ section A {
     g4 e8( g) c4. b8 | a4 c g2 | g4 d8( e) f4. b,8 | c2. r4 |
   }
   lyrics words language chinese {
-    长 亭 外 | 古 道 边 | 芳 草 碧 连 | 天 |
+    长[chang] 亭 外 | 古 道 边 | 芳 草 碧 连 | 天 |
     晚 风 拂 柳 | 笛 声 残 | 夕 阳 山 外 | 山 |
-    天 之 涯 | 地 之 角 | 知 交 半 零 | 落 |
+    天 之 涯 | 地[di] 之 角 | 知 交 半 零 | 落 |
     一 瓢 浊 酒 | 尽 余 欢 | 今 宵 别 梦 | 寒 |
   }
 }
+
 form { A }
-singer female on melody
-score { staff melody  lyrics words }
+
+score {
+  staff melody
+  lyrics words
+}

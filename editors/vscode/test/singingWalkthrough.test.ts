@@ -123,7 +123,7 @@ describe('the singing walkthrough', () => {
         // A song for each language Cantoria sings (owner's request 2026-11-18), each the opening
         // of a song in the public domain, its words saying their language where it is not Japanese.
         assert.deepEqual(FIRST_SONGS, { ja: 'first-song-ja.lys', en: 'first-song-en.lys', zh: 'first-song-zh.lys', ko: 'first-song-ko.lys' });
-        const words: Record<string, RegExp> = { ja: /lyrics words \{\s+う さ ぎ \|/, en: /lyrics words language english \{\s+Twin- kle,/, zh: /lyrics words language chinese \{\s+长 亭 外 \|/, ko: /lyrics words language korean \{\s+아 리 랑 \|/ };
+        const words: Record<string, RegExp> = { ja: /lyrics words \{\s+う さ ぎ \|/, en: /lyrics words language english \{\s+Twin- kle,/, zh: /lyrics words language chinese \{\s+长\[chang\] 亭 外 \|/, ko: /lyrics words language korean \{\s+아 리 랑 \|/ };
         for (const [language, file] of Object.entries(FIRST_SONGS)) {
             const text = fs.readFileSync(path.join(root, 'walkthrough', file), 'utf8');
             assert.match(text, /^singer female on melody$/m, file);

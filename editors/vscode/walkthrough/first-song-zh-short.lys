@@ -7,18 +7,37 @@ title "送别"
 poet "李叔同"
 composer "John P. Ordway"
 octave relative
+
+```md box
+**曲子来自美国，歌词写于中国。** 旋律是约翰·奥德威 1868 年的《梦见家和母亲》，李叔同在
+1915 年为它填了这首词。
+
+- 这是只有开头的短版。在向导的步骤里点 the whole song，就打开唱到最后的完整版。
+- 「长」在这里读 cháng。乐谱里写作 长[chang]：方括号里是唱的读音，印出来的仍是汉字。
+
+**试一试**：把下面的 singer female 改成 singer male，就换成男声来唱。把 tempo 96 改成
+tempo 72，离别的味道更浓。
+```
+
 time 4/4
 key c major
 tempo 96
+
 part melody { instrument alto  lyrics words }
+singer female on melody
+
 section A {
   melody {
     g'4 e8( g) c2 | a4 c g2 | g4 c,8( d) e4 d8( c) | d2. r4 |
   }
   lyrics words language chinese {
-    长 亭 外 | 古 道 边 | 芳 草 碧 连 | 天 |
+    长[chang] 亭 外 | 古 道 边 | 芳 草 碧 连 | 天 |
   }
 }
+
 form { A }
-singer female on melody
-score { staff melody  lyrics words }
+
+score {
+  staff melody
+  lyrics words
+}

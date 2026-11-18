@@ -4,10 +4,27 @@
 title "아리랑"
 composer "Korean folk song"
 octave relative
+
+```md box
+**아리랑은 하나가 아닙니다.** 지역마다 가락과 가사가 다른 아리랑이 전해지며, 이 곡은 그중
+가장 널리 알려진 아리랑입니다.
+
+- 2012년에 유네스코 인류무형문화유산으로 등재되었습니다.
+- 9/8박자입니다. 한 마디를 「하나·둘·셋」 세 박으로 크게 세면 흐름이 느껴집니다.
+- 넘[너] 어[머] 처럼 대괄호 안에 소리 나는 대로 적으면, 악보에는 원래 글자가 찍히고 노래는
+  발음대로 부릅니다.
+
+**해 보기**: 아래의 singer female 을 singer male 로 바꾸면 남자 목소리가 부릅니다.
+tempo 4. = 84 를 tempo 4. = 66 으로 바꾸면 더 느긋해집니다.
+```
+
 time 9/8
 key f major
 tempo 4. = 84
+
 part melody { instrument alto  lyrics words }
+singer female on melody
+
 section A {
   melody {
     c'4.~ c4 d8 c4( d8) | f4.~ f4 g8 f4( g8) | a4. g8( a g) f4( d8) | c4.~ c4( d8 c d) r |
@@ -17,11 +34,15 @@ section A {
   }
   lyrics words language korean {
     아 리 랑 | 아 리 랑 | 아 라 리 | 요 |
-    아 리 랑 | 고 개 로 | 넘 어 간 | 다 |
-    나 를 | 버 리 고 | 가 시 는 님 | 은 |
-    십 리 도 | 못 가 서 | 발 병 난 | 다 |
+    아 리 랑 | 고 개 로 | 넘[너] 어[머] 간 | 다 |
+    나 를 | 버 리 고 | 가 시 는 님[니] | 은[믄] |
+    십[심] 리[니] 도 | 못 가 서 | 발 병 난 | 다 |
   }
 }
+
 form { A }
-singer female on melody
-score { staff melody  lyrics words }
+
+score {
+  staff melody
+  lyrics words
+}
