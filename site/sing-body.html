@@ -94,12 +94,18 @@
     drives it on Windows only. It is free under its own terms. That package has a server that keeps
     the voice loaded, so a phrase you change is sung again in well under a second; the plain package
     sings too, but loads the voice for every phrase. The package with the
-    tuning tool comes with the voice MERROW, the plain one with five; other voices from the same
-    site go under its <code>model</code> folder.</li>
+    tuning tool comes with the voice MERROW, the plain one with five; the last step adds more.</li>
     <li>Run <b>Cantoria: Choose NEUTRINO Folder…</b> and choose the folder that holds
     <code>bin</code>, <code>model</code> and <code>settings</code> (in the package with the tuning
     tool, the inner folder <code>NEUTRINO 調声支援ツール</code>).</li>
     <li>Write a voice: <code>singer "neutrino/MERROW" on melody</code>.</li>
+    <li>To add a voice, open NEUTRINO's <a href="https://studio-neutrino.com/downloads/">download
+    page</a>, where the voices are listed under 歌声ライブラリ, and download the voice's <b>v3 Tau</b>
+    version: the generation of the NEUTRINO you installed. Unpack it and put the voice's folder, the
+    one that holds <code>info.toml</code>, under NEUTRINO's <code>model</code> folder:
+    <code>model\ZUNDAMON\info.toml</code>. The voice is named by that folder,
+    <code>singer "neutrino/ZUNDAMON" on melody</code>, and the list after <code>singer "</code> shows
+    it. Each voice has terms of its own, in the files it comes with.</li>
   </ol>
 
   <p>A voice is named <code>engine/name</code>: <code>neutrino/MERROW</code>,
