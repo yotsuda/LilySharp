@@ -277,6 +277,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1304セッションの経緯
+
+### 1.1 第1304セッション（2026-11-18・YT-DELL2・第1303 と同じ会話）
+
+base `60639b0dd`・開始時 full 17624 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17627（Lab `p1304` の `start.log`）。REQUESTS の open は第1303 の頭で 0（同じ日・見直していない）。便の途中でオーナーが push した＝`origin/master` は `60639b0dd`（この便の commit は未 push）。
+- **ottava の括弧の両端は譜表の列＝`41e4133ba`**（leftovers の第1263 が残した右端）: LilyPond の `Ottava_spanner_engraver` は Staff に居て、左の bound は最初に知らされた NoteColumn・右は最後に知らされた NoteColumn＝同じ瞬間の列は声部の順に来る。Lily# は右端を「最後の瞬間の*最初*の声部の列・ずれなし」で読んでいた（下の声部が 2 度下にずれる `voice { c''2 d''2 } { b'2@8vb c''2@!8vb }` で 1.377 短い・上が 2 分で下が 4 分なら符頭の幅が違う・上が休符なら黒い符頭の幅）。左端は印を書いた声部の列・ずれなし（声部が交差して 1 声部目の符頭がずれる形で 1.102 左）。今は `StaffLastColumnBefore` が同じ瞬間なら後の声部を取って `HairpinEngraver.CollisionShift` を足し、左は `StaffFirstColumnAt`。探り譜 Lab `p1304/ot`（o0〜o10・`probe.ps1`）は両端とも 0.005 以内（LilyPond の右の extent は鉤の中心線の 0.05 外＝対照 o0 も同じ）。網 `OttavaStaffBoundsTests` 11 冊・毒 5 / 5 赤（`p1304/poisons.ps1`）・全 svg の掃きは 0 / 1268（追跡コーパスにこの形は無い）。⚠️ 残したまま: 段をまたいだ続きの左端・小節の終わりまで走る括弧の右端（小節の右端 − 0.6 の近似）・最後の列が休符のときの幅（元からの注）。⚠️ Lab `p723/svg2/sweep-all.ps1` は差が 0 のとき前の `diff.txt` を残す（空の列を `Set-Content` に流すと書かない）＝「compared N / differ 0」の行を読む。
+- 終了時 full 17635 合格 / 1 失敗（同じ）/ skip 2 / 合計 17638（`run3.trx`・+11＝網）。途中の 1 回は `ScoreVideoShapeTests.AScoreOfOnePage_IsItsMusic_NotTheSheet` も赤（単独 3 / 3 緑＝不安定な網）。拡張は触っていない。
+- **同じ会話の続き（オーナーの依頼）**: 「no singing voice」のボタンは案内が先頭・エンジンは ABC 順（`96a8d06cf`）。Cantoria は通常版の NEUTRINO（`neutrino.exe`・サーバなし）も歌う（Cantoria は未 push・実測は Lab `p1304/neutrino`＝1 フレーズ約 3.6 秒・サーバは曲全体 2.2 秒）。案内ページは同梱版を名指し・声の足し方も（`site/sing-body.html`）。残り: 新しいフレーズを 1 回で歌う道（Cantoria `docs/design.md` §3.1）。
+- **続き 2**: vocoder の無い DiffSinger の声は通知で設定を促す（`20557afdb`・実機は未確認）。**音節で歌う＝`sings "ラ"`・`lyrics "ラ" on PART`**（オーナー決定 2026-11-18・`706afc2ee`）＝track 名は引用符ごとの文字列（`GeneratedLyrics.IsSyllable`）。残り: ステップキーは音節へ動かない。
+- **続き 3（第1305 の後・同じ会話・オーナーの依頼）**: singer の文字列の `+` は LYS4039（`07bd207d6`・Cantoria も `+` でつなぐ声を外した）。README のフェンスは ```` ```lily# ````（`175dc3c20`＝CI の `ReadmeSampleTests`）。**最初の歌声までの道はエディタの中のウォークスルー**（`af9492d32`・`contributes.walkthroughs` の `singing`・`when: lilysharp.singingGuide`・ページは `editors/vscode/walkthrough/`・外へのリンクはドメインだけ＝`2a05c2242`・網 `singingWalkthrough.test.ts`）。開くコマンドは **Lily#: Set Up a Singing Voice**＝`lilysharp.setUpSingingVoice`（`266ac69f8`・`cd62ec56e`）。Cantoria に **Find Engines on This Computer**（`472fca65a` が段に置いた）＝探す場所は実物で確かめた: VOICEVOX のインストーラは `%LOCALAPPDATA%\Programs\VOICEVOX`、エンジンは初回の起動で `%APPDATA%\voicevox\vvpp-engines\VOICEVOX_Engine+<uuid>\run.exe`／OpenUtau は Program Files に `installed.txt`・データは Documents（OneDrive でも）`\OpenUtau`。Cantoria の設定は Voices Folder が先・任意の 2 つに Optional・パレットの「How to Install a Voice」は外した（ボタンは残る）。GPU の無い PC の遅さは案内ページとウォークスルーに 1 組の数字で（`056946356`・`9f7a6ec5b`）。状態表示は作らない（オーナー）。GitHub の topics は 12 個付けた。Cantoria の pull と Lily# の pull の衝突（CHANGELOG）は両側を残して解いた。⚠️ マージの後の full は 1 回（3 失敗＝HANDOFF の SHA・commit 前の 1 本・`KeystrokeSideWorkTests` の不安定）で、その後は該当の網と拡張 1294 合格だけ。**オーナーの確認と判断待ちの一覧は Lab `sessions/p1304/owner-checks.md`**。
+- **次**: leftovers の第1263 の残り＝ずれた声部の運指（第 1 声）・コード名・`@text` の X（未測定＝まず探り譜）。その先は leftovers の「第1239」「第1238」の残り（別の声部のヘアピンと出会う形の絵・combinedStaff の印の re-address）。review.md の残りは設計が先の 3 つ（`mid-bar-break`＝§1.1 第1303・F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。
+
 ## 以下は第1303セッションの経緯
 
 ### 1.1 第1303セッション（2026-11-18・YT-DELL2）

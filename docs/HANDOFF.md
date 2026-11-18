@@ -89,7 +89,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
 - **★★★ オーナー決定 2026-11-15（第1264・6 件）**: ①〜④ と、⑥ 評価 4 の案（Lab `p1227/proposals-eval4.md`）の「作る」5 件＝6・7・8-1・2・4 は済み（第1264〜第1272・設計と実際の形は `docs/eval4-features-design.md`。6 の「歌い手が × の音を歌わない」だけ未＝同 §6 の末尾）／⑤ Dettato: 依頼 1＝作る（D3 で形が固まってから・名前「Convert Recording to Lily# (.lys)…」・Windows 以外はメニューを出さない）・依頼 2＝今は作らない（REQUESTS の行に書いた＝Dettato の repo では未 commit）／⑥ の**後で**＝3（`pass 2 { }`・文字は英語固定）・1（持ち替え・「to X」は自動で刷らない）・10（まず診断だけ）＝作る前に設計メモ・**着手してよい**（オーナー 2026-11-15 第1278「ほかに着手すべき候補がなければすぐ着手して良い」。10 の診断は LYS0046 で済み＝残りは 3 → 1）／**見送り**＝5・8-2〜4・9。**次の一手**: 下の行の Lab `sessions/p1242/leftovers.md` の欠陥から（第1272 が見つけた 2 件＝`lysc xml` の part header の `key` と、MusicXML の読み込みの `<transpose>` は第1273・第1275 で閉じた。一覧の先頭から順に）。
-- **★ 包括レビュー（オーナーの指示 2026-11-18・第1291）＝Lab `sessions/p1291/review.md`**: プレビュー更新の性能 P1〜P10 とリファクタ F1〜F7。P1〜P10・F1・F2・F3 段 1・F5・F7 と F4 の大半は済み（経緯は ARCHIVE の第1291〜第1301 と §1.1・数字は Lab `sessions/p1302/notes.md`）。残り＝設計が先の 3 つ（`mid-bar-break`・F4 の残り・`shiftPage`）と F3 段 2。残りは訊かずに着手してよい（オーナー 2026-11-18・次の順は §1.1 第1304 の末尾。F3 段 2 はオーナー判断）。
+- **★ 包括レビュー（オーナーの指示 2026-11-18・第1291）＝Lab `sessions/p1291/review.md`**: プレビュー更新の性能 P1〜P10 とリファクタ F1〜F7。P1〜P10・F1・F2・F3 段 1・F5・F7 と F4 の大半は済み（経緯は ARCHIVE の第1291〜第1301 と §1.1・数字は Lab `sessions/p1302/notes.md`）。残り＝設計が先の 3 つ（`mid-bar-break`・F4 の残り・`shiftPage`）と F3 段 2。残りは訊かずに着手してよい（オーナー 2026-11-18・次の順は §1.1 第1306 の末尾。F3 段 2 はオーナー判断）。
 - **★ A-B リピート（オーナー決定 2026-11-17・第1286）＝`docs/ab-repeat-design.md`**: §3 の 1〜5 は全部済み（1〜4 は第1286・5 の帯は第1287＝形は同 §3 の末尾）。残りは実機の確認（`MANUAL-CHECKS` の A-B その 1・その 2＝オーナー）と、帯をファイルの名前の変更・コピーに付いて行かせるか（未決・要望が出たら）。
 - **★ コード行の中に書けるもの（オーナー決定 2026-11-16・第1285）**: `time`・`tempo`・`%`・`key` は済み（§1.1）。**残り＝コードに付ける印 `@rit`／`@accel`／`@rall`（`…@!rit`）・`@fermata`・`@text("…")`**（今は `@todo` だけ）。強弱は見送り。
 - **★ 録音を聴きながら直す（Dettato #4・オーナーの希望 2026-11-15）＝`docs/recording-design.md`**: S1〜S4 と §1 7（楽譜と録音を同時に）・§7（書き出しに録音・第1286）は済み（§1.1 第1284〜第1286）。**次は S5**（帯・`Mark Bar Line Here`・ドラッグ・`byHand`）→ S6（CHANGELOG・Dettato への返事）。§8 の録音のパート（Dettato #16）は第1288 で実装・実測済み・使っている間のメモリは今のまま（オーナー決定 2026-11-17）＝残りは耳の確認（`MANUAL-CHECKS`「録音のパート」）。耳の確認は `MANUAL-CHECKS` §3.9（オーナー）。
@@ -146,6 +146,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1306セッション（2026-11-18・YT-DELL2・新しい会話）
+
+base `1fc8305c7`・開始時 full 17683 合格 / 0 失敗 / skip 2 / 合計 17685（Lab `p1306` の `start.log`・`run1.trx`）。REQUESTS の open は Calamo・Dettato とも 0。CI は `d236aab43` で success。
+- **ずれた声部の運指（第 1 声）・`@text`・コード名の X＝測って欠陥なし（leftovers の第1263 の残り）・網だけ `d10c12426`**: 探り譜 Lab `p1306/shift`（g0〜g5・t0〜t5・h0〜h3・c0〜c2・`probe.ps1`・`dump.ily`）。声部が交差して第 1 声がずれる形の運指はずれた符頭の中央、`@text` はずれた符頭（強弱の経路を通る＝`DynamicEngraver` のずれ）、コード名（行のものも音符の `@chord` も）は声部が共有する列＝LilyPond の ChordName と同じ。X・Y とも 0.01 以内。網 `VoiceShiftedMarksTests` +6・毒 2 / 2 赤（`p1306/poisons.ps1` の P1・P2）。
+- **別の声部のヘアピンと出会って終わる形の絵（leftovers の第1239 の先頭）＝`e1b32f6d2`**: 自分の声部が後に何も書かないヘアピンは、別の声部のヘアピンの始まりで終わる（`DetectHairpins` の譜表全体の探し）。その 2 本を「背中合わせ」（列の中央 ∓ 0.33）に描いていた＝高さの違う 2 本の線の上で、condensedStaff では譜表の上と下で。LilyPond の adjacent-spanners は 1 つの Dynamic_engraver（Voice に居る）の中だけ＝2 つの声部のヘアピンは背中合わせにならない。今は `HairpinItem.MetInAnotherVoice`＝その瞬間に `\!` を書いた LilyPond の絵: 自分の声部のその瞬間の音符の右端まで（休符は左端・自分の声部が長い音を伸ばしているなら出会った声部の列・小節の頭は今までどおり小節線）、相手は自分の列の左から 1 本下の線。基準は双子に手で `\!` を足したもの（Lab `p1306/hp` の 7 冊＝X・Y とも 0.01 以内・s4＝同じ声部の対は動かない・condensedStaff は `hp/cs/k1`）。網 `HairpinVoiceTests` +9・毒 7 本のうち赤 6・緑 1＝section の切断のときの旗の戻し（観測者なし・行に注）。全 svg の掃きは 0 / 1269（`p1306/sweep`・追跡コーパスにこの形は無い）。CHANGELOG に 1 行。
+- ⚠️ 残したまま: `.ly` はこのヘアピンに `\!` を書かない（`LilyPondExporter.EmitDynamic` の注が宣言している方針）＝ページは描き、LilyPond は unterminated と言って描かない。別の声部の*強弱*で終わる形（第1239 の t1）は今までどおりその文字が端。出会う瞬間が装飾音の形は未測定。
+- 終了時 full 17697 合格 / 1 失敗 / skip 2 / 合計 17700（`run3.trx`・+15＝網。1 失敗は §1 の字数の門＝この語りを 170 字超えて書いていた・削って単独で緑）。途中の 1 回（掃きと並走）は `ScoreVideoShapeTests` の 1 本も赤（単独 4 / 4 緑＝不安定な網）。拡張は触っていない。
+- **次**: leftovers の「第1239」の残り（condensedStaff の終わりは「立っている写し」の場所・刻印の網が無い運び手・「item の時刻」の綴り 3 つ・3 声部の強弱の並び）→「第1238」の残り（combinedStaff の印の re-address・drum 譜の落ちた側のヘアピン・段の部屋の予約の網）。その先は review.md の設計が先の 3 つ（`mid-bar-break`・F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。
+
+## 以下は第1305セッションの経緯
+
 ### 1.1 第1305セッション（2026-11-18・YT-LAPTOP4・第1304 とは別の会話）
 
 base `a5020e133`（オーナーの pull の後）。**`Session-Check -Start` は回していない**（オーナーの報告から入った便）＝開始時の full は無い・§7 3.5 のアーカイブは終わりに `-Archive 1303` で回した。CI は第1304 の `c49afc9ab` で `failure`（run `44249764964`・この便は読んでいない）。REQUESTS は見ていない。
@@ -155,18 +166,6 @@ base `a5020e133`（オーナーの pull の後）。**`Session-Check -Start` は
 - ⚠️ **オーナーの VS Code はまだ古い拡張**（Cantoria 0.4.0・Lily# 0.16.0）＝症状はそのまま。Cantoria `tools\deploy-extension.ps1` と Lily# の VSIX の作り直し・Reload はオーナー。Cantoria は未 push。
 - **残り**: VS Code の中で「歌いかけのフレーズを次の依頼が引き取る」形は見ていない（nocturne の rh は 1 フレーズ＝止める側だけ・引き取る側は serve で確認）。GPU のある機械では測っていない。exe 版と server 版の速さの差（1.8 倍）のうち、モデルの読み込みの分と版（v3.2.2 と v3.2.6）の分は分けていない。
 - **次**: 第1304 の「次」のまま（下）。
-
-## 以下は第1304セッションの経緯
-
-### 1.1 第1304セッション（2026-11-18・YT-DELL2・第1303 と同じ会話）
-
-base `60639b0dd`・開始時 full 17624 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17627（Lab `p1304` の `start.log`）。REQUESTS の open は第1303 の頭で 0（同じ日・見直していない）。便の途中でオーナーが push した＝`origin/master` は `60639b0dd`（この便の commit は未 push）。
-- **ottava の括弧の両端は譜表の列＝`41e4133ba`**（leftovers の第1263 が残した右端）: LilyPond の `Ottava_spanner_engraver` は Staff に居て、左の bound は最初に知らされた NoteColumn・右は最後に知らされた NoteColumn＝同じ瞬間の列は声部の順に来る。Lily# は右端を「最後の瞬間の*最初*の声部の列・ずれなし」で読んでいた（下の声部が 2 度下にずれる `voice { c''2 d''2 } { b'2@8vb c''2@!8vb }` で 1.377 短い・上が 2 分で下が 4 分なら符頭の幅が違う・上が休符なら黒い符頭の幅）。左端は印を書いた声部の列・ずれなし（声部が交差して 1 声部目の符頭がずれる形で 1.102 左）。今は `StaffLastColumnBefore` が同じ瞬間なら後の声部を取って `HairpinEngraver.CollisionShift` を足し、左は `StaffFirstColumnAt`。探り譜 Lab `p1304/ot`（o0〜o10・`probe.ps1`）は両端とも 0.005 以内（LilyPond の右の extent は鉤の中心線の 0.05 外＝対照 o0 も同じ）。網 `OttavaStaffBoundsTests` 11 冊・毒 5 / 5 赤（`p1304/poisons.ps1`）・全 svg の掃きは 0 / 1268（追跡コーパスにこの形は無い）。⚠️ 残したまま: 段をまたいだ続きの左端・小節の終わりまで走る括弧の右端（小節の右端 − 0.6 の近似）・最後の列が休符のときの幅（元からの注）。⚠️ Lab `p723/svg2/sweep-all.ps1` は差が 0 のとき前の `diff.txt` を残す（空の列を `Set-Content` に流すと書かない）＝「compared N / differ 0」の行を読む。
-- 終了時 full 17635 合格 / 1 失敗（同じ）/ skip 2 / 合計 17638（`run3.trx`・+11＝網）。途中の 1 回は `ScoreVideoShapeTests.AScoreOfOnePage_IsItsMusic_NotTheSheet` も赤（単独 3 / 3 緑＝不安定な網）。拡張は触っていない。
-- **同じ会話の続き（オーナーの依頼）**: 「no singing voice」のボタンは案内が先頭・エンジンは ABC 順（`96a8d06cf`）。Cantoria は通常版の NEUTRINO（`neutrino.exe`・サーバなし）も歌う（Cantoria は未 push・実測は Lab `p1304/neutrino`＝1 フレーズ約 3.6 秒・サーバは曲全体 2.2 秒）。案内ページは同梱版を名指し・声の足し方も（`site/sing-body.html`）。残り: 新しいフレーズを 1 回で歌う道（Cantoria `docs/design.md` §3.1）。
-- **続き 2**: vocoder の無い DiffSinger の声は通知で設定を促す（`20557afdb`・実機は未確認）。**音節で歌う＝`sings "ラ"`・`lyrics "ラ" on PART`**（オーナー決定 2026-11-18・`706afc2ee`）＝track 名は引用符ごとの文字列（`GeneratedLyrics.IsSyllable`）。残り: ステップキーは音節へ動かない。
-- **続き 3（第1305 の後・同じ会話・オーナーの依頼）**: singer の文字列の `+` は LYS4039（`07bd207d6`・Cantoria も `+` でつなぐ声を外した）。README のフェンスは ```` ```lily# ````（`175dc3c20`＝CI の `ReadmeSampleTests`）。**最初の歌声までの道はエディタの中のウォークスルー**（`af9492d32`・`contributes.walkthroughs` の `singing`・`when: lilysharp.singingGuide`・ページは `editors/vscode/walkthrough/`・外へのリンクはドメインだけ＝`2a05c2242`・網 `singingWalkthrough.test.ts`）。開くコマンドは **Lily#: Set Up a Singing Voice**＝`lilysharp.setUpSingingVoice`（`266ac69f8`・`cd62ec56e`）。Cantoria に **Find Engines on This Computer**（`472fca65a` が段に置いた）＝探す場所は実物で確かめた: VOICEVOX のインストーラは `%LOCALAPPDATA%\Programs\VOICEVOX`、エンジンは初回の起動で `%APPDATA%\voicevox\vvpp-engines\VOICEVOX_Engine+<uuid>\run.exe`／OpenUtau は Program Files に `installed.txt`・データは Documents（OneDrive でも）`\OpenUtau`。Cantoria の設定は Voices Folder が先・任意の 2 つに Optional・パレットの「How to Install a Voice」は外した（ボタンは残る）。GPU の無い PC の遅さは案内ページとウォークスルーに 1 組の数字で（`056946356`・`9f7a6ec5b`）。状態表示は作らない（オーナー）。GitHub の topics は 12 個付けた。Cantoria の pull と Lily# の pull の衝突（CHANGELOG）は両側を残して解いた。⚠️ マージの後の full は 1 回（3 失敗＝HANDOFF の SHA・commit 前の 1 本・`KeystrokeSideWorkTests` の不安定）で、その後は該当の網と拡張 1294 合格だけ。**オーナーの確認と判断待ちの一覧は Lab `sessions/p1304/owner-checks.md`**。
-- **次**: leftovers の第1263 の残り＝ずれた声部の運指（第 1 声）・コード名・`@text` の X（未測定＝まず探り譜）。その先は leftovers の「第1239」「第1238」の残り（別の声部のヘアピンと出会う形の絵・combinedStaff の印の re-address）。review.md の残りは設計が先の 3 つ（`mid-bar-break`＝§1.1 第1303・F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。
 
 ## 2. 開いている作業
 
