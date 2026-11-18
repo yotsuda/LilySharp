@@ -190,7 +190,29 @@ public sealed class Document
         Text = text;
         Tree = tree;
         Version = version;
+        // (Only a tree OF this text: the completion's stand-in for a text with its fences
+        // blanked carries the document's tree beside another text, and that text is parsed.)
+        if (ReferenceEquals(tree.Text, text))
+            TreesOfTexts.AddOrUpdate(text, tree);
     }
+
+    // By the text INSTANCE (a document hands out one string per version), so an entry dies
+    // with the edit.
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<string, SyntaxTree>
+        TreesOfTexts = new();
+
+    /// <summary>
+    /// The tree of <paramref name="text"/>: a document's own when the text is a document's
+    /// (the same string instance), else a parse of it.
+    /// </summary>
+    /// <remarks>
+    /// For the helpers that take a document's TEXT and need its tree too — the completion's
+    /// lists, which are written and tested as functions of a string. Seven of them parsed the
+    /// whole text again for each list (review of session 1291), beside the tree the document
+    /// already had.
+    /// </remarks>
+    internal static SyntaxTree TreeOf(string text)
+        => TreesOfTexts.TryGetValue(text, out var tree) ? tree : SyntaxTree.Parse(text);
 }
 
 

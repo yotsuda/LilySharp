@@ -561,7 +561,7 @@ public sealed partial class LilySharpLanguageServer
     /// </summary>
     internal static CompletionList GetChordDiagramCapoCompletions(string text)
     {
-        var root = Core.Syntax.SyntaxTree.Parse(text).GetRoot();
+        var root = Document.TreeOf(text).GetRoot();
         var tuning = CapoRankingTuning(root);
         var ranking = Core.Semantics.CapoAdvisor.Rank(root, tuning);
         if (ranking.Count == 0)
@@ -615,7 +615,7 @@ public sealed partial class LilySharpLanguageServer
                && listed.Any(l => Core.Music.ChordShapeTable.SameChord(l, chord));
 
         var items = new List<CompletionItem>();
-        var root = Core.Syntax.SyntaxTree.Parse(text).GetRoot();
+        var root = Document.TreeOf(text).GetRoot();
         foreach (var (symbol, _) in Core.Semantics.CapoAdvisor.ChordsOf(root))
             if (!IsListed(symbol))
                 items.Add(new CompletionItem
@@ -649,7 +649,7 @@ public sealed partial class LilySharpLanguageServer
     internal static CompletionList GetChordDiagramTableSectionCompletions(string text, int offset)
     {
         var (_, sections) = ShapeTableScope(text, offset);
-        var root = Core.Syntax.SyntaxTree.Parse(text).GetRoot();
+        var root = Document.TreeOf(text).GetRoot();
         bool hasBrace = SectionNameIsFollowedByBrace(text, offset);
         var names = SectionReferenceFinder.AllSectionNameTokens(root).Select(t => t.Text)
             .Distinct(StringComparer.Ordinal).Where(n => !sections.Contains(n)).ToList();
@@ -3119,7 +3119,7 @@ public sealed partial class LilySharpLanguageServer
         // ~silent, and [1. NAME] volta alternatives), which a text scan cannot.
         var known = new System.Collections.Generic.List<string>();
         var seen = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
-        var root = SyntaxTree.Parse(text).GetRoot();
+        var root = Document.TreeOf(text).GetRoot();
         foreach (var tok in SectionReferenceFinder.AllSectionNameTokens(root))
             if (seen.Add(tok.Text))
                 known.Add(tok.Text);
@@ -3182,7 +3182,7 @@ public sealed partial class LilySharpLanguageServer
         // Written as cells already? (The sections of the block the caret is in — the same
         // reading the scaffolds subtract, so the two cannot disagree.)
         bool sectioned = SectionsDeclaredInCurrentBlock(text, offset).Count > 0
-            || LilySharp.Core.Editing.PartSectionRegrouper.Detect(SyntaxTree.Parse(text).GetRoot())
+            || LilySharp.Core.Editing.PartSectionRegrouper.Detect(Document.TreeOf(text).GetRoot())
                 == LilySharp.Core.Editing.Grouping.ByPart;
 
         return sectioned
@@ -3259,7 +3259,7 @@ public sealed partial class LilySharpLanguageServer
     {
         var known = new System.Collections.Generic.List<string>();
         var seen = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
-        var root = SyntaxTree.Parse(text).GetRoot();
+        var root = Document.TreeOf(text).GetRoot();
         foreach (var tok in SectionReferenceFinder.AllSectionNameTokens(root))
             if (seen.Add(tok.Text))
                 known.Add(tok.Text);
@@ -3350,7 +3350,7 @@ public sealed partial class LilySharpLanguageServer
         // `section A { }` is a standalone HEADER: it carries section-wide directives (a pickup,
         // key, time, tempo, a section-scoped grob override) that apply to every part of the
         // section — never part cells. Offer those directives, not part names.
-        if (LilySharp.Core.Editing.PartSectionRegrouper.Detect(SyntaxTree.Parse(text).GetRoot())
+        if (LilySharp.Core.Editing.PartSectionRegrouper.Detect(Document.TreeOf(text).GetRoot())
             == LilySharp.Core.Editing.Grouping.ByPart)
             return new CompletionList { Items = SectionHeaderDirectiveItems() };
 
