@@ -595,7 +595,8 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         .mixer-panel .mhead.mtempo { margin-bottom: 0; flex-wrap: wrap; row-gap: 4px; }
         .mixer-panel .mhead.mtempo .fader { width: auto; flex: 1 1 70px; min-width: 70px; }
         .mixer-panel .mhead.mtempo > button.toggle { flex: 0 0 auto; white-space: nowrap; }
-        .mixer-panel .mfoot { clear: both; border-top: 1px solid rgba(128, 128, 128, 0.35); padding: 8px 2px 2px; text-align: right; }
+        /* Faders 100%: at the right of the row it stands in (placeFadersReset). */
+        .mixer-panel #fadersReset { margin-left: auto; white-space: nowrap; }
         /* As long as the tempo's slider (owner's request 2026-11-09, session 1159: longer, the 200% end further right). */
         .practice-panel .parts input.fader { width: 160px; flex: 0 0 auto; margin: 0; accent-color: #0078d7; cursor: pointer; }
         .practice-panel .parts .flevel { width: 2.8em; flex: 0 0 auto; text-align: right; font-size: 11px; opacity: 0.8; font-variant-numeric: tabular-nums; }
@@ -701,7 +702,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             <div class="mhead"><button type="button" class="mfold mtitle" aria-expanded="true">Score</button><button type="button" id="scoreOnBtn" class="toggle" aria-pressed="true" title="The score sounds: the parts turned on below — press to silence it, each part's own on or off kept">Play</button><button type="button" id="scoreAllBtn" class="toggle mall" aria-pressed="true" title="Every part of the score on, as the score has them — or every one off">All</button><input type="range" id="scoreLevelSlider" class="fader" min="0" max="200" step="1" value="100" aria-label="Score volume"><span id="scoreLevelValue" class="flevel"></span></div>
             <div class="mbody">
                 <span id="partsList" class="parts"></span>
-                <div class="prow presets"><span class="plbl"></span><span class="tempo"><button type="button" id="partsReset" title="The parts the selected score plays">As scored</button></span></div>
+                <div class="prow presets"><span class="plbl"></span><span class="tempo"><button type="button" id="partsReset" title="The parts the selected score plays">As scored</button><button type="button" id="fadersReset" title="Every fader to 100%: the score's and the recording's">Faders 100%</button></span></div>
             </div>
         </div>
         <div class="mgroup" id="mixRecGroup" data-fold="rec" hidden>
@@ -715,7 +716,6 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             <div class="prow moctrow" id="recOctRow"><span class="plbl">Octave</span><span class="tempo"><button type="button" id="recOctDown" title="An octave down">−</button><span id="recOctValue" class="tval">0</span><button type="button" id="recOctUp" title="An octave up">+</button></span></div>
             <div id="recStatus" class="rec-status" role="status"></div>
         </div>
-        <div class="mfoot"><button type="button" id="fadersReset" title="Every fader to 100%">Faders 100%</button></div>
     </div>
     <div class="main-content">
         <div class="container">
@@ -4952,6 +4952,13 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             }
             return recPlayer;
         }
+        /** Faders 100% stands at the right of the recording's Octave row, where there is room (owner's
+         *  request 2026-11-19: it had a line of its own at the panel's foot) — and, with no recording
+         *  (its group hidden), beside As scored. */
+        function placeFadersReset() {
+            const row = document.querySelector(recording ? '#recOctRow .tempo' : '#partsReset').closest('.tempo');
+            row.appendChild(document.getElementById('fadersReset'));
+        }
         function recStatus(text) {
             document.getElementById('recStatus').textContent = text || '';
         }
@@ -5126,6 +5133,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 recording = null;
                 recOn = false;
                 document.getElementById('mixRecGroup').hidden = true;   // (the mixer's recording group: §1 1)
+                placeFadersReset();
                 if (had && lastPartsMessage) renderParts(lastPartsMessage);
                 return;
             }
@@ -5145,6 +5153,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             // request 2026-11-16; the extension says so once, recording.ts justConverted).
             if (m.turnOn) recOn = true;
             document.getElementById('mixRecGroup').hidden = false;
+            placeFadersReset();
             if (fresh && lastPartsMessage) renderParts(lastPartsMessage);
             document.getElementById('recName').textContent = recording.name;
             document.getElementById('recName').title = recording.name;

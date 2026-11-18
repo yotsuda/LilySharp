@@ -322,6 +322,12 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /<div class="prow moctrow" id="recOctRow"><span class="plbl">Octave<\/span>/);
         assert.doesNotMatch(html, /recSpeedSlider|recSemiSlider|recCentSlider|recLinkBtn|recChartRow|recReset|recSummary|id="recSettings"|<details|recTuneBtn|recTuning/);
         assert.doesNotMatch(glue, /tuning/);
+        // Faders 100% stands at the right of the Octave row — beside As scored with no recording — and
+        // the panel has no foot line for it (owner's request 2026-11-19).
+        assert.match(html, /const row = document\.querySelector\(recording \? '#recOctRow \.tempo' : '#partsReset'\)\.closest\('\.tempo'\);\s*row\.appendChild\(document\.getElementById\('fadersReset'\)\);/);
+        assert.match(html, /getElementById\('mixRecGroup'\)\.hidden = false;\s*placeFadersReset\(\);/);
+        assert.match(html, /getElementById\('mixRecGroup'\)\.hidden = true;[^\n]*\s*placeFadersReset\(\);/);
+        assert.doesNotMatch(html, /mfoot/);
         assert.doesNotMatch(html, /\.play\(sec, recSettings,|recPlayer\.update\(recSettings\)|recordingPlan\(recSettings/);
         assert.match(html, /case 'chartTranspose': \{\s*const n = Number\(message\.semitones\) \|\| 0;\s*if \(n !== chartShift\) \{ chartShift = n; recApply\(\); \}/);
         assert.match(extension, /panel\.webview\.postMessage\(\{ type: 'chartTranspose', semitones: response\.ChartTranspose \?\? 0 \}\);/);
