@@ -368,7 +368,7 @@ const VOICE_SETUP_ACTIONS: VoiceGuide['actions'] = [
     { label: 'Choose VOICEVOX Folder…', command: 'cantoria.chooseVoicevoxFolder' },
 ];
 const GUIDE_LINK = `[How to install a voice](${VOICE_INSTALL_GUIDE})`;
-const ENGINE_LINKS = '[NEUTRINO](https://studio-neutrino.com/), [DiffSinger](https://github.com/openvpi/DiffSinger) or [VOICEVOX](https://voicevox.hiroshiba.jp/)';
+const ENGINE_LINKS = '[DiffSinger](https://github.com/openvpi/DiffSinger), [NEUTRINO](https://studio-neutrino.com/) or [VOICEVOX](https://voicevox.hiroshiba.jp/)';
 const STILL_WRITTEN = 'The score can still be written: a name here is sung once that voice is installed.';
 
 /** What the editor says when no singing voice is installed: with the Cantoria extension, that an engine
@@ -379,7 +379,7 @@ export function noVoiceGuide(cantoria: boolean): VoiceGuide {
             label: 'No singing voice is installed',
             detail: 'Set up a voice…',
             documentation: `Cantoria has no voice to sing with. Install ${ENGINE_LINKS}, then choose its folder: take this line for the buttons.\n\n${GUIDE_LINK}.\n\n${STILL_WRITTEN}`,
-            message: 'Lily#: no singing voice is installed. Cantoria sings with NEUTRINO, DiffSinger or VOICEVOX: install one, then choose its folder.',
+            message: 'Lily#: no singing voice is installed. Cantoria sings with DiffSinger, NEUTRINO or VOICEVOX: install one, then choose its folder.',
             actions: VOICE_SETUP_ACTIONS,
         }
         : {
@@ -406,7 +406,7 @@ export function noLanguageGuide(language: string, voices: readonly CantoriaVoice
     if (language === 'ja') {
         return { ...base,
             documentation: `${installed} Install ${ENGINE_LINKS}, then choose its folder: take this line for the buttons. ${words}\n\n${GUIDE_LINK}.\n\n${STILL_WRITTEN}`,
-            message: `Lily#: no installed voice sings ${wanted}. NEUTRINO, VOICEVOX and DiffSinger voices do: install one, then choose its folder.`,
+            message: `Lily#: no installed voice sings ${wanted}. DiffSinger, NEUTRINO and VOICEVOX voices do: install one, then choose its folder.`,
             actions: VOICE_SETUP_ACTIONS };
     }
     if (language === 'en' || language === 'zh' || language === 'ko') {

@@ -212,7 +212,7 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "provider": { "type": "string", "description": "Only this provider's voices: neutrino, diffsinger or voicevox (optional)." },
+            "provider": { "type": "string", "description": "Only this provider's voices: diffsinger, neutrino or voicevox (optional)." },
             "gender": { "type": "string", "enum": ["male", "female"], "description": "Only voices of this gender, and those that do not state one (optional)." },
             "language": { "type": "string", "description": "Only voices that sing this language: japanese or english, or ja or en (optional)." }
           }
