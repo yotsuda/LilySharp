@@ -94,6 +94,31 @@ public sealed record HairpinItem(
     public bool EndsAtStop { get; init; }
 
     /// <summary>
+    /// The hairpin ends where ANOTHER voice's hairpin begins — its own voice writes nothing
+    /// after it, so the search went over the staff (<c>HairpinEngraver.DetectHairpins</c>). It
+    /// is drawn as a hairpin stopped at that moment (<see cref="EndsAtStop"/>'s picture, on its
+    /// own voice's note there when it has one), and the two are NOT back to back
+    /// (<see cref="AdjacentAtEnd"/>): each is on its own voice's line.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: the pairing (LilyPond pairs a hairpin in its own voice and leaves this one
+    ///   unterminated, drawing none); the picture is LilyPond's for the same hairpin with
+    ///   <c>\!</c> written at that moment.
+    ///   departs from: lily/dynamic-engraver.cc:197-211 Dynamic_engraver::finalize.
+    ///   observed by: HairpinVoiceTests (a hairpin met in another voice).
+    /// LILYPOND-REF: lily/dynamic-engraver.cc:155-165 process_music — adjacent-spanners are the
+    ///   hairpin ending and the one starting in ONE Dynamic_engraver, which stands in a Voice.
+    /// MEASURED (LilyPond 2.26.0, Lab sessions/p1306/hp, the twin with <c>\!</c> by hand):
+    ///   t4 <c>&lt;&lt; { c''8 c'' c''\&lt; c'' c''2\! } \\ { c'2 c'2\&gt; } &gt;&gt;</c> — the crescendo
+    ///   runs 22.079..28.565, to the right edge of its c''2 (27.138..28.515), and the
+    ///   decrescendo opens at 27.088, its own column's left, one line lower (−8.28 under −6.54).
+    ///   Until session 1306 the two were drawn back to back, 27.49 and 28.16, as one voice's
+    ///   pair is (s4: 27.543 and 28.110) — on two lines of different heights. A condensed
+    ///   staff's two parts were too, the one's wedge ABOVE the staff and the other's below.
+    /// </remarks>
+    public bool MetInAnotherVoice { get; init; }
+
+    /// <summary>
     /// The source position of what the hairpin was paired with as its end — the level, the next
     /// hairpin's start or the stop (<c>@!cresc</c>) — or -1 for none: a hairpin nothing ends
     /// runs to its bar's line, and one the carry rule cuts (<see cref="CutAtSectionEnd"/>) to

@@ -406,6 +406,13 @@ internal static class HairpinEngraver
                 // LILYPOND-REF: lily/hairpin.cc:258-259 — x_points[d] = e.center () - d * padding / 3
                 ownEndX = (metColumn.Left + metColumn.Right) / 2 - BoundPadding / 3;
             }
+            else if (hairpin.MetInAnotherVoice
+                     && MeetingColumn(hairpin, hpVoices, hpMeasures, endMeasures, measureLayouts, endShift) is { } meeting)
+            {
+                // Ended where another voice's hairpin begins: LilyPond's \! at that moment
+                // (HairpinItem.MetInAnotherVoice), bound to the column as the stop below is.
+                ownEndX = meeting.IsRest ? meeting.Left : meeting.Right;
+            }
             else if ((hairpin.NienteAtEnd != null || hairpin.EndsAtStop)
                      && ColumnExtent(hairpin.EndMeasureIndex, hairpin.EndItemIndex, endMeasures,
                          measureLayouts, endShift) is { } endColumn)
@@ -645,6 +652,41 @@ internal static class HairpinEngraver
             onset = onset + own[i].Duration;
         }
         return last;
+    }
+
+    /// <summary>
+    /// The column a hairpin met in another voice ends on
+    /// (<see cref="HairpinItem.MetInAnotherVoice"/>): its OWN voice's item beginning at that
+    /// moment, where the collision put it, or — its own voice holding a longer note there —
+    /// the column of the voice that met it.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (LilyPond 2.26.0, Lab sessions/p1306/hp, <c>\!</c> written by hand): t6, the
+    /// meeting voice a second under and shifted, ends at 28.565 — the right edge of the
+    /// hairpin's own c''2 (27.138..28.515), not of the shifted b' (28.515..29.892); t7, the own
+    /// voice holding a dotted half (the <c>\!</c> on a skip of its Voice), ends at 23.599, the
+    /// right edge of the other voice's c'2 (22.172..23.549) — the paper column's only note.
+    /// </remarks>
+    private static (double Left, double Right, bool IsRest)? MeetingColumn(
+        HairpinItem hairpin, ImmutableArray<Voice> hpVoices, ImmutableArray<Measure> hpMeasures,
+        ImmutableArray<Measure> endMeasures, ImmutableArray<MeasureLayout> measureLayouts, double endShift)
+    {
+        int m = hairpin.EndMeasureIndex;
+        if (!hpMeasures.IsDefaultOrEmpty && !endMeasures.IsDefaultOrEmpty
+            && m >= 0 && m < hpMeasures.Length && m < endMeasures.Length)
+        {
+            var meetingOnset = LayoutUtilities.ItemOnset(endMeasures[m], hairpin.EndItemIndex);
+            var own = hpMeasures[m].Items;
+            var onset = Semantics.Fraction.Zero;
+            for (int i = 0; i < own.Length && onset <= meetingOnset; i++)
+            {
+                if (onset == meetingOnset && !own[i].GraceTime)
+                    return ColumnExtent(m, i, hpMeasures, measureLayouts,
+                        CollisionShift(hpVoices, SupportVoice(hairpin, hpVoices), m, i));
+                onset = onset + own[i].Duration;
+            }
+        }
+        return ColumnExtent(m, hairpin.EndItemIndex, endMeasures, measureLayouts, endShift);
     }
 
     /// <summary>
@@ -1232,6 +1274,7 @@ internal static class HairpinEngraver
             int endVoice = mark.VoiceIndex;
             DynamicItem? endDynamic = null;
             bool endsAtStop = false;
+            bool metInAnotherVoice = false;
             int endSource = -1;
             bool cut = false;
             StaffPlace end;
@@ -1260,6 +1303,9 @@ internal static class HairpinEngraver
                 // a bar stopped short at that bar's line (LilyPond draws both, Lab sessions/p1097/hp3).
                 end = markPlace;
                 endSource = nextMark!.SourcePosition;
+                // (A condensed staff's parts too: the one's hairpin stands above the staff and
+                // the other's below, MeasureCollector.JunkCondensedStaffDuplicateDynamics.)
+                metInAnotherVoice = nextMark.VoiceIndex != mark.VoiceIndex;
             }
             else
             {
@@ -1282,6 +1328,8 @@ internal static class HairpinEngraver
                 endVoice = mark.VoiceIndex;
                 endDynamic = null;
                 endsAtStop = false;
+                // (No picture reads it after a cut — the bound is the section's line: no observer.)
+                metInAnotherVoice = false;
                 endSource = -1;
                 cut = true;
                 end = new StaffPlace(endMeasure, endVoice, endItem, null);
@@ -1307,6 +1355,7 @@ internal static class HairpinEngraver
                     NienteAtStart = NienteAtStart(),
                     NienteAtEnd = endDynamic is { Level: DynamicLevel.Niente } ? endDynamic : null,
                     EndsAtStop = endsAtStop,
+                    MetInAnotherVoice = metInAnotherVoice,
                     EndSourcePosition = endSource,
                     CutAtSectionEnd = cut,
                 });
@@ -1401,8 +1450,10 @@ internal static class HairpinEngraver
             for (int j = 0; j < hairpins.Count; j++)
             {
                 var starting = hairpins[j];
+                // Two voices' hairpins are never adjacent, though one may end where the other
+                // begins (HairpinItem.MetInAnotherVoice): the engraver that pairs them is a Voice's.
                 if (j == i || starting.StaffIndex != ending.StaffIndex
-                    || starting.VoiceIndex != ending.EndVoiceIndex
+                    || starting.VoiceIndex != ending.EndVoiceIndex || ending.MetInAnotherVoice
                     || starting.StartMeasureIndex != ending.EndMeasureIndex || starting.StartItemIndex != ending.EndItemIndex)
                     continue;
                 bool circled = ending.Direction == HairpinDirection.Decrescendo && ending.NienteAtEnd is { } n

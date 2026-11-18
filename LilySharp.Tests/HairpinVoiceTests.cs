@@ -358,4 +358,89 @@ public class HairpinVoiceTests
         var levels = LevelHeights(sameNumber);
         Near(-7.2227, levels[0]); Near(-9.0473, levels[1]);
     }
+
+    /// <summary>
+    /// A hairpin that ends where ANOTHER voice's hairpin begins is drawn as LilyPond draws it
+    /// with <c>\!</c> written at that moment: to the right edge of its own voice's note there
+    /// (the other voice's, where its own holds a longer note), the other hairpin opening at its
+    /// own column's left on the line below — not the back-to-back pair of one voice, which the
+    /// two were drawn as until session 1306 (27.49 and 28.16 on two lines of different heights).
+    /// MEASURED (LilyPond 2.26.0, raggedRight, Lab sessions/p1306/hp, the twin with the stop
+    /// written by hand; a printed extent is half a line thickness wider at either end):
+    ///   t4  Hairpin 22.079..28.565 at −6.5433 and 27.088..31.399 at −8.2846, the p at −8.8846
+    ///   u4  the same columns, the voices exchanged: −6.6833 and −8.4246
+    ///   t6  the meeting voice a second under, shifted: 22.079..28.565 and 28.465..32.026
+    ///   t7  the own voice holding a dotted half (the \! on a skip): 17.071..23.599 and 22.122..25.688
+    ///   t9  the hairpin's OWN voice the shifted one: 22.079..30.192, its b' at 28.765..30.142
+    ///   t10 its own voice resting there: 17.071..23.175, the rest's left edge
+    ///   t11 the meeting at a bar's head: 21.346..24.956, a bound padding short of the bar line
+    /// </summary>
+    [Theory]
+    [InlineData("t4", "voice { c''8 c'' c''@cresc c'' c''2 } { c'2 c'2@decresc } | voice { c''1 } { c'1@p } |",
+        22.129, 28.515, -6.5433, 27.138, 31.349, -8.2846)]
+    [InlineData("u4", "voice { c''2 c''2@decresc } { c'8 c' c'@cresc c' c'2 } | voice { c''1@p } { c'1 } |",
+        22.129, 28.515, -6.6833, 27.138, 31.349, -8.4246)]
+    [InlineData("t6", "voice { c''8 c'' c''@cresc c'' c''2 } { g'2 b'2@decresc } | voice { c''1 } { g'1@p } |",
+        22.129, 28.515, -4.5099, 28.515, 31.976, -6.3929)]
+    [InlineData("t7", "voice { c''4@cresc c''2. } { c'2 c'2@decresc } | voice { c''1 } { c'1@p } |",
+        17.121, 23.549, -6.5441, 22.172, 25.638, -8.2865)]
+    [InlineData("t9", "voice { c''2 c''2@decresc } { g'8 g' g'@cresc g' b'2 } | voice { c''1@p } { g'1 } |",
+        22.129, 30.142, -4.6105, 27.388, 32.226, -6.2692)]
+    [InlineData("t10", "voice { c''4@cresc c'' r2 } { c'2 c'2@decresc } | voice { c''1 } { c'1@p } |",
+        17.121, 23.125, -6.6766, 23.125, 26.652, -8.5589)]
+    [InlineData("t11", "voice { c''2 c''2@cresc } { c'2 c'2 } | voice { c''2 c''2 } { c'2@decresc c'2@p } |",
+        21.396, 24.906, -6.0432, 26.806, 30.036, -6.8066)]
+    public void AHairpinMetInAnotherVoice_IsStoppedThere_NotBackToBack(string book, string bars,
+        double metStart, double metEnd, double metY, double otherStart, double otherEnd, double otherY)
+    {
+        var wedges = Wedges(bars);
+        Assert.Equal(2, wedges.Length);
+        string say = $"{book}: {wedges[0].StartX:F3}..{wedges[0].EndX:F3} at {wedges[0].Y:F4}, {wedges[1].StartX:F3}..{wedges[1].EndX:F3} at {wedges[1].Y:F4}";
+        Assert.True(System.Math.Abs(metStart - wedges[0].StartX) <= 0.005 && System.Math.Abs(metEnd - wedges[0].EndX) <= 0.005
+            && System.Math.Abs(metY - wedges[0].Y) <= 0.005, say);
+        Assert.True(System.Math.Abs(otherStart - wedges[1].StartX) <= 0.005 && System.Math.Abs(otherEnd - wedges[1].EndX) <= 0.005
+            && System.Math.Abs(otherY - wedges[1].Y) <= 0.005, say);
+
+        var pins = Pins(bars);
+        var met = Assert.Single(pins, p => p.MetInAnotherVoice);
+        Assert.NotEqual(met.VoiceIndex, met.EndVoiceIndex);
+        Assert.All(pins, p => Assert.False(p.AdjacentAtEnd || p.AdjacentAtStart, Say(p)));
+    }
+
+    /// <summary>
+    /// Two PARTS of a condensed staff are two voices of it: the upper part's crescendo, above
+    /// the staff, runs to the right edge of its own note where the lower part's decrescendo,
+    /// below the staff, begins at its column's left — the columns of t4 above. Until session
+    /// 1306 the two were back to back across the staff (27.49 above it, 28.16 below).
+    /// </summary>
+    [Fact]
+    public void ACondensedStaffsPartsHairpin_MetByTheOtherParts_IsStoppedThereToo()
+    {
+        var tree = SyntaxTree.Parse(
+            "octave absolute\npaper { raggedRight }\npart a { instrument violin }\npart b { instrument violin }\n"
+            + "section S {\n  a { c''8 c'' c''@cresc c'' c''2 | c''1 | }\n  b { e'2 e'2@decresc | e'1@p | }\n}\n"
+            + "form { ~S }\nscore { condensedStaff { a b } }\n");
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+        var score = LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var wedges = new LayoutEngine().Layout(score).HairpinLayouts.OrderBy(h => h.StartX).ToArray();
+        Assert.Equal(2, wedges.Length);
+        string say = $"k1: {wedges[0].StartX:F3}..{wedges[0].EndX:F3}, {wedges[1].StartX:F3}..{wedges[1].EndX:F3}";
+        Assert.True(System.Math.Abs(28.515 - wedges[0].EndX) <= 0.005 && System.Math.Abs(27.138 - wedges[1].StartX) <= 0.005, say);
+        Assert.Contains(HairpinEngraver.DetectHairpins(score.MusicMarks, score.Dynamics), p => p.MetInAnotherVoice);
+    }
+
+    /// <summary>One voice's pair on the same columns stays back to back (LilyPond, s4:
+    /// 22.079..27.543 and 28.110..31.399, both at −6.6430).</summary>
+    [Fact]
+    public void OneVoicesPair_IsStillBackToBack()
+    {
+        const string bars = "voice { c''8 c'' c''@cresc c'' c''2@decresc } { c'2 c'2 } | voice { c''1@p } { c'1 } |";
+        var pins = Pins(bars);
+        Assert.Equal(2, pins.Length);
+        Assert.All(pins, p => Assert.False(p.MetInAnotherVoice, Say(p)));
+        Assert.True(pins.Single(p => p.Direction == HairpinDirection.Crescendo).AdjacentAtEnd);
+        var wedges = Wedges(bars).OrderBy(w => w.StartX).ToArray();
+        Near(27.493, wedges[0].EndX); Near(28.160, wedges[1].StartX);
+        Near(-6.6430, wedges[0].Y); Near(-6.6430, wedges[1].Y);
+    }
 }

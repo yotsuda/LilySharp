@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 461 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **587** | |
+| `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
+| `OWN` | 462 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **589** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -139,7 +139,7 @@
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
 - **`BeamRestStem`** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（64 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（65 件）
 
 ### `LilySharp.Core/Midi/SungVoices.cs`
 - **`SungVoices.Read`** ⚠️ An empty text has no observer: the page files no syllable for `_` or a
@@ -187,6 +187,8 @@
 - **`FingeringEngraver.CentreX`** it was rather than being changed unobserved.
 ### `LilySharp.Core/Svg/Layout/GraceNoteEngraver.cs`
 - **`GraceNoteEngraver.StemLength`** observed by: NO OBSERVER — every book in the corpus quants, so nothing reaches the
+### `LilySharp.Core/Svg/Layout/HairpinEngraver.cs`
+- **`HairpinEngraver.DetectHairpins`** (No picture reads it after a cut — the bound is the section's line: no observer.)
 ### `LilySharp.Core/Svg/Layout/HorizontalSkyline.cs`
 - **`HorizontalSkyline.RentBox`** outline. So the clearing is right and unobserved: a forgotten Clear here would
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
@@ -246,7 +248,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（461 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（462 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -874,6 +876,8 @@
 ### `LilySharp.Core/Svg/Model/FiguredBassItem.cs`
 - **`FiguredBassItem.ParseFigures`** LILYSHARP-OWN: the @figuredBass(…) SPELLING is Lily#'s, not a port — LilyPond writes
 - **`FiguredBassItem.ParseGroups`** LILYSHARP-OWN: the comma spelling. LilyPond writes each figure event with its own
+### `LilySharp.Core/Svg/Model/HairpinItem.cs`
+- **`HairpinItem.MetInAnotherVoice`** LILYSHARP-OWN: the pairing (LilyPond pairs a hairpin in its own voice and leaves this one
 ### `LilySharp.Core/Svg/Model/InstrumentDefaults.cs`
 - **`InstrumentDefaults.GetMidiProgram`** LILYSHARP-OWN: LilyPond has no instrument presets, so which of its 128 sounds a preset
 - **`InstrumentDefaults.PrintedName`** LILYSHARP-OWN (owner's decision 2026-10-11): until then the preset WORD itself was the
