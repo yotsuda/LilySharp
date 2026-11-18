@@ -49,7 +49,7 @@ describe('the singing walkthrough', () => {
     it('has a button for every step, on a command that is there', () => {
         const own = new Set<string>(manifest.contributes.commands.map((c: { command: string }) => c.command));
         // Cantoria's own, as its package.json names them.
-        const cantoria = new Set(['cantoria.chooseVoicesFolder', 'cantoria.chooseNeutrinoFolder', 'cantoria.chooseVoicevoxFolder', 'cantoria.checkSetup']);
+        const cantoria = new Set(['cantoria.findEngines', 'cantoria.chooseVoicesFolder', 'cantoria.chooseNeutrinoFolder', 'cantoria.chooseVoicevoxFolder', 'cantoria.checkSetup']);
         for (const step of steps) {
             const commands = commandsOf(step.description);
             assert.ok(commands.length > 0, step.id);
@@ -58,7 +58,7 @@ describe('the singing walkthrough', () => {
                 if (c.startsWith('lilysharp.')) { assert.match(extensionSource(), new RegExp(`registerCommand\\('${c.replace('.', '\\.')}'`)); }
             }
         }
-        assert.deepEqual(commandsOf(steps[1].description), ['cantoria.chooseVoicesFolder', 'cantoria.chooseNeutrinoFolder', 'cantoria.chooseVoicevoxFolder']);
+        assert.deepEqual(commandsOf(steps[1].description), ['cantoria.findEngines', 'cantoria.chooseVoicesFolder', 'cantoria.chooseNeutrinoFolder', 'cantoria.chooseVoicevoxFolder']);
     });
 
     it('checks a step off by what the step does', () => {

@@ -16,7 +16,8 @@ terms: nothing here comes with Lily# or Cantoria.
    Unpack it into that folder, so that the voice is a folder of its own holding a
    `dsconfig.yaml`: `C:\voices\TIGER\dsconfig.yaml`. The `Singers` folder of
    [OpenUtau](https://github.com/stakira/OpenUtau), if you have one, is such a folder already.
-3. Choose `C:\voices` with **Choose DiffSinger Voices Folder**.
+3. Choose `C:\voices` with **Choose DiffSinger Voices Folder**. (OpenUtau's own `Singers`
+   folder is found by **Find Engines on This Computer**.)
 4. If the voice has no `dsvocoder` folder of its own, it needs a vocoder, the part that
    turns what the voice computes into sound. Download the `.oudep` file its readme names
    (the usual one is `nsf_hifigan`, among the DiffSinger community's
@@ -41,6 +42,8 @@ terms: nothing here comes with Lily# or Cantoria.
 1. Download VOICEVOX from [voicevox.hiroshiba.jp](https://voicevox.hiroshiba.jp/) and install it,
    or unpack its zip. Each
    character has terms of its own, and a published work credits `VOICEVOX:name`.
-2. Choose the folder that holds `vv-engine` with **Choose VOICEVOX Folder**. Cantoria then
-   starts the engine when one of its voices is needed and stops it when VS Code closes.
-   With VOICEVOX itself open, its voices are found with no folder chosen.
+2. Press **Find Engines on This Computer**: an installed VOICEVOX is found where its installer
+   left it. If you unpacked the zip somewhere of your own, choose the folder that holds
+   `vv-engine` with **Choose VOICEVOX Folder**. Cantoria then starts the engine when one of its
+   voices is needed and stops it when VS Code closes. With VOICEVOX itself open, its voices are
+   found with no folder chosen.
