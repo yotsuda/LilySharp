@@ -733,7 +733,7 @@
       {
         "command": "lilysharp.voiceInstallGuide",
         "category": "Lily#",
-        "title": "How to Install a Singing Voice"
+        "title": "Set Up a Singing Voice"
       },
       {
         "command": "lilysharp.writeSingerPart",

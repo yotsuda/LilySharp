@@ -370,7 +370,7 @@ const VOICE_SETUP_ACTIONS: VoiceGuide['actions'] = [
     { label: 'Choose NEUTRINO Folder…', command: 'cantoria.chooseNeutrinoFolder' },
     { label: 'Choose VOICEVOX Folder…', command: 'cantoria.chooseVoicevoxFolder' },
 ];
-const GUIDE_LINK = 'The steps for each engine: **Lily#: How to Install a Singing Voice**, in the command palette';
+const GUIDE_LINK = 'The steps for each engine: **Lily#: Set Up a Singing Voice**, in the command palette';
 const ENGINE_LINKS = '[DiffSinger](https://github.com/openvpi/DiffSinger), [NEUTRINO](https://studio-neutrino.com/) or [VOICEVOX](https://voicevox.hiroshiba.jp/)';
 const STILL_WRITTEN = 'The score can still be written: a name here is sung once that voice is installed.';
 
