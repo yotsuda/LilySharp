@@ -46,29 +46,50 @@ public sealed partial class LilySharpLanguageServer
         var doc = _documentManager.GetDocument(uri);
         if (doc == null) return null;
 
-        var tokens = new List<int>(); // [deltaLine, deltaStart, length, tokenType, tokenModifiers]
-        int prevLine = 0;
-        int prevChar = 0;
-
-        foreach (var token in CollectSemanticTokens(doc.Tree.GetRoot(), doc.Text))
-        {
-            int deltaLine = token.Line - prevLine;
-            int deltaChar = deltaLine == 0 ? token.Character - prevChar : token.Character;
-
-            tokens.Add(deltaLine);
-            tokens.Add(deltaChar);
-            tokens.Add(token.Length);
-            tokens.Add(token.TokenType);
-            tokens.Add(0); // No modifiers
-
-            prevLine = token.Line;
-            prevChar = token.Character;
-        }
-
-        return new SemanticTokens { Data = tokens.ToArray() };
+        return new SemanticTokens { Data = SemanticTokenData(doc.Tree.GetRoot(), doc.Text) };
     }
 
-    internal record SemanticToken(int Line, int Character, int Length, int TokenType);
+    /// <summary>The tokens as they go on the wire: five numbers each — the line as a step from
+    /// the token before, the character (a step too, on the same line), the length, the type and
+    /// the modifiers (none).</summary>
+    /// <remarks>
+    /// Asked again on every edit, for the whole file, so what one token costs is the keystroke's
+    /// price (review of session 1291, the small ones). Until session 1299 a token was an object
+    /// on the heap, the list of them was sorted through LINQ (its keys, its map and its buffer
+    /// beside the list), and the numbers were added one at a time to a list that grew and was
+    /// then copied: 157 bytes a token over every .lys on the machine (1,281 files, 764,203
+    /// tokens, the tree already walked). Now a token is three numbers in a list, the order is
+    /// one array of keys, and the numbers are written once into an array of their size: 65
+    /// bytes a token, the same numbers for every one of the files (Lab sessions/p1299).
+    /// </remarks>
+    internal static int[] SemanticTokenData(SyntaxNode root, string text)
+    {
+        var (raw, order) = CollectRawTokens(root);
+        int[] lineStarts = LineStartsOf(text);
+        int[] data = new int[order.Length * 5];
+        int prevLine = 0;
+        int prevChar = 0;
+        for (int i = 0; i < order.Length; i++)
+        {
+            var token = raw[(int)order[i]];
+            var (line, character) = GetLineAndCharacter(text, lineStarts, token.Start);
+            int deltaLine = line - prevLine;
+            int at = i * 5;
+            data[at] = deltaLine;
+            data[at + 1] = deltaLine == 0 ? character - prevChar : character;
+            data[at + 2] = token.Length;
+            data[at + 3] = token.TokenType;
+            // data[at + 4]: no modifiers
+            prevLine = line;
+            prevChar = character;
+        }
+        return data;
+    }
+
+    internal readonly record struct SemanticToken(int Line, int Character, int Length, int TokenType);
+
+    /// <summary>A token as the walk leaves it: where it starts in the text, not yet a line and a character.</summary>
+    private readonly record struct RawToken(int Start, int Length, int TokenType);
 
     /// <summary>Token-type indices, matching the legend order in
     /// <see cref="Initialize"/>. Written down because what goes on the wire is a NUMBER: the
@@ -92,9 +113,28 @@ public sealed partial class LilySharpLanguageServer
         return !root.DescendantNodes<PhraseDeclarationSyntax>().Any(p => p.Name.Text == reference.Name.Text);
     }
 
-    internal static IEnumerable<SemanticToken> CollectSemanticTokens(SyntaxNode root, string text)
+    /// <summary>The tokens in the order of the text, each with its line and character (the
+    /// tests' view; the request writes its numbers straight from the walk, <see cref="SemanticTokenData"/>).</summary>
+    internal static IReadOnlyList<SemanticToken> CollectSemanticTokens(SyntaxNode root, string text)
     {
-        var tokens = new List<SemanticToken>();
+        var (raw, order) = CollectRawTokens(root);
+        int[] lineStarts = LineStartsOf(text);
+        var tokens = new SemanticToken[order.Length];
+        for (int i = 0; i < order.Length; i++)
+        {
+            var token = raw[(int)order[i]];
+            var (line, character) = GetLineAndCharacter(text, lineStarts, token.Start);
+            tokens[i] = new SemanticToken(line, character, token.Length, token.TokenType);
+        }
+        return tokens;
+    }
+
+    /// <summary>The walk's tokens and the order they are sent in: each key is a token's start
+    /// (the high half) and its place in the list (the low half), so tokens that start together
+    /// keep the order the walk found them in — what a stable sort by line and character gave.</summary>
+    private static (List<RawToken> Tokens, long[] Order) CollectRawTokens(SyntaxNode root)
+    {
+        var tokens = new List<RawToken>();
 
         // A name that REFERS to something — a section in a `form { }`, a part in a
         // `score { }` — is coloured only when it resolves, and what it refers to may be
@@ -107,7 +147,7 @@ public sealed partial class LilySharpLanguageServer
         // declared names in separate DescendantNodes() passes would multiply the cost of
         // every keystroke to save two lists holding the few names a file mentions.
         var names = new DeclaredNames();
-        CollectTokensRecursive(root, text, tokens, names);
+        CollectTokensRecursive(root, tokens, names);
 
         // ⚠️ An unresolved name gets NO token (the user's call, 2026-08-23), and this is the
         // one place the colour says something a grammar could not: a form naming a section
@@ -126,7 +166,19 @@ public sealed partial class LilySharpLanguageServer
         // and the reason PartReferenceFinder.SingsTargetToken carries the warning it does.
         Resolve(names.SingsTargets, [.. names.Parts, .. names.Voices], TokenTypePart);
 
-        return tokens.OrderBy(t => t.Line).ThenBy(t => t.Character);
+        // The walk goes in the order of the text, but for the references just resolved (added
+        // last) and a property's value (added before its own words): sorted only when a token
+        // does start before the one ahead of it.
+        long[] order = new long[tokens.Count];
+        bool inOrder = true;
+        for (int i = 0; i < order.Length; i++)
+        {
+            order[i] = ((long)tokens[i].Start << 32) | (uint)i;
+            inOrder &= i == 0 || tokens[i - 1].Start <= tokens[i].Start;
+        }
+        if (!inOrder)
+            Array.Sort(order);
+        return (tokens, order);
 
         void Resolve(List<SyntaxTokenNode> references, HashSet<string> declared, int tokenType)
         {
@@ -134,8 +186,7 @@ public sealed partial class LilySharpLanguageServer
             {
                 if (!declared.Contains(reference.Text))
                     continue;
-                var (line, character) = GetLineAndCharacter(text, reference.Span.Start);
-                tokens.Add(new SemanticToken(line, character, reference.Width, tokenType));
+                tokens.Add(new RawToken(reference.Span.Start, reference.Width, tokenType));
             }
         }
     }
@@ -166,7 +217,7 @@ public sealed partial class LilySharpLanguageServer
     }
 
     private static void CollectTokensRecursive(
-        SyntaxNode node, string text, List<SemanticToken> tokens, DeclaredNames names)
+        SyntaxNode node, List<RawToken> tokens, DeclaredNames names)
     {
         // Token types: 0=keyword, 1=variable, 2=number, 3=string, 4=comment, 5=operator,
         // 6=pitch, 7=articulation, 8=dynamic, 9=part, 10=section, 11=phrase
@@ -245,10 +296,7 @@ public sealed partial class LilySharpLanguageServer
         }
 
         void Paint(SyntaxTokenNode name, int tokenType)
-        {
-            var (line, character) = GetLineAndCharacter(text, name.Span.Start);
-            tokens.Add(new SemanticToken(line, character, name.Width, tokenType));
-        }
+            => tokens.Add(new RawToken(name.Span.Start, name.Width, tokenType));
 
         if (node is SyntaxTokenNode tokenNode)
         {
@@ -305,24 +353,19 @@ public sealed partial class LilySharpLanguageServer
             };
 
             if (tokenType.HasValue)
-            {
-                var (line, character) = GetLineAndCharacter(text, node.Span.Start);
-                tokens.Add(new SemanticToken(line, character, node.Width, tokenType.Value));
-            }
+                tokens.Add(new RawToken(node.Span.Start, node.Width, tokenType.Value));
         }
         else if (node is VariableReferenceSyntax varRef && !IsSingerBeingTyped(varRef))
         {
             // Variable reference (after $ or use)
             var nameNode = varRef.Name;
-            var (line, character) = GetLineAndCharacter(text, nameNode.Span.Start);
-            tokens.Add(new SemanticToken(line, character, nameNode.Width, 1));
+            tokens.Add(new RawToken(nameNode.Span.Start, nameNode.Width, 1));
         }
         else if (node is VariableDeclarationSyntax varDecl)
         {
             // Variable declaration name
             var nameNode = varDecl.Name;
-            var (line, character) = GetLineAndCharacter(text, nameNode.Span.Start);
-            tokens.Add(new SemanticToken(line, character, nameNode.Width, 1));
+            tokens.Add(new RawToken(nameNode.Span.Start, nameNode.Width, 1));
         }
         else if (node is PropertyAssignmentSyntax propAssign)
         {
@@ -348,9 +391,8 @@ public sealed partial class LilySharpLanguageServer
             if (firstVal != null && lastVal != null
                 && firstVal.Kind != SyntaxKind.StringLiteral)
             {
-                var (line, character) = GetLineAndCharacter(text, firstVal.Span.Start);
                 int width = lastVal.Span.End - firstVal.Span.Start;
-                tokens.Add(new SemanticToken(line, character, width, 3));
+                tokens.Add(new RawToken(firstVal.Span.Start, width, 3));
             }
             // fall through to recursion: the property NAME keyword still
             // gets its keyword color from the token pass.
@@ -360,8 +402,7 @@ public sealed partial class LilySharpLanguageServer
         {
             // '@' + name as ONE articulation-colored span. @cue/@feather/…
             // only lit up when a TextMate regex happened to list them.
-            var (line, character) = GetLineAndCharacter(text, artNode.Span.Start);
-            tokens.Add(new SemanticToken(line, character,
+            tokens.Add(new RawToken(artNode.Span.Start,
                 artNode.NameToken.Span.End - artNode.Span.Start, 7));
         }
         else if (node is MusicMarkSyntax markNode)
@@ -370,8 +411,7 @@ public sealed partial class LilySharpLanguageServer
             // (numbers in @figuredBass(6 4), the string in @text("…")).
             if (markNode.GetChild(1) is SyntaxTokenNode markName)
             {
-                var (line, character) = GetLineAndCharacter(text, markNode.Span.Start);
-                tokens.Add(new SemanticToken(line, character,
+                tokens.Add(new RawToken(markNode.Span.Start,
                     markName.Span.End - markNode.Span.Start, 7));
             }
         }
@@ -400,8 +440,7 @@ public sealed partial class LilySharpLanguageServer
                 bool bareWord = value.Text == TempoValue.BareWord && value.Span.Start != tempoNode.Values.First().Span.Start;
                 if (value.Kind != SyntaxKind.Identifier || !(TempoValue.IsFeelWord(value.Text) || bareWord))
                     continue;
-                var (fline, fchar) = GetLineAndCharacter(text, value.Span.Start);
-                tokens.Add(new SemanticToken(fline, fchar, value.Width, 0));
+                tokens.Add(new RawToken(value.Span.Start, value.Width, 0));
             }
         }
         else if (node is RepeatExpressionSyntax repNode)
@@ -409,8 +448,7 @@ public sealed partial class LilySharpLanguageServer
             // 'tremolo' / 'percent' / 'unfold' lex as identifiers, not
             // keyword kinds — `repeat` colored, its type word did not.
             var rt = repNode.RepeatType;
-            var (rline, rchar) = GetLineAndCharacter(text, rt.Span.Start);
-            tokens.Add(new SemanticToken(rline, rchar, rt.Width, 0));
+            tokens.Add(new RawToken(rt.Span.Start, rt.Width, 0));
         }
 
         // Recurse into children
@@ -418,7 +456,7 @@ public sealed partial class LilySharpLanguageServer
         {
             var child = node.GetChild(i);
             if (child != null)
-                CollectTokensRecursive(child, text, tokens, names);
+                CollectTokensRecursive(child, tokens, names);
         }
     }
 
@@ -473,13 +511,16 @@ public sealed partial class LilySharpLanguageServer
     }
 
     internal static (int line, int character) GetLineAndCharacter(string text, int position)
+        => GetLineAndCharacter(text, LineStartsOf(text), position);
+
+    /// <summary>…with the text's line starts in hand: a caller that asks once per token looks
+    /// the table up once.</summary>
+    private static (int line, int character) GetLineAndCharacter(string text, int[] lineStarts, int position)
     {
         // A malformed/synthetic node can report a position outside the document; clamp it
         // so the character is never negative (VS Code rejects a Position with a negative
         // character, and one bad symbol range aborts the WHOLE documentSymbol response).
         position = System.Math.Clamp(position, 0, text.Length);
-
-        var lineStarts = LineStartsOf(text);
 
         // A position sitting exactly ON the '\n' of a CRLF is INSIDE the break.
         // The scan-from-zero version had already counted the line at the '\r' and

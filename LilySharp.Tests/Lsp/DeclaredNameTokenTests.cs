@@ -255,6 +255,47 @@ public class DeclaredNameTokenTests
         Assert.Equal(2, tokens.Count(t => Span(source, t) == "singer"));
     }
 
+    /// <summary>What goes on the wire is each token as a step from the one before, so the tokens
+    /// are sent in the order of the text — though the walk finds some out of it: a name that
+    /// refers (a form's section, a score's part) waits for the end of the walk to be resolved,
+    /// and a property's value is found before the property's own word.</summary>
+    /// <remarks>Since session 1299 the request writes its numbers itself
+    /// (<c>SemanticTokenData</c>) rather than from <c>CollectSemanticTokens</c>: the two are
+    /// held to each other here. ⚠️ A step backwards is not an error on the wire — the editor
+    /// paints the tokens after it on the wrong words.</remarks>
+    [Fact]
+    public void TheWire_IsInTheOrderOfTheText_ThoughAReferenceIsResolvedLast()
+    {
+        const string source = "form { A B }\nscore { staff melody }\n"
+            + "part melody { instrument acoustic-guitar\n  clef treble }\n"
+            + "section A { melody { c'4 d | } }\nsection B { melody { e'4@accent f | } }\n";
+        var root = SyntaxTree.Parse(source).GetRoot();
+        int[] data = LilySharpLanguageServer.SemanticTokenData(root, source);
+        var tokens = LilySharpLanguageServer.CollectSemanticTokens(root, source);
+
+        // The walk did find them out of order, and both kinds: else this test sees no sort.
+        Assert.Equal(["A", "B", "A", "B"], Coloured(source, Section));
+        Assert.Equal(["melody", "melody", "melody", "melody"], Coloured(source, Part));
+        Assert.Contains(tokens, t => Span(source, t) == "acoustic-guitar");
+
+        Assert.Equal(tokens.Count * 5, data.Length);
+        int line = 0, character = 0, before = -1;
+        var lineStarts = LilySharpLanguageServer.LineStartsOf(source);
+        for (int i = 0; i < tokens.Count; i++)
+        {
+            Assert.True(data[i * 5] >= 0, $"token {i} steps back {-data[i * 5]} lines");
+            character = data[i * 5] == 0 ? character + data[i * 5 + 1] : data[i * 5 + 1];
+            line += data[i * 5];
+            Assert.Equal(tokens[i], new LilySharpLanguageServer.SemanticToken(line, character, data[i * 5 + 2], data[i * 5 + 3]));
+            Assert.Equal(0, data[i * 5 + 4]);
+            int at = lineStarts[line] + character;
+            Assert.True(at >= before, $"token {i} ({Span(source, tokens[i])}) starts at {at}, before the one ahead of it at {before}");
+            before = at;
+        }
+        // The first token of all is the form's own word, and its sections' names come before the score.
+        Assert.Equal(["form", "A", "B", "score", "staff", "melody"], tokens.Take(6).Select(t => Span(source, t)));
+    }
+
     [Fact]
     public void AScoreNamingAPartThatDoesNotExist_LeavesItPlain()
     {

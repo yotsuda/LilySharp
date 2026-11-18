@@ -114,7 +114,8 @@ public class SingerStaffRequestTests
         {
             int at = source.IndexOf(line, StringComparison.Ordinal) + line.IndexOf(word, StringComparison.Ordinal);
             var (l, c) = LilySharpLanguageServer.GetLineAndCharacter(source, at);
-            return tokens.FirstOrDefault(t => t.Line == l && t.Character == c && t.Length == word.Length)?.TokenType ?? -1;
+            return tokens.Where(t => t.Line == l && t.Character == c && t.Length == word.Length)
+                .Select(t => (int?)t.TokenType).FirstOrDefault() ?? -1;
         }
 
         const int Keyword = 0, Part = 9;
