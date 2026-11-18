@@ -5916,9 +5916,10 @@ public sealed partial class MeasureCollector
             {
                 // Cross-edit validity at walk entry: the plan must target the SAME
                 // walk (ordinal drift after a part add/remove would pair it with
-                // another voice), and every earlier walk of THIS collect must have
-                // contributed exactly the counts the recording's watermarks bake in
-                // (see VoiceWalkRecording.StartTableCounts). Δ=0 passes trivially.
+                // another voice). What every earlier walk of THIS collect contributed
+                // to the side tables may differ from what the recording's watermarks
+                // bake in (VoiceWalkRecording.StartTableCounts): the walk reads them
+                // that far along (_walkTableDrift).
                 if (!string.Equals(resume.Recording.VoiceName, _voiceName, StringComparison.Ordinal))
                     throw new CollectResumeAbortException(
                         $"collect resume walk #{walkOrdinal} is now voice '{_voiceName}', recorded '{resume.Recording.VoiceName}'");
@@ -5931,14 +5932,8 @@ public sealed partial class MeasureCollector
                 if (startCounts == null || startCounts.Length != tables.Length)
                     throw new CollectResumeAbortException("collect resume recording has no start-table counts");
                 for (int t = 0; t < tables.Length; t++)
-                {
-                    if (tables[t].Count == startCounts[t])
-                        continue;
-                    if (!IsVoiceSanitySink(tables[t]))
-                        throw new CollectResumeAbortException(
-                            $"collect resume: side table {t} has {tables[t].Count} entries at walk entry, recorded {startCounts[t]}");
-                    (_walkTableDrift ??= new int[tables.Length])[t] = tables[t].Count - startCounts[t];
-                }
+                    if (tables[t].Count != startCounts[t])
+                        (_walkTableDrift ??= new int[tables.Length])[t] = tables[t].Count - startCounts[t];
                 // The journals the same way: their prefixes are the earlier walks'
                 // (kept live — see VoiceWalkRecording.StartKeyLogCount), so the
                 // watermarks only line up when those walks journaled as many events.
@@ -6276,29 +6271,24 @@ public sealed partial class MeasureCollector
 
     private IList[]? _cumulativeSideTables;
 
-    /// <summary>Whether <paramref name="table"/> is one of the four lists the per-voice sanity
-    /// scanners fill (<see cref="ScanVoiceSanity"/>): complaints about a FINISHED voice, read
-    /// by the diagnostics alone.</summary>
-    /// <remarks>
-    /// These are the side tables whose count an EARLIER walk may change without a later walk's
-    /// recording going stale (<see cref="_walkTableDrift"/>). Nothing holds an index into them
-    /// (the walk's own tables are another matter: a section's dynamics and marks are kept as
-    /// index ranges), no entry is rewritten after it is appended, and a walk's checkpoints
-    /// carry their counts only as watermarks. A tie whose two ends are retyped to differ in
-    /// the first part of a score adds one complaint to the first of them and moves no measure
-    /// of any other part. MEASURED (session 1300, the owner's corpus, 235 books × eight
-    /// forward keystrokes, Lab p1300/lat): 63 of 1,880 keystrokes collected the whole book
-    /// over again for exactly this — every abort the run saw — and 0 after.
-    /// </remarks>
-    private bool IsVoiceSanitySink(IList table)
-        => ReferenceEquals(table, _tieTargetWarnings) || ReferenceEquals(table, _unpairedSlurWarnings)
-           || ReferenceEquals(table, _unpairedBeamWarnings) || ReferenceEquals(table, _cueSpanBoundaryWarnings);
-
     /// <summary>Per side table, how many more entries this resumed walk found at its entry
     /// than its recording did (<see cref="VoiceWalkRecording.StartTableCounts"/>); null when
-    /// none differs, which is nearly always. Only a sanity sink may differ
-    /// (<see cref="IsVoiceSanitySink"/>); every watermark of the walk's recording is read
+    /// none differs, which is nearly always. Every watermark of the walk's recording is read
     /// through it (<see cref="LiveWatermark"/>).</summary>
+    /// <remarks>
+    /// An EARLIER walk leaving more or fewer entries does not make this walk's recording
+    /// stale. What a recording holds of the tables is counts alone — its entry counts and its
+    /// checkpoints' watermarks — and the entries between two of them are this walk's own,
+    /// made of this walk's text; the indices kept elsewhere (a staff's range of dynamics and
+    /// marks, the marks' positions synced so far) are read off the live tables of the collect
+    /// they are in. Until session 1300 the entry counts had to be equal and the whole book was
+    /// collected again when they were not: a complaint about a finished voice coming or going
+    /// in an earlier part (a tie's two ends retyped one at a time — 63 of 1,880 keystrokes over
+    /// the owner's corpus, 235 books × eight forward keystrokes, every abort the run saw, Lab
+    /// p1300/lat), a dynamic or a script written on a note of an earlier part (242 of 1,571
+    /// such edits over the net's books aborted, 0 after:
+    /// ResumedCollect_MatchesFullCollect_WhenAnEarlyMarkComesOrGoes).
+    /// </remarks>
     private int[]? _walkTableDrift;
 
     /// <summary>The recorded watermark <paramref name="recorded"/> of side table

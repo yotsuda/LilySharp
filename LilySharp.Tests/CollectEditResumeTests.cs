@@ -662,8 +662,7 @@ section S {
         // finds one more or one fewer than its recording did — and nothing else of vb's
         // has moved. Until session 1300 that count was compared like every other side
         // table's at walk entry and the whole book was collected again: 63 of 1,880
-        // keystrokes over the owner's corpus, every abort the run saw. Poison:
-        // IsVoiceSanitySink => false throws CollectResumeAbortException here.
+        // keystrokes over the owner's corpus, every abort the run saw.
         // The score walks va first wherever the cells are written. With vb's cell BELOW
         // va's, vb's bars are met past the edit (the suffix splice compares its counts
         // through the drift); with vb's cell ABOVE, they are the unchanged prefix (the
@@ -826,6 +825,72 @@ section S {
         // Degree I follows the EDITED text's keys: C, then A, then C to the end.
         Assert.Equal(new[] { "C", "A", "A", "C", "C", "C" },
             resumed.ChordNames.OrderBy(c => c.MeasureIndex).Select(c => c.ChordText).ToArray());
+    }
+
+    /// <summary>Edits that make a side table one entry longer or shorter EARLY in the text —
+    /// a dynamic, a script, a fingering, an arpeggio written on a note of the first tenth and
+    /// of the first third, and the first mark written there taken away — so that every walk
+    /// after the one edited enters with another count than its recording's.</summary>
+    internal static IEnumerable<string> EarlyMarkEdits(string text)
+    {
+        foreach (int from in new[] { text.Length / 10, text.Length / 3 })
+        {
+            for (int i = Math.Max(1, from); i < text.Length - 2; i++)
+            {
+                char c = text[i];
+                if (c is >= 'a' and <= 'g' && char.IsDigit(text[i + 1]) && !char.IsLetterOrDigit(text[i - 1])
+                    && text[i - 1] != '@' && (text[i + 2] is ' ' or '\r' or '\n'))
+                {
+                    foreach (var mark in new[] { "@f", "@staccato", "@finger(2)", "@arpeggio", "@fermata" })
+                        yield return text.Insert(i + 2, mark);
+                    break;
+                }
+            }
+            int at = text.IndexOf('@', from);
+            if (at > 0)
+            {
+                int end = at + 1;
+                while (end < text.Length && char.IsLetter(text[end]))
+                    end++;
+                if (end > at + 1 && end < text.Length && text[end] is ' ' or '\r' or '\n')
+                    yield return text.Remove(at, end - at);
+            }
+        }
+    }
+
+    [Fact]
+    public void ResumedCollect_MatchesFullCollect_WhenAnEarlyMarkComesOrGoes()
+    {
+        // A mark written on a note of an earlier part leaves one entry more in a side table
+        // every later walk's watermarks count from (MeasureCollector._walkTableDrift): the
+        // later walks adopt their recorded bars all the same, their own entries with them,
+        // and the score is the full collect's.
+
+        var failures = new List<string>();
+        int edits = 0, resumes = 0, bails = 0, planless = 0, adopted = 0, spliced = 0;
+        foreach (var path in CollectResumeTests.NetBooks())
+        {
+            var oldText = File.ReadAllText(path);
+            if (oldText.Contains("using \"", StringComparison.Ordinal))
+                continue;
+            foreach (var newText in EarlyMarkEdits(oldText))
+            {
+                edits++;
+                var (a, r, s) = RunOneEdit(Path.GetFileName(path), oldText, newText, failures, render: false,
+                    onBail: () => bails++, onPlanless: () => planless++);
+                adopted += a;
+                resumes += r;
+                spliced += s;
+            }
+        }
+        Assert.True(failures.Count == 0,
+            $"{failures.Count} mismatch(es):\n" + string.Join("\n", failures.Take(20)));
+        // The net must bite, and the walks after the edited one must be resumed: with the
+        // entry counts held equal (until session 1300) 242 of these 1,571 edits bailed and
+        // 812 resumed; 0 and 1,054 since.
+        string counts = $"edits {edits}, resumes {resumes}, bails {bails}, planless {planless}, adopted {adopted}, spliced {spliced}";
+        Assert.True(resumes >= 500, "the early marks resumed too seldom to hold anything: " + counts);
+        Assert.True(bails * 20 <= resumes, "a walk after an early mark bails again: " + counts);
     }
 
     // ---------- runner ----------

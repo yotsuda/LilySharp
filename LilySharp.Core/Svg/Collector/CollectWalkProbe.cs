@@ -197,8 +197,8 @@ internal sealed class VoiceWalkRecording
     /// because a checkpoint's <see cref="WalkCheckpoint.TableCounts"/> watermark
     /// bakes in every earlier walk's contribution: if an edit changed an earlier
     /// walk's item count, the watermark slices would land at shifted offsets.
-    /// The four lists of complaints about a finished voice are let differ, and the
-    /// walk reads its watermarks that far along (<c>MeasureCollector.IsVoiceSanitySink</c>).</summary>
+    /// So the resumed walk reads every watermark of its recording as far along as its
+    /// entry counts stand from these (<c>MeasureCollector._walkTableDrift</c>).</summary>
     public int[]? StartTableCounts;
 
     /// <summary>The key-modulation / section-start journal lengths at this walk's

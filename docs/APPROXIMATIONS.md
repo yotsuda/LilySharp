@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
+| `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
 | `OWN` | 461 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **588** | |
+| **計** | **587** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -139,7 +139,7 @@
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
 - **`BeamRestStem`** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（65 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（64 件）
 
 ### `LilySharp.Core/Midi/SungVoices.cs`
 - **`SungVoices.Read`** ⚠️ An empty text has no observer: the page files no syllable for `_` or a
@@ -157,8 +157,6 @@
 ### `LilySharp.Core/Svg/Collector/CollectResumePlanner.cs`
 - **`CollectResumePlanner.t_baselineTokens`** byte-identical, and the reason is stronger than "no observer": the answer is ALREADY
 - **`CollectResumePlanner.t_baselineTokens`** itself is unobserved in this tree (HANDOFF §1.0 ⒮¹²).
-### `LilySharp.Core/Svg/Collector/MeasureCollector.Resume.cs`
-- **`MeasureCollector.RestoreWalkCheckpoint`** source's entry stands the drift below it. (NO OBSERVER for that last
 ### `LilySharp.Core/Svg/Collector/PartCombiner.cs`
 - **`PartCombiner.ChooseSilenceWithinPart`** this is unobserved rather than known-good; it closes when the labels travel with
 - **`PartCombiner.MergeIntoChord`** accidental, ledgers and fingering only. ⚠️ No point observes it: the corpus has no
