@@ -277,6 +277,22 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1297セッションの経緯
+
+### 1.1 第1297セッション（2026-11-18・YT-DELL2）
+
+base `9ff2359a4`・開始時 full 17598 合格 / 1 失敗（`ReadmeSampleTests`）/ skip 2 / 合計 17601（Lab `p1297` の `run1.trx`）。REQUESTS の open は Calamo・Dettato とも 0。
+- **F4 の続き＝`888e600cc`・`5e7a2eec0`・`da24161d6`**: `extension.ts` 4,794 → 2,964 行。3 つとも移動で、旧ファイルの行＝新ファイルの行（違う行は commit の本文に全部）。計器は Lab `p1297/split-{editcommands,sound,export}.ps1`。
+  - `editCommands.ts`（1,128 行）: 文を書き換えるコマンドの 41 宣言と登録 23（Regroup〜Write a Harmony Part・singer のパート）。client を読む 18 関数は頭で `server()` を 1 回訊く。
+  - `soundFont.ts`（274 行）・`midiOut.ts`（117 行）: 登録と設定の listener は `extension.ts` に残した（プレビューの物と並んでいる）。`useSoundFontLog`・`useMidiOutHost` を activate の頭で呼ぶ。
+  - `exportPreview.ts`（539 行）: プレビューの Export と、一括 Export と共有する job の作り手（`practisedJobs`・`recordingRendered`・`recordJobs`・`singJobs`・`drawFramesFor`・`videoFfmpeg`）。`useExportHost`。`drawFramesFor` だけは up かどうかを見ない client を読んでいた＝そのまま（`startedClient()`）。
+  - host の文を読む試験は 4 ファイルも読む（`test/extensionSource.ts`）。C# の網が読む物は `extension.ts` に残っている。
+- **別の宣言の上に取り残された doc コメント 3 つ**を自分の関数へ戻した（間に別の宣言が書かれた形）: `removeStringNumbers`・`guessSectionKey`（移動の commit）・`newScoreTitleRange`（`5f6a71b07`）。
+- **実機＝隔離した VS Code（Lab `p1297/vscode-e2e`）**: `run.js` 16 項目（編集コマンド 13 本がサーバに届き答えを当てる）・`run2.js` 13 項目（プレビュー・無い音源の 1 行・2 つのピッカー・MIDI 出力の設定）・`run3.js` 8 項目（一括 Export が MIDI・PDF・WAV を書く）。フォルダの dialog は試験が答える（拡張のフォルダの中の loader から回すと拡張自身の `vscode` が渡る＝Lab `notes/CLAUDE-OPERATIONS.md` §3）。
+- ⚠️ 実機で見ていない: プレビュー自身の Export ボタン・MP4・歌や録音の入った export・MIDI ポートへの音・問いから始まるコマンド 4 つ・Split Sections to Match（一覧は commit の本文）。
+- 終了時 full 17598 合格 / 1 失敗（同じ）/ skip 2 / 合計 17601（`run6.trx`・増減 0＝C# は触っていない）・npm 1260 合格 / skip 1。
+- **次（review.md の残り・訊かずに着手してよい）**: F4 の残り＝`extension.ts` 2,964 行のうち `activate` 994 行・`openPreview` 553 行・`updatePreviewContent` 315 行で 63%。まだ切り出せる塊は New Score のテンプレートと MusicXML の取り込み（`newScoreTemplateUri`〜`importMusicXml`・約 210 行）と AI の入口（`aiTransformWholeScore`〜`noteSelectionEnd`・約 210 行）。その先は `activate` の中の登録を機能ごとに出す仕事（プレビューの状態を読む物が多い）。P8 の残り＝結合した文字列を毎打鍵作る。P6（ページの索引・強制レイアウト）・P7 の残り・P10 は静かな窓で。小さいもの: semantic tokens の割当。F3 段 2 と P9 はオーナー判断。
+
 ## 以下は第1296セッションの経緯
 
 ### 1.1 第1296セッション（2026-11-18・YT-DELL2）
