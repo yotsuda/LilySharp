@@ -147,6 +147,79 @@ public class GeneratedLyricsTests
     public void TheNoteNamesNeedNotes()
         => Assert.Contains(Validate(Book("c'1 |", "score { lyrics solfege  staff m }")), d => d.Code == DiagnosticCodes.LyricsRowNeedsOn);
 
+    // A syllable written where the words are named (owner's decision 2026-11-18): every note on it.
+
+    [Theory]
+    [InlineData("singer female on m sings \"ラ\"", "ラ")]
+    [InlineData("singer female sings \"ル\" on m", "ル")]               // the older order
+    [InlineData("singer female on m sings \"la\" octave 1", "la")]      // the line's other clauses after it
+    [InlineData("singer \"neutrino/MERROW\" on m sings \"ドゥ\"", "ドゥ")]  // beside the voice's own string
+    public void ASingerSingsEveryNoteOnTheSyllableWritten(string line, string syllable)
+    {
+        var src = Book("c'2 d |", line + "\nscore { staff m }");
+        Assert.Empty(Validate(src).Where(d => d.Severity == DiagnosticSeverity.Error).Select(d => d.Message));
+        var tree = SyntaxTree.Parse(src);
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+        var spec = RenderSpecParser.FindFirst(tree)!;
+        // Sung, and nothing printed: no row asks for it.
+        Assert.Empty(new MeasureCollector().CollectMultiStaff(tree, spec).Lyrics);
+        var sung = SungSyllables.Read(tree, LyricSinger.WithSungWords(tree.GetRoot(), spec));
+        Assert.Equal([syllable, syllable], sung.Select(s => s.Lyric.Text));
+        // The track is the string as written, which no declared track can be called.
+        Assert.All(sung, s => Assert.Equal($"\"{syllable}\"", s.Track));
+    }
+
+    [Fact]
+    public void ARowPrintsTheSyllableUnderEveryNote()
+    {
+        Assert.Equal(["la", "la", "la"], Words(Book("c'2 d4 e |", "score { staff m  lyrics \"la\" }")));
+        // …under the notes of the part it names, like any row.
+        var src = """
+            time 4/4
+            part sop { clef treble }
+            part alt { clef treble }
+            section A { sop { c'1 | } alt { e'2 f | } }
+            form { A }
+            score { staff sop  lyrics "ル" on alt  staff alt }
+            """;
+        Assert.Empty(Validate(src).Where(d => d.Severity == DiagnosticSeverity.Error).Select(d => d.Message));
+        Assert.Equal(["ル", "ル"], Words(src));
+    }
+
+    [Fact]
+    public void ASyllableIsNoTrackToDefineOrToList_AndIsOfTheFilesLanguage()
+    {
+        var src = Book("c'2 d |", "singer female on m sings \"la\"\nscore { staff m  lyrics \"la\" }", "language english");
+        Assert.Empty(Validate(src).Select(d => d.Message));
+        Assert.True(GeneratedLyrics.IsGenerated("\"la\""));
+        Assert.True(GeneratedLyrics.IsSyllable("\"la\""));
+        Assert.False(GeneratedLyrics.IsSyllable("la"));
+        Assert.False(GeneratedLyrics.IsSyllable("hum"));
+        Assert.Equal("la", GeneratedLyrics.SyllableOf("\"la\""));
+        Assert.Equal("en", LyricLanguage.ReaderOf(SyntaxTree.Parse(src).GetRoot())("\"la\""));
+    }
+
+    [Fact]
+    public void ASyllableRowNeedsNotes()
+        => Assert.Contains(Validate(Book("c'1 |", "score { lyrics \"la\"  staff m }")), d => d.Code == DiagnosticCodes.LyricsRowNeedsOn);
+
+    [Theory]
+    [InlineData("singer female on m sings \"\"\nscore { staff m }")]
+    [InlineData("singer female on m sings \" \"\nscore { staff m }")]
+    [InlineData("score { staff m  lyrics \"\" }")]
+    public void AnEmptySyllableIsAnError(string tail)
+    {
+        var tree = SyntaxTree.Parse(Book("c'1 |", tail));
+        Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.ExpectedToken && d.Message.Contains("syllable"));
+    }
+
+    [Fact]
+    public void TheTwinWritesTheSyllable()
+    {
+        string ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(Book("c'2 d |", "score { staff m  lyrics \"la\" }")));
+        Assert.Contains("la", ly[ly.IndexOf("lyric", System.StringComparison.OrdinalIgnoreCase)..]);
+    }
+
     [Fact]
     public void TheTwinWritesTheNoteNames()
     {

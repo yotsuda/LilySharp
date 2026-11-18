@@ -2471,13 +2471,43 @@ public sealed partial class LilySharpLanguageServer
 
     /// <summary>The lyrics tracks a score's <c>lyrics ▮</c> row offers. The row follows the staff
     /// above it, so the name alone is what it takes.</summary>
-    internal static CompletionList GetLyricsRowNameCompletions(string text, int offset)
-        => new() { Items = [.. GetDeclaredNameCompletions(text, "lyrics", "Lyrics part").Items, .. GeneratedLyricsItems(forSinger: false)] };
+    internal static CompletionList GetLyricsRowNameCompletions(string text, int offset, string? syllableLanguage = null)
+        => new() { Items = [.. GetDeclaredNameCompletions(text, "lyrics", "Lyrics part").Items, .. GeneratedLyricsItems(forSinger: false, syllableLanguage)] };
+
+    /// <summary>The language a file's words are in where a track says none: the one a syllable
+    /// written in a track's place is offered in (<see cref="SyllableItems"/>).</summary>
+    internal static string FileLyricLanguage(SyntaxTree tree) => LilySharp.Core.Music.LyricLanguage.ReaderOf(tree.GetRoot())(null);
+
+    /// <summary>
+    /// A few syllables to sing or print every note on (owner's decision 2026-11-18:
+    /// <c>sings "la"</c>, <c>lyrics "la" on PART</c>), in the script of <paramref name="language"/>.
+    /// Any string is taken there: these are the usual ones, to show the form.
+    /// </summary>
+    private static CompletionItem[] SyllableItems(string language)
+    {
+        string[] syllables = language switch
+        {
+            "ja" => ["ラ", "ル", "ア", "ウ"],
+            "zh" => ["啦", "噜", "啊", "呜"],
+            "ko" => ["라", "루", "아", "우"],
+            _ => ["la", "lu", "ah", "oo"],
+        };
+        return [.. syllables.Select((s, i) => new CompletionItem
+        {
+            Label = $"\"{s}\"",
+            Kind = CompletionItemKind.Value,
+            Detail = $"Every note on {s} (any syllable can be written)",
+            SortText = "8c" + i,
+        })];
+    }
 
     /// <summary>The words a file need not write (docs/lyrics-singer-design.md §6): a singer can
-    /// hum or sing the note names, and a row can print the note names (humming has nothing to print).</summary>
-    private static CompletionItem[] GeneratedLyricsItems(bool forSinger)
+    /// hum or sing the note names, and a row can print the note names (humming has nothing to print).
+    /// With <paramref name="syllableLanguage"/>, the syllables of that language too.</summary>
+    private static CompletionItem[] GeneratedLyricsItems(bool forSinger, string? syllableLanguage = null)
     {
+        if (syllableLanguage != null)
+            return [.. GeneratedLyricsItems(forSinger), .. SyllableItems(syllableLanguage)];
         var solfege = new CompletionItem
         {
             Label = LilySharp.Core.Music.GeneratedLyrics.Solfege,
@@ -2575,7 +2605,7 @@ public sealed partial class LilySharpLanguageServer
                 Detail = (own.Count > 0 ? "The words " + part + " names" : "Lyrics") + " (" + LanguageName(n) + ")",
                 SortText = "0" + i.ToString("D3"),
             }),
-            .. GeneratedLyricsItems(forSinger: true),
+            .. GeneratedLyricsItems(forSinger: true, languageOf(null)),
         ];
     }
 

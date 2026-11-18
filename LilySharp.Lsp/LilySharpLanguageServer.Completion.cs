@@ -649,7 +649,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterStrokesRef => GetDeclaredNameCompletions(doc.Text, "strokes", "Strokes part — drawn as a one-line staff of slash heads"),
             CompletionContext.AfterPlaysTarget => GetDeclaredNameCompletions(doc.Text, "strokes", "Strokes part the row plays — its chords struck at the strokes"),
             // …and the singers the file names: `lyrics carol` is the words carol sings.
-            CompletionContext.AfterLyricsRef => WithSingers(GetLyricsRowNameCompletions(doc.Text, offset), doc, staves: false),
+            CompletionContext.AfterLyricsRef => WithSingers(GetLyricsRowNameCompletions(doc.Text, offset, FileLyricLanguage(doc.Tree)), doc, staves: false),
             CompletionContext.AfterLyricsName => GetVoiceBindingNameCompletions(doc.Text),
             CompletionContext.AfterLyricsTrackName => GetLyricsTrackNameCompletions(LyricsHeadAt(doc.Text, offset)?.Written),
             CompletionContext.AfterLanguage => GetLanguageNameCompletions(),
@@ -661,7 +661,7 @@ public sealed partial class LilySharpLanguageServer
             // for the order — and, where it names none, the file's; the made words after them.
             CompletionContext.AfterSingerSings when SingerPartBefore(doc.Text, offset) is { } sungPart
                 => new CompletionList { Items = SingerWordsOfPart(doc, sungPart) },
-            CompletionContext.AfterSingerSings => new CompletionList { Items = [.. SingerWordsGoOnToOn([.. GetDeclaredNameCompletions(doc.Text, "lyrics", "The words this voice sings").Items, .. GeneratedLyricsItems(forSinger: true)], doc.Text, offset), RowOnItem("9")] },
+            CompletionContext.AfterSingerSings => new CompletionList { Items = [.. SingerWordsGoOnToOn([.. GetDeclaredNameCompletions(doc.Text, "lyrics", "The words this voice sings").Items, .. GeneratedLyricsItems(forSinger: true, FileLyricLanguage(doc.Tree))], doc.Text, offset), RowOnItem("9")] },
             CompletionContext.AfterSingerWords => new CompletionList { Items = [RowOnItem("0")] },
             CompletionContext.AfterSingsTarget => GetVoiceBindingNameCompletions(doc.Text,
                 "The part - or named voice - this lyrics track sings"),

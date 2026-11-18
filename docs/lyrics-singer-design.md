@@ -98,6 +98,12 @@ singer female sings solfege on alt    // sings the note names
 score { staff alt  lyrics solfege }   // prints them under the notes
 ```
 
+A syllable written in the track's place is the third kind (owner's decision 2026-11-18, asked as
+"la la la", then "lu lu lu too, or a parameter?"): `singer female on sop sings "la"` puts it on every
+note, and `lyrics "la" on sop` prints it. One form for any syllable, and no reserved name more. The
+track's name is the string as written (`GeneratedLyrics.IsSyllable`), so everything that asks
+"is this made from the notes" answers for it. A part's header (`part p { lyrics … }`) does not take one.
+
 `solfege` is movable do: the key's tonic is do, a minor key's is la, and a `key` change moves it. An
 altered note takes the name of its letter and sounds as written. The file's `language` picks the words:
 ドレミファソラシ in Japanese, do re mi fa sol la ti in English, 哆来咪发唆拉西 in Chinese (simplified

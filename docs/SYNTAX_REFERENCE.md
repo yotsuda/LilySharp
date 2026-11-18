@@ -2657,6 +2657,10 @@ is not checked. Words themselves (`lyrics NAME { … }`) are not written inside 
 sings the note names, and the row `lyrics solfege` prints them under the notes (`lyrics hum` is an
 error, LYS4050: there is nothing to print). Solfege is movable do, in the file's `language`.
 
+**A syllable for every note**: a string where the words are named. `singer female on sop sings "la"`
+sings every note on la, and the row `lyrics "la" on sop` prints it under each note. Any syllable can
+be written (`"ラ"`, `"ル"`, `"ah"`, `"doo"`), in the script the voice sings; an empty string is an error.
+
 **What a staff sounds** is the score's: `staff PART [hidden] [sounds voice|instrument|both]` (a `tab`
 too). With no `sounds` a part a `singer` line sings is a voice, any other its instrument; two staves
 of one part add up. `hidden` sounds the part and draws nothing. A part with no `staff` in the

@@ -1339,6 +1339,9 @@ Two track names need no `lyrics { }` block, being made from the notes: `singer f
 sings hum on sop` hums, and `singer female on alt sings solfege` sings the note names
 (movable do, in the file's `language`). The score row `lyrics solfege` prints the names
 under the notes; `lyrics hum` is an error (LYS4050), there being nothing to print.
+A string in the track's place is a syllable for every note: `singer female on alt sings "la"`
+(or `"ラ"`, `"ル"`, `"ah"`: any syllable, in the script the voice sings), and the row
+`lyrics "la" on alt` prints it under each note.
 
 A part may name its words in its header: `part sop { instrument soprano  lyrics words }`,
 no braces, one statement a track. `singer female on sop` then sings them with no name

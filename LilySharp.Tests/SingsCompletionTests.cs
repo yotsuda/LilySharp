@@ -171,6 +171,26 @@ public class SingsCompletionTests
         Assert.Null(items[0].Command);
     }
 
+    /// <summary>A syllable written where the words are named (owner's decision 2026-11-18): the row
+    /// and the singer line offer the usual ones in the script of the file's language, after the
+    /// tracks and the two made from the notes. A part's own list (<c>part p { lyrics ▮ }</c>) does not.</summary>
+    [Theory]
+    [InlineData("", "\"ラ\"", "\"ル\"")]
+    [InlineData("language english\n", "\"la\"", "\"lu\"")]
+    public void TheSyllables_AreOfferedWhereTheWordsAreNamed(string language, string first, string second)
+    {
+        static bool OfWords(string l) => l is "words" or "hum" or "solfege" || l.StartsWith('"');
+        string top = language + "part guitar\nlyrics words { section A { la | } }\nsection A { guitar { c4 | } }\nform { A }\n";
+        string row = top + "score {\n  staff guitar\n  lyrics ";
+        Assert.Equal(["words", "solfege", first, second], LabelsAt(row + "\n}\n", row.Length).Where(OfWords).Take(4));
+
+        string sings = top + "singer female on guitar sings ";
+        Assert.Equal(["words", "hum", "solfege", first, second], LabelsAt(sings + "\nscore { staff guitar }\n", sings.Length).Where(OfWords).Take(5));
+
+        string part = language + "lyrics words { section A { la | } }\npart guitar { lyrics ";
+        Assert.DoesNotContain(LabelsAt(part + " }\nsection A { guitar { c4 | } }\nform { A }\n", part.Length), l => l.StartsWith('"'));
+    }
+
     private static string[] LabelsAt(string text, int offset)
     {
         var server = new LilySharpLanguageServer(System.IO.Stream.Null, System.IO.Stream.Null);

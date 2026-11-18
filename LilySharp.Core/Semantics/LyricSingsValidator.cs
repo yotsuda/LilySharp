@@ -120,6 +120,9 @@ internal sealed class LyricSingsValidator : ISemanticValidator
             else if (row.PartName == GeneratedLyrics.Solfege && RenderSpecParser.RowTarget(row) == null)
                 _diagnostics.Error(row.LyricsKeyword.Span, DiagnosticCodes.LyricsRowNeedsOn,
                     "The note names follow notes: say whose, 'lyrics solfege on PART'.");
+            else if (GeneratedLyrics.IsSyllable(row.PartName) && RenderSpecParser.RowTarget(row) == null)
+                _diagnostics.Error(row.LyricsKeyword.Span, DiagnosticCodes.LyricsRowNeedsOn,
+                    $"A syllable is printed under notes: say whose, 'lyrics {row.PartName} on PART'.");
             else if (row.SingsTarget == null && LyricBindings.TargetOf(root, row.PartName) == null)
             {
                 RenderSpecParser.NearestStaffAbove(row, out bool severalParts);

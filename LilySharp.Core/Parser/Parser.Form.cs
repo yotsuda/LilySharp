@@ -1190,6 +1190,10 @@ internal sealed partial class Parser
         // 2026-10-09). ⚠️ So a bare word right after it is always the track's name.
         if (IsPartNameStart() && !IsRowOnClause())
             tokens.Add(Advance());
+        // A string in the name's place is a syllable printed under every note (owner's decision
+        // 2026-11-18; Music.GeneratedLyrics.IsSyllable): `lyrics "la" on sop`.
+        else if (Check(SyntaxKind.StringLiteral))
+            tokens.Add(ParseSyllable("lyrics \"la\" on PART"));
         if (IsRowOnClause())
         {
             tokens.Add(Advance());

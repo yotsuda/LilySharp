@@ -319,6 +319,11 @@ lyrics ja language japanese { さ く ら | }</pre>
 singer female on alt sings solfege    // sings the note names
 score { staff alt  lyrics solfege }   // prints the names under the notes</pre>
   <p>Solfege is movable do, in the file's <code>language</code>.</p>
+  <p>A string where the words are named is a syllable for every note. Any syllable can be written, in
+  the script the voice sings:</p>
+<pre>singer female on sop sings "ラ"        // ラ on every note
+singer male on bass sings "ドゥ"
+score { staff sop  lyrics "ラ" }       // prints it under the notes</pre>
 </section>
 
 <section id="editor">

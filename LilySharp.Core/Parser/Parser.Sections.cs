@@ -373,6 +373,11 @@ internal sealed partial class Parser
         }
         if (IsPartNameToken(Current) && Current.Text != "on" && !IsLanguageDeclaration() && !IsSingerWith() && !IsSingerPlace())
             tokens.Add(Advance());
+        // A string where the words are named is a syllable every note is sung on (owner's decision
+        // 2026-11-18): `sings "la"`. Its text, quotes and all, is the track's name
+        // (Music.GeneratedLyrics.IsSyllable).
+        else if (Check(SyntaxKind.StringLiteral) && !BeginsLine())
+            tokens.Add(ParseSyllable("singer female on PART sings \"la\""));
         if (!partFirst && Current.Text == "on")
         {
             tokens.Add(Advance());
@@ -400,6 +405,18 @@ internal sealed partial class Parser
                 tokens.Add(Advance());
         }
         return new SingerDeclarationGreen([.. tokens]);
+    }
+
+    /// <summary>The string written where words are named — the syllable every note takes — which
+    /// has to say one: an empty string is an error here, and stays the token it is.</summary>
+    private SyntaxToken ParseSyllable(string example)
+    {
+        var token = Advance();
+        if (string.IsNullOrWhiteSpace(StringLiteral.Value(token.Text)))
+            _diagnostics.Error(new TextSpan(_textPosition - token.FullWidth + token.LeadingTriviaWidth, Math.Max(1, token.Width)),
+                DiagnosticCodes.ExpectedToken,
+                $"The string is the syllable every note is sung on, and this one is empty: {example}.");
+        return token;
     }
 
     /// <summary>

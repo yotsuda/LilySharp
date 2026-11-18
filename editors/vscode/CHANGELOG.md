@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A syllable for every note: `sings "la"`.** A string where a singer line or a score's lyrics row names its words is a syllable put on every note: `singer female on sop sings "la"` sings the part on la, and `lyrics "la" on sop` prints it under each note. Any syllable can be written — `"ラ"`, `"ル"`, `"ah"`, `"doo"` — in the script the voice sings, with no `lyrics { }` block. The lists after `sings` and after a row's `lyrics` offer the usual ones in the file's language.
+
 - **A DiffSinger voice with no vocoder says so, with the way to one.** A DiffSinger voice that brings no vocoder of its own (no `dsvocoder` folder) cannot sing until a vocoder folder is chosen in Cantoria. Taking such a voice from the `singer` list was silent — its sample was not heard, and only the output channel said why — and a score that named one played the part's instrument with a note that pointed at the install page. Both now say that the voice has no vocoder, with two buttons: How to Install a Voice (the DiffSinger steps) and Choose Vocoder Folder….
 
 - **Fixed: an ottava bracket over two voices ended short of the last note.** Where the lower voice stands a second under the upper — its heads set a head's width aside — `voice { c''2 d''2 } { b'2@8vb c''2@!8vb }` ended the bracket over the upper voice's note, 1.4 short of the lower voice's last head. The bracket now runs from the staff's first note of its first moment to after the staff's last note of its last, each where it is drawn, as LilyPond's does.

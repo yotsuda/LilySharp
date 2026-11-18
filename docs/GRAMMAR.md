@@ -390,8 +390,8 @@ LanguageDecl   = 'language' , LanguageName ;
 SingerDecl     = 'singer' , [ SingerValue ] , SingerSung ,                                      (* SingerValue: below *)
                  { SingerPlace } ,                      (* each of the three once, in any order *)
                  [ 'with' , SingerSetting , { SingerSetting } ] ;
-SingerSung     = 'on' , PartRef , [ 'sings' , [ Identifier ] ]      (* THE PART FIRST — the standard *)
-               | 'sings' , [ Identifier ] , [ 'on' , PartRef ] ;    (* the older order, read as it was *)
+SingerSung     = 'on' , PartRef , [ 'sings' , [ Identifier | String ] ]      (* THE PART FIRST — the standard *)
+               | 'sings' , [ Identifier | String ] , [ 'on' , PartRef ] ;    (* the older order, read as it was *)
                  (* WHOSE NOTES, THEN WHICH WORDS (owner's decision 2026-11-12): 'singer alice
                     female on lead', and 'sings NAME' after the part only where the words have to
                     be named — a part that names its words needs no 'sings'. Once the part is
@@ -1784,6 +1784,13 @@ PartBlock      = PartName , MusicBlock ;
    'singer S on PART sings hum' hums each note on ん ('lyrics hum' is LYS4050: there is
    nothing to print). 'singer S on PART sings solfege' sings the note names, and the row
    'lyrics solfege' prints them under the notes (it needs a staff above it or 'on', LYS4051).
+   A STRING where a track is named is a syllable put on every note (owner's decision
+   2026-11-18): 'singer S on PART sings "la"' sings them all on la, and the row
+   'lyrics "la" on PART' prints it under each (the same LYS4051 with no notes to follow).
+   Any syllable: "ラ", "ル", "ah", "doo" — written in the script the voice sings, in the
+   file's language. The string, quotes and all, is the track's name, so it is no track to
+   define or for a part to list; an empty one is an error. A part's header does not take
+   one ('part p { lyrics "la" }' is not this form).
    Movable do: the key signature's major tonic is do, so a minor key's tonic is la, and a
    'key' change moves it. An altered note takes the name of its letter. The file's
    'language' picks the words: ドレミファソラシ, do re mi fa sol la ti, 哆来咪发唆拉西,
