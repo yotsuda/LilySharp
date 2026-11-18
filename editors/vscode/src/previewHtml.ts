@@ -474,9 +474,16 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         /* "0:00 / 4:38": the position and the length read as one, a space apart — not the
            group's 8px between two buttons (owner's report 2026-11-16) — and over them the bar,
            "Bar 12 / 118" (owner's request 2026-11-19): two small lines in the header's one. */
-        .toolbar .where { display: inline-flex; flex-direction: column; align-items: flex-start; justify-content: center; line-height: 1.15; }
+        /* The two lines' "/" stand one over the other (owner's request 2026-11-19): a grid of three
+           columns, what is before the "/" set right, what is after it set left. */
+        .toolbar .where { display: inline-grid; grid-template-columns: auto auto auto; column-gap: 3px; align-content: center; line-height: 1.15; }
         .toolbar .where .length { font-size: 11px; white-space: nowrap; }
-        .toolbar .where .clock { display: inline-flex; gap: 3px; }
+        .toolbar .where #barNow { grid-area: 1 / 1; justify-self: end; }
+        .toolbar .where #barSlash { grid-area: 1 / 2; }
+        .toolbar .where #barLast { grid-area: 1 / 3; }
+        .toolbar .where #posInfo { grid-area: 2 / 1; justify-self: end; }
+        .toolbar .where #posSlash { grid-area: 2 / 2; }
+        .toolbar .where #lengthInfo { grid-area: 2 / 3; }
         /* The button that brings a Play's view back to the notes sounding (followScroll.ts). */
         ${FOLLOW_SCROLL_CSS}
         /* The Range panel (owner's request 2026-10-25): each part's lowest and highest note over
@@ -677,7 +684,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         <button id="loopBtn" class="toggle icon" type="button" aria-pressed="false" aria-label="Repeat" title="Repeat: play round and round — the bars A to B when A-B is on, else the whole score as it plays"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.8 7.2V6.4a2.2 2.2 0 0 1 2.2-2.2h7.6"/><path d="M10.4 2l2.2 2.2-2.2 2.2"/><path d="M13.2 8.8v.8a2.2 2.2 0 0 1-2.2 2.2H3.4"/><path d="M5.6 14l-2.2-2.2 2.2-2.2"/></svg></button>
         <button id="practiceBtn" class="toggle icon practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" aria-label="Practice and mixer" title="Practice and mixer: tempo, the parts, the recording"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M3.6 14.8 6.3 1.4h3.4l2.7 13.4zM7.3 3 5.9 10.2h4.2L8.7 3z"/><path d="M7.7 11.2 12.4 3.9l1 .65-4.7 7.3z"/></svg><span id="practiceSpeed"></span></button>
         <!-- The bar over the time (owner's request 2026-11-19): "Bar 12 / 118" over "0:21 / 4:38". -->
-        <span class="where"><span id="barInfo" class="length" title="The bar playing — stopped, the A flag's bar, where Play starts — and the last bar printed" hidden></span><span class="clock"><span id="posInfo" class="length" title="Where the playback stands, in the score's time" hidden></span><span id="lengthInfo" class="length" title="Length, as played"></span></span></span>
+        <span class="where"><span id="barNow" class="length" title="The bar playing — stopped, the A flag's bar, where Play starts" hidden></span><span id="barSlash" class="length" hidden>/</span><span id="barLast" class="length" title="The last bar printed" hidden></span><span id="posInfo" class="length" title="Where the playback stands, in the score's time" hidden></span><span id="posSlash" class="length" hidden>/</span><span id="lengthInfo" class="length" title="Length, as played"></span></span>
         </span>
         <span class="sep"></span>
         <span class="group">
@@ -3110,24 +3117,26 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             const el = document.getElementById('posInfo');
             const s = playingNow() ? playbackScoreSeconds() : paused && typeof paused.seconds === 'number' ? paused.seconds : stoppedSeconds;
             el.hidden = typeof s !== 'number' || !isFinite(s);
-            el.textContent = el.hidden ? '' : clockText(s) + ' /';
+            el.textContent = el.hidden ? '' : clockText(s);
+            document.getElementById('posSlash').hidden = el.hidden;
             if (!playingNow()) showBarInfo();    // (playing, the lit bar says it: lightPlayingBar)
         }
         /** The bar over the time (owner's request 2026-11-19: it was the practice panel's last line,
          *  "118 bars placed"): the bar playing — paused, the one it stopped in; stopped, the A flag's,
          *  where Play starts — of the bars printed, by the numbers printed. */
         function showBarInfo() {
-            const el = document.getElementById('barInfo');
+            const now = document.getElementById('barNow'), end = document.getElementById('barLast');
             let bars;
             try { bars = abBars(); } catch (e) { return; }     // (the page's script is still starting)
             let last = -1;
             for (const b of bars) if (b) last = b.m;
             const m = playingNow() ? (litBar >= 0 ? litBar : Math.max(0, abFrom))
                 : paused && lastLitBar >= 0 ? lastLitBar : Math.max(0, abFrom);
-            el.hidden = last < 0;
-            if (el.hidden) { el.textContent = ''; return; }
+            for (const e of [now, document.getElementById('barSlash'), end]) e.hidden = last < 0;
+            if (last < 0) { now.textContent = end.textContent = ''; return; }
             const num = i => bars[i] && Number.isInteger(bars[i].bar) ? bars[i].bar : i + 1;
-            el.textContent = num(Math.min(m, last)) + ' / ' + num(last);
+            now.textContent = num(Math.min(m, last));        // (the "/" between them is its own cell: barSlash)
+            end.textContent = num(last);
         }
         /**
          * When printed bar m (a measure index, as the flags count) first plays, on a list's own time

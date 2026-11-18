@@ -199,11 +199,16 @@ describe('the preview\'s Range panel', () => {
     // Where the playback stands, just left of the length (owner's request 2026-11-16), on the
     // length's yardstick: the score's seconds at the written tempo.
     it('shows where the playback stands beside the length, in the score\'s seconds', () => {
-        assert.match(html, /<span id="posInfo" class="length"[^>]*hidden><\/span>\s*<span id="lengthInfo"/);
-        // …and over them the bar, "Bar 12 / 118" (owner's request 2026-11-19: the practice panel's
+        assert.match(html, /<span id="posInfo" class="length"[^>]*hidden><\/span><span id="posSlash" class="length" hidden>\/<\/span><span id="lengthInfo"/);
+        // …and over them the bar, "12 / 118" (owner's request 2026-11-19: the practice panel's
         // "118 bars placed" line took room there): the bar lit while it plays, else the A flag's.
-        assert.match(html, /<span class="where"><span id="barInfo" class="length"[^>]*hidden><\/span><span class="clock"><span id="posInfo"/);
-        assert.match(html, /el\.textContent = num\(Math\.min\(m, last\)\) \+ ' \/ ' \+ num\(last\);/);
+        // The two "/" one over the other (owner's request 2026-11-19): each its own cell of a grid.
+        assert.match(html, /<span class="where"><span id="barNow" class="length"[^>]*hidden><\/span><span id="barSlash" class="length" hidden>\/<\/span><span id="barLast" class="length"[^>]*hidden><\/span><span id="posInfo"/);
+        assert.match(html, /\.toolbar \.where \{ display: inline-grid; grid-template-columns: auto auto auto;/);
+        assert.match(html, /\.toolbar \.where #barNow \{ grid-area: 1 \/ 1; justify-self: end; \}/);
+        assert.match(html, /\.toolbar \.where #posInfo \{ grid-area: 2 \/ 1; justify-self: end; \}/);
+        assert.match(html, /now\.textContent = num\(Math\.min\(m, last\)\);/);
+        assert.match(html, /document\.getElementById\('posSlash'\)\.hidden = el\.hidden;/);
         assert.match(html, /if \(Number\.isInteger\(m\) && m !== litBar\) \{ litBar = m; showBarInfo\(\); \}/);
         assert.doesNotMatch(html, /bars placed'/);
         // No function of the page is declared twice: the later one silently takes the name (the
