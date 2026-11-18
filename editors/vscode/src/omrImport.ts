@@ -28,6 +28,7 @@ import {
     ReadProgress, readArguments, readerIsOld, runOmr, speaksProtocol,
 } from './omrCore';
 import { findOmr, noteOmrBeta, offerOmrExtension, offerOmrUpdate } from './omrReader';
+import { importFilters } from './fileFilters';
 
 export interface OmrImportDeps {
     readonly output: vscode.OutputChannel;
@@ -57,7 +58,7 @@ export async function importFromImage(
         const picked = await vscode.window.showOpenDialog({
             canSelectMany: true,
             openLabel: 'Read',
-            filters: { 'Scans and PDF': [...OMR_INPUT_EXTENSIONS] },
+            filters: importFilters('Scans and PDF', OMR_INPUT_EXTENSIONS),
         });
         if (!picked || picked.length === 0) {
             return undefined;

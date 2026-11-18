@@ -30,6 +30,7 @@ import {
 } from './dettatoCore';
 import { parseRecording, recordingPathFor } from './recordingCore';
 import { markJustConverted } from './recording';
+import { importFilters } from './fileFilters';
 
 async function dettatoExports(): Promise<unknown> {
     const ext = vscode.extensions.getExtension(DETTATO_EXTENSION_ID);
@@ -176,7 +177,7 @@ export async function convertRecording(context: vscode.ExtensionContext, uri: vs
     if (!uri) {
         const picked = await vscode.window.showOpenDialog({
             title: 'Convert Recording to Lily# (.lys)', openLabel: 'Convert', canSelectMany: false,
-            filters: { Recordings: [...reader.inputs] },
+            filters: importFilters('Recordings', reader.inputs),
         });
         if (!picked || picked.length === 0) {
             return;

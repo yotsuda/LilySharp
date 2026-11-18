@@ -80,6 +80,8 @@ export async function importMusicXml(context: vscode.ExtensionContext, sourceUri
             openLabel: 'Import',
             // A Standard MIDI File and ABC notation go through the same request: the server tells
             // them by what they hold.
+            // (Named by hand: the three MusicXML spellings are one kind, which importFilters,
+            // the scans' and the recordings', would list one by one.)
             filters: {
                 'MusicXML, MIDI or ABC': ['xml', 'musicxml', 'mxl', 'mid', 'midi', 'abc'],
                 'MusicXML': ['xml', 'musicxml', 'mxl'], 'MIDI': ['mid', 'midi'], 'ABC': ['abc'],
