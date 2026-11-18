@@ -689,8 +689,8 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
     <button id="followBtn" class="follow-btn" type="button" title="Scroll back to the notes sounding, and follow them again" hidden>↓ Follow</button>
     <div id="rangePanel" class="range-panel" hidden><button type="button" id="rangeClose" class="panel-close" title="Close" aria-label="Close">×</button><div id="rangeBody"></div></div>
     <!-- Practice and the mixer in one panel (docs/transport-mixer-design.md §6; owner's decision 2026-11-17): a group a
-         heading, each folded or opened by its name (remembered); a group's head — its All, its fader — stays
-         usable folded. -->
+         heading; Score and Recording folded or opened by their names (remembered), their heads — the on/off,
+         All, the fader — usable folded. -->
     <div id="practicePanel" class="range-panel practice-panel mixer-panel" hidden>
         <button type="button" id="practiceClose" class="panel-close" title="Close" aria-label="Close">×</button>
         <!-- Tempo: one line, never folded (owner's decision 2026-11-19: folded, the line showed all of it). -->
