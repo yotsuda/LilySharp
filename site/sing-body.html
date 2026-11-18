@@ -45,28 +45,16 @@
   </ol>
   <table class="g">
     <tr><th>Engine</th><th>What it is</th><th>Sings</th></tr>
-    <tr><td><a href="#install-voicevox"><b>VOICEVOX</b></a></td>
-      <td>One installer, many voices. The quickest start</td>
-      <td>Japanese</td></tr>
     <tr><td><a href="#install-diffsinger"><b>DiffSinger</b></a></td>
       <td>Voices published one by one by their authors, as folders</td>
       <td>Japanese, and English, Chinese or Korean where the voice has a dictionary for them</td></tr>
     <tr><td><a href="#install-neutrino"><b>NEUTRINO</b></a></td>
       <td>One download with a voice in it; more voices from its site. Windows only</td>
       <td>Japanese</td></tr>
+    <tr><td><a href="#install-voicevox"><b>VOICEVOX</b></a></td>
+      <td>One installer, many voices. The quickest start</td>
+      <td>Japanese</td></tr>
   </table>
-
-  <h3 id="install-voicevox">VOICEVOX</h3>
-  <ol class="llist">
-    <li>Download <a href="https://voicevox.hiroshiba.jp/">VOICEVOX</a> from its site and install it.
-    Read <a href="https://voicevox.hiroshiba.jp/term/">its terms</a>: each character has terms of its
-    own, and a published work credits <code>VOICEVOX:name</code>.</li>
-    <li>Run <b>Cantoria: Choose VOICEVOX Folder…</b> and choose the folder VOICEVOX was installed in,
-    the one that holds <code>vv-engine</code>. Cantoria then starts the engine when one of its voices
-    is needed and stops it when VS Code closes. You need not open VOICEVOX yourself.</li>
-    <li>Write a voice: <code>singer "voicevox/ずんだもん-ノーマル" on melody</code>. The list after
-    <code>singer "</code> shows every voice it has.</li>
-  </ol>
 
   <h3 id="install-diffsinger">DiffSinger</h3>
   <ol class="llist">
@@ -106,6 +94,18 @@
     <code>model\ZUNDAMON\info.toml</code>. The voice is named by that folder,
     <code>singer "neutrino/ZUNDAMON" on melody</code>, and the list after <code>singer "</code> shows
     it. Each voice has terms of its own, in the files it comes with.</li>
+  </ol>
+
+  <h3 id="install-voicevox">VOICEVOX</h3>
+  <ol class="llist">
+    <li>Download <a href="https://voicevox.hiroshiba.jp/">VOICEVOX</a> from its site and install it.
+    Read <a href="https://voicevox.hiroshiba.jp/term/">its terms</a>: each character has terms of its
+    own, and a published work credits <code>VOICEVOX:name</code>.</li>
+    <li>Run <b>Cantoria: Choose VOICEVOX Folder…</b> and choose the folder VOICEVOX was installed in,
+    the one that holds <code>vv-engine</code>. Cantoria then starts the engine when one of its voices
+    is needed and stops it when VS Code closes. You need not open VOICEVOX yourself.</li>
+    <li>Write a voice: <code>singer "voicevox/ずんだもん-ノーマル" on melody</code>. The list after
+    <code>singer "</code> shows every voice it has.</li>
   </ol>
 
   <p>A voice is named <code>engine/name</code>: <code>neutrino/MERROW</code>,
