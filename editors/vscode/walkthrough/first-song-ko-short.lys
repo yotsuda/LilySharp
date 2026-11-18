@@ -1,0 +1,23 @@
+// A first song: the opening of 아리랑 (Arirang, a Korean folk song; traditional) — the short
+// one, for a computer where a voice sings slowly; "the whole song" in the steps opens all of
+// it. The part names its words, `lyrics` holds them, the score's row prints them, and the
+// `singer` line is what makes them heard. A slur carries one syllable over its notes. Open the
+// preview and press Play.
+title "아리랑"
+composer "Korean folk song"
+octave relative
+time 9/8
+key f major
+tempo 4. = 84
+part melody { instrument alto  lyrics words }
+section A {
+  melody {
+    c'4.~ c4 d8 c4( d8) | f4.~ f4 g8 f4( g8) | a4. g8( a g) f4( d8) | c4.~ c4( d8 c d) r |
+  }
+  lyrics words language korean {
+    아 리 랑 | 아 리 랑 | 아 라 리 | 요 |
+  }
+}
+form { A }
+singer female on melody
+score { staff melody  lyrics words }

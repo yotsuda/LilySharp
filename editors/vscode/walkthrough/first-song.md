@@ -11,7 +11,10 @@ singer female on melody                          // this line sings them
 
 **Open a First Song** opens such a song, in a language your voices sing: ふるさと in
 Japanese, *Twinkle, Twinkle, Little Star* in English, 送别 in Chinese or 아리랑 in Korean,
-each with its title and sung to its end. All four are in the public domain. Words that are not Japanese say their language:
+each with its title. All four are in the public domain. On a computer with an NVIDIA GPU it
+is the whole song, half a minute of it; without one it is the song's opening, because a voice
+on a processor takes several times as long to sing as the song lasts. The step's two links
+open either. Words that are not Japanese say their language:
 `lyrics words language english { Twin- kle, twin- kle, | lit- tle star, | }`.
 
 Open its preview (the icon at the editor's top

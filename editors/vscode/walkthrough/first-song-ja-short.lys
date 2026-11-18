@@ -1,0 +1,23 @@
+// A first song: the opening of ふるさと (Furusato, 1914; in the public domain) — the short one,
+// for a computer where a voice sings slowly; "the whole song" in the steps opens all of it. The
+// part names its words, `lyrics` holds them, the score's row prints them, and the `singer`
+// line is what makes them heard. Open the preview and press Play.
+title "ふるさと"
+poet "高野辰之"
+composer "岡野貞一"
+octave relative
+time 3/4
+key g major
+tempo 80
+part melody { instrument alto  lyrics words }
+section A {
+  melody {
+    g'4 g g | a4. b8 a4 | b4 b c | d2 r4 |
+  }
+  lyrics words {
+    う さ ぎ | お い し | か の や | ま |
+  }
+}
+form { A }
+singer female on melody
+score { staff melody  lyrics words }

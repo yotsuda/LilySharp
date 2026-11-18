@@ -1,0 +1,24 @@
+// A first song: the opening of Twinkle, Twinkle, Little Star (words 1806, the tune an
+// 18th-century French one; in the public domain) — the short one, for a computer where a voice
+// sings slowly; "the whole song" in the steps opens all of it. The part names its words,
+// `lyrics` holds them, the score's row prints them, and the `singer` line is what makes them
+// heard. Open the preview and press Play.
+title "Twinkle, Twinkle, Little Star"
+poet "Jane Taylor"
+composer "French melody"
+octave relative
+time 4/4
+key c major
+tempo 96
+part melody { instrument alto  lyrics words }
+section A {
+  melody {
+    c'4 c g' g | a a g2 | f4 f e e | d d c2 |
+  }
+  lyrics words language english {
+    Twin- kle, twin- kle, | lit- tle star, | how I won- der | what you are! |
+  }
+}
+form { A }
+singer female on melody
+score { staff melody  lyrics words }

@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CANTORIA_OUTDATED_CONTEXT, FIRST_SONGS, cantoriaIsOutdated, firstSongFor,galleryQuery, newestInGallery, noLanguageGuide,noVocoderGuide, noVoiceGuide, unsingableGuide } from '../src/singerCore';
+import { CANTORIA_OUTDATED_CONTEXT, FIRST_SONGS, cantoriaIsOutdated, firstSongFor, galleryQuery, hasNvidiaGpu, newestInGallery, noLanguageGuide, noVocoderGuide, noVoiceGuide, unsingableGuide } from '../src/singerCore';
 import { extensionSource } from './extensionSource';
 
 // The way from nothing installed to a first voice (owner's request 2026-11-18, after a look at
@@ -103,7 +103,7 @@ describe('the singing walkthrough', () => {
         assert.deepEqual(events('cantoria'), ['extensionInstalled:yotsuda.cantoria']);
         assert.deepEqual(events('engine'), ['onSettingChanged:cantoria.voicesFolder', 'onSettingChanged:cantoria.neutrinoFolder', 'onSettingChanged:cantoria.voicevoxFolder']);
         assert.deepEqual(events('check'), ['onCommand:cantoria.checkSetup']);
-        assert.deepEqual(events('first-song'), ['onCommand:lilysharp.openFirstSong']);
+        assert.deepEqual(events('first-song'), ['onCommand:lilysharp.openFirstSong', 'onCommand:lilysharp.openFirstSongWhole', 'onCommand:lilysharp.openFirstSongShort']);
         for (const step of steps) {
             for (const e of step.completionEvents) { assert.match(e, /^(onCommand|onSettingChanged|onContext|extensionInstalled|onView|onLink):/); }
         }
@@ -138,7 +138,42 @@ describe('the singing walkthrough', () => {
             assert.ok(text.includes(`\ntitle "${titles[language]}"\n`), file);
             assert.match(text, lastWords[language], file);
         }
-        assert.match(extensionSource(), /joinPath\(context\.extensionUri, 'walkthrough', await firstSongFile\(\)\)/);
+        assert.match(extensionSource(), /joinPath\(context\.extensionUri, 'walkthrough', await firstSongFile\(whole\)\)/);
+    });
+
+    // The owner, 2026-11-18: the whole song is half a minute, which a voice on a processor takes
+    // minutes over. So each song has its opening alone beside it, and the computer's GPU says
+    // which is opened; the step links both.
+    it('has each first song whole and short, and opens the short one where there is no NVIDIA GPU', () => {
+        for (const [language, file] of Object.entries(FIRST_SONGS)) {
+            const whole = fs.readFileSync(path.join(root, 'walkthrough', file), 'utf8');
+            const short = fs.readFileSync(path.join(root, 'walkthrough', file.replace('.lys', '-short.lys')), 'utf8');
+            const music = (text: string) => /^  melody \{\s+([^}]+?)\s+\}/m.exec(text)![1].split('\n').map(l => l.trim());
+            const said = (text: string) => /^  lyrics words[^{]*\{\s+([^}]+?)\s+\}/m.exec(text)![1].split('\n').map(l => l.trim());
+            // The short one is the whole one's first line, note for note and word for word, under the same title.
+            assert.deepEqual(music(short), [music(whole)[0]], language);
+            assert.deepEqual(said(short), [said(whole)[0]], language);
+            assert.equal(/^title .*$/m.exec(short)![0], /^title .*$/m.exec(whole)![0], language);
+            assert.match(short, /^singer female on melody$/m, language);
+            assert.ok(music(whole).length >= 3, language);
+        }
+        assert.equal(firstSongFor([{ language: 'ja' }], 'en', false), 'first-song-ja-short.lys');
+        assert.equal(firstSongFor([{ languages: ['ko'] }], 'ja', false), 'first-song-ko-short.lys');
+        assert.equal(firstSongFor([{ languages: ['ko'] }], 'ja', true), 'first-song-ko.lys');
+        // The GPU is looked for by the program its driver installs, where the driver puts it.
+        const at = (...there: string[]) => (p: string) => there.includes(p);
+        assert.equal(hasNvidiaGpu('win32', { SystemRoot: 'D:\\Win' }, at('D:\\Win\\System32\\nvidia-smi.exe')), true);
+        assert.equal(hasNvidiaGpu('win32', {}, at('C:\\Windows\\System32\\nvidia-smi.exe')), true);
+        assert.equal(hasNvidiaGpu('win32', { SystemRoot: 'C:\\Windows' }, at()), false);
+        assert.equal(hasNvidiaGpu('linux', {}, at('/usr/bin/nvidia-smi')), true);
+        assert.equal(hasNvidiaGpu('linux', {}, at()), false);
+        assert.equal(hasNvidiaGpu('darwin', {}, at('/usr/bin/nvidia-smi')), false);
+        assert.match(extensionSource(), /firstSongFile\(whole: boolean = hasNvidiaGpu\(process\.platform, process\.env, fs\.existsSync\)\)/);
+        // The step's button opens the one for this computer, and its two links either.
+        const step = steps.find(s => s.id === 'first-song')!;
+        assert.deepEqual(commandsOf(step.description), ['lilysharp.openFirstSong', 'lilysharp.openFirstSongWhole', 'lilysharp.openFirstSongShort']);
+        assert.match(extensionSource(), /registerCommand\('lilysharp\.openFirstSongWhole', \(\) => openFirstSong\(context, true\)\)/);
+        assert.match(extensionSource(), /registerCommand\('lilysharp\.openFirstSongShort', \(\) => openFirstSong\(context, false\)\)/);
     });
 
     it('opens the first song in a language the voices installed sing', () => {

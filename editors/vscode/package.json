@@ -602,9 +602,9 @@
           {
             "id": "first-song",
             "title": "Open a first song and play it",
-            "description": "A short song with its words and a singer line. Open its preview and press Play.\n[Open a First Song](command:lilysharp.openFirstSong)",
+            "description": "A song you know, with its words and a singer line. Open its preview and press Play.\n[Open a First Song](command:lilysharp.openFirstSong)\nWith an NVIDIA GPU it is the whole song; without one, its opening, which a voice on a processor sings in a minute or two. Either can be opened: [the whole song](command:lilysharp.openFirstSongWhole), [the short one](command:lilysharp.openFirstSongShort).",
             "media": { "markdown": "walkthrough/first-song.md" },
-            "completionEvents": [ "onCommand:lilysharp.openFirstSong" ]
+            "completionEvents": [ "onCommand:lilysharp.openFirstSong", "onCommand:lilysharp.openFirstSongWhole", "onCommand:lilysharp.openFirstSongShort" ]
           }
         ]
       }
@@ -614,6 +614,16 @@
         "command": "lilysharp.openFirstSong",
         "category": "Lily#",
         "title": "Open a First Song to Sing"
+      },
+      {
+        "command": "lilysharp.openFirstSongWhole",
+        "category": "Lily#",
+        "title": "Open a First Song to Sing (the Whole Song)"
+      },
+      {
+        "command": "lilysharp.openFirstSongShort",
+        "category": "Lily#",
+        "title": "Open a First Song to Sing (the Short One)"
       },
       {
         "command": "lilysharp.installCantoria",

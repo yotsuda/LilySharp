@@ -115,11 +115,29 @@ export const FIRST_SONGS: Readonly<Record<string, string>> = { ja: 'first-song-j
  *  instrument). The editor's own language first, where a voice sings it; else the first of
  *  Japanese, English, Chinese and Korean that one does. With no voice that says what it sings
  *  (none installed yet, or an engine not running), the Japanese one: every engine the steps set
- *  up sings Japanese. */
-export function firstSongFor(voices: readonly Pick<CantoriaVoice, 'language' | 'languages'>[], uiLanguage: string): string {
+ *  up sings Japanese.
+ *
+ *  `whole`: the song to its end, or — false — its opening alone (`first-song-ja-short.lys`), for
+ *  a computer where a voice sings slowly (the owner, the same day): half a minute of song is
+ *  minutes of waiting with no GPU, and a first song should be heard soon. */
+export function firstSongFor(voices: readonly Pick<CantoriaVoice, 'language' | 'languages'>[], uiLanguage: string, whole = true): string {
     const ui = uiLanguage.toLowerCase().split('-')[0];
     const order = [...new Set([ui, 'ja', 'en', 'zh', 'ko'])].filter(l => l in FIRST_SONGS);
-    return FIRST_SONGS[order.find(l => voices.some(v => singsLanguage(v, l))) ?? 'ja'];
+    const song = FIRST_SONGS[order.find(l => voices.some(v => singsLanguage(v, l))) ?? 'ja'];
+    return whole ? song : song.replace(/\.lys$/, '-short.lys');
+}
+
+/** Whether this computer has an NVIDIA GPU with its driver, by the program the driver installs
+ *  (`nvidia-smi`): the GPU NEUTRINO sings on, and a fast one for a DiffSinger voice. Looked for
+ *  where it is put, not guessed from a name; no Mac has one. Another make's GPU sings a DiffSinger
+ *  voice fast too and is not seen here: such a computer is offered the short song first, and the
+ *  whole one is a click away. */
+export function hasNvidiaGpu(platform: string, env: Readonly<Record<string, string | undefined>>, exists: (p: string) => boolean): boolean {
+    if (platform === 'win32') {
+        const root = env.SystemRoot ?? env.SYSTEMROOT ?? env.windir ?? 'C:\\Windows';
+        return exists(`${root}\\System32\\nvidia-smi.exe`);
+    }
+    return platform === 'linux' && ['/usr/bin/nvidia-smi', '/usr/local/bin/nvidia-smi'].some(exists);
 }
 
 /** Whether a voice says it sings `language`: its list of languages, else its one. */

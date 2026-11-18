@@ -29,7 +29,7 @@ import { CandidateSounds, CandidateVoice, CandidateVoices, candidateSilencedTrac
 import { PracticeState, VOICE_LEAD_S, voiceEntries } from './webview/playbackCore';
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
 import { SINGER_NAME, SINGER_LANGUAGE, onSingerGender, singValueChoices, singerGoesOnToSings, singerLineOf, singerSettingSlot, singMarkSlot, singersWritten, singParameterDetail, singProblems, SingSettingDto, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, EngineWatch, prepareAllowanceMs, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuKey, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger, unsingableGuide, unsingableReason } from './singerCore';
-import { CANTORIA_OUTDATED_CONTEXT, CantoriaVoice, cantoriaIsOutdated, firstSongFor, galleryQuery, newestInGallery } from './singerCore';
+import { CANTORIA_OUTDATED_CONTEXT, CantoriaVoice, cantoriaIsOutdated, firstSongFor, galleryQuery, hasNvidiaGpu, newestInGallery } from './singerCore';
 import { VoiceProblems, engineFailureProblem, engineSaid, noVocoderGuide, singerFailureText, vocoderMissing, voiceWho, wordsProblems } from './singerCore';
 
 export interface SingingDeps {
@@ -572,8 +572,9 @@ export async function installCantoria(): Promise<void> {
 }
 
 /** The walkthrough's first song for the voices installed here (firstSongFor): Cantoria is asked
- *  what its voices sing; not installed, or not answering within a few seconds, the Japanese one. */
-export async function firstSongFile(): Promise<string> {
+ *  what its voices sing; not installed, or not answering within a few seconds, the Japanese one.
+ *  `whole` unsaid: the whole song where there is an NVIDIA GPU, its opening alone where not. */
+export async function firstSongFile(whole: boolean = hasNvidiaGpu(process.platform, process.env, fs.existsSync)): Promise<string> {
     let voices: CantoriaVoice[] = [];
     try {
         const asked = (async () => {
@@ -584,7 +585,7 @@ export async function firstSongFile(): Promise<string> {
     } catch {
         // No engine to ask: the default.
     }
-    return firstSongFor(voices, vscode.env.language);
+    return firstSongFor(voices, vscode.env.language, whole);
 }
 
 /** The newest Cantoria its gallery lists, as last asked (undefined: not asked, not answered, not listed). */

@@ -487,6 +487,14 @@ const PREVIEW_MAX_WAIT = 120;
 // When each document was last edited: the header's notes wait for the text to rest (soundingWait).
 const lastEditAt = new Map<string, number>();
 
+/** Opens the walkthrough's first song as a new document (firstSongFile says which: the language
+ *  the voices sing, and the whole song or its opening). */
+async function openFirstSong(context: vscode.ExtensionContext, whole?: boolean): Promise<void> {
+    const sample = await vscode.workspace.fs.readFile(vscode.Uri.joinPath(context.extensionUri, 'walkthrough', await firstSongFile(whole)));
+    const doc = await vscode.workspace.openTextDocument({ language: 'lilysharp', content: Buffer.from(sample).toString('utf8') });
+    await vscode.window.showTextDocument(doc);
+}
+
 export function activate(context: vscode.ExtensionContext) {
     outputChannel.appendLine('Lily# extension activating...');
     // The models that refused as VS Code's own, remembered from an earlier session (modelClient).
@@ -820,11 +828,12 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('lilysharp.upgradeCantoria', () => upgradeCantoria()),
         // The walkthrough's last step: a short song with its words and a singer line, as a new
         // document, to play in the preview — in a language the voices installed sing (firstSongFile).
-        vscode.commands.registerCommand('lilysharp.openFirstSong', async () => {
-            const sample = await vscode.workspace.fs.readFile(vscode.Uri.joinPath(context.extensionUri, 'walkthrough', await firstSongFile()));
-            const doc = await vscode.workspace.openTextDocument({ language: 'lilysharp', content: Buffer.from(sample).toString('utf8') });
-            await vscode.window.showTextDocument(doc);
-        }),
+        // The whole song where the computer has an NVIDIA GPU, its opening alone where not (a
+        // voice on a processor takes minutes over half a minute of song); the two commands
+        // after it are the step's way to the other one.
+        vscode.commands.registerCommand('lilysharp.openFirstSong', () => openFirstSong(context)),
+        vscode.commands.registerCommand('lilysharp.openFirstSongWhole', () => openFirstSong(context, true)),
+        vscode.commands.registerCommand('lilysharp.openFirstSongShort', () => openFirstSong(context, false)),
         vscode.commands.registerCommand('lilysharp.newScore', async () => {
             outputChannel.appendLine('newScore command triggered');
             const doc = await vscode.workspace.openTextDocument({
