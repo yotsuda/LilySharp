@@ -158,7 +158,7 @@ export function noVocoderGuide(reason: string, voice?: string): Pick<VoiceGuide,
         : 'it has no vocoder of its own (a dsvocoder folder) and no vocoder folder is chosen';
     return {
         message: `Lily#: ${who} cannot sing yet: ${why}. Download the vocoder the voice's readme names, then choose its folder.`,
-        actions: [{ label: HOW_TO_INSTALL.label, url: `${VOICE_INSTALL_GUIDE}-diffsinger` }, CHOOSE_VOCODER],
+        actions: [HOW_TO_INSTALL, CHOOSE_VOCODER],
     };
 }
 
@@ -354,9 +354,10 @@ export function voiceListText(voices: readonly CantoriaVoice[], filter: { provid
 /** What the editor says when a voice cannot be listed, and the buttons that go on from it. */
 export interface VoiceGuide { label: string; detail: string; documentation: string; message: string; actions: readonly { label: string; command?: string; url?: string }[] }
 
-/** Where the steps to install each engine are (site/sing-body.html, #install). */
-export const VOICE_INSTALL_GUIDE = 'https://yotsuda.github.io/LilySharp/sing.html#install';
-const HOW_TO_INSTALL = { label: 'How to Install a Voice', url: VOICE_INSTALL_GUIDE };
+/** The steps to install each engine: this extension's own walkthrough (package.json "singing"),
+ *  opened by its command. Until 2026-11-18 a page of the site, and the engines' own sites in what
+ *  is said below: the way to a first voice no longer hangs on a link (the owner asked). */
+const HOW_TO_INSTALL = { label: 'How to Install a Voice', command: 'lilysharp.voiceInstallGuide' };
 const CHOOSE_DIFFSINGER = { label: 'Choose DiffSinger Folder…', command: 'cantoria.chooseVoicesFolder' };
 const CHOOSE_VOCODER = { label: 'Choose Vocoder Folder…', command: 'cantoria.chooseVocoderFolder' };
 // The guide to installing leads (the owner asked, 2026-11-12), and the engines' folders after it
@@ -367,8 +368,8 @@ const VOICE_SETUP_ACTIONS: VoiceGuide['actions'] = [
     { label: 'Choose NEUTRINO Folder…', command: 'cantoria.chooseNeutrinoFolder' },
     { label: 'Choose VOICEVOX Folder…', command: 'cantoria.chooseVoicevoxFolder' },
 ];
-const GUIDE_LINK = `[How to install a voice](${VOICE_INSTALL_GUIDE})`;
-const ENGINE_LINKS = '[DiffSinger](https://github.com/openvpi/DiffSinger), [NEUTRINO](https://studio-neutrino.com/) or [VOICEVOX](https://voicevox.hiroshiba.jp/)';
+const GUIDE_LINK = 'The steps for each engine: **Lily#: How to Install a Singing Voice**, in the command palette';
+const ENGINE_LINKS = 'DiffSinger, NEUTRINO or VOICEVOX';
 const STILL_WRITTEN = 'The score can still be written: a name here is sung once that voice is installed.';
 
 /** What the editor says when no singing voice is installed: with the Cantoria extension, that an engine
@@ -411,7 +412,7 @@ export function noLanguageGuide(language: string, voices: readonly CantoriaVoice
     }
     if (language === 'en' || language === 'zh' || language === 'ko') {
         return { ...base,
-            documentation: `${installed} A [DiffSinger](https://github.com/openvpi/DiffSinger) voice with a \`dsdict-${language}.yaml\` sings ${wanted}: install one, then choose its folder. ${words}\n\n${GUIDE_LINK}.\n\n${STILL_WRITTEN}`,
+            documentation: `${installed} A DiffSinger voice with a \`dsdict-${language}.yaml\` sings ${wanted}: install one, then choose its folder. ${words}\n\n${GUIDE_LINK}.\n\n${STILL_WRITTEN}`,
             message: `Lily#: no installed voice sings ${wanted}. A DiffSinger voice with a dsdict-${language}.yaml does: install one, then choose its folder.`,
             actions: [HOW_TO_INSTALL, CHOOSE_DIFFSINGER] };
     }

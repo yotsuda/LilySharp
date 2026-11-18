@@ -1,0 +1,18 @@
+// A first song. The part names its words, `lyrics` holds them, the score's row prints them,
+// and the `singer` line is what makes them heard. Open the preview and press Play.
+octave relative
+time 4/4
+key c major
+tempo 96
+part melody { instrument alto  lyrics words }
+section A {
+  melody {
+    c'4 d e f | g2 g | a4 a g2 | f4 f e2 | d2 c |
+  }
+  lyrics words {
+    あ か る い | そ ら | う た を | う た お | う よ |
+  }
+}
+form { A }
+singer female on melody
+score { staff melody  lyrics words }

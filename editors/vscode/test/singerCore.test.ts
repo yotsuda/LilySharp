@@ -619,7 +619,7 @@ describe('noVoiceGuide', () => {
         const guide = noVoiceGuide(true);
         assert.match(guide.label, /No singing voice is installed/);
         for (const engine of ['NEUTRINO', 'DiffSinger', 'VOICEVOX']) { assert.match(guide.documentation, new RegExp(engine)); assert.match(guide.message, new RegExp(engine)); }
-        assert.deepEqual(guide.actions.flatMap(a => a.command ? [a.command] : []), ['cantoria.chooseVoicesFolder', 'cantoria.chooseNeutrinoFolder', 'cantoria.chooseVoicevoxFolder']);
+        assert.deepEqual(guide.actions.flatMap(a => a.command?.startsWith('cantoria.') ? [a.command] : []), ['cantoria.chooseVoicesFolder', 'cantoria.chooseNeutrinoFolder', 'cantoria.chooseVoicevoxFolder']);
     });
     it('sets the engines\' folders in the alphabet\'s order, after the guide (the owner asked, 2026-11-18)', () => {
         assert.deepEqual(noVoiceGuide(true).actions.map(a => a.label),
@@ -634,8 +634,12 @@ describe('noVoiceGuide', () => {
     });
     it('leads with the guide to installing a voice (the owner asked, 2026-11-12)', () => {
         const guide = noVoiceGuide(true);
-        assert.deepEqual(guide.actions[0], { label: 'How to Install a Voice', url: 'https://yotsuda.github.io/LilySharp/sing.html#install' });
-        for (const g of [guide, noVoiceGuide(false)]) { assert.match(g.documentation, /\[How to install a voice\]\(https:\/\/yotsuda\.github\.io\/LilySharp\/sing\.html#install\)/); }
+        // …which is this extension's own walkthrough, opened by its command (2026-11-18): no link.
+        assert.deepEqual(guide.actions[0], { label: 'How to Install a Voice', command: 'lilysharp.voiceInstallGuide' });
+        for (const g of [guide, noVoiceGuide(false)]) {
+            assert.match(g.documentation, /Lily#: How to Install a Singing Voice/);
+            assert.doesNotMatch(g.documentation + g.message, /https?:/);
+        }
     });
     it('without Cantoria, says the extension is the first step', () => {
         const guide = noVoiceGuide(false);
@@ -646,7 +650,7 @@ describe('noVoiceGuide', () => {
 
 describe('noLanguageGuide', () => {
     const japanese = [{ id: 'neutrino/X', engine: 'neutrino', name: 'X', language: 'ja' }];
-    const commands = (guide: ReturnType<typeof noLanguageGuide>) => guide.actions.flatMap(a => a.command ? [a.command] : []);
+    const commands = (guide: ReturnType<typeof noLanguageGuide>) => guide.actions.flatMap(a => a.command?.startsWith('cantoria.') ? [a.command] : []);
     it('says what the installed voices sing', () => {
         assert.match(noLanguageGuide('en', japanese).label, /No installed voice sings English/);
         assert.match(noLanguageGuide('en', japanese).documentation, /The installed voices sing Japanese\./);

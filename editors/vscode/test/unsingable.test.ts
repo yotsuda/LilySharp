@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CantoriaApi, CantoriaVoice, PlanAsk, SungVoiceDto, VOICE_INSTALL_GUIDE, languageRefusal, leftToTheInstrument, planAsked, noVocoderGuide, unsingableGuide, unsingableIn, unsingableReason, vocoderMissing } from '../src/singerCore';
+import { CantoriaApi, CantoriaVoice, PlanAsk, SungVoiceDto, languageRefusal, leftToTheInstrument, planAsked, noVocoderGuide, unsingableGuide, unsingableIn, unsingableReason, vocoderMissing } from '../src/singerCore';
 import { CantoriaExtensionBackend, PLAN_KEPT_MS, VoiceRenderer } from '../src/singer';
 import { extensionSource } from './extensionSource';
 
@@ -126,7 +126,7 @@ describe('what is said of a line nobody can sing', () => {
     it('is the reason, what plays then, and the way to a voice', () => {
         const guide = unsingableGuide(LATIN);
         assert.equal(guide.message, `Lily#: a singer line is not sung: ${LATIN}. The part's instrument plays instead.`);
-        assert.deepEqual(guide.actions, [{ label: 'How to Install a Voice', url: VOICE_INSTALL_GUIDE }]);
+        assert.deepEqual(guide.actions, [{ label: 'How to Install a Voice', command: 'lilysharp.voiceInstallGuide' }]);
         // One message a reason: the session's set of things said is keyed by it.
         assert.equal(unsingableGuide(LATIN + '.').message, guide.message);
         assert.notEqual(unsingableGuide('no voice is installed').message, guide.message);
@@ -145,7 +145,7 @@ describe('what is said of a line nobody can sing', () => {
     const EMPTY_VOCODER = 'no vocoder.yaml under C:\\vocoders\\nsf';
 
     it('a DiffSinger voice with no vocoder is told with the way to one (the owner asked, 2026-11-18)', () => {
-        const actions = [{ label: 'How to Install a Voice', url: `${VOICE_INSTALL_GUIDE}-diffsinger` }, { label: 'Choose Vocoder Folder…', command: 'cantoria.chooseVocoderFolder' }];
+        const actions = [{ label: 'How to Install a Voice', command: 'lilysharp.voiceInstallGuide' }, { label: 'Choose Vocoder Folder…', command: 'cantoria.chooseVocoderFolder' }];
         for (const said of [NO_VOCODER, EMPTY_VOCODER, new Error(NO_VOCODER), `Error: ${EMPTY_VOCODER}`]) { assert.equal(vocoderMissing(said), true); }
         for (const said of [LATIN, 'the engine gave no answer in 180 s', 'the voice has no duration model (dsdur/dsconfig.yaml): C:\\v\\X']) { assert.equal(vocoderMissing(said), false); }
 

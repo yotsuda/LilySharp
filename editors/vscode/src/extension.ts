@@ -53,7 +53,7 @@ import { TodoMark, parseStarts, todoDeletions } from './todoResolveCore';
 import { renderAudioFiles } from './audioRender';
 import { PracticeState, practiceSummary } from './webview/playbackCore';
 import { writeVideos } from './videoExport';
-import { registerSinging, deactivateSinging, hearSinger, stepSingerAt, renderer, disposeSinger, menuVoices, missingVoices, followVoices, forgetVoices, prepareVoices, candidateVoices } from './singing';
+import { registerSinging, deactivateSinging, installCantoria, hearSinger, stepSingerAt, renderer, disposeSinger, menuVoices, missingVoices, followVoices, forgetVoices, prepareVoices, candidateVoices } from './singing';
 import { useSoundFontLog, rememberSoundFont, wavSoundFont, chooseSoundFont, previewResourceRoots, synthUrls } from './soundFont';
 import { useMidiOutHost, midiOutputSetting, midiOutRequest, reportMidiOutError, chooseMidiOutput } from './midiOut';
 import { useExportHost, openInDefaultApp, exportPreview, practisedJobs, recordingRendered, recordJobs, singJobs, drawFramesFor, videoFfmpeg } from './exportPreview';
@@ -63,7 +63,7 @@ import { NEW_SCORE_TEMPLATE, newScoreTemplateUri, uriExists, newScoreTemplate, n
 import { registerEditCommands } from './editCommands';
 import { registerMenuContexts } from './menuContext';
 import { resolveServerLaunch } from './serverLaunch';
-import { VOICE_INSTALL_GUIDE, leftToTheInstrument, SungVoiceDto, sungKey, voiceMenuLabels, voiceMenuKey, voiceMenuTitleOf } from './singerCore';
+import { leftToTheInstrument, SungVoiceDto, sungKey, voiceMenuLabels, voiceMenuKey, voiceMenuTitleOf } from './singerCore';
 
 let client: LanguageClient;
 let clientReady = false;
@@ -798,10 +798,29 @@ export function activate(context: vscode.ExtensionContext) {
                 return vscode.commands.executeCommand(
                     'editor.action.showReferences', vscode.Uri.parse(uri), pos(position), locs);
             }),
-        // The steps for each engine, on the site (owner's request 2026-11-12): what to download, where
-        // to unpack it, which Cantoria command to run. The no-voice messages carry the same link.
-        vscode.commands.registerCommand('lilysharp.voiceInstallGuide',
-            () => vscode.env.openExternal(vscode.Uri.parse(VOICE_INSTALL_GUIDE))),
+        // The steps for each engine (owner's request 2026-11-12): what to download, where to unpack
+        // it, which Cantoria command to run. The no-voice messages carry the same command. Since
+        // 2026-11-18 they are a walkthrough of this extension's own (package.json "singing"), its
+        // buttons Cantoria's commands, and not a page of the site: the way to a first voice does
+        // not hang on a link. The walkthrough is hidden until it is asked for (its `when`), so
+        // that installing Lily# does not open a page about singing; where VS Code cannot open
+        // it, the engines' page is shown as it is written.
+        vscode.commands.registerCommand('lilysharp.voiceInstallGuide', async () => {
+            await vscode.commands.executeCommand('setContext', 'lilysharp.singingGuide', true);
+            try {
+                await vscode.commands.executeCommand('workbench.action.openWalkthrough', `${context.extension.id}#singing`, false);
+            } catch {
+                await vscode.commands.executeCommand('markdown.showPreview', vscode.Uri.joinPath(context.extensionUri, 'walkthrough', 'engines.md'));
+            }
+        }),
+        vscode.commands.registerCommand('lilysharp.installCantoria', () => installCantoria()),
+        // The walkthrough's last step: a short song with its words and a singer line, as a new
+        // document, to play in the preview.
+        vscode.commands.registerCommand('lilysharp.openFirstSong', async () => {
+            const sample = await vscode.workspace.fs.readFile(vscode.Uri.joinPath(context.extensionUri, 'walkthrough', 'first-song.lys'));
+            const doc = await vscode.workspace.openTextDocument({ language: 'lilysharp', content: Buffer.from(sample).toString('utf8') });
+            await vscode.window.showTextDocument(doc);
+        }),
         vscode.commands.registerCommand('lilysharp.newScore', async () => {
             outputChannel.appendLine('newScore command triggered');
             const doc = await vscode.workspace.openTextDocument({

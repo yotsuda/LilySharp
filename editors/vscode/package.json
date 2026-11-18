@@ -558,7 +558,59 @@
         }
       }
     ],
+    "walkthroughs": [
+      {
+        "id": "singing",
+        "title": "Have Lily# sing a score",
+        "description": "From nothing installed to a voice singing your words: the extension that sings, an engine for it, and a first song.",
+        "when": "lilysharp.singingGuide",
+        "steps": [
+          {
+            "id": "cantoria",
+            "title": "Install the Cantoria extension",
+            "description": "Voices are sung by Cantoria, a separate free extension that drives a singing engine on this computer.\n[Install Cantoria](command:lilysharp.installCantoria)",
+            "media": { "markdown": "walkthrough/cantoria.md" },
+            "completionEvents": [ "extensionInstalled:yotsuda.cantoria" ]
+          },
+          {
+            "id": "engine",
+            "title": "Set up one singing engine",
+            "description": "Download one engine as the page on the right says, then tell Cantoria where it is. One is enough.\n[Choose DiffSinger Voices Folder](command:cantoria.chooseVoicesFolder)\n[Choose NEUTRINO Folder](command:cantoria.chooseNeutrinoFolder)\n[Choose VOICEVOX Folder](command:cantoria.chooseVoicevoxFolder)",
+            "media": { "markdown": "walkthrough/engines.md" },
+            "completionEvents": [
+              "onSettingChanged:cantoria.voicesFolder",
+              "onSettingChanged:cantoria.neutrinoFolder",
+              "onSettingChanged:cantoria.voicevoxFolder"
+            ]
+          },
+          {
+            "id": "check",
+            "title": "Check that a voice is ready",
+            "description": "Cantoria says which voice would sing, or what is still missing.\n[Check Setup](command:cantoria.checkSetup)",
+            "media": { "markdown": "walkthrough/engines.md" },
+            "completionEvents": [ "onCommand:cantoria.checkSetup" ]
+          },
+          {
+            "id": "first-song",
+            "title": "Open a first song and play it",
+            "description": "A short song with its words and a singer line. Open its preview and press Play.\n[Open a First Song](command:lilysharp.openFirstSong)",
+            "media": { "markdown": "walkthrough/first-song.md" },
+            "completionEvents": [ "onCommand:lilysharp.openFirstSong" ]
+          }
+        ]
+      }
+    ],
     "commands": [
+      {
+        "command": "lilysharp.openFirstSong",
+        "category": "Lily#",
+        "title": "Open a First Song to Sing"
+      },
+      {
+        "command": "lilysharp.installCantoria",
+        "category": "Lily#",
+        "title": "Install the Cantoria Singing Voice Extension"
+      },
       {
         "command": "lilysharp.openPreview",
         "category": "Lily#",

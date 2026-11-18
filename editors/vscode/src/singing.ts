@@ -561,7 +561,7 @@ function offerCantoria(): void {
     });
 }
 
-async function installCantoria(): Promise<void> {
+export async function installCantoria(): Promise<void> {
     try {
         await vscode.commands.executeCommand('workbench.extensions.installExtension', CANTORIA_EXTENSION_ID);
     } catch {

@@ -462,6 +462,16 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] **漢字の読み `漢[かん]`**（第1138・オーナー決定 2026-11-08）: 歌詞を `漢[かん] 字[じ] 雪[ゆき] や | こん 子[こ] |` と書く → プレビューは **漢 字 雪 や こん 子** と刷る（括弧も読みも描かない）・`[かん]` の中が文字列の色、`[` `]` が区切りの色・status bar に「not kana」は出ない・▶ で **かんじゆきや こんこ** と歌う。`漢 [かん]`（空白あり）→ その音節に LYS4036（赤）・`漢[kan]` → LYS4037（黄）で歌声は kan をそのまま渡す。Export as WAV も読みで歌い、Export as MusicXML の `<text>` は漢字・`lysc ly` も漢字。
 - [ ] Cantoria 拡張を無効にする → 次の ▶ から楽器だけ（Lily# の出力チャネルに何も言わない）。**Cantoria: Forget Rendered Voices** → 次の ▶ は歌い直す。VS Code を閉じる → `cantoria.exe`・`neutrino_server.exe` が残らない（タスクマネージャ）。
 
+#### 歌のウォークスルー（2026-11-18・コマンドの動きは機械で確認済み＝Lab `sessions/p1304/vscode-e2e`。見た目は未確認）
+
+- [ ] **W1**: Cantoria を入れていない VS Code で **Lily#: How to Install a Singing Voice** → Welcome のタブに「Have Lily# sing a score」が 4 段で開く（Install the Cantoria extension／Set up one singing engine／Check that a voice is ready／Open a first song and play it）。右側に各段の説明のページが出る。リンクは 1 つも無い。
+- [ ] **W2**: 1 段目の **Install Cantoria** → Cantoria が入り、段にチェックが付く。
+- [ ] **W3**: 2 段目の 3 つのボタンのどれか → Cantoria のフォルダ選択が開く。選ぶと段にチェックが付く。
+- [ ] **W4**: 3 段目の **Check Setup** → Cantoria が「ready」か、足りないものを言う。
+- [ ] **W5**: 4 段目の **Open a First Song** → 新しい文書に短い曲が開く。プレビューを開いて Play → 既定の女声が「あかるいそら…」を歌う。
+- [ ] **W6**: Lily# を入れた直後（歌の案内を一度も開いていない状態）には、このウォークスルーが勝手に開かない・Welcome の一覧にも出ない。
+- [ ] **W7**: 声が無い状態で `singer "` の一覧の案内を取る／声の無い singer 行を再生する → 通知の先頭のボタン **How to Install a Voice** が同じウォークスルーを開く（ブラウザは開かない）。
+
 ### 3.8 頁の本文（```` ```md ````）の色と編集補助（2026-11-13・この節は全部未確認）
 
 機械が見たもの: 文法の scope（`npm test` の `pageTextGrammar.test.ts` が VS Code 自身の tokenizer＝vscode-textmate で回す。Markdown 文法は代役、`LILYSHARP_VSCODE_REPO` を指せば本物）・Enter と囲みの規則（`pageTextCore.test.ts`）・semantic token が本文に乗らないこと（`DeclaredNameTokenTests`）。**実機でしか見られないのは下の全部**（色そのもの・`embeddedLanguages` が効いているか・キーの束縛）。

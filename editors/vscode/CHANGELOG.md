@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Have Lily# sing a score: the steps are in the editor.** **Lily#: How to Install a Singing Voice**, and the first button of every message that says no voice can sing, opened a page of the website. They now open a walkthrough inside VS Code: install the Cantoria extension, set up one engine (the steps for DiffSinger, NEUTRINO and VOICEVOX beside buttons that choose each one's folder), check that a voice is ready, and open a first song to play. Each step is checked off as it is done, and nothing in it is a link. The new **Lily#: Open a First Song to Sing** opens that song by itself.
+
 - **A singer line names one voice.** `singer "neutrino/MERROW+diffsinger/TIGER" on lead` reached Cantoria as it stood and was sung by both voices; Cantoria no longer joins voices by `+`, and the line is now an error that says what to write: a `singer` line for each voice.
 
 - **The scan and recording pickers offer each kind.** *Convert Image/PDF to Lily# (.lys)…*, *Convert Recording to Lily# (.lys)…*, *Attach Recording…* and *Locate Recording…* open their file picker with every kind first and then each alone — PNG, JPEG, BMP, TIFF, PDF; WAV, MP3, M4A, MP4, AAC, FLAC, WMA for Dettato (what it says it reads); WAV, MP3, FLAC, OGG and, on Windows, M4A, MP4, AAC, WMA for a recording beside a chart — as *Import MusicXML, MIDI or ABC…* does.
