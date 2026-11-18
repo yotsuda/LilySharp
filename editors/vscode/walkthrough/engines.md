@@ -3,6 +3,12 @@
 One engine is enough. Each is its makers' work, downloaded from them and used under their
 terms: nothing here comes with Lily# or Cantoria.
 
+**A GPU makes the difference.** NEUTRINO sings on an NVIDIA GPU, and a DiffSinger voice on any
+DirectX 12 GPU on Windows; with none they sing on the CPU, far slower. Measured with NEUTRINO:
+43 s of song in 7 s on a fast NVIDIA GPU, and 37 s of song in 5 min 40 s on a laptop with none.
+On such a PC a song is minutes the first time. What was sung is kept, so after that only a phrase
+you change is sung again.
+
 | Engine | What it is | Sings |
 |---|---|---|
 | **[DiffSinger](https://github.com/openvpi/DiffSinger)** | Voices published one by one by their authors, as folders | Japanese, and English, Chinese or Korean where the voice has a dictionary for them |
