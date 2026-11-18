@@ -3127,7 +3127,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             el.hidden = last < 0;
             if (el.hidden) { el.textContent = ''; return; }
             const num = i => bars[i] && Number.isInteger(bars[i].bar) ? bars[i].bar : i + 1;
-            el.textContent = 'Bar ' + num(Math.min(m, last)) + ' / ' + num(last);
+            el.textContent = num(Math.min(m, last)) + ' / ' + num(last);
         }
         /**
          * When printed bar m (a measure index, as the flags count) first plays, on a list's own time

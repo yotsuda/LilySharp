@@ -203,7 +203,7 @@ describe('the preview\'s Range panel', () => {
         // …and over them the bar, "Bar 12 / 118" (owner's request 2026-11-19: the practice panel's
         // "118 bars placed" line took room there): the bar lit while it plays, else the A flag's.
         assert.match(html, /<span class="where"><span id="barInfo" class="length"[^>]*hidden><\/span><span class="clock"><span id="posInfo"/);
-        assert.match(html, /el\.textContent = 'Bar ' \+ num\(Math\.min\(m, last\)\) \+ ' \/ ' \+ num\(last\);/);
+        assert.match(html, /el\.textContent = num\(Math\.min\(m, last\)\) \+ ' \/ ' \+ num\(last\);/);
         assert.match(html, /if \(Number\.isInteger\(m\) && m !== litBar\) \{ litBar = m; showBarInfo\(\); \}/);
         assert.doesNotMatch(html, /bars placed'/);
         // No function of the page is declared twice: the later one silently takes the name (the
