@@ -439,7 +439,10 @@ memory/smart-app-control-blocks-lilysharp-dlls.md.
 # assignments moved between the two fonts (LilyPond looks glyphs up by feta NAME).
 # The manifest too, so contributed settings / labels / commands deploy; VS Code
 # re-reads package.json on the next window reload.
-$assets = @('syntaxes', 'out', 'media')
+# walkthrough/ carries the pages of the manifest's walkthrough steps (and the first song). The
+# manifest alone deployed the steps without their pages: every step selected raised "Error
+# reading markdown document at file:///…/walkthrough/cantoria.md" (owner's report 2026-11-18).
+$assets = @('syntaxes', 'out', 'media', 'walkthrough')
 foreach ($a in $assets) {
     $src = Join-Path $repoExt $a
     if (-not (Test-Path $src)) { continue }
