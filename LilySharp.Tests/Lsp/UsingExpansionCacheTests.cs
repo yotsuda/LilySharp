@@ -18,6 +18,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using LilySharp.Core.Syntax;
 using LilySharp.Lsp;
 using Xunit;
@@ -90,6 +92,44 @@ public sealed class UsingExpansionCacheTests
         Assert.Same(first.Tree, second.Tree);
         Assert.Same(first.Diagnostics, second.Diagnostics);
         Assert.True(log.Count > computeReads, "the replay must re-read the includes");
+    }
+
+    // Two requests arrive with one text (the caret's or the preview's, and the Problems panel's
+    // pass). Each used to go on with a tree of its own, and the one published was the LATER
+    // one's: everything kept by the tree was made twice for one text (session 1296).
+    [Fact]
+    public void TwoRequestsExpandingOneTextAtOnce_GoOnWithOneTree()
+    {
+        var main = FreshCopyOf(Main);
+        var unexpanded = SyntaxTree.Parse(main);
+        var files = new Dictionary<string, string> { ["parts.lys"] = Parts };
+        // Both are inside the expansion before either finishes: each waits, at its first read,
+        // for the other's.
+        using var both = new Barrier(2);
+        (SyntaxTree Tree, IReadOnlyList<Diagnostic> Diagnostics) One()
+        {
+            bool waited = false;
+            return LilySharpLanguageServer.ExpandUsings(main, unexpanded, "C:/proj/main.lys", p =>
+            {
+                if (!waited)
+                {
+                    waited = true;
+                    Assert.True(both.SignalAndWait(TimeSpan.FromSeconds(30)), "the two expansions did not overlap");
+                }
+                return files.TryGetValue(Path.GetFileName(p), out var t) ? t : null;
+            });
+        }
+
+        var a = Task.Run(One);
+        var b = Task.Run(One);
+        Task.WaitAll(a, b);
+
+        Assert.Same(a.Result.Tree, b.Result.Tree);
+        Assert.Same(a.Result.Diagnostics, b.Result.Diagnostics);
+        // …and it is the tree the next request is handed.
+        var next = LilySharpLanguageServer.ExpandUsings(main, unexpanded, "C:/proj/main.lys",
+            p => files.TryGetValue(Path.GetFileName(p), out var t) ? t : null);
+        Assert.Same(a.Result.Tree, next.Tree);
     }
 
     [Fact]

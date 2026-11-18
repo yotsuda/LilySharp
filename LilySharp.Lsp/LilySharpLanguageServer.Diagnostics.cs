@@ -114,13 +114,27 @@ public sealed partial class LilySharpLanguageServer
                 ? LilySharp.Core.Parser.UsingExpander.UsingsOf(unexpanded)
                 : RecentTrees.IncludedUsings(t));
         var tree = RecentTrees.Parse(expanded, text.Length);
-        System.Threading.Volatile.Write(ref holder.Snapshot, new UsingExpansionSnapshot
+        var made = new UsingExpansionSnapshot
         {
             BasePath = basePath,
             Reads = reads.ToArray(),
             Tree = tree,
             Diagnostics = usingDiagnostics,
-        });
+        };
+        // Two requests arrive with one text (the preview or the caret, and the Problems panel's
+        // pass): both expand, and the FIRST to finish is the expansion of that text for both.
+        // The later one's own tree was the one published until session 1296, so the earlier
+        // request went on with a tree nobody would be handed again — and everything kept by the
+        // tree (the pass's diagnostics, the caret's collects, the sound's index) was made a
+        // second time for the same text (KeystrokeSideWorkTests saw the caret collect twice,
+        // one run in two). Another's snapshot of OTHER reads (an include saved meanwhile) is not
+        // this text's piece any more: the newer one replaces it, as before.
+        var raced = System.Threading.Interlocked.CompareExchange(ref holder.Snapshot, made, cached);
+        if (ReferenceEquals(raced, cached))
+            return (tree, usingDiagnostics);
+        if (raced != null && raced.BasePath == basePath && raced.Reads.AsSpan().SequenceEqual(made.Reads))
+            return (raced.Tree, raced.Diagnostics);
+        System.Threading.Volatile.Write(ref holder.Snapshot, made);
         return (tree, usingDiagnostics);
     }
 

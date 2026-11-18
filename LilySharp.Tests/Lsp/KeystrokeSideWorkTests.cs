@@ -103,6 +103,70 @@ public class KeystrokeSideWorkTests
         Assert.Equal(collects, LilySharp.Core.Svg.SvgGenerator.CollectsOnThisThread - before);
     }
 
+    // The rest of P4: in a book with `using`s the sound read the expanded tree and the place the
+    // document's own, so each score was collected twice — and the place was that of a text the
+    // page never draws (the document with nothing it includes: here no part `m`, no `Intro`).
+    [Fact]
+    public void TheCaretOnANote_OfABookWithIncludes_CollectsOnce_AndStandsWhereThePageDrawsIt()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "lys-caret-using-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "intro.lys"),
+                "part m { clef treble }\nsection Intro { m { c'1 | d'1 | } }\n");
+            string text = "using \"intro.lys\"\nsection A { m { e'4 f g a | } }\nform { Intro A }\nscore { staff m }\n";
+            var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
+            var uri = new Uri(Path.Combine(dir, "main.lys"));
+            server.DidOpen(new DidOpenTextDocumentParams
+            {
+                TextDocument = new TextDocumentItem { Uri = uri, Text = text, Version = 1, LanguageId = "lilysharp" },
+            });
+            var ask = new AuditionAtParams
+            {
+                TextDocument = new TextDocumentIdentifier { Uri = uri },
+                Offset = text.IndexOf("f g a", StringComparison.Ordinal),
+            };
+            int before = LilySharp.Core.Svg.SvgGenerator.CollectsOnThisThread;
+            var info = server.CaretInfo(ask);
+            Assert.Equal(1, LilySharp.Core.Svg.SvgGenerator.CollectsOnThisThread - before);
+            // The Intro's two bars are before it on the page.
+            Assert.Equal("m · bar 3 · beat 2 · F4", info.Text);
+            // …and asked again of the same text, nothing is collected.
+            // (The Problems panel's pass expands the same text beside this: one tree for both,
+            // UsingExpansionCacheTests.)
+            server.CaretInfo(ask);
+            Assert.Equal(1, LilySharp.Core.Svg.SvgGenerator.CollectsOnThisThread - before);
+
+            // The place a caret is asked for (the chat's pointer, the scan view) and a mark's bar
+            // are the page's too: they were the bars of the document's own text (bar 1).
+            var placed = server.PlaceAt(new PlaceAtParams { TextDocument = new TextDocumentIdentifier { Uri = uri }, Offset = ask.Offset });
+            Assert.Equal(3, placed.Measure);
+            Assert.Equal("m", placed.Part);
+            Assert.Equal(1, server.PlacesCollects);
+
+            // An include saved with a bar more: the document's version stands, the piece does not.
+            File.WriteAllText(Path.Combine(dir, "intro.lys"),
+                "part m { clef treble }\nsection Intro { m { c'1 | d'1 | e'1 | } }\n");
+            Assert.Equal(4, server.PlaceAt(new PlaceAtParams { TextDocument = new TextDocumentIdentifier { Uri = uri }, Offset = ask.Offset }).Measure);
+            Assert.Equal("m · bar 4 · beat 2 · F4", server.CaretInfo(ask).Text);
+
+            string marked = text.Replace("f g a", "f@todo(\"here?\") g a");
+            server.DidChange(new DidChangeTextDocumentParams
+            {
+                TextDocument = new VersionedTextDocumentIdentifier { Uri = uri, Version = 2 },
+                ContentChanges = [new TextDocumentContentChangeEvent { Text = marked }],
+            });
+            var mark = Assert.Single(server.Todos(new TodosParams { TextDocument = new TextDocumentIdentifier { Uri = uri } }).Todos!);
+            Assert.Equal(4, mark.Measure);
+            Assert.Equal("m", mark.Part);
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
     private static string[] Lines(PlaybackResponse pb, Func<PlaybackNote, bool> keep)
         => [.. pb.Notes!.Where(keep).Select(n => $"{n.T}|{n.D}|{n.P}|{n.V}|{n.S}|{n.O}|{n.C}|{n.G}|{n.N}|{n.M}")];
 

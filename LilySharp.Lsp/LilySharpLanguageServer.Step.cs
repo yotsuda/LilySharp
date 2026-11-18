@@ -134,13 +134,20 @@ public sealed partial class LilySharpLanguageServer
         {
             string? text = NoteStepper.Describe(doc.Text, doc.Tree, @params.Offset);
             // A note, chord or member: its bar, beat and pitches, written and sounding — the
-            // sound off the tree the preview plays (owner's request 2026-10-24).
+            // sound off the tree the preview plays (owner's request 2026-10-24), and the place
+            // off the same tree: what the page draws, from the one collect of each score the
+            // sound reads too (FileReadings, kept by the tree — asked again of the same text,
+            // nothing is collected). The document's text is that tree's prefix (ExpandUsings),
+            // so a position in the document is the same position there. Until session 1296 the
+            // place was read off the document's OWN tree: in a book with `using`s a second
+            // collect of each score, of a text with none of what it includes — a note after an
+            // included section stood in the wrong bar.
             if (text == null)
             {
                 var (sounding, _) = ExpandUsings(doc, @params.TextDocument.Uri);
                 var heard = NoteStepper.AuditionAt(doc.Text, doc.Tree, @params.Offset, sounding)?.Pitches ?? [];
                 text = NoteStepper.DescribeNote(doc.Text, doc.Tree, @params.Offset,
-                    NotePlacesOf(@params.TextDocument.Uri, doc), heard);
+                    NotePlaces.Of(sounding), heard);
             }
             return new CaretInfoResponse { Text = text, Version = doc.Version };
         }
@@ -148,21 +155,5 @@ public sealed partial class LilySharpLanguageServer
         {
             return new CaretInfoResponse { Version = doc.Version };
         }
-    }
-
-    // The last document's note places, by version: the caret asks on every move, and a collect
-    // per move would be the preview's whole cost again (the PlacesOf cache's reason).
-    private readonly object _notePlacesLock = new();
-    private (Uri Uri, int Version, NotePlaces Places)? _notePlaces;
-
-    private NotePlaces NotePlacesOf(Uri uri, Document doc)
-    {
-        lock (_notePlacesLock)
-            if (_notePlaces is { } cached && cached.Uri == uri && cached.Version == doc.Version)
-                return cached.Places;
-        var places = NotePlaces.Of(doc.Tree);
-        lock (_notePlacesLock)
-            _notePlaces = (uri, doc.Version, places);
-        return places;
     }
 }

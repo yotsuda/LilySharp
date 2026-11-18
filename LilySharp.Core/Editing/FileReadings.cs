@@ -34,8 +34,11 @@ namespace LilySharp.Core.Editing;
 /// caretInfo was 84% of the side work left on a keystroke). A score that transposes
 /// (<c>transpose</c>, <c>concert</c>, a staff's pitch) is still collected a second time for
 /// its places, which read the pitch as the part writes it; nearly no score does.
-/// ⚠️ One tree, one entry: with <c>using</c>s or a printed singer the sound reads the
-/// expanded tree and the places the document's own, and each pays its own collects as before.
+/// ⚠️ One tree, one entry: the caller asks both of the SAME tree — the one the piece plays
+/// from, which with <c>using</c>s or a printed singer is the expanded one (the document's text
+/// is its prefix, so the document's positions are that tree's). The caret's place was asked of
+/// the document's own tree until session 1296: a second collect of each score, and the place
+/// of a text the page never draws.
 /// </remarks>
 internal sealed class FileReadings
 {

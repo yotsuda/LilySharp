@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Fixed: the status bar named the wrong bar for a note in a file with `using`** (`[editor]`). With the caret on a note the status bar says where it stands — `m · bar 3 · beat 2 · F4`. In a file that includes another, the bar was counted in the file's own text alone: a note after a section the included file writes was said to be in bar 1. It is now counted in the piece the preview draws — and so are the bar a `@todo` is listed under and the bars Ask AI in Chat names, which were wrong the same way.
+
 - **Fixed: Ask AI in Chat named the wrong part after a section's setting** (`[editor]`). With bars picked, the chat's input names where they stand — `(section A, part vn1, bars 3–4)`. A cell written after a section's `key`, `time`, `tempo` or `partial` (`section A { key d major  vn1 { … } }`) was named by the setting's word (`part key`), and a `strokes` block counted as a part. The cell is now named by the word before its brace, and what cannot be a part is the language's own list. Smart typing also no longer goes quiet inside a part named `header`, `midi` or `markup` — LilyPond's block words, which Lily# does not have.
 
 - **Fixed: on a chord chart, a bar's slots were counted on the score's meter under a `time` of the row or of the section** (`[engraving]` `[check]`). In a score of chord rows alone, `C | D | time 3/4 E . F |` — or `E . F` in a section whose header says `time 3/4` — warned "3 chord slot(s) in a 4/4 bar fit no beat" (LYS2009) and drew F two thirds of the way through the bar. The bar is read in its own meter, as the sound and the MusicXML already read it: F stands on the third beat and nothing is warned. A score with a staff was right.

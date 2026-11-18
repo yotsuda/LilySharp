@@ -758,10 +758,15 @@ public sealed partial class LilySharpLanguageServer
         }
     }
 
-    // The last document's places, by version: the caret asks on every move, and a collect per
-    // move would be the preview's whole cost again.
+    // The places of the last tree asked of: the caret asks on every move, and a collect per
+    // move would be the preview's whole cost again. The tree is the one the piece is drawn
+    // from (ExpandUsings: the same instance while the text and what its `using`s read stand;
+    // the document's text is its prefix, so the document's positions are its own). Until
+    // session 1296 it was the document's own tree, kept by version: in a book with `using`s
+    // the bars of a text the page never draws (a mark after an included section stood in
+    // bar 1), and an include saved meanwhile changed nothing.
     private readonly object _placesLock = new();
-    private (Uri Uri, int Version, IReadOnlyList<ItemPlace> Places)? _places;
+    private (SyntaxTree Tree, IReadOnlyList<ItemPlace> Places)? _places;
 
     /// <summary>How many times the places were collected (<see cref="TodoIndex.Places"/>) — for tests.</summary>
     internal int PlacesCollects => System.Threading.Volatile.Read(ref _placesCollects);
@@ -770,13 +775,14 @@ public sealed partial class LilySharpLanguageServer
 
     private IReadOnlyList<ItemPlace> PlacesOf(Uri uri, Document doc)
     {
+        var (tree, _) = ExpandUsings(doc, uri);
         lock (_placesLock)
-            if (_places is { } cached && cached.Uri == uri && cached.Version == doc.Version)
+            if (_places is { } cached && ReferenceEquals(cached.Tree, tree))
                 return cached.Places;
         System.Threading.Interlocked.Increment(ref _placesCollects);
-        var places = TodoIndex.Places(doc.Tree);
+        var places = TodoIndex.Places(tree);
         lock (_placesLock)
-            _places = (uri, doc.Version, places);
+            _places = (tree, places);
         return places;
     }
 }

@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Fixed: the status bar named the wrong bar for a note in a file with `using`.** With the caret on a note the status bar says where it stands — `m · bar 3 · beat 2 · F4`. In a file that includes another, the bar was counted in the file's own text alone: a note after a section the included file writes was said to be in bar 1. It is now counted in the piece the preview draws — and so are the bar a `@todo` is listed under and the bars Ask AI in Chat names, which were wrong the same way.
+
 - **Fixed: Ask AI in Chat named the wrong part after a section's setting.** With bars picked, the chat's input names where they stand — `(section A, part vn1, bars 3–4)`. A cell written after a section's `key`, `time`, `tempo` or `partial` (`section A { key d major  vn1 { … } }`) was named by the setting's word (`part key`), and a `strokes` block counted as a part. Smart typing also no longer goes quiet inside a part named `header`, `midi` or `markup`.
 
 - **Fixed: a wrong LYS2009 on a chord chart's bar in another meter.** In a score of chord rows alone, `time 3/4 E . F` at a bar's head — or `E . F` in a section whose header says `time 3/4` — was counted on the score's 4/4: "3 chord slot(s) in a 4/4 bar fit no beat", and F was drawn two thirds of the way through the bar. The bar is now read in its own meter; F stands on the third beat.
