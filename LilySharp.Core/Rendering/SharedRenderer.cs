@@ -622,6 +622,10 @@ internal static partial class SharedRenderer
                 // (A heading's line is larger; its pieces are already bold.)
                 foreach (var piece in line.Pieces)
                 {
+                    // The spaces between two pieces are a piece of their own (ProseBand.Break's
+                    // Flush) and nothing to draw: the next piece stands where the layout put it.
+                    if (string.IsNullOrWhiteSpace(piece.Text))
+                        continue;
                     var style = ProseBand.StyleOf(fonts, piece.Style);
                     double size = em * line.Scale;
                     // A character the text's face lacks stands in a cell of one em

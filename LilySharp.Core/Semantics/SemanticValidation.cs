@@ -87,6 +87,7 @@ public static class SemanticValidation
         new KeyTonicValidator(),            // `key WORD mode` where WORD is not a note
         new FormDeclarationValidator(),// at most one structure per scope
         new LyricSyllableValidator(),       // more syllables than notes
+        new LyricReadingKanaValidator(),    // a reading that is not kana, in Japanese words
         new TrackNeedsSectionsValidator(),  // by-part lyrics/chords track must use sections
         new LyricSingsValidator(),          // sings bindings: unknown target / conflict / attachment
         new ChordForValidator(),            // chord-track `for`: unknown part / conflict

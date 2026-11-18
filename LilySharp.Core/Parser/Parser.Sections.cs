@@ -1305,8 +1305,10 @@ internal sealed partial class Parser
         // 2026-11-08): '[' and ']' lex as their own tokens and the loop above glued them on, so
         // the word is read here for its shape. Malformed brackets (a '[' after a space, an
         // unclosed or empty reading, a stray ']') are an error on the syllable, which still
-        // prints as written; a reading that is not kana is a warning — the voices sing kana.
-        // A quoted syllable is its words and nothing else, brackets included.
+        // prints as written. A quoted syllable is its words and nothing else, brackets included.
+        // (A reading that is not kana, in Japanese words, is a warning — LYS4037 — and not said
+        // here since 2026-11-18: the words' language is the tree's to say, not the syllable's.
+        // Semantics.LyricReadingKanaValidator.)
         string raw = word.ToString();
         if (Music.LyricReading.HasBrackets(raw) && !Syntax.StringLiteral.IsClosed(raw))
         {
@@ -1314,15 +1316,6 @@ internal sealed partial class Parser
             var (_, _, problem) = Music.LyricReading.Split(raw);
             if (problem != null)
                 _diagnostics.Error(span, DiagnosticCodes.LyricReadingMalformed, problem);
-            else
-                foreach (var reading in Music.LyricReading.Readings(raw))
-                    if (!Music.LyricReading.IsKana(reading))
-                    {
-                        _diagnostics.Warning(span, DiagnosticCodes.LyricReadingNotKana,
-                            $"the reading [{reading}] is not kana — a Japanese voice sings hiragana or katakana; "
-                            + "the word still prints and the reading is handed to the voice as written");
-                        break;
-                    }
         }
 
         // Trailing hyphen (word continuation, e.g. "Hap-"). Keep the first token's

@@ -156,7 +156,9 @@ public class GrammarEvaluation4Tests
         Assert.Equal(LilySharp.Core.Rendering.FontStyle.Italic, wide[15].Style);    // さ
         // Latin words are still one piece a style, set by the text's own (measured) face.
         Assert.Contains(line.Pieces, p => p.Text == "Bold");
-        Assert.Contains(line.Pieces, p => p.Text == " next, ");
+        // (…and none begins with a space: the space after "Bold" is a piece of its own, not drawn —
+        // ASpaceAfterAStyleChange_IsNotTheFirstThingOfADrawnText.)
+        Assert.Contains(line.Pieces, p => p.Text == "next, ");
 
         // The SVG says each character's x, so a viewer's face cannot move one off its square.
         string svg = SvgGenerator.Generate(SyntaxTree.Parse(source));
@@ -169,6 +171,36 @@ public class GrammarEvaluation4Tests
         // The twin hands LilyPond whole strings again: it sets them by its own face.
         string ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(source));
         Assert.Contains("\\bold \"ことばを大切に\" \"、子音を早めに。\" \\italic \"ささやくように\"", ly);
+    }
+
+    /// <summary>Owner's report 2026-11-18 (the boxed note of the walkthrough's first song):
+    /// <c>**The tune is older than the words.** It is…</c> was set "words.It" in the editor's
+    /// preview. The regular piece began with the space, and a browser drops the white an SVG
+    /// <c>&lt;text&gt;</c> begins with; the PNG, which draws the string as it is, kept it. No
+    /// drawn text begins with a space now: the next word stands at its own x, a space's width
+    /// past where the bold piece ends.</summary>
+    [Fact]
+    public void ASpaceAfterAStyleChange_IsNotTheFirstThingOfADrawnText()
+    {
+        string source = Titled($"{F}md\n**The tune is older.** It is a song, *sung* by all.\n{F}");
+        var line = Assert.Single(Laid(source).Pages[0].Header!.Text!.Lines);
+        Assert.Equal(new[] { "The tune is older.", " ", "It is a song, ", "sung", " ", "by all." }, line.Pieces.Select(p => p.Text));
+        // The spaces are a piece where the bold one ends, and the word begins a space after it.
+        double space = line.Pieces[2].X - line.Pieces[1].X;
+        Assert.InRange(space, 0.3, 1.0);
+        Assert.InRange(line.Pieces[5].X - line.Pieces[4].X, 0.3, 1.0);
+
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse(source));
+        var drawn = Regex.Matches(svg, "<text x=\"([\\d.]+)\"[^>]*>([^<]*)</text>")
+            .Select(m => (X: double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture), Text: m.Groups[2].Value)).ToArray();
+        Assert.DoesNotContain(drawn, t => t.Text.Length == 0 || char.IsWhiteSpace(t.Text[0]));   // none begins with white, none is white alone
+        var bold = drawn.Single(t => t.Text == "The tune is older.");
+        var it = drawn.Single(t => t.Text == "It is a song, ");
+        Assert.Equal(line.Pieces[2].X - line.Pieces[0].X, it.X - bold.X, 2);
+
+        // The twin's string is the same as before: neighbours of one style are one string again.
+        string ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(source));
+        Assert.Contains("\\bold \"The tune is older.\" \" It is a song, \" \\italic \"sung\" \" by all.\"", ly);
     }
 
     // ---- 4. a swing tempo's equation over the first system, under a page text ---------------

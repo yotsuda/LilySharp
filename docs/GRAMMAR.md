@@ -1831,7 +1831,7 @@ LyricText      = { Word , [ '[' , Reading , ']' ] } ;
                     Music.LyricReading. A reading is of the stretch right before it: a '[' after
                     a space, a reading with no word before it, an empty, nested or unclosed one,
                     or a ']' on its own is an error on the syllable (LYS4036), which still prints
-                    as written; a reading that is not kana is a warning (LYS4037). A QUOTED
+                    as written; a reading that is not kana, in Japanese words, is a warning (LYS4037; in another language a reading is what its voices read — pinyin, a Hangul syllable — and no warning). A QUOTED
                     syllable keeps its brackets, as it keeps every character. *)
                  (* MEASURED 2026-08-16 — and the spacing is part of the rule, because
                     the two arms that fuse tokens keep only the pair's OUTER trivia:

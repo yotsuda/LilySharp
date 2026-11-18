@@ -33,7 +33,7 @@ namespace LilySharp.Core.Music;
 /// with nothing before it (<c>[かん]</c>, a <c>[</c> written after a space), an empty one, a
 /// nested or unclosed one, or a <c>]</c> on its own is a malformed syllable (LYS4036, the
 /// parser), and the syllable still prints as written. A reading that is not kana is a warning
-/// (LYS4037): the Japanese voices sing kana, and nothing else reads a reading yet.
+/// in Japanese words (LYS4037, Semantics.LyricReadingKanaValidator): the Japanese voices sing kana. In another language a reading is what its voices read (长[chang], 넘[너]).
 /// </para>
 /// <para>
 /// Who reads what: the page, the MusicXML <c>&lt;text&gt;</c>, the LilyPond twin and the

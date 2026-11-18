@@ -152,14 +152,44 @@ public sealed class LyricReadingTests
     public void AReadingThatIsNotKana_IsAWarning_AndIsStillHandedToTheVoice()
     {
         var tree = SyntaxTree.Parse(Book("漢[kan] 字[じ] ゆ き |"));
-        var d = Assert.Single(tree.Diagnostics);
-        Assert.Equal(DiagnosticCodes.LyricReadingNotKana, d.Code);
+        Assert.Empty(tree.Diagnostics);     // the words' language is the tree's to say: the validator's, not the parser's
+        var d = Assert.Single(LilySharp.Core.Semantics.SemanticValidation.Run(tree), d => d.Code == DiagnosticCodes.LyricReadingNotKana);
         Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
         Assert.Contains("[kan]", d.Message);
+        string source = tree.GetRoot().ToFullString();
+        Assert.Equal("漢[kan]", source.Substring(d.Span.Start, d.Span.Length));
         var score = RenderSpecParser.FindAll(tree).First();
         var midi = new MidiExporter { Form = score.Form, Score = score }.Export(tree);
         var voice = Assert.Single(SungVoices.Read(midi, MidiClock.SecondsOf(midi)));
         Assert.Equal("kan", voice.Notes[0].Lyric);
+    }
+
+    // Owner's report 2026-11-18 (the singing walkthrough's first songs): 长[chang] under
+    // `language chinese` and 넘[너] under `language korean` were told "a Japanese voice sings
+    // hiragana or katakana". A reading is what the words' language reads; kana is Japanese's.
+    [Theory]
+    [InlineData("lyrics verse language chinese { 长[chang] 亭 外 天 | }", "")]
+    [InlineData("lyrics verse language korean { 넘[너] 어[머] 간 다 | }", "")]
+    [InlineData("lyrics verse { 长[chang] 亭 外 天 | }", "language chinese")]       // the file's language, written after the words
+    public void AReadingInAnotherLanguage_IsNoWarning_AndIsSungAsWritten(string lyrics, string fileLine)
+    {
+        string book = Book("ゆ き |").Replace("lyrics verse { ゆ き | }", lyrics) + "\n" + fileLine + "\n";
+        Assert.Contains(lyrics, book);
+        var tree = SyntaxTree.Parse(book);
+        Assert.Empty(tree.Diagnostics);
+        Assert.DoesNotContain(LilySharp.Core.Semantics.SemanticValidation.Run(tree), d => d.Code == DiagnosticCodes.LyricReadingNotKana);
+        var score = RenderSpecParser.FindAll(tree).First();
+        var midi = new MidiExporter { Form = score.Form, Score = score }.Export(tree);
+        var voice = Assert.Single(SungVoices.Read(midi, MidiClock.SecondsOf(midi)));
+        Assert.Equal(lyrics.Contains("chang") ? "chang" : "너", voice.Notes[0].Lyric);
+    }
+
+    [Fact]
+    public void ATrackThatSaysJapanese_InAFileOfAnotherLanguage_IsStillWarned()
+    {
+        string book = Book("ゆ き |").Replace("lyrics verse { ゆ き | }", "lyrics verse language japanese { 漢[kan] 字 ゆ き | }") + "\nlanguage english\n";
+        var tree = SyntaxTree.Parse(book);
+        Assert.Single(LilySharp.Core.Semantics.SemanticValidation.Run(tree), d => d.Code == DiagnosticCodes.LyricReadingNotKana);
     }
 
     [Fact]
