@@ -23,6 +23,7 @@ import {
     CopySource, WEBVIEW_AUDIO, WINDOWS_AUDIO, audioReader, audioRef, chartForRecording, chartPathFor, copiedRecordingText, newRecording,
     parseRecording, rebasedParts, recordingPathFor, resolveAudio, samePath, serializeRecording, sourceForCopy, workForRename,
 } from './recordingCore';
+import { importFilters } from './fileFilters';
 
 const isWindows = process.platform === 'win32';
 
@@ -94,7 +95,7 @@ export async function attachRecording(uri?: vscode.Uri, onAttached?: (chart: vsc
             title: `Attach a recording to ${path.basename(chart.fsPath)}`,
             defaultUri: vscode.Uri.file(path.dirname(chart.fsPath)),
             canSelectMany: false,
-            filters: { Recordings: kinds },
+            filters: importFilters('Recordings', kinds),
             openLabel: 'Attach',
         });
         if (!picked || picked.length === 0) {
@@ -316,7 +317,7 @@ function offerLocate(chart: vscode.Uri, lookedFor: string, key: string): void {
             const kinds = [...WEBVIEW_AUDIO, ...(isWindows ? WINDOWS_AUDIO : [])];
             const picked = await vscode.window.showOpenDialog({
                 title: `Where is ${path.basename(lookedFor)}?`, canSelectMany: false,
-                defaultUri: vscode.Uri.file(path.dirname(chart.fsPath)), filters: { Recordings: kinds }, openLabel: 'Use This Recording',
+                defaultUri: vscode.Uri.file(path.dirname(chart.fsPath)), filters: importFilters('Recordings', kinds), openLabel: 'Use This Recording',
             });
             if (!picked || picked.length === 0) { return; }
             const file = vscode.Uri.file(recordingPathFor(chart.fsPath));

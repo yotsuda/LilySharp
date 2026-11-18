@@ -39,9 +39,12 @@ describe('the import pickers\' filters', () => {
     it('have no second filter for a single kind', () => {
         assert.deepEqual(importFilters('PDF', ['pdf']), { PDF: ['pdf'] });
     });
-    it('are what both pickers use', () => {
+    it('are what the pickers use — Attach Recording and Locate Recording too', () => {
         const src = (f: string) => fs.readFileSync(path.join(__dirname, '..', '..', 'src', f), 'utf8');
         assert.match(src('omrImport.ts'), /filters: importFilters\('Scans and PDF', OMR_INPUT_EXTENSIONS\)/);
         assert.match(src('dettato.ts'), /filters: importFilters\('Recordings', reader\.inputs\)/);
+        const recording = src('recording.ts');
+        assert.equal(recording.match(/filters: importFilters\('Recordings', kinds\)/g)?.length, 2);
+        assert.doesNotMatch(recording, /filters: \{ Recordings:/);
     });
 });
