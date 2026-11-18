@@ -1,8 +1,7 @@
-// A first song: the opening of 送别 (Songbie; words 1915, to the tune of "Dreaming of Home and
-// Mother", 1868; in the public domain) — the short one, for a computer where a voice sings
-// slowly; "the whole song" in the steps opens all of it. The part names its words, `lyrics`
-// holds them, the score's row prints them, and the `singer` line is what makes them heard. A
-// slur carries one word over two notes. Open the preview and press Play.
+// 第一首歌：《送别》的开头（歌词写于 1915 年，曲调是 1868 年的《梦见家和母亲》；已进入公有领域）。
+// 这是短版，适合唱得慢的电脑；向导步骤里的 the whole song 会打开完整的一首。part 指明它的歌词，
+// `lyrics` 里写歌词，score 的那一行把歌词印出来，`singer` 这一行让它被唱出来。连音线让一个字
+// 唱两个音符。打开预览，按 Play。
 title "送别"
 poet "李叔同"
 composer "John P. Ordway"

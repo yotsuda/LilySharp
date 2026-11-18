@@ -1,10 +1,9 @@
-// A first song: the opening of 아리랑 (Arirang, a Korean folk song; traditional) — the short
-// one, for a computer where a voice sings slowly; "the whole song" in the steps opens all of
-// it. The part names its words, `lyrics` holds them, the score's row prints them, and the
-// `singer` line is what makes them heard. A slur carries one syllable over its notes. Open the
-// preview and press Play.
+// 첫 노래: 아리랑의 첫 부분 (한국의 전래 민요). 목소리가 노래하는 데 시간이 오래 걸리는 컴퓨터를
+// 위한 짧은 판이며, 안내 단계의 the whole song 이 전체 곡을 엽니다. part 가 가사의 이름을
+// 가리키고, `lyrics` 에 가사를 적고, score 의 줄이 가사를 악보에 찍고, `singer` 줄이 노래하게
+// 합니다. 이음줄은 한 음절을 여러 음표에 걸쳐 부르게 합니다. 미리보기를 열고 Play 를 누르세요.
 title "아리랑"
-composer "Korean folk song"
+composer "한국 민요"
 octave relative
 
 ```md box

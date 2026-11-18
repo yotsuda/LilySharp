@@ -1,7 +1,7 @@
-// A first song: the opening of ふるさと (Furusato, 1914; in the public domain) — the short one,
-// for a computer where a voice sings slowly; "the whole song" in the steps opens all of it. The
-// part names its words, `lyrics` holds them, the score's row prints them, and the `singer`
-// line is what makes them heard. Open the preview and press Play.
+// はじめての歌: ふるさと の出だし（1914 年。著作権の保護期間は満了しています）。声が歌うのに
+// 時間のかかるパソコン向けの短い版で、案内のステップの the whole song が全曲を開きます。part が
+// 歌詞の名前を挙げ、`lyrics` に歌詞を書き、score の行がそれを刷り、`singer` の行が歌わせます。
+// プレビューを開いて Play を押してください。
 title "ふるさと"
 poet "高野辰之"
 composer "岡野貞一"

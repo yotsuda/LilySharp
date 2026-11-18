@@ -119,16 +119,16 @@ describe('the singing walkthrough', () => {
         for (const address of ['https://github.com/openvpi/DiffSinger', 'https://studio-neutrino.com/', 'https://voicevox.hiroshiba.jp/']) { assert.ok(engines.includes(address), address); }
         const song = fs.readFileSync(path.join(root, 'walkthrough', 'first-song-ja.lys'), 'utf8');
         assert.match(song, /^singer female on melody$/m);
-        assert.match(song, /lyrics words \{/);
+        assert.match(song, /lyrics words language japanese \{/);     // said, as the other three say theirs (the owner, 2026-11-18)
         // A song for each language Cantoria sings (owner's request 2026-11-18), each the opening
         // of a song in the public domain, its words saying their language where it is not Japanese.
         assert.deepEqual(FIRST_SONGS, { ja: 'first-song-ja.lys', en: 'first-song-en.lys', zh: 'first-song-zh.lys', ko: 'first-song-ko.lys' });
-        const words: Record<string, RegExp> = { ja: /lyrics words \{\s+う さ ぎ \|/, en: /lyrics words language english \{\s+Twin- kle,/, zh: /lyrics words language chinese \{\s+长\[chang\] 亭 外 \|/, ko: /lyrics words language korean \{\s+아 리 랑 \|/ };
+        const words: Record<string, RegExp> = { ja: /lyrics words language japanese \{\s+う さ ぎ \|/, en: /lyrics words language english \{\s+Twin- kle,/, zh: /lyrics words language chinese \{\s+长\[chang\] 亭 外 \|/, ko: /lyrics words language korean \{\s+아 리 랑 \|/ };
         for (const [language, file] of Object.entries(FIRST_SONGS)) {
             const text = fs.readFileSync(path.join(root, 'walkthrough', file), 'utf8');
             assert.match(text, /^singer female on melody$/m, file);
             assert.match(text, words[language], file);
-            assert.match(text, /public domain|traditional/, file);
+            assert.match(text, /public domain|保護期間は満了|公有领域|전래 민요/, file);     // said in the song's own language
         }
         // …under its title, and whole (the owner, the same day): the first verse to its last bar.
         const titles: Record<string, string> = { ja: 'ふるさと', en: 'Twinkle, Twinkle, Little Star', zh: '送别', ko: '아리랑' };

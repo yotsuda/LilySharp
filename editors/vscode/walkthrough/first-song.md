@@ -14,8 +14,9 @@ Japanese, *Twinkle, Twinkle, Little Star* in English, 送别 in Chinese or 아�
 each with its title. All four are in the public domain. On a computer with an NVIDIA GPU it
 is the whole song, half a minute of it; without one it is the song's opening, because a voice
 on a processor takes several times as long to sing as the song lasts. The step's two links
-open either. Words that are not Japanese say their language:
-`lyrics words language english { Twin- kle, twin- kle, | lit- tle star, | }`.
+open either. Each song's words say their language —
+`lyrics words language english { Twin- kle, twin- kle, | lit- tle star, | }` —
+and words that say none are Japanese.
 
 Open its preview (the icon at the editor's top
 right, or **Lily#: Open Preview to the Side**) and press **Play**: the first time, the
