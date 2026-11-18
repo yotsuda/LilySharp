@@ -44,7 +44,7 @@ public sealed partial class LilySharpLanguageServer
             return new StepResponse { Fallback = true, Error = DocumentNotFound };
         try
         {
-            string basePath = uri.IsFile ? uri.LocalPath : string.Empty;
+            string basePath = FilePathOf(uri);
             var result = NoteStepper.Step(doc.Text, doc.Tree,
                 @params.Selections.Select(s => (s.Start, s.End)).ToList(), @params.Direction,
                 text => ExpandUsings(text, SyntaxTree.Parse(text), basePath,

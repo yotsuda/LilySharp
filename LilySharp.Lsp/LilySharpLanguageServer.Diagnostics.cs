@@ -174,7 +174,7 @@ public sealed partial class LilySharpLanguageServer
 
     private static (SyntaxTree Tree, IReadOnlyList<CoreDiagnostic> UsingDiagnostics) ExpandUsings(
         Document doc, Uri uri)
-        => ExpandUsings(doc.Text, doc.Tree, uri.IsFile ? uri.LocalPath : string.Empty,
+        => ExpandUsings(doc.Text, doc.Tree, FilePathOf(uri),
             IncludeFiles.Read);
 
     /// <summary>
@@ -226,7 +226,7 @@ public sealed partial class LilySharpLanguageServer
         bool lent = false;
         System.Threading.Interlocked.Increment(ref _diagnosticPasses);
         var result = DocumentDiagnostics(doc.Text, doc.Tree,
-            doc.Uri.IsFile ? doc.Uri.LocalPath : string.Empty,
+            FilePathOf(doc.Uri),
             IncludeFiles.Read,
             token,
             tree =>

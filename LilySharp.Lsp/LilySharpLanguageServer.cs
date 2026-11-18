@@ -601,7 +601,7 @@ public sealed partial class LilySharpLanguageServer
     internal static IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> PageDiagnostics(Document doc, CancellationToken token)
     {
         var (tree, _) = ExpandUsings(doc.Text, doc.Tree,
-            doc.Uri.IsFile ? doc.Uri.LocalPath : string.Empty,
+            FilePathOf(doc.Uri),
             IncludeFiles.Read);
         var result = new List<LilySharp.Core.Syntax.Diagnostic>();
         foreach (var d in SemanticValidation.RunPageChecks(tree, token))
@@ -621,7 +621,7 @@ public sealed partial class LilySharpLanguageServer
     {
         if (!uri.IsFile || !diagnostics.Any(d => d.Core.Code == DiagnosticCodes.TodoMark))
             return;
-        var sure = OmrSideFile.Confidences(System.IO.Path.ChangeExtension(uri.LocalPath, ".omr.json"));
+        var sure = OmrSideFile.Confidences(System.IO.Path.ChangeExtension(FilePathOf(uri), ".omr.json"));
         if (sure.Count == 0)
             return;
         var marks = TodoMarksOf(tree);

@@ -66,7 +66,7 @@ public sealed partial class LilySharpLanguageServer
     public PlaybackResponse GetPlaybackText(PlaybackTextParams @params)
     {
         string text = @params.Text ?? "";
-        string basePath = @params.Uri is { IsFile: true } uri ? uri.LocalPath : string.Empty;
+        string basePath = FilePathOf(@params.Uri);
         var tree = ExpandUsings(text, SyntaxTree.Parse(text), basePath,
             IncludeFiles.Read).Tree;
         return PlaybackOf(tree, @params.RenderName);
@@ -184,7 +184,7 @@ public sealed partial class LilySharpLanguageServer
         {
             // A text of its own (a candidate's Play, owner's request 2026-11-11): read as
             // lilysharp/playbackText reads it, so the voices land on the notes that answer gives.
-            string basePath = @params.TextDocument?.Uri is { IsFile: true } beside ? beside.LocalPath : string.Empty;
+            string basePath = FilePathOf(@params.TextDocument?.Uri);
             tree = ExpandUsings(text, SyntaxTree.Parse(text), basePath,
                 IncludeFiles.Read).Tree;
         }

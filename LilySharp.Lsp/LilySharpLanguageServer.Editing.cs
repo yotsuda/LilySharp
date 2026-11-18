@@ -1110,7 +1110,7 @@ public sealed partial class LilySharpLanguageServer
         var mark = TodoMarkAt(doc.Tree, diagnostic);
         if (mark?.Parent is not { } host || TodoAnnotation.Of(mark) is not { Key: { } key })
             return [];
-        var candidates = OmrSideFile.Candidates(System.IO.Path.ChangeExtension(uri.LocalPath, ".omr.json"), key);
+        var candidates = OmrSideFile.Candidates(System.IO.Path.ChangeExtension(FilePathOf(uri), ".omr.json"), key);
         if (candidates.Count == 0)
             return [];
         return candidates.Select(c => QuickFix(
