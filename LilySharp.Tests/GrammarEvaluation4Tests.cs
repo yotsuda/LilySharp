@@ -173,6 +173,23 @@ public class GrammarEvaluation4Tests
         Assert.Contains("\\bold \"ことばを大切に\" \"、子音を早めに。\" \\italic \"ささやくように\"", ly);
     }
 
+    /// <summary>Korean is written with spaces between its words, though a syllable takes a
+    /// square as kana does: a line end inside a Korean sentence is a space ("그중⏎가장" printed
+    /// 그중가장 until 2026-11-18, seen in the note of the walkthrough's Korean first song), while
+    /// one inside a Japanese or a Chinese sentence is none, as before.</summary>
+    [Fact]
+    public void ALineEndInKoreanText_IsASpace_AndInJapaneseOrChineseNone()
+    {
+        string TextOfFence(string words) => TextOf(Assert.Single(Laid(Titled($"{F}md\n{words}\n{F}")).Pages[0].Header!.Text!.Lines));
+        Assert.Equal("그중 가장 널리", TextOfFence("그중\n가장 널리"));
+        Assert.Equal("마디를 「하나」", TextOfFence("마디를\n「하나」"));        // beside a syllable, whatever the other is
+        Assert.Equal("ことばを大切に", TextOfFence("ことばを\n大切に"));
+        Assert.Equal("歌词写于中国", TextOfFence("歌词写于\n中国"));
+        Assert.True(LilySharp.Core.Rendering.Prose.JoinsWithoutSpace('に', '大'));
+        Assert.False(LilySharp.Core.Rendering.Prose.JoinsWithoutSpace('중', '가'));
+        Assert.False(LilySharp.Core.Rendering.Prose.JoinsWithoutSpace('a', '가'));
+    }
+
     /// <summary>Owner's report 2026-11-18 (the boxed note of the walkthrough's first song):
     /// <c>**The tune is older than the words.** It is…</c> was set "words.It" in the editor's
     /// preview. The regular piece began with the space, and a browser drops the white an SVG

@@ -580,7 +580,7 @@ export async function firstSongFile(whole: boolean = hasNvidiaGpu(process.platfo
         const asked = (async () => {
             const engine = await renderer();
             return engine?.backend instanceof CantoriaExtensionBackend ? await engine.backend.api.voices?.() ?? [] : [];
-        })();
+        })().catch((): CantoriaVoice[] => []);      // (also when it fails after the wait is over: no one is listening then)
         voices = await Promise.race([asked, new Promise<CantoriaVoice[]>(resolve => setTimeout(() => resolve([]), 5000))]);
     } catch {
         // No engine to ask: the default.

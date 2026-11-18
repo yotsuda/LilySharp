@@ -253,7 +253,17 @@ internal sealed record Prose(ImmutableArray<ProseBlock> Blocks, ImmutableArray<P
     /// Whether a line end between <paramref name="before"/> and <paramref name="after"/> is
     /// no space: two characters of a script written without spaces between its words.
     /// </summary>
-    public static bool JoinsWithoutSpace(char before, char after) => IsWide(before) && IsWide(after);
+    /// <remarks>
+    /// ⚠️ NOT HANGUL: Korean is set a square a syllable (<see cref="IsWide"/>) and written WITH
+    /// spaces between its words, so a line end beside a Hangul syllable is a space as it is in
+    /// English. Until 2026-11-18 it was joined as kana is — "그중⏎가장" printed 그중가장 (seen
+    /// on the page of the singing walkthrough's Korean first song, whose note is written a
+    /// sentence over two lines).
+    /// </remarks>
+    public static bool JoinsWithoutSpace(char before, char after)
+        => IsWide(before) && IsWide(after) && !IsHangul(before) && !IsHangul(after);
+
+    private static bool IsHangul(char c) => c is >= '가' and <= '힣';
 
     /// <summary>
     /// Whether <paramref name="c"/> is of a script set a full square a character, with no
