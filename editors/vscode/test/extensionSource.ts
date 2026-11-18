@@ -18,11 +18,12 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 /**
- * The extension's host (src/extension.ts, the singing voice's half of it, src/singing.ts, and
- * the commands that rewrite the score, src/editCommands.ts) and the preview's page it writes
- * (src/previewHtml.ts), as one text. The page was a template literal inside extension.ts until
- * session 1295, the singing voice stood there until session 1296 and the rewriting commands until
- * session 1297, and the tests that read the source — to cut a function of the page out and run it, to see
+ * The extension's host (src/extension.ts, the singing voice's half of it, src/singing.ts, the
+ * commands that rewrite the score, src/editCommands.ts, the preview's sound font, src/soundFont.ts,
+ * and the MIDI output, src/midiOut.ts) and the preview's page it writes (src/previewHtml.ts), as
+ * one text. The page was a template literal inside extension.ts until session 1295, the singing
+ * voice stood there until session 1296 and the rewriting commands, the sound font and the MIDI
+ * output until session 1297, and the tests that read the source — to cut a function of the page out and run it, to see
  * a button is there, to see a name is gone — read them together: a test that says a name is NOT
  * there must look where it could be.
  */
@@ -31,5 +32,7 @@ export function extensionSource(): string {
     return fs.readFileSync(path.join(src, 'extension.ts'), 'utf8') + '\n'
         + fs.readFileSync(path.join(src, 'singing.ts'), 'utf8') + '\n'
         + fs.readFileSync(path.join(src, 'editCommands.ts'), 'utf8') + '\n'
+        + fs.readFileSync(path.join(src, 'soundFont.ts'), 'utf8') + '\n'
+        + fs.readFileSync(path.join(src, 'midiOut.ts'), 'utf8') + '\n'
         + fs.readFileSync(path.join(src, 'previewHtml.ts'), 'utf8');
 }
