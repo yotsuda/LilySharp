@@ -1431,8 +1431,14 @@ public sealed class MusicXmlExporter
             var key = (h.SourcePosition, plays?.PlayAt(h.StartMeasureIndex) ?? 0);
             if (!_pageHairpins.TryGetValue(key, out var playings))
                 _pageHairpins[key] = playings = new();
+            // (…and a combined staff's part's hairpin the page ends at that part's NEXT one,
+            // which stands in the staff's other voice — MusicMarkItem.MeetsVoice — and may be
+            // the other part's mark, the unison's: in this document it ends at its own part's
+            // next start too, which is the same moment.)
             bool onStaffOfParts = h.SourceIndex >= 0 && h.SourceIndex < page.MusicMarks.Length
-                && page.MusicMarks[h.SourceIndex].HairpinEndsOnStaff;
+                && page.MusicMarks[h.SourceIndex].HairpinEndsOnStaff
+                || h.EndVoiceIndex != h.VoiceIndex
+                    && page.MusicMarks.Any(m => m.MeetsVoice == h.VoiceIndex && m.SourcePosition == h.EndSourcePosition);
             playings.Enqueue((h, plays?.PlayAt(h.EndMeasureIndex) ?? 0, onStaffOfParts));
             if (h.CircledNiente is { } circled)
                 _circledNientes.Add((circled.SourcePosition, plays?.PlayAt(circled.MeasureIndex) ?? 0));
@@ -1444,11 +1450,17 @@ public sealed class MusicXmlExporter
         // playing one phrase write one position, the earlier part first. ⚠️ Until session 1266
         // the later part wrote no wedge at all: `b { e'2@p@cresc e'2@f }` under the same in
         // part a was a p and an f with nothing between (Lab sessions/p1266/cs/c4).
+        // …and the hairpins a combined staff's page drops with the notes it engraves for
+        // nobody (the second part's in a unison): the part's own start, and its own `@!cresc`
+        // beside it so the pairing finds an end. ⚠️ From session 1321, when the page began to
+        // drop them, to session 1325 the second part wrote no wedge for the unison's hairpin
+        // (Lab sessions/p1325/xml s2: part two's `d'@cresc … f'@!cresc` was nothing).
         var duplicates = collector.CondensedStaffDuplicateHairpinStarts;
-        if (duplicates.Count == 0)
+        var unengraved = collector.CombinedStaffUnengravedHairpinMarks;
+        if (duplicates.Count == 0 && unengraved.Count == 0)
             return;
         int pageMarks = page.MusicMarks.Length;
-        foreach (var h in Svg.Layout.HairpinEngraver.DetectHairpins(page.MusicMarks.AddRange(duplicates), page.Dynamics, plays)
+        foreach (var h in Svg.Layout.HairpinEngraver.DetectHairpins(page.MusicMarks.AddRange(duplicates).AddRange(unengraved), page.Dynamics, plays)
                      .Where(h => h.SourceIndex >= pageMarks)
                      .OrderBy(h => h.StaffIndex).ThenBy(h => h.StartMeasureIndex)
                      .ThenBy(h => h.VoiceIndex).ThenBy(h => h.StartItemIndex))

@@ -545,6 +545,17 @@ public sealed partial class MeasureCollector
             ? []
             : _musicMarks.Where(m => _condensedStaffDuplicateDynamics.Contains(m)).ToList();
 
+    private readonly List<MusicMarkItem> _combinedStaffUnengravedHairpinMarks = new();
+    /// <summary>
+    /// The hairpin starts and stops a combined staff's page does not draw — a unison's second
+    /// part's, whose notes the combiner engraves for nobody, and a start on a rest under the
+    /// other part's solo (<c>CombinedStaffReaddress.MoveMarks</c>) — as they were collected, in
+    /// their part's own voice and item numbers. The same debt as
+    /// <see cref="CondensedStaffDuplicateHairpinStarts"/>: a document that writes each part
+    /// alone (MusicXML) still owes the part its own hairpin.
+    /// </summary>
+    public IReadOnlyList<MusicMarkItem> CombinedStaffUnengravedHairpinMarks => _combinedStaffUnengravedHairpinMarks;
+
     /// <summary>The dynamics and hairpin starts of a condensed staff's parts that DIFFER at one
     /// moment, with the side each takes — the upper part's above the staff (true), a lower
     /// part's below (<see cref="JunkCondensedStaffDuplicateDynamics"/>): applied as a written
@@ -2710,7 +2721,8 @@ public sealed partial class MeasureCollector
             var builtStaves = staffGroups.SelectMany(sg => sg.Staves).ToList();
             content = CombinedStaffReaddress.Apply(content, combinedAddressings, (s, v) =>
                 s >= 0 && s < builtStaves.Count && v >= 0 && v < builtStaves[s].Voices.Length
-                    ? builtStaves[s].Voices[v].Measures : default);
+                    ? builtStaves[s].Voices[v].Measures : default,
+                _combinedStaffUnengravedHairpinMarks);
         }
         // …and a mark on an empty chord after a voice's last, full bar stands on that bar's
         // end — on the final addresses too (TrailingMarks says why).
@@ -5602,6 +5614,7 @@ public sealed partial class MeasureCollector
         _shadowedRehearsalMarks.Clear(); // refilled from the finished score (RecordShadowedRehearsalMarks)
         _condensedStaffChangeWarnings.Clear();
         _condensedStaffDuplicateDynamics.Clear();
+        _combinedStaffUnengravedHairpinMarks.Clear();
         _condensedStaffDynamicSides.Clear();
         _tempoStanding = _fileTempo = null;
         _writtenOutPercents = null;

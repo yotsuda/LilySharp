@@ -386,6 +386,47 @@ public class MusicXmlWedgePairTests
         Assert.Equal(own, Say(doc, 1));
     }
 
+    private static XDocument Combined(string fl1, string fl2)
+        => Document("octave absolute\ntime 4/4\npart fl1 { clef treble }\npart fl2 { clef treble }\nsection A {\n"
+            + "  fl1 { " + fl1 + " }\n  fl2 { " + fl2 + " }\n}\nform { ~A }\nscore { combinedStaff { fl1 fl2 } }\n");
+
+    /// <summary>
+    /// On a combined staff a unison's hairpin is printed once, the first part's — the second
+    /// part's notes are engraved for nobody and its marks go with them
+    /// (CombinedStaffReaddress.MoveMarks) — and is each part's own wedge in the document, the
+    /// second part's hairpin before it stopping where its own next one starts. From session
+    /// 1321, when the page began to drop those marks, to session 1325 the second part wrote no
+    /// wedge for the unison's hairpin, and the stop of the one before it stood after every
+    /// other direction of its bar (Lab sessions/p1325/xml s2, s3, h2, h3).
+    /// </summary>
+    [Theory]
+    // Part two's crescendo where the parts play apart, then the unison's.
+    [InlineData("c''2 d''2 | c'4 d'@cresc e' f'@!cresc | g'1 |", "e'4 f' e'@cresc f' | c'4 d'@cresc e' f'@!cresc | g'1 |",
+        "bar 2 +24 crescendo, bar 2 +96 stop",
+        "bar 1 +48 crescendo, bar 2 +24 stop, bar 2 +24 crescendo, bar 2 +96 stop")]
+    // The unison's begins at its bar's head.
+    [InlineData("c''2 d''2 | c'4@cresc d' e' f'@!cresc | g'1 |", "e'4 f' e'@cresc f' | c'4@cresc d' e' f'@!cresc | g'1 |",
+        "bar 2 crescendo, bar 2 +96 stop",
+        "bar 1 +48 crescendo, bar 2 stop, bar 2 crescendo, bar 2 +96 stop")]
+    // The unison's is closed by a level both parts write.
+    [InlineData("c''2 d''2 | c'4 d'@decresc e' f' | g'1@p |", "e'4@p f' e'@cresc f' | c'4 d'@decresc e' f' | g'1@p |",
+        "bar 2 +24 diminuendo, bar 3 stop, bar 3 p",
+        "bar 1 p, bar 1 +48 crescendo, bar 2 +24 stop, bar 2 +24 diminuendo, bar 3 stop, bar 3 p")]
+    // A unison alone: both parts say it.
+    [InlineData("c'4 d'@cresc e' f'@!cresc | g'1 |", "c'4 d'@cresc e' f'@!cresc | g'1 |",
+        "bar 1 +24 crescendo, bar 1 +96 stop",
+        "bar 1 +24 crescendo, bar 1 +96 stop")]
+    // A start on a rest under the other part's solo, dropped from the page with its stop.
+    [InlineData("c''1 | c''1 | c''1 | c''1 |", "r2 r2@cresc | r1 | e'1@!cresc | e'1 |",
+        "",
+        "bar 1 +48 crescendo, bar 3 +96 stop")]
+    public void OnACombinedStaff_TheUnisonsHairpin_IsEachPartsOwnWedge(string fl1, string fl2, string first, string second)
+    {
+        var doc = Combined(fl1, fl2);
+        Assert.Equal(first, string.Join(", ", Say(doc, 0)));
+        Assert.Equal(second, string.Join(", ", Say(doc, 1)));
+    }
+
     private const string GrandStaff = """
         octave absolute
         time 4/4

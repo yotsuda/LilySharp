@@ -180,7 +180,8 @@ internal static class CombinedStaffReaddress
     /// <summary>Re-addresses every island of every combined staff in one pass.</summary>
     internal static ScoreContent Apply(
         ScoreContent content, IReadOnlyList<CombinedStaffAddressing> addressings,
-        Func<int, int, ImmutableArray<Measure>>? measuresOf = null)
+        Func<int, int, ImmutableArray<Measure>>? measuresOf = null,
+        List<MusicMarkItem>? unengravedHairpinMarks = null)
     {
         var byStaff = addressings.ToDictionary(a => a.StaffIndex);
         return content with
@@ -240,7 +241,7 @@ internal static class CombinedStaffReaddress
                     EndMeasureIndex = to.MeasureIndex,
                     EndItemIndex = to.ItemIndex,
                 }),
-            MusicMarks = MoveMarks(content.MusicMarks, byStaff, measuresOf),
+            MusicMarks = MoveMarks(content.MusicMarks, byStaff, measuresOf, unengravedHairpinMarks),
         };
     }
 
@@ -311,7 +312,7 @@ internal static class CombinedStaffReaddress
     /// </remarks>
     private static ImmutableArray<MusicMarkItem> MoveMarks(
         ImmutableArray<MusicMarkItem> marks, Dictionary<int, CombinedStaffAddressing> byStaff,
-        Func<int, int, ImmutableArray<Measure>>? measuresOf)
+        Func<int, int, ImmutableArray<Measure>>? measuresOf, List<MusicMarkItem>? unengravedHairpinMarks = null)
     {
         if (marks.IsDefaultOrEmpty || !marks.Any(m => IsANotesMark(m) && byStaff.ContainsKey(m.StaffIndex)))
             return marks;
@@ -412,6 +413,11 @@ internal static class CombinedStaffReaddress
             }
         }
 
+        void NotEngraved(MusicMarkItem m)
+        {
+            if (PairedLine(m) is (HairpinLine, _))
+                unengravedHairpinMarks?.Add(m);
+        }
         var built = ImmutableArray.CreateBuilder<MusicMarkItem>(marks.Length);
         var seen = new HashSet<(int, int, int, int, MusicMarkType, string, TextSpanFamily)>();
         for (int i = 0; i < marks.Length; i++)
@@ -422,8 +428,13 @@ internal static class CombinedStaffReaddress
                 built.Add(m);
                 continue;
             }
+            // (A hairpin's end the page drops is still its part's: a document that writes each
+            // part alone reads it from here — MeasureCollector.CombinedStaffUnengravedHairpinMarks.)
             if (dropped.Contains(i))
+            {
+                NotEngraved(m);
                 continue;
+            }
             // (A pedal's release is paired with nothing here: it goes to its moment by itself.)
             var placed = byMoment.GetValueOrDefault(i) ?? Moved(m, map)
                 ?? (!IsAnEnd(m.Type) ? null
@@ -435,7 +446,10 @@ internal static class CombinedStaffReaddress
             if (placed is null
                 || !seen.Add((placed.StaffIndex, placed.VoiceIndex, placed.MeasureIndex, placed.AnchorItemIndex,
                               placed.Type, placed.Text, placed.SpanFamily)))
+            {
+                NotEngraved(m);
                 continue;
+            }
             built.Add(placed);
         }
         return built.ToImmutable();
