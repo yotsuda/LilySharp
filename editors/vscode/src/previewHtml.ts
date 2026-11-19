@@ -2502,6 +2502,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 voices.set(message.part, { buffer, speed: message.speed || 1, key: message.key, lead, pre: s === null ? 0 : Math.max(0, lead - s) });
                 setVoiceState(message.part, 'ready');
                 joinVoice(message.part, message.entries, sungBefore);
+                joinLoop(message.part);
             }, e => {
                 vscode.postMessage({ type: 'webviewPerf', text: 'voice: ' + message.part + ' could not be decoded: ' + e });
                 setVoiceState(message.part, 'failed', 'the WAV could not be decoded');
@@ -2518,8 +2519,15 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         const PLACEHOLDER_MS = 10000;
         let placeholderTimer = null;
         function clearVoices(pending) {
+            // Voices taken away while they sing (the engine changed, the singers went): the list
+            // sounding was laid out without their parts' instruments, so the parts fell silent to the
+            // list's end - a loop's ten minutes (measured 2026-11-19 in a real VS Code: the voice
+            // stopped, and no strike of its part went to the synth in the rounds after). What plays
+            // is laid out again from here, the instruments standing in.
+            const sang = voiceSources.length > 0;
             stopVoices(); voices.clear(); voiceStates.clear();
             sungNow = null;
+            if (sang && playingNow()) resumeHere();
             if (placeholderTimer) { clearTimeout(placeholderTimer); placeholderTimer = null; }
             if (pending) {
                 voiceStates.set('', { state: 'preparing' });
@@ -2770,6 +2778,31 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             voiceSources.push(src);
             if (tracks.size > 0) { sfPlayer.silence(playingNotes.filter(n => tracks.has(n.N) && !n.U && n.T >= entry.at - 1e-6)); }
             flashInfo('The voice of ' + (menuVoiceNames[key] || key) + ' comes in', 3000);
+        }
+        // A voice that lands while a LOOP goes round, which joinVoice leaves to the next Play: the
+        // rounds are laid out ten minutes ahead with the part's instrument standing in, so the
+        // voice was not heard until Play was pressed again (measured 2026-11-19 in a real VS Code:
+        // a four-bar loop, the voice ready in its first round, no voice in the rounds after). The
+        // round sounding plays to its end and the next begins with the voice - the loop laid out
+        // again there, as a loop takes an edit (refreshLoop, whose switch this one gives way to: it
+        // starts with the voice too). Not on the MIDI output, as joinVoice.
+        function joinLoop(key) {
+            if (playClock === null || !playingNotes || midiPlaying || !loopOn || !loopList || lastSpan === undefined || !(loopRound > 0)) { return; }
+            if (!soundingVoices().includes(key) || loopSwitchTimer) { return; }
+            const period = loopRound + loopGap, lt = Math.max(0, playOffset + playClock());
+            let remain = period - (lt % period);
+            if (remain < 0.25) remain += period;
+            const gen = playGeneration, list = loopList;
+            // (a new list starts 0.15 s after it is handed over: handed over so much before the round's end)
+            loopSwitchTimer = setTimeout(() => {
+                loopSwitchTimer = null;
+                if (gen !== playGeneration || !playingNow() || loopList !== list) return;
+                const rounds = looped(list);
+                voicePlan = loopVoicePlan();
+                startPlayback(rounds, 0, false, false, loopGap, spanStart);
+                loopList = list;
+                flashInfo('The voice of ' + (menuVoiceNames[key] || key) + ' comes in', 3000);
+            }, Math.max(0, (remain - 0.15) * 1000));
         }
         // Starts every voice so that the list's time listTime sounds at the context's time when:
         // after a count-in (countInFix), each stretch of the score the list plays cut from the

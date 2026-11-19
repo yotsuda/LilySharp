@@ -405,6 +405,19 @@ describe('the preview\'s Range panel', () => {
         assert.match(seek, /startPlayback\(rounds, at === null \? 0 : loopOffset\(at, null\), false, false, loopGap, spanStart\);\s+return;/);
         assert.match(seek, /startPlayback\(playbackNotes, t, false, false, 0, 0\);/);
         assert.match(html, /if \(best === null\) return false;\s+seekPlay\(best\.T\);/);
+        // A voice that lands while a loop goes round comes in with the next round (the rounds are
+        // laid out ten minutes ahead with its part's instrument standing in: it was not heard until
+        // Play was pressed again), unless a switch is already on its way - an edit's, which starts
+        // with the voice too.
+        assert.match(html, /joinVoice\(message\.part, message\.entries, sungBefore\);\s+joinLoop\(message\.part\);/);
+        const join = html.slice(html.indexOf('function joinLoop(key)'), html.indexOf('function voicePreroll('));
+        assert.match(join, /if \(playClock === null \|\| !playingNotes \|\| midiPlaying \|\| !loopOn \|\| !loopList \|\| lastSpan === undefined \|\| !\(loopRound > 0\)\) \{ return; \}/);
+        assert.match(join, /if \(!soundingVoices\(\)\.includes\(key\) \|\| loopSwitchTimer\) \{ return; \}/);
+        assert.match(join, /let remain = period - \(lt % period\);\s+if \(remain < 0\.25\) remain \+= period;/);
+        assert.match(join, /if \(gen !== playGeneration \|\| !playingNow\(\) \|\| loopList !== list\) return;\s+const rounds = looped\(list\);\s+voicePlan = loopVoicePlan\(\);\s+startPlayback\(rounds, 0, false, false, loopGap, spanStart\);/);
+        // Voices taken away while they sing: what plays is laid out again from here, so their
+        // parts' instruments stand in (the list sounding had left them out to its end).
+        assert.match(html, /const sang = voiceSources\.length > 0;\s+stopVoices\(\); voices\.clear\(\); voiceStates\.clear\(\);\s+sungNow = null;\s+if \(sang && playingNow\(\)\) resumeHere\(\);/);
         // Its start: the list's offset in the score's played time (count-in aside) times the speed.
         const at = html.indexOf('function startRecordingAlong(');
         const body = html.slice(at, html.indexOf('\n        }', at) + '\n        }'.length);
