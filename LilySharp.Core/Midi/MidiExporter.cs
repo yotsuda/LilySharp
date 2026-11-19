@@ -4589,6 +4589,7 @@ public sealed class MidiExporter
         // and ran off the top of the range.
         var frame = (_currentOctave, _currentNoteName, _defaultDuration);
 
+        int figureStart = _currentTick, pedalsBefore = _pedalLog.Count, pedalsOfTheBody = pedalsBefore, bodyEnd = _currentTick;
         for (int i = 0; i < repeatCount; i++)
         {
             if (i > 0 && ordSnapshot != null)
@@ -4596,11 +4597,48 @@ public sealed class MidiExporter
             if (i > 0)
                 (_currentOctave, _currentNoteName, _defaultDuration) = frame;
             ProcessNode(repeat.Body, track, conductorTrack);
+            if (i == 0)
+                (pedalsOfTheBody, bodyEnd) = (_pedalLog.Count, _currentTick);
         }
+        if (engravedOnce)
+            StandTremoloPedals(figureStart, bodyEnd, _currentTick, pedalsBefore, pedalsOfTheBody);
         // (Until 2026-09-17 this walk alone played a LilyPond-style `alternative { … }`
         // clause after the body — the page, the twin and the MusicXML dropped it — choosing
         // the LAST ending for every pass beyond the endings' count, where LilyPond's `\volta`
         // -less alternative repeats the FIRST. The clause left the language; HANDOFF §2 R1.)
+    }
+
+    /// <summary>
+    /// A pedal mark written inside a tremolo is ONE mark, as the page draws it: the marks the
+    /// repetitions after the first read again are dropped, and each of the first reading's
+    /// stands where its note's HEAD stands in the figure — the place it has in the body, taken
+    /// of the whole. In a pair the first note's is at the tremolo's start and the second's at
+    /// its half, under the second head, where the page prints the sign.
+    /// </summary>
+    /// <remarks>
+    /// Owner's decision 2026-11-19 (Calamo request 29, "B"). Until then every repetition read
+    /// the mark: <c>repeat tremolo 8 { e32@sustain g }</c> pressed and then changed the pedal
+    /// seven times, and a lift on the second note came one stroke after the tremolo began.
+    /// Pedals alone — a dynamic or an accent is its note's at every stroke.
+    /// LILYPOND-REF: scm/define-music-callbacks.scm:56-59 make-tremolo-set — what a tremolo
+    /// repeat engraves and performs is "a stretched copy of its body", so LilyPond's MIDI has
+    /// the lift at the second head's moment too (2.26.0, as Calamo measured it: tick 864 of a
+    /// tremolo from 576 to 1152, docs/repro/pedal-after-tremolo-2026-11-19.md there).
+    /// </remarks>
+    private void StandTremoloPedals(int figureStart, int bodyEnd, int figureEnd, int before, int ofTheBody)
+    {
+        if (_pedalLog.Count == before)
+            return;
+        _pedalLog.RemoveRange(ofTheBody, _pedalLog.Count - ofTheBody);
+        int body = bodyEnd - figureStart;
+        if (body <= 0)
+            return;
+        for (int i = before; i < ofTheBody; i++)
+        {
+            var mark = _pedalLog[i];
+            long into = (long)(mark.Tick - figureStart) * (figureEnd - figureStart) / body;
+            _pedalLog[i] = mark with { Tick = figureStart + (int)into };
+        }
     }
 
     private Fraction GetDuration(DurationSyntax? duration)

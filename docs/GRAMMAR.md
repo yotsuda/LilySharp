@@ -3723,6 +3723,11 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                      (* a pedal CHANGE is the start again while the pedal is down:
                         c4@sustain … g4@sustain … c4@!sustain — the second releases and
                         re-presses; c4@!sustain@sustain on one note means the same *)
+                     (* a pedal mark INSIDE a tremolo's body is one mark, in the sound as on
+                        the page, where its note's head stands in the figure: the first
+                        note's at the tremolo's start, the second's at its half
+                        (owner's decision 2026-11-19). When the tremolo is over: }@!sustain,
+                        §8.1 BlockEnd. *)
                      @phrasingSlur … @!phrasingSlur   [LilyPond's \( … \); an end is
                      REQUIRED; one open per voice, ordinary slurs ( ) may sit inside;
                      @phrasingSlur(dashed) or (dotted) opens a dashed or dotted one] *)

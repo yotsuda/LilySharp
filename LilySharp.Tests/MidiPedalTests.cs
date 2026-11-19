@@ -76,9 +76,26 @@ public class MidiPedalTests
         // The same lift written on the block's brace (EndingMarkOnABlockTests).
         midi = Midi(Piano("g'1 | a'1 |", "c4@sustain d repeat tremolo 8 { e32 g }@!sustain | f1 |"));
         Assert.Equal("v0 ^1920", Changes(Track(midi, "lh")));
-        // Written inside, the lift is at its note's first stroke: the first, the tremolo's onset.
-        midi = Midi(Piano("g'1 | a'1 |", "c4@sustain d repeat tremolo 8 { e32@!sustain g } | f1 |"));
-        Assert.Equal("v0 ^960", Changes(Track(midi, "lh")));
+    }
+
+    [Fact]
+    public void InsideATremolo_ItIsOneMark_WhereItsHeadStands()
+    {
+        // Owner's decision 2026-11-19 (Calamo request 29, "B"): the page draws ONE sign under
+        // the head it is written on, and the sound has one change there — the first note's at
+        // the tremolo's start (960), the second's at its half (1440), where the second head is.
+        // Until then every repetition read the mark: a press was seven changes after it, and a
+        // lift on the second note came one stroke in (1020).
+        string Lh(string music) => Changes(Track(Midi(Piano("g'1 | a'1 |", music)), "lh"));
+        Assert.Equal("v0 ^960", Lh("c4@sustain d repeat tremolo 8 { e32@!sustain g } | f1 |"));
+        Assert.Equal("v0 ^1440", Lh("c4@sustain d repeat tremolo 8 { e32 g@!sustain } | f1 |"));
+        Assert.Equal("v960 ^1920", Lh("c4 d repeat tremolo 8 { e32@sustain g } | f1@!sustain |"));
+        Assert.Equal("v1440 ^1920", Lh("c4 d repeat tremolo 8 { e32 g@sustain } | f1@!sustain |"));
+        // Lifted on the first head and pressed again on the second; a one-note tremolo's is its start.
+        Assert.Equal("v0 ^960 v1440 ^1920", Lh("c4@sustain d repeat tremolo 8 { e32@!sustain g@sustain } | f1@!sustain |"));
+        Assert.Equal("v0 ^960", Lh("c4@sustain d repeat tremolo 16 { e32@!sustain } | f1 |"));
+        // A pedal already down, pressed inside: one change, not eight.
+        Assert.Equal("v0 ^960 v960 ^1920", Lh("c4@sustain d repeat tremolo 8 { e32@sustain g } | f1@!sustain |"));
     }
 
     [Fact]

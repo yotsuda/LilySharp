@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Fixed: a pedal mark inside a tremolo was played at every repetition** (`[playback]`). `repeat tremolo 8 { e32@sustain g }` pressed the pedal and then changed it seven times, once a repetition, and a lift written on the second note (`{ e32 g@!sustain }`) came one stroke after the tremolo began. The mark is one change now, as the page draws one sign, where its note's head stands: the first note's at the tremolo's start, the second's at its half — LilyPond's moment too. To lift when the tremolo is over, write the mark on the block's brace: `}@!sustain` (Calamo request 29).
+
 - **`layout { tremoloBeams gapped | joined }`** (`[language]`, `[engraving]`). `joined` draws a two-note tremolo (`repeat tremolo 12 { a64 b }`) as an old print does, its beams reaching both stems; `gapped`, the beams kept off the stems, stays the default, so a file that does not write the key is drawn as before. The notes' values, the spacing, MIDI and MusicXML are the same under both. `lysc --set tremoloBeams=joined` takes it too, and `lysc ly` writes LilyPond's `\override Beam.gap = #0` (Calamo request 28).
 
 - **Fixed: a whole-note tremolo's beams ran into the accidentals of its second chord** (`[engraving]`). In `repeat tremolo 16 { c''32 <dis'' fis''> }` the beams must end before the chord's accidentals; with two or more accidentals standing side by side they ended 1.29 too far right, since one accidental's width was taken for all of them. They end where LilyPond 2.26.0 ends them now. A note or a chord with one accidental was already right.

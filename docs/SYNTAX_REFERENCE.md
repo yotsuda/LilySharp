@@ -3111,7 +3111,9 @@ The default row's last two are LilyPond's own defaults for those pedals (`pedalS
 With two pedals down at once the words stand on rows of their own, the una corda nearest the
 staff, clear of each other and of the lines. In the MIDI each pedal is its own controller —
 sustain 64, sostenuto 66, una corda (soft) 67 — down and up at the onset of the note that
-carries the mark. MusicXML writes `<pedal type="start|sostenuto|stop">` with the `line` / `sign`
+carries the mark. Inside a two-note tremolo (`repeat tremolo 12 { a64 b64@!sustain }`) the mark
+is one change, where its note's head stands on the page: the first note's at the tremolo's
+start, the second's at its half. MusicXML writes `<pedal type="start|sostenuto|stop">` with the `line` / `sign`
 of the picture, and the una corda as its words with `<sound soft-pedal="yes|no"/>` (MusicXML's
 `<pedal>` has no soft type).
 
