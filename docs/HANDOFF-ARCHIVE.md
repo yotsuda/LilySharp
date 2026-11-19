@@ -277,6 +277,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1306セッションの経緯
+
+### 1.1 第1306セッション（2026-11-18・YT-DELL2・新しい会話）
+
+base `1fc8305c7`・開始時 full 17683 合格 / 0 失敗 / skip 2 / 合計 17685（Lab `p1306` の `start.log`・`run1.trx`）。REQUESTS の open は Calamo・Dettato とも 0。CI は `d236aab43` で success。
+- **ずれた声部の運指（第 1 声）・`@text`・コード名の X＝測って欠陥なし（leftovers の第1263 の残り）・網だけ `d10c12426`**: 探り譜 Lab `p1306/shift`（g0〜g5・t0〜t5・h0〜h3・c0〜c2・`probe.ps1`・`dump.ily`）。声部が交差して第 1 声がずれる形の運指はずれた符頭の中央、`@text` はずれた符頭（強弱の経路を通る＝`DynamicEngraver` のずれ）、コード名（行のものも音符の `@chord` も）は声部が共有する列＝LilyPond の ChordName と同じ。X・Y とも 0.01 以内。網 `VoiceShiftedMarksTests` +6・毒 2 / 2 赤（`p1306/poisons.ps1` の P1・P2）。
+- **別の声部のヘアピンと出会って終わる形の絵（leftovers の第1239 の先頭）＝`e1b32f6d2`**: 自分の声部が後に何も書かないヘアピンは、別の声部のヘアピンの始まりで終わる（`DetectHairpins` の譜表全体の探し）。その 2 本を「背中合わせ」（列の中央 ∓ 0.33）に描いていた＝高さの違う 2 本の線の上で、condensedStaff では譜表の上と下で。LilyPond の adjacent-spanners は 1 つの Dynamic_engraver（Voice に居る）の中だけ＝2 つの声部のヘアピンは背中合わせにならない。今は `HairpinItem.MetInAnotherVoice`＝その瞬間に `\!` を書いた LilyPond の絵: 自分の声部のその瞬間の音符の右端まで（休符は左端・自分の声部が長い音を伸ばしているなら出会った声部の列・小節の頭は今までどおり小節線）、相手は自分の列の左から 1 本下の線。基準は双子に手で `\!` を足したもの（Lab `p1306/hp` の 7 冊＝X・Y とも 0.01 以内・s4＝同じ声部の対は動かない・condensedStaff は `hp/cs/k1`）。網 `HairpinVoiceTests` +9・毒 7 本のうち赤 6・緑 1＝section の切断のときの旗の戻し（観測者なし・行に注）。全 svg の掃きは 0 / 1269（`p1306/sweep`・追跡コーパスにこの形は無い）。CHANGELOG に 1 行。
+- ⚠️ 残したまま: `.ly` はこのヘアピンに `\!` を書かない（`LilyPondExporter.EmitDynamic` の注が宣言している方針）＝ページは描き、LilyPond は unterminated と言って描かない。別の声部の*強弱*で終わる形（第1239 の t1）は今までどおりその文字が端。出会う瞬間が装飾音の形は未測定。
+- 終了時 full 17697 合格 / 1 失敗 / skip 2 / 合計 17700（`run3.trx`・+15＝網。1 失敗は §1 の字数の門＝この語りを 170 字超えて書いていた・削って単独で緑）。途中の 1 回（掃きと並走）は `ScoreVideoShapeTests` の 1 本も赤（単独 4 / 4 緑＝不安定な網）。拡張は触っていない。
+- **次**: leftovers の「第1239」の残り（condensedStaff の終わりは「立っている写し」の場所・刻印の網が無い運び手・「item の時刻」の綴り 3 つ・3 声部の強弱の並び）→「第1238」の残り（combinedStaff の印の re-address・drum 譜の落ちた側のヘアピン・段の部屋の予約の網）。その先は review.md の設計が先の 3 つ（`mid-bar-break`・F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。
+
 ## 以下は第1305セッションの経緯
 
 ### 1.1 第1305セッション（2026-11-18・YT-LAPTOP4・第1304 とは別の会話）

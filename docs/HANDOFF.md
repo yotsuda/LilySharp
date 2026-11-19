@@ -146,6 +146,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1308セッション（2026-11-18〜19・YT-DELL2・新しい会話）
+
+オーナーの依頼を順に受けた便（`-Start` は終わりに・base `c993f302a`）。終了時 full 17719 合格 / 0 失敗 / skip 2 / 合計 17721（Lab `p1308` `run1.trx`）・拡張 1294 / 0 / skip 1。REQUESTS は Calamo #27 を `fixed` にした・open は両方 0。Lily# の commit は `1a3b9972e` からの 20 個（1 個はオーナー側の `e3765de71`）＝未 push。経緯は commit message と設計メモに在る。毒は回していない。
+- **メトロノームのウィンドウの整理（オーナー決定・`docs/transport-mixer-design.md` §9〜§13）**: 録音のパートの行は vocals・guitar・piano・other・bass・drums の順／Score と Recording の見出しにボタン 2 つ＝グループのオン／オフ（行の選択を保つ・Score は **Play**）と **All**／**Loop グループ・A-B ボタンと番号欄・8 本の帯・右クリックの Play from Here／A Here／B Here は撤去**、Repeat はヘッダの ⏹ の右（`ab-repeat-design.md` §0）／Tempo は 1 行で開閉なし／Faders 100% は Octave の行の右／小節はヘッダの時間の上（`12 / 118`）。使われないコードも掃除。
+- **録音**: Speed and pitch は撤去＝残るのは **Octave** だけ。隣のファイルの `tuning` は使わない（3 つの形を試してやめた＝理由と再検討の条件は `recording-design.md` §3 の 2 の ★）。**録音つきの譜面から録音なしへ切り替えるとパネルに前の録音が残る**（`sendRecording` の順番の入れ替わり）を直した `3037c1739`。
+- **拍の繰り返し `{ … } % % %`（Calamo #27・オーナー決定・`b3dce0d24`・`percent-repeat-design.md` §5・GRAMMAR の BeatRepeat）**: 第904 で消したものを戻した。診断 LYS1074。絵は LilyPond 2.26.0 と同じ並び（Lab `p1308/beat`）。
+- **実機の確かめ方**: 隔離した VS Code を CDP で読む型を Lab `p1308/e2e` に置いた。⚠️ ページに同名の関数を 2 つ宣言すると後のものが黙って勝つ（網 1 本を足した）。
+- **残り**: 実機は小節の表示と録音の切り替えだけ見た＝ほかは `MANUAL-CHECKS`（「Repeat はヘッダ」「Octave だけの録音の行・1 行の Tempo」）。site は release のときに書き直す。拍の繰り返しは補完なし・ドラム譜の行は読まない。未決＝録音が無いときの Faders 100% の置き場・Tempo の下限（今 50%）。
+- **次**（第1306 から写した）: leftovers の「第1239」の残り（condensedStaff の終わりは「立っている写し」の場所・刻印の網が無い運び手・「item の時刻」の綴り 3 つ・3 声部の強弱の並び）→「第1238」の残り（combinedStaff の印の re-address・drum 譜の落ちた側のヘアピン・段の部屋の予約の網）。その先は review.md の設計が先の 3 つ（`mid-bar-break`・F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。
+
+## 以下は第1307セッションの経緯
+
 ### 1.1 第1307セッション（2026-11-18・YT-DELL2・第1306 とは別の会話）
 
 オーナーの報告から入った便（`-Start` は終わりに回した）。終了時 full 17704 合格 / 0 失敗 / skip 2 / 合計 17706（Lab `p1307` `run1.trx`）・拡張 1298 / 0 / skip 1。REQUESTS は見ていない。Lily# の commit は `5b399b052` からの 11 個・Cantoria は「A folder that cannot be used is not set」＝どれも未 push。経緯は各 commit message に在る。
@@ -155,18 +167,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **本体の欠陥 3 つ**: `md` フェンスの太字の後の空白がブラウザで消える（空白で始まる SVG の `<text>`）／LYS4037 が歌詞の言語を見ていなかった（`LyricReadingKanaValidator` へ）／韓国語の文の行末が空白にならない（`Prose.JoinsWithoutSpace`）。網 +7・snapshot は動かず・毒は回していない。
 - **作らなかったもの**: Cantoria を 4 言語以外へ＝OpenUtau の発音変換データ（`G2p/Data` の zip）に出どころとライセンスの記載が無い。オーナーと「今は作らない」。
 - **測ったもの**: フォルダを選んだ後の問いが遅い＝Windows のフォルダ選択ダイアログの返事（初回 41.6 s・Lab `p1307/slow-dialog`）。Cantoria は 0 ms。
-- **残り**: 実機（`MANUAL-CHECKS` W8〜W10）と拡張の入れ直しはオーナー。NVIDIA 以外の GPU は短い版が先／`.lys` の全角の句読点に VS Code の黄色い枠（抑えるかは未決）。**次**: 第1306 の「次」のまま（下）。
-
-## 以下は第1306セッションの経緯
-
-### 1.1 第1306セッション（2026-11-18・YT-DELL2・新しい会話）
-
-base `1fc8305c7`・開始時 full 17683 合格 / 0 失敗 / skip 2 / 合計 17685（Lab `p1306` の `start.log`・`run1.trx`）。REQUESTS の open は Calamo・Dettato とも 0。CI は `d236aab43` で success。
-- **ずれた声部の運指（第 1 声）・`@text`・コード名の X＝測って欠陥なし（leftovers の第1263 の残り）・網だけ `d10c12426`**: 探り譜 Lab `p1306/shift`（g0〜g5・t0〜t5・h0〜h3・c0〜c2・`probe.ps1`・`dump.ily`）。声部が交差して第 1 声がずれる形の運指はずれた符頭の中央、`@text` はずれた符頭（強弱の経路を通る＝`DynamicEngraver` のずれ）、コード名（行のものも音符の `@chord` も）は声部が共有する列＝LilyPond の ChordName と同じ。X・Y とも 0.01 以内。網 `VoiceShiftedMarksTests` +6・毒 2 / 2 赤（`p1306/poisons.ps1` の P1・P2）。
-- **別の声部のヘアピンと出会って終わる形の絵（leftovers の第1239 の先頭）＝`e1b32f6d2`**: 自分の声部が後に何も書かないヘアピンは、別の声部のヘアピンの始まりで終わる（`DetectHairpins` の譜表全体の探し）。その 2 本を「背中合わせ」（列の中央 ∓ 0.33）に描いていた＝高さの違う 2 本の線の上で、condensedStaff では譜表の上と下で。LilyPond の adjacent-spanners は 1 つの Dynamic_engraver（Voice に居る）の中だけ＝2 つの声部のヘアピンは背中合わせにならない。今は `HairpinItem.MetInAnotherVoice`＝その瞬間に `\!` を書いた LilyPond の絵: 自分の声部のその瞬間の音符の右端まで（休符は左端・自分の声部が長い音を伸ばしているなら出会った声部の列・小節の頭は今までどおり小節線）、相手は自分の列の左から 1 本下の線。基準は双子に手で `\!` を足したもの（Lab `p1306/hp` の 7 冊＝X・Y とも 0.01 以内・s4＝同じ声部の対は動かない・condensedStaff は `hp/cs/k1`）。網 `HairpinVoiceTests` +9・毒 7 本のうち赤 6・緑 1＝section の切断のときの旗の戻し（観測者なし・行に注）。全 svg の掃きは 0 / 1269（`p1306/sweep`・追跡コーパスにこの形は無い）。CHANGELOG に 1 行。
-- ⚠️ 残したまま: `.ly` はこのヘアピンに `\!` を書かない（`LilyPondExporter.EmitDynamic` の注が宣言している方針）＝ページは描き、LilyPond は unterminated と言って描かない。別の声部の*強弱*で終わる形（第1239 の t1）は今までどおりその文字が端。出会う瞬間が装飾音の形は未測定。
-- 終了時 full 17697 合格 / 1 失敗 / skip 2 / 合計 17700（`run3.trx`・+15＝網。1 失敗は §1 の字数の門＝この語りを 170 字超えて書いていた・削って単独で緑）。途中の 1 回（掃きと並走）は `ScoreVideoShapeTests` の 1 本も赤（単独 4 / 4 緑＝不安定な網）。拡張は触っていない。
-- **次**: leftovers の「第1239」の残り（condensedStaff の終わりは「立っている写し」の場所・刻印の網が無い運び手・「item の時刻」の綴り 3 つ・3 声部の強弱の並び）→「第1238」の残り（combinedStaff の印の re-address・drum 譜の落ちた側のヘアピン・段の部屋の予約の網）。その先は review.md の設計が先の 3 つ（`mid-bar-break`・F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。
+- **残り**: 実機（`MANUAL-CHECKS` W8〜W10）と拡張の入れ直しはオーナー。NVIDIA 以外の GPU は短い版が先／`.lys` の全角の句読点に VS Code の黄色い枠（抑えるかは未決）。**次**: 第1306 の「次」のまま（第1308 の語りの末尾に写した）。
 
 ## 2. 開いている作業
 
