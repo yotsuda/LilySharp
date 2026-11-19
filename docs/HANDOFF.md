@@ -146,21 +146,24 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1313セッション（2026-11-19・YT-DELL2・新しい会話）
+
+leftovers の「第1239」の残りを閉じた便（base `145df3333`＝前の会話が第1312 の docs の後に入れた 2 commit を含む・その経緯はこの文書に無い）。開始時 full 17746 合格 / 0 失敗 / skip 2 / 合計 17748（Lab `p1313` `run1.trx`）。終了時 full 17785 合格 / 0 失敗 / skip 2 / 合計 17787（`run3.trx`）。REQUESTS の open は両方 0。全 svg の掃きは 0 / 1276・全冊の MusicXML の掃きも 0 / 1276（どちらも結果＝追跡の本にその形が無い。陽性対照は探り譜）。
+- **刻印の網（`72a1fcb34`）**: 第1239 が網なしで残した運び手（`q`・slash・bare・pitched rest・`<>`・それぞれ連符の中・ドラムの音符・チャートの打音と印つきの休符）に、強弱とヘアピンの始まりの 32 行（`HairpinVoiceTests.TheOtherCarriers_StampTheirMomentToo`）。毒は腕ごとに 17 本＝名指した行だけ赤（Lab `p1313/poisons.ps1`）。強弱もヘアピンの始まりも刻むのは `CollectDynamics`。
+- **見つけた欠陥 1＝ドラムチャートの連符（同じ commit・`[engraving]`）**: `EmitDrumPiece` は時刻を小節の時計（`CurrentDuration`）から読んでいた。連符の中では時計が止まるので、連符の 2 つ目以降の打音の強弱・ヘアピンは連符の頭の時刻で刻まれ、もう一方の声部のヘアピンが終わりを取り違えた。`CurrentMoment` を読む 1 行。同じ音楽を `voice { } { }` で書いた絵が答え（Lab `p1313/chart` c1・c2・v1）。網 2 行。
+- **時刻の綴りを 1 つ畳んだ（`de837072f`）**: condensedStaff の重複判定は長さを足し直さず刻印（`DynamicItem.Moment`）を読む。`@text` の強弱表現にも刻印。全 1,289 冊の 3,427 件で刻印＝和が 3,425・相違 0（Lab `p1313/moment-vs-sum.txt`）。網 `ACondensedStaff_PrintsATextBothPartsWrite_Once`・毒 2 本。
+- **見つけた欠陥 2＝単独のドラム音符の印が MusicXML に無い（`66412b223`・`[export]`）**: `ProcessDrumNote` は音符に書いた印を 1 つも読まなかった（強弱・ヘアピン・アクセント・フェルマータ・文字。和音と休符のものは書かれていた）。和音の構成音と同じ `ProcessArticulations` を呼ぶ。網 4 行・毒 1 本。CHANGELOG は欠陥 1 と 2。
+- **測っていない・残り**: Lab `p1242/leftovers.md` の「第1313」の節（運び手が `CollectArticulations` に渡す時刻の網・チャートの連符の MIDI・連符の中の slash と bare の `@cross`／数字付き低音・MusicXML の読み戻し）。「第1239」の残りは condensedStaff の終わりの場所の 1 行だけ。
+- **次**: leftovers の「第1313」の節 →「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決（録音が無いときの Faders 100% の置き場・Tempo の下限）はオーナー待ち。
+
+## 以下は第1312セッションの経緯
+
 ### 1.1 第1312セッション（2026-11-19・YT-DELL2・第1310 と同じ会話）
 
 Calamo #29 の 2 を直した便（base `b6f806dfe`）。開始時 full 17741 合格 / 0 失敗 / skip 2 / 合計 17743（Lab `p1312` `run1.trx`）。終了時 full 17744 合格 / 0 失敗 / skip 2 / 合計 17746（`run2.trx`）。REQUESTS は #29 を `fixed`・open は両方 0。毒は回していない。
 - **トレモロの中のペダルの印は 1 回だけ・その音の頭が立つ所で（オーナー決定 2026-11-19「B」）**: `MidiExporter.ProcessRepeat` は tremolo の本体を回数ぶん歩き、ペダルの印を毎回読んでいた（`{ e32@sustain g }` ×8 は 1 回踏んで 7 回踏み替え・2 つ目の音の離しは 1 打後）。今は最初の 1 回の印だけを残し、本体の中の位置をかたまり全体に引き伸ばした時刻に置く（`StandTremoloPedals`）＝1 つ目の音は頭・2 つ目は半分。LilyPond と同じ時刻（Calamo の再現譜で tick 1080＝3/16 後）。ペダルの 3 種だけ＝強弱・アクセントは今までどおり打つたびに効く。探り譜と前後の表は Lab `p1312/in`・`p1311/notes.md`。網 `MidiPedalTests.InsideATremolo_ItIsOneMark_WhereItsHeadStands`。MIDI の掃きは 0 / 1276（Lab `p1312/midi`＝追跡の本とコーパスに、トレモロの中にペダルを書く本は無い）。
 - **測っていない**: トレモロの中のヘアピン・text spanner・ottava の端が MIDI でどう鳴るか（同じ「毎回読む」の形がありうる）。
 - **次**: leftovers の「第1239」の残り →「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決（録音が無いときの Faders 100% の置き場・Tempo の下限）はオーナー待ち。
-
-## 以下は第1311セッションの経緯
-
-### 1.1 第1311セッション（2026-11-19・YT-DELL2・第1310 と同じ会話）
-
-Calamo #29 の `}@!sustain` を作った便（base `c8072bf8f`）。開始時 full 17733 合格 / 0 失敗 / skip 2 / 合計 17735（Lab `p1311` `run1.trx`）。終了時 full 17741 合格 / 0 失敗 / skip 2 / 合計 17743（`run2.trx`）。REQUESTS は #29 を `fixed`（1）と `question`（2）に書いた・open は両方 0。毒は回していない。
-- **終わりの印をかたまりの `}` に書ける（オーナー決定 2026-11-19: 終わりの印 `@!…` だけ・`{ }` で閉じる音楽のかたまり全部）**: `repeat tremolo 12 { … }@!sustain`・`tuplet 3/2 { … }@!cresc`。パーサが「かたまりの後ろの空の和音」として読む（`Parser.Music.cs` `EndingMarksOfABlock`＝幅 0 の `<` `>` を持つ `ChordGreen`）＝絵・MIDI・`.ly`・MusicXML は `} <>@!sustain` と同じ木を読むので、後ろは何も変えていない。`}@f`・`}@sustain` はエラーで `} <>@f` を言う。`}@!sustain@f` は `@f` だけを指す。空白を挟んだ `} @!sustain` は今までどおりエラー。探り譜 8 組（tremolo・tuplet・2 つの印・voice・grace・cue ほか）で 4 つの出力が一致（Lab `p1311/end`）。網 `EndingMarkOnABlockTests`・`SpanEndCompletionTests` に 1 本。文法は GRAMMAR.md §8.1 の BlockEnd。実機は `MANUAL-CHECKS` の `}@!sustain` の行。
-- **オーナー判断待ち（#29 の 2）**: トレモロの中の音に付けた離しの時刻。今は「その音を最初に弾く瞬間」（2 つ目の音なら 1/64 後）、LilyPond は表示上の頭の時刻（かたまりの半分）。**見つけた欠陥（未修正・同じ判断で直る）**: MIDI は tremolo の本体を回数ぶん歩き、中のペダルの印を毎回読む＝`repeat tremolo 8 { e32@sustain g }` は 1 回踏むのではなく 7 回踏み替える（Lab `p1311/notes.md` の表）。直しは「印は 1 回だけ」で、その時刻が問い。勧め＝表示上の頭の時刻（絵の印の位置と同じ）。
-- **次**: 上の判断 → leftovers の「第1239」の残り →「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決（録音が無いときの Faders 100% の置き場・Tempo の下限）もオーナー待ち。
 
 ## 2. 開いている作業
 

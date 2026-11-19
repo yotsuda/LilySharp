@@ -277,6 +277,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1311セッションの経緯
+
+### 1.1 第1311セッション（2026-11-19・YT-DELL2・第1310 と同じ会話）
+
+Calamo #29 の `}@!sustain` を作った便（base `c8072bf8f`）。開始時 full 17733 合格 / 0 失敗 / skip 2 / 合計 17735（Lab `p1311` `run1.trx`）。終了時 full 17741 合格 / 0 失敗 / skip 2 / 合計 17743（`run2.trx`）。REQUESTS は #29 を `fixed`（1）と `question`（2）に書いた・open は両方 0。毒は回していない。
+- **終わりの印をかたまりの `}` に書ける（オーナー決定 2026-11-19: 終わりの印 `@!…` だけ・`{ }` で閉じる音楽のかたまり全部）**: `repeat tremolo 12 { … }@!sustain`・`tuplet 3/2 { … }@!cresc`。パーサが「かたまりの後ろの空の和音」として読む（`Parser.Music.cs` `EndingMarksOfABlock`＝幅 0 の `<` `>` を持つ `ChordGreen`）＝絵・MIDI・`.ly`・MusicXML は `} <>@!sustain` と同じ木を読むので、後ろは何も変えていない。`}@f`・`}@sustain` はエラーで `} <>@f` を言う。`}@!sustain@f` は `@f` だけを指す。空白を挟んだ `} @!sustain` は今までどおりエラー。探り譜 8 組（tremolo・tuplet・2 つの印・voice・grace・cue ほか）で 4 つの出力が一致（Lab `p1311/end`）。網 `EndingMarkOnABlockTests`・`SpanEndCompletionTests` に 1 本。文法は GRAMMAR.md §8.1 の BlockEnd。実機は `MANUAL-CHECKS` の `}@!sustain` の行。
+- **オーナー判断待ち（#29 の 2）**: トレモロの中の音に付けた離しの時刻。今は「その音を最初に弾く瞬間」（2 つ目の音なら 1/64 後）、LilyPond は表示上の頭の時刻（かたまりの半分）。**見つけた欠陥（未修正・同じ判断で直る）**: MIDI は tremolo の本体を回数ぶん歩き、中のペダルの印を毎回読む＝`repeat tremolo 8 { e32@sustain g }` は 1 回踏むのではなく 7 回踏み替える（Lab `p1311/notes.md` の表）。直しは「印は 1 回だけ」で、その時刻が問い。勧め＝表示上の頭の時刻（絵の印の位置と同じ）。
+- **次**: 上の判断 → leftovers の「第1239」の残り →「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決（録音が無いときの Faders 100% の置き場・Tempo の下限）もオーナー待ち。
+
 ## 以下は第1310セッションの経緯
 
 ### 1.1 第1310セッション（2026-11-19・YT-DELL2・新しい会話）
