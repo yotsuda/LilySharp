@@ -549,6 +549,9 @@ public static partial class NoteStepper
         "glissando" => "a slide into the next note",
         "arpeggio" => "the chord rolled, from the bottom up",
         "laissezVibrer" => "let it ring",
+        // A chord member's (Music.StruckNotes): the small black head on the chord's stem.
+        "struck" => "struck with the chord and let go while the rest is held - a quarter at most",
+        "dead" => "a dead note, muted - a percussive click",
         "rit" => "ritardando - gradually slower, until @!rit",
         "rall" => "rallentando - gradually slower, until @!rall",
         "accel" => "accelerando - gradually faster, until @!accel",

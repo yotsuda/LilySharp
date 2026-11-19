@@ -491,7 +491,15 @@ internal static partial class SharedRenderer
                     // A half head's begin is 0 (open heads butt the centre), so a
                     // tremolo pair's stem begins 0.15 recessed here; pre-existing,
                     // named by the session-109 audit, unmeasured by any book.
-                    - StemAttachYOffset(MemberStyle(i), up, noteValue: 8);
+                    // A STRUCK foot (`<a@struck c' e'>8`) is a cue-sized black head: its
+                    // attachment shrinks with it, as the unbeamed stem's does (DrawChord).
+                    // MEASURED, 2.26.0 (Lab sessions/p1332/beam/b1.ly, bars 2 and 4): the
+                    //   beamed stem's foot 0.0948 from the small head's centre, 0.0914 nearer
+                    //   than a full head's, stem up and down alike.
+                    - (StruckFootOf(memberItem, up)
+                        ? StemAttachYOffset(MemberStyle(i), up, Core.Music.StruckNotes.HeadNoteValue)
+                            * EmmentalerDesignSize.Magstep(GrobFontSize.StruckHeadStepOf((ChordItem)memberItem))
+                        : StemAttachYOffset(MemberStyle(i), up, noteValue: 8));
             }
             // The stem ends at the OUTERMOST beam rank on its own side — the extreme
             // of this stem's ranks in its direction (up ⇒ max rank, down ⇒ min), so
@@ -609,6 +617,19 @@ internal static partial class SharedRenderer
             if (index == globalStaffIndex)
                 return staff;
         return null;
+    }
+
+    /// <summary>Whether a beamed chord's stem stands on a struck member
+    /// (<see cref="ChordNoteInfo.IsStruck"/>) — the head <see cref="GetMemberStaffPosition"/> names.</summary>
+    private static bool StruckFootOf(MusicItem item, bool stemUp)
+    {
+        if (item is not ChordItem chord)
+            return false;
+        int foot = GetMemberStaffPosition(item, stemUp);
+        foreach (var n in chord.Notes)
+            if (n.StaffPosition == foot && n.IsStruck)
+                return true;
+        return false;
     }
 
     // LILYPOND-REF: lily/stem.cc Stem::extremal_heads — the stem attaches at the

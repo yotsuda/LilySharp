@@ -257,7 +257,8 @@ score {
 ```
 
 - A chord row: symbols as printed (`C`, `Am`, `G7`, `F#m`, `Bb`), no lengths. The chords in a bar share it.
-- A chord as notes in a part is `<c e g>2`.
+- A chord as notes in a part is `<c e g>2`. A note struck with it and let go while the rest is held:
+  `<c e g@struck>2` (a small black head on the chord's stem).
 
 **Try:** press Ctrl+Shift+Down on `G7`: a guitar diagram appears. **Lesson:** `lesson-08-chords`.
 

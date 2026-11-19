@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **`q` keeps an `@struck` member.** `<c' e' g'@struck>2 q2` draws the small head on the q too and strikes it again in the preview; the step keys' line now says what `@struck` and `@dead` ask of the player.
+
 - **Two new warnings.** A script on an empty chord before a spacer (`c''2 <>@accent s4`) marks no note there and goes on to the next one (LYS4085); a tie that reaches an `@struck` member is drawn but does not sound (LYS4086).
 
 - **Fixed: on a `combinedStaff` a hairpin stood on the wrong notes, or was drawn twice.** A hairpin, a `@rit … @!rit` line, an ottava bracket and a pedal of a part stand on the notes they are written on wherever the two parts are merged — in a "Solo II" bar, after a mid-bar entrance — and a hairpin both parts write in a unison is drawn once. An end written on a rest under the other part's solo stops the line on that beat.

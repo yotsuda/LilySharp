@@ -4950,7 +4950,7 @@ public sealed class MusicXmlExporter
     /// <summary>The written notes of every chord this walk has emitted, keyed by
     /// node — what a following <c>q</c> copies (post-transpose spelling; LP
     /// expands repetitions after \relative, so a q never re-reads the frame).</summary>
-    private readonly Dictionary<ChordSyntax, List<(string Step, int Alter, int Octave, int Quarter)>> _resolvedChordXmlNotes = new();
+    private readonly Dictionary<ChordSyntax, List<(string Step, int Alter, int Octave, int Quarter, bool Struck)>> _resolvedChordXmlNotes = new();
 
     /// <summary>The resolved spelling of every pitched note this walk has
     /// emitted - what a following bare duration copies. Same contract as
@@ -5073,7 +5073,7 @@ public sealed class MusicXmlExporter
                 // q left it, the same as a following q would.
                 int bareDisplacement = Music.BareDurations.DisplacementOf(bare);
                 bool isFirst = true;
-                foreach (var m in members)
+                foreach (var m in HeldFirst(members))
                 {
                     var xmlNote = new MusicXmlNote
                     {
@@ -5088,6 +5088,8 @@ public sealed class MusicXmlExporter
                         ActualNotes = tupletActual,
                         NormalNotes = tupletNormal
                     };
+                    if (m.Struck)
+                        Strike(xmlNote, durationTicks);
                     if (isFirst)
                     {
                         ProcessArticulations(Semantics.ArticulationRuns.WithCovering(bare, bare.Articulations), xmlNote, host: bare.SourceStart);
@@ -5386,7 +5388,7 @@ public sealed class MusicXmlExporter
             }
             return;
         }
-        var resolved = new List<(string Step, int Alter, int Octave, int Quarter)>();
+        var resolved = new List<(string Step, int Alter, int Octave, int Quarter, bool Struck)>();
 
         var duration = GetDuration(chord.Duration);
         int durationTicks = FractionToTicks(duration);
@@ -5448,7 +5450,7 @@ public sealed class MusicXmlExporter
         {
             var (step, alter, targetOctave) = ResolveChordMemberPitch(
                 pitch, isFirst, chordOctave, ref firstStep, ref firstOctave);
-            resolved.Add((step, alter, targetOctave, pitch.QuarterOffset));
+            resolved.Add((step, alter, targetOctave, pitch.QuarterOffset, Music.StruckNotes.IsStruck(pitch)));
 
             var xmlNote = new MusicXmlNote
             {
@@ -5546,13 +5548,7 @@ public sealed class MusicXmlExporter
             // Calamo request 31): a sounding note of the cue size and a quarter's head, as long
             // as it sounds — never a <cue/>, which is silent.
             if (Music.StruckNotes.IsStruck(pitch))
-            {
-                xmlNote.IsStruck = true;
-                xmlNote.Duration = Math.Min(durationTicks, _divisions);
-                if (durationTicks >= _divisions)
-                    (xmlNote.Type, xmlNote.ActualNotes, xmlNote.NormalNotes) = ("quarter", null, null);
-                xmlNote.Dots = 0;
-            }
+                Strike(xmlNote, durationTicks);
 
             _currentMeasure.Notes.Add(xmlNote);
             _chordMembers.Add(xmlNote);
@@ -5576,7 +5572,7 @@ public sealed class MusicXmlExporter
         {
             var (sstep, salter, soctave) = ApplyWrittenTransforms(sn.Step, sn.Alter, sn.Octave);
             string stepName = "CDEFGAB"[sstep].ToString();
-            resolved.Add((stepName, salter, soctave, 0));
+            resolved.Add((stepName, salter, soctave, 0, false));
             var xmlNote = new MusicXmlNote
             {
                 Step = stepName,
@@ -5631,7 +5627,7 @@ public sealed class MusicXmlExporter
                 firstStep, firstOctave, degree.Number, degree.Alteration,
                 degree.OctaveOffset, _keyFifths);
             (dstep, dalter, doctave) = ApplyWrittenTransforms(dstep, dalter, doctave);
-            resolved.Add(("CDEFGAB"[dstep].ToString(), dalter, doctave, 0));
+            resolved.Add(("CDEFGAB"[dstep].ToString(), dalter, doctave, 0, false));
             var xmlNote = new MusicXmlNote
             {
                 Step = "CDEFGAB"[dstep].ToString(),
@@ -5719,6 +5715,28 @@ public sealed class MusicXmlExporter
         MaybeClosePickup(duration);
     }
 
+    /// <summary>A STRUCK member (<c>&lt;c e g@struck&gt;2</c>, Music.StruckNotes; owner's decision
+    /// 2026-11-19, Calamo request 31): a sounding note of the cue size and a quarter's head, as long
+    /// as it sounds — never a &lt;cue/&gt;, which is silent. The chord, a <c>q</c> and a bare
+    /// duration repeating it write it alike.</summary>
+    private void Strike(MusicXmlNote xmlNote, int durationTicks)
+    {
+        xmlNote.IsStruck = true;
+        xmlNote.Duration = Math.Min(durationTicks, _divisions);
+        if (durationTicks >= _divisions)
+            (xmlNote.Type, xmlNote.ActualNotes, xmlNote.NormalNotes) = ("quarter", null, null);
+        xmlNote.Dots = 0;
+    }
+
+    /// <summary>A repeated chord's members with the struck ones behind the held, as the chord's own
+    /// &lt;note&gt;s stand (ProcessChord): the first note is the one the reader's clock moves by, and
+    /// it carries the repetition's marks.</summary>
+    private static IEnumerable<(string Step, int Alter, int Octave, int Quarter, bool Struck)> HeldFirst(
+        List<(string Step, int Alter, int Octave, int Quarter, bool Struck)> members)
+        => members.Any(static m => m.Struck) && members.Any(static m => !m.Struck)
+            ? members.Where(static m => !m.Struck).Concat(members.Where(static m => m.Struck))
+            : members;
+
     /// <summary>A <c>q</c> chord repetition: the ORIGINAL chord's written notes at
     /// the repetition's own duration, with the repetition's own post-events. The
     /// octave frame is NOT touched — LP expands q after \relative resolution. A
@@ -5759,7 +5777,7 @@ public sealed class MusicXmlExporter
         // the step and the alter do not move, which is why the spelling is preserved.
         int displacement = ChordRepetitions.DisplacementOf(rep);
         bool isFirst = true;
-        foreach (var m in members)
+        foreach (var m in HeldFirst(members))
         {
             var xmlNote = new MusicXmlNote
             {
@@ -5774,6 +5792,8 @@ public sealed class MusicXmlExporter
                 ActualNotes = tupletActual,
                 NormalNotes = tupletNormal
             };
+            if (m.Struck)
+                Strike(xmlNote, durationTicks);
             if (isFirst)
             {
                 // The repetition's OWN post-events only — LP copies note events,

@@ -117,6 +117,30 @@ public class StruckNoteTests
         Assert.InRange(lengths[1], 2.0661 - 0.011, 2.0661 + 0.011);
     }
 
+    /// <summary>A beamed stem standing on a struck member begins where the small head's attachment
+    /// is, as the unbeamed one does; until session 1332 the beam drew it from a full head's.</summary>
+    [Fact]
+    public void ABeamedStem_StandsOnTheSmallHead()
+    {
+        // MEASURED on LilyPond 2.26.0 (Lab sessions/p1332/beam/b1.ly): the stem's foot 0.0948 from
+        // the small head's centre, stem up (bar 2) and down (bar 4); a full head's foot stays 0.15
+        // on Lily#'s side (LilyPond 0.1862 — the beamed filled head's own question, not this one).
+        string text = Book("<a@struck c' e'>8 <a c' e'>8 r2 | <e'' g'' c'''@struck>8 <e'' g'' c'''>8 r2 |");
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse(text));
+        var stems = Regex.Matches(svg, "<line x1=\"([-\\d.]+)\" y1=\"([-\\d.]+)\" x2=\"\\1\" y2=\"([-\\d.]+)\"[^>]*stroke-width=\"0\\.130\"")
+            .Select(m => (X: double.Parse(m.Groups[1].Value), Foot: double.Parse(m.Groups[2].Value))).ToArray();
+        Assert.Equal(4, stems.Length);
+        var glyphs = Glyphs(svg);
+        // The foot's head: the first glyph at the source offset of the text (a unique spelling).
+        double FootGap(int stem, string at) =>
+            System.Math.Abs(stems[stem].Foot - glyphs.First(g => g.Pos == text.IndexOf(at, StringComparison.Ordinal)).Y);
+        // (The page writes two places: each y is within 0.005.)
+        Assert.InRange(FootGap(0, "a@struck"), 0.0948 - 0.011, 0.0948 + 0.011);
+        Assert.InRange(FootGap(1, "a c' e'>8 r2"), 0.15 - 0.011, 0.15 + 0.011);
+        Assert.InRange(FootGap(2, "c'''@struck"), 0.0948 - 0.011, 0.0948 + 0.011);
+        Assert.InRange(FootGap(3, "c'''>8 r2"), 0.15 - 0.011, 0.15 + 0.011);
+    }
+
     /// <summary><c>lysc import</c> reads the struck member back from the MusicXML Lily# writes (a
     /// sounding chord member at the cue size); until session 1330 it came back a plain member.
     /// A cue-size member that is a <c>&lt;cue/&gt;</c> is not one.</summary>
@@ -254,6 +278,36 @@ public class StruckNoteTests
         Assert.DoesNotContain("<dot", notes[2]);
         static int Duration(string note) => int.Parse(Regex.Match(note, "<duration>(\\d+)</duration>").Groups[1].Value);
         Assert.Equal(Duration(notes[0]), 3 * Duration(notes[2]));
+    }
+
+    /// <summary>A <c>q</c> and a bare duration repeat the struck member as struck: the small head
+    /// again, struck again and let go, the cue-size note behind the held ones. Until session 1332 a
+    /// repetition drew it a full head, left it out of the MIDI and wrote it a held note.</summary>
+    [Theory]
+    [InlineData("<c' e' g'@struck>2 q2 |")]
+    [InlineData("<c' e' g'@struck>2 2 |")]
+    [InlineData("<g'@struck c' e'>2 q2 |")]
+    public void ARepetition_StrikesItAgain(string music)
+    {
+        // MEASURED on LilyPond 2.26.0 (Lab sessions/p1332/beam/lp-q1.ly): `<c' e' \struck g'>2 q4`
+        // draws the small head on the q too (its x 0.489 right of the full heads', stem up).
+        // (Halves: the q's struck member sounds a quarter of it, a held one all of it.)
+        string text = Book(music, "4/4");
+        var glyphs = Glyphs(SvgGenerator.Generate(SyntaxTree.Parse(text)));
+        Assert.Equal(2, glyphs.Count(g => g.Size == "2.52"));
+
+        var notes = Sounds(text);
+        int quarter = notes.First(n => n.Key == 60).Length / 2;
+        Assert.Equal(new[] { (67, 0, quarter), (67, 2 * quarter, quarter) },
+            notes.Where(n => n.Key == 67).ToArray());
+        Assert.Equal(2, notes.Count(n => n.Key == 60));
+
+        string xml = new LilySharp.Core.MusicXml.MusicXmlExporter().Export(SyntaxTree.Parse(text)).ToXml().ToString();
+        var xmlNotes = Regex.Matches(xml, "<note>[\\s\\S]*?</note>").Select(m => m.Value).ToArray();
+        Assert.Equal(6, xmlNotes.Length);
+        Assert.Contains("<step>G</step>", xmlNotes[5]);
+        Assert.Contains("<type size=\"cue\">quarter</type>", xmlNotes[5]);
+        Assert.DoesNotContain("<chord", xmlNotes[3]);
     }
 
     [Theory]

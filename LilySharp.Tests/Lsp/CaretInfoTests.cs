@@ -186,6 +186,10 @@ public class CaretInfoTests
         Assert.Equal("@fermata: held longer than written, as long as the player likes", InfoAt(Part("clef treble", "c4 d e f@ferm‸ata")));
         Assert.Equal("@rit: ritardando - gradually slower, until @!rit", InfoAt(Part("clef treble", "c4@r‸it d e f@!rit")));
         Assert.Equal("@!rit: ends the @rit", InfoAt(Part("clef treble", "c4@rit d e f@!ri‸t")));
+        // A chord member's own mark (session 1332: the two had no line).
+        Assert.Equal("@struck: struck with the chord and let go while the rest is held - a quarter at most",
+            InfoAt(Part("clef treble", "<c' e' g'@str‸uck>2 d4 e")));
+        Assert.Equal("@dead: a dead note, muted - a percussive click", InfoAt(Part("clef treble", "<c' e'@de‸ad>4 d e f")));
     }
 
     [Fact]

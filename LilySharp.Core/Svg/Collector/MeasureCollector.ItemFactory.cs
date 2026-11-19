@@ -428,7 +428,13 @@ public sealed partial class MeasureCollector
         // The member's written quarter tone (PitchSyntax.QuarterOffset: `eih` +1, `eeh` −1), on
         // top of Alter. Read by the editor's chord hover (RecordChordFacts) and by a repetition (`q`, a bare duration), which is the note again, quarter tone and all: until
         // 2026-11-14 (session 1232) the member carried none and `<c eeh g>` hovered as C E G.
-        int QuarterOffset = 0)
+        int QuarterOffset = 0,
+        // The member is STRUCK (ChordNoteInfo.IsStruck, Music.StruckNotes): a `q` and a bare
+        // duration strike it again and let it go, the small head drawn again. Until session 1332
+        // a repetition drew it a full head.
+        // MEASURED, 2.26.0 (Lab sessions/p1332/beam/q1.ly): `<c' e' \struck g'>4 q q` draws the
+        //   small head on every q (LilyPond's q copies the note events with their tweaks).
+        bool IsStruck = false)
     {
         /// <summary>
         /// The same member displaced by whole octaves — what <c>q'</c> repeats. A
@@ -742,7 +748,7 @@ public sealed partial class MeasureCollector
                 WrittenPitch: WrittenPitch.Pack(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave, pitch.QuarterOffset)));
             members.Add(new ResolvedChordMember(staffPosition, rp.DisplayStep, rp.DisplayAlteration,
                 rp.DisplayOctave, memberHead, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
-                IsDead: memberDead, QuarterOffset: pitch.QuarterOffset));
+                IsDead: memberDead, QuarterOffset: pitch.QuarterOffset, IsStruck: Music.StruckNotes.IsStruck(pitch)));
         }
 
         // diagram(SYMBOL SHAPE): the shape's strings on the part's tuning, ABSOLUTE and each with
@@ -1082,6 +1088,7 @@ public sealed partial class MeasureCollector
                 StringNumber: m.StringNumber,
                 Notehead: repDead ? NoteheadStyle.Cross : m.Notehead,
                 IsDead: repDead || m.IsDead,
+                IsStruck: m.IsStruck,
                 Midi: m.Midi,
                 SourcePosition: rep.SourceStart,
                 LineStartAccidental: memberLineStart,
@@ -1224,6 +1231,7 @@ public sealed partial class MeasureCollector
                         StringNumber: m.StringNumber,
                         Notehead: bareDead ? NoteheadStyle.Cross : m.Notehead,
                         IsDead: bareDead || m.IsDead,
+                        IsStruck: m.IsStruck,
                         Midi: m.Midi,
                         SourcePosition: bare.SourceStart,
                         WrittenPitch: m.Step is { } ps ? WrittenPitch.Pack(ps, m.Alter!.Value, m.Octave!.Value, m.QuarterOffset) : 0));

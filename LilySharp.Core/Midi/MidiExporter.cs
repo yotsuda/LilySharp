@@ -4050,7 +4050,7 @@ public sealed class MidiExporter
     /// <summary>The sounding notes of every chord this walk has emitted, keyed by
     /// node — what a following <c>q</c> copies (resolved ABSOLUTE pitches; LP
     /// expands repetitions after \relative, so a q never re-reads the frame).</summary>
-    private readonly Dictionary<ChordSyntax, List<(int MidiPitch, int QuarterBend, bool IsDrum)>> _resolvedChordNotes = new();
+    private readonly Dictionary<ChordSyntax, List<(int MidiPitch, int QuarterBend, bool IsDrum, bool IsStruck)>> _resolvedChordNotes = new();
 
     /// <summary>The sounding key of every pitched note this walk has emitted -
     /// what a following bare duration copies. Same contract as
@@ -4145,6 +4145,11 @@ public sealed class MidiExporter
                         continue;
                     }
                     int pitch = n.MidiPitch + semitones;
+                    if (n.IsStruck)
+                    {
+                        StrikeAgain(track, pitch, n.QuarterBend, velocity, startTick, actualDuration, bare.SourceStart, ordinal);
+                        continue;
+                    }
                     int tiedInto = ExtendTied(track, tieTargets, pitch, durationTicks);
                     if (tiedInto >= 0) { onset.Add(tiedInto); continue; }
                     track.Notes.Add(new MidiNote(track.Channel, pitch, velocity, startTick, actualDuration,
@@ -4302,7 +4307,7 @@ public sealed class MidiExporter
         var tiedMembers = chord.HasTiedMembers ? chord.TiedMembers.Select(m => m.SourceStart).ToHashSet() : null;
         var onTiedMembers = new List<int>();
         var onset = new List<int>();
-        var resolved = new List<(int MidiPitch, int QuarterBend, bool IsDrum)>();
+        var resolved = new List<(int MidiPitch, int QuarterBend, bool IsDrum, bool IsStruck)>();
 
         int startTick = _currentTick;
         var pitches = chord.Pitches.ToList();
@@ -4385,6 +4390,8 @@ public sealed class MidiExporter
             // small head by a tweak, sounds the note as long as the chord at every stroke.
             if (Music.StruckNotes.IsStruck(pitch))
             {
+                // A `q` or a bare duration after the chord strikes it again (ProcessChordRepetition).
+                resolved.Add((midiPitch, pitch.QuarterOffset, false, true));
                 if (_tremoloStroke > 0)
                     continue;
                 int struckTicks = Math.Min(soundTicks, ClockTicks(Music.StruckNotes.Longest));
@@ -4408,7 +4415,7 @@ public sealed class MidiExporter
             // A tie written on members (<c f d~>) goes on from those notes alone.
             if (tiedMembers?.Contains(pitch.SourceStart) == true)
                 onTiedMembers.Add(onset[^1]);
-            resolved.Add((midiPitch, pitch.QuarterOffset, false));
+            resolved.Add((midiPitch, pitch.QuarterOffset, false, false));
         }
 
         // diagram(SYMBOL SHAPE): the shape's strings on the part's tuning, written as the part
@@ -4432,7 +4439,7 @@ public sealed class MidiExporter
                         SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart, Accent: velocity - _velocity, Sforzando: _struckBy));
                     onset.Add(track.Notes.Count - 1);
                 }
-                resolved.Add((midiPitch, 0, false));
+                resolved.Add((midiPitch, 0, false, false));
             }
         }
 
@@ -4465,7 +4472,7 @@ public sealed class MidiExporter
                     Accent: velocity - _velocity, Sforzando: _struckBy));
                 onset.Add(track.Notes.Count - 1);
             }
-            resolved.Add((midiPitch, 0, false));
+            resolved.Add((midiPitch, 0, false, false));
         }
 
         // Drum chord members: GM percussion alongside any pitched members. They are
@@ -4478,7 +4485,7 @@ public sealed class MidiExporter
             track.Notes.Add(new MidiNote(9, dinfo.GmKey, velocity, startTick, soundTicks, chord.SourceStart,
                 SourceOrdinal: chordOrdinal, Timbre: 9, Part: _currentPart, Accent: velocity - _velocity, Sforzando: _struckBy));
             drumHits.Add(track.Notes.Count - 1);
-            resolved.Add((dinfo.GmKey, 0, true));
+            resolved.Add((dinfo.GmKey, 0, true, false));
         }
         _resolvedChordNotes[chord] = resolved;
         // …but they carry the chord's hairpin, as a single drum note does (ProcessDrumNote).
@@ -4563,6 +4570,11 @@ public sealed class MidiExporter
                     continue;
                 }
                 int pitch = n.MidiPitch + semitones;
+                if (n.IsStruck)
+                {
+                    StrikeAgain(track, pitch, n.QuarterBend, velocity, startTick, soundTicks, rep.SourceStart, ordinal);
+                    continue;
+                }
                 int tiedInto = ExtendTied(track, tieTargets, pitch, durationTicks);
                 if (tiedInto >= 0) { onset.Add(tiedInto); continue; }
                 track.Notes.Add(new MidiNote(track.Channel, pitch, velocity, startTick, soundTicks,
@@ -4575,6 +4587,21 @@ public sealed class MidiExporter
         CloseOnset(track, onset, startsTie);
 
         _currentTick = startTick + durationTicks;
+    }
+
+    /// <summary>A struck member (<see cref="Music.StruckNotes"/>) of the chord a <c>q</c> or a bare
+    /// duration repeats: struck again and let go, as in the chord itself — a quarter at most, at the
+    /// first stroke of a tremolo only, never tied into nor out of (it stays out of the onset).
+    /// Until session 1332 a repetition left it out, and the q's page drew it a full head.</summary>
+    private void StrikeAgain(MidiTrack track, int pitch, int quarterBend, int velocity, int startTick,
+        int soundTicks, int source, int ordinal)
+    {
+        if (_tremoloStroke > 0)
+            return;
+        track.Notes.Add(new MidiNote(track.Channel, pitch, velocity, startTick,
+            Math.Min(soundTicks, ClockTicks(Music.StruckNotes.Longest)), source,
+            QuarterBend: quarterBend, SourceOrdinal: ordinal, Timbre: _currentTimbre, Part: _currentPart,
+            Accent: velocity - _velocity, Sforzando: _struckBy));
     }
 
     private void ProcessTimeSignature(TimeSignatureSyntax timeSig, MidiTrack conductorTrack)
