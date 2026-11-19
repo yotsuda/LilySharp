@@ -4,6 +4,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Fixed: a pedal bracket, a text spanner or an ottava ended on an empty chord at the very end of a piece was not drawn.** `fis4.@sustain b4. <>@!sustain |` as the last bar (or `repeat tremolo 12 { … }@!sustain` there) drew no pedal bracket at all, and `c4@rit d e f <>@!rit |` drew neither the word nor its line. The line is drawn to the closing bar line now.
+
+- **Fixed: `<>@!8va` kept the next note under the bracket.** The end is where the empty chord stands; it was taken one note too far.
+
 - **Fixed: in a drum chart, a hairpin beside a tuplet took the wrong end.** A dynamic or a hairpin on the second or third hit of a tuplet in a `drums { … }` chart was timed at the tuplet's first hit, so a crescendo in the other line could run past the `f` that ends it. The chart is drawn as the same lines written in `voice { } { }` are.
 
 - **Fixed: MusicXML export left out everything written on a single drum note.** A dynamic, a hairpin, an accent, a fermata or a text on a drum note (`sn4@f sn@cresc sn sn@!cresc`) was not in the exported file; only drum chords and rests carried theirs. They are written now as a pitched note's are.

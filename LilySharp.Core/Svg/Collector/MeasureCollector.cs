@@ -1251,7 +1251,8 @@ public sealed partial class MeasureCollector
         var finalVoices = StampGraceMainChordNames(ImmutableArray.Create(voice), _v.Cursor.StaffIndex);
         voice = finalVoices[0];
         StaffAccidentals.SyncGraceNotes(_graceNotes, _ => finalVoices);
-        return ScoreAssembler.BuildScore(voice, CaptureScoreContent(voice.Measures.Length));
+        return ScoreAssembler.BuildScore(voice, TrailingMarks.OntoTheLastBar(
+            CaptureScoreContent(voice.Measures.Length), (_, v) => v == 0 ? voice.Measures : default));
     }
 
     /// <summary>
@@ -2706,6 +2707,14 @@ public sealed partial class MeasureCollector
         // the parts as they were collected, which is the space they are still in there.
         if (combinedAddressings.Count > 0)
             content = CombinedStaffReaddress.Apply(content, combinedAddressings);
+        // …and a mark on an empty chord after a voice's last, full bar stands on that bar's
+        // end — on the final addresses too (TrailingMarks says why).
+        {
+            var finalStaves = staffGroups.SelectMany(sg => sg.Staves).ToList();
+            content = TrailingMarks.OntoTheLastBar(content, (s, v) =>
+                s >= 0 && s < finalStaves.Count && v >= 0 && v < finalStaves[s].Voices.Length
+                    ? finalStaves[s].Voices[v].Measures : default);
+        }
         // @arpeggio(cross): each one's line is run down to the staff below — on the finished
         // staves and the final addresses, every collect (CrossArpeggios says why here).
         if (CrossArpeggios.Any(content.Arpeggios))
@@ -3212,7 +3221,9 @@ public sealed partial class MeasureCollector
         resolved = StampGraceCompanions(resolved, _v.Cursor.StaffIndex);
         return ScoreAssembler.BuildScore(
             resolved,
-            CaptureScoreContent(voices.Select(v => v.Measures.Length).DefaultIfEmpty(0).Max()));
+            TrailingMarks.OntoTheLastBar(
+                CaptureScoreContent(voices.Select(v => v.Measures.Length).DefaultIfEmpty(0).Max()),
+                (_, v) => v >= 0 && v < resolved.Length ? resolved[v].Measures : default));
     }
 
     /// <summary>

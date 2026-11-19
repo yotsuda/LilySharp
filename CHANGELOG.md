@@ -6,6 +6,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Fixed: a pedal bracket, a text spanner or an ottava ended on an empty chord at the very end of a piece was not drawn** (`[engraving]`). `fis4.@sustain b4. <>@!sustain |` as the last bar — or `repeat tremolo 12 { … }@!sustain` there, which reads the same — drew no pedal bracket at all; `c4@rit d e f <>@!rit |` drew neither the word nor its line, and an ottava ended that way collapsed onto its first note. The line is drawn to the closing bar line now, as LilyPond draws it. With music after it nothing changes (the end stands on the next bar's head). A dynamic, a fermata or a text written on that last empty chord is still not printed, as in LilyPond: there is no note there for it to stand on — write it on the last note.
+
+- **Fixed: `<>@!8va` kept the next note under the bracket** (`[engraving]`). An ottava's end is written on the last note it covers, and on an empty chord it covers nothing more; the end was taken one note too far (`f' <>@!8va | g'1` drew the g an octave down, under the bracket). It ends where the empty chord stands.
+
 - **Fixed: in a drum chart, a hairpin beside a tuplet took the wrong end** (`[engraving]`). A dynamic or a hairpin written on the second or third hit of a tuplet in a `drums { … }` chart was timed at the tuplet's first hit. In `drums { { hh2 hh8@cresc hh hh4 } { bd2 tuplet 3/2 { bd4 bd@f bd } } }` the crescendo did not end at the f and ran to the bar line; a crescendo starting on a tuplet's later hit could end on a dynamic written before it. The chart is drawn now as the same lines written in `voice { } { }` always were.
 
 - **Fixed: MusicXML left out everything written on a single drum note** (`[export]`). `sn4@f sn@cresc sn sn@!cresc` was exported with no dynamic and no wedge, and an accent, a fermata, a staccato or a `@text("…")` on a drum note was missing too — only a drum chord (`<sn hh>4@f`) and a rest carried theirs, so a drum part usually arrived in another program with no dynamics at all. A drum note's marks are written now as a pitched note's are, in a `voice { } { }` span, a tuplet and a `drums { … }` chart alike.

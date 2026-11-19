@@ -237,7 +237,7 @@ public sealed record MusicMarkItem
     public bool IsSymbol { get; }
 
     /// <summary>The measure index where this mark appears.</summary>
-    public int MeasureIndex { get; }
+    public int MeasureIndex { get; init; }
 
     /// <summary>
     /// The staff this mark was authored on (0 = the first/only staff). Spanner
@@ -330,7 +330,7 @@ public sealed record MusicMarkItem
     /// resolve the X on a multi-staff measure whose timing columns are shared
     /// across staves, so the index of the authoring voice cannot be trusted.
     /// </summary>
-    public Fraction AnchorTiming { get; }
+    public Fraction AnchorTiming { get; init; }
 
     /// <summary>Hung on a moment INSIDE its bar — a tempo on a later note
     /// (<see cref="AnchorItemIndex"/> &gt; 0) or a rehearsal mark at a later moment

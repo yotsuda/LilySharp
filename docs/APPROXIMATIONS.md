@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 465 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **591** | |
+| `OWN` | 466 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **592** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -247,7 +247,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（465 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（466 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -582,6 +582,8 @@
 - **`StaffAccidentals.ApplyAcrossStaves`** ⚠️ LILYSHARP-OWN, as ⑴: only ADDS. A moved note repeating the sharp
 ### `LilySharp.Core/Svg/Collector/TabResolver.cs`
 - **`TabResolver.ResolveTabStrings`** built on (LILYSHARP-OWN and deliberately not LilyPond's). REFINED 2026-09-14: only a
+### `LilySharp.Core/Svg/Collector/TrailingMarks.cs`
+- **`TrailingMarks`** LILYSHARP-OWN in its form (an address is Lily#'s), LilyPond's in its result. Observed by
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`
 - **`EngravingDefaults.StaffLinePositions`** ⚠️ LILYSHARP-OWN in the two- and four-line rows. LilyPond's own line-count N
 - **`EngravingDefaults.LedgerCapacity`** LILYSHARP-OWN: a buffer size, not a quantity — LilyPond's vector grows as it fills.

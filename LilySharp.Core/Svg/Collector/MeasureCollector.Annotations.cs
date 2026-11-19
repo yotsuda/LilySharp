@@ -1117,7 +1117,13 @@ public sealed partial class MeasureCollector
                         // ⚠️ On a grace, or with no onset to add to, it stays at its note's onset:
                         // a grace has no length on the bar's clock.
                         var (endItem, endTiming) = (itemIndex, anchorTiming);
+                        // ⚠️ Nor on an empty chord (`<>@!8va`): it added no item, the last added one
+                        // is the note BEFORE it, and its moment is already the end of that note.
+                        // Until session 1314 that note's length was added once more: the mark
+                        // stood past the NEXT item, so `f' <>@!8va | g'1` kept the g under the
+                        // bracket, and as a piece's last thing it named an item the voice has not.
                         if (endType == MusicMarkType.OttavaStop && !graceTime && anchorTiming.Denominator != 0
+                            && node is not ChordSyntax { IsEmpty: true }
                             && _v.LastAddedItem is { } carrier && carrier.Duration > Fraction.Zero)
                             (endItem, endTiming) = (itemIndex + 1, anchorTiming + carrier.Duration);
                         _musicMarks.Add(new MusicMarkItem(
