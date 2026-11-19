@@ -245,6 +245,26 @@ internal static class GrobFontSize
         => StepOf(item, SizedGrob.NoteHead) == 0 ? null : FontOf(item, SizedGrob.NoteHead);
 
     /// <summary>
+    /// The <c>font-size</c> of a STRUCK member's head on <paramref name="chord"/>
+    /// (<c>&lt;c e g@struck&gt;</c>, <see cref="ChordNoteInfo.IsStruck"/>): a cue's step below the
+    /// chord's own heads.
+    /// </summary>
+    /// <remarks>
+    /// Owner's decision 2026-11-19 (Calamo request 31). The twin writes it as
+    /// <c>\tweak font-size</c> on the chord's note, the head's own property, so it ADDS to what
+    /// the context states, as <see cref="StepOf"/> composes a cue's.
+    /// MEASURED, 2.26.0 (Lab sessions/p1317/lp/s1.ly): <c>\tweak font-size #-4</c> draws the head
+    /// at scale 0.0025 against the staff's 0.0040, magstep(−4), 0.8153 wide — the thirteen's
+    /// quarter head, 1.294282 · magstep(−4).
+    /// </remarks>
+    internal static double StruckHeadStepOf(MusicItem chord)
+        => StepOf(chord, SizedGrob.NoteHead) + EngravingDefaults.CueFontSizeStep;
+
+    /// <summary>The font a struck member's head reads on <paramref name="chord"/>.</summary>
+    internal static MusicFontDesign StruckHeadFontOf(MusicItem chord)
+        => MusicFont.Current.SizedAt(StruckHeadStepOf(chord));
+
+    /// <summary>
     /// One row of <c>general-grace-settings</c>.
     /// </summary>
     /// <remarks>

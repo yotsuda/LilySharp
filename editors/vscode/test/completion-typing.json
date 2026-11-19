@@ -271,6 +271,7 @@
     ["music-at", "arpeggio"],
     ["music-at", "courtesy"],
     ["music-at", "parenthesize"],
+    ["music-at", "struck"],
     ["music-at", "editorial"],
     ["music-at", "cross"],
     ["music-at", "laissezVibrer"],

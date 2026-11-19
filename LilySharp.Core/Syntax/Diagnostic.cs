@@ -1754,6 +1754,13 @@ public static class DiagnosticCodes
     /// for it.</summary>
     public const string GestureNotOnANote = "LYS4079";
 
+    /// <summary>Error: an <c>@struck</c> with no chord to be struck with — on a single note, on
+    /// a whole chord, on a member of a written-out arpeggio, or on every member of its chord
+    /// (owner's decision 2026-11-19, Calamo request 31: <c>&lt;gis cis' gis'@struck&gt;</c>;
+    /// <c>Music.StruckNotes</c>, <c>Semantics.StruckNoteValidator</c>). The note is drawn and
+    /// played as written.</summary>
+    public const string StruckWithNothingHeld = "LYS4084";
+
     /// <summary>Error: a span end whose name is not the one the span was opened with —
     /// <c>@8va … @!15ma</c> (owner's decision 2026-10-28: a span is closed by its own name;
     /// <c>Semantics.SpanNames</c>). The quick fix writes the start's name.</summary>

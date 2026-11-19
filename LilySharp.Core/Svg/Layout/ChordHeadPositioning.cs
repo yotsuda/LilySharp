@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Immutable;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -101,6 +102,52 @@ public static class ChordHeadPositioning
         return offsets;
     }
 
+    /// <summary>
+    /// How far right of its <see cref="CalculateOffsets"/> place a STRUCK member's small head is
+    /// drawn (<c>&lt;c e g@struck&gt;</c>, <see cref="ChordNoteInfo.IsStruck"/>): its stem-side edge
+    /// stands where a full head's would.
+    /// </summary>
+    /// <param name="offset">The member's own <see cref="CalculateOffsets"/> entry: a head
+    /// reversed to the stem's far side is flush with the stem on its other edge.</param>
+    /// <param name="fullRight">The right ink edge of the chord's ordinary heads.</param>
+    /// <param name="struckRight">The right ink edge of the small head, in its own font.</param>
+    /// <remarks>
+    /// The offsets, and every reader of them, keep the struck member a head of the chord's own
+    /// size: the room it is given is a full head's, which holds the small one.
+    /// LILYPOND-REF: lily/stem.cc:627-664 Stem::calc_positioning_done — every head is moved so its
+    ///   extent's edge in the stem's direction meets the support head's.
+    /// MEASURED, 2.26.0 (Lab sessions/p1317/lp/s1.ly): up, `&lt;\struck a c' e'&gt;2.` the full heads
+    ///   at 47.6416 and the small one at 48.2037, right edges both 49.0190; a stemless whole and
+    ///   a quarter the same (70.70, 76.6964); down, `&lt;gis' cis'' \struck gis''&gt;2.` all three
+    ///   left edges at 34.3403.
+    /// </remarks>
+    internal static double StruckShift(bool stemUp, double offset, double fullRight, double struckRight)
+        => stemUp == (offset == 0) ? fullRight - struckRight : 0;
+
+    /// <summary>
+    /// <paramref name="offsets"/> with each struck member's <see cref="StruckShift"/> added: where
+    /// every head's ink BEGINS, which is what an accidental stands left of. The same array for
+    /// a chord with no struck member.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED, 2.26.0 (Lab sessions/p1317/lp/s1.ly, bar 6 `&lt;c' e' \struck bes'&gt;2.`): the
+    ///   flat's left 0.5879 left of the full heads' and 1.1500 left of the small head's own —
+    ///   the place it has beside a full head (bar 1's sharps: 1.4500 and 2.5140 beside theirs).
+    /// </remarks>
+    internal static double[] InkLeftOffsets(ChordItem chord, double[] offsets, bool stemUp, int noteValue, MusicFontDesign? headFont)
+    {
+        if (!HasStruckHead(chord.Notes))
+            return offsets;
+        double fullRight = GlyphMetrics.GetNoteheadBBox(headFont ?? GlyphMetrics.StaffHeadFont, noteValue).Right;
+        var struckFont = GrobFontSize.StruckHeadFontOf(chord);
+        var inkLeft = (double[])offsets.Clone();
+        for (int i = 0; i < inkLeft.Length; i++)
+            if (chord.Notes[i].IsStruck)
+                inkLeft[i] += StruckShift(stemUp, offsets[i], fullRight,
+                    GlyphMetrics.GetNoteheadBBox(struckFont, chord.Notes[i].Notehead, Music.StruckNotes.HeadNoteValue).Right);
+        return inkLeft;
+    }
+
     /// <summary>Whether a chord's members draw different head shapes, as a drum chord's may.</summary>
     internal static bool HasMixedHeads(IReadOnlyList<ChordNoteInfo> notes)
     {
@@ -173,7 +220,29 @@ public static class ChordHeadPositioning
             if (chord.StemUp ? chord.Notes[i].StaffPosition < chord.Notes[first].StaffPosition
                              : chord.Notes[i].StaffPosition >= chord.Notes[first].StaffPosition)
                 first = i;
+        // A struck member there is its own small head, where it is drawn.
+        // MEASURED, 2.26.0 (Lab sessions/p1317/lp/s1.ly): down, `<gis' cis'' \struck gis''>2.` has
+        //   its bar line 4.165 after the heads' left, the unmarked chord's 4.727 — 0.562 nearer,
+        //   the full head's width less the small one's; up, with the small head at the foot, the
+        //   two edges meet and nothing moves (5.227 both).
+        if (chord.Notes[first].IsStruck)
+        {
+            var font = headFont ?? GlyphMetrics.StaffHeadFont;
+            double struckRight = GlyphMetrics.GetNoteheadBBox(GrobFontSize.StruckHeadFontOf(chord),
+                chord.Notes[first].Notehead, Music.StruckNotes.HeadNoteValue).Right;
+            return offsets[first] + struckRight + StruckShift(chord.StemUp, offsets[first],
+                GlyphMetrics.GetNoteheadBBox(font, noteValue).Right, struckRight);
+        }
         return offsets[first] + GlyphMetrics.GetNoteheadBBox(headFont ?? GlyphMetrics.StaffHeadFont, chord.Notes[first].Notehead, noteValue).Right;
+    }
+
+    /// <summary>Whether a chord has a struck member (<see cref="ChordNoteInfo.IsStruck"/>).</summary>
+    internal static bool HasStruckHead(ImmutableArray<ChordNoteInfo> notes)
+    {
+        foreach (var n in notes)
+            if (n.IsStruck)
+                return true;
+        return false;
     }
 
     /// <summary>

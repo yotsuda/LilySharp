@@ -721,6 +721,7 @@ public sealed partial class MeasureCollector
                 staffPosition, accidental,
                 IsCourtesy: memberCourtesy || styleCourtesy,
                 Notehead: chordDead ? NoteheadStyle.Cross : memberHead,
+                IsStruck: Music.StruckNotes.IsStruck(pitch),
                 IsDead: chordDead || memberDead,
                 Fingering: pitchFingering,
                 StringNumber: pitch.Articulations.OfType<StringNumberAnnotationSyntax>().FirstOrDefault()?.StringNumber,

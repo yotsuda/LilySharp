@@ -3677,6 +3677,27 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                     warning; MusicXML writes all four; any of the four, or a @bend(…),
                     on a rest is LYS4079 and draws nothing) , @breath @caesura
                     (* a CUE is not an annotation — it is a region, 'cue { … }', below *)
+   - A chord member struck and let go: <c e g@struck>2   [owner decision 2026-11-19, Calamo request 31]
+                     (* one member of a <…> chord, struck with the chord while the rest is held —
+                        the small black head old piano prints hang on a chord's stem (Kücken
+                        Op.47-3 bar 70: 'repeat tremolo 24 { <gis cis' gis'@struck>64 gis'64 }',
+                        the gis' struck once at the ffp). THE PAGE: that member's head is a
+                        quarter's black one at the cue size ('layout { cueSize }', -4), on the
+                        chord's stem with its stem-side edge where a full head's would be; it
+                        takes no dot; its accidental is full size; its ledger is its own head's.
+                        THE SOUND: it begins with the chord and lasts a quarter, or the chord's
+                        length where that is shorter; in a 'repeat tremolo' it sounds at the
+                        first stroke only; nothing ties into it or on from it. Written anywhere
+                        else — a single note, a whole chord, a member of '<< >>', every member of
+                        its chord — there is nothing held under it: LYS4084, and the note is
+                        drawn and played as written. Read by Music.StruckNotes.
+                        LILYSHARP-OWN in the sound. The twin writes the picture, three tweaks
+                        of that head ('\tweak font-size #-4 \tweak duration-log #2 \tweak
+                        Dots.stencil ##f'), and LilyPond's own MIDI holds the note as long as
+                        the chord; MusicXML writes a sounding note of the cue size after the
+                        held ones ('<type size="cue">quarter</type>', its <duration> the time
+                        it sounds, never a <cue/>). It is NOT a cue: 'cue { }' is another
+                        instrument's notes, silent, with stems of their own. *)
    - Feathered beam: c16@feather(right) … (accel) / @feather(left) (rit)
                      (* sixteenths or shorter: one beam cannot fan; drawn only *)
    - A mark over a RUN of notes: c8@staccato d e f@!staccato   [owner decision 2026-11-12]

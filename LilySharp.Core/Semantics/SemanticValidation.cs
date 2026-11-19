@@ -77,6 +77,7 @@ public static class SemanticValidation
         new CrossArpeggioValidator(),       // an @arpeggio(cross) with no chord below it to run down to
         new GuitarMarkValidator(),          // a @barre that names no barre
         new GestureHostValidator(),         // a @scoop, @plop, @fall, @doit or @bend(…) on a rest
+        new StruckNoteValidator(),          // an @struck with no chord held under it
         new HarmonicOpenStringValidator(),  // a @harmonic(12) on a note that is no open string
         new EditorialDynamicValidator(),    // @cresc(editorial), @niente(editorial): the parentheses are a level's
         new BowLineValidator(),             // a @slur(dashed) / @tie(dashed) that names no line, or with no slur / tie beginning there

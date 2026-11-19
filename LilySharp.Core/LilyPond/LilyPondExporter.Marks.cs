@@ -1135,6 +1135,7 @@ public sealed partial class LilyPondExporter
             case "doit": return "\\bendAfter #+" + LilySharp.Core.Svg.Layout.BendAfterGeometry.DeltaStep;
             case "dead": return "\\deadNote";      // normally intercepted as a prefix
             case "parenthesize": return "";        // intercepted as a prefix (note) or before the pitch (member)
+            case Music.StruckNotes.Name: return ""; // a member's tweaks, written before its pitch; elsewhere LYS4084
             // ⚠️ NOT A SCRIPT, so it must answer here and never reach the `dir + glyph` tail
             // below: LilyPond's arpeggio is an EVENT on the chord (`<c e g>1\arpeggio`), and
             // `-\arpeggio` is not the same thing. Lily#'s ChordItem.HasArpeggio is a plain

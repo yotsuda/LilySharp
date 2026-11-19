@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A chord member struck and let go: `@struck`.** `<c e g@struck>2` draws the g as a small black head on the chord's stem — the note struck with the chord and let go while the rest is held, as old piano prints write it. It sounds a quarter at most, and in a tremolo at the first stroke only (`repeat tremolo 24 { <gis cis' gis'@struck>64 gis'64 }`). The `@` completion offers it; written where no chord is held under it, it is an error (LYS4084).
+
 - **Fixed: an ottava bracket closed at a bar line ran on to the bar line.** `f'' <>@!8va | g'1`, or an `@8vb` starting the next bar, hooked at the bar's end instead of just after the last note under the bracket, as `f''@!8va` does and LilyPond draws it.
 
 - **Fixed: a pedal bracket, a text spanner or an ottava ended on an empty chord at the very end of a piece was not drawn.** `fis4.@sustain b4. <>@!sustain |` as the last bar (or `repeat tremolo 12 { … }@!sustain` there) drew no pedal bracket at all, and `c4@rit d e f <>@!rit |` drew neither the word nor its line. The line is drawn to the closing bar line now.

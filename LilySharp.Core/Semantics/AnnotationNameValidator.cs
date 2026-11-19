@@ -57,6 +57,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             "release",
             // A head in parentheses — a drummer's ghost note (MeasureCollector.IsParenthesizeMark).
             "parenthesize",
+            // A chord member struck and let go: the small black head (Music.StruckNotes).
+            "struck",
             "rest",
             "stemUp", "stemDown", "shiftOff",
             // '@ho' / '@po' are NOT here: retired from the registry pre-0.3.0, they stayed in

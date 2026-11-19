@@ -1392,6 +1392,16 @@ public sealed partial class LilyPondExporter
             //   before the member it mutes: `<c' \deadNote e'>4`.
             if (p.Articulations.Any(a => a is ArticulationSyntax da && IsDeadNote(da)))
                 sb.Append("\\deadNote ");
+            // A STRUCK member (`<c e g@struck>`, Music.StruckNotes; owner's decision 2026-11-19,
+            // Calamo request 31): the picture is three tweaks of that one head — a cue's size,
+            // a quarter's black head, and no dot. The sound is not LilyPond's to say: its MIDI
+            // holds the note as long as the chord.
+            // MEASURED, 2.26.0 (Lab sessions/p1317/lp/s1.ly): without the Dots tweak the small
+            //   head is dotted with the others (bar 2: three dots; bar 3: two).
+            if (Music.StruckNotes.IsStruck(p))
+                sb.Append("\\tweak font-size #")
+                  .Append(_layoutPlan.EngravingStyle.CueFontSizeStep.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture))
+                  .Append(" \\tweak duration-log #2 \\tweak Dots.stencil ##f ");
             // A member's own `@notehead(diamond)` is a tweak of that one head (found 2026-11-13:
             // the twin, as the page, drew the member plain).
             // LILYPOND-REF: Notation Reference 5.3.4 "The \tweak command" — `<c \tweak style #'diamond f>`
@@ -1489,6 +1499,8 @@ public sealed partial class LilyPondExporter
                         break; // written before the pitch above
                     case ArticulationSyntax da when IsDeadNote(da):
                         break; // written before the pitch above
+                    case ArticulationSyntax { Name: Music.StruckNotes.Name }:
+                        break; // the tweaks before the pitch above; one with nothing held is LYS4084's
                     case MusicMarkSyntax nh when Semantics.AnnotationValues.Notehead(nh) is not null:
                         break; // the \tweak before the pitch above (it was also reported "dropped")
                     // A member's own script (`<c'@staccato e'>`, chord-scripts.ly) and string

@@ -5524,6 +5524,8 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "arpeggio(cross)", Kind = CompletionItemKind.Value, Detail = "Arpeggio across both staves of a grand staff — written on the upper chord, one line down through the chord below", SortText = "6arpeggio.cross" },
                 new CompletionItem { Label = "courtesy", Kind = CompletionItemKind.Value, Detail = "Force courtesy accidental", SortText = "6courtesy" },
             new CompletionItem { Label = "parenthesize", Kind = CompletionItemKind.Value, Detail = "Head in parentheses (ghost note)", SortText = "6parenthesize" },
+                // A chord member struck and let go (Music.StruckNotes; owner's decision 2026-11-19).
+                new CompletionItem { Label = "struck", Kind = CompletionItemKind.Value, Detail = "Chord member struck and let go — the small black head on the chord's stem (<c e g@struck>2); it sounds a quarter at most, in a tremolo at the first stroke only", SortText = "6struck" },
                 new CompletionItem { Label = "editorial", Kind = CompletionItemKind.Value, Detail = "Editorial (suggestion) accidental above the note", SortText = "6editorial" },
                 new CompletionItem { Label = "cross", Kind = CompletionItemKind.Value, Detail = "Cross-staff note (moves to the other staff of the pair)", SortText = "6cross" },
                 new CompletionItem { Label = "laissezVibrer", Kind = CompletionItemKind.Value, Detail = "Laissez vibrer tie (hanging, no destination)", SortText = "6laissezVibrer" },

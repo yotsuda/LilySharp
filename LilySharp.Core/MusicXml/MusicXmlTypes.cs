@@ -1042,6 +1042,11 @@ internal sealed class MusicXmlNote
     /// file (grammar evaluation 4, 2026-11-13). MusicXML allows a cue no <c>&lt;tie&gt;</c>
     /// (the sound's tie); its <c>&lt;tied&gt;</c>, the drawn one, stays.</summary>
     public bool IsCue { get; set; }
+    /// <summary>A chord member struck and let go (<c>&lt;c e g@struck&gt;</c>,
+    /// <c>Music.StruckNotes</c>): <c>&lt;type size="cue"&gt;</c> with no <c>&lt;cue/&gt;</c> — printed
+    /// small and SOUNDING, its <c>&lt;duration&gt;</c> the time it sounds, shorter than the chord's
+    /// (MusicXML lets a chord's later note be shorter than its first).</summary>
+    public bool IsStruck { get; set; }
     public bool IsSlash { get; set; }
     /// <summary>The grace's <c>steal-time-previous</c> percentage: an afterGrace's 25.</summary>
     public int? StealTimePrevious { get; set; }
@@ -1210,7 +1215,7 @@ internal sealed class MusicXmlNote
             note.Add(new XElement("voice", 1));
 
         if (Type != null)
-            note.Add(new XElement("type", IsCue ? new XAttribute("size", "cue") : null, Type));
+            note.Add(new XElement("type", IsCue || IsStruck ? new XAttribute("size", "cue") : null, Type));
 
         for (int i = 0; i < Dots; i++)
             note.Add(new XElement("dot"));

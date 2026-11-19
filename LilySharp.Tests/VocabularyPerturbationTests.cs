@@ -157,6 +157,14 @@ public class VocabularyPerturbationTests
             AssertMoves(bent, bent.Replace("@bend(full)", "@bend(full)@release"), "@release");
             return;
         }
+        // A struck note is a chord member's: on a single note nothing is held under it and it
+        // is refused (LYS4084), so the book it is set against is a chord's.
+        if (name == "struck")
+        {
+            string chord = Plain.Replace("c'4 d' e' f' | c'4 d' e' f' |", "c'4 <d' f' a'>4 e'4 f'4 |");
+            AssertMoves(chord, chord.Replace("a'>", "a'@struck>"), "@struck");
+            return;
+        }
         // A barre is written with its fret: bare, it names none and is refused (LYS4065).
         if (name == "barre")
             name = "barre(7)";

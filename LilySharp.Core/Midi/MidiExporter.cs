@@ -4321,6 +4321,22 @@ public sealed class MidiExporter
             if (memberKeys[m] == Music.Harmonics.Silent)
                 continue;
             int midiPitch = SoundKey(memberKeys[m], chord.SourceStart);
+            // A STRUCK member (`<c e g@struck>2`, Music.StruckNotes; owner's decision 2026-11-19,
+            // Calamo request 31): struck with the chord and let go — a quarter at most, and in a
+            // tremolo at the first stroke only. It is always a new attack and nothing ties on
+            // from it, so it stays out of the onset. LILYSHARP-OWN: LilyPond, drawing the same
+            // small head by a tweak, sounds the note as long as the chord at every stroke.
+            if (Music.StruckNotes.IsStruck(pitch))
+            {
+                if (_tremoloStroke > 0)
+                    continue;
+                int struckTicks = Math.Min(soundTicks, ClockTicks(Music.StruckNotes.Longest));
+                track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity, startTick, struckTicks, chord.SourceStart,
+                    QuarterBend: pitch.QuarterOffset,
+                    SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart, MemberPos: pitch.SourceStart,
+                    Accent: velocity - _velocity, Sforzando: _struckBy));
+                continue;
+            }
             int tiedInto = ExtendTied(track, tieTargets, midiPitch, durationTicks);
             if (tiedInto >= 0)
                 onset.Add(tiedInto);
@@ -4557,6 +4573,10 @@ public sealed class MidiExporter
         }
     }
 
+    // Which reading of a tremolo's body the walk is in, 0 at the first and outside every tremolo:
+    // a struck chord member sounds at the first stroke only (Music.StruckNotes).
+    private int _tremoloStroke;
+
     private void ProcessRepeat(RepeatExpressionSyntax repeat, MidiTrack track, MidiTrack conductorTrack)
     {
         int repeatCount = 2;
@@ -4590,16 +4610,20 @@ public sealed class MidiExporter
         var frame = (_currentOctave, _currentNoteName, _defaultDuration);
 
         int figureStart = _currentTick, pedalsBefore = _pedalLog.Count, pedalsOfTheBody = pedalsBefore, bodyEnd = _currentTick;
+        int strokeOutside = _tremoloStroke;
         for (int i = 0; i < repeatCount; i++)
         {
             if (i > 0 && ordSnapshot != null)
                 _sourceOrdinals = new Dictionary<int, int>(ordSnapshot);
             if (i > 0)
                 (_currentOctave, _currentNoteName, _defaultDuration) = frame;
+            if (engravedOnce)
+                _tremoloStroke = i;
             ProcessNode(repeat.Body, track, conductorTrack);
             if (i == 0)
                 (pedalsOfTheBody, bodyEnd) = (_pedalLog.Count, _currentTick);
         }
+        _tremoloStroke = strokeOutside;
         if (engravedOnce)
             StandTremoloPedals(figureStart, bodyEnd, _currentTick, pedalsBefore, pedalsOfTheBody);
         // (Until 2026-09-17 this walk alone played a LilyPond-style `alternative { … }`

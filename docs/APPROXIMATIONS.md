@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 468 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **594** | |
+| `OWN` | 470 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **596** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -24,7 +24,7 @@
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 23 |
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 23 |
 | `LilySharp.Core/Svg/Layout/ProseBand.cs` | 19 |
-| `LilySharp.Core/Midi/MidiExporter.cs` | 17 |
+| `LilySharp.Core/Midi/MidiExporter.cs` | 18 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 16 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
 | `LilySharp.Core/Svg/Collector/MeasureCollector.cs` | 11 |
@@ -247,7 +247,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（468 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（470 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -317,6 +317,7 @@
 - **`MidiExporter.PlayForm`** again. LILYSHARP-OWN: LilyPond's MIDI unfolds the music in time
 - **`MidiExporter._sequenceClosedAt`** part's bar 3 at 3840 — a bar early from there on. LILYSHARP-OWN. ⚠️ Not a drum chart: the
 - **`MidiExporter.ProcessChord`** (Music.Harmonics.ArtificialSounds; LILYSHARP-OWN — LilyPond plays the two written).
+- **`MidiExporter.ProcessChord`** from it, so it stays out of the onset. LILYSHARP-OWN: LilyPond, drawing the same
 - **`MidiExporter.SwingNotes`** LILYSHARP-OWN: LilyPond's MIDI plays its swing equation straight unless the score asks for
 - **`MidiExporter.ProcessGrace`** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Midi/MidiForFile.cs`
@@ -366,6 +367,8 @@
 - **`PredefinedFretboards.Entries`** LILYSHARP-OWN: 9 entries are left out — each sounds a note that is no tone of its
 ### `LilySharp.Core/Music/ShapeChords.cs`
 - **`ShapeChords`** LILYSHARP-OWN: LilyPond has no chord-from-a-shape item.
+### `LilySharp.Core/Music/StruckNotes.cs`
+- **`StruckNotes`** LILYSHARP-OWN in what it means. LilyPond can draw the picture
 ### `LilySharp.Core/MusicXml/MusicXmlExporter.cs`
 - **`MusicXmlExporter._spanEndedOnBarLine`** (MEASURED 2026-11-12, Lab sessions/p1226/md/eval2/left3). LILYSHARP-OWN. Never a drum
 - **`MusicXmlExporter._printedPlays`** LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of

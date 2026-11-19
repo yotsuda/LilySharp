@@ -556,7 +556,8 @@ internal static partial class SharedRenderer
                             n.StaffPosition, n.Accidental!, n.AccidentalX!.Value, n.IsCourtesy))
                         .ToImmutableArray()
                     : AccidentalColumn.CalculatePositions(
-                        chord.Notes, offsets, chordAccFont, chordHeadFont,
+                        chord.Notes, ChordHeadPositioning.InkLeftOffsets(chord, offsets, chord.StemUp, noteValue, chordHeadFont),
+                        chordAccFont, chordHeadFont,
                         AccidentalStem.Of(chord, chord.StemUp, chordHeadFont));
                 for (int i = 0; i < chord.Notes.Length; i++)
                 {
@@ -572,6 +573,20 @@ internal static partial class SharedRenderer
                                     n.Accidental, n.IsCourtesy, chordAccFont ?? MusicFont.Current.DesignAt(0));
                                 break;
                             }
+                    // A struck member's ledger is its own small head's.
+                    // MEASURED, 2.26.0 (Lab sessions/p1317/lp/s1.ly, bar 5): 1.2230 long on the
+                    //   small head's line, 0.2039 past the 0.8153 head either side, and 2.0661 on
+                    //   the full head's.
+                    if (n.IsStruck)
+                    {
+                        var struckBox = GlyphMetrics.GetNoteheadBBox(GrobFontSize.StruckHeadFontOf(chord),
+                            n.Notehead, Core.Music.StruckNotes.HeadNoteValue);
+                        CollectLedgerRequest(ledgerPlan, column, n.StaffPosition,
+                            x + offsets[i] + ChordHeadPositioning.StruckShift(chord.StemUp, offsets[i],
+                                GlyphMetrics.GetNoteheadBBox(chordHeadFont, noteValue).Right, struckBox.Right),
+                            struckBox.Width, staffMiddleY, accRight, n.Accidental, n.IsCourtesy, staffLines);
+                        continue;
+                    }
                     CollectLedgerRequest(ledgerPlan, column, n.StaffPosition, x + offsets[i],
                         headWidth, staffMiddleY, accRight, n.Accidental, n.IsCourtesy, staffLines);
                 }
@@ -1137,7 +1152,8 @@ internal static partial class SharedRenderer
                     n.StaffPosition, n.Accidental!, n.AccidentalX!.Value, n.IsCourtesy))
                 .ToImmutableArray()
             : AccidentalColumn.CalculatePositions(
-                chord.Notes, headOffsets, chordAccFont, chordHeadFont,
+                chord.Notes, ChordHeadPositioning.InkLeftOffsets(chord, headOffsets, stemUp, noteValue, chordHeadFont),
+                chordAccFont, chordHeadFont,
                 AccidentalStem.Of(chord, stemUp, chordHeadFont));
         foreach (var al in accLayouts)
         {
@@ -1180,7 +1196,26 @@ internal static partial class SharedRenderer
             // that offset — the dots — while every head stayed dark (reported 2026-09-26,
             // fantasia.lys line 74). A caret on '<' lights the whole chord the same way; a
             // caret on one pitch still lights that head alone.
-            if (!headWiped && !headTransparent)
+            // A STRUCK member (`<c e g@struck>`): the black head at a cue's size, its stem-side
+            // edge where a full head's would be (ChordHeadPositioning.StruckShift, measured).
+            if (n.IsStruck && !headWiped && !headTransparent)
+            {
+                double struckStep = GrobFontSize.StruckHeadStepOf(chord);
+                var struckFont = MusicFont.Current.SizedAt(struckStep);
+                var struckBox = GlyphMetrics.GetNoteheadBBox(struckFont, n.Notehead, Core.Music.StruckNotes.HeadNoteValue);
+                double struckX = x + headOffsets[i] + ChordHeadPositioning.StruckShift(stemUp, headOffsets[i],
+                    GlyphMetrics.GetNoteheadBBox(chordHeadFont, noteValue).Right, struckBox.Right);
+                using (n.SourcePosition >= 0 && chord.SourcePosition >= 0
+                       && n.SourcePosition != chord.SourcePosition
+                           ? gc.Source(n.SourcePosition, [chord.SourcePosition])
+                           : gc.Source(n.SourcePosition >= 0 ? n.SourcePosition : chord.SourcePosition))
+                using (TodoScope(gc, chord))
+                using (gc.MusicFace(MusicFont.Current.DesignAt(struckStep).Rounded))
+                    gc.DrawNotehead(Music(MusicGlyphs.Notehead(n.Notehead, Core.Music.StruckNotes.HeadNoteValue)),
+                        struckX, y, FontSize * EmmentalerDesignSize.Magstep(struckStep), noteheadColor,
+                        struckBox.Width, struckBox.Height);
+            }
+            else if (!headWiped && !headTransparent)
                 using (n.SourcePosition >= 0 && chord.SourcePosition >= 0
                        && n.SourcePosition != chord.SourcePosition
                            ? gc.Source(n.SourcePosition, [chord.SourcePosition])
@@ -1371,8 +1406,19 @@ internal static partial class SharedRenderer
             bool stemTransparent = resolver.GetBool("Stem", "transparent") == true;
             // The stem attaches at the FAR notehead (the length was reckoned from the
             // tip-side one above).
+            // …and where that head is a STRUCK member's, at the small black head's own
+            // attachment: the stem begins on the head it stands on.
+            // MEASURED, 2.26.0 (Lab sessions/p1317/lp/s1.ly, bar 5 `<\struck a c' e'>2.`): the
+            //   stem's foot 0.0952 above the small head's centre, a full half head's 0.2590.
+            bool footStruck = false;
+            foreach (var n in chord.Notes)
+                if (n.StaffPosition == (stemUp ? minPos : maxPos))
+                    footStruck = n.IsStruck;
             double stemStartY = (stemUp ? bottomY : topY)
-                - StemAttachYOffset(ChordHeadPositioning.StemStyle(chord, stemUp, noteValue), stemUp, noteValue);
+                - (footStruck
+                    ? StemAttachYOffset(ChordHeadPositioning.StemStyle(chord, stemUp, noteValue), stemUp, Core.Music.StruckNotes.HeadNoteValue)
+                        * EmmentalerDesignSize.Magstep(GrobFontSize.StruckHeadStepOf(chord))
+                    : StemAttachYOffset(ChordHeadPositioning.StemStyle(chord, stemUp, noteValue), stemUp, noteValue));
             if (!stemTransparent)
                 using (gc.Kind("stem"))
                     gc.DrawLine(stemX, stemStartY, stemX, stemEndY,

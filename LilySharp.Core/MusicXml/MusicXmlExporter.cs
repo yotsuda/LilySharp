@@ -5500,8 +5500,33 @@ public sealed class MusicXmlExporter
                 xmlNote.ExtraNotations.Add(new System.Xml.Linq.XElement("arpeggiate",
                     new System.Xml.Linq.XAttribute("number", 1)));
 
+            // A STRUCK member (`<c e g@struck>2`, Music.StruckNotes; owner's decision 2026-11-19,
+            // Calamo request 31): a sounding note of the cue size and a quarter's head, as long
+            // as it sounds — never a <cue/>, which is silent.
+            if (Music.StruckNotes.IsStruck(pitch))
+            {
+                xmlNote.IsStruck = true;
+                xmlNote.Duration = Math.Min(durationTicks, _divisions);
+                if (durationTicks >= _divisions)
+                    (xmlNote.Type, xmlNote.ActualNotes, xmlNote.NormalNotes) = ("quarter", null, null);
+                xmlNote.Dots = 0;
+            }
+
             _currentMeasure.Notes.Add(xmlNote);
             _chordMembers.Add(xmlNote);
+        }
+        // …and it stands after the held members: a chord's first note is the one the reader's
+        // clock moves by, and the others may be shorter, not longer.
+        if (_chordMembers.Count > 1 && _chordMembers[0].IsStruck)
+        {
+            int at = _currentMeasure.Notes.Count - _chordMembers.Count;
+            var ordered = _chordMembers.Where(n => !n.IsStruck).Concat(_chordMembers.Where(n => n.IsStruck)).ToList();
+            for (int i = 0; i < ordered.Count; i++)
+            {
+                ordered[i].IsChord = i > 0;
+                _currentMeasure.Notes[at + i] = ordered[i];
+                _chordMembers[i] = ordered[i];
+            }
         }
 
         // diagram(SYMBOL SHAPE): lowest sounding first, each note's string in <technical>.
@@ -5747,7 +5772,8 @@ public sealed class MusicXmlExporter
         // One @tie(dashed) on a chord is every member's (the mark was read onto the first).
         string? lineType = null;
         foreach (var n in from) lineType ??= n.TiedLineType;
-        foreach (var n in from) { n.TieStart = true; n.TiedLineType = lineType; _tieOpen.Add(n); }
+        // A struck member is let go: nothing ties on from it (Music.StruckNotes).
+        foreach (var n in from) { if (n.IsStruck) continue; n.TieStart = true; n.TiedLineType = lineType; _tieOpen.Add(n); }
         _tieToNextNote = true;
     }
 
@@ -5768,6 +5794,7 @@ public sealed class MusicXmlExporter
         _tieToNextNote = false;
         foreach (var m in arriving)
         {
+            if (m.IsStruck) continue; // a new attack, always
             int k = _tieOpen.FindIndex(n => SameNotehead(n, m));
             if (k < 0) continue;
             m.TieStop = true;
@@ -7067,6 +7094,15 @@ public sealed class MusicXmlExporter
             for (int i = at; i < measure.Notes.Count && (i == at || measure.Notes[i].IsChord); i++)
             {
                 var note = measure.Notes[i];
+                // A struck member keeps its own: one stroke, the first.
+                if (note.IsStruck)
+                {
+                    // …under the head it draws: a quarter's, where the span's heads are longer.
+                    if (written.Type != "eighth")
+                        note.Type = "quarter";
+                    note.Beams.Clear();
+                    continue;
+                }
                 note.Duration = span / bodyHeads;
                 note.Type = written.Type;
                 note.Dots = written.Dots;

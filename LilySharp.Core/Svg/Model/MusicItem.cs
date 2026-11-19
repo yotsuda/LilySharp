@@ -1729,6 +1729,9 @@ public readonly record struct ChordNoteInfo(
     // Per-note notehead style (drum chords mix heads: bd default,
     // hh cross); Default falls back to the chord-level style.
     NoteheadStyle Notehead = NoteheadStyle.Default,
+    // A member struck with the chord and let go (`<c e g@struck>`, Music.StruckNotes): the small
+    // black head on the chord's stem, with no dot of its own.
+    bool IsStruck = false,
     // Absolute sounding MIDI number (clef-independent), for tab frets.
     int Midi = 0,
     // Source offset of THIS member's pitch token (so the interactive preview can

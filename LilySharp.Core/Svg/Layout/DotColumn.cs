@@ -379,11 +379,17 @@ internal static class DotColumn
     /// MEASURED, 2.26.0 (Lab sessions/p1226/md/eval3/featH/lp3.ly): one Dots grob on
     ///   <c>&lt;c' f'\harmonic&gt;4.</c>, on the c's row.
     /// </remarks>
+    /// <remarks>
+    /// A STRUCK member (<c>&lt;c e g@struck&gt;2.</c>, <see cref="ChordNoteInfo.IsStruck"/>) carries
+    /// none either: it is let go, and the dots are the held notes' (owner's decision 2026-11-19,
+    /// Calamo request 31; the twin writes <c>\tweak Dots.stencil ##f</c> on it, without which
+    /// LilyPond 2.26.0 dots the small head too — Lab sessions/p1317/lp/s1.ly, bars 2 and 3).
+    /// </remarks>
     internal static int[] DottedHeadPositions(MusicItem item)
     {
-        if (item is not ChordItem chord || !chord.Notes.Any(n => n.Notehead == NoteheadStyle.Harmonic))
+        if (item is not ChordItem chord || !chord.Notes.Any(static n => n.Notehead == NoteheadStyle.Harmonic || n.IsStruck))
             return HeadPositions(item);
-        return chord.Notes.Where(n => n.Notehead != NoteheadStyle.Harmonic).Select(n => n.StaffPosition).ToArray();
+        return chord.Notes.Where(static n => n.Notehead != NoteheadStyle.Harmonic && !n.IsStruck).Select(n => n.StaffPosition).ToArray();
     }
 
     /// <summary>
