@@ -127,8 +127,9 @@ internal static class DynamicAlignEngraver
         var lines = BuildLines(hairpinItems, dynamicLayouts, dynamics);
         // A line with one wedge and no text is the answer HairpinEngraver already
         // computed (same span supports, same wedge outline) — leave it untouched.
-        var grouped = lines.Where(l =>
-            l.DynamicLayoutIndices.Length > 0 || l.HairpinItemIndices.Length > 1).ToList();
+        // (A run of lines — a combined staff's part going on in another voice — is one line.)
+        var grouped = RunsOfLines(lines, hairpinItems).Where(run => run.Length > 1
+            || run[0].DynamicLayoutIndices.Length > 0 || run[0].HairpinItemIndices.Length > 1).ToList();
         if (grouped.Count == 0)
             return (dynamicLayouts, hairpinLayouts, ImmutableArray<AlignedLineGroup>.Empty);
         var groups = ImmutableArray.CreateBuilder<AlignedLineGroup>();
@@ -149,7 +150,9 @@ internal static class DynamicAlignEngraver
         var dynBuilder = dynamicLayouts.IsDefaultOrEmpty ? null : dynamicLayouts.ToBuilder();
         var hpBuilder = hairpinLayouts.ToBuilder();
 
-        foreach (var line in grouped)
+        // One line's own reading: its voice's columns and its members' pieces. Null where a
+        // member hairpin has no way back to its layouts.
+        LinePart? PartOf(DynamicLine line)
         {
             var lineVoices = voicesByStaff != null
                 && voicesByStaff.TryGetValue(line.StaffIndex, out var vv) ? vv : voices;
@@ -194,14 +197,30 @@ internal static class DynamicAlignEngraver
                     wedgePieces.Add((pi, hi));
             }
             if (!resolvable)
+                return null;
+            return new LinePart(line, lineVoices, voiceIndex, lineMeasures, lineEndMeasures, wedgePieces);
+        }
+
+        foreach (var run in grouped)
+        {
+            // Each line of the run reads its own voice's columns and brings its own members.
+            var parts = new List<LinePart>(run.Length);
+            foreach (var member in run)
+                if (PartOf(member) is { } read)
+                    parts.Add(read);
+            if (parts.Count != run.Length)
                 continue;
+            var runSystems = new SortedSet<int>();
+            foreach (var part in parts)
+                runSystems.UnionWith(MemberSystems(part.Line, part.WedgePieces, hairpinLayouts,
+                    dynamicLayouts, measureToSystem));
+            var line = run[0];
 
             // LILYPOND-REF: lily/spanner.cc:36-144 Spanner::do_break_processing — the
             // DynamicLineSpanner breaks per system and each piece is side-positioned
             // against the supports inside it, so the level is resolved per system, not
             // once for the whole span.
-            foreach (int sysIdx in MemberSystems(line, wedgePieces, hairpinLayouts,
-                         dynamicLayouts, measureToSystem))
+            foreach (int sysIdx in runSystems)
             {
                 (VerticalSkyline Up, VerticalSkyline Down)? myDim = null;
                 void Fold((VerticalSkyline Up, VerticalSkyline Down) part)
@@ -216,25 +235,28 @@ internal static class DynamicAlignEngraver
                 }
 
                 var sysTexts = new List<int>();
-                foreach (int di in line.DynamicLayoutIndices)
-                {
-                    var d = dynamicLayouts[di];
-                    if (!measureToSystem.TryGetValue(d.MeasureIndex, out int ds) || ds != sysIdx)
-                        continue;
-                    sysTexts.Add(di);
-                    Fold(DynamicEngraver.LabelSkylines(fonts, d.Text, d.IsExpressiveText, d.X,
-                        -DynamicEngraver.TextOffsetInSpanner(fonts), d.IsSubito, d.IsEditorial));
-                }
                 var sysWedges = new List<(int LayoutIdx, int HairpinItemIdx)>();
-                foreach (var (pi, hi) in wedgePieces)
+                foreach (var part in parts)
                 {
-                    var piece = hpBuilder[pi];
-                    if (!measureToSystem.TryGetValue(piece.StartMeasureIndex, out int ws)
-                        || ws != sysIdx)
-                        continue;
-                    sysWedges.Add((pi, hi));
-                    Fold(HairpinEngraver.WedgeSkylines(piece.StartX, piece.EndX,
-                        piece.StartOpening, piece.EndOpening, 0.0, piece.CircleX));
+                    foreach (int di in part.Line.DynamicLayoutIndices)
+                    {
+                        var d = dynamicLayouts[di];
+                        if (!measureToSystem.TryGetValue(d.MeasureIndex, out int ds) || ds != sysIdx)
+                            continue;
+                        sysTexts.Add(di);
+                        Fold(DynamicEngraver.LabelSkylines(fonts, d.Text, d.IsExpressiveText, d.X,
+                            -DynamicEngraver.TextOffsetInSpanner(fonts), d.IsSubito, d.IsEditorial));
+                    }
+                    foreach (var (pi, hi) in part.WedgePieces)
+                    {
+                        var piece = hpBuilder[pi];
+                        if (!measureToSystem.TryGetValue(piece.StartMeasureIndex, out int ws)
+                            || ws != sysIdx)
+                            continue;
+                        sysWedges.Add((pi, hi));
+                        Fold(HairpinEngraver.WedgeSkylines(piece.StartX, piece.EndX,
+                            piece.StartOpening, piece.EndOpening, 0.0, piece.CircleX));
+                    }
                 }
                 if (myDim is not { } my)
                     continue;
@@ -243,13 +265,25 @@ internal static class DynamicAlignEngraver
                 // drawn lines), as each member's own placement read it.
                 int staffLines = staffLinesOf?.Invoke(line.StaffIndex)
                     ?? EngravingDefaults.DefaultStaffLines;
-                var support = DynamicEngraver.SpanSupportSkylines(
-                    lineVoices, voiceIndex,
-                    SpanColumns(line, sysIdx, lineMeasures, measureLayouts, measureToSystem,
-                        graceNotes, lineVoices, voiceIndex, lineEndMeasures),
-                    (vi, mi, ii) => beamMembers.TryGetValue((line.StaffIndex, vi, mi, ii), out var b)
-                        ? b : null,
-                    staffLines, restShiftsOf?.Invoke(line.StaffIndex));
+                (VerticalSkyline Up, VerticalSkyline Down)? runSupport = null;
+                foreach (var part in parts)
+                {
+                    var partSupport = DynamicEngraver.SpanSupportSkylines(
+                        part.Voices, part.VoiceIndex,
+                        SpanColumns(part.Line, sysIdx, part.Measures, measureLayouts, measureToSystem,
+                            graceNotes, part.Voices, part.VoiceIndex, part.EndMeasures),
+                        (vi, mi, ii) => beamMembers.TryGetValue((line.StaffIndex, vi, mi, ii), out var b)
+                            ? b : null,
+                        staffLines, restShiftsOf?.Invoke(line.StaffIndex));
+                    if (runSupport is { } soFar)
+                    {
+                        soFar.Up.Merge(partSupport.Up);
+                        soFar.Down.Merge(partSupport.Down);
+                    }
+                    else
+                        runSupport = partSupport;
+                }
+                var support = runSupport!.Value;
                 // The line's own side: one computation, dir its sign. The text hangs
                 // TextOffsetInSpanner BELOW the spanner on either side (define-grobs.scm:1450
                 // is a plain Y-offset, not a side position).
@@ -283,6 +317,95 @@ internal static class DynamicAlignEngraver
 
         return (dynBuilder?.ToImmutable() ?? dynamicLayouts, hpBuilder.ToImmutable(),
             groups.ToImmutable());
+    }
+
+    /// <summary>One line of a run as <see cref="AlignLines"/> reads it: its voices, the voice
+    /// whose columns it runs over, that voice's measures and its end's, and its wedges' pieces.</summary>
+    private readonly record struct LinePart(
+        DynamicLine Line, ImmutableArray<Voice> Voices, int VoiceIndex,
+        ImmutableArray<Measure> Measures, ImmutableArray<Measure> EndMeasures,
+        List<(int LayoutIdx, int HairpinItemIdx)> WedgePieces);
+
+    /// <summary>
+    /// The lines in RUNS: a line alone, or the lines one part's hairpins make as a combined
+    /// staff engraves the part in one voice and then another — a hairpin ended by ITS OWN
+    /// part's next (<see cref="MusicMarkItem.MeetsVoice"/>), which stands in the other voice.
+    /// A run is side-positioned as one line: its members' outlines against all its lines'
+    /// supports, each read in its own voice.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond's line is a Voice's (ly/engraver-init.ly:359-410), and a part
+    ///   the combiner moves to another context opens another line there. A part's two hairpins
+    ///   that meet tip to tip (<see cref="HairpinItem.AdjacentAtEnd"/>) are one gesture of one
+    ///   player; on two lines the tips met at two heights, as much as a staff space apart (Lab
+    ///   sessions/p1325/probe h1, h3). MEASURED (LilyPond 2.26.0, Lab sessions/p1324/lp s2, s3):
+    ///   LilyPond keeps those bars in two voices, so there the two ARE one Voice's line, on one
+    ///   baseline — the picture this gives the unison Lily# makes of them.
+    ///   departs from: lily/dynamic-align-engraver.cc:194-235 stop_translation_timestep.
+    ///   observed by: CombinedStaffHairpinTests.APartsHairpinsInTwoVoices_RideOneLine.
+    /// A hairpin met in ANOTHER part's voice (<see cref="HairpinItem.MetInAnotherVoice"/>) is
+    /// not of the run: the two are two players' lines. Nor is a next one written on the other
+    /// side of the staff.
+    /// ⚠️ No observer (Lab sessions/p1325/poisons.ps1 R4, R5, R6, R10, R11 stay green): the
+    /// following line's staff, its voice, the next hairpin's source and its place each say what
+    /// the others already do in every book written so far, and a run whose lines stand on two
+    /// systems has not been written.
+    /// </remarks>
+    internal static List<ImmutableArray<DynamicLine>> RunsOfLines(
+        ImmutableArray<DynamicLine> lines, ImmutableArray<HairpinItem> hairpinItems)
+    {
+        var runs = new List<ImmutableArray<DynamicLine>>(lines.Length);
+        // The line each line follows on (itself: none).
+        int[]? root = null;
+        int RootOf(int i)
+        {
+            while (root![i] != i)
+                i = root[i] = root[root[i]];
+            return i;
+        }
+        for (int a = 0; a < lines.Length; a++)
+            foreach (int hi in lines[a].HairpinItemIndices)
+            {
+                var ending = hairpinItems[hi];
+                if (ending.EndVoiceIndex == ending.VoiceIndex || ending.MetInAnotherVoice
+                    || ending.EndSourcePosition < 0)
+                    continue;
+                for (int b = 0; b < lines.Length; b++)
+                {
+                    if (b == a || lines[b].StaffIndex != lines[a].StaffIndex
+                        || lines[b].IsAbove != lines[a].IsAbove || lines[b].VoiceIndex != ending.EndVoiceIndex)
+                        continue;
+                    foreach (int hj in lines[b].HairpinItemIndices)
+                    {
+                        var starting = hairpinItems[hj];
+                        if (starting.SourcePosition != ending.EndSourcePosition
+                            || starting.StartMeasureIndex != ending.EndMeasureIndex
+                            || starting.StartItemIndex != ending.EndItemIndex)
+                            continue;
+                        root ??= Enumerable.Range(0, lines.Length).ToArray();
+                        int ra = RootOf(a), rb = RootOf(b);
+                        if (ra != rb)
+                            root[Math.Max(ra, rb)] = Math.Min(ra, rb);
+                    }
+                }
+            }
+        if (root == null)
+        {
+            foreach (var line in lines)
+                runs.Add(ImmutableArray.Create(line));
+            return runs;
+        }
+        for (int i = 0; i < lines.Length; i++)
+        {
+            if (RootOf(i) != i)
+                continue;
+            var run = ImmutableArray.CreateBuilder<DynamicLine>();
+            for (int j = i; j < lines.Length; j++)
+                if (RootOf(j) == i)
+                    run.Add(lines[j]);
+            runs.Add(run.ToImmutable());
+        }
+        return runs;
     }
 
     /// <summary>

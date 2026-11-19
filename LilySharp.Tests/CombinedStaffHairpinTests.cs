@@ -209,6 +209,40 @@ public class CombinedStaffHairpinTests
     public void APartsNextHairpinInAnotherVoice_IsAdjacent(string fl1, string fl2, string expected)
         => Assert.Equal(expected, Tips(Collect(fl1, fl2)));
 
+    /// <summary>
+    /// …and the two ride ONE line, at one height (DynamicAlignEngraver.RunsOfLines, session
+    /// 1325): each in its own voice's line they met tip to tip at two heights, as much as a
+    /// staff space apart (Lab sessions/p1325/probe h1 to h3). The heights are the wedges'
+    /// centres, left to right, then the levels'.
+    /// </summary>
+    [Theory]
+    // Part two's crescendo where the parts play apart, its next in the unison.
+    [InlineData("c''2 d''2 | c'4 d'@cresc e' f'@!cresc | g'1 |", "e'4 f' e'@cresc f' | c'4 d'@cresc e' f'@!cresc | g'1 |",
+        "-7.33 -7.33")]
+    // The next begins at the unison's bar's head.
+    [InlineData("c''2 d''2 | c'4@cresc d' e' f'@!cresc | g'1 |", "e'4 f' e'@cresc f' | c'4@cresc d' e' f'@!cresc | g'1 |",
+        "-7.39 -7.39")]
+    // The level that closes the second is on the line too (the p before the first is not).
+    [InlineData("c''2 d''2 | c'4 d'@decresc e' f' | g'1@p |", "e'4@p f' e'@cresc f' | c'4 d'@decresc e' f' | g'1@p |",
+        "-7.33 -7.33 / p-6.39 p-5.93")]
+    // Begun in a bar part two plays alone, followed where the parts play apart.
+    [InlineData("R1 | c''2 d''2 | c''1 |", "g'4 g'@cresc g' g' | e'4 f'@decresc e' f'@!decresc | e'1 |",
+        "-7.77 -7.77")]
+    // Another part's hairpin under part two's open one is another line.
+    [InlineData("c''2 d''2 | c''4 d''@cresc e'' f''@!cresc | c''1 |", "e'4 f'@cresc e' f' | e'1 | e'1 |",
+        "-7.46 -5.37")]
+    // The next written on the other side of the staff is another line too.
+    [InlineData("c''2 d''2 | c'4 d'@cresc.up e' f'@!cresc | g'1 |", "e'4 f' e'@cresc f' | c'4 d'@cresc.up e' f'@!cresc | g'1 |",
+        "-7.33 1.37")]
+    public void APartsHairpinsInTwoVoices_RideOneLine(string fl1, string fl2, string expected)
+    {
+        var score = Collect(fl1, fl2);
+        var layout = new LayoutEngine(score.Paper).Layout(score);
+        string wedges = string.Join(" ", layout.HairpinLayouts.OrderBy(h => h.StartX).Select(h => $"{h.YUp:F2}"));
+        string levels = string.Join(" ", layout.DynamicLayouts.OrderBy(d => d.X).Select(d => $"{d.Text}{d.YUp:F2}"));
+        Assert.Equal(expected, levels.Length > 0 ? $"{wedges} / {levels}" : wedges);
+    }
+
     /// <summary>The other lines' ends: a text spanner, an ottava (whose end stands PAST its
     /// note), a pedal — in a bar part two plays alone, and after a mid-bar entrance.</summary>
     [Theory]

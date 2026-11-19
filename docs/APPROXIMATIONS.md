@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 474 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **600** | |
+| `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
+| `OWN` | 475 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **602** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -139,7 +139,7 @@
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
 - **`BeamRestStem`** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（64 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（65 件）
 
 ### `LilySharp.Core/Midi/SungVoices.cs`
 - **`SungVoices.Read`** ⚠️ An empty text has no observer: the page files no syllable for `_` or a
@@ -175,6 +175,8 @@
 - **`ArticulationEngraver.HeadSupportExtent`** box per duration, which Lily# does not read for this purpose. No ledger point observes
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **`ArticulationSpacing.OutsideStaffPriority`** number. No Lily# fixture and no ledger point reaches that regime — a fermata on a
+### `LilySharp.Core/Svg/Layout/DynamicAlignEngraver.cs`
+- **`DynamicAlignEngraver.RunsOfLines`** ⚠️ No observer (Lab sessions/p1325/poisons.ps1 R4, R5, R6, R10, R11 stay green): the
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
 - **`ElementCoordinator.BuildTieSpecification`** observed by: NOTHING. There is no ledger point on a tab tie's width,
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
@@ -247,7 +249,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（474 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（475 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -649,6 +651,8 @@
 - **`CustomTextEngraver.Calculate`** LILYSHARP-OWN, two declared bridges inside that rule (HANDOFF 5.2):
 ### `LilySharp.Core/Svg/Layout/DotColumn.cs`
 - **`DotColumn.Reserved`** ⚠️ LILYSHARP-OWN: the dots' preferred DIRECTION is not read here. LilyPond's
+### `LilySharp.Core/Svg/Layout/DynamicAlignEngraver.cs`
+- **`DynamicAlignEngraver.RunsOfLines`** LILYSHARP-OWN: LilyPond's line is a Voice's (ly/engraver-init.ly:359-410), and a part
 ### `LilySharp.Core/Svg/Layout/DynamicEngraver.cs`
 - **`DynamicEngraver.MeasuredExpressiveInk`** ⚠️ LILYSHARP-OWN: a string the bundled face cannot spell (CJK — TextFontMetrics reports
 - **`DynamicEngraver.DrumDoubles`** LILYSHARP-OWN: LilyPond's Dynamic_engraver lives in each Voice, and a DrumStaff of two
