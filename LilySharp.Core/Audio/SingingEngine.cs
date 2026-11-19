@@ -18,7 +18,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using LilySharp.Core.Midi;
@@ -43,6 +45,14 @@ public abstract class SingingEngine
     /// leaves the instrument in the voice's place and says so in its warnings.
     /// </summary>
     public abstract string? Sing(string scoreJsonPath, string outputWavPath);
+
+    /// <summary>
+    /// What the engine had to say of the score it last SANG: the sentences about notes it left
+    /// silent (<see cref="SingerFailure.SilentPattern"/> — a syllable its voice's dictionary has
+    /// no entry for; owner's report 2026-11-19, Moon-on-the-River.lys: 岸 under diffsinger/TIGER
+    /// was a silent note and nothing said so). Empty for an engine that says nothing.
+    /// </summary>
+    public IReadOnlyList<string> Said { get; protected set; } = [];
 
     /// <summary>This engine singing in the voice <paramref name="voice"/> (<c>engine/name</c>), for a
     /// part the file names a singer of; an engine with one voice is itself.</summary>
@@ -148,6 +158,11 @@ public sealed class CantoriaProgram : SingingEngine
             ? ["sing", scoreJsonPath, "-o", outputWavPath, "--voice", Voice]
             : ["sing", scoreJsonPath, "-o", outputWavPath];
         var (exit, _, err) = Run(arguments);
+        // Its lines are "cantoria: …": the ones about silent notes are kept, without the program's name.
+        Said = exit == 0
+            ? [.. err.Split('\n').Select(l => l.Trim()).Where(l => Regex.IsMatch(l, SingerFailure.SilentPattern, RegexOptions.CultureInvariant))
+                .Select(l => Regex.Replace(l, @"^cantoria:\s*", "", RegexOptions.CultureInvariant))]
+            : [];
         if (exit == 0)
             return null;
         // Its last line is the sentence ("cantoria: …"); a silent failure gets the exit code.

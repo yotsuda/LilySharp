@@ -308,6 +308,7 @@ public static class ScoreExport
             foreach (var w in voice.Warnings)
                 warnings.Add($"{voice.Part}: {Audio.SingerFailure.WithPlace(w, place)}");
             var (sound, error) = (default(Audio.MonoAudio), default(string));
+            Audio.SingingEngine sangBy = singer;
             string name = singer.Name;
             if (plan?.Of(voice) is { } planned)
             {
@@ -322,7 +323,8 @@ public static class ScoreExport
                 }
                 if (planned.Note is { } note && !warnings.Contains($"{line}: {note}"))
                     warnings.Add($"{line}: {note}");
-                (sound, error) = singer.WithVoice(resolved).Sing(voice, Audio.WavRenderer.DefaultSampleRate);
+                sangBy = singer.WithVoice(resolved);
+                (sound, error) = sangBy.Sing(voice, Audio.WavRenderer.DefaultSampleRate);
                 name = resolved;
             }
             else
@@ -331,14 +333,18 @@ public static class ScoreExport
                 // role is the editor's settings' to cast; a voice that cannot be had falls to the default.
                 if (voice.Singer is { } named && named.Contains('/'))
                 {
-                    (sound, error) = singer.WithVoice(named).Sing(voice, Audio.WavRenderer.DefaultSampleRate);
+                    sangBy = singer.WithVoice(named);
+                    (sound, error) = sangBy.Sing(voice, Audio.WavRenderer.DefaultSampleRate);
                     if (sound == null)
                         warnings.Add($"{voice.Part}: the singer \"{named}\" could not sing ({error}); singing with the default voice");
                 }
                 else if (voice.Singer is { } role)
                     warnings.Add($"{voice.Part}: the singer \"{role}\" is a role, which the command line does not cast; singing with the default voice");
                 if (sound == null)
-                    (sound, error) = singer.Sing(voice, Audio.WavRenderer.DefaultSampleRate);
+                {
+                    sangBy = singer;
+                    (sound, error) = sangBy.Sing(voice, Audio.WavRenderer.DefaultSampleRate);
+                }
             }
             if (sound == null)
             {
@@ -352,6 +358,14 @@ public static class ScoreExport
                     place = Audio.SingerFailure.PlaceOf(tree.GetRoot(), tree.Text, noSoundAt) ?? place;
                 warnings.Add(Audio.SingerFailure.Sentence(who, error, place));
                 continue;
+            }
+            // A voice that sang, and left notes silent (a syllable its dictionary has no entry
+            // for): what the engine said of them, with where the first one stands.
+            foreach (string said in sangBy.Said)
+            {
+                string? silentPlace = Audio.SingerFailure.SilentAt(said, voice) is [int first, ..]
+                    ? Audio.SingerFailure.PlaceOf(tree.GetRoot(), tree.Text, first) : null;
+                warnings.Add($"{voice.Key ?? voice.Part}: {Audio.SingerFailure.WithPlace(said, silentPlace)}");
             }
             sang.Add((voice, sound, name));
         }

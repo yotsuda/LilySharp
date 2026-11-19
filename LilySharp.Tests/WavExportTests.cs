@@ -218,6 +218,29 @@ public sealed class WavExportTests : IDisposable
     }
 
     [Fact]
+    public void ASyllableTheVoiceLeftSilent_IsAWarning_WithTheNotesPlace_AndTheVoiceIsSung()
+    {
+        // Owner's report 2026-11-19 (Moon-on-the-River.lys): TIGER's dictionary has no "an", 岸 was
+        // a silent note in a voice that sang, and nothing said so. Cantoria says it with the voice
+        // (DiffSingerSinger.NotInDictionary), and the export passes it on with where the note stands.
+        string said = "fake/voice does not sing \"く\" (note 2 at 1.3 s): the syllable is not in its dictionary (dsdict-zh.yaml), and its note is silent. Write other words there, or take another voice";
+        var (_, result) = Export(SungBook(), new FakeSinger { Says = [said] });
+
+        Assert.Contains($"melody: {said} — the first at line 4 (section A, bar 1)", result.Warnings);
+        Assert.Contains(result.Notes, n => n.StartsWith("Voice:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void TheNotesLeftSilent_AreTheVoicesOwn_EachOne()
+    {
+        var voice = new LilySharp.Core.Midi.SungVoice("m", "zh",
+            [new(0, 1, 60, "岸", false, false, 10), new(1, 1, 62, "边", false, false, 14), new(2, 1, 64, "村", false, false, 18)], []);
+        Assert.Equal([10, 18], SingerFailure.SilentAt("diffsinger/V does not sing \"岸\" (note 0 at 0.3 s), \"村\" (note 2 at 2.3 s), \"岸\" (note 9 at 9 s), \"岸\" (note 1 at 1.3 s): these syllables …", voice));
+        Assert.Empty(SingerFailure.SilentAt("diffsinger/V has no sound for \"岸\" (note 0 at 0.3 s): …", voice));
+        Assert.Empty(SingerFailure.SilentAt(null, voice));
+    }
+
+    [Fact]
     public void TheNoteOfAnUnsungSyllable_IsTheVoicesOwn_OrNone()
     {
         var voice = new LilySharp.Core.Midi.SungVoice("m", "zh",
@@ -391,6 +414,8 @@ internal sealed class FakeSinger : SingingEngine
     /// <summary>Seconds of sound before the beat (the first syllable's consonant), within the lead.</summary>
     public double Consonant { get; init; }
     public string? Error { get; init; }
+    /// <summary>What it says of the score it sang (<see cref="SingingEngine.Said"/>): the notes it left silent.</summary>
+    public string[] Says { init => Said = value; }
     public string? ScoreJson { get; private set; }
     /// <summary>What it answers when asked who would sing (<c>cantoria plan --json</c>'s text);
     /// null: an engine with no plan, as every engine was before 2026-11-13.</summary>

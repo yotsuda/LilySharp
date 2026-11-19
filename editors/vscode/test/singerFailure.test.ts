@@ -16,7 +16,7 @@
 
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { SungVoiceDto, VoiceProblems, engineFailureProblem, engineSaid, failurePlace, singerFailureCause, singerFailureText, unsungSyllable, unsungSyllableNotice, unsungSyllableProblem, voiceWho, wordsProblems } from '../src/singerCore';
+import { SungVoiceDto, VoiceProblems, engineFailureProblem, engineSaid, failurePlace, silentSyllableProblems, silentSyllables, silentSyllablesNotice, singerFailureCause, singerFailureText, unsungSyllable, unsungSyllableNotice, unsungSyllableProblem, voiceWho, wordsProblems } from '../src/singerCore';
 
 // Owner, 2026-11-13 (kaze.lys): the engine failed on the alto - NEUTRINO's "Failed to load phrase
 // data" - and the editor showed its words for eight seconds in the status bar, naming no line of
@@ -93,6 +93,25 @@ describe('what is said when the engine fails on a voice', () => {
         assert.equal(unsungSyllable(four, NO_SOUND.replace('note 3', 'note 1')), undefined);       // another syllable stands there
         assert.equal(unsungSyllableProblem(four, 'Failed to load phrase data', TEXT), undefined);
         assert.equal(failurePlace({ ...four, WarningPlace: 'line 9' }, 'Failed to load phrase data', TEXT), 'line 9');
+    });
+
+    // Owner's report 2026-11-19 (Moon-on-the-River.lys): TIGER's Chinese dictionary has no "an", 岸
+    // was a silent note in a voice that sang, and nothing said so. Cantoria says it with the voice.
+    const SILENT = 'diffsinger/V does not sing "い" (note 1 at 0.8 s), "だ" (note 3 at 1.8 s), "だ" (note 9 at 9 s): these syllables are not in its dictionary (dsdict-zh.yaml), and their notes are silent. Write other words there, or take another voice';
+
+    it('warns on every note the voice left silent, and says them with their lines', () => {
+        const problems = silentSyllableProblems(four, SILENT, TEXT);
+        assert.deepEqual(problems.map(p => TEXT.slice(p.start, p.end)), ["a'", "a'4"]);     // note 9 is not the voice's
+        assert.equal(problems[0].message, 'diffsinger/V is silent on this note: the syllable "い" under it is not in the voice\'s dictionary. Write other words here, or give the singer line another voice.');
+        assert.equal(silentSyllablesNotice(four, SILENT, TEXT),
+            'alt: diffsinger/V is silent on "い" (line 5), "だ" (line 5): these syllables are not in the voice\'s dictionary. Write other words there, or give the singer line another voice.');
+        assert.deepEqual(silentSyllables(four, SILENT).map(s => s.syllable), ['い', 'だ']);
+    });
+
+    it('takes no other sentence of the engine for a silent note', () => {
+        assert.deepEqual(silentSyllables(four, NO_SOUND), []);
+        assert.deepEqual(silentSyllableProblems(four, 'diffsinger/V does not take the setting "tension"', TEXT), []);
+        assert.equal(silentSyllablesNotice(four, 'diffsinger/V does not take the setting "tension"', TEXT), undefined);
     });
 
     it('shows a message it does not know as the engine said it', () => {

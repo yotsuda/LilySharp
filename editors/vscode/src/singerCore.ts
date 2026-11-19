@@ -381,6 +381,43 @@ export function unsungSyllableProblem(voice: Pick<SungVoiceDto, 'Part' | 'Key' |
     };
 }
 
+/**
+ * The notes a voice SANG AROUND: the syllables its dictionary has no entry for, which the engine
+ * leaves silent and says so with the sung voice (Cantoria's DiffSingerSinger.NotInDictionary,
+ * `… does not sing "岸" (note 46 at 57.25 s), …`; owner's report 2026-11-19, Moon-on-the-River.lys:
+ * TIGER's Chinese dictionary has no "an", 岸 was silent, and nothing said so). Each with its
+ * syllable and its note's source offset; a note the voice does not have, or whose syllable is
+ * another, is left out. Empty for any other sentence of the engine's. Core's SingerFailure.SilentAt.
+ */
+export function silentSyllables(voice: Pick<SungVoiceDto, 'Notes'>, engineNote: string): { syllable: string; at: number }[] {
+    if (!/ does not sing "/.test(engineNote)) { return []; }
+    const found: { syllable: string; at: number }[] = [];
+    for (const m of engineNote.matchAll(/"([^"]+)" \(note (\d+) at/g)) {
+        const note = voice.Notes[Number(m[2])];
+        if (note && note.L === m[1] && typeof note.S === 'number' && note.S >= 0) { found.push({ syllable: m[1], at: note.S }); }
+    }
+    return found;
+}
+
+/** A warning on each note a voice leaves silent (silentSyllables): what, why, and the two ways out. */
+export function silentSyllableProblems(voice: Pick<SungVoiceDto, 'Part' | 'Key' | 'Singer' | 'Notes'>, engineNote: string, text: string): VoiceProblem[] {
+    const who = voice.Singer && voice.Singer.includes('/') ? voice.Singer : `the voice of ${sungKey(voice)}`;
+    return silentSyllables(voice, engineNote).filter(s => s.at < text.length).map(s => ({
+        start: s.at, end: wordEnd(text, s.at),
+        message: `${who} is silent on this note: the syllable "${s.syllable}" under it is not in the voice's dictionary. Write other words here, or give the singer line another voice.`,
+    }));
+}
+
+/** The same, as a notification says it: every such syllable with its line, the first five. */
+export function silentSyllablesNotice(voice: Pick<SungVoiceDto, 'Part' | 'Key' | 'Singer' | 'Notes'>, engineNote: string, text: string): string | undefined {
+    const silent = silentSyllables(voice, engineNote).filter(s => s.at < text.length);
+    if (silent.length === 0) { return undefined; }
+    const who = voice.Singer && voice.Singer.includes('/') ? voice.Singer : 'its voice';
+    const listed = silent.slice(0, 5).map(s => `"${s.syllable}" (line ${text.slice(0, s.at).split('\n').length})`).join(', ') + (silent.length > 5 ? ', …' : '');
+    return `${sungKey(voice)}: ${who} is silent on ${listed}: ${silent.length === 1 ? 'the syllable is' : 'these syllables are'} not in the voice's dictionary. `
+        + 'Write other words there, or give the singer line another voice.';
+}
+
 /** The same, as a notification says it: away from the note, so with its line. */
 export function unsungSyllableNotice(voice: Pick<SungVoiceDto, 'Part' | 'Key' | 'Singer' | 'Notes'>, engineMessage: string, text: string): string | undefined {
     const unsung = unsungSyllable(voice, engineMessage);
@@ -407,7 +444,7 @@ export function wordsProblems(voice: Pick<SungVoiceDto, 'Part' | 'Key' | 'Warnin
 export class VoiceProblems {
     private readonly docs = new Map<string, Map<string, VoiceProblem[]>>();
     /** The problems of `kind` of the voice `key`; an empty list clears them. True when anything changed. */
-    set(uri: string, kind: 'engine' | 'words', key: string, problems: readonly VoiceProblem[]): boolean {
+    set(uri: string, kind: 'engine' | 'words' | 'silent', key: string, problems: readonly VoiceProblem[]): boolean {
         const id = `${kind}\n${key}`;
         let doc = this.docs.get(uri);
         if (problems.length === 0) {

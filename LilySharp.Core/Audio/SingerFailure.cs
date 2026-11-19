@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using LilySharp.Core.Syntax;
@@ -92,6 +93,28 @@ public static class SingerFailure
             || voice.Notes[note].Lyric != m.Groups[1].Value)
             return null;
         return voice.Notes[note].SourcePos;
+    }
+
+    /// <summary>What Cantoria says, with a voice it SANG, of the syllables its dictionary has no
+    /// entry for and it left silent (its <c>DiffSingerSinger.NotInDictionary</c>): `… does not sing
+    /// "岸" (note 46 at 57.25 s), …`. The editor's <c>silentSyllables</c> reads the same words.</summary>
+    public const string SilentPattern = " does not sing \"";
+
+    /// <summary>
+    /// The source offsets of the notes <paramref name="said"/> says the voice left silent, in its
+    /// order; a note the voice does not have, or whose syllable is another, is left out. Empty
+    /// for any other sentence.
+    /// </summary>
+    public static IReadOnlyList<int> SilentAt(string? said, Midi.SungVoice voice)
+    {
+        var found = new List<int>();
+        if (said == null || !said.Contains(SilentPattern, StringComparison.Ordinal))
+            return found;
+        foreach (Match m in Regex.Matches(said, "\"([^\"]+)\" \\(note (\\d+) at", RegexOptions.CultureInvariant))
+            if (int.TryParse(m.Groups[2].Value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int note)
+                && note < voice.Notes.Count && voice.Notes[note].Lyric == m.Groups[1].Value)
+                found.Add(voice.Notes[note].SourcePos);
+        return found;
     }
 
     /// <summary>

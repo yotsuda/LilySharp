@@ -30,7 +30,7 @@ import { PracticeState, VOICE_LEAD_S, voiceEntries } from './webview/playbackCor
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
 import { SINGER_NAME, SINGER_LANGUAGE, onSingerGender, singValueChoices, singerGoesOnToSings, singerLineOf, singerSettingSlot, singMarkSlot, singersWritten, singParameterDetail, singProblems, SingSettingDto, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, EngineWatch, prepareAllowanceMs, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuKey, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger, unsingableGuide, unsingableReason } from './singerCore';
 import { CANTORIA_OUTDATED_CONTEXT, CantoriaVoice, cantoriaIsOutdated, firstSongFor, galleryQuery, hasNvidiaGpu, newestInGallery } from './singerCore';
-import { VoiceProblems, engineFailureProblem, engineSaid, failurePlace, noVocoderGuide, singerFailureText, unsungSyllableNotice, unsungSyllableProblem, vocoderMissing, voiceWho, wordsProblems } from './singerCore';
+import { VoiceProblem, VoiceProblems, engineFailureProblem, engineSaid, failurePlace, noVocoderGuide, silentSyllableProblems, silentSyllablesNotice, singerFailureText, unsungSyllableNotice, unsungSyllableProblem, vocoderMissing, voiceWho, wordsProblems } from './singerCore';
 
 export interface SingingDeps {
     getClient: () => LanguageClient | undefined;
@@ -862,6 +862,8 @@ function failVoice(panel: vscode.WebviewPanel, part: string, speed: number, why:
         // seconds of the status bar): a word of the score has to change, so it is a warning on
         // the note itself too, and a notification that goes there - not a line that passes.
         const unsung = voice ? unsungSyllableProblem(voice, why, text) : undefined;
+        // Not sung at all now: what was said of the notes it left silent when it last sang is over.
+        if (uri && voiceProblems.set(uri, 'silent', part, [])) { showVoiceProblems(uri); }
         if (uri && document && voice) {
             voiceProblems.set(uri, 'engine', part, unsung ? [engineFailureProblem(voice, why, text), unsung] : [engineFailureProblem(voice, why, text)]);
             showVoiceProblems(uri);
@@ -1181,7 +1183,22 @@ async function renderVoice(job: PrepareJob): Promise<void> {
             engineWatch.heard();
             // What the engine had to say of the score: a setting of the singer line the voice
             // does not take is not sung, and the writer is told which - once, where it is seen.
-            for (const note of v.notes ?? []) { tellSingerSetting(note); }
+            // A syllable the voice's dictionary does not have is a SILENT NOTE in a voice that
+            // sang (owner's report 2026-11-19, Moon-on-the-River.lys: 岸 under diffsinger/TIGER,
+            // and nothing said so): a warning on each such note, there while the voice sings it
+            // so, and a notification that goes to the first.
+            const saidUri = voiceDocs.get(panel)?.split('\n')[0];
+            const saidDocument = saidUri ? vscode.workspace.textDocuments.find(d => d.uri.toString() === saidUri) : undefined;
+            const saidText = saidDocument?.getText() ?? '';
+            const silent: VoiceProblem[] = [];
+            for (const note of v.notes ?? []) {
+                const here = saidDocument ? silentSyllableProblems(voice, note, saidText) : [];
+                const notice = here.length > 0 ? silentSyllablesNotice(voice, note, saidText) : undefined;
+                if (saidDocument && notice) { silent.push(...here); tellUnsungSyllable(saidDocument, here[0], notice); }
+                else { tellSingerSetting(note); }
+            }
+            // Only of the render still asked for: a voice a newer one took the place of says nothing here.
+            if (saidUri && wanted() && voiceProblems.set(saidUri, 'silent', id, silent)) { showVoiceProblems(saidUri); }
             if (!cached) {
                 // The engine sings one at a time: this voice's time began when the last one landed.
                 const now = Date.now();
