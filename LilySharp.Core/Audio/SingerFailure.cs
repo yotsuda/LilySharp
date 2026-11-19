@@ -54,17 +54,44 @@ public static class SingerFailure
             "the engine took too long and was given up"),
         ("did not answer at",
             "the engine is not running"),
+        // Cantoria's DiffSingerSinger.NoSoundFor (owner's report 2026-11-19, Moon-on-the-River.lys:
+        // TIGER's dictionary spells 思 "s iz" and its pitch model has no "iz" - the warning named a
+        // phoneme and a file of the voice, and no word of the song). $1 is the syllable.
+        (UnsungPattern,
+            "the voice has no sound for the syllable \"$1\" (its models were not taught a phoneme the syllable needs): write other words there, or give the singer line another voice"),
     ];
 
-    /// <summary>The plain cause of <paramref name="engineMessage"/>, or null for a message Lily# does not know.</summary>
+    /// <summary>What Cantoria says of a syllable a voice has no sound for: the syllable, and its
+    /// note among the voice's notes, from 0.</summary>
+    private const string UnsungPattern = "has no sound for \"([^\"]+)\" \\(note (\\d+)";
+
+    /// <summary>The plain cause of <paramref name="engineMessage"/>, or null for a message Lily# does not know.
+    /// A <c>$1</c> in a cause is what its pattern caught (the syllable).</summary>
     public static string? Cause(string? engineMessage)
     {
         if (string.IsNullOrWhiteSpace(engineMessage))
             return null;
         foreach (var (pattern, cause) in Causes)
-            if (Regex.IsMatch(engineMessage, pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
-                return cause;
+            if (Regex.Match(engineMessage, pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) is { Success: true } m)
+                return cause.Replace("$1", m.Groups[1].Value, StringComparison.Ordinal);
         return null;
+    }
+
+    /// <summary>
+    /// The source offset of the note under the syllable the engine says the voice has no sound
+    /// for (<see cref="UnsungPattern"/>), or null: for another message, for a note the voice does
+    /// not have, and where that note's syllable is not the one named (the engine was sent other
+    /// notes than these).
+    /// </summary>
+    public static int? UnsungAt(string? engineMessage, Midi.SungVoice voice)
+    {
+        if (engineMessage == null
+            || Regex.Match(engineMessage, UnsungPattern, RegexOptions.CultureInvariant) is not { Success: true } m
+            || !int.TryParse(m.Groups[2].Value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int note)
+            || note >= voice.Notes.Count
+            || voice.Notes[note].Lyric != m.Groups[1].Value)
+            return null;
+        return voice.Notes[note].SourcePos;
     }
 
     /// <summary>

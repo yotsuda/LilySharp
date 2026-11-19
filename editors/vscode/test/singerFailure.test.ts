@@ -16,7 +16,7 @@
 
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { SungVoiceDto, VoiceProblems, engineFailureProblem, engineSaid, singerFailureCause, singerFailureText, voiceWho, wordsProblems } from '../src/singerCore';
+import { SungVoiceDto, VoiceProblems, engineFailureProblem, engineSaid, failurePlace, singerFailureCause, singerFailureText, unsungSyllable, unsungSyllableNotice, unsungSyllableProblem, voiceWho, wordsProblems } from '../src/singerCore';
 
 // Owner, 2026-11-13 (kaze.lys): the engine failed on the alto - NEUTRINO's "Failed to load phrase
 // data" - and the editor showed its words for eight seconds in the status bar, naming no line of
@@ -58,6 +58,41 @@ describe('what is said when the engine fails on a voice', () => {
         const problem = engineFailureProblem(voice, 'Error: Failed to load phrase data', TEXT);
         assert.match(problem.message, /Its instrument plays instead\. Look first at line 5 \(section Verse3, bar 1\)\. The engine said: Failed to load phrase data$/);
         assert.equal(TEXT.slice(problem.related!.start, problem.related!.end), "a'4");
+    });
+
+    // Owner's report 2026-11-19 (Moon-on-the-River.lys): TIGER's dictionary spells 思 "s iz", its
+    // pitch model has no "iz", and the warning was `the phoneme "iz" is not in …phonemes.txt`.
+    // Cantoria names the syllable and its note; the editor points at the note.
+    const NO_SOUND = 'diffsinger/V has no sound for "だ" (note 3 at 1.5 s): its dictionary spells it "d a", and its pitch model has no phoneme "a" (C:\\v\\dspitch\\phonemes.txt). Write other words there, or take another voice';
+    const four: SungVoiceDto = { ...alto, Singer: 'diffsinger/V', Notes: [
+        { T: 0, D: 0.5, P: 69, L: 'ど', S: firstNote }, { T: 0.5, D: 0.5, P: 69, L: 'い', S: firstNote + 4 },
+        { T: 1, D: 0.5, P: 69, L: 'た', S: firstNote + 7 }, { T: 1.5, D: 1, P: 69, L: 'だ', S: strange },
+    ] };
+
+    it('says a syllable the voice has no sound for by the syllable, and points at its note', () => {
+        const problem = engineFailureProblem(four, NO_SOUND, TEXT);
+        assert.match(problem.message, /^alt \(singer female "neutrino\/REINA" on alt, line 3\) is not sung: the voice has no sound for the syllable "だ" \(its models were not taught a phoneme the syllable needs\): write other words there, or give the singer line another voice\. Its instrument plays instead\. Look first at line 5\. The engine said: diffsinger\/V has no sound for/);
+        assert.equal(TEXT.slice(problem.related!.start, problem.related!.end), "a'4");
+        assert.equal(problem.related!.message, 'the syllable "だ" stands under this note');
+        assert.deepEqual(unsungSyllable(four, NO_SOUND), { syllable: 'だ', at: strange });
+        assert.equal(failurePlace(four, NO_SOUND, TEXT), 'line 5');
+    });
+
+    it('warns on the note itself too, naming the voice and the two ways out', () => {
+        const problem = unsungSyllableProblem(four, NO_SOUND, TEXT)!;
+        assert.equal(TEXT.slice(problem.start, problem.end), "a'4");
+        assert.equal(problem.message, 'diffsinger/V has no sound for the syllable "だ" under this note, so alt is not sung at all: write other words here, or give its singer line another voice.');
+        // The notification stands away from the note: it says the line.
+        assert.equal(unsungSyllableNotice(four, NO_SOUND, TEXT),
+            'alt is not sung: diffsinger/V has no sound for the syllable "だ" (line 5). Write other words there, or give the singer line another voice.');
+        assert.equal(unsungSyllableNotice(four, 'Failed to load phrase data', TEXT), undefined);
+    });
+
+    it('points at no note when the engine\'s note is not the voice\'s (other notes were sent), or for another failure', () => {
+        assert.equal(unsungSyllable(alto, NO_SOUND), undefined);                                   // the voice has one note
+        assert.equal(unsungSyllable(four, NO_SOUND.replace('note 3', 'note 1')), undefined);       // another syllable stands there
+        assert.equal(unsungSyllableProblem(four, 'Failed to load phrase data', TEXT), undefined);
+        assert.equal(failurePlace({ ...four, WarningPlace: 'line 9' }, 'Failed to load phrase data', TEXT), 'line 9');
     });
 
     it('shows a message it does not know as the engine said it', () => {

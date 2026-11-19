@@ -30,7 +30,7 @@ import { PracticeState, VOICE_LEAD_S, voiceEntries } from './webview/playbackCor
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
 import { SINGER_NAME, SINGER_LANGUAGE, onSingerGender, singValueChoices, singerGoesOnToSings, singerLineOf, singerSettingSlot, singMarkSlot, singersWritten, singParameterDetail, singProblems, SingSettingDto, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, EngineWatch, prepareAllowanceMs, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuKey, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger, unsingableGuide, unsingableReason } from './singerCore';
 import { CANTORIA_OUTDATED_CONTEXT, CantoriaVoice, cantoriaIsOutdated, firstSongFor, galleryQuery, hasNvidiaGpu, newestInGallery } from './singerCore';
-import { VoiceProblems, engineFailureProblem, engineSaid, noVocoderGuide, singerFailureText, vocoderMissing, voiceWho, wordsProblems } from './singerCore';
+import { VoiceProblems, engineFailureProblem, engineSaid, failurePlace, noVocoderGuide, singerFailureText, unsungSyllableNotice, unsungSyllableProblem, vocoderMissing, voiceWho, wordsProblems } from './singerCore';
 
 export interface SingingDeps {
     getClient: () => LanguageClient | undefined;
@@ -810,6 +810,25 @@ function tellSingerSetting(text: string): void {
     void vscode.window.showWarningMessage(`Lily#: ${text}`);
 }
 
+/** A syllable a voice has no sound for, said once a session for each (a document, a voice, a
+ *  syllable): a notification with the way to the note it stands under. False when it was said
+ *  before. Not by its place: the voice is asked for again at every edit, and a line typed above
+ *  the note would say it again each time. */
+const unsungSyllablesTold = new Set<string>();
+function tellUnsungSyllable(document: vscode.TextDocument, problem: { start: number; end: number; message: string }, notice: string): boolean {
+    const key = `${document.uri.toString()}\n${problem.message}`;
+    if (unsungSyllablesTold.has(key)) { return false; }
+    unsungSyllablesTold.add(key);
+    void vscode.window.showWarningMessage(`Lily#: ${notice}`, 'Show the Note').then(async picked => {
+        if (!picked) { return; }
+        const editor = await vscode.window.showTextDocument(document, { preview: false });
+        const range = new vscode.Range(document.positionAt(problem.start), document.positionAt(problem.end));
+        editor.selection = new vscode.Selection(range.start, range.end);
+        editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
+    });
+    return true;
+}
+
 function tellSingerOnce(panel: vscode.WebviewPanel, text: string): void {
     outputChannel.appendLine(`singer: ${text}`);
     let told = singerTold.get(panel);
@@ -836,13 +855,22 @@ function failVoice(panel: vscode.WebviewPanel, part: string, speed: number, why:
         const uri = voiceDocs.get(panel)?.split('\n')[0];
         const document = uri ? vscode.workspace.textDocuments.find(d => d.uri.toString() === uri) : undefined;
         const text = document?.getText() ?? '';
-        const sentence = singerFailureText(voice ? voiceWho(voice, text) : part, why, voice?.WarningPlace);
+        const sentence = singerFailureText(voice ? voiceWho(voice, text) : part, why, voice ? failurePlace(voice, why, text) : undefined);
         outputChannel.appendLine(`singer: ${clockNow()} ${sentence}`);
+        // A syllable the voice has no sound for (owner, 2026-11-19, Moon-on-the-River.lys: the
+        // engine's `the phoneme "iz" is not in …phonemes.txt` on the singer line, and eight
+        // seconds of the status bar): a word of the score has to change, so it is a warning on
+        // the note itself too, and a notification that goes there - not a line that passes.
+        const unsung = voice ? unsungSyllableProblem(voice, why, text) : undefined;
         if (uri && document && voice) {
-            voiceProblems.set(uri, 'engine', part, [engineFailureProblem(voice, why, text)]);
+            voiceProblems.set(uri, 'engine', part, unsung ? [engineFailureProblem(voice, why, text), unsung] : [engineFailureProblem(voice, why, text)]);
             showVoiceProblems(uri);
         }
-        tellSingerOnce(panel, `${part} is not sung, and its instrument plays — why is in the Problems panel`);
+        // Said before (the notification is once a session): the status bar's line, as for any failure.
+        const notice = voice ? unsungSyllableNotice(voice, why, text) : undefined;
+        if (!(unsung && notice && document && tellUnsungSyllable(document, unsung, notice))) {
+            tellSingerOnce(panel, `${part} is not sung, and its instrument plays — why is in the Problems panel`);
+        }
     }
     missingVoices.get(panel)?.add(part);
     void panel.webview.postMessage({ type: 'voiceState', part, speed, state: 'failed', detail: unsingable ?? why });

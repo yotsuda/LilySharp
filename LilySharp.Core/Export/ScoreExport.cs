@@ -347,6 +347,9 @@ public static class ScoreExport
                 string who = voice.Key ?? voice.Part;
                 if (asked.FirstOrDefault(a => a.Part == voice.Part && a.Key == (voice.Key ?? voice.Part)) is { Text: { } written, Position: >= 0 } ask)
                     who += $" ({written}, line {1 + tree.Text.AsSpan(0, Math.Min(ask.Position, tree.Text.Length)).Count('\n')})";
+                // A syllable the voice has no sound for is the place to look, before the first one that is not kana.
+                if (Audio.SingerFailure.UnsungAt(error, voice) is { } noSoundAt)
+                    place = Audio.SingerFailure.PlaceOf(tree.GetRoot(), tree.Text, noSoundAt) ?? place;
                 warnings.Add(Audio.SingerFailure.Sentence(who, error, place));
                 continue;
             }

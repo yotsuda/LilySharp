@@ -265,16 +265,50 @@ const SINGER_FAILURE_CAUSES: readonly (readonly [RegExp, string])[] = [
     [/did not start|did not become ready|before it was ready/i, "the engine's program did not start"],
     [/did not finish within|gave no answer in/i, 'the engine took too long and was given up'],
     [/did not answer at/i, 'the engine is not running'],
+    // Cantoria's DiffSingerSinger.NoSoundFor (owner's report 2026-11-19, Moon-on-the-River.lys:
+    // TIGER's dictionary spells 思 "s iz" and its pitch model has no "iz" - the warning named a
+    // phoneme and a file of the voice, and no word of the song). $1 is the syllable.
+    [/has no sound for "([^"]+)" \(note (\d+)/,
+        'the voice has no sound for the syllable "$1" (its models were not taught a phoneme the syllable needs): write other words there, or give the singer line another voice'],
 ];
+
+/** What Cantoria says of a syllable a voice has no sound for: the syllable, and its note among
+ *  the voice's notes, from 0. Core's SingerFailure.UnsungPattern. */
+const UNSUNG_SYLLABLE = /has no sound for "([^"]+)" \(note (\d+)/;
+
+/**
+ * The note under the syllable the engine says the voice has no sound for: the syllable and the
+ * note's source offset. Undefined for another message, for a note the voice does not have, and
+ * where that note's syllable is not the one named (the engine was sent other notes than these).
+ * Core's SingerFailure.UnsungAt.
+ */
+export function unsungSyllable(voice: Pick<SungVoiceDto, 'Notes'>, engineMessage: string): { syllable: string; at: number } | undefined {
+    const m = UNSUNG_SYLLABLE.exec(engineMessage);
+    if (!m) { return undefined; }
+    const note = voice.Notes[Number(m[2])];
+    return note && note.L === m[1] && typeof note.S === 'number' && note.S >= 0 ? { syllable: m[1], at: note.S } : undefined;
+}
+
+/** Where to look first when the engine failed on a voice: the line of the note under a syllable
+ *  the voice has no sound for, else where the server found the first syllable that is not kana. */
+export function failurePlace(voice: Pick<SungVoiceDto, 'Notes' | 'WarningPlace'>, engineMessage: string, text: string): string | null | undefined {
+    const unsung = unsungSyllable(voice, engineMessage);
+    return unsung && unsung.at < text.length ? `line ${text.slice(0, unsung.at).split('\n').length}` : voice.WarningPlace;
+}
 
 /** What an engine threw, as it said it: without the error's wrapping. */
 export function engineSaid(error: unknown): string {
     return (error instanceof Error ? error.message : String(error)).replace(/^(Error: )+/, '').trim();
 }
 
-/** The plain cause of an engine's message, or undefined for one Lily# does not know. */
+/** The plain cause of an engine's message, or undefined for one Lily# does not know. A `$1` in a
+ *  cause is what its pattern caught (the syllable). */
 export function singerFailureCause(engineMessage: string): string | undefined {
-    return SINGER_FAILURE_CAUSES.find(([pattern]) => pattern.test(engineMessage))?.[1];
+    for (const [pattern, cause] of SINGER_FAILURE_CAUSES) {
+        const m = pattern.exec(engineMessage);
+        if (m) { return cause.split('$1').join(m[1] ?? ''); }
+    }
+    return undefined;
 }
 
 /** The sentence said when the engine FAILS on a voice it agreed to sing: who (the voice, with its
@@ -321,11 +355,39 @@ export function engineFailureProblem(voice: Pick<SungVoiceDto, 'Part' | 'Key' | 
     const first = voice.Notes.find(n => typeof n.S === 'number' && n.S >= 0)?.S ?? 0;
     const start = onLine ? voice.SingerStart! : first;
     const end = onLine ? voice.SingerEnd! : wordEnd(text, first);
-    const problem: VoiceProblem = { start, end, message: singerFailureText(voiceWho(voice, text), engineMessage, voice.WarningPlace) };
-    if (typeof voice.WarningAt === 'number' && voice.WarningAt >= 0) {
+    const problem: VoiceProblem = { start, end, message: singerFailureText(voiceWho(voice, text), engineMessage, failurePlace(voice, engineMessage, text)) };
+    const unsung = unsungSyllable(voice, engineMessage);
+    if (unsung) {
+        problem.related = { start: unsung.at, end: wordEnd(text, unsung.at), message: `the syllable "${unsung.syllable}" stands under this note` };
+    } else if (typeof voice.WarningAt === 'number' && voice.WarningAt >= 0) {
         problem.related = { start: voice.WarningAt, end: wordEnd(text, voice.WarningAt), message: 'the first syllable that is not kana stands under this note' };
     }
     return problem;
+}
+
+/**
+ * A second warning for a syllable the voice has no sound for, ON THE NOTE it stands under (owner,
+ * 2026-11-19: "a clearer error in VS Code" - the warning on the `singer` line is sixty lines from
+ * the word that has to change): what cannot be sung, by whom, and the two ways out. None for any
+ * other failure of the engine.
+ */
+export function unsungSyllableProblem(voice: Pick<SungVoiceDto, 'Part' | 'Key' | 'Singer' | 'Notes'>, engineMessage: string, text: string): VoiceProblem | undefined {
+    const unsung = unsungSyllable(voice, engineMessage);
+    if (!unsung || unsung.at >= text.length) { return undefined; }
+    const who = voice.Singer && voice.Singer.includes('/') ? voice.Singer : 'the voice';
+    return {
+        start: unsung.at, end: wordEnd(text, unsung.at),
+        message: `${who} has no sound for the syllable "${unsung.syllable}" under this note, so ${sungKey(voice)} is not sung at all: write other words here, or give its singer line another voice.`,
+    };
+}
+
+/** The same, as a notification says it: away from the note, so with its line. */
+export function unsungSyllableNotice(voice: Pick<SungVoiceDto, 'Part' | 'Key' | 'Singer' | 'Notes'>, engineMessage: string, text: string): string | undefined {
+    const unsung = unsungSyllable(voice, engineMessage);
+    if (!unsung || unsung.at >= text.length) { return undefined; }
+    const who = voice.Singer && voice.Singer.includes('/') ? voice.Singer : 'its voice';
+    const line = text.slice(0, unsung.at).split('\n').length;
+    return `${sungKey(voice)} is not sung: ${who} has no sound for the syllable "${unsung.syllable}" (line ${line}). Write other words there, or give the singer line another voice.`;
 }
 
 /** The warnings the server gives of a voice's words (syllables that are not kana), each on the

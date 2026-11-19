@@ -206,6 +206,28 @@ public sealed class WavExportTests : IDisposable
             && w.EndsWith("The engine said: Failed to load phrase data", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void ASyllableTheVoiceHasNoSoundFor_IsSaidByItsSyllable_WithTheNotesPlace()
+    {
+        // Owner's report 2026-11-19 (Moon-on-the-River.lys): the engine named a phoneme and a file
+        // of the voice. Cantoria now names the syllable and its note (DiffSingerSinger.NoSoundFor).
+        string said = "diffsinger/V has no sound for \"く\" (note 2 at 1.1 s): its dictionary spells it \"k u\", and its pitch model has no phoneme \"u\" (C:\\v\\dspitch\\phonemes.txt). Write other words there, or take another voice";
+        var (_, result) = Export(SungBook(), new FakeSinger { Error = said });
+
+        Assert.Contains(result.Warnings, w => w.StartsWith("melody (singer sings verse on melody, line 5) is not sung: the voice has no sound for the syllable \"く\" (its models were not taught a phoneme the syllable needs): write other words there, or give the singer line another voice. Its instrument plays instead. Look first at line 4 (section A, bar 1). The engine said: diffsinger/V has no sound for", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void TheNoteOfAnUnsungSyllable_IsTheVoicesOwn_OrNone()
+    {
+        var voice = new LilySharp.Core.Midi.SungVoice("m", "zh",
+            [new(0, 1, 60, "我", false, false, 10), new(1, 1, 62, null, true, false, 14), new(2, 1, 64, "思", false, false, 18)], []);
+        Assert.Equal(18, SingerFailure.UnsungAt("diffsinger/V has no sound for \"思\" (note 2 at 2 s): …", voice));
+        Assert.Null(SingerFailure.UnsungAt("diffsinger/V has no sound for \"思\" (note 0 at 0 s): …", voice));   // another syllable there: other notes were sent
+        Assert.Null(SingerFailure.UnsungAt("diffsinger/V has no sound for \"思\" (note 7 at 9 s): …", voice));
+        Assert.Null(SingerFailure.UnsungAt("Failed to load phrase data", voice));
+    }
+
     [Theory]
     [InlineData("alt { r4 | R*5 | r2. | a'4 b' }", "b'", "bar 8")]
     [InlineData("alt { |: a'4 b' :| c'' d'' || e'' }", "e''", "bar 3")]
