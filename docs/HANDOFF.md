@@ -146,6 +146,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1332セッション（2026-11-20・YT-DELL2）
+
+leftovers の「第1317」の残りの便（base `210fb36a8`）。開始時 full 17983 合格 / 1 失敗（`ScoreVideoShapeTests` の png の掴み合い＝既知の不安定な網）/ skip 2 / 合計 17986（Lab `p1332` `start.log`）。終了時 full 17988 合格 / 0 失敗 / skip 2 / 合計 17990（`-End` の trx・注の追記の後に run5 も同じ）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
+- **連桁の符幹が小さい頭に立つ**（`aa7b4b890`・`[engraving]`）: `<a@struck c' e'>8 <a@struck c' e'>8` の符幹の始点が普通の頭の付け根（0.15）だった。LilyPond 2.26.0 は小さい頭の中心から 0.0948（符幹の上下とも・Lab `p1332/beam/b1.ly`）＝`SharedRenderer.Beams.StruckFootOf` で単独の符幹（`DrawChord`）と同じ読み。普通の頭は Lily# 0.15・LilyPond 0.1862＝梁の付いた黒い頭の別の問い（未調査・leftovers）。
+- **`q` と裸の音価が struck を引き継ぐ**（同じ commit・`[playback][export]`）: LilyPond の `q` は tweak ごと写す（`p1332/beam/lp-q1.ly`＝毎回小さい頭）。それまで Lily# の `q` は普通の頭で描き、**MIDI では struck の音を鳴らさず**（`_resolvedChordNotes` に入れていなかった）、MusicXML は普通の長さの音にしていた。ページ `ResolvedChordMember.IsStruck`・MIDI `StrikeAgain`（4 分以下・トレモロは最初の 1 打だけ・onset の外）・MusicXML `Strike`／`HeldFirst`（cue 大で held の後ろ）。`.ly` は `q` のまま（LilyPond が写す）。
+- step キーの行に `@struck` と `@dead`（`@dead` も説明が無かった）・`LEARN_FOR_LLM.md` に 1 行・CHANGELOG 2 つ。
+- 網 `StruckNoteTests` +1 本・1 theory 3 行、`CaretInfoTests` +2 行。毒 8 本（全部赤。P4＝MIDI の記録は最初 `q4` の網で緑＝held と struck の長さが同じ。`q2` に直して赤）。掃き: 全 svg 0 / 1276・全 MusicXML 0 / 1276（追跡コーパスに struck の本は無い）。
+- **測って残した**: tab の struck の数字は LilyPond では ×0.794・中央揃えではない（leftovers に数字）。装飾音の中の struck の和音は放置のまま。
+- **次**: leftovers の「第1317」の残り（tab の数字＝先に LilyPond の `tab-note-head::print` を読む）→「第1327」の `@!rit`（オーナーの返事待ち）→「第1321」の h13 → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決はオーナー待ち。
+
+## 以下は第1331セッションの経緯
+
 ### 1.1 第1331セッション（2026-11-20・YT-DELL2・第1329 と同じ会話）
 
 オーナー決定 2026-11-20 の 3 件の便（base `713377c9f`）。開始時 full 17968 合格 / 0 失敗 / skip 2 / 合計 17970（Lab `p1331` `start.log`）。終了時 full 17984 合格 / 0 失敗 / skip 2 / 合計 17986（`-End` の trx）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
@@ -153,18 +165,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **3 件とも実装**（`d0f01b760`・`[export][playback][language]`）: ① MusicXML はスペーサー（`print-object="no"` の休符）と装飾音のスペーサーを飛ばす・MIDI の装飾音のスペーサーも取らない・警告 LYS4085（`Semantics.SpacerScriptValidator`・小節線をまたいでも次の項目）② `LilyPondExporter.WriteTheClosingFermata` がパートの変数の末尾の `<>-\fermata` を `\once \override Score.TextMark.self-alignment-X = #CENTER \textEndMark \markup { \musicglyph "scripts.ufermata" }` に（`.down` は `direction = #DOWN`・`scripts.dfermata`・他の印は `<>` に残す）。form は各パートの変数に展開されるので変数の末尾が曲の末尾。end mark は score のもの＝1 回・最初のパート（上の譜表の上）。LilyPond 2.26.0 の絵は Lab `p1331/ly`。③ LYS4086（`StruckNoteValidator`）: 和音の中のタイは `TiedMembers` の後ろの子、和音全体のタイは和音の外の兄弟（`Articulations` には無い）。
 - 網 `EmptyChordScriptsExportTests` +2 行・1 theory 9 行・1 本、`StruckNoteTests` 1 theory 4 行。毒 13 本（全部赤・script だけの門は `<>@sustain s4` の行を足して赤）。掃き: 全 MusicXML・MIDI・`.ly` 0 / 1276。LYS4085・LYS4086 はコーパスの 0 冊。
 - **次**: leftovers の「第1317」の残り（連桁の符幹の根元・`q` が struck を引き継ぐか＝LilyPond を測る・装飾音の和音・tab とエディタの説明）→「第1327」の `@!rit`（オーナーの返事待ち）→「第1321」の h13 → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決はオーナー待ち。
-
-## 以下は第1330セッションの経緯
-
-### 1.1 第1330セッション（2026-11-20・YT-DELL2・第1329 と同じ会話）
-
-leftovers の「第1317」（`@struck`）の便（base `e02560029`）。オーナーの「続けて」で、判断の要る「第1329」の 2 件（スペーサー・`.ly` の最後のフェルマータ）は飛ばした。開始時 full 17965 合格 / 0 失敗 / skip 2 / 合計 17967（Lab `p1330` `start.log`）。終了時 full 17968 合格 / 0 失敗 / skip 2 / 合計 17970（`-End` の trx）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
-- **struck の頭の右の付点は小さい頭の右に**（`972f7ff52`・`[engraving]`）: `<c'' d''@struck>2.`（2 度・小さい d'' が符幹の向こう）の付点が c'' の頭から 3.14＝普通の頭の幅で床を取っていた。LilyPond 2.26.0 は 2.578（支えは頭それぞれの箱＝dot-column.cc:79-99）。`ChordHeadPositioning.InkRight` の struck つきの形が小さい頭を描いた位置と幅で読む（描画と声部をまたぐ付点の列）。2 度の他の 2 形も数字で LilyPond と一致（Lab `p1330/s2`）。
-- **import が `@struck` を読む**（`22960ab17`・`[import]`）: 和音の 2 番目以降の cue 大の鳴る音（`<cue/>` なし）を `ImportNote.IsStruck` に、`LysWriter` が `@struck` を書く。
-- **struck を先頭に書いた和音の印は MusicXML の先頭の `<note>` に**（`a5aa7d060`・`[export]`）: 書き出しは struck を held の後ろへ並べ替えるが、和音の印は最初に処理した struck の音に載ったまま `<chord/>` の音へ回っていた。印は最初の held の音に（`<>` の保留の script も）・arpeggio は音より先に決める。
-- 網 `StruckNoteTests` +3 本。毒 4 本（赤 2・観測者なし 2）・4 本（全部赤）・3 本（全部赤）。掃き: 全 svg 0 / 1276・全 MusicXML 0 / 1276（追跡コーパスに struck の本は無い）。
-- タイ: LilyPond も struck の頭からタイを描く＝ページは LilyPond どおり（MIDI と MusicXML がタイにしないのは意味の側＝判断・leftovers）。
-- **次**: leftovers の「第1317」の残り（連桁の符幹の根元・`q` が struck を引き継ぐか＝LilyPond を測る・装飾音の和音・tab とエディタの説明）→「第1329」の 2 件（判断）→「第1327」の `@!rit`（オーナーの返事待ち）→「第1321」の h13 → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決はオーナー待ち。
 
 ## 2. 開いている作業
 
