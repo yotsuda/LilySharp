@@ -146,6 +146,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1315セッション（2026-11-19・YT-DELL2・第1313 と同じ会話）
+
+最後の `<>` の強弱・文字・フェルマータと trill の線の便（base `28b043635`・`fa6d2f1a7`）。開始時 full 17798 合格 / 1 失敗 / skip 2 / 合計 17801（Lab `p1315` `run1.trx`。赤は既知の不安定な網 `ScoreVideoShapeTests.APaperTheScoreStates_KeepsItsShape_OnePageOrNot`＝単独で回すと緑）。終了時 full 17801 合格 / 0 失敗 / skip 2 / 合計 17803（`run2.trx`）。REQUESTS の open は両方 0（Calamo の 30 の行に追記・未 commit）。作業ツリーの `site/` は並行の別セッションの物＝触っていない。
+- **オーナー決定 2026-11-19「最後の `<>` に書いた強弱・フェルマータ・文字もレンダできるようにしたい」**: 第1314 は LilyPond に合わせて描かなかった（LilyPond 2.26.0 は 3 つとも描かない＝最後の時刻に音符の列が無い）。今は描く＝`LILYSHARP-OWN`。強弱と文字は `TrailingMarks` が線の終わりと同じく最後の小節の末尾へ付け直す。フェルマータは item に付く記号なので付け直すだけでは描けず、`ArticulationEngraver` に小節の末尾の腕（終わりの小節線の上・`.down` は下・高さは支えが五線だけの `AlignedSideUp`）。フェルマータ以外の script（アクセントなど）は動かさない・描かない。回帰譜 `audit/lp-regression/lys/empty-chord.lys`（最後が `c1@decresc <>@pp`）は pp が出てヘアピンがその手前で終わる＝LilyPond の絵から意図して離れた（本の頭に注記）。全 svg の掃きで動いたのはこの本と探り譜の 2 / 1276。
+- **trill の線**: `<>@!trillSpan` にも「書いた音符を含む」が当たっていた（8va と同じ族）＝曲の途中では次の小節の音の上まで伸び、曲の最後では *tr* ごと描かれなかった。`<>` の stop は含めない（`EmptyChordStop`）。
+- 網 `TrailingEmptyChordTests` は 16 本・毒 10 本（Lab `p1315/poisons.ps1`）。CHANGELOG は 2 つとも書き直した。
+- **残り（leftovers の「第1315」「第1314」の節）**: フェルマータがリハーサルマーク・volta・テンポと同じ小節線に立つときの積み方は見ていない／`<>@text("fine").up` は未／`.ly`・MusicXML の最後の `<>` は未測定／曲の途中の `f' <>@!8va |` と `f'@!8va |` の右端の差。
+- **次**: leftovers の「第1315」→「第1314」→「第1313」の節 →「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決はオーナー待ち。
+
+## 以下は第1314セッションの経緯
+
 ### 1.1 第1314セッション（2026-11-19・YT-DELL2・第1313 と同じ会話）
 
 Calamo の依頼 30 を直した便（base `c13aaa228`・`0f68f197f`）。開始時 full 17785 合格 / 0 失敗 / skip 2 / 合計 17787（Lab `p1314` `run1.trx`）。終了時 full 17799 合格 / 0 失敗 / skip 2 / 合計 17801（`run2.trx`）。REQUESTS は 30 を `fixed`（Calamo 側は未 commit）・open は両方 0。全 svg の掃きは 0 / 1276。並行の別セッションの 2 commit（`9361a0c0a`・`795210f8d`＝拡張）が間に在る。
@@ -155,18 +166,6 @@ Calamo の依頼 30 を直した便（base `c13aaa228`・`0f68f197f`）。開始
 - 網 `TrailingEmptyChordTests` 14 本・毒 14 本（Lab `p1314/poisons.ps1`）。CHANGELOG は 2 つとも 2 件。
 - **残り（leftovers の「第1314」の節）**: 最後の `<>` で終わる trill の線は未（LilyPond は描く）／曲の途中の `f' <>@!8va |` と `f'@!8va |` で括弧の右端が違う（小節の終わり 28.86 と最後の音の列 28.03・LilyPond 未測定）／最後の `<>` の強弱・script が黙って描かれないことを `check` で言うかはオーナー判断。
 - **次**: leftovers の「第1314」→「第1313」の節 →「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決（録音が無いときの Faders 100% の置き場・Tempo の下限）はオーナー待ち。
-
-## 以下は第1313セッションの経緯
-
-### 1.1 第1313セッション（2026-11-19・YT-DELL2・新しい会話）
-
-leftovers の「第1239」の残りを閉じた便（base `145df3333`＝前の会話が第1312 の docs の後に入れた 2 commit を含む・その経緯はこの文書に無い）。開始時 full 17746 合格 / 0 失敗 / skip 2 / 合計 17748（Lab `p1313` `run1.trx`）。終了時 full 17785 合格 / 0 失敗 / skip 2 / 合計 17787（`run3.trx`）。REQUESTS の open は両方 0。全 svg の掃きは 0 / 1276・全冊の MusicXML の掃きも 0 / 1276（どちらも結果＝追跡の本にその形が無い。陽性対照は探り譜）。
-- **刻印の網（`72a1fcb34`）**: 第1239 が網なしで残した運び手（`q`・slash・bare・pitched rest・`<>`・それぞれ連符の中・ドラムの音符・チャートの打音と印つきの休符）に、強弱とヘアピンの始まりの 32 行（`HairpinVoiceTests.TheOtherCarriers_StampTheirMomentToo`）。毒は腕ごとに 17 本＝名指した行だけ赤（Lab `p1313/poisons.ps1`）。強弱もヘアピンの始まりも刻むのは `CollectDynamics`。
-- **見つけた欠陥 1＝ドラムチャートの連符（同じ commit・`[engraving]`）**: `EmitDrumPiece` は時刻を小節の時計（`CurrentDuration`）から読んでいた。連符の中では時計が止まるので、連符の 2 つ目以降の打音の強弱・ヘアピンは連符の頭の時刻で刻まれ、もう一方の声部のヘアピンが終わりを取り違えた。`CurrentMoment` を読む 1 行。同じ音楽を `voice { } { }` で書いた絵が答え（Lab `p1313/chart` c1・c2・v1）。網 2 行。
-- **時刻の綴りを 1 つ畳んだ（`de837072f`）**: condensedStaff の重複判定は長さを足し直さず刻印（`DynamicItem.Moment`）を読む。`@text` の強弱表現にも刻印。全 1,289 冊の 3,427 件で刻印＝和が 3,425・相違 0（Lab `p1313/moment-vs-sum.txt`）。網 `ACondensedStaff_PrintsATextBothPartsWrite_Once`・毒 2 本。
-- **見つけた欠陥 2＝単独のドラム音符の印が MusicXML に無い（`66412b223`・`[export]`）**: `ProcessDrumNote` は音符に書いた印を 1 つも読まなかった（強弱・ヘアピン・アクセント・フェルマータ・文字。和音と休符のものは書かれていた）。和音の構成音と同じ `ProcessArticulations` を呼ぶ。網 4 行・毒 1 本。CHANGELOG は欠陥 1 と 2。
-- **測っていない・残り**: Lab `p1242/leftovers.md` の「第1313」の節（運び手が `CollectArticulations` に渡す時刻の網・チャートの連符の MIDI・連符の中の slash と bare の `@cross`／数字付き低音・MusicXML の読み戻し）。「第1239」の残りは condensedStaff の終わりの場所の 1 行だけ。
-- **次**: leftovers の「第1313」の節 →「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決（録音が無いときの Faders 100% の置き場・Tempo の下限）はオーナー待ち。
 
 ## 2. 開いている作業
 

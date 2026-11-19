@@ -277,6 +277,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1313セッションの経緯
+
+### 1.1 第1313セッション（2026-11-19・YT-DELL2・新しい会話）
+
+leftovers の「第1239」の残りを閉じた便（base `145df3333`＝前の会話が第1312 の docs の後に入れた 2 commit を含む・その経緯はこの文書に無い）。開始時 full 17746 合格 / 0 失敗 / skip 2 / 合計 17748（Lab `p1313` `run1.trx`）。終了時 full 17785 合格 / 0 失敗 / skip 2 / 合計 17787（`run3.trx`）。REQUESTS の open は両方 0。全 svg の掃きは 0 / 1276・全冊の MusicXML の掃きも 0 / 1276（どちらも結果＝追跡の本にその形が無い。陽性対照は探り譜）。
+- **刻印の網（`72a1fcb34`）**: 第1239 が網なしで残した運び手（`q`・slash・bare・pitched rest・`<>`・それぞれ連符の中・ドラムの音符・チャートの打音と印つきの休符）に、強弱とヘアピンの始まりの 32 行（`HairpinVoiceTests.TheOtherCarriers_StampTheirMomentToo`）。毒は腕ごとに 17 本＝名指した行だけ赤（Lab `p1313/poisons.ps1`）。強弱もヘアピンの始まりも刻むのは `CollectDynamics`。
+- **見つけた欠陥 1＝ドラムチャートの連符（同じ commit・`[engraving]`）**: `EmitDrumPiece` は時刻を小節の時計（`CurrentDuration`）から読んでいた。連符の中では時計が止まるので、連符の 2 つ目以降の打音の強弱・ヘアピンは連符の頭の時刻で刻まれ、もう一方の声部のヘアピンが終わりを取り違えた。`CurrentMoment` を読む 1 行。同じ音楽を `voice { } { }` で書いた絵が答え（Lab `p1313/chart` c1・c2・v1）。網 2 行。
+- **時刻の綴りを 1 つ畳んだ（`de837072f`）**: condensedStaff の重複判定は長さを足し直さず刻印（`DynamicItem.Moment`）を読む。`@text` の強弱表現にも刻印。全 1,289 冊の 3,427 件で刻印＝和が 3,425・相違 0（Lab `p1313/moment-vs-sum.txt`）。網 `ACondensedStaff_PrintsATextBothPartsWrite_Once`・毒 2 本。
+- **見つけた欠陥 2＝単独のドラム音符の印が MusicXML に無い（`66412b223`・`[export]`）**: `ProcessDrumNote` は音符に書いた印を 1 つも読まなかった（強弱・ヘアピン・アクセント・フェルマータ・文字。和音と休符のものは書かれていた）。和音の構成音と同じ `ProcessArticulations` を呼ぶ。網 4 行・毒 1 本。CHANGELOG は欠陥 1 と 2。
+- **測っていない・残り**: Lab `p1242/leftovers.md` の「第1313」の節（運び手が `CollectArticulations` に渡す時刻の網・チャートの連符の MIDI・連符の中の slash と bare の `@cross`／数字付き低音・MusicXML の読み戻し）。「第1239」の残りは condensedStaff の終わりの場所の 1 行だけ。
+- **次**: leftovers の「第1313」の節 →「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決（録音が無いときの Faders 100% の置き場・Tempo の下限）はオーナー待ち。
+
 ## 以下は第1312セッションの経緯
 
 ### 1.1 第1312セッション（2026-11-19・YT-DELL2・第1310 と同じ会話）
