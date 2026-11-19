@@ -277,6 +277,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1309セッションの経緯
+
+### 1.1 第1309セッション（2026-11-19・YT-DELL2・第1308 と同じ会話）
+
+`-Start p1309` を回し、Calamo の依頼 28 を読むところまでで締めた便（会話が長くなったので、作るのは次の会話。オーナーの指示）。開始時 full 17718 合格 / 1 失敗 / skip 2 / 合計 17721（Lab `p1309` `run1.trx`・失敗は `ScoreVideoShapeTests.AScoreOfOnePage_IsItsMusic_NotTheSheet`＝`s00000.png` を別のプロセスが掴んでいた・不安定な網で、第1308 の終了時は 17719 / 0）。REQUESTS は Calamo #28 が open・Dettato は 0。コードは触っていない。
+- **Calamo #28（2 音トレモロの線を両方の符幹につなげる形・学習用）＝オーナーが受けた（2026-11-19）: `layout { tremoloBeams joined }`・既定は今のまま**。読んだ所と段取りは Lab `sessions/p1309/request28-plan.md`（浮かせる量は `EngravingDefaults.TremoloBeamGap` 1 つで描画の 2 行だけが読む・LilyPond は `\override Beam.gap = #0`＝`beam.cc` `get_gaps` と同じ式に 0 を通す・曲全体で選ぶ前例は `ottavaLine`）。
+- **次**: ① #28 を作る（上の段取り）→ ② leftovers の「第1239」の残り（condensedStaff の終わりは「立っている写し」の場所・刻印の網が無い運び手・「item の時刻」の綴り 3 つ・3 声部の強弱の並び）→「第1238」の残り（combinedStaff の印の re-address・drum 譜の落ちた側のヘアピン・段の部屋の予約の網）。その先は review.md の 3 つ（`mid-bar-break`・F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。第1308 の残り（実機の確認・未決 2 つ）は下の語りに在る。
+
 ## 以下は第1308セッションの経緯
 
 ### 1.1 第1308セッション（2026-11-18〜19・YT-DELL2・新しい会話）

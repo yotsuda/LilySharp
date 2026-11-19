@@ -146,6 +146,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1311セッション（2026-11-19・YT-DELL2・第1310 と同じ会話）
+
+Calamo #29 の `}@!sustain` を作った便（base `c8072bf8f`）。開始時 full 17733 合格 / 0 失敗 / skip 2 / 合計 17735（Lab `p1311` `run1.trx`）。終了時 full 17741 合格 / 0 失敗 / skip 2 / 合計 17743（`run2.trx`）。REQUESTS は #29 を `fixed`（1）と `question`（2）に書いた・open は両方 0。毒は回していない。
+- **終わりの印をかたまりの `}` に書ける（オーナー決定 2026-11-19: 終わりの印 `@!…` だけ・`{ }` で閉じる音楽のかたまり全部）**: `repeat tremolo 12 { … }@!sustain`・`tuplet 3/2 { … }@!cresc`。パーサが「かたまりの後ろの空の和音」として読む（`Parser.Music.cs` `EndingMarksOfABlock`＝幅 0 の `<` `>` を持つ `ChordGreen`）＝絵・MIDI・`.ly`・MusicXML は `} <>@!sustain` と同じ木を読むので、後ろは何も変えていない。`}@f`・`}@sustain` はエラーで `} <>@f` を言う。`}@!sustain@f` は `@f` だけを指す。空白を挟んだ `} @!sustain` は今までどおりエラー。探り譜 8 組（tremolo・tuplet・2 つの印・voice・grace・cue ほか）で 4 つの出力が一致（Lab `p1311/end`）。網 `EndingMarkOnABlockTests`・`SpanEndCompletionTests` に 1 本。文法は GRAMMAR.md §8.1 の BlockEnd。実機は `MANUAL-CHECKS` の `}@!sustain` の行。
+- **オーナー判断待ち（#29 の 2）**: トレモロの中の音に付けた離しの時刻。今は「その音を最初に弾く瞬間」（2 つ目の音なら 1/64 後）、LilyPond は表示上の頭の時刻（かたまりの半分）。**見つけた欠陥（未修正・同じ判断で直る）**: MIDI は tremolo の本体を回数ぶん歩き、中のペダルの印を毎回読む＝`repeat tremolo 8 { e32@sustain g }` は 1 回踏むのではなく 7 回踏み替える（Lab `p1311/notes.md` の表）。直しは「印は 1 回だけ」で、その時刻が問い。勧め＝表示上の頭の時刻（絵の印の位置と同じ）。
+- **次**: 上の判断 → leftovers の「第1239」の残り →「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決（録音が無いときの Faders 100% の置き場・Tempo の下限）もオーナー待ち。
+
+## 以下は第1310セッションの経緯
+
 ### 1.1 第1310セッション（2026-11-19・YT-DELL2・新しい会話）
 
 Calamo #28 を作り、途中で届いた #29 に返事をした便（base `b96781b43`・途中でオーナーの `7cd26b659`）。開始時 full 17717 合格 / 2 失敗 / skip 2 / 合計 17721（Lab `p1310` `run1.trx`・失敗は `IncludeFilesTests.ABooksInclude_SavedAgain_…` と `KeystrokeSideWorkTests.TheCaretOnANote_OfABookWithIncludes_…`＝2 本だけ回すと緑の不安定な網）。終了時 full 17733 合格 / 0 失敗 / skip 2 / 合計 17735（`run3.trx`・+14 はこの便の網）。REQUESTS は #28 `fixed`・#29 `question`・open は両方 0。毒は回していない。細部は Lab `p1310/notes.md`。
@@ -153,14 +162,6 @@ Calamo #28 を作り、途中で届いた #29 に返事をした便（base `b967
 - **見つけて直した欠陥（同じ commit）**: 全音符のトレモロの対で後ろの和音に臨時記号が 2 つ以上並ぶと、線の右端が 1.29 長かった（`AccidentalGroupLength` が 1 声部だけの列の和音の臨時記号を 1 つ分の幅で数えていた）。掃きで動いた svg は 3 / 1276＝この形の 3 冊だけで、動いた後が LilyPond と同じ（Lab `p1310/svg2`・`acc`）。
 - **Calamo #29（トレモロの後ろのペダルの離し）**: 今の文法で書ける＝`repeat tremolo 12 { … } <>@!sustain`（離しはトレモロの終わり・印は LilyPond と同じ）。`}@mark` のエラーがこの書き方を言うようにした（`Parser.Music.cs`・網は `MidiPedalTests`）。**オーナー判断待ち 2 つ**: `}` に直接付ける書き方を作るか／中の音に付けた離しの時刻（今は最初に弾く瞬間・LilyPond は表示上の頭の時刻）。
 - **次**: #29 の返事があればそれ → leftovers の「第1239」の残り →「第1238」の残り → review.md の 3 つ（`mid-bar-break`・F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。第1308 の未決（録音が無いときの Faders 100% の置き場・Tempo の下限）もオーナー待ち。
-
-## 以下は第1309セッションの経緯
-
-### 1.1 第1309セッション（2026-11-19・YT-DELL2・第1308 と同じ会話）
-
-`-Start p1309` を回し、Calamo の依頼 28 を読むところまでで締めた便（会話が長くなったので、作るのは次の会話。オーナーの指示）。開始時 full 17718 合格 / 1 失敗 / skip 2 / 合計 17721（Lab `p1309` `run1.trx`・失敗は `ScoreVideoShapeTests.AScoreOfOnePage_IsItsMusic_NotTheSheet`＝`s00000.png` を別のプロセスが掴んでいた・不安定な網で、第1308 の終了時は 17719 / 0）。REQUESTS は Calamo #28 が open・Dettato は 0。コードは触っていない。
-- **Calamo #28（2 音トレモロの線を両方の符幹につなげる形・学習用）＝オーナーが受けた（2026-11-19）: `layout { tremoloBeams joined }`・既定は今のまま**。読んだ所と段取りは Lab `sessions/p1309/request28-plan.md`（浮かせる量は `EngravingDefaults.TremoloBeamGap` 1 つで描画の 2 行だけが読む・LilyPond は `\override Beam.gap = #0`＝`beam.cc` `get_gaps` と同じ式に 0 を通す・曲全体で選ぶ前例は `ottavaLine`）。
-- **次**: ① #28 を作る（上の段取り）→ ② leftovers の「第1239」の残り（condensedStaff の終わりは「立っている写し」の場所・刻印の網が無い運び手・「item の時刻」の綴り 3 つ・3 声部の強弱の並び）→「第1238」の残り（combinedStaff の印の re-address・drum 譜の落ちた側のヘアピン・段の部屋の予約の網）。その先は review.md の 3 つ（`mid-bar-break`・F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。第1308 の残り（実機の確認・未決 2 つ）は下の語りに在る。
 
 ## 2. 開いている作業
 
