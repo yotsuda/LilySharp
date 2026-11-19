@@ -19,6 +19,7 @@ using System.Linq;
 using System.Xml.Linq;
 using LilySharp.Core.Midi;
 using LilySharp.Core.MusicXml;
+using LilySharp.Core.MusicXmlImport;
 using LilySharp.Core.Syntax;
 using Xunit;
 
@@ -73,6 +74,22 @@ public class EmptyChordScriptsExportTests
     [InlineData("c''2 <>@accent grace { r16 e''16 } d''2 | c''1 |", "note note[articulations(accent)] note note note")]
     [InlineData("c''2 <>@accent r4 d''4 | c''1 |", "note note[articulations(accent)] note note")]
     public void InMusicXml(string bars, string expected) => Assert.Equal(expected, Xml(bars));
+
+    /// <summary>The fermata over the closing bar line comes back from <c>lysc import</c> as the
+    /// empty chord after the last note it was written as (until session 1329 the import did not
+    /// read <c>&lt;barline&gt;&lt;fermata/&gt;</c> and the round trip lost it); one over a bar line
+    /// within the piece stays out — that empty chord would put it on the next bar's first note.</summary>
+    [Theory]
+    [InlineData("c''2 d''2 | c''1 <>@fermata |", "c''1 <>@fermata")]
+    [InlineData("c''2 d''2 | c''1 <>@fermata.down |", "c''1 <>@fermata.down")]
+    public void TheClosingBarLinesFermata_ComesBackFromTheImport(string bars, string expected)
+    {
+        string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(Book(bars))).ToXml().ToString();
+        Assert.Contains(expected, new MusicXmlImporter().Import(xml).Item1);
+        string within = xml.Replace("</measure>", "<barline location=\"right\"><fermata type=\"upright\"/></barline></measure>");
+        string back = new MusicXmlImporter().Import(within).Item1;
+        Assert.Equal(1, back.Split("<>@fermata").Length - 1);
+    }
 
     /// <summary>A note's own fermata is a &lt;notations&gt; child, not one of &lt;articulations&gt;:
     /// until session 1328 it was written in there, where a reader keeping to the schema finds none.</summary>

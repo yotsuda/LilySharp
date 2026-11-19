@@ -1174,6 +1174,8 @@ internal static class MusicXmlReader
                     Tempo = measure.Tempo, TempoWords = measure.TempoWords, TempoCountHidden = measure.TempoCountHidden,
                     RepeatForward = measure.RepeatForward,
                     BarlineRight = measure.BarlineRight,
+                    // The fermata over the bar line, on the upper staff's line once.
+                    BarFermata = staff == staves[0] ? measure.BarFermata : null,
                 };
                 foreach (var (voice, items) in measure.VoiceItems)
                     if (voiceStaff.GetValueOrDefault(voice, 1) == staff)
@@ -2253,6 +2255,11 @@ internal static class MusicXmlReader
         // A volta bracket closes at this measure's right barline.
         if (endingType is "stop" or "discontinue")
             measure.EndingStop = true;
+
+        // A fermata over the bar line — Lily#'s export writes the one a piece ends on there
+        // (`c''1 <>@fermata`); until session 1329 it was not read and the round trip lost it.
+        if (Local(el, "fermata") is { } fermata)
+            measure.BarFermata = (string?)fermata.Attribute("type") == "inverted" ? "fermata.down" : "fermata";
 
         if ((string?)repeat?.Attribute("direction") == "backward")
             measure.BarlineRight = BarlineKind.RepeatEnd;

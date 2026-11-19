@@ -182,6 +182,9 @@ internal sealed class ImportMeasure
     public bool EndingStop { get; set; }
     /// <summary>The measure's closing bar style.</summary>
     public BarlineKind BarlineRight { get; set; } = BarlineKind.Plain;
+    /// <summary>A fermata over the closing bar line (<c>&lt;barline&gt;&lt;fermata/&gt;</c>):
+    /// <c>"fermata"</c>, or <c>"fermata.down"</c> for an inverted one; null for none.</summary>
+    public string? BarFermata { get; set; }
     /// <summary><c>&lt;measure-style&gt;&lt;multiple-rest&gt;N</c>: this measure opens an
     /// N-bar multi-measure rest (each of the N holds a whole-measure rest); null otherwise.</summary>
     public int? MultipleRest { get; set; }

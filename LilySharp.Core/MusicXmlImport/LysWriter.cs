@@ -1132,6 +1132,12 @@ internal static class LysWriter
             // HandleBarline), so `{ | || g'1 }` is ONE empty bar and g' stood a bar early, on the
             // page and in the sound, with nothing reported (lehmann-flapper5 bar 13).
             string closeBlank = !lead && items.Count == 0 && PlainOrDoubleBarline(last) != "|" ? "| " : "";
+            // A fermata over the piece's closing bar line is an empty chord's after the last
+            // note, which the page stands there (until session 1329 it was not read). Elsewhere
+            // the same empty chord would put it on the next bar's first note, so a fermata over
+            // a bar line within the piece is left out, as before.
+            if (lead && last.BarFermata is { } fermata && i + bars == part.Measures.Count)
+                sb.Append(" <>@").Append(fermata);
             i += bars;
             onLine++;
             if (i < end)
