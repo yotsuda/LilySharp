@@ -489,7 +489,7 @@ internal sealed class ElementCoordinator
                     ChordItem chord => s.Shift + DotColumn.Reserved(chord, value,
                         // The heads stand as the stem the writer turned puts them (a second's
                         // head is the stem's other side), not the voice's.
-                        ChordHeadPositioning.InkRight(chord.Notes, ChordHeadPositioning.CalculateOffsets(chord.Notes, chord.ForcedStemUp ?? s.StemUp, value), value, null), own).OffsetX,
+                        ChordHeadPositioning.InkRight(chord, ChordHeadPositioning.CalculateOffsets(chord.Notes, chord.ForcedStemUp ?? s.StemUp, value), chord.ForcedStemUp ?? s.StemUp, value, null), own).OffsetX,
                     _ => s.Shift + DotColumn.Reserved(s.Item, value, GlyphMetrics.GetNoteheadBBox(value).Right, own).OffsetX,
                 };
                 members.Add(new DotColumnMember(s.Voice, s.ItemIndex, s.Item, own, ownX, s.Pure, stems));

@@ -118,6 +118,20 @@ public class StruckNoteTests
     }
 
     [Fact]
+    public void TheDot_StandsRightOfTheSmallHead_OnTheStemsFarSide()
+    {
+        // MEASURED (the same book, bar 7 `<c'' \struck d''>2.`): a second, the small d'' on the
+        // stem's far side, the c'''s dot 2.578 right of the c'''s head — right of the small head's
+        // own ink. Until session 1330 the dot stood right of a full head there (3.14).
+        string text = Book("<c'' d''@struck>2. |");
+        var glyphs = Glyphs(SvgGenerator.Generate(SyntaxTree.Parse(text)));
+        var ofTheChord = glyphs.Where(g => g.Pos == text.IndexOf('<')).ToArray();
+        double head = glyphs.Single(g => g.Pos == text.IndexOf("c''")).X;
+        double dot = Assert.Single(ofTheChord).X;
+        Assert.InRange(dot - head, 2.578 - 0.011, 2.578 + 0.011);
+    }
+
+    [Fact]
     public void TheNextColumn_IsMeasuredFromTheSmallHead_WhereItIsTheStemsFirst()
     {
         // MEASURED (the same book): stem down with the small head on top, the bar line stands

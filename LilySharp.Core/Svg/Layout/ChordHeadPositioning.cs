@@ -206,6 +206,38 @@ public static class ChordHeadPositioning
         return GlyphMetrics.GetNoteheadBBox(font, noteValue).Right + Math.Max(0, offsets.Max());
     }
 
+    /// <summary><see cref="InkRight(IReadOnlyList{ChordNoteInfo}, double[], int, MusicFontDesign?)"/>
+    /// with a STRUCK member's small head at its own right edge, where it is drawn
+    /// (<see cref="StruckShift"/>), not a full head's.</summary>
+    /// <remarks>
+    /// MEASURED, 2.26.0 (Lab sessions/p1317/lp/s1.ly bar 7, `&lt;c'' \struck d''&gt;2.`): the small
+    ///   head on the stem's far side, the dot stands right of ITS ink (LilyPond's supports are the
+    ///   heads' own extents — lily/dot-column.cc:79-99), 0.55 left of where a full head there puts it.
+    ///   Until session 1330 the floor took a full head's width there.
+    /// </remarks>
+    internal static double InkRight(ChordItem chord, double[] offsets, bool stemUp, int noteValue, MusicFontDesign? headFont)
+    {
+        double right = InkRight(chord.Notes, offsets, noteValue, headFont);
+        if (!HasStruckHead(chord.Notes))
+            return right;
+        var font = headFont ?? GlyphMetrics.StaffHeadFont;
+        double fullRight = GlyphMetrics.GetNoteheadBBox(font, noteValue).Right;
+        var struckFont = GrobFontSize.StruckHeadFontOf(chord);
+        right = double.NegativeInfinity;
+        for (int i = 0; i < chord.Notes.Length; i++)
+        {
+            var note = chord.Notes[i];
+            if (note.IsStruck)
+            {
+                double struckRight = GlyphMetrics.GetNoteheadBBox(struckFont, note.Notehead, Music.StruckNotes.HeadNoteValue).Right;
+                right = Math.Max(right, offsets[i] + StruckShift(stemUp, offsets[i], fullRight, struckRight) + struckRight);
+            }
+            else
+                right = Math.Max(right, offsets[i] + GlyphMetrics.GetNoteheadBBox(font, note.Notehead, noteValue).Right);
+        }
+        return right;
+    }
+
     /// <summary>The right edge of a mixed chord's first head, the one at the stem's far end, in
     /// the chord's frame: what the next column's ideal is measured from.</summary>
     /// <remarks>LILYPOND-REF: lily/note-spacing.cc:46-77 Note_spacing::get_spacing — first_head's

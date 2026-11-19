@@ -1333,7 +1333,7 @@ internal static partial class SharedRenderer
             // what LilyPond gets from uniting the heads' own extents.
             // LILYPOND-REF: lily/dot-column.cc:82-84 — base_x.unite (Stem::first_head (…)).
             double dotStartX = x + DotColumn.OffsetX(
-                ChordHeadPositioning.InkRight(chord.Notes, headOffsets, noteValue, GrobFontSize.FontOf(chord, SizedGrob.NoteHead)),
+                ChordHeadPositioning.InkRight(chord, headOffsets, stemUp, noteValue, GrobFontSize.FontOf(chord, SizedGrob.NoteHead)),
                 dotSupports[..dotSupportCount], resolved, dotWidth) + chord.DotColumnShift;
             // Collision dot side supports — same push as the single-note branch.
             // LILYPOND-REF: lily/note-collision.cc:352-372 check_meshing_chords — add_support.
