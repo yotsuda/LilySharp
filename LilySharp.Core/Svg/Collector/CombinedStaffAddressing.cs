@@ -287,23 +287,69 @@ internal static class CombinedStaffReaddress
     {
         if (marks.IsDefaultOrEmpty || !marks.Any(m => IsANotesMark(m) && byStaff.ContainsKey(m.StaffIndex)))
             return marks;
+        // Where each mark goes by itself (null: its note is engraved by nobody).
+        MusicMarkItem? Moved(MusicMarkItem m, CombinedStaffAddressing map)
+        {
+            var at = new VoiceItemAddress(m.VoiceIndex, m.MeasureIndex, m.AnchorItemIndex);
+            if (map.Translate(at) is { } to)
+                return m with { VoiceIndex = to.VoiceIndex, MeasureIndex = to.MeasureIndex, AnchorItemIndex = to.ItemIndex };
+            if (m.AnchorItemIndex > 0 && map.Translate(at with { ItemIndex = m.AnchorItemIndex - 1 }) is { } before)
+                return m with { VoiceIndex = before.VoiceIndex, MeasureIndex = before.MeasureIndex, AnchorItemIndex = before.ItemIndex + 1 };
+            return null;
+        }
+
+        // The lines whose two ends are paired IN ONE VOICE (TextSpannerEngraver and
+        // OttavaBracketEngraver key their open span by staff and voice, and read the end's item
+        // in the start's voice) go as a pair: both ends moved when they land in one voice; both
+        // dropped when the start's note is engraved by nobody; and BOTH LEFT where they were
+        // collected when the part changes streams between them — `@rit` in a bar the parts play
+        // apart, `@!rit` in a bar part two plays alone. Moved one by one those two ends name two
+        // voices and pair with nothing: no line at all, where the collected numbers still draw
+        // one (Lab sessions/p1321/probe x1, x2).
+        // ⚠️ That last answer is the picture before session 1321, not a right one: the ends are
+        // then read under the part's own numbers. It goes when those engravers carry the end's
+        // own voice, as a hairpin does (HairpinItem.EndVoiceIndex).
+        var stays = new HashSet<int>();
+        var dropped = new HashSet<int>();
+        var open = new Dictionary<(int Staff, int Voice, int Line), int>();
+        for (int i = 0; i < marks.Length; i++)
+        {
+            var m = marks[i];
+            if (!IsANotesMark(m) || !byStaff.TryGetValue(m.StaffIndex, out var map) || PairedLine(m) is not { } line)
+                continue;
+            var key = (m.StaffIndex, m.VoiceIndex, line.Line);
+            if (!line.IsEnd)
+                open[key] = i;
+            else if (open.Remove(key, out int s))
+            {
+                var start = Moved(marks[s], map);
+                var end = Moved(m, map);
+                if (start is null)
+                {
+                    dropped.Add(s);
+                    dropped.Add(i);
+                }
+                else if (end is null || end.VoiceIndex != start.VoiceIndex)
+                {
+                    stays.Add(s);
+                    stays.Add(i);
+                }
+            }
+        }
+
         var built = ImmutableArray.CreateBuilder<MusicMarkItem>(marks.Length);
         var seen = new HashSet<(int, int, int, int, MusicMarkType, string, TextSpanFamily)>();
-        foreach (var m in marks)
+        for (int i = 0; i < marks.Length; i++)
         {
-            if (!IsANotesMark(m) || !byStaff.TryGetValue(m.StaffIndex, out var map))
+            var m = marks[i];
+            if (!IsANotesMark(m) || !byStaff.TryGetValue(m.StaffIndex, out var map) || stays.Contains(i))
             {
                 built.Add(m);
                 continue;
             }
-            var at = new VoiceItemAddress(m.VoiceIndex, m.MeasureIndex, m.AnchorItemIndex);
-            MusicMarkItem? placed = null;
-            if (map.Translate(at) is { } to)
-                placed = m with { VoiceIndex = to.VoiceIndex, MeasureIndex = to.MeasureIndex, AnchorItemIndex = to.ItemIndex };
-            else if (m.AnchorItemIndex > 0 && map.Translate(at with { ItemIndex = m.AnchorItemIndex - 1 }) is { } before)
-                placed = m with { VoiceIndex = before.VoiceIndex, MeasureIndex = before.MeasureIndex, AnchorItemIndex = before.ItemIndex + 1 };
-            else if (IsAnEnd(m.Type))
-                placed = m;
+            if (dropped.Contains(i))
+                continue;
+            var placed = Moved(m, map) ?? (IsAnEnd(m.Type) ? m : null);
             if (placed is null
                 || !seen.Add((placed.StaffIndex, placed.VoiceIndex, placed.MeasureIndex, placed.AnchorItemIndex,
                               placed.Type, placed.Text, placed.SpanFamily)))
@@ -312,6 +358,18 @@ internal static class CombinedStaffReaddress
         }
         return built.ToImmutable();
     }
+
+    /// <summary>For an end of a line that is paired within one voice — a text spanner of its
+    /// family, an ottava bracket — which line and which end; null for every other mark.</summary>
+    private static (int Line, bool IsEnd)? PairedLine(MusicMarkItem m) => m.Type switch
+    {
+        MusicMarkType.TextSpanStart => ((int)m.SpanFamily, false),
+        MusicMarkType.TextSpanStop => ((int)m.SpanFamily, true),
+        MusicMarkType.OttavaUp or MusicMarkType.OttavaDown
+            or MusicMarkType.QuindicesUp or MusicMarkType.QuindicesDown => (-1, false),
+        MusicMarkType.OttavaStop => (-1, true),
+        _ => null,
+    };
 
     private static bool IsAnEnd(MusicMarkType type) => type is MusicMarkType.HairpinStop
         or MusicMarkType.TextSpanStop or MusicMarkType.OttavaStop or MusicMarkType.SustainOff

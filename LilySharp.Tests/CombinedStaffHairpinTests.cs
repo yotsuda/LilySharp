@@ -131,6 +131,19 @@ public class CombinedStaffHairpinTests
     public void TheOtherLinesEnds_GoWithTheirNotes(string fl1, string fl2, string expected)
         => Assert.Equal(expected, Marks(Collect(fl1, fl2)));
 
+    /// <summary>A text spanner and an ottava bracket are paired within one voice, so their two
+    /// ends go as a pair: left where they were collected when the part changes streams between
+    /// them (moved one by one they would name two voices, and no line is drawn), and dropped
+    /// together when the start's note is engraved by nobody — part two's in a unison.</summary>
+    [Theory]
+    [InlineData("c''2 d''2 | R1 | c''1 |", "e'4 f'@rit e' f' | g'4 g' g' g'@!rit | e'1 |", "TextSpanStart:v1:0.1 TextSpanStop:v1:1.3")]
+    [InlineData("c''2 d''2 | R1 | c''1 |", "e'4 f'@8va e' f' | g'4 g' g' g'@!8va | e'1 |", "OttavaUp:v1:0.1 OttavaStop:v1:1.4")]
+    [InlineData("c'4 d'@rit e' f'@!rit | g'1 |", "c'4 d'@rit e' f'@!rit | g'1 |", "TextSpanStart:v0:0.1 TextSpanStop:v0:0.3")]
+    [InlineData("c'4 d'@8va e' f'@!8va | g'1 |", "c'4 d'@8va e' f'@!8va | g'1 |", "OttavaUp:v0:0.1 OttavaStop:v0:0.4")]
+    public void ALinePairedInOneVoice_GoesAsAPair(string fl1, string fl2, string expected)
+        => Assert.Equal(expected, string.Join(" ", Collect(fl1, fl2).MusicMarks.Where(m => m.AnchorItemIndex >= 0)
+            .Select(m => $"{m.Type}:v{m.VoiceIndex}:{m.MeasureIndex}.{m.AnchorItemIndex}")));
+
     /// <summary>A hairpin both parts write in a unison is drawn once; two different ones at
     /// one place are two marks still.</summary>
     [Theory]
