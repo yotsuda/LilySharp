@@ -277,6 +277,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1325セッションの経緯
+
+### 1.1 第1325セッション（2026-11-19・YT-DELL2）
+
+leftovers の「第1323」の残りの便（base `123f35b10`）。開始時 full 17917 合格 / 0 失敗 / skip 2 / 合計 17919（Lab `p1325` `run1.trx`）。終了時 full 17928 合格 / 0 失敗 / skip 2 / 合計 17930（`run5.trx`）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
+- **combinedStaff で、接する 2 本のヘアピンは 1 本の線**（`9c4fc860a`・`[engraving]`）: 第1324 が先どうしを接させた 2 本（パートのヘアピンと、別の声部に刻まれたそのパートの次のヘアピン）は、声部ごとの別々の線に乗っていて高さが最大 1 間ほど違った。直し: そういう対がつなぐ線を run にまとめ、run を 1 回だけ side-position する（`DynamicAlignEngraver.RunsOfLines`＝各線は自分の声部の列を支えに読む・outside-staff の pass も 1 つの group）。別のパートのヘアピンに出会った形（`MetInAnotherVoice`）と、向きの違う次のヘアピンは今までどおり別の線。LILYSHARP-OWN（LilyPond の線は Voice のもの。LilyPond はその小節を 2 声部のままにするので 1 本の線＝その絵）。
+- **MusicXML: unison のヘアピンは各パートの wedge**（`6e9b43a55`）: 測って出た欠陥。第1321 からページは unison のパート 2 の印を落とし、文書はページの対から wedge を書くので、パート 2 の `d'@cresc … f'@!cresc` が文書に無く、その前のヘアピンの stop は小節のほかの direction の後ろに付いていた。直し: 刻まれなかったヘアピンの始まりと stop を collector が持ち（`MeasureCollector.CombinedStaffUnengravedHairpinMarks`・`MoveMarks` が渡す・`Reset` で空にする）、書き出しが condensedStaff の重複と同じ形で対にする。`MeetsVoice` で終わるヘアピンは文書では自分のパートの次の始まりで止める。相手の solo の下の休符で始まるヘアピンも書く。
+- 網 `CombinedStaffHairpinTests` +6 行・`MusicXmlWedgePairTests` +5 行。毒は 11 本（赤 5・観測者なし 5＝remarks に明記・死んだ番 1 は削った＝Lab `p1325/poisons.ps1`）と 10 本（赤 6・緑 4 は冗長な条件と置き場所の違う Clear＝削った・移した＝`poisons-xml.ps1`）。全 svg の掃き 0 / 1276・全冊の MusicXML の掃き 0 / 1276（追跡の本にこの形は 0 冊・陽性対照は探り譜 Lab `p1325/probe` h1〜h5）。行番号の表は再生成。
+- 不安定な網を 2 種見た（full で 1 回ずつ・単独では緑＝leftovers の「第1325」）。
+- **次**: leftovers の「第1325」（h4＝unison の後にパート 2 だけが次のヘアピンを始める形・決めごとの面あり）→「第1323」の長い音の間の終わり（未決）と「第1321」の残り（h13・h10）→ review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
+
 ## 以下は第1324セッションの経緯
 
 ### 1.1 第1324セッション（2026-11-19・YT-DELL2・第1323 と同じ会話）

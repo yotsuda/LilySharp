@@ -146,6 +146,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1327セッション（2026-11-19・YT-DELL2・第1326 と同じ会話）
+
+オーナー決定 2026-11-19 の 3 件の便（base `03cdad597`）。開始時 full 17932 合格 / 0 失敗 / skip 2 / 合計 17934（Lab `p1327` `run1.trx`）。終了時 full 17944 合格 / 0 失敗 / skip 2 / 合計 17946（`-End` の trx）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
+- **オーナー決定 2026-11-19**（第1326 の報告の 3 問への返事）: ① 強弱は section の頭でリセット＝**ヘアピンの到達分だけ戻す**（書いた強弱は今までどおり続く・**テンポはリセットしない**）② unison の後のパート 2 の次のヘアピンは、パート 1 が自分の終わりを持たないときだけ接させる（持つときは今のまま）③ 相手が長い音を伸ばしている間の休符の上の `@!cresc` は書いた拍で止める。
+- **3 件とも実装**（`69bf832c3`・`[engraving][playback]`）: ① MIDI（歌い手も）＝音に section の 1 回を刻み（`MidiNote.SectionPlay`・`PlaySectionByName` が始まりを控える）、着地しないヘアピンは次の section で終わるときだけ持ち越し（ページの carry の規則）、それ以外は自分の section の音楽の終わりで切る。到達点は section の中だけ続く。② `MoveMarks` が落ちたパート 2 の始まりの代わりに立つパート 1 の印（`TwinOf`）を継がせる（`MeetsVoice`）・パート 1 がその後に強弱・ヘアピン・stop を書いていれば継がない（`EndsInItsPart`）。MusicXML のパート 1 の wedge はページの終わりで止める（`_meetsHairpins`）。③ 何も刻まれない拍の stop は鳴り続けている音の中に置き、時刻を保つ（`MusicMarkItem.WithinItem`・`HairpinItem.EndWithin`）＝X はその音の列から次の列（無ければ小節の終わり）までの時刻の比例（LILYSHARP-OWN・LilyPond は `\!` を失って描かない）。text spanner は今のまま。
+- 網 `InstrumentHairpinMidiTests` +1 本・`CombinedStaffHairpinTests` +8 行と 1 本・`MusicXmlWedgePairTests` +1 行。毒 24 本のうち 22 本が赤（観測者なし 2＝行に明記・Lab `p1327/poisons1.ps1`・`poisons2.ps1`）。掃き: 全 svg 0 / 1276・全 MusicXML 0 / 1276・全 MIDI 1 / 1276（`Fixtures/test/hairpin-in-a-repeated-section.lys`＝狙いの形）。行番号の表は再生成。
+- **次**: leftovers の「第1327」（`@!rit` の同じ形・`FirstOf` の書いた順・装飾音と section の頭）→「第1321」の h13 → review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
+
+## 以下は第1326セッションの経緯
+
 ### 1.1 第1326セッション（2026-11-19・YT-DELL2・第1325 と同じ会話）
 
 leftovers の「第1325」「第1321」の未測定を測る便（base `0156cbcc7`）。開始時 full 17928 合格 / 0 失敗 / skip 2 / 合計 17930（Lab `p1326` `run1.trx`）。終了時 full 17932 合格 / 0 失敗 / skip 2 / 合計 17934（`-End` の trx）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
@@ -153,17 +163,6 @@ leftovers の「第1325」「第1321」の未測定を測る便（base `0156cbcc
 - **MIDI: ヘアピンは前のヘアピンが到達した強さから始まる・同じ値で書き直した強弱も強弱**（`e67477e77`・`[playback]`）: 測って出た一般の欠陥 2 つ（combinedStaff に限らない・`SungVoices.Swells`＝歌い手と楽器の 1 つの規則）。⑴ 着地する強弱のないヘアピンの到達点は「強弱が書かれるまで続く」のに、次のヘアピンの最初の音だけ元の強さに落ちた（`@p … @cresc … @decresc … @p` が 70 75 81 → 70 68 65 63。今は 70 75 81 86 81 75 70）。⑵ 歩きは「数字が変わったら強弱」と読むので、立っている値と同じ値で書いた強弱は見えず、p からの decrescendo が次の `@p` を通り抜けた（その音が 66、次が 60）。直し: 書き出しが「そのパート（grand staff は手のどちらか）がその瞬間に強弱を書いた」音に印を付け（`MidiNote.LevelWritten`・`_levelLog` から）、ヘアピンはそこで止まり、向きが合えば着地する。ヘアピン自身の瞬間に書かれた強弱（`@p@cresc`・もう片方の手の音）は出発点。
 - 網 `InstrumentHairpinMidiTests` +2 本（行は 12）。毒 12 本のうち 10 本が赤（緑 1 は別の条件と同じことを言う field＝削った・1 は観測者なし＝行に明記・Lab `p1326/poisons.ps1`）。全冊の MIDI の掃き 8 / 1276（どれもヘアピンの検査用の本・`p1326/midsweep/midi-diff.txt`）。行番号の表は再生成。
 - **次**: leftovers の「第1326」（強弱のない本で section を 2 回弾くと crescendo が積み上がる＝決めごとの面）と「第1325」の h4（決めごとの面）はオーナーに訊く形 →「第1323」の長い音の間の終わり（未決）・「第1321」の h13 → review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
-
-## 以下は第1325セッションの経緯
-
-### 1.1 第1325セッション（2026-11-19・YT-DELL2）
-
-leftovers の「第1323」の残りの便（base `123f35b10`）。開始時 full 17917 合格 / 0 失敗 / skip 2 / 合計 17919（Lab `p1325` `run1.trx`）。終了時 full 17928 合格 / 0 失敗 / skip 2 / 合計 17930（`run5.trx`）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
-- **combinedStaff で、接する 2 本のヘアピンは 1 本の線**（`9c4fc860a`・`[engraving]`）: 第1324 が先どうしを接させた 2 本（パートのヘアピンと、別の声部に刻まれたそのパートの次のヘアピン）は、声部ごとの別々の線に乗っていて高さが最大 1 間ほど違った。直し: そういう対がつなぐ線を run にまとめ、run を 1 回だけ side-position する（`DynamicAlignEngraver.RunsOfLines`＝各線は自分の声部の列を支えに読む・outside-staff の pass も 1 つの group）。別のパートのヘアピンに出会った形（`MetInAnotherVoice`）と、向きの違う次のヘアピンは今までどおり別の線。LILYSHARP-OWN（LilyPond の線は Voice のもの。LilyPond はその小節を 2 声部のままにするので 1 本の線＝その絵）。
-- **MusicXML: unison のヘアピンは各パートの wedge**（`6e9b43a55`）: 測って出た欠陥。第1321 からページは unison のパート 2 の印を落とし、文書はページの対から wedge を書くので、パート 2 の `d'@cresc … f'@!cresc` が文書に無く、その前のヘアピンの stop は小節のほかの direction の後ろに付いていた。直し: 刻まれなかったヘアピンの始まりと stop を collector が持ち（`MeasureCollector.CombinedStaffUnengravedHairpinMarks`・`MoveMarks` が渡す・`Reset` で空にする）、書き出しが condensedStaff の重複と同じ形で対にする。`MeetsVoice` で終わるヘアピンは文書では自分のパートの次の始まりで止める。相手の solo の下の休符で始まるヘアピンも書く。
-- 網 `CombinedStaffHairpinTests` +6 行・`MusicXmlWedgePairTests` +5 行。毒は 11 本（赤 5・観測者なし 5＝remarks に明記・死んだ番 1 は削った＝Lab `p1325/poisons.ps1`）と 10 本（赤 6・緑 4 は冗長な条件と置き場所の違う Clear＝削った・移した＝`poisons-xml.ps1`）。全 svg の掃き 0 / 1276・全冊の MusicXML の掃き 0 / 1276（追跡の本にこの形は 0 冊・陽性対照は探り譜 Lab `p1325/probe` h1〜h5）。行番号の表は再生成。
-- 不安定な網を 2 種見た（full で 1 回ずつ・単独では緑＝leftovers の「第1325」）。
-- **次**: leftovers の「第1325」（h4＝unison の後にパート 2 だけが次のヘアピンを始める形・決めごとの面あり）→「第1323」の長い音の間の終わり（未決）と「第1321」の残り（h13・h10）→ review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
 
 ## 2. 開いている作業
 
