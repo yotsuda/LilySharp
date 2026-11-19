@@ -146,6 +146,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1314セッション（2026-11-19・YT-DELL2・第1313 と同じ会話）
+
+Calamo の依頼 30 を直した便（base `c13aaa228`・`0f68f197f`）。開始時 full 17785 合格 / 0 失敗 / skip 2 / 合計 17787（Lab `p1314` `run1.trx`）。終了時 full 17799 合格 / 0 失敗 / skip 2 / 合計 17801（`run2.trx`）。REQUESTS は 30 を `fixed`（Calamo 側は未 commit）・open は両方 0。全 svg の掃きは 0 / 1276。並行の別セッションの 2 commit（`9361a0c0a`・`795210f8d`＝拡張）が間に在る。
+- **曲の最後の空の和音で終わる線を描く**: 満ちた小節の後ろの `<>` の印は「次の小節の頭」に住所が付き、曲の最後ではその小節が無い＝どの engraver も黙って飛ばしていた（ペダルの括弧は消える・`@rit … <>@!rit` は文字ごと消える・8va は始点で潰れる。ヘアピンだけ `endsAtFinalBar` で描けていた）。`TrailingMarks.OntoTheLastBar`（新規・score を組む 3 か所で、捕まえた content に当てる＝収集のリストは書き換えない）が、線の終わり（ペダル 3 種の離し・text spanner の stop・ottava の stop）を最後の小節の末尾（item の数・小節の長さ）へ付け直す＝小節が満ちていないときの `<>` が元から持つ住所。
+- **付け直すのは線の終わりだけ（LilyPond 2.26.0 の実測・Lab `p1314/lp/end.ly`）**: LilyPond は最後の `<>` で終わる括弧・text spanner・ottava・trill の線を終わりの小節線まで描き、そこに書いた強弱・フェルマータ・文字は描かない。最初の版は強弱と script も動かし、掃きが回帰譜 `audit/lp-regression/lys/empty-chord.lys`（最後が `c1@decresc <>@pp`）で pp が増えたと言った＝戻した。
+- **`<>@!8va` は次の音を巻き込んでいた（同じ commit）**: ottava の終わりは「書いた音符を含む」ので直前に足した item の長さを足すが、`<>` は item を足さない＝前の音符の長さをもう一度足していた（`f' <>@!8va | g'1` の g が 1 オクターブ下・Lab `p1314/probe` o2b／o2h）。
+- 網 `TrailingEmptyChordTests` 14 本・毒 14 本（Lab `p1314/poisons.ps1`）。CHANGELOG は 2 つとも 2 件。
+- **残り（leftovers の「第1314」の節）**: 最後の `<>` で終わる trill の線は未（LilyPond は描く）／曲の途中の `f' <>@!8va |` と `f'@!8va |` で括弧の右端が違う（小節の終わり 28.86 と最後の音の列 28.03・LilyPond 未測定）／最後の `<>` の強弱・script が黙って描かれないことを `check` で言うかはオーナー判断。
+- **次**: leftovers の「第1314」→「第1313」の節 →「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決（録音が無いときの Faders 100% の置き場・Tempo の下限）はオーナー待ち。
+
+## 以下は第1313セッションの経緯
+
 ### 1.1 第1313セッション（2026-11-19・YT-DELL2・新しい会話）
 
 leftovers の「第1239」の残りを閉じた便（base `145df3333`＝前の会話が第1312 の docs の後に入れた 2 commit を含む・その経緯はこの文書に無い）。開始時 full 17746 合格 / 0 失敗 / skip 2 / 合計 17748（Lab `p1313` `run1.trx`）。終了時 full 17785 合格 / 0 失敗 / skip 2 / 合計 17787（`run3.trx`）。REQUESTS の open は両方 0。全 svg の掃きは 0 / 1276・全冊の MusicXML の掃きも 0 / 1276（どちらも結果＝追跡の本にその形が無い。陽性対照は探り譜）。
@@ -155,15 +167,6 @@ leftovers の「第1239」の残りを閉じた便（base `145df3333`＝前の�
 - **見つけた欠陥 2＝単独のドラム音符の印が MusicXML に無い（`66412b223`・`[export]`）**: `ProcessDrumNote` は音符に書いた印を 1 つも読まなかった（強弱・ヘアピン・アクセント・フェルマータ・文字。和音と休符のものは書かれていた）。和音の構成音と同じ `ProcessArticulations` を呼ぶ。網 4 行・毒 1 本。CHANGELOG は欠陥 1 と 2。
 - **測っていない・残り**: Lab `p1242/leftovers.md` の「第1313」の節（運び手が `CollectArticulations` に渡す時刻の網・チャートの連符の MIDI・連符の中の slash と bare の `@cross`／数字付き低音・MusicXML の読み戻し）。「第1239」の残りは condensedStaff の終わりの場所の 1 行だけ。
 - **次**: leftovers の「第1313」の節 →「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決（録音が無いときの Faders 100% の置き場・Tempo の下限）はオーナー待ち。
-
-## 以下は第1312セッションの経緯
-
-### 1.1 第1312セッション（2026-11-19・YT-DELL2・第1310 と同じ会話）
-
-Calamo #29 の 2 を直した便（base `b6f806dfe`）。開始時 full 17741 合格 / 0 失敗 / skip 2 / 合計 17743（Lab `p1312` `run1.trx`）。終了時 full 17744 合格 / 0 失敗 / skip 2 / 合計 17746（`run2.trx`）。REQUESTS は #29 を `fixed`・open は両方 0。毒は回していない。
-- **トレモロの中のペダルの印は 1 回だけ・その音の頭が立つ所で（オーナー決定 2026-11-19「B」）**: `MidiExporter.ProcessRepeat` は tremolo の本体を回数ぶん歩き、ペダルの印を毎回読んでいた（`{ e32@sustain g }` ×8 は 1 回踏んで 7 回踏み替え・2 つ目の音の離しは 1 打後）。今は最初の 1 回の印だけを残し、本体の中の位置をかたまり全体に引き伸ばした時刻に置く（`StandTremoloPedals`）＝1 つ目の音は頭・2 つ目は半分。LilyPond と同じ時刻（Calamo の再現譜で tick 1080＝3/16 後）。ペダルの 3 種だけ＝強弱・アクセントは今までどおり打つたびに効く。探り譜と前後の表は Lab `p1312/in`・`p1311/notes.md`。網 `MidiPedalTests.InsideATremolo_ItIsOneMark_WhereItsHeadStands`。MIDI の掃きは 0 / 1276（Lab `p1312/midi`＝追跡の本とコーパスに、トレモロの中にペダルを書く本は無い）。
-- **測っていない**: トレモロの中のヘアピン・text spanner・ottava の端が MIDI でどう鳴るか（同じ「毎回読む」の形がありうる）。
-- **次**: leftovers の「第1239」の残り →「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決（録音が無いときの Faders 100% の置き場・Tempo の下限）はオーナー待ち。
 
 ## 2. 開いている作業
 
