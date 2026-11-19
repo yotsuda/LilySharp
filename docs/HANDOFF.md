@@ -146,23 +146,21 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1310セッション（2026-11-19・YT-DELL2・新しい会話）
+
+Calamo #28 を作り、途中で届いた #29 に返事をした便（base `b96781b43`・途中でオーナーの `7cd26b659`）。開始時 full 17717 合格 / 2 失敗 / skip 2 / 合計 17721（Lab `p1310` `run1.trx`・失敗は `IncludeFilesTests.ABooksInclude_SavedAgain_…` と `KeystrokeSideWorkTests.TheCaretOnANote_OfABookWithIncludes_…`＝2 本だけ回すと緑の不安定な網）。終了時 full 17733 合格 / 0 失敗 / skip 2 / 合計 17735（`run3.trx`・+14 はこの便の網）。REQUESTS は #28 `fixed`・#29 `question`・open は両方 0。毒は回していない。細部は Lab `p1310/notes.md`。
+- **`layout { tremoloBeams gapped | joined }`（#28・`970e47f6d`・`TremoloBeamsKey`）**: `joined` は LilyPond の `Beam.gap` を 0 にして同じ式を通す（`EngravingStyle.TremoloBeamGap`・読むのは `SharedRenderer.Beams.cs` だけ・間隔は動かない）。`--set`・`.ly`（`\override Beam.gap = #0`）・補完と色・文書。LilyPond 2.26.0 と線の長さ 0.01 以内（Lab `p1310/trem`）。網 `TremoloBeamsTests`。実機は `MANUAL-CHECKS` の `tremoloBeams` の行。
+- **見つけて直した欠陥（同じ commit）**: 全音符のトレモロの対で後ろの和音に臨時記号が 2 つ以上並ぶと、線の右端が 1.29 長かった（`AccidentalGroupLength` が 1 声部だけの列の和音の臨時記号を 1 つ分の幅で数えていた）。掃きで動いた svg は 3 / 1276＝この形の 3 冊だけで、動いた後が LilyPond と同じ（Lab `p1310/svg2`・`acc`）。
+- **Calamo #29（トレモロの後ろのペダルの離し）**: 今の文法で書ける＝`repeat tremolo 12 { … } <>@!sustain`（離しはトレモロの終わり・印は LilyPond と同じ）。`}@mark` のエラーがこの書き方を言うようにした（`Parser.Music.cs`・網は `MidiPedalTests`）。**オーナー判断待ち 2 つ**: `}` に直接付ける書き方を作るか／中の音に付けた離しの時刻（今は最初に弾く瞬間・LilyPond は表示上の頭の時刻）。
+- **次**: #29 の返事があればそれ → leftovers の「第1239」の残り →「第1238」の残り → review.md の 3 つ（`mid-bar-break`・F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。第1308 の未決（録音が無いときの Faders 100% の置き場・Tempo の下限）もオーナー待ち。
+
+## 以下は第1309セッションの経緯
+
 ### 1.1 第1309セッション（2026-11-19・YT-DELL2・第1308 と同じ会話）
 
 `-Start p1309` を回し、Calamo の依頼 28 を読むところまでで締めた便（会話が長くなったので、作るのは次の会話。オーナーの指示）。開始時 full 17718 合格 / 1 失敗 / skip 2 / 合計 17721（Lab `p1309` `run1.trx`・失敗は `ScoreVideoShapeTests.AScoreOfOnePage_IsItsMusic_NotTheSheet`＝`s00000.png` を別のプロセスが掴んでいた・不安定な網で、第1308 の終了時は 17719 / 0）。REQUESTS は Calamo #28 が open・Dettato は 0。コードは触っていない。
 - **Calamo #28（2 音トレモロの線を両方の符幹につなげる形・学習用）＝オーナーが受けた（2026-11-19）: `layout { tremoloBeams joined }`・既定は今のまま**。読んだ所と段取りは Lab `sessions/p1309/request28-plan.md`（浮かせる量は `EngravingDefaults.TremoloBeamGap` 1 つで描画の 2 行だけが読む・LilyPond は `\override Beam.gap = #0`＝`beam.cc` `get_gaps` と同じ式に 0 を通す・曲全体で選ぶ前例は `ottavaLine`）。
 - **次**: ① #28 を作る（上の段取り）→ ② leftovers の「第1239」の残り（condensedStaff の終わりは「立っている写し」の場所・刻印の網が無い運び手・「item の時刻」の綴り 3 つ・3 声部の強弱の並び）→「第1238」の残り（combinedStaff の印の re-address・drum 譜の落ちた側のヘアピン・段の部屋の予約の網）。その先は review.md の 3 つ（`mid-bar-break`・F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。第1308 の残り（実機の確認・未決 2 つ）は下の語りに在る。
-
-## 以下は第1308セッションの経緯
-
-### 1.1 第1308セッション（2026-11-18〜19・YT-DELL2・新しい会話）
-
-オーナーの依頼を順に受けた便（`-Start` は終わりに・base `c993f302a`）。終了時 full 17719 合格 / 0 失敗 / skip 2 / 合計 17721（Lab `p1308` `run1.trx`）・拡張 1294 / 0 / skip 1。REQUESTS は Calamo #27 を `fixed` にした・open は両方 0。Lily# の commit は `1a3b9972e` からの 20 個（1 個はオーナー側の `e3765de71`）＝未 push。経緯は commit message と設計メモに在る。毒は回していない。
-- **メトロノームのウィンドウの整理（オーナー決定・`docs/transport-mixer-design.md` §9〜§13）**: 録音のパートの行は vocals・guitar・piano・other・bass・drums の順／Score と Recording の見出しにボタン 2 つ＝グループのオン／オフ（行の選択を保つ・Score は **Play**）と **All**／**Loop グループ・A-B ボタンと番号欄・8 本の帯・右クリックの Play from Here／A Here／B Here は撤去**、Repeat はヘッダの ⏹ の右（`ab-repeat-design.md` §0）／Tempo は 1 行で開閉なし／Faders 100% は Octave の行の右／小節はヘッダの時間の上（`12 / 118`）。使われないコードも掃除。
-- **録音**: Speed and pitch は撤去＝残るのは **Octave** だけ。隣のファイルの `tuning` は使わない（3 つの形を試してやめた＝理由と再検討の条件は `recording-design.md` §3 の 2 の ★）。**録音つきの譜面から録音なしへ切り替えるとパネルに前の録音が残る**（`sendRecording` の順番の入れ替わり）を直した `3037c1739`。
-- **拍の繰り返し `{ … } % % %`（Calamo #27・オーナー決定・`b3dce0d24`・`percent-repeat-design.md` §5・GRAMMAR の BeatRepeat）**: 第904 で消したものを戻した。診断 LYS1074。絵は LilyPond 2.26.0 と同じ並び（Lab `p1308/beat`）。
-- **実機の確かめ方**: 隔離した VS Code を CDP で読む型＝Lab `p1308/e2e`。
-- **残り**: 実機は小節の表示と録音の切り替えだけ見た＝ほかは `MANUAL-CHECKS`（「Repeat はヘッダ」「Octave だけの録音の行・1 行の Tempo」）。site は release のときに書き直す。拍の繰り返しは補完なし・ドラム譜の行は読まない。未決＝録音が無いときの Faders 100% の置き場・Tempo の下限（今 50%）。
-- **次**: 第1309 の語りの末尾。
 
 ## 2. 開いている作業
 

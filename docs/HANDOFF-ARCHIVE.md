@@ -277,6 +277,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1308セッションの経緯
+
+### 1.1 第1308セッション（2026-11-18〜19・YT-DELL2・新しい会話）
+
+オーナーの依頼を順に受けた便（`-Start` は終わりに・base `c993f302a`）。終了時 full 17719 合格 / 0 失敗 / skip 2 / 合計 17721（Lab `p1308` `run1.trx`）・拡張 1294 / 0 / skip 1。REQUESTS は Calamo #27 を `fixed` にした・open は両方 0。Lily# の commit は `1a3b9972e` からの 20 個（1 個はオーナー側の `e3765de71`）＝未 push。経緯は commit message と設計メモに在る。毒は回していない。
+- **メトロノームのウィンドウの整理（オーナー決定・`docs/transport-mixer-design.md` §9〜§13）**: 録音のパートの行は vocals・guitar・piano・other・bass・drums の順／Score と Recording の見出しにボタン 2 つ＝グループのオン／オフ（行の選択を保つ・Score は **Play**）と **All**／**Loop グループ・A-B ボタンと番号欄・8 本の帯・右クリックの Play from Here／A Here／B Here は撤去**、Repeat はヘッダの ⏹ の右（`ab-repeat-design.md` §0）／Tempo は 1 行で開閉なし／Faders 100% は Octave の行の右／小節はヘッダの時間の上（`12 / 118`）。使われないコードも掃除。
+- **録音**: Speed and pitch は撤去＝残るのは **Octave** だけ。隣のファイルの `tuning` は使わない（3 つの形を試してやめた＝理由と再検討の条件は `recording-design.md` §3 の 2 の ★）。**録音つきの譜面から録音なしへ切り替えるとパネルに前の録音が残る**（`sendRecording` の順番の入れ替わり）を直した `3037c1739`。
+- **拍の繰り返し `{ … } % % %`（Calamo #27・オーナー決定・`b3dce0d24`・`percent-repeat-design.md` §5・GRAMMAR の BeatRepeat）**: 第904 で消したものを戻した。診断 LYS1074。絵は LilyPond 2.26.0 と同じ並び（Lab `p1308/beat`）。
+- **実機の確かめ方**: 隔離した VS Code を CDP で読む型＝Lab `p1308/e2e`。
+- **残り**: 実機は小節の表示と録音の切り替えだけ見た＝ほかは `MANUAL-CHECKS`（「Repeat はヘッダ」「Octave だけの録音の行・1 行の Tempo」）。site は release のときに書き直す。拍の繰り返しは補完なし・ドラム譜の行は読まない。未決＝録音が無いときの Faders 100% の置き場・Tempo の下限（今 50%）。
+- **次**: 第1309 の語りの末尾。
+
 ## 以下は第1307セッションの経緯
 
 ### 1.1 第1307セッション（2026-11-18・YT-DELL2・第1306 とは別の会話）
