@@ -6050,7 +6050,15 @@ public sealed class MusicXmlExporter
     /// and trill and the XML had none (session 1232).
     /// </remarks>
     private void ProcessGraceScripts(IEnumerable<SyntaxNode> annotations, MusicXmlNote xmlNote)
-        => ProcessArticulations(annotations.Where(annotation =>
+    {
+        // The scripts an empty chord before this grace wrote are its own: the grace begins at the
+        // empty chord's moment, and the page (and LilyPond) draw them on its column. Until session
+        // 1329 the main note after the grace took them here (ProcessArticulations passes graces
+        // by), while the page drew `c''2 <>@accent grace { e''16 } d''2`'s accent on the e''
+        // (Lab sessions/p1329/g s2).
+        if (!xmlNote.IsChord && _heldScripts.Remove(_currentPartName ?? "", out var held))
+            annotations = held.Scripts.Cast<SyntaxNode>().Concat(annotations).ToList();
+        ProcessArticulations(annotations.Where(annotation =>
             Semantics.GraceBodySupport.IsCarriedScript(annotation)
             || Semantics.GraceBodySupport.IsCarriedThumb(annotation)
             || Semantics.GraceBodySupport.IsCarriedGesture(annotation)
@@ -6068,6 +6076,7 @@ public sealed class MusicXmlExporter
             // the run or at its end (CarriedBreath / InnerBreaths); a grace rest's is not drawn.
             || (!xmlNote.IsRest && annotation is ArticulationSyntax
                 { Type: ArticulationType.Breath or ArticulationType.Caesura })), xmlNote);
+    }
 
     /// <summary>
     /// Writes the grace notes of a <c>grace { … }</c> body.

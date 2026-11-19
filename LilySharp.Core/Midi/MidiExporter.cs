@@ -3985,6 +3985,12 @@ public sealed class MidiExporter
         // Where it stands and how long it lasts, for the editor to light it while it lasts
         // (MidiTrack.TextMarks; owner's request 2026-11-17) — kept however the clock moves below.
         int start = _currentTick, ordinal = NextOrdinal(rest.SourceStart);
+        // A rest takes the scripts an empty chord before it wrote, as the page and LilyPond draw
+        // them on it (`c''2 <>@accent r4 d''4`), and sounds none: until session 1329 they went on
+        // to the d'' (Lab sessions/p1329/g r1). A spacer is left out — LilyPond hangs them on its
+        // moment with no support while the page draws them on the next note (leftovers p1329).
+        if (rest.RestText == "r")
+            _heldScripts.Remove(_currentPart ?? "", out _);
         ProcessRestTime(rest, conductorTrack);
         if (track != null && _currentTick > start)
             track.TextMarks.Add(new TextMark(start, _currentTick - start, rest.SourceStart, ordinal, _currentPart));
@@ -5006,7 +5012,8 @@ public sealed class MidiExporter
                     if (note.Duration != null) written = note.Duration.ToFraction();
                     int g = GraceTicks(written);
                     int midiPitch = SoundKey(CalculateRelativeMidiPitch(note.Pitch), note.SourceStart);
-                    track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, _currentTick, g,
+                    var (graceVelocity, graceLength) = GraceScripts(note.Articulations, g);
+                    track.Notes.Add(new MidiNote(track.Channel, midiPitch, graceVelocity, _currentTick, graceLength,
                         note.SourceStart, QuarterBend: note.Pitch.QuarterOffset,
                         SourceOrdinal: NextOrdinal(note.SourceStart), Timbre: _currentTimbre, Part: _currentPart,
                         IsGrace: true));
@@ -5022,7 +5029,8 @@ public sealed class MidiExporter
                     if (drum.Duration != null) written = drum.Duration.ToFraction();
                     int g = GraceTicks(written);
                     var info = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
-                    track.Notes.Add(new MidiNote(9, info.GmKey, _velocity, _currentTick, g,
+                    var (graceVelocity, graceLength) = GraceScripts(drum.Articulations, g);
+                    track.Notes.Add(new MidiNote(9, info.GmKey, graceVelocity, _currentTick, graceLength,
                         drum.SourceStart, SourceOrdinal: NextOrdinal(drum.SourceStart),
                         Timbre: 9, Part: _currentPart, IsGrace: true));
                     _currentTick += g;
@@ -5034,6 +5042,7 @@ public sealed class MidiExporter
                     if (chord.Duration != null) written = chord.Duration.ToFraction();
                     int g = GraceTicks(written);
                     int chordOrdinal = NextOrdinal(chord.SourceStart);
+                    var (graceVelocity, graceLength) = GraceScripts(chord.Articulations, g);
                     // Within-chord relative octave: the root's LETTER is the chord's ANCHOR
                     // and every other member STACKS above it, and the item AFTER the chord is
                     // relative to that anchor. Asked of ResolveChordMemberPitch, which is what
@@ -5052,7 +5061,7 @@ public sealed class MidiExporter
                                 chordShift, ref firstNoteName, ref firstOctave),
                             chord.SourceStart);
                         isFirst = false;
-                        track.Notes.Add(new MidiNote(track.Channel, mp, _velocity, _currentTick, g,
+                        track.Notes.Add(new MidiNote(track.Channel, mp, graceVelocity, _currentTick, graceLength,
                             chord.SourceStart, QuarterBend: pitch.QuarterOffset,
                             SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart,
                             IsGrace: true, MemberPos: pitch.SourceStart));
@@ -5066,7 +5075,7 @@ public sealed class MidiExporter
                         foreach (var sn in shapeNotes)
                             track.Notes.Add(new MidiNote(track.Channel,
                                 SoundKey(WrittenToMidi(sn.Step, sn.Alter, sn.Octave), chord.SourceStart),
-                                _velocity, _currentTick, g, chord.SourceStart,
+                                graceVelocity, _currentTick, graceLength, chord.SourceStart,
                                 SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart,
                                 IsGrace: true));
                     }
@@ -5088,7 +5097,9 @@ public sealed class MidiExporter
                     if (rest.Duration != null) written = rest.Duration.ToFraction();
                     int g = GraceTicks(written);
                     // A grace rest is a silent spacer: it consumes grace time (the
-                    // following note steals it) but emits no note.
+                    // following note steals it) but emits no note — and takes the scripts an
+                    // empty chord before it wrote, as the page draws them on its column.
+                    GraceScripts(rest.Articulations, g);
                     _currentTick += g;
                     _pendingGraceSteal += g;
                     break;
@@ -5125,6 +5136,25 @@ public sealed class MidiExporter
             foreach (var held in heldScripts)
                 (velocity, durationPercent) = ApplyArticulationType(held, velocity, durationPercent);
         return (velocity, durationPercent);
+    }
+
+    /// <summary>The velocity and the sounding length of a grace that takes <paramref name="ticks"/>:
+    /// the scripts the page draws on it (GraceBodySupport.IsCarriedScript) and those an empty chord
+    /// before it wrote (<see cref="_heldScripts"/>: the grace begins at its moment), played as a
+    /// full-size note's are.</summary>
+    /// <remarks>Until session 1329 a grace sounded none: `grace { e''16@accent }` played at the
+    /// standing velocity, and `c''2 &lt;&gt;@accent grace { e''16 } d''2` accented the d'' while the
+    /// page (and LilyPond) drew the accent on the e'' (Lab sessions/p1329/g s2).</remarks>
+    private (int Velocity, int Ticks) GraceScripts(IEnumerable<SyntaxNode> annotations, int ticks)
+    {
+        int velocity = _velocity, durationPercent = 100;
+        if (_heldScripts.Remove(_currentPart ?? "", out var held))
+            foreach (var type in held)
+                (velocity, durationPercent) = ApplyArticulationType(type, velocity, durationPercent);
+        foreach (var annotation in annotations)
+            if (annotation is ArticulationSyntax script && Semantics.GraceBodySupport.IsCarriedScript(script))
+                (velocity, durationPercent) = ApplyArticulationType(script.Type, velocity, durationPercent);
+        return (velocity, Math.Max(1, ticks * durationPercent / 100));
     }
 
     // LILYPOND-REF: ly/articulate.ly — duration factors: ac:staccatoFactor (1 . 2) = 50%,

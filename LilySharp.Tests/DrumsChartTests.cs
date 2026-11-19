@@ -167,6 +167,16 @@ public class DrumsChartTests
         Assert.All(notes, n => Assert.Equal((9, 38), (n.Channel, n.Pitch)));
     }
 
+    /// <summary>A flam's grace plays the script drawn on it, as a full-size stroke does (until
+    /// session 1329 a grace played none).</summary>
+    [Fact]
+    public void AFlamsGrace_PlaysItsAccent()
+    {
+        int Grace(string music) => new MidiExporter().Export(SyntaxTree.Parse(Book(music)))
+            .Tracks.SelectMany(t => t.Notes).OrderBy(n => n.StartTick).First().Velocity;
+        Assert.Equal(Grace("r2. acciaccatura { sn16 } sn4 |") + 20, Grace("r2. acciaccatura { sn16@accent } sn4 |"));
+    }
+
     [Fact]
     public void ALineThatIsNotDrums_DrawsTheChartAsWritten()
     {

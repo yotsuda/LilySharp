@@ -65,6 +65,13 @@ public class EmptyChordScriptsExportTests
     [InlineData("c''2 d''2 | c''1 <>@fermata.down |", "note note note barline[fermata:inverted]")]
     // …the other scripts nowhere, as on the page.
     [InlineData("c''2 d''2 | c''1 <>@accent |", "note note note")]
+    // A grace or a rest that begins at its moment takes them, as the page and LilyPond draw them
+    // (session 1329, Lab sessions/p1329/g s2 r1 r2 c1): the main note after a grace took them.
+    [InlineData("c''2 <>@accent grace { e''16 } d''2 | c''1 |", "note note[articulations(accent)] note note")]
+    [InlineData("c''2 <>@accent grace { e''16 f''16 } d''2 | c''1 |", "note note[articulations(accent)] note note note")]
+    [InlineData("c''2 <>@staccato grace { <e'' g''>16 } d''2 | c''1 |", "note note[articulations(staccato)] note note note")]
+    [InlineData("c''2 <>@accent grace { r16 e''16 } d''2 | c''1 |", "note note[articulations(accent)] note note note")]
+    [InlineData("c''2 <>@accent r4 d''4 | c''1 |", "note note[articulations(accent)] note note")]
     public void InMusicXml(string bars, string expected) => Assert.Equal(expected, Xml(bars));
 
     /// <summary>A note's own fermata is a &lt;notations&gt; child, not one of &lt;articulations&gt;:
@@ -112,5 +119,32 @@ public class EmptyChordScriptsExportTests
         // …once: the note after it is played as written.
         var once = Notes("c''2 <>@accent d''4 e''4 | c''1 |");
         Assert.Equal(new[] { 90, 110, 90, 90 }, once.Select(n => n.Velocity));
+    }
+
+    /// <summary>A grace sounds the scripts the page draws on it — its own and those of an empty
+    /// chord before it, whose moment it begins — and the main note after it none of them; a rest
+    /// at that moment takes them and sounds nothing. Until session 1329 a grace sounded no script
+    /// and the main note took the empty chord's (Lab sessions/p1329/g).</summary>
+    [Fact]
+    public void InMidi_AGraceOrARestAtItsMomentTakesThem()
+    {
+        List<(int Tick, int Length, int Velocity)> Notes(string bars) =>
+            new MidiExporter().Export(SyntaxTree.Parse(Book(bars))).Tracks.SelectMany(t => t.Notes)
+                .OrderBy(n => n.StartTick).ThenBy(n => n.Pitch).Select(n => (n.StartTick, n.DurationTicks, n.Velocity)).ToList();
+        var own = Notes("c''2 grace { e''16@accent } d''2 | c''1 |");
+        Assert.Equal(new[] { 90, 110, 90, 90 }, own.Select(n => n.Velocity));
+        Assert.Equal(own, Notes("c''2 <>@accent grace { e''16 } d''2 | c''1 |"));
+        // The first grace of the group, once.
+        Assert.Equal(new[] { 90, 110, 90, 90, 90 }, Notes("c''2 <>@accent grace { e''16 f''16 } d''2 | c''1 |").Select(n => n.Velocity));
+        // A grace chord's staccato halves both heads' length (27 ticks of an eighth's 9/40 → 13).
+        Assert.Equal(new[] { 960, 13, 13, 933, 1920 }, Notes("c''2 <>@staccato grace { <e'' g''>16 } d''2 | c''1 |").Select(n => n.Length));
+        Assert.Equal(new[] { 960, 13, 13, 933, 1920 }, Notes("c''2 grace { <e'' g''>16@staccato } d''2 | c''1 |").Select(n => n.Length));
+        Assert.Equal(new[] { 90, 110, 110, 90, 90 }, Notes("c''2 <>@accent grace { <e'' g''>16 } d''2 | c''1 |").Select(n => n.Velocity));
+        // A rest, a grace's or a full one, takes them: nothing after it is accented.
+        Assert.Equal(new[] { 90, 90, 90, 90 }, Notes("c''2 <>@accent grace { r16 e''16 } d''2 | c''1 |").Select(n => n.Velocity));
+        Assert.Equal(new[] { 90, 90, 90 }, Notes("c''2 <>@accent r4 d''4 | c''1 |").Select(n => n.Velocity));
+        // A spacer does not: the page draws them on the note after it (LilyPond hangs them on the
+        // spacer's moment with no support; Lab sessions/p1329/g sp1).
+        Assert.Equal(new[] { 90, 110, 90 }, Notes("c''2 <>@accent s4 d''4 | c''1 |").Select(n => n.Velocity));
     }
 }
