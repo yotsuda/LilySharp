@@ -227,5 +227,10 @@ public class TrailingEmptyChordTests
         // bar's note is not under it (until session 1314 the g was, the mark standing past it).
         var mid = Assert.Single(OttavaBracketEngraver.DetectOttavaBrackets(Collect("c'4@8va d' e' f' <>@!8va | g'1 |").MusicMarks, null));
         Assert.Equal(0, mid.EndMeasureIndex);
+        // …and it hooks where `f'@!8va` does, just after the f's head: LilyPond's right bound is
+        // the last note column wherever the stop is (MEASURED 2.26.0, Lab sessions/p1316/lp/o1.ly —
+        // 0.6 right of the head, 1.34 before the bar line). Until session 1316 the closer on the
+        // next bar's first moment ran the bracket to the bar's edge.
+        Assert.Equal(Ottava("c'4@8va d' e' f'@!8va | g'1 |"), Ottava("c'4@8va d' e' f' <>@!8va | g'1 |"));
     }
 }

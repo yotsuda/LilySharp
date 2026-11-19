@@ -155,6 +155,10 @@ internal static class OttavaBracketEngraver
     /// </summary>
     private const double RightShorten = -0.6;
 
+    /// <summary>A moment past any bar's end: "every column of the bar" for
+    /// <see cref="StaffLastColumnBefore"/> when a span runs to its bar's end.</summary>
+    private static readonly Fraction WholeBar = new(1 << 20);
+
     /// <summary>
     /// The gap between the label's right edge and the dashed line's left end.
     /// </summary>
@@ -386,12 +390,22 @@ internal static class OttavaBracketEngraver
                                 graceNotes, bracket.StaffIndex)) is { } startItemX
                     ? segStartMeasure.X + startItemX + LeftShorten
                     : segStartMeasure.X + LeftShorten;
-                var lastStaffColumn = segment.IsLast && bracket.EndMoment is { } staffEndMoment
-                    ? StaffLastColumnBefore(segEndMeasure, ottavaVoices, bracket.EndMeasureIndex, staffEndMoment)
+                // A span running to its bar's END — closed on the next bar's first moment
+                // (`f'4 <>@!8va | g'1`, the next START there), cut at its section's end, or never
+                // closed — ends after its bar's last note column too: LilyPond's right bound is
+                // the last note column whatever moment the stop is at (lily/ottava-engraver.cc:176-180
+                // typeset_all; finalize, :219-226, takes the same path). MEASURED (2.26.0, Lab sessions/p1316/lp/o1.ly):
+                // `\ottava #1 c''4 d'' e'' f'' \ottava #0 | g'1` hooks at 28.03, 0.6 right of the
+                // f''s head, with the bar line at 29.37; Lily# drew `f'' <>@!8va |` to the
+                // measure's edge (28.86) until session 1316, while `f''@!8va |` hooked at 28.03.
+                var spanEnd = bracket.EndMoment ?? WholeBar;
+                var lastStaffColumn = segment.IsLast
+                    ? StaffLastColumnBefore(segEndMeasure, ottavaVoices, bracket.EndMeasureIndex, spanEnd)
                     : null;
-                double endX = segment.IsLast && bracket.EndMoment is { } endMoment
+                double endX = segment.IsLast
                         && (lastStaffColumn?.X
-                            ?? LastColumnBefore(segEndMeasure, endMoment, bracket.EndItemIndex)) is { } lastColX
+                            ?? (bracket.EndMoment is { } endMoment
+                                ? LastColumnBefore(segEndMeasure, endMoment, bracket.EndItemIndex) : null)) is { } lastColX
                     // A span stopping INSIDE its last bar ends where LilyPond's does: just after
                     // the last note head it covers — and that head's dots — by the shorten-pair's
                     // right half.
@@ -409,9 +423,10 @@ internal static class OttavaBracketEngraver
                     //   whole extent there, :108-109) and the timing-column fallback, which has
                     //   no item — both keep the black head's width.
                     ? lastColX + HeadsAndDotsRight(lastStaffColumn?.Item) - RightShorten
-                    // ⚠️ A span running to its bar's end keeps the measure's right edge, pulled in
-                    //   by the same 0.6 — the pre-existing approximation of "just after the last
-                    //   head", which differs from LilyPond's by the room after that head.
+                    // A bar with no note column of this staff (a percent repeat; no voices
+                    // supplied) keeps the measure's right edge, pulled in by the same 0.6 —
+                    // LilyPond's command column there (lily/ottava-engraver.cc:177-179 typeset_all; a percent
+                    // repeat disqualifies the note before it, :153-159).
                     : segEndMeasure.X + segEndMeasure.Width + RightShorten;
 
                 // First segment shows the bare text ("8va"); continuation pieces use "(8va)".

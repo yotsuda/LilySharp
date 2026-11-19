@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Fixed: an ottava bracket closed at a bar line ran on to the bar line.** `f'' <>@!8va | g'1`, or an `@8vb` starting the next bar, hooked at the bar's end instead of just after the last note under the bracket, as `f''@!8va` does and LilyPond draws it.
+
 - **Fixed: a pedal bracket, a text spanner or an ottava ended on an empty chord at the very end of a piece was not drawn.** `fis4.@sustain b4. <>@!sustain |` as the last bar (or `repeat tremolo 12 { … }@!sustain` there) drew no pedal bracket at all, and `c4@rit d e f <>@!rit |` drew neither the word nor its line. The line is drawn to the closing bar line now.
 
 - **A dynamic, a text and a fermata on an empty chord after the last note are printed.** `c1@decresc <>@pp |` prints its *pp*, `<>@text("fine")` its word, and `<>@fermata` stands over the closing bar line, centred on it (a repeat's `:|.` too).

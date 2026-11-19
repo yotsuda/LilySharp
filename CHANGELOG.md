@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Fixed: an ottava bracket closed at a bar line ran on to the bar line** (`[engraving]`). `c''4@8va d'' e'' f'' <>@!8va | g'1` — or an `@8vb` starting on the next bar's first note — drew the bracket's hook at the end of the bar, a staff space and more past the last note under it, while `f''@!8va` hooked just after the note. Both hook just after the last note's head now, as LilyPond draws them; so does a bracket cut at its section's end.
+
 - **Fixed: a pedal bracket, a text spanner or an ottava ended on an empty chord at the very end of a piece was not drawn** (`[engraving]`). `fis4.@sustain b4. <>@!sustain |` as the last bar — or `repeat tremolo 12 { … }@!sustain` there, which reads the same — drew no pedal bracket at all; `c4@rit d e f <>@!rit |` drew neither the word nor its line, and an ottava ended that way collapsed onto its first note. The line is drawn to the closing bar line now, as LilyPond draws it. With music after it nothing changes (the end stands on the next bar's head).
 
 - **A dynamic, a text and a fermata on an empty chord after the last note are printed** (`[engraving]`). `c1@decresc <>@pp |` ends the piece with its hairpin running to a printed *pp*; `… f4 <>@text("fine") |` prints the word at the bar's end; `… f4 <>@fermata |` draws the fermata over the closing bar line, centred on it — on a repeat's `:|.` too, dots and thick line together (`@fermata.down` under it). None of them was drawn before, and LilyPond prints none (it has no note there to hang them on) — here Lily# draws what was written. Any other script on that empty chord (an accent, a staccato) marks no note and is still not drawn.
