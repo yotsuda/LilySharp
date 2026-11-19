@@ -634,13 +634,18 @@ internal static partial class SharedRenderer
                     // glyph at its cell's left edge, so the white fell unevenly after it
                     // (seen 2026-11-13: "こ と ば を 大切に"). Set in the MIDDLE of its cell the
                     // characters stand at one pitch whatever the face.
+                    // …and so does a character that is no wide one — a flat sign in a chord's
+                    // name — in the room the face's own measure gives it (ProseBand.Break's Parts).
                     bool cell = piece.Text.Length is 1 or 2 && char.ConvertToUtf32(piece.Text, 0) is var cp
                         && char.ConvertFromUtf32(cp).Length == piece.Text.Length
-                        && LilySharp.Core.Rendering.Prose.IsWide(piece.Text[0])
                         && !fonts.Spells(piece.Text, size, TextRole.Markdown, style);
                     if (cell)
-                        gc.DrawText(piece.Text, options.MarginLeft + line.Left + piece.X + size / 2, y, size,
+                    {
+                        double room = LilySharp.Core.Rendering.Prose.IsWide(piece.Text[0])
+                            ? size : fonts.Advance(piece.Text, size, TextRole.Markdown, style);
+                        gc.DrawText(piece.Text, options.MarginLeft + line.Left + piece.X + room / 2, y, size,
                             TextRole.Markdown, style, TextAnchor.Middle);
+                    }
                     else
                         gc.DrawText(piece.Text, options.MarginLeft + line.Left + piece.X, y, size,
                             TextRole.Markdown, style, TextAnchor.Start);

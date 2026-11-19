@@ -395,4 +395,31 @@ public class MarkdownTextBoxFitTests
         Assert.Contains("\\concat { \\hspace #1.1 \\translate #'(0 . -0.314) \\override #'(box-padding . 1) \\box\n"
             + "    \\with-dimension #X #'(0 . 100.2299) \\with-dimension #Y #'(-0.686 . 2.314) \\column {\n      \"A closing note.\"\n", ly);
     }
+
+    // ---- a sign the text's face does not have, inside a word ------------------------------
+
+    /// <summary>
+    /// A flat sign in a chord's name — a character the text's face lacks, and no wide one — is
+    /// a piece of its own in the room the face's measure gives it, and what follows the word
+    /// starts where the layout says (the owner's songs page, 2026-11-19: "**D7♭9**, not" was
+    /// printed with the comma on the 9, the machine's face setting the sign nearly an em wide
+    /// inside the bold piece).
+    /// </summary>
+    [Fact]
+    public void ASignTheFaceLacks_IsAPieceOfItsOwn_AndTheWordAfterItStandsWhereItIsMeasured()
+    {
+        Assert.False(Fonts.Spells("♭", Em, TextRole.Markdown, FontStyle.Bold));
+        var band = ProseBand.Build("**D7♭9**, not", 0, Fonts, 100, new ProseShape(0, 0, false, false))!;
+        var pieces = Assert.Single(band.Lines).Pieces.Where(p => !string.IsNullOrWhiteSpace(p.Text)).ToArray();
+        Assert.Equal(new[] { "D7", "♭", "9", ", not" }, pieces.Select(p => p.Text));
+        var bold = ProseBand.StyleOf(Fonts, pieces[0].Style);
+        double d7 = Fonts.Advance("D7", Em, TextRole.Markdown, bold);
+        double sign = Fonts.Advance("♭", Em, TextRole.Markdown, bold);
+        Assert.Equal(d7, pieces[1].X - pieces[0].X, 9);
+        Assert.Equal(sign, pieces[2].X - pieces[1].X, 9);
+        Assert.Equal(Fonts.Advance("9", Em, TextRole.Markdown, bold), pieces[3].X - pieces[2].X, 9);
+        // A word with no such sign is one piece, as it was.
+        var plain = ProseBand.Build("**D7b9**, not", 0, Fonts, 100, new ProseShape(0, 0, false, false))!;
+        Assert.Equal("D7b9", plain.Lines[0].Pieces[0].Text);
+    }
 }

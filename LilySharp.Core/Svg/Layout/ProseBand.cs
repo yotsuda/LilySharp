@@ -547,7 +547,8 @@ internal sealed record ProseBand(
         // Whether an atom is ONE wide character the text's face does not have: it takes an em
         // square, and the page sets it AT that square (a piece of its own, in Flush).
         bool IsCell(Atom a)
-            => a.Text.Length == 1 && Prose.IsWide(a.Text[0])
+            => !a.IsSpace && !a.IsBreak
+                && (a.Text.Length == 1 || (a.Text.Length == 2 && char.IsHighSurrogate(a.Text[0])))
                 && !fonts.Spells(a.Text, em, TextRole.Markdown, StyleOf(fonts, a.Style));
 
         double WidthOf(Atom a)
@@ -574,6 +575,60 @@ internal sealed record ProseBand(
                     ? SpaceWidth(fonts, em, style) * narrow.Length
                     : fonts.Advance(narrow.ToString(), em, TextRole.Markdown, style);
             return w;
+        }
+
+        // A word's pieces: the word whole, unless it holds a character the text's face does not
+        // have that is no wide one — a flat sign in "D7♭9", an arrow. Such a character is drawn
+        // by a face of the machine's whose advance this layout does not know, and set inside
+        // its word it pushed the rest of the word over whatever came next: "**D7♭9**, not" was
+        // printed with the comma on the 9 (owner's songs page 2026-11-19, a harmony analysis
+        // in a page text; MEASURED on its PNG, this machine's face: the sign's glyph nearly an
+        // em wide, the layout's room for it under half). So it is a piece of its own, as an
+        // em-square character is, in the room the face's own measure of it gives, and the page
+        // sets it in the MIDDLE of that room (SharedRenderer.DrawProse): what follows starts
+        // where the layout put it, whatever face draws the sign.
+        // (Of one kind with the em grid in Flush, whose remark says what LilyPond does instead.)
+        List<(Atom Atom, double Width, bool Cell)> Parts(Atom a, double whole)
+        {
+            var one = new List<(Atom, double, bool)> { (a, whole, IsCell(a)) };
+            if (a.IsSpace || a.Text.Length < 2)
+                return one;
+            var style = StyleOf(fonts, a.Style);
+            bool Lacks(string s) => !Prose.IsWide(s[0]) && !fonts.Spells(s, em, TextRole.Markdown, style);
+            var parts = new List<(Atom, double, bool)>();
+            var run = new StringBuilder();
+            int runAt = 0;
+            void EndRun()
+            {
+                if (run.Length == 0)
+                    return;
+                var piece = a with { Text = run.ToString(), Offset = a.Offset < 0 ? -1 : a.Offset + runAt, BreakBefore = parts.Count == 0 && a.BreakBefore };
+                parts.Add((piece, WidthOf(piece), IsCell(piece)));
+                run.Clear();
+            }
+            bool any = false;
+            for (int i = 0; i < a.Text.Length; i++)
+            {
+                // (A character outside the basic plane is two chars and one sign: a double flat.)
+                int n = char.IsHighSurrogate(a.Text[i]) && i + 1 < a.Text.Length ? 2 : 1;
+                string c = a.Text.Substring(i, n);
+                if (Lacks(c))
+                {
+                    EndRun();
+                    var sign = a with { Text = c, Offset = a.Offset < 0 ? -1 : a.Offset + i, BreakBefore = parts.Count == 0 && a.BreakBefore };
+                    parts.Add((sign, fonts.Advance(c, em, TextRole.Markdown, style), true));
+                    any = true;
+                }
+                else
+                {
+                    if (run.Length == 0)
+                        runAt = i;
+                    run.Append(c);
+                }
+                i += n - 1;
+            }
+            EndRun();
+            return any ? parts : one;
         }
 
         void Flush()
@@ -648,9 +703,16 @@ internal sealed record ProseBand(
                 }
                 continue;
             }
+            var parts = Parts(atom, w);
+            if (parts.Count > 1)
+            {
+                w = 0;
+                foreach (var part in parts)
+                    w += part.Width;
+            }
             if (line.Count > 0 && atom.BreakBefore && width + w > lineWidth + 1e-9)
                 Flush();
-            line.Add((atom, w, IsCell(atom)));
+            line.AddRange(parts);
             width += w;
         }
         if (line.Count > 0)
