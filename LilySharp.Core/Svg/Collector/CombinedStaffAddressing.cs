@@ -166,6 +166,13 @@ public sealed record CombinedStaffAddressing(
 /// <c>Svg/Model</c> answers it — <c>TieItem</c>, <c>SlurItem</c>, <c>BeamGroup</c> and
 /// <c>GlissandoItem</c> also hold one, and none of them is collected: layout stamps those
 /// while walking the staff's OWN voices, so their numbers were never in a part's terms).
+/// <para>
+/// ⚠️ A FIFTH, WHICH THAT GREP DID NOT COUNT UNTIL SESSION 1321: <see cref="MusicMarkItem"/>.
+/// Most marks are a bar's, but the two ends of a hairpin, a text spanner, an ottava bracket
+/// and a pedal are stamped with the voice and the item of the note they are written on
+/// (<c>AnchorItemIndex</c>, not <c>ItemIndex</c> — the name the grep missed). They move in
+/// <see cref="MoveMarks"/>.
+/// </para>
 /// </remarks>
 internal static class CombinedStaffReaddress
 {
@@ -231,8 +238,84 @@ internal static class CombinedStaffReaddress
                     EndMeasureIndex = to.MeasureIndex,
                     EndItemIndex = to.ItemIndex,
                 }),
+            MusicMarks = MoveMarks(content.MusicMarks, byStaff),
         };
     }
+
+    /// <summary>The marks a note of a voice carries: the two ends of a hairpin, of a text
+    /// spanner, of an ottava bracket and of a pedal. Every other mark is its bar's or its
+    /// staff's and holds no voice's item number.</summary>
+    private static bool IsANotesMark(MusicMarkItem m) => m.AnchorItemIndex >= 0 && m.Type is
+        MusicMarkType.Cresc or MusicMarkType.Decresc or MusicMarkType.Dim or MusicMarkType.HairpinStop
+        or MusicMarkType.TextSpanStart or MusicMarkType.TextSpanStop
+        or MusicMarkType.OttavaUp or MusicMarkType.OttavaDown
+        or MusicMarkType.QuindicesUp or MusicMarkType.QuindicesDown or MusicMarkType.OttavaStop
+        or MusicMarkType.SustainOn or MusicMarkType.SustainOff
+        or MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff
+        or MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff;
+
+    /// <summary>
+    /// The marks, with a combined staff's note-carried ones (<see cref="IsANotesMark"/>) moved
+    /// to where their note went.
+    /// </summary>
+    /// <remarks>
+    /// Until session 1321 no mark was moved: a hairpin kept the part's own slot and item number,
+    /// which on the staff name another voice's item or none. Part two's `@p … @cresc … @f` in a
+    /// bar it plays alone began under the p at the bar's head — the bar is in the staff's FIRST
+    /// voice, where the levels had been moved to, and the hairpin read the second, a spacer; a
+    /// part entering mid-bar (`r2 g'4@cresc g'@f` after the other's `c''2 r2`) began its hairpin
+    /// on the other part's note; and a hairpin both parts write in a unison was drawn twice, one
+    /// under the other (Lab sessions/p1321/probe h2, h5, h4).
+    /// <para>
+    /// THREE ANSWERS, by what the routing says of the mark's item:
+    /// its note is engraved — the mark goes with it; the mark stands PAST an item (an ottava's
+    /// end includes its note, a line's end on a trailing empty chord) — it goes past where that
+    /// item went; neither — a START is dropped with its note, as a level is
+    /// (<see cref="MoveEach{T}"/>), and an END stays where it was collected, since dropping it
+    /// would run the line on to the next end. The moment a mark carries
+    /// (<see cref="MusicMarkItem.AnchorTiming"/>) is the bar's and does not move.
+    /// </para>
+    /// <para>
+    /// The same mark landing twice on one item — both parts' `@cresc` on a column the combiner
+    /// merged — is one mark, as two identical events in one LilyPond Voice are one grob; the
+    /// first is kept. Two DIFFERENT marks there both stay.
+    /// </para>
+    /// observed by: CombinedStaffHairpinTests.
+    /// </remarks>
+    private static ImmutableArray<MusicMarkItem> MoveMarks(
+        ImmutableArray<MusicMarkItem> marks, Dictionary<int, CombinedStaffAddressing> byStaff)
+    {
+        if (marks.IsDefaultOrEmpty || !marks.Any(m => IsANotesMark(m) && byStaff.ContainsKey(m.StaffIndex)))
+            return marks;
+        var built = ImmutableArray.CreateBuilder<MusicMarkItem>(marks.Length);
+        var seen = new HashSet<(int, int, int, int, MusicMarkType, string, TextSpanFamily)>();
+        foreach (var m in marks)
+        {
+            if (!IsANotesMark(m) || !byStaff.TryGetValue(m.StaffIndex, out var map))
+            {
+                built.Add(m);
+                continue;
+            }
+            var at = new VoiceItemAddress(m.VoiceIndex, m.MeasureIndex, m.AnchorItemIndex);
+            MusicMarkItem? placed = null;
+            if (map.Translate(at) is { } to)
+                placed = m with { VoiceIndex = to.VoiceIndex, MeasureIndex = to.MeasureIndex, AnchorItemIndex = to.ItemIndex };
+            else if (m.AnchorItemIndex > 0 && map.Translate(at with { ItemIndex = m.AnchorItemIndex - 1 }) is { } before)
+                placed = m with { VoiceIndex = before.VoiceIndex, MeasureIndex = before.MeasureIndex, AnchorItemIndex = before.ItemIndex + 1 };
+            else if (IsAnEnd(m.Type))
+                placed = m;
+            if (placed is null
+                || !seen.Add((placed.StaffIndex, placed.VoiceIndex, placed.MeasureIndex, placed.AnchorItemIndex,
+                              placed.Type, placed.Text, placed.SpanFamily)))
+                continue;
+            built.Add(placed);
+        }
+        return built.ToImmutable();
+    }
+
+    private static bool IsAnEnd(MusicMarkType type) => type is MusicMarkType.HairpinStop
+        or MusicMarkType.TextSpanStop or MusicMarkType.OttavaStop or MusicMarkType.SustainOff
+        or MusicMarkType.SostenutoOff or MusicMarkType.UnaCordaOff;
 
     /// <summary>
     /// One list of single-anchor items, with the ones on a combined staff moved to where

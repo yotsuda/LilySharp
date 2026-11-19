@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Fixed: on a `combinedStaff` a hairpin stood on the wrong notes, or was drawn twice.** A hairpin, a `@rit … @!rit` line, an ottava bracket and a pedal of a part stand on the notes they are written on wherever the two parts are merged — in a "Solo II" bar, after a mid-bar entrance — and a hairpin both parts write in a unison is drawn once.
+
 - **Fixed: a drum chart drew a hairpin beside its levels, or twice.** Where both lines of a `drums { … }` chart write `@p … @f` and a `@cresc` between them, the wedge stands between the one printed *p* and *f* now, and the same hairpin written in both lines is drawn once.
 
 - **Fixed: a slash or a repeated value inside a tuplet lost its figures and its `@cross`.** `tuplet 3/2 { /4@figuredBass(6) / / }` and `tuplet 3/2 { 4@cross 4 4 }` draw the figure and move the note to the other staff now, as they do outside a tuplet.
