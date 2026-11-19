@@ -1625,6 +1625,7 @@ internal static class LysWriter
     private static string MemberMarks(ImportNote note)
         => (note.StringNumber is { } s ? "\\" + s : "")
            + (note.Fingering is { } f ? "@finger(" + f + ")" : "")
+           + (note.IsStruck ? "@struck" : "")
            + (note.TiedAlone ? "~" : "");
 
     private static string PitchToken(int step, int alter, int octave, int quarter = 0)

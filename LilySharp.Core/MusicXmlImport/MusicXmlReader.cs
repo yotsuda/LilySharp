@@ -1452,6 +1452,10 @@ internal static class MusicXmlReader
             ChordWithPrev = Local(el, "chord") != null,
             IsCue = Local(el, "cue") != null,
         };
+        // A sounding chord member at the cue size is a struck one (`<c e g@struck>`), as Lily#'s
+        // export writes it; until session 1330 it came back a plain member.
+        note.IsStruck = note.ChordWithPrev && !note.IsCue
+            && (string?)Local(el, "type")?.Attribute("size") == "cue";
 
         var (value, dots) = NoteValue(el, divisions);
         note.NoteValue = value;

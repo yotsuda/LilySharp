@@ -333,6 +333,11 @@ internal sealed class ImportNote : ImportItem
     /// its own and a beam cannot cross it (MEASURED, audit/lp-geometry/probes/cue-span.ly).
     /// </remarks>
     public bool IsCue { get; set; }
+
+    /// <summary>A chord member after the first drawn at the cue size and sounding (<c>&lt;type
+    /// size="cue"&gt;</c> with no <c>&lt;cue/&gt;</c>): how Lily#'s export writes <c>@struck</c>, the
+    /// member struck with the chord and let go.</summary>
+    public bool IsStruck { get; set; }
 }
 
 /// <summary>

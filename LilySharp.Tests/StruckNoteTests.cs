@@ -117,6 +117,27 @@ public class StruckNoteTests
         Assert.InRange(lengths[1], 2.0661 - 0.011, 2.0661 + 0.011);
     }
 
+    /// <summary><c>lysc import</c> reads the struck member back from the MusicXML Lily# writes (a
+    /// sounding chord member at the cue size); until session 1330 it came back a plain member.
+    /// A cue-size member that is a <c>&lt;cue/&gt;</c> is not one.</summary>
+    [Fact]
+    public void TheImport_ReadsItBack()
+    {
+        string xml = new LilySharp.Core.MusicXml.MusicXmlExporter()
+            .Export(SyntaxTree.Parse(Book("<c' e' g'@struck>2. | <c'' d''@struck>2. |"))).ToXml().ToString();
+        string back = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(xml).Item1;
+        Assert.Contains("<c' e' g'@struck>2.", back);
+        Assert.Contains("<c'' d''@struck>2.", back);
+        string cue = xml.Replace("<type size=\"cue\">", "<cue /><type size=\"cue\">");
+        Assert.DoesNotContain("@struck", new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(cue).Item1);
+        // Nor a single note at the cue size: nothing is held under it.
+        string single = new LilySharp.Core.MusicXml.MusicXmlExporter()
+            .Export(SyntaxTree.Parse(Book("c'2. |"))).ToXml().ToString();
+        Assert.Contains("<type>half</type>", single);
+        single = single.Replace("<type>half</type>", "<type size=\"cue\">half</type>");
+        Assert.DoesNotContain("@struck", new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(single).Item1);
+    }
+
     [Fact]
     public void TheDot_StandsRightOfTheSmallHead_OnTheStemsFarSide()
     {
