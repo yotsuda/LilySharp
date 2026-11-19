@@ -145,6 +145,72 @@ public class InstrumentHairpinMidiTests
         Assert.Equal(new[] { P, P, P, P, F }, Velocities(OnePart("c''4@p d'' e'' f'' | g''1@f |"), "fl"));
     }
 
+    /// <summary>
+    /// A hairpin beginning where the one before it ended, with no level written between, starts
+    /// from what that one reached (session 1326). Until then it started from the level written
+    /// before the first: <c>@p … @cresc … @decresc … @p</c> climbed 70 75 81, fell back to 70 on
+    /// the decrescendo's first note and went on down, 68 65 (Lab sessions/p1326/probe m1, m2).
+    /// </summary>
+    [Fact]
+    public void AHairpinBeginningWhereAnotherEnded_StartsFromWhatThatOneReached()
+    {
+        int top = P + 16;
+        // Up three quarters to the decrescendo's note, and down three to the p.
+        var swell = Velocities(OnePart("e'4@p f' e'@cresc f' | c'4 d'@decresc e' f' | g'1@p |"), "fl");
+        Assert.Equal(new[] { P, P, P, Along(P, top, 1, 3), Along(P, top, 2, 3), top, Along(top, P, 1, 3), Along(top, P, 2, 3), P }, swell);
+        // The next written after a stop on the same note is the same pair.
+        Assert.Equal(swell, Velocities(OnePart("e'4@p f' e'@cresc f' | c'4 d'@!cresc@decresc e' f' | g'1@p |"), "fl"));
+        // Two crescendos on end go two dynamics each, and what the second reached stands.
+        int d = MidiExporter.DefaultVelocity;
+        var twice = Velocities(OnePart("e'4 f' e'@cresc f' | c'4 d'@cresc e' f'@!cresc | g'1 |"), "fl");
+        Assert.Equal(new[] { d, d, d, Along(d, d + 16, 1, 3), Along(d, d + 16, 2, 3), d + 16, d + 24, d + 32, d + 32 }, twice);
+        // A level written on the next one's first note is where that one starts (control).
+        var level = Velocities(OnePart("e'4@p f' e'@cresc f' | c'4 d'@f@decresc e' f' | g'1@p |"), "fl");
+        Assert.Equal(new[] { P, P, P, Along(P, F, 1, 3), Along(P, F, 2, 3), F, Along(F, P, 1, 3), Along(F, P, 2, 3), P }, level);
+        // …and so is the same number written again there: subito, then down.
+        const int PP = (int)DynamicLevel.PP;
+        var again = Velocities(OnePart("e'4@p f' e'@cresc f' | c'4 d'@p@decresc e' f' | g'1@pp |"), "fl");
+        Assert.Equal(new[] { P, P, P, Along(P, top, 1, 3), Along(P, top, 2, 3), P, Along(P, PP, 1, 3), Along(P, PP, 2, 3), PP }, again);
+        // A third on the second lands on the level written after it, though it is the first's.
+        var three = Velocities(OnePart("e'4@p f' e'@cresc f' | c'4 d'@cresc e'@decresc f' | g'1@p |"), "fl");
+        Assert.Equal(new[] { P, P, P, Along(P, top, 1, 3), Along(P, top, 2, 3), top, top + 16, Along(top + 16, P, 1, 2), P }, three);
+        // A hairpin later on starts from its own level, not from what stood where another began.
+        var later = Velocities(OnePart("e'4@p f' e'@cresc f' | c'4 d'@decresc e' f' | g'4@p g' g'@cresc g'@!cresc |"), "fl");
+        Assert.Equal(new[] { P, P, P + 16 }, later.Skip(8).Take(4).Where((_, k) => k != 0));
+        // A chord's notes all start from it.
+        var chords = Notes(OnePart("<e' g'>4@p@cresc <e' g'> <e' g'>@decresc <e' g'> | <e' g'>1@p |"), "fl");
+        Assert.Equal(new[] { P, P, P + 8, P + 8, top, top, P + 8, P + 8, P, P }, chords.Select(n => n.Velocity));
+    }
+
+    /// <summary>
+    /// A level written again in the number already standing is a level written: the hairpin
+    /// before it stops there and the note sounds at it (session 1326, MidiNote.LevelWritten).
+    /// Until then the walk told a written level by its number changing, so a decrescendo from
+    /// <c>@p</c> ran through the next <c>@p</c> — that note at 66, the one after it at 60 (Lab
+    /// sessions/p1326/probe m3).
+    /// </summary>
+    [Fact]
+    public void ALevelWrittenAgainInTheSameNumber_StopsTheHairpin_AndSoundsAsWritten()
+    {
+        // Two dynamics down over the three quarters to the p, which is p.
+        var v = Velocities(OnePart("c'4@p d'@decresc e' f' | g'1@p | g'1 |"), "fl");
+        Assert.Equal(new[] { P, P, Along(P, P - 16, 1, 3), Along(P, P - 16, 2, 3), P, P }, v);
+        // After a stop, what the hairpin reached stands up to it and not over it.
+        var stopped = Velocities(OnePart("c'4@p@cresc d' e'@!cresc f' | g'1@p | g'1 |"), "fl");
+        Assert.Equal(new[] { P, P + 8, P + 16, P + 16, P, P }, stopped);
+        // …in the other hand of a grand staff too.
+        string book = "time 4/4\noctave absolute\npart rh { }\npart lh { clef bass }\nsection A {\n" +
+            "  rh { c'4@p d'@decresc e' f' | g'1 | }\n  lh { c1 | c1@p | }\n}\nform { A }\nscore { grandStaff { staff rh staff lh } }\n";
+        Assert.Equal(new[] { P, P, Along(P, P - 16, 1, 3), Along(P, P - 16, 2, 3), P }, Velocities(book, "rh"));
+        // The second part of a bracket reads its own levels (and the first's are not its).
+        string bracket = "time 4/4\noctave absolute\npart rh { }\npart lh { clef bass }\nsection A {\n" +
+            "  rh { c'1 | c'1 | c'1 | }\n  lh { c4@p d@decresc e f | g1@p | g1 | }\n}\nform { A }\nscore { staffGroup { staff rh staff lh } }\n";
+        Assert.Equal(v, Velocities(bracket, "lh"));
+        // A voice span opening is no level written: the hairpin goes on through it to the f.
+        var through = Velocities(OnePart("c'4@p@cresc d' e' f' | voice { g'1 } { e'1 } | g'1@f |"), "fl");
+        Assert.Equal(new[] { P, Along(P, F, 1, 8), Along(P, F, 2, 8), Along(P, F, 3, 8), Along(P, F, 4, 8), Along(P, F, 4, 8), F }, through);
+    }
+
     [Fact]
     public void AGrandStaffsHands_ShareTheHairpin_AndABracketsPartsDoNot()
     {

@@ -502,17 +502,30 @@ public static class SungVoices
         for (int k = 0; k < notes.Count; k++)
             at[k] = Written(notes[k]);
         var after = new double?[notes.Count];
+        // What a hairpin with no level to land on left standing where the NEXT hairpin begins:
+        // the level that one starts from, at that moment.
+        (double Level, double Moment)? standing = null;
         for (int i = 0; i < notes.Count; i++)
         {
             if (notes[i].Swell == 0)
                 continue;
-            int level = Level(notes[i]);
-            int stop = i + 1;
-            while (stop < notes.Count && Level(notes[stop]) == level && notes[stop].Swell == 0 && !notes[stop].SwellEnds)
-                stop++;
-            bool landsOnALevel = stop < notes.Count && Math.Sign(Level(notes[stop]) - level) == notes[i].Swell;
-            double target = landsOnALevel ? Level(notes[stop]) : level + (notes[i].Swell * HairpinReach);
+            int written = Level(notes[i]);
             double from = startOf(i);
+            double level = !notes[i].LevelWritten && standing is { } left && left.Moment == from
+                ? left.Level
+                : written;
+            // (A level written at the hairpin's own moment — its own `@p@cresc`, the other
+            // hand's note under it — is where it starts, not where it goes.)
+            bool WrittenAfter(int k) => notes[k].LevelWritten && startOf(k) > from;
+            int stop = i + 1;
+            while (stop < notes.Count && Level(notes[stop]) == written && notes[stop].Swell == 0 && !notes[stop].SwellEnds
+                   && !WrittenAfter(stop))
+                stop++;
+            // A level written there, the hairpin's way from where it starts: another number, or
+            // the same one written again.
+            bool landsOnALevel = stop < notes.Count && (Level(notes[stop]) != written || WrittenAfter(stop))
+                && Math.Sign(Level(notes[stop]) - level) == notes[i].Swell;
+            double target = landsOnALevel ? Level(notes[stop]) : level + (notes[i].Swell * HairpinReach);
             double until = stop < notes.Count ? startOf(stop) : endOf(notes.Count - 1);
             double Along(double t) => level + ((target - level) * Math.Clamp((t - from) / Math.Max(1e-6, until - from), 0, 1));
             for (int k = i; k < stop && k < notes.Count; k++)
@@ -520,10 +533,16 @@ public static class SungVoices
                 at[k] = StruckAt(notes[k], Along(startOf(k)));
                 after[k] = StruckAt(notes[k], Along(endOf(k)));
             }
-            // With no level to land on, what the hairpin reached stands until one is written.
+            // With no level to land on, what the hairpin reached stands until one is written —
+            // and is where a hairpin beginning on it starts.
             if (!landsOnALevel)
-                for (int k = stop; k < notes.Count && Level(notes[k]) == level && notes[k].Swell == 0; k++)
+            {
+                int k = stop;
+                for (; k < notes.Count && Level(notes[k]) == written && notes[k].Swell == 0 && !WrittenAfter(k); k++)
                     at[k] = StruckAt(notes[k], target);
+                if (k < notes.Count && notes[k].Swell != 0 && startOf(k) > from)
+                    standing = (target, startOf(k));
+            }
             i = stop - 1;
         }
         return (at, after);

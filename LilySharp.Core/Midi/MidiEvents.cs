@@ -145,7 +145,12 @@ public readonly record struct MidiNote(
     // measures: the walk goes as printed before the piece is laid out as it plays, and the number
     // rides with the note through that (PlayedTimeline). The preview's A-B repeat picks its bars
     // by it (docs/ab-repeat-design.md). -1 where unknown. Not written to .mid files.
-    int PrintedBar = -1
+    int PrintedBar = -1,
+    // A level (`@p`, `@ff`, the piano of an `@fp`) was written at this note's moment in its part
+    // — or in a hand of its grand staff: a hairpin lands on it or stops at it though it writes
+    // the level already standing (SungVoices.Swells; MidiExporter.SwellInstruments stamps it).
+    // Not written to .mid files.
+    bool LevelWritten = false
 );
 
 /// <summary>

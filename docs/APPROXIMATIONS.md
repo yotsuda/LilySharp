@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
+| `UNWATCHED` | 66 | 観測者がゼロだと自認しているもの |
 | `OWN` | 475 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **602** | |
+| **計** | **603** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -23,8 +23,8 @@
 |---|---:|
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 23 |
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 23 |
+| `LilySharp.Core/Midi/MidiExporter.cs` | 19 |
 | `LilySharp.Core/Svg/Layout/ProseBand.cs` | 19 |
-| `LilySharp.Core/Midi/MidiExporter.cs` | 18 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 16 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
 | `LilySharp.Core/Svg/Collector/MeasureCollector.cs` | 11 |
@@ -139,8 +139,10 @@
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
 - **`BeamRestStem`** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（65 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（66 件）
 
+### `LilySharp.Core/Midi/MidiExporter.cs`
+- **`MidiExporter.SwellInstruments`** (No observer for `Written`: no book yet has a level a lane or a repeat's turn reopens
 ### `LilySharp.Core/Midi/SungVoices.cs`
 - **`SungVoices.Read`** ⚠️ An empty text has no observer: the page files no syllable for `_` or a
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`

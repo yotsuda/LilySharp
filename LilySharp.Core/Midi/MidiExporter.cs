@@ -449,6 +449,19 @@ public sealed class MidiExporter
                 lines[g] = line = new List<int>();
             line.Add(i);
         }
+        // Where a level was written, for the hairpins to land on or stop at (MidiNote.LevelWritten):
+        // the walk compares numbers, and `@p … @cresc … @decresc … @p` writes the same one twice.
+        // (No observer for `Written`: no book yet has a level a lane or a repeat's turn reopens
+        // at standing where a hairpin runs — Lab sessions/p1326/poisons.ps1 S10.)
+        var writtenAt = new HashSet<(int Group, int Tick)>();
+        foreach (var e in _levelLog)
+            if (e.Written && e.Part is { } p && groupOf.TryGetValue(p, out int g))
+                writtenAt.Add((g, e.Tick));
+        if (writtenAt.Count > 0)
+            foreach (var (g, line) in lines)
+                foreach (int i in line)
+                    if (writtenAt.Contains((g, track.Notes[i].StartTick)))
+                        track.Notes[i] = track.Notes[i] with { LevelWritten = true };
         foreach (var line in lines.Values.SelectMany(VoiceLines))
         {
             if (!line.Exists(i => track.Notes[i].Swell != 0))
