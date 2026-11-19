@@ -1283,6 +1283,9 @@ public sealed partial class MeasureCollector
                         {
                             IsAbove = onMmr ? markSyntax.ForcedAbove != false : markSyntax.ForcedAbove == true,
                             VoiceIndex = _v.Cursor.VoiceIndex,
+                            // Its item's moment, as a level's (CollectDynamics): what a
+                            // condensed staff compares two parts' texts by.
+                            Moment = anchorTiming.Denominator != 0 ? anchorTiming : null,
                             OnMultiMeasureRest = onMmr,
                         });
                 }

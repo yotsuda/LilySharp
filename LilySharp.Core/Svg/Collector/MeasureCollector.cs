@@ -4067,21 +4067,13 @@ public sealed partial class MeasureCollector
                 && d.WrittenAbove == null && d.Level != Syntax.DynamicLevel.Niente;
             // The upper part's levels that stand against a lower part's different one.
             var against = new HashSet<DynamicItem>();
-            // The moment of a part's dynamic: the lengths before its item, in its own voice.
-            Fraction? OnsetOf(StaffCollection part, DynamicItem d)
-            {
-                int voice = d.VoiceIndex - part.FirstVoice;
-                if (!staffVoices.TryGetValue(part.Part, out var voices) || voice < 0 || voice >= voices.Length
-                    || d.MeasureIndex < 0 || d.MeasureIndex >= voices[voice].Measures.Length)
-                    return null;
-                var items = voices[voice].Measures[d.MeasureIndex].Items;
-                if (d.ItemIndex < 0 || d.ItemIndex > items.Length)
-                    return null;
-                var at = Fraction.Zero;
-                for (int i = 0; i < d.ItemIndex; i++)
-                    at += items[i].Duration;
-                return at;
-            }
+            // The moment of a part's dynamic is the one its carrier stamped on it
+            // (DynamicItem.Moment — a level's by CollectDynamics, a text's by
+            // CollectArticulations). Until session 1313 it was added up again here, the
+            // lengths before its item in its own voice: the same number on each of the 3,425
+            // dynamics of 1,289 books that have an item to count to (Lab
+            // sessions/p1313/moment-vs-sum.txt), and a second spelling of it. (The other two
+            // are an empty chord after the last bar, `<>@pp`, which had no moment here.)
             var standing = new List<(DynamicItem Dynamic, Fraction Onset)>();
             for (int p = 0; p < parts.Count; p++)
             {
@@ -4089,7 +4081,7 @@ public sealed partial class MeasureCollector
                 for (int i = parts[p].DynamicsFrom; i < parts[p].DynamicsTo; i++)
                 {
                     var d = _dynamics[i];
-                    if (OnsetOf(parts[p], d) is not { } onset)
+                    if (d.Moment is not { } onset)
                         continue;
                     bool written = false;
                     for (int s = 0; s < standingBefore && !written; s++)

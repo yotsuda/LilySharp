@@ -70,6 +70,23 @@ public class GrammarEvaluation2SmallFixesTests
         Assert.Equal(2, apart.Dynamics.Length);
     }
 
+    /// <summary>A text both parts write on one moment is printed once as a level is, whatever
+    /// its item's number in its part: the moment is the one its carrier stamped on it
+    /// (<c>DynamicItem.Moment</c>, session 1313 — it was added up again here until then).</summary>
+    [Fact]
+    public void ACondensedStaff_PrintsATextBothPartsWrite_Once()
+    {
+        var score = Condensed(Choir
+            + "section A { sop { c''4 d''@text(\"dolce\") e'' f'' | } alt { e'8 e' f'4@text(\"dolce\") g'2 | } }\n"
+            + "form { ~A }\nscore { condensedStaff { sop alt } }\n");
+        Assert.Single(score.Dynamics, d => d.Text == "dolce");
+        // …and not one a beat apart.
+        var apart = Condensed(Choir
+            + "section A { sop { c''4 d''@text(\"dolce\") e'' f'' | } alt { e'4 f' g'@text(\"dolce\") a' | } }\n"
+            + "form { ~A }\nscore { condensedStaff { sop alt } }\n");
+        Assert.Equal(2, apart.Dynamics.Count(d => d.Text == "dolce"));
+    }
+
     /// <summary>A part with nothing in a section was exported with a full bar's rest in the short
     /// bar the next section's pickup completes: the file imported again did not align.</summary>
     [Fact]
