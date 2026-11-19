@@ -567,6 +567,7 @@ public sealed partial class LilyPondExporter
     {
         var root = tree.GetRoot();
         _rePedals = RePedalStarts(root);
+        _closingFermataWritten = false;
 
         // Every section's voices and canonical bar count (SectionBarCounts, the semantic
         // counter): a voice that writes fewer bars than its section-mates is padded with

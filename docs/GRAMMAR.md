@@ -3690,7 +3690,10 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                         first stroke only; nothing ties into it or on from it. Written anywhere
                         else — a single note, a whole chord, a member of '<< >>', every member of
                         its chord — there is nothing held under it: LYS4084, and the note is
-                        drawn and played as written. Read by Music.StruckNotes.
+                        drawn and played as written. A tie that reaches it ('<c e g@struck>2~',
+                        '<c e g@struck~>') is drawn, as LilyPond draws it, but does not sound:
+                        LYS4086 (a warning; tie the held members, '<c~ e~ g@struck>'). Read by
+                        Music.StruckNotes.
                         LILYSHARP-OWN in the sound. The twin writes the picture, three tweaks
                         of that head ('\tweak font-size #-4 \tweak duration-log #2 \tweak
                         Dots.stencil ##f'), and LilyPond's own MIDI holds the note as long as

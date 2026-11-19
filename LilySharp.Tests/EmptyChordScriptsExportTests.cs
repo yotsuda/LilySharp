@@ -73,6 +73,10 @@ public class EmptyChordScriptsExportTests
     [InlineData("c''2 <>@staccato grace { <e'' g''>16 } d''2 | c''1 |", "note note[articulations(staccato)] note note note")]
     [InlineData("c''2 <>@accent grace { r16 e''16 } d''2 | c''1 |", "note note[articulations(accent)] note note note")]
     [InlineData("c''2 <>@accent r4 d''4 | c''1 |", "note note[articulations(accent)] note note")]
+    // …but not a spacer, which is no note: the next note takes them, as the page draws them
+    // (owner's decision 2026-11-20; LYS4085 says so). Until session 1331 the invisible rest did.
+    [InlineData("c''2 <>@accent s4 d''4 | c''1 |", "note note note[articulations(accent)] note")]
+    [InlineData("c''2 <>@accent grace { s16 e''16 } d''2 | c''1 |", "note note note[articulations(accent)] note note")]
     public void InMusicXml(string bars, string expected) => Assert.Equal(expected, Xml(bars));
 
     /// <summary>The fermata over the closing bar line comes back from <c>lysc import</c> as the
@@ -163,5 +167,50 @@ public class EmptyChordScriptsExportTests
         // A spacer does not: the page draws them on the note after it (LilyPond hangs them on the
         // spacer's moment with no support; Lab sessions/p1329/g sp1).
         Assert.Equal(new[] { 90, 110, 90 }, Notes("c''2 <>@accent s4 d''4 | c''1 |").Select(n => n.Velocity));
+        // …nor a grace spacer (owner's decision 2026-11-20): the grace after it.
+        Assert.Equal(new[] { 90, 110, 90, 90 }, Notes("c''2 <>@accent grace { s16 e''16 } d''2 | c''1 |").Select(n => n.Velocity));
+    }
+
+    private static string[] Warnings(string bars, string code)
+        => [.. LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(Book(bars)))
+            .Where(d => d.Code == code).Select(d => d.Message)];
+
+    /// <summary>A script on an empty chord before a spacer is said where it is written (LYS4085,
+    /// owner's decision 2026-11-20): it marks no note there and goes on to the next one. A level,
+    /// words or a line at a spacer's moment is the ordinary way to place one, and is not.</summary>
+    [Theory]
+    [InlineData("c''2 <>@accent s4 d''4 | c''1 |", 1)]
+    [InlineData("c''2 <>@fermata s2 | c''1 |", 1)]
+    [InlineData("c''2 <>@accent@staccato s4 d''4 | c''1 |", 2)]
+    [InlineData("c''2. <>@accent | s4 d''2. |", 1)]
+    [InlineData("c''2 <>@p s4 d''4 | c''1 |", 0)]
+    [InlineData("c''2 <>@segno s4 d''4 | c''1 |", 0)]
+    [InlineData("c''2 <>@sustain s4 d''4@!sustain | c''1 |", 0)]
+    [InlineData("c''2 <>@accent r4 d''4 | c''1 |", 0)]
+    [InlineData("c''2 <>@accent d''2 | c''1 |", 0)]
+    public void AScriptBeforeASpacer_IsSaid(string bars, int expected)
+        => Assert.Equal(expected, Warnings(bars, "LYS4085").Length);
+
+    /// <summary>A piece's closing <c>&lt;&gt;@fermata</c> is written in the <c>.ly</c> as LilyPond's
+    /// fermata over the closing bar line (owner's decision 2026-11-20): <c>&lt;&gt;-\fermata</c>
+    /// there draws nothing in LilyPond 2.26.0 (Lab sessions/p1331/ly). Within the piece the empty
+    /// chord's fermata stays as it was (LilyPond puts it on the next note), and the end mark is
+    /// the score's, written once.</summary>
+    [Fact]
+    public void TheClosingFermata_IsTheEndMarkInTheLy()
+    {
+        static string Ly(string text) => new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(text));
+        const string Mark = "\\once \\override Score.TextMark.self-alignment-X = #CENTER \\textEndMark \\markup { \\musicglyph \"scripts.ufermata\" }";
+        string up = Ly(Book("c''2 d''2 | c''1 <>@fermata |"));
+        Assert.Contains("c''1 " + Mark + " |", up);
+        Assert.DoesNotContain("<>-\\fermata", up);
+        string down = Ly(Book("c''2 d''2 | c''1 <>@fermata.down@accent |"));
+        Assert.Contains("<>-\\accent \\once \\override Score.TextMark.self-alignment-X = #CENTER \\once \\override Score.TextMark.direction = #DOWN "
+            + "\\textEndMark \\markup { \\musicglyph \"scripts.dfermata\" }", down);
+        // Within the piece, and in a second part ending the same way: as before.
+        string two = Ly(TwoSections.Replace("e''1 |", "e''1 <>@fermata |").Replace("e1 |", "e1 <>@fermata |"));
+        Assert.Contains("d''2 <>-\\fermata", two);
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(two, "textEndMark"));
+        Assert.Contains("e1 <>-\\fermata", two);
     }
 }

@@ -159,6 +159,17 @@ public class StruckNoteTests
         Assert.Equal(new[] { "C[]", "C[accent]", "E+[]", "G+[]" }, Notes("c'2 <>@accent <g'@struck c'' e''>4 |"));
     }
 
+    /// <summary>A tie that reaches the struck member is said (LYS4086, owner's decision 2026-11-20):
+    /// the page draws it as LilyPond does, but the member is let go, so it does not sound and
+    /// MusicXML does not tie it. Ties on the held members alone are not.</summary>
+    [Theory]
+    [InlineData("<c' e' g'@struck>2~ <c' e' g'>4 |", 1)]
+    [InlineData("<c' e' g'@struck~>2 <c' e' g'>4 |", 1)]
+    [InlineData("<c'~ e'~ g'@struck>2 <c' e' g'>4 |", 0)]
+    [InlineData("<c' e' g'>2~ <c' e' g'>4 |", 0)]
+    public void ATieFromTheStruckMember_IsSaid(string music, int expected)
+        => Assert.Equal(expected, SemanticValidation.Run(SyntaxTree.Parse(Book(music))).Count(d => d.Code == "LYS4086"));
+
     [Fact]
     public void TheDot_StandsRightOfTheSmallHead_OnTheStemsFarSide()
     {

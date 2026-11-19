@@ -6058,14 +6058,15 @@ public sealed class MusicXmlExporter
     /// <c>&lt;articulations&gt;</c> arm, while the page drew a grace's staccato, accent, fermata
     /// and trill and the XML had none (session 1232).
     /// </remarks>
-    private void ProcessGraceScripts(IEnumerable<SyntaxNode> annotations, MusicXmlNote xmlNote)
+    private void ProcessGraceScripts(IEnumerable<SyntaxNode> annotations, MusicXmlNote xmlNote, bool spacer = false)
     {
         // The scripts an empty chord before this grace wrote are its own: the grace begins at the
         // empty chord's moment, and the page (and LilyPond) draw them on its column. Until session
         // 1329 the main note after the grace took them here (ProcessArticulations passes graces
         // by), while the page drew `c''2 <>@accent grace { e''16 } d''2`'s accent on the e''
         // (Lab sessions/p1329/g s2).
-        if (!xmlNote.IsChord && _heldScripts.Remove(_currentPartName ?? "", out var held))
+        // (A grace spacer takes none, as a full one: owner's decision 2026-11-20.)
+        if (!xmlNote.IsChord && !spacer && _heldScripts.Remove(_currentPartName ?? "", out var held))
             annotations = held.Scripts.Cast<SyntaxNode>().Concat(annotations).ToList();
         ProcessArticulations(annotations.Where(annotation =>
             Semantics.GraceBodySupport.IsCarriedScript(annotation)
@@ -6489,7 +6490,7 @@ public sealed class MusicXmlExporter
                     // its stop alone in the file).
                     EmitGraceDirectionMarks(rest.Articulations);
                     // A grace rest's fermata, as the page draws it (a gesture on a rest is refused).
-                    ProcessGraceScripts(rest.Articulations, graceRest);
+                    ProcessGraceScripts(rest.Articulations, graceRest, spacer: rest.RestText == "s");
                     _currentMeasure.Notes.Add(graceRest);
                     (lastGrace, graceSlurOn) = (graceRest, null);
                     break;
@@ -6508,7 +6509,9 @@ public sealed class MusicXmlExporter
         // The scripts an empty chord before this onset wrote are this onset's (the empty chord's
         // arm in ProcessChord). Until session 1328 the document had none of them, though the
         // page draws them on this note (Lab sessions/p1328/end e6, e7, e10).
-        if (!xmlNote.IsGrace && !xmlNote.IsChord && !xmlNote.IsBackup
+        // A spacer takes none (owner's decision 2026-11-20): they go on to the next note, as the
+        // page draws them and LYS4085 says.
+        if (!xmlNote.IsGrace && !xmlNote.IsChord && !xmlNote.IsBackup && !(xmlNote.IsRest && !xmlNote.PrintObject)
             && _heldScripts.Remove(_currentPartName ?? "", out var held))
             articulations = held.Scripts.Cast<SyntaxNode>().Concat(articulations).ToList();
         // Pre-scan the frame spec so a chord symbol on the same note can

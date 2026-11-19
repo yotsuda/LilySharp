@@ -3987,8 +3987,8 @@ public sealed class MidiExporter
         int start = _currentTick, ordinal = NextOrdinal(rest.SourceStart);
         // A rest takes the scripts an empty chord before it wrote, as the page and LilyPond draw
         // them on it (`c''2 <>@accent r4 d''4`), and sounds none: until session 1329 they went on
-        // to the d'' (Lab sessions/p1329/g r1). A spacer is left out — LilyPond hangs them on its
-        // moment with no support while the page draws them on the next note (leftovers p1329).
+        // to the d'' (Lab sessions/p1329/g r1). A spacer takes none: they go on to the next note,
+        // as the page draws them (owner's decision 2026-11-20; LYS4085 says so).
         if (rest.RestText == "r")
             _heldScripts.Remove(_currentPart ?? "", out _);
         ProcessRestTime(rest, conductorTrack);
@@ -5099,7 +5099,9 @@ public sealed class MidiExporter
                     // A grace rest is a silent spacer: it consumes grace time (the
                     // following note steals it) but emits no note — and takes the scripts an
                     // empty chord before it wrote, as the page draws them on its column.
-                    GraceScripts(rest.Articulations, g);
+                    // (A grace spacer takes none, as a full one: owner's decision 2026-11-20.)
+                    if (rest.RestText == "r")
+                        GraceScripts(rest.Articulations, g);
                     _currentTick += g;
                     _pendingGraceSteal += g;
                     break;

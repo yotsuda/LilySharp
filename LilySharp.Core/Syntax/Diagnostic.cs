@@ -1761,6 +1761,18 @@ public static class DiagnosticCodes
     /// played as written.</summary>
     public const string StruckWithNothingHeld = "LYS4084";
 
+    /// <summary>Warning: a script (an accent, a staccato, a fermata…) on an empty chord whose next
+    /// item is a spacer — <c>c''2 &lt;&gt;@accent s4 d''4</c> (owner's decision 2026-11-20;
+    /// <c>Semantics.SpacerScriptValidator</c>). A spacer is no note, so the script goes on to the
+    /// next note in every output.</summary>
+    public const string ScriptBeforeASpacer = "LYS4085";
+
+    /// <summary>Warning: a tie from an <c>@struck</c> member — <c>&lt;c e g@struck&gt;2~</c> or
+    /// <c>&lt;c e g@struck~&gt;</c> (owner's decision 2026-11-20). The page draws it, as LilyPond
+    /// does, but the member is let go, so the tie does not sound (MIDI) and MusicXML does not tie
+    /// it (<c>Semantics.StruckNoteValidator</c>).</summary>
+    public const string TieFromAStruckNote = "LYS4086";
+
     /// <summary>Error: a span end whose name is not the one the span was opened with —
     /// <c>@8va … @!15ma</c> (owner's decision 2026-10-28: a span is closed by its own name;
     /// <c>Semantics.SpanNames</c>). The quick fix writes the start's name.</summary>

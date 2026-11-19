@@ -440,8 +440,58 @@ public sealed partial class LilyPondExporter
         // What a section boundary restores: the part header's key, else the file's.
         _restoreKeySharps = _keySharps;
 
+        int bodyStart = _sb.Length;
         EmitMusicStream(music, indent: "  ");
+        WriteTheClosingFermata(bodyStart);
         _sb.Append("}\n\n");
+    }
+
+    // Whether a part's closing fermata has been written as the score's end mark (once a score).
+    private bool _closingFermataWritten;
+
+    private static readonly System.Text.RegularExpressions.Regex ClosingEmptyChord = new(
+        @"<>(?<marks>(?:[-^_]?\\[A-Za-z]+)*)(?<tail>(?:\s|\||\\bar\s+""[^""]*"")*)$",
+        System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+    private static readonly System.Text.RegularExpressions.Regex FermataMark = new(
+        @"(?<dir>[-^_])\\fermata(?![A-Za-z])", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// A part's music ending on <c>&lt;&gt;-\fermata</c> — the empty chord after the piece's last
+    /// note (<c>c''1 &lt;&gt;@fermata |</c>) — written as LilyPond's fermata over the closing bar
+    /// line, <c>\textEndMark \markup { \musicglyph "scripts.ufermata" }</c> centred on it, where
+    /// the page stands it (owner's decision 2026-11-20).
+    /// </summary>
+    /// <remarks>
+    /// MEASURED, 2.26.0 (Lab sessions/p1329/lpf a, e, f; sessions/p1331/ly g1, g2, g5): the empty
+    ///   chord's <c>-\fermata</c> at the final moment draws nothing (no note column for the Script);
+    ///   the end mark draws the glyph over the closing bar line, centred with
+    ///   <c>self-alignment-X = #CENTER</c> (right-aligned to it without), and a <c>.down</c> one
+    ///   below the staff with <c>direction = #DOWN</c> and <c>scripts.dfermata</c>.
+    /// The form is written out into each part's variable, so the variable's end is the piece's.
+    /// The end mark is the SCORE's: written once, for the first part that ends so, over the top
+    /// staff (the page stands one over each staff that writes it). Other marks on the empty chord
+    /// stay on it, as before.
+    /// </remarks>
+    private void WriteTheClosingFermata(int bodyStart)
+    {
+        if (_closingFermataWritten || _sb.Length <= bodyStart)
+            return;
+        string body = _sb.ToString(bodyStart, _sb.Length - bodyStart);
+        var chord = ClosingEmptyChord.Match(body);
+        if (!chord.Success)
+            return;
+        var fermata = FermataMark.Match(chord.Groups["marks"].Value);
+        if (!fermata.Success)
+            return;
+        bool down = fermata.Groups["dir"].Value == "_";
+        string others = chord.Groups["marks"].Value.Remove(fermata.Index, fermata.Length);
+        string mark = "\\once \\override Score.TextMark.self-alignment-X = #CENTER "
+            + (down ? "\\once \\override Score.TextMark.direction = #DOWN " : "")
+            + "\\textEndMark \\markup { \\musicglyph \"scripts." + (down ? "d" : "u") + "fermata\" }";
+        string rewritten = (others.Length > 0 ? "<>" + others + " " : "") + mark + chord.Groups["tail"].Value;
+        _sb.Remove(bodyStart + chord.Index, chord.Length).Append(rewritten);
+        _closingFermataWritten = true;
     }
 
     /// <summary>
