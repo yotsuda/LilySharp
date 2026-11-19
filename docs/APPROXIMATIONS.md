@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 464 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **590** | |
+| `OWN` | 465 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **591** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -247,7 +247,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（464 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（465 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -383,6 +383,7 @@
 - **`MusicXmlReader.ReadArpeggioBrackets`** LILYSHARP-OWN: what one bracket on two staves is. The ends that begin at one moment
 - **`MusicXmlReader.TempoWordsAlone`** LILYSHARP-OWN: MusicXML has no element for a tempo word, so the reading goes by the
 ### `LilySharp.Core/Parser/Parser.Music.cs`
+- **`Parser.EndingMarksOfABlock`** LILYSHARP-OWN: LilyPond takes a post-event after \repeat tremolo { … } with a
 - **`Parser.ParseChordRepetition`** its '>': q' repeats the chord an octave up. LILYSHARP-OWN — LilyPond's q
 - **`Parser.ParseChord`** LILYSHARP-OWN: members' ties and the whole chord's say two things about the same notes; LilyPond takes both.
 - **`Parser.ParseShapeChord`** LILYSHARP-OWN: LilyPond writes such a chord out note by note.

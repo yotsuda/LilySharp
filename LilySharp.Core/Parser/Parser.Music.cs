@@ -471,14 +471,20 @@ internal sealed partial class Parser
             SyntaxKind.At when _position > 0 && _tokens[_position - 1].Kind == SyntaxKind.Identifier
                                && _tokens[_position - 1].TrailingTriviaWidth == 0 && Current.LeadingTriviaWidth == 0
                 => ReportMarkOnAName(),
-            // A mark glued to a block's closing brace — `repeat tremolo 12 { … }@!sustain`, a
-            // pedal lifted when the tremolo is over (Calamo request 29, 2026-11-19). The same
-            // answer as a mark on a name: an empty chord after the block stands at its end.
-            // Reported and kept exactly as any stray token; only the sentence says what to write.
-            SyntaxKind.At when _position > 0 && _tokens[_position - 1].Kind == SyntaxKind.CloseBrace
-                               && _tokens[_position - 1].TrailingTriviaWidth == 0 && Current.LeadingTriviaWidth == 0
+            // An ENDING mark glued to a block's closing brace — `repeat tremolo 12 { … }@!sustain`,
+            // a pedal lifted when the tremolo is over (Calamo request 29; owner's decision
+            // 2026-11-19): what the mark ends, ends where the block ends. It is read as the
+            // empty chord a writer could have put there, `} <>@!sustain` (EndingMarksOfABlock).
+            SyntaxKind.At when GluedToAClosingBrace() && Peek(1) is { Kind: SyntaxKind.DashedBar, LeadingTriviaWidth: 0 }
+                               && Current.TrailingTriviaWidth == 0
+                => EndingMarksOfABlock(),
+            // Any other mark there — `}@f`, `}@sustain` — has two readings (after the block,
+            // or the whole of it), and a mark on a name is read BEFORE it (ReportMarkOnAName):
+            // reported and kept as any stray token, the sentence saying what to write.
+            SyntaxKind.At when GluedToAClosingBrace()
                 => ReportStrayItem("a music block",
-                    "A mark stands on a note, and a block is not one. Write the mark on an empty chord "
+                    "A mark stands on a note, and a block is not one; only an ending mark (}@!sustain) "
+                    + "is written on its closing brace. Write this one on an empty chord "
                     + "after the block, which takes no time and stands where the block ends: } <>@"
                     + MarkWordAfterAt() + "."),
             _ => ReportStrayItem("a music block",
@@ -524,6 +530,71 @@ internal sealed partial class Parser
             + "number is a value, and belongs in a value position such as an "
             + "override (override Stem.length = 3.5).");
         return Advance();
+    }
+
+    /// <summary>Whether <c>Current</c> is written against a <c>}</c> with nothing between.</summary>
+    private bool GluedToAClosingBrace()
+        => _position > 0 && _tokens[_position - 1].Kind == SyntaxKind.CloseBrace
+           && _tokens[_position - 1].TrailingTriviaWidth == 0 && Current.LeadingTriviaWidth == 0;
+
+    /// <summary>
+    /// The ending marks written on a block's closing brace (<c>}@!sustain</c>, <c>}@!cresc@!8va</c>),
+    /// as an EMPTY CHORD standing after the block: its two angle brackets are zero-width tokens,
+    /// so the tree is the one <c>} &lt;&gt;@!sustain</c> parses to but for their text, and every
+    /// reader of the empty chord — the page, the sound, the twin, MusicXML — reads this too.
+    /// </summary>
+    /// <remarks>
+    /// Owner's decision 2026-11-19 (Calamo request 29): ENDING marks alone, on any block of
+    /// music that closes with a brace. A mark that is not an ending one, written in the same
+    /// run (<c>}@!sustain@f</c>), is reported where it stands and kept on the chord.
+    /// LILYSHARP-OWN: LilyPond takes a post-event after <c>\repeat tremolo { … }</c> with a
+    /// warning ("Unattached SustainEvent") and acts on it at the block's end, as here.
+    /// </remarks>
+    private ChordGreen EndingMarksOfABlock()
+    {
+        int at = _textPosition;
+        var marks = ParsePostEvents();
+        int offset = at;
+        foreach (var mark in marks)
+        {
+            if (mark is null)
+                continue;
+            if (mark is MusicMarkGreen green && green.SlotCount > 1 && green.GetSlot(1) is SyntaxToken { Kind: SyntaxKind.DashedBar })
+            {
+                offset += mark.FullWidth;
+                continue;
+            }
+            _diagnostics.Error(new TextSpan(offset + LeadingWidthOf(mark), Math.Max(1, mark.FullWidth - LeadingWidthOf(mark) - TrailingWidthOf(mark))),
+                DiagnosticCodes.StrayItemToken,
+                "Only an ending mark (@!sustain, @!cresc) is written on a block's closing brace: what it ends, "
+                + "ends where the block ends. Write any other mark on an empty chord after the block: } <>@mf.");
+            offset += mark.FullWidth;
+        }
+        return new ChordGreen(new SyntaxToken(SyntaxKind.OpenAngle, "", null, null), [],
+            new SyntaxToken(SyntaxKind.CloseAngle, "", null, null), [], null, null, marks);
+
+        static int LeadingWidthOf(GreenNode node)
+        {
+            GreenNode first = node;
+            while (first is not SyntaxToken && first.SlotCount > 0 && first.GetSlot(0) is { } child)
+                first = child;
+            return first is SyntaxToken token ? token.LeadingTriviaWidth : 0;
+        }
+
+        static int TrailingWidthOf(GreenNode node)
+        {
+            GreenNode last = node;
+            while (last is not SyntaxToken && last.SlotCount > 0)
+            {
+                GreenNode? child = null;
+                for (int i = last.SlotCount - 1; i >= 0 && child is null; i--)
+                    child = last.GetSlot(i);
+                if (child is null)
+                    break;
+                last = child;
+            }
+            return last is SyntaxToken token ? token.TrailingTriviaWidth : 0;
+        }
     }
 
     /// <summary>The mark written after the <c>@</c> at <c>Current</c>, as far as it is glued —

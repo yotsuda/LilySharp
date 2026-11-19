@@ -85,6 +85,17 @@ public class SpanEndCompletionTests
         Assert.Single(items, i => i.Preselect == true);
     }
 
+    /// <summary>On a block's closing brace too, where an ending mark is written
+    /// (<c>repeat tremolo 8 { … }@!sustain</c>, owner's decision 2026-11-19).</summary>
+    [Fact]
+    public void OnABlocksBrace_TheOpenSpanComesFirst()
+    {
+        var items = ItemsAt("c'4@sustain d'4 repeat tremolo 8 { e'32 g' }@!▮", "!")!;
+        var first = items.OrderBy(i => i.SortText, System.StringComparer.Ordinal).First();
+        Assert.Equal("sustain", first.Label);
+        Assert.True(first.Preselect);
+    }
+
     [Theory]
     [InlineData("c'4@!ri▮", "rit")]
     [InlineData("c'4@!8▮", "8vb")]

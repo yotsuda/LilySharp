@@ -2837,8 +2837,25 @@ MusicItem      = Note | Rest | Chord | Arpeggio | Barline | PhraseRef
                | SlashNote | BareDuration | PercentMark | BeatRepeat
                | Slur | Tie | Beam | Tuplet | Grace | Cue | MidMusicCommand
                | DrumChart                        (* §5.2 *)
-               | InlineVolta | NavMark ;          (* a section's music and a chords row;
+               | InlineVolta | NavMark            (* a section's music and a chords row;
                                                       not a phrase — see below *)
+               | BlockEnd ;
+BlockEnd       = SpanEndMark , { SpanEndMark } ;  (* written against a block's '}', no space *)
+SpanEndMark    = '@!' , MarkName ;
+
+(* AN ENDING MARK ON A BLOCK'S BRACE (Calamo request 29; owner's decision 2026-11-19).
+   'repeat tremolo 12 { a64 b }@!sustain' lifts the pedal when the tremolo is over;
+   'tuplet 3/2 { d8 e f }@!cresc' ends the crescendo where the tuplet ends. What the mark
+   ends, ends where the block ends: it is read as an EMPTY CHORD written after the block,
+   '} <>@!sustain', which takes no time — the same page, sound, twin and MusicXML. Any block
+   of music that closes with a brace takes it (repeat tremolo, tuplet, grace, cue, the last
+   voice of a 'voice { } { }'; not a beat repeat's figure, whose '%' must follow its brace).
+   ENDING marks alone: '}@f' or '}@sustain' could mean "after
+   the block" or "all of it", and a mark on a phrase's name is read BEFORE the call — those
+   are errors that name the empty chord ('} <>@f'). A space before the '@' ('} @!sustain')
+   is a mark on nothing, an error as before. LILYSHARP-OWN in spelling: LilyPond takes
+   '\repeat tremolo 12 { … } \sustainOff' with a warning (Unattached SustainEvent) and lifts
+   at the same moment. *)
 InlineVolta    = '[' , Integer , [ '-' , Integer | ',' , Integer , { ',' , Integer } ] , '.' ,
                  { MusicItem } , [ ( ']' | '-]' ) , [ '@voltaBracket(' , VoltaLength , ')' ] ] ;
                  (* The passes and the bracket's length as StructureVolta's, §6. The ending

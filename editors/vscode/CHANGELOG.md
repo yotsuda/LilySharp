@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **An ending mark on a block's closing brace: `repeat tremolo 12 { … }@!sustain`.** The pedal lifts when the tremolo is over; `tuplet 3/2 { d8 e f }@!cresc` ends the crescendo where the tuplet ends. Typing `@!` against a `}` offers the spans that are open, the one to close first. Any other mark there (`}@f`) is an error that says to write it on an empty chord after the block: `} <>@f`.
+
 - **`layout { tremoloBeams joined }`** draws a two-note tremolo as an old print does, its beams reaching both stems. The default, `gapped`, keeps them off the stems as before. The key is in the `layout` list, its two words are offered after it, and both are coloured.
 
 - **Fixed: a whole-note tremolo's beams ran into the accidentals of its second chord** when that chord had two or more accidentals side by side.

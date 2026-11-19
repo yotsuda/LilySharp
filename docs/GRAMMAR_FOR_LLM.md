@@ -315,6 +315,11 @@ prints "Più mosso" once. `tempo! …` draws it anyway. Words alone (`tempo "a t
 `<>@mf theme`, `<>@p@text("dolce") theme` — the phrase's notes are the same at every call, so
 `theme@mf` is an error that says this.
 
+**An ending mark on a block's closing brace** ends its span where the block ends:
+`repeat tremolo 12 { a64 b }@!sustain` (the pedal lifts when the tremolo is over),
+`tuplet 3/2 { d8 e f }@!cresc`. No space before the `@`. Only `@!…` marks go there — it is
+the same as `} <>@!sustain`; for any other mark after a block write the empty chord: `} <>@f`.
+
 A key has at most seven sharps or flats: D♭ minor (eight flats, every A a B𝄫) is written
 `key cis minor`, G♯ major `key aes major`, F♭ major `key e major` — the key that sounds the same
 (LYS4034 warns otherwise). A hairpin goes the way its next level does: `@ff … @decresc … @fff`
