@@ -277,6 +277,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1319セッションの経緯
+
+### 1.1 第1319セッション（2026-11-19・YT-DELL2）
+
+leftovers の「第1313」の残りの便（base `86c7022f6`）。開始時 full 17820 合格 / 0 失敗 / skip 2 / 合計 17822（Lab `p1319` `run1.trx`）。終了時 full 17850 合格 / 0 失敗 / skip 2 / 合計 17852（`run2.trx`）。REQUESTS の open は両方 0。作業ツリーの `site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
+- **連符の中の slash と裸の音価は、数字付き低音と `@cross` を落としていた**（未測定だった項目・`93bc60612`・`[engraving]`）: `tuplet 3/2 { /4@figuredBass(6) / / }` は数字を描かず、`tuplet 3/2 { /4@cross / / }`・`{ 4@cross 4 4 }` はその本で唯一の移る音のとき段を移らなかった（表 `CrossStaffItems` が「移る音がある」と collector に言う。ほかに移る音があれば移っていた＝x7）。連符の歩きの slash の腕と bare の 2 つの腕が `CollectFiguredBass`・`CollectCrossStaff` を呼んでいなかった（主の歩きの腕と、連符の note・chord・`q` は呼ぶ）。`.ly`・MusicXML・MIDI は構文を歩くので元から正しい。探り譜は Lab `p1319/probe` x0〜x7・f1〜f6。
+- **運び手が `CollectArticulations` に渡す時刻に網を付けた**（`HairpinVoiceTests.EveryCarrier_StampsTheMomentOfAHairpinsStopToo` 23 行＝別の声部の `@!cresc` を拍で見つける形を運び手ごとに）。欠陥は出なかった。
+- 網は `TupletArmTests.FiguresAndCross_ReachEveryMemberOfATuplet` 7 行と上の 23 行。毒 29 本のうち 27 本が自分の行だけ赤（Lab `p1319/poisons.ps1`）。緑の 2 本は観測できない腕（`R1*N` の時刻は常に小節の頭＝既定値・`<< >>` の休符の member は印を受けない文法）。全 svg の掃き 0 / 1276（追跡中の本にこの形は 0 冊・陽性対照は探り譜）。行番号の表 2 枚は再生成して差なし。
+- **次**: leftovers の「第1238」の残り（combinedStaff のヘアピンの re-address・drum 譜の `DrumDoubles` で落ちた側のヘアピン・段の「部屋」の網）→ review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
+
 ## 以下は第1318セッションの経緯
 
 ### 1.1 第1318セッション（2026-11-19・YT-DELL2・第1317 と同じ会話）
