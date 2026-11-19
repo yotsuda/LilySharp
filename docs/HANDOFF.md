@@ -146,6 +146,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1316セッション（2026-11-19・YT-DELL2）
+
+leftovers の「第1315」「第1314」の節の便（base `057fe425e`）。開始時 full 17802 合格 / 0 失敗 / skip 2 / 合計 17804（Lab `p1316` `run1.trx`）。終了時 full 17804 合格 / 0 失敗 / skip 2 / 合計 17806（`run6.trx`）。REQUESTS の open は両方 0。作業ツリーの `site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
+- **終わりの小節線の上のフェルマータは描いた小節線の中央に**（`d64240d03`）: 第1315 の腕は小節の末尾の列（小節線の左端）に中央を置いていた＝リピートの終わり `:|.` の上では点の上（群の中央から 0.92 左）。今は末尾の列から小節の右端（小節線の墨）までの中央。網 `TrailingEmptyChordTests.TheFermataOverTheClosingBarLine_IsCentredOnItsInk`（boxes で小節線の墨と比べる・毒で 2 本赤）。掃き 0 / 1276（追跡中の本に `<>@fermata` は 0 冊・陽性対照は探り譜 f2 で 48.192 → 49.112）。同じ小節線に立つ 8va の括弧・volta・テンポ・`<>@text("fine").up`・大譜表・tab の双子は探り譜 f0〜f9 で崩れない（leftovers に詳細）。`<>@mark` は描かれない＝LP の RehearsalMark も行末で見えない。
+- **小節線で閉じる 8va の括弧は最後の音の後で止める**（`2544f35f8`）: LilyPond の右端は止める時刻がどこでも最後の音の列（`ottava-engraver.cc:176-180`・実測 Lab `p1316/lp/o1.ly` 28.03）。Lily# は次の小節の頭で閉じる括弧（`f'' <>@!8va | g'1`・次の START）と section で切れる括弧を小節の右端（28.86）まで描いていた＝自分で「近似」と名乗っていた腕。網は `ThePage_DrawsThem` に 1 行（毒で赤）。掃きで動いたのは `audit/lpreg/ottcons.lys` 1 / 1276＝1 本目の鉤が音の右 0.6 に寄り LP の双子と同じ（前は 3.6）。
+- ⚠️ full の途中で 2 回、別々の網が 1 回だけ赤（`MusicFontSearchPathTests` 3 本＝`no bundled fonts`、`LpReferenceCitationTests.CitationsThatNameNothing_DoNotGrow` 682/681）。どちらも次の run で緑・単独でも緑＝並行の別セッションの作業と重なった揺れと読んだ（原因は未特定）。後者は私の出典 1 つに関数名が無かったのも事実なので足した。
+- **次**: leftovers の「第1313」の節 →「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1315 の残り（`.ly`・MusicXML の最後の `<>`・`check` で言うか）と第1314 の残り（text 様式のペダル・`.ly`／MusicXML の最後の `<>@!sustain`）も同じ一覧に。第1308 の未決はオーナー待ち。
+
+## 以下は第1315セッションの経緯
+
 ### 1.1 第1315セッション（2026-11-19・YT-DELL2・第1313 と同じ会話）
 
 最後の `<>` の強弱・文字・フェルマータと trill の線の便（base `28b043635`・`fa6d2f1a7`）。開始時 full 17798 合格 / 1 失敗 / skip 2 / 合計 17801（Lab `p1315` `run1.trx`。赤は既知の不安定な網 `ScoreVideoShapeTests.APaperTheScoreStates_KeepsItsShape_OnePageOrNot`＝単独で回すと緑）。終了時 full 17801 合格 / 0 失敗 / skip 2 / 合計 17803（`run2.trx`）。REQUESTS の open は両方 0（Calamo の 30 の行に追記・未 commit）。作業ツリーの `site/` は並行の別セッションの物＝触っていない。
@@ -154,18 +164,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 網 `TrailingEmptyChordTests` は 16 本・毒 10 本（Lab `p1315/poisons.ps1`）。CHANGELOG は 2 つとも書き直した。
 - **残り（leftovers の「第1315」「第1314」の節）**: フェルマータがリハーサルマーク・volta・テンポと同じ小節線に立つときの積み方は見ていない／`<>@text("fine").up` は未／`.ly`・MusicXML の最後の `<>` は未測定／曲の途中の `f' <>@!8va |` と `f'@!8va |` の右端の差。
 - **次**: leftovers の「第1315」→「第1314」→「第1313」の節 →「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決はオーナー待ち。
-
-## 以下は第1314セッションの経緯
-
-### 1.1 第1314セッション（2026-11-19・YT-DELL2・第1313 と同じ会話）
-
-Calamo の依頼 30 を直した便（base `c13aaa228`・`0f68f197f`）。開始時 full 17785 合格 / 0 失敗 / skip 2 / 合計 17787（Lab `p1314` `run1.trx`）。終了時 full 17799 合格 / 0 失敗 / skip 2 / 合計 17801（`run2.trx`）。REQUESTS は 30 を `fixed`（Calamo 側は未 commit）・open は両方 0。全 svg の掃きは 0 / 1276。並行の別セッションの 2 commit（`9361a0c0a`・`795210f8d`＝拡張）が間に在る。
-- **曲の最後の空の和音で終わる線を描く**: 満ちた小節の後ろの `<>` の印は「次の小節の頭」に住所が付き、曲の最後ではその小節が無い＝どの engraver も黙って飛ばしていた（ペダルの括弧は消える・`@rit … <>@!rit` は文字ごと消える・8va は始点で潰れる。ヘアピンだけ `endsAtFinalBar` で描けていた）。`TrailingMarks.OntoTheLastBar`（新規・score を組む 3 か所で、捕まえた content に当てる＝収集のリストは書き換えない）が、線の終わり（ペダル 3 種の離し・text spanner の stop・ottava の stop）を最後の小節の末尾（item の数・小節の長さ）へ付け直す＝小節が満ちていないときの `<>` が元から持つ住所。
-- **付け直すのは線の終わりだけ（LilyPond 2.26.0 の実測・Lab `p1314/lp/end.ly`）**: LilyPond は最後の `<>` で終わる括弧・text spanner・ottava・trill の線を終わりの小節線まで描き、そこに書いた強弱・フェルマータ・文字は描かない。最初の版は強弱と script も動かし、掃きが回帰譜 `audit/lp-regression/lys/empty-chord.lys`（最後が `c1@decresc <>@pp`）で pp が増えたと言った＝戻した。
-- **`<>@!8va` は次の音を巻き込んでいた（同じ commit）**: ottava の終わりは「書いた音符を含む」ので直前に足した item の長さを足すが、`<>` は item を足さない＝前の音符の長さをもう一度足していた（`f' <>@!8va | g'1` の g が 1 オクターブ下・Lab `p1314/probe` o2b／o2h）。
-- 網 `TrailingEmptyChordTests` 14 本・毒 14 本（Lab `p1314/poisons.ps1`）。CHANGELOG は 2 つとも 2 件。
-- **残り（leftovers の「第1314」の節）**: 最後の `<>` で終わる trill の線は未（LilyPond は描く）／曲の途中の `f' <>@!8va |` と `f'@!8va |` で括弧の右端が違う（小節の終わり 28.86 と最後の音の列 28.03・LilyPond 未測定）／最後の `<>` の強弱・script が黙って描かれないことを `check` で言うかはオーナー判断。
-- **次**: leftovers の「第1314」→「第1313」の節 →「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決（録音が無いときの Faders 100% の置き場・Tempo の下限）はオーナー待ち。
 
 ## 2. 開いている作業
 
