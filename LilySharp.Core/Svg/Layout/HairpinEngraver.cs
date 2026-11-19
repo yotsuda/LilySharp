@@ -1199,8 +1199,11 @@ internal static class HairpinEngraver
                 .Where(m =>
                     m != mark && (m.SourcePosition != mark.SourcePosition || !InAnotherPlay(m)) &&
                     m.StaffIndex == mark.StaffIndex &&
-                    (!ownVoice || m.VoiceIndex == mark.VoiceIndex) &&
+                    (!ownVoice || IsOwn(m)) &&
                     PlaceOfMark(m).IsAfter(PlaceOfMark(mark))), PlaceOfMark, ownVoice);
+            // (A combined staff's part's next hairpin, engraved in the other voice, is this
+            // voice's own too: MusicMarkItem.MeetsVoice.)
+            bool IsOwn(MusicMarkItem m) => m.VoiceIndex == mark.VoiceIndex || m.MeetsVoice == mark.VoiceIndex;
 
             // An explicit stop (@!cresc, LilyPond's \!) on this staff, strictly after the start:
             // the wedge ends at its note. Another playing of the same written stop is fine — a
@@ -1307,7 +1310,7 @@ internal static class HairpinEngraver
                 endSource = nextMark!.SourcePosition;
                 // (A condensed staff's parts too: the one's hairpin stands above the staff and
                 // the other's below, MeasureCollector.JunkCondensedStaffDuplicateDynamics.)
-                metInAnotherVoice = nextMark.VoiceIndex != mark.VoiceIndex;
+                metInAnotherVoice = !IsOwn(nextMark);
             }
             else
             {

@@ -282,6 +282,26 @@ public sealed record MusicMarkItem
     public int PairingVoice => LineVoice ?? VoiceIndex;
 
     /// <summary>
+    /// For a hairpin's START on a <c>combinedStaff</c>: the other voice of the staff whose open
+    /// hairpin this one follows — the SAME PART's hairpin before it, begun where the part was
+    /// engraved in that voice. To that hairpin this start is its own voice's next, the two back
+    /// to back (<see cref="HairpinItem.AdjacentAtEnd"/>). Null everywhere else.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (LilyPond 2.26.0, Lab sessions/p1324/lp s2, s3): a part's crescendo written
+    /// where the parts play apart and its next hairpin in a bar both parts write alike are
+    /// drawn tip to tip — one Voice's two hairpins, adjacent. LilyPond keeps that bar in two
+    /// voices (a part's dynamics keep it from the unison), which Lily# does not: its unison
+    /// drops the second part's notes and marks, and the hairpin that is left is the first
+    /// part's, in the other voice. Without this word the earlier hairpin was "met in another
+    /// voice" and ended on the far edge of the note the next begins on, the two overlapping by
+    /// a note head.
+    /// LILYSHARP-OWN: the address (LilyPond has the event in the Voice, and no address).
+    ///   observed by: CombinedStaffHairpinTests.APartsNextHairpinInAnotherVoice_IsAdjacent.
+    /// </remarks>
+    public int? MeetsVoice { get; init; }
+
+    /// <summary>
     /// For a hairpin's start on a condensed staff: its end is the STAFF's next level, hairpin
     /// or stop, whichever part wrote it — not its own voice's first
     /// (<c>HairpinEngraver.DetectHairpins</c>).

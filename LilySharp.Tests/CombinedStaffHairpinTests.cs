@@ -68,6 +68,12 @@ public class CombinedStaffHairpinTests
             .Select(h => Place(score, h.VoiceIndex, h.StartMeasureIndex, h.StartItemIndex)
                 + " .. " + Place(score, h.EndVoiceIndex, h.EndMeasureIndex, h.EndItemIndex)));
 
+    private static string Tips(MultiStaffScore score)
+        => string.Join(" | ", ScoreSideTables.HairpinsByStaff(score).At(0)
+            .OrderBy(h => h.StartMeasureIndex).ThenBy(h => h.StartItemIndex)
+            .Select(h => (h.AdjacentAtStart ? ">" : "") + h.Direction + (h.AdjacentAtEnd ? ">" : "")
+                + (h.MetInAnotherVoice ? " (met in another voice)" : "")));
+
     private static string Marks(MultiStaffScore score)
         => string.Join(" | ", score.MusicMarks.Where(m => m.AnchorItemIndex >= 0)
             .Select(m => m.Type + " " + Place(score, m.VoiceIndex, m.MeasureIndex, m.AnchorItemIndex)));
@@ -178,6 +184,30 @@ public class CombinedStaffHairpinTests
         "v1 0.1 note@1/4 .. v0 1.1 note@1/4 | v0 1.1 note@1/4 .. v0 1.3 note@3/4")]
     public void AUnisonsSecondStop_GoesWithItsStart(string fl1, string fl2, string expected)
         => Assert.Equal(expected, Hairpins(Collect(fl1, fl2)));
+
+    /// <summary>
+    /// A part's hairpin and that part's next one are back to back, wherever the combiner
+    /// engraves the part by then (session 1324; LilyPond 2.26.0 draws them tip to tip, Lab
+    /// sessions/p1324/lp s2, s3). Until then the earlier one was "met in another voice" and
+    /// ended on the far edge of the note the next begins on, overlapping it by a note head.
+    /// </summary>
+    [Theory]
+    // The next is the unison's: part two's own start is dropped, part one's stands for it.
+    [InlineData("c''2 d''2 | c'4 d'@cresc e' f'@!cresc | g'1 |", "e'4 f' e'@cresc f' | c'4 d'@cresc e' f'@!cresc | g'1 |",
+        "Crescendo> | >Crescendo")]
+    [InlineData("c''2 d''2 | c'4 d'@decresc e' f'@!decresc | g'2 a'2 |", "e'4 f'@cresc e' f' | c'4 d'@decresc e' f'@!decresc | e'2 f'2@!cresc |",
+        "Crescendo> | >Decrescendo")]
+    // The next is in a bar part two plays alone: its own start, in the staff's first voice.
+    [InlineData("c''2 d''2 | R1 | c''1 |", "e'4 f'@cresc e' f' | g'4 g'@decresc g' g'@!decresc | e'1 |",
+        "Crescendo> | >Decrescendo")]
+    // …and the other way: begun in a bar part two plays alone, followed where the parts play apart.
+    [InlineData("R1 | c''2 d''2 | c''1 |", "g'4 g'@cresc g' g' | e'4 f'@decresc e' f'@!decresc | e'1 |",
+        "Crescendo> | >Decrescendo")]
+    // Part ONE's hairpin under part two's open one is another part's: met in another voice.
+    [InlineData("c''2 d''2 | c''4 d''@cresc e'' f''@!cresc | c''1 |", "e'4 f'@cresc e' f' | e'1 | e'1 |",
+        "Crescendo (met in another voice) | Crescendo")]
+    public void APartsNextHairpinInAnotherVoice_IsAdjacent(string fl1, string fl2, string expected)
+        => Assert.Equal(expected, Tips(Collect(fl1, fl2)));
 
     /// <summary>The other lines' ends: a text spanner, an ottava (whose end stands PAST its
     /// note), a pedal — in a bar part two plays alone, and after a mid-bar entrance.</summary>

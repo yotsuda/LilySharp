@@ -290,10 +290,13 @@ internal static class CombinedStaffReaddress
     /// address to translate: its events ARE in the context, where Lily# collects first and
     /// routes afterwards.
     /// </para>
-    /// LILYSHARP-OWN: three answers here have no LilyPond measurement behind them. An END on a
+    /// LILYSHARP-OWN: three answers here are not LilyPond's. An END on a
     ///   rest engraved for nobody — the part's own rest under the other's solo, `r2 r2@!cresc` —
     ///   goes to the item the staff engraves AT ITS MOMENT (<see cref="AtItsMoment"/>): the line
-    ///   stops on the beat it was written on. Until session 1323 it stayed under the part's own
+    ///   stops on the beat it was written on. MEASURED (LilyPond 2.26.0, Lab sessions/p1324/lp
+    ///   n2, n7): LilyPond loses that `\!` with the rest — "unterminated crescendo",
+    ///   "unterminated text spanner" — and draws no hairpin and no line at all; what the writer
+    ///   wrote is drawn here instead. Until session 1323 it stayed under the part's own
     ///   numbers, which name nothing on the staff, and the line ran to the bar's end (a pedal
     ///   bracket closed on the bar's head). Where the staff engraves nothing at that moment (the
     ///   other part holds a long note through it) it stays as collected still. A text spanner or
@@ -344,7 +347,22 @@ internal static class CombinedStaffReaddress
         var dropped = new HashSet<int>();
         var lineVoice = new Dictionary<int, int>();
         var byMoment = new Dictionary<int, MusicMarkItem>();
+        var meets = new Dictionary<int, int>();
         var open = new Dictionary<(int Staff, int Voice, int Line), int>();
+        // The other part's hairpin start at the moment of `m`, whose own note nobody engraves
+        // (-1: none) — the mark a unison keeps.
+        int TwinOf(MusicMarkItem m, CombinedStaffAddressing map)
+        {
+            if (AtItsMoment(m, map, measuresOf) is not { } there)
+                return -1;
+            for (int j = 0; j < marks.Length; j++)
+                if (PairedLine(marks[j]) is (HairpinLine, false) && marks[j].StaffIndex == m.StaffIndex && !ReferenceEquals(marks[j], m)
+                    && IsANotesMark(marks[j]) && Moved(marks[j], map) is { } kept
+                    && kept.VoiceIndex == there.VoiceIndex && kept.MeasureIndex == there.MeasureIndex
+                    && kept.AnchorItemIndex == there.AnchorItemIndex)
+                    return j;
+            return -1;
+        }
         for (int i = 0; i < marks.Length; i++)
         {
             var m = marks[i];
@@ -352,7 +370,21 @@ internal static class CombinedStaffReaddress
                 continue;
             var key = (m.StaffIndex, m.VoiceIndex, line.Line);
             if (!line.IsEnd)
+            {
+                // A part's next hairpin while its last is open ends that one, tip to tip —
+                // also where the part is engraved in another voice by now, or where this start
+                // is dropped for the other part's same mark on the merged column, which then
+                // stands for it (MusicMarkItem.MeetsVoice).
+                if (line.Line == HairpinLine && open.TryGetValue(key, out int before)
+                    && Moved(marks[before], map) is { } earlier)
+                {
+                    var here = Moved(m, map);
+                    int at = here != null ? i : TwinOf(m, map);
+                    if (at >= 0)
+                        meets[at] = earlier.VoiceIndex;
+                }
                 open[key] = i;
+            }
             else if (open.Remove(key, out int s))
             {
                 var start = Moved(marks[s], map);
@@ -398,6 +430,8 @@ internal static class CombinedStaffReaddress
                     : PairedLine(m) is null && AtItsMoment(m, map, measuresOf) is { } there ? there : m);
             if (placed != null && lineVoice.TryGetValue(i, out int paired))
                 placed = placed with { LineVoice = paired };
+            if (placed != null && meets.TryGetValue(i, out int met))
+                placed = placed with { MeetsVoice = met };
             if (placed is null
                 || !seen.Add((placed.StaffIndex, placed.VoiceIndex, placed.MeasureIndex, placed.AnchorItemIndex,
                               placed.Type, placed.Text, placed.SpanFamily)))
