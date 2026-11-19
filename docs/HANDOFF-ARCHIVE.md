@@ -277,6 +277,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1327セッションの経緯
+
+### 1.1 第1327セッション（2026-11-19・YT-DELL2・第1326 と同じ会話）
+
+オーナー決定 2026-11-19 の 3 件の便（base `03cdad597`）。開始時 full 17932 合格 / 0 失敗 / skip 2 / 合計 17934（Lab `p1327` `run1.trx`）。終了時 full 17944 合格 / 0 失敗 / skip 2 / 合計 17946（`-End` の trx）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
+- **オーナー決定 2026-11-19**（第1326 の報告の 3 問への返事）: ① 強弱は section の頭でリセット＝**ヘアピンの到達分だけ戻す**（書いた強弱は今までどおり続く・**テンポはリセットしない**）② unison の後のパート 2 の次のヘアピンは、パート 1 が自分の終わりを持たないときだけ接させる（持つときは今のまま）③ 相手が長い音を伸ばしている間の休符の上の `@!cresc` は書いた拍で止める。
+- **3 件とも実装**（`69bf832c3`・`[engraving][playback]`）: ① MIDI（歌い手も）＝音に section の 1 回を刻み（`MidiNote.SectionPlay`・`PlaySectionByName` が始まりを控える）、着地しないヘアピンは次の section で終わるときだけ持ち越し（ページの carry の規則）、それ以外は自分の section の音楽の終わりで切る。到達点は section の中だけ続く。② `MoveMarks` が落ちたパート 2 の始まりの代わりに立つパート 1 の印（`TwinOf`）を継がせる（`MeetsVoice`）・パート 1 がその後に強弱・ヘアピン・stop を書いていれば継がない（`EndsInItsPart`）。MusicXML のパート 1 の wedge はページの終わりで止める（`_meetsHairpins`）。③ 何も刻まれない拍の stop は鳴り続けている音の中に置き、時刻を保つ（`MusicMarkItem.WithinItem`・`HairpinItem.EndWithin`）＝X はその音の列から次の列（無ければ小節の終わり）までの時刻の比例（LILYSHARP-OWN・LilyPond は `\!` を失って描かない）。text spanner は今のまま。
+- 網 `InstrumentHairpinMidiTests` +1 本・`CombinedStaffHairpinTests` +8 行と 1 本・`MusicXmlWedgePairTests` +1 行。毒 24 本のうち 22 本が赤（観測者なし 2＝行に明記・Lab `p1327/poisons1.ps1`・`poisons2.ps1`）。掃き: 全 svg 0 / 1276・全 MusicXML 0 / 1276・全 MIDI 1 / 1276（`Fixtures/test/hairpin-in-a-repeated-section.lys`＝狙いの形）。行番号の表は再生成。
+- **次**: leftovers の「第1327」（`@!rit` の同じ形・`FirstOf` の書いた順・装飾音と section の頭）→「第1321」の h13 → review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
+
 ## 以下は第1326セッションの経緯
 
 ### 1.1 第1326セッション（2026-11-19・YT-DELL2・第1325 と同じ会話）
