@@ -146,23 +146,23 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1323セッション（2026-11-19・YT-DELL2）
+
+leftovers の「第1321」の残りの便（base `82da4e456`）。開始時 full 17901 合格 / 0 失敗 / skip 2 / 合計 17903（Lab `p1323` `run1.trx`）。終了時 full 17912 合格 / 0 失敗 / skip 2 / 合計 17914（`run2.trx` は HANDOFF を書く前＝継ぎ目の 3 本が赤の 17909・`-End` で緑）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
+- **combinedStaff で、誰も刻まない休符の上の終わりは書いた拍で止まる**（`e868ba0fa`・`[engraving]`）: 相手の solo の下の `r2 r2@!cresc` はパートの番号のまま残り、譜表では何も指さないのでヘアピン（と `@rit` の線）が小節の終わりまで伸びた。直し: その時刻に譜表が刻む音へ移す（`CombinedStaffReaddress.AtItsMoment`・`Apply` が譜表の小節を受け取る）。相手が長い音を伸ばしていてその時刻に何も刻まれないときは今までどおり。ペダルの括弧は元から時刻で読むので絵は同じ・ottava の終わりは休符を含むので小節の終わりのまま。
+- **ヘアピンの stop はそのパートのもの**: stop に始まりの声部を持たせ（`MusicMarkItem.LineVoice` をヘアピンにも）、`HairpinEngraver` の「自分の声部が先」は `PairingVoice` で読む。直す前は、パートが声部を移った後の自分の `@!cresc` を通り越して、始まりの声部の先の f まで伸びた（leftovers が「未測定」としていた形＝欠陥だった）。
+- **unison の 2 番目のパートの stop は始まりと一緒に落とす**: 残っていた stop は自分だけの声部に立ち、その声部の前のヘアピンを小節の終わりで終えていた＝unison のヘアピンに重なった（Lab `p1323/probe` s2・s3）。今は前のヘアピンが unison のヘアピンの始まりで終わる。
+- 探り譜 Lab `p1323/probe`（n2・n5〜n10・s1〜s3）。網 `CombinedStaffHairpinTests` +11 行。毒 10 本のうち 9 本が赤（Lab `p1323/poisons.ps1`）・緑 1 本は観測者なし＝`AtItsMoment` の spacer を除く条件。全 svg の掃き 0 / 1276（追跡の本にこの形は 0 冊・陽性対照は探り譜）。行番号の表は再生成。LILYSHARP-OWN（LilyPond とは比べていない）。
+- **次**: leftovers の「第1323」（長い音の間の終わり・別の声部のヘアピンに終えられた先の重なり・パート 2 の 8va が相手の音も下げる）と「第1321」の残り（h13・h10・`.ly`／MusicXML）→ review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
+
+## 以下は第1322セッションの経緯
+
 ### 1.1 第1322セッション（2026-11-19・YT-DELL2・第1321 と同じ会話）
 
 leftovers の「第1321」の先頭の便（base `4aeb3c7e5`）。開始時 full 17895 合格 / 0 失敗 / skip 2 / 合計 17897（Lab `p1322` `run1.trx`）。終了時 full 17901 合格 / 0 失敗 / skip 2 / 合計 17903（`run2.trx`）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
 - **combinedStaff で声部を移るパートの text spanner と ottava は 1 本の線**（`06c7307c5`・`[engraving]`）: この 2 つの engraver は開いた線を（譜・声部）で持つ（LilyPond の Voice の engraver）。combinedStaff のパートは combiner が声部のあいだを動かす 1 本の音楽なので、2 パートが別々の小節の `@rit` と Solo II の小節の `@!rit` は 2 つの声部に着く。第1321 は両端を集めた場所のまま残した（線は出るが、終わりを始まりの声部で読むので小節の終わりまで伸びた）。直し: 終わりの印が始まりの声部を持つ（`MusicMarkItem.LineVoice`・対の鍵は `PairingVoice`）／text spanner は終わりの item を終わりの声部で読む（`TextSpannerItem.EndVoiceIndex`・描く側と、上の行の部屋 `InkAboveStaff`）。ottava の端は譜表の列を時刻で読むので対の鍵だけ。`CombinedStaffReaddress.MoveMarks` は声部が分かれた対も動かす。LILYSHARP-OWN（LilyPond が別の context の stop をどう描くかは測っていない）。
 - 探り譜 Lab `p1322/probe`（x1・x2・y1〜y4＝別々→Solo II・Solo II→別々・3 小節）。網 `CombinedStaffHairpinTests` +6 行（線の両端の X 4 行・部屋の右端 2 行）。毒 9 本のうち 6 本が赤（Lab `p1322/poisons.ps1`）・緑 3 本は観測者なし＝端が装飾音のときの `BoundX` の腕 2 つと、section の切断で終わりの声部を戻す行。全 svg の掃き 0 / 1276（陽性対照は探り譜 26 冊のうち 4 冊）。行番号の表は再生成（`APPROXIMATIONS.md` に OWN 1 件）。
 - **次**: leftovers の「第1321」の残り（誰も刻まない休符の上の終わり・a2 の迷子の stop）→ review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
-
-## 以下は第1321セッションの経緯
-
-### 1.1 第1321セッション（2026-11-19・YT-DELL2）
-
-leftovers の「第1238」の残り 2 つの便（base `ed10b9c56`）。開始時 full 17864 合格 / 0 失敗 / skip 2 / 合計 17866（Lab `p1321` `run1.trx`）。終了時 full 17895 合格 / 0 失敗 / skip 2 / 合計 17897（`run2.trx`）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
-- **combinedStaff の音符の印は音符と一緒に動く**（`1c660791d`・`7cd77d290`・`[engraving]`・`CombinedStaffReaddress.MoveMarks`）: ヘアピン・text spanner・ottava・ペダルの両端は書いた音符の声部と item 番号を持つが、combinedStaff では強弱・アーティキュレーション・連符・trill だけが combiner の行き先へ付け直され、印はパートの番号のままだった。欠陥 3 つ（Lab `p1321/probe`）: Solo II の小節の `@p … @cresc … @f` が小節頭の p の下から始まる（h2）／小節の途中で入るパート（相手の `c''2 r2` の後の `r2 g'4@cresc g'@f`）のヘアピンが相手の音から始まる（h5）／a2 で両パートが書いたヘアピンを 2 本描く（h4）。直し: 印を行き先へ動かす・item を過ぎた場所に立つ終わり（ottava）は行き先の item の次・誰も刻まない休符の上の始まりは落とす（強弱と同じ）・終わりは集めた場所に残す・同じ列に重なった同じ印は 1 つ。
-- ⚠️ **最初の commit が退行を作り、続きの commit で直した**: text spanner と ottava は対を（譜・声部）で作るので、パートが両端のあいだで声部を移る線（x1・x2）は 1 つずつ動かすと対が切れて線が消えた。両端を対で扱う＝同じ声部に着けば動かす・始まりが誰にも刻まれなければ 2 つとも落とす・声部が分かれたら 2 つとも集めた場所のまま（直す前の絵）。見つけたのは掃きではなく、leftovers に「未測定」と書く前に書いた探り譜。
-- **段の「部屋」の網**: `HairpinRoomTests` 5 行＝`CalculateOnSystem` の楔と描かれた楔の両端が同じ（2 声部目のヘアピン・別の声部で終わる形）。
-- 網 `CombinedStaffHairpinTests` 26 行と上の 5 行。毒 17 本が全部赤（Lab `p1321/poisons.ps1`・R1・R2 が部屋の側だけの `VoiceMeasures`）。全 svg の掃き 0 / 1276（追跡の本にこの形は 0 冊・陽性対照は探り譜 19 冊のうち 9 冊）。行番号の表 2 枚は再生成して差なし。
-- **次**: leftovers の「第1321」（声部を移る text spanner と ottava＝engraver が終わりの声部を持つ形）→ review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
 
 ## 2. 開いている作業
 
