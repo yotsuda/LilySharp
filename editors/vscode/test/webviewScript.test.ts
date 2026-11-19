@@ -448,14 +448,16 @@ describe('the preview tells a note\'s printed copies apart by their bars', () =>
     // Two systems, two bars each, a box over each bar's staff lines; the second system 20 below.
     const bars = [rect(0, 0, 50, 4), rect(50, 0, 50, 4), rect(0, 20, 50, 4), rect(50, 20, 50, 4)];
     // An element at (x, y) on the page; its own frame's y is the same on every system (local).
-    const el = (x: number, y: number, local = y % 20) => ({
+    // (system: the g.system it is drawn in — none for the page's overlay, and for these plain cases)
+    const el = (x: number, y: number, local = y % 20, system: string | null = null) => ({
         id: x + ',' + y,
+        closest: () => system,
         getBBox: () => ({ x, y: local }),
         getBoundingClientRect: () => rect(x, y, 1, 1),
     });
     const clusterByGaps = pageFunction('clusterByGaps', {});
     const cluster = (boxes: ReturnType<typeof rect>[]) => pageFunction('clusterInstances', {
-        svgContainer: { querySelectorAll: () => boxes.map(b => ({ getBoundingClientRect: () => b, getBBox: () => ({ width: b.width }) })) },
+        svgContainer: { querySelectorAll: () => boxes.map(b => ({ getBoundingClientRect: () => b, getBBox: () => ({ width: b.width }), closest: () => (b.top < 10 ? 'upper' : 'lower') })) },
         clusterByGaps,
     }) as (m: unknown[]) => { id: string }[][];
     // The copies by their elements, as arrays of this realm (the function's are the vm's).
@@ -473,6 +475,19 @@ describe('the preview tells a note\'s printed copies apart by their bars', () =>
     it('splits a phrase written twice in one bar, and keeps a mark beyond the bars with its note', () => {
         assert.deepEqual(ids(cluster(bars)([el(5, 2), el(30, 2)])), ['5,2', '30,2']);
         assert.deepEqual(ids(cluster(bars)([el(5, 2), el(120, 2), el(55, 2)])), ['5,2 120,2', '55,2']);
+    });
+    // Owner's report 2026-11-19 (a string quartet, its first violin on ledger lines over the
+    // staff): the bar lit jumped to the one over it on the system above, which was as near.
+    it('keeps a note high over its staff with its own system, nearer though the one above is', () => {
+        // Between the systems, nearer the upper (6.5 from it, 9.5 from its own).
+        assert.deepEqual(ids(cluster(bars)([el(5, 2, 2, 'upper'), el(5, 10, 10, 'lower')])), ['5,2', '5,10']);
+        assert.deepEqual(ids(cluster(bars)([el(5, 10, 10, 'lower'), el(5, 22, 2, 'lower')])), ['5,10 5,22']);
+        const boxEls = bars.map((b, i) => ({ m: i, getBoundingClientRect: () => b }));
+        const inSystem = (s: string) => ({ querySelectorAll: () => boxEls.filter(b => (b.getBoundingClientRect().top < 10 ? 'upper' : 'lower') === s) });
+        const barBoxElOf = pageFunction('barBoxElOf', { svgContainer: { querySelectorAll: () => boxEls } }) as (e: unknown) => { m: number };
+        const note = (system: unknown) => ({ getBoundingClientRect: () => rect(55, 10, 1, 1), closest: () => system });
+        assert.equal(barBoxElOf(note(inSystem('lower'))).m, 3);
+        assert.equal(barBoxElOf(note(null)).m, 1);   // (drawn in no system: the nearest of the page's)
     });
     it('falls back to the gaps where the page draws no bars', () => {
         assert.deepEqual(ids(cluster([])([el(5, 2), el(5, 12, 12)])), ['5,2 5,12']);

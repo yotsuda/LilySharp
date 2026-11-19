@@ -1867,8 +1867,14 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         function barBoxElOf(el) {
             const b = el.getBoundingClientRect();
             const cx = (b.left + b.right) / 2, cy = (b.top + b.bottom) / 2;
+            // The bars of the system the element is DRAWN in (g.system), where it is in one: a note
+            // high over its staff stands as near the system above as its own, and by the distance
+            // alone the bar lit jumped a line up for that note (owner's report 2026-11-19: a string
+            // quartet's bar 55, its first violin on ledger lines, lit bar 49 over it). Every bar of
+            // the page for what is drawn outside the systems (the page's overlay group).
+            const system = el.closest('g.system');
             let box = null, bestGap = Infinity;
-            for (const r of svgContainer.querySelectorAll('rect.bar-box')) {
+            for (const r of (system || svgContainer).querySelectorAll('rect.bar-box')) {
                 const k = r.getBoundingClientRect();
                 if (cx < k.left || cx > k.right) continue;
                 const gap = cy < k.top ? k.top - cy : cy > k.bottom ? cy - k.bottom : 0;
@@ -2000,6 +2006,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             const bars = Array.from(svgContainer.querySelectorAll('rect.bar-box'));
             if (bars.length === 0) return clusterByGaps(matches);
             const boxes = bars.map(r => r.getBoundingClientRect());
+            const systems = bars.map(r => r.closest('g.system'));
             let unit = 1;
             try { const b0 = bars[0].getBBox(); if (b0.width > 0) unit = boxes[0].width / b0.width; } catch (e) { /* non-SVG */ }
             const byBar = new Map();
@@ -2010,8 +2017,12 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 const x = b.left + 0.5, y = (b.top + b.bottom) / 2;
                 // The bar whose column holds it, the nearest of them up or down: a box
                 // spans the staff lines only, and a note under the staff is outside it.
+                // …of ITS OWN system's, where it is drawn in one (see barBoxElOf): a note high
+                // over its staff is as near the system above.
+                const own = el.closest('g.system');
                 let bar = -1, nearest = Infinity;
                 for (let i = 0; i < boxes.length; i++) {
+                    if (own && systems[i] !== own) continue;
                     const r = boxes[i];
                     if (x < r.left || x > r.right) continue;
                     const d = y < r.top ? r.top - y : y > r.bottom ? y - r.bottom : 0;
