@@ -55,6 +55,35 @@ public class MusicXmlBandReportTests
         Assert.Equal("1", Part(doc, 0).Descendants("key").Single().Element("fifths")!.Value);
     }
 
+    /// <summary>
+    /// A lone drum note's marks are in the file as a pitched note's are (session 1313): its
+    /// dynamic, its hairpin, its accent, fermata and text. Until then the drum note's arm read
+    /// none of them — a drum chord's member and a rest on the same staff had theirs — and a
+    /// drum part came out with no dynamics at all. The same bar on a treble staff is the
+    /// answer: the same directions at the same offsets, the same notations.
+    /// </summary>
+    [Theory]
+    [InlineData("sn4@f sn@cresc sn sn@!cresc |", "c'4@f c'@cresc c' c'@!cresc |")]
+    [InlineData("sn4@accent sn@fermata sn@text(\"x\") sn@staccato |", "c'4@accent c'@fermata c'@text(\"x\") c'@staccato |")]
+    [InlineData("voice { hh4@p hh@decresc hh hh@!decresc } { bd1 } |", "voice { c''4@p c''@decresc c'' c''@!decresc } { c'1 } |")]
+    [InlineData("tuplet 3/2 { sn4@mf sn@accent sn } sn2@sfz |", "tuplet 3/2 { c'4@mf c'@accent c' } c'2@sfz |")]
+    public void ALoneDrumNotesMarks_AreWritten_AsAPitchedNotesAre(string drums, string pitched)
+    {
+        static string Book(string clef, string bars)
+            => "octave absolute\ntime 4/4\npart m { clef " + clef + " }\nsection A { m {\n" + bars + "\n} }\nform { A }\nscore { staff m }\n";
+        // What a mark is in the file: every direction with its offset, and every note's notations.
+        static string[] Marks(XDocument doc) =>
+        [
+            .. doc.Descendants("direction").Select(d => d.Element("direction-type")!.ToString(SaveOptions.DisableFormatting)
+                + "@" + (d.Element("offset")?.Value ?? "0") + (d.Attribute("placement") is { } side ? "/" + side.Value : "")),
+            .. doc.Descendants("note").Select((n, i) => i + ":" + string.Concat(
+                n.Elements("notations").Select(x => x.ToString(SaveOptions.DisableFormatting)))),
+        ];
+        var kit = Marks(Export(Book("percussion", drums)));
+        Assert.Contains(kit, m => m.Contains("<dynamics>") || m.Contains("<articulations>"));
+        Assert.Equal(Marks(Export(Book("treble", pitched))), kit);
+    }
+
     /// <summary>Measured on the 2026-09-29 build (the report's #12): section B's first bar
     /// restated the vocal and bass clefs. Fixed by the per-part written-attributes record
     /// (40dd2e93); kept here so it stays fixed.</summary>

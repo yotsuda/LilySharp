@@ -4377,8 +4377,15 @@ public sealed class MusicXmlExporter
         EmitPendingDynamic();
 
         var (tupletActual, tupletNormal) = CurrentTupletRatio();
-        _currentMeasure.Notes.Add(DrumChordMember(drum, durationTicks, type, dots,
-            isChord: false, tupletActual, tupletNormal, chordParenthesized: false));
+        var xmlNote = DrumChordMember(drum, durationTicks, type, dots,
+            isChord: false, tupletActual, tupletNormal, chordParenthesized: false);
+        // The hit's own marks, as a drum chord's member takes them (ProcessChord) and as every
+        // other note does. Until session 1313 this method wrote none: a lone drum note's
+        // dynamic, hairpin, accent, fermata and text were on the page and not in the file
+        // (`sn4@f sn@cresc sn sn@!cresc` had no <dynamics> and no <wedge>), while `<sn hh>4@f`
+        // and `r4@f` on the same staff had theirs.
+        ProcessArticulations(drum.Articulations, xmlNote, host: drum.SourceStart);
+        _currentMeasure.Notes.Add(xmlNote);
         MaybeClosePickup(duration);
     }
 

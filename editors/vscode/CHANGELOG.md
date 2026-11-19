@@ -4,6 +4,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Fixed: in a drum chart, a hairpin beside a tuplet took the wrong end.** A dynamic or a hairpin on the second or third hit of a tuplet in a `drums { … }` chart was timed at the tuplet's first hit, so a crescendo in the other line could run past the `f` that ends it. The chart is drawn as the same lines written in `voice { } { }` are.
+
+- **Fixed: MusicXML export left out everything written on a single drum note.** A dynamic, a hairpin, an accent, a fermata or a text on a drum note (`sn4@f sn@cresc sn sn@!cresc`) was not in the exported file; only drum chords and rests carried theirs. They are written now as a pitched note's are.
+
 - **Fixed: a pedal mark inside a tremolo was played at every repetition.** `repeat tremolo 8 { e32@sustain g }` changed the pedal seven times after pressing it. It is one change now, where the mark's note head stands: at the tremolo's start for the first note, at its half for the second.
 
 - **An ending mark on a block's closing brace: `repeat tremolo 12 { … }@!sustain`.** The pedal lifts when the tremolo is over; `tuplet 3/2 { d8 e f }@!cresc` ends the crescendo where the tuplet ends. Typing `@!` against a `}` offers the spans that are open, the one to close first. Any other mark there (`}@f`) is an error that says to write it on an empty chord after the block: `} <>@f`.
