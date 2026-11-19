@@ -3937,6 +3937,11 @@ public sealed class MidiExporter
         int actualDuration = Math.Max(1, durationTicks * durationPercent / 100);
         track.Notes.Add(new MidiNote(9, info.GmKey, velocity, _currentTick, actualDuration,
             drum.SourceStart, SourceOrdinal: NextOrdinal(drum.SourceStart), Timbre: 9, Part: _currentPart, Accent: velocity - _velocity, Sforzando: _struckBy));
+        // A drum's hairpin is played as any part's (SwellInstruments reads the mark off the
+        // note). Until 2026-11-19 no drum note carried it, and `sn4@p@cresc sn sn sn@f` struck
+        // 70 70 70 95 where a pitched part's four notes go 70 78 87 95 (MEASURED, Lab
+        // sessions/p1318/mid/p3.lys against p1.lys).
+        MarkForSinger(track, [track.Notes.Count - 1], drum.Articulations);
         CloseOnset(track, [track.Notes.Count - 1], startsTie: false);
         _currentTick += durationTicks;
     }
@@ -4087,6 +4092,7 @@ public sealed class MidiExporter
                 // the chord where that q left it. Drums are exempt for the same reason.
                 var tieTargets = OpenTieTargets(track);
                 var onset = new List<int>();
+                var drums = new List<int>();
                 int ordinal = NextOrdinal(bare.SourceStart);
                 int semitones = 12 * Music.BareDurations.DisplacementOf(bare);
                 foreach (var n in notes)
@@ -4095,6 +4101,7 @@ public sealed class MidiExporter
                     {
                         track.Notes.Add(new MidiNote(9, n.MidiPitch, velocity, startTick, actualDuration,
                             bare.SourceStart, SourceOrdinal: ordinal, Timbre: 9, Part: _currentPart, Accent: velocity - _velocity, Sforzando: _struckBy));
+                        drums.Add(track.Notes.Count - 1);
                         continue;
                     }
                     int pitch = n.MidiPitch + semitones;
@@ -4105,7 +4112,7 @@ public sealed class MidiExporter
                         Accent: velocity - _velocity, Sforzando: _struckBy));
                     onset.Add(track.Notes.Count - 1);
                 }
-                MarkForSinger(track, onset, bare.Articulations);
+                MarkForSinger(track, [.. onset, .. drums], bare.Articulations);
                 CloseOnset(track, onset, startsTie);
                 break;
             }
@@ -4114,6 +4121,7 @@ public sealed class MidiExporter
                 var info = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
                 track.Notes.Add(new MidiNote(9, info.GmKey, velocity, startTick, actualDuration,
                     bare.SourceStart, SourceOrdinal: NextOrdinal(bare.SourceStart), Timbre: 9, Part: _currentPart, Accent: velocity - _velocity, Sforzando: _struckBy));
+                MarkForSinger(track, [track.Notes.Count - 1], bare.Articulations); // its hairpin, as ProcessDrumNote's
                 CloseOnset(track, [track.Notes.Count - 1], startsTie: false);
                 break;
             }
@@ -4414,15 +4422,18 @@ public sealed class MidiExporter
         // Drum chord members: GM percussion alongside any pitched members. They are
         // deliberately left OUT of the onset: drums do not tie (ProcessDrumNote), so a
         // tie must not find one and sustain a cymbal.
+        var drumHits = new List<int>();
         foreach (var drum in chord.DrumNames)
         {
             var dinfo = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
             track.Notes.Add(new MidiNote(9, dinfo.GmKey, velocity, startTick, soundTicks, chord.SourceStart,
                 SourceOrdinal: chordOrdinal, Timbre: 9, Part: _currentPart, Accent: velocity - _velocity, Sforzando: _struckBy));
+            drumHits.Add(track.Notes.Count - 1);
             resolved.Add((dinfo.GmKey, 0, true));
         }
         _resolvedChordNotes[chord] = resolved;
-        MarkForSinger(track, onset, chord.Articulations);
+        // …but they carry the chord's hairpin, as a single drum note does (ProcessDrumNote).
+        MarkForSinger(track, [.. onset, .. drumHits], chord.Articulations);
         CloseOnset(track, tiedMembers is null ? onset : onTiedMembers, startsTie);
 
         // The next note is relative to the chord's ANCHOR (the root's bare letter or the
@@ -4456,11 +4467,34 @@ public sealed class MidiExporter
         var tieTargets = OpenTieTargets(track);
         bool startsTie = rep.Articulations.OfType<TieSyntax>().Any();
         var onset = new List<int>();
+        var drumHits = new List<int>();
 
         int startTick = _currentTick;
         var duration = rep.Duration is { } rd ? GetDuration(rd) : _defaultDuration;
         int durationTicks = ClockTicks(duration);
         durationTicks -= ConsumeGraceSteal(durationTicks);
+
+        // The q's own dynamic and scripts, read as a chord's are (ProcessChord). Until 2026-11-19
+        // a q read none of them: `<c' e'>4@p q q@f q` struck all four at p — the f was drawn and
+        // never sounded, nor stood for what follows — and `q@staccato` was held its full length
+        // (MEASURED, Lab sessions/p1318/mid/q1.lys: 70 70 70 70, 480 ticks each). A bare value
+        // after a chord, the same chord again, has always read its own (ProcessBareDuration).
+        int velocity = Standing();
+        int durationPercent = 100;
+        foreach (var child in rep.Articulations)
+        {
+            switch (child)
+            {
+                case DynamicSyntax { Level: not DynamicLevel.None } dynamic:
+                    velocity = Strike(dynamic);
+                    break;
+                case ArticulationSyntax articulation:
+                    (velocity, durationPercent) = ApplyArticulationType(articulation.Type, velocity, durationPercent);
+                    break;
+            }
+        }
+        (velocity, durationPercent) = ApplyRunMarks(rep, velocity, durationPercent);
+        int soundTicks = Math.Max(1, durationTicks * durationPercent / 100);
 
         if (ChordRepetitions.OriginalOf(rep) is { } original
             && _resolvedChordNotes.TryGetValue(original, out var notes))
@@ -4474,19 +4508,21 @@ public sealed class MidiExporter
             {
                 if (n.IsDrum)
                 {
-                    track.Notes.Add(new MidiNote(9, n.MidiPitch, _velocity, startTick, durationTicks,
-                        rep.SourceStart, SourceOrdinal: ordinal, Timbre: 9, Part: _currentPart));
+                    track.Notes.Add(new MidiNote(9, n.MidiPitch, velocity, startTick, soundTicks,
+                        rep.SourceStart, SourceOrdinal: ordinal, Timbre: 9, Part: _currentPart, Accent: velocity - _velocity, Sforzando: _struckBy));
+                    drumHits.Add(track.Notes.Count - 1);
                     continue;
                 }
                 int pitch = n.MidiPitch + semitones;
                 int tiedInto = ExtendTied(track, tieTargets, pitch, durationTicks);
                 if (tiedInto >= 0) { onset.Add(tiedInto); continue; }
-                track.Notes.Add(new MidiNote(track.Channel, pitch, _velocity, startTick, durationTicks,
-                    rep.SourceStart, QuarterBend: n.QuarterBend, SourceOrdinal: ordinal, Timbre: _currentTimbre, Part: _currentPart));
+                track.Notes.Add(new MidiNote(track.Channel, pitch, velocity, startTick, soundTicks,
+                    rep.SourceStart, QuarterBend: n.QuarterBend, SourceOrdinal: ordinal, Timbre: _currentTimbre, Part: _currentPart,
+                    Accent: velocity - _velocity, Sforzando: _struckBy));
                 onset.Add(track.Notes.Count - 1);
             }
         }
-        MarkForSinger(track, onset, rep.Articulations);
+        MarkForSinger(track, [.. onset, .. drumHits], rep.Articulations);
         CloseOnset(track, onset, startsTie);
 
         _currentTick = startTick + durationTicks;

@@ -4,6 +4,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Fixed: a drum did not play its hairpins.** `sn4@p@cresc sn sn sn@f` struck three hits at *p* and jumped to *f*; a drum part swells and fades now as every part does, in the preview and in every export that sounds.
+
+- **Fixed: a chord repetition `q` played none of its own marks.** `<c' e'>4@p q q@f q` sounded all four chords at *p*, and `q@accent` / `q@staccato` did nothing to the sound. A `q` plays its dynamic and its scripts now as the chord written out does.
+
 - **A chord member struck and let go: `@struck`.** `<c e g@struck>2` draws the g as a small black head on the chord's stem — the note struck with the chord and let go while the rest is held, as old piano prints write it. It sounds a quarter at most, and in a tremolo at the first stroke only (`repeat tremolo 24 { <gis cis' gis'@struck>64 gis'64 }`). The `@` completion offers it; written where no chord is held under it, it is an error (LYS4084).
 
 - **Fixed: an ottava bracket closed at a bar line ran on to the bar line.** `f'' <>@!8va | g'1`, or an `@8vb` starting the next bar, hooked at the bar's end instead of just after the last note under the bracket, as `f''@!8va` does and LilyPond draws it.

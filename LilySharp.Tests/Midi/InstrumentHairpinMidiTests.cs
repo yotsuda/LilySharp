@@ -203,4 +203,56 @@ public class InstrumentHairpinMidiTests
         Assert.Equal(new[] { Mf, Along(Mf, F, 1, 4), Along(Mf, F, 2, 4), Along(Mf, F, 3, 4), F }, upper);
         Assert.Equal(new[] { Mf, Along(Mf, P, 1, 4), Along(Mf, P, 2, 4), Along(Mf, P, 3, 4), P }, lower);
     }
+
+    private static string Kit(string music) =>
+        "time 4/4\noctave absolute\npart kit { clef percussion }\nsection A {\n  kit { " + music + " }\n}\nform { A }\nscore { staff kit }\n";
+
+    [Fact]
+    public void ADrum_PlaysItsHairpin_AsAnyPart()
+    {
+        // Until 2026-11-19 no drum note carried the hairpin's mark: P P P F, where a pitched
+        // part's four notes climb (MEASURED, Lab sessions/p1318/mid/p3.lys against p1.lys).
+        int[] climb = [P, Along(P, F, 1, 3), Along(P, F, 2, 3), F];
+        Assert.Equal(climb, Velocities(Kit("sn4@p@cresc sn sn sn@f |"), "kit"));
+        // A bare value after a drum note is that hit again.
+        Assert.Equal(climb, Velocities(Kit("sn4@p@cresc 4 4 4@f |"), "kit"));
+        // A drum chord: both hits of each onset.
+        Assert.Equal(climb.SelectMany(v => new[] { v, v }), Velocities(Kit("<sn hh>4@p@cresc <sn hh> <sn hh> <sn hh>@f |"), "kit"));
+        // …its bare value and its `q` too.
+        Assert.Equal(climb.SelectMany(v => new[] { v, v }), Velocities(Kit("<sn hh>4@p@cresc 4 4 4@f |"), "kit"));
+        Assert.Equal(climb.SelectMany(v => new[] { v, v }), Velocities(Kit("<sn hh>4@p@cresc q q q@f |"), "kit"));
+        // A hairpin opened on a bare value, a drum's and a drum chord's: the mark is that hit's.
+        Assert.Equal(climb, Velocities(Kit("sn4@p 4@p@cresc 4 4 | sn4@f r4 r2 |"), "kit").Skip(1));
+        Assert.Equal(climb.SelectMany(v => new[] { v, v }), Velocities(Kit("<sn hh>4@p 4@p@cresc 4 4 | <sn hh>4@f r4 r2 |"), "kit").Skip(2));
+        // A hairpin opened on a `q` of a drum chord.
+        Assert.Equal(climb.SelectMany(v => new[] { v, v }), Velocities(Kit("<sn hh>4@p q@p@cresc q q | q4@f r4 r2 |"), "kit").Skip(2));
+    }
+
+    [Fact]
+    public void AChartsTupletHit_EndsTheOtherLinesHairpin_AtItsOwnMoment()
+    {
+        // The f stands on the tuplet's second hit, a third of a half into the bar's second
+        // half: the hi-hat's eighth before it is still on the way and the quarter after it has
+        // arrived (the page's reading since session 1313; the MIDI was not measured then).
+        var notes = Notes(Kit("drums { { hh2@p hh8@cresc hh hh4 } { bd2 tuplet 3/2 { bd4 bd@f bd } } } |"), "kit");
+        int quarter = notes[0].DurationTicks / 2;
+        int At(int tick, int key) => notes.Single(n => n.StartTick == tick && n.Pitch == key).Velocity;
+        Assert.Equal(P, At(2 * quarter, 42));
+        Assert.InRange(At(2 * quarter + quarter / 2, 42), P + 1, F - 1);
+        Assert.Equal(F, At(2 * quarter + 2 * quarter / 3, 36));
+        Assert.Equal(F, At(3 * quarter, 42));
+    }
+
+    [Fact]
+    public void AChordRepetition_PlaysItsOwnMarks()
+    {
+        // Until 2026-11-19 a `q` read none of what was written on it: the f was drawn and never
+        // sounded, nor stood for the notes after it, and a staccato was held its full length
+        // (MEASURED, Lab sessions/p1318/mid/q1.lys: four chords at p, 480 ticks each).
+        var notes = Notes(OnePart("<c' e'>4@p q q@f q | q4@accent q@staccato q q |"), "fl");
+        Assert.Equal(new[] { P, P, F, F, F + 20, F, F, F }, notes.Where(n => n.Pitch == 60).Select(n => n.Velocity));
+        var lengths = notes.Where(n => n.Pitch == 60).Select(n => n.DurationTicks).ToList();
+        Assert.Equal(lengths[0] / 2, lengths[5]);
+        Assert.Equal(lengths[0], lengths[6]);
+    }
 }
