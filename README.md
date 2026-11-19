@@ -13,7 +13,7 @@ editor at work, a gallery of engraved scores, and the
 
 *Harbour Lights* — music, words and source composed by an AI (Claude, by Anthropic) — engraved by Lily#. Play it in the VS Code preview and each note lights up as it sounds:
 
-https://github.com/user-attachments/assets/2b00e458-15b7-485c-a82c-ce7db2970d13
+https://github.com/user-attachments/assets/a5b2c904-20e5-4475-bfdd-d712bbf5ec71
 
 The page in the video is the whole of [`samples/harbour-lights.lys`](samples/harbour-lights.lys):
 
