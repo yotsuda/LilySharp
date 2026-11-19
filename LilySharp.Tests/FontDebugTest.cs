@@ -66,4 +66,49 @@ public class FontDebugTest
                    svg.Contains(EmmentalerGlyphs.GClef),
                    "SVG should contain music glyph characters");
     }
+
+    // ---- the words' faces, cut to the characters drawn (2026-11-19) -----------------------
+
+    private const string Song = """
+        title "Morning"
+        time 4/4
+        part m { clef treble }
+        section A {
+          m { c'4 d' e' f' | }
+          lyrics words { Write a line of | }
+        }
+        form { A }
+        score { staff m  lyrics words on m }
+        """;
+
+    private static (string Style, byte[] Font)[] TextFaces(string svg)
+        => [.. System.Text.RegularExpressions.Regex.Matches(svg,
+                @"@font-face \{ font-family: 'TeX Gyre Schola'; font-weight: (\w+); font-style: (\w+); src: url\('data:font/otf;base64,([A-Za-z0-9+/=]+)'\) format\('opentype'\); \}")
+            .Select(m => (m.Groups[1].Value + "/" + m.Groups[2].Value, System.Convert.FromBase64String(m.Groups[3].Value)))];
+
+    /// <summary>
+    /// An exported SVG carries the bundled text face its words are set in, cut down to the
+    /// characters drawn: the layout spaced the words by that face's widths, and a viewer's own
+    /// serif ran two lyric words together (owner's report 2026-11-19, the site's home page).
+    /// </summary>
+    [Fact]
+    public void Embedded_CarriesTheWordsFace_CutToTheCharactersDrawn()
+    {
+        var svg = SvgGenerator.Generate(SyntaxTree.Parse(Song), new SvgRenderOptions { EmbedFont = true });
+        var faces = TextFaces(svg);
+        var regular = Assert.Single(faces, f => f.Style == "normal/normal").Font;
+        Assert.Contains(faces, f => f.Style == "bold/normal");   // the title
+        // An OpenType font still, and a small one: the whole file is 140,596 bytes.
+        Assert.Equal("OTTO", System.Text.Encoding.ASCII.GetString(regular, 0, 4));
+        Assert.InRange(regular.Length, 1000, 12000);
+        // The same score, the same bytes.
+        Assert.Equal(svg, SvgGenerator.Generate(SyntaxTree.Parse(Song), new SvgRenderOptions { EmbedFont = true }));
+    }
+
+    [Fact]
+    public void NotEmbedded_AndPreview_CarryNoTextFace()
+    {
+        Assert.Empty(TextFaces(SvgGenerator.Generate(SyntaxTree.Parse(Song), new SvgRenderOptions { EmbedFont = false })));
+        Assert.Empty(TextFaces(SvgGenerator.Generate(SyntaxTree.Parse(Song), SvgRenderOptions.Preview())));
+    }
 }

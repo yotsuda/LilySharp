@@ -1072,7 +1072,7 @@ public static class TextFontMetrics
             return SystemFace(key.Name!, key.Style) ?? throw Unmeasurable(key);
         });
 
-    private static string FileName(bool sans, FontStyle style)
+    internal static string FileName(bool sans, FontStyle style)
     {
         string stem = sans ? "texgyreheros" : "texgyreschola";
         string face = style switch

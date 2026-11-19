@@ -18,6 +18,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using LilySharp.Core.Svg.Layout;
 
 namespace LilySharp.Core.Rendering.Svg;
@@ -363,11 +364,10 @@ internal sealed class SvgDocumentContext : IDocumentContext
         // own text face by metrics — so a viewer holding that font now draws exactly what
         // was spaced for. ⚠️ The bare generic used to be a silent mismatch: measured on a
         // stock Windows box the CSS generic "serif" resolves to Segoe UI, a SANS face.
-        // ⚠️ REMAINING GAP: unlike Emmentaler the text faces are NOT embedded here, so a
-        // viewer without Schola still falls back. Embedding them would add ~185 KB of
-        // base64 PER FACE to every SVG, which needs the used-face tracking this context
-        // does not have (the header is written before any text is drawn). PNG and PDF are
-        // exact today; SVG records the intent and degrades to the generic.
+        // The bundled faces the pages used are embedded too, cut down to the characters
+        // drawn (AppendTextFaces, 2026-11-19) — until then a viewer without Schola fell
+        // back, and the whole file would have been ~185 KB of base64 a face. A face of the
+        // machine's (a `fonts` name) still degrades to the generic.
         sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
             "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{0:F1}\" height=\"{1:F1}\" viewBox=\"0 0 {2:F2} {3:F2}\" font-family=\"{4}, serif\">",
             widthPx, heightPx, widthSpaces, heightSpaces, TextFontMetrics.SerifFamily));
@@ -458,6 +458,7 @@ internal sealed class SvgDocumentContext : IDocumentContext
                 var files = TextFontMetrics.CompanionFaces[name];
                 AppendEmbeddedFontFace(faces, name, files.WebFile, FormatOf(files.WebFile));
             }
+            AppendTextFaces(faces);
             if (faces.Length > 0)
                 return faces.ToString().TrimEnd();
         }
@@ -493,6 +494,73 @@ internal sealed class SvgDocumentContext : IDocumentContext
         var b64 = Convert.ToBase64String(File.ReadAllBytes(path));
         sb.AppendLine(
             $"@font-face {{ font-family: '{family}'; src: url('data:font/{format};base64,{b64}') format('{format}'); }}");
+    }
+
+    // A text the pages drew that is not a music glyph (SvgDrawingContext.DrawText): its
+    // attributes and its (escaped) characters.
+    private static readonly Regex DrawnText = new(
+        "<text(?![^>]*class=\"music\")([^>]*)>([^<]*)</text>", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex FamilyAttribute = new(
+        "font-family=\"([^\",]+)", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// The bundled text faces the pages' words are set in, each cut down to the characters
+    /// drawn in it (<see cref="HarfBuzzSubset"/>) and embedded as the music font is.
+    /// </summary>
+    /// <remarks>
+    /// The layout spaces words by the bundled face's widths; a viewer without that face set
+    /// them in its own serif, and where that one is wider two words a LyricSpace apart (0.45
+    /// of a staff space) ran together — "wordsfor me" under a melody on the site's home page
+    /// (owner's report 2026-11-19; MEASURED there: the same SVG with the 7 KB subset of the
+    /// regular serif added is drawn as the PNG is). Read off the PAGES, which are complete by
+    /// the time the header is written, so a replayed fragment needs no side channel; a face
+    /// the bundle does not hold (a `fonts` name of the machine's) is left to the machine, as
+    /// it was. Sorted, so the same score always produces the same bytes.
+    /// (Lily#'s own: LilyPond's SVG backend names the face and embeds nothing.)
+    /// </remarks>
+    private void AppendTextFaces(StringBuilder sb)
+    {
+        var used = new SortedDictionary<(bool Sans, int Style), SortedSet<int>>();
+        foreach (var (content, _, _) in _pages)
+        {
+            foreach (Match m in DrawnText.Matches(content.ToString()))
+            {
+                string attributes = m.Groups[1].Value;
+                var family = FamilyAttribute.Match(attributes);
+                string name = family.Success ? family.Groups[1].Value.Trim() : TextFontMetrics.SerifFamily;
+                bool sans = name == TextFontMetrics.SansFamily;
+                if (!sans && name != TextFontMetrics.SerifFamily)
+                    continue;
+                int style = (attributes.Contains("font-weight=\"bold\"", StringComparison.Ordinal) ? 1 : 0)
+                          | (attributes.Contains("font-style=\"italic\"", StringComparison.Ordinal) ? 2 : 0);
+                if (!used.TryGetValue((sans, style), out var set))
+                    used[(sans, style)] = set = new SortedSet<int> { ' ' };
+                string text = m.Groups[2].Value.Replace("&lt;", "<").Replace("&gt;", ">").Replace("&amp;", "&");
+                for (int i = 0; i < text.Length; i += char.IsSurrogatePair(text, i) ? 2 : 1)
+                    set.Add(char.ConvertToUtf32(text, i));
+            }
+        }
+        foreach (var ((sans, style), codepoints) in used)
+        {
+            var fontStyle = style switch
+            {
+                3 => FontStyle.BoldItalic,
+                1 => FontStyle.Bold,
+                2 => FontStyle.Italic,
+                _ => FontStyle.Regular,
+            };
+            var path = ResolveFontPath(TextFontMetrics.FileName(sans, fontStyle));
+            if (path == null || !File.Exists(path))
+                continue;
+            var subset = HarfBuzzSubset.Subset(File.ReadAllBytes(path), codepoints);
+            if (subset == null)
+                continue;
+            sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                "@font-face {{ font-family: '{0}'; font-weight: {1}; font-style: {2}; src: url('data:font/otf;base64,{3}') format('opentype'); }}",
+                sans ? TextFontMetrics.SansFamily : TextFontMetrics.SerifFamily,
+                (style & 1) != 0 ? "bold" : "normal", (style & 2) != 0 ? "italic" : "normal",
+                Convert.ToBase64String(subset)));
+        }
     }
 
     private string? ResolveFontPath(string fileName) =>
