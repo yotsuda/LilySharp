@@ -874,7 +874,8 @@ internal static class OttavaBracketEngraver
 
         foreach (var (mark, srcIndex) in ottavaMarks)
         {
-            var key = (mark.StaffIndex, mark.VoiceIndex);
+            // (A combined staff's end whose part changed streams is paired in its start's voice.)
+            var key = (mark.StaffIndex, mark.PairingVoice);
 
             if (mark.Type == MusicMarkType.OttavaStop)
             {

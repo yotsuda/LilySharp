@@ -136,13 +136,52 @@ public class CombinedStaffHairpinTests
     /// them (moved one by one they would name two voices, and no line is drawn), and dropped
     /// together when the start's note is engraved by nobody — part two's in a unison.</summary>
     [Theory]
-    [InlineData("c''2 d''2 | R1 | c''1 |", "e'4 f'@rit e' f' | g'4 g' g' g'@!rit | e'1 |", "TextSpanStart:v1:0.1 TextSpanStop:v1:1.3")]
-    [InlineData("c''2 d''2 | R1 | c''1 |", "e'4 f'@8va e' f' | g'4 g' g' g'@!8va | e'1 |", "OttavaUp:v1:0.1 OttavaStop:v1:1.4")]
+    [InlineData("c''2 d''2 | R1 | c''1 |", "e'4 f'@rit e' f' | g'4 g' g' g'@!rit | e'1 |", "TextSpanStart:v1:0.1 TextSpanStop:v0:1.3")]
+    [InlineData("c''2 d''2 | R1 | c''1 |", "e'4 f'@8va e' f' | g'4 g' g' g'@!8va | e'1 |", "OttavaUp:v1:0.1 OttavaStop:v0:1.4")]
     [InlineData("c'4 d'@rit e' f'@!rit | g'1 |", "c'4 d'@rit e' f'@!rit | g'1 |", "TextSpanStart:v0:0.1 TextSpanStop:v0:0.3")]
     [InlineData("c'4 d'@8va e' f'@!8va | g'1 |", "c'4 d'@8va e' f'@!8va | g'1 |", "OttavaUp:v0:0.1 OttavaStop:v0:0.4")]
     public void ALinePairedInOneVoice_GoesAsAPair(string fl1, string fl2, string expected)
         => Assert.Equal(expected, string.Join(" ", Collect(fl1, fl2).MusicMarks.Where(m => m.AnchorItemIndex >= 0)
             .Select(m => $"{m.Type}:v{m.VoiceIndex}:{m.MeasureIndex}.{m.AnchorItemIndex}")));
+
+    /// <summary>A text spanner or an ottava whose part changes streams between its two ends is
+    /// one line, from the note its start is written on to the note its end is: the end is paired
+    /// in the start's voice (MusicMarkItem.LineVoice) and read in its own.</summary>
+    [Theory]
+    // Apart, then alone.
+    [InlineData("c''2 d''2 | R1 | c''1 |", "e'4 f'@rit e' f' | g'4 g' g' g'@!rit | e'1 |", "rit", "20.37..39.61")]
+    [InlineData("c''2 d''2 | R1 | c''1 |", "e'4 f'@8va e' f' | g'4 g' g' g'@!8va | e'1 |", "8va", "19.07..40.88")]
+    // Alone, then apart.
+    [InlineData("c''2 d''2 | R1 | c''2 d''2 |", "e'4 f' e' f' | g'4 g'@rit g' g' | e'4 f' e'@!rit f' |", "rit", "33.45..49.90")]
+    [InlineData("c''2 d''2 | R1 | c''2 d''2 |", "e'4 f' e' f' | g'4 g'@8va g' g' | e'4 f' e'@!8va f' |", "8va", "32.15..51.10")]
+    public void ALineWhosePartChangesStreams_IsOneLine(string fl1, string fl2, string line, string expected)
+    {
+        var score = Collect(fl1, fl2);
+        var layout = new LayoutEngine(score.Paper).Layout(score);
+        string said = line == "rit"
+            ? string.Join(" ", layout.TextSpannerLayouts.Select(t => $"{t.StartX:F2}..{t.EndX:F2}"))
+            : string.Join(" ", layout.OttavaBracketLayouts.Select(t => $"{t.StartX:F2}..{t.EndX:F2}"));
+        Assert.Equal(expected, said);
+    }
+
+    /// <summary>…and the room the row above the staff keeps for that line
+    /// (TextSpannerEngraver.InkAboveStaff, entered before the systems exist) ends where the
+    /// drawn line does, not at the bar's end the start's voice would give.</summary>
+    [Theory]
+    [InlineData("c''2 d''2 | R1 | c''1 |", "e'4 f'@rit e' f' | g'4 g' g' g'@!rit | e'1 |")]
+    [InlineData("c''2 d''2 | R1 | c''2 d''2 |", "e'4 f' e' f' | g'4 g'@rit g' g' | e'4 f' e'@!rit f' |")]
+    public void TheRoomOfALineWhosePartChangesStreams_EndsWhereTheLineDoes(string fl1, string fl2)
+    {
+        var score = Collect(fl1, fl2);
+        var layout = new LayoutEngine(score.Paper).Layout(score);
+        var drawn = Assert.Single(layout.TextSpannerLayouts);
+        var system = Assert.Single(layout.Systems);
+        var ink = TextSpannerEngraver.InkAboveStaff(score.TextMetrics, ScoreSideTables.TextSpannersByStaff(score).At(0),
+            system.Measures, new VerticalSkyline(VerticalDirection.Up), score.StaffGroups[0].Staves[0].Voices);
+        Assert.False(ink.IsEmpty);
+        double right = ink.Buildings.Where(b => !double.IsNegativeInfinity(ink.Height((b.Start + b.End) / 2))).Max(b => b.End);
+        Assert.True(System.Math.Abs(right - drawn.EndX) < 0.3, $"ink to {right:F2}, the line to {drawn.EndX:F2}");
+    }
 
     /// <summary>A hairpin both parts write in a unison is drawn once; two different ones at
     /// one place are two marks still.</summary>

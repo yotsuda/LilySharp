@@ -292,11 +292,11 @@ internal static class TextSpannerEngraver
                 {
                     var endMeasure = measureLayouts[segment.EndMeasureIndex];
                     if (RightBoundCentre(measureLayouts, spannerVoices, graceNotes, spanner.StaffIndex,
-                            spanner.VoiceIndex, spanner.EndMeasureIndex, spanner.EndItemIndex) is { } centre)
+                            spanner.EndVoiceIndex, spanner.EndMeasureIndex, spanner.EndItemIndex) is { } centre)
                     {
                         endX = centre - BoundPadding;
                     }
-                    else if (BoundX(endMeasure, spannerVoices, graceNotes, spanner.StaffIndex, spanner.VoiceIndex,
+                    else if (BoundX(endMeasure, spannerVoices, graceNotes, spanner.StaffIndex, spanner.EndVoiceIndex,
                             spanner.EndMeasureIndex, spanner.EndItemIndex) is { } endItemX)
                     {
                         endX = endMeasure.X + endItemX - BoundPadding;
@@ -590,7 +590,8 @@ internal static class TextSpannerEngraver
 
         foreach (var (mark, srcIndex) in spanMarks)
         {
-            var key = (mark.StaffIndex, mark.VoiceIndex, mark.SpanFamily);
+            // (A combined staff's end whose part changed streams is paired in its start's voice.)
+            var key = (mark.StaffIndex, mark.PairingVoice, mark.SpanFamily);
 
             if (mark.Type == MusicMarkType.TextSpanStop)
             {
@@ -607,6 +608,7 @@ internal static class TextSpannerEngraver
                 }
                 open.Remove(key);
                 int endMeasure = mark.MeasureIndex, endItem = Math.Max(mark.AnchorItemIndex, 0);
+                int endVoice = mark.VoiceIndex;
                 // The carry rule at section boundaries: a refused end cuts the spanner at the
                 // end of its own section, as the hairpin is cut.
                 if (plays?.Judge(start.Mark.MeasureIndex, mark.MeasureIndex) is { } fault)
@@ -615,6 +617,7 @@ internal static class TextSpannerEngraver
                         fault, start.Mark.MeasureIndex));
                     endMeasure = plays.CutMeasure(start.Mark.MeasureIndex);
                     endItem = 0;
+                    endVoice = start.Mark.VoiceIndex;
                 }
                 spanners.Add(new TextSpannerItem(
                     Text: start.Mark.Text,
@@ -634,7 +637,8 @@ internal static class TextSpannerEngraver
                     SourceIndex: start.Index,
                     StaffIndex: start.Mark.StaffIndex,
                     VoiceIndex: start.Mark.VoiceIndex,
-                    Family: start.Mark.SpanFamily));
+                    Family: start.Mark.SpanFamily)
+                { EndVoiceIndex = endVoice });
                 continue;
             }
 
@@ -752,7 +756,7 @@ internal static class TextSpannerEngraver
                     spanner.StartMeasureIndex, spanner.StartItemIndex) is { } sx
                 ? startLayout.X + sx + BoundPadding
                 : startLayout.X + BoundPadding;
-            double endX = endsHere && BoundX(endLayout, voices, graceNotes, spanner.StaffIndex, spanner.VoiceIndex,
+            double endX = endsHere && BoundX(endLayout, voices, graceNotes, spanner.StaffIndex, spanner.EndVoiceIndex,
                     spanner.EndMeasureIndex, spanner.EndItemIndex) is { } ex
                 ? endLayout.X + ex - BoundPadding
                 : endLayout.X + endLayout.Width - BoundPadding;
@@ -766,14 +770,14 @@ internal static class TextSpannerEngraver
             // grammar evaluation 3, fixC b5b).
             // LILYPOND-REF: lily/line-spanner.cc:155-175 Line_spanner::calc_bound_info —
             //   attach-dir CENTER, the bound's generic_bound_extent.
-            if (endsHere && !voices.IsDefaultOrEmpty && spanner.VoiceIndex < voices.Length
+            if (endsHere && !voices.IsDefaultOrEmpty && spanner.EndVoiceIndex < voices.Length
                 && spanner.EndItemIndex >= 0
-                && (graceNotes.IsDefaultOrEmpty || ElementCoordinator.GraceColumnAt(voices[spanner.VoiceIndex], graceNotes,
-                    spanner.StaffIndex, spanner.VoiceIndex, spanner.EndMeasureIndex, spanner.EndItemIndex, endLayout,
+                && (graceNotes.IsDefaultOrEmpty || ElementCoordinator.GraceColumnAt(voices[spanner.EndVoiceIndex], graceNotes,
+                    spanner.StaffIndex, spanner.EndVoiceIndex, spanner.EndMeasureIndex, spanner.EndItemIndex, endLayout,
                     SpacingRules.VoiceCollisionShiftsOf(voices)) == null)
                 && HairpinEngraver.ColumnExtent(spanner.EndMeasureIndex, spanner.EndItemIndex,
-                    LayoutUtilities.ResolveVoiceMeasures(voices, spanner.VoiceIndex, default), endLayout,
-                    HairpinEngraver.CollisionShift(voices, spanner.VoiceIndex, spanner.EndMeasureIndex, spanner.EndItemIndex)) is { } endColumn)
+                    LayoutUtilities.ResolveVoiceMeasures(voices, spanner.EndVoiceIndex, default), endLayout,
+                    HairpinEngraver.CollisionShift(voices, spanner.EndVoiceIndex, spanner.EndMeasureIndex, spanner.EndItemIndex)) is { } endColumn)
                 endX = (endColumn.Left + endColumn.Right) / 2 - BoundPadding;
             // A one-note barre's label, and a hooked line shorter than its word (Calculate).
             if (startsHere && (spanner.Style == TextSpannerStyle.None || (spanner.EndHook && endsHere))

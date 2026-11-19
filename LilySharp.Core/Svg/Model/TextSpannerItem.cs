@@ -103,6 +103,11 @@ public sealed record TextSpannerItem(
     TextSpanFamily Family = TextSpanFamily.Text
 )
 {
+    /// <summary>The voice the END's item index counts in: the start's, except on a
+    /// <c>combinedStaff</c> whose part changed streams between the two ends
+    /// (<see cref="MusicMarkItem.LineVoice"/>).</summary>
+    public int EndVoiceIndex { get; init; } = VoiceIndex;
+
     /// <summary>Whether the line ends in a hook turned to the staff: the three guitar lines do
     /// (owner-approved 2026-11-13, grammar evaluation 3), the general spanner does not.</summary>
     public bool EndHook => Family != TextSpanFamily.Text && Style != TextSpannerStyle.None;

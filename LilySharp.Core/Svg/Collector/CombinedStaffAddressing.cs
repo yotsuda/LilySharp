@@ -292,10 +292,9 @@ internal static class CombinedStaffReaddress
     ///   engraved for nobody stays at its collected place (its bar and its moment are still
     ///   right; the item number names nothing, and the line then closes on that bar's end or
     ///   head). And a text spanner or an ottava whose part changes streams between its ends is
-    ///   left as collected, both ends (the pairing pass in the body says why).
-    ///   departs from: ly/engraver-init.ly:375 Text_spanner_engraver consisted into the Voice context — what LilyPond draws
-    ///   for a spanner whose stop is heard in another context is not measured.
-    ///   goes when: TextSpannerEngraver and OttavaBracketEngraver carry the end's own voice.
+    ///   one line still, its end paired in its start's voice (<see cref="MusicMarkItem.LineVoice"/>,
+    ///   which carries the departure's address); one whose end is on such a rest is left as
+    ///   collected, both ends.
     ///   observed by: CombinedStaffHairpinTests (AMarkOnARestNobodyEngraves, ALinePairedInOneVoice_GoesAsAPair).
     /// </remarks>
     private static ImmutableArray<MusicMarkItem> MoveMarks(
@@ -316,17 +315,19 @@ internal static class CombinedStaffReaddress
 
         // The lines whose two ends are paired IN ONE VOICE (TextSpannerEngraver and
         // OttavaBracketEngraver key their open span by staff and voice, and read the end's item
-        // in the start's voice) go as a pair: both ends moved when they land in one voice; both
-        // dropped when the start's note is engraved by nobody; and BOTH LEFT where they were
-        // collected when the part changes streams between them — `@rit` in a bar the parts play
-        // apart, `@!rit` in a bar part two plays alone. Moved one by one those two ends name two
-        // voices and pair with nothing: no line at all, where the collected numbers still draw
-        // one (Lab sessions/p1321/probe x1, x2).
-        // ⚠️ That last answer is the picture before session 1321, not a right one: the ends are
-        // then read under the part's own numbers. It goes when those engravers carry the end's
-        // own voice, as a hairpin does (HairpinItem.EndVoiceIndex).
+        // in the start's voice unless told otherwise) go as a pair: both ends moved; both dropped
+        // when the start's note is engraved by nobody; and where the part CHANGES STREAMS
+        // between them — `@rit` in a bar the parts play apart, `@!rit` in a bar part two plays
+        // alone — the end is told its start's voice (MusicMarkItem.LineVoice), so the two pair
+        // though they stand in two voices. Moved one by one with no such word they paired with
+        // nothing and no line was drawn (session 1321's first commit; Lab sessions/p1321/probe
+        // x1, x2), and from that session's second commit to session 1322 both were left under
+        // the part's own numbers instead.
+        // ⚠️ Still left as collected, both ends: a line whose END is on a rest engraved for
+        // nobody (the item names nothing; the line closes on that bar's edge).
         var stays = new HashSet<int>();
         var dropped = new HashSet<int>();
+        var lineVoice = new Dictionary<int, int>();
         var open = new Dictionary<(int Staff, int Voice, int Line), int>();
         for (int i = 0; i < marks.Length; i++)
         {
@@ -345,11 +346,13 @@ internal static class CombinedStaffReaddress
                     dropped.Add(s);
                     dropped.Add(i);
                 }
-                else if (end is null || end.VoiceIndex != start.VoiceIndex)
+                else if (end is null)
                 {
                     stays.Add(s);
                     stays.Add(i);
                 }
+                else if (end.VoiceIndex != start.VoiceIndex)
+                    lineVoice[i] = start.VoiceIndex;
             }
         }
 
@@ -366,6 +369,8 @@ internal static class CombinedStaffReaddress
             if (dropped.Contains(i))
                 continue;
             var placed = Moved(m, map) ?? (IsAnEnd(m.Type) ? m : null);
+            if (placed != null && lineVoice.TryGetValue(i, out int paired))
+                placed = placed with { LineVoice = paired };
             if (placed is null
                 || !seen.Add((placed.StaffIndex, placed.VoiceIndex, placed.MeasureIndex, placed.AnchorItemIndex,
                               placed.Type, placed.Text, placed.SpanFamily)))

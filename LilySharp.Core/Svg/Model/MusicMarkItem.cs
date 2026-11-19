@@ -261,6 +261,27 @@ public sealed record MusicMarkItem
     public int VoiceIndex { get; init; }
 
     /// <summary>
+    /// For the END of a text spanner or an ottava bracket on a <c>combinedStaff</c> whose part
+    /// changed streams since the line's start: the voice the START stands in — the voice the
+    /// line is paired in (<see cref="PairingVoice"/>), while <see cref="VoiceIndex"/> stays the
+    /// voice whose item this end stands on. Null everywhere else.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: the pairing is LilyPond's, one open span a Voice context (TextSpannerEngraver.PairTextSpanners
+    ///   and OttavaBracketEngraver.PairOttavaBrackets cite it). A part of a combined staff is one
+    ///   line of music the combiner moves between voices, so its `@rit` where the parts play
+    ///   apart and its `@!rit` in a bar it plays alone are two ends of one line in two voices.
+    ///   departs from: ly/engraver-init.ly:375 Text_spanner_engraver consisted into the Voice context — what LilyPond
+    ///   draws for a spanner whose stop is heard in another context is not measured.
+    ///   observed by: CombinedStaffHairpinTests.ALineWhosePartChangesStreams_IsOneLine.
+    /// </remarks>
+    public int? LineVoice { get; init; }
+
+    /// <summary>The voice a line's end is PAIRED in: its start's (<see cref="LineVoice"/>),
+    /// else its own.</summary>
+    public int PairingVoice => LineVoice ?? VoiceIndex;
+
+    /// <summary>
     /// For a hairpin's start on a condensed staff: its end is the STAFF's next level, hairpin
     /// or stop, whichever part wrote it — not its own voice's first
     /// (<c>HairpinEngraver.DetectHairpins</c>).

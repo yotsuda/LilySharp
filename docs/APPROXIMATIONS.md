@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 472 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **598** | |
+| `OWN` | 473 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **599** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -247,7 +247,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（472 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（473 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -902,6 +902,7 @@
 ### `LilySharp.Core/Svg/Model/MusicMarkItem.cs`
 - **`MusicMarkType.RepeatCount`** edge on the bar line. The text is the item's. LILYSHARP-OWN — LilyPond prints nothing
 - **`MusicMarkType.KeyName`** LILYSHARP-OWN — LilyPond's RhythmicStaff draws no key at all (ly/engraver-init.ly removes
+- **`MusicMarkItem.LineVoice`** LILYSHARP-OWN: the pairing is LilyPond's, one open span a Voice context (TextSpannerEngraver.PairTextSpanners
 - **`MusicMarkItem.HairpinEndsOnStaff`** LILYSHARP-OWN: a condensed staff prints ONE copy of a level two of its parts write
 - **`MusicMarkItem..ctor`** coda itself (LILYSHARP-OWN, a Gould-style departure).
 - **`MusicMarkItem.BarreText`** LILYSHARP-OWN: LilyPond has no barre command; its manual writes the label as the
