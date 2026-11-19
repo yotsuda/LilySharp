@@ -277,6 +277,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1322セッションの経緯
+
+### 1.1 第1322セッション（2026-11-19・YT-DELL2・第1321 と同じ会話）
+
+leftovers の「第1321」の先頭の便（base `4aeb3c7e5`）。開始時 full 17895 合格 / 0 失敗 / skip 2 / 合計 17897（Lab `p1322` `run1.trx`）。終了時 full 17901 合格 / 0 失敗 / skip 2 / 合計 17903（`run2.trx`）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
+- **combinedStaff で声部を移るパートの text spanner と ottava は 1 本の線**（`06c7307c5`・`[engraving]`）: この 2 つの engraver は開いた線を（譜・声部）で持つ（LilyPond の Voice の engraver）。combinedStaff のパートは combiner が声部のあいだを動かす 1 本の音楽なので、2 パートが別々の小節の `@rit` と Solo II の小節の `@!rit` は 2 つの声部に着く。第1321 は両端を集めた場所のまま残した（線は出るが、終わりを始まりの声部で読むので小節の終わりまで伸びた）。直し: 終わりの印が始まりの声部を持つ（`MusicMarkItem.LineVoice`・対の鍵は `PairingVoice`）／text spanner は終わりの item を終わりの声部で読む（`TextSpannerItem.EndVoiceIndex`・描く側と、上の行の部屋 `InkAboveStaff`）。ottava の端は譜表の列を時刻で読むので対の鍵だけ。`CombinedStaffReaddress.MoveMarks` は声部が分かれた対も動かす。LILYSHARP-OWN（LilyPond が別の context の stop をどう描くかは測っていない）。
+- 探り譜 Lab `p1322/probe`（x1・x2・y1〜y4＝別々→Solo II・Solo II→別々・3 小節）。網 `CombinedStaffHairpinTests` +6 行（線の両端の X 4 行・部屋の右端 2 行）。毒 9 本のうち 6 本が赤（Lab `p1322/poisons.ps1`）・緑 3 本は観測者なし＝端が装飾音のときの `BoundX` の腕 2 つと、section の切断で終わりの声部を戻す行。全 svg の掃き 0 / 1276（陽性対照は探り譜 26 冊のうち 4 冊）。行番号の表は再生成（`APPROXIMATIONS.md` に OWN 1 件）。
+- **次**: leftovers の「第1321」の残り（誰も刻まない休符の上の終わり・a2 の迷子の stop）→ review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
+
 ## 以下は第1321セッションの経緯
 
 ### 1.1 第1321セッション（2026-11-19・YT-DELL2）
