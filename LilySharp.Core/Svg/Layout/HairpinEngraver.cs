@@ -1205,7 +1205,7 @@ internal static class HairpinEngraver
                     d.StaffIndex == mark.StaffIndex &&
                     (!ownVoice || d.VoiceIndex == mark.VoiceIndex) &&
                     PlaceOf(d).IsAfter(start));
-                return (FirstOf(ends, PlaceOf, ownVoice), NextMark(ownVoice), NextStop(ownVoice));
+                return (FirstOf(ends, PlaceOf), NextMark(ownVoice), NextStop(ownVoice));
             }
 
             // Find the next cresc/decresc mark on this staff (another hairpin starts
@@ -1235,7 +1235,7 @@ internal static class HairpinEngraver
                     m != mark && (m.SourcePosition != mark.SourcePosition || !InAnotherPlay(m)) &&
                     m.StaffIndex == mark.StaffIndex &&
                     (!ownVoice || IsOwn(m)) &&
-                    PlaceOfMark(m).IsAfter(PlaceOfMark(mark))), PlaceOfMark, ownVoice);
+                    PlaceOfMark(m).IsAfter(PlaceOfMark(mark))), PlaceOfMark);
             // (A combined staff's part's next hairpin, engraved in the other voice, is this
             // voice's own too: MusicMarkItem.MeetsVoice.)
             bool IsOwn(MusicMarkItem m) => m.VoiceIndex == mark.VoiceIndex || m.MeetsVoice == mark.VoiceIndex;
@@ -1248,7 +1248,7 @@ internal static class HairpinEngraver
             MusicMarkItem? NextStop(bool ownVoice) => FirstOf(musicMarks.Where(m =>
                 m.Type == MusicMarkType.HairpinStop && m.StaffIndex == mark.StaffIndex &&
                 (!ownVoice || m.PairingVoice == mark.VoiceIndex) &&
-                PlaceOfMark(m).IsAfter(start)), PlaceOfMark, ownVoice);
+                PlaceOfMark(m).IsAfter(start)), PlaceOfMark);
 
             // (A condensed staff's levels are the staff's from the start: HairpinEndsOnStaff.)
             var (nextDynamic, nextMark, nextStop) = EndsIn(ownVoice: !mark.HairpinEndsOnStaff);
@@ -1447,16 +1447,21 @@ internal static class HairpinEngraver
     private static Semantics.Fraction? MomentOf(MusicMarkItem m) => m.AnchorTiming.Denominator != 0 ? m.AnchorTiming : null;
 
     /// <summary>
-    /// The first of <paramref name="candidates"/>: in the hairpin's own voice the first in
-    /// their list's order, as it was; over the whole staff the EARLIEST by
-    /// <see cref="StaffPlace"/> — a condensed staff's lists are in one part's order after
-    /// another's, so the first listed is not the first heard. Null for none.
+    /// The first of <paramref name="candidates"/>: the EARLIEST by <see cref="StaffPlace"/>,
+    /// the first listed of those at one place — in the hairpin's own voice as over the whole
+    /// staff. The lists are in one part's order after another's (a condensed staff's; a
+    /// combined staff's voice carrying one part, then the other), so the first listed is not
+    /// the first heard. Null for none.
     /// </summary>
-    private static T? FirstOf<T>(IEnumerable<T> candidates, Func<T, StaffPlace> placeOf, bool ownVoice)
+    /// <remarks>
+    /// Until session 1328 the own voice took the first LISTED: on a combined staff whose voice
+    /// carries part two's first half bar and part one's second half, part two's crescendo ran
+    /// past its own decrescendo on the first beat to part one's on the third, the two wedges
+    /// over each other (Lab sessions/p1328/probe f4). The marks are listed by bar only.
+    /// </remarks>
+    private static T? FirstOf<T>(IEnumerable<T> candidates, Func<T, StaffPlace> placeOf)
         where T : class
     {
-        if (ownVoice)
-            return candidates.FirstOrDefault();
         T? first = null;
         foreach (var candidate in candidates)
             if (first == null || placeOf(candidate).CompareTo(placeOf(first)) < 0)

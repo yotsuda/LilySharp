@@ -207,6 +207,22 @@ public class CombinedStaffHairpinTests
         => Assert.Equal(expected, Hairpins(Collect(fl1, fl2)));
 
     /// <summary>
+    /// A hairpin ends at the EARLIEST end of its own voice, though a voice carrying part two's
+    /// first half bar and part one's second lists part one's marks first (session 1328,
+    /// HairpinEngraver.FirstOf). Until then part two's crescendo ran past its own decrescendo
+    /// on the bar's first beat to part one's on the third (Lab sessions/p1328/probe f4).
+    /// </summary>
+    [Theory]
+    // Part two alone, then part one alone, in one bar of one voice.
+    [InlineData("R1 | r2 c''2@decresc | c''1@p |", "e'4 f'@cresc e' f' | e'4@decresc f' r2 | e'1@p |",
+        "v0 0.1 note@1/4 .. v0 1.0 note@0")]
+    // The other way round (control: part one is listed first and heard first).
+    [InlineData("R1 | c''2@decresc r2 | c''1@p |", "e'4 f'@cresc e' f' | r2 e'4@decresc f' | e'1@p |",
+        "v0 0.1 note@1/4 .. v0 1.0 note@0")]
+    public void AHairpin_EndsAtItsVoicesEarliestEnd_WhicheverPartIsListedFirst(string fl1, string fl2, string expected)
+        => Assert.Equal(expected, Hairpins(Collect(fl1, fl2)).Split(" | ")[0]);
+
+    /// <summary>
     /// In a unison part two's notes are engraved by nobody, and its hairpin goes with them —
     /// BOTH ends. Until session 1323 the stop was left behind in a voice of its own, where it
     /// ended that voice's earlier hairpin at its bar's end: across the unison's own hairpin (Lab
