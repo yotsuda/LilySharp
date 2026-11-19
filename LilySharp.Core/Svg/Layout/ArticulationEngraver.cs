@@ -853,6 +853,40 @@ internal static class ArticulationEngraver
             // Get the music item to determine staff position
             // LILYPOND-REF: script-engraver.cc:235-250 acknowledge_rhythmic_head
             var measure = artMeasures[articulation.MeasureIndex];
+            // A FERMATA ON THE END OF A PIECE'S LAST BAR — written on an empty chord after the
+            // last note (`f'4 <>@fermata |`; Collector.TrailingMarks gives it this address: one
+            // past the bar's last item). It has no note: it stands over the closing bar line,
+            // centred on the bar's end, at the height a fermata takes off the bare staff.
+            // LILYSHARP-OWN (owner's decision 2026-11-19, session 1315): LilyPond prints nothing
+            //   for `<>\fermata` at the final moment (MEASURED 2.26.0, Lab sessions/p1314/lp/end.ly 5
+            //   — no note column to carry the Script).
+            //   departs from: lily/script-engraver.cc:235-250 acknowledge_rhythmic_head (a script needs a head).
+            //   goes away when: never — the decision is to draw what the writer wrote.
+            //   observed by: TrailingEmptyChordTests (the fermata over the closing bar line).
+            // The side machinery it shares is AlignedSideUp's, with no support but the staff.
+            if (articulation.ItemIndex == measure.Items.Length && measure.Items.Length > 0
+                && IsFermata(articulation.Type))
+            {
+                bool endAbove = !articulation.DirectionForced || articulation.IsAbove;
+                var endArt = endAbove == articulation.IsAbove ? articulation : articulation with { IsAbove = endAbove };
+                int endLines = staffByIndex != null && staffByIndex.TryGetValue(articulation.StaffIndex, out var endStaff)
+                    ? endStaff.Lines : EngravingDefaults.DefaultStaffLines;
+                var barLength = Semantics.Fraction.Zero;
+                foreach (var endItem in measure.Items)
+                    barLength += endItem.Duration;
+                double endX = measureLayout.X + (measureLayout.Columns.IsDefaultOrEmpty
+                    ? measureLayout.Width : measureLayout.GetXForTiming(barLength));
+                string endGlyph = endArt.GetGlyph();
+                layouts.Add(new ArticulationLayout(
+                    endArt.MeasureIndex, endArt.ItemIndex, endX + OriginFromCentre(endGlyph, 0.0),
+                    AlignedSideUp(endArt, endAbove, supportReach: 0.0, staffSpace: 1.0, endLines,
+                        onNoteHead: false, fonts, drawnLines: true),
+                    endGlyph, endAbove, endArt.SourcePosition, 0, GetSeedBBoxFor(endArt, fonts),
+                    SourceIndex: arti, StaffIndex: endArt.StaffIndex,
+                    SkylineHorizontalPadding: ArticulationSpacing.SkylineHorizontalPadding(endArt.Type),
+                    OutsideStaffPriority: ArticulationSpacing.OutsideStaffPriority(endArt)));
+                continue;
+            }
             if (articulation.ItemIndex >= measure.Items.Length)
                 continue;
             var item = measure.Items[articulation.ItemIndex];

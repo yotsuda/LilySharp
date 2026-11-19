@@ -14,15 +14,15 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 466 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **592** | |
+| `OWN` | 468 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **594** | |
 
 ## 密度の高いファイル（上位 12）
 
 | ファイル | 件数 |
 |---|---:|
+| `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 23 |
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 23 |
-| `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 22 |
 | `LilySharp.Core/Svg/Layout/ProseBand.cs` | 19 |
 | `LilySharp.Core/Midi/MidiExporter.cs` | 17 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 16 |
@@ -247,7 +247,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（466 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（468 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -583,6 +583,7 @@
 ### `LilySharp.Core/Svg/Collector/TabResolver.cs`
 - **`TabResolver.ResolveTabStrings`** built on (LILYSHARP-OWN and deliberately not LilyPond's). REFINED 2026-09-14: only a
 ### `LilySharp.Core/Svg/Collector/TrailingMarks.cs`
+- **`TrailingMarks`** LILYSHARP-OWN: LilyPond prints none of them (the measurement above), for want of a column
 - **`TrailingMarks`** LILYSHARP-OWN in its form (an address is Lily#'s), LilyPond's in its result. Observed by
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`
 - **`EngravingDefaults.StaffLinePositions`** ⚠️ LILYSHARP-OWN in the two- and four-line rows. LilyPond's own line-count N
@@ -604,6 +605,7 @@
 - **`ArticulationEngraver.BendApproachDepth`** How far below (a scoop) or above (a plop) the head's row the curve starts. LILYSHARP-OWN (above).
 - **`ArticulationEngraver.BendApproachThickness`** The curve's line thickness. LILYSHARP-OWN (above).
 - **`ArticulationEngraver.BendApproachLeftReach`** LILYSHARP-OWN: LilyPond has no scoop or plop, so there is no grob whose room this is.
+- **`ArticulationEngraver.CalculateWithFingerings`** LILYSHARP-OWN (owner's decision 2026-11-19, session 1315): LilyPond prints nothing
 - **`ArticulationEngraver.CalculateWithFingerings`** LILYSHARP-OWN: LilyPond draws NO fall or doit on a chord at all — its
 - **`ArticulationEngraver.CalculateWithFingerings`** LILYSHARP-OWN: the scoop and plop are (BendApproachLeftReach).
 - **`ArticulationEngraver.CalculateWithFingerings`** to this note's left. LILYSHARP-OWN, as the bend-up is.

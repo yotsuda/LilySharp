@@ -17,6 +17,7 @@
 using System.Collections.Immutable;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Svg.Collector;
 
@@ -47,11 +48,23 @@ namespace LilySharp.Core.Svg.Collector;
 /// empty chord are drawn to the closing bar line ("programming error: bounds of this piece
 /// aren't breakable", and drawn); a LEVEL (<c>&lt;&gt;\f</c>), a fermata, a text and the text-style
 /// pedal's release sign written there are NOT drawn — the final moment has no note column for
-/// them to stand on. So a level and a script keep the address no engraver finds, as before:
-/// audit/lp-regression/lys/empty-chord.lys ends <c>c1@decresc &lt;&gt;@pp</c>, and its page is
-/// LilyPond's, the hairpin to the bar line and no pp.
-/// A hairpin's stop is left too: HairpinEngraver reads "the head of the bar after the last"
-/// itself, as the final bar line (its endsAtFinalBar).
+/// them to stand on.
+/// A hairpin's stop is left as it is: HairpinEngraver reads "the head of the bar after the
+/// last" itself, as the final bar line (its endsAtFinalBar).
+/// </para>
+/// <para>
+/// …AND A LEVEL AND A TEXT, where Lily# departs from LilyPond (owner's decision
+/// 2026-11-19, session 1315: "最後の &lt;&gt; に書いた強弱・フェルマータ・文字もレンダできるようにしたい").
+/// LILYSHARP-OWN: LilyPond prints none of them (the measurement above), for want of a column
+/// and not by an engraving rule; what a writer wrote there is real notation — the level a
+/// closing hairpin runs to (<c>c1@decresc &lt;&gt;@pp</c>), the fermata over the closing bar line,
+/// a "fine" — and mid-piece the same empty chord prints them on the next bar's head. They
+/// stand on the last bar's end like the lines' ends. audit/lp-regression/lys/empty-chord.lys
+/// ends that way: its page has the pp LilyPond's has not, and its last hairpin ends before
+/// the pp, as a hairpin running to a level does anywhere.
+/// A FERMATA written there stands over the closing bar line (ArticulationEngraver's bar-end
+/// arm — the one script with a place of its own; every other script is drawn on an item and
+/// is left where it was, undrawn: an accent after the last note marks nothing).
 /// </para>
 /// <para>
 /// LILYSHARP-OWN in its form (an address is Lily#'s), LilyPond's in its result. Observed by
@@ -93,6 +106,47 @@ internal static class TrailingMarks
                 at += item.Duration;
             (marks ??= content.MusicMarks.ToBuilder())[i] = m with { MeasureIndex = bar, AnchorItemIndex = items.Length, AnchorTiming = at };
         }
-        return marks == null ? content : content with { MusicMarks = marks.ToImmutable() };
+
+        // A level or a text (the remarks' owner's decision).
+        ImmutableArray<DynamicItem>.Builder? dynamics = null;
+        for (int i = 0; i < content.Dynamics.Length; i++)
+        {
+            var d = content.Dynamics[i];
+            if (d.ItemIndex != 0 || d.MeasureIndex <= 0)
+                continue;
+            var measures = measuresOf(d.StaffIndex, d.VoiceIndex);
+            if (measures.IsDefaultOrEmpty || d.MeasureIndex != measures.Length)
+                continue;
+            int bar = d.MeasureIndex - 1;
+            var items = measures[bar].Items;
+            var at = Fraction.Zero;
+            foreach (var item in items)
+                at += item.Duration;
+            (dynamics ??= content.Dynamics.ToBuilder())[i] = d with { MeasureIndex = bar, ItemIndex = items.Length, Moment = at };
+        }
+
+        // A fermata: the one script that has a place with no note (ArticulationEngraver's
+        // bar-end arm). Any other script is drawn on an item and stays where it was.
+        ImmutableArray<ArticulationItem>.Builder? scripts = null;
+        for (int i = 0; i < content.Articulations.Length; i++)
+        {
+            var a = content.Articulations[i];
+            if (a.ItemIndex != 0 || a.MeasureIndex <= 0
+                || a.Type is not (ArticulationType.Fermata or ArticulationType.FermataShort or ArticulationType.FermataLong))
+                continue;
+            var measures = measuresOf(a.StaffIndex, a.VoiceIndex);
+            if (measures.IsDefaultOrEmpty || a.MeasureIndex != measures.Length)
+                continue;
+            (scripts ??= content.Articulations.ToBuilder())[i] = a with { MeasureIndex = a.MeasureIndex - 1, ItemIndex = measures[a.MeasureIndex - 1].Items.Length };
+        }
+
+        if (marks == null && dynamics == null && scripts == null)
+            return content;
+        return content with
+        {
+            MusicMarks = marks?.ToImmutable() ?? content.MusicMarks,
+            Dynamics = dynamics?.ToImmutable() ?? content.Dynamics,
+            Articulations = scripts?.ToImmutable() ?? content.Articulations,
+        };
     }
 }

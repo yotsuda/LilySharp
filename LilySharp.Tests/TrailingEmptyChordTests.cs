@@ -75,22 +75,90 @@ public class TrailingEmptyChordTests
     }
 
     /// <summary>
-    /// Only the ends of lines. A level and a script written there are left where no engraver
-    /// finds them, and are not drawn — as LilyPond draws none: its final moment has no note
-    /// column for them. MEASURED (LilyPond 2.26.0, Lab sessions/p1314/lp/end.ly: <c>&lt;&gt;\f</c>,
-    /// <c>&lt;&gt;\fermata</c> and <c>&lt;&gt;^"fine"</c> before <c>\bar "|."</c> print nothing; and
-    /// audit/lpreg/empty-chord.ly, whose last <c>&lt;&gt;\pp</c> is not on the page).
+    /// A level and a text written there stand on the last bar's end too and are drawn (owner's
+    /// decision 2026-11-19, session 1315) — LILYSHARP-OWN: LilyPond prints neither, its final
+    /// moment having no note column (MEASURED 2.26.0, Lab sessions/p1314/lp/end.ly: <c>&lt;&gt;\f</c>
+    /// and <c>&lt;&gt;^"fine"</c> before <c>\bar "|."</c> print nothing).
     /// </summary>
     [Fact]
-    public void ALevelAndAScriptAfterTheLastFullBar_AreNotDrawn_AsLilyPondDrawsNone()
+    public void ALevelAndATextAfterTheLastFullBar_StandOnItsEnd_AndAreDrawn()
     {
-        var score = Collect("c'4 d' e' f' <>@f@fermata |");
+        var score = Collect("c'4 d' e' f' <>@f |");
         var f = Assert.Single(score.Dynamics);
-        Assert.Equal((1, 0), (f.MeasureIndex, f.ItemIndex));
+        Assert.Equal((0, 4, (Fraction?)new Fraction(1, 1)), (f.MeasureIndex, f.ItemIndex, f.Moment));
+        Assert.Single(new LayoutEngine().Layout(score).DynamicLayouts);
+
+        var fine = Collect("c'4 d' e' f' <>@text(\"fine\") |");
+        Assert.Equal((0, 4), (Assert.Single(fine.Dynamics).MeasureIndex, fine.Dynamics[0].ItemIndex));
+        Assert.Single(new LayoutEngine().Layout(fine).DynamicLayouts);
+
+        // The level a closing hairpin runs to: the hairpin ends on it, where it ran to the
+        // bar line with nothing after it.
+        var closing = Collect("c'1@decresc <>@pp |");
+        var pin = Assert.Single(HairpinEngraver.DetectHairpins(closing.MusicMarks, closing.Dynamics));
+        Assert.Equal((0, 1, false), (pin.EndMeasureIndex, pin.EndItemIndex, pin.EndsAtStop));
+        Assert.Single(new LayoutEngine().Layout(closing).DynamicLayouts);
+
+        // With a bar after it: the next bar's head, as it was.
+        var mid = Assert.Single(Collect("c'4 d' e' f' <>@f | g'1 |").Dynamics);
+        Assert.Equal((1, 0), (mid.MeasureIndex, mid.ItemIndex));
+    }
+
+    /// <summary>
+    /// A FERMATA written there stands over the closing bar line: centred on the bar's end,
+    /// outside the staff — above, or below when it is written <c>.down</c> (owner's decision
+    /// 2026-11-19, session 1315; LILYSHARP-OWN, ArticulationEngraver's bar-end arm — LilyPond
+    /// prints none, Lab sessions/p1314/lp/end.ly 5). Its height is the one a fermata takes over
+    /// a note that lies inside the staff: the staff alone supports both.
+    /// Any other script is drawn on an item, keeps its address and is not drawn.
+    /// </summary>
+    [Fact]
+    public void AFermataAfterTheLastFullBar_StandsOverTheClosingBarLine()
+    {
+        var score = Collect("c''4 b' a' b' <>@fermata |");
         var fermata = Assert.Single(score.Articulations);
-        Assert.Equal((1, 0), (fermata.MeasureIndex, fermata.ItemIndex));
+        Assert.Equal((0, 4), (fermata.MeasureIndex, fermata.ItemIndex));
         var page = new LayoutEngine().Layout(score);
-        Assert.Empty(page.DynamicLayouts);
+        var drawn = Assert.Single(page.ArticulationLayouts);
+        Assert.True(drawn.IsAbove);
+        // Right of every note, and at the height of the fermata on the b' (the middle line).
+        var onANote = Assert.Single(new LayoutEngine().Layout(Collect("c''4 b' a' b'@fermata |")).ArticulationLayouts);
+        Assert.True(drawn.X > onANote.X + 1.0, $"{drawn.X} against the last note's {onANote.X}");
+        Assert.Equal(onANote.YUp, drawn.YUp, 6);
+
+        var below = Assert.Single(new LayoutEngine().Layout(Collect("c''4 b' a' b' <>@fermata.down |")).ArticulationLayouts);
+        Assert.False(below.IsAbove);
+        Assert.Equal(-drawn.YUp, below.YUp, 6);
+
+        // An accent there marks no note: left where it was, and not drawn.
+        var accent = Collect("c''4 b' a' b' <>@accent |");
+        Assert.Equal((1, 0), (Assert.Single(accent.Articulations).MeasureIndex, accent.Articulations[0].ItemIndex));
+        Assert.Empty(new LayoutEngine().Layout(accent).ArticulationLayouts);
+    }
+
+    /// <summary>
+    /// A trill's line ended on an empty chord ends at the chord's moment: an <c>@!trillSpan</c>
+    /// includes its note (owner's decision 2026-10-28) and an empty chord has none. Until
+    /// session 1315 it was inclusive there too: mid-piece the line ran over the next bar's
+    /// note, and after a piece's last note it ran to a note no bar has and was not drawn at
+    /// all — neither the "tr" nor the line. MEASURED (LilyPond 2.26.0, Lab
+    /// sessions/p1314/lp/end.ly 7): <c>c'2\startTrillSpan e'2 &lt;&gt;\stopTrillSpan \bar "|."</c>
+    /// draws the line to the end.
+    /// </summary>
+    [Fact]
+    public void ATrillsLineEndedOnAnEmptyChord_IncludesNoNote()
+    {
+        static string Say(TrillSpannerItem t) => $"({t.StartMeasureIndex},{t.StartItemIndex})..({t.EndMeasureIndex},{t.EndItemIndex}) inclusive {t.EndInclusive}";
+        // At the piece's end: what a trill with no stop at all has (the virtual stop past the
+        // last bar), which the engraver draws to the final bar line.
+        var last = Collect("c'2@trillSpan e'2 <>@!trillSpan |");
+        Assert.Equal("(0,0)..(1,0) inclusive False", Say(Assert.Single(last.TrillSpanners)));
+        Assert.Equal(Say(Assert.Single(Collect("c'2@trillSpan e'2 |").TrillSpanners)), Say(last.TrillSpanners[0]));
+        Assert.Single(new LayoutEngine().Layout(last).TrillSpannerLayouts);
+        // Mid-piece: the next bar's head, not past its note.
+        Assert.Equal("(0,0)..(1,0) inclusive False", Say(Assert.Single(Collect("c'2@trillSpan e'2 <>@!trillSpan | g'1 |").TrillSpanners)));
+        // On a note it includes the note, as before.
+        Assert.Equal("(0,0)..(0,1) inclusive True", Say(Assert.Single(Collect("c'2@trillSpan e'2@!trillSpan |").TrillSpanners)));
     }
 
     /// <summary>Each voice by its own last bar, on a staff of two voices and on a second staff.</summary>

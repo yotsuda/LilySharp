@@ -1096,7 +1096,9 @@ public sealed partial class MeasureCollector
                 if (markSyntax.IsSpanEnd && markSyntax.Name == "trillSpan")
                 {
                     // The trill spanner's end: an event of the trill pairing, not a mark.
-                    _trillSpannerEvents.Add((false, measureIndex, itemIndex, markSyntax.SourceStart, _v.Cursor.StaffIndex, _v.Cursor.VoiceIndex, 0));
+                    // …on an empty chord, an end that includes no note (EmptyChordStop).
+                    _trillSpannerEvents.Add((false, measureIndex, itemIndex, markSyntax.SourceStart, _v.Cursor.StaffIndex, _v.Cursor.VoiceIndex,
+                        node is ChordSyntax { IsEmpty: true } ? EmptyChordStop : 0));
                 }
                 else if (markSyntax.IsSpanEnd)
                 {
@@ -1386,6 +1388,11 @@ public sealed partial class MeasureCollector
     /// span. Outside −1 / 0 / +1, the directions a <c>@trillSpan</c> is written with.</summary>
     private const int VibratoEvent = 2;
 
+    /// <summary>The <c>forcedDir</c> slot of a trill spanner's STOP written on an empty chord
+    /// (<c>&lt;&gt;@!trillSpan</c>) — a stop has no direction, and this one includes no note
+    /// (<see cref="PairTrillSpannerEvents"/>).</summary>
+    private const int EmptyChordStop = 3;
+
     /// <summary>
     /// True for the pedal music marks that anchor to the host note's column
     /// (the engage/release marks, @sustain … @treCorde). They are plain
@@ -1485,7 +1492,11 @@ public sealed partial class MeasureCollector
                 // so its supports and its left bound are that voice's columns.
                 // An @!trillSpan INCLUDES its note (owner's decision 2026-10-28): the trill
                 // runs to the next note (TrillSpannerItem.EndInclusive).
-                items.Add(Closed(pendingStart.Value, evt.measureIndex, evt.itemIndex, inclusive: true));
+                // ⚠️ On an empty chord there is no note to include: the trill ends at the
+                // chord's moment, as one ended by the next start does. Until session 1315 it
+                // was "inclusive" there too — `e'2 <>@!trillSpan | g'1` ran over the g, and
+                // after a piece's last note it ran to a note no bar has and was not drawn.
+                items.Add(Closed(pendingStart.Value, evt.measureIndex, evt.itemIndex, inclusive: evt.forcedDir != EmptyChordStop));
                 pendingStart = null;
             }
             else if (plays != null && plays.OnUnmatchedStop(evt.measureIndex,
