@@ -5430,6 +5430,20 @@ public sealed class MusicXmlExporter
         var tiedXmlNotes = new List<MusicXmlNote>();
 
         bool isFirst = true;
+        // The chord's own marks ride its first held member: a struck one written first is moved
+        // after the held ones below (the reader's clock moves by a chord's first note), and its
+        // marks went with it onto a <chord/> note until session 1330 (`<g'@struck c'' e''>2.@accent`).
+        var marksHost = pitches.FirstOrDefault(p => !Music.StruckNotes.IsStruck(p)) ?? pitches.FirstOrDefault();
+        // The arpeggio is every member's, so it is known before the first.
+        // (A cross-staff spelling is WriteCrossArpeggio's, once the members stand.)
+        if (marksHost != null)
+        {
+            if (WritesOwnWavyLine(chord.Articulations))
+                _chordArpeggio = "arpeggiate";
+            else if (chord.Articulations.Any(a2 => a2 is MusicMarkSyntax mm
+                         && Semantics.AnnotationValues.ArpeggioWords(mm) is { Bracket: true, Cross: false }))
+                _chordArpeggio = "non-arpeggiate";
+        }
         foreach (var pitch in pitches)
         {
             var (step, alter, targetOctave) = ResolveChordMemberPitch(
@@ -5505,27 +5519,22 @@ public sealed class MusicXmlExporter
             if (chord.HasTiedMembers && chord.TiedMembers.Any(m => m.SourceStart == pitch.SourceStart))
                 tiedXmlNotes.Add(xmlNote);
 
-            // Add articulations + tie pairing only on the first note of the chord.
-            if (isFirst)
+            // Add articulations + tie pairing only on the first note of the chord — its first
+            // held one, which is the chord's first <note> once a struck one is moved behind.
+            if (ReferenceEquals(pitch, marksHost))
             {
+                bool wasChord = xmlNote.IsChord;
+                xmlNote.IsChord = false;
                 WriteStemTremolo(chord.Tremolo, xmlNote);
-                bool hasArp = WritesOwnWavyLine(chord.Articulations);
-                // (A cross-staff spelling is WriteCrossArpeggio's, once the members stand.)
-                bool hasBracket = chord.Articulations.Any(a2 =>
-                    a2 is MusicMarkSyntax mm
-                    && Semantics.AnnotationValues.ArpeggioWords(mm) is { Bracket: true, Cross: false });
-                if (hasArp)
-                    _chordArpeggio = "arpeggiate";
-                else if (hasBracket)
-                    _chordArpeggio = "non-arpeggiate";
                 // The outside string numbers were paired above, member by member.
                 var memberMarks = chord.MemberSlurs.Select(ms => ms.Mark.SourceStart).ToHashSet();
                 ProcessArticulations(
                     Semantics.ArticulationRuns.WithCovering(chord, chord.Articulations.Where(a => a is not StringNumberAnnotationSyntax
                         && !(a is SlurSyntax s && memberMarks.Contains(s.SourceStart)))), xmlNote,
                     host: chord.SourceStart);
-                isFirst = false;
+                xmlNote.IsChord = wasChord;
             }
+            isFirst = false;
 
             // Arpeggio marks: <arpeggiate> on EVERY member; the bracket form
             // puts <non-arpeggiate> on the two OUTER members only.

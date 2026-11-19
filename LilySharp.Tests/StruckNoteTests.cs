@@ -138,6 +138,27 @@ public class StruckNoteTests
         Assert.DoesNotContain("@struck", new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(single).Item1);
     }
 
+    /// <summary>Written first, the struck member is moved behind the held ones in MusicXML; the
+    /// chord's marks stay on its first &lt;note&gt; (until session 1330 they went with the struck
+    /// one onto a &lt;chord/&gt; note), and an arpeggio is still every member's.</summary>
+    [Fact]
+    public void InMusicXml_TheChordsMarks_StayOnItsFirstNote()
+    {
+        static string[] Notes(string music)
+        {
+            var doc = System.Xml.Linq.XDocument.Parse(new LilySharp.Core.MusicXml.MusicXmlExporter()
+                .Export(SyntaxTree.Parse(Book(music))).ToXml().ToString());
+            return [.. doc.Descendants("note").Select(n => n.Element("pitch")!.Element("step")!.Value
+                + (n.Element("chord") != null ? "+" : "")
+                + "[" + string.Join(",", n.Descendants().Where(d => d.Parent?.Name.LocalName is "articulations" or "notations"
+                    && d.Name.LocalName is not "articulations").Select(d => d.Name.LocalName)) + "]")];
+        }
+        Assert.Equal(new[] { "C[accent]", "E+[]", "G+[]" }, Notes("<g'@struck c'' e''>2.@accent |"));
+        Assert.Equal(new[] { "C[arpeggiate]", "E+[arpeggiate]", "G+[arpeggiate]" }, Notes("<g'@struck c'' e''>2.@arpeggio |"));
+        // An empty chord's script before it is the chord's too, on that first note.
+        Assert.Equal(new[] { "C[]", "C[accent]", "E+[]", "G+[]" }, Notes("c'2 <>@accent <g'@struck c'' e''>4 |"));
+    }
+
     [Fact]
     public void TheDot_StandsRightOfTheSmallHead_OnTheStemsFarSide()
     {
