@@ -280,7 +280,23 @@ internal static class CombinedStaffReaddress
     /// merged — is one mark, as two identical events in one LilyPond Voice are one grob; the
     /// first is kept. Two DIFFERENT marks there both stay.
     /// </para>
-    /// observed by: CombinedStaffHairpinTests.
+    /// <para>
+    /// WHERE THIS COMES FROM. That a mark travels with its note is LilyPond's combiner, which
+    /// moves a part's music — its span events with it — between the contexts it routes it to:
+    /// the address is the one <see cref="CombinedStaffAddressing.TranslateSpan"/> cites, and it
+    /// is not written a second time here. It is not a literal port because LilyPond has no
+    /// address to translate: its events ARE in the context, where Lily# collects first and
+    /// routes afterwards.
+    /// </para>
+    /// LILYSHARP-OWN: two answers here have no LilyPond measurement behind them. An END on a rest
+    ///   engraved for nobody stays at its collected place (its bar and its moment are still
+    ///   right; the item number names nothing, and the line then closes on that bar's end or
+    ///   head). And a text spanner or an ottava whose part changes streams between its ends is
+    ///   left as collected, both ends (the pairing pass in the body says why).
+    ///   departs from: ly/engraver-init.ly:375 Text_spanner_engraver consisted into the Voice context — what LilyPond draws
+    ///   for a spanner whose stop is heard in another context is not measured.
+    ///   goes when: TextSpannerEngraver and OttavaBracketEngraver carry the end's own voice.
+    ///   observed by: CombinedStaffHairpinTests (AMarkOnARestNobodyEngraves, ALinePairedInOneVoice_GoesAsAPair).
     /// </remarks>
     private static ImmutableArray<MusicMarkItem> MoveMarks(
         ImmutableArray<MusicMarkItem> marks, Dictionary<int, CombinedStaffAddressing> byStaff)

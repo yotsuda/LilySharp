@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 471 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **597** | |
+| `OWN` | 472 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **598** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -247,7 +247,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（471 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（472 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -521,6 +521,8 @@
 - **`BeamingPattern.Options.For`** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/ChordRhythm.cs`
 - **`ChordRhythm.BeatsOf`** LILYSHARP-OWN (2026-11-14, a design by musical validity — RULES §5.2; LilyPond's chord
+### `LilySharp.Core/Svg/Collector/CombinedStaffAddressing.cs`
+- **`CombinedStaffReaddress.MoveMarks`** LILYSHARP-OWN: two answers here have no LilyPond measurement behind them. An END on a rest
 ### `LilySharp.Core/Svg/Collector/CompressRests.cs`
 - **`CompressRests`** LILYSHARP-OWN: LilyPond has no switch for this. MEASURED (2.26.0, Lab sessions/p903/b5):
 ### `LilySharp.Core/Svg/Collector/CondensedPercents.cs`
