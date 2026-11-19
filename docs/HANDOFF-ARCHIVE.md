@@ -277,6 +277,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1310セッションの経緯
+
+### 1.1 第1310セッション（2026-11-19・YT-DELL2・新しい会話）
+
+Calamo #28 を作り、途中で届いた #29 に返事をした便（base `b96781b43`・途中でオーナーの `7cd26b659`）。開始時 full 17717 合格 / 2 失敗 / skip 2 / 合計 17721（Lab `p1310` `run1.trx`・失敗は `IncludeFilesTests.ABooksInclude_SavedAgain_…` と `KeystrokeSideWorkTests.TheCaretOnANote_OfABookWithIncludes_…`＝2 本だけ回すと緑の不安定な網）。終了時 full 17733 合格 / 0 失敗 / skip 2 / 合計 17735（`run3.trx`・+14 はこの便の網）。REQUESTS は #28 `fixed`・#29 `question`・open は両方 0。毒は回していない。細部は Lab `p1310/notes.md`。
+- **`layout { tremoloBeams gapped | joined }`（#28・`970e47f6d`・`TremoloBeamsKey`）**: `joined` は LilyPond の `Beam.gap` を 0 にして同じ式を通す（`EngravingStyle.TremoloBeamGap`・読むのは `SharedRenderer.Beams.cs` だけ・間隔は動かない）。`--set`・`.ly`（`\override Beam.gap = #0`）・補完と色・文書。LilyPond 2.26.0 と線の長さ 0.01 以内（Lab `p1310/trem`）。網 `TremoloBeamsTests`。実機は `MANUAL-CHECKS` の `tremoloBeams` の行。
+- **見つけて直した欠陥（同じ commit）**: 全音符のトレモロの対で後ろの和音に臨時記号が 2 つ以上並ぶと、線の右端が 1.29 長かった（`AccidentalGroupLength` が 1 声部だけの列の和音の臨時記号を 1 つ分の幅で数えていた）。掃きで動いた svg は 3 / 1276＝この形の 3 冊だけで、動いた後が LilyPond と同じ（Lab `p1310/svg2`・`acc`）。
+- **Calamo #29（トレモロの後ろのペダルの離し）**: 今の文法で書ける＝`repeat tremolo 12 { … } <>@!sustain`（離しはトレモロの終わり・印は LilyPond と同じ）。`}@mark` のエラーがこの書き方を言うようにした（`Parser.Music.cs`・網は `MidiPedalTests`）。**オーナー判断待ち 2 つ**: `}` に直接付ける書き方を作るか／中の音に付けた離しの時刻（今は最初に弾く瞬間・LilyPond は表示上の頭の時刻）。
+- **次**: #29 の返事があればそれ → leftovers の「第1239」の残り →「第1238」の残り → review.md の 3 つ（`mid-bar-break`・F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。第1308 の未決（録音が無いときの Faders 100% の置き場・Tempo の下限）もオーナー待ち。
+
 ## 以下は第1309セッションの経緯
 
 ### 1.1 第1309セッション（2026-11-19・YT-DELL2・第1308 と同じ会話）

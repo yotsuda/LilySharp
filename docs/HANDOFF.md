@@ -146,22 +146,21 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1312セッション（2026-11-19・YT-DELL2・第1310 と同じ会話）
+
+Calamo #29 の 2 を直した便（base `b6f806dfe`）。開始時 full 17741 合格 / 0 失敗 / skip 2 / 合計 17743（Lab `p1312` `run1.trx`）。終了時 full 17744 合格 / 0 失敗 / skip 2 / 合計 17746（`run2.trx`）。REQUESTS は #29 を `fixed`・open は両方 0。毒は回していない。
+- **トレモロの中のペダルの印は 1 回だけ・その音の頭が立つ所で（オーナー決定 2026-11-19「B」）**: `MidiExporter.ProcessRepeat` は tremolo の本体を回数ぶん歩き、ペダルの印を毎回読んでいた（`{ e32@sustain g }` ×8 は 1 回踏んで 7 回踏み替え・2 つ目の音の離しは 1 打後）。今は最初の 1 回の印だけを残し、本体の中の位置をかたまり全体に引き伸ばした時刻に置く（`StandTremoloPedals`）＝1 つ目の音は頭・2 つ目は半分。LilyPond と同じ時刻（Calamo の再現譜で tick 1080＝3/16 後）。ペダルの 3 種だけ＝強弱・アクセントは今までどおり打つたびに効く。探り譜と前後の表は Lab `p1312/in`・`p1311/notes.md`。網 `MidiPedalTests.InsideATremolo_ItIsOneMark_WhereItsHeadStands`。MIDI の掃きは 0 / 1276（Lab `p1312/midi`＝追跡の本とコーパスに、トレモロの中にペダルを書く本は無い）。
+- **測っていない**: トレモロの中のヘアピン・text spanner・ottava の端が MIDI でどう鳴るか（同じ「毎回読む」の形がありうる）。
+- **次**: leftovers の「第1239」の残り →「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決（録音が無いときの Faders 100% の置き場・Tempo の下限）はオーナー待ち。
+
+## 以下は第1311セッションの経緯
+
 ### 1.1 第1311セッション（2026-11-19・YT-DELL2・第1310 と同じ会話）
 
 Calamo #29 の `}@!sustain` を作った便（base `c8072bf8f`）。開始時 full 17733 合格 / 0 失敗 / skip 2 / 合計 17735（Lab `p1311` `run1.trx`）。終了時 full 17741 合格 / 0 失敗 / skip 2 / 合計 17743（`run2.trx`）。REQUESTS は #29 を `fixed`（1）と `question`（2）に書いた・open は両方 0。毒は回していない。
 - **終わりの印をかたまりの `}` に書ける（オーナー決定 2026-11-19: 終わりの印 `@!…` だけ・`{ }` で閉じる音楽のかたまり全部）**: `repeat tremolo 12 { … }@!sustain`・`tuplet 3/2 { … }@!cresc`。パーサが「かたまりの後ろの空の和音」として読む（`Parser.Music.cs` `EndingMarksOfABlock`＝幅 0 の `<` `>` を持つ `ChordGreen`）＝絵・MIDI・`.ly`・MusicXML は `} <>@!sustain` と同じ木を読むので、後ろは何も変えていない。`}@f`・`}@sustain` はエラーで `} <>@f` を言う。`}@!sustain@f` は `@f` だけを指す。空白を挟んだ `} @!sustain` は今までどおりエラー。探り譜 8 組（tremolo・tuplet・2 つの印・voice・grace・cue ほか）で 4 つの出力が一致（Lab `p1311/end`）。網 `EndingMarkOnABlockTests`・`SpanEndCompletionTests` に 1 本。文法は GRAMMAR.md §8.1 の BlockEnd。実機は `MANUAL-CHECKS` の `}@!sustain` の行。
 - **オーナー判断待ち（#29 の 2）**: トレモロの中の音に付けた離しの時刻。今は「その音を最初に弾く瞬間」（2 つ目の音なら 1/64 後）、LilyPond は表示上の頭の時刻（かたまりの半分）。**見つけた欠陥（未修正・同じ判断で直る）**: MIDI は tremolo の本体を回数ぶん歩き、中のペダルの印を毎回読む＝`repeat tremolo 8 { e32@sustain g }` は 1 回踏むのではなく 7 回踏み替える（Lab `p1311/notes.md` の表）。直しは「印は 1 回だけ」で、その時刻が問い。勧め＝表示上の頭の時刻（絵の印の位置と同じ）。
 - **次**: 上の判断 → leftovers の「第1239」の残り →「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決（録音が無いときの Faders 100% の置き場・Tempo の下限）もオーナー待ち。
-
-## 以下は第1310セッションの経緯
-
-### 1.1 第1310セッション（2026-11-19・YT-DELL2・新しい会話）
-
-Calamo #28 を作り、途中で届いた #29 に返事をした便（base `b96781b43`・途中でオーナーの `7cd26b659`）。開始時 full 17717 合格 / 2 失敗 / skip 2 / 合計 17721（Lab `p1310` `run1.trx`・失敗は `IncludeFilesTests.ABooksInclude_SavedAgain_…` と `KeystrokeSideWorkTests.TheCaretOnANote_OfABookWithIncludes_…`＝2 本だけ回すと緑の不安定な網）。終了時 full 17733 合格 / 0 失敗 / skip 2 / 合計 17735（`run3.trx`・+14 はこの便の網）。REQUESTS は #28 `fixed`・#29 `question`・open は両方 0。毒は回していない。細部は Lab `p1310/notes.md`。
-- **`layout { tremoloBeams gapped | joined }`（#28・`970e47f6d`・`TremoloBeamsKey`）**: `joined` は LilyPond の `Beam.gap` を 0 にして同じ式を通す（`EngravingStyle.TremoloBeamGap`・読むのは `SharedRenderer.Beams.cs` だけ・間隔は動かない）。`--set`・`.ly`（`\override Beam.gap = #0`）・補完と色・文書。LilyPond 2.26.0 と線の長さ 0.01 以内（Lab `p1310/trem`）。網 `TremoloBeamsTests`。実機は `MANUAL-CHECKS` の `tremoloBeams` の行。
-- **見つけて直した欠陥（同じ commit）**: 全音符のトレモロの対で後ろの和音に臨時記号が 2 つ以上並ぶと、線の右端が 1.29 長かった（`AccidentalGroupLength` が 1 声部だけの列の和音の臨時記号を 1 つ分の幅で数えていた）。掃きで動いた svg は 3 / 1276＝この形の 3 冊だけで、動いた後が LilyPond と同じ（Lab `p1310/svg2`・`acc`）。
-- **Calamo #29（トレモロの後ろのペダルの離し）**: 今の文法で書ける＝`repeat tremolo 12 { … } <>@!sustain`（離しはトレモロの終わり・印は LilyPond と同じ）。`}@mark` のエラーがこの書き方を言うようにした（`Parser.Music.cs`・網は `MidiPedalTests`）。**オーナー判断待ち 2 つ**: `}` に直接付ける書き方を作るか／中の音に付けた離しの時刻（今は最初に弾く瞬間・LilyPond は表示上の頭の時刻）。
-- **次**: #29 の返事があればそれ → leftovers の「第1239」の残り →「第1238」の残り → review.md の 3 つ（`mid-bar-break`・F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。第1308 の未決（録音が無いときの Faders 100% の置き場・Tempo の下限）もオーナー待ち。
 
 ## 2. 開いている作業
 
