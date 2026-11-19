@@ -277,6 +277,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1317セッションの経緯
+
+### 1.1 第1317セッション（2026-11-19・YT-DELL2）
+
+Calamo 依頼 31 の便（base `ae34ccb17`）。開始時 full 17804 合格 / 0 失敗 / skip 2 / 合計 17806（Lab `p1317` `run1.trx`）。終了時 full 17817 合格 / 0 失敗 / skip 2 / 合計 17819（`run4.trx`）。REQUESTS: Calamo に open が 1 件（31・2026-11-19 15:49 の行）＝この便で `fixed`（Calamo の repo では未 commit）・Dettato は 0。作業ツリーの `site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
+- **オーナー決定 2026-11-19（依頼 31）＝`@struck`・1 つの印で絵と音**（`e3f0310ce`）: 和音の 1 音に付ける（`<c e g@struck>2`・Kücken Op.47-3 の 70 小節は `repeat tremolo 24 { <gis cis' gis'@struck>64 gis'64 }`）。絵＝cue の大きさの黒い頭（4 分の頭）が和音の符幹に付く・付点なし。音＝和音と一緒に打って離す（4 分まで・トレモロでは最初の一打だけ・タイに入らない）＝`LILYSHARP-OWN`。単音・和音全体・全員に付けた和音は LYS4084（エラー）。問いの家は `Music.StruckNotes`。
+- **絵は LilyPond 2.26.0 の `\tweak font-size #-4 \tweak duration-log #2` を測って合わせた**（Lab `p1317/lp/s1.ly`・9 小節）: 符幹側の端を普通の頭と揃える（上向き＝右端・0.5621 右、下向き＝左端）／加線は小さい頭の幅（1.2230）／臨時記号は普通の大きさで小さい頭の左／符幹の根元が小さい頭ならその付け根（0.0952）／次の列への間隔は符幹の最初の頭から（下向きで上が小さい頭なら 0.562 詰まる）。付点は LilyPond だと小さい頭にも付く＝双子は `\tweak Dots.stencil ##f` を足す。⚠️ 小さい頭を読むのは描画・加線・付点・間隔の最初の頭・臨時記号（描画側）だけ＝`CalculateOffsets` のほかの読み手は普通の頭の箱のまま（広く取るだけで重ならない・見える差は 2 度の付点 0.55＝leftovers）。
+- 書き出し: `.ly` は tweak 3 つ・MusicXML は `<cue/>` なしの `<type size="cue">quarter</type>`（`<duration>` は鳴る長さ）。規則は GRAMMAR 8.4。
+- 網 `StruckNoteTests` 11 本・毒 14 本が赤（Lab `p1317/poisons.ps1`。15 本目は MIDI の上限と重なる冗長な枝だった＝枝を畳んだ）。全 svg の掃き 0 / 1276（追跡中の本に `@struck` は 0 冊・陽性対照は探り譜 `p1317/probe/s1.lys`・`k70.lys`）。
+- **残り＝leftovers の「第1317」の節**: タイの絵（struck の頭からも描く）・2 度の付点・連桁の符幹の根元・`q`・MusicXML の読み込み・`NoteStepper.Describe`／`LEARN_FOR_LLM.md` など。
+- **次**: leftovers の「第1313」の節 →「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
+
 ## 以下は第1316セッションの経緯
 
 ### 1.1 第1316セッション（2026-11-19・YT-DELL2）

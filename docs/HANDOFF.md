@@ -146,6 +146,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1319セッション（2026-11-19・YT-DELL2）
+
+leftovers の「第1313」の残りの便（base `86c7022f6`）。開始時 full 17820 合格 / 0 失敗 / skip 2 / 合計 17822（Lab `p1319` `run1.trx`）。終了時 full 17850 合格 / 0 失敗 / skip 2 / 合計 17852（`run2.trx`）。REQUESTS の open は両方 0。作業ツリーの `site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
+- **連符の中の slash と裸の音価は、数字付き低音と `@cross` を落としていた**（未測定だった項目・`93bc60612`・`[engraving]`）: `tuplet 3/2 { /4@figuredBass(6) / / }` は数字を描かず、`tuplet 3/2 { /4@cross / / }`・`{ 4@cross 4 4 }` はその本で唯一の移る音のとき段を移らなかった（表 `CrossStaffItems` が「移る音がある」と collector に言う。ほかに移る音があれば移っていた＝x7）。連符の歩きの slash の腕と bare の 2 つの腕が `CollectFiguredBass`・`CollectCrossStaff` を呼んでいなかった（主の歩きの腕と、連符の note・chord・`q` は呼ぶ）。`.ly`・MusicXML・MIDI は構文を歩くので元から正しい。探り譜は Lab `p1319/probe` x0〜x7・f1〜f6。
+- **運び手が `CollectArticulations` に渡す時刻に網を付けた**（`HairpinVoiceTests.EveryCarrier_StampsTheMomentOfAHairpinsStopToo` 23 行＝別の声部の `@!cresc` を拍で見つける形を運び手ごとに）。欠陥は出なかった。
+- 網は `TupletArmTests.FiguresAndCross_ReachEveryMemberOfATuplet` 7 行と上の 23 行。毒 29 本のうち 27 本が自分の行だけ赤（Lab `p1319/poisons.ps1`）。緑の 2 本は観測できない腕（`R1*N` の時刻は常に小節の頭＝既定値・`<< >>` の休符の member は印を受けない文法）。全 svg の掃き 0 / 1276（追跡中の本にこの形は 0 冊・陽性対照は探り譜）。行番号の表 2 枚は再生成して差なし。
+- **次**: leftovers の「第1238」の残り（combinedStaff のヘアピンの re-address・drum 譜の `DrumDoubles` で落ちた側のヘアピン・段の「部屋」の網）→ review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
+
+## 以下は第1318セッションの経緯
+
 ### 1.1 第1318セッション（2026-11-19・YT-DELL2・第1317 と同じ会話）
 
 leftovers の「第1313」の節の MIDI の便（base `14d8de812`）。開始時 full 17817 合格 / 0 失敗 / skip 2 / 合計 17819（Lab `p1318` `run1.trx`）。終了時 full 17820 合格 / 0 失敗 / skip 2 / 合計 17822（`run3.trx`）。REQUESTS の open は両方 0。作業ツリーの `site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
@@ -154,18 +164,6 @@ leftovers の「第1313」の節の MIDI の便（base `14d8de812`）。開始�
 - 網は `InstrumentHairpinMidiTests` に 3 本・毒 8 本が赤（Lab `p1318/poisons.ps1`）。絵は触っていない（MIDI だけ）＝svg の掃きは回していない。
 - ⚠️ full で `ScoreVideoShapeTests.AScoreOfOnePage_IsItsMusic_NotTheSheet` が 1 回赤・単独で緑＝既知の不安定な網。`-End` の full では `KeystrokeSideWorkTests.TheCaretOnANote_OfABookWithIncludes_…` が 1 回赤・単独と次の full（`run3.trx`）で緑＝原因は未特定。
 - **次**: leftovers の「第1313」の残り（運び手ごとの時刻の網・連符の中の slash と bare の `@cross`／数字付き低音）→「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
-
-## 以下は第1317セッションの経緯
-
-### 1.1 第1317セッション（2026-11-19・YT-DELL2）
-
-Calamo 依頼 31 の便（base `ae34ccb17`）。開始時 full 17804 合格 / 0 失敗 / skip 2 / 合計 17806（Lab `p1317` `run1.trx`）。終了時 full 17817 合格 / 0 失敗 / skip 2 / 合計 17819（`run4.trx`）。REQUESTS: Calamo に open が 1 件（31・2026-11-19 15:49 の行）＝この便で `fixed`（Calamo の repo では未 commit）・Dettato は 0。作業ツリーの `site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
-- **オーナー決定 2026-11-19（依頼 31）＝`@struck`・1 つの印で絵と音**（`e3f0310ce`）: 和音の 1 音に付ける（`<c e g@struck>2`・Kücken Op.47-3 の 70 小節は `repeat tremolo 24 { <gis cis' gis'@struck>64 gis'64 }`）。絵＝cue の大きさの黒い頭（4 分の頭）が和音の符幹に付く・付点なし。音＝和音と一緒に打って離す（4 分まで・トレモロでは最初の一打だけ・タイに入らない）＝`LILYSHARP-OWN`。単音・和音全体・全員に付けた和音は LYS4084（エラー）。問いの家は `Music.StruckNotes`。
-- **絵は LilyPond 2.26.0 の `\tweak font-size #-4 \tweak duration-log #2` を測って合わせた**（Lab `p1317/lp/s1.ly`・9 小節）: 符幹側の端を普通の頭と揃える（上向き＝右端・0.5621 右、下向き＝左端）／加線は小さい頭の幅（1.2230）／臨時記号は普通の大きさで小さい頭の左／符幹の根元が小さい頭ならその付け根（0.0952）／次の列への間隔は符幹の最初の頭から（下向きで上が小さい頭なら 0.562 詰まる）。付点は LilyPond だと小さい頭にも付く＝双子は `\tweak Dots.stencil ##f` を足す。⚠️ 小さい頭を読むのは描画・加線・付点・間隔の最初の頭・臨時記号（描画側）だけ＝`CalculateOffsets` のほかの読み手は普通の頭の箱のまま（広く取るだけで重ならない・見える差は 2 度の付点 0.55＝leftovers）。
-- 書き出し: `.ly` は tweak 3 つ・MusicXML は `<cue/>` なしの `<type size="cue">quarter</type>`（`<duration>` は鳴る長さ）。規則は GRAMMAR 8.4。
-- 網 `StruckNoteTests` 11 本・毒 14 本が赤（Lab `p1317/poisons.ps1`。15 本目は MIDI の上限と重なる冗長な枝だった＝枝を畳んだ）。全 svg の掃き 0 / 1276（追跡中の本に `@struck` は 0 冊・陽性対照は探り譜 `p1317/probe/s1.lys`・`k70.lys`）。
-- **残り＝leftovers の「第1317」の節**: タイの絵（struck の頭からも描く）・2 度の付点・連桁の符幹の根元・`q`・MusicXML の読み込み・`NoteStepper.Describe`／`LEARN_FOR_LLM.md` など。
-- **次**: leftovers の「第1313」の節 →「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
 
 ## 2. 開いている作業
 
