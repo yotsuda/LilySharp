@@ -277,6 +277,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1318セッションの経緯
+
+### 1.1 第1318セッション（2026-11-19・YT-DELL2・第1317 と同じ会話）
+
+leftovers の「第1313」の節の MIDI の便（base `14d8de812`）。開始時 full 17817 合格 / 0 失敗 / skip 2 / 合計 17819（Lab `p1318` `run1.trx`）。終了時 full 17820 合格 / 0 失敗 / skip 2 / 合計 17822（`run3.trx`）。REQUESTS の open は両方 0。作業ツリーの `site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
+- **チャートの連符の強弱・ヘアピンの時刻は MIDI でも正しい**（未測定だった項目・Lab `p1318/mid` m4〜m8＝`voice { } { }` と同じ値）。測る道具は `p1318/mididump.ps1`（exe の写しから Core を読んで音を 1 行ずつ）。
+- 測って出た欠陥 2 つを直した（`cfe045d4a`・`[playback]`）: **ドラムはヘアピンを演奏していなかった**（`sn4@p@cresc sn sn sn@f` が 70 70 70 95・音高のあるパートは 70 78 87 95。単打・ドラムの和音・裸の音価・`q` のどれも `MarkForSinger` を通らず `SwellInstruments` が読む印が無かった）／**`q` は自分に書いた強弱と script を演奏していなかった**（`<c' e'>4@p q q@f q` が 4 つとも p・`q@staccato` が全長。`ProcessChordRepetition` が `_velocity` をそのまま使っていた）。どちらも 2026-11-14 の「ヘアピンは演奏する」と「描いた印は鳴る」の穴＝訊かずに直した。
+- 網は `InstrumentHairpinMidiTests` に 3 本・毒 8 本が赤（Lab `p1318/poisons.ps1`）。絵は触っていない（MIDI だけ）＝svg の掃きは回していない。
+- ⚠️ full で `ScoreVideoShapeTests.AScoreOfOnePage_IsItsMusic_NotTheSheet` が 1 回赤・単独で緑＝既知の不安定な網。`-End` の full では `KeystrokeSideWorkTests.TheCaretOnANote_OfABookWithIncludes_…` が 1 回赤・単独と次の full（`run3.trx`）で緑＝原因は未特定。
+- **次**: leftovers の「第1313」の残り（運び手ごとの時刻の網・連符の中の slash と bare の `@cross`／数字付き低音）→「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
+
 ## 以下は第1317セッションの経緯
 
 ### 1.1 第1317セッション（2026-11-19・YT-DELL2）

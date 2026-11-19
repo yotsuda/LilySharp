@@ -146,6 +146,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1320セッション（2026-11-19・YT-DELL2・第1319 と同じ会話）
+
+leftovers の「第1238」の残りの便（base `e76f21d62`）。開始時の full は第1319 の終了時の値（同じ HEAD・17850 合格 / 0 失敗 / skip 2 / 合計 17852）＝⚠️ `-Start` の full は build で落ちた（裏取りの最中に Core を編集した＝自分の誤り。`-Start` が返るまで Core に触らない）。終了時 full 17864 合格 / 0 失敗 / skip 2 / 合計 17866（Lab `p1320` `run2.trx`）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物。
+- **ドラム譜のヘアピンは 1 人の奏者のもの**（`9406998ad`・`[engraving]`・`HairpinEngraver.AsOneDrummers`＝LILYSHARP-OWN・強弱の `DrumDoubles`（オーナー報告 2026-10-30）と同じ規則の続き）: 両方の行が `@p … @f` を書くと 1 組だけ刷るが、落ちた側の行のヘアピンは端の文字を見つけず、音の列から列へ・刷られた p と f の下の別の線に立っていた（Lab `p1320/probe` d1）。両方の行がヘアピンも書くと 2 本描いていた（d2）。直し: 落ちた写しに付くヘアピンは刷られた写しの声部と番号へ付け直す／同じ譜の同じ向き・同じ拍から同じ拍のヘアピンは最初の声部の 1 本。部屋の予約（`ScoreSideTables.HairpinsByStaff`）も同じ 1 本。音高のある譜は声部ごとのまま。⚠️ 「同じヘアピンは 1 本」は規則の延長として訊かずに入れた＝オーナーに報告済み。
+- 網 `DrumChartHairpinTests` 14 行・毒 10 本が赤（Lab `p1320/poisons.ps1`）・全 svg の掃き 0 / 1276（陽性対照は探り譜）。
+- **次**: leftovers の「第1238」の残り 2 つ（combinedStaff のヘアピンの re-address・段の「部屋」の網）→ review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
+
+## 以下は第1319セッションの経緯
+
 ### 1.1 第1319セッション（2026-11-19・YT-DELL2）
 
 leftovers の「第1313」の残りの便（base `86c7022f6`）。開始時 full 17820 合格 / 0 失敗 / skip 2 / 合計 17822（Lab `p1319` `run1.trx`）。終了時 full 17850 合格 / 0 失敗 / skip 2 / 合計 17852（`run2.trx`）。REQUESTS の open は両方 0。作業ツリーの `site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
@@ -153,17 +162,6 @@ leftovers の「第1313」の残りの便（base `86c7022f6`）。開始時 full
 - **運び手が `CollectArticulations` に渡す時刻に網を付けた**（`HairpinVoiceTests.EveryCarrier_StampsTheMomentOfAHairpinsStopToo` 23 行＝別の声部の `@!cresc` を拍で見つける形を運び手ごとに）。欠陥は出なかった。
 - 網は `TupletArmTests.FiguresAndCross_ReachEveryMemberOfATuplet` 7 行と上の 23 行。毒 29 本のうち 27 本が自分の行だけ赤（Lab `p1319/poisons.ps1`）。緑の 2 本は観測できない腕（`R1*N` の時刻は常に小節の頭＝既定値・`<< >>` の休符の member は印を受けない文法）。全 svg の掃き 0 / 1276（追跡中の本にこの形は 0 冊・陽性対照は探り譜）。行番号の表 2 枚は再生成して差なし。
 - **次**: leftovers の「第1238」の残り（combinedStaff のヘアピンの re-address・drum 譜の `DrumDoubles` で落ちた側のヘアピン・段の「部屋」の網）→ review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
-
-## 以下は第1318セッションの経緯
-
-### 1.1 第1318セッション（2026-11-19・YT-DELL2・第1317 と同じ会話）
-
-leftovers の「第1313」の節の MIDI の便（base `14d8de812`）。開始時 full 17817 合格 / 0 失敗 / skip 2 / 合計 17819（Lab `p1318` `run1.trx`）。終了時 full 17820 合格 / 0 失敗 / skip 2 / 合計 17822（`run3.trx`）。REQUESTS の open は両方 0。作業ツリーの `site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
-- **チャートの連符の強弱・ヘアピンの時刻は MIDI でも正しい**（未測定だった項目・Lab `p1318/mid` m4〜m8＝`voice { } { }` と同じ値）。測る道具は `p1318/mididump.ps1`（exe の写しから Core を読んで音を 1 行ずつ）。
-- 測って出た欠陥 2 つを直した（`cfe045d4a`・`[playback]`）: **ドラムはヘアピンを演奏していなかった**（`sn4@p@cresc sn sn sn@f` が 70 70 70 95・音高のあるパートは 70 78 87 95。単打・ドラムの和音・裸の音価・`q` のどれも `MarkForSinger` を通らず `SwellInstruments` が読む印が無かった）／**`q` は自分に書いた強弱と script を演奏していなかった**（`<c' e'>4@p q q@f q` が 4 つとも p・`q@staccato` が全長。`ProcessChordRepetition` が `_velocity` をそのまま使っていた）。どちらも 2026-11-14 の「ヘアピンは演奏する」と「描いた印は鳴る」の穴＝訊かずに直した。
-- 網は `InstrumentHairpinMidiTests` に 3 本・毒 8 本が赤（Lab `p1318/poisons.ps1`）。絵は触っていない（MIDI だけ）＝svg の掃きは回していない。
-- ⚠️ full で `ScoreVideoShapeTests.AScoreOfOnePage_IsItsMusic_NotTheSheet` が 1 回赤・単独で緑＝既知の不安定な網。`-End` の full では `KeystrokeSideWorkTests.TheCaretOnANote_OfABookWithIncludes_…` が 1 回赤・単独と次の full（`run3.trx`）で緑＝原因は未特定。
-- **次**: leftovers の「第1313」の残り（運び手ごとの時刻の網・連符の中の slash と bare の `@cross`／数字付き低音）→「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
 
 ## 2. 開いている作業
 
