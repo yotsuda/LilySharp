@@ -336,6 +336,88 @@ public class HairpinVoiceTests
     public void EveryCarrier_StampsTheMomentOfItsLevelOrItsHairpinsStart(string bar, int startItem)
         => Assert.Equal($"voice 0 (0,{startItem})..(0,1) end voice 1 stop False", Say(Assert.Single(Pins(bar))));
 
+    private const string LevelFound = "voice 0 (0,3)..(0,1) end voice 1 stop False";
+    private const string StartAfterTheLevel = "voice 0 (0,1)..(1,0) end voice 0 stop False";
+
+    private static string PinOf(string clef, string bar)
+    {
+        var tree = SyntaxTree.Parse("octave absolute\ntime 4/4\npaper { raggedRight }\npart m { clef " + clef + " }\nsection A { m {\n" + bar + Tail);
+        Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        var page = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        return Say(Assert.Single(HairpinEngraver.DetectHairpins(page.MusicMarks, page.Dynamics)));
+    }
+
+    /// <summary>
+    /// The carriers session 1239 stamped and left without a net (session 1313): the chord
+    /// again (<c>q</c>), a slash, a bare duration, a rest at a pitch and the empty chord, each
+    /// as a tuplet's member too, and a drum staff's — a hit written in a voice, in a tuplet,
+    /// and a chart's merged hit and marked rest.
+    /// <para>A LEVEL stands on beat 3 under the number 1 while the other voice's crescendo
+    /// starts on its item 3, the fourth eighth: stamped the bar's head it is "before" the
+    /// start and is no end. A START stands on beat 3 under the number 1 while the other
+    /// voice's f is its item 2, on beat 2: with no moment the numbers say the f comes after
+    /// it, and stamped the bar's head the moments say so too — the f is no end, and the wedge
+    /// runs its bar out.</para>
+    /// </summary>
+    [Theory]
+    // — a level, in the main walk —
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { <c' e'>2 q2@f } |", LevelFound)]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { /2 /2@f } |", LevelFound)]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { c'2 2@f } |", LevelFound)]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { c'2 c'2@rest@f } |", LevelFound)]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { c'2 <>@f c'2 } |", LevelFound)]
+    // — a level, on a tuplet's member —
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { c'2 tuplet 3/2 { r4@f r r } } |", LevelFound)]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { c'2 tuplet 3/2 { <c' e'>4@f q q } } |", LevelFound)]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { <c' e'>2 tuplet 3/2 { q4@f q q } } |", LevelFound)]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { c'2 tuplet 3/2 { /4@f / / } } |", LevelFound)]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { c'2 tuplet 3/2 { 4@f 4 4 } } |", LevelFound)]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { <c' e'>2 tuplet 3/2 { 4@f 4 4 } } |", LevelFound)]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { c'2 tuplet 3/2 { c'4@rest@f c' c' } } |", LevelFound)]
+    // — a start, in the main walk —
+    [InlineData("treble", "voice { <c'' e''>2 q2@cresc } { c'8 c' c'@f c' c'2 } |", StartAfterTheLevel)]
+    [InlineData("treble", "voice { /2 /2@cresc } { c'8 c' c'@f c' c'2 } |", StartAfterTheLevel)]
+    [InlineData("treble", "voice { c''2 2@cresc } { c'8 c' c'@f c' c'2 } |", StartAfterTheLevel)]
+    [InlineData("treble", "voice { c''2 c''2@rest@cresc } { c'8 c' c'@f c' c'2 } |", StartAfterTheLevel)]
+    [InlineData("treble", "voice { c''2 <>@cresc c''2 } { c'8 c' c'@f c' c'2 } |", StartAfterTheLevel)]
+    // — a start, on a tuplet's member —
+    [InlineData("treble", "voice { c''2 tuplet 3/2 { r4@cresc r r } } { c'8 c' c'@f c' c'2 } |", StartAfterTheLevel)]
+    [InlineData("treble", "voice { c''2 tuplet 3/2 { <c'' e''>4@cresc q q } } { c'8 c' c'@f c' c'2 } |", StartAfterTheLevel)]
+    [InlineData("treble", "voice { <c'' e''>2 tuplet 3/2 { q4@cresc q q } } { c'8 c' c'@f c' c'2 } |", StartAfterTheLevel)]
+    [InlineData("treble", "voice { c''2 tuplet 3/2 { /4@cresc / / } } { c'8 c' c'@f c' c'2 } |", StartAfterTheLevel)]
+    [InlineData("treble", "voice { c''2 tuplet 3/2 { 4@cresc 4 4 } } { c'8 c' c'@f c' c'2 } |", StartAfterTheLevel)]
+    [InlineData("treble", "voice { <c'' e''>2 tuplet 3/2 { 4@cresc 4 4 } } { c'8 c' c'@f c' c'2 } |", StartAfterTheLevel)]
+    [InlineData("treble", "voice { c''2 tuplet 3/2 { c''4@rest@cresc c'' c'' } } { c'8 c' c'@f c' c'2 } |", StartAfterTheLevel)]
+    // — a drum staff: a hit in a voice, in a tuplet, and a chart's hit and marked rest —
+    [InlineData("percussion", "voice { hh8 hh hh hh@cresc hh2 } { bd2 bd2@f } |", LevelFound)]
+    [InlineData("percussion", "voice { hh8 hh hh hh@cresc hh2 } { bd2 tuplet 3/2 { bd4@f bd bd } } |", LevelFound)]
+    [InlineData("percussion", "drums { { hh8 hh hh hh@cresc hh2 } { bd2 bd2@f } } |", LevelFound)]
+    [InlineData("percussion", "drums { { hh8 hh hh hh@cresc hh2 } { bd2 r2@f } } |", LevelFound)]
+    [InlineData("percussion", "voice { hh2 hh2@cresc } { bd8 bd bd@f bd bd2 } |", StartAfterTheLevel)]
+    [InlineData("percussion", "voice { hh2 tuplet 3/2 { hh4@cresc hh hh } } { bd8 bd bd@f bd bd2 } |", StartAfterTheLevel)]
+    [InlineData("percussion", "drums { { hh2 hh2@cresc } { bd8 bd bd@f bd bd2 } } |", StartAfterTheLevel)]
+    [InlineData("percussion", "drums { { hh2 r2@cresc } { bd8 bd bd@f bd bd2 } } |", StartAfterTheLevel)]
+    public void TheOtherCarriers_StampTheirMomentToo(string clef, string bar, string expected)
+        => Assert.Equal(expected, PinOf(clef, bar));
+
+    /// <summary>
+    /// A drum chart's tuplet: its second hit's moment is its own, a third of the tuplet in
+    /// (session 1313). The chart's pieces go in without duration and the bar's clock stands
+    /// still until the run closes; read off the clock, every hit of the run was stamped the
+    /// run's first moment — the f on the second triplet quarter (2/3 of the bar) stood "at"
+    /// the crescendo's own start on beat 3 and was no end, and a crescendo starting on that
+    /// quarter was "before" an f on the eighth after beat 3 and took it for its end. The same
+    /// lines written as <c>voice { } { }</c> are the answer, and were right before.
+    /// </summary>
+    [Theory]
+    [InlineData("{ hh2 hh8@cresc hh hh4 } { bd2 tuplet 3/2 { bd4 bd@f bd } }", "voice 0 (0,1)..(0,2) end voice 1 stop False")]
+    [InlineData("{ hh2 tuplet 3/2 { hh4 hh@cresc hh } } { bd2 bd8 bd@f bd4 }", "voice 0 (0,2)..(1,0) end voice 0 stop False")]
+    public void AChartsTuplet_StampsEachHitItsOwnMoment(string lines, string expected)
+    {
+        Assert.Equal(expected, PinOf("percussion", "voice " + lines + " |"));
+        Assert.Equal(expected, PinOf("percussion", "drums { " + lines + " } |"));
+    }
+
     /// <summary>
     /// The page for two of those bars: the wedge spans the columns it spans when the end is
     /// written in its own voice, which LilyPond draws. MEASURED (LilyPond 2.26.0, raggedRight,

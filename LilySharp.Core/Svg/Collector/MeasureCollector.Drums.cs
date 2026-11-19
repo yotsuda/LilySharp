@@ -498,7 +498,16 @@ public sealed partial class MeasureCollector
         builder.NoteWrittenStart(chartStart);
         int measureIndex = builder.CurrentMeasureIndex;
         int itemIndex = builder.CurrentItemCount;
-        Fraction anchor = builder.CurrentDuration;
+        // The moment, not the clock: a tuplet's pieces go in without duration and the clock
+        // stands still until EmitDrumVoice hands it the run's scaled total, so the clock is
+        // the run's FIRST moment for every piece of it (MeasureBuilder.CurrentMoment's
+        // remark — the main walk's tuplet arm, EmitScaledItem, reads the moment for the same
+        // reason). Read off the clock until session 1313, a level or a hairpin's start or
+        // stop on a chart tuplet's second hit was stamped the first hit's moment: beside
+        // another voice the hairpin took or missed its end by a moment that was not its own
+        // (`{ hh2 hh8@cresc hh hh4 } { bd2 tuplet 3/2 { bd4 bd@f bd } }` ran its bar out,
+        // where the same two lines written as `voice { } { }` end on the f).
+        Fraction anchor = builder.CurrentMoment;
         var value = Fraction.FromNoteValue(piece.Value);
         // A flam: its grace is walked now, in front of the item its hit joined.
         if (piece.Hits?.FirstOrDefault(h => h.Grace != null) is { Grace: { } grace } graced)
