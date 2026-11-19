@@ -1205,9 +1205,11 @@ internal static class HairpinEngraver
             // An explicit stop (@!cresc, LilyPond's \!) on this staff, strictly after the start:
             // the wedge ends at its note. Another playing of the same written stop is fine — a
             // stop ends whatever hairpin is open, as \! does.
+            // (A combined staff's stop whose part changed streams is its START's voice's own:
+            // MusicMarkItem.LineVoice.)
             MusicMarkItem? NextStop(bool ownVoice) => FirstOf(musicMarks.Where(m =>
                 m.Type == MusicMarkType.HairpinStop && m.StaffIndex == mark.StaffIndex &&
-                (!ownVoice || m.VoiceIndex == mark.VoiceIndex) &&
+                (!ownVoice || m.PairingVoice == mark.VoiceIndex) &&
                 PlaceOfMark(m).IsAfter(start)), PlaceOfMark, ownVoice);
 
             // (A condensed staff's levels are the staff's from the start: HairpinEndsOnStaff.)

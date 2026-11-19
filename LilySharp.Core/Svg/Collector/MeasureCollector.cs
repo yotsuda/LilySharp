@@ -2706,7 +2706,12 @@ public sealed partial class MeasureCollector
         // BEFORE this point (ProbeTupletBrackets, feeding the beam stem resolution) read
         // the parts as they were collected, which is the space they are still in there.
         if (combinedAddressings.Count > 0)
-            content = CombinedStaffReaddress.Apply(content, combinedAddressings);
+        {
+            var builtStaves = staffGroups.SelectMany(sg => sg.Staves).ToList();
+            content = CombinedStaffReaddress.Apply(content, combinedAddressings, (s, v) =>
+                s >= 0 && s < builtStaves.Count && v >= 0 && v < builtStaves[s].Voices.Length
+                    ? builtStaves[s].Voices[v].Measures : default);
+        }
         // …and a mark on an empty chord after a voice's last, full bar stands on that bar's
         // end — on the final addresses too (TrailingMarks says why).
         {

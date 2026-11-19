@@ -522,7 +522,7 @@
 ### `LilySharp.Core/Svg/Collector/ChordRhythm.cs`
 - **`ChordRhythm.BeatsOf`** LILYSHARP-OWN (2026-11-14, a design by musical validity — RULES §5.2; LilyPond's chord
 ### `LilySharp.Core/Svg/Collector/CombinedStaffAddressing.cs`
-- **`CombinedStaffReaddress.MoveMarks`** LILYSHARP-OWN: two answers here have no LilyPond measurement behind them. An END on a rest
+- **`CombinedStaffReaddress.MoveMarks`** LILYSHARP-OWN: three answers here have no LilyPond measurement behind them. An END on a
 ### `LilySharp.Core/Svg/Collector/CompressRests.cs`
 - **`CompressRests`** LILYSHARP-OWN: LilyPond has no switch for this. MEASURED (2.26.0, Lab sessions/p903/b5):
 ### `LilySharp.Core/Svg/Collector/CondensedPercents.cs`

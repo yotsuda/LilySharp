@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Collector;
@@ -178,7 +179,8 @@ internal static class CombinedStaffReaddress
 {
     /// <summary>Re-addresses every island of every combined staff in one pass.</summary>
     internal static ScoreContent Apply(
-        ScoreContent content, IReadOnlyList<CombinedStaffAddressing> addressings)
+        ScoreContent content, IReadOnlyList<CombinedStaffAddressing> addressings,
+        Func<int, int, ImmutableArray<Measure>>? measuresOf = null)
     {
         var byStaff = addressings.ToDictionary(a => a.StaffIndex);
         return content with
@@ -238,7 +240,7 @@ internal static class CombinedStaffReaddress
                     EndMeasureIndex = to.MeasureIndex,
                     EndItemIndex = to.ItemIndex,
                 }),
-            MusicMarks = MoveMarks(content.MusicMarks, byStaff),
+            MusicMarks = MoveMarks(content.MusicMarks, byStaff, measuresOf),
         };
     }
 
@@ -288,17 +290,25 @@ internal static class CombinedStaffReaddress
     /// address to translate: its events ARE in the context, where Lily# collects first and
     /// routes afterwards.
     /// </para>
-    /// LILYSHARP-OWN: two answers here have no LilyPond measurement behind them. An END on a rest
-    ///   engraved for nobody stays at its collected place (its bar and its moment are still
-    ///   right; the item number names nothing, and the line then closes on that bar's end or
-    ///   head). And a text spanner or an ottava whose part changes streams between its ends is
-    ///   one line still, its end paired in its start's voice (<see cref="MusicMarkItem.LineVoice"/>,
-    ///   which carries the departure's address); one whose end is on such a rest is left as
-    ///   collected, both ends.
-    ///   observed by: CombinedStaffHairpinTests (AMarkOnARestNobodyEngraves, ALinePairedInOneVoice_GoesAsAPair).
+    /// LILYSHARP-OWN: three answers here have no LilyPond measurement behind them. An END on a
+    ///   rest engraved for nobody — the part's own rest under the other's solo, `r2 r2@!cresc` —
+    ///   goes to the item the staff engraves AT ITS MOMENT (<see cref="AtItsMoment"/>): the line
+    ///   stops on the beat it was written on. Until session 1323 it stayed under the part's own
+    ///   numbers, which name nothing on the staff, and the line ran to the bar's end (a pedal
+    ///   bracket closed on the bar's head). Where the staff engraves nothing at that moment (the
+    ///   other part holds a long note through it) it stays as collected still. A text spanner or
+    ///   an ottava whose part changes streams between its ends is one line, its end paired in
+    ///   its start's voice (<see cref="MusicMarkItem.LineVoice"/>, which carries the departure's
+    ///   address) — and so is a hairpin, whose stop is its part's and not whichever voice's
+    ///   comes first. And a hairpin's stop whose START was dropped with its note (the second
+    ///   part's in a unison) is dropped with it: left behind it stood in a voice of its own and
+    ///   ended that voice's earlier hairpin at its bar's end, across the unison's hairpin (Lab
+    ///   sessions/p1323/probe s2, s3).
+    ///   observed by: CombinedStaffHairpinTests (AMarkOnARestNobodyEngraves, ALinePairedInOneVoice_GoesAsAPair, AnEndOnARestNobodyEngraves_StopsOnItsBeat, AUnisonsSecondStop_GoesWithItsStart).
     /// </remarks>
     private static ImmutableArray<MusicMarkItem> MoveMarks(
-        ImmutableArray<MusicMarkItem> marks, Dictionary<int, CombinedStaffAddressing> byStaff)
+        ImmutableArray<MusicMarkItem> marks, Dictionary<int, CombinedStaffAddressing> byStaff,
+        Func<int, int, ImmutableArray<Measure>>? measuresOf)
     {
         if (marks.IsDefaultOrEmpty || !marks.Any(m => IsANotesMark(m) && byStaff.ContainsKey(m.StaffIndex)))
             return marks;
@@ -323,11 +333,17 @@ internal static class CombinedStaffReaddress
         // nothing and no line was drawn (session 1321's first commit; Lab sessions/p1321/probe
         // x1, x2), and from that session's second commit to session 1322 both were left under
         // the part's own numbers instead.
-        // ⚠️ Still left as collected, both ends: a line whose END is on a rest engraved for
-        // nobody (the item names nothing; the line closes on that bar's edge).
+        // An end on a rest engraved for nobody goes to what the staff engraves at its moment
+        // (AtItsMoment). ⚠️ Still left as collected, both ends: a
+        // line whose end the staff engraves nothing under (the line closes on that bar's edge).
+        // A HAIRPIN is paired the same way for its stop's sake — a part's `@!cresc` ends that
+        // part's hairpin — but a hairpin's start goes by itself (a level or the next hairpin
+        // ends one too), so only the stop is touched: told its start's voice, sent to its
+        // moment, or dropped with a start nobody engraves.
         var stays = new HashSet<int>();
         var dropped = new HashSet<int>();
         var lineVoice = new Dictionary<int, int>();
+        var byMoment = new Dictionary<int, MusicMarkItem>();
         var open = new Dictionary<(int Staff, int Voice, int Line), int>();
         for (int i = 0; i < marks.Length; i++)
         {
@@ -341,6 +357,8 @@ internal static class CombinedStaffReaddress
             {
                 var start = Moved(marks[s], map);
                 var end = Moved(m, map);
+                if (start != null && end is null && AtItsMoment(m, map, measuresOf) is { } there)
+                    byMoment[i] = end = there;
                 if (start is null)
                 {
                     dropped.Add(s);
@@ -348,8 +366,14 @@ internal static class CombinedStaffReaddress
                 }
                 else if (end is null)
                 {
-                    stays.Add(s);
-                    stays.Add(i);
+                    if (line.Line != HairpinLine)
+                    {
+                        stays.Add(s);
+                        stays.Add(i);
+                    }
+                    // (A hairpin's stop left where it was collected is its start's still.)
+                    else if (m.VoiceIndex != start.VoiceIndex)
+                        lineVoice[i] = start.VoiceIndex;
                 }
                 else if (end.VoiceIndex != start.VoiceIndex)
                     lineVoice[i] = start.VoiceIndex;
@@ -368,7 +392,10 @@ internal static class CombinedStaffReaddress
             }
             if (dropped.Contains(i))
                 continue;
-            var placed = Moved(m, map) ?? (IsAnEnd(m.Type) ? m : null);
+            // (A pedal's release is paired with nothing here: it goes to its moment by itself.)
+            var placed = byMoment.GetValueOrDefault(i) ?? Moved(m, map)
+                ?? (!IsAnEnd(m.Type) ? null
+                    : PairedLine(m) is null && AtItsMoment(m, map, measuresOf) is { } there ? there : m);
             if (placed != null && lineVoice.TryGetValue(i, out int paired))
                 placed = placed with { LineVoice = paired };
             if (placed is null
@@ -380,10 +407,55 @@ internal static class CombinedStaffReaddress
         return built.ToImmutable();
     }
 
+    /// <summary>
+    /// The END <paramref name="m"/>, whose own item nobody engraves, on the item the combined
+    /// voices engrave at its moment — the first combined voice that has one (a rest is engraved
+    /// for nobody under the other part's solo, which is one stream). Null when no voice
+    /// engraves anything there, or the mark carries no moment.
+    /// </summary>
+    /// <remarks>
+    /// Only an item that IS something at that moment answers: a spacer the combiner wrote into
+    /// a gap is not a column of its own, and a grace note or a signature standing at the same
+    /// moment takes no time — the item of the moment that does is the note.
+    /// </remarks>
+    private static MusicMarkItem? AtItsMoment(MusicMarkItem m, CombinedStaffAddressing map,
+        Func<int, int, ImmutableArray<Measure>>? measuresOf)
+    {
+        if (measuresOf is null || m.AnchorTiming.Denominator == 0)
+            return null;
+        int? ItemAt(int voice)
+        {
+            var measures = measuresOf(m.StaffIndex, voice);
+            if (measures.IsDefaultOrEmpty || m.MeasureIndex < 0 || m.MeasureIndex >= measures.Length)
+                return null;
+            var items = measures[m.MeasureIndex].Items;
+            var at = Fraction.Zero;
+            for (int i = 0; i < items.Length && at <= m.AnchorTiming; i++)
+            {
+                if (at == m.AnchorTiming && items[i].Duration > Fraction.Zero && items[i] is not RestItem { IsSpacer: true })
+                    return i;
+                at += items[i].Duration;
+            }
+            return null;
+        }
+
+        for (int v = 0; v < map.CombinedVoiceCount; v++)
+            if (ItemAt(v) is { } item)
+                return m with { VoiceIndex = v, AnchorItemIndex = item };
+        return null;
+    }
+
+    /// <summary><see cref="PairedLine"/>'s name for a hairpin (a text spanner's is its family,
+    /// an ottava's -1).</summary>
+    private const int HairpinLine = -2;
+
     /// <summary>For an end of a line that is paired within one voice — a text spanner of its
-    /// family, an ottava bracket — which line and which end; null for every other mark.</summary>
+    /// family, an ottava bracket, a hairpin and its stop — which line and which end; null for
+    /// every other mark.</summary>
     private static (int Line, bool IsEnd)? PairedLine(MusicMarkItem m) => m.Type switch
     {
+        MusicMarkType.Cresc or MusicMarkType.Decresc or MusicMarkType.Dim => (HairpinLine, false),
+        MusicMarkType.HairpinStop => (HairpinLine, true),
         MusicMarkType.TextSpanStart => ((int)m.SpanFamily, false),
         MusicMarkType.TextSpanStop => ((int)m.SpanFamily, true),
         MusicMarkType.OttavaUp or MusicMarkType.OttavaDown

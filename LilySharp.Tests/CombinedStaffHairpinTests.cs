@@ -105,13 +105,78 @@ public class CombinedStaffHairpinTests
         => Assert.Equal(expected, Hairpins(Collect(fl1, fl2)));
 
     /// <summary>A mark on a rest the combiner engraves for nobody (the partner's rest under a
-    /// solo): a start goes with its rest, as a level there does; an end stays, and ends its
-    /// hairpin where it was written — dropped, the hairpin would run on to the next level.</summary>
+    /// solo): a start goes with its rest, as a level there does; an end ends its hairpin where
+    /// it was written — dropped, the hairpin would run on to the next level.</summary>
     [Theory]
     [InlineData("c''2 d''2 | c''4 d'' e'' f'' | c''1 |", "e'4 f' e'@cresc f' | R1@!cresc | e'1@f |",
-        "v1 0.2 note@1/2 .. v1 1.0 end@0")]
+        "v1 0.2 note@1/2 .. v0 1.0 note@0")]
     [InlineData("c''2 d''2 | c''4 d'' e'' f'' | c''1 |", "e'4 f' e' f' | r2@cresc r2 | e'1@f |", "")]
     public void AMarkOnARestNobodyEngraves(string fl1, string fl2, string expected)
+        => Assert.Equal(expected, Hairpins(Collect(fl1, fl2)));
+
+    /// <summary>
+    /// An END on such a rest stands on what the staff engraves at its moment (session 1323):
+    /// the hairpin stops on the beat it was written on. Until then it kept the part's own
+    /// numbers, which name nothing on the staff, and the hairpin ran to the bar's end (Lab
+    /// sessions/p1323/probe n2, n5, n6 — out-base against out).
+    /// </summary>
+    [Theory]
+    // The soloist has a note on that beat.
+    [InlineData("c''2 d''2 | c''4 d'' e'' f'' | c''1 |", "e'4 f' e'@cresc f' | r2 r2@!cresc | e'1@f |",
+        "v1 0.2 note@1/2 .. v0 1.2 note@1/2")]
+    // …and the hairpin's own voice has a level further on: the part's stop comes first.
+    [InlineData("c''2 d''2 | c''4 d'' e'' f'' | c''2 d''2 | c''2 d''2 |", "e'4 f' e'@cresc f' | r2 r2@!cresc | e'4 f' e' f' | e'4@f f' e' f' |",
+        "v1 0.2 note@1/2 .. v0 1.2 note@1/2")]
+    // A grace note before the soloist's note on that beat: the note, not the grace.
+    [InlineData("c''2 d''2 | c''4 d'' grace { d''8 } e''4 f'' | c''1 |", "e'4 f' e'@cresc f' | r2 r2@!cresc | e'1@f |",
+        "v1 0.2 note@1/2 .. v0 1.3 note@1/2")]
+    // The soloist holds a note through it: nothing is engraved on that beat, and the stop
+    // stays where it was collected — the bar's end.
+    [InlineData("c''2 d''2 | c''1 | c''1 |", "e'4 f' e'@cresc f' | r2 r2@!cresc | e'1@f |",
+        "v1 0.2 note@1/2 .. v1 1.1 end@0")]
+    // …and its start still goes with its note (a bar part two plays alone), the stop still its
+    // own, before the level its start's voice has further on. (The staff has one voice here:
+    // the collected place names none, and the hairpin is drawn to that bar's end.)
+    [InlineData("R1 | c''1 | c''1 |", "g'4 g'@cresc g' g' | r2 r2@!cresc | e'1@f |",
+        "v0 0.1 note@1/4 .. v1 1.1 (no such bar)")]
+    public void AnEndOnARestNobodyEngraves_StopsOnItsBeat(string fl1, string fl2, string expected)
+        => Assert.Equal(expected, Hairpins(Collect(fl1, fl2)));
+
+    /// <summary>The same for a text spanner's end and a pedal's release; an ottava's end
+    /// includes the rest it is written on, and stays past it.</summary>
+    [Theory]
+    [InlineData("c''2 d''2 | c''4 d'' e'' f'' | c''1 |", "e'4 f' e'@rit f' | r2 r2@!rit | e'1 |",
+        "TextSpanStart v1 0.2 note@1/2 | TextSpanStop v0 1.2 note@1/2")]
+    [InlineData("c''2 d''2 | c''4 d'' e'' f'' | c''1 |", "e'4 f' e'@sustain f' | r2 r2@!sustain | e'1 |",
+        "SustainOn v1 0.2 note@1/2 | SustainOff v0 1.2 note@1/2")]
+    [InlineData("c''2 d''2 | c''4 d'' e'' f'' | c''1 |", "e'4 f' e'@8va f' | r2 r2@!8va | e'1 |",
+        "OttavaUp v1 0.2 note@1/2 | OttavaStop v1 1.2 end@0")]
+    public void AnotherLinesEndOnARestNobodyEngraves_StopsOnItsBeat(string fl1, string fl2, string expected)
+        => Assert.Equal(expected, Marks(Collect(fl1, fl2)));
+
+    /// <summary>
+    /// A hairpin's stop is its PART's: where the part changed streams since the start, the stop
+    /// is still that hairpin's own, before a level its start's voice has further on.
+    /// </summary>
+    [Theory]
+    [InlineData("c''2 d''2 | R1 | c''2 d''2 | c''2 d''2 |", "e'4 f'@cresc e' f' | g'4 g' g'@!cresc g' | e'4 f' e' f' | e'4@f f' e' f' |",
+        "v1 0.1 note@1/4 .. v0 1.2 note@1/2")]
+    public void AHairpinsStopAfterItsPartChangedStreams_IsItsOwn(string fl1, string fl2, string expected)
+        => Assert.Equal(expected, Hairpins(Collect(fl1, fl2)));
+
+    /// <summary>
+    /// In a unison part two's notes are engraved by nobody, and its hairpin goes with them —
+    /// BOTH ends. Until session 1323 the stop was left behind in a voice of its own, where it
+    /// ended that voice's earlier hairpin at its bar's end: across the unison's own hairpin (Lab
+    /// sessions/p1323/probe s2, s3).
+    /// </summary>
+    [Theory]
+    // Part two's open crescendo ends where the unison's begins.
+    [InlineData("c''2 d''2 | c'4 d'@cresc e' f'@!cresc | g'1 |", "e'4 f' e'@cresc f' | c'4 d'@cresc e' f'@!cresc | g'1 |",
+        "v1 0.2 note@1/2 .. v0 1.1 note@1/4 | v0 1.1 note@1/4 .. v0 1.3 note@3/4")]
+    [InlineData("c''2 d''2 | c'4 d'@decresc e' f'@!decresc | g'2 a'2 |", "e'4 f'@cresc e' f' | c'4 d'@decresc e' f'@!decresc | e'2 f'2@!cresc |",
+        "v1 0.1 note@1/4 .. v0 1.1 note@1/4 | v0 1.1 note@1/4 .. v0 1.3 note@3/4")]
+    public void AUnisonsSecondStop_GoesWithItsStart(string fl1, string fl2, string expected)
         => Assert.Equal(expected, Hairpins(Collect(fl1, fl2)));
 
     /// <summary>The other lines' ends: a text spanner, an ottava (whose end stands PAST its
