@@ -146,6 +146,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1328セッション（2026-11-19〜20・YT-DELL2・第1327 と同じ会話）
+
+leftovers の「第1327」の便（base `8c7e74d6f`）。開始時 full 17944 合格 / 0 失敗 / skip 2 / 合計 17946（Lab `p1328` `run1.trx`・⚠️ `-Start` の途中で Core を書いたので `FirstOf` の修正込みの数）。終了時 full 17956 合格 / 0 失敗 / skip 2 / 合計 17958（`-End` の trx）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
+- **ヘアピンは自分の声部の最も早い終わりで終わる**（`336ea3ba1`・`[engraving]`）: `FirstOf` は自分の声部では「書いた順の先頭」を取っていた。印は小節だけで並び、パート 1 の後にパート 2 が来るので、combinedStaff で 1 つの声部が小節の前半パート 2・後半パート 1 を運ぶと、パート 2 の crescendo が 1 拍目の自分の decrescendo を通り越して 3 拍目のパート 1 のものまで伸び、2 本が重なった（Lab `p1328/probe` f4）。全譜表の探しと同じく時刻で最も早いものに。
+- **空の和音の script は MusicXML と MIDI で次の音のもの**（`26d713c3c`・`[export][playback]`）: `c''2 <>@accent d''2` はページ（と LilyPond）が d'' に accent を描くのに、MusicXML はどこにも書かず MIDI は accent なしで鳴らしていた（fermata・staccato・trill・弓の記号も）。両方ともパートごとに保留して次の音へ（section の終わりの `<>` は同じパートの次の section の最初の音＝ページどおり・`end` s1）。曲の最後まで残ったフェルマータは MusicXML の終わりの小節線（`<barline><fermata/>`）。ついでに音のフェルマータを規格どおり `<notations>` の直下へ（`<articulations>` の中にあった・`lysc import` は両方読む）。
+- 網 `CombinedStaffHairpinTests` +2 行・`EmptyChordScriptsExportTests` 10 本。毒 2 本（赤 1・観測者なし 1）と 12 本（全部赤）。掃き: 全 svg 0 / 1276・全 MusicXML 42 / 1276（41 はフェルマータの置き場所・1 は `empty-chord.lys` の `<>@downBow c`）・全 MIDI 0 / 1276。
+- **次**: leftovers の「第1328」（装飾音の前の `<>` の script・`.ly` の最後のフェルマータ・import の小節線のフェルマータ）→「第1327」の `@!rit`（オーナーの返事待ち）→「第1321」の h13 → review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
+
+## 以下は第1327セッションの経緯
+
 ### 1.1 第1327セッション（2026-11-19・YT-DELL2・第1326 と同じ会話）
 
 オーナー決定 2026-11-19 の 3 件の便（base `03cdad597`）。開始時 full 17932 合格 / 0 失敗 / skip 2 / 合計 17934（Lab `p1327` `run1.trx`）。終了時 full 17944 合格 / 0 失敗 / skip 2 / 合計 17946（`-End` の trx）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
@@ -153,16 +163,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **3 件とも実装**（`69bf832c3`・`[engraving][playback]`）: ① MIDI（歌い手も）＝音に section の 1 回を刻み（`MidiNote.SectionPlay`・`PlaySectionByName` が始まりを控える）、着地しないヘアピンは次の section で終わるときだけ持ち越し（ページの carry の規則）、それ以外は自分の section の音楽の終わりで切る。到達点は section の中だけ続く。② `MoveMarks` が落ちたパート 2 の始まりの代わりに立つパート 1 の印（`TwinOf`）を継がせる（`MeetsVoice`）・パート 1 がその後に強弱・ヘアピン・stop を書いていれば継がない（`EndsInItsPart`）。MusicXML のパート 1 の wedge はページの終わりで止める（`_meetsHairpins`）。③ 何も刻まれない拍の stop は鳴り続けている音の中に置き、時刻を保つ（`MusicMarkItem.WithinItem`・`HairpinItem.EndWithin`）＝X はその音の列から次の列（無ければ小節の終わり）までの時刻の比例（LILYSHARP-OWN・LilyPond は `\!` を失って描かない）。text spanner は今のまま。
 - 網 `InstrumentHairpinMidiTests` +1 本・`CombinedStaffHairpinTests` +8 行と 1 本・`MusicXmlWedgePairTests` +1 行。毒 24 本のうち 22 本が赤（観測者なし 2＝行に明記・Lab `p1327/poisons1.ps1`・`poisons2.ps1`）。掃き: 全 svg 0 / 1276・全 MusicXML 0 / 1276・全 MIDI 1 / 1276（`Fixtures/test/hairpin-in-a-repeated-section.lys`＝狙いの形）。行番号の表は再生成。
 - **次**: leftovers の「第1327」（`@!rit` の同じ形・`FirstOf` の書いた順・装飾音と section の頭）→「第1321」の h13 → review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
-
-## 以下は第1326セッションの経緯
-
-### 1.1 第1326セッション（2026-11-19・YT-DELL2・第1325 と同じ会話）
-
-leftovers の「第1325」「第1321」の未測定を測る便（base `0156cbcc7`）。開始時 full 17928 合格 / 0 失敗 / skip 2 / 合計 17930（Lab `p1326` `run1.trx`）。終了時 full 17932 合格 / 0 失敗 / skip 2 / 合計 17934（`-End` の trx）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
-- **h10（Solo II の小節の 8va）を LilyPond 2.26.0 の絵と比べた**＝同じ形（Lab `p1326/lp`・座標は取っていない）。combinedStaff の MIDI は構文どおり 2 パートとも鳴る。
-- **MIDI: ヘアピンは前のヘアピンが到達した強さから始まる・同じ値で書き直した強弱も強弱**（`e67477e77`・`[playback]`）: 測って出た一般の欠陥 2 つ（combinedStaff に限らない・`SungVoices.Swells`＝歌い手と楽器の 1 つの規則）。⑴ 着地する強弱のないヘアピンの到達点は「強弱が書かれるまで続く」のに、次のヘアピンの最初の音だけ元の強さに落ちた（`@p … @cresc … @decresc … @p` が 70 75 81 → 70 68 65 63。今は 70 75 81 86 81 75 70）。⑵ 歩きは「数字が変わったら強弱」と読むので、立っている値と同じ値で書いた強弱は見えず、p からの decrescendo が次の `@p` を通り抜けた（その音が 66、次が 60）。直し: 書き出しが「そのパート（grand staff は手のどちらか）がその瞬間に強弱を書いた」音に印を付け（`MidiNote.LevelWritten`・`_levelLog` から）、ヘアピンはそこで止まり、向きが合えば着地する。ヘアピン自身の瞬間に書かれた強弱（`@p@cresc`・もう片方の手の音）は出発点。
-- 網 `InstrumentHairpinMidiTests` +2 本（行は 12）。毒 12 本のうち 10 本が赤（緑 1 は別の条件と同じことを言う field＝削った・1 は観測者なし＝行に明記・Lab `p1326/poisons.ps1`）。全冊の MIDI の掃き 8 / 1276（どれもヘアピンの検査用の本・`p1326/midsweep/midi-diff.txt`）。行番号の表は再生成。
-- **次**: leftovers の「第1326」（強弱のない本で section を 2 回弾くと crescendo が積み上がる＝決めごとの面）と「第1325」の h4（決めごとの面）はオーナーに訊く形 →「第1323」の長い音の間の終わり（未決）・「第1321」の h13 → review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
 
 ## 2. 開いている作業
 
