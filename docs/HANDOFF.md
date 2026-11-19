@@ -146,6 +146,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1331セッション（2026-11-20・YT-DELL2・第1329 と同じ会話）
+
+オーナー決定 2026-11-20 の 3 件の便（base `713377c9f`）。開始時 full 17968 合格 / 0 失敗 / skip 2 / 合計 17970（Lab `p1331` `start.log`）。終了時 full 17984 合格 / 0 失敗 / skip 2 / 合計 17986（`-End` の trx）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
+- **オーナー決定 2026-11-20**（第1330 の報告の問いへの返事）: ① スペーサーの前の `<>` の script は次の音が取る・音楽的に意味が無いので警告も（スペーサーの時刻に置く意味があるのは強弱・文字・線＝警告は script だけ）② `.ly` の曲の最後の `<>@fermata` は LilyPond の `\textEndMark` で写す ③ struck の音へのタイは `check` で言う（絵はそのまま）。
+- **3 件とも実装**（`d0f01b760`・`[export][playback][language]`）: ① MusicXML はスペーサー（`print-object="no"` の休符）と装飾音のスペーサーを飛ばす・MIDI の装飾音のスペーサーも取らない・警告 LYS4085（`Semantics.SpacerScriptValidator`・小節線をまたいでも次の項目）② `LilyPondExporter.WriteTheClosingFermata` がパートの変数の末尾の `<>-\fermata` を `\once \override Score.TextMark.self-alignment-X = #CENTER \textEndMark \markup { \musicglyph "scripts.ufermata" }` に（`.down` は `direction = #DOWN`・`scripts.dfermata`・他の印は `<>` に残す）。form は各パートの変数に展開されるので変数の末尾が曲の末尾。end mark は score のもの＝1 回・最初のパート（上の譜表の上）。LilyPond 2.26.0 の絵は Lab `p1331/ly`。③ LYS4086（`StruckNoteValidator`）: 和音の中のタイは `TiedMembers` の後ろの子、和音全体のタイは和音の外の兄弟（`Articulations` には無い）。
+- 網 `EmptyChordScriptsExportTests` +2 行・1 theory 9 行・1 本、`StruckNoteTests` 1 theory 4 行。毒 13 本（全部赤・script だけの門は `<>@sustain s4` の行を足して赤）。掃き: 全 MusicXML・MIDI・`.ly` 0 / 1276。LYS4085・LYS4086 はコーパスの 0 冊。
+- **次**: leftovers の「第1317」の残り（連桁の符幹の根元・`q` が struck を引き継ぐか＝LilyPond を測る・装飾音の和音・tab とエディタの説明）→「第1327」の `@!rit`（オーナーの返事待ち）→「第1321」の h13 → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決はオーナー待ち。
+
+## 以下は第1330セッションの経緯
+
 ### 1.1 第1330セッション（2026-11-20・YT-DELL2・第1329 と同じ会話）
 
 leftovers の「第1317」（`@struck`）の便（base `e02560029`）。オーナーの「続けて」で、判断の要る「第1329」の 2 件（スペーサー・`.ly` の最後のフェルマータ）は飛ばした。開始時 full 17965 合格 / 0 失敗 / skip 2 / 合計 17967（Lab `p1330` `start.log`）。終了時 full 17968 合格 / 0 失敗 / skip 2 / 合計 17970（`-End` の trx）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
@@ -155,17 +165,6 @@ leftovers の「第1317」（`@struck`）の便（base `e02560029`）。オー�
 - 網 `StruckNoteTests` +3 本。毒 4 本（赤 2・観測者なし 2）・4 本（全部赤）・3 本（全部赤）。掃き: 全 svg 0 / 1276・全 MusicXML 0 / 1276（追跡コーパスに struck の本は無い）。
 - タイ: LilyPond も struck の頭からタイを描く＝ページは LilyPond どおり（MIDI と MusicXML がタイにしないのは意味の側＝判断・leftovers）。
 - **次**: leftovers の「第1317」の残り（連桁の符幹の根元・`q` が struck を引き継ぐか＝LilyPond を測る・装飾音の和音・tab とエディタの説明）→「第1329」の 2 件（判断）→「第1327」の `@!rit`（オーナーの返事待ち）→「第1321」の h13 → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決はオーナー待ち。
-
-## 以下は第1329セッションの経緯
-
-### 1.1 第1329セッション（2026-11-20・YT-DELL2・新しい会話）
-
-leftovers の「第1328」の便（base `dc38e7357`）。開始時 full 17956 合格 / 0 失敗 / skip 2 / 合計 17958（Lab `p1329` `run1.trx`）。終了時 full 17965 合格 / 0 失敗 / skip 2 / 合計 17967（`-End` の trx）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
-- **装飾音と休符が `<>` の script を取る・装飾音は自分の script を鳴らす**（`de8e21ac7`・`[export][playback]`）: `c''2 <>@accent grace { e''16 } d''2` はページも LilyPond 2.26.0 も装飾音に accent を描く（装飾音が `<>` の時刻に始まる）のに、MusicXML と MIDI は d'' に付けていた。`<>@accent r4 d''4` はページ・LilyPond・MusicXML が休符に付け、MIDI だけ d'' を強くしていた（Lab `p1329/g`）。MusicXML は `ProcessGraceScripts` が保留の script を装飾音の最初の `<note>` に、MIDI は `GraceScripts` が装飾音に・`ProcessRest` が休符で捨てる。スペーサーは今のまま（4 者が割れている＝leftovers）。ついでに MIDI の装飾音は自分の script を 1 つも鳴らしていなかった（`grace { e''16@accent }` が普通の強さ）＝ページが描く script（`IsCarriedScript`）を全音価の音と同じく鳴らす。
-- **import が最後の小節線のフェルマータを読む**（`b0878a10b`・`[import]`）: 第1328 が書き出す `<barline><fermata/>` を `ImportMeasure.BarFermata` に読み、`LysWriter` が最後の小節の最後の音の後に `<>@fermata`（inverted は `.down`）を書く。曲の途中の小節線のフェルマータは今までどおり書かない。
-- 網 `EmptyChordScriptsExportTests` +7 行と 1 本・`DrumsChartTests` 1 本。毒 13 本（赤 10・観測者なし 2・門を外した 1）と 4 本（赤 3・観測者なし 1）。掃き: 全 MusicXML 0 / 1276・全 MIDI 0 / 1276（装飾音に script を書いた本も `<>` を装飾音・休符の前に書いた本も追跡コーパスに無い）。ページは触っていない。
-- `.ly` の最後の `<>@fermata` は LilyPond の書き方（`\textEndMark` を中央に）まで測って未着手＝「曲の最後の瞬間」を双子の書き手が知る配管と、フェルマータだけ写すかの判断が要る（leftovers）。
-- **次**: leftovers の「第1329」（スペーサーの前の `<>`・`.ly` の最後のフェルマータ＝どちらも判断が要る）→「第1327」の `@!rit`（オーナーの返事待ち）→「第1321」の h13 → review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
 
 ## 2. 開いている作業
 

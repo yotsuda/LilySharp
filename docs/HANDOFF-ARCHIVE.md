@@ -277,6 +277,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1329セッションの経緯
+
+### 1.1 第1329セッション（2026-11-20・YT-DELL2・新しい会話）
+
+leftovers の「第1328」の便（base `dc38e7357`）。開始時 full 17956 合格 / 0 失敗 / skip 2 / 合計 17958（Lab `p1329` `run1.trx`）。終了時 full 17965 合格 / 0 失敗 / skip 2 / 合計 17967（`-End` の trx）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
+- **装飾音と休符が `<>` の script を取る・装飾音は自分の script を鳴らす**（`de8e21ac7`・`[export][playback]`）: `c''2 <>@accent grace { e''16 } d''2` はページも LilyPond 2.26.0 も装飾音に accent を描く（装飾音が `<>` の時刻に始まる）のに、MusicXML と MIDI は d'' に付けていた。`<>@accent r4 d''4` はページ・LilyPond・MusicXML が休符に付け、MIDI だけ d'' を強くしていた（Lab `p1329/g`）。MusicXML は `ProcessGraceScripts` が保留の script を装飾音の最初の `<note>` に、MIDI は `GraceScripts` が装飾音に・`ProcessRest` が休符で捨てる。スペーサーは今のまま（4 者が割れている＝leftovers）。ついでに MIDI の装飾音は自分の script を 1 つも鳴らしていなかった（`grace { e''16@accent }` が普通の強さ）＝ページが描く script（`IsCarriedScript`）を全音価の音と同じく鳴らす。
+- **import が最後の小節線のフェルマータを読む**（`b0878a10b`・`[import]`）: 第1328 が書き出す `<barline><fermata/>` を `ImportMeasure.BarFermata` に読み、`LysWriter` が最後の小節の最後の音の後に `<>@fermata`（inverted は `.down`）を書く。曲の途中の小節線のフェルマータは今までどおり書かない。
+- 網 `EmptyChordScriptsExportTests` +7 行と 1 本・`DrumsChartTests` 1 本。毒 13 本（赤 10・観測者なし 2・門を外した 1）と 4 本（赤 3・観測者なし 1）。掃き: 全 MusicXML 0 / 1276・全 MIDI 0 / 1276（装飾音に script を書いた本も `<>` を装飾音・休符の前に書いた本も追跡コーパスに無い）。ページは触っていない。
+- `.ly` の最後の `<>@fermata` は LilyPond の書き方（`\textEndMark` を中央に）まで測って未着手＝「曲の最後の瞬間」を双子の書き手が知る配管と、フェルマータだけ写すかの判断が要る（leftovers）。
+- **次**: leftovers の「第1329」（スペーサーの前の `<>`・`.ly` の最後のフェルマータ＝どちらも判断が要る）→「第1327」の `@!rit`（オーナーの返事待ち）→「第1321」の h13 → review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
+
 ## 以下は第1328セッションの経緯
 
 ### 1.1 第1328セッション（2026-11-19〜20・YT-DELL2・第1327 と同じ会話）
