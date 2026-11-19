@@ -146,6 +146,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1333セッション（2026-11-20・YT-DELL2・第1332 と同じ会話）
+
+leftovers の「第1317」の tab の struck の数字の便（base `fe049751b`）。開始時 full 17988 合格 / 0 失敗 / skip 2 / 合計 17990（Lab `p1333` `start.log`）。終了時 full 17989 合格 / 0 失敗 / skip 2 / 合計 17991（`-End` の trx）。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
+- **tab の struck の数字は小さく、LilyPond の位置に**（`d6ce4a69a`・`[engraving]`）: twin の `\tweak font-size` は TabNoteHead の −2 を置き換える＝magstep(cue − (−2))＝0.794（`p1332/beam/tab1.ly` 1.3862 対 1.7459）。中心は自分の大きさの「8」の幅 × 3/5（`scm/tablature.scm:249-271` tab-note-head::print）＝普通の数字の中心より 3/5 × w8 × 0.206 左。`DrawTabFret` の `struck`・`TabStruckScale`・`TabHeadOffsetFactor`。網 `StruckNoteTests` +1 本・毒 3 本（全部赤）・全 svg 0 / 1276。「第1317」の残りは意味の上で正しい読み（コード名・`check --pitches`）と放置の装飾音の和音だけ。
+- **h13（a2 で 2 パートが違うヘアピン）＝オーナー判断待ち**: LilyPond 2.26.0 は a2 にせず 2 声部に分ける（`scm/part-combiner.scm:215-242`・`:495-501`＝cresc／decr は開いている span・両パートで違えば apart。`PartCombiner.cs` の注が「移植していない」と書いていた所）。移植は書いて h13 は LilyPond どおりになったが、`CombinedStaffHairpinTests` の 10 行前後（オーナー決定 2026-11-19 の形を含む）の前提が崩れる＝差分を Lab `p1333/h13/lp-span-dynamics.diff` に退避してコードは HEAD に戻した。比べた絵と問いは leftovers の「第1321」の h13 の行。
+- **別の欠陥を 1 つ見つけた**（未着手）: combinedStaff で最初から apart の形でも、上のパートの強弱とヘアピンが譜表の下に立つ（LilyPond は voiceOne の分を上・`p1333/h13/apart.lys`）。
+- **次**: h13 のオーナーの答え →（答えと無関係に着手できる）combinedStaff の apart の上のパートの強弱の向き →「第1327」の `@!rit`（オーナーの返事待ち）→ review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決はオーナー待ち。
+
+## 以下は第1332セッションの経緯
+
 ### 1.1 第1332セッション（2026-11-20・YT-DELL2）
 
 leftovers の「第1317」の残りの便（base `210fb36a8`）。開始時 full 17983 合格 / 1 失敗（`ScoreVideoShapeTests` の png の掴み合い＝既知の不安定な網）/ skip 2 / 合計 17986（Lab `p1332` `start.log`）。終了時 full 17988 合格 / 0 失敗 / skip 2 / 合計 17990（`-End` の trx・注の追記の後に run5 も同じ）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
@@ -155,16 +165,6 @@ leftovers の「第1317」の残りの便（base `210fb36a8`）。開始時 full
 - 網 `StruckNoteTests` +1 本・1 theory 3 行、`CaretInfoTests` +2 行。毒 8 本（全部赤。P4＝MIDI の記録は最初 `q4` の網で緑＝held と struck の長さが同じ。`q2` に直して赤）。掃き: 全 svg 0 / 1276・全 MusicXML 0 / 1276（追跡コーパスに struck の本は無い）。
 - **測って残した**: tab の struck の数字は LilyPond では ×0.794・中央揃えではない（leftovers に数字）。装飾音の中の struck の和音は放置のまま。
 - **次**: leftovers の「第1317」の残り（tab の数字＝先に LilyPond の `tab-note-head::print` を読む）→「第1327」の `@!rit`（オーナーの返事待ち）→「第1321」の h13 → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決はオーナー待ち。
-
-## 以下は第1331セッションの経緯
-
-### 1.1 第1331セッション（2026-11-20・YT-DELL2・第1329 と同じ会話）
-
-オーナー決定 2026-11-20 の 3 件の便（base `713377c9f`）。開始時 full 17968 合格 / 0 失敗 / skip 2 / 合計 17970（Lab `p1331` `start.log`）。終了時 full 17984 合格 / 0 失敗 / skip 2 / 合計 17986（`-End` の trx）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
-- **オーナー決定 2026-11-20**（第1330 の報告の問いへの返事）: ① スペーサーの前の `<>` の script は次の音が取る・音楽的に意味が無いので警告も（スペーサーの時刻に置く意味があるのは強弱・文字・線＝警告は script だけ）② `.ly` の曲の最後の `<>@fermata` は LilyPond の `\textEndMark` で写す ③ struck の音へのタイは `check` で言う（絵はそのまま）。
-- **3 件とも実装**（`d0f01b760`・`[export][playback][language]`）: ① MusicXML はスペーサー（`print-object="no"` の休符）と装飾音のスペーサーを飛ばす・MIDI の装飾音のスペーサーも取らない・警告 LYS4085（`Semantics.SpacerScriptValidator`・小節線をまたいでも次の項目）② `LilyPondExporter.WriteTheClosingFermata` がパートの変数の末尾の `<>-\fermata` を `\once \override Score.TextMark.self-alignment-X = #CENTER \textEndMark \markup { \musicglyph "scripts.ufermata" }` に（`.down` は `direction = #DOWN`・`scripts.dfermata`・他の印は `<>` に残す）。form は各パートの変数に展開されるので変数の末尾が曲の末尾。end mark は score のもの＝1 回・最初のパート（上の譜表の上）。LilyPond 2.26.0 の絵は Lab `p1331/ly`。③ LYS4086（`StruckNoteValidator`）: 和音の中のタイは `TiedMembers` の後ろの子、和音全体のタイは和音の外の兄弟（`Articulations` には無い）。
-- 網 `EmptyChordScriptsExportTests` +2 行・1 theory 9 行・1 本、`StruckNoteTests` 1 theory 4 行。毒 13 本（全部赤・script だけの門は `<>@sustain s4` の行を足して赤）。掃き: 全 MusicXML・MIDI・`.ly` 0 / 1276。LYS4085・LYS4086 はコーパスの 0 冊。
-- **次**: leftovers の「第1317」の残り（連桁の符幹の根元・`q` が struck を引き継ぐか＝LilyPond を測る・装飾音の和音・tab とエディタの説明）→「第1327」の `@!rit`（オーナーの返事待ち）→「第1321」の h13 → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決はオーナー待ち。
 
 ## 2. 開いている作業
 

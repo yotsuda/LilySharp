@@ -277,6 +277,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1331セッションの経緯
+
+### 1.1 第1331セッション（2026-11-20・YT-DELL2・第1329 と同じ会話）
+
+オーナー決定 2026-11-20 の 3 件の便（base `713377c9f`）。開始時 full 17968 合格 / 0 失敗 / skip 2 / 合計 17970（Lab `p1331` `start.log`）。終了時 full 17984 合格 / 0 失敗 / skip 2 / 合計 17986（`-End` の trx）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
+- **オーナー決定 2026-11-20**（第1330 の報告の問いへの返事）: ① スペーサーの前の `<>` の script は次の音が取る・音楽的に意味が無いので警告も（スペーサーの時刻に置く意味があるのは強弱・文字・線＝警告は script だけ）② `.ly` の曲の最後の `<>@fermata` は LilyPond の `\textEndMark` で写す ③ struck の音へのタイは `check` で言う（絵はそのまま）。
+- **3 件とも実装**（`d0f01b760`・`[export][playback][language]`）: ① MusicXML はスペーサー（`print-object="no"` の休符）と装飾音のスペーサーを飛ばす・MIDI の装飾音のスペーサーも取らない・警告 LYS4085（`Semantics.SpacerScriptValidator`・小節線をまたいでも次の項目）② `LilyPondExporter.WriteTheClosingFermata` がパートの変数の末尾の `<>-\fermata` を `\once \override Score.TextMark.self-alignment-X = #CENTER \textEndMark \markup { \musicglyph "scripts.ufermata" }` に（`.down` は `direction = #DOWN`・`scripts.dfermata`・他の印は `<>` に残す）。form は各パートの変数に展開されるので変数の末尾が曲の末尾。end mark は score のもの＝1 回・最初のパート（上の譜表の上）。LilyPond 2.26.0 の絵は Lab `p1331/ly`。③ LYS4086（`StruckNoteValidator`）: 和音の中のタイは `TiedMembers` の後ろの子、和音全体のタイは和音の外の兄弟（`Articulations` には無い）。
+- 網 `EmptyChordScriptsExportTests` +2 行・1 theory 9 行・1 本、`StruckNoteTests` 1 theory 4 行。毒 13 本（全部赤・script だけの門は `<>@sustain s4` の行を足して赤）。掃き: 全 MusicXML・MIDI・`.ly` 0 / 1276。LYS4085・LYS4086 はコーパスの 0 冊。
+- **次**: leftovers の「第1317」の残り（連桁の符幹の根元・`q` が struck を引き継ぐか＝LilyPond を測る・装飾音の和音・tab とエディタの説明）→「第1327」の `@!rit`（オーナーの返事待ち）→「第1321」の h13 → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決はオーナー待ち。
+
 ## 以下は第1330セッションの経緯
 
 ### 1.1 第1330セッション（2026-11-20・YT-DELL2・第1329 と同じ会話）
