@@ -146,6 +146,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1318セッション（2026-11-19・YT-DELL2・第1317 と同じ会話）
+
+leftovers の「第1313」の節の MIDI の便（base `14d8de812`）。開始時 full 17817 合格 / 0 失敗 / skip 2 / 合計 17819（Lab `p1318` `run1.trx`）。終了時 full 17820 合格 / 0 失敗 / skip 2 / 合計 17822（`run3.trx`）。REQUESTS の open は両方 0。作業ツリーの `site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
+- **チャートの連符の強弱・ヘアピンの時刻は MIDI でも正しい**（未測定だった項目・Lab `p1318/mid` m4〜m8＝`voice { } { }` と同じ値）。測る道具は `p1318/mididump.ps1`（exe の写しから Core を読んで音を 1 行ずつ）。
+- 測って出た欠陥 2 つを直した（`cfe045d4a`・`[playback]`）: **ドラムはヘアピンを演奏していなかった**（`sn4@p@cresc sn sn sn@f` が 70 70 70 95・音高のあるパートは 70 78 87 95。単打・ドラムの和音・裸の音価・`q` のどれも `MarkForSinger` を通らず `SwellInstruments` が読む印が無かった）／**`q` は自分に書いた強弱と script を演奏していなかった**（`<c' e'>4@p q q@f q` が 4 つとも p・`q@staccato` が全長。`ProcessChordRepetition` が `_velocity` をそのまま使っていた）。どちらも 2026-11-14 の「ヘアピンは演奏する」と「描いた印は鳴る」の穴＝訊かずに直した。
+- 網は `InstrumentHairpinMidiTests` に 3 本・毒 8 本が赤（Lab `p1318/poisons.ps1`）。絵は触っていない（MIDI だけ）＝svg の掃きは回していない。
+- ⚠️ full で `ScoreVideoShapeTests.AScoreOfOnePage_IsItsMusic_NotTheSheet` が 1 回赤・単独で緑＝既知の不安定な網。`-End` の full では `KeystrokeSideWorkTests.TheCaretOnANote_OfABookWithIncludes_…` が 1 回赤・単独と次の full（`run3.trx`）で緑＝原因は未特定。
+- **次**: leftovers の「第1313」の残り（運び手ごとの時刻の網・連符の中の slash と bare の `@cross`／数字付き低音）→「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
+
+## 以下は第1317セッションの経緯
+
 ### 1.1 第1317セッション（2026-11-19・YT-DELL2）
 
 Calamo 依頼 31 の便（base `ae34ccb17`）。開始時 full 17804 合格 / 0 失敗 / skip 2 / 合計 17806（Lab `p1317` `run1.trx`）。終了時 full 17817 合格 / 0 失敗 / skip 2 / 合計 17819（`run4.trx`）。REQUESTS: Calamo に open が 1 件（31・2026-11-19 15:49 の行）＝この便で `fixed`（Calamo の repo では未 commit）・Dettato は 0。作業ツリーの `site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
@@ -155,16 +166,6 @@ Calamo 依頼 31 の便（base `ae34ccb17`）。開始時 full 17804 合格 / 0 
 - 網 `StruckNoteTests` 11 本・毒 14 本が赤（Lab `p1317/poisons.ps1`。15 本目は MIDI の上限と重なる冗長な枝だった＝枝を畳んだ）。全 svg の掃き 0 / 1276（追跡中の本に `@struck` は 0 冊・陽性対照は探り譜 `p1317/probe/s1.lys`・`k70.lys`）。
 - **残り＝leftovers の「第1317」の節**: タイの絵（struck の頭からも描く）・2 度の付点・連桁の符幹の根元・`q`・MusicXML の読み込み・`NoteStepper.Describe`／`LEARN_FOR_LLM.md` など。
 - **次**: leftovers の「第1313」の節 →「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
-
-## 以下は第1316セッションの経緯
-
-### 1.1 第1316セッション（2026-11-19・YT-DELL2）
-
-leftovers の「第1315」「第1314」の節の便（base `057fe425e`）。開始時 full 17802 合格 / 0 失敗 / skip 2 / 合計 17804（Lab `p1316` `run1.trx`）。終了時 full 17804 合格 / 0 失敗 / skip 2 / 合計 17806（`run6.trx`）。REQUESTS の open は両方 0。作業ツリーの `site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
-- **終わりの小節線の上のフェルマータは描いた小節線の中央に**（`d64240d03`）: 第1315 の腕は小節の末尾の列（小節線の左端）に中央を置いていた＝リピートの終わり `:|.` の上では点の上（群の中央から 0.92 左）。今は末尾の列から小節の右端（小節線の墨）までの中央。網 `TrailingEmptyChordTests.TheFermataOverTheClosingBarLine_IsCentredOnItsInk`（boxes で小節線の墨と比べる・毒で 2 本赤）。掃き 0 / 1276（追跡中の本に `<>@fermata` は 0 冊・陽性対照は探り譜 f2 で 48.192 → 49.112）。同じ小節線に立つ 8va の括弧・volta・テンポ・`<>@text("fine").up`・大譜表・tab の双子は探り譜 f0〜f9 で崩れない（leftovers に詳細）。`<>@mark` は描かれない＝LP の RehearsalMark も行末で見えない。
-- **小節線で閉じる 8va の括弧は最後の音の後で止める**（`2544f35f8`）: LilyPond の右端は止める時刻がどこでも最後の音の列（`ottava-engraver.cc:176-180`・実測 Lab `p1316/lp/o1.ly` 28.03）。Lily# は次の小節の頭で閉じる括弧（`f'' <>@!8va | g'1`・次の START）と section で切れる括弧を小節の右端（28.86）まで描いていた＝自分で「近似」と名乗っていた腕。網は `ThePage_DrawsThem` に 1 行（毒で赤）。掃きで動いたのは `audit/lpreg/ottcons.lys` 1 / 1276＝1 本目の鉤が音の右 0.6 に寄り LP の双子と同じ（前は 3.6）。
-- ⚠️ full の途中で 2 回、別々の網が 1 回だけ赤（`MusicFontSearchPathTests` 3 本＝`no bundled fonts`、`LpReferenceCitationTests.CitationsThatNameNothing_DoNotGrow` 682/681）。どちらも次の run で緑・単独でも緑＝並行の別セッションの作業と重なった揺れと読んだ（原因は未特定）。後者は私の出典 1 つに関数名が無かったのも事実なので足した。
-- **次**: leftovers の「第1313」の節 →「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1315 の残り（`.ly`・MusicXML の最後の `<>`・`check` で言うか）と第1314 の残り（text 様式のペダル・`.ly`／MusicXML の最後の `<>@!sustain`）も同じ一覧に。第1308 の未決はオーナー待ち。
 
 ## 2. 開いている作業
 

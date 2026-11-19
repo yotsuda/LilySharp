@@ -277,6 +277,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1316セッションの経緯
+
+### 1.1 第1316セッション（2026-11-19・YT-DELL2）
+
+leftovers の「第1315」「第1314」の節の便（base `057fe425e`）。開始時 full 17802 合格 / 0 失敗 / skip 2 / 合計 17804（Lab `p1316` `run1.trx`）。終了時 full 17804 合格 / 0 失敗 / skip 2 / 合計 17806（`run6.trx`）。REQUESTS の open は両方 0。作業ツリーの `site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
+- **終わりの小節線の上のフェルマータは描いた小節線の中央に**（`d64240d03`）: 第1315 の腕は小節の末尾の列（小節線の左端）に中央を置いていた＝リピートの終わり `:|.` の上では点の上（群の中央から 0.92 左）。今は末尾の列から小節の右端（小節線の墨）までの中央。網 `TrailingEmptyChordTests.TheFermataOverTheClosingBarLine_IsCentredOnItsInk`（boxes で小節線の墨と比べる・毒で 2 本赤）。掃き 0 / 1276（追跡中の本に `<>@fermata` は 0 冊・陽性対照は探り譜 f2 で 48.192 → 49.112）。同じ小節線に立つ 8va の括弧・volta・テンポ・`<>@text("fine").up`・大譜表・tab の双子は探り譜 f0〜f9 で崩れない（leftovers に詳細）。`<>@mark` は描かれない＝LP の RehearsalMark も行末で見えない。
+- **小節線で閉じる 8va の括弧は最後の音の後で止める**（`2544f35f8`）: LilyPond の右端は止める時刻がどこでも最後の音の列（`ottava-engraver.cc:176-180`・実測 Lab `p1316/lp/o1.ly` 28.03）。Lily# は次の小節の頭で閉じる括弧（`f'' <>@!8va | g'1`・次の START）と section で切れる括弧を小節の右端（28.86）まで描いていた＝自分で「近似」と名乗っていた腕。網は `ThePage_DrawsThem` に 1 行（毒で赤）。掃きで動いたのは `audit/lpreg/ottcons.lys` 1 / 1276＝1 本目の鉤が音の右 0.6 に寄り LP の双子と同じ（前は 3.6）。
+- ⚠️ full の途中で 2 回、別々の網が 1 回だけ赤（`MusicFontSearchPathTests` 3 本＝`no bundled fonts`、`LpReferenceCitationTests.CitationsThatNameNothing_DoNotGrow` 682/681）。どちらも次の run で緑・単独でも緑＝並行の別セッションの作業と重なった揺れと読んだ（原因は未特定）。後者は私の出典 1 つに関数名が無かったのも事実なので足した。
+- **次**: leftovers の「第1313」の節 →「第1238」の残り → review.md の 3 つと F3 段 2（オーナー判断）。第1315 の残り（`.ly`・MusicXML の最後の `<>`・`check` で言うか）と第1314 の残り（text 様式のペダル・`.ly`／MusicXML の最後の `<>@!sustain`）も同じ一覧に。第1308 の未決はオーナー待ち。
+
 ## 以下は第1315セッションの経緯
 
 ### 1.1 第1315セッション（2026-11-19・YT-DELL2・第1313 と同じ会話）
