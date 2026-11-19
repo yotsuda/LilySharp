@@ -146,6 +146,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1330セッション（2026-11-20・YT-DELL2・第1329 と同じ会話）
+
+leftovers の「第1317」（`@struck`）の便（base `e02560029`）。オーナーの「続けて」で、判断の要る「第1329」の 2 件（スペーサー・`.ly` の最後のフェルマータ）は飛ばした。開始時 full 17965 合格 / 0 失敗 / skip 2 / 合計 17967（Lab `p1330` `start.log`）。終了時 full 17968 合格 / 0 失敗 / skip 2 / 合計 17970（`-End` の trx）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
+- **struck の頭の右の付点は小さい頭の右に**（`972f7ff52`・`[engraving]`）: `<c'' d''@struck>2.`（2 度・小さい d'' が符幹の向こう）の付点が c'' の頭から 3.14＝普通の頭の幅で床を取っていた。LilyPond 2.26.0 は 2.578（支えは頭それぞれの箱＝dot-column.cc:79-99）。`ChordHeadPositioning.InkRight` の struck つきの形が小さい頭を描いた位置と幅で読む（描画と声部をまたぐ付点の列）。2 度の他の 2 形も数字で LilyPond と一致（Lab `p1330/s2`）。
+- **import が `@struck` を読む**（`22960ab17`・`[import]`）: 和音の 2 番目以降の cue 大の鳴る音（`<cue/>` なし）を `ImportNote.IsStruck` に、`LysWriter` が `@struck` を書く。
+- **struck を先頭に書いた和音の印は MusicXML の先頭の `<note>` に**（`a5aa7d060`・`[export]`）: 書き出しは struck を held の後ろへ並べ替えるが、和音の印は最初に処理した struck の音に載ったまま `<chord/>` の音へ回っていた。印は最初の held の音に（`<>` の保留の script も）・arpeggio は音より先に決める。
+- 網 `StruckNoteTests` +3 本。毒 4 本（赤 2・観測者なし 2）・4 本（全部赤）・3 本（全部赤）。掃き: 全 svg 0 / 1276・全 MusicXML 0 / 1276（追跡コーパスに struck の本は無い）。
+- タイ: LilyPond も struck の頭からタイを描く＝ページは LilyPond どおり（MIDI と MusicXML がタイにしないのは意味の側＝判断・leftovers）。
+- **次**: leftovers の「第1317」の残り（連桁の符幹の根元・`q` が struck を引き継ぐか＝LilyPond を測る・装飾音の和音・tab とエディタの説明）→「第1329」の 2 件（判断）→「第1327」の `@!rit`（オーナーの返事待ち）→「第1321」の h13 → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決はオーナー待ち。
+
+## 以下は第1329セッションの経緯
+
 ### 1.1 第1329セッション（2026-11-20・YT-DELL2・新しい会話）
 
 leftovers の「第1328」の便（base `dc38e7357`）。開始時 full 17956 合格 / 0 失敗 / skip 2 / 合計 17958（Lab `p1329` `run1.trx`）。終了時 full 17965 合格 / 0 失敗 / skip 2 / 合計 17967（`-End` の trx）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
@@ -154,16 +166,6 @@ leftovers の「第1328」の便（base `dc38e7357`）。開始時 full 17956 �
 - 網 `EmptyChordScriptsExportTests` +7 行と 1 本・`DrumsChartTests` 1 本。毒 13 本（赤 10・観測者なし 2・門を外した 1）と 4 本（赤 3・観測者なし 1）。掃き: 全 MusicXML 0 / 1276・全 MIDI 0 / 1276（装飾音に script を書いた本も `<>` を装飾音・休符の前に書いた本も追跡コーパスに無い）。ページは触っていない。
 - `.ly` の最後の `<>@fermata` は LilyPond の書き方（`\textEndMark` を中央に）まで測って未着手＝「曲の最後の瞬間」を双子の書き手が知る配管と、フェルマータだけ写すかの判断が要る（leftovers）。
 - **次**: leftovers の「第1329」（スペーサーの前の `<>`・`.ly` の最後のフェルマータ＝どちらも判断が要る）→「第1327」の `@!rit`（オーナーの返事待ち）→「第1321」の h13 → review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
-
-## 以下は第1328セッションの経緯
-
-### 1.1 第1328セッション（2026-11-19〜20・YT-DELL2・第1327 と同じ会話）
-
-leftovers の「第1327」の便（base `8c7e74d6f`）。開始時 full 17944 合格 / 0 失敗 / skip 2 / 合計 17946（Lab `p1328` `run1.trx`・⚠️ `-Start` の途中で Core を書いたので `FirstOf` の修正込みの数）。終了時 full 17956 合格 / 0 失敗 / skip 2 / 合計 17958（`-End` の trx）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
-- **ヘアピンは自分の声部の最も早い終わりで終わる**（`336ea3ba1`・`[engraving]`）: `FirstOf` は自分の声部では「書いた順の先頭」を取っていた。印は小節だけで並び、パート 1 の後にパート 2 が来るので、combinedStaff で 1 つの声部が小節の前半パート 2・後半パート 1 を運ぶと、パート 2 の crescendo が 1 拍目の自分の decrescendo を通り越して 3 拍目のパート 1 のものまで伸び、2 本が重なった（Lab `p1328/probe` f4）。全譜表の探しと同じく時刻で最も早いものに。
-- **空の和音の script は MusicXML と MIDI で次の音のもの**（`26d713c3c`・`[export][playback]`）: `c''2 <>@accent d''2` はページ（と LilyPond）が d'' に accent を描くのに、MusicXML はどこにも書かず MIDI は accent なしで鳴らしていた（fermata・staccato・trill・弓の記号も）。両方ともパートごとに保留して次の音へ（section の終わりの `<>` は同じパートの次の section の最初の音＝ページどおり・`end` s1）。曲の最後まで残ったフェルマータは MusicXML の終わりの小節線（`<barline><fermata/>`）。ついでに音のフェルマータを規格どおり `<notations>` の直下へ（`<articulations>` の中にあった・`lysc import` は両方読む）。
-- 網 `CombinedStaffHairpinTests` +2 行・`EmptyChordScriptsExportTests` 10 本。毒 2 本（赤 1・観測者なし 1）と 12 本（全部赤）。掃き: 全 svg 0 / 1276・全 MusicXML 42 / 1276（41 はフェルマータの置き場所・1 は `empty-chord.lys` の `<>@downBow c`）・全 MIDI 0 / 1276。
-- **次**: leftovers の「第1328」（装飾音の前の `<>` の script・`.ly` の最後のフェルマータ・import の小節線のフェルマータ）→「第1327」の `@!rit`（オーナーの返事待ち）→「第1321」の h13 → review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
 
 ## 2. 開いている作業
 

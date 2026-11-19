@@ -277,6 +277,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1328セッションの経緯
+
+### 1.1 第1328セッション（2026-11-19〜20・YT-DELL2・第1327 と同じ会話）
+
+leftovers の「第1327」の便（base `8c7e74d6f`）。開始時 full 17944 合格 / 0 失敗 / skip 2 / 合計 17946（Lab `p1328` `run1.trx`・⚠️ `-Start` の途中で Core を書いたので `FirstOf` の修正込みの数）。終了時 full 17956 合格 / 0 失敗 / skip 2 / 合計 17958（`-End` の trx）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
+- **ヘアピンは自分の声部の最も早い終わりで終わる**（`336ea3ba1`・`[engraving]`）: `FirstOf` は自分の声部では「書いた順の先頭」を取っていた。印は小節だけで並び、パート 1 の後にパート 2 が来るので、combinedStaff で 1 つの声部が小節の前半パート 2・後半パート 1 を運ぶと、パート 2 の crescendo が 1 拍目の自分の decrescendo を通り越して 3 拍目のパート 1 のものまで伸び、2 本が重なった（Lab `p1328/probe` f4）。全譜表の探しと同じく時刻で最も早いものに。
+- **空の和音の script は MusicXML と MIDI で次の音のもの**（`26d713c3c`・`[export][playback]`）: `c''2 <>@accent d''2` はページ（と LilyPond）が d'' に accent を描くのに、MusicXML はどこにも書かず MIDI は accent なしで鳴らしていた（fermata・staccato・trill・弓の記号も）。両方ともパートごとに保留して次の音へ（section の終わりの `<>` は同じパートの次の section の最初の音＝ページどおり・`end` s1）。曲の最後まで残ったフェルマータは MusicXML の終わりの小節線（`<barline><fermata/>`）。ついでに音のフェルマータを規格どおり `<notations>` の直下へ（`<articulations>` の中にあった・`lysc import` は両方読む）。
+- 網 `CombinedStaffHairpinTests` +2 行・`EmptyChordScriptsExportTests` 10 本。毒 2 本（赤 1・観測者なし 1）と 12 本（全部赤）。掃き: 全 svg 0 / 1276・全 MusicXML 42 / 1276（41 はフェルマータの置き場所・1 は `empty-chord.lys` の `<>@downBow c`）・全 MIDI 0 / 1276。
+- **次**: leftovers の「第1328」（装飾音の前の `<>` の script・`.ly` の最後のフェルマータ・import の小節線のフェルマータ）→「第1327」の `@!rit`（オーナーの返事待ち）→「第1321」の h13 → review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
+
 ## 以下は第1327セッションの経緯
 
 ### 1.1 第1327セッション（2026-11-19・YT-DELL2・第1326 と同じ会話）
