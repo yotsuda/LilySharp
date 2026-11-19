@@ -6,7 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
-- **`q` repeats an `@struck` member as struck** (`[engraving]`, `[playback]`, `[export]`). `<c' e' g'@struck>2 q2` drew the q's g' as a full head, left it out of the MIDI and wrote it a held note in MusicXML; a `q` or a bare duration after the chord now draws the small head again (as LilyPond's `q` does), strikes it again for a quarter at most, and writes it as the chord does. A beamed stem standing on the small head begins at its own attachment, as an unbeamed one does.
+- **`q` repeats an `@struck` member as struck** (`[engraving]`, `[playback]`, `[export]`). `<c' e' g'@struck>2 q2` drew the q's g' as a full head, left it out of the MIDI and wrote it a held note in MusicXML; a `q` or a bare duration after the chord now draws the small head again (as LilyPond's `q` does), strikes it again for a quarter at most, and writes it as the chord does. A beamed stem standing on the small head begins at its own attachment, as an unbeamed one does. On a tab the struck member's fret number is smaller (magstep −2 of the others, LilyPond's size) and centred where LilyPond centres it.
 
 - **A script before a spacer goes on to the next note, and says so** (`[export]`, `[playback]`, `[language]`). `c''2 <>@accent s4 d''4` draws the accent on the d''; MIDI accented it too, but MusicXML wrote it on the spacer's invisible rest, where nobody sees it. A spacer is no note, so every output now gives the script to the next note, and a warning (LYS4085) says so where it is written. A level, words or a line at a spacer's moment (`<>@p s4`, `<>@sustain s4`) is the ordinary way to place one between notes and is left as it was.
 

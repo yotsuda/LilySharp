@@ -141,6 +141,47 @@ public class StruckNoteTests
         Assert.InRange(FootGap(3, "c'''>8 r2"), 0.15 - 0.011, 0.15 + 0.011);
     }
 
+    /// <summary>On a tab the struck member's fret number is smaller, centred where LilyPond's smaller
+    /// reference "8" puts it; until session 1333 it was a full one.</summary>
+    [Fact]
+    public void OnATab_ItsNumberIsSmaller_AndStandsAFullHeadOffsetLeft()
+    {
+        // MEASURED on LilyPond 2.26.0 (Lab sessions/p1332/beam/tab1.ly): the struck "3" at 1.3862
+        // against 1.7459 (0.794); its centre 3/5 × (the full "8"'s width) × (1 − 0.794) left of a
+        // full number's (scm/tablature.scm tab-note-head::print), its baseline centred on the string.
+        const string text = """
+            octave absolute
+            part g { clef treble_8 }
+            section A { g { <c' e' g'>2 <c' e' g'@struck>2 | } }
+            form { ~A }
+            score { staff g tab g }
+            """;
+        // The tab's numbers (written from the chords; the clef's 8 is not one): two chords of three.
+        int music = text.IndexOf("<c'", StringComparison.Ordinal);
+        var digits = Regex.Matches(SvgGenerator.Generate(SyntaxTree.Parse(text)),
+                "<text x=\"([-\\d.]+)\" y=\"([-\\d.]+)\" font-size=\"([\\d.]+)\"[^>]* data-pos=\"(\\d+)\">(\\d+)</text>")
+            .Where(m => int.Parse(m.Groups[4].Value) >= music)
+            .Select(m => (X: double.Parse(m.Groups[1].Value), Y: double.Parse(m.Groups[2].Value),
+                Size: double.Parse(m.Groups[3].Value), Text: m.Groups[5].Value))
+            .ToArray();
+        Assert.Equal(6, digits.Length);
+        // Each chord's "3" (the g', top string) against its bottom number (the c', string 3: the
+        // column's own place, no zigzag).
+        (double Dx, double Dy, double Ratio) TopAgainstBottom(int chord)
+        {
+            var three = digits.Skip(3 * chord).Take(3).Single(d => d.Text == "3");
+            var bottom = digits.Skip(3 * chord).Take(3).MaxBy(d => d.Y);
+            return (bottom.X - three.X, three.Y, three.Size / bottom.Size);
+        }
+        var full = TopAgainstBottom(0);
+        var small = TopAgainstBottom(1);
+        Assert.InRange(full.Dx, -0.006, 0.006);
+        Assert.InRange(small.Ratio, 0.794 - 0.01, 0.794 + 0.01);
+        // 0.6 × w8 × 0.206 at Lily#'s digit size: 0.16 at 2.30.
+        Assert.InRange(small.Dx, 0.16 - 0.015, 0.16 + 0.015);
+        Assert.True(small.Dy < full.Dy, "the smaller number's baseline is higher, centred on the string");
+    }
+
     /// <summary><c>lysc import</c> reads the struck member back from the MusicXML Lily# writes (a
     /// sounding chord member at the cue size); until session 1330 it came back a plain member.
     /// A cue-size member that is a <c>&lt;cue/&gt;</c> is not one.</summary>

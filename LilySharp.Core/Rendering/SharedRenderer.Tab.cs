@@ -745,6 +745,27 @@ internal static partial class SharedRenderer
     ///   ±0.545, the same as the black head's) at magstep(−2) = 0.7937.
     /// </remarks>
     private const int TabDeadHeadFontSizeStep = -2;
+
+    /// <summary>
+    /// A STRUCK chord member's fret number (<c>&lt;c' e' g'@struck&gt;</c>,
+    /// <see cref="ChordNoteInfo.IsStruck"/>) against a full one's: the twin's
+    /// <c>\tweak font-size</c> (the cue's step) replaces the TabNoteHead's own −2, so the number
+    /// is magstep(cue − (−2)) of a full one — magstep(−2) at the default cue size.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (2.26.0, Lab sessions/p1332/beam/tab1.ly, lp-tab1.svg): the struck g' as "3" at
+    ///   1.3862 against the full numbers' 1.7459 (0.794), its left 0.0205 left of where a full
+    ///   "3" would begin, its baseline 0.119 higher (centred on the string as a full one).
+    /// </remarks>
+    private static double TabStruckScale =>
+        LilySharp.Core.Svg.Layout.EmmentalerDesignSize.Magstep(EngravingDefaults.CueFontSizeStep - TabDeadHeadFontSizeStep);
+
+    /// <summary>Where a TabNoteHead centres its number: <c>head-offset</c> (3/5) of the width of
+    /// an "8" at its own size.</summary>
+    /// <remarks>LILYPOND-REF: scm/tablature.scm:249-271 tab-note-head::print — ref-grob "8",
+    /// column-offset = offset-factor × its X extent, the stencil centred and moved by it;
+    /// scm/define-grobs.scm:3731 <c>(head-offset . 3/5)</c>.</remarks>
+    private const double TabHeadOffsetFactor = 3.0 / 5.0;
     private static readonly double TabDeadHeadScale =
         LilySharp.Core.Svg.Layout.EmmentalerDesignSize.Magstep(TabDeadHeadFontSizeStep);
     private static readonly double TabDeadHeadWidth =
@@ -848,7 +869,7 @@ internal static partial class SharedRenderer
     private static void DrawTabFret(ScoreTextMetrics fonts, int stringCount, int fret, int stringNum, double x, double staffY,
         double stringSpace, int sourcePosition, IDrawingContext gc,
         List<(int StringIndex, double Left, double Right)> digitGaps, bool isDead = false,
-        bool parenthesized = false, bool harmonic = false)
+        bool parenthesized = false, bool harmonic = false, bool struck = false)
     {
         // String 1 (highest pitch) is the TOP tab line; string N the bottom
         // (device down = smaller Y-up).
@@ -857,6 +878,14 @@ internal static partial class SharedRenderer
         // (TabDeadHeadWidth's remarks); its string gap is the glyph's own box.
         string fretText = fret.ToString();
         double fretEm = TabFretEm(fonts, stringCount);
+        if (struck && !isDead)
+        {
+            // A STRUCK member's number (TabStruckScale) is smaller, and stands left of a full one's
+            // centre by what its smaller reference '8' takes off the head offset.
+            x -= TabHeadOffsetFactor * LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(fonts, stringCount, "8", fretEm)
+                * (1 - TabStruckScale);
+            fretEm *= TabStruckScale;
+        }
         double bgWidth = isDead
             ? TabDeadHeadWidth
             : LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(fonts, stringCount,
@@ -1056,6 +1085,15 @@ internal static partial class SharedRenderer
             return false;
         }
 
+        // …and a struck member's number is smaller (TabStruckScale).
+        bool IsStruckString(int str)
+        {
+            for (int k = 0; k < alloc.Length; k++)
+                if (alloc[k].stringNum == str && chord.Notes[k].IsStruck)
+                    return true;
+            return false;
+        }
+
         double[] dx = TabChordColumns.Offsets(fonts, tuning.Length, notes);
         for (int i = 0; i < notes.Count; i++)
         {
@@ -1064,7 +1102,7 @@ internal static partial class SharedRenderer
                 continue;
             DrawTabFret(fonts, tuning.Length, notes[i].fret, notes[i].str, itemX + dx[i], staffY, stringSpace,
                 chord.SourcePosition, gc, digitGaps, IsDeadString(notes[i].str),
-                parenthesized: tied, harmonic: IsHarmonicString(notes[i].str));
+                parenthesized: tied, harmonic: IsHarmonicString(notes[i].str), struck: IsStruckString(notes[i].str));
         }
 
         // Augmentation dots sit to the right of the whole chord (its rightmost digit
