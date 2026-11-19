@@ -66,6 +66,30 @@ public class MidiPedalTests
     }
 
     [Fact]
+    public void LiftedWhenATremoloIsOver_IsAnEmptyChordAfterTheBlock()
+    {
+        // Calamo request 29 (2026-11-19): "lift when the tremolo has been played". The empty
+        // chord after the block takes no time and stands at the block's end — tick 1920, where
+        // LilyPond's `\repeat tremolo … \sustainOff` lifts.
+        var midi = Midi(Piano("g'1 | a'1 |", "c4@sustain d repeat tremolo 8 { e32 g } <>@!sustain | f1 |"));
+        Assert.Equal("v0 ^1920", Changes(Track(midi, "lh")));
+        // Written inside, the lift is at its note's first stroke: the first, the tremolo's onset.
+        midi = Midi(Piano("g'1 | a'1 |", "c4@sustain d repeat tremolo 8 { e32@!sustain g } | f1 |"));
+        Assert.Equal("v0 ^960", Changes(Track(midi, "lh")));
+    }
+
+    [Theory]
+    [InlineData("repeat tremolo 8 { e32 g }@!sustain", "} <>@!sustain.")]
+    [InlineData("repeat tremolo 8 { e32 g }@f", "} <>@f.")]
+    public void AMarkGluedToABlocksBrace_IsToldTheEmptyChord(string block, string repair)
+    {
+        var tree = SyntaxTree.Parse(Piano("g'1 | a'1 |", "c4@sustain d " + block + " | f1@!sustain |"));
+        var error = tree.Diagnostics.First(d => d.Message.Contains("is not something a music block can hold"));
+        Assert.Contains("an empty chord after the block", error.Message);
+        Assert.EndsWith(repair, error.Message);
+    }
+
+    [Fact]
     public void ItIsReadWhereverTheMusicPlaysIt()
     {
         // On a rest; in a repeat, each time; in a phrase; in a tuplet.

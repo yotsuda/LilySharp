@@ -471,6 +471,16 @@ internal sealed partial class Parser
             SyntaxKind.At when _position > 0 && _tokens[_position - 1].Kind == SyntaxKind.Identifier
                                && _tokens[_position - 1].TrailingTriviaWidth == 0 && Current.LeadingTriviaWidth == 0
                 => ReportMarkOnAName(),
+            // A mark glued to a block's closing brace — `repeat tremolo 12 { … }@!sustain`, a
+            // pedal lifted when the tremolo is over (Calamo request 29, 2026-11-19). The same
+            // answer as a mark on a name: an empty chord after the block stands at its end.
+            // Reported and kept exactly as any stray token; only the sentence says what to write.
+            SyntaxKind.At when _position > 0 && _tokens[_position - 1].Kind == SyntaxKind.CloseBrace
+                               && _tokens[_position - 1].TrailingTriviaWidth == 0 && Current.LeadingTriviaWidth == 0
+                => ReportStrayItem("a music block",
+                    "A mark stands on a note, and a block is not one. Write the mark on an empty chord "
+                    + "after the block, which takes no time and stands where the block ends: } <>@"
+                    + MarkWordAfterAt() + "."),
             _ => ReportStrayItem("a music block",
                     "A music block holds notes, rests, chords, barlines and the directives "
                     + "that act from a point in the music (key, clef, time, tempo, octave, "
@@ -514,6 +524,24 @@ internal sealed partial class Parser
             + "number is a value, and belongs in a value position such as an "
             + "override (override Stem.length = 3.5).");
         return Advance();
+    }
+
+    /// <summary>The mark written after the <c>@</c> at <c>Current</c>, as far as it is glued —
+    /// <c>mf</c>, <c>!sustain</c> — for a message that spells the repair; <c>mf</c> when there
+    /// is none.</summary>
+    private string MarkWordAfterAt()
+    {
+        var text = new System.Text.StringBuilder();
+        for (int i = 1; i <= 2 && Peek(i) is { LeadingTriviaWidth: 0, Text.Length: > 0 } word
+                        && Peek(i - 1).TrailingTriviaWidth == 0; i++)
+        {
+            text.Append(word.Text);
+            if (char.IsLetter(word.Text[0]))
+                return text.ToString();
+            if (word.Text != "!")
+                break;
+        }
+        return "mf";
     }
 
     /// <summary>Reports a mark glued to a phrase's name (LYS0030) once, keeps the <c>@</c> and
