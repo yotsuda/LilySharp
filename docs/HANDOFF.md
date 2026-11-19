@@ -96,7 +96,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **★ 反復とナビ記号を section の音楽にも書く（オーナー提案 2026-11-14・第1243＝第1249 で段 0〜8 が済み・LYS1034 は phrase だけ）**: 全部 `docs/inline-repeat-design.md`（規則 §3・段取り §4・未決 §6・経過 §7・エディタのコマンド §8）。オーナー決定（2026-11-14）: 対は form に組み立てた列で見る／`| |:` は空小節のまま／歌詞の verse は 5 規則／書き出しはなるべく form 側（Q2）。**次**（順は上から。歌詞の規則 3 と警告の 4 種目は第1253、ending・ナビ記号を全パートに書くコマンドと LYS1070 の quick fix は第1254 で済み＝§1.1）: ⑴ この島（反復とナビ記号を音楽に書く）の「次」は無い＝判断待ちも残りの形も 0。step キー・`PlayForm` の一本化（第1255）、3 番括弧＝3 回（form は第1256・音楽は第1257・コードの行は第1258）は済み。次の一手は下の積み残しから（オーナーに訊く）。段 9（読み込みと OMR の書き出し）は Q2 の決定で今の形のまま＝作業なし。⚠️ Calamo と Dettato の REQUESTS への知らせ（Q2「本体が出てから」）は未＝release のときに書く。実機は `MANUAL-CHECKS` 第1243・第1249・第1253・第1254・第1255。
 - **★ 歌詞と歌い手の文法の作り直し（オーナー決定 2026-11-10・第1217）**: `docs/lyrics-singer-design.md` が全部（§9 が作業順）。①②③④は済み（§1.1 第1217〜第1219）。⚠️ ④の `ん` の聞こえ方はオーナーの実聴待ち（`MANUAL-CHECKS` 第1219）。Cantoria の master は zh／ko を歌う（VSIX の入れ直しはオーナー）。`singer` は 1 行 1 声で score の中にも書ける（第1220）。古い書き方を案内する専用エラーは作らない（オーナー指示）。設計 §10「パート自身の歌詞」（`part sop { lyrics words }`）は第1222 で実装（§1.1 第1222・実機は `MANUAL-CHECKS` 第1222）＝§9 は全部済み。**次の一手の指示はまだ無い＝下の積み残しから選ぶならオーナーに訊く**。積み残し: Calamo の生成コードが `lyrics … sings` のまま（`docs\repro\REQUESTS.md` に連絡済み・Calamo 側は未 commit）／実機確認（`MANUAL-CHECKS` 第1217）／perf ベンチ／コーパス外のオーナーのファイル（Downloads の Tabidachi・Rose Garden など）は未移行で、`LilySharp-Lab\sessions\p1217\migrate\migrate.ps1 -Lys -Files` で書き換えられる／Rose Garden のオクターブ変換はオーナーの回答待ち。
 - **★ 歌詞のある譜表では強弱記号とヘアピンを譜表の上に（オーナー決定 2026-11-11）＝設計 `docs/dynamics-above-lyrics-design.md` §5 の 1〜6 は全部済み（第1224〜第1225・§1.1）**。**D3 は LilyPond の規則に替えた（オーナー決定 2026-11-11「LP に合わせて」）**＝向きを書いた記号が*線*の向きを決め、同じ線の後続（向きを書いていない記号）は従う。歌詞のない譜表でも同じ（`c@f.up@decresc … g@p` の p は上）。残りはオーナー: 実機のプレビュー（`MANUAL-CHECKS` 第1225）と release（CHANGELOG は 2 つとも `## Unreleased`・`[engraving]`）。残る穴: 2 声部の譜表で上の声部のヘアピンの線に下の声部の同じ拍の強弱記号も乗る（ヘアピンが声部を持たない既知の穴＝`DynamicAlignEngraver` の注 ⑵・Lab `p1225/dyn/out/vv.png`）。線の向きは第1260 で声部ごとにした。**次の一手の指示はまだ無い＝上の行の積み残しから選ぶならオーナーに訊く**。
-- **★ 評価 4（2026-11-13）の残り＝⑴ 書き出し・⑵ 誤った診断・⑷ 文書は第1227 で閉じた（§1.1）**。書き手のメモと再現は Lab `sessions/p1226/md/eval4/{bigband,choral,chamber,rock}`。⑶ `lysc review` は第1228 で閉じた（§1.1）。**残り**: ⑸ 欠けている機能は上のオーナー決定 ⑥。**残っているもの**（どれも未着手・値段は未測定）: **一覧は Lab `sessions/p1242/leftovers.md`**（**オーナー指示 2026-11-14・第1231「残りの欠陥を順に」＝この一覧の「残り（欠陥）」と「第1231〜第1235 が見つけて残したもの」は訊かずに着手してよい**。機能の追加は訊く）。残りの先頭（一覧）: 第1321 の残り（声部を移る text spanner と ottava）／黙っている段の wish の測っていない形（装飾音で始まる小節・段の最初の小節）／`lysc review` の 3 件。MusicXML の四分音の `<accidental>` は他のリーダーの読みを確かめてから（一覧に理由）。見送ったものの理由もそこ。小残り（第1226 から）: condensedStaff の数字付き低音など 3 種の再住所・tab のアルペジオ線が自分の数字に 0.035・小文字だけの枠の中央が 0.23〜0.51 下・`md end` は既定の yMargin では動かない・箇条書きのリンク・不安定な網 2 種（`ScoreVideoShapeTests`、まれに `SvgSnapshotTests`）。**補助は同じモデルで 3〜5 件ずつ順番に・数行は自分で・全 full は自分が 1 回**（memory）。
+- **★ 評価 4（2026-11-13）の残り＝⑴ 書き出し・⑵ 誤った診断・⑷ 文書は第1227 で閉じた（§1.1）**。書き手のメモと再現は Lab `sessions/p1226/md/eval4/{bigband,choral,chamber,rock}`。⑶ `lysc review` は第1228 で閉じた（§1.1）。**残り**: ⑸ 欠けている機能は上のオーナー決定 ⑥。**残っているもの**（どれも未着手・値段は未測定）: **一覧は Lab `sessions/p1242/leftovers.md`**（**オーナー指示 2026-11-14・第1231「残りの欠陥を順に」＝この一覧の「残り（欠陥）」と「第1231〜第1235 が見つけて残したもの」は訊かずに着手してよい**。機能の追加は訊く）。残りの先頭（一覧）: 黙っている段の wish の測っていない形（装飾音で始まる小節・段の最初の小節）／`lysc review` の 3 件。MusicXML の四分音の `<accidental>` は他のリーダーの読みを確かめてから（一覧に理由）。見送ったものの理由もそこ。小残り（第1226 から）: condensedStaff の数字付き低音など 3 種の再住所・tab のアルペジオ線が自分の数字に 0.035・小文字だけの枠の中央が 0.23〜0.51 下・`md end` は既定の yMargin では動かない・箇条書きのリンク・不安定な網 2 種（`ScoreVideoShapeTests`、まれに `SvgSnapshotTests`）。**補助は同じモデルで 3〜5 件ずつ順番に・数行は自分で・全 full は自分が 1 回**（memory）。
 - **オーナー待ち（2026-11-18・歌声の設定まわり）＝Lab `sessions/p1304/owner-checks.md`**: ＋第1307: `MANUAL-CHECKS` W8〜W10・最初の歌 4 曲の耳の確認・中国語と韓国語の文の確認・Cantoria の Marketplace 公開後の Upgrade の確認（§1.1 第1307）。 push・拡張の入れ直しの後の実機（ウォークスルー W1〜W7・Cantoria の設定画面と Find Engines）・判断 2 つ（ウォークスルーを常に一覧に出すか・ボタンの名前）・確認用に入れた VOICEVOX の始末。
 - **オーナー待ち（第1226）**: `samples/harbour-lights.lys`・`README.md` はオーナーの作業中の変更＝**commit しない**（歌を聴いてから。歌詞とリズムは Claude が直し済み・`ReadmeSampleTests` はそれで赤）／`tools\Deploy-Lsp.ps1`・Cantoria `deploy-extension.ps1`／実機（`MANUAL-CHECKS` 第1226: 補完・問題パネルの歌い手の失敗・LYS4078・プログレスバー・フェンスの色と Enter／囲み）／初回の声のダウンロード・Cantoria の声の解決の一本化・言語に合わせた既定の声＝未決。
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
@@ -146,6 +146,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1322セッション（2026-11-19・YT-DELL2・第1321 と同じ会話）
+
+leftovers の「第1321」の先頭の便（base `4aeb3c7e5`）。開始時 full 17895 合格 / 0 失敗 / skip 2 / 合計 17897（Lab `p1322` `run1.trx`）。終了時 full 17901 合格 / 0 失敗 / skip 2 / 合計 17903（`run2.trx`）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
+- **combinedStaff で声部を移るパートの text spanner と ottava は 1 本の線**（`06c7307c5`・`[engraving]`）: この 2 つの engraver は開いた線を（譜・声部）で持つ（LilyPond の Voice の engraver）。combinedStaff のパートは combiner が声部のあいだを動かす 1 本の音楽なので、2 パートが別々の小節の `@rit` と Solo II の小節の `@!rit` は 2 つの声部に着く。第1321 は両端を集めた場所のまま残した（線は出るが、終わりを始まりの声部で読むので小節の終わりまで伸びた）。直し: 終わりの印が始まりの声部を持つ（`MusicMarkItem.LineVoice`・対の鍵は `PairingVoice`）／text spanner は終わりの item を終わりの声部で読む（`TextSpannerItem.EndVoiceIndex`・描く側と、上の行の部屋 `InkAboveStaff`）。ottava の端は譜表の列を時刻で読むので対の鍵だけ。`CombinedStaffReaddress.MoveMarks` は声部が分かれた対も動かす。LILYSHARP-OWN（LilyPond が別の context の stop をどう描くかは測っていない）。
+- 探り譜 Lab `p1322/probe`（x1・x2・y1〜y4＝別々→Solo II・Solo II→別々・3 小節）。網 `CombinedStaffHairpinTests` +6 行（線の両端の X 4 行・部屋の右端 2 行）。毒 9 本のうち 6 本が赤（Lab `p1322/poisons.ps1`）・緑 3 本は観測者なし＝端が装飾音のときの `BoundX` の腕 2 つと、section の切断で終わりの声部を戻す行。全 svg の掃き 0 / 1276（陽性対照は探り譜 26 冊のうち 4 冊）。行番号の表は再生成（`APPROXIMATIONS.md` に OWN 1 件）。
+- **次**: leftovers の「第1321」の残り（誰も刻まない休符の上の終わり・a2 の迷子の stop）→ review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
+
+## 以下は第1321セッションの経緯
+
 ### 1.1 第1321セッション（2026-11-19・YT-DELL2）
 
 leftovers の「第1238」の残り 2 つの便（base `ed10b9c56`）。開始時 full 17864 合格 / 0 失敗 / skip 2 / 合計 17866（Lab `p1321` `run1.trx`）。終了時 full 17895 合格 / 0 失敗 / skip 2 / 合計 17897（`run2.trx`）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
@@ -154,15 +163,6 @@ leftovers の「第1238」の残り 2 つの便（base `ed10b9c56`）。開始�
 - **段の「部屋」の網**: `HairpinRoomTests` 5 行＝`CalculateOnSystem` の楔と描かれた楔の両端が同じ（2 声部目のヘアピン・別の声部で終わる形）。
 - 網 `CombinedStaffHairpinTests` 26 行と上の 5 行。毒 17 本が全部赤（Lab `p1321/poisons.ps1`・R1・R2 が部屋の側だけの `VoiceMeasures`）。全 svg の掃き 0 / 1276（追跡の本にこの形は 0 冊・陽性対照は探り譜 19 冊のうち 9 冊）。行番号の表 2 枚は再生成して差なし。
 - **次**: leftovers の「第1321」（声部を移る text spanner と ottava＝engraver が終わりの声部を持つ形）→ review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
-
-## 以下は第1320セッションの経緯
-
-### 1.1 第1320セッション（2026-11-19・YT-DELL2・第1319 と同じ会話）
-
-leftovers の「第1238」の残りの便（base `e76f21d62`）。開始時の full は第1319 の終了時の値（同じ HEAD・17850 合格 / 0 失敗 / skip 2 / 合計 17852）＝⚠️ `-Start` の full は build で落ちた（裏取りの最中に Core を編集した＝自分の誤り。`-Start` が返るまで Core に触らない）。終了時 full 17864 合格 / 0 失敗 / skip 2 / 合計 17866（Lab `p1320` `run2.trx`）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物。
-- **ドラム譜のヘアピンは 1 人の奏者のもの**（`9406998ad`・`[engraving]`・`HairpinEngraver.AsOneDrummers`＝LILYSHARP-OWN・強弱の `DrumDoubles`（オーナー報告 2026-10-30）と同じ規則の続き）: 両方の行が `@p … @f` を書くと 1 組だけ刷るが、落ちた側の行のヘアピンは端の文字を見つけず、音の列から列へ・刷られた p と f の下の別の線に立っていた（Lab `p1320/probe` d1）。両方の行がヘアピンも書くと 2 本描いていた（d2）。直し: 落ちた写しに付くヘアピンは刷られた写しの声部と番号へ付け直す／同じ譜の同じ向き・同じ拍から同じ拍のヘアピンは最初の声部の 1 本。部屋の予約（`ScoreSideTables.HairpinsByStaff`）も同じ 1 本。音高のある譜は声部ごとのまま。⚠️ 「同じヘアピンは 1 本」は規則の延長として訊かずに入れた＝オーナーに報告済み。
-- 網 `DrumChartHairpinTests` 14 行・毒 10 本が赤（Lab `p1320/poisons.ps1`）・全 svg の掃き 0 / 1276（陽性対照は探り譜）。
-- **次**: leftovers の「第1238」の残り 2 つ（combinedStaff のヘアピンの re-address・段の「部屋」の網）→ review.md の 3 つと F3 段 2（オーナー判断）。第1317・第1315・第1314 の残りも同じ一覧に。第1308 の未決はオーナー待ち。
 
 ## 2. 開いている作業
 
