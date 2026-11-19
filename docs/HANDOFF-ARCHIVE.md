@@ -277,6 +277,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1307セッションの経緯
+
+### 1.1 第1307セッション（2026-11-18・YT-DELL2・第1306 とは別の会話）
+
+オーナーの報告から入った便（`-Start` は終わりに回した）。終了時 full 17704 合格 / 0 失敗 / skip 2 / 合計 17706（Lab `p1307` `run1.trx`）・拡張 1298 / 0 / skip 1。REQUESTS は見ていない。Lily# の commit は `5b399b052` からの 11 個・Cantoria は「A folder that cannot be used is not set」＝どれも未 push。経緯は各 commit message に在る。
+- **Cantoria**: 使えないフォルダを選んだときの問いを「Choose Another Folder…」と Cancel に（`chooseFolder`・4 つのフォルダ選択すべて）。
+- **ウォークスルー**: 古い Cantoria なら最初のステップが Upgrade（context `lilysharp.cantoriaOutdated`・最新は `product.json` の gallery に訊く。⚠️ 更新が実際に入るかは Marketplace 公開後に確認）。`Deploy-Lsp.ps1` は `walkthrough` も入れる。
+- **最初の歌**: `walkthrough/first-song-{ja,en,zh,ko}.lys`（ふるさと・Twinkle・送别・아리랑の 1 番・題名と `md box` のメモつき）と各 `-short.lys`（出だし）。選び方は `singerCore.firstSongFor`（声が歌う言語）と `hasNvidiaGpu`（あれば全曲）。旋律は Wikipedia の記事の `<score>` と音高を照合・`lysc wav --singer` で 4 曲とも歌った（耳では未確認）。読みは `は[わ]`・`长[chang]` `地[di]`・`넘[너] 어[머]` ほか。中国語と韓国語の文は Claude が書いた＝読める人の確認待ち。
+- **本体の欠陥 3 つ**: `md` フェンスの太字の後の空白がブラウザで消える（空白で始まる SVG の `<text>`）／LYS4037 が歌詞の言語を見ていなかった（`LyricReadingKanaValidator` へ）／韓国語の文の行末が空白にならない（`Prose.JoinsWithoutSpace`）。網 +7・snapshot は動かず・毒は回していない。
+- **作らなかったもの**: Cantoria を 4 言語以外へ＝OpenUtau の発音変換データ（`G2p/Data` の zip）に出どころとライセンスの記載が無い。オーナーと「今は作らない」。
+- **測ったもの**: フォルダを選んだ後の問いが遅い＝Windows のフォルダ選択ダイアログの返事（初回 41.6 s・Lab `p1307/slow-dialog`）。Cantoria は 0 ms。
+- **残り**: 実機（`MANUAL-CHECKS` W8〜W10）と拡張の入れ直しはオーナー。NVIDIA 以外の GPU は短い版が先／`.lys` の全角の句読点に VS Code の黄色い枠（抑えるかは未決）。**次**: 第1306 の「次」のまま（第1308 の語りの末尾に写した）。
+
 ## 以下は第1306セッションの経緯
 
 ### 1.1 第1306セッション（2026-11-18・YT-DELL2・新しい会話）

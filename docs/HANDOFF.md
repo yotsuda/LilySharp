@@ -146,28 +146,23 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1309セッション（2026-11-19・YT-DELL2・第1308 と同じ会話）
+
+`-Start p1309` を回し、Calamo の依頼 28 を読むところまでで締めた便（会話が長くなったので、作るのは次の会話。オーナーの指示）。開始時 full 17718 合格 / 1 失敗 / skip 2 / 合計 17721（Lab `p1309` `run1.trx`・失敗は `ScoreVideoShapeTests.AScoreOfOnePage_IsItsMusic_NotTheSheet`＝`s00000.png` を別のプロセスが掴んでいた・不安定な網で、第1308 の終了時は 17719 / 0）。REQUESTS は Calamo #28 が open・Dettato は 0。コードは触っていない。
+- **Calamo #28（2 音トレモロの線を両方の符幹につなげる形・学習用）＝オーナーが受けた（2026-11-19）: `layout { tremoloBeams joined }`・既定は今のまま**。読んだ所と段取りは Lab `sessions/p1309/request28-plan.md`（浮かせる量は `EngravingDefaults.TremoloBeamGap` 1 つで描画の 2 行だけが読む・LilyPond は `\override Beam.gap = #0`＝`beam.cc` `get_gaps` と同じ式に 0 を通す・曲全体で選ぶ前例は `ottavaLine`）。
+- **次**: ① #28 を作る（上の段取り）→ ② leftovers の「第1239」の残り（condensedStaff の終わりは「立っている写し」の場所・刻印の網が無い運び手・「item の時刻」の綴り 3 つ・3 声部の強弱の並び）→「第1238」の残り（combinedStaff の印の re-address・drum 譜の落ちた側のヘアピン・段の部屋の予約の網）。その先は review.md の 3 つ（`mid-bar-break`・F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。第1308 の残り（実機の確認・未決 2 つ）は下の語りに在る。
+
+## 以下は第1308セッションの経緯
+
 ### 1.1 第1308セッション（2026-11-18〜19・YT-DELL2・新しい会話）
 
 オーナーの依頼を順に受けた便（`-Start` は終わりに・base `c993f302a`）。終了時 full 17719 合格 / 0 失敗 / skip 2 / 合計 17721（Lab `p1308` `run1.trx`）・拡張 1294 / 0 / skip 1。REQUESTS は Calamo #27 を `fixed` にした・open は両方 0。Lily# の commit は `1a3b9972e` からの 20 個（1 個はオーナー側の `e3765de71`）＝未 push。経緯は commit message と設計メモに在る。毒は回していない。
 - **メトロノームのウィンドウの整理（オーナー決定・`docs/transport-mixer-design.md` §9〜§13）**: 録音のパートの行は vocals・guitar・piano・other・bass・drums の順／Score と Recording の見出しにボタン 2 つ＝グループのオン／オフ（行の選択を保つ・Score は **Play**）と **All**／**Loop グループ・A-B ボタンと番号欄・8 本の帯・右クリックの Play from Here／A Here／B Here は撤去**、Repeat はヘッダの ⏹ の右（`ab-repeat-design.md` §0）／Tempo は 1 行で開閉なし／Faders 100% は Octave の行の右／小節はヘッダの時間の上（`12 / 118`）。使われないコードも掃除。
 - **録音**: Speed and pitch は撤去＝残るのは **Octave** だけ。隣のファイルの `tuning` は使わない（3 つの形を試してやめた＝理由と再検討の条件は `recording-design.md` §3 の 2 の ★）。**録音つきの譜面から録音なしへ切り替えるとパネルに前の録音が残る**（`sendRecording` の順番の入れ替わり）を直した `3037c1739`。
 - **拍の繰り返し `{ … } % % %`（Calamo #27・オーナー決定・`b3dce0d24`・`percent-repeat-design.md` §5・GRAMMAR の BeatRepeat）**: 第904 で消したものを戻した。診断 LYS1074。絵は LilyPond 2.26.0 と同じ並び（Lab `p1308/beat`）。
-- **実機の確かめ方**: 隔離した VS Code を CDP で読む型を Lab `p1308/e2e` に置いた。⚠️ ページに同名の関数を 2 つ宣言すると後のものが黙って勝つ（網 1 本を足した）。
+- **実機の確かめ方**: 隔離した VS Code を CDP で読む型＝Lab `p1308/e2e`。
 - **残り**: 実機は小節の表示と録音の切り替えだけ見た＝ほかは `MANUAL-CHECKS`（「Repeat はヘッダ」「Octave だけの録音の行・1 行の Tempo」）。site は release のときに書き直す。拍の繰り返しは補完なし・ドラム譜の行は読まない。未決＝録音が無いときの Faders 100% の置き場・Tempo の下限（今 50%）。
-- **次**（第1306 から写した）: leftovers の「第1239」の残り（condensedStaff の終わりは「立っている写し」の場所・刻印の網が無い運び手・「item の時刻」の綴り 3 つ・3 声部の強弱の並び）→「第1238」の残り（combinedStaff の印の re-address・drum 譜の落ちた側のヘアピン・段の部屋の予約の網）。その先は review.md の設計が先の 3 つ（`mid-bar-break`・F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。
-
-## 以下は第1307セッションの経緯
-
-### 1.1 第1307セッション（2026-11-18・YT-DELL2・第1306 とは別の会話）
-
-オーナーの報告から入った便（`-Start` は終わりに回した）。終了時 full 17704 合格 / 0 失敗 / skip 2 / 合計 17706（Lab `p1307` `run1.trx`）・拡張 1298 / 0 / skip 1。REQUESTS は見ていない。Lily# の commit は `5b399b052` からの 11 個・Cantoria は「A folder that cannot be used is not set」＝どれも未 push。経緯は各 commit message に在る。
-- **Cantoria**: 使えないフォルダを選んだときの問いを「Choose Another Folder…」と Cancel に（`chooseFolder`・4 つのフォルダ選択すべて）。
-- **ウォークスルー**: 古い Cantoria なら最初のステップが Upgrade（context `lilysharp.cantoriaOutdated`・最新は `product.json` の gallery に訊く。⚠️ 更新が実際に入るかは Marketplace 公開後に確認）。`Deploy-Lsp.ps1` は `walkthrough` も入れる。
-- **最初の歌**: `walkthrough/first-song-{ja,en,zh,ko}.lys`（ふるさと・Twinkle・送别・아리랑の 1 番・題名と `md box` のメモつき）と各 `-short.lys`（出だし）。選び方は `singerCore.firstSongFor`（声が歌う言語）と `hasNvidiaGpu`（あれば全曲）。旋律は Wikipedia の記事の `<score>` と音高を照合・`lysc wav --singer` で 4 曲とも歌った（耳では未確認）。読みは `は[わ]`・`长[chang]` `地[di]`・`넘[너] 어[머]` ほか。中国語と韓国語の文は Claude が書いた＝読める人の確認待ち。
-- **本体の欠陥 3 つ**: `md` フェンスの太字の後の空白がブラウザで消える（空白で始まる SVG の `<text>`）／LYS4037 が歌詞の言語を見ていなかった（`LyricReadingKanaValidator` へ）／韓国語の文の行末が空白にならない（`Prose.JoinsWithoutSpace`）。網 +7・snapshot は動かず・毒は回していない。
-- **作らなかったもの**: Cantoria を 4 言語以外へ＝OpenUtau の発音変換データ（`G2p/Data` の zip）に出どころとライセンスの記載が無い。オーナーと「今は作らない」。
-- **測ったもの**: フォルダを選んだ後の問いが遅い＝Windows のフォルダ選択ダイアログの返事（初回 41.6 s・Lab `p1307/slow-dialog`）。Cantoria は 0 ms。
-- **残り**: 実機（`MANUAL-CHECKS` W8〜W10）と拡張の入れ直しはオーナー。NVIDIA 以外の GPU は短い版が先／`.lys` の全角の句読点に VS Code の黄色い枠（抑えるかは未決）。**次**: 第1306 の「次」のまま（第1308 の語りの末尾に写した）。
+- **次**: 第1309 の語りの末尾。
 
 ## 2. 開いている作業
 
