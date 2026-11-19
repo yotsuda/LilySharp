@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Fixed: a drum chart drew a hairpin beside its levels, or twice** (`[engraving]`). Where both lines of a `drums { … }` chart write the level (`{ hh4@p … hh@f } { bd4@p@cresc … bd@f }`) one *p* and one *f* are printed — one drummer's — but the hairpin of the line whose levels were the dropped copies ran under them on a line of its own, from note to note, and where both lines wrote the hairpin both wedges were drawn. A drum staff's hairpin stands between the printed levels now, whichever line writes it, and the same hairpin over the same beats in two lines is one wedge. A pitched staff still engraves each voice's.
+
 - **Fixed: a slash or a repeated value inside a tuplet lost its figures and its `@cross`** (`[engraving]`). `tuplet 3/2 { /4@figuredBass(6) / / }` drew no figure, and so did a bare value there (`c'4 tuplet 3/2 { 4@figuredBass(6) 4 4 }`); a `/4@cross` or `4@cross` in a tuplet stayed on its own staff when no other note of the book was moved. Both are read now as they are outside a tuplet — a note, a chord and a `q` in a tuplet always were. The LilyPond, MusicXML and MIDI exports were right already.
 
 - **Fixed: a drum did not play its hairpins** (`[playback]`). `sn4@p@cresc sn sn sn@f` struck the first three hits at *p* and jumped to *f* on the fourth, where any other part's notes climb through a crescendo: no drum note — a single hit, a drum chord, their bare values, a `q` — carried the hairpin into the playback. A drum part swells and fades now as every part does, in the MIDI, the WAV and the preview, and a hairpin in one line of a `drums { … }` chart ends at the moment the other line writes its level, a tuplet's hit included.

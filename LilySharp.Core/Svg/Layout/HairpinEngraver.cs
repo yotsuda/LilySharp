@@ -1502,4 +1502,89 @@ internal static class HairpinEngraver
                 return true;
         return false;
     }
+
+    /// <summary>
+    /// A drum staff's hairpins as ONE drummer's: a hairpin whose level is the staff's second
+    /// copy (<see cref="DynamicEngraver.DrumDoubles"/> — both lines of a chart writing
+    /// <c>@p</c>, one printed) is addressed to the copy that is printed, and the same hairpin
+    /// written in two of the staff's voices over the same beats is one wedge, the first voice's.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond engraves each voice's hairpin, as it engraves each voice's level.
+    ///   departs from: ly/engraver-init.ly Voice's Dynamic_engraver (one per voice).
+    ///   observed by: DrumChartHairpinTests.
+    /// Until session 1320 the level was printed once and its wedge was not: the hairpin of the
+    /// line whose p and f were the dropped copies found no text at its ends, stood on the note
+    /// columns and rode a line of its own under the printed p and f (Lab sessions/p1320/probe
+    /// d1), and both lines' wedges were drawn where both wrote one (d2).
+    /// </remarks>
+    internal static ImmutableArray<HairpinItem> AsOneDrummers(ImmutableArray<HairpinItem> hairpins,
+        ImmutableArray<DynamicItem> dynamics, Func<int, bool> isDrumStaff,
+        Dictionary<int, ImmutableArray<Voice>>? voicesByStaff, ImmutableArray<Voice> voices)
+    {
+        if (hairpins.IsDefaultOrEmpty)
+            return hairpins;
+        bool any = false;
+        foreach (var h in hairpins)
+            if (isDrumStaff(h.StaffIndex)) { any = true; break; }
+        if (!any)
+            return hairpins;
+
+        Semantics.Fraction? OnsetOf(int staff, int voice, int measure, int item)
+        {
+            var staffVoices = voicesByStaff != null && voicesByStaff.TryGetValue(staff, out var sv) ? sv : voices;
+            if (staffVoices.IsDefaultOrEmpty || voice < 0 || voice >= staffVoices.Length
+                || measure < 0 || measure >= staffVoices[voice].Measures.Length)
+                return null;
+            return LayoutUtilities.ItemOnset(staffVoices[voice].Measures[measure], item);
+        }
+
+        // Where each dropped copy of a level is printed: DrumDoubles' own reading, the first
+        // voice's copy standing.
+        var printed = new Dictionary<(int Staff, int Measure, Semantics.Fraction Onset, string Text, bool Above), (int Voice, int Item)>();
+        Dictionary<(int Staff, int Voice, int Measure, int Item), (int Voice, int Item)>? moved = null;
+        if (!dynamics.IsDefaultOrEmpty)
+            foreach (int i in Enumerable.Range(0, dynamics.Length).OrderBy(i => dynamics[i].VoiceIndex))
+            {
+                var d = dynamics[i];
+                if (!isDrumStaff(d.StaffIndex) || d.IsExpressiveText || d.Level == DynamicLevel.None
+                    || OnsetOf(d.StaffIndex, d.VoiceIndex, d.MeasureIndex, d.ItemIndex) is not { } onset)
+                    continue;
+                var key = (d.StaffIndex, d.MeasureIndex, onset, d.Text, d.IsAbove);
+                if (printed.TryGetValue(key, out var first))
+                    (moved ??= [])[(d.StaffIndex, d.VoiceIndex, d.MeasureIndex, d.ItemIndex)] = first;
+                else
+                    printed[key] = (d.VoiceIndex, d.ItemIndex);
+            }
+
+        var seen = new HashSet<(int Staff, HairpinDirection Direction, bool Above, int StartMeasure, Semantics.Fraction Start,
+            int EndMeasure, Semantics.Fraction End, bool Stop)>();
+        var kept = new bool[hairpins.Length];
+        var result = hairpins.ToBuilder();
+        // The first voice's wedge stands: read in voice order, each kept at its own place.
+        foreach (int i in Enumerable.Range(0, hairpins.Length).OrderBy(i => hairpins[i].VoiceIndex))
+        {
+            var h = hairpins[i];
+            kept[i] = true;
+            if (!isDrumStaff(h.StaffIndex))
+                continue;
+            if (moved != null)
+            {
+                if (moved.TryGetValue((h.StaffIndex, h.VoiceIndex, h.StartMeasureIndex, h.StartItemIndex), out var start))
+                    h = h with { VoiceIndex = start.Voice, StartItemIndex = start.Item };
+                if (!h.EndsAtStop && !h.MetInAnotherVoice
+                    && moved.TryGetValue((h.StaffIndex, h.EndVoiceIndex, h.EndMeasureIndex, h.EndItemIndex), out var end))
+                    h = h with { EndVoiceIndex = end.Voice, EndItemIndex = end.Item };
+                result[i] = h;
+            }
+            if (OnsetOf(h.StaffIndex, h.VoiceIndex, h.StartMeasureIndex, h.StartItemIndex) is { } from
+                && OnsetOf(h.StaffIndex, h.EndVoiceIndex, h.EndMeasureIndex, h.EndItemIndex) is { } to
+                && !seen.Add((h.StaffIndex, h.Direction, h.IsAbove, h.StartMeasureIndex, from, h.EndMeasureIndex, to, h.EndsAtStop)))
+                kept[i] = false;
+        }
+        for (int i = hairpins.Length - 1; i >= 0; i--)
+            if (!kept[i])
+                result.RemoveAt(i);
+        return result.ToImmutable();
+    }
 }

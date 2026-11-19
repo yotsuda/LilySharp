@@ -792,6 +792,10 @@ internal sealed partial class LayoutEngine
 
         // Detect and layout hairpins from cresc/decresc marks (the plays are read above).
         var hairpinItems = HairpinEngraver.DetectHairpins(musicMarks, dynamics, sectionPlays);
+        // …a drum staff's as one drummer's, as its levels are above (drumDoubles).
+        hairpinItems = HairpinEngraver.AsOneDrummers(hairpinItems, dynamics,
+            si => staffByIndex != null && staffByIndex.TryGetValue(si, out var ds) && ds.Clef == ClefType.Percussion,
+            voicesByStaff, staffVoices);
         // A tab staff blanks the wedge too, and the ITEM carries its own SourceIndex, so
         // this one is cut before the layout is built rather than after.
         // LILYPOND-REF: ly/engraver-init.ly:1283 Tab_staff_symbol_engraver — that

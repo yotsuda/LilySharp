@@ -266,10 +266,24 @@ internal static class ScoreSideTables
             : _hairpinsByScore.GetValue(score,
                 s => IndexBuckets<HairpinItem>.Build(
                     TabStaffStencils.Blank(
-                        s, HairpinEngraver.DetectHairpins(s.MusicMarks, s.Dynamics,
-                            Collector.SectionPlays.For(s)),
+                        s, OneDrummers(s, HairpinEngraver.DetectHairpins(s.MusicMarks, s.Dynamics,
+                            Collector.SectionPlays.For(s))),
                         static h => h.StaffIndex),
                     h => h.StaffIndex));
+
+    /// <summary>A drum staff's hairpins as the annotation pass draws them
+    /// (<see cref="HairpinEngraver.AsOneDrummers"/>), so the room is the drawn wedge's.</summary>
+    private static ImmutableArray<HairpinItem> OneDrummers(MultiStaffScore score, ImmutableArray<HairpinItem> hairpins)
+    {
+        if (hairpins.IsDefaultOrEmpty)
+            return hairpins;
+        Dictionary<int, ImmutableArray<Voice>>? drums = null;
+        foreach (var (_, staff, index) in score.EnumerateStaves())
+            if (staff.Clef == ClefType.Percussion)
+                (drums ??= [])[index] = staff.Voices;
+        return drums is null ? hairpins
+            : HairpinEngraver.AsOneDrummers(hairpins, score.Dynamics, drums.ContainsKey, drums, default);
+    }
 
     /// <summary>
     /// The score's accel./rit. SPANNERS — derived from the marks, not stored on the score —

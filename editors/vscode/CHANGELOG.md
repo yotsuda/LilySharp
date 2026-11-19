@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Fixed: a drum chart drew a hairpin beside its levels, or twice.** Where both lines of a `drums { … }` chart write `@p … @f` and a `@cresc` between them, the wedge stands between the one printed *p* and *f* now, and the same hairpin written in both lines is drawn once.
+
 - **Fixed: a slash or a repeated value inside a tuplet lost its figures and its `@cross`.** `tuplet 3/2 { /4@figuredBass(6) / / }` and `tuplet 3/2 { 4@cross 4 4 }` draw the figure and move the note to the other staff now, as they do outside a tuplet.
 
 - **Fixed: a drum did not play its hairpins.** `sn4@p@cresc sn sn sn@f` struck three hits at *p* and jumped to *f*; a drum part swells and fades now as every part does, in the preview and in every export that sounds.
