@@ -137,6 +137,30 @@ public class TrailingEmptyChordTests
     }
 
     /// <summary>
+    /// That fermata is centred on the closing bar line AS DRAWN — a thin line, or a whole
+    /// <c>:|.</c> with its dots and thick line. Until session 1316 it was centred on the bar's end
+    /// column, the bar line's LEFT edge: over a repeat's end it stood over the dots, 0.92 staff
+    /// spaces left of the group's centre (Lab sessions/p1316/probe f2).
+    /// </summary>
+    [Theory]
+    [InlineData("form { A }")]
+    [InlineData("form { |: A :| }")]
+    public void TheFermataOverTheClosingBarLine_IsCentredOnItsInk(string form)
+    {
+        var tree = SyntaxTree.Parse("octave absolute\ntime 4/4\npaper { raggedRight }\npart m { clef treble }\n"
+            + "section A { m {\nc'4 d' e' f' | g'1 <>@fermata |\n} }\n" + form + "\nscore { staff m }\n");
+        Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        var page = Core.Rendering.Boxes.BoxesGenerator.GeneratePages(tree, RenderSpecParser.FindFirst(tree))[0];
+        var fermata = Assert.Single(page.Symbols, s => s.Kind == "fermata");
+        // The closing bar line's ink: every bar-line piece right of the last note head.
+        double lastHead = page.Symbols.Where(s => s.Kind == "notehead").Max(s => s.Box[2]);
+        var closing = page.Symbols.Where(s => s.Kind == "barLine" && s.Box[0] > lastHead).ToList();
+        Assert.NotEmpty(closing);
+        double inkCentre = (closing.Min(s => s.Box[0]) + closing.Max(s => s.Box[2])) / 2;
+        Assert.Equal(inkCentre, (fermata.Box[0] + fermata.Box[2]) / 2, 2);
+    }
+
+    /// <summary>
     /// A trill's line ended on an empty chord ends at the chord's moment: an <c>@!trillSpan</c>
     /// includes its note (owner's decision 2026-10-28) and an empty chord has none. Until
     /// session 1315 it was inclusive there too: mid-piece the line ran over the next bar's

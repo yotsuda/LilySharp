@@ -874,8 +874,13 @@ internal static class ArticulationEngraver
                 var barLength = Semantics.Fraction.Zero;
                 foreach (var endItem in measure.Items)
                     barLength += endItem.Duration;
+                // Centred on the bar line AS DRAWN: from the bar's end column to the measure's
+                // right edge, which is the bar line's ink — a thin line, or the whole `:|.` with
+                // its dots (on the end column's x alone it stood over the dots, 0.92 left of the
+                // group's centre; Lab sessions/p1316/probe f2).
                 double endX = measureLayout.X + (measureLayout.Columns.IsDefaultOrEmpty
-                    ? measureLayout.Width : measureLayout.GetXForTiming(barLength));
+                    ? measureLayout.Width
+                    : (measureLayout.GetXForTiming(barLength) + measureLayout.Width) / 2.0);
                 string endGlyph = endArt.GetGlyph();
                 layouts.Add(new ArticulationLayout(
                     endArt.MeasureIndex, endArt.ItemIndex, endX + OriginFromCentre(endGlyph, 0.0),

@@ -6,7 +6,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 - **Fixed: a pedal bracket, a text spanner or an ottava ended on an empty chord at the very end of a piece was not drawn.** `fis4.@sustain b4. <>@!sustain |` as the last bar (or `repeat tremolo 12 { … }@!sustain` there) drew no pedal bracket at all, and `c4@rit d e f <>@!rit |` drew neither the word nor its line. The line is drawn to the closing bar line now.
 
-- **A dynamic, a text and a fermata on an empty chord after the last note are printed.** `c1@decresc <>@pp |` prints its *pp*, `<>@text("fine")` its word, and `<>@fermata` stands over the closing bar line.
+- **A dynamic, a text and a fermata on an empty chord after the last note are printed.** `c1@decresc <>@pp |` prints its *pp*, `<>@text("fine")` its word, and `<>@fermata` stands over the closing bar line, centred on it (a repeat's `:|.` too).
 
 - **Fixed: `<>@!8va` and `<>@!trillSpan` reached one note too far.** The end is where the empty chord stands; a trill ended that way at a piece's end was not drawn at all.
 
