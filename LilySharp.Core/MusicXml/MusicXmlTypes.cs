@@ -326,6 +326,10 @@ internal sealed class MusicXmlMeasure
     /// <summary>Closing bar style ("light-light" for <c>||</c>, "light-heavy"
     /// for <c>|.</c>, "dashed" for <c>!</c>); null = ordinary barline.</summary>
     public string? BarStyle { get; set; }
+    /// <summary>A fermata over the closing bar line — the scripts of an empty chord the part
+    /// ends a block on (<c>c''1 &lt;&gt;@fermata</c>), which the page stands over that line:
+    /// its <c>type</c>, "upright" or "inverted"; null for none.</summary>
+    public string? BarFermata { get; set; }
 
     /// <summary>Volta ending that STARTS on this measure — the number(s) as a
     /// MusicXML ending list ("1", "1,2", "1,2,3"); null when none.</summary>
@@ -407,13 +411,16 @@ internal sealed class MusicXmlMeasure
                         : note.ToXml(staff: 2, tabStaff: true, tabCopy: true, beams: tabBeams!.GetValueOrDefault(note)));
         }
 
-        if (RepeatBackward || BarStyle != null || EndingStopNumbers != null)
+        if (RepeatBackward || BarStyle != null || EndingStopNumbers != null || BarFermata != null)
         {
             // DTD order inside <barline>: bar-style, ending, repeat.
             var barline = new XElement("barline", new XAttribute("location", "right"));
             if (RepeatBackward || BarStyle != null)
                 barline.Add(new XElement("bar-style",
                     RepeatBackward ? "light-heavy" : BarStyle));
+            // DTD: bar-style, footnote, level, wavy-line, segno, coda, fermata, ending, repeat.
+            if (BarFermata != null)
+                barline.Add(new XElement("fermata", new XAttribute("type", BarFermata)));
             if (EndingStopNumbers != null)
                 barline.Add(new XElement("ending",
                     new XAttribute("number", EndingStopNumbers),
@@ -1280,12 +1287,17 @@ internal sealed class MusicXmlNote
             if (slurStop)
                 notations.Add(new XElement("slur", new XAttribute("type", "stop"), new XAttribute("number", SlurNumber)));
 
-            // Articulations
-            if (articulations.Count > 0)
+            // Articulations — and the fermata, which MusicXML has as a <notations> child of its
+            // own, not one of <articulations> (until session 1328 it was written in there, where
+            // a reader keeping to the schema finds none; MusicXmlReader reads both).
+            if (articulations.Contains("fermata"))
+                notations.Add(new XElement("fermata", new XAttribute("type", "upright")));
+            if (articulations.Any(a => a != "fermata"))
             {
                 var artics = new XElement("articulations");
                 foreach (var a in articulations)
-                    artics.Add(new XElement(a));
+                    if (a != "fermata")
+                        artics.Add(new XElement(a));
                 notations.Add(artics);
             }
 

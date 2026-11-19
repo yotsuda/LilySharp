@@ -419,6 +419,7 @@ public sealed class MusicXmlExporter
         }
         SpreadRepeatSignsToEveryPart();
         WriteTheMusicsNavigationMarks();
+        FlushHeldScripts();
         FinishOpenSpans();
         WriteCapo();
         WriteBeams(tree, hasSections);
@@ -5372,6 +5373,16 @@ public sealed class MusicXmlExporter
                     ProcessDirectionMark(mark);
                 else if (postEvent is ArticulationSyntax { Type: ArticulationType.None } named)
                     ProcessDirectionName(named.NameToken.Text);
+                // A script stands at this moment too: on the note that begins it, as the page
+                // draws it (ProcessArticulations takes it), or — nothing following in the block
+                // — a fermata over the bar line it ends on (FlushHeldScripts).
+                else if (postEvent is ArticulationSyntax script)
+                {
+                    if (!_heldScripts.TryGetValue(_currentPartName ?? "", out var held))
+                        _heldScripts[_currentPartName ?? ""] = held = (new List<ArticulationSyntax>(), null);
+                    held.Scripts.Add(script);
+                    _heldScripts[_currentPartName ?? ""] = held with { Bar = _currentMeasure };
+                }
             }
             return;
         }
@@ -6476,6 +6487,12 @@ public sealed class MusicXmlExporter
     /// -1 where none can be refused.</param>
     private void ProcessArticulations(IEnumerable<SyntaxNode> articulations, MusicXmlNote xmlNote, int host = -1)
     {
+        // The scripts an empty chord before this onset wrote are this onset's (the empty chord's
+        // arm in ProcessChord). Until session 1328 the document had none of them, though the
+        // page draws them on this note (Lab sessions/p1328/end e6, e7, e10).
+        if (!xmlNote.IsGrace && !xmlNote.IsChord && !xmlNote.IsBackup
+            && _heldScripts.Remove(_currentPartName ?? "", out var held))
+            articulations = held.Scripts.Cast<SyntaxNode>().Concat(articulations).ToList();
         // Pre-scan the frame spec so a chord symbol on the same note can
         // embed it, whichever order the marks were written in.
         // ⚠️ This read used to take whatever followed "frame." with NO gate, so a spec
@@ -6996,6 +7013,22 @@ public sealed class MusicXmlExporter
     private static System.Xml.Linq.XElement WavyLine(string type, int number, string? placement)
         => new("wavy-line", new System.Xml.Linq.XAttribute("type", type), new System.Xml.Linq.XAttribute("number", number),
             placement is null ? null : new System.Xml.Linq.XAttribute("placement", placement));
+
+    /// <summary>The scripts of an empty chord no onset of its part took — it ends the piece on
+    /// it (<see cref="_heldScripts"/>): a fermata stands over the bar line it ends on, as the page
+    /// draws it; the rest go, as on the page.</summary>
+    private void FlushHeldScripts()
+    {
+        foreach (var (scripts, bar) in _heldScripts.Values)
+            if (scripts.Find(s => s.Type == ArticulationType.Fermata) is { } fermata && bar != null)
+                bar.BarFermata = fermata.ForcedAbove == false ? "inverted" : "upright";
+        _heldScripts.Clear();
+    }
+
+    /// <summary>The scripts an empty chord wrote, by part, waiting for that part's onset that
+    /// begins at its moment — the next block's first, where the empty chord ends one (as the page
+    /// draws it: the next bar's head) — and the bar it was written in.</summary>
+    private readonly Dictionary<string, (List<ArticulationSyntax> Scripts, MusicXmlMeasure? Bar)> _heldScripts = new(StringComparer.Ordinal);
 
     /// <summary>Settles the spans still open once every part is written: a text spanner nobody
     /// closed is taken back out (the page draws none of it), and a trill nobody ended stops on

@@ -160,6 +160,11 @@ public sealed class MidiExporter
     // the notes' MidiNote.SectionPlay, which a hairpin's reach does not leave (SwellInstruments).
     private readonly List<int> _sectionPlayStarts = new();
 
+    // The scripts an empty chord wrote (<>@accent), by part, for that part's onset that begins at
+    // its moment — the next block's first where it ends one (ProcessChord's empty arm;
+    // ApplyRunMarks plays them).
+    private readonly Dictionary<string, List<ArticulationType>> _heldScripts = new(StringComparer.Ordinal);
+
     /// <summary>The running level is now <paramref name="level"/> — a dynamic written here
     /// (<paramref name="written"/>) or a level a lane or a repeat's turn reopens at.</summary>
     private void SetLevel(int level, bool written, string? part = null)
@@ -1113,6 +1118,7 @@ public sealed class MidiExporter
         _swing.Clear();
         OpenBarGrid(mainTrack, null);
         _levelLog.Clear();
+        _heldScripts.Clear();
         _sectionPlayStarts.Clear(); // (no net uses one exporter twice — the same open as the logs around it)
         _strikeLog.Clear();
         _pedalLog.Clear();
@@ -4268,6 +4274,15 @@ public sealed class MidiExporter
             foreach (var child in chord.Articulations)
                 if (child is DynamicSyntax { Level: not DynamicLevel.None } dynamic)
                     Hold(dynamic);
+                // A script stands at this moment, on the onset that begins it, as the page draws
+                // it (ApplyRunMarks plays it). Until session 1328 none sounded: `c''2 <>@accent
+                // d''2` played d'' unaccented (Lab sessions/p1328/end e10).
+                else if (child is ArticulationSyntax { Type: not ArticulationType.None } script)
+                {
+                    if (!_heldScripts.TryGetValue(_currentPart ?? "", out var held))
+                        _heldScripts[_currentPart ?? ""] = held = new List<ArticulationType>();
+                    held.Add(script.Type);
+                }
             return;
         }
 
@@ -5105,6 +5120,10 @@ public sealed class MidiExporter
         foreach (var opener in Semantics.ArticulationRuns.Covering(item))
             if (opener is ArticulationSyntax mark)
                 (velocity, durationPercent) = ApplyArticulationType(mark.Type, velocity, durationPercent);
+        // …and the scripts an empty chord before it wrote (ProcessChord: they stand at this onset).
+        if (_heldScripts.Remove(_currentPart ?? "", out var heldScripts))
+            foreach (var held in heldScripts)
+                (velocity, durationPercent) = ApplyArticulationType(held, velocity, durationPercent);
         return (velocity, durationPercent);
     }
 

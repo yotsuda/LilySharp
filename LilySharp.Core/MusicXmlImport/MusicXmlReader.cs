@@ -1640,8 +1640,8 @@ internal static class MusicXmlReader
     /// <summary>The fermata and the &lt;articulations&gt; marks, for a note or a rest.</summary>
     private static void ReadMarks(XElement notations, ImportNote note)
     {
-        // Fermata is a direct <notations> child in real files, but the Lily#
-        // exporter nests it under <articulations> (mapped below); handle both, once.
+        // Fermata is a direct <notations> child in real files and in Lily#'s since session 1328;
+        // older Lily# exporters nested it under <articulations> (mapped below). Both, once.
         if (Local(notations, "fermata") != null && !note.Articulations.Contains("fermata"))
             note.Articulations.Add("fermata");
         foreach (var a in Local(notations, "articulations")?.Elements() ?? Enumerable.Empty<XElement>())
@@ -2072,7 +2072,7 @@ internal static class MusicXmlReader
         "doit" => "doit",
         "breath-mark" => "breath",
         "caesura" => "caesura",
-        "fermata" => "fermata",   // the Lily# exporter nests fermata here
+        "fermata" => "fermata",   // Lily# exporters until session 1328 nested fermata here
         _ => null,
     };
 

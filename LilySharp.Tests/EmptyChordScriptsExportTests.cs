@@ -1,0 +1,116 @@
+// Lily# - Music notation compiler
+// Copyright (C) 2025-2026 Yoshifumi Tsuda
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+using System.Collections.Generic;
+using System.Linq;
+using System.Xml.Linq;
+using LilySharp.Core.Midi;
+using LilySharp.Core.MusicXml;
+using LilySharp.Core.Syntax;
+using Xunit;
+
+namespace LilySharp.Tests;
+
+/// <summary>
+/// The scripts written on an empty chord (<c>c''2 &lt;&gt;@accent d''2</c>) stand at its moment,
+/// on the note that begins it, as the page draws them — and at the end of a piece a fermata
+/// stands over the closing bar line (session 1315). Until session 1328 neither MusicXML nor
+/// MIDI had any of them (Lab sessions/p1328/end e6 to e10).
+/// </summary>
+[Trait("Category", "Unit")]
+public class EmptyChordScriptsExportTests
+{
+    private static string Book(string bars)
+        => "octave absolute\ntime 4/4\npart m { clef treble }\nsection A { m { " + bars + " } }\nform { ~A }\nscore { staff m }\n";
+
+    /// <summary>Each note's notations and the closing bar lines, bar by bar.</summary>
+    private static string Xml(string bars)
+    {
+        var doc = XDocument.Parse(new MusicXmlExporter().Export(SyntaxTree.Parse(Book(bars))).ToXml().ToString());
+        var said = new List<string>();
+        foreach (var measure in doc.Descendants("measure"))
+            foreach (var e in measure.Elements())
+                if (e.Name == "note")
+                    said.Add("note" + (e.Element("notations") is { } n
+                        ? "[" + string.Join(",", n.Elements().Select(x => x.Name.LocalName
+                            + (x.HasElements ? "(" + string.Join(",", x.Elements().Select(y => y.Name.LocalName)) + ")" : ""))) + "]"
+                        : ""));
+                else if (e.Name == "barline")
+                    said.Add("barline[" + string.Join(",", e.Elements().Select(x => x.Name.LocalName
+                        + (x.Attribute("type") is { } t ? ":" + t.Value : ""))) + "]");
+        return string.Join(" ", said);
+    }
+
+    [Theory]
+    // On the note that begins at its moment, as the note's own marks are.
+    [InlineData("c''2 <>@fermata d''2 | c''1 |", "note note[fermata] note")]
+    [InlineData("c''2 d''2 <>@fermata | c''1 |", "note note note[fermata]")]
+    [InlineData("c''2 <>@accent@staccato@trill d''2 | c''1 |", "note note[articulations(accent,staccato),ornaments(trill-mark)] note")]
+    // At the end of the piece a fermata stands over the closing bar line — a full bar or not.
+    [InlineData("c''2 d''2 | c''1 <>@fermata |", "note note note barline[fermata:upright]")]
+    [InlineData("c''2 d''2 | c''2 <>@fermata |", "note note note barline[fermata:upright]")]
+    [InlineData("c''2 d''2 | c''1 <>@fermata.down |", "note note note barline[fermata:inverted]")]
+    // …the other scripts nowhere, as on the page.
+    [InlineData("c''2 d''2 | c''1 <>@accent |", "note note note")]
+    public void InMusicXml(string bars, string expected) => Assert.Equal(expected, Xml(bars));
+
+    /// <summary>A note's own fermata is a &lt;notations&gt; child, not one of &lt;articulations&gt;:
+    /// until session 1328 it was written in there, where a reader keeping to the schema finds none.</summary>
+    [Fact]
+    public void ANotesFermata_IsANotationsChild()
+        => Assert.Equal("note note[fermata,articulations(accent)] note", Xml("c''2 d''2@fermata@accent | c''1 |"));
+
+    private const string TwoSections = "octave absolute\ntime 4/4\npart m { clef treble }\npart n { clef bass }\n"
+        + "section A {\n  m { c''2 d''2 <>@fermata | }\n  n { c2 d2 | }\n}\nsection B {\n  m { e''1 | }\n  n { e1 | }\n}\n"
+        + "form { A B }\nscore { staff m staff n }\n";
+
+    /// <summary>An empty chord ending a section's block: its scripts are its part's next onset's,
+    /// the next section's first — the page's next bar's head (Lab sessions/p1328/end s1) — and the
+    /// other part, whose block is written between the two, takes none.</summary>
+    [Fact]
+    public void AtABlocksEnd_TheScriptsAreThePartsNextOnsets()
+    {
+        var doc = XDocument.Parse(new MusicXmlExporter().Export(SyntaxTree.Parse(TwoSections)).ToXml().ToString());
+        string Part(int k) => string.Join(" ", doc.Descendants("part").ElementAt(k).Descendants("note")
+            .Select(n => "note" + (n.Element("notations") is { } x ? "[" + string.Join(",", x.Elements().Select(e => e.Name.LocalName)) + "]" : "")));
+        Assert.Equal("note note note[fermata]", Part(0));
+        Assert.Equal("note note note", Part(1));
+        Assert.DoesNotContain(doc.Descendants("barline"), b => b.Element("fermata") != null);
+        var notes = new MidiExporter().Export(SyntaxTree.Parse(TwoSections)).Tracks.SelectMany(t => t.Notes).ToList();
+        Assert.Equal(new[] { 960, 960, 2880 }, notes.Where(n => n.Part == "m").OrderBy(n => n.StartTick).Select(n => n.DurationTicks));
+        Assert.Equal(new[] { 960, 960, 1920 }, notes.Where(n => n.Part == "n").OrderBy(n => n.StartTick).Select(n => n.DurationTicks));
+    }
+
+    [Fact]
+    public void InMidi()
+    {
+        List<(int Tick, int Length, int Velocity)> Notes(string bars) =>
+            new MidiExporter().Export(SyntaxTree.Parse(Book(bars))).Tracks.SelectMany(t => t.Notes)
+                .OrderBy(n => n.StartTick).Select(n => (n.StartTick, n.DurationTicks, n.Velocity)).ToList();
+        // The empty chord's scripts sound on the next note as written on it.
+        foreach (var (onChord, onNote) in new[]
+        {
+            ("c''2 <>@accent d''2 | c''1 |", "c''2 d''2@accent | c''1 |"),
+            ("c''2 <>@fermata d''2 | c''1 |", "c''2 d''2@fermata | c''1 |"),
+            ("c''2 <>@staccato@accent d''2 | c''1 |", "c''2 d''2@staccato@accent | c''1 |"),
+            ("c''2 d''2 <>@fermata | c''1 |", "c''2 d''2 | c''1@fermata |"),
+        })
+            Assert.Equal(Notes(onNote), Notes(onChord));
+        // …once: the note after it is played as written.
+        var once = Notes("c''2 <>@accent d''4 e''4 | c''1 |");
+        Assert.Equal(new[] { 90, 110, 90, 90 }, once.Select(n => n.Velocity));
+    }
+}
