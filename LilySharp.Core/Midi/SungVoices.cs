@@ -481,10 +481,21 @@ public static class SungVoices
     /// and — for a note a hairpin crosses — the level at its end. A hairpin goes from its first
     /// note to the first level written after it when that lies the hairpin's way, or
     /// <see cref="HairpinReach"/> on when none does; what it reached then stands until a level
-    /// is written. The one rule a singer (<see cref="Levels"/>) and an instrument
-    /// (MidiExporter.SwellInstruments) follow, each on its own clock.
+    /// is written or its section ends. The one rule a singer (<see cref="Levels"/>) and an
+    /// instrument (MidiExporter.SwellInstruments) follow, each on its own clock.
     /// </summary>
     /// <remarks>
+    /// AT A SECTION'S START (owner's decision 2026-11-19): the level a hairpin moved to without
+    /// landing on a written one does not go into the next section, which opens at the level last
+    /// written — the levels written stand on as they always did, and the tempo is not touched.
+    /// A hairpin is carried into the section played next only to end there, as the page draws
+    /// it (Collector.SectionPlayCursor); one that does not end there is cut where its own
+    /// section's music ends, reaching its <see cref="HairpinReach"/> by then. MEASURED before
+    /// (Lab sessions/p1326/probe a124, the fixture test/hairpin-in-a-repeated-section): with no
+    /// level written anywhere, `form { A B A }` of an A that opens a crescendo climbed through B
+    /// and the second A on top of the first, 90 … 104 | 106 110 114 118 — every play of it
+    /// higher, to 127.
+    /// <para>
     /// A hairpin moves the LEVEL, and a note keeps what its own marks add to it: an accent or a
     /// marcato inside a crescendo is struck that much over where the hairpin has come, an
     /// <c>@sfz</c> as it is at that level (<see cref="StruckAt"/>), and the hairpin goes on
@@ -492,6 +503,7 @@ public static class SungVoices
     /// compared velocities, so <c>c@p@cresc d@accent e f@f</c> took the accented note for the
     /// level the crescendo was going to: the hairpin ended there, at the accent's velocity, and
     /// the notes after it fell back to piano.
+    /// </para>
     /// </remarks>
     /// <param name="notes">The line in time order, each note at its WRITTEN level (<see cref="Written"/>).</param>
     /// <param name="startOf">When note <c>k</c> starts, on the caller's clock.</param>
@@ -521,26 +533,43 @@ public static class SungVoices
             while (stop < notes.Count && Level(notes[stop]) == written && notes[stop].Swell == 0 && !notes[stop].SwellEnds
                    && !WrittenAfter(stop))
                 stop++;
+            // The section carry rule, as the page has it (Collector.SectionPlayCursor): a hairpin
+            // open when its section ends is carried into the section played next and must end
+            // there; one that does not is cut where its own section's music ends.
+            int section = notes[i].SectionPlay;
+            bool cut = false;
+            if (stop >= notes.Count || notes[stop].SectionPlay > section + 1)
+                for (int k = i + 1; k < stop && k < notes.Count; k++)
+                    if (notes[k].SectionPlay != section)
+                    {
+                        stop = k;
+                        cut = true;
+                        break;
+                    }
             // A level written there, the hairpin's way from where it starts: another number, or
             // the same one written again.
-            bool landsOnALevel = stop < notes.Count && (Level(notes[stop]) != written || WrittenAfter(stop))
+            bool landsOnALevel = !cut && stop < notes.Count && (Level(notes[stop]) != written || WrittenAfter(stop))
                 && Math.Sign(Level(notes[stop]) - level) == notes[i].Swell;
             double target = landsOnALevel ? Level(notes[stop]) : level + (notes[i].Swell * HairpinReach);
-            double until = stop < notes.Count ? startOf(stop) : endOf(notes.Count - 1);
+            double until = cut ? endOf(stop - 1) : stop < notes.Count ? startOf(stop) : endOf(notes.Count - 1);
             double Along(double t) => level + ((target - level) * Math.Clamp((t - from) / Math.Max(1e-6, until - from), 0, 1));
             for (int k = i; k < stop && k < notes.Count; k++)
             {
                 at[k] = StruckAt(notes[k], Along(startOf(k)));
                 after[k] = StruckAt(notes[k], Along(endOf(k)));
             }
-            // With no level to land on, what the hairpin reached stands until one is written —
-            // and is where a hairpin beginning on it starts.
-            if (!landsOnALevel)
+            // With no level to land on, what the hairpin reached stands until one is written or
+            // its section ends (owner's decision 2026-11-19: the next section opens at the level
+            // last written) — and is where a hairpin beginning on it starts. A cut hairpin leaves
+            // nothing standing.
+            if (!landsOnALevel && !cut)
             {
+                int standsIn = stop < notes.Count ? notes[stop].SectionPlay : section;
                 int k = stop;
-                for (; k < notes.Count && Level(notes[k]) == written && notes[k].Swell == 0 && !WrittenAfter(k); k++)
+                for (; k < notes.Count && Level(notes[k]) == written && notes[k].Swell == 0 && !WrittenAfter(k)
+                       && notes[k].SectionPlay == standsIn; k++)
                     at[k] = StruckAt(notes[k], target);
-                if (k < notes.Count && notes[k].Swell != 0 && startOf(k) > from)
+                if (k < notes.Count && notes[k].Swell != 0 && startOf(k) > from && notes[k].SectionPlay == standsIn)
                     standing = (target, startOf(k));
             }
             i = stop - 1;

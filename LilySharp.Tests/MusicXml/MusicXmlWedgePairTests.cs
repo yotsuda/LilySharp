@@ -416,6 +416,11 @@ public class MusicXmlWedgePairTests
     [InlineData("c'4 d'@cresc e' f'@!cresc | g'1 |", "c'4 d'@cresc e' f'@!cresc | g'1 |",
         "bar 1 +24 crescendo, bar 1 +96 stop",
         "bar 1 +24 crescendo, bar 1 +96 stop")]
+    // Part two's next hairpin follows the unison's (part one ending it nowhere): in part one's
+    // own document the wedge stops where the page ends it (session 1327).
+    [InlineData("c'4 d'@cresc e' f' | c''2 d''2 | c''1 |", "c'4 d'@cresc e' f' | e'4 f'@decresc e' f'@!decresc | e'1 |",
+        "bar 1 +24 crescendo, bar 2 +24 stop",
+        "bar 1 +24 crescendo, bar 2 +24 stop, bar 2 +24 diminuendo, bar 2 +96 stop")]
     // A start on a rest under the other part's solo, dropped from the page with its stop.
     [InlineData("c''1 | c''1 | c''1 | c''1 |", "r2 r2@cresc | r1 | e'1@!cresc | e'1 |",
         "",

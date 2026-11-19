@@ -1329,6 +1329,13 @@ public sealed class MusicXmlExporter
     /// </para>
     private readonly Dictionary<(int Position, int Play), Queue<(Svg.Model.HairpinItem Item, int EndPlay, bool OnStaffOfParts)>> _pageHairpins = new();
 
+    /// <summary>The page's hairpins a combined staff ends at a part's next one in the staff's
+    /// other voice (<c>MusicMarkItem.MeetsVoice</c>): in this document each stops at its own
+    /// part's next end, and where its part writes none — the unison's hairpin, kept for the
+    /// other part, whose part plays on — where the page ends it, as before
+    /// (<see cref="FinishOpenSpans"/>).</summary>
+    private readonly HashSet<Svg.Model.HairpinItem> _meetsHairpins = new(ReferenceEqualityComparer.Instance);
+
     /// <summary>The nientes a hairpin's circled tip stands for on the page, by (source
     /// position, play): no <c>&lt;n/&gt;</c> is written for them, the wedge's
     /// <c>niente="yes"</c> is.</summary>
@@ -1403,6 +1410,7 @@ public sealed class MusicXmlExporter
     {
         _refusedSlurs.Clear();
         _pageHairpins.Clear();
+        _meetsHairpins.Clear();
         _circledNientes.Clear();
         _openWedges.Clear();
         _endsWritten.Clear();
@@ -1435,10 +1443,12 @@ public sealed class MusicXmlExporter
             // which stands in the staff's other voice — MusicMarkItem.MeetsVoice — and may be
             // the other part's mark, the unison's: in this document it ends at its own part's
             // next start too, which is the same moment.)
+            bool meets = h.EndVoiceIndex != h.VoiceIndex
+                && page.MusicMarks.Any(m => m.MeetsVoice == h.VoiceIndex && m.SourcePosition == h.EndSourcePosition);
             bool onStaffOfParts = h.SourceIndex >= 0 && h.SourceIndex < page.MusicMarks.Length
-                && page.MusicMarks[h.SourceIndex].HairpinEndsOnStaff
-                || h.EndVoiceIndex != h.VoiceIndex
-                    && page.MusicMarks.Any(m => m.MeetsVoice == h.VoiceIndex && m.SourcePosition == h.EndSourcePosition);
+                && page.MusicMarks[h.SourceIndex].HairpinEndsOnStaff || meets;
+            if (meets)
+                _meetsHairpins.Add(h);
             playings.Enqueue((h, plays?.PlayAt(h.EndMeasureIndex) ?? 0, onStaffOfParts));
             if (h.CircledNiente is { } circled)
                 _circledNientes.Add((circled.SourcePosition, plays?.PlayAt(circled.MeasureIndex) ?? 0));
@@ -7016,6 +7026,14 @@ public sealed class MusicXmlExporter
                     && (w.Bar > open.Bar || (w.Bar == open.Bar && w.Offset > open.Start.Offset))
                     && (end is not { } first || w.Bar < first.Bar || (w.Bar == first.Bar && w.Offset < first.Offset)))
                     end = w;
+            // (A combined staff's hairpin met by a part's next one, whose own part ends it with
+            // nothing: where the page ends it, as another part's end — _meetsHairpins.)
+            if (end is null && open.EndsInItsPart && _meetsHairpins.Contains(open.Page)
+                && _endsWritten.TryGetValue((open.Page.EndSourcePosition, open.EndPlay), out var others))
+                foreach (var w in others)
+                    if (w.Part != open.Part && (w.Bar > open.Bar || (w.Bar == open.Bar && w.Offset > open.Start.Offset))
+                        && (end is not { } first || w.Bar < first.Bar || (w.Bar == first.Bar && w.Offset < first.Offset)))
+                        end = w;
             var stop = WedgeStop(open);
             if (end is { } at && at.Bar < home.Measures.Count)
             {

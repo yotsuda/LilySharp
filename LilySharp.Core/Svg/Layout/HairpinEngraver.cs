@@ -383,7 +383,13 @@ internal static class HairpinEngraver
         double ownEndX = 0.0;
         if (segment.IsLast)
         {
-            if (hairpin.EndItemIndex == 0 && hairpin.EndMeasureIndex > 0)
+            if (hairpin.EndWithin is { } within
+                && WithinX(hairpin, within, endMeasures, measureLayouts, endShift) is { } withinX)
+            {
+                // Stopped inside the note sounding at its moment (HairpinItem.EndWithin).
+                ownEndX = withinX;
+            }
+            else if (hairpin.EndItemIndex == 0 && hairpin.EndMeasureIndex > 0)
             {
                 if (endMeasureIdx != hairpin.EndMeasureIndex)
                 {
@@ -1054,6 +1060,35 @@ internal static class HairpinEngraver
         return startMeasure.X + BoundPadding;
     }
 
+    /// <summary>
+    /// The X of <paramref name="within"/>, a moment of the hairpin's end bar inside the item at
+    /// its end (<see cref="HairpinItem.EndWithin"/>): that moment's share of the item's length,
+    /// of the way from the item's column to the next column of its voice — or to the bar's end,
+    /// a bound-padding short of its line as an end nothing marks is (CalculateEndX). Null where
+    /// the item is not there to read.
+    /// </summary>
+    private static double? WithinX(HairpinItem hairpin, Semantics.Fraction within,
+        ImmutableArray<Measure> endMeasures, ImmutableArray<MeasureLayout> measureLayouts, double shift)
+    {
+        if (endMeasures.IsDefaultOrEmpty || hairpin.EndMeasureIndex >= endMeasures.Length
+            || hairpin.EndMeasureIndex >= measureLayouts.Length)
+            return null;
+        var items = endMeasures[hairpin.EndMeasureIndex].Items;
+        int item = hairpin.EndItemIndex;
+        if (item < 0 || item >= items.Length || items[item].Duration <= Semantics.Fraction.Zero)
+            return null;
+        var ml = measureLayouts[hairpin.EndMeasureIndex];
+        var onset = Semantics.Fraction.Zero;
+        for (int i = 0; i < item; i++)
+            onset += items[i].Duration;
+        double left = ml.X + LayoutUtilities.GetItemXOffset(endMeasures, hairpin.EndMeasureIndex, item, ml) + shift;
+        double right = item + 1 < StaffItemCount(endMeasures, hairpin.EndMeasureIndex, ml)
+            ? ml.X + LayoutUtilities.GetItemXOffset(endMeasures, hairpin.EndMeasureIndex, item + 1, ml)
+            : ml.X + ml.Width - BoundPadding;
+        double share = Math.Clamp(((within - onset).ToDouble()) / items[item].Duration.ToDouble(), 0, 1);
+        return left + (share * (right - left));
+    }
+
     private static double CalculateEndX(HairpinItem hairpin, ImmutableArray<Measure> hpMeasures,
         ImmutableArray<MeasureLayout> measureLayouts, double shift)
     {
@@ -1360,6 +1395,7 @@ internal static class HairpinEngraver
                     NienteAtStart = NienteAtStart(),
                     NienteAtEnd = endDynamic is { Level: DynamicLevel.Niente } ? endDynamic : null,
                     EndsAtStop = endsAtStop,
+                    EndWithin = endsAtStop && nextStop is { WithinItem: true } within ? within.AnchorTiming : null,
                     MetInAnotherVoice = metInAnotherVoice,
                     EndSourcePosition = endSource,
                     CutAtSectionEnd = cut,

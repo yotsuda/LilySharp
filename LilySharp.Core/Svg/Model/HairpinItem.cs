@@ -126,6 +126,21 @@ public sealed record HairpinItem(
     /// </summary>
     public int EndSourcePosition { get; init; } = -1;
 
+    /// <summary>
+    /// Where the hairpin's stop stands INSIDE the item at its end, as a moment of that bar
+    /// (<c>MusicMarkItem.WithinItem</c>): the end X is that moment's share of the way from the
+    /// item's column to the next column, or to the bar's end. Null for every end on a column.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN (owner's decision 2026-11-19: "書いた拍で止める"): a combined staff's stop
+    ///   written on a rest under the other part's long note. MEASURED (LilyPond 2.26.0, Lab
+    ///   sessions/p1324/lp n6, n10): LilyPond loses that \! with the rest and draws no hairpin;
+    ///   until session 1327 Lily# ran it to the bar's end.
+    ///   departs from: lily/dynamic-engraver.cc:197-211 Dynamic_engraver::finalize.
+    ///   observed by: CombinedStaffHairpinTests.AnEndOnARestUnderTheOtherPartsLongNote_StopsOnItsBeat.
+    /// </remarks>
+    public Semantics.Fraction? EndWithin { get; init; }
+
     /// <summary>The hairpin's end was found past its section's end and refused by the carry
     /// rule (<c>Collector.SectionPlayCursor</c>): it is cut where its own section's play ends.</summary>
     public bool CutAtSectionEnd { get; init; }

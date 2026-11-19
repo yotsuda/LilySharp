@@ -302,6 +302,15 @@ public sealed record MusicMarkItem
     public int? MeetsVoice { get; init; }
 
     /// <summary>
+    /// For a hairpin's stop on a <c>combinedStaff</c>, written on a rest the combiner engraves
+    /// for nobody at a moment when the staff engraves nothing either (the other part holds a
+    /// long note through it): the stop stands on that sounding note (its voice and item) and
+    /// keeps its own moment, <see cref="AnchorTiming"/>, inside it. The hairpin ends there
+    /// (<c>HairpinItem.EndWithin</c>).
+    /// </summary>
+    public bool WithinItem { get; init; }
+
+    /// <summary>
     /// For a hairpin's start on a condensed staff: its end is the STAFF's next level, hairpin
     /// or stop, whichever part wrote it — not its own voice's first
     /// (<c>HairpinEngraver.DetectHairpins</c>).

@@ -241,7 +241,7 @@ internal static class CombinedStaffReaddress
                     EndMeasureIndex = to.MeasureIndex,
                     EndItemIndex = to.ItemIndex,
                 }),
-            MusicMarks = MoveMarks(content.MusicMarks, byStaff, measuresOf, unengravedHairpinMarks),
+            MusicMarks = MoveMarks(content.MusicMarks, byStaff, measuresOf, unengravedHairpinMarks, content.Dynamics),
         };
     }
 
@@ -312,7 +312,8 @@ internal static class CombinedStaffReaddress
     /// </remarks>
     private static ImmutableArray<MusicMarkItem> MoveMarks(
         ImmutableArray<MusicMarkItem> marks, Dictionary<int, CombinedStaffAddressing> byStaff,
-        Func<int, int, ImmutableArray<Measure>>? measuresOf, List<MusicMarkItem>? unengravedHairpinMarks = null)
+        Func<int, int, ImmutableArray<Measure>>? measuresOf, List<MusicMarkItem>? unengravedHairpinMarks = null,
+        ImmutableArray<DynamicItem> dynamics = default)
     {
         if (marks.IsDefaultOrEmpty || !marks.Any(m => IsANotesMark(m) && byStaff.ContainsKey(m.StaffIndex)))
             return marks;
@@ -364,6 +365,25 @@ internal static class CombinedStaffReaddress
                     return j;
             return -1;
         }
+        // Whether the part that wrote the hairpin start marks[j] writes anything after it that
+        // ends a hairpin — a level, a hairpin's start or a stop — in its own terms (the marks and
+        // the levels are both still in their part's voice slot and item numbers here).
+        bool EndsInItsPart(int j)
+        {
+            var start = marks[j];
+            bool After(int measure, int item)
+                => measure > start.MeasureIndex || (measure == start.MeasureIndex && item > start.AnchorItemIndex);
+            for (int k = 0; k < marks.Length; k++)
+                if (k != j && marks[k].StaffIndex == start.StaffIndex && marks[k].VoiceIndex == start.VoiceIndex
+                    && PairedLine(marks[k]) is (HairpinLine, _) && After(marks[k].MeasureIndex, marks[k].AnchorItemIndex))
+                    return true;
+            if (!dynamics.IsDefaultOrEmpty)
+                foreach (var d in dynamics)
+                    if (d.StaffIndex == start.StaffIndex && d.VoiceIndex == start.VoiceIndex && !d.IsExpressiveText
+                        && After(d.MeasureIndex, d.ItemIndex))
+                        return true;
+            return false;
+        }
         for (int i = 0; i < marks.Length; i++)
         {
             var m = marks[i];
@@ -376,8 +396,14 @@ internal static class CombinedStaffReaddress
                 // also where the part is engraved in another voice by now, or where this start
                 // is dropped for the other part's same mark on the merged column, which then
                 // stands for it (MusicMarkItem.MeetsVoice).
+                // …and where that last one was a unison's, dropped for the other part's mark on
+                // the merged column, the mark kept for it is the one this follows — unless the
+                // other part ends that hairpin itself (EndsInItsPart): then it runs on to that
+                // end, two hairpins over each other as before (owner's decision 2026-11-19).
                 if (line.Line == HairpinLine && open.TryGetValue(key, out int before)
-                    && Moved(marks[before], map) is { } earlier)
+                    && (Moved(marks[before], map)
+                        ?? (TwinOf(marks[before], map) is var kept and >= 0 && !EndsInItsPart(kept) ? Moved(marks[kept], map) : null))
+                        is { } earlier)
                 {
                     var here = Moved(m, map);
                     int at = here != null ? i : TwinOf(m, map);
@@ -392,6 +418,10 @@ internal static class CombinedStaffReaddress
                 var end = Moved(m, map);
                 if (start != null && end is null && AtItsMoment(m, map, measuresOf) is { } there)
                     byMoment[i] = end = there;
+                // …and where nothing is engraved at that moment, a hairpin's stop goes inside the
+                // note sounding through it, keeping its moment (owner's decision 2026-11-19).
+                else if (start != null && end is null && line.Line == HairpinLine && Inside(m, map, measuresOf) is { } inside)
+                    byMoment[i] = end = inside;
                 if (start is null)
                 {
                     dropped.Add(s);
@@ -490,6 +520,37 @@ internal static class CombinedStaffReaddress
         for (int v = 0; v < map.CombinedVoiceCount; v++)
             if (ItemAt(v) is { } item)
                 return m with { VoiceIndex = v, AnchorItemIndex = item };
+        return null;
+    }
+
+    /// <summary>
+    /// The END <paramref name="m"/>, whose own item nobody engraves and at whose moment no item
+    /// is engraved either, on the item the combined voices engrave SOUNDING THROUGH that moment
+    /// — a long note the other part holds — with its moment kept
+    /// (<see cref="MusicMarkItem.WithinItem"/>). Null when nothing sounds there.
+    /// </summary>
+    private static MusicMarkItem? Inside(MusicMarkItem m, CombinedStaffAddressing map,
+        Func<int, int, ImmutableArray<Measure>>? measuresOf)
+    {
+        if (measuresOf is null || m.AnchorTiming.Denominator == 0)
+            return null;
+        for (int v = 0; v < map.CombinedVoiceCount; v++)
+        {
+            var measures = measuresOf(m.StaffIndex, v);
+            if (measures.IsDefaultOrEmpty || m.MeasureIndex < 0 || m.MeasureIndex >= measures.Length)
+                continue;
+            var items = measures[m.MeasureIndex].Items;
+            var at = Fraction.Zero;
+            for (int i = 0; i < items.Length && at < m.AnchorTiming; i++)
+            {
+                var next = at + items[i].Duration;
+                // (No observer for the spacer: none sounds through a moment in a book written so
+                // far — Lab sessions/p1327/poisons2.ps1 V6.)
+                if (next > m.AnchorTiming && items[i] is not RestItem { IsSpacer: true })
+                    return m with { VoiceIndex = v, AnchorItemIndex = i, WithinItem = true };
+                at = next;
+            }
+        }
         return null;
     }
 

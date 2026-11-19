@@ -150,7 +150,11 @@ public readonly record struct MidiNote(
     // — or in a hand of its grand staff: a hairpin lands on it or stops at it though it writes
     // the level already standing (SungVoices.Swells; MidiExporter.SwellInstruments stamps it).
     // Not written to .mid files.
-    bool LevelWritten = false
+    bool LevelWritten = false,
+    // The section play the note sounds in, counted in the order the form plays them (-1 in a
+    // book without sections): a hairpin's reach stays in its section (SungVoices.Swells;
+    // MidiExporter.SwellInstruments stamps it). Not written to .mid files.
+    int SectionPlay = -1
 );
 
 /// <summary>

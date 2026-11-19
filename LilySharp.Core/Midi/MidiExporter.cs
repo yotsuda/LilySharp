@@ -156,6 +156,10 @@ public sealed class MidiExporter
     // repeat's turn reopening at its entry level). ShareGrandStaffDynamics reads it.
     private readonly List<(string? Part, int Tick, int Level, bool Written)> _levelLog = new();
 
+    // Where each section play of the form begins, in the order they are played (PlaySectionByName):
+    // the notes' MidiNote.SectionPlay, which a hairpin's reach does not leave (SwellInstruments).
+    private readonly List<int> _sectionPlayStarts = new();
+
     /// <summary>The running level is now <paramref name="level"/> — a dynamic written here
     /// (<paramref name="written"/>) or a level a lane or a repeat's turn reopens at.</summary>
     private void SetLevel(int level, bool written, string? part = null)
@@ -462,6 +466,15 @@ public sealed class MidiExporter
                 foreach (int i in line)
                     if (writtenAt.Contains((g, track.Notes[i].StartTick)))
                         track.Notes[i] = track.Notes[i] with { LevelWritten = true };
+        // …and the section play each note sounds in: the last that began at or before it.
+        if (_sectionPlayStarts.Count > 0)
+            for (int i = 0; i < track.Notes.Count; i++)
+            {
+                int play = _sectionPlayStarts.BinarySearch(track.Notes[i].StartTick + 1);
+                play = (play < 0 ? ~play : play) - 1;
+                if (play >= 0)
+                    track.Notes[i] = track.Notes[i] with { SectionPlay = play };
+            }
         foreach (var line in lines.Values.SelectMany(VoiceLines))
         {
             if (!line.Exists(i => track.Notes[i].Swell != 0))
@@ -1100,6 +1113,7 @@ public sealed class MidiExporter
         _swing.Clear();
         OpenBarGrid(mainTrack, null);
         _levelLog.Clear();
+        _sectionPlayStarts.Clear(); // (no net uses one exporter twice — the same open as the logs around it)
         _strikeLog.Clear();
         _pedalLog.Clear();
         _anyPedal = tree.GetRoot().DescendantNodes().Any(n => PedalMark(n) != null);
@@ -2291,6 +2305,7 @@ public sealed class MidiExporter
         if (_sections == null || !_sections.TryGetValue(name, out var sections))
             return;
         int start = _currentTick;
+        _sectionPlayStarts.Add(start);
         int end = start, written = start;
         // A by-part chord track's copy is a row, not a lane (RowsAndLanesEnd).
         int rowsEnd = start, rowsLastBar = start, rowNotes = track.Notes.Count;

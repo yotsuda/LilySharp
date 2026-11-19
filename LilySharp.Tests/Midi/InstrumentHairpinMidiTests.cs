@@ -211,6 +211,49 @@ public class InstrumentHairpinMidiTests
         Assert.Equal(new[] { P, Along(P, F, 1, 8), Along(P, F, 2, 8), Along(P, F, 3, 8), Along(P, F, 4, 8), Along(P, F, 4, 8), F }, through);
     }
 
+    private static string Sections(string sections, string form) =>
+        "octave absolute\ntime 4/4\npart m { clef treble }\n" + sections + "\nform { " + form + " }\nscore { staff m }\n";
+
+    /// <summary>
+    /// What a hairpin reached without landing on a written level does not go into the next
+    /// section, which opens at the level last written (owner's decision 2026-11-19); the levels
+    /// written stand on, and a hairpin carried into the section played next to end there plays
+    /// through, as the page draws it. Until then the reach stood on through every section: with
+    /// no level written, `form { A B A }` of an A opening a crescendo climbed on through B and
+    /// the second A, 90 … 104 | 106 110 114 118 (Lab sessions/p1326/probe a124, sessions/p1327/probe r1 to r7).
+    /// </summary>
+    [Fact]
+    public void AHairpinsReach_DoesNotGoIntoTheNextSection()
+    {
+        int d = MidiExporter.DefaultVelocity;
+        const string AB = "section A { m { c''2@cresc c''2 | c''2 c''2 | } }\nsection B { m { d''2 d''2 | d''2 d''2 | } }";
+        // Cut where its section's music ends, two dynamics up by then; every play of A the same.
+        Assert.Equal(new[] { d, d + 4, d + 8, d + 12, d, d, d, d, d, d + 4, d + 8, d + 12 },
+            Velocities(Sections(AB, "A B A"), "m"));
+        // Stopped inside its section: what it reached stands to the section's end.
+        Assert.Equal(new[] { P, P + 8, P + 16, P + 16, P, P },
+            Velocities(Sections("section A { m { c''4@p@cresc d'' e''@!cresc f'' | } }\nsection B { m { g''1 | g''1@p | } }", "A B"), "m"));
+        // Carried into the next section to end there at a level, a stop, or the next hairpin.
+        Assert.Equal(new[] { P, Along(P, F, 1, 4), Along(P, F, 2, 4), Along(P, F, 3, 4), F, F },
+            Velocities(Sections("section A { m { c''4@p@cresc d'' e'' f'' | } }\nsection B { m { g''1@f | g''1 | } }", "A B"), "m"));
+        Assert.Equal(new[] { P, 73, 75, 78, 81, P + 16, P + 16 },
+            Velocities(Sections("section A { m { c''4@p@cresc d'' e'' f'' | } }\nsection B { m { g''2 a''2@!cresc | b''1 | } }", "A B"), "m"));
+        Assert.Equal(new[] { P, P, 75, 81, P + 16, 82, 78, 74, P },
+            Velocities(Sections("section A { m { c''4@p e''@cresc d'' f'' | } }\nsection B { m { g''4@decresc a'' b'' c''' | d'''1@p | } }", "A B"), "m"));
+        // …but not over a section to a level after it: cut in its own.
+        Assert.Equal(new[] { P, P + 4, P + 8, P + 12, P, F },
+            Velocities(Sections("section A { m { c''4@p@cresc d'' e'' f'' | } }\nsection B { m { g''1 | } }\nsection C { m { g''1@f | } }", "A B C"), "m"));
+        // Cut where its section's MUSIC ends — the last note's end, not the next section's first note.
+        Assert.Equal(new[] { d, d + 8, d },
+            Velocities(Sections("section A { m { c''2@cresc c''2 | r1 | } }\nsection B { m { d''1 | } }", "A B"), "m"));
+        // What a stopped hairpin reached is not where the next section's first hairpin starts.
+        Assert.Equal(new[] { P, P + 8, P + 16, P + 16, P, P + 4, P + 8, P + 12, P + 16 },
+            Velocities(Sections("section A { m { c''4@p@cresc d'' e''@!cresc f'' | } }\nsection B { m { g''4@cresc a'' b'' c''' | d'''1@!cresc | } }", "A B"), "m"));
+        // A level written stands on into the next section, as it did.
+        Assert.Equal(new[] { P, P, P, P, P, P },
+            Velocities(Sections("section A { m { c''4@p d'' e'' f'' | } }\nsection B { m { g''1 | g''1 | } }", "A B"), "m"));
+    }
+
     [Fact]
     public void AGrandStaffsHands_ShareTheHairpin_AndABracketsPartsDoNot()
     {

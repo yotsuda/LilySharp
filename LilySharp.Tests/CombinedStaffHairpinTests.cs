@@ -136,17 +136,49 @@ public class CombinedStaffHairpinTests
     // A grace note before the soloist's note on that beat: the note, not the grace.
     [InlineData("c''2 d''2 | c''4 d'' grace { d''8 } e''4 f'' | c''1 |", "e'4 f' e'@cresc f' | r2 r2@!cresc | e'1@f |",
         "v1 0.2 note@1/2 .. v0 1.3 note@1/2")]
-    // The soloist holds a note through it: nothing is engraved on that beat, and the stop
-    // stays where it was collected — the bar's end.
+    // The soloist holds a note through it: nothing is engraved on that beat, and the stop goes
+    // inside that note, keeping its beat (session 1327; until then it stayed where it was
+    // collected — the bar's end).
     [InlineData("c''2 d''2 | c''1 | c''1 |", "e'4 f' e'@cresc f' | r2 r2@!cresc | e'1@f |",
-        "v1 0.2 note@1/2 .. v1 1.1 end@0")]
+        "v1 0.2 note@1/2 .. v0 1.0 note@0")]
     // …and its start still goes with its note (a bar part two plays alone), the stop still its
-    // own, before the level its start's voice has further on. (The staff has one voice here:
-    // the collected place names none, and the hairpin is drawn to that bar's end.)
+    // own, before the level its start's voice has further on.
     [InlineData("R1 | c''1 | c''1 |", "g'4 g'@cresc g' g' | r2 r2@!cresc | e'1@f |",
-        "v0 0.1 note@1/4 .. v1 1.1 (no such bar)")]
+        "v0 0.1 note@1/4 .. v0 1.0 note@0")]
     public void AnEndOnARestNobodyEngraves_StopsOnItsBeat(string fl1, string fl2, string expected)
         => Assert.Equal(expected, Hairpins(Collect(fl1, fl2)));
+
+    /// <summary>
+    /// A hairpin's stop on a rest under the other part's long note ends on the beat it is
+    /// written on: that beat's share of the way from the long note's column to the next column,
+    /// or to the bar's end (owner's decision 2026-11-19, HairpinItem.EndWithin). Until session
+    /// 1327 it ran to the bar's end (Lab sessions/p1327/probe n6, n10 — out-base against out).
+    /// LilyPond draws no hairpin there (sessions/p1324/lp n6, n10).
+    /// </summary>
+    [Theory]
+    // On the third beat of a whole note: half way from its column to the bar's end.
+    [InlineData("c''2 d''2 | c''1 | c''1 |", "e'4 f' e'@cresc f' | r2 r2@!cresc | e'1@f |", 1, 2)]
+    [InlineData("R1 | c''1 | c''1 |", "g'4 g'@cresc g' g' | r2 r2@!cresc | e'1@f |", 1, 2)]
+    // On the second beat of a half note: half way from its column to the next note's.
+    [InlineData("c''2 d''2 | c''2 d''2 | c''1 |", "e'4 f' e'@cresc f' | r4 r4@!cresc r2 | e'1@f |", 1, 2)]
+    public void AnEndOnARestUnderTheOtherPartsLongNote_StopsOnItsBeat(string fl1, string fl2, int share, int of)
+    {
+        var score = Collect(fl1, fl2);
+        var layout = new LayoutEngine(score.Paper).Layout(score);
+        var hairpin = Assert.Single(layout.HairpinLayouts);
+        var item = Assert.Single(ScoreSideTables.HairpinsByStaff(score).At(0));
+        Assert.NotNull(item.EndWithin);
+        var bar = layout.Systems.SelectMany(s => s.Measures).First(m => m.MeasureIndex == item.EndMeasureIndex);
+        var notes = score.StaffGroups[0].Staves[0].Voices[item.EndVoiceIndex].Measures[item.EndMeasureIndex];
+        double left = bar.X + LayoutUtilities.GetItemXOffset(score.StaffGroups[0].Staves[0].Voices[item.EndVoiceIndex].Measures,
+            item.EndMeasureIndex, item.EndItemIndex, bar);
+        double right = item.EndItemIndex + 1 < notes.Items.Length
+            ? bar.X + LayoutUtilities.GetItemXOffset(score.StaffGroups[0].Staves[0].Voices[item.EndVoiceIndex].Measures,
+                item.EndMeasureIndex, item.EndItemIndex + 1, bar)
+            : bar.X + bar.Width - 1.0; // a bound-padding short of the bar line (HairpinEngraver.BoundPadding)
+        Assert.Equal(left + ((right - left) * share / of), hairpin.EndX, 6);
+        Assert.True(hairpin.EndX < bar.X + bar.Width - 1.0, $"{hairpin.EndX} against the bar's end {bar.X + bar.Width}");
+    }
 
     /// <summary>The same for a text spanner's end and a pedal's release; an ottava's end
     /// includes the rest it is written on, and stays past it.</summary>
@@ -157,6 +189,10 @@ public class CombinedStaffHairpinTests
         "SustainOn v1 0.2 note@1/2 | SustainOff v0 1.2 note@1/2")]
     [InlineData("c''2 d''2 | c''4 d'' e'' f'' | c''1 |", "e'4 f' e'@8va f' | r2 r2@!8va | e'1 |",
         "OttavaUp v1 0.2 note@1/2 | OttavaStop v1 1.2 end@0")]
+    // Under the soloist's long note a text spanner's end stays where it was collected (the
+    // stop inside the note is a hairpin's alone, session 1327).
+    [InlineData("c''2 d''2 | c''1 | c''1 |", "e'4 f' e'@rit f' | r2 r2@!rit | e'1 |",
+        "TextSpanStart v1 0.2 note@1/2 | TextSpanStop v1 1.1 end@0")]
     public void AnotherLinesEndOnARestNobodyEngraves_StopsOnItsBeat(string fl1, string fl2, string expected)
         => Assert.Equal(expected, Marks(Collect(fl1, fl2)));
 
@@ -206,6 +242,23 @@ public class CombinedStaffHairpinTests
     // Part ONE's hairpin under part two's open one is another part's: met in another voice.
     [InlineData("c''2 d''2 | c''4 d''@cresc e'' f''@!cresc | c''1 |", "e'4 f'@cresc e' f' | e'1 | e'1 |",
         "Crescendo (met in another voice) | Crescendo")]
+    // The unison's hairpin stands for part two's too: part two's next follows it, part one ending
+    // it nowhere (owner's decision 2026-11-19; Lab sessions/p1327/probe h4)…
+    [InlineData("c'4 d'@cresc e' f' | c''2 d''2 | c''1 |", "c'4 d'@cresc e' f' | e'4 f'@decresc e' f'@!decresc | e'1 |",
+        "Crescendo> | >Decrescendo")]
+    // …but where part one ends it itself, it runs to that end, as before (h4f)…
+    [InlineData("c'4 d'@cresc e' f' | c''2 d''2@f | c''1 |", "c'4 d'@cresc e' f' | e'4 f'@decresc e' f'@!decresc | e'1 |",
+        "Crescendo | Decrescendo")]
+    // …a hairpin of its own being such an end too (its fourth beat is one chord of both parts,
+    // where part two's stop meets it)…
+    [InlineData("c'4 d'@cresc e' f' | c''2. d''4@decresc | c''1@p |", "c'4 d'@cresc e' f' | e'4 f' e'@decresc f'@!decresc | e'1 |",
+        "Crescendo> | >Decrescendo | Decrescendo>")]
+    // …also a bar later, past part two's next…
+    [InlineData("c'4 d'@cresc e' f' | c''1 | c''2 d''2@decresc | c''1 |", "c'4 d'@cresc e' f' | e'4 f'@decresc e' f'@!decresc | e'1 | e'1 |",
+        "Crescendo> | Decrescendo | >Decrescendo")]
+    // …and a level part one wrote BEFORE the unison's start none.
+    [InlineData("c'4@p d'@cresc e' f' | c''2 d''2 | c''1 |", "c'4@p d'@cresc e' f' | e'4 f'@decresc e' f'@!decresc | e'1 |",
+        "Crescendo> | >Decrescendo")]
     public void APartsNextHairpinInAnotherVoice_IsAdjacent(string fl1, string fl2, string expected)
         => Assert.Equal(expected, Tips(Collect(fl1, fl2)));
 
@@ -227,6 +280,9 @@ public class CombinedStaffHairpinTests
         "-7.33 -7.33 / p-6.39 p-5.93")]
     // Begun in a bar part two plays alone, followed where the parts play apart.
     [InlineData("R1 | c''2 d''2 | c''1 |", "g'4 g'@cresc g' g' | e'4 f'@decresc e' f'@!decresc | e'1 |",
+        "-7.77 -7.77")]
+    // The unison's hairpin and part two's next (part one ending it nowhere).
+    [InlineData("c'4 d'@cresc e' f' | c''2 d''2 | c''1 |", "c'4 d'@cresc e' f' | e'4 f'@decresc e' f'@!decresc | e'1 |",
         "-7.77 -7.77")]
     // Another part's hairpin under part two's open one is another line.
     [InlineData("c''2 d''2 | c''4 d''@cresc e'' f''@!cresc | c''1 |", "e'4 f'@cresc e' f' | e'1 | e'1 |",
