@@ -156,4 +156,34 @@ public class TupletArmTests
         Assert.Same(notes[0], allItems[grace.MainNoteItemIndex]);
         Assert.NotEmpty(notes[0].LeadingGrace);
     }
+
+    // ---- the figures and the @cross table: a slash and a bare duration read them too ----
+
+    /// <summary>
+    /// A tuplet's slash and bare duration hand their figures and their <c>@cross</c> on as the
+    /// main walk's do (session 1319). Until then those three arms of the tuplet walk read
+    /// neither: <c>tuplet 3/2 { /4@figuredBass(6) / / }</c> drew no figure, and a moved slash
+    /// that was the book's only <c>@cross</c> stayed on its own staff — the table is what tells
+    /// the collector that any note moves at all. The note, the chord and <c>q</c> were right.
+    /// </summary>
+    [Theory]
+    [InlineData("c'8", "c'", "c'")]
+    [InlineData("<c' e'>8", "<c' e'>", "<c' e'>")]
+    [InlineData("<c' e'>8", "q", "q")]
+    [InlineData("/8", "/", "/")]
+    [InlineData("c'8", "8", "8")]
+    [InlineData("<c' e'>8", "8", "8")]
+    [InlineData("/8", "8", "8")]
+    public void FiguresAndCross_ReachEveryMemberOfATuplet(string first, string second, string third)
+    {
+        static string Say(Score s) =>
+            "figures " + string.Join(" ", s.FiguredBasses.Select(f => $"({f.MeasureIndex},{f.ItemIndex})"))
+            + " cross " + string.Join(" ", s.CrossStaffItems.Select(c => $"({c.MeasureIndex},{c.ItemIndex})"));
+
+        string body = $"{first} {second}@figuredBass(6)@cross {third}@figuredBass(4 3)@cross";
+        var plain = Collect(body + " |");
+        var scaled = Collect("tuplet 3/2 { " + body + " } |");
+        Assert.Equal("figures (0,1) (0,2) cross (0,1) (0,2)", Say(plain));
+        Assert.Equal(Say(plain), Say(scaled));
+    }
 }

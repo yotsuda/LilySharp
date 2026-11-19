@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Fixed: a slash or a repeated value inside a tuplet lost its figures and its `@cross`** (`[engraving]`). `tuplet 3/2 { /4@figuredBass(6) / / }` drew no figure, and so did a bare value there (`c'4 tuplet 3/2 { 4@figuredBass(6) 4 4 }`); a `/4@cross` or `4@cross` in a tuplet stayed on its own staff when no other note of the book was moved. Both are read now as they are outside a tuplet — a note, a chord and a `q` in a tuplet always were. The LilyPond, MusicXML and MIDI exports were right already.
+
 - **Fixed: a drum did not play its hairpins** (`[playback]`). `sn4@p@cresc sn sn sn@f` struck the first three hits at *p* and jumped to *f* on the fourth, where any other part's notes climb through a crescendo: no drum note — a single hit, a drum chord, their bare values, a `q` — carried the hairpin into the playback. A drum part swells and fades now as every part does, in the MIDI, the WAV and the preview, and a hairpin in one line of a `drums { … }` chart ends at the moment the other line writes its level, a tuplet's hit included.
 
 - **Fixed: a chord repetition `q` played none of its own marks** (`[playback]`). `<c' e'>4@p q q@f q` sounded all four chords at *p* — the *f* was printed under the third and never played, for it or for anything after it — and `q@accent`, `q@staccato` and the other scripts did nothing to the sound. A `q` reads its dynamic and its scripts now exactly as the chord written out does (a bare value after a chord always did).

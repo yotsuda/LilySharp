@@ -400,6 +400,45 @@ public class HairpinVoiceTests
     public void TheOtherCarriers_StampTheirMomentToo(string clef, string bar, string expected)
         => Assert.Equal(expected, PinOf(clef, bar));
 
+    private const string StopFound = "voice 0 (0,3)..(0,1) end voice 1 stop True";
+
+    /// <summary>
+    /// …and every carrier stamps the moment of the marks it hands on, a hairpin's STOP among
+    /// them (session 1319): the level and the start above are stamped by the dynamics' own
+    /// collector, the stop by the articulations', a second argument of each arm that no net
+    /// read — a <c>q</c> handing on no moment kept all of this class green. The stop stands on
+    /// beat 3 under the number 1 while the other voice's crescendo starts on its item 3, the
+    /// fourth eighth: with no moment, or the bar's head, it is "before" the start and is no end.
+    /// </summary>
+    [Theory]
+    // — the main walk —
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { c'2 c'2@!cresc } |")]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { r2 r2@!cresc } |")]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { <c' e'>2 <c' e'>2@!cresc } |")]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { <c' e'>2 q2@!cresc } |")]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { /2 /2@!cresc } |")]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { c'2 2@!cresc } |")]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { <c' e'>2 2@!cresc } |")]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { c'2 c'2@rest@!cresc } |")]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { c'2 <>@!cresc c'2 } |")]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { c'2 << c'@!cresc e' g' >>2 } |")]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { c'2 << <c' e'>@!cresc g' >>2 } |")]    // — a tuplet's member —
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { c'2 tuplet 3/2 { c'4@!cresc c' c' } } |")]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { c'2 tuplet 3/2 { r4@!cresc r r } } |")]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { c'2 tuplet 3/2 { <c' e'>4@!cresc q q } } |")]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { <c' e'>2 tuplet 3/2 { q4@!cresc q q } } |")]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { c'2 tuplet 3/2 { /4@!cresc / / } } |")]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { c'2 tuplet 3/2 { 4@!cresc 4 4 } } |")]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { <c' e'>2 tuplet 3/2 { 4@!cresc 4 4 } } |")]
+    [InlineData("treble", "voice { c''8 c'' c'' c''@cresc c''2 } { c'2 tuplet 3/2 { c'4@rest@!cresc c' c' } } |")]
+    // — a drum staff: a hit in a voice, in a tuplet, and a chart's hit and marked rest —
+    [InlineData("percussion", "voice { hh8 hh hh hh@cresc hh2 } { bd2 bd2@!cresc } |")]
+    [InlineData("percussion", "voice { hh8 hh hh hh@cresc hh2 } { bd2 tuplet 3/2 { bd4@!cresc bd bd } } |")]
+    [InlineData("percussion", "drums { { hh8 hh hh hh@cresc hh2 } { bd2 bd2@!cresc } } |")]
+    [InlineData("percussion", "drums { { hh8 hh hh hh@cresc hh2 } { bd2 r2@!cresc } } |")]
+    public void EveryCarrier_StampsTheMomentOfAHairpinsStopToo(string clef, string bar)
+        => Assert.Equal(StopFound, PinOf(clef, bar));
+
     /// <summary>
     /// A drum chart's tuplet: its second hit's moment is its own, a third of the tuplet in
     /// (session 1313). The chart's pieces go in without duration and the bar's clock stands

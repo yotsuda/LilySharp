@@ -2911,7 +2911,12 @@ public sealed partial class MeasureCollector
                 await AddItemWithoutDurationAsync(builder, WithBowSources(slashItem, m));
                 CollectDynamics(slash, annMeasureIndex, annItemIndex, annAnchor);
                 CollectArticulations(slash, annMeasureIndex, annItemIndex, slashItem.StemUp, anchorTiming: annAnchor);
+                // The figures and the @cross table as the main walk's slash arm reads them
+                // (session 1319): this arm and the two bare arms below read neither, so a
+                // tuplet's slash drew no figures and stayed on its own staff, without a word.
+                CollectFiguredBass(slash, annMeasureIndex, annItemIndex, annAnchor, slashItem.Duration);
                 CollectChordNames(slash, annMeasureIndex, annItemIndex, annAnchor);
+                CollectCrossStaff(slash, annMeasureIndex, annItemIndex);
                 return written;
             }
             case DrumNoteSyntax drumNote:
@@ -2947,7 +2952,9 @@ public sealed partial class MeasureCollector
                         AddRepeatedDrumMark(bare, annMeasureIndex, annItemIndex);
                         CollectDynamics(bare, annMeasureIndex, annItemIndex, annAnchor);
                         CollectArticulations(bare, annMeasureIndex, annItemIndex, n.StemUp, anchorTiming: annAnchor);
+                        CollectFiguredBass(bare, annMeasureIndex, annItemIndex, annAnchor, n.Duration);
                         CollectChordNames(bare, annMeasureIndex, annItemIndex, annAnchor);
+                        CollectCrossStaff(bare, annMeasureIndex, annItemIndex);
                         return written;
                     }
                     case ChordItem c:
@@ -2957,7 +2964,9 @@ public sealed partial class MeasureCollector
                         await AddItemWithoutDurationAsync(builder, WithBowSources(c, m));
                         CollectDynamics(bare, annMeasureIndex, annItemIndex, annAnchor);
                         CollectArticulations(bare, annMeasureIndex, annItemIndex, c.StemUp, anchorTiming: annAnchor);
+                        CollectFiguredBass(bare, annMeasureIndex, annItemIndex, annAnchor, c.Duration);
                         CollectChordNames(bare, annMeasureIndex, annItemIndex, annAnchor);
+                        CollectCrossStaff(bare, annMeasureIndex, annItemIndex);
                         return written;
                     }
                     default:
