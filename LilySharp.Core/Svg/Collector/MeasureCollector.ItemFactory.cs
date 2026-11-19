@@ -432,8 +432,9 @@ public sealed partial class MeasureCollector
         // The member is STRUCK (ChordNoteInfo.IsStruck, Music.StruckNotes): a `q` and a bare
         // duration strike it again and let it go, the small head drawn again. Until session 1332
         // a repetition drew it a full head.
-        // MEASURED, 2.26.0 (Lab sessions/p1332/beam/q1.ly): `<c' e' \struck g'>4 q q` draws the
+        // MEASURED, 2.26.0 (Lab sessions/p1332/beam/lp-q1.ly): `<c' e' \struck g'>4 q q` draws the
         //   small head on every q (LilyPond's q copies the note events with their tweaks).
+        // LILYPOND-REF: scm/music-functions.scm:854-946 copy-repeat-chord + expand-repeat-chords!
         bool IsStruck = false)
     {
         /// <summary>
