@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
+| `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
 | `OWN` | 464 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **591** | |
+| **計** | **590** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -139,13 +139,12 @@
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
 - **`BeamRestStem`** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（65 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（64 件）
 
 ### `LilySharp.Core/Midi/SungVoices.cs`
 - **`SungVoices.Read`** ⚠️ An empty text has no observer: the page files no syllable for `_` or a
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
-- **`SharedRenderer.AccidentalGroupLength`** no observer; add the paren widths when a book brings one. The unpacked
-- **`SharedRenderer.AccidentalGroupLength`** bare glyph width, which is exact for one and unobserved for many.
+- **`SharedRenderer.AccidentalGroupLength`** no observer; add the paren widths when a book brings one. A lone note's
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **`SharedRenderer.DrawStemlessTremolo`** no observer reaches that branch yet.
 ### `LilySharp.Core/Rendering/SharedRenderer.Noteheads.cs`

@@ -95,6 +95,7 @@ internal static class LayoutPlanReader
         VoltaBracketLength.Key => VoltaBracketLength.Words,
         OttavaLineKey.Key => OttavaLineKey.Words,
         RestStyleKey.Key => RestStyleKey.Words,
+        TremoloBeamsKey.Key => TremoloBeamsKey.Words,
         _ => [],
     };
 
@@ -306,6 +307,11 @@ internal static class LayoutPlanReader
                 RestStyleKey.Key => ReadOneWord(plan, entry, span, found, RestStyleKey.Key,
                     RestStyleKey.Words, w => RestStyleKey.Find(w) is { } style
                         ? plan with { Style = plan.EngravingStyle with { RestStyle = style } } : null),
+                // Whether a two-note tremolo's beams reach the stems — LilyPond's Beam.gap
+                // (TremoloBeamsKey).
+                TremoloBeamsKey.Key => ReadOneWord(plan, entry, span, found, TremoloBeamsKey.Key,
+                    TremoloBeamsKey.Words, w => TremoloBeamsKey.Find(w) is { } b
+                        ? plan with { Style = plan.EngravingStyle with { TremoloBeamsJoined = b } } : null),
                 // Which chords draw a diagram, and the tuning a part-less chord draws on — two
                 // keys, one question each (owner's grammar 2026-10-31). The old one-key form
                 // (a tuning word, `capo N`, a table) is refused naming the new spelling.

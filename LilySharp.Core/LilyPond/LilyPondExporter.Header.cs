@@ -93,6 +93,9 @@ public sealed partial class LilyPondExporter
         // `restStyle classical | z` — LilyPond's own words (Semantics.RestStyleKey). In \Score it
         // is every staff's Rest; the MultiMeasureRest is another grob and keeps its glyphs.
         Line(s.RestStyle != d.RestStyle, "Rest.style = #'" + Semantics.RestStyleKey.WordOf(s.RestStyle));
+        // `tremoloBeams joined` — the beams of a two-note tremolo reach its stems
+        // (Semantics.TremoloBeamsKey). No other beam is gapped, so the \Score override moves none.
+        Line(s.TremoloBeamsJoined, "Beam.gap = #0");
         Line(s.BarLineHairThickness != d.BarLineHairThickness, "BarLine.hair-thickness = #" + N(s.BarLineHairThickness));
         Line(s.BarLineThickThickness != d.BarLineThickThickness, "BarLine.thick-thickness = #" + N(s.BarLineThickThickness));
         return lines.ToString();

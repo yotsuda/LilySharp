@@ -317,6 +317,34 @@ public static class OttavaLineKey
 }
 
 /// <summary>
+/// <c>layout { tremoloBeams gapped | joined }</c>: how a two-note tremolo's beams meet its stems.
+/// <c>gapped</c> (the default) is LilyPond's: the beams stop short of the stems, so the figure is
+/// not read as an ordinary beam; <c>joined</c> is an old print's, the beams reaching both stems
+/// (Calamo request 28, 2026-11-19; owner's decision: the key and its two words).
+/// </summary>
+/// <remarks>LILYPOND-REF: lily/beam.cc:402-427 Beam::get_gaps reads the beam's <c>gap</c>
+/// (scm/define-grobs.scm Beam: 0.8); LilyPond 2.26.0 draws the joined picture under
+/// <c>\override Beam.gap = #0</c>, which the twin writes. A display switch: the notes' values,
+/// the spacing (lily/beam.cc:429-449 tremolo_springs_and_rods reads no gap), the MIDI and the
+/// MusicXML are the default's.</remarks>
+public static class TremoloBeamsKey
+{
+    /// <summary>The key as written in the block.</summary>
+    public const string Key = "tremoloBeams";
+
+    /// <summary>The two words, the default first.</summary>
+    public static readonly IReadOnlyList<string> Words = ["gapped", "joined"];
+
+    /// <summary>True for <c>joined</c>, false for <c>gapped</c>, null for anything else.</summary>
+    public static bool? Find(string word) => word switch
+    {
+        "gapped" => false,
+        "joined" => true,
+        _ => null,
+    };
+}
+
+/// <summary>
 /// <c>layout { restStyle default | classical | z }</c>: which quarter rest the score draws.
 /// <c>default</c> is the modern one; <c>classical</c> a mirrored eighth rest; <c>z</c> a z with a
 /// knob at each end, an old French print's (OMR request #26, 2026-11-12; built 2026-11-13). The

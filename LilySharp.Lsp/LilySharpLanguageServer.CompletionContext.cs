@@ -915,6 +915,8 @@ public sealed partial class LilySharpLanguageServer
         AfterLayoutOttavaLine,
         /// <summary><c>layout { restStyle |</c> — default / classical / z.</summary>
         AfterLayoutRestStyle,
+        /// <summary><c>layout { tremoloBeams |</c> — gapped / joined.</summary>
+        AfterLayoutTremoloBeams,
         /// <summary><c>layout { chordDiagrams |</c> — written / none / all.</summary>
         AfterLayoutChordDiagrams,
         /// <summary><c>layout { chordTuning |</c> — the tuning words.</summary>
@@ -1477,6 +1479,8 @@ public sealed partial class LilySharpLanguageServer
                 return CompletionContext.AfterLayoutOttavaLine;
             if (prevWord.Equals(RestStyleKey.Key, StringComparison.Ordinal))
                 return CompletionContext.AfterLayoutRestStyle;
+            if (prevWord.Equals(TremoloBeamsKey.Key, StringComparison.Ordinal))
+                return CompletionContext.AfterLayoutTremoloBeams;
             if (prevWord.Equals(ChordDiagramsKey.Key, StringComparison.Ordinal))
                 return CompletionContext.AfterLayoutChordDiagrams;
             if (prevWord.Equals(ChordTuningKey.Key, StringComparison.Ordinal))

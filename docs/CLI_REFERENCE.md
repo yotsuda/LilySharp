@@ -225,7 +225,7 @@ The keys that came in for training data are the page's (`staffSpace`, `systemsPe
 the engraving style's (`lineThickness`, `StaffLine.thickness`, `LedgerLine.thickness`,
 `LedgerLine.lengthFraction`, `Stem.thickness`, `Stem.lengthFraction`, `Beam.thickness`,
 `Beam.damping`, `Dots.padding`, `Accidental.rightPadding`, `NoteHead.scale`, `BarLine.thinThickness`,
-`BarLine.thickThickness`, `cueSize`) and the shapes' (`ottavaLine`, `restStyle`) — the language
+`BarLine.thickThickness`, `cueSize`) and the shapes' (`ottavaLine`, `restStyle`, `tremoloBeams`) — the language
 documents what each means. Two notes for a reader
 of the pictures:
 

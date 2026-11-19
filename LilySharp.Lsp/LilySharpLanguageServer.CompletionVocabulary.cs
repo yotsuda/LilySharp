@@ -518,6 +518,12 @@ public sealed partial class LilySharpLanguageServer
         ["z"] = "A z with a knob at each end, as in old French prints — LilyPond's z",
     };
 
+    private static readonly System.Collections.Generic.Dictionary<string, string> TremoloBeamsDetails = new()
+    {
+        ["gapped"] = "The beams stop short of the stems — LilyPond's (the default)",
+        ["joined"] = "The beams reach both stems, as in old prints",
+    };
+
     /// <summary>After <c>layout { sectionLabels</c>.</summary>
     internal static CompletionList GetSectionLabelCompletions()
         => WordList(LanguageVocabulary.SectionLabelStyles, SectionLabelDetails);
@@ -541,6 +547,10 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>After <c>layout { restStyle</c>.</summary>
     internal static CompletionList GetRestStyleCompletions()
         => WordList(Core.Semantics.RestStyleKey.Words, RestStyleDetails);
+
+    /// <summary>After <c>layout { tremoloBeams</c>.</summary>
+    internal static CompletionList GetTremoloBeamsCompletions()
+        => WordList(Core.Semantics.TremoloBeamsKey.Words, TremoloBeamsDetails);
 
     /// <summary>After <c>layout { chordDiagrams</c>: written, none, all (the compiler's
     /// <see cref="Core.Semantics.ChordDiagramsKey.Words"/>; owner's grammar 2026-10-31).</summary>
@@ -890,6 +900,7 @@ public sealed partial class LilySharpLanguageServer
         ["compressRests"] = "false",
         ["ottavaLine"] = "dashed",
         ["restStyle"] = "default",
+        ["tremoloBeams"] = "gapped",
     };
 
     /// <summary>Every key's line of the pre-filled <c>layout</c> snippet, at its default — the
@@ -950,6 +961,7 @@ public sealed partial class LilySharpLanguageServer
         "minorChords" => "How a minor chord's root is spelled: upper (default) | lower",
         "ottavaLine" => "How an ottava's line is drawn: dashed (default, with a hook) | wave (no hook, as in old prints)",
         "restStyle" => "Which quarter rest is drawn: default | classical (a mirrored eighth rest) | z (an old French print's)",
+        "tremoloBeams" => "How a two-note tremolo's beams meet its stems: gapped (default) | joined (reaching both stems, as in old prints)",
         "chordDiagrams" => "The tuning written chord shapes draw on: guitar | ukulele | mandolin | … | none (default: the part's instrument, else guitar); add `capo N` for a capo, `all` to draw every chord, `{ … }` to list the chords that draw",
         "chordNames" => "What a chord name shows under a capo: shape (default, the pressed chord's) | sounding | both",
         "chordList" => "The chords the score uses, each with its diagram, under the title: true | false (default)",

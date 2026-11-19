@@ -2951,6 +2951,14 @@ is the whole score's; the value, the MIDI and the MusicXML are unchanged. The tw
 `restQuarterZ`. `lysc --set restStyle=z` takes it too. LilyPond's mensural styles are not
 offered.
 
+**`tremoloBeams`** — how a two-note tremolo's beams (`repeat tremolo 12 { a64 b }`) meet its
+stems: `gapped` (the default and LilyPond's: the beams stop short of the stems, so the figure
+is not read as an ordinary beam) or `joined` (the beams reach both stems, as in old prints,
+where the figure looks like two notes under a thick beam). A whole-note pair's beams then run
+from one head to the other. It is the whole score's; the notes' values, the spacing, the MIDI
+and the MusicXML are unchanged. The twin writes `\override Beam.gap = #0`.
+`lysc --set tremoloBeams=joined` takes it too.
+
 **`minorChords`** — whether a chord with a **minor third** prints an uppercase root with
 its `m` (`upper`, the default and LilyPond's) or a lowercase root with the `m` dropped
 (`lower` = LilyPond's `chordNameLowercaseMinor`, which the twin writes on the `ChordNames`

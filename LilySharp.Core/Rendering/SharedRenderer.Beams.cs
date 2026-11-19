@@ -386,11 +386,14 @@ internal static partial class SharedRenderer
                     //   (default 1.0) and grows gap_lengths[RIGHT];
                     // LILYPOND-REF: lily/beam.cc:381-400 get_accidentals —
                     //   the LAST stem's note heads' accidental grobs.
-                    double gapLeft = EngravingDefaults.TremoloBeamGap;
-                    double gapRight = EngravingDefaults.TremoloBeamGap;
+                    // `layout { tremoloBeams joined }` is the gap at 0 through the same
+                    // lines (EngravingStyle.TremoloBeamGap): the beams reach the stems, a
+                    // whole-note pair's the heads' inner edges and its accidentals' padding.
+                    double gapLeft = EngravingStyle.Current.TremoloBeamGap;
+                    double gapRight = gapLeft;
                     if (InvisibleStem(0))
                     {
-                        double accsLen = AccidentalGroupLength(grp.ItemOf(grp.Members.Length - 1));
+                        double accsLen = AccidentalGroupLength(grp.ItemOf(grp.Members.Length - 1), grp.StemUp);
                         if (accsLen > 0)
                             gapRight += accsLen + 1.0;
                     }
@@ -690,11 +693,11 @@ internal static partial class SharedRenderer
     /// ⚠️ NOT PORTED: courtesy parens are not counted, where LP's grob extent includes
     /// them — an omission from LP's quantity, not a Lily#-own one (§5.2 audit, session
     /// 158). No whole-display pair in the corpus carries one, so the omission has
-    /// no observer; add the paren widths when a book brings one. The unpacked
-    /// fallback (<c>packedX ?? 0.0</c>) likewise collapses a lone accidental to its
-    /// bare glyph width, which is exact for one and unobserved for many.
+    /// no observer; add the paren widths when a book brings one. A lone note's
+    /// unpacked fallback (<c>packedX ?? 0.0</c>) is its bare glyph width, exact for
+    /// one accidental; a chord's unpacked accidentals are solved here as they are drawn.
     /// </remarks>
-    private static double AccidentalGroupLength(MusicItem item)
+    private static double AccidentalGroupLength(MusicItem item, bool stemUp)
     {
         double min = double.PositiveInfinity, max = double.NegativeInfinity;
         void Add(double? packedX, string kind)
@@ -709,10 +712,23 @@ internal static partial class SharedRenderer
             case NoteItem { Accidental: { } kind } n:
                 Add(n.AccidentalX, kind);
                 break;
-            case ChordItem c:
+            case ChordItem { HasPackedAccidentals: true } c:
                 foreach (var n in c.Notes)
                     if (n.Accidental is { } kind)
                         Add(n.AccidentalX, kind);
+                break;
+            // A chord alone on its column carries no packed X: its accidentals stand where
+            // its own solve staggers them, the one DrawChord draws (two sharps a third apart
+            // are 1.285 apart, so the union is 2.32 and not one sharp's 1.03 — LilyPond
+            // 2.26.0, `repeat tremolo 16 { c''32 <dis'' fis''> }`, session 1310).
+            case ChordItem c:
+                var headFont = HeadFontOf(c);
+                foreach (var al in AccidentalColumn.CalculatePositions(
+                    c.Notes,
+                    ChordHeadPositioning.CalculateOffsets(c.Notes, stemUp, GlyphMetrics.NoteValueOf(c), headFont),
+                    GrobFontSize.IsReduced(c) ? GrobFontSize.FontOf(c, SizedGrob.Accidental) : null, headFont,
+                    AccidentalStem.Of(c, stemUp, headFont)))
+                    Add(al.XOffset, al.Accidental);
                 break;
         }
 

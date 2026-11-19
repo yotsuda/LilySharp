@@ -189,6 +189,19 @@ public sealed record EngravingStyle
     /// <see cref="MusicGlyphs.QuarterRest"/>; OMR request #26, 2026-11-12; built 2026-11-13).</summary>
     public RestStyle RestStyle { get; init; }
 
+    /// <summary><c>layout { tremoloBeams joined }</c>: a two-note tremolo's beams reach both
+    /// stems — LilyPond's <c>Beam.gap</c> at 0 rather than 0.8
+    /// (<see cref="Semantics.TremoloBeamsKey"/>, <see cref="TremoloBeamGap"/>; Calamo request 28,
+    /// 2026-11-19).</summary>
+    public bool TremoloBeamsJoined { get; init; }
+
+    /// <summary>LilyPond's <c>Beam.gap</c>: how far a tremolo pair's gapped beams stop short of
+    /// each stem — <see cref="EngravingDefaults.TremoloBeamGap"/>, or 0 under
+    /// <see cref="TremoloBeamsJoined"/>.</summary>
+    /// <remarks>LILYPOND-REF: lily/beam.cc:402-427 Beam::get_gaps — the property read as the
+    /// length of both ends.</remarks>
+    public double TremoloBeamGap => TremoloBeamsJoined ? 0 : EngravingDefaults.TremoloBeamGap;
+
     /// <summary><c>BarLine.hair-thickness</c>, in staff line thicknesses.</summary>
     /// <remarks>LILYPOND-REF: scm/bar-line.scm:227-238 make-simple-bar-line reads it times the
     /// paper's line-thickness; scm/define-grobs.scm BarLine (hair-thickness . 1.9).</remarks>

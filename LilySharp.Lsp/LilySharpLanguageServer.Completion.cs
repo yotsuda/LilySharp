@@ -584,6 +584,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterLayoutMinorChords => GetMinorChordCompletions(),
             CompletionContext.AfterLayoutOttavaLine => GetOttavaLineCompletions(),
             CompletionContext.AfterLayoutRestStyle => GetRestStyleCompletions(),
+            CompletionContext.AfterLayoutTremoloBeams => GetTremoloBeamsCompletions(),
             CompletionContext.AfterLayoutChordDiagrams => GetChordDiagramCompletions(),
             CompletionContext.AfterLayoutChordTuning => GetChordTuningCompletions(),
             // The ranked capo frets after the top-level `capo` (on the file's chordTuning, else the guitar).

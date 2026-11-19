@@ -1104,6 +1104,7 @@ LayoutEntry    = 'markTempo' , MarkArrangement
                | 'compressRests' , Boolean
                | 'ottavaLine' , ( 'dashed' | 'wave' )   (* an ottava's line: dashes and a hook (default), or a wave with no hook *)
                | 'restStyle' , ( 'default' | 'classical' | 'z' )   (* the shape of the quarter rest: the modern one (default), a mirrored eighth rest, or a z with a knob at each end *)
+               | 'tremoloBeams' , ( 'gapped' | 'joined' )   (* a two-note tremolo's beams: kept off the stems (default), or reaching both stems *)
                | 'voltaBracket' , VoltaLength        (* VoltaLength: 'all' | 'line' | Integer >= 1 — §6 StructureVolta *)
                | StyleKey , Number                     (* > 0, no unit *)
                | ( 'Beam.damping' | 'Dots.padding' | 'Accidental.rightPadding' ) , Number   (* >= 0 *)
@@ -1360,6 +1361,16 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
    \Score context of its \layout block. NOT HERE: LilyPond's mensural and neomensural
    styles, which change other durations and need another font's glyphs.
 
+   tremoloBeams — how the beams of a TWO-NOTE TREMOLO ('repeat tremolo N { a b }') meet its
+   stems (Calamo request 28, built 2026-11-19). 'gapped' (the default) is LilyPond's: the beams
+   nearest the heads stop 0.8 short of each stem, so the figure is not read as an ordinary
+   beam. 'joined' is an old print's: the beams reach both stems — LilyPond's Beam.gap at 0
+   through the same lines (lily/beam.cc Beam::get_gaps), so a whole-note pair's beams run from
+   one head's inner edge to the other's, and still keep the accidental-padding off the last
+   chord's accidentals. A pair of half notes has no gapped beam under either word. A DISPLAY
+   switch: the notes' values, the spacing, the MIDI and the MusicXML are untouched. The twin
+   writes '\override Beam.gap = #0' in the \Score context of its \layout block.
+
    voltaBracket — how far a form ending's volta bracket reaches (2026-09-28). 'all' (the
    default) covers every bar of the ending; 'line' stops at the end of the system the
    bracket starts in; a whole number N covers the ending's first N bars (all of them when
@@ -1398,6 +1409,7 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
      voltaBracket line
      compressRests true
      restStyle z
+     tremoloBeams joined
    }
 *)
 

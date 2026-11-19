@@ -4,6 +4,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **`layout { tremoloBeams joined }`** draws a two-note tremolo as an old print does, its beams reaching both stems. The default, `gapped`, keeps them off the stems as before. The key is in the `layout` list, its two words are offered after it, and both are coloured.
+
+- **Fixed: a whole-note tremolo's beams ran into the accidentals of its second chord** when that chord had two or more accidentals side by side.
+
 - **A beat repeat: a figure shorter than a bar, repeated inside the bar.** Write the figure in braces, then one `%` a repetition: `c4 { d8 e } % %` is one bar of 4/4, the figure three times. The preview draws a beat slash for each `%` (one slash for eighths, two for sixteenths, the double slash with dots for a figure of mixed values) and plays the figure again. Braces with no `%` after them are an error (LYS1074). Hovering a figure's `%` says how many times the figure is heard.
 
 - **Fixed: the practice panel kept another chart's recording.** Going from a chart with a recording to one with none, the score changed and the panel's Recording group stayed — the first chart's recording, its parts and its Octave, which Play would then have sounded under the wrong score. The second chart's "no recording" reached the page before the first chart's recording, still being read from disk. The chart shown last now decides.
