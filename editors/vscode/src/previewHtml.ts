@@ -6141,6 +6141,20 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             startPlayback(playbackNotes, best.T, false, false, 0, 0);   // (the recording seeks too)
             return true;
         }
+        // A clicked bar whose first note is not in the list: one tied over from the bar before
+        // ("a8 d'8~ | d'2. r4 |" — the list has the one onset, in the bar before) has no entry of
+        // its own, so seekToCopy finds nothing and the playing went on where it was (owner's
+        // report 2026-11-19, Moon-on-the-River.lys: bar 3 playing, bar 14 clicked; measured in
+        // a real VS Code, the A flag on bar 14 and the list still at 7 s). The bar's own start
+        // instead, where it first plays — Play's rule from the A flag (barStartIn).
+        function seekToBar(m) {
+            if (playheadTimer === null || !playbackNotes || m < 0) return false;
+            clearHighlights();
+            const speed = playedSpeed();
+            const at = barStartIn(playbackNotes, (playedBeats() || []).map(b => ({ T: b.T / speed, A: b.A })), m);
+            startPlayback(playbackNotes, at, false, false, 0, 0);
+            return true;
+        }
 
         installBarHover();
 
@@ -6226,7 +6240,8 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 const pos = parseInt(bar.getAttribute('data-start'), 10);
                 // The bar takes the A flag: Play starts there (docs/transport-mixer-design.md §1 3).
                 // (playing: laid out again as the flags now say, as a dragged flag — owner's report 2026-11-17)
-                { const m = measureOfStaffBox(bar); if (m >= 0) setA(m); }
+                const m = measureOfStaffBox(bar);
+                if (m >= 0) setA(m);
                 lastHighlightPos = -1;
                 aiClearSelection();
                 const box = bar.getBoundingClientRect();
@@ -6238,7 +6253,8 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 };
                 // (A-B on: the bars as the flags now say are already laid out above — a seek would go
                 // through the whole score, out past B: owner's report 2026-11-17)
-                if (!abOn && seekToCopy(pos, inBar)) return;
+                // (a bar that opens on a note tied over has no note of its own to seek to: its start)
+                if (!abOn && (seekToCopy(pos, inBar) || seekToBar(m))) return;
                 clearHighlights();
                 vscode.postMessage({ type: 'jumpToPosition', position: pos });
             } else if (target && mainContent.contains(target)) {

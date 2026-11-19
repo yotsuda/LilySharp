@@ -193,7 +193,7 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /practiceNotes\(timed, rawParts, playedBeats\(\), Object\.assign\(\{\}, eff\(\), \{ speed: playBasis\.speed \}\), rawExtra, true\);/);
         assert.match(html, /if \(quiet && quiet\.changed && r\.sounding\.length === 0\) \{[\s\S]{0,300}lightPlayingBar\(els\);/);
         // A click on a bar (or a note of it) takes the A flag there.
-        assert.match(html, /\{ const m = measureOfStaffBox\(bar\); if \(m >= 0\) setA\(m\); \}/);
+        assert.match(html, /const m = measureOfStaffBox\(bar\);\s+if \(m >= 0\) setA\(m\);/);
     });
 
     // Where the playback stands, just left of the length (owner's request 2026-11-16), on the
@@ -390,6 +390,12 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /loopOn = !loopOn;[\s\S]{0,500}if \(!playingNow\(\) \|\| !resumeHere\(\)\) \{/);
         assert.match(resume, /startPlayback\(rounds, at === null \? 0 : loopOffset\(at, place\.counting\), false, false, loopGap, spanStart\);/);
         assert.match(resume, /startPlayback\(list, at === null \? 0 : at, false, false, 0, spanStart\);/);
+        // A bar clicked while it plays, whose first note is tied over from the bar before (no
+        // onset of its own in the list): from the bar's start, not on from where it was (owner's
+        // report 2026-11-19, Moon-on-the-River.lys: bar 3 playing, bar 14 clicked).
+        assert.match(html, /function seekToBar\(m\) \{\s+if \(playheadTimer === null \|\| !playbackNotes \|\| m < 0\) return false;/);
+        assert.match(html, /const at = barStartIn\(playbackNotes, \(playedBeats\(\) \|\| \[\]\)\.map\(b => \(\{ T: b\.T \/ speed, A: b\.A \}\)\), m\);\s+startPlayback\(playbackNotes, at, false, false, 0, 0\);/);
+        assert.match(html, /if \(!abOn && \(seekToCopy\(pos, inBar\) \|\| seekToBar\(m\)\)\) return;/);
         // Its start: the list's offset in the score's played time (count-in aside) times the speed.
         const at = html.indexOf('function startRecordingAlong(');
         const body = html.slice(at, html.indexOf('\n        }', at) + '\n        }'.length);
