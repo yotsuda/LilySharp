@@ -394,8 +394,17 @@ describe('the preview\'s Range panel', () => {
         // onset of its own in the list): from the bar's start, not on from where it was (owner's
         // report 2026-11-19, Moon-on-the-River.lys: bar 3 playing, bar 14 clicked).
         assert.match(html, /function seekToBar\(m\) \{\s+if \(playheadTimer === null \|\| !playbackNotes \|\| m < 0\) return false;/);
-        assert.match(html, /const at = barStartIn\(playbackNotes, \(playedBeats\(\) \|\| \[\]\)\.map\(b => \(\{ T: b\.T \/ speed, A: b\.A \}\)\), m\);\s+startPlayback\(playbackNotes, at, false, false, 0, 0\);/);
+        assert.match(html, /const at = barStartIn\(playbackNotes, \(playedBeats\(\) \|\| \[\]\)\.map\(b => \(\{ T: b\.T \/ speed, A: b\.A \}\)\), m\);\s+seekPlay\(at\);/);
         assert.match(html, /if \(!abOn && \(seekToCopy\(pos, inBar\) \|\| seekToBar\(m\)\)\) return;/);
+        // A seek while Repeat goes round stays in the loop: its rounds laid out again and entered at
+        // the place, with the voices' plan - not the score once under a plan of rounds, which left
+        // the voice going round alone after the instruments' one pass (owner's report 2026-11-19,
+        // Spring-Breeze-Bicycle.lys).
+        const seek = html.slice(html.indexOf('function seekPlay(t)'), html.indexOf('function seekToBar(m)'));
+        assert.match(seek, /if \(loopOn && loopList && lastSpan !== undefined && loopRound > 0\) \{\s+const rounds = looped\(loopList\);\s+voicePlan = loopVoicePlan\(\);/);
+        assert.match(seek, /startPlayback\(rounds, at === null \? 0 : loopOffset\(at, null\), false, false, loopGap, spanStart\);\s+return;/);
+        assert.match(seek, /startPlayback\(playbackNotes, t, false, false, 0, 0\);/);
+        assert.match(html, /if \(best === null\) return false;\s+seekPlay\(best\.T\);/);
         // Its start: the list's offset in the score's played time (count-in aside) times the speed.
         const at = html.indexOf('function startRecordingAlong(');
         const body = html.slice(at, html.indexOf('\n        }', at) + '\n        }'.length);

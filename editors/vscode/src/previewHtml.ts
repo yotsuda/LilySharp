@@ -6138,8 +6138,29 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 }
             }
             if (best === null) return false;
-            startPlayback(playbackNotes, best.T, false, false, 0, 0);   // (the recording seeks too)
+            seekPlay(best.T);
             return true;
+        }
+        // The list from the score's time t, as it is being played: round and round with Repeat on
+        // (the whole score: its rounds laid out again and entered at t), else once from t. Until
+        // 2026-11-19 a seek handed the instruments the score ONCE whatever Repeat said, while the
+        // voices kept the loop's plan and the end stayed the last round's: at the score's end the
+        // instruments stopped and the voice went on into the next round alone (owner's report,
+        // Spring-Breeze-Bicycle.lys, seen once; measured in a real VS Code: after a click on a bar
+        // the list ended at 104 s under a plan of 6 rounds).
+        function seekPlay(t) {
+            if (loopOn && loopList && lastSpan !== undefined && loopRound > 0) {
+                const rounds = looped(loopList);
+                voicePlan = loopVoicePlan();
+                let at = null, before = 0;
+                for (const [a, b] of spanPieces || [[spanStart, spanStart + loopRound]]) {
+                    if (t >= a - 1e-6 && t < b - 1e-6) { at = before + (t - a); break; }
+                    before += b - a;
+                }
+                startPlayback(rounds, at === null ? 0 : loopOffset(at, null), false, false, loopGap, spanStart);
+                return;
+            }
+            startPlayback(playbackNotes, t, false, false, 0, 0);   // (the recording seeks too)
         }
         // A clicked bar whose first note is not in the list: one tied over from the bar before
         // ("a8 d'8~ | d'2. r4 |" — the list has the one onset, in the bar before) has no entry of
@@ -6152,7 +6173,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             clearHighlights();
             const speed = playedSpeed();
             const at = barStartIn(playbackNotes, (playedBeats() || []).map(b => ({ T: b.T / speed, A: b.A })), m);
-            startPlayback(playbackNotes, at, false, false, 0, 0);
+            seekPlay(at);
             return true;
         }
 
