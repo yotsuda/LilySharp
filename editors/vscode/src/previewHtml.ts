@@ -4703,7 +4703,10 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         // extension keeps this page's menu for them (previewPractice) — and the recording, while it
         // sounds with the score (docs/recording-design.md §7: its bars, the panel and its fader).
         function postPracticeState() {
-            const along = recOn && recording && recording.ready && !recording.error;
+            // (as Play has it, recordingAlong: on, one of its parts soloed, or its All pressed in — an
+            // export of the score with the recording's vocals soloed and its button out had no recording,
+            // owner's report 2026-11-20)
+            const along = recordingAlong() && !recording.error;
             const e = eff();    // (the exports sound as the mixer does: the solo, the group's fader)
             vscode.postMessage({ type: 'practiceState', practice: {
                 speed: practice.speed, muted: e.muted.slice(), click: practice.click, countIn: practice.countIn,

@@ -177,6 +177,10 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /out\[name\] = \(soloParts \? !solo\.has\('rec:' \+ name\) : recPartsOff\.includes\(name\) && !recAllOn\) \? 0 : levelIn\(recPartLevels, name\);/);
         // …and its All pressed in sounds it with its button out (owner's request 2026-11-20).
         assert.match(html, /return !!\(\(recOn \|\| recSoloed\(\) \|\| \(recAllOn && recording && \(recording\.parts \|\| \[\]\)\.length > 0\)\) && recording && recording\.ready && recordingPlayer\(\)\);/);
+        // The exports take the recording as Play does: a part soloed with the group's button out is
+        // in the export too (owner's report 2026-11-20: the vocals soloed, the MP3 had none).
+        const posted = html.slice(html.indexOf('function postPracticeState()'));
+        assert.match(posted.slice(0, 400), /const along = recordingAlong\(\) && !recording\.error;/);
         // The practice panel's folds are kept per file; a file's first opening has every group folded
         // (owner's requests 2026-11-17).
         assert.match(html, /practiceBtn\.setAttribute\('aria-expanded', 'true'\);[\s\S]{0,300}applyFolds\(\);/);
