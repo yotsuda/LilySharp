@@ -1519,8 +1519,8 @@ internal static class ItemSkylineFactory
         switch (chord)
         {
             case ChordItem { Notes.Length: > 0 } c:
-                minPosition = c.Notes.Min(n => n.StaffPosition);
-                maxPosition = c.Notes.Max(n => n.StaffPosition);
+                // What the drawn line covers (a struck member is outside it, Calamo request 32).
+                (minPosition, maxPosition) = ArpeggioEngraver.HeldSpan(c.Notes);
                 break;
             case NoteItem n:
                 minPosition = maxPosition = n.StaffPosition;

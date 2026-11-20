@@ -2675,8 +2675,8 @@ public sealed partial class MeasureCollector
     {
         if (!(hasArpeggio || bracket) || chordItem.Notes.Length == 0)
             return;
-        int minPos = chordItem.Notes.Min(n => n.StaffPosition);
-        int maxPos = chordItem.Notes.Max(n => n.StaffPosition);
+        // A struck member stands outside the roll (Calamo request 32): the line covers what is held.
+        var (minPos, maxPos) = Layout.ArpeggioEngraver.HeldSpan(chordItem.Notes);
         _arpeggios.Add(new ArpeggioItem(measureIndex, itemIndex, minPos, maxPos, sourceStart, _v.Cursor.StaffIndex,
             Bracket: bracket, VoiceIndex: _v.Cursor.VoiceIndex, Cross: cross, Arrow: bracket ? 0 : arrow));
     }

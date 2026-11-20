@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **An arpeggio leaves out an `@struck` member.** `<gis cis' gis'@struck>2.@arpeggio` draws the wavy line beside the held notes only, not the small head.
 - **Other extensions can read songs through the bundled lysc.** The extension's exports carry `lyscPath`, the lysc beside its server, which now prints a song's sections, tempos and notes as played (`lysc timeline`, `lysc notes`) — what Shosa dances to.
 - **Dettato is now Orecchiante.** The recording reader was renamed (another project published under its old name): Lily# looks for the `yotsuda.orecchiante` extension, 0.11.0 or newer, reads and writes the file beside a chart as `<stem>.orecchiante.json`, and names a converted chart `song (Orecchiante).lys`. A `.dettato.json` is no longer read — convert the recording again. For a reader named by hand, the variable is `LILYSHARP_ORECCHIANTE_PATH`.
 - **A hairpin with no end is flagged.** A `@cresc` that no level, hairpin or `@!cresc` follows is drawn to the next bar line as before, and the Problems panel now says where to write its end.

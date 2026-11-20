@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 67 | 観測者がゼロだと自認しているもの |
-| `OWN` | 478 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **607** | |
+| `OWN` | 479 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **608** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -253,7 +253,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（478 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（479 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -606,6 +606,7 @@
 - **`EngravingDefaults.RestHeight`** ⚠️ LILYSHARP-OWN: ONE NOMINAL BOX FOR EVERY REST, WHICH LILYPOND DOES NOT HAVE. There a
 - **`EngravingDefaults.RepeatDotRadius`** a LILYSHARP-OWN divergence that had been measured and left because closing it redraws
 ### `LilySharp.Core/Svg/Layout/ArpeggioEngraver.cs`
+- **`ArpeggioEngraver.HeldSpan`** LILYSHARP-OWN (Calamo request 32, 2026-11-20): LilyPond's arpeggio takes every head on
 - **`ArpeggioEngraver.WigglesBesideArrow`** LILYSHARP-OWN for a font whose arrow is not a wiggle tall (SMuFL's
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
 - **`ArticulationEngraver.BendTabXOffset`** LILYSHARP-OWN: the bend-up is Lily#'s own arrow-and-label device — LilyPond's guitar

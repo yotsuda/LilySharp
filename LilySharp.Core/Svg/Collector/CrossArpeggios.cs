@@ -227,7 +227,8 @@ internal static class CrossArpeggios
     private static int? LowestHead(MusicItem item) => item switch
     {
         NoteItem note => note.StaffPosition,
-        ChordItem { Notes.Length: > 0 } chord => chord.Notes.Min(n => n.StaffPosition),
+        // A struck member is outside the roll (Calamo request 32, ArpeggioEngraver.HeldSpan).
+        ChordItem { Notes.Length: > 0 } chord => Layout.ArpeggioEngraver.HeldSpan(chord.Notes).Min,
         _ => null,
     };
 

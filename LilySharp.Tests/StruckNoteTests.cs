@@ -205,7 +205,7 @@ public class StruckNoteTests
 
     /// <summary>Written first, the struck member is moved behind the held ones in MusicXML; the
     /// chord's marks stay on its first &lt;note&gt; (until session 1330 they went with the struck
-    /// one onto a &lt;chord/&gt; note), and an arpeggio is still every member's.</summary>
+    /// one onto a &lt;chord/&gt; note), and an arpeggio is the held members' (Calamo request 32).</summary>
     [Fact]
     public void InMusicXml_TheChordsMarks_StayOnItsFirstNote()
     {
@@ -219,7 +219,9 @@ public class StruckNoteTests
                     && d.Name.LocalName is not "articulations").Select(d => d.Name.LocalName)) + "]")];
         }
         Assert.Equal(new[] { "C[accent]", "E+[]", "G+[]" }, Notes("<g'@struck c'' e''>2.@accent |"));
-        Assert.Equal(new[] { "C[arpeggiate]", "E+[arpeggiate]", "G+[arpeggiate]" }, Notes("<g'@struck c'' e''>2.@arpeggio |"));
+        Assert.Equal(new[] { "C[arpeggiate]", "E+[arpeggiate]", "G+[]" }, Notes("<g'@struck c'' e''>2.@arpeggio |"));
+        // A bracket's ends are the held members' too: the lowest and the highest that is held.
+        Assert.Equal(new[] { "G[non-arpeggiate]", "C+[non-arpeggiate]", "E+[]" }, Notes("<g' c'' e''@struck>2.@arpeggio(bracket) |"));
         // An empty chord's script before it is the chord's too, on that first note.
         Assert.Equal(new[] { "C[]", "C[accent]", "E+[]", "G+[]" }, Notes("c'2 <>@accent <g'@struck c'' e''>4 |"));
     }
@@ -298,6 +300,32 @@ public class StruckNoteTests
         Assert.Equal(24 + 1, notes.Count(n => n.Key == 68));
         Assert.Single(notes, n => n.Start == 0 && n.Key == 68);
         Assert.Equal(notes.First(n => n.Key == 56).Length, notes.Single(n => n.Start == 0 && n.Key == 68).Length);
+    }
+
+    /// <summary>An arpeggio beside a chord with a struck member covers the held heads only (Calamo
+    /// request 32: Kücken Op.47-3 bar 70, the wavy line beside the two white heads and not the
+    /// small one) — on the page, in the spacing's reservation, and in the twin, which sets
+    /// <c>positions</c> from the heads that are not smaller than their stem. A chord with no struck
+    /// member keeps LilyPond's own extent and writes no override.</summary>
+    [Theory]
+    [InlineData("<gis cis' gis'@struck>2.@arpeggio |", -9, -6, "Arpeggio")]
+    [InlineData("<gis@struck cis' gis'>2.@arpeggio |", -6, -2, "Arpeggio")]
+    [InlineData("<gis cis' gis'@struck>2.@arpeggio(up) |", -9, -6, "Arpeggio")]
+    [InlineData("<gis cis' gis'@struck>2.@arpeggio(bracket) |", -9, -6, "ChordBracket")]
+    [InlineData("<gis cis' gis'>2.@arpeggio |", -9, -2, null)]
+    public void AnArpeggio_CoversTheHeldHeadsOnly(string music, int min, int max, string? grob)
+    {
+        var tree = SyntaxTree.Parse(Book(music));
+        Assert.Empty(SemanticValidation.Run(tree).Where(d => d.Severity != DiagnosticSeverity.Info));
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), null));
+        var arp = Assert.Single(score.Arpeggios);
+        Assert.Equal((min, max), (arp.MinStaffPosition, arp.MaxStaffPosition));
+
+        string ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(tree);
+        if (grob is null)
+            Assert.DoesNotContain(".positions", ly);
+        else
+            Assert.Contains("\\once \\override " + grob + ".positions = #(lambda (grob)", ly);
     }
 
     [Fact]

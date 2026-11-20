@@ -5539,8 +5539,9 @@ public sealed class MusicXmlExporter
             isFirst = false;
 
             // Arpeggio marks: <arpeggiate> on EVERY member; the bracket form
-            // puts <non-arpeggiate> on the two OUTER members only.
-            if (_chordArpeggio == "arpeggiate")
+            // puts <non-arpeggiate> on the two OUTER members only. A struck member is outside
+            // the roll (Calamo request 32, ArpeggioEngraver.HeldSpan): it carries neither.
+            if (_chordArpeggio == "arpeggiate" && !Music.StruckNotes.IsStruck(pitch))
                 xmlNote.ExtraNotations.Add(new System.Xml.Linq.XElement("arpeggiate",
                     new System.Xml.Linq.XAttribute("number", 1)));
 
@@ -5670,11 +5671,12 @@ public sealed class MusicXmlExporter
             needsOnset = false;
         }
 
-        WriteCrossArpeggio(chord, _chordMembers);
-        StampArpeggioDirection(chord, _chordMembers);
+        var rolled = Rolled(_chordMembers);
+        WriteCrossArpeggio(chord, rolled);
+        StampArpeggioDirection(chord, rolled);
         // (A chord of one member has both ends on it, as a single note has — AddBracketEnds.)
-        if (_chordArpeggio == "non-arpeggiate" && _chordMembers.Count >= 1)
-            AddBracketEnds(_chordMembers[0], _chordMembers[^1], 1);
+        if (_chordArpeggio == "non-arpeggiate" && rolled.Count >= 1)
+            AddBracketEnds(rolled[0], rolled[^1], 1);
         _resolvedChordXmlNotes[chord] = resolved;
 
         // A chord-level half-tie ties EVERY head (the page's SemiTiesOf); ProcessArticulations
@@ -5727,6 +5729,15 @@ public sealed class MusicXmlExporter
             (xmlNote.Type, xmlNote.ActualNotes, xmlNote.NormalNotes) = ("quarter", null, null);
         xmlNote.Dots = 0;
     }
+
+    /// <summary>The members a chord's arpeggio covers: the held ones, a struck member being struck
+    /// with the chord and let go, outside the roll (Calamo request 32; the page's
+    /// ArpeggioEngraver.HeldSpan). The held stand first and keep their written order, so a
+    /// bracket's ends are this list's first and last.</summary>
+    private static List<MusicXmlNote> Rolled(List<MusicXmlNote> members)
+        => members.Any(static n => n.IsStruck) && members.Any(static n => !n.IsStruck)
+            ? members.Where(static n => !n.IsStruck).ToList()
+            : members;
 
     /// <summary>A repeated chord's members with the struck ones behind the held, as the chord's own
     /// &lt;note&gt;s stand (ProcessChord): the first note is the one the reader's clock moves by, and
@@ -5805,8 +5816,9 @@ public sealed class MusicXmlExporter
             _chordMembers.Add(xmlNote);
         }
 
-        WriteCrossArpeggio(rep, _chordMembers);
-        StampArpeggioDirection(rep, _chordMembers);
+        var rolled = Rolled(_chordMembers);
+        WriteCrossArpeggio(rep, rolled);
+        StampArpeggioDirection(rep, rolled);
         CloseTies(_chordMembers);
         if (rep.Articulations.OfType<TieSyntax>().Any()) OpenTies(_chordMembers);
 

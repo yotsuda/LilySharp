@@ -1627,8 +1627,52 @@ public sealed partial class LilyPondExporter
         if (c.HasTiedMembers)
             chordArts = chordArts.Where(a => a is not TieSyntax).ToList();
         var (prefix, suffix) = SplitAttachments(Semantics.ArticulationRuns.WithCovering(c, chordArts));
-        return prefix + sb.ToString() + ArpeggioFromAbove(c) + suffix + SyllabicBeamMarks(c) + memberFrames;
+        return HeldHeadPositions(c) + prefix + sb.ToString() + ArpeggioFromAbove(c) + suffix + SyllabicBeamMarks(c) + memberFrames;
     }
+
+    /// <summary>
+    /// The extent of a chord's own arpeggio or bracket when it has a STRUCK member
+    /// (<c>&lt;gis cis' gis'@struck&gt;64@arpeggio</c>, Music.StruckNotes): the held heads only,
+    /// as the page draws it (ArpeggioEngraver.HeldSpan, Calamo request 32) — or "" for every
+    /// other chord.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's arpeggio takes every head on its stems, the small one too
+    /// (LILYPOND-REF: lily/arpeggio.cc:83-115 calc_positions — <c>Stem::head_positions</c>,
+    /// halved into staff spaces). The twin computes the same interval from the heads that are
+    /// not smaller than their stem — the struck one is the head the
+    /// <c>\tweak font-size</c> above makes smaller — so it needs no clef. A connected
+    /// cross-staff line is the GrandStaff's grob and keeps LilyPond's own extent.
+    /// MEASURED, 2.26.0 (Lab sessions/p1339): bar 1 of Calamo's repro draws what
+    /// <c>Arpeggio.positions = #'(-4.5 . -3)</c> draws.
+    /// </remarks>
+    private string HeldHeadPositions(ChordSyntax c)
+    {
+        if (!c.Pitches.Any(Music.StruckNotes.IsStruck))
+            return "";
+        bool wiggle = false, bracket = false;
+        foreach (var a in c.Articulations)
+            if (a is ArticulationSyntax { Type: ArticulationType.None } na
+                && na.NameToken.Text.Equals("arpeggio", StringComparison.Ordinal))
+                wiggle = true;
+            else if (a is MusicMarkSyntax mk && Semantics.AnnotationValues.ArpeggioWords(mk) is { } words)
+            {
+                if (words.Cross && _shared.CrossArpeggioUppers.Contains(c.SourceStart))
+                    return "";
+                if (words.Bracket) bracket = true; else wiggle = true;
+            }
+        if (!wiggle && !bracket)
+            return "";
+        return "\\once \\override " + (bracket ? "ChordBracket" : "Arpeggio") + ".positions = " + HeldPositionsCallback + " ";
+    }
+
+    // The interval of the heads that are not smaller than their stem's, or LilyPond's own when
+    // there is none (HeldHeadPositions).
+    private const string HeldPositionsCallback =
+        "#(lambda (grob) (let ((ps (append-map (lambda (s) (let ((fs (ly:grob-property s 'font-size 0))) "
+        + "(filter-map (lambda (h) (and (>= (ly:grob-property h 'font-size 0) fs) (ly:grob-property h 'staff-position))) "
+        + "(ly:grob-array->list (ly:grob-object s 'note-heads))))) (ly:grob-array->list (ly:grob-object grob 'stems))))) "
+        + "(if (null? ps) (ly:arpeggio::calc-positions grob) (cons (/ (apply min ps) 2) (/ (apply max ps) 2)))))";
 
     /// <summary>
     /// The notes of a <c>diagram(…)</c> item (the page's ShapeNotesOf): the part's strings;

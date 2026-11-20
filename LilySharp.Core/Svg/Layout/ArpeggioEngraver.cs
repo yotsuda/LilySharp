@@ -237,6 +237,38 @@ internal static class ArpeggioEngraver
     internal const double HeadDrop = 0.5;
 
     /// <summary>
+    /// The heads a chord's arpeggio (wavy line or bracket) covers: the chord's members save a
+    /// STRUCK one (<c>&lt;gis cis' gis'@struck&gt;@arpeggio</c>, <see cref="Music.StruckNotes"/>),
+    /// which is struck with the chord and let go, outside the roll — the lowest and highest
+    /// staff positions of what is held. A chord with nothing but struck members has none
+    /// struck (<see cref="Music.StruckNotes.IsStruck"/>), so the set is never empty while the
+    /// chord has notes.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN (Calamo request 32, 2026-11-20): LilyPond's arpeggio takes every head on
+    /// its stems (lily/arpeggio.cc:83-115 calc_positions — <c>Stem::head_positions</c>), the
+    /// small one too; the print (Kücken Op.47-3 bar 70) stops the line below it. The twin
+    /// says the same with <c>Arpeggio.positions</c> (LilyPondExporter, HeldHeadPositions).
+    /// </remarks>
+    internal static (int Min, int Max) HeldSpan(ImmutableArray<ChordNoteInfo> notes)
+    {
+        int min = int.MaxValue, max = int.MinValue;
+        foreach (var n in notes)
+            if (!n.IsStruck)
+            {
+                min = Math.Min(min, n.StaffPosition);
+                max = Math.Max(max, n.StaffPosition);
+            }
+        if (min > max)
+            foreach (var n in notes)
+            {
+                min = Math.Min(min, n.StaffPosition);
+                max = Math.Max(max, n.StaffPosition);
+            }
+        return (min, max);
+    }
+
+    /// <summary>
     /// An <see cref="ArpeggioLayout.Copies"/> that says the pile is counted at draw time: a
     /// cross-staff arpeggio's, whose length is the distance between two staves on the page.
     /// </summary>

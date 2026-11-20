@@ -3696,8 +3696,11 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                         its chord — there is nothing held under it: LYS4084, and the note is
                         drawn and played as written. A tie that reaches it ('<c e g@struck>2~',
                         '<c e g@struck~>') is drawn, as LilyPond draws it, but does not sound:
-                        LYS4086 (a warning; tie the held members, '<c~ e~ g@struck>'). Read by
-                        Music.StruckNotes.
+                        LYS4086 (a warning; tie the held members, '<c~ e~ g@struck>'). The
+                        chord's '@arpeggio' (and '@arpeggio(bracket)', its MusicXML ends too)
+                        covers the held members only — it is outside the roll (Calamo request
+                        32; LilyPond's plain \arpeggio reaches the small head, the twin sets
+                        Arpeggio.positions). Read by Music.StruckNotes.
                         LILYSHARP-OWN in the sound. The twin writes the picture, three tweaks
                         of that head ('\tweak font-size #-4 \tweak duration-log #2 \tweak
                         Dots.stencil ##f'), and LilyPond's own MIDI holds the note as long as
