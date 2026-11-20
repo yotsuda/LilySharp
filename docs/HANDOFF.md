@@ -146,6 +146,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1335セッション（2026-11-20・YT-DELL2・第1332 と同じ会話）
+
+第1334 の残りから（base `a74836a94`）。開始時 full 17996 合格 / 0 失敗 / skip 2 / 合計 17998（Lab `p1335` `start.log`）。コードの変更なし。
+- **第1334 の残り ⑴「apart の中のユニゾンの符幹をどちらに残すか」は取り消し**: PNG の読み違いだった。svg で数えると c25 は LilyPond・Lily# とも 2 小節目に 8 本（上下 2 本ずつ）・c37 は両方 14 本。残りは ⑵ 終わりのないヘアピン（LilyPond は捨てる・Lily# は描く＝既存の扱い・決めるならオーナー）。
+- **最後の `<>@!sustain` を測った**（leftovers の「第1314」）: MusicXML は正しい。`.ly` の双子は LilyPond が `programming error` を出して鉤を描かない＝同じ絵の綴りが無い（Lab `p1335/ped`）。
+- **訊かずに着手できる計器つきの欠陥は一覧でほぼ尽きた**: leftovers の残りはオーナー判断（「第1240」先頭の condensedStaff の MusicXML の stop・grand staff の片手の sfz・roman の行の調・終わりのないヘアピン）か、実物のリーダーが要る（MusicXML の四分音・text spanner の stop）か、`lysc review`（作曲ガイダンスのクローズに近い島）。
+- **次**: オーナーに次の島を訊く（§1.0 の ★ の行: review.md の設計が先の 3 つ＝`mid-bar-break`・F4 の残り・`shiftPage`、F3 段 2、「第1327」の `@!rit`、上の判断待ち）。
+
+## 以下は第1334セッションの経緯
+
 ### 1.1 第1334セッション（2026-11-20・YT-DELL2・第1332 と同じ会話）
 
 h13 のオーナー決定（2026-11-20「1 LP に合わせて。既存の .lys の移行とか後方互換性は気にしなくて良い」）の便（base `ef6d10828`）。開始時 full 17989 合格 / 0 失敗 / skip 2 / 合計 17991（Lab `p1334` `start.log`）。終了時 full 17996 合格 / 0 失敗 / skip 2 / 合計 17998（`-End` の trx）。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
@@ -153,16 +163,6 @@ h13 のオーナー決定（2026-11-20「1 LP に合わせて。既存の .lys �
 - 網: `CombinedStaffHairpinTests` 23 行（第1321〜第1328 の形・オーナー決定 2026-11-19 の形を含む）を新しい値に。どの形も LilyPond 2.26.0 の絵と見比べた（Lab `p1334/probes` の 52 形・`make-probes.ps1`・書き換えは `rewrite-expectations.ps1`）。新しい網 3 本（違うヘアピンのユニゾン・片方だけのヘアピン・上のパートの強弱の向き）。毒 9 本（8 赤・パート 2 の下は観測者なし）。全 svg 0 / 1276（追跡コーパスの combinedStaff 25 冊にこの形は無い）。
 - **残り**（leftovers の「第1321」の h13 の行）: apart の中のユニゾンの符幹をどちらに残すかが LilyPond と違う形がある（c25・c37）／終わりのないヘアピンを LilyPond は捨てるが Lily# は描く（既存の扱い）。
 - **次**: 上の符幹の規則（LilyPond を読む）→「第1327」の `@!rit`（オーナーの返事待ち）→ review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決はオーナー待ち。
-
-## 以下は第1333セッションの経緯
-
-### 1.1 第1333セッション（2026-11-20・YT-DELL2・第1332 と同じ会話）
-
-leftovers の「第1317」の tab の struck の数字の便（base `fe049751b`）。開始時 full 17988 合格 / 0 失敗 / skip 2 / 合計 17990（Lab `p1333` `start.log`）。終了時 full 17989 合格 / 0 失敗 / skip 2 / 合計 17991（`-End` の trx）。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
-- **tab の struck の数字は小さく、LilyPond の位置に**（`d6ce4a69a`・`[engraving]`）: twin の `\tweak font-size` は TabNoteHead の −2 を置き換える＝magstep(cue − (−2))＝0.794（`p1332/beam/tab1.ly` 1.3862 対 1.7459）。中心は自分の大きさの「8」の幅 × 3/5（`scm/tablature.scm:249-271` tab-note-head::print）＝普通の数字の中心より 3/5 × w8 × 0.206 左。`DrawTabFret` の `struck`・`TabStruckScale`・`TabHeadOffsetFactor`。網 `StruckNoteTests` +1 本・毒 3 本（全部赤）・全 svg 0 / 1276。「第1317」の残りは意味の上で正しい読み（コード名・`check --pitches`）と放置の装飾音の和音だけ。
-- **h13（a2 で 2 パートが違うヘアピン）＝オーナー判断待ち**: LilyPond 2.26.0 は a2 にせず 2 声部に分ける（`scm/part-combiner.scm:215-242`・`:495-501`＝cresc／decr は開いている span・両パートで違えば apart。`PartCombiner.cs` の注が「移植していない」と書いていた所）。移植は書いて h13 は LilyPond どおりになったが、`CombinedStaffHairpinTests` の 10 行前後（オーナー決定 2026-11-19 の形を含む）の前提が崩れる＝差分を Lab `p1333/h13/lp-span-dynamics.diff` に退避してコードは HEAD に戻した。比べた絵と問いは leftovers の「第1321」の h13 の行。
-- **別の欠陥を 1 つ見つけた**（未着手）: combinedStaff で最初から apart の形でも、上のパートの強弱とヘアピンが譜表の下に立つ（LilyPond は voiceOne の分を上・`p1333/h13/apart.lys`）。
-- **次**: h13 のオーナーの答え →（答えと無関係に着手できる）combinedStaff の apart の上のパートの強弱の向き →「第1327」の `@!rit`（オーナーの返事待ち）→ review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決はオーナー待ち。
 
 ## 2. 開いている作業
 
