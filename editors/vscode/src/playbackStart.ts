@@ -70,3 +70,11 @@ export function soundingOf(notes: readonly TimedNote[], parts: readonly string[]
     const left = new Set(extra ?? []);
     return notes.filter(n => !(parts && typeof n.N === 'number' && left.has(parts[n.N])));
 }
+
+/** The parts that sound a note (`N` indexes `parts`), in score order: a `part { }` with no music
+ *  yet is not among them. */
+export function soundingPartsOf(notes: readonly TimedNote[], parts: readonly string[] | null | undefined): string[] {
+    if (!parts) { return []; }
+    const sounding = new Set(notes.map(n => n.N));
+    return parts.filter((p, i) => sounding.has(i));
+}

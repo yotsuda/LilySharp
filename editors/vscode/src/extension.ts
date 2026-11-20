@@ -33,8 +33,8 @@ import { registerStepAudition } from './stepAudition';
 import { registerCaretInfo } from './caretInfo';
 import { registerExportBatch } from './exportBatch';
 import { OmrImportDeps, importFromImage } from './omrImport';
-import { DecodeResult, attachRecording, followCopies, followRenames, keepRecordingSettings, sendRecording, useRecordingSettingsStore } from './recording';
-import { TimedNote, soundingOf, soundingWait, startSecondsAt } from './playbackStart';
+import { DecodeResult, attachRecording, followCopies, followRenames, keepRecordingSettings, sendNoRecording, sendRecording, useRecordingSettingsStore } from './recording';
+import { TimedNote, soundingOf, soundingPartsOf, soundingWait, startSecondsAt } from './playbackStart';
 import { convertRecording, findDettato, registerDettatoContext } from './dettato';
 import { newScoreSources } from './menuContextCore';
 import { recordingPathFor } from './recordingCore';
@@ -1530,7 +1530,13 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     // length and its position while stopped read them (a caret move must not export again).
     // Asked once the text has rested (soundingWait): `undefined` is an answer the text has
     // moved on from while it waited — the next refresh asks again, and nothing is posted.
-    let soundingCache: { key: string; notes: Promise<TimedNote[] | null | undefined> } | undefined;
+    // The same answer's parts that sound a note go to the page with the length: the practice menu,
+    // open, asks for its Parts list again when one is new (owner's report 2026-11-20) — read off
+    // this export, which every refresh pays for already, so the render pays nothing for it. The
+    // score's parts only: a part added to the file and not to its `score` (an extra) shows when
+    // the menu is opened again — listing the extras here costs the server a second export at every
+    // rest, for an edit that comes rarely (owner's decision 2026-11-20).
+    let soundingCache: { key: string; notes: Promise<TimedNote[] | null | undefined>; parts: Promise<string[] | null | undefined> } | undefined;
     panel.webview.onDidReceiveMessage(
         async message => {
             // The file the panel shows NOW: the follower turns, and an untitled save re-keys.
@@ -1541,7 +1547,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 const renderName = selectedRenders.get(uri) || null;
                 const key = `${uri}\n${version}\n${renderName ?? ''}`;
                 if (soundingCache?.key !== key) {
-                    const notes = (async () => {
+                    const answer = (async () => {
                         for (let wait = soundingWait(lastEditAt.get(uri), Date.now()); wait > 0;
                             wait = soundingWait(lastEditAt.get(uri), Date.now())) {
                             await new Promise(r => setTimeout(r, wait));
@@ -1551,11 +1557,16 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                         // and listing them costs the server a second export)
                         const pb = await client!.sendRequest<{ Notes?: TimedNote[] | null; Parts?: string[] | null; Extra?: string[] | null }>(
                             'lilysharp/playback', { textDocument: { uri }, renderName, soundingOnly: true });
-                        return pb.Notes ? soundingOf(pb.Notes, pb.Parts, pb.Extra) : null;
+                        if (!pb.Notes) { return null; }
+                        const notes = soundingOf(pb.Notes, pb.Parts, pb.Extra);
+                        return { notes, parts: soundingPartsOf(notes, pb.Parts) };
                     })();
+                    const notes = answer.then(a => a === undefined ? undefined : a ? a.notes : null);
+                    const parts = answer.then(a => a === undefined ? undefined : a ? a.parts : null);
                     // (a failed fetch is not kept: the next asks again)
-                    notes.catch(() => { if (soundingCache?.key === key) { soundingCache = undefined; } });
-                    soundingCache = { key, notes };
+                    answer.catch(() => { if (soundingCache?.key === key) { soundingCache = undefined; } });
+                    parts.catch(() => undefined);
+                    soundingCache = { key, notes, parts };
                 }
                 return soundingCache.notes;
             };
@@ -1790,6 +1801,9 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     if (notes === undefined) { return; }
                     const seconds = (notes ?? []).reduce((end, n) => Math.max(end, n.T + n.D), 0);
                     panel.webview.postMessage({ type: 'lengthData', seconds: notes ? seconds : null });
+                    // (the score's parts that sound, from the same answer: soundingCache)
+                    const parts = await soundingCache?.parts;
+                    if (parts) { panel.webview.postMessage({ type: 'soundingParts', parts }); }
                 } catch {
                     panel.webview.postMessage({ type: 'lengthData', seconds: null });
                 }
@@ -2053,8 +2067,11 @@ async function updatePreviewContent(
         // The chords of the text, for Select Chord on a member right-clicked (owner's request 2026-10-27).
         void panel.webview.postMessage({ type: 'chordSpans', spans: chordSpans(document.getText()) });
         // The recording beside the chart (docs/recording-design.md): sent when it or the chart changed.
+        // A document with no file (untitled) has none: said, or the last chart's stays (owner's report 2026-11-20).
         if (document.uri.scheme === 'file') {
             void sendRecording(panel, document.uri, context.globalStorageUri, decodeRecordingOnServer);
+        } else {
+            sendNoRecording(panel, document.uri);
         }
     };
     // Wait for client to be ready if not already

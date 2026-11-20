@@ -174,7 +174,7 @@ describe('the preview\'s Range panel', () => {
         // A soloed line is heard though muted — its own mute, its group's All off (owner's decision
         // 2026-11-17: S is "listen to this").
         assert.match(html, /out\.muted = own\.muted\.filter\(n => !solo\.has\('part:' \+ n\)\)/);
-        assert.match(html, /out\[name\] = \(soloParts \? !solo\.has\('rec:' \+ name\) : recPartsOff\.includes\(name\)\) \? 0 : levelIn\(recPartLevels, name\);/);
+        assert.match(html, /out\[name\] = \(soloParts \? !solo\.has\('rec:' \+ name\) : recPartsOff\.includes\(name\) && !recAllOn\) \? 0 : levelIn\(recPartLevels, name\);/);
         assert.match(html, /return !!\(\(recOn \|\| recSoloed\(\)\) && recording && recording\.ready && recordingPlayer\(\)\);/);
         // The practice panel's folds are kept per file; a file's first opening has every group folded
         // (owner's requests 2026-11-17).
@@ -345,6 +345,12 @@ describe('the preview\'s Range panel', () => {
         // five switches of five wrong before, none after.
         assert.match(glue, /const turn = \(sendTurns\.get\(panel\) \?\? 0\) \+ 1;\s*sendTurns\.set\(panel, turn\);\s*const file = /);
         assert.match(glue, /const key = [^\n]*\n\s*if \(sendTurns\.get\(panel\) !== turn\) \{\s*return;[^\n]*\n\s*\}\s*if \(!force && sentKeys\.get\(panel\) === key\)/);
+        // An untitled score (File > New File > Lily# Score) has no recording, and says so — the last
+        // chart's stayed in the panel (owner's report 2026-11-20); a send still on its way gives way.
+        assert.match(glue, /export function sendNoRecording\(panel: vscode\.WebviewPanel, doc: vscode\.Uri\): void \{\s*sendTurns\.set\(panel, \(sendTurns\.get\(panel\) \?\? 0\) \+ 1\);/);
+        assert.match(glue, /postMessage\(\{ type: 'recording', chart: doc\.toString\(\), none: true \}\)/);
+        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(ext, /if \(document\.uri\.scheme === 'file'\) \{\s*void sendRecording\(panel, document\.uri, [^\n]*\n\s*\} else \{\s*sendNoRecording\(panel, document\.uri\);\s*\}/);
         // Faders 100% stands at the right of the Octave row — beside As scored with no recording — and
         // the panel has no foot line for it (owner's request 2026-11-19).
         assert.match(html, /const row = document\.querySelector\(recording \? '#recOctRow \.tempo' : '#partsReset'\)\.closest\('\.tempo'\);\s*row\.appendChild\(document\.getElementById\('fadersReset'\)\);/);
@@ -372,7 +378,11 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /<button type="button" id="scoreOnBtn"[^>]*>Play<\/button><button type="button" id="scoreAllBtn"[^>]*>All<\/button><input type="range" id="scoreLevelSlider"/);
         assert.match(html, /function flipRecording\(\) \{\s*(\/\/[^\n]*\s*)*recOn = !recOn;\s*renderRecParts\(\);/);
         assert.match(html, /const on = !recPartsOff\.includes\(name\);/);
-        assert.match(html, /function recLevel\(\) \{ return solo\.size > 0 && !recSoloed\(\) \? 0 : levelIn\(recLevels, 'Recording'\); \}/);
+        // Each group's own solo (owner's decision 2026-11-20): a score line soloed leaves the recording sounding.
+        assert.match(html, /function recLevel\(\) \{ return levelIn\(recLevels, 'Recording'\); \}/);
+        assert.match(html, /\(scoreSoloed\(\) && !solo\.has\(soloKey\)\)\);/);
+        assert.match(html, /\(recSoloed\(\) && !solo\.has\('rec:' \+ name\)\)\);/);
+        assert.doesNotMatch(html, /solo\.size > 0 && !/);
         assert.match(html, /delete recLevels\.Recording;/);
         assert.match(html, /if \(origin !== undefined\) end = Math\.max\(end, startRecordingAlong\(t0, offset, origin, !!loopList\)\);/);
         assert.match(html, /const timed = warp \? window\.LysSynth\.warpNotes\(notes, warp\) : notes;/);

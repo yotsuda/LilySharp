@@ -712,7 +712,7 @@ describe('the preview means by a click on a chord the nearest head', () => {
 describe('the mixer\'s score group turned off', () => {
     const practice = { speed: 1, muted: ['bass'], voicesOff: [] as string[], extraOn: ['horn'], voicesOn: [] as string[], instrumentsOn: [] as string[],
         levels: {}, voiceLevels: {} };
-    const scope = (scoreOn: boolean, solo: string[]) => ({ solo: new Set(solo), scoreLevel: 1, scoreOn, practice, rawParts: ['gtr', 'bass'],
+    const scope = (scoreOn: boolean, solo: string[], scoreAll = false) => ({ solo: new Set(solo), scoreLevel: 1, scoreOn, scoreAll, practice, rawParts: ['gtr', 'bass'],
         rawExtra: ['horn'], lastPartsMessage: null, menuVoiceKeys: ['lead'], levelIn: () => 1, Object });
     type Eff = () => typeof practice;
 
@@ -731,5 +731,49 @@ describe('the mixer\'s score group turned off', () => {
         const e = (pageFunction('eff', scope(false, ['part:gtr'])) as Eff)();
         assert.deepEqual([...e.muted], ['bass']);
         assert.deepEqual([...e.voicesOff], ['lead']);
+    });
+    // Each group's own solo (owner's decision 2026-11-20): a recording part soloed leaves the score as it is.
+    it('is not touched by a solo in the recording\'s group', () => {
+        assert.equal((pageFunction('eff', scope(true, ['rec:Vocals'])) as Eff)(), practice);
+        const e = (pageFunction('eff', scope(true, ['rec:Vocals', 'part:gtr'])) as Eff)();
+        assert.deepEqual([...e.muted], ['bass']);
+        assert.deepEqual([...e.voicesOff], ['lead']);
+    });
+});
+
+// The score's All (owner's decision 2026-11-20): pressed in, every part and voice of the score is
+// heard and the lines' own on/off — the parts one is after — is kept for when it is let go.
+describe('the mixer\'s All pressed in', () => {
+    const practice = { speed: 1, muted: ['bass'], voicesOff: ['lead'], extraOn: [] as string[], voicesOn: [] as string[], instrumentsOn: [] as string[],
+        levels: {}, voiceLevels: {} };
+    const scope = (scoreOn: boolean, solo: string[], scoreAll: boolean) => ({ solo: new Set(solo), scoreLevel: 1, scoreOn, scoreAll, practice, rawParts: ['gtr', 'bass'],
+        rawExtra: ['horn'], lastPartsMessage: null, menuVoiceKeys: ['lead'], levelIn: () => 1, Object });
+    type Eff = () => typeof practice;
+
+    it('sounds every part and voice of the score, the extras as they are, and rewrites nothing', () => {
+        const e = (pageFunction('eff', scope(true, [], true)) as Eff)();
+        assert.deepEqual([...e.muted], []);
+        assert.deepEqual([...e.voicesOff], []);
+        assert.deepEqual([...e.extraOn], []);
+        assert.deepEqual(practice.muted, ['bass']);
+        assert.deepEqual(practice.voicesOff, ['lead']);
+    });
+    it('is the choice again when let go', () => {
+        assert.equal((pageFunction('eff', scope(true, [], false)) as Eff)(), practice);
+    });
+    it('sounds nothing with the group off, and gives way to a solo', () => {
+        const off = (pageFunction('eff', scope(false, [], true)) as Eff)();
+        assert.deepEqual([...off.muted], ['gtr', 'bass']);
+        const soloed = (pageFunction('eff', scope(true, ['part:bass'], true)) as Eff)();
+        assert.deepEqual([...soloed.muted], ['gtr']);
+        assert.deepEqual([...soloed.voicesOff], ['lead']);
+    });
+    it('is a toggle that rewrites no line, and a line pressed while it is in lets it go', () => {
+        const html = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'previewHtml.ts'), 'utf8');
+        assert.match(html, /document\.getElementById\('scoreAllBtn'\)\.addEventListener\('click', \(\) => \{\s*scoreAll = !scoreAll;\s*refreshMixer\(\);/);
+        assert.match(html, /document\.getElementById\('recAllBtn'\)\.addEventListener\('click', \(\) => \{\s*recAllOn = !recAllOn;\s*applyRecParts\(\);/);
+        assert.match(html, /if \(scoreAll\) \{ scoreAll = false; flip\(\); refreshMixer\(\);/);
+        assert.match(html, /const mute = \(\) => \{\s*recAllOn = false;/);
+        assert.match(html, /all\.setAttribute\('aria-pressed', String\(scoreAll\)\);/);
     });
 });

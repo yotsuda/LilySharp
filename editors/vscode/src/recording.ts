@@ -281,6 +281,22 @@ export async function sendRecording(panel: vscode.WebviewPanel, chart: vscode.Ur
     void panel.webview.postMessage({ type: 'recordingParts', chart: chart.toString(), name: shown, parts: sent });
 }
 
+/**
+ * Tells the preview the document it shows has no recording: one with no file beside it to look at
+ * (an untitled score — owner's report 2026-11-20: File > New File > Lily# Score from a chart with a
+ * recording kept the first chart's recording in the practice menu). A sendRecording still looking
+ * at the earlier chart's files gives way to it (sendTurns); said once per document.
+ */
+export function sendNoRecording(panel: vscode.WebviewPanel, doc: vscode.Uri): void {
+    sendTurns.set(panel, (sendTurns.get(panel) ?? 0) + 1);
+    const key = `${doc.toString()}\nnone`;
+    if (sentKeys.get(panel) === key) {
+        return;
+    }
+    sentKeys.set(panel, key);
+    void panel.webview.postMessage({ type: 'recording', chart: doc.toString(), none: true });
+}
+
 /** Where the recording panel's setting is kept, per chart and recording (owner's decisions
  *  2026-11-16 and 2026-11-19: its octave is the recording's, kept for the next time — nothing the
  *  writer edits by hand). Set once by the extension (workspaceState). */

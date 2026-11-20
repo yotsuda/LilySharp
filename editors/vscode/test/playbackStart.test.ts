@@ -16,10 +16,12 @@
 
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { SOUNDING_IDLE_MS, soundingOf, soundingWait, startSecondsAt } from '../src/playbackStart';
+import { SOUNDING_IDLE_MS, soundingOf, soundingPartsOf, soundingWait, startSecondsAt } from '../src/playbackStart';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { extensionSource } from './extensionSource';
+
+const html = () => fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'previewHtml.ts'), 'utf8');
 
 // The header's notes are an export of the whole score: asked once the text has rested, and for the
 // score's own notes alone (review of session 1291).
@@ -38,7 +40,11 @@ describe('when the sounding notes are asked for', () => {
     it('is what the preview does: waits, asks for the sounding notes only, and sends the render first', () => {
         const extension = extensionSource();
         assert.match(extension, /soundingWait\(lastEditAt\.get\(uri\), Date\.now\(\)\)/);
+        // (the sounding notes only, always — the extras' second export is never paid here: owner's
+        // decision 2026-11-20)
         assert.match(extension, /'lilysharp\/playback', \{ textDocument: \{ uri \}, renderName, soundingOnly: true \}/);
+        assert.doesNotMatch(extension, /withExtra/);
+        assert.match(html(), /vscode\.postMessage\(\{ type: 'requestLength' \}\);/);
         // The @todo marks are asked for after the render request has left.
         const svg = extension.indexOf("client.sendRequest<SvgResponse>('lilysharp/svg'");
         const todos = extension.indexOf('const marksAsked = todoMarksOf(document);');
@@ -102,5 +108,31 @@ describe('where Play would start, in the score\'s seconds', () => {
         const all = [{ T: 0, D: 4, N: 0 }, { T: 0, D: 9, N: 1 }];
         assert.deepEqual(soundingOf(all, parts, ['extra']), [all[0]]);
         assert.deepEqual(soundingOf(all, parts, null), all);
+    });
+});
+
+// A part given music while the practice menu is open joins its Parts list (owner's report
+// 2026-11-20), seen in the length's export — the render pays nothing for it.
+describe('the parts that sound, for the practice menu', () => {
+    it('are the parts with a note, in score order; a part with no music yet is not one', () => {
+        const parts = ['melody', 'empty', 'bass'];
+        const notes = [{ T: 0, D: 1, N: 2 }, { T: 0, D: 1, N: 0 }];
+        assert.deepEqual(soundingPartsOf(notes, parts), ['melody', 'bass']);
+        assert.deepEqual(soundingPartsOf(notes, null), []);
+    });
+
+    it('ride with the length, and the open menu asks again only for a part not on its list', () => {
+        const extension = extensionSource();
+        assert.match(extension, /return \{ notes, parts: soundingPartsOf\(notes, pb\.Parts\) \};/);
+        assert.match(extension, /const parts = await soundingCache\?\.parts;\s*if \(parts\) \{ panel\.webview\.postMessage\(\{ type: 'soundingParts', parts \}\); \}/);
+        const page = html();
+        const at = page.indexOf("case 'soundingParts':");
+        assert.ok(at > 0);
+        const body = page.slice(at, page.indexOf('break;\n                }', at));
+        assert.match(body, /if \(practicePanel\.hidden \|\| !lastPartsMessage\) break;/);
+        // An added part, or a listed one that sounds no more (removed), asks — once per set.
+        assert.match(body, /const changed = sounding\.some\(p => !listed\.has\(p\)\) \|\| listedParts\.some\(p => !heard\.has\(p\)\);/);
+        assert.match(body, /if \(changed && partsAskedFor !== askKey\)/);
+        assert.match(body, /requestParts\(\);/);
     });
 });
