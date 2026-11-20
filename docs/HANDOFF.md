@@ -147,6 +147,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1337セッション（2026-11-20・YT-DELL2）
+
+オーナーの報告と依頼を順に（base `763f1d011`・/clear 後の会話で `-Start` は回していない）。終了時 full 18040 合格 / 0 失敗 / skip 2 / 合計 18042（`-End` の trx・Lab `p1337`）。
+- **練習パネル**（`c7d798156`・`737c8dfb2`・`transport-mixer-design.md` §1）: パートの追加・削除を長さのエクスポートから即時反映（score のパートだけ。extra のための 2 回目のエクスポートは入れない＝オーナー決定）／S は群ごと／無題の score は録音なし／All は上書きのトグル（選択を書き換えない・Play にも勝つ）／行の Shift+クリックは「この行だけ」。
+- **`2ce9d2381`**: tab の `as removeEmpty`（GRAMMAR TabSelector）／`staff bass as removeEmpty ▮` の値の補完／行と全部 removeEmpty の譜表だけの score に代役の一線譜（`Staff.StandIn`・`row-staff-design.md`）／書いていない小節のクリックはパートのブロックの末尾へ／小節線の自動入力が section のメーターを小節ごとに読む（コードの行の `time` も）／Dettato→Orecchiante（依頼 20 は `fixed`・Orecchiante の repo では未 commit）。
+- **オーナー決定**: `bass` は予約語にしない／代役の段の頭の予約は残す（9 小節目とコード名の x が揃う）／最初の段も消すのは `all`。手元の楽譜は言語の設計の根拠にもしない（Lab notes・`e76554467`）。
+- 実機は隔離 VS Code で All と Shift+クリック（Lab `p1337/alle2e`）。残りはオーナー: 入れ直し後の実機・Orecchiante の `done`・`site/build-manual.ps1` の Dettato 1 か所（作業中のファイル）。
+- **次**: review.md の設計が先の 3 つ（順は §1.1 第1306 の末尾）＝この会話が重いので新しい会話で。
+
+## 以下は第1336セッションの経緯
+
 ### 1.1 第1336セッション（2026-11-20・YT-DELL2・第1332 と同じ会話）
 
 オーナー決定 2026-11-20「どれもあなたのお勧め通りで良い」（第1335 の報告の 5 件＝1C・2B・3A・4C・5B）の便（base `f135da52c`）。開始時 full 17996 合格 / 0 失敗 / skip 2 / 合計 17998（Lab `p1336` `start.log`）。終了時 full 18011 合格 / 0 失敗 / skip 2 / 合計 18013（`-End` の trx）。
@@ -155,16 +166,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ 4C の説明で私が「`staff a with chords X as roman`」という今は無い書き方を前提にしていた（2026-08-19 に `with` の句は廃止＝和音の行は並び順で譜表に掛かる）。気づいて (i)／(ii) を訊き直した。
 - 網: `UnendedHairpinTests`（3 行＋4 行＋1 本）・`RomanRowKeyTests`（3 行＋2 本）・`CombinedStaffHairpinTests` +1 theory 2 行・1 行変更。毒 8 本（全部赤）。全 svg 0 / 1276。
 - **次**: オーナーに次の島を訊く（review.md の設計が先の 3 つ・F3 段 2）。
-
-## 以下は第1335セッションの経緯
-
-### 1.1 第1335セッション（2026-11-20・YT-DELL2・第1332 と同じ会話）
-
-第1334 の残りから（base `a74836a94`）。開始時 full 17996 合格 / 0 失敗 / skip 2 / 合計 17998（Lab `p1335` `start.log`）。コードの変更なし。
-- **第1334 の残り ⑴「apart の中のユニゾンの符幹をどちらに残すか」は取り消し**: PNG の読み違いだった。svg で数えると c25 は LilyPond・Lily# とも 2 小節目に 8 本（上下 2 本ずつ）・c37 は両方 14 本。残りは ⑵ 終わりのないヘアピン（LilyPond は捨てる・Lily# は描く＝既存の扱い・決めるならオーナー）。
-- **最後の `<>@!sustain` を測った**（leftovers の「第1314」）: MusicXML は正しい。`.ly` の双子は LilyPond が `programming error` を出して鉤を描かない＝同じ絵の綴りが無い（Lab `p1335/ped`）。
-- **訊かずに着手できる計器つきの欠陥は一覧でほぼ尽きた**: leftovers の残りはオーナー判断（「第1240」先頭の condensedStaff の MusicXML の stop・grand staff の片手の sfz・roman の行の調・終わりのないヘアピン）か、実物のリーダーが要る（MusicXML の四分音・text spanner の stop）か、`lysc review`（作曲ガイダンスのクローズに近い島）。
-- **次**: オーナーに次の島を訊く（§1.0 の ★ の行: review.md の設計が先の 3 つ＝`mid-bar-break`・F4 の残り・`shiftPage`、F3 段 2、「第1327」の `@!rit`、上の判断待ち）。
 
 ## 2. 開いている作業
 
