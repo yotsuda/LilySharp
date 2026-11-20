@@ -872,6 +872,29 @@ export interface GateVerdict {
     readonly verify?: boolean;
     /** What failed, in the compiler's words — what the model is told. */
     readonly problems: readonly string[];
+    /** The compiler's warnings on the bar as it now reads (owner's request 2026-11-20: an
+     *  `@stuck` typed for `@struck` was ignored with nothing said in the panel) — shown on the
+     *  row, as the Problems panel shows them for the file; they fail no gate. */
+    readonly warnings?: readonly string[];
+}
+
+/** The compiler's warnings on `span` of the candidate, in its words ("LYS1008: …"): those the
+ *  gate does not already name (a length code is a problem). */
+export function warningsIn(candidate: readonly Diag[], span: { start: number; length: number }): string[] {
+    const lo = span.start, hi = span.start + span.length;
+    return [...new Set(candidate
+        .filter(d => d.Severity === 'warning' && d.Offset >= lo && d.Offset <= hi && !(d.Code !== null && LENGTH_CODES.has(d.Code)))
+        .map(d => `${d.Code ? `${d.Code}: ` : ''}${d.Message}`))];
+}
+
+/** The compiler's errors and warnings on the bar as it stands in the file (`diags` the file's,
+ *  the target its line), in the row's words ("error LYS…: …", "LYS1008: …") — what the editor's
+ *  Problems panel shows for that line. */
+export function currentDiagnosticsOn(diags: readonly Diag[], target: FixTarget): string[] {
+    return [...new Set(diags
+        .filter(d => (d.Severity === 'error' || d.Severity === 'warning')
+            && d.Offset <= target.end && d.Offset + Math.max(1, d.Length) > target.start)
+        .map(d => `${d.Severity === 'error' ? 'error ' : ''}${d.Code ? `${d.Code}: ` : ''}${d.Message}`))];
 }
 
 /** A proposal below this is shown, but not taken by "Accept all". */
@@ -944,6 +967,7 @@ export function gateOf(baseline: readonly Diag[], candidate: readonly Diag[], sp
         compile: compileProblems.length === 0 && !more,
         length: lengthProblems.length === 0,
         problems: [...new Set([...compileProblems, ...lengthProblems].map(say))],
+        warnings: warningsIn(candidate, span),
     };
 }
 

@@ -23,7 +23,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
     Diag, FixableTodo, Rgba, acceptableByAll, anchorOf, averageOf, barBoxFor, batchesOf, checkedByDefault, cropRect, cropRgba,
-    decodeImage, diagnosticsOn, encodePng, estimateOf, fixTargets, gateOf, headOf, labelOf, neighboursOf, parseProposal,
+    currentDiagnosticsOn, decodeImage, diagnosticsOn, encodePng, estimateOf, fixTargets, gateOf, headOf, labelOf, neighboursOf, parseProposal,
     rangesOf, readerBarOf, repairPromptOf, resolvedLine, scanCropPng, shortTodos, spliceBar, stripTodoMarks, systemPromptOf, targetsInLines, taskPromptOf,
     itemEndsOf, withTodoMark, lineTargets, widthAmongNeighbours,
     verifyVerdict, withSample, withVerify, wordDiff,
@@ -603,7 +603,22 @@ describe('the gates', () => {
     it('pass a proposal that adds no error and fills its bar', () => {
         const before = [d(105, 'warning', 'LYS2001', 'short'), d(900, 'error', 'LYS0001', 'old')];
         const after = [d(900, 'error', 'LYS0001', 'old')];
-        assert.deepEqual(gateOf(before, after, span), { compile: true, length: true, problems: [] });
+        assert.deepEqual(gateOf(before, after, span), { compile: true, length: true, problems: [], warnings: [] });
+    });
+
+    it('carry the warnings in the span, failing no gate (an @stuck typed for @struck)', () => {
+        const after = [d(110, 'warning', 'LYS1008', "Unknown annotation '@stuck' — it is ignored."),
+            d(120, 'warning', 'LYS2002', 'long'), d(400, 'warning', 'LYS1008', 'other bar'), d(115, 'info', 'LYS9999', 'a hint')];
+        const g = gateOf([], after, span);
+        assert.deepEqual([g.compile, g.problems, g.warnings], [true, ['LYS2002: long'], ["LYS1008: Unknown annotation '@stuck' — it is ignored."]]);
+    });
+
+    it("show the bar's current errors and warnings as it stands in the file", () => {
+        const [t] = fixTargets(LYS, TODOS.slice(0, 1));
+        const on = currentDiagnosticsOn([d(t.start + 2, 'warning', 'LYS1008', 'Unknown annotation'),
+            d(t.start, 'error', 'LYS0002', 'Unknown pitch'), d(t.end + 50, 'warning', 'LYS1008', 'next line'),
+            d(t.start + 3, 'info', null, 'a hint')], t);
+        assert.deepEqual(on, ['LYS1008: Unknown annotation', 'error LYS0002: Unknown pitch']);
     });
 
     it('fail compile on an error in the span, and name it', () => {

@@ -574,6 +574,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] **B21**（第977・読みの進捗）: 数頁の PDF（表紙のあるもの）を Convert Image/PDF to Lily# で読む → 通知の文が毎秒進む時計つきで *opening the pages… 0:03* → *finding the staves on N pages… 2:10*（Calamo 0.4.0 ではここが長く、棒は 0% のまま＝OMR に `stage` を依頼済み・入れば *finding the staves: page 2 of N… (about 0:56 to go for the staves)* と棒が進む）→ *reading page 2 of N… (about 0:28 to go for the pages)*（目安は 2 頁目の後から）→ *checking the reading against the pages…* → 楽譜が開く。Cancel で止まる。`lilysharp.omr.verifyOnSave` を on にして保存 → ステータスバーが *checking x.lys against the scan… 0:02* と秒を数える。
 
 - [ ] **B10″**（scan view のボタン）: Show Original Scan の頭のバー、スライダーの右に **Fix N marks with AI…**（N＝スライダーが見せる印のうち e.lyse にあるもの・quiet は数えない・0 なら押せない）。スライダーを動かすと N が変わる・押すと QuickPick がその N 個にチェックされて開く（scan をアクティブにしたままでも e.lyse が対象）。印を Accept で消す → scan の枠が消えて N が減る。
+- [ ] **B22**（第1339・Bar fixes の警告）: Edit Bars Beside the Scan で開いた行の Draft の文を `<e, e@stuck>64` のように書き換える → 行の説明の下に黄色で *⚠ LYS1008: Unknown annotation '@stuck' — it is ignored. …* が出る（compile ✓ のまま＝警告は門を落とさない）。`@struck` に直すと消える。何も編集していない行（original）には、その行に今出ているエラーと警告（Problems パネルと同じもの・エラーは *error LYS…*）が出る。AI の案の行にはその案の警告が出る。
 
 ## 6. 結果の書き方
 

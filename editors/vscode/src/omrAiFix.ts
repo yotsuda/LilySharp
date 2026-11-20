@@ -33,7 +33,7 @@ import { AiTransformDeps, loadGrammar } from './aiTransform';
 import { ChatClient, ChatMessage, availableModels, hasChatModel, offerModelSetup, resolveChatClient } from './modelClient';
 import {
     BarCheck, BarNeighbours, Diag, FixTarget, FixableTodo, GateVerdict, Proposal, Rgba, acceptableByAll, anchorOf, averageOf,
-    checkedByDefault, cropRect, decodeImage, diagnosticsOn, estimateOf, fixTargets, gateOf, headOf, labelOf,
+    checkedByDefault, cropRect, currentDiagnosticsOn, decodeImage, diagnosticsOn, estimateOf, fixTargets, gateOf, headOf, labelOf,
     neighboursOf, parseProposal, readerBarOf, repairPromptOf, resolvedLine, scanCropPng, spliceBar, systemPromptOf, targetsInLines, taskPromptOf, withTodoMark, lineTargets,
     verifyVerdict, withSample, withVerify, wordDiff, DiffPiece, rangesOf, shortTodos,
 } from './omrAiFixCore';
@@ -1763,6 +1763,14 @@ function rowParts(run: FixRun, r: FixRow): RowParts {
     const hint = !edited && r.asked && !r.ai && barOf(r) === undefined && base
         ? ' <span class="dim">— click a note or the text to edit the bar yourself</span>' : '';
     const lost = r.state === 'skipped' ? '<span class="bad">Not written: the line has changed since the panel opened it.</span> ' : '';
+    // The compiler's current word on the bar the Draft shows (owner's request 2026-11-20: an
+    // `@stuck` typed for `@struck` was ignored and the panel said nothing): the warnings on your
+    // edit or the AI's bar, or the errors and warnings on the bar as it stands — what the Problems
+    // panel says of that line. They fail no gate.
+    const said = edited ? gate?.warnings ?? []
+        : hasProposal(r) ? r.gate?.warnings ?? []
+        : currentDiagnosticsOn(r.base.baseline, t);
+    const warned = said.length ? `<span class="warn">${said.map(w => `⚠ ${esc(w)}`).join('<br>')}</span>` : '';
     // Accept writes the row's bar (the person's or the AI's), else takes its marks out, else —
     // with keep/add @todo — writes the mark; a bar with none of these has nothing to write.
     const marked = resolvedLine(t.written) !== t.written;
@@ -1790,7 +1798,7 @@ function rowParts(run: FixRun, r: FixRow): RowParts {
         : esc(edited ? 'your edit' : hasProposal(r) ? 'AI proposal'
             : 'original' + (busy || (r.asked ? ' — no AI proposal' : '')));
     return {
-        gates: gatesHtml(gate), reason: lost + reason + sure + hint + barLine + aiNow, proposal, source, nowText: piecesHtml(diff.before), afterText: piecesHtml(diff.after), del,
+        gates: gatesHtml(gate), reason: lost + reason + sure + hint + barLine + aiNow + warned, proposal, source, nowText: piecesHtml(diff.before), afterText: piecesHtml(diff.after), del,
         accept: { word: !own && marked && !r.keepTodo ? 'Accept (remove @todo)' : 'Accept', can: own || marked || !!r.keepTodo, ready: isReady(r) },
     };
 }
@@ -1990,6 +1998,7 @@ tr.body td { padding-top: 2px; }
 .gates { margin-right:8px; white-space:nowrap; }
 .ok { color: var(--vscode-testing-iconPassed, #3c3); }
 .bad { color: var(--vscode-testing-iconFailed, #e33); }
+.warn { display: block; margin-top: 2px; color: var(--vscode-editorWarning-foreground, #cca700); }
 button { padding:4px 10px; font-size:12px; border:1px solid var(--vscode-button-border, transparent); border-radius:4px; cursor:pointer; margin:0 2px 4px 0;
          background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
 button.primary, button.on { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
