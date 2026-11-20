@@ -63,7 +63,19 @@ public sealed class SongTimeline
     public List<SongTempo> Tempos { get; set; } = [];
     /// <summary>Every time as the song is played, the first at beat 0.</summary>
     public List<SongMeter> Meters { get; set; } = [];
+    /// <summary>What is sung, as Lily# sings it (Shosa's request 6, 2026-11-21: a dancer's mouth
+    /// moves to it): one for each voice, in the order their parts first sing; empty where nobody sings.</summary>
+    public List<SongSung> Sung { get; set; } = [];
 }
+
+/// <summary>
+/// One voice as it is sung: the part whose notes it sings (<c>singer … on PART</c>; for a singer
+/// the score prints on a staff of her own, the part her line names), the singer's own name
+/// (<c>singer alice …</c>) or null, and its syllables in the order they are sung, each
+/// [beat it starts at, beats the voice sounds it, the text as the voice is handed it]. A syllable
+/// held over several notes (a melisma, <c>__</c>) lasts until its last note ends; a rest ends it.
+/// </summary>
+public sealed record SongSung(string Part, string? Singer, List<object[]> Syllables);
 
 /// <summary>
 /// A song as it will sound, read for a program that keeps time with it (<c>lysc timeline</c>,
@@ -221,6 +233,77 @@ public sealed class SongReading
             Retime(midi, asked);
         Midi = midi;
         Measure(midi);
+        Timeline.Sung = SungOf(tree, spec, midi);
+    }
+
+    /// <summary>
+    /// The voices <paramref name="midi"/> sings, as the WAV export and the preview sing them
+    /// (<see cref="ScoreExport.SungVoicesOf"/>: which lines, which sections, which verse), their
+    /// syllables in the timeline's beats. Counted from the voices' own seconds and back, so a note
+    /// that gives up room for an <c>@breath</c> is as short here as it is sung.
+    /// </summary>
+    private List<SongSung> SungOf(SyntaxTree tree, RenderSpec? spec, MidiFile midi)
+    {
+        var voices = ScoreExport.SungVoicesOf(tree, spec, midi);
+        if (voices.Count == 0)
+            return [];
+        var root = tree.GetRoot();
+        var names = Music.LyricSinger.NamesReaderOf(root, spec ?? RenderSpecParser.PlayedSpec(tree, null, null));
+        var lines = Music.LyricSinger.LinesOf(root);
+        var seconds = MidiClock.SecondsOf(midi);
+        int last = Math.Max(midi.EndTick, 1);
+        // Seconds back to a beat: the tick they fall at (the clock only goes forward), then its beat.
+        double BeatAt(double at)
+        {
+            int lo = 0, hi = last;
+            while (lo < hi)
+            {
+                int mid = lo + (hi - lo + 1) / 2;
+                if (seconds(mid) <= at) lo = mid; else hi = mid - 1;
+            }
+            double from = seconds(lo), to = seconds(lo + 1);
+            double fraction = to > from ? Math.Clamp((at - from) / (to - from), 0, 1) : 0;
+            return Beat(lo) + fraction * (Beat(lo + 1) - Beat(lo));
+        }
+
+        var sung = new List<SongSung>(voices.Count);
+        foreach (var voice in voices)
+        {
+            string part = voice.Part;
+            string? person = names(voice.Track, voice.Part, voice.Line);
+            // A singer the score prints sings a staff made for her: the part is the one her line names.
+            if (Music.LyricSinger.IsMadePart(root, part))
+            {
+                string her = part[..part.LastIndexOf(Music.LyricSinger.ScopedMark, StringComparison.Ordinal)];
+                person ??= her;
+                part = (lines.FirstOrDefault(l => l.Person == her && l.Track == voice.Track && l.Part != null)
+                    ?? lines.FirstOrDefault(l => l.Person == her && l.Part != null))?.Part ?? her;
+            }
+            var syllables = new List<object[]>();
+            double start = 0, end = 0;
+            string? text = null;
+            void Close()
+            {
+                if (text != null)
+                    syllables.Add([Math.Round(BeatAt(start), 4), Math.Round(BeatAt(end) - BeatAt(start), 4), text]);
+            }
+            foreach (var note in voice.Notes)
+            {
+                if (note.Lyric != null && !note.Melisma)
+                {
+                    Close();
+                    (text, start) = (note.Lyric, note.Start);
+                }
+                else if (text == null)
+                {
+                    continue;
+                }
+                end = note.Start + note.Duration;
+            }
+            Close();
+            sung.Add(new SongSung(part, person, syllables));
+        }
+        return sung;
     }
 
     /// <summary>

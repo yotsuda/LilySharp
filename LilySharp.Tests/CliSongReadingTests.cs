@@ -105,15 +105,86 @@ public sealed class CliSongReadingTests : IDisposable
         Assert.Equal(0, exit);
         using var json = JsonDocument.Parse(output);
         var root = json.RootElement;
-        Assert.Equal(new[] { "error", "tempo", "beatsPerBar", "beatUnit", "sections", "plays", "scores", "tempos", "meters" }, Keys(root));
+        Assert.Equal(new[] { "error", "tempo", "beatsPerBar", "beatUnit", "sections", "plays", "scores", "tempos", "meters", "sung" }, Keys(root));
         Assert.All(root.GetProperty("plays").EnumerateArray(), p => Assert.Equal(new[] { "name", "beats", "pickup" }, Keys(p)));
         Assert.All(root.GetProperty("tempos").EnumerateArray(), t => Assert.Equal(new[] { "beat", "bpm" }, Keys(t)));
         Assert.All(root.GetProperty("meters").EnumerateArray(), m => Assert.Equal(new[] { "beat", "beatsPerBar", "beatUnit" }, Keys(m)));
         // And what each says, all of it: the upbeat is a beat of Intro's nine, the tempo changes
         // in Intro's third bar (beat 5), the waltz's time from its first beat (9). "" is the unnamed score.
         Assert.Equal(
-            """{"error":null,"tempo":120,"beatsPerBar":4,"beatUnit":4,"sections":["Intro","Waltz"],"plays":[{"name":"Intro","beats":9,"pickup":1},{"name":"Waltz","beats":6,"pickup":0}],"scores":["","practice"],"tempos":[{"beat":0,"bpm":120},{"beat":5,"bpm":90}],"meters":[{"beat":0,"beatsPerBar":4,"beatUnit":4},{"beat":9,"beatsPerBar":3,"beatUnit":4}]}""",
+            """{"error":null,"tempo":120,"beatsPerBar":4,"beatUnit":4,"sections":["Intro","Waltz"],"plays":[{"name":"Intro","beats":9,"pickup":1},{"name":"Waltz","beats":6,"pickup":0}],"scores":["","practice"],"tempos":[{"beat":0,"bpm":120},{"beat":5,"bpm":90}],"meters":[{"beat":0,"beatsPerBar":4,"beatUnit":4},{"beat":9,"beatsPerBar":3,"beatUnit":4}],"sung":[]}""",
             output);
+    }
+
+    // Two singers on one part, one of them only in B; a melisma (a slur and `__`), a
+    // reading (空[そら] sings そら), a rest, an `@breath`, and a tempo change, so every beat is counted
+    // back from the voice's seconds.
+    private const string Sung = """
+        tempo 120
+        time 4/4
+        part melody { clef treble  instrument soprano }
+        section A {
+          melody { c'4 d( e) f | tempo 60 g2 r4 a4@breath | b1 | }
+          lyrics verse { 空[そら] に __ き | ら ほ | し | }
+        }
+        section B {
+          melody { c''2 r2 | }
+          lyrics verse { る | }
+        }
+        singer alice "neutrino/MERROW" sings verse on melody
+        singer bob sings verse on melody in B
+        form { A B }
+        score { staff melody  lyrics verse on melody }
+
+        """;
+
+    [Fact]
+    public void Sung_IsWhatLilySharpSings_InTheTimelinesBeats()
+    {
+        var (exit, output, _) = Lysc("timeline", Write("sung.lys", Sung));
+        Assert.Equal(0, exit);
+        using var json = JsonDocument.Parse(output);
+        var sung = json.RootElement.GetProperty("sung");
+        Assert.All(sung.EnumerateArray(), v => Assert.Equal(new[] { "part", "singer", "syllables" }, Keys(v)));
+        Assert.Equal(
+            """[{"part":"melody","singer":"alice","syllables":[[0,1,"そら"],[1,2,"に"],[3,1,"き"],[4,2,"ら"],[7,0.75,"ほ"],[8,4,"し"],[12,2,"る"]]},{"part":"melody","singer":"bob","syllables":[[12,2,"る"]]}]""",
+            Readable(sung));
+    }
+
+    private static string Readable(JsonElement e)
+        => JsonSerializer.Serialize(e, new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
+
+    [Fact]
+    public void Sung_ASingerOnAStaffOfHerOwn_SingsThePartHerLineNames()
+    {
+        // The score prints alice: she sings a staff made for her (alice__0), a third above melody.
+        // Her part is still melody, the name a dance's `sings melody` gives.
+        string song = Write("printed.lys", """
+            tempo 120
+            part melody { clef treble  instrument soprano }
+            section A {
+              melody { c'4 d e f | }
+              lyrics verse { さ く ら よ | }
+            }
+            singer alice female sings verse on melody up 3
+            form { A }
+            score { staff melody  staff alice  lyrics alice }
+
+            """);
+        using var json = JsonDocument.Parse(Lysc("timeline", song).Out);
+        Assert.Equal(
+            """[{"part":"melody","singer":"alice","syllables":[[0,1,"さ"],[1,1,"く"],[2,1,"ら"],[3,1,"よ"]]}]""",
+            Readable(json.RootElement.GetProperty("sung")));
+    }
+
+    [Fact]
+    public void Sung_IsEmpty_WhereNothingIsSung()
+    {
+        // A singer line and no score: no staff has words under it, and the preview sings nothing.
+        string song = Write("unsung.lys", Sung[..Sung.IndexOf("score {", StringComparison.Ordinal)]);
+        using var json = JsonDocument.Parse(Lysc("timeline", song).Out);
+        Assert.Equal(JsonValueKind.Null, json.RootElement.GetProperty("error").ValueKind);
+        Assert.Equal("[]", json.RootElement.GetProperty("sung").GetRawText());
     }
 
     [Fact]

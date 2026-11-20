@@ -651,6 +651,14 @@ from 0 at the start of what is played, an upbeat included.
 | `scores` | The song's scores, `""` for the unnamed one |
 | `tempos` | `{beat, bpm}`, the first at beat 0, each in the beat of the time there |
 | `meters` | `{beat, beatsPerBar, beatUnit}`, the first at beat 0 |
+| `sung` | What Lily# sings, as the preview and `lysc wav --singer` sing it (its lines, its sections, its verse): a voice each, `{part, singer, syllables}` in the order their parts first sing; `[]` where nobody sings |
+
+In `sung`, `part` is the part a voice sings the notes of — the `PART` of `singer … on PART`, also for a
+singer the score prints on a staff of her own — and `singer` her name (`singer alice …`), or `null`.
+Each syllable is `[beat, beats, text]` in the order sung: `beats` is how long the voice sounds it — a
+syllable held over several notes (a slur, `__`, `_`) lasts to the end of its last note, a rest ends
+it, and an `@breath` takes its room out of it. `text` is what the voice is handed: the reading of a
+`漢[かん]` (かん), the syllable as written in any other language. Two singers on one part are two voices.
 
 The piece ends at its last bar line, though a fermata or a held note sounds past it, and a closing
 rest stops short of it.

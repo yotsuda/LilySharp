@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **The bundled lysc says what is sung, syllable by syllable.** `lysc timeline` has a new field `sung`: each voice's part, singer and syllables with their beats, as the preview sings them — what Shosa moves a dancer's mouth to.
 - **A `break` inside a tuplet that opens a bar no longer breaks the line before that bar.** The line breaks at the end of the bar instead, and the Problems panel says why (LYS1037).
 - **A chart with a line break inside a bar previews as quickly as any other.** Each keystroke used to collect the whole score twice from the top.
 

@@ -1104,9 +1104,11 @@ static int RunSong(string command, string[] args)
             {{(command == "timeline"
                 ? """
                   Prints the song as it is played, as JSON: {error, tempo, beatsPerBar, beatUnit,
-                  sections, plays, scores, tempos, meters}. A beat is the lower number of the time
+                  sections, plays, scores, tempos, meters, sung}. A beat is the lower number of the time
                   in force; plays are {name, beats, pickup} in the order they are played (pickup:
                   the beats before the section's first bar line). The piece ends at its last bar line.
+                  sung is what Lily# sings, a voice each: {part, singer, syllables}, each syllable
+                  [beat, beats, text] as the voice sings it (a melisma lasts to its last note).
                   """
                 : """
                   Prints every note as it is played, as JSON: {error, notes}, each note
