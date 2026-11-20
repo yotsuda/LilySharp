@@ -94,6 +94,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **★★★ オーナー決定 2026-11-15（第1264・6 件）**: ①〜④ と、⑥ 評価 4 の案（Lab `p1227/proposals-eval4.md`）の「作る」5 件＝6・7・8-1・2・4 は済み（第1264〜第1272・設計と実際の形は `docs/eval4-features-design.md`。6 の「歌い手が × の音を歌わない」だけ未＝同 §6 の末尾）／⑤ Dettato: 依頼 1＝作る（D3 で形が固まってから・名前「Convert Recording to Lily# (.lys)…」・Windows 以外はメニューを出さない）・依頼 2＝今は作らない（REQUESTS の行に書いた＝Dettato の repo では未 commit）／⑥ の**後で**＝3（`pass 2 { }`・文字は英語固定）・1（持ち替え・「to X」は自動で刷らない）・10（まず診断だけ）＝作る前に設計メモ・**着手してよい**（オーナー 2026-11-15 第1278「ほかに着手すべき候補がなければすぐ着手して良い」。10 の診断は LYS0046 で済み＝残りは 3 → 1）／**見送り**＝5・8-2〜4・9。**次の一手**: 下の行の Lab `sessions/p1242/leftovers.md` の欠陥から（第1272 が見つけた 2 件＝`lysc xml` の part header の `key` と、MusicXML の読み込みの `<transpose>` は第1273・第1275 で閉じた。一覧の先頭から順に）。
 - **★ 包括レビュー（オーナーの指示 2026-11-18・第1291）＝Lab `sessions/p1291/review.md`**: プレビュー更新の性能 P1〜P10 とリファクタ F1〜F7。P1〜P10・F1・F2・F3 段 1・F5・F7 と F4 の大半は済み（経緯は ARCHIVE の第1291〜第1301 と §1.1・数字は Lab `sessions/p1302/notes.md`）。残り＝設計が先の 2 つ（F4 の残り・`shiftPage`。`mid-bar-break` は第1340 で閉じた）と F3 段 2。残りは訊かずに着手してよい（オーナー 2026-11-18・次の順は §1.1 第1306 の末尾。F3 段 2 はオーナー判断）。
 - **★ A-B リピート（オーナー決定 2026-11-17・第1286）＝`docs/ab-repeat-design.md`**: §3 の 1〜4 は済み（第1286）。**2026-11-19 オーナー決定: Loop グループ・A-B ボタンと番号欄・8 本の帯（§3 の 5）・右クリックの Play from Here／A Here／B Here は撤去、Repeat はヘッダへ**（同 §0）。残りは実機（`MANUAL-CHECKS`「Repeat はヘッダ」＝オーナー）と、release 時の site・README の書き直し。
+- **★ Join Bars in Pairs（Orecchiante の依頼 21・オーナー決定 2026-11-21・第1342）＝実装済み**（`docs/join-bars-design.md`）。残りは実機（`MANUAL-CHECKS`「Join Bars in Pairs」＝Ctrl+Z で 2 つのファイルが戻る・録音と小節の頭がそろう）と Orecchiante の確認。
 - **★ コード行の中に書けるもの（オーナー決定 2026-11-16・第1285）**: `time`・`tempo`・`%`・`key` は済み（§1.1）。**残り＝コードに付ける印 `@rit`／`@accel`／`@rall`（`…@!rit`）・`@fermata`・`@text("…")`**（今は `@todo` だけ）。強弱は見送り。
 - **★ 録音を聴きながら直す（Dettato #4・オーナーの希望 2026-11-15）＝`docs/recording-design.md`**: S1〜S4 と §1 7（楽譜と録音を同時に）・§7（書き出しに録音・第1286）は済み（§1.1 第1284〜第1286）。**次は S5**（帯・`Mark Bar Line Here`・ドラッグ・`byHand`）→ S6（CHANGELOG・Dettato への返事）。§8 の録音のパート（Dettato #16）は第1288 で実装・実測済み・使っている間のメモリは今のまま（オーナー決定 2026-11-17）＝残りは耳の確認（`MANUAL-CHECKS`「録音のパート」）。耳の確認は `MANUAL-CHECKS` §3.9（オーナー）。
 - **★ 反復とナビ記号を section の音楽にも書く（オーナー提案 2026-11-14・第1243＝第1249 で段 0〜8 が済み・LYS1034 は phrase だけ）**: 全部 `docs/inline-repeat-design.md`（規則 §3・段取り §4・未決 §6・経過 §7・エディタのコマンド §8）。オーナー決定（2026-11-14）: 対は form に組み立てた列で見る／`| |:` は空小節のまま／歌詞の verse は 5 規則／書き出しはなるべく form 側（Q2）。**次**（順は上から。歌詞の規則 3 と警告の 4 種目は第1253、ending・ナビ記号を全パートに書くコマンドと LYS1070 の quick fix は第1254 で済み＝§1.1）: ⑴ この島（反復とナビ記号を音楽に書く）の「次」は無い＝判断待ちも残りの形も 0。step キー・`PlayForm` の一本化（第1255）、3 番括弧＝3 回（form は第1256・音楽は第1257・コードの行は第1258）は済み。次の一手は下の積み残しから（オーナーに訊く）。段 9（読み込みと OMR の書き出し）は Q2 の決定で今の形のまま＝作業なし。⚠️ Calamo と Dettato の REQUESTS への知らせ（Q2「本体が出てから」）は未＝release のときに書く。実機は `MANUAL-CHECKS` 第1243・第1249・第1253・第1254・第1255。
@@ -153,6 +154,21 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1342セッション（2026-11-21・YT-DELL2）
+
+Orecchiante の依頼 21（小節を 2 つずつまとめる）。base `08c3335f7`。開始時 full 18086 合格 / 0 失敗 / skip 2 / 合計 18088（Lab `p1342` `start.log`）。Calamo・Shosa の open は 0。
+- オーナーに「21 を実装してよいと思うか」と訊かれ、「よい」と答えた（手でまとめると `timeWarp` の数が合わなくなり、録音との同期が黙って切れる＝Lily# 自身の穴に近い）。オーナー決定「進めて」。設計 `docs/join-bars-design.md`。§7 の 3 つ（テンポは届く範囲が全部まとめた小節に入るものだけ半分・入口はエディタの選択だけ・組の 2 つ目の頭が空きなら断る）もオーナー決定。
+- **`fb66ad9c0`**: Core `BarJoiner`（`Join`・`Offers`）・LSP `lilysharp/joinBars`（`Played`・`BarsPlayed`）とコードアクション・拡張 `joinBars`（`.lys` と隣のファイルを 1 つの WorkspaceEdit で当て、隣のファイルは保存。Undo／Redo でも保存）・`recordingCore.joinRecordingBars`。
+  - 書き換えの確かめ: すべての音が同じ小節で鳴り、組の音は位置と長さが半分。鳴る位置 n は範囲の和音の音から読む（`%` は元の和音の位置で鳴るので候補を絞る）。
+  - 網 `BarJoinerTests` 16 本・`joinRecordingBars.test.ts` 5 本。毒 10 / 10 赤＋TS 1 本赤（Lab `p1342/poisons.ps1`）。最初の P9（範囲の途中の `time` を断る行）が緑で、その制限は要らないと分かって外した（組の 1 小節目の頭の `time` はまとめた小節の頭に残る）。
+  - 実物の VS Code で 13 項目 PASS（Lab `p1342/vscode-e2e`）。Ctrl+Z とプレビューの耳は `MANUAL-CHECKS`「Join Bars in Pairs」（オーナー）。
+  - 文書: SYNTAX_REFERENCE（和音の行の節）・拡張の README・CHANGELOG 2 つ。
+- Orecchiante の REQUESTS 21 は `fixed`（Orecchiante の repo は未 commit）。
+- 終了時 full 18102 合格 / 0 失敗 / skip 2 / 合計 18104（Lab `p1342` `full1.log`。`-End` の run は §1 の字数で 1 赤＝削って直した）。
+- **次**: Orecchiante とオーナーの確認を待つ。Lily# の次は review.md の設計が先の 2 つ（F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。第1340 の ⚠️ の 2 つを先に調べるのも手。
+
+## 以下は第1341セッションの経緯
+
 ### 1.1 第1341セッション（2026-11-21・YT-DELL2）
 
 Shosa の依頼 6（歌われる音節を `lysc timeline` から）。base `4cc29d7d6`。開始時 full 18083 合格 / 0 失敗 / skip 2 / 合計 18085（Lab `p1341` `start.log`）。Calamo・Orecchiante の open は 0。
@@ -164,20 +180,6 @@ Shosa の依頼 6（歌われる音節を `lysc timeline` から）。base `4cc2
 - REQUESTS 6 は `fixed`（Shosa の repo は未 commit）。
 - 終了時 full 18086 合格 / 0 失敗 / skip 2 / 合計 18088（`-End`・`run2.trx`）。
 - **次**: Shosa の確認（done）を待つ。Lily# の次は review.md の設計が先の 2 つ（F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。第1340 の ⚠️ の 2 つを先に調べるのも手。
-
-## 以下は第1340セッションの経緯
-
-### 1.1 第1340セッション（2026-11-21・YT-DELL2）
-
-review.md の設計が先の 3 つの 1 つ目＝`mid-bar-break` の本の差分 collect。base `e41322018`。開始時 full 18077 合格 / 0 失敗 / skip 2 / 合計 18079（Lab `p1340` `start.log`）。REQUESTS の open は Calamo・Orecchiante・Shosa とも 0。
-- **`8211e55e4`**: 小節の途中に break のある本は、1 つの collector が 2 回まわし（発見・分割）、録りを全部 ineligible にしていた＝打鍵ごとにフル collect × 2。打鍵の道（`IncrementalCompiler.CollectWithResume`／`CollectPass`）を 2 つの collector・2 つの録りにした（第1303 のメモの形）。
-  - 1 回目は `LeavesTheSplitToTheCaller`＝表を `TableForASecondPass` に置いて止まる。要求と拒否は累積の side table にした（shifter の腕 2 本）＝resume した 1 回目が全体の表を作れる。
-  - 2 回目は、表と 1 回目の衝突を seed した別の collector・別の録り。表が `MidBarBreakTable.CutsLike`（小節・offset・page）で同じときだけ resume、違えば録りと nested の store（`ServesOneTable`）を捨てる。再録りの予定は両 pass で 1 つ。診断は `LastCollectPasses`。
-  - 網 `MidBarBreakResumeTests`（3 つの形 × 8 段の編集・SVG のバイト・LYS1037 の衝突・pass の道）と shifter の腕。毒 9 / 9 赤（Lab `p1340/poisons*.log`・`notes.md`）。P7（2 回目が 1 回目の nested の store を共有）は harvest の形で赤＝変更前の 1 つの store も同じ食い違いを持っていたはず（未確認）。全 svg の掃き 0 / 1289。
-- **同じ commit で既存の欠陥**: 2 小節目以降の頭の連符の中の `break` は小節線の上と読まれ（メンバーの時間は連符の終わりまで時計に届かない）、改行が前の小節の後ろに付き、LYS1037 も出なかった＝`DirectiveStandsAtTheBarLine` は `CurrentMoment` で読む。網 1 本・毒 1 本赤。CHANGELOG 2 つに 2 行。
-- ⚠️ 見たが追っていないもの（break のない本でも同じ）: この形の本では、長さの変わる編集は splice しない。空白だけの編集は resume しない（`LastCollectPasses` が False）。実コーパスの打鍵の数（第1300 の銀河鉄道999）は測っていない。
-- 終了時 full 18083 合格 / 0 失敗 / skip 2 / 合計 18085（`-End`・`run3.trx`）。
-- **次**: review.md の残りは設計が先の 2 つ（F4 の残り＝状態ごと移す設計・第1299 の末尾は ARCHIVE／`shiftPage`）と F3 段 2（オーナー判断）。⚠️ の 2 つを先に調べるのも手。
 
 ## 2. 開いている作業
 

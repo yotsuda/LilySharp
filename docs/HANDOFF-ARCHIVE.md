@@ -277,6 +277,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1340セッションの経緯
+
+### 1.1 第1340セッション（2026-11-21・YT-DELL2）
+
+review.md の設計が先の 3 つの 1 つ目＝`mid-bar-break` の本の差分 collect。base `e41322018`。開始時 full 18077 合格 / 0 失敗 / skip 2 / 合計 18079（Lab `p1340` `start.log`）。REQUESTS の open は Calamo・Orecchiante・Shosa とも 0。
+- **`8211e55e4`**: 小節の途中に break のある本は、1 つの collector が 2 回まわし（発見・分割）、録りを全部 ineligible にしていた＝打鍵ごとにフル collect × 2。打鍵の道（`IncrementalCompiler.CollectWithResume`／`CollectPass`）を 2 つの collector・2 つの録りにした（第1303 のメモの形）。
+  - 1 回目は `LeavesTheSplitToTheCaller`＝表を `TableForASecondPass` に置いて止まる。要求と拒否は累積の side table にした（shifter の腕 2 本）＝resume した 1 回目が全体の表を作れる。
+  - 2 回目は、表と 1 回目の衝突を seed した別の collector・別の録り。表が `MidBarBreakTable.CutsLike`（小節・offset・page）で同じときだけ resume、違えば録りと nested の store（`ServesOneTable`）を捨てる。再録りの予定は両 pass で 1 つ。診断は `LastCollectPasses`。
+  - 網 `MidBarBreakResumeTests`（3 つの形 × 8 段の編集・SVG のバイト・LYS1037 の衝突・pass の道）と shifter の腕。毒 9 / 9 赤（Lab `p1340/poisons*.log`・`notes.md`）。P7（2 回目が 1 回目の nested の store を共有）は harvest の形で赤＝変更前の 1 つの store も同じ食い違いを持っていたはず（未確認）。全 svg の掃き 0 / 1289。
+- **同じ commit で既存の欠陥**: 2 小節目以降の頭の連符の中の `break` は小節線の上と読まれ（メンバーの時間は連符の終わりまで時計に届かない）、改行が前の小節の後ろに付き、LYS1037 も出なかった＝`DirectiveStandsAtTheBarLine` は `CurrentMoment` で読む。網 1 本・毒 1 本赤。CHANGELOG 2 つに 2 行。
+- ⚠️ 見たが追っていないもの（break のない本でも同じ）: この形の本では、長さの変わる編集は splice しない。空白だけの編集は resume しない（`LastCollectPasses` が False）。実コーパスの打鍵の数（第1300 の銀河鉄道999）は測っていない。
+- 終了時 full 18083 合格 / 0 失敗 / skip 2 / 合計 18085（`-End`・`run3.trx`）。
+- **次**: review.md の残りは設計が先の 2 つ（F4 の残り＝状態ごと移す設計・第1299 の末尾は ARCHIVE／`shiftPage`）と F3 段 2（オーナー判断）。⚠️ の 2 つを先に調べるのも手。
+
 ## 以下は第1339セッションの経緯
 
 ### 1.1 第1339セッション（2026-11-20・YT-DELL2）
