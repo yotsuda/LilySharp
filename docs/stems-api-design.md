@@ -121,8 +121,11 @@ interface Stem {
   - 録音なし（morning-light）: `timeline: 'score'`、3 パート。2 回目はパートを描き直さない（1.4 s → 26 ms）。
   - `onDidChangeStems` は開いた .lys の編集の 1.5 s 後に来る。`writeAudio` の 48 kHz の MP3 はクリックが 48000 標本目・長さも 144000 標本。
     22050 Hz の MP3 は理由つきで断る。
-- 気づいたこと: `singer on melody`（どの歌詞を歌うか書かない行）では `lilysharp/sung` が声を返さないのに、再生の `Sung` は
-  melody を歌うパートとして数える。そのときメロディは楽器で鳴り、`notes` に理由が出る（stems の側の扱いはこれで正しい）。
+- 気づいたこと: 作業場の譜面の最初の版は `lyrics words { … }`（名前つき）を score の行で結び、`singer on melody` と書いていた。
+  文法（GRAMMAR.md SingerSung、lyrics-singer-design.md §10・§14）では `sings` を省いた行はパートが名指しした歌詞
+  （`part melody { lyrics words }`）か名前の無い歌詞を歌うので、これはエラー LYS4042「This file has no unnamed lyrics to sing.」
+  （`lysc check` で確かめた）。エラーのある譜面でも再生の `Sung` は melody を歌うパートとして数え、`lilysharp/sung` は声を返さない。
+  そのときメロディは楽器で鳴り、`notes` に理由が出る（stems の側の扱いはこれで正しい）。
 
 ## 作る順（了承の後）
 
