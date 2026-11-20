@@ -432,6 +432,55 @@ function round(s: number): number {
     return Math.round(s * 10000) / 10000;
 }
 
+/**
+ * Join Bars in Pairs, in the file beside the chart (docs/join-bars-design.md §3; Orecchiante's
+ * request 21): each `bars[n]` and `bars[n + 1]` of `played` (the first bar played of every pair, as
+ * the language server counts them) become one bar — the first's `start`, `section`, `tempo` and
+ * `byHand`, the second's `end`, the beats of the two one in two (as many as the meter has: the
+ * joined bar's beats), their chords one after the other. `bar` and `barOfSection` are numbered
+ * again. The items this reader does not know stay as they were.
+ */
+export function joinRecordingBars(rec: Recording, played: readonly number[]): Recording | { error: string } {
+    const raw: Record<string, unknown>[] = Array.isArray(rec.raw.bars) && rec.raw.bars.length === rec.bars.length
+        ? (rec.raw.bars as Record<string, unknown>[]).map(b => ({ ...b }))
+        : rec.bars.map((b, i) => ({ bar: i, start: b.start, end: b.end }));
+    const bars = rec.bars.map(b => ({ ...b }));
+    const sectionPlay = raw.map(b => b.barOfSection);   // to tell a section played again from one played on
+    for (const n of [...new Set(played)].sort((x, y) => y - x)) {
+        if (!Number.isInteger(n) || n < 0 || n + 1 >= bars.length) {
+            return { error: `the file has no bars ${n} and ${n + 1} to join` };
+        }
+        const a = raw[n], b = raw[n + 1];
+        const joined: Record<string, unknown> = { ...a, end: b.end };
+        if (Array.isArray(a.beats) && Array.isArray(b.beats)) {
+            joined.beats = [...a.beats, ...b.beats].filter((_, i) => i % 2 === 0);
+        }
+        if (Array.isArray(a.chords) && Array.isArray(b.chords)) {
+            joined.chords = [...a.chords, ...b.chords];
+        }
+        raw.splice(n, 2, joined);
+        sectionPlay.splice(n, 2, sectionPlay[n]);
+        bars.splice(n, 2, bars[n].byHand
+            ? { start: bars[n].start, end: bars[n + 1].end, byHand: true }
+            : { start: bars[n].start, end: bars[n + 1].end });
+    }
+    // Numbered again: `bar` from 1 (a pickup 0), `barOfSection` from 1 in each playing of a section
+    // (a playing begins where the section changes, or where the file began one again).
+    let inSection = 0;
+    for (let i = 0; i < raw.length; i++) {
+        if ('bar' in raw[i]) {
+            raw[i].bar = rec.pickup ? i : i + 1;
+        }
+        const again = i === 0 || raw[i].section !== raw[i - 1].section
+            || (typeof sectionPlay[i] === 'number' && typeof sectionPlay[i - 1] === 'number' && (sectionPlay[i] as number) <= (sectionPlay[i - 1] as number));
+        inSection = again ? 1 : inSection + 1;
+        if ('barOfSection' in raw[i]) {
+            raw[i].barOfSection = inSection;
+        }
+    }
+    return { ...rec, bars, raw: { ...rec.raw, bars: raw } };
+}
+
 /** How the recording is played (docs/recording-design.md §1 3; owner's decisions 2026-11-19: the
  *  panel keeps the octave alone — its speed, semitones, cents and "pitch with speed" are gone, the
  *  tempo being the practice panel's; the file's `tuning` is not used, §3 2). */

@@ -907,6 +907,11 @@
         "title": "Join Sections"
       },
       {
+        "command": "lilysharp.joinBars",
+        "category": "Lily#",
+        "title": "Join Bars in Pairs"
+      },
+      {
         "command": "lilysharp.splitSectionHere",
         "category": "Lily#",
         "title": "Split Section Here"
@@ -1188,6 +1193,10 @@
         },
         {
           "command": "lilysharp.joinSections",
+          "when": "editorLangId == lilysharp"
+        },
+        {
+          "command": "lilysharp.joinBars",
           "when": "editorLangId == lilysharp"
         },
         {

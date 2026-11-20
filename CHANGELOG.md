@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Join Bars in Pairs** (`[editor]`, Orecchiante's request 21). A chart a transcription read at half the bar's length is mended in one step: select its bars and the lightbulb joins them two by two, each becoming half of the joined bar, the chords keeping their place in time (`C | D |` → `C D`, `C . F . | G |` → `C F G .`). The tempo is halved where everything it reaches is joined. The file beside the chart, `<name>.orecchiante.json`, has the same bars joined in the same edit, so the recording still plays with the chart bar for bar; a chart and a file that did not line up before are asked about. Refused with the reason where the bars cannot be joined faithfully.
+
 - **`lysc timeline` says what is sung, syllable by syllable** (`[cli]`, Shosa's request 6). A new field `sung` gives each voice Lily# sings — its part, its singer's name, and every syllable as `[beat, beats, text]` in the timeline's beats, as the preview and `lysc wav --singer` sing it (the singer lines, their sections, the reading of a `漢[かん]`, a melisma held to its last note) — so a dancing character can move her mouth to the song. A new field: the `protocol` stays 1.
 
 - **Fixed: a `break` inside a tuplet that opens a bar broke the line before that bar** (`[engraving]`, `[diagnostics]`). `c''1 | tuplet 3/2 { c4 e break g } e2 |` ended the line after the first bar and said nothing. A bar cannot be split inside a tuplet, so the line now breaks at the end of the bar the `break` stands in and LYS1037 says why — as it always did in a score's first bar.

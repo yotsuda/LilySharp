@@ -79,6 +79,12 @@ sections, the chord conversions on a chord; *Go to the Same Bar in Another Part�
 
 - **Lily#: Sections** — Join Sections, Split Section Here, Split Sections to Match a Part, Extract
   Phrase from Section, Regroup (by part ⇄ by section)
+
+To mend a chart read at half the bar's length, select its bars and choose *Join Bars in Pairs…*
+from the lightbulb: `C | D |` becomes `C D`, and the recording's bars in `<name>.orecchiante.json`
+are joined with them, so the recording still plays with the chart bar for bar.
+
+
 - **Lily#: Parts & Tracks** — Add Chord Track…, Write a Harmony Part…, Write a Singer's Notes Out
   as a Part, Write Repeat Signs in Every Part, Keep Repeat Signs in One Part
 - **Lily#: Notation** — Convert Octaves to Absolute / Relative, Respell Notes to Key…, Guess Section Key…

@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Join Bars in Pairs.** Select the bars of a chords row read at half the bar's length and the lightbulb joins them two by two (`C | D |` → `C D`), the chords keeping their place in time and the tempo halved where everything it reaches is joined. The recording's bars in `<name>.orecchiante.json` are joined in the same edit, so the recording still plays with the chart bar for bar.
 - **The bundled lysc says what is sung, syllable by syllable.** `lysc timeline` has a new field `sung`: each voice's part, singer and syllables with their beats, as the preview sings them — what Shosa moves a dancer's mouth to.
 - **A `break` inside a tuplet that opens a bar no longer breaks the line before that bar.** The line breaks at the end of the bar instead, and the Problems panel says why (LYS1037).
 - **A chart with a line break inside a bar previews as quickly as any other.** Each keystroke used to collect the whole score twice from the top.

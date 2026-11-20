@@ -431,6 +431,8 @@ public sealed partial class LilySharpLanguageServer
             actions.Add(singerPart);
         if (JoinSectionsAction(doc, uri, startOffset, endOffset) is { } join)
             actions.Add(join);
+        if (JoinBarsAction(doc, uri, startOffset, endOffset) is { } joinBars)
+            actions.Add(joinBars);
         if (startOffset == endOffset && CutSectionAction(doc, uri, startOffset) is { } cut)
             actions.Add(cut);
 
@@ -496,6 +498,27 @@ public sealed partial class LilySharpLanguageServer
             Title = title,
             Kind = CodeActionKind.RefactorRewrite,
             Command = new Command { Title = title, CommandIdentifier = JoinSectionsCommand, Arguments = [uri.ToString(), names.ToArray()] },
+        };
+    }
+
+    /// <summary>The command "Join Bars in Pairs" runs — the extension's, which asks the server for
+    /// the rewrite (lilysharp/joinBars, <see cref="LilySharp.Core.Editing.BarJoiner"/>), applies it and
+    /// joins the same bars in the file beside a chart.</summary>
+    internal const string JoinBarsCommand = "lilysharp.joinBars";
+
+    /// <summary>"Join Bars in Pairs…" on a selection across two or more bars of a chords row
+    /// (Orecchiante's request 21, owner's decision 2026-11-21). Offered on sight; the join is worked
+    /// out — and checked — when picked.</summary>
+    private static CodeAction? JoinBarsAction(Document doc, Uri uri, int start, int end)
+    {
+        if (!LilySharp.Core.Editing.BarJoiner.Offers(doc.Tree, start, end))
+            return null;
+        string title = LilySharp.Core.Editing.BarJoiner.Title + "…";
+        return new CodeAction
+        {
+            Title = title,
+            Kind = CodeActionKind.RefactorRewrite,
+            Command = new Command { Title = title, CommandIdentifier = JoinBarsCommand, Arguments = [uri.ToString(), start, end] },
         };
     }
 

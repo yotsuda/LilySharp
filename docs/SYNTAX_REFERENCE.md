@@ -3347,6 +3347,23 @@ but voices none, so Lily# picks one voicing, the same everywhere: every tone tak
 pitch from G3 up to (not including) G4, and a slash bass its pitch an octave below that —
 `G7/B` sounds B2 G3 B3 D4 F4. Hovering the symbol in the editor lists those pitches.
 
+**Joining bars in pairs.** A chart a transcription read at half the bar's length — `C | D |`
+where the music has one bar of C and D — is mended by selecting its bars and choosing **Join
+Bars in Pairs…** from the lightbulb (or **Lily#: Join Bars in Pairs** from the Command Palette).
+The bars the selection touches are joined two by two from the first, each becoming half of the
+joined bar, the chords keeping their place in time on the beat grid: `C | D |` → `C D`,
+`C . F . | G |` → `C F G .`; an odd bar out is left as it is. A `%` is written out; a meter at a
+pair's first bar opens the joined bar. A tempo is halved where everything it reaches is joined —
+every tempo when the whole chart is; a section's own when its bars are all joined and every section
+played after it says its own tempo. It is refused, with the reason, where the bars cannot be
+joined faithfully: a second bar that opens silent after a chord (the `.` would hold that chord on),
+a `time`, `key` or `tempo` that would stand inside the joined bar, a bar line in a pair other than
+`|`, repeat signs, endings or navigation marks among the bars, a pickup, or a section that writes
+anything beside the chords row. A `break` that would stand inside a joined bar is dropped. The
+rewrite is checked before it is applied — every chord plays in its bar at half its place — and the
+file beside a chart (`<name>.orecchiante.json`) has the same bars joined in the same edit.
+
+
 ### The strum's rhythm — `strokes` and `plays`
 
 A placed row **holds** each chord over its slot — a keyboard's reading. A guitar's strum is a

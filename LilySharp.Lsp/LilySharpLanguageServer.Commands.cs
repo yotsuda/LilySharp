@@ -483,6 +483,25 @@ public sealed partial class LilySharpLanguageServer
             return new JoinSectionsResponse { Success = r.NewText != null, NewText = r.NewText, Plan = r.Plan, Error = r.Error, Version = doc.Version };
         }, token);
 
+    /// <summary>"Join Bars in Pairs" (<see cref="LilySharp.Core.Editing.BarJoiner"/>, which checks
+    /// every note plays where it did, the joined bars' at half their place): the bars of a chords row
+    /// the selection touches; the rewritten document, its account and the bars played that were
+    /// joined (for the file beside a chart), or the refusal.</summary>
+    [JsonRpcMethod("lilysharp/joinBars", UseSingleObjectParameterDeserialization = true)]
+    public Task<JoinBarsResponse> JoinBarsAsync(JoinBarsParams @params, CancellationToken token)
+        => OffDispatch(() =>
+        {
+            var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+            if (doc == null)
+                return new JoinBarsResponse { Error = DocumentNotFound };
+            var r = LilySharp.Core.Editing.BarJoiner.Join(doc.Text, @params.Start, @params.End, @params.Score);
+            return new JoinBarsResponse
+            {
+                Success = r.NewText != null, NewText = r.NewText, Plan = r.Plan, Error = r.Error,
+                Played = r.Played?.ToArray(), BarsPlayed = r.BarsPlayed, Version = doc.Version,
+            };
+        }, token);
+
     /// <summary>"Split Section Here" (<see cref="LilySharp.Core.Editing.SectionCutter"/>, which checks the
     /// piece sounds as it did): with no name, where the caret cuts and a free name to offer; with one,
     /// the rewrite or the refusal.</summary>

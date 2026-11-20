@@ -27,6 +27,7 @@ import { reviewPointsOf } from './reviewCore';
 import { rewriteIsStale } from './previewCore';
 import { SplitSectionsChoice, modalText, splitChoiceItems } from './splitSectionsCore';
 import { sameDocumentUri } from './shapeItemCore';
+import { joinRecordingBars, parseRecording, recordingPathFor, serializeRecording } from './recordingCore';
 
 export interface EditCommandsDeps {
     /** The server's client; undefined until the first score starts it. */
@@ -68,6 +69,18 @@ export function registerEditCommands(context: vscode.ExtensionContext, deps: Edi
         }),
         vscode.commands.registerCommand('lilysharp.joinSections',
             (uri?: string, sections?: string[]) => joinSections(typeof uri === 'string' ? uri : undefined, Array.isArray(sections) ? sections : undefined)),
+        // From the code action on a selection (the document and the selection), or from the palette.
+        vscode.commands.registerCommand('lilysharp.joinBars',
+            (uri?: string, start?: number, end?: number) => joinBars(typeof uri === 'string' ? uri : undefined,
+                typeof start === 'number' ? start : undefined, typeof end === 'number' ? end : undefined)),
+        // A file beside a chart that Join Bars in Pairs wrote, undone or redone with the chart (one
+        // edit across the two files): written to the disk as well, where the preview reads it.
+        vscode.workspace.onDidChangeTextDocument(e => {
+            if ((e.reason === vscode.TextDocumentChangeReason.Undo || e.reason === vscode.TextDocumentChangeReason.Redo)
+                && joinedRecordings.has(e.document.uri.toString()) && e.document.isDirty) {
+                void e.document.save();
+            }
+        }),
         vscode.commands.registerCommand('lilysharp.splitSectionsToMatch',
             (uri?: string, section?: string) => splitSectionsToMatch(
                 typeof uri === 'string' ? uri : undefined, typeof section === 'string' ? section : undefined)),
@@ -539,6 +552,108 @@ async function joinSections(uriArg?: string, sections?: string[]) {
         vscode.window.setStatusBarMessage(`Lily#: ${response.Plan ?? 'joined'}`, 6000);
     } catch (err) {
         vscode.window.showErrorMessage(`Lily#: joining sections failed: ${err}`);
+    }
+}
+
+/** The files beside a chart Join Bars in Pairs has written (their undo is saved too). */
+const joinedRecordings = new Set<string>();
+
+/**
+ * Join Bars in Pairs (Orecchiante's request 21, owner's decisions 2026-11-21,
+ * docs/join-bars-design.md): the bars of a chords row the selection touches, two by two. The
+ * server works the join out and checks every note plays where it did (lilysharp/joinBars); a
+ * refusal says why. The file beside the chart, `<stem>.orecchiante.json`, has the same bars
+ * joined in the same edit (one undo across the two files) and is saved at once — its bars are
+ * the n-th bar played, and a chart a bar shorter would play every bar after it against the
+ * recording's next. Where the two did not line up before, the chart alone is joined if asked.
+ */
+async function joinBars(uriArg?: string, startArg?: number, endArg?: number) {
+    const client = server();
+    const editor = vscode.window.activeTextEditor;
+    const doc = uriArg
+        ? vscode.workspace.textDocuments.find(d => sameDocumentUri(d.uri.toString(), uriArg))
+        : editor?.document;
+    if (!doc || doc.languageId !== 'lilysharp' || !client) {
+        return;
+    }
+    const sel = editor && editor.document === doc ? editor.selection : undefined;
+    const start = startArg ?? (sel ? doc.offsetAt(sel.start) : 0);
+    const end = endArg ?? (sel ? doc.offsetAt(sel.end) : 0);
+    try {
+        const version = doc.version;
+        const response = await vscode.window.withProgress(
+            { location: vscode.ProgressLocation.Window, title: 'Lily#: checking the joined bars…' },
+            () => client!.sendRequest<{ Success: boolean; NewText?: string | null; Plan?: string | null; Error?: string | null;
+                Played?: number[] | null; BarsPlayed: number; Version: number }>(
+                'lilysharp/joinBars', {
+                    textDocument: { uri: doc.uri.toString() },
+                    start, end,
+                    score: selectedRenders.get(doc.uri.toString()) || null,
+                }));
+        if (!response.Success || response.NewText == null) {
+            const refusal = modalText(response.Error ?? 'The bars were not joined.');
+            await vscode.window.showWarningMessage(refusal.message, { modal: true, detail: refusal.detail });
+            return;
+        }
+        // The file beside the chart, as the editor has it if open.
+        let recordingText: string | undefined;
+        let recordingUri: vscode.Uri | undefined;
+        if (doc.uri.scheme === 'file') {
+            recordingUri = vscode.Uri.file(recordingPathFor(doc.uri.fsPath));
+            const open = vscode.workspace.textDocuments.find(d => d.uri.fsPath.toLowerCase() === recordingUri!.fsPath.toLowerCase());
+            try {
+                recordingText = open ? open.getText() : Buffer.from(await vscode.workspace.fs.readFile(recordingUri)).toString('utf8');
+            } catch {
+                recordingText = undefined;   // (no file beside the chart)
+            }
+        }
+        let joinedText: string | undefined;
+        let note = '';
+        if (recordingText !== undefined && recordingUri) {
+            const rec = parseRecording(recordingText);
+            const name = recordingUri.fsPath.split(/[\\/]/).pop();
+            if ('error' in rec) {
+                note = `; ${name} was left alone (${rec.error})`;
+            } else if (rec.bars.length !== response.BarsPlayed) {
+                const chartOnly = 'Join the Chart Only';
+                const choice = await vscode.window.showWarningMessage(
+                    `The chart plays ${response.BarsPlayed} bars and ${name} has ${rec.bars.length}, so which of its bars to join cannot be told. Join the chart's bars and leave ${name} as it is?`,
+                    { modal: true }, chartOnly);
+                if (choice !== chartOnly) {
+                    return;
+                }
+                note = `; ${name} was left as it is`;
+            } else {
+                const joined = joinRecordingBars(rec, response.Played ?? []);
+                if ('error' in joined) {
+                    await vscode.window.showWarningMessage(`Lily#: ${name}: ${joined.error} — nothing was done.`, { modal: true });
+                    return;
+                }
+                joinedText = serializeRecording(joined);
+                note = `; ${name} too`;
+            }
+        }
+        if (doc.version !== version || response.Version !== version) {
+            vscode.window.showWarningMessage('Lily#: the file changed while the bars were being checked — run it again.');
+            return;
+        }
+        const edit = new vscode.WorkspaceEdit();
+        edit.replace(doc.uri, new vscode.Range(doc.positionAt(0), doc.positionAt(doc.getText().length)), response.NewText);
+        if (joinedText !== undefined && recordingUri) {
+            const target = await vscode.workspace.openTextDocument(recordingUri);
+            edit.replace(recordingUri, new vscode.Range(target.positionAt(0), target.positionAt(target.getText().length)), joinedText);
+        }
+        if (!await vscode.workspace.applyEdit(edit)) {
+            vscode.window.showWarningMessage('Lily#: the bars could not be joined (the edit was refused).');
+            return;
+        }
+        if (joinedText !== undefined && recordingUri) {
+            joinedRecordings.add(recordingUri.toString());
+            await vscode.workspace.textDocuments.find(d => d.uri.toString() === recordingUri!.toString())?.save();
+        }
+        vscode.window.setStatusBarMessage(`Lily#: ${(response.Plan ?? 'joined').replace(/\.$/, '')}${note}.`, 8000);
+    } catch (err) {
+        vscode.window.showErrorMessage(`Lily#: joining bars failed: ${err}`);
     }
 }
 

@@ -1432,6 +1432,32 @@ public class CutSectionResponse
     public int Version { get; set; }
 }
 
+/// <summary>Parameters for lilysharp/joinBars: the selection whose chords-row bars are joined in
+/// pairs, and the score the preview plays (null: the file's first), whose form the answer's
+/// <see cref="JoinBarsResponse.Played"/> counts.</summary>
+public class JoinBarsParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    public int Start { get; set; }
+    public int End { get; set; }
+    public string? Score { get; set; }
+}
+
+/// <summary>Response for lilysharp/joinBars: the rewrite and its account, or the refusal; and, for
+/// the file beside a chart, the first bar played of every pair joined (ascending, a pickup being
+/// bar 0) — each <c>bars[n]</c> and <c>bars[n + 1]</c> become one.</summary>
+public class JoinBarsResponse
+{
+    public bool Success { get; set; }
+    public string? NewText { get; set; }
+    public string? Plan { get; set; }
+    public string? Error { get; set; }
+    public int[]? Played { get; set; }
+    /// <summary>How many bars the score played before the join.</summary>
+    public int BarsPlayed { get; set; }
+    public int Version { get; set; }
+}
+
 /// <summary>Response for lilysharp/joinSections.</summary>
 public class JoinSectionsResponse
 {
