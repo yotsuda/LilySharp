@@ -51,6 +51,7 @@ tools\Session-Check.ps1 -End pNNN -DiffBase <開始時 HEAD>   # 終了の機械
 - ★★★ **開始時に `C:\MyProj\Calamo\docs\repro\REQUESTS.md` の `open` を見る＝open があればそれに優先的に着手する**（ユーザー指示 2026-10-23・第961）。OMR 側（楽譜画像 → `.lys`）からの依頼の 1 枚で、状態は両側で書き換える（直したら `fixed <commit>`・直さないなら `won't`・聞くなら `question`。長い返事は Lab の `sessions/pNNN/` に置いて行から指す）。
 - ★ **Dettato は 2026-11-20 に Orecchiante へ改名（その依頼 20・同名の別プロジェクトが公開されたため）＝REQUESTS は `C:\MyProj\Orecchiante\docs\repro\REQUESTS.md` へ移る（移るまでは旧 `C:\MyProj\Dettato\…`）。拡張 ID `yotsuda.orecchiante`・隣のファイル `<stem>.orecchiante.json`。以下の「Dettato」は旧名。**
 - ★ **`C:\MyProj\Dettato\docs\repro\REQUESTS.md` にも `open` がある**（2026-11-14・Dettato のセッションが書いた行。Dettato は録音 → `.lys` のコード譜）。同じ使い方の 1 枚で、最初の依頼は「録音を `.lys` に変換するメニューを Lily# 本体が持つ」（オーナー決定 2026-11-14）と、その取り決めへの希望。Calamo の依頼との優先順はオーナーに聞く。第1242 で 3 を直し、1・2 に返事を書いた。2026-11-15 にオーナー決定（§1.0・1＝D3 の後に作る／2＝今は作らない）。
+- ★ **`C:\MyProj\Shosa\docs\repro\REQUESTS.md` も同じ使い方の 1 枚**（2026-11-20〜・Shosa は Lily# の曲に合わせて踊る言語）。依頼 1（曲を読むところを lysc へ）は第1338 で `fixed`。`lysc timeline`／`notes` の JSON は Shosa との約束＝形を変えるなら `SongReading.Protocol` と `CliSongReadingTests`。
 - 証明 ⑴ の道具は `LilySharp-Lab\tools\rerender-ls.ps1`（RULES §5.5 のコマンド一覧）。
 - ★★★ **開始時に `LilySharp-Lab\notes\CLAUDE-OPERATIONS.md` も通読する**＝シェルと道具の使い方（Bash・PowerShell ツール・ripple は禁止・pwsh MCP の作法）・push や commit のユーザー規則・機械と社内環境の罠。**user memory は使わない**（2026-09-17・ユーザー決定。PC ローカルで他の PC に届かない）＝知見は RULES §4 の表の置き場所へ書く（公開してよい技術知見は RULES §5、private なものは Lab の notes）。
 ⚠️ **読み方の罠のうち、スクリプトが*刷れない*もの**（刷れる 4 つ——合計で読む・Release で測る・
@@ -147,6 +148,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1338セッション（2026-11-20・YT-DELL2）
+
+Shosa の依頼 1（曲を読むところを lysc へ）。base `2c32604f8`。開始時 full 18040 合格 / 0 失敗 / skip 2 / 合計 18042（Lab `p1338` `start.log`）。終了前の full 18050 合格 / 0 失敗 / skip 2 / 合計 18052（Lab `p1338` `full2.trx`）。
+- **`aa6602d4d`**: Shosa の `shosa-music`（同じ作者・GPL）を Core `Export/SongReading.cs` に移した。`lysc timeline`／`lysc notes`（読めない曲も JSON・exit 0）。`--order`（曲に form を 1 つ書き足す＝`SongReading.WithOrder`）と `--tempo`（全テンポを同じ比で＝`Retime`）は 4 つのコマンドが取る（midi／wav は `ExportOptions.PlayForm`／`Tempo`、CLI は `RunOutputCommand` の `reshape`）。`lysc --version --json` → `{version, protocol: 1}`。拡張の `activate()` が `{ extendMarkdownIt, lyscPath }` を返す。
+- 照合: Shosa の木と samples の 35 曲で shosa-music（今の Core でビルドし直したもの、Lab `p1338/shosa-music`）と同じバイト（timeline・notes・`--order` の 50 回）。違うのは `timeline --tempo` だけで、変えた後のテンポを返すようにした（Shosa は timeline に `--tempo` を渡していない）。`midi --order` は form を書いたファイルと同じバイト。`--tempo` は 1 µs の丸め差（90→45 のスケールと 45 を直接書いたもの）。
+- 網 `CliSongReadingTests` 10 本（キーの並びと値を全部固定）。毒 8 本は全部赤（Lab `p1338/poisons.ps1`）。`wav` の `--order`／`--tempo` は SoundFont が要るので網なし＝`midi` と同じ道（`ScoreExport.Write`）。実機: 隔離 VS Code で exports と Markdown のフェンス（Lab `p1338/vscode-e2e`）。拡張の `server\lysc.exe` は古い＝入れ直しはオーナー。
+- ⚠️ 途中で pwsh MCP の module が 1.17.0 に上がって proxy 1.16.0 と合わなくなり、`pwsh` サーバが使えなくなった。後半は `pwsh-dev` の新しいコンソールで作業した（オーナーが `Register-PwshToClaudeCode` してクライアントを再起動すれば戻る）。
+- **次**: Shosa 側が `done` にするのを待つ。Lily# の次は review.md の設計が先の 3 つ（順は §1.1 第1306 の末尾）。
+
+## 以下は第1337セッションの経緯
+
 ### 1.1 第1337セッション（2026-11-20・YT-DELL2）
 
 オーナーの報告と依頼を順に（base `763f1d011`・/clear 後の会話で `-Start` は回していない）。終了時 full 18040 合格 / 0 失敗 / skip 2 / 合計 18042（`-End` の trx・Lab `p1337`）。
@@ -155,17 +167,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **オーナー決定**: `bass` は予約語にしない／代役の段の頭の予約は残す（9 小節目とコード名の x が揃う）／最初の段も消すのは `all`。手元の楽譜は言語の設計の根拠にもしない（Lab notes・`e76554467`）。
 - 実機は隔離 VS Code で All と Shift+クリック（Lab `p1337/alle2e`）。残りはオーナー: 入れ直し後の実機・Orecchiante の `done`・`site/build-manual.ps1` の Dettato 1 か所（作業中のファイル）。
 - **次**: review.md の設計が先の 3 つ（順は §1.1 第1306 の末尾）＝この会話が重いので新しい会話で。
-
-## 以下は第1336セッションの経緯
-
-### 1.1 第1336セッション（2026-11-20・YT-DELL2・第1332 と同じ会話）
-
-オーナー決定 2026-11-20「どれもあなたのお勧め通りで良い」（第1335 の報告の 5 件＝1C・2B・3A・4C・5B）の便（base `f135da52c`）。開始時 full 17996 合格 / 0 失敗 / skip 2 / 合計 17998（Lab `p1336` `start.log`）。終了時 full 18011 合格 / 0 失敗 / skip 2 / 合計 18013（`-End` の trx）。
-- **実装（`69e11942c`）**: 1C＝終わりのないヘアピンは描いたうえで警告（`SpanKind.Hairpin`・`DetectHairpins` の `unpairedSink`・LYS4018 を警告の重さで。他の線の族の終わりなしはエラーのまま）。5B＝combinedStaff の休符の上の `@!rit` を相手の長い音の中へ時刻ごと移し、その時刻の比例で止める（`TextSpannerItem.EndWithin`・`HairpinEngraver.WithinX` を共有・ottava は除く）。4C＝オーナーの答え (ii)「和音の行はどこに置いてもファイルと section の調で読む」: 走査が最後のパートの header の主音をメタデータに残し、主音 D・調号 C の食い違いで「VII IV7 Vm III」と読んでいた（`p1278/probe/row1.lys`）。行の時系列はファイルの主音・家に戻る記録もファイルの調（`_fileKeyTonicStep`）・小節 0 の調の変化を先頭として読む。
-- **2B は第1266 で実装済みだった**（オーナー決定 2026-11-15＝自分のパートの f で止まる・`p1336/cs/k1` で確認）＝leftovers の古い行を直しただけ。3A は今のまま。
-- ⚠️ 4C の説明で私が「`staff a with chords X as roman`」という今は無い書き方を前提にしていた（2026-08-19 に `with` の句は廃止＝和音の行は並び順で譜表に掛かる）。気づいて (i)／(ii) を訊き直した。
-- 網: `UnendedHairpinTests`（3 行＋4 行＋1 本）・`RomanRowKeyTests`（3 行＋2 本）・`CombinedStaffHairpinTests` +1 theory 2 行・1 行変更。毒 8 本（全部赤）。全 svg 0 / 1276。
-- **次**: オーナーに次の島を訊く（review.md の設計が先の 3 つ・F3 段 2）。
 
 ## 2. 開いている作業
 
