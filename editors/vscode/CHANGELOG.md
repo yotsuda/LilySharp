@@ -2,6 +2,10 @@
 
 All notable changes to the Lily# VS Code extension are documented here.
 
+## 0.17.1
+
+- **An export with a recording part soloed has the recording.** With the score on and the recording's vocals soloed (its button out), the preview played the vocals but the WAV, MP3 or MP4 left the recording out; the exports now take the recording as Play does. (0.17.0 reached the Marketplace for Windows x64 only; what is new in 0.17 is below.)
+
 ## 0.17.0
 
 - **A singer line that sings nothing says how to fix it.** `singer on melody` over named lyrics the part does not name now says to write `lyrics words` in the part's header or `sings words` on the line (LYS4042).

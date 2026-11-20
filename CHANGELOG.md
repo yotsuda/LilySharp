@@ -4,6 +4,12 @@ Notable changes to Lily# are recorded here, newest first. Release notes are take
 from this file: the topmost section is the version being tagged, and the release
 workflow attaches that section to the GitHub Release verbatim.
 
+## 0.17.1
+
+0.17.0 reached the Marketplace for Windows (x64) alone before its release was stopped; 0.17.1 is that release for every platform, with one fix. **What is new since 0.16.0 — and the breaking changes — is under 0.17.0 below.**
+
+- **Fixed: an export left out the recording when one of its parts was soloed with its button out** (`[export]`, owner's report 2026-11-20). A chart with the score on and the recording's vocals soloed played the vocals in the preview, but the WAV, MP3 or MP4 had the score alone: the exports took the recording only while its button was in. They now take it as Play does — on, one of its parts soloed, or its All pressed in — and the singing voice follows the recording's bars in the same cases.
+
 ## 0.17.0
 
 **Breaking changes.** A file that compiled under 0.16.0 can stop here, each with the diagnostic that says so:
