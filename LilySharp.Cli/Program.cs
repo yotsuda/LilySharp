@@ -49,7 +49,12 @@ static int Run(string[] args)
 
     if (first is "-V" or "--version")
     {
-        ShowVersion();
+        // --json: for a program that calls lysc and checks it speaks what it reads
+        // (`lysc timeline`/`notes`, SongReading.Protocol), as Lily# checks an OMR reader's.
+        if (args.Skip(1).Contains("--json"))
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { version = VersionString(), protocol = SongReading.Protocol }));
+        else
+            ShowVersion();
         return 0;
     }
 
@@ -85,6 +90,8 @@ static int Dispatch(string command, string[] args) => command switch
     "review" => RunReview(args),
     "layout" => RunLayout(args),
     "shape" => RunShape(args),
+    "timeline" => RunSong("timeline", args),
+    "notes" => RunSong("notes", args),
     _ => UnknownCommand(command)
 };
 
@@ -119,10 +126,13 @@ static void ShowHelp()
           review     Review a piece as music: what works, and what to look at
           layout     Print a text summary of the layout (system/line breaks, bars per system)
           shape      Print the default chord diagram of chord names (lysc shape D Am7 --tuning guitar)
+          timeline   Print the tempo, time and sections as played, as JSON (for a program keeping time)
+          notes      Print every note as played, as JSON (for a program keeping time)
 
         Global Options:
           -h, --help          Show this help
-          -V, --version       Show version
+          -V, --version       Show version (--version --json: {"version", "protocol"}, the
+                              version of what timeline and notes write)
           --batch <list>      Run the command over every file in <list>, in ONE process
                               (- reads the list from standard input)
           -j, --parallel <n>  Engrave n files of the batch at once (0 = one per
@@ -493,9 +503,49 @@ static int RunMidi(string[] args)
         return 0;
     }
 
-    return RunFormOutput(args, "midi", ".mid",
-        (tree, output) => Report(ScoreExport.Write(tree, "midi", output.Path, output.Score)));
+    var r = PlayOptions(OutputOptions()
+        .Value("score", "--score requires a score name", "--score"))
+        .Parse(args);
+    if (r.Error != null) return OptionError(r.Error, "midi");
+    var play = PlayOf(r);
+    if (play.Error != null) return OptionError(play.Error, "midi");
+
+    return RunScoreOutputs("midi", r, ".mid", (tree, output) =>
+    {
+        int rc = Report(ScoreExport.Write(tree, "midi", output.Path, output.Score, play.Options()));
+        // A file with no `score` block writes its primary form alone — unless an order was asked.
+        if (rc == 0 && output.Score == null && play.Order == null) WarnFormsLeftOut(tree);
+        return rc;
+    }, play.Reshape);
 }
+
+// ============ The order and tempo a caller plays a song in ============
+//
+// `--order "A B A"` and `--tempo N` (Shosa's request 1, 2026-11-20): `timeline`, `notes`,
+// `midi` and `wav` play the song as a program keeping time with it asks — its sections in this
+// order instead of the score's form, starting at this tempo. The order is written into the song
+// as one more form (SongReading.WithOrder), so every rule of how sections follow is Lily#'s.
+
+static CliParser PlayOptions(CliParser parser) => parser
+    .Value("order", "--order requires section names, e.g. --order \"A B A\"", "--order")
+    .Value("tempo", "--tempo requires beats a minute, e.g. --tempo 96", "--tempo");
+
+static PlayRequest PlayOf(CliParser.Result r)
+{
+    var order = r.Get("order")?.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+    if (order is { Length: 0 })
+        return new PlayRequest(null, null, "--order requires section names, e.g. --order \"A B A\"");
+    double? tempo = null;
+    if (r.Get("tempo") is { } text)
+    {
+        if (!double.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double bpm)
+            || !(bpm > 0) || double.IsInfinity(bpm))
+            return new PlayRequest(null, null, $"--tempo {text}: give beats a minute, e.g. --tempo 96");
+        tempo = bpm;
+    }
+    return new PlayRequest(order, tempo, null);
+}
+
 
 static void ShowMidiHelp()
 {
@@ -513,6 +563,9 @@ static void ShowMidiHelp()
         Options:
           -d, --out-dir <folder> Write into this folder (default: the input's folder)
           --score <name>         Write only the named score's form
+          --order "A B A"        Play these sections in this order instead of the score's form
+                                 (names the file has no section of are left out)
+          --tempo <bpm>          Start at this tempo; later changes keep their proportions
           -h, --help             Show this help
 
         Examples:
@@ -532,13 +585,15 @@ static int RunWav(string[] args)
         return 0;
     }
 
-    var r = OutputOptions()
+    var r = PlayOptions(OutputOptions()
         .Value("score", "--score requires a score name", "--score")
         .Value("soundfont", "--soundfont requires a SoundFont 2 file (.sf2)", "--soundfont")
         .Value("singer", "--singer requires a cantoria program", "--singer")
-        .Value("voice", "--voice requires a voice name (engine/name)", "--voice")
+        .Value("voice", "--voice requires a voice name (engine/name)", "--voice"))
         .Parse(args);
     if (r.Error != null) return OptionError(r.Error, "wav");
+    var play = PlayOf(r);
+    if (play.Error != null) return OptionError(play.Error, "wav");
 
     // No font is bundled (owner's decision 2026-10-12): the user names one, here or once in
     // the environment.
@@ -558,17 +613,17 @@ static int RunWav(string[] args)
     if (singer == null && r.Get("voice") != null)
         return OptionError("--voice names the singer's voice: name the singer too, with --singer <program> or LILYSHARP_SINGER", "wav");
 
-    var options = new ExportOptions
-    {
-        SoundFont = font,
-        Singer = singer != null ? new LilySharp.Core.Audio.CantoriaProgram(singer, r.Get("voice")) : null,
-    };
+    var engine = singer != null ? new LilySharp.Core.Audio.CantoriaProgram(singer, r.Get("voice")) : null;
     return RunScoreOutputs("wav", r, ".wav", (tree, output) =>
     {
+        var options = new ExportOptions
+        {
+            SoundFont = font, Singer = engine, PlayForm = play.Form, Tempo = play.Tempo,
+        };
         int rc = Report(ScoreExport.Write(tree, "wav", output.Path, output.Score, options));
-        if (rc == 0 && output.Score == null) WarnFormsLeftOut(tree);
+        if (rc == 0 && output.Score == null && play.Order == null) WarnFormsLeftOut(tree);
         return rc;
-    });
+    }, play.Reshape);
 }
 
 static void ShowWavHelp()
@@ -604,6 +659,8 @@ static void ShowWavHelp()
           --voice <engine/name>  Its voice, e.g. neutrino/MERROW or diffsinger/TIGER (default: the program's)
           -d, --out-dir <folder> Write into this folder (default: the input's folder)
           --score <name>         Write only the named score's form
+          --order "A B A"        Play these sections in this order instead of the score's form
+          --tempo <bpm>          Start at this tempo; later changes keep their proportions
           -h, --help             Show this help
 
         Examples:
@@ -1027,6 +1084,63 @@ static int RunShape(string[] args)
         output.Append(name).Append('\t').Append(shape).Append('\n');
     }
     Console.Out.Write(output.ToString());
+    return 0;
+}
+
+// ============ Timeline and Notes Commands ============
+
+// `lysc timeline` / `lysc notes` (Shosa's request 1, 2026-11-20): a song as a program keeping
+// time with it needs it — Shosa dances to it. The JSON is an agreement (SongReading.Protocol,
+// given by `lysc --version --json`; SongReadingShapeTests keep its shape). Always JSON and exit 0
+// for a song that cannot be read too: its `error` is for the person who wrote the dance. Exit 1 is
+// for a command line that is wrong (no file named, a bad --tempo).
+static int RunSong(string command, string[] args)
+{
+    if (WantsHelp(args))
+    {
+        Console.WriteLine($$"""
+            Usage: lysc {{command}} <input.lys> [--score <name>] [--order "A B A"] [--tempo <bpm>]
+
+            {{(command == "timeline"
+                ? """
+                  Prints the song as it is played, as JSON: {error, tempo, beatsPerBar, beatUnit,
+                  sections, plays, scores, tempos, meters}. A beat is the lower number of the time
+                  in force; plays are {name, beats, pickup} in the order they are played (pickup:
+                  the beats before the section's first bar line). The piece ends at its last bar line.
+                  """
+                : """
+                  Prints every note as it is played, as JSON: {error, notes}, each note
+                  [beat, beats, pitch, velocity, timbre, program, channel] in the order they start
+                  (at once: by pitch). Beats are the timeline's; pitch is a MIDI number (.5 is a
+                  quarter tone); timbre is the preview's family (0 piano … 8 voice, 9 drums);
+                  program is the General MIDI instrument (-1 when the part names none).
+                  """)}}
+            A song that cannot be read prints its reason as "error", with exit code 0.
+            `lysc --version --json` gives the version of this shape ("protocol").
+
+            Options:
+              --score <name>     One of the song's scores (its default without)
+              --order "A B A"    Play these sections in this order instead of the score's form
+                                 (names the file has no section of are left out)
+              --tempo <bpm>      Start at this tempo; later changes keep their proportions
+            """);
+        return 0;
+    }
+
+    var r = PlayOptions(new CliParser(maxPositionals: 1)
+        .Value("score", "--score requires a score name", "--score"))
+        .Parse(args);
+    if (r.Error != null) return OptionError(r.Error, command);
+    if (r.Positionals.Count == 0) return OptionError("Input file required", command);
+    var play = PlayOf(r);
+    if (play.Error != null) return OptionError(play.Error, command);
+
+    var song = SongReading.FromFile(r.Positionals[0], r.Get("score"), play.Order, play.Tempo);
+    var camel = new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
+    // The serializer escapes every non-ASCII letter (\uXXXX), so the console's code page cannot garble a name.
+    Console.WriteLine(command == "timeline"
+        ? System.Text.Json.JsonSerializer.Serialize(song.Timeline, camel)
+        : System.Text.Json.JsonSerializer.Serialize(new { error = song.Timeline.Error, notes = song.Notes() }));
     return 0;
 }
 
@@ -1511,12 +1625,19 @@ static (string Source, LilySharp.Core.Syntax.SyntaxTree Tree,
 // What still stops: a render that THROWS (the catch below — no file is written), and a
 // --score naming something the file does not define (nothing to draw).
 // The exit code is unchanged, so scripts and CI still fail on an error.
-static int RunOutputCommand(string inputPath, string? scoreName, Func<SyntaxTree, int> body)
+static int RunOutputCommand(string inputPath, string? scoreName, Func<SyntaxTree, int> body,
+    Func<string, string, SyntaxTree, SyntaxTree?>? reshape = null)
 {
     try
     {
-        var (_, tree, usingDiagnostics) = LoadAndParse(inputPath);
+        var (source, tree, usingDiagnostics) = LoadAndParse(inputPath);
         bool hasErrors = ReportDiagnostics(tree, usingDiagnostics);
+        // The file as the caller plays it (--order: one more form), once its own errors are said.
+        if (reshape != null)
+        {
+            if (reshape(inputPath, source, tree) is not { } reshaped) return 1;
+            tree = reshaped;
+        }
         if (!ValidateScoreName(tree, scoreName)) return 1;
         int result = body(tree);
         if (hasErrors && result == 0)
@@ -1649,7 +1770,7 @@ static string OutputPathFor(string input, string dir, string ext)
 
 // Writes every score (or the one --score names) through `write`, one fixed name each.
 static int RunScoreOutputs(string verb, CliParser.Result r, string ext,
-    Func<SyntaxTree, ScoreOutput, int> write)
+    Func<SyntaxTree, ScoreOutput, int> write, Func<string, string, SyntaxTree, SyntaxTree?>? reshape = null)
 {
     var (input, dir, error) = ResolveOutputs(r);
     if (error != null) return OptionError(error, verb);
@@ -1664,7 +1785,7 @@ static int RunScoreOutputs(string verb, CliParser.Result r, string ext,
             if (rc != 0) return rc;
         }
         return 0;
-    });
+    }, reshape);
 }
 
 static List<ScoreOutput>? ScoreOutputs(SyntaxTree tree, string input, string dir, string? scoreName, string ext)
@@ -1719,6 +1840,31 @@ static string LineCol(string text, int offset)
 /// input's own stem) — what ScoreExport.Write takes.</summary>
 sealed record ScoreOutput(string Path,
     (LilySharp.Core.Syntax.RenderDeclarationSyntax Declaration, LilySharp.Core.Svg.Collector.RenderSpec Spec)? Score);
+
+/// <summary>The order and tempo a caller asked a song to be played in (<c>--order</c>, <c>--tempo</c>),
+/// or why the asking was wrong. <see cref="Form"/> is the asked order's form in the tree
+/// <see cref="Reshape"/> made, set when it runs.</summary>
+sealed class PlayRequest(IReadOnlyList<string>? order, double? tempo, string? error)
+{
+    public IReadOnlyList<string>? Order { get; } = order;
+    public double? Tempo { get; } = tempo;
+    public string? Error { get; } = error;
+    public LilySharp.Core.Syntax.FormDeclarationSyntax? Form { get; private set; }
+
+    /// <summary>The file with the asked order written in (null when nothing was asked: the file as it is).</summary>
+    public Func<string, string, LilySharp.Core.Syntax.SyntaxTree, LilySharp.Core.Syntax.SyntaxTree?>? Reshape => Order == null ? null : (input, source, tree) =>
+    {
+        if (SongReading.WithOrder(source, tree, Order, System.IO.Path.GetFileName(input), out string? problem) is not { } ordered)
+        {
+            Console.Error.WriteLine($"Error: --order: {problem}");
+            return null;
+        }
+        Form = ordered.Form;
+        return ordered.Tree;
+    };
+
+    public ExportOptions Options() => new() { PlayForm = Form, Tempo = Tempo };
+}
 
 /// <summary>What <c>lysc check</c> does with a <c>@todo</c> mark (LYS4026):
 /// <c>--todo-as-error</c>, <c>--no-todo</c>, or the information it is.</summary>

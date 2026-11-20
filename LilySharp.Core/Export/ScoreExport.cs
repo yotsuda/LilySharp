@@ -70,6 +70,15 @@ public sealed class ExportOptions
     /// alone, as before.</summary>
     public Audio.SingingEngine? Singer { get; init; }
 
+    /// <summary>MIDI, WAV: the form to play instead of the score's own — the order of sections a
+    /// caller asked for (<c>lysc midi|wav --order</c>; <see cref="SongReading.WithOrder"/>, whose
+    /// tree is the one written).</summary>
+    public FormDeclarationSyntax? PlayForm { get; init; }
+
+    /// <summary>MIDI, WAV: beats a minute to start at instead of the song's own; a song that
+    /// changes tempo keeps its proportions (<c>lysc midi|wav --tempo</c>; <see cref="SongReading.Retime"/>).</summary>
+    public double? Tempo { get; init; }
+
     public static ExportOptions Default { get; } = new();
 }
 
@@ -194,8 +203,10 @@ public static class ScoreExport
 
             case "midi":
             {
-                var exporter = new MidiExporter { Form = form, Score = spec };
+                var exporter = new MidiExporter { Form = options.PlayForm ?? form, Score = spec };
                 var midi = exporter.Export(tree);
+                if (options.Tempo is { } midiTempo)
+                    SongReading.Retime(midi, midiTempo);
                 // The file's own shape: words on their part's track, one a note, as sung; a
                 // singer's harmony as a track (MidiForFile). The preview plays `midi` as it is.
                 midi = MidiForFile.Shape(midi, tree.GetRoot(), spec);
@@ -216,8 +227,10 @@ public static class ScoreExport
                     throw new ArgumentException("a WAV export needs a SoundFont 2 (.sf2)");
                 if (Audio.WavRenderer.SoundFontProblem(options.SoundFont) is { } problem)
                     throw new InvalidDataException(problem);
-                var exporter = new MidiExporter { Form = form, Score = spec };
+                var exporter = new MidiExporter { Form = options.PlayForm ?? form, Score = spec };
                 var midi = exporter.Export(tree);
+                if (options.Tempo is { } wavTempo)
+                    SongReading.Retime(midi, wavTempo);
                 var notes = new List<string>();
                 var warnings = exporter.Warnings.ToList();
                 var voices = options.Singer != null ? SingTheSungParts(tree, spec, midi, options.Singer, notes, warnings) : null;

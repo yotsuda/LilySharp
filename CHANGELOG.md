@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **`lysc timeline` and `lysc notes`: a song as it is played, as JSON** (`[export]`, Shosa's request). `timeline` gives the tempo, the time, the sections and how long each is as it is played (an upbeat said apart), with every change of tempo and time on a beat; `notes` gives every note sounded as `[beat, beats, pitch, velocity, timbre, program, channel]`. For a program that keeps time with a song: a song that cannot be read is an `error` in the JSON, and `lysc --version --json` says the version of the shape (`protocol` 1). `--order "A B A"` plays the sections in that order instead of the score's form and `--tempo N` starts at N beats a minute, keeping the song's proportions; `lysc midi` and `lysc wav` take both. The extension gives other extensions the lysc it bundles (`exports.lyscPath`).
+
 - **Dettato is now Orecchiante** (`[editor]`). The recording reader's new name: extension `yotsuda.orecchiante` (0.11.0 or newer), the file beside a chart `<stem>.orecchiante.json` (format key `"orecchiante"`), a converted chart `song (Orecchiante).lys`. `.dettato.json` is no longer read.
 
 - **A hairpin nothing ends is a warning** (`[language]`, LYS4018 at warning strength). `c'4@p d'@cresc e' f' | g'1 |` — no level, hairpin or `@!cresc` after it in its staff — is still drawn to the next bar line, and now says so with where to write its end. LilyPond warns "unterminated crescendo" and draws nothing.

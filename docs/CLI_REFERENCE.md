@@ -320,6 +320,8 @@ lysc midi [options] <input.lys>
 |--------|-------------|
 | `-d, --out-dir <folder>` | Write into this folder (default: the input's folder) |
 | `--score <name>` | Write only the named score's form |
+| `--order "A B A"` | Play these sections in this order instead of the score's form (as `timeline`) |
+| `--tempo <bpm>` | Start at this tempo; later changes keep their proportions (as `timeline`) |
 | `-h, --help` | Show help |
 
 One file holds one form, so every score writes its form to a file of its own. Scores that
@@ -391,6 +393,8 @@ asks the same without rendering.
 | `--voice <engine/name>` | Its voice (default: the program's) |
 | `-d, --out-dir <folder>` | Write into this folder (default: the input's folder) |
 | `--score <name>` | Write only the named score's form |
+| `--order "A B A"` | Play these sections in this order instead of the score's form (as `timeline`) |
+| `--tempo <bpm>` | Start at this tempo; later changes keep their proportions (as `timeline`) |
 | `-h, --help` | Show help |
 
 One file holds one form, as for `midi`.
@@ -620,6 +624,78 @@ Exit code 0 whatever the names; 1 for no name or an unknown tuning.
 lysc shape D Am7 D/F#                 # D<TAB>xx0232, Am7<TAB>x02010, D/F#<TAB>xx4232
 lysc shape C --tuning ukulele         # C<TAB>0003
 ```
+
+### timeline - A song as it is played, as JSON
+
+```bash
+lysc timeline <input.lys> [--score <name>] [--order "A B A"] [--tempo <bpm>]
+```
+
+For a program that keeps time with a song — Shosa dances to it. The JSON is an agreement: its
+version is the `protocol` of `lysc --version --json` (`{"version": "0.16.0", "protocol": 1}`),
+raised only when a field changes its meaning or goes away; a new field does not raise it, so a
+reader ignores what it does not know.
+
+A **beat** is the lower number of the time in force (a quarter in 3/4, an eighth in 6/8), counted
+from 0 at the start of what is played, an upbeat included.
+
+`timeline` prints (camelCase):
+
+| Field | |
+|-------|-|
+| `error` | Why the song could not be read, for the person who asked; `null` when it was |
+| `tempo` | Beats a minute at the start |
+| `beatsPerBar`, `beatUnit` | The first time |
+| `sections` | Every section the song has, played or not |
+| `plays` | The sections as they are played, each `{name, beats, pickup}`; `pickup` is the beats before its first bar line (0 when it starts on a bar) |
+| `scores` | The song's scores, `""` for the unnamed one |
+| `tempos` | `{beat, bpm}`, the first at beat 0, each in the beat of the time there |
+| `meters` | `{beat, beatsPerBar, beatUnit}`, the first at beat 0 |
+
+The piece ends at its last bar line, though a fermata or a held note sounds past it, and a closing
+rest stops short of it.
+
+**Options:**
+| Option | Description |
+|--------|-------------|
+| `--score <name>` | One of the song's scores (its default without) |
+| `--order "A B A"` | Play these sections in this order instead of the score's form (below) |
+| `--tempo <bpm>` | Start at this tempo; later changes keep their proportions (below) |
+
+### notes - Every note as it is played, as JSON
+
+```bash
+lysc notes <input.lys> [--score <name>] [--order "A B A"] [--tempo <bpm>]
+```
+
+Takes what `timeline` takes, under the same agreement (`protocol`), and counts beats as it does.
+`notes` prints `{error, notes}`: every note sounded, in the order they start (at once: by pitch), each
+`[beat, beats, pitch, velocity, timbre, program, channel]` — pitch a MIDI number (`.5` is a quarter
+tone), velocity 1–127, timbre the preview's family (0 piano … 8 voice; 9 the drum kit, whose pitch is
+the General MIDI drum), program the General MIDI instrument of its part (−1 when the part names
+none), channel 0–15 (9 the drums).
+
+A song that cannot be read — no file, an error in it, no section — still prints the JSON, with its
+reason in `error`, and exit code 0. Exit code 1 is for a wrong command line (no file named, a
+`--tempo` that is not a number above 0).
+
+**Options** (`timeline`'s and `notes`'; the last two are `midi`'s and `wav`'s too):
+| Option | Description |
+|--------|-------------|
+| `--score <name>` | One of the song's scores (its default without) |
+| `--order "A B A"` | Play these sections in this order instead of the score's form. Names the song has no section of are left out; none left is an `error`. The order is played as a form written in the file would be |
+| `--tempo <bpm>` | Start at this tempo; a song that changes tempo keeps its proportions, and no beat moves |
+
+**Examples:**
+```bash
+lysc timeline song.lys                          # {"error":null,"tempo":120,...}
+lysc notes song.lys --order "Verse Chorus Chorus"
+lysc midi song.lys --order "A A B" --tempo 96   # song.mid in that order, at 96
+lysc --version --json                           # {"version":"0.16.0","protocol":1}
+```
+
+The VS Code extension gives another extension the lysc it bundles:
+`vscode.extensions.getExtension('yotsuda.lilysharp').exports.lyscPath` (undefined when there is none).
 
 ### check - Syntax Check
 

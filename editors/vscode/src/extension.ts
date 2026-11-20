@@ -1348,12 +1348,19 @@ export function activate(context: vscode.ExtensionContext) {
 
     // The Markdown lily# fence: VS Code's Markdown preview asks for this object
     // (contributes.markdown.markdownItPlugins) and wires the plugin into its engine.
-    return markdownItExtensionApi({
-        getClient: () => client,
-        isReady: () => clientReady,
-        whenReady: ensureClientReady,
-        log: (msg: string) => outputChannel.appendLine(msg),
-    });
+    // Another extension reads the same object (vscode.extensions.getExtension('yotsuda.lilysharp')
+    // .exports): `lyscPath` is the lysc beside the bundled server, for a program that reads songs
+    // with it (`lysc timeline`/`notes`; Shosa's request 1, 2026-11-20). It checks what that lysc
+    // speaks with `lysc --version --json`; undefined when this build bundles none.
+    return {
+        ...markdownItExtensionApi({
+            getClient: () => client,
+            isReady: () => clientReady,
+            whenReady: ensureClientReady,
+            log: (msg: string) => outputChannel.appendLine(msg),
+        }),
+        lyscPath: bundledLysc(),
+    };
 }
 
 // The clock time of the last play-note fire, so the webview can tell a fresh
