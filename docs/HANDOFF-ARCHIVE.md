@@ -277,6 +277,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1338セッションの経緯
+
+### 1.1 第1338セッション（2026-11-20・YT-DELL2）
+
+Shosa の依頼 1（曲を読むところを lysc へ）。base `2c32604f8`。開始時 full 18040 合格 / 0 失敗 / skip 2 / 合計 18042（Lab `p1338` `start.log`）。終了前の full 18050 合格 / 0 失敗 / skip 2 / 合計 18052（Lab `p1338` `full2.trx`）。
+- **`aa6602d4d`**: Shosa の `shosa-music`（同じ作者・GPL）を Core `Export/SongReading.cs` に移した。`lysc timeline`／`lysc notes`（読めない曲も JSON・exit 0）。`--order`（曲に form を 1 つ書き足す＝`SongReading.WithOrder`）と `--tempo`（全テンポを同じ比で＝`Retime`）は 4 つのコマンドが取る（midi／wav は `ExportOptions.PlayForm`／`Tempo`、CLI は `RunOutputCommand` の `reshape`）。`lysc --version --json` → `{version, protocol: 1}`。拡張の `activate()` が `{ extendMarkdownIt, lyscPath }` を返す。
+- 照合: Shosa の木と samples の 35 曲で shosa-music（今の Core でビルドし直したもの、Lab `p1338/shosa-music`）と同じバイト（timeline・notes・`--order` の 50 回）。違うのは `timeline --tempo` だけで、変えた後のテンポを返すようにした（Shosa は timeline に `--tempo` を渡していない）。`midi --order` は form を書いたファイルと同じバイト。`--tempo` は 1 µs の丸め差（90→45 のスケールと 45 を直接書いたもの）。
+- 網 `CliSongReadingTests` 10 本（キーの並びと値を全部固定）。毒 8 本は全部赤（Lab `p1338/poisons.ps1`）。`wav` の `--order`／`--tempo` は SoundFont が要るので網なし＝`midi` と同じ道（`ScoreExport.Write`）。実機: 隔離 VS Code で exports と Markdown のフェンス（Lab `p1338/vscode-e2e`）。拡張の `server\lysc.exe` は古い＝入れ直しはオーナー。
+- ⚠️ 途中で pwsh MCP の module が 1.17.0 に上がって proxy 1.16.0 と合わなくなり、`pwsh` サーバが使えなくなった。後半は `pwsh-dev` の新しいコンソールで作業した（オーナーが `Register-PwshToClaudeCode` してクライアントを再起動すれば戻る）。
+- **次**: Shosa 側が `done` にするのを待つ。Lily# の次は review.md の設計が先の 3 つ（順は §1.1 第1306 の末尾）。
+
 ## 以下は第1337セッションの経緯
 
 ### 1.1 第1337セッション（2026-11-20・YT-DELL2）
