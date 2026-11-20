@@ -4500,8 +4500,12 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         var scoreAll = false;
         // The recording's All, the same (its parts' own on/off, recPartsOff, kept).
         var recAllOn = false;
-        // What a line's button says of Alt+click (owner's decision 2026-11-20): it keeps that line alone.
-        const ONLY_THIS_HINT = 'Alt+click: only this one (the others off)';
+        // What a line's button says of Shift+click (owner's decision 2026-11-20): it keeps that line
+        // alone. Shift, as the B flag's on the score — it was Alt, which Windows' VS Code may take
+        // for the menu bar (owner's decision the same day).
+        const ONLY_THIS_HINT = 'Shift+click: only this one (the others off)';
+        /** A Shift+press on a line's button selects no text: the click is the line's. */
+        function noShiftSelect(b) { b.addEventListener('mousedown', e => { if (e.shiftKey) e.preventDefault(); }); }
         // The panel's button pressed while anything in it is not as it was (§6): the practice's or the mixer's.
         var practiceOn = false, mixerChanged = false;
         function paintPracticeBtn() { document.getElementById('practiceBtn').setAttribute('aria-pressed', String(practiceOn || mixerChanged)); }
@@ -4769,7 +4773,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             // One toggle each, pressed in while it sounds; the lists are by name, so a part muted
             // in another score stays muted.
             const without = (names, name) => names.filter(n => n !== name);
-            // Every line of the score's group off, each as its own toggle reads (an Alt+click's
+            // Every line of the score's group off, each as its own toggle reads (a Shift+click's
             // first half: the line clicked is then flipped on). (sungOnly and inScore are read at
             // the click, after they are set below.)
             // Only this score's lines: the lists are by name across scores, and another's are kept.
@@ -4808,7 +4812,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                     bar.appendChild(document.createElement('span'));
                     b.appendChild(bar);
                 }
-                // (Alt+click — Option on a Mac — keeps this line alone: onlyThis)
+                // (Shift+click keeps this line alone: noLineOn, then the line's own flip)
                 const hint = (title ? title + '\\n' : '') + ONLY_THIS_HINT;
                 b.title = hint; b.dataset.title = hint;
                 if (cls) for (const c of cls.split(' ')) b.classList.add(c);
@@ -4826,15 +4830,16 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 paint();
                 // A line pressed while All is pressed in: All goes out and the line's own on/off
                 // flips — what is heard is then the choice with this change (owner's decision 2026-11-20).
-                // Alt+click: this line alone — every line of the score's group off, then this one on
+                // Shift+click: this line alone — every line of the score's group off, then this one on
                 // (owner's decision 2026-11-20: the choice made again from nothing, in one click,
                 // never silent on the way). All, pressed in, goes out as with a plain click.
                 const mute = (e) => {
-                    if (e && e.altKey) { scoreAll = false; noLineOn(); flip(); refreshMixer(); practiceChanged(practice.speed); return; }
+                    if (e && e.shiftKey) { scoreAll = false; noLineOn(); flip(); refreshMixer(); practiceChanged(practice.speed); return; }
                     if (scoreAll) { scoreAll = false; flip(); refreshMixer(); practiceChanged(practice.speed); return; }
                     flip(); paint(); showPractice(); practiceChanged(practice.speed);
                 };
                 b.addEventListener('click', mute);
+                noShiftSelect(b);
                 sBtn.addEventListener('click', () => toggleSolo(soloKey));
                 line.appendChild(b);
                 line.appendChild(sBtn);
@@ -5175,13 +5180,14 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             line.classList.toggle('unheard', (!on && !recAllOn) || (!recOn && !recAllOn && !solo.has('rec:' + name)) || (recSoloed() && !solo.has('rec:' + name)));
             const mute = (e) => {
                 recAllOn = false;   // (pressed while All is in: All goes out, as the score's lines)
-                // Alt+click: this part alone (as the score's lines — owner's decision 2026-11-20).
-                if (e && e.altKey) recPartsOff = ((recording && recording.parts) || []).filter(n => n !== name);
+                // Shift+click: this part alone (as the score's lines — owner's decision 2026-11-20).
+                if (e && e.shiftKey) recPartsOff = ((recording && recording.parts) || []).filter(n => n !== name);
                 else recPartsOff = recPartsOff.includes(name) ? recPartsOff.filter(n => n !== name) : recPartsOff.concat([name]);
                 applyRecParts();
                 showMixerHead();
             };
             b.addEventListener('click', mute);
+            noShiftSelect(b);
             sBtn.addEventListener('click', () => toggleSolo('rec:' + name));
             const fader = document.createElement('input');
             fader.type = 'range'; fader.min = '0'; fader.max = String(FADER_MAX * 100); fader.step = '1';

@@ -780,14 +780,19 @@ describe('the mixer\'s All pressed in', () => {
         assert.match(html, /const mute = \(e\) => \{\s*recAllOn = false;/);
         assert.match(html, /all\.setAttribute\('aria-pressed', String\(scoreAll\)\);/);
     });
-    // Alt+click on a line keeps it alone (owner's decision 2026-11-20): the choice made again from
-    // nothing in one click — every line of this score off (another score's kept), this one on.
-    it('keeps a line alone on Alt+click, the score\'s and the recording\'s, and says so on the button', () => {
+    // Shift+click on a line keeps it alone (owner's decisions 2026-11-20: it was Alt+click, then
+    // Shift, as the B flag's on the score): the choice made again from nothing in one click — every
+    // line of this score off (another score's kept), this one on.
+    it('keeps a line alone on Shift+click, the score\'s and the recording\'s, and says so on the button', () => {
         const html = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'previewHtml.ts'), 'utf8');
-        assert.match(html, /if \(e && e\.altKey\) \{ scoreAll = false; noLineOn\(\); flip\(\); refreshMixer\(\);/);
+        assert.match(html, /if \(e && e\.shiftKey\) \{ scoreAll = false; noLineOn\(\); flip\(\); refreshMixer\(\);/);
+        assert.doesNotMatch(html, /e && e\.altKey/);
+        assert.match(html, /const ONLY_THIS_HINT = 'Shift\+click: only this one \(the others off\)';/);
+        // (a Shift+press selects no text: both kinds of line)
+        assert.equal((html.match(/b\.addEventListener\('click', mute\);\s*noShiftSelect\(b\);/g) || []).length, 2);
         assert.match(html, /practice\.muted = practice\.muted\.filter\(n => !mine\.has\(n\)\)\.concat\(parts\.filter\(n => !sungOnly\.has\(n\)\)\);/);
         assert.match(html, /practice\.voicesOff = practice\.voicesOff\.filter\(k => !myVoices\.has\(k\)\)\.concat\(voices\.filter\(k => inScore\.has\(k\)\)\);/);
-        assert.match(html, /if \(e && e\.altKey\) recPartsOff = \(\(recording && recording\.parts\) \|\| \[\]\)\.filter\(n => n !== name\);/);
+        assert.match(html, /if \(e && e\.shiftKey\) recPartsOff = \(\(recording && recording\.parts\) \|\| \[\]\)\.filter\(n => n !== name\);/);
         assert.match(html, /const hint = \(title \? title \+ '\\\\n' : ''\) \+ ONLY_THIS_HINT;/);
     });
 });
