@@ -146,6 +146,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1334セッション（2026-11-20・YT-DELL2・第1332 と同じ会話）
+
+h13 のオーナー決定（2026-11-20「1 LP に合わせて。既存の .lys の移行とか後方互換性は気にしなくて良い」）の便（base `ef6d10828`）。開始時 full 17989 合格 / 0 失敗 / skip 2 / 合計 17991（Lab `p1334` `start.log`）。終了時 full 17996 合格 / 0 失敗 / skip 2 / 合計 17998（`-End` の trx）。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
+- **combinedStaff はヘアピンが違えば apart・上のパートの強弱は上**（`d3cbb32fa`・`[engraving]`）: 第1333 の差分（`PartDynamicEvents`＝collector がパートの最初の声部の強弱と印を (小節, item) で渡し、`AnalyzeSpannerStates` が LilyPond の順に cresc／decr を開閉）を当てた。加えて partCombine の voice "one" の `DynamicLineSpanner.direction = #UP`・"two" の `#DOWN`（`ly/music-functions-init.ly:1668-1670`）を `CombinedStaffReaddress.SideByContext` で写し、線の向きを合成の住所で解き直す（書いた向きはその線だけを曲げる＝`p1334/lp-down` で確認）。普通の `voice { } { }` の強弱が両方下なのは LilyPond どおり（DynamicLineSpanner は `direction-polyphonic-grobs` に無い）。
+- 網: `CombinedStaffHairpinTests` 23 行（第1321〜第1328 の形・オーナー決定 2026-11-19 の形を含む）を新しい値に。どの形も LilyPond 2.26.0 の絵と見比べた（Lab `p1334/probes` の 52 形・`make-probes.ps1`・書き換えは `rewrite-expectations.ps1`）。新しい網 3 本（違うヘアピンのユニゾン・片方だけのヘアピン・上のパートの強弱の向き）。毒 9 本（8 赤・パート 2 の下は観測者なし）。全 svg 0 / 1276（追跡コーパスの combinedStaff 25 冊にこの形は無い）。
+- **残り**（leftovers の「第1321」の h13 の行）: apart の中のユニゾンの符幹をどちらに残すかが LilyPond と違う形がある（c25・c37）／終わりのないヘアピンを LilyPond は捨てるが Lily# は描く（既存の扱い）。
+- **次**: 上の符幹の規則（LilyPond を読む）→「第1327」の `@!rit`（オーナーの返事待ち）→ review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決はオーナー待ち。
+
+## 以下は第1333セッションの経緯
+
 ### 1.1 第1333セッション（2026-11-20・YT-DELL2・第1332 と同じ会話）
 
 leftovers の「第1317」の tab の struck の数字の便（base `fe049751b`）。開始時 full 17988 合格 / 0 失敗 / skip 2 / 合計 17990（Lab `p1333` `start.log`）。終了時 full 17989 合格 / 0 失敗 / skip 2 / 合計 17991（`-End` の trx）。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
@@ -153,18 +163,6 @@ leftovers の「第1317」の tab の struck の数字の便（base `fe049751b`�
 - **h13（a2 で 2 パートが違うヘアピン）＝オーナー判断待ち**: LilyPond 2.26.0 は a2 にせず 2 声部に分ける（`scm/part-combiner.scm:215-242`・`:495-501`＝cresc／decr は開いている span・両パートで違えば apart。`PartCombiner.cs` の注が「移植していない」と書いていた所）。移植は書いて h13 は LilyPond どおりになったが、`CombinedStaffHairpinTests` の 10 行前後（オーナー決定 2026-11-19 の形を含む）の前提が崩れる＝差分を Lab `p1333/h13/lp-span-dynamics.diff` に退避してコードは HEAD に戻した。比べた絵と問いは leftovers の「第1321」の h13 の行。
 - **別の欠陥を 1 つ見つけた**（未着手）: combinedStaff で最初から apart の形でも、上のパートの強弱とヘアピンが譜表の下に立つ（LilyPond は voiceOne の分を上・`p1333/h13/apart.lys`）。
 - **次**: h13 のオーナーの答え →（答えと無関係に着手できる）combinedStaff の apart の上のパートの強弱の向き →「第1327」の `@!rit`（オーナーの返事待ち）→ review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決はオーナー待ち。
-
-## 以下は第1332セッションの経緯
-
-### 1.1 第1332セッション（2026-11-20・YT-DELL2）
-
-leftovers の「第1317」の残りの便（base `210fb36a8`）。開始時 full 17983 合格 / 1 失敗（`ScoreVideoShapeTests` の png の掴み合い＝既知の不安定な網）/ skip 2 / 合計 17986（Lab `p1332` `start.log`）。終了時 full 17988 合格 / 0 失敗 / skip 2 / 合計 17990（`-End` の trx・注の追記の後に run5 も同じ）。REQUESTS の open は両方 0。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
-- **連桁の符幹が小さい頭に立つ**（`aa7b4b890`・`[engraving]`）: `<a@struck c' e'>8 <a@struck c' e'>8` の符幹の始点が普通の頭の付け根（0.15）だった。LilyPond 2.26.0 は小さい頭の中心から 0.0948（符幹の上下とも・Lab `p1332/beam/b1.ly`）＝`SharedRenderer.Beams.StruckFootOf` で単独の符幹（`DrawChord`）と同じ読み。普通の頭は Lily# 0.15・LilyPond 0.1862＝梁の付いた黒い頭の別の問い（未調査・leftovers）。
-- **`q` と裸の音価が struck を引き継ぐ**（同じ commit・`[playback][export]`）: LilyPond の `q` は tweak ごと写す（`p1332/beam/lp-q1.ly`＝毎回小さい頭）。それまで Lily# の `q` は普通の頭で描き、**MIDI では struck の音を鳴らさず**（`_resolvedChordNotes` に入れていなかった）、MusicXML は普通の長さの音にしていた。ページ `ResolvedChordMember.IsStruck`・MIDI `StrikeAgain`（4 分以下・トレモロは最初の 1 打だけ・onset の外）・MusicXML `Strike`／`HeldFirst`（cue 大で held の後ろ）。`.ly` は `q` のまま（LilyPond が写す）。
-- step キーの行に `@struck` と `@dead`（`@dead` も説明が無かった）・`LEARN_FOR_LLM.md` に 1 行・CHANGELOG 2 つ。
-- 網 `StruckNoteTests` +1 本・1 theory 3 行、`CaretInfoTests` +2 行。毒 8 本（全部赤。P4＝MIDI の記録は最初 `q4` の網で緑＝held と struck の長さが同じ。`q2` に直して赤）。掃き: 全 svg 0 / 1276・全 MusicXML 0 / 1276（追跡コーパスに struck の本は無い）。
-- **測って残した**: tab の struck の数字は LilyPond では ×0.794・中央揃えではない（leftovers に数字）。装飾音の中の struck の和音は放置のまま。
-- **次**: leftovers の「第1317」の残り（tab の数字＝先に LilyPond の `tab-note-head::print` を読む）→「第1327」の `@!rit`（オーナーの返事待ち）→「第1321」の h13 → review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決はオーナー待ち。
 
 ## 2. 開いている作業
 
