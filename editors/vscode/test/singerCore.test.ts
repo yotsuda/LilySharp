@@ -19,6 +19,8 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { singerLineOf, onSingerGender, singersWritten, CANTORIA_EXTENSION_ID, EngineWatch, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantoriaApiOf, cantoriaScore, fitsGender, learnRenderRate, parseServeLine, prepareAllowanceMs, prepareModeOf, serveCancelLine, serveRequestLine, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitle, voiceMenuTitleOf, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungKey, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from '../src/singerCore';
+import { voiceOnWarp } from '../src/singerCore';
+import { timeWarp, warpKey } from '../src/recordingCore';
 import { VoiceBarPart, voiceBar, voiceBarShown, voiceProgress, voiceRound, voiceRowProgress, voiceStillSinging, voiceToldFraction } from '../src/webview/playbackCore';
 import { extensionSource } from './extensionSource';
 
@@ -63,6 +65,28 @@ describe('the engine\'s score of a sung voice', () => {
         assert.equal(voiceKey(cantoriaScore(voice, 1), 'MERROW'), a);
         assert.notEqual(voiceKey(cantoriaScore(voice, 0.8), 'MERROW'), a);
         assert.notEqual(voiceKey(cantoriaScore(voice, 1), 'OTHER'), a);
+    });
+
+    // Shosa's request 4 (2026-11-20): over a recording, the voice is sung on its seconds as the
+    // score's notes are — each bar stretched or squeezed as the band played it.
+    it('follows the recording bar by bar when it sounds with the score', () => {
+        // The score's bar is 0.5 s (beats at 0, 0.5 accented: two bars to 1 s); the recording
+        // plays the first in 1 s after a second's intro, the second in 0.25 s.
+        const beats = [{ T: 0, A: true }, { T: 0.25, A: false }, { T: 0.5, A: true }, { T: 0.75, A: false }];
+        const w = timeWarp(beats, 1, { bars: [{ start: 1, end: 2 }, { start: 2, end: 2.25 }] })!;
+        const sung = voiceOnWarp(voice, w);
+        assert.deepEqual(sung.Notes.map(n => [n.T, n.D]), [[1, 0.75], [1.75, 0.25], [2, 0.1875], [2.1875, 0.0625]]);
+        assert.deepEqual(sung.Notes.map(n => n.L), voice.Notes.map(n => n.L), 'the words, the melisma and the breath as they were');
+        const notes = cantoriaScore(sung, 1).notes;
+        for (let i = 1; i < notes.length; i++) {
+            assert.equal(+(notes[i - 1].start + notes[i - 1].duration).toFixed(4), notes[i].start, 'each note ends where the next begins');
+        }
+        assert.notEqual(voiceKey(cantoriaScore(sung, 1), 'MERROW'), voiceKey(cantoriaScore(voice, 1), 'MERROW'), 'a voice of its own');
+        assert.equal(voiceOnWarp(voice, null), voice, 'no recording: the voice as it is');
+        // The page and the extension work the warp out apart and must name it alike.
+        assert.equal(warpKey(w), warpKey(timeWarp(beats, 1, { bars: [{ start: 1, end: 2 }, { start: 2, end: 2.25 }] })));
+        assert.notEqual(warpKey(w), warpKey(timeWarp(beats, 1, { bars: [{ start: 1, end: 2 }, { start: 2, end: 2.5 }] })));
+        assert.equal(warpKey(null), '');
     });
 });
 

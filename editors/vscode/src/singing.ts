@@ -30,7 +30,8 @@ import { PracticeState, VOICE_LEAD_S, voiceEntries } from './webview/playbackCor
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
 import { SINGER_NAME, SINGER_LANGUAGE, onSingerGender, singValueChoices, singerGoesOnToSings, singerLineOf, singerSettingSlot, singMarkSlot, singersWritten, singParameterDetail, singProblems, SingSettingDto, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, EngineWatch, prepareAllowanceMs, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuKey, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger, unsingableGuide, unsingableReason } from './singerCore';
 import { CANTORIA_OUTDATED_CONTEXT, CantoriaVoice, cantoriaIsOutdated, firstSongFor, galleryQuery, hasNvidiaGpu, newestInGallery } from './singerCore';
-import { VoiceProblem, VoiceProblems, engineFailureProblem, engineSaid, failurePlace, noVocoderGuide, silentSyllableProblems, silentSyllablesNotice, singerFailureText, unsungSyllableNotice, unsungSyllableProblem, vocoderMissing, voiceWho, wordsProblems } from './singerCore';
+import { VoiceProblem, VoiceProblems, engineFailureProblem, engineSaid, failurePlace, noVocoderGuide, silentSyllableProblems, silentSyllablesNotice, singerFailureText, unsungSyllableNotice, unsungSyllableProblem, vocoderMissing, voiceOnWarp, voiceWho, wordsProblems } from './singerCore';
+import { TimeWarp, timeWarp, warpKey } from './recordingCore';
 
 export interface SingingDeps {
     getClient: () => LanguageClient | undefined;
@@ -929,7 +930,11 @@ function voiceEstimateMs(voice: SungVoiceDto, speed: number): number {
 type PrepareReason = 'edit' | 'play' | 'speed';
 
 /** One voice to render for one preview; `mine` is the preview's postedVoices at the time (another map means the engine or the document changed). */
-interface PrepareJob { panel: vscode.WebviewPanel; voice: SungVoiceDto; speed: number; mine: Map<string, string>; key: string; letGo: AbortController }
+interface PrepareJob {
+    panel: vscode.WebviewPanel; voice: SungVoiceDto; speed: number; mine: Map<string, string>; key: string; letGo: AbortController;
+    /** What the voice's notes were moved onto (recordingCore.warpKey; '' for the score's own seconds). */
+    warp: string;
+}
 
 /** The engine's work, one job at a time per preview and part, the newest text winning
  *  (singerCore.PrepareQueue). A voice of an older text being sung is let go of as soon as a newer
@@ -1011,6 +1016,11 @@ export async function prepareVoices(panel: vscode.WebviewPanel, uri: string, rea
     void panel.webview.postMessage({ type: 'voiceParts', parts: [...parts] });
     sungParts.set(panel, parts);
     const speed = previewPractice.get(panel)?.speed ?? 1;
+    // With the recording sounding with the score, the voices are sung on its seconds (Shosa's
+    // request 4): the score's bars from its beats, lined up with the recording's.
+    const warp = await recordingWarpOf(panel, uri, client);
+    if (!current()) { log('the preview turned meanwhile'); return; }
+    const onWarp = (v: SungVoiceDto) => voiceOnWarp(v, warp);
     let posted = postedVoices.get(panel);
     if (!posted) { postedVoices.set(panel, posted = new Map()); }
     const mine = posted;
@@ -1049,9 +1059,11 @@ export async function prepareVoices(panel: vscode.WebviewPanel, uri: string, rea
             void panel.webview.postMessage({ type: 'voiceState', part: id, speed, state: 'failed', detail: nobody });
             continue;
         }
+        // (the notes on the recording's seconds when it sounds with the score: another key)
+        const sungVoice = onWarp(voice);
         let key: string;
         try {
-            key = await engine.key(voice, speed);
+            key = await engine.key(sungVoice, speed);
         } catch (e) {
             failVoice(panel, id, speed, engineSaid(e), voice);
             continue;
@@ -1065,7 +1077,7 @@ export async function prepareVoices(panel: vscode.WebviewPanel, uri: string, rea
         mine.delete(id);
         const rests = reason === 'edit' && !turned && !engine.has(key);
         if (rests && mode === 'onPlay') {
-            void panel.webview.postMessage({ type: 'voiceState', part: id, speed, state: 'waiting', estimateMs: voiceEstimateMs(voice, speed) });
+            void panel.webview.postMessage({ type: 'voiceState', part: id, speed, state: 'waiting', estimateMs: voiceEstimateMs(sungVoice, speed) });
             prepareQueue.cancelSlot(slot);
             continue;
         }
@@ -1075,11 +1087,32 @@ export async function prepareVoices(panel: vscode.WebviewPanel, uri: string, rea
         // sung and never says "singing" either - the microphone pulsed for 24 s with no bar
         // (owner's report 2026-11-13, kaze.lys). So the page is told by the KEY: here if the
         // engine is on it now, and by singingStarted when it begins.
-        askVoice(panel, id, key, speed, voiceEstimateMs(voice, speed));
-        void panel.webview.postMessage({ type: 'voiceState', part: id, speed, state: rests ? 'waiting' : 'preparing', estimateMs: voiceEstimateMs(voice, speed), key, singing: !rests && engine.isSinging(key) ? true : undefined });
+        askVoice(panel, id, key, speed, voiceEstimateMs(sungVoice, speed));
+        void panel.webview.postMessage({ type: 'voiceState', part: id, speed, state: rests ? 'waiting' : 'preparing', estimateMs: voiceEstimateMs(sungVoice, speed), key, singing: !rests && engine.isSinging(key) ? true : undefined });
         const busy = prepareQueue.busy(slot);
-        prepareQueue.schedule(slot, { panel, voice, speed, mine, key, letGo: new AbortController() }, rests ? PREPARE_IDLE_MS : 0);
+        prepareQueue.schedule(slot, { panel, voice: sungVoice, speed, warp: warpKey(warp), mine, key, letGo: new AbortController() }, rests ? PREPARE_IDLE_MS : 0);
         log(`${id}: ${rests ? `waits for the text to rest ${PREPARE_IDLE_MS} ms` : 'goes now'}${busy ? ', after what is being sung lets go' : ''}`);
+    }
+}
+
+/**
+ * What the voices of `panel` are sung on (Shosa's request 4): when its page sounds the recording
+ * with the score (PracticeState.recording), the score's bars — from the beats of the score it
+ * shows (lilysharp/playback, the sounding notes alone) — lined up with the recording's, as the
+ * page lines up the notes (timeWarp); else null, the score's own seconds. A server that cannot
+ * answer: null, and the voice sung on the score's seconds sounds only when the recording is off
+ * (the page compares warpKey).
+ */
+async function recordingWarpOf(panel: vscode.WebviewPanel, uri: string, client: LanguageClient): Promise<TimeWarp | null> {
+    const rec = previewPractice.get(panel)?.recording;
+    if (!rec || rec.bars.length === 0) { return null; }
+    try {
+        const pb = await client.sendRequest<{ Beats?: { T: number; A: boolean }[] | null; BarEnd?: number | null }>(
+            'lilysharp/playback', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null, soundingOnly: true });
+        return timeWarp(pb.Beats ?? null, pb.BarEnd ?? null, { bars: rec.bars.map(b => ({ start: b.start, end: b.end })) });
+    } catch (e) {
+        outputChannel.appendLine(`singer: ${clockNow()} the score's bars for the recording could not be read: ${String(e)}`);
+        return null;
     }
 }
 
@@ -1221,7 +1254,7 @@ async function renderVoice(job: PrepareJob): Promise<void> {
             if (sungUri && voiceProblems.set(sungUri, 'engine', id, [])) { showVoiceProblems(sungUri); }
             // entries: where the voice may come in if its part is already playing (joinVoice).
             forgetAskedVoice(panel, id);
-            void panel.webview.postMessage({ type: 'voice', part: id, key, speed, lead: VOICE_LEAD_S, bytes: new Uint8Array(bytes), entries: voiceEntries(voice.Notes) });
+            void panel.webview.postMessage({ type: 'voice', part: id, key, speed, warp: job.warp, lead: VOICE_LEAD_S, bytes: new Uint8Array(bytes), entries: voiceEntries(voice.Notes) });
             outputChannel.appendLine(`singer: ${clockNow()} ${id} ${cached ? 'from the cache' : 'sung'} (${v.duration.toFixed(1)} s at speed ${speed})`);
         } catch (e) {
             if (wanted()) { failVoice(panel, id, speed, engineSaid(e), voice); }

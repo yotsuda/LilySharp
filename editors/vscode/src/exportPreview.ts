@@ -35,8 +35,9 @@ import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { renderer, tellUnsingable } from './singing';
 import { wavSoundFont } from './soundFont';
-import { leftToTheInstrument, SungVoiceDto, sungKey, unsingableReason } from './singerCore';
+import { leftToTheInstrument, SungVoiceDto, sungKey, unsingableReason, voiceOnWarp } from './singerCore';
 import { engineSaid, singerFailureText } from './singerCore';
+import { timeWarp } from './recordingCore';
 
 export interface ExportDeps {
     getClient: () => LanguageClient | undefined;
@@ -469,7 +470,11 @@ export async function singJobs(jobs: readonly AudioJob[], source: { textDocument
             const nobody = unsingable.get(key);
             if (nobody !== undefined) { tellUnsingable(key, nobody); notSung.add(key); continue; }
             try {
-                const { rendered } = await engine.render(voice, speed);
+                // With the recording mixed in (practisedJobs gave the job its RecordingPlay), the
+                // voice on the recording's seconds, as the score's notes are (Shosa's request 4).
+                const warp = job.RecordingPlay && practice?.recording
+                    ? timeWarp(job.Beats ?? null, job.BarEnd ?? null, { bars: practice.recording.bars.map(b => ({ start: b.start, end: b.end })) }) : null;
+                const { rendered } = await engine.render(voiceOnWarp(voice, warp), speed);
                 const v = await rendered;
                 // The WAV begins VOICE_LEAD_S before the score's 0 (the first consonant's room).
                 voices.push({ wav: v.wav, at: (job.Lead ?? 0) - VOICE_LEAD_S, duration: v.duration, gain });

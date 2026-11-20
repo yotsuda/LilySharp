@@ -1705,7 +1705,10 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 // A new tempo: the voice is sung again at it (docs/singing-design.md §5). A voice
                 // the score does not sing turned on (voicesOn, session 1163): asked for at once.
                 const onBefore = (was?.voicesOn ?? []).join('\n'), onNow = (now.voicesOn ?? []).join('\n');
-                if (now.speed !== was?.speed) { void prepareVoices(panel, uri, 'speed'); }
+                // …and on the recording's seconds while it sounds with the score (Shosa's request
+                // 4): turned on or off, or a bar line moved in it, the voice is sung again.
+                const barsOf = (p: PracticeState | undefined) => p?.recording ? JSON.stringify(p.recording.bars) : '';
+                if (now.speed !== was?.speed || barsOf(now) !== barsOf(was)) { void prepareVoices(panel, uri, 'speed'); }
                 else if (onNow !== onBefore) { void prepareVoices(panel, uri, 'play'); }
                 return;
             }

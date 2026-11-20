@@ -221,7 +221,7 @@ describe('the editor and a line nobody can sing', () => {
         // Play: shown as not sung on its line of the menu, with the reason; no voice, so the instrument stands in.
         assert.match(ext, /const unsingable = await engine\.unsingable\(active\);[\s\S]{0,900}tellUnsingable\(id, nobody\);\s+void panel\.webview\.postMessage\(\{ type: 'voiceState', part: id, speed, state: 'failed', detail: nobody \}\);\s+continue;/);
         // Export: skipped before the render, so its track is not silenced.
-        assert.match(ext, /if \(nobody !== undefined\) \{ tellUnsingable\(key, nobody\); notSung\.add\(key\); continue; \}\s+try \{\s+const \{ rendered \} = await engine\.render\(voice, speed\);/);
+        assert.match(ext, /if \(nobody !== undefined\) \{ tellUnsingable\(key, nobody\); notSung\.add\(key\); continue; \}\s+try \{[\s\S]{0,600}?const \{ rendered \} = await engine\.render\(voiceOnWarp\(voice, warp\), speed\);/);
         assert.match(ext, /const unsingable = await engine\.unsingable\(candidates\);/);
     });
 

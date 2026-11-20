@@ -2510,7 +2510,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 const s = lead > 0 && window.LysSynth && window.LysSynth.soundStart
                     ? window.LysSynth.soundStart(buffer.getChannelData(0), buffer.sampleRate, lead) : null;
                 const sungBefore = sungTracks();
-                voices.set(message.part, { buffer, speed: message.speed || 1, key: message.key, lead, pre: s === null ? 0 : Math.max(0, lead - s) });
+                voices.set(message.part, { buffer, speed: message.speed || 1, warp: message.warp || '', key: message.key, lead, pre: s === null ? 0 : Math.max(0, lead - s) });
                 setVoiceState(message.part, 'ready');
                 joinVoice(message.part, message.entries, sungBefore);
                 joinLoop(message.part);
@@ -2697,12 +2697,16 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         function soundingVoices() {
             const keys = [];
             if (voicePlan === null || !rawParts) { return keys; }
+            // A voice is for one speed and one warp: sung on the recording's seconds while it
+            // sounds with the score (Shosa's request 4), on the score's own while it does not —
+            // the instrument stands in until the host has sung it anew for the other.
+            const warp = window.LysSynth.warpKey ? window.LysSynth.warpKey(warpNow()) : '';
             for (const name of rawParts) {
                 for (const key of voiceKeysOf(name)) {
                     const v = voices.get(key);
                     const own = !rawSung || rawSung.includes(name);
                     const e = eff(), on = own ? !e.voicesOff.includes(key) : e.voicesOn.includes(key);
-                    if (Math.abs(v.speed - practice.speed) < 1e-6 && on && levelIn(e.voiceLevels, key) > 0) { keys.push(key); }
+                    if (Math.abs(v.speed - practice.speed) < 1e-6 && (v.warp || '') === warp && on && levelIn(e.voiceLevels, key) > 0) { keys.push(key); }
                 }
             }
             return keys;
@@ -4647,11 +4651,11 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         function practiced(notes, keepSilent) {
             if (!window.LysSynth || !window.LysSynth.practiceNotes) return notes;
             const warp = warpNow();
-            // With the recording, the SCORE's tempo sets the pace (owner's decision 2026-11-16): the
-            // recording is played at the score's written length over its own (warpFit) — 131 written
-            // over a recording of 131.8 plays it at 131/131.8 — times the practice tempo, and the
-            // panel's speed on top (recordingPlan). recTempo is what the player is handed.
-            const recTempo = warp ? practice.speed * window.LysSynth.warpFit(warp) : practice.speed;
+            // With the recording, the RECORDING's seconds stand (owner's decision 2026-11-20, Shosa's
+            // request 3; it was the score's written pace, warpFit): the recording plays at the
+            // practice tempo alone — at 100 % untouched — and the notes follow it bar by bar.
+            // recTempo is what the player is handed.
+            const recTempo = practice.speed;
             playBasis = { warp, recTempo, speed: warp ? window.LysSynth.recordingPlan(recSound(), recTempo).rate : practice.speed };
             const timed = warp ? window.LysSynth.warpNotes(notes, warp) : notes;
             // The parts turned off stay in the list, marked Z: nothing sounds them, and they still say

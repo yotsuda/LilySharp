@@ -19,7 +19,7 @@ import * as assert from 'node:assert/strict';
 import {
     RECORDING_DEFAULTS, Recording, ScoreBeat, audioPathFor, recordingPlan, audioReader, barAt, chartForRecording, lineUp, newRecording, parseRecording,
     CopySource, chartPathFor, copiedRecordingText, rebasedParts, shownPartOrder, sourceForCopy,
-    audioRef, recordingPathFor, recordingSecondAt, resolveAudio, samePath, scoreBars, scoreTimeAt, serializeRecording, timeWarp, unwarpTime, warpBeats, warpFit, warpNotes, warpTime, workForRename,
+    audioRef, recordingPathFor, recordingSecondAt, resolveAudio, samePath, scoreBars, scoreTimeAt, serializeRecording, timeWarp, unwarpTime, warpBeats, warpNotes, warpTime, workForRename,
 } from '../src/recordingCore';
 
 // Orecchiante's own example (SIDECAR.md), cut to its first bars.
@@ -251,33 +251,6 @@ describe('the score played with the recording (§1 7)', () => {
         assert.equal(timeWarp(beats(2, 3), 5.5, { bars: [] }), null);  // only attached: no bar placed
         assert.equal(timeWarp(null, 5.5, r), null);
         assert.equal(timeWarp(beats(2, 3), null, r), null);
-    });
-
-    it('plays the recording at the pace the score writes (owner\'s decision 2026-11-16)', () => {
-        // Score bars 1.5, 2, 2 s at its tempo; the recording's 1.545, 2.06, 2.04: the middle ratio, 1.03.
-        const w = timeWarp(beats(2, 3), 5.5, ok(FORMAT1))!;
-        assert.ok(Math.abs(warpFit(w) - 2.06 / 2) < 1e-12);
-        // A chart written at 120 (the helper's beats) over a recording at 121: the recording a
-        // shade slower, 120/121 — whatever lead it has before its first bar.
-        const bars = (n: number, len: number, from = 0) => Array.from({ length: n }, (_, i) => ({ start: from + i * len, end: from + (i + 1) * len }));
-        const w120 = timeWarp(beats(4), 8, { bars: bars(4, 4 * 60 / 121, 1.5) })!;
-        assert.ok(Math.abs(warpFit(w120) - 120 / 121) < 1e-12);
-    });
-
-    // Orecchiante's request 8 (2026-11-16): the median of the bars' ratios, so a bar read wrong or a
-    // long gap does not drag the whole's pace.
-    it('keeps the pace of the bars read right when one is read wrong or a gap lies between', () => {
-        const len = 4 * 60 / 121;
-        const bars = (lens: number[]) => { let t = 1; return lens.map(l => ({ start: t, end: (t += l) })); };
-        // Two bars read as one (twice as long), and a last bar cut short: still 120/121.
-        const misread = timeWarp(beats(6), 12, { bars: bars([len, len, 2 * len, len, len, len / 3]) })!;
-        assert.ok(Math.abs(warpFit(misread) - 120 / 121) < 1e-12);
-        // A minute's gap inside one bar of a long recording: still 120/121.
-        const gap = timeWarp(beats(5), 10, { bars: bars([len, len, len + 60, len, len]) })!;
-        assert.ok(Math.abs(warpFit(gap) - 120 / 121) < 1e-12);
-        // An even count: the mean of the middle two.
-        const even = timeWarp(beats(4), 8, { bars: bars([2, 2.2, 2.4, 9]) })!;
-        assert.ok(Math.abs(warpFit(even) - (2.2 + 2.4) / 2 / 2) < 1e-12);
     });
 
     it('moves the score\'s notes onto the recording\'s seconds, bar by bar', () => {

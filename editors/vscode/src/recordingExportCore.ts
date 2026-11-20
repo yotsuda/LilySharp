@@ -17,18 +17,18 @@
 // The WAV, MP3 and MP4 exports with the recording beside the chart (docs/recording-design.md §7,
 // owner's report 2026-11-16: the MP4 carried the score's sound alone while Play sounded the
 // recording with it). The timing is the preview's practiced() (extension.ts): the score's notes
-// and beats moved bar by bar onto the recording's seconds (timeWarp), the score's written tempo
-// setting the recording's pace (warpFit) under the practice tempo, and the list divided by the
-// rate the recording then plays at (recordingPlan) — so the recording's second 0 stands at the
-// list's 0, after the count-in's lead.
+// and beats moved bar by bar onto the recording's seconds (timeWarp), and the list divided by the
+// rate the recording plays at — the practice tempo alone (owner's decision 2026-11-20, Shosa's
+// request 3: at 100 % the file is on the recording's own seconds) — so the recording's second 0
+// stands at the list's 0, after the count-in's lead.
 //
 // No vscode here: the extension and the tests share it.
 
-import { recordingPlan, timeWarp, warpBeats, warpFit, warpNotes } from './recordingCore';
+import { recordingPlan, timeWarp, warpBeats, warpNotes } from './recordingCore';
 import { PlaybackBeat, PlaybackNote, PracticeState, RecordingAlong, exportPlan } from './webview/playbackCore';
 
-/** How the recording plays in an export: the tempo its player is handed (the practice tempo times
- *  warpFit — RecordingPlayer.play's `tempo`), its panel's settings, and its fader. */
+/** How the recording plays in an export: the tempo its player is handed (the practice tempo —
+ *  RecordingPlayer.play's `tempo`), its panel's settings, and its fader. */
 export interface RecordingPlay {
     tempo: number;
     sound: RecordingAlong['sound'];
@@ -50,7 +50,7 @@ export function recordedExportPlan(notes: readonly PlaybackNote[], parts: readon
     if (!practice || !rec || !beats || !warp) {
         return { ...exportPlan(notes, parts, beats, practice, extra), recording: null };
     }
-    const tempo = practice.speed * warpFit(warp);
+    const tempo = practice.speed;
     const speed = recordingPlan(rec.sound, tempo).rate;
     const plan = exportPlan(warpNotes(notes, warp), parts, warpBeats(beats, warp), { ...practice, speed }, extra);
     return { ...plan, recording: { tempo, sound: rec.sound, level: rec.level } };

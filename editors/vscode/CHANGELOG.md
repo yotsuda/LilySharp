@@ -4,6 +4,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **The recording is no longer stretched to the chart's tempo.** With the recording sounding with the score, it plays at the practice tempo alone — at 100 % untouched — and the score's notes follow it bar by bar; a tempo written anew no longer moves the recording. An export at 100 % with no count-in is on the recording's own seconds: it was 0.07 % long (a five-minute song 0.2 s) and began 34 ms late.
+- **MP3 exports start on time.** The file now carries the encoder's delay (a LAME tag), so players that read it — ffmpeg, browsers, most players — give back the sound from its first sample; every MP3 export began 25 ms late.
+- **The singing voice follows the recording.** Sung with the recording, a voice is sung on the recording's seconds, each bar as the band played it, in the preview and the exports; it was sung at the written tempo and drifted (1.5 s by bar 39 in one song). Turning the recording on or off sings the voice again.
 - **Stem tremolos are played stroke by stroke.** `<c e g>2.:8` plays six eighths in the preview and the exports instead of one held chord; `@portato` on it draws the arc over one dot a stroke and plays each stroke portato.
 - **Bar fixes shows the errors and the warnings.** Each row of the panel beside the scan now shows the compiler's errors (red, ✖) and warnings (⚠) on the bar its Draft holds — your edit, the AI's bar, or the bar as it stands, as the Problems panel has them — so an `@stuck` typed for `@struck` is said there instead of silently ignored, and an error no longer hides in the row's plain text. Warnings fail no check.
 - **An arpeggio leaves out an `@struck` member.** `<gis cis' gis'@struck>2.@arpeggio` draws the wavy line beside the held notes only, not the small head.

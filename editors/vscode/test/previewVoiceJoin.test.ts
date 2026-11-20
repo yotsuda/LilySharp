@@ -207,7 +207,7 @@ describe('a voice that lands while the preview plays', () => {
 
     it('is asked when a voice is decoded, with the entries the host read from its notes', () => {
         assert.match(extension, /const sungBefore = sungTracks\(\);\s*voices\.set\(message\.part, \{[^\n]+\}\);\s*setVoiceState\(message\.part, 'ready'\);\s*joinVoice\(message\.part, message\.entries, sungBefore\);/);
-        assert.match(extension, /type: 'voice', part: id, key, speed, lead: VOICE_LEAD_S, bytes: new Uint8Array\(bytes\), entries: voiceEntries\(voice\.Notes\) \}\);/);
+        assert.match(extension, /type: 'voice', part: id, key, speed, warp: job\.warp, lead: VOICE_LEAD_S, bytes: new Uint8Array\(bytes\), entries: voiceEntries\(voice\.Notes\) \}\);/);
         assert.match(extension, /playOffset = offset;\s*playingNotes = notes;/);
         assert.match(extension, /playClock = null;\s*playingNotes = null;/);
         // A score edited while it plays: the Play is the old text's, and the new text's voice is
@@ -216,6 +216,18 @@ describe('a voice that lands while the preview plays', () => {
         assert.match(extension, /playingNotes = notes;\s*playEdited = false;/);
         // Each voice's sources say whose they are, for the one that replaces them.
         assert.match(extension, /src\.voiceKey = key;     \/\/ which voice sings here/);
+    });
+
+    // Shosa's request 4 (2026-11-20): over the recording the voice is sung on its seconds.
+    it('sounds a voice only on the warp it was sung for, and is sung anew when the recording\'s bars change', () => {
+        // The page: the voice's warp against the one the notes are on now.
+        assert.match(extension, /voices\.set\(message\.part, \{ buffer, speed: message\.speed \|\| 1, warp: message\.warp \|\| '',/);
+        assert.match(extension, /const warp = window\.LysSynth\.warpKey \? window\.LysSynth\.warpKey\(warpNow\(\)\) : '';[\s\S]{0,600}?\(v\.warp \|\| ''\) === warp/);
+        // The host: the voice's notes moved onto the recording's seconds before the engine keys them.
+        assert.match(extension, /const sungVoice = onWarp\(voice\);[\s\S]{0,200}?key = await engine\.key\(sungVoice, speed\);/);
+        assert.match(extension, /voice: sungVoice, speed, warp: warpKey\(warp\),/);
+        // …and asked again when the recording is turned on or off or a bar line moves.
+        assert.match(extension, /if \(now\.speed !== was\?\.speed \|\| barsOf\(now\) !== barsOf\(was\)\) \{ void prepareVoices\(panel, uri, 'speed'\); \}/);
     });
 });
 

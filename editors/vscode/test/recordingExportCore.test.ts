@@ -38,14 +38,25 @@ describe('an export with the recording beside the chart', () => {
 
     it('moves the notes onto the recording at its rate, its second 0 at the file\'s 0', () => {
         const plan = recordedExportPlan(NOTES, null, BEATS, 2, { ...PRACTICE, recording: ALONG });
-        // The score's tempo sets the pace (warpFit = 2: the recording is played twice as fast),
-        // so bar 1 (the recording's second 1) sounds at 0.5 s and bar 2 (second 3) at 1.5 s.
+        // The recording's seconds stand (owner's decision 2026-11-20, Shosa's request 3): it plays
+        // untouched though the band played at half the speed written, so bar 1 sounds at its
+        // second 1 and bar 2 at its second 3, each note as long as the band played it.
         assert.ok(plan.recording);
-        assert.equal(plan.recording.tempo, 2);
+        assert.equal(plan.recording.tempo, 1);
         assert.equal(plan.lead, 0);
         const music = plan.notes.filter(n => n.C !== 9);
-        assert.deepEqual(music.map(n => +n.T.toFixed(6)), [0.5, 1.5]);
-        assert.deepEqual(music.map(n => +n.D.toFixed(6)), [0.5, 0.5]);
+        assert.deepEqual(music.map(n => +n.T.toFixed(6)), [1, 3]);
+        assert.deepEqual(music.map(n => +n.D.toFixed(6)), [1, 1]);
+    });
+
+    it('plays the recording untouched at a tempo of 100 %, however the score is written', () => {
+        // A chart at 120 over a band at 121: the recording is not stretched to the chart's pace
+        // (it was, by 120/121: a file 0.07 % long, a dance on its seconds 245 ms off at the end).
+        const bar = 2 * 120 / 121;
+        const plan = recordedExportPlan(NOTES, null, BEATS, 2, { ...PRACTICE, recording: { ...ALONG, bars: [{ start: 1, end: 1 + bar }, { start: 1 + bar, end: 1 + 2 * bar }] } });
+        assert.ok(plan.recording);
+        assert.equal(plan.recording.tempo, 1);
+        assert.deepEqual(plan.notes.filter(n => n.C !== 9).map(n => +n.T.toFixed(9)), [1, +(1 + bar).toFixed(9)]);
     });
 
     it('keeps the count-in before both: the notes and the recording start after the lead', () => {
@@ -53,14 +64,14 @@ describe('an export with the recording beside the chart', () => {
         assert.ok(plan.recording);
         assert.ok(plan.lead > 0, `lead ${plan.lead}`);
         const music = plan.notes.filter(n => n.C !== 9);
-        assert.deepEqual(music.map(n => +(n.T - plan.lead).toFixed(6)), [0.5, 1.5]);
+        assert.deepEqual(music.map(n => +(n.T - plan.lead).toFixed(6)), [1, 3]);
     });
 
-    it('follows the practice tempo on top of the score\'s', () => {
+    it('follows the practice tempo', () => {
         const plan = recordedExportPlan(NOTES, null, BEATS, 2, { ...PRACTICE, speed: 0.5, recording: ALONG });
         assert.ok(plan.recording);
-        assert.equal(plan.recording.tempo, 1);
-        assert.deepEqual(plan.notes.map(n => +n.T.toFixed(6)), [1, 3]);
+        assert.equal(plan.recording.tempo, 0.5);
+        assert.deepEqual(plan.notes.map(n => +n.T.toFixed(6)), [2, 6]);
     });
 
     it('leaves the recording out when no bar is placed in it', () => {

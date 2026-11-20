@@ -21,6 +21,7 @@
 
 import { createHash } from 'crypto';
 import { VOICE_LEAD_S } from './webview/playbackCore';
+import { TimeWarp, warpTime } from './recordingCore';
 
 /** One note of `lilysharp/sung`, in seconds: its syllable `L` (null on a melisma), `M` a melisma
  *  carrying the previous syllable's vowel on, `B` a breath after it, `S` the source offset. */
@@ -1029,6 +1030,23 @@ export function cantoriaApiOf(exports: unknown): CantoriaApi | undefined {
 }
 
 const round = (x: number): number => Math.round(x * 1e4) / 1e4;
+
+/**
+ * The voice on the recording's seconds (Shosa's request 4, docs/recording-design.md §7): every
+ * note's start and end moved bar by bar as the score's notes are (warpTime), so a voice sung over a
+ * recording follows its tempo as it sways — at the score's 61.5 a song's voice was 1.49 s off the
+ * recording by bar 39. Each end is moved on its own, so two notes that meet still meet. No warp:
+ * the voice as it is.
+ */
+export function voiceOnWarp<V extends Pick<SungVoiceDto, 'Notes'>>(voice: V, w: TimeWarp | null | undefined): V {
+    if (!w) {
+        return voice;
+    }
+    return { ...voice, Notes: voice.Notes.map(n => {
+        const T = warpTime(w, n.T);
+        return { ...n, T, D: Math.max(0, warpTime(w, n.T + n.D) - T) };
+    }) };
+}
 
 /**
  * The engine's score of a voice at the practice menu's `speed`: the notes' seconds divided by

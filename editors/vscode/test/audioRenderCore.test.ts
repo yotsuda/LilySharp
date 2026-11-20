@@ -19,7 +19,7 @@ import * as assert from 'node:assert/strict';
 import { PlaybackNote, toEvents } from '../src/webview/playbackCore';
 import {
     MP3_FRAME, Mp3Encoder, OfflineSynth, RENDER_BLOCK, WAV_PEAK, WAV_TAIL_S,
-    encodeMp3, fileLevel, frameCount, renderNotes, toInt16,
+    MP3_ENCODER_DELAY, crc16, encodeMp3, fileLevel, frameCount, mp3Frames, renderNotes, toInt16, withGaplessTag,
 } from '../src/audioRenderCore';
 
 /** The server's pitch for a sustain-pedal change (PlaybackNote.PedalPitch; isPedal reads P < 0). */
@@ -141,5 +141,57 @@ describe('the MP3 writing', () => {
         assert.equal(encoder.flushed, 1);
         assert.equal(pauses, 2, 'between stretches, not after the last');
         assert.deepEqual([...out], [...encoder.fed.map(f => f % 251), 255, 254]);
+    });
+
+    // Shosa's request 3 (2026-11-20): lamejs writes no tag, and every MP3 export decoded 1105
+    // samples (25.1 ms) late. The tag says the encoder's delay and the padding, and a gapless decoder
+    // gives back the samples as they went in (measured with ffmpeg and Chromium, Lab p1339/align).
+    describe('the gapless tag', () => {
+        /** MPEG-1 Layer III frames at 192 kb/s, 44.1 kHz, joint stereo; `padded` marks the ones a byte longer. */
+        const stream = (padded: boolean[]) => {
+            const frames = padded.map((p, i) => {
+                const f = new Uint8Array(626 + (p ? 1 : 0));
+                f.set([0xff, 0xfb, 0xb0 | (p ? 2 : 0), 0x44]);
+                f.fill(i + 1, 4);
+                return f;
+            });
+            const out = new Uint8Array(frames.reduce((n, f) => n + f.length, 0));
+            let at = 0;
+            for (const f of frames) { out.set(f, at); at += f.length; }
+            return out;
+        };
+
+        it('counts the frames', () => {
+            assert.deepEqual(mp3Frames(stream([false, true, false])), { count: 3, kbps: 192, sampleRate: 44100 });
+            assert.equal(mp3Frames(Uint8Array.from([1, 2, 3, 4])), null);
+            assert.equal(mp3Frames(stream([false]).subarray(0, 600)), null, 'a frame cut short');
+        });
+
+        it('puts an Info frame ahead with the delay, the padding and the CRC LAME writes', () => {
+            const s = stream([false, true, false, false]);
+            const input = 4 * MP3_FRAME - MP3_ENCODER_DELAY - 1000;
+            const out = withGaplessTag(s, input);
+            assert.equal(out.length, 626 + s.length);
+            assert.deepEqual([...out.subarray(626)], [...s], 'the stream after it, untouched');
+            assert.deepEqual([...out.subarray(0, 4)], [0xff, 0xfb, 0xb0, 0x44], 'the stream\'s own header, unpadded');
+            const text = (from: number, n: number) => String.fromCharCode(...out.subarray(from, from + n));
+            const u32 = (at: number) => ((out[at] << 24) | (out[at + 1] << 16) | (out[at + 2] << 8) | out[at + 3]) >>> 0;
+            assert.equal(text(36, 4), 'Info');
+            assert.equal(u32(40), 0x0f);
+            assert.equal(u32(44), 4, 'the frames of the music');
+            assert.equal(u32(48), out.length, 'the bytes of the file');
+            assert.equal(text(156, 9), 'LAME3.100');
+            const delays = (out[177] << 16) | (out[178] << 8) | out[179];
+            assert.deepEqual([delays >> 12, delays & 4095], [MP3_ENCODER_DELAY, 1000]);
+            assert.equal((out[190] << 8) | out[191], crc16(out, 0, 190));
+            // CRC-16/ARC's check value.
+            assert.equal(crc16(Uint8Array.from('123456789', c => c.charCodeAt(0)), 0, 9), 0xbb3d);
+        });
+
+        it('leaves a stream alone when it cannot say the padding', () => {
+            const s = stream([false]);
+            assert.equal(withGaplessTag(s, MP3_FRAME * 2), s, 'more samples than the frames hold');
+            assert.equal(withGaplessTag(Uint8Array.from([1, 2]), 10).length, 2);
+        });
     });
 });

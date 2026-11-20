@@ -115,10 +115,11 @@ Transcribe!（Seventh String）と同じ体験を Lily# のプレビューで（
 **S4 の実際の形（第1285・§1 7 と一緒に）**:
 - 録音は Practice の Parts の最後の行（`Recording`・トグル＋フェーダー）と録音パネルの一番上（`recOnBtn`・`recLevelSlider`＝同じ値）。ツールバーの波形のボタンは外した。
 - オンで隣のファイルの小節が楽譜の小節と同じ数なら（`timeWarp`）、楽譜の音符・拍・最後の小節線を小節ごとに録音の秒へ写し（`warpNotes`／`warpBeats`＝小節の中は直線・最初の小節の前と最後の小節の後はその小節の速さ）、録音はその時計で鳴る（`startRecordingAlong`: リストの offset の「演奏の時刻」×速さ＝録音の秒・同じ `AudioContext` の時刻に始める）。だから小節のクリック・選んだ範囲・ループ（録音も同じ秒を巡る）・Count-in（録音はその間も流れる）・途中のシークは楽譜の仕組みのまま両方に効く。
-- 速さ: **楽譜に書いたテンポが全体の速さを決める**（オーナー決定 2026-11-16）＝録音は「対応する小節の、楽譜の長さ（書いたテンポ）÷ 録音の長さ」の逆数の速さで鳴る（`warpFit`。131 と書いた譜面に 131.8 の録音なら 131/131.8 倍・音高は保つ）。楽譜のテンポを書き換えれば録音の速さもついて来る。小節ごとの揺れは今までどおり録音に合わせる。その上に Practice の Tempo とパネルの Speed（連動オンなら音高の比）が掛かる＝楽譜も同じ速さ（`recordingPlan(s, practice.speed × warpFit).rate` が両方の速さ）。
+- ★ **速さ（2026-11-20 オーナー決定・下の行より新しい）: 録音は伸ばさない＝録音の秒が基準**。録音は Practice の Tempo の倍率だけで鳴る（100% なら伸縮のエンジンを通らず元のまま）。楽譜の音は小節ごとに録音へ写すので、平均の速さも録音に付いて行く。楽譜のテンポを書き換えても録音の速さは変わらない。`warpFit` は消した。きっかけは Shosa の依頼 3（`C:\MyProj\Shosa\docs\repro\lilysharp-requests-2026-11-20-recording-export.md`）: 書き出しが速さ 1.0 でも約 0.07% 伸び（糸 (Bank Band) で 285.257 s／元 285.048 s・265 s で +245 ms）、録音の秒で踊る Shosa がずれた。
+- （旧・2026-11-16）速さ: **楽譜に書いたテンポが全体の速さを決める**（オーナー決定 2026-11-16）＝録音は「対応する小節の、楽譜の長さ（書いたテンポ）÷ 録音の長さ」の逆数の速さで鳴る（`warpFit`。131 と書いた譜面に 131.8 の録音なら 131/131.8 倍・音高は保つ）。楽譜のテンポを書き換えれば録音の速さもついて来る。小節ごとの揺れは今までどおり録音に合わせる。その上に Practice の Tempo とパネルの Speed（連動オンなら音高の比）が掛かる＝楽譜も同じ速さ（`recordingPlan(s, practice.speed × warpFit).rate` が両方の速さ）。
 - 鳴っている途中の切り替え（トグル・Tempo・パネル）は、今の時刻を古い基準で楽譜の時刻へ戻し、新しい基準で写し直して続ける（`practiceChanged`・ループは周の中の位置）。
 - 小節を置いていない録音・小節数が違う録音は録音だけが頭から鳴り、理由を言う（`recordingAlone`）。録音が読み込み中なら楽譜だけ。
-- 残る穴: ⑴ 歌い手の声（Cantoria の WAV）は楽譜の時刻のまま＝録音と一緒に鳴らすと声だけ揺れについて行かない ⑵ MIDI 出力のときは録音は鳴らない ⑶ 範囲が反復をまたいで 2 片になる選択（`spanPieces` が 2 つ以上）は、録音のループが最初の片の頭から周の長さだけ。
+- 残る穴: ⑴ ~~歌い手の声（Cantoria の WAV）は楽譜の時刻のまま＝録音と一緒に鳴らすと声だけ揺れについて行かない~~（2026-11-20 に埋めた・§7）⑵ MIDI 出力のときは録音は鳴らない ⑶ 範囲が反復をまたいで 2 片になる選択（`spanPieces` が 2 つ以上）は、録音のループが最初の片の頭から周の長さだけ。
 
 ## 6. まだ決めていない細部
 
@@ -134,12 +135,14 @@ Transcribe!（Seventh String）と同じ体験を Lily# のプレビューで（
 
 オーナー決定（2026-11-16）: WAV／MP3 にも MP4 と同じく入れる・MP4 のコード名は全部の楽譜で光らせる。
 
-- **時刻**: webview の `practiced()` と同じ＝`recordingExportCore.ts` の `recordedExportPlan`。音符と拍を `timeWarp(beats, BarEnd, bars)` で録音の秒へ移し（`warpNotes`／`warpBeats`）、`recordingPlan(sound, practice.speed × warpFit).rate` を速さにして `exportPlan` に渡す。録音の秒 0 はリストの 0（Count-in の後＝`Lead`）。
+- **時刻**: webview の `practiced()` と同じ＝`recordingExportCore.ts` の `recordedExportPlan`。音符と拍を `timeWarp(beats, BarEnd, bars)` で録音の秒へ移し（`warpNotes`／`warpBeats`）、`recordingPlan(sound, practice.speed).rate` を速さにして `exportPlan` に渡す（2026-11-20 から `warpFit` は掛けない＝§5 の速さ）。録音の秒 0 はリストの 0（Count-in の後＝`Lead`）。
+- **（2026-11-20・Shosa の依頼 3）書き出しは速さ 100%・Count-in なしなら元の録音と同じ秒の上**。頭が 34 ms 遅れていた原因は 2 つ（Lab `sessions/p1339/align`、ヘッドレス Edge と ffmpeg で実測）: ⑴ 書き出しの MP3（lamejs）に LAME タグが無く、復号が 1105 標本（25.1 ms）遅れる → `audioRenderCore.withGaplessTag` が Info フレーム（遅れ 576・末尾の詰め物・CRC）を先頭に置く＝ffmpeg と Chromium の復号で 0 標本差・長さも入力と同じ。タグを読まない再生機では先頭に 26 ms の無音のフレームが 1 つ増える（LAME の普通の MP3 と同じ）。⑵ `RecordingPlayer.render` のリミッター（DynamicsCompressor）の先読み 6 ms（44.1 kHz で 264 標本）→ 伸縮もパートの和も無い録音はリミッターを通さない。通すときはその分を頭から切る。録音の MP3 の復号は Chromium も遅れを除いている（ffmpeg と 0 標本差）。
+- **（2026-11-20・Shosa の依頼 4）歌い手の声も録音の揺れに付いていく**（下の「残る穴」を埋めた）: 拡張は、録音が楽譜と鳴っているページ（`PracticeState.recording`）の声を頼むとき、楽譜の拍（`lilysharp/playback` の `soundingOnly`）と録音の小節から `timeWarp` を作り、音節の始めと終わりを録音の秒へ移してから Cantoria に渡す（`singerCore.voiceOnWarp`）。声の鍵が変わるので別の声として歌い直す。ページは声がどの warp で歌われたか（`recordingCore.warpKey`）を持ち、今の warp と同じ声だけを鳴らす（違えば歌い直すまで楽器が代わる）。録音のオン・オフや小節線の移動は `practiceState` で拡張に届き、歌い直す。書き出し（`singJobs`）も、録音を入れる仕事では同じように移す。
 - **配線**: webview は録音が楽譜と鳴る状態（オン・読み込み済み）のとき `practiceState.recording`（小節・`recSound()`・フェーダー）を送る（`postPracticeState`・`showRecording` と読み込みの完了でも送る）。LSP の `PlaybackExport.BarEnd`。拡張の `practisedJobs` が `RecordingPlay` を付け、歌い手の後の `recordJobs` がプレビューに `renderRecording` を頼む → webview は `RecordingPlayer.render`（同じエンジン・rate・shift・gain・リミッター、フェーダーは除く）を OfflineAudioContext で描き、10 秒ずつ `recordingRendered` で返す → `AudioJob.Recording`（ステレオ）→ `renderAudioFiles` が `mixInStereo` で楽譜の音に足す（ゲインはフェーダー ÷ プレビューの master 0.9＝`PREVIEW_MASTER`、その後 `fileLevel`）。MP4 は `writeVideos` が同じ WAV を使い、長さは録音の終わりまで（`fileSeconds`）。プレビューが無い・描けないときは録音なしで書き、出力チャンネルに理由。
 - ⚠️ **描画は復号したバッファ自身のレートで**: Signalsmith は入力を自分のコンテキストのレートの標本として読む＝48 kHz の録音を 44.1 kHz の OfflineAudioContext で描くと ×1.125 が ×1.034 になった（実物の VS Code で実測・Lab `p1286/e2e`）。書き出しが `mixInStereo` で再標本化する。
 - **MP4 の映像の長さ**: concat の最後の 1 枚の長さを `-r` だけでは落としていた（曲で 0.47 s、録音が曲の後まで鳴ると 1.6 s 映像が先に終わる）＝`videoArgs` は `[0:v]fps=30` を通す。
 - **確かめ方**: 網は `recordingExportCore.test.ts`（時刻・Count-in・テンポ・小節なし）と `mixInStereo`／`fileSeconds`。実物の VS Code（CDP・簡易ダイアログ `files.simpleDialog.enable` を操作・Lab `p1286/e2e`）で WAV／MP3／MP4 を書き、録音のクリックが楽譜の小節頭（0.89／2.67／4.89／6.67／8.89 s＝秒 ÷1.125）に来ること・MP4 の映像と音が 12.4 s で揃うことを測った。⚠️ その計器は拡張の写し（`server` に自己完結の LSP を publish）で回す＝リポジトリの `editors/vscode/server` に自己完結版があると `lilysharp.serverPath` より優先される。
-- 残る穴: 歌い手の声は録音の揺れについて行かない（§5 の ⑴ と同じ）。プレビューを閉じた状態の Explorer の書き出しには録音は入らない（録音の状態はプレビューが持つ）。
+- 残る穴: ~~歌い手の声は録音の揺れについて行かない（§5 の ⑴ と同じ）~~（2026-11-20 に埋めた・上）。プレビューを閉じた状態の Explorer の書き出しには録音は入らない（録音の状態はプレビューが持つ）。
 
 同じ報告の ⑴ は閉じた: `ScoreVideo.HeadsByNote` が `notehead` に加えて `chordName` の箱も拾う（コード行の音の `S`／`O` はコード名の位置）。網 `ScoreVideoLightTests`。
 

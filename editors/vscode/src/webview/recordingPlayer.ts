@@ -26,6 +26,10 @@
 
 import { RecordingSettings, recordingPlan } from '../recordingCore';
 
+/** How far Chromium's DynamicsCompressorNode holds its input back (its fixed look-ahead):
+ *  MEASURED 2026-11-20 (Lab sessions/p1339/align/measure.mjs) — 264 samples at 44.1 kHz. */
+const LIMITER_LOOKAHEAD_S = 0.006;
+
 /** The node Signalsmith Stretch's Web release hands back (its README). */
 interface StretchNode extends AudioNode {
     addBuffers(channels: Float32Array[]): Promise<number>;
@@ -427,17 +431,29 @@ export class RecordingPlayer {
         const ctx = new OfflineAudioContext(2, frames, sampleRate);
         const gain = ctx.createGain();
         gain.gain.value = plan.gain;
-        const limiter = ctx.createDynamicsCompressor();
-        limiter.threshold.value = -1;
-        limiter.knee.value = 0;
-        limiter.ratio.value = 20;
-        limiter.attack.value = 0.002;
-        limiter.release.value = 0.1;
-        gain.connect(limiter);
-        limiter.connect(ctx.destination);
         // The parts as they sound now (§8): through a splitter and a gain each, as play does.
         if (this.usesParts()) { await this.ensureParts(); }
         const parts = this.usesParts() && this.parts ? this.parts : null;
+        // The recording untouched (no stretch, no parts summed) goes out as it is, its samples its
+        // own: the limiter is for a sound that may peak over its source, and it holds everything
+        // back by its look-ahead (MEASURED 2026-11-20, Lab sessions/p1339/align: a click 264
+        // samples late at 44.1 kHz, 6 ms — of the 34 ms Shosa's request 3 found). With the limiter
+        // that much more is cut off the front.
+        const limited = stretched || !!parts;
+        let late = 0;
+        if (limited) {
+            const limiter = ctx.createDynamicsCompressor();
+            limiter.threshold.value = -1;
+            limiter.knee.value = 0;
+            limiter.ratio.value = 20;
+            limiter.attack.value = 0.002;
+            limiter.release.value = 0.1;
+            gain.connect(limiter);
+            limiter.connect(ctx.destination);
+            late = Math.floor(LIMITER_LOOKAHEAD_S * sampleRate);
+        } else {
+            gain.connect(ctx.destination);
+        }
         let into: AudioNode = gain;
         if (parts) {
             const split = ctx.createChannelSplitter(parts.numberOfChannels);
@@ -469,7 +485,7 @@ export class RecordingPlayer {
             await Promise.resolve(node.schedule({ active: true, input: 0, rate: plan.rate, semitones: plan.semitones, output: pad }));
         }
         const out = await ctx.startRendering();
-        const skip = Math.round(pad * sampleRate);
+        const skip = Math.round(pad * sampleRate) + late;
         const length = Math.max(0, Math.min(out.length - skip, Math.ceil(buffer.duration / plan.rate * sampleRate)));
         const left = out.getChannelData(0).slice(skip, skip + length);
         const right = (out.numberOfChannels > 1 ? out.getChannelData(1) : out.getChannelData(0)).slice(skip, skip + length);

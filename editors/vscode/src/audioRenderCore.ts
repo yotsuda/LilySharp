@@ -289,5 +289,104 @@ export async function encodeMp3(encoder: Mp3Encoder, left: Float32Array, right: 
     const out = new Uint8Array(pieces.reduce((n, p) => n + p.length, 0));
     let o = 0;
     for (const p of pieces) { out.set(p, o); o += p.length; }
+    return withGaplessTag(out, l.length);
+}
+
+/** The samples the encoder puts before the music (LAME's ENCDELAY; lamejs is its port). A decoder
+ *  adds 529 of its own: MEASURED 2026-11-20 (Lab sessions/p1339/align/lame.mjs) — a click at 1 s
+ *  came out of ffmpeg 1105 samples (25.1 ms) late from lamejs's untagged file. */
+export const MP3_ENCODER_DELAY = 576;
+
+/**
+ * The MP3 with an Info frame ahead of it carrying a LAME tag — the encoder's delay and the padding
+ * after the last sample — so that a gapless decoder (ffmpeg, Chromium's decodeAudioData, the usual
+ * players) gives back the samples exactly as they went in, the file's 0 at the music's 0. lamejs
+ * writes no tag: every export was 25.1 ms late, an export with the recording beside the chart off
+ * its seconds by that much (Shosa's request 3, 2026-11-20, measured 34 ms with the limiter's 6).
+ * The Info frame is a silent frame of the stream's own header (decoders that read no tag play it as
+ * 26 ms of silence, as for any LAME file). The stream as given when it is not frames this can read.
+ *
+ * Layout (LAME's own, "Mp3 Info Tag rev 1"): the frame header, the side information (zeros), then
+ * "Info", the Xing flags (frames, bytes, TOC, quality) and their fields, then the 36-byte LAME tag,
+ * whose last two bytes are the CRC-16 of the frame's first 190 bytes.
+ */
+export function withGaplessTag(stream: Uint8Array, inputSamples: number): Uint8Array {
+    const frames = mp3Frames(stream);
+    if (!frames || frames.count === 0) {
+        return stream;
+    }
+    const padding = frames.count * MP3_FRAME - MP3_ENCODER_DELAY - inputSamples;
+    if (padding < 0 || padding > 4095) {
+        return stream;
+    }
+    // The first frame's header, unpadded: the same version, layer, rate and mode.
+    const h = stream.subarray(0, 4);
+    const header = [h[0], h[1], h[2] & ~0x02, h[3]];
+    const mono = (h[3] >> 6) === 3;
+    const length = Math.floor(144 * frames.kbps * 1000 / frames.sampleRate);
+    const info = new Uint8Array(length);
+    info.set(header, 0);
+    let at = 4 + (mono ? 17 : 32);
+    const put = (bytes: ArrayLike<number>) => { info.set(bytes, at); at += bytes.length; };
+    const u32 = (v: number) => [(v >>> 24) & 255, (v >>> 16) & 255, (v >>> 8) & 255, v & 255];
+    const total = length + stream.length;
+    put([0x49, 0x6e, 0x66, 0x6f]);                  // "Info": a constant bit rate
+    put(u32(0x0f));                                 // frames, bytes, TOC, quality follow
+    put(u32(frames.count));
+    put(u32(total));
+    put(Array.from({ length: 100 }, (_, i) => Math.floor(i * 256 / 100)));   // CBR: an even TOC
+    put(u32(0));                                    // quality
+    put(Array.from('LAME3.100', c => c.charCodeAt(0)));
+    put([0x01]);                                    // tag revision 0, constant bit rate
+    put([0]);                                       // lowpass: not said
+    put(u32(0)); put([0, 0, 0, 0]);                 // peak, the two replay gains: none
+    put([0]);                                       // encoding flags, ATH
+    put([Math.min(255, frames.kbps)]);              // the bit rate
+    put([MP3_ENCODER_DELAY >> 4, ((MP3_ENCODER_DELAY & 15) << 4) | (padding >> 8), padding & 255]);
+    put([0, 0]);                                    // misc, MP3 gain
+    put([0, 0]);                                    // surround, preset
+    put(u32(total));                                // music length: from this frame to the last
+    const music = crc16(stream, 0, stream.length);
+    put([music >> 8, music & 255]);                 // the music's CRC
+    const crc = crc16(info, 0, 190);
+    put([crc >> 8, crc & 255]);
+    const out = new Uint8Array(total);
+    out.set(info, 0);
+    out.set(stream, length);
     return out;
+}
+
+/** The MPEG-1 Layer III frames of a stream that begins with one: how many, at what bit rate (the
+ *  first frame's) and sample rate. Null when it is not such a stream. */
+export function mp3Frames(stream: Uint8Array): { count: number; kbps: number; sampleRate: number } | null {
+    const kbpsOf = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320];
+    const ratesOf = [44100, 48000, 32000];
+    let at = 0, count = 0, kbps = 0, sampleRate = 0;
+    while (at + 4 <= stream.length) {
+        const b1 = stream[at + 1], b2 = stream[at + 2];
+        // Sync, MPEG-1, Layer III.
+        if (stream[at] !== 0xff || (b1 & 0xfe) !== 0xfa) {
+            return null;
+        }
+        const k = kbpsOf[b2 >> 4], r = ratesOf[(b2 >> 2) & 3];
+        if (!k || !r) {
+            return null;
+        }
+        if (count === 0) { kbps = k; sampleRate = r; }
+        at += Math.floor(144 * k * 1000 / r) + ((b2 >> 1) & 1);
+        count++;
+    }
+    return at === stream.length ? { count, kbps, sampleRate } : null;
+}
+
+/** CRC-16 as LAME's tag computes it (polynomial 0x8005, reflected: CRC-16/ARC). */
+export function crc16(bytes: Uint8Array, from: number, to: number): number {
+    let crc = 0;
+    for (let i = from; i < to; i++) {
+        crc ^= bytes[i];
+        for (let b = 0; b < 8; b++) {
+            crc = crc & 1 ? (crc >>> 1) ^ 0xa001 : crc >>> 1;
+        }
+    }
+    return crc & 0xffff;
 }
