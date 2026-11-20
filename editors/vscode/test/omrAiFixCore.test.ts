@@ -618,7 +618,7 @@ describe('the gates', () => {
         const on = currentDiagnosticsOn([d(t.start + 2, 'warning', 'LYS1008', 'Unknown annotation'),
             d(t.start, 'error', 'LYS0002', 'Unknown pitch'), d(t.end + 50, 'warning', 'LYS1008', 'next line'),
             d(t.start + 3, 'info', null, 'a hint')], t);
-        assert.deepEqual(on, ['LYS1008: Unknown annotation', 'error LYS0002: Unknown pitch']);
+        assert.deepEqual(on, { errors: ['LYS0002: Unknown pitch'], warnings: ['LYS1008: Unknown annotation'] });
     });
 
     it('fail compile on an error in the span, and name it', () => {

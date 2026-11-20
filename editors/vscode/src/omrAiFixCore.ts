@@ -888,13 +888,15 @@ export function warningsIn(candidate: readonly Diag[], span: { start: number; le
 }
 
 /** The compiler's errors and warnings on the bar as it stands in the file (`diags` the file's,
- *  the target its line), in the row's words ("error LYS…: …", "LYS1008: …") — what the editor's
- *  Problems panel shows for that line. */
-export function currentDiagnosticsOn(diags: readonly Diag[], target: FixTarget): string[] {
-    return [...new Set(diags
-        .filter(d => (d.Severity === 'error' || d.Severity === 'warning')
-            && d.Offset <= target.end && d.Offset + Math.max(1, d.Length) > target.start)
-        .map(d => `${d.Severity === 'error' ? 'error ' : ''}${d.Code ? `${d.Code}: ` : ''}${d.Message}`))];
+ *  the target its line), each in the compiler's words ("LYS4084: …") — what the editor's
+ *  Problems panel shows for that line, the errors and the warnings apart so the row can show
+ *  each in its colour (owner's report 2026-11-20: an error in plain text went unseen beside a
+ *  coloured warning). */
+export function currentDiagnosticsOn(diags: readonly Diag[], target: FixTarget): { errors: string[]; warnings: string[] } {
+    const on = diags.filter(d => d.Offset <= target.end && d.Offset + Math.max(1, d.Length) > target.start);
+    const say = (severity: string) => [...new Set(on.filter(d => d.Severity === severity)
+        .map(d => `${d.Code ? `${d.Code}: ` : ''}${d.Message}`))];
+    return { errors: say('error'), warnings: say('warning') };
 }
 
 /** A proposal below this is shown, but not taken by "Accept all". */

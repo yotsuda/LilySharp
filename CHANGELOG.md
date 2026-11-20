@@ -6,7 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
-- **The Bar fixes panel shows the compiler's warnings** (`[editor]`). Each row beside the scan says the warnings on the bar its Draft holds — the person's edit, the AI's bar, or the bar as it stands (with its errors, as the Problems panel has them). `<e, e@stuck>64` was checked and drawn with the `@stuck` silently ignored; the row now says LYS1008. Warnings fail no gate.
+- **The Bar fixes panel shows the compiler's errors and warnings** (`[editor]`). Each row beside the scan says the errors (red, ✖) and warnings (⚠) on the bar its Draft holds — the person's edit, the AI's bar, or the bar as it stands, as the Problems panel has them. `<e, e@stuck>64` was checked and drawn with the `@stuck` silently ignored, and an edit's error stood in the row's plain text ("Your edit: …"), easy to miss; the row now says LYS1008 in the warning colour and an error in red. Warnings fail no gate.
 
 - **An arpeggio leaves out an `@struck` member** (`[engraving]`, `[export]`, Calamo's request 32). `<gis cis' gis'@struck>2.@arpeggio` ran the wavy line up beside the small head too, as LilyPond's plain `\arpeggio` does, and MusicXML put `<arpeggiate>` on it. The struck note is struck with the chord and let go, outside the roll, so the line (or `@arpeggio(bracket)`, and its ends in MusicXML) now covers the held members only, as old prints draw it (Kücken Op.47-3 bar 70). The `.ly` sets `Arpeggio.positions` from the full-size heads. A chord with no struck member is unchanged.
 

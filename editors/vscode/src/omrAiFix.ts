@@ -1751,7 +1751,7 @@ function rowParts(run: FixRun, r: FixRow): RowParts {
         : r.proposal.reason || '';
     const aiLine = aiSaid ? `<span class="ai-said"><b>AI:</b> ${esc(aiSaid)}</span>` : '';
     const reason = edited
-        ? esc(gate && gate.problems.length ? `Your edit: ${gate.problems.join(' / ')}` : gate ? 'Your edit.' : 'Your edit — checking…')
+        ? esc(gate ? 'Your edit.' : 'Your edit — checking…')
             + (aiLine ? ` ${aiLine}` : '')
         : !r.asked ? esc(r.ai ? '' : 'Click a note or the text under the picture to edit this bar.')
         : aiLine;
@@ -1763,14 +1763,16 @@ function rowParts(run: FixRun, r: FixRow): RowParts {
     const hint = !edited && r.asked && !r.ai && barOf(r) === undefined && base
         ? ' <span class="dim">— click a note or the text to edit the bar yourself</span>' : '';
     const lost = r.state === 'skipped' ? '<span class="bad">Not written: the line has changed since the panel opened it.</span> ' : '';
-    // The compiler's current word on the bar the Draft shows (owner's request 2026-11-20: an
-    // `@stuck` typed for `@struck` was ignored and the panel said nothing): the warnings on your
-    // edit or the AI's bar, or the errors and warnings on the bar as it stands — what the Problems
-    // panel says of that line. They fail no gate.
-    const said = edited ? gate?.warnings ?? []
-        : hasProposal(r) ? r.gate?.warnings ?? []
-        : currentDiagnosticsOn(r.base.baseline, t);
-    const warned = said.length ? `<span class="warn">${said.map(w => `⚠ ${esc(w)}`).join('<br>')}</span>` : '';
+    // The compiler's current word on the bar the Draft shows (owner's requests 2026-11-20: an
+    // `@stuck` typed for `@struck` was ignored and the panel said nothing; then an error, written
+    // in the plain text of the row's line, went unseen beside the coloured warning): what failed
+    // your edit (red, ✖) and its warnings (⚠), the AI's bar's warnings, or the errors and warnings
+    // on the bar as it stands — what the Problems panel says of that line. Warnings fail no gate.
+    const now = edited || hasProposal(r) ? undefined : currentDiagnosticsOn(r.base.baseline, t);
+    const errs = edited ? gate?.problems ?? [] : now?.errors ?? [];
+    const warns = edited ? gate?.warnings ?? [] : hasProposal(r) ? r.gate?.warnings ?? [] : now?.warnings ?? [];
+    const warned = (errs.length ? `<span class="err">${errs.map(e => `✖ ${esc(e)}`).join('<br>')}</span>` : '')
+        + (warns.length ? `<span class="warn">${warns.map(w => `⚠ ${esc(w)}`).join('<br>')}</span>` : '');
     // Accept writes the row's bar (the person's or the AI's), else takes its marks out, else —
     // with keep/add @todo — writes the mark; a bar with none of these has nothing to write.
     const marked = resolvedLine(t.written) !== t.written;
@@ -1998,6 +2000,7 @@ tr.body td { padding-top: 2px; }
 .gates { margin-right:8px; white-space:nowrap; }
 .ok { color: var(--vscode-testing-iconPassed, #3c3); }
 .bad { color: var(--vscode-testing-iconFailed, #e33); }
+.err { display: block; margin-top: 2px; color: var(--vscode-editorError-foreground, #f14c4c); font-weight: 600; }
 .warn { display: block; margin-top: 2px; color: var(--vscode-editorWarning-foreground, #cca700); }
 button { padding:4px 10px; font-size:12px; border:1px solid var(--vscode-button-border, transparent); border-radius:4px; cursor:pointer; margin:0 2px 4px 0;
          background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
