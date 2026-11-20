@@ -170,74 +170,266 @@ $template = @'
 </div></div>
 <header><div class="wrap">
   <h1 class="brand">Lily#</h1>
-  <p class="tagline">Publication-quality sheet music from plain text — engraved by a
-  LilyPond port, edited in Lily# Studio, an editor that keeps up with your keystrokes.</p>
+  <p class="tagline">Write music as plain text. See it engraved as you type, hear it played
+  and sung, and ask AI to compose or change it — with every note still yours to edit.</p>
   <ul class="entries">
     <li><a href="start.html">Get started &rarr;</a></li>
     <li><a href="learn.html">Learn it lesson by lesson &rarr;</a></li>
     <li><a href="scan.html">Bring in printed music from a scan or PDF &rarr;</a>
       <span class="entry-note">Windows · beta</span></li>
+    <li><a href="recording.html">Turn a recording into a chord chart &rarr;</a>
+      <span class="entry-note">Windows · preview</span></li>
     <li><a href="sing.html">Have the words of a score sung &rarr;</a></li>
+    <li><a href="songs.html">Hear music composed by AI &rarr;</a></li>
   </ul>
   {{HERO_SHOT}}
   <p class="caption">The source and the engraving, side by side. The preview follows your
   keystrokes — it does not wait for a save.</p>
 </div></header>
 
-<section id="install"><div class="wrap">
-  <p class="eyebrow">Install</p>
-  <h2>Install it, and write your first score</h2>
-  <p class="lede">Two free downloads and a few minutes. Nothing else to set up — no programming,
-  no command line.</p>
-  {{INSTALL_STEPS}}
-  <p class="note" style="margin-top:16px">Stuck? <a href="start.html">Get started</a> goes
-  through it again with a first score, step by step.</p>
+<section id="how"><div class="wrap">
+  <p class="eyebrow">In one minute</p>
+  <h2>You write music as text. Lily# does the rest.</h2>
+  <p class="lede">No dragging notes onto a staff. You type the notes, the chords and the words in
+  a plain text file, and the page beside it is always the engraved score of what you typed.</p>
+  <ol class="steps">
+    <li><b>Write</b><span>Notes are their letters: <code>c4 d e f</code> is four quarter notes.
+    A bar ends with <code>|</code>. Words, chords and drums are written the same way, in their
+    own lines.</span></li>
+    <li><b>See</b><span>The score redraws as you type, in milliseconds, with nothing to save or
+    run. Click a note on the page and the editor goes to where it is written.</span></li>
+    <li><b>Hear</b><span>Press ▶ and the score plays, every instrument. Loop the bars you
+    select, slow them down, turn parts off — and have the words
+    <a href="#sing">sung</a>.</span></li>
+    <li><b>Ask</b><span>Tell an AI model what you want — <i>“add a bass line”</i> — and judge
+    its answer as a score, not as a diff. Or let it <a href="#composed">write a whole
+    piece</a>.</span></li>
+    <li><b>Share</b><span>The same file goes out as a PDF, as MIDI or audio, or as a
+    <a href="#share">video</a> of the page with each note lit as it sounds.</span></li>
+  </ol>
+  <p class="note" style="margin-top:16px">Lily# is free and open source, and runs inside Visual
+  Studio Code. <a href="#install">Install it</a> in a few minutes, or read on to see what it
+  does.</p>
 </div></section>
 
-<section><div class="wrap">
-  <p class="eyebrow">Why Lily#</p>
-  <h2>Six things it is built to do</h2>
-  <p class="lede">Most are shown further down, with the evidence.</p>
-  <div class="cols4">
-    <div class="pillar"><span class="n">01</span><h3>LilyPond's engraving</h3>
-      <p>Beam quanting, slur and tie scoring, skylines, springs and page breaking are
-      transliterated from LilyPond's own source — not approximated from its output.</p></div>
-    <div class="pillar"><span class="n">02</span><h3>A grammar you can read</h3>
-      <p>One canonical form per idea, no backslash constructs, and octaves that can be
-      absolute so a mistake never cascades.</p></div>
-    <div class="pillar"><span class="n">03</span><h3>Preview that keeps up</h3>
-      <p>A keystroke reparses incrementally and reuses the systems it did not disturb, so
-      the score redraws in milliseconds. It plays too: the bars you select, round and round,
-      slower or faster, with a metronome and the parts you choose — and it shows each part's
-      range. <a href="editor.html#practice">Practice playback &rarr;</a></p></div>
-    <div class="pillar"><span class="n">04</span><h3>AI that compiles first</h3>
-      <p>Ask in words, and every candidate is compiled and repaired before you see it,
-      engraved with what changed in green. A candidate that adds errors is never shown. It uses
-      the models VS Code offers you, such as GitHub Copilot's.</p></div>
-    <div class="pillar"><span class="n">05</span><h3>Lily# Studio knows the grammar</h3>
-      <p>Completion offers what can actually come next — after <code>singer&nbsp;sings&nbsp;NAME</code>
-      it proposes <code>on</code>, then the part names that exist in your file. Rename a
-      part and every reference to it moves with it. Hover a chord and it names itself — symbol,
-      degree and pitches. An octave mark or a duration typed anywhere on a note lands in its
-      slot, <code>Ctrl+Shift+Up/Down</code> steps to the next note of the key (PageUp/PageDown an octave) or a chord shape — and on a tempo, key, clef, dynamic, articulation, time, octave, transpose or shift changes it, no typing — and the note you
-      land on sounds. <a href="editor.html">Everything Lily# Studio does &rarr;</a></p></div>
-    <div class="pillar"><span class="n">06</span><h3>One source, every score</h3>
-      <p>A file can carry more than one <code>score</code> and more than one
-      <code>form</code>. The full score, the separate parts, a staff-less chord grid and a
-      practice excerpt all come out of the same notes — so they cannot drift apart. Write a
-      progression once and print it both above the melody and as its own chart. Chord
-      diagrams follow the score, not the file: <code>chordTuning guitar</code> or
-      <code>ukulele</code>, <code>chordDiagrams none</code> or <code>all</code>, and a chord
-      list at the head turn the same progression into a guitar book, a ukulele book and a
-      piano score; the capo and the shapes are the piece's own.
-      <a href="chords.html">Chords and chord diagrams &rarr;</a></p></div>
+<section id="lyrics"><div class="wrap">
+  <p class="eyebrow">01 — Words</p>
+  <h2>Lyrics are a line of text, bar by bar</h2>
+  <p class="lede">You do not attach a syllable to each note in a dialog box. You write the words
+  of each bar between the same <code>|</code> that end the music's bars, and Lily# sets each
+  syllable under its note.</p>
+  <div class="cols2" style="align-items:start">
+    <div>
+      <pre>melody {
+  g4 a b d   | c4 b a r    | b4 c d g   | fis4 e d r |
+  e4 fis g e | d4 b g r    | a4 b c a   | b4 a g2    |
+}
+lyrics words {
+  Write a line of   | words for me, | set them on the | mel- o- dy;    |
+  press the key and | lend an ear:  | what you wrote is | what you hear. |
+}</pre>
+      <p class="note">The melody and its words, as they are written in the file. The picture
+      is what Lily# engraves from them, with a piano part added.</p>
+    </div>
+    <ul class="plain">
+      <li><b>A space</b> moves to the next note. <b><code>-</code></b> joins the syllables of
+      one word (<code>mel- o- dy</code>), and <b><code>~</code></b> holds a syllable over one
+      more note.</li>
+      <li><b>The bar lines are shared.</b> A bar with one syllable too many is underlined
+      where it happens, so a slip stays inside its bar instead of pushing every later word out
+      of place.</li>
+      <li><b>More verses, more languages</b> are more lines of the same kind.
+      <a href="lesson-07-lyrics.html">The lesson on lyrics &rarr;</a></li>
+    </ul>
+  </div>
+  <div class="paper" style="margin-top:28px"><img src="examples/sing-first.svg" style="width:100%" alt="Eight bars of a melody with the words 'Write a line of words for me, set them on the melody' under the notes, over a piano part"></div>
+</div></section>
+
+<section id="sing"><div class="wrap">
+  <p class="eyebrow">02 — Voice</p>
+  <h2>Then press ▶, and the words are sung</h2>
+  <p class="lede">One more line — <code>singer female on melody</code> — and a synthetic voice
+  sings the lyrics on their notes, in time with the other instruments.</p>
+  <div class="cols2" style="align-items:start">
+    <figure class="demo-video" style="margin:0">
+      <video src="videos/sing-first.mp4" controls playsinline preload="metadata"></video>
+      <figcaption>A melody with words and a piano, sung. This is the video Lily# itself
+      exports: nothing was recorded.</figcaption>
+    </figure>
+    <ul class="plain">
+      <li><b>It follows your edits.</b> Change a word or a note and only the phrase you touched
+      is sung again; the rest is kept.</li>
+      <li><b>Free voices, on your own computer.</b> Singing comes from a separate free
+      extension, Cantoria, which drives engines you install yourself —
+      <b>DiffSinger</b>, <b>NEUTRINO</b> and <b>VOICEVOX</b>. Nothing is sent anywhere.</li>
+      <li><b>Several singers, several languages.</b> Each part can have its own voice, and a
+      voice sings Japanese — or English, Chinese or Korean where the voice knows them.</li>
+      <li><b>Each voice has its maker's terms.</b> The engines and voices are their authors'
+      work, downloaded from them, and their conditions of use are theirs.
+      <a href="sing.html">How to set up singing &rarr;</a></li>
+    </ul>
   </div>
 </div></section>
 
-<section><div class="wrap">
-  <p class="eyebrow">01 — Engraving</p>
-  <h2>What comes out</h2>
-  <p class="lede">Six pages, one engine. Each is a plain <code>.lys</code> file rendered
+<section id="composed"><div class="wrap">
+  <p class="eyebrow">03 — Composed by AI</p>
+  <h2>AI writes the score, not a sound file</h2>
+  <p class="lede">Because a Lily# score is text, a language model can write one from the first
+  bar to the last. What you get back is not a recording you can only replay: it is sheet music
+  you can read, play, correct note by note, and print.</p>
+  <div class="cols2" style="align-items:start">
+    <figure class="demo-video" style="margin:0">
+      <video src="videos/songs/Zunda-to-Metan-no-Jikoshokai.mp4" controls playsinline preload="metadata" style="max-width:520px"></video>
+      <figcaption>A song for two voices and a band, composed by an AI model in GitHub Copilot's
+      chat and sung by two synthetic voices. The whole file is on the
+      <a href="songs.html#zundamon-and-metan">songs page</a>.</figcaption>
+    </figure>
+    <ul class="plain">
+      <li><b>Lily# checks what the model wrote.</b> A bar that is too long, a word with no
+      note, a name that does not exist: each is reported with its place, and the model fixes
+      it before you hear it.</li>
+      <li><b>It reviews the piece as music, too.</b> A part that never changes its figure,
+      chords too low to sound clear, a melody that is all one rhythm — the model is told what
+      to look at, and writes again.</li>
+      <li><b>The result stays yours.</b> Open the file, move a note, change a word, ask for
+      another verse. Nothing is locked inside a generator.</li>
+      <li><b>Seven pieces, with their files:</b> songs in Japanese, Korean, English and
+      Chinese, a piano piece, a bossa nova with its harmony explained, and a string quartet.
+      <a href="songs.html">Music composed by AI &rarr;</a></li>
+    </ul>
+  </div>
+</div></section>
+<section id="ask"><div class="wrap">
+  <p class="eyebrow">04 — Ask AI</p>
+  <h2>Ask for a change, and judge it as a score</h2>
+  <p class="lede">Press <code>Ctrl+I</code> (<code>Cmd+I</code> on macOS) or ✨ in the
+  preview, and ask in words —
+  <i>"add a bass line"</i>, <i>"harmonise this in thirds"</i>, <i>"transpose up a fourth"</i>.
+  What comes back is not a text diff to squint at: it is a rendered score, what changed in
+  green, and it has already been compiled.</p>
+  <div class="box"><pre class="mermaid">{{AI_FLOW}}</pre></div>
+  <div class="cols2" style="margin-top:26px">
+    <ul class="plain">
+      <li><b>Broken candidates never reach you.</b> Each one is compiled in-process; its own
+      diagnostics go back to the model for up to two repair rounds.</li>
+      <li><b>You judge on the notation.</b> The candidate renders beside the original with an
+      After/Before toggle, the notes the AI changed in green and its own word on what it did;
+      ▶ plays it before you decide.</li>
+      <li><b>Nothing is touched until you accept.</b> One <code>WorkspaceEdit</code>, and one
+      <code>Ctrl+Z</code> undoes it.</li>
+    </ul>
+    <ul class="plain">
+      <li><b>The model always has the grammar.</b> <code>docs/GRAMMAR_FOR_LLM.md</code> is copied
+      into Lily# Studio at build time, so the canon ships with it and cannot drift. It reads
+      the whole file, and answers with edits.</li>
+      <li><b>Point at the bars.</b> Select them in the text or on the score (Shift-click), or
+      right-click a note or a bar: the place is a hint of where to look, and the whole score
+      stays open to change — a new part brings its score row with it.</li>
+      <li><b>Your model, no telemetry.</b> It runs on the language models VS Code offers you —
+      GitHub Copilot's, or another provider's — and outcomes go to an output channel on your
+      machine. <a href="editor.html#ai">More on the AI features &rarr;</a></li>
+    </ul>
+  </div>
+</div></section>
+
+<section id="editor"><div class="wrap">
+  <p class="eyebrow">05 — The editor</p>
+  <h2>An editor that knows what a note is</h2>
+  <p class="lede">Lily# Studio is not a text editor with colours. It knows the key you are in,
+  the chord under the caret and the parts your file has — so one pair of keys does the musical
+  thing, wherever you are.</p>
+  <div class="cols2" style="align-items:start">
+    <div>
+      <table>
+        <tr><th>The caret is on</th><th><kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd></th></tr>
+        <tr><td>a note</td><td>moves it to the next note <b>of the key</b>: in F major,
+        <code>a</code> → <code>bes</code> → <code>c</code></td></tr>
+        <tr><td>a chord</td><td><b>inverts</b> it: the lowest note goes up an octave</td></tr>
+        <tr><td>a chord name</td><td>walks the <b>shapes a guitarist can hold</b>, and draws
+        the diagram</td></tr>
+        <tr><td>a tempo, a key, a dynamic, a clef</td><td>changes it one step, with no
+        typing</td></tr>
+      </table>
+      <p class="note">With <kbd>PageUp</kbd> / <kbd>PageDown</kbd> instead, a note moves an
+      octave and a chord name walks the chords of the key:
+      <code>Cmaj7</code> → <code>Dm7</code> → <code>Em7</code> → <code>Fmaj7</code>. The note you
+      land on sounds. <a href="editor.html#step">Stepping &rarr;</a></p>
+    </div>
+    <ul class="plain">
+      <li><b>It completes what can come next.</b> After <code>singer female on</code> it offers
+      the part names that exist in your file, not every word it knows.</li>
+      <li><b>Hover a chord and it names itself</b> — symbol, degree and pitches.</li>
+      <li><b>Rename a part</b> and every reference to it moves with it.</li>
+      <li><b>Mistakes are underlined where they are,</b> in plain words: a bar one beat too
+      long says which bar and by how much.</li>
+      <li><b>Practice with it.</b> Loop the bars you select, slower or faster, with a
+      metronome and only the parts you choose.
+      <a href="editor.html#practice">Practice playback &rarr;</a></li>
+      <li><a href="editor.html">Everything Lily# Studio does &rarr;</a></li>
+    </ul>
+  </div>
+</div></section>
+
+<section id="scores"><div class="wrap">
+  <p class="eyebrow">06 — One source</p>
+  <h2>Write the music once, print it every way you need</h2>
+  <p class="lede">The notes are written once. A <code>score</code> block only says what to print
+  of them, so another layout is a few more lines — and a note you correct is corrected in all
+  of them.</p>
+  <div class="cols2" style="align-items:start">
+    <pre>score {                 // the full score
+  staff vox
+  lyrics words
+  staff keys
+  staff bass
+  staff kit
+}
+
+score vocal {           // the singer's part alone
+  staff vox
+  lyrics words
+}</pre>
+    <ul class="plain">
+      <li><b>A conductor's score and each player's part,</b> a lead sheet, a chord chart with
+      no staff, a practice excerpt: all are scores of one file, each written out under its own
+      name.</li>
+      <li><b>Notation and tablature</b> of one guitar part, side by side — and the same
+      progression as a guitar book, a ukulele book and a piano score.
+      <a href="chords.html">Chords and chord diagrams &rarr;</a></li>
+      <li><b>One song in four languages:</b> the same tune with Korean, English, Japanese and
+      Chinese words, each a score with its own title and its own singer.
+      <a href="songs.html#spring-breeze-bicycle">See it &rarr;</a></li>
+    </ul>
+  </div>
+</div></section>
+
+<section id="share"><div class="wrap">
+  <p class="eyebrow">07 — Share</p>
+  <h2>A video anyone can follow, and every format a musician asks for</h2>
+  <p class="lede">The videos on this page were not filmed. <b>Export as MP4</b> writes the
+  engraved pages with their sound, each note lit while it plays and the page turning by
+  itself — so someone with no software at all can read along.</p>
+  <div class="cols4">
+    <div class="pillar"><h3>To read</h3>
+      <p>PDF for print, SVG and PNG for a page or a slide.</p></div>
+    <div class="pillar"><h3>To hear</h3>
+      <p>WAV and MP3 as the preview plays it, MIDI for a sequencer, MP4 with the score on
+      screen.</p></div>
+    <div class="pillar"><h3>To take elsewhere</h3>
+      <p>MusicXML for other notation programs, LilyPond source, and a VOCALOID sequence for
+      the vocal line. Printed music comes <i>in</i> too, from a scan or a PDF
+      (<a href="scan.html">Windows, beta</a>).</p></div>
+  </div>
+  <p class="note" style="margin-top:16px">Every export is a command in the editor, and a command
+  line tool for batches. <a href="commands.html#export">Export &rarr;</a></p>
+</div></section>
+
+<section id="engraving"><div class="wrap">
+  <p class="eyebrow">08 — Engraving</p>
+  <h2>The page looks like published music</h2>
+  <p class="lede">Lily# engraves with LilyPond's own rules — how beams slant, how slurs curve, how
+  notes are spaced and pages broken are transliterated from LilyPond's source, not approximated
+  from its output. Six pages, one engine. Each is a plain <code>.lys</code> file rendered
   with <code>lysc svg</code>; the source is under every one.</p>
 
   <div class="gallery">
@@ -312,8 +504,8 @@ $template = @'
   </div>
 </div></section>
 
-<section><div class="wrap">
-  <p class="eyebrow">02 — Grammar</p>
+<section id="grammar"><div class="wrap">
+  <p class="eyebrow">09 — Grammar</p>
   <h2>Explicit, and only one way to say it</h2>
   <div class="cols2">
     <div>
@@ -337,37 +529,14 @@ $template = @'
   </div>
 </div></section>
 
-<section><div class="wrap">
-  <p class="eyebrow">03 — AI</p>
-  <h2>It compiles the answer before showing it to you</h2>
-  <p class="lede">Press <code>Ctrl+I</code> (<code>Cmd+I</code> on macOS) or ✨ in the
-  preview, and ask in words —
-  <i>"add a bass line"</i>, <i>"harmonise this in thirds"</i>, <i>"transpose up a fourth"</i>.
-  What comes back is not a text diff to squint at: it is a rendered score, what changed in
-  green, and it has already been compiled.</p>
-  <div class="box"><pre class="mermaid">{{AI_FLOW}}</pre></div>
-  <div class="cols2" style="margin-top:26px">
-    <ul class="plain">
-      <li><b>Broken candidates never reach you.</b> Each one is compiled in-process; its own
-      diagnostics go back to the model for up to two repair rounds.</li>
-      <li><b>You judge on the notation.</b> The candidate renders beside the original with an
-      After/Before toggle, the notes the AI changed in green and its own word on what it did;
-      ▶ plays it before you decide.</li>
-      <li><b>Nothing is touched until you accept.</b> One <code>WorkspaceEdit</code>, and one
-      <code>Ctrl+Z</code> undoes it.</li>
-    </ul>
-    <ul class="plain">
-      <li><b>The model always has the grammar.</b> <code>docs/GRAMMAR_FOR_LLM.md</code> is copied
-      into Lily# Studio at build time, so the canon ships with it and cannot drift. It reads
-      the whole file, and answers with edits.</li>
-      <li><b>Point at the bars.</b> Select them in the text or on the score (Shift-click), or
-      right-click a note or a bar: the place is a hint of where to look, and the whole score
-      stays open to change — a new part brings its score row with it.</li>
-      <li><b>Your model, no telemetry.</b> It runs on the language models VS Code offers you —
-      GitHub Copilot's, or another provider's — and outcomes go to an output channel on your
-      machine. <a href="editor.html#ai">More on the AI features &rarr;</a></li>
-    </ul>
-  </div>
+<section id="install"><div class="wrap">
+  <p class="eyebrow">Install</p>
+  <h2>Install it, and write your first score</h2>
+  <p class="lede">Two free downloads and a few minutes. Nothing else to set up — no programming,
+  no command line.</p>
+  {{INSTALL_STEPS}}
+  <p class="note" style="margin-top:16px">Stuck? <a href="start.html">Get started</a> goes
+  through it again with a first score, step by step.</p>
 </div></section>
 
 <footer><div class="wrap">

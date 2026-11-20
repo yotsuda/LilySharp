@@ -1,0 +1,116 @@
+// Composed in Claude Code (Claude Fable 5.2), 2026-11-19
+// Asked: Write some good pieces for a page of music composed by AI.
+// The AI: A piano piece in G major at 76. Its two-bar theme falls a sixth and settles through an appoggiatura; the middle section turns it upside down in E minor, the return climbs to B5, and a deceptive cadence leads to a quiet close.
+
+octave relative
+pitch concert
+
+title "A Window After the Rain"
+tempo "Andante" 4 = 76
+time 4/4
+key g major
+
+// A note to the player, in Markdown: printed in a box under the title.
+```md start box xMargin 20mm
+**To the player.** Let the left hand ring: one pedal to a bar, changed on the bass note.
+
+- The theme falls and then *leans* on its long note (bars 2 and 4). Arrive a little late and let it fade.
+- In the middle section the same shape climbs instead of falling. Play it **softer** than the opening, not louder.
+- The octaves at the return are the one *forte* of the piece. Everything after them is an afterthought.
+```
+
+part rh { instrument piano-right }
+part lh { instrument piano-left }
+
+section A {
+  rh {
+    d''4.@mp b8 g4 a8 b8 |
+    c4 b8 g8~ g2 |
+    e'4. c8 a4 b8 c8 |
+    d4 c8 a8~ a2 |
+    d4.@cresc b8 g4 b8 d8 |
+    g4.@mf e8 c4 e8 d8 |
+    c4@decresc b8 a8~ a4 fis4 |
+    g1 |
+  }
+  lh {
+    g,8@mp@sustain d'8 g8 b8 d8 b8 g8 d8 |
+    e,8@sustain b'8 d8 g8 b8 g8 d8 b8 |
+    c,8@sustain g'8 c8 e8 g8 e8 c8 g8 |
+    d8@sustain a'8 c8 fis8 a8 fis8 c8 a8 |
+    b8@cresc@sustain d8 g8 b8 d8 b8 g8 d8 |
+    a8@mf@sustain e'8 g8 c8 e8 c8 g8 e8 |
+    d,8@decresc@sustain a'8 e'8 g8 d,8@sustain a'8 c8 fis8 |
+    g,8@sustain d'8 g8 b8 d2 |
+  }
+}
+
+section B {
+  rh {
+    r8 e'8@p g8 b8 e4. d8 |
+    d4 b8 fis8~ fis2 |
+    r8 e8 g8 c8 e4. d8 |
+    d2 b4 g4 |
+    r8 a8@cresc c8 e8 a4. g8 |
+    fis4.@mf dis8 b4 a4 |
+    g2@decresc e'4. d8 |
+    c4. a8 fis2 |
+  }
+  lh {
+    e,4@p@sustain <e' g b>4 <g b e>4 <e g b>4 |
+    d,4@sustain <d' fis b>4 <fis b d>4 <d fis b>4 |
+    c,4@sustain <e' g c>4 <g c e>4 <e g c>4 |
+    g,4@sustain <d' g b>4 <g b d>4 <d g b>4 |
+    a4@cresc@sustain <e' a c>4 <a c e>4 <e a c>4 |
+    b,4@mf@sustain <dis' fis a>4 <fis a dis>4 <dis fis a>4 |
+    c,4@decresc@sustain <e' g c>4 <g c e>4 <e g c>4 |
+    d,4@sustain <fis' a c>4 <fis a c d>2 |
+  }
+}
+
+section A2 {
+  rh {
+    d''4.@mp b8 g4 a8 b8 |
+    c4 b8 g8~ g2 |
+    e'4. c8 a4 b8 c8 |
+    d4@cresc c8 a8~ a4 d8 fis8 |
+    g4. d8 b4 d8 g8 |
+    <b, b'>4.@f <g g'>8 <e e'>4 <g g'>8 <fis fis'>8 |
+    e'4@decresc d8 c8~ c4 a4 |
+    g2@mp r8 g8 a8 b8 |
+  }
+  lh {
+    g,8@mp@sustain d'8 g8 b8 d8 b8 g8 d8 |
+    e,8@sustain b'8 d8 g8 b8 g8 d8 b8 |
+    c,8@sustain g'8 c8 e8 g8 e8 c8 g8 |
+    d8@cresc@sustain a'8 c8 fis8 a8 fis8 c8 a8 |
+    b8@sustain d8 g8 b8 d8 b8 g8 d8 |
+    e,8@f@sustain b'8 e8 g8 b8 g8 e8 b8 |
+    a8@decresc@sustain e'8 g8 c8 d,,8@sustain a'8 c8 fis8 |
+    e,8@mp@sustain b'8 e8 g8 b8 g8 e8 b8 |
+  }
+}
+
+section Coda {
+  rh {
+    e''4. c8 a4 b8 c8 |
+    d4@decresc c8 a8~ a2 |
+    d4.@p@rit b8 g2 |
+    <b, d g>1@pp@!rit@fermata |
+  }
+  lh {
+    c,8@sustain g'8 c8 e8 g8 e8 c8 g8 |
+    d8@decresc@sustain a'8 c8 fis8 a8 fis8 c8 a8 |
+    g8@p@sustain d'8 g8 b8 d2 |
+    <g,,, g'>1@pp@fermata@!sustain |
+  }
+}
+
+form { ~A ~B ~A2 ~Coda }
+
+score {
+  grandStaff {
+    staff rh
+    staff lh
+  }
+}

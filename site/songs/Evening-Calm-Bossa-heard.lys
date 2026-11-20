@@ -1,0 +1,58 @@
+// read from Evening-Calm-Bossa.wav by dettato
+title "Evening-Calm-Bossa"
+tempo 4 = 132
+time 4/4
+key f major
+
+// Shift+Ctrl+Up/Down on the font name switches the font
+fonts { music "Petaluma" }
+
+// Ctrl+. on a section's name offers Join Sections (with the next one, or all the sections selected)
+section A {
+  chords harmony {
+    // Shift+Ctrl+Up/Down on a chord name shows its guitar chord diagram; on X@or(Y), swaps in Y and plays it
+    F@or(Fm7) C@or(Csus4) | Gm7@or(C7) C7 | F@or(Fm) C@or(Csus4) | Gm7@or(C7) C7 | break
+  }
+}
+
+section B {
+  chords harmony {
+    Fmaj7 | Fmaj7 C@or(Fmaj7) | Gm7 | C |
+    Am7 | D7@or(Dm7) | Gm7 | C@or(Csus4) | break
+  }
+}
+
+section C {
+  chords harmony {
+    Fmaj7 | Fmaj7 C@or(Fmaj7) | Gm7 | C |
+    Am7 | Dm | Gm7 C7@or(Cm7) | F@or(C7) | break
+  }
+}
+
+section D {
+  chords harmony {
+    Bbmaj7 F | Bb | Bbm7@or(Bb7) Eb@or(Ebsus4) | F C |
+    C/E@or(Em7) Am7 | Dm | G | Gm7@or(G) C | break
+  }
+}
+
+section B2 {
+  chords harmony {
+    Fmaj7 | Fmaj7 C@or(Fmaj7) | Gm7 | C |
+    Am7 | D7@or(Dm7) | Gm7 | C7@or(Csus4) | break
+  }
+}
+
+section C2 {
+  chords harmony {
+    Fmaj7 | Fmaj7@or(C) | Gm7 | C7 |
+    Am7 | Dm7 | Gm7 C7@or(Cm7) | F@or(C7) |
+    Fmaj7 | Bbm@or(Bbmaj7) F@or(Fsus4) | Fmaj7 | Fmaj7 | break
+  }
+}
+
+form { A B C D B2 C2 }
+
+score {
+  chords harmony
+}

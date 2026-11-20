@@ -1,0 +1,194 @@
+// Composed in Claude Code (Claude Fable 5.2), 2026-11-19
+// Asked: Write good songs for a page of music composed by AI - one of them in Chinese.
+// The AI: A ballad in G major at 76 for a baritone, flute and piano, its tune on the five notes G A B D E. The verse is low and even; the chorus opens on its highest note calling the moon, and closes on the tonic only the second time round.
+
+octave relative
+pitch concert
+language chinese
+
+title "江上月"      // "Moon on the River"
+tempo 4 = 76
+time 4/4
+key g major
+
+part vox { instrument baritone  lyrics words }
+part fl "Flute" "Fl." { instrument flute }
+part rh "Piano" "Pno." { instrument piano-right }
+part lh { instrument piano-left }
+
+// The chorus's first three lines (six bars)
+phrase hook {
+  e'4 d8 b8~ b4 a8 d8~ |
+  d2. r4 |
+  r4 d4 b4 d4 |
+  a4 g2 r4 |
+  e'2 e8 d8 b8 a8~ |
+  a2. r4 |
+}
+
+// Left hand: one broken chord a bar
+phrase lG   { g,,8@sustain d'8 g8 b8 d8 b8 g8 d8 | }
+phrase lEm  { e,8@sustain b'8 e8 g8 b8 g8 e8 b8 | }
+phrase lC   { c,8@sustain g'8 c8 e8 g8 e8 c8 g8 | }
+phrase lD   { d,8@sustain a'8 d8 fis8 a8 fis8 d8 a8 | }
+phrase lAm  { a,,8@sustain e'8 g8 c8 e8 c8 g8 e8 | }
+phrase lBm  { b,,8@sustain fis'8 a8 d8 fis8 d8 a8 fis8 | }
+phrase lD7  { d,8@sustain a'8 c8 fis8 a8 fis8 c8 a8 | }
+phrase lAmD { a,,8@sustain e'8 g8 c8 d,8@sustain a'8 c8 fis8 | }
+
+// Right hand, chorus: the chord, then two of its notes climbing
+phrase rC   { <e' g c>2 g4 c4 | }
+phrase rD   { <d' fis a>2 fis4 a4 | }
+phrase rBm  { <d' fis a>2 fis4 b4 | }
+phrase rEm  { <e' g b>2 g4 b4 | }
+phrase rAm  { <e' g c>2 e4 g4 | }
+phrase rD7  { <c' fis a>2 fis4 a4 | }
+phrase rG   { <d' g b>2 g4 b4 | }
+
+section Intro {
+  vox { R | R | R | R | }
+  fl {
+    e'''4@mf d8 b8~ b4 a8 d8~ |
+    d2. r4 |
+    d4 b8 a8~ a4 g4 |
+    a1@decresc |
+  }
+  rh {
+    <e' g c>1@mf |
+    <d fis a>1 |
+    <d fis a>2 <e g b>2 |
+    <d fis a>1@decresc |
+  }
+  lh {
+    <>@mf lC lD
+    b,8@sustain fis'8 a8 d8 e,8@sustain b'8 e8 g8 |
+    d,8@decresc@sustain a'8 d8 fis8 a2 |
+  }
+  lyrics words { | | | | }
+}
+
+section Verse {
+  vox {
+    d4@mp e4 g4. a8 |
+    b4 a8 g8~ g2 |
+    r4 e8 g8 a4 g4 |
+    e4 e8 d8~ d4 r4 |
+    d4 e4 g4. a8 |
+    d4 a8 b8~ b2 |
+    r8 b8 a8 g8 e4 g4 |
+    b4 a2 r4 |
+  }
+  fl {
+    R |
+    r2 b''8@mp a8 g4 |
+    R |
+    r2 a8 b8 d4 |
+    R |
+    r2 e,8 g8 b4 |
+    R |
+    r4 a4@cresc b4 d4 |
+  }
+  rh {
+    <d' g b>1@mp |
+    <e g b>1 |
+    <e g c>1 |
+    <d fis a>1 |
+    <d g b>1 |
+    <e g b>1 |
+    <e g c>1@cresc |
+    <d fis a>1 |
+  }
+  lh { <>@mp lG lEm lC lD lG lEm <>@cresc lAm lD }
+  lyrics words {
+    verse 1 {
+      月 光 轻 轻 | 落 江 上 |
+      小 船 慢 慢 | 向 远 方 |
+      风 里 传 来 | 谁 的 歌 |
+      一 声 一 声 到 | 天 亮 |
+    }
+    verse 2 {
+      江 边 灯 火 | 一 点 点 |
+      照 亮 我 回 | 家 路 上 |
+      你 在 梦 里 | 等 我 吗 |
+      我 把 想 念 寄 | 月 光 |
+    }
+  }
+}
+
+section Chorus {
+  vox {
+    <>@mf hook
+    g4 a8 b8~ b4 d8 e8~ |
+    e2( d2) |
+    hook
+    g4 a8 b8~ b4 a8 g8~ |
+    g1 |
+  }
+  fl {
+    R | R | R | R |
+    e''2.@mf d4 |
+    fis2 a2 |
+    b1 |
+    a2. r4 |
+    r2 g2 |
+    a1 |
+    r2 fis2 |
+    g1 |
+    e2. d4 |
+    fis2 a2 |
+    c2 a2 |
+    b1 |
+  }
+  rh {
+    <>@mf rC rD rBm rEm rAm rD7 rG rD
+    rC rD rBm rEm rAm rD7
+    <e' g c>2 <c fis a>2 |
+    <d g b>1 |
+  }
+  lh {
+    <>@mf lC lD lBm lEm lAm lD7 lG lD
+    lC lD lBm lEm lAm lD7 lAmD
+    g,,8@sustain d'8 g8 b8 d2 |
+  }
+  lyrics words {
+    月 亮 啊 月 亮 | | 请 你 慢 | 慢 走 | 带 上 我 的 心 | | 飞 到 她 身 旁 | |
+    月 亮 啊 月 亮 | | 轻 轻 照 | 她 窗 | 告 诉 她 今 夜 | | 我 也 在 远 望 | |
+  }
+}
+
+section Coda {
+  vox { R | R | R | R | }
+  fl {
+    e'''4@mp d8 b8~ b4 a8 d8~ |
+    d2@decresc b4 a4 |
+    g1@p~ |
+    g1@fermata |
+  }
+  rh {
+    <e' g c>1@mp |
+    <d fis a>1@decresc |
+    <d g b>1@p~ |
+    <d g b>1@fermata |
+  }
+  lh {
+    <>@mp lC
+    <>@decresc lD
+    <>@p lG
+    <g,, d g'>1@fermata@!sustain |
+  }
+  lyrics words { | | | | }
+}
+
+singer "diffsinger/TIGER" on vox
+
+form { ~Intro Verse Chorus Verse Chorus ~Coda }
+
+score {
+  staff vox
+  lyrics words
+  staff fl
+  grandStaff {
+    staff rh
+    staff lh
+  }
+}

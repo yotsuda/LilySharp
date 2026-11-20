@@ -1,0 +1,289 @@
+// Composed in Claude Code (Claude Fable 5.2), 2026-11-19
+// Asked: Write good songs for a page of music composed by AI - one of them in Korean.
+// The AI: An upbeat pop song in F major at 120 for a voice, electric piano, bass and drums. The verse stays low over a pushed bass; the chorus opens high on "run, run" over four on the floor and climbs to F5 in its last line; the bridge drops to half time before the last chorus.
+
+octave relative
+pitch concert
+language korean
+
+title "봄바람 자전거"      // "Spring Breeze Bicycle"; each other score gives the title in its own language
+tempo 4 = 120
+time 4/4
+key f major
+
+// The same tune in four languages: `words` is the Korean it was written to; `en`, `ja` and `zh`
+// are sung by the scores `english`, `japanese` and `chinese` at the end of the file.
+part vox { instrument soprano  lyrics words  lyrics en  lyrics ja  lyrics zh }
+part keys "Keys" "Kb." { instrument piano-right midiInstrument "electric piano 1" }
+part bass "Bass" "Bs." { instrument bass midiInstrument "electric bass (finger)" }
+part kit "Drums" "Dr." { clef percussion }
+
+// Keys, verse: the chord pushed an eighth before beat 3
+phrase vF  { <a c f>4. <a c f>8~ <a c f>2 | }
+phrase vC  { <g c e>4. <g c e>8~ <g c e>2 | }
+phrase vBb { <bes d f>4. <bes d f>8~ <bes d f>2 | }
+phrase vC7 { <bes c e>4. <bes c e>8~ <bes c e>2 | }
+
+// Keys, chorus: short chords round the beat (Am7 is the C shape over A, Dm7 the F shape over D)
+phrase cF  { <a c f>8 q8 r8 q8 r8 q8 q4 | }
+phrase cC  { <g c e>8 q8 r8 q8 r8 q8 q4 | }
+phrase cBb { <bes d f>8 q8 r8 q8 r8 q8 q4 | }
+phrase cGmC { <bes d f>8 q8 r8 q8 <bes c e>8 q8 r8 q8 | }
+
+// Bass, verse: with the kick on 1, the push and the pickup
+phrase bvF  { f,,4. f8~ f4 r8 f8 | }
+phrase bvE  { e,,4. e8~ e4 r8 e8 | }
+phrase bvD  { d,4. d8~ d4 r8 d8 | }
+phrase bvBb { bes,,4. bes8~ bes4 r8 bes8 | }
+phrase bvG  { g,,4. g8~ g4 r8 g8 | }
+phrase bvC  { c,4. c8~ c4 r8 c8 | }
+
+// Bass, chorus: eighths on the root, the octave before the bar line
+phrase bcBb { bes,,8 bes8 bes8 bes8 bes8 bes8 bes'8 bes,8 | }
+phrase bcC  { c,8 c8 c8 c8 c8 c8 c'8 c,8 | }
+phrase bcA  { a,,8 a8 a8 a8 a8 a8 a'8 a,8 | }
+phrase bcD  { d,8 d8 d8 d8 d8 d8 d'8 d,8 | }
+phrase bcGC { g,,8 g8 g8 g8 c8 c8 c8 c8 | }
+phrase bcF  { f,,8 f8 f8 f8 f8 f8 c'8 e8 | }
+
+// Drums
+phrase hat  { hh8 hh hh hh hh hh hh hh | }
+phrase hatO { hh8 hho hh hho hh hho hh hho | }
+phrase back { r4 sn4 r4 sn4 | }
+phrase kickV { bd4. bd8 r4 r8 bd8 | }
+phrase kick4 { bd4 bd4 bd4 bd4 | }
+phrase gV { drums { hat back kickV } }
+phrase gC { drums { hatO back kick4 } }
+phrase gH { drums { { cymr4 cymr cymr cymr | } { r2 sn2 | } { bd2 r2 | } } }
+phrase fillV { drums { { hh8 hh hh hh sn16 sn sn sn tomh8 toml8 | } kickV } }
+phrase fillC { drums { { hh8 hho hh hho sn16 sn sn sn tomh8 toml8 | } kick4 } }
+
+section Intro {
+  vox { R | R | R | R | }
+  keys { <>@f cBb cC cF cC }
+  bass { <>@f bcBb bcC bcD bcC }
+  kit { <>@f gC gC gC fillC }
+  lyrics words { | | | | }
+  lyrics en language english { | | | | }
+  lyrics ja language japanese { | | | | }
+  lyrics zh language chinese { | | | | }
+}
+
+section Verse {
+  vox {
+    c'8@mf f8 f4 f8 g8 a4 |
+    g4 g8 e8~ e8 g4 r8 |
+    r8 d8 f8 f8 a4 g8 f8 |
+    f4 f8 d8~ d8 f4 r8 |
+    c8 f8 f4 f8 g8 a4 |
+    c4 a8 g8~ g8 g4 r8 |
+    r4 g8@cresc bes8~ bes4 a8 g8 |
+    g8 g8 a4 bes8 c8~ c4 |
+  }
+  keys { <>@mf vF vC vF vBb vF vC <>@cresc vBb vC7 }
+  bass { <>@mf bvF bvE bvD bvBb bvF bvE <>@cresc bvG bvC }
+  kit { <>@mf gV gV gV gV gV gV gV fillV }
+  lyrics words {
+    verse 1 {
+      햇 살 이 창 문 을 | 두 드 리 면 |
+      낡 은 자 전 거 를 | 꺼 내 타 고 |
+      바 람 이 부 는 저 | 언 덕 너 머 |
+      너 에 게 로 | 달 려 갈 거 야 |
+    }
+    verse 2 {
+      꽃 잎 이 어 깨 에 | 내 려 앉 고 |
+      페 달 을 밟 으 면 | 노 래 가 돼 |
+      조 금 은 느 려 도 | 괜 찮 잖 아 |
+      이 길 끝 에 | 네 가 서 있 어 |
+    }
+  }
+  lyrics en language english {
+    verse 1 {
+      Sun- light taps come out- side | morn- ing is here |
+      I roll my old bike out | down the long road |
+      O- ver hills past the trees | blow sweet spring wind |
+      To- day I will | ride a- way to you |
+    }
+    verse 2 {
+      Pet- als land soft and light | all a- round me |
+      My ped- als sing loud- er | like a new song |
+      Slow is fine take your time | eas- y slow down |
+      Be- cause I know | you are wait- ing there |
+    }
+  }
+  lyrics ja language japanese {
+    verse 1 {
+      あ さ の ひ か り | こ ぼ れ て |
+      ペ ダ ル ふ ん で | か け だ す |
+      お か の む こ う[お] | め ざ し て |
+      き み へ[え] と | は し っ て く |
+    }
+    verse 2 {
+      は な が ひ ら り | ま い お り |
+      う た い な が ら | す す む よ |
+      ゆ っ く り で も | い い ん だ |
+      こ の さ き | き み が い る |
+    }
+  }
+  lyrics zh language chinese {
+    verse 1 {
+      阳 光 轻 轻 敲 窗 | 把 我 叫 醒 |
+      推 出 那 辆 旧 车 | 骑 上 就 走 |
+      春 风 吹 过 山 坡 | 一 路 向 前 |
+      我 要 马 上 | 骑 到 你 身 旁 |
+    }
+    verse 2 {
+      花 瓣 落 在 我 肩 | 轻 轻 飘 下 |
+      脚 下 踏 板 转 动 | 变 成 歌 声 |
+      慢 慢 骑 也 很 好 | 不 必 慌 张 |
+      路 的 尽 头 | 有 你 在 等 我 |
+    }
+  }
+}
+
+section Chorus {
+  vox {
+    d''8@f d8 c8 d8~ d8 d8 c4 |
+    c4 a8 c8~ c8 a8 g4 |
+    r8 a8 c8 c8 e4 d8 c8 |
+    d4 d8 c8~ c8 a8 a4 |
+    d8 d8 c8 d8~ d8 d8 c4 |
+    c8 c8 e8 e8~ e8 d8 c4 |
+    r8 bes8 d8 f8~ f8 e8 d8 c8 |
+    c4 a8 g8~ g8 f4. |
+  }
+  keys { <>@f cBb cC cC cF cBb cC cGmC cF }
+  bass { <>@f bcBb bcC bcA bcD bcBb bcC bcGC bcF }
+  kit { <>@f gC gC gC gC gC gC gC fillC }
+  lyrics words {
+    달 려 라 달 려 라 | 봄 바 람 타 고 |
+    두 바 퀴 위 에 내 | 마 음 을 싣 고 |
+    달 려 라 달 려 라 | 저 하 늘 끝 까 지 |
+    오 늘 은 어 디 든 | 갈 수 있 어 |
+  }
+  lyrics en language english {
+    Ride a- way ride a- way | on the spring- time breeze |
+    Two wheels are car- ry- ing | all my heart a- long |
+    Ride a- way ride a- way | up and up touch the sky |
+    There is no place too far | on this bright day |
+  }
+  lyrics ja language japanese {
+    は し れ は し れ | は る か ぜ と |
+    と き め き の せ | は し り だ す |
+    は し れ は し れ | そ ら の か な た |
+    ど こ へ[え] だ っ て | ゆ け る さ |
+  }
+  lyrics zh language chinese {
+    向 前 冲 向 前 冲 | 追 上 那 春 风 |
+    两 个 轮 子 载 上 | 我 这 一 颗 心 |
+    向 前 冲 向 前 冲 | 冲 到 天 空 尽 头 |
+    今 天 想 去 哪 里 | 就 去 哪 里 |
+  }
+}
+
+section Bridge {
+  vox {
+    a'4@mp.subito a8 f8 a8 a8 c4 |
+    d4 d8 c8 bes8 bes4. |
+    bes4@cresc bes8 g8 bes8 bes8 d4 |
+    e4 e8 d8 c8 c4. |
+  }
+  keys {
+    <a c f>1@mp.subito |
+    <bes d f>1 |
+    <bes d f>1@cresc |
+    <bes c f>2 <bes c e>2 |
+  }
+  bass {
+    d,1@mp.subito |
+    bes1 |
+    g1@cresc |
+    c2 c4 c8 c8 |
+  }
+  kit { <>@mp.subito gH gH gH fillV }
+  lyrics words {
+    숨 이 차 올 라 도 | 멈 추 지 않 아 |
+    바 람 이 내 등 을 | 밀 어 주 니 까 |
+  }
+  lyrics en language english {
+    Out of my breath but still | I will not slow down |
+    With the spring wind be- hind | car- ry- ing me on |
+  }
+  lyrics ja language japanese {
+    い き き れ て も | と ま ら な い |
+    は る の か ぜ が | お す か ら ね |
+  }
+  lyrics zh language chinese {
+    就 算 喘 不 过 气 | 我 也 不 会 停 |
+    因 为 春 风 一 直 | 在 背 后 推 我 |
+  }
+}
+
+section Outro {
+  vox { R | R | R | R | }
+  keys {
+    cBb cC cF
+    <a c f a'>1@ff |
+  }
+  bass {
+    bcBb bcC bcF
+    f,,1@ff |
+  }
+  kit {
+    gC gC fillC
+    drums { { cymc1@ff | } { bd1 | } } |
+  }
+  lyrics words { | | | | }
+  lyrics en language english { | | | | }
+  lyrics ja language japanese { | | | | }
+  lyrics zh language chinese { | | | | }
+}
+
+singer "diffsinger/Nishiren" on vox sings words
+
+form { ~Intro Verse Chorus Verse Chorus Bridge Chorus ~Outro }
+
+score korean {
+  staff vox
+  lyrics words
+  staff keys
+  staff bass
+  staff kit
+}
+
+score english {
+  title "Spring Breeze Bicycle"
+  singer "diffsinger/Nishiren" on vox sings en
+  staff vox
+  lyrics en
+  staff keys
+  staff bass
+  staff kit
+}
+
+score english_vocal {
+  title "Spring Breeze Bicycle"
+  singer "diffsinger/Nishiren" on vox sings en
+  staff vox
+  lyrics en
+}
+
+score japanese {
+  title "春風の自転車"
+  singer "neutrino/MERROW" on vox sings ja
+  staff vox
+  lyrics ja
+  staff keys
+  staff bass
+  staff kit
+}
+
+score chinese {
+  title "春风自行车"
+  singer "diffsinger/Nishiren" on vox sings zh
+  staff vox
+  lyrics zh
+  staff keys
+  staff bass
+  staff kit
+}

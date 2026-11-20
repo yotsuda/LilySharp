@@ -1,0 +1,299 @@
+<div class="layout">
+
+<nav class="toc">
+  <p class="grp">Music composed by AI</p>
+  <ol>
+    <li><a href="#how">How these were made</a></li>
+    <li><a href="#zundamon-and-metan">Zundamon and Metan</a></li>
+    <li><a href="#spring-breeze-bicycle">Spring Breeze Bicycle</a></li>
+    <li><a href="#paper-boats">Paper Boats</a></li>
+    <li><a href="#moon-on-the-river">Moon on the River</a></li>
+    <li><a href="#a-window-after-the-rain">A Window After the Rain</a></li>
+    <li><a href="#evening-calm-bossa">Evening Calm Bossa</a></li>
+    <li><a href="#north-wind-waltz">North Wind Waltz</a></li>
+    <li><a href="#credits">Voices and credits</a></li>
+  </ol>
+</nav>
+
+<article class="songs">
+
+<section id="how">
+  <h2>How these were made</h2>
+  <p>Every piece on this page was composed by an AI model, asked in plain words. A person asked,
+  listened, and asked again; the notes and the words are the model's. Each one is a single
+  <code>.lys</code> file — text — and the file is under its video, whole, to read or to open in
+  Lily# Studio and change.</p>
+  <div class="cols2">
+    <div class="pillar">
+      <h3>The model writes text, and Lily# checks it</h3>
+      <p>A score in Lily# is plain text, so a language model can write one from its first bar to
+      its last. Lily# then tells it what it wrote: <code>lysc check</code> finds a bar that is too
+      long or a word with no note, and <code>lysc review</code> reads the piece as music — a part
+      that keeps one figure through every section, chords too low to sound clear, a tune that is
+      all eighth notes — and says what to look at. The model answers those and writes again.</p>
+      <p>For a guitar it asks Lily# which shapes a hand can hold; the off-beat chords of
+      <a href="#zundamon-and-metan">the Zundamon song</a> below were moved up the neck that way.</p>
+    </div>
+    <div class="pillar">
+      <h3>The words are sung, the page is filmed</h3>
+      <p>The songs are sung by voices on the composer's own machine, through
+      <a href="sing.html">Cantoria</a>: a <code>singer</code> line in the file names the voice.
+      Nothing was recorded. Each video is the preview's <b>Export as MP4</b> — the engraved page,
+      lit note by note as it plays.</p>
+      <p>A video is one output among many. The same file goes out as a PDF, SVG or PNG of the
+      page, as MIDI, WAV or MP3, and as MusicXML, LilyPond or a VOCALOID sequence for other
+      programs — <a href="commands.html#export">every one a command</a>.</p>
+      <p>One of the songs is in four languages: the same tune, with words written for each, as
+      four scores of one file.</p>
+    </div>
+  </div>
+  <p class="note">The header of each file says which model wrote it and what it was asked. Most
+  were written by Claude in Claude Code; the Zundamon song was written in GitHub Copilot's chat,
+  with the tools <a href="editor.html#ai">Lily# Studio gives a chat</a>.</p>
+</section>
+
+<section id="zundamon-and-metan">
+  <h2>Zundamon and Metan Introduce Themselves</h2>
+  <p>ずんだもんとめたんの自己紹介 — a bright pop song in B-flat major, in Japanese, for two voices
+  and a band. Zundamon and Metan introduce themselves in turn, two bars each, and sing the chorus
+  together; the last chorus repeats its last line.</p>
+  <p>This one was composed in GitHub Copilot's chat. Its guitar first played full chords low on
+  the neck, under the bass; asked to move them up and thin them out, the model took three-note
+  shapes on strings 2 to 4 from Lily#'s chord voicings.</p>
+  <figure class="demo-video">
+    <video src="videos/songs/Zunda-to-Metan-no-Jikoshokai.mp4" controls playsinline preload="metadata"></video>
+    <figcaption>ずんだもんとめたんの自己紹介 — two voices, electric piano, guitar, bass and drums.</figcaption>
+  </figure>
+  <!--SONG:Zunda-to-Metan-no-Jikoshokai-->
+</section>
+
+<section id="spring-breeze-bicycle">
+  <h2>Spring Breeze Bicycle</h2>
+  <p>An upbeat pop song in F major for a voice, electric piano, bass and drums. The verse stays
+  low over a pushed bass; the chorus opens high on “run, run” over four on the floor and climbs
+  to F5 in its last line; the bridge drops to half time before the last chorus.</p>
+  <p>It was written in Korean. The English, Japanese and Chinese words were then written to the
+  same notes — as many syllables, morae or characters as each bar has notes — and each language
+  is a score of its own in the one file, with its own title and its own singer.</p>
+
+  <h3>One file, as many scores as you ask for</h3>
+  <p>The music is written once: the parts, the sections, the form. A <code>score { }</code> block
+  only says what to print of it — which staves, in which order, with which words under them —
+  so another layout of the same music is a few more lines at the end of the file, and no note
+  is copied. This file ends with five of them. Two are:</p>
+  <pre data-fragment>score english {
+  title "Spring Breeze Bicycle"
+  singer "diffsinger/Nishiren" on vox sings en
+  staff vox
+  lyrics en
+  staff keys
+  staff bass
+  staff kit
+}
+
+score english_vocal {
+  title "Spring Breeze Bicycle"
+  singer "diffsinger/Nishiren" on vox sings en
+  staff vox
+  lyrics en
+}</pre>
+  <p>The first is the full score in English; the second is the singer's part alone — the same
+  bars, the same words, three <code>staff</code> lines fewer. The Korean, Japanese and Chinese
+  scores differ from the first in the title, the singer and one word, the name of the lyrics. A conductor's score and
+  every player's part, a lead sheet and a tablature, a page for each language: all are scores
+  of one file, and a change to a note shows in every one of them.</p>
+  <p>Each score is written out under its own name —
+  <code>Spring-Breeze-Bicycle-english_vocal.pdf</code> beside
+  <code>Spring-Breeze-Bicycle-korean.pdf</code> — and the preview shows the one you pick. The video of the singer's part below is that score's
+  page, with the whole band in its sound. <a href="ref-output.html#scores">More on scores</a>.</p>
+  <div class="cols2">
+    <figure class="demo-video">
+      <video src="videos/songs/Spring-Breeze-Bicycle-korean.mp4" controls playsinline preload="metadata"></video>
+      <figcaption>봄바람 자전거 — Korean, the score <code>korean</code>.</figcaption>
+    </figure>
+    <figure class="demo-video">
+      <video src="videos/songs/Spring-Breeze-Bicycle-english_vocal.mp4" controls playsinline preload="metadata"></video>
+      <figcaption>Spring Breeze Bicycle — English, the score <code>english_vocal</code>: the voice's
+      staff alone on the page, the whole band in the sound.</figcaption>
+    </figure>
+    <figure class="demo-video">
+      <video src="videos/songs/Spring-Breeze-Bicycle-japanese.mp4" controls playsinline preload="metadata"></video>
+      <figcaption>春風の自転車 — Japanese, the score <code>japanese</code>.</figcaption>
+    </figure>
+    <figure class="demo-video">
+      <video src="videos/songs/Spring-Breeze-Bicycle-chinese.mp4" controls playsinline preload="metadata"></video>
+      <figcaption>春风自行车 — Chinese, the score <code>chinese</code>.</figcaption>
+    </figure>
+  </div>
+  <!--SONG:Spring-Breeze-Bicycle-->
+</section>
+
+<section id="paper-boats">
+  <h2>Paper Boats</h2>
+  <p>A piano ballad in D major, in English. The verse comes in off the beat and stays low; the
+  chorus opens on its highest note with the title words, and its last line is sung once more,
+  broad, at the end.</p>
+  <figure class="demo-video">
+    <video src="videos/songs/Paper-Boats.mp4" controls playsinline preload="metadata"></video>
+    <figcaption>Paper Boats — a voice and a piano.</figcaption>
+  </figure>
+  <!--SONG:Paper-Boats-->
+</section>
+
+<section id="moon-on-the-river">
+  <h2>Moon on the River</h2>
+  <p>江上月 — a ballad in G major for a baritone, flute and piano, in Chinese, its tune on the
+  five notes G A B D E. The verse is low and even; the chorus opens on its highest note calling
+  the moon, and closes on the tonic only the second time round.</p>
+  <figure class="demo-video">
+    <video src="videos/songs/Moon-on-the-River.mp4" controls playsinline preload="metadata"></video>
+    <figcaption>江上月 (Moon on the River) — a voice, a flute and a piano.</figcaption>
+  </figure>
+  <!--SONG:Moon-on-the-River-->
+</section>
+
+<section id="a-window-after-the-rain">
+  <h2>A Window After the Rain</h2>
+  <p>A piano piece in G major. Its two-bar theme falls a sixth and settles through an
+  appoggiatura; the middle section turns it upside down in E minor, the return climbs to B5, and
+  a deceptive cadence leads to a quiet close.</p>
+  <figure class="demo-video">
+    <video src="videos/songs/A-Window-After-the-Rain.mp4" controls playsinline preload="metadata"></video>
+    <figcaption>A Window After the Rain — piano.</figcaption>
+  </figure>
+  <h3>A note to the player, written in Markdown</h3>
+  <p>The boxed note under the title, on the first page of the video above, is part of the file. A page's text is written as Markdown
+  between two fence lines — bold, italic, headings and lists as anywhere else — and the opening
+  line says where it goes and how: <code>start</code> or <code>end</code> of the score,
+  <code>box</code> for a frame, <code>xMargin</code> to narrow it. The model wrote this one for
+  whoever plays the piece:</p>
+  <pre data-fragment>```md start box xMargin 20mm
+**To the player.** Let the left hand ring: one pedal to a bar, changed on the bass note.
+
+- The theme falls and then *leans* on its long note (bars 2 and 4). Arrive a little late and let it fade.
+- In the middle section the same shape climbs instead of falling. Play it **softer** than the opening, not louder.
+- The octaves at the return are the one *forte* of the piece. Everything after them is an afterthought.
+```</pre>
+  <!--SONG:A-Window-After-the-Rain-->
+</section>
+
+<section id="evening-calm-bossa">
+  <h2>Evening Calm Bossa</h2>
+  <p>A bossa nova in F major for flute, piano, bass and drums. The flute's theme comes in off
+  the beat and is held over the bar line; the B of its AABA passes through a backdoor ii–V and
+  climbs to D6. The piano plays the batida in rootless chords, the bass roots and fifths.</p>
+  <figure class="demo-video">
+    <video src="videos/songs/Evening-Calm-Bossa.mp4" controls playsinline preload="metadata"></video>
+    <figcaption>Evening Calm Bossa — flute, piano, bass and drums.</figcaption>
+  </figure>
+  <h3>The harmony, bar by bar</h3>
+  <p>A language model does not hum a tune and then look for chords. It chooses the harmony, and
+  writes the melody and the accompaniment out of it. This piece shows that plainly, so here is
+  what it chose and why — every statement below can be checked against the notes in the file.</p>
+  <p>One thing first: <b>the piano never plays a root.</b> The bass has it. Each chord is the
+  piano's three notes <i>over</i> the bass note, the way a pianist plays in a band.</p>
+
+  <h4>The three chords everything starts from</h4>
+  <table class="g harmony">
+    <tr><th>Chord</th><th>In F major</th><th>Piano</th><th>Bass</th><th>What the piano's notes are</th></tr>
+    <tr><td><b>Fmaj7</b></td><td>I — home</td><td>A C E</td><td>F</td><td>third, fifth, seventh</td></tr>
+    <tr><td><b>Gm7</b></td><td>ii</td><td>F B<span class="acc">♭</span> D</td><td>G</td><td>seventh, third, fifth</td></tr>
+    <tr><td><b>C9</b></td><td>V</td><td>E B<span class="acc">♭</span> D</td><td>C</td><td>third, seventh, ninth</td></tr>
+  </table>
+  <p>From Gm7 to C9 <b>only one note moves</b>: F falls a half step to E, the seventh of one
+  chord becoming the third of the next, while B<span class="acc">♭</span> and D stay where they are. That half step is
+  the sound of a ii–V, and it is why the two chords are heard as one gesture.</p>
+
+  <h4>A — the same eight bars, with two endings</h4>
+  <table class="g harmony">
+    <tr><th>Bar</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th></tr>
+    <tr><td>First time</td><td>Fmaj7</td><td>Fmaj7</td><td>Gm7</td><td>C9</td><td>Am7</td><td><b>D7<span class="acc">♭</span>9</b></td><td>Gm7</td><td>C9</td></tr>
+    <tr><td>Second time</td><td>Fmaj7</td><td>Fmaj7</td><td>Gm7</td><td>C9</td><td>Am7</td><td><b>Dm7</b></td><td>Gm7 C9</td><td>F6</td></tr>
+    <tr><td></td><td>I</td><td>I</td><td>ii</td><td>V</td><td>iii</td><td>VI7, then vi</td><td>ii (V)</td><td>V, then I</td></tr>
+  </table>
+  <ul>
+    <li><b>Bars 1–4: the theme is made of the chords.</b> The flute's C E A over Fmaj7 are its
+    fifth, seventh and third. Bars 3–4 repeat the shape a step lower <i>because the harmony
+    has moved a step</i>, from I to ii — a sequence, not a new idea.</li>
+    <li><b>Bar 6, first time: a chord from outside the key.</b> F major would give Dm7. D7<span class="acc">♭</span>9
+    has two notes the key does not: F♯ and E<span class="acc">♭</span>. They close in on G and D from either side — and
+    G and D are the root and fifth of the Gm7 that follows. The flute plays exactly those two
+    notes, F♯ then E<span class="acc">♭</span>, so the melody itself tells the ear that the chord has changed.</li>
+    <li><b>Bar 8, first time: left open.</b> The phrase stops on C9, the dominant, so the tune
+    has to come round again.</li>
+    <li><b>Second time: the plain chord, and home.</b> Bar 6 is now Dm7, and Am7 → Dm7 → Gm7 →
+    C9 → F6 falls by fifths all the way to the tonic. The first ending asks a question with a
+    borrowed chord; the second answers it with the chords of the key alone.</li>
+  </ul>
+
+  <h4>B — three ways of leaving F, and the way back</h4>
+  <table class="g harmony">
+    <tr><th>Bar</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th></tr>
+    <tr><td>Chord</td><td>B<span class="acc">♭</span>maj7</td><td>B<span class="acc">♭</span>maj7</td><td><b>B<span class="acc">♭</span>m7 E<span class="acc">♭</span>9</b></td><td>Fmaj7</td><td><b>Em7<span class="acc">♭</span>5 A7</b></td><td>Dm7</td><td><b>G7</b></td><td>Gm7 C9</td></tr>
+    <tr><td></td><td>IV</td><td>IV</td><td>backdoor ii–V</td><td>I</td><td>ii–V of vi</td><td>vi</td><td>V of V</td><td>ii V</td></tr>
+  </table>
+  <ul>
+    <li><b>Bars 1–2: the subdominant.</b> The first long chord that is not F. The drums move to
+    the ride cymbal and the piano holds its chords, so the change of harmony is also a change
+    of light.</li>
+    <li><b>Bars 3–4: the backdoor.</b> B<span class="acc">♭</span>m7 → E<span class="acc">♭</span>9 is a ii–V that belongs to A<span class="acc">♭</span> major, but it
+    lands on F. It works because E<span class="acc">♭</span>9's D<span class="acc">♭</span> and G slide by a half and a whole step into the C and
+    A of Fmaj7. The flute's A<span class="acc">♭</span> here is the first note of the tune taken from F <i>minor</i>.</li>
+    <li><b>Bars 5–6: the same shape, aimed elsewhere.</b> Em7<span class="acc">♭</span>5 → A7 → Dm7 is a ii–V into the
+    relative minor; A7's C♯ leads up to D.</li>
+    <li><b>Bar 7: the brightest chord.</b> G7, the dominant of the dominant, has a B<span class="acc">♮</span> where the
+    key has B<span class="acc">♭</span>. The piece's one <i>forte</i> is here, and the flute climbs to its highest note
+    outlining G B D — the chord, again, in the melody.</li>
+    <li><b>Bar 8: the way back.</b> B<span class="acc">♮</span> falls to B<span class="acc">♭</span>: G7 becomes Gm7, the bright chord turns
+    into the ordinary ii, and the bass walks C D E up to the F that begins A again.</li>
+  </ul>
+
+  <h4>Coda</h4>
+  <p><b>Fmaj7 → B<span class="acc">♭</span>m6 → Fmaj7 → Fmaj9.</b> B<span class="acc">♭</span>m6 is IV made minor: its D<span class="acc">♭</span> falls to C as it
+  resolves — a last, quieter echo of the backdoor in B, and the flute sings the chord's own
+  notes, D<span class="acc">♭</span> F B<span class="acc">♭</span>. The final chord adds the ninth, G, and the flute ends on A, the third: the
+  piece closes at rest, but not shut.</p>
+  <!--SONG:Evening-Calm-Bossa-->
+</section>
+
+<section id="north-wind-waltz">
+  <h2>North Wind Waltz</h2>
+  <p>A waltz in D minor for string quartet. The second violin murmurs like wind under a theme
+  that rises and settles through an appoggiatura; each phrase ends in a hemiola. The cello sings
+  the middle section in F major. Then the theme's head is tossed from part to part over a
+  pulsing dominant, the return comes in octaves and climbs to D6 by way of a Neapolitan chord,
+  and after the cello's last word a gust closes it.</p>
+  <p>Its first version was found a little dull by its listener — one accompaniment figure from
+  start to end, every phrase in the same four bars — and the model rewrote it: this is the
+  second.</p>
+  <figure class="demo-video">
+    <video src="videos/songs/North-Wind-Waltz.mp4" controls playsinline preload="metadata"></video>
+    <figcaption>North Wind Waltz — string quartet.</figcaption>
+  </figure>
+  <!--SONG:North-Wind-Waltz-->
+</section>
+
+<section id="credits">
+  <h2>Voices and credits</h2>
+  <p>The music and the words on this page were written by AI models and are given as examples of
+  what Lily# takes; the files may be read, changed and played freely.</p>
+  <p>The singing voices are other people's work, driven on the composer's machine by
+  <a href="sing.html">Cantoria</a>:</p>
+  <ul>
+    <li><b>NEUTRINO: ずんだもん</b> and <b>NEUTRINO: 四国めたん</b> (Zundamon, Shikoku Metan) —
+    <i>Zundamon and Metan Introduce Themselves</i>. The characters are the
+    <a href="https://zunko.jp/">Tohoku Zunko / Zundamon project</a>'s.</li>
+    <li><b>NEUTRINO: めろう</b> (Merrow) — the Japanese <i>Spring Breeze Bicycle</i>.</li>
+    <li><b>Nishiren Gard AI DiffSinger</b> v2.1, by <a href="https://gardanana.nekoweb.org/">Gardanana</a> —
+    the Korean, English and Chinese <i>Spring Breeze Bicycle</i>.</li>
+    <li><b>TIGER</b> DiffSinger, by <a href="https://tigermeat.xyz/">tigermeat</a> — <i>Paper Boats</i> and
+    <i>Moon on the River</i>.</li>
+  </ul>
+  <p><a href="https://studio-neutrino.com/">NEUTRINO</a> is SHACHI's (Studio NEUTRINO). This page is
+  not made or endorsed by any of the voices' makers, and nothing here is sold.</p>
+  <p>The instruments are played by Lily# Studio itself, through a <a href="editor.html#soundfonts">sound
+  font</a>.</p>
+</section>
+
+</article>
+</div>

@@ -1,0 +1,367 @@
+// Composed in Copilot's chat (Claude Sonnet 5.5), 2026-11-10
+// Asked: Write a pop song in which Zundamon and Metan cheerfully introduce themselves, trading lines.
+// The AI: A bright pop song in B-flat major at 128. Zundamon and Metan introduce themselves in turn, two bars each, and sing the chorus together ("jikoshoukai hajimaru yo" - the introductions begin). The last chorus repeats its last line to lift the ending.
+
+octave relative
+pitch concert
+
+title "ずんだもんとめたんの自己紹介"      // "Zundamon and Metan Introduce Themselves"
+tempo 128
+time 4/4
+key bes major
+
+part zunda { instrument soprano lyrics zw }
+part metan { instrument alto lyrics mw }
+part keys { instrument piano-right midiInstrument "electric piano 1" }
+part gtr { instrument guitar midiInstrument "electric guitar (clean)" }
+part bass { instrument bass midiInstrument "electric bass (finger)" }
+part kit { clef percussion }
+
+section Intro {
+  zunda { R | R | R | R | }
+  metan { R | R | R | R | }
+  keys { r8 d''8@mp f8 g8~ g4 f8 d8 |
+    r8 bes8 d8 g8~ g4 f8 d8 |
+    r8 bes8 ees8 g8~ g4 f8 ees8 |
+    r8 a,8 c8 f8~ f4 ees8 c8 |
+  }
+  gtr { R | R |
+    r8 <g ees g'>8@mp r8 q r8 q r8 q |
+    gF
+  }
+  bass { bes,,4@mp bes8 bes8 r8 bes8 bes8 bes8 |
+    bGm bEb bF
+  }
+  kit { hh4@mp hh hh hh | hh4 hh hh hh |
+    dV dFill
+  }
+  lyrics zw { | | | | }
+  lyrics mw { | | | | }
+}
+section Verse1 {
+  zunda { r8 d'8@mp f8 bes4 a8 f8 d8 |
+    bes'8 g8 bes8 a8 g4 r4 |
+    R | R |
+    r8 d8 f8 bes4 c8 a8 f8 |
+    bes8 g8 bes8 c8 a8 g4 r8 |
+    R | R |
+  }
+  metan { R | R |
+    r8 g'8@mp bes8 ees4 d8 bes8 g8 |
+    c8 a8 c8 bes8 a4 r4 |
+    R | R |
+    r8 g8@mf bes8 ees4 d8 bes8 g8 |
+    c8 a8 c8 d8 c4 r4 |
+  }
+  keys { <bes d f>1@mp | <bes d g>1 | <bes ees g>1 | <a c f>1 |
+    <bes d f>1 | <bes d g>1@cresc | <bes ees g>1 | <a c f>1@mf |
+  }
+  gtr { gBb gGm gEb gF gBb gGm gEb gF }
+  bass { bBb bGm bEb bF bBb bGm bEb bF }
+  kit { dV dV dV dV dV dV dV dFill }
+  lyrics zw { ぼ く は[わ] ず ん だ | も ん な の だ | | |
+    え だ ま め の よ | う せ い な の だ | | |
+  }
+  lyrics mw { | | わ た く し は[わ] し | こ く め た ん | | |
+    ちょ っ と お じょ う | さ ま で す わ |
+  }
+}
+section Chorus {
+  zunda { r8 d''8@mf f8 g4. f8 d8 |
+    c8 a8 c8 d8 c8 a4. |
+    bes8 d8 f4 d8 f8 d8 bes8 |
+    r8 g8 bes8 ees4 d8 bes8 g8 |
+    r8 d'8@f f8 g4. f8 d8 |
+    c8 a8 c8 d8 c4 r4 |
+    r8 g8@decresc bes8 ees8 d8 c4. |
+    f8@mp d8 bes4 r2 |
+  }
+  metan { r8 f'8@mf a8 bes4. a8 f8 |
+    a8 f8 a8 bes8 a8 f4. |
+    g8 bes8 d4 bes8 d8 bes8 g8 |
+    r8 ees8 g8 bes4 bes8 g8 ees8 |
+    r8 f8@f a8 bes4. a8 f8 |
+    a8 f8 a8 bes8 a4 r4 |
+    r8 ees8@decresc g8 c8 bes8 a4. |
+    d8@mp bes8 f4 r2 |
+  }
+  keys { <bes d f>4.@mf q4. q4 | <a c f>4. q4. q4 | <bes d g>4. q4. q4 | <bes ees g>4. q4. q4 |
+    <bes d f>4.@f q4. q4 | <a c f>4. q4. q4 | <bes ees g>2@decresc <a c f>2 | <bes d f>1@mp |
+  }
+  gtr { <bes d f>8@mf q q q q q q q |
+    <a c f>8 q q q q q q q |
+    <bes d g>8 q q q q q q q |
+    <g ees g'>8 q q q q q q q |
+    <bes d f>8@f q q q q q q q |
+    <a c f>8 q q q q q q q |
+    <g ees g'>8@decresc q q q <a c f>8 q q q |
+    <bes d f>1@mp |
+  }
+  bass { bes,,8@mf bes8 bes'8 bes,8 bes8 bes'8 bes,8 bes8 |
+    f'8 f8 f'8 f,8 f8 f'8 f,8 f8 |
+    g,8 g8 g'8 g,8 g8 g'8 g,8 g8 |
+    ees'8 ees8 ees'8 ees,8 ees8 ees'8 ees,8 ees8 |
+    bes8@f bes8 bes'8 bes,8 bes8 bes'8 bes,8 bes8 |
+    f'8 f8 f'8 f,8 f8 f'8 f,8 f8 |
+    ees8 ees8 ees8 ees8 f8 f8 f8 f8 |
+    bes,4 bes8 bes8 r2 |
+  }
+  kit { voice { cymc8@mf cymr cymr cymr cymr cymr cymr cymr | }
+    { bd4 sn4 r8 bd8 sn4 | }
+    dC dC dC
+    voice { cymc8@f cymr cymr cymr cymr cymr cymr cymr | }
+    { bd4 sn4 r8 bd8 sn4 | }
+    dC dC dFill
+  }
+  lyrics zw { じ こ しょ う[お] か | い は じ ま る よ | ず ん だ も ん と め | た ん ふ た り で |
+    じ こ しょ う[お] か | い き い て ね | よ ろ し く ね | な の だ |
+  }
+  lyrics mw { じ こ しょ う[お] か | い は じ ま る よ | ず ん だ も ん と め | た ん ふ た り で |
+    じ こ しょ う[お] か | い き い て ね | よ ろ し く ね | で す わ |
+  }
+}
+section Verse2 {
+  zunda { r8 d'8@mp f8 bes4 a8 f8 d8 |
+    a'8 c8 a8 g8 fis4 r4 |
+    R | R |
+    r8 g8 bes8 ees4 d8 bes8 g8 |
+    bes8 ges8 bes2 r4 |
+    R | R |
+  }
+  metan { R | R |
+    r8 g'8@mp bes8 d4 c8 bes8 g8 |
+    e8 g8 bes4 g4 r4 |
+    R | R |
+    r8 f8@mf bes8 d4 c8 bes8 f8 |
+    c'8 a8 c8 d8 c4 r4 |
+  }
+  keys { <bes d f>1@mp | <a c fis>1 | <bes d g>1 | <bes e g>1 |
+    <bes ees g>1 | <bes ees ges>1 | <bes d f>1@cresc | <a c f>1@mf |
+  }
+  gtr { r8 <bes d f>8@mp r8 q r8 q r8 q |
+    gD7 gGm gC7 gEb gEbm gBb gF
+  }
+  bass { bes,,4@mp bes8 bes8 r8 bes8 bes8 bes8 |
+    bD bGm bC bEb bEb bF bF
+  }
+  kit { voice { hh8@mp hh hh hh hh hh hh hh | }
+    { bd4 sn4 r8 bd8 sn4 | }
+    dV dV dV dV dV dV dFill
+  }
+  lyrics zw { す き な も の は[わ] | ず ん だ も ち | | |
+    い っ しょ に た べ | よ う よ | | |
+  }
+  lyrics mw { | | わ た く し は[わ] お | ちゃ が す き | | |
+    し か た な い わ | ね い い わ よ |
+  }
+}
+section Bridge {
+  zunda { r8 d''8@p bes8 g4. bes4 |
+    g8 bes8 ees2 r4 |
+    R | R |
+    r8 d8@mp f8 g4. d4 |
+    ees8 d8 bes4 g4 r4 |
+    R |
+    r2 c4@f c8 c8 |
+  }
+  metan { R | R |
+    g'4.@p ees8 c4 r4 |
+    a'8 c8 a8 g8 f4 r4 |
+    R | R |
+    r8 ees8@mf g8 c8 bes8 g4. |
+    r2 a4@f a8 a8 |
+  }
+  keys { bes8@p d8 g8 d8 bes8 d8 g8 d8 |
+    bes8 ees8 g8 ees8 bes8 ees8 g8 ees8 |
+    c8 ees8 g8 bes8 g8 ees8 c8 ees8 |
+    a,8 c8 f8 c8 a8 c8 f8 c8 |
+    bes8@mp d8 g8 d8 bes8 d8 g8 d8 |
+    bes8 ees8 g8 ees8 bes8 ees8 g8 ees8 |
+    c8@cresc ees8 g8 bes8 g8 ees8 c8 ees8 |
+    a,8@mf c8 f8 c8 a8 c8 f8 c8 |
+  }
+  gtr { R | R | R | R |
+    r8 <bes d g>8@mp r8 q r8 q r8 q |
+    gEb gCm7 gF
+  }
+  bass { g,,1@p | ees'1 | c1 | f1 |
+    bGm bEb bC bF
+  }
+  kit { voice { hh8@p hh hh hh hh hh hh hh | }
+    { bd4 r4 sn4 r4 | }
+    dHalf dHalf dHalf dHalf dHalf dHalf dFill
+  }
+  lyrics zw { ね え ね え | め た ん | | |
+    ぼ く た ち | な か よ し | | せ ー の |
+  }
+  lyrics mw { | | な あ に | ず ん だ も ん | | |
+    も ち ろ ん よ | せ ー の |
+  }
+}
+section Final {
+  zunda { r8 f''8@ff a8 bes4. a8 f8 |
+    ees8 c8 ees8 f8 ees8 c4. |
+    bes8 d8 f4 d8 f8 d8 bes8 |
+    r8 g8 bes8 ees4 d8 bes8 g8 |
+    r8 f'8 a8 bes4. a8 f8 |
+    c8 a8 c8 d8 c4 r4 |
+    r8 g8@cresc bes8 ees8 d8 c4. |
+    f8 d8 bes4 r2 |
+    r8 g8@fff bes8 ees8 f8 a4. |
+    f8 d8 bes2. |
+  }
+  metan { r8 f'8@ff a8 bes4. a8 f8 |
+    a8 f8 a8 bes8 a8 f4. |
+    g8 bes8 d4 bes8 d8 bes8 g8 |
+    r8 ees8 g8 bes4 bes8 g8 ees8 |
+    r8 f8 a8 bes4. a8 f8 |
+    a8 f8 a8 bes8 a4 r4 |
+    r8 ees8@cresc g8 c8 bes8 a4. |
+    d8 bes8 f4 r2 |
+    r8 ees8@fff g8 c8 bes8 a4. |
+    d8 bes8 f2. |
+  }
+  keys { <bes d f bes'>4.@ff q4. q4 | <a c f a'>4. q4. q4 | <bes d g bes'>4. q4. q4 | <bes ees g bes'>4. q4. q4 |
+    <bes d f bes'>4. q4. q4 | <a c f a'>4. q4. q4 | <bes ees g bes'>2 <a c f a'>2 | <bes d f bes'>1 |
+    <bes ees g bes'>2 <a c f a'>2 | <bes d f bes'>1 |
+  }
+  gtr { <bes d f>8@ff q q q q q q q |
+    <a c f>8 q q q q q q q |
+    <bes d g>8 q q q q q q q |
+    <g ees g'>8 q q q q q q q |
+    <bes d f>8 q q q q q q q |
+    <a c f>8 q q q q q q q |
+    <g ees g'>8 q q q <a c f>8 q q q |
+    <bes d f>1 |
+    <g ees g'>8 q q q <a c f>8 q q q |
+    <bes d f>1 |
+  }
+  bass { bes,,8@ff bes8 bes'8 bes,8 bes8 bes'8 bes,8 bes8 |
+    f'8 f8 f'8 f,8 f8 f'8 f,8 f8 |
+    g,8 g8 g'8 g,8 g8 g'8 g,8 g8 |
+    ees'8 ees8 ees'8 ees,8 ees8 ees'8 ees,8 ees8 |
+    bes8 bes8 bes'8 bes,8 bes8 bes'8 bes,8 bes8 |
+    f'8 f8 f'8 f,8 f8 f'8 f,8 f8 |
+    ees8 ees8 ees8 ees8 f8 f8 f8 f8 |
+    bes,8 bes8 bes'8 bes,8 bes8 bes'8 bes,8 bes8 |
+    ees8 ees8 ees8 ees8 f8 f8 f8 f8 |
+    bes,4 bes8 bes8 r2 |
+  }
+  kit { voice { cymc8@ff cymr cymr cymr cymr cymr cymr cymr | }
+    { bd4 sn4 r8 bd8 sn4 | }
+    dF dF dF
+    voice { cymc8 cymr cymr cymr cymr cymr cymr cymr | }
+    { bd4 sn4 bd8 bd8 sn4 | }
+    dF dF dF
+    dF dFill
+  }
+  lyrics zw { じ こ しょ う[お] か | い は じ ま る よ | ず ん だ も ん と め | た ん ふ た り で |
+    じ こ しょ う[お] か | い き い て ね | よ ろ し く ね | な の だ |
+    よ ろ し く ね | な の だ |
+  }
+  lyrics mw { じ こ しょ う[お] か | い は じ ま る よ | ず ん だ も ん と め | た ん ふ た り で |
+    じ こ しょ う[お] か | い き い て ね | よ ろ し く ね | で す わ |
+    よ ろ し く ね | で す わ |
+  }
+}
+section Coda {
+  zunda { R | R | R | R | }
+  metan { R | R | R | R | }
+  keys { r8 d''8@f f8 g8~ g4 f8 d8 |
+    r8 bes8 d8 g8~ g4 f8 d8 |
+    <bes, ees g>2@decresc <a c f>2 |
+    <bes d f bes'>1@mf |
+  }
+  gtr { r8 <bes d f>8@f r8 q r8 q r8 q |
+    gGm
+    <g ees g'>2 <a c f>2 |
+    <bes d f>1 |
+  }
+  bass { bes,,4@f bes8 bes8 r8 bes8 bes8 bes8 |
+    bGm
+    ees,2 f2 |
+    bes,1 |
+  }
+  kit { voice { hh8@f hh hh hh hh hh hh hh | }
+    { bd4 sn4 r8 bd8 sn4 | }
+    dV dFill
+    voice { cymc1 | } { bd1 | }
+  }
+  lyrics zw { | | | | }
+  lyrics mw { | | | | }
+}
+
+singer Zundamon "neutrino/ZUNDAMON" sings on zunda
+singer Metan "neutrino/METAN" sings on metan
+
+// Guitar: chords cut on the off-beats (one bar each), three notes on strings 2-4 at frets 5-10, the roots left to the bass
+phrase gBb  { r8 <bes d f>8 r8 q r8 q r8 q | }      // xx876x
+phrase gGm  { r8 <bes d g>8 r8 q r8 q r8 q | }      // xx878x
+phrase gEb  { r8 <g ees g'>8 r8 q r8 q r8 q | }     // xx588x
+phrase gF   { r8 <a c f>8 r8 q r8 q r8 q | }        // xx756x
+phrase gD7  { r8 <c' d fis>8 r8 q r8 q r8 q | }     // xx-10-77x
+phrase gC7  { r8 <bes c e>8 r8 q r8 q r8 q | }      // xx855x
+phrase gEbm { r8 <bes ees ges>8 r8 q r8 q r8 q | }  // xx887x
+phrase gCm7 { r8 <bes ees g>8 r8 q r8 q r8 q | }    // xx888x (no root)
+
+// Bass: the root, syncopated (one bar each)
+phrase bBb { bes,,4 bes8 bes8 r8 bes8 bes8 bes8 | }
+phrase bGm { g,,4 g8 g8 r8 g8 g8 g8 | }
+phrase bEb { ees,4 ees8 ees8 r8 ees8 ees8 ees8 | }
+phrase bF  { f,4 f8 f8 r8 f8 f8 f8 | }
+phrase bD  { d,4 d8 d8 r8 d8 d8 d8 | }
+phrase bC  { c,4 c8 c8 r8 c8 c8 c8 | }
+
+// Drums: the closed hi-hat of the verse, the ride of the chorus, the fill
+phrase dV {
+  voice { hh8 hh hh hh hh hh hh hh | }
+  { bd4 sn4 r8 bd8 sn4 | }
+}
+phrase dC {
+  voice { cymr8 cymr cymr cymr cymr cymr cymr cymr | }
+  { bd4 sn4 r8 bd8 sn4 | }
+}
+phrase dF {
+  voice { cymr8 cymr cymr cymr cymr cymr cymr cymr | }
+  { bd4 sn4 bd8 bd8 sn4 | }
+}
+phrase dFill {
+  voice { sn8 sn tomh tomh tomml tomml toml tomfl | }
+  { bd4 r4 r2 | }
+}
+phrase dHalf {
+  voice { hh8 hh hh hh hh hh hh hh | }
+  { bd4 r4 sn4 r4 | }
+}
+
+form { Intro Verse1 Chorus Verse2 Chorus Bridge Final Coda }
+
+score {
+  staff zunda
+  lyrics zw
+  staff metan
+  lyrics mw
+  staff keys
+  staff gtr
+  staff bass
+  staff kit
+}
+
+score youtube {
+  paper {
+    paperWidth 256mm
+    paperHeight 144mm
+    leftMargin 10mm  rightMargin 10mm
+    topMargin 6mm  bottomMargin 6mm
+    indent 0
+  }
+  staff zunda
+  lyrics zw
+  staff metan
+  lyrics mw
+  staff keys
+  staff gtr
+  staff bass
+  staff kit
+}
+

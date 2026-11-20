@@ -1,0 +1,273 @@
+// Composed in Claude Code (Claude Fable 5.2), 2026-11-19
+// Asked: Write some good pieces for a page of music composed by AI.
+// The AI: A waltz in D minor for string quartet. The second violin murmurs like wind under a theme that rises and settles through an appoggiatura; each phrase ends in a hemiola. The cello sings the middle section in F major over flowing eighths. Then the theme's head is tossed from part to part over a trembling dominant, the return comes in octaves and climbs to D6 by way of a Neapolitan chord, and after the cello's last word a gust closes it.
+
+octave relative
+pitch concert
+
+title "North Wind Waltz"
+tempo "Allegretto" 4 = 132
+time 3/4
+key d minor
+
+part vn1 "Violin I" "Vn. I" { instrument violin }
+part vn2 "Violin II" "Vn. II" { instrument violin }
+part va "Viola" "Va." { instrument viola }
+part vc "Cello" "Vc." { instrument cello }
+
+// The theme and its sequence (four bars), and the same an octave lower for the second violin
+phrase theme {
+  a'4. d8 f4 |
+  e2 d4 |
+  bes4. d8 g4 |
+  f4( e4) cis4 |
+}
+phrase themeLow {
+  a4. d8 f4 |
+  e2 d4 |
+  bes4. d8 g4 |
+  f4( e4) cis4 |
+}
+
+// The wind: a murmur of eighths round one chord (one bar each)
+phrase mDm { d'8 f8 e8 f8 d8 f8 | }
+phrase mGm { d'8 g8 f8 g8 d8 g8 | }
+phrase mA  { cis'8 e8 d8 e8 cis8 e8 | }
+phrase mBb { bes8 d8 c8 d8 bes8 d8 | }
+phrase wDm { a8 d8 cis8 d8 a8 d8 | }
+phrase wA  { a8 cis8 b8 cis8 a8 cis8 | }
+
+// The middle section's flowing chords (one bar each)
+phrase fF  { f'8 a8 c8 a8 f8 a8 | }
+phrase fC  { e'8 g8 c8 g8 e8 g8 | }
+phrase fDm { f'8 a8 d8 a8 f8 a8 | }
+phrase fBb { f'8 bes8 d8 bes8 f8 bes8 | }
+phrase fGm { g'8 bes8 d8 bes8 g8 bes8 | }
+phrase fC7 { e'8 g8 bes8 g8 e8 g8 | }
+
+section Intro {
+  vn1 { R | R | R | r4 d'8@mp e8 f8 g8 | }
+  vn2 { <>@p mDm mDm mA mA }
+  va { a2.@p~ | a2. | a2.~ | a2. | }
+  vc { d4@p r4 r4 | d4 r4 r4 | a4 r4 r4 | a4 r4 r4 | }
+}
+
+section A {
+  vn1 {
+    <>@mf theme
+    d'8 e8 f8 g8 a4 |
+    bes2 a8 g8 |
+    g2 e4~ |
+    e4 cis2 |
+    <>@mp theme
+    d'4.@cresc f8 bes4 |
+    a8@mf g8 f8 e8 d8 bes8 |
+    e4.@decresc d8 cis4 |
+    d2.@mp |
+  }
+  vn2 {
+    <>@mf mDm mDm mGm mA mDm mBb mGm
+    cis'8 e8 d8 e8 cis4 |
+    <>@mp mDm mDm mGm mA
+    <>@cresc mBb
+    <>@mf mGm
+    <>@decresc mA
+    d'2.@mp |
+  }
+  va {
+    r4 a4@mf a4 | r4 a4 a4 | r4 bes4 bes4 | r4 a4 a4 |
+    r4 a4 a4 | r4 f4 f4 | r4 bes4 bes4 | a2. |
+    R |
+    a4.@mp d8 f4 |
+    e2 d4 |
+    cis2 a4 |
+    f2@cresc d'4 |
+    bes2@mf g4 |
+    g4@decresc a4 g4 |
+    f2.@mp |
+  }
+  vc {
+    d4@mf r4 r4 | d4 r4 r4 | g,4 r4 r4 | a4 r4 r4 |
+    d4 r4 r4 | bes4 r4 r4 | g4 r4 r4 | a2. |
+    d2.@mp | c2. | bes2. | a2. |
+    bes2.@cresc | g2.@mf | a2.@decresc | d,2.@mp |
+  }
+}
+
+section B {
+  vn1 {
+    R | R | R | R |
+    a'2.@p | bes2. | bes2 g4 | a2. |
+    c2@mp a4 |
+    bes8 a8 g2 |
+    f4 a4 d4 |
+    d4. e8 f4 |
+    g2@cresc bes4 |
+    a4. g8 f4 |
+    e2@mf f4~ |
+    f4 e2 |
+  }
+  vn2 {
+    <>@p fF fC fDm fBb fF fGm fC7
+    f'8 a8 c8 a8 f4 |
+    r4 f4@mp f4 | r4 e4 e4 | r4 d4 d4 | r4 d4 d4 |
+    r4 d4@cresc d4 | r4 d4 d4 | r4 cis4@mf cis4 | cis2.@decresc |
+  }
+  va {
+    f4@p r4 c4 | e4 r4 c4 | d4 r4 a'4 | d,4 r4 f4 |
+    c4 r4 c4 | g'4 r4 d4 | c4 r4 e4 | f2. |
+    a8@mp c8 a8 c8 a8 c8 |
+    g8 cis8 g8 cis8 g8 cis8 |
+    f,8 a8 f8 a8 f8 a8 |
+    f8 bes8 f8 bes8 f8 bes8 |
+    g8@cresc bes8 g8 bes8 g8 bes8 |
+    f8 a8 f8 a8 f8 a8 |
+    e8@mf g8 e8 g8 e8 g8 |
+    e2.@decresc |
+  }
+  vc {
+    c'2@mf a4 |
+    bes8 a8 g2 |
+    f4 a4 d4 |
+    d4. c8 bes4 |
+    c2 f4 |
+    e4 d8 c8 bes4 |
+    a2 g4~ |
+    g4 f2 |
+    f4@mp a4 c4 | e,4 a4 cis4 | d,4 f4 a4 | bes,4 d4 f4 |
+    g,4@cresc bes4 d4 | a4 d4 f4 | a,4@mf cis4 e4 | a,2.@decresc |
+  }
+}
+
+// The theme's head from part to part over the cello's pulsing dominant, the inner strings trembling
+section C {
+  vn1 {
+    R | R | R |
+    e''4.@mf g8 bes4 |
+    d4@f bes8 a8 g8 f8 |
+    e8 g8 bes8 g8 e8 g8 |
+    a8@cresc g8 f8 e8 d8 cis8 |
+    e8 d8 cis8 bes8 a8 gis8 |
+  }
+  vn2 {
+    R |
+    a'4.@p cis8 e4 |
+    d2.@cresc |
+    cis2. |
+    f4.@f d8 bes4 |
+    bes2.:16 |
+    g2.:16@cresc |
+    g2.:16 |
+  }
+  va {
+    a4.@p d8 f4 |
+    e2. |
+    d4.@cresc f8 a4 |
+    g2. |
+    d2.:16@f |
+    g,2.:16 |
+    cis2.:16@cresc |
+    cis2.:16 |
+  }
+  vc {
+    a,8@p a8 a8 a8 a8 a8 |
+    a8 a8 a8 a8 a8 a8 |
+    a8@cresc a8 a8 a8 a8 a8 |
+    a8 a8 a8 a8 a8 a8 |
+    bes8@f bes8 bes8 bes8 bes8 bes8 |
+    g8 g8 g8 g8 g8 g8 |
+    a8@cresc a8 a8 a8 a8 a8 |
+    a8 a8 a8 a8 a4 |
+  }
+}
+
+section A2 {
+  vn1 {
+    <>@ff theme
+    d'8 e8 f8 g8 a4 |
+    bes2 a8 g8 |
+    g2@decresc e4~ |
+    e4 cis2 |
+    d4.@mf f8 a4 |
+    g2 f4 |
+    g4.@cresc bes8 d4 |
+    cis4 a4 g4 |
+    f4.@ff bes8 d4 |
+    bes4 g4 ees4 |
+    f4@decresc e4 cis4 |
+    d2. |
+  }
+  vn2 {
+    <>@ff themeLow
+    d8 e8 f8 g8 a4 |
+    bes2 a8 g8 |
+    g2@decresc e4~ |
+    e4 cis2 |
+    f4.@mf a8 d4 |
+    bes2 a4 |
+    bes4.@cresc d8 g4 |
+    e4 cis4 e4 |
+    d4.@ff f8 bes4 |
+    g4 ees4 bes4 |
+    a4@decresc g4 e4 |
+    <a, f>2. |
+  }
+  va {
+    <>@ff wDm wDm mBb wA wDm mBb
+    <>@decresc mBb
+    a8 cis8 b8 cis8 a4 |
+    a2.:16@mf | a2.:16 | bes2.:16@cresc | g2.:16 |
+    f2.:16@ff | g2.:16 | g2.:16@decresc | <d a>2. |
+  }
+  vc {
+    d4@ff r4 a4 | d4 r4 a4 | g4 r4 d'4 | a4 r4 e'4 |
+    d4 r4 a4 | bes4 r4 f'4 | g,4@decresc r4 d'4 | a2. |
+    d4@mf f4 a4 | c,4 f4 a4 | bes,4@cresc d4 g4 | a,4 cis4 e4 |
+    bes4@ff d4 f4 | g,4 ees'4 bes4 | a4@decresc cis4 e4 | d,2. |
+  }
+}
+
+section Coda {
+  vn1 {
+    a'4.@mf d8 f4 |
+    e2@decresc d4 |
+    a2.@p~ | a2. |
+    d8@cresc e8 f8 g8 a8 bes8 |
+    a8 g8 f8 e8 d8 cis8 |
+    cis4@ff r4 e4 |
+    d2.@fermata |
+  }
+  vn2 {
+    r4 f'4@mf f4 | r4 f4@decresc f4 |
+    f2.@p~ | f2. |
+    <>@cresc mDm mA
+    e'4@ff r4 g4 |
+    <a, f>2.@fermata |
+  }
+  va {
+    r4 a4@mf a4 | r4 a4@decresc a4 |
+    d2.@p~ | d2. |
+    a2.:16@cresc | g2.:16 |
+    a4@ff r4 a4 |
+    <d, a>2.@fermata |
+  }
+  vc {
+    d4@mp r4 r4 | d4 r4 r4 |
+    a'4.@mf d8 f4 |
+    e2 d4 |
+    d,2.@cresc | a2. |
+    a4@ff r4 a4 |
+    d,2.@fermata |
+  }
+}
+
+form { ~Intro ~A ~B ~C ~A2 ~Coda }
+
+score {
+  staffGroup {
+    staff vn1
+    staff vn2
+    staff va
+    staff vc
+  }
+}

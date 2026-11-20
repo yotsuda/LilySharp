@@ -1,0 +1,195 @@
+// Composed in Claude Code (Claude Fable 5.2), 2026-11-19
+// Asked: Write good songs for a page of music composed by AI - one of them in English.
+// The AI: A piano ballad in D major at 88. The verse comes in off the beat and stays low; the chorus opens on its highest note with the title words, and its last line is sung twice at the end.
+
+octave relative
+pitch concert
+language english
+
+title "Paper Boats"
+tempo 4 = 88
+time 4/4
+key d major
+
+part vox { instrument baritone  clef treble_8 lyrics words }
+part rh { instrument piano-right }
+part lh { instrument piano-left }
+
+// The chorus's first six bars: the hook, its answer, the hook again
+phrase hook {
+  d'4 b8 b8~ b2 |
+  a4 fis8 fis8~ fis2 |
+  e8 e8 a4 a8 cis8 a8 b8~ |
+  b2. r4 |
+  d4 b8 b8~ b2 |
+  a4 fis8 fis8~ fis2 |
+}
+
+// Left hand, verse: one broken chord a bar
+phrase lD   { d,8@sustain a'8 d8 fis8 a8 fis8 d8 a8 | }
+phrase lA   { a,,8@sustain e'8 a8 cis8 e8 cis8 a8 e8 | }
+phrase lBm  { b,,8@sustain fis'8 b8 d8 fis8 d8 b8 fis8 | }
+phrase lG   { g,,8@sustain d'8 g8 b8 d8 b8 g8 d8 | }
+phrase lDf  { fis,8@sustain a8 d8 fis8 a8 fis8 d8 a8 | }
+phrase lEm  { e,8@sustain b'8 e8 g8 b8 g8 e8 b8 | }
+
+// Left hand, chorus: the bass and its octave
+phrase cG   { g,,4.@sustain d'8 g2 | }
+phrase cD   { d,4.@sustain a'8 d2 | }
+phrase cA   { a,,4.@sustain e'8 a2 | }
+phrase cBm  { b,,4.@sustain fis'8 b2 | }
+
+// Right hand, chorus: the chord on every beat
+phrase rG   { <b d g>4 q q q | }
+phrase rD   { <a d fis>4 q q q | }
+phrase rA   { <a cis e>4 q q q | }
+phrase rBm  { <b d fis>4 q q q | }
+
+section Intro {
+  vox { R | R | R | R | }
+  rh {
+    d''4@mf b8 b8~ b2 |
+    a4 fis8 fis8~ fis2 |
+    d'4 b8 b8~ b4 a8 g8 |
+    a1@decresc |
+  }
+  lh {
+    <>@mf lG lD lG
+    a,,8@decresc@sustain e'8 a8 cis8 e2 |
+  }
+  lyrics words { | | | | }
+}
+
+section Verse {
+  vox {
+    r8 a,8@mp d8 d8 e4 fis8 a8~ |
+    a4 fis8 e8 d8 e4. |
+    r8 b8 d8 d8 e4 fis8 b8~ |
+    b4 a8 g8 fis8 g4. |
+    r8 a,8 d8 fis8 a4 a8 b8~ |
+    b4 a8 fis4 e8 d4 |
+    r8 g,8 b8 e8 g4 fis8 e8~ |
+    e4 d8 cis8 d8 e4. |
+  }
+  rh {
+    <a d fis>2@mp q2 |
+    <a cis e>2 q2 |
+    <b d fis>2 q2 |
+    <b d g>2 q2 |
+    <a d fis>2 q2 |
+    <b d g>2 q2 |
+    <b d e g>2@cresc q2 |
+    <a d e>2 <g cis e>2 |
+  }
+  lh {
+    <>@mp lD lA lBm lG lDf lG
+    <>@cresc lEm
+    a,,8@sustain e'8 a8 d8 a,8@sustain e'8 g8 cis8 |
+  }
+  lyrics words {
+    verse 1 {
+      I fold- ed all my wor- | ries in- to boats |
+      and set them on the riv- | er by the door |
+      The cur- rent took them gen- | tly one by one |
+      un- til I could not see | them an- y- more |
+    }
+    verse 2 {
+      The morn- ing came in sil- | ver through the rain |
+      the wa- ter kept the se- | crets that it knew |
+      And ev- ery lit- tle sail | I gave a- way |
+      came drift- ing back as some- | thing bright and new |
+    }
+  }
+}
+
+section Chorus {
+  vox {
+    <>@mf hook
+    e8 e8 a4 a8 cis8 b8 d8~ |
+    d2. r4 |
+  }
+  rh { <>@mf rG rD rA rBm rG rD rA <a d fis>2. r4 | }
+  lh { <>@mf cG cD cA cBm cG cD cA cD }
+  lyrics words {
+    Pa- per boats | pa- per boats |
+    car- ry me a- cross the night | |
+    Pa- per boats | pa- per boats |
+    sail un- til the morn- ing light | |
+  }
+}
+
+section Bridge {
+  vox {
+    r8 e8@mp g8 g8 b4 a8 g8~ |
+    g4 a8 b8 b8 d4. |
+    e,4@cresc e8 g8~ g8 fis8 b8 b8 |
+    a4. g8 e2 |
+  }
+  rh {
+    <g' b e>1@mp |
+    <g b d>1 |
+    <g b e>2@cresc <g b d>2 |
+    <e a d>2 <e a cis>2 |
+  }
+  lh {
+    e,2@mp@sustain b'2 |
+    g,2@sustain d'2 |
+    e2@cresc@sustain b'2 |
+    a,2@sustain a'2 |
+  }
+  lyrics words {
+    And if the riv- er runs | out to the sea |
+    let it take the heav- y | part of me |
+  }
+}
+
+// The last line once more, broad, after the last chorus
+section Tag {
+  vox {
+    e4@f g4 b2 |
+    a4 cis4 b4 d4~ |
+    d1~ |
+    d2. r4 |
+  }
+  rh {
+    <b e g>2@f q2 |
+    <a cis e g>2 q2 |
+    <a d fis>1 |
+    <a d fis>1@decresc |
+  }
+  lh {
+    <>@f lEm lA cD
+    d,4.@decresc@sustain a'8 d2 |
+  }
+  lyrics words {
+    sail un- til | the morn- ing light | | |
+  }
+}
+
+section Coda {
+  vox { R | R | R | }
+  rh {
+    d''4@mp b8 b8~ b2 |
+    a4@decresc fis8 fis8~ fis2 |
+    <fis a d>1@p@fermata |
+  }
+  lh {
+    <>@mp lG
+    a,,8@decresc@sustain fis'8 a8 d8 fis8 d8 a8 fis8 |
+    <d a d'>1@p@fermata@!sustain |
+  }
+  lyrics words { | | | }
+}
+
+singer "diffsinger/TIGER" on vox
+
+form { ~Intro Verse Chorus Verse Chorus Bridge Chorus ~Tag ~Coda }
+
+score {
+  staff vox
+  lyrics words
+  grandStaff {
+    staff rh
+    staff lh
+  }
+}

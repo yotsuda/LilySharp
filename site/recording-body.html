@@ -1,0 +1,219 @@
+<div class="layout">
+
+<nav class="toc">
+  <p class="grp">From a recording</p>
+  <ol>
+    <li><a href="#what">What it does</a></li>
+    <li><a href="#steps">Three steps</a></li>
+    <li><a href="#example">A real example</a></li>
+    <li><a href="#doubt">The chords it doubts</a></li>
+    <li><a href="#parts">The band, one part at a time</a></li>
+    <li><a href="#practice">Practise with the record</a></li>
+    <li><a href="#chart">A chart that is yours</a></li>
+    <li><a href="#expect">What to expect</a></li>
+    <li><a href="#install">What you need</a></li>
+  </ol>
+</nav>
+
+<article class="songs">
+
+<section id="what">
+  <h2>What it does</h2>
+  <p><b>Give it a recording of a song, and it writes the chord chart.</b> Right-click an
+  <code>.mp3</code> or a <code>.wav</code>, choose <i>Convert Recording to Lily# (.lys)…</i>, and
+  about half a minute later a chart is open: the tempo, the key, the bar lines, the sections and
+  the chord of every bar.</p>
+  <p>Then it does what a chart on paper cannot. Press ▶ and <b>the recording plays under the
+  chart</b>, the bar that sounds lit on the page. Click a bar and the record starts there. Loop
+  four bars, slow them down without changing their pitch, and turn the band's parts on and off
+  — the bass alone, or everything but the singing.</p>
+  <p>If you play in a band, you know both halves of this job: working out the chords of a song
+  from the record, and playing along with it until you have it. Here they are one tool, and what
+  you end up with is not a screen in an app but <b>a chart you own</b> — text you can correct,
+  transpose, print and hand to the rest of the band.</p>
+  <p class="note">Windows only, and a preview: the reading is a first draft to correct, not a
+  finished chart. Everything runs on your own computer; no recording is sent anywhere.</p>
+</section>
+
+<section id="steps">
+  <h2>Three steps</h2>
+  <ol class="steps">
+    <li><b>Convert</b><span>In VS Code's Explorer, right-click the recording and choose
+    <i>Convert Recording to Lily# (.lys)… (Preview)</i>. The chart is written beside it and
+    opens with its preview.</span></li>
+    <li><b>Listen and correct</b><span>Play the chart with the record. Where a chord is wrong,
+    type the right one — or, where the reader itself was in doubt, try its second guess with
+    one key.</span></li>
+    <li><b>Practise, print, share</b><span>Loop the hard bars with your own part turned off.
+    Transpose for the singer. Print a PDF for rehearsal, or export a video of the chart with
+    the record in it.</span></li>
+  </ol>
+</section>
+
+<section id="example">
+  <h2>A real example</h2>
+  <p>To show a reading that anyone may check, this one was made from a piece whose answer is
+  known: <a href="songs.html#evening-calm-bossa">Evening Calm Bossa</a>, the bossa nova on the
+  songs page. Its score was played into a WAV file, a minute and a half long, and that file —
+  only the sound — was given to the reader. Eighteen seconds later it had written this:</p>
+  <figure class="ex page-shot">
+    <div class="paper"><img src="songs/Evening-Calm-Bossa-heard.svg" alt="A chord chart of 48 bars in six sections, A to C2, in F major at 132: Fmaj7, Gm7, C, Am7, D7, and in section D B-flat major 7, B-flat minor 7, E-flat, F"></div>
+    <figcaption>The chart as it was written, untouched: 48 bars in 4/4 at 132, in F major, in
+    six sections.</figcaption>
+  </figure>
+  <p>It never saw the score. Compare what it heard with what was written:</p>
+  <table class="g">
+    <tr><th></th><th>The reader found</th><th>The score says</th></tr>
+    <tr><td>Tempo, meter, key</td><td>132, 4/4, F major</td><td>132, 4/4, F major — all three right</td></tr>
+    <tr><td>Bars and sections</td><td>48 bars; sections of 4, 8, 8, 8, 8 and 12 bars</td><td>48 bars; an intro of 4, then 8, 8, 8, 8, and 8 with a coda of 4 — every boundary where it is</td></tr>
+    <tr><td>The tune's first eight bars</td><td>Fmaj7 · Fmaj7 C · Gm7 · C · Am7 · D7 · Gm7 · C</td><td>Fmaj7 · Fmaj7 · Gm7 · C9 · Am7 · D7<span class="acc">♭</span>9 · Gm7 · C9</td></tr>
+    <tr><td>The second time, bar 6</td><td>Dm</td><td>Dm7 — it heard that the chord had changed from D7</td></tr>
+    <tr><td>The middle section's borrowed chords</td><td>B<span class="acc">♭</span>m7 · E<span class="acc">♭</span> · F</td><td>B<span class="acc">♭</span>m7 · E<span class="acc">♭</span>9 · Fmaj7 — the “backdoor” cadence, found</td></tr>
+    <tr><td>Where it went wrong</td><td>C/E · Am7 (and asks: or Em7?)</td><td>Em7<span class="acc">♭</span>5 · A7</td></tr>
+  </table>
+  <p>So: the frame of the song — tempo, key, bars, form — is right, most chords have the right
+  root and kind, the ninths and other colours are left for you to add, and a few bars are
+  wrong. That is what to expect, and a recording of a real band is harder than this one was
+  (<a href="#expect">the numbers are below</a>).</p>
+  <!--SONG:Evening-Calm-Bossa-heard-->
+</section>
+
+<section id="doubt">
+  <h2>The chords it doubts are marked, with its second guess</h2>
+  <p>A reader that is sometimes wrong is only useful if it says <i>where</i> it may be wrong.
+  Where it could not decide between two chords it writes both:</p>
+  <pre data-fragment>Am7 | D7@or(Dm7) | Gm7 | C@or(Csus4) |</pre>
+  <p>The chart shows and plays the first, <code>D7</code>; the other waits in the
+  <code>@or</code>.</p>
+  <ul>
+    <li><b>One key tries the other.</b> With the caret on the chord,
+    <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd> swaps the two and plays the chord.</li>
+    <li><b>Hear it in the music.</b> <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd> swaps
+    them and plays the whole bar — the recording's bar and the chart's chord together, so your
+    ear decides.</li>
+    <li><b>Any chord can be typed.</b> The chart is text: write <code>D7-9</code> over
+    <code>D7</code> and it is so. <a href="chords.html">How chords are written &rarr;</a></li>
+  </ul>
+</section>
+
+<section id="parts">
+  <h2>The band, one part at a time</h2>
+  <p>While it reads the chords, the converter also takes the recording apart. Six parts are
+  written beside the chart — <b>vocals, guitar, piano, other, bass</b> and <b>drums</b> — and
+  each gets a line in the preview's practice panel, with a switch and a fader.</p>
+  <ul>
+    <li><b>Hear one part alone.</b> Turn the others off, or press its <b>S</b>: the bass line
+    you are trying to work out, with nothing over it.</li>
+    <li><b>Take one part out.</b> Turn off the part you play, and the rest of the band is your
+    backing track.</li>
+    <li><b>Bass players: an octave up.</b> Low notes are hard to tell apart. <b>Octave</b>
+    raises the recording an octave, at the same speed, and the line is suddenly easy to
+    hear.</li>
+    <li><b>Nothing is lost when all are on.</b> With every part on and every fader at 100% you
+    hear the original recording itself, not the parts added up again.</li>
+  </ul>
+  <p class="note">The separation is done by a published model, on your machine. It is good
+  enough to hear a line and to practise against; it is not a clean studio stem.</p>
+</section>
+
+<section id="practice">
+  <h2>Practise with the record</h2>
+  <p>Because the chart knows when each bar begins in the recording, everything the preview
+  does with a score it does with the record too.</p>
+  <table class="g">
+    <tr><th>You want to</th><th>Do this</th></tr>
+    <tr><td>start from a place</td><td>click the bar; Play starts there</td></tr>
+    <tr><td>repeat a passage</td><td>select its bars and turn Repeat on — with a bar of
+    count-in before each round, if you like</td></tr>
+    <tr><td>slow it down</td><td>the Tempo slider, down to half speed; the pitch stays where
+    it was</td></tr>
+    <tr><td>play it in another key</td><td>write <code>transpose</code> in the chart: the
+    chords change, and the recording is shifted to match</td></tr>
+    <tr><td>hear one bar again</td><td><kbd>Alt+M</kbd> plays the bar the caret is in, with
+    the recording</td></tr>
+    <tr><td>hear the chart against the record</td><td>turn both on: the chart's chords, or
+    any part you add to it, sound with the recording, bar for bar</td></tr>
+  </table>
+  <p>The chart follows the band, not a metronome: each bar of the chart is stretched or
+  squeezed to the bar of the recording, so a drummer who pushes the chorus stays in step with
+  the page. <a href="editor.html#practice">More on practice playback &rarr;</a></p>
+</section>
+
+<section id="chart">
+  <h2>A chart that is yours</h2>
+  <p>What the converter writes is an ordinary Lily# file. It has no staves yet, only the
+  chords, bar by bar, under their section names — and everything Lily# does is open to it.</p>
+  <div class="cols2">
+    <div class="pillar">
+      <h3>For rehearsal</h3>
+      <p>Print it as a PDF. Rename the sections <i>Verse</i> and
+      <i>Chorus</i>. Add guitar or ukulele diagrams over the names, or a capo.
+      <a href="chords.html">Chords and chord diagrams &rarr;</a></p>
+    </div>
+    <div class="pillar">
+      <h3>To build on</h3>
+      <p>Add the melody, the words, a bass line or the kicks the band must hit — by hand, or
+      by <a href="editor.html#ai">asking AI</a>. The chart becomes a lead sheet, then a
+      score, from the same file.</p>
+    </div>
+    <div class="pillar">
+      <h3>To share</h3>
+      <p><i>Export as MP4</i> writes the chart with the recording in it, each chord name lit
+      while it sounds. WAV and MP3 take the recording too, with the parts as you set
+      them.</p>
+    </div>
+    <div class="pillar">
+      <h3>A chart you already have</h3>
+      <p><i>Attach Recording…</i> ties a recording to a chart you wrote yourself, so it plays
+      with yours. And if you convert a song you have already charted, the new reading can be
+      written beside yours, to compare.</p>
+    </div>
+  </div>
+  <p class="note">The recording itself is never copied or changed, and nothing about it is
+  written into the chart: a small file beside the chart remembers where the recording is and
+  when each bar begins.</p>
+</section>
+
+<section id="expect">
+  <h2>What to expect</h2>
+  <p>Measured on 100 studio recordings of pop songs with a band and singing (the RWC Popular
+  Music Database):</p>
+  <table class="g harmony">
+    <tr><th>It gets right</th><th>How often</th></tr>
+    <tr><td>the bar lines</td><td>94%</td></tr>
+    <tr><td>the chord's root (the <i>C</i> of Cm7)</td><td>87% of the time</td></tr>
+    <tr><td>the root, and major or minor</td><td>82% of the time</td></tr>
+  </table>
+  <ul>
+    <li><b>It is a first draft.</b> Roughly one chord in six has the wrong root or the wrong
+    major or minor. The finer colours — sevenths, ninths, altered notes — need your ear more
+    often still.</li>
+    <li><b>Not yet handled:</b> songs whose tempo changes a great deal, and bars with no chord
+    at the start of a song.</li>
+    <li><b>It reads harmony, not notes.</b> It does not write the melody, the bass line or the
+    drum part. Those you add.</li>
+  </ul>
+</section>
+
+<section id="install">
+  <h2>What you need</h2>
+  <ol class="llist">
+    <li><b>Windows</b>, 64-bit, and <a href="start.html">Lily# Studio</a>.</li>
+    <li><b>The Orecchiante extension</b>, which holds the reader and its models. Lily# Studio has
+    the menu; the first time you choose <i>Convert Recording to Lily# (.lys)…</i> without it,
+    you are offered the install. Orecchiante is free and open source
+    (<a href="https://github.com/yotsuda/Orecchiante">its repository</a>), and a separate
+    program, as <a href="sing.html">Cantoria</a> is for singing.</li>
+    <li><b>A recording</b> of five seconds or more that Windows can read: WAV, MP3, M4A, MP4,
+    AAC, FLAC or WMA.</li>
+  </ol>
+  <p>A three-minute song takes about half a minute. The chart, the small file of bar times and
+  a folder of the six parts are written to the folder you choose; the parts of a
+  five-minute song take a few tens of megabytes.</p>
+  <p class="note"><b>The music is someone's.</b> Working out a song for your own practice is
+  one thing; publishing a chart of it, or a video with the recording in it, is another, and
+  needs the rights holder's leave. The piece in the example above was written for this site.</p>
+</section>
+
+</article>
+</div>

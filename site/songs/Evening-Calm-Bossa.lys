@@ -1,0 +1,163 @@
+// Composed in Claude Code (Claude Fable 5.2), 2026-11-19
+// Asked: Write some good pieces for a page of music composed by AI.
+// The AI: A bossa nova in F major at 132 for flute, piano, bass and drums. The flute's theme comes in off the beat and is held over the bar line; the B of its AABA passes through a backdoor ii-V and climbs to D6. The piano plays the batida in rootless chords, the bass roots and fifths.
+
+octave relative
+pitch concert
+
+title "Evening Calm Bossa"
+tempo "Bossa Nova" 4 = 132
+time 4/4
+key f major
+
+part fl "Flute" "Fl." { instrument flute }
+part pno "Piano" "Pno." { instrument piano-right }
+part bass "Bass" "Bs." { instrument bass midiInstrument "acoustic bass" }
+part kit "Drums" "Dr." { clef percussion }
+
+// Flute: the first four bars of A (the theme, then the theme a step lower)
+phrase fHead {
+  r8 c''8 e8 a8~ a4 g8 e8~ |
+  e2. r4 |
+  r8 bes8 d8 g8~ g4 f8 d8~ |
+  d4. c8 e2 |
+}
+
+// Piano: the two-bar batida (eighths 1, 4, 7 and then 3, 6), the roots left to the bass
+phrase pF1  { <a c e>4. <a c e>4. <a c e>4 | }
+phrase pF2  { r4 <a c e>4 r8 <a c e>4. | }
+phrase pGm1 { <f bes d>4. <f bes d>4. <f bes d>4 | }
+phrase pC2  { r4 <e bes d>4 r8 <e bes d>4. | }
+phrase pAm1 { <g c e>4. <g c e>4. <g c e>4 | }
+phrase pD2  { r4 <fis c ees>4 r8 <fis c ees>4. | }
+phrase pDm2 { r4 <f a c>4 r8 <f a c>4. | }
+phrase pGmC { <f bes d>4. <f bes d>8 r8 <e bes d>4. | }
+phrase pHead { pF1 pF2 pGm1 pC2 }
+
+// Bass: root, root, fifth, fifth
+phrase bF   { f,,4 r8 f8 c'4. c8 | }
+phrase bGm  { g,,4 r8 g8 d'4. d8 | }
+phrase bC   { c,4 r8 c8 g4. g8 | }
+phrase bAm  { a,,4 r8 a8 e'4. e8 | }
+phrase bD   { d,4 r8 d8 a4. a8 | }
+phrase bBb  { bes,,4 r8 bes8 f'4. f8 | }
+phrase bGmC { g,,4. g8 c4. c8 | }
+phrase bHead { bF bF bGm bC }
+
+// Drums: eighths on the hi-hat, the clave on the side stick, the bass drum
+phrase hat  { hh8 hh hh hh hh hh hh hh | }
+phrase ride { cymr8 cymr cymr cymr cymr cymr cymr cymr | }
+phrase stA  { ss4. ss4. ss4 | }
+phrase stB  { r4 ss4 r8 ss4. | }
+phrase feet { bd4. bd8 bd4. bd8 | }
+phrase gA { drums { hat stA feet } }
+phrase gB { drums { hat stB feet } }
+// B: on the ride, the stick on beats 2 and 4, the bass drum on 1 and 3 alone
+phrase stC  { r4 ss4 r4 ss4 | }
+phrase feetC { bd2 bd2 | }
+phrase rC { drums { ride stC feetC } }
+phrase fillB { drums { { hh8 hh hh hh sn8 sn tomh toml | } feet } }
+
+section Intro {
+  fl { R | R | R | R | }
+  pno { <>@mf pF1 pGmC pF1 <>@decresc pGmC }
+  bass { <>@mf bF bGmC bF <>@decresc bGmC }
+  kit { <>@mf gA gB gA gB }
+}
+
+section A {
+  fl {
+    <>@mp fHead
+    r4 e''8 g8~ g4 a8 c8~ |
+    c4 a8 fis8~ fis4 ees4 |
+    d2 r8 d8 f8 a8~ |
+    a4 g4 r2 |
+  }
+  pno { <>@mp pHead pAm1 pD2 pGm1 pC2 }
+  bass { <>@mp bHead bAm bD bGm bC }
+  kit { <>@mp gA gB gA gB gA gB gA fillB }
+}
+
+section A2 {
+  fl {
+    <>@mf fHead
+    r4 e''8 g8~ g4 a8 c8~ |
+    c4 a8 f8~ f4 d4 |
+    r8 d8@decresc f8 bes8~ bes4 a8 g8 |
+    f2. r4 |
+  }
+  pno { <>@mf pHead pAm1 pDm2 <>@decresc pGmC <a c d>1 | }
+  bass { <>@mf bHead bAm bD <>@decresc bGmC bF }
+  kit { <>@mf gA gB gA gB gA gB gA fillB }
+}
+
+section B {
+  fl {
+    a''2.@mp f4 |
+    d4. f8~ f2 |
+    aes2. f4 |
+    c4. e8~ e2 |
+    r8 d8@cresc e8 g8 bes4 a8 g8 |
+    f4. a8~ a2 |
+    r8 g8@f b8 d8~ d4 b8 g8 |
+    bes4@decresc a8 g8~ g4 e4 |
+  }
+  pno {
+    <a d f>2.@mp r8 <a d f>8 |
+    r4 <a d f>2. |
+    <aes des f>2 <g des f>2 |
+    <a c e>2. r4 |
+    <g bes d>2@cresc <g cis e>2 |
+    <f a c>4. <f a c>4. <f a c>4 |
+    <f b d>4.@f <f b d>4. <f b d>4 |
+    <f bes d>4.@decresc <f bes d>8 r8 <e bes d>4. |
+  }
+  bass {
+    bes,,2@mp f'2 |
+    bes,2. f'4 |
+    bes,2 ees2 |
+    f,2 c'2 |
+    e2@cresc a,2 |
+    d2 a4 d4 |
+    g,2@f d'4 g,4 |
+    g2@decresc c4 d8 e8 |
+  }
+  kit {
+    <>@mp rC rC rC rC rC rC <>@f rC
+    drums { { cymr8@decresc cymr cymr cymr sn8 sn tomh toml | } feet } |
+  }
+}
+
+section Coda {
+  fl {
+    r8 c''8@mp e8 a8~ a2 |
+    r8 des,8@decresc f8 bes8~ bes2 |
+    r8 c,8@p e8 a8~ a2~ |
+    a1@fermata |
+  }
+  pno {
+    <>@mp pF1
+    <g bes des>1@decresc |
+    <a c e>4.@p <a c e>4. <a c e>4 |
+    <a c e g>1@fermata |
+  }
+  bass {
+    <>@mp bF
+    <>@decresc bBb
+    <>@p bF
+    f,,1@fermata |
+  }
+  kit {
+    <>@mp gA gB <>@p gA
+    drums { { cymr1@fermata | } { bd1 | } } |
+  }
+}
+
+form { Intro A A2 B A A2 Coda }
+
+score {
+  staff fl
+  staff pno
+  staff bass
+  staff kit
+}

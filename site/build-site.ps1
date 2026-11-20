@@ -29,6 +29,10 @@ function Test-Lys([string]$path) {
     # that is about the MACHINE, not the source: a `fonts` example naming a face the build
     # host lacks (Georgia on the Pages runner). The page shows the source, not that render.
     $lines = $out -split "`r?`n" | Where-Object { $_ -match ': (error|warning):' }
+    # A file whose only remarks are `info:` — a chart read from a recording, its doubted chords
+    # written X@or(Y) (recording.html's example) — is clean: the remarks are the reader's
+    # questions, part of what the page shows.
+    if (-not $lines -and $LASTEXITCODE -eq 0 -and $out -match ': info:') { return $null }
     $real = @($lines | Where-Object { $_ -notmatch 'is not installed on this system' })
     if ($lines -and -not $real -and $LASTEXITCODE -eq 0) { return $null }
     return (($out -split "`r?`n" | Where-Object { $_ -match '\S' }) | Select-Object -First 3) -join ' / '
@@ -38,7 +42,7 @@ function Test-Lys([string]$path) {
 & (Join-Path $here 'build-examples.ps1') -Lysc $Lysc
 
 # ------------------------------------------------------------------ 2. gallery + figures
-$pictures = 'ode-to-joy', 'rising-sun', 'blues-in-f', 'sketch-in-c', 'air-in-d', 'petite-valse', 'chord-axes'
+$pictures = 'ode-to-joy', 'rising-sun', 'blues-in-f', 'sketch-in-c', 'air-in-d', 'petite-valse', 'chord-axes', 'songs/Evening-Calm-Bossa-heard'
 $failed = @()
 foreach ($name in $pictures) {
     $lys = Join-Path $here "$name.lys"
@@ -75,7 +79,7 @@ $published = [System.Collections.Generic.HashSet[string]]::new([StringComparer]:
 $tmp = Join-Path ([IO.Path]::GetTempPath()) 'lilysharp-site-check'
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
 $pages = @('index.html', 'start.html', 'learn.html', 'grammar.html', 'ref-music.html', 'ref-structure.html',
-    'ref-output.html', 'ref-lookup.html', 'chords.html', 'chord-input.html', 'editor.html', 'commands.html', 'scan.html', 'sing.html', 'about.html') +
+    'ref-output.html', 'ref-lookup.html', 'chords.html', 'chord-input.html', 'editor.html', 'commands.html', 'scan.html', 'sing.html', 'songs.html', 'recording.html', 'about.html') +
     @(Get-ChildItem (Join-Path $here '../LilySharp.Lsp/Lessons/en') -Filter 'lesson-*.lys' | Sort-Object Name | ForEach-Object { "$($_.BaseName).html" })
 foreach ($page in $pages) {
     $html = Get-Content (Join-Path $here $page) -Raw -Encoding UTF8
@@ -88,6 +92,13 @@ foreach ($page in $pages) {
     foreach ($m in [regex]::Matches($media, '<(?:img|source|video)[^>]+?\b(?:src|poster)="([^"]+)"')) {
         $src = $m.Groups[1].Value
         if ($src -match '^[a-z]+:') { continue }
+        if (-not (Test-Path (Join-Path $here $src))) { $problems.Add("${page}:$(LineOf $m.Index): missing file $src") }
+        else { $published.Add($src) | Out-Null }
+    }
+    # A song's own file, linked for download (songs.html, build-manual.ps1's Expand-Songs), goes
+    # out with the page as a picture does.
+    foreach ($m in [regex]::Matches($html, '<a[^>]+href="(songs/[A-Za-z0-9-]+\.lys)"')) {
+        $src = $m.Groups[1].Value
         if (-not (Test-Path (Join-Path $here $src))) { $problems.Add("${page}:$(LineOf $m.Index): missing file $src") }
         else { $published.Add($src) | Out-Null }
     }

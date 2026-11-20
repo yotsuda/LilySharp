@@ -74,6 +74,20 @@ $extra = @'
   section.refcard { border-top:1px solid var(--rule); padding:18px 0 4px; }
   section.refcard h2 { font-size:21px; margin:0 0 6px; }
   section.front { padding:0 0 10px; }
+  /* songs.html: each video is a printed page, taller than wide — no wider than a page reads at,
+     so one fits a screen (at the demo clips' 960px it was 1350px tall). */
+  article.songs figure.demo-video video { max-width:520px; }
+  /* …and two side by side start at one height, however many lines the caption under each takes
+     (centred, the one with the two-line caption stood higher than its neighbour). */
+  article.songs .cols2 { align-items:start; }
+  /* The chord charts of a harmony analysis: every bar a column, the chords not broken. */
+  article.songs table.harmony td, article.songs table.harmony th { white-space:nowrap; }
+  article.songs table.harmony { display:block; overflow-x:auto; }
+  article.songs h4 { margin:26px 0 8px; }
+  /* A flat or natural sign comes from a fallback face with wide side bearings: drawn close to its letter. */
+  article.songs .acc { margin:0 -0.22em 0 -0.08em; }
+  /* A whole engraved page shown as a picture: wide enough to read its text. */
+  article.songs figure.page-shot img { display:block; width:100%; max-width:720px; height:auto; margin:0 auto; }
   /* learn pages */
   article.lesson { max-width:64em; }
   article.lesson h1 { font-size:32px; margin:0 0 14px; letter-spacing:-.01em; }
@@ -129,6 +143,16 @@ $pages = @(
        Desc = 'Have the lyrics of a Lily# score sung: install Cantoria and a voice, add a singer line, and press Play. Choose voices, hum or sing the note names, and export the song.'
        Sub = 'Singing — have the words of a score sung'
        Authority = 'Lily# Studio and Cantoria are the authority: where this page and the extensions disagree, the extensions are right and this page is a bug.' },
+    @{ Out = 'songs.html'; Body = 'songs-body.html'; Section = 'editor.html'
+       Title = 'Lily# — music composed by AI'
+       Desc = 'Songs and pieces composed by AI models in Lily#: each one a video of its engraved score playing, sung where it has words, with the whole .lys file under it.'
+       Sub = 'Music composed by AI — songs and pieces, each with its file'
+       Authority = 'The files are the authority: each piece is the .lys under its video, as it is shown.' },
+    @{ Out = 'recording.html'; Body = 'recording-body.html'; Section = 'editor.html'
+       Title = 'Lily# — a chord chart from a recording'
+       Desc = 'Give Lily# a recording of a song and it writes the chord chart: tempo, key, bar lines, sections and the chord of every bar. Then play the recording under the chart, loop and slow it down, and turn the band''s parts on and off.'
+       Sub = 'From a recording — the chord chart of a song, and the record to practise with'
+       Authority = 'Lily# Studio and Orecchiante are the authority: where this page and the extensions disagree, the extensions are right and this page is a bug.' },
     @{ Out = 'about.html'; Body = 'about-body.html'; Section = 'about.html'
        Title = 'Lily# — about'
        Desc = 'What Lily# owes LilyPond, its licence and fonts, how it is put together, and why the preview keeps up.'
@@ -273,6 +297,24 @@ function Expand-Examples([string]$body) {
     })
 }
 
+# <!--SONG:name--> becomes the COMPLETE source of songs/name.lys, folded away, and a link to the
+# file itself (songs.html: a piece is shown as its video, so there is no picture to go with it).
+# Read from the file that is published, so the text on the page and the download cannot drift;
+# build-site.ps1 compiles it as it stands on the page, like every whole example.
+function Expand-Songs([string]$body) {
+    [regex]::Replace($body, '<!--SONG:([A-Za-z0-9-]+)-->', {
+        param($m)
+        $name = $m.Groups[1].Value
+        $lys = Join-Path $here "songs/$name.lys"
+        if (-not (Test-Path $lys)) { throw "No song named '$name' (looked for songs/$name.lys)" }
+        $src = (Get-Content $lys -Raw -Encoding UTF8).TrimEnd().Replace('&', '&amp;').Replace('<', '&lt;').Replace('>', '&gt;')
+        @"
+<details><summary>Show the whole file</summary><pre>$src</pre></details>
+  <p class="note"><a href="songs/$name.lys" download>Download $name.lys</a></p>
+"@
+    })
+}
+
 function Write-Page([string]$out, [string]$section, [string]$title, [string]$desc, [string]$sub, [string]$body,
     [string]$authority, [string]$scripts = '') {
     $nav = Get-SiteNav $section
@@ -318,6 +360,7 @@ $scripts
 foreach ($page in $pages) {
     $body = Expand-Examples ((Get-Content (Join-Path $here $page.Body) -Raw -Encoding UTF8).Replace('{{VER}}', $ver).
         Replace('{{MERMAID}}', (Get-ReadmeMermaid $here)).Replace('{{INSTALL_STEPS}}', $InstallSteps))
+    $body = Expand-Songs $body
     $body = Add-FoldingToc (Add-SectionNumbers $body)
     Write-Page $page.Out $page.Section $page.Title $page.Desc $page.Sub $body $page.Authority ($page.Scripts ?? '')
 }
