@@ -43,6 +43,26 @@ internal sealed class LyricSingsValidator : ISemanticValidator
 
     public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics.ToList();
 
+    /// <summary>
+    /// LYS4042 on a singer line that names no words (<c>singer on melody</c>) where the part names
+    /// none and the file has no unnamed lyrics: the line sings nothing — and what to write. The
+    /// file's lyrics all have names, so the words are named on the part (the standard,
+    /// docs/lyrics-singer-design.md §10) or on the line (<c>sings NAME</c>). Owner's request
+    /// 2026-11-20: the message said only that there were no unnamed lyrics, and a chart that
+    /// joined its named words to the part by a score's row alone sang nothing with no way out said.
+    /// </summary>
+    internal static string NoUnnamedWords(string? part, IReadOnlyCollection<string> tracks)
+    {
+        if (tracks.Count == 0)
+            return "This file has no lyrics to sing.";
+        var names = tracks.OrderBy(t => t, StringComparer.Ordinal).ToList();
+        string p = part ?? "PART", w = names[0];
+        return "This file has no unnamed lyrics to sing, and the part names none of its own. "
+            + $"Name the words on the part, 'part {p} {{ lyrics {w} }}' (in its header, with what it already has), "
+            + $"or on this line, 'singer on {p} sings {w}'"
+            + (names.Count > 1 ? $" — the file's lyrics are {string.Join(", ", names)}." : ".");
+    }
+
     public void Validate(SyntaxTree tree)
     {
         var root = tree.GetRoot();
@@ -306,7 +326,7 @@ internal sealed class LyricSingsValidator : ISemanticValidator
             // A name the part lists and no block defines is already said at the part (LYS1007).
             if (!GeneratedLyrics.IsGenerated(line.Track) && !tracks.Contains(line.Track) && (node.TrackToken != null || own.Count == 0))
                 _diagnostics.Error(at.Span, DiagnosticCodes.SingerWordsUnknown,
-                    node.TrackToken == null ? "This file has no unnamed lyrics to sing." : $"No lyrics are named '{line.Track}'.");
+                    node.TrackToken == null ? NoUnnamedWords(line.Part, tracks) : $"No lyrics are named '{line.Track}'.");
             if (node.OnToken is { } on)
             {
                 if (!partNames.Contains(on.Text) && !voiceNames.Contains(on.Text))

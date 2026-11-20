@@ -109,6 +109,25 @@ public class PartOwnWordsTests
         Assert.DoesNotContain(ds, d => d.Code == DiagnosticCodes.SingerWordsUnknown);
     }
 
+    // Owner's request 2026-11-20: a chart whose named words were joined to the part by a score's row
+    // alone, 'singer on sop', sang nothing, and LYS4042 said only that there were no unnamed lyrics.
+    [Fact]
+    public void ALineWithNoWords_WhereThePartNamesNone_SaysWhatToWrite()
+    {
+        var d = Assert.Single(Validate(Music + "singer on sop\nscore { staff sop  lyrics words on sop }\n"), d => d.Code == DiagnosticCodes.SingerWordsUnknown);
+        Assert.Equal("This file has no unnamed lyrics to sing, and the part names none of its own. "
+            + "Name the words on the part, 'part sop { lyrics mw }' (in its header, with what it already has), "
+            + "or on this line, 'singer on sop sings mw' — the file's lyrics are mw, words.", d.Message);
+        // One lyrics in the file: that one, and no list.
+        var one = Assert.Single(Validate(Music.Replace("lyrics mw { か き く け | }", "") + "singer on sop\nscore { staff sop }\n"), d => d.Code == DiagnosticCodes.SingerWordsUnknown);
+        Assert.EndsWith("or on this line, 'singer on sop sings words'.", one.Message);
+        // Either way out clears it.
+        Assert.DoesNotContain(Validate("part sop { lyrics words }\n" + Music + "singer on sop\nscore { staff sop }\n"), d => d.Code == DiagnosticCodes.SingerWordsUnknown);
+        Assert.DoesNotContain(Validate(Music + "singer on sop sings words\nscore { staff sop }\n"), d => d.Code == DiagnosticCodes.SingerWordsUnknown);
+        // No lyrics at all.
+        Assert.Equal("This file has no lyrics to sing.", LyricSingsValidator.NoUnnamedWords("sop", []));
+    }
+
     [Fact]
     public void AGeneratedName_NeedsNoDefinition()
     {

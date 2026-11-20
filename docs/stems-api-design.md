@@ -124,7 +124,8 @@ interface Stem {
 - 気づいたこと: 作業場の譜面の最初の版は `lyrics words { … }`（名前つき）を score の行で結び、`singer on melody` と書いていた。
   文法（GRAMMAR.md SingerSung、lyrics-singer-design.md §10・§14）では `sings` を省いた行はパートが名指しした歌詞
   （`part melody { lyrics words }`）か名前の無い歌詞を歌うので、これはエラー LYS4042「This file has no unnamed lyrics to sing.」
-  （`lysc check` で確かめた）。エラーのある譜面でも再生の `Sung` は melody を歌うパートとして数え、`lilysharp/sung` は声を返さない。
+  （`lysc check` で確かめた。2026-11-20 のオーナー依頼で、文面に直し方を足した: パートに `lyrics words` と名指しするか、
+  `singer on melody sings words` と書く）。エラーのある譜面でも再生の `Sung` は melody を歌うパートとして数え、`lilysharp/sung` は声を返さない。
   そのときメロディは楽器で鳴り、`notes` に理由が出る（stems の側の扱いはこれで正しい）。
 
 ## 作る順（了承の後）
