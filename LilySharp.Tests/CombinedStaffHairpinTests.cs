@@ -36,6 +36,15 @@ namespace LilySharp.Tests;
 /// entering mid-bar began its hairpin on the other part's note; and a hairpin both parts write
 /// in a unison was drawn twice (Lab sessions/p1321/probe h2, h5, h4 — out-base against out).
 /// Each place below is said as voice, bar.item and the item's moment in its bar.
+/// <para>
+/// SESSION 1334 (owner's decision 2026-11-20, "match LilyPond"): a hairpin is a spanner the parts
+/// must share to be merged, as a slur is (PartDynamicEvents). Where one part's hairpin is open and
+/// the other's is not, or the two differ, the parts are apart — a "unison" with differing hairpins
+/// is two voices, and a solo does not begin while the soloist's hairpin is open. Part one's
+/// levels and hairpins then stand above the staff, part two's below (partCombine's
+/// DynamicLineSpanner directions). The expectations below changed with it; the pictures they
+/// stand for are LilyPond 2.26.0's (Lab sessions/p1334/probes, lp-cNN against cNN).
+/// </para>
 /// </remarks>
 [Trait("Category", "Unit")]
 public class CombinedStaffHairpinTests
@@ -91,16 +100,16 @@ public class CombinedStaffHairpinTests
         "v0 1.1 note@1/4 .. v0 1.3 note@3/4")]
     // …and its end in the next bar, apart again.
     [InlineData("c''2 d''2 | R1 | c''1 |", "e'4 f' e' f' | g'4@p g'@cresc g' g' | e'1@f |",
-        "v0 1.1 note@1/4 .. v0 2.0 note@0")]
+        "v1 1.1 note@1/4 .. v1 2.0 note@0")]
     // …and its start in the bar before, apart.
     [InlineData("c''2 d''2 | R1 | c''1 |", "e'4@p f'@cresc e' f' | g'4 g' g' g'@f | e'1 |",
-        "v1 0.1 note@1/4 .. v0 1.3 note@3/4")]
+        "v1 0.1 note@1/4 .. v1 1.3 note@3/4")]
     // Part two enters mid-bar after part one's half note: its item numbers are not the staff's.
     [InlineData("c''2 d''2 | c''2 r2 | c''1 |", "e'4 f' e' f' | r2 g'4@cresc g'@f | e'1 |",
         "v0 1.1 note@1/2 .. v0 1.2 note@3/4")]
     // One column of chords, part two writes.
     [InlineData("c''4 e'' g'' e'' | c''1 |", "g'4@p g'@cresc g' g'@f | g'1 |",
-        "v0 0.1 note@1/4 .. v0 0.3 note@3/4")]
+        "v1 0.1 note@1/4 .. v1 0.3 note@3/4")]
     // A unison, both write: one hairpin.
     [InlineData("c'4@p d'@cresc e' f'@f | g'1 |", "c'4@p d'@cresc e' f'@f | g'1 |",
         "v0 0.1 note@1/4 .. v0 0.3 note@3/4")]
@@ -144,7 +153,7 @@ public class CombinedStaffHairpinTests
     // …and its start still goes with its note (a bar part two plays alone), the stop still its
     // own, before the level its start's voice has further on.
     [InlineData("R1 | c''1 | c''1 |", "g'4 g'@cresc g' g' | r2 r2@!cresc | e'1@f |",
-        "v0 0.1 note@1/4 .. v0 1.0 note@0")]
+        "v1 0.1 note@1/4 .. v0 1.0 note@0")]
     public void AnEndOnARestNobodyEngraves_StopsOnItsBeat(string fl1, string fl2, string expected)
         => Assert.Equal(expected, Hairpins(Collect(fl1, fl2)));
 
@@ -202,7 +211,7 @@ public class CombinedStaffHairpinTests
     /// </summary>
     [Theory]
     [InlineData("c''2 d''2 | R1 | c''2 d''2 | c''2 d''2 |", "e'4 f'@cresc e' f' | g'4 g' g'@!cresc g' | e'4 f' e' f' | e'4@f f' e' f' |",
-        "v1 0.1 note@1/4 .. v0 1.2 note@1/2")]
+        "v1 0.1 note@1/4 .. v1 1.2 note@1/2")]
     public void AHairpinsStopAfterItsPartChangedStreams_IsItsOwn(string fl1, string fl2, string expected)
         => Assert.Equal(expected, Hairpins(Collect(fl1, fl2)));
 
@@ -215,10 +224,10 @@ public class CombinedStaffHairpinTests
     [Theory]
     // Part two alone, then part one alone, in one bar of one voice.
     [InlineData("R1 | r2 c''2@decresc | c''1@p |", "e'4 f'@cresc e' f' | e'4@decresc f' r2 | e'1@p |",
-        "v0 0.1 note@1/4 .. v0 1.0 note@0")]
+        "v1 0.1 note@1/4 .. v1 1.0 note@0")]
     // The other way round (control: part one is listed first and heard first).
     [InlineData("R1 | c''2@decresc r2 | c''1@p |", "e'4 f'@cresc e' f' | r2 e'4@decresc f' | e'1@p |",
-        "v0 0.1 note@1/4 .. v0 1.0 note@0")]
+        "v1 0.1 note@1/4 .. v1 1.1 note@1/2")]
     public void AHairpin_EndsAtItsVoicesEarliestEnd_WhicheverPartIsListedFirst(string fl1, string fl2, string expected)
         => Assert.Equal(expected, Hairpins(Collect(fl1, fl2)).Split(" | ")[0]);
 
@@ -229,11 +238,12 @@ public class CombinedStaffHairpinTests
     /// sessions/p1323/probe s2, s3).
     /// </summary>
     [Theory]
-    // Part two's open crescendo ends where the unison's begins.
+    // Part two's open crescendo ends where the unison's begins — the "unison" is apart since session
+    // 1334 (part two's crescendo is open there), and part two's own hairpin stands in its own voice.
     [InlineData("c''2 d''2 | c'4 d'@cresc e' f'@!cresc | g'1 |", "e'4 f' e'@cresc f' | c'4 d'@cresc e' f'@!cresc | g'1 |",
-        "v1 0.2 note@1/2 .. v0 1.1 note@1/4 | v0 1.1 note@1/4 .. v0 1.3 note@3/4")]
+        "v1 0.2 note@1/2 .. v1 1.1 note@1/4 | v0 1.1 note@1/4 .. v0 1.3 note@3/4 | v1 1.1 note@1/4 .. v1 1.3 note@3/4")]
     [InlineData("c''2 d''2 | c'4 d'@decresc e' f'@!decresc | g'2 a'2 |", "e'4 f'@cresc e' f' | c'4 d'@decresc e' f'@!decresc | e'2 f'2@!cresc |",
-        "v1 0.1 note@1/4 .. v0 1.1 note@1/4 | v0 1.1 note@1/4 .. v0 1.3 note@3/4")]
+        "v1 0.1 note@1/4 .. v1 1.1 note@1/4 | v0 1.1 note@1/4 .. v0 1.3 note@3/4 | v1 1.1 note@1/4 .. v1 1.3 note@3/4")]
     public void AUnisonsSecondStop_GoesWithItsStart(string fl1, string fl2, string expected)
         => Assert.Equal(expected, Hairpins(Collect(fl1, fl2)));
 
@@ -244,11 +254,12 @@ public class CombinedStaffHairpinTests
     /// ended on the far edge of the note the next begins on, overlapping it by a note head.
     /// </summary>
     [Theory]
-    // The next is the unison's: part two's own start is dropped, part one's stands for it.
+    // The next was the unison's until session 1334; apart now (part two's crescendo is open), each
+    // part's hairpin in its own voice and part two's two back to back.
     [InlineData("c''2 d''2 | c'4 d'@cresc e' f'@!cresc | g'1 |", "e'4 f' e'@cresc f' | c'4 d'@cresc e' f'@!cresc | g'1 |",
-        "Crescendo> | >Crescendo")]
+        "Crescendo> | Crescendo | >Crescendo")]
     [InlineData("c''2 d''2 | c'4 d'@decresc e' f'@!decresc | g'2 a'2 |", "e'4 f'@cresc e' f' | c'4 d'@decresc e' f'@!decresc | e'2 f'2@!cresc |",
-        "Crescendo> | >Decrescendo")]
+        "Crescendo> | Decrescendo | >Decrescendo")]
     // The next is in a bar part two plays alone: its own start, in the staff's first voice.
     [InlineData("c''2 d''2 | R1 | c''1 |", "e'4 f'@cresc e' f' | g'4 g'@decresc g' g'@!decresc | e'1 |",
         "Crescendo> | >Decrescendo")]
@@ -258,23 +269,25 @@ public class CombinedStaffHairpinTests
     // Part ONE's hairpin under part two's open one is another part's: met in another voice.
     [InlineData("c''2 d''2 | c''4 d''@cresc e'' f''@!cresc | c''1 |", "e'4 f'@cresc e' f' | e'1 | e'1 |",
         "Crescendo (met in another voice) | Crescendo")]
-    // The unison's hairpin stands for part two's too: part two's next follows it, part one ending
-    // it nowhere (owner's decision 2026-11-19; Lab sessions/p1327/probe h4)…
+    // Both parts' crescendo in the unison, then apart: part two's next follows its own, part one's
+    // runs on unended (until session 1334 the unison's hairpin stood for part two's, owner's decision
+    // 2026-11-19; the parts are apart from the crescendo's end on now, as LilyPond keeps them, Lab
+    // sessions/p1334/probes lp-c30 — which draws part one's unended crescendo nowhere)…
     [InlineData("c'4 d'@cresc e' f' | c''2 d''2 | c''1 |", "c'4 d'@cresc e' f' | e'4 f'@decresc e' f'@!decresc | e'1 |",
-        "Crescendo> | >Decrescendo")]
+        "Crescendo (met in another voice) | Crescendo> | >Decrescendo")]
     // …but where part one ends it itself, it runs to that end, as before (h4f)…
     [InlineData("c'4 d'@cresc e' f' | c''2 d''2@f | c''1 |", "c'4 d'@cresc e' f' | e'4 f'@decresc e' f'@!decresc | e'1 |",
-        "Crescendo | Decrescendo")]
+        "Crescendo | Crescendo> | >Decrescendo")]
     // …a hairpin of its own being such an end too (its fourth beat is one chord of both parts,
     // where part two's stop meets it)…
     [InlineData("c'4 d'@cresc e' f' | c''2. d''4@decresc | c''1@p |", "c'4 d'@cresc e' f' | e'4 f' e'@decresc f'@!decresc | e'1 |",
-        "Crescendo> | >Decrescendo | Decrescendo>")]
+        "Crescendo> | Crescendo> | >Decrescendo | >Decrescendo")]
     // …also a bar later, past part two's next…
     [InlineData("c'4 d'@cresc e' f' | c''1 | c''2 d''2@decresc | c''1 |", "c'4 d'@cresc e' f' | e'4 f'@decresc e' f'@!decresc | e'1 | e'1 |",
-        "Crescendo> | Decrescendo | >Decrescendo")]
+        "Crescendo> | Crescendo> | >Decrescendo | >Decrescendo")]
     // …and a level part one wrote BEFORE the unison's start none.
     [InlineData("c'4@p d'@cresc e' f' | c''2 d''2 | c''1 |", "c'4@p d'@cresc e' f' | e'4 f'@decresc e' f'@!decresc | e'1 |",
-        "Crescendo> | >Decrescendo")]
+        "Crescendo (met in another voice) | Crescendo> | >Decrescendo")]
     public void APartsNextHairpinInAnotherVoice_IsAdjacent(string fl1, string fl2, string expected)
         => Assert.Equal(expected, Tips(Collect(fl1, fl2)));
 
@@ -285,27 +298,28 @@ public class CombinedStaffHairpinTests
     /// centres, left to right, then the levels'.
     /// </summary>
     [Theory]
-    // Part two's crescendo where the parts play apart, its next in the unison.
+    // Part two's crescendo where the parts play apart, its next in the bar after — apart too since
+    // session 1334: part one's crescendo above, part two's two on one line below.
     [InlineData("c''2 d''2 | c'4 d'@cresc e' f'@!cresc | g'1 |", "e'4 f' e'@cresc f' | c'4 d'@cresc e' f'@!cresc | g'1 |",
-        "-7.33 -7.33")]
+        "-8.61 1.37 -8.61")]
     // The next begins at the unison's bar's head.
     [InlineData("c''2 d''2 | c'4@cresc d' e' f'@!cresc | g'1 |", "e'4 f' e'@cresc f' | c'4@cresc d' e' f'@!cresc | g'1 |",
-        "-7.39 -7.39")]
+        "-8.16 1.37 -8.16")]
     // The level that closes the second is on the line too (the p before the first is not).
     [InlineData("c''2 d''2 | c'4 d'@decresc e' f' | g'1@p |", "e'4@p f' e'@cresc f' | c'4 d'@decresc e' f' | g'1@p |",
-        "-7.33 -7.33 / p-6.39 p-5.93")]
+        "-8.61 1.83 -8.61 / p-6.39 p3.23 p-7.21")]
     // Begun in a bar part two plays alone, followed where the parts play apart.
     [InlineData("R1 | c''2 d''2 | c''1 |", "g'4 g'@cresc g' g' | e'4 f'@decresc e' f'@!decresc | e'1 |",
-        "-7.77 -7.77")]
-    // The unison's hairpin and part two's next (part one ending it nowhere).
+        "-7.82 -7.82")]
+    // Part one's crescendo above (unended), part two's crescendo and next on one line below.
     [InlineData("c'4 d'@cresc e' f' | c''2 d''2 | c''1 |", "c'4 d'@cresc e' f' | e'4 f'@decresc e' f'@!decresc | e'1 |",
-        "-7.77 -7.77")]
+        "2.85 -7.82 -7.82")]
     // Another part's hairpin under part two's open one is another line.
     [InlineData("c''2 d''2 | c''4 d''@cresc e'' f''@!cresc | c''1 |", "e'4 f'@cresc e' f' | e'1 | e'1 |",
-        "-7.46 -5.37")]
+        "-7.46 3.98")]
     // The next written on the other side of the staff is another line too.
     [InlineData("c''2 d''2 | c'4 d'@cresc.up e' f'@!cresc | g'1 |", "e'4 f' e'@cresc f' | c'4 d'@cresc.up e' f'@!cresc | g'1 |",
-        "-7.33 1.37")]
+        "-8.61 1.37 3.26")]
     public void APartsHairpinsInTwoVoices_RideOneLine(string fl1, string fl2, string expected)
     {
         var score = Collect(fl1, fl2);
@@ -398,6 +412,55 @@ public class CombinedStaffHairpinTests
         var score = Collect(fl1, fl2);
         Assert.Equal(wedges, new LayoutEngine(score.Paper).Layout(score).HairpinLayouts.Length);
     }
+
+    /// <summary>
+    /// A "unison" whose parts write different hairpins is two voices while they run, each part's
+    /// wedge its own (session 1334; until then it stayed "a2" and part two's wedge was lost).
+    /// MEASURED, LilyPond 2.26.0 (Lab sessions/p1333/h13, lp-h13.cropped.png): "a2" on the c, d to f
+    /// apart — part one's crescendo and f above the staff, part two's decrescendo and f below — and
+    /// "a2" again on the g.
+    /// </summary>
+    [Fact]
+    public void AUnisonWithDifferentHairpins_IsApartWhileTheyRun()
+    {
+        var score = Collect("c'4@p d'@cresc e' f'@f | g'1 |", "c'4@p d'@decresc e' f'@f | g'1 |");
+        Assert.Equal("v0 0.1 note@1/4 .. v0 0.3 note@3/4 | v1 0.1 note@1/4 .. v1 0.3 note@3/4", Hairpins(score));
+        Assert.Equal(new[] { "a2", "a2" }, score.StaffGroups[0].Staves[0].PartCombineMarks.Select(m => m.Text));
+        Assert.Equal("wedges 1 up 1 down / levels 1 up 2 down", Sides(score));
+    }
+
+    /// <summary>One part's hairpin alone in a unison keeps the parts apart while it runs, a
+    /// decrescendo as a crescendo; the same hairpin in both is one voice still.</summary>
+    [Theory]
+    [InlineData("c'4 d'@decresc e' f'@!decresc | g'1 |", "c'4 d' e' f' | g'1 |", "a2 a2")]
+    [InlineData("c'4 d'@cresc e' f'@!cresc | g'1 |", "c'4 d' e' f' | g'1 |", "a2 a2")]
+    [InlineData("c'4 d'@decresc e' f'@!decresc | g'1 |", "c'4 d'@decresc e' f'@!decresc | g'1 |", "a2")]
+    public void OnePartsHairpinInAUnison_KeepsThePartsApart(string fl1, string fl2, string labels)
+        => Assert.Equal(labels, string.Join(" ", Collect(fl1, fl2).StaffGroups[0].Staves[0].PartCombineMarks.Select(m => m.Text)));
+
+    /// <summary>How many wedges and levels stand above the staff and how many below.</summary>
+    private static string Sides(MultiStaffScore score)
+    {
+        var layout = new LayoutEngine(score.Paper).Layout(score);
+        return $"wedges {layout.HairpinLayouts.Count(h => h.YUp > 0)} up {layout.HairpinLayouts.Count(h => h.YUp < 0)} down"
+            + $" / levels {layout.DynamicLayouts.Count(d => d.YUp > 0)} up {layout.DynamicLayouts.Count(d => d.YUp < 0)} down";
+    }
+
+    /// <summary>
+    /// Where the parts are apart, part one's levels and hairpins stand above the staff and part
+    /// two's below, as partCombine's voices set them (session 1334; until then both stood below,
+    /// one under the other). A side written stays.
+    /// MEASURED, LilyPond 2.26.0 (Lab sessions/p1333/h13/apart.lys, lp-apart.cropped.png).
+    /// </summary>
+    [Theory]
+    [InlineData("e''4@p f''@cresc g'' a''@f | g''1 |", "c'4@p d'@cresc e' f'@f | g'1 |", "wedges 1 up 1 down / levels 2 up 2 down")]
+    // A side written turns only its own line: the p written below stands below, the crescendo a
+    // moment later opens a line of its own, above (LilyPond 2.26.0: Lab sessions/p1334/lp-down)…
+    [InlineData("e''4@p.down f''@cresc g'' a''@f | g''1 |", "c'4@p d'@cresc e' f'@f | g'1 |", "wedges 1 up 1 down / levels 1 up 3 down")]
+    // …and a crescendo written below takes the f that ends it with it.
+    [InlineData("e''4 f''@cresc.down g'' a''@f | g''1 |", "c'4 d'@cresc e' f'@f | g'1 |", "wedges 0 up 2 down / levels 0 up 2 down")]
+    public void ApartPartOnesDynamics_StandAbove(string fl1, string fl2, string expected)
+        => Assert.Equal(expected, Sides(Collect(fl1, fl2)));
 
     /// <summary>The marks of a staff that is not combined are not touched, beside one that is.</summary>
     [Fact]

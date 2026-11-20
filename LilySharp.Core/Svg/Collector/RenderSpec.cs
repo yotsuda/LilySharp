@@ -596,6 +596,40 @@ public sealed record RenderSpec(
         return on;
     }
 
+    /// <summary>
+    /// Whether each binding of <see cref="GetVoiceBindings"/> (same order) is a part of a
+    /// combined staff — what the collector hands the part combiner each such part's dynamics by
+    /// (<see cref="ToStaffGroups"/>'s <c>combinedDynamics</c>).
+    /// </summary>
+    internal List<bool> GetBindingsOnCombinedStaves()
+    {
+        var on = new List<bool>();
+        void Add(RenderItemSpec item)
+        {
+            switch (item)
+            {
+                case GrandStaffRenderSpec grand:
+                    foreach (var member in grand.GrandStaff.Members)
+                        Add(member);
+                    break;
+                case CondensedStaffSpec condensed:
+                    foreach (var _ in condensed.PartNames)
+                        on.Add(false);
+                    break;
+                case CombinedStaffSpec combined:
+                    foreach (var _ in combined.PartNames)
+                        on.Add(true);
+                    break;
+                case SingleStaffSpec or TabStaffSpec or OssiaStaffSpec or ChordRowSpec or LyricsRowSpec:
+                    on.Add(false);
+                    break;
+            }
+        }
+        foreach (var item in OrderedItems())
+            Add(item);
+        return on;
+    }
+
     /// <summary>Whether this render contains a grand staff.</summary>
     public bool HasGrandStaff => Items.Any(i => i is GrandStaffRenderSpec);
 
@@ -885,13 +919,17 @@ public sealed record RenderSpec(
     /// naming ONE part builds a staff without yielding such a binding — so the two lists
     /// would silently slip by one from that book onward.
     /// </remarks>
+    /// <param name="combinedDynamics">A combined staff's part's dynamics, asked once for each of
+    /// its parts in binding order (<see cref="GetBindingsOnCombinedStaves"/>): the combiner reads
+    /// a hairpin as a spanner the parts must share (<see cref="PartDynamicEvents"/>). Null for none.</param>
     public IEnumerable<StaffGroup> ToStaffGroups(
         Func<string, ImmutableArray<Voice>> getVoices,
-        ICollection<CombinedStaffAddressing>? addressings = null)
+        ICollection<CombinedStaffAddressing>? addressings = null,
+        Func<string, IReadOnlyDictionary<(int Measure, int Item), PartDynamicEvents>?>? combinedDynamics = null)
     {
         var pending = addressings == null ? null : new List<CombinedStaffAddressing>();
         int staffIndex = 0;
-        foreach (var group in BuildStaffGroups(getVoices, pending))
+        foreach (var group in BuildStaffGroups(getVoices, pending, combinedDynamics))
         {
             if (pending is { Count: > 0 })
             {
@@ -926,7 +964,8 @@ public sealed record RenderSpec(
 
     private IEnumerable<StaffGroup> BuildStaffGroups(
         Func<string, ImmutableArray<Voice>> getVoices,
-        ICollection<CombinedStaffAddressing>? addressings)
+        ICollection<CombinedStaffAddressing>? addressings,
+        Func<string, IReadOnlyDictionary<(int Measure, int Item), PartDynamicEvents>?>? combinedDynamics)
     {
         // The single-voice rows (tab/ossia/chord/lyrics) take the part's primary
         // voice; a spec naming an undefined/empty part falls back to an empty voice
@@ -1014,7 +1053,13 @@ public sealed record RenderSpec(
                         ? combineParts[i][0]
                         : new Voice(combined.PartNames.Length > i ? combined.PartNames[i] : "",
                             ImmutableArray<Measure>.Empty);
-                    var result = PartCombiner.Combine(PartVoice(0), PartVoice(1));
+                    // Each part's dynamics, asked in the order its bindings were collected.
+                    var partDynamics = combined.PartNames
+                        .Select(name => combinedDynamics?.Invoke(name))
+                        .ToArray();
+                    IReadOnlyDictionary<(int Measure, int Item), PartDynamicEvents>? DynamicsOf(int i)
+                        => i < partDynamics.Length ? partDynamics[i] : null;
+                    var result = PartCombiner.Combine(PartVoice(0), PartVoice(1), DynamicsOf(0), DynamicsOf(1));
                     // ⚠️ A part that is itself polyphonic contributes its FIRST voice to the
                     // combination and its remaining voices to the staff untouched — the
                     // combiner compares two streams, and a voice { } { } span is already two.

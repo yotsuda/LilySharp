@@ -30,6 +30,29 @@ using LilySharp.Core.Svg.Model;
 namespace LilySharp.Core.Svg.Collector;
 
 /// <summary>
+/// What a part's dynamics do at one of its items, as the part combiner reads them: Lily#
+/// dynamics are annotations beside the items, so the collector hands them over by
+/// (measure, item) of the part's first voice (<see cref="PartCombiner.Combine"/>).
+/// </summary>
+/// <remarks>LILYPOND-REF: scm/part-combiner.scm:215-242 analyze-absdyn-end, analyze-span-event —
+/// an absolute dynamic or a span-dynamic STOP ends the open 'cresc and 'decr; a
+/// crescendo-event opens 'cresc, a decrescendo-event 'decr.</remarks>
+[Flags]
+public enum PartDynamicEvents
+{
+    /// <summary>Nothing.</summary>
+    None = 0,
+    /// <summary>An absolute dynamic (<c>@p</c>, <c>@sfz</c>): ends an open hairpin.</summary>
+    Absolute = 1,
+    /// <summary>A crescendo opens (<c>@cresc</c>).</summary>
+    CrescendoStart = 2,
+    /// <summary>A decrescendo opens (<c>@decresc</c>, <c>@dim</c>).</summary>
+    DecrescendoStart = 4,
+    /// <summary>A hairpin's own stop (<c>@!cresc</c>).</summary>
+    Stop = 8,
+}
+
+/// <summary>
 /// The split configuration at one moment: what the two parts are doing relative to each
 /// other, and therefore which voice each of them is engraved in.
 /// </summary>
@@ -175,10 +198,10 @@ public sealed record PartCombineResult(
 /// <c>partCombineForced</c>, which comes from <c>\partCombineApart</c> and friends. Lily#
 /// has no spelling for them, so no event can carry it. Adding the spelling is what putting
 /// this pass back would take — the pass is a fold over the same result vector.</item>
-/// <item>The <c>cresc</c>/<c>decr</c> span states (:215-220, :227-242). Lily# dynamics are
-/// not items in the voice stream at all — they are annotations resolved later — so there is
-/// nothing in this input to read them off. Slurs, phrasing slurs, ties and manual beams ARE
-/// on the items and are analysed.</item>
+/// <item>(Ported in session 1333: the <c>cresc</c>/<c>decr</c> span states, :215-220 and
+/// :227-242. Lily# dynamics are annotations beside the items, so the collector hands each part's
+/// over by (measure, item) — <see cref="PartDynamicEvents"/>. Until then `@cresc` in one part
+/// against `@decresc` in the other at one moment stayed "a2" and the second wedge was lost.)</item>
 /// <item>Pitch is compared as (staff position, printed accidental), because that is what a
 /// <see cref="NoteItem"/> carries. Two notes that sound alike but print differently — one
 /// part restating an accidental the other still has in force — compare unequal. Carrying the
@@ -234,6 +257,9 @@ internal static class PartCombiner
         public MusicItem? Item;
         public int MeasureIndex = -1;
         public int ItemIndex = -1;
+
+        /// <summary>The part's dynamics at this item (<see cref="PartDynamicEvents"/>).</summary>
+        public PartDynamicEvents Dynamics;
 
         /// <summary>Index into the split-state vector. LILYPOND-REF: :25 split-index.</summary>
         public int SplitIndex;
@@ -301,12 +327,17 @@ internal static class PartCombiner
     /// </summary>
     /// <param name="one">Part one — stems up where the parts are apart.</param>
     /// <param name="two">Part two — stems down where the parts are apart.</param>
-    public static PartCombineResult Combine(Voice one, Voice two)
+    /// <param name="dynamicsOne">Part one's dynamics by (measure, item) of <paramref name="one"/>:
+    /// a hairpin is a spanner the parts must share to be merged, as a slur is. Null for none.</param>
+    /// <param name="dynamicsTwo">Part two's, the same.</param>
+    public static PartCombineResult Combine(Voice one, Voice two,
+        IReadOnlyDictionary<(int Measure, int Item), PartDynamicEvents>? dynamicsOne = null,
+        IReadOnlyDictionary<(int Measure, int Item), PartDynamicEvents>? dynamicsTwo = null)
     {
         (one, two) = UnionWrittenRestBoundaries(one, two);
 
-        var states1 = MakeVoiceStates(one);
-        var states2 = MakeVoiceStates(two);
+        var states1 = MakeVoiceStates(one, dynamicsOne);
+        var states2 = MakeVoiceStates(two, dynamicsTwo);
         var result = MakeSplitState(states1, states2);
         AnalyzeSpannerStates(states1);
         AnalyzeSpannerStates(states2);
@@ -397,8 +428,10 @@ internal static class PartCombiner
     /// The split list on its own — the analysis without the engraving, for tests that want
     /// to assert what LilyPond's <c>determine-split-list</c> would return.
     /// </summary>
-    public static ImmutableArray<PartCombineSplit> DetermineSplitList(Voice one, Voice two)
-        => Combine(one, two).SplitList;
+    public static ImmutableArray<PartCombineSplit> DetermineSplitList(Voice one, Voice two,
+        IReadOnlyDictionary<(int Measure, int Item), PartDynamicEvents>? dynamicsOne = null,
+        IReadOnlyDictionary<(int Measure, int Item), PartDynamicEvents>? dynamicsTwo = null)
+        => Combine(one, two, dynamicsOne, dynamicsTwo).SplitList;
 
     // ------------------------------------------------- the part's own simultaneous silence
 
@@ -651,7 +684,8 @@ internal static class PartCombiner
     /// there. They are not events the combiner compares, so they are held on the state that
     /// carries the moment and routed with it.
     /// </remarks>
-    private static VoiceState[] MakeVoiceStates(Voice voice)
+    private static VoiceState[] MakeVoiceStates(Voice voice,
+        IReadOnlyDictionary<(int Measure, int Item), PartDynamicEvents>? dynamics = null)
     {
         var states = new List<VoiceState>();
         var moment = Fraction.Zero;
@@ -669,6 +703,7 @@ internal static class PartCombiner
                     Item = items[ii],
                     MeasureIndex = mi,
                     ItemIndex = ii,
+                    Dynamics = dynamics?.GetValueOrDefault((mi, ii)) ?? PartDynamicEvents.None,
                 });
                 moment += duration;
             }
@@ -741,11 +776,24 @@ internal static class PartCombiner
             {
                 int here = vs.SplitIndex;
 
+                // analyze-absdyn-end (:215-220) first, over the moment's events: an absolute
+                // dynamic or a hairpin's stop ends whichever hairpin is open.
+                if ((vs.Dynamics & (PartDynamicEvents.Absolute | PartDynamicEvents.Stop)) != 0)
+                {
+                    Remove(active, "cresc");
+                    Remove(active, "decr");
+                }
+
                 // analyze-span-event (:227-242) — a stop clears, a start records.
                 if (EndsSlur(item)) Remove(active, "slur");
                 if (EndsBeam(item)) Remove(active, "beam");
                 if (StartsSlur(item)) active.Add(("slur", here));
                 if (StartsBeam(item)) active.Add(("beam", here));
+                // …a crescendo-event opens 'cresc and a decrescendo-event 'decr (:232-233), so
+                // two parts merged into one voice must swell together: `@cresc` against
+                // `@decresc` at one moment is apart, where each part's wedge is drawn.
+                if ((vs.Dynamics & PartDynamicEvents.CrescendoStart) != 0) active.Add(("cresc", here));
+                if ((vs.Dynamics & PartDynamicEvents.DecrescendoStart) != 0) active.Add(("decr", here));
                 // ⚠️ LilyPond keys the PHRASING slur as 'tie (:230), stop before start as the
                 // engraver reads them — and the note's own event then clears 'tie just below
                 // (analyze-tie-end), so only a phrasing slur on a REST outlives its moment.

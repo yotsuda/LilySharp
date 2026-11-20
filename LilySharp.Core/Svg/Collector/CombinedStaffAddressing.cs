@@ -184,7 +184,7 @@ internal static class CombinedStaffReaddress
         List<MusicMarkItem>? unengravedHairpinMarks = null)
     {
         var byStaff = addressings.ToDictionary(a => a.StaffIndex);
-        return content with
+        var moved = content with
         {
             Dynamics = MoveEach(content.Dynamics, byStaff,
                 d => new VoiceItemAddress(d.VoiceIndex, d.MeasureIndex, d.ItemIndex),
@@ -243,6 +243,79 @@ internal static class CombinedStaffReaddress
                 }),
             MusicMarks = MoveMarks(content.MusicMarks, byStaff, measuresOf, unengravedHairpinMarks, content.Dynamics),
         };
+        return measuresOf == null ? moved : SideByContext(moved, byStaff, measuresOf);
+    }
+
+    /// <summary>
+    /// The side a combined staff's dynamics and hairpins stand on where nothing is written: part
+    /// one's own voice above the staff, part two's below, the shared and solo voices the staff's.
+    /// Until session 1334 part one's levels and hairpins stood below with part two's, one under
+    /// the other, where its notes were apart.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/music-functions-init.ly:1668-1670 partCombine → make-directed-part-combine-music — the context settings
+    ///   of "one" are <c>\voiceOne \override DynamicLineSpanner.direction = #UP</c>, of "two"
+    ///   <c>\voiceTwo \override DynamicLineSpanner.direction = #DOWN</c>, and "shared" has none
+    ///   (DynamicLineSpanner is not in scm/music-functions.scm:617-634 direction-polyphonic-grobs,
+    ///   so <c>\voiceOne</c> alone leaves it below — a <c>voice { } { }</c> span's levels stay below).
+    /// MEASURED (LilyPond 2.26.0, Lab sessions/p1333/h13/apart.lys, lp-apart.cropped.png): part one's
+    ///   p, crescendo and f above the staff, part two's below.
+    /// The voice's side is the DEFAULT a line takes with nothing written, as the staff's is
+    /// elsewhere: the lines are settled again here, in the staff's own voices
+    /// (<see cref="DynamicLineSides.Resolve"/>), so a side written on a mark still turns the line
+    /// it opens — <c>e''4@p.down f''@cresc … a''@f</c> in part one stands below, all three.
+    /// MEASURED (LilyPond 2.26.0): an explicit <c>_\p</c> in voice "one" turns its line down
+    ///   (lily/dynamic-align-engraver.cc:119-160 Dynamic_align_engraver::acknowledge_dynamic, set_grob_direction (line_, d)).
+    /// </remarks>
+    private static ScoreContent SideByContext(
+        ScoreContent content, Dictionary<int, CombinedStaffAddressing> byStaff,
+        Func<int, int, ImmutableArray<Measure>> measuresOf)
+    {
+        bool? SideAt(int staff, int voice, int measure, int item)
+        {
+            if (!byStaff.ContainsKey(staff))
+                return null;
+            var measures = measuresOf(staff, voice);
+            if (measures.IsDefault || measure < 0 || measure >= measures.Length)
+                return null;
+            var items = measures[measure].Items;
+            if (item < 0 || item >= items.Length)
+                return null;
+            return items[item].VoiceContext switch
+            {
+                VoiceContextId.CombineOne => true,
+                VoiceContextId.CombineTwo => false,
+                _ => null,
+            };
+        }
+        bool any = false;
+        var dynamics = content.Dynamics.Select(d =>
+        {
+            if (d.WrittenAbove == null && !d.IsExpressiveText
+                && SideAt(d.StaffIndex, d.VoiceIndex, d.MeasureIndex, d.ItemIndex) is { } above)
+            {
+                any = true;
+                return above != d.IsAbove ? d with { IsAbove = above } : d;
+            }
+            return d;
+        }).ToImmutableArray();
+        var marks = content.MusicMarks.Select(m =>
+        {
+            if (m.Type is MusicMarkType.Cresc or MusicMarkType.Decresc or MusicMarkType.Dim
+                && m.HairpinWritten == null
+                && SideAt(m.StaffIndex, m.VoiceIndex, m.MeasureIndex, m.AnchorItemIndex) is { } above)
+            {
+                any = true;
+                return above != m.HairpinAbove ? m with { HairpinAbove = above } : m;
+            }
+            return m;
+        }).ToImmutableArray();
+        if (!any)
+            return content;
+        // The lines again, now in the staff's voices: a written side turns its line, the rest take
+        // the default each holds.
+        var (resolvedDynamics, resolvedMarks) = DynamicLineSides.Resolve(dynamics, marks);
+        return content with { Dynamics = resolvedDynamics, MusicMarks = resolvedMarks };
     }
 
     /// <summary>The marks a note of a voice carries: the two ends of a hairpin, of a text
@@ -400,6 +473,9 @@ internal static class CombinedStaffReaddress
                 // the merged column, the mark kept for it is the one this follows — unless the
                 // other part ends that hairpin itself (EndsInItsPart): then it runs on to that
                 // end, two hairpins over each other as before (owner's decision 2026-11-19).
+                // Since session 1334 the parts are apart wherever their open hairpins differ
+                // (PartDynamicEvents, owner's decision 2026-11-20 "match LilyPond"), so a unison
+                // reaches here only with both parts' hairpin the same, up to where they part.
                 if (line.Line == HairpinLine && open.TryGetValue(key, out int before)
                     && (Moved(marks[before], map)
                         ?? (TwinOf(marks[before], map) is var kept and >= 0 && !EndsInItsPart(kept) ? Moved(marks[kept], map) : null))

@@ -2053,7 +2053,7 @@ public sealed partial class MeasureCollector
                 : CollectStaffVoices(voiceName);
             staffCollections.Add(new StaffCollection(voiceName, _v.Cursor.StaffIndex, staffVoiceSlots,
                 slotting == VoiceSlotting.AppendedToStaff,
-                dynamicsBefore, _dynamics.Count, marksBefore, _musicMarks.Count));
+                dynamicsBefore, _dynamics.Count, marksBefore, _musicMarks.Count, bindingIndex));
             if (!collectedPerBinding.TryGetValue(voiceName, out var collections))
                 collectedPerBinding[voiceName] = collections = new List<(string, ImmutableArray<Voice>)>();
             collections.Add((collectedUnder, staffVoices[voiceName]));
@@ -2420,8 +2420,10 @@ public sealed partial class MeasureCollector
         using (EngravingStyle.Use(_v.Meta.Paper.Style))
         using (Layout.MusicFont.Use(Layout.MusicFonts.Of(_v.Meta.Fonts)))
         {
+            var partDynamics = CombinedPartDynamics(staffCollections, renderSpec.GetBindingsOnCombinedStaves());
             staffGroups = renderSpec.ToStaffGroups(VoicesFor,
-                combinedAddressings)
+                combinedAddressings,
+                name => partDynamics.TryGetValue(name, out var queue) && queue.Count > 0 ? queue.Dequeue() : null)
                 .ToImmutableArray();
         }
         // A staff built from SEVERAL parts (condensed, combined) owes the accidentals its parts'
@@ -4042,7 +4044,50 @@ public sealed partial class MeasureCollector
     /// appended to a condensed staff, and the ranges it added to <see cref="_dynamics"/> and
     /// <see cref="_musicMarks"/>.</summary>
     private readonly record struct StaffCollection(string Part, int Staff, int FirstVoice, bool Appended,
-        int DynamicsFrom, int DynamicsTo, int MarksFrom, int MarksTo);
+        int DynamicsFrom, int DynamicsTo, int MarksFrom, int MarksTo, int Binding = -1);
+
+    /// <summary>
+    /// Each combined staff's part's dynamics as the part combiner reads them
+    /// (<see cref="PartDynamicEvents"/>), queued by part name in binding order — the order
+    /// <c>RenderSpec.ToStaffGroups</c> asks in. Only the part's FIRST voice is combined, so only
+    /// what is written on it counts: its absolute dynamics (not <c>@text</c>), the hairpins it opens
+    /// and their stops, by (measure, item) as collected.
+    /// </summary>
+    private Dictionary<string, Queue<IReadOnlyDictionary<(int Measure, int Item), PartDynamicEvents>>> CombinedPartDynamics(
+        List<StaffCollection> collections, List<bool> onCombined)
+    {
+        var queued = new Dictionary<string, Queue<IReadOnlyDictionary<(int Measure, int Item), PartDynamicEvents>>>(StringComparer.Ordinal);
+        foreach (var c in collections)
+        {
+            if (c.Binding < 0 || c.Binding >= onCombined.Count || !onCombined[c.Binding])
+                continue;
+            var table = new Dictionary<(int Measure, int Item), PartDynamicEvents>();
+            void Add(int measure, int item, PartDynamicEvents what)
+                => table[(measure, item)] = table.GetValueOrDefault((measure, item)) | what;
+            for (int i = c.DynamicsFrom; i < c.DynamicsTo && i < _dynamics.Count; i++)
+                if (_dynamics[i] is { IsExpressiveText: false } d && d.VoiceIndex == c.FirstVoice)
+                    Add(d.MeasureIndex, d.ItemIndex, PartDynamicEvents.Absolute);
+            for (int i = c.MarksFrom; i < c.MarksTo && i < _musicMarks.Count; i++)
+            {
+                var m = _musicMarks[i];
+                if (m.VoiceIndex != c.FirstVoice || m.AnchorItemIndex < 0)
+                    continue;
+                var what = m.Type switch
+                {
+                    MusicMarkType.Cresc => PartDynamicEvents.CrescendoStart,
+                    MusicMarkType.Decresc or MusicMarkType.Dim => PartDynamicEvents.DecrescendoStart,
+                    MusicMarkType.HairpinStop => PartDynamicEvents.Stop,
+                    _ => PartDynamicEvents.None,
+                };
+                if (what != PartDynamicEvents.None)
+                    Add(m.MeasureIndex, m.AnchorItemIndex, what);
+            }
+            if (!queued.TryGetValue(c.Part, out var queue))
+                queued[c.Part] = queue = new Queue<IReadOnlyDictionary<(int Measure, int Item), PartDynamicEvents>>();
+            queue.Enqueue(table);
+        }
+        return queued;
+    }
 
     /// <summary>
     /// ONE dynamic and ONE hairpin where the parts of a condensed staff wrote the same one at

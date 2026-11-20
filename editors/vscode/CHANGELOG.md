@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A combined staff follows LilyPond's part combiner with hairpins.** Two parts whose hairpins differ on the same notes are drawn as two voices, each with its own wedge, instead of "a2" with one; where the parts are apart, the upper part's dynamics stand above the staff.
+
 - **`q` keeps an `@struck` member.** `<c' e' g'@struck>2 q2` draws the small head on the q too and strikes it again in the preview; the step keys' line now says what `@struck` and `@dead` ask of the player.
 
 - **Two new warnings.** A script on an empty chord before a spacer (`c''2 <>@accent s4`) marks no note there and goes on to the next one (LYS4085); a tie that reaches an `@struck` member is drawn but does not sound (LYS4086).
