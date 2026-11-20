@@ -427,12 +427,24 @@ public sealed partial class MeasureCollector
                 .. Layout.TextSpannerEngraver.PairTextSpanners(marks, plays).Unpaired,
                 .. Layout.OttavaBracketEngraver.PairOttavaBrackets(marks, plays).Unpaired,
                 .. Layout.PedalEngraver.UnpairedPedalMarks(marks, plays),
+                // A hairpin nothing ends (drawn to the next bar line; a warning, not an error).
+                .. UnendedHairpins(marks, plays),
                 // One per (position, fault): a repeated section plays the same mark twice
                 // (UnpairedSpanWarning's remark).
                 .. phrasing.Distinct(),
             ];
         }
     }
+    /// <summary>The hairpins nothing ends (SpanKind.Hairpin), through the call the page pairs by
+    /// (<c>HairpinEngraver.DetectHairpins</c>) over the collect's own tables — once per written
+    /// mark, though a repeated section plays it twice.</summary>
+    private IEnumerable<UnpairedSpanWarning> UnendedHairpins(ImmutableArray<MusicMarkItem> marks, SectionPlays? plays)
+    {
+        var unended = new List<UnpairedSpanWarning>();
+        Layout.HairpinEngraver.DetectHairpins(marks, _dynamics.ToImmutableArray(), plays, null, unended);
+        return unended.Distinct();
+    }
+
     /// <summary>Slurs, phrasing slurs, ties and hairpins the section carry rule refuses
     /// (<see cref="SectionPlayCursor"/>): carried into the next section and not ended there,
     /// ending a span nothing carried in, carried into a section the part does not play, or
@@ -742,6 +754,10 @@ public sealed partial class MeasureCollector
     // measure -> (tonic step, sharps) at each key change, so a chord's Roman degree
     // follows the key in force at its bar (a mid-piece modulation re-bases the degrees).
     private readonly SortedDictionary<int, (int TonicStep, int Sharps)> _keyByMeasure = new();
+    // The FILE's key tonic on a multi-staff score, which the chord rows' degrees go home to — a
+    // part's header key is that part's home, not the score's (owner's decision 2026-11-20,
+    // session 1336). Null where none was taken: the walk's own home then, as before.
+    private int? _fileKeyTonicStep;
     // WALK-ORDER JOURNAL of every _keyByMeasure write (RecordKeyAtMeasure is the one
     // write site) — append-only across the collect, so a WalkCheckpoint stores a
     // WATERMARK into it instead of copying the map per boundary, and a restore/splice
@@ -1831,6 +1847,7 @@ public sealed partial class MeasureCollector
         // The file key's tonic/position too, so a part that sets its OWN header key
         // can be undone for the next part that sets none (restored per voice below).
         int globalKeyTonicStep = _v.Meta.KeyTonicStep;
+        _fileKeyTonicStep = globalKeyTonicStep;
         int globalKeyTonicAlter = _v.Meta.KeyTonicAlter;
         int globalKeyPosition = _v.Meta.KeyPosition;
         // Capture the file-level `octave absolute/relative` default AFTER the
@@ -2073,7 +2090,13 @@ public sealed partial class MeasureCollector
         // register the section starts — derive them from the row blocks.
         if (pendingChordRows.Count > 0 || pendingLyricsRows.Count > 0)
             EnsureSectionStartsForRows(tree.GetRoot());
-        _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
+        // A chord row reads its degrees in the FILE's key (and the sections' and the music's
+        // changes), never a part's header key, wherever it stands in the score — a row is one
+        // track that several bands may show (owner's decision 2026-11-20, session 1336):
+        // until then the walk left the last part's header tonic in the metadata, and a `chords prog
+        // as roman` band under `key c major` over `part a { key d major }` read C G7 Am F as
+        // "VII IV7 Vm III" — the D tonic beside C's signature (Lab sessions/p1278/probe/row1.lys).
+        _chordNameCollector.KeyByMeasure = BuildKeyTimeline(globalKeyTonicStep);
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
         // A ROW's bar is as long as the MUSIC's bar at that index, and gridded on its meter.
         // The row grids its slots on the score meter (ChordRhythm / the even spread), so a
@@ -2338,7 +2361,7 @@ public sealed partial class MeasureCollector
                     renderSpec.VerseVoiceMapOf(group.Key.StaffVoice),
                     voiceKeyDict.TryGetValue(group.Key.StaffVoice, out var staffKey) ? staffKey.Sharps : _v.Meta.InitialKeySharps);
         }
-        _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
+        _chordNameCollector.KeyByMeasure = BuildKeyTimeline(globalKeyTonicStep);
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
         // (The nameless `chords { }` auto-attach is gone — LYS0032. It was the one
         // band a score never placed, and its "co-written staff" association was a
@@ -2351,6 +2374,8 @@ public sealed partial class MeasureCollector
             _chordNameCollector.RowNameDrop = ChordRowDrop(tree.GetRoot(), attachedPart,
                 renderSpec.ChordRowFor(attachedPart, staffVoice));
             SetRowMove();
+            // The file's key here too (owner's decision 2026-11-20 below).
+            _chordNameCollector.KeyByMeasure = BuildKeyTimeline(globalKeyTonicStep);
             _chordNameCollector.CollectAttached(
                 tree.GetRoot(), attachedPart, _sectionState.StartMeasure, attachedStaff,
                 _v.Meta.TimeBeats, _v.Meta.TimeBeatType, attachedMode);
@@ -6377,14 +6402,19 @@ public sealed partial class MeasureCollector
         return true;
     }
 
-    /// <summary>The key timeline for Roman-numeral chord degrees: the initial key at
-    /// bar 0 plus each mid-piece modulation, sorted ascending.</summary>
-    private List<(int Measure, int TonicStep, int Sharps)> BuildKeyTimeline()
+    /// <summary>The key timeline for Roman-numeral chord degrees, sorted ascending: the opening key (by
+    /// default the metadata's tonic over the file's signature; the multi-staff rows pass the file's
+    /// tonic, which a part's header key no longer leaks into) and the changes the music writes.</summary>
+    private List<(int Measure, int TonicStep, int Sharps)> BuildKeyTimeline(int? tonicStep = null)
     {
-        var list = new List<(int, int, int)> { (0, _v.Meta.KeyTonicStep, _v.Meta.InitialKeySharps) };
+        var list = new List<(int, int, int)> { (0, tonicStep ?? _v.Meta.KeyTonicStep, _v.Meta.InitialKeySharps) };
         foreach (var (m, key) in _keyByMeasure)
             if (m > 0)
                 list.Add((m, key.TonicStep, key.Sharps));
+            // A key written at the very start (the first section's own) is the opening one:
+            // until session 1336 it was skipped here, the metadata's tonic standing for it.
+            else
+                list[0] = (0, key.TonicStep, key.Sharps);
         if (_keyByMeasure.Count == 0)
             AddSectionHeaderKeys(list);
         return list;

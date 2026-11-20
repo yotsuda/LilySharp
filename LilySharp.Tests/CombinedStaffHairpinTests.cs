@@ -198,10 +198,11 @@ public class CombinedStaffHairpinTests
         "SustainOn v1 0.2 note@1/2 | SustainOff v0 1.2 note@1/2")]
     [InlineData("c''2 d''2 | c''4 d'' e'' f'' | c''1 |", "e'4 f' e'@8va f' | r2 r2@!8va | e'1 |",
         "OttavaUp v1 0.2 note@1/2 | OttavaStop v1 1.2 end@0")]
-    // Under the soloist's long note a text spanner's end stays where it was collected (the
-    // stop inside the note is a hairpin's alone, session 1327).
+    // Under the soloist's long note a text spanner's end goes inside that note, keeping its beat,
+    // as a hairpin's stop (owner's decision 2026-11-20, session 1336; until then it stayed where
+    // it was collected — the bar's end).
     [InlineData("c''2 d''2 | c''1 | c''1 |", "e'4 f' e'@rit f' | r2 r2@!rit | e'1 |",
-        "TextSpanStart v1 0.2 note@1/2 | TextSpanStop v1 1.1 end@0")]
+        "TextSpanStart v1 0.2 note@1/2 | TextSpanStop v0 1.0 note@0")]
     public void AnotherLinesEndOnARestNobodyEngraves_StopsOnItsBeat(string fl1, string fl2, string expected)
         => Assert.Equal(expected, Marks(Collect(fl1, fl2)));
 
@@ -345,6 +346,30 @@ public class CombinedStaffHairpinTests
         "Cresc v0 1.0 note@0 | TextSpanStart v0 1.0 note@0 | HairpinStop v0 1.3 note@3/4 | TextSpanStop v0 1.3 note@3/4")]
     public void TheOtherLinesEnds_GoWithTheirNotes(string fl1, string fl2, string expected)
         => Assert.Equal(expected, Marks(Collect(fl1, fl2)));
+
+    /// <summary>
+    /// …and the line ends on that beat: its share of the way from the long note's column to the
+    /// next column, or to the bar's end, as a hairpin's (owner's decision 2026-11-20, session
+    /// 1336, TextSpannerItem.EndWithin). An ottava's end includes its rest and stays at the bar's end.
+    /// </summary>
+    [Theory]
+    [InlineData("c''2 d''2 | c''1 | c''1 |", "e'4 f' e'@rit f' | r2 r2@!rit | e'1 |", 1, 2)]
+    [InlineData("c''2 d''2 | c''2 d''2 | c''1 |", "e'4 f' e'@rit f' | r4 r4@!rit r2 | e'1 |", 1, 2)]
+    public void ATextSpannersEndOnARestUnderTheOtherPartsLongNote_StopsOnItsBeat(string fl1, string fl2, int share, int of)
+    {
+        var score = Collect(fl1, fl2);
+        var layout = new LayoutEngine(score.Paper).Layout(score);
+        var line = Assert.Single(layout.TextSpannerLayouts);
+        var item = Assert.Single(ScoreSideTables.TextSpannersByStaff(score).At(0));
+        Assert.NotNull(item.EndWithin);
+        var voice = score.StaffGroups[0].Staves[0].Voices[item.EndVoiceIndex].Measures;
+        var bar = layout.Systems.SelectMany(s => s.Measures).First(m => m.MeasureIndex == item.EndMeasureIndex);
+        double left = bar.X + LayoutUtilities.GetItemXOffset(voice, item.EndMeasureIndex, item.EndItemIndex, bar);
+        double right = item.EndItemIndex + 1 < voice[item.EndMeasureIndex].Items.Length
+            ? bar.X + LayoutUtilities.GetItemXOffset(voice, item.EndMeasureIndex, item.EndItemIndex + 1, bar)
+            : bar.X + bar.Width - 1.0;
+        Assert.Equal(left + ((right - left) * share / of), line.EndX, 6);
+    }
 
     /// <summary>A text spanner and an ottava bracket are paired within one voice, so their two
     /// ends go as a pair: left where they were collected when the part changes streams between

@@ -4,6 +4,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A hairpin with no end is flagged.** A `@cresc` that no level, hairpin or `@!cresc` follows is drawn to the next bar line as before, and the Problems panel now says where to write its end.
+- **Roman degrees follow the file's key.** A `chords … as roman` row no longer reads a part's own header key.
+
 - **A combined staff follows LilyPond's part combiner with hairpins.** Two parts whose hairpins differ on the same notes are drawn as two voices, each with its own wedge, instead of "a2" with one; where the parts are apart, the upper part's dynamics stand above the staff.
 
 - **`q` keeps an `@struck` member.** `<c' e' g'@struck>2 q2` draws the small head on the q too and strikes it again in the preview; the step keys' line now says what `@struck` and `@dead` ask of the player.

@@ -291,7 +291,15 @@ internal static class TextSpannerEngraver
                 if (segment.IsLast)
                 {
                     var endMeasure = measureLayouts[segment.EndMeasureIndex];
-                    if (RightBoundCentre(measureLayouts, spannerVoices, graceNotes, spanner.StaffIndex,
+                    if (spanner.EndWithin is { } within
+                        && HairpinEngraver.WithinX(spanner.EndMeasureIndex, spanner.EndItemIndex, within,
+                            LayoutUtilities.ResolveVoiceMeasures(spannerVoices, spanner.EndVoiceIndex, default),
+                            measureLayouts, 0) is { } withinX)
+                    {
+                        // Stopped inside the note sounding at its moment (TextSpannerItem.EndWithin).
+                        endX = withinX;
+                    }
+                    else if (RightBoundCentre(measureLayouts, spannerVoices, graceNotes, spanner.StaffIndex,
                             spanner.EndVoiceIndex, spanner.EndMeasureIndex, spanner.EndItemIndex) is { } centre)
                     {
                         endX = centre - BoundPadding;
@@ -638,7 +646,12 @@ internal static class TextSpannerEngraver
                     StaffIndex: start.Mark.StaffIndex,
                     VoiceIndex: start.Mark.VoiceIndex,
                     Family: start.Mark.SpanFamily)
-                { EndVoiceIndex = endVoice });
+                {
+                    EndVoiceIndex = endVoice,
+                    // (A refused end is cut at its section's end: no moment inside a note there.)
+                    EndWithin = endItem == Math.Max(mark.AnchorItemIndex, 0) && endMeasure == mark.MeasureIndex
+                        && mark.WithinItem ? mark.AnchorTiming : null,
+                });
                 continue;
             }
 
@@ -756,7 +769,11 @@ internal static class TextSpannerEngraver
                     spanner.StartMeasureIndex, spanner.StartItemIndex) is { } sx
                 ? startLayout.X + sx + BoundPadding
                 : startLayout.X + BoundPadding;
-            double endX = endsHere && BoundX(endLayout, voices, graceNotes, spanner.StaffIndex, spanner.EndVoiceIndex,
+            double endX = endsHere && spanner.EndWithin is { } within
+                    && HairpinEngraver.WithinX(endLayout, spanner.EndMeasureIndex, spanner.EndItemIndex, within,
+                        LayoutUtilities.ResolveVoiceMeasures(voices, spanner.EndVoiceIndex, default), 0) is { } withinEnd
+                ? withinEnd
+                : endsHere && BoundX(endLayout, voices, graceNotes, spanner.StaffIndex, spanner.EndVoiceIndex,
                     spanner.EndMeasureIndex, spanner.EndItemIndex) is { } ex
                 ? endLayout.X + ex - BoundPadding
                 : endLayout.X + endLayout.Width - BoundPadding;

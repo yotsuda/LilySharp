@@ -95,7 +95,7 @@ internal sealed class SpanPairingValidator : ISharedCollectValidator
             // alone, and "nothing is drawn" beside a drawn bracket reads as a wrong report.
             if (w.ClosedElsewhere)
                 message = LastPlayingOnly + message;
-            if (w.Fault == SpanPairingFault.Unterminated)
+            if (w.Fault == SpanPairingFault.Unterminated && w.Kind != SpanKind.Hairpin)
                 _diagnostics.Error(span, DiagnosticCodes.UnpairedSpan, message);
             else
                 _diagnostics.Warning(span, DiagnosticCodes.UnpairedSpan, message);
@@ -129,6 +129,15 @@ internal sealed class SpanPairingValidator : ISharedCollectValidator
     /// </remarks>
     private static string MessageFor(SpanKind kind, SpanPairingFault fault, string? opened = null)
     {
+        // A hairpin is drawn all the same (owner's decision 2026-11-20): the words say where to.
+        if (kind == SpanKind.Hairpin)
+        {
+            string name = opened ?? "cresc";
+            string what = name == "cresc" ? "a crescendo" : name == "dim" ? "a diminuendo" : "a decrescendo";
+            return what + " is never ended - no level, hairpin or '@!" + name + "' follows it in its staff - "
+                + "so it is drawn to the next bar line; write the level it reaches, or '@!" + name
+                + "', on the note it should reach";
+        }
         if (kind == SpanKind.PhrasingSlur)
             return fault switch
             {

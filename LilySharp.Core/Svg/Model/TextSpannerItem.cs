@@ -108,6 +108,19 @@ public sealed record TextSpannerItem(
     /// (<see cref="MusicMarkItem.LineVoice"/>).</summary>
     public int EndVoiceIndex { get; init; } = VoiceIndex;
 
+    /// <summary>
+    /// The moment of the end's bar the line stops at, inside the item at its end, or null for an
+    /// end on its item. Set where a <c>combinedStaff</c> moved the end, written on the part's own
+    /// rest that nobody engraves, into the other part's note sounding through that moment
+    /// (<c>MusicMarkItem.WithinItem</c>): the end X is that moment's share of the way from the
+    /// item's column to the next column, as a hairpin's (<c>HairpinItem.EndWithin</c>).
+    /// </summary>
+    /// <remarks>Owner's decision 2026-11-20 (session 1336, "as the hairpin"): until then a
+    /// <c>@!rit</c> there ran to the bar's end, where a hairpin's stop on the same rest stopped on
+    /// its beat (owner's decision 2026-11-19). LILYSHARP-OWN for the same reason as the hairpin's:
+    /// LilyPond loses that stop with the rest (Lab sessions/p1324/lp n2, "unterminated text spanner").</remarks>
+    public Semantics.Fraction? EndWithin { get; init; }
+
     /// <summary>Whether the line ends in a hook turned to the staff: the three guitar lines do
     /// (owner-approved 2026-11-13, grammar evaluation 3), the general spanner does not.</summary>
     public bool EndHook => Family != TextSpanFamily.Text && Style != TextSpannerStyle.None;

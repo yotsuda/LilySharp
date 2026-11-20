@@ -6,6 +6,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **A hairpin nothing ends is a warning** (`[language]`, LYS4018 at warning strength). `c'4@p d'@cresc e' f' | g'1 |` — no level, hairpin or `@!cresc` after it in its staff — is still drawn to the next bar line, and now says so with where to write its end. LilyPond warns "unterminated crescendo" and draws nothing.
+
+- **A `@!rit` on a combined staff's rest under the other part's long note stops on its beat** (`[engraving]`), as a hairpin's stop there has since 2026-11-19; it ran to the bar's end.
+
+- **A chord row's Roman degrees are read in the file's key** (`[engraving]`). `chords prog as roman` beside a part whose header says `key d major` read C G7 Am F as "VII IV7 Vm III" under `key c major`; a row is one track and reads the file's key and the sections' changes wherever it stands ("I V7 VIm IV").
+
 - **A combined staff keeps the parts apart where their hairpins differ, and part one's dynamics stand above** (`[engraving]`, owner's decision "match LilyPond"). `combinedStaff { fl1 fl2 }` with `d'@cresc` in one part and `d'@decresc` in the other on the same notes stayed "a2" and drew only the first part's wedge. As in LilyPond's `\partCombine`, a hairpin is now a spanner the parts must share to be merged: where one part's is open and the other's is not, or they differ, the parts are two voices (and a solo does not begin while the soloist's hairpin runs). Where the parts are apart, part one's levels and hairpins stand above the staff and part two's below, where both used to stand below, one under the other.
 
 - **`q` repeats an `@struck` member as struck** (`[engraving]`, `[playback]`, `[export]`). `<c' e' g'@struck>2 q2` drew the q's g' as a full head, left it out of the MIDI and wrote it a held note in MusicXML; a `q` or a bare duration after the chord now draws the small head again (as LilyPond's `q` does), strikes it again for a quarter at most, and writes it as the chord does. A beamed stem standing on the small head begins at its own attachment, as an unbeamed one does. On a tab the struck member's fret number is smaller (magstep −2 of the others, LilyPond's size) and centred where LilyPond centres it.

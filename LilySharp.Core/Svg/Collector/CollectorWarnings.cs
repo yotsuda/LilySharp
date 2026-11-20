@@ -217,6 +217,12 @@ public enum SpanKind
     /// :312, :174 with the object_name of lily/phrasing-slur-engraver.cc:57-60 (the phrasing
     /// engraver IS a Slur_engraver).</summary>
     PhrasingSlur,
+    /// <summary>A hairpin (<c>@cresc</c>, <c>@decresc</c>, <c>@dim</c>) that no level, hairpin
+    /// or stop ever ends. ⚠️ ONLY THE UNTERMINATED FAULT, AND IT IS DRAWN: the page draws it to
+    /// the next bar line and the diagnostic is a WARNING (owner's decision 2026-11-20, session
+    /// 1336: "draw it and say so") — LilyPond warns "unterminated crescendo" and draws nothing
+    /// (lily/dynamic-engraver.cc:197-211 Dynamic_engraver::finalize).</summary>
+    Hairpin,
 }
 
 /// <summary>Why a span mark drew nothing — the three situations a start/stop pairing can

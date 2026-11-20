@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 67 | 観測者がゼロだと自認しているもの |
-| `OWN` | 476 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **605** | |
+| `OWN` | 477 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **606** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -253,7 +253,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（476 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（477 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -922,6 +922,7 @@
 - **`PedalStyles`** LILYSHARP-OWN: pedal text and pedal mixed, written, are the writer's word
 ### `LilySharp.Core/Svg/Model/TextSpannerItem.cs`
 - **`TextSpanFamily`** LILYSHARP-OWN: LilyPond has ONE text spanner per voice (lily/text-spanner-engraver.cc
+- **`TextSpannerItem.EndWithin`** its beat (owner's decision 2026-11-19). LILYSHARP-OWN for the same reason as the hairpin's:
 ### `LilySharp.Core/Syntax/StringLiteral.cs`
 - **`StringLiteral`** LILYSHARP-OWN: the owner's decision (2026-09-30) — Lily#'s strings follow C#'s grammar:
 ### `LilySharp.Core/Syntax/SyntaxNodes.Attachments.cs`

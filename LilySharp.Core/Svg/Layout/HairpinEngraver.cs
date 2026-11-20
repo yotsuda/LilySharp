@@ -1069,21 +1069,30 @@ internal static class HairpinEngraver
     /// </summary>
     private static double? WithinX(HairpinItem hairpin, Semantics.Fraction within,
         ImmutableArray<Measure> endMeasures, ImmutableArray<MeasureLayout> measureLayouts, double shift)
+        => WithinX(hairpin.EndMeasureIndex, hairpin.EndItemIndex, within, endMeasures, measureLayouts, shift);
+
+    /// <summary>The same for any line's end at <paramref name="measure"/>.<paramref name="item"/>
+    /// — a text spanner's (TextSpannerItem.EndWithin) reads it as a hairpin's does.</summary>
+    internal static double? WithinX(int measure, int item, Semantics.Fraction within,
+        ImmutableArray<Measure> endMeasures, ImmutableArray<MeasureLayout> measureLayouts, double shift)
+        => measure < 0 || measure >= measureLayouts.Length ? null
+            : WithinX(measureLayouts[measure], measure, item, within, endMeasures, shift);
+
+    /// <summary>The same on the bar's own layout <paramref name="ml"/>.</summary>
+    internal static double? WithinX(MeasureLayout ml, int measure, int item, Semantics.Fraction within,
+        ImmutableArray<Measure> endMeasures, double shift)
     {
-        if (endMeasures.IsDefaultOrEmpty || hairpin.EndMeasureIndex >= endMeasures.Length
-            || hairpin.EndMeasureIndex >= measureLayouts.Length)
+        if (endMeasures.IsDefaultOrEmpty || measure < 0 || measure >= endMeasures.Length)
             return null;
-        var items = endMeasures[hairpin.EndMeasureIndex].Items;
-        int item = hairpin.EndItemIndex;
+        var items = endMeasures[measure].Items;
         if (item < 0 || item >= items.Length || items[item].Duration <= Semantics.Fraction.Zero)
             return null;
-        var ml = measureLayouts[hairpin.EndMeasureIndex];
         var onset = Semantics.Fraction.Zero;
         for (int i = 0; i < item; i++)
             onset += items[i].Duration;
-        double left = ml.X + LayoutUtilities.GetItemXOffset(endMeasures, hairpin.EndMeasureIndex, item, ml) + shift;
-        double right = item + 1 < StaffItemCount(endMeasures, hairpin.EndMeasureIndex, ml)
-            ? ml.X + LayoutUtilities.GetItemXOffset(endMeasures, hairpin.EndMeasureIndex, item + 1, ml)
+        double left = ml.X + LayoutUtilities.GetItemXOffset(endMeasures, measure, item, ml) + shift;
+        double right = item + 1 < StaffItemCount(endMeasures, measure, ml)
+            ? ml.X + LayoutUtilities.GetItemXOffset(endMeasures, measure, item + 1, ml)
             : ml.X + ml.Width - BoundPadding;
         double share = Math.Clamp(((within - onset).ToDouble()) / items[item].Duration.ToDouble(), 0, 1);
         return left + (share * (right - left));
@@ -1118,11 +1127,14 @@ internal static class HairpinEngraver
     /// next hairpin): a caller that passes none for a score that has them reads every
     /// repeated mark as the second.</param>
     /// <param name="carrySink">Where the refused carries go; null to report none.</param>
+    /// <param name="unpairedSink">Where a hairpin that nothing ends goes (drawn to the next bar
+    /// line all the same): <c>SpanPairingValidator</c> says so; null to report none.</param>
     public static ImmutableArray<HairpinItem> DetectHairpins(
         ImmutableArray<MusicMarkItem> musicMarks,
         ImmutableArray<DynamicItem> dynamics,
         Collector.SectionPlays? plays = null,
-        List<Collector.SectionCarryWarning>? carrySink = null)
+        List<Collector.SectionCarryWarning>? carrySink = null,
+        List<Collector.UnpairedSpanWarning>? unpairedSink = null)
     {
         // Sort all events by position (measure, item). F3/B: keep each mark's ORIGINAL
         // index in musicMarks (== score.MusicMarks) so the hairpin can re-derive its
@@ -1349,8 +1361,12 @@ internal static class HairpinEngraver
             }
             else
             {
-                // No end found — extend to end of the mark's measure + 1
+                // No end found — extend to end of the mark's measure + 1, and say so: nothing
+                // the hairpin reaches is written (owner's decision 2026-11-20, session 1336 —
+                // LilyPond draws nothing there; the writer's crescendo is drawn and warned about).
                 end = new StaffPlace(mark.MeasureIndex + 1, mark.VoiceIndex, 0, null);
+                unpairedSink?.Add(new Collector.UnpairedSpanWarning(mark.SourcePosition,
+                    Collector.SpanKind.Hairpin, Collector.SpanPairingFault.Unterminated));
             }
             (endMeasure, endItem, endVoice) = (end.Measure, end.Item, end.Voice);
 

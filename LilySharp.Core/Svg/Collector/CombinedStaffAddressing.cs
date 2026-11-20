@@ -496,7 +496,9 @@ internal static class CombinedStaffReaddress
                     byMoment[i] = end = there;
                 // …and where nothing is engraved at that moment, a hairpin's stop goes inside the
                 // note sounding through it, keeping its moment (owner's decision 2026-11-19).
-                else if (start != null && end is null && line.Line == HairpinLine && Inside(m, map, measuresOf) is { } inside)
+                // A text spanner's end does the same (owner's decision 2026-11-20, "as the hairpin");
+                // an ottava's includes its rest and stays at the bar's end.
+                else if (start != null && end is null && line.Line != OttavaLine && Inside(m, map, measuresOf) is { } inside)
                     byMoment[i] = end = inside;
                 if (start is null)
                 {
@@ -634,6 +636,9 @@ internal static class CombinedStaffReaddress
     /// an ottava's -1).</summary>
     private const int HairpinLine = -2;
 
+    /// <summary><see cref="PairedLine"/>'s name for an ottava bracket.</summary>
+    private const int OttavaLine = -1;
+
     /// <summary>For an end of a line that is paired within one voice — a text spanner of its
     /// family, an ottava bracket, a hairpin and its stop — which line and which end; null for
     /// every other mark.</summary>
@@ -644,8 +649,8 @@ internal static class CombinedStaffReaddress
         MusicMarkType.TextSpanStart => ((int)m.SpanFamily, false),
         MusicMarkType.TextSpanStop => ((int)m.SpanFamily, true),
         MusicMarkType.OttavaUp or MusicMarkType.OttavaDown
-            or MusicMarkType.QuindicesUp or MusicMarkType.QuindicesDown => (-1, false),
-        MusicMarkType.OttavaStop => (-1, true),
+            or MusicMarkType.QuindicesUp or MusicMarkType.QuindicesDown => (OttavaLine, false),
+        MusicMarkType.OttavaStop => (OttavaLine, true),
         _ => null,
     };
 

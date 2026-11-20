@@ -703,8 +703,11 @@ public sealed partial class MeasureCollector
             // The revert is a key change for the Roman-numeral degrees too: a section after
             // one that wrote `key f major` is back in the home key, and `chords … as roman`
             // read it in F until session 905 (C showed as V). A custom home key has no tonic.
+            // The rows' home is the FILE's key where one was taken (a part's header key is that
+            // part's home, not the score's — owner's decision 2026-11-20, session 1336).
             if (_sectionResetKeyCustom == null)
-                RecordKeyAtMeasure(builder.CurrentMeasureIndex, _v.Meta.KeyTonicStep, _sectionResetKeySharps);
+                RecordKeyAtMeasure(builder.CurrentMeasureIndex, _fileKeyTonicStep ?? _v.Meta.KeyTonicStep,
+                    _fileKeyTonicStep != null ? _v.Meta.InitialKeySharps : _sectionResetKeySharps);
             await AddItemAsync(builder, new KeySignatureChangeItem(
                 new KeySignature(_v.Meta.KeySharps, _v.Meta.KeyCustom), previousKey, sectionPos)
             {
