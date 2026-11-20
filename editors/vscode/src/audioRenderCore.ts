@@ -72,6 +72,8 @@ export interface VoiceTrack {
     wav: string; at: number; duration: number;
     /** The practice menu's fader for the voice (0–1); 1, or absent, as rendered. */
     gain?: number;
+    /** Which voice it is (singerCore.sungKey): a stem's name (docs/stems-api-design.md). */
+    name?: string;
 }
 
 /** How long the file runs with its voices: the notes' end or the last voice's, and the tail —

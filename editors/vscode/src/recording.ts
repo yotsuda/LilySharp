@@ -136,6 +136,30 @@ export async function attachRecording(uri?: vscode.Uri, onAttached?: (chart: vsc
 /** What the language server says of lilysharp/decodeRecording. */
 export interface DecodeResult { Ok: boolean; Error?: string | null; Seconds?: number }
 
+/** A recording the webview cannot decode (an m4a) as the float WAV the language server decoded,
+ *  kept in the extension's storage under the recording's path and stamp (`audioKey`, statKey's):
+ *  decoded once, `starting` said only when it is decoded now. */
+export async function decodedRecording(audio: vscode.Uri, audioKey: string, storage: vscode.Uri,
+    decode: (input: string, output: string) => Promise<DecodeResult>, starting?: () => void): Promise<{ file: vscode.Uri } | { error: string }> {
+    const dir = vscode.Uri.joinPath(storage, 'recordings');
+    await vscode.workspace.fs.createDirectory(dir);
+    const id = Buffer.from(audio.fsPath.toLowerCase()).toString('base64url').slice(-48);
+    const cached = vscode.Uri.joinPath(dir, `${id}-${audioKey.replace(':', '-')}.wav`);
+    if (!(await exists(cached))) {
+        starting?.();
+        const r = await decode(audio.fsPath, cached.fsPath);
+        if (!r.Ok) {
+            return { error: r.Error ?? 'the recording could not be decoded' };
+        }
+    }
+    return { file: cached };
+}
+
+/** The stamp of a file (its time and size), or undefined when it is not there. */
+export async function fileStamp(uri: vscode.Uri): Promise<string | undefined> {
+    return statKey(uri);
+}
+
 const sentKeys = new WeakMap<vscode.WebviewPanel, string>();
 /** Each preview's count of sendRecording calls: one still looking at its files when a later one is
  *  asked for gives way to it (see sendRecording). */
@@ -229,20 +253,12 @@ export async function sendRecording(panel: vscode.WebviewPanel, chart: vscode.Ur
         if (how === 'webview') {
             bytes = await vscode.workspace.fs.readFile(audio);
         } else {
-            // The decoded WAV, kept in the extension's storage under the recording's path and stamp.
-            const dir = vscode.Uri.joinPath(storage, 'recordings');
-            await vscode.workspace.fs.createDirectory(dir);
-            const id = Buffer.from(audio.fsPath.toLowerCase()).toString('base64url').slice(-48);
-            const cached = vscode.Uri.joinPath(dir, `${id}-${audioKey.replace(':', '-')}.wav`);
-            if (!(await exists(cached))) {
-                post({ ...base, preparing: true });
-                const r = await decode(audio.fsPath, cached.fsPath);
-                if (!r.Ok) {
-                    post({ ...base, error: r.Error ?? 'the recording could not be decoded' });
-                    return;
-                }
+            const decoded = await decodedRecording(audio, audioKey, storage, decode, () => post({ ...base, preparing: true }));
+            if ('error' in decoded) {
+                post({ ...base, error: decoded.error });
+                return;
             }
-            bytes = await vscode.workspace.fs.readFile(cached);
+            bytes = await vscode.workspace.fs.readFile(decoded.file);
         }
         if (sentKeys.get(panel) !== key) {
             return;   // (something newer was sent meanwhile)

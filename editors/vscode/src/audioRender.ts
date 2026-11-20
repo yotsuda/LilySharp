@@ -105,3 +105,34 @@ export async function renderAudioFiles(jobs: readonly AudioJob[], bankPath: stri
         fs.writeFileSync(job.OutputPath, data);
     }
 }
+
+/**
+ * One part's notes through the sound font, as they sound in the preview — the synth's own level,
+ * nothing scaled (a stem, docs/stems-api-design.md: the parts must keep their balance when another
+ * extension sums them). The two channels at WAV_SAMPLE_RATE.
+ */
+export async function renderPartSound(notes: readonly PlaybackNote[], bankPath: string): Promise<[Float32Array, Float32Array]> {
+    const bytes = fs.readFileSync(bankPath);
+    const bank = SoundBankLoader.fromArrayBuffer(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer);
+    const synth = new SpessaSynthProcessor(WAV_SAMPLE_RATE, { eventsEnabled: false });
+    synth.soundBankManager.addSoundBank(bank, 'lys');
+    await synth.processorInitialized;
+    try {
+        return await renderNotes(synth as unknown as OfflineSynth, notes, WAV_SAMPLE_RATE, breathe);
+    } finally {
+        synth.destroySynthProcessor();
+    }
+}
+
+/**
+ * A mix another extension made (docs/stems-api-design.md: Shosa sums the stems with its mixer and
+ * hands the two channels here) written as `format`, as it is — no level set: the mixer's is the one.
+ * An MP3 carries the LAME tag, so its 0 is the mix's 0.
+ */
+export async function writeMixFile(left: Float32Array, right: Float32Array, sampleRate: number, format: AudioFormat, file: string): Promise<void> {
+    const data = format === 'mp3'
+        ? await encodeMp3(new Mp3Encoder(2, sampleRate, MP3_KBPS), left, right, breathe)
+        : new Uint8Array(audioToWav([left, right], sampleRate, { normalizeAudio: false }));
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, data);
+}

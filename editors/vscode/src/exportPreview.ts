@@ -444,7 +444,7 @@ export async function singJobs(jobs: readonly AudioJob[], source: { textDocument
             out.push(job);
             continue;
         }
-        const sungParts = new Set(job.Sung ?? []), playedParts = new Set(job.Played ?? []);
+        if (sung.Error) { outputChannel.appendLine(`singer: export: no voices for ${path.basename(job.OutputPath)}: ${sung.Error}`); }        const sungParts = new Set(job.Sung ?? []), playedParts = new Set(job.Played ?? []);
         const voicesOn = new Set(practice?.voicesOn ?? []);
         const voices: VoiceTrack[] = [];
         const silenced = new Set<number>();
@@ -477,7 +477,7 @@ export async function singJobs(jobs: readonly AudioJob[], source: { textDocument
                 const { rendered } = await engine.render(voiceOnWarp(voice, warp), speed);
                 const v = await rendered;
                 // The WAV begins VOICE_LEAD_S before the score's 0 (the first consonant's room).
-                voices.push({ wav: v.wav, at: (job.Lead ?? 0) - VOICE_LEAD_S, duration: v.duration, gain });
+                voices.push({ wav: v.wav, at: (job.Lead ?? 0) - VOICE_LEAD_S, duration: v.duration, gain, name: key });
                 // A part the score only sings keeps its instrument out of the mix unless the menu
                 // turned it on (instrumentsOn; session 1165) - a part it plays, or the menu's own
                 // voice of a played part, sounds both ways.

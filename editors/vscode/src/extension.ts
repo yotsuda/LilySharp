@@ -47,6 +47,7 @@ import { PreviewSession } from './previewSession';
 import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, sourceGroupToOpen, SourceTab, jumpOffsetFor, chordSpans, caretHighlight, soundingLight, SoundingSession, auditionBarRange, messageChanged } from './previewCore';
 import { textFontFaceCss } from './scoreFonts';
 import { getPreviewHtml } from './previewHtml';
+import { stemsApi } from './stems';
 
 import { TodoMark, parseStarts, todoDeletions } from './todoResolveCore';
 import { renderAudioFiles } from './audioRender';
@@ -1360,6 +1361,12 @@ export function activate(context: vscode.ExtensionContext) {
             log: (msg: string) => outputChannel.appendLine(msg),
         }),
         lyscPath: bundledLysc(),
+        // The score's sound one stem at a time — its parts, its voices, the recording beside it —
+        // for another extension to mix (docs/stems-api-design.md; Shosa's mixer, owner 2026-11-20).
+        ...stemsApi({
+            context, getClient: () => (clientReady ? client : undefined), whenReady: ensureClientReady,
+            outputChannel, decode: decodeRecordingOnServer,
+        }),
     };
 }
 
