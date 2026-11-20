@@ -50,7 +50,7 @@ tools\Session-Check.ps1 -End pNNN -DiffBase <開始時 HEAD>   # 終了の機械
   ＝要るなら取り直す。コード内コメントや ARCHIVE の `scratch/` 表記は書き換えない。
 - ★★★ **開始時に `C:\MyProj\Calamo\docs\repro\REQUESTS.md` の `open` を見る＝open があればそれに優先的に着手する**（ユーザー指示 2026-10-23・第961）。OMR 側（楽譜画像 → `.lys`）からの依頼の 1 枚で、状態は両側で書き換える（直したら `fixed <commit>`・直さないなら `won't`・聞くなら `question`。長い返事は Lab の `sessions/pNNN/` に置いて行から指す）。
 - ★ **Orecchiante（録音 → `.lys` のコード譜・旧名 Dettato、2026-11-20 改名）も同じ使い方の 1 枚**: `C:\MyProj\Orecchiante\docs\repro\REQUESTS.md`。拡張 `yotsuda.orecchiante`（床 0.11.0）・隣のファイル `<stem>.orecchiante.json`。以下の「Dettato」は旧名。Calamo の依頼との優先順はオーナーに聞く。
-- ★ **`C:\MyProj\Shosa\docs\repro\REQUESTS.md` も同じ使い方の 1 枚**（2026-11-20〜・Shosa は Lily# の曲に合わせて踊る言語）。依頼 1〜5 は閉じた（1・4・5 は Shosa が `done`、2 は取り下げ、3 は `fixed`。§1.1 第1339）。Shosa との約束は 2 つあり、形を変えるときはそれぞれの網も直す。
+- ★ **`C:\MyProj\Shosa\docs\repro\REQUESTS.md` も同じ使い方の 1 枚**（2026-11-20〜・Shosa は Lily# の曲に合わせて踊る言語）。依頼 1〜5 は閉じた（1・4・5 は Shosa が `done`、2 は取り下げ、3 は `fixed`。§1.1 第1339）。6（`timeline` の `sung`）は第1341 で `fixed`＝Shosa の確認待ち。Shosa との約束は 2 つあり、形を変えるときはそれぞれの網も直す。
   - `lysc timeline`／`notes` の JSON: `SongReading.Protocol` と `CliSongReadingTests`。
   - 拡張の exports の stems API（`stemsVersion: 1`）: `docs/stems-api-design.md` と `stemsCore.test.ts`。
 - 証明 ⑴ の道具は `LilySharp-Lab\tools\rerender-ls.ps1`（RULES §5.5 のコマンド一覧）。
@@ -153,6 +153,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1341セッション（2026-11-21・YT-DELL2）
+
+Shosa の依頼 6（歌われる音節を `lysc timeline` から）。base `4cc29d7d6`。開始時 full 18083 合格 / 0 失敗 / skip 2 / 合計 18085（Lab `p1341` `start.log`）。Calamo・Orecchiante の open は 0。
+- **`4af9ee58a`**: `timeline` に `sung`＝`[{part, singer, syllables: [[beat, beats, text]]}]`（`SongReading.SungOf`・`SongSung`）。protocol は 1 のまま。
+  - 中身は `ScoreExport.SungVoicesOf`＝`lysc wav --singer` とプレビューが歌うものそのもの（singer の行・`in`・どの歌詞・読み `漢[かん]`）。拍は声の秒から逆算（tick を二分探索）＝`@breath` で縮む音も歌うとおり（テンポ 60 で 0.75 拍）。
+  - 音節はメリスマ（スラー・`__`・`_`）の最後の音の終わりまで。息の後に持ち直す音（母音を歌い直す）は新しい音節。
+  - 楽譜が歌い手を自分の段に描く形（`staff alice`）は、作った part（`alice__0`）ではなく行の `on PART` を返す。`singer` は `NamesReaderOf` の名前（無ければ null）。
+  - 網は `CliSongReadingTests` に 3 本（2 人が 1 パート・`in B`・テンポの変化／自分の段の歌い手／score の無い曲は `[]`）と形の網の鍵。毒 4 / 4 赤（Lab `p1341/poisons.ps1`）。CLI_REFERENCE・CHANGELOG 2 つ。
+- REQUESTS 6 は `fixed`（Shosa の repo は未 commit）。
+- 終了時 full 18086 合格 / 0 失敗 / skip 2 / 合計 18088（`-End`・`run2.trx`）。
+- **次**: Shosa の確認（done）を待つ。Lily# の次は review.md の設計が先の 2 つ（F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。第1340 の ⚠️ の 2 つを先に調べるのも手。
+
+## 以下は第1340セッションの経緯
+
 ### 1.1 第1340セッション（2026-11-21・YT-DELL2）
 
 review.md の設計が先の 3 つの 1 つ目＝`mid-bar-break` の本の差分 collect。base `e41322018`。開始時 full 18077 合格 / 0 失敗 / skip 2 / 合計 18079（Lab `p1340` `start.log`）。REQUESTS の open は Calamo・Orecchiante・Shosa とも 0。
@@ -164,26 +178,6 @@ review.md の設計が先の 3 つの 1 つ目＝`mid-bar-break` の本の差分
 - ⚠️ 見たが追っていないもの（break のない本でも同じ）: この形の本では、長さの変わる編集は splice しない。空白だけの編集は resume しない（`LastCollectPasses` が False）。実コーパスの打鍵の数（第1300 の銀河鉄道999）は測っていない。
 - 終了時 full 18083 合格 / 0 失敗 / skip 2 / 合計 18085（`-End`・`run3.trx`）。
 - **次**: review.md の残りは設計が先の 2 つ（F4 の残り＝状態ごと移す設計・第1299 の末尾は ARCHIVE／`shiftPage`）と F3 段 2（オーナー判断）。⚠️ の 2 つを先に調べるのも手。
-
-## 以下は第1339セッションの経緯
-
-### 1.1 第1339セッション（2026-11-20・YT-DELL2）
-
-Calamo の依頼 32・33、Shosa の依頼 3〜5、v0.17.1 のリリース。base `be79ac447`。前の会話から続けたので `-Start` は回していない。終了時の full は 18077 合格 / 0 失敗 / skip 2 / 合計 18079（`-End`、Lab `p1339` `run1.trx`）。
-- **Calamo**: 32 は `de115df63`（アルペジオの線が `@struck` の音を外す）、33 は `d0bd67b49`（刻みを一打ずつ鳴らす。刻みの `@portato` は弧に一打 1 つの点）。
-- **Bar fixes の各行が警告とエラーを出す**（`e3eae16e3`・`d729d4a53`）。
-- **Shosa 3・4**（`695fe386a`、`recording-design.md` §5・§7）:
-  - オーナー決定「録音は伸ばさない」で、`warpFit` を外した。
-  - MP3 に LAME タグを付けた。
-  - 手を加えない録音はリミッターを通さない。
-  - 歌声は `voiceOnWarp` で録音の秒に乗る。
-- **stems API**（`fbf205e01`、オーナー決定。設計と結果は `docs/stems-api-design.md`）: exports に `renderStems`・`onDidChangeStems`・`writeAudio`。
-- **Shosa 5**（`cad184c3b`）: stems を楽譜の行の順に並べる（`Rows`）。
-- **LYS4042** の文が直し方を言う（`ed3c8a0fa`）。
-- **リリース**: サイト（`c1083703d`）、0.17.0、書き出しの修正（`626cb5766`、録音のパートを Solo にしてボタンが出たままだと書き出しに録音が入らなかった。オーナーの実機報告）、0.17.1（`a8ebc8ca0`）。経緯は §1.0 と `RELEASING.md` §6・§7。
-- **次**:
-  - 実機で歌声が録音に付くか（歌のある曲で）、刻みと portato の耳の確認、Kücken の 73 小節（オーナー）。
-  - Lily# の次は review.md の設計が先の 3 つ（順は §1.1 第1306 の末尾）。
 
 ## 2. 開いている作業
 
