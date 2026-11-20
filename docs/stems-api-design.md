@@ -121,6 +121,12 @@ interface Stem {
   - 録音なし（morning-light）: `timeline: 'score'`、3 パート。2 回目はパートを描き直さない（1.4 s → 26 ms）。
   - `onDidChangeStems` は開いた .lys の編集の 1.5 s 後に来る。`writeAudio` の 48 kHz の MP3 はクリックが 48000 標本目・長さも 144000 標本。
     22050 Hz の MP3 は理由つきで断る。
+- **順（Shosa の依頼 5・オーナー決定 2026-11-20「.lys に出てくる順」）**: `stems` は楽譜に並ぶ順。サーバーの再生の答えに `Rows`
+  （score の行が示す名前を上から。すぐ下の譜表に乗る chords の行はその譜表のパートの前。score の無い譜面は空＝パートの順がそのまま紙面の順）を足し、
+  `stemsCore.inScoreOrder` が part をその順に、voice をそのパートの直後に（`melody`、`melody#2` の順。歌うだけのパートは声がその位置に）、
+  録音とそのパートを最後に並べる。糸 (Bank Band)（`part bass` だけ宣言し `score { chords prog  tab bass }`）は prog、bass の順になった
+  （前は宣言の順で bass が先）。網は `PlaybackRequestTests.TheRows_AreTheScoresOrder_NotTheParts` と `stemsCore.test.ts`。
+  実物の VS Code で morning-light が harmony (chords)・melody・bass。
 - 気づいたこと: 作業場の譜面の最初の版は `lyrics words { … }`（名前つき）を score の行で結び、`singer on melody` と書いていた。
   文法（GRAMMAR.md SingerSung、lyrics-singer-design.md §10・§14）では `sings` を省いた行はパートが名指しした歌詞
   （`part melody { lyrics words }`）か名前の無い歌詞を歌うので、これはエラー LYS4042「This file has no unnamed lyrics to sing.」

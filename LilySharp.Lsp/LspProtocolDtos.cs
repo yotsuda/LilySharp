@@ -286,6 +286,8 @@ public class PlaybackExport
     /// beats, the score's bars that a recording beside the chart lines up with — the editor mixes
     /// the recording in as the preview plays it (docs/recording-design.md §7).</summary>
     public double BarEnd { get; set; }
+    /// <summary>The names the score's rows show, top to bottom (<see cref="PlaybackResponse.Rows"/>).</summary>
+    public string[] Rows { get; set; } = [];
     /// <summary>The score's name, as <see cref="VideoFramesParams.Score"/> names it back for an
     /// MP4's pictures: "" for the unnamed score, null for a file that declares none.</summary>
     public string? Score { get; set; }
@@ -632,6 +634,12 @@ public class PlaybackResponse
     /// <summary>The beats a metronome clicks, in seconds: one per beat of the meter in force,
     /// the first of each bar accented.</summary>
     public PlaybackBeat[]? Beats { get; set; }
+    /// <summary>The names the score's rows show, top to bottom — each staff's, tab's or chord row's
+    /// part or track as written (a chord row folded onto the staff below it before that staff's part), each once — so
+    /// that a list of the parts can go as the page does (Shosa's request 5: the stems' order,
+    /// <c>lilysharp/playback</c>'s <see cref="Parts"/> being the tracks' own order). A chord
+    /// track's playback name is this name with " (chords)" after it.</summary>
+    public string[]? Rows { get; set; }
     /// <summary>Where the music's last bar ends, in seconds: its closing bar line, or the end of the
     /// meter's bar the last note ends in — the last of the bars a loop rounds to.</summary>
     public double BarEnd { get; set; }

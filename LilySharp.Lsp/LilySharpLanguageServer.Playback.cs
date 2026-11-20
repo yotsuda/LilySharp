@@ -537,11 +537,36 @@ public sealed partial class LilySharpLanguageServer
                 Played = sounds?.Played.ToArray() ?? midi.Tracks.Select(t => t.Name).ToArray(),
                 Beats = beats,
                 BarEnd = SecondsAt(barEnd),
+                Rows = shown != null ? RowsOf(shown) : [],
             };
         }
         catch (Exception ex)
         {
             return new PlaybackResponse { Error = ex.Message };
         }
+    }
+
+    /// <summary>
+    /// The names the score's rows show, top to bottom (<see cref="PlaybackResponse.Rows"/>): each
+    /// staff's, tab's or chord row's part or track in the score's written order (a chord row folded
+    /// onto the staff below it stays above that staff's part); each name once. Shosa's request 5
+    /// (owner's decision 2026-11-20): a mixer's lines go as the page does.
+    /// </summary>
+    internal static string[] RowsOf(LilySharp.Core.Svg.Collector.RenderSpec spec)
+    {
+        var rows = new List<string>();
+        void Add(string? name)
+        {
+            if (!string.IsNullOrEmpty(name) && !rows.Contains(name))
+                rows.Add(name);
+        }
+        foreach (var b in spec.GetVoiceBindings())
+        {
+            // A chord row directly above a staff is folded onto it (GRAMMAR: a score is a stack of
+            // bands): drawn above the staff, so it comes first.
+            Add(b.WithChords);
+            Add(b.VoiceName);
+        }
+        return [.. rows];
     }
 }

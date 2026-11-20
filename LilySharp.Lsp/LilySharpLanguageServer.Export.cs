@@ -138,7 +138,7 @@ public sealed partial class LilySharpLanguageServer
                 throw new InvalidOperationException(pb.Error);
             playbacks.Add(new PlaybackExport
             {
-                OutputPath = path, Notes = pb.Notes ?? [], Parts = pb.Parts ?? [], Extra = pb.Extra ?? [], Beats = pb.Beats ?? [], BarEnd = pb.BarEnd,
+                OutputPath = path, Notes = pb.Notes ?? [], Parts = pb.Parts ?? [], Extra = pb.Extra ?? [], Beats = pb.Beats ?? [], BarEnd = pb.BarEnd, Rows = pb.Rows ?? [],
                 Sung = pb.Sung ?? [], Played = pb.Played ?? [],
                 Score = score?.Spec.Name,
             });

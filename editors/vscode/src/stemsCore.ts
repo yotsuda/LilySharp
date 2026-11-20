@@ -77,6 +77,33 @@ export function notesByPart(notes: readonly PlaybackNote[], parts: readonly stri
     return out;
 }
 
+/**
+ * The stems in the order the page stacks them (Shosa's request 5, owner's decision 2026-11-20: a
+ * mixer's lines go as the .lys writes its score): each part where the score's rows name it
+ * (`rows`, PlaybackResponse.Rows — a chord track's part is its row's name with " (chords)" after
+ * it), each voice right after its part's (`melody`, `melody#2` after `melody`), or where its part
+ * would stand when the part sings only; a part or voice no row names after those, in the order
+ * given (a score with no rows: the parts' own order, which is the page's then). The recording and
+ * its parts last, as given.
+ */
+export function inScoreOrder(stems: readonly Stem[], rows: readonly string[] | null | undefined): Stem[] {
+    const at = new Map<string, number>();
+    (rows ?? []).forEach((r, i) => { if (!at.has(r)) { at.set(r, i); } });
+    const rowOf = (name: string): number | undefined => at.get(name) ?? at.get(name.replace(/ \(chords\)$/, ''));
+    // (a part no row names keeps its place among such parts, and its voices go with it)
+    const given = (base: string, i: number) => { const p = stems.findIndex(x => x.kind === 'part' && x.name === base); return p >= 0 ? p : i; };
+    const keyed = stems.map((s, i) => {
+        const recorded = s.kind === 'recording' || s.kind === 'recordingPart';
+        const base = s.kind === 'voice' ? s.name.split('#')[0] : s.name;
+        const row = recorded ? undefined : rowOf(base);
+        return { s, group: recorded ? 2 : row === undefined ? 1 : 0, row: row ?? (recorded ? 0 : given(base, i)),
+            // (a part's voices by their number: `melody` is the first, `melody#2` the second)
+            voice: s.kind === 'voice' ? Number(s.name.split('#')[1] ?? 1) || 1 : 0, i };
+    });
+    keyed.sort((a, b) => a.group - b.group || a.row - b.row || a.voice - b.voice || a.i - b.i);
+    return keyed.map(k => k.s);
+}
+
 /** The name of a part's kept WAV: the same notes through the same sound font are the same sound. */
 export function stemFileName(notes: readonly PlaybackNote[], soundFont: string): string {
     const h = createHash('sha1');

@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as assert from 'node:assert/strict';
-import { STEMS_VERSION, floatWav, mixProblem, notesByPart, stemFileName } from '../src/stemsCore';
+import { STEMS_VERSION, Stem, floatWav, inScoreOrder, mixProblem, notesByPart, stemFileName } from '../src/stemsCore';
 import { decodeWav } from '../src/audioRenderCore';
 import { PlaybackNote } from '../src/webview/playbackCore';
 import { extensionSource } from './extensionSource';
@@ -63,6 +63,22 @@ describe('the stems', () => {
         assert.equal(mixProblem({ ...two(4), sampleRate: 22050 }, 'wav'), null);
         assert.match(mixProblem(two(4), 'flac')!, /mp3.*wav/);
         assert.match(mixProblem({ left: [0], right: [0], sampleRate: 48000 }, 'wav')!, /Float32Array/);
+    });
+
+    // Shosa's request 5 (owner's decision 2026-11-20): 糸 (Bank Band) declares bass alone and writes
+    // `score { chords prog  tab bass }` — the mixer listed bass before prog.
+    it('go in the score\'s order, a voice after its part, the recording last', () => {
+        const s = (kind: Stem['kind'], name: string): Stem => ({ kind, name, file: name, at: 0 });
+        const names = (list: Stem[]) => list.map(x => `${x.kind}:${x.name}`);
+        assert.deepEqual(names(inScoreOrder([s('part', 'bass'), s('part', 'prog (chords)'), s('recording', 'ito.mp3'), s('recordingPart', 'vocals')], ['prog', 'bass'])),
+            ['part:prog (chords)', 'part:bass', 'recording:ito.mp3', 'recordingPart:vocals']);
+        // A voice after its part, its second voice after it; a part that only sings: its voice where the part stands.
+        assert.deepEqual(names(inScoreOrder([s('voice', 'alto'), s('part', 'piano'), s('voice', 'melody#2'), s('part', 'melody'), s('voice', 'melody')], ['melody', 'alto', 'piano'])),
+            ['part:melody', 'voice:melody', 'voice:melody#2', 'voice:alto', 'part:piano']);
+        // No rows (a file with no score block): as given; a part no row names after those that are, its voice with it.
+        const given = [s('part', 'b'), s('voice', 'b'), s('part', 'a')];
+        assert.deepEqual(names(inScoreOrder(given, null)), names(given));
+        assert.deepEqual(names(inScoreOrder([s('part', 'x'), s('part', 'a'), s('voice', 'x')], ['a'])), ['part:a', 'part:x', 'voice:x']);
     });
 
     it('are on the extension\'s exports, with their version', () => {

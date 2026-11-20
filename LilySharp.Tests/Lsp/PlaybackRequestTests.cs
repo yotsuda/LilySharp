@@ -71,6 +71,31 @@ public class PlaybackRequestTests
 
     // p1 opens on c'' (72) and p2 on e' (64): the two parts never share a pitch on the first
     // beat, so the onset-0 pitches say which parts sound.
+    // Shosa's request 5 (owner's decision 2026-11-20): a mixer's lines go as the page does. 糸 (Bank
+    // Band) declares bass alone and writes `score { chords prog  tab bass }`: prog first.
+    [Fact]
+    public void TheRows_AreTheScoresOrder_NotTheParts()
+    {
+        const string ito = "part bass { instrument bass5 }\n"
+            + "section A { chords prog { C | G | }  bass { c,1 | g,1 | } }\n"
+            + "form { A }\n"
+            + "score {\n  chords prog\n  tab bass\n}\n";
+        var pb = Playback(ito, null);
+        Assert.Null(pb.Error);
+        Assert.Equal(["prog", "bass"], pb.Rows);
+        Assert.Equal(["Tempo", "bass", "prog (chords)"], pb.Parts);     // the tracks' own order, unchanged
+        // As written, whatever the sections write first; the picked score's own; a file with no
+        // score block goes as the page draws it.
+        Assert.Equal(["p1", "p2"], Playback(null).Rows);
+        Assert.Equal(["p2"], Playback("p2").Rows);
+        Assert.Equal(["bass", "harmony", "melody"],
+            Playback("section A { melody { c''1 | }  chords harmony { C | }  bass { c1 | } }\nform { A }\nscore { staff bass  chords harmony  staff melody }\n", null).Rows);
+        // No score block: no rows — the parts' own order is the page's then (each part a staff, as they come).
+        var bare = Playback("section A { a { c''1 | }  b { c1 | } }\nform { A }\n", null);
+        Assert.Empty(bare.Rows!);
+        Assert.Equal(["a", "b"], bare.Parts!.Where(p => p != "Tempo"));
+    }
+
     private static int[] PitchesAtOnset0(PlaybackResponse pb)
     {
         Assert.Null(pb.Error);

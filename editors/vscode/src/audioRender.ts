@@ -53,6 +53,8 @@ export interface AudioJob {
     /** Where the music's last bar ends (PlaybackExport.BarEnd): with `Beats`, the bars a
      *  recording beside the chart lines up with. */
     BarEnd?: number | null;
+    /** The names the score's rows show, top to bottom (PlaybackExport.Rows): the stems' order. */
+    Rows?: string[] | null;
     /** How the recording beside the chart plays in this file, when the preview sounds it with the
      *  score and its bars line up (recordedExportPlan; docs/recording-design.md §7). */
     RecordingPlay?: RecordingPlay | null;

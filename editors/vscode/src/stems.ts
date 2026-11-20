@@ -37,7 +37,7 @@ import { RECORDING_DEFAULTS, audioReader, parseRecording, recordingPathFor, reso
 import { PREPARE_IDLE_MS } from './singerCore';
 import { renderer } from './singing';
 import { wavSoundFont } from './soundFont';
-import { STEMS_VERSION, Stem, Stems, floatWav, mixProblem, notesByPart, stemFileName } from './stemsCore';
+import { STEMS_VERSION, Stem, Stems, floatWav, inScoreOrder, mixProblem, notesByPart, stemFileName } from './stemsCore';
 import { PracticeState } from './webview/playbackCore';
 
 export interface StemsDeps {
@@ -175,7 +175,8 @@ async function renderStems(deps: StemsDeps, lys: vscode.Uri, options: StemsOptio
         for (const p of recording.parts) { made({ kind: 'recordingPart', name: p.name, file: p.file, at: 0 }); }
     }
     log(`${stems.length} stems on the ${warp ? 'recording' : 'score'}'s seconds${notes.length ? '; ' + notes.join('; ') : ''}`);
-    return { timeline: warp && recording ? 'recording' : 'score', stems, notes };
+    // In the order the page stacks them (Shosa's request 5): the score's rows, a voice after its part.
+    return { timeline: warp && recording ? 'recording' : 'score', stems: inScoreOrder(stems, job.Rows), notes };
 }
 
 /** The recording beside the chart as the stems hand it out: its file (an m4a as the WAV the server
