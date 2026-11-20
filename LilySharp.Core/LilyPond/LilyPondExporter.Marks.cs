@@ -393,6 +393,13 @@ public sealed partial class LilyPondExporter
                 case ArticulationSyntax art when AccidentalMark(art) is { } acc:
                     if (acc == '!') prefix.Append("\\once \\set suggestAccidentals = ##t ");
                     break;
+                // A portato over a stem tremolo's strokes (`<fis b dis' fis'>2.:8@portato`, owner's
+                // decision 2026-11-20, Calamo request 33): LilyPond has no such script, so the
+                // twin draws the page's — one dot a stroke and the arc — as a markup over the note
+                // (under it with '.down'), the geometry ArticulationEngraver's.
+                case ArticulationSyntax { Type: ArticulationType.Portato } pa when PortatoStrokesMarkup(pa) is { } strokesMarkup:
+                    suffix.Append(strokesMarkup);
+                    break;
                 case ArticulationSyntax art when IsDeadNote(art):
                     prefix.Append("\\deadNote ");
                     break;
@@ -643,6 +650,48 @@ public sealed partial class LilyPondExporter
     /// <c>\nonArpeggiato</c> than to use <c>\arpeggio</c> and alter the appearance."
     /// </para>
     /// </remarks>
+    private string? PortatoStrokesMarkup(ArticulationSyntax portato)
+    {
+        if (portato.Parent is not { } host || host is PitchSyntax)
+            return null;
+        var tremolo = Music.TremoloStrokes.TremoloOf(host);
+        if (tremolo is null)
+            return null;
+        var duration = host switch
+        {
+            NoteSyntax n => n.Duration, ChordSyntax c => c.Duration, ChordRepetitionSyntax q => q.Duration,
+            BareDurationSyntax b => b.Duration, DrumNoteSyntax d => d.Duration, _ => null,
+        };
+        if (duration is null)
+        {
+            _warnings.Add("@portato over a stem tremolo with no written value: the twin draws LilyPond's portato, not the dots a stroke");
+            return null;
+        }
+        int strokes = Music.TremoloStrokes.Of(tremolo, duration.ToFraction());
+        if (strokes < 2)
+            return null;
+        bool above = portato.ForcedAbove != false;
+        static string N(double v) => v.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+        var dot = Svg.Layout.MusicFont.Current.FullSize.Box(Svg.MusicGlyph.AugmentationDot);
+        double dotCx = (dot.Left + dot.Right) / 2.0;
+        double pitch = Svg.Layout.ArticulationEngraver.StrokeDotPitch;
+        double dir = above ? 1 : -1;
+        double x0 = dotCx - Svg.Layout.ArticulationEngraver.StrokeArcOverhang;
+        double x1 = dotCx + (strokes - 1) * pitch + Svg.Layout.ArticulationEngraver.StrokeArcOverhang;
+        double y0 = dir * (Svg.Layout.ArticulationEngraver.StrokeDotRadius + Svg.Layout.ArticulationEngraver.StrokeArcGap);
+        double cy = y0 + dir * (Svg.Layout.ArticulationEngraver.StrokeArcRise + Svg.Layout.ArticulationEngraver.StrokeArcThickness / 1.5);
+        double quarter = (x1 - x0) / 4.0;
+        var sb = new StringBuilder(above ? "^" : "_").Append("\\markup \\center-align \\overlay { ");
+        for (int i = 0; i < strokes; i++)
+            sb.Append("\\translate #'(").Append(N(i * pitch)).Append(" . 0) \\musicglyph \"dots.dot\" ");
+        sb.Append("\\path #").Append(N(Svg.Layout.ArticulationEngraver.StrokeArcThickness)).Append(" #'((moveto ")
+          .Append(N(x0)).Append(' ').Append(N(y0)).Append(") (curveto ")
+          .Append(N(x0 + quarter)).Append(' ').Append(N(cy)).Append(' ')
+          .Append(N(x1 - quarter)).Append(' ').Append(N(cy)).Append(' ')
+          .Append(N(x1)).Append(' ').Append(N(y0)).Append(")) }");
+        return sb.ToString();
+    }
+
     private static string? NonArpeggiato(MusicMarkSyntax mk)
         => Semantics.AnnotationValues.IsArpeggioBracket(mk) ? "\\nonArpeggiato" : null;
 

@@ -3183,6 +3183,42 @@ internal static class ArticulationEngraver
                 VerticalSkyline.FromBox(l, r, b, t, VerticalDirection.Down));
     }
 
+    // The portato over a tremolo's strokes (ArticulationItem.TremoloStrokes; owner's decision
+    // 2026-11-20, Calamo request 33): one dot a stroke in a row, an arc over them. LILYSHARP-OWN —
+    // LilyPond has no such script; the proportions are the print's (Kücken Op.47-3 bar 73, Fr.
+    // Kistner 1711) and the hand-drawn markup of Calamo's repro: dots a little more than a dot
+    // apart, the arc's ends just past the outer dots, its crown about half a space over them.
+    /// <summary>Centre to centre of two dots of the row.</summary>
+    internal const double StrokeDotPitch = 0.6;
+    /// <summary>How far the arc's ends reach past the outer dots' centres.</summary>
+    internal const double StrokeArcOverhang = 0.35;
+    /// <summary>From the dots' tops to the arc's ends.</summary>
+    internal const double StrokeArcGap = 0.25;
+    /// <summary>The arc's control points over its ends (the crown is ¾ of it).</summary>
+    internal const double StrokeArcRise = 0.6;
+    /// <summary>The arc's thickness at its crown (a slur's middle, about).</summary>
+    internal const double StrokeArcThickness = 0.11;
+
+    /// <summary>The augmentation dot's half height, the row's dots' radius.</summary>
+    internal static double StrokeDotRadius
+        => (MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Top
+            - MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Bottom) / 2.0;
+
+    /// <summary>
+    /// The box of a portato over <paramref name="strokes"/> strokes about its anchor — the
+    /// dots' centre line, the row's middle — Y-up: the dots at the near side, the arc beyond
+    /// them (over them above the note, under them below it).
+    /// </summary>
+    internal static GlyphMetrics.BBox PortatoStrokesBox(int strokes, bool isAbove)
+    {
+        double r = StrokeDotRadius;
+        double half = (strokes - 1) * StrokeDotPitch / 2.0 + StrokeArcOverhang;
+        double far = r + StrokeArcGap + 0.75 * StrokeArcRise + StrokeArcThickness;
+        return isAbove
+            ? new GlyphMetrics.BBox(-half, -r, half, far)
+            : new GlyphMetrics.BBox(-half, -far, half, r);
+    }
+
     /// <summary>Real ink box of a chord diagram, anchored at the GRID BOTTOM centre, at the
     /// score's size — the drawing's own dimensions (<see cref="FretFrameGeometry.Box"/>).</summary>
     private static GlyphMetrics.BBox FrameBox(string? spec, ScoreTextMetrics fonts)
@@ -3237,6 +3273,8 @@ internal static class ArticulationEngraver
         ArticulationItem articulation, ScoreTextMetrics fonts) =>
         articulation.Type == ArticulationType.FretFrame
             ? FrameBox(articulation.FrameSpec, fonts)
+            : articulation.TremoloStrokes >= 2
+                ? PortatoStrokesBox(articulation.TremoloStrokes, articulation.IsAbove)
             : TabTechniqueLetterOf(articulation) is { } letter
                 ? TabTechniqueInkBox(fonts, letter)
                 : GetSeedBBox(articulation.Type, articulation.IsAbove);
@@ -3286,7 +3324,10 @@ internal static class ArticulationEngraver
         || a.Type is ArticulationType.UpBow or ArticulationType.DownBow
             or ArticulationType.Flageolet or ArticulationType.Stopped
             or ArticulationType.Heel or ArticulationType.Toe or ArticulationType.SnapPizz
-            or ArticulationType.FretFrame;
+            or ArticulationType.FretFrame
+        // The portato over a tremolo's strokes stands over the stem's tip whatever the stem
+        // (ArticulationItem.TremoloStrokes; Calamo request 33).
+        || a.TremoloStrokes >= 2;
 
     /// <summary>
     /// <see cref="GetNearExtent"/> for one script, which is where the TAB technique
@@ -3300,6 +3341,11 @@ internal static class ArticulationEngraver
     /// </remarks>
     private static double NearExtentOf(ArticulationItem a, bool isAbove, ScoreTextMetrics? fonts)
     {
+        if (a.TremoloStrokes >= 2)
+        {
+            var strokes = PortatoStrokesBox(a.TremoloStrokes, isAbove);
+            return isAbove ? -strokes.Bottom : strokes.Top;
+        }
         if (fonts is { } f && TabTechniqueLetterOf(a) is { } letter)
         {
             var ink = TabTechniqueInkBox(f, letter);

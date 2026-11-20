@@ -872,6 +872,15 @@ internal static partial class SharedRenderer
                         TextAnchor.Middle, Color.Black);
                 continue;
             }
+            // A portato over a tremolo's strokes ("portatoStrokes:N"): N dots and the arc —
+            // the box ArticulationEngraver.PortatoStrokesBox reserved.
+            if (a.Glyph.StartsWith(ArticulationItem.PortatoStrokesSentinel, StringComparison.Ordinal))
+            {
+                if (int.TryParse(a.Glyph.AsSpan(ArticulationItem.PortatoStrokesSentinel.Length), out int strokes))
+                    using (gc.Source(a.SourcePosition))
+                        DrawPortatoStrokes(a.X, y, strokes, a.IsAbove, scale, gc);
+                continue;
+            }
             // Chord diagram sentinel ("frame:x32010").
             if (a.Glyph.StartsWith("frame:", StringComparison.Ordinal))
             {
@@ -926,6 +935,34 @@ internal static partial class SharedRenderer
                 LilySharp.Core.Svg.Layout.ArticulationEngraver.BendApproachThickness, cap: LineCap.Round);
             px = nx; py = ny;
         }
+    }
+
+    /// <summary>
+    /// Draws the portato over a tremolo's <paramref name="strokes"/> strokes about
+    /// (<paramref name="x"/>, <paramref name="y"/>) — the dots' centre line, Y-up: the font's
+    /// augmentation dot once a stroke, and an arc beyond them (over them when
+    /// <paramref name="above"/>), at <paramref name="scale"/> (an ossia's). The geometry is
+    /// ArticulationEngraver's, which reserved its box (PortatoStrokesBox).
+    /// </summary>
+    private static void DrawPortatoStrokes(double x, double y, int strokes, bool above, double scale, IDrawingContext gc)
+    {
+        var dot = MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot);
+        double dotCx = (dot.Left + dot.Right) / 2.0, dotCy = (dot.Bottom + dot.Top) / 2.0;
+        char code = MusicFont.Current.Codepoint(MusicGlyph.AugmentationDot);
+        double pitch = ArticulationEngraver.StrokeDotPitch * scale;
+        double first = x - (strokes - 1) * pitch / 2.0;
+        for (int i = 0; i < strokes; i++)
+            gc.DrawGlyph(code, first + i * pitch - dotCx * scale, y - dotCy * scale, FontSize * scale);
+
+        double dir = above ? 1.0 : -1.0;
+        double half = ((strokes - 1) * ArticulationEngraver.StrokeDotPitch / 2.0 + ArticulationEngraver.StrokeArcOverhang) * scale;
+        double ends = y + dir * (ArticulationEngraver.StrokeDotRadius + ArticulationEngraver.StrokeArcGap) * scale;
+        double rise = ArticulationEngraver.StrokeArcRise * scale, thick = ArticulationEngraver.StrokeArcThickness * scale;
+        double l = x - half, r = x + half, quarter = (r - l) / 4.0;
+        gc.DrawClosedBezier(
+            (l, ends), (l + quarter, ends + dir * (rise + thick / 0.75)), (r - quarter, ends + dir * (rise + thick / 0.75)), (r, ends),
+            (r - quarter, ends + dir * rise), (l + quarter, ends + dir * rise),
+            Color.Black, 0.02 * scale);
     }
 
     /// <summary>

@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Stem tremolos are played stroke by stroke.** `<c e g>2.:8` plays six eighths in the preview and the exports instead of one held chord; `@portato` on it draws the arc over one dot a stroke and plays each stroke portato.
 - **Bar fixes shows the errors and the warnings.** Each row of the panel beside the scan now shows the compiler's errors (red, ✖) and warnings (⚠) on the bar its Draft holds — your edit, the AI's bar, or the bar as it stands, as the Problems panel has them — so an `@stuck` typed for `@struck` is said there instead of silently ignored, and an error no longer hides in the row's plain text. Warnings fail no check.
 - **An arpeggio leaves out an `@struck` member.** `<gis cis' gis'@struck>2.@arpeggio` draws the wavy line beside the held notes only, not the small head.
 - **Other extensions can read songs through the bundled lysc.** The extension's exports carry `lyscPath`, the lysc beside its server, which now prints a song's sections, tempos and notes as played (`lysc timeline`, `lysc notes`) — what Shosa dances to.

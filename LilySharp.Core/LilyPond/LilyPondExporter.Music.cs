@@ -1617,6 +1617,11 @@ public sealed partial class LilyPondExporter
 
         sb.Append('>');
         sb.Append(EmitEventDuration(c.Duration));
+        // The chord's stem tremolo (`<fis b dis' fis'>2.:8`), as a note's (EmitNote). Until
+        // 2026-11-20 the twin dropped it: the chord was drawn with no stroke on its stem
+        // (found with Calamo request 33).
+        if (c.Tremolo is { } chordTremolo)
+            sb.Append(chordTremolo.Text);
         // The chord's post-events are the whole list less the member slurs and ties written above.
         IEnumerable<SyntaxNode> chordArts = c.Articulations;
         if (c.MemberSlurs.Any())

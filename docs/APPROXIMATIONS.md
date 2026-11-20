@@ -14,16 +14,16 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 67 | 観測者がゼロだと自認しているもの |
-| `OWN` | 479 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **608** | |
+| `OWN` | 482 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **611** | |
 
 ## 密度の高いファイル（上位 12）
 
 | ファイル | 件数 |
 |---|---:|
-| `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 23 |
+| `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 24 |
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 23 |
-| `LilySharp.Core/Midi/MidiExporter.cs` | 19 |
+| `LilySharp.Core/Midi/MidiExporter.cs` | 20 |
 | `LilySharp.Core/Svg/Layout/ProseBand.cs` | 19 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 16 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
@@ -253,7 +253,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（479 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（482 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -324,6 +324,7 @@
 - **`MidiExporter._sequenceClosedAt`** part's bar 3 at 3840 — a bar early from there on. LILYSHARP-OWN. ⚠️ Not a drum chart: the
 - **`MidiExporter.ProcessChord`** (Music.Harmonics.ArtificialSounds; LILYSHARP-OWN — LilyPond plays the two written).
 - **`MidiExporter.ProcessChord`** from it, so it stays out of the onset. LILYSHARP-OWN: LilyPond, drawing the same
+- **`MidiExporter.Restrike`** LILYSHARP-OWN: LilyPond's MIDI plays c2:8 as one half note — the stroke is drawn
 - **`MidiExporter.SwingNotes`** LILYSHARP-OWN: LilyPond's MIDI plays its swing equation straight unless the score asks for
 - **`MidiExporter.ProcessGrace`** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Midi/MidiForFile.cs`
@@ -624,6 +625,7 @@
 - **`ArticulationEngraver.CalculateWithFingerings`** LILYSHARP-OWN: LilyPond prints the collision. Its Script_engraver acknowledges
 - **`ArticulationEngraver.OtherVoiceRestSupport`** The rule and its LILYSHARP-OWN declaration are at the one call site in
 - **`ArticulationEngraver.GuitarBendReach,GuitarBendRise,GuitarBendHeadHalfWidth,GuitarBendLabelGap`** ink box below read. LILYSHARP-OWN, as the device is.
+- **`ArticulationEngraver.StrokeDotPitch`** 2026-11-20, Calamo request 33): one dot a stroke in a row, an arc over them. LILYSHARP-OWN —
 - **`ArticulationEngraver.DiagramYUpOverInk`** LILYSHARP-OWN (2026-09-28, defect seen on the owner's "Shape chords" book: the Cm diagram's
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **`ArticulationSpacing.OutsideStaffPriority`** LILYSHARP-OWN (owner's decision 2026-09-27: "the diagram stands below the name, between
@@ -893,6 +895,7 @@
 - **`VoltaBracketEngraver.Bounds`** ⚠️ LILYSHARP-OWN: that column's X extent is taken as EMPTY, where
 - **`VoltaBracketEngraver.BarWalk`** ⚠️ LILYSHARP-OWN: the plain bar lines inside a compressed multi-measure rest, which the
 ### `LilySharp.Core/Svg/Model/ArticulationItem.cs`
+- **`ArticulationItem.TremoloStrokes`** LILYSHARP-OWN: LilyPond has no such script; the twin draws it as a markup.
 - **`ArticulationItem.AccidentalOfOrnament`** LILYSHARP-OWN: LilyPond has no accidental on a Script; its twin writes the accidental
 ### `LilySharp.Core/Svg/Model/ChordNameItem.cs`
 - **`ChordNameItem.PlacedByBeat`** LILYSHARP-OWN: LilyPond's ChordName stands on its paper column, which a Lyrics

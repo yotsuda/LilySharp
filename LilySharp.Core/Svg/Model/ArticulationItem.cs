@@ -257,8 +257,24 @@ public sealed record ArticulationItem
         ArticulationType.Plop => "",
         ArticulationType.FretFrame => $"frame:{FrameSpec}",
         ArticulationType.Doit => "",
+        // A portato over a stem tremolo's strokes: an arc over one dot a stroke, drawn by the
+        // renderer (TremoloStrokes; ArticulationEngraver.PortatoStrokesBox).
+        ArticulationType.Portato when TremoloStrokes >= 2 => $"{PortatoStrokesSentinel}{TremoloStrokes}",
         _ => Glyph is { } g ? Layout.MusicFont.Current.Codepoint(g).ToString() : "",
     };
+
+    /// <summary>The glyph sentinel of a portato over a tremolo's strokes: "portatoStrokes:N".</summary>
+    internal const string PortatoStrokesSentinel = "portatoStrokes:";
+
+    /// <summary>
+    /// For an <see cref="ArticulationType.Portato"/> on a note or chord with a stem tremolo, the
+    /// strokes it plays (<c>&lt;fis b dis' fis'&gt;2.:8@portato</c>: 6), else 0. The mark is then
+    /// the old prints' arc with one dot a stroke under it, over the stem's tip whatever the stem
+    /// (Kücken Op.47-3 bars 73, 78-79; owner's decision 2026-11-20, Calamo request 33), and the
+    /// strokes sound portato one by one (Midi.MidiExporter.Restrike).
+    /// </summary>
+    /// <remarks>LILYSHARP-OWN: LilyPond has no such script; the twin draws it as a markup.</remarks>
+    public int TremoloStrokes { get; init; }
 
     /// <summary>
     /// Whether this is an ornament (always placed above the note).

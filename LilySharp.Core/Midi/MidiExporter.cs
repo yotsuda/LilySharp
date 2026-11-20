@@ -3936,8 +3936,10 @@ public sealed class MidiExporter
             _currentTick, actualDuration, note.SourceStart,
             QuarterBend: note.Pitch.QuarterOffset,
             SourceOrdinal: NextOrdinal(note.SourceStart), Timbre: _currentTimbre, Part: _currentPart, Accent: velocity - _velocity, Sforzando: _struckBy));
-        MarkForSinger(track, [track.Notes.Count - 1], note.Articulations);
-        CloseOnset(track, [track.Notes.Count - 1], startsTie);
+        int sounded = track.Notes.Count - 1;
+        MarkForSinger(track, [sounded], note.Articulations);
+        CloseOnset(track, [sounded], startsTie);
+        Restrike(track, [sounded], sounded, note.Tremolo, duration, _currentTick, durationTicks, durationPercent);
         _currentTick += durationTicks;
     }
 
@@ -3975,8 +3977,11 @@ public sealed class MidiExporter
         // note). Until 2026-11-19 no drum note carried it, and `sn4@p@cresc sn sn sn@f` struck
         // 70 70 70 95 where a pitched part's four notes go 70 78 87 95 (MEASURED, Lab
         // sessions/p1318/mid/p3.lys against p1.lys).
-        MarkForSinger(track, [track.Notes.Count - 1], drum.Articulations);
-        CloseOnset(track, [track.Notes.Count - 1], startsTie: false);
+        int hit = track.Notes.Count - 1;
+        MarkForSinger(track, [hit], drum.Articulations);
+        CloseOnset(track, [hit], startsTie: false);
+        // `sn2:32`: a roll, its strokes struck (Restrike).
+        Restrike(track, [hit], hit, drum.Tremolo, duration, _currentTick, durationTicks, durationPercent);
         _currentTick += durationTicks;
     }
 
@@ -4121,8 +4126,10 @@ public sealed class MidiExporter
                     startTick, actualDuration, bare.SourceStart,
                     QuarterBend: sound.QuarterBend,
                     SourceOrdinal: NextOrdinal(bare.SourceStart), Timbre: _currentTimbre, Part: _currentPart, Accent: velocity - _velocity, Sforzando: _struckBy));
-                MarkForSinger(track, [track.Notes.Count - 1], bare.Articulations);
-                CloseOnset(track, [track.Notes.Count - 1], startsTie);
+                int sounded = track.Notes.Count - 1;
+                MarkForSinger(track, [sounded], bare.Articulations);
+                CloseOnset(track, [sounded], startsTie);
+                Restrike(track, [sounded], sounded, bare.Tremolo, duration, startTick, durationTicks, durationPercent);
                 break;
             }
             case ChordSyntax chord when _resolvedChordNotes.TryGetValue(chord, out var notes):
@@ -4133,6 +4140,7 @@ public sealed class MidiExporter
                 var tieTargets = OpenTieTargets(track);
                 var onset = new List<int>();
                 var drums = new List<int>();
+                int firstNew = track.Notes.Count;
                 int ordinal = NextOrdinal(bare.SourceStart);
                 int semitones = 12 * Music.BareDurations.DisplacementOf(bare);
                 foreach (var n in notes)
@@ -4159,6 +4167,7 @@ public sealed class MidiExporter
                 }
                 MarkForSinger(track, [.. onset, .. drums], bare.Articulations);
                 CloseOnset(track, onset, startsTie);
+                Restrike(track, [.. onset, .. drums], firstNew, bare.Tremolo, duration, startTick, durationTicks, durationPercent);
                 break;
             }
             case DrumNoteSyntax drum:
@@ -4166,8 +4175,10 @@ public sealed class MidiExporter
                 var info = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
                 track.Notes.Add(new MidiNote(9, info.GmKey, velocity, startTick, actualDuration,
                     bare.SourceStart, SourceOrdinal: NextOrdinal(bare.SourceStart), Timbre: 9, Part: _currentPart, Accent: velocity - _velocity, Sforzando: _struckBy));
-                MarkForSinger(track, [track.Notes.Count - 1], bare.Articulations); // its hairpin, as ProcessDrumNote's
-                CloseOnset(track, [track.Notes.Count - 1], startsTie: false);
+                int hit = track.Notes.Count - 1;
+                MarkForSinger(track, [hit], bare.Articulations); // its hairpin, as ProcessDrumNote's
+                CloseOnset(track, [hit], startsTie: false);
+                Restrike(track, [hit], hit, bare.Tremolo, duration, startTick, durationTicks, durationPercent);
                 break;
             }
             default:
@@ -4310,6 +4321,7 @@ public sealed class MidiExporter
         var resolved = new List<(int MidiPitch, int QuarterBend, bool IsDrum, bool IsStruck)>();
 
         int startTick = _currentTick;
+        int firstNew = track.Notes.Count;
         var pitches = chord.Pitches.ToList();
         // One ordinal per chord ONSET — every head shares the chord's source
         // position and must map to the same printed copy.
@@ -4491,6 +4503,7 @@ public sealed class MidiExporter
         // …but they carry the chord's hairpin, as a single drum note does (ProcessDrumNote).
         MarkForSinger(track, [.. onset, .. drumHits], chord.Articulations);
         CloseOnset(track, tiedMembers is null ? onset : onTiedMembers, startsTie);
+        Restrike(track, [.. onset, .. drumHits], firstNew, chord.Tremolo, duration, startTick, durationTicks, durationPercent);
 
         // The next note is relative to the chord's ANCHOR (the root's bare letter or the
         // tonic, plus the whole-chord marks); a chord that anchors nothing, and absolute
@@ -4526,6 +4539,7 @@ public sealed class MidiExporter
         var drumHits = new List<int>();
 
         int startTick = _currentTick;
+        int firstNew = track.Notes.Count;
         var duration = rep.Duration is { } rd ? GetDuration(rd) : _defaultDuration;
         int durationTicks = ClockTicks(duration);
         durationTicks -= ConsumeGraceSteal(durationTicks);
@@ -4585,6 +4599,7 @@ public sealed class MidiExporter
         }
         MarkForSinger(track, [.. onset, .. drumHits], rep.Articulations);
         CloseOnset(track, onset, startsTie);
+        Restrike(track, [.. onset, .. drumHits], firstNew, rep.Tremolo, duration, startTick, durationTicks, durationPercent);
 
         _currentTick = startTick + durationTicks;
     }
@@ -4602,6 +4617,48 @@ public sealed class MidiExporter
             Math.Min(soundTicks, ClockTicks(Music.StruckNotes.Longest)), source,
             QuarterBend: quarterBend, SourceOrdinal: ordinal, Timbre: _currentTimbre, Part: _currentPart,
             Accent: velocity - _velocity, Sforzando: _struckBy));
+    }
+
+    /// <summary>
+    /// Plays a stem tremolo's strokes (owner's decision 2026-11-20, Calamo request 33: "打ち直しを
+    /// 全部鳴らす"): each of the onset's notes written at <paramref name="startTick"/> becomes that
+    /// many notes, one a stroke, each shaped by the note's marks as a note that long is —
+    /// <c>&lt;fis b dis' fis'&gt;2.:8@portato</c> is six eighths played portato, as the same
+    /// music written out. A struck member (Music.StruckNotes) is not in the onset and sounds once,
+    /// as in a <c>repeat tremolo</c>; a note a tie extended into keeps its one sound. The last
+    /// stroke is what a tie goes on from: the walk's last onset becomes the last strokes.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond's MIDI plays <c>c2:8</c> as one half note — the stroke is drawn
+    /// only (lily/stem-tremolo.cc; ly/articulate.ly writes the strokes out, the plain
+    /// performer does not). Until 2026-11-20 Lily# did the same.
+    /// </remarks>
+    private void Restrike(MidiTrack track, IReadOnlyList<int> indices, int from, SyntaxTokenNode? tremolo,
+        Fraction written, int startTick, int durationTicks, int durationPercent)
+    {
+        int strokes = Music.TremoloStrokes.Of(tremolo, written);
+        if (strokes < 2 || durationTicks < strokes)
+            return;
+        int each = durationTicks / strokes;
+        int Sound(int ticks) => Math.Max(1, ticks * durationPercent / 100);
+        var lastOf = new Dictionary<int, int>();
+        foreach (int i in indices)
+        {
+            if (i < from || i >= track.Notes.Count || track.Notes[i].StartTick != startTick || lastOf.ContainsKey(i))
+                continue;
+            var first = track.Notes[i];
+            track.Notes[i] = first with { DurationTicks = Sound(each), TiedOut = false };
+            for (int s = 1; s < strokes; s++)
+            {
+                int ticks = s == strokes - 1 ? durationTicks - s * each : each;
+                track.Notes.Add(first with { StartTick = startTick + s * each, DurationTicks = Sound(ticks), FollowsNote = true,
+                    TiedOut = s == strokes - 1 && first.TiedOut });
+            }
+            lastOf[i] = track.Notes.Count - 1;
+        }
+        for (int k = 0; k < _lastOnset.Count; k++)
+            if (lastOf.TryGetValue(_lastOnset[k], out int last))
+                _lastOnset[k] = last;
     }
 
     private void ProcessTimeSignature(TimeSignatureSyntax timeSig, MidiTrack conductorTrack)

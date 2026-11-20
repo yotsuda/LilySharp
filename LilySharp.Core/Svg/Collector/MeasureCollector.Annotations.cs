@@ -925,6 +925,14 @@ public sealed partial class MeasureCollector
         foreach (var opener in Semantics.ArticulationRuns.Covering(node))
             Collect(opener, isChordMember: false);
 
+        // The value the note just collected was written with, dots and all — the voice's
+        // running duration, which the item has just set.
+        Fraction WrittenValue()
+        {
+            int pow = 1 << Math.Clamp(_v.DefaultDots, 0, 8);
+            return _v.DefaultDuration * new Fraction(2 * pow - 1, pow);
+        }
+
         void Collect(SyntaxNode articulation, bool isChordMember)
         {
             if (graceTime && !Semantics.GraceBodySupport.IsCarriedScript(articulation)
@@ -989,12 +997,22 @@ public sealed partial class MeasureCollector
                         directionForced = true;
                     }
 
+                    // A portato over a stem tremolo (`<fis b dis' fis'>2.:8@portato`, owner's
+                    // decision 2026-11-20, Calamo request 33): the arc over one dot a stroke,
+                    // over the stem's tip whatever the stem, as the old prints stand it
+                    // (Kücken Op.47-3 bar 73 stem up, bars 78-79 stem down) — '.down' still wins.
+                    int strokes = type == ArticulationType.Portato && !isChordMember
+                        ? Music.TremoloStrokes.Of(Music.TremoloStrokes.TremoloOf(node), WrittenValue())
+                        : 0;
+                    if (strokes >= 2 && !directionForced)
+                        isAbove = true;
                     _articulations.Add(new ArticulationItem(type, measureIndex, itemIndex, isAbove,
                         articulationSyntax.SourceStart, _v.Cursor.StaffIndex)
                     {
                         DirectionForced = directionForced,
                         VoiceIndex = _v.Cursor.VoiceIndex,
                         IsChordMember = isChordMember,
+                        TremoloStrokes = strokes >= 2 ? strokes : 0,
                     });
                 }
                 else

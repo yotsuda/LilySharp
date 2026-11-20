@@ -121,6 +121,15 @@ Contraction    = 'es' | 'as' | 'eses' | 'ases' ;   (* = ees / aes / eeses / aese
 DurationBase   = '1' | '2' | '4' | '8' | '16' | '32' | '64' | '128' ;
 Dots           = { '.' }+ ;
 Tremolo        = ':' , ( '8' | '16' | '32' ) ;    (* stem tremolo: 1-3 beams *)
+                 (* THE SOUND: the note is struck once a stroke — '<fis b dis' fis'>2.:8' six
+                    eighths, 'c2:16' eight sixteenths — each shaped by the note's marks as a
+                    note that long (owner's decision 2026-11-20, Calamo request 33; LILYSHARP-OWN:
+                    LilyPond's MIDI holds one note). A struck member ('@struck') sounds once; a tie
+                    goes on from the last stroke. A stroke as long as the note ('c8:8') is the note.
+                    '@portato' on it is the old prints' arc over one dot a stroke ('2.:8@portato'
+                    six dots), over the stem's tip whatever the stem ('.down' puts it under), each
+                    stroke played portato; MusicXML writes <detached-legato/>, the twin a markup.
+                    Read by Music.TremoloStrokes. *)
 DurationToken  = DurationBase , [ Dots ] , [ Tremolo ] ;
 
 ### Keywords
