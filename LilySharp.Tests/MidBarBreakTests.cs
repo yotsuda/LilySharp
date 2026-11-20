@@ -352,6 +352,26 @@ public class MidBarBreakTests
         Assert.Contains(warnings, w => w.Message.Contains(reason));
     }
 
+    /// <summary>
+    /// A break inside a tuplet that OPENS a bar past the first (session 1340): the members'
+    /// time had not reached the bar's clock, so the break read as standing at the bar line and
+    /// broke the line before the bar, with no LYS1037. Now it is the first bar's case: the
+    /// tuplet refuses the split, the line breaks at the end of the bar the break stands in.
+    /// </summary>
+    [Fact]
+    public void ABreakInATupletThatOpensALaterBar_FallsToThatBarsEnd_AndSaysSo()
+    {
+        string book = Book("c''1 | tuplet 3/2 { c4 e break g } e2 | c1 |");
+        var measures = Melody(book).Measures;
+        Assert.Equal(3, measures.Length);
+        Assert.Equal(new[] { false, true, false },
+            measures.Select(m => m.LineBreakPermission == BreakPermission.Force));
+        var warning = Assert.Single(SemanticValidation.Run(SyntaxTree.Parse(book)),
+            d => d.Code == DiagnosticCodes.MidBarBreakNotSplit);
+        Assert.Contains("inside a tuplet", warning.Message);
+        Assert.Equal(book.IndexOf("break", System.StringComparison.Ordinal), warning.Span.Start);
+    }
+
     [Fact]
     public void ATupletThatEndsAtTheBreak_IsNoObstacle()
     {

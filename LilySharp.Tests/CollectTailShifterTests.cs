@@ -89,6 +89,8 @@ public class CollectTailShifterTests
         [typeof(UnpairedBeamWarning)] = new[] { "SourcePosition" },
         [typeof(CueSpanBoundaryWarning)] = new[] { "SourcePosition" },
         [typeof(ChordNameItem)] = new[] { "SourcePosition" },
+        [typeof(MidBarBreakRequest)] = new[] { "SourcePosition" },
+        [typeof(MidBarBreakConflict)] = new[] { "SourcePosition" },
         // The trill-spanner event tuple is covered by hand in ShiftSideEntry
         // (ValueTuple fields are not reflectable by name); its shape change
         // would break the tuple pattern there at compile time.
@@ -216,5 +218,27 @@ public class CollectTailShifterTests
         Assert.False(w.TryShift(119, out _));        // last window char
         Assert.True(w.TryShift(120, out int suf));   // first suffix char
         Assert.Equal(123, suf);
+    }
+
+    /// <summary>
+    /// The mid-bar break's two side tables (session 1340) re-home their break's position
+    /// across a spliced tail. Held here directly: no edit the resume nets make splices a
+    /// tail whose length changed past a break (poisoning either arm left all 343 resume
+    /// nets green — LilySharp-Lab sessions/p1340/poisons3.log).
+    /// </summary>
+    [Fact]
+    public void MidBarBreakEntries_ShiftTheirBreaksPosition()
+    {
+        var w = new CollectTailShifter.Window(Prefix: 100, SuffixStart: 120, Delta: 3);
+
+        var request = new MidBarBreakRequest(8, new LilySharp.Core.Semantics.Fraction(1, 2), true, 130);
+        Assert.Equal(request with { SourcePosition = 133 }, CollectTailShifter.ShiftSideEntry(request, w));
+        Assert.Equal(request with { SourcePosition = 50 },
+            CollectTailShifter.ShiftSideEntry(request with { SourcePosition = 50 }, w));
+        Assert.Null(CollectTailShifter.ShiftSideEntry(request with { SourcePosition = 110 }, w));
+
+        var refusal = new MidBarBreakConflict(130, "the break stands inside a tuplet");
+        Assert.Equal(refusal with { SourcePosition = 133 }, CollectTailShifter.ShiftSideEntry(refusal, w));
+        Assert.Null(CollectTailShifter.ShiftSideEntry(refusal with { SourcePosition = 110 }, w));
     }
 }

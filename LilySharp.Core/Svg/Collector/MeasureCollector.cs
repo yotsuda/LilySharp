@@ -631,8 +631,17 @@ public sealed partial class MeasureCollector
     // and never discovers on its own — Empty while the outer collect is still discovering.
     internal MidBarBreakTable? MidBarBreaks { get; private set; }
     internal MidBarBreakTable? SeededMidBarBreaks { get; init; }
-    // The mid-bar breaks the builders met in THIS pass (cleared by Reset), and the ones they
-    // could refuse on the spot (inside a tuplet, under `time none`).
+    // The keystroke path's two collectors (IncrementalCompiler.CollectWithResume): the FIRST
+    // stops where it would run its second pass and leaves the settled table in
+    // TableForASecondPass; the caller collects the split pass in another collector seeded with
+    // that table and with the first one's settled conflicts (SettledMidBarBreakConflicts),
+    // each collector on its own recording — so both passes can resume (session 1340).
+    internal bool LeavesTheSplitToTheCaller { get; init; }
+    internal MidBarBreakTable? TableForASecondPass { get; private set; }
+    internal IReadOnlyList<MidBarBreakConflict>? SettledMidBarBreakConflicts { get; init; }
+    // The mid-bar breaks the builders met in THIS pass, and the ones they could refuse on the
+    // spot (inside a tuplet, under `time none`) — cumulative side tables, so a resumed walk
+    // adopts the prefix's requests and the resumed first pass settles the whole table.
     private readonly List<MidBarBreakRequest> _midBarBreakRequests = new();
     private readonly List<MidBarBreakConflict> _midBarBreakRefusals = new();
     // The breaks the score could not split its bars at — settled with the table after the
@@ -1769,8 +1778,9 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>After the second pass: the settled refusals go back (Reset cleared them) and
-    /// every walk this collect recorded is marked ineligible for resume — a book with a split
-    /// bar always collects in full (<see cref="SettleMidBarBreaks"/>'s remarks).</summary>
+    /// every walk this collect recorded is marked ineligible for resume — one recording holds
+    /// both passes here (<see cref="SettleMidBarBreaks"/>'s remarks; the keystroke path uses
+    /// two collectors instead).</summary>
     private void FinishSplitCollect(List<MidBarBreakConflict> conflicts)
     {
         _midBarBreakConflicts.Clear();
@@ -1784,26 +1794,46 @@ public sealed partial class MeasureCollector
     /// one) or with no request settles to "no split" at once.
     /// </summary>
     /// <remarks>
-    /// A RESUMED collect cannot settle the table — its adopted prefix recorded nothing — so
-    /// a request met mid-resume aborts to the full collect (IncrementalCompiler catches
-    /// <see cref="CollectResumeAbortException"/> and re-collects from scratch), and a book
-    /// holding a split marks every walk recording ineligible (<see cref="MarkWalkRecordingsIneligible"/>),
-    /// so no later edit resumes a collect whose bars were cut under an older table. That is
-    /// the whole of this feature's price on the keystroke path, and only books with a mid-bar
-    /// break pay it.
+    /// <para>
+    /// The requests and refusals are cumulative side tables (<see cref="CumulativeSideTables"/>),
+    /// so a RESUMED first pass holds the prefix's requests as well as its live walk's and
+    /// settles the same table a full one would (session 1340; before, the adopted prefix had
+    /// recorded nothing and a resume that met a request aborted).
+    /// </para>
+    /// <para>
+    /// What a resumed collector cannot do is run the second pass itself: its probe has
+    /// consumed its plans, and a recording that holds both passes holds measures cut under a
+    /// table a later edit may change. So the keystroke path splits the passes between two
+    /// collectors with two recordings (<see cref="LeavesTheSplitToTheCaller"/> /
+    /// <see cref="TableForASecondPass"/>; IncrementalCompiler resumes the split pass only
+    /// under a table that cuts the same bars). Any other collector that meets a split keeps
+    /// the old price: a resumed one aborts to the full collect, and a recording one marks
+    /// every walk recording ineligible (<see cref="MarkWalkRecordingsIneligible"/>).
+    /// </para>
     /// </remarks>
     private bool SettleMidBarBreaks(IEnumerable<Voice> voices, out List<MidBarBreakConflict> conflicts)
     {
         conflicts = new List<MidBarBreakConflict>(_midBarBreakRefusals);
+        TableForASecondPass = null;
         if (SeededMidBarBreaks != null || MidBarBreaks != null)
+        {
+            if (SettledMidBarBreakConflicts != null)
+            {
+                _midBarBreakConflicts.Clear();
+                _midBarBreakConflicts.AddRange(SettledMidBarBreakConflicts);
+            }
             return false;
+        }
         if (_midBarBreakRequests.Count == 0)
         {
             _midBarBreakConflicts.Clear();
             _midBarBreakConflicts.AddRange(conflicts);
             return false;
         }
-        if (WalkProbe is { IsRecording: false })
+        // The requests are cumulative side tables, so a resumed pass holds them all — but
+        // only a caller with a second collector (and a second recording) can run the split
+        // pass after a resumed first one; this collector's probe has consumed its plans.
+        if (WalkProbe is { IsRecording: false } && !LeavesTheSplitToTheCaller)
             throw new CollectResumeAbortException(
                 "a mid-bar line break was met mid-resume; replaying the collect in full");
 
@@ -1814,6 +1844,14 @@ public sealed partial class MeasureCollector
             _tupletBrackets, _percentRepeats, conflicts);
         _midBarBreakConflicts.Clear();
         _midBarBreakConflicts.AddRange(conflicts);
+        if (LeavesTheSplitToTheCaller)
+        {
+            // This pass's recording holds a first pass only, which is what the caller's next
+            // first pass resumes from: nothing here was cut under any table.
+            if (!table.IsEmpty)
+                TableForASecondPass = table;
+            return false;
+        }
         MarkWalkRecordingsIneligible();
         if (table.IsEmpty)
             return false;
@@ -1821,8 +1859,8 @@ public sealed partial class MeasureCollector
         return true;
     }
 
-    /// <summary>Marks every walk this collect recorded ineligible for resume — a book with a
-    /// mid-bar break always collects in full (see <see cref="SettleMidBarBreaks"/>).</summary>
+    /// <summary>Marks every walk this collect recorded ineligible for resume — a collector
+    /// that splits bars itself (see <see cref="SettleMidBarBreaks"/>).</summary>
     private void MarkWalkRecordingsIneligible()
     {
         if (WalkProbe is { IsRecording: true } probe)
@@ -2945,8 +2983,10 @@ public sealed partial class MeasureCollector
 
         var sub = new MeasureCollector { WalkProbe = begun.Probe, BeamMemo = BeamMemo, SeededMidBarBreaks = seeded, RecordsPitchTrace = RecordsPitchTrace, OctaveOverride = OctaveOverride, WrittenKeyObserver = WrittenKeyObserver, ShapeNotesObserver = ShapeNotesObserver };
         var result = sub.CollectMultiStaff(tree, spec, harvestStructureMarks);
-        // A nested collect cut under a settled table must not be resumed under a later one.
-        if (!seeded.IsEmpty)
+        // A nested collect cut under a settled table must not be resumed under a later one —
+        // unless its channels serve one table only (the keystroke path's split collector,
+        // whose channels are dropped whenever the table changes).
+        if (!seeded.IsEmpty && !NestedResume!.ServesOneTable)
             sub.MarkWalkRecordingsIneligible();
         NestedResume!.Complete(channelKey, begun.Probe, sub);
         return Finish(result);
@@ -6376,6 +6416,9 @@ public sealed partial class MeasureCollector
         _tieTargetWarnings, _unpairedSlurWarnings, _unpairedBeamWarnings,
         _cueSpanBoundaryWarnings,
         _chordNameCollector.ItemsList,
+        // The mid-bar breaks the walks met (session 1340): a resumed first pass settles its
+        // table from the prefix's requests adopted here and the live walk's own.
+        _midBarBreakRequests, _midBarBreakRefusals,
         // ⚠️ _unpairedRepeatWarnings IS DELIBERATELY ABSENT, and the omission is the kind
         // this list exists to make impossible — so it is written down. Every other entry
         // ACCUMULATES during the walk, which is why a resumed walk has to adopt and shift

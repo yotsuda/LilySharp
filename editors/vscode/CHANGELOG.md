@@ -2,6 +2,11 @@
 
 All notable changes to the Lily# VS Code extension are documented here.
 
+## Unreleased
+
+- **A `break` inside a tuplet that opens a bar no longer breaks the line before that bar.** The line breaks at the end of the bar instead, and the Problems panel says why (LYS1037).
+- **A chart with a line break inside a bar previews as quickly as any other.** Each keystroke used to collect the whole score twice from the top.
+
 ## 0.17.1
 
 - **An export with a recording part soloed has the recording.** With the score on and the recording's vocals soloed (its button out), the preview played the vocals but the WAV, MP3 or MP4 left the recording out; the exports now take the recording as Play does. (0.17.0 reached the Marketplace for Windows x64 only; what is new in 0.17 is below.)

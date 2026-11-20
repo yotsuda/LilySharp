@@ -4,6 +4,12 @@ Notable changes to Lily# are recorded here, newest first. Release notes are take
 from this file: the topmost section is the version being tagged, and the release
 workflow attaches that section to the GitHub Release verbatim.
 
+## Unreleased
+
+- **Fixed: a `break` inside a tuplet that opens a bar broke the line before that bar** (`[engraving]`, `[diagnostics]`). `c''1 | tuplet 3/2 { c4 e break g } e2 |` ended the line after the first bar and said nothing. A bar cannot be split inside a tuplet, so the line now breaks at the end of the bar the `break` stands in and LYS1037 says why — as it always did in a score's first bar.
+
+- **A chart with a line break inside a bar previews as quickly as any other** (`[editor]`). Every keystroke on such a chart collected the whole score twice — once to find the bars to split, once to split them — from the top; both now pick up from the part of the score the edit did not touch, as every other chart does.
+
 ## 0.17.1
 
 0.17.0 reached the Marketplace for Windows (x64) alone before its release was stopped; 0.17.1 is that release for every platform, with one fix. **What is new since 0.16.0 — and the breaking changes — is under 0.17.0 below.**

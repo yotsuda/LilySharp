@@ -1727,10 +1727,14 @@ internal sealed class MeasureBuilder
     /// ⚠️ UNTIL 2026-10-10 THIS READ `_currentItems.Count == 0`, so the signature item already
     /// in the bar made `time 4/4 break` a mid-bar break, deferred onto the END of the bar the
     /// signature opened (If You Leave Me Now: the page broke after bar 13, LilyPond after 12).
+    /// ⚠️ AND UNTIL 2026-11-21 (session 1340) THE CLOCK ARM READ <c>_currentDuration</c>, which a
+    /// tuplet's members reach only when the tuplet ends: a break inside a tuplet that opens a
+    /// bar (any bar but the first) stood "at the bar line" and broke the line BEFORE the bar,
+    /// with no LYS1037 — <see cref="CurrentMoment"/> counts the members' time.
     /// </remarks>
     private bool DirectiveStandsAtTheBarLine
         => _measures.Count > 0
-           && (_currentItems.Count == 0 || (!_hasMeasureContent && _currentDuration == Fraction.Zero));
+           && (_currentItems.Count == 0 || (!_hasMeasureContent && CurrentMoment == Fraction.Zero));
 
     /// <summary>Forces a line break here (<c>break</c>, LP's <c>\break</c>). At a bar
     /// boundary it flags the measure just closed; INSIDE a bar it flags the measure the bar

@@ -74,6 +74,12 @@ internal sealed class NestedCollectResume
     /// (diagnostics / the liveness half of the nets).</summary>
     public (int Resumed, int Full) Stats { get; private set; }
 
+    /// <summary>Every collect these channels serve cuts its bars by ONE mid-bar break table,
+    /// and the owner <see cref="Reset"/>s them when the table changes — so a nested collect
+    /// cut under that table may be resumed (<c>MeasureCollector.CollectNested</c>). The
+    /// keystroke path's split collector has such channels (session 1340).</summary>
+    public bool ServesOneTable { get; init; }
+
     /// <summary>Arms the channels for one compile: the tree every nested collect
     /// of this compile sees, and whether resuming is allowed at all (the session
     /// passes its own allowResume; the first compile records).</summary>

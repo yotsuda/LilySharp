@@ -96,6 +96,20 @@ internal sealed class MidBarBreakTable
 
     public bool IsEmpty => _splits.Count == 0;
 
+    /// <summary>Whether <paramref name="other"/> cuts the same bars at the same offsets with
+    /// the same kind of break — what a split pass recorded under this table needs of the
+    /// table it is resumed under. The breaks' source positions are not compared: an edit
+    /// before a break moves it, and a split carries its position to nothing it builds.</summary>
+    public bool CutsLike(MidBarBreakTable other)
+    {
+        if (_keys.Length != other._keys.Length)
+            return false;
+        foreach (var (bar, split) in _splits)
+            if (other.At(bar) is not { } o || o.Offset != split.Offset || o.PageBreak != split.PageBreak)
+                return false;
+        return true;
+    }
+
     /// <summary>The split in bar <paramref name="logical"/>, or null.</summary>
     public MidBarSplit? At(int logical)
         => _splits.TryGetValue(logical, out var s) ? s : null;

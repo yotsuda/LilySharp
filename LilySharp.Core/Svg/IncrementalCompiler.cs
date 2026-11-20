@@ -193,6 +193,21 @@ public sealed class IncrementalCompiler
     private CollectWalkProbe? _collectRecording;
     private SyntaxTree? _collectBaselineTree;
 
+    // A book with a `break` INSIDE a bar collects twice (MidBarBreakTable's remarks): a
+    // first pass that discovers the splits, then a pass that cuts every voice by the settled
+    // table. Here the two passes are two collectors with two recordings (session 1340): the
+    // first is the baseline above (its collector leaves the split to this class), the
+    // second is this one — recorded under _splitTable and resumed only while the resumed
+    // first pass settles a table that cuts the same bars (MidBarBreakTable.CutsLike); any
+    // other table drops it, with its nested channels, and the split pass runs in full.
+    // Before, such a book marked every recording ineligible and collected twice in full on
+    // every keystroke.
+    private MidBarBreakTable? _splitTable;
+    private MeasureCollector? _splitSource;
+    private CollectWalkProbe? _splitRecording;
+    private SyntaxTree? _splitBaselineTree;
+    private readonly NestedCollectResume _splitNestedResume = new() { ServesOneTable = true };
+
     // The collector of the most recent compile — full or resumed — with the tree it
     // collected and whether the block it collected is the tree's FIRST render block.
     // Lent to the semantic-validation pass through CollectFor (its remarks); swapped
@@ -260,6 +275,12 @@ public sealed class IncrementalCompiler
     /// For diagnostics / tests.</summary>
     internal (int Walks, int AdoptedMeasures, int SplicedWalks, int SplicedMeasures)
         LastCollectResume { get; private set; }
+
+    /// <summary>Whether the most recent compile's collect passes resumed from their
+    /// baselines: the first pass, and the split pass of a book with a mid-bar break (null
+    /// when the book split no bar). <see cref="LastCollectResume"/> sums both.
+    /// For diagnostics / tests.</summary>
+    internal (bool First, bool? Split) LastCollectPasses { get; private set; }
 
     /// <summary>Whether the most recent compile scheduled a baseline re-record
     /// (its resume adopted too little of what the baseline could offer — see the
@@ -489,6 +510,7 @@ public sealed class IncrementalCompiler
             _collectSource = null;
             _collectRecording = null;
             _collectBaselineTree = null;
+            DropTheSplitBaseline();
             _rerecordNext = false;
             _rerecordArmed = true;
             _nestedResume.Reset();
@@ -1007,70 +1029,106 @@ public sealed class IncrementalCompiler
     private MultiStaffScore CollectWithResume(SyntaxTree tree, RenderSpec? spec, bool allowResume,
         out MeasureCollector collector)
     {
-        if (allowResume && !_rerecordNext && _collectRecording != null
-            && _collectSource != null && _collectBaselineTree != null)
+        // Read once for both passes: a full first pass below IS the re-record a schedule asks
+        // for, and the split pass must re-record with it.
+        bool resume = allowResume && !_rerecordNext;
+        _rerecordNext = false;
+        var tally = new ResumeTally();
+
+        var score = CollectPass(tree, spec, resume, split: null, settledConflicts: null, _nestedResume,
+            ref _collectSource, ref _collectRecording, ref _collectBaselineTree, ref tally, out collector,
+            out bool firstResumed);
+        LastCollectPasses = (firstResumed, null);
+
+        // A book with a mid-bar break: the split pass, in a collector of its own (the fields'
+        // remarks). Its recording serves only a table that cuts the same bars.
+        if (collector.TableForASecondPass is { } table)
         {
-            var resumer = CollectResumePlanner.Plan(
-                _collectBaselineTree, tree, _collectRecording, _collectSource);
+            if (_splitTable == null || !_splitTable.CutsLike(table))
+                DropTheSplitBaseline();
+            _splitTable = table;
+            _splitNestedResume.BeginCompile(tree, allowResume: resume);
+            score = CollectPass(tree, spec, resume, table, collector.MidBarBreakConflicts, _splitNestedResume,
+                ref _splitSource, ref _splitRecording, ref _splitBaselineTree, ref tally, out collector,
+                out bool splitResumed);
+            LastCollectPasses = (firstResumed, splitResumed);
+        }
+        else
+            DropTheSplitBaseline();
+
+        LastCollectResume = (tally.Walks, tally.Adopted, tally.SplicedWalks, tally.Spliced);
+
+        // Re-record heuristic (remarks at the fields): judge the resumes' adoption against
+        // what the baselines COULD offer — the eligible recordings' measure counts, planned
+        // or not (an unplanned-but-eligible walk is reuse the stale baseline lost too).
+        // Ineligible walks (q / bare duration / form repeat) are excluded from the
+        // denominator: no re-record brings them back, so counting them would schedule
+        // re-records that cannot help.
+        if (tally.Resumable >= RerecordMinResumableMeasures)
+        {
+            bool adoptedWell = tally.Adopted + tally.Spliced >= tally.Resumable * RerecordAdoptionFloor;
+            if (adoptedWell)
+                _rerecordArmed = true;
+            else if (_rerecordArmed)
+            {
+                _rerecordArmed = false;
+                _rerecordNext = true;
+            }
+        }
+        return score;
+    }
+
+    /// <summary>What a compile's resumed passes adopted, and what their baselines could
+    /// have offered (the re-record heuristic's denominator).</summary>
+    private struct ResumeTally
+    {
+        public int Walks, Adopted, SplicedWalks, Spliced, Resumable;
+    }
+
+    /// <summary>
+    /// One collect pass on its own baseline (<paramref name="source"/>,
+    /// <paramref name="recording"/>, <paramref name="baseline"/>): resumed from it when the
+    /// edit window allows, else collected in full and recorded as the new baseline. With
+    /// <paramref name="split"/> null it is the FIRST pass, whose collector leaves a split
+    /// to the caller (<see cref="MeasureCollector.TableForASecondPass"/>); otherwise the
+    /// split pass, cut by that table and reporting the first pass's conflicts.
+    /// </summary>
+    private MultiStaffScore CollectPass(SyntaxTree tree, RenderSpec? spec, bool resume,
+        MidBarBreakTable? split, IReadOnlyList<MidBarBreakConflict>? settledConflicts,
+        NestedCollectResume nested,
+        ref MeasureCollector? source, ref CollectWalkProbe? recording, ref SyntaxTree? baseline,
+        ref ResumeTally tally, out MeasureCollector collector, out bool resumedPass)
+    {
+        resumedPass = false;
+        if (resume && recording != null && source != null && baseline != null)
+        {
+            var resumer = CollectResumePlanner.Plan(baseline, tree, recording, source);
             if (resumer != null)
             {
                 try
                 {
-                    var resumedCollector = new MeasureCollector
-                    {
-                        ScoreTranspose = spec?.ScoreTranspose,
-                        ScoreConcert = spec?.ScoreConcert,
-                        StaffPitch = spec?.StaffPitch,
-                        PaperBase = SvgGenerator.PaperBaseOf(_options.Snippet, _options.Interactive, cropLonePage: !_options.Interactive),
-                        WalkProbe = resumer,
-                        BeamMemo = _beamMemo,
-                        NestedResume = _nestedResume,
-                        RecordsPitchTrace = false, // no reader (MeasureCollector.RecordsPitchTrace)
-                    };
+                    var resumedCollector = NewCollector(spec, resumer, nested, split, settledConflicts);
                     var resumed = SvgGenerator.CollectScore(resumedCollector, tree, spec);
-                    int walks = 0, adopted = 0, splicedWalks = 0, spliced = 0;
                     foreach (var plan in resumer.ResumePlans.Values)
                     {
                         if (plan.Consumed)
                         {
-                            walks++;
-                            adopted += plan.Checkpoint!.MeasureCount;
+                            tally.Walks++;
+                            tally.Adopted += plan.Checkpoint!.MeasureCount;
                         }
                         if (plan.SplicedMeasures > 0)
                         {
-                            splicedWalks++;
-                            spliced += plan.SplicedMeasures;
+                            tally.SplicedWalks++;
+                            tally.Spliced += plan.SplicedMeasures;
                         }
                     }
-                    LastCollectResume = (walks, adopted, splicedWalks, spliced);
-
-                    // Re-record heuristic (remarks at the fields): judge this
-                    // resume's adoption against what the baseline COULD offer —
-                    // the eligible recordings' measure counts, planned or not (an
-                    // unplanned-but-eligible walk is reuse the stale baseline
-                    // lost too). Ineligible walks (q / bare duration / form
-                    // repeat) are excluded from the denominator: no re-record
-                    // brings them back, so counting them would schedule
-                    // re-records that cannot help.
-                    int resumable = 0;
-                    foreach (var rec in _collectRecording.Recordings.Values)
+                    foreach (var rec in recording.Recordings.Values)
                     {
                         if (rec.IneligibleReason == null && rec.Checkpoints.Count > 0)
-                            resumable += rec.PreFinalizeMeasures?.Count ?? 0;
-                    }
-                    if (resumable >= RerecordMinResumableMeasures)
-                    {
-                        bool adoptedWell =
-                            adopted + spliced >= resumable * RerecordAdoptionFloor;
-                        if (adoptedWell)
-                            _rerecordArmed = true;
-                        else if (_rerecordArmed)
-                        {
-                            _rerecordArmed = false;
-                            _rerecordNext = true;
-                        }
+                            tally.Resumable += rec.PreFinalizeMeasures?.Count ?? 0;
                     }
                     collector = resumedCollector;
+                    resumedPass = true;
                     return resumed;
                 }
                 catch (CollectResumeAbortException)
@@ -1082,29 +1140,43 @@ public sealed class IncrementalCompiler
             }
         }
 
-        LastCollectResume = (0, 0, 0, 0);
-        _rerecordNext = false; // this IS the re-record every schedule asks for
         var recorder = CollectWalkProbe.Recorder();
-        var source = new MeasureCollector
-        {
-            ScoreTranspose = spec?.ScoreTranspose,
-            ScoreConcert = spec?.ScoreConcert,
-            StaffPitch = spec?.StaffPitch,
-            // The same paper SvgGenerator starts a book from with these options (the
-            // preview's memo rows, LayoutOptions.TodoBands), so the session's picture is
-            // the full render's.
-            PaperBase = SvgGenerator.PaperBaseOf(_options.Snippet, _options.Interactive, cropLonePage: !_options.Interactive),
-            WalkProbe = recorder,
-            BeamMemo = _beamMemo,
-            NestedResume = _nestedResume,
-            RecordsPitchTrace = false, // no reader (MeasureCollector.RecordsPitchTrace)
-        };
-        var score = SvgGenerator.CollectScore(source, tree, spec);
-        _collectSource = source;
-        _collectRecording = recorder;
-        _collectBaselineTree = tree;
-        collector = source;
+        var full = NewCollector(spec, recorder, nested, split, settledConflicts);
+        var score = SvgGenerator.CollectScore(full, tree, spec);
+        source = full;
+        recording = recorder;
+        baseline = tree;
+        collector = full;
         return score;
+    }
+
+    private MeasureCollector NewCollector(RenderSpec? spec, CollectWalkProbe probe,
+        NestedCollectResume nested, MidBarBreakTable? split,
+        IReadOnlyList<MidBarBreakConflict>? settledConflicts) => new()
+    {
+        ScoreTranspose = spec?.ScoreTranspose,
+        ScoreConcert = spec?.ScoreConcert,
+        StaffPitch = spec?.StaffPitch,
+        // The same paper SvgGenerator starts a book from with these options (the
+        // preview's memo rows, LayoutOptions.TodoBands), so the session's picture is
+        // the full render's.
+        PaperBase = SvgGenerator.PaperBaseOf(_options.Snippet, _options.Interactive, cropLonePage: !_options.Interactive),
+        WalkProbe = probe,
+        BeamMemo = _beamMemo,
+        NestedResume = nested,
+        RecordsPitchTrace = false, // no reader (MeasureCollector.RecordsPitchTrace)
+        LeavesTheSplitToTheCaller = split == null,
+        SeededMidBarBreaks = split,
+        SettledMidBarBreakConflicts = settledConflicts,
+    };
+
+    private void DropTheSplitBaseline()
+    {
+        _splitTable = null;
+        _splitSource = null;
+        _splitRecording = null;
+        _splitBaselineTree = null;
+        _splitNestedResume.Reset();
     }
 
     // F3/B-2: a cached layout is safe to reuse only if it carries no annotation whose
