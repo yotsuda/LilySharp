@@ -146,6 +146,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1336セッション（2026-11-20・YT-DELL2・第1332 と同じ会話）
+
+オーナー決定 2026-11-20「どれもあなたのお勧め通りで良い」（第1335 の報告の 5 件＝1C・2B・3A・4C・5B）の便（base `f135da52c`）。開始時 full 17996 合格 / 0 失敗 / skip 2 / 合計 17998（Lab `p1336` `start.log`）。終了時 full 18011 合格 / 0 失敗 / skip 2 / 合計 18013（`-End` の trx）。
+- **実装（`69e11942c`）**: 1C＝終わりのないヘアピンは描いたうえで警告（`SpanKind.Hairpin`・`DetectHairpins` の `unpairedSink`・LYS4018 を警告の重さで。他の線の族の終わりなしはエラーのまま）。5B＝combinedStaff の休符の上の `@!rit` を相手の長い音の中へ時刻ごと移し、その時刻の比例で止める（`TextSpannerItem.EndWithin`・`HairpinEngraver.WithinX` を共有・ottava は除く）。4C＝オーナーの答え (ii)「和音の行はどこに置いてもファイルと section の調で読む」: 走査が最後のパートの header の主音をメタデータに残し、主音 D・調号 C の食い違いで「VII IV7 Vm III」と読んでいた（`p1278/probe/row1.lys`）。行の時系列はファイルの主音・家に戻る記録もファイルの調（`_fileKeyTonicStep`）・小節 0 の調の変化を先頭として読む。
+- **2B は第1266 で実装済みだった**（オーナー決定 2026-11-15＝自分のパートの f で止まる・`p1336/cs/k1` で確認）＝leftovers の古い行を直しただけ。3A は今のまま。
+- ⚠️ 4C の説明で私が「`staff a with chords X as roman`」という今は無い書き方を前提にしていた（2026-08-19 に `with` の句は廃止＝和音の行は並び順で譜表に掛かる）。気づいて (i)／(ii) を訊き直した。
+- 網: `UnendedHairpinTests`（3 行＋4 行＋1 本）・`RomanRowKeyTests`（3 行＋2 本）・`CombinedStaffHairpinTests` +1 theory 2 行・1 行変更。毒 8 本（全部赤）。全 svg 0 / 1276。
+- **次**: オーナーに次の島を訊く（review.md の設計が先の 3 つ・F3 段 2）。
+
+## 以下は第1335セッションの経緯
+
 ### 1.1 第1335セッション（2026-11-20・YT-DELL2・第1332 と同じ会話）
 
 第1334 の残りから（base `a74836a94`）。開始時 full 17996 合格 / 0 失敗 / skip 2 / 合計 17998（Lab `p1335` `start.log`）。コードの変更なし。
@@ -153,16 +164,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **最後の `<>@!sustain` を測った**（leftovers の「第1314」）: MusicXML は正しい。`.ly` の双子は LilyPond が `programming error` を出して鉤を描かない＝同じ絵の綴りが無い（Lab `p1335/ped`）。
 - **訊かずに着手できる計器つきの欠陥は一覧でほぼ尽きた**: leftovers の残りはオーナー判断（「第1240」先頭の condensedStaff の MusicXML の stop・grand staff の片手の sfz・roman の行の調・終わりのないヘアピン）か、実物のリーダーが要る（MusicXML の四分音・text spanner の stop）か、`lysc review`（作曲ガイダンスのクローズに近い島）。
 - **次**: オーナーに次の島を訊く（§1.0 の ★ の行: review.md の設計が先の 3 つ＝`mid-bar-break`・F4 の残り・`shiftPage`、F3 段 2、「第1327」の `@!rit`、上の判断待ち）。
-
-## 以下は第1334セッションの経緯
-
-### 1.1 第1334セッション（2026-11-20・YT-DELL2・第1332 と同じ会話）
-
-h13 のオーナー決定（2026-11-20「1 LP に合わせて。既存の .lys の移行とか後方互換性は気にしなくて良い」）の便（base `ef6d10828`）。開始時 full 17989 合格 / 0 失敗 / skip 2 / 合計 17991（Lab `p1334` `start.log`）。終了時 full 17996 合格 / 0 失敗 / skip 2 / 合計 17998（`-End` の trx）。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
-- **combinedStaff はヘアピンが違えば apart・上のパートの強弱は上**（`d3cbb32fa`・`[engraving]`）: 第1333 の差分（`PartDynamicEvents`＝collector がパートの最初の声部の強弱と印を (小節, item) で渡し、`AnalyzeSpannerStates` が LilyPond の順に cresc／decr を開閉）を当てた。加えて partCombine の voice "one" の `DynamicLineSpanner.direction = #UP`・"two" の `#DOWN`（`ly/music-functions-init.ly:1668-1670`）を `CombinedStaffReaddress.SideByContext` で写し、線の向きを合成の住所で解き直す（書いた向きはその線だけを曲げる＝`p1334/lp-down` で確認）。普通の `voice { } { }` の強弱が両方下なのは LilyPond どおり（DynamicLineSpanner は `direction-polyphonic-grobs` に無い）。
-- 網: `CombinedStaffHairpinTests` 23 行（第1321〜第1328 の形・オーナー決定 2026-11-19 の形を含む）を新しい値に。どの形も LilyPond 2.26.0 の絵と見比べた（Lab `p1334/probes` の 52 形・`make-probes.ps1`・書き換えは `rewrite-expectations.ps1`）。新しい網 3 本（違うヘアピンのユニゾン・片方だけのヘアピン・上のパートの強弱の向き）。毒 9 本（8 赤・パート 2 の下は観測者なし）。全 svg 0 / 1276（追跡コーパスの combinedStaff 25 冊にこの形は無い）。
-- **残り**（leftovers の「第1321」の h13 の行）: apart の中のユニゾンの符幹をどちらに残すかが LilyPond と違う形がある（c25・c37）／終わりのないヘアピンを LilyPond は捨てるが Lily# は描く（既存の扱い）。
-- **次**: 上の符幹の規則（LilyPond を読む）→「第1327」の `@!rit`（オーナーの返事待ち）→ review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決はオーナー待ち。
 
 ## 2. 開いている作業
 

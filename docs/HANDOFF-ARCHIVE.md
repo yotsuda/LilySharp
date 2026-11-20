@@ -277,6 +277,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1334セッションの経緯
+
+### 1.1 第1334セッション（2026-11-20・YT-DELL2・第1332 と同じ会話）
+
+h13 のオーナー決定（2026-11-20「1 LP に合わせて。既存の .lys の移行とか後方互換性は気にしなくて良い」）の便（base `ef6d10828`）。開始時 full 17989 合格 / 0 失敗 / skip 2 / 合計 17991（Lab `p1334` `start.log`）。終了時 full 17996 合格 / 0 失敗 / skip 2 / 合計 17998（`-End` の trx）。`site/`・`samples/harbour-lights.mp4` は並行の別セッションの物＝触っていない。
+- **combinedStaff はヘアピンが違えば apart・上のパートの強弱は上**（`d3cbb32fa`・`[engraving]`）: 第1333 の差分（`PartDynamicEvents`＝collector がパートの最初の声部の強弱と印を (小節, item) で渡し、`AnalyzeSpannerStates` が LilyPond の順に cresc／decr を開閉）を当てた。加えて partCombine の voice "one" の `DynamicLineSpanner.direction = #UP`・"two" の `#DOWN`（`ly/music-functions-init.ly:1668-1670`）を `CombinedStaffReaddress.SideByContext` で写し、線の向きを合成の住所で解き直す（書いた向きはその線だけを曲げる＝`p1334/lp-down` で確認）。普通の `voice { } { }` の強弱が両方下なのは LilyPond どおり（DynamicLineSpanner は `direction-polyphonic-grobs` に無い）。
+- 網: `CombinedStaffHairpinTests` 23 行（第1321〜第1328 の形・オーナー決定 2026-11-19 の形を含む）を新しい値に。どの形も LilyPond 2.26.0 の絵と見比べた（Lab `p1334/probes` の 52 形・`make-probes.ps1`・書き換えは `rewrite-expectations.ps1`）。新しい網 3 本（違うヘアピンのユニゾン・片方だけのヘアピン・上のパートの強弱の向き）。毒 9 本（8 赤・パート 2 の下は観測者なし）。全 svg 0 / 1276（追跡コーパスの combinedStaff 25 冊にこの形は無い）。
+- **残り**（leftovers の「第1321」の h13 の行）: apart の中のユニゾンの符幹をどちらに残すかが LilyPond と違う形がある（c25・c37）／終わりのないヘアピンを LilyPond は捨てるが Lily# は描く（既存の扱い）。
+- **次**: 上の符幹の規則（LilyPond を読む）→「第1327」の `@!rit`（オーナーの返事待ち）→ review.md の 3 つと F3 段 2（オーナー判断）。第1308 の未決はオーナー待ち。
+
 ## 以下は第1333セッションの経緯
 
 ### 1.1 第1333セッション（2026-11-20・YT-DELL2・第1332 と同じ会話）
