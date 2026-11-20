@@ -277,6 +277,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1337セッションの経緯
+
+### 1.1 第1337セッション（2026-11-20・YT-DELL2）
+
+オーナーの報告と依頼を順に（base `763f1d011`・/clear 後の会話で `-Start` は回していない）。終了時 full 18040 合格 / 0 失敗 / skip 2 / 合計 18042（`-End` の trx・Lab `p1337`）。
+- **練習パネル**（`c7d798156`・`737c8dfb2`・`transport-mixer-design.md` §1）: パートの追加・削除を長さのエクスポートから即時反映（score のパートだけ。extra のための 2 回目のエクスポートは入れない＝オーナー決定）／S は群ごと／無題の score は録音なし／All は上書きのトグル（選択を書き換えない・Play にも勝つ）／行の Shift+クリックは「この行だけ」。
+- **`2ce9d2381`**: tab の `as removeEmpty`（GRAMMAR TabSelector）／`staff bass as removeEmpty ▮` の値の補完／行と全部 removeEmpty の譜表だけの score に代役の一線譜（`Staff.StandIn`・`row-staff-design.md`）／書いていない小節のクリックはパートのブロックの末尾へ／小節線の自動入力が section のメーターを小節ごとに読む（コードの行の `time` も）／Dettato→Orecchiante（依頼 20 は `fixed`・Orecchiante の repo では未 commit）。
+- **オーナー決定**: `bass` は予約語にしない／代役の段の頭の予約は残す（9 小節目とコード名の x が揃う）／最初の段も消すのは `all`。手元の楽譜は言語の設計の根拠にもしない（Lab notes・`e76554467`）。
+- 実機は隔離 VS Code で All と Shift+クリック（Lab `p1337/alle2e`）。残りはオーナー: 入れ直し後の実機・Orecchiante の `done`・`site/build-manual.ps1` の Dettato 1 か所（作業中のファイル）。
+- **次**: review.md の設計が先の 3 つ（順は §1.1 第1306 の末尾）＝この会話が重いので新しい会話で。
+
 ## 以下は第1336セッションの経緯
 
 ### 1.1 第1336セッション（2026-11-20・YT-DELL2・第1332 と同じ会話）

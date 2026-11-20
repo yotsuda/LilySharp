@@ -154,6 +154,18 @@ git push origin v0.4.0
 Annotated, matching `v0.3.0`. The workflow syncs the extension's version from the tag
 name, so the tag and `package.json` must already agree.
 
+⚠️ **Stopping a release means seeing its run say `cancelled`.** Each `vsix` leg publishes
+to the Marketplace the moment it is built, so a run left going keeps publishing leg by leg.
+0.17.0 (2026-11-20) was "cancelled" by the maintainer, but its run was still queued and
+building half an hour later. By the time `gh run cancel` stopped it, its `win32-x64` leg had
+already published. Check with
+`gh run list --workflow release.yml -L 1` and `gh run view <id> --json jobs`. Once any leg
+has published, that version is spent on the Marketplace for that platform. Do not retag it:
+bump the patch number and release again. 0.17.1 was 0.17.0 for every platform, plus the fix
+that had led to stopping it. Its CHANGELOG section points to 0.17.0's for what was new. Do
+not unlist the spent version. The Marketplace's unlist hides the whole extension, and
+installs of the spent version update to the next one by themselves.
+
 ### 7. Verify that it actually shipped
 
 **This is the step that matters, and CI's colour is not the answer.**
@@ -161,7 +173,10 @@ name, so the tag and `package.json` must already agree.
 Publishing is the last step of each `vsix` leg, and a leg can upload successfully and
 still report failure. During 0.4.0, **five of eight targets were live on the Marketplace
 while their jobs showed red**, and three were genuinely missing — including `win32-x64`,
-most of the audience. The run's summary could not tell those apart.
+most of the audience. The run's summary could not tell those apart. It happened again in
+0.17.1: `linux-armhf`'s publish step ended `read ECONNRESET` four seconds after
+"Publishing…", and the Marketplace already had the package. Do not re-run such a leg. It
+fails again, this time because the version exists.
 
 Ask the Marketplace instead, target by target:
 

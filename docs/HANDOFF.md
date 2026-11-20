@@ -49,9 +49,10 @@ tools\Session-Check.ps1 -End pNNN -DiffBase <開始時 HEAD>   # 終了の機械
   `probes/<名前>/`、直下の単発ファイルは `probes/loose/YYYY-MM/`）。**生成物（絵・trx・バイナリ）は移していない**
   ＝要るなら取り直す。コード内コメントや ARCHIVE の `scratch/` 表記は書き換えない。
 - ★★★ **開始時に `C:\MyProj\Calamo\docs\repro\REQUESTS.md` の `open` を見る＝open があればそれに優先的に着手する**（ユーザー指示 2026-10-23・第961）。OMR 側（楽譜画像 → `.lys`）からの依頼の 1 枚で、状態は両側で書き換える（直したら `fixed <commit>`・直さないなら `won't`・聞くなら `question`。長い返事は Lab の `sessions/pNNN/` に置いて行から指す）。
-- ★ **Dettato は 2026-11-20 に Orecchiante へ改名（その依頼 20・同名の別プロジェクトが公開されたため）＝REQUESTS は `C:\MyProj\Orecchiante\docs\repro\REQUESTS.md` へ移る（移るまでは旧 `C:\MyProj\Dettato\…`）。拡張 ID `yotsuda.orecchiante`・隣のファイル `<stem>.orecchiante.json`。以下の「Dettato」は旧名。**
-- ★ **`C:\MyProj\Dettato\docs\repro\REQUESTS.md` にも `open` がある**（2026-11-14・Dettato のセッションが書いた行。Dettato は録音 → `.lys` のコード譜）。同じ使い方の 1 枚で、最初の依頼は「録音を `.lys` に変換するメニューを Lily# 本体が持つ」（オーナー決定 2026-11-14）と、その取り決めへの希望。Calamo の依頼との優先順はオーナーに聞く。第1242 で 3 を直し、1・2 に返事を書いた。2026-11-15 にオーナー決定（§1.0・1＝D3 の後に作る／2＝今は作らない）。
-- ★ **`C:\MyProj\Shosa\docs\repro\REQUESTS.md` も同じ使い方の 1 枚**（2026-11-20〜・Shosa は Lily# の曲に合わせて踊る言語）。依頼 1（曲を読むところを lysc へ）は第1338 で `fixed`。`lysc timeline`／`notes` の JSON は Shosa との約束＝形を変えるなら `SongReading.Protocol` と `CliSongReadingTests`。
+- ★ **Orecchiante（録音 → `.lys` のコード譜・旧名 Dettato、2026-11-20 改名）も同じ使い方の 1 枚**: `C:\MyProj\Orecchiante\docs\repro\REQUESTS.md`。拡張 `yotsuda.orecchiante`（床 0.11.0）・隣のファイル `<stem>.orecchiante.json`。以下の「Dettato」は旧名。Calamo の依頼との優先順はオーナーに聞く。
+- ★ **`C:\MyProj\Shosa\docs\repro\REQUESTS.md` も同じ使い方の 1 枚**（2026-11-20〜・Shosa は Lily# の曲に合わせて踊る言語）。依頼 1〜5 は閉じた（1・4・5 は Shosa が `done`、2 は取り下げ、3 は `fixed`。§1.1 第1339）。Shosa との約束は 2 つあり、形を変えるときはそれぞれの網も直す。
+  - `lysc timeline`／`notes` の JSON: `SongReading.Protocol` と `CliSongReadingTests`。
+  - 拡張の exports の stems API（`stemsVersion: 1`）: `docs/stems-api-design.md` と `stemsCore.test.ts`。
 - 証明 ⑴ の道具は `LilySharp-Lab\tools\rerender-ls.ps1`（RULES §5.5 のコマンド一覧）。
 - ★★★ **開始時に `LilySharp-Lab\notes\CLAUDE-OPERATIONS.md` も通読する**＝シェルと道具の使い方（Bash・PowerShell ツール・ripple は禁止・pwsh MCP の作法）・push や commit のユーザー規則・機械と社内環境の罠。**user memory は使わない**（2026-09-17・ユーザー決定。PC ローカルで他の PC に届かない）＝知見は RULES §4 の表の置き場所へ書く（公開してよい技術知見は RULES §5、private なものは Lab の notes）。
 ⚠️ **読み方の罠のうち、スクリプトが*刷れない*もの**（刷れる 4 つ——合計で読む・Release で測る・
@@ -119,7 +120,11 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **プレビューの音源＝第901 で SoundFont シンセ（`docs/playback-design.md`）**: 音源は同梱しない（2026-10-12 決定・既定は OS の GM バンク）。LSP からの MIDI 出力は第911（Windows は網で実走・**mac／Linux は未実走＝MANUAL-CHECKS §3.5**）。`lysc wav` は第916・エディタの Export に第1030 で接続（C44 未確認）。`midiChannel` は要るときに。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」。
 - **`@todo` の memo の置き場＝第899〜900・第910 で閉じた**（規則は `docs/todo-memo-design.md`・残りは同 §4 と MANUAL-CHECKS §2.1 の実機確認。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
 - **VS Code の手動確認＝第909 で 107 / 107 済**（手順と期待は `editors/vscode/MANUAL-CHECKS.md`・次の版で足した項目は `[ ]` から。ステップのキーは Ctrl+Shift+↑↓＝調の次の音・Ctrl+Shift+PgUp/PgDn＝オクターブ。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
-- **v0.15.0 は出した（2026-11-07・tag `8111ba3eb`・Release run `42292827975` 13/13・Marketplace 8/8・§1.1 第1119）**。v0.14.0 は 2026-10-26（tag `4188f209f`・表示名 Lily# Studio から）。push とタグはどちらもユーザー許可で Claude が打った（規則は「push はユーザー」のまま）。OMR の床 `OMR_MIN_VERSION` 0.4.0。手動確認の `[ ]` は MANUAL-CHECKS §3.6・§3.5 末尾。CHANGELOG は両方の `## Unreleased` に書き release 時に版番号へ（`RELEASING.md` §3）。Lab の本の警告は直さない（ユーザー決定 2026-10-17）。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」。
+- **v0.17.1 は出した（2026-11-20・tag `a8ebc8ca0`・Marketplace 8/8・GitHub Release が Latest）**。
+  - 0.17.0（tag `fd15ce3b9`）は止めたが、止める前に Marketplace の win32-x64 にだけ出た。そのため版を 0.17.1 に上げた。
+  - 0.17.1 の linux-armhf の脚は `ECONNRESET` で赤だが、Marketplace には出ている。
+  - どちらの教訓も `RELEASING.md` §6・§7 に書いた。push とタグはオーナー。
+  - v0.15.0 は 2026-11-07（tag `8111ba3eb`）、v0.14.0 は 2026-10-26（tag `4188f209f`）。OMR の床 `OMR_MIN_VERSION` 0.4.0。手動確認の `[ ]` は MANUAL-CHECKS §3.6・§3.5 末尾。CHANGELOG は両方の `## Unreleased` に書き release 時に版番号へ（`RELEASING.md` §3）。Lab の本の警告は直さない（ユーザー決定 2026-10-17）。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」。
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
 - **T7 の残り＝双子と段割れが違う score 16 は全部分類が付いた**（F9 の族 13＝tab の数字の大きさ・計器 3・製品 1 は閉じた。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
 - **双子の計器の残り（第881）＝分類済み**（本の側 8・ABC は LP の癖・LP 落ち 3＝本の側・全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
@@ -148,6 +153,26 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1339セッション（2026-11-20・YT-DELL2）
+
+Calamo の依頼 32・33、Shosa の依頼 3〜5、v0.17.1 のリリース。base `be79ac447`。前の会話から続けたので `-Start` は回していない。終了時の full は 18077 合格 / 0 失敗 / skip 2 / 合計 18079（`-End`、Lab `p1339` `run1.trx`）。
+- **Calamo**: 32 は `de115df63`（アルペジオの線が `@struck` の音を外す）、33 は `d0bd67b49`（刻みを一打ずつ鳴らす。刻みの `@portato` は弧に一打 1 つの点）。
+- **Bar fixes の各行が警告とエラーを出す**（`e3eae16e3`・`d729d4a53`）。
+- **Shosa 3・4**（`695fe386a`、`recording-design.md` §5・§7）:
+  - オーナー決定「録音は伸ばさない」で、`warpFit` を外した。
+  - MP3 に LAME タグを付けた。
+  - 手を加えない録音はリミッターを通さない。
+  - 歌声は `voiceOnWarp` で録音の秒に乗る。
+- **stems API**（`fbf205e01`、オーナー決定。設計と結果は `docs/stems-api-design.md`）: exports に `renderStems`・`onDidChangeStems`・`writeAudio`。
+- **Shosa 5**（`cad184c3b`）: stems を楽譜の行の順に並べる（`Rows`）。
+- **LYS4042** の文が直し方を言う（`ed3c8a0fa`）。
+- **リリース**: サイト（`c1083703d`）、0.17.0、書き出しの修正（`626cb5766`、録音のパートを Solo にしてボタンが出たままだと書き出しに録音が入らなかった。オーナーの実機報告）、0.17.1（`a8ebc8ca0`）。経緯は §1.0 と `RELEASING.md` §6・§7。
+- **次**:
+  - 実機で歌声が録音に付くか（歌のある曲で）、刻みと portato の耳の確認、Kücken の 73 小節（オーナー）。
+  - Lily# の次は review.md の設計が先の 3 つ（順は §1.1 第1306 の末尾）。
+
+## 以下は第1338セッションの経緯
+
 ### 1.1 第1338セッション（2026-11-20・YT-DELL2）
 
 Shosa の依頼 1（曲を読むところを lysc へ）。base `2c32604f8`。開始時 full 18040 合格 / 0 失敗 / skip 2 / 合計 18042（Lab `p1338` `start.log`）。終了前の full 18050 合格 / 0 失敗 / skip 2 / 合計 18052（Lab `p1338` `full2.trx`）。
@@ -156,17 +181,6 @@ Shosa の依頼 1（曲を読むところを lysc へ）。base `2c32604f8`。�
 - 網 `CliSongReadingTests` 10 本（キーの並びと値を全部固定）。毒 8 本は全部赤（Lab `p1338/poisons.ps1`）。`wav` の `--order`／`--tempo` は SoundFont が要るので網なし＝`midi` と同じ道（`ScoreExport.Write`）。実機: 隔離 VS Code で exports と Markdown のフェンス（Lab `p1338/vscode-e2e`）。拡張の `server\lysc.exe` は古い＝入れ直しはオーナー。
 - ⚠️ 途中で pwsh MCP の module が 1.17.0 に上がって proxy 1.16.0 と合わなくなり、`pwsh` サーバが使えなくなった。後半は `pwsh-dev` の新しいコンソールで作業した（オーナーが `Register-PwshToClaudeCode` してクライアントを再起動すれば戻る）。
 - **次**: Shosa 側が `done` にするのを待つ。Lily# の次は review.md の設計が先の 3 つ（順は §1.1 第1306 の末尾）。
-
-## 以下は第1337セッションの経緯
-
-### 1.1 第1337セッション（2026-11-20・YT-DELL2）
-
-オーナーの報告と依頼を順に（base `763f1d011`・/clear 後の会話で `-Start` は回していない）。終了時 full 18040 合格 / 0 失敗 / skip 2 / 合計 18042（`-End` の trx・Lab `p1337`）。
-- **練習パネル**（`c7d798156`・`737c8dfb2`・`transport-mixer-design.md` §1）: パートの追加・削除を長さのエクスポートから即時反映（score のパートだけ。extra のための 2 回目のエクスポートは入れない＝オーナー決定）／S は群ごと／無題の score は録音なし／All は上書きのトグル（選択を書き換えない・Play にも勝つ）／行の Shift+クリックは「この行だけ」。
-- **`2ce9d2381`**: tab の `as removeEmpty`（GRAMMAR TabSelector）／`staff bass as removeEmpty ▮` の値の補完／行と全部 removeEmpty の譜表だけの score に代役の一線譜（`Staff.StandIn`・`row-staff-design.md`）／書いていない小節のクリックはパートのブロックの末尾へ／小節線の自動入力が section のメーターを小節ごとに読む（コードの行の `time` も）／Dettato→Orecchiante（依頼 20 は `fixed`・Orecchiante の repo では未 commit）。
-- **オーナー決定**: `bass` は予約語にしない／代役の段の頭の予約は残す（9 小節目とコード名の x が揃う）／最初の段も消すのは `all`。手元の楽譜は言語の設計の根拠にもしない（Lab notes・`e76554467`）。
-- 実機は隔離 VS Code で All と Shift+クリック（Lab `p1337/alle2e`）。残りはオーナー: 入れ直し後の実機・Orecchiante の `done`・`site/build-manual.ps1` の Dettato 1 か所（作業中のファイル）。
-- **次**: review.md の設計が先の 3 つ（順は §1.1 第1306 の末尾）＝この会話が重いので新しい会話で。
 
 ## 2. 開いている作業
 
