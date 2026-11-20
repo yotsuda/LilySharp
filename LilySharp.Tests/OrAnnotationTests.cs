@@ -26,7 +26,7 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// <c>@or</c> on a chords-row symbol (Dettato request 17, owner's decisions 2026-11-17): the
+/// <c>@or</c> on a chords-row symbol (Orecchiante request 17, owner's decisions 2026-11-17): the
 /// chords it may be instead. It reads and is reported; the preview shows its first candidate as a
 /// grey memo; Ctrl+Shift+Up / Down rotates the candidates through the symbol's place and sounds
 /// the one that came forward; nothing on paper, nothing in the sound changes.
@@ -147,7 +147,7 @@ public class OrAnnotationTests
         Assert.Contains("{ " + turned + " | C", ApplyAll(text, step.Edits));
     }
 
-    /// <summary>After a comment line in the row (owner's report 2026-11-17, Dettato's "03 Open Arms.lys"):
+    /// <summary>After a comment line in the row (owner's report 2026-11-17, Orecchiante's "03 Open Arms.lys"):
     /// the comment was the line's first entry's trivia, its reach ran over the line, and that entry —
     /// with no @or — was taken for the one under the caret: G/B@or(Bm) did not turn.</summary>
     [Fact]

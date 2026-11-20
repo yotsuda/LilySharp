@@ -121,6 +121,6 @@ public class TabOctaveTests
         string text = "part melody\nscore { tab bass5 melody as 8vb ";
         Assert.Equal("AfterTabSelectorChain", LilySharpLanguageServer.GetCompletionContext(text, text.Length).ToString());
         var labels = LilySharpLanguageServer.GetTabDisplayModeCompletions().Items.Select(i => i.Label).ToList();
-        Assert.Equal(["numbers", "full", "8vb", "15mb", "8va", "15ma"], labels);
+        Assert.Equal(["numbers", "full", "8vb", "15mb", "8va", "15ma", "removeEmpty"], labels);
     }
 }

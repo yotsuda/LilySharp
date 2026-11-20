@@ -2919,7 +2919,7 @@ public sealed partial class LilySharpLanguageServer
                     Kind = CompletionItemKind.Keyword,
                     Detail = TabStyleDetails.TryGetValue(label, out var d) ? d : null,
                     SortText = i.ToString(),
-                }).ToArray()
+                }).Append(TabRemoveEmptyItem("")).ToArray()
         };
     }
 
@@ -2939,6 +2939,8 @@ public sealed partial class LilySharpLanguageServer
                 Detail = TabStyleDetails.TryGetValue(label, out var d) ? d : null,
                 SortText = i.ToString(),
             }).ToList();
+        if (!written.Contains("removeEmpty"))
+            items.Add(TabRemoveEmptyItem(""));
         foreach (var it in GetScoreBlockCompletions().Items)
         {
             it.SortText = "9" + (it.SortText ?? "");
@@ -2958,7 +2960,22 @@ public sealed partial class LilySharpLanguageServer
             InsertText = prefix + style,
             Detail = TabStyleDetails.TryGetValue(style, out var d) ? d : "Tab style",
             SortText = i.ToString(),
-        });
+        }).Append(TabRemoveEmptyItem(prefix));
+
+    /// <summary>A tab's hara-kiri (<c>tab m as removeEmpty V</c>, owner's request 2026-11-20), as
+    /// a staff's: inserts the word and re-opens the popup on its values. After the styles and
+    /// octaves.</summary>
+    private static CompletionItem TabRemoveEmptyItem(string prefix) => new()
+    {
+        Label = prefix + "removeEmpty",
+        Kind = CompletionItemKind.Keyword,
+        InsertTextFormat = InsertTextFormat.Snippet,
+        InsertText = prefix + "removeEmpty $0",
+        Detail = "Hara-kiri: hide this tab in rest-only systems "
+                 + $"({string.Join(" | ", LanguageVocabulary.RemoveEmptyValues)})",
+        SortText = "8",
+        Command = new Command { Title = "Suggest value", CommandIdentifier = "editor.action.triggerSuggest" },
+    };
 
     /// <summary>After <c>tab NAME</c> / <c>tab TUNING NAME</c>: the <c>as numbers|full</c>
     /// style selector, then the ordinary render-item continuations — the tab sibling of
@@ -5422,7 +5439,7 @@ public sealed partial class LilySharpLanguageServer
                 },
 
                 // A chord still undecided (OrAnnotation): on a chords-row symbol, the chords it may
-                // be instead — Ctrl+Shift+Up / Down tries them (Dettato request 17, 2026-11-17).
+                // be instead — Ctrl+Shift+Up / Down tries them (Orecchiante request 17, 2026-11-17).
                 new CompletionItem
                 {
                     Label = "or", Kind = CompletionItemKind.Value,

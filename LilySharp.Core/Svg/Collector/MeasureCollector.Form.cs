@@ -730,6 +730,9 @@ public sealed partial class MeasureCollector
         Func<MusicSiteList, ValueTask> processNodes, MeasureBuilder builder, int startMeasure)
     {
         bool matched = false;
+        // The block this voice's music for the section was walked from (null: none) — where a
+        // bar it does not write yet is to be written (BlockEndForTyping, the padding below).
+        SyntaxNode? walkedBlock = null;
         // The score's meter in this section (SectionMeterPlan): armed for the play, so the
         // walk and the padding below apply what other parts write at each bar's start.
         var meterChanges = _voiceName != null ? MeterPlan().ChangesOf(section.SectionName) : null;
@@ -756,6 +759,7 @@ public sealed partial class MeasureCollector
             {
                 await ProcessMusicContainer(partBlock, processNodes);
                 matched = true;
+                walkedBlock = partBlock;
 
                 // One part block per voice name; stop looking. (A null voice
                 // is single-staff and legitimately concatenates every block.)
@@ -776,6 +780,7 @@ public sealed partial class MeasureCollector
         {
             await ProcessMusicContainer(elsewhere, processNodes);
             matched = true;
+            walkedBlock = elsewhere;
         }
 
         // By-part fallback: this section's music for the current voice is not a
@@ -785,6 +790,7 @@ public sealed partial class MeasureCollector
         {
             await ProcessMusicContainer(cell, processNodes);
             matched = true;
+            walkedBlock = cell;
         }
 
         // Single-part shorthand: bare music written straight into a top-level section
@@ -894,8 +900,19 @@ public sealed partial class MeasureCollector
             var shortEnd = produced < canonical ? ShortEndOf(section.SectionName) : null;
             if (_probeRecording != null && produced < canonical && _sectionHeaders.Partials.Count > 0)
                 _walkCanonicalReads.Add((section.SectionName + ShortEndRead, ShortEndCode(shortEnd)));
+            // Where a bar this part does not write yet is to be written (owner's request
+            // 2026-11-20: a bass line added by ear under a chord chart — a click on the next bar
+            // of the bass staff went to the section's head): the end of the part's block in this
+            // section, where the next bar would be typed. The spacers keep citing the section's
+            // start (the resume reads that); the bar's written place (Measure.WrittenStart) is
+            // what the preview's click goes to. No block here: the section's head, as before.
+            int typeAt = produced < canonical && walkedBlock != null ? BlockEndForTyping(walkedBlock) : -1;
+            if (typeAt >= 0 && _probeRecording != null)
+                _walkMaxSourceRead = Math.Max(_walkMaxSourceRead, typeAt + 1);
             for (int i = produced; i < canonical; i++)
             {
+                if (typeAt >= 0)
+                    builder.NoteWrittenStart(typeAt);
                 // A padding bar is a bar of the score's meter there (SectionMeterPlan).
                 await ApplyPlannedMeter(builder);
                 // …and under `time none` a bar as long as the part that writes it makes it,
@@ -921,6 +938,71 @@ public sealed partial class MeasureCollector
             }
         }
         _meterCursor = null;
+    }
+
+    /// <summary>
+    /// Where the next bar of a part's block is typed: just after the block's last token before
+    /// its closing brace — its last bar line, say — and one space further when a space follows
+    /// it there (<c>c1 | ⏎</c> → after <c>"| "</c>, ready for the next note). Just after the
+    /// opening brace for an empty block. -1 when the block has no closing brace.
+    /// </summary>
+    internal static int BlockEndForTyping(SyntaxNode block)
+    {
+        // The closing brace: the block's last token (descending into its last child).
+        var close = LastToken(block);
+        if (close == null || close.Kind != SyntaxKind.CloseBrace || close.Span.Length == 0)
+            return -1;
+        var before = TokenBefore(close);
+        if (before == null)
+            return -1;
+        int at = before.Span.End;
+        // The text between the two (trailing trivia of one, or leading trivia of the other).
+        string full = before.ToFullString();
+        int trail = before.Span.End - before.FullSpan.Start;
+        char next = trail < full.Length ? full[trail]
+            : close.Span.Start > close.FullSpan.Start ? close.ToFullString()[0] : '\0';
+        return next is ' ' or '\t' ? at + 1 : at;
+    }
+
+    private static SyntaxTokenNode? LastToken(SyntaxNode node)
+    {
+        for (int i = node.SlotCount - 1; i >= 0; i--)
+        {
+            var child = node.GetChild(i);
+            if (child is SyntaxTokenNode t)
+            {
+                if (t.Span.Length > 0)
+                    return t;
+                continue;
+            }
+            if (child != null && LastToken(child) is { } inner)
+                return inner;
+        }
+        return null;
+    }
+
+    private static SyntaxTokenNode? TokenBefore(SyntaxNode token)
+    {
+        for (SyntaxNode? node = token; node?.Parent is { } parent; node = parent)
+        {
+            // (the node's own slot: the parent caches its reds, so the same instance comes back)
+            int slot = parent.SlotCount - 1;
+            while (slot >= 0 && !ReferenceEquals(parent.GetChild(slot), node))
+                slot--;
+            for (int i = slot - 1; i >= 0; i--)
+            {
+                var sibling = parent.GetChild(i);
+                if (sibling is SyntaxTokenNode t)
+                {
+                    if (t.Span.Length > 0)
+                        return t;
+                    continue;
+                }
+                if (sibling != null && LastToken(sibling) is { } inner)
+                    return inner;
+            }
+        }
+        return null;
     }
 
     /// <summary>

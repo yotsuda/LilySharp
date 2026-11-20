@@ -900,7 +900,7 @@ internal sealed partial class Parser
         }
         if (Check(SyntaxKind.CloseBracket))
             return new VoltaEndGreen(Advance());
-        // `time 2/4` at a bar's head (Dettato's request 13, owner's decision 2026-11-16): the meter
+        // `time 2/4` at a bar's head (Orecchiante's request 13, owner's decision 2026-11-16): the meter
         // from that bar, for the whole score, as a part's music writes it. Where in the bar it may
         // stand: ReportChordTimeInsideABar.
         if (Check(SyntaxKind.TimeKeyword))

@@ -23,12 +23,12 @@ namespace LilySharp.Core.Semantics;
 
 /// <summary>
 /// An <c>@or</c> mark on a chords-row symbol: the chords it may be instead —
-/// <c>F@or(Bm Dm)</c>, the candidates space-separated (Dettato request 17, owner's decisions
+/// <c>F@or(Bm Dm)</c>, the candidates space-separated (Orecchiante request 17, owner's decisions
 /// 2026-11-17).
 /// </summary>
 /// <remarks>
 /// <para>
-/// A transcription (Dettato's, a writer's) that is unsure of a chord writes the one it
+/// A transcription (Orecchiante's, a writer's) that is unsure of a chord writes the one it
 /// thinks likeliest and the others after it. Like <see cref="TodoAnnotation"/> it changes
 /// neither the paper nor the sound: the symbol written is the chord, the candidates are a
 /// note to oneself. The preview shows it as a grey <c>@todo</c> whose memo is the FIRST

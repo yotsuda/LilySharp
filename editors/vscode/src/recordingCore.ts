@@ -14,9 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// The recording beside a chart (docs/recording-design.md): the file `<stem>.dettato.json` next to
+// The recording beside a chart (docs/recording-design.md): the file `<stem>.orecchiante.json` next to
 // `<stem>.lys` says which recording goes with the chart and where in it every bar the chart plays
-// is. Dettato writes format 1 (C:\MyProj\Dettato\docs\SIDECAR.md); Lily# reads it and writes
+// is. Orecchiante writes format 1 (C:\MyProj\Orecchiante\docs\SIDECAR.md); Lily# reads it and writes
 // format 2 — the same file, a person's hand on it allowed (`byHand` on a bar it set or confirmed).
 // The .lys itself never names the recording (owner's decision 2026-11-15).
 //
@@ -33,7 +33,7 @@ export interface RecordingBar {
 
 /** The file beside a chart, as read. */
 export interface Recording {
-    /** The format's number as read: 1 (Dettato's reading) or 2. */
+    /** The format's number as read: 1 (Orecchiante's reading) or 2. */
     format: number;
     /** The recording's file name, in the folder of the file beside it (no path). */
     audio: string;
@@ -43,7 +43,7 @@ export interface Recording {
     bars: RecordingBar[];
     /** The first bar is a pickup (format 1 marks it `pickup`). */
     pickup: boolean;
-    /** The recording in parts, each its own file (Dettato's `parts`, REQUESTS 16;
+    /** The recording in parts, each its own file (Orecchiante's `parts`, REQUESTS 16;
      *  docs/recording-design.md §8): in the order written, as many as written, each found as
      *  `audio` is (resolveAudio). Absent when the file has none. */
     parts?: RecordingPart[];
@@ -72,7 +72,7 @@ export function partsOf(raw: Record<string, unknown>): RecordingPart[] | undefin
 
 /** The order the parts' lines are shown in (owner's decision 2026-11-18): the voice, the chord
  *  instruments, the rest, then the rhythm section. A name is matched whatever its case, with or
- *  without a plural `s` (Dettato writes `vocals`). */
+ *  without a plural `s` (Orecchiante writes `vocals`). */
 const SHOWN_PART_ORDER = ['vocal', 'guitar', 'piano', 'other', 'bass', 'drum'];
 
 /** The parts' names in the order their lines are shown: the known ones as SHOWN_PART_ORDER says,
@@ -107,18 +107,18 @@ export function rebasedParts(raw: Record<string, unknown>, fromFile: string, toF
  *  refuses a number it does not know). */
 export const RECORDING_FORMAT = 2;
 
-/** The file beside <paramref name="lysPath"/>: same folder, same stem, `.dettato.json`. */
+/** The file beside <paramref name="lysPath"/>: same folder, same stem, `.orecchiante.json`. */
 export function recordingPathFor(lysPath: string): string {
     const dot = lysPath.lastIndexOf('.');
     const slash = Math.max(lysPath.lastIndexOf('/'), lysPath.lastIndexOf('\\'));
     const stem = dot > slash ? lysPath.slice(0, dot) : lysPath;
-    return stem + '.dettato.json';
+    return stem + '.orecchiante.json';
 }
 
 /** The chart a file beside a chart belongs to — `recordingPathFor`'s inverse; undefined for a
- *  name that is not `<stem>.dettato.json`. */
+ *  name that is not `<stem>.orecchiante.json`. */
 export function chartPathFor(recordingPath: string): string | undefined {
-    return /\.dettato\.json$/i.test(recordingPath) ? recordingPath.replace(/\.dettato\.json$/i, '.lys') : undefined;
+    return /\.orecchiante\.json$/i.test(recordingPath) ? recordingPath.replace(/\.orecchiante\.json$/i, '.lys') : undefined;
 }
 
 /** The recording's own path, from the file beside the chart and the name it holds. */
@@ -169,7 +169,7 @@ export function chartForRecording(audio: string, lysInFolder: readonly string[],
 
 // ---------------------------------------------------------------- where the recording is
 //
-// The file beside a chart names its recording by `audio` (Dettato's request 6, owner's decision
+// The file beside a chart names its recording by `audio` (Orecchiante's request 6, owner's decision
 // 2026-11-16, which retired "the file name only"): the file name when the recording is beside the
 // chart; else the way to it from the chart's folder, `/`-separated (`../Music/x.mp3`); on another
 // drive, the whole path (`F:/Music/x.mp3`). These are strings, not Node paths: the webview reads
@@ -362,16 +362,16 @@ export function parseRecording(text: string): Recording | { error: string } {
         return { error: 'not a JSON object' };
     }
     const o = raw as Record<string, unknown>;
-    // Files written before 2026-11-14 have no `dettato` and are otherwise format 1 (SIDECAR.md).
-    const format = o.dettato === undefined ? 1 : o.dettato;
+    // Files written before 2026-11-14 have no `orecchiante` and are otherwise format 1 (SIDECAR.md).
+    const format = o.orecchiante === undefined ? 1 : o.orecchiante;
     if (typeof format !== 'number' || !Number.isInteger(format) || format < 1) {
-        return { error: `"dettato" is not a format number` };
+        return { error: `"orecchiante" is not a format number` };
     }
     if (format > RECORDING_FORMAT) {
         return { error: `format ${format} is newer than this Lily# reads (${RECORDING_FORMAT}) — update Lily#` };
     }
     // The file name beside the chart, the way to the recording from the chart's folder, or the
-    // whole path (resolveAudio; Dettato's request 6).
+    // whole path (resolveAudio; Orecchiante's request 6).
     if (typeof o.audio !== 'string' || o.audio.trim() === '') {
         return { error: `"audio" must name the recording` };
     }
@@ -411,7 +411,7 @@ export function newRecording(audio: string, duration?: number): Recording {
 /** The file as Lily# writes it: format 2, the items it does not know kept as they were, each
  *  bar's own items kept and `byHand` set or cleared. */
 export function serializeRecording(rec: Recording): string {
-    const out: Record<string, unknown> = { ...rec.raw, dettato: RECORDING_FORMAT, audio: rec.audio };
+    const out: Record<string, unknown> = { ...rec.raw, orecchiante: RECORDING_FORMAT, audio: rec.audio };
     if (rec.duration !== undefined) {
         out.duration = rec.duration;
     }
@@ -551,7 +551,7 @@ export function scoreTimeAt(bars: readonly [number, number][], rec: Recording, s
  *  sounds alone). Every bar must move forward in both.
  *
  *  Counts that differ (a chart a bar added or taken out, or being cut into sections) line up as far
- *  as the shorter goes, the n-th bar with the n-th (Dettato's request 11, the owner 2026-11-16:
+ *  as the shorter goes, the n-th bar with the n-th (Orecchiante's request 11, the owner 2026-11-16:
  *  "71 bars of the recording to their end"; SIDECAR.md "After the chart is corrected" — before then
  *  it said not to play at all). The bars after the one added or taken out are a bar off: the person
  *  is putting that right. Past the shorter end the score goes on at its last bar's pace (carry). */
@@ -615,9 +615,9 @@ function carry(from: readonly [number, number][], to: readonly [number, number][
  * plays the recording at 131/131.8, and a tempo written anew moves the recording with it. Bar by
  * bar the two still meet (warpTime); this sets the whole's pace.
  *
- * The median, not the spans' ratio (Dettato's request 8, 2026-11-16): a bar read wrong — two bars
+ * The median, not the spans' ratio (Orecchiante's request 8, 2026-11-16): a bar read wrong — two bars
  * read as one, a last bar cut short — or a long gap between songs in a long recording dragged the
- * whole's pace with it. MEASURED by Dettato (its scratch/fit.py, 172 songs): over 2 % off in 35
+ * whole's pace with it. MEASURED by Orecchiante (its scratch/fit.py, 172 songs): over 2 % off in 35
  * songs, at most 39 %, with the spans' ratio; in 3, at most 2.7 %, with the median; a 58-minute
  * band practice played 1.26× fast and now 0.994×. A pickup counts as any bar: short in both, its
  * ratio is the music's like the others'.

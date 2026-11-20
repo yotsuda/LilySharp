@@ -112,6 +112,20 @@ internal static class HaraKiri
         if (!staff.RemoveEmpty)
             return false;
 
+        // The automatic one-line staff standing in for staves that may all be hidden
+        // (Staff.StandIn, 2026-11-20): alive only where every one of them is dead.
+        // LILYSHARP-OWN — LilyPond's hara-kiri has no staff kept alive by the others' death.
+        if (staff.StandIn)
+        {
+            if (score == null)
+                return false;
+            foreach (var (_, other, otherIndex) in score.EnumerateStaves())
+                if (!ReferenceEquals(other, staff) && !other.IsTextRow && !other.StandIn
+                    && !ShouldHideStaff(other, otherIndex, score, startMeasure, endMeasure, isFirstSystem))
+                    return true;
+            return false;
+        }
+
         // LILYPOND-REF: lily/hara-kiri-group-spanner.cc:request_suicide_alone()
         // If remove-first is false and we're in the first system, don't hide
         if (isFirstSystem && !staff.RemoveFirst)

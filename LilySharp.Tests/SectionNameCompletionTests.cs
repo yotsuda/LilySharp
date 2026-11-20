@@ -404,7 +404,7 @@ public class SectionNameCompletionTests
         Assert.DoesNotContain("bass", labels);
     }
 
-    /// <summary>A chord chart (no parts: a `chords` track's cells in each section, as Dettato
+    /// <summary>A chord chart (no parts: a `chords` track's cells in each section, as Orecchiante
     /// writes one) — the caret after a section's chords cell is beside the cells, not in a
     /// single voice's music (owner's report 2026-11-16: the list offered pitch letters there).
     /// The section takes another track cell — the file's own track names first — and the

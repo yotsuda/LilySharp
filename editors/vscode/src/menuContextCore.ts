@@ -71,15 +71,15 @@ export function fileMenuContext(text: string): { hasOrMarks: boolean; hasTodos: 
  *  Each source shows where its own command shows in the palette: the scan and the recording on
  *  Windows (the command offers the reader's extension) or wherever their reader is found. */
 export interface NewScoreSource { command: string; label: string; detail: string }
-export function newScoreSources(onWindows: boolean, omrFound: boolean, dettatoFound: boolean): NewScoreSource[] {
+export function newScoreSources(onWindows: boolean, omrFound: boolean, orecchianteFound: boolean): NewScoreSource[] {
     const sources: NewScoreSource[] = [
         { command: 'lilysharp.importMusicXml', label: 'MusicXML, MIDI or ABC…', detail: '.musicxml · .mxl · .xml · .mid · .midi · .abc' },
     ];
     if (onWindows || omrFound) {
         sources.push({ command: 'lilysharp.importImage', label: 'Image or PDF (Scan)… (Preview)', detail: 'printed music read by Calamo' });
     }
-    if (onWindows || dettatoFound) {
-        sources.push({ command: 'lilysharp.convertRecording', label: 'Recording… (Preview)', detail: 'a chord chart heard by Dettato' });
+    if (onWindows || orecchianteFound) {
+        sources.push({ command: 'lilysharp.convertRecording', label: 'Recording… (Preview)', detail: 'a chord chart heard by Orecchiante' });
     }
     return sources;
 }

@@ -1128,20 +1128,10 @@ internal sealed partial class Parser
                 any = true;
                 continue;
             }
-            if (string.Equals(Current.Text, "removeEmpty", System.StringComparison.Ordinal))
+            // (A bare word in the value slot is consumed even when unknown, so a typo is
+            // reported once there and not a second time as a MIDI-only part reference.)
+            if (ConsumeRemoveEmpty(tokens))
             {
-                tokens.Add(Advance()); // removeEmpty
-                var known = Semantics.SymbolCaseValidator.RemoveEmptyValueVocabulary;
-                if (!known.Contains(Current.Text, System.StringComparer.Ordinal))
-                    _diagnostics.Error(
-                        new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length),
-                        DiagnosticCodes.UnknownSymbolCase,
-                        $"Unknown removeEmpty '{Current.Text}'. removeEmpty values are case-sensitive; known: " +
-                        $"{string.Join(", ", known)}.");
-                // A bare word in the value slot is consumed even when unknown, so a typo is
-                // reported once here and not a second time as a MIDI-only part reference.
-                if (Check(SyntaxKind.Identifier))
-                    tokens.Add(Advance()); // true | all | false
                 any = true;
                 continue;
             }
@@ -1517,9 +1507,37 @@ internal sealed partial class Parser
         if (!string.Equals(Current.Text, "as", System.StringComparison.Ordinal) || Peek(1) == null)
             return;
         tokens.Add(Advance()); // as
-        tokens.Add(Advance()); // the first word, known or not
-        while (Semantics.TabRenderVocabularyValidator.IsSelectorWord(Current.Text))
-            tokens.Add(Advance());
+        // …and hara-kiri, as a staff's (`tab bass as removeEmpty true`, owner's request
+        // 2026-11-20): the same word and values, read the same way (ConsumeRemoveEmpty).
+        if (!ConsumeRemoveEmpty(tokens))
+            tokens.Add(Advance()); // the first word, known or not
+        while (true)
+        {
+            if (Semantics.TabRenderVocabularyValidator.IsSelectorWord(Current.Text))
+                tokens.Add(Advance());
+            else if (!ConsumeRemoveEmpty(tokens))
+                break;
+        }
+    }
+
+    /// <summary><c>removeEmpty true|all|false</c> at the cursor, consumed with its value: a
+    /// staff's selector, and a tab's (2026-11-20). An unknown value is reported here and still
+    /// consumed when it is a bare word, so a typo is said once. False when the word is not there.</summary>
+    private bool ConsumeRemoveEmpty(List<SyntaxToken> tokens)
+    {
+        if (!string.Equals(Current.Text, "removeEmpty", System.StringComparison.Ordinal))
+            return false;
+        tokens.Add(Advance()); // removeEmpty
+        var known = Semantics.SymbolCaseValidator.RemoveEmptyValueVocabulary;
+        if (!known.Contains(Current.Text, System.StringComparer.Ordinal))
+            _diagnostics.Error(
+                new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length),
+                DiagnosticCodes.UnknownSymbolCase,
+                $"Unknown removeEmpty '{Current.Text}'. removeEmpty values are case-sensitive; known: " +
+                $"{string.Join(", ", known)}.");
+        if (Check(SyntaxKind.Identifier))
+            tokens.Add(Advance()); // true | all | false
+        return true;
     }
 
     /// <summary>

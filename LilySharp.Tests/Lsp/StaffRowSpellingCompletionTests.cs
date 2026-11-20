@@ -130,7 +130,7 @@ public class StaffRowSpellingCompletionTests
         // offered after every tuning word for the same untested reason. One book, one part
         // named `bass`, both answers.
         Assert.Equal(new[] { "melody" }, LabelsAt(OnePart, "score { tab bass5 ▮ }"));
-        Assert.Equal(new[] { "melody", "bass", "as numbers", "as full", "as 8vb", "as 15mb", "as 8va", "as 15ma" },
+        Assert.Equal(new[] { "melody", "bass", "as numbers", "as full", "as 8vb", "as 15mb", "as 8va", "as 15ma", "as removeEmpty" },
             LabelsAt(PartNamedBass, "score { tab bass ▮ }"));
 
         var withName = LabelsAt(OnePart, "score { tab bass5 melody ▮ }");

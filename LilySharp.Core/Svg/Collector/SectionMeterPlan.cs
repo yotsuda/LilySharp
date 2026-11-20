@@ -113,7 +113,7 @@ internal sealed class SectionMeterPlan
         {
             if (voice.IsLyrics)
                 continue;
-            // A chord row's `time` at a bar's head is the score's too (Dettato's request 13, owner's
+            // A chord row's `time` at a bar's head is the score's too (Orecchiante's request 13, owner's
             // decision 2026-11-16): its bars are counted by its bar lines (no beats to split by).
             var written = new List<(int Bar, TimeSignatureSyntax Time, bool MidBar)>();
             var bars = voice.IsChords ? null : MeasureModel.Split(voice.Container, phrases, null, written);

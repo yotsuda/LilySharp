@@ -2876,7 +2876,7 @@ public sealed class MidiExporter
         // page draws them. Until 2026-11-14 only a part's lane marked a bar line, so a lead sheet
         // had none: its metronome counted whole bars of the meter from the first beat, and after
         // three beats of pickup every accent fell a beat before its bar line (MEASURED, Lab
-        // sessions/p1242/dettato/probe-lsp.txt: bar lines at 1.5 3.5 5.5 s, accents at 0 2 4 6).
+        // sessions/p1242/orecchiante/probe-lsp.txt: bar lines at 1.5 3.5 5.5 s, accents at 0 2 4 6).
         // ⚠️ PAST THE MUSIC WRITTEN (`lanesWritten`), not past the lanes as padded: a part
         // shorter than its section's rows is padded with silence to the section's bars, and the
         // silence draws no bar line. Measured from the padded end, the rows' bar lines there were

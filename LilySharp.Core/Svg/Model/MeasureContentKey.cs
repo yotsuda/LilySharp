@@ -473,6 +473,7 @@ public readonly record struct MeasureContentKey(long Hash)
         hc.Add(staff.IsOssia);
         hc.Add(staff.RemoveEmpty);
         hc.Add(staff.RemoveFirst);
+        hc.Add(staff.StandIn);               // alive where the others are dead (2026-11-20)
         hc.Add(staff.StaffAffinity);
         hc.Add(staff.PerStaffKeySignature);
         // ⚠️ Staff.ClefPosition is deliberately NOT folded in. It is a SOURCE OFFSET, not

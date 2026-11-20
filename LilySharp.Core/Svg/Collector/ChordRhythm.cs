@@ -120,7 +120,7 @@ public static class ChordRhythm
     /// slots were warned off a grid they stood on, LYS2009; four were not, and stood off every
     /// beat), while the sound and the MusicXML kept the whole meter's grid and CUT it at the
     /// pickup's length — the bar's first beats, where a pickup is its last, and a slot past the
-    /// cut neither sounded nor was written (Dettato's request 3, Lab sessions/p1242/dettato).
+    /// cut neither sounded nor was written (Orecchiante's request 3, Lab sessions/p1242/orecchiante).
     /// Observed by ChordRowPickupGridTests.
     /// </remarks>
     public static IReadOnlyList<Fraction> BeatsOf(int beats, int beatType, Fraction? pickup = null)

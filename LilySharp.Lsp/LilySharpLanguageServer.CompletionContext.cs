@@ -657,9 +657,21 @@ public sealed partial class LilySharpLanguageServer
     /// follows one of them (<c>tab bass5 m as 8vb ▮</c>), else null: the words back to the
     /// <c>as</c> must all be selector words, and the word before that <c>as</c>'s row a tab's.</summary>
     internal static List<string>? TabSelectorsWritten(string text, int offset)
+        => TabChainAt(text, offset) is { Open: false, Words.Count: > 0 } chain ? chain.Words : null;
+
+    /// <summary>The caret right after a tab's <c>as … removeEmpty</c>, its value still to come
+    /// (<c>tab bass as removeEmpty ▮</c>, 2026-11-20).</summary>
+    internal static bool TabAwaitsRemoveEmptyValue(string text, int offset)
+        => TabChainAt(text, offset) is { Open: true };
+
+    /// <summary>The words of the tab row's <c>as</c> chain before the caret, read forward: the
+    /// style and octave words, and <c>removeEmpty</c> for its pair (<c>removeEmpty V</c>) —
+    /// <c>Open</c> when the chain ends on <c>removeEmpty</c> with its value missing. Null when
+    /// the caret is not in a tab's chain.</summary>
+    private static (List<string> Words, bool Open)? TabChainAt(string text, int offset)
     {
         static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '-';
-        var words = new List<string>();
+        var back = new List<string>();
         int i = offset;
         while (i > 0 && IsWordChar(text[i - 1])) i--;   // a partial word is not a written one
         while (true)
@@ -667,17 +679,33 @@ public sealed partial class LilySharpLanguageServer
             while (i > 0 && text[i - 1] is ' ' or '\t') i--;
             int end = i;
             while (i > 0 && IsWordChar(text[i - 1])) i--;
-            if (end == i)
+            if (end == i || back.Count > 8)
                 return null;
             string w = text[i..end];
             if (w == "as")
                 break;
-            if (!LilySharp.Core.Semantics.LanguageVocabulary.TabStyles.Contains(w)
-                && !LilySharp.Core.Semantics.LanguageVocabulary.TabOctaves.Contains(w))
+            back.Add(w);
+        }
+        back.Reverse();
+        var words = new List<string>();
+        bool open = false;
+        for (int k = 0; k < back.Count; k++)
+        {
+            string w = back[k];
+            if (w == "removeEmpty")
+            {
+                if (k == back.Count - 1) { open = true; words.Add(w); continue; }
+                if (!LanguageVocabulary.RemoveEmptyValues.Contains(back[k + 1], StringComparer.Ordinal))
+                    return null;
+                words.Add(w);
+                k++;
+                continue;
+            }
+            if (!LanguageVocabulary.TabStyles.Contains(w) && !LanguageVocabulary.TabOctaves.Contains(w))
                 return null;
             words.Add(w);
         }
-        return words.Count > 0 && AsSelectorContext(text, i + 3) == CompletionContext.AfterTabDisplayAs ? words : null;
+        return words.Count > 0 && AsSelectorContext(text, i + 3) == CompletionContext.AfterTabDisplayAs ? (words, open) : null;
     }
 
     /// <summary>The caret right after a chord track's <c>for</c>: <c>chords for ▮</c> or
@@ -1663,6 +1691,9 @@ public sealed partial class LilySharpLanguageServer
                 return AsSelectorContext(text, offset);
             // `tab bass5 m as 8vb ▮`: one `as` takes the style and the octave (2026-10-28), so
             // after one of them the other kind is still offered, and the row may end here.
+            // `tab bass as removeEmpty ▮` (2026-11-20): hara-kiri's values, as a staff's.
+            if (TabAwaitsRemoveEmptyValue(text, offset))
+                return CompletionContext.AfterRemoveEmpty;
             if (TabSelectorsWritten(text, offset) is { Count: > 0 })
                 return CompletionContext.AfterTabSelectorChain;
 
@@ -1856,7 +1887,7 @@ public sealed partial class LilySharpLanguageServer
         // not the pitch letters. (A section in a NO-parts doc is a single voice and keeps its
         // note completions; a section nested in a part is a by-part cell, likewise music.)
         // …and in a NO-parts doc whose section holds TRACK cells only (a chord chart: `section A
-        // { chords harmony { … } }`, as Dettato writes one): beside the cells, not a single
+        // { chords harmony { … } }`, as Orecchiante writes one): beside the cells, not a single
         // voice's music (owner's report 2026-11-16 — the list offered pitch letters after a
         // section's chords cell).
         if (IsInsideTopLevelSectionBody(scan.Stack)
@@ -2142,6 +2173,15 @@ public sealed partial class LilySharpLanguageServer
                     if (!row.HasClef && LanguageVocabulary.ClefNames.Contains(w))
                     {
                         row = row with { HasClef = true };
+                        continue;
+                    }
+                    // `staff bass as …`: the clef word WAS the part (`as` names no part — the
+                    // parser reads it as the selectors' `as`), so the row is past its name and in
+                    // its selectors (owner's report 2026-11-20: `staff bass as removeEmpty ▮`
+                    // offered no value — the `as` had been read as the part name).
+                    if (row.HasClef && w == "as")
+                    {
+                        row = row with { HasClef = false, HasName = true, AfterAs = true };
                         continue;
                     }
                     row = row with { HasName = true };

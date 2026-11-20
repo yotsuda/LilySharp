@@ -29,9 +29,9 @@ namespace LilySharp.Lsp;
 /// </summary>
 /// <remarks>
 /// The seconds must be a player's: an mp3 or AAC encoder puts silence in front and the file says how
-/// much; a browser and ffmpeg start after it, Media Foundation does not — and Dettato's bar seconds
-/// are a player's (C:\MyProj\Dettato\docs\SIDECAR.md). So the lead is cut as Dettato cuts it: the
-/// reading below is Dettato's own (src/Dettato/Audio.cs, the same author, Apache-2.0), kept to its
+/// much; a browser and ffmpeg start after it, Media Foundation does not — and Orecchiante's bar seconds
+/// are a player's (C:\MyProj\Orecchiante\docs\SIDECAR.md). So the lead is cut as Orecchiante cuts it: the
+/// reading below is Orecchiante's own (src/Orecchiante/Audio.cs, the same author, Apache-2.0), kept to its
 /// channels instead of averaged.
 /// </remarks>
 internal static class RecordingDecoder
@@ -198,7 +198,7 @@ internal static class RecordingDecoder
 
     /// <summary>With no edit list, iTunes (and the iPhone's Voice Memos) say the encoder's silence in their own note,
     /// "iTunSMPB": hex numbers, the second the samples in front (2112 for AAC). ffmpeg goes by it, Windows does not
-    /// (MEASURED 2026-11-16 by Dettato on the owner's files, its README "A recording as it comes"; Dettato
+    /// (MEASURED 2026-11-16 by Orecchiante on the owner's files, its README "A recording as it comes"; Orecchiante
     /// REQUESTS #5). 0 when there is none.</summary>
     internal static int Priming(byte[] moov)
     {

@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Dettato is now Orecchiante** (`[editor]`). The recording reader's new name: extension `yotsuda.orecchiante` (0.11.0 or newer), the file beside a chart `<stem>.orecchiante.json` (format key `"orecchiante"`), a converted chart `song (Orecchiante).lys`. `.dettato.json` is no longer read.
+
 - **A hairpin nothing ends is a warning** (`[language]`, LYS4018 at warning strength). `c'4@p d'@cresc e' f' | g'1 |` — no level, hairpin or `@!cresc` after it in its staff — is still drawn to the next bar line, and now says so with where to write its end. LilyPond warns "unterminated crescendo" and draws nothing.
 
 - **A `@!rit` on a combined staff's rest under the other part's long note stops on its beat** (`[engraving]`), as a hairpin's stop there has since 2026-11-19; it ran to the bar's end.

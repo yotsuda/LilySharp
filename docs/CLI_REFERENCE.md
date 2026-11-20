@@ -604,7 +604,7 @@ Prints the chord diagram the editor writes first on a chord with none — the fi
 Ctrl+Shift+Up / Down gives: LilyPond's predefined one, else the first of Lily#'s order — one line
 a name: the name, a tab, the shape (`xx0232`; a fret past 9 is written `-10-`). Names are read as a
 `chords` row reads them (`D`, `Am7`, `Bm7(b5)`, `D/F#`). The shape is empty when the name is not
-a chord a row reads, or nothing plays it. For a program that writes charts (Dettato puts it on a
+a chord a row reads, or nothing plays it. For a program that writes charts (Orecchiante puts it on a
 converted chart's first chord; the extension tells it where lysc is in `LILYSHARP_LYSC_PATH`).
 
 **Options:**

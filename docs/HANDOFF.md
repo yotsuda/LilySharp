@@ -49,6 +49,7 @@ tools\Session-Check.ps1 -End pNNN -DiffBase <開始時 HEAD>   # 終了の機械
   `probes/<名前>/`、直下の単発ファイルは `probes/loose/YYYY-MM/`）。**生成物（絵・trx・バイナリ）は移していない**
   ＝要るなら取り直す。コード内コメントや ARCHIVE の `scratch/` 表記は書き換えない。
 - ★★★ **開始時に `C:\MyProj\Calamo\docs\repro\REQUESTS.md` の `open` を見る＝open があればそれに優先的に着手する**（ユーザー指示 2026-10-23・第961）。OMR 側（楽譜画像 → `.lys`）からの依頼の 1 枚で、状態は両側で書き換える（直したら `fixed <commit>`・直さないなら `won't`・聞くなら `question`。長い返事は Lab の `sessions/pNNN/` に置いて行から指す）。
+- ★ **Dettato は 2026-11-20 に Orecchiante へ改名（その依頼 20・同名の別プロジェクトが公開されたため）＝REQUESTS は `C:\MyProj\Orecchiante\docs\repro\REQUESTS.md` へ移る（移るまでは旧 `C:\MyProj\Dettato\…`）。拡張 ID `yotsuda.orecchiante`・隣のファイル `<stem>.orecchiante.json`。以下の「Dettato」は旧名。**
 - ★ **`C:\MyProj\Dettato\docs\repro\REQUESTS.md` にも `open` がある**（2026-11-14・Dettato のセッションが書いた行。Dettato は録音 → `.lys` のコード譜）。同じ使い方の 1 枚で、最初の依頼は「録音を `.lys` に変換するメニューを Lily# 本体が持つ」（オーナー決定 2026-11-14）と、その取り決めへの希望。Calamo の依頼との優先順はオーナーに聞く。第1242 で 3 を直し、1・2 に返事を書いた。2026-11-15 にオーナー決定（§1.0・1＝D3 の後に作る／2＝今は作らない）。
 - 証明 ⑴ の道具は `LilySharp-Lab\tools\rerender-ls.ps1`（RULES §5.5 のコマンド一覧）。
 - ★★★ **開始時に `LilySharp-Lab\notes\CLAUDE-OPERATIONS.md` も通読する**＝シェルと道具の使い方（Bash・PowerShell ツール・ripple は禁止・pwsh MCP の作法）・push や commit のユーザー規則・機械と社内環境の罠。**user memory は使わない**（2026-09-17・ユーザー決定。PC ローカルで他の PC に届かない）＝知見は RULES §4 の表の置き場所へ書く（公開してよい技術知見は RULES §5、private なものは Lab の notes）。

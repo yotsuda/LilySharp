@@ -705,6 +705,7 @@
     ["score-tab-as", "15mb"],
     ["score-tab-as", "8va"],
     ["score-tab-as", "15ma"],
+    ["score-tab-as", "removeEmpty"],
     ["score-chords", "prog"],
     ["layout", "markTempo"],
     ["layout", "barNumbers"],

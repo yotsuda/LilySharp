@@ -49,9 +49,10 @@ public class TabDisplayCompletionTests
     [Fact]
     public void TabDisplayModeCompletions_AreTheStylesThenTheOctaves()
     {
-        // The octave the tab is played in joined the style after `as` on 2026-10-28.
+        // The octave the tab is played in joined the style after `as` on 2026-10-28, and
+        // hara-kiri on 2026-11-20 (TabRemoveEmptyTests), after them.
         var labels = LilySharpLanguageServer.GetTabDisplayModeCompletions().Items
             .Select(i => i.Label).ToArray();
-        Assert.Equal(new[] { "numbers", "full", "8vb", "15mb", "8va", "15ma" }, labels);
+        Assert.Equal(new[] { "numbers", "full", "8vb", "15mb", "8va", "15ma", "removeEmpty" }, labels);
     }
 }

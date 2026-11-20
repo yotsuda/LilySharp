@@ -960,7 +960,7 @@ static int RunHarmonize(string[] args)
 
 // ============ Shape Command ============
 
-// `lysc shape D Am7 D/F#` (Dettato's request 9, owner's request 2026-11-16): the chord diagram the
+// `lysc shape D Am7 D/F#` (Orecchiante's request 9, owner's request 2026-11-16): the chord diagram the
 // editor writes first on a chord with none — Ctrl+Shift+Up / Down's first shape, ChordShapes.Default
 // (LilyPond's predefined one, else the first of Lily#'s order) — so a chart written elsewhere can
 // carry it without a second table of shapes. One line a name: the name, a tab, the shape (empty

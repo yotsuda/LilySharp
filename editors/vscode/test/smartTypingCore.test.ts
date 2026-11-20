@@ -988,6 +988,22 @@ describe('a space after the note that fills its bar writes the bar line (rule 32
         typed('section A { time 6/8 c4. d8 e f‸', ' ', 'section A { time 6/8 c4. d8 e f | ‸');
         typed('part a { time 3/4 c d e | }\npart b { c d e‸', ' ', 'part a { time 3/4 c d e | }\npart b { c d e ‸');
     });
+    // Owner's report 2026-11-20: a bass line under a chord chart whose row writes the meter
+    // (`| time 2/4 G | time 4/4 C |`) got no bar line — the row's `time` stood in a block already
+    // closed. A `time` at a bar's head in any block of the section is the score's meter from that
+    // bar to the section's end (GRAMMAR ChordRowTime), and the section opens on its header's or
+    // the score's.
+    it('32. reads a section\'s meter bar by bar, a chords row\'s time included, and resets it at the section', () => {
+        const chart = 'section G {\n  chords prog { G | G | time 2/4 G | time 4/4 C | }\n  bass {\n    ';
+        typed(chart + 'g2 fis8 fis4.‸\n  }\n}', ' ', chart + 'g2 fis8 fis4. | ‸\n  }\n}');                      // bar 1: the score's 4/4
+        typed(chart + 'g1 | g1 | d4.. d16‸\n  }\n}', ' ', chart + 'g1 | g1 | d4.. d16 | ‸\n  }\n}');          // bar 3: 2/4
+        typed(chart + 'g1 | g1 | d2 | cis1‸\n  }\n}', ' ', chart + 'g1 | g1 | d2 | cis1 | ‸\n  }\n}');        // bar 4: 4/4 again
+        typed(chart + 'g1 | g1 | d2 d‸\n  }\n}', ' ', chart + 'g1 | g1 | d2 d ‸\n  }\n}');                    // 4/4 in a 2/4 bar: overfull
+        // The next section opens on the score's meter again.
+        typed(chart + 'g1 |\n  }\n}\nsection H {\n  bass { c2 d‸ }\n}', ' ', chart + 'g1 |\n  }\n}\nsection H {\n  bass { c2 d | ‸ }\n}');
+        // …and on its own header's.
+        typed('time 4/4\nsection A {\n  time 3/4\n  chords p { C | }\n  b { c d e‸ }\n}', ' ', 'time 4/4\nsection A {\n  time 3/4\n  chords p { C | }\n  b { c d e | ‸ }\n}');
+    });
     it('32. counts a bare duration — the previous event again at that length (GRAMMAR §8.2)', () => {
         typed('section A { c8 8 8 8 8 8 8 8‸', ' ', 'section A { c8 8 8 8 8 8 8 8 | ‸');      // the bass pump
         typed('section A { c 8 8 8 8 8 8‸', ' ', 'section A { c 8 8 8 8 8 8 | ‸');          // a quarter and six eighths

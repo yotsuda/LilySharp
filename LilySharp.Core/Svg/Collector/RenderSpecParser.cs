@@ -277,6 +277,17 @@ public static class RenderSpecParser
 
         FoldAdjacentRows(render, items);
 
+        // …and where every staff may be hidden (each `as removeEmpty`) beside rows, the same
+        // one-line staff stands in for them: shown in a system only where they all are hidden
+        // (Staff.StandIn, HaraKiri), so such a system looks as a score of rows alone does
+        // (owner's request 2026-11-20: a chord chart with `tab bass as removeEmpty true` — the
+        // systems the tab left had no line under the chords). Last, and after the fold: a row
+        // folds into the staff below it, and the stand-in is no staff a row may fold into.
+        if (StandsInFor(items))
+            items.Add(new SingleStaffSpec(new StaffSpec(
+                ClefType.Treble, AutoStaffPart, Lines: 1, NameSuppressed: true, WithLyrics: [],
+                RemoveEmpty: true, RemoveFirst: true) { StandIn = true }));
+
         ApplyEnsembleDefault(items);
 
         var scoreTranspose = render.Transpose is { } t
@@ -295,6 +306,28 @@ public static class RenderSpecParser
             HiddenStaves: HiddenStavesOf(render),
             SourceStart: render.Span.Start,
             TextOverrides: [.. textOverrides]);
+    }
+
+    /// <summary>Whether the score's staves may all be hidden beside its rows: it has a chords or
+    /// lyrics row, and every staff-like item is a single staff or a tab written
+    /// <c>as removeEmpty</c> (a group, an ossia or a staff that never hides keeps a line on every
+    /// system already).</summary>
+    private static bool StandsInFor(List<RenderItemSpec> items)
+    {
+        bool rows = false, staves = false;
+        foreach (var item in items)
+        {
+            switch (item)
+            {
+                case ChordRowSpec or LyricsRowSpec: rows = true; break;
+                case SingleStaffSpec { Staff.RemoveEmpty: true } s when !IsAutoStaff(s.Staff.VoiceName): staves = true; break;
+                case TabStaffSpec { Staff.RemoveEmpty: true }: staves = true; break;
+                case SingleStaffSpec or TabStaffSpec or GrandStaffRenderSpec or CondensedStaffSpec
+                    or CombinedStaffSpec or OssiaStaffSpec:
+                    return false;
+            }
+        }
+        return rows && staves;
     }
 
     /// <summary>
@@ -1120,7 +1153,11 @@ public static class RenderSpecParser
         int capo = Semantics.ItemCapoValidator.CapoOf(tab)
             ?? Tablature.Tunings.CapoOn(tuning, Semantics.CapoDirective.CapoOf(root));
         transposition -= capo;
-        var staffSpec = new StaffSpec(sourceClef, voiceName, Sounds: tab.SoundsToken?.Text);
+        // Hara-kiri, as a staff's `as removeEmpty V` (owner's request 2026-11-20: a bass tab
+        // under a chord chart, written by ear, hides where it has nothing yet).
+        string? removeEmpty = tab.RemoveEmptyToken?.Text;
+        var staffSpec = new StaffSpec(sourceClef, voiceName, Sounds: tab.SoundsToken?.Text,
+            RemoveEmpty: removeEmpty is "true" or "all", RemoveFirst: removeEmpty is "all");
         // The STYLE: an explicit `as` wins; otherwise the score answers. A tab beside a
         // notation staff of the same part is fret digits only, because that staff already
         // carries the meter, the rests, the dots, the stems and the ties; a tab standing

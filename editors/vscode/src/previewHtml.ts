@@ -3764,7 +3764,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             let minT = Infinity, maxEnd = 0;
             for (const n of sub) { if (n.T < minT) { minT = n.T; } if (n.T + n.D > maxEnd) { maxEnd = n.T + n.D; } }
             // With the recording loaded and lined up, the bar plays WITH it: the recording's bar and
-            // this part's notes, bar line to bar line (owner's decision 2026-11-17, Dettato request 17:
+            // this part's notes, bar line to bar line (owner's decision 2026-11-17, Orecchiante request 17:
             // a chord is judged against the recording, as Transcribe! lets one).
             if (recordingAlong() && playBasis && playBasis.warp) {
                 const sp = playedSpeed();
@@ -4500,6 +4500,8 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         var scoreAll = false;
         // The recording's All, the same (its parts' own on/off, recPartsOff, kept).
         var recAllOn = false;
+        // What a line's button says of Alt+click (owner's decision 2026-11-20): it keeps that line alone.
+        const ONLY_THIS_HINT = 'Alt+click: only this one (the others off)';
         // The panel's button pressed while anything in it is not as it was (§6): the practice's or the mixer's.
         var practiceOn = false, mixerChanged = false;
         function paintPracticeBtn() { document.getElementById('practiceBtn').setAttribute('aria-pressed', String(practiceOn || mixerChanged)); }
@@ -4517,11 +4519,13 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             const heard = k => !any || solo.has(k);
             const parts = (rawParts || (lastPartsMessage && (lastPartsMessage.parts || []).concat(lastPartsMessage.extra || [])) || []).filter(Boolean);
             const voices = menuVoiceKeys || [];
-            // The group off: every line silent, the lines' own on/off (practice) as they are. All
-            // pressed in: every part and voice of the score heard, the lines' own on/off kept.
-            const own = !scoreOn
-                ? Object.assign({}, practice, { muted: parts.slice(), voicesOff: voices.slice(), extraOn: [], voicesOn: [], instrumentsOn: [] })
-                : scoreAll ? Object.assign({}, practice, { muted: [], voicesOff: [] }) : practice;
+            // All pressed in: every part and voice of the score heard, the lines' own on/off kept —
+            // the group off (Play let go) too (owner's request 2026-11-20: All sounds every part,
+            // whatever the other buttons say). The group off, All out: every line silent, the
+            // lines' own on/off (practice) as they are.
+            const own = scoreAll ? Object.assign({}, practice, { muted: [], voicesOff: [] })
+                : !scoreOn ? Object.assign({}, practice, { muted: parts.slice(), voicesOff: voices.slice(), extraOn: [], voicesOn: [], instrumentsOn: [] })
+                : practice;
             const out = Object.assign({}, own);
             if (any) {
                 // A soloed line is HEARD — its own mute, its group off, an extra the score leaves
@@ -4765,6 +4769,18 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             // One toggle each, pressed in while it sounds; the lists are by name, so a part muted
             // in another score stays muted.
             const without = (names, name) => names.filter(n => n !== name);
+            // Every line of the score's group off, each as its own toggle reads (an Alt+click's
+            // first half: the line clicked is then flipped on). (sungOnly and inScore are read at
+            // the click, after they are set below.)
+            // Only this score's lines: the lists are by name across scores, and another's are kept.
+            const noLineOn = () => {
+                const mine = new Set(parts.concat(extra)), myVoices = new Set(voices);
+                practice.muted = practice.muted.filter(n => !mine.has(n)).concat(parts.filter(n => !sungOnly.has(n)));
+                practice.instrumentsOn = practice.instrumentsOn.filter(n => !mine.has(n));
+                practice.extraOn = practice.extraOn.filter(n => !mine.has(n));
+                practice.voicesOff = practice.voicesOff.filter(k => !myVoices.has(k)).concat(voices.filter(k => inScore.has(k)));
+                practice.voicesOn = practice.voicesOn.filter(k => !myVoices.has(k));
+            };
             // One line a part: its toggle, and to its right a fader (owner's request 2026-11-09)
             // - 0 to 100%, the instrument's velocity or the voice's gain. The number follows the
             // thumb; the sound changes when it is let go (as the tempo's does), 100 means "as
@@ -4792,7 +4808,9 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                     bar.appendChild(document.createElement('span'));
                     b.appendChild(bar);
                 }
-                if (title) { b.title = title; b.dataset.title = title; }
+                // (Alt+click — Option on a Mac — keeps this line alone: onlyThis)
+                const hint = (title ? title + '\\n' : '') + ONLY_THIS_HINT;
+                b.title = hint; b.dataset.title = hint;
                 if (cls) for (const c of cls.split(' ')) b.classList.add(c);
                 if (part) b.dataset.part = part;
                 b.classList.add('pname');
@@ -4803,12 +4821,16 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                     sBtn.setAttribute('aria-pressed', String(solo.has(soloKey)));
                     // (the group off: every line of it dimmed, pressed or not as it is itself; All
                     // pressed in: its lines heard, each still showing its own on/off)
-                    line.classList.toggle('unheard', (!on && !(scoreAll && byAll)) || (!scoreOn && !solo.has(soloKey)) || (scoreSoloed() && !solo.has(soloKey)));
+                    line.classList.toggle('unheard', (!on && !(scoreAll && byAll)) || (!scoreOn && !(scoreAll && byAll) && !solo.has(soloKey)) || (scoreSoloed() && !solo.has(soloKey)));
                 };
                 paint();
                 // A line pressed while All is pressed in: All goes out and the line's own on/off
                 // flips — what is heard is then the choice with this change (owner's decision 2026-11-20).
-                const mute = () => {
+                // Alt+click: this line alone — every line of the score's group off, then this one on
+                // (owner's decision 2026-11-20: the choice made again from nothing, in one click,
+                // never silent on the way). All, pressed in, goes out as with a plain click.
+                const mute = (e) => {
+                    if (e && e.altKey) { scoreAll = false; noLineOn(); flip(); refreshMixer(); practiceChanged(practice.speed); return; }
                     if (scoreAll) { scoreAll = false; flip(); refreshMixer(); practiceChanged(practice.speed); return; }
                     flip(); paint(); showPractice(); practiceChanged(practice.speed);
                 };
@@ -5042,7 +5064,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         var recPlayer = null;
         var recOn = false;
         var recLevels = {};        // the fader, as the parts' are: { Recording: 0..2 } while not 100%
-        // The recording's parts (Dettato's parts, docs/recording-design.md §8): the ones turned off,
+        // The recording's parts (Orecchiante's parts, docs/recording-design.md §8): the ones turned off,
         // and the faders not at 100% — the page's own, as the score's parts are (not kept).
         var recPartsOff = [];
         var recPartLevels = {};
@@ -5139,7 +5161,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             b.textContent = name;
             b.dataset.recPart = name;
             b.disabled = !ready;
-            b.title = ready ? 'The recording\\'s ' + name + ' (a part of it): on or off'
+            b.title = ready ? 'The recording\\'s ' + name + ' (a part of it): on or off\\n' + ONLY_THIS_HINT
                 : (recording && recording.partsError && recording.partsError[name]) || 'The recording\\'s parts are loading';
             b.classList.add('pname');
             // (its own on/off, kept while the recording is off: the line is dimmed then)
@@ -5150,10 +5172,12 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             const sBtn = mixerSmall('S', 'Solo: of the recording, only the parts soloed sound (the score as it is)');
             sBtn.setAttribute('aria-pressed', String(solo.has('rec:' + name)));
             sBtn.disabled = !ready;
-            line.classList.toggle('unheard', (!on && !recAllOn) || (!recOn && !solo.has('rec:' + name)) || (recSoloed() && !solo.has('rec:' + name)));
-            const mute = () => {
+            line.classList.toggle('unheard', (!on && !recAllOn) || (!recOn && !recAllOn && !solo.has('rec:' + name)) || (recSoloed() && !solo.has('rec:' + name)));
+            const mute = (e) => {
                 recAllOn = false;   // (pressed while All is in: All goes out, as the score's lines)
-                recPartsOff = recPartsOff.includes(name) ? recPartsOff.filter(n => n !== name) : recPartsOff.concat([name]);
+                // Alt+click: this part alone (as the score's lines — owner's decision 2026-11-20).
+                if (e && e.altKey) recPartsOff = ((recording && recording.parts) || []).filter(n => n !== name);
+                else recPartsOff = recPartsOff.includes(name) ? recPartsOff.filter(n => n !== name) : recPartsOff.concat([name]);
                 applyRecParts();
                 showMixerHead();
             };
@@ -5200,7 +5224,8 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         /** Whether the recording sounds with the next Play: on, and loaded. */
         function recordingAlong() {
             // (on — or one of its parts soloed: a soloed line is heard with its group off, owner's decision 2026-11-17)
-            return !!((recOn || recSoloed()) && recording && recording.ready && recordingPlayer());
+            // (…or its All pressed in: All sounds every part whatever the group's button says — 2026-11-20)
+            return !!((recOn || recSoloed() || (recAllOn && recording && (recording.parts || []).length > 0)) && recording && recording.ready && recordingPlayer());
         }
         /** The score's bars on the recording's (LysSynth.timeWarp), or null: the recording off or
          *  not loaded, or the two not lined up. */
@@ -5376,7 +5401,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             playRecordingFrom(0);
             return true;
         }
-        /** The score and the recording a bar apart or more (Dettato's request 11, the owner
+        /** The score and the recording a bar apart or more (Orecchiante's request 11, the owner
          *  2026-11-16): they still play together as far as the shorter goes, and the panel says so. */
         function recCountsDiffer(counts) {
             const n = Math.min(counts.score, counts.rec);
@@ -5425,6 +5450,8 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             recAllOn = !recAllOn;
             applyRecParts();
             showMixerHead();
+            // (the recording's button out: All brings the recording in or takes it out — what plays is planned again)
+            if (!recOn) { showRecording(); practiceChanged(practice.speed); }
         });
         // The mixer's group heads (§1 2). The recording's: its on/off and All (above), its fader. (No group
         // solo: the other group's on/off released does it.)

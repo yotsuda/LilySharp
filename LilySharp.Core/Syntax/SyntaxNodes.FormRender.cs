@@ -1435,19 +1435,44 @@ public sealed partial class TabRenderSyntax : SyntaxNode
         return (last.Span.End, last.Span.End, " as " + word);
     }
 
-    /// <summary>Every word after the item's <c>as</c>, in order.</summary>
+    /// <summary>Every style or octave word after the item's <c>as</c>, in order — the
+    /// <c>removeEmpty</c> pair is not one of them (<see cref="RemoveEmptyToken"/>).</summary>
     internal IEnumerable<SyntaxTokenNode> SelectorWords()
     {
-        bool after = false;
+        bool after = false, value = false;
         int end = StaffSoundClause.Of(this).End;
         for (int i = 1; i < end; i++)
         {
             if (GetChild(i) is not SyntaxTokenNode t)
                 continue;
+            if (value) { value = false; if (t.Kind == SyntaxKind.Identifier) continue; }
             if (after)
+            {
+                if (string.Equals(t.Text, "removeEmpty", System.StringComparison.Ordinal)) { value = true; continue; }
                 yield return t;
+            }
             else if (string.Equals(t.Text, "as", System.StringComparison.Ordinal))
                 after = true;
+        }
+    }
+
+    /// <summary>The value of the item's <c>as … removeEmpty V</c> (<c>true | all | false</c>), or
+    /// null when it writes none: hara-kiri for a tab, as a staff's (owner's request 2026-11-20).</summary>
+    public SyntaxTokenNode? RemoveEmptyToken
+    {
+        get
+        {
+            bool after = false;
+            int end = StaffSoundClause.Of(this).End;
+            for (int i = 1; i < end; i++)
+            {
+                if (GetChild(i) is not SyntaxTokenNode t)
+                    continue;
+                if (!after) { after = string.Equals(t.Text, "as", System.StringComparison.Ordinal); continue; }
+                if (string.Equals(t.Text, "removeEmpty", System.StringComparison.Ordinal))
+                    return i + 1 < end && GetChild(i + 1) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } v ? v : null;
+            }
+            return null;
         }
     }
 

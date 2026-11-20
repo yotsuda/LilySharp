@@ -28,7 +28,7 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// A chord row writes <c>time</c> at a bar's head (Dettato's request 13, owner's decision
+/// A chord row writes <c>time</c> at a bar's head (Orecchiante's request 13, owner's decision
 /// 2026-11-16): <c>| G C#m7(b5) | time 2/4 C#m7(b5) | time 4/4 C Dsus4 |</c>. It is the score's
 /// meter from that bar to the section's end, as a <c>time</c> in a part's music is
 /// (<see cref="SectionMeterPlan"/>): the page engraves it, the slots grid on it, every part
@@ -103,7 +103,7 @@ public class ChordRowTimeTests
         Assert.Null(meters[4]);
     }
 
-    // Dettato's request 18: on a rows-only sheet the slots of the bar a row's `time` opens were
+    // Orecchiante's request 18: on a rows-only sheet the slots of the bar a row's `time` opens were
     // gridded on the score's meter — `time 3/4 E . F` was "3 chord slot(s) in a 4/4 bar" (LYS2009)
     // and F stood two thirds of the way through the bar, not on its third beat.
     [Theory]

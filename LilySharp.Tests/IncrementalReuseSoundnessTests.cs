@@ -447,7 +447,7 @@ public class IncrementalReuseSoundnessTests
         var foldedByStaffIdentity = new[]
         {
             nameof(Staff.Tuning), nameof(Staff.InstrumentName), nameof(Staff.ShortInstrumentName), nameof(Staff.IsOssia),
-            nameof(Staff.RemoveEmpty), nameof(Staff.RemoveFirst), nameof(Staff.StaffAffinity),
+            nameof(Staff.RemoveEmpty), nameof(Staff.RemoveFirst), nameof(Staff.StandIn), nameof(Staff.StaffAffinity),
             nameof(Staff.PerStaffKeySignature), nameof(Staff.IsTextRow), nameof(Staff.TextRowVerses),
             nameof(Staff.IsLyricsTextRow),
         nameof(Staff.TabSourceClef), nameof(Staff.Transposition), nameof(Staff.TabNumbersOnly), nameof(Staff.TabCapo),

@@ -629,7 +629,9 @@ public sealed partial class LilyPondExporter
         // (EmitScore places it), and LilyPond's clock is the page's for the same reason.
         Svg.Model.Staff? grid = null;
         foreach (var (_, staff, _) in score.EnumerateStaves())
-            if (!staff.IsTextRow && RenderSpecParser.IsAutoStaff(staff.PrimaryVoice.Name))
+            // (Not the one standing in for hidden staves, Staff.StandIn: LilyPond keeps no staff
+            // alive by the others' death, so the twin leaves it out and its clock is the music's.)
+            if (!staff.IsTextRow && !staff.StandIn && RenderSpecParser.IsAutoStaff(staff.PrimaryVoice.Name))
             {
                 grid = staff;
                 _autoStaffTiming = true;
@@ -673,7 +675,7 @@ public sealed partial class LilyPondExporter
             if (!cadenza && length != inForce)
             {
                 // The meter as the page spells it: the bar's own change (a row's `time 2/4` at a
-                // bar's head, Dettato's request 13) — not its length reduced, which wrote 1/2.
+                // bar's head, Orecchiante's request 13) — not its length reduced, which wrote 1/2.
                 var spelled = measures[m].Items.OfType<TimeSignatureChangeItem>().FirstOrDefault()?.NewTime;
                 AppendToken(line, spelled is { SenzaMisura: false } own && own.MeasureDuration == length
                     ? TimeText(new Semantics.Meter(own.Beats, own.BeatType, own.BeatsText, own.Grouping))

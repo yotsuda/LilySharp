@@ -26,7 +26,7 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// <c>lysc shape</c> (Dettato's request 9, owner's request 2026-11-16): a chord name's default
+/// <c>lysc shape</c> (Orecchiante's request 9, owner's request 2026-11-16): a chord name's default
 /// diagram, the shape the editor's step writes first (<see cref="ChordShapes.Default"/>), so a
 /// chart written by another program carries it without a second table of shapes.
 /// </summary>
@@ -78,9 +78,9 @@ public class CliShapeTests
     }
 
     [Fact]
-    public void EveryChordDettatoWrites_HasAShape_TheEditorsFirst()
+    public void EveryChordOrecchianteWrites_HasAShape_TheEditorsFirst()
     {
-        // Dettato writes 12 roots × 8 kinds × (no bass or 12): every one has a guitar shape, and
+        // Orecchiante writes 12 roots × 8 kinds × (no bass or 12): every one has a guitar shape, and
         // it is the editor's first (the same ChordShapes.Default; checked here for the plain ones).
         string[] roots = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
         string[] kinds = ["", "m", "7", "maj7", "m7", "sus4", "dim", "m7(b5)"];

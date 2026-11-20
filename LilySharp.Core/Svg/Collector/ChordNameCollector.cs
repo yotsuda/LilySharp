@@ -109,7 +109,7 @@ internal sealed class ChordNameCollector
     /// <see cref="ChordNameItem.TodoBelow"/> hold it — read the way a note's is
     /// (<c>MeasureCollector.TodoKeyOf</c>): the marks are the host's child nodes.</summary>
     /// <remarks>An <c>@or</c> (<see cref="Semantics.OrAnnotation"/>) is shown the same way, in grey,
-    /// its memo the first candidate (<c>or Bm?</c>) — owner's decision 2026-11-17, the way Dettato
+    /// its memo the first candidate (<c>or Bm?</c>) — owner's decision 2026-11-17, the way Orecchiante
     /// had written <c>@todo("or Bm?")</c>. Beside a <c>@todo</c>, the todo's red ring stands and the
     /// candidate follows its memo.</remarks>
     private static (string? Key, string? Memo, bool Below, bool Grey) TodoOf(SyntaxNode host)
@@ -796,7 +796,7 @@ internal sealed class ChordNameCollector
         => CountBars(SectionItems(section), out trailingOpen);
 
     /// <summary>
-    /// The <c>time</c>s a chord row writes (Dettato's request 13, owner's decision 2026-11-16): each
+    /// The <c>time</c>s a chord row writes (Orecchiante's request 13, owner's decision 2026-11-16): each
     /// at the bar of its row it stands in — counted as <see cref="CountBars(IEnumerable{SyntaxNode}, out bool)"/>
     /// counts, the one rule — and whether it stands after that bar's first entry (<c>MidBar</c>:
     /// refused by the validator, and read by nobody). For <see cref="SectionMeterPlan"/>, which makes a

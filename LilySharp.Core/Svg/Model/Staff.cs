@@ -180,6 +180,15 @@ public sealed record Staff(
     public bool Equals(Staff? other) => ReferenceEquals(this, other);
 
     /// <summary>
+    /// The automatic one-line staff standing in for staves that may all be hidden — a score of
+    /// rows and staves every one of which is <c>as removeEmpty</c> (owner's request 2026-11-20:
+    /// a chord chart with a bass tab written by ear, <c>tab bass as removeEmpty true</c>, lost the
+    /// one-line staff in the systems the tab left). Shown in a system only where every other
+    /// staff is hidden (<see cref="Layout.HaraKiri"/>), as a score of rows alone always shows it.
+    /// </summary>
+    public bool StandIn { get; init; }
+
+    /// <summary>
     /// The notes of other staves that <c>@cross</c> moved onto this one. They stay in their own
     /// voices; this staff's skyline holds their heads.
     /// </summary>

@@ -2520,6 +2520,112 @@ function meterAt(text: string, offset: number): number {
     return closedBelow ? NaN : meter;
 }
 
+/** Each character of `text` from `from` to `to` that is code — strings and comments skipped —
+ * handed to `visit` with its index; `visit` returns how many characters it consumed past it
+ * (0 for none). */
+function scanCode(text: string, from: number, to: number, visit: (i: number) => number): void {
+    for (let i = from; i < to; i++) {
+        const c = text[i];
+        if (c === '"') {
+            const close = text.indexOf('"', i + 1);
+            if (close < 0) { return; }
+            i = close;
+        } else if (c === '/' && text[i + 1] === '/') {
+            const nl = text.indexOf('\n', i);
+            if (nl < 0) { return; }
+            i = nl;
+        } else if (c === '/' && text[i + 1] === '*') {
+            const close = text.indexOf('*/', i + 2);
+            if (close < 0) { return; }
+            i = close + 1;
+        } else {
+            i += visit(i);
+        }
+    }
+}
+
+/** A `time N/D` starting at `i` — its meter in WHOLE units (NaN for a denominator that is no
+ * duration) and its length — or null. */
+function timeAt(text: string, i: number): { meter: number, length: number } | null {
+    if (text[i] !== 't' || isWordChar(text[i - 1]) || !text.startsWith('time', i)) { return null; }
+    const m = /^time\s+([0-9]+)\s*\/\s*([0-9]+)/.exec(text.slice(i, i + 24));
+    if (!m) { return null; }
+    const n = parseInt(m[1], 10), d = parseInt(m[2], 10);
+    return { meter: DURATIONS.includes(String(d)) && n > 0 ? n * (WHOLE / d) : NaN, length: m[0].length };
+}
+
+/**
+ * The meter of the bar the caret is in, inside a part's block of a top-level section
+ * (`section G { chords prog { … | time 2/4 G | time 4/4 C | } bass { …▮ } }`) — by the
+ * language's rule (GRAMMAR ChordRowTime; SectionMeterPlan): a section opens on its header's
+ * `time`, else the score's, and a `time` at a bar's head in ANY of its blocks — a chords row
+ * included — is the score's meter from that bar to the section's end, the first in document
+ * order where two write one bar. `undefined` when the caret's block is not a section's.
+ * Owner's report 2026-11-20: the bar line was not written in such a section — `meterAt`
+ * found the chords row's `time` in a block already closed and could not say its reach.
+ */
+function sectionBarMeter(text: string, offset: number, blockStart: number): number | undefined {
+    const open = blockStart - 1;
+    // The section's `{`: the block enclosing the caret's.
+    let parent = -1;
+    for (let i = open - 1, depth = 0; i >= 0; i--) {
+        if (text[i] === '}') { depth++; }
+        else if (text[i] === '{') { if (depth === 0) { parent = i; break; } depth--; }
+    }
+    if (parent < 0) { return undefined; }
+    const name = wordBefore(text, parent);
+    if (!name.word || wordBefore(text, name.at).word !== 'section') { return undefined; }
+    // The score's meter: the last top-level `time` before the section.
+    let score = WHOLE, depth0 = 0;
+    scanCode(text, 0, wordBefore(text, name.at).at, i => {
+        const c = text[i];
+        if (c === '{') { depth0++; } else if (c === '}') { depth0--; }
+        else if (depth0 === 0) { const t = timeAt(text, i); if (t) { score = t.meter; return t.length - 1; } }
+        return 0;
+    });
+    // The section's body: its header's `time`, and each block's changes by bar index.
+    let header: number | undefined;
+    const changes: { bar: number, at: number, meter: number }[] = [];
+    let caretBar = -1, depth = 0, bar = 0, inOwn = false;
+    scanCode(text, parent + 1, text.length, i => {
+        const c = text[i];
+        if (c === '{') {
+            depth++;
+            if (depth === 1) { bar = 0; inOwn = i === open; }
+            return 0;
+        }
+        if (c === '}') {
+            if (depth === 0) { return text.length; }   // the section's own close: stop
+            depth--;
+            return 0;
+        }
+        if (inOwn && depth >= 1 && i >= offset && caretBar < 0) { caretBar = bar; }
+        if (depth >= 1 && c === '|') {
+            // One bar line, however it is spelled (`|`, `||`, `:|:`, `|.`).
+            let j = i;
+            while (j + 1 < text.length && '|:.'.includes(text[j + 1])) { j++; }
+            bar++;
+            return j - i;
+        }
+        const t = timeAt(text, i);
+        if (t) {
+            if (depth === 0) { header = t.meter; }
+            else if (!inOwn || i < offset) { changes.push({ bar, at: i, meter: t.meter }); }
+            return t.length - 1;
+        }
+        return 0;
+    });
+    if (caretBar < 0) { caretBar = inOwn ? bar : 0; }
+    let meter = header ?? score;
+    // Bar by bar up to the caret's, the first written at a bar standing.
+    const byBar = new Map<number, number>();
+    for (const ch of changes.sort((a, b) => a.at - b.at)) {
+        if (ch.bar <= caretBar && !byBar.has(ch.bar)) { byBar.set(ch.bar, ch.meter); }
+    }
+    for (const b of [...byBar.keys()].sort((x, y) => x - y)) { meter = byBar.get(b)!; }
+    return meter;
+}
+
 /** A running duration: the base (4 for a quarter) and its dots. */
 type Running = { base: number, dots: number };
 
@@ -2776,7 +2882,9 @@ export function autoBarlinePlan(text: string, offset: number): FixPlan | null {
     const [blockStart] = blockBounds(before, offset);
     const open = blockStart - 1;
     if (open < 0 || before[open] !== '{') { return null; }
-    const meter = meterAt(before, offset);
+    // A part's block in a section: the section's meter at the caret's bar, by the language's
+    // rule (sectionBarMeter) — a chords row's `time` included. Elsewhere the last `time`.
+    const meter = sectionBarMeter(before, offset, blockStart) ?? meterAt(before, offset);
     if (!Number.isFinite(meter)) { return null; }
 
     // What the block opens with: a voice's block the running duration in force where its

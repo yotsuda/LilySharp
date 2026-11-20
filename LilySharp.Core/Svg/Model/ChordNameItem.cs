@@ -189,7 +189,7 @@ public sealed record ChordNameItem
     public bool TodoBelow { get; init; }
 
     /// <summary>The mark is an <c>@or</c> alone (no <c>@todo</c> beside it): drawn in grey, its memo
-    /// the first candidate (<c>or Bm?</c>; Dettato request 17, owner's decision 2026-11-17).</summary>
+    /// the first candidate (<c>or Bm?</c>; Orecchiante request 17, owner's decision 2026-11-17).</summary>
     public bool TodoGrey { get; init; }
 
     /// <summary>

@@ -556,10 +556,13 @@ public class CompletionAuditTests
         var items = LilySharpLanguageServer.GetTabAttachNameCompletions().Items;
         // The selector rows first, one per compiler style, then the score's continuations.
         var selectors = items.TakeWhile(i => i.Label!.StartsWith("as ", StringComparison.Ordinal)).Select(i => i.Label!).ToList();
-        Assert.Equal(LanguageVocabulary.TabStyles.Concat(LanguageVocabulary.TabOctaves).Select(s => "as " + s), selectors);
+        // (…and hara-kiri after them, 2026-11-20: TabRemoveEmptyTests)
+        Assert.Equal(LanguageVocabulary.TabStyles.Concat(LanguageVocabulary.TabOctaves).Select(s => "as " + s).Append("as removeEmpty"), selectors);
         Assert.Contains(items, i => i.Label == "staff");
-        foreach (string selector in selectors)
+        foreach (string label in selectors)
         {
+            // (`as removeEmpty` re-opens the popup on its values, as a staff's: written with one)
+            string selector = label == "as removeEmpty" ? label + " true" : label;
             AssertCompiles(Book(items: $"staff m  tab m {selector}"), $"`tab m {selector}`");
             AssertCompiles(Book(items: $"staff m  tab bass5 m {selector}"), $"`tab bass5 m {selector}`");
         }

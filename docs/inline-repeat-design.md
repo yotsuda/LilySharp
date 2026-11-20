@@ -120,7 +120,7 @@ LYS1034 のエラーが出ていても出力は書かれるので、今の答え
 | タイの持ち越し・小節の補完（`PlayedOrder.Expand`・`SectionBoundaryBars`） | **測った（第1245・§7）。** タイは 5 つの読み手とも直した（MIDI 第1245・ページと検査 第1246・MusicXML と `.ly` 第1247）。`:|` が割る小節も 5 つとも 1 小節と読む（第1247・`SignCutBars`） | score 全体の記号の列（`RepeatStream`）から「小節の次に鳴る小節」を引く |
 | 歌詞の `verse N` | 未測定 | §6 Q3 |
 | プレビューの増分（`MeasureCollector.Resume`） | **測った（第1245）。** 記号を 1 つのパートに打つ・消す・1 文字ずつ打つ 10 通りで、増分の絵は全部描き直した絵と同じ（網 `InlineRepeatIncrementalTests`） | なし |
-| 読み込み（`LysWriter`）・OMR・Dettato | section に分解して書く | §6 Q2 |
+| 読み込み（`LysWriter`）・OMR・Orecchiante | section に分解して書く | §6 Q2 |
 
 オーナーの本にも前例がある: LYS1034 より前、ABC・Automatic・Beat It の 3 冊は `|:` を 1 つの section に、
 `] :|` を後ろの section に書いていた（`MidiExporter.cs` :2975-2978 の注）。§3.3 はその綴りを戻す。
@@ -144,9 +144,9 @@ LYS1034 は**最後に**外す。エラーの本も今は描けて鳴るので�
 ## 6. 未決（オーナーに訊く）
 
 - ~~**Q1** section の無いファイル~~ — 閉じた（§3.1。残る形は平らな chords トラックだけで、同じ記号を読む・網 `AFlatChordsTrackWritesEndingsToo`）。
-- ~~**Q2** 読み込み・OMR・Dettato の書き出しの綴り~~ — **オーナー決定 2026-11-14**: 反復記号は**なるべく form 側**に書き出す（今の形のまま）。
+- ~~**Q2** 読み込み・OMR・Orecchiante の書き出しの綴り~~ — **オーナー決定 2026-11-14**: 反復記号は**なるべく form 側**に書き出す（今の形のまま）。
   volta の ending の小節が短い場合は section 側に書いてもよい（1 小節の ending のために section を切らない）。境目の小節数は書き出す側で決める。
-  本体が出てから、Calamo と Dettato の REQUESTS に知らせる。
+  本体が出てから、Calamo と Orecchiante の REQUESTS に知らせる。
 - **Q3** 歌詞の `verse N`（**オーナー決定 2026-11-14: 下の 5 規則でよい**。歌い分けは実装済み・警告と quick fix は未実装）。オーナーの方向（2026-11-14）:「規則を増やした方が分かりやすくなるかもしれない。
   たとえば section の中で繰り返しがあれば、必ず対応する `verse 1 {}` を書かないといけない」。最初の案（その小節が歌われる N 回目＝verse N）は、
   中に反復を持つ section を form がもう一度演奏すると行と番が対応しなくなるので取り下げた。
@@ -328,7 +328,7 @@ LYS1034 は**最後に**外す。エラーの本も今は描けて鳴るので�
 - 網: `RepeatStructureScopeValidatorTests`（phrase の 4 形・書ける場所 11 形）・`CompletionAuditTests` 3 本・`FormCompletionTests`（サーバー経由・phrase の中）・`FormJumpTargetValidatorTests` 11 本。
   毒 9 本とも赤（Lab `p1249/poisons.ps1`）。
 - 残り: step キー（`NoteStepper`）は音楽の小節線を `|` `||` `|.` `!` のまま回す（反復記号は回らない）／~~`|: d1 [1. e1 :|` に LYS1071 と一緒に LYS1041 も出る~~（第1250 で LYS1071 だけに）／
-  fixture と audit の本は form の綴りのまま（2026-08-31 に切り直した形・戻していない）／Calamo と Dettato への知らせ（Q2）は release のときに。
+  fixture と audit の本は form の綴りのまま（2026-08-31 に切り直した形・戻していない）／Calamo と Orecchiante への知らせ（Q2）は release のときに。
 
 ## 8. エディタ: 記号を全パートに書く（オーナー決定 2026-11-14・実装 `Editing.RepeatSignSpreader`＝小節線は第1243・ending とナビ記号は第1254・実機は未確認）
 

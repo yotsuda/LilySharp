@@ -50,7 +50,7 @@ function activeChart(): vscode.Uri | undefined {
 }
 
 /**
- * Attaches a recording to a chart: writes the file beside the chart, `<stem>.dettato.json`
+ * Attaches a recording to a chart: writes the file beside the chart, `<stem>.orecchiante.json`
  * (format 2, no bars yet — they are set by hand in the preview). From the Explorer's right-click
  * on a recording, or from the Command Palette for the chart open in the editor. A recording in
  * another folder stays where it is: the file names the way to it (audioRef; owner's decision
@@ -214,7 +214,7 @@ export async function sendRecording(panel: vscode.WebviewPanel, chart: vscode.Ur
         parts: shownPartOrder(parts.map(p => p.name)) };
     if (!audio || !audioKey) {
         // Moved, renamed outside VS Code, or on a drive not here: say where it was looked for, and
-        // let it be found again (Dettato's request 6).
+        // let it be found again (Orecchiante's request 6).
         post({ ...base, error: `${shown} cannot be found (${audio!.fsPath})` });
         offerLocate(chart, audio!.fsPath, key);
         return;
@@ -255,7 +255,7 @@ export async function sendRecording(panel: vscode.WebviewPanel, chart: vscode.Ur
         post({ ...base, error: String(e) });
         return;
     }
-    // Then its parts, each the file's bytes for the page to decode (FLAC as Dettato writes them),
+    // Then its parts, each the file's bytes for the page to decode (FLAC as Orecchiante writes them),
     // or why it cannot be — after the recording, which plays without them.
     if (parts.length === 0) {
         return;
@@ -391,7 +391,7 @@ export function followCopies(): vscode.Disposable {
                 const lower = file.fsPath.toLowerCase();
                 if (lower.endsWith('.lys')) {
                     await chartCopied(file.fsPath, open);
-                } else if (lower.endsWith('.dettato.json')) {
+                } else if (lower.endsWith('.orecchiante.json')) {
                     await recordingFileCopied(file.fsPath);
                 }
             } catch (err) {
@@ -467,7 +467,7 @@ async function recordingFileCopied(file: string): Promise<void> {
     }
     // The file it was copied from: the same text, beside a chart.
     let from: string | undefined;
-    for (const u of await vscode.workspace.findFiles('**/*.dettato.json', '**/node_modules/**', 2000)) {
+    for (const u of await vscode.workspace.findFiles('**/*.orecchiante.json', '**/node_modules/**', 2000)) {
         if (samePath(u.fsPath, file)) { continue; }
         const t = await readText(u);
         const chart = chartPathFor(u.fsPath);
@@ -504,19 +504,19 @@ export function followRenames(): vscode.Disposable {
             const texts = new Map<string, string | undefined>();
             try {
                 inFolder = (await vscode.workspace.fs.readDirectory(vscode.Uri.file(folder)))
-                    .filter(([n]) => n.toLowerCase().endsWith('.dettato.json')).map(([n]) => path.join(folder, n));
+                    .filter(([n]) => n.toLowerCase().endsWith('.orecchiante.json')).map(([n]) => path.join(folder, n));
                 for (const f of inFolder) {
                     texts.set(f, await readText(vscode.Uri.file(f)));
                 }
             } catch {
                 // (a folder gone: nothing to follow)
             }
-            // A recording may be named from anywhere (audio leads to it, Dettato's request 6): every
+            // A recording may be named from anywhere (audio leads to it, Orecchiante's request 6): every
             // file beside a chart in the workspace may name it.
             const isRecording = [...WEBVIEW_AUDIO, ...WINDOWS_AUDIO].includes(path.extname(oldUri.fsPath).slice(1).toLowerCase());
             if (isRecording) {
                 try {
-                    for (const u of await vscode.workspace.findFiles('**/*.dettato.json', '**/node_modules/**', 2000)) {
+                    for (const u of await vscode.workspace.findFiles('**/*.orecchiante.json', '**/node_modules/**', 2000)) {
                         if (!texts.has(u.fsPath)) {
                             inFolder.push(u.fsPath);
                             texts.set(u.fsPath, await readText(u));

@@ -29,7 +29,7 @@ namespace LilySharp.Tests;
 /// (<see cref="ChordRhythm.BeatsOf"/>) — by every reader of the row: the page, its check
 /// (LYS2009), the sound, the MusicXML and the LilyPond twin. Until 2026-11-14 the page and the
 /// twin gridded the pickup on the whole meter and scaled it, and the sound and the MusicXML
-/// gridded it on the whole meter and cut it (Dettato's request 3, Lab sessions/p1242/dettato):
+/// gridded it on the whole meter and cut it (Orecchiante's request 3, Lab sessions/p1242/orecchiante):
 /// three chords over three beats of pickup in 4/4 were warned off the grid and written to the
 /// MusicXML a third of a bar apart, and the second of two chords over two beats neither
 /// sounded nor was written.

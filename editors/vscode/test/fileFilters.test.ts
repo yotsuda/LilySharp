@@ -20,7 +20,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { importFilters } from '../src/fileFilters';
 import { OMR_INPUT_EXTENSIONS } from '../src/omrCore';
-import { DETTATO_INPUTS } from '../src/dettatoCore';
+import { ORECCHIANTE_INPUTS } from '../src/orecchianteCore';
 
 // Owner's request 2026-11-18: the scans' and the recordings' pickers offer every kind, then each
 // kind alone, as Import MusicXML, MIDI or ABC… does.
@@ -32,7 +32,7 @@ describe('the import pickers\' filters', () => {
         });
     });
     it('offer every recording kind, then each — what the reader says it reads, in its order', () => {
-        assert.deepEqual(Object.keys(importFilters('Recordings', DETTATO_INPUTS)),
+        assert.deepEqual(Object.keys(importFilters('Recordings', ORECCHIANTE_INPUTS)),
             ['Recordings', 'WAV', 'MP3', 'M4A', 'MP4', 'AAC', 'FLAC', 'WMA']);
         assert.deepEqual(importFilters('Recordings', ['WAV', 'ogg']), { Recordings: ['wav', 'ogg'], WAV: ['wav'], OGG: ['ogg'] });
     });
@@ -42,7 +42,7 @@ describe('the import pickers\' filters', () => {
     it('are what the pickers use — Attach Recording and Locate Recording too', () => {
         const src = (f: string) => fs.readFileSync(path.join(__dirname, '..', '..', 'src', f), 'utf8');
         assert.match(src('omrImport.ts'), /filters: importFilters\('Scans and PDF', OMR_INPUT_EXTENSIONS\)/);
-        assert.match(src('dettato.ts'), /filters: importFilters\('Recordings', reader\.inputs\)/);
+        assert.match(src('orecchiante.ts'), /filters: importFilters\('Recordings', reader\.inputs\)/);
         const recording = src('recording.ts');
         assert.equal(recording.match(/filters: importFilters\('Recordings', kinds\)/g)?.length, 2);
         assert.doesNotMatch(recording, /filters: \{ Recordings:/);

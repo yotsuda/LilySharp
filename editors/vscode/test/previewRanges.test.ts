@@ -175,7 +175,8 @@ describe('the preview\'s Range panel', () => {
         // 2026-11-17: S is "listen to this").
         assert.match(html, /out\.muted = own\.muted\.filter\(n => !solo\.has\('part:' \+ n\)\)/);
         assert.match(html, /out\[name\] = \(soloParts \? !solo\.has\('rec:' \+ name\) : recPartsOff\.includes\(name\) && !recAllOn\) \? 0 : levelIn\(recPartLevels, name\);/);
-        assert.match(html, /return !!\(\(recOn \|\| recSoloed\(\)\) && recording && recording\.ready && recordingPlayer\(\)\);/);
+        // …and its All pressed in sounds it with its button out (owner's request 2026-11-20).
+        assert.match(html, /return !!\(\(recOn \|\| recSoloed\(\) \|\| \(recAllOn && recording && \(recording\.parts \|\| \[\]\)\.length > 0\)\) && recording && recording\.ready && recordingPlayer\(\)\);/);
         // The practice panel's folds are kept per file; a file's first opening has every group folded
         // (owner's requests 2026-11-17).
         assert.match(html, /practiceBtn\.setAttribute\('aria-expanded', 'true'\);[\s\S]{0,300}applyFolds\(\);/);
@@ -265,7 +266,7 @@ describe('the preview\'s Range panel', () => {
     // sending of the sound says turnOn, once, and the page turns the recording on.
     it('starts a chart just made from its recording with the recording on, once', () => {
         const src = (name: string) => fs.readFileSync(path.join(__dirname, '..', '..', 'src', name), 'utf8');
-        assert.match(src('dettato.ts'), /markJustConverted\(chart\);\s*const doc = await vscode\.workspace\.openTextDocument\(chart\);/);
+        assert.match(src('orecchiante.ts'), /markJustConverted\(chart\);\s*const doc = await vscode\.workspace\.openTextDocument\(chart\);/);
         assert.match(src('recording.ts'), /const turnOn = justConverted\.delete\(chartKey\(chart\.fsPath\)\);\s*post\(\{ \.\.\.base, bytes: new Uint8Array\(bytes\), \.\.\.\(turnOn \? \{ turnOn: true \} : \{\}\) \}\);/);
         assert.match(html, /if \(m\.turnOn\) recOn = true;/);
     });

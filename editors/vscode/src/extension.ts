@@ -35,7 +35,7 @@ import { registerExportBatch } from './exportBatch';
 import { OmrImportDeps, importFromImage } from './omrImport';
 import { DecodeResult, attachRecording, followCopies, followRenames, keepRecordingSettings, sendNoRecording, sendRecording, useRecordingSettingsStore } from './recording';
 import { TimedNote, soundingOf, soundingPartsOf, soundingWait, startSecondsAt } from './playbackStart';
-import { convertRecording, findDettato, registerDettatoContext } from './dettato';
+import { convertRecording, findOrecchiante, registerOrecchianteContext } from './orecchiante';
 import { newScoreSources } from './menuContextCore';
 import { recordingPathFor } from './recordingCore';
 import { findOmr, registerOmrContexts } from './omrReader';
@@ -658,7 +658,7 @@ export function activate(context: vscode.ExtensionContext) {
     // (it offers that extension when the reader is missing); in the Explorer's menu only where a
     // reader is — kept current as extensions come and go (omrReader.ts).
     registerOmrContexts(context, outputChannel);
-    registerDettatoContext(context, outputChannel);
+    registerOrecchianteContext(context, outputChannel);
 
     // "Show Original Scan" (LilySharp-Omr proposal B3) is offered on a .lys an OMR reader
     // wrote, i.e. one with its side file beside it.
@@ -897,8 +897,8 @@ export function activate(context: vscode.ExtensionContext) {
         // a second picker, as New File… cannot hold a submenu (menuContextCore.newScoreSources).
         vscode.commands.registerCommand('lilysharp.newScoreFromFile', async () => {
             const onWindows = process.platform === 'win32';
-            const [omr, dettato] = onWindows ? [undefined, undefined] : await Promise.all([findOmr(context), findDettato()]);
-            const sources = newScoreSources(onWindows, omr !== undefined, dettato !== undefined);
+            const [omr, orecchiante] = onWindows ? [undefined, undefined] : await Promise.all([findOmr(context), findOrecchiante()]);
+            const sources = newScoreSources(onWindows, omr !== undefined, orecchiante !== undefined);
             const picked = await vscode.window.showQuickPick(sources, {
                 title: 'New Score from…',
                 placeHolder: 'What to make the score from',
@@ -915,7 +915,7 @@ export function activate(context: vscode.ExtensionContext) {
         // chart, never by the .lys; renames keep the two together.
         vscode.commands.registerCommand('lilysharp.attachRecording', (uri?: vscode.Uri) =>
             attachRecording(uri instanceof vscode.Uri ? uri : undefined)),
-        // Dettato writes the chart (and the file beside it) from a recording; without it the
+        // Orecchiante writes the chart (and the file beside it) from a recording; without it the
         // command offers its extension (owner's decision 2026-11-15).
         vscode.commands.registerCommand('lilysharp.convertRecording', (uri?: vscode.Uri) =>
             convertRecording(context, uri instanceof vscode.Uri ? uri : undefined, outputChannel,
@@ -1972,10 +1972,10 @@ async function decodeRecordingOnServer(input: string, output: string): Promise<D
     return client.sendRequest<DecodeResult>('lilysharp/decodeRecording', { Input: input, Output: output });
 }
 
-/** A file beside a chart written or removed (Attach Recording…, the bar marks, Dettato): the
+/** A file beside a chart written or removed (Attach Recording…, the bar marks, Orecchiante): the
  *  chart's open preview hears of it at once. */
 function watchRecordings(context: vscode.ExtensionContext): vscode.Disposable {
-    const watcher = vscode.workspace.createFileSystemWatcher('**/*.dettato.json');
+    const watcher = vscode.workspace.createFileSystemWatcher('**/*.orecchiante.json');
     const changed = (file: vscode.Uri) => {
         for (const [uri, panel] of previewPanels) {
             const chart = vscode.Uri.parse(uri);

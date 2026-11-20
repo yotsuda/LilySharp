@@ -925,7 +925,7 @@ public static class DiagnosticCodes
     public const string ChordsBreakInsideBar = "LYS1069";
 
     /// <summary>A <c>time</c>, a <c>tempo</c> or a <c>key</c> stands after a chord, a rest or a <c>.</c> of its bar
-    /// in a chords track (<c>C time 2/4 F |</c>). A row writes either at a bar's head only (Dettato's request 13,
+    /// in a chords track (<c>C time 2/4 F |</c>). A row writes either at a bar's head only (Orecchiante's request 13,
     /// owner's decision 2026-11-16): the bar it opens is a bar of that meter. Kept in the tree, read
     /// by nobody.</summary>
     public const string ChordsTimeInsideBar = "LYS1073";
@@ -961,7 +961,7 @@ public static class DiagnosticCodes
     /// key it lands in has no twin (<c>Semantics.TransposeValueValidator</c>, 2026-11-16).</summary>
     public const string TransposeSpellingUnused = "LYS4081";
     /// <summary>Information: a chord still undecided — an <c>@or</c> on a chords-row symbol, with its
-    /// candidates (<c>Semantics.OrAnnotation</c>; Dettato request 17, owner's decisions 2026-11-17).
+    /// candidates (<c>Semantics.OrAnnotation</c>; Orecchiante request 17, owner's decisions 2026-11-17).
     /// Information, as a <see cref="TodoMark"/> is: F8 and the Problems list reach every chord left
     /// to decide.</summary>
     public const string OrMark = "LYS4082";

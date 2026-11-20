@@ -546,7 +546,7 @@ score { chords prog  staff melody }
 
 A chords-row symbol may also carry the chords it might be instead: `F@or(Bm Dm)` — the
 symbol written is the chord (it prints and plays), the candidates follow, space-separated.
-It is written by a transcription that is unsure (Dettato) or by hand, and it is there to be
+It is written by a transcription that is unsure (Orecchiante) or by hand, and it is there to be
 settled by ear:
 
 - **Ctrl+Shift+Up** on the symbol brings the first candidate forward —

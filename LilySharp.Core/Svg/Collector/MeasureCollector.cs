@@ -1458,7 +1458,7 @@ public sealed partial class MeasureCollector
     {
         // (A voice with no measure is no music: a rows-only sheet's one-line staff is in the table
         // with none, and with it taken for the music a row's own `time` — `| time 3/4 E . F |` —
-        // was gridded on the score's meter; LYS2009 said so, Dettato's request 18.)
+        // was gridded on the score's meter; LYS2009 said so, Orecchiante's request 18.)
         Voice? longest = null;
         foreach (var (name, voices) in staffVoices)
             if (!rowNames.Contains(name))
@@ -2253,6 +2253,7 @@ public sealed partial class MeasureCollector
         }
 
         GiveBlankStavesTheRowsBars(staffVoices, rowNames, pendingChordRows.Select(r => r.Item1));
+        GiveTheStandInTheMusicsBars(staffVoices, rowNames);
 
         // Bar lines are score-synchronized: LilyPond's Timing context lives
         // at Score level, so a repeat/double/final bar set by ANY part
@@ -3975,6 +3976,30 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>
+    /// The automatic one-line staff standing in for staves that may all be hidden
+    /// (<see cref="Staff.StandIn"/>, RenderSpecParser.Parse; owner's request 2026-11-20) walks no
+    /// music, and beside music the rows' bars are not the clock (<see cref="GiveBlankStavesTheRowsBars"/>
+    /// returns): it takes the bars of the longest music voice, silent — their lengths, bar lines
+    /// and meter changes — so it stands bar for bar where the hidden staves would.
+    /// </summary>
+    private static void GiveTheStandInTheMusicsBars(
+        Dictionary<string, ImmutableArray<Voice>> staffVoices, IReadOnlySet<string> rowNames)
+    {
+        if (!staffVoices.TryGetValue(RenderSpecParser.AutoStaffPart, out var auto)
+            || auto.Length == 0 || auto[0].Measures.Length > 0)
+            return;
+        ImmutableArray<Measure> grid = default;
+        foreach (var (name, voices) in staffVoices)
+            if (!rowNames.Contains(name) && !RenderSpecParser.IsAutoStaff(name))
+                foreach (var v in voices)
+                    if (grid.IsDefault || v.Measures.Length > grid.Length)
+                        grid = v.Measures;
+        if (grid.IsDefaultOrEmpty)
+            return;
+        staffVoices[RenderSpecParser.AutoStaffPart] = auto.SetItem(0, auto[0] with { Measures = SpacerSkeleton(grid, keepSignatures: true) });
+    }
+
+    /// <summary>
     /// The bar lengths of a ROWS-ONLY score, read off its structure — what
     /// <see cref="FitRowsToMusicBars"/> reads off the music when there is some. A score with
     /// no staff has no voice that walked the section headers, so the rows kept their grid
@@ -4031,7 +4056,7 @@ public sealed partial class MeasureCollector
             int meterPos = hasTime ? TimeDataPos(time!) : 0;
             Fraction? headerPickup = _sectionHeaders.Partials.TryGetValue(name, out var partial) && partial.Duration != null
                 ? partial.ToFraction() : null;
-            // A `time` a row writes at a bar's head (SectionMeterPlan: Dettato's request 13) is the
+            // A `time` a row writes at a bar's head (SectionMeterPlan: Orecchiante's request 13) is the
             // meter from that bar to the section's end, engraved where it stands.
             var changes = MeterPlan().TimelineOf(name);
             foreach (int start in starts)

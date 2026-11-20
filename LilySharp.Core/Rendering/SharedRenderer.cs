@@ -382,8 +382,14 @@ internal static partial class SharedRenderer
                 // in the phrase bodies — is written where its chart is (Measure.WrittenStart): the
                 // click goes there and the stretch is the chart's, not from the bodies at the top of
                 // the file down to the bar line (owner's report 2026-11-01: every Dr bar lit).
+                // A bar a part does not write yet — padded to the section's length — is written at
+                // the end of the part's block there (owner's request 2026-11-20): the click goes
+                // where its notes are to be typed, and its stretch is that one place.
                 if (last >= 0 && m < measures.Length && measures[m].WrittenStart is >= 0 and var written)
+                {
                     (best, first) = (written, written);
+                    to = Math.Max(to, written);
+                }
                 row[m] = last < 0
                     ? new BarSource(best >= 0 ? best : spacer, 0, 0)
                     : new BarSource(best >= 0 ? best : spacer, first, to);

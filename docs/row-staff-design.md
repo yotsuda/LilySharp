@@ -110,6 +110,21 @@
   線の数と `Blanked` も見る。2〜4 線の譜は今までどおり記号も描く（LilyPond と同じ）。
 - `.ly`・MusicXML には出さない（あちらは本物の調を持つ）。
 
+## 隠れる譜表の代わりに立つ一線譜（オーナー要望 2026-11-20）
+
+- 依頼: コード表に耳コピのベースの tab を足していく本（`chords prog` ＋ `tab bass as removeEmpty true`）で、tab が空のため消えた段に
+  一線譜が出なかった（行だけの score なら出るのに）。
+- 形: score に行（chords / lyrics）があり、**譜表の項目が全部 single staff か tab で、どれも `as removeEmpty`** のとき、自動の一線譜
+  （`(staff)`）を**最後**に足す（`RenderSpecParser.StandsInFor`）。この一線譜は `Staff.StandIn`＝**ほかの譜表が全部消えた段にだけ出る**
+  （`HaraKiri.ShouldHideStaff` の逆。最初の段は `removeEmpty true` の譜表が残るので出ない・`all` なら最初の段にも出る）。
+  LILYSHARP-OWN（LilyPond の hara-kiri に、ほかの死で生きる譜表は無い）。
+- 足すのは**行の fold の後**: 行は下の譜表に fold されるので、先に足すと `tab bass` の下の `chords` が代役に fold されて、tab のある段で
+  コードが消える。
+- 小節: 音楽を歩かない（行だけの score と同じ）。音楽がある score では行の小節が時計でないので、**一番長い音楽の声の小節を休符で写す**
+  （`MeasureCollector.GiveTheStandInTheMusicsBars`）。拍子・調の変化はそのまま（一線譜は調号を描かない既存の規則）。
+- 足さない: 消えない譜表が 1 つでもある・譜表の group／ossia／condensed／combined がある（どの段にも線がもう在る）。
+- 書き出し: MusicXML は自動の一線譜を今までどおり書かない。`.ly` の双子も書かない（「ほかが消えたときだけ」を LilyPond で書けない）。
+
 ## 作らないもの
 
 - 線の上のスラッシュ・休符（⑴）。描かない設定（⑶）。

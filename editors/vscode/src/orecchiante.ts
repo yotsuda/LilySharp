@@ -14,26 +14,26 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// "Convert Recording to Lily# (.lys)… (Preview)" — Dettato is a Preview (owner's decision 2026-11-15;
-// Calamo's menu says "(Preview)" too since 2026-11-18): runs Dettato on a recording and opens the chart it writes,
-// with the file beside it (`x.dettato.json`) that the preview plays the recording by
-// (docs/recording-design.md §2). The menu shows on Windows whether or not Dettato is installed; run
-// without it, it offers to install it (owner's decision 2026-11-15). dettatoCore.ts decides.
+// "Convert Recording to Lily# (.lys)… (Preview)" — Orecchiante is a Preview (owner's decision 2026-11-15;
+// Calamo's menu says "(Preview)" too since 2026-11-18): runs Orecchiante on a recording and opens the chart it writes,
+// with the file beside it (`x.orecchiante.json`) that the preview plays the recording by
+// (docs/recording-design.md §2). The menu shows on Windows whether or not Orecchiante is installed; run
+// without it, it offers to install it (owner's decision 2026-11-15). orecchianteCore.ts decides.
 
 import * as vscode from 'vscode';
 import * as cp from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import {
-    DETTATO_EXTENSION_ID, DettatoLocation, DettatoVersion, chartForConversion, dettatoArgs, dettatoFailure, judgeDettato,
-    besideChart, locateDettato, parseDettatoVersion, replaceQuestion,
-} from './dettatoCore';
+    ORECCHIANTE_EXTENSION_ID, OrecchianteLocation, OrecchianteVersion, chartForConversion, orecchianteArgs, orecchianteFailure, judgeOrecchiante,
+    besideChart, locateOrecchiante, parseOrecchianteVersion, replaceQuestion,
+} from './orecchianteCore';
 import { parseRecording, recordingPathFor } from './recordingCore';
 import { markJustConverted } from './recording';
 import { importFilters } from './fileFilters';
 
-async function dettatoExports(): Promise<unknown> {
-    const ext = vscode.extensions.getExtension(DETTATO_EXTENSION_ID);
+async function orecchianteExports(): Promise<unknown> {
+    const ext = vscode.extensions.getExtension(ORECCHIANTE_EXTENSION_ID);
     if (!ext) {
         return undefined;
     }
@@ -44,66 +44,66 @@ async function dettatoExports(): Promise<unknown> {
     }
 }
 
-export async function findDettato(): Promise<DettatoLocation | undefined> {
-    return locateDettato(process.env, await dettatoExports());
+export async function findOrecchiante(): Promise<OrecchianteLocation | undefined> {
+    return locateOrecchiante(process.env, await orecchianteExports());
 }
 
-/** Installs — or, installed, updates — Dettato's extension; a gallery that does not list it
+/** Installs — or, installed, updates — Orecchiante's extension; a gallery that does not list it
  *  (offline, or not published yet) gets the search instead. */
-async function installDettato(): Promise<void> {
+async function installOrecchiante(): Promise<void> {
     try {
-        await vscode.commands.executeCommand('workbench.extensions.installExtension', DETTATO_EXTENSION_ID);
+        await vscode.commands.executeCommand('workbench.extensions.installExtension', ORECCHIANTE_EXTENSION_ID);
     } catch {
-        await vscode.commands.executeCommand('workbench.extensions.search', `@id:${DETTATO_EXTENSION_ID}`);
+        await vscode.commands.executeCommand('workbench.extensions.search', `@id:${ORECCHIANTE_EXTENSION_ID}`);
     }
 }
 
 /** Says the reader is missing and offers its extension (as offerOmrExtension does for Calamo). */
-export async function offerDettato(): Promise<void> {
-    const install = 'Install Dettato';
+export async function offerOrecchiante(): Promise<void> {
+    const install = 'Install Orecchiante';
     const choice = await vscode.window.showInformationMessage(
-        'Lily#: converting a recording needs the Dettato extension (Preview, Windows). Install it?',
+        'Lily#: converting a recording needs the Orecchiante extension (Preview, Windows). Install it?',
         install);
     if (choice === install) {
-        await installDettato();
+        await installOrecchiante();
     }
 }
 
 /** Offers the reader's update (offerOmrUpdate's twin). True when the person took it. */
-async function offerDettatoUpdate(text: string): Promise<boolean> {
-    const update = 'Update Dettato';
+async function offerOrecchianteUpdate(text: string): Promise<boolean> {
+    const update = 'Update Orecchiante';
     if (await vscode.window.showWarningMessage(`Lily#: ${text}`, update) !== update) {
         return false;
     }
-    await installDettato();
+    await installOrecchiante();
     return true;
 }
 
 /** Once per install: the reader is a Preview, so its marks are where to look first (noteOmrBeta's twin). */
-async function noteDettatoPreview(context: vscode.ExtensionContext): Promise<void> {
-    const key = 'dettato.previewNoted';
+async function noteOrecchiantePreview(context: vscode.ExtensionContext): Promise<void> {
+    const key = 'orecchiante.previewNoted';
     if (context.globalState.get<boolean>(key)) {
         return;
     }
     await context.globalState.update(key, true);
     void vscode.window.showInformationMessage(
-        'Lily#: Dettato is a Preview. It marks every chord it is unsure of with @todo — '
+        'Lily#: Orecchiante is a Preview. It marks every chord it is unsure of with @todo — '
         + 'check those against the recording (the preview plays it) before trusting the chart.');
 }
 
-/** Keeps `lilysharp.dettatoAvailable` true to what is installed (the name is shared with
- *  Dettato's extension, which sets it on startup: Lab sessions/p1242/dettato reply). */
-export function registerDettatoContext(context: vscode.ExtensionContext, output: vscode.OutputChannel): void {
+/** Keeps `lilysharp.orecchianteAvailable` true to what is installed (the name is shared with
+ *  Orecchiante's extension, which sets it on startup: Lab sessions/p1242/orecchiante reply). */
+export function registerOrecchianteContext(context: vscode.ExtensionContext, output: vscode.OutputChannel): void {
     let said: string | undefined;
     const update = async () => {
-        const where = await findDettato();
-        const line = where ? `Dettato reader (${where.source}${where.version ? ' ' + where.version : ''}): ${where.path}`
-            : 'Dettato reader: none (Convert Recording to Lily# (.lys)… (Preview) offers the extension)';
+        const where = await findOrecchiante();
+        const line = where ? `Orecchiante reader (${where.source}${where.version ? ' ' + where.version : ''}): ${where.path}`
+            : 'Orecchiante reader: none (Convert Recording to Lily# (.lys)… (Preview) offers the extension)';
         if (line !== said) {
             said = line;
             output.appendLine(line);
         }
-        await vscode.commands.executeCommand('setContext', 'lilysharp.dettatoAvailable', where !== undefined);
+        await vscode.commands.executeCommand('setContext', 'lilysharp.orecchianteAvailable', where !== undefined);
     };
     void update();
     context.subscriptions.push(vscode.extensions.onDidChange(() => void update()));
@@ -111,8 +111,8 @@ export function registerDettatoContext(context: vscode.ExtensionContext, output:
 
 /** Runs the reader; resolves to its exit code and what it said on stderr (undefined: cancelled). */
 /** The environment the reader runs in: with `LILYSHARP_LYSC_PATH`, the lysc this extension carries
- *  (Dettato's request 9, 2026-11-16 — `lysc shape` gives the first chord's default diagram, so the
- *  chart carries one without Dettato keeping a table of shapes). An environment variable rather
+ *  (Orecchiante's request 9, 2026-11-16 — `lysc shape` gives the first chord's default diagram, so the
+ *  chart carries one without Orecchiante keeping a table of shapes). An environment variable rather
  *  than an argument: a reader that does not know it is not stopped by it. */
 function readerEnv(lysc: string | undefined): NodeJS.ProcessEnv {
     return lysc ? { ...process.env, LILYSHARP_LYSC_PATH: lysc } : process.env;
@@ -142,9 +142,9 @@ function run(exe: string, args: string[], output: vscode.OutputChannel,
 }
 
 /** Asks the reader its version (`--version --json`), as Calamo is asked. */
-function askVersion(exe: string): Promise<DettatoVersion | undefined> {
+function askVersion(exe: string): Promise<OrecchianteVersion | undefined> {
     return new Promise(resolve => cp.execFile(exe, ['--version', '--json'], { timeout: 20000, windowsHide: true },
-        (err, stdout) => resolve(err ? undefined : parseDettatoVersion(String(stdout)))));
+        (err, stdout) => resolve(err ? undefined : parseOrecchianteVersion(String(stdout)))));
 }
 
 /** The lysc beside the language server in this extension, or undefined when it is not there. */
@@ -169,9 +169,9 @@ function versionAtLeast(version: string | undefined, major: number, minor: numbe
  */
 export async function convertRecording(context: vscode.ExtensionContext, uri: vscode.Uri | undefined,
     output: vscode.OutputChannel, openPreview?: (chart: vscode.Uri) => Thenable<unknown>): Promise<void> {
-    const reader = await findDettato();
+    const reader = await findOrecchiante();
     if (!reader) {
-        await offerDettato();
+        await offerOrecchiante();
         return;
     }
     if (!uri) {
@@ -184,29 +184,29 @@ export async function convertRecording(context: vscode.ExtensionContext, uri: vs
         }
         uri = picked[0];
     }
-    output.appendLine(`Dettato reader (${reader.source}): ${reader.path}`);
+    output.appendLine(`Orecchiante reader (${reader.source}): ${reader.path}`);
     const v = await askVersion(reader.path);
     if (!v) {
-        void vscode.window.showErrorMessage(`Lily#: the Dettato reader at ${reader.path} did not answer '--version --json'.`);
+        void vscode.window.showErrorMessage(`Lily#: the Orecchiante reader at ${reader.path} did not answer '--version --json'.`);
         return;
     }
-    const judged = judgeDettato(v);
+    const judged = judgeOrecchiante(v);
     if (judged.kind === 'updateLilySharp') {
         void vscode.window.showErrorMessage(`Lily#: ${judged.text}`);
         return;
     }
-    if (judged.kind === 'offerUpdate' && (await offerDettatoUpdate(judged.text) || !judged.goesOn)) {
+    if (judged.kind === 'offerUpdate' && (await offerOrecchianteUpdate(judged.text) || !judged.goesOn)) {
         return;
     }
     const inputs = v.inputs ?? [...reader.inputs];
     const kind = path.extname(uri.fsPath).slice(1).toLowerCase();
     if (uri.scheme !== 'file' || !inputs.includes(kind)) {
-        void vscode.window.showErrorMessage(`Lily#: Dettato reads a recording on this computer (${inputs.join(', ')}).`);
+        void vscode.window.showErrorMessage(`Lily#: Orecchiante reads a recording on this computer (${inputs.join(', ')}).`);
         return;
     }
     const recording = uri.fsPath;
     // The folder is asked every time, the recording's offered first (owner's decision 2026-11-16,
-    // Dettato's request 6: a chart and its file beside the recording was awkward to keep).
+    // Orecchiante's request 6: a chart and its file beside the recording was awkward to keep).
     let chart = chartForConversion(recording);
     for (;;) {
         const folder = await vscode.window.showOpenDialog({
@@ -229,7 +229,7 @@ export async function convertRecording(context: vscode.ExtensionContext, uri: vs
     // A chart beside the recording may hold the person's corrections: never written over unasked.
     let replace = false;
     if (fs.existsSync(chart)) {
-        // The bars a person placed by hand are named: the reading writes over them (Dettato's note
+        // The bars a person placed by hand are named: the reading writes over them (Orecchiante's note
         // of 2026-11-16; reading again around them is its D4, with format 2).
         let byHand = 0;
         try {
@@ -251,15 +251,15 @@ export async function convertRecording(context: vscode.ExtensionContext, uri: vs
         }
     }
     const name = path.basename(recording);
-    void noteDettatoPreview(context);
-    output.appendLine(`Dettato ${v.version}: dettato ${dettatoArgs(recording, chart, replace).join(' ')}`);
+    void noteOrecchiantePreview(context);
+    output.appendLine(`Orecchiante ${v.version}: orecchiante ${orecchianteArgs(recording, chart, replace).join(' ')}`);
     let done: { code: number | null; stderr: string } | undefined;
     try {
         done = await vscode.window.withProgress(
             { location: vscode.ProgressLocation.Notification, title: `Lily#: reading ${name}`, cancellable: true },
-            (progress, token) => run(reader.path, dettatoArgs(recording, chart, replace), output, progress, token, bundledLysc(context)));
+            (progress, token) => run(reader.path, orecchianteArgs(recording, chart, replace), output, progress, token, bundledLysc(context)));
     } catch (e) {
-        void vscode.window.showErrorMessage(`Lily#: the Dettato reader could not start: ${(e as Error).message ?? e}`);
+        void vscode.window.showErrorMessage(`Lily#: the Orecchiante reader could not start: ${(e as Error).message ?? e}`);
         return;
     }
     if (done === undefined) {
@@ -267,8 +267,8 @@ export async function convertRecording(context: vscode.ExtensionContext, uri: vs
         return;
     }
     if (done.code !== 0 || !fs.existsSync(chart)) {
-        const failure = done.code !== 0 ? dettatoFailure(done.code, done.stderr, name)
-            : { text: 'Lily#: the Dettato reader finished without writing a chart.', showOutput: true };
+        const failure = done.code !== 0 ? orecchianteFailure(done.code, done.stderr, name)
+            : { text: 'Lily#: the Orecchiante reader finished without writing a chart.', showOutput: true };
         if (failure.showOutput) {
             void vscode.window.showErrorMessage(failure.text, 'Show Output')
                 .then(choice => { if (choice === 'Show Output') { output.show(true); } });
@@ -277,8 +277,8 @@ export async function convertRecording(context: vscode.ExtensionContext, uri: vs
         }
         return;
     }
-    // A chart written in another folder: Dettato 0.3.0 and later write the way to the recording in
-    // the file beside the chart (`audio`, read by recordingCore.resolveAudio — Dettato's request 6),
+    // A chart written in another folder: Orecchiante 0.3.0 and later write the way to the recording in
+    // the file beside the chart (`audio`, read by recordingCore.resolveAudio — Orecchiante's request 6),
     // and the recording stays where it is. An older reader names it without a path, so the
     // recording goes beside the chart, or the preview cannot find it.
     if (path.dirname(chart).toLowerCase() !== path.dirname(recording).toLowerCase() && !versionAtLeast(v.version, 0, 3, 0)) {

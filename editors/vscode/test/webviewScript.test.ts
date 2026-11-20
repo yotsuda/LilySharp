@@ -761,9 +761,13 @@ describe('the mixer\'s All pressed in', () => {
     it('is the choice again when let go', () => {
         assert.equal((pageFunction('eff', scope(true, [], false)) as Eff)(), practice);
     });
-    it('sounds nothing with the group off, and gives way to a solo', () => {
+    it('sounds every part with the group off too, and gives way to a solo', () => {
+        // (owner's request 2026-11-20: All sounds every part, whatever the other buttons say)
         const off = (pageFunction('eff', scope(false, [], true)) as Eff)();
-        assert.deepEqual([...off.muted], ['gtr', 'bass']);
+        assert.deepEqual([...off.muted], []);
+        assert.deepEqual([...off.voicesOff], []);
+        const offOut = (pageFunction('eff', scope(false, [], false)) as Eff)();
+        assert.deepEqual([...offOut.muted], ['gtr', 'bass']);
         const soloed = (pageFunction('eff', scope(true, ['part:bass'], true)) as Eff)();
         assert.deepEqual([...soloed.muted], ['gtr']);
         assert.deepEqual([...soloed.voicesOff], ['lead']);
@@ -773,7 +777,17 @@ describe('the mixer\'s All pressed in', () => {
         assert.match(html, /document\.getElementById\('scoreAllBtn'\)\.addEventListener\('click', \(\) => \{\s*scoreAll = !scoreAll;\s*refreshMixer\(\);/);
         assert.match(html, /document\.getElementById\('recAllBtn'\)\.addEventListener\('click', \(\) => \{\s*recAllOn = !recAllOn;\s*applyRecParts\(\);/);
         assert.match(html, /if \(scoreAll\) \{ scoreAll = false; flip\(\); refreshMixer\(\);/);
-        assert.match(html, /const mute = \(\) => \{\s*recAllOn = false;/);
+        assert.match(html, /const mute = \(e\) => \{\s*recAllOn = false;/);
         assert.match(html, /all\.setAttribute\('aria-pressed', String\(scoreAll\)\);/);
+    });
+    // Alt+click on a line keeps it alone (owner's decision 2026-11-20): the choice made again from
+    // nothing in one click — every line of this score off (another score's kept), this one on.
+    it('keeps a line alone on Alt+click, the score\'s and the recording\'s, and says so on the button', () => {
+        const html = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'previewHtml.ts'), 'utf8');
+        assert.match(html, /if \(e && e\.altKey\) \{ scoreAll = false; noLineOn\(\); flip\(\); refreshMixer\(\);/);
+        assert.match(html, /practice\.muted = practice\.muted\.filter\(n => !mine\.has\(n\)\)\.concat\(parts\.filter\(n => !sungOnly\.has\(n\)\)\);/);
+        assert.match(html, /practice\.voicesOff = practice\.voicesOff\.filter\(k => !myVoices\.has\(k\)\)\.concat\(voices\.filter\(k => inScore\.has\(k\)\)\);/);
+        assert.match(html, /if \(e && e\.altKey\) recPartsOff = \(\(recording && recording\.parts\) \|\| \[\]\)\.filter\(n => n !== name\);/);
+        assert.match(html, /const hint = \(title \? title \+ '\\\\n' : ''\) \+ ONLY_THIS_HINT;/);
     });
 });

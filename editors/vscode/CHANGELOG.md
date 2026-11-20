@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Dettato is now Orecchiante.** The recording reader was renamed (another project published under its old name): Lily# looks for the `yotsuda.orecchiante` extension, 0.11.0 or newer, reads and writes the file beside a chart as `<stem>.orecchiante.json`, and names a converted chart `song (Orecchiante).lys`. A `.dettato.json` is no longer read — convert the recording again. For a reader named by hand, the variable is `LILYSHARP_ORECCHIANTE_PATH`.
 - **A hairpin with no end is flagged.** A `@cresc` that no level, hairpin or `@!cresc` follows is drawn to the next bar line as before, and the Problems panel now says where to write its end.
 - **Roman degrees follow the file's key.** A `chords … as roman` row no longer reads a part's own header key.
 

@@ -1892,7 +1892,7 @@ TodoMark       = Annotation ;   (* GLUED: '@todo', '@todo(key)', '@todo("memo")'
                     symbol's ink. A '@' after a space belongs to no entry (the stray report). *)
 OrMark         = '@or' , '(' , ChordSymbolText , { ChordSymbolText } , ')' ;   (* GLUED, the candidates
                     space-separated: F@or(Bm Dm), C@or(F#m7b5 C/E) *)
-                 (* A CHORD STILL UNDECIDED (Dettato request 17, owner's decisions 2026-11-17): the
+                 (* A CHORD STILL UNDECIDED (Orecchiante request 17, owner's decisions 2026-11-17): the
                     chords the symbol may be instead. The symbol written is the chord — it prints
                     and plays; the candidates change nothing on paper or in the sound. Reported as
                     information (LYS4082); a candidate that is not a chord symbol, or an @or that is
@@ -1928,7 +1928,7 @@ ChordRowBreak  = 'break' | 'noBreak' | 'pageBreak' | 'noPageBreak' ;
                     the piece breaks where any part, shown or not, or any chords track says, and
                     a 'break' against a 'noBreak' at one bar line is LYS4077, the break winning. *)
 ChordRowTime   = TimeSignature ;
-                 (* AT A BAR'S HEAD (Dettato's request 13, decided by the owner 2026-11-16):
+                 (* AT A BAR'S HEAD (Orecchiante's request 13, decided by the owner 2026-11-16):
                     right after a bar line, or at the row's start - '| G | time 2/4 C | time 4/4 D |'.
                     It is the SCORE'S meter from that bar to the section's end, as a 'time' in the
                     music of a part (SectionMeterPlan): the page engraves it, the row's slots grid
@@ -2412,7 +2412,11 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                | PartRef                            (* a bare part name: MIDI only — see below *)
                ;
 
-TabSelector    = TabStyle | TabOctave ;   (* one 'as' takes both, in either order, each once *)
+TabSelector    = TabStyle | TabOctave | 'removeEmpty' , RemoveEmptyValue ;
+                 (* one 'as' takes them all, in any order, each once. 'removeEmpty' is a
+                    staff's hara-kiri (StaffSelector), for a tab too (owner's request
+                    2026-11-20: 'tab bass as removeEmpty true' - a bass tab written by ear
+                    under a chord chart hides where it has nothing yet). *)
 TabOctave      = '8vb' | '15mb' | '8va' | '15ma' ;
                  (* The octave the tab is PLAYED in (owner's decision 2026-10-28): 'tab bass5
                     melody as 8vb' frets a guitar line an octave below what it sounds, on a

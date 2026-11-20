@@ -1287,7 +1287,7 @@
         },
         {
           "command": "lilysharp.convertRecording",
-          "when": "lilysharp.dettatoAvailable || isWindows"
+          "when": "lilysharp.orecchianteAvailable || isWindows"
         },
         {
           "command": "lilysharp.showScan",
@@ -1497,7 +1497,7 @@
         },
         {
           "command": "lilysharp.convertRecording",
-          "when": "(lilysharp.dettatoAvailable || isWindows) && resourceExtname =~ /^\\.(wav|mp3|m4a|mp4|aac|flac|wma)$/i",
+          "when": "(lilysharp.orecchianteAvailable || isWindows) && resourceExtname =~ /^\\.(wav|mp3|m4a|mp4|aac|flac|wma)$/i",
           "group": "7_modification"
         },
         {

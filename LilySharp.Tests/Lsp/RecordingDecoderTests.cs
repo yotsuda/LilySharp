@@ -25,7 +25,7 @@ namespace LilySharp.Tests.Lsp;
 /// <summary>
 /// lilysharp/decodeRecording: an m4a (which VS Code's webview cannot decode) is decoded by
 /// Windows' Media Foundation into a float WAV whose seconds are a player's — the encoder's silence
-/// in front cut, as a browser and ffmpeg cut it, so the bar seconds Dettato writes fall where the
+/// in front cut, as a browser and ffmpeg cut it, so the bar seconds Orecchiante writes fall where the
 /// sound is (docs/recording-design.md §1 5).
 /// </summary>
 /// <remarks>
@@ -126,7 +126,7 @@ public class RecordingDecoderTests
     [Fact]
     public void AnM4aWithNoEditList_IsCutByItsITunesNote()
     {
-        // (Dettato REQUESTS #5: without it the bar seconds Dettato writes are 48 ms before the sound Lily# plays)
+        // (Orecchiante REQUESTS #5: without it the bar seconds Orecchiante writes are 48 ms before the sound Lily# plays)
         Assert.Equal(0x840, RecordingDecoder.Mp4Lead(ITunesFile(null), 44100));
     }
 

@@ -184,7 +184,7 @@ public class SectionCutterTests
         Assert.Equal("A2", after.Suggested);
     }
 
-    /// <summary>Words written as empty bars (`| | | |`, as Dettato writes a section's lyrics to be filled
+    /// <summary>Words written as empty bars (`| | | |`, as Orecchiante writes a section's lyrics to be filled
     /// in) are cut by their bars — their lyric measures (owner's report 2026-11-17: at the end of a
     /// `| break` line every cut was refused as "the words have no bar lines").</summary>
     [Fact]

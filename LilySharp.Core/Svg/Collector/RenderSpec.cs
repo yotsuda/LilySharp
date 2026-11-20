@@ -78,6 +78,10 @@ public sealed record StaffSpec(
     /// suppressed (`~`).</summary>
     public string? ShortInstrumentName { get; init; }
 
+    /// <summary>The automatic one-line staff standing in for staves that may all be hidden
+    /// (<see cref="Model.Staff.StandIn"/>, RenderSpecParser.Parse).</summary>
+    public bool StandIn { get; init; }
+
     /// <summary>The folded chord row's own <c>plays</c> (<c>chords prog plays rhythm</c> folded over
     /// the strokes staff it places, RenderSpecParser.FoldAdjacentRows): the strokes part the row's
     /// chords sound at (MidiExporter.StrokesOfPlacedRows), or null.</summary>
@@ -995,6 +999,7 @@ public sealed record RenderSpec(
                         RemoveFirst = single.Staff.RemoveFirst,
                         Lines = single.Staff.Lines,
                         PedalStyle = single.Staff.PedalStyle,
+                        StandIn = single.Staff.StandIn,
                     };
 
                 // N parts -> ONE staff. A Staff already holds N voices and the whole
@@ -1161,7 +1166,13 @@ public sealed record RenderSpec(
                     if (tabVoices.Length == 0)
                         tabVoices = ImmutableArray.Create(
                             new Voice(tab.Staff.VoiceName, ImmutableArray<Measure>.Empty));
-                    var tabStaff = Staff.CreateTab(tab.Tuning, tabVoices, tab.Staff.Clef, tab.Transposition, tab.NumbersOnly) with { TabCapo = tab.Capo };
+                    var tabStaff = Staff.CreateTab(tab.Tuning, tabVoices, tab.Staff.Clef, tab.Transposition, tab.NumbersOnly) with
+                    {
+                        TabCapo = tab.Capo,
+                        // (`tab m as removeEmpty V`, 2026-11-20: hara-kiri as a staff's)
+                        RemoveEmpty = tab.Staff.RemoveEmpty,
+                        RemoveFirst = tab.Staff.RemoveFirst,
+                    };
                     yield return StaffGroup.CreateSingle(tabStaff);
                     break;
 

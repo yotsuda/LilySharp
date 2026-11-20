@@ -78,14 +78,14 @@ export class RecordingPlayer {
     /** Called when the recording plays to its end (not on a stop). */
     onEnded: (() => void) | null = null;
 
-    // The recording's parts (Dettato's `parts`, docs/recording-design.md §8): ONE buffer, channel i
+    // The recording's parts (Orecchiante's `parts`, docs/recording-design.md §8): ONE buffer, channel i
     // part i, played through one stretcher (or one resampling source) of that many channels, so
     // the parts keep together to the sample; each channel then has its own gain, and they add up
     // in the recording's gain. Played only when a part is off or not at 100% (partLevels): all of
     // them as recorded, the recording itself plays (the separation's error left out).
     // Decoded only when first played (ensureParts): until then the files' bytes are all there is —
     // MEASURED 2026-11-17 (Lab sessions/p1288/parts, 48 kHz): a 5-minute song's 4 parts decoded take
-    // ~220 MB and the stretcher's copy as much again, which every chart Dettato writes (with parts)
+    // ~220 MB and the stretcher's copy as much again, which every chart Orecchiante writes (with parts)
     // paid on opening, the parts used or not.
     private partSources: { name: string; bytes: Uint8Array | ArrayBuffer }[] = [];
     private partsDecoding: Promise<void> | null = null;

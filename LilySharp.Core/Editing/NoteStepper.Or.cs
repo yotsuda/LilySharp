@@ -25,7 +25,7 @@ namespace LilySharp.Core.Editing;
 
 /// <summary>
 /// The semitone pair (Ctrl+Shift+Up / Down) on a chords-row symbol that carries an <c>@or</c>
-/// (<see cref="OrAnnotation"/>; Dettato request 17, owner's decisions 2026-11-17): the
+/// (<see cref="OrAnnotation"/>; Orecchiante request 17, owner's decisions 2026-11-17): the
 /// candidates ROTATE through the symbol's place — Up <c>F@or(Bm Dm)</c> → <c>Bm@or(Dm F)</c>,
 /// Down → <c>Dm@or(F Bm)</c> — and the chord that came forward sounds alone, so the ear compares
 /// one chord with the next in a moment. On such a symbol it comes before the shape step the
@@ -74,7 +74,7 @@ public static partial class NoteStepper
         // The entry the caret is on, by its OWN text (Span, '@or(…)' included) — not its Width, which
         // carries its trivia: a comment line before a row's first entry ran its reach over the line,
         // and that entry, with no @or, was found before the one under the caret (owner's report
-        // 2026-11-17, Dettato's "03 Open Arms.lys": G/B@or(Bm) after such a line did not turn).
+        // 2026-11-17, Orecchiante's "03 Open Arms.lys": G/B@or(Bm) after such a line did not turn).
         ChordEntrySyntax? entry = null;
         foreach (var e in tree.GetNodes<ChordEntrySyntax>())
             if (e.Span.Start <= caret && caret <= e.Span.Start + e.Span.Length)

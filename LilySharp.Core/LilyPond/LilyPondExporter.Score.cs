@@ -655,6 +655,10 @@ public sealed partial class LilyPondExporter
             if (tuning.Length > 0) tabWith.Add("stringTunings = " + tuning);
             if (InstrumentNameClause(partName) is { } tabName) tabWith.Add(tabName);
             if (MidiInstrumentClause(part) is { } tabMidi) tabWith.Add(tabMidi);
+            // `tab m as removeEmpty V` (2026-11-20): the page's hara-kiri, LilyPond's context mod
+            // as on a staff (below). LILYPOND-REF: ly/context-mods-init.ly — RemoveEmptyStaves.
+            if (tabSpec?.Staff is { RemoveEmpty: true } tabStaffSpec)
+                tabWith.Add(tabStaffSpec.RemoveFirst ? "\\RemoveAllEmptyStaves" : "\\RemoveEmptyStaves");
             if (tabWith.Count > 0)
                 sb.Append(" \\with { ").Append(string.Join(" ", tabWith)).Append(" }");
             sb.Append(" { ");
