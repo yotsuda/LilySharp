@@ -4,7 +4,16 @@ Notable changes to Lily# are recorded here, newest first. Release notes are take
 from this file: the topmost section is the version being tagged, and the release
 workflow attaches that section to the GitHub Release verbatim.
 
-## Unreleased
+## 0.17.0
+
+**Breaking changes.** A file that compiled under 0.16.0 can stop here, each with the diagnostic that says so:
+
+- `singer "a+b" on lead` — two voices joined by `+` in one string — is an error (**LYS4039**). Write a `singer` line for each voice.
+- A lyrics track may not have the name of a part or of a named voice (`lyrics sop` beside `part sop`): it is an error (**LYS7008**), where the name used to bind the words to that staff. Give the track its own name and say who sings it — `part sop { lyrics words }`, or a score's row `lyrics words on sop`.
+- A scoop, plop, fall, doit or bend on a rest is an error (**LYS4079**), and nothing is drawn.
+- The recording reader is Orecchiante (`yotsuda.orecchiante` 0.11.0 or newer); the file beside a chart is `<stem>.orecchiante.json`, and `.dettato.json` is no longer read.
+
+And one that sounds different: a recording beside a chart is no longer stretched to the score's written tempo — the score's notes follow the recording bar by bar.
 
 - **LYS4042 says how to give a singer line its words** (`[diagnostics]`). `singer on melody`, where the part names no lyrics and every lyrics of the file has a name, sang nothing and said only "This file has no unnamed lyrics to sing." — a chart that joined its words to the part by a score's row alone (`lyrics words on melody`) had no way out said. It now goes on: name the words on the part, `part melody { lyrics words }`, or on the line, `singer on melody sings words`, with the file's lyrics listed where there are several; a file with no lyrics at all is told so.
 

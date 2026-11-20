@@ -2,7 +2,7 @@
 
 All notable changes to the Lily# VS Code extension are documented here.
 
-## Unreleased
+## 0.17.0
 
 - **A singer line that sings nothing says how to fix it.** `singer on melody` over named lyrics the part does not name now says to write `lyrics words` in the part's header or `sings words` on the line (LYS4042).
 - **Other extensions can play a score's sound one part at a time.** The extension's exports carry `renderStems` — a score's parts (each through the preview's sound font), its sung voices and the recording beside it (with its parts), each a file with the second it starts on, on the recording's seconds when there is one — `onDidChangeStems`, told when the score's sound may have changed, and `writeAudio`, which writes a mix made of them as an MP3 or a WAV. Shosa mixes a song with them as it dances. The stems come in the order the score stacks its rows, each voice after its part.
