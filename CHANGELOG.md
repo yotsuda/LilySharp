@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **A tuplet bracket reaches a note moved with `@cross` on the staff it stands on** (`[engraving]`). In `rh { tuplet 3/2 { c''4@cross c'' c'' } }` the bracket ran through the moved head, read as if it had stayed on the treble; it now goes under that note's stem, into the left hand's staff, flat, as LilyPond draws it. A rest moved with `@cross` still leaves the bracket on its own staff.
+
 - **Fixed: with `paper { raggedRight }` the lines were balanced instead of filled** (`[engraving]`). Seven bars of which five fit on a line were set 3+4; the last line of a ragged-right score now costs nothing, so the lines before it are filled as far as they go — 5+2, as LilyPond sets them.
 
 - **Fixed: a rest moved with `@cross` inside a beam across the staves always went under the beam** (`[engraving]`). In `lh { c8[ r8@cross g'8@cross c8] }` the rest stood at −6.5 spaces on the treble whatever the treble held. LilyPond lets the beam push it first and the treble's notes after: under `e''2` it stands above the staff at +4.0, under `a'2` at +2.5, and only under an empty treble at −6.5. Lily# now does the same.

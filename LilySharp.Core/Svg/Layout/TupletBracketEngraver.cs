@@ -448,7 +448,10 @@ internal static class TupletBracketEngraver
                 staffLines: staffByIndex != null
                     && staffByIndex.TryGetValue(tuplet.StaffIndex, out var linesStaff)
                     ? linesStaff.Lines : 5,
-                fonts: fonts, children: children, staffOffset: staffOffset);
+                fonts: fonts, children: children, staffOffset: staffOffset,
+                // How far up (spaces) a staff a note @cross moved onto stands from this one.
+                crossStaffUp: staffYAt is null ? null
+                    : target => staffOffset - staffYAt(tuplet.MeasureIndex, target));
 
             // When the bracket is suppressed (fully beamed), the NUMBER
             // attaches to the BEAM: centered between the outer stems, sitting
@@ -1050,7 +1053,8 @@ internal static class TupletBracketEngraver
         ImmutableArray<ArticulationLayout> scripts = default,
         IReadOnlyDictionary<RestShiftKey, double>? restShifts = null,
         int staffLines = 5, Rendering.ScoreTextMetrics? fonts = null,
-        IReadOnlyList<TupletBracketLayout>? children = null, double staffOffset = 0)
+        IReadOnlyList<TupletBracketLayout>? children = null, double staffOffset = 0,
+        Func<int, double>? crossStaffUp = null)
     {
         double nestingOffset = tuplet.NestingDepth * NestingDepthOffset;
         // Fallback only — when no note positions are found the bracket
@@ -1128,6 +1132,8 @@ internal static class TupletBracketEngraver
         // LILYPOND-REF: lily/tuplet-bracket.cc calc_position_and_height — the points are
         //   the note columns' own extents (Note_column::cross_staff_extent[dir]).
         double? extremeTip = null;
+        // Y-up spaces from this staff to the staff the bracket stands on (a moved first note's).
+        double bracketStaffUp = 0.0;
 
         // A rest column's reach on the bracket's side, Y-up in staff-middle spaces: the
         // glyph the renderer draws (GlyphMetrics.GetRestBBox — LilyPond's Rest extent is
@@ -1246,6 +1252,30 @@ internal static class TupletBracketEngraver
                 continue;
             }
 
+            // A note @cross moved stands on the other staff, its positions read there: the
+            // bracket reaches it in the common frame, across the distance between the two
+            // staves (owner's decision 2026-11-22, "the same as LilyPond"). MEASURED, LilyPond
+            // 2.26.0 (Lab sessions/p1357/tb x0): `tuplet 3/2 { c''4@cross c'' c'' }` in the right
+            // hand puts the bracket under the moved c''s stem, inside the left hand's staff;
+            // read on its own staff, the moved head stood inside the bracket's span and the
+            // bracket ran through it. (A moved REST stays out — session 1354, above.)
+            // The musical gates below keep the head positions as written on their own staff
+            // (head_positions_interval is staff-relative): a moved first note and an unmoved
+            // last one then disagree in sign with the graphical dy, and the bracket is flat,
+            // as LilyPond's is.
+            // LILYPOND-REF: lily/tuplet-bracket.cc:554-562 calc_position_and_height — the
+            //   columns' extents in the common Y frame (commony); :530-549 the slope bounds,
+            //   graphical in commony, musical by head_positions_interval.
+            double crossUp = item.CrossStaffIndex >= 0 && crossStaffUp is not null
+                ? crossStaffUp(item.CrossStaffIndex) : 0.0;
+            // The bracket is a grob of the staff its voice stands on where the tuplet starts —
+            // the moved note's, when the first note is moved — and a flat bracket steps off
+            // THAT staff's lines below (x0: −1.1 spaces under the left hand's middle line went
+            // to −1.5 there). LILYPOND-REF: lily/tuplet-bracket.cc:726-745 (Staff_symbol_referencer
+            //   of the bracket).
+            if (i == tuplet.StartNoteIndex)
+                bracketStaffUp = crossUp;
+
             // Head-position interval of the column (chord: min..max) — only the
             // SIGNS of last−first feed the LP gates.
             (int lo, int hi) posIv = item switch
@@ -1312,7 +1342,7 @@ internal static class TupletBracketEngraver
                 // The single house of a column's reach (HANDOFF §5.2.1②). Of() cannot
                 // return null here — the `pos` gate above keeps only notes/chords.
                 tip = NoteColumnLayout.Of(item, null, member?.beam, stemX) is { } col
-                    ? col.OutwardTipDeviceY(isStemUp)
+                    ? col.OutwardTipDeviceY(isStemUp) - crossUp
                     : RawOutwardTip(pos.Value, duration, isStemUp);
                 // Y-up staff-middle spaces (device staff-top middle = 2.0).
                 double tipUp = 2.0 - tip;
@@ -1613,13 +1643,13 @@ internal static class TupletBracketEngraver
             // LILYPOND-REF: lily/tuplet-bracket.cc:726-746 calc_position_and_height.
             if (Math.Abs(dy) < 0.01)
             {
-                double posQ = offsetUp / 0.5;
+                double posQ = (offsetUp - bracketStaffUp) / 0.5;
                 if (posQ >= staffLinePositions[0] - 1.0 && posQ <= staffLinePositions[^1] + 1.0)
                 {
                     posQ = Math.Round(posQ, MidpointRounding.ToEven);
                     if (EngravingDefaults.OnLineOrLedger((int)posQ, staffLines))
                         posQ += dir;
-                    offsetUp = posQ * 0.5;
+                    offsetUp = posQ * 0.5 + bracketStaffUp;
                 }
             }
 

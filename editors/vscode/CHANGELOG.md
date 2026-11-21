@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A tuplet bracket no longer runs through a note moved with `@cross`.** It reaches the moved note on the other staff, as LilyPond draws it.
 - **`paper { raggedRight }` fills the lines before the last one.** Seven bars of which five fit on a line were set 3+4; they are now set 5+2, as LilyPond sets them.
 - **A rest moved with `@cross` inside a beam across the staves clears the other staff's notes.** `c8[ r8@cross g'8@cross c8]` in the left hand always put the rest under the beam; above the right hand's held `e''` it now stands over the staff, as in LilyPond.
 - **A rest left behind by grace notes moved with `@cross` takes room.** Text written above it no longer prints through it.
