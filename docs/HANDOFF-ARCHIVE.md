@@ -277,6 +277,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1341セッションの経緯
+
+### 1.1 第1341セッション（2026-11-21・YT-DELL2）
+
+Shosa の依頼 6（歌われる音節を `lysc timeline` から）。base `4cc29d7d6`。開始時 full 18083 合格 / 0 失敗 / skip 2 / 合計 18085（Lab `p1341` `start.log`）。Calamo・Orecchiante の open は 0。
+- **`4af9ee58a`**: `timeline` に `sung`＝`[{part, singer, syllables: [[beat, beats, text]]}]`（`SongReading.SungOf`・`SongSung`）。protocol は 1 のまま。
+  - 中身は `ScoreExport.SungVoicesOf`＝`lysc wav --singer` とプレビューが歌うものそのもの（singer の行・`in`・どの歌詞・読み `漢[かん]`）。拍は声の秒から逆算（tick を二分探索）＝`@breath` で縮む音も歌うとおり（テンポ 60 で 0.75 拍）。
+  - 音節はメリスマ（スラー・`__`・`_`）の最後の音の終わりまで。息の後に持ち直す音（母音を歌い直す）は新しい音節。
+  - 楽譜が歌い手を自分の段に描く形（`staff alice`）は、作った part（`alice__0`）ではなく行の `on PART` を返す。`singer` は `NamesReaderOf` の名前（無ければ null）。
+  - 網は `CliSongReadingTests` に 3 本（2 人が 1 パート・`in B`・テンポの変化／自分の段の歌い手／score の無い曲は `[]`）と形の網の鍵。毒 4 / 4 赤（Lab `p1341/poisons.ps1`）。CLI_REFERENCE・CHANGELOG 2 つ。
+- REQUESTS 6 は `fixed`（Shosa の repo は未 commit）。
+- 終了時 full 18086 合格 / 0 失敗 / skip 2 / 合計 18088（`-End`・`run2.trx`）。
+- **次**: Shosa の確認（done）を待つ。Lily# の次は review.md の設計が先の 2 つ（F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。第1340 の ⚠️ の 2 つを先に調べるのも手。
+
 ## 以下は第1340セッションの経緯
 
 ### 1.1 第1340セッション（2026-11-21・YT-DELL2）
