@@ -277,6 +277,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1352セッションの経緯
+
+### 1.1 第1352セッション（2026-11-21・YT-DELL2）
+
+base `1af349848`。開始時 full 18151 合格 / 0 失敗 / skip 2 / 合計 18153（Lab `p1352` `run1.trx`）。Calamo・Orecchiante・Shosa の open は 0。
+- **CI の extension-tests の赤＝`3b53ec548`**: `dbe903b0d` の `audioBlockedAt = 0` を形の試験 2 本が追っていなかった。windows の赤は既知の `ScoreVideoShapeTests`。
+- **leftovers 第1351 の 2 件＝`900734111`**（Lab `p1352/marks`・LilyPond 2.26.0 と 0.01 以内）:
+  - 移した音符・休符の強弱と `@text` は、`LayoutEngine.DynamicsOnTheirNotesStaff` が音の立つ段へ付け替える（ヘアピンの線に入ったものは線の段のまま）。q2 の p −6.82（LilyPond −6.81・以前 −15.82）。
+  - 休符の上の記号は、X を休符の幅の中央にした（`NoteheadHalfWidth` の休符の枝・黒玉の 0.65 → 休符の 0.475）。押された自分の休符を支えにした（輪郭は `SkylineBuilder.MergeRestSupport`）。k1 −3.75（−3.7446）、k3・k4・k5 も一致。
+  - k1 の原因は X: 0.175 右にずれ、休符の鉤がフェルマータの点と弧のあいだに沈んでいた（LilyPond の輪郭は `dump2.ily`）。
+  - 網 `CrossStaffRestTests` +3・`ScriptOnRestTests` 4（毒で 3／4／1 本赤）。掃き 1289 枚で動いたのは 3 枚（記号の X）。
+- full 18158 合格 / 0 失敗 / skip 2 / 合計 18160（`run2.trx`）。
+- **次**: `docs/cross-rest-design.md` §4 の残り（連符の括弧 m4・連桁・装飾音のスラーの障害物）か、F4。
+
 ## 以下は第1351セッションの経緯
 
 ### 1.1 第1351セッション（2026-11-21・YT-DELL2・第1349 と同じ会話）
