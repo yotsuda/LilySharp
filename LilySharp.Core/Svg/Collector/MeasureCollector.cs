@@ -4888,6 +4888,7 @@ public sealed partial class MeasureCollector
                 : new();
 
         var crossedIn = new List<CrossedNote>?[staves.Length];
+        var restsIn = new List<CrossedNote>?[staves.Length];
         var moved = new Staff?[staves.Length];
         for (int n = 0; n < notation.Count; n++)
         {
@@ -4907,7 +4908,10 @@ public sealed partial class MeasureCollector
                     for (int i = 0; i < items.Length; i++)
                     {
                         var item = items[i];
-                        if (item.CrossWritten && item is NoteItem or ChordItem)
+                        // A rest that writes @cross moves too (owner's decision 2026-11-21,
+                        // docs/cross-rest-design.md): a pitched one is read again under the
+                        // target staff's clef, as a note is.
+                        if (item.CrossWritten && item is NoteItem or ChordItem or RestItem)
                         {
                             int shift = Diatonic(InForce(staves[source].Clef, EventsOf(source), m, at))
                                 - Diatonic(InForce(staves[target].Clef, EventsOf(target), m, at));
@@ -4917,6 +4921,11 @@ public sealed partial class MeasureCollector
                                 ChordItem chord => chord with
                                 {
                                     Notes = chord.Notes.Select(x => x with { StaffPosition = x.StaffPosition + shift }).ToImmutableArray(),
+                                    CrossStaffIndex = target,
+                                },
+                                RestItem rest => rest with
+                                {
+                                    StaffPosition = rest.StaffPosition + shift,
                                     CrossStaffIndex = target,
                                 },
                                 _ => item,
@@ -4962,16 +4971,25 @@ public sealed partial class MeasureCollector
                 {
                     var items = voice.Measures[m].Items;
                     for (int i = 0; i < items.Length; i++)
-                        if (items[i].CrossStaffIndex >= 0 && !items[i].GraceTime)
+                        if (items[i].CrossStaffIndex >= 0 && items[i] is RestItem)
+                            (restsIn[items[i].CrossStaffIndex] ??= new()).Add(new CrossedNote(voice.Measures, m, i));
+                        else if (items[i].CrossStaffIndex >= 0 && !items[i].GraceTime)
                             (crossedIn[items[i].CrossStaffIndex] ??= new()).Add(new CrossedNote(voice.Measures, m, i));
                 }
         for (int i = 0; i < finals.Length; i++)
+        {
             if (crossedIn[i] is { } here)
                 finals[i] = finals[i] with { CrossedIn = here.ToImmutableArray() };
+            if (restsIn[i] is { } rests)
+                finals[i] = finals[i] with { RestsCrossedIn = rests.ToImmutableArray() };
+        }
         // After every staff has its moved notes: the knee reads the boxes of both.
         RestampMovedBeams(finals);
         // And with the stems settled: the columns a moved note shares with the staff it stands on.
         SolveCrossCollisions(finals);
+        // Last, with every staff as it stands: where each moved rest sits on the staff it moved
+        // to — that staff's Rest_collision, which only here can see both staves.
+        StampCrossedRestShifts(finals);
 
         int walk = 0;
         return staffGroups.Select(g => g with
@@ -5393,6 +5411,51 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>
+    /// Stamps on each staff the shift of every rest of its voices <c>@cross</c> moved
+    /// (<see cref="Staff.CrossedRestShifts"/>), read on the staff the rest stands on
+    /// (<see cref="Layout.ElementCoordinator.CrossedRestShift"/>). The measures are not touched,
+    /// so every <see cref="Staff.CrossedIn"/> address stays good.
+    /// </summary>
+    private static void StampCrossedRestShifts(Staff[] staves)
+    {
+        if (staves.All(s => s.RestsCrossedIn.IsEmpty))
+            return;
+        for (int s = 0; s < staves.Length; s++)
+        {
+            ImmutableDictionary<Layout.RestShiftKey, double>.Builder? shifts = null;
+            var voices = staves[s].Voices;
+            for (int v = 0; v < voices.Length; v++)
+                for (int m = 0; m < voices[v].Measures.Length; m++)
+                {
+                    var items = voices[v].Measures[m].Items;
+                    var at = Fraction.Zero;
+                    for (int i = 0; i < items.Length; at += items[i].Duration, i++)
+                        if (items[i] is RestItem { CrossStaffIndex: >= 0 } rest && rest.CrossStaffIndex < staves.Length)
+                            (shifts ??= ImmutableDictionary.CreateBuilder<Layout.RestShiftKey, double>())
+                                [new Layout.RestShiftKey(m, v, i)] =
+                                Layout.ElementCoordinator.CrossedRestShift(rest, at, m, staves[rest.CrossStaffIndex]);
+                }
+            if (shifts != null)
+                staves[s] = staves[s] with { CrossedRestShifts = shifts.ToImmutable() };
+        }
+        // …and each staff a rest moved onto reserves it at that shift (CrossedNote.RestShift).
+        for (int t = 0; t < staves.Length; t++)
+        {
+            if (staves[t].RestsCrossedIn.IsEmpty)
+                continue;
+            var b = staves[t].RestsCrossedIn.ToBuilder();
+            for (int c = 0; c < b.Count; c++)
+                foreach (var owner in staves)
+                    for (int v = 0; v < owner.Voices.Length; v++)
+                        if (owner.Voices[v].Measures == b[c].Measures
+                            && owner.CrossedRestShifts.TryGetValue(
+                                new Layout.RestShiftKey(b[c].MeasureIndex, v, b[c].ItemIndex), out var shift))
+                            b[c] = b[c] with { RestShift = shift };
+            staves[t] = staves[t] with { RestsCrossedIn = b.ToImmutable() };
+        }
+    }
+
+    /// <summary>
     /// Writes each <see cref="CrossCollisionMark.DotShift"/> onto its item's
     /// <see cref="MusicItem.DotColumnShift"/>, by copy (an item here is shared with the collect's
     /// recording), and points every <see cref="Staff.CrossedIn"/> address at the copied measures.
@@ -5431,13 +5494,20 @@ public sealed partial class MeasureCollector
             return;
         for (int s = 0; s < staves.Length; s++)
         {
-            if (staves[s].CrossedIn.IsEmpty)
-                continue;
-            var crossedIn = staves[s].CrossedIn.ToBuilder();
-            for (int c = 0; c < crossedIn.Count; c++)
-                if (moved.TryGetValue(crossedIn[c].Measures, out var now))
-                    crossedIn[c] = crossedIn[c] with { Measures = now };
-            staves[s] = staves[s] with { CrossedIn = crossedIn.ToImmutable() };
+            if (!staves[s].CrossedIn.IsEmpty)
+                staves[s] = staves[s] with { CrossedIn = Repoint(staves[s].CrossedIn) };
+            // …and the rests moved onto it (docs/cross-rest-design.md), the same addresses.
+            if (!staves[s].RestsCrossedIn.IsEmpty)
+                staves[s] = staves[s] with { RestsCrossedIn = Repoint(staves[s].RestsCrossedIn) };
+        }
+
+        ImmutableArray<CrossedNote> Repoint(ImmutableArray<CrossedNote> addresses)
+        {
+            var b = addresses.ToBuilder();
+            for (int c = 0; c < b.Count; c++)
+                if (moved.TryGetValue(b[c].Measures, out var now))
+                    b[c] = b[c] with { Measures = now };
+            return b.ToImmutable();
         }
     }
 

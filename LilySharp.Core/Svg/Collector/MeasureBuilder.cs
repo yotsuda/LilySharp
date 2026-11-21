@@ -995,6 +995,9 @@ internal sealed class MeasureBuilder
                 TodoMemo = r.TodoMemo,
                 TodoBelow = r.TodoBelow,
                 TodoSideWritten = r.TodoSideWritten,
+                // The @cross (owner's decision 2026-11-21): a rest of a run that moves whole
+                // moves with it when it writes one (docs/cross-rest-design.md §2-3).
+                CrossWritten = r.CrossWritten,
             },
 
             _ => item with { GraceTime = true },

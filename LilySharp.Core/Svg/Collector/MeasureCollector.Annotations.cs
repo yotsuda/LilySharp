@@ -748,6 +748,22 @@ public sealed partial class MeasureCollector
         }
     }
 
+    /// <summary>
+    /// A rest that writes <c>@cross</c> moves to the other staff as a note does (owner's
+    /// decision 2026-11-21, docs/cross-rest-design.md §2): stamped and listed as
+    /// <see cref="DecorateSoundingItem"/> and <see cref="CollectCrossStaff"/> do a note. Inside a
+    /// grace run only when the run moves whole (§2-3); a spacer and a bar rest do not move.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/change-iterator.cc:74-99 Change_iterator::process — the
+    /// Voice is re-parented, rests included: its Rest grobs are the new Staff's.</remarks>
+    private RestItem WithCrossRest(RestItem rest, SyntaxNode node, int measureIndex, int itemIndex)
+    {
+        if (rest.IsSpacer || rest.IsMultiMeasure || (_v.GraceDepth > 0 && !_v.GraceAllCross) || !WritesCross(node))
+            return rest;
+        CollectCrossStaff(node, measureIndex, itemIndex);
+        return rest with { CrossWritten = true };
+    }
+
     /// <summary>Whether the note or chord <paramref name="node"/> writes <c>@cross</c>.</summary>
     private static bool WritesCross(SyntaxNode node)
     {

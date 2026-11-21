@@ -1078,12 +1078,31 @@ internal sealed class SkylineBuilder
         // session 1122): the walk above never meets them, so they are seeded here with the same
         // boxes a column of this staff takes, at the X their run placed them.
         if (graceSeeds is not null)
-            foreach (var (item, seed) in graceSeeds.Foreign)
+            foreach (var (item, seed, restShiftUp) in graceSeeds.Foreign)
                 AddMusicItemToSkylines(item, seed.X, staffMiddleUp, StaffSize.Of(staff),
                     upSkyline, downSkyline,
                     forcedStemUp: !item.GraceStemDown,
                     reserveStem: !seed.Beamed,
+                    restShiftUp: restShiftUp,
                     clef: staff.Clef, staffLines: staff.Lines);
+        // ...and the rests another staff's voice @cross moved onto this one, where this staff's
+        // Rest_collision placed them (CrossedNote.RestShift; docs/cross-rest-design.md). A grace
+        // rest is a column of its moved run, seeded above.
+        foreach (var crossed in staff.RestsCrossedIn)
+        {
+            if (crossed.Item.GraceTime || crossed.MeasureIndex >= crossed.Measures.Length)
+                continue;
+            foreach (var measureLayout in measureLayouts)
+            {
+                if (measureLayout.MeasureIndex != crossed.MeasureIndex)
+                    continue;
+                double restX = measureLayout.X + LayoutUtilities.GetItemXOffset(
+                    crossed.Measures, crossed.MeasureIndex, crossed.ItemIndex, measureLayout);
+                AddMusicItemToSkylines(crossed.Item, restX, staffMiddleUp, StaffSize.Of(staff),
+                    upSkyline, downSkyline, restShiftUp: crossed.RestShift * 0.5,
+                    clef: staff.Clef, staffLines: staff.Lines);
+            }
+        }
         // ...and the beams of this staff's grace runs, with the stems that end on them — the
         // grace counterpart of AddBeamsToSkyline, run after the columns because it seeds
         // the drawn geometry the withheld stems above were left to.
@@ -1172,7 +1191,7 @@ internal sealed class SkylineBuilder
         /// which <c>@cross</c> moved (GraceNoteItem.CrossStaffIndex, session 1122) — each with the X
         /// the run placed it at. The staff's own walk never meets them (they are not its voices'
         /// items), so <c>AddStaffToSkylines</c> seeds them after it, with the same item boxes.</summary>
-        internal readonly List<(MusicItem Item, GraceColumnSeed Seed)> Foreign = new();
+        internal readonly List<(MusicItem Item, GraceColumnSeed Seed, double RestShiftUp)> Foreign = new();
     }
 
     /// <summary>The staff at global index <paramref name="staffIndex"/> of <paramref name="score"/>,
@@ -1244,7 +1263,23 @@ internal sealed class SkylineBuilder
                 if (!foreign)
                     seeds.Columns[(grace.VoiceIndex, grace.MeasureIndex, grace.ColumnItemIndices[i])] = seed;
                 else if (grace.ColumnItemIndices[i] >= 0 && grace.ColumnItemIndices[i] < ownerItems.Length)
-                    seeds.Foreign.Add((ownerItems[grace.ColumnItemIndices[i]], seed));
+                {
+                    // A rest of the run stands here only when it moved with it (it writes
+                    // @cross), where the staff it moved to placed it (Staff.CrossedRestShifts);
+                    // one that did not is drawn on its own staff, not here
+                    // (docs/cross-rest-design.md §2-3).
+                    var columnItem = ownerItems[grace.ColumnItemIndices[i]];
+                    double restShiftUp = 0.0;
+                    if (columnItem is RestItem)
+                    {
+                        if (columnItem.CrossStaffIndex != staffIndex)
+                            continue;
+                        restShiftUp = owner.CrossedRestShifts.TryGetValue(
+                            new RestShiftKey(grace.MeasureIndex, grace.VoiceIndex, grace.ColumnItemIndices[i]),
+                            out var rs) ? rs * 0.5 : 0.0;
+                    }
+                    seeds.Foreign.Add((columnItem, seed, restShiftUp));
+                }
             }
             if (beamedPrefix >= 2)
             {

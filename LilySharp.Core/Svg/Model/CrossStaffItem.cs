@@ -125,6 +125,11 @@ public sealed record CrossedNote(ImmutableArray<Measure> Measures, int MeasureIn
     /// on spaces it at.</summary>
     public double CollisionShift { get; init; }
 
+    /// <summary>For a moved REST (<see cref="Staff.RestsCrossedIn"/>): its shift in this staff's
+    /// positions from the neutral letter, the one its own staff answers
+    /// (<see cref="Staff.CrossedRestShifts"/>) — what this staff's skyline reserves it at.</summary>
+    public double RestShift { get; init; }
+
     // Identity, not value equality: see ModelIdentity.
     public bool Equals(CrossedNote? other) => ReferenceEquals(this, other);
 

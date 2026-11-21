@@ -1305,6 +1305,7 @@ public sealed partial class MeasureCollector
                     }
                     if (count <= 1)
                     {
+                        restItem = WithCrossRest(restItem, rest, restMeasureIndex, restItemIndex);
                         await AddItemAsync(builder, WithBowSources(restItem with
                         {
                             HasSlurStart = hasSlurStartAfter,
@@ -2822,6 +2823,7 @@ public sealed partial class MeasureCollector
                     HasBeamStart = hasBeamStartAfter,
                     HasBeamEnd = hasBeamEndAfter,
                 };
+                restItem = WithCrossRest(restItem, rest, annMeasureIndex, annItemIndex);
                 await AddItemWithoutDurationAsync(builder, WithBowSources(restItem with { TimeScale = scale }, m));
                 CollectArticulations(rest, annMeasureIndex, annItemIndex, stemUp: false, anchorTiming: annAnchor);
                 // Same repair as the main walk's rest case: a rest carries dynamics too.

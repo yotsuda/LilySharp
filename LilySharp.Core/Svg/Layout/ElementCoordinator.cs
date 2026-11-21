@@ -2375,7 +2375,7 @@ internal sealed class ElementCoordinator
         AddCrossedRestCollisions(staff, shifts);
 
         if (staff.Voices.Length < 2)
-            return shifts.ToImmutableDictionary();
+            return WithCrossedRests(staff, shifts);
 
         int measureCount = staff.Voices.Min(v => v.Measures.Length);
 
@@ -2499,6 +2499,17 @@ internal sealed class ElementCoordinator
             }
         }
 
+        return WithCrossedRests(staff, shifts);
+    }
+
+    /// <summary>The shifts with this staff's rests that <c>@cross</c> moved answered as the staff
+    /// they stand on placed them (<see cref="Staff.CrossedRestShifts"/>) — over whatever this
+    /// staff's own collisions said of them.</summary>
+    private static ImmutableDictionary<RestShiftKey, double> WithCrossedRests(
+        Staff staff, Dictionary<RestShiftKey, double> shifts)
+    {
+        foreach (var (key, shift) in staff.CrossedRestShifts)
+            shifts[key] = shift;
         return shifts.ToImmutableDictionary();
     }
 
@@ -2608,6 +2619,97 @@ internal sealed class ElementCoordinator
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Where a rest <c>@cross</c> moved onto <paramref name="target"/> sits there, in that staff's
+    /// positions from its neutral letter (what <c>GetRestShift</c> answers): the Rest_collision
+    /// of the staff it stands on. Its direction is its voice's, a grace rest's its stated stem
+    /// (up, as <see cref="GraceRestShift"/>), else its column's — a stem with no head points down,
+    /// as <see cref="AddCrossedRestCollisions"/> reads. It clears what sounds on that staff at its
+    /// moment: the staff's own voices' notes and the notes moved onto it — the column at its
+    /// moment pointing its way whole, any other by its first head (<see cref="RootHeadPosition"/>).
+    /// A grace rest's moment is before its main moment, so a note ending there still sounds and
+    /// a note starting there does not yet.
+    /// </summary>
+    /// <remarks>
+    /// Owner's decision 2026-11-21, docs/cross-rest-design.md §2. MEASURED, LilyPond 2.26.0 (Lab
+    /// sessions/p1350/rest): <c>lh { c4 r4@cross c2 }</c> under <c>rh { e''2 e''2 }</c> puts the
+    /// rest at −2.0 spaces on the treble (down past the held e''), and a bass grace run moved
+    /// whole with its <c>r16@cross</c> lifts the rest to +5.0 over the treble's held e''.
+    /// LILYPOND-REF: lily/change-iterator.cc:74-99 Change_iterator::process — the Voice and its Rest join the new Staff,
+    ///   and so its Rest_collision; lily/rest-collision.cc:222-284 calc_positioning_done.
+    /// </remarks>
+    internal static double CrossedRestShift(RestItem rest, Fraction onset, int m, Staff target)
+    {
+        int restValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
+        double basePos = RestStaffPosition(rest, rest.VoiceDirection, restValue, target.Lines);
+        double neutral = NeutralRestPosition(target.Lines, restValue);
+        if (rest.StaffPosition is not null)
+            return basePos - neutral;
+        int dir = rest.VoiceDirection != 0 ? rest.VoiceDirection
+            : rest.GraceTime ? (rest.GraceStemDown ? -1 : 1)
+            : -1;
+        bool grace = rest.GraceTime;
+        bool Sounds(Fraction start, Fraction length) => grace
+            ? start < onset && start + length >= onset
+            : start <= onset && start + length > onset;
+
+        double noteLow = double.PositiveInfinity, noteHigh = double.NegativeInfinity;
+        void Unite(MusicItem item, bool stemUp, bool wholeColumn)
+        {
+            var (headBelow, headAbove) = HeadReachInPositions(item);
+            foreach (double p in wholeColumn ? StaffPositionsOf(item) : [RootHeadPosition(item)])
+            {
+                noteLow = Math.Min(noteLow, p + headBelow);
+                noteHigh = Math.Max(noteHigh, p + headAbove);
+            }
+            if (wholeColumn)
+            {
+                double tip = StemTipPositionOf(item, stemUp);
+                noteLow = Math.Min(noteLow, tip);
+                noteHigh = Math.Max(noteHigh, tip);
+            }
+        }
+
+        for (int o = 0; o < target.Voices.Length; o++)
+        {
+            if (m >= target.Voices[o].Measures.Length)
+                continue;
+            var items = target.Voices[o].Measures[m].Items;
+            var start = Fraction.Zero;
+            for (int k = 0; k < items.Length; start += GetItemDuration(items[k]), k++)
+            {
+                var item = items[k];
+                if (item is not (NoteItem or ChordItem) || item.GraceTime || item.CrossStaffIndex >= 0
+                    || !Sounds(start, GetItemDuration(item)))
+                    continue;
+                // The note's own stem, as for a moved note below: the staff's voice default says
+                // nothing of a single voice, whose stems follow their pitch.
+                bool up = item is NoteItem n0 ? n0.StemUp : ((ChordItem)item).StemUp;
+                Unite(item, up, !grace && (up ? 1 : -1) == dir && start == onset);
+            }
+        }
+        foreach (var crossed in target.CrossedIn)
+        {
+            if (crossed.MeasureIndex != m)
+                continue;
+            var theirs = crossed.Measures[m].Items;
+            var start = Fraction.Zero;
+            for (int k = 0; k < crossed.ItemIndex; k++)
+                start += GetItemDuration(theirs[k]);
+            var item = crossed.Item;
+            if (!Sounds(start, GetItemDuration(item)))
+                continue;
+            bool up = item is NoteItem n ? n.StemUp : ((ChordItem)item).StemUp;
+            Unite(item, up, !grace && (up ? 1 : -1) == dir && start == onset && !BeamSpansStaves(theirs, item));
+        }
+
+        if (double.IsInfinity(noteLow))
+            return basePos - neutral;
+        var box = GlyphMetrics.GetRestBBox(rest, restValue);
+        return basePos - neutral
+            + RestTranslation(dir, basePos + box.Bottom * 2.0, basePos + box.Top * 2.0, noteLow, noteHigh, basePos);
     }
 
     /// <summary>Whether <paramref name="item"/>'s beam has a member of <paramref name="items"/>

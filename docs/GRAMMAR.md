@@ -2531,7 +2531,10 @@ StaffGroupBody = '{' , { StaffRender | CondensedStaff | CombinedStaff
                     a rest - nothing is moved and a warning says so, LYS4078: one a bar of the
                     part, one for the part when more than five of its bars do. `lysc check` and
                     the editor (once the text has rested) say it; a moved grace note is not
-                    judged. *)
+                    judged. A REST moves the same way (`lh { c4 r4@cross c2 }`; owner's decision
+                    2026-11-21, docs/cross-rest-design.md): it sits where the other staff's notes
+                    leave it room, as LilyPond's Rest_collision there places it; inside a grace
+                    run it moves when the run does and it writes `@cross` itself. *)
 
 CondensedStaff = 'condensedStaff' , [ ClefName ] , [ DisplayName , [ DisplayName ] ] , '{' , PartRef , PartRef , { PartRef } , '}' ;
                  (* A CONDENSED score: the named parts, each of which would otherwise be its

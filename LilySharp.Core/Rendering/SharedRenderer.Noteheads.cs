@@ -142,7 +142,10 @@ internal static partial class SharedRenderer
                         double restPosition = restShift
                             + ElementCoordinator.NeutralRestPosition(
                                 staffLines, GlyphMetrics.NoteValueOf(rest.BaseDuration));
-                        DrawRest(rest, itemX, staffY + restShift * 0.5, staffLines,
+                        // A rest @cross moved is drawn on the staff it stands on, its shift
+                        // already in that staff's positions (Staff.CrossedRestShifts).
+                        double restStaffY = MiddleYOf(rest, system, staffMiddleY) + StaffHeight / 2;
+                        DrawRest(rest, itemX, restStaffY + restShift * 0.5, staffLines,
                             layout.GetRestDotOffset(ml.MeasureIndex, voiceNumber - 1, itemIdx),
                             gc, restPosition);
                     }

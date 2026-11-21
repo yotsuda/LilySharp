@@ -199,6 +199,23 @@ public sealed record Staff(
     /// </remarks>
     public ImmutableArray<CrossedNote> CrossedIn { get; init; } = ImmutableArray<CrossedNote>.Empty;
 
+    /// <summary>
+    /// The rests of other staves that <c>@cross</c> moved onto this one (owner's decision
+    /// 2026-11-21, docs/cross-rest-design.md) — kept apart from <see cref="CrossedIn"/>, whose
+    /// readers are a note's. This staff's skyline holds them where they are drawn.
+    /// </summary>
+    public ImmutableArray<CrossedNote> RestsCrossedIn { get; init; } = ImmutableArray<CrossedNote>.Empty;
+
+    /// <summary>
+    /// The rests of THIS staff's voices that <c>@cross</c> moved to another staff, each with its
+    /// shift in that staff's positions from its neutral letter — the Rest_collision of the staff
+    /// it stands on, which only the collector, holding every staff, can read
+    /// (<c>ElementCoordinator.CrossedRestShift</c>). The rest-collision memo answers these as
+    /// they stand.
+    /// </summary>
+    public ImmutableDictionary<Layout.RestShiftKey, double> CrossedRestShifts { get; init; }
+        = ImmutableDictionary<Layout.RestShiftKey, double>.Empty;
+
     /// <summary>Whether a note of this staff's voices stands on another staff (@cross).</summary>
     public bool HasMovedNotes { get; init; }
 

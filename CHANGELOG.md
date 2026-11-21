@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **A rest that writes `@cross` moves to the other staff** (`[engraving]`). `lh { c4 r4@cross c2 }` draws the rest on the treble, as a note with `@cross` moves, and as the LilyPond export and the MusicXML export already did; the page used to leave it on the bass in silence. It sits where that staff's notes leave it room, as LilyPond places it, and the staves make room for it. In a grace run that moves to the other staff (every note with `@cross`), a rest moves with it when it writes `@cross` too.
+
 - **Fixed: a rest beside a chord held from an earlier beat moved too far** (`[engraving]`). LilyPond moves a rest off such a chord by one head only, the one at the stem's root; Lily# cleared every head of the chord. When the chord's stem pointed the rest's way, the rest went past heads LilyPond lets it sit beside: in `voice { e''2 r4 e''4 } { c'1 } { <g' d''>2. r4 }` the rest stood at 4.0 spaces where LilyPond puts it at 2.0. The same for a grace rest after a chord stemmed up, and a rest beside a chord `@cross` moved onto its staff.
 
 - **Fixed: a rest of one voice could stand half a space too close to the other voice's note** (`[engraving]`). Moving a rest off the notes of another voice took a note head as half a space tall each way, where the drawn head reaches 0.545; when the clearance came out exactly on a half space, the rest stopped one step short. A rest over `c'''` stood at 6.5 spaces where LilyPond puts it at 7.0, and a rest over `a'` stayed on its line where LilyPond lifts it a space. An 8va bracket or a trill over such a rest rises with it.
