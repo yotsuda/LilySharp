@@ -277,6 +277,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1349セッションの経緯
+
+### 1.1 第1349セッション（2026-11-21・YT-DELL2・新しい会話）
+
+base `b5b435035`。開始時 full 18139 合格 / 0 失敗 / skip 2 / 合計 18141（Lab `p1349` `run1.trx`）。Calamo・Orecchiante・Shosa の open は 0。
+- **leftovers 第1237 の「残り」＝根元の頭を閉じた `454659690`**（Lab `p1349/rest` probe.ps1 h1〜h5・s1・o1、probe2.ps1 g4〜g6・x1〜x2・LilyPond 2.26.0）: LilyPond の休符の衝突は、前から伸びている音と反対向きの音を符幹の根元の頭 1 つで読む（`Note_column::first_head`）。Lily# は和音の頭を全部読んでいた。同じ向きの声部が伸ばしている和音では根元が休符から遠い頭なので、休符が上がりすぎた: `voice { e''2 r4 e''4 } { c'1 } { <g' d''>2. r4 }` の休符が LilyPond 2.0／Lily# 4.0、下向き（h4）−3.0／−5.0。同じ規則が装飾休符（符幹が上の和音の後 g4 2.0／3.5）と `@cross` で移ってきた和音（x1 −2.0／−4.0）にもあった＝`ElementCoordinator` の 3 か所が `RootHeadPosition` を読む。12 形が 0.01 以内。対照 3 つ（同じ瞬間の和音・反対向き・符幹が下の和音）は元から一致。網 +4（`RestAvoidNoteTests.AHeldChord_CountsByTheHeadAtItsStemsRoot`）・毒 3 本で 2／1／1 赤。掃き 1289 枚は 0 枚動いた（base の exe で h1 が 4.0＝陽性対照）。CHANGELOG 2 つ。
+- 残した（leftovers）: ⑵ `@cross` で移った装飾休符は未測定のまま。
+- full 18143 合格 / 0 失敗 / skip 2 / 合計 18145（`run2.trx`）。`-End` の full は既知の不安定な 2 本（include の一時ファイルのロック）が赤＝単独 3/3 緑。
+- **次**: leftovers の残り（⑵ `@cross` で移った装飾休符ほか）か F4。
+
 ## 以下は第1348セッションの経緯
 
 ### 1.1 第1348セッション（2026-11-21・YT-DELL2・新しい会話）
