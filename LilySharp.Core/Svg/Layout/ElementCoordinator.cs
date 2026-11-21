@@ -2144,7 +2144,8 @@ internal sealed class ElementCoordinator
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<BeamLayout> beamLayouts,
         ImmutableDictionary<RestShiftKey, double> priorShifts,
-        int staffIndex = -1, ImmutableArray<Voice> staffVoices = default)
+        int staffIndex = -1, ImmutableArray<Voice> staffVoices = default,
+        Func<int, Staff?>? staffOf = null)
     {
         var voicesOfBeams = staffVoices.IsDefaultOrEmpty ? score.Voices : staffVoices;
         if (beamLayouts.Length == 0)
@@ -2222,6 +2223,8 @@ internal sealed class ElementCoordinator
                 // before, i.e. read the line one attach to the right of the rest).
                 double stemY = beamLayout.GetYAtX(restX);
                 double beamY = stemY - d * heightOfBeams;
+                RestItem? movedRest = null;
+                Staff? movedTo = null;
                 // A rest @cross moved stands on the other staff, its prior shift already in
                 // THAT staff's positions (Staff.CrossedRestShifts): the beam is read there too,
                 // across the distance between the two staves' middles. Read in this staff's
@@ -2233,10 +2236,15 @@ internal sealed class ElementCoordinator
                     && measureIndex < voicesOfBeams[group.VoiceIndex].Measures.Length
                     && rest.ItemIndex < voicesOfBeams[group.VoiceIndex].Measures[measureIndex].Items.Length
                     && voicesOfBeams[group.VoiceIndex].Measures[measureIndex].Items[rest.ItemIndex]
-                        is RestItem { CrossStaffIndex: >= 0 and var crossTarget }
+                        is RestItem { CrossStaffIndex: >= 0 and var crossTarget } crossed
                     && measureMap.TryGetValue(measureIndex, out var crossPlaced))
+                {
+                    // LILYPOND-REF: lily/beam.cc:1349-1355 (the common Y refpoint, above).
                     beamY += 2.0 * (LayoutUtilities.FindStaffYInSystem(crossPlaced.System, staffIndex)
                         - LayoutUtilities.FindStaffYInSystem(crossPlaced.System, crossTarget));
+                    movedRest = crossed;
+                    movedTo = staffOf?.Invoke(crossTarget);
+                }
 
                 // LILYPOND-REF: beam.cc:1388-1392 rest_dim = rest_extent[d], the extent
                 // TRANSLATED by prev_offset — the rest's REAL glyph ink where the voiced
@@ -2251,6 +2259,27 @@ internal sealed class ElementCoordinator
                 // no book puts one on a staff of fewer than five lines.
                 var key = new RestShiftKey(measureIndex, group.VoiceIndex, rest.ItemIndex);
                 priorShifts.TryGetValue(key, out double prior);
+                // ⚠️ A REST @cross MOVED is pushed by the beam FIRST and by the staff it stands
+                // on AFTER: the beam reads it where its voice puts it, not where that staff's
+                // Rest_collision did (Staff.CrossedRestShifts), and the collision then
+                // translates it from where the beam left it, in the beam's direction (the rest's
+                // stem's), below. MEASURED, LilyPond 2.26.0 (Lab sessions/p1356/b7):
+                // `lh { c8[ r8@cross g'8@cross c8] }` puts the rest at −6.5 spaces on the
+                // treble under an empty treble (the beam's push alone), +4.0 over e''2 and +2.5
+                // over a'2 (−6.5, then up past the head); Lily# drew −6.5 for all three.
+                // LILYPOND-REF: lily/grob-closure.cc:63-68 chain_callback — Rest_collision's
+                //   force_shift_callback_rest (rest-collision.cc:79-83, add_column) is chained
+                //   after Beam_engraver's rest_collision_callback (beam-engraver.cc:215), so it is
+                //   the outer one and runs on the beam's answer; rest-collision.cc:224-226 the
+                //   direction is Note_column::dir, the stem's.
+                if (movedTo is not null && movedRest!.StaffPosition is null)
+                {
+                    int value = GlyphMetrics.NoteValueOf(movedRest.BaseDuration);
+                    prior = RestStaffPosition(movedRest, movedRest.VoiceDirection, value, movedTo.Lines)
+                        - NeutralRestPosition(movedTo.Lines, value);
+                }
+                else
+                    movedTo = null;
                 var restBox = GlyphMetrics.GetRestBBox(rest.NoteValue);
                 double restOrigin = (rest.NoteValue == 1 ? 2.0 : 0.0) + prior;
                 double restTop = restOrigin + EngravingDefaults.ToStaffPositions(restBox.Top);
@@ -2262,7 +2291,7 @@ internal sealed class ElementCoordinator
                 double minimumDistance =
                     EngravingDefaults.ToStaffPositions(EngravingDefaults.RestMinimumDistance);
                 double shift = d * Math.Min(d * (beamY - d * minimumDistance - restDim), 0.0);
-                if (shift == 0.0)
+                if (shift == 0.0 && movedTo is null)
                     continue;
 
                 // LILYPOND-REF: beam.cc:1403-1404 always move by discrete half-spaces
@@ -2284,6 +2313,15 @@ internal sealed class ElementCoordinator
                 // beams sharing one rest slot keep the larger push (degenerate; LP has
                 // one stem -> one beam per rest).
                 double total = prior + shift;
+                if (movedTo is not null)
+                {
+                    var voiceItems = voicesOfBeams[group.VoiceIndex].Measures[measureIndex].Items;
+                    var onset = Fraction.Zero;
+                    for (int k = 0; k < rest.ItemIndex; k++)
+                        onset += GetItemDuration(voiceItems[k]);
+                    shifts[key] = CrossedRestShift(movedRest!, onset, measureIndex, movedTo, columnDir: d, before: shift);
+                    continue;
+                }
                 if (!shifts.TryGetValue(key, out var existing)
                     || Math.Abs(total - prior) > Math.Abs(existing - prior))
                     shifts[key] = total;
@@ -2657,16 +2695,22 @@ internal sealed class ElementCoordinator
     /// LILYPOND-REF: lily/change-iterator.cc:74-99 Change_iterator::process — the Voice and its Rest join the new Staff,
     ///   and so its Rest_collision; lily/rest-collision.cc:222-284 calc_positioning_done.
     /// </remarks>
-    internal static double CrossedRestShift(RestItem rest, Fraction onset, int m, Staff target)
+    /// <param name="columnDir">The column's direction when the rest's stem has one — a rest in a
+    /// beam takes the beam's (<see cref="CalculateRestShifts"/>); null reads the headless default.
+    /// LILYPOND-REF: lily/rest-collision.cc:224-226 (Note_column::dir, the stem's).</param>
+    /// <param name="before">A shift, in positions, the rest took BEFORE this collision — the
+    /// beam's push (<see cref="CalculateRestShifts"/>); the collision translates from there.</param>
+    internal static double CrossedRestShift(RestItem rest, Fraction onset, int m, Staff target,
+        int? columnDir = null, double before = 0.0)
     {
         int restValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
-        double basePos = RestStaffPosition(rest, rest.VoiceDirection, restValue, target.Lines);
+        double basePos = RestStaffPosition(rest, rest.VoiceDirection, restValue, target.Lines) + before;
         double neutral = NeutralRestPosition(target.Lines, restValue);
         if (rest.StaffPosition is not null)
             return basePos - neutral;
         int dir = rest.VoiceDirection != 0 ? rest.VoiceDirection
             : rest.GraceTime ? (rest.GraceStemDown ? -1 : 1)
-            : -1;
+            : columnDir ?? -1;
         bool grace = rest.GraceTime;
         bool Sounds(Fraction start, Fraction length) => grace
             ? start < onset && start + length >= onset

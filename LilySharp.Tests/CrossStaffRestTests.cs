@@ -150,6 +150,26 @@ public class CrossStaffRestTests
     }
 
     /// <summary>
+    /// A moved rest in a beam across the staves is pushed by the beam FIRST and by the staff it
+    /// stands on AFTER (ElementCoordinator.CalculateRestShifts), in the beam's direction: the
+    /// beam takes it under itself to −6.5 spaces, and the treble's note then lifts it from
+    /// there — past e'' to +4.0, past a' to +2.5. LilyPond 2.26.0's, in spaces above the treble's
+    /// middle line (Lab sessions/p1356/b7 v1–v3). Until session 1356 the treble's collision ran
+    /// first (down, the headless default) and the beam had the last word: −6.5 for all three.
+    /// LILYPOND-REF: lily/grob-closure.cc:63-68 chain_callback (Rest_collision's callback is the
+    ///   outer one); lily/rest-collision.cc:224-226 (the direction is the stem's).
+    /// </summary>
+    [Theory]
+    [InlineData("s1 |", -6.5)]
+    [InlineData("e''2 e''2 |", 4.0)]
+    [InlineData("a'2 a'2 |", 2.5)]
+    public void AMovedRestInABeamAcrossTheStaves_TakesTheBeamFirst_ThenItsStaffsNotes(string treble, double expected)
+    {
+        var (_, rests) = Read(TestPaper.SvgFromRenderSpec(Book(treble, "c8[ r8@cross g'8@cross c8] c2 |")));
+        Assert.Equal(expected, Assert.Single(rests));
+    }
+
+    /// <summary>
     /// A slur under the bass over a grace run <c>@cross</c> moved to the treble reads the run
     /// where it stands (ElementCoordinator.AddGraceObstaclesForMeasure), so it bows as if the
     /// run were not under it: its lowest ink, in spaces above the treble's middle line, LilyPond

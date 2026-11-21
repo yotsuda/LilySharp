@@ -1530,7 +1530,9 @@ internal sealed partial class LayoutEngine
             var staffCollisionShifts = restCollisionsOf(staff);
             var staffRestShifts = _elementCoordinator.CalculateRestShifts(
                 staffScore, systemsArray, staffFinalBeams,
-                staffCollisionShifts, staffIndex, staff.Voices);
+                staffCollisionShifts, staffIndex, staff.Voices,
+                // the staff a rest @cross moved stands on (its collision follows the beam's push)
+                staffOf: i => SkylineBuilder.StaffAt(score, i));
             foreach (var kv in staffCollisionShifts.SetItems(staffRestShifts))
             {
                 restShiftsByStaff[(staffIndex, kv.Key)] = kv.Value;
