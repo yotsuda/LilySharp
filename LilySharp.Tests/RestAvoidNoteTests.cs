@@ -218,4 +218,67 @@ public class RestAvoidNoteTests
 
         Assert.Equal(new[] { 5.5, 7.0, 7.0, 6.5, 6.0 }, rests);
     }
+
+    /// <summary>
+    /// A note of another column — one held over from an earlier moment — counts by its FIRST
+    /// head alone, the head at its stem's root. For a chord held in a voice pointing the
+    /// rest's way that is the head farthest from the rest, so the rest may lie on the chord's
+    /// other heads: LilyPond leaves the up rest beside the held <c>&lt;g' d''&gt;</c> at 2.0
+    /// spaces, clearing only the g'. The same rule in the collision's other two arms: a grace
+    /// rest after a chord stemmed up, a rest beside a chord <c>@cross</c> moved onto its
+    /// staff. Every rest of the staff, left to right, is LilyPond 2.26.0's own print of the
+    /// twin (Lab sessions/p1349/rest h1, h4, g4, x1); every head counting, the first rest of
+    /// each sat at 4.0, −5.0, 3.5 and −4.0.
+    /// LILYPOND-REF: lily/rest-collision.cc:246-265 calc_positioning_done —
+    ///   Note_column::first_head; lily/stem.cc:212-221 Stem::first_head.
+    /// </summary>
+    [Theory]
+    [InlineData("voice { e''2 r4 e''4 } { c'1 } { <g' d''>2. r4 } |", "", new[] { 2.0, 6.5 })]
+    [InlineData("voice { c''1 } { a2 r4 a4 } { e''1 } { <e' b'>2. r4 } |", "", new[] { -3.0, -9.0 })]
+    [InlineData("<e' b'>4 grace { r16 } c''4 c''2 |", "", new[] { 2.0 })]
+    [InlineData("c''4 r4 r2 |", "<g' e''>2@cross r2 |", new[] { -2.0, 0.0 })]
+    public void AHeldChord_CountsByTheHeadAtItsStemsRoot(string treble, string bass, double[] expected)
+    {
+        var svg = TestPaper.SvgFromRenderSpec(bass.Length == 0
+            ? $$"""
+                octave absolute
+                time 4/4
+                paper { raggedRight }
+                part m { clef treble }
+                section A { m {
+                {{treble}}
+                } }
+                form { A }
+                score { staff m }
+                """
+            : $$"""
+                octave absolute
+                time 4/4
+                paper { raggedRight }
+                part rh { clef treble }
+                part lh { clef bass }
+                section A { rh { {{treble}} } lh { {{bass}} } }
+                form { A }
+                score { grandStaff { staff rh staff lh } }
+                """);
+
+        // The treble staff: the top five lines.
+        var lineYs = Regex.Matches(svg,
+                "<line x1=\"[-\\d.]+\" y1=\"([-\\d.]+)\" x2=\"[-\\d.]+\" y2=\"\\1\" stroke=\"#000000\" stroke-width=\"0\\.100\"")
+            .Select(m => double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture))
+            .Distinct().OrderBy(y => y).ToList();
+        Assert.Equal(bass.Length == 0 ? 5 : 10, lineYs.Count);
+        double middleY = lineYs[2];
+        double between = bass.Length == 0 ? double.PositiveInfinity : (lineYs[4] + lineYs[5]) / 2;
+
+        var rests = Regex.Matches(svg,
+                "<text class=\"music\" x=\"([-\\d.]+)\" y=\"([-\\d.]+)\"[^>]*>(.)</text>")
+            .Where(m => (int)m.Groups[3].Value[0] is >= 0xE000 and <= 0xE00F)
+            .Select(m => (X: double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture),
+                Y: double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture)))
+            .Where(r => r.Y < between)
+            .OrderBy(r => r.X).Select(r => Math.Round(middleY - r.Y, 2)).ToArray();
+
+        Assert.Equal(expected, rests);
+    }
 }

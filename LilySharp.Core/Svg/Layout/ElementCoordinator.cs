@@ -2462,17 +2462,20 @@ internal sealed class ElementCoordinator
                             if (otherTime > time
                                 || otherTime + GetItemDuration(otherItem) <= time)
                                 continue;
+                            // Same direction at the SAME moment: LilyPond unites the whole
+                            // COLUMN, so every head and the stem count. A note that merely
+                            // holds over from an earlier moment, or points the other way,
+                            // counts by its first head alone (the arm of :246-265).
+                            bool wholeColumn = otherUp == voiceUp && otherTime == time;
                             var (headBelow, headAbove) = HeadReachInPositions(otherItem);
-                            foreach (double p in StaffPositionsOf(otherItem))
+                            foreach (double p in wholeColumn
+                                ? StaffPositionsOf(otherItem)
+                                : [RootHeadPosition(otherItem)])
                             {
                                 noteLow = Math.Min(noteLow, p + headBelow);
                                 noteHigh = Math.Max(noteHigh, p + headAbove);
                             }
-                            // Same direction at the SAME moment: LilyPond unites the whole
-                            // COLUMN, so the stem counts too. A note that merely holds over
-                            // from an earlier moment stays head-only, whatever its side
-                            // (the different-column arm of :246-265).
-                            if (otherUp == voiceUp && otherTime == time)
+                            if (wholeColumn)
                             {
                                 double tip = StemTipPositionOf(otherItem, otherUp);
                                 noteLow = Math.Min(noteLow, tip);
@@ -2566,13 +2569,16 @@ internal sealed class ElementCoordinator
                         var item = crossed.Item;
                         if (onset > time || onset + GetItemDuration(item) <= time)
                             continue;
+                        bool stemUp = item is NoteItem n ? n.StemUp : ((ChordItem)item).StemUp;
+                        // The column at the rest's own moment pointing its way counts with
+                        // every head; any other note by its first head alone.
+                        bool sameColumn = (stemUp ? 1 : -1) == dir && onset == time;
                         var (headBelow, headAbove) = HeadReachInPositions(item);
-                        foreach (double p in StaffPositionsOf(item))
+                        foreach (double p in sameColumn ? StaffPositionsOf(item) : [RootHeadPosition(item)])
                         {
                             noteLow = Math.Min(noteLow, p + headBelow);
                             noteHigh = Math.Max(noteHigh, p + headAbove);
                         }
-                        bool stemUp = item is NoteItem n ? n.StemUp : ((ChordItem)item).StemUp;
                         // …but not the stem of a beam that spans the staves: that stem is a
                         // cross-staff grob, and the column's extent leaves it out — the head
                         // alone, as for a note of another column. MEASURED (Lab
@@ -2582,7 +2588,7 @@ internal sealed class ElementCoordinator
                         // LILYPOND-REF: lily/stem.cc:1279-1283 Stem::is_cross_staff — its beam's;
                         //   lily/axis-group-interface.cc:96-106 relative_maybe_bound_group_extent
                         //   — a cross-staff element is not in the group's extent.
-                        if ((stemUp ? 1 : -1) == dir && onset == time && !BeamSpansStaves(theirs, item))
+                        if (sameColumn && !BeamSpansStaves(theirs, item))
                         {
                             double tip = StemTipPositionOf(item, stemUp);
                             noteLow = Math.Min(noteLow, tip);
@@ -2694,10 +2700,9 @@ internal sealed class ElementCoordinator
         int dir = rest.VoiceDirection != 0 ? rest.VoiceDirection : 1;
         var box = GlyphMetrics.GetRestBBox(rest, restValue);
         double restNear = dir > 0 ? basePos + box.Bottom * 2.0 : basePos + box.Top * 2.0;
+        // The held note is of another column: its first head alone.
         var (headBelow, headAbove) = HeadReachInPositions(held);
-        double noteFar = dir > 0
-            ? StaffPositionsOf(held).Max() + headAbove
-            : StaffPositionsOf(held).Min() + headBelow;
+        double noteFar = RootHeadPosition(held) + (dir > 0 ? headAbove : headBelow);
         double y = dir * Math.Max(0.0,
             -dir * restNear + dir * noteFar + RestCollisionMinimumDistance * 2.0);
         double discrete = dir * Math.Ceiling(dir * y);
@@ -2724,6 +2729,31 @@ internal sealed class ElementCoordinator
     {
         var box = GlyphMetrics.GetNoteheadBBox(GlyphMetrics.NoteValueOf(item));
         return (box.Bottom * 2.0, box.Top * 2.0);
+    }
+
+    /// <summary>
+    /// The staff position of <paramref name="item"/>'s head at its stem's root — the lowest
+    /// head under a stem up, the highest over a stem down: all Rest_collision reads of a note
+    /// of another column (one held over from an earlier moment) or pointing the other way.
+    /// </summary>
+    /// <remarks>
+    /// For a note pointing the other way the root is the head nearest the rest, so it answers
+    /// what every head did. For a chord held in a voice pointing the rest's way it is the head
+    /// FARTHEST from the rest, and the rest may lie on the chord's other heads. MEASURED,
+    /// LilyPond 2.26.0 (Lab sessions/p1349/rest): <c>voice { e''2 r4 e''4 } { c'1 } { &lt;g'
+    /// d''&gt;2. r4 }</c> leaves the rest at 2.0 spaces, on the d''; it sat at 4.0 while every
+    /// head counted. The same for a grace rest after a chord stemmed up
+    /// (<c>&lt;e' b'&gt;4 grace { r16 }</c>: 2.0, not 3.5) and a rest beside a chord
+    /// <c>@cross</c> moved onto its staff (−2.0, not −4.0).
+    /// LILYPOND-REF: lily/rest-collision.cc:246-265 calc_positioning_done —
+    ///   Note_column::first_head; lily/stem.cc:212-221 Stem::first_head — extremal_heads[-dir].
+    /// </remarks>
+    private static double RootHeadPosition(MusicItem item)
+    {
+        var positions = StaffPositionsOf(item);
+        return item is ChordItem { StemUp: false } or NoteItem { StemUp: false }
+            ? positions.Max()
+            : positions.Min();
     }
 
     /// <summary>RestCollision's <c>minimum-distance</c>, in staff spaces.</summary>

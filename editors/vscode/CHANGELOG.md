@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A rest beside a chord held from an earlier beat no longer moves too far.** Where a voice holds a chord whose stem points the rest's way, the rest went past the whole chord; LilyPond clears only the head at the stem's root. Grace rests after such a chord and rests beside a chord moved with `@cross` went too far the same way.
 - **A rest no longer stands half a space too close to the other voice's note.** When a rest was moved off another voice's notes, it could stop one step short of where LilyPond puts it (over `c'''`, or over `a'`), and an 8va bracket or trill over it with it.
 - **A grace's dynamic, and a script on one note of a chord, now sound.** `grace { e''16@f }` was drawn and not played, and the accent of `<e''@accent g''>4` was drawn over the chord and not heard. The MusicXML export writes that accent on its note.
 - **The preview no longer keeps what an edit changed.** Deleting a `~` before a bar line could leave the next bar's natural on the preview, a click on a bar not written yet could type into the place it had before an edit above it, and a note typed among a section's phrase references could come out in the wrong octave — until the next edit elsewhere.

@@ -615,7 +615,7 @@
 "Svg/Layout/ElementCoordinator.cs","ElementCoordinator.GraceRestShift","2.0","-dir * restNear + dir * noteFar + RestCollisionMinimumDistance * 2.0);","(file-level) LILYPOND-REF: lily/beam.cc, lily/tie.cc, lily/slur.cc","Yellow"
 "Svg/Layout/ElementCoordinator.cs","ElementCoordinator.GraceRestShift","5.0, 5.0","if (basePos + discrete >= -5.0 && basePos + discrete <= 5.0)","(file-level) LILYPOND-REF: lily/beam.cc, lily/tie.cc, lily/slur.cc","Yellow"
 "Svg/Layout/ElementCoordinator.cs","ElementCoordinator.GraceRestShift","2.0, 2.0","discrete = dir * Math.Ceiling(dir * discrete / 2.0) * 2.0;","(file-level) LILYPOND-REF: lily/beam.cc, lily/tie.cc, lily/slur.cc","Yellow"
-"Svg/Layout/ElementCoordinator.cs","ElementCoordinator.HeadReachInPositions","2.0, 2.0","return (box.Bottom * 2.0, box.Top * 2.0);","LILYPOND-REF: scm/define-grobs.scm:2981-2984 RestCollision","Green"
+"Svg/Layout/ElementCoordinator.cs","ElementCoordinator.HeadReachInPositions","2.0, 2.0","return (box.Bottom * 2.0, box.Top * 2.0);","(file-level) LILYPOND-REF: lily/beam.cc, lily/tie.cc, lily/slur.cc","Yellow"
 "Svg/Layout/ElementCoordinator.cs","ElementCoordinator.RestCollisionMinimumDistance","0.75","private const double RestCollisionMinimumDistance = 0.75;","LILYPOND-REF: scm/define-grobs.scm:2981-2984 RestCollision","Green"
 "Svg/Layout/ElementCoordinator.cs","ElementCoordinator.RestStaffPosition","2.0","? (restValue == 1 ? written + 2.0 : written)","LILYPOND-REF: lily/rest.cc:53-74 staff_position_internal — position_override.","Green"
 "Svg/Layout/ElementCoordinator.cs","ElementCoordinator.NeutralRestPosition","0.0","return 0.0;","(file-level) LILYPOND-REF: lily/beam.cc, lily/tie.cc, lily/slur.cc","Yellow"
