@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **A tuplet bracket stays on its own staff when one of its notes is a rest moved with `@cross`** (`[engraving]`). `tuplet 3/2 { c'8 r8@cross c'8 }` in the left hand brackets the left hand's notes where it would without the rest; the moved rest used to push the bracket down by its height on the other staff. LilyPond carries the bracket over to the moved rest, through the other staff's notes; Lily# deliberately does not, and the LilyPond export keeps LilyPond's picture.
+
 - **Fixed: a slur over a grace run moved with `@cross` bowed too deep** (`[engraving]`). In `lh { c4( grace { e'16@cross } c4) }` the slur under the bass was pulled half a space lower by the grace note standing on the treble; it now bows as LilyPond's does, as if the run were not under it.
 
 - **Fixed: a rest moved with `@cross` inside a bracketed beam was pushed by the beam as if it had stayed** (`[engraving]`). In `lh { c'8[ r8@cross c'8 c'8] c2 }` the beam under the bass lifted the rest on the treble to +2.0 spaces; LilyPond leaves it at −1.0, where the treble's notes put it.

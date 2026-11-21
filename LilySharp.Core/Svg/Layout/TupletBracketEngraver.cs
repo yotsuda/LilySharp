@@ -1223,7 +1223,19 @@ internal static class TupletBracketEngraver
                 //   `for (i < columns.size ()) points.push_back (x, note_ext[dir])';
                 //   lily/note-column.cc:251-258 Note_column::cross_staff_extent — the
                 //   column's extent united with its stem's.
-                if (item is RestItem { IsSpacer: false, IsMultiMeasure: false } rest
+                // A rest @cross moved is no support of its tuplet's bracket: the bracket stays
+                // on its own staff, over the notes there, and the moved rest stands inside its
+                // span on the other staff.
+                // LILYSHARP-OWN: LilyPond reaches the moved rest in the common frame and carries
+                //   the bracket into the other staff, through its notes (owner's decision
+                //   2026-11-21, session 1354: not copied — a bracket drawn through the other
+                //   staff's heads is not a placement to keep; Lab sessions/p1353/m4/lp.png,
+                //   `tuplet 3/2 { c8 r8@cross c8 }` under e''2: the bracket crosses e'').
+                //   departs from: lily/tuplet-bracket.cc:554-562 calc_position_and_height (every
+                //     column's extent, the moved rest's among them).
+                //   goes away when: never — a deliberate choice; the twin (lysc ly) keeps LilyPond's.
+                //   observed by: CrossStaffRestTests.ATupletBracket_StaysOnItsOwnStaff_OverAMovedRest.
+                if (item is RestItem { IsSpacer: false, IsMultiMeasure: false, CrossStaffIndex: < 0 } rest
                     && useRealExtents && measureLayout is { } rml)
                 {
                     double restColX = rml.X

@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 67 | 観測者がゼロだと自認しているもの |
-| `OWN` | 482 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **611** | |
+| `OWN` | 483 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **612** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -253,7 +253,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（482 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（483 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -887,6 +887,8 @@
 - **`TrillSpannerEngraver.GetEndX`** BoundPadding short of the measure's end — a device, kept (LILYSHARP-OWN,
 ### `LilySharp.Core/Svg/Layout/TrillWaveOutline.cs`
 - **`TrillWaveOutline.Resolved`** ⚠️ LILYSHARP-OWN: FullSize — and it is the ANNOTATION ISLAND's debt, not
+### `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs`
+- **`TupletBracketEngraver.CalculateSlope`** LILYSHARP-OWN: LilyPond reaches the moved rest in the common frame and carries
 ### `LilySharp.Core/Svg/Layout/VerticalSkyline.cs`
 - **`VerticalSkyline.FromGlyphOutline`** ⚠️ LILYSHARP-OWN, one deviation, declared rather than hidden: LilyPond flattens each
 - **`VerticalSkyline.Scale`** ⚠️ LILYSHARP-OWN: THIS EXISTS BECAUSE LILY# SCALES AT DRAW TIME. An ossia is drawn

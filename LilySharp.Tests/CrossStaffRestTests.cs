@@ -177,6 +177,30 @@ public class CrossStaffRestTests
         Assert.Equal(expected, Math.Round(lines[2] - lowest - 0.04, 2));
     }
 
+    /// <summary>
+    /// A tuplet's bracket stays on its own staff over a rest <c>@cross</c> moved out of it: the
+    /// bracket under the bass's <c>c'8</c> stands where it stands over a spacer in the rest's
+    /// place, 3.4 spaces below the bass's middle line. Read as a support, the moved rest (on
+    /// the treble, under a') took the bracket 1.75 spaces lower, in the bass's positions.
+    /// LILYSHARP-OWN (owner's decision 2026-11-21, session 1354): LilyPond carries the bracket
+    /// to the moved rest, through the other staff's notes (Lab sessions/p1353/m4/lp.png);
+    /// TupletBracketEngraver records the departure.
+    /// </summary>
+    [Fact]
+    public void ATupletBracket_StaysOnItsOwnStaff_OverAMovedRest()
+    {
+        double BracketBelowBass(string bass)
+        {
+            var svg = TestPaper.SvgFromRenderSpec(Book("a'2 a'2 |", bass));
+            var (lines, _) = Read(svg);
+            var y = Regex.Match(svg,
+                "<line x1=\"[-\\d.]+\" y1=\"([-\\d.]+)\" x2=\"[-\\d.]+\" y2=\"\\1\" stroke=\"#000000\" stroke-width=\"0\\.160\" data-pos").Groups[1].Value;
+            return Math.Round(double.Parse(y, CultureInfo.InvariantCulture) - lines[7], 2);
+        }
+        Assert.Equal(3.4, BracketBelowBass("tuplet 3/2 { c'8 s8 c'8 } c'4 c2 |"));
+        Assert.Equal(3.4, BracketBelowBass("tuplet 3/2 { c'8 r8@cross c'8 } c'4 c2 |"));
+    }
+
     [Fact]
     public void TheStaffItMovedTo_ReservesTheRest()
     {

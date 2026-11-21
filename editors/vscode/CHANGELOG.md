@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A tuplet bracket stays on its own staff over a rest moved with `@cross`.** The moved rest no longer pushes the bracket away from its notes.
 - **A slur over grace notes moved with `@cross` no longer sags.** The grace notes on the other staff pulled the slur under them deeper than LilyPond draws it.
 - **A rest moved with `@cross` inside a `[ ]` beam stays where it belongs.** The beam on the left hand's staff no longer lifts the moved rest on the right hand's staff.
 - **A dynamic or text on a note moved with `@cross` follows the note.** `g4@cross@p` in the left hand prints the p under the right hand's staff, by the note, instead of under the left hand's.
