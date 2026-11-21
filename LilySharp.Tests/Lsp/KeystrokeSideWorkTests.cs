@@ -163,7 +163,8 @@ public class KeystrokeSideWorkTests
         }
         finally
         {
-            Directory.Delete(dir, recursive: true);
+            // The change's background pass may still be reading the include (seen once in a full run).
+            try { Directory.Delete(dir, recursive: true); } catch (IOException) { /* the temp folder's own cleaning takes it */ }
         }
     }
 
