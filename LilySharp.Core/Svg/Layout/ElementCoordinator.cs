@@ -2462,12 +2462,11 @@ internal sealed class ElementCoordinator
                             if (otherTime > time
                                 || otherTime + GetItemDuration(otherItem) <= time)
                                 continue;
+                            var (headBelow, headAbove) = HeadReachInPositions(otherItem);
                             foreach (double p in StaffPositionsOf(otherItem))
                             {
-                                // Head ink is ±0.545 ss = ±1.09 positions about its centre.
-                                double half = EngravingDefaults.NoteheadHalfHeight * 2.0;
-                                noteLow = Math.Min(noteLow, p - half);
-                                noteHigh = Math.Max(noteHigh, p + half);
+                                noteLow = Math.Min(noteLow, p + headBelow);
+                                noteHigh = Math.Max(noteHigh, p + headAbove);
                             }
                             // Same direction at the SAME moment: LilyPond unites the whole
                             // COLUMN, so the stem counts too. A note that merely holds over
@@ -2567,11 +2566,11 @@ internal sealed class ElementCoordinator
                         var item = crossed.Item;
                         if (onset > time || onset + GetItemDuration(item) <= time)
                             continue;
+                        var (headBelow, headAbove) = HeadReachInPositions(item);
                         foreach (double p in StaffPositionsOf(item))
                         {
-                            double half = EngravingDefaults.NoteheadHalfHeight * 2.0;
-                            noteLow = Math.Min(noteLow, p - half);
-                            noteHigh = Math.Max(noteHigh, p + half);
+                            noteLow = Math.Min(noteLow, p + headBelow);
+                            noteHigh = Math.Max(noteHigh, p + headAbove);
                         }
                         bool stemUp = item is NoteItem n ? n.StemUp : ((ChordItem)item).StemUp;
                         // …but not the stem of a beam that spans the staves: that stem is a
@@ -2695,16 +2694,36 @@ internal sealed class ElementCoordinator
         int dir = rest.VoiceDirection != 0 ? rest.VoiceDirection : 1;
         var box = GlyphMetrics.GetRestBBox(rest, restValue);
         double restNear = dir > 0 ? basePos + box.Bottom * 2.0 : basePos + box.Top * 2.0;
-        double half = EngravingDefaults.NoteheadHalfHeight * 2.0;
+        var (headBelow, headAbove) = HeadReachInPositions(held);
         double noteFar = dir > 0
-            ? StaffPositionsOf(held).Max() + half
-            : StaffPositionsOf(held).Min() - half;
+            ? StaffPositionsOf(held).Max() + headAbove
+            : StaffPositionsOf(held).Min() + headBelow;
         double y = dir * Math.Max(0.0,
             -dir * restNear + dir * noteFar + RestCollisionMinimumDistance * 2.0);
         double discrete = dir * Math.Ceiling(dir * y);
         if (basePos + discrete >= -5.0 && basePos + discrete <= 5.0)
             discrete = dir * Math.Ceiling(dir * discrete / 2.0) * 2.0;
         return basePos - defaultPos + discrete;
+    }
+
+    /// <summary>
+    /// How far a head of <paramref name="item"/> reaches below and above its own centre, in
+    /// staff positions — what Rest_collision unites a note into (<c>head-&gt;extent</c>): the
+    /// head's stencil, ±0.545 spaces for Emmentaler's black, half and whole heads.
+    /// </summary>
+    /// <remarks>
+    /// It read a nominal ±0.5 (<see cref="EngravingDefaults.NoteheadHalfHeight"/>) until
+    /// session 1348. The 0.045 decides a whole position whenever the clearance lands on a
+    /// half space: <c>voice { r4 } { c'''4 }</c> needs 9.09 positions above the rest's low
+    /// end, which ceils to 10 — LilyPond 2.26.0 puts the rest at 7.0, the nominal head
+    /// left it at 6.5, 0.75 off the head instead of 1.25 (Lab sessions/p1348/rest d2).
+    /// LILYPOND-REF: lily/rest-collision.cc:243-268 calc_positioning_done — notedim from the
+    ///   head's (or the column's) extent; :274-275 — the ceil to half spaces.
+    /// </remarks>
+    private static (double Below, double Above) HeadReachInPositions(MusicItem item)
+    {
+        var box = GlyphMetrics.GetNoteheadBBox(GlyphMetrics.NoteValueOf(item));
+        return (box.Bottom * 2.0, box.Top * 2.0);
     }
 
     /// <summary>RestCollision's <c>minimum-distance</c>, in staff spaces.</summary>

@@ -101,9 +101,12 @@ public class ScriptOverOtherVoiceRestTests
         Assert.Equal(2, portatos.Count);
         var rest = Assert.Single(g.Glyphs.Where(x => x.Glyph == EmmentalerGlyphs.RestQuarter));
         var overRest = portatos[0];
-        // The rest stands where the renderer put it (the upper voice's +4, nothing to push it
-        // further), and the mark is OVER it, horizontally: the two share the column.
-        Assert.Equal(middle - 2.0, rest.Y, 3);
+        // The rest stands where Rest_collision puts it: the upper voice's +4, pushed one space
+        // further by a8's head (its 0.545 reaches 0.09 positions into the rest's clearance,
+        // and inside the staff the push is a whole space) — LilyPond 2.26.0 prints it at
+        // +3.0 (Lab sessions/p1348/rest/books/omr). It read +2.0 while the collision took a
+        // head as ±0.5. The mark is OVER it, horizontally: the two share the column.
+        Assert.Equal(middle - 3.0, rest.Y, 3);
         Assert.InRange(overRest.X, rest.X - 1.0, rest.X + 1.0);
         // The mark clears the rest's OUTLINE by the portato's own padding 0.45
         // (ArticulationSpacing.VerticalPadding) — the same support reading a tie or a stacked
@@ -140,7 +143,7 @@ public class ScriptOverOtherVoiceRestTests
         // The REST is the one that stays: the other way round (moving the rest off the mark) is
         // the design not taken — a rest's place is the voice's, the mark is the one that floats.
         var rest = Assert.Single(with.Glyphs.Where(x => x.Glyph == EmmentalerGlyphs.RestQuarter));
-        Assert.Equal(with.StaffRefpoints()[0] - 2.0, rest.Y, 3);
+        Assert.Equal(with.StaffRefpoints()[0] - 3.0, rest.Y, 3);
     }
 
     /// <summary>The mirror: an upper voice's <c>.down</c> mark under which the lower voice rests.</summary>

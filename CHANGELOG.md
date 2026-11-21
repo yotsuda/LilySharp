@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Fixed: a rest of one voice could stand half a space too close to the other voice's note** (`[engraving]`). Moving a rest off the notes of another voice took a note head as half a space tall each way, where the drawn head reaches 0.545; when the clearance came out exactly on a half space, the rest stopped one step short. A rest over `c'''` stood at 6.5 spaces where LilyPond puts it at 7.0, and a rest over `a'` stayed on its line where LilyPond lifts it a space. An 8va bracket or a trill over such a rest rises with it.
+
 - **Fixed: a grace's dynamic, and a script on one note of a chord, now sound** (`[playback]`, `[export]`). `grace { e''16@f }` was drawn and not played: the notes after it stayed at the level before. A script written on one note of a chord (`<e''@accent g''>4`), drawn over the chord as the chord's own, now sounds on the chord (each kind once), and the MusicXML writes it on that note, as it already did for a grace chord.
 
 - **Fixed: the preview could keep what an edit had changed** (`[editor]`). Deleting a `~` before a bar line could leave the next bar's natural on the preview (and typing one, leave it off); after an edit that changed the length of the text above it, a click on a bar a part has not written yet typed into the old place; and a note typed among a section's phrase references could come out in the octave of the bars recorded before it. Each was the preview reusing the previous keystroke's work where it no longer applied; a fresh render was always right.

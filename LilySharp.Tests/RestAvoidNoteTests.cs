@@ -174,4 +174,48 @@ public class RestAvoidNoteTests
             expected.OrderBy(e => e.Item1).ThenBy(e => e.Item2),
             rests.OrderBy(r => r.Glyph).ThenBy(r => r.Y).Select(r => (r.Glyph, r.Y)));
     }
+
+    /// <summary>
+    /// The collision clears the other voice's HEAD as drawn — its stencil reaches 0.545
+    /// spaces from its centre, not a nominal half space — and the 0.045 decides a whole
+    /// position whenever the clearance lands on a half space. Over <c>c'''</c> the quarter
+    /// rest needs 9.09 positions above its low end, which ceils to 10 (7.0 spaces up); read
+    /// as ±0.5 it took 9 (6.5), 0.75 off the head where LilyPond leaves 1.25. The other
+    /// rests pin the rest of the bar. Every pin is LilyPond 2.26.0's own print of the twin
+    /// (Lab sessions/p1348/rest d2: Rest y = 5.5, 7.0, 7.0, 6.5, 6.0).
+    /// LILYPOND-REF: lily/rest-collision.cc:243-268 calc_positioning_done — head->extent;
+    /// :274-275 — the ceil to half spaces.
+    /// </summary>
+    [Fact]
+    public void TheRest_ClearsTheHeadAsDrawn_NotANominalHalfSpace()
+    {
+        var svg = TestPaper.SvgFromRenderSpec("""
+            octave absolute
+            time 4/4
+            paper { raggedRight }
+            part m { clef treble }
+            section A { m {
+            voice { r8. r16 r4 r4 r4 } { a''8. b''16 c'''4 b''4 a''4 } |
+            } }
+            form { A }
+            score { staff m }
+            """);
+
+        var lineYs = Regex.Matches(svg,
+                "<line x1=\"0\\.05\" y1=\"([-\\d.]+)\" x2=\"[-\\d.]+\" y2=\"\\1\"")
+            .Select(m => double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture))
+            .OrderBy(y => y).ToList();
+        Assert.Equal(5, lineYs.Count);
+        double middleY = lineYs[2];
+
+        // Every rest glyph left to right, as spaces above the middle line.
+        var rests = Regex.Matches(svg,
+                "<text class=\"music\" x=\"([-\\d.]+)\" y=\"([-\\d.]+)\"[^>]*>(.)</text>")
+            .Where(m => (int)m.Groups[3].Value[0] is >= 0xE000 and <= 0xE00F)
+            .Select(m => (X: double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture),
+                Up: Math.Round(middleY - double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture), 2)))
+            .OrderBy(r => r.X).Select(r => r.Up).ToArray();
+
+        Assert.Equal(new[] { 5.5, 7.0, 7.0, 6.5, 6.0 }, rests);
+    }
 }
