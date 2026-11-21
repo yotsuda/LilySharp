@@ -1232,8 +1232,10 @@ internal sealed class SkylineBuilder
         foreach (var grace in graceNotes)
         {
             // The runs DRAWN on this staff: its own, and another staff's voice's that @cross
-            // moved here whole (GraceNoteItem.CrossStaffIndex) — never one of its own that moved away.
-            if (grace.DrawnStaffIndex != staffIndex || grace.ColumnItemIndices.IsDefaultOrEmpty)
+            // moved here whole (GraceNoteItem.CrossStaffIndex) — and, of one of its own that
+            // moved away, only the rests that stayed (below).
+            bool movedAway = grace.StaffIndex == staffIndex && grace.DrawnStaffIndex != staffIndex;
+            if ((grace.DrawnStaffIndex != staffIndex && !movedAway) || grace.ColumnItemIndices.IsDefaultOrEmpty)
                 continue;
             bool foreign = grace.StaffIndex != staffIndex;
             var owner = foreign ? staffOf?.Invoke(grace.StaffIndex) : staff;
@@ -1260,7 +1262,22 @@ internal sealed class SkylineBuilder
             for (int i = 0; i < n; i++)
             {
                 var seed = new GraceColumnSeed(x + columns.Offsets[i], i < beamedPrefix);
-                if (!foreign)
+                if (movedAway)
+                {
+                    // A rest of a run that moved away and does not write @cross stays on this
+                    // staff (docs/cross-rest-design.md §2-3) and is drawn here at the column the
+                    // run placed — so it takes this staff's room, as the walk seeds any grace
+                    // column (with this staff's rest shift). Until session 1355 it was in no
+                    // staff's profile: an `@text(…).up` over `grace { r16 e'16@cross }` in the
+                    // lower hand of a grand staff stood 0.82 too low, through the rest
+                    // (LilyPond 2.26.0 lifts it clear; Lab sessions/p1355/c2 u1).
+                    int ci = grace.ColumnItemIndices[i];
+                    if (ci >= 0 && ci < ownerItems.Length
+                        && ownerItems[ci] is RestItem stayed
+                        && stayed.CrossStaffIndex != grace.DrawnStaffIndex)
+                        seeds.Columns[(grace.VoiceIndex, grace.MeasureIndex, ci)] = seed with { Beamed = false };
+                }
+                else if (!foreign)
                     seeds.Columns[(grace.VoiceIndex, grace.MeasureIndex, grace.ColumnItemIndices[i])] = seed;
                 else if (grace.ColumnItemIndices[i] >= 0 && grace.ColumnItemIndices[i] < ownerItems.Length)
                 {
@@ -1281,7 +1298,7 @@ internal sealed class SkylineBuilder
                     seeds.Foreign.Add((columnItem, seed, restShiftUp));
                 }
             }
-            if (beamedPrefix >= 2)
+            if (beamedPrefix >= 2 && !movedAway)   // a moved run's beam is the other staff's
             {
                 var (beamLeftY, beamRightY) = GraceNoteEngraver.QuantGraceBeam(grace, columns.Offsets);
                 seeds.BeamedRuns.Add(new GraceRunSeed(

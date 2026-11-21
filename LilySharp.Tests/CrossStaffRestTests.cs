@@ -201,6 +201,28 @@ public class CrossStaffRestTests
         Assert.Equal(3.4, BracketBelowBass("tuplet 3/2 { c'8 r8@cross c'8 } c'4 c2 |"));
     }
 
+    /// <summary>
+    /// A rest left behind by a grace run <c>@cross</c> moved stays on the bass and takes the
+    /// bass's room (SkylineBuilder.GraceSeedsFor): an <c>@text(…).up</c> over it is lifted clear
+    /// of it, as over the same rest in a run that does not move — 4.20 spaces above the bass's
+    /// middle line for both (LilyPond 2.26.0: 4.313 for both, Lab sessions/p1355/c2 u1, u6; the
+    /// 0.11 between is the ordinary grace rest's, not this one's). With no rest it is 3.49 (u3).
+    /// Until session 1355 the rest was in no staff's profile and the text stood at 3.49, through it.
+    /// LILYPOND-REF: lily/axis-group-interface.cc:914-935 skyline_spacing (the rest is the bass
+    ///   Staff's grob — it never changed staff).
+    /// </summary>
+    [Theory]
+    [InlineData("c4@text(\"wwwwwwwwwwww\").up grace { r16 e'16@cross } c4 c2 |", 4.20)]
+    [InlineData("c4@text(\"wwwwwwwwwwww\").up grace { r16 e16 } c4 c2 |", 4.20)]
+    [InlineData("c4@text(\"wwwwwwwwwwww\").up grace { e'16@cross } c4 c2 |", 3.49)]
+    public void ARestLeftBehindByAMovedGraceRun_TakesItsOwnStaffsRoom(string bass, double expected)
+    {
+        var svg = TestPaper.SvgFromRenderSpec(Book("e''2 e''2 |", bass));
+        var (lines, _) = Read(svg);
+        var y = Regex.Match(svg, "<text x=\"[-\\d.]+\" y=\"([-\\d.]+)\"[^>]*font-style=\"italic\"[^>]*>w+</text>").Groups[1].Value;
+        Assert.Equal(expected, Math.Round(lines[7] - double.Parse(y, CultureInfo.InvariantCulture), 2));
+    }
+
     [Fact]
     public void TheStaffItMovedTo_ReservesTheRest()
     {
