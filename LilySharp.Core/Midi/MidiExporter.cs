@@ -3993,8 +3993,11 @@ public sealed class MidiExporter
         // A rest takes the scripts an empty chord before it wrote, as the page and LilyPond draw
         // them on it (`c''2 <>@accent r4 d''4`), and sounds none: until session 1329 they went on
         // to the d'' (Lab sessions/p1329/g r1). A spacer takes none: they go on to the next note,
-        // as the page draws them (owner's decision 2026-11-20; LYS4085 says so).
-        if (rest.RestText == "r")
+        // as the page draws them (owner's decision 2026-11-20; LYS4085 says so). A full-bar rest
+        // takes them as `r` does — the page draws them over it and MusicXML writes them on its
+        // <note>: until session 1359 they went on to the next bar's first note (`<>@accent R1 |
+        // d''1` accented the d''; Lab sessions/p1359/mmr a1).
+        if (rest.RestText is "r" or "R")
             _heldScripts.Remove(_currentPart ?? "", out _);
         ProcessRestTime(rest, conductorTrack);
         if (track != null && _currentTick > start)

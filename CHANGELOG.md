@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Fixed: a script written before a full-bar rest sounded on the next bar's first note** (`[playback]`). In `c''1 | <>@accent R1 | d''1 |` the page draws the accent over the rest and the MusicXML export writes it on the rest, but the MIDI accented the d''. A full-bar rest now takes the empty chord's scripts as a rest `r` does, and sounds none of them.
+
 - **A tuplet bracket reaches a note moved with `@cross` on the staff it stands on** (`[engraving]`). In `rh { tuplet 3/2 { c''4@cross c'' c'' } }` the bracket ran through the moved head, read as if it had stayed on the treble; it now goes under that note's stem, into the left hand's staff, flat, as LilyPond draws it. A rest moved with `@cross` still leaves the bracket on its own staff.
 
 - **Fixed: with `paper { raggedRight }` the lines were balanced instead of filled** (`[engraving]`). Seven bars of which five fit on a line were set 3+4; the last line of a ragged-right score now costs nothing, so the lines before it are filled as far as they go — 5+2, as LilyPond sets them.

@@ -73,6 +73,8 @@ public class EmptyChordScriptsExportTests
     [InlineData("c''2 <>@staccato grace { <e'' g''>16 } d''2 | c''1 |", "note note[articulations(staccato)] note note note")]
     [InlineData("c''2 <>@accent grace { r16 e''16 } d''2 | c''1 |", "note note[articulations(accent)] note note note")]
     [InlineData("c''2 <>@accent r4 d''4 | c''1 |", "note note[articulations(accent)] note note")]
+    [InlineData("c''1 | <>@accent R1 | d''1 |", "note note[articulations(accent)] note")]
+    [InlineData("c''1 | <>@fermata R1 | d''1 |", "note note[fermata] note")]
     // …but not a spacer, which is no note: the next note takes them, as the page draws them
     // (owner's decision 2026-11-20; LYS4085 says so). Until session 1331 the invisible rest did.
     [InlineData("c''2 <>@accent s4 d''4 | c''1 |", "note note note[articulations(accent)] note")]
@@ -164,6 +166,11 @@ public class EmptyChordScriptsExportTests
         // A rest, a grace's or a full one, takes them: nothing after it is accented.
         Assert.Equal(new[] { 90, 90, 90, 90 }, Notes("c''2 <>@accent grace { r16 e''16 } d''2 | c''1 |").Select(n => n.Velocity));
         Assert.Equal(new[] { 90, 90, 90 }, Notes("c''2 <>@accent r4 d''4 | c''1 |").Select(n => n.Velocity));
+        // …a full-bar rest too, as the page draws them over it and MusicXML writes them on it:
+        // until session 1359 the next bar's first note took them (Lab sessions/p1359/mmr a1, a4).
+        Assert.Equal(new[] { 90, 90 }, Notes("c''1 | <>@accent R1 | d''1 |").Select(n => n.Velocity));
+        Assert.Equal(new[] { 90, 90 }, Notes("c''1 | <>@accent R1*2 | d''1 |").Select(n => n.Velocity));
+        Assert.Equal(new[] { 90, 95 }, Notes("c''1 | <>@f R1 | d''1 |").Select(n => n.Velocity));
         // A spacer does not: the page draws them on the note after it (LilyPond hangs them on the
         // spacer's moment with no support; Lab sessions/p1329/g sp1).
         Assert.Equal(new[] { 90, 110, 90 }, Notes("c''2 <>@accent s4 d''4 | c''1 |").Select(n => n.Velocity));
