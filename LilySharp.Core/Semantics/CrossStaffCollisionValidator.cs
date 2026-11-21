@@ -98,11 +98,11 @@ internal sealed class CrossStaffCollisionValidator : ISemanticValidator
     /// one warning, at the first of them.</summary>
     internal const int BarsBeforeOne = 5;
 
-    /// <summary>How many scores this check has laid out in this process — for the test that
-    /// holds the keystroke pass to none.</summary>
-    internal static int Layouts => Volatile.Read(ref _layouts);
-
-    private static int _layouts;
+    /// <summary>How many scores this check has laid out on this thread — for the test that
+    /// holds the keystroke pass to none. (Per thread: counted per process, a test that ran a page
+    /// check beside it was counted too, and the test failed now and then in a full run.)</summary>
+    [ThreadStatic]
+    internal static int Layouts;
 
     private readonly DiagnosticBag _diagnostics = new();
 
@@ -208,7 +208,7 @@ internal sealed class CrossStaffCollisionValidator : ISemanticValidator
             return;
 
         token.ThrowIfCancellationRequested();
-        Interlocked.Increment(ref _layouts);
+        Layouts++;
         var layout = new Svg.Layout.LayoutEngine(score.Paper).Layout(score);
         token.ThrowIfCancellationRequested();
         using var doc = new BoxesDocumentContext(FontLocator.Find());
