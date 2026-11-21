@@ -92,7 +92,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
 - **★★★ オーナー決定 2026-11-15（第1264・6 件）**: ①〜④ と、⑥ 評価 4 の案（Lab `p1227/proposals-eval4.md`）の「作る」5 件＝6・7・8-1・2・4 は済み（第1264〜第1272・設計と実際の形は `docs/eval4-features-design.md`。6 の「歌い手が × の音を歌わない」だけ未＝同 §6 の末尾）／⑤ Dettato: 依頼 1＝作る（D3 で形が固まってから・名前「Convert Recording to Lily# (.lys)…」・Windows 以外はメニューを出さない）・依頼 2＝今は作らない（REQUESTS の行に書いた＝Dettato の repo では未 commit）／⑥ の**後で**＝3（`pass 2 { }`・文字は英語固定）・1（持ち替え・「to X」は自動で刷らない）・10（まず診断だけ）＝作る前に設計メモ・**着手してよい**（オーナー 2026-11-15 第1278「ほかに着手すべき候補がなければすぐ着手して良い」。10 の診断は LYS0046 で済み＝残りは 3 → 1）／**見送り**＝5・8-2〜4・9。**次の一手**: 下の行の Lab `sessions/p1242/leftovers.md` の欠陥から（第1272 が見つけた 2 件＝`lysc xml` の part header の `key` と、MusicXML の読み込みの `<transpose>` は第1273・第1275 で閉じた。一覧の先頭から順に）。
-- **★ 包括レビュー（オーナーの指示 2026-11-18・第1291）＝Lab `sessions/p1291/review.md`**: プレビュー更新の性能 P1〜P10 とリファクタ F1〜F7。P1〜P10・F1・F2・F3 段 1・F5・F7 と F4 の大半は済み（経緯は ARCHIVE の第1291〜第1301 と §1.1・数字は Lab `sessions/p1302/notes.md`）。残り＝設計が先の 2 つ（F4 の残り・`shiftPage`。`mid-bar-break` は第1340 で閉じた）と F3 段 2。残りは訊かずに着手してよい（オーナー 2026-11-18・次の順は §1.1 第1306 の末尾。F3 段 2 はオーナー判断）。**＋第1343 の発見（設計級）**: 音・印・臨時記号を*足す*編集は尾を splice しない（掃きで `note.accidental` 0 小節・`note.dup` 666、`note.swap` は 103,711。探りでは「a side-table count differs」＝table の数が 1 ずれる・添字を持つ項目があるので足すだけでは済まない）。打鍵の大半＝F4 より先に値付け。
+- **★ 包括レビュー（オーナーの指示 2026-11-18・第1291）＝Lab `sessions/p1291/review.md`**: プレビュー更新の性能 P1〜P10 とリファクタ F1〜F7。P1〜P10・F1・F2・F3 段 1・F5・F7 と F4 の大半は済み（経緯は ARCHIVE の第1291〜第1301 と §1.1・数字は Lab `sessions/p1302/notes.md`）。残り＝設計が先の 2 つ（F4 の残り・`shiftPage`。`mid-bar-break` は第1340 で閉じた）と F3 段 2。残りは訊かずに着手してよい（オーナー 2026-11-18・次の順は §1.1 第1306 の末尾。F3 段 2 はオーナー判断）。**＋第1343〜1344**: 足す編集が splice しない穴は第1344 で大半を閉じた（§1.1）。残り＝`note.dup` 20,457・`note.delete` 15,464 小節（`note.swap` 103,711）の差の理由は未調査。
 - **★ A-B リピート（オーナー決定 2026-11-17・第1286）＝`docs/ab-repeat-design.md`**: §3 の 1〜4 は済み（第1286）。**2026-11-19 オーナー決定: Loop グループ・A-B ボタンと番号欄・8 本の帯（§3 の 5）・右クリックの Play from Here／A Here／B Here は撤去、Repeat はヘッダへ**（同 §0）。残りは実機（`MANUAL-CHECKS`「Repeat はヘッダ」＝オーナー）と、release 時の site・README の書き直し。
 - **★ Join Bars in Pairs（Orecchiante の依頼 21・オーナー決定 2026-11-21・第1342）＝実装済み**（`docs/join-bars-design.md`）。残りは実機（`MANUAL-CHECKS`「Join Bars in Pairs」＝Ctrl+Z で 2 つのファイルが戻る・録音と小節の頭がそろう）と Orecchiante の確認。
 - **★ コード行の中に書けるもの（オーナー決定 2026-11-16・第1285）**: `time`・`tempo`・`%`・`key` は済み（§1.1）。**残り＝コードに付ける印 `@rit`／`@accel`／`@rall`（`…@!rit`）・`@fermata`・`@text("…")`**（今は `@todo` だけ）。強弱は見送り。
@@ -154,6 +154,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1344セッション（2026-11-21・YT-DELL2・第1343 と同じ会話）
+
+第1343 が残した「足す編集が splice しない」。base `fd7794ba0`。開始時 full 18112 合格 / 0 失敗 / skip 2 / 合計 18114（Lab `p1344` `start.log`）。Shosa の依頼 6 の返事はオーナー指示で後回し。
+- **`8f7d35d05`＝side table の数の一致の門を外した**（`SuffixStateMatches`）: 項目は位置と（小節・item）の番号を持つだけで table の添字を持たない・尾は live の後ろに足すだけ・次の walk は `_walkTableDrift` で読む（第1300 の論の walk 内版）。
+- **外したら出た既存の穴**: 境界の小節に尾が後から書く欄（改行・改頁・譜めくりの許可、終わりの小節線の別名）を比べていなかった＝`| break` の小節に音を足すと先読みが外れ、尾を飛ばして改行が消えた（途中で止めた掃き `p1344/sweep-head4` で 10 件・オーナーのコーパス）。比べる門を足した。
+- **臨時記号は別の理由**: splice 用の prefix の一致が `b`→`bes`（窓の前で終わる token が窓をまたぐ）を拒否＝splice 用だけ、窓をまたぐ node は子を比べて進む（`spliceHalf`。採用では緩めない）。
+- 掃き（628 冊）: splice した小節 702,785 → 1,086,294（臨時記号 0 → 106,486・印 601 → 99,888・音 666 → 20,457）・乖離 0（Lab `p1344/sweep-head5`）。網 `AddedEntrySpliceTests` 5 本。毒 5 本中 3 赤（Q3＝採用にも緩める、は前便の容器の読みが先に断つ・Q5＝別名の値は観測者なし）。CHANGELOG 2 つ。
+- 終了時 full 18117 合格 / 0 失敗 / skip 2 / 合計 18119（`end2.log`。1 回目は `IncludeFilesTests` の 1 本が揺れた＝単独 3/3 緑）。
+- **次**: §1.0 の残り（`note.dup` の差）か review.md。Shosa の依頼 6 の返事。
+
+## 以下は第1343セッションの経緯
+
 ### 1.1 第1343セッション（2026-11-21・YT-DELL2）
 
 第1340 の ⚠️ の 2 つ（長さの変わる編集が splice しない・空白だけの編集が resume しない）から。base `b9b83a2de`。開始時 full 18102 合格 / 0 失敗 / skip 2 / 合計 18104（Lab `p1343` `start.log`）。Calamo・Orecchiante・Shosa の open は 0。
@@ -162,21 +174,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 掃き: splice した小節 196,752 → 702,785・乖離 13 → 0（Lab `p1343/sweep-base`・`sweep-head3`）。網 2 file＋shifter 1 本。毒 7 本中 6 赤（P4 は観測者なし）。CHANGELOG 2 つ。
 - 終了時 full 18112 合格 / 0 失敗 / skip 2 / 合計 18114（`-End`）。
 - **次**: 上の §1.0 の「足す編集が splice しない」の値付け→設計。review.md の残りはその後。
-
-## 以下は第1342セッションの経緯
-
-### 1.1 第1342セッション（2026-11-21・YT-DELL2）
-
-Orecchiante の依頼 21（小節を 2 つずつまとめる）。base `08c3335f7`。開始時 full 18086 合格 / 0 失敗 / skip 2 / 合計 18088（Lab `p1342` `start.log`）。Calamo・Shosa の open は 0。
-- オーナーに「21 を実装してよいと思うか」と訊かれ、「よい」と答えた（手でまとめると `timeWarp` の数が合わなくなり、録音との同期が黙って切れる＝Lily# 自身の穴に近い）。オーナー決定「進めて」。設計 `docs/join-bars-design.md`。§7 の 3 つ（テンポは届く範囲が全部まとめた小節に入るものだけ半分・入口はエディタの選択だけ・組の 2 つ目の頭が空きなら断る）もオーナー決定。
-- **`fb66ad9c0`**: Core `BarJoiner`（`Join`・`Offers`）・LSP `lilysharp/joinBars`（`Played`・`BarsPlayed`）とコードアクション・拡張 `joinBars`（`.lys` と隣のファイルを 1 つの WorkspaceEdit で当て、隣のファイルは保存。Undo／Redo でも保存）・`recordingCore.joinRecordingBars`。
-  - 書き換えの確かめ: すべての音が同じ小節で鳴り、組の音は位置と長さが半分。鳴る位置 n は範囲の和音の音から読む（`%` は元の和音の位置で鳴るので候補を絞る）。
-  - 網 `BarJoinerTests` 16 本・`joinRecordingBars.test.ts` 5 本。毒 10 / 10 赤＋TS 1 本赤（Lab `p1342/poisons.ps1`）。最初の P9（範囲の途中の `time` を断る行）が緑で、その制限は要らないと分かって外した（組の 1 小節目の頭の `time` はまとめた小節の頭に残る）。
-  - 実物の VS Code で 13 項目 PASS（Lab `p1342/vscode-e2e`）。Ctrl+Z とプレビューの耳は `MANUAL-CHECKS`「Join Bars in Pairs」（オーナー）。
-  - 文書: SYNTAX_REFERENCE（和音の行の節）・拡張の README・CHANGELOG 2 つ。
-- Orecchiante の REQUESTS 21 は `fixed`（Orecchiante の repo は未 commit）。
-- 終了時 full 18102 合格 / 0 失敗 / skip 2 / 合計 18104（Lab `p1342` `full1.log`。`-End` の run は §1 の字数で 1 赤＝削って直した）。
-- **次**: Orecchiante とオーナーの確認を待つ。Lily# の次は review.md の設計が先の 2 つ（F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。第1340 の ⚠️ の 2 つを先に調べるのも手。
 
 ## 2. 開いている作業
 

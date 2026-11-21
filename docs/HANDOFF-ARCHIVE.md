@@ -277,6 +277,21 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1342セッションの経緯
+
+### 1.1 第1342セッション（2026-11-21・YT-DELL2）
+
+Orecchiante の依頼 21（小節を 2 つずつまとめる）。base `08c3335f7`。開始時 full 18086 合格 / 0 失敗 / skip 2 / 合計 18088（Lab `p1342` `start.log`）。Calamo・Shosa の open は 0。
+- オーナーに「21 を実装してよいと思うか」と訊かれ、「よい」と答えた（手でまとめると `timeWarp` の数が合わなくなり、録音との同期が黙って切れる＝Lily# 自身の穴に近い）。オーナー決定「進めて」。設計 `docs/join-bars-design.md`。§7 の 3 つ（テンポは届く範囲が全部まとめた小節に入るものだけ半分・入口はエディタの選択だけ・組の 2 つ目の頭が空きなら断る）もオーナー決定。
+- **`fb66ad9c0`**: Core `BarJoiner`（`Join`・`Offers`）・LSP `lilysharp/joinBars`（`Played`・`BarsPlayed`）とコードアクション・拡張 `joinBars`（`.lys` と隣のファイルを 1 つの WorkspaceEdit で当て、隣のファイルは保存。Undo／Redo でも保存）・`recordingCore.joinRecordingBars`。
+  - 書き換えの確かめ: すべての音が同じ小節で鳴り、組の音は位置と長さが半分。鳴る位置 n は範囲の和音の音から読む（`%` は元の和音の位置で鳴るので候補を絞る）。
+  - 網 `BarJoinerTests` 16 本・`joinRecordingBars.test.ts` 5 本。毒 10 / 10 赤＋TS 1 本赤（Lab `p1342/poisons.ps1`）。最初の P9（範囲の途中の `time` を断る行）が緑で、その制限は要らないと分かって外した（組の 1 小節目の頭の `time` はまとめた小節の頭に残る）。
+  - 実物の VS Code で 13 項目 PASS（Lab `p1342/vscode-e2e`）。Ctrl+Z とプレビューの耳は `MANUAL-CHECKS`「Join Bars in Pairs」（オーナー）。
+  - 文書: SYNTAX_REFERENCE（和音の行の節）・拡張の README・CHANGELOG 2 つ。
+- Orecchiante の REQUESTS 21 は `fixed`（Orecchiante の repo は未 commit）。
+- 終了時 full 18102 合格 / 0 失敗 / skip 2 / 合計 18104（Lab `p1342` `full1.log`。`-End` の run は §1 の字数で 1 赤＝削って直した）。
+- **次**: Orecchiante とオーナーの確認を待つ。Lily# の次は review.md の設計が先の 2 つ（F4 の残り・`shiftPage`）と F3 段 2（オーナー判断）。第1340 の ⚠️ の 2 つを先に調べるのも手。
+
 ## 以下は第1341セッションの経緯
 
 ### 1.1 第1341セッション（2026-11-21・YT-DELL2）
