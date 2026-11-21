@@ -1668,8 +1668,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
             if (message.type === 'audioBlocked') {
                 // The webview's synth is not allowed to run until the user has clicked or
                 // typed in the preview (the browser's autoplay policy; the editor's keys
-                // do not count). Said once per blocked spell — the webview resets the flag
-                // when sound gets through.
+                // do not count). The webview repeats it at most every 5 s while the block lasts.
                 outputChannel.appendLine(`Audio blocked in the preview (AudioContext ${message.state}): click the preview once`);
                 vscode.window.setStatusBarMessage('Lily#: click the preview once to enable its sound', 8000);
                 // A candidate's Play is pressed on its own panel: said there too, where the eyes are.
