@@ -95,6 +95,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **★ 包括レビュー（オーナーの指示 2026-11-18・第1291）＝Lab `sessions/p1291/review.md`**: プレビュー更新の性能 P1〜P10 とリファクタ F1〜F7。P1〜P10・F1・F2・F3 段 1・F5・F7 と F4 の大半は済み（経緯は ARCHIVE の第1291〜第1301 と §1.1・数字は Lab `sessions/p1302/notes.md`）。残り＝設計が先の 2 つ（F4 の残り・`shiftPage`＝第1346 は見送りを推す: 実コーパスで 1 打鍵 1 ms 未満・`data-pos` の読み手 19 か所。`mid-bar-break` は第1340 で閉じた）と F3 段 2。残りは訊かずに着手してよい（オーナー 2026-11-18・次の順は §1.1 第1306 の末尾。F3 段 2 はオーナー判断）。**＋第1343〜1345**: 足す編集が splice しない穴は閉じた（§1.1）。残る差は意味のある状態差＝短くした小節の後の `BarPosition`（LilyPond の measurePosition）と、編集が曲の終わり近くで尾が無い形。
 - **★ A-B リピート（オーナー決定 2026-11-17・第1286）＝`docs/ab-repeat-design.md`**: §3 の 1〜4 は済み（第1286）。**2026-11-19 オーナー決定: Loop グループ・A-B ボタンと番号欄・8 本の帯（§3 の 5）・右クリックの Play from Here／A Here／B Here は撤去、Repeat はヘッダへ**（同 §0）。残りは実機（`MANUAL-CHECKS`「Repeat はヘッダ」＝オーナー）と、release 時の site・README の書き直し。
 - **★ Join Bars in Pairs（Orecchiante の依頼 21・オーナー決定 2026-11-21・第1342）＝実装済み**（`docs/join-bars-design.md`）。依頼 22（同じ和音 1 つずつの組は `C`）は第1346 `f81f8cd28`。残りは実機（`MANUAL-CHECKS`「Join Bars in Pairs」＝Ctrl+Z で 2 つのファイルが戻る・録音と小節の頭がそろう）と Orecchiante の確認。
+- **★ 休符の `@cross`（オーナー決定 2026-11-21・第1350）＝`docs/cross-rest-design.md`**: 段 1・2 は済み（`01497654d`）。残りは段 3（移った休符に付いた印・連桁・装飾音のスラーの障害物の座標）＝§4。
 - **★ コード行の中に書けるもの（オーナー決定 2026-11-16・第1285）**: `time`・`tempo`・`%`・`key` は済み（§1.1）。**残り＝コードに付ける印 `@rit`／`@accel`／`@rall`（`…@!rit`）・`@fermata`・`@text("…")`**（今は `@todo` だけ）。強弱は見送り。
 - **★ 録音を聴きながら直す（Dettato #4・オーナーの希望 2026-11-15）＝`docs/recording-design.md`**: S1〜S4 と §1 7（楽譜と録音を同時に）・§7（書き出しに録音・第1286）は済み（§1.1 第1284〜第1286）。**次は S5**（帯・`Mark Bar Line Here`・ドラッグ・`byHand`）→ S6（CHANGELOG・Dettato への返事）。§8 の録音のパート（Dettato #16）は第1288 で実装・実測済み・使っている間のメモリは今のまま（オーナー決定 2026-11-17）＝残りは耳の確認（`MANUAL-CHECKS`「録音のパート」）。耳の確認は `MANUAL-CHECKS` §3.9（オーナー）。
 - **★ 反復とナビ記号を section の音楽にも書く（オーナー提案 2026-11-14・第1243＝第1249 で段 0〜8 が済み・LYS1034 は phrase だけ）**: 全部 `docs/inline-repeat-design.md`（規則 §3・段取り §4・未決 §6・経過 §7・エディタのコマンド §8）。オーナー決定（2026-11-14）: 対は form に組み立てた列で見る／`| |:` は空小節のまま／歌詞の verse は 5 規則／書き出しはなるべく form 側（Q2）。**次**（順は上から。歌詞の規則 3 と警告の 4 種目は第1253、ending・ナビ記号を全パートに書くコマンドと LYS1070 の quick fix は第1254 で済み＝§1.1）: ⑴ この島（反復とナビ記号を音楽に書く）の「次」は無い＝判断待ちも残りの形も 0。step キー・`PlayForm` の一本化（第1255）、3 番括弧＝3 回（form は第1256・音楽は第1257・コードの行は第1258）は済み。次の一手は下の積み残しから（オーナーに訊く）。段 9（読み込みと OMR の書き出し）は Q2 の決定で今の形のまま＝作業なし。⚠️ Calamo と Dettato の REQUESTS への知らせ（Q2「本体が出てから」）は未＝release のときに書く。実機は `MANUAL-CHECKS` 第1243・第1249・第1253・第1254・第1255。
@@ -154,6 +155,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1350セッション（2026-11-21・YT-DELL2・第1349 と同じ会話）
+
+base `9439b4174`。開始時 full 18143 合格 / 0 失敗 / skip 2 / 合計 18145（Lab `p1350` `run1.trx`）。Calamo・Orecchiante・Shosa の open は 0。
+- **オーナー決定 2026-11-21＝休符に書いた `@cross` は休符も移す**（設計 `docs/cross-rest-design.md`）。きっかけは leftovers 第1237 ⑵（`@cross` で移った装飾休符）の実測（Lab `p1350/rest`）: 譜面だけが休符の `@cross` を黙って捨てていた（`lysc ly` の双子は `\change Staff`・MusicXML は `<staff>` を移していた）。**`01497654d`**: 集める段階の印（`WithCrossRest`）・`MoveCrossStaffNotes` が休符も移す（`Staff.RestsCrossedIn`）・高さは移った先の段の Rest_collision（`ElementCoordinator.CrossedRestShift`＝集める段階で全段が見えるところで計算し `Staff.CrossedRestShifts` に刻む）・描く Y・移った先の段の輪郭・装飾音の列の `Foreign` の種。8 形（普通の休符 3・装飾音の列 4・段のあいだ 1）が LilyPond と 0.01 以内。網 +7（`CrossStaffRestTests`）・毒 5 本で 6／6／6／1／1 赤。掃き 1289 枚は 0 枚動いた。GRAMMAR.md・CHANGELOG 2 つ。
+- 残した（設計 §4 の段 3）: 移った休符に付いた印と連桁・装飾音のスラーの障害物は元の段の座標。
+- full 18150 合格 / 0 失敗 / skip 2 / 合計 18152（`run3.trx`）。
+- **次**: 段 3（`docs/cross-rest-design.md` §4）か leftovers の残りか F4。
+
+## 以下は第1349セッションの経緯
+
 ### 1.1 第1349セッション（2026-11-21・YT-DELL2・新しい会話）
 
 base `b5b435035`。開始時 full 18139 合格 / 0 失敗 / skip 2 / 合計 18141（Lab `p1349` `run1.trx`）。Calamo・Orecchiante・Shosa の open は 0。
@@ -161,17 +172,6 @@ base `b5b435035`。開始時 full 18139 合格 / 0 失敗 / skip 2 / 合計 1814
 - 残した（leftovers）: ⑵ `@cross` で移った装飾休符は未測定のまま。
 - full 18143 合格 / 0 失敗 / skip 2 / 合計 18145（`run2.trx`）。`-End` の full は既知の不安定な 2 本（include の一時ファイルのロック）が赤＝単独 3/3 緑。
 - **次**: leftovers の残り（⑵ `@cross` で移った装飾休符ほか）か F4。
-
-## 以下は第1348セッションの経緯
-
-### 1.1 第1348セッション（2026-11-21・YT-DELL2・新しい会話）
-
-base `d6716f23f`。開始時 full 18138 合格 / 0 失敗 / skip 2 / 合計 18140（Lab `p1348` `run1.trx`）。Calamo・Orecchiante・Shosa の open は 0。
-- **leftovers 第1237「休符の支え」の ⑴⑶⑷ を測った**（Lab `p1348/rest` d1〜d5・g1〜g3・o1〜o2・LilyPond 2.26.0）: 付点休符・下の声部の装飾休符・8vb と下向き trill は強弱・括弧・線とも 0.01 以内＝欠陥なし。
-- **測って出た別の欠陥＝`411c063fe`**: 休符の衝突（`ElementCoordinator` の 3 か所＝声部・`@cross`・装飾休符）が相手の符頭を ±0.5 で読んでいた（字形は ±0.545・`EngravingDefaults` の注が「直さず名指す」と残していた読み手）。余白が半間隔ちょうどに乗ると休符が 1 段足りない: `c'''` の上の 4 分休符 6.5→7.0、OMR の portato の小節の休符 +2.0→+3.0（どちらも LilyPond どおり。8va の線は 5.13→5.63）。`HeadReachInPositions` が字形の箱を読む。網 +1・`ScriptOverOtherVoiceRestTests` の 2 本は Lily# 自身の +2.0 を写していた＝LilyPond の +3.0 に。毒で 3 本赤。掃き 1289 枚は 0 枚動いた（休符が譜表の外へ出るか、休符の余白のすぐ下の線に頭があるときだけ効く）。CHANGELOG 2 つ。
-- 残した（leftovers）: 同じ向きの声部で前から伸びている和音は LilyPond が根元の頭 1 つだけを読む（`Stem::first_head`）・Lily# は全部の頭＝未測定。⑵ `@cross` の装飾休符も未測定。
-- 終了時 full 18139 合格 / 0 失敗 / skip 2 / 合計 18141（`run4.trx`）。
-- **次**: leftovers の残りか F4。
 
 ## 2. 開いている作業
 
