@@ -154,6 +154,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1348セッション（2026-11-21・YT-DELL2・新しい会話）
+
+base `d6716f23f`。開始時 full 18138 合格 / 0 失敗 / skip 2 / 合計 18140（Lab `p1348` `run1.trx`）。Calamo・Orecchiante・Shosa の open は 0。
+- **leftovers 第1237「休符の支え」の ⑴⑶⑷ を測った**（Lab `p1348/rest` d1〜d5・g1〜g3・o1〜o2・LilyPond 2.26.0）: 付点休符・下の声部の装飾休符・8vb と下向き trill は強弱・括弧・線とも 0.01 以内＝欠陥なし。
+- **測って出た別の欠陥＝`411c063fe`**: 休符の衝突（`ElementCoordinator` の 3 か所＝声部・`@cross`・装飾休符）が相手の符頭を ±0.5 で読んでいた（字形は ±0.545・`EngravingDefaults` の注が「直さず名指す」と残していた読み手）。余白が半間隔ちょうどに乗ると休符が 1 段足りない: `c'''` の上の 4 分休符 6.5→7.0、OMR の portato の小節の休符 +2.0→+3.0（どちらも LilyPond どおり。8va の線は 5.13→5.63）。`HeadReachInPositions` が字形の箱を読む。網 +1・`ScriptOverOtherVoiceRestTests` の 2 本は Lily# 自身の +2.0 を写していた＝LilyPond の +3.0 に。毒で 3 本赤。掃き 1289 枚は 0 枚動いた（休符が譜表の外へ出るか、休符の余白のすぐ下の線に頭があるときだけ効く）。CHANGELOG 2 つ。
+- 残した（leftovers）: 同じ向きの声部で前から伸びている和音は LilyPond が根元の頭 1 つだけを読む（`Stem::first_head`）・Lily# は全部の頭＝未測定。⑵ `@cross` の装飾休符も未測定。
+- 終了時 full 18139 合格 / 0 失敗 / skip 2 / 合計 18141（`run4.trx`）。
+- **次**: leftovers の残りか F4。
+
+## 以下は第1347セッションの経緯
+
 ### 1.1 第1347セッション（2026-11-21・YT-DELL2・新しい会話）
 
 base `dd1dcae2f`。開始時 full 18119 合格 / 0 失敗 / skip 2 / 合計 18121（Lab `p1347` `run1.trx`）。Calamo・Orecchiante・Shosa の open は 0。
@@ -161,19 +172,6 @@ base `dd1dcae2f`。開始時 full 18119 合格 / 0 失敗 / skip 2 / 合計 1812
 - ⚠️ ⑵ の「和音全体に効かせる」は Claude の判断（音ごとに鳴らす案は最初に実装して捨てた＝ページの絵と聞こえが食い違う）。和音の音に書いた強弱 `<e''@f g''>` は描かれず鳴らず警告も無い＝決めごと（leftovers 第1347）。
 - 終了時 full 18138 合格 / 0 失敗 / skip 2 / 合計 18140（`run3.trx`）。
 - **次**: leftovers の残り（多くは判断待ち・未検証）か F4。
-
-## 以下は第1346セッションの経緯
-
-### 1.1 第1346セッション（2026-11-21・YT-DELL2・新しい会話）
-
-base `96cc49c29`。開始時 full 18117 合格 / 1 失敗 / skip 2 / 合計 18120（Lab `p1346` `run1.trx`・失敗は下の揺れ）。Calamo・Shosa の open は 0。Orecchiante の依頼 22 は便の途中で届いた。
-- **網の揺れ 2 本**: `9a29968fa`＝`KeystrokeSideWorkTests` の include の本の片付け（`intro.lys` を掴まれた IOException は諦める）・`8b1b9a021`＝`CrossStaffCollisionValidator.Layouts` をスレッドごとに（並走する page check も数えていた）。
-- **Orecchiante 22＝`f81f8cd28`**: 組の 2 小節目の頭の和音が 1 小節目の最後と同じ文字なら伸ばし（`C | C |`→`C`・`A | A E/G# |`→`A . . E/G#`・`C | % |`→`C`）。`Verify` は組の真ん中で同じ音の打ち直しが伸ばしに変わる所だけ緩める。Orecchiante の 18 曲の行を全部まとめて 172 行・断り 0（Lab `p1346/join`）。網 +1・毒 3/3。REQUESTS 22 は `fixed`（Orecchiante の repo は未 commit）。
-- **Shosa 6**: 本物の lysc で `out\sing\sing.shosa` を通した＝`shosa check` に SH1909 なし・`shosa ir` が偽の lysc の IR とバイト一致。行に書いた（Shosa の repo は未 commit・`Mouth.cs` は別の会話の作業）。
-- 測って閉じた（leftovers に書いた）: 最後の `<>@ff` の `.ly` は LilyPond が描かない＝双子の限界（MusicXML は正しい）・パートの順と譜表の順が違うヘアピンの MusicXML は取り違えない・apart の上のパートの強弱は既に上・struck の付点 0.55 は第1330 で閉じていた。
-- `shiftPage` は見送りを推す（§1.0）。F4 の残りは状態を入れ物へ包み直す千行規模＝急がない。
-- 終了時 full は `-End` の表。
-- **次**: leftovers の残り（多くは判断待ち・未検証）か F4。Orecchiante と Shosa の確認待ち。
 
 ## 2. 開いている作業
 

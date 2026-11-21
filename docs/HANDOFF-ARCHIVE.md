@@ -277,6 +277,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1346セッションの経緯
+
+### 1.1 第1346セッション（2026-11-21・YT-DELL2・新しい会話）
+
+base `96cc49c29`。開始時 full 18117 合格 / 1 失敗 / skip 2 / 合計 18120（Lab `p1346` `run1.trx`・失敗は下の揺れ）。Calamo・Shosa の open は 0。Orecchiante の依頼 22 は便の途中で届いた。
+- **網の揺れ 2 本**: `9a29968fa`＝`KeystrokeSideWorkTests` の include の本の片付け（`intro.lys` を掴まれた IOException は諦める）・`8b1b9a021`＝`CrossStaffCollisionValidator.Layouts` をスレッドごとに（並走する page check も数えていた）。
+- **Orecchiante 22＝`f81f8cd28`**: 組の 2 小節目の頭の和音が 1 小節目の最後と同じ文字なら伸ばし（`C | C |`→`C`・`A | A E/G# |`→`A . . E/G#`・`C | % |`→`C`）。`Verify` は組の真ん中で同じ音の打ち直しが伸ばしに変わる所だけ緩める。Orecchiante の 18 曲の行を全部まとめて 172 行・断り 0（Lab `p1346/join`）。網 +1・毒 3/3。REQUESTS 22 は `fixed`（Orecchiante の repo は未 commit）。
+- **Shosa 6**: 本物の lysc で `out\sing\sing.shosa` を通した＝`shosa check` に SH1909 なし・`shosa ir` が偽の lysc の IR とバイト一致。行に書いた（Shosa の repo は未 commit・`Mouth.cs` は別の会話の作業）。
+- 測って閉じた（leftovers に書いた）: 最後の `<>@ff` の `.ly` は LilyPond が描かない＝双子の限界（MusicXML は正しい）・パートの順と譜表の順が違うヘアピンの MusicXML は取り違えない・apart の上のパートの強弱は既に上・struck の付点 0.55 は第1330 で閉じていた。
+- `shiftPage` は見送りを推す（§1.0）。F4 の残りは状態を入れ物へ包み直す千行規模＝急がない。
+- 終了時 full は `-End` の表。
+- **次**: leftovers の残り（多くは判断待ち・未検証）か F4。Orecchiante と Shosa の確認待ち。
+
 ## 以下は第1345セッションの経緯
 
 ### 1.1 第1345セッション（2026-11-21・YT-DELL2・第1343 と同じ会話）
