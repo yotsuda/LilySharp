@@ -63,6 +63,21 @@ public class BarJoinerTests
         Assert.StartsWith("Joined 6 bars into 3", r.Plan);
     }
 
+    // Orecchiante's request 22: a chart writes a chord a bar, so `C | C |` says "these two bars
+    // are C" — joined, the chord is held, not struck again on beat 3. The same where the second
+    // bar opens on the chord the first ends on. Only alike as written (`@or(…)` too), only at
+    // the pair's middle: a strike written inside a bar stays.
+    [Fact]
+    public void ThePairsSecondBar_OpeningOnTheChordTheFirstEndsOn_HoldsIt()
+    {
+        var (text, r) = Joined("""
+            time 4/4
+            chords { «C | C | A | A E/G# | F F | F | Am@or(A) | Am@or(A) | Am@or(A) | Am@or(E) | G | G7» | }
+            """);
+        Assert.Contains("chords { C | A . . E/G# | F F . . | Am@or(A) | Am@or(A) Am@or(E) | G G7 | }", text);
+        Assert.Equal([0, 2, 4, 6, 8, 10], r.Played);
+    }
+
     [Fact]
     public void AnOddBarOut_IsLeftAsItIs()
     {
@@ -112,10 +127,14 @@ public class BarJoinerTests
     [Fact]
     public void PercentIsOpened_AndTwoInAPairStayOne()
     {
+        // (a `%` repeats the bar's chord, so the pair holds it: request 22)
         var (text, _) = Joined("chords { «C | % | % | %» | }");
-        Assert.Contains("chords { C C | % | }", text);
+        Assert.Contains("chords { C | % | }", text);
         var (text2, _) = Joined("chords { «C | D | % | %» | }");
-        Assert.Contains("chords { C D | D D | }", text2);
+        Assert.Contains("chords { C D | D | }", text2);
+        // A pair of two bars C D (no `%`) again after one: that bar, not a `%`.
+        var (text3, _) = Joined("chords { «C D | % | % | %» | }");
+        Assert.Contains("chords { C D C D | % | }", text3);
     }
 
     [Fact]

@@ -398,6 +398,13 @@ public static class BarJoiner
             why = "The second bar of a pair is empty ({where}) after a bar that sounds a chord — joined, the first bar's chord would hold on through it. Write what the silence is (an `r`), or start the range a bar later.";
             return null;
         }
+        // The second bar opening on the chord the first bar ends on, written alike (its `@or(…)`
+        // and all): a chart that writes a chord a bar says "these bars are C", not "strike C
+        // again" — joined, it is held (Orecchiante's request 22: `C | C |` -> `C`, not `C C`;
+        // `A | A E/G# |` -> `A . . E/G#`). The check lets these strikes become holds (Verify).
+        int second = onsets.FindIndex(o => o.At == half);
+        if (second > 0 && aSounds && onsets[second - 1].Text == onsets[second].Text)
+            onsets.RemoveAt(second);
         if (onsets.Count == 0)
             return a.Count == 0 && b.Count == 0 ? "" : ".";
         int beatCount = ChordRhythm.BeatsOf(meter.Beats, meter.BeatType).Count;
@@ -613,6 +620,7 @@ public static class BarJoiner
         var startsAfter = BarStarts(now);
         var pairFirst = played.ToHashSet();
         var expected = new List<(int Bar, double At, int Pitch, double Length, string Part)>();
+        var atMiddle = new List<int>();   // the notes struck where a pair's second bar began
         foreach (var n in before.Tracks.SelectMany(t => t.Notes))
         {
             int bar = BarAt(startsBefore, n.StartTick);
@@ -622,6 +630,8 @@ public static class BarJoiner
                 (offset, length) = (offset / 2, length / 2);
             else if (pairFirst.Contains(bar - 1))
             {
+                if (offset == 0)
+                    atMiddle.Add(expected.Count);
                 int firstLength = startsBefore[bar] - startsBefore[bar - 1];
                 (offset, length) = ((firstLength + offset) / 2, length / 2);
             }
@@ -630,6 +640,26 @@ public static class BarJoiner
         var actual = now.Tracks.SelectMany(t => t.Notes)
             .Select(n => { int bar = BarAt(startsAfter, n.StartTick); return (Bar: bar, At: (double)(n.StartTick - startsAfter[bar]), n.Pitch, Length: (double)n.DurationTicks, Part: n.Part ?? ""); })
             .ToList();
+        // A chord struck again at a pair's middle that the joined bar holds instead (the same
+        // chord ending the first bar, JoinedSlots): the strike is not played, and the note before
+        // it lasts through. Only there, only the same key of the same part, only when the note
+        // before ends where the strike began.
+        var gone = new HashSet<int>();
+        foreach (int i in atMiddle)
+        {
+            var e = expected[i];
+            if (actual.Any(a => a.Bar == e.Bar && Math.Abs(a.At - e.At) <= 1 && a.Pitch == e.Pitch && a.Part == e.Part))
+                continue;
+            int held = expected.FindIndex(p => p.Bar == e.Bar && p.Pitch == e.Pitch && p.Part == e.Part
+                && p.At < e.At && Math.Abs(p.At + p.Length - e.At) <= 1);
+            if (held < 0)
+                continue;
+            var p = expected[held];
+            expected[held] = (p.Bar, p.At, p.Pitch, e.At + e.Length - p.At, p.Part);
+            gone.Add(i);
+        }
+        if (gone.Count > 0)
+            expected = [.. expected.Where((_, i) => !gone.Contains(i))];
         static List<(int, double, int, double, string)> Sorted(IEnumerable<(int Bar, double At, int Pitch, double Length, string Part)> x)
             => [.. x.OrderBy(e => e.Bar).ThenBy(e => e.At).ThenBy(e => e.Pitch).ThenBy(e => e.Part, StringComparer.Ordinal)];
         var x = Sorted(expected);
