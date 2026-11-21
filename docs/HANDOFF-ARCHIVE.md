@@ -277,6 +277,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1347セッションの経緯
+
+### 1.1 第1347セッション（2026-11-21・YT-DELL2・新しい会話）
+
+base `dd1dcae2f`。開始時 full 18119 合格 / 0 失敗 / skip 2 / 合計 18121（Lab `p1347` `run1.trx`）。Calamo・Orecchiante・Shosa の open は 0。
+- **`d7cf0cff6`＝leftovers 第1329 の「MIDI の装飾音」**（Lab `p1347/grace` g1〜g7）: ⑴ 装飾音の強弱は MIDI で鳴らなかった（`c''4@p grace { e''16@f } d''4 …` の後ろが全部 p・ページは f を描く）→ `GraceScripts` が `Strike` を呼ぶ（強さは装飾音から続く・`@sfz` は装飾音 1 音）。⑵ 和音の音に書いた script（`<e''@accent g''>4`）は装飾音に限らず普通の和音でも鳴らず、MusicXML も普通の和音では書いていなかった → MIDI は和音全体に効かせる（`MemberScriptTypes`＝ページは和音の上に 1 つの記号として描く・同じ種類は 1 回・和音自身の種類は足さない）、MusicXML はその音の `<note>` に。網 +19（`GraceDynamicsMidiTests`・`ChordMemberScriptsExportTests`）・毒 6/6 赤。掃き: MIDI・MusicXML とも 1289 本のうち 4 本（どれも音ごとの印・XML は足すだけ）。CHANGELOG 2 つ。ランはページも装飾音に点を打たない＝今のまま。
+- ⚠️ ⑵ の「和音全体に効かせる」は Claude の判断（音ごとに鳴らす案は最初に実装して捨てた＝ページの絵と聞こえが食い違う）。和音の音に書いた強弱 `<e''@f g''>` は描かれず鳴らず警告も無い＝決めごと（leftovers 第1347）。
+- 終了時 full 18138 合格 / 0 失敗 / skip 2 / 合計 18140（`run3.trx`）。
+- **次**: leftovers の残り（多くは判断待ち・未検証）か F4。
+
 ## 以下は第1346セッションの経緯
 
 ### 1.1 第1346セッション（2026-11-21・YT-DELL2・新しい会話）

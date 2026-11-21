@@ -154,6 +154,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1349セッション（2026-11-21・YT-DELL2・新しい会話）
+
+base `b5b435035`。開始時 full 18139 合格 / 0 失敗 / skip 2 / 合計 18141（Lab `p1349` `run1.trx`）。Calamo・Orecchiante・Shosa の open は 0。
+- **leftovers 第1237 の「残り」＝根元の頭を閉じた `454659690`**（Lab `p1349/rest` probe.ps1 h1〜h5・s1・o1、probe2.ps1 g4〜g6・x1〜x2・LilyPond 2.26.0）: LilyPond の休符の衝突は、前から伸びている音と反対向きの音を符幹の根元の頭 1 つで読む（`Note_column::first_head`）。Lily# は和音の頭を全部読んでいた。同じ向きの声部が伸ばしている和音では根元が休符から遠い頭なので、休符が上がりすぎた: `voice { e''2 r4 e''4 } { c'1 } { <g' d''>2. r4 }` の休符が LilyPond 2.0／Lily# 4.0、下向き（h4）−3.0／−5.0。同じ規則が装飾休符（符幹が上の和音の後 g4 2.0／3.5）と `@cross` で移ってきた和音（x1 −2.0／−4.0）にもあった＝`ElementCoordinator` の 3 か所が `RootHeadPosition` を読む。12 形が 0.01 以内。対照 3 つ（同じ瞬間の和音・反対向き・符幹が下の和音）は元から一致。網 +4（`RestAvoidNoteTests.AHeldChord_CountsByTheHeadAtItsStemsRoot`）・毒 3 本で 2／1／1 赤。掃き 1289 枚は 0 枚動いた（base の exe で h1 が 4.0＝陽性対照）。CHANGELOG 2 つ。
+- 残した（leftovers）: ⑵ `@cross` で移った装飾休符は未測定のまま。
+- full 18143 合格 / 0 失敗 / skip 2 / 合計 18145（`run2.trx`）。`-End` の full は既知の不安定な 2 本（include の一時ファイルのロック）が赤＝単独 3/3 緑。
+- **次**: leftovers の残り（⑵ `@cross` で移った装飾休符ほか）か F4。
+
+## 以下は第1348セッションの経緯
+
 ### 1.1 第1348セッション（2026-11-21・YT-DELL2・新しい会話）
 
 base `d6716f23f`。開始時 full 18138 合格 / 0 失敗 / skip 2 / 合計 18140（Lab `p1348` `run1.trx`）。Calamo・Orecchiante・Shosa の open は 0。
@@ -162,16 +172,6 @@ base `d6716f23f`。開始時 full 18138 合格 / 0 失敗 / skip 2 / 合計 1814
 - 残した（leftovers）: 同じ向きの声部で前から伸びている和音は LilyPond が根元の頭 1 つだけを読む（`Stem::first_head`）・Lily# は全部の頭＝未測定。⑵ `@cross` の装飾休符も未測定。
 - 終了時 full 18139 合格 / 0 失敗 / skip 2 / 合計 18141（`run4.trx`）。
 - **次**: leftovers の残りか F4。
-
-## 以下は第1347セッションの経緯
-
-### 1.1 第1347セッション（2026-11-21・YT-DELL2・新しい会話）
-
-base `dd1dcae2f`。開始時 full 18119 合格 / 0 失敗 / skip 2 / 合計 18121（Lab `p1347` `run1.trx`）。Calamo・Orecchiante・Shosa の open は 0。
-- **`d7cf0cff6`＝leftovers 第1329 の「MIDI の装飾音」**（Lab `p1347/grace` g1〜g7）: ⑴ 装飾音の強弱は MIDI で鳴らなかった（`c''4@p grace { e''16@f } d''4 …` の後ろが全部 p・ページは f を描く）→ `GraceScripts` が `Strike` を呼ぶ（強さは装飾音から続く・`@sfz` は装飾音 1 音）。⑵ 和音の音に書いた script（`<e''@accent g''>4`）は装飾音に限らず普通の和音でも鳴らず、MusicXML も普通の和音では書いていなかった → MIDI は和音全体に効かせる（`MemberScriptTypes`＝ページは和音の上に 1 つの記号として描く・同じ種類は 1 回・和音自身の種類は足さない）、MusicXML はその音の `<note>` に。網 +19（`GraceDynamicsMidiTests`・`ChordMemberScriptsExportTests`）・毒 6/6 赤。掃き: MIDI・MusicXML とも 1289 本のうち 4 本（どれも音ごとの印・XML は足すだけ）。CHANGELOG 2 つ。ランはページも装飾音に点を打たない＝今のまま。
-- ⚠️ ⑵ の「和音全体に効かせる」は Claude の判断（音ごとに鳴らす案は最初に実装して捨てた＝ページの絵と聞こえが食い違う）。和音の音に書いた強弱 `<e''@f g''>` は描かれず鳴らず警告も無い＝決めごと（leftovers 第1347）。
-- 終了時 full 18138 合格 / 0 失敗 / skip 2 / 合計 18140（`run3.trx`）。
-- **次**: leftovers の残り（多くは判断待ち・未検証）か F4。
 
 ## 2. 開いている作業
 
