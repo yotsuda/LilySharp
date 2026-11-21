@@ -2344,10 +2344,11 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         // once the user has clicked or typed in THIS document (the editor's keys do not
         // count): until then it stays 'suspended' — so it is resumed from the first gesture
         // here and asked to resume at every strike, and if it is still not running shortly
-        // after, the host is told once (audioBlocked) and the status bar says to click the
-        // preview. The Play button is a click, so it always gets through.
+        // after, the host is told (audioBlocked, at most every 5 s while it lasts) and the status
+        // bar says to click the preview. The Play button is a click, so it normally gets through;
+        // a context that even a click cannot wake is replaced (ensureRunning, rebuildAudio).
         let audioCtx = null;
-        let audioBlockedTold = false;
+        let audioBlockedAt = 0;     // when audioBlocked was last said (0: say it at the next block)
         function audioContext() {
             if (!audioCtx || audioCtx.state === 'closed') { audioCtx = new AudioContext(); }
             return audioCtx;
@@ -2356,18 +2357,55 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             const ctx = audioContext();
             if (ctx.state !== 'running') {
                 ctx.resume().catch(() => { /* reported below */ });
+                // Said again while the block lasts, at most every 5 s (the auditions strike this
+                // often): a context stuck suspended (2026-11-21: resume() never settled after the
+                // first block, Play stayed silent and the one-shot report hid it) must stay
+                // visible in the log.
                 setTimeout(() => {
-                    if (audioCtx && audioCtx.state !== 'running' && !audioBlockedTold) {
-                        audioBlockedTold = true;
+                    if (audioCtx && audioCtx.state !== 'running' && Date.now() - audioBlockedAt > 5000) {
+                        audioBlockedAt = Date.now();
                         vscode.postMessage({ type: 'audioBlocked', state: audioCtx.state });
                     }
                 }, 300);
             }
             return ctx;
         }
+        // A context that will not run although this page has had a gesture is stuck for good
+        // (only a new webview used to cure it): a Play gives resume() a moment (ensureRunning),
+        // and if the context is still not running, it is replaced (rebuildAudio) — closed, with
+        // its synth and voice output, the recording carried over to a new player, and the sound
+        // font loaded anew. At most once in AUDIO_REBUILD_GAP_MS, so a new context that fares no
+        // better is not rebuilt round after round (startPlayback's waits re-enter it).
+        const AUDIO_WAKE_WAIT_MS = 700;       // how long a Play gives resume() before replacing
+        const AUDIO_REBUILD_GAP_MS = 15000;
+        let audioRebuiltAt = -Infinity;
+        function pageHadGesture() {
+            // Sticky, not the click's transient activation: the notes come back from the host
+            // after the click (requestPlayback), and a long export outlasts the transient one.
+            return !navigator.userActivation || navigator.userActivation.hasBeenActive;
+        }
+        function ensureRunning(ctx, ms) {
+            if (ctx.state === 'running') { return Promise.resolve(true); }
+            return new Promise(resolve => {
+                const timer = setTimeout(() => resolve(ctx.state === 'running'), ms);
+                ctx.resume().then(() => { clearTimeout(timer); resolve(ctx.state === 'running'); },
+                                  () => { clearTimeout(timer); resolve(false); });
+            });
+        }
+        function rebuildAudio(why) {
+            audioRebuiltAt = Date.now();
+            vscode.postMessage({ type: 'webviewPerf', text: 'AudioContext would not run (' + why + '): replaced' });
+            const old = audioCtx, oldRec = recPlayer;
+            if (oldRec) { oldRec.stop(); }
+            audioCtx = null; sfSynth = null; voiceOut = null; recPlayer = null;
+            try { soundFontSynth(); } catch (e) { vscode.postMessage({ type: 'synthStatus', state: 'failed', detail: String(e) }); }
+            if (oldRec) { const rec = recordingPlayer(); if (rec) { rec.adopt(oldRec); } }
+            if (old) { old.close().catch(() => { /* already closed */ }); }
+            audio();
+        }
         function resumeAudioOnGesture() {
             if (audioCtx && audioCtx.state === 'suspended') {
-                audioCtx.resume().then(() => { audioBlockedTold = false; }).catch(() => { /* noop */ });
+                audioCtx.resume().then(() => { audioBlockedAt = 0; }).catch(() => { /* noop */ });
             }
         }
         window.addEventListener('pointerdown', resumeAudioOnGesture, true);
@@ -2396,7 +2434,9 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 }
                 return null;
             }
-            sfSynth = window.LysSynth.create(audioContext(), cfg.processor, cfg.soundFont || '', (status) => {
+            let made = null;
+            made = sfSynth = window.LysSynth.create(audioContext(), cfg.processor, cfg.soundFont || '', (status) => {
+                if (made && sfSynth !== made) { return; }   // the synth of a context replaced (rebuildAudio)
                 vscode.postMessage({ type: 'synthStatus', state: status.state, detail: status.detail || '' });
                 if (status.state === 'failed') {
                     flashInfo('Sound: ' + (status.detail || 'the sound font did not load'), 4000);
@@ -3279,6 +3319,13 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         // played time the list's 0 is — and then the recording sounds with it (startRecordingAlong).
         function startPlayback(notes, offset, plainTones, here, countFix, origin, span) {
             offset = offset || 0;
+            // A wait below (the context, the sound font) plays this Play again once it is over;
+            // what the caller set after this call returned (loopEntry) is kept through that.
+            function replay(tones = plainTones) {
+                const entry = loopEntry;
+                startPlayback(notes, offset, tones, here, countFix, origin, span);
+                loopEntry = entry;
+            }
             stopPlayback();
             // A voice's phrase still sounding gives way to the score (playVoiceSample).
             if (voiceSampleSource) { try { voiceSampleSource.stop(); } catch (e) { /* ended */ } voiceSampleSource = null; }
@@ -3321,6 +3368,21 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 return;
             }
             const ctx = audio();
+            if (ctx.state !== 'running' && pageHadGesture() && Date.now() - audioRebuiltAt > AUDIO_REBUILD_GAP_MS) {
+                // Not running although this page has had a gesture: resume() is given a moment, and
+                // a context that still will not run is replaced (rebuildAudio); then this Play goes
+                // on. A page never clicked (or a context just replaced) plays at once, as before: no
+                // rebuild would be made, so a wait would only delay it.
+                const gen = ++playGeneration;
+                setPlayUi(true);
+                ensureRunning(ctx, AUDIO_WAKE_WAIT_MS).then(ok => {
+                    if (gen !== playGeneration) { return; }
+                    // (replaced, the Play that comes again is within the gap: it waits no more)
+                    if (!ok) { rebuildAudio(ctx.state); }
+                    replay();
+                });
+                return;
+            }
             const sf = soundFontSynth();
             if (sf && sf.state === 'loading' && !plainTones) {
                 const gen = ++playGeneration;
@@ -3329,7 +3391,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 sf.whenReady(8000).then(ok => {
                     if (gen !== playGeneration) { return; }
                     if (!ok) { flashInfo('The sound font is not ready: plain tones this time'); }
-                    startPlayback(notes, offset, !ok, here, countFix, origin, span);
+                    replay(!ok);
                 });
                 return;
             }
@@ -6007,8 +6069,8 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                     loopList = null;
                     voicePlan = null;       // another text's notes: no voice of this score's
                     // Pressed on another panel, so no click here lets the sound through: said at
-                    // every silent press, not once.
-                    audioBlockedTold = false;
+                    // every silent press, not once in 5 s.
+                    audioBlockedAt = 0;
                     startPlayback(message.notes, 0);
                     break;
                 case 'setSoundFont':

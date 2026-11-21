@@ -160,6 +160,21 @@ export class RecordingPlayer {
         this.dropParts();
     }
 
+    /** Takes over another player's recording, parts and fader — the page's AudioContext was
+     *  replaced (previewHtml rebuildAudio). AudioBuffers belong to no context; the nodes (the
+     *  stretchers, the parts' gains) are the old context's and stay behind, built anew here. */
+    adopt(from: RecordingPlayer): void {
+        this.unload();
+        this.buffer = from.buffer;
+        this.partSources = from.partSources.slice();
+        this.parts = from.parts;
+        this.partNames = from.partNames.slice();
+        this.partLevels = from.partLevels.slice();
+        this.partsFailed = from.partsFailed.slice();
+        this.onPartsDecoded = from.onPartsDecoded;
+        this.level.gain.value = from.level.gain.value;
+    }
+
     /** The parts' names, as loaded (in the file's order). */
     get partsLoaded(): readonly string[] {
         return this.partNames;
