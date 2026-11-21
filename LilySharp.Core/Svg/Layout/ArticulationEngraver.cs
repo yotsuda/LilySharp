@@ -1707,6 +1707,41 @@ internal static class ArticulationEngraver
                 }
             }
 
+            // THE SCRIPT'S OWN REST, where Rest_collision left it, is its support: the column
+            // answer above anchors a rest on the middle line, which is where it stands unless
+            // another voice's notes pushed it off.
+            // LILYPOND-REF: lily/script-engraver.cc:234-250 acknowledge_rhythmic_head — a Rest
+            //   carries rhythmic-head-interface (scm/define-grobs.scm Rest), so it is a support,
+            //   and it declares its skylines from its stencil.
+            // MEASURED (LilyPond 2.26.0, Lab sessions/p1352/marks k4): `voice { e''2 e''2 }
+            //   { s4 r8@accent.down s8 s2 } |` — the eighth rest pushed to -2.0, the accent at
+            //   -3.5452, its padding 0.2 under the rest's stem foot (the outlines; the rest as the
+            //   staff profile seeds it, SkylineBuilder.MergeRestSupport). A fermata, a mover, gets
+            //   there through the outside-staff pass as well (k1, k3).
+            // ⚠️ Not for a rest @cross moved: its shift is the other staff's
+            //   (Staff.CrossedRestShifts), not in this staff's memo.
+            if (restShiftsOf != null && item is RestItem { IsSpacer: false, IsMultiMeasure: false, GraceTime: false, CrossStaffIndex: < 0 } ownRest
+                && staffByIndex != null && staffByIndex.TryGetValue(effArt.StaffIndex, out var ownRestStaff)
+                && restShiftsOf(ownRestStaff).TryGetValue(
+                    new RestShiftKey(effArt.MeasureIndex, effArt.VoiceIndex, effArt.ItemIndex), out var ownShift)
+                && ownShift != 0.0)
+            {
+                var restUp = new VerticalSkyline(VerticalDirection.Up);
+                var restDown = new VerticalSkyline(VerticalDirection.Down);
+                SkylineBuilder.MergeRestSupport(ownRest,
+                    measureLayout.X + LayoutUtilities.GetItemXOffset(artMeasures, effArt.MeasureIndex, effArt.ItemIndex, measureLayout),
+                    ownShift * 0.5, ownRestStaff.Lines, restUp, restDown);
+                var mine = ScriptSkyline(
+                    layout, yUp, effArt.IsAbove ? VerticalDirection.Down : VerticalDirection.Up);
+                double ownMove = Math.Max(0.0, (effArt.IsAbove ? restUp : restDown).Distance(mine, ScriptHorizonPadding)
+                    + PaddingFor(effArt.Type));
+                if (ownMove > 0)
+                {
+                    yUp += effArt.IsAbove ? ownMove : -ownMove;
+                    layout = layout with { YUp = yUp };
+                }
+            }
+
             // Stack multiple scripts on one note & side by the support chain, not by
             // box arithmetic: the next script sits at pointwise distance + its OWN
             // padding over the placed profiles, maxed with its own note answer (one
@@ -2550,9 +2585,19 @@ internal static class ArticulationEngraver
     /// left of LilyPond's — MEASURED by all three editorial.accidental.* ledger points at
     /// once, the same residual on three different glyphs, which is what said it was not the
     /// accidental's own box but this one.
+    /// <para>
+    /// A REST's column is the rest: a script on it centres on the rest glyph's extent.
+    /// MEASURED (LilyPond 2.26.0, Lab sessions/p1352/marks k1, k4, k5): a fermata on a quarter
+    /// rest centres 0.475 right of the column (the rest's 0.95 box), an accent on an eighth 0.5,
+    /// a fermata on a half rest 0.75. Until session 1352 every one centred on a black head's
+    /// 0.65 — and a fermata under a rest pushed off the staff, 0.175 right, let the rest's hook
+    /// sink between its dot and its arc.
+    /// </para>
     /// </remarks>
     private static double NoteheadHalfWidth(MusicItem item)
-        => ScriptHeadBox(item).CenterX;
+        => item is RestItem { IsMultiMeasure: false } rest
+            ? GlyphMetrics.GetRestBBox(rest, GlyphMetrics.NoteValueOf(rest.BaseDuration)).CenterX
+            : ScriptHeadBox(item).CenterX;
 
     /// <summary>
     /// The head a script centres on and clears: its OWN glyph's box, in the style it is drawn —

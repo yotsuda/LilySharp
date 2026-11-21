@@ -6,6 +6,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Fixed: a dynamic or an `@text` on a note or rest moved with `@cross` hung off its old staff** (`[engraving]`). `lh { c4 g4@cross@p c2 }` printed the p under the bass, where the g used to be; LilyPond hangs it under the treble, by the g. A dynamic that a running hairpin carries stays with its hairpin.
+
+- **Fixed: a script on a rest centred as if on a note head, and could run into a rest another voice pushed aside** (`[engraving]`). A fermata on a quarter rest stood 0.175 spaces right of the rest's middle; it now centres on the rest, as in LilyPond. Under a rest moved down by the other voice's notes, `r4@fermata.down` printed across the rest at −3.22 spaces where LilyPond puts it clear at −3.74, and an accent under an eighth rest likewise.
+
 - **A rest that writes `@cross` moves to the other staff** (`[engraving]`). `lh { c4 r4@cross c2 }` draws the rest on the treble, as a note with `@cross` moves, and as the LilyPond export and the MusicXML export already did; the page used to leave it on the bass in silence. It sits where that staff's notes leave it room, as LilyPond places it, and the staves make room for it. In a grace run that moves to the other staff (every note with `@cross`), a rest moves with it when it writes `@cross` too.
 
 - **Fixed: a rest beside a chord held from an earlier beat moved too far** (`[engraving]`). LilyPond moves a rest off such a chord by one head only, the one at the stem's root; Lily# cleared every head of the chord. When the chord's stem pointed the rest's way, the rest went past heads LilyPond lets it sit beside: in `voice { e''2 r4 e''4 } { c'1 } { <g' d''>2. r4 }` the rest stood at 4.0 spaces where LilyPond puts it at 2.0. The same for a grace rest after a chord stemmed up, and a rest beside a chord `@cross` moved onto its staff.

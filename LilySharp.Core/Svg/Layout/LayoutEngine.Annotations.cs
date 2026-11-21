@@ -829,6 +829,7 @@ internal sealed partial class LayoutEngine
                 ? ImmutableArray.Create(score.Voice) : staffVoices,
             voicesByStaff, measuresByStaff, beamLayouts ?? default, staffLinesOf, ctx.GraceNotes,
             restShiftsOf);
+        dynamicLayouts = DynamicsOnTheirNotesStaff(ctx.MultiScore, dynamicLayouts, dynamicLineGroups);
 
         // Detect and layout text spanners from rit/accel marks (outside-staff-priority: 350)
         // Pass dynamic layouts so text spanners can stack below them

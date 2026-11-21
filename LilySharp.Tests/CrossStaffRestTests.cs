@@ -111,6 +111,27 @@ public class CrossStaffRestTests
         Assert.Equal(2.58, Assert.Single(marks).Up);
     }
 
+    /// <summary>
+    /// A dynamic or an <c>@text</c> on a moved note or rest hangs off the staff it moved to
+    /// (LayoutEngine.DynamicsOnTheirNotesStaff): the twin's <c>\change Staff</c> moves the whole
+    /// Voice, its DynamicText and TextScript with it. Under the treble, in spaces above its middle
+    /// line — LilyPond 2.26.0's −6.813, −4.931 and −4.774 (Lab sessions/p1352/marks q2, m2, m3).
+    /// Until session 1352 each was as far under the BASS, nine spaces lower.
+    /// </summary>
+    [Theory]
+    [InlineData("c4 g4@cross@p c2 |", "p", -6.82)]
+    [InlineData("c4 r4@cross@p c2 |", "p", -4.94)]
+    [InlineData("c4 r4@cross@text(\"x\") c2 |", "x", -4.78)]
+    public void ADynamicOrTextOnAMovedNote_HangsOffTheStaffItMovedTo(string bass, string label, double expected)
+    {
+        var svg = TestPaper.SvgFromRenderSpec(Book("e''2 e''2 |", bass));
+        var (lines, _) = Read(svg);
+        var ys = Regex.Matches(svg, "<text x=\"[-\\d.]+\" y=\"([-\\d.]+)\"[^>]*font-style=\"italic\"[^>]*>" + label + "</text>")
+            .Select(m => Math.Round(lines[2] - double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture), 2))
+            .ToList();
+        Assert.Equal(expected, Assert.Single(ys));
+    }
+
     [Fact]
     public void TheStaffItMovedTo_ReservesTheRest()
     {

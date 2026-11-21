@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A dynamic or text on a note moved with `@cross` follows the note.** `g4@cross@p` in the left hand prints the p under the right hand's staff, by the note, instead of under the left hand's.
+- **A script on a rest centres on the rest and clears it.** A fermata on a rest stood a little right of it, and under a rest the other voice pushed down it could print across the rest.
 - **A rest with `@cross` moves to the other staff.** `r4@cross` in the left hand is drawn on the right hand's staff, as a note with `@cross` is, clear of that staff's notes; the preview used to leave it where it was.
 - **A rest beside a chord held from an earlier beat no longer moves too far.** Where a voice holds a chord whose stem points the rest's way, the rest went past the whole chord; LilyPond clears only the head at the stem's root. Grace rests after such a chord and rests beside a chord moved with `@cross` went too far the same way.
 - **A rest no longer stands half a space too close to the other voice's note.** When a rest was moved off another voice's notes, it could stop one step short of where LilyPond puts it (over `c'''`, or over `a'`), and an 8va bracket or trill over it with it.

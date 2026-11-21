@@ -197,4 +197,51 @@ internal sealed partial class LayoutEngine
         }
         return builder.ToImmutable();
     }
+
+    /// <summary>A dynamic or an <c>@text</c> on a note or rest <c>@cross</c> moved hangs off the
+    /// staff the note stands on, as a script does (<see cref="ScriptsOnTheirNotesStaff"/>): its
+    /// supports were read off the head's position, which is that staff's already, so only the
+    /// staff its <see cref="DynamicLayout.YUp"/> is about changes. One a running hairpin's line
+    /// took (<paramref name="groups"/>) stays with its line's staff.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: the twin writes <c>@cross</c> as <c>\change Staff</c> around the note, which
+    ///   moves the whole Voice: its Dynamic_engraver's and Text_engraver's grobs are that
+    ///   staff's (ly/engraver-init.ly — both are consisted in the Voice).
+    /// MEASURED (LilyPond 2.26.0, Lab sessions/p1352/marks q2): <c>c4 g4@cross@p c2</c> in the
+    ///   left hand: the p at -6.81 under the right hand (Lily# drew it -6.82 under the left).
+    /// </remarks>
+    private static ImmutableArray<DynamicLayout> DynamicsOnTheirNotesStaff(MultiStaffScore? score,
+        ImmutableArray<DynamicLayout> dynamics, ImmutableArray<DynamicAlignEngraver.AlignedLineGroup> groups)
+    {
+        if (score is null || dynamics.IsDefaultOrEmpty)
+            return dynamics;
+        bool any = false;
+        foreach (var (_, st, _) in score.EnumerateStaves())
+            if (!st.CrossedIn.IsEmpty || !st.RestsCrossedIn.IsEmpty) { any = true; break; }
+        if (!any)
+            return dynamics;
+        HashSet<int>? lined = null;
+        if (!groups.IsDefaultOrEmpty)
+            foreach (var g in groups)
+                foreach (int di in g.DynamicIndices)
+                    (lined ??= new HashSet<int>()).Add(di);
+        ImmutableArray<DynamicLayout>.Builder? moved = null;
+        for (int i = 0; i < dynamics.Length; i++)
+        {
+            var d = dynamics[i];
+            if (lined != null && lined.Contains(i))
+                continue;
+            foreach (var (_, st, si) in score.EnumerateStaves())
+            {
+                if (si != d.StaffIndex)
+                    continue;
+                if (d.VoiceIndex < st.Voices.Length && d.MeasureIndex < st.Voices[d.VoiceIndex].Measures.Length
+                    && d.ItemIndex < st.Voices[d.VoiceIndex].Measures[d.MeasureIndex].Items.Length
+                    && st.Voices[d.VoiceIndex].Measures[d.MeasureIndex].Items[d.ItemIndex].CrossStaffIndex is >= 0 and var target)
+                    (moved ??= dynamics.ToBuilder())[i] = d with { StaffIndex = target };
+                break;
+            }
+        }
+        return moved?.ToImmutable() ?? dynamics;
+    }
 }
