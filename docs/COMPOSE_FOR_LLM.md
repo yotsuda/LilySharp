@@ -136,14 +136,15 @@ What makes it music:
   to a cadence — so the ear half-knows what comes next and is pleased when it comes, and once or
   twice surprised. One feature makes it remembered: a leap the tune keeps, a rhythm, a note leaned
   on against its chord (an appoggiatura on the strong beat, resolving a step down). A tune of notes
-  that only follow the chords is not yet a theme. **The motif's shape is kept, its rhythm is not
-  frozen**: its own rhythm in one bar of two at most, longer notes at a phrase's peak and end, a
-  phrase that runs on over the bar line, a section that moves in other values (owner's trials
-  2026-11-07: a waltz and a rain piece, two models, poured the motif's one-bar rhythm into half
-  their bars or more, and the tune became a pattern). (Owner's goals 2026-11-07, with the five that
-  follow: a melody that is remembered, chords that are more than a stock pattern, a countermelody
-  of its own, a key change with a story, an orchestra's instruments written as they sound, and one
-  piece from its first bar to its last.)
+  that only follow the chords is not yet a theme. (Owner's goals 2026-11-07: a melody that is
+  remembered — and, each in its own place in this guide, chords that are more than a stock pattern,
+  a countermelody of its own, a key change with a story, an orchestra's instruments written as they
+  sound, and one piece from its first bar to its last.) **The motif's shape is kept, its rhythm is
+  not frozen**: in a melody, its own rhythm in one bar of two at most, longer notes at a phrase's
+  peak and end, a phrase that runs on over the bar line, a section that moves in other values
+  (owner's trials 2026-11-07: a waltz and a rain piece, two models, poured the motif's one-bar
+  rhythm into half their bars or more, and the tune became a pattern). A riff, an ostinato and an
+  accompaniment's figure repeat by nature (*Rock*, *A blues head*): this is the tune's rule.
 - **A section that returns is named again, not copied**: one that comes back as it was is written
   once and played twice by the form (`form { A B A Coda }`) — never a second section with the same
   notes. A return that changes (the tune an octave higher, a new accompaniment, another ending) is a
@@ -452,8 +453,10 @@ What makes it music:
   of parts, the inner ones too and across each bar line: no parallel fifths or octaves, and no
   strong beat with all the parts on one note before a cadence.
 - **An orchestra or a string ensemble** writes each instrument where it sounds well, not only where
-  it can play: a flute's low octave is weak (its tune lies above G5), an oboe carries a tune in its
-  middle, a horn sings round C4–C5 and rests between phrases, a cello's tenor register sings. Strings
+  it can play: a flute's low octave (C4–C5) is soft and hollow, a quiet colour that an ensemble
+  covers — its tune lies from C5 up, graceful in the middle octave and brilliant in the top one; an
+  oboe carries a tune in its middle; a horn sings round F3–F4 sounding (written C4–C5 for the horn
+  in F) and rests between phrases; a cello's tenor register sings. Strings
   play `@text("pizz.").up` and back `@text("arco").up` (the preview still plays them bowed: the
   marks are for the players), a tremolo `c'2:32` for tension, sustained notes under a moving tune.
   Layers: one tune, one countermelody, a harmony held, a bass — doubled at the octave for weight at

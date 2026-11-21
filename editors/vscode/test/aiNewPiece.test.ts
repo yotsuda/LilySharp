@@ -247,7 +247,12 @@ describe('the composing guide', () => {
         assert.match(guide, /\*\*The chorus comes back after every verse\*\*: verse 1, chorus, verse 2, chorus — the form names\s+the chorus again each time/);
         assert.match(guide, /A song does not end on\s+a verse, nor on its hook said once in a coda/);
         // Owner's trials the same day: the motif's rhythm poured into half the bars, two models.
-        assert.match(guide, /\*\*The motif's shape is kept, its rhythm is not\s+frozen\*\*: its own rhythm in one bar of two at most/);
+        assert.match(guide, /\*\*The motif's shape is kept, its rhythm is\s+not frozen\*\*: in a melody, its own rhythm in one bar of two at most/);
+        // …the tune's rule: a riff, an ostinato, an accompaniment's figure repeat (Rock, A blues head).
+        assert.match(guide, /A riff, an ostinato and an\s+accompaniment's figure repeat by nature/);
+        // A flute's tune lies from C5 up (its low octave C4–C5); a horn's register said as it sounds.
+        assert.match(guide, /a flute's low octave \(C4–C5\) is soft and hollow/);
+        assert.match(guide, /a horn sings round F3–F4 sounding \(written C4–C5 for the horn\s+in F\)/);
         assert.match(guide, /\*\*Harmony that moves\*\*: past the first phrase, colour the progression/);
         // Owner's trial the same day: a flute's A♮ over the piano's F minor.
         assert.match(guide, /\*\*The\s+chord changes with the note\*\*: a melody's note from outside the key belongs to the accompaniment's\s+chord as well/);
