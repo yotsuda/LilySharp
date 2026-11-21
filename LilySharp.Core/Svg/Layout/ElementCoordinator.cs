@@ -2239,7 +2239,7 @@ internal sealed class ElementCoordinator
                         is RestItem { CrossStaffIndex: >= 0 and var crossTarget } crossed
                     && measureMap.TryGetValue(measureIndex, out var crossPlaced))
                 {
-                    // LILYPOND-REF: lily/beam.cc:1349-1355 (the common Y refpoint, above).
+                    // LILYPOND-REF: lily/beam.cc:1349-1355 Beam::rest_collision_callback (above).
                     beamY += 2.0 * (LayoutUtilities.FindStaffYInSystem(crossPlaced.System, staffIndex)
                         - LayoutUtilities.FindStaffYInSystem(crossPlaced.System, crossTarget));
                     movedRest = crossed;
@@ -2267,10 +2267,12 @@ internal sealed class ElementCoordinator
                 // `lh { c8[ r8@cross g'8@cross c8] }` puts the rest at −6.5 spaces on the
                 // treble under an empty treble (the beam's push alone), +4.0 over e''2 and +2.5
                 // over a'2 (−6.5, then up past the head); Lily# drew −6.5 for all three.
-                // LILYPOND-REF: lily/grob-closure.cc:63-68 chain_callback — Rest_collision's
-                //   force_shift_callback_rest (rest-collision.cc:79-83, add_column) is chained
-                //   after Beam_engraver's rest_collision_callback (beam-engraver.cc:215), so it is
-                //   the outer one and runs on the beam's answer; rest-collision.cc:224-226 the
+                // LILYPOND-REF: lily/grob-closure.cc:63-68 chain_callback — the callback chained
+                //   later is the outer one and runs on the inner one's answer.
+                // LILYPOND-REF: lily/rest-collision.cc:79-83 add_column — chains
+                //   force_shift_callback_rest after the beam's (lily/beam-engraver.cc:215
+                //   acknowledge_rest), so the collision runs on the beam's push.
+                // LILYPOND-REF: lily/rest-collision.cc:224-226 calc_positioning_done — the
                 //   direction is Note_column::dir, the stem's.
                 if (movedTo is not null && movedRest!.StaffPosition is null)
                 {
@@ -2697,7 +2699,7 @@ internal sealed class ElementCoordinator
     /// </remarks>
     /// <param name="columnDir">The column's direction when the rest's stem has one — a rest in a
     /// beam takes the beam's (<see cref="CalculateRestShifts"/>); null reads the headless default.
-    /// LILYPOND-REF: lily/rest-collision.cc:224-226 (Note_column::dir, the stem's).</param>
+    /// LILYPOND-REF: lily/rest-collision.cc:224-226 calc_positioning_done (Note_column::dir).</param>
     /// <param name="before">A shift, in positions, the rest took BEFORE this collision — the
     /// beam's push (<see cref="CalculateRestShifts"/>); the collision translates from there.</param>
     internal static double CrossedRestShift(RestItem rest, Fraction onset, int m, Staff target,

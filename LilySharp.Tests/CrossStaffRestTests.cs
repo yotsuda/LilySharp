@@ -156,8 +156,9 @@ public class CrossStaffRestTests
     /// there — past e'' to +4.0, past a' to +2.5. LilyPond 2.26.0's, in spaces above the treble's
     /// middle line (Lab sessions/p1356/b7 v1–v3). Until session 1356 the treble's collision ran
     /// first (down, the headless default) and the beam had the last word: −6.5 for all three.
-    /// LILYPOND-REF: lily/grob-closure.cc:63-68 chain_callback (Rest_collision's callback is the
-    ///   outer one); lily/rest-collision.cc:224-226 (the direction is the stem's).
+    /// LILYPOND-REF: lily/grob-closure.cc:63-68 chain_callback (the collision's callback is the
+    ///   outer one).
+    /// LILYPOND-REF: lily/rest-collision.cc:224-226 calc_positioning_done (the stem's direction).
     /// </summary>
     [Theory]
     [InlineData("s1 |", -6.5)]
