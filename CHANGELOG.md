@@ -6,6 +6,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Fixed: with `paper { raggedRight }` the lines were balanced instead of filled** (`[engraving]`). Seven bars of which five fit on a line were set 3+4; the last line of a ragged-right score now costs nothing, so the lines before it are filled as far as they go — 5+2, as LilyPond sets them.
+
+- **Fixed: a rest moved with `@cross` inside a beam across the staves always went under the beam** (`[engraving]`). In `lh { c8[ r8@cross g'8@cross c8] }` the rest stood at −6.5 spaces on the treble whatever the treble held. LilyPond lets the beam push it first and the treble's notes after: under `e''2` it stands above the staff at +4.0, under `a'2` at +2.5, and only under an empty treble at −6.5. Lily# now does the same.
+
+- **Fixed: a rest left behind by a grace run moved with `@cross` took no room** (`[engraving]`). In `grace { r16 e'16@cross }` the rest stays on its own staff, but nothing there knew it: an `@text(…).up` over it was printed through it. It now clears the rest as over any grace rest.
+
 - **A tuplet bracket stays on its own staff when one of its notes is a rest moved with `@cross`** (`[engraving]`). `tuplet 3/2 { c'8 r8@cross c'8 }` in the left hand brackets the left hand's notes where it would without the rest; the moved rest used to push the bracket down by its height on the other staff. LilyPond carries the bracket over to the moved rest, through the other staff's notes; Lily# deliberately does not, and the LilyPond export keeps LilyPond's picture.
 
 - **Fixed: a slur over a grace run moved with `@cross` bowed too deep** (`[engraving]`). In `lh { c4( grace { e'16@cross } c4) }` the slur under the bass was pulled half a space lower by the grace note standing on the treble; it now bows as LilyPond's does, as if the run were not under it.
