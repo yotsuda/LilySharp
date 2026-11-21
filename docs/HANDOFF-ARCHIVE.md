@@ -277,6 +277,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1350セッションの経緯
+
+### 1.1 第1350セッション（2026-11-21・YT-DELL2・第1349 と同じ会話）
+
+base `9439b4174`。開始時 full 18143 合格 / 0 失敗 / skip 2 / 合計 18145（Lab `p1350` `run1.trx`）。Calamo・Orecchiante・Shosa の open は 0。
+- **オーナー決定 2026-11-21＝休符に書いた `@cross` は休符も移す**（設計 `docs/cross-rest-design.md`）。きっかけは leftovers 第1237 ⑵（`@cross` で移った装飾休符）の実測（Lab `p1350/rest`）: 譜面だけが休符の `@cross` を黙って捨てていた（`lysc ly` の双子は `\change Staff`・MusicXML は `<staff>` を移していた）。**`01497654d`**: 集める段階の印（`WithCrossRest`）・`MoveCrossStaffNotes` が休符も移す（`Staff.RestsCrossedIn`）・高さは移った先の段の Rest_collision（`ElementCoordinator.CrossedRestShift`＝集める段階で全段が見えるところで計算し `Staff.CrossedRestShifts` に刻む）・描く Y・移った先の段の輪郭・装飾音の列の `Foreign` の種。8 形（普通の休符 3・装飾音の列 4・段のあいだ 1）が LilyPond と 0.01 以内。網 +7（`CrossStaffRestTests`）・毒 5 本で 6／6／6／1／1 赤。掃き 1289 枚は 0 枚動いた。GRAMMAR.md・CHANGELOG 2 つ。
+- 残した（設計 §4 の段 3）: 移った休符に付いた印と連桁・装飾音のスラーの障害物は元の段の座標。
+- full 18150 合格 / 0 失敗 / skip 2 / 合計 18152（`run3.trx`）。
+- **次**: 段 3（`docs/cross-rest-design.md` §4）か leftovers の残りか F4。
+
 ## 以下は第1349セッションの経緯
 
 ### 1.1 第1349セッション（2026-11-21・YT-DELL2・新しい会話）
