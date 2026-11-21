@@ -4851,7 +4851,7 @@ internal sealed class ElementCoordinator
 
             AddGraceObstaclesForMeasure(
                 obstacles, voice, slur, graceNotes, graceByMeasure, graceGeomCache,
-                ml, mi, hi, staffMiddleDown, segStartX, segEndX, voiceShifts);
+                ml, mi, hi, staffMiddleDown, segStartX, segEndX, voiceShifts, segSystem, staffIndex);
         }
 
         obstacles.Sort((a, b) => a.X.CompareTo(b.X));
@@ -5250,8 +5250,8 @@ internal sealed class ElementCoordinator
         ImmutableArray<GraceNoteItem> graceNotes,
         Dictionary<int, List<int>>? graceByMeasure, GraceObstacleGeom?[]? graceGeomCache,
         MeasureLayout ml, int mi, int hi,
-        double staffMiddleDown, double segStartX, double segEndX,
-        VoiceCollisionTable voiceShifts)
+        double laidStaffMiddleDown, double segStartX, double segEndX,
+        VoiceCollisionTable voiceShifts, SystemLayout? segSystem = null, int staffIndex = -1)
     {
         if (graceByMeasure is null || graceGeomCache is null
             || !graceByMeasure.TryGetValue(mi, out var groupIndices))
@@ -5261,6 +5261,18 @@ internal sealed class ElementCoordinator
         foreach (int gi in groupIndices)
         {
             var g = graceNotes[gi];
+            // A run @cross moved stands on the other staff (GraceNoteItem.CrossStaffIndex): its
+            // heads' and stems' positions are about THAT staff, so they are read there, as a
+            // moved main note's head is (MovedDown). Read about the slur's staff, the run's
+            // e' on the treble pulled a slur under the bass a quarter space lower (Lab
+            // sessions/p1354/gs s1, s6); LilyPond bows as if the run were not there.
+            // LILYPOND-REF: lily/slur-scoring.cc:144 get_encompass_info — the head's extent in
+            //   the common Y frame.
+            double staffMiddleDown = laidStaffMiddleDown
+                + (g.CrossStaffIndex >= 0 && segSystem is not null && staffIndex >= 0
+                    ? LayoutUtilities.FindStaffYInSystem(segSystem, staffIndex)
+                        - LayoutUtilities.FindStaffYInSystem(segSystem, g.CrossStaffIndex)
+                    : 0.0);
             // Which columns the slur covers, read off each column's own item address: from
             // the start item to the end item, both included — the window the main-grid loop
             // reads. A run before the start note sounds BEFORE the slur opens, so LP's

@@ -149,6 +149,34 @@ public class CrossStaffRestTests
         Assert.Equal(expected, Assert.Single(rests));
     }
 
+    /// <summary>
+    /// A slur under the bass over a grace run <c>@cross</c> moved to the treble reads the run
+    /// where it stands (ElementCoordinator.AddGraceObstaclesForMeasure), so it bows as if the
+    /// run were not under it: its lowest ink, in spaces above the treble's middle line, LilyPond
+    /// 2.26.0's −11.430 for both (Lab sessions/p1354/gs s6, s1; Lily# −11.43 and −11.46). Until
+    /// session 1354 the run's heads were read in the bass's positions and took it to about −11.95.
+    /// LILYPOND-REF: lily/slur-scoring.cc:144 get_encompass_info (the common Y frame).
+    /// </summary>
+    [Theory]
+    [InlineData("c4( grace { e'16@cross } c4) c2 |", -11.43)]
+    [InlineData("c4( grace { r16@cross e'16@cross } c4) c2 |", -11.46)]
+    public void ASlurOverAMovedGraceRun_BowsAsIfTheRunWereNotUnderIt(string bass, double expected)
+    {
+        var svg = TestPaper.SvgFromRenderSpec(Book("e''2 e''2 |", bass));
+        var (lines, _) = Read(svg);
+        var path = Assert.Single(Regex.Matches(svg, "<path d=\"(M [^\"]+ Z)\" stroke=\"#000000\" stroke-width=\"0\\.08\"")).Groups[1].Value;
+        var n = Regex.Matches(path, "[-\\d.]+,([-\\d.]+)")
+            .Select(m => double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture)).ToArray();
+        double lowest = double.NegativeInfinity;
+        foreach (var s in new[] { (n[0], n[1], n[2], n[3]), (n[3], n[4], n[5], n[6]) })
+            for (int i = 0; i <= 100; i++)
+            {
+                double t = i / 100.0, u = 1 - t;
+                lowest = Math.Max(lowest, u * u * u * s.Item1 + 3 * u * u * t * s.Item2 + 3 * u * t * t * s.Item3 + t * t * t * s.Item4);
+            }
+        Assert.Equal(expected, Math.Round(lines[2] - lowest - 0.04, 2));
+    }
+
     [Fact]
     public void TheStaffItMovedTo_ReservesTheRest()
     {

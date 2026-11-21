@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Fixed: a slur over a grace run moved with `@cross` bowed too deep** (`[engraving]`). In `lh { c4( grace { e'16@cross } c4) }` the slur under the bass was pulled half a space lower by the grace note standing on the treble; it now bows as LilyPond's does, as if the run were not under it.
+
 - **Fixed: a rest moved with `@cross` inside a bracketed beam was pushed by the beam as if it had stayed** (`[engraving]`). In `lh { c'8[ r8@cross c'8 c'8] c2 }` the beam under the bass lifted the rest on the treble to +2.0 spaces; LilyPond leaves it at −1.0, where the treble's notes put it.
 
 - **Fixed: a dynamic or an `@text` on a note or rest moved with `@cross` hung off its old staff** (`[engraving]`). `lh { c4 g4@cross@p c2 }` printed the p under the bass, where the g used to be; LilyPond hangs it under the treble, by the g. A dynamic that a running hairpin carries stays with its hairpin.

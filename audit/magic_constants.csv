@@ -665,6 +665,7 @@
 "Svg/Layout/ElementCoordinator.cs","ElementCoordinator.GraceBeamedStemTipDeviceY","2.0","double centerUp = (bl + (br - bl) * t) / 2.0","(file-level) LILYPOND-REF: lily/beam.cc, lily/tie.cc, lily/slur.cc","Yellow"
 "Svg/Layout/ElementCoordinator.cs","ElementCoordinator.GraceBeamedStemTipDeviceY","2.0","return staffMiddleDown - (centerUp + (up ? 1 : -1) * EngravingDefaults.GraceBeamThickness / 2.0);","(file-level) LILYPOND-REF: lily/beam.cc, lily/tie.cc, lily/slur.cc","Yellow"
 "Svg/Layout/ElementCoordinator.cs","ElementCoordinator.AddGraceObstaclesForMeasure","0.001","const double eps = 0.001;","(file-level) LILYPOND-REF: lily/beam.cc, lily/tie.cc, lily/slur.cc","Yellow"
+"Svg/Layout/ElementCoordinator.cs","ElementCoordinator.AddGraceObstaclesForMeasure","0.0",": 0.0);","(file-level) LILYPOND-REF: lily/beam.cc, lily/tie.cc, lily/slur.cc","Yellow"
 "Svg/Layout/ElementCoordinator.cs","ElementCoordinator.AddGraceObstaclesForMeasure","0.0","groupX + (k < geom.Offsets.Length ? geom.Offsets[k] : 0.0),","(file-level) LILYPOND-REF: lily/beam.cc, lily/tie.cc, lily/slur.cc","Yellow"
 "Svg/Layout/ElementCoordinator.cs","ElementCoordinator.AddGraceObstaclesForMeasure","0.0","double hx = groupX + (k < geom.Offsets.Length ? geom.Offsets[k] : 0.0);","(file-level) LILYPOND-REF: lily/beam.cc, lily/tie.cc, lily/slur.cc","Yellow"
 "Svg/Layout/ElementCoordinator.cs","ElementCoordinator.AddGraceObstaclesForMeasure","0.0","double lift = GraceRestShift(voice.Measures, mi, restItem, 5) ?? 0.0;","(file-level) LILYPOND-REF: lily/beam.cc, lily/tie.cc, lily/slur.cc","Yellow"

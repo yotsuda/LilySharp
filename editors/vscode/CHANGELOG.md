@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A slur over grace notes moved with `@cross` no longer sags.** The grace notes on the other staff pulled the slur under them deeper than LilyPond draws it.
 - **A rest moved with `@cross` inside a `[ ]` beam stays where it belongs.** The beam on the left hand's staff no longer lifts the moved rest on the right hand's staff.
 - **A dynamic or text on a note moved with `@cross` follows the note.** `g4@cross@p` in the left hand prints the p under the right hand's staff, by the note, instead of under the left hand's.
 - **A script on a rest centres on the rest and clears it.** A fermata on a rest stood a little right of it, and under a rest the other voice pushed down it could print across the rest.
