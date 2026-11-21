@@ -1924,6 +1924,11 @@ internal sealed class MeasureBuilder
         bool atScopeStart = _atScopeStart;
         _atScopeStart = false; // any written barline ends the scope's opening span
         _spanKey = -1; // …and the written bar the fills asked about
+        // …with its value: read only under its key, so a value left behind is no state — but the
+        // splice compares the whole checkpoint, and a bar that overflowed (a note typed into a
+        // full bar) left its first-bar length here for every later boundary to differ by
+        // (session 1345: such an edit spliced nothing past it).
+        _spanFirstBar = default;
         if (barType == BarlineType.RepeatStart)
         {
             // |: opens the NEXT measure; close anything pending first. A directive-only

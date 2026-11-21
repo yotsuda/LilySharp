@@ -67,6 +67,10 @@ public sealed class AddedEntrySpliceTests
     [InlineData("g1 | e4 f g a | b1 |", "g1 | e4 f g a | b1@f |", "a dynamic typed")]
     [InlineData("g1 | e4 f g a | b1 |", "g1 | e4 f g a | bes1 |", "an accidental typed")]
     [InlineData("g1 | e4 f g a | b1 |", "g1 | e4 f g a | b1@staccato |", "a script typed")]
+    // A note typed into a full bar: the bar overflows and stays one bar (LYS2002). Until session
+    // 1345 the overflow's first-bar length stayed in the builder after the bar line under a key
+    // already cleared (MeasureBuilder._spanFirstBar), and every later boundary differed by it.
+    [InlineData("g1 | e4 f g a | b1 |", "g1 | e4 f g g a | b1 |", "a note typed into a full bar")]
     public void AnEditThatAddsAnEntry_SplicesTheTail(string find, string replacement, string label)
     {
         int at = Book.IndexOf(find, StringComparison.Ordinal);
