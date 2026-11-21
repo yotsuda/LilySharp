@@ -172,7 +172,9 @@ internal sealed partial class LayoutEngine
             return scripts;
         bool any = false;
         foreach (var (_, st, _) in score.EnumerateStaves())
-            if (!st.CrossedIn.IsEmpty) { any = true; break; }
+            // …or a rest (docs/cross-rest-design.md): its shift is that staff's already
+            // (Staff.CrossedRestShifts), so a script over it was read in that frame too.
+            if (!st.CrossedIn.IsEmpty || !st.RestsCrossedIn.IsEmpty) { any = true; break; }
         if (!any)
             return scripts;
         var builder = scripts.ToBuilder();

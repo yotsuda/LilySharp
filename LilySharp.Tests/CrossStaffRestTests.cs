@@ -90,6 +90,28 @@ public class CrossStaffRestTests
     /// (Lab sessions/p1350/rest s1).
     /// </summary>
     [Fact]
+    public void AScriptOnAMovedRest_StandsOnTheStaffTheRestMovedTo()
+    {
+        // A fermata over the moved rest is read about the staff the rest stands on, as a
+        // script on a moved note is (LayoutEngine.ScriptsOnTheirNotesStaff): over the treble,
+        // clear of its e'', at 2.58 spaces — LilyPond 2.26.0's 2.586 (Lab sessions/p1351/marks
+        // m1). It printed at −6.42, beside the bass, where the rest was before it moved.
+        var svg = TestPaper.SvgFromRenderSpec(Book("e''2 e''2 |", "c4 r4@cross@fermata c2 |"));
+        var (lines, rests) = Read(svg);
+        double restX = Regex.Matches(svg, "<text class=\"music\" x=\"([-\\d.]+)\" y=\"[-\\d.]+\"[^>]*>(.)</text>")
+            .Where(m => (int)m.Groups[2].Value[0] is >= 0xE000 and <= 0xE00F)
+            .Select(m => double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture)).Single();
+        var marks = Regex.Matches(svg, "<text class=\"music\" x=\"([-\\d.]+)\" y=\"([-\\d.]+)\"[^>]*>(.)</text>")
+            .Select(m => (X: double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture),
+                Up: Math.Round(lines[2] - double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture), 2),
+                Glyph: (int)m.Groups[3].Value[0]))
+            .Where(m => m.Glyph is < 0xE000 or > 0xE00F && Math.Abs(m.X - restX - 0.65) < 0.5)
+            .ToList();
+        Assert.Equal(-2.0, Assert.Single(rests));
+        Assert.Equal(2.58, Assert.Single(marks).Up);
+    }
+
+    [Fact]
     public void TheStaffItMovedTo_ReservesTheRest()
     {
         var (lines, rests) = Read(TestPaper.SvgFromRenderSpec(Book("a2 a2 |", "c'4 r4@cross c'2 |")));
