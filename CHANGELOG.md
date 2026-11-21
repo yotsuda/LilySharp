@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Fixed: a grace's dynamic, and a script on one note of a chord, now sound** (`[playback]`, `[export]`). `grace { e''16@f }` was drawn and not played: the notes after it stayed at the level before. A script written on one note of a chord (`<e''@accent g''>4`), drawn over the chord as the chord's own, now sounds on the chord (each kind once), and the MusicXML writes it on that note, as it already did for a grace chord.
+
 - **Fixed: the preview could keep what an edit had changed** (`[editor]`). Deleting a `~` before a bar line could leave the next bar's natural on the preview (and typing one, leave it off); after an edit that changed the length of the text above it, a click on a bar a part has not written yet typed into the old place; and a note typed among a section's phrase references could come out in the octave of the bars recorded before it. Each was the preview reusing the previous keystroke's work where it no longer applied; a fresh render was always right.
 
 - **Typing previews as quickly as changing a note** (`[editor]`). A space typed or deleted, a `~`, an accidental, a dynamic or a script typed, a note added or removed, or a bar rewritten to text of another length made the preview read the whole rest of the score again on that keystroke; it now picks up from the part the edit did not touch, as it already did when a note's letter changed.

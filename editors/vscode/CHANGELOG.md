@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A grace's dynamic, and a script on one note of a chord, now sound.** `grace { e''16@f }` was drawn and not played, and the accent of `<e''@accent g''>4` was drawn over the chord and not heard. The MusicXML export writes that accent on its note.
 - **The preview no longer keeps what an edit changed.** Deleting a `~` before a bar line could leave the next bar's natural on the preview, a click on a bar not written yet could type into the place it had before an edit above it, and a note typed among a section's phrase references could come out in the wrong octave — until the next edit elsewhere.
 - **Typing previews as quickly as changing a note.** A space, a `~`, an accidental, a dynamic or a script, a note added or removed, or a bar rewritten to text of another length used to make the preview read the rest of the score again on that keystroke.
 - **Join Bars in Pairs.** Select the bars of a chords row read at half the bar's length and the lightbulb joins them two by two (`C | D |` → `C D`, and `C | C |` → `C`), the chords keeping their place in time and the tempo halved where everything it reaches is joined. The recording's bars in `<name>.orecchiante.json` are joined in the same edit, so the recording still plays with the chart bar for bar.
