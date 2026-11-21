@@ -4349,6 +4349,8 @@ public sealed class MidiExporter
                     break;
             }
         }
+        foreach (var type in MemberScriptTypes(chord))
+            (velocity, durationPercent) = ApplyArticulationType(type, velocity, durationPercent);
         (velocity, durationPercent) = ApplyRunMarks(chord, velocity, durationPercent);
         int soundTicks = Math.Max(1, durationTicks * durationPercent / 100);
 
@@ -5126,7 +5128,7 @@ public sealed class MidiExporter
                     if (chord.Duration != null) written = chord.Duration.ToFraction();
                     int g = GraceTicks(written);
                     int chordOrdinal = NextOrdinal(chord.SourceStart);
-                    var (graceVelocity, graceLength) = GraceScripts(chord.Articulations, g);
+                    var (graceVelocity, graceLength) = GraceScripts(chord.Articulations, g, MemberScriptTypes(chord));
                     // Within-chord relative octave: the root's LETTER is the chord's ANCHOR
                     // and every other member STACKS above it, and the item AFTER the chord is
                     // relative to that anchor. Asked of ResolveChordMemberPitch, which is what
@@ -5230,17 +5232,41 @@ public sealed class MidiExporter
     /// full-size note's are.</summary>
     /// <remarks>Until session 1329 a grace sounded none: `grace { e''16@accent }` played at the
     /// standing velocity, and `c''2 &lt;&gt;@accent grace { e''16 } d''2` accented the d'' while the
-    /// page (and LilyPond) drew the accent on the e'' (Lab sessions/p1329/g s2).</remarks>
-    private (int Velocity, int Ticks) GraceScripts(IEnumerable<SyntaxNode> annotations, int ticks)
+    /// page (and LilyPond) drew the accent on the e'' (Lab sessions/p1329/g s2).
+    /// Its own dynamic is struck as a full-size note's is (<see cref="Strike"/>): a level stands
+    /// from the grace on, an accent is the grace's alone. Until session 1347 a grace's dynamic
+    /// sounded nowhere: `c''4@p grace { e''16@f } d''4 e'' f''` drew the f under the grace and
+    /// played every note after it at p (Lab sessions/p1347/grace g1).</remarks>
+    private (int Velocity, int Ticks) GraceScripts(IEnumerable<SyntaxNode> annotations, int ticks,
+        IEnumerable<ArticulationType>? memberScripts = null)
     {
         int velocity = _velocity, durationPercent = 100;
+        foreach (var annotation in annotations)
+            if (annotation is DynamicSyntax { Level: not DynamicLevel.None } dynamic)
+                velocity = Strike(dynamic);
+            else if (annotation is ArticulationSyntax script && Semantics.GraceBodySupport.IsCarriedScript(script))
+                (velocity, durationPercent) = ApplyArticulationType(script.Type, velocity, durationPercent);
+        foreach (var type in memberScripts ?? [])
+            (velocity, durationPercent) = ApplyArticulationType(type, velocity, durationPercent);
         if (_heldScripts.Remove(_currentPart ?? "", out var held))
             foreach (var type in held)
                 (velocity, durationPercent) = ApplyArticulationType(type, velocity, durationPercent);
-        foreach (var annotation in annotations)
-            if (annotation is ArticulationSyntax script && Semantics.GraceBodySupport.IsCarriedScript(script))
-                (velocity, durationPercent) = ApplyArticulationType(script.Type, velocity, durationPercent);
         return (velocity, Math.Max(1, ticks * durationPercent / 100));
+    }
+
+    /// <summary>The scripts written on <paramref name="chord"/>'s members (<c>&lt;e''@accent g''&gt;4</c>)
+    /// that the chord does not write itself, each kind once: they sound on the whole chord. The page
+    /// draws them as it draws the chord's own — one accent, one dot over the chord, which a player
+    /// reads as the chord's — so a chord plays them as it would play `&lt;e'' g''&gt;4@accent`.</summary>
+    /// <remarks>Until session 1347 a member's scripts sounded nowhere: the page drew the accent of
+    /// <c>&lt;e''@accent g''&gt;4</c> and the chord played at the level (Lab sessions/p1347/grace g6;
+    /// a grace chord's, g3, the same). The MusicXML writes them on that member's &lt;note&gt;.</remarks>
+    private static IEnumerable<ArticulationType> MemberScriptTypes(ChordSyntax chord)
+    {
+        var own = chord.Articulations.OfType<ArticulationSyntax>().Select(a => a.Type).ToHashSet();
+        return chord.Pitches.SelectMany(p => p.Articulations.OfType<ArticulationSyntax>())
+            .Where(a => a.Type != ArticulationType.None && Semantics.GraceBodySupport.IsCarriedScript(a))
+            .Select(a => a.Type).Distinct().Where(type => !own.Contains(type)).ToList();
     }
 
     // LILYPOND-REF: ly/articulate.ly — duration factors: ac:staccatoFactor (1 . 2) = 50%,

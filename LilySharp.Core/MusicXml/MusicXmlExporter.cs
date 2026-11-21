@@ -5508,6 +5508,20 @@ public sealed class MusicXmlExporter
             // A member-level half-tie ties its own head (LP `<d\laissezVibrer g>`); the
             // chord-level one is written on every member below.
             ApplyHalfTies(pitch.Articulations, xmlNote);
+            // A member's own script (`<e''@accent g''>4`), on that member's <note>, as the page draws
+            // it on that head and a grace chord's member writes it (ProcessGraceScripts). Until
+            // session 1347 a full-size chord's member wrote none (Lab sessions/p1347/grace g6).
+            // Read as a chord member's (IsChord): the empty chord's scripts are the host's, below.
+            var memberScripts = pitch.Articulations.Where(Semantics.GraceBodySupport.IsCarriedScript).ToList();
+            if (memberScripts.Count > 0)
+            {
+                bool wasChord = xmlNote.IsChord;
+                var (frameSpec, markedLength) = (_noteFrameSpec, _markedNoteLength);
+                xmlNote.IsChord = true;
+                ProcessArticulations(memberScripts, xmlNote, host: chord.SourceStart);
+                xmlNote.IsChord = wasChord;
+                (_noteFrameSpec, _markedNoteLength) = (frameSpec, markedLength);
+            }
             // A slur mark written on this member (<c e( g>) is this note's <slur>, as the page
             // binds it to this head; the chord-level list below skips it.
             foreach (var (member, mark) in chord.MemberSlurs)
