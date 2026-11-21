@@ -5,7 +5,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 ## Unreleased
 
 - **The preview no longer keeps what an edit changed.** Deleting a `~` before a bar line could leave the next bar's natural on the preview, a click on a bar not written yet could type into the place it had before an edit above it, and a note typed among a section's phrase references could come out in the wrong octave — until the next edit elsewhere.
-- **Spaces, ties and rewritten bars preview as quickly as other edits.** A space, a `~` or a bar rewritten to text of another length used to make the preview read the rest of the score again on that keystroke.
+- **Typing previews as quickly as changing a note.** A space, a `~`, an accidental, a dynamic or a script, a note added or removed, or a bar rewritten to text of another length used to make the preview read the rest of the score again on that keystroke.
 - **Join Bars in Pairs.** Select the bars of a chords row read at half the bar's length and the lightbulb joins them two by two (`C | D |` → `C D`), the chords keeping their place in time and the tempo halved where everything it reaches is joined. The recording's bars in `<name>.orecchiante.json` are joined in the same edit, so the recording still plays with the chart bar for bar.
 - **The bundled lysc says what is sung, syllable by syllable.** `lysc timeline` has a new field `sung`: each voice's part, singer and syllables with their beats, as the preview sings them — what Shosa moves a dancer's mouth to.
 - **A `break` inside a tuplet that opens a bar no longer breaks the line before that bar.** The line breaks at the end of the bar instead, and the Problems panel says why (LYS1037).

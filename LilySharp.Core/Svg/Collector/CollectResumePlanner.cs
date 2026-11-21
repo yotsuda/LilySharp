@@ -263,7 +263,7 @@ internal static class CollectResumePlanner
             return true;
         probe.ParseAgreementsVerified ??=
             probe.BaselineRoot != null && probe.NewRoot != null
-            && ParsePrefixAgrees(probe.BaselineRoot, probe.NewRoot, probe.WindowPrefix)
+            && ParsePrefixAgrees(probe.BaselineRoot, probe.NewRoot, probe.WindowPrefix, spliceHalf: true)
             && ParseSuffixAgrees(probe.BaselineRoot, probe.NewRoot,
                 probe.WindowSuffixStart, probe.WindowDelta);
         return probe.ParseAgreementsVerified == true;
@@ -559,8 +559,8 @@ internal static class CollectResumePlanner
     /// only into subtrees that overlap [0, limit). Token streams are a pure
     /// function of the text (byte-identical below the window), so node-level
     /// agreement pins the whole prefix parse.</summary>
-    private static bool ParsePrefixAgrees(SyntaxNode a, SyntaxNode b, int limit)
-        => GreenPrefixAgrees(a.Green, a.FullSpan.Start, b.Green, b.FullSpan.Start, limit);
+    private static bool ParsePrefixAgrees(SyntaxNode a, SyntaxNode b, int limit, bool spliceHalf = false)
+        => GreenPrefixAgrees(a.Green, a.FullSpan.Start, b.Green, b.FullSpan.Start, limit, spliceHalf);
 
     /// <summary><see cref="ParsePrefixAgrees"/>'s body, on the green trees. A red
     /// node is exactly (green, absolute start) — Kind/FullSpan/ChildNodes are all
@@ -577,7 +577,7 @@ internal static class CollectResumePlanner
     /// scan stays a linear loop — and the green walk cut the plan row ~6–19×.</summary>
     private static bool GreenPrefixAgrees(
         GreenNode a, int aStart,
-        GreenNode b, int bStart, int limit)
+        GreenNode b, int bStart, int limit, bool spliceHalf)
     {
         if (aStart != bStart)
             return false;
@@ -599,10 +599,23 @@ internal static class CollectResumePlanner
             // plan (a space cost a full collect). Its children are still compared below.
             if (aBelow == bBelow)
                 return false;
-            int aText = aStart + a.FullWidth - (a.IsToken ? a.TrailingTriviaWidth : a.GetTrailingTriviaWidth());
-            int bText = bStart + b.FullWidth - (b.IsToken ? b.TrailingTriviaWidth : b.GetTrailingTriviaWidth());
-            if (aText != bText || aText > limit)
-                return false;
+            // ★ …and for the SPLICE's agreement (session 1344) a node whose TEXT crosses the
+            // limit on one side agrees too, its children below the limit still compared — the
+            // mirror of the suffix half's token rule (session 591): `b1` → `bes1` makes the pitch
+            // token `b`, ending at the window, the token `bes`, crossing it, and the splice of
+            // every walk was declined — an accidental typed spliced 0 measures in 1,983 resumes
+            // over 628 books. Such a node is the window's, walked live; the tail reaches window
+            // text only through a phrase body (no suffix side then), a section it plays again
+            // or a `q`'s original (each declined by its own guard). NOT for a prefix adoption,
+            // whose limit is the deepest read: there a node read to exactly that offset and
+            // continued past it (`c1}` → `c1.}`) would be adopted as it was.
+            if (!spliceHalf)
+            {
+                int aText = aStart + a.FullWidth - (a.IsToken ? a.TrailingTriviaWidth : a.GetTrailingTriviaWidth());
+                int bText = bStart + b.FullWidth - (b.IsToken ? b.TrailingTriviaWidth : b.GetTrailingTriviaWidth());
+                if (aText != bText || aText > limit)
+                    return false;
+            }
         }
 
         int sa = 0, sb = 0, pa = aStart, pb = bStart;
@@ -617,7 +630,7 @@ internal static class CollectResumePlanner
                 return false;
             if (ca == null)
                 return true;
-            if (!GreenPrefixAgrees(ca, caStart, cb!, cbStart, limit))
+            if (!GreenPrefixAgrees(ca, caStart, cb!, cbStart, limit, spliceHalf))
                 return false;
         }
 

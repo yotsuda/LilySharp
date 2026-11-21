@@ -720,6 +720,32 @@ public sealed partial class MeasureCollector
             => b with { LastMeasure = null, SectionLabelPosition = 0, MeasureSourceStart = 0 };
         if (Comparable(live) != Comparable(recB))
             return DeclineSplice("builder state differs");
+        // The boundary measure IS the edited text's own — but the fields the tail can still
+        // write into it are not (MeasureBuilder.BuilderCheckpoint.LastMeasure: SetBreak and its
+        // kin, AddEndBarlineSource). The recorded tail wrote them into the RECORDED bar, or found
+        // them written already, and the splice keeps the LIVE bar: they must agree here. MEASURED
+        // (session 1344, the owner's corpus): a note typed into a bar that ends `| break` made
+        // the note that fills the bar another, so the bar no longer read the `break` ahead at
+        // its close (_followingBreaks) and would have taken it at the directive — the candidate
+        // right before it, whose recorded bar already held the break, spliced it away and the
+        // line no longer broke there. The side-table count gate (gone since — see below) had
+        // masked it for every such edit that added a note; one that changes no count would not.
+        if (live.LastMeasure is { } liveLast && recB.LastMeasure is { } recLast)
+        {
+            if (liveLast.LineBreakPermission != recLast.LineBreakPermission
+                || liveLast.PageBreakPermission != recLast.PageBreakPermission
+                || liveLast.PageTurnPermission != recLast.PageTurnPermission)
+                return DeclineSplice("the boundary measure's break permissions differ");
+            var liveAliases = liveLast.EndHighlightAliases;
+            var recAliases = recLast.EndHighlightAliases;
+            if (liveAliases.Length != recAliases.Length)
+                return DeclineSplice("the boundary measure's end bar-line aliases differ");
+            for (int i = 0; i < recAliases.Length; i++)
+                if (!w.TryShift(recAliases[i], out int alias) || alias != liveAliases[i])
+                    return DeclineSplice("the boundary measure's end bar-line aliases differ");
+        }
+        else if ((live.LastMeasure == null) != (recB.LastMeasure == null))
+            return DeclineSplice("one side has no boundary measure");
         // …and the one thing the tail reads out of the measures left out above: the tie the
         // last event carries into the bar (MeasureBuilder.TieCarry — the tied head's accidental).
         if (!builder.TieCarry().SequenceEqual(MeasureBuilder.TieCarryOf(_suffixPlan!.Recording.PreFinalizeMeasures!, ck.MeasureCount)))
@@ -785,15 +811,20 @@ public sealed partial class MeasureCollector
                 return DeclineSplice("section start journal entry differs");
         }
 
-        // Watermark equality = "the window produced exactly the recorded item
-        // counts", which is what makes the adopted tail slices land at the same
-        // indices — and is the Δm≠0 bail for this walk's own measures/items.
-        // (Read as this collect's index: the earlier walks may have left more
-        // or fewer entries than the recording's did — LiveWatermark.)
-        var tables = CumulativeSideTables();
-        for (int t = 0; t < tables.Length; t++)
-            if (tables[t].Count != LiveWatermark(t, ck.TableCounts[t]))
-                return DeclineSplice("a side-table count differs");
+        // ★ NO SIDE-TABLE WATERMARK EQUALITY (session 1343's sweep, session 1344). Until then
+        // the live tables had to hold exactly the recorded counts here — "the window produced
+        // exactly the recorded entries, so the tail slices land at the same indices" — and an
+        // edit that ADDS an entry before the boundary (a note: a pitch-trace entry; an
+        // accidental; a mark) declined every candidate of the walk: over 628 books an
+        // accidental typed spliced 0 measures in 1,983 resumes, a note typed 666, a letter
+        // swapped 103,711. Nothing needs the indices to agree: an entry carries source
+        // positions and (measure, item) indices into the walk's measures — the tail's are the
+        // tail's, whose count the first test above pins — never an index into a table; the
+        // commit below APPENDS the tail slices after whatever the live walk left; the next
+        // walk reads every watermark of its own recording through _walkTableDrift (session
+        // 1300's argument, made for an earlier walk's drift, holds for this walk's own); and
+        // the indices the layout keeps (HairpinItem.SourceIndex and its kin) are taken from
+        // the finished score. The measure count — the Δm≠0 bail — stays.
 
         if (_v.PendingInlineVoltas.Count != ck.PendingInlineVoltaCount)
             return DeclineSplice("pending inline volta count differs");
