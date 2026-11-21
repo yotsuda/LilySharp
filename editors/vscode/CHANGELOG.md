@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A rest moved with `@cross` inside a `[ ]` beam stays where it belongs.** The beam on the left hand's staff no longer lifts the moved rest on the right hand's staff.
 - **A dynamic or text on a note moved with `@cross` follows the note.** `g4@cross@p` in the left hand prints the p under the right hand's staff, by the note, instead of under the left hand's.
 - **A script on a rest centres on the rest and clears it.** A fermata on a rest stood a little right of it, and under a rest the other voice pushed down it could print across the rest.
 - **A rest with `@cross` moves to the other staff.** `r4@cross` in the left hand is drawn on the right hand's staff, as a note with `@cross` is, clear of that staff's notes; the preview used to leave it where it was.

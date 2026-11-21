@@ -2143,8 +2143,10 @@ internal sealed class ElementCoordinator
         Score score,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<BeamLayout> beamLayouts,
-        ImmutableDictionary<RestShiftKey, double> priorShifts)
+        ImmutableDictionary<RestShiftKey, double> priorShifts,
+        int staffIndex = -1, ImmutableArray<Voice> staffVoices = default)
     {
+        var voicesOfBeams = staffVoices.IsDefaultOrEmpty ? score.Voices : staffVoices;
         if (beamLayouts.Length == 0)
             return ImmutableDictionary<RestShiftKey, double>.Empty;
 
@@ -2220,6 +2222,21 @@ internal sealed class ElementCoordinator
                 // before, i.e. read the line one attach to the right of the rest).
                 double stemY = beamLayout.GetYAtX(restX);
                 double beamY = stemY - d * heightOfBeams;
+                // A rest @cross moved stands on the other staff, its prior shift already in
+                // THAT staff's positions (Staff.CrossedRestShifts): the beam is read there too,
+                // across the distance between the two staves' middles. Read in this staff's
+                // positions, a beam under the bass pushed a rest on the treble up by three
+                // spaces (Lab sessions/p1353/beam b5: Lily# +2.0, LilyPond -1.0).
+                // LILYPOND-REF: lily/beam.cc:1349-1355 Beam::rest_collision_callback — the beam's
+                //   positions are taken to the rest's and the beam's common Y refpoint first.
+                if (staffIndex >= 0 && group.VoiceIndex < voicesOfBeams.Length
+                    && measureIndex < voicesOfBeams[group.VoiceIndex].Measures.Length
+                    && rest.ItemIndex < voicesOfBeams[group.VoiceIndex].Measures[measureIndex].Items.Length
+                    && voicesOfBeams[group.VoiceIndex].Measures[measureIndex].Items[rest.ItemIndex]
+                        is RestItem { CrossStaffIndex: >= 0 and var crossTarget }
+                    && measureMap.TryGetValue(measureIndex, out var crossPlaced))
+                    beamY += 2.0 * (LayoutUtilities.FindStaffYInSystem(crossPlaced.System, staffIndex)
+                        - LayoutUtilities.FindStaffYInSystem(crossPlaced.System, crossTarget));
 
                 // LILYPOND-REF: beam.cc:1388-1392 rest_dim = rest_extent[d], the extent
                 // TRANSLATED by prev_offset — the rest's REAL glyph ink where the voiced

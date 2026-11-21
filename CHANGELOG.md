@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Fixed: a rest moved with `@cross` inside a bracketed beam was pushed by the beam as if it had stayed** (`[engraving]`). In `lh { c'8[ r8@cross c'8 c'8] c2 }` the beam under the bass lifted the rest on the treble to +2.0 spaces; LilyPond leaves it at −1.0, where the treble's notes put it.
+
 - **Fixed: a dynamic or an `@text` on a note or rest moved with `@cross` hung off its old staff** (`[engraving]`). `lh { c4 g4@cross@p c2 }` printed the p under the bass, where the g used to be; LilyPond hangs it under the treble, by the g. A dynamic that a running hairpin carries stays with its hairpin.
 
 - **Fixed: a script on a rest centred as if on a note head, and could run into a rest another voice pushed aside** (`[engraving]`). A fermata on a quarter rest stood 0.175 spaces right of the rest's middle; it now centres on the rest, as in LilyPond. Under a rest moved down by the other voice's notes, `r4@fermata.down` printed across the rest at −3.22 spaces where LilyPond puts it clear at −3.74, and an accent under an eighth rest likewise.

@@ -132,6 +132,23 @@ public class CrossStaffRestTests
         Assert.Equal(expected, Assert.Single(ys));
     }
 
+    /// <summary>
+    /// A moved rest inside a bracketed beam reads the beam across the staves
+    /// (ElementCoordinator.CalculateRestShifts): a beam under the bass, far from a rest on the
+    /// treble, pushes nothing, and the rest stays where the treble's notes put it — LilyPond
+    /// 2.26.0's −1.0 and −3.0 (Lab sessions/p1353/beam b5, b8). Until session 1353 the beam was
+    /// read in the bass's positions and lifted the rest to +2.0.
+    /// LILYPOND-REF: lily/beam.cc:1349-1355 Beam::rest_collision_callback (the common refpoint).
+    /// </summary>
+    [Theory]
+    [InlineData("e''2 e''2 |", -1.0)]
+    [InlineData("a'2 a'2 |", -3.0)]
+    public void AMovedRestInABeam_ReadsTheBeamFromTheStaffItStandsOn(string treble, double expected)
+    {
+        var (_, rests) = Read(TestPaper.SvgFromRenderSpec(Book(treble, "c'8[ r8@cross c'8 c'8] c2 |")));
+        Assert.Equal(expected, Assert.Single(rests));
+    }
+
     [Fact]
     public void TheStaffItMovedTo_ReservesTheRest()
     {

@@ -1530,7 +1530,7 @@ internal sealed partial class LayoutEngine
             var staffCollisionShifts = restCollisionsOf(staff);
             var staffRestShifts = _elementCoordinator.CalculateRestShifts(
                 staffScore, systemsArray, staffFinalBeams,
-                staffCollisionShifts);
+                staffCollisionShifts, staffIndex, staff.Voices);
             foreach (var kv in staffCollisionShifts.SetItems(staffRestShifts))
             {
                 restShiftsByStaff[(staffIndex, kv.Key)] = kv.Value;
