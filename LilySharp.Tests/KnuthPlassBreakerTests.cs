@@ -24,6 +24,25 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class KnuthPlassBreakerTests
 {
+    /// <summary>
+    /// Ragged-right, the LAST line costs nothing, so the lines before it are filled as far as
+    /// they go: seven bars of 10 on a 55-wide line are 5+2 (six would have to compress, which
+    /// ragged refuses). Priced like any other line, the last one's white space squared balanced
+    /// the two lines instead (3+4 or 4+3 tie at 850 against 5+2's 1250) — LilyPond 2.26.0 sets
+    /// the same seven bars of Lab sessions/p1357/rc 5+2, Lily# set them 3+4 until session 1357.
+    /// Not ragged, the last line is priced as before (its force differs from the line above).
+    /// LILYPOND-REF: lily/constrained-breaking.cc:470-476 Constrained_breaking::initialize.
+    /// </summary>
+    [Theory]
+    [InlineData(true, new[] { 5, 7 })]
+    [InlineData(false, new[] { 4, 7 })]
+    public void ARaggedLastLine_CostsNothing_SoTheLinesBeforeItAreFilled(bool ragged, int[] expected)
+    {
+        var bars = Enumerable.Repeat(new MeasureSpringData(10, 10, 1), 7).ToArray();
+        var breaks = new KnuthPlassBreaker(55, 0, 0, raggedRight: ragged).Solve(bars).IdealBreaks;
+        Assert.Equal(expected, breaks);
+    }
+
     [Fact]
     public void BreakIntoLines_ManyMeasures_CreatesMultipleLines()
     {

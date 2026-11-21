@@ -591,6 +591,18 @@ internal sealed class KnuthPlassBreaker
                 {
                     penalizedForce = ForcePenalty(availableWidth, force, effectiveWidth);
                 }
+                // A RAGGED LAST line costs nothing: its white space is the ragged end itself, so
+                // the lines before it are filled as far as they go. Until session 1357 the last
+                // line was priced like any other (its white space squared), which balanced the
+                // lines: `paper { raggedRight }` set seven bars 3+4 where LilyPond 2.26.0 sets
+                // 5+2 (Lab sessions/p1357/rc). An unsettable line of one breakpoint (the
+                // −200000 above) is zeroed too; a longer one never reaches here. Row n is never
+                // served from LineBreakDpSession (it reuses rows below min(n, old n) only), so
+                // the row that reads `j == n` is always this run's.
+                // LILYPOND-REF: lily/constrained-breaking.cc:470-476 Constrained_breaking::initialize —
+                //   `if (ragged && last && !isinf (force)) force = (force < 0 && j > i + 1) ? inf : 0`.
+                if (_raggedRight && j == n)
+                    penalizedForce = 0;
 
                 // What LilyPond stores per line, and what combine_demerits squares, is the
                 // PENALISED force, not the raw one.
