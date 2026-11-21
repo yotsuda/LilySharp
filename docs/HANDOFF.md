@@ -50,7 +50,7 @@ tools\Session-Check.ps1 -End pNNN -DiffBase <開始時 HEAD>   # 終了の機械
   ＝要るなら取り直す。コード内コメントや ARCHIVE の `scratch/` 表記は書き換えない。
 - ★★★ **開始時に `C:\MyProj\Calamo\docs\repro\REQUESTS.md` の `open` を見る＝open があればそれに優先的に着手する**（ユーザー指示 2026-10-23・第961）。OMR 側（楽譜画像 → `.lys`）からの依頼の 1 枚で、状態は両側で書き換える（直したら `fixed <commit>`・直さないなら `won't`・聞くなら `question`。長い返事は Lab の `sessions/pNNN/` に置いて行から指す）。
 - ★ **Orecchiante（録音 → `.lys` のコード譜・旧名 Dettato、2026-11-20 改名）も同じ使い方の 1 枚**: `C:\MyProj\Orecchiante\docs\repro\REQUESTS.md`。拡張 `yotsuda.orecchiante`（床 0.11.0）・隣のファイル `<stem>.orecchiante.json`。以下の「Dettato」は旧名。Calamo の依頼との優先順はオーナーに聞く。
-- ★ **`C:\MyProj\Shosa\docs\repro\REQUESTS.md` も同じ使い方の 1 枚**（2026-11-20〜・Shosa は Lily# の曲に合わせて踊る言語）。依頼 1〜5 は閉じた（1・4・5 は Shosa が `done`、2 は取り下げ、3 は `fixed`。§1.1 第1339）。6（`timeline` の `sung`）は第1341 で `fixed`＝Shosa の確認待ち。Shosa との約束は 2 つあり、形を変えるときはそれぞれの網も直す。
+- ★ **`C:\MyProj\Shosa\docs\repro\REQUESTS.md` も同じ使い方の 1 枚**（2026-11-20〜・Shosa は Lily# の曲に合わせて踊る言語）。依頼 1〜5 は閉じた（1・4・5 は Shosa が `done`、2 は取り下げ、3 は `fixed`。§1.1 第1339）。6（`timeline` の `sung`）は第1341 で `fixed`・第1346 で Shosa の木で通した（`shosa ir` が偽の lysc の IR とバイト一致）＝Shosa の done 待ち。Shosa との約束は 2 つあり、形を変えるときはそれぞれの網も直す。
   - `lysc timeline`／`notes` の JSON: `SongReading.Protocol` と `CliSongReadingTests`。
   - 拡張の exports の stems API（`stemsVersion: 1`）: `docs/stems-api-design.md` と `stemsCore.test.ts`。
 - 証明 ⑴ の道具は `LilySharp-Lab\tools\rerender-ls.ps1`（RULES §5.5 のコマンド一覧）。
@@ -92,9 +92,9 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
 - **★★★ オーナー決定 2026-11-15（第1264・6 件）**: ①〜④ と、⑥ 評価 4 の案（Lab `p1227/proposals-eval4.md`）の「作る」5 件＝6・7・8-1・2・4 は済み（第1264〜第1272・設計と実際の形は `docs/eval4-features-design.md`。6 の「歌い手が × の音を歌わない」だけ未＝同 §6 の末尾）／⑤ Dettato: 依頼 1＝作る（D3 で形が固まってから・名前「Convert Recording to Lily# (.lys)…」・Windows 以外はメニューを出さない）・依頼 2＝今は作らない（REQUESTS の行に書いた＝Dettato の repo では未 commit）／⑥ の**後で**＝3（`pass 2 { }`・文字は英語固定）・1（持ち替え・「to X」は自動で刷らない）・10（まず診断だけ）＝作る前に設計メモ・**着手してよい**（オーナー 2026-11-15 第1278「ほかに着手すべき候補がなければすぐ着手して良い」。10 の診断は LYS0046 で済み＝残りは 3 → 1）／**見送り**＝5・8-2〜4・9。**次の一手**: 下の行の Lab `sessions/p1242/leftovers.md` の欠陥から（第1272 が見つけた 2 件＝`lysc xml` の part header の `key` と、MusicXML の読み込みの `<transpose>` は第1273・第1275 で閉じた。一覧の先頭から順に）。
-- **★ 包括レビュー（オーナーの指示 2026-11-18・第1291）＝Lab `sessions/p1291/review.md`**: プレビュー更新の性能 P1〜P10 とリファクタ F1〜F7。P1〜P10・F1・F2・F3 段 1・F5・F7 と F4 の大半は済み（経緯は ARCHIVE の第1291〜第1301 と §1.1・数字は Lab `sessions/p1302/notes.md`）。残り＝設計が先の 2 つ（F4 の残り・`shiftPage`。`mid-bar-break` は第1340 で閉じた）と F3 段 2。残りは訊かずに着手してよい（オーナー 2026-11-18・次の順は §1.1 第1306 の末尾。F3 段 2 はオーナー判断）。**＋第1343〜1345**: 足す編集が splice しない穴は閉じた（§1.1）。残る差は意味のある状態差＝短くした小節の後の `BarPosition`（LilyPond の measurePosition）と、編集が曲の終わり近くで尾が無い形。
+- **★ 包括レビュー（オーナーの指示 2026-11-18・第1291）＝Lab `sessions/p1291/review.md`**: プレビュー更新の性能 P1〜P10 とリファクタ F1〜F7。P1〜P10・F1・F2・F3 段 1・F5・F7 と F4 の大半は済み（経緯は ARCHIVE の第1291〜第1301 と §1.1・数字は Lab `sessions/p1302/notes.md`）。残り＝設計が先の 2 つ（F4 の残り・`shiftPage`＝第1346 は見送りを推す: 実コーパスで 1 打鍵 1 ms 未満・`data-pos` の読み手 19 か所。`mid-bar-break` は第1340 で閉じた）と F3 段 2。残りは訊かずに着手してよい（オーナー 2026-11-18・次の順は §1.1 第1306 の末尾。F3 段 2 はオーナー判断）。**＋第1343〜1345**: 足す編集が splice しない穴は閉じた（§1.1）。残る差は意味のある状態差＝短くした小節の後の `BarPosition`（LilyPond の measurePosition）と、編集が曲の終わり近くで尾が無い形。
 - **★ A-B リピート（オーナー決定 2026-11-17・第1286）＝`docs/ab-repeat-design.md`**: §3 の 1〜4 は済み（第1286）。**2026-11-19 オーナー決定: Loop グループ・A-B ボタンと番号欄・8 本の帯（§3 の 5）・右クリックの Play from Here／A Here／B Here は撤去、Repeat はヘッダへ**（同 §0）。残りは実機（`MANUAL-CHECKS`「Repeat はヘッダ」＝オーナー）と、release 時の site・README の書き直し。
-- **★ Join Bars in Pairs（Orecchiante の依頼 21・オーナー決定 2026-11-21・第1342）＝実装済み**（`docs/join-bars-design.md`）。残りは実機（`MANUAL-CHECKS`「Join Bars in Pairs」＝Ctrl+Z で 2 つのファイルが戻る・録音と小節の頭がそろう）と Orecchiante の確認。
+- **★ Join Bars in Pairs（Orecchiante の依頼 21・オーナー決定 2026-11-21・第1342）＝実装済み**（`docs/join-bars-design.md`）。依頼 22（同じ和音 1 つずつの組は `C`）は第1346 `f81f8cd28`。残りは実機（`MANUAL-CHECKS`「Join Bars in Pairs」＝Ctrl+Z で 2 つのファイルが戻る・録音と小節の頭がそろう）と Orecchiante の確認。
 - **★ コード行の中に書けるもの（オーナー決定 2026-11-16・第1285）**: `time`・`tempo`・`%`・`key` は済み（§1.1）。**残り＝コードに付ける印 `@rit`／`@accel`／`@rall`（`…@!rit`）・`@fermata`・`@text("…")`**（今は `@todo` だけ）。強弱は見送り。
 - **★ 録音を聴きながら直す（Dettato #4・オーナーの希望 2026-11-15）＝`docs/recording-design.md`**: S1〜S4 と §1 7（楽譜と録音を同時に）・§7（書き出しに録音・第1286）は済み（§1.1 第1284〜第1286）。**次は S5**（帯・`Mark Bar Line Here`・ドラッグ・`byHand`）→ S6（CHANGELOG・Dettato への返事）。§8 の録音のパート（Dettato #16）は第1288 で実装・実測済み・使っている間のメモリは今のまま（オーナー決定 2026-11-17）＝残りは耳の確認（`MANUAL-CHECKS`「録音のパート」）。耳の確認は `MANUAL-CHECKS` §3.9（オーナー）。
 - **★ 反復とナビ記号を section の音楽にも書く（オーナー提案 2026-11-14・第1243＝第1249 で段 0〜8 が済み・LYS1034 は phrase だけ）**: 全部 `docs/inline-repeat-design.md`（規則 §3・段取り §4・未決 §6・経過 §7・エディタのコマンド §8）。オーナー決定（2026-11-14）: 対は form に組み立てた列で見る／`| |:` は空小節のまま／歌詞の verse は 5 規則／書き出しはなるべく form 側（Q2）。**次**（順は上から。歌詞の規則 3 と警告の 4 種目は第1253、ending・ナビ記号を全パートに書くコマンドと LYS1070 の quick fix は第1254 で済み＝§1.1）: ⑴ この島（反復とナビ記号を音楽に書く）の「次」は無い＝判断待ちも残りの形も 0。step キー・`PlayForm` の一本化（第1255）、3 番括弧＝3 回（form は第1256・音楽は第1257・コードの行は第1258）は済み。次の一手は下の積み残しから（オーナーに訊く）。段 9（読み込みと OMR の書き出し）は Q2 の決定で今の形のまま＝作業なし。⚠️ Calamo と Dettato の REQUESTS への知らせ（Q2「本体が出てから」）は未＝release のときに書く。実機は `MANUAL-CHECKS` 第1243・第1249・第1253・第1254・第1255。
@@ -154,6 +154,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1346セッション（2026-11-21・YT-DELL2・新しい会話）
+
+base `96cc49c29`。開始時 full 18117 合格 / 1 失敗 / skip 2 / 合計 18120（Lab `p1346` `run1.trx`・失敗は下の揺れ）。Calamo・Shosa の open は 0。Orecchiante の依頼 22 は便の途中で届いた。
+- **網の揺れ 2 本**: `9a29968fa`＝`KeystrokeSideWorkTests` の include の本の片付け（`intro.lys` を掴まれた IOException は諦める）・`8b1b9a021`＝`CrossStaffCollisionValidator.Layouts` をスレッドごとに（並走する page check も数えていた）。
+- **Orecchiante 22＝`f81f8cd28`**: 組の 2 小節目の頭の和音が 1 小節目の最後と同じ文字なら伸ばし（`C | C |`→`C`・`A | A E/G# |`→`A . . E/G#`・`C | % |`→`C`）。`Verify` は組の真ん中で同じ音の打ち直しが伸ばしに変わる所だけ緩める。Orecchiante の 18 曲の行を全部まとめて 172 行・断り 0（Lab `p1346/join`）。網 +1・毒 3/3。REQUESTS 22 は `fixed`（Orecchiante の repo は未 commit）。
+- **Shosa 6**: 本物の lysc で `out\sing\sing.shosa` を通した＝`shosa check` に SH1909 なし・`shosa ir` が偽の lysc の IR とバイト一致。行に書いた（Shosa の repo は未 commit・`Mouth.cs` は別の会話の作業）。
+- 測って閉じた（leftovers に書いた）: 最後の `<>@ff` の `.ly` は LilyPond が描かない＝双子の限界（MusicXML は正しい）・パートの順と譜表の順が違うヘアピンの MusicXML は取り違えない・apart の上のパートの強弱は既に上・struck の付点 0.55 は第1330 で閉じていた。
+- `shiftPage` は見送りを推す（§1.0）。F4 の残りは状態を入れ物へ包み直す千行規模＝急がない。
+- 終了時 full は `-End` の表。
+- **次**: leftovers の残り（多くは判断待ち・未検証）か F4。Orecchiante と Shosa の確認待ち。
+
+## 以下は第1345セッションの経緯
+
 ### 1.1 第1345セッション（2026-11-21・YT-DELL2・第1343 と同じ会話）
 
 第1344 の残り（音を足す・消す編集の splice が音名を変える編集に届かない）。base `4eb457e95`。開始時 full 18118 合格 / 0 失敗 / skip 2 / 合計 18120（Lab `p1345` `start.log`・作業ツリーの直しを含む）。
@@ -161,18 +174,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 掃き（628 冊）: splice 1,086,294 → 1,266,527（音を足す 20,457 → 69,686・小節線の前に音 26,516 → 88,894）・乖離 0（Lab `p1345/sweep-head6`）。網は `AddedEntrySpliceTests` に 1 行。毒 1 / 1 赤。
 - 終了時 full 18118 合格 / 0 失敗 / skip 2 / 合計 18120（`end.log`）。
 - **次**: Shosa の依頼 6 の返事（新しい会話で）。review.md の残り。
-
-## 以下は第1344セッションの経緯
-
-### 1.1 第1344セッション（2026-11-21・YT-DELL2・第1343 と同じ会話）
-
-第1343 が残した「足す編集が splice しない」。base `fd7794ba0`。開始時 full 18112 合格 / 0 失敗 / skip 2 / 合計 18114（Lab `p1344` `start.log`）。Shosa の依頼 6 の返事はオーナー指示で後回し。
-- **`8f7d35d05`＝side table の数の一致の門を外した**（`SuffixStateMatches`）: 項目は位置と（小節・item）の番号を持つだけで table の添字を持たない・尾は live の後ろに足すだけ・次の walk は `_walkTableDrift` で読む（第1300 の論の walk 内版）。
-- **外したら出た既存の穴**: 境界の小節に尾が後から書く欄（改行・改頁・譜めくりの許可、終わりの小節線の別名）を比べていなかった＝`| break` の小節に音を足すと先読みが外れ、尾を飛ばして改行が消えた（途中で止めた掃き `p1344/sweep-head4` で 10 件・オーナーのコーパス）。比べる門を足した。
-- **臨時記号は別の理由**: splice 用の prefix の一致が `b`→`bes`（窓の前で終わる token が窓をまたぐ）を拒否＝splice 用だけ、窓をまたぐ node は子を比べて進む（`spliceHalf`。採用では緩めない）。
-- 掃き（628 冊）: splice した小節 702,785 → 1,086,294（臨時記号 0 → 106,486・印 601 → 99,888・音 666 → 20,457）・乖離 0（Lab `p1344/sweep-head5`）。網 `AddedEntrySpliceTests` 5 本。毒 5 本中 3 赤（Q3＝採用にも緩める、は前便の容器の読みが先に断つ・Q5＝別名の値は観測者なし）。CHANGELOG 2 つ。
-- 終了時 full 18117 合格 / 0 失敗 / skip 2 / 合計 18119（`end2.log`。1 回目は `IncludeFilesTests` の 1 本が揺れた＝単独 3/3 緑）。
-- **次**: §1.0 の残り（`note.dup` の差）か review.md。Shosa の依頼 6 の返事。
 
 ## 2. 開いている作業
 
