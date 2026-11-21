@@ -277,6 +277,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1356セッションの経緯
+
+### 1.1 第1356セッション（2026-11-22・YT-DELL2・第1355 と同じ会話）
+
+base `2dcbe0850`。開始時 full 18165 合格 / 1 失敗 / skip 2 / 合計 18168（Lab `p1356` `run1.trx`。赤は `IncludeFilesTests` の 1 本。同時に LilyPond を回していた時間で、単独では 3 回とも緑）。
+- **両段にまたがる連桁の中の移った休符（b7）＝`10543d3eb`**（Lab `p1356/b7`）: LilyPond は連桁の押しを先に、移った先の段の Rest_collision を後に当てる。Rest_collision の callback が外側に連なるため（grob-closure.cc `chain_callback`）。向きは休符の棒＝連桁の向き（上）。Lily# は逆の順で、`c8[ r8@cross g'8@cross c8]` の休符はいつも −6.5 だった。`CalculateRestShifts` が移った休符だけ LilyPond の順で読むようにした。上の段が空なら −6.5、e'' なら +4.0、a' なら +2.5（LilyPond と同じ）。網 +3（毒で 2 本赤）。掃き 1289 枚で動いたのは 0 枚。
+  - 上の段の上の文字は、LilyPond も押された後の休符を避けない（v5: 両方 2.55）。輪郭は衝突だけの表のまま。
+  - 棚卸しの表で 1 行が Green → Yellow に落ちかけた（LILYPOND-REF から 5 行より遠くなった）。注を近くに置いて Green に戻した。
+- 出典の網 2 本の赤は `d8f55e4c5`。full 18169 合格 / 0 失敗 / skip 2 / 合計 18171（`-End`）。
+- **次**: 休符の `@cross`（`docs/cross-rest-design.md`）は §3 が全部済み。次は F4 か leftovers の先頭。
+
 ## 以下は第1355セッションの経緯
 
 ### 1.1 第1355セッション（2026-11-22・YT-DELL2）
