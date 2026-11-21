@@ -1919,6 +1919,10 @@ public sealed partial class MeasureCollector
             GatherContainerSite(site, musicNodes);
         await processNodes(MusicSiteList.Eager(musicNodes, container));
         GiveGatherSites(musicNodes);
+        // The container's whole text, gaps between its sites included, as a value read every
+        // later prefix checkpoint stands on (HeaderRead.PrefixOnly says why).
+        if (_probeRecording != null)
+            _walkHeaderReads.Add(new HeaderRead(container.FullSpan, ValueOnly: true, PrefixOnly: true));
     }
 
     /// <summary>

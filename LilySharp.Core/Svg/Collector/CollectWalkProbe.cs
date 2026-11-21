@@ -309,7 +309,19 @@ internal sealed class VoiceWalkRecording
 /// does for every block of the section, and no span the walk read covers it (2026-09-10,
 /// session 366: the audit sweep's `partial` books kept the pickup flag the full collect
 /// no longer set, because a `|` at section level had turned the section inline).</param>
-internal readonly record struct HeaderRead(Syntax.TextSpan Span, bool ValueOnly, Syntax.SyntaxNode? Structure = null);
+/// <param name="PrefixOnly">A read only a PREFIX checkpoint taken after it must find stable:
+/// the whole music container the walk has just finished (session 1343). Its sites' own reads
+/// cover the notes, but not the text BETWEEN them — and a container of phrase references
+/// folds none of its own positions (each reference is a value read of its call site alone),
+/// so a note typed before, between or after the references was read by nothing: a prefix
+/// checkpoint in a later section visit (the form playing an earlier section again) adopted
+/// the edited section's recorded bars (dollar-ref.lys in session 1343's sweep, a pre-existing
+/// divergence). The suffix side skips it: a candidate inside the same container, past the
+/// edit, has always been allowed to splice the rest of it — the boundary state and the parse
+/// agreements vouch for that tail — and counting this read there would decline every such
+/// candidate.</param>
+internal readonly record struct HeaderRead(Syntax.TextSpan Span, bool ValueOnly, Syntax.SyntaxNode? Structure = null,
+    bool PrefixOnly = false);
 
 /// <summary>A resume instruction for one primary walk: skip to
 /// <see cref="Checkpoint"/> (the PREFIX side; null when no prefix checkpoint

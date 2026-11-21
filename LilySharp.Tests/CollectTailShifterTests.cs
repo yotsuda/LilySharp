@@ -45,6 +45,8 @@ public class CollectTailShifterTests
     {
         (null, "StaffPosition"),
         (null, "SourceIndex"),
+        // A spelled pitch (TieDetector.SamePitch), not an offset.
+        (null, "WrittenPitch"),
         (typeof(ArpeggioItem), "MinStaffPosition"),
         (typeof(ArpeggioItem), "MaxStaffPosition"),
         // The staff position of the chord member a slur mark inside the brackets binds to.
@@ -60,6 +62,9 @@ public class CollectTailShifterTests
         [typeof(Measure)] = new[]
         {
             "SourceStart", "SourceEnd", "EndHighlightAliases", "SectionLabelPosition",
+            // Where an unwritten bar is to be typed (session 1337) — missed by the name test
+            // below until session 1343, whose sweep found it served unshifted.
+            "WrittenStart",
         },
         // A chord member's pitch token, plus the `@` of a MEMBER-level @laissezVibrer /
         // @repeatTie (<d@laissezVibrer g>) — three offsets into the same text, re-homed
@@ -191,6 +196,9 @@ public class CollectTailShifterTests
             bool suspicious = offsetStruct || intish
                 && (prop.Name.EndsWith("Position", StringComparison.Ordinal)
                     || prop.Name.StartsWith("Source", StringComparison.Ordinal)
+                    // `Measure.WrittenStart` (session 1337) fit none of the spellings above and
+                    // went unshifted for a day: an offset can be named after what starts there.
+                    || prop.Name.StartsWith("Written", StringComparison.Ordinal)
                     || prop.Name == "EndHighlightAliases");
             if (!suspicious
                 || NotAPosition.Contains((null, prop.Name))
@@ -240,5 +248,24 @@ public class CollectTailShifterTests
         var refusal = new MidBarBreakConflict(130, "the break stands inside a tuplet");
         Assert.Equal(refusal with { SourcePosition = 133 }, CollectTailShifter.ShiftSideEntry(refusal, w));
         Assert.Null(CollectTailShifter.ShiftSideEntry(refusal with { SourcePosition = 110 }, w));
+    }
+
+    /// <summary>
+    /// Where a bar the part has not written is to be typed (<see cref="Measure.WrittenStart"/>,
+    /// session 1337) rides the window like the measure's other offsets: shifted past it, kept
+    /// before it, the splice declined inside it, and -1 (a written bar) left alone. Session
+    /// 1343's audit sweep found it served unshifted — a click on such a bar after an edit above
+    /// it typed into the old offset (20 divergences over 628 books).
+    /// </summary>
+    [Fact]
+    public void AnUnwrittenBarsTypingPlace_RidesTheWindow()
+    {
+        var w = new CollectTailShifter.Window(Prefix: 100, SuffixStart: 120, Delta: 3);
+        var bar = new Measure(System.Collections.Immutable.ImmutableArray<MusicItem>.Empty,
+            BarlineType.None, BarlineType.None, null, 0, 0) { SourceStart = 140, SourceEnd = 150, WrittenStart = 160 };
+        Assert.Equal(163, CollectTailShifter.ShiftMeasure(bar, w)!.WrittenStart);
+        Assert.Equal(60, CollectTailShifter.ShiftMeasure(bar with { WrittenStart = 60 }, w)!.WrittenStart);
+        Assert.Null(CollectTailShifter.ShiftMeasure(bar with { WrittenStart = 110 }, w));
+        Assert.Equal(-1, CollectTailShifter.ShiftMeasure(bar with { WrittenStart = -1 }, w)!.WrittenStart);
     }
 }

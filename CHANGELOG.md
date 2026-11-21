@@ -6,6 +6,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Fixed: the preview could keep what an edit had changed** (`[editor]`). Deleting a `~` before a bar line could leave the next bar's natural on the preview (and typing one, leave it off); after an edit that changed the length of the text above it, a click on a bar a part has not written yet typed into the old place; and a note typed among a section's phrase references could come out in the octave of the bars recorded before it. Each was the preview reusing the previous keystroke's work where it no longer applied; a fresh render was always right.
+
+- **Spaces, ties and rewritten bars preview as quickly as other edits** (`[editor]`). A space typed or deleted, a `~` typed, or a bar rewritten to text of another length made the preview read the whole rest of the score again on that keystroke; it now picks up from the part the edit did not touch, as it does for other edits.
+
 - **Join Bars in Pairs** (`[editor]`, Orecchiante's request 21). A chart a transcription read at half the bar's length is mended in one step: select its bars and the lightbulb joins them two by two, each becoming half of the joined bar, the chords keeping their place in time (`C | D |` → `C D`, `C . F . | G |` → `C F G .`). The tempo is halved where everything it reaches is joined. The file beside the chart, `<name>.orecchiante.json`, has the same bars joined in the same edit, so the recording still plays with the chart bar for bar; a chart and a file that did not line up before are asked about. Refused with the reason where the bars cannot be joined faithfully.
 
 - **`lysc timeline` says what is sung, syllable by syllable** (`[cli]`, Shosa's request 6). A new field `sung` gives each voice Lily# sings — its part, its singer's name, and every syllable as `[beat, beats, text]` in the timeline's beats, as the preview and `lysc wav --singer` sing it (the singer lines, their sections, the reading of a `漢[かん]`, a melisma held to its last note) — so a dancing character can move her mouth to the song. A new field: the `protocol` stays 1.

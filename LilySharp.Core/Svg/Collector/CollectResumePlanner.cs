@@ -176,6 +176,8 @@ internal static class CollectResumePlanner
                 {
                     for (int i = reads.Count - 1; i >= 0; i--)
                     {
+                        if (reads[i].PrefixOnly)
+                            continue; // HeaderRead.PrefixOnly says why
                         bool unstable = reads[i].Structure is { } shape
                             ? !StructureStable(shape, newRoot, structureWindow)
                             : !(reads[i].Span.End <= prefix || reads[i].Span.Start >= suffixStart);
@@ -466,11 +468,22 @@ internal static class CollectResumePlanner
         // token ends exactly at the limit and is never compared.) Both sides must
         // agree that the text is below their limit; a text that crosses it on one
         // side falls through to the kind check as before.
+        // ★ The same holds for a NODE (session 1343): what crosses the limit is then the trailing
+        // trivia of its LAST token, and which token that is can differ — `g2 g |` → `g4 a g2 |`
+        // leaves the space before `|` with the pitch `g` on the old side and the duration `2`
+        // on the new, so the comparison went one level down, met a Pitch against a Duration,
+        // and declined every splice of every walk (the bass's too, whose text all lies past
+        // the window). The suffix characters inside such a node are trivia on both sides, and
+        // the next sibling is still compared — at its shifted start — by the caller's loop.
+        // A token's trailing trivia is its own; a composite's is its last terminal's (a walk down
+        // its right edge — asked only of a node that starts before the limit, so the nodes of
+        // the suffix itself, which the walk below visits one by one, never pay it).
+        if (aStart < oldLimit && bStart < oldLimit + delta
+            && aStart + a.FullWidth - (a.IsToken ? a.TrailingTriviaWidth : a.GetTrailingTriviaWidth()) <= oldLimit
+            && bStart + b.FullWidth - (b.IsToken ? b.TrailingTriviaWidth : b.GetTrailingTriviaWidth()) <= oldLimit + delta)
+            return true;
         if (a.IsToken && b.IsToken)
         {
-            if (aStart + a.LeadingTriviaWidth + a.Width <= oldLimit
-                && bStart + b.LeadingTriviaWidth + b.Width <= oldLimit + delta)
-                return true;
             // …and so is a token whose text STARTS before the limit and runs past it: the
             // window lies inside its text. `cis`→`dis` is a one-letter window, and the
             // token `cis` (a PitchC, now a PitchD) crosses it with `is`. Until session 591
@@ -577,7 +590,20 @@ internal static class CollectResumePlanner
         bool aBelow = aStart + a.FullWidth <= limit;
         bool bBelow = bStart + b.FullWidth <= limit;
         if (aBelow != bBelow || (aBelow && aStart + a.FullWidth != bStart + b.FullWidth))
-            return false;
+        {
+            // ★ The mirror of OnlyTriviaBelow at the node's OTHER end (session 1343): a node
+            // whose text ends at the same place before the limit on both sides, and only its
+            // last token's trailing trivia runs on past it, agrees below the limit — a space
+            // typed after `f` in `e4 f g a` lengthens the `f` note's trailing trivia across the
+            // window, which declined every splice of every walk and, at a bar's end, the whole
+            // plan (a space cost a full collect). Its children are still compared below.
+            if (aBelow == bBelow)
+                return false;
+            int aText = aStart + a.FullWidth - (a.IsToken ? a.TrailingTriviaWidth : a.GetTrailingTriviaWidth());
+            int bText = bStart + b.FullWidth - (b.IsToken ? b.TrailingTriviaWidth : b.GetTrailingTriviaWidth());
+            if (aText != bText || aText > limit)
+                return false;
+        }
 
         int sa = 0, sb = 0, pa = aStart, pb = bStart;
         while (true)

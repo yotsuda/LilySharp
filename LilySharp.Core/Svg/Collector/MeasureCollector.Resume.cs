@@ -720,6 +720,10 @@ public sealed partial class MeasureCollector
             => b with { LastMeasure = null, SectionLabelPosition = 0, MeasureSourceStart = 0 };
         if (Comparable(live) != Comparable(recB))
             return DeclineSplice("builder state differs");
+        // …and the one thing the tail reads out of the measures left out above: the tie the
+        // last event carries into the bar (MeasureBuilder.TieCarry — the tied head's accidental).
+        if (!builder.TieCarry().SequenceEqual(MeasureBuilder.TieCarryOf(_suffixPlan!.Recording.PreFinalizeMeasures!, ck.MeasureCount)))
+            return DeclineSplice("the tie carried into the boundary differs");
         if (!w.TryShift(recB.SectionLabelPosition, out int labelPos)
             || live.SectionLabelPosition != labelPos)
             return DeclineSplice("section label position differs");

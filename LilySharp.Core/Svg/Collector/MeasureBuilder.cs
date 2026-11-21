@@ -357,6 +357,53 @@ internal sealed class MeasureBuilder
         }
     }
 
+    /// <summary>
+    /// The tie this voice carries into its next event — the heads the last note or chord ties
+    /// on from, as (staff position, sounding MIDI key, written pitch) in head order; empty when
+    /// the last sounding event (a rest included) starts no tie. What <see cref="TiesInto"/>
+    /// will read for the next head, as a value a suffix splice can compare across two walks.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="TiesInto"/> reads the emitted measures, which a splice's state comparison
+    /// leaves out (the boundary measure is the edited text's own), so a `~` typed or deleted
+    /// before a bar line changed the next bar's accidental while every compared field matched
+    /// (session 1343: the parse agreements had declined that splice by accident until then).
+    /// </remarks>
+    public ImmutableArray<(int StaffPosition, int Midi, int Written)> TieCarry()
+        => TieCarryOf(LastSoundingItem());
+
+    /// <summary><see cref="TieCarry"/> read off a recording's first <paramref name="count"/>
+    /// measures (a walk checkpoint stands at a clean boundary: nothing is in progress).</summary>
+    public static ImmutableArray<(int StaffPosition, int Midi, int Written)> TieCarryOf(
+        IReadOnlyList<Measure> measures, int count)
+    {
+        for (int m = count - 1; m >= 0; m--)
+        {
+            var items = measures[m].Items;
+            for (int i = items.Length - 1; i >= 0; i--)
+                if (items[i] is NoteItem or ChordItem or RestItem)
+                    return TieCarryOf(items[i]);
+        }
+        return ImmutableArray<(int, int, int)>.Empty;
+    }
+
+    private static ImmutableArray<(int StaffPosition, int Midi, int Written)> TieCarryOf(MusicItem? last)
+    {
+        switch (last)
+        {
+            case NoteItem { HasTieStart: true } n:
+                return ImmutableArray.Create((n.StaffPosition, n.Midi, n.WrittenPitch));
+            case ChordItem { HasTieStart: true } c:
+                var heads = ImmutableArray.CreateBuilder<(int, int, int)>();
+                foreach (var note in c.Notes)
+                    if (c.Ties(note))
+                        heads.Add((note.StaffPosition, note.Midi, note.WrittenPitch));
+                return heads.ToImmutable();
+            default:
+                return ImmutableArray<(int, int, int)>.Empty;
+        }
+    }
+
     private MusicItem? LastSoundingItem()
     {
         for (int i = _currentItems.Count - 1; i >= 0; i--)

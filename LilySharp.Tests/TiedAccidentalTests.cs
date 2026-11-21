@@ -136,8 +136,12 @@ public sealed class TiedAccidentalTests
     // A `~` typed or deleted before a bar line — or the tied note's pitch changed under it —
     // changes the NEXT bar's accidental, outside the edit's own text. The resumed collect has
     // to re-walk that bar rather than splice the recorded one. MEASURED (session 648): the
-    // splice re-walks the bar after the edited one (d2~ → c2~: 2 adopted, 36 spliced), so the
-    // builder needed no checkpoint field of its own; these rows hold that reach.
+    // splice re-walks the bar after the edited one (d2~ → c2~: 2 adopted, 36 spliced). ⚠️ For
+    // the first two rows that was the parse agreements declining by accident (session 1343: the
+    // `~` moves the space before `|` to another token); once trailing trivia stopped counting as
+    // structure the splice from that bar line served the old accidental, and the splice now
+    // compares the tie carried into the boundary (MeasureBuilder.TieCarry,
+    // TrailingTriviaSpliceTests). These rows hold that reach.
     [Theory]
     [InlineData("c2 c2 | c2 c2 | a,2 c2 | c2 c2 |", "a,2 c2 |", "a,2 c2~ |")]
     [InlineData("c2 c2 | c2 c2 | a,2 c2~ | c2 c2 |", "a,2 c2~ |", "a,2 c2 |")]

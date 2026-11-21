@@ -80,7 +80,12 @@ internal static class CollectTailShifter
     {
         if (!w.TryShift(m.SourceStart, out int start)
             || !w.TryShift(m.SourceEnd, out int end)
-            || !w.TryShift(m.SectionLabelPosition, out int label))
+            || !w.TryShift(m.SectionLabelPosition, out int label)
+            // Where a bar the part has not written yet is to be typed (session 1337) — a source
+            // offset like the others, -1 when the bar is written. Until session 1343 it was not
+            // shifted: an edit that changed the text's length above such a bar served the old
+            // offset, and a click on that bar typed into the wrong place (session 1343's sweep).
+            || !w.TryShift(m.WrittenStart, out int written))
             return null;
 
         // ⚠️ NOTHING MOVED ⇒ THE SAME INSTANCES. A Δ=0 edit, or a tail whose positions all sit
@@ -90,7 +95,8 @@ internal static class CollectTailShifter
         // the splice's copies among them. The adopted prefix already shares the recording's
         // instances (NoteItem.StampBeam's remarks: the bake clears before it stamps), so the
         // spliced tail sharing them stands on the same argument.
-        bool moved = start != m.SourceStart || end != m.SourceEnd || label != m.SectionLabelPosition;
+        bool moved = start != m.SourceStart || end != m.SourceEnd || label != m.SectionLabelPosition
+            || written != m.WrittenStart;
 
         var aliases = m.EndHighlightAliases;
         if (!aliases.IsDefaultOrEmpty)
@@ -137,6 +143,7 @@ internal static class CollectTailShifter
             SourceEnd = end,
             EndHighlightAliases = aliases,
             SectionLabelPosition = label,
+            WrittenStart = written,
         };
     }
 
