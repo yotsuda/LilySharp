@@ -277,6 +277,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1343セッションの経緯
+
+### 1.1 第1343セッション（2026-11-21・YT-DELL2）
+
+第1340 の ⚠️ の 2 つ（長さの変わる編集が splice しない・空白だけの編集が resume しない）から。base `b9b83a2de`。開始時 full 18102 合格 / 0 失敗 / skip 2 / 合計 18104（Lab `p1343` `start.log`）。Calamo・Orecchiante・Shosa の open は 0。
+- **`3a1e70940`＝原因は break と無関係＝trailing trivia が構造に数えられていた**（`CollectResumePlanner`）: suffix の一致は token の段だけ trivia を無視し node の段に無かった（`g2 g |`→`g4 a g2 |` は `|` の前の空白を旧は Pitch・新は Duration が持つ＝bass の尾まで拒否）。prefix の一致は窓をまたぐ trailing trivia を扱わなかった（空白 1 つで splice が消え、小節線の直前ならフル collect）。両方を直した。
+- **拒否が隠していた既存の穴 3 つ**（第366 の掃きの計器 Lab `p1343/Zz1343SweepProbeTests.cs.txt`＝628 冊・約 9.4 万編集を base と比べた）: ⑴ splice がタイの持ち越しを比べない（`~` の後の臨時記号が古い）＝`MeasureBuilder.TieCarry` を比べる ⑵ shifter が `Measure.WrittenStart` を動かさない＝動かす・drift 網も直した ⑶ 参照だけの容器の隙間に打った音を誰も読まない（dollar-ref.lys）＝容器を prefix だけの値の読みに（`HeaderRead.PrefixOnly`・今は abort でフル collect）。
+- 掃き: splice した小節 196,752 → 702,785・乖離 13 → 0（Lab `p1343/sweep-base`・`sweep-head3`）。網 2 file＋shifter 1 本。毒 7 本中 6 赤（P4 は観測者なし）。CHANGELOG 2 つ。
+- 終了時 full 18112 合格 / 0 失敗 / skip 2 / 合計 18114（`-End`）。
+- **次**: 上の §1.0 の「足す編集が splice しない」の値付け→設計。review.md の残りはその後。
+
 ## 以下は第1342セッションの経緯
 
 ### 1.1 第1342セッション（2026-11-21・YT-DELL2）
