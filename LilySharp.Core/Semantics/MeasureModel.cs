@@ -53,10 +53,11 @@ internal static class MeasureModel
     /// <see cref="RunCrossesMeter"/>: the bar is one of a VALUED run's (<c>R1*8</c>) from the bar
     /// where the score's meter changes under it to a bar of another length — that bar's index,
     /// the <c>time</c>, and the run's bar count; the bar's <see cref="Duration"/> is still the
-    /// value the run wrote.</summary>
+    /// value the run wrote. <see cref="Unmetered"/>: an empty bar under <c>time none</c>, as long
+    /// as the other parts' bar there — its <see cref="Duration"/> is only the spacer's.</summary>
     internal readonly record struct Bar(Fraction Duration, TextSpan Span, bool IsEmpty = false, int BarLineEnd = -1,
         bool Flowed = false, bool HasPhrase = false, bool IsBareRest = false, Fraction? Meter = null,
-        (int Bar, TimeSignatureSyntax Time, int Bars)? RunCrossesMeter = null);
+        (int Bar, TimeSignatureSyntax Time, int Bars)? RunCrossesMeter = null, bool Unmetered = false);
 
     /// <summary>
     /// Flattens <paramref name="scope"/> (expanding phrase references via
@@ -91,7 +92,7 @@ internal static class MeasureModel
         Fraction? initialMeter = null, List<(int Bar, TimeSignatureSyntax Time, bool MidBar)>? meterChanges = null,
         Func<int, TimeSignatureSyntax?>? plannedMeterAt = null, int expansionBudget = ExpansionCap,
         Dictionary<(string Chain, int Position), int>? index = null, bool longestVoice = false,
-        List<(int End, int Bars)>? writtenLines = null)
+        List<(int End, int Bars)>? writtenLines = null, bool initialSenza = false)
     {
         var stream = new List<object>();
         var budget = new ExpansionBudget(expansionBudget);
@@ -110,7 +111,7 @@ internal static class MeasureModel
         bool atScopeStart = true;
         int prevBarEnd = -1; // ink end of the last barline, for an empty bar's span
         var meter = initialMeter ?? DurationCalculator.ParseTimeSignature(4, 4);
-        bool senzaMisura = false; // time none: no auto-complete boundary exists
+        bool senzaMisura = initialSenza; // time none: no auto-complete boundary exists
         int plannedFor = -1;      // the bar plannedMeterAt was last asked for
         bool flows = false;       // the bar under construction closes where its beats fill (Bar.Flowed)
         bool phraseInBar = false; // …holds music inlined from a phrase body (Bar.HasPhrase)
@@ -275,10 +276,13 @@ internal static class MeasureModel
                     // Under `time none` the collector still fills the gap with the LAST
                     // METERED length (MeasureBuilder keeps it for exactly this spacer), and
                     // `meter` here is that same value — a senza `time` re-arms nothing. One
-                    // answer, both sides; no check reads it there (the fill checks are off).
+                    // answer, both sides; no check reads it there (the fill checks are off),
+                    // and the cross-part check leaves the bar out by Unmetered: it is as long
+                    // as the other parts' bar (GRAMMAR, rests under 'time none'), not that
+                    // length ("lasts 3/4 but part 'lh' has 1" until 2026-11-22).
                     int start = prevBarEnd >= 0 ? prevBarEnd : barStart;
                     bars.Add(new Bar(meter,
-                        new TextSpan(start, Math.Max(1, barEnd - start)), IsEmpty: true));
+                        new TextSpan(start, Math.Max(1, barEnd - start)), IsEmpty: true, Unmetered: senzaMisura));
                 }
                 prevBarEnd = barEnd;
                 if (callSites.Count == 0)

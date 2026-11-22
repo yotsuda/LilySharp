@@ -66,9 +66,10 @@ internal sealed class CrossPartMeasureValidator
         // Document-order walk: top-level time declarations update the score
         // time; each section validates with the time in force at its site.
         var time = new Fraction(4, 4);
+        bool senza = false;
         _root = root;
         _headers = null;
-        WalkForSections(root, ref time);
+        WalkForSections(root, ref time, ref senza);
 
         // By-part (`part X { section S { … } }`) sections are not visited above
         // (WalkForSections only sees by-section blocks that hold part sub-blocks),
@@ -257,7 +258,7 @@ internal sealed class CrossPartMeasureValidator
         _ => $"{string.Join(", ", names.Take(names.Count - 1))} and {names[^1]}",
     };
 
-    private void WalkForSections(SyntaxNode node, ref Fraction time)
+    private void WalkForSections(SyntaxNode node, ref Fraction time, ref bool senza)
     {
         for (int i = 0; i < node.SlotCount; i++)
         {
@@ -267,31 +268,41 @@ internal sealed class CrossPartMeasureValidator
             switch (child)
             {
                 case TimeSignatureSyntax ts:
-                    time = DurationCalculator.ParseTimeSignature(ts.Beats, ts.BeatType);
+                    ReadMeter(ts, ref time, ref senza);
                     break;
                 case SectionDeclarationSyntax section:
                     // A section's own `time` is ITS meter only — the next section starts
                     // back in the score meter, as the collector reverts it at every boundary
                     // (MeasureCollector.ProcessSection). Carrying it on was the cross-part
                     // half of the leak MeasureValidator's header registry closes (2026-09-26).
-                    ValidateSectionCrossPart(section, time);
+                    ValidateSectionCrossPart(section, time, senza);
                     break;
                 case PhraseDeclarationSyntax:
                 case VariableDeclarationSyntax:
                     break; // bodies are validated where referenced
                 default:
-                    WalkForSections(child, ref time);
+                    WalkForSections(child, ref time, ref senza);
                     break;
             }
         }
     }
 
-    private Fraction ValidateSectionCrossPart(SectionDeclarationSyntax section, Fraction time)
+    /// <summary>A <c>time</c>: a meter is the bar length, and <c>time none</c> keeps the last one
+    /// (the length the collector's spacer fills an empty bar with) and opens an unmetered span —
+    /// read as 4/4 until 2026-11-22, which weighed an empty bar there as a whole note.</summary>
+    private static void ReadMeter(TimeSignatureSyntax ts, ref Fraction time, ref bool senza)
+    {
+        senza = ts.IsSenzaMisura;
+        if (!senza)
+            time = DurationCalculator.ParseTimeSignature(ts.Beats, ts.BeatType);
+    }
+
+    private Fraction ValidateSectionCrossPart(SectionDeclarationSyntax section, Fraction time, bool senza)
     {
         // Section items in document order: a section-level time declaration
         // applies to the part blocks that follow it. Each part records the
         // time in force at its own position.
-        var blocks = new List<(string Name, Fraction Time, TextSpan TimeSpan, PartBlockSyntax Block)>();
+        var blocks = new List<(string Name, Fraction Time, bool Senza, TextSpan TimeSpan, PartBlockSyntax Block)>();
         // Named chord blocks of the section: voices of the bar-count check only (a chord
         // row has bars but no beats to compare per measure). Its lyrics cells (`lyrics w
         // [sings p] { … }`) join the same list, as the short side only.
@@ -302,10 +313,10 @@ internal sealed class CrossPartMeasureValidator
             switch (child)
             {
                 case TimeSignatureSyntax ts:
-                    time = DurationCalculator.ParseTimeSignature(ts.Beats, ts.BeatType);
+                    ReadMeter(ts, ref time, ref senza);
                     break;
                 case PartBlockSyntax pb:
-                    blocks.Add((pb.Name, time, pb.PartName.Span, pb));
+                    blocks.Add((pb.Name, time, senza, pb.PartName.Span, pb));
                     break;
                 case ChordPartBlockSyntax { PartName: { } track, NameToken: { } nameToken } cb:
                     chordVoices.Add(SectionVoice.Chords(track, Svg.Collector.ChordNameCollector.CountBars(cb), nameToken.Span));
@@ -327,13 +338,13 @@ internal sealed class CrossPartMeasureValidator
         // above and then throw the bars away (MEASURED, session 400 — see
         // ValidateGroupedByPartSections).
         var parts = new List<(string Name, Fraction Time, TextSpan TimeSpan, List<MeasureModel.Bar> Measures)>(blocks.Count);
-        foreach (var (name, blockTime, span, block) in blocks)
+        foreach (var (name, blockTime, blockSenza, span, block) in blocks)
             parts.Add((name, blockTime, span, _meterPlan.IsEmpty
-                ? BuildPartMeasures(block, blockTime)
+                ? BuildPartMeasures(block, blockTime, blockSenza)
                 // A bare `R` or an empty bar under another part's `time` is a bar of that
                 // meter (Lab sessions/p849/pm/r-bareR.lys: "lasts 3/4 but part 'top' has 1").
                 : MeasureModel.Split(block, _phraseBodies, blockTime, null,
-                    bar => _meterPlan.ForeignChangeAt(section.SectionName, bar, block), longestVoice: true)));
+                    bar => _meterPlan.ForeignChangeAt(section.SectionName, bar, block), longestVoice: true, initialSenza: blockSenza)));
         if (parts.Count < 2)
         {
             // One part beside chord rows: nothing to compare per measure, only the count.
@@ -384,7 +395,7 @@ internal sealed class CrossPartMeasureValidator
             // under `time none`) and some part writes music in that bar.
             bool someWrite = parts.Any(p => i < p.Measures.Count && !p.Measures[i].IsEmpty && !p.Measures[i].IsBareRest);
             var present = parts.Where(p => i < p.Measures.Count && !p.Measures[i].IsBareRest
-                && (!p.Measures[i].IsEmpty || (someWrite && p.Measures[i].Duration > Fraction.Zero))
+                && (!p.Measures[i].IsEmpty || (someWrite && p.Measures[i].Duration > Fraction.Zero && !p.Measures[i].Unmetered))
                 && p.Measures[i].RunCrossesMeter == null).ToList();
             if (present.Count < 2)
                 continue;
@@ -562,9 +573,9 @@ internal sealed class CrossPartMeasureValidator
     /// warning is emitted from <see cref="MeasureValidator"/> over the same model, so the
     /// two passes agree on which bars exist (IsEmpty never depends on the meter, so that
     /// pass omitting it is harmless). The meter in force at the scope steers the
-    /// repeat-flow auto-complete.
+    /// repeat-flow auto-complete, and an unmetered one (<c>time none</c>) marks its empty bars.
     /// </summary>
-    private List<MeasureModel.Bar> BuildPartMeasures(SyntaxNode scope, Fraction time)
-        => MeasureModel.Split(scope, _phraseBodies, time, longestVoice: true);
+    private List<MeasureModel.Bar> BuildPartMeasures(SyntaxNode scope, Fraction time, bool senza)
+        => MeasureModel.Split(scope, _phraseBodies, time, longestVoice: true, initialSenza: senza);
 
 }

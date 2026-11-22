@@ -155,4 +155,28 @@ public class SectionShortEndTests
         // that stands still.
         Assert.Contains(@"\cadenzaOn s1*5/4 \bar ""|""", Variable(ly, "low"));
     }
+
+    /// <summary>…and the bar check says so: the empty bar was weighed as a bar of the last meter,
+    /// "Measure 2 of part 'rh' lasts 3/4 but part 'lh' has 1" (grammar evaluation 5, 2026-11-22).
+    /// Rests that do not add up to the other part's bar are still told.</summary>
+    [Theory]
+    [InlineData("octave absolute\n", "  time none\n")]
+    [InlineData("octave absolute\ntime none\n", "")]
+    [InlineData("octave absolute\ntime 3/4\n", "  time none\n")]
+    public void AnEmptyBarUnderTimeNone_IsNotWeighedAsABarOfTheLastMeter(string head, string sectionTime)
+    {
+        static string Source(string head, string sectionTime, string low) => head
+            + "part rh { clef treble }\npart lh { clef bass }\n"
+            + "section A {\n" + sectionTime + "  rh { c''4 d'' e'' | f''4 g'' a'' | }\n  lh { " + low + " }\n}\n"
+            + "form { ~A }\nscore { grandStaff { staff rh  staff lh } }\n";
+        static string[] Said(string source)
+        {
+            var tree = SyntaxTree.Parse(source);
+            return [.. tree.Diagnostics.Concat(SemanticValidation.Run(tree))
+                .Where(d => d.Code == DiagnosticCodes.MeasureDurationMismatch).Select(d => d.Message)];
+        }
+        Assert.Empty(Said(Source(head, sectionTime, "c2. | |")));
+        Assert.Empty(Said(Source(head, sectionTime, "| c2. |")));
+        Assert.Single(Said(Source(head, sectionTime, "c2. | r2 |")));
+    }
 }
