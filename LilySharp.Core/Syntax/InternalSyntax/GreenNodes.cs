@@ -1318,6 +1318,27 @@ internal sealed class BreakGreen : GreenSyntaxNode
     }
 }
 
+/// <summary>
+/// <c>pass 2 {</c> / <c>pass 1 3 bare {</c>: music of some passes only begins. Slots: the word,
+/// the numbers, <c>bare</c> or null, the brace.
+/// </summary>
+internal sealed class PassStartGreen : GreenSyntaxNode
+{
+    public PassStartGreen(SyntaxToken passWord, IReadOnlyList<SyntaxToken> numbers, SyntaxToken? bare, SyntaxToken openBrace)
+        : base(SyntaxKind.PassStart, [passWord, .. numbers, bare, openBrace])
+    {
+    }
+}
+
+/// <summary>The <c>}</c> that ends music of some passes only.</summary>
+internal sealed class PassEndGreen : GreenSyntaxNode
+{
+    public PassEndGreen(SyntaxToken closeBrace)
+        : base(SyntaxKind.PassEnd, [closeBrace])
+    {
+    }
+}
+
 // ================================================================================
 // Lyrics
 // ================================================================================

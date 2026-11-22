@@ -498,3 +498,86 @@ public sealed class CueExpressionSyntax : SyntaxNode
     /// <summary>The cue region's music block.</summary>
     public MusicBlockSyntax Body => (MusicBlockSyntax)GetChild(2)!;
 }
+
+/// <summary>
+/// <c>pass 2 {</c> — the music from here to the matching <see cref="PassEndSyntax"/> sounds on
+/// the passes named only and is a rest of its length on the others; the page prints it once,
+/// under "2nd time only" (docs/eval4-features-design.md §3).
+/// </summary>
+/// <remarks>
+/// ⚠️ TWO MARKS AMONG THE MUSIC'S ITEMS, not a node around them (as a chords row's ending is,
+/// <see cref="VoltaEndSyntax"/>): the notes between them stay the items of the music they are
+/// written in, so a beam, a tie, a slur and a bar line run across either mark as if it were not
+/// there, and every reader that does not ask about passes reads the music as it always did.
+/// The parser pairs them (<c>ParsePass</c>); a reader asks <see cref="Semantics.PassRegions"/>.
+/// </remarks>
+public sealed class PassStartSyntax : SyntaxNode
+{
+    internal PassStartSyntax(InternalSyntax.PassStartGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>The word that opens the region, in a music stream only and only before a number.</summary>
+    public const string PassWord = "pass";
+
+    /// <summary>The word before the brace that prints no text over the region.</summary>
+    public const string BareWord = "bare";
+
+    /// <summary>The <c>pass</c> word's token.</summary>
+    public SyntaxTokenNode Keyword => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>The number tokens, as written.</summary>
+    public IEnumerable<SyntaxTokenNode> NumberTokens
+    {
+        get
+        {
+            for (int i = 1; i < SlotCount; i++)
+                if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.IntegerLiteral } number)
+                    yield return number;
+        }
+    }
+
+    /// <summary>The passes named, as written (a number that is no pass — 0 — included).</summary>
+    public IEnumerable<int> Numbers => NumberTokens.Select(t => int.TryParse(t.Text, out int n) ? n : 0);
+
+    /// <summary>The passes the region sounds on.</summary>
+    public Semantics.PassSet Passes => Semantics.PassSet.Of(Numbers);
+
+    /// <summary><c>pass 2 bare {</c>: no text is printed over the region.</summary>
+    public bool IsBare => GetChild(SlotCount - 2) is SyntaxTokenNode { Kind: SyntaxKind.Identifier, Text: BareWord };
+
+    /// <summary>What the page prints over the region's first note, or null for a bare one:
+    /// "2nd time only", "1st &amp; 3rd time", "1st, 2nd &amp; 4th time" (English, the owner's
+    /// decision 2026-11-15).</summary>
+    public string? PrintedText => IsBare ? null : TextOf(Passes);
+
+    /// <summary>The text of the passes given, null when there are none.</summary>
+    public static string? TextOf(Semantics.PassSet passes)
+    {
+        var names = Enumerable.Range(1, passes.Max).Where(passes.Contains).Select(Ordinal).ToList();
+        return names.Count switch
+        {
+            0 => null,
+            1 => names[0] + " time only",
+            _ => string.Join(", ", names.Take(names.Count - 1)) + " & " + names[^1] + " time",
+        };
+    }
+
+    private static string Ordinal(int n) => n + ((n % 100) is 11 or 12 or 13 ? "th" : (n % 10) switch
+    {
+        1 => "st",
+        2 => "nd",
+        3 => "rd",
+        _ => "th",
+    });
+}
+
+/// <summary>The <c>}</c> that ends the region a <see cref="PassStartSyntax"/> opened.</summary>
+public sealed class PassEndSyntax : SyntaxNode
+{
+    internal PassEndSyntax(InternalSyntax.PassEndGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+}

@@ -137,6 +137,13 @@ public readonly record struct MidiNote(
     // this: a repeat played again starts with no note that only rings into it (PlayedTimeline).
     // Not written to .mid files.
     int Overhang = 0,
+    // Written inside `pass 2 { … }`: the passes the note sounds on (empty: every pass). The
+    // exporter drops it from the passes it is not of once the music is played
+    // (MidiExporter.KeepPassNotes). Not written to .mid files.
+    Semantics.PassSet OnlyPasses = default,
+    // The source position of that `pass` (its PassStartSyntax), -1 outside one: what tells a
+    // region none of whose notes is ever played (MidiExporter.SilentPassRegions).
+    int PassRegionAt = -1,
     // The `%` this note sounds for — a percent repeat plays its bars again for each mark, from the
     // bars' own notes, which the page prints once; the mark is what the page prints there. Null
     // for any other note. Not written to .mid files.

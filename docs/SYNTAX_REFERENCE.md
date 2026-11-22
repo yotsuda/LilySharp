@@ -1727,6 +1727,39 @@ though both ends of that slur are cue notes.
 Two other shapes are closed while the feature is young: a `cue` nested in a `cue`
 (**LYS4013**) and a `voice { … } voice { … }` span inside one (**LYS4014**).
 
+## Music of Some Passes Only
+
+"2nd time only", "tacet 1st x": notes a player plays on some times through a repeat and not
+on the others. `pass N { … }` is a **region**, like a cue:
+
+```
+|: c'4 d' pass 2 { e' f' } :|       // Plays c d (rest rest), then c d e f
+|: c'2 pass 1 3 { d'2 } :|*3        // The d on the first and third times
+|: c'4 d' pass 2 bare { e' f' } :|  // The same sound, and no text printed
+```
+
+The notes inside sound on the passes named and are a rest of their own length on the others,
+so the bar keeps its time. A pass is the time through the repeat around the region — the
+form's `|: … :|`, the music's `|: … :|`, `:|*N` — counted as a `verse N` of the lyrics is;
+outside a repeat the music is played once, on pass 1, and a D.S. or D.C. return is the last
+pass. This is not an ending: `[1. …]` is **skipped** on the other passes, a `pass` region is
+**silent** on them.
+
+The page prints the notes once, with an italic text over the first note or rest: "2nd time
+only", "1st time only", "1st & 3rd time", "1st, 2nd & 4th time". `bare` prints none (write
+your own `@text("tacet 1st x").up`). The region may span bar lines, and a beam, a tie or a
+slur is drawn across its braces as if they were not there — though a tie across a brace is
+not held in the sound: the note after the brace is struck again. Its dynamics and pedals hold on every
+pass.
+
+MusicXML writes the text as `<words>` and the passes on each note (`time-only="2"`); the
+LilyPond twin writes the text. `pass` is a word only before a number, so a phrase may still be
+named `pass`.
+
+`pass 0` and `pass 2 2` are errors (**LYS1075**), and so is a `pass` inside a `pass`
+(**LYS1076**). A region none of whose notes the music ever plays — `pass 2` with no repeat
+around it, `pass 3` in a repeat played twice — is a warning (**LYS1077**).
+
 ## Repeats
 
 ### Volta Repeats

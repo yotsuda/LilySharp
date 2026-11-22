@@ -815,6 +815,21 @@ public static class DiagnosticCodes
     /// 2026-10-14, is written where it is drawn — the figure, then a mark a repetition.</remarks>
     public const string BeatRepeatMisspelled = "LYS1074";
 
+    /// <summary>Semantic error: a <c>pass N { … }</c> that names no pass (<c>pass 0</c>) or one
+    /// pass twice (<c>pass 2 2</c>). A pass is counted from 1; the region sounds on the passes
+    /// that are passes (docs/eval4-features-design.md §3).</summary>
+    public const string PassNumberInvalid = "LYS1075";
+
+    /// <summary>Semantic error: a <c>pass N { … }</c> written inside another. The inner one's
+    /// passes are not read: its notes sound on the outer region's.</summary>
+    public const string PassInsidePass = "LYS1076";
+
+    /// <summary>Semantic warning: a <c>pass N { … }</c> none of whose notes is ever played — the
+    /// music never makes any of its passes there (a <c>pass 2</c> outside a repeat, a
+    /// <c>pass 3</c> in a repeat played twice). Read off the MIDI as it plays
+    /// (<c>MidiExporter.SilentPassRegions</c>).</summary>
+    public const string PassNeverPlayed = "LYS1077";
+
     /// <summary>Warning: a part's <c>octave N</c> below the default 3 under an <c>instrument</c> preset,
     /// where the part already sounds an octave or more below the page — <c>instrument bass
     /// octave 2</c>: a bare <c>c</c> is written C2 and sounds C1. The octave is the WRITTEN

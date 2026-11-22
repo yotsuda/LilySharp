@@ -397,6 +397,10 @@ internal sealed partial class Parser
             // `@chord` is read after its '@' and never reaches this switch.
             SyntaxKind.Identifier when IsShapeChordWord(Current.Text) => ParseShapeChord(),
 
+            // `pass 2 { … }` — music of some passes only (docs/eval4-features-design.md §3).
+            // Claimed only as `pass` NUMBER… [bare] `{`, so a phrase may still be named `pass`.
+            SyntaxKind.Identifier when AtPassStart() => ParsePass(),
+
             // `drums { hats  back  kick }` — a drum chart, its lines played together
             // (Parser.Drums). Claimed only before a `{`, so a phrase may still be named
             // `drums` and referenced bare.
@@ -917,6 +921,53 @@ internal sealed partial class Parser
     /// as the following sequence items, preserving source order.
     /// </summary>
     private readonly Queue<GreenNode> _pendingPostEventMarkers = new();
+
+    /// <summary>Whether the stream stands at <c>pass N… [bare] {</c>.</summary>
+    private bool AtPassStart()
+    {
+        if (Current.Text != PassStartSyntax.PassWord || Peek().Kind != SyntaxKind.IntegerLiteral)
+            return false;
+        int at = 1;
+        while (Peek(at).Kind == SyntaxKind.IntegerLiteral)
+            at++;
+        if (Peek(at) is { Kind: SyntaxKind.Identifier, Text: PassStartSyntax.BareWord })
+            at++;
+        return Peek(at).Kind == SyntaxKind.OpenBrace;
+    }
+
+    /// <summary>
+    /// Parses <c>pass 2 { … }</c> into TWO MARKS and the music between them, all items of the
+    /// stream being read: returns the opening mark and leaves the music and the closing mark to
+    /// be handed out next (the queue every music loop empties first), so the notes are the
+    /// enclosing music's own items — see <see cref="PassStartSyntax"/>.
+    /// </summary>
+    private PassStartGreen ParsePass()
+    {
+        // Re-kinded, as `drums` is (Parser.Drums): the editor paints it as a keyword.
+        var written = Advance();
+        var word = new SyntaxToken(SyntaxKind.PassOpener, written.Text, written.LeadingTrivia, written.TrailingTrivia);
+        var numbers = new List<SyntaxToken>();
+        while (Current.Kind == SyntaxKind.IntegerLiteral)
+            numbers.Add(Advance());
+        var bare = Current.Kind == SyntaxKind.Identifier && Current.Text == PassStartSyntax.BareWord ? Advance() : null;
+        var start = new PassStartGreen(word, numbers, bare, Expect(SyntaxKind.OpenBrace));
+
+        // (Here the queue is empty: ParseMusicItem hands out what waits before it reads a word.)
+        var body = new List<GreenNode>();
+        while (_pendingPostEventMarkers.Count > 0
+               || (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile)))
+        {
+            var item = ParseMusicItem();
+            if (item != null)
+                body.Add(item);
+            else
+                Advance(); // Skip unexpected token, as a music block does
+        }
+        foreach (var item in body)
+            _pendingPostEventMarkers.Enqueue(item);
+        _pendingPostEventMarkers.Enqueue(new PassEndGreen(Expect(SyntaxKind.CloseBrace)));
+        return start;
+    }
 
     /// <summary>
     /// Parses a note's/chord's trailing post-events with LilyPond's order-free

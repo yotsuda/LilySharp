@@ -1110,6 +1110,10 @@ internal sealed class MusicXmlNote
     /// Until 2026-11-14 a feathered beam was written as a plain one (grammar evaluation 4).</summary>
     public string? BeamFan { get; set; }
 
+    /// <summary>The passes the note sounds on — written inside <c>pass 2 { … }</c> — as
+    /// MusicXML's <c>time-only</c> writes them ("2", "1,3"), or null for every pass.</summary>
+    public string? TimeOnly { get; set; }
+
     /// <summary>The string and fret the page's tab staff plays this note on, or null when the
     /// part has no tab staff (or the note is off the fretboard).</summary>
     public (int String, int Fret)? Tab { get; set; }
@@ -1160,6 +1164,8 @@ internal sealed class MusicXmlNote
         var note = new XElement("note");
         if (!PrintObject)
             note.Add(new XAttribute("print-object", "no"));
+        if (TimeOnly != null)
+            note.Add(new XAttribute("time-only", TimeOnly));
 
         if (IsGrace)
         {

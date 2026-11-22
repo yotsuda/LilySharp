@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Music of some passes only: `pass 2 { … }`** (`[language]` `[playback]` `[engraving]` `[export]`). "2nd time only" was a text alone, and the notes sounded every time through the repeat. `|: c'4 d' pass 2 { e' f' } :|` now plays the e' f' the second time only — a rest of their length the first time — and prints "2nd time only" over the e'. A pass is the time through the repeat around the region, as a `verse N` counts it; `pass 1 3 { … }` names two ("1st & 3rd time"), `pass 2 bare { … }` prints no text. MusicXML writes the text and `time-only` on the notes; the LilyPond export writes the text. `pass 0` or a pass named twice (LYS1075) and a region inside another (LYS1076) are errors; a region the music never plays — `pass 2` with no repeat around it — is a warning (LYS1077). `pass` is a word only before a number: a phrase named `pass` is still called by its name.
+
 - **Fixed: an ending right after a `voice { } { }` span was refused** (`[check]`). `voice { e''4 f'' g'' a'' | } { c''2 c'' | } [1. …` said "The ending '[1.' opens inside a bar", though every voice of the span closed its bar; a `|` had to be added after the span. The span's bar line is now the ending's.
 
 - **Fixed: a section that opens with `time none` shifted every bar after it in the LilyPond export** (`[export]`). Each bar of the cadenza went out with `\partial`, and LilyPond carried the displaced position on: "mid-measure time signature without \partial", "bar check failed", and every later bar a beat off. A section header's `time none` is now written as a cadenza with no `\partial`, as one written in the music already was.

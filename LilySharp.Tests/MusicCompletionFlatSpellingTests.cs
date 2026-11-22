@@ -140,6 +140,7 @@ public class MusicCompletionFlatSpellingTests
                 "once" => "once override Stem.transparent = true g4 a b c' |",
                 "repeat" => "repeat tremolo 4 { g16 } a4 b c' |",
                 "tuplet" => "tuplet 3/2 { g8 a b } c'4 d' e' |",
+                "pass" => "pass 1 { g4 a } b4 c' |",                     // music of some passes (2026-11-22)
                 "<<" => "<< g b d' >>4 e'4 f' g' |",   // the group's duration goes after >>
 
                 "grace" => "grace { g16 } a4 b c' d' |",

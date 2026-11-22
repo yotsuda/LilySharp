@@ -322,7 +322,9 @@ public sealed partial class LilySharpLanguageServer
                 SyntaxKind.OverrideKeyword or SyntaxKind.RevertKeyword or SyntaxKind.OnceKeyword or
                 SyntaxKind.PhraseKeyword or SyntaxKind.SectionKeyword or SyntaxKind.FormKeyword or
                 // A drum chart's opener and its line words, re-kinded by Parser.Drums.
-                SyntaxKind.DrumsOpener or SyntaxKind.DrumsLineDirection => 0,
+                SyntaxKind.DrumsOpener or SyntaxKind.DrumsLineDirection or
+                // `pass 2 { … }`'s word, re-kinded by Parser.ParsePass.
+                SyntaxKind.PassOpener => 0,
 
                 // A percent mark: one repetition of the bars before it — painted as a bar line
                 // is, a mark between the bar lines.

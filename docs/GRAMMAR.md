@@ -2853,7 +2853,7 @@ MusicBlock     = '{' , { MusicItem } , '}' ;
 
 MusicItem      = Note | Rest | Chord | Arpeggio | Barline | PhraseRef
                | SlashNote | BareDuration | PercentMark | BeatRepeat
-               | Slur | Tie | Beam | Tuplet | Grace | Cue | MidMusicCommand
+               | Slur | Tie | Beam | Tuplet | Grace | Cue | Pass | MidMusicCommand
                | DrumChart                        (* §5.2 *)
                | InlineVolta | NavMark            (* a section's music and a chords row;
                                                       not a phrase — see below *)
@@ -3939,6 +3939,38 @@ Cue            = 'cue' , [ ClefName ] , MusicBlock ;
 (* Example: c4 d cue { e4 f } g4 | *)
 
 (* Example: c4 d cue bass { e4 f } g4 | *)
+
+Pass           = 'pass' , Integer , { Integer } , [ 'bare' ] , '{' , { MusicItem } , '}' ;
+                 (* MUSIC OF SOME PASSES ONLY (docs/eval4-features-design.md §3; 2026-11-22).
+                    The notes inside sound on the passes named and are a rest of their length
+                    on the others — "2nd time only", "tacet 1st x". A pass is counted as a
+                    'verse N' is: the time through the repeat around the region (the form's
+                    '|: … :|', the music's '|: … :|', ':|*N', a lone ':|'); outside a repeat
+                    the music is played once, on pass 1. A D.S. or D.C. return is the last pass.
+                    Not an ending: an ending is SKIPPED (it takes no time on the other passes),
+                    a pass region is SILENT (it takes its time on every pass).
+                    The page prints the notes once, under an italic text over the first note
+                    or rest (the picture of '@text("…").up'): 'pass 2' "2nd time only", 'pass 1'
+                    "1st time only", 'pass 1 3' "1st & 3rd time", 'pass 1 2 4' "1st, 2nd & 4th
+                    time" (English, owner's decision 2026-11-15). 'bare' prints no text.
+                    MIDI, the preview, the WAV and a sung voice drop the notes on the other
+                    passes (a word under a dropped note is not sung); the region's dynamics and
+                    pedals stand on every pass. MusicXML writes the text as <words> and the
+                    passes on each note (time-only="2"); the twin writes the text only
+                    ('<>^\markup { \italic "2nd time only" }').
+                    'pass' is a word only before a number: a phrase may still be named pass.
+                    The region is two marks among the music's items, not a block: a beam, a
+                    tie, a slur and a bar line are drawn across its braces as if they were not
+                    there, and it may span bar lines. A tie across a brace is not HEARD across it:
+                    the note after the brace is struck again (a note of some passes only and one
+                    of every pass cannot be one sound).
+                    Errors: a pass below 1 or a pass named twice (LYS1075), a region inside
+                    another (LYS1076). Warning: a region none of whose notes the music ever plays
+                    — 'pass 2' outside a repeat, 'pass 3' in a repeat played twice (LYS1077). *)
+
+(* Example: |: c'4 d' pass 2 { e' f' } :| *)
+
+(* Example: |: c'2 pass 1 3 { d'2 } :|*3 *)
 
 ================================================================================
 ## 9. Override / Revert (engraving properties)

@@ -3225,9 +3225,15 @@ public sealed class MusicXmlExporter
                 var n = measure.Notes[i];
                 if (n.SourcePosition < 0 && !n.IsGrace && !n.IsBackup && n.RawElement == null)
                     n.SourcePosition = source;
+                // Inside `pass 2 { … }`: the passes the note sounds on.
+                if (_xmlPassRegions.Count > 0 && n.TimeOnly == null && !n.IsBackup && n.RawElement == null)
+                    n.TimeOnly = _xmlPassRegions.Peek().ToString();
             }
         }
     }
+
+    // The `pass N {` regions open in the walk, innermost on top (docs/eval4-features-design.md §3).
+    private readonly Stack<PassSet> _xmlPassRegions = new();
 
     /// <summary>
     /// Puts a <c>&lt;measure-repeat&gt;</c> on a measure, INTO the attributes it already has.
@@ -3343,6 +3349,17 @@ public sealed class MusicXmlExporter
             case MusicBlockSyntax block:
                 foreach (var item in block.Items)
                     ProcessNode(item);
+                break;
+
+            // `pass 2 { … }`: the page's "2nd time only" as words over the first note, and the
+            // passes on each note of the region (MusicXML's time-only, Stamped).
+            case PassStartSyntax passStart:
+                if (_currentMeasure != null && passStart.PrintedText is { } passText)
+                    AddDirection(new MusicXmlDirection { Words = passText, Placement = "above" });
+                _xmlPassRegions.Push(passStart.Passes);
+                break;
+            case PassEndSyntax:
+                _xmlPassRegions.TryPop(out _);
                 break;
 
             case NoteSyntax note:

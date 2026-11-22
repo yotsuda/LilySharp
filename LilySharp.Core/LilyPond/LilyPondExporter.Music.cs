@@ -891,6 +891,11 @@ public sealed partial class LilyPondExporter
         OctaveDirectiveSyntax or MetadataDeclarationSyntax
             or SectionDeclarationSyntax or FormDeclarationSyntax
             or PartDeclarationSyntax or RenderDeclarationSyntax => "",
+        // `pass 2 { … }` (docs/eval4-features-design.md §3): the text the page prints over the
+        // region's first note, on the empty chord LilyPond hangs a moment's text on; the passes
+        // themselves are the MIDI's (the twin measures the picture).
+        PassStartSyntax { PrintedText: { } passText } => "<>^\\markup { \\italic \"" + Escape(passText) + "\" }",
+        PassStartSyntax or PassEndSyntax => "",
         _ => Skip(item),
     };
 

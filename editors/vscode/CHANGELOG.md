@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **`pass 2 { … }` plays music on some times through a repeat only.** The notes rest on the other passes and print once under "2nd time only"; completion offers `pass`, and hovering it says which passes it sounds on.
 - **An ending may follow a two-voice passage that closes its bar** (`voice { … | } { … | } [1. …`), without an extra `|`.
 - **A cadenza (`time none` in a section's header) exports to LilyPond in time.** Every bar after it used to be a beat off in LilyPond's engraving.
 - **The chords of a section the form leaves out are no longer printed over the first bars.** An excerpt score (`form practice`) shows its own sections' chords alone.

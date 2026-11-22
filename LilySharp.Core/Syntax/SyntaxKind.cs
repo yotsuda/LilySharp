@@ -540,6 +540,10 @@ public enum SyntaxKind : ushort
     Barline,
     /// <summary>A line-break node.</summary>
     Break,
+    /// <summary>Where music of some passes only begins: <c>pass 2 {</c> (docs/eval4-features-design.md §3).</summary>
+    PassStart,
+    /// <summary>The <c>}</c> that ends music of some passes only.</summary>
+    PassEnd,
     /// <summary>A tie node.</summary>
     Tie,
     /// <summary>A slur node.</summary>
@@ -604,6 +608,12 @@ public enum SyntaxKind : ushort
     /// <summary>The <c>up</c> / <c>down</c> word before a line of a drum chart, overriding
     /// the stem side its kit pieces would take (hands up, feet down).</summary>
     DrumsLineDirection,
+
+    // === Passes (docs/eval4-features-design.md §3) ===
+    /// <summary>The <c>pass</c> word opening music of some passes only, <c>pass 2 { … }</c>.
+    /// Lexed as an identifier and re-kinded by the parser (only before a number), so
+    /// <c>pass</c> stays an ordinary name everywhere else.</summary>
+    PassOpener,
 
     // === Percent repeat (docs/percent-repeat-design.md) ===
     /// <summary>A percent mark token, <c>%</c> or <c>%N</c>: one repetition of the N bars

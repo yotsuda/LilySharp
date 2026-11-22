@@ -844,6 +844,15 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   a cue is a voice of its own, so close the span inside the cue or keep both ends outside.
   Two `cue` blocks side by side are two voices — a span may not run from one into the next
   either, even though both of its ends are cue notes.
+- Music of some passes only: `pass 2 { … }` — "2nd time only", "tacet 1st x". The notes sound
+  on the passes named and rest (keeping their time) on the others: `|: c'4 d' pass 2 { e' f' } :|`
+  plays c d (rest rest) c d e f. A pass is the time through the repeat around it (`|: … :|`,
+  `:|*3`, the form's repeat); outside a repeat the music plays once, on pass 1. Several passes:
+  `pass 1 3 { … }`. The page prints the notes once under "2nd time only" / "1st & 3rd time"
+  (`pass 2 bare { … }` prints no text — write your own `@text`). Not an ending: `[1. …]` is
+  skipped, a `pass` region is silent. It may span bar lines; beams, ties and slurs are drawn across
+  its braces (a tie across a brace is struck again, not held). `pass 0`, `pass 2 2` (LYS1075) and a `pass` inside a `pass` (LYS1076) are errors;
+  a region the music never plays (`pass 2` with no repeat) is a warning (LYS1077)
 - Feathered beams: `c16@feather(right) d e f` (accel), `@feather(left)` (rit) — on sixteenths
   or shorter: the fan is the beams spreading, and an eighth's one beam stays a plain beam. Drawn
   only: the notes play evenly

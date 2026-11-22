@@ -1197,8 +1197,15 @@ public sealed class MidiExporter
         // A book played along its timeline (below) takes its words afterwards, on the notes as
         // they are PLAYED: a verse is the words of a pass, and the printed timeline has one.
         bool playedLater = _timeline is { Count: > 0 };
+        var passRegionsWritten = new HashSet<int>();
+        foreach (var n in mainTrack.Notes)
+            if (n.PassRegionAt >= 0)
+                passRegionsWritten.Add(n.PassRegionAt);
         if (!playedLater)
+        {
+            KeepPassNotes(mainTrack, null);
             SingLyrics(tree, mainTrack);
+        }
         SplitIntoPartTracks(midi, mainTrack);
         AddPedals(midi, mainTrack.Name);
         // Each note's printed bar, while the notes and the bar lines are still as printed.
@@ -1207,6 +1214,8 @@ public sealed class MidiExporter
         if (_timeline is { Count: > 0 } marks)
         {
             var passes = PlayedTimeline.Unfold(midi, marks, printedEnd);
+            foreach (var partTrack in midi.Tracks)
+                KeepPassNotes(partTrack, passes);
             var played = new MidiTrack();
             foreach (var partTrack in midi.Tracks)
                 played.Notes.AddRange(partTrack.Notes);
@@ -1216,8 +1225,38 @@ public sealed class MidiExporter
                 midi.Tracks[1].Lyrics.AddRange(played.Lyrics);
         }
 
+        if (passRegionsWritten.Count > 0)
+        {
+            foreach (var track in midi.Tracks)
+                foreach (var n in track.Notes)
+                    if (n.PassRegionAt >= 0)
+                        passRegionsWritten.Remove(n.PassRegionAt);
+            SilentPassRegions = passRegionsWritten;
+        }
+
         return midi;
     }
+
+    // The `pass N {` regions open in the walk: the track, its first note's index, the passes.
+    private readonly Stack<(MidiTrack Track, int First, PassSet Passes, int At)> _passRegions = new();
+
+    /// <summary>
+    /// After <see cref="Export(SyntaxTree)"/>: the source positions of the <c>pass N { … }</c>
+    /// regions that wrote notes and none of whose notes is played — every pass named is one the
+    /// music never makes there (a <c>pass 2</c> outside a repeat, a <c>pass 3</c> in a repeat
+    /// played twice). <see cref="Semantics.PassRegionValidator"/> warns about them.
+    /// </summary>
+    public IReadOnlyCollection<int> SilentPassRegions { get; private set; } = [];
+
+    /// <summary>
+    /// Drops each note written inside <c>pass N { … }</c> from the passes it is not of: the
+    /// pass of the PLAYED tick it starts at (<see cref="PlayedTimeline.PassAt"/>, the table a
+    /// `verse N` reads), or pass 1 in a book that plays straight through (<paramref name="passes"/>
+    /// null). Its time stays: the bar sounds a rest where it was dropped.
+    /// </summary>
+    private static void KeepPassNotes(MidiTrack track, IReadOnlyList<RepeatStream.PassStretch>? passes)
+        => track.Notes.RemoveAll(n => !n.OnlyPasses.IsEmpty
+            && !n.OnlyPasses.Contains(passes == null ? 1 : PlayedTimeline.PassAt(passes, n.StartTick)));
 
     /// <summary>Gives every note the bar it is printed in (<see cref="MidiNote.PrintedBar"/>): the
     /// number of printed bar lines at or before its start — so a pickup is bar 0 and the first
@@ -1741,6 +1780,28 @@ public sealed class MidiExporter
                     if (track.Notes.Count > firstCued)
                         _tiePending = false;
                 }
+                break;
+
+            // `pass 2 { … }` (docs/eval4-features-design.md §3): its notes are played as any
+            // others — they take their time, move the relative frame, fill their bars — and are
+            // stamped with the passes they sound on; KeepPassNotes drops them from the others once
+            // the music is played. Its dynamics and pedals are the player's: they stand.
+            // ⚠️ A tie is cut at either brace: it would merge a note of some passes with one of
+            // every pass into one note, which then sounds on the region's passes only (MEASURED:
+            // '|: c'2 pass 2 { e'2~ } | e'1 :|' lost the e'1 on the first pass). Where both sides
+            // sound, the note after the brace is struck again.
+            case PassStartSyntax passStart:
+                _tiePending = false;
+                _passRegions.Push((track, track.Notes.Count, passStart.Passes, passStart.SourceStart));
+                break;
+            case PassEndSyntax:
+                _tiePending = false;
+                if (_passRegions.TryPop(out var region))
+                    for (int i = region.First; i < region.Track.Notes.Count; i++)
+                        if (region.Track.Notes[i].OnlyPasses.IsEmpty)
+                        {
+                            region.Track.Notes[i] = region.Track.Notes[i] with { OnlyPasses = region.Passes, PassRegionAt = region.At };
+                        }
                 break;
 
             case MusicBlockSyntax block:

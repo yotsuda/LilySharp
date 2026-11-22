@@ -201,6 +201,8 @@ public abstract class SyntaxNode
             SyntaxKind.Duration => new DurationSyntax((DurationGreen)green, this, position),
             SyntaxKind.Barline => new BarlineSyntax((BarlineGreen)green, this, position),
             SyntaxKind.Break => new BreakSyntax((BreakGreen)green, this, position),
+            SyntaxKind.PassStart => new PassStartSyntax((PassStartGreen)green, this, position),
+            SyntaxKind.PassEnd => new PassEndSyntax((PassEndGreen)green, this, position),
             SyntaxKind.Tie => new TieSyntax((TieGreen)green, this, position),
             SyntaxKind.Slur => new SlurSyntax((SlurGreen)green, this, position),
             SyntaxKind.BeamMarker => new BeamMarkerSyntax((BeamMarkerGreen)green, this, position),

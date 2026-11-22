@@ -130,3 +130,37 @@
 - **MusicXML の読み込み**: 調号も `<key-step>` も無い `<key>` は `key none` で戻す（今は何で戻るかを作る前に測る）。
 - ⚠️ Claude の判断: `none` の後ろに音名や mode を書いたらエラー／part header の `key none` はその part だけ（ほかの part は自分の調）。
 
+## 3. 回ごとに違う演奏 `pass 2 { … }`（第1279 で設計・第1368 で実装・着手はオーナー 2026-11-15）
+
+- **背景**: "2nd time only"・"tacet 1st x" は `@text("2nd x only")` を書くだけで、MIDI は毎回鳴っていた（評価 4 の 3・評価 5 の B4）。
+- **綴り**: 音楽の中の区間 `pass 2 { … }`。回は 1 つ以上（`pass 1 3 { … }`）、`{` の前に `bare` で文字を刷らない
+  （`pass 2 bare { … }`＝`tuplet 3/2 bare { }` と同じ並び）。`pass` は予約語にしない＝音楽の中で**後ろに整数が来るときだけ**
+  区間の語（`drums {` と同じ文脈語・パーサーが `PassOpener` に付け替える＝色付け）。`pass` という名前の phrase は今までどおり呼べる。
+- **構文**: ブロックではなく、音楽の項目の間の **2 つの印**（`PassStartSyntax`・`PassEndSyntax`）。中の音は外の音楽の項目のまま
+  ＝連桁・タイ・スラー・小節線は印を素通りし、回を訊かない読み手は今までどおりに読む（`Parser.ParsePass` が本体を待ち行列に積む）。
+- **意味**: 中の音は**その回だけ鳴り、ほかの回は同じ長さの休み**。譜面は 1 回だけ刷る（普通の音符）。
+  回は、その場所を通る**何回目か**＝`verse N` の歌詞と同じ 1 つの表（`PlayedTimeline.PassAt`）: form の `|: … :|`・
+  音楽の中の `|: … :|`・`:|*N`・1 本だけの `:|`（頭から 2 回目）。反復の外は 1 回目。D.S.／D.C. で戻った所は最後の回。
+  ⇒ ending（`[1. …]`）とは別物: ending は**飛ばす**（時間を取らない）、`pass` は**黙る**（時間を取る）。
+- **刷る文字**（英語固定・オーナー決定）: 区間の最初の音（休符でも・spacer と装飾音は除く）の上に斜体で、`@text("…").up` と同じ絵
+  （`MeasureCollector.CollectArticulations` が `DynamicItem` を足す。最初の音は `Semantics.PassRegions`＝木ごとの表・green の検索で
+  打鍵では索引を作らない）。`pass 1`＝"1st time only"、`pass 2`＝"2nd time only"、`pass 3`＝"3rd time only"、`pass 4`＝"4th time only"／
+  2 つ＝"1st & 3rd time"／3 つ以上＝"1st, 2nd & 4th time"。`bare` は刷らない。
+- **音**（MIDI・プレビュー・WAV・歌い手は 1 本の道）: 歩きは 1 回のまま、区間の中で打った音に回の集合を付け
+  （`MidiNote.OnlyPasses`）、`PlayedTimeline.Unfold` の後・`SingLyrics` の前に、鳴る tick の回が集合に無い音を落とす（`KeepPassNotes`）。
+  反復の無い本（timeline なし）は全部 1 回目。区間の中の言葉は、音が落ちた回には歌われない（音が無い）。
+  区間の中の強弱・ペダルは回を問わずそのまま（書いた人の流れ。cue のように巻き戻さない）。
+- **MusicXML**: 文字は `<direction><words>`（above）、区間の中の音に `time-only="2"`（複数は `"1,3"`・`Stamped` が付ける）。
+- **`.ly`**: 文字だけ（`<>^\markup { \italic "2nd time only" }`）。双子は絵を測るもので、音は Lily# の MIDI。
+- **診断**: 回が 1 未満・同じ回を 2 度＝LYS1075／`pass` の中の `pass`＝LYS1076（どちらもエラー）／一度も鳴らない区間
+  （2 回しか通らないのに `pass 3`、反復の外の `pass 2`）＝LYS1077 の警告。LYS1077 は MIDI を書き出して読む
+  （`MidiExporter.SilentPassRegions`＝区間の音のうち演奏の後に 1 つも残らなかった区間・`pass` を書いた本だけ）。
+  一部の回だけ届かない形（2 回の反復の `pass 2 3`）は鳴る回があるので言わない。
+- **エディタ**: 補完（音楽の中の `pass`）・色付け（`PassOpener`）・hover（`LanguageReference`）・文書 3 冊（GRAMMAR・GRAMMAR_FOR_LLM・SYNTAX_REFERENCE）。
+- ⚠️ Claude の判断: 回の数え方は歌詞の `verse` と同じ表に乗せる（案の文面は「form の `|: … :|` の回」＝音楽に反復記号を
+  書けるようになる前の文）／区間は小節線をまたいでよい。
+- **タイは区間の括弧で切る**（MIDI の `_tiePending`）: 合わさると全部の回の音が区間の回だけ鳴る音になる（実測: `|: c'2 pass 2 { e'2~ } | e'1 :|` が 1 回目に e'1 を失った）。両側が鳴る回は括弧の後の音を打ち直す。区間の中どうしのタイはそのまま。
+- **残り（未測定）**: 
+  区間の最初が装飾音のときの文字の位置／区間の中の `voice { } { }`・`%`・cue との組み合わせの音。
+- **作らないもの**: 回ごとに**違う音**（1 回目は A、2 回目は B を同じ小節に）は `pass 1 { } pass 2 { }` と並べても時間が
+  2 倍になる＝ending か `voice { } { }` で書く。MusicXML の読み込み（`time-only` を `pass` に戻す）。
