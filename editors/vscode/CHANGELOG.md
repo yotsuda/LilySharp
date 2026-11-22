@@ -7,7 +7,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **An 8va or 15ma in a cadenza (`time none`) covers its whole run.** It ended after the first beat, the rest drawn on many ledger lines.
 - **A trill's written-out termination (`afterGrace`) is drawn after `@trill(flat)`.** Any `@name(…)` mark on the main note made the run disappear from the preview.
 - **A fermata within the piece no longer rings over the next bar.** Its note sounded on into the next harmony; it now stops where the music goes on, and a closing fermata still rings longer.
-- **A transposed part no longer reads a key of seven or more sharps or flats when fewer would do.** A clarinet in A over D♭ major showed F♭ major (eight flats); it now shows E major, its notes spelled in it.
+- **A transposed part no longer reads a key of eight sharps or flats.** A clarinet in A over D♭ major showed F♭ major (eight flats); it now shows E major, its notes spelled in it.
 - **A part in another key keeps its key signature in an exported .mid.** `part a { key d major }` in a piece in C was read back in C by other programs; the part's track now says D.
 - **`key none`, `time none` and `key custom` are coloured as one keyword.** The word after `key` or `time` was left plain, though `major` and `minor` are coloured.
 - **A script written before a full-bar rest no longer sounds on the next note.** `<>@accent R1 | d''1` played the d'' accented, though the accent is drawn over the rest.

@@ -202,8 +202,8 @@ public sealed class MusicXmlExporter
     }
 
     /// <summary>The fifths the part's transpose is respelled by in the key in force, as the page
-    /// does it (Svg.Collector.OctaveContext.ArmKey): 0, or ±12 where the key would print seven
-    /// or more sharps or flats and its enharmonic twin fewer.</summary>
+    /// does it (Svg.Collector.OctaveContext.ArmKey): 0, or ±12 where the key would print eight
+    /// or more sharps or flats.</summary>
     private int KeyRespell()
         => _currentTranspose is { } trk && !OnPercussionStaff
             ? PitchTransposer.KeyRespellFor(_keyFifths + PitchTransposer.KeySignatureFifthsShift(trk.step, trk.alt))

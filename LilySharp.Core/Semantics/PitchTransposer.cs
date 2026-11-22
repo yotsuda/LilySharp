@@ -147,13 +147,14 @@ public static class PitchTransposer
     }
 
     /// <summary>How many fifths to respell a transposition by so that the key it prints is not one
-    /// of seven or more sharps or flats where twelve fifths away has fewer: 0, +12 or −12.</summary>
+    /// of eight or more sharps or flats — a signature with a double sharp or flat in it: 0, +12 or
+    /// −12.</summary>
     /// <remarks>LILYSHARP-OWN (session 1363): LilyPond's <c>\transpose</c> keeps the interval's
-    /// spelling, so a clarinet in A over a piece in D♭ major reads F♭ major — eight flats, a
-    /// double flat in the signature — and one in B♭ over B major reads C♯ major. A publisher
-    /// prints E major and D♭ major: the part's player reads the key with fewer accidentals.</remarks>
+    /// spelling, so a clarinet in A over a piece in D♭ major reads F♭ major — eight flats, B𝄫 in
+    /// the signature — where a publisher prints E major. Seven (C♯ or C♭ major) is a key players
+    /// read and a writer may choose (<c>transpose +1 sharp</c>), and is left as it is.</remarks>
     public static int KeyRespellFor(int writtenFifths)
-        => Math.Abs(writtenFifths) >= 7 && Math.Abs(writtenFifths - 12 * Math.Sign(writtenFifths)) < Math.Abs(writtenFifths)
+        => Math.Abs(writtenFifths) >= 8
             ? -12 * Math.Sign(writtenFifths)
             : 0;
 

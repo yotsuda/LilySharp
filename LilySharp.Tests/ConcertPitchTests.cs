@@ -112,21 +112,21 @@ public sealed class ConcertPitchTests
     }
 
     /// <summary>
-    /// A transposed part in a key that would print seven or more sharps or flats takes its
-    /// enharmonic twin, and its notes are spelled in it (session 1363; LilyPond's \transpose
+    /// A transposed part in a key that would print eight or more sharps or flats — a double sharp
+    /// or flat in its signature — takes its enharmonic twin, and its notes are spelled in it (session 1363; LilyPond's \transpose
     /// keeps the interval, and a clarinet in A over D♭ major read F♭ major, eight flats with a
-    /// double flat): D♭ major → E major for the clarinet in A, B major → D♭ major for the one in
-    /// B♭. Where the key comes back to one the interval prints well, the interval comes back
+    /// double flat): D♭ major → E major for the clarinet in A, F♯ major → A♭ major for the one
+    /// in B♭; B major stays C♯ major for it. Where the key comes back to one the interval prints well, the interval comes back
     /// with it — a section header's key, the home key a section returns to, and a key written
     /// in the music, on the page and in the MusicXML alike.
     /// </summary>
     [Theory]
-    [InlineData("clarinet-a", "key des major", "G#5 A5 B5 C#6 | Ab5 | Eb5 G#5", "4 -3 4")]
-    [InlineData("clarinet", "key b major", "Db6 Eb6 F6 Gb6 | G5 | D5 Gb5", "-5 2 -5")]
-    public void ATransposedKeyOfSevenOrMore_IsSpelledAsItsTwin(string instrument, string sectionKey, string pitches, string fifths)
+    [InlineData("clarinet-a", "key des major", "f'4 ges' aes' bes'", "f'", "G#5 A5 B5 C#6 | Ab5 | Eb5 G#5", "4 -3 4")]
+    [InlineData("clarinet", "key fis major", "fis'4 gis' ais' b'", "fis'", "Ab5 Bb5 C6 Db6 | G5 | D5 Ab5", "-4 2 -4")]
+    // Seven is a key players read (and `transpose +1 sharp` chooses): C♯ major stays.
+    [InlineData("clarinet", "key b major", "b'4 cis'' dis'' e''", "e'", "C#6 D#6 E#6 F#6 | G5 | D5 F#5", "7 2 7")]
+    public void ATransposedKeyOfEightOrMore_IsSpelledAsItsTwin(string instrument, string sectionKey, string first, string music, string pitches, string fifths)
     {
-        string first = sectionKey == "key des major" ? "f'4 ges' aes' bes'" : "b'4 cis'' dis'' e''";
-        string music = sectionKey == "key des major" ? "f'" : "e'";
         string source = $"octave absolute\npitch concert\ntime 4/4\nkey c major\npart x {{ instrument {instrument} octave 4 }}\n"
             + $"section A {{ {sectionKey}\n x {{ {first} | }} }}\nsection B {{ x {{ f'1 | }} }}\n"
             + $"section C {{ x {{ c'1 | {sectionKey} {music}1 | }} }}\nform {{ A B C }}\nscore pitch transposed {{ staff x }}\n";

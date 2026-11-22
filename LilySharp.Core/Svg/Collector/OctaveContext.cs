@@ -238,8 +238,8 @@ internal sealed class OctaveContext
     /// <summary>
     /// Arms a key as the source writes it (<paramref name="sharps"/>) under the part transpose,
     /// and answers the key the part prints: C major (0) transposed by d becomes D major (+2).
-    /// A key that would print seven or more sharps or flats where its enharmonic twin prints
-    /// fewer takes the twin, and the pitches under it are respelled with it (session 1363).
+    /// A key that would print eight or more sharps or flats (a double sharp or flat in its
+    /// signature) takes its enharmonic twin, and the pitches under it are respelled with it (session 1363).
     /// LILYPOND-REF: \transpose also moves \key.
     /// </summary>
     public int ArmKey(int sharps)
