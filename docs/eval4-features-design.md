@@ -190,4 +190,12 @@
 - **診断**: 知らない preset＝エラー（part header と同じ文と候補）／上の作らない形＝エラー。
 - **書き出し（段 2）**: MusicXML は `<sound><instrument-change>` と `<attributes><transpose>`、`.ly` は文字と `\set Staff.midiInstrument`・
   `\transposition`。段 1 では `.ly` は文字だけ、MusicXML は文字だけ（音色と移調は最初の楽器のまま＝既知の穴として書く）。
-- **段取り**: 段 1＝構文・音（音色・移調）・音域・文字・診断・補完と文書／段 2＝段頭の名前・MusicXML と `.ly` の音色と移調・譜面の移調が動く本。
+- **段取り**: 段 1＝構文・音（音色・移調）・音域・文字・診断・補完と文書＝**第1368 `1e351abe1` で実装**（網 19・毒 10 本は赤）。
+  実装の形: 音ごとの `MidiNote.Instrument`、`MidiTrack.ProgramOf`（`.mid`・LSP の `G`・`lysc notes`・試し聴き）、`toEvents`／`MidiOutEvents.From` は
+  program が替わる所で送る、文字は `Semantics.OnsetMarks`（pass の文字と 1 つの表）、診断は `InstrumentSwitchValidator`（LYS1078・知らない preset は header の文）。
+  段 2＝段頭の名前・MusicXML の音色と移調・譜面の移調が動く本。
+- **段 2 の前にオーナーに訊くこと**: ⑴ **段頭の短い名前**＝今は score 全体で「最初の段は長い名前・以降は短い名前」の 1 組（`SharedRenderer.DrawInstrumentNames`）。
+  持ち替えの後の段に新しい楽器の短い名前を出すには、preset に短い名前（Picc.・B. Cl.）の表が無い＝表を足すか、持ち替えに書いた "名前" を
+  短い名前として使うか（その場合、替わる所の文字も同じ "名前"）。⑵ 実音の本・実音の score での移調の違う持ち替え（今は LYS1078）を描くか
+  ＝パートの移調を時間で替える＝`transpose` の通り道（`ConcertPitch`）・調号の刷り直し・4 つの読み手の大きい変更。⑶ MusicXML の
+  `<sound><instrument-change>` と途中の `<transpose>`（⑴⑵ と独立・小さい）。
