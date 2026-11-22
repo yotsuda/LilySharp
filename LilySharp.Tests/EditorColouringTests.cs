@@ -525,6 +525,32 @@ public class EditorColouringTests
         }
     }
 
+    [Theory]
+    [InlineData("key none")]
+    [InlineData("key  none")]
+    [InlineData("key! none")]
+    [InlineData("key custom")]
+    [InlineData("time none")]
+    [InlineData("time! none")]
+    public void TheWordAfterKeyOrTime_IsColouredWithIt(string spelling)
+    {
+        // `key none`, `time none`, `key custom` (session 1360): the word is the keyword's, as
+        // `major` is — and the rule taking both must come before every list that colours the
+        // bare `key` or `time` in that context, or TextMate takes the keyword alone and leaves
+        // the word plain (as it did until session 1360).
+        foreach (string context in new[] { "keywords", "part-body" })
+        {
+            var patterns = ContextPatterns(context);
+            int both = patterns.FindIndex(p => Covers(p, spelling));
+            int bare = patterns.FindIndex(p => Regex.Match(spelling, p) is { Success: true, Index: 0 } m && m.Length < spelling.Length);
+            Assert.True(both >= 0, $"{context}: no rule colours `{spelling}`");
+            Assert.True(bare < 0 || both < bare, $"{context}: `{spelling}` — the rule ({both}) comes after the bare keyword ({bare})");
+        }
+        // …and only after the keyword, as a word of its own.
+        foreach (string not in new[] { "keynone", "key nonesuch", "time custom", "key c" })
+            Assert.DoesNotContain(ContextPatterns("keywords"), p => Covers(p, not) && p.Contains("none"));
+    }
+
     /// <summary>The match patterns one context tries, in the order TextMate tries them: its own
     /// <c>patterns</c>, each <c>#include</c> expanded in place.</summary>
     private static List<string> ContextPatterns(string rule)

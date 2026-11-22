@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **`key none`, `time none` and `key custom` are coloured as one keyword.** The word after `key` or `time` was left plain, though `major` and `minor` are coloured.
 - **A script written before a full-bar rest no longer sounds on the next note.** `<>@accent R1 | d''1` played the d'' accented, though the accent is drawn over the rest.
 - **A tuplet bracket no longer runs through a note moved with `@cross`.** It reaches the moved note on the other staff, as LilyPond draws it.
 - **`paper { raggedRight }` fills the lines before the last one.** Seven bars of which five fit on a line were set 3+4; they are now set 5+2, as LilyPond sets them.

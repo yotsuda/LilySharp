@@ -882,6 +882,18 @@
             "comment": "The force mark: `key! ees major`, `time! 3/4`, `clef! bass` draw a restatement that changes nothing (2026-10-02). Included BEFORE every list that colours the bare keyword, so the `!` is taken with it; a `!` anywhere else is the dashed barline.",
             "patterns": [
                 {
+                    "comment": "`key none`, `time none` and `key custom` (session 1360): the word after the keyword is the keyword's, as `major` is, forced or not (`key! none`). Here, since this rule comes before every list that colours the bare keyword; until session 1360 the word was left plain.",
+                    "match": "\\b(?:(key)(?:\\s*(!)\\s*|\\s+)(none|custom)|(time)(?:\\s*(!)\\s*|\\s+)(none))\\b",
+                    "captures": {
+                        "1": { "name": "keyword.other.lilysharp" },
+                        "2": { "name": "keyword.operator.force.lilysharp" },
+                        "3": { "name": "keyword.other.lilysharp" },
+                        "4": { "name": "keyword.other.lilysharp" },
+                        "5": { "name": "keyword.operator.force.lilysharp" },
+                        "6": { "name": "keyword.other.lilysharp" }
+                    }
+                },
+                {
                     "match": "\\b(key|time|clef)\\s*(!)",
                     "captures": {
                         "1": { "name": "keyword.other.lilysharp" },
