@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Fixed: an ending right after a `voice { } { }` span was refused** (`[check]`). `voice { e''4 f'' g'' a'' | } { c''2 c'' | } [1. …` said "The ending '[1.' opens inside a bar", though every voice of the span closed its bar; a `|` had to be added after the span. The span's bar line is now the ending's.
+
 - **Fixed: a section that opens with `time none` shifted every bar after it in the LilyPond export** (`[export]`). Each bar of the cadenza went out with `\partial`, and LilyPond carried the displaced position on: "mid-measure time signature without \partial", "bar check failed", and every later bar a beat off. A section header's `time none` is now written as a cadenza with no `\partial`, as one written in the music already was.
 
 - **Fixed: the chords of a section the form does not play were crammed into the first bars** (`[engraving]`). With `form { A B }` and a section C written for later, C's chord symbols were printed over A's first bars beside A's own; an excerpt score (`score practice { form practice … }`) printed every other section's chords over its own. A section the form leaves out now prints no chords. The MIDI, MusicXML and LilyPond export were right.

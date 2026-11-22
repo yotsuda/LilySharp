@@ -112,6 +112,12 @@ internal sealed class MusicRepeatValidator : ISemanticValidator
 
     /// <summary>Whether timed music stands beside <paramref name="sign"/> in its own bar —
     /// between it and the nearest bar line (or ending, or the scope's edge) on that side.</summary>
+    /// <remarks>Looking back, a voice span whose every voice ends on its own bar line
+    /// (`voice { … | } { … | } [1.`) is that bar line: until session 1364 the ending after it was
+    /// refused as opening inside a bar, though the page and the play read the bar line the span
+    /// wrote (Lab sessions/p1362/eval5 piano r-01). A phrase reference is not: its closing bar
+    /// line is handed to the `|` written after it (`one | [1.`, no bar added), and that `|` is
+    /// what the message asks for.</remarks>
     private static bool MusicInTheBar(SyntaxNode sign, bool before)
     {
         if (sign.Parent is not { } parent)
@@ -122,11 +128,24 @@ internal sealed class MusicRepeatValidator : ISemanticValidator
         {
             if (siblings[i] is BarlineSyntax or InlineVoltaSyntax)
                 return false;
+            if (before && EndsOnABarLine(siblings[i]))
+                return false;
             if (siblings[i] is not SyntaxTokenNode && SectionSigns.TakesTime(siblings[i]))
                 return true;
         }
         return false;
     }
+
+    /// <summary>Whether <paramref name="item"/>'s music ends on a bar line of its own: a voice span
+    /// every voice of which does, a block whose last item does.</summary>
+    private static bool EndsOnABarLine(SyntaxNode item) => item switch
+    {
+        BarlineSyntax => true,
+        ParallelExpressionSyntax span => span.ChildNodes().Where(n => n is not SyntaxTokenNode).ToList() is { Count: > 0 } voices
+            && voices.All(EndsOnABarLine),
+        MusicBlockSyntax block => block.ChildNodes().LastOrDefault(n => n is not SyntaxTokenNode) is { } last && EndsOnABarLine(last),
+        _ => false,
+    };
 
     // ───────────────────────── on the column ─────────────────────────
 

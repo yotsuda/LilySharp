@@ -55,6 +55,10 @@ public sealed class MusicRepeatValidatorTests
     // An ending inside a bar; written with a line before it, it is one cut bar and says nothing.
     [InlineData("|: c'4 d e f | g a [1. b c :| [2. b g ] | c1 |", "LYS1071@[1.")]
     [InlineData("|: c'4 d e f | g a | [1. b c :| [2. b g ] | c1 |", "")]
+    // A voice span whose voices end on their own bar line is that bar line (session 1364: the
+    // ending after it was refused); one whose voices do not, is not.
+    [InlineData("|: voice { e''4 f'' g'' a'' | } { c''2 c'' | } [1. g''1 :| [2. c''1 | ] c1 |", "")]
+    [InlineData("|: c'1 | voice { e''4 f'' } { c''2 } [1. g''2 :| [2. c''2 | ] c1 |", "LYS1071@[1.")]
     // …and once only: the body's one bar is there, it has no line of its own yet — so the
     // repeat is not also told it has no body (LYS1041 stood beside this until 2026-11-15).
     [InlineData("|: c'1 [1. d1 :| [2. e1 ] | c1 |", "LYS1071@[1.")]
