@@ -644,9 +644,16 @@ internal sealed partial class LayoutEngine
         double em = LilySharp.Core.Rendering.SharedRenderer.InstrumentNameEm(fonts);
         var style = LilySharp.Core.Rendering.SharedRenderer.InstrumentNameStyle(fonts);
         double widest = 0;
-        foreach (var (_, staff, _) in score.EnumerateStaves())
-            if ((shortNames ? staff.ShortInstrumentName : staff.InstrumentName) is { Length: > 0 } name)
-                widest = Math.Max(widest, fonts.Advance(name, em, TextRole.Instrument, style));
+        foreach (var (_, staff, index) in score.EnumerateStaves())
+        {
+            // The later systems' names include the instrument changes' (SharedRenderer.ShortNameAt).
+            var names = shortNames
+                ? LilySharp.Core.Rendering.SharedRenderer.ShortNamesOf(score, index, staff.ShortInstrumentName)
+                : [staff.InstrumentName];
+            foreach (var candidate in names)
+                if (candidate is { Length: > 0 } name)
+                    widest = Math.Max(widest, fonts.Advance(name, em, TextRole.Instrument, style));
+        }
         if (widest <= 0)
             return 0;
         return widest + MultiStaffLayouter.SystemStartReach(score)

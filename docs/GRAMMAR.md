@@ -2951,13 +2951,13 @@ MidMusicCommand = 'clef' , [ '!' ] , ClefName       (* '!' forces a clef that ch
                                                       LilyPond; a tuplet's body may hold one. *)
                | 'key' , [ '!' ] , PitchBase , [ Accidental-text ] , Mode
                | 'time' , [ '!' ] , Integer , '/' , Integer
-               | 'instrument' , Preset , [ String ]   (* THE PLAYER CHANGES INSTRUMENT here
+               | 'instrument' , Preset , [ String , [ String ] ]   (* THE PLAYER CHANGES INSTRUMENT here
                                                       (docs/eval4-features-design.md §1;
                                                       2026-11-22): from here the part sounds the
                                                       preset — its MIDI program and its
                                                       transposition — and is checked against its
                                                       range; the page prints its name (the
-                                                      String, else the preset's) over the next
+                                                      first String, else the preset's) over the next
                                                       note or rest, as '@text("…").up'. The notes,
                                                       the clef and the key stay as written, so
                                                       write 'clef' yourself if it changes, and
@@ -2971,8 +2971,20 @@ MidMusicCommand = 'clef' , [ '!' ] , ClefName       (* '!' forces a clef that ch
                                                       concert pitch, or one a score prints at
                                                       concert pitch, the two differing by more
                                                       than octaves (LYS1078; not drawn yet).
-                                                      MusicXML and the twin write the name; their
-                                                      sound stays the part's own for now. *)
+                                                      The second String is its SHORT name: the
+                                                      staff's later systems are headed by it
+                                                      from the change on, as a part's own short
+                                                      name heads them ('part fl "Flute" "Fl."').
+                                                      A part that writes a short name and a
+                                                      change that writes none: those systems
+                                                      print no name (LYS1079, a warning) - save a
+                                                      change back to the part's own instrument
+                                                      with no names, which takes the part's own
+                                                      names again. MusicXML writes the change as
+                                                      <sound><instrument-change> with its program,
+                                                      <instrument> on the notes and, typed as
+                                                      written, a <transpose>; the twin writes the
+                                                      name. *)
                | 'time' , [ '!' ] , 'none'          (* unmetered from here to the next
                                                       'time N/M' — see TimeDecl §2 *)
                | 'partial' , DurationToken         (* this bar is that long — at a bar's

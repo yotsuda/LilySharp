@@ -847,7 +847,7 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
 - A player changing instrument (Fl. → Picc., Cl. → B.Cl.): write `instrument piccolo` in the
   part's music, usually after a rest — `R1*4 | instrument piccolo c'''4 d''' e''' f''' |`. From
   there the part sounds the preset (its sound, transposition and range) and the page prints
-  "Piccolo" over the next note; `instrument piccolo "Picc."` prints the quoted name. The notes,
+  "Piccolo" over the next note. Give it names as a part's are given — `instrument piccolo "Piccolo" "Picc."` — and the later systems are headed "Picc."; in a part that writes a short name, a change with none leaves them unnamed (LYS1079 warns). The notes,
   the clef and the key stay as written (write `clef bass` yourself for a bass clarinet's change of
   clef, and `@text("to Picc.")` in the rest before if you want the warning). Change back with
   `instrument flute`. Keep one part per player instead of a part per instrument. In a book typed

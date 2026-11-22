@@ -134,6 +134,24 @@ internal sealed class MusicXmlDocument
                     new XElement("midi-channel", channel),
                     new XElement("midi-program", program + 1)));
             }
+            // The instruments the part changes to (`instrument piccolo`): one <score-instrument>
+            // each, on the part's channel. The schema keeps every score-instrument before the
+            // midi-instruments.
+            if (part.ChangedInstruments.Count > 0)
+            {
+                int channel = i < 9 ? i + 1 : Math.Min(16, i + 2);
+                var firstMidi = scorePart.Elements("midi-instrument").FirstOrDefault();
+                string Real(string changedId) => id + changedId[MusicXmlPart.InstrumentPlaceholder.Length..];
+                foreach (var (changedId, name, _) in part.ChangedInstruments)
+                {
+                    var score = new XElement("score-instrument", new XAttribute("id", Real(changedId)), new XElement("instrument-name", name));
+                    if (firstMidi != null) firstMidi.AddBeforeSelf(score); else scorePart.Add(score);
+                }
+                foreach (var (changedId, _, changedProgram) in part.ChangedInstruments)
+                    if (changedProgram is int p)
+                        scorePart.Add(new XElement("midi-instrument", new XAttribute("id", Real(changedId)),
+                            new XElement("midi-channel", channel), new XElement("midi-program", p + 1)));
+            }
             partList.Add(scorePart);
             // Inner groups close first.
             for (int g = PartGroups.Count - 1; g >= 0; g--)
@@ -190,6 +208,10 @@ internal sealed class MusicXmlPart
     /// <summary>The part's General MIDI program (0-based), written as its
     /// <c>&lt;midi-instrument&gt;</c>; null writes none.</summary>
     public int? MidiProgram { get; set; }
+
+    /// <summary>The instruments the part changes to in its music (<c>instrument piccolo</c>):
+    /// each one's <c>&lt;score-instrument&gt;</c> id, name and program (0-based, or null).</summary>
+    public List<(string Id, string Name, int? Program)> ChangedInstruments { get; } = new();
     public List<MusicXmlMeasure> Measures { get; } = new();
 
     /// <summary>The part's tablature staff, or null when the score shows it on none.</summary>
@@ -243,8 +265,18 @@ internal sealed class MusicXmlPart
                 unpitched.SetElementValue("display-octave", 4);
             }
         }
+
+        // The instrument ids written before the part had its id (an instrument change's
+        // `@@-I2`, InstrumentPlaceholder) take it now.
+        if (ChangedInstruments.Count > 0)
+            foreach (var attr in part.Descendants().Attributes("id").Where(a => a.Value.StartsWith(InstrumentPlaceholder, StringComparison.Ordinal)))
+                attr.Value = id + attr.Value[InstrumentPlaceholder.Length..];
         return part;
     }
+
+    /// <summary>What stands for the part's id in an instrument id written before the part has
+    /// one (<c>@@-I2</c> becomes <c>P3-I2</c>).</summary>
+    public const string InstrumentPlaceholder = "@@";
 }
 
 /// <summary>
@@ -669,18 +701,7 @@ internal sealed class MusicXmlAttributes
             attrs.Add(new XElement("staff-details", new XElement("capo", capo)));
 
         if (TransposeSemitones is { } semis && semis != 0)
-        {
-            // Whole octaves get <octave-change> and a zero chromatic, which is how every
-            // octave-transposing instrument is written; anything else is a plain chromatic
-            // shift with the diatonic step it implies.
-            int octaves = semis / 12, rest = semis % 12;
-            var tr = new XElement("transpose",
-                new XElement("diatonic", rest == 0 ? 0 : DiatonicStepsFor(rest)),
-                new XElement("chromatic", rest));
-            if (octaves != 0)
-                tr.Add(new XElement("octave-change", octaves));
-            attrs.Add(tr);
-        }
+            attrs.Add(TransposeElement(semis));
 
         if (MeasureRepeat != null)
         {
@@ -701,6 +722,22 @@ internal sealed class MusicXmlAttributes
             attrs.Add(new XElement("measure-style", new XElement("multiple-rest", bars)));
 
         return attrs;
+    }
+
+    /// <summary>The <c>&lt;transpose&gt;</c> of an instrument that sounds <paramref name="semis"/>
+    /// from what it reads — also written in the note stream where a part changes instrument.</summary>
+    /// <remarks>Whole octaves get <c>&lt;octave-change&gt;</c> and a zero chromatic, which is how
+    /// every octave-transposing instrument is written; anything else is a plain chromatic shift
+    /// with the diatonic step it implies.</remarks>
+    internal static XElement TransposeElement(int semis)
+    {
+        int octaves = semis / 12, rest = semis % 12;
+        var tr = new XElement("transpose",
+            new XElement("diatonic", rest == 0 ? 0 : DiatonicStepsFor(rest)),
+            new XElement("chromatic", rest));
+        if (octaves != 0)
+            tr.Add(new XElement("octave-change", octaves));
+        return tr;
     }
 
     /// <summary>
@@ -737,6 +774,12 @@ internal sealed class MusicXmlDirection
     /// a pair of parentheses), and <c>other-dynamics</c> would give the level up as text — so
     /// the level stays the element it is, and the parentheses are words beside it.</summary>
     public bool Editorial { get; set; }
+    /// <summary>The part's <c>&lt;score-instrument&gt;</c> it changes to here, written as
+    /// <c>&lt;sound&gt;&lt;instrument-change&gt;</c>, or null.</summary>
+    public string? InstrumentChangeId { get; set; }
+    /// <summary>That instrument's General MIDI program (0-based), or null.</summary>
+    public int? InstrumentChangeProgram { get; set; }
+
     /// <summary>The metronome's per-minute figure, in <see cref="TempoBeatUnit"/>s.</summary>
     public int? Tempo { get; set; }
     /// <summary>The count as written when it has a fraction (<c>tempo 4 = 131.8</c>, owner's
@@ -947,6 +990,17 @@ internal sealed class MusicXmlDirection
         if (SoftPedal is { } soft)
             (sound ??= new XElement("sound")).Add(new XAttribute("soft-pedal", soft ? "yes" : "no"));
 
+        // An instrument change (`instrument piccolo`): the part's <score-instrument> it sounds
+        // with from here, and that instrument's program.
+        if (InstrumentChangeId is { } changeId)
+        {
+            sound ??= new XElement("sound");
+            sound.Add(new XElement("instrument-change", new XAttribute("id", changeId)));
+            if (InstrumentChangeProgram is int changeProgram)
+                sound.Add(new XElement("midi-instrument", new XAttribute("id", changeId),
+                    new XElement("midi-program", changeProgram + 1)));
+        }
+
         // Schema order: direction-type+, offset?, …, voice?, staff?, sound?.
         if (Offset > 0)
             direction.Add(new XElement("offset", Offset));
@@ -1114,6 +1168,10 @@ internal sealed class MusicXmlNote
     /// MusicXML's <c>time-only</c> writes them ("2", "1,3"), or null for every pass.</summary>
     public string? TimeOnly { get; set; }
 
+    /// <summary>The <c>&lt;score-instrument&gt;</c> of its part the note sounds with, written
+    /// after the part has changed instrument (<c>instrument piccolo</c>), or null.</summary>
+    public string? InstrumentId { get; set; }
+
     /// <summary>The string and fret the page's tab staff plays this note on, or null when the
     /// part has no tab staff (or the note is off the fretboard).</summary>
     public (int String, int Fret)? Tab { get; set; }
@@ -1216,6 +1274,10 @@ internal sealed class MusicXmlNote
             note.Add(new XElement("tie", new XAttribute("type", "start")));
         if (TieStop && !IsCue)
             note.Add(new XElement("tie", new XAttribute("type", "stop")));
+        // The part's instrument this note sounds with, where the part has changed to another
+        // (`instrument piccolo`; the schema's place: after the ties, before the voice).
+        if (InstrumentId != null)
+            note.Add(new XElement("instrument", new XAttribute("id", InstrumentId)));
 
         // A note on a numbered staff always says its voice (2026-10-01, the Omr report #16):
         // the second staff's voices are 5–8, and a first staff that left its voice to the

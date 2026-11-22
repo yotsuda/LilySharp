@@ -67,6 +67,21 @@ public sealed record DynamicItem
     /// </summary>
     public int StaffIndex { get; }
 
+    /// <summary>The text is an instrument change's name (<c>instrument piccolo</c>,
+    /// docs/eval4-features-design.md §1): from its bar the staff's later systems are headed by
+    /// <see cref="InstrumentShortName"/>.</summary>
+    public bool IsInstrumentChange { get; init; }
+
+    /// <summary>For an instrument change: the short name written on it
+    /// (<c>instrument piccolo "Piccolo" "Picc."</c>), or null — the later systems from it then
+    /// print no name for the staff.</summary>
+    public string? InstrumentShortName { get; init; }
+
+    /// <summary>For an instrument change: it goes back to the part's own instrument writing no
+    /// names (<c>instrument flute</c> in a flute part) — the staff's own short name heads the
+    /// later systems again.</summary>
+    public bool InstrumentReturnsHome { get; init; }
+
     /// <summary>The dynamic stands ABOVE its staff: the side of the line it rides
     /// (<c>DynamicLineSides</c>) — written (<c>@f.up</c>), its line's, or its staff's own.</summary>
     public bool IsAbove { get; init; }

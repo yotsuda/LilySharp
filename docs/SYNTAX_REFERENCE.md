@@ -1735,13 +1735,19 @@ part changes instrument in its music:
 ```
 R1*2 | instrument piccolo c'''4 d''' e''' f''' |   // Plays and prints as the piccolo from here
 R1 | instrument flute c''1 |                       // Back to the flute
-instrument clarinet "Cl. in B-flat" c''1 |        // The quoted name is the one printed
+instrument piccolo "Piccolo" "Picc." c'''1 |     // Names, long then short, as a part's
 ```
 
 From the change on, the part **sounds** the preset — its MIDI program and its transposition
 (the piccolo an octave above what is written, a B♭ clarinet a tone below) — and its notes are
 checked against that instrument's range. The page prints the instrument's name over the next
-note or rest. The change holds into the sections after it, until the next one.
+note or rest (the first quoted name, else the preset's). The change holds into the sections after it, until the next one.
+
+The second quoted name is the **short name**, and the staff's later systems are headed by it from
+the change on — the rule a part's own short name follows (`part fl "Flute" "Fl."`): a short name
+is printed only where it is written. So in a part that writes one, a change that writes none
+leaves the later systems unnamed rather than under the flute the player has put down
+(**LYS1079** warns); `instrument flute` with no names goes back to the part's own names.
 
 What is written stays as written: the notes, the key signature and the clef. Write `clef bass`
 yourself where the new instrument reads another clef, and "to Picc." with `@text` in the rest
@@ -1751,7 +1757,9 @@ In a book typed at concert pitch (`pitch concert`), or one a score prints at con
 page would have to move its transposition at a change to an instrument that transposes
 otherwise, and a page prints a part with one transposition: that change is an error
 (**LYS1078**) until the page can follow — give the instrument a part of its own there. The
-MusicXML and LilyPond exports write the name; their sound stays the part's own instrument for now.
+MusicXML export writes the change as `<sound><instrument-change>` with its program, names the
+instrument on each note after it and states the new transposition; the LilyPond export writes
+the name.
 
 ## Music of Some Passes Only
 

@@ -600,20 +600,24 @@ public sealed class InstrumentSwitchSyntax : SyntaxNode
         }
     }
 
-    /// <summary>The preset, lower-cased (<c>piccolo</c>, <c>electric-bass</c>); empty when none
-    /// was written.</summary>
-    public string Preset => Svg.Model.InstrumentDefaults.SplitInstrument(ValueTokens.Select(t => t.Text)).Preset.ToLowerInvariant();
+    /// <summary>The preset, lower-cased (<c>piccolo</c>, <c>electric-bass</c>): the bare words;
+    /// empty when none was written.</summary>
+    public string Preset => string.Concat(ValueTokens.Where(t => !StringLiteral.IsClosed(t.Text)).Select(t => t.Text)).ToLowerInvariant();
 
-    /// <summary>The name the page prints over the change: the quoted label, else the preset's
-    /// printed name, else the preset as written.</summary>
-    public string PrintedName
-    {
-        get
-        {
-            var (preset, display) = Svg.Model.InstrumentDefaults.SplitInstrument(ValueTokens.Select(t => t.Text));
-            return display != preset ? display : Svg.Model.InstrumentDefaults.PrintedName(preset) ?? preset;
-        }
-    }
+    /// <summary>The quoted names, as a part's are written: the long one first, then the short
+    /// one (<c>instrument piccolo "Piccolo" "Picc."</c>).</summary>
+    private List<string> Names => ValueTokens.Where(t => StringLiteral.IsClosed(t.Text)).Select(t => StringLiteral.Value(t.Text)).ToList();
+
+    /// <summary>The long name written, or null.</summary>
+    public string? LongName => Names is { Count: > 0 } names ? names[0] : null;
+
+    /// <summary>The short name written — what the staff's later systems are headed by from the
+    /// change on — or null.</summary>
+    public string? ShortName => Names is { Count: > 1 } names ? names[1] : null;
+
+    /// <summary>The name the page prints over the change: the long name written, else the
+    /// preset's printed name, else the preset as written.</summary>
+    public string PrintedName => LongName ?? Svg.Model.InstrumentDefaults.PrintedName(Preset) ?? Preset;
 }
 
 /// <summary>The <c>}</c> that ends the region a <see cref="PassStartSyntax"/> opened.</summary>

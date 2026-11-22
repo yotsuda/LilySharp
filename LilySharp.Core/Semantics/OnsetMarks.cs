@@ -60,16 +60,17 @@ public static class OnsetMarks
         => At(onset).OfType<PassStartSyntax>().FirstOrDefault();
 
     /// <summary>The texts the page prints over <paramref name="onset"/>, each with the source
-    /// position of the mark that writes it: an instrument change's name, a pass region's
-    /// "2nd time only" (none for a <c>bare</c> one).</summary>
-    public static IEnumerable<(string Text, int Source)> TextsOver(SyntaxNode onset)
+    /// position of the mark that writes it: an instrument change's name (with the change, whose
+    /// short name heads the later systems), a pass region's "2nd time only" (none for a
+    /// <c>bare</c> one).</summary>
+    public static IEnumerable<(string Text, int Source, InstrumentSwitchSyntax? Change)> TextsOver(SyntaxNode onset)
     {
         foreach (var mark in At(onset))
         {
             if (mark is InstrumentSwitchSyntax change && change.Preset.Length > 0)
-                yield return (change.PrintedName, change.SourceStart);
+                yield return (change.PrintedName, change.SourceStart, change);
             else if (mark is PassStartSyntax { PrintedText: { } text } start)
-                yield return (text, start.SourceStart);
+                yield return (text, start.SourceStart, null);
         }
     }
 

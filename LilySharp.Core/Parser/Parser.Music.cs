@@ -943,11 +943,13 @@ internal sealed partial class Parser
                 values.Add(Advance()); // word
             }
         }
-        if (Check(SyntaxKind.StringLiteral))
+        bool preset = values.Count > 0;
+        // The long and the short name, as a part's are written (`part fl "Flute" "Fl."`).
+        for (int names = 0; names < 2 && Check(SyntaxKind.StringLiteral); names++)
             values.Add(Advance());
-        if (values.Count == 0)
+        if (!preset)
             _diagnostics.Error(new TextSpan(_textPosition, Math.Max(1, Current.Width)), DiagnosticCodes.PartPropertyMissingValue,
-                "'instrument' has no instrument: write the one the part changes to - 'instrument piccolo'.");
+                "'instrument' has no instrument: write the one the part changes to, then its names - 'instrument piccolo \"Piccolo\" \"Picc.\"'.");
         return new InstrumentSwitchGreen(keyword, values);
     }
 

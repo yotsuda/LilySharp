@@ -63,6 +63,13 @@ internal sealed class InstrumentSwitchValidator : ISemanticValidator
             }
             if (PartOf(change) is not { } partName || ConcertPitch.FindPart(root, partName) is not { } part)
                 continue;
+            // A part that heads its later systems with a short name: the change names its own,
+            // or those systems are left unnamed (SharedRenderer.ShortNameAt).
+            if (part.ShortName != null && change.ShortName == null && !ReturnsHome(change))
+                _diagnostics.Warning(change.Keyword.Span, DiagnosticCodes.InstrumentChangeHasNoShortName,
+                    $"Part '{partName}' heads its later systems with a short name ('{part.ShortName}'), and this change writes none: "
+                    + "the systems after it print no name for the part. Write the instrument's names after it, long then short: "
+                    + $"instrument {preset} \"{change.PrintedName}\" \"…\".");
             var header = PartHeaderDefaults.Read(part);
             int to = InstrumentDefaults.GetTransposition(preset);
             bool lettersConcert = ConcertPitch.PartMode(part) ?? fileConcert;
@@ -79,6 +86,20 @@ internal sealed class InstrumentSwitchValidator : ISemanticValidator
                     + "would have to change its transposition here, and a page prints a part with one. Not drawn yet: give the "
                     + "instrument a part of its own, or type the part as written ('pitch written') and print it for the player.");
         }
+    }
+
+    /// <summary>
+    /// Whether <paramref name="change"/> goes back to its part's own instrument writing no names
+    /// (<c>instrument flute</c> in a flute part): the part's own names head its systems again.
+    /// </summary>
+    internal static bool ReturnsHome(InstrumentSwitchSyntax change)
+    {
+        if (change.LongName != null || PartOf(change) is not { } partName)
+            return false;
+        SyntaxNode root = change;
+        while (root.Parent is { } parent)
+            root = parent;
+        return ConcertPitch.FindPart(root, partName) is { } part && PartHeaderDefaults.Read(part).Preset == change.Preset;
     }
 
     /// <summary>The part whose music the change is written in, or null (a phrase, played by

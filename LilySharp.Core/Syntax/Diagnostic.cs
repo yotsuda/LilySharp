@@ -836,6 +836,12 @@ public static class DiagnosticCodes
     /// A page prints a part with one transposition (docs/eval4-features-design.md §1, stage 2).</summary>
     public const string InstrumentChangeMovesThePage = "LYS1078";
 
+    /// <summary>Semantic warning: an instrument change in a part that writes a short name
+    /// (<c>part fl "Flute" "Fl."</c>) writes none — the later systems from the change print no
+    /// name for the staff, rather than the instrument the player has put down. The fix writes
+    /// the names: <c>instrument piccolo "Piccolo" "Picc."</c>.</summary>
+    public const string InstrumentChangeHasNoShortName = "LYS1079";
+
     /// <summary>Warning: a part's <c>octave N</c> below the default 3 under an <c>instrument</c> preset,
     /// where the part already sounds an octave or more below the page — <c>instrument bass
     /// octave 2</c>: a bare <c>c</c> is written C2 and sounds C1. The octave is the WRITTEN

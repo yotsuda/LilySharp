@@ -143,6 +143,84 @@ public sealed class InstrumentSwitchTests
         Assert.Contains("<words>Piccolo</words>", xml);
     }
 
+    /// <summary>MusicXML: the part lists the instrument it changes to, the change is a
+    /// &lt;sound&gt;&lt;instrument-change&gt; with the program, the notes after it name it, and a
+    /// part typed as written states its new transposition — through the next section, and back.</summary>
+    [Fact]
+    public void MusicXmlChangesTheInstrumentAndItsTransposition()
+    {
+        string src = """
+            octave absolute
+            part fl { instrument flute }
+            section A { fl { c''1 | instrument clarinet c''1 | } }
+            section B { fl { c''1 | instrument flute c''1 | } }
+            form { A B }
+            score { staff fl }
+            """;
+        var doc = new MusicXmlExporter().Export(SyntaxTree.Parse(src)).ToXml();
+        var scorePart = doc.Descendants("score-part").Single();
+        Assert.Equal(new[] { "P1-I1", "P1-I2" }, scorePart.Elements("score-instrument").Select(e => (string)e.Attribute("id")!));
+        Assert.Equal(new[] { "Clarinet" }, scorePart.Elements("score-instrument").Skip(1).Select(e => (string)e.Element("instrument-name")!));
+        var changes = doc.Descendants("instrument-change").Select(e => (string)e.Attribute("id")!).ToList();
+        Assert.Equal(new[] { "P1-I2", "P1-I1" }, changes);
+        Assert.Equal("72", (string)doc.Descendants("sound").First(s => s.Element("instrument-change") != null).Element("midi-instrument")!.Element("midi-program")!);
+        // Bars 2 and 3 sound the clarinet (bar 3 is the next section's), bar 4 the flute again.
+        var notes = doc.Descendants("note").ToList();
+        Assert.Equal(new string?[] { null, "P1-I2", "P1-I2", null }, notes.Select(n => (string?)n.Element("instrument")?.Attribute("id")));
+        var transposes = doc.Descendants("transpose").Select(t => (int)t.Element("chromatic")!).ToList();
+        Assert.Equal(new[] { -2, 0 }, transposes);
+    }
+
+    // Four systems' worth of whole notes, with `change` before the bar after the first 15.
+    private static string LongBook(string change, string names = "\"Flute\" \"Fl.\"", string back = "") => $$"""
+        octave absolute
+        part fl {{names}} { instrument flute }
+        section S { fl { {{string.Concat(Enumerable.Repeat("c''1 | ", 15))}} R1 | {{change}} {{string.Concat(Enumerable.Repeat("c''1 | ", 15))}} {{back}} {{string.Concat(Enumerable.Repeat("c''1 | ", 15))}} } }
+        form { S }
+        score { staff fl }
+        """;
+
+    private static int Count(string svg, string text) => Regex.Matches(svg, ">" + Regex.Escape(text) + "<").Count;
+
+    /// <summary>A later system is headed by the short name of the instrument in force at its
+    /// first bar: the change's, once it has been made (docs/eval4-features-design.md §1).</summary>
+    [Fact]
+    public void TheSystemsAfterTheChangeAreHeadedByItsShortName()
+    {
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse(LongBook("instrument piccolo \"Piccolo\" \"Picc.\"")));
+        Assert.True(Count(svg, "Picc.") >= 2, "the systems after the change name the piccolo");
+        Assert.True(Count(svg, "Fl.") >= 1, "the system before it names the flute");
+        // No system names the flute after a piccolo-headed one.
+        int lastFlute = svg.LastIndexOf(">Fl.<", System.StringComparison.Ordinal);
+        int firstPiccolo = svg.IndexOf(">Picc.<", System.StringComparison.Ordinal);
+        Assert.True(lastFlute < firstPiccolo);
+    }
+
+    [Fact]
+    public void AChangeBackToThePartsOwnInstrumentTakesItsNameAgain()
+    {
+        string src = LongBook("instrument piccolo \"Piccolo\" \"Picc.\"", back: "instrument flute");
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse(src));
+        Assert.True(svg.LastIndexOf(">Fl.<", System.StringComparison.Ordinal) > svg.IndexOf(">Picc.<", System.StringComparison.Ordinal));
+        Assert.DoesNotContain(Said(src), d => d.Code == DiagnosticCodes.InstrumentChangeHasNoShortName);
+    }
+
+    [Fact]
+    public void AChangeThatWritesNoShortNameLeavesTheLaterSystemsUnnamed_AndSaysSo()
+    {
+        string src = LongBook("instrument piccolo");
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse(src));
+        Assert.Equal(0, Count(svg, "Picc."));
+        // Fewer systems are headed "Fl." than in the same book with no change: the later ones none.
+        int withoutChange = Count(SvgGenerator.Generate(SyntaxTree.Parse(LongBook(""))), "Fl.");
+        Assert.True(Count(svg, "Fl.") < withoutChange, $"{Count(svg, "Fl.")} of {withoutChange}");
+        Assert.Contains(Said(src), d => d.Code == DiagnosticCodes.InstrumentChangeHasNoShortName && d.Severity == DiagnosticSeverity.Warning);
+    }
+
+    [Fact]
+    public void APartThatWritesNoShortNameIsNotAskedForOne()
+        => Assert.DoesNotContain(Said(LongBook("instrument piccolo", names: "")), d => d.Code == DiagnosticCodes.InstrumentChangeHasNoShortName);
+
     [Fact]
     public void AnUnknownInstrumentIsTheHeadersError()
     {

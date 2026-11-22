@@ -854,9 +854,13 @@ public sealed partial class MeasureCollector
         // note of `pass 2 { … }` the region's "2nd time only" (§3; docs/eval4-features-design.md):
         // each the picture of `@text("…").up` on it.
         if (!graceTime)
-            foreach (var (markText, markSource) in Semantics.OnsetMarks.TextsOver(node))
+            foreach (var (markText, markSource, change) in Semantics.OnsetMarks.TextsOver(node))
                 _dynamics.Add(new DynamicItem(markText, measureIndex, itemIndex, markSource, _v.Cursor.StaffIndex)
                 {
+                    // An instrument change heads the staff's later systems with its short name.
+                    IsInstrumentChange = change != null,
+                    InstrumentShortName = change?.ShortName,
+                    InstrumentReturnsHome = change != null && Semantics.InstrumentSwitchValidator.ReturnsHome(change),
                     IsAbove = true,
                     VoiceIndex = _v.Cursor.VoiceIndex,
                     Moment = anchorTiming.Denominator != 0 ? anchorTiming : null,

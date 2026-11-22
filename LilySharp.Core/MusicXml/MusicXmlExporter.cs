@@ -3228,12 +3228,89 @@ public sealed class MusicXmlExporter
                 // Inside `pass 2 { … }`: the passes the note sounds on.
                 if (_xmlPassRegions.Count > 0 && n.TimeOnly == null && !n.IsBackup && n.RawElement == null)
                     n.TimeOnly = _xmlPassRegions.Peek().ToString();
+                // After an instrument change: the instrument it sounds with.
+                if (_xmlInstrumentId != null && n.InstrumentId == null && !n.IsBackup && n.RawElement == null)
+                    n.InstrumentId = _xmlInstrumentId;
             }
         }
     }
 
     // The `pass N {` regions open in the walk, innermost on top (docs/eval4-features-design.md §3).
     private readonly Stack<PassSet> _xmlPassRegions = new();
+
+    // The instrument each part has changed to in its music (`instrument piccolo`), by part — a
+    // part's spans are emitted one section at a time, and a change holds into the next.
+    private readonly Dictionary<string, string> _xmlSwitched = new(StringComparer.Ordinal);
+    // The <score-instrument> the current part's notes sound with (InstrumentPlaceholder-based),
+    // null for its own.
+    private string? _xmlInstrumentId;
+
+    /// <summary>
+    /// <c>instrument piccolo</c> (docs/eval4-features-design.md §1): the page's name as words
+    /// over the change, the part's <c>&lt;score-instrument&gt;</c> for the preset (one each, made
+    /// the first time) as <c>&lt;sound&gt;&lt;instrument-change&gt;</c> with its program, an
+    /// <c>&lt;instrument&gt;</c> on the notes after, and — where the part is typed as written
+    /// and the preset transposes otherwise — a <c>&lt;transpose&gt;</c> in the note stream.
+    /// </summary>
+    private void ProcessInstrumentSwitch(InstrumentSwitchSyntax change)
+    {
+        string preset = change.Preset;
+        if (_currentMeasure == null || _currentPart == null || _currentPartName == null || preset.Length == 0)
+            return;
+        var direction = new MusicXmlDirection { Words = change.PrintedName, Placement = "above" };
+        if (!Svg.Model.InstrumentDefaults.IsKnownInstrument(preset))
+        {
+            AddDirection(direction);
+            return;
+        }
+        var part = _root != null ? ConcertPitch.FindPart(_root, _currentPartName) : null;
+        var header = PartHeaderDefaults.Read(part);
+        bool home = preset == header.Preset;
+        if (home)
+            _xmlSwitched.Remove(_currentPartName);
+        else
+            _xmlSwitched[_currentPartName] = preset;
+        string? id = InstrumentIdOf(preset, home, out int? program);
+        _xmlInstrumentId = home ? null : id;
+        direction.InstrumentChangeId = id;
+        direction.InstrumentChangeProgram = program;
+        AddDirection(direction);
+
+        // The transposition, for a part typed as written (one typed at concert pitch is the
+        // page's question: InstrumentSwitchValidator refuses another transposition there).
+        bool lettersConcert = ConcertPitch.PartMode(part) ?? (_root != null && ConcertPitch.FileIsConcert(_root));
+        int written = home ? header.TranspositionSemitones : Svg.Model.InstrumentDefaults.GetTransposition(preset);
+        if (!lettersConcert && written != _partTransposeWritten)
+        {
+            _partTransposeSemitones += written - _partTransposeWritten;
+            _partTransposeWritten = written;
+            _currentMeasure.Notes.Add(new MusicXmlNote
+            {
+                RawElement = new XElement("attributes", MusicXmlAttributes.TransposeElement(written)),
+            });
+        }
+    }
+
+    /// <summary>The <c>&lt;score-instrument&gt;</c> id the current part sounds <paramref name="preset"/>
+    /// with — its own (<c>-I1</c>) at home, else one made for the preset the first time — and that
+    /// sound's program; null where the part names no sound.</summary>
+    private string? InstrumentIdOf(string preset, bool home, out int? program)
+    {
+        var part = _currentPart!;
+        if (home)
+        {
+            program = part.MidiProgram;
+            return part.MidiProgram != null ? MusicXmlPart.InstrumentPlaceholder + "-I1" : null;
+        }
+        program = Svg.Model.InstrumentDefaults.GetMidiProgram(preset);
+        string name = Svg.Model.InstrumentDefaults.PrintedName(preset) ?? preset;
+        foreach (var made in part.ChangedInstruments)
+            if (made.Name == name)
+                return made.Id;
+        string id = MusicXmlPart.InstrumentPlaceholder + "-I" + (part.ChangedInstruments.Count + 2);
+        part.ChangedInstruments.Add((id, name, program));
+        return id;
+    }
 
     /// <summary>
     /// Puts a <c>&lt;measure-repeat&gt;</c> on a measure, INTO the attributes it already has.
@@ -3362,11 +3439,8 @@ public sealed class MusicXmlExporter
                 _xmlPassRegions.TryPop(out _);
                 break;
 
-            // `instrument piccolo`: the page's name over the change, as words (stage 1 — the
-            // sound and the transposition stay the part's, docs/eval4-features-design.md §1).
             case InstrumentSwitchSyntax change:
-                if (_currentMeasure != null && change.Preset.Length > 0)
-                    AddDirection(new MusicXmlDirection { Words = change.PrintedName, Placement = "above" });
+                ProcessInstrumentSwitch(change);
                 break;
 
             case NoteSyntax note:
@@ -4231,6 +4305,21 @@ public sealed class MusicXmlExporter
         _partTransposeWritten = header.TranspositionSemitones;
         if (_currentPart != null)
             _currentPart.PitchOctaveShift = header.ClefOctaveSemitones / 12;
+
+        // An instrument the part changed to in an earlier span holds on here
+        // (ProcessInstrumentSwitch): its sound, and — typed as written — its transposition.
+        _xmlInstrumentId = null;
+        if (_xmlSwitched.TryGetValue(partName, out var switched) && _currentPart != null)
+        {
+            _xmlInstrumentId = InstrumentIdOf(switched, home: false, out _);
+            var decl = _root != null ? ConcertPitch.FindPart(_root, partName) : null;
+            if (!(ConcertPitch.PartMode(decl) ?? (_root != null && ConcertPitch.FileIsConcert(_root))))
+            {
+                int written = Svg.Model.InstrumentDefaults.GetTransposition(switched);
+                _partTransposeSemitones += written - _partTransposeWritten;
+                _partTransposeWritten = written;
+            }
+        }
     }
 
     private void ProcessClef(ClefDeclarationSyntax clef)
