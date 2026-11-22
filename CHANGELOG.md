@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Fixed: an `afterGrace` run was not drawn after a note with a mark in parentheses** (`[engraving]`). `g''2@trill(flat) afterGrace { fis''16 g'' } a''2` — a trill with its accidental and its termination — drew the trill and no termination; `@text("…")` or any other `@name(…)` on the main note did the same. The MIDI and the MusicXML had the run. It is drawn now.
+
 - **Fixed: a fermata within the piece rang over the next bar** (`[playback]`). The held note sounded half again its length while the music after it went on at once, so the chord rang over the next harmony and a repeated pitch was struck again while still sounding. A fermata's note now rings until the next note of any part begins; one that nothing follows still rings half again its length.
 
 - **Fixed: a transposed part could print in a key of eight flats** (`[engraving]` `[export]`). A clarinet in A over a piece in D♭ major read F♭ major — eight flats, a double flat in the signature — and one in B♭ over B major read C♯ major. A transposed part whose key would have seven or more sharps or flats, where the same sound spelled the other way has fewer, now takes that key — E major and D♭ major — with its notes spelled in it, on the page and in the MusicXML; where the music goes back to a key the instrument reads well, so does the spelling. The LilyPond export keeps LilyPond's own `\transpose`.

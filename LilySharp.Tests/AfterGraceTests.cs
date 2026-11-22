@@ -61,6 +61,11 @@ public class AfterGraceTests
     [InlineData("tuplet 3/2 { c'4 afterGrace { d'16 } d' e' } f'2 |", "1/8 g s1/24:1 1/6 1/6 1/2")]
     // A tie or slur mark between the note and its afterGrace still names that note.
     [InlineData("g'1~ afterGrace { a'16 } | g'1 |", "3/4 g s1/4:1 | 1")]
+    // …and so does a mark written on the note with words in parentheses, which the walk lists
+    // after it: until session 1363 a trill with its accidental lost its termination.
+    [InlineData("g''2@trill(flat) afterGrace { fis''16 g'' } a''2 |", "3/8 g g s1/8:2 1/2")]
+    [InlineData("g'1@text(\"rit.\") afterGrace { a'16 } |", "3/4 g s1/4:1")]
+    [InlineData("tuplet 3/2 { c'4@text(\"x\") afterGrace { d'16 } d' e' } f'2 |", "1/8 g s1/24:1 1/6 1/6 1/2")]
     public void TheMainNoteSoundsThreeQuarters_AndASpacerCarriesTheRun(string music, string expected)
         => Assert.Equal(expected, Items(music));
 

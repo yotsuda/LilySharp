@@ -262,11 +262,14 @@ public sealed partial class MeasureCollector
 
     /// <summary>True when the site after <paramref name="i"/> — past the tie, slur and beam
     /// markers that annotate it — is an <c>afterGrace</c>, so the item at <paramref name="i"/>
-    /// is its main note. Kinds first: only the grace itself is materialized.</summary>
+    /// is its main note. Kinds first: only the grace itself is materialized. The note's own
+    /// <c>@name(…)</c> marks, which the flattened walk lists after it (<see cref="IsAttachedMark"/>),
+    /// are passed too: until session 1363 `g''2@trill(flat) afterGrace { … }` — any such mark —
+    /// drew no run (Lab sessions/p1362/eval5 piano r-05).</summary>
     private static bool AfterGraceFollows(Func<int, GreenSite?> siteAt, int i)
     {
         int k = i + 1;
-        while (siteAt(k) is { } marker && IsMarkerKind(marker.Kind))
+        while (siteAt(k) is { } marker && (IsMarkerKind(marker.Kind) || IsAttachedMark(marker)))
             k++;
         return siteAt(k) is { Kind: SyntaxKind.GraceExpression } next
             && next.Node is GraceExpressionSyntax { IsAfterGrace: true };
