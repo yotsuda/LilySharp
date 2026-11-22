@@ -1846,9 +1846,11 @@ LyricText      = { Word , [ '[' , Reading , ']' ] } ;
                  (* A READING glued to the word it reads (owner's decision 2026-11-08): the page
                     prints the word, a singing engine sings the reading — '漢[かん]' prints 漢 and
                     sings かん; '大[おお]空[ぞら]' prints 大空 and sings おおぞら; a stretch with no
-                    reading sings as written. The MusicXML, the LilyPond twin and the .mid's
-                    lyric events carry the PRINTED word (neither format has a reading); the sung
-                    voice (lilysharp/sung, lysc wav --singer) and the VSQX sing the reading.
+                    reading sings as written. The MusicXML and the LilyPond twin carry the
+                    PRINTED word (neither format has a reading); the .mid's lyric events (lysc
+                    midi, Export as MIDI), the sung voice (lilysharp/sung, lysc wav --singer) and
+                    the VSQX carry the reading (owner's decision 2026-11-12: a .mid's words are
+                    as sung, lyrics-singer-design.md §16).
                     Music.LyricReading. A reading is of the stretch right before it: a '[' after
                     a space, a reading with no word before it, an empty, nested or unclosed one,
                     or a ']' on its own is an error on the syllable (LYS4036), which still prints

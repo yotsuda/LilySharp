@@ -156,9 +156,11 @@ The score spellings here (`lyrics NAME sings PART`) were replaced on 2026-11-10:
   and sings おおぞら (`Music.LyricReading`; GRAMMAR.md `LyricText`). One row, one place: the file
   that prints the kanji says how it is sung, and nothing is counted twice — the page's syllable
   carries the printed word, `SungSyllables` reads the sung word off the same token by its source
-  offset, `LyricEvent.Sung` carries it to `SungVoices`. The `.mid`'s lyric events, the MusicXML
-  `<text>` and the LilyPond twin keep the PRINTED word (a karaoke display shows the words as
-  written; neither format has a reading); the VSQX sings the reading. No ruby is printed (the
+  offset, `LyricEvent.Sung` carries it to `SungVoices`. The MusicXML `<text>` and the LilyPond
+  twin keep the PRINTED word (neither format has a reading); the VSQX sings the reading, and the
+  `.mid`'s lyric events carry it too since 2026-11-12 (owner's decision: a .mid's words are as
+  sung, `lyrics-singer-design.md` §16 — until then they printed the kanji, as a karaoke display
+  shows the words as written). No ruby is printed (the
   page is unchanged; LilyPond prints none). A malformed reading is LYS4036, one that is not kana
   LYS4037; a kanji with no reading is still the engine's one sentence.
 

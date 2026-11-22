@@ -193,9 +193,10 @@ public readonly record struct TimeSignatureChange(
 /// part track. An empty <paramref name="Text"/> is a held note (<c>_</c>, a detached <c>~</c>): the
 /// previous syllable's vowel goes on.</param>
 /// <param name="Sung">The word a voice sings where it is not <paramref name="Text"/> — a syllable
-/// with a reading, <c>漢[かん]</c> (<see cref="Music.LyricReading"/>): the file writes the kanji
-/// (a karaoke display shows the words as printed; owner's decision 2026-11-08) and the voice
-/// sings the kana. Null when the printed word is the sung one. Not written to .mid files.</param>
+/// with a reading, <c>漢[かん]</c> (<see cref="Music.LyricReading"/>): the voice sings the kana,
+/// and so does a written .mid — <c>MidiForFile.Shape</c> writes a word as sung (owner's decision
+/// 2026-11-12, lyrics-singer-design.md §16; the kanji until then, 2026-11-08). Null when the
+/// printed word is the sung one.</param>
 public readonly record struct LyricEvent(
     int Tick,
     string Text,

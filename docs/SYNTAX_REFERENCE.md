@@ -2602,9 +2602,9 @@ longer than `きら | ひかる`, its first bar carrying no syllables. That lead
 `|` is how a verse skips the rest bar the melody opens with.
 
 **A reading** (ruby) is glued to the word it reads, in square brackets: `漢[かん]` prints 漢 and
-sings かん — the preview's voice and `lysc wav --singer` sing the reading; the page, the
-MusicXML, the LilyPond export and the `.mid`'s lyric events keep the printed word (neither
-format has a reading). One syllable may carry several: `大[おお]空[ぞら]` prints 大空 and sings
+sings かん — the preview's voice, `lysc wav --singer` and the `.mid`'s lyric events carry the
+reading (a `.mid`'s words are as sung); the page, the MusicXML and the LilyPond export keep the
+printed word (neither format has a reading). One syllable may carry several: `大[おお]空[ぞら]` prints 大空 and sings
 おおぞら, and a stretch with no reading sings as written (`漢[かん]じ`). The brackets must
 touch the word: a `[` after a space, a reading with no word before it, an empty or unclosed one
 and a `]` on its own are an error on the syllable (LYS4036), which still prints as written;
