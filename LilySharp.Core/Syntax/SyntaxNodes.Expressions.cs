@@ -509,7 +509,7 @@ public sealed class CueExpressionSyntax : SyntaxNode
 /// <see cref="VoltaEndSyntax"/>): the notes between them stay the items of the music they are
 /// written in, so a beam, a tie, a slur and a bar line run across either mark as if it were not
 /// there, and every reader that does not ask about passes reads the music as it always did.
-/// The parser pairs them (<c>ParsePass</c>); a reader asks <see cref="Semantics.PassRegions"/>.
+/// The parser pairs them (<c>ParsePass</c>); the page finds the region's first onset through <see cref="Semantics.OnsetMarks"/>.
 /// </remarks>
 public sealed class PassStartSyntax : SyntaxNode
 {
@@ -571,6 +571,49 @@ public sealed class PassStartSyntax : SyntaxNode
         3 => "rd",
         _ => "th",
     });
+}
+
+/// <summary>
+/// <c>instrument piccolo</c> in the music — the part changes instrument here: from this point
+/// its sound (the MIDI program, the transposition it sounds at), its range and the name the
+/// page prints over the change are the preset's; its clef, its key and its notes are as written
+/// (docs/eval4-features-design.md §1).
+/// </summary>
+public sealed class InstrumentSwitchSyntax : SyntaxNode
+{
+    internal InstrumentSwitchSyntax(InternalSyntax.InstrumentSwitchGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>The <c>instrument</c> keyword's token.</summary>
+    public SyntaxTokenNode Keyword => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>The value tokens, as a part header's <c>instrument</c> reads them.</summary>
+    public IEnumerable<SyntaxTokenNode> ValueTokens
+    {
+        get
+        {
+            for (int i = 1; i < SlotCount; i++)
+                if (GetChild(i) is SyntaxTokenNode token)
+                    yield return token;
+        }
+    }
+
+    /// <summary>The preset, lower-cased (<c>piccolo</c>, <c>electric-bass</c>); empty when none
+    /// was written.</summary>
+    public string Preset => Svg.Model.InstrumentDefaults.SplitInstrument(ValueTokens.Select(t => t.Text)).Preset.ToLowerInvariant();
+
+    /// <summary>The name the page prints over the change: the quoted label, else the preset's
+    /// printed name, else the preset as written.</summary>
+    public string PrintedName
+    {
+        get
+        {
+            var (preset, display) = Svg.Model.InstrumentDefaults.SplitInstrument(ValueTokens.Select(t => t.Text));
+            return display != preset ? display : Svg.Model.InstrumentDefaults.PrintedName(preset) ?? preset;
+        }
+    }
 }
 
 /// <summary>The <c>}</c> that ends the region a <see cref="PassStartSyntax"/> opened.</summary>

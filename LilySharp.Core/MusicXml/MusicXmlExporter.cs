@@ -3362,6 +3362,13 @@ public sealed class MusicXmlExporter
                 _xmlPassRegions.TryPop(out _);
                 break;
 
+            // `instrument piccolo`: the page's name over the change, as words (stage 1 — the
+            // sound and the transposition stay the part's, docs/eval4-features-design.md §1).
+            case InstrumentSwitchSyntax change:
+                if (_currentMeasure != null && change.Preset.Length > 0)
+                    AddDirection(new MusicXmlDirection { Words = change.PrintedName, Placement = "above" });
+                break;
+
             case NoteSyntax note:
                 Stamped(note, () => ProcessNote(note));
                 break;

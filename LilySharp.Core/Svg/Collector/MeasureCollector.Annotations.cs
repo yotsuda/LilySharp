@@ -850,16 +850,18 @@ public sealed partial class MeasureCollector
         // Under a % sign nothing that rides a note is collected — see _v.PercentCoveredDepth.
         if (_v.PercentCoveredDepth > 0)
             return;
-        // The first note of `pass 2 { … }` (docs/eval4-features-design.md §3) carries the
-        // region's "2nd time only": the picture of `@text("2nd time only").up` on it.
-        if (!graceTime && Semantics.PassRegions.OpenedAt(node) is { PrintedText: { } passText } passStart)
-            _dynamics.Add(new DynamicItem(passText, measureIndex, itemIndex, passStart.SourceStart, _v.Cursor.StaffIndex)
-            {
-                IsAbove = true,
-                VoiceIndex = _v.Cursor.VoiceIndex,
-                Moment = anchorTiming.Denominator != 0 ? anchorTiming : null,
-                OnMultiMeasureRest = node is RestSyntax { RestText: "R" },
-            });
+        // The note after an instrument change carries the new instrument's name (§1), the first
+        // note of `pass 2 { … }` the region's "2nd time only" (§3; docs/eval4-features-design.md):
+        // each the picture of `@text("…").up` on it.
+        if (!graceTime)
+            foreach (var (markText, markSource) in Semantics.OnsetMarks.TextsOver(node))
+                _dynamics.Add(new DynamicItem(markText, measureIndex, itemIndex, markSource, _v.Cursor.StaffIndex)
+                {
+                    IsAbove = true,
+                    VoiceIndex = _v.Cursor.VoiceIndex,
+                    Moment = anchorTiming.Denominator != 0 ? anchorTiming : null,
+                    OnMultiMeasureRest = node is RestSyntax { RestText: "R" },
+                });
         // A chord's scripts come from the whole-chord post-events AND from each
         // member (<c@staccato e@accent>), and the two are DIFFERENT GROBS in
         // LilyPond, not one list: a chord/note-level script is Script_engraver's,

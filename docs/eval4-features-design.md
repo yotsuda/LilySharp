@@ -143,7 +143,7 @@
   音楽の中の `|: … :|`・`:|*N`・1 本だけの `:|`（頭から 2 回目）。反復の外は 1 回目。D.S.／D.C. で戻った所は最後の回。
   ⇒ ending（`[1. …]`）とは別物: ending は**飛ばす**（時間を取らない）、`pass` は**黙る**（時間を取る）。
 - **刷る文字**（英語固定・オーナー決定）: 区間の最初の音（休符でも・spacer と装飾音は除く）の上に斜体で、`@text("…").up` と同じ絵
-  （`MeasureCollector.CollectArticulations` が `DynamicItem` を足す。最初の音は `Semantics.PassRegions`＝木ごとの表・green の検索で
+  （`MeasureCollector.CollectArticulations` が `DynamicItem` を足す。最初の音は `Semantics.OnsetMarks`＝木ごとの表・green の検索で
   打鍵では索引を作らない）。`pass 1`＝"1st time only"、`pass 2`＝"2nd time only"、`pass 3`＝"3rd time only"、`pass 4`＝"4th time only"／
   2 つ＝"1st & 3rd time"／3 つ以上＝"1st, 2nd & 4th time"。`bare` は刷らない。
 - **音**（MIDI・プレビュー・WAV・歌い手は 1 本の道）: 歩きは 1 回のまま、区間の中で打った音に回の集合を付け
@@ -164,3 +164,30 @@
   区間の最初が装飾音のときの文字の位置／区間の中の `voice { } { }`・`%`・cue との組み合わせの音。
 - **作らないもの**: 回ごとに**違う音**（1 回目は A、2 回目は B を同じ小節に）は `pass 1 { } pass 2 { }` と並べても時間が
   2 倍になる＝ending か `voice { } { }` で書く。MusicXML の読み込み（`time-only` を `pass` に戻す）。
+
+## 1. 楽器の持ち替え `instrument piccolo`（第1368 で設計・着手はオーナー 2026-11-15）
+
+- **背景**: Fl. → Picc.、Cl. → B.Cl. の持ち替えを書けない。音楽の中の `instrument piccolo` はエラーで、書き手は楽器ごとに part を
+  分けて `removeEmpty` と手書きの `@text("to Picc.")` でしのいだ（同じ奏者が 3 段に分かれる・評価 4 の bigband・評価 5 の orchestra の B3）。
+- **綴り**: 音楽の中の `instrument PRESET ["名前"]`＝part header と同じ並び（`instrument violin "1st Violin"`）。`clef` と同じく
+  音の間のどこにでも書ける（ふつうは休みの後の小節の頭）。元の楽器へ戻るのも同じ綴り（`instrument flute`）。
+  ⚠️ Claude の判断: 案の文面は「小節の頭に」だが、`clef`・`key` と同じく音の間ならどこでもよいとする（休みの途中で持ち替える形も紙にある）。
+- **意味**（そこから先の、その part）: preset が束ねるもののうち
+  - **替わる**: MIDI の音色（program・プレビューの音色の族）、鳴る高さの移調（`SoundingShiftSemitones`）、音域の検査（LYS1052 系）、
+    刷る名前（替わる所の文字・次の段から段頭の短い名前＝段 2）。
+  - **替わらない**: 音部記号（書き手が `clef` を書く）、相対オクターブの基準（流れのまま）、調弦、調号。
+    ⚠️ Claude の判断: 記譜音で打つ本（既定）では、移調楽器の調号も書いたとおりに刷られる（実測 Lab `sessions/p1368/instr/k1.png`:
+    `key f major` の本のクラリネットも ♭ 1 つ）＝持ち替えで譜面の音と調号は動かず、鳴る高さだけが新しい楽器の移調で替わる。
+    音部記号を自動で替えると、続く音の読みが書き手の見ている譜と食い違うので替えない。
+- **刷る文字**: 替わる所の譜表の上に新しい楽器の名前（書いた "名前"、無ければ preset の名前＝`InstrumentDefaults.PrintedName`）。
+  `@text("…").up` と同じ絵。「to Picc.」は自動で刷らない（オーナー決定 2026-11-15）＝前の休みに `@text` で書く。LilyPond の `\instrumentSwitch` 相当。
+- **音**: 音は持ち替えの後の preset を持つ（`MidiNote.Instrument`・null は header の楽器）＝反復の展開（`PlayedTimeline.Unfold`）で写っても
+  音について回る。`.mid` はその音の前に program change を書き、プレビューは音ごとの program と音色の族を受け取る（`toEvents` は
+  チャンネルの program が替わる所で program を送る）。チャンネルの割り振りは header の楽器で決める。
+- **作らない形（段 1）**: 移調の違う楽器への持ち替えを、譜面の移調が動く本で書く形＝`pitch concert` の本（音を実音で打つ）か、
+  実音の score（`score x pitch concert`）が持ち替えるパートを描く本。譜面の移調はパートで 1 つの値（`ConcertPitch`＝`transpose` の通り道）で、
+  途中で替える仕組みが無い＝**エラー**にする（黙って最初の楽器の移調で刷らない）。段 2 で `transpose` の通り道を時間で替える。
+- **診断**: 知らない preset＝エラー（part header と同じ文と候補）／上の作らない形＝エラー。
+- **書き出し（段 2）**: MusicXML は `<sound><instrument-change>` と `<attributes><transpose>`、`.ly` は文字と `\set Staff.midiInstrument`・
+  `\transposition`。段 1 では `.ly` は文字だけ、MusicXML は文字だけ（音色と移調は最初の楽器のまま＝既知の穴として書く）。
+- **段取り**: 段 1＝構文・音（音色・移調）・音域・文字・診断・補完と文書／段 2＝段頭の名前・MusicXML と `.ly` の音色と移調・譜面の移調が動く本。

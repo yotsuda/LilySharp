@@ -1330,6 +1330,19 @@ internal sealed class PassStartGreen : GreenSyntaxNode
     }
 }
 
+/// <summary>
+/// <c>instrument piccolo</c> / <c>instrument clarinet "Cl. in A"</c> in the music: the part
+/// changes instrument here. Slots: the keyword, then the value tokens as a part header's
+/// <c>instrument</c> takes them (the words of the preset, hyphen segments, a quoted label).
+/// </summary>
+internal sealed class InstrumentSwitchGreen : GreenSyntaxNode
+{
+    public InstrumentSwitchGreen(SyntaxToken keyword, IReadOnlyList<SyntaxToken> values)
+        : base(SyntaxKind.InstrumentSwitch, [keyword, .. values])
+    {
+    }
+}
+
 /// <summary>The <c>}</c> that ends music of some passes only.</summary>
 internal sealed class PassEndGreen : GreenSyntaxNode
 {

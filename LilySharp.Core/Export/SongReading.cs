@@ -381,7 +381,7 @@ public sealed class SongReading
     {
         if (Midi is null)
             return [];
-        return Midi.Tracks.SelectMany(t => t.Notes.Select(n => (Note: n, Program: t.Program ?? -1)))
+        return Midi.Tracks.SelectMany(t => t.Notes.Select(n => (Note: n, Program: t.ProgramOf(n) ?? -1)))
             .Where(n => n.Note.Velocity > 0 && n.Note.DurationTicks > 0)
             .OrderBy(n => n.Note.StartTick).ThenBy(n => n.Note.Pitch)
             .Select(x =>

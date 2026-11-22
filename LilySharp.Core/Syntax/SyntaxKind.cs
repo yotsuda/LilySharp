@@ -544,6 +544,8 @@ public enum SyntaxKind : ushort
     PassStart,
     /// <summary>The <c>}</c> that ends music of some passes only.</summary>
     PassEnd,
+    /// <summary>An instrument change in the music: <c>instrument piccolo</c> (docs/eval4-features-design.md §1).</summary>
+    InstrumentSwitch,
     /// <summary>A tie node.</summary>
     Tie,
     /// <summary>A slur node.</summary>

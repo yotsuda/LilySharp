@@ -1895,6 +1895,12 @@ public sealed partial class LilySharpLanguageServer
             && !IsInsideStringLiteral(text, offset))
             return CompletionContext.SectionBlock;
 
+        // `instrument ▮` in the music — the part changes instrument there
+        // (docs/eval4-features-design.md §1): the presets, as after the part property. A lyrics
+        // body has been answered above, so a sung "instrument" is not taken for the keyword.
+        if (prevWord == "instrument" && scan.Stack.Count > 0 && !IsInsideStringLiteral(text, offset))
+            return CompletionContext.AfterInstrument;
+
         if (i >= 0 && text[i] == '{')
             return CompletionContext.MusicBlock;
 

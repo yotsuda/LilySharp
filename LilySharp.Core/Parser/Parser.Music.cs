@@ -250,6 +250,7 @@ internal sealed partial class Parser
             SyntaxKind.PartialKeyword => true,
             SyntaxKind.KeyKeyword => true,
             SyntaxKind.ClefKeyword => true,
+            SyntaxKind.InstrumentKeyword => true,
             SyntaxKind.OctaveKeyword => true,
             SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword or SyntaxKind.AppoggiaturaKeyword
                 or SyntaxKind.AfterGraceKeyword => true,
@@ -359,6 +360,8 @@ internal sealed partial class Parser
             SyntaxKind.TupletKeyword => ParseTupletExpression(),
             SyntaxKind.KeyKeyword => ParseKeySignature(),
             SyntaxKind.ClefKeyword => ParseClefDeclaration(),
+            // `instrument piccolo` — the part changes instrument here (docs/eval4-features-design.md §1).
+            SyntaxKind.InstrumentKeyword => ParseInstrumentSwitch(),
             SyntaxKind.OctaveKeyword => ParseOctaveDirective(),
             SyntaxKind.TimeKeyword => ParseTimeSignature(),
             SyntaxKind.TempoKeyword => ParseTempoDeclaration(),
@@ -921,6 +924,32 @@ internal sealed partial class Parser
     /// as the following sequence items, preserving source order.
     /// </summary>
     private readonly Queue<GreenNode> _pendingPostEventMarkers = new();
+
+    /// <summary>
+    /// Parses <c>instrument PRESET ["label"]</c> in the music: the preset's words as a part
+    /// header reads them (a hyphenated preset is one word, <c>electric-bass</c>), then an
+    /// optional quoted label. A missing preset is reported where it is missing.
+    /// </summary>
+    private InstrumentSwitchGreen ParseInstrumentSwitch()
+    {
+        var keyword = Advance();
+        var values = new List<SyntaxToken>();
+        if (Current.Kind != SyntaxKind.StringLiteral && SyntaxFacts.IsBareWord(Current.Text))
+        {
+            values.Add(Advance());
+            while (Check(SyntaxKind.Minus) && IsHyphenatedValueTail(Peek(1)))
+            {
+                values.Add(Advance()); // -
+                values.Add(Advance()); // word
+            }
+        }
+        if (Check(SyntaxKind.StringLiteral))
+            values.Add(Advance());
+        if (values.Count == 0)
+            _diagnostics.Error(new TextSpan(_textPosition, Math.Max(1, Current.Width)), DiagnosticCodes.PartPropertyMissingValue,
+                "'instrument' has no instrument: write the one the part changes to - 'instrument piccolo'.");
+        return new InstrumentSwitchGreen(keyword, values);
+    }
 
     /// <summary>Whether the stream stands at <c>pass N… [bare] {</c>.</summary>
     private bool AtPassStart()

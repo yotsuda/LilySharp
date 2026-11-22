@@ -896,6 +896,10 @@ public sealed partial class LilyPondExporter
         // themselves are the MIDI's (the twin measures the picture).
         PassStartSyntax { PrintedText: { } passText } => "<>^\\markup { \\italic \"" + Escape(passText) + "\" }",
         PassStartSyntax or PassEndSyntax => "",
+        // `instrument piccolo` (docs/eval4-features-design.md §1): the name the page prints over
+        // the change, as the pass text is; the sound is the MIDI's.
+        InstrumentSwitchSyntax { Preset.Length: > 0 } change => "<>^\\markup { \\italic \"" + Escape(change.PrintedName) + "\" }",
+        InstrumentSwitchSyntax => "",
         _ => Skip(item),
     };
 

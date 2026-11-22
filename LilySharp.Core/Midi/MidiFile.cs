@@ -28,6 +28,15 @@ public class MidiTrack
     /// <summary>The General MIDI program (0-based) sent at tick 0 on every channel the track's
     /// pitched notes use, or null to send none (the conductor track, a drum-only track).</summary>
     public int? Program { get; set; }
+
+    /// <summary>The program <paramref name="note"/> sounds with: the instrument the part changed
+    /// to in the music (<see cref="MidiNote.Instrument"/>, <c>instrument piccolo</c>) when it names
+    /// a General MIDI sound, else the track's <see cref="Program"/>. Null where the track sends none.</summary>
+    public int? ProgramOf(MidiNote note)
+        => Program is null ? null
+            : note.Instrument is { } preset && Svg.Model.InstrumentDefaults.GetMidiProgram(preset) is int changed ? changed
+            : Program;
+
     /// <summary>What sounds the track, by name (an instrument-name meta event, 0x04), or null:
     /// the voice that sings it (<see cref="MidiForFile"/>). The preview does not read it.</summary>
     public string? Instrument { get; set; }
@@ -403,6 +412,22 @@ public class MidiFile
             channels.Remove(9);
             foreach (int ch in channels)
                 events.Add(new MidiEvent(0, MidiEventType.ProgramChange, ch, program, 0));
+
+            // An instrument change in the music (`instrument piccolo`): the program changes on
+            // the note's channel where a note first sounds with another (MidiNote.Instrument). A
+            // program change sorts before a note on at one tick (the event order below).
+            var sounding = new Dictionary<int, int>();
+            foreach (int ni in Enumerable.Range(0, track.Notes.Count).OrderBy(i => track.Notes[i].StartTick))
+            {
+                var note = track.Notes[ni];
+                int ch = channelPlan != null ? channelPlan[ni] : note.Channel;
+                if (ch == 9 || track.ProgramOf(note) is not int wanted)
+                    continue;
+                if ((sounding.TryGetValue(ch, out int had) ? had : program) == wanted)
+                    continue;
+                events.Add(new MidiEvent(note.StartTick, MidiEventType.ProgramChange, ch, wanted, 0));
+                sounding[ch] = wanted;
+            }
         }
 
         // The pedal on every channel the notes use, as the program is: it is channel-wide too.

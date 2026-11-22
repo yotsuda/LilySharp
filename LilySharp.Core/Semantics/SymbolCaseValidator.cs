@@ -217,24 +217,7 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
                     break;
                 var (preset, _) = InstrumentDefaults.SplitInstrument(valueTokens.Select(t => t.Text));
                 if (!InstrumentPresets.Contains(preset))
-                {
-                    // bass-clarinet → "Bass Clarinet": the label the writer would quote.
-                    static string DisplayNameOf(string written) => string.Join(' ', written.Split('-', StringSplitOptions.RemoveEmptyEntries)
-                        .Select(w => char.ToUpperInvariant(w[0]) + w[1..]));
-                    // The nearest names first, then the whole list: it is short, and until
-                    // 2026-11-14 the message named three presets and no place to find the rest
-                    // (grammar evaluation 4: alto-flute, bass-clarinet, vibraphone, marimba).
-                    string nearest = InstrumentDefaults.SuggestPreset(preset) is { } meant
-                        ? $" Did you mean '{meant}'?"
-                        : InstrumentDefaults.RelatedPresets(preset) is { Count: > 0 } related
-                            ? $" The nearest preset{(related.Count == 1 ? " is" : "s are")} {string.Join(", ", related.Select(p => $"'{p}'"))}."
-                            : " No preset is near it.";
-                    Error(valueTokens[0],
-                        $"Unknown instrument preset '{preset}'.{nearest} The presets (case-sensitive): "
-                        + $"{string.Join(", ", InstrumentDefaults.KnownInstruments)} - docs/GRAMMAR_FOR_LLM.md, "
-                        + "\"Instrument ranges\", lists what each brings. An instrument that has no preset takes a "
-                        + $"quoted \"…\" name instead: instrument \"{DisplayNameOf(preset)}\".");
-                }
+                    Error(valueTokens[0], UnknownPresetMessage(preset));
                 break;
             // ("lines" left this list 2026-08-19 and "removeEmpty" 2026-09-08: both are
             // properties of the RENDERING, written `staff m as lines N removeEmpty V` in
@@ -372,6 +355,27 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
         for (int i = 2; i < prop.SlotCount; i++)
             if (prop.GetChild(i) is SyntaxTokenNode t)
                 yield return t;
+    }
+
+    /// <summary>What an <c>instrument</c> that names no preset is told — in a part header, and
+    /// in the music where a part changes instrument (InstrumentSwitchValidator).</summary>
+    internal static string UnknownPresetMessage(string preset)
+    {
+        // bass-clarinet → "Bass Clarinet": the label the writer would quote.
+        static string DisplayNameOf(string written) => string.Join(' ', written.Split('-', StringSplitOptions.RemoveEmptyEntries)
+            .Select(w => char.ToUpperInvariant(w[0]) + w[1..]));
+        // The nearest names first, then the whole list: it is short, and until
+        // 2026-11-14 the message named three presets and no place to find the rest
+        // (grammar evaluation 4: alto-flute, bass-clarinet, vibraphone, marimba).
+        string nearest = InstrumentDefaults.SuggestPreset(preset) is { } meant
+            ? $" Did you mean '{meant}'?"
+            : InstrumentDefaults.RelatedPresets(preset) is { Count: > 0 } related
+                ? $" The nearest preset{(related.Count == 1 ? " is" : "s are")} {string.Join(", ", related.Select(p => $"'{p}'"))}."
+                : " No preset is near it.";
+        return $"Unknown instrument preset '{preset}'.{nearest} The presets (case-sensitive): "
+            + $"{string.Join(", ", InstrumentDefaults.KnownInstruments)} - docs/GRAMMAR_FOR_LLM.md, "
+            + "\"Instrument ranges\", lists what each brings. An instrument that has no preset takes a "
+            + $"quoted \"…\" name instead: instrument \"{DisplayNameOf(preset)}\".";
     }
 
     private void Error(SyntaxNode token, string message) =>

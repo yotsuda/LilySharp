@@ -73,6 +73,7 @@ public static class MidiOutEvents
     {
         var events = new List<(MidiOutEvent E, int I)>();
         var programs = new Dictionary<int, int>();
+        var sounding = new Dictionary<int, int>();
         int serial = 0;
         // Times to the microsecond: a note's end and the next one's start that are one instant
         // can differ in the last bit (a tempo the practice menu stretched, 2026-10-25), and the
@@ -89,8 +90,16 @@ public static class MidiOutEvents
                 Add(Math.Max(0, n.T - offset), (byte)(Control | c), Sustain, n.V);
                 continue;
             }
-            if (c != DrumChannel && !programs.ContainsKey(c)) programs[c] = ProgramOf(n.G, n.I);
             double t = Math.Max(0, n.T - offset);
+            if (c != DrumChannel)
+            {
+                // The channel's first program at the start; a later note of another — the part
+                // changed instrument (`instrument piccolo`) — changes it where that note starts.
+                int g = ProgramOf(n.G, n.I);
+                if (!programs.ContainsKey(c)) programs[c] = g;
+                else if (sounding[c] != g) Add(t, (byte)(Program | c), g, 0);
+                sounding[c] = g;
+            }
             double off = t + Math.Max(MinDuration, n.D);
             int key = (int)Math.Floor(n.P + BendEpsilon);
             double frac = n.P - key;

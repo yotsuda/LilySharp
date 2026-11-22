@@ -1872,7 +1872,7 @@ public static partial class NoteStepper
                     {
                         index.Midi[note.SourcePos] = list = [];
                         index.Timbre[note.SourcePos] = note.Timbre;
-                        index.Program[note.SourcePos] = track.Program ?? NoProgram;
+                        index.Program[note.SourcePos] = track.ProgramOf(note) ?? NoProgram;
                     }
                     if (!list.Contains(note.Pitch))
                         list.Add(note.Pitch);

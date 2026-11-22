@@ -68,6 +68,24 @@ public class MidiOutTests
         Assert.DoesNotContain(events, e => Kind(e) == "program" && e.Channel == MidiOutEvents.DrumChannel);
     }
 
+    /// <summary>An instrument change in the music (<c>instrument piccolo</c>): the channel's
+    /// program changes where a note of another starts, before that note — the webview's case
+    /// of the same name.</summary>
+    [Fact]
+    public void AChannelsProgram_ChangesWhereANoteOfAnotherStarts()
+    {
+        var events = MidiOutEvents.From(
+        [
+            Note(0, 1, 72, c: 0, g: 73),
+            Note(1, 1, 84, c: 0, g: 72),
+            Note(2, 1, 84, c: 0, g: 72),
+            Note(3, 1, 72, c: 0, g: 73),
+        ], 0);
+        Assert.Equal([(0.0, 73), (1.0, 72), (3.0, 73)],
+            events.Where(e => Kind(e) == "program").Select(e => (e.Time, (int)e.Data1)));
+        Assert.Equal(["off", "program", "on"], events.Where(e => e.Time == 1).Select(Kind));
+    }
+
     [Fact]
     public void ANotesOff_ComesBeforeItsReStrike_AtTheSameInstant()
     {

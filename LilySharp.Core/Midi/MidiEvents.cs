@@ -144,6 +144,11 @@ public readonly record struct MidiNote(
     // The source position of that `pass` (its PassStartSyntax), -1 outside one: what tells a
     // region none of whose notes is ever played (MidiExporter.SilentPassRegions).
     int PassRegionAt = -1,
+    // The instrument the part changed to in the music before this note (`instrument piccolo`,
+    // its preset lower-cased), or null for the part's own: the program it sounds with
+    // (MidiTrack.ProgramOf) and the range it is checked against. Rides the note through the
+    // repeats as played. Not written to .mid files (the program change is).
+    string? Instrument = null,
     // The `%` this note sounds for — a percent repeat plays its bars again for each mark, from the
     // bars' own notes, which the page prints once; the mark is what the page prints there. Null
     // for any other note. Not written to .mid files.

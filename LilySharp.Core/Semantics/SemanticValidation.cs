@@ -121,6 +121,7 @@ public static class SemanticValidation
         new RepeatPairingValidator(),       // a '|:' that no ':|' closes (score-expanded)
         new RepeatSignAgreementValidator(), // two parts writing different repeat signs on one bar line
         new MusicRepeatValidator(),         // a repeat, an ending or a mark written in the music: nesting, passes, a sign inside a bar
+        new InstrumentSwitchValidator(),    // an `instrument X` in the music naming no preset, or one the page cannot follow
         new PassRegionValidator(),          // a `pass N { … }` naming no pass or a pass twice; one inside another
         new VerseRepeatValidator(),        // the verses of a section that repeats: a pass none names, a verse never sung, a pass named twice, words in a bar the pass does not play
         new ExpansionBudgetValidator(),     // expansion truncated at the collector's site budget

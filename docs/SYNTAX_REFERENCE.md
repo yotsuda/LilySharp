@@ -1727,6 +1727,32 @@ though both ends of that slur are cue notes.
 Two other shapes are closed while the feature is young: a `cue` nested in a `cue`
 (**LYS4013**) and a `voice { … } voice { … }` span inside one (**LYS4014**).
 
+## Changing Instrument
+
+A player who doubles — flute and piccolo, clarinet and bass clarinet — stays one part, and the
+part changes instrument in its music:
+
+```
+R1*2 | instrument piccolo c'''4 d''' e''' f''' |   // Plays and prints as the piccolo from here
+R1 | instrument flute c''1 |                       // Back to the flute
+instrument clarinet "Cl. in B-flat" c''1 |        // The quoted name is the one printed
+```
+
+From the change on, the part **sounds** the preset — its MIDI program and its transposition
+(the piccolo an octave above what is written, a B♭ clarinet a tone below) — and its notes are
+checked against that instrument's range. The page prints the instrument's name over the next
+note or rest. The change holds into the sections after it, until the next one.
+
+What is written stays as written: the notes, the key signature and the clef. Write `clef bass`
+yourself where the new instrument reads another clef, and "to Picc." with `@text` in the rest
+before the change if you want it — it is not printed for you.
+
+In a book typed at concert pitch (`pitch concert`), or one a score prints at concert pitch, the
+page would have to move its transposition at a change to an instrument that transposes
+otherwise, and a page prints a part with one transposition: that change is an error
+(**LYS1078**) until the page can follow — give the instrument a part of its own there. The
+MusicXML and LilyPond exports write the name; their sound stays the part's own instrument for now.
+
 ## Music of Some Passes Only
 
 "2nd time only", "tacet 1st x": notes a player plays on some times through a repeat and not

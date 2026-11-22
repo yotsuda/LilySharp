@@ -51,7 +51,9 @@ public class InstrumentCompletionTests
     [InlineData("lyrics { play my instrument ", false)]  // ordinary English word in lyrics
     [InlineData("title \"My instrument ", false)]        // inside a string literal
     [InlineData("form { instrument ", false)]       // structure body, not a part
-    [InlineData("section S { m { instrument ", false)]   // part REFERENCE body, not a declaration
+    // A part's music: the player changes instrument there (2026-11-22, docs/eval4-features-design.md §1).
+    [InlineData("section S { m { instrument ", true)]
+    [InlineData("section S { m { c'1 | instrument ", true)]
     public void InstrumentContext_FiresOnlyInsideAPartBlock(string text, bool expected)
     {
         var context = LilySharpLanguageServer.GetCompletionContext(text, text.Length);

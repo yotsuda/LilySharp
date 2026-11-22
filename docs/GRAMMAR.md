@@ -2951,6 +2951,28 @@ MidMusicCommand = 'clef' , [ '!' ] , ClefName       (* '!' forces a clef that ch
                                                       LilyPond; a tuplet's body may hold one. *)
                | 'key' , [ '!' ] , PitchBase , [ Accidental-text ] , Mode
                | 'time' , [ '!' ] , Integer , '/' , Integer
+               | 'instrument' , Preset , [ String ]   (* THE PLAYER CHANGES INSTRUMENT here
+                                                      (docs/eval4-features-design.md §1;
+                                                      2026-11-22): from here the part sounds the
+                                                      preset — its MIDI program and its
+                                                      transposition — and is checked against its
+                                                      range; the page prints its name (the
+                                                      String, else the preset's) over the next
+                                                      note or rest, as '@text("…").up'. The notes,
+                                                      the clef and the key stay as written, so
+                                                      write 'clef' yourself if it changes, and
+                                                      'to Picc.' with @text in the rest before
+                                                      (not printed for you). Back to the part's
+                                                      own: 'instrument flute'. It holds into the
+                                                      sections after it. Errors: a preset that is
+                                                      none (the part header's message); a change
+                                                      to another transposition where the page
+                                                      would have to move — a part typed at
+                                                      concert pitch, or one a score prints at
+                                                      concert pitch, the two differing by more
+                                                      than octaves (LYS1078; not drawn yet).
+                                                      MusicXML and the twin write the name; their
+                                                      sound stays the part's own for now. *)
                | 'time' , [ '!' ] , 'none'          (* unmetered from here to the next
                                                       'time N/M' — see TimeDecl §2 *)
                | 'partial' , DurationToken         (* this bar is that long — at a bar's

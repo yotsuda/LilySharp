@@ -429,7 +429,8 @@ public sealed partial class LilySharpLanguageServer
                         Q = n.Percent != null ? n.SourcePos : null,
                         I = n.Timbre,
                         C = n.Channel == 9 ? 9 : x.Channel,
-                        G = n.Channel == 9 ? 0 : x.Track.Program ?? 0,
+                        // The note's own program where the part changed instrument (`instrument piccolo`).
+                        G = n.Channel == 9 ? 0 : x.Track.ProgramOf(n) ?? 0,
                         N = x.Index,
                         K = n.Strike,
                         M = n.PrintedBar,

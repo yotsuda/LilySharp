@@ -210,13 +210,15 @@ export function fromOffset(notes: readonly PlaybackNote[], offset: number): Play
  * The events of `notes` from `offset` (seconds into the piece) on, timed from the
  * offset. Notes already past the offset are dropped whole (re-striking half a note reads
  * worse than starting cleanly at the next onset). Each pitched channel's program is set
- * once, at the start; a quarter-tone note bends its channel's wheel for its duration and
+ * at the start, and again where a note of another program starts (an instrument change in
+ * the music); a quarter-tone note bends its channel's wheel for its duration and
  * centres it after (one wheel per channel: a quarter tone sounding against a plain note
  * on the same channel bends both — the .mid export has the same limit).
  */
 export function toEvents(notes: readonly PlaybackNote[], offset = 0): MidiEvent[] {
     const events: MidiEvent[] = [];
     const programs = new Map<number, number>();
+    const sounding = new Map<number, number>();
     for (const n of notes) {
         if (n.T < offset - 0.001 || isLight(n)) { continue; }
         const c = channelOf(n);
@@ -224,11 +226,18 @@ export function toEvents(notes: readonly PlaybackNote[], offset = 0): MidiEvent[
             events.push({ t: micro(Math.max(0, n.T - offset)), kind: 'pedal', c, v: n.V });
             continue;
         }
-        if (c !== DRUM_CHANNEL && !programs.has(c)) { programs.set(c, programOf(n.G, n.I)); }
         // To the microsecond: a note's end and the next one's start that are one instant can
         // differ in the last bit (a tempo the practice menu stretched, 2026-10-25), and the off
         // sorted after the re-strike silenced it — a repeated note went missing.
         const t = micro(Math.max(0, n.T - offset));
+        if (c !== DRUM_CHANNEL) {
+            // The channel's first program at the start; a later note of another — the part
+            // changed instrument (`instrument piccolo`) — changes it where that note starts.
+            const g = programOf(n.G, n.I);
+            if (!programs.has(c)) { programs.set(c, g); }
+            else if (sounding.get(c) !== g) { events.push({ t, kind: 'program', c, g }); }
+            sounding.set(c, g);
+        }
         const off = micro(t + Math.max(0.03, n.D));
         // The key below the pitch, bent UP by the fraction — the shape the .mid export
         // writes (a key and a positive wheel), not Math.round's coin toss at .5.

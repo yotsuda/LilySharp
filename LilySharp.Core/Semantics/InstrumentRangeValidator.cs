@@ -65,7 +65,10 @@ internal sealed class InstrumentRangeValidator : ISemanticValidator
                         : "check its octave, or the part's instrument"));
             }
         }
-        if (ranges.Count == 0)
+        // A part that changes instrument in the music (`instrument piccolo`) is checked against
+        // the instrument it changed to from there (MidiNote.Instrument).
+        bool changes = tree.GetRoot().DescendantNodes<InstrumentSwitchSyntax>().Any();
+        if (ranges.Count == 0 && !changes)
             return;
 
         MidiFile midi;
@@ -91,7 +94,17 @@ internal sealed class InstrumentRangeValidator : ISemanticValidator
         var seen = new HashSet<int>();
         foreach (var n in midi.Tracks.SelectMany(t => t.Notes))
         {
-            if (n.SourcePos < 0 || n.Part is not { } part || !ranges.TryGetValue(part, out var range))
+            if (n.SourcePos < 0 || n.Part is not { } part)
+                continue;
+            (int Low, int High, string Whose, string Advice) range;
+            if (n.Instrument is { } changed)
+            {
+                if (InstrumentDefaults.SoundingRange(changed) is not { } changedRange)
+                    continue;
+                range = (changedRange.Low, changedRange.High, $"the range of the {InstrumentDefaults.PrintedName(changed) ?? changed}",
+                    "check its octave, or the instrument the part changed to");
+            }
+            else if (!ranges.TryGetValue(part, out range))
                 continue;
             var (low, high, whose, advice) = range;
             if (n.Pitch >= low && n.Pitch <= high || !seen.Add(n.SourcePos))

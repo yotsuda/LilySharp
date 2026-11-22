@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **`instrument piccolo` in the music changes the player's instrument.** The preview plays the new sound and pitch from there and prints the name over the change; completion offers the presets after `instrument`.
 - **`pass 2 { … }` plays music on some times through a repeat only.** The notes rest on the other passes and print once under "2nd time only"; completion offers `pass`, and hovering it says which passes it sounds on.
 - **An ending may follow a two-voice passage that closes its bar** (`voice { … | } { … | } [1. …`), without an extra `|`.
 - **A cadenza (`time none` in a section's header) exports to LilyPond in time.** Every bar after it used to be a beat off in LilyPond's engraving.

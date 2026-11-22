@@ -844,6 +844,15 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   a cue is a voice of its own, so close the span inside the cue or keep both ends outside.
   Two `cue` blocks side by side are two voices — a span may not run from one into the next
   either, even though both of its ends are cue notes.
+- A player changing instrument (Fl. → Picc., Cl. → B.Cl.): write `instrument piccolo` in the
+  part's music, usually after a rest — `R1*4 | instrument piccolo c'''4 d''' e''' f''' |`. From
+  there the part sounds the preset (its sound, transposition and range) and the page prints
+  "Piccolo" over the next note; `instrument piccolo "Picc."` prints the quoted name. The notes,
+  the clef and the key stay as written (write `clef bass` yourself for a bass clarinet's change of
+  clef, and `@text("to Picc.")` in the rest before if you want the warning). Change back with
+  `instrument flute`. Keep one part per player instead of a part per instrument. In a book typed
+  at concert pitch (`pitch concert`), or printed at concert pitch, a change to an instrument of
+  another transposition is not drawn yet (LYS1078) — give that instrument its own part there
 - Music of some passes only: `pass 2 { … }` — "2nd time only", "tacet 1st x". The notes sound
   on the passes named and rest (keeping their time) on the others: `|: c'4 d' pass 2 { e' f' } :|`
   plays c d (rest rest) c d e f. A pass is the time through the repeat around it (`|: … :|`,

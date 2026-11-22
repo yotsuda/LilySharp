@@ -476,6 +476,20 @@ describe('the events a note list becomes (docs/playback-design.md §2)', () => {
         assert.ok(!events.some(e => e.kind === 'program' && e.c === DRUM_CHANNEL));
     });
 
+    it('changes a channel\'s program where a note of another starts (an instrument change in the music)', () => {
+        const events = toEvents([
+            note(0, 1, 72, { C: 0, G: 73 }),
+            note(1, 1, 84, { C: 0, G: 72 }),
+            note(2, 1, 84, { C: 0, G: 72 }),
+            note(3, 1, 72, { C: 0, G: 73 }),
+        ]);
+        const programs = events.filter(e => e.kind === 'program') as { t: number; g: number }[];
+        assert.deepEqual(programs.map(e => [e.t, e.g]), [[0, 73], [1, 72], [3, 73]]);
+        // …before the note it changes the sound of.
+        const at1 = events.filter(e => e.t === 1).map(e => e.kind);
+        assert.deepEqual(at1, ['off', 'program', 'on']);
+    });
+
     it('orders a note\'s off before a re-strike of the same pitch at the same instant', () => {
         const events = toEvents([note(0, 1, 60), note(1, 1, 60)]);
         const at1 = events.filter(e => e.t === 1).map(e => e.kind);

@@ -162,6 +162,8 @@ internal static class LanguageReference
             TupletExpressionSyntax tuplet => $"**Tuplet**: {tuplet.TupletRatio} in the time of {tuplet.BaseDivision}",
             PassStartSyntax pass => $"**Pass**: sounds on pass {pass.Passes} only — a rest of its length on the others"
                 + (pass.PrintedText is { } passText ? $" (prints \"{passText}\")" : " (prints no text)"),
+            InstrumentSwitchSyntax change => $"**Instrument change**: the part plays the {change.PrintedName} from here "
+                + "— its sound, transposition and range; the notes, the clef and the key stay as written",
             OverrideDeclarationSyntax ovr => $"**Override**: `{ovr.GrobName.Text}.{ovr.PropertyName.Text}` = `{ovr.ValueToken.Text}`",
             RevertDeclarationSyntax rev => $"**Revert**: `{rev.GrobName.Text}.{rev.PropertyName.Text}`",
             OnceModifierSyntax => "**Once**: Applies override/revert for one note only",

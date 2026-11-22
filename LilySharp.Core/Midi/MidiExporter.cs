@@ -1663,12 +1663,17 @@ public sealed class MidiExporter
         // written at its start (PlayedTimeline).
         int first = track.Notes.Count;
         ProcessNodeCore(node, track, conductorTrack);
+        // …and the instrument the part has changed to, if any (MidiNote.Instrument).
+        string? switched = _currentPart is { } part ? SwitchedInstrument(part) : null;
         for (int i = first; i < track.Notes.Count; i++)
         {
             var n = track.Notes[i];
             int past = n.StartTick + n.DurationTicks - _currentTick;
             if (past > 0 && n.DurationTicks > 0 && !n.IsGrace && !n.IsAfterGrace && n.StartTick < _currentTick)
-                track.Notes[i] = n with { Overhang = past };
+                n = n with { Overhang = past };
+            if (switched != null && n.Channel != 9)
+                n = n with { Instrument = switched };
+            track.Notes[i] = n;
         }
     }
 
@@ -1790,6 +1795,10 @@ public sealed class MidiExporter
             // every pass into one note, which then sounds on the region's passes only (MEASURED:
             // '|: c'2 pass 2 { e'2~ } | e'1 :|' lost the e'1 on the first pass). Where both sides
             // sound, the note after the brace is struck again.
+            case InstrumentSwitchSyntax change:
+                SwitchInstrument(change);
+                break;
+
             case PassStartSyntax passStart:
                 _tiePending = false;
                 _passRegions.Push((track, track.Notes.Count, passStart.Passes, passStart.SourceStart));
@@ -3158,6 +3167,10 @@ public sealed class MidiExporter
         // disagree (the substring guess below read `double-bass` and `piano-bass` as a bass
         // guitar). A part that names none keeps the guess from its name: "flute" sounds
         // flute-ish without any property.
+        // An instrument the part changed to in the music sounds as that preset.
+        if (SwitchedInstrument(partName) is { } switched
+            && LilySharp.Core.Svg.Model.InstrumentDefaults.GetMidiProgram(switched) is int switchedProgram)
+            return GeneralMidi.PreviewTimbreFamily(switchedProgram);
         var header = Header(partName);
         if (header.MidiInstrument != null
             || LilySharp.Core.Svg.Model.InstrumentDefaults.GetMidiProgram(header.Preset) != null)
@@ -3217,7 +3230,44 @@ public sealed class MidiExporter
         // shift inside, the file's top-level transpose outside (FileTranspose).
         var transpose = PartTranspose.Read(decl, _fileConcert, _fileShift);
         return (transpose is { } t ? PitchTransposer.IntervalSemitones(t.step, t.alt, t.oct) : 0)
-            + _scoreTransposeSemitones + PartSoundingShift(partName);
+            + _scoreTransposeSemitones + PartSoundingShift(partName) + SwitchedTranspositionDelta(partName);
+    }
+
+    // The instrument each part has changed to in the music so far (`instrument piccolo`,
+    // docs/eval4-features-design.md §1), by part; a part not in it plays its own. The walk goes
+    // as printed, so a change holds on into the sections after it until the next one.
+    private readonly Dictionary<string, string> _switchedInstrument = new(StringComparer.Ordinal);
+
+    /// <summary>The instrument <paramref name="partName"/> has changed to, or null.</summary>
+    private string? SwitchedInstrument(string partName)
+        => _switchedInstrument.TryGetValue(partName, out var preset) ? preset : null;
+
+    /// <summary>What the instrument changed to sounds away from the part's own transposition:
+    /// a flute that took the piccolo sounds an octave higher from there (0 with no change).</summary>
+    /// <remarks>A part typed at concert pitch sounds its letters whatever plays them: 0.</remarks>
+    private int SwitchedTranspositionDelta(string partName)
+        => SwitchedInstrument(partName) is { } preset
+            && !(ConcertPitch.PartMode(_partDecls.TryGetValue(partName, out var decl) ? decl : null) ?? _fileConcert)
+            ? Svg.Model.InstrumentDefaults.GetTransposition(preset) - Header(partName).TranspositionSemitones
+            : 0;
+
+    /// <summary>
+    /// <c>instrument piccolo</c> in the music: the part sounds the preset from here — its
+    /// transposition moves the played pitch and its sound the preview timbre (the program is
+    /// the note's, MidiTrack.ProgramOf). Back to the part's own instrument, the change is gone.
+    /// </summary>
+    private void SwitchInstrument(InstrumentSwitchSyntax change)
+    {
+        if (_currentPart is not { } part || change.Preset.Length == 0
+            || !Svg.Model.InstrumentDefaults.IsKnownInstrument(change.Preset))
+            return;
+        int before = SwitchedTranspositionDelta(part);
+        if (change.Preset == Header(part).Preset)
+            _switchedInstrument.Remove(part);
+        else
+            _switchedInstrument[part] = change.Preset;
+        _currentTransposeSemitones += SwitchedTranspositionDelta(part) - before;
+        _currentTimbre = PartTimbre(part);
     }
 
     /// <summary>The part's octave anchor, resolved the way the page resolves it, so a bare
