@@ -298,6 +298,14 @@ internal sealed class MeasureBuilder
     /// <summary>Gets the current accumulated duration within the measure.</summary>
     public Fraction CurrentDuration => _currentDuration;
 
+    /// <summary>The moment a note-attached mark is anchored at (MusicMarkItem.AnchorTiming): the
+    /// clock, or under <c>time none</c>, where it stands still (<see cref="SenzaMisura"/>), the
+    /// lengths of the items the measure holds so far — the ottava transposer counts its window
+    /// off those. In a cadenza every mark stood at moment 0 until session 1363, and an `@!15ma`
+    /// on a run's last note (an end that takes its note in) ended the octavation after one beat
+    /// (Lab sessions/p1362/eval5 piano r-04b).</summary>
+    public Fraction AnchorMoment => _bars.SenzaMisura ? ItemsLength() : _currentDuration;
+
     /// <summary>The auto-complete measure length currently in force — the running meter, or
     /// the pickup while one is pending (<see cref="BarContext.BarLength"/>). A section boundary
     /// reads this to decide whether reverting to the score meter needs a redrawn time signature.</summary>
@@ -1397,6 +1405,14 @@ internal sealed class MeasureBuilder
     /// its sounding pitch (OMR report 2026-10-20, item 7).
     /// </remarks>
     public Fraction CurrentMoment => _currentDuration + _unclockedTime;
+
+    private Fraction ItemsLength()
+    {
+        var length = Fraction.Zero;
+        foreach (var item in _currentItems)
+            length += GetItemDuration(item);
+        return length;
+    }
 
     /// <summary>The scaled time of the members added since the clock last moved — see
     /// <see cref="CurrentMoment"/>.</summary>

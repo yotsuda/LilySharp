@@ -124,6 +124,25 @@ public class OttavaMidBarTests
     }
 
     /// <summary>
+    /// …under <c>time none</c> too, where the clock stands still (a cadenza): the moment a mark
+    /// stands at is the lengths of the notes before it in the bar. Until session 1363 every mark
+    /// there stood at moment 0, so an end on the run's last note ended the octavation after the
+    /// length of that note alone (Lab sessions/p1362/eval5 piano r-04b: the rest of the run was
+    /// drawn at sounding pitch on seven ledger lines).
+    /// </summary>
+    [Theory]
+    [InlineData("a,,8@8vb e,8 a,8 e,8 a,4 e,4@!8vb | a,,4 e, a, e, |", 6)]
+    [InlineData("a,,8@8vb e,8 a,8 e,8@!8vb a,4 e,4 | a,,4 e, a, e, |", 4)]
+    public void AnEndUnderTimeNone_IncludesTheNoteItIsWrittenOn(string music, int covered)
+    {
+        var shifted = Heads(Svg("time none " + music));
+        var plain = Heads(Svg("time none " + music.Replace("@8vb", "").Replace("@!8vb", "")));
+        Assert.Equal(10, shifted.Length);
+        for (int i = 0; i < 10; i++)
+            Assert.Equal(i < covered ? plain[i].Y - 3.5 : plain[i].Y, shifted[i].Y, 2);
+    }
+
+    /// <summary>
     /// …and inside a tuplet the note's length is the tuplet member's SCALED one: the members
     /// after the end are back at written pitch. Until session 1034 the end read the length of
     /// the last note BEFORE the tuplet (the tuplet funnel did not record its members as the

@@ -1200,7 +1200,7 @@ public sealed partial class MeasureCollector
                     int itemIndex = builder.CurrentItemCount;
                     // Onset timing of this note (elapsed duration before it is added)
                     // — anchors note-attached marks to the right column.
-                    Fraction noteAnchorTiming = builder.CurrentDuration;
+                    Fraction noteAnchorTiming = builder.AnchorMoment;
                     // The grace group waiting for this note is walked BEFORE it (octave
                     // context), and the index re-read — OpenSoundingItem says why.
                     (itemIndex, bool isCue, int featherDir) =
@@ -1220,7 +1220,7 @@ public sealed partial class MeasureCollector
                     {
                         int prMeasureIndex = builder.CurrentMeasureIndex;
                         int prItemIndex = builder.CurrentItemCount;
-                        Fraction prAnchorTiming = builder.CurrentDuration;
+                        Fraction prAnchorTiming = builder.AnchorMoment;
                         var pitchedRest = CreatePitchedRestItem(note);
                         await AddItemAsync(builder, WithBowSources(pitchedRest with
                         {
@@ -1263,7 +1263,7 @@ public sealed partial class MeasureCollector
                 {
                     int drumMeasureIndex = builder.CurrentMeasureIndex;
                     int drumItemIndex = builder.CurrentItemCount;
-                    Fraction drumAnchorTiming = builder.CurrentDuration;
+                    Fraction drumAnchorTiming = builder.AnchorMoment;
                     // Opened like every sounding item — above all for the grace waiting for
                     // it: a flam (`acciaccatura { sn16 } sn4`) drew no grace until 2026-10-11,
                     // because this arm never walked it (and LYS4020 called the body empty).
@@ -1290,7 +1290,7 @@ public sealed partial class MeasureCollector
                             ? left : builder.CurrentMeasureLength);
                     int restMeasureIndex = builder.CurrentMeasureIndex;
                     int restItemIndex = builder.CurrentItemCount;
-                    Fraction restAnchorTiming = builder.CurrentDuration;
+                    Fraction restAnchorTiming = builder.AnchorMoment;
                     int count = rest.MeasureCount;
                     // `R4*5` in 5/4 is the bar's rest and `R4*40` eight bars of it: a run
                     // R<dur>*N opening a bar is dur × N of silence in whole bars of the meter
@@ -1429,7 +1429,7 @@ public sealed partial class MeasureCollector
                 {
                     int measureIndex = builder.CurrentMeasureIndex;
                     int itemIndex = builder.CurrentItemCount;
-                    Fraction chordAnchorTiming = builder.CurrentDuration;
+                    Fraction chordAnchorTiming = builder.AnchorMoment;
                     // The EMPTY chord <> is a zero-time carrier: it adds NO item,
                     // advances NO time, leaves the running default duration alone,
                     // and its post-events (dynamics, scripts) attach at the CURRENT
@@ -1523,7 +1523,7 @@ public sealed partial class MeasureCollector
                 {
                     int measureIndex = builder.CurrentMeasureIndex;
                     int itemIndex = builder.CurrentItemCount;
-                    Fraction repAnchorTiming = builder.CurrentDuration;
+                    Fraction repAnchorTiming = builder.AnchorMoment;
                     (itemIndex, bool isCue, _) =
                         await OpenSoundingItem(rep, builder, measureIndex, itemIndex, hasSlurEndAfter);
                     bool hasArpeggio = HasArpeggioArticulation(rep);
@@ -1560,7 +1560,7 @@ public sealed partial class MeasureCollector
                 {
                     int measureIndex = builder.CurrentMeasureIndex;
                     int itemIndex = builder.CurrentItemCount;
-                    Fraction slashAnchorTiming = builder.CurrentDuration;
+                    Fraction slashAnchorTiming = builder.AnchorMoment;
                     (itemIndex, bool isCue, _) =
                         await OpenSoundingItem(slash, builder, measureIndex, itemIndex, hasSlurEndAfter);
                     var slashItem = DecorateSoundingItem(
@@ -1582,7 +1582,7 @@ public sealed partial class MeasureCollector
                 {
                     int measureIndex = builder.CurrentMeasureIndex;
                     int itemIndex = builder.CurrentItemCount;
-                    Fraction bareAnchorTiming = builder.CurrentDuration;
+                    Fraction bareAnchorTiming = builder.AnchorMoment;
                     (itemIndex, bool isCue, _) =
                         await OpenSoundingItem(bare, builder, measureIndex, itemIndex, hasSlurEndAfter);
                     var bareItem = DecorateSoundingItem(
