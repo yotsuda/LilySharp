@@ -842,7 +842,7 @@ public sealed partial class MeasureCollector
         // Degrees stack in the WRITTEN key; the part transpose is then applied
         // once by ResolveAbsolutePitch (TransposePitch). Using the displayed
         // (already-transposed) key here would transpose a degree chord twice.
-        int writtenKeySharps = _v.Meta.KeySharps - _v.Octave.TransposeKeySharps(0);
+        int writtenKeySharps = _v.Meta.KeySharps - _v.Octave.KeyShift;
         foreach (var degree in chord.Degrees)
         {
             var (step, alteration, octave) = ChordDegrees.Resolve(

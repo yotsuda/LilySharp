@@ -133,6 +133,30 @@ public static class PitchTransposer
         return (newStep, newAlteration, newOctave);
     }
 
+    /// <summary>The c→target interval spelled twelve fifths away, the same sound: +12 fifths is a
+    /// step lower and sharper (c→ees, a minor third, becomes c→dis, an augmented second), −12 a
+    /// step higher and flatter. 0 leaves it.</summary>
+    public static (int step, int alt, int oct) RespellInterval(int step, int alt, int oct, int fifths)
+    {
+        if (fifths == 0)
+            return (step, alt, oct);
+        int semitones = IntervalSemitones(step, alt, oct);
+        int raw = step + 7 * oct + (fifths > 0 ? -1 : 1);
+        int newOct = FloorDiv(raw, 7), newStep = Mod(raw, 7);
+        return (newStep, semitones - RelativeOctave.StepSemitoneOf(newStep) - 12 * newOct, newOct);
+    }
+
+    /// <summary>How many fifths to respell a transposition by so that the key it prints is not one
+    /// of seven or more sharps or flats where twelve fifths away has fewer: 0, +12 or −12.</summary>
+    /// <remarks>LILYSHARP-OWN (session 1363): LilyPond's <c>\transpose</c> keeps the interval's
+    /// spelling, so a clarinet in A over a piece in D♭ major reads F♭ major — eight flats, a
+    /// double flat in the signature — and one in B♭ over B major reads C♯ major. A publisher
+    /// prints E major and D♭ major: the part's player reads the key with fewer accidentals.</remarks>
+    public static int KeyRespellFor(int writtenFifths)
+        => Math.Abs(writtenFifths) >= 7 && Math.Abs(writtenFifths - 12 * Math.Sign(writtenFifths)) < Math.Abs(writtenFifths)
+            ? -12 * Math.Sign(writtenFifths)
+            : 0;
+
     // Floored division / modulo so a downward interval (negative rawStep) carries
     // the octave the same way an upward one does.
     private static int FloorDiv(int a, int b) => (int)Math.Floor((double)a / b);

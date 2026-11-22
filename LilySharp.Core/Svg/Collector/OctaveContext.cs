@@ -217,20 +217,42 @@ internal sealed class OctaveContext
     /// Applies the part transpose to a resolved display pitch (no-op when the part
     /// is untransposed).
     /// </summary>
-    public (int step, int alt, int octave) TransposePitch(int step, int alt, int octave) =>
-        HasTranspose
-            ? PitchTransposer.Transpose(step, alt, octave, TransposeStep, TransposeAlt, TransposeOctave)
-            : (step, alt, octave);
+    public (int step, int alt, int octave) TransposePitch(int step, int alt, int octave)
+    {
+        if (!HasTranspose)
+            return (step, alt, octave);
+        var (ts, ta, to) = PitchTransposer.RespellInterval(TransposeStep, TransposeAlt, TransposeOctave, KeyRespell);
+        return PitchTransposer.Transpose(step, alt, octave, ts, ta, to);
+    }
+
+    /// <summary>The fifths the transpose is respelled by for the key in force — 0, +12 or −12
+    /// (<see cref="PitchTransposer.KeyRespellFor"/>): set where a key is armed
+    /// (<see cref="ArmKey"/>), read by every pitch the transpose moves under it.</summary>
+    public int KeyRespell;
+
+    /// <summary>The key-signature shift the part transpose adds to the key in force (0 when
+    /// untransposed): the written key is the source's plus this.</summary>
+    public int KeyShift
+        => HasTranspose ? PitchTransposer.KeySignatureFifthsShift(TransposeStep, TransposeAlt) + KeyRespell : 0;
 
     /// <summary>
-    /// Shifts a written key signature's sharp count by the part transpose (no-op
-    /// when untransposed). C major (0) transposed by d becomes D major (+2).
+    /// Arms a key as the source writes it (<paramref name="sharps"/>) under the part transpose,
+    /// and answers the key the part prints: C major (0) transposed by d becomes D major (+2).
+    /// A key that would print seven or more sharps or flats where its enharmonic twin prints
+    /// fewer takes the twin, and the pitches under it are respelled with it (session 1363).
     /// LILYPOND-REF: \transpose also moves \key.
     /// </summary>
-    public int TransposeKeySharps(int sharps) =>
-        HasTranspose
-            ? sharps + PitchTransposer.KeySignatureFifthsShift(TransposeStep, TransposeAlt)
-            : sharps;
+    public int ArmKey(int sharps)
+    {
+        if (!HasTranspose)
+        {
+            KeyRespell = 0;
+            return sharps;
+        }
+        int written = sharps + PitchTransposer.KeySignatureFifthsShift(TransposeStep, TransposeAlt);
+        KeyRespell = PitchTransposer.KeyRespellFor(written);
+        return written + KeyRespell;
+    }
 }
 
 /// <summary>Running octave state captured for a nested frame.</summary>

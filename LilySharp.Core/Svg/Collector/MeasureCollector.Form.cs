@@ -699,6 +699,7 @@ public sealed partial class MeasureCollector
         {
             var previousKey = new KeySignature(_v.Meta.KeySharps, _v.Meta.KeyCustom);
             _v.Meta.KeySharps = _sectionResetKeySharps;
+            _v.Octave.KeyRespell = _sectionResetKeyRespell;
             _v.Meta.KeyCustom = _sectionResetKeyCustom;
             // The revert is a key change for the Roman-numeral degrees too: a section after
             // one that wrote `key f major` is back in the home key, and `chords … as roman`
@@ -1101,13 +1102,14 @@ public sealed partial class MeasureCollector
             // Custom signature: alterations as written (transpose does not respell a
             // custom map). A custom key has no tonic — phrases placed here are unshifted.
             _v.Meta.KeySharps = 0;
+            _v.Octave.KeyRespell = 0;
             _v.Meta.KeyCustom = KeySignature.EncodeCustom(keySig.CustomAlterations);
             newKey = new KeySignature(0, _v.Meta.KeyCustom);
             _v.AmbientTonicValid = false;
         }
         else
         {
-            int newSharps = _v.Octave.TransposeKeySharps(CalculateKeySharps(keySig));
+            int newSharps = _v.Octave.ArmKey(CalculateKeySharps(keySig));
             _v.Meta.KeySharps = newSharps;
             _v.Meta.KeyCustom = null;
             newKey = new KeySignature(newSharps);

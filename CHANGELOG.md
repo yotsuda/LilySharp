@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Fixed: a transposed part could print in a key of eight flats** (`[engraving]` `[export]`). A clarinet in A over a piece in D♭ major read F♭ major — eight flats, a double flat in the signature — and one in B♭ over B major read C♯ major. A transposed part whose key would have seven or more sharps or flats, where the same sound spelled the other way has fewer, now takes that key — E major and D♭ major — with its notes spelled in it, on the page and in the MusicXML; where the music goes back to a key the instrument reads well, so does the spelling. The LilyPond export keeps LilyPond's own `\transpose`.
+
 - **Fixed: a part in another key had no key signature in a written .mid** (`[export]`). A .mid stated the piece's key alone, so a program reading `part a { key d major }` in a file in C spelled the part in C, and a part that stays in C while another part's music changes to G was read in G. A part whose key is not the piece's now states its own on its track, through repeats as played; a transposing part that sounds in the piece's key (a clarinet written in D) states none. `lysc import` of a .mid takes the piece's key from the first track that states one, so a part's own no longer replaces it.
 
 - **Fixed: a script written before a full-bar rest sounded on the next bar's first note** (`[playback]`). In `c''1 | <>@accent R1 | d''1 |` the page draws the accent over the rest and the MusicXML export writes it on the rest, but the MIDI accented the d''. A full-bar rest now takes the empty chord's scripts as a rest `r` does, and sounds none of them.

@@ -192,9 +192,22 @@ public sealed class MusicXmlExporter
     private (int step, int alter, int octave) ApplyWrittenTransforms(int step, int alter, int octave)
     {
         if (_currentTranspose is { } tr)
-            (step, alter, octave) = PitchTransposer.Transpose(step, alter, octave, tr.step, tr.alt, tr.oct);
+        {
+            // Respelled as the key in force is (KeyRespell; session 1363): a clarinet in A over
+            // D♭ major reads E major, its notes spelled in it.
+            var (ts, ta, to) = PitchTransposer.RespellInterval(tr.step, tr.alt, tr.oct, KeyRespell());
+            (step, alter, octave) = PitchTransposer.Transpose(step, alter, octave, ts, ta, to);
+        }
         return (step, alter, octave);
     }
+
+    /// <summary>The fifths the part's transpose is respelled by in the key in force, as the page
+    /// does it (Svg.Collector.OctaveContext.ArmKey): 0, or ±12 where the key would print seven
+    /// or more sharps or flats and its enharmonic twin fewer.</summary>
+    private int KeyRespell()
+        => _currentTranspose is { } trk && !OnPercussionStaff
+            ? PitchTransposer.KeyRespellFor(_keyFifths + PitchTransposer.KeySignatureFifthsShift(trk.step, trk.alt))
+            : 0;
 
     // Phrase auto-transpose (movable motif): a phrase written in the score's home
     // key is respelled into whatever key is in effect where it is referenced.
@@ -3047,7 +3060,7 @@ public sealed class MusicXmlExporter
     /// and a later change cannot disagree about it.</summary>
     private int EffectiveKeyFifths()
         => _currentTranspose is { } trk
-            ? _keyFifths + PitchTransposer.KeySignatureFifthsShift(trk.step, trk.alt)
+            ? _keyFifths + PitchTransposer.KeySignatureFifthsShift(trk.step, trk.alt) + KeyRespell()
             : _keyFifths;
 
     /// <summary>

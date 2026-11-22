@@ -656,6 +656,7 @@ public sealed partial class MeasureCollector
                     continue;
                 s.Meta.KeySharps = _v.Meta.KeySharps;
                 s.Meta.KeyCustom = _v.Meta.KeyCustom;
+                s.Octave.KeyRespell = _v.Octave.KeyRespell;
                 s.AmbientTonicStep = _v.AmbientTonicStep;
                 s.AmbientTonicAlter = _v.AmbientTonicAlter;
                 s.AmbientTonicValid = _v.AmbientTonicValid;

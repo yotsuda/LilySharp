@@ -379,13 +379,13 @@ internal readonly record struct OctaveCheckpoint(
     int CurrentOctave, char LastPitchName, int InitialOctave, int OctaveBase,
     int InitialOctaveBase, int SectionOctaveOffset,
     bool OctaveAbsolute, bool InitialOctaveAbsolute,
-    bool HasTranspose, int TransposeStep, int TransposeAlt, int TransposeOctave)
+    bool HasTranspose, int TransposeStep, int TransposeAlt, int TransposeOctave, int KeyRespell)
 {
     public static OctaveCheckpoint Capture(OctaveContext o) => new(
         o.CurrentOctave, o.LastPitchName, o.InitialOctave, o.OctaveBase,
         o.InitialOctaveBase, o.SectionOctaveOffset,
         o.OctaveAbsolute, o.InitialOctaveAbsolute,
-        o.HasTranspose, o.TransposeStep, o.TransposeAlt, o.TransposeOctave);
+        o.HasTranspose, o.TransposeStep, o.TransposeAlt, o.TransposeOctave, o.KeyRespell);
 
     public void Restore(OctaveContext o)
     {
@@ -401,6 +401,7 @@ internal readonly record struct OctaveCheckpoint(
         o.TransposeStep = TransposeStep;
         o.TransposeAlt = TransposeAlt;
         o.TransposeOctave = TransposeOctave;
+        o.KeyRespell = KeyRespell;
     }
 }
 

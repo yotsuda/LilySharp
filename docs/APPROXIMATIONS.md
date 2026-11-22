@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 67 | 観測者がゼロだと自認しているもの |
-| `OWN` | 483 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **612** | |
+| `OWN` | 484 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **613** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -253,7 +253,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（483 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（484 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -497,6 +497,8 @@
 - **`MusicRepeatValidator`** LILYSHARP-OWN: the language's rules about its own signs. Departs from: LilyPond's
 ### `LilySharp.Core/Semantics/PartHeaderDefaults.cs`
 - **`PartHeaderDefaults.Range`** LILYSHARP-OWN: LilyPond has no instrument ranges. The two pitches are named absolutely
+### `LilySharp.Core/Semantics/PitchTransposer.cs`
+- **`PitchTransposer.KeyRespellFor`** LILYSHARP-OWN (session 1363): LilyPond's \transpose keeps the interval's
 ### `LilySharp.Core/Semantics/RepeatPasses.cs`
 - **`RepeatPasses.EndingFor`** LILYSHARP-OWN: a pass no ending names replays the LAST ending — |: A [1. B] :|*3 [2. C]
 ### `LilySharp.Core/Semantics/RepeatSignAgreementValidator.cs`

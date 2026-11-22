@@ -940,7 +940,7 @@ public sealed partial class MeasureCollector
         IReadOnlyList<(int Value, int Dots)> parts, Fraction scale, int rootStep, int anchorOctave,
         ArpeggioMarks marks, int? groupString)
     {
-        int writtenKeySharps = _v.Meta.KeySharps - _v.Octave.TransposeKeySharps(0);
+        int writtenKeySharps = _v.Meta.KeySharps - _v.Octave.KeyShift;
         var (step, alteration, octave) = ChordDegrees.Resolve(
             rootStep, anchorOctave, degree.Number, degree.Alteration, degree.OctaveOffset, writtenKeySharps);
         var rp = ResolveAbsolutePitch(step, alteration, octave, degree.SourceStart);

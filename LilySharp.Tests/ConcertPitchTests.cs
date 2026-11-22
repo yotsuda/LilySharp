@@ -112,6 +112,39 @@ public sealed class ConcertPitchTests
     }
 
     /// <summary>
+    /// A transposed part in a key that would print seven or more sharps or flats takes its
+    /// enharmonic twin, and its notes are spelled in it (session 1363; LilyPond's \transpose
+    /// keeps the interval, and a clarinet in A over D♭ major read F♭ major, eight flats with a
+    /// double flat): D♭ major → E major for the clarinet in A, B major → D♭ major for the one in
+    /// B♭. Where the key comes back to one the interval prints well, the interval comes back
+    /// with it — a section header's key, the home key a section returns to, and a key written
+    /// in the music, on the page and in the MusicXML alike.
+    /// </summary>
+    [Theory]
+    [InlineData("clarinet-a", "key des major", "G#5 A5 B5 C#6 | Ab5 | Eb5 G#5", "4 -3 4")]
+    [InlineData("clarinet", "key b major", "Db6 Eb6 F6 Gb6 | G5 | D5 Gb5", "-5 2 -5")]
+    public void ATransposedKeyOfSevenOrMore_IsSpelledAsItsTwin(string instrument, string sectionKey, string pitches, string fifths)
+    {
+        string first = sectionKey == "key des major" ? "f'4 ges' aes' bes'" : "b'4 cis'' dis'' e''";
+        string music = sectionKey == "key des major" ? "f'" : "e'";
+        string source = $"octave absolute\npitch concert\ntime 4/4\nkey c major\npart x {{ instrument {instrument} octave 4 }}\n"
+            + $"section A {{ {sectionKey}\n x {{ {first} | }} }}\nsection B {{ x {{ f'1 | }} }}\n"
+            + $"section C {{ x {{ c'1 | {sectionKey} {music}1 | }} }}\nform {{ A B C }}\nscore pitch transposed {{ staff x }}\n";
+        var tree = Parse(source);
+        var spec = RenderSpecParser.FindFirst(tree);
+        var collector = SemanticValidation.TryCollect(tree, spec);
+        Assert.NotNull(collector);
+        var page = collector!.PitchTrace.OrderBy(e => e.Position).Select(e => e.Pitch).ToList();
+        string Bars(IReadOnlyList<string> p) => string.Join(" ", p.Take(4)) + " | " + p[4] + " | " + string.Join(" ", p.Skip(5));
+        Assert.Equal(pitches, Bars(page));
+        var xml = System.Xml.Linq.XDocument.Parse(new LilySharp.Core.MusicXml.MusicXmlExporter().Export(tree).ToXml().ToString());
+        Assert.Equal(fifths, string.Join(" ", xml.Descendants("fifths").Select(f => f.Value)));
+        string Name(System.Xml.Linq.XElement p) => p.Element("step")!.Value
+            + (p.Element("alter")?.Value switch { "1" => "#", "-1" => "b", _ => "" }) + p.Element("octave")!.Value;
+        Assert.Equal(pitches, Bars([.. xml.Descendants("pitch").Select(Name)]));
+    }
+
+    /// <summary>
     /// A concert-pitch file, one preset per row: each chromatic transposer prints its
     /// written pitch in its written key, and so do the octave-only ones (bass, piccolo, an
     /// explicit <c>transposition 8vb</c>): since the owner's decision 2026-10-28 they are typed

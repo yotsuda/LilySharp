@@ -370,7 +370,7 @@ public sealed partial class MeasureCollector
 
     /// <summary>The key signature as WRITTEN at this point of the walk — the one a chord
     /// named from notes is spelled in (<see cref="TryNameChord"/> reads it the same way).</summary>
-    private int WrittenKeySharps() => _v.Meta.KeySharps - _v.Octave.TransposeKeySharps(0);
+    private int WrittenKeySharps() => _v.Meta.KeySharps - _v.Octave.KeyShift;
 
     /// <summary>The open strings of the part being collected, LOW string first
     /// (<see cref="Semantics.PartHeaderDefaults.Tuning"/>): what a symbol-less
@@ -587,7 +587,7 @@ public sealed partial class MeasureCollector
             // be named by the write-order reader either, but letting it try keeps this
             // change from being able to LOSE a name.
         }
-        int keySharps = _v.Meta.KeySharps - _v.Octave.TransposeKeySharps(0); // written key
+        int keySharps = _v.Meta.KeySharps - _v.Octave.KeyShift; // written key
         // (Until 2026-08-28 a shifted phrase reference — Melody'(3) — made the chord
         // SOUND a diatonic interval away from what is written, and this named what
         // sounded. That spelling is gone, so written and sounding are the same again.)
@@ -652,7 +652,7 @@ public sealed partial class MeasureCollector
     private bool TryNameArpeggio(ArpeggioSyntax arp, out ChordStructure? structure)
     {
         structure = null;
-        int keySharps = _v.Meta.KeySharps - _v.Octave.TransposeKeySharps(0); // written key
+        int keySharps = _v.Meta.KeySharps - _v.Octave.KeyShift; // written key
         var members = arp.Members
             .Where(m => m is PitchSyntax or ChordSyntax or ScaleDegreeSyntax).ToList();
         if (members.Count == 0)

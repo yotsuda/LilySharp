@@ -727,6 +727,8 @@ public sealed partial class MeasureCollector
     // is self-contained: a mid-section modulation cannot leak into the next
     // section — nor into the same section reused elsewhere in the form.
     private int _sectionResetKeySharps;
+    // …and the transpose's respelling for that key (OctaveContext.KeyRespell, session 1363).
+    private int _sectionResetKeyRespell;
     private string? _sectionResetKeyCustom;
 
     // This voice's part-default clef, captured at collection start. A section boundary
@@ -1117,7 +1119,7 @@ public sealed partial class MeasureCollector
             // Transpose the written key signature (CollectDefinitions set it
             // before the part option was known) so the displayed key and the
             // accidental engine match the transposed pitches.
-            _v.Meta.KeySharps = _v.Octave.TransposeKeySharps(_v.Meta.KeySharps);
+            _v.Meta.KeySharps = _v.Octave.ArmKey(_v.Meta.KeySharps);
         }
         else
         {
@@ -2087,12 +2089,12 @@ public sealed partial class MeasureCollector
             if (partKey != null)
             {
                 ApplyPartHeaderKey(partKey);
-                _v.Meta.KeySharps = _v.Octave.TransposeKeySharps(_v.Meta.KeySharps);
+                _v.Meta.KeySharps = _v.Octave.ArmKey(_v.Meta.KeySharps);
                 voiceKeyDict[voiceName] = new KeySignature(_v.Meta.KeySharps, _v.Meta.KeyCustom);
             }
             else
             {
-                _v.Meta.KeySharps = _v.Octave.TransposeKeySharps(_v.Meta.InitialKeySharps);
+                _v.Meta.KeySharps = _v.Octave.ArmKey(_v.Meta.InitialKeySharps);
                 if (_v.Octave.HasTranspose)
                     voiceKeyDict[voiceName] = new KeySignature(_v.Meta.KeySharps);
             }
@@ -6030,6 +6032,7 @@ public sealed partial class MeasureCollector
         // Snapshot this voice's score-level key (already transposed for the part)
         // so each section boundary can revert the running key to it.
         _sectionResetKeySharps = _v.Meta.KeySharps;
+        _sectionResetKeyRespell = _v.Octave.KeyRespell;
         _sectionResetKeyCustom = _v.Meta.KeyCustom;
         // Same for the clef: the part default a section without its own clef reverts to.
         _sectionResetClef = _v.Meta.Clef;
