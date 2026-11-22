@@ -668,8 +668,19 @@ internal static class MultiMeasureRestEngraver
         if (!marks.IsDefaultOrEmpty)
             foreach (var mark in marks)
                 if (mark.Type is MusicMarkType.Rehearsal or MusicMarkType.SectionLabel or MusicMarkType.Tempo
-                    or (>= MusicMarkType.Segno and <= MusicMarkType.ToCoda))
-                    (stops ??= []).Add(mark.Position == MusicMarkPosition.End ? mark.MeasureIndex + 1 : mark.MeasureIndex);
+                    or (>= MusicMarkType.Segno and <= MusicMarkType.ToCoda)
+                    // …and a text spanner's two ends (rit., accel., a @textSpan): their events
+                    // make a musical column, which ends the rest there. Until 2026-11-22 another
+                    // part's rit. inside a part sheet's R*3 was pushed past it, onto the next
+                    // bar's tempo mark (evaluation 5, orchestra r-01). MEASURED (2.26.0, Lab
+                    // sessions/p1366/a15/twin.ly): R1*3 beside a rit. from its 2nd to its 3rd bar
+                    // under \compressMMRests prints 1, 1 with the rit., 1.
+                    or MusicMarkType.TextSpanStart or MusicMarkType.TextSpanStop)
+                    // A spanner's end rides its NOTE (its Position says End, the anchor's side,
+                    // not a bar's end): its own bar is where the column stands.
+                    (stops ??= []).Add(mark.Position == MusicMarkPosition.End
+                        && mark.Type is not (MusicMarkType.TextSpanStart or MusicMarkType.TextSpanStop)
+                        ? mark.MeasureIndex + 1 : mark.MeasureIndex);
         if (!voltas.IsDefaultOrEmpty)
             foreach (var volta in voltas)
             {
