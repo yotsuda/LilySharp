@@ -162,6 +162,12 @@ public class MidiFile
     /// steps along (<see cref="SungVoices"/>). Not written to .mid files.</summary>
     public SortedDictionary<int, int> KeyStarts { get; } = [];
 
+    /// <summary>Each part's own keys, as <see cref="KeyStarts"/> holds the piece's: the ticks its
+    /// blocks open at and its music changes key at, each with its major scale's tonic as the part
+    /// sounds (its transposition in). A written .mid states them on the part's track where they
+    /// are not the piece's (<see cref="MidiForFile"/>).</summary>
+    public Dictionary<string, SortedDictionary<int, int>> PartKeyStarts { get; } = new(StringComparer.Ordinal);
+
     /// <summary>The piece's end: the last tick any track sounds or says anything at.
     /// Every track's end-of-track stands here (<see cref="WriteTo"/>).</summary>
     public int EndTick => Tracks.Count == 0 ? 0 : Tracks.Max(t => t.LastTick);

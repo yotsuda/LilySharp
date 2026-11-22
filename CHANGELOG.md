@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Fixed: a part in another key had no key signature in a written .mid** (`[export]`). A .mid stated the piece's key alone, so a program reading `part a { key d major }` in a file in C spelled the part in C, and a part that stays in C while another part's music changes to G was read in G. A part whose key is not the piece's now states its own on its track, through repeats as played; a transposing part that sounds in the piece's key (a clarinet written in D) states none. `lysc import` of a .mid takes the piece's key from the first track that states one, so a part's own no longer replaces it.
+
 - **Fixed: a script written before a full-bar rest sounded on the next bar's first note** (`[playback]`). In `c''1 | <>@accent R1 | d''1 |` the page draws the accent over the rest and the MusicXML export writes it on the rest, but the MIDI accented the d''. A full-bar rest now takes the empty chord's scripts as a rest `r` does, and sounds none of them.
 
 - **A tuplet bracket reaches a note moved with `@cross` on the staff it stands on** (`[engraving]`). In `rh { tuplet 3/2 { c''4@cross c'' c'' } }` the bracket ran through the moved head, read as if it had stayed on the treble; it now goes under that note's stem, into the left hand's staff, flat, as LilyPond draws it. A rest moved with `@cross` still leaves the bracket on its own staff.

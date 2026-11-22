@@ -940,6 +940,21 @@ public sealed class MidiExporter
     {
         (_ambientTonic, _keySharps) = _partKeyLanes.TryGetValue(partName, out var left) ? left
             : _sectionHeadKey ?? PartHomeKey(partName) ?? (_homeTonic, _homeKeySharps);
+        NotePartKey(partName);
+    }
+
+    // Each part's keys of the file being exported (MidiFile.PartKeyStarts).
+    private Dictionary<string, SortedDictionary<int, int>>? _partKeyStarts;
+
+    /// <summary>The key <paramref name="partName"/> is in from the current tick, as it sounds —
+    /// the part's lane twin of <see cref="NoteKey(int)"/>, its transposition in.</summary>
+    private void NotePartKey(string? partName)
+    {
+        if (_partKeyStarts == null || partName == null)
+            return;
+        if (!_partKeyStarts.TryGetValue(partName, out var lane))
+            _partKeyStarts[partName] = lane = [];
+        lane[_currentTick] = (((_keySharps * 7 + PartPlaybackShift(partName)) % 12) + 12) % 12;
     }
 
     /// <summary>The key a part's header states — its home — or null: the file's is.</summary>
@@ -1036,6 +1051,7 @@ public sealed class MidiExporter
         _barTicks = midi.BarTicks;
         _sectionStarts = midi.SectionStarts;
         _keyStarts = midi.KeyStarts;
+        _partKeyStarts = midi.PartKeyStarts;
 
         var conductorTrack = new MidiTrack { Name = "Tempo", Channel = 0 };
         _conductorTrack = conductorTrack;
@@ -1799,6 +1815,7 @@ public sealed class MidiExporter
                     keySig.Pitch.ToFullString().Trim().ToLowerInvariant(),
                     keySig.Mode.Text.ToLowerInvariant()) ?? 0;
                 NoteKey();
+                NotePartKey(_currentPart);
                 break;
 
             case TempoDeclarationSyntax tempo:

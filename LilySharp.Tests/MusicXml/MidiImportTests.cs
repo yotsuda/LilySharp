@@ -159,6 +159,19 @@ public class MidiImportTests
         Assert.False(SyntaxTree.Parse(lys).HasErrors);
     }
 
+    /// <summary>The piece's key comes back from the first track that states one: a part in another
+    /// key states its own on its track (Lily#'s .mid from session 1361), which used to replace the
+    /// piece's at the same tick — the whole import in the part's key.</summary>
+    [Fact]
+    public void APartsOwnKey_IsNotThePiecesOnTheWayBack()
+    {
+        string source = "octave absolute\ntime 4/4\nkey c major\npart a { key d major }\npart b { }\n"
+            + "section A { a { d''1 | } b { c'1 | } }\nform { A }\nscore { staff a staff b }\n";
+        var (lys, _) = new MusicXmlImporter().ImportBytes(MidOf(source));
+        Assert.Contains("key c major", lys);
+        Assert.DoesNotContain("key d major", lys);
+    }
+
     [Fact]
     public void WhatIsNotAMidiFileWithBars_IsRefused()
     {

@@ -60,6 +60,7 @@ internal static class MidiReader
         public readonly Dictionary<int, int> Programs = new();
         public readonly List<RawNote> Notes = new();
         public readonly List<(int Tick, string Text)> Lyrics = new();
+        public readonly List<(int Tick, (int Fifths, bool Minor) Key)> Keys = new();
     }
 
     private sealed class Raw
@@ -89,7 +90,16 @@ internal static class MidiReader
             bool isTrack = b[p] == 'M' && b[p + 1] == 'T' && b[p + 2] == 'r' && b[p + 3] == 'k';
             int start = p + 8, end = Math.Min(b.Length, start + Math.Max(0, length));
             if (isTrack)
-                raw.Tracks.Add(ParseTrack(b, start, end, raw));
+            {
+                var track = ParseTrack(b, start, end, raw);
+                raw.Tracks.Add(track);
+                // The piece's keys are those of the first track that states any (a conductor
+                // track's, in a file of several). A later track's are its part's own — Lily#
+                // writes one on a part in another key from session 1361 — and do not replace them.
+                if (raw.Keys.Count == 0)
+                    foreach (var (tick, key) in track.Keys)
+                        raw.Keys[tick] = key;
+            }
             p = end;
         }
         return raw;
@@ -144,7 +154,7 @@ internal static class MidiReader
                     case 0x05: track.Lyrics.Add((tick, Text(b, at, size))); break;
                     case 0x51 when size >= 3: raw.Tempos[tick] = (b[at] << 16) | (b[at + 1] << 8) | b[at + 2]; break;
                     case 0x58 when size >= 2: raw.Meters[tick] = (Math.Max(1, (int)b[at]), 1 << Math.Min(6, (int)b[at + 1])); break;
-                    case 0x59 when size >= 2: raw.Keys[tick] = (Math.Clamp((int)(sbyte)b[at], -7, 7), b[at + 1] == 1); break;
+                    case 0x59 when size >= 2: track.Keys.Add((tick, (Math.Clamp((int)(sbyte)b[at], -7, 7), b[at + 1] == 1))); break;
                 }
                 continue;
             }

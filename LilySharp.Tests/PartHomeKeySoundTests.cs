@@ -188,6 +188,37 @@ public class PartHomeKeySoundTests
         Assert.Equal([(0, fifths)], file.Tracks[0].KeySignatures);
     }
 
+    /// <summary>
+    /// A part in a key that is not the piece's states its own on its track (session 1361; until
+    /// then a .mid had the piece's alone, and a reader spelled the part in it): its header key,
+    /// what its music changes to, each section's — restated where the piece's changes, so that a
+    /// reader taking the track's latest signature keeps it. A part in the piece's key, a section
+    /// header's key over the part's, and a transposing part sounding in the piece's key state none.
+    /// </summary>
+    [Theory]
+    [InlineData("part melody { key bes major section A { c'1 } }\nform { A }\nscore { staff melody }", "")]
+    [InlineData("key c major\npart melody { key bes major section A { c'1 } }\npart two { section A { e'1 } }\nform { A }\nscore { staff melody staff two }", "melody 0:-2")]
+    [InlineData("key d major\npart melody { section A { c'1 } }\npart two { key bes major section A { e'1 } }\nform { A }\nscore { staff melody staff two }", "two 0:-2")]
+    [InlineData("part melody { section A { c'1 } }\npart two { key bes major section A { e'1 } }\nform { A }\nscore { staff melody staff two }", "two 0:-2")]
+    [InlineData("key c major\npart melody { key bes major }\nsection A { key d major melody { c'1 } }\nform { A }\nscore { staff melody }", "")]
+    // A key one part's music changes to is the piece's lane's too; the other part keeps its own.
+    [InlineData("key c major\npart a { }\npart b { }\nsection A { a { c''1 | key g major fis''1 | } b { c'1 | c'1 | } }\nform { A }\nscore { staff a staff b }", "b 0:0,1920:0")]
+    // A section header's key is every part's; the part's own comes back after it, form order.
+    [InlineData("key c major\npart a { key d major }\npart b { }\nsection A { a { d''1 | } b { c'1 | } }\nsection B { key f major\n a { f''1 | } b { f1 | } }\nform { A B A }\nscore { staff a staff b }", "a 0:2,1920:-1,3840:2")]
+    // …through a repeat too, as played (PlayedTimeline lays each part's keys out).
+    [InlineData("key c major\npart a { key d major }\npart b { }\nsection A { a { |: d''1 | e''1 :| } b { |: c'1 | c'1 :| } }\nsection B { key f major\n a { f''1 | } b { f1 | } }\nform { A B }\nscore { staff a staff b }", "a 0:2,7680:-1")]
+    // A clarinet written in D sounds in C, the piece's key.
+    [InlineData("key c major\npart cl { instrument clarinet key d major }\npart b { }\nsection A { cl { d''1 | } b { c'1 | } }\nform { A }\nscore { staff cl staff b }", "")]
+    public void APartInAnotherKey_StatesItsOwnOnItsTrack(string source, string expected)
+    {
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
+        var spec = RenderSpecParser.FindFirst(tree);
+        var file = MidiForFile.Shape(new MidiExporter { Form = spec?.Form, Score = spec }.Export(tree), tree.GetRoot(), spec);
+        Assert.Equal(expected, string.Join(" ", file.Tracks.Skip(1).Where(t => t.KeySignatures.Count > 0)
+            .Select(t => t.Name + " " + string.Join(",", t.KeySignatures.Select(k => $"{k.Tick}:{k.Fifths}")))));
+    }
+
     [Fact]
     public void AKeyOnePartsMusicChanges_IsNotTheNextPartsKey()
     {

@@ -228,9 +228,13 @@ internal static class PlayedTimeline
         var bars = midi.BarTicks.ToList();
         var sections = midi.SectionStarts.ToList();
         var keyStarts = midi.KeyStarts.ToList();
+        // Each part's keys go the same way as the piece's (MidiForFile states them on its track).
+        var partKeys = midi.PartKeyStarts.ToDictionary(p => p.Key, p => p.Value.ToList(), StringComparer.Ordinal);
         midi.BarTicks.Clear();
         midi.SectionStarts.Clear();
         midi.KeyStarts.Clear();
+        foreach (var lane in midi.PartKeyStarts.Values)
+            lane.Clear();
         for (int k = 0; k < route.Count; k++)
         {
             var (from, to) = (route[k].From, route[k].To);
@@ -241,11 +245,19 @@ internal static class PlayedTimeline
             foreach (var (tick, name) in sections)
                 if (tick >= from && tick < to)
                     midi.SectionStarts.TryAdd(tick + shift, name);
-            if (InForce(keyStarts, from, t => t.Key) is { } standing)
-                midi.KeyStarts[starts[k]] = standing.Value;
-            foreach (var (tick, tonic) in keyStarts)
+            Lay(keyStarts, midi.KeyStarts, from, to, shift, starts[k]);
+            foreach (var (part, keys) in partKeys)
+                Lay(keys, midi.PartKeyStarts[part], from, to, shift, starts[k]);
+        }
+
+        // The key in force where the stretch begins, at its new start, then the changes inside it.
+        static void Lay(List<KeyValuePair<int, int>> keys, SortedDictionary<int, int> into, int from, int to, int shift, int start)
+        {
+            if (InForce(keys, from, t => t.Key) is { } standing)
+                into[start] = standing.Value;
+            foreach (var (tick, tonic) in keys)
                 if (tick > from && tick < to)
-                    midi.KeyStarts[tick + shift] = tonic;
+                    into[tick + shift] = tonic;
         }
     }
 

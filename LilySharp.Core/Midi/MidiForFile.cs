@@ -96,14 +96,52 @@ public static class MidiForFile
             file.Tracks[0].Copyright = copyright;
 
         // The keys, on the first track with the tempos: the signature of each key's major scale.
+        static int FifthsOf(int tonic)
+        {
+            int fifths = tonic * 7 % 12;
+            return fifths > 6 ? fifths - 12 : fifths;
+        }
         int stated = int.MinValue;
         foreach (var (tick, tonic) in midi.KeyStarts)
         {
-            int fifths = tonic * 7 % 12;
-            if (fifths > 6)
-                fifths -= 12;
+            int fifths = FifthsOf(tonic);
             if (fifths != stated && file.Tracks.Count > 0)
                 file.Tracks[0].KeySignatures.Add((tick, stated = fifths));
+        }
+
+        // A part in a key that is not the piece's — `part a { key d major }` in a file in C, or
+        // the C a part keeps where another part's music changed key — states its own on its
+        // track, restated at each of the piece's changes so that a reader taking the latest
+        // signature on the track keeps it. Until session 1361 a .mid had the piece's alone, and
+        // a reader spelled such a part in the piece's key. Asked where the part plays: a part
+        // silent through a section in another key does not differ there.
+        var pieceKeys = midi.KeyStarts.ToList();
+        var pieceChanges = file.Tracks.Count > 0 ? file.Tracks[0].KeySignatures.Select(k => k.Tick).ToHashSet() : [];
+        foreach (var track in file.Tracks.Skip(1))
+        {
+            if (track.Name is not { } name || !midi.PartKeyStarts.TryGetValue(name, out var lane) || lane.Count == 0)
+                continue;
+            var own = lane.ToList();
+            var ticks = own.Select(k => k.Key).Concat(pieceKeys.Select(k => k.Key).Where(t => t > own[0].Key))
+                .Distinct().Order().ToList();
+            var notes = track.Notes.Select(n => n.StartTick).Order().ToList();
+            bool differs = false;
+            for (int i = 0; i < ticks.Count && !differs; i++)
+            {
+                int from = ticks[i], to = i + 1 < ticks.Count ? ticks[i + 1] : int.MaxValue;
+                int mine = TonicAt(own, from)!.Value;
+                int piece = TonicAt(pieceKeys, from) ?? mine;
+                differs = mine != piece && notes.Any(t => t >= from && t < to);
+            }
+            if (!differs)
+                continue;
+            int said = int.MinValue;
+            foreach (int tick in ticks)
+            {
+                int fifths = FifthsOf(TonicAt(own, tick)!.Value);
+                if (fifths != said || pieceChanges.Contains(tick))
+                    track.KeySignatures.Add((tick, said = fifths));
+            }
         }
 
         // The words, each to its part's track, one a note.
@@ -175,6 +213,20 @@ public static class MidiForFile
     /// <remarks>Written as Markdown (<c>```md copyright</c>; owner's decision 2026-11-13) and as
     /// no string, the notice is the Markdown's words with the formatting stripped
     /// (Semantics.HeaderLineText).</remarks>
+    /// <summary>The tonic in force at <paramref name="tick"/> in a tick-ordered key lane, or null
+    /// before its first.</summary>
+    private static int? TonicAt(List<KeyValuePair<int, int>> keys, int tick)
+    {
+        int? tonic = null;
+        foreach (var (at, value) in keys)
+        {
+            if (at > tick)
+                break;
+            tonic = value;
+        }
+        return tonic;
+    }
+
     private static string? CopyrightOf(SyntaxNode root, RenderSpec? spec)
     {
         string? copyright = Semantics.HeaderLineText.NonPage(root, spec, "copyright");

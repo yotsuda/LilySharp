@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A part in another key keeps its key signature in an exported .mid.** `part a { key d major }` in a piece in C was read back in C by other programs; the part's track now says D.
 - **`key none`, `time none` and `key custom` are coloured as one keyword.** The word after `key` or `time` was left plain, though `major` and `minor` are coloured.
 - **A script written before a full-bar rest no longer sounds on the next note.** `<>@accent R1 | d''1` played the d'' accented, though the accent is drawn over the rest.
 - **A tuplet bracket no longer runs through a note moved with `@cross`.** It reaches the moved note on the other staff, as LilyPond draws it.
