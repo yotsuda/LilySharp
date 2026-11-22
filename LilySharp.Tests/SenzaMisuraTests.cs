@@ -267,6 +267,22 @@ public class SenzaMisuraTests
         Assert.Contains("c''4 d e f |", ly);
     }
 
+    /// <summary>A section whose HEADER writes <c>time none</c> is a cadenza in the twin too: no
+    /// <c>\partial</c> before its bars. Until session 1364 each was taken for a bar its <c>|</c>
+    /// closes short of the meter before it, and LilyPond 2.26.0 carried the displaced position on
+    /// past <c>\cadenzaOff</c> — every bar after it a beat off (Lab sessions/p1362/eval5 piano r-09).</summary>
+    [Fact]
+    public void TheTwin_OfASectionHeadersTimeNone_WritesNoPartial()
+    {
+        string ly = new LilyPondExporter().Export(SyntaxTree.Parse(
+            "octave absolute\npart rh { instrument piano-right }\n"
+            + "section Cad {\n  time none\n  rh { c''4 d'' e'' | f''4 g'' a'' | }\n}\n"
+            + "section B {\n  time 4/4\n  rh { c''1 | d''1 | }\n}\nform { ~Cad ~B }\nscore { staff rh }\n"));
+        Assert.Contains("\\cadenzaOn c''4 d'' e'' \\bar \"|\"", ly);
+        Assert.Contains("  f''4 g'' a'' \\bar \"|\"", ly);
+        Assert.DoesNotContain("\\partial", ly);
+    }
+
     [Fact]
     public void TheMeasureValidator_IsSilentUnderTimeNone()
     {

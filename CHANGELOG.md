@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Fixed: a section that opens with `time none` shifted every bar after it in the LilyPond export** (`[export]`). Each bar of the cadenza went out with `\partial`, and LilyPond carried the displaced position on: "mid-measure time signature without \partial", "bar check failed", and every later bar a beat off. A section header's `time none` is now written as a cadenza with no `\partial`, as one written in the music already was.
+
 - **Fixed: the chords of a section the form does not play were crammed into the first bars** (`[engraving]`). With `form { A B }` and a section C written for later, C's chord symbols were printed over A's first bars beside A's own; an excerpt score (`score practice { form practice … }`) printed every other section's chords over its own. A section the form leaves out now prints no chords. The MIDI, MusicXML and LilyPond export were right.
 
 - **Fixed: an 8va or 15ma in a passage under `time none` ended after its first beat** (`[engraving]`). In a cadenza, `a'''8@15ma bes''' cis'''' d'''' a''''4 a''''4@!15ma` drew the bracket over the first two notes and the rest at their sounding pitch, on seven ledger lines. The marks of an unmetered passage now stand where their notes do, and the octavation covers the run up to the note its end is written on, as in metered music.

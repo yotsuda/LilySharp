@@ -573,6 +573,13 @@ public sealed partial class LilyPondExporter
                 : bar => _meterPlan.ForeignChangeAt(name, bar, voice.Container);
             var bars = Semantics.MeasureModel.Split(voice.Container, _phraseBodies, opening, plannedMeterAt: planned);
             bool pickup = _sectionHeaders.Partials.ContainsKey(name);
+            // A section whose header writes `time none` has no meter to be short of: its bars are
+            // a cadenza's, which the bar model reads under the meter before it. Until session 1364
+            // each went out as `\partial 2.` inside `\cadenzaOn`, and LilyPond 2.26.0 carried the
+            // displaced position on ("mid-measure time signature without \partial", every bar
+            // after it a beat off — Lab sessions/p1362/eval5 piano r-09). (A `time none` written in
+            // the music already leaves its bars without a meter.)
+            bool senzaMisura = _sectionHeaders.Times.GetValueOrDefault(name) is { IsSenzaMisura: true };
             // A `partial` written in the music makes its bar a pickup the stream writes itself
             // (EmitPartial); the bar model does not know it (MeasureModel's IsBareRest note).
             var inlinePartials = voice.Container.DescendantNodes<PartialDeclarationSyntax>().Select(p => p.Span.Start).ToList();
@@ -583,7 +590,7 @@ public sealed partial class LilyPondExporter
                 var b = bars[i];
                 var meter = b.Meter ?? opening;
                 int from = i > 0 ? bars[i - 1].Span.End : voice.Container.Span.Start;
-                bool shortBar = b.BarLineEnd >= 0 && !b.IsEmpty && !b.Flowed && !b.IsBareRest && b.Meter != null
+                bool shortBar = !senzaMisura && b.BarLineEnd >= 0 && !b.IsEmpty && !b.Flowed && !b.IsBareRest && b.Meter != null
                     && b.Duration > Fraction.Zero && b.Duration < meter && !(i == 0 && pickup)
                     && !inlinePartials.Any(p => p >= from && p < b.Span.End)
                     && !signCut.Contains(b.Span.Start);

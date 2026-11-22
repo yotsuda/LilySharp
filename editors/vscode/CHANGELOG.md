@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A cadenza (`time none` in a section's header) exports to LilyPond in time.** Every bar after it used to be a beat off in LilyPond's engraving.
 - **The chords of a section the form leaves out are no longer printed over the first bars.** An excerpt score (`form practice`) shows its own sections' chords alone.
 - **An 8va or 15ma in a cadenza (`time none`) covers its whole run.** It ended after the first beat, the rest drawn on many ledger lines.
 - **A trill's written-out termination (`afterGrace`) is drawn after `@trill(flat)`.** Any `@name(…)` mark on the main note made the run disappear from the preview.
