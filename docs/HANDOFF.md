@@ -155,6 +155,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1361セッション（2026-11-22・YT-DELL2・第1359 と同じ会話）
+
+base `9426fe74b`。開始時 full 18184 合格 / 0 失敗 / skip 2 / 合計 18186（Lab `p1361` `run1.trx`）。
+- **`.mid` のパートごとの調号＝`6e64a6ebb`**（Lab `p1361/key` k1〜k6・読み手 `p1361/midkeys.ps1`）: `.mid` はファイルの調だけを最初の track に書いていた＝`part a { key d major }`（ファイルは C）を他のソフトは C で読み、a だけが曲の中で G に変えると C のままの b も G で読まれた。
+  - パートの調を鳴る高さで持つ（`MidiFile.PartKeyStarts`＝block の頭と音楽の中の `key`・移調込み）。繰り返しは `PlayedTimeline` が同じく展開する。ファイルの調とパートが弾く所で違えば、そのパートの track に書き、ファイルの調が変わる tick では言い直す。クラリネットの D 記譜（鳴る C）は書かない。
+  - `.mid` の読み込みは、調を最初に書いた track のものをファイルの調にした（前は後の track が同じ tick を上書き＝曲全体がパートの調になる）。
+  - 網 +10（`PartHomeKeySoundTests` 9 行・`MidiImportTests` 1 本）。毒 4 本とも赤。観測者なし: 「パートが弾く所だけ比べる」の条件。CHANGELOG（両方）。
+- doc コメントの置き場所を `DocCommentPlacementTests` が捕まえた＝`689b84212`。終わり full 18194 合格 / 0 失敗 / skip 2 / 合計 18196（`-End`）。
+- **次**: leftovers の残りは決めごと・外部のリーダー待ちが多い。F4 はオーナー判断（第1346 は見送りを推す）。
+
+## 以下は第1360セッションの経緯
+
 ### 1.1 第1360セッション（2026-11-22・YT-DELL2・第1359 と同じ会話）
 
 base `bf1364447`。開始時 full 18178 合格 / 0 失敗 / skip 2 / 合計 18180（Lab `p1360` `run1.trx`）。
@@ -163,16 +175,6 @@ base `bf1364447`。開始時 full 18178 合格 / 0 失敗 / skip 2 / 合計 1818
 - 見て残したもの: `.mid` の調号はファイルに 1 本（`MidiForFile` が `KeyStarts` を最初の track にだけ書く）＝パートごとの調は配管が要る・多調の本だけの差。
 - 終わり full 18184 合格 / 0 失敗 / skip 2 / 合計 18186（`-End`）。
 - **次**: leftovers の残りは決めごと・外部のリーダー待ちが多い。手が動くのは `.mid` のパートごとの調号、F4。
-
-## 以下は第1359セッションの経緯
-
-### 1.1 第1359セッション（2026-11-22・YT-DELL2・新しい会話）
-
-base `a2365e16e`。開始時 full 18176 合格 / 0 失敗 / skip 2 / 合計 18178（Lab `p1359` `run1.trx`）。REQUESTS 3 枚（Calamo・Orecchiante・Shosa）に `open` なし。
-- **`R1` の前の `<>` の script＝`87b2f5a83`**（Lab `p1359/mmr` a1〜a5）: ページは R1 の上に描き、MusicXML は R1 の `<note>` に付けるのに、MIDI だけが次の小節の頭の音へ渡していた（`<>@accent R1 | d''1` の d'' が v110）。`R` も `r` と同じく取るようにした。LilyPond 2.26.0 は `<>-\accent R1` を支えなしで小節の頭に浮かせ、`<>-\fermata R1` は休符の上に描く（`lp/`）＝ページは `r` と同じ扱い（第1329）のまま。網 +2（MusicXML の 2 行・MIDI は既存の網に 3 行＝毒で赤）。CHANGELOG（両方）。leftovers の行を閉じた。
-- CI の `extension-tests` は origin/master の 11-21 の 2 回が赤（`aiCandidatePlay` の 2 本＝`audioBlockedTold` の正規表現）。未 push の `3b53ec548` が直している（手元 17/17）＝push で緑になるはず。
-- 終わり full 18178 合格 / 0 失敗 / skip 2 / 合計 18180（`-End`）。
-- **次**: leftovers の残り（第1315 の `<>@text("fine").up` の揃え、第1329 の MIDI の装飾音の和音の音ごとの script など）か F4。
 
 ## 2. 開いている作業
 

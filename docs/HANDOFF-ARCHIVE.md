@@ -277,6 +277,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1359セッションの経緯
+
+### 1.1 第1359セッション（2026-11-22・YT-DELL2・新しい会話）
+
+base `a2365e16e`。開始時 full 18176 合格 / 0 失敗 / skip 2 / 合計 18178（Lab `p1359` `run1.trx`）。REQUESTS 3 枚（Calamo・Orecchiante・Shosa）に `open` なし。
+- **`R1` の前の `<>` の script＝`87b2f5a83`**（Lab `p1359/mmr` a1〜a5）: ページは R1 の上に描き、MusicXML は R1 の `<note>` に付けるのに、MIDI だけが次の小節の頭の音へ渡していた（`<>@accent R1 | d''1` の d'' が v110）。`R` も `r` と同じく取るようにした。LilyPond 2.26.0 は `<>-\accent R1` を支えなしで小節の頭に浮かせ、`<>-\fermata R1` は休符の上に描く（`lp/`）＝ページは `r` と同じ扱い（第1329）のまま。網 +2（MusicXML の 2 行・MIDI は既存の網に 3 行＝毒で赤）。CHANGELOG（両方）。leftovers の行を閉じた。
+- CI の `extension-tests` は origin/master の 11-21 の 2 回が赤（`aiCandidatePlay` の 2 本＝`audioBlockedTold` の正規表現）。未 push の `3b53ec548` が直している（手元 17/17）＝push で緑になるはず。
+- 終わり full 18178 合格 / 0 失敗 / skip 2 / 合計 18180（`-End`）。
+- **次**: leftovers の残り（第1315 の `<>@text("fine").up` の揃え、第1329 の MIDI の装飾音の和音の音ごとの script など）か F4。
+
 ## 以下は第1358セッションの経緯
 
 ### 1.1 第1358セッション（2026-11-22・YT-DELL2・第1355 と同じ会話）
