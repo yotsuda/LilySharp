@@ -124,16 +124,10 @@ internal static class StanzaNumberEngraver
             if (l.Item.HideStanza && measureToSystem.TryGetValue(l.Item.MeasureIndex, out int hs))
                 hiddenPairs.Add((hs, l.Item.StaffIndex, l.Item.VerseNumber));
 
-        // Where each written number's verse begins (LyricItem.OpensStanzaRun).
-        var runOpensOn = new HashSet<(int sys, int staff, int verse, int label)>();
         var staffHasWrittenNumbers = new HashSet<int>();
         foreach (var l in lyrics)
-        {
             if (l.Item.StanzaLabel > 0)
                 staffHasWrittenNumbers.Add(l.Item.StaffIndex);
-            if (l.Item.OpensStanzaRun && measureToSystem.TryGetValue(l.Item.MeasureIndex, out int os))
-                runOpensOn.Add((os, l.Item.StaffIndex, l.Item.VerseNumber, l.Item.StanzaLabel));
-        }
 
         // Collect (system, staff, verse, label) → first lyric of that run (its Y is the
         // baseline). ★ THE LABEL IS PART OF THE KEY (owner's design 2026-11-01): a section
@@ -161,8 +155,12 @@ internal static class StanzaNumberEngraver
             // once-per-change (lily/stanza-number-engraver.cc:57-68 process_music), stacked or
             // not. Owner's reports 2026-11-01 (風の道, 明日へつなぐ声): a verse running on to the
             // next line printed "1." and "2." again in the middle of its sentence.
-            if (!emitForFirstVerse && l.Item.StanzaLabel > 0
-                && !runOpensOn.Contains((sysIdx, l.Item.StaffIndex, l.Item.VerseNumber, l.Item.StanzaLabel)))
+            // ⚠️ Asked of THE SYLLABLE, not of its (system, row, number): when the next section's
+            // verse 1 began on the system a verse 1 ran on to, the run that only continued there
+            // passed too, and its leftmost syllable took the number — "1." under the earlier
+            // section's words at the line start, none where the new verse began (evaluation 5,
+            // jpop r-06).
+            if (!emitForFirstVerse && l.Item.StanzaLabel > 0 && !l.Item.OpensStanzaRun)
                 continue;
             // …and words written with no `verse` beside verses that have numbers have none: they
             // are sung every time, and no count of the rows beside them makes them "1." (明日へ
