@@ -58,6 +58,22 @@ public class TabMarksInVoiceSpanTests
         Assert.True(letters[0].IsAbove);
     }
 
+    /// <summary>A fretted @vibrato draws no "tr", so it keeps no room for one (owner's decision
+    /// 2026-11-22): its wave stands where LilyPond 2.26.0 draws the twin's TrillSpanner with
+    /// no left text — over a'4. on a guitar's staff, the line 2.0277 over the top line (Lab
+    /// sessions/p1365/g/vib.ly). With the "tr"'s plateau it stood 1.0 higher.</summary>
+    [Fact]
+    public void TheVibratoWave_KeepsNoRoomForATrItDoesNotDraw()
+    {
+        const string book = "octave absolute\npart gtr { instrument guitar }\nsection A { gtr { a'4.@vibrato b'8 a'2 | } }\n"
+            + "form { ~A }\nscore { staff gtr }\n";
+        var tree = SyntaxTree.Parse(book);
+        var layout = new LayoutEngine().Layout(SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)));
+        // The record's frame: the line, up from the staff's top line. The wave's elements are
+        // drawn 0.4 below it, at the 2.0277 LilyPond's are (both svgs, Lab sessions/p1365/g).
+        Assert.Equal(2.4276, Assert.Single(layout.TrillSpannerLayouts).YUp, 3);
+    }
+
     [Fact]
     public void TheVibratoWave_OnTheTab_StandsAsHighInTheSpanAsOutsideIt()
     {

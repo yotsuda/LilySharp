@@ -424,7 +424,15 @@ internal static class TrillSpannerEngraver
         // "tr" binds. Until session 965 only the FIRST piece had one, and the continuation
         // read 4.505 off its wave over a''8 (the 0.040 that session 961 left OPEN: it had
         // priced the plateau at 1.5 and so believed LilyPond ignored it).
-        VerticalSkyline? plateau = VerticalSkyline.FromBox(
+        // …except a fretted @vibrato's wave (WaveOnly), which prints no glyph and so has no
+        // plateau (owner's decision 2026-11-22: the reach of a "tr" it does not draw stood the
+        // wave 1.0 off its note, on the staff and on the tab alike). It is LilyPond's own
+        // answer for the twin, which writes the wave as a TrillSpanner whose
+        // bound-details.left.text is ##f: no text, no plateau. MEASURED (2.26.0, Lab
+        // sessions/p1365/g/vib.ly): a'4. on a guitar's staff, the wave's elements 2.0277 over
+        // the top line in both. The stacker and the page's boxes already read it so
+        // (TrillProfileSkylines: GlyphX == LineStartX is "no glyph").
+        VerticalSkyline? plateau = spanner.WaveOnly ? null : VerticalSkyline.FromBox(
             glyphX + MusicFont.Current.FullSize.Outline(MusicGlyph.OrnamentTrill).Left,
             glyphX + MusicFont.Current.FullSize.Outline(MusicGlyph.OrnamentTrill).Right,
             -reach, MusicFont.Current.FullSize.Box(MusicGlyph.OrnamentTrill).Top - reach, facing);
