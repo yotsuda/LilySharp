@@ -409,6 +409,29 @@ public class ShapeChordItemTests
         Assert.Equal(43, played[^2]);
     }
 
+    /// <summary>A phrase's shape is checked on the tunings of the parts that PLAY it — through
+    /// other phrases too — not on every part of the file (evaluation 5, guitar r-05: a phrase only
+    /// a standard guitar plays was warned against Guitar II's drop D, `320003` read as G7/F). A
+    /// phrase no part plays is still checked on every part's.</summary>
+    [Fact]
+    public void APhrasesShape_IsCheckedOnTheTuningsOfThePartsThatPlayIt()
+    {
+        static string Song(string gtrA, string gtrB, string phrases = "phrase strum { chord(G 320003)4 q q q | }") =>
+            "octave absolute\npart gtrA { instrument guitar }\npart gtrB { instrument guitar  tuning guitarDropD }\n"
+            + phrases + "\nsection A {\n  gtrA { " + gtrA + " }\n  gtrB { " + gtrB + " }\n}\n"
+            + "form { ~A }\nscore { staff gtrA  staff gtrB }\n";
+        static int Mismatches(string book) => Diagnostics(book).Count(d => d.Code == DiagnosticCodes.ChordShapeMismatch);
+
+        Assert.Equal(0, Mismatches(Song("strum", "R1 |")));
+        // …through a phrase that names it.
+        Assert.Equal(0, Mismatches(Song("outer", "R1 |",
+            "phrase strum { chord(G 320003)4 q q q | }\nphrase outer { strum }")));
+        // Guitar II plays it: its drop D reads 320003 as G7/F, and says so.
+        Assert.Equal(1, Mismatches(Song("strum", "strum")));
+        // No part plays it: every part's tuning, as before.
+        Assert.Equal(1, Mismatches(Song("R1 |", "R1 |")));
+    }
+
     // ================================================================ in << >>
 
     /// <summary>Owner's decision 2026-09-30: a <c>diagram(…)</c> member of <c>&lt;&lt; &gt;&gt;</c>

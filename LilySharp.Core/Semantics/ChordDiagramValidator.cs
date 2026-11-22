@@ -139,16 +139,72 @@ public static class ChordDiagramScores
     }
 
     /// <summary>
-    /// The fretted tuning word of the part <paramref name="node"/> is written in; outside every
-    /// part (a phrase), the one word all the file's parts share, else null.
+    /// The parts that play the phrase (or variable) <paramref name="node"/> is written in, from
+    /// the SYNTAX: each part whose music names it, directly or through other phrases, in the
+    /// order first met. Empty outside a phrase, or for a phrase no part's music names.
+    /// </summary>
+    /// <remarks>
+    /// Until 2026-11-22 a phrase's shape chord was checked on EVERY tuning of the file, so a
+    /// phrase only a standard guitar plays was warned against another part's drop D
+    /// (evaluation 5, guitar r-05: LYS1039 ten times in one book).
+    /// </remarks>
+    public static IReadOnlyList<string> PartsPlayingPhraseOf(SyntaxNode node)
+    {
+        string? phrase = EnclosingPhraseName(node);
+        if (phrase == null)
+            return [];
+        var references = RootOf(node).KindSites(SyntaxKind.VariableReference).OfType<VariableReferenceSyntax>().ToList();
+        var phrases = new HashSet<string>(System.StringComparer.Ordinal) { phrase };
+        var parts = new List<string>();
+        var pending = new Queue<string>();
+        pending.Enqueue(phrase);
+        while (pending.Count > 0)
+        {
+            string name = pending.Dequeue();
+            foreach (var r in references)
+            {
+                if (r.Name.Text != name)
+                    continue;
+                if (PartNameOf(r) is { } part)
+                {
+                    if (!parts.Contains(part))
+                        parts.Add(part);
+                }
+                else if (EnclosingPhraseName(r) is { } outer && phrases.Add(outer))
+                    pending.Enqueue(outer);
+            }
+        }
+        return parts;
+
+        static string? EnclosingPhraseName(SyntaxNode n)
+        {
+            for (var p = n.Parent; p != null; p = p.Parent)
+                switch (p)
+                {
+                    case PhraseDeclarationSyntax ph:
+                        return ph.Name.Text;
+                    case VariableDeclarationSyntax vd:
+                        return vd.Name.Text;
+                }
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// The fretted tuning word of the part <paramref name="node"/> is written in; in a phrase,
+    /// the one word the parts that play it share (<see cref="PartsPlayingPhraseOf"/>) — every
+    /// part of the file's when no part plays it — else null.
     /// </summary>
     public static string? FrettedWordOfNode(SyntaxNode node)
     {
         var root = RootOf(node);
         if (PartNameOf(node) is { } part)
             return FrettedWordOfPart(root, part);
-        var words = root.ChildNodes().OfType<PartDeclarationSyntax>()
-            .Select(pd => PartHeaderDefaults.Read(pd).FrettedTuningWord).Distinct().ToList();
+        var players = PartsPlayingPhraseOf(node);
+        var words = (players.Count > 0
+                ? players.Select(p => PartHeaderDefaults.Read(ConcertPitch.FindPart(root, p)))
+                : root.ChildNodes().OfType<PartDeclarationSyntax>().Select(pd => PartHeaderDefaults.Read(pd)))
+            .Select(h => h.FrettedTuningWord).Distinct().ToList();
         return words.Count == 1 ? words[0] : null;
     }
 

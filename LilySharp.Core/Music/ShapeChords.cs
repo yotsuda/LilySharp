@@ -290,8 +290,9 @@ public static class ShapeChords
 
     /// <summary>
     /// The parts <paramref name="node"/> is played by, from the SYNTAX — the enclosing part
-    /// declaration, or the part a section's block names; outside every part (a phrase), each
-    /// distinct tuning of the file's parts (the guitar when it declares none). For the readers
+    /// declaration, or the part a section's block names; in a phrase, each distinct tuning of
+    /// the parts that play it (<see cref="ChordDiagramScores.PartsPlayingPhraseOf"/>) — of the
+    /// file's parts when none does (the guitar when it declares none). For the readers
     /// that have no part in hand: the validator, the hover, the editor's step. The page and the
     /// exporters know the part they are writing.
     /// </summary>
@@ -304,6 +305,8 @@ public static class ShapeChords
             => new(TuningOf(h), h.FrettedTuningWord ?? "guitar", h.SoundingShiftSemitones, h.FrettedTuning != null, CloseRegisterOf(h), CloseFloorOf(h));
         if (ChordDiagramScores.PartNameOf(node) is { } part)
             return [Of(PartHeaderDefaults.Read(ConcertPitch.FindPart(root, part)))];
+        if (ChordDiagramScores.PartsPlayingPhraseOf(node) is { Count: > 0 } players)
+            return players.Select(p => Of(PartHeaderDefaults.Read(ConcertPitch.FindPart(root, p)))).Distinct().ToList();
         var all = root.ChildNodes().OfType<PartDeclarationSyntax>()
             .Select(pd => Of(PartHeaderDefaults.Read(pd))).Distinct().ToList();
         return all.Count == 0 ? [Of(PartHeaderDefaults.Empty)] : all;

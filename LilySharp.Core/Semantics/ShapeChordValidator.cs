@@ -30,9 +30,9 @@ namespace LilySharp.Core.Semantics;
 /// </summary>
 /// <remarks>
 /// The part's tuning is read from the tree (<see cref="ShapeChords.PartTuningsOf"/>): in a part,
-/// its own; in a phrase, each tuning of the file's parts — a phrase a guitar and a ukulele both
-/// play needs a shape for each, and the one missing is said once per tuning. Identical warnings
-/// are said once.
+/// its own; in a phrase, each tuning of the parts that play it (every part's when none does) — a
+/// phrase a guitar and a ukulele both play needs a shape for each, and the one missing is said
+/// once per tuning. Identical warnings are said once.
 /// </remarks>
 internal sealed class ShapeChordValidator : ISemanticValidator
 {
