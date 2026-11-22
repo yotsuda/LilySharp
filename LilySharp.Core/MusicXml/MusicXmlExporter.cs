@@ -56,6 +56,10 @@ public sealed class MusicXmlExporter
     // The sostenuto's own style under the part's (Svg.Model.PedalStyles, 2026-11-13): mixed
     // under the bracket style, so its <pedal> says line and sign.
     private string _partSostenutoStyle = "mixed";
+    // The parts whose sustain pedal is down: an '@sustain' there is a change (ProcessDirectionName).
+    // By name: a voice span writes its later voices into a scratch part of the same part.
+    private readonly HashSet<string> _sustainDown = new(StringComparer.Ordinal);
+    private string? _pedalPart;
     private int _partTransposeSemitones;
     // …and the share of it the document's <transpose> states: the instrument's alone, the
     // header clef's octave being in the pitches (MusicXmlPart.PitchOctaveShift).
@@ -2641,6 +2645,7 @@ public sealed class MusicXmlExporter
         _currentTranspose = PitchTransposer.NullIfIdentity(PitchTransposer.Compose(
             _root != null ? PartTranspose.Read(_root, partName) : null, _playedSpec?.ScoreTranspose));
         ApplyPartHeader(partName);
+        _pedalPart = partName;
         _lastPitchedNote = null; // ho/po never pairs across parts
 
         // Reset state for this part's continuation. The relative frame starts at the part's
@@ -7504,6 +7509,8 @@ public sealed class MusicXmlExporter
                     // MusicXML has ONE pedal stop for the sustain and the sostenuto.
                     case Svg.Model.MusicMarkType.SustainOff:
                         AddDirection(new MusicXmlDirection { PedalType = "stop", Placement = "below" });
+                        if (_pedalPart != null)
+                            _sustainDown.Remove(_pedalPart);
                         break;
                     case Svg.Model.MusicMarkType.SostenutoOff:
                         AddDirection(new MusicXmlDirection { PedalType = "stop", Placement = "below", PedalStyle = _partSostenutoStyle });
@@ -7559,7 +7566,22 @@ public sealed class MusicXmlExporter
         // Matched as written: names are case-sensitive (owner's decision 2026-09-27).
         switch (name)
         {
+            // An '@sustain' while the pedal is down is a change — lifted and taken again, as the
+            // page draws its notch and the MIDI plays it. A <pedal type="change"> where the part's
+            // pedal draws a line; where it is the signs alone (MusicXML: change is for lines), the
+            // stop and the start. Until 2026-11-22 it was a second start with no stop before it
+            // (evaluation 5, piano r-10).
             case "sustain":
+                if (_pedalPart != null && !_sustainDown.Add(_pedalPart))
+                {
+                    if (_partPedalStyle == "text")
+                        AddDirection(new MusicXmlDirection { PedalType = "stop", Placement = "below" });
+                    else
+                    {
+                        AddDirection(new MusicXmlDirection { PedalType = "change", Placement = "below" });
+                        break;
+                    }
+                }
                 AddDirection(new MusicXmlDirection { PedalType = "start", Placement = "below" });
                 break;
             case "sostenuto":

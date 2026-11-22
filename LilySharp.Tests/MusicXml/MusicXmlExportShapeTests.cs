@@ -501,6 +501,33 @@ public class MusicXmlExportShapeTests
         Assert.Equal("B", doc.Descendants("bass-step").Single().Value);
     }
 
+    /// <summary>An <c>@sustain</c> while the pedal is down is a change: <c>&lt;pedal type="change"&gt;</c>
+    /// where the pedal draws a line, the stop and the start where it is the signs alone (MusicXML's
+    /// change is for lines). It was a second start with no stop before it (evaluation 5, 2026-11-22).
+    /// The part's pedal is its own: another part's down pedal changes nothing, across sections too.</summary>
+    [Theory]
+    [InlineData("", "start change stop")]
+    [InlineData(" pedal mixed", "start change stop")]
+    [InlineData(" pedal text", "start stop start stop")]
+    public void ASustainWhileThePedalIsDown_IsAChange(string style, string expected)
+    {
+        var doc = Export($$"""
+            octave absolute
+            part lh { clef bass{{style}} }
+            part rh { clef treble }
+            section A { lh { d,2@sustain a,,2 | } rh { d'2@sustain e'2@!sustain | } }
+            section B { lh { a,,2@sustain d,2@!sustain | } rh { f'2@sustain g'2@!sustain | } }
+            form { A B }
+            score { staff rh  staff lh }
+            """);
+        string Pedals(string id) => string.Join(" ", doc.Descendants("part").Single(p => (string?)p.Attribute("id") == id)
+            .Descendants("pedal").Select(p => (string?)p.Attribute("type")));
+        // The parts in the score's order: rh, then lh.
+        var ids = doc.Descendants("part").Select(p => (string)p.Attribute("id")!).ToList();
+        Assert.Equal("start stop start stop", Pedals(ids[0]));
+        Assert.Equal(expected, Pedals(ids[1]));
+    }
+
     /// <summary>
     /// A direction stands at ITS note (HANDOFF §1.1 第662 ⑹, 2026-09-29): the measure writes
     /// its directions at its head with an &lt;offset&gt; in divisions, so <c>c4 d@cresc</c>
