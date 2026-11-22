@@ -4203,7 +4203,7 @@ internal sealed class MultiStaffLayouter
                     insideSky.Up, NotationStaffLinesOf(staff), LineSpacingOf(staff));
                 inside.Add(insideSky);
                 // The staff's HAIRPINS, laid out once for both passes below.
-                var hairpins = StaffHairpinLayouts(
+                var (hairpins, lineDynamics) = StaffHairpinLayouts(
                     score, staff, thisStaff, measureLayouts, beams, dynamics);
                 // TWO PASSES OVER THE SAME STACK: the layout's (over the inside profile just
                 // built) and, where the page breaker would read a different one, the PURE one —
@@ -4255,6 +4255,10 @@ internal sealed class MultiStaffLayouter
                     // LILYPOND-REF: lily/axis-group-interface.cc:952-972 add_grobs_of_one_priority
                     //   — a placed outside-staff grob's skyline is merged into the group's.
                     SkylineBuilder.AddHairpinsToSkyline(hairpins, StaffSize.Of(staff), sky.Up, sky.Down);
+                    // …and the texts on those wedges' lines where the line put them (the texts
+                    // were reserved above where each stood alone; StaffHairpinLayouts' remark).
+                    SkylineBuilder.AddLineDynamicsToSkyline(score.TextMetrics, lineDynamics,
+                        StaffSize.Of(staff), sky.Up, sky.Down);
 
                     // The staff's own accel./rit. spanner is OUTSIDE-STAFF INK ABOVE IT, and a
                     // row standing above the staff has to clear it exactly as the staff below a
@@ -4918,14 +4922,14 @@ internal sealed class MultiStaffLayouter
     /// global index for the reason the tuplet seed gives: the engraver keys stem tips by
     /// (staff, voice, measure, item) and the hairpin carries the score's real staff index.
     /// </remarks>
-    private ImmutableArray<HairpinLayout> StaffHairpinLayouts(
+    private (ImmutableArray<HairpinLayout> Hairpins, ImmutableArray<DynamicLayout> LineDynamics) StaffHairpinLayouts(
         MultiStaffScore score, Staff staff, int staffIndex,
         ImmutableArray<MeasureLayout> measureLayouts, ImmutableArray<BeamLayout> beamLayouts,
         ImmutableArray<DynamicItem> staffDynamics)
     {
         var staffHairpins = ScoreSideTables.HairpinsByStaff(score).At(staffIndex);
         if (staffHairpins.IsEmpty || measureLayouts.IsDefaultOrEmpty)
-            return ImmutableArray<HairpinLayout>.Empty;
+            return (ImmutableArray<HairpinLayout>.Empty, ImmutableArray<DynamicLayout>.Empty);
 
         int maxMeasureIndex = -1;
         foreach (var ml in measureLayouts)
@@ -4965,10 +4969,23 @@ internal sealed class MultiStaffLayouter
                 staffLinesOf: _ => NotationStaffLinesOf(staff),
                 restShiftsOf: _ => RestCollisionsOf(staff));
 
-        return HairpinEngraver.CalculateOnSystem(
+        var hairpins = HairpinEngraver.CalculateOnSystem(
             staffHairpins, system, staff.PrimaryVoice.Measures.Length, keyed,
             staff.Voices, staff.PrimaryVoice.Measures, staffBeams, dynamicLayouts,
             NotationStaffLinesOf(staff), score.GraceNotes, RestCollisionsOf(staff));
+        // …and the texts and wedges linked by running hairpins re-seated on their ONE line, as
+        // the ink does (LayoutEngine.Annotations → DynamicAlignEngraver.AlignLines): the room
+        // reserved each where it stood alone, so a pp a beam had pushed its hairpin's line down
+        // to was drawn lower than its room, into the next staff's fermata (evaluation 5, piano
+        // r-07: LilyPond opens that gap to 8.1, Lily# left it at 5.6).
+        // LILYPOND-REF: lily/dynamic-align-engraver.cc:194-235 stop_translation_timestep — one
+        //   DynamicLineSpanner for the linked grobs, side-positioned (and so spaced) as one.
+        var (lineDynamics, lineHairpins, _) = DynamicAlignEngraver.AlignLines(
+            score.TextMetrics, staffHairpins, systemDynamics.ToImmutable(), dynamicLayouts, hairpins,
+            ImmutableArray.Create(system), keyed, staffYAt: null, staff.Voices, voicesByStaff,
+            measuresByStaff, staffBeams, _ => NotationStaffLinesOf(staff), score.GraceNotes,
+            _ => RestCollisionsOf(staff));
+        return (lineHairpins, lineDynamics);
     }
 
     /// <summary>

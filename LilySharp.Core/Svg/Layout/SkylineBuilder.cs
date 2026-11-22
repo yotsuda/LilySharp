@@ -2609,6 +2609,36 @@ internal sealed class SkylineBuilder
     }
 
     /// <summary>
+    /// The dynamics re-seated on their hairpins' line (<see cref="DynamicAlignEngraver.AlignLines"/>),
+    /// each label's own outline where the line put it, merged on its side — the reservation of the
+    /// DynamicLineSpanner's texts, beside <see cref="AddHairpinsToSkyline"/>'s of its wedges.
+    /// </summary>
+    /// <remarks>
+    /// The labels were reserved before where each stood alone (<see cref="PlaceDynamicsOn"/>); a
+    /// label the line moved away from the staff was drawn past that room (evaluation 5, piano
+    /// r-07). Merging adds room and never takes any, so a label the line left where it was costs
+    /// nothing. Full size only, as the wedges' and the pointwise labels' arms are.
+    /// LILYPOND-REF: lily/dynamic-align-engraver.cc:194-235 stop_translation_timestep — the
+    ///   linked texts and wedges are one DynamicLineSpanner, whose skyline the group merges.
+    /// </remarks>
+    internal static void AddLineDynamicsToSkyline(
+        Rendering.ScoreTextMetrics fonts, ImmutableArray<DynamicLayout> dynamics, StaffSize size,
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        if (dynamics.IsDefaultOrEmpty || size.Span(1.0) != 1.0)
+            return;
+        foreach (var d in dynamics)
+        {
+            var my = DynamicEngraver.LabelSkylines(fonts, d.Text, d.IsExpressiveText, d.X, d.YUp,
+                d.IsSubito, d.IsEditorial);
+            if (d.IsAbove)
+                upSkyline.Merge(my.Up);
+            else
+                downSkyline.Merge(my.Down);
+        }
+    }
+
+    /// <summary>
     /// Seeds the drawn slur bows into the per-staff skylines so the inter-staff gap
     /// reserves the room they occupy — the analogue of <see cref="AddTupletBracketsToSkyline"/>
     /// for slurs.
