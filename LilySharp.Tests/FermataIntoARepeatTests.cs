@@ -65,6 +65,27 @@ public class FermataIntoARepeatTests
         Assert.Equal(closing.Contains("fermata") ? 3 * midi.TicksPerQuarterNote * 4 / 2 : midi.TicksPerQuarterNote * 4, e.DurationTicks);
     }
 
+    /// <summary>
+    /// Within the piece a fermata's ring ends where the music goes on — the next note of any part
+    /// — since the music after it is not held back (session 1363): the held note overran the next
+    /// bar, struck its own pitch again while still sounding, and rang the chord over the next
+    /// harmony. A note of another voice sounding across that point is no fermata's and keeps its
+    /// length; a hold nothing follows still rings half again its value (above).
+    /// </summary>
+    [Theory]
+    // (onset ticks at 480 a quarter : length)
+    [InlineData("part a { clef treble }\nsection A { a { g''1@fermata | g''1 | } }", "a", "0:1920 1920:1920")]
+    [InlineData("part a { clef treble }\npart b { clef bass }\nsection A { a { <e' g'>1@fermata | r1 | } b { a,1@fermata | d4 e f g | } }",
+        "a", "0:1920 0:1920")]
+    [InlineData("part a { clef treble }\nsection A { a { voice { c''4@fermata d''4 e''2 } { g'1 } | c''1 | } }", "a", "0:480 0:1920 480:480 960:960 1920:1920")]
+    public void AFermataWithinThePiece_RingsUntilTheMusicGoesOn(string body, string part, string expected)
+    {
+        var midi = Play("octave absolute\ntime 4/4\n" + body + "\nform { A }\nscore { staff a" + (body.Contains("part b") ? " staff b" : "") + " }\n");
+        var notes = midi.Tracks.SelectMany(t => t.Notes).Where(n => n.Part == part)
+            .OrderBy(n => n.StartTick).ThenBy(n => n.DurationTicks).Select(n => $"{n.StartTick}:{n.DurationTicks}");
+        Assert.Equal(expected, string.Join(" ", notes));
+    }
+
     /// <summary>A fermata closing a repeat's body is not tied over the jump back: the body's
     /// first note, the same pitch, is struck again on the second pass.</summary>
     [Fact]

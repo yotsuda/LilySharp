@@ -1135,6 +1135,7 @@ public sealed class MidiExporter
         OpenBarGrid(mainTrack, null);
         _levelLog.Clear();
         _heldScripts.Clear();
+        _holds.Clear();
         _sectionPlayStarts.Clear(); // (no net uses one exporter twice — the same open as the logs around it)
         _strikeLog.Clear();
         _pedalLog.Clear();
@@ -1171,6 +1172,7 @@ public sealed class MidiExporter
         // The notes an overfull bar ran past its bar line (AlignBarLine), once nothing indexes
         // the track any more.
         mainTrack.Notes.RemoveAll(n => n.DurationTicks < 0);
+        EndTheHolds(mainTrack);
         SwingNotes(mainTrack);
 
         // Ensure there is an initial time signature at tick 0. If the score already
@@ -3848,6 +3850,7 @@ public sealed class MidiExporter
         (velocity, durationPercent) = ApplyRunMarks(pitch, velocity, durationPercent);
         int ticks = ClockTicks(_defaultDuration);
         int actualTicks = Math.Max(1, ticks * durationPercent / 100);
+        NoteHold(pitch, ticks, durationPercent);
         track.Notes.Add(new MidiNote(track.Channel, SoundKey(midiPitch, pitch.SourceStart), velocity,
             _currentTick, actualTicks, pitch.SourceStart, QuarterBend: pitch.QuarterOffset,
             SourceOrdinal: NextOrdinal(pitch.SourceStart), Timbre: _currentTimbre, Part: _currentPart, Accent: velocity - _velocity, Sforzando: _struckBy));
@@ -3921,6 +3924,7 @@ public sealed class MidiExporter
         // NoteOn — be emitted first, leaving a stuck note.
         (velocity, durationPercent) = ApplyRunMarks(note, velocity, durationPercent);
         int actualDuration = Math.Max(1, durationTicks * durationPercent / 100);
+        NoteHold(note, durationTicks, durationPercent);
 
         bool startsTie = note.Articulations.OfType<TieSyntax>().Any();
         // ⚠️ Pinned to the range BEFORE the tie is matched: the notes already in the track
@@ -3988,6 +3992,7 @@ public sealed class MidiExporter
 
         (velocity, durationPercent) = ApplyRunMarks(drum, velocity, durationPercent);
         int actualDuration = Math.Max(1, durationTicks * durationPercent / 100);
+        NoteHold(drum, durationTicks, durationPercent);
         track.Notes.Add(new MidiNote(9, info.GmKey, velocity, _currentTick, actualDuration,
             drum.SourceStart, SourceOrdinal: NextOrdinal(drum.SourceStart), Timbre: 9, Part: _currentPart, Accent: velocity - _velocity, Sforzando: _struckBy));
         // A drum's hairpin is played as any part's (SwellInstruments reads the mark off the
@@ -4123,6 +4128,7 @@ public sealed class MidiExporter
         }
         (velocity, durationPercent) = ApplyRunMarks(bare, velocity, durationPercent);
         int actualDuration = Math.Max(1, durationTicks * durationPercent / 100);
+        NoteHold(bare, durationTicks, durationPercent);
         bool startsTie = bare.Articulations.OfType<TieSyntax>().Any();
 
         // A bare value after a slash is that stroke again (`/4 8 8 4 4` in a part that comps; a
@@ -4373,6 +4379,7 @@ public sealed class MidiExporter
             (velocity, durationPercent) = ApplyArticulationType(type, velocity, durationPercent);
         (velocity, durationPercent) = ApplyRunMarks(chord, velocity, durationPercent);
         int soundTicks = Math.Max(1, durationTicks * durationPercent / 100);
+        NoteHold(chord, durationTicks, durationPercent);
 
         // The first member is the ROOT, read as a single note; where it SOUNDS is the
         // chord's ANCHOR, and every other member STACKS above the anchor — the same
@@ -4587,6 +4594,7 @@ public sealed class MidiExporter
         }
         (velocity, durationPercent) = ApplyRunMarks(rep, velocity, durationPercent);
         int soundTicks = Math.Max(1, durationTicks * durationPercent / 100);
+        NoteHold(rep, durationTicks, durationPercent);
 
         if (ChordRepetitions.OriginalOf(rep) is { } original
             && _resolvedChordNotes.TryGetValue(original, out var notes))
@@ -5287,6 +5295,48 @@ public sealed class MidiExporter
         return chord.Pitches.SelectMany(p => p.Articulations.OfType<ArticulationSyntax>())
             .Where(a => a.Type != ArticulationType.None && Semantics.GraceBodySupport.IsCarriedScript(a))
             .Select(a => a.Type).Distinct().Where(type => !own.Contains(type)).ToList();
+    }
+
+    // The notes a fermata holds past their written length (NoteHold), of the export running:
+    // where each starts, its written length, the part, and the span of the text that wrote it.
+    private readonly List<(int Start, int Written, string? Part, int From, int To)> _holds = [];
+
+    /// <summary>Notes the note or chord <paramref name="node"/> sounds, at the current tick, as
+    /// held past its <paramref name="writtenTicks"/> when <paramref name="durationPercent"/> is
+    /// over 100 (a fermata) — for <see cref="EndTheHolds"/>.</summary>
+    private void NoteHold(SyntaxNode node, int writtenTicks, int durationPercent)
+    {
+        if (durationPercent > 100)
+            _holds.Add((_currentTick, writtenTicks, _currentPart, node.Span.Start, node.Span.End));
+    }
+
+    /// <summary>
+    /// A fermata's note rings half again its length (ApplyArticulationType) — where nothing
+    /// follows it. The music after it is not held back (a fermata does not stop the clock), so a
+    /// hold within the piece ends where the next note of any part begins — the music goes on there,
+    /// whoever plays it: until session 1363 the held
+    /// chord rang over the next bar's harmony and struck its own pitch again while still sounding
+    /// (Lab sessions/p1362/eval5 orchestra r-02b, piano r-08).
+    /// </summary>
+    private void EndTheHolds(MidiTrack track)
+    {
+        foreach (var (start, written, part, from, to) in _holds)
+        {
+            int next = int.MaxValue;
+            foreach (var n in track.Notes)
+                if (n.StartTick >= start + written && n.StartTick < next)
+                    next = n.StartTick;
+            if (next == int.MaxValue)
+                continue;
+            for (int i = 0; i < track.Notes.Count; i++)
+            {
+                var n = track.Notes[i];
+                if (n.Part == part && n.StartTick == start && n.SourcePos >= from && n.SourcePos < to
+                    && n.StartTick + n.DurationTicks > next)
+                    track.Notes[i] = n with { DurationTicks = Math.Max(written, next - start) };
+            }
+        }
+        _holds.Clear();
     }
 
     // LILYPOND-REF: ly/articulate.ly — duration factors: ac:staccatoFactor (1 . 2) = 50%,

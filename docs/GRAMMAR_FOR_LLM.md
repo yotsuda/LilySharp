@@ -624,7 +624,7 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
 - Voice column: `@shiftOff` keeps a note of a third or later voice in its group's first
   column, so it stands under the voice above instead of a column aside.
 - Articulations: `@staccato @staccatissimo @accent @tenuto @marcato @fermata @portato`
-  (`@fermata` is printed, not played: the note keeps its written length in the MIDI)
+  (`@fermata` does not hold the music back in the MIDI: a note nothing follows rings half again its length, and one within the piece rings until the next note of any part begins)
 - **A mark over a run of notes**: `c8@staccato d e f@!staccato` — the end `@!NAME` goes on the
   LAST note of the run, and every note and chord from the opening one to that one carries the
   mark (drawn and played on each, exactly as `c8@staccato d@staccato e@staccato f@staccato`).
