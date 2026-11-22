@@ -3238,8 +3238,9 @@ public sealed class MusicXmlExporter
     // The `pass N {` regions open in the walk, innermost on top (docs/eval4-features-design.md §3).
     private readonly Stack<PassSet> _xmlPassRegions = new();
 
-    // The instrument each part has changed to in its music (`instrument piccolo`), by part — a
-    // part's spans are emitted one section at a time, and a change holds into the next.
+    // The instrument each part has changed to in its music (`instrument piccolo`), by part. A
+    // change holds to the end of its section, as a `key` or a `clef` in the music does: the
+    // next span of the part goes back to its own (_xmlRestore).
     private readonly Dictionary<string, string> _xmlSwitched = new(StringComparer.Ordinal);
     // The <score-instrument> the current part's notes sound with (InstrumentPlaceholder-based),
     // null for its own.
@@ -3276,19 +3277,58 @@ public sealed class MusicXmlExporter
         direction.InstrumentChangeProgram = program;
         AddDirection(direction);
 
-        // The transposition, for a part typed as written (one typed at concert pitch is the
-        // page's question: InstrumentSwitchValidator refuses another transposition there).
+        // The transposition the document states. The document writes a part for its player
+        // with a <transpose> to what sounds; a part typed at concert pitch is moved to the new
+        // instrument's notation too (its letters sound whatever plays them), and its key with it.
         bool lettersConcert = ConcertPitch.PartMode(part) ?? (_root != null && ConcertPitch.FileIsConcert(_root));
         int written = home ? header.TranspositionSemitones : Svg.Model.InstrumentDefaults.GetTransposition(preset);
-        if (!lettersConcert && written != _partTransposeWritten)
+        if (written != _partTransposeWritten)
         {
-            _partTransposeSemitones += written - _partTransposeWritten;
+            if (lettersConcert)
+            {
+                var spanTranspose = PitchTransposer.NullIfIdentity(PitchTransposer.Compose(
+                    _root != null ? PartTranspose.Read(_root, _currentPartName) : null, _playedSpec?.ScoreTranspose));
+                int delta = header.TranspositionSemitones - written;
+                _currentTranspose = PitchTransposer.NullIfIdentity(PitchTransposer.Compose(spanTranspose,
+                    delta == 0 ? null : PitchTransposer.IntervalFromSemitones(delta)));
+                _attributesDirty = true;
+                SyncAttributes();
+            }
+            else
+                _partTransposeSemitones += written - _partTransposeWritten;
             _partTransposeWritten = written;
             _currentMeasure.Notes.Add(new MusicXmlNote
             {
                 RawElement = new XElement("attributes", MusicXmlAttributes.TransposeElement(written)),
             });
         }
+    }
+
+    // The instrument the part's previous span ended on, when it was not its own: the document
+    // goes back to the part's own sound (and transposition) before this span's first note.
+    private string? _xmlRestore;
+
+    /// <summary>A span after one that ended on another instrument: the part's own sound again,
+    /// as a bare <c>&lt;sound&gt;&lt;instrument-change&gt;</c> (the page prints nothing there), and its
+    /// own <c>&lt;transpose&gt;</c> (the span's pitches and key are its own already: EmitPartMusic).</summary>
+    private void RestoreOwnInstrument()
+    {
+        string? was = _xmlRestore;
+        _xmlRestore = null;
+        if (was == null || _currentMeasure == null || _currentPart == null || _currentPartName == null)
+            return;
+        // A bare <sound> (a direction needs a direction-type, and the page prints none here).
+        if (InstrumentIdOf("", home: true, out int? program) is { } id)
+            _currentMeasure.Notes.Add(new MusicXmlNote
+            {
+                RawElement = new XElement("sound", new XElement("instrument-change", new XAttribute("id", id)),
+                    program is int p ? new XElement("midi-instrument", new XAttribute("id", id), new XElement("midi-program", p + 1)) : null),
+            });
+        if (Svg.Model.InstrumentDefaults.GetTransposition(was) != _partTransposeWritten)
+            _currentMeasure.Notes.Add(new MusicXmlNote
+            {
+                RawElement = new XElement("attributes", MusicXmlAttributes.TransposeElement(_partTransposeWritten)),
+            });
     }
 
     /// <summary>The <c>&lt;score-instrument&gt;</c> id the current part sounds <paramref name="preset"/>
@@ -3441,6 +3481,12 @@ public sealed class MusicXmlExporter
 
             case InstrumentSwitchSyntax change:
                 ProcessInstrumentSwitch(change);
+                break;
+
+            case NoteSyntax or ChordSyntax or RestSyntax or BareDurationSyntax or ChordRepetitionSyntax or DrumNoteSyntax or SlashNoteSyntax
+                when _xmlRestore != null:
+                RestoreOwnInstrument();
+                ProcessNode(node);
                 break;
 
             case NoteSyntax note:
@@ -4306,20 +4352,10 @@ public sealed class MusicXmlExporter
         if (_currentPart != null)
             _currentPart.PitchOctaveShift = header.ClefOctaveSemitones / 12;
 
-        // An instrument the part changed to in an earlier span holds on here
-        // (ProcessInstrumentSwitch): its sound, and — typed as written — its transposition.
+        // An instrument change ends with its section: a span that follows one which ended on
+        // another instrument goes back to the part's own before its first note (RestoreOwnInstrument).
         _xmlInstrumentId = null;
-        if (_xmlSwitched.TryGetValue(partName, out var switched) && _currentPart != null)
-        {
-            _xmlInstrumentId = InstrumentIdOf(switched, home: false, out _);
-            var decl = _root != null ? ConcertPitch.FindPart(_root, partName) : null;
-            if (!(ConcertPitch.PartMode(decl) ?? (_root != null && ConcertPitch.FileIsConcert(_root))))
-            {
-                int written = Svg.Model.InstrumentDefaults.GetTransposition(switched);
-                _partTransposeSemitones += written - _partTransposeWritten;
-                _partTransposeWritten = written;
-            }
-        }
+        _xmlRestore = _xmlSwitched.Remove(partName, out var switched) ? switched : null;
     }
 
     private void ProcessClef(ClefDeclarationSyntax clef)

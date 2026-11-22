@@ -1743,8 +1743,13 @@ public sealed class MidiExporter
             case PartBlockSyntax partBlock:
                 // A section's `partName { ... }` block: arm the part's transpose
                 // (sounding-pitch shift) for the notes inside, then disarm it.
+                // An instrument change holds to the end of the section it is written in, as a
+                // `key` or a `clef` in the music does: each play starts on the part's own.
+                _switchedInstrument.Remove(partBlock.Name);
                 _currentTransposeSemitones = PartPlaybackShift(partBlock.Name);
+                _currentTimbre = PartTimbre(partBlock.Name);
                 ProcessChildren(partBlock, track, conductorTrack);
+                _switchedInstrument.Remove(partBlock.Name);
                 _currentTransposeSemitones = 0;
                 break;
 
@@ -2152,8 +2157,12 @@ public sealed class MidiExporter
         // `transpose` (and, with it, a concert-pitch file's instrument shift) reached the
         // page and not the .mid — measured on `part x { transpose d section A { c1 | } }`,
         // which played C4 where the by-section spelling of the same book played D4.
+        // An instrument change holds to the end of the section it is written in.
+        _switchedInstrument.Remove(partName);
         _currentTransposeSemitones = PartPlaybackShift(partName);
+        _currentTimbre = PartTimbre(partName);
         body();
+        _switchedInstrument.Remove(partName);
         _partPitchLanes[partName] = (_currentNoteName, _currentOctave, _defaultDuration);
         // (No key lane is kept here: a section written inside its part is one block a play —
         // poisoned 2026-11-15, keeping it changed nothing. The by-section loop keeps it.)
@@ -3234,8 +3243,9 @@ public sealed class MidiExporter
     }
 
     // The instrument each part has changed to in the music so far (`instrument piccolo`,
-    // docs/eval4-features-design.md §1), by part; a part not in it plays its own. The walk goes
-    // as printed, so a change holds on into the sections after it until the next one.
+    // docs/eval4-features-design.md §1), by part; a part not in it plays its own. Cleared as
+    // each play of a section begins: a change holds to the end of its section, as a `key` and a
+    // `clef` written in the music do.
     private readonly Dictionary<string, string> _switchedInstrument = new(StringComparer.Ordinal);
 
     /// <summary>The instrument <paramref name="partName"/> has changed to, or null.</summary>

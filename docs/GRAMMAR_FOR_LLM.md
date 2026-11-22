@@ -845,14 +845,18 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   Two `cue` blocks side by side are two voices — a span may not run from one into the next
   either, even though both of its ends are cue notes.
 - A player changing instrument (Fl. → Picc., Cl. → B.Cl.): write `instrument piccolo` in the
-  part's music, usually after a rest — `R1*4 | instrument piccolo c'''4 d''' e''' f''' |`. From
-  there the part sounds the preset (its sound, transposition and range) and the page prints
-  "Piccolo" over the next note. Give it names as a part's are given — `instrument piccolo "Piccolo" "Picc."` — and the later systems are headed "Picc."; in a part that writes a short name, a change with none leaves them unnamed (LYS1079 warns). The notes,
-  the clef and the key stay as written (write `clef bass` yourself for a bass clarinet's change of
-  clef, and `@text("to Picc.")` in the rest before if you want the warning). Change back with
-  `instrument flute`. Keep one part per player instead of a part per instrument. In a book typed
-  at concert pitch (`pitch concert`), or printed at concert pitch, a change to an instrument of
-  another transposition is not drawn yet (LYS1078) — give that instrument its own part there
+  part's music, usually after a rest — `R1*4 | instrument piccolo c'''4 d''' e''' f''' |`. To the
+  end of the section (as a `key` or `clef` in the music holds; the next section starts on the
+  part's own instrument) the part sounds the preset (its sound, transposition and range), and the
+  page prints "Piccolo" over the next note. Give it names as a part's are given —
+  `instrument piccolo "Piccolo" "Picc."` — and the later systems are headed "Picc."; in a part
+  that writes a short name, a change with none leaves them unnamed (LYS1078 warns). Write
+  `clef bass` yourself for a bass clarinet's change of clef, and `@text("to Picc.")` in the rest
+  before if you want the warning. Change back with `instrument flute`. Keep one part per player
+  instead of a part per instrument. The page follows the instrument where it moves the part away
+  from the letters: a part typed at concert pitch (`pitch concert`) printed for its player is
+  printed for the instrument that plays it (key included); in the ordinary book, typed as written,
+  the notes and the key are printed as written
 - Music of some passes only: `pass 2 { … }` — "2nd time only", "tacet 1st x". The notes sound
   on the passes named and rest (keeping their time) on the others: `|: c'4 d' pass 2 { e' f' } :|`
   plays c d (rest rest) c d e f. A pass is the time through the repeat around it (`|: … :|`,

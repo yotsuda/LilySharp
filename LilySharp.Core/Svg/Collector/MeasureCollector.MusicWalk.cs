@@ -1655,6 +1655,12 @@ public sealed partial class MeasureCollector
                 }
                 break;
 
+            case InstrumentSwitchSyntax instrumentChange:
+                // `instrument piccolo` (docs/eval4-features-design.md §1): where the page prints
+                // the part transposed, it follows the instrument (ApplyInstrumentChange).
+                await ApplyInstrumentChange(instrumentChange, builder);
+                break;
+
             case BreakSyntax brk:
                 // `break` / `noBreak` force / forbid a line break here, `pageBreak` /
                 // `noPageBreak` a page break — one dispatch (MeasureBuilder.ApplyBreak). Written

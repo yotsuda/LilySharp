@@ -1738,28 +1738,31 @@ R1 | instrument flute c''1 |                       // Back to the flute
 instrument piccolo "Piccolo" "Picc." c'''1 |     // Names, long then short, as a part's
 ```
 
-From the change on, the part **sounds** the preset — its MIDI program and its transposition
-(the piccolo an octave above what is written, a B♭ clarinet a tone below) — and its notes are
-checked against that instrument's range. The page prints the instrument's name over the next
-note or rest (the first quoted name, else the preset's). The change holds into the sections after it, until the next one.
+From the change to the end of the section, the part **sounds** the preset — its MIDI program and
+its transposition (the piccolo an octave above what is written, a B♭ clarinet a tone below) — and
+its notes are checked against that instrument's range. The page prints the instrument's name over
+the next note or rest (the first quoted name, else the preset's). Like a `key` or a `clef` written
+in the music, the change holds to the end of its section: the next section starts on the part's
+own instrument, so a section played on the piccolo says so at its start.
 
-The second quoted name is the **short name**, and the staff's later systems are headed by it from
-the change on — the rule a part's own short name follows (`part fl "Flute" "Fl."`): a short name
+The second quoted name is the **short name**, and the staff's later systems in the section are
+headed by it — the rule a part's own short name follows (`part fl "Flute" "Fl."`): a short name
 is printed only where it is written. So in a part that writes one, a change that writes none
 leaves the later systems unnamed rather than under the flute the player has put down
-(**LYS1079** warns); `instrument flute` with no names goes back to the part's own names.
+(**LYS1078** warns); `instrument flute` with no names goes back to the part's own names.
 
-What is written stays as written: the notes, the key signature and the clef. Write `clef bass`
-yourself where the new instrument reads another clef, and "to Picc." with `@text` in the rest
-before the change if you want it — it is not printed for you.
+In the ordinary book — typed as written, printed for the player — what is written is printed: the
+notes, the key signature and the clef. Write `clef bass` yourself where the new instrument reads
+another clef, and "to Picc." with `@text` in the rest before the change if you want it — it is
+not printed for you.
 
-In a book typed at concert pitch (`pitch concert`), or one a score prints at concert pitch, the
-page would have to move its transposition at a change to an instrument that transposes
-otherwise, and a page prints a part with one transposition: that change is an error
-(**LYS1078**) until the page can follow — give the instrument a part of its own there. The
-MusicXML export writes the change as `<sound><instrument-change>` with its program, names the
-instrument on each note after it and states the new transposition; the LilyPond export writes
-the name.
+Where the page moves the part away from its letters, it follows the instrument, key and all. A
+part typed at concert pitch (`pitch concert`) and printed for its players is printed for the
+instrument that plays it: a B♭ clarinet's sounding `c''` as `d''`, in D major in a piece in C; the
+piccolo an octave under what it sounds. A part typed as written that a score prints at concert
+pitch (`score full pitch concert`) is printed as the new instrument sounds. The MusicXML export
+writes the change as `<sound><instrument-change>` with its program, names the instrument on each
+note after it, and states the new transposition and key; the LilyPond export writes the name.
 
 ## Music of Some Passes Only
 

@@ -24,17 +24,9 @@ namespace LilySharp.Core.Semantics;
 /// <summary>
 /// <c>instrument piccolo</c> in the music (docs/eval4-features-design.md §1): a preset that is
 /// none (the part header's message, <see cref="DiagnosticCodes.UnknownSymbolCase"/>), and a change
-/// the page cannot draw yet (<see cref="DiagnosticCodes.InstrumentChangeMovesThePage"/>).
+/// that leaves the later systems of a part that names them with no name
+/// (<see cref="DiagnosticCodes.InstrumentChangeHasNoShortName"/>).
 /// </summary>
-/// <remarks>
-/// A page prints a part with ONE transposition (ConcertPitch: the shift rides the part's
-/// <c>transpose</c>), so a change to an instrument of another transposition is refused where the
-/// page would have to move: a part typed at concert pitch (its letters sound; a transposed page
-/// prints them for the instrument), and a part typed as written that a score prints at concert
-/// pitch, when the two instruments differ by more than octaves (an octave-only transposer keeps
-/// its octave in a concert score). A part typed as written and printed for its player — every
-/// book that writes no <c>pitch</c> — draws as written, and only its sound moves.
-/// </remarks>
 internal sealed class InstrumentSwitchValidator : ISemanticValidator
 {
     private readonly DiagnosticBag _diagnostics = new();
@@ -47,8 +39,6 @@ internal sealed class InstrumentSwitchValidator : ISemanticValidator
         var changes = root.DescendantNodes<InstrumentSwitchSyntax>().ToList();
         if (changes.Count == 0)
             return;
-        bool fileConcert = ConcertPitch.FileIsConcert(root);
-        var renders = root.ChildNodes().OfType<RenderDeclarationSyntax>().ToList();
         foreach (var change in changes)
         {
             string preset = change.Preset;
@@ -70,21 +60,6 @@ internal sealed class InstrumentSwitchValidator : ISemanticValidator
                     $"Part '{partName}' heads its later systems with a short name ('{part.ShortName}'), and this change writes none: "
                     + "the systems after it print no name for the part. Write the instrument's names after it, long then short: "
                     + $"instrument {preset} \"{change.PrintedName}\" \"…\".");
-            var header = PartHeaderDefaults.Read(part);
-            int to = InstrumentDefaults.GetTransposition(preset);
-            bool lettersConcert = ConcertPitch.PartMode(part) ?? fileConcert;
-            int chromatic = to % 12 == 0 ? 0 : to;
-            string? why = lettersConcert && to != header.TranspositionSemitones
-                    ? $"part '{partName}' is typed at concert pitch, and its transposed page"
-                : !lettersConcert && chromatic != header.ConcertShiftSemitones
-                    && renders.Any(r => ConcertPitch.PageMode(r, partName) == true)
-                    ? $"a score prints part '{partName}' at concert pitch, and that page"
-                : null;
-            if (why != null)
-                _diagnostics.Error(change.Keyword.Span, DiagnosticCodes.InstrumentChangeMovesThePage,
-                    $"The {InstrumentDefaults.PrintedName(preset) ?? preset} transposes otherwise than the part's own instrument: {why} "
-                    + "would have to change its transposition here, and a page prints a part with one. Not drawn yet: give the "
-                    + "instrument a part of its own, or type the part as written ('pitch written') and print it for the player.");
         }
     }
 

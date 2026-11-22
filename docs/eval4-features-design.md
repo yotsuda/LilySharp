@@ -165,37 +165,41 @@
 - **作らないもの**: 回ごとに**違う音**（1 回目は A、2 回目は B を同じ小節に）は `pass 1 { } pass 2 { }` と並べても時間が
   2 倍になる＝ending か `voice { } { }` で書く。MusicXML の読み込み（`time-only` を `pass` に戻す）。
 
-## 1. 楽器の持ち替え `instrument piccolo`（第1368 で設計・着手はオーナー 2026-11-15）
+## 1. 楽器の持ち替え `instrument piccolo`（第1368 で設計・第1368〜第1369 で実装・着手はオーナー 2026-11-15）
 
 - **背景**: Fl. → Picc.、Cl. → B.Cl. の持ち替えを書けない。音楽の中の `instrument piccolo` はエラーで、書き手は楽器ごとに part を
   分けて `removeEmpty` と手書きの `@text("to Picc.")` でしのいだ（同じ奏者が 3 段に分かれる・評価 4 の bigband・評価 5 の orchestra の B3）。
-- **綴り**: 音楽の中の `instrument PRESET ["名前"]`＝part header と同じ並び（`instrument violin "1st Violin"`）。`clef` と同じく
-  音の間のどこにでも書ける（ふつうは休みの後の小節の頭）。元の楽器へ戻るのも同じ綴り（`instrument flute`）。
-  ⚠️ Claude の判断: 案の文面は「小節の頭に」だが、`clef`・`key` と同じく音の間ならどこでもよいとする（休みの途中で持ち替える形も紙にある）。
-- **意味**（そこから先の、その part）: preset が束ねるもののうち
-  - **替わる**: MIDI の音色（program・プレビューの音色の族）、鳴る高さの移調（`SoundingShiftSemitones`）、音域の検査（LYS1052 系）、
-    刷る名前（替わる所の文字・次の段から段頭の短い名前＝段 2）。
-  - **替わらない**: 音部記号（書き手が `clef` を書く）、相対オクターブの基準（流れのまま）、調弦、調号。
-    ⚠️ Claude の判断: 記譜音で打つ本（既定）では、移調楽器の調号も書いたとおりに刷られる（実測 Lab `sessions/p1368/instr/k1.png`:
-    `key f major` の本のクラリネットも ♭ 1 つ）＝持ち替えで譜面の音と調号は動かず、鳴る高さだけが新しい楽器の移調で替わる。
-    音部記号を自動で替えると、続く音の読みが書き手の見ている譜と食い違うので替えない。
-- **刷る文字**: 替わる所の譜表の上に新しい楽器の名前（書いた "名前"、無ければ preset の名前＝`InstrumentDefaults.PrintedName`）。
-  `@text("…").up` と同じ絵。「to Picc.」は自動で刷らない（オーナー決定 2026-11-15）＝前の休みに `@text` で書く。LilyPond の `\instrumentSwitch` 相当。
-- **音**: 音は持ち替えの後の preset を持つ（`MidiNote.Instrument`・null は header の楽器）＝反復の展開（`PlayedTimeline.Unfold`）で写っても
-  音について回る。`.mid` はその音の前に program change を書き、プレビューは音ごとの program と音色の族を受け取る（`toEvents` は
-  チャンネルの program が替わる所で program を送る）。チャンネルの割り振りは header の楽器で決める。
-- **作らない形（段 1）**: 移調の違う楽器への持ち替えを、譜面の移調が動く本で書く形＝`pitch concert` の本（音を実音で打つ）か、
-  実音の score（`score x pitch concert`）が持ち替えるパートを描く本。譜面の移調はパートで 1 つの値（`ConcertPitch`＝`transpose` の通り道）で、
-  途中で替える仕組みが無い＝**エラー**にする（黙って最初の楽器の移調で刷らない）。段 2 で `transpose` の通り道を時間で替える。
-- **診断**: 知らない preset＝エラー（part header と同じ文と候補）／上の作らない形＝エラー。
-- **書き出し（段 2）**: MusicXML は `<sound><instrument-change>` と `<attributes><transpose>`、`.ly` は文字と `\set Staff.midiInstrument`・
-  `\transposition`。段 1 では `.ly` は文字だけ、MusicXML は文字だけ（音色と移調は最初の楽器のまま＝既知の穴として書く）。
-- **段取り**: 段 1＝構文・音（音色・移調）・音域・文字・診断・補完と文書＝**第1368 `1e351abe1` で実装**（網 19・毒 10 本は赤）。
-  実装の形: 音ごとの `MidiNote.Instrument`、`MidiTrack.ProgramOf`（`.mid`・LSP の `G`・`lysc notes`・試し聴き）、`toEvents`／`MidiOutEvents.From` は
-  program が替わる所で送る、文字は `Semantics.OnsetMarks`（pass の文字と 1 つの表）、診断は `InstrumentSwitchValidator`（LYS1078・知らない preset は header の文）。
-  段 2＝段頭の名前・MusicXML の音色と移調・譜面の移調が動く本。
-- **段 2 の前にオーナーに訊くこと**: ⑴ **段頭の短い名前**＝今は score 全体で「最初の段は長い名前・以降は短い名前」の 1 組（`SharedRenderer.DrawInstrumentNames`）。
-  持ち替えの後の段に新しい楽器の短い名前を出すには、preset に短い名前（Picc.・B. Cl.）の表が無い＝表を足すか、持ち替えに書いた "名前" を
-  短い名前として使うか（その場合、替わる所の文字も同じ "名前"）。⑵ 実音の本・実音の score での移調の違う持ち替え（今は LYS1078）を描くか
-  ＝パートの移調を時間で替える＝`transpose` の通り道（`ConcertPitch`）・調号の刷り直し・4 つの読み手の大きい変更。⑶ MusicXML の
-  `<sound><instrument-change>` と途中の `<transpose>`（⑴⑵ と独立・小さい）。
+- **綴り**: 音楽の中の `instrument PRESET ["長い名前" ["短い名前"]]`＝preset は part header の `instrument` と同じ読み、名前は part の
+  `part fl "Flute" "Fl."` と同じ並び。`clef`・`key` と同じく音の間のどこにでも書ける（ふつうは休みの後の小節の頭）。元の楽器へ戻るのも
+  同じ綴り（`instrument flute`）。
+- **効く範囲＝書いたセクションの終わりまで**（オーナー 2026-11-23「一貫した文法が条件」）: 音楽の中の `key` と `clef` はセクションの
+  終わりまでしか効かず、次のセクションはパート自身の値から始まる（実測 Lab `sessions/p1369/kc.png`・`cc.png`）＝持ち替えも同じ。
+  セクションは form が何度でも並べる部品なので、前に何が鳴ったかで同じセクションの音が変わらない。ピッコロで吹くセクションは頭に書く。
+- **意味**（そこから先・そのセクションの終わりまで）: 鳴る音（MIDI の program・プレビューの音色の族・鳴る高さの移調）、音域の検査、
+  刷る名前（替わる所の文字＝長い名前、無ければ preset の名前・段頭の短い名前）、譜面の移調（下）。音部記号は替えない（書き手が `clef`）。
+  「to Picc.」は自動で刷らない（オーナー決定 2026-11-15）。
+- **譜面の移調**（オーナー 2026-11-23「音楽的に妥当であるべきなら作って」）: 譜面がパートを文字から動かす本では、その時点の楽器で
+  動かす（調号も）。実音で打ってプレイヤー向けに刷るパートは、吹く楽器の記譜で刷る（B♭ クラの実音 c'' は d''・C の曲で D 長調・
+  ピッコロは実音の 1 オクターブ下）。記譜音で打って実音で刷る score は、新しい楽器の鳴る高さで刷る（半音の部分だけ＝`ConcertPitch.OutputShift`）。
+  記譜音で打ってプレイヤー向けに刷る普通の本は書いたとおり（調号も）＝持ち替えで譜面は動かない。新しい文法は無い。
+  実装: `MeasureCollector.ApplyInstrumentChange`（パート自身の移調＋楽器の差を `SetTranspose`・調号が変われば `KeySignatureChangeItem`）・
+  `ProcessSectionPrologue` で各セクションの頭にパート自身の移調へ戻す（持ち替えのある本だけ・`OnsetMarks.HasInstrumentChanges`）。
+- **段頭の名前**（オーナー 2026-11-23「短い名前を必ず刷るのは妥当か」への Claude の答え＝妥当でない）: 後の段の短い名前は総譜の慣行で、
+  パート譜（1 段）には刷らない。Lily# も短い名前は書いたときだけ刷る（`part fl "Flute" "Fl."`）＝持ち替えも同じ規則: 持ち替えに書いた
+  短い名前がそのセクションの後の段の頭に出る。短い名前を書いたパートで持ち替えが書かなければ、置いた楽器の名前を残さず無名（LYS1078 の警告）。
+  名前を書かずに元の楽器へ戻ればパート自身の名前。preset から略名を推す表は作らない。実装: 持ち替えの文字の `DynamicItem` に
+  `IsInstrumentChange`・`InstrumentShortName`・`InstrumentReturnsHome`、`SharedRenderer.ShortNameAt`（段の最初の小節までの最後の持ち替え・
+  その後にセクションの演奏が始まっていればパート自身＝`BeginsSectionPlay`）・`NameFitIndent` が持ち替えの短い名前も幅に入れる。
+- **音**: 音は持ち替えの後の preset を持つ（`MidiNote.Instrument`）＝反復の展開で写っても音について回る。`MidiTrack.ProgramOf` が音の program
+  （`.mid` の program change・LSP の `G`・`lysc notes`・試し聴き）、`toEvents`／`MidiOutEvents.From` は program が替わる所で送る。
+  実音で打つパートは文字のとおり鳴る（移調の差 0）。各セクションの演奏の頭でパート自身に戻る。チャンネルの割り振りは header の楽器で決める。
+- **MusicXML**: part-list に持ち替える楽器の `<score-instrument>`／`<midi-instrument>`、持ち替えの所で `<sound><instrument-change>` と program、
+  後の音に `<instrument id>`、`<transpose>`（実音で打つパートは書き出す音と調号もプレイヤー向けに）。次のセクションの最初の音の前で
+  パート自身に戻す（素の `<sound>`・文字なし）。id はパートの番号が決まってから入れる（`@@-I2`）。
+- **`.ly`**: 名前（`<>^\markup { \italic "…" }`）だけ。⚠️ 譜面が移調でついていく本の双子は、ついていかない（双子は絵を測るもの＝残り）。
+- **診断**: 知らない preset＝part header と同じ文のエラー／名前の無い `instrument`＝エラー／短い名前の無い持ち替え（上）＝LYS1078 の警告。
+  （第1368 の段 1 の LYS1078「譜面が追えない持ち替え」は段 2 で譜面がついていくようになって無くなった＝未リリースの番号を詰めた。）
+- **エディタ**: 補完（音楽の中の `instrument`・その後に preset の一覧）・hover（`LanguageReference`）・文書 3 冊。
+- **残り**: 双子の移調がついていく形／phrase の中に書いた持ち替え（フレーズの自動移調の出入りで譜面の移調が戻る＝未測定）／
+  チャンネルが 16 を超えて共有されるときの program change。
+- **作らないもの**: preset の略名の表／音部記号の自動の切り替え／「to X」の自動の文字。

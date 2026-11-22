@@ -479,6 +479,10 @@ public sealed partial class MeasureCollector
         // the meter/key reverts below are unaffected, and a section's first note still
         // states its own value.
         _v.Octave.ResetForSection(octaveOffset);
+        // An instrument change holds to the end of its section (ApplyInstrumentChange): each
+        // play starts in the part's own transposition. Asked only of a book that writes one.
+        if (_voiceName is { } changedPart && _root is { } changedRoot && Semantics.OnsetMarks.HasInstrumentChanges(changedRoot))
+            ApplyTranspose(GetPartDefaults(changedRoot, changedPart, PagePitchOf(changedPart), _fileIsConcert, FileShiftInterval).transpose);
         _v.DefaultDuration = Fraction.Quarter;
         _v.DefaultDots = 0;
 
@@ -1083,6 +1087,61 @@ public sealed partial class MeasureCollector
         return _voiceName != null
             && _sectionState.GroupedByPartCells.TryGetValue((section.SectionName, _voiceName), out var cell)
             ? cell : null;
+    }
+
+    /// <summary>
+    /// <c>instrument piccolo</c> on the page (docs/eval4-features-design.md §1): where the page
+    /// moves a part away from its letters, it moves it by the instrument in force — from here
+    /// to the end of the section, as a <c>key</c> written in the music holds. A part typed at
+    /// concert pitch is printed for the instrument that plays it (−its transposition: the
+    /// piccolo an octave under what it sounds, a B♭ clarinet a tone over); a score that prints a
+    /// part typed as written at concert pitch moves it by the instrument's chromatic share
+    /// (ConcertPitch.OutputShift). The key the part prints follows, drawn here where it changes;
+    /// a part typed as written and printed for its player — the ordinary book — moves nothing.
+    /// </summary>
+    private async ValueTask ApplyInstrumentChange(InstrumentSwitchSyntax change, MeasureBuilder builder)
+    {
+        string preset = change.Preset;
+        if (_voiceName is not { } part || _root is not { } root || preset.Length == 0
+            || !InstrumentDefaults.IsKnownInstrument(preset)
+            || ConcertPitch.FindPart(root, part) is not { } decl)
+            return;
+        var header = PartHeaderDefaults.Read(decl);
+        bool lettersConcert = ConcertPitch.PartMode(decl) ?? _fileIsConcert;
+        bool pageConcert = PagePitchOf(part) ?? lettersConcert;
+        int to = InstrumentDefaults.GetTransposition(preset);
+        int chromatic = to % 12 == 0 ? 0 : to;
+        int delta = (lettersConcert ? header.TranspositionSemitones - to : 0)
+            + (pageConcert ? chromatic - header.ConcertShiftSemitones : 0);
+        // The part's own transpose (the header's, as GetPartDefaults composes it) with the
+        // instrument's difference on it, then the score's — ApplyTranspose's composition.
+        var (_, _, _, partTranspose, _, _) = GetPartDefaults(root, part, PagePitchOf(part), _fileIsConcert, FileShiftInterval);
+        var target = ComposeTranspose(
+            PitchTransposer.NullIfIdentity(PitchTransposer.Compose(partTranspose,
+                delta == 0 ? null : PitchTransposer.IntervalFromSemitones(delta))),
+            ScoreTranspose);
+        if (target == _v.Octave.GetTranspose())
+            return;
+        int printedBefore = _v.Meta.KeySharps;
+        int source = printedBefore - _v.Octave.KeyShift;
+        _v.Octave.SetTranspose(target);
+        if (_v.Meta.KeyCustom != null)
+            return; // a custom key is not respelled by a transpose
+        int printed = _v.Octave.ArmKey(source);
+        _v.Meta.KeySharps = printed;
+        if (printed == printedBefore)
+            return;
+        _v.MeasureAccidentals.Clear();
+        ShareKeyWithSpanBranches();
+        if (builder.AtPieceOpening)
+        {
+            _openingKeyOverride = (printed, null);
+            return;
+        }
+        await AddItemAsync(builder, new KeySignatureChangeItem(new KeySignature(printed), new KeySignature(printedBefore), change.SourceStart)
+        {
+            Clef = ParseClefType(_v.Meta.Clef),
+        });
     }
 
     /// <summary>

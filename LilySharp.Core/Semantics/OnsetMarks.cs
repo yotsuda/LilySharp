@@ -55,6 +55,14 @@ public static class OnsetMarks
         return marks.Count != 0 && marks.TryGetValue(onset.SourceStart, out var list) ? list : [];
     }
 
+    private static readonly SyntaxKind[] s_switch = [SyntaxKind.InstrumentSwitch];
+    private static readonly ConditionalWeakTable<SyntaxNode, object> s_hasSwitch = new();
+
+    /// <summary>Whether the book writes an instrument change anywhere (kept on the root; the
+    /// green finder, so a keystroke builds no index).</summary>
+    public static bool HasInstrumentChanges(SyntaxNode root)
+        => (bool)s_hasSwitch.GetValue(root, r => r is CompilationUnitSyntax unit && unit.SitesOfKinds(s_switch).Any());
+
     /// <summary>The <c>pass N {</c> whose region <paramref name="onset"/> opens, or null.</summary>
     public static PassStartSyntax? PassOpenedAt(SyntaxNode onset)
         => At(onset).OfType<PassStartSyntax>().FirstOrDefault();

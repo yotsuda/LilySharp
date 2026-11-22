@@ -830,17 +830,11 @@ public static class DiagnosticCodes
     /// (<c>MidiExporter.SilentPassRegions</c>).</summary>
     public const string PassNeverPlayed = "LYS1077";
 
-    /// <summary>Semantic error: <c>instrument X</c> in the music changes to an instrument of
-    /// another transposition where the page would have to move — a part typed at concert pitch,
-    /// or one a score prints at concert pitch (the instruments differing by more than octaves).
-    /// A page prints a part with one transposition (docs/eval4-features-design.md §1, stage 2).</summary>
-    public const string InstrumentChangeMovesThePage = "LYS1078";
-
     /// <summary>Semantic warning: an instrument change in a part that writes a short name
     /// (<c>part fl "Flute" "Fl."</c>) writes none — the later systems from the change print no
     /// name for the staff, rather than the instrument the player has put down. The fix writes
     /// the names: <c>instrument piccolo "Piccolo" "Picc."</c>.</summary>
-    public const string InstrumentChangeHasNoShortName = "LYS1079";
+    public const string InstrumentChangeHasNoShortName = "LYS1078";
 
     /// <summary>Warning: a part's <c>octave N</c> below the default 3 under an <c>instrument</c> preset,
     /// where the part already sounds an octave or more below the page — <c>instrument bass

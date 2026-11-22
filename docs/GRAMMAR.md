@@ -2953,38 +2953,47 @@ MidMusicCommand = 'clef' , [ '!' ] , ClefName       (* '!' forces a clef that ch
                | 'time' , [ '!' ] , Integer , '/' , Integer
                | 'instrument' , Preset , [ String , [ String ] ]   (* THE PLAYER CHANGES INSTRUMENT here
                                                       (docs/eval4-features-design.md §1;
-                                                      2026-11-22): from here the part sounds the
-                                                      preset — its MIDI program and its
-                                                      transposition — and is checked against its
-                                                      range; the page prints its name (the
-                                                      first String, else the preset's) over the next
-                                                      note or rest, as '@text("…").up'. The notes,
-                                                      the clef and the key stay as written, so
-                                                      write 'clef' yourself if it changes, and
-                                                      'to Picc.' with @text in the rest before
-                                                      (not printed for you). Back to the part's
-                                                      own: 'instrument flute'. It holds into the
-                                                      sections after it. Errors: a preset that is
-                                                      none (the part header's message); a change
-                                                      to another transposition where the page
-                                                      would have to move — a part typed at
-                                                      concert pitch, or one a score prints at
-                                                      concert pitch, the two differing by more
-                                                      than octaves (LYS1078; not drawn yet).
+                                                      2026-11-22): from here to the end of the
+                                                      section — as a 'key' or a 'clef' written in
+                                                      the music holds — the part sounds the
+                                                      preset (its MIDI program and its
+                                                      transposition) and is checked against its
+                                                      range; the next section starts on the
+                                                      part's own instrument. The page prints its
+                                                      name (the first String, else the preset's)
+                                                      over the next note or rest, as
+                                                      '@text("…").up'. The notes and the clef are
+                                                      as written: write 'clef' yourself if it
+                                                      changes, and 'to Picc.' with @text in the
+                                                      rest before (not printed for you). Back to
+                                                      the part's own: 'instrument flute'.
+                                                      Where the page moves the part away from its
+                                                      letters it follows the instrument, key and
+                                                      all: a part typed at concert pitch printed
+                                                      for its players is printed for the
+                                                      instrument that plays it (a B-flat
+                                                      clarinet's sounding c'' as d'', in D major
+                                                      in a piece in C); a part typed as written
+                                                      that a score prints at concert pitch is
+                                                      printed as the new instrument sounds. A
+                                                      part typed as written and printed for its
+                                                      player - the ordinary book - prints exactly
+                                                      what is written, its key included.
                                                       The second String is its SHORT name: the
-                                                      staff's later systems are headed by it
-                                                      from the change on, as a part's own short
-                                                      name heads them ('part fl "Flute" "Fl."').
-                                                      A part that writes a short name and a
-                                                      change that writes none: those systems
-                                                      print no name (LYS1079, a warning) - save a
-                                                      change back to the part's own instrument
-                                                      with no names, which takes the part's own
-                                                      names again. MusicXML writes the change as
-                                                      <sound><instrument-change> with its program,
-                                                      <instrument> on the notes and, typed as
-                                                      written, a <transpose>; the twin writes the
-                                                      name. *)
+                                                      staff's later systems in the section are
+                                                      headed by it, as a part's own short name
+                                                      heads them ('part fl "Flute" "Fl."'). A
+                                                      part that writes a short name and a change
+                                                      that writes none: those systems print no
+                                                      name (LYS1078, a warning) - save a change
+                                                      back to the part's own instrument with no
+                                                      names, which takes the part's own names
+                                                      again. Error: a preset that is none (the
+                                                      part header's message). MusicXML writes the
+                                                      change as <sound><instrument-change> with
+                                                      its program, <instrument> on the notes, a
+                                                      <transpose> and the key; the twin writes
+                                                      the name (not the moving page). *)
                | 'time' , [ '!' ] , 'none'          (* unmetered from here to the next
                                                       'time N/M' — see TimeDecl §2 *)
                | 'partial' , DurationToken         (* this bar is that long — at a bar's

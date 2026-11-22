@@ -58,21 +58,32 @@ internal static partial class SharedRenderer
     /// The short name that heads staff <paramref name="staffIndex"/> on a later system opening
     /// at bar <paramref name="systemStart"/>: the short name of the last instrument change
     /// (<c>instrument piccolo "Piccolo" "Picc."</c>, docs/eval4-features-design.md §1) at or
-    /// before that bar — none when the change wrote none — else the staff's own.
+    /// before that bar in the same play of its section — none when the change wrote none — else
+    /// the staff's own.
     /// </summary>
     /// <remarks>A short name is printed only where it is written, the rule a part's own follows:
     /// a change that writes none leaves the later systems unnamed rather than under the
     /// instrument the player has put down (InstrumentSwitchValidator says so) — save a change
     /// back to the part's own instrument, which takes the staff's own name again.</remarks>
-    internal static string? ShortNameAt(MultiStaffScore score, int staffIndex, string? own, int systemStart)
+    internal static string? ShortNameAt(MultiStaffScore score, int staffIndex, Staff staff, int systemStart)
     {
+        string? own = staff.ShortInstrumentName;
         DynamicItem? last = null;
         foreach (var d in score.Dynamics)
             if (d.IsInstrumentChange && d.StaffIndex == staffIndex && d.MeasureIndex <= systemStart
                 && (last is null || d.MeasureIndex > last.MeasureIndex
                     || d.MeasureIndex == last.MeasureIndex && d.SourcePosition > last.SourcePosition))
                 last = d;
-        return last is null || last.InstrumentReturnsHome ? own : last.InstrumentShortName;
+        if (last is null || last.InstrumentReturnsHome)
+            return own;
+        // A change ends with its section, as a `key` or a `clef` in the music does: a play of a
+        // section begun on the staff after it, by this system's first bar, is headed by its own.
+        foreach (var voice in staff.Voices)
+            for (int m = last.MeasureIndex + 1; m <= systemStart && m < voice.Measures.Length; m++)
+                foreach (var item in voice.Measures[m].Items)
+                    if (item.BeginsSectionPlay != SectionPlayEdge.None)
+                        return own;
+        return last.InstrumentShortName;
     }
 
     /// <summary>Every short name staff <paramref name="staffIndex"/> can be headed by on a later
@@ -129,7 +140,7 @@ internal static partial class SharedRenderer
             shortNames = new Dictionary<int, string?>();
             int systemStart = system.Measures.IsDefaultOrEmpty ? 0 : system.Measures[0].MeasureIndex;
             foreach (var (_, st, idx) in score.EnumerateStaves())
-                shortNames[idx] = ShortNameAt(score, idx, st.ShortInstrumentName, systemStart);
+                shortNames[idx] = ShortNameAt(score, idx, st, systemStart);
             if (shortNames.Values.All(string.IsNullOrEmpty)) return;
         }
         string? NameOf(int staffIndex, string? longName)

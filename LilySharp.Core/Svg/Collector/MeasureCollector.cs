@@ -7252,7 +7252,8 @@ public sealed partial class MeasureCollector
             or NavigationMarkSyntax
             or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax
             or ClefDeclarationSyntax or OctaveDirectiveSyntax or KeySignatureSyntax
-            or TimeSignatureSyntax or TempoDeclarationSyntax or PartialDeclarationSyntax;
+            or TimeSignatureSyntax or TempoDeclarationSyntax or PartialDeclarationSyntax
+            or InstrumentSwitchSyntax;
 
     /// <summary>
     /// Kind-level mirror of <see cref="IsCollectableMusicNode"/> for the lazy
@@ -7361,6 +7362,7 @@ public sealed partial class MeasureCollector
             or SyntaxKind.ClefDeclaration or SyntaxKind.OctaveDirective or SyntaxKind.KeySignature
             or SyntaxKind.TimeSignature or SyntaxKind.TempoDeclaration
             or SyntaxKind.PartialDeclaration
+            or SyntaxKind.InstrumentSwitch
             or SyntaxKind.VariableReference;
 
     /// <summary>

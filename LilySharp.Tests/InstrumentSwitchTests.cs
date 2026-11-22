@@ -84,8 +84,12 @@ public sealed class InstrumentSwitchTests
         Assert.Equal(2, Count(0xC0, 73));   // the flute at the start and after it
     }
 
+    /// <summary>A change holds to the end of the section it is written in, as a `key` and a
+    /// `clef` in the music do (MEASURED 2026-11-23, Lab sessions/p1369 kc.png and cc.png: the
+    /// next section starts in the part's own key and clef): the next section starts on the part's
+    /// own instrument.</summary>
     [Fact]
-    public void AChangeHoldsIntoTheNextSection()
+    public void AChangeEndsWithItsSection()
     {
         string src = """
             octave absolute
@@ -95,7 +99,7 @@ public sealed class InstrumentSwitchTests
             form { A B }
             score { staff fl }
             """;
-        Assert.Equal(new[] { 72, 84, 84 }, Notes(src).Select(n => n.Pitch));
+        Assert.Equal(new[] { 72, 84, 72 }, Notes(src).Select(n => n.Pitch));
     }
 
     [Fact]
@@ -145,7 +149,8 @@ public sealed class InstrumentSwitchTests
 
     /// <summary>MusicXML: the part lists the instrument it changes to, the change is a
     /// &lt;sound&gt;&lt;instrument-change&gt; with the program, the notes after it name it, and a
-    /// part typed as written states its new transposition — through the next section, and back.</summary>
+    /// part typed as written states its new transposition; the next section goes back to the
+    /// part's own before its first note (a bare &lt;sound&gt;, no words).</summary>
     [Fact]
     public void MusicXmlChangesTheInstrumentAndItsTransposition()
     {
@@ -162,11 +167,12 @@ public sealed class InstrumentSwitchTests
         Assert.Equal(new[] { "P1-I1", "P1-I2" }, scorePart.Elements("score-instrument").Select(e => (string)e.Attribute("id")!));
         Assert.Equal(new[] { "Clarinet" }, scorePart.Elements("score-instrument").Skip(1).Select(e => (string)e.Element("instrument-name")!));
         var changes = doc.Descendants("instrument-change").Select(e => (string)e.Attribute("id")!).ToList();
-        Assert.Equal(new[] { "P1-I2", "P1-I1" }, changes);
+        Assert.Equal(new[] { "P1-I2", "P1-I1", "P1-I1" }, changes);
         Assert.Equal("72", (string)doc.Descendants("sound").First(s => s.Element("instrument-change") != null).Element("midi-instrument")!.Element("midi-program")!);
-        // Bars 2 and 3 sound the clarinet (bar 3 is the next section's), bar 4 the flute again.
+        // Bar 2 sounds the clarinet; bar 3 is the next section's, on the flute again.
         var notes = doc.Descendants("note").ToList();
-        Assert.Equal(new string?[] { null, "P1-I2", "P1-I2", null }, notes.Select(n => (string?)n.Element("instrument")?.Attribute("id")));
+        Assert.Equal(new string?[] { null, "P1-I2", null, null }, notes.Select(n => (string?)n.Element("instrument")?.Attribute("id")));
+        Assert.Equal(1, doc.Descendants("words").Count(w => w.Value == "Flute"));
         var transposes = doc.Descendants("transpose").Select(t => (int)t.Element("chromatic")!).ToList();
         Assert.Equal(new[] { -2, 0 }, transposes);
     }
@@ -194,6 +200,26 @@ public sealed class InstrumentSwitchTests
         int lastFlute = svg.LastIndexOf(">Fl.<", System.StringComparison.Ordinal);
         int firstPiccolo = svg.IndexOf(">Picc.<", System.StringComparison.Ordinal);
         Assert.True(lastFlute < firstPiccolo);
+    }
+
+    /// <summary>The later systems of the next section are headed by the part's own short name:
+    /// the change ended with its section.</summary>
+    [Fact]
+    public void TheNextSectionsSystemsAreHeadedByThePartsOwnName()
+    {
+        string bars = string.Concat(Enumerable.Repeat("c''1 | ", 30));
+        string src = $$"""
+            octave absolute
+            part fl "Flute" "Fl." { instrument flute }
+            section A { fl { c''1 | instrument piccolo "Piccolo" "Picc." {{bars}} } }
+            section B { fl { {{bars}} } }
+            form { A B }
+            score { staff fl }
+            """;
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse(src));
+        Assert.True(Count(svg, "Picc.") >= 1);
+        Assert.True(svg.LastIndexOf(">Fl.<", System.StringComparison.Ordinal) > svg.LastIndexOf(">Picc.<", System.StringComparison.Ordinal),
+            "a system of section B is headed by the flute's own name");
     }
 
     [Fact]
@@ -232,21 +258,75 @@ public sealed class InstrumentSwitchTests
     public void AMissingInstrumentIsSaid()
         => Assert.Contains(Said(Book("c''1 | instrument | c''1 |")), d => d.Severity == DiagnosticSeverity.Error && d.Message.Contains("'instrument' has no instrument"));
 
-    [Theory]
-    // Typed at concert pitch: the transposed page would have to move.
-    [InlineData("c''1 | instrument piccolo c''1 |", "pitch concert", "score { staff fl }")]
-    [InlineData("c''1 | instrument clarinet c''1 |", "pitch concert", "score { staff fl }")]
-    // Typed as written, a concert score prints it: only a chromatic difference moves that page.
-    [InlineData("c''1 | instrument clarinet c''1 |", "", "score full pitch concert { staff fl }")]
-    public void AChangeThePageCannotFollowIsAnError(string music, string header, string score)
-        => Assert.Contains(Said(Book(music, header, score)), d => d.Code == DiagnosticCodes.InstrumentChangeMovesThePage);
+    /// <summary>The page's pitches, in order, and the keys it changes to (the new key's sharps).</summary>
+    private static (List<string> Pitches, List<int> Keys) Page(string src)
+    {
+        var tree = SyntaxTree.Parse(src);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+        var spec = LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree);
+        var collector = SemanticValidation.TryCollect(tree, spec!);
+        var pitches = collector!.PitchTrace.OrderBy(e => e.Position).Select(e => e.Pitch).ToList();
+        var score = SvgGenerator.CollectScore(tree, spec!);
+        var keys = score.EnumerateStaves().SelectMany(s => s.Staff.Voices).SelectMany(v => v.Measures)
+            .SelectMany(m => m.Items).OfType<LilySharp.Core.Svg.Model.KeySignatureChangeItem>()
+            .Select(k => k.NewKey.Sharps).ToList();
+        return (pitches, keys);
+    }
 
-    [Theory]
-    [InlineData("c''1 | instrument clarinet c''1 |", "", "score { staff fl }")]            // as written, for the player
-    [InlineData("c''1 | instrument piccolo c''1 |", "", "score full pitch concert { staff fl }")]   // octaves only
-    [InlineData("c''1 | instrument flute c''1 |", "pitch concert", "score { staff fl }")]   // the part's own
-    public void AChangeThePageFollowsSaysNothing(string music, string header, string score)
-        => Assert.DoesNotContain(Said(Book(music, header, score)), d => d.Severity == DiagnosticSeverity.Error);
+    private static string TwoSections(string header, string score) => $$"""
+        octave absolute
+        {{header}}
+        part fl { instrument flute }
+        section A { fl { c''1 | R1 | instrument clarinet c''1 | } }
+        section B { fl { c''1 | } }
+        form { A B }
+        {{score}}
+        """;
+
+    /// <summary>A part typed at concert pitch, printed for its players: the page prints it for
+    /// the instrument that plays it — the B-flat clarinet's sounding c'' as d'', in D major —
+    /// and the next section is the flute's again (stage 2, owner's go-ahead 2026-11-23).</summary>
+    [Fact]
+    public void APartTypedAtConcertPitchIsPrintedForTheInstrumentThatPlaysIt()
+    {
+        var (pitches, keys) = Page(TwoSections("pitch concert", "score pitch transposed { staff fl }"));
+        Assert.Equal(new[] { "C5", "D5", "C5" }, pitches.Select(Name));
+        Assert.Equal(new[] { 2, 0 }, keys);
+    }
+
+    /// <summary>A part typed as written that a score prints at concert pitch: the clarinet's
+    /// written c'' is printed as it sounds, B-flat, in B-flat major.</summary>
+    [Fact]
+    public void AConcertScorePrintsTheNewInstrumentAsItSounds()
+    {
+        var (pitches, keys) = Page(TwoSections("", "score pitch concert { staff fl }"));
+        Assert.Equal(new[] { "C5", "Bb4", "C5" }, pitches.Select(Name));
+        Assert.Equal(new[] { -2, 0 }, keys);
+    }
+
+    /// <summary>The ordinary book — typed as written, printed for the player — prints what is
+    /// written: no key changes at an instrument change.</summary>
+    [Fact]
+    public void ThePlayersPageOfAWrittenPartMovesNothing()
+    {
+        var (pitches, keys) = Page(TwoSections("", "score { staff fl }"));
+        Assert.Equal(new[] { "C5", "C5", "C5" }, pitches.Select(Name));
+        Assert.Empty(keys);
+    }
+
+    /// <summary>MusicXML of a part typed at concert pitch: the clarinet's bar written for its
+    /// player (D, two sharps) with its &lt;transpose&gt;, the flute's again in the next section.</summary>
+    [Fact]
+    public void MusicXmlWritesAConcertPartForTheInstrumentThatPlaysIt()
+    {
+        var doc = new MusicXmlExporter().Export(SyntaxTree.Parse(TwoSections("pitch concert", "score { staff fl }"))).ToXml();
+        var steps = doc.Descendants("note").Where(n => n.Element("pitch") != null).Select(n => (string)n.Element("pitch")!.Element("step")!).ToList();
+        Assert.Equal(new[] { "C", "D", "C" }, steps);
+        Assert.Equal(new[] { 0, 2, 0 }, doc.Descendants("fifths").Select(f => (int)f));
+    }
+
+    // A PitchTrace entry as a letter, an accidental and an octave ("Bb4").
+    private static string Name(string pitch) => pitch;
 
     [Fact]
     public void TheRangeIsTheNewInstruments()
