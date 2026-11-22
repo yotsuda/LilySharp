@@ -114,7 +114,10 @@ internal static class TrillSpannerEngraver
         ImmutableArray<GraceNoteItem> graceNotes = default,
         // A staff's rest shifts (by staff index): a rest moved off the staff is a support where
         // it was moved to (DynamicEngraver.MergeColumnSupport). Absent, no rest is read.
-        Func<int, IReadOnlyDictionary<RestShiftKey, double>?>? restShiftsOf = null)
+        Func<int, IReadOnlyDictionary<RestShiftKey, double>?>? restShiftsOf = null,
+        // A staff's tab geometry (its top string at 0) when it is a tab: the line then sides
+        // off the fret digits (AlignedSideLineY's tab remark). Absent, every staff is notation.
+        Func<int, TabStaffGeometry?>? tabOf = null)
     {
         if (trillSpanners.IsDefaultOrEmpty)
             return ImmutableArray<TrillSpannerLayout>.Empty;
@@ -316,7 +319,7 @@ internal static class TrillSpannerEngraver
                 double lineUp = AlignedSideLineY(
                     spanner, piece.Segment, piece.GlyphX, piece.LineStartX, piece.EndX,
                     trillVoices, measureLayouts, beamMembers, dir, staffLines, graceNotes,
-                    restShiftsOf?.Invoke(spanner.StaffIndex));
+                    restShiftsOf?.Invoke(spanner.StaffIndex), tabOf?.Invoke(spanner.StaffIndex));
                 // AlignedSideLineY answers in the staff-MIDDLE frame (the frame the ledger's
                 // staff-to-line entries read); this record's frame has its origin on the
                 // staff TOP line, 2 above it, and carries the staff's own offset within the
@@ -387,7 +390,8 @@ internal static class TrillSpannerEngraver
         Dictionary<(int Staff, int Voice, int Measure, int Item),
             (BeamLayout Beam, double StemX, bool StemUp)> beamMembers,
         int dir, int staffLines, ImmutableArray<GraceNoteItem> graceNotes = default,
-        IReadOnlyDictionary<RestShiftKey, double>? restShifts = null)
+        IReadOnlyDictionary<RestShiftKey, double>? restShifts = null,
+        TabStaffGeometry? tab = null)
     {
         // The DOWN arm (dir = −1) is the same aligned_side with every side flipped: my_dim
         // becomes the grob's UP profile (skyp[-dir]), the supports contribute their DOWN
@@ -435,6 +439,30 @@ internal static class TrillSpannerEngraver
         // dir-side extent of THIS staff's drawn lines: +2.05 for an UP spanner over five,
         // −2.05 for a DOWN one, ±0.05 on a one-line staff.
         double staffExtent = DynamicEngraver.StaffExtentToward(dir, staffLines);
+        // ON A TAB the same aligned_side reads the TabStaff: its extent is the outer strings,
+        // its supports are the fret digits (a TabNoteHead per string, whatever the notes'
+        // pitches), and padding and staff-padding are in ITS staff space, the string gap. The
+        // frame stays this method's — up-positive about the point 2 below the top line, where
+        // the record's origin (the top line) puts a notation staff's middle. A numbers-only
+        // tab's stems have no length (ArticulationEngraver's tab remark), and a full tab's are
+        // not read here yet. Until 2026-11-22 a tab was read as a five-line staff of the notes'
+        // pitches: a @vibrato wave floated off the tab, and inside a voice span stood under
+        // the notation staff (evaluation 5, guitar r-08).
+        // LILYPOND-REF: ly/engraver-init.ly:1248-1296 TabStaff — Stem.no-stem-extend and the
+        //   stencil overrides after it name no TrillSpanner
+        // LILYPOND-REF: lily/side-position-interface.cc:370 aligned_side — total_off += dir * ss * padding;
+        //   :437-439 staff_padding = staff_space * staff-padding
+        // LILYPOND-REF: lily/staff-symbol-referencer.cc:47-53 staff_space — the TabStaff's 1.5
+        double ss = 1.0;
+        if (tab is { } tabGeom)
+        {
+            ss = tabGeom.StringSpace;
+            double halfLine = DynamicEngraver.StaffExtentToward(1, EngravingDefaults.DefaultStaffLines)
+                - (EngravingDefaults.DefaultStaffLines - 1) / 2.0;
+            double top = EngravingDefaults.StaffMiddle;
+            double bottom = top - (tabGeom.StringCount - 1) * tabGeom.StringSpace;
+            staffExtent = dir > 0 ? top + halfLine : -(bottom - halfLine);
+        }
         var support = VerticalSkyline.FromBox(
             double.NegativeInfinity, double.PositiveInfinity,
             dir * staffExtent, dir * staffExtent,
@@ -471,6 +499,11 @@ internal static class TrillSpannerEngraver
             for (int ii = first; ii <= last; ii++)
             {
                 double xColumn = ml.X + VoiceItemX(voices, voiceIndex, ml, mi, ii, graceNotes, spanner.StaffIndex);
+                if (tab is { } tg)
+                {
+                    MergeTabDigits(support, tg, voice.Measures[mi].Items[ii], xColumn, dir);
+                    continue;
+                }
                 int cmi = mi, cii = ii;
                 var (up, down) = DynamicEngraver.ColumnSupportSkylines(voices, voiceIndex, mi, ii,
                     xColumn,
@@ -489,15 +522,41 @@ internal static class TrillSpannerEngraver
             overlap = Math.Max(overlap, p.Distance(support));
         if (run is { } r)
             overlap = Math.Max(overlap, r.Distance(support));
-        double totalOff = overlap + EngravingDefaults.TrillSpannerPadding;
+        double totalOff = overlap + ss * EngravingDefaults.TrillSpannerPadding;
         // :433-453 — the refpoint floor (dir * staff_extent[dir] + staff-padding, against
         // the dir-signed offset — the same magnitude both sides). The trill's reach
         // subsumes it whenever reach > staff-padding - padding, which 1.0 always
         // satisfies; it is written because LilyPond computes it (HANDOFF §5.2: do not
         // fold a term to its value).
         double diff = staffExtent
-            + EngravingDefaults.TrillSpannerStaffPadding - totalOff;
+            + ss * EngravingDefaults.TrillSpannerStaffPadding - totalOff;
         return dir * (totalOff + Math.Max(diff, 0.0));
+    }
+
+    /// <summary>A tab column's fret digits as supports, in AlignedSideLineY's frame: each digit
+    /// the item draws, its box at its string's line (the digit's drawn height) over its drawn
+    /// width.</summary>
+    private static void MergeTabDigits(VerticalSkyline support, TabStaffGeometry tab, MusicItem item,
+        double xColumn, int dir)
+    {
+        double half = TabConstants.FretDigitHeight(tab.Fonts, tab.StringCount) / 2.0;
+        double axis = xColumn + EngravingDefaults.TabHeadCenterOffset;
+        void Add((int StringNum, double Dx, double HalfWidth) d)
+        {
+            double y = EngravingDefaults.StaffMiddle - tab.StringY(d.StringNum);
+            support.Merge(VerticalSkyline.FromBox(axis + d.Dx - d.HalfWidth, axis + d.Dx + d.HalfWidth,
+                y - half, y + half, dir > 0 ? VerticalDirection.Up : VerticalDirection.Down));
+        }
+        switch (item)
+        {
+            case NoteItem n:
+                Add(tab.NoteDigitColumn(n.Midi, n.StringNumber));
+                break;
+            case ChordItem c:
+                foreach (var m in c.Notes)
+                    Add(tab.ChordNoteDigitColumn(c, m.StaffPosition));
+                break;
+        }
     }
 
     /// <summary>

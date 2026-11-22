@@ -1076,7 +1076,11 @@ internal sealed partial class LayoutEngine
         var trillSpannerLayouts = TrillSpannerEngraver.Calculate(
             trillSpanners ?? ImmutableArray<TrillSpannerItem>.Empty, systems, ml, staffYAt,
             voicesByStaff, beamLayouts ?? ImmutableArray<BeamLayout>.Empty, staffLinesOf, ctx.GraceNotes,
-            restShiftsOf);
+            restShiftsOf,
+            tabOf: si => staffByIndex != null && staffByIndex.TryGetValue(si, out var tabStaff) && tabStaff.IsTab
+                ? new TabStaffGeometry(ctx.Fonts, tabStaff.Tuning ?? Syntax.TuningType.Guitar, 0.0,
+                    tabStaff.TabSourceClef, tabStaff.Transposition)
+                : null);
 
         // Calculate volta brackets first — needed by MusicMarkEngraver for collision avoidance
         // LILYPOND-REF: axis-group-interface.cc — elements sorted by outside-staff-priority

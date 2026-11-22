@@ -4761,7 +4761,12 @@ internal sealed class MultiStaffLayouter
                     beamLayouts: RestampedToStaff(beamLayouts, staffIndex),
                     staffLinesOf: _ => NotationStaffLinesOf(staff),
                     graceNotes: score.GraceNotes,
-                    restShiftsOf: _ => RestCollisionsOf(staff));
+                    restShiftsOf: _ => RestCollisionsOf(staff),
+                    // the ink's tab reading (LayoutEngine.Annotations), so the room is the ink's
+                    tabOf: _ => staff.IsTab
+                        ? new TabStaffGeometry(score.TextMetrics, staff.Tuning ?? Syntax.TuningType.Guitar, 0.0,
+                            staff.TabSourceClef, staff.Transposition)
+                        : null);
         var layouts = Lay(onThisSystem.ToImmutable());
         var continuedLayouts = Lay(continued.ToImmutable());
         if (!continuedLayouts.IsDefaultOrEmpty)

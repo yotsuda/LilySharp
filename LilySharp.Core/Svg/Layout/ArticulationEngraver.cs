@@ -1432,7 +1432,16 @@ internal static class ArticulationEngraver
                     TabConstants.FretEm(fonts, geom.StringCount) * digitScale) / 2.0;
                 double support = dir * (tabMiddle - geom.StringY(edgeString)) + fretHalf
                                  + NearReachOver(articulation, tabAbove, fonts, -digitHalf, digitHalf, tabStep);
-                if (tabStemUp == tabAbove && !tabGrace)
+                // ⚠️ Only on a FULL tab. A numbers-only tab's stems have no length — LilyPond's
+                // TabStaff makes them "as short as possible to minimize their influence" — so
+                // the stem ends at its digit, which the support above already holds. Until
+                // 2026-11-22 the full stem was reached for there too: inside a voice span, where
+                // the voice turns the stem toward the script, a @pluck letter on the tab stood a
+                // whole stem off its digit, up under the notation staff (evaluation 5, guitar
+                // r-01, r-08).
+                // LILYPOND-REF: ly/engraver-init.ly:1248-1258 TabStaff — Stem.no-stem-extend,
+                //   Stem.details lengths 0, Stem.stencil ##f (reverted by \tabFullNotation)
+                if (tabStemUp == tabAbove && !tabGrace && !tabStaff.TabNumbersOnly)
                 {
                     // A beamed stem ends at its beam's outer edge; an unbeamed one at its tip.
                     double? tip = tabBeam is not null
