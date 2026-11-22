@@ -208,11 +208,6 @@ public static class MidiForFile
         return file;
     }
 
-    /// <summary>The copyright line the score prints: its own <c>copyright</c>, else the file's,
-    /// else null.</summary>
-    /// <remarks>Written as Markdown (<c>```md copyright</c>; owner's decision 2026-11-13) and as
-    /// no string, the notice is the Markdown's words with the formatting stripped
-    /// (Semantics.HeaderLineText).</remarks>
     /// <summary>The tonic in force at <paramref name="tick"/> in a tick-ordered key lane, or null
     /// before its first.</summary>
     private static int? TonicAt(List<KeyValuePair<int, int>> keys, int tick)
@@ -227,6 +222,11 @@ public static class MidiForFile
         return tonic;
     }
 
+    /// <summary>The copyright line the score prints: its own <c>copyright</c>, else the file's,
+    /// else null.</summary>
+    /// <remarks>Written as Markdown (<c>```md copyright</c>; owner's decision 2026-11-13) and as
+    /// no string, the notice is the Markdown's words with the formatting stripped
+    /// (Semantics.HeaderLineText).</remarks>
     private static string? CopyrightOf(SyntaxNode root, RenderSpec? spec)
     {
         string? copyright = Semantics.HeaderLineText.NonPage(root, spec, "copyright");
