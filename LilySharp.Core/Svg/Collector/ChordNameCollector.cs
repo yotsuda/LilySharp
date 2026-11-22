@@ -452,12 +452,21 @@ internal sealed class ChordNameCollector
     }
 
     /// <summary>Every start measure a section occupies (each structure replay), or the
-    /// single first-occurrence anchor when the all-starts map is absent/empty.</summary>
+    /// single first-occurrence anchor when the all-starts map is absent/empty — and none for a
+    /// section the form does not play, where other sections have their places.</summary>
+    /// <remarks>Until session 1363 such a section was placed at measure 0: `form { A B }` with
+    /// a section C written for later printed C's chords crammed into A's bars, and an excerpt
+    /// score (`score practice { form practice … }`) printed every other section's chords over
+    /// its own (Lab sessions/p1362/eval5 jpop r-07, r-07b). A score that has no places at all
+    /// (a row read on its own) keeps the first bar.</remarks>
     private IEnumerable<int> StartsFor(string sectionName, IReadOnlyDictionary<string, int> single)
     {
         if (SectionStarts != null && SectionStarts.TryGetValue(sectionName, out var all) && all.Count > 0)
             return all;
-        return new[] { single.GetValueOrDefault(sectionName, 0) };
+        if (single.TryGetValue(sectionName, out int start))
+            return new[] { start };
+        bool placed = single.Count > 0 || SectionStarts is { Count: > 0 };
+        return placed ? [] : new[] { 0 };
     }
 
     /// <summary>Start measures for a FLAT (in-section) chord block: every occurrence of

@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Fixed: the chords of a section the form does not play were crammed into the first bars** (`[engraving]`). With `form { A B }` and a section C written for later, C's chord symbols were printed over A's first bars beside A's own; an excerpt score (`score practice { form practice … }`) printed every other section's chords over its own. A section the form leaves out now prints no chords. The MIDI, MusicXML and LilyPond export were right.
+
 - **Fixed: an 8va or 15ma in a passage under `time none` ended after its first beat** (`[engraving]`). In a cadenza, `a'''8@15ma bes''' cis'''' d'''' a''''4 a''''4@!15ma` drew the bracket over the first two notes and the rest at their sounding pitch, on seven ledger lines. The marks of an unmetered passage now stand where their notes do, and the octavation covers the run up to the note its end is written on, as in metered music.
 
 - **Fixed: an `afterGrace` run was not drawn after a note with a mark in parentheses** (`[engraving]`). `g''2@trill(flat) afterGrace { fis''16 g'' } a''2` — a trill with its accidental and its termination — drew the trill and no termination; `@text("…")` or any other `@name(…)` on the main note did the same. The MIDI and the MusicXML had the run. It is drawn now.
