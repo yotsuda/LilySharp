@@ -90,6 +90,12 @@ internal static class GlissandoEngraver
     // LILYPOND-REF: lily/line-spanner.cc:599 — span_points[d] += -d * gaps[d] * magstep * dz.direction ()
     private const double Padding = 0.5;
 
+    // …and 0.3 on a TabStaff, both bounds (0.5 again on the left after a parenthesized digit,
+    // which glissando::draw-tab-glissando sets — not spelled: Lily# draws no tied-to digit).
+    // LILYPOND-REF: ly/engraver-init.ly:1286-1292 TabStaff — Glissando.stencil = glissando::draw-tab-glissando, then bound-details (padding . 0.3)
+    // LILYPOND-REF: scm/tablature.scm:161-170 glissando::draw-tab-glissando
+    private const double TabPadding = 0.3;
+
     // The same single-ape accidental column the renderer and the beam quanter place
     // with, so the ink the glissando stops before is the ink drawn.
     private static readonly AccidentalPlacement AccidentalColumn = new();
@@ -110,7 +116,8 @@ internal static class GlissandoEngraver
         ImmutableArray<GraceNoteItem> graceNotes = default,
         Voice? voice = null,
         int voiceIndex = 0,
-        VoiceCollisionTable? voiceShifts = null)
+        VoiceCollisionTable? voiceShifts = null,
+        TabStaffGeometry? tab = null)
     {
         if (glissandos.IsDefaultOrEmpty || glissandos.Length == 0)
             return ImmutableArray<GlissandoLayout>.Empty;
@@ -177,6 +184,36 @@ internal static class GlissandoEngraver
             //   read in the common Y refpoint of the two bounds.
             double startStaffY = gliss.StartStaffPosition * 0.5 + MovedLift(startItem, startInfo.System);
             double endStaffY = gliss.EndStaffPosition * 0.5 + MovedLift(endItem, endInfo.System);
+            // ON A TAB the bound is the fret DIGIT: the line runs from the start digit's right
+            // edge to the target digit's left edge, at the strings' lines — not from the note
+            // head's ink at the pitch's staff position, which put a slide on string 5 up near
+            // strings 1-2 and ran it into the target's digit (evaluation 5, guitar r-04). The
+            // TabStaff tilts the line by extra-dy, ±0.75 toward the target's pitch, half at
+            // each end. (A grace bound keeps the notation reading above — no tab grace measured.)
+            // LILYPOND-REF: lily/line-spanner.cc:171-175 calc_bound_info — x = the bound grob's
+            //   (the TabNoteHead's) extent at attach-dir
+            // LILYPOND-REF: lily/line-spanner.cc:416-428 calc_bound_info — y = the bound's
+            //   extent center, then y += dir * extra-dy / 2
+            // LILYPOND-REF: ly/engraver-init.ly:1288 TabStaff Glissando.extra-dy = glissando::calc-tab-extra-dy
+            // LILYPOND-REF: scm/tablature.scm:131-140 glissando::calc-tab-extra-dy — -0.75 when
+            //   the right pitch is lower, else 0.75
+            if (tab is { } tabGeom
+                && GraceBound(gliss.StartMeasureIndex, gliss.StartItemIndex, startMeasure) is null
+                && GraceBound(gliss.EndMeasureIndex, gliss.EndItemIndex, endMeasure) is null
+                && DigitColumn(tabGeom, startItem, gliss.StartStaffPosition) is { } startDigit
+                && DigitColumn(tabGeom, endItem, gliss.EndStaffPosition) is { } endDigit)
+            {
+                realStartX = startMeasure.X + LayoutUtilities.GetItemXOffset(
+                    measures, gliss.StartMeasureIndex, gliss.StartItemIndex, startMeasure)
+                    + EngravingDefaults.TabHeadCenterOffset + startDigit.Dx + startDigit.HalfWidth;
+                realEndX = endMeasure.X + LayoutUtilities.GetItemXOffset(
+                    measures, gliss.EndMeasureIndex, gliss.EndItemIndex, endMeasure)
+                    + EngravingDefaults.TabHeadCenterOffset + endDigit.Dx - endDigit.HalfWidth;
+                double extraDy = PitchOf(endItem, gliss.EndStaffPosition) < PitchOf(startItem, gliss.StartStaffPosition)
+                    ? -0.75 : 0.75;
+                startStaffY = ReferenceStaffHeight / 2.0 - tabGeom.StringY(startDigit.StringNum) - extraDy / 2.0;
+                endStaffY = ReferenceStaffHeight / 2.0 - tabGeom.StringY(endDigit.StringNum) + extraDy / 2.0;
+            }
 
             // The broken pieces' X first: a piece's share of the slope is its share of the
             // whole length.
@@ -246,9 +283,10 @@ internal static class GlissandoEngraver
                 double dx = segEndX - segStartX;
                 double dy = segEndY - segStartY;
                 double length = Math.Sqrt(dx * dx + dy * dy);
-                if (length <= 2 * Padding)
+                double padding = tab is null ? Padding : TabPadding;
+                if (length <= 2 * padding)
                     continue;
-                double gapRatio = Padding / length;
+                double gapRatio = padding / length;
                 segStartX += dx * gapRatio;
                 segStartY += dy * gapRatio;
                 segEndX -= dx * gapRatio;
@@ -319,6 +357,30 @@ internal static class GlissandoEngraver
                 best = v;
         return best;
     }
+
+    /// <summary>The 5-line staff's height the draw reflects a layout's Y-up against
+    /// (<c>SharedRenderer.StaffHeight</c>): the reference sits half of it below the staff's top
+    /// line, on a tab too.</summary>
+    private const double ReferenceStaffHeight = 4.0;
+
+    /// <summary>A tab bound's fret digit as the renderer draws it: its string (a note's as the
+    /// tab resolver gave it, a chord member's through the chord's string allocation), its
+    /// column offset from the digit axis, and half its width. Null for anything else.</summary>
+    private static (int StringNum, double Dx, double HalfWidth)? DigitColumn(
+        TabStaffGeometry tab, MusicItem? item, int staffPosition) => item switch
+    {
+        NoteItem n => tab.NoteDigitColumn(n.Midi, n.StringNumber),
+        ChordItem c when c.Notes.Length > 0 => tab.ChordNoteDigitColumn(c, staffPosition),
+        _ => null,
+    };
+
+    /// <summary>The bound's pitch (MIDI) — a chord's member by staff position.</summary>
+    private static int PitchOf(MusicItem? item, int staffPosition) => item switch
+    {
+        NoteItem n => n.Midi,
+        ChordItem { Notes.Length: > 0 } c => c.Notes.FirstOrDefault(m => m.StaffPosition == staffPosition, c.Notes[0]).Midi,
+        _ => 0,
+    };
 
     /// <summary>The item a glissando bound resolves against, or null off the map.</summary>
     private static MusicItem? ItemAt(ImmutableArray<Measure> measures, int measureIdx, int itemIdx)

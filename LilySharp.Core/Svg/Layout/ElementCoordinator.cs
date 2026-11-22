@@ -7054,7 +7054,10 @@ internal sealed class ElementCoordinator
     /// <remarks>
     /// LILYPOND-REF: scm/scheme-engravers.scm
     /// </remarks>
-    public ImmutableArray<GlissandoLayout> LayoutGlissandos(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1, ImmutableArray<GraceNoteItem> graceNotes = default)
+    /// <param name="tab">The staff's tab geometry (its top string at 0) when it is a tab: the
+    /// bounds are then the fret digits (GlissandoEngraver's tab remark).</param>
+    public ImmutableArray<GlissandoLayout> LayoutGlissandos(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1, ImmutableArray<GraceNoteItem> graceNotes = default,
+        TabStaffGeometry? tab = null)
     {
         var glissandos = _glissandoDetector.DetectGlissandos(score);
 
@@ -7070,7 +7073,7 @@ internal sealed class ElementCoordinator
                 score.Voices[group.Key].Measures,
                 // A bound on a GRACE note reads the grace column (session 920).
                 graceNotes.IsDefault ? score.GraceNotes : graceNotes, score.Voices[group.Key], group.Key,
-                SpacingRules.VoiceCollisionShiftsOf(score.Voices)));
+                SpacingRules.VoiceCollisionShiftsOf(score.Voices), tab));
         return layouts.ToImmutable();
     }
 }

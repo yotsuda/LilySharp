@@ -1583,7 +1583,8 @@ internal sealed partial class LayoutEngine
                     tieLayouts: staffTies);
             }
             allSlurLayouts.AddRange(staffSlurs);
-            allGlissandoLayouts.AddRange(_elementCoordinator.LayoutGlissandos(staffSpannerScore, systemsArray, staffIndex, score.GraceNotes));
+            allGlissandoLayouts.AddRange(_elementCoordinator.LayoutGlissandos(staffSpannerScore, systemsArray, staffIndex, score.GraceNotes,
+                staff.IsTab ? new TabStaffGeometry(score.TextMetrics, staff.Tuning ?? Syntax.TuningType.Guitar, 0.0, staff.TabSourceClef, staff.Transposition) : null));
         }
         var ties = allTieLayouts.ToImmutableArray();
         var slurs = allSlurLayouts.ToImmutableArray();
