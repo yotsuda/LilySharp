@@ -155,6 +155,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1360セッション（2026-11-22・YT-DELL2・第1359 と同じ会話）
+
+base `bf1364447`。開始時 full 18178 合格 / 0 失敗 / skip 2 / 合計 18180（Lab `p1360` `run1.trx`）。
+- **エディタの色＝`b8fea2c00`**: `key none`・`time none`・`key custom` の後ろの語が素のままだった（`major` は keyword）。規則は `force-mark` に置いた（両方の文脈で素の `key` の一覧より先に読まれる）＝`key! none` も。網 +6（毒＝HEAD の tmLanguage で 6 本赤）。vscode-textmate でも確かめた（Lab `p1360/tm.js`）。CHANGELOG は拡張側だけ。
+- leftovers の「MIDI の装飾音」の行は第1347 で閉じていた（Lab `p1360/grace`）＝閉じた印だけ付けた。
+- 見て残したもの: `.mid` の調号はファイルに 1 本（`MidiForFile` が `KeyStarts` を最初の track にだけ書く）＝パートごとの調は配管が要る・多調の本だけの差。
+- 終わり full 18184 合格 / 0 失敗 / skip 2 / 合計 18186（`-End`）。
+- **次**: leftovers の残りは決めごと・外部のリーダー待ちが多い。手が動くのは `.mid` のパートごとの調号、F4。
+
+## 以下は第1359セッションの経緯
+
 ### 1.1 第1359セッション（2026-11-22・YT-DELL2・新しい会話）
 
 base `a2365e16e`。開始時 full 18176 合格 / 0 失敗 / skip 2 / 合計 18178（Lab `p1359` `run1.trx`）。REQUESTS 3 枚（Calamo・Orecchiante・Shosa）に `open` なし。
@@ -162,16 +173,6 @@ base `a2365e16e`。開始時 full 18176 合格 / 0 失敗 / skip 2 / 合計 1817
 - CI の `extension-tests` は origin/master の 11-21 の 2 回が赤（`aiCandidatePlay` の 2 本＝`audioBlockedTold` の正規表現）。未 push の `3b53ec548` が直している（手元 17/17）＝push で緑になるはず。
 - 終わり full 18178 合格 / 0 失敗 / skip 2 / 合計 18180（`-End`）。
 - **次**: leftovers の残り（第1315 の `<>@text("fine").up` の揃え、第1329 の MIDI の装飾音の和音の音ごとの script など）か F4。
-
-## 以下は第1358セッションの経緯
-
-### 1.1 第1358セッション（2026-11-22・YT-DELL2・第1355 と同じ会話）
-
-base `e4bf6ebef`。開始時 full 18171 合格 / 0 失敗 / skip 2 / 合計 18173（Lab `p1358` `run1.trx`）。
-- **オーナー決定 2026-11-22「LilyPond と同じに揃えて」**: 連符の音が `@cross` で移ったとき、括弧は移った音の列を共通の座標で支えに読む（休符の「写さない」は第1354 の決定のまま）。
-- **実装＝`a77c26704`**（Lab `p1357/tb` x0・`p1358/tb` x1〜x5）: `CalculateSlope` が移った音の列を段の距離だけ動かして読む。勾配の音の側は各音の自分の譜表の位置のまま（LilyPond の `head_positions_interval`）＝x0 は水平。最初の音が移れば括弧はその段のもので、水平な括弧の譜線の丸めもその段で。5 形とも LilyPond と 0.005 以内。網 +5（毒 2 本で 5 本・3 本赤）。掃き 0 枚。CHANGELOG（両方）。
-- 終わり full 18176 合格 / 0 失敗 / skip 2 / 合計 18178（`-End`）。
-- **次**: leftovers の残り（第1329 の `<>` の script を `R1` の前に書く形は探り譜だけ作った＝Lab `p1358/mmr`）か F4。
 
 ## 2. 開いている作業
 
