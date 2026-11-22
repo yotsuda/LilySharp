@@ -429,8 +429,10 @@ What makes it music:
   lies within an octave, a ninth at most: a wider sound is shared between the hands, or its bass
   struck first and the chord after it. Broken chords and a slow
   or quiet tune are held in the pedal, or each note stops where it is written: `@sustain` on the
-  harmony's first bass note, the same mark again at each change of harmony, `@!sustain` on the
-  last note (`d,4@sustain a, d a, | g,4@sustain d g d | a,1@!sustain |`).
+  harmony's first bass note, the same mark again at each change of harmony, and the release on
+  an empty chord after the last note, so the final chord rings in the pedal
+  (`d,4@sustain a, d a, | g,4@sustain d g d | a,1 <>@!sustain |`). `@!sustain` ON a note lifts
+  the pedal as that note is struck — the way to end a pedal before a dry chord or a rest.
 - **Texture**: one voice carries the melody while the others accompany — broken chords,
   repeated eighths, a moving bass — and the roles pass between the parts. Not every part in the
   same rhythm; not whole notes everywhere. **A rest in one part is covered by another**: the

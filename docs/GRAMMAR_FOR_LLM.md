@@ -1069,7 +1069,10 @@ transposing instrument writes what its player reads, an octave clef's part what 
 Read the "write" column, not the pitch names: `instrument bass` (the 4-string electric or
 double bass, lowest string E) sounds an octave under what it writes, so its lowest note is
 written `e,` (E2 on the page, sounding E1) and a written `c,` sounds C1 — out of range; a bass
-line that wants to go lower turns up an octave there.
+line that wants to go lower turns up an octave there. ⚠️ Under `pitch concert` (the file's or the
+part's) the letters are what SOUNDS, so read the "sounds" column instead: the bass's low E is
+`e,,` (E1). A bass line copied from the "write" column there sounds an octave high, and nothing
+warns — every note of it is still inside the range.
 
 A range is how far an instrument CAN go, not where its part lies: keep each part where its
 player usually plays. A piano's left hand lies mostly between C2 and C4, round C3 — a left hand
@@ -1608,7 +1611,11 @@ pedals `@sustain` ... `@!sustain`, `@sostenuto` ... `@!sostenuto`, `@unaCorda` .
 LilyPond's own names, taking NO argument (`@ped`, `@ped(off)`, `@sost(off)`, `@una(corda)` do not exist).
 A pedal CHANGE (release and re-press on the same note, LilyPond's `\sustainOff\sustainOn`) is
 the start again while the pedal is down: `g,4@sustain` — the bracket draws its notch there, and
-the one `@!sustain` at the end closes the span. `g,4@!sustain@sustain` means the same. How the span is
+the one `@!sustain` at the end closes the span. `g,4@!sustain@sustain` means the same. The pedal
+lifts at the ONSET of the note that carries `@!sustain`, so `a,1@!sustain` strikes that last
+chord dry. To hold the pedal THROUGH a last note, put the release on an empty chord after it:
+`a,1 <>@!sustain |` — the bracket runs to the bar line and the pedal lifts as the note ends
+(LilyPond's `a,1 <>\sustainOff`). How the span is
 drawn is the PART's: `part lh { clef bass pedal text }` (`text` = "Ped. … *", `bracket` =
 what an unset part draws, or `mixed` = text at the start, bracket for the hold). The plain
 BRACKET is the sustain pedal's alone (2026-11-13): under `bracket` an `@unaCorda` span prints
@@ -1618,7 +1625,8 @@ bracket. `text` and `mixed`, written, style all three alike ("Sost. Ped. … *",
 tre corde"). All three sound in the MIDI: sustain CC 64, sostenuto CC 66, una corda CC 67.
 
 ```
-d,4@sustain a, d a, | g,4@sustain d g d | a,1@!sustain |
+d,4@sustain a, d a, | g,4@sustain d g d | a,1@!sustain |    // the last note struck as the pedal lifts
+d,4@sustain a, d a, | g,4@sustain d g d | a,1 <>@!sustain | // the last note rings in the pedal
 ```
 Phrasing slur `@phrasingSlur` ... `@!phrasingSlur` (LilyPond's `\(` ... `\)`; **the end is REQUIRED**):
 the long curve over a musical sentence, drawn over the ordinary slurs `( )` inside it. One is open

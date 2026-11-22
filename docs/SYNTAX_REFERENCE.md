@@ -3090,7 +3090,9 @@ mean the same and engrave the same.)
 A pedal — or any span — that ends **when a block is over** takes its ending mark on the
 block's closing brace: `repeat tremolo 12 { <fis b>64 dis' }@!sustain` lifts when the tremolo
 has been played, `tuplet 3/2 { d8 e f }@!cresc` ends the crescendo with the tuplet. It is the
-same as an empty chord after the block, `} <>@!sustain`, which takes no time. Only ending
+same as an empty chord after the block, `} <>@!sustain`, which takes no time. The same empty
+chord holds the pedal through a LAST note: `a,1 <>@!sustain |` lifts as the note ends, where
+`a,1@!sustain` lifts as it is struck and leaves the final chord dry. Only ending
 marks (`@!…`) are written there; `}@f` is an error that says to write `} <>@f`.
 
 The drawing is a part property: `part lh { clef bass pedal text }` picks "Ped. … *",
