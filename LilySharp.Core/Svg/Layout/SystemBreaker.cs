@@ -252,6 +252,12 @@ internal sealed class SystemBreaker
                 continue;
             }
 
+            // The end bar line's room when the line goes on: none when it yields to the next
+            // measure's |: (the layout's reading); a line ending here gets it back through the
+            // next measure's LineEndCourtesyWidth below.
+            double endBarWidth = YieldsMidLine(measures, runMap, i)
+                ? 0.0 : SpacingRules.GetBarlineWidth(primaryMeasure.EndBarline);
+
             var allTimings = MultiStaffLayouter.CollectAllTimingsForMeasure(score, i);
             var allMeasures = MultiStaffLayouter.CollectAllMeasuresAtIndex(score, i);
             // Mirror of MultiStaffLayouter: a clef change opening the next measure is
@@ -292,7 +298,7 @@ internal sealed class SystemBreaker
                     LyricSpacing.OwnVoiceEdgeProvider(score));
                 barPricing = LyricSpacing.BuildBarPricing(edges, springs,
                     SpacingRules.GetBarlineWidth(primaryMeasure.StartBarline),
-                    SpacingRules.GetBarlineWidth(primaryMeasure.EndBarline));
+                    endBarWidth);
             }
 
             double ideal = 0, min = 0, invStretch = 0, invCompress = 0;
@@ -375,8 +381,7 @@ internal sealed class SystemBreaker
                     lineEndSprings = ending;
             }
 
-            double barlines = SpacingRules.GetBarlineWidth(primaryMeasure.StartBarline)
-                            + SpacingRules.GetBarlineWidth(primaryMeasure.EndBarline);
+            double barlines = SpacingRules.GetBarlineWidth(primaryMeasure.StartBarline) + endBarWidth;
             // The measure's own spring 0 — the one the layout REPLACES when this measure
             // opens a line (MultiStaffLayouter). Carried so the gate can make the same
             // substitution instead of pricing a line start with a spring the layout will
@@ -424,12 +429,24 @@ internal sealed class SystemBreaker
                 // The courtesy is drawn with the clef in force at the ending line's START;
                 // the breaker does not know that start, so the clef of the measure before
                 // this one stands in for it (they differ only across a mid-line clef change).
-                i == 0 ? 0.0 : MultiStaffLayouter.LineEndCourtesyWidth(score, i - 1, i),
+                i == 0 ? 0.0 : MultiStaffLayouter.LineEndCourtesyWidth(score, i - 1, i)
+                    // …and the | a plain bar line before this measure's |: yields mid-line
+                    // (left out of measure i − 1's rigid width) is back when the line ends there.
+                    + (YieldsMidLine(measures, runMap, i - 1)
+                        ? SpacingRules.GetBarlineWidth(measures[i - 1].EndBarline) : 0.0),
                 runIdealDelta, runMinDelta, runNaturalDelta,
                 lineEndSprings);
         }
         return springData;
     }
+
+    /// <summary>Whether measure <paramref name="i"/>'s end bar line yields to the next
+    /// measure's <c>|:</c> when both stand on one line (SpacingRules.EndBarYieldsToRepeatStart)
+    /// — never for a multi-measure-rest run's bars, whose bar is the run's own, as the layout
+    /// reads it.</summary>
+    private static bool YieldsMidLine(ImmutableArray<Measure> measures, MmrRunMap runMap, int i)
+        => i >= 0 && !runMap.IsInterior(i) && !runMap.TryGetRunStartingAt(i, out _)
+           && SpacingRules.EndBarYieldsToRepeatStart(measures, i);
 
     /// <summary>
     /// The measure's line-end springs (<paramref name="springs"/>) with its columns'
@@ -495,7 +512,8 @@ internal sealed class SystemBreaker
     /// line that continues); and the meter in force there, which the meter of bar i is
     /// carried from (<c>ScoreSideTables.PrevailingMeters</c> — a time change in a
     /// secondary voice is in no entry context).</item>
-    /// <item>i + 1: whether it is swallowed by a multi-measure-rest run
+    /// <item>i + 1: whether it opens with a <c>|:</c>, which bar i's plain end bar line yields
+    /// to (<c>YieldsMidLine</c>); whether it is swallowed by a multi-measure-rest run
     /// (<see cref="MmrRunMap.ForbidsBreakAfter"/> of i is exactly that); which lyric lines
     /// have a syllable there (the closing half); the double-percent sign on its opening
     /// bar line (<c>ScoreSideTables.DoublePercentHalfWidths</c>, which reaches into an empty
@@ -559,6 +577,10 @@ internal sealed class SystemBreaker
             next.Add(lineHash.ToHashCode());
             next.Add(i < meters.Count ? meters[i] : default);
             previous.Add(runMap.IsInterior(i));
+            // A |: opening bar i takes bar i − 1's plain end bar line out of its rigid width
+            // (YieldsMidLine).
+            if (i < measures.Length)
+                previous.Add(measures[i].StartBarline);
             previous.Add(lineHash.ToHashCode());
             previous.Add(i < signHalf.Count ? signHalf[i] : 0.0);
             // A grace run opening bar i scales the closing spring of bar i − 1

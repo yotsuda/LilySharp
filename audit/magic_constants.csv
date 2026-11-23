@@ -8,6 +8,7 @@
 "Svg/Layout/SpacingRules.cs","SpacingRules.EngravedKeyInkWidth","1.0","KeySignatureInkWidth(key) * (staff.IsOssia ? EngravingDefaults.OssiaScale : 1.0);","","Red"
 "Svg/Layout/SpacingRules.cs","SpacingRules.WidestActiveKeyInk","0.0","double widestInk = 0.0;","","Red"
 "Svg/Layout/SpacingRules.cs","SpacingRules.ActiveKeyInkForStaff","0.0",": 0.0;","","Red"
+"Svg/Layout/SpacingRules.cs","SpacingRules.MidLineEndBarlineWidth","0.0","=> EndBarYieldsToRepeatStart(measures, i) ? 0.0 : GetBarlineWidth(measures[i].EndBarline);","LILYPOND-REF: scm/bar-line.scm define-bar-line "".|:"" — mid-line one glyph, no ""|"" before it.</remarks>","Green"
 "Svg/Layout/SpacingRules.cs","SpacingRules.DefaultExtraSpacingWidth","0.1","internal const double DefaultExtraSpacingWidth = 0.1;","LILYPOND-REF: lily/separation-item.cc:166-167 extra-spacing-width — its default <c>Interval (-0.1, 0.1)</c>.</remarks>","Green"
 "Svg/Layout/SpacingRules.cs","SpacingRules.MusicalColumnSkylineVerticalPadding","0.08","internal const double MusicalColumnSkylineVerticalPadding = 0.08;","LILYPOND-REF: scm/define-grobs.scm PaperColumn","Green"
 "Svg/Layout/SpacingRules.cs","SpacingRules.NoteColumnSkylineVerticalPadding","0.15","internal const double NoteColumnSkylineVerticalPadding = 0.15;","","Red"

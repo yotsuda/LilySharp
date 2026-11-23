@@ -136,6 +136,19 @@ public class SpringEdgeKeyTests
         Assert.Equal(a[1].ReadByNext, b[1].ReadByNext);
     }
 
+    [Fact]
+    public void ARepeatOpeningTheBar_MovesWhatThePreviousBarReads()
+    {
+        // The bar before it drops its plain end bar line's room (SystemBreaker.YieldsMidLine).
+        var (a, sa) = Edges(Book(Plain));
+        var (b, sb) = Edges(Book(Plain.Replace("f | g4 a b c |", "f |: g4 a b c :|")));
+        var ma = sa.PrimaryContentStaff.PrimaryVoice.Measures;
+        var mb = sb.PrimaryContentStaff.PrimaryVoice.Measures;
+        Assert.NotEqual(ma[1].StartBarline, mb[1].StartBarline);   // the variant did what it says
+        Assert.Equal(ma[0].EndBarline, mb[0].EndBarline);
+        Assert.NotEqual(a[1].ReadByPrevious, b[1].ReadByPrevious);
+    }
+
     private const string Sung = "lyrics words { la la la la | la la la la | la la la la | la la la la | }";
 
     [Fact]

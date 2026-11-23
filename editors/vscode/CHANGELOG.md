@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- `[engraving]` **A repeat sign in the middle of a line stands where a plain bar line would.** The plain bar line ending the bar before a `|:` was never drawn — the boundary is the one `.|:` — but its room (0.19 of a staff space) was still kept, so the `.|:` and the bar after it stood that much too far right. They now stand where LilyPond puts them; a line ending just before a `|:` keeps its closing bar line as before.
+
 - `[engraving]` **A line that opens with a repeat sign opens a little closer beside a silent staff, too.** The narrower bar beside a staff with no note and no rest in it now holds at the start of a line as well, where a `|:` opens the line and a down stem follows it: 0.095 with one silent staff of two, as in LilyPond.
 
 - **The chat's check of a new piece no longer calls an accompaniment's chord tone a slip, a short piece asked for too short, or a band's guitar staff the chords row again.**

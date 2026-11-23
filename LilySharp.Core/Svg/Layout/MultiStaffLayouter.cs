@@ -2049,8 +2049,13 @@ internal sealed class MultiStaffLayouter
             measureTimings.Add(allTimings);
             measureAllMeasures.Add(allMeasures);
 
+            // A plain end bar line yielding to the next measure's |: on this line takes no
+            // room (SpacingRules.EndBarYieldsToRepeatStart); the line's last measure keeps
+            // its | (the end-of-line piece), and a run's bar is the run's own.
             double barlineWidth = SpacingRules.GetBarlineWidth(primaryMeasure.StartBarline)
-                                + SpacingRules.GetBarlineWidth(primaryMeasure.EndBarline);
+                                + (i < endMeasureIndex - 1 && !runMap.TryGetRunStartingAt(i, out _)
+                                    ? SpacingRules.MidLineEndBarlineWidth(primaryVoice.Measures, i)
+                                    : SpacingRules.GetBarlineWidth(primaryMeasure.EndBarline));
             measureBarlineWidths.Add(barlineWidth);
             totalBarlineWidth += barlineWidth;
         }
@@ -2280,7 +2285,7 @@ internal sealed class MultiStaffLayouter
                         var rightMeasure = primaryVoice.Measures[startMeasureIndex + m + 1];
                         double dist = LyricSpacing.CrossBarLyricRodDistance(
                             edge, next,
-                            SpacingRules.GetBarlineWidth(leftMeasure.EndBarline)
+                            SpacingRules.MidLineEndBarlineWidth(primaryVoice.Measures, startMeasureIndex + m)
                             + SpacingRules.GetBarlineWidth(rightMeasure.StartBarline));
                         if (dist > 0)
                             rods.Add((lyricSpringOffset + edge.LastCol + 1,
@@ -2322,8 +2327,8 @@ internal sealed class MultiStaffLayouter
                     {
                         if (lastColumn is { } left && lastMeasure >= 0 && lastMeasure < m)
                         {
-                            double ink = SpacingRules.GetBarlineWidth(
-                                    primaryVoice.Measures[startMeasureIndex + lastMeasure].EndBarline)
+                            double ink = SpacingRules.MidLineEndBarlineWidth(
+                                    primaryVoice.Measures, startMeasureIndex + lastMeasure)
                                 + SpacingRules.GetBarlineWidth(
                                     primaryVoice.Measures[startMeasureIndex + m].StartBarline);
                             for (int k = lastMeasure + 1; k < m; k++)

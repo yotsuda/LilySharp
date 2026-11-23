@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- `[engraving]` **A repeat sign in the middle of a line stands where a plain bar line would.** The plain bar line ending the bar before a `|:` was never drawn — the boundary is the one `.|:` — but its room (0.19 of a staff space) was still kept, so the `.|:` and the bar after it stood that much too far right. They now stand where LilyPond puts them; a line ending just before a `|:` keeps its closing bar line as before.
+
 - `[engraving]` **A line that opens with a repeat sign opens a little closer beside a silent staff, too.** The narrower bar beside a staff with no note and no rest in it now holds at the start of a line as well, where a `|:` opens the line and a down stem follows it: 0.095 with one silent staff of two, as in LilyPond.
 
 - **Fixed: the chat's check of a new piece sent back three things that were not mistakes** (`[editor]`). A tune's note outside the key that an "oom-pah" accompaniment's chord has a beat later, over the bass struck on the beat, is the chord's, not a slip. A piece asked for as short ("a short …", 「短い…」) is no longer told to be longer. A band's guitar, beside a bass, is no longer told to drop its staff of written-out chords for the chords row.

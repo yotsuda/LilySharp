@@ -985,6 +985,34 @@ internal static partial class SpacingRules
     public static double GetBarlineWidth(BarlineType type) =>
         EngravingDefaults.BarlineDrawnWidth(type);
 
+    /// <summary>
+    /// Whether measure <paramref name="i"/>'s plain end bar line yields to a <c>|:</c> opening
+    /// the next measure — on one line the boundary is ONE bar line, the <c>.|:</c>, drawn from
+    /// the next measure's X (SharedRenderer.EndBarYieldsToRepeatStart), so the yielded <c>|</c>
+    /// takes no room there. At a line end it does not yield: the end-of-line piece of
+    /// <c>.|:</c> is that <c>|</c>, and it stays in the ending line.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/bar-line.scm define-bar-line ".|:" — mid-line glyph ".|:",
+    /// end-of-line piece "|", begin-of-line piece ".|:".
+    /// MEASURED (2.26.0, Lab sessions/p1373/wish d0/u0/d1): after a bar of down-stem e''
+    /// quarters the <c>.|:</c> stands where a plain <c>|</c> does (left edge 28.893 both;
+    /// 29.367 after up stems), and only its own 1.84 widens the bar: the head-to-head
+    /// crossing 5.695 (up stems 5.979) against 4.045 over a <c>|</c>. Until session 1373 the
+    /// layout kept the yielded <c>|</c>'s 0.19 before the <c>.|:</c> (5.88 and 6.17).
+    /// </remarks>
+    internal static bool EndBarYieldsToRepeatStart(ImmutableArray<Measure> measures, int i)
+        => (uint)(i + 1) < (uint)measures.Length
+           && measures[i].EndBarline == BarlineType.Single
+           && measures[i + 1].StartBarline == BarlineType.RepeatStart;
+
+    /// <summary>The room measure <paramref name="i"/>'s end bar line takes when the line
+    /// goes on past it: none when it yields to the next measure's <c>|:</c>
+    /// (<see cref="EndBarYieldsToRepeatStart"/>), else its drawn width.</summary>
+    /// <remarks>LILYPOND-REF: scm/bar-line.scm define-bar-line ".|:" — mid-line one glyph, no "|" before it.</remarks>
+    internal static double MidLineEndBarlineWidth(ImmutableArray<Measure> measures, int i)
+        => EndBarYieldsToRepeatStart(measures, i) ? 0.0 : GetBarlineWidth(measures[i].EndBarline);
+
     private static bool HasAccidental(MusicItem? item)
     {
         return item switch
