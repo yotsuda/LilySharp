@@ -53,6 +53,7 @@ tools\Session-Check.ps1 -End pNNN -DiffBase <開始時 HEAD>   # 終了の機械
 - ★ **`C:\MyProj\Shosa\docs\repro\REQUESTS.md` も同じ使い方の 1 枚**（2026-11-20〜・Shosa は Lily# の曲に合わせて踊る言語）。依頼 1〜5 は閉じた（1・4・5 は Shosa が `done`、2 は取り下げ、3 は `fixed`。§1.1 第1339）。6（`timeline` の `sung`）は第1341 で `fixed`・第1346 で Shosa の木で通した（`shosa ir` が偽の lysc の IR とバイト一致）＝Shosa の done 待ち。Shosa との約束は 2 つあり、形を変えるときはそれぞれの網も直す。
   - `lysc timeline`／`notes` の JSON: `SongReading.Protocol` と `CliSongReadingTests`。
   - 拡張の exports の stems API（`stemsVersion: 1`）: `docs/stems-api-design.md` と `stemsCore.test.ts`。
+- ★ **`C:\MyProj\Cantoria\docs\repro\REQUESTS.md` も同じ使い方の 1 枚**（2026-11-22〜・Cantoria は Lily# の歌い手のエンジン）。依頼 1（音節の `phonemes`）・2（`bend`）は第1375 で `fixed`＝Cantoria の done 待ち。他の 1 枚との優先順はオーナー決定（第1375）で「Cantoria を leftovers より先に」。
 - 証明 ⑴ の道具は `LilySharp-Lab\tools\rerender-ls.ps1`（RULES §5.5 のコマンド一覧）。
 - ★★★ **開始時に `LilySharp-Lab\notes\CLAUDE-OPERATIONS.md` も通読する**＝シェルと道具の使い方（Bash・PowerShell ツール・ripple は禁止・pwsh MCP の作法）・push や commit のユーザー規則・機械と社内環境の罠。**user memory は使わない**（2026-09-17・ユーザー決定。PC ローカルで他の PC に届かない）＝知見は RULES §4 の表の置き場所へ書く（公開してよい技術知見は RULES §5、private なものは Lab の notes）。
 ⚠️ **読み方の罠のうち、スクリプトが*刷れない*もの**（刷れる 4 つ——合計で読む・Release で測る・
@@ -96,6 +97,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **★ A-B リピート（オーナー決定 2026-11-17・第1286）＝`docs/ab-repeat-design.md`**: §3 の 1〜4 は済み（第1286）。**2026-11-19 オーナー決定: Loop グループ・A-B ボタンと番号欄・8 本の帯（§3 の 5）・右クリックの Play from Here／A Here／B Here は撤去、Repeat はヘッダへ**（同 §0）。残りは実機（`MANUAL-CHECKS`「Repeat はヘッダ」＝オーナー）と、release 時の site・README の書き直し。
 - **★ Join Bars in Pairs（Orecchiante の依頼 21・オーナー決定 2026-11-21・第1342）＝実装済み**（`docs/join-bars-design.md`）。依頼 22（同じ和音 1 つずつの組は `C`）は第1346 `f81f8cd28`。残りは実機（`MANUAL-CHECKS`「Join Bars in Pairs」＝Ctrl+Z で 2 つのファイルが戻る・録音と小節の頭がそろう）と Orecchiante の確認。
 - **★ Report to Orecchiante（Orecchiante の依頼 23・オーナーの希望 2026-11-23・第1372）＝実装済み**（`docs/orecchiante-report-design.md`）。残りは Orecchiante の確認とオーナーの実機（設定は手書き）。
+- **★ Cantoria の依頼 1（音節の音素 `병[/pp.y.eo.NG/]`）・2（歌う `bend`・お試し）＝第1375 で実装済み**（`singing-design.md` §3）。残りは Cantoria の done・オーナーの耳（`MANUAL-CHECKS` 第1375）・bend の量は Cantoria の形が変わったら合わせる。
 - **★ コード行の中に書けるもの（オーナー決定 2026-11-16・第1285）**: `time`・`tempo`・`%`・`key` は済み（§1.1）。**残り＝コードに付ける印 `@rit`／`@accel`／`@rall`（`…@!rit`）・`@fermata`・`@text("…")`**（今は `@todo` だけ）。強弱は見送り。
 - **★ 録音を聴きながら直す（Dettato #4・オーナーの希望 2026-11-15）＝`docs/recording-design.md`**: S1〜S4 と §1 7（楽譜と録音を同時に）・§7（書き出しに録音・第1286）は済み（§1.1 第1284〜第1286）。**次は S5**（帯・`Mark Bar Line Here`・ドラッグ・`byHand`）→ S6（CHANGELOG・Dettato への返事）。§8 の録音のパート（Dettato #16）は第1288 で実装・実測済み・使っている間のメモリは今のまま（オーナー決定 2026-11-17）＝残りは耳の確認（`MANUAL-CHECKS`「録音のパート」）。耳の確認は `MANUAL-CHECKS` §3.9（オーナー）。
 - **★ 反復とナビ記号を section の音楽にも書く（オーナー提案 2026-11-14・第1243＝第1249 で段 0〜8 が済み・LYS1034 は phrase だけ）**: 全部 `docs/inline-repeat-design.md`（規則 §3・段取り §4・未決 §6・経過 §7・エディタのコマンド §8）。オーナー決定（2026-11-14）: 対は form に組み立てた列で見る／`| |:` は空小節のまま／歌詞の verse は 5 規則／書き出しはなるべく form 側（Q2）。**次**（順は上から。歌詞の規則 3 と警告の 4 種目は第1253、ending・ナビ記号を全パートに書くコマンドと LYS1070 の quick fix は第1254 で済み＝§1.1）: ⑴ この島（反復とナビ記号を音楽に書く）の「次」は無い＝判断待ちも残りの形も 0。step キー・`PlayForm` の一本化（第1255）、3 番括弧＝3 回（form は第1256・音楽は第1257・コードの行は第1258）は済み。次の一手は下の積み残しから（オーナーに訊く）。段 9（読み込みと OMR の書き出し）は Q2 の決定で今の形のまま＝作業なし。⚠️ Calamo と Dettato の REQUESTS への知らせ（Q2「本体が出てから」）は未＝release のときに書く。実機は `MANUAL-CHECKS` 第1243・第1249・第1253・第1254・第1255。
@@ -155,19 +157,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1375セッション（2026-11-23・YT-DELL2・新しい会話）
+
+base `28a76692b`。開始時 full 18331 / 1 / skip 2 / 18334（赤は不安定な `ScoreVideoShapeTests`）。オーナー決定: Cantoria の open 2 件を先に（§0 に無く誰も見ていなかった）。
+- 依頼 1＝`52bae3764`（`병[/pp.y.eo.NG/]`・読みの経路・`singing-design.md` §3。⚠️ `[//]` は行コメント）・`37cdf8551`（声に無い記号を名指す）。依頼 2＝`b32a0ad7a`（記号を歌う `bend`・お試し）。毒は全部赤。
+- 実機は `lysc wav --singer`（`CANTORIA_VOICES_DIR=C:\Tools\voices`・`--soundfont` は Lab `p1137\sine.sf2`）: 발뼝・fall は midi 69→65（Lab `p1375/ph`）。
+- full 18372 / 0 / 2 / 18374。`IncludeFilesTests.ABooksInclude_SavedAgain…` は一時ファイルの取り合いで 1 度赤（不安定）。**次**: `lysc review` の 3 件。
+
+## 以下は第1374セッションの経緯
+
 ### 1.1 第1374セッション（2026-11-23・YT-DELL2・第1373 と同じ会話）
 
 base `d859eca27`。開始時 full 18322 / 0 / skip 2 / 18324。leftovers の ⑶（w.lys の 2→3 小節 0.045）から。
 - **⑶＝欠陥 2 つ**（Lab `p1373/wish` w1〜w6・x1〜x4）: 小節の頭が `@cross` の音の声部は、その前の小節線への wish を出さない（LilyPond は声部の最後の NoteSpacing をいた段に置き、小節線の column はいま居る段のものに渡す）→ `CreateLastToBarlineSpring`・`MergeVoiceStemWishesToBarline`・`ColumnWishes` が `ClosesWithoutWish` の声部を外す（前は全声部がそのときだけ）。小節の音が全部移った段は黙っている段（`EngravesBefore` が移った音を数えない）。w3 4.69→4.82（LP 4.815）・w6 4.82→4.74（4.735）・x3 4.24→4.04（4.045）。網 +10・毒 4 本赤・P5（最小値）は観測者なし。掃き 0 / 1289。終わり full 18332 / 0 / skip 2 / 18334。**次**: `lysc review` の 3 件（一覧の先頭）。
-
-## 以下は第1373セッションの経緯
-
-### 1.1 第1373セッション（2026-11-23・YT-DELL2・新しい会話）
-
-base `928bc10c4`。開始時 full 18306 / 0 / skip 2 / 18308。REQUESTS の open は 0。leftovers の「黙っている段の wish の測っていない形」（Lab `p1373/wish/probe.ps1`・LilyPond 2.26.0）。
-- ⑴ 装飾音で始まる小節＝欠陥なし（5.023／5.929・Lily# 5.020／5.920）。⑵ `|:` で始まる段＝欠陥・`c3936e59c`（r1 7.513・r2 7.418。`LineStartSpring` が `IsSilentToItsNextChange(staff, …)`）。網 +7・掃き 0 / 1289。
-- 測って出た欠陥＝`7a8ea83f2`: 段の途中の `|:` の前の小節が描かない `|` の 0.19 を取っていた（d0 5.88／5.695・u0 6.17／5.979）。`SpacingRules.MidLineEndBarlineWidth` を段の幅・rod・break gate（段末で返す・memo の鍵）が読む。網 +8・毒 4 本赤・掃き 34 / 1289（x だけ）・snapshot 10。
-- 残り（leftovers）: ⑶ w.lys 4.735／4.690・trill の `to-barline` の端（以前から 0.19 左）。終わり full 18322 / 0 / skip 2 / 18324（`-End` の 1 赤は §1 の字数＝削って緑）。
 
 ## 2. 開いている作業
 

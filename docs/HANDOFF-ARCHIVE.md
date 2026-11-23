@@ -277,6 +277,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1373セッションの経緯
+
+### 1.1 第1373セッション（2026-11-23・YT-DELL2・新しい会話）
+
+base `928bc10c4`。開始時 full 18306 / 0 / skip 2 / 18308。REQUESTS の open は 0。leftovers の「黙っている段の wish の測っていない形」（Lab `p1373/wish/probe.ps1`・LilyPond 2.26.0）。
+- ⑴ 装飾音で始まる小節＝欠陥なし（5.023／5.929・Lily# 5.020／5.920）。⑵ `|:` で始まる段＝欠陥・`c3936e59c`（r1 7.513・r2 7.418。`LineStartSpring` が `IsSilentToItsNextChange(staff, …)`）。網 +7・掃き 0 / 1289。
+- 測って出た欠陥＝`7a8ea83f2`: 段の途中の `|:` の前の小節が描かない `|` の 0.19 を取っていた（d0 5.88／5.695・u0 6.17／5.979）。`SpacingRules.MidLineEndBarlineWidth` を段の幅・rod・break gate（段末で返す・memo の鍵）が読む。網 +8・毒 4 本赤・掃き 34 / 1289（x だけ）・snapshot 10。
+- 残り（leftovers）: ⑶ w.lys 4.735／4.690・trill の `to-barline` の端（以前から 0.19 左）。終わり full 18322 / 0 / skip 2 / 18324（`-End` の 1 赤は §1 の字数＝削って緑）。
+
 ## 以下は第1372セッションの経緯
 
 ### 1.1 第1372セッション（2026-11-23・YT-DELL2）
