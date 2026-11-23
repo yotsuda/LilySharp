@@ -45,7 +45,7 @@ import {
     CandidateSounds, CandidateVoice, CandidateVoices, candidateWaitingNote,
     lastUserMessageAt, heldClashesOf, noTuneOf, CLASHES_TURNED_DOWN, singersInOneLineOf, unfingerableOf, UNFINGERABLE_TURNED_DOWN, REVIEW_READING,
     applyDraft, draftSummary, DraftInput, FROM_DRAFT_NOTE,
-    applyScoreEdits, ScoreEdit, scorePartView, scorePages,
+    applyScoreEdits, ScoreEdit, scorePartView, scorePages, withoutLengthAskedShort,
 } from './aiTransformCore';
 import { CANTORIA_EXTENSION_ID, cantoriaApiOf, leftToTheInstrument, voiceListText } from './singerCore';
 import { withTodoMark } from './omrAiFixCore';
@@ -2526,7 +2526,7 @@ async function compositionFindings(client: LanguageClient, text: string): Promis
 async function compositionReport(client: LanguageClient, text: string): Promise<{ findings: string[]; mistakes: string[]; ranges: string[] }> {
     try {
         const resp = await client.sendRequest<{ Findings: string[]; Mistakes?: string[]; Ranges?: string[] }>('lilysharp/compositionCheck', { Text: text });
-        return { findings: resp?.Findings ?? [], mistakes: resp?.Mistakes ?? [], ranges: resp?.Ranges ?? [] };
+        return { findings: withoutLengthAskedShort(resp?.Findings ?? [], text), mistakes: resp?.Mistakes ?? [], ranges: resp?.Ranges ?? [] };
     } catch {
         return { findings: [], mistakes: [], ranges: [] };
     }

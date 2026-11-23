@@ -913,6 +913,16 @@ export function isEmptyScore(text: string): boolean {
     return text.split(/\r?\n/).every(l => /^\s*(\/\/.*|octave\s+\w+|pitch\s+\w+)?\s*$/.test(l));
 }
 
+/** The music check's findings without its length's when the request asks for a short piece
+ *  (grammar evaluation 5's D5, 2026-11-23: asked for "a short J-POP song", the chat was told its
+ *  40 bars, 74 seconds, wanted a minute and a half — and again when it said so). The check
+ *  cannot read the request; the header's `// Asked:` line holds it. */
+export function withoutLengthAskedShort(findings: string[], text: string): string[] {
+    const asked = chatPieceRequest(text) ?? '';
+    if (!/\b(short|brief|miniature)\b|短い|短め|小品|ショート|小さな曲/i.test(asked)) { return findings; }
+    return findings.filter(f => !/^The piece is \d+ bars long, about \d+ seconds played/.test(f));
+}
+
 /** The request a piece composed in Copilot's chat says it was written for — its header's
  *  `// Asked: …` line, among the comments it opens with — or undefined for a text that does not
  *  open with that header. */

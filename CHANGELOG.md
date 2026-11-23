@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Fixed: the chat's check of a new piece sent back three things that were not mistakes** (`[editor]`). A tune's note outside the key that an "oom-pah" accompaniment's chord has a beat later, over the bass struck on the beat, is the chord's, not a slip. A piece asked for as short ("a short …", 「短い…」) is no longer told to be longer. A band's guitar, beside a bass, is no longer told to drop its staff of written-out chords for the chords row.
+
 - **Fixed: the chat's review called a Picardy third and a last chorus lifted a step "ends in another key"** (`[editor]`). A minor piece closing in its own major, and a last section a half or whole step up in the same mode, are closes, not a mistake; a piece ending a fifth away is still told. The review now speaks to the reader it is asked for (`audience: advanced` was still told "you may be a beginner"), and its "as played" length says a section played again is counted again rather than "repeats counted".
 
 - **Fixed: the chat could not write some bars of a section with a two-voice passage** (`[editor]`). Any `bars` of such a section was refused as "a group with bar lines inside it"; a `voice { } { }` passage is now as many bars as its first voice, the bars around it can be written, and the passage itself taken whole.

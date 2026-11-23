@@ -228,7 +228,7 @@ public static class KeyChecks
                 // twice in the bar over one held bass is one chord (the same song's second B♯, a beat after the voice's).
                 // A bass struck again on its own note is still that bass (Little Fugue's viola G♯ under `e2 e,2`, the
                 // violin's G♯ of the same E7 on the bar's first beat, told a slip).
-                var bass = around.Where(o => o.Pitch < note.Pitch).OrderBy(o => o.Pitch).Select(o => ((int, int)?)HeldSpan(everything, o)).FirstOrDefault();
+                var bass = around.Where(o => o.Pitch < note.Pitch).OrderBy(o => o.Pitch).Select(o => ((int, int)?)HeldSpan(everything, o, bars)).FirstOrDefault();
                 bool InSpan(int from, int to, (string Part, int Voice, int StartTick, int DurationTicks, int Pitch) o) => o.StartTick < to && from < o.StartTick + o.DurationTicks;
                 bool inBeat = everything.Any(o => Other(o) && Pc(o.Pitch) == pc
                     && (InSpan(beatStart, beatEnd, o) || (bass is var (bassFrom, bassTo) && InSpan(bassFrom, bassTo, o))));
@@ -252,9 +252,12 @@ public static class KeyChecks
     }
 
     /// <summary>How long a bass note holds, from the first to the last of the notes of its own name its voice
-    /// strikes one straight after another.</summary>
+    /// strikes one straight after another — and through the rests after it, to its voice's next note within
+    /// the bar: an "oom-pah" bass struck on the beat and silent while the chord answers it holds that chord
+    /// (grammar evaluation 5's D5, 2026-11-23: a clarinet's A on the first beat of an F7 the second violins
+    /// play on the second and fourth, over a pizzicato F on the first, was told a note no chord has).</summary>
     private static (int From, int To) HeldSpan(List<(string Part, int Voice, int StartTick, int DurationTicks, int Pitch)> everything,
-        (string Part, int Voice, int StartTick, int DurationTicks, int Pitch) bass)
+        (string Part, int Voice, int StartTick, int DurationTicks, int Pitch) bass, IReadOnlyList<int> bars)
     {
         int name = (bass.Pitch % 12 + 12) % 12;
         var same = everything.Where(o => o.Part == bass.Part && o.Voice == bass.Voice && (o.Pitch % 12 + 12) % 12 == name)
@@ -266,7 +269,13 @@ public static class KeyChecks
         for (int k = same.Count - 1; k >= 0; k--)
             if (same[k].StartTick < from && same[k].StartTick + same[k].DurationTicks >= from)
                 from = same[k].StartTick;
-        return (from, to);
+        int next = int.MaxValue;
+        foreach (var o in everything)
+            if (o.Part == bass.Part && o.Voice == bass.Voice && o.StartTick >= to && o.StartTick < next)
+                next = o.StartTick;
+        int barEnd = bars.FirstOrDefault(b => b > bass.StartTick) is var b0 && b0 > 0 ? b0 : int.MaxValue;
+        to = System.Math.Max(to, System.Math.Min(next, barEnd));
+        return (from, to == int.MaxValue ? from + bass.DurationTicks : to);
     }
 
     /// <summary>The beat <paramref name="tick"/> falls in, as ticks from its start to its end: a beat of the

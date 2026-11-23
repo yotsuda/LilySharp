@@ -24,7 +24,7 @@ import * as path from 'node:path';
 import {
     SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
     pickModel, isAutoModel, pitchToMidi, splitNote, planOf, withoutPlan, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup, rangeFixOf,
-    aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote, diagLines,
+    aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, withoutLengthAskedShort, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote, diagLines,
     lastUserMessageAt, heldClashesOf, CLASHES_TURNED_DOWN, singersInOneLineOf, unfingerableOf, UNFINGERABLE_TURNED_DOWN,
     noTuneOf, chatPieceRequest, newPieceOverScore,
 } from '../src/aiTransformCore';
@@ -152,6 +152,14 @@ describe('a new piece\'s header in the request\'s language', () => {
         assert.match(headerLanguageNote(header('結婚式で流す、優しいピアノ曲を書いて', 'A gentle piano piece in F major.')) ?? '',
             /not in the language of the request/);
         assert.ok(headerLanguageNote(header('Write a gentle piano piece', '結婚式のための優しい曲です。')));
+    });
+    // Grammar evaluation 5's D5 (2026-11-23): asked for a short song, told to make it longer.
+    it('drops the length finding when the request asks for a short piece', () => {
+        const length = 'The piece is 40 bars long, about 74 seconds played: unless a short piece was asked for, give it more';
+        assert.deepEqual(withoutLengthAskedShort([length, 'other'], header('短いJ-POPを書いて', 'x')), ['other']);
+        assert.deepEqual(withoutLengthAskedShort([length, 'other'], header('a short nocturne for horn', 'x')), ['other']);
+        assert.deepEqual(withoutLengthAskedShort([length, 'other'], header('a nocturne for horn', 'x')), [length, 'other']);
+        assert.deepEqual(withoutLengthAskedShort([length], 'title "x"\n'), [length]);
     });
     it('is not said when they agree, or a line is missing', () => {
         assert.equal(headerLanguageNote(header('結婚式で流す曲', 'F majorの穏やかなピアノ曲です。')), undefined);

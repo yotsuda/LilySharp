@@ -485,6 +485,12 @@ public class CompositionChecksTests
         Assert.DoesNotContain(CompositionChecks.Of(Song("d8 a d' fis' a' fis' d' a | a,8 e a cis' e' cis' a e |")), f => f.Contains("says what the chords row says"));
         // A bass note, then the chord: not block chords alone.
         Assert.DoesNotContain(CompositionChecks.Of(Song("d4 <fis a d'>4 d4 <fis a d'>4 | a,4 <cis' e' a'>4 a,4 <cis' e' a'>4 |")), f => f.Contains("says what the chords row says"));
+        // A band's guitar, beside a bass, reads its own staff (grammar evaluation 5's D5, 2026-11-23).
+        string band = Song("<d fis a d' fis'>2 <d fis a d' fis'>2 | <a cis' e' a' cis''>4 <a cis' e' a' cis''>4 <a cis' e' a' cis''>2 |")
+            .Replace("part guitar { instrument guitar }", "part guitar { instrument guitar }\npart bass { instrument bass }")
+            .Replace("  chords harmony {", "  bass { " + string.Concat(Enumerable.Repeat("d,1 | a,,1 | ", 4)) + "}\n  chords harmony {")
+            .Replace("staff guitar }", "staff guitar  staff bass }");
+        Assert.DoesNotContain(CompositionChecks.Of(band), f => f.Contains("says what the chords row says"));
     }
 
     // Owner's review 2026-11-01 (Kaerimichi-no-Akari3, a song to sing and play yourself): 48 bars sung
@@ -1877,6 +1883,35 @@ public class CompositionChecksTests
         Assert.Contains("about 24 to 32 bars\n  of 4/4 suits a piece", guide.Replace("\r\n", "\n"));
         // Owner's review 2026-11-02: 29 pieces with a piano, composed in the chat, and not one pedal.
         Assert.Contains("`@sustain` on the\n  harmony's first bass note", guide.Replace("\r\n", "\n"));
+    }
+
+    /// <summary>An "oom-pah" accompaniment — the bass struck on the beat and silent while the chord
+    /// answers it — holds its chord through the rests: a tune's note outside the key that the chord has,
+    /// a beat later, is the chord's (grammar evaluation 5's D5, 2026-11-23: Harbour Night's clarinet A
+    /// on the first beat of an F7 the second violins play on the second and fourth was told a note no
+    /// chord has). With no part sounding it, it is still told.</summary>
+    [Theory]
+    [InlineData("r4 a' r a' | r4 bes' r bes' | r4 bes' r bes' |", false)]
+    [InlineData("r4 c'' r c'' | r4 bes' r bes' | r4 bes' r bes' |", true)]
+    public void AnOomPahBassHoldsItsChord(string violins, bool told)
+    {
+        string book = $$"""
+            octave absolute
+            key des major
+            time 4/4
+            tempo 4 = 66
+            part m { instrument flute }
+            part vn { instrument violin }
+            part vc { instrument cello }
+            section A {
+              m { a'4 c'' ees'' f'' | des''2 f''2 | des''4 ees'' f'' ges'' | aes''4 ges'' f'' ees'' | des''1 | }
+              vn { {{violins}} r4 bes' r bes' | r4 bes' r bes' | }
+              vc { f,4 r c r | bes,4 r f r | bes,4 r f r | bes,4 r f r | bes,4 r f r | }
+            }
+            form { A }
+            score { staff m staff vn staff vc }
+            """;
+        Assert.Equal(told, CompositionChecks.Findings(book).Any(f => f.Id == "key.outside" && f.Message.StartsWith("m:")));
     }
 
     /// <summary>A minor piece closing in its own major (the Picardy third) and a last section lifted

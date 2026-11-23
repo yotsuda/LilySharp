@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **The chat's check of a new piece no longer calls an accompaniment's chord tone a slip, a short piece asked for too short, or a band's guitar staff the chords row again.**
 - **The chat's review no longer calls a Picardy third or a last chorus lifted a step a mistake**, and speaks to the reader it is asked for.
 - **The chat can write some bars of a section that holds a two-voice passage.**
 - **The preview plays rit., rall., accel. and fermatas**: the tempo slows or quickens over the line, and a fermata holds every part.

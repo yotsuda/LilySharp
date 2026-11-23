@@ -631,7 +631,7 @@ public static class CompositionChecks
         findings.AddRange(OneFigure(midi, barList, byPart.Where(p => !melodies.Contains(p.Key) && p.Value.Count >= 16)
             .Select(p => p.Key).ToHashSet(System.StringComparer.Ordinal)));
         findings.AddRange(OneProgression(midi, barList, fifths));
-        findings.AddRange(StaffRestatesTheChordsRow(midi, parts, barList));
+        findings.AddRange(StaffRestatesTheChordsRow(midi, parts, barList, band));
         var sung = SungPartsOf(root);
         findings.AddRange(NoBreath(midi, parts, barList, sung));
         findings.AddRange(SingersLines(midi, parts, declared is { } placed
@@ -1887,7 +1887,10 @@ public static class CompositionChecks
     /// guitarist reads). Said when every bar the part plays in, eight or more, holds chords only,
     /// their pitch classes inside the row's chord sounding in that bar.
     /// </summary>
-    private static IEnumerable<CompositionFinding> StaffRestatesTheChordsRow(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts, List<int> barList)
+    /// A band's guitar is not that: its staff is the part its player reads, voicings and strum written
+    /// out, beside the bass and the drums (grammar evaluation 5's D5, 2026-11-23: a J-pop band's clean
+    /// guitar was told to drop its staff, "the chords row is what a guitarist reads").
+    private static IEnumerable<CompositionFinding> StaffRestatesTheChordsRow(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts, List<int> barList, bool band)
     {
         var row = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9 && (n.Part ?? t.Name).EndsWith(" (chords)", System.StringComparison.Ordinal))).ToList();
         if (row.Count == 0)
@@ -1899,6 +1902,8 @@ public static class CompositionChecks
             // "a picking pattern" (grammar evaluation 3, 2026-11-13).
             bool keys = InstrumentOf(part).StartsWith("piano", System.StringComparison.Ordinal)
                 || System.Text.RegularExpressions.Regex.IsMatch(PropOf(part, "midiInstrument"), "piano|organ|clavi|harpsichord");
+            if (band && !keys)
+                continue;
             var notes = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9 && (n.Part ?? t.Name) == name)).ToList();
             int played = 0, restated = 0;
             for (int b = 0; b < barList.Count; b++)
