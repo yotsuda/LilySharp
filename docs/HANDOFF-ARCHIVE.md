@@ -277,6 +277,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1369セッションの経緯
+
+### 1.1 第1369セッション（2026-11-22・YT-DELL2・第1368 と同じ会話）
+
+base `01c4ee0cc`。開始時 full 18278 / 0 / skip 2 / 18280。評価 4 の 1＝持ち替え（§1.0）。
+- **`instrument piccolo`（段 1）＝`1e351abe1`**（設計 `docs/eval4-features-design.md` §1）: 音楽の中で書くと、その part は preset の音色・移調・音域になり、次の音の上に名前を刷る。音・音部記号・調号は書いたまま。
+  - 形: `MidiNote.Instrument`・`MidiTrack.ProgramOf`・`toEvents`／`MidiOutEvents.From` は program の替わる所で送る・文字は `Semantics.OnsetMarks`（pass と共有）・LYS1078（実音の本／score で移調の違う持ち替え）。
+  - 網 +21・毒 10 本は赤（Lab `p1368/poisons2.ps1`）。実機は `MANUAL-CHECKS`。
+- 終わり full 18278 / 0 / skip 2 / 18280。**次**: 段 2 の 3 つ（設計 §1 の末尾）と評価 5 のほかの B・D をオーナーに相談。
+
 ## 以下は第1368セッションの経緯
 
 ### 1.1 第1368セッション（2026-11-22・YT-DELL2）
