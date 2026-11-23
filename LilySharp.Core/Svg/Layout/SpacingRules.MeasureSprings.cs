@@ -1595,6 +1595,7 @@ internal static partial class SpacingRules
                     var items = voice.Measures[measureIndex].Items;
                     var onset = Fraction.Zero;
                     int t = 0, previous = -2;
+                    MusicItem? previousItem = null;
                     for (int oi = 0; oi < items.Length; oi++)
                     {
                         if (IsMusicalColumn(items[oi]))
@@ -1606,11 +1607,14 @@ internal static partial class SpacingRules
                                 if (previous == t - 1)
                                     wishes[t]++;
                                 previous = t;
+                                previousItem = items[oi];
                             }
                         }
                         onset += items[oi].Duration;
                     }
-                    if (previous == timings.Count - 1)
+                    // A voice gone to another staff by the bar line files no closing wish
+                    // (MusicItem.ClosesWithoutWish).
+                    if (previous == timings.Count - 1 && previousItem is not { ClosesWithoutWish: true })
                         wishes[timings.Count]++;
                 }
         return wishes;

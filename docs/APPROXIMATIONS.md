@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 67 | 観測者がゼロだと自認しているもの |
+| `UNWATCHED` | 68 | 観測者がゼロだと自認しているもの |
 | `OWN` | 484 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **613** | |
+| **計** | **614** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -139,7 +139,7 @@
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
 - **`BeamRestStem`** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（67 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（68 件）
 
 ### `LilySharp.Core/Midi/MidiExporter.cs`
 - **`MidiExporter.SwellInstruments`** (No observer for `Written`: no book yet has a level a lane or a repeat's turn reopens
@@ -212,6 +212,8 @@
 - **`LyricHyphenEngraver.CalculateLayouts`** an unverified edge of this proxy (no point observes it).
 ### `LilySharp.Core/Svg/Layout/LyricSpacing.cs`
 - **`LyricSpacing.ReserveLyricLine`** is measured-exact there, and no ledger point prices replacing it.
+### `LilySharp.Core/Svg/Layout/MeasureLayouter.cs`
+- **`MeasureLayouter.CreateLastToBarlineSpring`** ⚠️ No observer (session 1374, poison P5 green): the minimum binds only under
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
 - **`MultiStaffLayouter.BuildAllStaffSkylines`** staff down, and this reserves it on the hidden one. No book reaches that.
 - **`MultiStaffLayouter.CalculateStaffGapWithSkylines`** company on a row whose symbols sit closer than its spec's 1.0. No point measures

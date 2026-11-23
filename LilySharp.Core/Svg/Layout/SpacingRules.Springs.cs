@@ -724,7 +724,9 @@ internal static partial class SpacingRules
         var wishes = RentWishes(); // given back once MergeSprings has read it (see RentWishes)
         for (int v = 0; v < voices.Count; v++)
         {
-            if (WishColumnAt(voices[v], tLeft) is not { } left)
+            // A voice gone to another staff by the bar line files no wish toward it
+            // (MusicItem.ClosesWithoutWish; MeasureLayouter.CreateLastToBarlineSpring).
+            if (WishColumnAt(voices[v], tLeft) is not { } left || left.ClosesWithoutWish)
                 continue;
             // As in MergeVoiceStemWishes: the rest's wish counts, with no correction of its own.
             if (left is RestItem)
@@ -961,7 +963,13 @@ internal static partial class SpacingRules
     }
 
     /// <summary>Whether the measure holds a note, a chord or a drawn rest (a NoteSpacing)
-    /// before <paramref name="nextChange"/> — anywhere, when there is none.</summary>
+    /// before <paramref name="nextChange"/> — anywhere, when there is none. One <c>@cross</c>
+    /// drew on another staff is that staff's: LilyPond's <c>\change Staff</c> moves the Voice,
+    /// and its note column joins the other staff's Separating_line_group.</summary>
+    /// <remarks>MEASURED (2.26.0, Lab sessions/p1373/wish w6/w3): a bar whose lower notes are
+    /// ALL moved up opens 0.08 narrower than one keeping a note at home after the moved first
+    /// (bar line → first head 1.1719 against 1.2522) — the lower staff's wish without the
+    /// correction, as over spacers.</remarks>
     private static bool EngravesBefore(Measure measure, Fraction? nextChange)
     {
         var onset = Fraction.Zero;
@@ -969,7 +977,8 @@ internal static partial class SpacingRules
         {
             if (nextChange is { } change && onset >= change)
                 break;
-            if (item is NoteItem or ChordItem or RestItem { IsSpacer: false, IsMultiMeasure: false })
+            if (item is NoteItem or ChordItem or RestItem { IsSpacer: false, IsMultiMeasure: false }
+                && item.CrossStaffIndex < 0)
                 return true;
             onset += item.Duration;
         }

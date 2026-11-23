@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- `[engraving]` **A bar that opens with a note moved to the other staff is spaced as LilyPond spaces it.** When the first note of a bar is moved up (or down) with `@cross`, that voice no longer has a say in the room before the bar line — the other voices' distance stands alone, as in LilyPond — and a staff whose notes in the bar are all moved away counts as silent there. A grand staff with such a bar opens it up to 0.3 of a staff space differently.
+
 - `[engraving]` **A repeat sign in the middle of a line stands where a plain bar line would.** The plain bar line ending the bar before a `|:` was never drawn — the boundary is the one `.|:` — but its room (0.19 of a staff space) was still kept, so the `.|:` and the bar after it stood that much too far right. They now stand where LilyPond puts them; a line ending just before a `|:` keeps its closing bar line as before.
 
 - `[engraving]` **A line that opens with a repeat sign opens a little closer beside a silent staff, too.** The narrower bar beside a staff with no note and no rest in it now holds at the start of a line as well, where a `|:` opens the line and a down stem follows it: 0.095 with one silent staff of two, as in LilyPond.

@@ -1315,6 +1315,33 @@ internal sealed class MeasureLayouter
             for (int q = 0; q < lastItems.Count; q++)
                 maxRod = Math.Max(maxRod, SpacingRules.NoteColumnToBarlineFloorPair(fonts, lastItems[q]).Rod);
         }
+        // …and a voice gone while another stays: only THAT voice's wish drops out of the merge
+        // (its rod stands), the others are averaged without it. LilyPond files the voice's last
+        // NoteSpacing under the staff it stood on, and hands the bar line's column to the one
+        // filed under the staff it stands on at the bar line — so the gone voice's spacing never
+        // names the bar's column and found_matching_column passes it over.
+        // LILYPOND-REF: lily/note-spacing-engraver.cc:109-128 stop_translation_timestep — last_spacings_[parent], the voice's CURRENT staff.
+        // LILYPOND-REF: lily/spacing-spanner.cc:350-364 musical_column_spacing — a wish counts only with a right item on the right column.
+        // MEASURED (2.26.0, Lab sessions/p1373/wish w3/x1–x4): a bar opening with a lower voice's
+        // note `@cross`ed up crosses its bar line at the upper staff's own distance, whatever the
+        // lower voice ended on — 4.815 over c, g or a rest (Lily# 4.69, 4.55, 4.51), and 4.045
+        // under one down-stem upper voice where the bar without the move is 4.248.
+        var wishing = lastItems;
+        if (!gone && !wishless)
+        {
+            List<MusicItem>? staying = null;
+            for (int q = 0; q < lastItems.Count; q++)
+                if (lastItems[q].ClosesWithoutWish && staying == null)
+                {
+                    staying = new List<MusicItem>(lastItems.Count);
+                    for (int k = 0; k < q; k++)
+                        staying.Add(lastItems[k]);
+                }
+                else if (!lastItems[q].ClosesWithoutWish)
+                    staying?.Add(lastItems[q]);
+            if (staying != null)
+                wishing = new ItemColumn(staying);
+        }
         if (lastItems.Count > 0 && !wishless)
         {
             endSpring = TabVoiceWishes(measuresToScan, stavesOfMeasures, timings[^1]) is { } tabWishes
@@ -1328,19 +1355,23 @@ internal sealed class MeasureLayouter
                 // (2.26.0, Lab sessions/p851, test/rhythm-slashes's twin): the last bar's three
                 // wholes — two slash heads 3.0152 and a plain 1.962 — close 0.70 wider than
                 // three plain wholes, the MEAN's +0.702; the max's +1.053 drew it 0.38 wide.
-                : SpacingRules.ApplyLeftHeadWidth(endSpring, lastItems, spacing.Increment,
+                : SpacingRules.ApplyLeftHeadWidth(endSpring, wishing, spacing.Increment,
                     mergeWishAverage: true);
 
             // The column's whole skyline — flag included — against the bar line's box:
             // the spring minimum now, the rod after the headroom.
             // LILYPOND-REF: lily/note-spacing.cc:78-83 get_spacing (the minimum);
             // LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods (the rod).
+            // The minimum is the wishes' (a gone voice files none); the rod is every column's.
+            // ⚠️ No observer (session 1374, poison P5 green): the minimum binds only under
+            // compression or past the merge's headroom, and no probe's gone voice reaches it.
             double maxSkyDist = 0;
             for (int q = 0; q < lastItems.Count; q++)
             {
                 var item = lastItems[q];
                 var (skyDist, rod) = SpacingRules.NoteColumnToBarlineFloorPair(fonts, item);
-                maxSkyDist = Math.Max(maxSkyDist, skyDist);
+                if (!item.ClosesWithoutWish)
+                    maxSkyDist = Math.Max(maxSkyDist, skyDist);
                 maxRod = Math.Max(maxRod, rod);
             }
 
