@@ -58,6 +58,10 @@ public static class SingerFailure
         // Cantoria's DiffSingerSinger.NoSoundFor (owner's report 2026-11-19, Moon-on-the-River.lys:
         // TIGER's dictionary spells 思 "s iz" and its pitch model has no "iz" - the warning named a
         // phoneme and a file of the voice, and no word of the song). $1 is the syllable.
+        // FIRST the syllable whose phonemes the file wrote (`병[/pp.yeo/]`, session 1375): the
+        // voice lacks a symbol the writer chose, and other words are not the remedy. $2 is the symbol.
+        ("has no sound for \"([^\"]+)\" \\(note \\d+[^)]*\\): its phonemes are written \"[^\"]*\", and .*?has no phoneme \"([^\"]+)\"",
+            "the phonemes written on the syllable \"$1\" are not all the voice's own: it has no \"$2\" - write its own symbols in the [/…/] there, or give the singer line another voice"),
         (UnsungPattern,
             "the voice has no sound for the syllable \"$1\" (its models were not taught a phoneme the syllable needs): write other words there, or give the singer line another voice"),
     ];
@@ -67,14 +71,14 @@ public static class SingerFailure
     private const string UnsungPattern = "has no sound for \"([^\"]+)\" \\(note (\\d+)";
 
     /// <summary>The plain cause of <paramref name="engineMessage"/>, or null for a message Lily# does not know.
-    /// A <c>$1</c> in a cause is what its pattern caught (the syllable).</summary>
+    /// A <c>$1</c> in a cause is what its pattern caught (the syllable), a <c>$2</c> its second catch.</summary>
     public static string? Cause(string? engineMessage)
     {
         if (string.IsNullOrWhiteSpace(engineMessage))
             return null;
         foreach (var (pattern, cause) in Causes)
             if (Regex.Match(engineMessage, pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) is { Success: true } m)
-                return cause.Replace("$1", m.Groups[1].Value, StringComparison.Ordinal);
+                return cause.Replace("$1", m.Groups[1].Value, StringComparison.Ordinal).Replace("$2", m.Groups[2].Value, StringComparison.Ordinal);
         return null;
     }
 

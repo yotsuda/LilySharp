@@ -271,6 +271,10 @@ const SINGER_FAILURE_CAUSES: readonly (readonly [RegExp, string])[] = [
     // Cantoria's DiffSingerSinger.NoSoundFor (owner's report 2026-11-19, Moon-on-the-River.lys:
     // TIGER's dictionary spells 思 "s iz" and its pitch model has no "iz" - the warning named a
     // phoneme and a file of the voice, and no word of the song). $1 is the syllable.
+    // FIRST the syllable whose phonemes the file wrote (`병[/pp.yeo/]`, session 1375): the voice
+    // lacks a symbol the writer chose, and other words are not the remedy. $2 is the symbol.
+    [/has no sound for "([^"]+)" \(note \d+[^)]*\): its phonemes are written "[^"]*", and .*?has no phoneme "([^"]+)"/,
+        'the phonemes written on the syllable "$1" are not all the voice\'s own: it has no "$2" - write its own symbols in the [/…/] there, or give the singer line another voice'],
     [/has no sound for "([^"]+)" \(note (\d+)/,
         'the voice has no sound for the syllable "$1" (its models were not taught a phoneme the syllable needs): write other words there, or give the singer line another voice'],
 ];
@@ -309,7 +313,7 @@ export function engineSaid(error: unknown): string {
 export function singerFailureCause(engineMessage: string): string | undefined {
     for (const [pattern, cause] of SINGER_FAILURE_CAUSES) {
         const m = pattern.exec(engineMessage);
-        if (m) { return cause.split('$1').join(m[1] ?? ''); }
+        if (m) { return cause.split('$1').join(m[1] ?? '').split('$2').join(m[2] ?? ''); }
     }
     return undefined;
 }
@@ -374,13 +378,22 @@ export function engineFailureProblem(voice: Pick<SungVoiceDto, 'Part' | 'Key' | 
  * the word that has to change): what cannot be sung, by whom, and the two ways out. None for any
  * other failure of the engine.
  */
+/** The symbol the voice lacks among the phonemes the file wrote on the syllable (`병[/pp.yeo/]`,
+ *  session 1375), or undefined when the engine spoke of the syllable's own reading. */
+export function missingWrittenPhoneme(engineMessage: string): string | undefined {
+    return /: its phonemes are written "[^"]*", and .*?has no phoneme "([^"]+)"/.exec(engineMessage)?.[1];
+}
+
 export function unsungSyllableProblem(voice: Pick<SungVoiceDto, 'Part' | 'Key' | 'Singer' | 'Notes'>, engineMessage: string, text: string): VoiceProblem | undefined {
     const unsung = unsungSyllable(voice, engineMessage);
     if (!unsung || unsung.at >= text.length) { return undefined; }
     const who = voice.Singer && voice.Singer.includes('/') ? voice.Singer : 'the voice';
+    const symbol = missingWrittenPhoneme(engineMessage);
     return {
         start: unsung.at, end: wordEnd(text, unsung.at),
-        message: `${who} has no sound for the syllable "${unsung.syllable}" under this note, so ${sungKey(voice)} is not sung at all: write other words here, or give its singer line another voice.`,
+        message: symbol !== undefined
+            ? `${who} has no "${symbol}" among the phonemes written on the syllable "${unsung.syllable}" under this note, so ${sungKey(voice)} is not sung at all: write its own symbols here, or give its singer line another voice.`
+            : `${who} has no sound for the syllable "${unsung.syllable}" under this note, so ${sungKey(voice)} is not sung at all: write other words here, or give its singer line another voice.`,
     };
 }
 
@@ -427,7 +440,10 @@ export function unsungSyllableNotice(voice: Pick<SungVoiceDto, 'Part' | 'Key' | 
     if (!unsung || unsung.at >= text.length) { return undefined; }
     const who = voice.Singer && voice.Singer.includes('/') ? voice.Singer : 'its voice';
     const line = text.slice(0, unsung.at).split('\n').length;
-    return `${sungKey(voice)} is not sung: ${who} has no sound for the syllable "${unsung.syllable}" (line ${line}). Write other words there, or give the singer line another voice.`;
+    const symbol = missingWrittenPhoneme(engineMessage);
+    return symbol !== undefined
+        ? `${sungKey(voice)} is not sung: ${who} has no "${symbol}" among the phonemes written on the syllable "${unsung.syllable}" (line ${line}). Write its own symbols there, or give the singer line another voice.`
+        : `${sungKey(voice)} is not sung: ${who} has no sound for the syllable "${unsung.syllable}" (line ${line}). Write other words there, or give the singer line another voice.`;
 }
 
 /** The warnings the server gives of a voice's words (syllables that are not kana), each on the

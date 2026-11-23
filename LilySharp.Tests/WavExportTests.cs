@@ -207,6 +207,17 @@ public sealed class WavExportTests : IDisposable
     }
 
     [Fact]
+    public void ASymbolOfTheWrittenPhonemes_TheVoiceLacks_IsSaidBySymbol_WithTheNotesPlace()
+    {
+        // Session 1375 (Cantoria's request 1): the file wrote the syllable's phonemes and the voice
+        // has no "ax" - other words are not the remedy, its own symbols are. Cantoria's own words.
+        string said = "diffsinger/V has no sound for \"く\" (note 2 at 1.1 s): its phonemes are written \"k ax\", and its duration model has no phoneme \"ax\" (C:\\v\\dsdur\\phonemes.json)";
+        var (_, result) = Export(SungBook(), new FakeSinger { Error = said });
+
+        Assert.Contains(result.Warnings, w => w.StartsWith("melody (singer sings verse on melody, line 5) is not sung: the phonemes written on the syllable \"く\" are not all the voice's own: it has no \"ax\" - write its own symbols in the [/…/] there, or give the singer line another voice. Its instrument plays instead. Look first at line 4 (section A, bar 1). The engine said: diffsinger/V has no sound for", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void ASyllableTheVoiceHasNoSoundFor_IsSaidByItsSyllable_WithTheNotesPlace()
     {
         // Owner's report 2026-11-19 (Moon-on-the-River.lys): the engine named a phoneme and a file

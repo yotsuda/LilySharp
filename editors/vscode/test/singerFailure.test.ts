@@ -88,6 +88,19 @@ describe('what is said when the engine fails on a voice', () => {
         assert.equal(unsungSyllableNotice(four, 'Failed to load phrase data', TEXT), undefined);
     });
 
+    // Session 1375 (Cantoria's request 1): the file wrote the syllable's phonemes, `だ[/d.ax/]`, and
+    // the voice has no "ax" - other words are not the remedy, its own symbols are. Cantoria's words.
+    const NO_SYMBOL = 'diffsinger/V has no sound for "だ" (note 3 at 1.5 s): its phonemes are written "d ax", and its duration model has no phoneme "ax" (C:\\v\\dsdur\\phonemes.json)';
+    it('says a symbol of the written phonemes the voice lacks, by the symbol, on the note and in the notice', () => {
+        const problem = engineFailureProblem(four, NO_SYMBOL, TEXT);
+        assert.match(problem.message, /is not sung: the phonemes written on the syllable "だ" are not all the voice's own: it has no "ax" - write its own symbols in the \[\/…\/\] there, or give the singer line another voice\. Its instrument plays instead\. Look first at line 5\./);
+        assert.equal(TEXT.slice(problem.related!.start, problem.related!.end), "a'4");
+        assert.equal(unsungSyllableProblem(four, NO_SYMBOL, TEXT)!.message,
+            'diffsinger/V has no "ax" among the phonemes written on the syllable "だ" under this note, so alt is not sung at all: write its own symbols here, or give its singer line another voice.');
+        assert.equal(unsungSyllableNotice(four, NO_SYMBOL, TEXT),
+            'alt is not sung: diffsinger/V has no "ax" among the phonemes written on the syllable "だ" (line 5). Write its own symbols there, or give the singer line another voice.');
+    });
+
     it('points at no note when the engine\'s note is not the voice\'s (other notes were sent), or for another failure', () => {
         assert.equal(unsungSyllable(alto, NO_SOUND), undefined);                                   // the voice has one note
         assert.equal(unsungSyllable(four, NO_SOUND.replace('note 3', 'note 1')), undefined);       // another syllable stands there
