@@ -96,14 +96,13 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **★ A-B リピート（オーナー決定 2026-11-17・第1286）＝`docs/ab-repeat-design.md`**: §3 の 1〜4 は済み（第1286）。**2026-11-19 オーナー決定: Loop グループ・A-B ボタンと番号欄・8 本の帯（§3 の 5）・右クリックの Play from Here／A Here／B Here は撤去、Repeat はヘッダへ**（同 §0）。残りは実機（`MANUAL-CHECKS`「Repeat はヘッダ」＝オーナー）と、release 時の site・README の書き直し。
 - **★ Join Bars in Pairs（Orecchiante の依頼 21・オーナー決定 2026-11-21・第1342）＝実装済み**（`docs/join-bars-design.md`）。依頼 22（同じ和音 1 つずつの組は `C`）は第1346 `f81f8cd28`。残りは実機（`MANUAL-CHECKS`「Join Bars in Pairs」＝Ctrl+Z で 2 つのファイルが戻る・録音と小節の頭がそろう）と Orecchiante の確認。
 - **★ Report to Orecchiante（Orecchiante の依頼 23・オーナーの希望 2026-11-23・第1372）＝実装済み**（`docs/orecchiante-report-design.md`）。残りは Orecchiante の確認とオーナーの実機（設定は手書き）。
-- **★ 休符の `@cross`（オーナー決定 2026-11-21・第1350）＝`docs/cross-rest-design.md`**: 段 1・2 と段 3 の記号（第1351）・強弱と文字（第1352）・`[ ]` の連桁（第1353）・装飾音の列の上のスラー（第1354）は済み。連符の括弧は写さない（オーナー決定・第1354）。c2 の輪郭は第1355、両段にまたがる連桁（b7）は第1356＝§3 は全部済み。
 - **★ コード行の中に書けるもの（オーナー決定 2026-11-16・第1285）**: `time`・`tempo`・`%`・`key` は済み（§1.1）。**残り＝コードに付ける印 `@rit`／`@accel`／`@rall`（`…@!rit`）・`@fermata`・`@text("…")`**（今は `@todo` だけ）。強弱は見送り。
 - **★ 録音を聴きながら直す（Dettato #4・オーナーの希望 2026-11-15）＝`docs/recording-design.md`**: S1〜S4 と §1 7（楽譜と録音を同時に）・§7（書き出しに録音・第1286）は済み（§1.1 第1284〜第1286）。**次は S5**（帯・`Mark Bar Line Here`・ドラッグ・`byHand`）→ S6（CHANGELOG・Dettato への返事）。§8 の録音のパート（Dettato #16）は第1288 で実装・実測済み・使っている間のメモリは今のまま（オーナー決定 2026-11-17）＝残りは耳の確認（`MANUAL-CHECKS`「録音のパート」）。耳の確認は `MANUAL-CHECKS` §3.9（オーナー）。
 - **★ 反復とナビ記号を section の音楽にも書く（オーナー提案 2026-11-14・第1243＝第1249 で段 0〜8 が済み・LYS1034 は phrase だけ）**: 全部 `docs/inline-repeat-design.md`（規則 §3・段取り §4・未決 §6・経過 §7・エディタのコマンド §8）。オーナー決定（2026-11-14）: 対は form に組み立てた列で見る／`| |:` は空小節のまま／歌詞の verse は 5 規則／書き出しはなるべく form 側（Q2）。**次**（順は上から。歌詞の規則 3 と警告の 4 種目は第1253、ending・ナビ記号を全パートに書くコマンドと LYS1070 の quick fix は第1254 で済み＝§1.1）: ⑴ この島（反復とナビ記号を音楽に書く）の「次」は無い＝判断待ちも残りの形も 0。step キー・`PlayForm` の一本化（第1255）、3 番括弧＝3 回（form は第1256・音楽は第1257・コードの行は第1258）は済み。次の一手は下の積み残しから（オーナーに訊く）。段 9（読み込みと OMR の書き出し）は Q2 の決定で今の形のまま＝作業なし。⚠️ Calamo と Dettato の REQUESTS への知らせ（Q2「本体が出てから」）は未＝release のときに書く。実機は `MANUAL-CHECKS` 第1243・第1249・第1253・第1254・第1255。
 - **★ 歌詞と歌い手の文法の作り直し（オーナー決定 2026-11-10・第1217）**: `docs/lyrics-singer-design.md` が全部（§9 が作業順）。①②③④は済み（§1.1 第1217〜第1219）。⚠️ ④の `ん` の聞こえ方はオーナーの実聴待ち（`MANUAL-CHECKS` 第1219）。Cantoria の master は zh／ko を歌う（VSIX の入れ直しはオーナー）。`singer` は 1 行 1 声で score の中にも書ける（第1220）。古い書き方を案内する専用エラーは作らない（オーナー指示）。設計 §10「パート自身の歌詞」（`part sop { lyrics words }`）は第1222 で実装（§1.1 第1222・実機は `MANUAL-CHECKS` 第1222）＝§9 は全部済み。**次の一手の指示はまだ無い＝下の積み残しから選ぶならオーナーに訊く**。積み残し: Calamo の生成コードが `lyrics … sings` のまま（`docs\repro\REQUESTS.md` に連絡済み・Calamo 側は未 commit）／実機確認（`MANUAL-CHECKS` 第1217）／perf ベンチ／コーパス外のオーナーのファイル（Downloads の Tabidachi・Rose Garden など）は未移行で、`LilySharp-Lab\sessions\p1217\migrate\migrate.ps1 -Lys -Files` で書き換えられる／Rose Garden のオクターブ変換はオーナーの回答待ち。
 - **★ 歌詞のある譜表では強弱記号とヘアピンを譜表の上に（オーナー決定 2026-11-11）＝設計 `docs/dynamics-above-lyrics-design.md` §5 の 1〜6 は全部済み（第1224〜第1225・§1.1）**。**D3 は LilyPond の規則に替えた（オーナー決定 2026-11-11「LP に合わせて」）**＝向きを書いた記号が*線*の向きを決め、同じ線の後続（向きを書いていない記号）は従う。歌詞のない譜表でも同じ（`c@f.up@decresc … g@p` の p は上）。残りはオーナー: 実機のプレビュー（`MANUAL-CHECKS` 第1225）と release（CHANGELOG は 2 つとも `## Unreleased`・`[engraving]`）。残る穴: 2 声部の譜表で上の声部のヘアピンの線に下の声部の同じ拍の強弱記号も乗る（ヘアピンが声部を持たない既知の穴＝`DynamicAlignEngraver` の注 ⑵・Lab `p1225/dyn/out/vv.png`）。線の向きは第1260 で声部ごとにした。**次の一手の指示はまだ無い＝上の行の積み残しから選ぶならオーナーに訊く**。
 - **★ 評価 5（オーナー指示 2026-11-22「大きな曲を書いて改善点を」→「優先度をつけて順に」）＝Lab `sessions/p1362/eval5/SUMMARY.md`**。欠陥 2〜10・A12〜A18 は第1363〜1367 で済み（1 は誤報・A12 は LP と同じ）。A19 は直すものなし（§1.1 第1367）。B4・B3 は第1368〜第1370、B1（テンポ系）・B8・D1・D3・D4・D6 は第1371。**次**: ほかの B（ディヴィジ・黙るパートの省略・ギター記号ほか）はオーナーに相談。
-- **★ 評価 4（2026-11-13）の残り＝⑴ 書き出し・⑵ 誤った診断・⑷ 文書は第1227 で閉じた（§1.1）**。書き手のメモと再現は Lab `sessions/p1226/md/eval4/{bigband,choral,chamber,rock}`。⑶ `lysc review` は第1228 で閉じた（§1.1）。**残り**: ⑸ 欠けている機能は上のオーナー決定 ⑥。**残っているもの**（どれも未着手・値段は未測定）: **一覧は Lab `sessions/p1242/leftovers.md`**（**オーナー指示 2026-11-14・第1231「残りの欠陥を順に」＝この一覧の「残り（欠陥）」と「第1231〜第1235 が見つけて残したもの」は訊かずに着手してよい**。機能の追加は訊く）。残りの先頭（一覧）: 黙っている段の wish の測っていない形（装飾音で始まる小節・段の最初の小節）／`lysc review` の 3 件。MusicXML の四分音の `<accidental>` は他のリーダーの読みを確かめてから（一覧に理由）。見送ったものの理由もそこ。小残り（第1226 から）: condensedStaff の数字付き低音など 3 種の再住所・tab のアルペジオ線が自分の数字に 0.035・小文字だけの枠の中央が 0.23〜0.51 下・`md end` は既定の yMargin では動かない・箇条書きのリンク・不安定な網 2 種（`ScoreVideoShapeTests`、まれに `SvgSnapshotTests`）。**補助は同じモデルで 3〜5 件ずつ順番に・数行は自分で・全 full は自分が 1 回**（memory）。
+- **★ 評価 4（2026-11-13）の残り＝⑴ 書き出し・⑵ 誤った診断・⑷ 文書は第1227 で閉じた（§1.1）**。書き手のメモと再現は Lab `sessions/p1226/md/eval4/{bigband,choral,chamber,rock}`。⑶ `lysc review` は第1228 で閉じた（§1.1）。**残り**: ⑸ 欠けている機能は上のオーナー決定 ⑥。**残っているもの**（どれも未着手・値段は未測定）: **一覧は Lab `sessions/p1242/leftovers.md`**（**オーナー指示 2026-11-14・第1231「残りの欠陥を順に」＝この一覧の「残り（欠陥）」と「第1231〜第1235 が見つけて残したもの」は訊かずに着手してよい**。機能の追加は訊く）。残りの先頭（一覧）: `lysc review` の 3 件（黙っている段の wish は第1373 で閉じた・⑶ の 0.045 と trill の `to-barline` は一覧に）。MusicXML の四分音の `<accidental>` は他のリーダーの読みを確かめてから（一覧に理由）。見送ったものの理由もそこ。小残り（第1226 から）: condensedStaff の数字付き低音など 3 種の再住所・tab のアルペジオ線が自分の数字に 0.035・小文字だけの枠の中央が 0.23〜0.51 下・`md end` は既定の yMargin では動かない・箇条書きのリンク・不安定な網 2 種（`ScoreVideoShapeTests`、まれに `SvgSnapshotTests`）。**補助は同じモデルで 3〜5 件ずつ順番に・数行は自分で・全 full は自分が 1 回**（memory）。
 - **オーナー待ち（2026-11-18・歌声の設定まわり）＝Lab `sessions/p1304/owner-checks.md`**: ＋第1307: `MANUAL-CHECKS` W8〜W10・最初の歌 4 曲の耳の確認・中国語と韓国語の文の確認・Cantoria の Marketplace 公開後の Upgrade の確認（§1.1 第1307）。 push・拡張の入れ直しの後の実機（ウォークスルー W1〜W7・Cantoria の設定画面と Find Engines）・判断 2 つ（ウォークスルーを常に一覧に出すか・ボタンの名前）・確認用に入れた VOICEVOX の始末。
 - **オーナー待ち（第1226）**: `samples/harbour-lights.lys`・`README.md` はオーナーの作業中の変更＝**commit しない**（歌を聴いてから。歌詞とリズムは Claude が直し済み・`ReadmeSampleTests` はそれで赤）／`tools\Deploy-Lsp.ps1`・Cantoria `deploy-extension.ps1`／実機（`MANUAL-CHECKS` 第1226: 補完・問題パネルの歌い手の失敗・LYS4078・プログレスバー・フェンスの色と Enter／囲み）／初回の声のダウンロード・Cantoria の声の解決の一本化・言語に合わせた既定の声＝未決。
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
@@ -116,7 +115,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **作曲ガイダンスの改善＝クローズ（オーナー決定 2026-11-02・第1042）**: 「ユーザーが使う機会が少ない機能にかなり投資している。どうしても入れるべき内容でなければクローズして別の課題へ」。**講評のループと検査の追加を、オーナーが言うまで再開しない・提案しない。** 入れなかったもの: W3（section の中の急な落ち込み・試作は Lab `sessions/p1042/proto-w3.ps1`）。未調査のまま: 書き込みの後の再提案で差し戻しが最初からやり直しになる動き。
 - **作曲ガイダンスの流れ・検査の一覧・差し戻しの規則・講評の手順・残りは `docs/compose-in-chat-design.md`**（第1042 でクローズ＝上の行。講評の手順の控えは ARCHIVE「§1.0 から移した閉じた段落（2026-11-18）」）。
 - **人間の曲のレビュー（オーナーの設計 2026-10-30）＝第1038 で §6 の 1〜4 を実装**: ツールとコマンドは実物の VS Code で確認済み。残りは Copilot の AI の振る舞い（MANUAL-CHECKS C55）・目視（C56）・§6-5（消音・頼まれてから）。設計との差は **`docs/review-tool-design.md` §7**（`what` と `fix.say` が 1 文のまま・`fix.edit`／`ask` なし）。
-- **section の外のコード行（`chords X { C | G7 | }`・`Semantics.FlatChordRows`）＝第1120〜1121 で全部閉じた**（残る注: section の中の inline の `repeat` と flat の行は未実測・本 0。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-18）」）。
 - **コード図の文法の整理＝第1036 で実装済（§1.1 第1036）**: 残りは MANUAL-CHECKS §2.2 の `[ ]`（実機）だけ。旧綴りの本は普通の語のエラー＝Claude は直さない（全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
 - **OMR の読みを AI で直す＝M1〜M3 実装済・実機未確認**（MANUAL-CHECKS §5 B9〜B11・設計は `docs/omr-ai-fix-design.md`・照合の lysc は VSIX の `server` に同梱済＝§1.1 第975。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
 - **GitHub Pages の OMR デモ動画の撮影＝ユーザーのタスク（第961）**: `site/videos/SHOTLIST.md` の 16・17。置き場は `site/scan-body.html` の `figure.demo-video[data-pending]`（置いたら `data-pending` を外す）。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」。
@@ -157,22 +155,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1373セッション（2026-11-23・YT-DELL2・新しい会話）
+
+base `928bc10c4`。開始時 full 18306 / 0 / skip 2 / 18308。REQUESTS の open は 0。leftovers の「黙っている段の wish の測っていない形」（Lab `p1373/wish/probe.ps1`・LilyPond 2.26.0）。
+- ⑴ 装飾音で始まる小節＝欠陥なし（5.023／5.929・Lily# 5.020／5.920）。⑵ `|:` で始まる段＝欠陥・`c3936e59c`（r1 7.513・r2 7.418。`LineStartSpring` が `IsSilentToItsNextChange(staff, …)`）。網 +7・掃き 0 / 1289。
+- 測って出た欠陥＝`7a8ea83f2`: 段の途中の `|:` の前の小節が描かない `|` の 0.19 を取っていた（d0 5.88／5.695・u0 6.17／5.979）。`SpacingRules.MidLineEndBarlineWidth` を段の幅・rod・break gate（段末で返す・memo の鍵）が読む。網 +8・毒 4 本赤・掃き 34 / 1289（x だけ）・snapshot 10。
+- 残り（leftovers）: ⑶ w.lys 4.735／4.690・trill の `to-barline` の端（以前から 0.19 左）。終わり full 18322 / 0 / skip 2 / 18324（`-End` の 1 赤は §1 の字数＝削って緑）。
+
+## 以下は第1372セッションの経緯
+
 ### 1.1 第1372セッション（2026-11-23・YT-DELL2）
 
 base `6be40fd04`。開始時 full 18305 / 0 / skip 2 / 18307。REQUESTS の open は Orecchiante の 23 だけ（Calamo・Shosa は 0）。
 - 依頼 23＝`644f96c74`（Calamo の Report Misread の双子・Ctrl+. で小節／section／phrase・手書きの設定があるときだけ）。サーバは `lilysharp/voiceBars`。
 - 網 C# +1・node +6・毒は赤。実機は Lab `p1372/vscode-e2e`（16 項目）。返事は Lab `p1372/orecchiante-reply-23.md`。終わり full 18306 / 0 / skip 2 / 18308。**次**: Orecchiante の確認とオーナーの実機。
-
-## 以下は第1371セッションの経緯
-
-### 1.1 第1371セッション（2026-11-23・YT-DELL2・第1368 と同じ会話）
-
-base `5a48885b0`。開始時 full 18303 / 0 / skip 2 / 18305。評価 5 の残り（オーナー 2026-11-23）。commit は第1370 の便の中。
-- D1＝`fe4f28e17`（変換が `key fes major`＝8 つ以上は異名同音・AI に書き換えを言う）・D3（タイで小節へ入る和音はその小節のコード名）。
-- B8＝`a4756caa5`（`chords harmony silent`）・B1＝`294cd3781`（`docs/expressive-tempo-design.md`: rit. 70%・accel. 130%・後は元に・フェルマータ 1.5 倍）。
-- D4・D6＝`5a48885b0`（ピカルディと最後の転調は別の調でない・audience どおり・2 声部の塊を小節に）。
-- D5＝`0b6c7d90d`（oom-pah の和音音・「短い」の長さ・バンドのギター段）。D♭→B は共有サーバの引き直し。
-- 網 +28・毒は赤（Lab `p1370`〜`p1371` の poisons6〜10）。終わり full 18305 / 0 / skip 2 / 18307。**次**: ほかの B はオーナーに相談。
 
 ## 2. 開いている作業
 
