@@ -3753,7 +3753,10 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                     curves INTO the note from the left, rising from below / falling from
                     above; LILYSHARP-OWN — LilyPond has neither, its twin drops them with a
                     warning; MusicXML writes all four; any of the four, or a @bend(…),
-                    on a rest is LYS4079 and draws nothing) , @breath @caesura
+                    on a rest is LYS4079 and draws nothing; a SINGER sings the four, and a
+                    @glissando / @slide to the next sung note, as a bend — Cantoria's request
+                    2, a trial a DiffSinger voice sings: Midi.SungVoices.Bend, the score's
+                    "bend"; an instrument plays plain) , @breath @caesura
                     (* a CUE is not an annotation — it is a region, 'cue { … }', below *)
    - A chord member struck and let go: <c e g@struck>2   [owner decision 2026-11-19, Calamo request 31]
                      (* one member of a <…> chord, struck with the chord while the rest is held —

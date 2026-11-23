@@ -788,10 +788,29 @@ public sealed class MidiExporter
         int swell = 0;
         (double Depth, double? Rate)? vibrato = null;
         string? sing = null;
+        var head = SungGlide.Into.None;
+        var tail = SungGlide.OutOf.None;
         foreach (var mark in marks)
         {
             switch (mark)
             {
+                // The pitch moves a singer makes (Cantoria's request 2, a trial): into the head, out of the end.
+                case ArticulationSyntax { Type: ArticulationType.Scoop }:
+                    head = SungGlide.Into.FromBelow;
+                    break;
+                case ArticulationSyntax { Type: ArticulationType.Plop }:
+                    head = SungGlide.Into.FromAbove;
+                    break;
+                case ArticulationSyntax { Type: ArticulationType.Fall }:
+                    tail = SungGlide.OutOf.Down;
+                    break;
+                case ArticulationSyntax { Type: ArticulationType.Doit }:
+                    tail = SungGlide.OutOf.Up;
+                    break;
+                // A fall or a doit written with it is where the note goes: a slide only where neither is.
+                case ArticulationSyntax { Type: ArticulationType.None, Name: "glissando" or "slide" } when tail == SungGlide.OutOf.None:
+                    tail = SungGlide.OutOf.ToNext;
+                    break;
                 case ArticulationSyntax { Type: ArticulationType.Breath }:
                     breath = inhale = true;
                     break;
@@ -817,13 +836,14 @@ public sealed class MidiExporter
                     break;
             }
         }
-        if (!breath && !ends && swell == 0 && vibrato == null && sing == null)
+        var glide = new SungGlide(head, tail);
+        if (!breath && !ends && swell == 0 && vibrato == null && sing == null && glide.IsNone)
             return;
         foreach (int i in onset)
             track.Notes[i] = track.Notes[i] with
             {
                 BreathAfter = breath, Inhale = inhale, Swell = swell, SwellEnds = ends,
-                Vibrato = vibrato?.Depth, VibratoRate = vibrato?.Rate, Sing = sing,
+                Vibrato = vibrato?.Depth, VibratoRate = vibrato?.Rate, Sing = sing, Glide = glide,
             };
     }
 

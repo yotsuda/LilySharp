@@ -41,6 +41,20 @@ public readonly record struct PedalChange(int Tick, bool Down, int Controller = 
 /// for a form's name), and the bar it starts in (<see cref="MidiNote.PrintedBar"/>, -1 until told).</summary>
 public readonly record struct TextMark(int StartTick, int DurationTicks, int SourcePos, int SourceOrdinal, string? Part, int PrintedBar = -1);
 
+/// <summary>The pitch moves a singer makes on a note, as written (<see cref="MidiNote.Glide"/>):
+/// one into its head and one out of its end, either or both. LILYSHARP-OWN: LilyPond sounds none.</summary>
+public readonly record struct SungGlide(SungGlide.Into Head, SungGlide.OutOf Tail)
+{
+    /// <summary>Into the note's head: from below (<c>@scoop</c>) or from above (<c>@plop</c>).</summary>
+    public enum Into { None, FromBelow, FromAbove }
+
+    /// <summary>Out of the note's end: down (<c>@fall</c>), up (<c>@doit</c>), or on to the next sung
+    /// note (<c>@glissando</c>, <c>@slide</c>).</summary>
+    public enum OutOf { None, Down, Up, ToNext }
+
+    public bool IsNone => Head == Into.None && Tail == OutOf.None;
+}
+
 /// <summary>
 /// Represents a MIDI note event.
 /// </summary>
@@ -105,6 +119,10 @@ public readonly record struct MidiNote(
     // `@sing(…)` was written on this note: how the voice sings from here on, as
     // AnnotationValues.SingText writes it (SungVoices). Not written to .mid files.
     string? Sing = null,
+    // What a singer's pitch does on the note as written (`@scoop` `@plop` at its head, `@fall`
+    // `@doit` `@glissando` `@slide` at its end; Cantoria's request 2). A trial, sung by DiffSinger
+    // voices (SungVoices.Bend). Not written to .mid files, and an instrument plays plain.
+    SungGlide Glide = default,
     // An `afterGrace` run's note: it ends the note before it, where a leading grace begins the
     // note after it. Not written to .mid files.
     bool IsAfterGrace = false,

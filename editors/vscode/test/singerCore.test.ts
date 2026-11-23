@@ -985,6 +985,22 @@ describe('a vibrato written on a note goes to the engine', () => {
     });
 });
 
+// Cantoria's request 2 (2026-11-22, a trial): a scoop, a fall or a slide as the pitch's bend.
+describe('a pitch move written on a sung note goes to the engine as a bend', () => {
+    it('in the note\'s seconds, stretched with a practice speed, none past its end', () => {
+        const voice: SungVoiceDto = { Part: 'lead', Language: 'ja', Notes: [
+            { T: 0, D: 0.5, P: 60, L: 'ら', Bd: [[0, -200], [0.15, 0]] },
+            { T: 0.5, D: 0.5, P: 62, L: 'ら', Bd: [[0.3, 0], [0.5, -400]] },
+            { T: 1, D: 0.5, P: 64, L: 'ら' },
+        ] };
+        assert.deepEqual(cantoriaScore(voice, 1).notes.map(n => n.bend), [[[0, -200], [0.15, 0]], [[0.3, 0], [0.5, -400]], undefined]);
+        const slow = cantoriaScore(voice, 0.5).notes;
+        assert.deepEqual(slow[0].bend, [[0, -200], [0.3, 0]]);
+        assert.deepEqual(slow[1].bend, [[0.6, 0], [slow[1].duration, -400]]);
+        assert.ok(slow[1].bend![1][0] <= slow[1].duration);
+    });
+});
+
 // Cantoria's request 1 (2026-11-22): the voice's own symbols written on a syllable (병[/pp.y.eo.NG/]).
 describe('the phonemes written on a syllable go to the engine', () => {
     it('beside its lyric, on the notes the server puts them on', () => {

@@ -314,6 +314,20 @@ public static class SungScoreJson
                 // The voice's symbols the syllable is sung by (병[/pp.y.eo.NG/]; Cantoria's request 1).
                 if (n.Phonemes is { } phonemes)
                     w.WriteString("phonemes", phonemes);
+                // What a scoop, a fall or a slide makes of the pitch (Cantoria's request 2, a trial):
+                // [seconds from the note's start, cents], none past the duration written above.
+                if (n.Bend is { Count: > 0 } bend)
+                {
+                    w.WriteStartArray("bend");
+                    foreach (var (at, cents) in bend)
+                    {
+                        w.WriteStartArray();
+                        w.WriteNumberValue(Math.Min(at, Math.Round(end - start, 6)));
+                        w.WriteNumberValue(cents);
+                        w.WriteEndArray();
+                    }
+                    w.WriteEndArray();
+                }
                 // What an `@sing(…)` writes on the note: held from it ("sing"), or arrived at ("singTo").
                 var settings = Semantics.AnnotationValues.SingOf(n.Sing);
                 foreach (bool arrives in new[] { false, true })

@@ -491,7 +491,12 @@ c''4@scoop d''4@plop e''4@fall f''4@doit |
 | `@doit` | out of the note to the right, upward |
 
 A note may take one of each side (`c''4@scoop@fall`), and a chord takes one curve
-(`<c'' e''>2@fall`). They are drawn only — the sound is unchanged. MusicXML writes all four (`<scoop>`, `<plop>`, `<falloff>`, `<doit>`) and reads
+(`<c'' e''>2@fall`). An instrument plays the note as it is; a **singer** sings the curve (a
+trial, DiffSinger voices only — NEUTRINO and VOICEVOX sing flat): the scoop rises two semitones
+into the note and the plop falls as far, over its first 0.15 s; the fall drops four semitones
+and the doit rises as far, over its last 0.35 s (on a short note, at most a third and 40 % of
+it). A singer's `@glissando` or `@slide` goes to the next sung note's pitch over the note's
+second half — not before a rest or a breath. MusicXML writes all four (`<scoop>`, `<plop>`, `<falloff>`, `<doit>`) and reads
 them back. The fall and the doit are LilyPond's `\bendAfter`, which the LilyPond export
 writes; LilyPond has no scoop and no plop, so those two are Lily#'s own drawing and the
 export drops them with a warning. All four, and a guitar's `@bend(…)`, need a note: on a rest

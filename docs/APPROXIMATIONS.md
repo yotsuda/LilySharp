@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 68 | 観測者がゼロだと自認しているもの |
-| `OWN` | 485 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **615** | |
+| `OWN` | 487 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **617** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -255,7 +255,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（485 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（487 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -309,6 +309,8 @@
 - **`LilyPondExporter.EmitBoxedText`** it stood and its text moved down. LILYSHARP-OWN.
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
 - **`GeneralMidi.PreviewTimbreFamily`** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
+### `LilySharp.Core/Midi/MidiEvents.cs`
+- **`SungGlide`** one into its head and one out of its end, either or both. LILYSHARP-OWN: LilyPond sounds none.
 ### `LilySharp.Core/Midi/MidiExporter.cs`
 - **`MidiExporter.Strike`** LILYSHARP-OWN (2026-11-14, a leftover of session 1227; musical validity is the judge of
 - **`MidiExporter.ShareGrandStaffDynamics`** LILYSHARP-OWN: LilyPond's Dynamic_performer is consisted per Voice
@@ -337,6 +339,7 @@
 - **`SungVoices`** drifted from the page). LILYSHARP-OWN: LilyPond writes no sound.
 - **`SungVoices.SungBy`** LILYSHARP-OWN.
 - **`SungVoices.VowelOf`** has no other word for it. LILYSHARP-OWN.
+- **`SungVoices.Bend`** LILYSHARP-OWN, a TRIAL (Cantoria's own: "the owner has not heard it yet"): only a DiffSinger
 - **`SungVoices.Placed`** LILYSHARP-OWN: no engine is asked — the notes are moved before any voice sees them, so
 - **`SungVoices.Step`** LILYSHARP-OWN, a reading and not a fact: a note that is NOT of the scale is taken for
 ### `LilySharp.Core/Music/ArpeggioSpread.cs`

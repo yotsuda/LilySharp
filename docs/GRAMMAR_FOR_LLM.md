@@ -830,7 +830,8 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
 - Jazz bends, four short curves at the head: `@scoop` (INTO the note from the left, rising from
   below) and `@plop` (into it, falling from above); `@fall` (OUT of the note to the right,
   downward) and `@doit` (out of it, upward) — `c''4@scoop`, `<c'' e''>2@fall` (a chord takes one
-  curve), `c''4@scoop@fall`. Drawn only: the sound is unchanged. MusicXML writes all four
+  curve), `c''4@scoop@fall`. An instrument plays the note plain; a DiffSinger singer sings the
+  curve (a trial), and a sung `@glissando` slides into the next sung note. MusicXML writes all four
   (`<scoop>` `<plop>` `<falloff>` `<doit>`); the LilyPond export writes `@fall` / `@doit` as
   `\bendAfter` and drops `@scoop` / `@plop` with a warning — LilyPond has neither. They need
   a note: on a rest (`r4@scoop`) each is an error (LYS4079), as `@bend(…)` is

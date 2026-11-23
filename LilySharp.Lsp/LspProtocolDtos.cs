@@ -463,6 +463,9 @@ public class SungNoteDto
     /// <summary>The voice's symbols the syllable is sung by, space-separated (<c>병[/pp.y.eo.NG/]</c>),
     /// null where none are written.</summary>
     public string? Ph { get; set; }
+    /// <summary>What a scoop, a fall or a slide makes of the pitch: points of seconds from the
+    /// note's start and cents (a trial; <c>SungVoices.Bend</c>), null where none is written.</summary>
+    public double[][]? Bd { get; set; }
 }
 
 /// <summary>A part's words on its notes: what the editor hands a singing engine, with what the

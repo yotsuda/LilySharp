@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- `[singing]` **A singer sings the jazz bends and a glissando** (a trial, Cantoria's request 2; DiffSinger voices only — NEUTRINO and VOICEVOX sing flat). `@scoop` rises two semitones into the note and `@plop` falls into it; `@fall` drops four semitones at its end and `@doit` rises as far; `@glissando` or `@slide` goes on to the next sung note's pitch over the note's second half. An instrument still plays the note plain.
+
 - `[lang]` **Phonemes on a syllable, for a word a voice reads wrong** (Cantoria's request 1). Write the voice's own symbols last on the syllable, separated by dots: `병[/pp.y.eo.NG/]` prints 병, and a DiffSinger voice sings pp y eo NG — the doubled consonant of 발병 its rules miss, an English stress, a Chinese word its tables do not know. After a reading too: `漢[かん][/k.a.N/]` (NEUTRINO and VOICEVOX read かん). The symbols are the voice's own; a singer that lacks one says which. The page and the exported files print the word.
 
 - `[engraving]` **A bar that opens with a note moved to the other staff is spaced as LilyPond spaces it.** When the first note of a bar is moved up (or down) with `@cross`, that voice no longer has a say in the room before the bar line — the other voices' distance stands alone, as in LilyPond — and a staff whose notes in the bar are all moved away counts as silent there. A grand staff with such a bar opens it up to 0.3 of a staff space differently.

@@ -302,6 +302,27 @@ public class SungRequestTests
         Assert.True(notes[1].M);
     }
 
+    // Cantoria's request 2 (2026-11-22, a trial): a scoop and a fall written on sung notes reach the
+    // editor as points of seconds from the note's start and cents.
+    [Fact]
+    public void APitchMoveWrittenOnASungNote_IsToldToTheSinger()
+    {
+        var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
+        var uri = new Uri("file:///bd.lys");
+        string text = Doc.Replace("c'8. d16 c8. d16 | c4 a8 r |", "c'8.@scoop d16 c8. d16 | c4@fall a8 r |");
+        server.DidOpen(new DidOpenTextDocumentParams
+        {
+            TextDocument = new TextDocumentItem { Uri = uri, Text = text, Version = 1, LanguageId = "lilysharp" },
+        });
+        var sung = server.GetSung(new SungParams { TextDocument = new TextDocumentIdentifier { Uri = uri } });
+        Assert.Null(sung.Error);
+        var notes = Assert.Single(sung.Voices!).Notes;
+        Assert.Equal(new[] { new[] { 0, -200.0 }, new[] { 0.1125, 0 } }, notes[0].Bd);     // a dotted eighth, 0.375 s: its first 30 %
+        Assert.Equal(-400, notes[4].Bd![^1][1]);
+        Assert.Equal(notes[4].D, notes[4].Bd![^1][0], 6);
+        Assert.Equal(new[] { 1, 2, 3, 5 }, notes.Select((n, i) => (n, i)).Where(x => x.n.Bd == null).Select(x => x.i));
+    }
+
     // Owner's request 2026-11-12, a trial: `@vibrato` on a sung note is told to the singing engine
     // (a DiffSinger voice lays it on its pitch curve) - the swing each way in cents, and the swings
     // a second where written. It draws nothing, and the MIDI does not know it.

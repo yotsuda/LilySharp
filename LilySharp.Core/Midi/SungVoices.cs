@@ -31,8 +31,13 @@ namespace LilySharp.Core.Midi;
 /// the settings an <c>@sing(…)</c> writes on it, as <c>Semantics.AnnotationValues.SingText</c>;
 /// <paramref name="Phonemes"/> the voice's symbols its syllable is sung by, space-separated
 /// (<c>병[/pp.y.eo.NG/]</c>, <see cref="Music.LyricReading.Phonemes"/>; Cantoria's request 1, a DiffSinger
-/// voice sings them) — on the note the syllable stands on, never on a melisma's.
-public sealed record SungNote(double Start, double Duration, double Pitch, string? Lyric, bool Melisma, bool Breath, int SourcePos, double? Level = null, double? LevelEnd = null, bool Inhale = false, bool Hyphen = false, double? Vibrato = null, double? VibratoRate = null, string? Sing = null, string? Phonemes = null);
+/// voice sings them) — on the note the syllable stands on, never on a melisma's;
+/// <paramref name="Glide"/> the pitch moves written on it (<c>@scoop</c> … <c>@glissando</c>) and
+/// <paramref name="Bend"/> what they make of its pitch: points of seconds from the note's start and
+/// cents, smooth between them (<see cref="SungVoices.Bend"/>; Cantoria's request 2, a trial a
+/// DiffSinger voice sings), null where none is written.
+public sealed record SungNote(double Start, double Duration, double Pitch, string? Lyric, bool Melisma, bool Breath, int SourcePos, double? Level = null, double? LevelEnd = null, bool Inhale = false, bool Hyphen = false, double? Vibrato = null, double? VibratoRate = null, string? Sing = null, string? Phonemes = null,
+    SungGlide Glide = default, IReadOnlyList<(double At, double Cents)>? Bend = null);
 
 /// <summary>A part's words on its notes, as a singing engine takes them: the score in seconds
 /// that <c>cantoria</c> reads. <paramref name="Warnings"/> says what the engine will not sing
@@ -197,7 +202,7 @@ public static class SungVoices
                 if (joined && note.BreathAfter)
                     duration -= Math.Min(BreathSeconds, duration / 3);
                 notes.Add(new SungNote(start, duration, note.Pitch + 0.5 * note.QuarterBend, lyric, melisma, breath, note.SourcePos, levels[i].Level, levels[i].End, joined && note.Inhale, lyric != null && !melisma && sung[i].Lyric != null && hyphens.Contains(note.StartTick), note.Vibrato, note.VibratoRate, note.Sing,
-                    phonemes.GetValueOrDefault(note.StartTick)));    // the syllable's note only: a held note (a vowel sung again after a breath too) has its own tick
+                    phonemes.GetValueOrDefault(note.StartTick), note.Glide));    // the syllable's note only: a held note (a vowel sung again after a breath too) has its own tick
                 if (lyric != null && language == Japanese && !IsKana(lyric) && !strange.Contains(lyric, StringComparer.Ordinal))
                 {
                     strange.Add(lyric);
@@ -224,7 +229,7 @@ public static class SungVoices
                 // What of the part this line sings (its up / down / octave / in) rides with the
                 // settings and is taken out here: the rest is the voice's engine's.
                 var sing = written?.Where(p => !p.Key.StartsWith('\u0001')).ToDictionary(p => p.Key, p => p.Value, StringComparer.Ordinal);
-                var own = Placed(midi, notes, ticks, written);
+                var own = Bent(Placed(midi, notes, ticks, written));
                 if (own.Count == 0)
                     continue;       // it sings in sections the piece does not play these words in
                 int nth = before + s;
@@ -358,6 +363,85 @@ public static class SungVoices
             // っ, ー and anything else: the mora before it
         }
         return syllable;
+    }
+
+    /// <summary>How far a scoop or a plop comes from, in cents: two semitones below or above.</summary>
+    internal const double HeadCents = 200;
+
+    /// <summary>The longest a scoop or a plop takes, in seconds, and its most of a short note.</summary>
+    internal const double HeadSeconds = 0.15, HeadShare = 0.3;
+
+    /// <summary>How far a fall or a doit goes, in cents: the semitones of the LilyPond twin's
+    /// <c>\bendAfter #-4</c> (<see cref="Svg.Layout.BendAfterGeometry.DeltaStep"/>), as Cantoria proposed.</summary>
+    internal const double TailCents = 100 * Svg.Layout.BendAfterGeometry.DeltaStep;
+
+    /// <summary>The longest a fall or a doit takes, in seconds, and its most of a short note.</summary>
+    internal const double TailSeconds = 0.35, TailShare = 0.4;
+
+    /// <summary>The share of a note a slide to the next takes: its second half.</summary>
+    internal const double SlideShare = 0.5;
+
+    /// <summary>The bend a pitch move may reach, in cents, as Cantoria takes it.</summary>
+    private const double BendReach = 2400;
+
+    /// <summary><paramref name="notes"/> with each written pitch move made a <see cref="SungNote.Bend"/>
+    /// (<see cref="Bend"/>); the same list where none is written.</summary>
+    private static IReadOnlyList<SungNote> Bent(IReadOnlyList<SungNote> notes)
+    {
+        if (notes.All(n => n.Glide.IsNone))
+            return notes;
+        var bent = new List<SungNote>(notes.Count);
+        for (int i = 0; i < notes.Count; i++)
+            bent.Add(notes[i].Glide.IsNone ? notes[i] : notes[i] with { Bend = Bend(notes[i], i + 1 < notes.Count ? notes[i + 1] : null) });
+        return bent;
+    }
+
+    /// <summary>
+    /// What the pitch moves written on <paramref name="note"/> make of its pitch (Cantoria's
+    /// request 2, 2026-11-22: `"bend": [[seconds from the note's start, cents], …]`, smooth between
+    /// the points, the first point's value before it and the last one's after it): a scoop rises
+    /// <see cref="HeadCents"/> into the head and a plop falls as far, over the first
+    /// <see cref="HeadSeconds"/> (at most <see cref="HeadShare"/> of the note); a fall drops
+    /// <see cref="TailCents"/> and a doit rises as far over the last <see cref="TailSeconds"/>
+    /// (at most <see cref="TailShare"/>); a glissando or a slide goes to the next sung note's pitch
+    /// over the note's second half, where that note follows with no breath between — a phrase's
+    /// last note slides nowhere. Null where nothing moves.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN, a TRIAL (Cantoria's own: "the owner has not heard it yet"): only a DiffSinger
+    /// voice sings it, the other engines sing flat, and an instrument plays plain. The amounts are
+    /// a first reading of how a singer does it, not measured; the next note's pitch is the one
+    /// this voice sings (a harmony line's own). A slide cannot go past its note (Cantoria bends
+    /// inside a note), so the next note starts on its own pitch.
+    /// </remarks>
+    internal static IReadOnlyList<(double At, double Cents)>? Bend(SungNote note, SungNote? next)
+    {
+        double d = note.Duration;
+        var points = new List<(double At, double Cents)>(4);
+        if (note.Glide.Head != SungGlide.Into.None)
+        {
+            double from = note.Glide.Head == SungGlide.Into.FromBelow ? -HeadCents : HeadCents;
+            points.Add((0, from));
+            points.Add((Math.Min(HeadSeconds, HeadShare * d), 0));
+        }
+        double span = 0, to = 0;
+        switch (note.Glide.Tail)
+        {
+            case SungGlide.OutOf.Down or SungGlide.OutOf.Up:
+                span = Math.Min(TailSeconds, TailShare * d);
+                to = note.Glide.Tail == SungGlide.OutOf.Down ? -TailCents : TailCents;
+                break;
+            case SungGlide.OutOf.ToNext when next != null && !note.Breath:
+                span = SlideShare * d;
+                to = Math.Clamp(Math.Round(100 * (next.Pitch - note.Pitch)), -BendReach, BendReach);
+                break;
+        }
+        if (span > 0 && to != 0)
+        {
+            points.Add((d - span, 0));
+            points.Add((d, to));
+        }
+        return points.Count == 0 ? null : points.Select(p => (Math.Round(p.At, 6), p.Cents)).ToList();
     }
 
     /// <summary>The steps of a major scale above its tonic, in semitones.</summary>

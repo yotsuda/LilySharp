@@ -151,6 +151,20 @@ The score spellings here (`lyrics NAME sings PART`) were replaced on 2026-11-10:
   that sing it (`singerChoices`); a voice not saying what it sings is
   left out. `lysc wav --singer` sings a written `engine/name` and takes a role as the default. The editor shows the
   engine's sentence once per score and plays the instruments alone.
+- **A pitch move as a bend** (Cantoria's request 2, 2026-11-22; session 1375, a trial — Cantoria's
+  own and the owner's ears not yet): the jazz bends the page already draws are sung —
+  `@scoop` / `@plop` into the head (±200 cents over the first 0.15 s, at most 30 % of the note),
+  `@fall` / `@doit` out of the end (∓400 cents, the LilyPond twin's `\bendAfter #-4`, over the
+  last 0.35 s, at most 40 %), `@glissando` / `@slide` on to the next sung note's pitch over the
+  note's second half (not past a breath or a rest: a phrase's last note slides nowhere; a fall
+  written with it wins). `MidiNote.Glide` → `SungNote.Glide` → `SungVoices.Bend` after the
+  singer line's `up`/`octave` placed the notes (a harmony slides to its own next pitch) → the
+  score's `"bend": [[s, cents], …]`, no point past the note's written duration (the two ends
+  round apart by a millionth at some tempos — `SungBendTests` sweeps 40 to 200). WHY no new
+  syntax: the marks are written for the page already, and a singer reading a lead sheet sings
+  them; a `\bendAfter` amount is not written in Lily# (one size). Measured on diffsinger/Nishiren
+  (Lab `sessions/p1375/ph`, `pitch.ps1`): the fall goes 69 → 65 by the note's end, the scoop
+  starts 1.6 semitones under, the slide is 2.4 above E three quarters of the way to G.
 - **Phonemes on a syllable** (Cantoria's request 1, 2026-11-22; session 1375 — the shape was left
   to Lily#): `병[/pp.y.eo.NG/]`, glued last, after the word or its reading. It rides the reading's
   path (`LyricReading.Phonemes` → `LyricSyllableReader` → `SungSyllables` → `LyricEvent.Phonemes`
