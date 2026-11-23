@@ -1030,7 +1030,7 @@ internal sealed partial class Parser
         // A bare `chords` places the file's unnamed chord track (2026-10-09). ⚠️ So a bare
         // word right after it is always the track's name, never a MIDI-only part.
         if (IsPartNameStart() && !string.Equals(Current.Text, "as", System.StringComparison.Ordinal)
-            && !IsChordRowFor() && !IsChordRowPlays())
+            && !IsChordRowFor() && !IsChordRowPlays() && !IsChordRowSilent())
             tokens.Add(Advance());
         // `chords prog for tp`: this row prints the chords as tp's player reads them on this
         // page (Semantics.ChordTrackPitch.ReaderOfRow) — before or after the `as` selector.
@@ -1041,8 +1041,15 @@ internal sealed partial class Parser
         ConsumeAsSelector(tokens);
         ConsumeChordRowFor(tokens);
         ConsumeChordRowPlays(tokens);
+        // `chords harmony silent` (2026-11-23): printed, not sounded — the item's last word.
+        if (IsChordRowSilent())
+            tokens.Add(Advance());
         return new ChordRowRenderGreen([.. tokens]);
     }
+
+    // `silent` in a chords row is always the word (a row cannot be placed by the name `silent`).
+    private bool IsChordRowSilent()
+        => Check(SyntaxKind.Identifier) && Current.Text == SyntaxFacts.ChordRowSilentWord;
 
     private bool IsChordRowPlays()
         => Check(SyntaxKind.Identifier) && Current.Text == SyntaxFacts.ChordRowPlaysWord

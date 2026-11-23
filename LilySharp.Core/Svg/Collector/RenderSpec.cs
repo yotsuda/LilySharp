@@ -387,6 +387,10 @@ public sealed record RenderSpec(
     public string ResolveOutputStem(string inputStem) =>
         string.IsNullOrEmpty(Name) ? inputStem : $"{inputStem}-{Name}";
 
+    /// <summary>The chord rows this score prints and does not sound — <c>chords harmony silent</c>
+    /// (grammar evaluation 5's B8, 2026-11-23). Default (unset) reads as none.</summary>
+    public ImmutableArray<string> SilentChordRows { get; init; } = [];
+
     /// <summary>
     /// The parts this score ENGRAVES, in score order, without repeats — the answer to
     /// "whose music is this score showing".

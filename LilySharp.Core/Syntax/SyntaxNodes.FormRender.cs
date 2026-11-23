@@ -1008,7 +1008,13 @@ public sealed class ChordRowRenderSyntax : SyntaxNode
     public SyntaxTokenNode? NameToken =>
         GetChild(1) is SyntaxTokenNode t
             && !((t.Text == "as" || t.Text == Semantics.ChordTrackPitch.ForWord || t.Text == SyntaxFacts.ChordRowPlaysWord)
-                 && SlotCount > 2) ? t : null;
+                 && SlotCount > 2)
+            && t.Text != SyntaxFacts.ChordRowSilentWord ? t : null;
+
+    /// <summary><c>chords harmony silent</c> (grammar evaluation 5's B8, 2026-11-23): the row is
+    /// printed and sounds nothing — in the MIDI, the preview and the WAV — where another part plays
+    /// the chords already. Its MusicXML harmonies are written as ever.</summary>
+    public bool IsSilent => SlotCount > 1 && GetChild(SlotCount - 1) is SyntaxTokenNode { Kind: SyntaxKind.Identifier, Text: SyntaxFacts.ChordRowSilentWord };
 
     /// <summary>The strokes part this row strums to (<c>chords prog plays rhythm</c> → "rhythm",
     /// owner's design 2026-11-01), or null: the row's chords sound at that part's strokes, and

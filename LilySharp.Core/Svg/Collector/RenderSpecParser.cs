@@ -305,7 +305,10 @@ public static class RenderSpecParser
             StaffPitch: LilySharp.Core.Semantics.ConcertPitch.StaffModes(render),
             HiddenStaves: HiddenStavesOf(render),
             SourceStart: render.Span.Start,
-            TextOverrides: [.. textOverrides]);
+            TextOverrides: [.. textOverrides])
+        {
+            SilentChordRows = [.. render.DescendantNodes<ChordRowRenderSyntax>().Where(r => r.IsSilent).Select(r => r.PartName).Distinct()],
+        };
     }
 
     /// <summary>Whether the score's staves may all be hidden beside its rows: it has a chords or

@@ -2822,6 +2822,15 @@ public sealed partial class LilySharpLanguageServer
                 SortText = "3",
                 Command = new Command { Title = "Suggest strokes part", CommandIdentifier = "editor.action.triggerSuggest" },
             },
+            // `silent`: printed, not sounded (grammar evaluation 5's B8, 2026-11-23).
+            new CompletionItem
+            {
+                Label = "silent",
+                Kind = CompletionItemKind.Keyword,
+                InsertText = "silent",
+                Detail = "Print the chords and sound nothing (a band score whose keyboard plays them already)",
+                SortText = "4",
+            },
         };
         // The next render item can also start here; keep those, sorted after `as …`.
         foreach (var it in GetScoreBlockCompletions().Items)

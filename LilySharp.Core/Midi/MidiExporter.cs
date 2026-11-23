@@ -2694,8 +2694,16 @@ public sealed class MidiExporter
     /// </summary>
     private static HashSet<string> SoundingChordRows(SyntaxTree tree, RenderSpec? score,
         FormDeclarationSyntax? form)
-        // ONE HOME with the MusicXML's harmonies (RenderSpecParser.PlacedChordRows, 2026-09-29).
-        => RenderSpecParser.PlacedChordRows(RenderSpecParser.PlayedSpec(tree, score, form));
+    {
+        // ONE HOME with the MusicXML's harmonies (RenderSpecParser.PlacedChordRows, 2026-09-29)…
+        var spec = RenderSpecParser.PlayedSpec(tree, score, form);
+        var rows = RenderSpecParser.PlacedChordRows(spec);
+        // …less a row the score prints and silences (`chords harmony silent`, 2026-11-23): the
+        // harmonies are written, the row is not heard.
+        if (spec != null && !spec.SilentChordRows.IsDefaultOrEmpty)
+            rows.ExceptWith(spec.SilentChordRows);
+        return rows;
+    }
 
     /// <summary>
     /// Sounds one chord row's bars from <paramref name="startTick"/> and returns where they

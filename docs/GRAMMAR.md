@@ -2373,7 +2373,7 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                                                         ⚠️ keep semicolons out of comments
                                                         inside this production — the doc
                                                         tests cut the block at the first *)
-               | 'chords' , [ PartRef ] , [ 'for' , PartRef ] , [ 'as' , ( 'roman' | 'names' ) ] , [ 'plays' , PartRef ]
+               | 'chords' , [ PartRef ] , [ 'for' , PartRef ] , [ 'as' , ( 'roman' | 'names' ) ] , [ 'plays' , PartRef ] , [ 'silent' ]
                                                      (* independent chord ROW (lead sheet) - bare,
                                                         the unnamed chords track. The optional
                                                         'for' (before or after 'as') names the
@@ -2386,7 +2386,13 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                                                         stroke of that strokes part - without
                                                         it a row holds each chord over its slot.
                                                         It draws nothing: the strokes' one-line
-                                                        staff is the 'strokes NAME' item *)
+                                                        staff is the 'strokes NAME' item.
+                                                        'silent' (the item's last word,
+                                                        2026-11-23): the row is printed and
+                                                        sounds nothing - a band score whose
+                                                        keyboard plays the chords already. Its
+                                                        MusicXML harmonies are written. A row
+                                                        cannot be placed by the name silent *)
                | 'lyrics' , [ PartRef ] , [ 'on' , PartRef ]
                                                      (* lyrics ROW: where the words are PRINTED,
                                                         it sounds nothing (SingerDecl sings).

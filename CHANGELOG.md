@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **A chords row can be printed and not sounded: `chords harmony silent`** (`[language]` `[playback]`). In a band score the row sounded beside the keyboard that plays the same chords, and nothing could silence it. `silent` at the end of a score's chords row prints it and sounds nothing; its MusicXML harmonies are written as ever.
+
 - **Fixed: a piece composed in the chat could open with a part in a key of eight flats, and the chat's next changes missed** (`[editor]`). Opening a concert-pitch piece as its players read it, a clarinet in A over D♭ major was given `key fes major`; it now reads E major, its notes spelled in it, as the page prints such a part. And the chat is told that its parts were respelled, so it copies the text of its next changes from the score as it reads it, not from its own draft.
 
 - **Fixed: the chat's chord reading named a chord struck before the bar by the bar it was struck in** (`[editor]`). `<g b d'>2. <cis' e' a'>4~ | <cis' e' a'>1` listed the A chord as "G" for the chat to replace; a chord is now the chord of the bar it sounds through.

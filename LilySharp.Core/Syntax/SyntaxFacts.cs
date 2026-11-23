@@ -530,6 +530,11 @@ internal static class SyntaxFacts
     /// strokes' one-line staff stands under the row. Matched by text, like a row's <c>for</c>.</summary>
     public const string ChordRowPlaysWord = "plays";
 
+    /// <summary>The word after a score's chords row that prints the row and sounds nothing
+    /// (<c>chords harmony silent</c>; grammar evaluation 5's B8, 2026-11-23): a band score whose
+    /// keyboard plays the chords already. The last word of the item.</summary>
+    public const string ChordRowSilentWord = "silent";
+
     /// <summary>
     /// The keys a <c>layout { }</c> block takes (GRAMMAR.md: LayoutEntry) — <c>marks</c>
     /// and <c>barNumbers</c>. Spelled here, in Syntax, because the block's entry walker

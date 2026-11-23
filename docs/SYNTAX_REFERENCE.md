@@ -3458,6 +3458,11 @@ labels it) — and a chords row written above that item stands over it (`chords 
 rhythm  strokes rhythm`). `lyrics NAME on STROKES` puts words under the strokes, one syllable
 a stroke.
 
+A row the score prints and does not sound ends with `silent`: `score { chords harmony silent
+staff keys }` — a band score whose keyboard plays the chords already. It is heard nowhere (the
+MIDI, the preview, the WAV) and its MusicXML harmonies are written as ever. A row cannot be
+placed by the name `silent`.
+
 ### Chords for a transposing part — `for`
 
 A track is the band's chords at **concert pitch**: it prints and plays as written, whatever the

@@ -1507,6 +1507,8 @@ in the score draws it as a ONE-LINE staff of slashes (no clef, key or name), and
 written above that item stands over it (`score { staff singer  lyrics words  chords harmony
 plays rhythm  strokes rhythm }`). `lyrics strum { … }` puts words under the strokes,
 one syllable a stroke — the way to place a verse's words when its tune is not written out.
+A row printed and NOT sounded ends with `silent` — `score { chords harmony silent  staff keys }`,
+for a band score whose keyboard already plays the chords (a row otherwise sounds beside it).
 
 **Roman numerals.** A chord entry may also be a DEGREE of the key in force at its bar —
 `I` `IIm7` `V7` `IVmaj7` `VIIm7-5` `bVII` (`b`/`#` or `♭`/`♯`; the quality in any of its
