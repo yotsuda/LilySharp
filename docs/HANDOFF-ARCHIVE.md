@@ -277,6 +277,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1372セッションの経緯
+
+### 1.1 第1372セッション（2026-11-23・YT-DELL2）
+
+base `6be40fd04`。開始時 full 18305 / 0 / skip 2 / 18307。REQUESTS の open は Orecchiante の 23 だけ（Calamo・Shosa は 0）。
+- 依頼 23＝`644f96c74`（Calamo の Report Misread の双子・Ctrl+. で小節／section／phrase・手書きの設定があるときだけ）。サーバは `lilysharp/voiceBars`。
+- 網 C# +1・node +6・毒は赤。実機は Lab `p1372/vscode-e2e`（16 項目）。返事は Lab `p1372/orecchiante-reply-23.md`。終わり full 18306 / 0 / skip 2 / 18308。**次**: Orecchiante の確認とオーナーの実機。
+
 ## 以下は第1371セッションの経緯
 
 ### 1.1 第1371セッション（2026-11-23・YT-DELL2・第1368 と同じ会話）
