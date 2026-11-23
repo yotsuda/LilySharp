@@ -220,4 +220,29 @@ public class PartWriterTests
         Assert.Contains("part keys \"Keys\" {\n  instrument piano-right\n  section A { c'1 | d'1 | }\n}\npart bass", text);
         Assert.Contains("score { staff gtr  staff keys  staff bass }", text);
     }
+
+    /// <summary>A two-voice passage is as many bars as its first voice, taken whole: the bars around
+    /// it can be written, and so can it (grammar evaluation 5's D6, 2026-11-23). MEASURED before:
+    /// any `bars` of such a section was refused — "a group with bar lines inside it", no word of voices.</summary>
+    [Fact]
+    public void ASectionWithTwoVoicesHasItsBarsCounted_ThePassageTakenWhole()
+    {
+        const string twoVoices = """
+            octave absolute
+            part pn { instrument piano-right }
+            section A {
+              pn { c'1 | voice { e'2 f'2 | g'1 | } { c'1 | c'1 | } d'1 | }
+            }
+            form { A }
+            score { staff pn }
+            """;
+        var after = PartWriter.Apply(twoVoices, [new PartWriter.Write("pn", "A", "b1 |", "4")], []);
+        Assert.Empty(after.Problems);
+        Assert.Contains("voice { e'2 f'2 | g'1 | } { c'1 | c'1 | } b1 |", Unix(after.Text));
+        var passage = PartWriter.Apply(twoVoices, [new PartWriter.Write("pn", "A", "voice { a'1 | b'1 | } { f'1 | g'1 | }", "2-3")], []);
+        Assert.Empty(passage.Problems);
+        Assert.Contains("c'1 | voice { a'1 | b'1 | } { f'1 | g'1 | } d'1 |", Unix(passage.Text));
+        var cut = PartWriter.Apply(twoVoices, [new PartWriter.Write("pn", "A", "a'1 |", "2")], []);
+        Assert.Contains(cut.Problems, p => p.Contains("two-voice passage") && p.Contains("bars 2-3"));
+    }
 }

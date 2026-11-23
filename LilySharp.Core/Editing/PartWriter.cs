@@ -378,7 +378,7 @@ public static class PartWriter
     }
 
     /// <summary>One stretch of a block that is whole bars: a run closed by a bar line, a counted rest's, a phrase's.</summary>
-    private readonly record struct Unit(int Bars, int Start, int End, string? Phrase);
+    private readonly record struct Unit(int Bars, int Start, int End, string? Phrase, bool Voices = false);
 
     /// <summary>The units of a block's music, or null where its bars cannot be told apart
     /// (<paramref name="why"/> says what stands in the way).</summary>
@@ -425,9 +425,29 @@ public static class PartWriter
                     continue;
                 }
             }
+            // A two-voice passage (`voice { … | } { … | }`) at a bar's start is as many bars as its first
+            // voice, taken whole (grammar evaluation 5's D6, 2026-11-23: it was "a group with bar lines
+            // inside it", and the section's bars could not be written at all).
+            if (child is ParallelExpressionSyntax parallel && runStart < 0 && depth < 8 && parallel.Voices.FirstOrDefault() is { } firstVoice)
+            {
+                var inner = UnitsOf(root, firstVoice, out string? innerWhy, depth + 1);
+                if (inner == null)
+                {
+                    why = $"a two-voice passage (`voice {{ }} {{ }}`) whose first voice holds {innerWhy}";
+                    return null;
+                }
+                int bars = inner.Sum(u => u.Bars);
+                if (bars > 0)
+                {
+                    units.Add(new Unit(bars, parallel.Span.Start, parallel.Span.End, null, Voices: true));
+                    continue;
+                }
+            }
             if (Within(child).Any(n => n is BarlineSyntax))
             {
-                why = "an ending, a `%` repeat or a group with bar lines inside it";
+                why = child is ParallelExpressionSyntax
+                    ? "a two-voice passage (`voice { } { }`) that begins inside a bar"
+                    : "an ending, a `%` repeat or a group with bar lines inside it";
                 return null;
             }
             if (runStart < 0)
@@ -482,6 +502,8 @@ public static class PartWriter
                 {
                     why = unit.Phrase != null
                         ? $"they cut through the phrase `{unit.Phrase}`, which is bars {bar}-{unitLast} there. Take those bars whole, or write the section whole."
+                        : unit.Voices
+                        ? $"they cut through a two-voice passage (`voice {{ }} {{ }}`), which is bars {bar}-{unitLast} there. Take those bars whole — write both voices — or write the section whole."
                         : $"they cut through a rest of {unit.Bars} bars (bars {bar}-{unitLast}). Take those bars whole, or write the section whole.";
                     return false;
                 }

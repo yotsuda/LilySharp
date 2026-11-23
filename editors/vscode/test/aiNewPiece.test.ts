@@ -380,6 +380,9 @@ describe('the composing guide', () => {
         const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');
         assert.match(build, /'\*\*Reviewing a piece\*\*: asked to review a \.lys file or give feedback on it, use the `lilysharp_reviewScore` tool \(#reviewScore\)',/);
         assert.match(REVIEW_READING, /Start with what works \(`strengths`\)/);
+        // …spoken to the reader the report names, not to a beginner whatever it says (evaluation 5's D4).
+        assert.match(REVIEW_READING, /Speak to the reader the report names \(`audience`\)/);
+        assert.doesNotMatch(REVIEW_READING, /may be a beginner/);
         assert.match(REVIEW_READING, /at most five points, mistakes first/);
         assert.match(REVIEW_READING, /Check `fine_when` against the piece/);
         assert.match(REVIEW_READING, /Do not change the score/);

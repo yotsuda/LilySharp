@@ -1878,4 +1878,29 @@ public class CompositionChecksTests
         // Owner's review 2026-11-02: 29 pieces with a piano, composed in the chat, and not one pedal.
         Assert.Contains("`@sustain` on the\n  harmony's first bass note", guide.Replace("\r\n", "\n"));
     }
+
+    /// <summary>A minor piece closing in its own major (the Picardy third) and a last section lifted
+    /// a step in the same mode are closes, not another key (grammar evaluation 5's D4, 2026-11-23:
+    /// both were said as a mistake). A piece that ends a fifth away still is told.</summary>
+    [Theory]
+    [InlineData("d minor", "d major", false)]
+    [InlineData("c major", "d major", false)]
+    [InlineData("c major", "des major", false)]
+    [InlineData("c major", "g major", true)]
+    public void ThePicardyThirdAndTheLiftedLastSectionAreNoOtherKey(string home, string last, bool told)
+    {
+        string bars = string.Concat(Enumerable.Repeat("c'4 d'' e'' f'' | g''1 | ", 8));
+        string book = $$"""
+            octave absolute
+            key {{home}}
+            time 4/4
+            tempo 4 = 100
+            part m { instrument flute }
+            section A { m { {{bars}} } }
+            section B { key {{last}}  m { {{bars}} } }
+            form { A B }
+            score { staff m }
+            """;
+        Assert.Equal(told, CompositionChecks.Findings(book).Any(f => f.Id == "form.ends-in-another-key"));
+    }
 }

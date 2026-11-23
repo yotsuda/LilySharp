@@ -845,7 +845,9 @@ export function lastUserMessageAt(events: string): number | undefined {
 /** How to read the review's report, put in front of it (docs/review-tool-design.md §3). */
 export const REVIEW_READING = [
     'How to read this report on the score:',
-    '- The person may be a beginner. Speak in plain words and explain each musical term the first time you use it.',
+    // Spoken to the reader the report names (grammar evaluation 5's D4, 2026-11-23: asked with
+    // `audience: advanced`, the chat still opened with "you may be a beginner").
+    '- Speak to the reader the report names (`audience`): to a `beginner` in plain words, each musical term explained the first time you use it; to an `advanced` musician in the terms musicians use, explaining nothing they know.',
     '- If `compiles` is false, the piece cannot be read as music yet: help with `errors` first, and say that the rest of the review waits for them.',
     '- Start with what works (`strengths`). Then raise at most five points, mistakes first, grouped by theme (the key, the rhythm, the parts, the notation). Offer the rest if the person wants them. The compiler\'s `warnings` count among the mistakes.',
     '- For each point: where it is (part and bar; `where.bars` count bars as the form plays them, so a section that returns has later numbers), what you see, why it matters (`why`, in your own words), and what to do (the advice at the end of `what`). `what` is written for a composing AI and uses Lily#\'s own terms: say it for this person.',

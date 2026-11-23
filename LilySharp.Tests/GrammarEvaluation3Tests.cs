@@ -998,7 +998,7 @@ public class GrammarEvaluation3Tests
             + "section B { a { c''1 | } b { c'1 | } }\nform { ~A ~Cad ~B }\nscore { staff a staff b }\n"));
 
         // A form that plays a section again says its count is the played one.
-        Assert.Contains(" 4 bars as played (repeats counted),", ReviewHead(Head + "section A { a { c''1 | } b { c'1 | } }\n"
+        Assert.Contains(" 4 bars as played (a section played again counted again),", ReviewHead(Head + "section A { a { c''1 | } b { c'1 | } }\n"
             + "section B { a { d''1 | d''1 | } b { d'1 | d'1 | } }\nform { ~A ~B ~A }\nscore { staff a staff b }\n"));
     }
 }

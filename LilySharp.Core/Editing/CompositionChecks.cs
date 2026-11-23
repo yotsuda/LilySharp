@@ -695,7 +695,13 @@ public static class CompositionChecks
             var (home, end) = inKeys;
             int homeTonic = PitchClass(home.Tonic), endTonic = PitchClass(end.Tonic);
             string KeyName((string Tonic, string Mode) k) => $"{TonicName(k.Tonic)} {k.Mode}";
-            if (homeTonic != endTonic || home.Mode != end.Mode)
+            // Two closes are no other key (grammar evaluation 5's D4, 2026-11-23: both were said as a
+            // mistake): a minor piece ending in its own major (the Picardy third), and a last section a
+            // half or whole step up in the same mode (the last chorus lifted).
+            int lift = ((endTonic - homeTonic) % 12 + 12) % 12;
+            bool picardy = homeTonic == endTonic && home.Mode == "minor" && end.Mode == "major";
+            bool lifted = home.Mode == end.Mode && lift is 1 or 2;
+            if ((homeTonic != endTonic || home.Mode != end.Mode) && !picardy && !lifted)
                 findings.Add(new("form.ends-in-another-key", $"The piece begins in {KeyName(home)} and ends in {KeyName(end)}: come back to the home key for the last "
                     + "section, and close there."));
             // The lowest note sounding at the last onset: the final chord's bass.

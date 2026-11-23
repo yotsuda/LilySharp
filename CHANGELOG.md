@@ -6,6 +6,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Fixed: the chat's review called a Picardy third and a last chorus lifted a step "ends in another key"** (`[editor]`). A minor piece closing in its own major, and a last section a half or whole step up in the same mode, are closes, not a mistake; a piece ending a fifth away is still told. The review now speaks to the reader it is asked for (`audience: advanced` was still told "you may be a beginner"), and its "as played" length says a section played again is counted again rather than "repeats counted".
+
+- **Fixed: the chat could not write some bars of a section with a two-voice passage** (`[editor]`). Any `bars` of such a section was refused as "a group with bar lines inside it"; a `voice { } { }` passage is now as many bars as its first voice, the bars around it can be written, and the passage itself taken whole.
+
 - **rit., rall., accel. and the fermata are played** (`[playback]`). They were drawn only, and a fermata rang its own note while the other parts went on. `@rit` … `@!rit` (and `@rall`) now slows the tempo over the line to 70% of the one it began at, `@accel` speeds it to 130%, and the tempo comes back after the line — a `tempo` written there stands. A fermata holds the time half again for every part, its note as written. The MIDI, the preview and the WAV all hear it.
 
 - **A chords row can be printed and not sounded: `chords harmony silent`** (`[language]` `[playback]`). In a band score the row sounded beside the keyboard that plays the same chords, and nothing could silence it. `silent` at the end of a score's chords row prints it and sounds nothing; its MusicXML harmonies are written as ever.

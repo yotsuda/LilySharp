@@ -70,7 +70,9 @@ public static class ScoreReview
                 // The bars PLAYED, which is what the seconds are of: said so where the form plays
                 // a section again, and the page has fewer (a reader counting the page's 38 bars
                 // was told 56 — grammar evaluation 3, 2026-11-13).
-                about.Add($"{(int)bars} bars{((bool?)facts["bars_with_repeats"] == true ? " as played (repeats counted)" : "")}, about {(int)facts["seconds"]!} seconds");
+                // "As played": a section the form plays again is counted again — with no repeat sign written
+        // (grammar evaluation 5's D4, 2026-11-23: "repeats counted" read as a claim the piece had repeats).
+        about.Add($"{(int)bars} bars{((bool?)facts["bars_with_repeats"] == true ? " as played (a section played again counted again)" : "")}, about {(int)facts["seconds"]!} seconds");
             text.AppendLine(string.Join(" - ", new[] { (string?)facts["title"] ?? "(no title)", string.Join(", ", about) }.Where(s => s.Length > 0)));
             if (facts["keyHeard"] is { } heard)
                 text.AppendLine($"Heard in: {(string?)heard}");
