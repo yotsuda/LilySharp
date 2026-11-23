@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- `[engraving]` **A line that opens with a repeat sign opens a little closer beside a silent staff, too.** The narrower bar beside a staff with no note and no rest in it now holds at the start of a line as well, where a `|:` opens the line and a down stem follows it: 0.095 with one silent staff of two, as in LilyPond.
+
 - **The chat's check of a new piece no longer calls an accompaniment's chord tone a slip, a short piece asked for too short, or a band's guitar staff the chords row again.**
 - **The chat's review no longer calls a Picardy third or a last chorus lifted a step a mistake**, and speaks to the reader it is asked for.
 - **The chat can write some bars of a section that holds a two-voice passage.**

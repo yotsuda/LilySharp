@@ -906,9 +906,13 @@ internal static partial class SpacingRules
     /// <c>s2 c2</c>, <c>s2 r2</c> or a second voice's note 4.045; up stems above (e') 4.329 with
     /// or without. Until session 1236 every staff took the column's correction (4.04 in all).
     /// <para>
-    /// Not measured: a silent staff under a bar that opens with a grace run (the grace's
-    /// correction is read first, <c>CreateBarlineToFirstSpring</c>), and the line's first bar
-    /// (LineStartColumn — the correction is live there only behind an opening <c>|:</c>).
+    /// The line's first bar asks the same question through the <see cref="Staff"/> overload
+    /// (<c>LineStartColumn.LineStartSpring</c> — the correction is live there only behind an
+    /// opening <c>|:</c>). MEASURED (session 1373, Lab sessions/p1373/wish r1/r2, a second line
+    /// opening with <c>|:</c>, down-stem e'' above): the first head 7.513 over <c>c1</c>, 7.418
+    /// over <c>s1</c> — the same 0.095. A bar opening with a grace run loses nothing to a
+    /// silent staff (g1–g6: 5.023 and 5.929 with or without; Lily# 5.020 and 5.920 already),
+    /// and a line start without a bar line earns no correction to lose (l1/l2).
     /// </para>
     /// </remarks>
     private static bool IsSilentToItsNextChange(IReadOnlyList<Measure> voices, IReadOnlyList<Staff> staves, int s)
@@ -917,32 +921,59 @@ internal static partial class SpacingRules
         // stands in the bar line's own column).
         Fraction? nextChange = null;
         for (int v = 0; v < voices.Count; v++)
-        {
-            if (!ReferenceEquals(staves[v], staves[s]))
-                continue;
-            var onset = Fraction.Zero;
-            foreach (var item in voices[v].Items)
-            {
-                if (onset > Fraction.Zero && IsChangeItem(item) && (nextChange is not { } known || onset < known))
-                    nextChange = onset;
-                onset += item.Duration;
-            }
-        }
+            if (ReferenceEquals(staves[v], staves[s]))
+                EarliestChange(voices[v], ref nextChange);
         for (int v = 0; v < voices.Count; v++)
-        {
-            if (!ReferenceEquals(staves[v], staves[s]))
-                continue;
-            var onset = Fraction.Zero;
-            foreach (var item in voices[v].Items)
-            {
-                if (nextChange is { } change && onset >= change)
-                    break;
-                if (item is NoteItem or ChordItem or RestItem { IsSpacer: false, IsMultiMeasure: false })
-                    return false;
-                onset += item.Duration;
-            }
-        }
+            if (ReferenceEquals(staves[v], staves[s]) && EngravesBefore(voices[v], nextChange))
+                return false;
         return true;
+    }
+
+    /// <summary>
+    /// <see cref="IsSilentToItsNextChange(IReadOnlyList{Measure}, IReadOnlyList{Staff}, int)"/>
+    /// for one staff's bar read off the staff itself — every voice's measure
+    /// <paramref name="measureIndex"/> (a voice without one says nothing).
+    /// </summary>
+    internal static bool IsSilentToItsNextChange(Staff staff, int measureIndex)
+    {
+        Fraction? nextChange = null;
+        foreach (var voice in staff.Voices)
+            if ((uint)measureIndex < (uint)voice.Measures.Length)
+                EarliestChange(voice.Measures[measureIndex], ref nextChange);
+        foreach (var voice in staff.Voices)
+            if ((uint)measureIndex < (uint)voice.Measures.Length
+                && EngravesBefore(voice.Measures[measureIndex], nextChange))
+                return false;
+        return true;
+    }
+
+    /// <summary>Lowers <paramref name="nextChange"/> to the onset of the measure's first
+    /// clef, key or meter change after its start.</summary>
+    private static void EarliestChange(Measure measure, ref Fraction? nextChange)
+    {
+        var onset = Fraction.Zero;
+        foreach (var item in measure.Items)
+        {
+            if (onset > Fraction.Zero && IsChangeItem(item) && (nextChange is not { } known || onset < known))
+                nextChange = onset;
+            onset += item.Duration;
+        }
+    }
+
+    /// <summary>Whether the measure holds a note, a chord or a drawn rest (a NoteSpacing)
+    /// before <paramref name="nextChange"/> — anywhere, when there is none.</summary>
+    private static bool EngravesBefore(Measure measure, Fraction? nextChange)
+    {
+        var onset = Fraction.Zero;
+        foreach (var item in measure.Items)
+        {
+            if (nextChange is { } change && onset >= change)
+                break;
+            if (item is NoteItem or ChordItem or RestItem { IsSpacer: false, IsMultiMeasure: false })
+                return true;
+            onset += item.Duration;
+        }
+        return false;
     }
 
     [ThreadStatic]

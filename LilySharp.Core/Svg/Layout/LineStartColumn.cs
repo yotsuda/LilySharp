@@ -1001,8 +1001,10 @@ internal static class LineStartColumn
             // Every staff's first column against THIS staff's bar (ColumnOptical); a tab voice
             // reads the TabVoice's own stems, in its own frame — a numbers-only tab's
             // zero-length stubs included: Stem::is_normal_stem reads heads and duration, not
-            // the stencil.
+            // the stencil. A staff silent to its next break-aligned grob reads no note column
+            // at all, as mid-line (SpacingRules.IsSilentToItsNextChange).
             double optical = last.Symbol != BreakAlignSymbol.StaffBar
+                             || SpacingRules.IsSilentToItsNextChange(staff, startMeasureIndex)
                 ? 0.0
                 : ColumnOptical(score, startMeasureIndex, SpacingRules.BarHalfSpaces(staff));
 

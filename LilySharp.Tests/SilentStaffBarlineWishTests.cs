@@ -78,4 +78,60 @@ public class SilentStaffBarlineWishTests
         // to 0.0029 (session 739, not ported); the figures are LilyPond's to three places.
         Assert.Equal(crossing, heads[4] - heads[3], 0.003);
     }
+
+    /// <summary>
+    /// A bar opening with a grace run: the crossing to the first MAIN head is the same over a
+    /// silent staff as over a sounding one. MEASURED (session 1373, Lab sessions/p1373/wish
+    /// g0–g6): 5.023 (one grace) and 5.929 (two), with the lower staff sounding, silent or
+    /// resting.
+    /// </summary>
+    [Theory]
+    [InlineData("grace { c''16 } e''4 e'' e'' e'' |", "lh { c1 | c1 | }", 5.023)]
+    [InlineData("grace { c''16 } e''4 e'' e'' e'' |", "lh { s1 | s1 | }", 5.023)]
+    [InlineData("grace { c''16 } e''4 e'' e'' e'' |", "lh { c1 | R1 | }", 5.023)]
+    [InlineData("grace { c''8 d''8 } e''4 e'' e'' e'' |", "lh { c1 | c1 | }", 5.929)]
+    [InlineData("grace { c''8 d''8 } e''4 e'' e'' e'' |", "lh { s1 | s1 | }", 5.929)]
+    public void ABarOpeningWithAGraceRun_LosesNothingToASilentStaff(string bar2, string lower, double crossing)
+    {
+        string src = "time 4/4\noctave absolute\npaper { raggedRight }\npart rh { }\npart lh { clef bass }"
+            + "\nsection A {\n  rh { e''4 e'' e'' e'' | " + bar2 + " }\n  " + lower
+            + "\n}\nform { A }\nscore { staff rh staff lh }\n";
+        // The upper staff's heads by x: bar 1's four, the graces, then bar 2's four.
+        var heads = Regex.Matches(TwinBowSweep.Dump(src), @"^HEAD \S+ 0 x=([-\d.]+)", RegexOptions.Multiline)
+            .Select(m => double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture))
+            .OrderBy(x => x).ToList();
+        int graces = heads.Count - 8;
+        Assert.InRange(graces, 1, 2);
+        // 0.01: the two-grace run is 5.920 here (0.009 short of LilyPond either way).
+        Assert.Equal(crossing, heads[4 + graces] - heads[3], 0.01);
+    }
+
+    /// <summary>
+    /// A line OPENING WITH <c>|:</c> earns the down-stem correction off that bar line (the
+    /// only line start that does), and a silent staff's wish carries none of it there too —
+    /// the first head of the line stands the silent staff's share closer. A line start
+    /// without a bar line has no correction to lose.
+    /// MEASURED (session 1373, Lab sessions/p1373/wish r1/r2 and l1/l2): the second line's
+    /// first head 7.513 over <c>c1</c>, 7.418 over <c>s1</c> (− 0.19 / 2); 5.800 both ways
+    /// without the <c>|:</c>. Until session 1373 Lily# put both at the same place.
+    /// </summary>
+    [Theory]
+    [InlineData("e''4 e'' e'' e'' break |: e''4 e'' e'' e'' :|", "c1 break |: c1 :|", "s1 break |: s1 :|", 0.095)]
+    [InlineData("e''4 e'' e'' e'' | break e''4 e'' e'' e'' |", "c1 | c1 |", "s1 | s1 |", 0.0)]
+    public void ALineOpeningWithARepeat_LosesTheSilentStaffsShare(string upper, string sounding, string silent, double share)
+    {
+        double First(string lower)
+        {
+            string src = "time 4/4\noctave absolute\npaper { raggedRight }\npart rh { }\npart lh { clef bass }"
+                + "\nsection A {\n  rh { " + upper + " }\n  lh { " + lower
+                + " }\n}\nform { A }\nscore { staff rh staff lh }\n";
+            // Staff 2 is the second line's upper staff.
+            var heads = Regex.Matches(TwinBowSweep.Dump(src), @"^HEAD \S+ 2 x=([-\d.]+)", RegexOptions.Multiline)
+                .Select(m => double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture))
+                .OrderBy(x => x).ToList();
+            Assert.Equal(4, heads.Count);
+            return heads[0];
+        }
+        Assert.Equal(share, First(sounding) - First(silent), 0.007);
+    }
 }
