@@ -36,6 +36,7 @@ import { OmrImportDeps, importFromImage } from './omrImport';
 import { DecodeResult, attachRecording, followCopies, followRenames, keepRecordingSettings, sendNoRecording, sendRecording, useRecordingSettingsStore } from './recording';
 import { TimedNote, soundingOf, soundingPartsOf, soundingWait, startSecondsAt } from './playbackStart';
 import { convertRecording, findOrecchiante, registerOrecchianteContext } from './orecchiante';
+import { registerOrecchianteReport } from './orecchianteSeed';
 import { newScoreSources } from './menuContextCore';
 import { recordingPathFor } from './recordingCore';
 import { findOmr, registerOmrContexts } from './omrReader';
@@ -1113,6 +1114,10 @@ export function activate(context: vscode.ExtensionContext) {
         previewPanels,
         selectedRenders,
     });
+
+    // Report to Orecchiante (orecchianteSeed.ts, Orecchiante's request 23): the owner's alone — its
+    // code actions show only with lilysharp.orecchiante.seedFolder written by hand.
+    registerOrecchianteReport(context, () => client, outputChannel);
 
     // The Explorer's batch export: right-click one or more .lys → the format
     // submenu → a folder → every score of every file, named as `lysc` names

@@ -1376,6 +1376,36 @@ public class SameBarResponse
     public int Version { get; set; }
 }
 
+/// <summary>lilysharp/voiceBars: the document whose voices' bars are asked for.</summary>
+public class VoiceBarsParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+}
+
+/// <summary>A bar's text span; both -1 when the bar has no bar line of its voice's own around it.</summary>
+public class BarSpan
+{
+    public int Start { get; set; }
+    public int End { get; set; }
+}
+
+/// <summary>One voice of a section (lilysharp/voiceBars): the voice as a message names it
+/// (<c>part 'bass'</c>, <c>chords 'prog'</c>) and its bars in order.</summary>
+public class VoiceBarsInfo
+{
+    public string Section { get; set; } = "";
+    public string Voice { get; set; } = "";
+    public BarSpan[] Bars { get; set; } = [];
+}
+
+/// <summary>Response for lilysharp/voiceBars (<see cref="LilySharp.Core.Editing.SameBarFinder.AllBars"/>):
+/// every voice of every section; <see cref="Voices"/> null when the document could not be read.</summary>
+public class VoiceBarsResponse
+{
+    public VoiceBarsInfo[]? Voices { get; set; }
+    public int Version { get; set; }
+}
+
 /// <summary>One answer of lilysharp/placeAt's <c>Offsets</c>.</summary>
 public class PlaceInfo
 {

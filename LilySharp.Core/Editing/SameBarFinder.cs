@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using LilySharp.Core.Semantics;
@@ -86,6 +87,43 @@ public static class SameBarFinder
             others.Add(new Place(other.Label, BarStart(other, lines, bar, text)));
         }
         return new Answer(here.SectionName, bar + 1, here.Label, others);
+    }
+
+    /// <summary>A voice of a section and its bars' text spans (lilysharp/voiceBars).</summary>
+    public sealed record VoiceBars(string Section, string Voice, IReadOnlyList<(int Start, int End)> Bars);
+
+    /// <summary>
+    /// Every voice of every section — the parts' music and the chords rows, no lyrics — with each
+    /// of its bars as a text span: from where the bar opens (as <see cref="At"/> answers it in another
+    /// voice) to the bar line that closes it, its ink left out; the last bar with no bar line after
+    /// it ends at the voice's closing brace. A bar that has no bar line of the voice's own on either
+    /// side — one inside a <c>R1*4</c> or a phrase the voice plays — is <c>(-1, -1)</c>. For the
+    /// editor's "Report to Orecchiante" (Orecchiante's request 23): its bar and its section's bars.
+    /// </summary>
+    public static IReadOnlyList<VoiceBars> AllBars(SyntaxTree tree)
+    {
+        var root = tree.GetRoot();
+        string text = root.ToFullString();
+        var phrases = SectionBarCounts.PhraseBodies(root);
+        var result = new List<VoiceBars>();
+        foreach (var voice in SectionBarCounts.SemanticVoices(root, phrases)
+            .DistinctBy(v => v.Container.Span.Start).OrderBy(v => v.Container.Span.Start))
+        {
+            var lines = VoiceBarLines.Of(voice, phrases);
+            var flat = lines.Select(l => (l.End, l.Bars)).ToList();
+            int count = Math.Max(voice.Bars, lines.Count == 0 ? 0 : lines.Max(l => l.Bars));
+            int close = text.LastIndexOf('}', Math.Max(0, voice.Container.Span.Start + voice.Container.Span.Length - 1));
+            var bars = new List<(int, int)>();
+            for (int k = 0; k < count; k++)
+            {
+                bool opens = k == 0 || lines.Any(l => l.Bars == k);
+                int end = lines.FirstOrDefault(l => l.Bars == k + 1).Node is { } line ? line.Span.Start
+                    : k == count - 1 && close > voice.Container.Span.Start ? close : -1;
+                bars.Add(opens && end >= 0 ? (BarStart(voice, flat, k, text), end) : (-1, -1));
+            }
+            result.Add(new VoiceBars(voice.SectionName, voice.Label, bars));
+        }
+        return result;
     }
 
     /// <summary>Every lyrics cell: by part (<c>lyrics w { section A { … } }</c>) and by section

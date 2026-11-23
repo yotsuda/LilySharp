@@ -48,6 +48,36 @@ public sealed class SameBarFinderTests
             answer.Others.Select(o => (o.Voice, After(o.Offset))).ToArray());
     }
 
+    /// <summary>
+    /// Every voice's bars as text (lilysharp/voiceBars, Orecchiante's request 23): the shape
+    /// Orecchiante writes — by-section part blocks, a chords row, a kit of grooves and <c>%</c>,
+    /// a bar of two drum voices — each bar its own text, its bar line left out.
+    /// </summary>
+    [Fact]
+    public void AllBars_EveryVoicesBarsAsText()
+    {
+        const string chart = "octave absolute\ntime 4/4\n"
+            + "part bass { instrument bass }\npart kit { clef percussion }\n"
+            + "phrase hatsA { hh8 8 8 8 8 8 8 8 | }\nphrase kickA { bd4 4 4 4 | }\n"
+            + "phrase beatA { drums { hatsA kickA } }\n"
+            + "section A {\n  chords prog {\n    C | G7 | C | C | break\n  }\n"
+            + "  bass {\n    c8 c g c c c g c | g,2 b, | c1 | c1~ |\n  }\n"
+            + "  kit {\n    beatA | % | beatA | drums { { hh4 4 4 4 } { bd2 2 } } |\n  }\n}\n"
+            + "section B {\n  chords prog { F | C | }\n  bass { f1 | c1 | }\n  kit { beatA | % | }\n}\n"
+            + "form { A B A }\nscore { chords prog staff bass staff kit }\n";
+        var tree = SyntaxTree.Parse(chart);
+        Assert.False(tree.HasErrors);
+        var voices = SameBarFinder.AllBars(tree);
+        string[] Texts(string section, string voice)
+            => voices.Single(v => v.Section == section && v.Voice == voice).Bars
+                .Select(b => b.Start < 0 ? "?" : chart[b.Start..b.End].Trim()).ToArray();
+        Assert.Equal(new[] { "C", "G7", "C", "C" }, Texts("A", "chords 'prog'"));
+        Assert.Equal(new[] { "c8 c g c c c g c", "g,2 b,", "c1", "c1~" }, Texts("A", "part 'bass'"));
+        Assert.Equal(new[] { "beatA", "%", "beatA", "drums { { hh4 4 4 4 } { bd2 2 } }" }, Texts("A", "part 'kit'"));
+        Assert.Equal(new[] { "F", "C" }, Texts("B", "chords 'prog'"));
+        Assert.Equal(new[] { "beatA", "%" }, Texts("B", "part 'kit'"));
+    }
+
     [Fact]
     public void TheFirstBarOpensAfterTheVoicesBrace_AndTheSectionIsTheCaretsOwn()
     {

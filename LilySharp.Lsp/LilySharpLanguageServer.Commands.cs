@@ -768,6 +768,39 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
+    /// Every voice of every section with its bars' text spans — the editor's "Report to
+    /// Orecchiante" (Orecchiante's request 23, docs/orecchiante-report-design.md). See
+    /// <see cref="LilySharp.Core.Editing.SameBarFinder.AllBars"/>.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/voiceBars", UseSingleObjectParameterDeserialization = true)]
+    public Task<VoiceBarsResponse> VoiceBarsAsync(VoiceBarsParams @params, CancellationToken token)
+        => OffDispatch(() => VoiceBars(@params), token);
+
+    public VoiceBarsResponse VoiceBars(VoiceBarsParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new VoiceBarsResponse { Version = -1 };
+        try
+        {
+            var voices = LilySharp.Core.Editing.SameBarFinder.AllBars(doc.Tree);
+            return new VoiceBarsResponse
+            {
+                Version = doc.Version,
+                Voices = [.. voices.Select(v => new VoiceBarsInfo
+                {
+                    Section = v.Section, Voice = v.Voice,
+                    Bars = [.. v.Bars.Select(b => new BarSpan { Start = b.Start, End = b.End })],
+                })],
+            };
+        }
+        catch (Exception)
+        {
+            return new VoiceBarsResponse { Version = doc.Version };
+        }
+    }
+
+    /// <summary>
     /// A section's repeat signs written in every part that writes the section, or taken back to
     /// one — the editor's two commands (owner's design 2026-11-14, docs/inline-repeat-design.md
     /// §8). See <see cref="LilySharp.Core.Editing.RepeatSignSpreader"/>.

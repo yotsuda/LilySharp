@@ -139,6 +139,12 @@ checks), never in the CHANGELOG or the README, and no seed, scan or reported bar
 or the site. Before tagging, list a built VSIX (`dist\*.vsix` is a zip) and look for `seed`
 beyond `omrSeedCore`.
 
+⚠️ **Orecchiante's seed tooling is the same** (Orecchiante's request 23, 2026-11-23,
+`docs/orecchiante-report-design.md`): **Report to Orecchiante…** (`orecchianteSeedCore.ts`,
+`orecchianteSeed.ts`) is code actions that show only when `lilysharp.orecchiante.seedFolder` is
+written by hand. The setting and the commands are not in `package.json` (`orecchianteSeed.test.ts`
+checks), not in the CHANGELOG or the README; the VSIX carries the code alone.
+
 ### 5. Push, and wait for CI to be green
 
 Do not tag a commit whose CI you have not seen pass. The `test` job in `release.yml`
