@@ -231,4 +231,24 @@ public class ChordProgressionReadingTests
         Assert.Contains("  section A { Bb | Gm | }   // read from the notes\n", text);
         Assert.Contains("in B♭ major", text);
     }
+
+    /// <summary>A chord struck before the bar and tied into it is the chord of the bar it sounds
+    /// through — the one an edit of it replaces (grammar evaluation 5's D3, 2026-11-23). MEASURED
+    /// before: "G = &lt;cis' e' a'&gt;", the chord of the beat it was struck on.</summary>
+    [Fact]
+    public void AChordStruckBeforeTheBarIsTheBarsChord()
+    {
+        string text = ChordHarmonizer.DescribeProgression("""
+            octave absolute
+            key d major
+            part pn { instrument piano-right }
+            part bs { instrument bass }
+            section A { pn { <g b d'>2. <cis' e' a'>4~ | <cis' e' a'>1 | <d' fis' a'>1 | } bs { g,1 | a,1 | d,1 | } }
+            form { A }
+            score { staff pn staff bs }
+            """, null, ["pn"]);
+        Assert.Contains("  section A { G | A | D | }", text);
+        Assert.Contains("  A = <cis' e' a'> (1 place)\n", text);
+        Assert.Contains("  G = <g b d'> (1 place)\n", text);
+    }
 }

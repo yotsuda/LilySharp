@@ -1208,9 +1208,17 @@ async function proposeScore(deps: AiTransformDeps, given: ProposeScoreInput, tok
         const musicians = await asMusicianWrites(deps, client, text);
         // Said as it is written (owner's report 2026-10-30: a piece left in absolute octaves was told
         // to the chat as relative).
-        const octaves = ABSOLUTE_LINE.test(musicians)
+        const octaves = (ABSOLUTE_LINE.test(musicians)
             ? 'It is written in absolute octaves, as you proposed it (Lily# could not bring it into relative octaves); '
-            : 'It is written in relative octaves, as a musician writes it; ';
+            : 'It is written in relative octaves, as a musician writes it; ')
+            // …and each part as its player reads it, where `pitch concert` was taken out (grammar
+            // evaluation 5's D1, 2026-11-23: the chat's next `edits` copied their `old` from its own
+            // concert-pitch draft and did not match the respelled parts).
+            + (CONCERT_LINE.test(text) && !CONCERT_LINE.test(musicians)
+                ? '`pitch concert` is taken out: each transposing part is now written as its player reads it (a bass an octave '
+                  + 'up, a B-flat clarinet a tone up, in its player\'s key) — so your draft is no longer the text: copy every `old` '
+                  + 'of an `edits` change from what lilysharp_readScore shows, never from your draft; '
+                : '');
         const written = await writeWhole(uri, exists, doc, musicians);
         if (typeof written === 'string') {
             return `Not written: ${written}`;
@@ -1551,6 +1559,9 @@ async function asMusicianWrites(deps: AiTransformDeps, client: LanguageClient, t
 
 /** A top-level `octave absolute` line. */
 const ABSOLUTE_LINE = /^[ \t]*octave[ \t]+absolute\b/m;
+
+/** A top-level `pitch concert` line. */
+const CONCERT_LINE = /^[ \t]*pitch[ \t]+concert\b/m;
 
 /** How many `octave …` lines a text holds (the server checks where they stand). */
 function octaveLines(text: string): number {

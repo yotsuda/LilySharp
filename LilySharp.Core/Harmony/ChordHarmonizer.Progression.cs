@@ -245,8 +245,9 @@ public static partial class ChordHarmonizer
         var (tonic, sharps) = SectionKey(tree, sectionName) ?? home;
 
         var heard = new List<SoundingNote>();
-        // Each place a part writes, with the instant it first sounds and how many notes sound there then.
-        var together = new Dictionary<(string Part, int Position), (int Tick, int Notes)>();
+        // Each place a part writes, with the instant it first sounds, how many notes sound there then,
+        // and when the last of those ends (a phrase's place sounds again at each call: the first is read).
+        var together = new Dictionary<(string Part, int Position), (int Tick, int Notes, int End)>();
         var written = new SortedDictionary<int, string>();
         var sounding = new Dictionary<(int Tick, int Position), List<int>>();
         // Every note read, and whether its part is one of those shown.
@@ -266,7 +267,10 @@ public static partial class ChordHarmonizer
                 if (shown)
                 {
                     var place = (part, n.SourcePos);
-                    together[place] = together.TryGetValue(place, out var seen) ? (seen.Tick, seen.Notes + (n.StartTick == seen.Tick ? 1 : 0)) : (n.StartTick, 1);
+                    int ends = n.StartTick + System.Math.Max(1, n.DurationTicks);
+                    together[place] = together.TryGetValue(place, out var seen)
+                        ? (seen.Tick, seen.Notes + (n.StartTick == seen.Tick ? 1 : 0), n.StartTick == seen.Tick ? System.Math.Max(seen.End, ends) : seen.End)
+                        : (n.StartTick, 1, ends);
                 }
                 if (names is not { } written1)
                     continue;
@@ -336,8 +340,24 @@ public static partial class ChordHarmonizer
                     && here.Where(s => s.Shown).Min(s => s.Pitch) > here.Min(s => s.Pitch))
                     symbols[i] = (read with { Bass = read.Root }).Symbol(sharps);
             }
+        // A chord struck is the chord of the beat it sounds through longest: one struck before the
+        // bar and tied into it (`<cis' e' a'>4~ | <cis' e' a'>1`) is the next bar's A, not the G it
+        // was struck under (grammar evaluation 5's D3, 2026-11-23: "G = <cis' e' a'>").
+        // Counted by the bar (a beat each is the same length): the first beat it sounds on in the bar it
+        // sounds through longest.
+        int LongestBeat(int from, int until)
+        {
+            var heardIn = new Dictionary<int, (int Length, int FirstBeat)>();
+            for (int i = BeatOf(from); i < beats.Count && beats[i].Tick < until; i++)
+            {
+                int beatEnd = i + 1 < beats.Count ? beats[i + 1].Tick : System.Math.Max(beats[i].Tick + 1, end);
+                int heardFor = System.Math.Min(until, beatEnd) - System.Math.Max(from, beats[i].Tick);
+                heardIn[barOf[i]] = heardIn.TryGetValue(barOf[i], out var had) ? (had.Length + heardFor, had.FirstBeat) : (heardFor, i);
+            }
+            return heardIn.Count == 0 ? BeatOf(from) : heardIn.MaxBy(h => h.Value.Length).Value.FirstBeat;
+        }
         var struck = together.Where(p => p.Value.Notes >= 2).OrderBy(p => p.Value.Tick)
-            .Select(p => (p.Key.Part, p.Key.Position, symbols[BeatOf(p.Value.Tick)])).ToList();
+            .Select(p => (p.Key.Part, p.Key.Position, symbols[LongestBeat(p.Value.Tick, p.Value.End)])).ToList();
         return new SectionChords(beats, symbols, isWritten, barOf, readings, dense, struck, sharps);
     }
 

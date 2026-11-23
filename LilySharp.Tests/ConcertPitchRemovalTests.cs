@@ -83,6 +83,23 @@ public class ConcertPitchRemovalTests
         Assert.Equal(Sounds(text), Sounds(result.NewText!));
     }
 
+    /// <summary>A clarinet in A over D-flat major reads E major, not F-flat major (eight flats, a
+    /// B double-flat in its signature): the interval is spelled twelve fifths away and the notes
+    /// with it, the page's rule (grammar evaluation 5's D1, 2026-11-23 — this rewrite wrote
+    /// `key fes major` into an orchestra's clarinet header). MEASURED before: `key fes major`.</summary>
+    [Fact]
+    public void ATransposerWhoseKeyWouldTakeEightFlats_ReadsItsTwin()
+    {
+        string text = "octave absolute\npitch concert\nkey des major\ntime 4/4\npart cl { instrument clarinet-a }\n"
+            + "section A {\n  cl { des'2 f'2 | }\n}\nform { A }\nscore { staff cl }\n";
+        var result = OctaveModeConverter.WithoutConcertPitch(text);
+        Assert.NotNull(result.NewText);
+        Assert.Contains("part cl { instrument clarinet-a key e major }", result.NewText);
+        Assert.DoesNotContain("fes", result.NewText);
+        Assert.Contains("cl { e'2 gis'2 | }", result.NewText);     // D-flat 4 and F 4, read a minor third up
+        Assert.Equal(Sounds(text), Sounds(result.NewText!));
+    }
+
     [Fact]
     public void AFileNotAtConcertPitch_IsLeftAsItIs()
     {

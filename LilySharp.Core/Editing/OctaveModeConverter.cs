@@ -373,6 +373,18 @@ public static class OctaveModeConverter
                 continue;
             }
             var interval = Semantics.PitchTransposer.IntervalFromSemitones(semitones);
+            // The key the player reads is not one of eight or more sharps or flats: where it would be
+            // (a clarinet in A over D-flat major reads F-flat major, B double-flat in its signature),
+            // the interval is spelled twelve fifths away — E major — and the notes with it, the
+            // page's rule since session 1363 (PitchTransposer.KeyRespellFor; grammar evaluation 5's
+            // D1: this rewrite put `key fes major` in a clarinet's header).
+            if (!toConcert && HomeKeySharps(root, part) is int homeSharps)
+            {
+                int respell = Semantics.PitchTransposer.KeyRespellFor(
+                    homeSharps + Semantics.PitchTransposer.KeySignatureFifthsShift(interval.step, interval.alt));
+                if (respell != 0)
+                    interval = Semantics.PitchTransposer.RespellInterval(interval.step, interval.alt, interval.oct, respell);
+            }
             var mine = new List<Edit>();
             var shifts = new Dictionary<int, int>();
             string? why = null;
@@ -539,6 +551,20 @@ public static class OctaveModeConverter
         return source[close] == '}'
             ? new Edit(close, close, (source[close - 1] == ' ' ? "" : " ") + property + " ")
             : new Edit(part.Span.End, part.Span.End, $" {{ {property} }}");
+    }
+
+    /// <summary>The sharps of the key a part reads at concert pitch — its own first key, else the
+    /// file's first (C major when none) — or null for a custom key, which no transpose respells.</summary>
+    private static int? HomeKeySharps(SyntaxNode root, PartDeclarationSyntax part)
+    {
+        var key = part.DescendantNodes<KeySignatureSyntax>().FirstOrDefault()
+            ?? root.ChildNodes().OfType<KeySignatureSyntax>().FirstOrDefault();
+        if (key == null)
+            return 0;
+        if (key.IsCustom || key.GetChild(2) is not PitchSyntax tonic)
+            return null;
+        string mode = key.GetChild(3) is SyntaxTokenNode { Text.Length: > 0 } m ? m.Text.ToLowerInvariant() : "major";
+        return Music.KeySpelling.SharpsFor(tonic.PitchName, mode);
     }
 
     /// <summary>A written pitch's name moved by the c→target <paramref name="interval"/>, and the
