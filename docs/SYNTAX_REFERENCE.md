@@ -415,7 +415,10 @@ g4@fermata     // Fermata
 a4@portato     // Portato (tenuto + staccato)
 ```
 
-A fermata is printed, not played: the note keeps its written length in the MIDI.
+A fermata holds the time half again, for every part (since 2026-11-23): its note — or rest —
+keeps its written length, and the tempo is two thirds under it, in the MIDI, the preview and the
+WAV. `@rit` and `@rall` slow the tempo over their line to 70% of the one it began at, and `@accel`
+speeds it to 130%; the tempo comes back after the line (write a `tempo` there to stay slow).
 
 Every annotation name is case-sensitive and has one spelling: a name of several words is
 camelCase (`@upBow`, `@shortFermata`, `@reverseTurn`, `@laissezVibrer`, `@hammerOn`,

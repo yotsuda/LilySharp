@@ -218,8 +218,10 @@ public class PlaybackRequestTests
         const string doc = "time 4/4\npart m { }\nsection A {\n  m { c''4 d e f | g1@fermata |. }\n}\nform { A }\nscore { staff m }\n";
         var pb = Playback(doc, null);
         Assert.Null(pb.Error);
-        Assert.Equal(4.0, Math.Round(pb.BarEnd, 3));
-        Assert.Equal(3.5, Math.Round(pb.Beats!.Max(b => b.T), 3));
+        // The fermata holds the time of its bar half again (docs/expressive-tempo-design.md, 2026-11-23):
+        // the second bar is 3 seconds at 120, its beats 0.75 apart; until then 2, the note ringing past it.
+        Assert.Equal(5.0, Math.Round(pb.BarEnd, 3));
+        Assert.Equal(4.25, Math.Round(pb.Beats!.Max(b => b.T), 3));
         Assert.Equal(new[] { 0.0, 2.0 }, pb.Beats!.Where(b => b.A).Select(b => Math.Round(b.T, 3)));
     }
 

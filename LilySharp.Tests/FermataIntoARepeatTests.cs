@@ -60,9 +60,13 @@ public class FermataIntoARepeatTests
         // c' d' and the closing bar's notes, once: the rests of S's two passes sound nothing.
         int closingNotes = closing.StartsWith('<') ? 2 : 1;
         Assert.Equal(2 + closingNotes, midi.Tracks.Sum(t => t.Notes.Count));
-        // …and the fermata still rings half again its value.
+        // …and the fermata holds its bar's TIME half again, its note as written (docs/expressive-tempo-design.md,
+        // 2026-11-23; until then the note rang half again its value).
         var e = midi.Tracks.SelectMany(t => t.Notes).Single(n => n.Pitch == 64);
-        Assert.Equal(closing.Contains("fermata") ? 3 * midi.TicksPerQuarterNote * 4 / 2 : midi.TicksPerQuarterNote * 4, e.DurationTicks);
+        Assert.Equal(midi.TicksPerQuarterNote * 4, e.DurationTicks);
+        var tempos = midi.Tracks[0].TempoChanges;
+        int under = tempos.Last(c => c.Tick <= e.StartTick).MicrosecondsPerBeat, before = tempos[0].MicrosecondsPerBeat;
+        Assert.Equal(closing.Contains("fermata") ? before * 3 / 2 : before, under);
     }
 
     /// <summary>

@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **rit., rall., accel. and the fermata are played** (`[playback]`). They were drawn only, and a fermata rang its own note while the other parts went on. `@rit` … `@!rit` (and `@rall`) now slows the tempo over the line to 70% of the one it began at, `@accel` speeds it to 130%, and the tempo comes back after the line — a `tempo` written there stands. A fermata holds the time half again for every part, its note as written. The MIDI, the preview and the WAV all hear it.
+
 - **A chords row can be printed and not sounded: `chords harmony silent`** (`[language]` `[playback]`). In a band score the row sounded beside the keyboard that plays the same chords, and nothing could silence it. `silent` at the end of a score's chords row prints it and sounds nothing; its MusicXML harmonies are written as ever.
 
 - **Fixed: a piece composed in the chat could open with a part in a key of eight flats, and the chat's next changes missed** (`[editor]`). Opening a concert-pitch piece as its players read it, a clarinet in A over D♭ major was given `key fes major`; it now reads E major, its notes spelled in it, as the page prints such a part. And the chat is told that its parts were respelled, so it copies the text of its next changes from the score as it reads it, not from its own draft.

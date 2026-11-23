@@ -46,8 +46,9 @@ public class ChordMemberScriptsExportTests
     [InlineData("c''4 <e''@accent g''>4 r2 | c''1 |", "72:90:480 76:110:480 79:110:480 72:90:1920")]
     // …over the chord's own staccato.
     [InlineData("c''4 <e''@accent g''>4@staccato r2 | c''1 |", "72:90:480 76:110:240 79:110:240 72:90:1920")]
-    // A member's fermata holds the chord.
-    [InlineData("c''4 <e'' g''@fermata>4 r2 | c''1 |", "72:90:480 76:90:720 79:90:720 72:90:1920")]
+    // A member's fermata holds the chord — its TIME, the notes as written (docs/expressive-tempo-design.md,
+    // 2026-11-23; ExpressiveTempoTests holds the tempo).
+    [InlineData("c''4 <e'' g''@fermata>4 r2 | c''1 |", "72:90:480 76:90:480 79:90:480 72:90:1920")]
     // Each kind once: two members' accents accent the chord once.
     [InlineData("c''4 <e''@accent g''@accent>4 r2 | c''1 |", "72:90:480 76:110:480 79:110:480 72:90:1920")]
     // …and a kind the chord writes itself is not played twice.

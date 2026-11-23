@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **The preview plays rit., rall., accel. and fermatas**: the tempo slows or quickens over the line, and a fermata holds every part.
 - **`chords harmony silent` in a score prints a chords row without sounding it**; completion offers `silent` after the row.
 - **A piece composed in the chat no longer opens a part in a key of eight flats** (a clarinet in A over D♭ major reads E major), and the chat is told its parts were respelled for their players.
 - **The chat's chord reading names a chord tied over the bar line by the bar it sounds in.**

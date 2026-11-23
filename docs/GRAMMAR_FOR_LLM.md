@@ -624,7 +624,7 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
 - Voice column: `@shiftOff` keeps a note of a third or later voice in its group's first
   column, so it stands under the voice above instead of a column aside.
 - Articulations: `@staccato @staccatissimo @accent @tenuto @marcato @fermata @portato`
-  (`@fermata` does not hold the music back in the MIDI: a note nothing follows rings half again its length, and one within the piece rings until the next note of any part begins)
+  (`@fermata` holds the TIME half again for every part: its note, or rest, keeps its written length and the tempo is two thirds under it — the MIDI, the preview and the WAV)
 - **A mark over a run of notes**: `c8@staccato d e f@!staccato` — the end `@!NAME` goes on the
   LAST note of the run, and every note and chord from the opening one to that one carries the
   mark (drawn and played on each, exactly as `c8@staccato d@staccato e@staccato f@staccato`).
@@ -1621,8 +1621,9 @@ score { chords prog  staff mel }
 In-note marks: `c4@mark("A")` (rehearsal mark),
 text spanners `@textSpan("poco rit.")` ... `@!textSpan` (sugar: `@rit` / `@accel` / `@rall`,
 closed by `@!rit` / `@!accel` / `@!rall` — **the end is REQUIRED**: a spanner nobody closes
-draws nothing at all, its word included, and says so with LYS4018; all are printed, not
-played — the MIDI's tempo changes only at a `tempo`),
+draws nothing at all, its word included, and says so with LYS4018. `@rit` / `@rall` are PLAYED
+too: the tempo slows over the line to 70% of the one it began at, `@accel` speeds to 130%, and the
+tempo comes back after the line's end — write a `tempo` there to stay slow; `@textSpan` is printed only),
 the guitar lines `@palmMute` ... `@!palmMute`, `@letRing` ... `@!letRing`, `@barre(7)` ... `@!barre`
 (see the guitar marks above),
 ottava `@8va` / `@8vb` / `@15ma` / `@15mb` ... `@!8va` (the label the page prints; `@ottava` / `@quindicesima` are retired)

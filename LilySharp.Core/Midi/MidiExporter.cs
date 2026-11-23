@@ -1210,6 +1210,8 @@ public sealed class MidiExporter
         AddPedals(midi, mainTrack.Name);
         // Each note's printed bar, while the notes and the bar lines are still as printed.
         TagPrintedBars(midi);
+        // The time an `@rit` or a fermata moves, as printed — before the music is laid out as played.
+        ApplyExpressiveTempo(conductorTrack);
         // The music was walked once, as printed: now it is played (PlayedTimeline).
         if (_timeline is { Count: > 0 } marks)
         {
@@ -1653,6 +1655,14 @@ public sealed class MidiExporter
 
     private void ProcessNode(SyntaxNode node, MidiTrack track, MidiTrack conductorTrack)
     {
+        if (node is RestSyntax rest)
+        {
+            // A rest under a fermata holds the time too (CollectExpressiveTempo).
+            int restStart = _currentTick;
+            ProcessNodeCore(node, track, conductorTrack);
+            CollectExpressiveTempo(rest.Articulations, restStart);
+            return;
+        }
         if (node is not (NoteSyntax or ChordSyntax or BareDurationSyntax or ChordRepetitionSyntax or ArpeggioSyntax or DrumNoteSyntax))
         {
             ProcessNodeCore(node, track, conductorTrack);
@@ -1662,7 +1672,22 @@ public sealed class MidiExporter
         // them (MidiNote.Overhang), so a repeat played again does not take that ring for a note
         // written at its start (PlayedTimeline).
         int first = track.Notes.Count;
+        int onsetStart = _currentTick;
+        _onsetFermata = false;
         ProcessNodeCore(node, track, conductorTrack);
+        if (_onsetFermata && _currentTick > onsetStart && !_fermataTimes.Contains((onsetStart, _currentTick)))
+            _fermataTimes.Add((onsetStart, _currentTick));
+        _onsetFermata = false;
+        // The time it moves: an `@rit` begun or ended on it, a fermata over it (docs/expressive-tempo-design.md).
+        switch (node)
+        {
+            case NoteSyntax n: CollectExpressiveTempo(n.Articulations, onsetStart); break;
+            case ChordSyntax c: CollectExpressiveTempo(c.Articulations, onsetStart); break;
+            case BareDurationSyntax b: CollectExpressiveTempo(b.Articulations, onsetStart); break;
+            case ChordRepetitionSyntax q: CollectExpressiveTempo(q.Articulations, onsetStart); break;
+            case DrumNoteSyntax d: CollectExpressiveTempo(d.Articulations, onsetStart); break;
+            case ArpeggioSyntax a: CollectExpressiveTempo(a.Articulations, onsetStart); break;
+        }
         // …and the instrument the part has changed to, if any (MidiNote.Instrument).
         string? switched = _currentPart is { } part ? SwitchedInstrument(part) : null;
         for (int i = first; i < track.Notes.Count; i++)
@@ -5426,6 +5451,109 @@ public sealed class MidiExporter
             .Select(a => a.Type).Distinct().Where(type => !own.Contains(type)).ToList();
     }
 
+    // ===== The time an `@rit` and a fermata move (docs/expressive-tempo-design.md) =====
+
+    // The tempo spans of the export running, as printed: rit./rall. (slower) or accel. (faster),
+    // from the onset of the note that opens one to the end of the note that closes it.
+    private readonly List<(int Start, int End, bool Faster)> _tempoSpans = [];
+    // The ones open, by their word (`rit`, `rall`, `accel`).
+    private readonly Dictionary<string, int> _openTempoSpans = new(StringComparer.Ordinal);
+    // The fermatas, each from its onset to the end of its written length.
+    private readonly List<(int Start, int End)> _fermataTimes = [];
+
+    /// <summary>The speed an rit. or rall. arrives at, and an accel.'s, of the tempo it began at.</summary>
+    internal const double RitardandoArrival = 0.7, AccelerandoArrival = 1.3;
+
+    /// <summary>How much longer a fermata holds the time than its written length.</summary>
+    internal const double FermataHold = 1.5;
+
+    // A fermata sounded on the onset being played — however it reached it (its own, a chord
+    // member's, an empty chord's handed on): the onset's wrapper records its time.
+    private bool _onsetFermata;
+
+    private int FermataNoted(int durationPercent)
+    {
+        _onsetFermata = true;
+        return durationPercent;
+    }
+
+    /// <summary>Notes the time the onset just played (from <paramref name="start"/> to the tick now)
+    /// moves: an `@rit` / `@rall` / `@accel` it opens or closes, a fermata over it.</summary>
+    private void CollectExpressiveTempo(ChildNodeList articulations, int start)
+    {
+        foreach (var a in articulations)
+        {
+            if (a is ArticulationSyntax { Type: ArticulationType.Fermata } && _currentTick > start)
+            {
+                if (!_fermataTimes.Contains((start, _currentTick)))
+                    _fermataTimes.Add((start, _currentTick));
+            }
+            // `@rit` reads as an articulation, `@!rit` as a mark.
+            else if (a is ArticulationSyntax { Name: "rit" or "rall" or "accel" } opens)
+                _openTempoSpans.TryAdd(opens.Name, start);
+            else if (a is MusicMarkSyntax { Name: "rit" or "rall" or "accel" } mark)
+            {
+                if (!mark.IsSpanEnd)
+                    _openTempoSpans.TryAdd(mark.Name, start);
+                else if (_openTempoSpans.Remove(mark.Name, out int from) && _currentTick > from
+                         && !_tempoSpans.Contains((from, _currentTick, mark.Name == "accel")))
+                    _tempoSpans.Add((from, _currentTick, mark.Name == "accel"));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Writes the time the walk noted onto the tempo map, as printed: each rit./rall. slows the tempo
+    /// it began at, a sixteenth a step, to <see cref="RitardandoArrival"/> of it at its end (an
+    /// accel. to <see cref="AccelerandoArrival"/>) and gives it back after — save where a written
+    /// `tempo` stands there; then each fermata holds the time <see cref="FermataHold"/> times its
+    /// written length, over the tempo in force under it.
+    /// </summary>
+    private void ApplyExpressiveTempo(MidiTrack conductor)
+    {
+        _openTempoSpans.Clear();
+        if (_tempoSpans.Count == 0 && _fermataTimes.Count == 0)
+            return;
+        int TempoAt(int tick)
+        {
+            int at = conductor.TempoChanges.Count > 0 ? conductor.TempoChanges[0].MicrosecondsPerBeat : BpmToMicroseconds(_tempo);
+            foreach (var change in conductor.TempoChanges)
+                if (change.Tick <= tick) at = change.MicrosecondsPerBeat;
+                else break;
+            return at;
+        }
+        bool Written(int tick) => conductor.TempoChanges.Any(c => c.Tick == tick);
+        int step = Math.Max(1, _ticksPerQuarter / 4);
+        foreach (var (start, end, faster) in _tempoSpans.OrderBy(s => s.Start))
+        {
+            int baseTempo = TempoAt(start);
+            bool restoreWritten = Written(end);
+            double arrival = faster ? AccelerandoArrival : RitardandoArrival;
+            for (int tick = start; tick < end; tick += step)
+            {
+                // From the tempo it began at, its first step, to the arrival at its end.
+                double speed = 1 + (arrival - 1) * (tick - start) / (double)System.Math.Max(1, end - start - step);
+                conductor.SetTempo(tick, (int)Math.Round(baseTempo / Math.Max(0.1, speed)));
+            }
+            if (!restoreWritten)
+                conductor.SetTempo(end, baseTempo);
+        }
+        // One fermata a moment, whichever parts write it: the longest note under it.
+        foreach (var (start, end) in _fermataTimes.GroupBy(f => f.Start).Select(g => (g.Key, g.Max(f => f.End))).OrderBy(f => f.Key))
+        {
+            int after = TempoAt(end);
+            // The tempo under the fermata, each step of an rit. under it held as long again.
+            var under = conductor.TempoChanges.Where(c => c.Tick > start && c.Tick < end).ToList();
+            int first = TempoAt(start);
+            conductor.SetTempo(start, (int)Math.Round(first * FermataHold));
+            foreach (var change in under)
+                conductor.SetTempo(change.Tick, (int)Math.Round(change.MicrosecondsPerBeat * FermataHold));
+            conductor.SetTempo(end, after);
+        }
+        _tempoSpans.Clear();
+        _fermataTimes.Clear();
+    }
+
     // The notes a fermata holds past their written length (NoteHold), of the export running:
     // where each starts, its written length, the part, and the span of the text that wrote it.
     private readonly List<(int Start, int Written, string? Part, int From, int To)> _holds = [];
@@ -5482,7 +5610,9 @@ public sealed class MidiExporter
             ArticulationType.Tenuto => (velocity, 100),                       // Full duration
             ArticulationType.Marcato => (Math.Min(127, velocity + 30), 80),   // Louder, slightly shorter
             ArticulationType.Portato => (velocity, 75),                       // Slightly shorter
-            ArticulationType.Fermata => (velocity, 150),                      // Extended
+            // A fermata holds the TIME (CollectExpressiveTempo, docs/expressive-tempo-design.md):
+            // its note is as long as it is written, the tempo slower under it.
+            ArticulationType.Fermata => (velocity, FermataNoted(durationPercent)),
             _ => (velocity, durationPercent)
         };
     }

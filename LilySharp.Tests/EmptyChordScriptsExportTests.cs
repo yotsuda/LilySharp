@@ -119,8 +119,13 @@ public class EmptyChordScriptsExportTests
         Assert.Equal("note note note[fermata]", Part(0));
         Assert.Equal("note note note", Part(1));
         Assert.DoesNotContain(doc.Descendants("barline"), b => b.Element("fermata") != null);
-        var notes = new MidiExporter().Export(SyntaxTree.Parse(TwoSections)).Tracks.SelectMany(t => t.Notes).ToList();
-        Assert.Equal(new[] { 960, 960, 2880 }, notes.Where(n => n.Part == "m").OrderBy(n => n.StartTick).Select(n => n.DurationTicks));
+        var midi = new MidiExporter().Export(SyntaxTree.Parse(TwoSections));
+        var notes = midi.Tracks.SelectMany(t => t.Notes).ToList();
+        // The fermata holds the next section's first bar's time half again, its note as written
+        // (docs/expressive-tempo-design.md, 2026-11-23; until then the note rang 2880).
+        Assert.Equal(new[] { 960, 960, 1920 }, notes.Where(n => n.Part == "m").OrderBy(n => n.StartTick).Select(n => n.DurationTicks));
+        var tempos = midi.Tracks[0].TempoChanges;
+        Assert.Equal(tempos[0].MicrosecondsPerBeat * 3 / 2, tempos.Last(c => c.Tick <= 1920).MicrosecondsPerBeat);
         Assert.Equal(new[] { 960, 960, 1920 }, notes.Where(n => n.Part == "n").OrderBy(n => n.StartTick).Select(n => n.DurationTicks));
     }
 
