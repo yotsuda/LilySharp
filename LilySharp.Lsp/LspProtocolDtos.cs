@@ -460,6 +460,9 @@ public class SungNoteDto
     /// (<see cref="St"/>, <c>NAME to VALUE</c>); each null where there is none.</summary>
     public System.Collections.Generic.Dictionary<string, object>? Sg { get; set; }
     public System.Collections.Generic.Dictionary<string, object>? St { get; set; }
+    /// <summary>The voice's symbols the syllable is sung by, space-separated (<c>병[/pp.y.eo.NG/]</c>),
+    /// null where none are written.</summary>
+    public string? Ph { get; set; }
 }
 
 /// <summary>A part's words on its notes: what the editor hands a singing engine, with what the

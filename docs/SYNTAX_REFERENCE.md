@@ -2684,6 +2684,15 @@ and a `]` on its own are an error on the syllable (LYS4036), which still prints 
 a reading that is not kana is a warning (LYS4037). A kanji with no reading prints as always
 and is not sung — the voice says so once. (VSQX, VOCALOID's format, takes the reading too.)
 
+**Phonemes** fix a word a voice reads wrong — the doubled consonant of 발병, an English stress, a
+Chinese word its tables do not know. Write the voice's own symbols last on the syllable, between
+`[/` and `/]`, separated by `.`: `발 병[/pp.y.eo.NG/]` prints 병 and a DiffSinger voice sings
+pp y eo NG. They follow a reading too: `漢[かん][/k.a.N/]`. The symbols are the voice's — another
+singer may not know them, and says which one it lacks. Only the sung voice takes them, on the
+syllable's note; NEUTRINO and VOICEVOX read the word. An unclosed one, one that is not last, an
+empty one (`[/pp..y/]`) or one with nothing before it is LYS4036. (A space ends the syllable:
+`[/pp y/]` is unclosed — write the dots.)
+
 **The language of the words** is `japanese` unless the file says otherwise: `language english`
 on a line of its own for the whole file, or on a track, `lyrics en language english { … }`
 (the track's wins). The names are `japanese`, `english`,

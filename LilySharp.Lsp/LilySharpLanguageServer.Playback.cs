@@ -252,7 +252,7 @@ public sealed partial class LilySharpLanguageServer
                     Sing = v.Sing?.ToDictionary(p => p.Key, p => p.Value.Number is { } number ? (object)number : p.Value.Word ?? ""),
                     Notes = v.Notes.Select(n => new SungNoteDto
                     {
-                        T = n.Start, D = n.Duration, P = n.Pitch, L = n.Lyric, M = n.Melisma, B = n.Breath, S = n.SourcePos, V = n.Level, E = n.LevelEnd, I = n.Inhale, H = n.Hyphen, Vb = n.Vibrato, Vr = n.VibratoRate, Sg = SingDto(n.Sing, arrives: false), St = SingDto(n.Sing, arrives: true),
+                        T = n.Start, D = n.Duration, P = n.Pitch, L = n.Lyric, M = n.Melisma, B = n.Breath, S = n.SourcePos, V = n.Level, E = n.LevelEnd, I = n.Inhale, H = n.Hyphen, Vb = n.Vibrato, Vr = n.VibratoRate, Ph = n.Phonemes, Sg = SingDto(n.Sing, arrives: false), St = SingDto(n.Sing, arrives: true),
                     }).ToArray(),
                 }).OrderByDescending(v => v.InScore).ToArray(),
                 PrintedWords = shownSounds?.PrintedWords?.ToArray() ?? [],

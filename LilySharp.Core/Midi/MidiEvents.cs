@@ -221,5 +221,6 @@ public readonly record struct LyricEvent(
     bool Voiced = true,         // a voice was asked for them (Music.LyricSinger.SungReaderOf); not written to .mid
     string? Track = null,       // the lyrics track they are written in, as named there; not written to .mid
     string? Sing = null,        // how each voice sings them, its line's `with …` (Music.LyricSinger.SettingsReaderOf); not written to .mid
-    int SourcePos = -1          // where the syllable stands in the text, for the editor to light it while it is sung (owner's request 2026-11-17); -1 from a file; not written to .mid
+    int SourcePos = -1,         // where the syllable stands in the text, for the editor to light it while it is sung (owner's request 2026-11-17); -1 from a file; not written to .mid
+    string? Phonemes = null     // the voice's symbols it is sung by, space-separated — 병[/pp.y.eo.NG/] (Music.LyricReading.Phonemes); not written to .mid
 );

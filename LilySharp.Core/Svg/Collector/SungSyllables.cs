@@ -28,8 +28,9 @@ namespace LilySharp.Core.Svg.Collector;
 /// note: the page's item, which printing of that item's source it is (the k-th, counted on its
 /// staff in written order), the part sung, the track the words are written in, and — a syllable
 /// with a reading, <c>漢[かん]</c> — the word a voice sings in place of the printed one
-/// (<see cref="Music.LyricReading"/>), else null.</summary>
-internal readonly record struct SungSyllable(LyricItem Lyric, MusicItem Item, int Printing, string Part, string? Track, string? Sung = null);
+/// (<see cref="Music.LyricReading"/>), else null; and the voice's symbols it is sung by —
+/// <c>병[/pp.y.eo.NG/]</c> (<see cref="Music.LyricReading.Phonemes"/>) — else null.</summary>
+internal readonly record struct SungSyllable(LyricItem Lyric, MusicItem Item, int Printing, string Part, string? Track, string? Sung = null, string? Phonemes = null);
 
 /// <summary>
 /// The one answer to "which note does this syllable stand on" for the files (MusicXML, MIDI):
@@ -110,9 +111,17 @@ internal static class SungSyllables
         // word and its offset (SourcePosition is the token's), so the sung word is read off the
         // token again here, and only here: the page never needs it.
         var readings = new Dictionary<int, string>();
+        var phonemes = new Dictionary<int, string>();
         foreach (var node in root.DescendantNodes())
-            if (node.Kind == SyntaxKind.LyricSyllable && LyricSyllableReader.Read(node) is { Sung: { } sung } token)
+        {
+            if (node.Kind != SyntaxKind.LyricSyllable)
+                continue;
+            var token = LyricSyllableReader.Read(node);
+            if (token.Sung is { } sung)
                 readings[token.Position] = sung;
+            if (token.Phonemes is { } symbols)
+                phonemes[token.Position] = symbols;
+        }
 
         foreach (var lyric in page.Lyrics.OrderBy(l => l.MeasureIndex).ThenBy(l => l.Timing).ThenBy(l => l.VerseNumber))
         {
@@ -125,7 +134,7 @@ internal static class SungSyllables
                 continue;
             var track = lyric.GeneratedTrack
                 ?? blocks.FirstOrDefault(b => lyric.SourcePosition >= b.Span.Start && lyric.SourcePosition < b.Span.End)?.VoiceName;
-            result.Add(new SungSyllable(lyric, item, k, part, track, readings.GetValueOrDefault(lyric.SourcePosition)));
+            result.Add(new SungSyllable(lyric, item, k, part, track, readings.GetValueOrDefault(lyric.SourcePosition), phonemes.GetValueOrDefault(lyric.SourcePosition)));
         }
         return result;
     }

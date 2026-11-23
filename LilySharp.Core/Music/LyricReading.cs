@@ -14,7 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace LilySharp.Core.Music;
@@ -55,16 +57,79 @@ public static class LyricReading
     /// </summary>
     public static (string Printed, string Sung, string? Problem) Split(string raw)
     {
+        var (printed, sung, _, problem) = Read(raw);
+        return (printed, sung, problem);
+    }
+
+    /// <summary>
+    /// The PHONEMES written at the end of a syllable — <c>병[/pp.y.eo.NG/]</c> — as a voice takes
+    /// them, its symbols separated by spaces (<c>pp y eo NG</c>); null when the syllable writes
+    /// none or its brackets are malformed.
+    /// </summary>
+    /// <remarks>
+    /// Cantoria's request 1 (2026-11-22, its docs/repro/REQUESTS.md): a word a voice's dictionary
+    /// or rules read wrong — the doubled consonant of 발병, an English stress, a Chinese word no
+    /// table has — is sung by the voice's own symbols. LILYSHARP-OWN: LilyPond sings nothing.
+    /// <para>
+    /// The shape, as the session-1375 design gives it (docs/singing-design.md §3): <c>[/…/]</c>
+    /// glued last on the syllable, after its word or its reading (<c>漢[かん][/k.a.N/]</c>: an
+    /// engine that reads words sings かん, a DiffSinger voice the symbols), the symbols separated
+    /// by <c>.</c> — a space ends a syllable. The symbols are THE VOICE'S: another singer may not
+    /// know them, and says so. A melisma's notes carry none (the syllable is on its first note).
+    /// The page, the MusicXML, the LilyPond twin, the .mid and the VSQX do not write them.
+    /// </para>
+    /// </remarks>
+    public static string? Phonemes(string raw) => HasBrackets(raw) ? Read(raw).Phonemes : null;
+
+    /// <summary>The opening of a phoneme bracket, <c>[/</c>, and its closing, <c>/]</c>.</summary>
+    private const string PhonemesOpen = "[/", PhonemesClose = "/]";
+
+    private static (string Printed, string Sung, string? Phonemes, string? Problem) Read(string raw)
+    {
         if (!HasBrackets(raw))
-            return (raw, raw, null);
+            return (raw, raw, null, null);
+        string? phonemes = null;
+        int end = raw.Length;
+        int open = raw.IndexOf(PhonemesOpen, StringComparison.Ordinal);
+        if (open >= 0)
+        {
+            const string example = "e.g. 병[/pp.y.eo.NG/]";
+            int close = raw.IndexOf(PhonemesClose, open + 2, StringComparison.Ordinal);
+            string? problem = null;
+            if (close < 0)
+                problem = $"the phonemes in '{raw}' are not closed — write '/]' after them, separated by '.' (a space ends the syllable), {example}";
+            else if (close + 2 != raw.Length)
+                problem = $"the phonemes in '{raw}' must end the syllable — write [/…/] last, after the word and its reading, {example}";
+            else if (open == 0)
+                problem = $"the phonemes [/{raw[2..close]}/] in '{raw}' have no word before them — they are glued after the syllable they sing, {example}";
+            else if (raw[(open + 2)..close] is var symbols && (symbols.Length == 0 || symbols.IndexOfAny(['[', ']']) >= 0
+                         || symbols.Split('.').Any(s => s.Length == 0)))
+                problem = symbols.IndexOfAny(['[', ']']) >= 0
+                    ? $"a bracket inside the phonemes in '{raw}' — {example}"
+                    : $"an empty phoneme in '{raw}' — write the voice's symbols separated by one '.', {example}";
+            if (problem != null)
+                return (raw, raw, null, problem);
+            phonemes = raw[(open + 2)..close].Replace('.', ' ');
+            end = open;
+        }
+        var (printed, sung, readingProblem) = SplitReadings(raw[..end], raw);
+        return readingProblem != null ? (raw, raw, null, readingProblem) : (printed, sung, phonemes, null);
+    }
+
+    /// <summary>The readings of <paramref name="word"/> (the syllable less its phonemes);
+    /// <paramref name="raw"/> is the syllable as written, for the message.</summary>
+    private static (string Printed, string Sung, string? Problem) SplitReadings(string word, string raw)
+    {
+        if (!HasBrackets(word))
+            return (word, word, null);
         var printed = new StringBuilder();
         var sung = new StringBuilder();
         var stretch = new StringBuilder();      // the printed chars since the last reading
         string? problem = null;
         int i = 0;
-        while (i < raw.Length)
+        while (i < word.Length)
         {
-            char c = raw[i];
+            char c = word[i];
             if (c == ']')
             {
                 problem ??= $"a ']' with no '[' before it in '{raw}' — a reading is written WORD[READING], e.g. 漢[かん]";
@@ -76,8 +141,8 @@ public static class LyricReading
                 i++;
                 continue;
             }
-            int close = raw.IndexOf(']', i + 1);
-            int nextOpen = raw.IndexOf('[', i + 1);
+            int close = word.IndexOf(']', i + 1);
+            int nextOpen = word.IndexOf('[', i + 1);
             if (close < 0)
             {
                 problem ??= $"the reading in '{raw}' is not closed — write ']' after it, e.g. 漢[かん]";
@@ -88,7 +153,7 @@ public static class LyricReading
                 problem ??= $"a '[' inside the reading in '{raw}' — one reading is one pair of brackets, e.g. 漢[かん]";
                 break;
             }
-            string reading = raw[(i + 1)..close];
+            string reading = word[(i + 1)..close];
             if (stretch.Length == 0)
             {
                 problem ??= $"the reading [{reading}] in '{raw}' has no word before it — a reading is glued after the word it reads, e.g. 漢[かん]";
@@ -118,10 +183,11 @@ public static class LyricReading
         var list = new List<string>();
         if (!HasBrackets(raw) || Split(raw).Problem != null)
             return list;
-        for (int open = raw.IndexOf('['); open >= 0; open = raw.IndexOf('[', open + 1))
+        string word = raw.IndexOf(PhonemesOpen, StringComparison.Ordinal) is var p and >= 0 ? raw[..p] : raw;     // the phonemes are no reading
+        for (int open = word.IndexOf('['); open >= 0; open = word.IndexOf('[', open + 1))
         {
-            int close = raw.IndexOf(']', open + 1);
-            list.Add(raw[(open + 1)..close]);
+            int close = word.IndexOf(']', open + 1);
+            list.Add(word[(open + 1)..close]);
             open = close;
         }
         return list;

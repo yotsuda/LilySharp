@@ -311,6 +311,9 @@ public static class SungScoreJson
                     w.WriteNumber("vibrato", vibrato);
                 if (n.VibratoRate is { } vibratoRate)
                     w.WriteNumber("vibratoRate", vibratoRate);
+                // The voice's symbols the syllable is sung by (병[/pp.y.eo.NG/]; Cantoria's request 1).
+                if (n.Phonemes is { } phonemes)
+                    w.WriteString("phonemes", phonemes);
                 // What an `@sing(…)` writes on the note: held from it ("sing"), or arrived at ("singTo").
                 var settings = Semantics.AnnotationValues.SingOf(n.Sing);
                 foreach (bool arrives in new[] { false, true })

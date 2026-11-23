@@ -251,6 +251,15 @@
                     "match": "--|__|~|_"
                 },
                 {
+                    "comment": "Phonemes glued last on a syllable, the voice's own symbols: 병[/pp.y.eo.NG/] (Cantoria's request 1, session 1375). Before the reading rule, which would take the slashes for kana.",
+                    "match": "(\\[/)([^\\[\\]\\s|]*)(/\\])",
+                    "captures": {
+                        "1": { "name": "punctuation.definition.lyric-phonemes.lilysharp" },
+                        "2": { "name": "constant.other.lyric-phonemes.lilysharp" },
+                        "3": { "name": "punctuation.definition.lyric-phonemes.lilysharp" }
+                    }
+                },
+                {
                     "comment": "A reading glued to the word it reads, sung in its place: 漢[かん] (2026-11-08). The kana inside are coloured as a string, the brackets as punctuation; the word before them stays plain text.",
                     "match": "(\\[)([^\\[\\]\\s|]*)(\\])",
                     "captures": {

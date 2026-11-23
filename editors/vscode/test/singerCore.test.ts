@@ -985,6 +985,21 @@ describe('a vibrato written on a note goes to the engine', () => {
     });
 });
 
+// Cantoria's request 1 (2026-11-22): the voice's own symbols written on a syllable (병[/pp.y.eo.NG/]).
+describe('the phonemes written on a syllable go to the engine', () => {
+    it('beside its lyric, on the notes the server puts them on', () => {
+        const voice: SungVoiceDto = { Part: 'lead', Language: 'ko', Notes: [
+            { T: 0, D: 1, P: 60, L: '병', Ph: 'pp y eo NG' },
+            { T: 1, D: 1, P: 62, M: true },
+            { T: 2, D: 1, P: 64, L: '다' },
+        ] };
+        const notes = cantoriaScore(voice, 1).notes;
+        assert.deepEqual(notes.map(n => [n.lyric, n.phonemes]), [['병', 'pp y eo NG'], [undefined, undefined], ['다', undefined]]);
+        const plain = { ...voice, Notes: voice.Notes.map(n => ({ ...n, Ph: undefined })) };
+        assert.ok(!JSON.stringify(cantoriaScore(plain, 1)).includes('phonemes'));
+    });
+});
+
 // Owner's decisions 2026-11-12: how a voice sings is written on its singer line after `with`, a
 // name and a value each, by the names the voice's own engine takes; the editor lists them.
 describe('a singer line\'s settings', () => {

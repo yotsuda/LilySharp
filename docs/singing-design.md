@@ -151,6 +151,20 @@ The score spellings here (`lyrics NAME sings PART`) were replaced on 2026-11-10:
   that sing it (`singerChoices`); a voice not saying what it sings is
   left out. `lysc wav --singer` sings a written `engine/name` and takes a role as the default. The editor shows the
   engine's sentence once per score and plays the instruments alone.
+- **Phonemes on a syllable** (Cantoria's request 1, 2026-11-22; session 1375 — the shape was left
+  to Lily#): `병[/pp.y.eo.NG/]`, glued last, after the word or its reading. It rides the reading's
+  path (`LyricReading.Phonemes` → `LyricSyllableReader` → `SungSyllables` → `LyricEvent.Phonemes`
+  → `SungNote.Phonemes`) and is the score's `"phonemes": "pp y eo NG"` beside the `lyric`, which
+  stays (Cantoria names the note by it). WHY THESE CHOICES: ⑴ on the syllable and not on the
+  `singer` line — the fix is of a word, where the word is written, as the reading is; a voice
+  that does not know a symbol says so by the note (Cantoria's `has no sound for … its phonemes
+  are written …`), so switching singers is told, not hidden; ⑵ `.` between the symbols, as a
+  space ends a syllable, and `[/ /]` as Cantoria proposed (a phonemic transcription's slashes);
+  ⑶ last on the syllable, so a reading and the phonemes stack (`漢[かん][/k.a.N/]`: NEUTRINO and
+  VOICEVOX read かん, DiffSinger sings k a N); ⑷ on the syllable's note only — a melisma or a
+  vowel sung again after a breath has its own tick, which the table is not keyed by; ⑸ no file
+  but the sung score writes them (the VSQX's symbols are VOCALOID's, not the voice's). ⚠️ `[//]`
+  is a line comment, not an empty bracket (`//`).
 - **Kanji with a reading** (owner's decision 2026-11-08, session 1138): the reading is glued to
   the word in the syllable — `漢[かん]` prints 漢 and sings かん, `大[おお]空[ぞら]` prints 大空
   and sings おおぞら (`Music.LyricReading`; GRAMMAR.md `LyricText`). One row, one place: the file

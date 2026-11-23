@@ -28,8 +28,11 @@ namespace LilySharp.Core.Midi;
 /// an audible breath before the note right after it (<c>@breath</c>; a rest is only silence);
 /// <paramref name="Vibrato"/> a written vibrato's swing each way in cents and <paramref name="VibratoRate"/>
 /// its swings a second (<c>@vibrato</c>, a trial: a DiffSinger voice sings it); <paramref name="Sing"/>
-/// the settings an <c>@sing(…)</c> writes on it, as <c>Semantics.AnnotationValues.SingText</c>.
-public sealed record SungNote(double Start, double Duration, double Pitch, string? Lyric, bool Melisma, bool Breath, int SourcePos, double? Level = null, double? LevelEnd = null, bool Inhale = false, bool Hyphen = false, double? Vibrato = null, double? VibratoRate = null, string? Sing = null);
+/// the settings an <c>@sing(…)</c> writes on it, as <c>Semantics.AnnotationValues.SingText</c>;
+/// <paramref name="Phonemes"/> the voice's symbols its syllable is sung by, space-separated
+/// (<c>병[/pp.y.eo.NG/]</c>, <see cref="Music.LyricReading.Phonemes"/>; Cantoria's request 1, a DiffSinger
+/// voice sings them) — on the note the syllable stands on, never on a melisma's.
+public sealed record SungNote(double Start, double Duration, double Pitch, string? Lyric, bool Melisma, bool Breath, int SourcePos, double? Level = null, double? LevelEnd = null, bool Inhale = false, bool Hyphen = false, double? Vibrato = null, double? VibratoRate = null, string? Sing = null, string? Phonemes = null);
 
 /// <summary>A part's words on its notes, as a singing engine takes them: the score in seconds
 /// that <c>cantoria</c> reads. <paramref name="Warnings"/> says what the engine will not sing
@@ -96,11 +99,17 @@ public static class SungVoices
             string language = first.Language ?? Japanese;
             var words = new Dictionary<int, string>();
             var hyphens = new HashSet<int>();
+            var phonemes = new Dictionary<int, string>();
             foreach (var l in lyrics)
-                if (l.Part == part && l.Track == track && words.TryAdd(l.Tick, AsSung(l.Sung ?? l.Text, language)) && l.Hyphen)     // a reading (漢[かん]) sings かん
-                    hyphens.Add(l.Tick);
+                if (l.Part == part && l.Track == track && words.TryAdd(l.Tick, AsSung(l.Sung ?? l.Text, language)))     // a reading (漢[かん]) sings かん
+                {
+                    if (l.Hyphen)
+                        hyphens.Add(l.Tick);
+                    if (l.Phonemes != null)
+                        phonemes[l.Tick] = l.Phonemes;
+                }
             var line = Line(midi, part!, words);
-            MoveWordsOntoGraces(line, words, hyphens);
+            MoveWordsOntoGraces(line, words, hyphens, phonemes);
 
             // A vowel is not carried into a section that sings no word (owner's report
             // 2026-11-12: a Coda of two bars with no words, right after the last chorus, was
@@ -187,7 +196,8 @@ public static class SungVoices
                 // the next one still starts on its beat.
                 if (joined && note.BreathAfter)
                     duration -= Math.Min(BreathSeconds, duration / 3);
-                notes.Add(new SungNote(start, duration, note.Pitch + 0.5 * note.QuarterBend, lyric, melisma, breath, note.SourcePos, levels[i].Level, levels[i].End, joined && note.Inhale, lyric != null && !melisma && sung[i].Lyric != null && hyphens.Contains(note.StartTick), note.Vibrato, note.VibratoRate, note.Sing));
+                notes.Add(new SungNote(start, duration, note.Pitch + 0.5 * note.QuarterBend, lyric, melisma, breath, note.SourcePos, levels[i].Level, levels[i].End, joined && note.Inhale, lyric != null && !melisma && sung[i].Lyric != null && hyphens.Contains(note.StartTick), note.Vibrato, note.VibratoRate, note.Sing,
+                    phonemes.GetValueOrDefault(note.StartTick)));    // the syllable's note only: a held note (a vowel sung again after a breath too) has its own tick
                 if (lyric != null && language == Japanese && !IsKana(lyric) && !strange.Contains(lyric, StringComparer.Ordinal))
                 {
                     strange.Add(lyric);
@@ -599,7 +609,7 @@ public static class SungVoices
 
     /// <summary>A leading grace is sung on the syllable of the note it leads to: the word moves to the
     /// run's first note, and the rest of the run and the note itself carry its vowel on.</summary>
-    private static void MoveWordsOntoGraces(List<(MidiNote Note, int End)> line, Dictionary<int, string> words, HashSet<int> hyphens)
+    private static void MoveWordsOntoGraces(List<(MidiNote Note, int End)> line, Dictionary<int, string> words, HashSet<int> hyphens, Dictionary<int, string> phonemes)
     {
         for (int i = 0; i < line.Count; i++)
         {
@@ -614,6 +624,8 @@ public static class SungVoices
                 words[line[i].Note.StartTick] = word;
                 if (hyphens.Remove(line[main].Note.StartTick))
                     hyphens.Add(line[i].Note.StartTick);
+                if (phonemes.Remove(line[main].Note.StartTick, out var symbols))
+                    phonemes[line[i].Note.StartTick] = symbols;
             }
         }
     }

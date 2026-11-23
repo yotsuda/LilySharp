@@ -60,6 +60,10 @@ internal static class LyricSyllableReader
     internal readonly record struct LyricToken(Marker Role, string Text, int Position)
     {
         public string? Sung { get; init; }
+
+        /// <summary>The voice's symbols the syllable is sung by, space-separated —
+        /// <c>병[/pp.y.eo.NG/]</c> (<see cref="Music.LyricReading.Phonemes"/>) — else null.</summary>
+        public string? Phonemes { get; init; }
     }
 
     /// <summary>
@@ -112,6 +116,7 @@ internal static class LyricSyllableReader
             return new LyricToken(role, DisplaySyllable(printed), position)
             {
                 Sung = problem == null && sung != printed ? sung : null,
+                Phonemes = problem == null ? Music.LyricReading.Phonemes(word) : null,
             };
         }
         return new LyricToken(role, text, position);

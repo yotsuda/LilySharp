@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 68 | 観測者がゼロだと自認しているもの |
-| `OWN` | 484 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **614** | |
+| `OWN` | 485 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **615** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -255,7 +255,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（484 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（485 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -366,6 +366,7 @@
 - **`Harmonics.ArtificialSounding`** LILYSHARP-OWN: LilyPond's \harmonic changes the head and nothing else —
 ### `LilySharp.Core/Music/LyricReading.cs`
 - **`LyricReading`** that says how it is sung. LILYSHARP-OWN: LilyPond prints lyrics and sings nothing.
+- **`LyricReading.Phonemes`** table has — is sung by the voice's own symbols. LILYSHARP-OWN: LilyPond sings nothing.
 ### `LilySharp.Core/Music/PhraseAnchor.cs`
 - **`PhraseAnchor.Shape`** LILYSHARP-OWN: LilyPond has neither the item nor a phrase anchor — the twin's
 ### `LilySharp.Core/Music/PhraseSummary.cs`

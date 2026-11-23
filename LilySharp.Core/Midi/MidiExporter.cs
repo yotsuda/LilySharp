@@ -5687,7 +5687,7 @@ public sealed class MidiExporter
         // The passes the verses written on each note name, between them — what a pass no verse
         // names falls back on.
         var versedPasses = new Dictionary<(int Source, int Printing, string Part, string? Track), SortedSet<int>>();
-        foreach (var (lyric, item, printing, part, sungTrack, _) in sung)
+        foreach (var (lyric, item, printing, part, sungTrack, _, _) in sung)
                 if (lyric.StanzaLabel > 0)
                 {
                     var key = (item.SourcePosition, printing, part, sungTrack);
@@ -5695,7 +5695,7 @@ public sealed class MidiExporter
                         versedPasses[key] = named = [];
                     named.UnionWith(Svg.Collector.LyricsCollector.PlaysOfVerseAt(tree.GetRoot(), lyric.SourcePosition).Select(play => play - 1));
                 }
-        foreach (var (lyric, item, printing, part, sungTrack, reading) in sung)
+        foreach (var (lyric, item, printing, part, sungTrack, reading, phonemes) in sung)
         {
             var notes = bySource[item.SourcePosition].ToList();
             // A phrase two parts play stands at one source position, and its ordinals run on
@@ -5739,7 +5739,7 @@ public sealed class MidiExporter
                     && (verse.Own.Contains(pass)
                         || (!verse.Cell.Contains(pass) && verse.Own.Contains(verse.Cell.Where(w => w < pass).DefaultIfEmpty(0).Max())))).ToList();
             foreach (int tick in ticks)
-                track.Lyrics.Add(new LyricEvent(tick, lyric.Text, part, reading, languageOf(sungTrack), singerOf(sungTrack, part), genderOf(singerOf(sungTrack, part), part), lyric.ConnectorType == Svg.Model.LyricConnectorType.Hyphen, sings(sungTrack, part), sungTrack, settingsOf(sungTrack, part), lyric.SourcePosition));
+                track.Lyrics.Add(new LyricEvent(tick, lyric.Text, part, reading, languageOf(sungTrack), singerOf(sungTrack, part), genderOf(singerOf(sungTrack, part), part), lyric.ConnectorType == Svg.Model.LyricConnectorType.Hyphen, sings(sungTrack, part), sungTrack, settingsOf(sungTrack, part), lyric.SourcePosition, phonemes));
         }
     }
 }

@@ -1842,7 +1842,18 @@ LyricVerse     = 'verse' , [ '~' ] , Integer , { ( ',' | '-' ) , Integer } , '{'
                     spelling '[1. … ]' was read with an error until 2026-11-08; dropped, owner's
                     decision). *)
 LyricSyllable  = LyricText , [ '-' ] | '--' | '-' | '~' | '_' ;
-LyricText      = { Word , [ '[' , Reading , ']' ] } ;
+LyricText      = { Word , [ '[' , Reading , ']' ] } , [ '[/' , Phoneme , { '.' , Phoneme } , '/]' ] ;
+                 (* PHONEMES glued last on the syllable (Cantoria's request 1, 2026-11-22;
+                    session 1375): the voice's own symbols it is sung by — '병[/pp.y.eo.NG/]'
+                    prints 병 and a DiffSinger voice sings pp y eo NG; '漢[かん][/k.a.N/]' prints
+                    漢, an engine that reads words sings かん. The symbols are separated by '.'
+                    (a space ends the syllable) and are the VOICE'S: another singer may not know
+                    them, and says so. They reach the sung voice only (lilysharp/sung, lysc wav
+                    --singer: the score's "phonemes"), on the syllable's note and never on a
+                    melisma's; the page, the MusicXML, the LilyPond twin, the .mid and the VSQX
+                    do not write them. Music.LyricReading.Phonemes. Unclosed, not last, with
+                    nothing before them, empty ('[/pp..y/]') or holding a bracket: LYS4036, and
+                    the syllable prints as written. *)
                  (* A READING glued to the word it reads (owner's decision 2026-11-08): the page
                     prints the word, a singing engine sings the reading — '漢[かん]' prints 漢 and
                     sings かん; '大[おお]空[ぞら]' prints 大空 and sings おおぞら; a stretch with no

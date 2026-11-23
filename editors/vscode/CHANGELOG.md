@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- `[lang]` **Phonemes on a syllable, for a word a voice reads wrong** (Cantoria's request 1). Write the voice's own symbols last on the syllable, separated by dots: `병[/pp.y.eo.NG/]` prints 병, and a DiffSinger voice sings pp y eo NG — the doubled consonant of 발병 its rules miss, an English stress, a Chinese word its tables do not know. After a reading too: `漢[かん][/k.a.N/]` (NEUTRINO and VOICEVOX read かん). The symbols are the voice's own; a singer that lacks one says which. The page and the exported files print the word.
+
 - `[engraving]` **A bar that opens with a note moved to the other staff is spaced as LilyPond spaces it.** When the first note of a bar is moved up (or down) with `@cross`, that voice no longer has a say in the room before the bar line — the other voices' distance stands alone, as in LilyPond — and a staff whose notes in the bar are all moved away counts as silent there. A grand staff with such a bar opens it up to 0.3 of a staff space differently.
 
 - `[engraving]` **A repeat sign in the middle of a line stands where a plain bar line would.** The plain bar line ending the bar before a `|:` was never drawn — the boundary is the one `.|:` — but its room (0.19 of a staff space) was still kept, so the `.|:` and the bar after it stood that much too far right. They now stand where LilyPond puts them; a line ending just before a `|:` keeps its closing bar line as before.

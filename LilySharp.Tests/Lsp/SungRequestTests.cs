@@ -280,6 +280,28 @@ public class SungRequestTests
         Assert.Equal(new string?[] { null }, plain.Singers);
     }
 
+    // Cantoria's request 1 (2026-11-22): the voice's own symbols written on a syllable reach the
+    // editor beside its word, on the syllable's note only - never on the melisma that holds it.
+    [Fact]
+    public void ThePhonemesWrittenOnASyllable_AreToldToTheSinger()
+    {
+        var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
+        var uri = new Uri("file:///ph.lys");
+        string text = Doc.Replace("ゆ _ き や", "ゆ[/y.u/] _ き や");
+        Assert.Contains("[/y.u/]", text);
+        server.DidOpen(new DidOpenTextDocumentParams
+        {
+            TextDocument = new TextDocumentItem { Uri = uri, Text = text, Version = 1, LanguageId = "lilysharp" },
+        });
+        var sung = server.GetSung(new SungParams { TextDocument = new TextDocumentIdentifier { Uri = uri } });
+        Assert.Null(sung.Error);
+        var notes = Assert.Single(sung.Voices!).Notes;
+        Assert.Equal("ゆ", notes[0].L);
+        Assert.Equal("y u", notes[0].Ph);
+        Assert.All(notes.Skip(1), n => Assert.Null(n.Ph));
+        Assert.True(notes[1].M);
+    }
+
     // Owner's request 2026-11-12, a trial: `@vibrato` on a sung note is told to the singing engine
     // (a DiffSinger voice lays it on its pitch curve) - the swing each way in cents, and the swings
     // a second where written. It draws nothing, and the MIDI does not know it.

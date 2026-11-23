@@ -1008,7 +1008,7 @@ public sealed class MusicXmlExporter
         var byPart = Document.Parts.ToDictionary(p => p, p => PrintingsBySource(p, unpitchedToo: true));
         var hyphenBefore = new Dictionary<(string? Part, string? Track, int Verse), bool>();
         var trackPlaces = new Dictionary<(string? Part, string? Track), int>();
-        foreach (var (lyric, item, k, sungPart, track, reading) in sung)
+        foreach (var (lyric, item, k, sungPart, track, reading, _) in sung)
         {
             // The sung part's own note: a phrase two parts play stands at one source position.
             var (part, note) = byPart

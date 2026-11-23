@@ -29,7 +29,9 @@ export interface SungNoteDto { T: number; D: number; P: number; L?: string | nul
     /** A written vibrato (`@vibrato`, a trial sung by DiffSinger voices): its swing each way in cents, its swings a second. */
     Vb?: number | null; Vr?: number | null;
     /** What an `@sing(…)` writes on the note: settings held from it (`Sg`), and arrived at with it (`St`, `NAME to VALUE`). */
-    Sg?: Record<string, number | string> | null; St?: Record<string, number | string> | null }
+    Sg?: Record<string, number | string> | null; St?: Record<string, number | string> | null;
+    /** The voice's symbols the syllable is sung by, space-separated (`병[/pp.y.eo.NG/]`; Cantoria's request 1). */
+    Ph?: string | null }
 
 /** A part's words on its notes, as the server answers `lilysharp/sung`. */
 /** `InScore`: the score shown sings this part itself; false for a voice the file's other lyrics could sing (off until the menu turns it on; session 1163). */
@@ -44,7 +46,7 @@ export interface SungVoiceDto { Part: string; Key?: string; Language: string; No
     WarningAt?: number | null; WarningPlace?: string | null }
 
 /** The score Cantoria reads (its README): seconds, MIDI pitch, the syllable as pronounced. */
-export interface CantoriaNote { start: number; duration: number; pitch: number; lyric?: string; melisma?: boolean; breath?: boolean; level?: number; levelEnd?: number; inhale?: boolean; hyphen?: boolean; vibrato?: number; vibratoRate?: number;
+export interface CantoriaNote { start: number; duration: number; pitch: number; lyric?: string; melisma?: boolean; breath?: boolean; level?: number; levelEnd?: number; inhale?: boolean; hyphen?: boolean; vibrato?: number; vibratoRate?: number; phonemes?: string;
     sing?: Record<string, number | string>; singTo?: Record<string, number | string> }
 export interface CantoriaScore { sampleRate: number; language: string; sing?: Record<string, number | string>; notes: CantoriaNote[] }
 
@@ -1081,6 +1083,8 @@ export function cantoriaScore(voice: SungVoiceDto, speed: number): CantoriaScore
             // A vibrato's swings a second are the singer's, not the tempo's: a practice speed leaves them.
             if (n.Vb != null) { note.vibrato = n.Vb; }
             if (n.Vr != null) { note.vibratoRate = n.Vr; }
+            // The voice's own symbols for the syllable (a DiffSinger voice sings them; the server puts none on a melisma).
+            if (n.Ph) { note.phonemes = n.Ph; }
             // The settings written on the note, the names in one order (the voice's key is this text).
             const ordered = (s: Record<string, number | string>) => Object.fromEntries(Object.entries(s).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0));
             if (n.Sg && Object.keys(n.Sg).length > 0) { note.sing = ordered(n.Sg); }
