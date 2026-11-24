@@ -419,8 +419,13 @@ internal static partial class SharedRenderer
         // A lower voice's DOWN stem (GraceColumnInfo.StemDown) runs the other way, from the top
         // head down past the bottom one.
         double StemEndY(int i) => stemUps[i] ? topYs[i] + stemLen : ys[i] - stemLen;
-        // The stem's FOOT is the head at the far end from the beam.
-        double StemFootY(int i) => stemUps[i] ? ys[i] : topYs[i];
+        // The stem's FOOT is the head at the far end from the beam, at that head's own
+        // attachment point (StemAttachYOffset, the grace font's).
+        // MEASURED (2.26.0, Lab sessions/p1378/m b3): `grace { g'8 a' }` begins its stems 0.114
+        // from the heads' centres, as an unbeamed grace's; Lily# began them at the centres until
+        // session 1378.
+        double StemFootY(int i) => (stemUps[i] ? ys[i] : topYs[i])
+            - StemAttachYOffset(NoteheadStyle.Default, stemUps[i], graceHeadNoteValue, headFont);
 
         // OVER THE PREFIX, NOT OVER THE RUN. beamedCount is GraceNoteEngraver.BeamedPrefix —
         // the same sentence the reservation, the quanter and the ordinary pass's withholding

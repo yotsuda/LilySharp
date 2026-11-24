@@ -127,4 +127,30 @@ public class StyledHeadStemAttachmentTests
         Assert.Equal(middle - 0.2410, stems[2].Top, 3);    // c''2, down
         Assert.Equal(middle + 1.7410, stems[3].Bottom, 3); // e'2, up
     }
+
+    /// <summary>
+    /// A grace head reads ITS font's point, flagged or beamed: 0.114 from the centre.
+    /// MEASURED (LilyPond 2.26.0, Lab sessions/p1378/m b1, b3): g' grace stems' feet at
+    /// −0.886, a' at −0.386 from the middle line. Session 1377 read the full design (0.186)
+    /// on a flagged grace; a beamed grace's stem began at the head's centre until session 1378.
+    /// </summary>
+    [Fact]
+    public void GraceHeads_AttachTheStemAtTheirOwnFontsPoint()
+    {
+        var page = RenderedGeometry.Render("""
+            octave absolute
+            time 4/4
+            part v { clef treble }
+            section Main { v { grace { g'16 } c''4 grace { g'8 a' } c''4 r2 | } }
+            form { ~Main }
+            score { staff v }
+            """);
+        double middle = Assert.Single(page.StaffRefpoints());
+        var feet = page.Lines
+            .Where(l => Math.Abs(l.X1 - l.X2) < 1e-9 && l.StrokeWidth < 0.2)
+            .Select(l => Math.Max(l.Y1, l.Y2) - middle)
+            .ToList();
+        Assert.Equal(2, feet.Count(f => Math.Abs(f - 0.886) < 0.006)); // the g's, flagged and beamed
+        Assert.Single(feet, f => Math.Abs(f - 0.386) < 0.006);         // the beamed a'
+    }
 }

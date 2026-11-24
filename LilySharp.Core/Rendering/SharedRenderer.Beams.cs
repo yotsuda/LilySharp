@@ -499,7 +499,7 @@ internal static partial class SharedRenderer
                     - (StruckFootOf(memberItem, up)
                         ? StemAttachYOffset(MemberStyle(i), up, Core.Music.StruckNotes.HeadNoteValue,
                             GrobFontSize.StruckHeadFontOf((ChordItem)memberItem))
-                        : StemAttachYOffset(MemberStyle(i), up, noteValue: 8));
+                        : StemAttachYOffset(MemberStyle(i), up, noteValue: 8, GrobFontSize.HeadFontOrNull(memberItem)));
             }
             // The stem ends at the OUTERMOST beam rank on its own side — the extreme
             // of this stem's ranks in its direction (up ⇒ max rank, down ⇒ min), so

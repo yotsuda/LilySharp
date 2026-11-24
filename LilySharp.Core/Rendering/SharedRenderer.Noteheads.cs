@@ -640,8 +640,9 @@ internal static partial class SharedRenderer
     /// font-size −4 design's own point, not 0.3724 × magstep(−4) = 0.2346.
     /// </para>
     /// <para>
-    /// ⚠️ A cue or grace head without <paramref name="sized"/> still reads the full design
-    /// (session 109 audit: the X side takes the cue's headScale); no book measures one.
+    /// A grace or cue head passes its own font too (GrobFontSize.HeadFontOrNull). MEASURED (2.26.0,
+    /// Lab sessions/p1378/m b1): a grace eighth's stem begins 0.114 from its head's centre;
+    /// session 1377 read the full design there (0.186), worse than the old rule's 0.15.
     /// </para>
     /// <para>
     /// <c>NoteHead.scale</c> magnifies the full design's answer by the heads' size, as LilyPond's attachment
@@ -880,7 +881,7 @@ internal static partial class SharedRenderer
                 StemDetailsOf(note));
             if (!stemTransparent)
                 using (gc.Kind("stem"))
-                    gc.DrawLine(stemX, noteY - StemAttachYOffset(note.Notehead, stemUp, noteValue),
+                    gc.DrawLine(stemX, noteY - StemAttachYOffset(note.Notehead, stemUp, noteValue, GrobFontSize.HeadFontOrNull(note)),
                         stemX, stemEndY,
                         stemColor ?? Color.Black, EngravingDefaults.StemThickness);
 
@@ -1418,7 +1419,8 @@ internal static partial class SharedRenderer
                 - (footStruck
                     ? StemAttachYOffset(ChordHeadPositioning.StemStyle(chord, stemUp, noteValue), stemUp,
                         Core.Music.StruckNotes.HeadNoteValue, GrobFontSize.StruckHeadFontOf(chord))
-                    : StemAttachYOffset(ChordHeadPositioning.StemStyle(chord, stemUp, noteValue), stemUp, noteValue));
+                    : StemAttachYOffset(ChordHeadPositioning.StemStyle(chord, stemUp, noteValue), stemUp, noteValue,
+                        GrobFontSize.HeadFontOrNull(chord)));
             if (!stemTransparent)
                 using (gc.Kind("stem"))
                     gc.DrawLine(stemX, stemStartY, stemX, stemEndY,
