@@ -72,4 +72,57 @@ public class OttavaStaffBoundsTests
         Assert.True(System.Math.Abs(left - bracket.StartX) <= 0.005, $"{book} left: {bracket.StartX:F3}, LilyPond {left:F3}");
         Assert.True(System.Math.Abs(right - 0.05 - bracket.EndX) <= 0.005, $"{book} right: {bracket.EndX:F3}, LilyPond {right - 0.05:F3}");
     }
+
+    private static ScoreLayout LayoutOf(string bars)
+    {
+        var tree = SyntaxTree.Parse("octave absolute\ntime 4/4\npaper { raggedRight }\npart m { clef treble }\n"
+            + "section A { m {\n" + bars + "\n} }\nform { A }\nscore { staff m }\n");
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+        return new LayoutEngine().Layout(SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)));
+    }
+
+    /// <summary>
+    /// A bar of multi-measure rest is no note column: a span stopping over it hooks after the
+    /// last note before it, as one stopping on that note does, and draws no piece over the rest
+    /// even when the rest opens a line. MEASURED (2.26.0, Lab sessions/p1378/m a1, a2, a5): the
+    /// hook 0.6 right of the f'' over `R1` and `R1*2` alike; nothing on the rest's line.
+    /// </summary>
+    [Theory]
+    [InlineData("c''4@8va d'' e'' f'' | R1@!8va | g''1 |")]
+    [InlineData("c''4@8va d'' e'' f'' | R1*2@!8va | g''1 |")]
+    public void AStopOverAMultiMeasureRest_HooksAfterTheLastNote(string bars)
+    {
+        var onTheNote = Assert.Single(LayoutOf("c''4@8va d'' e'' f''@!8va | R1 | g''1 |").OttavaBracketLayouts);
+        var overTheRest = Assert.Single(LayoutOf(bars).OttavaBracketLayouts);
+        Assert.Equal(onTheNote.EndX, overTheRest.EndX, 6);
+        Assert.Equal(onTheNote.YUp, overTheRest.YUp, 6);
+    }
+
+    [Fact]
+    public void AStopOverARestOpeningALine_DrawsNoPieceThere()
+    {
+        var layout = LayoutOf("c''1@8va | d''1 | break R1@!8va | g''1 |");
+        Assert.Equal(2, layout.Systems.Length);
+        var piece = Assert.Single(layout.OttavaBracketLayouts);
+        Assert.Equal(0, piece.StartMeasureIndex);
+        Assert.True(piece.EdgeHeight != 0, "the one piece hooks");
+    }
+
+    /// <summary>
+    /// A broken end is the line's own edge, unshortened: the first piece runs to its line's last
+    /// bar's right edge and the continuation starts at the next line's first bar. MEASURED (2.26.0,
+    /// Lab sessions/p1378/m a3): the first piece ends on the line's last bar line's right edge
+    /// (Lily# 0.6 short until session 1378); the continuation starts on the clef's right edge,
+    /// 0.156 left of Lily#'s first bar X (until session 1378 it started 0.8 further left still).
+    /// </summary>
+    [Fact]
+    public void ABrokenBracket_RunsToTheLinesEdges()
+    {
+        var layout = LayoutOf("c''1@8va | d''1 | break e''1 | f''1@!8va | g''1 |");
+        var pieces = layout.OttavaBracketLayouts.OrderBy(p => p.StartMeasureIndex).ToList();
+        Assert.Equal(2, pieces.Count);
+        var first = layout.Systems[0].Measures[^1];
+        Assert.Equal(first.X + first.Width, pieces[0].EndX, 6);
+        Assert.Equal(layout.Systems[1].Measures[0].X, pieces[1].StartX, 6);
+    }
 }

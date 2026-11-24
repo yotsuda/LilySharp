@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -324,7 +324,6 @@ internal static class OttavaBracketEngraver
                 continue;
 
             int endMeasureIdx = Math.Min(bracket.EndMeasureIndex, measureLayouts.Length - 1);
-
             bool isAbove = bracket.Type == OttavaType.Ottava8va ||
                            bracket.Type == OttavaType.Quindicesima15ma;
             // The offset to this bracket's OWN staff on a grand staff (so an 8va over the lower
@@ -333,6 +332,21 @@ internal static class OttavaBracketEngraver
             var ottavaVoices = voicesByStaff != null
                 && voicesByStaff.TryGetValue(bracket.StaffIndex, out var vv)
                 ? vv : ImmutableArray<Voice>.Empty;
+            // A bar of multi-measure rest is no note column, and the right bound is the last
+            // note column: a span stopping over `R1` (or `R1*N`) ends after the bar before it,
+            // and draws no piece over the rest — not even on a line of its own.
+            // LILYPOND-REF: lily/ottava-engraver.cc:138-151 acknowledge_note_column — only
+            //   NoteColumns become bounds; a MultiMeasureRest has none.
+            // MEASURED (2.26.0, Lab sessions/p1378/m a1, a2, a5): `c''4@8va d'' e'' f'' | R1@!8va |`
+            //   hooks 0.6 right of the f'' (Lily# hooked inside the rest's bar, and over `R1*2`
+            //   raised the line over the bar count); with the `R1` opening the next line LilyPond
+            //   draws nothing there and hooks after the last note of the line before.
+            bool endsOverRests = false;
+            while (endMeasureIdx > bracket.StartMeasureIndex && OnlyMultiMeasureRests(ottavaVoices, endMeasureIdx))
+            {
+                endMeasureIdx--;
+                endsOverRests = true;
+            }
             // The staff floor under the supports and the staff-padding floor are this staff's
             // own extent (an `as lines N` staff's drawn lines); a caller without staves stands
             // on five.
@@ -348,7 +362,7 @@ internal static class OttavaBracketEngraver
                 _ => "8va"
             };
 
-            foreach (var (segment, _) in SpannerBreakSubstitution.BrokenPieces(
+            foreach (var (segment, system) in SpannerBreakSubstitution.BrokenPieces(
                 bracket.StartMeasureIndex, endMeasureIdx, systems, measureToSystemIdx))
             {
                 if (segment.StartMeasureIndex >= measureLayouts.Length ||
@@ -370,9 +384,7 @@ internal static class OttavaBracketEngraver
                 //   chord with a shifted head starts its bracket further left than the
                 //   column's X; Lily# reads the column. No book has such a chord under an
                 //   ottava — the next step there is a book, not a widening.
-                // ⚠️ A CONTINUATION piece keeps the measure's origin: its bound is broken,
-                //   and LilyPond's broken branch takes generic_bound_extent and sets
-                //   shorten to 0, which is a different arithmetic with no point on it yet.
+                // A CONTINUATION piece's bound is broken (below).
                 // …and the column is the STAFF's, not the voice's that wrote the mark: the first
                 // voice's that has one at that moment, where the note collision put it.
                 // LILYPOND-REF: lily/ottava-engraver.cc:138-151 acknowledge_note_column — the
@@ -389,7 +401,14 @@ internal static class OttavaBracketEngraver
                                 bracket.StartMeasureIndex, bracket.StartItemIndex,
                                 graceNotes, bracket.StaffIndex)) is { } startItemX
                     ? segStartMeasure.X + startItemX + LeftShorten
-                    : segStartMeasure.X + LeftShorten;
+                    : segment.IsFirst
+                        ? segStartMeasure.X + LeftShorten
+                        // A BROKEN left bound is the line-start column's right edge, unshortened
+                        // (ottava-bracket.cc:111-116, as the right one above). MEASURED (2.26.0,
+                        // Lab sessions/p1378/m a3, a4): the continuation starts on the clef's right
+                        // edge; Lily# started it 0.8 left of the first bar's X — over the clef —
+                        // until session 1378.
+                        : SpannerBreakSubstitution.ReattachSpanX(segment, system, 0, 0).StartX;
                 // A span running to its bar's END — closed on the next bar's first moment
                 // (`f'4 <>@!8va | g'1`, the next START there), cut at its section's end, or never
                 // closed — ends after its bar's last note column too: LilyPond's right bound is
@@ -398,13 +417,21 @@ internal static class OttavaBracketEngraver
                 // `\ottava #1 c''4 d'' e'' f'' \ottava #0 | g'1` hooks at 28.03, 0.6 right of the
                 // f''s head, with the bar line at 29.37; Lily# drew `f'' <>@!8va |` to the
                 // measure's edge (28.86) until session 1316, while `f''@!8va |` hooked at 28.03.
-                var spanEnd = bracket.EndMoment ?? WholeBar;
+                var spanEnd = endsOverRests ? WholeBar : bracket.EndMoment ?? WholeBar;
                 var lastStaffColumn = segment.IsLast
-                    ? StaffLastColumnBefore(segEndMeasure, ottavaVoices, bracket.EndMeasureIndex, spanEnd)
+                    ? StaffLastColumnBefore(segEndMeasure, ottavaVoices,
+                        endsOverRests ? endMeasureIdx : bracket.EndMeasureIndex, spanEnd)
                     : null;
-                double endX = segment.IsLast
-                        && (lastStaffColumn?.X
-                            ?? (bracket.EndMoment is { } endMoment
+                double endX = !segment.IsLast
+                    // A BROKEN right bound is the line's end — its last bar's right edge — and
+                    // takes no shorten.
+                    // LILYPOND-REF: lily/ottava-bracket.cc:111-116 Ottava_bracket::print —
+                    //   broken: span_points[d] = generic_bound_extent (b)[RIGHT]; shorten[d] = 0.
+                    // MEASURED (2.26.0, Lab sessions/p1378/m a3, a4): the first piece ends on the
+                    //   line's last bar line's right edge; Lily# ended it 0.6 short until session 1378.
+                    ? SpannerBreakSubstitution.ReattachSpanX(segment, system, 0, 0).EndX
+                    : (lastStaffColumn?.X
+                            ?? (!endsOverRests && bracket.EndMoment is { } endMoment
                                 ? LastColumnBefore(segEndMeasure, endMoment, bracket.EndItemIndex) : null)) is { } lastColX
                     // A span stopping INSIDE its last bar ends where LilyPond's does: just after
                     // the last note head it covers — and that head's dots — by the shorten-pair's
@@ -557,7 +584,7 @@ internal static class OttavaBracketEngraver
             {
                 var item = items[ii];
                 bool column = !item.GraceTime
-                    && item is NoteItem or ChordItem or RestItem { IsSpacer: false };
+                    && item is NoteItem or ChordItem or RestItem { IsSpacer: false, IsMultiMeasure: false };
                 if (column && onset < endMoment && (best is null || onset >= best.Value))
                 {
                     best = onset;
@@ -569,6 +596,30 @@ internal static class OttavaBracketEngraver
             }
         }
         return best is null || bestItem is null ? null : (bestX, bestItem);
+    }
+
+    /// <summary>
+    /// Whether bar <paramref name="measureIndex"/> of this staff holds no note column — only
+    /// multi-measure rest (and spacers) — in every voice, with at least one such rest.
+    /// </summary>
+    private static bool OnlyMultiMeasureRests(ImmutableArray<Voice> voices, int measureIndex)
+    {
+        if (voices.IsDefaultOrEmpty)
+            return false;
+        bool any = false;
+        foreach (var voice in voices)
+        {
+            if (measureIndex < 0 || measureIndex >= voice.Measures.Length)
+                continue;
+            foreach (var item in voice.Measures[measureIndex].Items)
+            {
+                if (item is RestItem { IsMultiMeasure: true })
+                    any = true;
+                else if (item is not RestItem { IsSpacer: true })
+                    return false;
+            }
+        }
+        return any;
     }
 
     /// <summary>
