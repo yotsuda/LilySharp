@@ -265,7 +265,7 @@ internal static class TrillSpannerEngraver
                 if (segment.IsLast)
                 {
                     endX = endsOnMeasureStart
-                        ? BarlineLeftEdge(spanner.EndMeasureIndex - 1, measureLayouts, trillVoices)
+                        ? BarlineLeftEdge(spanner.EndMeasureIndex - 1, measureLayouts, trillVoices, system)
                         : GetEndX(spanner, measureLayouts, trillVoices, graceNotes);
                     if (neighbourLeft is { } nl)
                         endX = Math.Min(endX, nl);
@@ -577,14 +577,25 @@ internal static class TrillSpannerEngraver
     ///   point, and TrillSpanner declares no bound-details padding, so nothing more is
     ///   subtracted. The drawn bar's right edge sits on the measure's right edge
     ///   (the same identity MultiMeasureRestEngraver's frame spends).
+    /// A plain end bar that yields to the next measure's <c>|:</c> on the same line is not
+    /// drawn: the boundary's one bar line is the <c>.|:</c>, drawn from the next measure's X,
+    /// which is this measure's right edge (SpacingRules.EndBarYieldsToRepeatStart) — so the
+    /// bound is that edge, nothing subtracted. At the line's end the <c>|</c> stays.
+    /// MEASURED (2.26.0, Lab sessions/p1376/trill t0/t1): the bound bar's left edge is 39.8667
+    /// under both a plain <c>|</c> and a mid-line <c>.|:</c>; until session 1376 the line ended
+    /// the yielded <c>|</c>'s 0.19 short of the <c>.|:</c>.
     /// </remarks>
     private static double BarlineLeftEdge(
         int measureIndex, ImmutableArray<MeasureLayout> measureLayouts,
-        ImmutableArray<Voice> voices)
+        ImmutableArray<Voice> voices, SystemLayout system)
     {
         var ml = measureLayouts[measureIndex];
+        bool yields = !voices.IsDefaultOrEmpty
+            && !system.Measures.IsDefaultOrEmpty
+            && measureIndex < system.Measures[^1].MeasureIndex
+            && SpacingRules.EndBarYieldsToRepeatStart(voices[0].Measures, measureIndex);
         return ml.X + ml.Width
-            - EngravingDefaults.BarlineDrawnWidth(EndBarlineOf(measureIndex, voices));
+            - (yields ? 0.0 : EngravingDefaults.BarlineDrawnWidth(EndBarlineOf(measureIndex, voices)));
     }
 
     private static BarlineType EndBarlineOf(int measureIndex, ImmutableArray<Voice> voices)

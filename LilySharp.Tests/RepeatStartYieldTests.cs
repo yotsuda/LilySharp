@@ -135,4 +135,28 @@ public class RepeatStartYieldTests
             + SpacingRules.GetBarlineWidth(BarlineType.RepeatEnd), data[1].RigidWidth, 9);
         Assert.Equal(0.0, data[2].LineEndCourtesyWidth, 9);
     }
+
+    /// <summary>
+    /// A trill stopping on the head of a bar binds to the bar line before it (to-barline), at
+    /// that bar line's left edge. Before a mid-line <c>|:</c> that bar line is the <c>.|:</c>,
+    /// drawn from the next bar's X — the yielded <c>|</c> is not there to end short of.
+    /// MEASURED (2.26.0, Lab sessions/p1376/trill t0/t1): the left edge is 39.8667 under both a
+    /// plain <c>|</c> and the <c>.|:</c>. Until session 1376 the line ended 0.19 short of the
+    /// <c>.|:</c>.
+    /// </summary>
+    [Theory]
+    [InlineData("|: e''1 :|", false)]
+    [InlineData("| e''1 |", true)]
+    [InlineData("break |: e''1 :|", true)]
+    public void ATrillStoppingOnABarHead_EndsAtTheBarLineDrawnThere(string rest, bool plainBar)
+    {
+        string src = "time 4/4\noctave absolute\npaper { raggedRight }\npart rh { }\nsection A {\n  rh { "
+            + "c''1@trillSpan | d''1@!trillSpan " + rest + " f''1 | }\n}\nform { A }\nscore { staff rh }\n";
+        var tree = SyntaxTree.Parse(src);
+        var layout = new LayoutEngine().Layout(SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)));
+        var trill = Assert.Single(layout.TrillSpannerLayouts);
+        var bar2 = layout.Systems[0].Measures.Single(m => m.MeasureIndex == 1);
+        double edge = bar2.X + bar2.Width - (plainBar ? EngravingDefaults.ThinBarlineThickness : 0.0);
+        Assert.Equal(edge, trill.LineEndX, 6);
+    }
 }
