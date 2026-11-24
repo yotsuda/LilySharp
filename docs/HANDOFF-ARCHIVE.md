@@ -277,6 +277,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1375セッションの経緯
+
+### 1.1 第1375セッション（2026-11-23・YT-DELL2・新しい会話）
+
+base `28a76692b`。開始時 full 18331 / 1 / skip 2 / 18334（赤は不安定な網）。オーナー決定: Cantoria の open 2 件を先に。
+- 依頼 1＝`52bae3764`（`병[/pp.y.eo.NG/]`・読みの経路・`singing-design.md` §3。⚠️ `[//]` は行コメント）・`37cdf8551`（声に無い記号を名指す）。依頼 2＝`b32a0ad7a`（記号を歌う `bend`・お試し）。毒は全部赤。
+- 実機は `lysc wav --singer`（`CANTORIA_VOICES_DIR=C:\Tools\voices`・`--soundfont` は Lab `p1137\sine.sf2`）: 발뼝・fall は midi 69→65（Lab `p1375/ph`）。
+- full 18372 / 0 / 2 / 18374。`IncludeFilesTests.ABooksInclude_SavedAgain…` は一時ファイルの取り合いで 1 度赤（不安定）。
+- `lysc review` の 3 件＝`9e1d997c5`・section の `key none`＝`dca986ca4`（前後は Lab `p1375/review`・leftovers に要約）。毒は全部赤。full 18376 / 0 / 2 / 18378。**次**: §1.0 の残りの先頭。
+
 ## 以下は第1374セッションの経緯
 
 ### 1.1 第1374セッション（2026-11-23・YT-DELL2・第1373 と同じ会話）

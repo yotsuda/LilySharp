@@ -4,6 +4,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- `[engraving]` **A stem begins where LilyPond begins it, inside the head.** A plain head's stem started 0.15 of a staff space from the head's centre (a black head) or at the centre itself (a half head); it now starts at the font's own point, 0.1862 and 0.259, as LilyPond's does — so every beamed stem is the length LilyPond draws, no longer 0.03 longer. A SMuFL font's heads use its own stem anchors.
+
+- `[engraving]` **A trill line stopping just before a repeat sign in the middle of a line reaches the sign.** It ended 0.19 of a staff space short of the `.|:` (the plain bar line that is not drawn there), and so sometimes drew one wave fewer than LilyPond.
+
 - `[review]` **The review reads a big band, a blues and a modulation better** (the chat's review and `lysc review`). Parts that strike with a higher part — a section's second alto, the trombones under their lead — play the harmony and are no longer each called "the melody" or held to a melody's rhythm (their wrong notes are still told). In a piece that swings, the blues scale's fourth (B♭ over F7 in F) is no wrong note. A piece whose written key changes is heard stretch by stretch: "D major → E major" where the notes of both keys summed were "A major". A section in `key none` is heard in no key, and a piece that begins or ends in one is no longer told it ends off its tonic.
 
 - `[singing]` **A singer sings the jazz bends and a glissando** (a trial, Cantoria's request 2; DiffSinger voices only — NEUTRINO and VOICEVOX sing flat). `@scoop` rises two semitones into the note and `@plop` falls into it; `@fall` drops four semitones at its end and `@doit` rises as far; `@glissando` or `@slide` goes on to the next sung note's pitch over the note's second half. An instrument still plays the note plain.
