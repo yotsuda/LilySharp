@@ -45,6 +45,9 @@ One JSON document. The tool hands it to the AI with the reading instructions of 
     "Every section closes on the tonic or the dominant.",
     "The flute stays in its comfortable range."
   ],
+  // keyHeard, where the written key changes as the music plays (session 1375): the key heard in
+  // each stretch of one written key, in the order played — "D major (0.90) → E major (0.99)";
+  // two stretches heard alike in a row are one.
   "findings": [
     {
       "id": "spelling.direction",

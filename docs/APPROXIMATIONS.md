@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 68 | 観測者がゼロだと自認しているもの |
-| `OWN` | 487 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **617** | |
+| `OWN` | 488 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **618** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -255,7 +255,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（487 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（488 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -265,6 +265,8 @@
 - **`SingingEngine`** (singing-design §6). LILYSHARP-OWN.
 ### `LilySharp.Core/Editing/ChordVoicingFinder.cs`
 - **`ChordVoicingFinder.DescribeProgression`** LILYSHARP-OWN (owner's request 2026-11-11): the composing chat asked eight chords one by
+### `LilySharp.Core/Editing/CompositionChecks.cs`
+- **`CompositionChecks.Leads`** all of them. LILYSHARP-OWN, a reading.
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
 ### `LilySharp.Core/Editing/NoteStepper.Articulation.cs`

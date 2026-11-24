@@ -233,7 +233,7 @@ public static class CompositionChecks
         var bandBasses = band
             ? parts.Where(p => RoleOf(p).Bass).Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal)
             : [];
-        var melodies = MelodiesOf(source, parts, hands, band, midi);
+        var melodies = MelodiesOf(source, parts, hands, band, midi, out var harmonyParts);
         var barList = midi.BarTicks.Where(b => b > 0).Distinct().OrderBy(b => b).Prepend(0).ToList();
         // A band's instrumental: the bars where each part over the bass plays a line (said below when
         // there are few), and the part playing them its melody, held to a melody's rhythm (owner's
@@ -582,7 +582,7 @@ public static class CompositionChecks
         }
         findings.AddRange(WideChords(source, root, midi, hands.Keys, barList, fifths));
 
-        findings.AddRange(Clashes(midi, melodies, barList, fifths, SwungBlueNotes(root), UnpitchedHeads(root), [.. hands.Keys]));
+        findings.AddRange(Clashes(midi, melodies, barList, fifths, SwungBlueNotes(root), UnpitchedHeads(root), [.. hands.Keys], harmonyParts));
         findings.AddRange(LowChords(midi, barList, fifths, parts));
         findings.AddRange(ThickChordsOnADistortedSound(midi, parts, barList, fifths));
         findings.AddRange(BandChordsOnLowStrings(midi, parts, barList, fifths));
@@ -822,22 +822,26 @@ public static class CompositionChecks
     private const double ClashShare = 0.05;
 
     /// <summary>
-    /// The blue notes of a piece written to swing (a <c>tempo … swing</c>): its home key's tonic's minor
-    /// third, diminished fifth and minor seventh, as pitch classes; null for a piece that does not swing,
-    /// or that writes no key.
+    /// The blue notes of a piece written to swing (a <c>tempo … swing</c>): the blues scale's own notes
+    /// over its home key's tonic — the minor third, the fourth, the diminished fifth and the minor
+    /// seventh — as pitch classes; null for a piece that does not swing, or that writes no key.
     /// </summary>
     /// <remarks>
     /// Jazz's and the blues's own language (owner's trial 2026-11-07, a jazz piano trio's swinging blues in E
     /// written as the composing guide asks): its tune's D and G over E7 and A7, and its walking bass's
     /// chromatic approach notes, were told wrong notes and slips. The swing marking says which language a
     /// piece speaks; a piece that does not swing is read as before.
+    /// THE FOURTH since session 1375 (grammar evaluation 4, a swing big band in F: its saxes' riff
+    /// F A♭ F B♭ over F7, the B♭ an accented quarter on the beat, was the one "[mistake]" left — the
+    /// fourth a semitone over the chord's third, the riff the blues scale itself). In the key's own
+    /// scale already, it moves nothing the out-of-key check reads.
     /// </remarks>
     internal static int[]? SwungBlueNotes(SyntaxNode root)
     {
         if (!root.DescendantNodes<TempoDeclarationSyntax>().Any(t => t.SwingSubdivision > 0) || PlayedKeys(root) is not { } keys)
             return null;
         int tonic = PitchClass(keys.Home.Tonic);
-        return [(tonic + 3) % 12, (tonic + 6) % 12, (tonic + 10) % 12];
+        return [(tonic + 3) % 12, (tonic + 5) % 12, (tonic + 6) % 12, (tonic + 10) % 12];
     }
 
     /// <summary>A melody's notes held on the beat (a quarter or longer) a semitone or a minor ninth over
@@ -845,9 +849,11 @@ public static class CompositionChecks
     /// struck before the harmony moves under it, so it is not one. In a piece that swings
     /// (<paramref name="blueNotes"/>), a blue note in the tune is the language's own, and so is a walking
     /// line's chromatic approach — a note of a quarter or less moving straight on by a semitone — which is
-    /// not the harmony the tune is heard against.</summary>
+    /// not the harmony the tune is heard against. The parts <paramref name="under"/> a lead (a section's
+    /// second alto, the trombones under it) are read too — a voicing's wrong note is one — and are not
+    /// called the melody.</summary>
     private static IEnumerable<CompositionFinding> Clashes(MidiFile midi, HashSet<string> melodies, List<int> barList, int fifths,
-        int[]? blueNotes = null, HashSet<int>? unpitched = null, HashSet<string>? hands = null)
+        int[]? blueNotes = null, HashSet<int>? unpitched = null, HashSet<string>? hands = null, HashSet<string>? under = null)
     {
         int tpq = midi.TicksPerQuarterNote;
         // A head that names no pitch — a spoken word's ×, a key click — is no note of the harmony, and
@@ -867,7 +873,7 @@ public static class CompositionChecks
         // Who a note stands against: a part, or the harmony itself — a piano's two hands and the chord rows, one voice.
         string Player(string part) => hands?.Contains(part) == true || part.EndsWith(" (chords)", System.StringComparison.Ordinal) ? "" : part;
         var found = new List<(string Part, List<(int Bar, int Note, int Against, List<string> With)> Clashes)>();
-        foreach (var part in melodies)
+        foreach (var part in melodies.Concat(under ?? []).Distinct())
         {
             // The melody is the part's line voice; its own chords in another voice are harmony it sounds against.
             int voice = voices.GetValueOrDefault(part);
@@ -936,7 +942,9 @@ public static class CompositionChecks
         foreach (var (who, clashes) in lines)
         {
             var bars = clashes.Select(c => c.Bar).Distinct().ToList();
-            yield return new("harmony.clash", $"{string.Join(", ", who)}, the melody: {clashes.Count} times a note held on the beat stands a semitone from the harmony sounding "
+            // A part under a lead plays the harmony, and is not called the melody (eval 4: a big band's horns).
+            string role = who.Any(melodies.Contains) ? ", the melody" : "";
+            yield return new("harmony.clash", $"{string.Join(", ", who)}{role}: {clashes.Count} times a note held on the beat stands a semitone from the harmony sounding "
                 + $"with it (bars {BarsOf(bars)}, as the form plays them; "
                 + $"{PartRanges.SpelledFromPitch(clashes[0].Note, fifths)} against {PartRanges.SpelledFromPitch(clashes[0].Against, fifths)} first) — "
                 + "a wrong note? Take the chord's own tone there, or change the chord under it; a note against the chord is a "
@@ -2951,11 +2959,14 @@ public static class CompositionChecks
     /// <summary>
     /// The parts that carry the melody: those a lyrics track sings; else, beside a piano, the
     /// parts that are neither the piano nor a band's drums, bass or chords (a violin's, a flute's);
-    /// else a piano's right hand.
+    /// else a piano's right hand. <paramref name="under"/> is the parts beside a piano that play the
+    /// harmony under one of them (<see cref="Leads"/>): not the tune, but lines whose clashes still say
+    /// what the piece's language is (<see cref="Clashes"/>).
     /// </summary>
     private static HashSet<string> MelodiesOf(string source, IReadOnlyList<PartDeclarationSyntax> parts,
-        IReadOnlyDictionary<string, bool> hands, bool band, MidiFile? midi = null)
+        IReadOnlyDictionary<string, bool> hands, bool band, MidiFile? midi, out HashSet<string> under)
     {
+        under = new HashSet<string>(System.StringComparer.Ordinal);
         var sung = SungPartsOf(SyntaxTree.Parse(source).GetRoot());
         // A choir — three voices or more singing words — has its tune in the top voice; the voices under
         // it sing the harmony, a bass leaping by its roots (owner's trial 2026-11-08: a mixed choir's
@@ -2977,8 +2988,46 @@ public static class CompositionChecks
                 && !(RoleOf(p) is var r && (r.Drums || r.Bass || (band && r.Chords))))
             .Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal);
         if (hands.Count > 0 && solos.Count > 0 && solos.Count < parts.Count)
-            return solos;
+        {
+            var leads = midi != null ? Leads(solos, midi) : solos;
+            under.UnionWith(solos.Except(leads));
+            return leads;
+        }
         return hands.Where(h => !h.Value).Select(h => h.Key).ToHashSet(System.StringComparer.Ordinal);
+    }
+
+    /// <summary>The share of a part's onsets a higher part strikes with it, from which the part is
+    /// the harmony under that one and not a melody (<see cref="Leads"/>).</summary>
+    private const double UnderShare = 2.0 / 3;
+
+    /// <summary>
+    /// Of the parts that may carry the tune, those that LEAD: a part whose onsets are mostly
+    /// (<see cref="UnderShare"/>) struck with another such part sounding higher plays the harmony
+    /// under that one (a unison doubling is the line itself, and leads with it), as a section's second
+    /// alto, its trombones under the lead, a horn doubling the line (eval 4, a big band: all 13
+    /// horns were told their rhythm and their clashes as "the melody"; the choir's rule, the top
+    /// voice sings the tune, read by onsets). With fewer than three, or where none would be left,
+    /// all of them. LILYSHARP-OWN, a reading.
+    /// </summary>
+    private static HashSet<string> Leads(HashSet<string> candidates, MidiFile midi)
+    {
+        if (candidates.Count < 3)
+            return candidates;
+        // Each part's onsets: the tick and the top pitch struck there.
+        var onsets = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9 && !n.IsGrace).Select(n => (Part: n.Part ?? t.Name, n.StartTick, n.Pitch)))
+            .Where(n => candidates.Contains(n.Part))
+            .GroupBy(n => n.Part)
+            .ToDictionary(g => g.Key, g => g.GroupBy(n => n.StartTick).ToDictionary(t => t.Key, t => t.Max(n => n.Pitch)), System.StringComparer.Ordinal);
+        var leads = new HashSet<string>(System.StringComparer.Ordinal);
+        foreach (var p in candidates)
+        {
+            if (!onsets.TryGetValue(p, out var own) || own.Count == 0)
+                continue;
+            int under = own.Count(o => onsets.Any(q => q.Key != p && q.Value.TryGetValue(o.Key, out int top) && top > o.Value));
+            if (under < UnderShare * own.Count)
+                leads.Add(p);
+        }
+        return leads.Count > 0 ? leads : candidates;
     }
 
     /// <summary>A pitch class named as the key spells it (<see cref="PartRanges.SpelledFromPitch(int, int)"/>).</summary>

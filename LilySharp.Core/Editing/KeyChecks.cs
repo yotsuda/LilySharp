@@ -80,6 +80,46 @@ public static class KeyChecks
             .OrderByDescending(k => k.Fit).ToList();
     }
 
+    /// <summary>
+    /// Where the written key changes as the music plays: the key the notes fit best in each stretch of
+    /// one written key, in the order played — a stretch back in an earlier key is said again, and two
+    /// stretches heard alike in a row are one. Null where the key written never changes, or where
+    /// fewer than two stretches have notes enough to tell (<see cref="HeardFewestNotes"/>).
+    /// </summary>
+    /// <remarks>
+    /// Grammar evaluation 4 (2026-11-13): a choir piece in D that goes up to E for its last verse was
+    /// "Heard in: A major / E major" — the two keys' notes summed into one profile fit neither; the
+    /// keys written say where to look, the notes say what each stretch is heard in.
+    /// </remarks>
+    public static IReadOnlyList<HeardKey>? HeardAlong(MidiFile midi)
+    {
+        var starts = midi.KeyStarts.ToList();
+        // One stretch per written key: a key written again where it already stands starts none.
+        var stretches = new List<int>();
+        for (int i = 0; i < starts.Count; i++)
+            if (i == 0 || starts[i].Value != starts[i - 1].Value)
+                stretches.Add(starts[i].Key);
+        if (stretches.Count < 2)
+            return null;
+        stretches[0] = int.MinValue;
+        var notes = Pitched(midi);
+        var heard = new List<HeardKey>();
+        for (int s = 0; s < stretches.Count; s++)
+        {
+            int from = stretches[s], to = s + 1 < stretches.Count ? stretches[s + 1] : int.MaxValue;
+            var inside = notes.Where(n => n.StartTick >= from && n.StartTick < to).ToList();
+            if (inside.Count < HeardFewestNotes)
+                continue;
+            var weights = Weights(inside);
+            var best = Enumerable.Range(0, 12)
+                .SelectMany(t => new[] { new HeardKey(t, false, Harmony.KeyEstimator.ProfileFit(weights, true, t)), new HeardKey(t, true, Harmony.KeyEstimator.ProfileFit(weights, false, t)) })
+                .MaxBy(k => k.Fit);
+            if (heard.Count == 0 || heard[^1].Tonic != best.Tonic || heard[^1].Minor != best.Minor)
+                heard.Add(best);
+        }
+        return heard.Count >= 2 ? heard : null;
+    }
+
     private static List<MidiNote> Pitched(MidiFile midi) => midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9
         && !(n.Part ?? t.Name).EndsWith(" (chords)", System.StringComparison.Ordinal))).ToList();
 

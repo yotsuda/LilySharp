@@ -225,7 +225,11 @@ public static class ScoreReview
             facts["key"] = "no key";
         else if (HomeKey(root) is { } key)
             facts["key"] = key;
-        if (!keyless && midi != null && KeyChecks.Heard(midi) is { Count: > 0 } heard)
+        // A piece whose written key changes is heard stretch by stretch, in the order played
+        // (KeyChecks.HeardAlong): the notes of two keys summed fit neither.
+        if (!keyless && midi != null && KeyChecks.HeardAlong(midi) is { } along)
+            facts["keyHeard"] = string.Join(" → ", along.Select(k => $"{k.Name} ({k.Fit:0.00})"));
+        else if (!keyless && midi != null && KeyChecks.Heard(midi) is { Count: > 0 } heard)
             facts["keyHeard"] = string.Join(" / ", heard.Take(2).Select(k => $"{k.Name} ({k.Fit:0.00})"));
         var form = CompositionChecks.PlayedSections(root, midi);
         if (form.Count > 0)

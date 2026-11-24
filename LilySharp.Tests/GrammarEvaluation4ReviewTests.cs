@@ -182,4 +182,70 @@ public class GrammarEvaluation4ReviewTests
         Assert.DoesNotContain(marked, f => f.Id == "singers.parallels" && f.Message.Contains("sop and alt"));
     }
 
+    // ── session 1375: the three left from session 1228 (the big band's horns, its blues fourth, a piece that changes key) ──
+
+    /// <summary>Parts that strike with a higher part play the harmony under it: their wrong notes are
+    /// still told, but they are not called the melody, nor held to a melody's rhythm.</summary>
+    [Fact]
+    public void PartsUnderALead_AreNotTheMelody()
+    {
+        string Trio(string ob) => Beside(Winds.Replace("\npart bn { instrument bassoon }", ""),
+            $"  fl {{ f''1@mf | f''1 | f''1 | f''1 | }}\n  ob {{ {ob} }}\n  va {{ aes'1@mf | aes'1 | aes'1 | aes'1 | }}",
+            "staff fl  staff ob  staff va");
+        var found = Clashes(Trio("des''1@mf | des''1 | des''1 | des''1 |"));
+        Assert.Equal(3, found.Count);
+        Assert.Single(found, f => f.Message.StartsWith("fl, the melody: 4 times", StringComparison.Ordinal));
+        Assert.Single(found, f => f.Message.StartsWith("ob: 4 times", StringComparison.Ordinal));
+        Assert.Single(found, f => f.Message.StartsWith("va: 4 times", StringComparison.Ordinal));
+        // An oboe with a rhythm of its own leads a line of its own.
+        var own = Clashes(Trio("r2 des''2@mf | r2 des''2 | r2 des''2 | r2 des''2 |"));
+        Assert.Single(own, f => f.Message.StartsWith("ob, the melody:", StringComparison.Ordinal));
+        // Half its notes with the flute, half alone: under it less than two thirds of the time, it leads.
+        var half = Clashes(Trio("des''2@mf des''2 | des''2 des''2 | des''2 des''2 | des''2 des''2 |"));
+        Assert.Single(half, f => f.Message.StartsWith("ob, the melody:", StringComparison.Ordinal));
+    }
+
+    /// <summary>In a piece that swings, the blues scale's fourth over the tonic's seventh chord is the language's own.</summary>
+    [Fact]
+    public void TheBluesFourth_InAPieceThatSwings_IsNoWrongNote()
+    {
+        // B♭ held over the piano's F7, a minor ninth over its A: the riff of a swing band in F.
+        string book = FluteOver("bes''1", piano: "<f' a' ees''>1").Replace("tempo 4 = 96", "tempo 4 = 96\nkey f major");
+        Assert.Single(Clashes(book));                                                // straight eighths: told
+        Assert.Empty(Clashes(book.Replace("tempo 4 = 96", "tempo 4 = 96 swing")));   // swung: the blues
+        Assert.Contains(10, CompositionChecks.SwungBlueNotes(LilySharp.Core.Syntax.SyntaxTree.Parse(book.Replace("tempo 4 = 96", "tempo 4 = 96 swing")).GetRoot())!);   // B♭, F's fourth
+    }
+
+    private const string InE = "e'4 fis' gis' a' | b' cis'' dis'' e'' | e''4 dis'' cis'' b' | a' gis' fis' e' |";
+
+    private static string Modulating(string second, string music = InE) => $$"""
+        title "Up a step"
+        tempo 4 = 96
+        time 4/4
+        octave absolute
+        key d major
+        part fl { instrument flute }
+        section A {
+          fl { d'4@mf e' fis' g' | a' b' cis'' d'' | d''4 cis'' b' a' | g' fis' e' d' | }
+        }
+        section B {
+          {{second}}
+          fl { {{music}} }
+        }
+        form { A B }
+        score { staff fl }
+        """;
+
+    /// <summary>A piece whose written key changes is heard stretch by stretch, in the order played.</summary>
+    [Fact]
+    public void APieceThatChangesKey_IsHeardKeyByKey()
+    {
+        static string Heard(string book) => (string)System.Text.Json.Nodes.JsonNode.Parse(ScoreReview.Json(book))!["facts"]!["keyHeard"]!;
+        Assert.Matches(@"^D major \(\d\.\d\d\) → E major \(\d\.\d\d\)$", Heard(Modulating("key e major")));
+        // The same notes with B in the file's key, D: one key for the whole, its two best fits.
+        Assert.Contains(" / ", Heard(Modulating("")));
+        // A key written in B whose notes stay in D: two stretches heard alike are one, and the whole is said as one key.
+        Assert.Contains(" / ", Heard(Modulating("key g major", "d''4 cis'' b' a' | g' fis' e' d' | e'4 fis' g' a' | b' cis'' d'' d'' |")));
+    }
+
 }

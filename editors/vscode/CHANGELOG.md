@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- `[review]` **The review reads a big band, a blues and a modulation better** (the chat's review and `lysc review`). Parts that strike with a higher part — a section's second alto, the trombones under their lead — play the harmony and are no longer each called "the melody" or held to a melody's rhythm (their wrong notes are still told). In a piece that swings, the blues scale's fourth (B♭ over F7 in F) is no wrong note. A piece whose written key changes is heard stretch by stretch: "D major → E major" where the notes of both keys summed were "A major".
+
 - `[singing]` **A singer sings the jazz bends and a glissando** (a trial, Cantoria's request 2; DiffSinger voices only — NEUTRINO and VOICEVOX sing flat). `@scoop` rises two semitones into the note and `@plop` falls into it; `@fall` drops four semitones at its end and `@doit` rises as far; `@glissando` or `@slide` goes on to the next sung note's pitch over the note's second half. An instrument still plays the note plain.
 
 - `[lang]` **Phonemes on a syllable, for a word a voice reads wrong** (Cantoria's request 1). Write the voice's own symbols last on the syllable, separated by dots: `병[/pp.y.eo.NG/]` prints 병, and a DiffSinger voice sings pp y eo NG — the doubled consonant of 발병 its rules miss, an English stress, a Chinese word its tables do not know. After a reading too: `漢[かん][/k.a.N/]` (NEUTRINO and VOICEVOX read かん). The symbols are the voice's own; a singer that lacks one says which. The page and the exported files print the word.
