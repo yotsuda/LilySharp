@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- `[engraving]` **An octave line ends where LilyPond ends it.** A `@!8va` (or 8vb, 15ma…) written on a bar of whole-bar rest (`R1`, `R1*2`) now hooks just after the last note before the rest, as LilyPond does — it ran into the rest's bar, and over `R1*2` rose above the bar count; a rest alone on the next line gets no piece. A line broken across systems runs to the end of the first one (it stopped short of the last bar line) and starts the next one just after the clef (it began over the clef). The stems of grace and cue notes begin at their own small heads' point, as the plain notes' now do.
+
 - `[engraving]` **A stem begins where LilyPond begins it, inside the head.** A plain head's stem started 0.15 of a staff space from the head's centre (a black head) or at the centre itself (a half head); it now starts at the font's own point, 0.1862 and 0.259, as LilyPond's does — so every beamed stem is the length LilyPond draws, no longer 0.03 longer. A SMuFL font's heads use its own stem anchors.
 
 - `[engraving]` **A trill line stopping just before a repeat sign in the middle of a line reaches the sign.** It ended 0.19 of a staff space short of the `.|:` (the plain bar line that is not drawn there), and so sometimes drew one wave fewer than LilyPond.
