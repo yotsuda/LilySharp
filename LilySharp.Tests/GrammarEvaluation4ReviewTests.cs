@@ -248,4 +248,30 @@ public class GrammarEvaluation4ReviewTests
         Assert.Contains(" / ", Heard(Modulating("key g major", "d''4 cis'' b' a' | g' fis' e' d' | e'4 fis' g' a' | b' cis'' d'' d'' |")));
     }
 
+    private const string NoKeyNotes = "c'4 fis' b' f'' | e'' bes' dis' a' | gis'4 d'' cis'' g' | aes' ees'' b' e' |";
+
+    /// <summary>A section in no key (<c>key none</c>) is heard in none, and the piece ending there is not
+    /// told it ends off its tonic (leftovers of session 1272: it was guessed G♯ minor, and "ends over E,
+    /// not its tonic D").</summary>
+    [Fact]
+    public void ASectionInNoKey_IsHeardInNone_AndClosesOnNoTonic()
+    {
+        string book = Modulating("key none", NoKeyNotes);
+        Assert.Matches(@"^D major \(\d\.\d\d\) → no key$", (string)System.Text.Json.Nodes.JsonNode.Parse(ScoreReview.Json(book))!["facts"]!["keyHeard"]!);
+        var found = CompositionChecks.Findings(book);
+        Assert.DoesNotContain(found, f => f.Id is "form.final-bass" or "form.ends-in-another-key" or "key.relative");
+        // The same notes in a section that keeps the file's key: told.
+        Assert.Contains(CompositionChecks.Findings(Modulating("", NoKeyNotes)), f => f.Id == "form.final-bass");
+        // In a file in C — whose signature a section of no key shares — the section is still a stretch of its own.
+        Assert.EndsWith("→ no key", (string)System.Text.Json.Nodes.JsonNode.Parse(ScoreReview.Json(book.Replace("key d major", "key c major")))!["facts"]!["keyHeard"]!);
+        // Beginning in no key, the piece has no home to come back to — not the file's E♭, the D it ends in.
+        string fromNoKey = book.Replace("key d major", "key ees major").Replace("section A {", "section A {\n  key d major").Replace("form { A B }", "form { B A }");
+        Assert.DoesNotContain(CompositionChecks.Findings(fromNoKey), f => f.Id is "form.final-bass" or "form.ends-in-another-key" or "key.relative");
+        var report = System.Text.Json.Nodes.JsonNode.Parse(ScoreReview.Json(fromNoKey))!;
+        Assert.Equal("no key", (string)report["facts"]!["key"]!);
+        Assert.DoesNotContain(report["strengths"]!.AsArray(), s => ((string)s!).StartsWith("It ends where it began", StringComparison.Ordinal));
+        // …nor ending in none (the strength said "in D major, over its tonic" of the last bar in no key).
+        Assert.DoesNotContain(System.Text.Json.Nodes.JsonNode.Parse(ScoreReview.Json(book))!["strengths"]!.AsArray(), s => ((string)s!).StartsWith("It ends where it began", StringComparison.Ordinal));
+    }
+
 }

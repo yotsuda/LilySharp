@@ -6,7 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
-- `[review]` **`lysc review` reads a big band, a blues and a modulation better.** Parts that strike with a higher part — a section's second alto, the trombones under their lead — play the harmony and are no longer each called "the melody" or held to a melody's rhythm (their wrong notes are still told). In a piece that swings, the blues scale's fourth (B♭ over F7 in F) is no wrong note. A piece whose written key changes is "Heard in" stretch by stretch: "D major → E major" where the notes of both keys summed were "A major".
+- `[review]` **`lysc review` reads a big band, a blues and a modulation better.** Parts that strike with a higher part — a section's second alto, the trombones under their lead — play the harmony and are no longer each called "the melody" or held to a melody's rhythm (their wrong notes are still told). In a piece that swings, the blues scale's fourth (B♭ over F7 in F) is no wrong note. A piece whose written key changes is "Heard in" stretch by stretch: "D major → E major" where the notes of both keys summed were "A major". A section in `key none` is heard in no key, and a piece that begins or ends in one is no longer told it ends off its tonic.
 
 - `[singing]` **A singer sings the jazz bends and a glissando** (a trial, Cantoria's request 2; DiffSinger voices only — NEUTRINO and VOICEVOX sing flat). `@scoop` rises two semitones into the note and `@plop` falls into it; `@fall` drops four semitones at its end and `@doit` rises as far; `@glissando` or `@slide` goes on to the next sung note's pitch over the note's second half. An instrument still plays the note plain.
 

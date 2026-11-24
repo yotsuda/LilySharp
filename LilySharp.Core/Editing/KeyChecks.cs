@@ -83,43 +83,87 @@ public static class KeyChecks
     /// <summary>
     /// Where the written key changes as the music plays: the key the notes fit best in each stretch of
     /// one written key, in the order played — a stretch back in an earlier key is said again, and two
-    /// stretches heard alike in a row are one. Null where the key written never changes, or where
-    /// fewer than two stretches have notes enough to tell (<see cref="HeardFewestNotes"/>).
+    /// stretches heard alike in a row are one. A stretch in a section of no key
+    /// (<paramref name="keylessSections"/>, its <c>key none</c>) is null: no key is guessed for it. Null
+    /// where the key written never changes, or where fewer than two stretches have notes enough to tell
+    /// (<see cref="HeardFewestNotes"/>).
     /// </summary>
     /// <remarks>
     /// Grammar evaluation 4 (2026-11-13): a choir piece in D that goes up to E for its last verse was
     /// "Heard in: A major / E major" — the two keys' notes summed into one profile fit neither; the
     /// keys written say where to look, the notes say what each stretch is heard in.
     /// </remarks>
-    public static IReadOnlyList<HeardKey>? HeardAlong(MidiFile midi)
+    public static IReadOnlyList<HeardKey?>? HeardAlong(MidiFile midi, ISet<string>? keylessSections = null)
     {
-        var starts = midi.KeyStarts.ToList();
-        // One stretch per written key: a key written again where it already stands starts none.
-        var stretches = new List<int>();
-        for (int i = 0; i < starts.Count; i++)
-            if (i == 0 || starts[i].Value != starts[i - 1].Value)
-                stretches.Add(starts[i].Key);
+        // The section playing at each tick, and whether it is in no key.
+        var sections = midi.SectionStarts.ToList();
+        bool KeylessAt(int tick)
+        {
+            if (keylessSections is not { Count: > 0 })
+                return false;
+            string? at = null;
+            foreach (var (start, name) in sections)
+            {
+                if (start > tick)
+                    break;
+                at = name;
+            }
+            return at != null && keylessSections.Contains(at);
+        }
+        // One stretch per written key, and per turn into or out of a section of no key — the key
+        // lane states each section's key at its start, so a section of no key after one in C (the
+        // signature it shares) starts a stretch too. A key written again where it already stands
+        // starts none.
+        var marks = midi.KeyStarts.Select(k => (Tick: k.Key, Key: (int?)k.Value)).ToList();
+        var stretches = new List<(int From, bool Keyless)>();
+        int? key = null;
+        (bool, int?) current = default;
+        foreach (var (tick, written) in marks)
+        {
+            key = written ?? key;
+            bool keyless = KeylessAt(tick);
+            var label = (keyless, keyless ? null : key);
+            if (stretches.Count == 0)
+            {
+                stretches.Add((tick, keyless));
+                current = label;
+            }
+            else if (label != current)
+            {
+                if (stretches[^1].From == tick)
+                    stretches[^1] = (tick, keyless);
+                else
+                    stretches.Add((tick, keyless));
+                current = label;
+            }
+        }
         if (stretches.Count < 2)
             return null;
-        stretches[0] = int.MinValue;
+        stretches[0] = (int.MinValue, stretches[0].Keyless);
         var notes = Pitched(midi);
-        var heard = new List<HeardKey>();
+        var heard = new List<HeardKey?>();
         for (int s = 0; s < stretches.Count; s++)
         {
-            int from = stretches[s], to = s + 1 < stretches.Count ? stretches[s + 1] : int.MaxValue;
+            int from = stretches[s].From, to = s + 1 < stretches.Count ? stretches[s + 1].From : int.MaxValue;
             var inside = notes.Where(n => n.StartTick >= from && n.StartTick < to).ToList();
             if (inside.Count < HeardFewestNotes)
                 continue;
-            var weights = Weights(inside);
-            var best = Enumerable.Range(0, 12)
-                .SelectMany(t => new[] { new HeardKey(t, false, Harmony.KeyEstimator.ProfileFit(weights, true, t)), new HeardKey(t, true, Harmony.KeyEstimator.ProfileFit(weights, false, t)) })
-                .MaxBy(k => k.Fit);
-            if (heard.Count == 0 || heard[^1].Tonic != best.Tonic || heard[^1].Minor != best.Minor)
+            HeardKey? best = null;
+            if (!stretches[s].Keyless)
+            {
+                var weights = Weights(inside);
+                best = Enumerable.Range(0, 12)
+                    .SelectMany(t => new[] { new HeardKey(t, false, Harmony.KeyEstimator.ProfileFit(weights, true, t)), new HeardKey(t, true, Harmony.KeyEstimator.ProfileFit(weights, false, t)) })
+                    .MaxBy(k => k.Fit);
+            }
+            if (heard.Count == 0 || !Alike(heard[^1], best))
                 heard.Add(best);
         }
         return heard.Count >= 2 ? heard : null;
-    }
 
+        static bool Alike(HeardKey? a, HeardKey? b)
+            => a is null ? b is null : b is { } k && a.Value.Tonic == k.Tonic && a.Value.Minor == k.Minor;
+    }
     private static List<MidiNote> Pitched(MidiFile midi) => midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9
         && !(n.Part ?? t.Name).EndsWith(" (chords)", System.StringComparison.Ordinal))).ToList();
 

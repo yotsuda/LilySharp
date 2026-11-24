@@ -690,7 +690,10 @@ public static class CompositionChecks
                 + "earlier section under a new name with a few bars altered."));
         if (instrumentalLines == null && !root.DescendantNodes<LyricsBlockSyntax>().Any() && PlayedRound(midi) is { } round)
             findings.Add(round);
-        if (PlayedKeys(root, midi) is { } inKeys && pitched.Count > 0)
+        // A piece that begins or ends in a section of no key has no tonic there to begin or close on
+        // (leftovers of session 1272: a section's `key none` was read as the file's key, and its last
+        // bar told "ends over E, not its tonic D").
+        if (PlayedKeys(root, midi) is { } inKeys && pitched.Count > 0 && !BeginsOrEndsKeyless(root, midi))
         {
             var (home, end) = inKeys;
             int homeTonic = PitchClass(home.Tonic), endTonic = PitchClass(end.Tonic);
@@ -3074,6 +3077,31 @@ public static class CompositionChecks
         var written = keys.Select(Of).OfType<(string, string)>().ToList();
         return written.Count > 0 ? (written[0], written[^1]) : null;
     }
+
+    /// <summary>The top-level sections that write <c>key none</c> as their last key: music in no key, whose
+    /// notes no tonic is heard against (owner's decision 2026-11-15 for a file's own <c>key none</c>; the
+    /// same for a section's, session 1375).</summary>
+    internal static HashSet<string> KeylessSections(SyntaxNode root)
+        => root.DescendantNodes<SectionDeclarationSyntax>().Where(s => s.Parent is { Parent: null })
+            .Where(s => s.DescendantNodes<KeySignatureSyntax>().LastOrDefault() is { IsNone: true })
+            .Select(s => s.SectionName).ToHashSet(System.StringComparer.Ordinal);
+
+    /// <summary>Whether the first and the last section the form plays are in no key (<see cref="KeylessSections"/>):
+    /// there the piece has no tonic to begin on, or to close on.</summary>
+    internal static (bool Begins, bool Ends) PlayedKeyless(SyntaxNode root, MidiFile? midi)
+    {
+        var keyless = KeylessSections(root);
+        if (keyless.Count == 0)
+            return (false, false);
+        var form = root.DescendantNodes<FormDeclarationSyntax>().Where(f => !f.InScore).OrderBy(f => f.Name != null).FirstOrDefault();
+        var played = form == null ? [] : JumpedPlays(form, midi) ?? PlaysOf(form);
+        return played.Count > 0 ? (keyless.Contains(played[0]), keyless.Contains(played[^1])) : (false, false);
+    }
+
+    /// <summary>Whether the piece begins or ends in no key (<see cref="PlayedKeyless"/>): then it has no home
+    /// key to come back to, or no last one to close in.</summary>
+    internal static bool BeginsOrEndsKeyless(SyntaxNode root, MidiFile? midi)
+        => PlayedKeyless(root, midi) is var (begins, ends) && (begins || ends);
 
     /// <summary>The music whose spelling can be read, each with its key: a section's part blocks, and a top-level
     /// phrase played by one part alone. Not the drums, nor a transposing part unless the file is in concert pitch.</summary>

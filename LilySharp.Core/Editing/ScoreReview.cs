@@ -221,14 +221,15 @@ public static class ScoreReview
         // `key none` at the top of the file says the piece has no key: the header says so, and
         // the key the notes would be heard in is not guessed (owner's decision 2026-11-15).
         bool keyless = root.ChildNodes().OfType<KeySignatureSyntax>().FirstOrDefault() is { IsNone: true };
-        if (keyless)
+        // …and so does a piece whose first section played writes `key none`: it begins in no key.
+        if (keyless || CompositionChecks.PlayedKeyless(root, midi).Begins)
             facts["key"] = "no key";
         else if (HomeKey(root) is { } key)
             facts["key"] = key;
         // A piece whose written key changes is heard stretch by stretch, in the order played
         // (KeyChecks.HeardAlong): the notes of two keys summed fit neither.
-        if (!keyless && midi != null && KeyChecks.HeardAlong(midi) is { } along)
-            facts["keyHeard"] = string.Join(" → ", along.Select(k => $"{k.Name} ({k.Fit:0.00})"));
+        if (!keyless && midi != null && KeyChecks.HeardAlong(midi, CompositionChecks.KeylessSections(root)) is { } along)
+            facts["keyHeard"] = string.Join(" → ", along.Select(k => k is { } heard ? $"{heard.Name} ({heard.Fit:0.00})" : "no key"));
         else if (!keyless && midi != null && KeyChecks.Heard(midi) is { Count: > 0 } heard)
             facts["keyHeard"] = string.Join(" / ", heard.Take(2).Select(k => $"{k.Name} ({k.Fit:0.00})"));
         var form = CompositionChecks.PlayedSections(root, midi);
@@ -311,7 +312,8 @@ public static class ScoreReview
         if (pitched == 0)
             yield break;
 
-        if (HomeKey(root) is { } key && !Said("form.ends-in-another-key", "form.final-bass", "key.relative"))
+        if (HomeKey(root) is { } key && !Said("form.ends-in-another-key", "form.final-bass", "key.relative")
+            && !CompositionChecks.BeginsOrEndsKeyless(root, midi))
             yield return $"It ends where it began: in {key}, over its tonic.";
         var form = CompositionChecks.PlayedSections(root, midi);
         if (form.Distinct().Count() >= 2 && form.Distinct().Count() < form.Count && !Said("form.played-three-times"))
