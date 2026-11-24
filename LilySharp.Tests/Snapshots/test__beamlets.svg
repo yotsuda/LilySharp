@@ -52,21 +52,21 @@
   <text class="music" x="34.65" y="14.36" font-size="4.00" data-pos="460"></text>
   <text class="music" x="37.15" y="13.86" font-size="4.00" data-pos="467"></text>
   <text class="music" x="39.65" y="13.36" font-size="4.00" data-pos="474"></text>
-  <line x1="39.72" y1="13.51" x2="39.72" y2="20.86" stroke="#000000" stroke-width="0.130"/>
+  <line x1="39.72" y1="13.55" x2="39.72" y2="20.86" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="39.78" y="20.82" font-size="4.00"></text>
   <polygon points="17.12,20.81 21.66,20.62 21.66,21.10 17.12,21.29"/>
   <polygon points="20.49,19.86 21.66,19.81 21.66,20.29 20.49,20.34"/>
-  <line x1="17.19" y1="17.01" x2="17.19" y2="21.05" stroke="#000000" stroke-width="0.130"/>
-  <line x1="21.59" y1="16.51" x2="21.59" y2="20.86" stroke="#000000" stroke-width="0.130"/>
+  <line x1="17.19" y1="17.05" x2="17.19" y2="21.05" stroke="#000000" stroke-width="0.130"/>
+  <line x1="21.59" y1="16.55" x2="21.59" y2="20.86" stroke="#000000" stroke-width="0.130"/>
   <polygon points="24.03,20.62 26.67,20.43 26.67,20.91 24.03,21.10"/>
   <polygon points="24.03,19.81 25.20,19.73 25.20,20.21 24.03,20.29"/>
-  <line x1="24.10" y1="16.01" x2="24.10" y2="20.86" stroke="#000000" stroke-width="0.130"/>
-  <line x1="26.60" y1="15.51" x2="26.60" y2="20.67" stroke="#000000" stroke-width="0.130"/>
+  <line x1="24.10" y1="16.05" x2="24.10" y2="20.86" stroke="#000000" stroke-width="0.130"/>
+  <line x1="26.60" y1="15.55" x2="26.60" y2="20.67" stroke="#000000" stroke-width="0.130"/>
   <polygon points="30.94,20.62 37.28,20.62 37.28,21.10 30.94,21.10"/>
   <polygon points="34.65,19.81 37.28,19.81 37.28,20.29 34.65,20.29"/>
-  <line x1="31.01" y1="15.01" x2="31.01" y2="20.86" stroke="#000000" stroke-width="0.130"/>
-  <line x1="34.71" y1="14.51" x2="34.71" y2="20.86" stroke="#000000" stroke-width="0.130"/>
-  <line x1="37.21" y1="14.01" x2="37.21" y2="20.86" stroke="#000000" stroke-width="0.130"/>
+  <line x1="31.01" y1="15.05" x2="31.01" y2="20.86" stroke="#000000" stroke-width="0.130"/>
+  <line x1="34.71" y1="14.55" x2="34.71" y2="20.86" stroke="#000000" stroke-width="0.130"/>
+  <line x1="37.21" y1="14.05" x2="37.21" y2="20.86" stroke="#000000" stroke-width="0.130"/>
   <rect x="11.90" y="12.93" width="7.32" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="405"/>
   <text x="15.57" y="15.28" font-size="2.77" text-anchor="middle" data-pos="405">Main</text>
   </g>

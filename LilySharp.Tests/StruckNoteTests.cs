@@ -123,8 +123,8 @@ public class StruckNoteTests
     public void ABeamedStem_StandsOnTheSmallHead()
     {
         // MEASURED on LilyPond 2.26.0 (Lab sessions/p1332/beam/b1.ly): the stem's foot 0.0948 from
-        // the small head's centre, stem up (bar 2) and down (bar 4); a full head's foot stays 0.15
-        // on Lily#'s side (LilyPond 0.1862 — the beamed filled head's own question, not this one).
+        // the small head's centre, stem up (bar 2) and down (bar 4); a full head's 0.1862 (since
+        // session 1377 on Lily#'s side too — it was a hand rule's 0.15; Lab sessions/p1377/stem).
         string text = Book("<a@struck c' e'>8 <a c' e'>8 r2 | <e'' g'' c'''@struck>8 <e'' g'' c'''>8 r2 |");
         string svg = SvgGenerator.Generate(SyntaxTree.Parse(text));
         var stems = Regex.Matches(svg, "<line x1=\"([-\\d.]+)\" y1=\"([-\\d.]+)\" x2=\"\\1\" y2=\"([-\\d.]+)\"[^>]*stroke-width=\"0\\.130\"")
@@ -136,9 +136,9 @@ public class StruckNoteTests
             System.Math.Abs(stems[stem].Foot - glyphs.First(g => g.Pos == text.IndexOf(at, StringComparison.Ordinal)).Y);
         // (The page writes two places: each y is within 0.005.)
         Assert.InRange(FootGap(0, "a@struck"), 0.0948 - 0.011, 0.0948 + 0.011);
-        Assert.InRange(FootGap(1, "a c' e'>8 r2"), 0.15 - 0.011, 0.15 + 0.011);
+        Assert.InRange(FootGap(1, "a c' e'>8 r2"), 0.1862 - 0.011, 0.1862 + 0.011);
         Assert.InRange(FootGap(2, "c'''@struck"), 0.0948 - 0.011, 0.0948 + 0.011);
-        Assert.InRange(FootGap(3, "c'''>8 r2"), 0.15 - 0.011, 0.15 + 0.011);
+        Assert.InRange(FootGap(3, "c'''>8 r2"), 0.1862 - 0.011, 0.1862 + 0.011);
     }
 
     /// <summary>On a tab the struck member's fret number is smaller, centred where LilyPond's smaller

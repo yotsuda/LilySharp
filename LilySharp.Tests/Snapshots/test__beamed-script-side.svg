@@ -30,15 +30,15 @@
   <text class="music" x="34.90" y="18.06" font-size="4.00" data-pos="142"></text>
   <rect x="37.46" y="17.06" width="0.19" height="4.00" data-pos="143"/>
   <polygon points="18.30,18.82 25.69,18.82 25.69,19.30 18.30,19.30"/>
-  <line x1="18.36" y1="22.41" x2="18.36" y2="19.06" stroke="#000000" stroke-width="0.130"/>
-  <line x1="20.86" y1="22.41" x2="20.86" y2="19.06" stroke="#000000" stroke-width="0.130"/>
-  <line x1="23.12" y1="23.41" x2="23.12" y2="19.06" stroke="#000000" stroke-width="0.130"/>
-  <line x1="25.62" y1="23.41" x2="25.62" y2="19.06" stroke="#000000" stroke-width="0.130"/>
+  <line x1="18.36" y1="22.38" x2="18.36" y2="19.06" stroke="#000000" stroke-width="0.130"/>
+  <line x1="20.86" y1="22.38" x2="20.86" y2="19.06" stroke="#000000" stroke-width="0.130"/>
+  <line x1="23.12" y1="23.38" x2="23.12" y2="19.06" stroke="#000000" stroke-width="0.130"/>
+  <line x1="25.62" y1="23.38" x2="25.62" y2="19.06" stroke="#000000" stroke-width="0.130"/>
   <polygon points="28.31,15.01 36.20,15.01 36.20,15.49 28.31,15.49"/>
-  <line x1="28.38" y1="20.91" x2="28.38" y2="15.25" stroke="#000000" stroke-width="0.130"/>
-  <line x1="31.13" y1="17.41" x2="31.13" y2="15.25" stroke="#000000" stroke-width="0.130"/>
-  <line x1="33.64" y1="17.91" x2="33.64" y2="15.25" stroke="#000000" stroke-width="0.130"/>
-  <line x1="36.14" y1="17.91" x2="36.14" y2="15.25" stroke="#000000" stroke-width="0.130"/>
+  <line x1="28.38" y1="20.88" x2="28.38" y2="15.25" stroke="#000000" stroke-width="0.130"/>
+  <line x1="31.13" y1="17.38" x2="31.13" y2="15.25" stroke="#000000" stroke-width="0.130"/>
+  <line x1="33.64" y1="17.88" x2="33.64" y2="15.25" stroke="#000000" stroke-width="0.130"/>
+  <line x1="36.14" y1="17.88" x2="36.14" y2="15.25" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="17.77" y="23.51" font-size="4.00" data-pos="91"></text>
   <text class="music" x="22.53" y="24.51" font-size="4.00" data-pos="104"></text>
   <text class="music" x="27.79" y="22.01" font-size="4.00" data-pos="118"></text>

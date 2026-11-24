@@ -627,37 +627,34 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/open-type-font.cc:334-369 attachment_point — DOWN is the
     ///   font's attachment-down entry, not a reflection.
     /// <para>
-    /// ⚠️ The DEFAULT head keeps the older hand rule (filled heads recess the start
-    /// ±<see cref="StemHeadInset"/> toward the stem's far end; open heads butt the
-    /// centre) instead of the font's ±0.186200 (s2) / ±0.259000 (s1) — switching it
-    /// moves every stem rect in every snapshot by 0.036 (black) / 0.259 (half) and
-    /// wants its own point (ticketed 2026-08-07, session 108: default-head
-    /// stem-begin regime).
+    /// The DEFAULT head reads the font too: ±0.186200 (s2) / ±0.259000 (s1).
+    /// MEASURED (2.26.0, Lab sessions/p1377/stem — `stem-begin-position` dumped): c''4 0.3724
+    /// half spaces from the head, c''2 and e'2 0.5180, a beamed or unbeamed chord's foot the
+    /// same 0.3724. Until session 1377 it kept a hand rule (filled heads ±0.15, open heads the
+    /// centre; ticketed 2026-08-07, session 108).
     /// </para>
     /// <para>
-    /// ⚠️ UNSCALED, unlike the X side (session 109 audit): the styled Y is the 20
-    /// design's coordinate while <see cref="LayoutUtilities.StemAttachX(bool, int, NoteheadStyle, double)"/>
-    /// takes the cue's headScale — LilyPond scales the whole attachment with the
-    /// grob's font. A CUE styled head is the only reader of the difference and no
-    /// book measures one; ticketed with the default-head regime above.
+    /// A head at another SIZE reads its own font, <paramref name="sized"/> (already in the page's
+    /// staff spaces): an optically sized font's small design attaches elsewhere than the full
+    /// one scaled down. MEASURED (same book): a struck member's foot 0.1896 half spaces — the
+    /// font-size −4 design's own point, not 0.3724 × magstep(−4) = 0.2346.
     /// </para>
     /// <para>
-    /// <c>NoteHead.scale</c> magnifies either answer by the heads' size, as LilyPond's attachment
+    /// ⚠️ A cue or grace head without <paramref name="sized"/> still reads the full design
+    /// (session 109 audit: the X side takes the cue's headScale); no book measures one.
+    /// </para>
+    /// <para>
+    /// <c>NoteHead.scale</c> magnifies the full design's answer by the heads' size, as LilyPond's attachment
     /// is read from the head's font (exactly 1 at the default; MEASURED against 2.26.0 at
-    /// <c>font-size</c> +1.2 and −0.9, Lab sessions/p827/nh: the hand rule's 0.036 grows with the
-    /// head and no further).
+    /// <c>font-size</c> +1.2 and −0.9, Lab sessions/p827/nh).
     /// </para>
     /// </remarks>
-    private static double StemAttachYOffset(NoteheadStyle style, bool stemUp, int noteValue) => style switch
-    {
-        NoteheadStyle.Default when noteValue >= 4 => stemUp ? -StemHeadInset : StemHeadInset,
-        NoteheadStyle.Default => 0,
-        _ => -GlyphMetrics.GetNoteheadStemAttachment(MusicFont.Current.DesignAt(0), style, stemUp, noteValue).Y,
-    } * GlyphMetrics.StaffHeadMagnification;
-
-    /// <summary>How far a filled round head recesses the stem's start toward the far
-    /// end so the join clears the head's slanted corner.</summary>
-    private const double StemHeadInset = 0.15;
+    private static double StemAttachYOffset(NoteheadStyle style, bool stemUp, int noteValue,
+        MusicFontDesign? sized = null)
+        => sized is { } font
+            ? -GlyphMetrics.GetNoteheadStemAttachment(font, style, stemUp, noteValue).Y
+            : -GlyphMetrics.GetNoteheadStemAttachment(MusicFont.Current.DesignAt(0), style, stemUp, noteValue).Y
+              * GlyphMetrics.StaffHeadMagnification;
 
     /// <summary>
     /// The stem parameters this item's stem is measured and drawn with — null at the staff's
@@ -1419,8 +1416,8 @@ internal static partial class SharedRenderer
                     footStruck = n.IsStruck;
             double stemStartY = (stemUp ? bottomY : topY)
                 - (footStruck
-                    ? StemAttachYOffset(ChordHeadPositioning.StemStyle(chord, stemUp, noteValue), stemUp, Core.Music.StruckNotes.HeadNoteValue)
-                        * EmmentalerDesignSize.Magstep(GrobFontSize.StruckHeadStepOf(chord))
+                    ? StemAttachYOffset(ChordHeadPositioning.StemStyle(chord, stemUp, noteValue), stemUp,
+                        Core.Music.StruckNotes.HeadNoteValue, GrobFontSize.StruckHeadFontOf(chord))
                     : StemAttachYOffset(ChordHeadPositioning.StemStyle(chord, stemUp, noteValue), stemUp, noteValue));
             if (!stemTransparent)
                 using (gc.Kind("stem"))

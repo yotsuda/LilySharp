@@ -16,9 +16,9 @@
   <text class="music" x="9.34" y="18.06" font-size="4.00" data-pos="722"></text>
   <text class="music" x="13.66" y="19.06" font-size="4.00" data-pos="703"></text>
   <text class="music" x="16.96" y="17.06" font-size="4.00" data-pos="759"></text>
-  <line x1="17.02" y1="17.06" x2="17.02" y2="20.56" stroke="#000000" stroke-width="0.130"/>
+  <line x1="17.02" y1="17.32" x2="17.02" y2="20.56" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="21.09" y="17.06" font-size="4.00" data-pos="762"></text>
-  <line x1="21.15" y1="17.06" x2="21.15" y2="20.56" stroke="#000000" stroke-width="0.130"/>
+  <line x1="21.15" y1="17.32" x2="21.15" y2="20.56" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="27.17" y="17.06" font-size="4.00" data-pos="768"></text>
   <rect x="25.08" y="17.06" width="0.19" height="4.00" data-pos="766"/>
   <rect x="32.80" y="17.06" width="0.19" height="4.00" data-pos="771"/>

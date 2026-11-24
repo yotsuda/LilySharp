@@ -27,17 +27,17 @@
   <text class="music" x="32.05" y="9.28" font-size="4.00" data-pos="764"></text>
   <text class="music" x="34.44" y="9.28" font-size="4.00" data-pos="769"></text>
   <text class="music" x="37.84" y="12.28" font-size="4.00" data-pos="776"></text>
-  <line x1="37.91" y1="12.43" x2="37.91" y2="15.62" stroke="#000000" stroke-width="0.130"/>
+  <line x1="37.91" y1="12.47" x2="37.91" y2="15.62" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="41.44" y="12.28" font-size="4.00" data-pos="781"></text>
-  <line x1="41.51" y1="12.43" x2="41.51" y2="15.62" stroke="#000000" stroke-width="0.130"/>
+  <line x1="41.51" y1="12.47" x2="41.51" y2="15.62" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="45.04" y="12.28" font-size="4.00" data-pos="785"></text>
-  <line x1="45.10" y1="12.43" x2="45.10" y2="15.62" stroke="#000000" stroke-width="0.130"/>
+  <line x1="45.10" y1="12.47" x2="45.10" y2="15.62" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="48.63" y="12.28" font-size="4.00" data-pos="789"></text>
-  <line x1="48.70" y1="12.43" x2="48.70" y2="15.62" stroke="#000000" stroke-width="0.130"/>
+  <line x1="48.70" y1="12.47" x2="48.70" y2="15.62" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="53.48" y="10.78" font-size="4.00" data-pos="795"></text>
-  <line x1="53.54" y1="10.78" x2="53.54" y2="14.28" stroke="#000000" stroke-width="0.130"/>
+  <line x1="53.54" y1="11.04" x2="53.54" y2="14.28" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="58.31" y="10.78" font-size="4.00" data-pos="800"></text>
-  <line x1="58.38" y1="10.78" x2="58.38" y2="14.28" stroke="#000000" stroke-width="0.130"/>
+  <line x1="58.38" y1="11.04" x2="58.38" y2="14.28" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="84.24" y="11.28" font-size="4.00" data-pos="815"></text>
   <rect x="36.66" y="10.28" width="0.19" height="4.00" data-pos="774"/>
   <rect x="52.22" y="10.28" width="0.19" height="4.00" data-pos="793"/>
@@ -97,15 +97,15 @@
   <line x1="23.59" y1="23.53" x2="24.41" y2="23.53" stroke="#000000" stroke-width="0.100"/>
   <line x1="25.98" y1="23.53" x2="90.68" y2="23.53" stroke="#000000" stroke-width="0.100"/>
   <polygon points="18.53,10.23 25.85,10.23 25.85,10.71 18.53,10.71"/>
-  <line x1="18.60" y1="13.63" x2="18.60" y2="10.47" stroke="#000000" stroke-width="0.130"/>
-  <line x1="20.99" y1="13.63" x2="20.99" y2="10.47" stroke="#000000" stroke-width="0.130"/>
-  <line x1="23.39" y1="13.63" x2="23.39" y2="10.47" stroke="#000000" stroke-width="0.130"/>
-  <line x1="25.79" y1="13.63" x2="25.79" y2="10.47" stroke="#000000" stroke-width="0.130"/>
+  <line x1="18.60" y1="13.60" x2="18.60" y2="10.47" stroke="#000000" stroke-width="0.130"/>
+  <line x1="20.99" y1="13.60" x2="20.99" y2="10.47" stroke="#000000" stroke-width="0.130"/>
+  <line x1="23.39" y1="13.60" x2="23.39" y2="10.47" stroke="#000000" stroke-width="0.130"/>
+  <line x1="25.79" y1="13.60" x2="25.79" y2="10.47" stroke="#000000" stroke-width="0.130"/>
   <polygon points="27.25,12.04 34.57,12.04 34.57,12.52 27.25,12.52"/>
-  <line x1="27.32" y1="9.43" x2="27.32" y2="12.28" stroke="#000000" stroke-width="0.130"/>
-  <line x1="29.72" y1="9.43" x2="29.72" y2="12.28" stroke="#000000" stroke-width="0.130"/>
-  <line x1="32.11" y1="9.43" x2="32.11" y2="12.28" stroke="#000000" stroke-width="0.130"/>
-  <line x1="34.51" y1="9.43" x2="34.51" y2="12.28" stroke="#000000" stroke-width="0.130"/>
+  <line x1="27.32" y1="9.47" x2="27.32" y2="12.28" stroke="#000000" stroke-width="0.130"/>
+  <line x1="29.72" y1="9.47" x2="29.72" y2="12.28" stroke="#000000" stroke-width="0.130"/>
+  <line x1="32.11" y1="9.47" x2="32.11" y2="12.28" stroke="#000000" stroke-width="0.130"/>
+  <line x1="34.51" y1="9.47" x2="34.51" y2="12.28" stroke="#000000" stroke-width="0.130"/>
   <polygon points="17.94,18.23 25.26,18.23 25.26,18.71 17.94,18.71"/>
   <line x1="18.01" y1="22.18" x2="18.01" y2="18.47" stroke="#000000" stroke-width="0.130"/>
   <line x1="20.40" y1="22.18" x2="20.40" y2="18.47" stroke="#000000" stroke-width="0.130"/>

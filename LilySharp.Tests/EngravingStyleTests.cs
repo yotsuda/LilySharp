@@ -221,9 +221,9 @@ public class EngravingStyleTests
     /// The 30 beamed stems' lengths LilyPond 2.26.0 draws (sorted; Lab sessions/p822/p4, the
     /// twin, stem rects) at its defaults and under <c>line-thickness = 0.75\pt</c>,
     /// <c>Stem.thickness = 2</c>, <c>Stem.length-fraction = 1.2</c>, <c>Beam.beam-thickness = 0.6</c>.
-    /// Lily#'s stem is drawn 0.03 longer than LilyPond's rect at the default — the drawing's
-    /// convention, measured 0.027 … 0.036 over all 30 — and stays so under the settings: the
-    /// beams were placed where LilyPond places them.
+    /// Lily#'s stem is LilyPond's rect to the page's two places at the default and under the
+    /// settings: the beams were placed where LilyPond places them. (Until session 1377 every stem
+    /// was 0.027 … 0.036 longer: the head end began at a hand rule's 0.15, not the font's 0.1862.)
     /// </summary>
     [Fact]
     public void TheBeamedStems_AreLilyPondsUnderTheSettings()
@@ -247,8 +247,8 @@ public class EngravingStyleTests
         Assert.Equal(30, set.Length);
         for (int i = 0; i < 30; i++)
         {
-            Assert.InRange(plain[i] - lilyPondDefault[i], 0.02, 0.045);
-            Assert.InRange(set[i] - lilyPondSet[i], 0.02, 0.045);
+            Assert.InRange(plain[i] - lilyPondDefault[i], -0.012, 0.012);
+            Assert.InRange(set[i] - lilyPondSet[i], -0.012, 0.012);
         }
     }
 
@@ -256,7 +256,7 @@ public class EngravingStyleTests
     /// The 35 stems LilyPond 2.26.0 draws (sorted; Lab sessions/p825/damp, the
     /// <c>lysc ly --pin-fonts</c> twin, stem rects) for a book whose beams leap, under
     /// <c>\override Beam.damping</c> = 0 (no damping), 3 and 10000 (flat). The beams follow
-    /// LilyPond's to the drawing's 0.03 at each (as <see cref="TheBeamedStems_AreLilyPondsUnderTheSettings"/>),
+    /// LilyPond's to the page's two places at each (as <see cref="TheBeamedStems_AreLilyPondsUnderTheSettings"/>),
     /// and the three are three different pages.
     /// </summary>
     [Theory]
@@ -285,7 +285,7 @@ public class EngravingStyleTests
         var drawn = StemLengths(svg, "0.130");
         Assert.Equal(lilyPond.Length, drawn.Length);
         for (int i = 0; i < drawn.Length; i++)
-            Assert.InRange(drawn[i] - lilyPond[i], 0.02, 0.045);
+            Assert.InRange(drawn[i] - lilyPond[i], -0.012, 0.012);
         Assert.NotEqual(Svg(book), svg);
     }
 

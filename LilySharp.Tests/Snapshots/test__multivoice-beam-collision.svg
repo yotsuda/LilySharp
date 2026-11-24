@@ -26,15 +26,15 @@
   <text class="music" x="17.12" y="15.45" font-size="4.00" data-pos="1159"></text>
   <rect x="37.92" y="16.45" width="0.19" height="4.00" data-pos="1149"/>
   <polygon points="18.96,14.02 26.60,14.02 26.60,14.50 18.96,14.50"/>
-  <line x1="19.03" y1="17.80" x2="19.03" y2="14.26" stroke="#000000" stroke-width="0.130"/>
-  <line x1="21.53" y1="17.80" x2="21.53" y2="14.26" stroke="#000000" stroke-width="0.130"/>
-  <line x1="24.04" y1="17.80" x2="24.04" y2="14.26" stroke="#000000" stroke-width="0.130"/>
-  <line x1="26.54" y1="17.80" x2="26.54" y2="14.26" stroke="#000000" stroke-width="0.130"/>
+  <line x1="19.03" y1="17.77" x2="19.03" y2="14.26" stroke="#000000" stroke-width="0.130"/>
+  <line x1="21.53" y1="17.77" x2="21.53" y2="14.26" stroke="#000000" stroke-width="0.130"/>
+  <line x1="24.04" y1="17.77" x2="24.04" y2="14.26" stroke="#000000" stroke-width="0.130"/>
+  <line x1="26.54" y1="17.77" x2="26.54" y2="14.26" stroke="#000000" stroke-width="0.130"/>
   <polygon points="28.98,15.40 36.62,15.40 36.62,15.88 28.98,15.88"/>
-  <line x1="29.04" y1="17.80" x2="29.04" y2="15.64" stroke="#000000" stroke-width="0.130"/>
-  <line x1="31.55" y1="17.80" x2="31.55" y2="15.64" stroke="#000000" stroke-width="0.130"/>
-  <line x1="34.05" y1="17.80" x2="34.05" y2="15.64" stroke="#000000" stroke-width="0.130"/>
-  <line x1="36.56" y1="17.80" x2="36.56" y2="15.64" stroke="#000000" stroke-width="0.130"/>
+  <line x1="29.04" y1="17.77" x2="29.04" y2="15.64" stroke="#000000" stroke-width="0.130"/>
+  <line x1="31.55" y1="17.77" x2="31.55" y2="15.64" stroke="#000000" stroke-width="0.130"/>
+  <line x1="34.05" y1="17.77" x2="34.05" y2="15.64" stroke="#000000" stroke-width="0.130"/>
+  <line x1="36.56" y1="17.77" x2="36.56" y2="15.64" stroke="#000000" stroke-width="0.130"/>
   <rect x="11.90" y="12.82" width="2.20" height="2.79" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1084"/>
   <text x="12.98" y="15.21" font-size="2.77" text-anchor="middle" data-pos="1084">S</text>
   </g>

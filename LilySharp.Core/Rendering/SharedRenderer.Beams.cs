@@ -488,17 +488,17 @@ internal static partial class SharedRenderer
                     // noteValue 8 = "a beamed head is filled" — true for ordinary
                     // beams, NOT for a two-note tremolo pair, which beams HALF
                     // heads (the same fact the X side already honours per member).
-                    // A half head's begin is 0 (open heads butt the centre), so a
-                    // tremolo pair's stem begins 0.15 recessed here; pre-existing,
-                    // named by the session-109 audit, unmeasured by any book.
+                    // A half head attaches at 0.259, so a tremolo pair's stem begins
+                    // at the black head's 0.1862 here; pre-existing, named by the
+                    // session-109 audit, unmeasured by any book.
                     // A STRUCK foot (`<a@struck c' e'>8`) is a cue-sized black head: its
                     // attachment shrinks with it, as the unbeamed stem's does (DrawChord).
                     // MEASURED, 2.26.0 (Lab sessions/p1332/beam/b1.ly, bars 2 and 4): the
                     //   beamed stem's foot 0.0948 from the small head's centre, 0.0914 nearer
                     //   than a full head's, stem up and down alike.
                     - (StruckFootOf(memberItem, up)
-                        ? StemAttachYOffset(MemberStyle(i), up, Core.Music.StruckNotes.HeadNoteValue)
-                            * EmmentalerDesignSize.Magstep(GrobFontSize.StruckHeadStepOf((ChordItem)memberItem))
+                        ? StemAttachYOffset(MemberStyle(i), up, Core.Music.StruckNotes.HeadNoteValue,
+                            GrobFontSize.StruckHeadFontOf((ChordItem)memberItem))
                         : StemAttachYOffset(MemberStyle(i), up, noteValue: 8));
             }
             // The stem ends at the OUTERMOST beam rank on its own side — the extreme

@@ -19,13 +19,13 @@
   <text class="music" x="9.34" y="20.05" font-size="4.00" data-pos="351"></text>
   <text class="music" x="13.54" y="19.05" font-size="4.00" data-pos="318"></text>
   <text class="music" x="19.08" y="18.55" font-size="4.00" data-pos="416"></text>
-  <line x1="19.15" y1="18.70" x2="19.15" y2="22.05" stroke="#000000" stroke-width="0.130"/>
+  <line x1="19.15" y1="18.74" x2="19.15" y2="22.05" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="22.09" y="18.05" font-size="4.00" data-pos="421"></text>
-  <line x1="22.15" y1="18.20" x2="22.15" y2="21.55" stroke="#000000" stroke-width="0.130"/>
+  <line x1="22.15" y1="18.24" x2="22.15" y2="21.55" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="25.09" y="17.55" font-size="4.00" data-pos="423"></text>
-  <line x1="25.15" y1="17.70" x2="25.15" y2="21.05" stroke="#000000" stroke-width="0.130"/>
+  <line x1="25.15" y1="17.74" x2="25.15" y2="21.05" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="28.09" y="17.05" font-size="4.00" data-pos="425"></text>
-  <line x1="28.16" y1="17.20" x2="28.16" y2="20.55" stroke="#000000" stroke-width="0.130"/>
+  <line x1="28.16" y1="17.24" x2="28.16" y2="20.55" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="34.03" y="16.55" font-size="4.00" data-pos="429"></text>
   <rect x="30.33" y="17.05" width="0.19" height="4.00" data-pos="427"/>
   <rect x="42.44" y="17.05" width="0.19" height="4.00" data-pos="432"/>
@@ -48,19 +48,19 @@
   <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="16.24" y="27.93" font-size="2.83" data-pos="452"></text>
   <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="17.66" y="27.43" font-size="2.83" data-pos="456"></text>
   <text class="music" x="19.08" y="26.93" font-size="4.00" data-pos="460"></text>
-  <line x1="19.15" y1="27.08" x2="19.15" y2="30.43" stroke="#000000" stroke-width="0.130"/>
+  <line x1="19.15" y1="27.12" x2="19.15" y2="30.43" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="22.09" y="26.43" font-size="4.00" data-pos="463"></text>
-  <line x1="22.15" y1="26.58" x2="22.15" y2="29.93" stroke="#000000" stroke-width="0.130"/>
+  <line x1="22.15" y1="26.62" x2="22.15" y2="29.93" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="25.09" y="25.93" font-size="4.00" data-pos="465"></text>
-  <line x1="25.15" y1="26.08" x2="25.15" y2="29.43" stroke="#000000" stroke-width="0.130"/>
+  <line x1="25.15" y1="26.12" x2="25.15" y2="29.43" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="28.09" y="25.43" font-size="4.00" data-pos="467"></text>
-  <line x1="28.16" y1="25.58" x2="28.16" y2="28.93" stroke="#000000" stroke-width="0.130"/>
+  <line x1="28.16" y1="25.62" x2="28.16" y2="28.93" stroke="#000000" stroke-width="0.130"/>
   <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="31.20" y="24.93" font-size="2.83" data-pos="479"></text>
   <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="32.62" y="24.43" font-size="2.83" data-pos="483"></text>
   <text class="music" x="34.03" y="23.93" font-size="4.00" data-pos="487"></text>
-  <line x1="34.10" y1="23.93" x2="34.10" y2="28.43" stroke="#000000" stroke-width="0.130"/>
+  <line x1="34.10" y1="24.19" x2="34.10" y2="28.43" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="38.31" y="23.43" font-size="4.00" data-pos="490"></text>
-  <line x1="38.37" y1="23.43" x2="38.37" y2="28.43" stroke="#000000" stroke-width="0.130"/>
+  <line x1="38.37" y1="23.69" x2="38.37" y2="28.43" stroke="#000000" stroke-width="0.130"/>
   <rect x="30.33" y="26.43" width="0.19" height="4.00" data-pos="469"/>
   <rect x="42.44" y="26.43" width="0.19" height="4.00" data-pos="493"/>
   <line x1="17.09" y1="27.93" x2="17.09" y2="25.56" stroke="#000000" stroke-width="0.130" data-pos="444"/>

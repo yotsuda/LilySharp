@@ -23,17 +23,17 @@
   <line x1="24.25" y1="23.09" x2="26.21" y2="23.09" stroke="#000000" stroke-width="0.200"/>
   <line x1="28.49" y1="23.09" x2="30.45" y2="23.09" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="18.58" y="24.59" font-size="4.00" data-pos="409"></text>
-  <line x1="19.81" y1="24.44" x2="19.81" y2="20.09" stroke="#000000" stroke-width="0.130"/>
+  <line x1="19.81" y1="24.41" x2="19.81" y2="20.09" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="21.58" y="24.09" font-size="4.00" data-pos="412"></text>
-  <line x1="22.82" y1="23.94" x2="22.82" y2="20.09" stroke="#000000" stroke-width="0.130"/>
+  <line x1="22.82" y1="23.91" x2="22.82" y2="20.09" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="24.58" y="23.59" font-size="4.00" data-pos="414"></text>
-  <line x1="25.82" y1="23.44" x2="25.82" y2="20.09" stroke="#000000" stroke-width="0.130"/>
+  <line x1="25.82" y1="23.41" x2="25.82" y2="20.09" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="28.82" y="23.09" font-size="4.00" data-pos="418"></text>
-  <line x1="30.05" y1="22.94" x2="30.05" y2="19.59" stroke="#000000" stroke-width="0.130"/>
+  <line x1="30.05" y1="22.91" x2="30.05" y2="19.59" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="31.82" y="22.59" font-size="4.00" data-pos="421"></text>
-  <line x1="33.06" y1="22.44" x2="33.06" y2="19.09" stroke="#000000" stroke-width="0.130"/>
+  <line x1="33.06" y1="22.41" x2="33.06" y2="19.09" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="34.82" y="22.09" font-size="4.00" data-pos="423"></text>
-  <line x1="36.06" y1="21.94" x2="36.06" y2="18.59" stroke="#000000" stroke-width="0.130"/>
+  <line x1="36.06" y1="21.91" x2="36.06" y2="18.59" stroke="#000000" stroke-width="0.130"/>
   <rect x="27.73" y="18.09" width="0.19" height="4.00" data-pos="416"/>
   <rect x="38.06" y="18.09" width="0.19" height="4.00" data-pos="425"/>
   <rect x="13.82" y="13.47" width="7.32" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="371"/>

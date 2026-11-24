@@ -96,4 +96,35 @@ public class StyledHeadStemAttachmentTests
         Assert.Equal(middle + 2.6828, stems[4].Top, 3);
         Assert.Equal(middle + 1.8738, stems[5].Bottom, 3);
     }
+
+    /// <summary>
+    /// The DEFAULT head reads the font's point too: a black head's stem begins 0.1862 from its
+    /// centre, a half head's 0.259 — until session 1377 a hand rule's 0.15 and the centre.
+    /// MEASURED (LilyPond 2.26.0, Lab sessions/p1377/stem — `stem-begin-position` dumped):
+    /// c''4 down 0.6276, a'4 up −0.6276, c''2 down 0.4820, e'2 up −3.4820 half spaces.
+    /// </summary>
+    [Fact]
+    public void DefaultHeads_AttachTheStemAtTheFontsOwnPoint()
+    {
+        var page = RenderedGeometry.Render("""
+            octave absolute
+            time 4/4
+            part v { clef treble }
+            section Main { v { c''4 a'4 c''2 | e'2 r2 | } }
+            form { ~Main }
+            score { staff v }
+            """);
+        double middle = Assert.Single(page.StaffRefpoints());
+        var stems = page.Lines
+            .Where(l => Math.Abs(l.X1 - l.X2) < 1e-9
+                        && Math.Abs(l.StrokeWidth - EngravingDefaults.StemThickness) < 1e-9)
+            .Select(l => (X: l.X1, Top: Math.Min(l.Y1, l.Y2), Bottom: Math.Max(l.Y1, l.Y2)))
+            .OrderBy(s => s.X)
+            .ToList();
+        Assert.Equal(4, stems.Count);
+        Assert.Equal(middle - 0.3138, stems[0].Top, 3);    // c''4, down
+        Assert.Equal(middle + 0.3138, stems[1].Bottom, 3); // a'4, up
+        Assert.Equal(middle - 0.2410, stems[2].Top, 3);    // c''2, down
+        Assert.Equal(middle + 1.7410, stems[3].Bottom, 3); // e'2, up
+    }
 }

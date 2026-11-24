@@ -24,33 +24,33 @@
   <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="16.12" y="28.46" font-size="2.83" data-pos="216"></text>
   <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="17.54" y="27.96" font-size="2.83" data-pos="221"></text>
   <text class="music" x="18.96" y="27.46" font-size="4.00" data-pos="225"></text>
-  <line x1="20.20" y1="27.31" x2="20.20" y2="23.96" stroke="#000000" stroke-width="0.130"/>
+  <line x1="20.20" y1="27.28" x2="20.20" y2="23.96" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="21.96" y="26.96" font-size="4.00" data-pos="228"></text>
-  <line x1="23.27" y1="26.96" x2="23.27" y2="23.46" stroke="#000000" stroke-width="0.130"/>
+  <line x1="23.27" y1="26.70" x2="23.27" y2="23.46" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="26.23" y="25.96" font-size="4.00" data-pos="231"></text>
   <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="29.22" y="29.96" font-size="2.83" data-pos="330"></text>
-  <line x1="30.08" y1="29.81" x2="30.08" y2="27.16" stroke="#000000" stroke-width="0.130"/>
+  <line x1="30.08" y1="29.78" x2="30.08" y2="27.16" stroke="#000000" stroke-width="0.130"/>
   <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="30.14" y="27.20" font-size="2.83"></text>
   <line x1="29.66" y1="28.69" x2="30.66" y2="27.87" stroke="#000000" stroke-width="0.138"/>
   <text class="music" x="31.16" y="29.46" font-size="4.00" data-pos="336"></text>
-  <line x1="32.40" y1="29.31" x2="32.40" y2="25.96" stroke="#000000" stroke-width="0.130"/>
+  <line x1="32.40" y1="29.28" x2="32.40" y2="25.96" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="34.17" y="25.96" font-size="4.00" data-pos="339"></text>
   <text class="music" x="38.56" y="25.96" font-size="4.00" data-pos="342"></text>
   <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="41.55" y="28.96" font-size="2.83" data-pos="439"></text>
-  <line x1="42.41" y1="28.81" x2="42.41" y2="26.16" stroke="#000000" stroke-width="0.130"/>
+  <line x1="42.41" y1="28.78" x2="42.41" y2="26.16" stroke="#000000" stroke-width="0.130"/>
   <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="42.47" y="26.20" font-size="2.83"></text>
   <text class="music" x="43.49" y="28.46" font-size="4.00" data-pos="445"></text>
-  <line x1="44.73" y1="28.31" x2="44.73" y2="24.96" stroke="#000000" stroke-width="0.130"/>
+  <line x1="44.73" y1="28.28" x2="44.73" y2="24.96" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="46.50" y="27.96" font-size="4.00" data-pos="448"></text>
-  <line x1="47.81" y1="27.96" x2="47.81" y2="24.46" stroke="#000000" stroke-width="0.130"/>
+  <line x1="47.81" y1="27.70" x2="47.81" y2="24.46" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="50.77" y="25.96" font-size="4.00" data-pos="451"></text>
   <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="53.76" y="27.96" font-size="2.83" data-pos="518"></text>
-  <line x1="54.61" y1="27.81" x2="54.61" y2="25.16" stroke="#000000" stroke-width="0.130"/>
+  <line x1="54.61" y1="27.78" x2="54.61" y2="25.16" stroke="#000000" stroke-width="0.130"/>
   <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="54.68" y="25.20" font-size="2.83"></text>
   <text class="music" x="55.70" y="28.96" font-size="4.00" data-pos="526"></text>
   <text class="music" x="55.70" y="27.96" font-size="4.00" data-pos="528"></text>
   <text class="music" x="55.70" y="26.96" font-size="4.00" data-pos="530"></text>
-  <line x1="56.94" y1="28.81" x2="56.94" y2="23.46" stroke="#000000" stroke-width="0.130"/>
+  <line x1="56.94" y1="28.78" x2="56.94" y2="23.46" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="58.70" y="25.96" font-size="4.00" data-pos="534"></text>
   <text class="music" x="63.10" y="25.96" font-size="4.00" data-pos="537"></text>
   <rect x="28.35" y="23.96" width="0.19" height="4.00" data-pos="234"/>
