@@ -277,6 +277,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1389セッションの経緯
+
+### 1.1 第1389セッション（2026-11-25・YT-DELL2）
+
+base `f7eef4000`。開始時 full 18416 / 0 / skip 2 / 18418。REQUESTS 4 枚に Lily# 側の open は無し。
+- leftovers 第1388 の「歌詞の延長線とハイフンは角の丸い箱」から。LP は両方 `round_filled_box`（ハイフンは blot 0.8·lt＝ry 0.04、延長線は blot 0.8×自分の太さ＝ry 0.032・`lookup.cc:152-157` が箱に合わせて削る）。
+- `660dcb981`: `IDrawingContext.DrawRoundedBox`（SVG は `rect` の `ry`・PNG・PDF・flip・boxes も）で描く。l2 は LP と一致（Lab `p1389/m`・延長線は `\lyricsto` の手書きの双子 `l2-to.ly`＝`lysc ly` の双子は LP に heads を渡さず延長線が出ない）。網 +5・毒 7 本で赤。掃き 37 / 1289（線→同じ範囲の箱だけ・他 0）。full 18421 / 0 / 2 / 18423（途中の run で `IncludeFilesTests` と `SvgSnapshotTests` 2 本が 1 回ずつ赤・単独で緑＝既知の不安定）。
+- 残りは leftovers 第1388 の「残した」3 つ（ottava の線の始まり 0.031・`textSpan("poco")` 0.03・glissando 0.006）。
+
 ## 以下は第1388セッションの経緯
 
 ### 1.1 第1388セッション（2026-11-25・YT-DELL2）
