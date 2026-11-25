@@ -394,21 +394,24 @@ internal static class OttavaBracketEngraver
                 //   d''2@!8vb }` — the upper voice's b' is set 1.102 right of the c'' under it,
                 //   and the bracket begins at 17.423, 0.8 left of THAT head (18.223); Lily# began
                 //   it 0.8 left of the mark's own c'' (16.32) until session 1304.
-                double startX = segment.IsFirst
+                // A continuation: this system's piece of a bracket begun on a line before — a
+                // later broken piece, or the one-system reservation's clipped item.
+                bool continues = !segment.IsFirst || bracket.ContinuesFromLineBefore;
+                double startX = !continues
                         && (StaffFirstColumnAt(segStartMeasure, ottavaVoices, bracket.VoiceIndex,
                                 bracket.StartMeasureIndex, bracket.StartItemIndex)
                             ?? ItemX(segStartMeasure, ottavaVoices, bracket.VoiceIndex,
                                 bracket.StartMeasureIndex, bracket.StartItemIndex,
                                 graceNotes, bracket.StaffIndex)) is { } startItemX
                     ? segStartMeasure.X + startItemX + LeftShorten
-                    : segment.IsFirst
+                    : !continues
                         ? segStartMeasure.X + LeftShorten
                         // A BROKEN left bound is the line-start column's right edge, unshortened
                         // (ottava-bracket.cc:111-116, as the right one above). MEASURED (2.26.0,
                         // Lab sessions/p1378/m a3, a4): the continuation starts on the clef's right
                         // edge; Lily# started it 0.8 left of the first bar's X — over the clef —
                         // until session 1378.
-                        : SpannerBreakSubstitution.ReattachSpanX(segment, system, 0, 0).StartX;
+                        : system.Measures[0].X;
                 // A span running to its bar's END — closed on the next bar's first moment
                 // (`f'4 <>@!8va | g'1`, the next START there), cut at its section's end, or never
                 // closed — ends after its bar's last note column too: LilyPond's right bound is
@@ -456,9 +459,24 @@ internal static class OttavaBracketEngraver
                     // repeat disqualifies the note before it, :153-159).
                     : segEndMeasure.X + segEndMeasure.Width + RightShorten;
 
-                // First segment shows the bare text ("8va"); continuation pieces use "(8va)".
+                // First segment shows the bare text ("8va"); a continuation repeats it in
+                // parentheses, "(8va)" — the common engraving convention for a sign carried
+                // over a line break (it says "still in force", not "begins here"), kept by owner
+                // decision of 2026-11-25 (session 1379) although LilyPond repeats the bare "8va".
+                // ⚠️ When the parenthesised label and the shortest line do not fit between the
+                // line's start and the right end, the continuation falls back to the bare label
+                // — LilyPond's own. Until session 1379 the wider label slid left over the clef
+                // (MEASURED 2.26.0, Lab sessions/p1378/m a4: one whole note into the line, the
+                // "(8va)" began 1.16 left of the clef's right edge and the skyline lifted the whole
+                // bracket 1.0; LilyPond's "8va" starts on the clef's edge).
                 // Last segment carries the hook; non-last ends are open.
-                string segText = segment.IsFirst ? text : $"({text})";
+                string segText = continues ? $"({text})" : text;
+                double textSize = LineStartX(fonts, segText, 0.0, LabelEm(fonts));
+                if (continues && startX > endX - textSize - MinimumLength)
+                {
+                    segText = text;
+                    textSize = LineStartX(fonts, segText, 0.0, LabelEm(fonts));
+                }
                 double segEdgeHeight = segment.IsLast && !Wave ? EndEdgeHeight : 0;
 
                 // A span shorter than its label plus the minimum line slides the label LEFT,
@@ -468,7 +486,6 @@ internal static class OttavaBracketEngraver
                 // LILYPOND-REF: lily/ottava-bracket.cc:127-134 Ottava_bracket::print —
                 //   text_size = text.extent (X_AXIS)[RIGHT] + 0.3, then
                 //   span_points[LEFT] = min (span_points[LEFT], span_points[RIGHT] - text_size - minimum-length).
-                double textSize = LineStartX(fonts, segText, 0.0, LabelEm(fonts));
                 startX = Math.Min(startX, endX - textSize - MinimumLength);
 
                 // EACH broken piece sides off ITS OWN system's columns, the way LilyPond's

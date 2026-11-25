@@ -124,5 +124,47 @@ public class OttavaStaffBoundsTests
         var first = layout.Systems[0].Measures[^1];
         Assert.Equal(first.X + first.Width, pieces[0].EndX, 6);
         Assert.Equal(layout.Systems[1].Measures[0].X, pieces[1].StartX, 6);
+        Assert.Equal("(8va)", pieces[1].Text);
+    }
+
+    /// <summary>
+    /// A continuation too short for "(8va)" and the shortest line drops the parentheses — the
+    /// bare label LilyPond prints — instead of sliding the label left over the clef. MEASURED
+    /// (2.26.0, Lab sessions/p1378/m a4): LilyPond's "8va" starts on the clef's right edge at the
+    /// first bar's line height; Lily#'s "(8va)" began 1.16 left of that edge and the bracket stood
+    /// 1.0 higher (until session 1379).
+    /// </summary>
+    [Fact]
+    public void AShortContinuation_DropsTheParentheses_AndStaysOffTheClef()
+    {
+        var layout = LayoutOf("c''1 | d''1@8va | break e''1@!8va | f''1 | g''1 |");
+        var pieces = layout.OttavaBracketLayouts.OrderBy(p => p.StartMeasureIndex).ToList();
+        Assert.Equal(2, pieces.Count);
+        Assert.Equal("8va", pieces[1].Text);
+        Assert.True(pieces[1].StartX > layout.Systems[1].Measures[0].X - 0.2,
+            $"start {pieces[1].StartX:F3}, first bar {layout.Systems[1].Measures[0].X:F3}");
+        Assert.Equal(pieces[0].YUp, pieces[1].YUp, 3);
+    }
+
+    /// <summary>
+    /// A continuation is reserved as the piece that is drawn — from the line's start, "(8va)" —
+    /// so the staves part for its ")" under the upper staff's low e. MEASURED (Lab
+    /// sessions/p1379/r r2): the lower staff of the second line stands 0.08 lower than it did
+    /// while the reservation was a first piece's "8va" over the clef (until session 1379).
+    /// </summary>
+    [Fact]
+    public void AContinuation_IsReservedAsDrawn_AndTheStavesPartForIt()
+    {
+        var page = LpFidelity.RenderedGeometry.Render(
+            "octave absolute\ntime 4/4\npaper { raggedRight }\npart u { clef treble }\npart l { clef bass }\n"
+            + "section A {\n  u { c'1 | c'1 | break e1 | c'1 | c'1 | }\n"
+            + "  l { c'1 | d'1@8va | break e'1 | f'1@!8va | c1 | }\n}\n"
+            + "form { A }\nscore { grandStaff { staff u staff l } }\n");
+        var label = Assert.Single(page.Texts, t => t.Text == "(8va)");
+        // The upper staff's low e on line 2: the lowest head above the label.
+        double e = page.Noteheads.Where(h => h.Y < label.Y).Max(h => h.Y);
+        // MEASURED (session 1379): 2.599 with the piece reserved as drawn; 2.518 while the
+        // reservation was the first piece's "8va" over the clef, and the ")" stood 0.08 closer.
+        Assert.True(label.Y - e > 2.57, $"label baseline {label.Y:F3}, e {e:F3}, gap {label.Y - e:F3}");
     }
 }

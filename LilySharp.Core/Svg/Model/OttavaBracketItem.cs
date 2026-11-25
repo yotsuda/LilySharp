@@ -87,6 +87,14 @@ public sealed record OttavaBracketItem(
     int VoiceIndex = 0
 )
 {
+    /// <summary>
+    /// This item is the part of a longer bracket that a layout of ONE system sees, the bracket
+    /// having begun on a line before it: its start is that line's start, and it is laid out as
+    /// the continuation piece the full layout draws there (broken left bound, the label in
+    /// parentheses). Set only by the per-system reservation (MultiStaffLayouter.StaffOttavaInk).
+    /// </summary>
+    public bool ContinuesFromLineBefore { get; init; }
+
     // Identity, not value equality: see ModelIdentity.
     public bool Equals(OttavaBracketItem? other) => ReferenceEquals(this, other);
 

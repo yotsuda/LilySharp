@@ -4818,10 +4818,12 @@ internal sealed class MultiStaffLayouter
     /// moved clear of what the staff holds by outside-staff-padding.
     /// </summary>
     /// <remarks>
-    /// ⚠️ A BRACKET CROSSING A LINE BREAK is reserved clipped to this system, its label spelt
-    /// as the first piece's ("8va", not "(8va)" — a few hundredths narrower than a
-    /// continuation's) and its broken end without a hook: the whole score's systems do not
-    /// exist yet here.
+    /// ⚠️ A BRACKET CROSSING A LINE BREAK is reserved clipped to this system, its broken end
+    /// without a hook: the whole score's systems do not exist yet here. A piece CONTINUED from
+    /// the line before is marked <see cref="OttavaBracketItem.ContinuesFromLineBefore"/>, so it
+    /// is reserved as the piece that is drawn — from the line's start, its label "(8va)" —
+    /// not as a first piece hung 0.8 left of the first bar, over the clef, with a narrower
+    /// "8va" (until session 1379).
     /// </remarks>
     private (VerticalSkyline Up, VerticalSkyline Down)? StaffOttavaInk(
         MultiStaffScore score, Staff staff, int staffIndex,
@@ -4847,6 +4849,7 @@ internal sealed class MultiStaffLayouter
             bool clipEnd = o.EndMeasureIndex > maxMeasureIndex;
             onThisSystem.Add(!clipStart && !clipEnd ? o : o with
             {
+                ContinuesFromLineBefore = clipStart,
                 StartMeasureIndex = clipStart ? firstMeasure : o.StartMeasureIndex,
                 StartItemIndex = clipStart ? -1 : o.StartItemIndex,
                 StartMoment = clipStart ? null : o.StartMoment,
