@@ -173,20 +173,29 @@ internal sealed class BoxesDrawingContext : IDrawingContext, IDisposable
         Color? stroke = null, double strokeWidth = 0.1,
         (double On, double Off)? dash = null, LineCap cap = LineCap.Butt)
     {
-        // The stroked outline: half the width either side of the segment, and past each end
-        // by half the width for a round cap. Its box is the box of those corners.
+        // A butt-capped line's stroked outline is half the width either side of the segment,
+        // and its box is the box of those corners.
         double dx = x2 - x1, dy = y2 - y1, len = Math.Sqrt(dx * dx + dy * dy), h = strokeWidth / 2;
         if (len == 0)
         {
             Add("line", x1 - h, y1 - h, x1 + h, y1 + h);
             return;
         }
+        // A round cap's outline is a capsule — a half-width disc at each end — so its box is
+        // the endpoints' box widened by the half width on every side, whatever the slant; the
+        // corners of a half-width extension along the line overshoot it on a diagonal. It is
+        // LilyPond's own box for a line (lily/line-interface.cc:184-189 make_line, box.widen
+        // (th / 2) on both axes).
+        if (cap == LineCap.Round)
+        {
+            Add("line", Math.Min(x1, x2) - h, Math.Min(y1, y2) - h, Math.Max(x1, x2) + h, Math.Max(y1, y2) + h);
+            return;
+        }
         double nx = -dy / len * h, ny = dx / len * h;
-        double ex = cap == LineCap.Round ? dx / len * h : 0, ey = cap == LineCap.Round ? dy / len * h : 0;
         AddPoints("line",
         [
-            (x1 - ex + nx, y1 - ey + ny), (x1 - ex - nx, y1 - ey - ny),
-            (x2 + ex + nx, y2 + ey + ny), (x2 + ex - nx, y2 + ey - ny),
+            (x1 + nx, y1 + ny), (x1 - nx, y1 - ny),
+            (x2 + nx, y2 + ny), (x2 - nx, y2 - ny),
         ], 0);
     }
 

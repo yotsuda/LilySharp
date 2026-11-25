@@ -202,17 +202,17 @@
   <text x="13.40" y="15.87" font-size="2.77" text-anchor="middle" data-pos="640">A</text>
   <rect x="3.48" y="31.12" width="2.48" height="2.71" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="860"/>
   <text x="4.76" y="33.47" font-size="2.77" text-anchor="middle" data-pos="860">B</text>
-  <line x1="17.14" y1="34.33" x2="52.40" y2="34.33" stroke="#000000" stroke-width="0.100" data-pos="727"/>
-  <line x1="52.40" y1="34.33" x2="52.40" y2="33.33" stroke="#000000" stroke-width="0.100" data-pos="727"/>
-  <line x1="17.14" y1="34.33" x2="17.14" y2="33.33" stroke="#000000" stroke-width="0.100" data-pos="727"/>
-  <line x1="60.85" y1="34.33" x2="95.98" y2="34.33" stroke="#000000" stroke-width="0.100" data-pos="794"/>
-  <line x1="95.98" y1="34.33" x2="95.98" y2="33.33" stroke="#000000" stroke-width="0.100" data-pos="794"/>
-  <line x1="60.85" y1="34.33" x2="60.85" y2="33.33" stroke="#000000" stroke-width="0.100" data-pos="794"/>
-  <line x1="5.80" y1="57.44" x2="35.72" y2="57.44" stroke="#000000" stroke-width="0.100" data-pos="958"/>
-  <line x1="35.72" y1="57.44" x2="35.72" y2="56.44" stroke="#000000" stroke-width="0.100" data-pos="958"/>
-  <line x1="5.80" y1="57.44" x2="5.80" y2="56.44" stroke="#000000" stroke-width="0.100" data-pos="958"/>
-  <line x1="55.49" y1="57.44" x2="85.45" y2="57.44" stroke="#000000" stroke-width="0.100" data-pos="1017"/>
-  <line x1="85.45" y1="57.44" x2="85.45" y2="56.44" stroke="#000000" stroke-width="0.100" data-pos="1017"/>
-  <line x1="55.49" y1="57.44" x2="55.49" y2="56.44" stroke="#000000" stroke-width="0.100" data-pos="1017"/>
+  <line x1="17.14" y1="34.33" x2="52.40" y2="34.33" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="727"/>
+  <line x1="52.40" y1="34.33" x2="52.40" y2="33.33" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="727"/>
+  <line x1="17.14" y1="34.33" x2="17.14" y2="33.33" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="727"/>
+  <line x1="60.85" y1="34.33" x2="95.98" y2="34.33" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="794"/>
+  <line x1="95.98" y1="34.33" x2="95.98" y2="33.33" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="794"/>
+  <line x1="60.85" y1="34.33" x2="60.85" y2="33.33" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="794"/>
+  <line x1="5.80" y1="57.44" x2="35.72" y2="57.44" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="958"/>
+  <line x1="35.72" y1="57.44" x2="35.72" y2="56.44" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="958"/>
+  <line x1="5.80" y1="57.44" x2="5.80" y2="56.44" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="958"/>
+  <line x1="55.49" y1="57.44" x2="85.45" y2="57.44" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="1017"/>
+  <line x1="85.45" y1="57.44" x2="85.45" y2="56.44" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="1017"/>
+  <line x1="55.49" y1="57.44" x2="55.49" y2="56.44" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="1017"/>
   </g>
 </svg>

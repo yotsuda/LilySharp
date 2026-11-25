@@ -1024,24 +1024,32 @@ internal static partial class SharedRenderer
             double lineStartX = b.IsMixed
                     ? Math.Min(b.StartX + (b.MixedLineStart > 0 ? b.MixedLineStart : PedalEngraver.SustainMixedLineStart), lineEndX)
                 : b.StartChange ? b.StartX + flare : b.StartX;
+            // Every piece ROUND-capped: LilyPond's bracket is Line_interface lines, each a
+            // draw-line whose box is widened by half the thickness at both ends and drawn with
+            // round caps. MEASURED 2.26.0 (Lab sessions/p1387/m s1, u1): the bracket's extent
+            // starts 0.05 before the line's start and its hook stands 1.05 above the line, where
+            // the butt-capped lines stopped at the points.
+            // LILYPOND-REF: lily/bracket.cc:75-85 Bracket::make_bracket (Line_interface::line);
+            //   lily/line-interface.cc:178-191 make_line — box.widen (th / 2).
+            const LineCap cap = LineCap.Round;
             using (gc.Source(b.SourcePosition))
             {
-                gc.DrawLine(lineStartX, absY, lineEndX, absY, Color.Black, thickness);
+                gc.DrawLine(lineStartX, absY, lineEndX, absY, Color.Black, thickness, cap: cap);
                 // Right end: flared notch toward b.EndX (change) or vertical hook — or
                 // nothing where the bracket breaks at the system's end.
                 if (b.BrokenRight) { }
                 else if (b.EndChange)
-                    gc.DrawLine(lineEndX, absY, b.EndX, top, Color.Black, thickness);
+                    gc.DrawLine(lineEndX, absY, b.EndX, top, Color.Black, thickness, cap: cap);
                 else
-                    gc.DrawLine(b.EndX, absY, b.EndX, top, Color.Black, thickness);
+                    gc.DrawLine(b.EndX, absY, b.EndX, top, Color.Black, thickness, cap: cap);
                 // Left end: mixed has none; a continuation from the previous system has
                 // none; a change flares to b.StartX; else vertical.
                 if (!b.IsMixed && !b.BrokenLeft)
                 {
                     if (b.StartChange)
-                        gc.DrawLine(lineStartX, absY, b.StartX, top, Color.Black, thickness);
+                        gc.DrawLine(lineStartX, absY, b.StartX, top, Color.Black, thickness, cap: cap);
                     else
-                        gc.DrawLine(lineStartX, absY, lineStartX, top, Color.Black, thickness);
+                        gc.DrawLine(lineStartX, absY, lineStartX, top, Color.Black, thickness, cap: cap);
                 }
             }
         }
