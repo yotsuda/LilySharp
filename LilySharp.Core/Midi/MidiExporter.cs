@@ -3648,6 +3648,14 @@ public sealed class MidiExporter
     /// d,4` with no `|` under eight bars of chords ran the section to 7¼ bars, and every later
     /// section sounded a bar and three beats early.
     /// </summary>
+    /// <remarks>
+    /// The whole bar so closed stands its bar line (<see cref="MidiFile.BarTicks"/>), as the page
+    /// draws one there. Until 2026-11-25 none stood: a chord row's bar lines stand only past the
+    /// music written (<see cref="RowsAndLanesEnd"/>), and the written `|` that the lane would
+    /// have marked was not there. One bar line short, every later note was numbered a bar less
+    /// (<see cref="MidiNote.PrintedBar"/>), and the preview's A-B repeat on bar 57 sounded bar
+    /// 58. Owner's report (今宵の月のように, Lab sessions/p1382): a bass line ending `… | a, d`.
+    /// </remarks>
     private void CloseLaneOf(MidiTrack track, SyntaxNode voice)
     {
         // (A pickup still pending — `section P { partial 2 }` whose body is `r8` — is the next
@@ -3657,8 +3665,11 @@ public sealed class MidiExporter
         {
             bool known = _barKnown || _bars.Partial != null;
             int length = known && _bars.Partial == null && _firstBarTicks is { } first ? first : MeasureTicks();
-            if (length > 0 && _currentTick < _barStart + length)
+            if (length > 0 && _currentTick <= _barStart + length)
+            {
                 _currentTick = _barStart + length;
+                MarkBarLine(track);
+            }
         }
         CloseLane(track);
     }

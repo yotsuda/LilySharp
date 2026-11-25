@@ -103,6 +103,24 @@ public class OpenBarAtSectionEndTests
         Assert.Equal(Enumerable.Range(0, bars).Select(i => i * bar), chords);
     }
 
+    /// <summary>A section's last bar left open stands its bar line where it is closed, as the page
+    /// draws one there: the metronome accents it, the bars after it keep their printed numbers
+    /// (<see cref="MidiNote.PrintedBar"/>, what the preview's A-B repeat picks its bars by), and a
+    /// recording lined up bar by bar gives it its bar. Owner's report 2026-11-25 (今宵の月のように,
+    /// Lab sessions/p1382): a bass line ending `… | a, d` with no `|` stood no line there — every
+    /// later bar was numbered one less, and A-B on bar 57 sounded bar 58.</summary>
+    [Theory]
+    [InlineData("d1 | c1 | f1 | g1")]     // the last bar full
+    [InlineData("d1 | c1 | f1 | g4")]     // …and short, closed with silence
+    public void AnOpenLastBar_StandsItsBarLine(string bass)
+    {
+        var midi = new MidiExporter().Export(SyntaxTree.Parse(Book(bass, bRow: "D | C | F | G |")));
+        int bar = 4 * midi.TicksPerQuarterNote;
+        Assert.Equal(Enumerable.Range(1, 8).Select(i => i * bar), midi.BarTicks.Where(t => t > 0));
+        var c = midi.Tracks.Single(t => t.Name == "harmony (chords)").Notes.Where(n => n.StartTick >= 4 * bar);
+        Assert.Equal(new[] { 4, 5, 6, 7 }, c.Select(n => n.PrintedBar).Distinct().OrderBy(b => b));
+    }
+
     /// <summary>A bar its `|` closes SHORT (the bar line is the bar, LYS2001) is that short under the
     /// chord row too: the page draws the row's D over the bar's one beat and the next chords after
     /// it, and the sound plays them so. Until 2026-11-17 the row's bar stayed a whole one — D for a
