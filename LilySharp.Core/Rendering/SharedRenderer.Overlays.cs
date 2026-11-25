@@ -1328,19 +1328,20 @@ internal static partial class SharedRenderer
                     foreach (double originX in TrillWaveOutline.ElementOrigins(lineStartX, b.EndX - lineStartX))
                         gc.DrawGlyph(Music(MusicGlyph.WiggleTrill), originX, baseline, size);
                 }
+                // Round-capped, the dashes fitted to the line (FittedDash): LilyPond's
+                // Line_interface line.
                 else if (lineStartX < b.EndX)
                 {
-                    double dashOn = b.DashPeriod * b.DashFraction;
-                    double dashOff = b.DashPeriod * (1 - b.DashFraction);
                     gc.DrawLine(lineStartX, absY, b.EndX, absY,
-                        Color.Black, thickness, (dashOn, dashOff));
+                        Color.Black, thickness,
+                        FittedDash(b.EndX - lineStartX, b.DashPeriod, b.DashFraction), LineCap.Round);
                 }
                 if (b.EdgeHeight > 0)
                 {
                     double hookDir = b.IsAbove ? 1 : -1;
                     gc.DrawLine(b.EndX, absY, b.EndX,
                         absY - os.Size(b.EdgeHeight, b.StaffIndex) * hookDir,
-                        Color.Black, thickness);
+                        Color.Black, thickness, cap: LineCap.Round);
                 }
             }
         }
@@ -1370,22 +1371,25 @@ internal static partial class SharedRenderer
             if (!sysTopYUp.TryGetValue(v.StartMeasureIndex, out var syUp)) continue; // other page
             // Page Y-up: lift this segment's own system top and add the stored offset.
             double absY = syUp + v.YUp;
-            // The hooks hang edge-height below the LINE'S BOTTOM EDGE, not below its centre.
-            // LILYPOND-REF: lily/bracket.cc:40-96 Bracket::make_bracket — the edge is drawn
-            //   from the line's own thickness outward, which is why LilyPond's grob extent
-            //   reads (-2.08 . 0.08) about a centre with half-thickness 0.08: 2.0 below the
-            //   BOTTOM. Hanging it from the centre instead cost 0.065 of the bracket's height
-            //   (ledger page.volta.no-ink.staff-to-line).
-            double hookTip = absY - thickness / 2.0 - edgeHeight;
+            // The hooks are edge-height long from the line's centre and ROUND-capped, so their
+            // ink reaches half the thickness further: LilyPond's grob extent reads
+            // (-2.08 . 0.08) about a centre with half-thickness 0.08. Hanging the ink from the
+            // centre without the cap cost 0.065 of the bracket's height (ledger
+            // page.volta.no-ink.staff-to-line). MEASURED 2.26.0 (Lab sessions/p1388/m vb): the
+            // hook's draw-line runs 2.000 from the line.
+            // LILYPOND-REF: lily/bracket.cc:75-85 Bracket::make_bracket (Line_interface::line);
+            //   lily/line-interface.cc:178-191 make_line; scm/output-svg.scm:326-337 draw-line.
+            double hookTip = absY - edgeHeight;
             bool hasText = !string.IsNullOrEmpty(v.VoltaText);
+            const LineCap cap = LineCap.Round;
             using (gc.Source(v.SourcePosition))
             {
                 if (hasText)
-                    gc.DrawLine(v.StartX, absY, v.StartX, hookTip, Color.Black, thickness);
+                    gc.DrawLine(v.StartX, absY, v.StartX, hookTip, Color.Black, thickness, cap: cap);
                 gc.DrawLine(v.StartX, absY, v.EndX, absY,
-                    Color.Black, thickness);
+                    Color.Black, thickness, cap: cap);
                 if (v.IsClosed)
-                    gc.DrawLine(v.EndX, absY, v.EndX, hookTip, Color.Black, thickness);
+                    gc.DrawLine(v.EndX, absY, v.EndX, hookTip, Color.Black, thickness, cap: cap);
                 if (hasText)
                 {
                     // The number's INK TOP sits NumberOffsetY below the line's centre and its
@@ -1600,7 +1604,9 @@ internal static partial class SharedRenderer
                 gc.DrawLine(
                     g.StartX, os.YUp(midYup + g.StartYUp, g.StaffIndex, placed),
                     g.EndX, os.YUp(midYup + g.EndYUp, g.StaffIndex, placed),
-                    Color.Black, thickness);
+                    // Round-capped: LilyPond's Line_interface line (draw-line).
+                    // LILYPOND-REF: lily/line-interface.cc:178-191 make_line.
+                    Color.Black, thickness, cap: LineCap.Round);
         }
     }
 

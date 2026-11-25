@@ -168,13 +168,13 @@
   <rect x="75.94" y="42.49" width="0.60" height="4.00" data-pos="1102"/>
   <rect x="92.42" y="42.49" width="0.19" height="4.00" data-pos="895"/>
   <rect x="102.24" y="42.49" width="0.19" height="4.00" data-pos="900"/>
-  <line x1="49.06" y1="39.36" x2="49.06" y2="41.44" stroke="#000000" stroke-width="0.160" data-pos="1092"/>
-  <line x1="49.06" y1="39.36" x2="75.53" y2="39.36" stroke="#000000" stroke-width="0.160" data-pos="1092"/>
-  <line x1="75.53" y1="39.36" x2="75.53" y2="41.44" stroke="#000000" stroke-width="0.160" data-pos="1092"/>
+  <line x1="49.06" y1="39.36" x2="49.06" y2="41.36" stroke="#000000" stroke-width="0.160" stroke-linecap="round" data-pos="1092"/>
+  <line x1="49.06" y1="39.36" x2="75.53" y2="39.36" stroke="#000000" stroke-width="0.160" stroke-linecap="round" data-pos="1092"/>
+  <line x1="75.53" y1="39.36" x2="75.53" y2="41.36" stroke="#000000" stroke-width="0.160" stroke-linecap="round" data-pos="1092"/>
   <text x="50.06" y="41.10" font-size="1.75" font-weight="bold" data-pos="1092">1.</text>
-  <line x1="76.46" y1="39.36" x2="76.46" y2="41.44" stroke="#000000" stroke-width="0.160" data-pos="1105"/>
-  <line x1="76.46" y1="39.36" x2="102.35" y2="39.36" stroke="#000000" stroke-width="0.160" data-pos="1105"/>
-  <line x1="102.35" y1="39.36" x2="102.35" y2="41.44" stroke="#000000" stroke-width="0.160" data-pos="1105"/>
+  <line x1="76.46" y1="39.36" x2="76.46" y2="41.36" stroke="#000000" stroke-width="0.160" stroke-linecap="round" data-pos="1105"/>
+  <line x1="76.46" y1="39.36" x2="102.35" y2="39.36" stroke="#000000" stroke-width="0.160" stroke-linecap="round" data-pos="1105"/>
+  <line x1="102.35" y1="39.36" x2="102.35" y2="41.36" stroke="#000000" stroke-width="0.160" stroke-linecap="round" data-pos="1105"/>
   <text x="77.46" y="41.10" font-size="1.75" font-weight="bold" data-pos="1105">2.</text>
   <text x="17.12" y="22.32" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="218">C</text>
   <text x="20.92" y="22.32" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="235">Dm</text>

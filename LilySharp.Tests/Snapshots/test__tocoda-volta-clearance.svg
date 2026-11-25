@@ -77,13 +77,13 @@
   <rect x="69.37" y="21.17" width="0.19" height="4.00" data-pos="929"/>
   <rect x="77.52" y="21.17" width="0.19" height="4.00" data-pos="957"/>
   <rect x="90.85" y="21.17" width="0.19" height="4.00" data-pos="831"/>
-  <line x1="44.49" y1="18.04" x2="44.49" y2="20.12" stroke="#000000" stroke-width="0.160" data-pos="984"/>
-  <line x1="44.49" y1="18.04" x2="58.52" y2="18.04" stroke="#000000" stroke-width="0.160" data-pos="984"/>
-  <line x1="58.52" y1="18.04" x2="58.52" y2="20.12" stroke="#000000" stroke-width="0.160" data-pos="984"/>
+  <line x1="44.49" y1="18.04" x2="44.49" y2="20.04" stroke="#000000" stroke-width="0.160" stroke-linecap="round" data-pos="984"/>
+  <line x1="44.49" y1="18.04" x2="58.52" y2="18.04" stroke="#000000" stroke-width="0.160" stroke-linecap="round" data-pos="984"/>
+  <line x1="58.52" y1="18.04" x2="58.52" y2="20.04" stroke="#000000" stroke-width="0.160" stroke-linecap="round" data-pos="984"/>
   <text x="45.49" y="19.78" font-size="1.75" font-weight="bold" data-pos="984">1.</text>
-  <line x1="59.45" y1="18.04" x2="59.45" y2="20.12" stroke="#000000" stroke-width="0.160" data-pos="995"/>
-  <line x1="59.45" y1="18.04" x2="68.96" y2="18.04" stroke="#000000" stroke-width="0.160" data-pos="995"/>
-  <line x1="68.96" y1="18.04" x2="68.96" y2="20.12" stroke="#000000" stroke-width="0.160" data-pos="995"/>
+  <line x1="59.45" y1="18.04" x2="59.45" y2="20.04" stroke="#000000" stroke-width="0.160" stroke-linecap="round" data-pos="995"/>
+  <line x1="59.45" y1="18.04" x2="68.96" y2="18.04" stroke="#000000" stroke-width="0.160" stroke-linecap="round" data-pos="995"/>
+  <line x1="68.96" y1="18.04" x2="68.96" y2="20.04" stroke="#000000" stroke-width="0.160" stroke-linecap="round" data-pos="995"/>
   <text x="60.45" y="19.78" font-size="1.75" font-weight="bold" data-pos="995">2.</text>
   <text class="music" x="8.84" y="17.41" font-size="4.00" data-pos="971"></text>
   <rect x="11.90" y="17.58" width="2.75" height="2.74" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="803"/>

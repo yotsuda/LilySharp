@@ -1104,7 +1104,7 @@
 "Svg/Layout/TupletBracketEngraver.cs","TupletBracketEngraver.TabDirection","811","double upDepth = -(staffHalf - extremeUp);          // :811, d = UP","(file-level) LILYPOND-REF: lily/tuplet-bracket.cc:288-443 print method","Yellow"
 "Svg/Layout/TupletBracketEngraver.cs","TupletBracketEngraver.TabDirection","811","double downDepth = (-staffHalf - extremeDown);      // :811, d = DOWN","(file-level) LILYPOND-REF: lily/tuplet-bracket.cc:288-443 print method","Yellow"
 "Svg/Layout/OttavaBracketEngraver.cs","OttavaBracketEngraver.DashFraction","0.3","private const double DashFraction = 0.3;","LILYPOND-REF: scm/define-grobs.scm:2710 (dash-fraction . 0.3)</remarks>","Green"
-"Svg/Layout/OttavaBracketEngraver.cs","OttavaBracketEngraver.DashPeriod","2.0","private const double DashPeriod = 2.0;","LILYPOND-REF: scm/define-grobs.scm:2711 (edge-height . (0 . 0.8))</remarks>","Green"
+"Svg/Layout/OttavaBracketEngraver.cs","OttavaBracketEngraver.DashPeriod","1.0","private const double DashPeriod = 1.0;","LILYPOND-REF: lily/line-interface.cc:245-246 Line_interface::line (dash-period default 1.0).","Green"
 "Svg/Layout/OttavaBracketEngraver.cs","OttavaBracketEngraver.EndEdgeHeight","0.8","private const double EndEdgeHeight = 0.8;","LILYPOND-REF: scm/define-grobs.scm:2711 (edge-height . (0 . 0.8))</remarks>","Green"
 "Svg/Layout/OttavaBracketEngraver.cs","OttavaBracketEngraver.LineReach","2.0","=> Wave ? TrillWaveOutline.InkReach : EngravingDefaults.StaffLineThickness / 2.0;","LILYPOND-REF lives beside the entry).","Green"
 "Svg/Layout/OttavaBracketEngraver.cs","OttavaBracketEngraver.AboveStaffYUp","2.0","StaffPadding + EngravingDefaults.StaffLineThickness / 2.0;","(file-level) LILYPOND-REF: lily/ottava-bracket.cc Ottava_bracket::print()","Yellow"

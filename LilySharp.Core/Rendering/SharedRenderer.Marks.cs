@@ -973,21 +973,50 @@ internal static partial class SharedRenderer
                 gc.DrawText(s.Text, s.StartX, absY,
                     os.Size(textSize, s.StaffIndex), TextRole.Text,
                     textStyle, TextAnchor.Start, Color.Black);
+                // Round-capped and, when dashed, fitted to begin and end with a dash: LilyPond's
+                // Line_interface line (FittedDash).
                 if (s.Style != TextSpannerStyle.None && s.LineStartX < s.EndX)
                 {
                     (double On, double Off)? dash = s.Style == TextSpannerStyle.DashedLine
-                        ? (s.DashPeriod * s.DashFraction, s.DashPeriod * (1 - s.DashFraction))
+                        ? FittedDash(s.EndX - s.LineStartX, s.DashPeriod, s.DashFraction)
                         : null;
                     gc.DrawLine(s.LineStartX, absY, s.EndX, absY,
-                        Color.Black, thickness, dash);
+                        Color.Black, thickness, dash, LineCap.Round);
                 }
                 // The hook that ends a palm mute, a let ring and a barre: from the line's end
                 // toward the staff (TextSpannerEngraver.HookDepth).
                 if (s.HookDepth > 0)
                     gc.DrawLine(s.EndX, absY, s.EndX, absY - os.Size(s.HookDepth, s.StaffIndex),
-                        Color.Black, thickness, null);
+                        Color.Black, thickness, null, LineCap.Round);
             }
         }
+    }
+
+    /// <summary>
+    /// The dash pattern of a LilyPond dashed line of this <paramref name="length"/>: the period
+    /// is stretched or shrunk so the line begins and ends with a dash — one more dash than
+    /// whole periods. Drawn with round caps, each dash's ink runs half the thickness past both
+    /// of its ends, as LilyPond's <c>draw-line</c> with a <c>stroke-dasharray</c> does.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED 2.26.0 (Lab sessions/p1388/m x1, p1, o1): "rit." 6.052 long, period 3.0 and
+    /// fraction 0.2 → dashes 0.550 every 2.751; a palm mute 3.074 long → 0.512 every 2.562; an
+    /// ottava 7.519 long, period 1.0 and fraction 0.3 → 0.309 every 1.030. The raw period
+    /// left the line ending in a gap or a cut dash.
+    /// LILYPOND-REF: lily/line-interface.cc:235-268 Line_interface::line (full_period_count =
+    ///   rint ((len - period * fraction) / period); period = len / (fraction + count));
+    ///   lily/line-interface.cc:153-175 make_dashed_line; scm/output-svg.scm:322-337 dashed-line over draw-line.
+    /// </remarks>
+    internal static (double On, double Off)? FittedDash(double length, double period, double fraction)
+    {
+        fraction = Math.Clamp(fraction, 0.0, 1.0);
+        if (period <= 0) return null;
+        // rint rounds half to even, as Math.Round does by default.
+        int fullPeriods = Math.Max(0, (int)Math.Round((length - period * fraction) / period));
+        if (fullPeriods > 0)
+            period = length / (fraction + fullPeriods);
+        double on = fraction * period;
+        return (on, Math.Max(0.0, period - on));
     }
 
     // ---------- Pedal brackets ----------

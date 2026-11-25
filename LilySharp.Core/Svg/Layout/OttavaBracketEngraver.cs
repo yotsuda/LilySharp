@@ -91,9 +91,15 @@ internal static class OttavaBracketEngraver
     private const double DashFraction = 0.3;
 
     /// <summary>
-    /// Dash period (implicit from LilyPond's default line rendering).
+    /// Dash period: OttavaBracket declares none, so Line_interface's default of one staff
+    /// space applies (the drawing then fits it to the line, SharedRenderer.FittedDash).
     /// </summary>
-    private const double DashPeriod = 2.0;
+    /// <remarks>
+    /// MEASURED 2.26.0 (Lab sessions/p1388/m o1): a 7.519 line dashes 0.309 every 1.030 —
+    /// seven whole periods of about 1.0. This was 2.0 until 2026-11-25.
+    /// LILYPOND-REF: lily/line-interface.cc:245-246 Line_interface::line (dash-period default 1.0).
+    /// </remarks>
+    private const double DashPeriod = 1.0;
 
     /// <summary>
     /// Edge height at the end (right hook).

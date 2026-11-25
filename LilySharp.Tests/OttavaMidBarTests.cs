@@ -104,7 +104,7 @@ public class OttavaMidBarTests
     {
         string svg = Svg("a,,4@8vb e, a, e, | a,,4 e, a,@!8vb e, | a,,4 e, a, e, |");
         var hook = Regex.Match(svg,
-            "<line x1=\"([\\d.]+)\" y1=\"([\\d.]+)\" x2=\"\\1\" y2=\"[\\d.]+\" stroke=\"#000000\" stroke-width=\"0.100\" data-pos");
+            "<line x1=\"([\\d.]+)\" y1=\"([\\d.]+)\" x2=\"\\1\" y2=\"[\\d.]+\" stroke=\"#000000\" stroke-width=\"0.100\" stroke-linecap=\"round\" data-pos");
         double end = double.Parse(hook.Groups[1].Value, CultureInfo.InvariantCulture);
         Assert.Equal(1.904, end - Heads(svg)[6].X, 1);
     }

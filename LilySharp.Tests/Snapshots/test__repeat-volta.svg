@@ -91,13 +91,13 @@
   <rect x="81.46" y="23.96" width="0.60" height="4.00" data-pos="548"/>
   <rect x="94.57" y="23.96" width="0.19" height="4.00" data-pos="318"/>
   <rect x="102.24" y="23.96" width="0.19" height="4.00" data-pos="323"/>
-  <line x1="59.49" y1="20.83" x2="59.49" y2="22.91" stroke="#000000" stroke-width="0.160" data-pos="535"/>
-  <line x1="59.49" y1="20.83" x2="81.05" y2="20.83" stroke="#000000" stroke-width="0.160" data-pos="535"/>
-  <line x1="81.05" y1="20.83" x2="81.05" y2="22.91" stroke="#000000" stroke-width="0.160" data-pos="535"/>
+  <line x1="59.49" y1="20.83" x2="59.49" y2="22.83" stroke="#000000" stroke-width="0.160" stroke-linecap="round" data-pos="535"/>
+  <line x1="59.49" y1="20.83" x2="81.05" y2="20.83" stroke="#000000" stroke-width="0.160" stroke-linecap="round" data-pos="535"/>
+  <line x1="81.05" y1="20.83" x2="81.05" y2="22.83" stroke="#000000" stroke-width="0.160" stroke-linecap="round" data-pos="535"/>
   <text x="60.49" y="22.57" font-size="1.75" font-weight="bold" data-pos="535">1.</text>
-  <line x1="81.98" y1="20.83" x2="81.98" y2="22.91" stroke="#000000" stroke-width="0.160" data-pos="551"/>
-  <line x1="81.98" y1="20.83" x2="102.35" y2="20.83" stroke="#000000" stroke-width="0.160" data-pos="551"/>
-  <line x1="102.35" y1="20.83" x2="102.35" y2="22.91" stroke="#000000" stroke-width="0.160" data-pos="551"/>
+  <line x1="81.98" y1="20.83" x2="81.98" y2="22.83" stroke="#000000" stroke-width="0.160" stroke-linecap="round" data-pos="551"/>
+  <line x1="81.98" y1="20.83" x2="102.35" y2="20.83" stroke="#000000" stroke-width="0.160" stroke-linecap="round" data-pos="551"/>
+  <line x1="102.35" y1="20.83" x2="102.35" y2="22.83" stroke="#000000" stroke-width="0.160" stroke-linecap="round" data-pos="551"/>
   <text x="82.98" y="22.57" font-size="1.75" font-weight="bold" data-pos="551">2.</text>
   <text class="music" x="13.42" y="22.60" font-size="3.56" data-pos="135"></text>
   <line x1="14.52" y1="22.43" x2="14.52" y2="19.92" stroke="#000000" stroke-width="0.116" data-pos="135"/>

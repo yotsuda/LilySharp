@@ -78,7 +78,7 @@
   <rect x="42.18" y="21.47" width="0.19" height="4.00" data-pos="658"/>
   <path d="M 34.80,21.75 C 35.11,22.04 35.64,22.04 35.96,21.75 C 35.64,22.16 35.11,22.16 34.80,21.75 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="707"/>
   <path d="M 23.68,22.01 C 24.05,22.73 25.04,23.19 25.83,23.01 C 24.99,23.30 24.00,22.84 23.68,22.01 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="690"/>
-  <line x1="18.86" y1="21.73" x2="19.81" y2="21.21" stroke="#000000" stroke-width="0.100" data-pos="668"/>
+  <line x1="18.86" y1="21.73" x2="19.81" y2="21.21" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="668"/>
   <rect x="11.90" y="17.83" width="2.20" height="2.79" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="581"/>
   <text x="12.98" y="20.22" font-size="2.77" text-anchor="middle" data-pos="581">S</text>
   </g>

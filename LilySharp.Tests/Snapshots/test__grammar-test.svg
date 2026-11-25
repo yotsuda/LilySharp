@@ -99,13 +99,13 @@
   <rect x="79.37" y="23.96" width="0.60" height="4.00" data-pos="311"/>
   <rect x="94.15" y="23.96" width="0.19" height="4.00" data-pos="136"/>
   <rect x="102.24" y="23.96" width="0.19" height="4.00" data-pos="143"/>
-  <line x1="55.39" y1="20.21" x2="55.39" y2="22.29" stroke="#000000" stroke-width="0.160" data-pos="344"/>
-  <line x1="55.39" y1="20.21" x2="78.96" y2="20.21" stroke="#000000" stroke-width="0.160" data-pos="344"/>
-  <line x1="78.96" y1="20.21" x2="78.96" y2="22.29" stroke="#000000" stroke-width="0.160" data-pos="344"/>
+  <line x1="55.39" y1="20.21" x2="55.39" y2="22.21" stroke="#000000" stroke-width="0.160" stroke-linecap="round" data-pos="344"/>
+  <line x1="55.39" y1="20.21" x2="78.96" y2="20.21" stroke="#000000" stroke-width="0.160" stroke-linecap="round" data-pos="344"/>
+  <line x1="78.96" y1="20.21" x2="78.96" y2="22.21" stroke="#000000" stroke-width="0.160" stroke-linecap="round" data-pos="344"/>
   <text x="56.39" y="21.95" font-size="1.75" font-weight="bold" data-pos="344">1.</text>
-  <line x1="79.89" y1="20.21" x2="79.89" y2="22.29" stroke="#000000" stroke-width="0.160" data-pos="359"/>
-  <line x1="79.89" y1="20.21" x2="102.35" y2="20.21" stroke="#000000" stroke-width="0.160" data-pos="359"/>
-  <line x1="102.35" y1="20.21" x2="102.35" y2="22.29" stroke="#000000" stroke-width="0.160" data-pos="359"/>
+  <line x1="79.89" y1="20.21" x2="79.89" y2="22.21" stroke="#000000" stroke-width="0.160" stroke-linecap="round" data-pos="359"/>
+  <line x1="79.89" y1="20.21" x2="102.35" y2="20.21" stroke="#000000" stroke-width="0.160" stroke-linecap="round" data-pos="359"/>
+  <line x1="102.35" y1="20.21" x2="102.35" y2="22.21" stroke="#000000" stroke-width="0.160" stroke-linecap="round" data-pos="359"/>
   <text x="80.89" y="21.95" font-size="1.75" font-weight="bold" data-pos="359">2.</text>
   <text class="music" x="13.42" y="22.60" font-size="3.56" data-pos="56"></text>
   <line x1="14.52" y1="22.43" x2="14.52" y2="19.92" stroke="#000000" stroke-width="0.116" data-pos="56"/>

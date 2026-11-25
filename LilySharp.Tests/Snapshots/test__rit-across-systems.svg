@@ -299,9 +299,9 @@
   <rect x="5.52" y="64.72" width="4.13" height="2.74" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="71"/>
   <text x="7.67" y="67.11" font-size="2.77" text-anchor="middle" data-pos="71">A2</text>
   <text x="18.76" y="17.26" font-size="2.20" font-style="italic" data-pos="86">rit.</text>
-  <line x1="21.86" y1="17.26" x2="24.35" y2="17.26" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="86"/>
+  <line x1="21.86" y1="17.26" x2="24.35" y2="17.26" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.415 1.661" stroke-linecap="round" data-pos="86"/>
   <text x="7.26" y="69.37" font-size="2.20" font-style="italic" data-pos="86">rit.</text>
-  <line x1="10.37" y1="69.37" x2="13.57" y2="69.37" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="86"/>
+  <line x1="10.37" y1="69.37" x2="13.57" y2="69.37" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.533 2.134" stroke-linecap="round" data-pos="86"/>
   <line x1="14.15" y1="60.44" x2="14.81" y2="60.44" stroke="#000000" stroke-width="0.130"/>
   <line x1="40.78" y1="60.44" x2="41.44" y2="60.44" stroke="#000000" stroke-width="0.130"/>
   <line x1="13.65" y1="63.24" x2="14.31" y2="63.24" stroke="#000000" stroke-width="0.130"/>

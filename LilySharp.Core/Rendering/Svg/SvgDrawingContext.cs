@@ -143,10 +143,12 @@ internal sealed class SvgDrawingContext : IDrawingContext
         AppendStroke(stroke ?? Color.Black, strokeWidth);
         if (dash is { } d)
         {
+            // Three places: a fitted period (SharedRenderer.FittedDash) repeats many times, and
+            // two places drift 0.05 over a long ottava.
             _sb.Append(" stroke-dasharray=\"");
-            F2(d.On);
+            F3(d.On);
             _sb.Append(' ');
-            F2(d.Off);
+            F3(d.Off);
             _sb.Append('"');
         }
         // SVG default linecap is butt; only emit the attribute when rounding.
