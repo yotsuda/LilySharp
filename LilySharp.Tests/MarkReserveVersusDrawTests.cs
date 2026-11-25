@@ -209,9 +209,10 @@ public class MarkReserveVersusDrawTests
     /// the sustain word became a glyph run that stopped being merely the wrong string — it
     /// was the wrong MECHANISM, a text word cleared by a music-font width.
     /// <para>
-    /// The arithmetic asserted is the site's own claim restated from the DRAWN page: two
-    /// centred words, so the release's centre sits half of each plus the gap to the left of
-    /// the engage's. The engage's half comes from the string the page actually carries.
+    /// The arithmetic asserted is the site's own claim restated from the DRAWN page: one
+    /// word "*" + engage (LilyPond 2.26.0, Lab sessions/p1384/m t6, c1), so the release's
+    /// right edge is the engage's left edge. The engage's half comes from the string the
+    /// page actually carries.
     /// </para>
     /// </remarks>
     [Fact]
@@ -245,15 +246,19 @@ public class MarkReserveVersusDrawTests
         // answers here are 3.2 staff spaces apart, so the quantisation has no bearing on
         // what is being told apart — and saying so is cheaper than routing this one book
         // through the LpFidelity recorder, which exists for residuals that live below 0.01.
-        Assert.Equal(engageCentre - engageHalf - starHalf - gap, starCentre, 2);
+        // Since session 1384 the change is ONE word, "*Sost. Ped.", centred on the column as
+        // LilyPond's middle pedal string (MusicMarkEngraver.PedalChangeOffset): the star's
+        // right edge IS the engage's left edge, no gap.
+        Assert.Equal(engageCentre - engageHalf, starCentre + starHalf, 2);
         // The falsifier, spelled out: the sustain word is a MUSIC-GLYPH run and is much
         // narrower than this one, so a nudge that still measured "Ped." would land the star
         // that much to the right — inside the engage word's ink.
         Assert.NotEqual(
             engageCentre
-                - MusicMarkEngraver.PlainMarkWidth(Fonts, MusicMarkType.SustainOn, "Ped.") / 2
-                - starHalf - gap,
-            starCentre, 2);
+                - MusicMarkEngraver.PlainMarkWidth(Fonts, MusicMarkType.SustainOn, "Ped.") / 2,
+            starCentre + starHalf, 2);
+        // …and the old two-word spelling (a 0.4 gap) is gone.
+        Assert.NotEqual(engageCentre - engageHalf - starHalf - gap, starCentre, 2);
     }
 
     // ⚠️ The navigation marks are BARE tokens, not '@' post-events (the '@' form is LYS1022);

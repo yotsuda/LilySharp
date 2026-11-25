@@ -222,6 +222,14 @@ internal static class PedalEngraver
     /// (axis-group-interface.cc:648-676). MEASURED on 2.26.0 (probes/pedal-three.ly):
     /// the three-family steps 1.961 / 2.443 are exactly each row's own ink + 0.46, so
     /// the steps fall out of the profiles and no step constant exists here.
+    /// LILYPOND-REF: lily/piano-pedal-align-engraver.cc:56-65 Pedal_align_info::is_finished,
+    ///   :144-151 stop_translation_timestep — a word's line spanner is checked for its end
+    ///   BEFORE the step clears its carrying item, so it lives one timestep past its word: a
+    ///   word on the next timestep joins it (make_line_spanner reuses the live one) and the
+    ///   two share one row. MEASURED 2.26.0 (Lab sessions/p1384/m t2, t5, t6): "Ped." and the
+    ///   "*" of the next note stand on one baseline, the lower word's; Lily# solved each word
+    ///   alone and set the "*" of a low note 0.35 under its "Ped.", and a change's "Ped."
+    ///   2.27 under the previous "Ped." it overlaps.
     /// ⚠️ The words' X is the pedal arm of MusicMarkEngraver.CalculateXPosition spelled
     /// through AnchorX — the same timing-column read, asserted by the ledger points
     /// rather than by a shared function (the draw's arm needs `systems`, which do not
@@ -264,37 +272,144 @@ internal static class PedalEngraver
         }
         if (words.Count == 0)
             return ImmutableArray<SolvedPedalRow>.Empty;
+        // A change's two words stand as the draw sets them (MusicMarkEngraver.PedalChangeOffset).
+        for (int i = 0; i < words.Count; i++)
+            foreach (var other in words)
+                if (other.Rank == words[i].Rank && other.Mark != words[i].Mark
+                    && other.Mark.MeasureIndex == words[i].Mark.MeasureIndex
+                    && other.Mark.AnchorTiming == words[i].Mark.AnchorTiming
+                    && IsRelease(other.Mark.Type) != IsRelease(words[i].Mark.Type))
+                {
+                    words[i] = words[i] with
+                    {
+                        X = words[i].X + MusicMarkEngraver.PedalChangeOffset(fonts, words[i].Mark, other.Mark),
+                    };
+                    break;
+                }
+
+        // The system's timesteps, in order: every timing column of every measure (the
+        // columns are the score's, shared by the staves). A word's step is its own column's.
+        // A measure's closing column (zero width at its full duration, MeasureLayouter) is the
+        // moment the next measure begins: one timestep with the next measure's first column.
+        var steps = new List<(double Left, double Right)>();
+        var stepOf = new Dictionary<(int Measure, Fraction Timing), int>();
+        (int Measure, Fraction Timing)? closing = null;
+        foreach (var ml in measureLayouts)
+        {
+            if (ml.Columns.IsDefaultOrEmpty)
+                continue;
+            for (int ci = 0; ci < ml.Columns.Length; ci++)
+            {
+                var c = ml.Columns[ci];
+                if (ci > 0 && ci == ml.Columns.Length - 1 && c.Width == 0)
+                {
+                    closing = (ml.MeasureIndex, c.Timing);
+                    continue;
+                }
+                if (!stepOf.TryAdd((ml.MeasureIndex, c.Timing), steps.Count))
+                    continue;
+                if (closing is { } k)
+                {
+                    stepOf.TryAdd(k, steps.Count);
+                    closing = null;
+                }
+                steps.Add((ml.X + c.X, ml.X + c.X + c.Width));
+            }
+        }
+        if (closing is { } last)
+        {
+            double x = 0;
+            foreach (var ml in measureLayouts)
+                if (ml.MeasureIndex == last.Measure)
+                    x = ml.X + ml.GetXForTiming(last.Timing);
+            stepOf.TryAdd(last, steps.Count);
+            steps.Add((x, x));
+        }
 
         var solved = ImmutableArray.CreateBuilder<SolvedPedalRow>(words.Count);
-        foreach (var (rank, _, mark, x, span) in words
-                     .OrderBy(w => w.Rank).ThenBy(w => w.Order))
+        var ordered = words.OrderBy(w => w.Rank).ThenBy(w => w.Order).ToList();
+        // One LINE SPANNER per run of a family's words whose timesteps follow each other: a
+        // spanner outlives its word by one timestep, so a word on the very next timestep (a
+        // release right after its engage, the "*" and "Ped." of a change) joins it and
+        // carries it a step further. Its words share one row, side-positioned as one group.
+        var taken = new bool[ordered.Count];
+        for (int head = 0; head < ordered.Count; head++)
         {
-            var word = WordProfiles(fonts, mark.Type, mark.Text, x);
+            if (taken[head])
+                continue;
+            var group = new List<int> { head };
+            taken[head] = true;
+            int lastStep = StepOf(ordered[head].Mark);
+            if (lastStep >= 0)
+            {
+                // The family's later words, by timestep; a gap of more than one step ends it.
+                var later = Enumerable.Range(head + 1, ordered.Count - head - 1)
+                    .Where(i => !taken[i] && ordered[i].Rank == ordered[head].Rank && StepOf(ordered[i].Mark) >= lastStep)
+                    .OrderBy(i => StepOf(ordered[i].Mark)).ThenBy(i => ordered[i].Order);
+                foreach (int i in later)
+                {
+                    int s = StepOf(ordered[i].Mark);
+                    if (s > lastStep + 1)
+                        break;
+                    group.Add(i);
+                    taken[i] = true;
+                    lastStep = s;
+                }
+            }
+
+            // The group's own profiles and its support: the columns of its timesteps and of
+            // the one after its last word (the spanner's last timestep).
+            VerticalSkyline? up = null, down = null;
+            var support = SupportProfile(insideDown, 0, 0);
+            foreach (int i in group)
+            {
+                var (_, _, mark, x, span) = ordered[i];
+                var word = WordProfiles(fonts, mark.Type, mark.Text, x);
+                if (up == null) { up = word.Up; down = word.Down; }
+                else { up.Merge(word.Up); down!.Merge(word.Down); }
+                if (span.Right > span.Left && !insideDown.IsEmpty)
+                    support.Merge(insideDown.ClippedToRange(span.Left, span.Right));
+            }
+            if (lastStep >= 0 && lastStep + 1 < steps.Count && !insideDown.IsEmpty)
+            {
+                var next = steps[lastStep + 1];
+                if (next.Right > next.Left)
+                    support.Merge(insideDown.ClippedToRange(next.Left, next.Right));
+            }
             // Quiet: the spanner's own side-position against its SUPPORT at padding 1.2 —
-            // the staff plus the word's OWN column's ink, not the whole inside profile: a
-            // text-style word's spanner lives one timestep, so that column is its whole
-            // acknowledged support (SupportProfile's remark carries the LilyPond source
-            // and the +0.157 a whole-profile read charged on PLT).
-            double quiet = DynamicEngraver.BelowCollisionMove(
-                SupportProfile(insideDown, span.Left, span.Right), word.Up, SpannerPadding);
-            word.Up.Raise(quiet);
-            word.Down.Raise(quiet);
+            // the staff plus its OWN timesteps' columns' ink, not the whole inside profile
+            // (SupportProfile's remark carries the LilyPond source and the +0.157 a
+            // whole-profile read charged on PLT).
+            double quiet = DynamicEngraver.BelowCollisionMove(support, up!, SpannerPadding);
+            up!.Raise(quiet);
+            down!.Raise(quiet);
             // ...then the collision pass against everything already placed below —
-            // the dynamics, the figures, the words solved before this one. An
-            // X-disjoint word keeps its own quiet row (the PLT star), an overlapping
+            // the dynamics, the figures, the groups solved before this one. An
+            // X-disjoint group keeps its own quiet row (the PLT star), an overlapping
             // one stacks (the pedal-three families).
             double move = DynamicEngraver.BelowCollisionMove(
-                downProfile, word.Up, SkylineBuilder.OutsideStaffPaddingValue);
+                downProfile, up, SkylineBuilder.OutsideStaffPaddingValue);
             if (move != 0)
             {
-                word.Up.Raise(move);
-                word.Down.Raise(move);
+                up.Raise(move);
+                down.Raise(move);
             }
-            downProfile.Merge(word.Down);
-            solved.Add(new SolvedPedalRow(mark.MeasureIndex, mark.AnchorItemIndex, mark.AnchorTiming, mark.Type, quiet + move));
+            downProfile.Merge(down);
+            foreach (int i in group)
+            {
+                var mark = ordered[i].Mark;
+                solved.Add(new SolvedPedalRow(mark.MeasureIndex, mark.AnchorItemIndex, mark.AnchorTiming, mark.Type, quiet + move));
+            }
         }
         return solved.ToImmutable();
+
+        int StepOf(MusicMarkItem mark)
+            => stepOf.TryGetValue((mark.MeasureIndex, mark.AnchorTiming), out int s) ? s : -1;
     }
+
+    /// <summary>A pedal release ("*", "tre corde").</summary>
+    private static bool IsRelease(MusicMarkType t) =>
+        t is MusicMarkType.SustainOff or MusicMarkType.SostenutoOff or MusicMarkType.UnaCordaOff;
 
     /// <summary>Every pedal mark type, engage and release, all three families.</summary>
     internal static bool IsPedalMarkType(MusicMarkType t) =>
@@ -1106,8 +1221,9 @@ internal static class PedalEngraver
     /// :106-109 start_translation_timestep, :139-142 stop_translation_timestep —
     /// <c>supports_</c> is cleared every timestep and the acknowledged NOTE COLUMNS are
     /// added to the line spanner, so a pedal item's support is the note columns of its
-    /// spanner's own timesteps (a text-style word's spanner lives one timestep: its own
-    /// column alone; a bracket's lives engage→release: the episode's columns) plus the
+    /// spanner's own timesteps (a text-style word's spanner lives its word's timestep and
+    /// the next — a run of words on consecutive timesteps shares one, SolveAndSeedText; a
+    /// bracket's lives engage→release: the episode's columns) plus the
     /// staff symbol through <c>staff-padding</c>. Ink OUTSIDE the pedal's timesteps is
     /// never a support, whatever the item's overhang covers — measured on 2.26.0
     /// (pedal-lyric-stack.ly PLT): the engage word's left overhang stands over the first

@@ -339,6 +339,40 @@ internal static class MusicMarkEngraver
             e => IsPedal(e.Mark.Type) && !IsPedalRelease(e.Mark.Type)
                  && PedalFamilyRank(e.Mark.Type) == PedalFamilyRank(release));
 
+    /// <summary>The release mark of an engage's own pedal family in one group's below marks.</summary>
+    private static (MusicMarkItem Mark, double X, int SourceIndex) ReleaseOfFamily(
+        List<(MusicMarkItem Mark, double X, int SourceIndex)> belowMarks, MusicMarkType engage) =>
+        belowMarks.First(
+            e => IsPedalRelease(e.Mark.Type) && PedalFamilyRank(e.Mark.Type) == PedalFamilyRank(engage));
+
+    /// <summary>
+    /// How far a text-style pedal CHANGE's word stands from the column both words are written
+    /// on — <paramref name="mark"/> beside <paramref name="partner"/>, the other word of its
+    /// family at that moment. ONE HOME for the draw and the skyline-time row solver.
+    /// </summary>
+    /// <remarks>
+    /// The sustain and the sostenuto print the change as ONE word, the release's "*" set
+    /// against the engage's, centred on the column: the "*" a half engage width left of it and
+    /// the engage a half "*" right (MEASURED 2.26.0, Lab sessions/p1384/m t6: "*Ped." at
+    /// 0.488..5.516 over the column 3.002; Lily# kept "Ped." centred and set the "*" 0.4 apart,
+    /// both 0.78 left). The una corda's change string is empty in LilyPond, so nothing measures
+    /// it: it keeps its two words, "tre corde" a gap of 0.4 left of a centred "una corda".
+    /// LILYPOND-REF: scm/define-context-properties.scm / ly/engraver-init.ly
+    ///   pedalSustainStrings ("Ped." "*Ped." "*"), pedalSostenutoStrings ("Sost. Ped."
+    ///   "*Sost. Ped." "*"), pedalUnaCordaStrings ("una corda" "" "tre corde").
+    /// LILYPOND-REF: lily/piano-pedal-engraver.cc create_text_grobs — a STOP and a START on
+    ///   one moment take the middle string, one grob.
+    /// </remarks>
+    internal static double PedalChangeOffset(ScoreTextMetrics fonts, MusicMarkItem mark, MusicMarkItem partner)
+    {
+        double partnerHalf = PlainMarkWidth(fonts, partner.Type, partner.Text) / 2;
+        if (mark.Type is MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff)
+            return IsPedalRelease(mark.Type)
+                ? -(partnerHalf + PlainMarkWidth(fonts, mark.Type, mark.Text) / 2 + 0.4)
+                : 0;
+        return IsPedalRelease(mark.Type) ? -partnerHalf : partnerHalf;
+    }
+
     /// <summary>
     /// Which ROW a pedal family occupies below the staff, nearest first — the order
     /// pedal-three.ly measured on 2.26.0 (una corda 2.7775, sostenuto 4.7387, sustain
@@ -1469,26 +1503,20 @@ internal static class MusicMarkEngraver
                           && rows.TryGetValue(PedalFamilyRank(mark.Type), out double rowYUp)
                         ? rowYUp
                         : belowBaseUp - Padding;
-                    if (GroupHasPedalChange(mark.Type) && IsPedalRelease(mark.Type))
+                    if (GroupHasPedalChange(mark.Type))
                     {
-                        // "*" just left of the new "Ped." — both centered
-                        // texts, so clear half of each measured width + gap.
-                        // The word that follows is the ENGAGE mark of this release's OWN
-                        // family, FOUND in the group rather than spelled. It was spelled
-                        // "Ped." here whatever the family until 2026-08-18 — so a sostenuto
-                        // change cleared the sustain word's width — and the glyph port made
-                        // that wrong in KIND rather than in degree: "Sost. Ped." is text and
-                        // "Ped." is now a run of music glyphs, so the wrong string had also
-                        // become the wrong mechanism. GroupHasPedalChange has already
-                        // established that this engage exists, which is what makes First safe.
-                        // ⚠️ Both halves go through PlainMarkWidth, not TextFontMetrics: only
+                        // A change: "*" and the new "Ped." as one word on the column
+                        // (PedalChangeOffset). The partner is the other word of this mark's OWN
+                        // family, FOUND in the group rather than spelled — it was spelled
+                        // "Ped." whatever the family until 2026-08-18, so a sostenuto change
+                        // cleared the sustain word's width. GroupHasPedalChange has already
+                        // established that both exist, which is what makes First safe.
+                        // ⚠️ Both widths go through PlainMarkWidth, not TextFontMetrics: only
                         // that home knows which of the two a given pedal's word is.
-                        var follower = EngageOfFamily(belowMarks, mark.Type);
-                        double pedHalf =
-                            PlainMarkWidth(fonts, follower.Mark.Type, follower.Mark.Text) / 2;
-                        double starHalf =
-                            PlainMarkWidth(fonts, mark.Type, mark.Text) / 2;
-                        x -= pedHalf + starHalf + 0.4;
+                        var partner = IsPedalRelease(mark.Type)
+                            ? EngageOfFamily(belowMarks, mark.Type)
+                            : ReleaseOfFamily(belowMarks, mark.Type);
+                        x += PedalChangeOffset(fonts, mark, partner.Mark);
                     }
                 }
                 else if (firstStacked)
