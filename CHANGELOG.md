@@ -6,6 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- `[editor]` **Installing the Lily# Sound Font extension installs Lily# Studio with it.** The sound font plays only through Lily#, and it could be installed alone, doing nothing.
 - `[engraving]` **Re-pressing the una corda prints nothing.** When a note releases and re-engages the soft pedal (`@treCorde@unaCorda`), nothing is printed under it, as in LilyPond; Lily# printed "tre corde" and "una corda" there, over the "una corda" before them, and pushed a sustain "Ped." on the same note further down.
 - `[engraving]` **Lyric hyphens and extender lines have rounded corners.** Each hyphen dash and each extender line is drawn as a small box with rounded corners, as LilyPond draws them; they were lines cut square at the ends. Their place, length and thickness are unchanged. In `lysc boxes` they are now `rect`s, the name of the shape they are.
 - `[engraving]` **Text spanner, ottava, glissando and volta lines end round, and a dashed line begins and ends with a dash.** "rit.", "poco …", palm mute, let ring, 8va / 8vb lines, glissandos and volta brackets are drawn with round ends as LilyPond draws them, and a dashed line's dashes are spaced to fit its length, so it no longer ends in a gap or a cut dash. An 8va line's dashes are about one staff space apart, as in LilyPond (they were twice that). A volta's hooks keep their length.

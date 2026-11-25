@@ -18,6 +18,9 @@
   "extensionKind": [
     "workspace"
   ],
+  "extensionDependencies": [
+    "yotsuda.lilysharp"
+  ],
   "engines": {
     "vscode": "^1.90.0"
   },
