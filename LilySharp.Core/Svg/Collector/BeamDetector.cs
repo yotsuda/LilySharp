@@ -1024,6 +1024,16 @@ internal sealed class BeamDetector
             if (stems.Count > 0 && item.VoiceContext != stems[0].item.VoiceContext)
                 EndBeam();
 
+            // A cue stem and a full-size stem are never offered to the same beam either: `cue { }`
+            // is written as `\new CueVoice { … }`, a Voice of its own with its own
+            // Auto_beam_engraver, so the eighths before a cue and the cue's eighths are two beams.
+            // MEASURED (2.26.0, Lab sessions/p1380/m/d3.ly: `d''8 e'' \new CueVoice { d''8 e'' } c''4`):
+            // two Beam grobs (0–3.834 and 7.304–10.649); Lily# drew one flat beam over the four.
+            // LILYPOND-REF: ly/engraver-init.ly:396 Voice — \consists Auto_beam_engraver; CueVoice
+            //   (ly/engraver-init.ly, `\context { \Voice \name CueVoice … }`) is that Voice copied.
+            if (stems.Count > 0 && IsCueStem(item) != IsCueStem(stems[0].item))
+                EndBeam();
+
             // A note that starts a syllable in a `beaming syllabic` part (MusicItem.BeamBreakBefore,
             // owner-approved 2026-11-13): no automatic beam reaches it from the note before —
             // the vocal style, LilyPond's \autoBeamOff with the melismata beamed by hand.
@@ -1665,6 +1675,9 @@ internal sealed class BeamDetector
     /// LILYPOND-REF: lily/beam-engraver.cc:211-218 acknowledge_rest,
     /// lily/auto-beam-engraver.cc:324-328 acknowledge_rest (force_end_).
     /// </remarks>
+    private static bool IsCueStem(MusicItem item)
+        => item is NoteItem { IsCue: true } or ChordItem { IsCue: true };
+
     private static bool IsBeamedRest(MusicItem item)
         => item is RestItem { IsSpacer: false, IsMultiMeasure: false };
 

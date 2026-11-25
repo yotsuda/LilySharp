@@ -83,6 +83,25 @@ public sealed class CueBeamSpacingTests
     }
 
     /// <summary>
+    /// LilyPond 2.26.0 (Lab sessions/p1380/m/d3.ly, `d''8 e'' \new CueVoice { d''8 e'' } c''4 …`):
+    /// the eighths before a cue and the cue's eighths are two beams — the CueVoice is a Voice of
+    /// its own, with its own auto-beamer — one full-size from 0 to 3.834 (−2.240 … −1.570 below
+    /// the middle line) and one cue-size from 7.304 to 10.649 (−1.050 … −0.325). The other way
+    /// round is the same rule. Until session 1380 Lily# drew one flat full-size beam over all four.
+    /// </summary>
+    [Theory]
+    [InlineData("d''8 e'' cue { d''8 e'' } c''2 |", 0.48, 0.35)]
+    [InlineData("cue { d''8 e'' } d''8 e'' c''2 |", 0.35, 0.48)]
+    public void FullSizeEighthsAndCueEighths_AreTwoBeams(string music, double first, double second)
+    {
+        var page = Render(music);
+        var beams = page.Quads.OrderBy(q => q.X0).ToArray();
+        Assert.Equal(2, beams.Length);
+        Assert.Equal(first, System.Math.Abs(beams[0].Y3 - beams[0].Y0), 0.0005);
+        Assert.Equal(second, System.Math.Abs(beams[1].Y3 - beams[1].Y0), 0.0005);
+    }
+
+    /// <summary>
     /// A cue beam's members stand their stems where the quanter stood them: the one recipe
     /// (<c>LayoutUtilities.BeamMemberStemX</c>, through <c>BeamLayout.MemberStemX</c>) reads the
     /// cue heads' attachment, as the quanter was handed it — so every reader of the beam's face

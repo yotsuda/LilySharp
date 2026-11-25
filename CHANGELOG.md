@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- `[engraving]` **Cue notes get a beam of their own.** Eighths written just before or after a `cue { }` were beamed together with the cue's eighths into one full-size beam; now the plain notes and the cue notes are beamed separately, as LilyPond beams a cue voice.
+
 - `[engraving]` **A short octave line continued onto a new system stays off the clef.** A continued line repeats its sign in parentheses, "(8va)"; when the piece on the new system is too short for that, it now prints the plain "8va" just after the clef, as LilyPond does — the wider "(8va)" was pushed left over the clef and the whole line stood a staff space higher. The space between staves is now kept for a continued line as it is drawn.
 
 - `[engraving]` **An octave line ends where LilyPond ends it.** A `@!8va` (or 8vb, 15ma…) written on a bar of whole-bar rest (`R1`, `R1*2`) now hooks just after the last note before the rest, as LilyPond does — it ran into the rest's bar, and over `R1*2` rose above the bar count; a rest alone on the next line gets no piece. A line broken across systems runs to the end of the first one (it stopped short of the last bar line) and starts the next one just after the clef (it began over the clef). The stems of grace and cue notes begin at their own small heads' point, as the plain notes' now do.
