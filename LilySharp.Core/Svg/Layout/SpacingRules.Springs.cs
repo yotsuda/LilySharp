@@ -437,6 +437,20 @@ internal static partial class SpacingRules
     /// For monophonic music exactly one voice contributes, so the result equals
     /// that single wish (base + its own correction) — identical to applying the
     /// correction directly, which keeps all single-voice spacing unchanged.
+    /// <para>
+    /// ⚠️ WHEN THE RIGHT MOMENT OPENS WITH A GRACE RUN IN ANY VOICE, only the voices whose own
+    /// right column leads with that run wish here. LilyPond's spring stops at the first grace
+    /// column, and a wish counts only when its Note_spacing's right column IS the pair's right
+    /// column; a voice with no grace there has its wish end at the main column, so it takes
+    /// part in neither the approach nor the grace → main spring.
+    /// LILYPOND-REF: lily/spacing-spanner.cc:345-357 Spacing_spanner::musical_column_spacing —
+    ///   <c>if (Note_spacing::left_column (wish) != left_col || (wish_rcol != right_col
+    ///   &amp;&amp; wish_rcol != right_col->original_)) continue;</c>
+    /// MEASURED 2.26.0 (Lab sessions/p1392/m s1–s4): `e''2 grace { g''16 } f''2` over
+    /// `c,2 d2` puts the grace and the f'' where the treble staff alone does (3.421 / 5.359),
+    /// and the run in the bass staff where the bass alone does (3.621 / 5.559). Lily# averaged
+    /// the other staff's c,→d wish in: 0.176 wide, and 0.100 narrow.
+    /// </para>
     /// </remarks>
     internal static Spring MergeVoiceStemWishes(
         Spring baseSpring, IReadOnlyList<Measure> voices,
@@ -444,6 +458,10 @@ internal static partial class SpacingRules
         IReadOnlyList<Staff>? staves = null)
     {
         var wishes = RentWishes(); // given back once MergeSprings has read it (see RentWishes)
+        // Whether some voice's right column leads with a grace run (the doc's ⚠️).
+        bool graceRight = false;
+        for (int v = 0; v < voices.Count && !graceRight; v++)
+            graceRight = WishColumnAt(voices[v], tRight) is { } r && !GraceNotesOf(r).IsDefaultOrEmpty;
         // Indexed, not foreach, here and in MergeVoiceStemWishesToBarline: `voices` is an
         // interface, so foreach would box an enumerator on every spring (RULES §5.3).
         for (int v = 0; v < voices.Count; v++)
@@ -452,6 +470,8 @@ internal static partial class SpacingRules
             var left = WishColumnAt(voice, tLeft);
             var right = WishColumnAt(voice, tRight);
             if (left is null || right is null)
+                continue;
+            if (graceRight && GraceNotesOf(right).IsDefaultOrEmpty)
                 continue;
             // A voice whose two columns are two contexts (a cue region's edge) has no wish
             // spanning them, so it makes no correction either (VoicePairCrossesContexts).

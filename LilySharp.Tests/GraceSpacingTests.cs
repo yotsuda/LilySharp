@@ -82,6 +82,30 @@ public class GraceSpacingTests
         Assert.Equal(expected, bar.GetXForTiming(Fraction.Zero), 6);
     }
 
+    /// <summary>The main column after a grace run in ONE of two staves (or voices) stands where
+    /// the staff with the run alone puts it: only the voices whose right column leads with the
+    /// run wish into it. MEASURED 2.26.0 (Lab sessions/p1392/m s1–s5).</summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:345-357 Spacing_spanner::musical_column_spacing — a
+    /// wish counts only when its right column is the pair's.
+    /// </remarks>
+    [Theory]
+    // s1: the run in the treble staff — LilyPond 5.359, as the treble alone (s2); Lily# was 5.535.
+    [InlineData("part rh { clef treble }\npart lh { clef bass }\nsection A {\n  rh { e''2 grace { g''16 } f''2 | g''1 | }\n  lh { c,2 d2 | g,1 | }\n}\nform { A }\nscore { staff rh  staff lh }\n", 5.359)]
+    // s3: the run in the bass staff — 5.559, as the bass alone (s4); Lily# was 5.459.
+    [InlineData("part rh { clef treble }\npart lh { clef bass }\nsection A {\n  rh { e''2 f''2 | g''1 | }\n  lh { c,2 grace { e16 } d2 | g,1 | }\n}\nform { A }\nscore { staff rh  staff lh }\n", 5.559)]
+    // s5: the run in the upper of two voices on one staff — 5.559; Lily# was 5.459.
+    [InlineData("part rh { clef treble }\nsection A {\n  rh { voice { e''2 grace { g''16 } f''2 } { c'2 d'2 } | g''1 | }\n}\nform { A }\nscore { staff rh }\n", 5.559)]
+    public void AGraceRunInOneStaff_IsSpacedByThatStaffsWishAlone(string body, double mainFromFirst)
+    {
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse("octave absolute\ntime 4/4\npaper { raggedRight }\n" + body);
+        var multi = new LilySharp.Core.Svg.Collector.MeasureCollector()
+            .CollectMultiStaff(tree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree)!);
+        var layout = new LayoutEngine(new LayoutOptions()).Layout(multi);
+        var bar = layout.Systems.SelectMany(s => s.Measures).Single(m => m.MeasureIndex == 0);
+        Assert.Equal(mainFromFirst, bar.GetXForTiming(Fraction.Half) - bar.GetXForTiming(Fraction.Zero), 2);
+    }
+
     /// <summary>
     /// A whole note behind a grace run earns no full-measure-extra-space: LilyPond's bar line
     /// spring stops at the GRACE column, whose next column is the main note — musical — so
