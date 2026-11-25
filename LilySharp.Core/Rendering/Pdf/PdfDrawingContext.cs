@@ -130,6 +130,15 @@ internal sealed class PdfDrawingContext : IDrawingContext
         }
     }
 
+    public void DrawRoundedBox(double x, double y, double width, double height,
+        double blotDiameter, Color? fill = null)
+    {
+        // XGraphics takes the corner's ellipse size: twice the radius.
+        double d = T(2 * IDrawingContext.RoundedBoxRadius(width, height, blotDiameter));
+        _gfx.DrawRoundedRectangle(new XSolidBrush(ToXColor(fill)),
+            X(x), X(y), T(width), T(height), d, d);
+    }
+
     public void DrawEllipse(double cx, double cy, double rx, double ry,
         Color? fill = null, Color? stroke = null, double strokeWidth = 0)
     {

@@ -176,6 +176,29 @@ internal sealed class SvgDrawingContext : IDrawingContext
         _sb.Append("/>").AppendLine();
     }
 
+    public void DrawRoundedBox(double x, double y, double width, double height,
+        double blotDiameter, Color? fill = null)
+    {
+        // LP writes only ry; SVG then takes rx = ry.
+        // LILYPOND-REF: scm/output-svg.scm:574-590 round-filled-box
+        _sb.Append("  <rect");
+        Attr("x", x);
+        Attr("y", y);
+        Attr("width", width);
+        Attr("height", height);
+        double r = IDrawingContext.RoundedBoxRadius(width, height, blotDiameter);
+        if (r > 0)
+        {
+            // Three places, like a stroke width: an extender's is 0.032.
+            _sb.Append(" ry=\"");
+            F3(r);
+            _sb.Append('"');
+        }
+        AppendFill(fill);
+        AppendSource();
+        _sb.Append("/>").AppendLine();
+    }
+
     public void DrawFilledQuad((double X, double Y) p0, (double X, double Y) p1,
         (double X, double Y) p2, (double X, double Y) p3, Color fill)
     {

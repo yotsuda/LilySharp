@@ -146,14 +146,12 @@ public class LineEdgeLyricReservationTests
         string svg = Svg(Sung(HyphenOnward));
         var rows = BarLineXsOf(svg);
         double endBarRight = rows[0][^1] + 0.19;
-        // Horizontal 0.130-thick strokes are the hyphen dashes (staff lines are 0.100,
-        // stems are vertical).
-        var dashes = Regex.Matches(svg, "<line x1=\"([0-9.-]+)\" y1=\"([0-9.-]+)\" x2=\"([0-9.-]+)\" y2=\"([0-9.-]+)\" stroke=\"#000000\" stroke-width=\"0.130\"")
+        // The hyphen dashes are 0.13-tall round boxes (LilyPond's round_filled_box, a rect
+        // with ry; a 0.130-thick line until session 1389).
+        var dashes = Regex.Matches(svg, "<rect x=\"([0-9.-]+)\" y=\"([0-9.-]+)\" width=\"([0-9.-]+)\" height=\"0\\.13\" ry=")
             .Select(m => (X1: double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture),
-                          Y1: double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture),
-                          X2: double.Parse(m.Groups[3].Value, CultureInfo.InvariantCulture),
-                          Y2: double.Parse(m.Groups[4].Value, CultureInfo.InvariantCulture)))
-            .Where(d => d.Y1 == d.Y2)
+                          X2: double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture)
+                              + double.Parse(m.Groups[3].Value, CultureInfo.InvariantCulture)))
             .ToList();
         var atBreak = Assert.Single(dashes, d => d.X1 > endBarRight - 0.5);
         Assert.InRange(atBreak.X1 - endBarRight, -0.02, 0.02);

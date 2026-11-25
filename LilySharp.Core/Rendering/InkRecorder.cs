@@ -187,6 +187,13 @@ internal sealed class InkRecorder : IDrawingContext
         _inner.DrawRectangle(x, y, width, height, fill, stroke, strokeWidth);
     }
 
+    public void DrawRoundedBox(double x, double y, double width, double height,
+        double blotDiameter, Color? fill = null)
+    {
+        Put(x, y, x + width, y + height);
+        _inner.DrawRoundedBox(x, y, width, height, blotDiameter, fill);
+    }
+
     public void DrawFilledQuad((double X, double Y) p0, (double X, double Y) p1,
         (double X, double Y) p2, (double X, double Y) p3, Color fill)
     {

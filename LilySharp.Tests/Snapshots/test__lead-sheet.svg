@@ -34,8 +34,8 @@
   <text x="63.14" y="15.85" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="480">C</text>
   <rect x="4.88" y="12.82" width="7.32" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="427"/>
   <text x="8.55" y="15.17" font-size="2.77" text-anchor="middle" data-pos="427">Main</text>
-  <line x1="16.93" y1="20.04" x2="17.39" y2="20.04" stroke="#000000" stroke-width="0.130"/>
-  <line x1="24.56" y1="20.04" x2="25.22" y2="20.04" stroke="#000000" stroke-width="0.130"/>
-  <line x1="49.28" y1="20.04" x2="49.74" y2="20.04" stroke="#000000" stroke-width="0.130"/>
+  <rect x="16.93" y="19.97" width="0.46" height="0.13" ry="0.040"/>
+  <rect x="24.56" y="19.97" width="0.66" height="0.13" ry="0.040"/>
+  <rect x="49.28" y="19.97" width="0.46" height="0.13" ry="0.040"/>
   </g>
 </svg>

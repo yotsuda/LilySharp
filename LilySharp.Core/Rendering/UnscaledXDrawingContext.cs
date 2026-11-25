@@ -57,6 +57,11 @@ internal sealed class UnscaledXDrawingContext : IDrawingContext
         Color? fill = null, Color? stroke = null, double strokeWidth = 0)
         => _inner.DrawRectangle(X(x), y, width * _invScaleX, height, fill, stroke, strokeWidth);
 
+    // The blot stays as given, like a circle's radius below.
+    public void DrawRoundedBox(double x, double y, double width, double height,
+        double blotDiameter, Color? fill = null)
+        => _inner.DrawRoundedBox(X(x), y, width * _invScaleX, height, blotDiameter, fill);
+
     public void DrawFilledQuad((double X, double Y) p0, (double X, double Y) p1,
         (double X, double Y) p2, (double X, double Y) p3, Color fill)
         => _inner.DrawFilledQuad(P(p0), P(p1), P(p2), P(p3), fill);

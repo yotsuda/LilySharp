@@ -159,13 +159,13 @@
   <line x1="22.03" y1="17.90" x2="43.26" y2="17.90" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.590 2.359" stroke-linecap="round" data-pos="921"/>
   <text x="8.04" y="32.24" font-size="2.20" font-style="italic" data-pos="994">rit.</text>
   <line x1="11.14" y1="32.24" x2="35.24" y2="32.24" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.588 2.351" stroke-linecap="round" data-pos="994"/>
-  <line x1="22.69" y1="26.29" x2="23.35" y2="26.29" stroke="#000000" stroke-width="0.130"/>
-  <line x1="34.65" y1="26.29" x2="35.31" y2="26.29" stroke="#000000" stroke-width="0.130"/>
-  <line x1="45.26" y1="26.29" x2="45.92" y2="26.29" stroke="#000000" stroke-width="0.130"/>
-  <line x1="74.70" y1="26.29" x2="75.36" y2="26.29" stroke="#000000" stroke-width="0.130"/>
-  <line x1="12.14" y1="40.63" x2="12.80" y2="40.63" stroke="#000000" stroke-width="0.130"/>
-  <line x1="25.44" y1="40.63" x2="26.10" y2="40.63" stroke="#000000" stroke-width="0.130"/>
-  <line x1="37.58" y1="40.63" x2="38.24" y2="40.63" stroke="#000000" stroke-width="0.130"/>
-  <line x1="71.02" y1="40.63" x2="71.68" y2="40.63" stroke="#000000" stroke-width="0.130"/>
+  <rect x="22.69" y="26.23" width="0.66" height="0.13" ry="0.040"/>
+  <rect x="34.65" y="26.23" width="0.66" height="0.13" ry="0.040"/>
+  <rect x="45.26" y="26.23" width="0.66" height="0.13" ry="0.040"/>
+  <rect x="74.70" y="26.23" width="0.66" height="0.13" ry="0.040"/>
+  <rect x="12.14" y="40.56" width="0.66" height="0.13" ry="0.040"/>
+  <rect x="25.44" y="40.56" width="0.66" height="0.13" ry="0.040"/>
+  <rect x="37.58" y="40.56" width="0.66" height="0.13" ry="0.040"/>
+  <rect x="71.02" y="40.56" width="0.66" height="0.13" ry="0.040"/>
   </g>
 </svg>

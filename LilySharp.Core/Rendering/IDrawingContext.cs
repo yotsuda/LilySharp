@@ -73,6 +73,26 @@ public interface IDrawingContext
         double x, double y, double width, double height,
         Color? fill = null, Color? stroke = null, double strokeWidth = 0);
 
+    /// <summary>
+    /// Fills an axis-aligned box whose corners are rounded with a radius of half
+    /// <paramref name="blotDiameter"/> — LilyPond's <c>round_filled_box</c>, the shape of a
+    /// lyric hyphen's dash and an extender. The blot never exceeds the box's width or height
+    /// (lily/lookup.cc:152-157), so a box thinner than its blot is a capsule.
+    /// LILYPOND-REF: scm/output-svg.scm:574-590 round-filled-box — a rect with ry = blot / 2.
+    /// The default draws the square box, for a recorder that only wants "there is ink here";
+    /// every backend and decorator overrides it.
+    /// </summary>
+    void DrawRoundedBox(
+        double x, double y, double width, double height, double blotDiameter,
+        Color? fill = null)
+        => DrawRectangle(x, y, width, height, fill ?? Color.Black);
+
+    /// <summary>The corner radius <see cref="DrawRoundedBox"/> draws: half the blot, the
+    /// blot clamped to the box's width and height first.
+    /// LILYPOND-REF: lily/lookup.cc:152-157 Lookup::round_filled_box.</summary>
+    static double RoundedBoxRadius(double width, double height, double blotDiameter)
+        => Math.Max(0, Math.Min(blotDiameter, Math.Min(width, height))) / 2;
+
     /// <summary>Fills the quadrilateral p0→p1→p2→p3 (four straight edges). Used for a
     /// beam, whose ends are VERTICAL even when the body slopes — a plain thick line
     /// would cap its ends perpendicular to the slope and leave triangles past the

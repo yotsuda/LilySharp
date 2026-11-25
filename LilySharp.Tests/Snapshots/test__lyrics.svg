@@ -57,6 +57,6 @@
   <text x="15.20" y="23.03" font-size="2.20" data-pos="127">= 120</text>
   <rect x="11.90" y="16.66" width="7.32" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="154"/>
   <text x="15.57" y="19.02" font-size="2.77" text-anchor="middle" data-pos="154">Main</text>
-  <line x1="37.82" y1="30.93" x2="38.48" y2="30.93" stroke="#000000" stroke-width="0.130"/>
+  <rect x="37.82" y="30.86" width="0.66" height="0.13" ry="0.040"/>
   </g>
 </svg>

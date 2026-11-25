@@ -1416,17 +1416,22 @@ internal static partial class SharedRenderer
         if (layout.LyricHyphenLayouts.IsDefaultOrEmpty) return;
         // LILYPOND-REF: lily/lyric-hyphen.cc:64-65 th = get_dimension of the layout
         // line-thickness × the LyricHyphen thickness 1.3 (scm/define-grobs.scm).
-        // ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
-        // with blot 0.8·lt (lily/lyric-hyphen.cc:126 dash_mol — corner radius 0.04 in
-        // its SVG); this draws a square-ended line. LP has the stencil, so the square
-        // end is a knowing form divergence, not a Lily#-own quantity (§5.2 audit,
-        // session 158). The whiteout branch (:135-153, default OFF at
-        // whiteout −1) is not ported.
+        // Each dash is a round_filled_box with blot 0.8·lt — corners of radius 0.04
+        // (lily/lyric-hyphen.cc:125-126 dash_mol); it was a square-ended line until
+        // session 1389. The whiteout branch (:135-153, default OFF at whiteout −1) is
+        // not ported.
         double thickness = 1.3 * EngravingDefaults.LineThickness;
+        double hyphenBlot = 0.8 * EngravingDefaults.LineThickness;
         // The extender's line is the LyricExtender's own thickness (0.8 line-thicknesses),
         // read from the one home the layout placed it with; it was a flat 0.1 until session
         // 565. LILYPOND-REF: lily/lyric-extender.cc:86 Lyric_extender::print — h = sl × thickness.
+        // It too is a round_filled_box, its blot 0.8 of its own thickness (:128-129).
         double extenderThickness = LyricHyphenParameters.Default.ExtenderThickness;
+        double extenderBlot = 0.8 * extenderThickness;
+        // A box centred on the Y the layout gives (where the line's middle was), in the
+        // page's Y-up frame: DrawRoundedBox's y is the box's top edge.
+        void Box(double x1, double x2, double y, double th, double blot)
+            => gc.DrawRoundedBox(Math.Min(x1, x2), y + th / 2, Math.Abs(x2 - x1), th, blot, Color.Black);
         foreach (var h in layout.LyricHyphenLayouts)
         {
             // A system-crossing connector's SECOND piece lives on the NEXT
@@ -1452,8 +1457,7 @@ internal static partial class SharedRenderer
                     if (h.CrossesSystemBreak && dash.OnNextSystem && NextSystemTop() is { } nt)
                         syUp = nt;
                     double dashY = syUp - dash.Y;
-                    gc.DrawLine(dash.X1, dashY, dash.X2, dashY,
-                        Color.Black, thickness);
+                    Box(dash.X1, dash.X2, dashY, thickness, hyphenBlot);
                 }
             }
             else if (h.Type == LyricConnectorType.Extender)
@@ -1463,17 +1467,14 @@ internal static partial class SharedRenderer
                 double extY = syUp - h.ExtenderY;
                 if (h.CrossesSystemBreak)
                 {
-                    gc.DrawLine(h.ExtenderStartX, extY,
-                        h.FirstSegmentEndX, extY, Color.Black, extenderThickness);
+                    Box(h.ExtenderStartX, h.FirstSegmentEndX, extY, extenderThickness, extenderBlot);
                     double ext2Y = NextSystemTop() is { } nextTop
                         ? nextTop - h.SecondSegmentY : extY;
-                    gc.DrawLine(h.SecondSegmentStartX, ext2Y,
-                        h.ExtenderEndX, ext2Y, Color.Black, extenderThickness);
+                    Box(h.SecondSegmentStartX, h.ExtenderEndX, ext2Y, extenderThickness, extenderBlot);
                 }
                 else
                 {
-                    gc.DrawLine(h.ExtenderStartX, extY,
-                        h.ExtenderEndX, extY, Color.Black, extenderThickness);
+                    Box(h.ExtenderStartX, h.ExtenderEndX, extY, extenderThickness, extenderBlot);
                 }
             }
         }

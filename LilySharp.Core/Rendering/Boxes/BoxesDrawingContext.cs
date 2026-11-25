@@ -208,6 +208,11 @@ internal sealed class BoxesDrawingContext : IDrawingContext, IDisposable
         Add("rect", x - h, y - h, x + width + h, y + height + h);
     }
 
+    // The rounded corners lie inside the box, so the box is the rectangle's.
+    public void DrawRoundedBox(double x, double y, double width, double height,
+        double blotDiameter, Color? fill = null)
+        => Add("rect", x, y, x + width, y + height);
+
     public void DrawFilledQuad((double X, double Y) p0, (double X, double Y) p1,
         (double X, double Y) p2, (double X, double Y) p3, Color fill)
     {

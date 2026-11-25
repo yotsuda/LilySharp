@@ -12,10 +12,10 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
+| `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 68 | 観測者がゼロだと自認しているもの |
 | `OWN` | 489 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **619** | |
+| **計** | **618** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -34,7 +34,7 @@
 | `LilySharp.Core/Svg/Layout/DynamicEngraver.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 8 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（62 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（61 件）
 
 ### `LilySharp.Core/Music/ChordStructure.cs`
 - **`ChordQualityRegistry.GetTones`** ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
@@ -48,8 +48,7 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **`SharedRenderer.DrawGraceBeam`** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: this argument
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **`SharedRenderer.DrawLyricHyphens`** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
-- **`SharedRenderer.DrawLyricHyphens`** whiteout −1) is not ported.
+- **`SharedRenderer.DrawLyricHyphens`** not ported.
 - **`SharedRenderer.DrawStemlessTremolo`** NOT ported; this takes the note's own stem direction. No book and
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
 - **`SharedRenderer.DrawGuitarBend`** Lily# has not ported; this arrow is its own device.

@@ -59,15 +59,8 @@ public class LyricExtenderCompletionTests
         double cHeadX = heads[2];
         double dHeadX = heads[3];
 
-        // The extender: the long thin line below the staff (past the syllable).
-        var extenders = new List<(double X1, double X2)>();
-        foreach (Match m in Regex.Matches(svg, "<line ([^>]*)/>"))
-        {
-            var a = m.Groups[1].Value;
-            double y1 = Attr(a, "y1"), y2 = Attr(a, "y2");
-            if (y1 == y2 && y1 > 15.5)
-                extenders.Add((Attr(a, "x1"), Attr(a, "x2")));
-        }
+        // The extender: the long thin box below the staff (past the syllable).
+        var extenders = Extenders(svg).Where(e => e.Y > 15.5).ToList();
         // It used to be dropped entirely (a final extender needed a NEXT
         // syllable to exist at all).
         var ext = Assert.Single(extenders);
@@ -101,17 +94,9 @@ public class LyricExtenderCompletionTests
             score { staff ~v  lyrics w on v }
             """);
 
-        // Extender segments: thin (0.080 = the LyricExtender's 0.8 line-thicknesses; a flat
-        // 0.100 until session 565) horizontal lines below the first staff.
-        var segments = new List<(double X1, double X2, double Y)>();
-        foreach (Match m in Regex.Matches(svg, "<line ([^>]*stroke-width=\"0.080\"[^>]*)/>"))
-        {
-            var a = m.Groups[1].Value;
-            double y1 = Attr2(a, "y1"), y2 = Attr2(a, "y2");
-            double x1 = Attr2(a, "x1"), x2 = Attr2(a, "x2");
-            if (y1 == y2 && y1 > 15 && x2 - x1 < 50)   // staff lines span the full width
-                segments.Add((x1, x2, y1));
-        }
+        // Extender segments: thin (0.08 = the LyricExtender's 0.8 line-thicknesses; a flat
+        // 0.100 until session 565) boxes below the first staff.
+        var segments = Extenders(svg).Where(e => e.Y > 15).ToList();
         Assert.Equal(2, segments.Count);
         var first = segments.OrderBy(s => s.Y).First();
         var second = segments.OrderBy(s => s.Y).Last();
@@ -154,16 +139,7 @@ public class LyricExtenderCompletionTests
             score { staff m  lyrics w on m }
             """);
 
-        var segments = new List<(double X1, double X2, double Y)>();
-        foreach (Match m in Regex.Matches(svg, "<line ([^>]*stroke-width=\"0.080\"[^>]*)/>"))
-        {
-            var a = m.Groups[1].Value;
-            double y1 = Attr3(a, "y1"), y2 = Attr3(a, "y2");
-            double x1 = Attr3(a, "x1"), x2 = Attr3(a, "x2");
-            if (y1 == y2 && x2 - x1 < 90)   // staff lines span the full width
-                segments.Add((x1, x2, y1));
-        }
-        var ext = Assert.Single(segments);
+        var ext = Assert.Single(Extenders(svg));
 
         // The quarter-note heads of line 1: the ones above the extender, in x order;
         // f is the last of them.
@@ -202,15 +178,7 @@ public class LyricExtenderCompletionTests
             score { staff m  lyrics w on m }
             """);
 
-        var segments = new List<(double X1, double X2, double Y)>();
-        foreach (Match m in Regex.Matches(svg, "<line ([^>]*stroke-width=\"0.080\"[^>]*)/>"))
-        {
-            var a = m.Groups[1].Value;
-            double y1 = Attr4(a, "y1"), y2 = Attr4(a, "y2");
-            double x1 = Attr4(a, "x1"), x2 = Attr4(a, "x2");
-            if (y1 == y2 && x2 - x1 < 90)
-                segments.Add((x1, x2, y1));
-        }
+        var segments = Extenders(svg);
         Assert.Equal(2, segments.Count);
         var first = segments.OrderBy(s => s.Y).First();
         var second = segments.OrderBy(s => s.Y).Last();
@@ -232,4 +200,18 @@ public class LyricExtenderCompletionTests
             Regex.Match(attrs, name + "=\"([^\"]+)\"").Groups[1].Value,
             CultureInfo.InvariantCulture);
     }
+
+    /// <summary>The extender pieces on the page: LilyPond's round_filled_box, 0.08 tall
+    /// (lily/lyric-extender.cc:128-129 Lyric_extender::print) — a rect since session 1389, a 0.080 line before.
+    /// Y is the box's middle, where the line's was.</summary>
+    private static List<(double X1, double X2, double Y)> Extenders(string svg)
+        => Regex.Matches(svg, "<rect x=\"([-\\d.]+)\" y=\"([-\\d.]+)\" width=\"([\\d.]+)\" height=\"0\\.08\"")
+            .Select(m =>
+            {
+                double x = D(m, 1), y = D(m, 2), w = D(m, 3);
+                return (x, x + w, y + 0.04);
+            })
+            .ToList();
+
+    private static double D(Match m, int g) => double.Parse(m.Groups[g].Value, CultureInfo.InvariantCulture);
 }

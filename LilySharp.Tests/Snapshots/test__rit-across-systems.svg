@@ -302,9 +302,9 @@
   <line x1="21.86" y1="17.26" x2="24.35" y2="17.26" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.415 1.661" stroke-linecap="round" data-pos="86"/>
   <text x="7.26" y="69.37" font-size="2.20" font-style="italic" data-pos="86">rit.</text>
   <line x1="10.37" y1="69.37" x2="13.57" y2="69.37" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.533 2.134" stroke-linecap="round" data-pos="86"/>
-  <line x1="14.15" y1="60.44" x2="14.81" y2="60.44" stroke="#000000" stroke-width="0.130"/>
-  <line x1="40.78" y1="60.44" x2="41.44" y2="60.44" stroke="#000000" stroke-width="0.130"/>
-  <line x1="13.65" y1="63.24" x2="14.31" y2="63.24" stroke="#000000" stroke-width="0.130"/>
-  <line x1="40.44" y1="63.24" x2="41.10" y2="63.24" stroke="#000000" stroke-width="0.130"/>
+  <rect x="14.15" y="60.37" width="0.66" height="0.13" ry="0.040"/>
+  <rect x="40.78" y="60.37" width="0.66" height="0.13" ry="0.040"/>
+  <rect x="13.65" y="63.17" width="0.66" height="0.13" ry="0.040"/>
+  <rect x="40.44" y="63.17" width="0.66" height="0.13" ry="0.040"/>
   </g>
 </svg>

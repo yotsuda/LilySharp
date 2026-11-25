@@ -6,6 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- `[engraving]` **Lyric hyphens and extender lines have rounded corners.** Each hyphen dash and each extender line is drawn as a small box with rounded corners, as LilyPond draws them; they were lines cut square at the ends. Their place, length and thickness are unchanged. In `lysc boxes` they are now `rect`s, the name of the shape they are.
 - `[engraving]` **Text spanner, ottava, glissando and volta lines end round, and a dashed line begins and ends with a dash.** "rit.", "poco …", palm mute, let ring, 8va / 8vb lines, glissandos and volta brackets are drawn with round ends as LilyPond draws them, and a dashed line's dashes are spaced to fit its length, so it no longer ends in a gap or a cut dash. An 8va line's dashes are about one staff space apart, as in LilyPond (they were twice that). A volta's hooks keep their length.
 - `[engraving]` **Tuplet brackets have round line ends.** Like the pedal brackets, the hooks and the line either side of the number end in round caps, as LilyPond draws them; each hook used to stop a little short of LilyPond's.
 - `[engraving]` **Pedal brackets have round line ends.** The bracket's line, hooks and change notches end in round caps half a line wide, as LilyPond draws them; they were cut square at their points, so each hook stopped a little short. `lysc boxes` now gives a round-ended line's box as LilyPond does (the ends' box widened by half the line), which a slanted line overshot.

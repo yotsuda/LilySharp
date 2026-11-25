@@ -82,6 +82,11 @@ internal sealed class YFlipDrawingContext : IDrawingContext
         // height, so the device-space rectangle is unchanged in size.
         => _inner.DrawRectangle(x, F(y), width, height, fill, stroke, strokeWidth);
 
+    public void DrawRoundedBox(double x, double y, double width, double height,
+        double blotDiameter, Color? fill = null)
+        // The same top edge as DrawRectangle.
+        => _inner.DrawRoundedBox(x, F(y), width, height, blotDiameter, fill);
+
     public void DrawFilledQuad(
         (double X, double Y) p0, (double X, double Y) p1,
         (double X, double Y) p2, (double X, double Y) p3,

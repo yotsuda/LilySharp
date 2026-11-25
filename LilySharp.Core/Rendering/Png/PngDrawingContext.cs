@@ -110,6 +110,15 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
         }
     }
 
+    public void DrawRoundedBox(double x, double y, double width, double height,
+        double blotDiameter, Color? fill = null)
+    {
+        var rect = SKRect.Create(X(x), X(y), T(width), T(height));
+        float r = T(IDrawingContext.RoundedBoxRadius(width, height, blotDiameter));
+        using var fp = new SKPaint { Color = ToSKColor(fill), Style = SKPaintStyle.Fill, IsAntialias = true };
+        _canvas.DrawRoundRect(rect, r, r, fp);
+    }
+
     public void DrawFilledQuad((double X, double Y) p0, (double X, double Y) p1,
         (double X, double Y) p2, (double X, double Y) p3, Color fill)
     {

@@ -58,11 +58,11 @@
   <text x="0.00" y="25.95" font-size="1.75" font-weight="bold" text-anchor="end">5</text>
   <rect x="4.88" y="12.82" width="7.32" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="447"/>
   <text x="8.55" y="15.17" font-size="2.77" text-anchor="middle" data-pos="447">Main</text>
-  <line x1="17.61" y1="20.04" x2="18.27" y2="20.04" stroke="#000000" stroke-width="0.130"/>
-  <line x1="30.89" y1="20.04" x2="31.55" y2="20.04" stroke="#000000" stroke-width="0.130"/>
-  <line x1="42.07" y1="20.04" x2="42.73" y2="20.04" stroke="#000000" stroke-width="0.130"/>
-  <line x1="73.05" y1="20.04" x2="73.71" y2="20.04" stroke="#000000" stroke-width="0.130"/>
-  <line x1="9.46" y1="32.04" x2="10.12" y2="32.04" stroke="#000000" stroke-width="0.130"/>
-  <line x1="69.61" y1="32.04" x2="70.27" y2="32.04" stroke="#000000" stroke-width="0.130"/>
+  <rect x="17.61" y="19.97" width="0.66" height="0.13" ry="0.040"/>
+  <rect x="30.89" y="19.97" width="0.66" height="0.13" ry="0.040"/>
+  <rect x="42.07" y="19.97" width="0.66" height="0.13" ry="0.040"/>
+  <rect x="73.05" y="19.97" width="0.66" height="0.13" ry="0.040"/>
+  <rect x="9.46" y="31.97" width="0.66" height="0.13" ry="0.040"/>
+  <rect x="69.61" y="31.97" width="0.66" height="0.13" ry="0.040"/>
   </g>
 </svg>
