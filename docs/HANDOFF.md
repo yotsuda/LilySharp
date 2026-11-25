@@ -126,9 +126,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **VS Code の手動確認＝第909 で 107 / 107 済**（手順と期待は `editors/vscode/MANUAL-CHECKS.md`・次の版で足した項目は `[ ]` から。ステップのキーは Ctrl+Shift+↑↓＝調の次の音・Ctrl+Shift+PgUp/PgDn＝オクターブ。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
 - **v0.17.1 は出した（2026-11-20・tag `a8ebc8ca0`・Marketplace 8/8・GitHub Release が Latest）**。
   - 0.17.0（tag `fd15ce3b9`）は止めたが、止める前に Marketplace の win32-x64 にだけ出た。そのため版を 0.17.1 に上げた。
-  - 0.17.1 の linux-armhf の脚は `ECONNRESET` で赤だが、Marketplace には出ている。
-  - どちらの教訓も `RELEASING.md` §6・§7 に書いた。push とタグはオーナー。
-  - v0.15.0 は 2026-11-07（tag `8111ba3eb`）、v0.14.0 は 2026-10-26（tag `4188f209f`）。OMR の床 `OMR_MIN_VERSION` 0.4.0。手動確認の `[ ]` は MANUAL-CHECKS §3.6・§3.5 末尾。CHANGELOG は両方の `## Unreleased` に書き release 時に版番号へ（`RELEASING.md` §3）。Lab の本の警告は直さない（ユーザー決定 2026-10-17）。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」。
+  - 教訓（linux-armhf の `ECONNRESET` も）は `RELEASING.md` §6・§7。push とタグはオーナー。
+  - OMR の床 `OMR_MIN_VERSION` 0.4.0。手動確認の `[ ]` は MANUAL-CHECKS §3.6・§3.5 末尾。CHANGELOG は両方の `## Unreleased` に書き release 時に版番号へ（`RELEASING.md` §3）。Lab の本の警告は直さない（ユーザー決定 2026-10-17）。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」。
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
 - **T7 の残り＝双子と段割れが違う score 16 は全部分類が付いた**（F9 の族 13＝tab の数字の大きさ・計器 3・製品 1 は閉じた。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
 - **双子の計器の残り（第881）＝分類済み**（本の側 8・ABC は LP の癖・LP 落ち 3＝本の側・全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
@@ -157,6 +156,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1389セッション（2026-11-25・YT-DELL2）
+
+base `f7eef4000`。開始時 full 18416 / 0 / skip 2 / 18418。REQUESTS 4 枚に Lily# 側の open は無し。
+- leftovers 第1388 の「歌詞の延長線とハイフンは角の丸い箱」から。LP は両方 `round_filled_box`（ハイフンは blot 0.8·lt＝ry 0.04、延長線は blot 0.8×自分の太さ＝ry 0.032・`lookup.cc:152-157` が箱に合わせて削る）。
+- `660dcb981`: `IDrawingContext.DrawRoundedBox`（SVG は `rect` の `ry`・PNG・PDF・flip・boxes も）で描く。l2 は LP と一致（Lab `p1389/m`・延長線は `\lyricsto` の手書きの双子 `l2-to.ly`＝`lysc ly` の双子は LP に heads を渡さず延長線が出ない）。網 +5・毒 7 本で赤。掃き 37 / 1289（線→同じ範囲の箱だけ・他 0）。full 18421 / 0 / 2 / 18423（途中の run で `IncludeFilesTests` と `SvgSnapshotTests` 2 本が 1 回ずつ赤・単独で緑＝既知の不安定）。
+- 残りは leftovers 第1388 の「残した」3 つ（ottava の線の始まり 0.031・`textSpan("poco")` 0.03・glissando 0.006）。
+
+## 以下は第1388セッションの経緯
+
 ### 1.1 第1388セッション（2026-11-25・YT-DELL2）
 
 base `781e948b8`。開始時 full 18407 / 0 / skip 2 / 18409。REQUESTS 4 枚に Lily# 側の open は無し。
@@ -164,14 +172,6 @@ base `781e948b8`。開始時 full 18407 / 0 / skip 2 / 18409。REQUESTS 4 枚に
 - `4f8d16422`: text spanner・ottava・glissando・volta を丸い端に、破線は `SharedRenderer.FittedDash`。ottava の周期 2.0 → LP の既定 1.0。volta の鉤は線の中心から 2.0。x1・p1・o1・g1・vb は LP と一致（Lab `p1388/m`）。網 +8・毒 9 本で赤。掃き 191 / 1289（線の属性だけ・他 0）。
 - `0a39fbda9`: 鉤のある text spanner（palm mute ほか）の線は鉤の箱の左端（0.05 手前）で止まる＝破線の合わせも LP と一致。網 +1・毒で赤。掃き 0 / 1289。full 18416 / 0 / 2 / 18418。
 - 残りは leftovers 第1388（歌詞の延長線とハイフンは角の丸い箱＝別物）。
-
-## 以下は第1387セッションの経緯
-
-### 1.1 第1387セッション（2026-11-25・YT-DELL2）
-
-base `be9ec8d9c`。開始時 full 18404 / 0 / skip 2 / 18406。
-- 第1383 の s1・u1（線の始まり 0.017）も書体の双子の詰めの差（una corda は co・rd・da）。
-- `c1ff32016`・`c3ff4b757`: ペダルと連符の括弧の線を丸い端に（LP の `make_line`）。b1・t1 は LP と一致。網 +3・毒で赤。掃き 13・72 / 1289（端の属性だけ）。full 18407 / 0 / 2 / 18409。
 
 ## 2. 開いている作業
 
