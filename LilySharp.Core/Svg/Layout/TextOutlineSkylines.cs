@@ -259,9 +259,29 @@ internal static class TextOutlineSkylines
     /// Flattens the string's path into sign-framed skyline quads ([x1, v1, v2, x2] with
     /// v = sky·y_up), baseline origin, staff spaces at <paramref name="fontSize"/>.
     /// </summary>
+    /// <remarks>
+    /// A glyph that draws no outline (a space) is not nothing: LilyPond enters it as a box of
+    /// zero height on the baseline, as wide as its advance
+    /// (<see cref="TextFontMetrics.BlankGlyphSpans"/>), so a word gap holds the baseline
+    /// rather than letting a neighbour's ink through it.
+    /// </remarks>
     private static (double[] Up, double[] Down) BuildQuads(
         string text, double fontSize, TextFace face)
-        => FlattenPath(TextFontMetrics.OutlinePath(text, face), fontSize / 1000.0);
+    {
+        double k = fontSize / 1000.0;
+        var (up, down) = FlattenPath(TextFontMetrics.OutlinePath(text, face), k);
+        var blanks = TextFontMetrics.BlankGlyphSpans(text, face);
+        if (blanks.Length == 0)
+            return (up, down);
+        var upList = new List<double>(up);
+        var downList = new List<double>(down);
+        foreach (var (left, right) in blanks)
+        {
+            AddQuad(upList, +1, (left * k, 0.0), (right * k, 0.0));
+            AddQuad(downList, -1, (left * k, 0.0), (right * k, 0.0));
+        }
+        return (upList.ToArray(), downList.ToArray());
+    }
 
     /// <summary>The walk itself, at path level (units/em·<paramref name="k"/> = staff
     /// spaces). Internal seam so a test can run the identical walk over another face —

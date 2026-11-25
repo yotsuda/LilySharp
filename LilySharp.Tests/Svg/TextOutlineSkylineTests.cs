@@ -209,4 +209,36 @@ public class TextOutlineSkylineTests
         double mid = advance / 2;
         Assert.Equal(upAtOrigin.Height(mid) + 3, upPlaced.Height(mid + 10), 9);
     }
+
+    /// <summary>
+    /// A SPACE holds the baseline: LilyPond enters a glyph with no outline as its kerned box,
+    /// zero high on the baseline and as wide as its advance, in both skylines — so the word
+    /// gap of "Sost. Ped." reads 0, while the gaps between letters read nothing.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stencil-integral.cc:616-631 add_glyph_string_segments.
+    /// MEASURED 2.26.0 (Lab sessions/p1386/m sky2.ily, <c>ly:skyline-height</c> of the
+    /// SostenutoPedal's own up skyline, x from its logical left): 0.000 at 4.95 … 5.40 (the
+    /// space, after "Sost." at 4.9166), -inf at 4.70 … 4.90 (between the period's ink and the
+    /// space's pen). "Sost. " is 5.5312 wide in both faces, so the space stands where
+    /// LilyPond's does; Lily# read -inf across it. ⚠️ Not 4.90: LilyPond's pen is the sum of
+    /// pixel-snapped advances (the space starts at 4.9166), Lily#'s outline pen is the raw one
+    /// (TextFontMetrics.OutlinePath), a few thousandths earlier.
+    /// </remarks>
+    [Fact]
+    public void ASpace_HoldsTheBaseline_LikeLilyPondsKernedBox()
+    {
+        var fonts = ScoreTextMetrics.Bundled;
+        var on = LilySharp.Core.Svg.Model.MusicMarkType.SostenutoOn;
+        double em = MusicMarkEngraver.PlainMarkEm(fonts, on);
+        var face = fonts.Face(MusicMarkEngraver.TextRoleOf(on), MusicMarkEngraver.TextStyleOf(fonts, on));
+        var (up, down) = TextOutlineSkylines.Place("Sost. Ped.", em, face, x: 0, yBaseline: 0);
+        foreach (double x in new[] { 4.95, 5.10, 5.25, 5.40 })
+        {
+            Assert.Equal(0.0, up.Height(x), 9);
+            Assert.Equal(0.0, down.Height(x), 9);
+        }
+        foreach (double x in new[] { 4.70, 4.80 })
+            Assert.True(double.IsNegativeInfinity(up.Height(x)), $"up at {x} = {up.Height(x)}");
+    }
 }

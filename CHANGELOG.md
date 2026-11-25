@@ -6,6 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- `[engraving]` **The space between words keeps its place when text is stacked.** A space in a text mark ("Sost. Ped.", "una corda", a tempo or text script with several words) was treated as empty, so a stem or another mark could slip into the gap below or above the words' line; now it holds the line, as LilyPond does.
 - `[engraving]` **A pedal word or bracket no longer drops for the next note's ledger line.** The room under a note's column ran up to the next note and so took in the ledger line hanging left of a low next note; a "*Ped." (or a bracket end) above it was pushed down. Ledger lines belong to the staff, not to a note, and LilyPond does not read them there.
 - `[engraving]` **`pedal text` words line up as LilyPond sets them.** A "*" on the note right after its "Ped." now stands on the same line as that "Ped." (they were solved one by one, so either could sit lower), and a pedal change prints "*Ped." as one word centred on its note, on the same line as the words around it — the "Ped." used to stay centred with the "*" set apart to its left, and could drop a whole line below the previous "Ped.". The same holds for the sostenuto's "*Sost. Ped.".
 - `[engraving]` **The line of a `pedal mixed` sustain starts closer to its "Ped.".** It began a sixth of a staff space further right than LilyPond's — the gap was still measured for the wider serif "Ped." used before the pedal glyphs; it now starts a staff space after the glyphs, as LilyPond draws it.

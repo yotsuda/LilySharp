@@ -190,6 +190,43 @@ public static class TextFontMetrics
             return path;
         });
 
+    private static readonly ConcurrentDictionary<(TextFace Face, string Text), (double Left, double Right)[]>
+        BlankSpans = new();
+
+    /// <summary>
+    /// The pen spans of the shaped glyphs that draw NO outline — a space — in
+    /// <see cref="OutlinePath(string, TextFace)"/>'s frame (1000 units/em, baseline origin):
+    /// from the glyph's pen to the pen plus its advance. Empty for a string without one.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stencil-integral.cc:616-631 add_glyph_string_segments — a glyph whose
+    ///   outline box has no width (the comment: "nan for whitespace, in which case we just want
+    ///   filler, so the kerned bbox is ok") enters the skyline as its KERNED BOX: the pen and
+    ///   advance across, the glyph's ink heights up, which for a space are 0 and 0. MEASURED
+    ///   2.26.0 (Lab sessions/p1386/m sky2.ily on c1): "Sost. Ped."'s up skyline is 0.000 across
+    ///   the space and -inf in the gaps between letters.
+    /// </remarks>
+    internal static (double Left, double Right)[] BlankGlyphSpans(string text, TextFace face)
+        => BlankSpans.GetOrAdd((face, text), static key =>
+        {
+            var (font, upem) = ShapingFont(key.Face);
+            float scale = 1000f / upem;
+            List<(double, double)>? spans = null;
+            double penPerEm = 0;
+            foreach (var g in ShapedAdvancesPerEm(key.Text, key.Face))
+            {
+                using var probe = new SKPath();
+                lock (font)
+                    HarfBuzzOutline.Append(probe, font.Handle, g.GlyphId, 0f, scale);
+                if (probe.IsEmpty && g.PerEm > 0)
+                    (spans ??= new()).Add((
+                        (penPerEm + g.XOffsetPerEm) * 1000.0,
+                        (penPerEm + g.XOffsetPerEm + g.PerEm) * 1000.0));
+                penPerEm += g.PerEm;
+            }
+            return spans?.ToArray() ?? [];
+        });
+
     /// <summary>Advance width of <paramref name="text"/> in staff spaces.</summary>
     /// <remarks>
     /// PER GLYPH, then snapped to <see cref="PangoPixelStaffSpaces"/> — the size multiply
