@@ -332,6 +332,42 @@ internal static partial class SpacingRules
         return EveryCuedItemBeginsItsRegion(rightItems);
     }
 
+    /// <summary>
+    /// Whether ONE voice's two columns belong to two contexts — the voice leaves or enters a
+    /// cue region, or crosses from one region into the next, or the part combiner hands its
+    /// stream to another context — so that no Note_spacing wish of that voice spans the pair.
+    /// </summary>
+    /// <remarks>
+    /// The per-voice face of <see cref="CrossesVoiceBoundary"/>: that one asks it of the whole
+    /// column for the head-width refinement; this one is asked of each voice's own pair, by
+    /// the stem-direction wishes (<see cref="MergeVoiceStemWishes"/>), which LilyPond makes
+    /// only out of a wish — stem_dir_correction is a line of Note_spacing::get_spacing.
+    /// A spacer files no wish of its own and contributes no context, so a pair with one at
+    /// either end is not called a crossing here (the caller's own reading stands).
+    /// MEASURED (2.26.0, Lab sessions/p1381/m v1/v2/v5/d3): the step out of a cue region into
+    /// the next full-size note is the bare duration ideal whatever the two stems do —
+    /// `d''4 cue { d''8 e'' } c''4` 2.400 (stems down→down), `… e'4` 2.400 (down→up),
+    /// `d''4 cue { g'8 a' } c''4` 2.400 (up→down), and the step INTO the cue in that last
+    /// book 3.600 though the stems go down→up. Lily# corrected all four (2.150 / 2.027 /
+    /// 2.502 / 3.354) until session 1381.
+    /// LILYPOND-REF: lily/spacing-spanner.cc:350-377 musical_column_spacing — a wish counts
+    ///   only when one of its right-items stands on the right column;
+    /// LILYPOND-REF: lily/note-spacing.cc:111 Note_spacing::get_spacing — stem_dir_correction
+    ///   runs inside the wish.
+    /// </remarks>
+    internal static bool VoicePairCrossesContexts(MusicItem left, MusicItem right)
+    {
+        if (left is not (NoteItem or ChordItem or RestItem { IsSpacer: false })
+            || right is not (NoteItem or ChordItem or RestItem { IsSpacer: false }))
+            return false;
+        var context = ContextOf(right);
+        if (ContextOf(left) != context)
+            return true;
+        // Both in a cue: one region, unless the right item opens the next one (section F of
+        // voice-boundary-spacing.ly, the same stamp EveryCuedItemBeginsItsRegion reads).
+        return context == VoiceContextId.Cue && right is NoteItem or ChordItem && right.BeginsCueRegion;
+    }
+
     /// <summary>Whether every cued item in a column is the FIRST of its region — so no region
     /// in this column was already open in the column before it.</summary>
     /// <remarks>

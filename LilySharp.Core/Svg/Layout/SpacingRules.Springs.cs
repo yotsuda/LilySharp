@@ -100,8 +100,10 @@ internal static partial class SpacingRules
 
         // --- Stem direction optical correction ---
         // LILYPOND-REF: lily/note-spacing.cc:204-315 stem_dir_correction
-        spring = spring.WithIdealDistance(
-            spring.IdealDistance + CalculateStemCorrection(prevItem, nextItem, np, so.Increment));
+        // — not across a cue region's edge, where no wish spans the pair (VoicePairCrossesContexts).
+        if (prevItem is null || nextItem is null || !VoicePairCrossesContexts(prevItem, nextItem))
+            spring = spring.WithIdealDistance(
+                spring.IdealDistance + CalculateStemCorrection(prevItem, nextItem, np, so.Increment));
 
         // A whole-display tremolo pair whose RIGHT half carries accidentals gets the
         // Beam's minimum-length as a spacing rod between its two columns, so the
@@ -450,6 +452,10 @@ internal static partial class SpacingRules
             var left = WishColumnAt(voice, tLeft);
             var right = WishColumnAt(voice, tRight);
             if (left is null || right is null)
+                continue;
+            // A voice whose two columns are two contexts (a cue region's edge) has no wish
+            // spanning them, so it makes no correction either (VoicePairCrossesContexts).
+            if (VoicePairCrossesContexts(left, right))
                 continue;
             // A rest's voice wishes all the same, uncorrected: stem_dir_correction returns at the
             // first column with no stem (note-spacing.cc:248-249), and the wish still goes into

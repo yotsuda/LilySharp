@@ -6,6 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- `[engraving]` **The space around a cue no longer bends to the stems.** The gap into and out of a `cue { }` took the small correction for stems pointing different ways, as if the cue and the notes around it were one voice, which left the note after a beamed cue up to a quarter of a staff space off; now those two gaps are spaced as LilyPond spaces a cue voice's edges.
 - `[engraving]` **Cue notes get a beam of their own.** Eighths written just before or after a `cue { }` were beamed together with the cue's eighths into one full-size beam; now the plain notes and the cue notes are beamed separately, as LilyPond beams a cue voice.
 
 - `[engraving]` **A short octave line continued onto a new system stays off the clef.** A continued line repeats its sign in parentheses, "(8va)"; when the piece on the new system is too short for that, it now prints the plain "8va" just after the clef, as LilyPond does — the wider "(8va)" was pushed left over the clef and the whole line stood a staff space higher. The space between staves is now kept for a continued line as it is drawn.

@@ -8,16 +8,16 @@
   <rect x="0" y="0" width="119.50" height="31.30" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="2407">Cue Notes Demo</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="8.59" y1="20.06" x2="40.49" y2="20.06" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="21.06" x2="40.49" y2="21.06" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="22.06" x2="40.49" y2="22.06" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="23.06" x2="40.49" y2="23.06" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="24.06" x2="40.49" y2="24.06" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="20.06" x2="40.46" y2="20.06" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="21.06" x2="40.46" y2="21.06" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="22.06" x2="40.46" y2="22.06" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="23.06" x2="40.46" y2="23.06" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="24.06" x2="40.46" y2="24.06" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="9.34" y="23.06" font-size="4.00"></text>
   <text class="music" x="13.42" y="22.06" font-size="4.00" data-pos="2439"></text>
   <line x1="16.79" y1="25.06" x2="18.75" y2="25.06" stroke="#000000" stroke-width="0.200"/>
-  <line x1="37.78" y1="19.06" x2="39.00" y2="19.06" stroke="#000000" stroke-width="0.200"/>
-  <line x1="37.78" y1="18.06" x2="39.00" y2="18.06" stroke="#000000" stroke-width="0.200"/>
+  <line x1="37.75" y1="19.06" x2="38.97" y2="19.06" stroke="#000000" stroke-width="0.200"/>
+  <line x1="37.75" y1="18.06" x2="38.97" y2="18.06" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="17.12" y="25.06" font-size="4.00" data-pos="2579"></text>
   <line x1="18.36" y1="24.88" x2="18.36" y2="21.56" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="20.12" y="24.56" font-size="4.00" data-pos="2583"></text>
@@ -30,12 +30,12 @@
   <line x1="30.53" y1="22.88" x2="30.53" y2="19.56" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="32.29" y="22.56" font-size="4.00" data-pos="2605"></text>
   <line x1="33.53" y1="22.38" x2="33.53" y2="19.06" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" style="font-family: 'Emmentaler-13', 'Emmentaler', serif" x="35.22" y="22.06" font-size="2.52" data-pos="2613"></text>
-  <line x1="35.29" y1="22.16" x2="35.29" y2="24.16" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" style="font-family: 'Emmentaler-13', 'Emmentaler', serif" x="37.98" y="18.06" font-size="2.52" data-pos="2616"></text>
-  <line x1="38.05" y1="18.16" x2="38.05" y2="22.06" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" style="font-family: 'Emmentaler-13', 'Emmentaler', serif" x="35.19" y="22.06" font-size="2.52" data-pos="2613"></text>
+  <line x1="35.25" y1="22.16" x2="35.25" y2="24.16" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" style="font-family: 'Emmentaler-13', 'Emmentaler', serif" x="37.95" y="18.06" font-size="2.52" data-pos="2616"></text>
+  <line x1="38.02" y1="18.16" x2="38.02" y2="22.06" stroke="#000000" stroke-width="0.130"/>
   <rect x="28.20" y="20.06" width="0.19" height="4.00" data-pos="2598"/>
-  <rect x="40.35" y="20.06" width="0.19" height="4.00" data-pos="2621"/>
+  <rect x="40.32" y="20.06" width="0.19" height="4.00" data-pos="2621"/>
   <text class="music" x="13.42" y="18.69" font-size="3.56" data-pos="2430"></text>
   <line x1="14.52" y1="18.53" x2="14.52" y2="16.02" stroke="#000000" stroke-width="0.116" data-pos="2430"/>
   <text x="15.20" y="19.18" font-size="2.20" data-pos="2430">= 120</text>

@@ -102,6 +102,26 @@ public sealed class CueBeamSpacingTests
     }
 
     /// <summary>
+    /// LilyPond 2.26.0 (Lab sessions/p1381/m v1, v2, v5, v6): the step out of a cue region into
+    /// the next full-size note, and into it, takes no stem-direction correction — the cue is a
+    /// voice of its own, so no spacing wish spans the edge and the gap is the bare duration
+    /// ideal (here 2.400 out of the cue eighth, 3.600 out of the full-size quarter) whatever
+    /// the stems do. Until session 1381 Lily# corrected the edge as one voice: 2.150 (down →
+    /// down), 2.027 (down → up), 3.354 and 2.502 (down → up into the cue, up → down out).
+    /// </summary>
+    [Theory]
+    [InlineData("d''4 cue { d''8 e'' } c''4 c''4 |", 3.600, 2.400)]
+    [InlineData("d''4 cue { d''8 e'' } e'4 e'4 |", 3.600, 2.400)]
+    [InlineData("d''4 cue { g'8 a' } c''4 c''4 |", 3.600, 2.400)]
+    [InlineData("d''4 cue { d''8 e'' } c''2 |", 3.600, 2.400)]
+    public void TheEdgesOfACue_TakeNoStemCorrection(string music, double into, double outOf)
+    {
+        var x = Columns(Render(music));
+        Assert.Equal(into, x[1] - x[0], 0.002);
+        Assert.Equal(outOf, x[3] - x[2], 0.002);
+    }
+
+    /// <summary>
     /// A cue beam's members stand their stems where the quanter stood them: the one recipe
     /// (<c>LayoutUtilities.BeamMemberStemX</c>, through <c>BeamLayout.MemberStemX</c>) reads the
     /// cue heads' attachment, as the quanter was handed it — so every reader of the beam's face
