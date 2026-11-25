@@ -157,20 +157,21 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1388セッション（2026-11-25・YT-DELL2）
+
+base `781e948b8`。開始時 full 18407 / 0 / skip 2 / 18409。REQUESTS 4 枚に Lily# 側の open は無し。
+- leftovers 第1387 の「未測定の `draw-line` の端」から。LP の Line_interface の線は破線も含めて丸い端（`output-svg.scm:322-337`）で、破線は周期を線の長さに合わせて両端を破線にする（`line-interface.cc:251-267`）。
+- `4f8d16422`: text spanner・ottava・glissando・volta を丸い端に、破線は `SharedRenderer.FittedDash`。ottava の周期 2.0 → LP の既定 1.0。volta の鉤は線の中心から 2.0。x1・p1・o1・g1・vb は LP と一致（Lab `p1388/m`）。網 +8・毒 9 本で赤。掃き 191 / 1289（線の属性だけ・他 0）。
+- `0a39fbda9`: 鉤のある text spanner（palm mute ほか）の線は鉤の箱の左端（0.05 手前）で止まる＝破線の合わせも LP と一致。網 +1・毒で赤。掃き 0 / 1289。full 18416 / 0 / 2 / 18418。
+- 残りは leftovers 第1388（歌詞の延長線とハイフンは角の丸い箱＝別物）。
+
+## 以下は第1387セッションの経緯
+
 ### 1.1 第1387セッション（2026-11-25・YT-DELL2）
 
 base `be9ec8d9c`。開始時 full 18404 / 0 / skip 2 / 18406。
 - 第1383 の s1・u1（線の始まり 0.017）も書体の双子の詰めの差（una corda は co・rd・da）。
 - `c1ff32016`・`c3ff4b757`: ペダルと連符の括弧の線を丸い端に（LP の `make_line`）。b1・t1 は LP と一致。網 +3・毒で赤。掃き 13・72 / 1289（端の属性だけ）。full 18407 / 0 / 2 / 18409。
-
-## 以下は第1386セッションの経緯
-
-### 1.1 第1386セッション（2026-11-25・YT-DELL2）
-
-base `159a0789e`。開始時 full 18403 / 0 / skip 2 / 18405。REQUESTS 4 枚に Lily# 側の open は無し。
-- ⚠️ `-Start` を `Start-Process pwsh -WindowStyle Hidden` で回したら `dotnet build` が CPU 0 のまま 11 分止まった。CLAUDE-OPERATIONS §1 どおり `cmd /d /s /c "pwsh -NoProfile -File tools\Session-Check.ps1 -Start pNNN < NUL > …"` でやり直して通った。
-- leftovers 第1384 の sost. の行（0.19〜0.9 低い）は欠陥ではないと分かった。§3 の決定（Schola を同梱）の残差。踏み替えの「Sost. Ped.」の S が前の列の符幹に LP は 0.010 手前・Lily# は 0.007 重なる。語が 0.017 右なのは「d.」の詰め（C059 +0.0341・Schola 0）の半分。Lab `p1386/m`。
-- `d786fcc26`: 文字列の空白は高さ 0 の箱（LP の glyph-string の skyline・`stencil-integral.cc:616-631`）。網 +1・毒で赤。掃き 0 / 1289。full 18404 / 0 / 2 / 18406。
 
 ## 2. 開いている作業
 

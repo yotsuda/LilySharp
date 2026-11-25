@@ -277,6 +277,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1386セッションの経緯
+
+### 1.1 第1386セッション（2026-11-25・YT-DELL2）
+
+base `159a0789e`。開始時 full 18403 / 0 / skip 2 / 18405。REQUESTS 4 枚に Lily# 側の open は無し。
+- ⚠️ `-Start` を `Start-Process pwsh -WindowStyle Hidden` で回したら `dotnet build` が CPU 0 のまま 11 分止まった。CLAUDE-OPERATIONS §1 どおり `cmd /d /s /c "pwsh -NoProfile -File tools\Session-Check.ps1 -Start pNNN < NUL > …"` でやり直して通った。
+- leftovers 第1384 の sost. の行（0.19〜0.9 低い）は欠陥ではないと分かった。§3 の決定（Schola を同梱）の残差。踏み替えの「Sost. Ped.」の S が前の列の符幹に LP は 0.010 手前・Lily# は 0.007 重なる。語が 0.017 右なのは「d.」の詰め（C059 +0.0341・Schola 0）の半分。Lab `p1386/m`。
+- `d786fcc26`: 文字列の空白は高さ 0 の箱（LP の glyph-string の skyline・`stencil-integral.cc:616-631`）。網 +1・毒で赤。掃き 0 / 1289。full 18404 / 0 / 2 / 18406。
+
 ## 以下は第1385セッションの経緯
 
 ### 1.1 第1385セッション（2026-11-25・YT-DELL2）
