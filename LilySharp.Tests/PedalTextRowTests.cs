@@ -98,6 +98,73 @@ public class PedalTextRowTests
         Assert.All(words.Where(w => w.X <= engage.X), w => Assert.Equal(first.YUp, w.YUp, 9));
     }
 
+    /// <summary>A grace note between "Ped." and "*" is a timestep of its own (Lab
+    /// sessions/p1391/m g1 against g0): the "*" is no longer on the next step, so it is its
+    /// own spanner and sits 1.242 higher than the "Ped." over the low c' — LilyPond's ink
+    /// −5.255 against −6.497. Lily# counted only main columns and kept the row.</summary>
+    [Fact]
+    public void AGraceBetweenTwoWords_EndsTheRun()
+    {
+        var plain = Words(Laid("c'2@sustain d''2@!sustain | g''1 |"));
+        Assert.Equal(plain[0].YUp, plain[1].YUp, 9);
+        var graced = Words(Laid("c'2@sustain grace { g''16 } d''2@!sustain | g''1 |"));
+        Assert.Equal(2, graced.Length);
+        Assert.Equal(1.242, graced[1].YUp - graced[0].YUp, 2);
+    }
+
+    /// <summary>A word written on a grace note stands at its grace column (g3): the "*" is
+    /// centred on the grace head's left edge, 3.620 right of the "Ped." — not on the d''
+    /// it leans on (5.018), where Lily# set it.</summary>
+    [Fact]
+    public void AWordOnAGrace_StandsAtItsGraceColumn()
+    {
+        var words = Words(Laid("c'2@sustain grace { g''16@!sustain } d''2 | g''1 |"));
+        Assert.Equal(2, words.Length);
+        Assert.Equal(3.620, words[1].X - words[0].X, 2);
+    }
+
+    /// <summary>A change on a grace note is one "*Ped." word on the grace column, apart from
+    /// the d''s own "*" (g2: LilyPond's "*Ped." at 1.106..6.134, the "*" at 4.240..5.796).
+    /// Lily# grouped the grace's words with the d''s, and drew two "*" on top of each other.</summary>
+    [Fact]
+    public void AChangeOnAGrace_IsOneWordOnItsColumn()
+    {
+        var words = Words(Laid("c'2@sustain grace { g''16@!sustain@sustain } d''2@!sustain | g''1 |"));
+        Assert.Equal(4, words.Length);
+        double x0 = words[0].X;
+        Assert.Collection(words.Skip(1),
+            w => { Assert.Equal(MusicMarkType.SustainOff, w.MarkType); Assert.Equal(1.884, w.X - x0, 2); },
+            w => { Assert.Equal(MusicMarkType.SustainOn, w.MarkType); Assert.Equal(4.398, w.X - x0, 2); },
+            w => { Assert.Equal(MusicMarkType.SustainOff, w.MarkType); Assert.Equal(5.018, w.X - x0, 2); });
+    }
+
+    /// <summary>A word on a grace is supported by its grace column (g4): "Ped." on
+    /// `grace { c'16 }` before a g'' hangs under the grace's low c' and its ledger — LilyPond's
+    /// ink −6.346..−4.346, 0.526 lower than the g''s column alone would set it, where Lily#
+    /// set it — and the "*" on the next bar's g'' is its own row at −4.806.</summary>
+    [Fact]
+    public void AWordOnAGrace_IsSupportedByItsGraceColumn()
+    {
+        var onLowGrace = Words(Laid("g''2 grace { c'16@sustain } g''2 | g''1@!sustain |"));
+        var onHighGrace = Words(Laid("g''2 grace { g''16@sustain } g''2 | g''1@!sustain |"));
+        Assert.Equal(2, onLowGrace.Length);
+        Assert.True(onHighGrace[0].YUp - onLowGrace[0].YUp > 0.4, $"{onLowGrace[0].YUp:F3} / {onHighGrace[0].YUp:F3}");
+        Assert.Equal(1.540, onLowGrace[1].YUp - onLowGrace[0].YUp, 2);
+    }
+
+    /// <summary>A release on a grace and an engage on the note after it are two moments, not a
+    /// change (g5): the "*" stays centred on the grace (3.620) and the "Ped." on the d''
+    /// (5.018). Lily# took them for one "*Ped." on the d''.</summary>
+    [Fact]
+    public void AReleaseOnAGrace_AndAnEngageAfterIt_AreNoChange()
+    {
+        var words = Words(Laid("c'2@sustain grace { g''16@!sustain } d''2@sustain | g''1@!sustain |"));
+        Assert.Equal(4, words.Length);
+        Assert.Equal(3.620, words[1].X - words[0].X, 2);
+        Assert.Equal(5.018, words[2].X - words[0].X, 2);
+        Assert.All(words, w => Assert.Equal(words[0].YUp, w.YUp, 9));
+    }
+
     private static MusicMarkLayout[] UnaCordaWords(ScoreLayout layout) => [.. layout.MusicMarkLayouts
         .Where(m => m.MarkType is MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff)
         .OrderBy(m => m.X)];

@@ -1129,6 +1129,7 @@
 "Svg/Layout/PedalEngraver.cs","PedalEngraver.HalfThickness","0.05","private const double HalfThickness = 0.05;","(file-level) LILYPOND-REF: define-grobs.scm:2855-2873 PianoPedalBracket grob","Yellow"
 "Svg/Layout/PedalEngraver.cs","PedalEngraver.HookWidth","0.1","private const double HookWidth = 0.1;","(file-level) LILYPOND-REF: define-grobs.scm:2855-2873 PianoPedalBracket grob","Yellow"
 "Svg/Layout/PedalEngraver.cs","PedalEngraver.SolveAndSeedText","1.0, 1.0","|| StaffSize.Of(staff).Span(1.0) != 1.0)","(file-level) LILYPOND-REF: define-grobs.scm:2855-2873 PianoPedalBracket grob","Yellow"
+"Svg/Layout/PedalEngraver.cs","PedalEngraver.SameGraceStepReach","0.25","private const double SameGraceStepReach = 0.25;","(file-level) LILYPOND-REF: define-grobs.scm:2855-2873 PianoPedalBracket grob","Yellow"
 "Svg/Layout/PedalEngraver.cs","PedalEngraver.SolveAndSeed","1.0, 1.0","|| StaffSize.Of(staff).Span(1.0) != 1.0)","(file-level) LILYPOND-REF: define-grobs.scm:2855-2873 PianoPedalBracket grob","Yellow"
 "Svg/Layout/PedalEngraver.cs","PedalEngraver.SolveAndSeed","2.0","if (endX - startX < 2.0)","(file-level) LILYPOND-REF: define-grobs.scm:2855-2873 PianoPedalBracket grob","Yellow"
 "Svg/Layout/PedalEngraver.cs","PedalEngraver.SolveAndSeed","2.0","endX = startX + 2.0; // the same minimum Calculate applies","(file-level) LILYPOND-REF: define-grobs.scm:2855-2873 PianoPedalBracket grob","Yellow"

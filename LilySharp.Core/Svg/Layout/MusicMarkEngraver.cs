@@ -619,6 +619,10 @@ internal static class MusicMarkEngraver
         // bracket/mixed styles, an ossia's scale, and callers without per-staff
         // skylines.
         Func<int, int, MusicMarkItem, double?>? solvedPedalRowUp = null,
+        // The X of a pedal word written on a GRACE note — its grace column's head left
+        // (PedalEngraver.GraceWordColumn) — or null for a word on a main note. Such a word is
+        // also its own moment: it groups apart from the main note's marks at the same timing.
+        Func<MusicMarkItem, MeasureLayout, double?>? pedalGraceX = null,
         // `markTempo beside` (Semantics.MarkArrangement, MultiStaffScore.MarksBeside): a boxed
         // label keeps the line-start edge and the bar's measure-start tempo stands to its
         // right on one line — see BesidePair. False is the stacked default, LilyPond's.
@@ -681,6 +685,7 @@ internal static class MusicMarkEngraver
         // even though GroupBy/OrderBy below reorders the entries.
         // Lent, and given back once the grouping below has copied it (see RentMarkEntries).
         var markEntries = RentMarkEntries();
+        HashSet<MusicMarkItem>? onGrace = null;
         for (int si = 0; si < allMarks.Length; si++)
         {
             var mark = allMarks[si];
@@ -688,9 +693,16 @@ internal static class MusicMarkEngraver
                 continue;
 
             var measureLayout = measureLayouts[mark.MeasureIndex];
-            double x = CalculateXPosition(
-                fonts, mark, measureLayout, systems, prefixTimeSignatureX, lineStartBarlineX,
-                prefixMarkAnchorX, measures, marksBeside, boxed: BoxedOf(mark.Type), sectionLabelAlign: sectionLabelAlign);
+            double x;
+            if (pedalGraceX != null && IsPedal(mark.Type) && pedalGraceX(mark, measureLayout) is { } graceX)
+            {
+                x = graceX;
+                (onGrace ??= []).Add(mark);
+            }
+            else
+                x = CalculateXPosition(
+                    fonts, mark, measureLayout, systems, prefixTimeSignatureX, lineStartBarlineX,
+                    prefixMarkAnchorX, measures, marksBeside, boxed: BoxedOf(mark.Type), sectionLabelAlign: sectionLabelAlign);
             markEntries.Add((mark, x, si));
         }
 
@@ -714,7 +726,9 @@ internal static class MusicMarkEngraver
         var groupOf = RentGroupOf();
         foreach (var e in markEntries)
         {
-            var key = (e.Mark.MeasureIndex, e.Mark.Position, e.Mark.AnchorTiming);
+            // A pedal word on a grace note is its own moment (pedalGraceX): keyed by its item.
+            int graceItem = onGrace != null && onGrace.Contains(e.Mark) ? e.Mark.AnchorItemIndex : -1;
+            var key = (e.Mark.MeasureIndex, e.Mark.Position, e.Mark.AnchorTiming, graceItem);
             if (!groupOf.TryGetValue(key, out int gi))
             {
                 gi = groups.Count;
@@ -1679,18 +1693,18 @@ internal static class MusicMarkEngraver
     /// pass made. RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom).
     /// </remarks>
     [ThreadStatic]
-    private static Dictionary<(int, MusicMarkPosition, Semantics.Fraction), int>? t_groupOf;
+    private static Dictionary<(int, MusicMarkPosition, Semantics.Fraction, int), int>? t_groupOf;
 
     /// <summary>Takes the thread's group map, or makes the thread's first.</summary>
-    private static Dictionary<(int, MusicMarkPosition, Semantics.Fraction), int> RentGroupOf()
+    private static Dictionary<(int, MusicMarkPosition, Semantics.Fraction, int), int> RentGroupOf()
     {
-        var map = t_groupOf ?? new Dictionary<(int, MusicMarkPosition, Semantics.Fraction), int>();
+        var map = t_groupOf ?? new Dictionary<(int, MusicMarkPosition, Semantics.Fraction, int), int>();
         t_groupOf = null;
         return map;
     }
 
     /// <summary>Puts a finished grouping's map back, emptied, with its capacity.</summary>
-    private static void GiveGroupOf(Dictionary<(int, MusicMarkPosition, Semantics.Fraction), int> map)
+    private static void GiveGroupOf(Dictionary<(int, MusicMarkPosition, Semantics.Fraction, int), int> map)
     {
         map.Clear();
         t_groupOf = map;

@@ -1313,6 +1313,23 @@ internal sealed partial class LayoutEngine
                 ? MultiStaffLayouter.LyricGridBarTopAboveBandTop(
                     gridScore, gridRowStaff, ctx.GridBarlineRowIndex, _options.StaffHeight)
                 : 0.0;
+        // A pedal word on a grace note stands at its grace column, as the row solve sets it
+        // (PedalEngraver.GraceWordColumn); the bracket's grace anchors, per staff.
+        Func<MusicMarkItem, MeasureLayout, double?>? pedalGraceX = null;
+        if (anyPedalMark && !ctx.GraceNotes.IsDefaultOrEmpty)
+        {
+            var graceByStaff = new Dictionary<int, PedalEngraver.GraceAnchors>();
+            pedalGraceX = (mark, layout) =>
+            {
+                if (!graceByStaff.TryGetValue(mark.StaffIndex, out var anchors))
+                    graceByStaff[mark.StaffIndex] = anchors = new PedalEngraver.GraceAnchors(
+                        voicesByStaff != null && voicesByStaff.TryGetValue(mark.StaffIndex, out var pv) ? pv
+                        : score != null && staffVoices.IsDefaultOrEmpty ? ImmutableArray.Create(score.Voice)
+                        : staffVoices,
+                        ctx.GraceNotes, mark.StaffIndex);
+                return PedalEngraver.GraceWordColumn(anchors, layout, mark)?.X;
+            };
+        }
         var musicMarkLayouts = MusicMarkEngraver.Calculate(
             ctx.Fonts, score, musicMarks, systems, ml, measures,
             chordNames: chordNameLayouts, lyrics: lyricLayouts, keepMarkText: keepMarkText,
@@ -1320,6 +1337,7 @@ internal sealed partial class LayoutEngine
             lineStartBarlineX: ctx.LineStartBarlineX,
             prefixMarkAnchorX: ctx.PrefixMarkAnchorX,
             solvedPedalRowUp: solvedPedalRowUp,
+            pedalGraceX: pedalGraceX,
             marksBeside: ctx.MultiScore?.MarksBeside ?? false,
             sectionLabels: ctx.MultiScore?.LayoutPlan.SectionLabels
                 ?? ctx.Score?.LayoutPlan.SectionLabels ?? Semantics.SectionLabelStyle.Boxed,

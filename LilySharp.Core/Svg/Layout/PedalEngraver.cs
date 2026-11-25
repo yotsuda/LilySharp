@@ -254,6 +254,10 @@ internal static class PedalEngraver
         // pedal-three.ly reads), then document order within a family.
         var words = new List<(int Rank, int Order, MusicMarkItem Mark, double X,
             (double Left, double Right) Span)>();
+        // A word written on a grace note stands at, and is supported by, its grace column
+        // (GraceWordColumn), on that grace's own timestep.
+        var grace = new GraceAnchors(staff.Voices, score.GraceNotes, staffIndex);
+        HashSet<MusicMarkItem>? onGrace = null;
         int order = 0;
         foreach (var mark in score.MusicMarks)
         {
@@ -266,20 +270,35 @@ internal static class PedalEngraver
                 if (m.MeasureIndex == mark.MeasureIndex) { ml = m; break; }
             if (ml == null)
                 continue; // another system's word
-            double x = AnchorX(ml, mark.AnchorItemIndex, mark.AnchorTiming);
-            var span = AnchorColumnSpan(ml, mark.AnchorItemIndex, mark.AnchorTiming);
+            double x;
+            (double Left, double Right) span;
+            if (GraceWordColumn(grace, ml, mark) is { } g)
+            {
+                (x, span) = (g.X, (g.Left, g.Right));
+                (onGrace ??= []).Add(mark);
+            }
+            else
+            {
+                x = AnchorX(ml, mark.AnchorItemIndex, mark.AnchorTiming);
+                span = AnchorColumnSpan(ml, mark.AnchorItemIndex, mark.AnchorTiming);
+            }
             words.Add((MusicMarkEngraver.PedalFamilyRank(mark.Type), order, mark, x, span));
         }
         if (words.Count == 0)
             return ImmutableArray<SolvedPedalRow>.Empty;
+        // One moment: the same timing, and the same grace column or none.
+        bool SameMoment(MusicMarkItem a, MusicMarkItem b)
+            => a.MeasureIndex == b.MeasureIndex && a.AnchorTiming == b.AnchorTiming
+               && (onGrace?.Contains(a) ?? false) == (onGrace?.Contains(b) ?? false)
+               && (onGrace == null || !onGrace.Contains(a)
+                   || (a.AnchorItemIndex == b.AnchorItemIndex && a.VoiceIndex == b.VoiceIndex));
         // A change's two words stand as the draw sets them (MusicMarkEngraver.PedalChangeOffset),
         // or, for a una corda, print nothing and only carry the row (ChangePrintsNothing).
         HashSet<MusicMarkItem>? silent = null;
         for (int i = 0; i < words.Count; i++)
             foreach (var other in words)
                 if (other.Rank == words[i].Rank && other.Mark != words[i].Mark
-                    && other.Mark.MeasureIndex == words[i].Mark.MeasureIndex
-                    && other.Mark.AnchorTiming == words[i].Mark.AnchorTiming
+                    && SameMoment(other.Mark, words[i].Mark)
                     && IsRelease(other.Mark.Type) != IsRelease(words[i].Mark.Type))
                 {
                     if (MusicMarkEngraver.ChangePrintsNothing(words[i].Mark.Type))
@@ -330,6 +349,7 @@ internal static class PedalEngraver
             stepOf.TryAdd(last, steps.Count);
             steps.Add((x, x));
         }
+        var graceStepOf = GraceTimesteps(score, measureLayouts, steps, stepOf);
 
         var solved = ImmutableArray.CreateBuilder<SolvedPedalRow>(words.Count);
         var ordered = words.OrderBy(w => w.Rank).ThenBy(w => w.Order).ToList();
@@ -415,8 +435,121 @@ internal static class PedalEngraver
         return solved.ToImmutable();
 
         int StepOf(MusicMarkItem mark)
-            => stepOf.TryGetValue((mark.MeasureIndex, mark.AnchorTiming), out int s) ? s : -1;
+        {
+            if (onGrace != null && onGrace.Contains(mark))
+                return graceStepOf != null
+                       && graceStepOf.TryGetValue((staffIndex, mark.VoiceIndex, mark.MeasureIndex, mark.AnchorItemIndex), out int gs)
+                    ? gs : -1;
+            return stepOf.TryGetValue((mark.MeasureIndex, mark.AnchorTiming), out int s) ? s : -1;
+        }
     }
+
+    /// <summary>
+    /// The column a pedal WORD written on a grace note stands at: the grace column's head
+    /// left X and its ink span (<see cref="GraceAnchors"/>), or null for a word on a main note.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED 2.26.0 (Lab sessions/p1391/m g2, g3): "*" on `grace { g''16@!sustain }` is
+    /// centred on the grace head's left edge, 1.398 left of the d'' it leans on, where Lily#
+    /// set it; "*Ped." on the grace is one word there too. The bracket has read the grace
+    /// column since session 922 (audit/lp-geometry/probes/grace-pedal.ly).
+    /// </remarks>
+    internal static (double X, double Left, double Right)? GraceWordColumn(
+        GraceAnchors grace, MeasureLayout ml, MusicMarkItem mark)
+        => mark.AnchorItemIndex >= 0 ? grace.Column(ml, mark.VoiceIndex, mark.AnchorItemIndex) : null;
+
+    /// <summary>
+    /// Folds the grace columns of every staff on the system into the timestep list, in X
+    /// order, and returns each grace column's step by (staff, voice, measure, item); null
+    /// when the score has no grace on this system. <paramref name="steps"/> and
+    /// <paramref name="stepOf"/> are renumbered in place.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/piano-pedal-align-engraver.cc:56-65 Pedal_align_info::is_finished —
+    ///   a word's spanner lives one TIMESTEP past it, and a grace note's moment is a timestep
+    ///   of its own (the global translation steps every grace moment, in any staff).
+    /// MEASURED 2.26.0 (Lab sessions/p1391/m g0, g1): "Ped." on c'2 and "*" on the next d''2
+    /// share a row; with `grace { g''16 }` between them the "*" is its own spanner and sits
+    /// 1.242 higher, clear of the low c'. Lily# counted only the main columns and kept the row.
+    /// ⚠️ ONE NAMED APPROXIMATION: LilyPond's grace timesteps are MOMENTS, so two staves' graces
+    /// at one moment are one step. These are COLUMNS, and two grace columns with no main column
+    /// between them and heads within <see cref="SameGraceStepReach"/> of each other count as one.
+    /// </remarks>
+    private static Dictionary<(int Staff, int Voice, int Measure, int Item), int>? GraceTimesteps(
+        MultiStaffScore score, ImmutableArray<MeasureLayout> measureLayouts,
+        List<(double Left, double Right)> steps, Dictionary<(int Measure, Fraction Timing), int> stepOf)
+    {
+        if (score.GraceNotes.IsDefaultOrEmpty)
+            return null;
+        var graces = new List<(double X, double Left, double Right, (int, int, int, int) Key)>();
+        Dictionary<int, GraceAnchors>? anchors = null;
+        foreach (var gn in score.GraceNotes)
+        {
+            if (gn.ColumnItemIndices.IsDefaultOrEmpty)
+                continue;
+            MeasureLayout? ml = null;
+            foreach (var m in measureLayouts)
+                if (m.MeasureIndex == gn.MeasureIndex) { ml = m; break; }
+            if (ml == null)
+                continue;
+            if (anchors == null)
+            {
+                anchors = [];
+                foreach (var (_, s, si) in score.EnumerateStaves())
+                    anchors[si] = new GraceAnchors(s.Voices, score.GraceNotes, si);
+            }
+            if (!anchors.TryGetValue(gn.StaffIndex, out var ga))
+                continue;
+            foreach (int item in gn.ColumnItemIndices)
+                if (ga.Column(ml, gn.VoiceIndex, item) is { } c)
+                    graces.Add((c.X, c.Left, c.Right, (gn.StaffIndex, gn.VoiceIndex, gn.MeasureIndex, item)));
+        }
+        if (graces.Count == 0)
+            return null;
+
+        // Merge by X: a main step sorts at its column's X (its Left), a grace at its head.
+        var merged = new List<(double X, int Main, int Grace)>(steps.Count + graces.Count);
+        for (int i = 0; i < steps.Count; i++)
+            merged.Add((steps[i].Left, i, -1));
+        for (int i = 0; i < graces.Count; i++)
+            merged.Add((graces[i].X, -1, i));
+        merged.Sort((a, b) => a.X != b.X ? a.X.CompareTo(b.X) : b.Main.CompareTo(a.Main));
+
+        var newSteps = new List<(double Left, double Right)>(merged.Count);
+        var newIndexOfMain = new int[steps.Count];
+        var graceStepOf = new Dictionary<(int, int, int, int), int>();
+        double lastGraceX = double.NaN;
+        foreach (var (x, main, gi) in merged)
+        {
+            if (main >= 0)
+            {
+                newIndexOfMain[main] = newSteps.Count;
+                newSteps.Add(steps[main]);
+                lastGraceX = double.NaN;
+                continue;
+            }
+            var g = graces[gi];
+            if (!double.IsNaN(lastGraceX) && x - lastGraceX <= SameGraceStepReach)
+            {
+                var (l, r) = newSteps[^1];
+                newSteps[^1] = (Math.Min(l, g.Left), Math.Max(r, g.Right));
+            }
+            else
+                newSteps.Add((g.Left, g.Right));
+            graceStepOf[g.Key] = newSteps.Count - 1;
+            lastGraceX = x;
+        }
+        steps.Clear();
+        steps.AddRange(newSteps);
+        foreach (var key in stepOf.Keys.ToList())
+            stepOf[key] = newIndexOfMain[stepOf[key]];
+        return graceStepOf;
+    }
+
+    /// <summary>How close two grace heads stand to be one grace moment (<see cref="GraceTimesteps"/>'
+    /// named approximation): under the narrowest grace column spacing, which is a small head
+    /// and more.</summary>
+    private const double SameGraceStepReach = 0.25;
 
     /// <summary>A pedal release ("*", "tre corde").</summary>
     private static bool IsRelease(MusicMarkType t) =>
@@ -1150,10 +1283,8 @@ internal static class PedalEngraver
     /// the left edge of a grace it releases on, and its line is pushed by the grace's SMALL
     /// head — the grace column is an acknowledged support like any (GPA 5.144060 under the
     /// staff against the full-size control's 5.295000).
-    /// ⚠️ THE BRACKET ONLY, named rather than hidden: a pedal WORD ("Ped.", "*" of the text
-    /// style, the mixed style's leading word) is drawn by MusicMarkEngraver's pedal arm, which
-    /// still reads the main column, and SolveAndSeedText does not read this either — a word
-    /// written on a grace stands at the note the grace leans on. No probe measures it.
+    /// A pedal WORD on a grace reads it too since session 1391 (<see cref="GraceWordColumn"/>:
+    /// the row solve and, through LayoutEngine's pedalGraceX, the draw).
     /// </remarks>
     internal sealed class GraceAnchors(
         ImmutableArray<Voice> voices, ImmutableArray<GraceNoteItem> graceNotes, int staffIndex)
