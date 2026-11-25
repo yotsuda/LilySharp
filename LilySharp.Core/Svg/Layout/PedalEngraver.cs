@@ -313,7 +313,7 @@ internal static class PedalEngraver
                     stepOf.TryAdd(k, steps.Count);
                     closing = null;
                 }
-                steps.Add((ml.X + c.X, ml.X + c.X + c.Width));
+                steps.Add(ColumnSupportSpan(ml.X + c.X, c.Width));
             }
         }
         if (closing is { } last)
@@ -1186,6 +1186,25 @@ internal static class PedalEngraver
     }
 
     /// <summary>
+    /// A timing column's support span: from its X up to the next column, short of the
+    /// ledger lines the next column's heads hang to their left — those belong to the staff's
+    /// LedgerLineSpanner, not to any note column, so no pedal reads them.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm LedgerLineSpanner length-fraction 0.25 — a ledger
+    ///   reaches a quarter of its head's width past each side. MEASURED 2.26.0 (Lab
+    ///   sessions/p1384/m t8, t9): a "*Ped." whose "d" stands over the next c''s ledger keeps
+    ///   its staff-floor row in LilyPond; the allotted span read the ledger and set it 0.266 low.
+    /// ⚠️ Still the allotted span otherwise: an accidental or an arpeggio hung left of the
+    ///   next column stands in it too (SupportProfile's named approximation).
+    /// </remarks>
+    private static (double Left, double Right) ColumnSupportSpan(double x, double width)
+    {
+        double reach = 0.25 * MusicFont.Current.FullSize.Box(MusicGlyph.NoteheadBlack).Width;
+        return (x, x + Math.Max(0, width - reach));
+    }
+
+    /// <summary>
     /// The allocated span of the anchor's own column — the X range of the ink that
     /// SUPPORTS a pedal item there. Same resolution order as <see cref="AnchorX"/>.
     /// </summary>
@@ -1199,7 +1218,7 @@ internal static class PedalEngraver
         {
             foreach (var c in ml.Columns)
                 if (c.Timing == timing)
-                    return (ml.X + c.X, ml.X + c.X + c.Width);
+                    return ColumnSupportSpan(ml.X + c.X, c.Width);
             double x = ml.X + ml.GetXForTiming(timing);
             return (x, x);
         }

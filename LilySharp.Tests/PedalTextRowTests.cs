@@ -67,6 +67,19 @@ public class PedalTextRowTests
         Assert.True(words[1].YUp - words[0].YUp > 0.5, $"{words[0].YUp:F3} / {words[1].YUp:F3}");
     }
 
+    /// <summary>A change right before a ledger-line note (t8): the "d" of "*Ped." stands over
+    /// the c''s ledger, which no note column holds (LedgerLineSpanner), so LilyPond keeps the
+    /// staff-floor row (−5.250, as with no ledger there). The allotted span read the ledger
+    /// and set all three words 0.266 low.</summary>
+    [Fact]
+    public void AChangeOverTheNextNotesLedger_KeepsItsRow()
+    {
+        var ledger = Words(Laid("g''8@sustain g''8@!sustain@sustain c'8 g''8 g''2 | g''1@!sustain |"));
+        var none = Words(Laid("g''8@sustain g''8@!sustain@sustain g''8 g''8 g''2 | g''1@!sustain |"));
+        Assert.Equal(none[0].YUp, ledger[0].YUp, 9);
+        Assert.Equal(none[1].YUp, ledger[1].YUp, 9);
+    }
+
     /// <summary>A change (t6): "*Ped." over the column 3.002 right of the first "Ped.", the
     /// "*" (1.5556 wide) at 0.488..2.044 and the "Ped." (3.472) at 2.044..5.516, all three
     /// words on the first one's row. Lily# kept the change's "Ped." centred on the column,
