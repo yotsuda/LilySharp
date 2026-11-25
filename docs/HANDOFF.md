@@ -156,21 +156,21 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1392セッション（2026-11-26・YT-DELL2）
+
+base `b8bc3d539`。開始時 full 18429 / 0 / skip 2 / 18431。
+- leftovers 第1391 の「他の譜表の装飾音が連結を切る形」は LP と一致（Lab `p1392/m` s0・s1）。その探り譜で間隔の差を見つけた。
+- `3650b59ef`: 前の列→装飾音のばねは、右の列が装飾音で始まる声部の wish だけ（LP `musical_column_spacing` は右の列が一致する wish だけを数える）。`SpacingRules.MergeVoiceStemWishes` が他の譜表・声部の wish を平均していた（0.176 広い／0.100 狭い）。s1〜s5 は LP と一致。網 +3・毒 2 本で赤。掃き 1 / 1289（`test/ossia-beams`・snapshot 更新）。
+- 次: leftovers 第1392 の「両方の譜表に同時の装飾音は LP では 1 つの列」（s6・0.124）ほか。
+
+## 以下は第1391セッションの経緯
+
 ### 1.1 第1391セッション（2026-11-26・YT-DELL2）
 
 base `404a9b619`。開始時 full 18424 / 0 / skip 2 / 18426。REQUESTS は第1390 から変化なし。途中で別のセッションが `f5bebb00f`・`fbaf1ff63`（エディタ）を commit＝第1390 の「他者の未 commit」はそれ。
 - leftovers 第1384 の「未測定: 段をまたぐ文字の連結・装飾音の瞬間」から。段をまたぐ形は LP と一致（Lab `p1391/m` b1・b2）。
 - `220192884`: 装飾音も timestep（LP の `is_finished`）＝間に装飾音があると語の連結は切れる。装飾音に書いた語は装飾音の列に立ち、その列が支え、踏み替えは 1 語「*Ped.」。`PedalEngraver.GraceWordColumn`（解き手と描画の `pedalGraceX`）・`GraceTimesteps`。g1〜g5 は LP と一致（直す前は g1 の「*」が 1.242 低い・g3 の「*」が 1.398 右・g4 の「Ped.」が 0.526 高い）。網 +5・毒 6 本中 4 本で赤（残り 2 本は観測者なし＝leftovers）。掃き 0 / 1289。
 - 次は leftovers の残りの未測定から（他の譜表の装飾音が連結を切る形・第1383 の sost. の線の始まりほか）。
-
-## 以下は第1390セッションの経緯
-
-### 1.1 第1390セッション（2026-11-26・YT-DELL2）
-
-base `4f537c756`（開始時 未 push 0）。開始時 full 18420 / 1 / skip 2 / 18423（赤は `IncludeFilesTests`＝既知の揺れ・単独で緑）。REQUESTS 4 枚に Lily# 側の open は無し。⚠️ 作業ツリーに他者の未 commit（`editors/vscode/*`・`site/*`・CHANGELOG の `[editor]` の行ほか）＝触らず、CHANGELOG は自分の行だけ積んだ。
-- leftovers 第1388 の「残した」3 つは欠陥ではない: ottava と `textSpan("poco")` の線の始まりは文字の論理幅がちょうど 1 画素広い＝書体の双子の詰めの差（§3）。LP を TeX Gyre Schola に固定すると Lily# と一致（Lab `p1390/m` の `*-schola.ly`）。glissando の 0.006 は SVG の丸め（`lysc boxes` で 0.0003 以内）。
-- `abae89200`: una corda の踏み替えは何も刷らない（LP の中の文字列は ""・空の grob は line spanner に加わる）。Lily# は「tre corde」を前の「una corda」に重ね、同じ列の sustain を 3.97 下へ押していた。u2・u3・u5・u6 は LP と一致。網 +3・毒 4 本で赤。掃き 0 / 1289。
-- 次は leftovers の残りの未測定から（段をまたぐペダルの文字の連結・装飾音の瞬間ほか）。
 
 ## 2. 開いている作業
 

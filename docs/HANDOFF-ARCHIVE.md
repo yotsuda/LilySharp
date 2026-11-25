@@ -277,6 +277,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1390セッションの経緯
+
+### 1.1 第1390セッション（2026-11-26・YT-DELL2）
+
+base `4f537c756`（開始時 未 push 0）。開始時 full 18420 / 1 / skip 2 / 18423（赤は `IncludeFilesTests`＝既知の揺れ・単独で緑）。REQUESTS 4 枚に Lily# 側の open は無し。⚠️ 作業ツリーに他者の未 commit（`editors/vscode/*`・`site/*`・CHANGELOG の `[editor]` の行ほか）＝触らず、CHANGELOG は自分の行だけ積んだ。
+- leftovers 第1388 の「残した」3 つは欠陥ではない: ottava と `textSpan("poco")` の線の始まりは文字の論理幅がちょうど 1 画素広い＝書体の双子の詰めの差（§3）。LP を TeX Gyre Schola に固定すると Lily# と一致（Lab `p1390/m` の `*-schola.ly`）。glissando の 0.006 は SVG の丸め（`lysc boxes` で 0.0003 以内）。
+- `abae89200`: una corda の踏み替えは何も刷らない（LP の中の文字列は ""・空の grob は line spanner に加わる）。Lily# は「tre corde」を前の「una corda」に重ね、同じ列の sustain を 3.97 下へ押していた。u2・u3・u5・u6 は LP と一致。網 +3・毒 4 本で赤。掃き 0 / 1289。
+- 次は leftovers の残りの未測定から（段をまたぐペダルの文字の連結・装飾音の瞬間ほか）。
+
 ## 以下は第1389セッションの経緯
 
 ### 1.1 第1389セッション（2026-11-25・YT-DELL2）
