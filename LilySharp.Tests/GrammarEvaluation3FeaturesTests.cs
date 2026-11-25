@@ -94,7 +94,8 @@ public class GrammarEvaluation3FeaturesTests
         "e,8@palmMute e, e, e,@!palmMute e,8@letRing b, e g@!letRing | b,8@barre(7) fis b d'@!barre b8@barre(7 half) d' fis' b'@!barre |";
 
     /// <summary>Each line is its word, a dashed rule from the word to the centre of the note
-    /// carrying the end, and a hook from the rule's end one staff space toward the staff.</summary>
+    /// carrying the end, and a hook from the rule's end one staff space toward the staff (the
+    /// rule stopping half its thickness short, at the hook's box, as LilyPond's does).</summary>
     [Fact]
     public void AGuitarLine_IsItsWordADashedRuleAndAHook()
     {
@@ -108,8 +109,10 @@ public class GrammarEvaluation3FeaturesTests
             Assert.Equal(LilySharp.Core.Rendering.TextRole.Text, label.Role);
             // The rule of this line: dashed, at the label's baseline, right of the label.
             var rule = Assert.Single(g.Lines, l => l.IsDashed && Math.Abs(l.Y1 - label.Y) < 1e-9 && l.X1 > label.X);
-            // The hook: a solid stroke down from the rule's end, HookDepth long.
-            var hook = Assert.Single(g.Lines, l => !l.IsDashed && Math.Abs(l.X1 - rule.X2) < 1e-9 && Math.Abs(l.X2 - rule.X2) < 1e-9
+            // The hook: a solid stroke down from the rule's end, HookDepth long. The rule stops
+            // half its thickness before the hook, where LilyPond's line meets the hook's box.
+            double hookX = rule.X2 + rule.StrokeWidth / 2;
+            var hook = Assert.Single(g.Lines, l => !l.IsDashed && Math.Abs(l.X1 - hookX) < 1e-9 && Math.Abs(l.X2 - hookX) < 1e-9
                 && Math.Abs(l.Y1 - rule.Y1) < 1e-9);
             Assert.Equal(LilySharp.Core.Svg.Layout.TextSpannerEngraver.HookDepth, hook.Y2 - hook.Y1, 9);
             Assert.Equal(rule.StrokeWidth, hook.StrokeWidth, 9);

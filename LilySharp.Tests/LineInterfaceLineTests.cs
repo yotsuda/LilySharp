@@ -70,6 +70,21 @@ public class LineInterfaceLineTests
     }
 
     [Fact]
+    public void AHookedLine_StopsWhereTheHooksBoxBegins_AndItsDashesFitThatLength()
+    {
+        var lines = Lines("e'8@palmMute e' e' e'@!palmMute e'2 | c'1 |");
+        var dashed = Assert.Single(lines, m => m.Value.Contains("stroke-dasharray"));
+        var hook = Assert.Single(lines, m => D(m, 1) == D(m, 3) && m.Value.Contains("stroke-width=\"0.100\"")
+            && m.Value.Contains("stroke-linecap=\"round\""));
+        // LilyPond: the line ends 0.049 before the hook (the hook's draw-line box), 3.074 long.
+        Assert.Equal(0.05, D(hook, 1) - D(dashed, 3), 2);
+        var arr = Regex.Match(dashed.Value, "stroke-dasharray=\"([\\d.]+) ([\\d.]+)\"");
+        double length = D(dashed, 3) - D(dashed, 1);
+        double period = D(arr, 1) + D(arr, 2);
+        Assert.Equal(Math.Round((length - D(arr, 1)) / period), (length - D(arr, 1)) / period, 2);
+    }
+
+    [Fact]
     public void AnOttavasLine_DashesAboutOnceAStaffSpace_RoundCapped()
     {
         var lines = Lines("c''4@8va d'' e'' f''@!8va | c''1 |");

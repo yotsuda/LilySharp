@@ -974,13 +974,19 @@ internal static partial class SharedRenderer
                     os.Size(textSize, s.StaffIndex), TextRole.Text,
                     textStyle, TextAnchor.Start, Color.Black);
                 // Round-capped and, when dashed, fitted to begin and end with a dash: LilyPond's
-                // Line_interface line (FittedDash).
-                if (s.Style != TextSpannerStyle.None && s.LineStartX < s.EndX)
+                // Line_interface line (FittedDash). A hooked line stops where the hook's box
+                // begins, half the thickness before it: in LilyPond the hook is the right
+                // bound's text (a draw-line markup, its box widened by half the thickness) and
+                // the line ends at that text's left edge. MEASURED 2.26.0 (Lab sessions/p1388/m
+                // p1): a palm mute's line ends 0.049 before its hook, so it is 3.074 long and
+                // dashes 0.512 every 2.562. The ink at the corner is the hook's cap either way.
+                double lineEndX = s.HookDepth > 0 ? s.EndX - thickness / 2 : s.EndX;
+                if (s.Style != TextSpannerStyle.None && s.LineStartX < lineEndX)
                 {
                     (double On, double Off)? dash = s.Style == TextSpannerStyle.DashedLine
-                        ? FittedDash(s.EndX - s.LineStartX, s.DashPeriod, s.DashFraction)
+                        ? FittedDash(lineEndX - s.LineStartX, s.DashPeriod, s.DashFraction)
                         : null;
-                    gc.DrawLine(s.LineStartX, absY, s.EndX, absY,
+                    gc.DrawLine(s.LineStartX, absY, lineEndX, absY,
                         Color.Black, thickness, dash, LineCap.Round);
                 }
                 // The hook that ends a palm mute, a let ring and a barre: from the line's end
