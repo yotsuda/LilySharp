@@ -82,6 +82,25 @@ public class StemSideStaccatoTests
         { "k10", "voice { d''2 e''2 } { b'2@staccato@thumb c''2@staccato@finger(2) } |", [17.186, 21.461] },
     };
 
+    /// <summary>
+    /// A staccatissimo inside the staff is moved into a space, as a staccato is: scm/script.scm
+    /// gives both <c>quantize-position</c>. MEASURED (LilyPond 2.26.0, Lab sessions/p1381/m
+    /// s1–s3): the wedge over a grace <c>e'16</c> stands in the space below the top line (its
+    /// ink 1.460 … 2.226), over a grace <c>g'16</c> and a full-size <c>g'16</c> in the space
+    /// above it (2.460 … 3.226 and 2.460 … 3.500) — its origin at 1.5 and 2.5. Until session
+    /// 1381 Lily# left it unquantized: the two grace wedges at 2.255 over the staff-padding
+    /// floor, the full-size one at 2.440.
+    /// </summary>
+    [Theory]
+    [InlineData("grace { e'16@staccatissimo.up } a'1 |", 1.5)]
+    [InlineData("grace { g'16@staccatissimo.up } a'1 |", 2.5)]
+    [InlineData("g'16@staccatissimo.up g'16 g'8 g'2. |", 2.5)]
+    public void AStaccatissimo_IsQuantizedIntoASpace(string bars, double origin)
+    {
+        var wedge = Assert.Single(LayoutOf(bars).ArticulationLayouts);
+        Assert.Equal(origin, wedge.YUp, 3);
+    }
+
     [Theory]
     [MemberData(nameof(Books))]
     public void TheDot_StandsWhereLilyPondPutsIt(string book, string bars, double[] centres)

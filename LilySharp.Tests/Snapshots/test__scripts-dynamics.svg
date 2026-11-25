@@ -69,8 +69,8 @@
   <text x="23.78" y="18.90" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="272">sf</text>
   <text x="26.78" y="19.17" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="277">rfz</text>
   <text x="53.21" y="18.66" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="392">fz</text>
-  <text class="music" x="31.11" y="16.42" font-size="4.00" data-pos="290"></text>
-  <text class="music" x="34.11" y="16.42" font-size="4.00" data-pos="306"></text>
+  <text class="music" x="31.11" y="16.62" font-size="4.00" data-pos="290"></text>
+  <text class="music" x="34.11" y="15.62" font-size="4.00" data-pos="306"></text>
   <text class="music" x="37.13" y="11.82" font-size="4.00" data-pos="322"></text>
   <text class="music" x="40.13" y="11.82" font-size="4.00" data-pos="330"></text>
   <text class="music" x="44.22" y="11.47" font-size="4.00" data-pos="347"></text>

@@ -6,6 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- `[engraving]` **A staccatissimo inside the staff sits in a space.** Like a staccato, the wedge is now moved off the staff lines into the nearest space, as LilyPond does; it used to be pushed above (or below) the staff instead, up to a staff space too far out on short stems and grace notes.
 - `[engraving]` **The space around a cue no longer bends to the stems.** The gap into and out of a `cue { }` took the small correction for stems pointing different ways, as if the cue and the notes around it were one voice, which left the note after a beamed cue up to a quarter of a staff space off; now those two gaps are spaced as LilyPond spaces a cue voice's edges.
 - `[engraving]` **Cue notes get a beam of their own.** Eighths written just before or after a `cue { }` were beamed together with the cue's eighths into one full-size beam; now the plain notes and the cue notes are beamed separately, as LilyPond beams a cue voice.
 

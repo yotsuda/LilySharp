@@ -3802,10 +3802,18 @@ internal static class ArticulationEngraver
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: scm/script.scm — these scripts have (quantize-position . #t)
+    /// (and the ancient accentus, circulus, comma family, ictus and semicirculus, which Lily#
+    /// does not write).
+    /// ⚠️ Staccatissimo was missing until session 1381, so inside the staff it stood where its
+    /// support put it and was floored by the staff-padding instead of being moved into a space.
+    /// MEASURED (2.26.0, Lab sessions/p1381/m s1–s3): a grace `e'16`'s staccatissimo above
+    /// sits at 1.460 (Lily# 2.255), a grace `g'16`'s at 2.460 (2.255), a full-size `g'16`'s at
+    /// 2.460 (2.440).
     /// </remarks>
     private static bool ShouldQuantize(ArticulationType type) => type switch
     {
         ArticulationType.Staccato => true,
+        ArticulationType.Staccatissimo => true,
         ArticulationType.Marcato => true,
         ArticulationType.Tenuto => true,
         _ => false
