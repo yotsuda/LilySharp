@@ -49,7 +49,7 @@ Uses the language models VS Code offers — GitHub Copilot's, or another provide
 - **✨ Ask AI in Chat (`Ctrl+I`)**: the preview's ✨, Ctrl+I and the right-click menus open
   Copilot's chat with the file, or the bars selected, in its input — say what to change and send. The chat reads the score as it
   stands, and its proposal opens beside the score to play and Accept or Reject.
-- **Compose with Copilot** (File > New File… → *Lily# Score, Composed with Copilot…*, or just ask
+- **Compose with AI** (File > New File… → *Lily# Score (.lys)…* → *Compose with AI…*, or just ask
   in Copilot's chat): the chat composes a new piece into a new, unsaved score named after its
   title — never over the score that is open. Pick a strong model in the chat's model menu.
 - **Lily#: Rewrite with AI…** (the command palette): Lily#'s own, without the chat — say what to change ("add a bass
@@ -94,8 +94,9 @@ are joined with them, so the recording still plays with the chart bar for bar.
 The preview's right-click menu groups its own: the selection, playback, the section (*Split Section
 Here* on the bar line nearer the pointer), the marks (TODOs, `@or`) and the view. New Score (from a
 template you can make your own: *Edit New Score Template*) and Import MusicXML, MIDI or ABC… are in the
-Command Palette; File > New File… offers New Score, Compose with Copilot, and *Lily# Score from File
-(MusicXML, MIDI, ABC, Scan, Recording)…*. Every command, with examples:
+Command Palette; File > New File… has one entry, *Lily# Score (.lys)…*, which asks where the piece
+starts: Blank (⚙ edits the template) or Compose with AI…, or from a recording, a scan, or MusicXML,
+MIDI or ABC. Every command, with examples:
 [the editor commands](https://yotsuda.github.io/LilySharp/commands.html).
 
 ### Writing

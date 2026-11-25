@@ -7,7 +7,9 @@ next step and the open items are `docs/HANDOFF.md` §1.0, which points here.
 
 **The one composer** (owner's decision 2026-11-07): Lily#'s own composer without the chat
 (*Compose with AI…*, `runCompose`) was taken out — it and the chat's were hard to tell apart. The
-chat's is *Compose with Copilot…* (command `lilysharp.composeWithAiInChat`, its id kept). Left
+chat's is *Compose with AI…* (command `lilysharp.composeWithAiInChat`, its id kept; named *Compose
+with Copilot…* until the owner's decision of 2026-11-26 put it with Lily#'s other "… with AI" commands —
+only one composer is left, so the name no longer confuses). Left
 behind: `drive()`'s `compose` branches (and `composeSystemPrompt`, `composeAsked`), which nothing
 calls with `compose = true` now; to be folded out with the tests that read them.
 

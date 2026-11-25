@@ -523,7 +523,7 @@
           "lilysharp.ai.editModel": {
             "type": "string",
             "default": "",
-            "markdownDescription": "The language model Lily#'s own features that change the music use — *Lily#: Rewrite with AI…* (the command palette) and *Fix OMR Marks with AI…*: a model id or family from **Lily#: Select AI Model…**. Copilot's chat — *Ask AI in Chat* (Ctrl+I) and *Compose with Copilot…* — uses the model picked in the chat instead. Empty chooses automatically — the largest model on offer, passing over the small ones (mini, nano, lite, …), which write poor Lily#. Ghost Completion has its own: `#lilysharp.ai.ghostModel#`.\n\n**[Choose a model…](command:lilysharp.selectAiModel?%5B%22edit%22%5D)**"
+            "markdownDescription": "The language model Lily#'s own features that change the music use — *Lily#: Rewrite with AI…* (the command palette) and *Fix OMR Marks with AI…*: a model id or family from **Lily#: Select AI Model…**. Copilot's chat — *Ask AI in Chat* (Ctrl+I) and *Compose with AI…* — uses the model picked in the chat instead. Empty chooses automatically — the largest model on offer, passing over the small ones (mini, nano, lite, …), which write poor Lily#. Ghost Completion has its own: `#lilysharp.ai.ghostModel#`.\n\n**[Choose a model…](command:lilysharp.selectAiModel?%5B%22edit%22%5D)**"
           },
           "lilysharp.ai.ghostModel": {
             "type": "string",
@@ -782,10 +782,10 @@
         "title": "Reset New Score Template"
       },
       {
-        "command": "lilysharp.newScoreFromFile",
+        "command": "lilysharp.newScoreMenu",
         "category": "Lily#",
-        "title": "Score from File (MusicXML, MIDI, ABC, Scan, Recording)…",
-        "shortTitle": "Lily# Score from File (MusicXML, MIDI, ABC, Scan, Recording)…"
+        "title": "New Score (Blank, AI, Recording, Scan, MusicXML)…",
+        "shortTitle": "Lily# Score (.lys)…"
       },
       {
         "command": "lilysharp.importMusicXml",
@@ -834,8 +834,7 @@
         "command": "lilysharp.composeWithAiInChat",
         "category": "Lily#",
         "icon": "$(comment-discussion)",
-        "title": "Compose with Copilot…",
-        "shortTitle": "Lily# Score, Composed with Copilot…"
+        "title": "Compose with AI…"
       },
       {
         "command": "lilysharp.previewAiTransform",
@@ -1109,16 +1108,8 @@
       ],
       "file/newFile": [
         {
-          "command": "lilysharp.newScore",
+          "command": "lilysharp.newScoreMenu",
           "group": "file@1"
-        },
-        {
-          "command": "lilysharp.composeWithAiInChat",
-          "group": "file@2"
-        },
-        {
-          "command": "lilysharp.newScoreFromFile",
-          "group": "file@3"
         }
       ],
       "commandPalette": [
@@ -1280,7 +1271,7 @@
           "when": "false"
         },
         {
-          "command": "lilysharp.newScoreFromFile",
+          "command": "lilysharp.newScoreMenu",
           "when": "false"
         },
         {

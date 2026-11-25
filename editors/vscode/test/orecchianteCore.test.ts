@@ -22,7 +22,7 @@ import {
     ORECCHIANTE_INPUTS, chartForConversion, orecchianteArgs, orecchianteFailure, judgeOrecchiante, locateOrecchiante, parseOrecchianteVersion,
     besideChart, replaceQuestion,
 } from '../src/orecchianteCore';
-import { newScoreSources } from '../src/menuContextCore';
+import { newScoreStarts } from '../src/menuContextCore';
 
 describe('Orecchiante, the recording reader', () => {
     it('is found by the variable first, then by its extension when its reader is on disk', () => {
@@ -116,35 +116,40 @@ describe('Orecchiante, the recording reader', () => {
         assert.equal(mine.when.replace('orecchianteAvailable', 'X'), theirs.when.replace('omrAvailable', 'X'));
     });
 
-    it('keeps Score from File… out of the palette, where the three commands are found by name (owner\'s decision 2026-11-18)', () => {
+    it('keeps the New File… picker out of the palette, where each command is found by name (owner\'s decisions 2026-11-18, 2026-11-26)', () => {
         const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
         const palette = pkg.contributes.menus.commandPalette;
-        assert.equal(palette.find((m: { command: string }) => m.command === 'lilysharp.newScoreFromFile')?.when, 'false');
-        for (const c of ['lilysharp.importMusicXml', 'lilysharp.importImage', 'lilysharp.convertRecording']) {
+        assert.equal(palette.find((m: { command: string }) => m.command === 'lilysharp.newScoreMenu')?.when, 'false');
+        for (const c of ['lilysharp.newScore', 'lilysharp.composeWithAiInChat', 'lilysharp.importMusicXml', 'lilysharp.importImage', 'lilysharp.convertRecording']) {
             assert.notEqual(palette.find((m: { command: string }) => m.command === c)?.when, 'false', c);
         }
     });
 
-    it('lists one entry in File > New File… for the three readers, whose picker follows the palette (owner\'s decision 2026-11-18)', () => {
+    it('lists one Lily# entry in File > New File…, its picker grouped by where a piece starts (owner\'s decision 2026-11-26)', () => {
         const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
         const newFile = pkg.contributes.menus['file/newFile'].map((m: { command: string }) => m.command);
-        assert.ok(newFile.includes('lilysharp.newScoreFromFile'));
-        for (const c of ['lilysharp.importMusicXml', 'lilysharp.importImage', 'lilysharp.convertRecording']) {
-            assert.ok(!newFile.includes(c), `${c} is in the picker, not the list`);
+        assert.deepEqual(newFile, ['lilysharp.newScoreMenu']);
+        const shown = (w: boolean, o: boolean, d: boolean) => newScoreStarts(w, o, d).map(s => s.command ?? `— ${s.label}`);
+        const fresh = ['— Start fresh', 'lilysharp.newScore', 'lilysharp.composeWithAiInChat', '— From music you have'];
+        assert.deepEqual(shown(true, false, false), [...fresh, 'lilysharp.convertRecording', 'lilysharp.importImage', 'lilysharp.importMusicXml']);
+        assert.deepEqual(shown(false, false, false), [...fresh, 'lilysharp.importMusicXml']);
+        assert.deepEqual(shown(false, true, false), [...fresh, 'lilysharp.importImage', 'lilysharp.importMusicXml']);
+        assert.deepEqual(shown(false, false, true), [...fresh, 'lilysharp.convertRecording', 'lilysharp.importMusicXml']);
+        // Blank first (Enter alone starts it) and the one that edits the template.
+        const items = newScoreStarts(true, false, false).filter(s => s.command);
+        assert.equal(items[0].command, 'lilysharp.newScore');
+        assert.deepEqual(items.filter(s => s.template).map(s => s.command), ['lilysharp.newScore']);
+        // The readers still in preview say so, as their palette titles do.
+        for (const s of items.filter(s => s.command === 'lilysharp.importImage' || s.command === 'lilysharp.convertRecording')) {
+            assert.equal(s.description, 'Preview', s.label);
         }
-        const all = (w: boolean, o: boolean, d: boolean) => newScoreSources(w, o, d).map(s => s.command);
-        assert.deepEqual(all(true, false, false), ['lilysharp.importMusicXml', 'lilysharp.importImage', 'lilysharp.convertRecording']);
-        assert.deepEqual(all(false, false, false), ['lilysharp.importMusicXml']);
-        assert.deepEqual(all(false, true, false), ['lilysharp.importMusicXml', 'lilysharp.importImage']);
-        assert.deepEqual(all(false, false, true), ['lilysharp.importMusicXml', 'lilysharp.convertRecording']);
         const titles = pkg.contributes.commands
             .filter((c: { command: string }) => c.command === 'lilysharp.importImage' || c.command === 'lilysharp.convertRecording')
             .map((c: { title: string }) => c.title);
         for (const t of titles) assert.match(t, /… \(Preview\)$/, t);
-        // Named in New File… as its neighbours are, by their short titles: "Lily# Score …".
-        const entries = pkg.contributes.commands
-            .filter((c: { command: string }) => newFile.includes(c.command))
-            .map((c: { command: string; shortTitle?: string }) => c.shortTitle ?? c.command);
-        for (const s of entries) assert.match(s, /^Lily# Score\b/, s);
+        const entry = pkg.contributes.commands.find((c: { command: string }) => c.command === 'lilysharp.newScoreMenu');
+        assert.equal(entry.shortTitle, 'Lily# Score (.lys)…');
+        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(ext, /onDidTriggerItemButton\(\(\) => run\('lilysharp\.editNewScoreTemplate'\)\)/);
     });
 });

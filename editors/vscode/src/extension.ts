@@ -37,7 +37,7 @@ import { DecodeResult, attachRecording, followCopies, followRenames, keepRecordi
 import { TimedNote, soundingOf, soundingPartsOf, soundingWait, startSecondsAt } from './playbackStart';
 import { convertRecording, findOrecchiante, registerOrecchianteContext } from './orecchiante';
 import { registerOrecchianteReport } from './orecchianteSeed';
-import { newScoreSources } from './menuContextCore';
+import { newScoreStarts } from './menuContextCore';
 import { recordingPathFor } from './recordingCore';
 import { findOmr, registerOmrContexts } from './omrReader';
 import { OmrScanDeps, hasScan, previewHoversBar, previewReady, previewShowsBar, registerScanFollow, scanBarAt, scanColumnOf, scanSideOf, scanThresholdOf, showScan } from './omrScan';
@@ -895,19 +895,28 @@ export function activate(context: vscode.ExtensionContext) {
             importFromImage(context, omrImportDeps, uri, uris)),
         vscode.commands.registerCommand('lilysharp.showScan', (uri?: vscode.Uri) =>
             showScan(context, deps, uri instanceof vscode.Uri ? uri : undefined)),
-        // File > New File…'s one entry for the three readers above (owner's decision 2026-11-18):
-        // a second picker, as New File… cannot hold a submenu (menuContextCore.newScoreSources).
-        vscode.commands.registerCommand('lilysharp.newScoreFromFile', async () => {
+        // File > New File…'s one Lily# entry (owner's decision 2026-11-26): a second picker, as
+        // New File… cannot hold a submenu (menuContextCore.newScoreStarts).
+        vscode.commands.registerCommand('lilysharp.newScoreMenu', async () => {
             const onWindows = process.platform === 'win32';
             const [omr, orecchiante] = onWindows ? [undefined, undefined] : await Promise.all([findOmr(context), findOrecchiante()]);
-            const sources = newScoreSources(onWindows, omr !== undefined, orecchiante !== undefined);
-            const picked = await vscode.window.showQuickPick(sources, {
-                title: 'New Score from…',
-                placeHolder: 'What to make the score from',
+            const editTemplate: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('gear'), tooltip: 'Edit New Score Template' };
+            type Item = vscode.QuickPickItem & { command?: string };
+            const items: Item[] = newScoreStarts(onWindows, omr !== undefined, orecchiante !== undefined).map(s => s.command
+                ? { label: s.label, description: s.description, detail: s.detail, command: s.command, buttons: s.template ? [editTemplate] : undefined }
+                : { label: s.label, kind: vscode.QuickPickItemKind.Separator });
+            const pick = vscode.window.createQuickPick<Item>();
+            pick.title = 'New Lily# Score';
+            pick.placeholder = 'Where the piece starts';
+            pick.items = items;
+            const run = (command: string) => { pick.hide(); void vscode.commands.executeCommand(command); };
+            pick.onDidTriggerItemButton(() => run('lilysharp.editNewScoreTemplate'));
+            pick.onDidAccept(() => {
+                const command = pick.selectedItems[0]?.command;
+                if (command) { run(command); }
             });
-            if (picked) {
-                await vscode.commands.executeCommand(picked.command);
-            }
+            pick.onDidHide(() => pick.dispose());
+            pick.show();
         }),
         vscode.commands.registerCommand('lilysharp.importMusicXml', (uri?: vscode.Uri) => {
             outputChannel.appendLine('importMusicXml command triggered');

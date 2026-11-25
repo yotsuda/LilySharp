@@ -166,9 +166,10 @@ describe('the composing guide', () => {
         const pkg = fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8');
         // Named for Copilot in the palette and in File > New File… alike (owner's decisions 2026-10-29
         // and 2026-11-07: the one composer).
-        assert.match(pkg, /"command": "lilysharp\.composeWithAiInChat",\s*"category": "Lily#",[\s\S]*?"title": "Compose with Copilot…"/);
-        assert.match(pkg, /"command": "lilysharp\.composeWithAiInChat",\s*"group": "file@2"/);
-        assert.match(pkg, /"command": "lilysharp\.composeWithAiInChat",[^}]*"shortTitle": "Lily# Score, Composed with Copilot…"/);
+        assert.match(pkg, /"command": "lilysharp\.composeWithAiInChat",\s*"category": "Lily#",[\s\S]*?"title": "Compose with AI…"/);
+        // In File > New File…, it is a choice of the one "Lily# Score (.lys)…" entry (owner's decision 2026-11-26).
+        const core = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'menuContextCore.ts'), 'utf8');
+        assert.match(core, /command: 'lilysharp\.composeWithAiInChat', label: 'Compose with AI…'/);
         assert.match(transform, /registerCommand\('lilysharp\.composeWithAiInChat', \(\) => runComposeInChat\(deps\)\)/);
         const fn = transform.slice(transform.indexOf('async function runComposeInChat'), transform.indexOf('async function runAiTransform('));
         // Nothing opened before the piece comes (owner's request 2026-10-29): the chat writes the
@@ -642,15 +643,17 @@ describe('a new piece in place of the score', () => {
     });
 
     // Owner's decision 2026-11-07: "Compose with AI…" (Lily#'s own composer, no chat) and "Compose
-    // with AI in Chat…" were hard to tell apart; the chat's alone stays, as "Compose with Copilot…".
+    // with AI in Chat…" were hard to tell apart; the chat's alone stays, named "Compose with Copilot…"
+    // then and "Compose with AI…" since, as Lily#'s other AI commands are (owner's decision 2026-11-26).
     it('composes in Copilot\'s chat alone: no composer of Lily#\'s own', () => {
         assert.doesNotMatch(transform, /registerCommand\('lilysharp\.composeWithAi'/);
         assert.doesNotMatch(transform, /async function runCompose\(/);
         const pkg = fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8');
         assert.doesNotMatch(pkg, /"lilysharp\.composeWithAi"/);
-        // Found where a piece is begun (owner's request 2026-10-29): File > New File… beside New
-        // Score, New Score first — by order, not by title (Score from File… follows, owner's decision 2026-11-18).
-        assert.match(pkg, /"command": "lilysharp\.newScore",\s*"group": "file@1"\s*\},\s*\{\s*"command": "lilysharp\.composeWithAiInChat",\s*"group": "file@2"\s*\},\s*\{\s*"command": "lilysharp\.newScoreFromFile",\s*"group": "file@3"\s*\}\s*\]/);
+        // Found where a piece is begun (owner's request 2026-10-29): File > New File… → Lily# Score,
+        // after Blank — by order, not by title (owner's decision 2026-11-26; menuContextCore.newScoreStarts).
+        const core = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'menuContextCore.ts'), 'utf8');
+        assert.match(core, /command: 'lilysharp\.newScore', label: 'Blank'[^\n]*\n\s*\{ command: 'lilysharp\.composeWithAiInChat'/);
     });
 });
 

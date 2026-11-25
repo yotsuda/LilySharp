@@ -64,24 +64,40 @@ export function fileMenuContext(text: string): { hasOrMarks: boolean; hasTodos: 
     };
 }
 
-/** The second step of "Score from File (MusicXML, MIDI, Scan, Recording)…" (owner's decision
- *  2026-11-18: File > New File… lists one entry, as VS Code's New File… picker drops submenus —
- *  vscode newFile.contribution.ts keeps only MenuItemAction). The entry itself is hidden from the
- *  palette, where the three commands are found by their own names (owner's decision 2026-11-18).
- *  Each source shows where its own command shows in the palette: the scan and the recording on
- *  Windows (the command offers the reader's extension) or wherever their reader is found. */
-export interface NewScoreSource { command: string; label: string; detail: string }
-export function newScoreSources(onWindows: boolean, omrFound: boolean, orecchianteFound: boolean): NewScoreSource[] {
-    const sources: NewScoreSource[] = [
-        { command: 'lilysharp.importMusicXml', label: 'MusicXML, MIDI or ABC…', detail: '.musicxml · .mxl · .xml · .mid · .midi · .abc' },
+/** The second step of File > New File… → "Lily# Score (.lys)…", its one entry (owner's decision
+ *  2026-11-26, widening 2026-11-18's "Score from File…": VS Code's New File… picker drops submenus —
+ *  vscode newFile.contribution.ts keeps only MenuItemAction — so the choice is a second picker).
+ *  Grouped by where a piece starts, not by file type: from nothing, or from music you have.
+ *  Blank comes first, so Enter alone starts the template; it carries a button to edit the template.
+ *  The entry itself is hidden from the palette, where each command is found by its own name.
+ *  The scan and the recording show where their own commands show in the palette: on Windows (the
+ *  command offers the reader's extension) or wherever their reader is found. */
+export interface NewScoreStart {
+    /** A separator's heading when `command` is absent. */
+    label: string;
+    command?: string;
+    description?: string;
+    detail?: string;
+    /** The item that carries the Edit New Score Template button. */
+    template?: true;
+}
+export function newScoreStarts(onWindows: boolean, omrFound: boolean, orecchianteFound: boolean): NewScoreStart[] {
+    const starts: NewScoreStart[] = [
+        { label: 'Start fresh' },
+        { command: 'lilysharp.newScore', label: 'Blank', detail: 'The New Score template', template: true },
+        { command: 'lilysharp.composeWithAiInChat', label: 'Compose with AI…', detail: 'Copilot\'s chat writes a new piece from what you describe' },
+        { label: 'From music you have' },
     ];
-    if (onWindows || omrFound) {
-        sources.push({ command: 'lilysharp.importImage', label: 'Image or PDF (Scan)… (Preview)', detail: 'printed music read by Calamo' });
-    }
     if (onWindows || orecchianteFound) {
-        sources.push({ command: 'lilysharp.convertRecording', label: 'Recording… (Preview)', detail: 'a chord chart heard by Orecchiante' });
+        starts.push({ command: 'lilysharp.convertRecording', label: 'Recording (MP3, WAV, …)…', description: 'Preview',
+            detail: 'A chord chart heard by Orecchiante: tempo, bar lines, chords and sections' });
     }
-    return sources;
+    if (onWindows || omrFound) {
+        starts.push({ command: 'lilysharp.importImage', label: 'Scan (PDF, image)…', description: 'Preview',
+            detail: 'Printed music read by Calamo' });
+    }
+    starts.push({ command: 'lilysharp.importMusicXml', label: 'MusicXML, MIDI or ABC…', detail: '.musicxml · .mxl · .xml · .mid · .midi · .abc' });
+    return starts;
 }
 
 function stripComment(line: string): string {
