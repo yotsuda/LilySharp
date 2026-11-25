@@ -277,6 +277,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1388セッションの経緯
+
+### 1.1 第1388セッション（2026-11-25・YT-DELL2）
+
+base `781e948b8`。開始時 full 18407 / 0 / skip 2 / 18409。REQUESTS 4 枚に Lily# 側の open は無し。
+- leftovers 第1387 の「未測定の `draw-line` の端」から。LP の Line_interface の線は破線も含めて丸い端（`output-svg.scm:322-337`）で、破線は周期を線の長さに合わせて両端を破線にする（`line-interface.cc:251-267`）。
+- `4f8d16422`: text spanner・ottava・glissando・volta を丸い端に、破線は `SharedRenderer.FittedDash`。ottava の周期 2.0 → LP の既定 1.0。volta の鉤は線の中心から 2.0。x1・p1・o1・g1・vb は LP と一致（Lab `p1388/m`）。網 +8・毒 9 本で赤。掃き 191 / 1289（線の属性だけ・他 0）。
+- `0a39fbda9`: 鉤のある text spanner（palm mute ほか）の線は鉤の箱の左端（0.05 手前）で止まる＝破線の合わせも LP と一致。網 +1・毒で赤。掃き 0 / 1289。full 18416 / 0 / 2 / 18418。
+- 残りは leftovers 第1388（歌詞の延長線とハイフンは角の丸い箱＝別物）。
+
 ## 以下は第1387セッションの経緯
 
 ### 1.1 第1387セッション（2026-11-25・YT-DELL2）
