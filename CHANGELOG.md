@@ -6,6 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- `[engraving]` **Tuplet brackets have round line ends.** Like the pedal brackets, the hooks and the line either side of the number end in round caps, as LilyPond draws them; each hook used to stop a little short of LilyPond's.
 - `[engraving]` **Pedal brackets have round line ends.** The bracket's line, hooks and change notches end in round caps half a line wide, as LilyPond draws them; they were cut square at their points, so each hook stopped a little short. `lysc boxes` now gives a round-ended line's box as LilyPond does (the ends' box widened by half the line), which a slanted line overshot.
 - `[engraving]` **The space between words keeps its place when text is stacked.** A space in a text mark ("Sost. Ped.", "una corda", a tempo or text script with several words) was treated as empty, so a stem or another mark could slip into the gap below or above the words' line; now it holds the line, as LilyPond does.
 - `[engraving]` **A pedal word or bracket no longer drops for the next note's ledger line.** The room under a note's column ran up to the next note and so took in the ledger line hanging left of a low next note; a "*Ped." (or a bracket end) above it was pushed down. Ledger lines belong to the staff, not to a note, and LilyPond does not read them there.

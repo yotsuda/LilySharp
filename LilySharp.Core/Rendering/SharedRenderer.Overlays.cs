@@ -1468,22 +1468,28 @@ internal static partial class SharedRenderer
                     double reach = TupletBracketLayout.BracketOutwardReach * b.LineSpacing;
                     double lx = b.StartX - reach * ux, ly = startY - reach * uy;
                     double rx = b.EndX + reach * ux, ry = endY + reach * uy;
+                    // Every piece ROUND-capped, as make_bracket's Line_interface lines are (each a
+                    // draw-line, its box widened by half the thickness at both ends). MEASURED
+                    // 2.26.0 (Lab sessions/p1387/m t1): the TupletBracket reaches 2.620 under a
+                    // hook drawn to 2.700 — the 0.08 of a 0.16 line's cap, which the butt-capped
+                    // hooks stopped short of. LILYPOND-REF: lily/line-interface.cc:178-191 make_line.
+                    const LineCap cap = LineCap.Round;
                     using var bracketKind = gc.Kind("tupletBracket");
-                    gc.DrawLine(lx, ly, lx, ly - edgeHeight * hookDir, Color.Black, thickness);
+                    gc.DrawLine(lx, ly, lx, ly - edgeHeight * hookDir, Color.Black, thickness, cap: cap);
                     if (!string.IsNullOrEmpty(b.NumberText))
                     {
                         double gap = fonts.Advance(b.NumberText, os.Size(numberEm, b.StaffIndex),
                             TextRole.Tuplet, numberStyle) + 1.0;
                         double g0 = -0.5 * gap + 0.1, g1 = 0.5 * gap + 0.1;
                         double mx = b.StartX + dx * 0.5, my = startY + dy * 0.5;
-                        gc.DrawLine(lx, ly, mx + g0 * ux, my + g0 * uy, Color.Black, thickness);
-                        gc.DrawLine(mx + g1 * ux, my + g1 * uy, rx, ry, Color.Black, thickness);
+                        gc.DrawLine(lx, ly, mx + g0 * ux, my + g0 * uy, Color.Black, thickness, cap: cap);
+                        gc.DrawLine(mx + g1 * ux, my + g1 * uy, rx, ry, Color.Black, thickness, cap: cap);
                     }
                     else
                     {
-                        gc.DrawLine(lx, ly, rx, ry, Color.Black, thickness);
+                        gc.DrawLine(lx, ly, rx, ry, Color.Black, thickness, cap: cap);
                     }
-                    gc.DrawLine(rx, ry, rx, ry - edgeHeight * hookDir, Color.Black, thickness);
+                    gc.DrawLine(rx, ry, rx, ry - edgeHeight * hookDir, Color.Black, thickness, cap: cap);
                 }
 
                 // CENTRED ON THE BRACKET LINE, both axes — LilyPond's own placement, and

@@ -65,7 +65,7 @@ public class CrossStaffTupletBracketTests
             .Distinct().OrderBy(y => y).ToList();
         Assert.Equal(10, lines.Count);
         var bracket = Regex.Matches(svg,
-                "<line x1=\"([-\\d.]+)\" y1=\"([-\\d.]+)\" x2=\"([-\\d.]+)\" y2=\"\\2\" stroke=\"#000000\" stroke-width=\"0\\.160\" data-pos")
+                "<line x1=\"([-\\d.]+)\" y1=\"([-\\d.]+)\" x2=\"([-\\d.]+)\" y2=\"\\2\" stroke=\"#000000\" stroke-width=\"0\\.160\"(?: stroke-linecap=\"round\")? data-pos")
             .Select(m => Math.Round(lines[2] - double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture), 2))
             .Distinct().ToList();
         Assert.Equal(expected, Assert.Single(bracket));

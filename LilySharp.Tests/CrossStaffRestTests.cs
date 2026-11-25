@@ -215,7 +215,7 @@ public class CrossStaffRestTests
             var svg = TestPaper.SvgFromRenderSpec(Book("a'2 a'2 |", bass));
             var (lines, _) = Read(svg);
             var y = Regex.Match(svg,
-                "<line x1=\"[-\\d.]+\" y1=\"([-\\d.]+)\" x2=\"[-\\d.]+\" y2=\"\\1\" stroke=\"#000000\" stroke-width=\"0\\.160\" data-pos").Groups[1].Value;
+                "<line x1=\"[-\\d.]+\" y1=\"([-\\d.]+)\" x2=\"[-\\d.]+\" y2=\"\\1\" stroke=\"#000000\" stroke-width=\"0\\.160\"(?: stroke-linecap=\"round\")? data-pos").Groups[1].Value;
             return Math.Round(double.Parse(y, CultureInfo.InvariantCulture) - lines[7], 2);
         }
         Assert.Equal(3.4, BracketBelowBass("tuplet 3/2 { c'8 s8 c'8 } c'4 c2 |"));
