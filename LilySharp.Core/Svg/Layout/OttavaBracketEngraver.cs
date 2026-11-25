@@ -460,7 +460,7 @@ internal static class OttavaBracketEngraver
                     : segEndMeasure.X + segEndMeasure.Width + RightShorten;
 
                 // First segment shows the bare text ("8va"); a continuation repeats it in
-                // parentheses, "(8va)" — the common engraving convention for a sign carried
+                // parentheses, "(8va)". LILYSHARP-OWN: the common engraving convention for a sign carried
                 // over a line break (it says "still in force", not "begins here"), kept by owner
                 // decision of 2026-11-25 (session 1379) although LilyPond repeats the bare "8va".
                 // ⚠️ When the parenthesised label and the shortest line do not fit between the

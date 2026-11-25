@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 68 | 観測者がゼロだと自認しているもの |
-| `OWN` | 488 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **618** | |
+| `OWN` | 489 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **619** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -255,7 +255,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（488 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（489 件）
 
 ### `LilySharp.Core/Audio/SingerFailure.cs`
 - **`SingerFailure`** own message, as it gave it, at the end. LILYSHARP-OWN.
@@ -801,6 +801,8 @@
 - **`NoteCollision.AnalyzeCollision`** LILYSHARP-OWN (user decision 2026-09-26): ONE meshing shift, dotted or not.
 ### `LilySharp.Core/Svg/Layout/NoteSpacingParameters.cs`
 - **`NoteSpacingParameters.MinItemGap`** LILYSHARP-OWN: ⚠️ this knob no longer reaches note-to-note spacing at all, and it is
+### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
+- **`OttavaBracketEngraver.Calculate`** parentheses, "(8va)". LILYSHARP-OWN: the common engraving convention for a sign carried
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
 - **`OutsideStaffStacker.StackAboveStaff`** system would hand back marks placed without the labels under them. LILYSHARP-OWN
 - **`OutsideStaffStacker.PlaceMusicMarks`** The key's words (MusicMarkType.KeyName, LILYSHARP-OWN) are placed LAST: they are no
