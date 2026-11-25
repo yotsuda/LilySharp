@@ -272,7 +272,9 @@ internal static class PedalEngraver
         }
         if (words.Count == 0)
             return ImmutableArray<SolvedPedalRow>.Empty;
-        // A change's two words stand as the draw sets them (MusicMarkEngraver.PedalChangeOffset).
+        // A change's two words stand as the draw sets them (MusicMarkEngraver.PedalChangeOffset),
+        // or, for a una corda, print nothing and only carry the row (ChangePrintsNothing).
+        HashSet<MusicMarkItem>? silent = null;
         for (int i = 0; i < words.Count; i++)
             foreach (var other in words)
                 if (other.Rank == words[i].Rank && other.Mark != words[i].Mark
@@ -280,10 +282,13 @@ internal static class PedalEngraver
                     && other.Mark.AnchorTiming == words[i].Mark.AnchorTiming
                     && IsRelease(other.Mark.Type) != IsRelease(words[i].Mark.Type))
                 {
-                    words[i] = words[i] with
-                    {
-                        X = words[i].X + MusicMarkEngraver.PedalChangeOffset(fonts, words[i].Mark, other.Mark),
-                    };
+                    if (MusicMarkEngraver.ChangePrintsNothing(words[i].Mark.Type))
+                        (silent ??= []).Add(words[i].Mark);
+                    else
+                        words[i] = words[i] with
+                        {
+                            X = words[i].X + MusicMarkEngraver.PedalChangeOffset(fonts, words[i].Mark, other.Mark),
+                        };
                     break;
                 }
 
@@ -364,12 +369,18 @@ internal static class PedalEngraver
             foreach (int i in group)
             {
                 var (_, _, mark, x, span) = ordered[i];
-                var word = WordProfiles(fonts, mark.Type, mark.Text, x);
-                if (up == null) { up = word.Up; down = word.Down; }
-                else { up.Merge(word.Up); down!.Merge(word.Down); }
+                if (silent == null || !silent.Contains(mark))
+                {
+                    var word = WordProfiles(fonts, mark.Type, mark.Text, x);
+                    if (up == null) { up = word.Up; down = word.Down; }
+                    else { up.Merge(word.Up); down!.Merge(word.Down); }
+                }
                 if (span.Right > span.Left && !insideDown.IsEmpty)
                     support.Merge(insideDown.ClippedToRange(span.Left, span.Right));
             }
+            // A run of nothing but a silent change has no ink to place.
+            if (up == null)
+                continue;
             if (lastStep >= 0 && lastStep + 1 < steps.Count && !insideDown.IsEmpty)
             {
                 var next = steps[lastStep + 1];

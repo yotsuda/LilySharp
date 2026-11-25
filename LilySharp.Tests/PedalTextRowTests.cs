@@ -97,4 +97,51 @@ public class PedalTextRowTests
         Assert.Equal(3.780, engage.X - first.X, 3);
         Assert.All(words.Where(w => w.X <= engage.X), w => Assert.Equal(first.YUp, w.YUp, 9));
     }
+
+    private static MusicMarkLayout[] UnaCordaWords(ScoreLayout layout) => [.. layout.MusicMarkLayouts
+        .Where(m => m.MarkType is MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff)
+        .OrderBy(m => m.X)];
+
+    /// <summary>A una corda change prints nothing — LilyPond's middle string is "" (Lab
+    /// sessions/p1390/m u2). Lily# drew "una corda" on the column and "tre corde" 0.4 left of
+    /// it, over the first "una corda".</summary>
+    [Fact]
+    public void AUnaCordaChange_PrintsNothing()
+    {
+        var words = UnaCordaWords(Laid("c''4@unaCorda d''4@treCorde@unaCorda e''4@treCorde c'4 | g''1 |"));
+        Assert.Collection(words,
+            w => Assert.Equal(MusicMarkType.UnaCordaOn, w.MarkType),
+            w => Assert.Equal(MusicMarkType.UnaCordaOff, w.MarkType));
+        Assert.Equal(6.004, words[1].X - words[0].X, 2);
+    }
+
+    /// <summary>The silent change still carries the row (u3): LilyPond's empty grob joins
+    /// the line spanner, so "tre corde" on the next step stays on the first word's row
+    /// (ink −5.812..−4.158 both). Without a change between them (u4) the same "tre corde"
+    /// is its own spanner and stacks under the "una corda" it overlaps (−7.671).</summary>
+    [Fact]
+    public void AUnaCordaChange_CarriesTheRowToTheNextWord()
+    {
+        var changed = UnaCordaWords(Laid("c'4@unaCorda d''4@treCorde@unaCorda g''4@treCorde r4 | g''1 |"));
+        Assert.Equal(2, changed.Length);
+        Assert.Equal(changed[0].YUp, changed[1].YUp, 9);
+        var plain = UnaCordaWords(Laid("c'4@unaCorda d''4 g''4@treCorde r4 | g''1 |"));
+        Assert.Equal(2, plain.Length);
+        Assert.True(plain[0].YUp - plain[1].YUp > 1.5, $"{plain[0].YUp:F3} / {plain[1].YUp:F3}");
+    }
+
+    /// <summary>The silent change has no ink to clear (u5 against u6): a sustain "Ped." on the
+    /// change's column stands where it stands with no change there — LilyPond's ink
+    /// −5.451..−3.451 in both books. Lily# stacked it 3.97 lower, under the two words.</summary>
+    [Fact]
+    public void AUnaCordaChange_LeavesNoInkForTheRowsBelow()
+    {
+        double[] SustainRows(string music) => [.. Laid(music).MusicMarkLayouts
+            .Where(m => m.MarkType is MusicMarkType.SustainOn or MusicMarkType.SustainOff)
+            .OrderBy(m => m.X).Select(m => m.YUp)];
+        var changed = SustainRows("c''1@unaCorda | d''2 d''2@treCorde@unaCorda@sustain | r1@!sustain | e''1@treCorde |");
+        var plain = SustainRows("c''1@unaCorda | d''2 d''2@sustain | r1@!sustain | e''1@treCorde |");
+        Assert.Equal(2, changed.Length);
+        Assert.Equal(plain, changed, (a, b) => Math.Abs(a - b) < 1e-9);
+    }
 }

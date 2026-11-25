@@ -355,8 +355,8 @@ internal static class MusicMarkEngraver
     /// against the engage's, centred on the column: the "*" a half engage width left of it and
     /// the engage a half "*" right (MEASURED 2.26.0, Lab sessions/p1384/m t6: "*Ped." at
     /// 0.488..5.516 over the column 3.002; Lily# kept "Ped." centred and set the "*" 0.4 apart,
-    /// both 0.78 left). The una corda's change string is empty in LilyPond, so nothing measures
-    /// it: it keeps its two words, "tre corde" a gap of 0.4 left of a centred "una corda".
+    /// both 0.78 left). The una corda prints no change word at all (<see cref="ChangePrintsNothing"/>),
+    /// so its words never reach this.
     /// LILYPOND-REF: scm/define-context-properties.scm / ly/engraver-init.ly
     ///   pedalSustainStrings ("Ped." "*Ped." "*"), pedalSostenutoStrings ("Sost. Ped."
     ///   "*Sost. Ped." "*"), pedalUnaCordaStrings ("una corda" "" "tre corde").
@@ -366,12 +366,27 @@ internal static class MusicMarkEngraver
     internal static double PedalChangeOffset(ScoreTextMetrics fonts, MusicMarkItem mark, MusicMarkItem partner)
     {
         double partnerHalf = PlainMarkWidth(fonts, partner.Type, partner.Text) / 2;
-        if (mark.Type is MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff)
-            return IsPedalRelease(mark.Type)
-                ? -(partnerHalf + PlainMarkWidth(fonts, mark.Type, mark.Text) / 2 + 0.4)
-                : 0;
         return IsPedalRelease(mark.Type) ? -partnerHalf : partnerHalf;
     }
+
+    /// <summary>
+    /// Whether a text-style CHANGE of this pedal family (its release and engage on one
+    /// moment) prints nothing: the una corda's. Both of its words stay out of the draw and
+    /// out of every row's ink, but the moment still carries the family's row on to the next
+    /// word (<see cref="PedalEngraver.SolveAndSeedText"/>).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly pedalUnaCordaStrings ("una corda" "" "tre corde") —
+    ///   the middle string, a change's, is empty.
+    /// LILYPOND-REF: lily/piano-pedal-engraver.cc:291-331 Piano_pedal_engraver::create_text_grobs —
+    ///   a STOP and a START take that middle string, and an empty string is still a string, so
+    ///   the grob is made with no ink and joins the line spanner like any word.
+    /// MEASURED 2.26.0 (Lab sessions/p1390/m u2, `c''4@unaCorda d''4@treCorde@unaCorda
+    /// e''4@treCorde`): "una corda" and "tre corde" only, on one baseline. Lily# drew "una corda"
+    /// on the d'' and "tre corde" 0.4 left of it, which put "tre corde" over the first word.
+    /// </remarks>
+    internal static bool ChangePrintsNothing(MusicMarkType t)
+        => t is MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff;
 
     /// <summary>
     /// Which ROW a pedal family occupies below the staff, nearest first — the order
@@ -1476,6 +1491,9 @@ internal static class MusicMarkEngraver
                 // A bracket/mixed pedal style draws the "Ped." / "*" as a bracket
                 // instead; skip the text layout (its SourceIndex si is already fixed).
                 if (keepMarkText != null && !keepMarkText(mark))
+                    continue;
+                // A una corda change prints nothing (ChangePrintsNothing).
+                if (ChangePrintsNothing(mark.Type) && GroupHasPedalChange(mark.Type))
                     continue;
                 double halfExtent = GetMarkHalfExtent(fonts, mark.Type, mark.Text, BoxedOf(mark.Type));
 
