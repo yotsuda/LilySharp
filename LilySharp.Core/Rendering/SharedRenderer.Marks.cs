@@ -992,10 +992,6 @@ internal static partial class SharedRenderer
 
     // ---------- Pedal brackets ----------
 
-    // Mixed style: how far past the note column the bracket line starts, clearing
-    // the centred "Ped." text (its right half ≈ 1.9 ss) plus bound-padding (1.0).
-    private const double MixedPedalTextClearance = 2.9;
-
     /// <summary>
     /// Draws piano pedal brackets: a below-staff line with an up hook at each end
     /// (bracket style) or a right hook only after the "Ped." text (mixed style).
@@ -1026,7 +1022,7 @@ internal static partial class SharedRenderer
             // …past ITS word: the layout says how far (PedalBracketLayout.MixedLineStart), and
             // a word that reaches past the release leaves the hook alone.
             double lineStartX = b.IsMixed
-                    ? Math.Min(b.StartX + (b.MixedLineStart > 0 ? b.MixedLineStart : MixedPedalTextClearance), lineEndX)
+                    ? Math.Min(b.StartX + (b.MixedLineStart > 0 ? b.MixedLineStart : PedalEngraver.SustainMixedLineStart), lineEndX)
                 : b.StartChange ? b.StartX + flare : b.StartX;
             using (gc.Source(b.SourcePosition))
             {

@@ -589,7 +589,10 @@ public class GrammarEvaluation4Tests
         var lines = layout.PedalBracketLayouts.OrderBy(b => b.StartX).ToArray();
         Assert.Equal(3, lines.Length);
         Assert.All(lines, b => Assert.True(b.IsMixed));
-        Assert.Equal(2.9, lines[0].MixedLineStart, 9);
+        // The sustain's: "Ped." is 3.472 wide (pedal.Ped 3.192 + pedal.. 0.280), centred, and
+        // LilyPond 2.26.0 begins the line 2.736 from the column (Lab sessions/p1383/m p0/r0/m1).
+        // It was 2.9 — the half width of the serif "Ped." of before 2026-08-18.
+        Assert.Equal(2.736, lines[0].MixedLineStart, 9);
         var fonts = LilySharp.Core.Rendering.ScoreTextMetrics.Bundled;
         foreach (var (line, word, on) in new[] { (lines[1], "Sost. Ped.", LilySharp.Core.Svg.Model.MusicMarkType.SostenutoOn),
                      (lines[2], "una corda", LilySharp.Core.Svg.Model.MusicMarkType.UnaCordaOn) })

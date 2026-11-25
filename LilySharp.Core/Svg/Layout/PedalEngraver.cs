@@ -951,7 +951,11 @@ internal static class PedalEngraver
     /// "Sost. Ped." and "una corda", which are twice as wide as the "Ped." glyphs (grammar
     /// evaluation 4, 2026-11-13, chamber/r-14). MEASURED 2.26.0 (Lab
     /// sessions/p1226/md/eval4/fixB/lp/r14.png): each line begins a staff space after its word.
-    /// The sustain's stays the constant it was (its glyphs' half width, 1.9, plus the padding).
+    /// The sustain's was a constant, 1.9 plus the padding: the half width of "Ped." when it was
+    /// set as a serif string (until 2026-08-18), 0.164 more than the music glyphs' 1.736 —
+    /// every mixed sustain line began 0.164 right of LilyPond's (MEASURED 2.26.0, Lab
+    /// sessions/p1383/m p0/r0/m1: 2.736 from the column, Lily# 2.900). It is now the glyphs'
+    /// own half width (<see cref="SustainMixedLineStart"/>), like the other two words.
     /// LILYPOND-REF: lily/piano-pedal-bracket.cc Piano_pedal_bracket::print — the left
     ///   edge is the pedal-text's right extent plus <c>bound-padding</c>.
     /// LILYPOND-REF: scm/define-grobs.scm PianoPedalBracket — <c>(bound-padding . 1.0)</c>.
@@ -960,13 +964,22 @@ internal static class PedalEngraver
     {
         const double boundPadding = 1.0;
         if (type == PedalType.Sustain)
-            return 1.9 + boundPadding;
+            return SustainMixedLineStart;
         var on = type == PedalType.Sostenuto ? MusicMarkType.SostenutoOn : MusicMarkType.UnaCordaOn;
         string word = type == PedalType.Sostenuto ? "Sost. Ped." : "una corda";
         double width = fonts.Advance(word, MusicMarkEngraver.PlainMarkEm(fonts, on),
             MusicMarkEngraver.TextRoleOf(on), MusicMarkEngraver.TextStyleOf(fonts, on));
         return width / 2 + boundPadding;
     }
+
+    /// <summary>
+    /// Mixed style, the sustain: the centred "Ped." glyphs' right half (the music font's, as
+    /// <see cref="MusicMarkEngraver.SustainPedalExtent"/> pastes them) plus the bound's
+    /// padding (1.0) — 2.736 with Emmentaler. Needs no text fonts, so the renderer's
+    /// fallback for a layout made without them reads it too.
+    /// </summary>
+    internal static double SustainMixedLineStart
+        => MusicMarkEngraver.SustainPedalExtent("Ped.").Width / 2 + 1.0;
 
     /// <summary>
     /// Which brackets END and which START at a pedal CHANGE: one bracket ends at the very
