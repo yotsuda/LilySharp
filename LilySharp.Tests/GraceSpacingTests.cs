@@ -117,7 +117,9 @@ public class GraceSpacingTests
             .CollectMultiStaff(tree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree)!);
         var layout = new LayoutEngine(new LayoutOptions()).Layout(multi);
         var bar = layout.Systems.SelectMany(s => s.Measures).Single(m => m.MeasureIndex == 0);
-        Assert.Equal(mainFromFirst, bar.GetXForTiming(Fraction.Half) - bar.GetXForTiming(Fraction.Zero), 2);
+        // Within 0.005, not "equal at 2 decimal places": that rounds both sides, so v11's 6.675 against
+        // 6.67520 on ubuntu (6.67499… on Windows) fell either side of the rounding — CI red 2026-11-26.
+        Assert.Equal(mainFromFirst, bar.GetXForTiming(Fraction.Half) - bar.GetXForTiming(Fraction.Zero), 0.005);
     }
 
     /// <summary>Grace runs at one moment in two staves stand in SHARED columns: each column where
