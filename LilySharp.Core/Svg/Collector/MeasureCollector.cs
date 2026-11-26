@@ -2755,6 +2755,20 @@ public sealed partial class MeasureCollector
                 StampMovedGraceRuns(stavesInOrder);
         }
 
+        // A run that starts after another of the same moment, in any staff, draws flags
+        // (GraceColumnInfo.StartsAfterGraceGroup) — before the companions copy the columns.
+        {
+            var before = staffGroups.SelectMany(sg => sg.Staves).Select(st => st.Voices).ToImmutableArray();
+            var after = StampLateGraceRuns(before);
+            if (after != before)
+            {
+                int lsi = 0;
+                staffGroups = staffGroups
+                    .Select(sg => sg with { Staves = sg.Staves.Select(st => st with { Voices = after[lsi++] }).ToImmutableArray() })
+                    .ToImmutableArray();
+            }
+        }
+
         // The staff columns two voices' graces SHARE (HANDOFF §2 U8b): paired by moment, shifted
         // apart by Note_collision, their accidentals packed as one column — on both copies, after
         // the accidentals are final.
@@ -3305,6 +3319,7 @@ public sealed partial class MeasureCollector
         // The grace groups' heads as the voices now have them (StaffAccidentals added some).
         StaffAccidentals.SyncGraceNotes(_graceNotes, _ => resolved);
         // The staff columns two voices' graces share (HANDOFF §2 U8b) — after the accidentals.
+        resolved = StampLateGraceRuns(ImmutableArray.Create(resolved), _v.Cursor.StaffIndex)[0];
         resolved = StampGraceCompanions(resolved, _v.Cursor.StaffIndex);
         return ScoreAssembler.BuildScore(
             resolved,
@@ -8618,6 +8633,95 @@ public sealed partial class MeasureCollector
             columnItemIndices) { IsAfterGrace = grace.IsAfterGrace });
         // Hand the infos to the next main note/chord so it can reserve front space.
         _v.PendingLeadingGrace = graceColumns;
+    }
+
+    /// <summary>
+    /// Marks every grace run that starts LATER than another run before the same moment — in any
+    /// staff or voice of the score — on its first column
+    /// (<see cref="GraceColumnInfo.StartsAfterGraceGroup"/>), on both copies: the main item's
+    /// <c>LeadingGrace</c> and the grace group's columns. Such a run draws flags.
+    /// </summary>
+    /// <param name="staves">Each staff's voices, in the global staff order the grace groups carry.</param>
+    /// <remarks>
+    /// LILYPOND-REF: lily/auto-beam-engraver.cc:587-615 Grace_auto_beam_engraver — process_music
+    ///   takes the FIRST timestep of a new main moment as the grace group's start, and the
+    ///   timesteps are the whole score's; test_moment starts a beam only there.
+    /// MEASURED (2.26.0, Lab sessions/p1394/m): `grace { f16 e16 }` under `grace { g''8 a''8 }`
+    ///   (p1393 s12) draws flags and its gaps 1.938 apart; under `grace { g''16 a''16 }` (s7), which
+    ///   starts with it, a beam.
+    /// </remarks>
+    private ImmutableArray<ImmutableArray<Voice>> StampLateGraceRuns(ImmutableArray<ImmutableArray<Voice>> staves, int firstStaffIndex = 0)
+    {
+        if (_graceNotes.Count == 0 || staves.IsDefaultOrEmpty)
+            return staves;
+        // The runs: (staff, voice, measure, item, onset, grace length).
+        var runs = new List<(int Staff, int Voice, int Measure, int Item, Fraction Onset, Fraction Length)>();
+        for (int s = 0; s < staves.Length; s++)
+            for (int v = 0; v < staves[s].Length; v++)
+            {
+                var measures = staves[s][v].Measures;
+                for (int m = 0; m < measures.Length; m++)
+                {
+                    var onset = new Fraction(0, 1);
+                    var items = measures[m].Items;
+                    for (int ii = 0; ii < items.Length; ii++)
+                    {
+                        if (!items[ii].GraceTime)
+                        {
+                            var lead = Svg.Layout.SpacingRules.GraceNotesOf(items[ii]);
+                            if (!lead.IsDefaultOrEmpty)
+                            {
+                                var len = new Fraction(0, 1);
+                                foreach (var c in lead)
+                                    len += c.Length;
+                                runs.Add((s, v, m, ii, onset, len));
+                            }
+                            onset += items[ii].Duration;
+                        }
+                    }
+                }
+            }
+        if (runs.Count < 2)
+            return staves;
+        var earliest = new Dictionary<(int, Fraction), Fraction>();
+        foreach (var r in runs)
+            if (!earliest.TryGetValue((r.Measure, r.Onset), out var e) || r.Length > e)
+                earliest[(r.Measure, r.Onset)] = r.Length;
+        ImmutableArray<ImmutableArray<Voice>>.Builder? sb = null;
+        foreach (var r in runs)
+        {
+            if (r.Length >= earliest[(r.Measure, r.Onset)])
+                continue;
+            sb ??= staves.ToBuilder();
+            var voices = sb[r.Staff].ToBuilder();
+            var voice = voices[r.Voice];
+            var mb = voice.Measures.ToBuilder();
+            var ib = mb[r.Measure].Items.ToBuilder();
+            var lead = Svg.Layout.SpacingRules.GraceNotesOf(ib[r.Item]);
+            var columns = lead.SetItem(0, lead[0] with { StartsAfterGraceGroup = true });
+            ib[r.Item] = ib[r.Item] switch
+            {
+                NoteItem n => n with { LeadingGrace = columns },
+                ChordItem c => c with { LeadingGrace = columns },
+                RestItem rr => rr with { LeadingGrace = columns },
+                var other => other,
+            };
+            mb[r.Measure] = mb[r.Measure] with { Items = ib.MoveToImmutable() };
+            voices[r.Voice] = voice with { Measures = mb.MoveToImmutable() };
+            sb[r.Staff] = voices.MoveToImmutable();
+            for (int g = 0; g < _graceNotes.Count; g++)
+            {
+                var gn = _graceNotes[g];
+                if (gn.StaffIndex != firstStaffIndex + r.Staff || gn.VoiceIndex != r.Voice || gn.MeasureIndex != r.Measure
+                    || gn.MainNoteItemIndex != r.Item || gn.Columns.IsDefaultOrEmpty)
+                    continue;
+                _graceNotes[g] = new GraceNoteItem(gn.Type,
+                    gn.Columns.SetItem(0, gn.Columns[0] with { StartsAfterGraceGroup = true }),
+                    gn.MeasureIndex, gn.MainNoteItemIndex, gn.SourcePosition, gn.StaffIndex, gn.VoiceIndex,
+                    gn.ColumnItemIndices) { IsAfterGrace = gn.IsAfterGrace, CrossStaffIndex = gn.CrossStaffIndex };
+            }
+        }
+        return sb?.MoveToImmutable() ?? staves;
     }
 
     /// <summary>

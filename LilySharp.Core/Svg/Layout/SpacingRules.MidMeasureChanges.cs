@@ -662,9 +662,32 @@ internal static partial class SpacingRules
     /// spacer's column 2.318436 = 2.898045 x 0.8, where the Note_spacing approach gives 2.401796.
     /// </remarks>
     internal static bool LeadingGraceOpensOnSpacer(in ItemColumn items)
-        => WidestLeadingGraceItem(items) is { } item
-           && GraceNotesOf(item) is { IsDefaultOrEmpty: false } grace
-           && grace[0].IsSpacer;
+    {
+        // The first grace column is the EARLIEST run's (SharedGraceChain): it holds no note only
+        // when every run that starts there opens on a spacer. MEASURED (2.26.0, Lab
+        // sessions/p1394/m s14): `grace { s16 f16 e16 }` under `grace { g''8 a''8 }` — the
+        // treble's g'' opens the moment, and the approach into it is its wish (3.421), not the
+        // bare spring the bass's spacer would give.
+        Fraction earliest = Fraction.Zero;
+        bool spacer = false;
+        for (int i = 0; i < items.Count; i++)
+        {
+            var grace = GraceNotesOf(items[i]);
+            if (grace.IsDefaultOrEmpty)
+                continue;
+            var length = Fraction.Zero;
+            foreach (var c in grace)
+                length += c.Length;
+            if (length > earliest)
+            {
+                earliest = length;
+                spacer = grace[0].IsSpacer;
+            }
+            else if (length == earliest)
+                spacer &= grace[0].IsSpacer;
+        }
+        return earliest > Fraction.Zero && spacer;
+    }
 
     /// <summary>The main item at this moment whose leading grace run is the widest — the run the
     /// slot's springs are built from (<see cref="LeadingGraceRun"/>'s choice). Null when none leads

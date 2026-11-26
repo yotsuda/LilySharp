@@ -99,6 +99,9 @@ public class GraceSpacingTests
     // s17 (Lab sessions/p1393/m): `grace { a''8 }` over `grace { f8 e16 d16 }` — the bass run starts
     // first, so the approach is the bass's wish alone: the main notes 8.654 after the first; Lily# was 8.554.
     [InlineData("part rh { clef treble }\npart lh { clef bass }\nsection A {\n  rh { e''2 grace { a''8 } f''2 | g''1 | }\n  lh { c,2 grace { f8 e16 d16 } d2 | g,1 | }\n}\nform { A }\nscore { staff rh  staff lh }\n", 8.654)]
+    // p1394 s14: `grace { s16 f16 e16 }` under `grace { g''8 a''8 }` — the spacer's column holds no note
+    // (bare springs 1.280 into and out of it) and the treble's g'' opens the moment: 9.858; Lily# was 8.436.
+    [InlineData("part rh { clef treble }\npart lh { clef bass }\nsection A {\n  rh { e''2 grace { g''8 a''8 } f''2 | g''1 | }\n  lh { c,2 grace { s16 f16 e16 } d2 | g,1 | }\n}\nform { A }\nscore { staff rh  staff lh }\n", 9.858)]
     public void AGraceRunInOneStaff_IsSpacedByThatStaffsWishAlone(string body, double mainFromFirst)
     {
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse("octave absolute\ntime 4/4\npaper { raggedRight }\n" + body);
@@ -128,6 +131,13 @@ public class GraceSpacingTests
     [InlineData("rh { e''2 grace { g''8 a''8 } f''2 | g''1 | }\n  lh { c,2 grace { f8 e16 d16 } d2 | g,1 | }", "5.03 2.84", "5.03 2.84 1.42")]
     // s15: the treble's main note stems up — still one column, 1.938; Lily# stood the bass 1.814.
     [InlineData("rh { e'2 grace { g'16 } f'2 | g'1 | }\n  lh { c,2 grace { f16 } d2 | g,1 | }", "1.94", "1.94")]
+    // p1394 s12: the bass run starts after the treble's, so it draws FLAGS (StartsAfterGraceGroup) —
+    // its sixteenths 1.938 apart and 1.939 before d; Lily# beamed them, 1.418 and 1.418.
+    [InlineData("rh { e''2 grace { g''8 a''8 } f''2 | g''1 | }\n  lh { c,2 grace { f16 e16 } d2 | g,1 | }", "6.08 3.88", "3.88 1.94")]
+    // p1394 v5: no run has a column at both ends of the quarter → sixteenth pair — the bare base spring, 2.080.
+    [InlineData("rh { e''2 grace { g''4 } f''2 | g''1 | }\n  lh { c,2 grace { f16 e16 } d2 | g,1 | }", "5.96", "3.88 1.94")]
+    // p1394 v7: the same for a''8 → the bass's lone f16 — 1.280.
+    [InlineData("rh { e''2 grace { g''8 a''8 } f''2 | g''1 | }\n  lh { c,2 grace { f16 } d2 | g,1 | }", "5.29 3.09", "1.81")]
     public void GraceRunsAtOneMomentInTwoStaves_StandInSharedColumns(string music, string treble, string bass)
     {
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(
@@ -143,6 +153,28 @@ public class GraceSpacingTests
             .Select(kv => main - kv.Value).OrderByDescending(d => d)
             .Select(d => d.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)));
         Assert.Equal((treble, bass), (BeforeMain(0), BeforeMain(1)));
+    }
+
+    /// <summary>A grace run that starts after another run of the same moment — in another staff or
+    /// another voice — draws flags: LilyPond's grace autobeam starts only on the moment's first
+    /// timestep. The run that starts first keeps its beam. MEASURED 2.26.0 (Lab sessions/p1394/m s12, v9).</summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/auto-beam-engraver.cc:602-615 Grace_auto_beam_engraver::test_moment — START only at last_grace_position_.
+    /// </remarks>
+    [Theory]
+    [InlineData("part rh { clef treble }\npart lh { clef bass }\nsection A {\n  rh { e''2 grace { g''8 a''8 } f''2 | g''1 | }\n  lh { c,2 grace { f16 e16 } d2 | g,1 | }\n}\nform { A }\nscore { staff rh  staff lh }\n", 1, 0)]
+    [InlineData("part rh { clef treble }\nsection A {\n  rh { voice { e''2 grace { g''8 a''8 } f''2 } { c'2 grace { f'16 e'16 } d'2 } | g''1 | }\n}\nform { A }\nscore { staff rh }\n", 0, 1)]
+    public void AGraceRunThatStartsLater_DrawsFlags(string body, int staff, int voice)
+    {
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse("octave absolute\ntime 4/4\npaper { raggedRight }\n" + body);
+        var multi = new LilySharp.Core.Svg.Collector.MeasureCollector()
+            .CollectMultiStaff(tree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree)!);
+        var staves = multi.StaffGroups.SelectMany(g => g.Staves).ToList();
+        ImmutableArray<GraceColumnInfo> RunOf(int s, int v) => staves[s].Voices[v].Measures[0].Items
+            .First(i => !i.GraceTime && !SpacingRules.GraceNotesOf(i).IsDefaultOrEmpty) is var item
+            ? SpacingRules.GraceNotesOf(item) : default;
+        Assert.Equal(0, GraceNoteEngraver.BeamedPrefix(RunOf(staff, voice)));
+        Assert.Equal(2, GraceNoteEngraver.BeamedPrefix(RunOf(0, 0)));
     }
 
     /// <summary>

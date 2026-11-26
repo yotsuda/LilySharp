@@ -228,7 +228,14 @@ public readonly record struct GraceColumnInfo(
     // skylines and reach carry it so the run keeps its room (2026-11-14, leftover of session
     // 1227: it was drawn through the time signature or the note before). MusicItem.ApproachGesture
     // for a grace column (Lily#'s own device: ItemSkylineFactory.GraceApproachPart).
-    int ApproachGesture = 0
+    int ApproachGesture = 0,
+    // Whether the run this column leads starts LATER than another run at the same moment, in any
+    // staff or voice (session 1394) — LilyPond's grace autobeam then never starts, so the run
+    // draws flags (GraceNoteEngraver.BeamedPrefix). Stamped on the run's FIRST column by
+    // MeasureCollector.StampLateGraceRuns; false everywhere else.
+    // LILYPOND-REF: lily/auto-beam-engraver.cc:587-615 Grace_auto_beam_engraver — the group's
+    //   start is the first timestep of the main moment, which the timesteps of EVERY context make.
+    bool StartsAfterGraceGroup = false
 )
 {
     /// <summary>Whether this column's stem points up — <c>!</c><see cref="StemDown"/>.</summary>

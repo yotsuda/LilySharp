@@ -552,6 +552,13 @@ internal static class GraceNoteEngraver
     {
         if (notes.IsDefaultOrEmpty || notes.Length < 2)
             return 0;
+        // A run that starts after another run of the same moment (in any staff or voice) is no
+        // autobeam's start: LilyPond's grace autobeam starts only on the moment's first timestep.
+        // MEASURED (2.26.0, Lab sessions/p1394/m): `grace { f16 e16 }` under `grace { g''8 a''8 }`
+        // draws two flagged sixteenths; alone (p1393 s13) it draws a beam.
+        // LILYPOND-REF: lily/auto-beam-engraver.cc:602-615 Grace_auto_beam_engraver::test_moment — START only at last_grace_position_.
+        if (notes[0].StartsAfterGraceGroup)
+            return 0;
         int n = 0;
         foreach (var note in notes)
         {

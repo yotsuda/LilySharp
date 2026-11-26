@@ -385,6 +385,7 @@ internal static partial class SpacingRules
     internal static GraceColumnLayout? SharedGraceChain(in ItemColumn items)
     {
         List<GraceColumnLayout>? runs = null;
+        List<ImmutableArray<GraceColumnInfo>>? runColumns = null;
         for (int i = 0; i < items.Count; i++)
         {
             var grace = GraceNotesOf(items[i]);
@@ -394,6 +395,7 @@ internal static partial class SpacingRules
                 if (c.CollisionShift != 0)
                     return null;
             (runs ??= new()).Add(GraceColumns(grace, items[i]));
+            (runColumns ??= new()).Add(grace);
         }
         if (runs is null || runs.Count < 2)
             return null;
@@ -429,16 +431,24 @@ internal static partial class SpacingRules
             double idealSum = 0, min = double.NegativeInfinity, floor = double.NegativeInfinity;
             double rod = double.NegativeInfinity;
             int count = 0;
-            foreach (var r in runs)
+            for (int ri = 0; ri < runs.Count; ri++)
             {
+                var r = runs[ri];
+                var rc = runColumns![ri];
                 int k = r.Moments.IndexOf(columns[u]);
-                if (k < 0)
+                // A SPACER column holds no note: no wish leaves it, and the wish before it
+                // reaches the next NOTE column (lily/note-spacing-engraver.cc — a skip makes no
+                // note column, so no spacing item), so it takes part in no pair here.
+                if (k < 0 || rc[k].IsSpacer)
                     continue;
-                Fraction? theirRight = k + 1 < r.Moments.Length ? r.Moments[k + 1] : null;
+                int next = k + 1;
+                while (next < rc.Length && rc[next].IsSpacer)
+                    next++;
+                Fraction? theirRight = next < r.Moments.Length ? r.Moments[next] : null;
                 if (theirRight != right)
                     continue;   // its wish reaches a later column, not this pair's
                 var (ideal, wishMin, ownBase) = r.Wishes[k];
-                if (double.IsNaN(ideal))
+                if (double.IsNaN(ideal) || next != k + 1)
                     return null;
                 double gap = r.Gap(k);
                 // The wish as its run priced it, on the run's own base spring; re-based.
@@ -450,7 +460,20 @@ internal static partial class SpacingRules
                 count++;
             }
             if (count == 0)
-                return null;
+            {
+                // No run has a column at both ends (every wish from the left column reaches a
+                // later one): the bare base spring, its minimum 0, and no rod — the two columns'
+                // heads stand in different staves.
+                // LILYPOND-REF: lily/spacing-spanner.cc:380-391 musical_column_spacing — no wishes: set_min_distance (0.0).
+                // MEASURED (2.26.0, Lab sessions/p1394/m v5, v7): `grace { g''4 }` over
+                // `grace { f16 e16 }` stands f 2.080 after g'' (the eighth's base spring), and
+                // `grace { g''8 a''8 }` over `grace { f16 }` stands f 1.280 after a''.
+                wishes[u] = (sharedBase, 0.0, sharedBase);
+                gapLengths[u] = sharedBase;
+                rods[u] = 0.0;
+                compresses[u] = Math.Max(0.0, sharedBase - gp.SpacingIncrement);
+                continue;
+            }
             wishes[u] = (idealSum / count, min, sharedBase);
             gapLengths[u] = Math.Max(GraceColumnGapOfIdeal(idealSum / count, min), floor);
             rods[u] = rod;
