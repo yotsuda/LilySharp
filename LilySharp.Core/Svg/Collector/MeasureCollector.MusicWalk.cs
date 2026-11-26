@@ -147,6 +147,10 @@ public sealed partial class MeasureCollector
         EnterPhraseTranspose(reset.AnchorStep, reset.OctaveOffset, reset.AnchorShape);
     }
 
+    /// <summary>The outermost reference of the phrase being expanded — written in the part's own
+    /// text — or -1 outside a phrase body (<see cref="MeasureBuilder.CallSite"/>).</summary>
+    private int OutermostPhraseCallSite() => _v.PhraseCallSites.Count > 0 ? _v.PhraseCallSites[0] : -1;
+
     /// <summary>Closes a phrase reference's body: drops its auto-transpose, so the notes after
     /// it stay at their written pitch.</summary>
     private void LeavePhraseBody(PhraseEndMarker end)

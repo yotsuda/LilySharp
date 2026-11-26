@@ -266,6 +266,26 @@ internal sealed class MeasureBuilder
             _writtenStart = position;
     }
 
+    /// <summary>Where the phrase being expanded is called from — the outermost reference, in the
+    /// part's own text (<c>beatA |</c>, <c>riff |</c>) — or -1 outside a phrase body. A bar whose
+    /// music comes from a phrase called by name is written at the reference
+    /// (<see cref="Measure.WrittenStart"/>): its items carry the body's positions at the top of the
+    /// file, so the bar's written stretch ran from the body down to the bar line after the
+    /// reference, and the editor's caret anywhere between lit it (owner's report 2026-11-27: a
+    /// kit of <c>beatA | % | beatB |</c> bars stayed lit in the preview whatever the caret did).
+    /// Set by the collector, which keeps the call sites.</summary>
+    internal Func<int>? CallSite { get; init; }
+
+    /// <summary>The call site, when inside a phrase body; -1 otherwise.</summary>
+    internal int PhraseCallSite => CallSite?.Invoke() ?? -1;
+
+    /// <summary>A note, rest or chord of a phrase body: its bar is written at the call site.</summary>
+    private void NoteCalledFrom(MusicItem item)
+    {
+        if (item is NoteItem or ChordItem or RestItem && PhraseCallSite is >= 0 and var calledAt)
+            NoteWrittenStart(calledAt);
+    }
+
     /// <summary>
     /// Fires when a measure is completed (auto-fill OR explicit barline), i.e.
     /// a new measure is about to begin. The collector uses this to reset its
@@ -1207,7 +1227,10 @@ internal sealed class MeasureBuilder
         if (item is ClefChangeItem or KeySignatureChangeItem)
             InsertInBreakAlignOrder(item);
         else
+        {
+            NoteCalledFrom(item);
             _currentItems.Add(TakePendingPhrasingSlur(item));
+        }
 
         // Real content fills this span, so a following barline closes IT, not an empty
         // measure. A ZERO-duration directive (a clef change) does not fill anything — it
@@ -1382,6 +1405,7 @@ internal sealed class MeasureBuilder
         if (_overflowing && item is NoteItem or ChordItem or RestItem)
             return;
         item = TakePendingPhrasingSlur(item);
+        NoteCalledFrom(item);
         _currentItems.Add(_graceDepth > 0 ? NarrowToGraceTime(item) : item);
         _confirmableBoundary = false;
         // A tuplet's member is sounding music after a mid-bar `break` too (its duration

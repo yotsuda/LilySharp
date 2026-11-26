@@ -385,10 +385,15 @@ internal static partial class SharedRenderer
                 // A bar a part does not write yet — padded to the section's length — is written at
                 // the end of the part's block there (owner's request 2026-11-20): the click goes
                 // where its notes are to be typed, and its stretch is that one place.
+                // A bar of a phrase called by name (`riff |`, `beatA |`) is written at the reference
+                // (MeasureBuilder.CallSite): a bar of a longer phrase but its last closes inside the
+                // body, so its stretch is the reference's first character — the caret on the name
+                // lights every bar the phrase plays there. A bar not written yet keeps no stretch.
                 if (last >= 0 && m < measures.Length && measures[m].WrittenStart is >= 0 and var written)
                 {
+                    bool sounds = best >= 0;
                     (best, first) = (written, written);
-                    to = Math.Max(to, written);
+                    to = Math.Max(to, sounds ? written + 1 : written);
                 }
                 row[m] = last < 0
                     ? new BarSource(best >= 0 ? best : spacer, 0, 0)

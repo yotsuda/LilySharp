@@ -495,7 +495,9 @@ public sealed partial class MeasureCollector
     /// lines', phrase bodies elsewhere in the file when the lines are phrase words).</summary>
     private async ValueTask<Fraction> EmitDrumPiece(DrumPiece piece, MeasureBuilder builder, bool stemUp, Fraction? scaled, int chartStart)
     {
-        builder.NoteWrittenStart(chartStart);
+        // A chart inside a phrase body (`phrase beatA { steps { … } }` played as `beatA |`) is
+        // written where the phrase is called, not at the body.
+        builder.NoteWrittenStart(builder.PhraseCallSite is >= 0 and var calledAt ? calledAt : chartStart);
         int measureIndex = builder.CurrentMeasureIndex;
         int itemIndex = builder.CurrentItemCount;
         // The moment, not the clock: a tuplet's pieces go in without duration and the clock

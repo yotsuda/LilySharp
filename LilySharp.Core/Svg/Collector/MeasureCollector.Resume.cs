@@ -179,6 +179,13 @@ public sealed partial class MeasureCollector
     /// lists, cumulative side-table slices), and clears the pending plan so
     /// everything after the checkpoint runs live.
     /// </summary>
+    private static int WrittenAcross(int written, in CollectTailShifter.Window window)
+        => window.TryShift(written, out int moved) ? moved
+            : throw new CollectResumeAbortException("collect resume: a bar's written place stands in the edit");
+
+    private static Measure WrittenAcross(Measure m, in CollectTailShifter.Window window)
+        => WrittenAcross(m.WrittenStart, window) is var moved && moved != m.WrittenStart ? m with { WrittenStart = moved } : m;
+
     private void RestoreWalkCheckpoint(VoiceResumePlan plan, MeasureBuilder builder)
     {
         var ck = plan.Checkpoint!; // only a prefix-armed plan reaches the restore
@@ -284,7 +291,21 @@ public sealed partial class MeasureCollector
         // Builder: adopt the pre-finalize prefix measures, with the boundary-time
         // value of the last one (the walk can rewrite _measures[^1] after the
         // checkpoint — SetBreak / AddEndBarlineSource — and did, in the recording).
-        builder.Restore(ck.Builder, rec.PreFinalizeMeasures!.GetRange(0, ck.MeasureCount));
+        // …with each bar's written place moved across the edit: a bar of a phrase called by name
+        // is written at the reference (MeasureBuilder.CallSite), which stands below the body the
+        // walk read — after the window when the edit lies between them, the only position of the
+        // prefix that can (CollectEditResumeTests, canon-in-d: 2829 vs 2831).
+        var probe = WalkProbe!;
+        var window = new CollectTailShifter.Window(probe.WindowPrefix, probe.WindowSuffixStart, probe.WindowDelta);
+        var prefix = rec.PreFinalizeMeasures!.GetRange(0, ck.MeasureCount);
+        for (int i = 0; i < prefix.Count; i++)
+            prefix[i] = WrittenAcross(prefix[i], window);
+        var boundary = ck.Builder with
+        {
+            LastMeasure = ck.Builder.LastMeasure is { } last ? WrittenAcross(last, window) : null,
+            WrittenStart = WrittenAcross(ck.Builder.WrittenStart, window),
+        };
+        builder.Restore(boundary, prefix);
 
         _resumeRestoredSectionStart = ck.SectionStartMeasure;
         _resumePending = null;

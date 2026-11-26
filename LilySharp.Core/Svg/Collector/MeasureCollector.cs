@@ -5655,6 +5655,7 @@ public sealed partial class MeasureCollector
     {
         var builder = new MeasureBuilder(ScoreMeter, voiceNode.SourceStart, _v.Meta.TimeSenzaMisura)
         {
+            CallSite = OutermostPhraseCallSite,
             MeterInForce = MeterOfMeta(),
             MidBarBreaks = MidBarBreaks,
             MidBarBreakRequests = _midBarBreakRequests,
@@ -6076,6 +6077,7 @@ public sealed partial class MeasureCollector
 
         var builder = new MeasureBuilder(ScoreMeter, senzaMisura: _v.Meta.TimeSenzaMisura)
         {
+            CallSite = OutermostPhraseCallSite,
             MeterInForce = MeterOfMeta(),
             MidBarBreaks = MidBarBreaks,
             MidBarBreakRequests = _midBarBreakRequests,

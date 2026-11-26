@@ -119,6 +119,31 @@ public class BarStaffBoxTests
         Assert.All(own, s => Assert.Equal("drums { { hh8 hh hh hh hh hh hh hh } { bd4 r bd r } } |", s));
     }
 
+    private static List<string> Stretches(string book) =>
+        Regex.Matches(SvgGenerator.Generate(SyntaxTree.Parse(book), SvgRenderOptions.Preview()), @"data-start=""(\d+)"" data-span=""(\d+) (\d+)""").Cast<Match>()
+            .Select(m => (S: int.Parse(m.Groups[1].Value), F: int.Parse(m.Groups[2].Value), T: int.Parse(m.Groups[3].Value)))
+            .Select(x => { Assert.Equal(x.S, x.F); return book[x.F..(x.T + 1)]; }).ToList();
+
+    /// <summary>A bar of a phrase called by name (owner's report 2026-11-27: a kit of
+    /// <c>beatA | % | beatB |</c> bars, Orecchiante's grooves written as
+    /// <c>phrase beatA { steps { … } }</c>, stayed lit in the preview whatever the caret did — the
+    /// same as 2026-11-01's chart of phrase words, for a bar that is the phrase's name alone). Its
+    /// stretch ran from the phrase body at the top of the file down to the bar line after the name.
+    /// It is written at the name: a drum chart's or a pitched phrase's, one bar long or more.</summary>
+    [Fact]
+    public void ABarOfAPhraseCalledByName_SpansTheName_NotThePhraseBody()
+    {
+        const string kit = "time 4/4\npart kit { clef percussion }\nphrase beatA { steps { hh \"x... x... x... x...\" } }\n"
+            + "phrase two { steps { bd \"x... .... .... .... | x... .... .... ....\" } }\n"
+            + "section A {\n  kit { beatA | % | two | steps { sn \".... x... .... x...\" } | }\n}\nform { A }\nscore { staff kit }\n";
+        // (two's first bar closes inside the body: its stretch is the name's first character)
+        Assert.Equal(new[] { "beatA |", "% |", "tw", "two |", "steps { sn \".... x... .... x...\" } |" }, Stretches(kit));
+
+        const string bass = "time 4/4\npart bass { clef bass }\nphrase riff { c4 d e f | }\nphrase two { c1 | d1 | }\n"
+            + "section A {\n  bass { riff | g1 | two | }\n}\nform { A }\nscore { staff bass }\n";
+        Assert.Equal(new[] { "riff |", "g1 |", "tw", "two |" }, Stretches(bass));
+    }
+
     /// <summary>A chords row's box stands where its names are (owner's report 2026-11-16: on a
     /// chord chart the box a hover lights stood above the names, their lower half outside it —
     /// it was the row's reserved band, whose top is 2.9 above the names' baseline and which is
