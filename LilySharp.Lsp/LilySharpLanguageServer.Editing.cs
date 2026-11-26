@@ -427,6 +427,8 @@ public sealed partial class LilySharpLanguageServer
             actions.Add(notesToChord);
         if (NamePartWordsAction(doc, uri, startOffset) is { } partWords)
             actions.Add(partWords);
+        if (DrumStepsAction(doc, uri, startOffset) is { } drumSteps)
+            actions.Add(drumSteps);
         if (WriteSingerPartAction(doc, uri, startOffset) is { } singerPart)
             actions.Add(singerPart);
         if (JoinSectionsAction(doc, uri, startOffset, endOffset) is { } join)
@@ -605,6 +607,40 @@ public sealed partial class LilySharpLanguageServer
                                 End = new Position { Line = endLine, Character = endCharacter },
                             },
                             NewText = edit.NewText,
+                        },
+                    ],
+                },
+            },
+        };
+    }
+
+    /// <summary>On a drum chart, "Convert to Drum Steps steps { }" or "Convert to Drum Lines
+    /// drums { }" (<see cref="LilySharp.Core.Editing.DrumStepsConverter"/>; Orecchiante's request
+    /// 24 §4). Offered only where the chart can be written the other way.</summary>
+    internal static CodeAction? DrumStepsAction(Document doc, Uri uri, int offset)
+    {
+        if (LilySharp.Core.Editing.DrumStepsConverter.At(doc.Tree, offset) is not { } rewrite)
+            return null;
+        var (startLine, startCharacter) = GetLineAndCharacter(doc.Text, rewrite.Start);
+        var (endLine, endCharacter) = GetLineAndCharacter(doc.Text, rewrite.End);
+        return new CodeAction
+        {
+            Title = rewrite.Title,
+            Kind = CodeActionKind.RefactorRewrite,
+            Edit = new WorkspaceEdit
+            {
+                Changes = new Dictionary<string, TextEdit[]>
+                {
+                    [uri.ToString()] =
+                    [
+                        new TextEdit
+                        {
+                            Range = new LspRange
+                            {
+                                Start = new Position { Line = startLine, Character = startCharacter },
+                                End = new Position { Line = endLine, Character = endCharacter },
+                            },
+                            NewText = rewrite.NewText,
                         },
                     ],
                 },

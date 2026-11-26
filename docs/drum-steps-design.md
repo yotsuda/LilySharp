@@ -43,7 +43,13 @@ steps [拍] { 太鼓 "パターン"  太鼓 "パターン" … }
 
 ## 3. 入れなかったもの・残り
 
-- 依頼 §4 の `drums { }` ⇄ `steps { }` の変換（エディタ）は後回し（なくても Orecchiante の作業は止まらない）。
+- ~~依頼 §4 の `drums { }` ⇄ `steps { }` の変換~~＝第1400 で入れた（`Editing/DrumStepsConverter`・Ctrl+. の
+  「Convert to Drum Steps steps { }」「Convert to Drum Lines drums { }」）。steps へ: 線（phrase の線も）の打撃を
+  時刻で集め、太鼓ごとの行（最初に出た順・`hho` は `hh` の行の `o`・`@accent`→`X`・`@parenthesize`→`g`・同じ太鼓の
+  `acciaccatura`→`f`）。小節は最初の線の小節線。拍はその場の拍子（section の前の `time`、なければファイルの）で、
+  複合拍子なら付点（`steps 4.`）。拍ごとに打撃が乗るいちばん粗い格子（全部の拍に 1 つの格子が合えばそれ）＝行が
+  揃う。音の長さは保たない（steps の規則になる）。書けない表（`up`/`down`・アクセントとゴースト以外の印・格子に
+  乗らない打撃・線どうしで小節線が違う）には出さない。lines へ: パーサーが読んだ音をそのまま書く＝絵も音も同じ。
 - ~~拍子と合わない小節の専用の文~~＝第1400 で入れた: 短い・長い小節の警告（LYS2001／LYS2002・最初の小節の弱起の
   勧め）の後ろに「the steps chart has 3 beats of a quarter, and this bar holds 4」を足す（小節に書いた表も、小節が
   鳴らす phrase の中の表も・`MeasureValidator.StepsNote`）。6/8・12/8 で 4 分を数える表は長さが合ってしまう

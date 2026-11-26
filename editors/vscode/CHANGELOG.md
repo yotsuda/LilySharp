@@ -4,7 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
-- `[editor]` **`steps` in a drum part's completion list** writes a drum chart as steps — a row a drum, a character a step (`hh "x.x. x.x. x.x. x.x."`), and an unreadable step is underlined where it stands, with its row, bar and beat named.
+- `[editor]` **`steps` in a drum part's completion list** writes a drum chart as steps — a row a drum, a character a step (`hh "x.x. x.x. x.x. x.x."`), and an unreadable step is underlined where it stands, with its row, bar and beat named. Ctrl+. on a drum chart rewrites it either way: **Convert to Drum Steps** writes a `drums { }` chart (phrase lines too) as steps — a row a drum, each beat as fine as its hits need, the beat the meter's — keeping every hit's drum, time and strength; **Convert to Drum Lines** writes steps back as the notes they stand for.
 
 - `[scan]` **A score read from a scan is checked against it when you save, by default**: `lilysharp.scans.verifyOnSave` is on, where it was off and nothing else ran the check, so the marks of bars already corrected stayed until the setting was found. Only a save you make (Ctrl+S, the menu, Save All) checks — not an auto save (`files.autoSave`), which would start a check of seconds at every pause in the typing. A score with no scan beside it, or no reader with `verify`, is never checked.
 

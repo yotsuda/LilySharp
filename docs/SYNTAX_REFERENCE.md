@@ -1158,6 +1158,15 @@ beat 1 of bar 2 in the hh row)`, `beat 2 of bar 1 in the sn row has 5 steps`, `t
 2 bars and the hh row 1 bar`. Anything finer than steps (a nested tuplet, a hit held across a
 beat) is written in a `drums { }` line.
 
+The editor rewrites a chart either way (Ctrl+. on it): **Convert to Drum Steps** writes a
+`drums { }` chart — phrase lines too — as rows, one row a drum in the order the drums first
+appear, each beat split as finely as its hits need (one grid for the whole chart when one fits,
+so the rows line up), the beat the meter's where the chart stands (`steps 4.` in 6/8). The hits
+keep their drums, times and strengths; their lengths become steps' (to the next hit of the
+beat). It is offered only where steps can write the chart: no `up`/`down` line, no mark but an
+accent or a ghost, no hit off every grid. **Convert to Drum Lines** writes a steps chart as the
+`drums { }` lines it stands for, note for note.
+
 ## Time Signature
 
 ```
