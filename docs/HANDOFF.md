@@ -97,7 +97,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **★ A-B リピート（オーナー決定 2026-11-17・第1286）＝`docs/ab-repeat-design.md`**: §3 の 1〜4 は済み（第1286）。**2026-11-19 オーナー決定: Loop グループ・A-B ボタンと番号欄・8 本の帯（§3 の 5）・右クリックの Play from Here／A Here／B Here は撤去、Repeat はヘッダへ**（同 §0）。残りは実機（`MANUAL-CHECKS`「Repeat はヘッダ」＝オーナー）と、release 時の site・README の書き直し。
 - **★ Join Bars in Pairs（Orecchiante の依頼 21・オーナー決定 2026-11-21・第1342）＝実装済み**（`docs/join-bars-design.md`）。依頼 22（同じ和音 1 つずつの組は `C`）は第1346 `f81f8cd28`。残りは実機（`MANUAL-CHECKS`「Join Bars in Pairs」＝Ctrl+Z で 2 つのファイルが戻る・録音と小節の頭がそろう）と Orecchiante の確認。
 - **★ Report to Orecchiante（Orecchiante の依頼 23・オーナーの希望 2026-11-23・第1372）＝実装済み**（`docs/orecchiante-report-design.md`）。残りは Orecchiante の確認とオーナーの実機（設定は手書き）。
-- **★ Write a Song over These Chords…（Shosa の導線の第 2 段・オーナー決定 2026-11-26「同じ `.lys` に歌のパートを足す」・伴奏は元の録音）＝実装済み**（`docs/song-over-chords-design.md`）。残りはオーナーの実機（`MANUAL-CHECKS`）。第 3 段は第1397 で実装（`docs/song-to-dance-design.md`・残りは実機）。第 4 段（Arrange an Accompaniment…）は未着手。
+- **★ Shosa の導線の第 2〜4 段（オーナー決定 2026-11-26）＝実装済み**: Write a Song…（`docs/song-over-chords-design.md`）・From a Song to a Dance（`song-to-dance-design.md`）・Arrange an Accompaniment…＝Accept で録音は `"silent"`（`accompaniment-design.md`）。残りはオーナーの実機と Shosa 側の `"silent"`。
 - **★ Cantoria の依頼 1（音節の音素 `병[/pp.y.eo.NG/]`）・2（歌う `bend`・お試し）＝第1375 で実装済み**（`singing-design.md` §3）。残りは Cantoria の done とオーナーの耳（`MANUAL-CHECKS` 第1375）。
 - **★ コード行の中に書けるもの（オーナー決定 2026-11-16・第1285）**: `time`・`tempo`・`%`・`key` は済み（§1.1）。**残り＝コードに付ける印 `@rit`／`@accel`／`@rall`（`…@!rit`）・`@fermata`・`@text("…")`**（今は `@todo` だけ）。強弱は見送り。
 - **★ 録音を聴きながら直す（Dettato #4・オーナーの希望 2026-11-15）＝`docs/recording-design.md`**: S1〜S4 と §1 7（楽譜と録音を同時に）・§7（書き出しに録音・第1286）は済み（§1.1 第1284〜第1286）。**次は S5**（帯・`Mark Bar Line Here`・ドラッグ・`byHand`）→ S6（CHANGELOG・Dettato への返事）。§8 の録音のパート（Dettato #16）は第1288 で実装・実測済み・使っている間のメモリは今のまま（オーナー決定 2026-11-17）＝残りは耳の確認（`MANUAL-CHECKS`「録音のパート」）。耳の確認は `MANUAL-CHECKS` §3.9（オーナー）。
@@ -160,9 +160,9 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ### 1.1 第1397セッション（2026-11-26・YT-DELL2）
 
 base `701cdeb60`。開始時 full 18447 / 1 / skip 2 / 18450（赤 1 は `IncludeFilesTests` の不安定な網＝単独で 3/3 緑）。終了時 full 18448 / 0 / skip 2 / 18450。
-- `491567514`: Shosa の導線の第 3 段（オーナー指示）＝`docs/song-to-dance-design.md`。ウォークスルー（**From a Song to a Dance (Steps)**）。曲に歌い手の行が入る Accept で「次は踊り」。npm 1349 / 0・実機 E2E 3 項目（Lab `p1397/vscode-e2e`）。
-- 残した: オーナーの実機。Shosa は Marketplace 未公開＝Install Shosa は検索で止まる。
-- 次: 第 4 段（Arrange an Accompaniment…）はオーナーに設計を訊いてから。それ以外は leftovers（タブの装飾音の数字の中心）。
+- `491567514`: 第 3 段＝ウォークスルーと「次は踊り」。`6895373bd`: 第 4 段＝伴奏はチャット・既定の 3 楽器・録音は `"silent"`（小節は時計のまま・オーナー決定）。npm 1356 / 0・実機 E2E（Lab `p1397/vscode-e2e`・`instrument piano` はプリセットに無いと分かりガイドを直した）。
+- 残した: オーナーの実機。Shosa の `"silent"` の対応（Shosa の HANDOFF）。Install Shosa は公開まで検索で止まる。
+- 次: leftovers（タブの装飾音の数字の中心）。
 
 ## 以下は第1396セッションの経緯
 
