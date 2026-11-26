@@ -594,6 +594,16 @@ internal static partial class SpacingRules
                         theirNextBeamed = cn.Beamed;
                         break;
                     }
+            // A companion whose wish reaches ANOTHER column than this run's next one takes no part
+            // in this pair: its next column is later (we go on, it does not stand at our next
+            // moment) or earlier (we end on the main note, its run goes on). LilyPond counts a wish
+            // only when its right column is the pair's.
+            // LILYPOND-REF: lily/spacing-spanner.cc:350-364 musical_column_spacing — found_matching_column.
+            // MEASURED (2.26.0, Lab sessions/p1394/m v9): `grace { g''8 a''8 }` over a later
+            // `grace { f'16 e'16 }` in one staff stands f' → e' 1.418 apart; with a''8's wish to
+            // its main note averaged in, Lily# stood them 1.673.
+            if (next is not null ? theirNext is null : c.MainItem is null)
+                continue;
             var theirMain = theirNext is null ? (c.MainItem ?? mainItem) : null;
             double correction = GraceStemCorrection(c.Column, c.Beamed, theirNext, theirNextBeamed, theirMain,
                 NoteSpacingParameters.Default, gp.SpacingIncrement);

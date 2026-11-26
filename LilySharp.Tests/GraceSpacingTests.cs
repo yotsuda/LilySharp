@@ -102,6 +102,10 @@ public class GraceSpacingTests
     // p1394 s14: `grace { s16 f16 e16 }` under `grace { g''8 a''8 }` — the spacer's column holds no note
     // (bare springs 1.280 into and out of it) and the treble's g'' opens the moment: 9.858; Lily# was 8.436.
     [InlineData("part rh { clef treble }\npart lh { clef bass }\nsection A {\n  rh { e''2 grace { g''8 a''8 } f''2 | g''1 | }\n  lh { c,2 grace { s16 f16 e16 } d2 | g,1 | }\n}\nform { A }\nscore { staff rh  staff lh }\n", 9.858)]
+    // p1394 v9: one staff, `grace { f'16 e'16 }` in the lower voice starting after the upper's
+    // `grace { g''8 a''8 }` — the upper a''8's wish reaches the main note, not e', so it is no part of
+    // the f' → e' spring: the main notes 8.654 after the first; Lily# averaged it in, 8.909.
+    [InlineData("part rh { clef treble }\nsection A {\n  rh { voice { e''2 grace { g''8 a''8 } f''2 } { c'2 grace { f'16 e'16 } d'2 } | g''1 | }\n}\nform { A }\nscore { staff rh }\n", 8.654)]
     public void AGraceRunInOneStaff_IsSpacedByThatStaffsWishAlone(string body, double mainFromFirst)
     {
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse("octave absolute\ntime 4/4\npaper { raggedRight }\n" + body);
