@@ -27,7 +27,8 @@ import * as path from 'path';
 import {
     ORECCHIANTE_EXTENSION_ID, OrecchianteLocation, OrecchianteVersion, chartForConversion, orecchianteArgs, orecchianteFailure, judgeOrecchiante,
     besideChart, locateOrecchiante, parseOrecchianteVersion, replaceQuestion,
-    canFetchLyrics, lookedFor, lyricsArgs, lyricsOutcome, lyricsPathFor, lyricsQuestion,
+    LyricsList, LyricsSong, canFetchLyrics, lyricsArgs, lyricsIdArgs, lyricsListArgs, lyricsOutcome, lyricsPathFor, lyricsQuestion,
+    lyricsSearchStart, lyricsSongItem, parseLyricsList,
 } from './orecchianteCore';
 import { parseRecording, recordingPathFor } from './recordingCore';
 import { markJustConverted } from './recording';
@@ -121,12 +122,12 @@ function readerEnv(lysc: string | undefined): NodeJS.ProcessEnv {
 
 function run(exe: string, args: string[], output: vscode.OutputChannel,
     progress: vscode.Progress<{ message?: string }>, token: vscode.CancellationToken,
-    lysc?: string): Promise<{ code: number | null; stderr: string } | undefined> {
+    lysc?: string): Promise<{ code: number | null; stderr: string; stdout: string } | undefined> {
     return new Promise((resolve, reject) => {
         const child = cp.spawn(exe, args, { windowsHide: true, env: readerEnv(lysc) });
-        let cancelled = false, stderr = '';
+        let cancelled = false, stderr = '', stdout = '';
         const stop = token.onCancellationRequested(() => { cancelled = true; child.kill(); });
-        child.stdout.on('data', (b: Buffer) => output.append(b.toString()));
+        child.stdout.on('data', (b: Buffer) => { stdout += b.toString(); output.append(b.toString()); });
         child.stderr.on('data', (b: Buffer) => {
             const text = b.toString();
             stderr += text;
@@ -138,7 +139,7 @@ function run(exe: string, args: string[], output: vscode.OutputChannel,
             }
         });
         child.on('error', e => { stop.dispose(); reject(e); });
-        child.on('close', code => { stop.dispose(); resolve(cancelled ? undefined : { code, stderr }); });
+        child.on('close', code => { stop.dispose(); resolve(cancelled ? undefined : { code, stderr, stdout }); });
     });
 }
 
@@ -187,9 +188,10 @@ async function copyLyrics(recording: string, output: vscode.OutputChannel): Prom
 /**
  * Before a conversion, the words of the song (Orecchiante's request 25, 2026-11-26): words already beside
  * the recording (`<name>.lrc`) are read by the conversion itself, unasked; otherwise, with a reader that can
- * fetch them, the person is asked first — nothing is sent unless they choose to — and may correct the title
- * and artist when none are found, or choose a file of their own. False only when the person cancelled the
- * conversion.
+ * fetch them, the person is asked first — nothing is sent unless they choose to. The words found are named
+ * and may be changed for another song; none found, the songs LRCLIB has are listed to choose from, searched
+ * again by other words (chooseLyrics; Orecchiante's request 28). A file of their own may be chosen too.
+ * False only when the person cancelled the conversion.
  */
 async function prepareLyrics(reader: OrecchianteLocation, v: OrecchianteVersion, recording: string,
     output: vscode.OutputChannel): Promise<boolean> {
@@ -221,63 +223,141 @@ async function prepareLyrics(reader: OrecchianteLocation, v: OrecchianteVersion,
         await copyLyrics(recording, output);
         return true;
     }
-    let title: string | undefined, artist: string | undefined;
-    for (;;) {
-        const args = lyricsArgs(recording, title, artist);
-        output.appendLine(`Orecchiante ${v.version}: orecchiante ${args.join(' ')}`);
-        let done: { code: number | null; stderr: string } | undefined;
-        try {
-            done = await vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Notification, title: `Lily#: fetching the words of ${name} from LRCLIB`, cancellable: true },
-                (progress, token) => run(reader.path, args, output, progress, token));
-        } catch (e) {
-            void vscode.window.showWarningMessage(`Lily#: the words could not be fetched (${(e as Error).message ?? e}). The chart is written without them.`);
-            return true;
+    const done = await askLRCLIB(reader, v, lyricsArgs(recording), `fetching the words of ${name} from LRCLIB`, output);
+    if (done === undefined) {
+        return true;
+    }
+    const outcome = lyricsOutcome(done.code, done.stderr);
+    if (outcome.kind === 'found') {
+        // Asked, not only said: the entry shows a cover version or a live take taken by mistake, and the
+        // conversion reads the words as soon as it starts (Orecchiante's request 28, §4).
+        const use = 'Use These Words', another = 'Choose Another…';
+        const choice = await vscode.window.showInformationMessage(
+            `Words from LRCLIB${outcome.entry ? `: ${outcome.entry}` : ''} — saved beside the recording as ${path.basename(lrc)}.`,
+            { modal: true }, use, another);
+        if (choice === undefined) {
+            return false;
         }
+        return choice === use ? true : chooseLyrics(reader, v, recording, output, 'choose another song', true);
+    }
+    if (outcome.kind === 'notFound') {
+        return chooseLyrics(reader, v, recording, output, outcome.reason || 'LRCLIB has no lyrics for this song by its name and length');
+    }
+    sayNoLyrics(outcome, output);
+    return true;
+}
+
+/** Says why the chart is written without lyrics: LRCLIB not reached, or the reader failed. */
+function sayNoLyrics(outcome: { kind: string; reason?: string }, output: vscode.OutputChannel): void {
+    if (outcome.kind === 'unreached') {
+        void vscode.window.showWarningMessage(`Lily#: LRCLIB could not be reached${outcome.reason ? ` (${outcome.reason})` : ''}. The chart is written without lyrics.`);
+        return;
+    }
+    void vscode.window.showWarningMessage(`Lily#: the words could not be fetched${outcome.reason ? `: ${outcome.reason}` : '.'} The chart is written without lyrics.`, 'Show Output')
+        .then(choice => { if (choice === 'Show Output') { output.show(true); } });
+}
+
+/** One call of `orecchiante lyrics`, with a cancellable progress; undefined when cancelled or it could not
+ *  run (said: the chart is written without lyrics). */
+async function askLRCLIB(reader: OrecchianteLocation, v: OrecchianteVersion, args: string[], doing: string,
+    output: vscode.OutputChannel): Promise<{ code: number | null; stderr: string; stdout: string } | undefined> {
+    output.appendLine(`Orecchiante ${v.version}: orecchiante ${args.join(' ')}`);
+    try {
+        return await vscode.window.withProgress(
+            { location: vscode.ProgressLocation.Notification, title: `Lily#: ${doing}`, cancellable: true },
+            (progress, token) => run(reader.path, args, output, progress, token));
+    } catch (e) {
+        void vscode.window.showWarningMessage(`Lily#: the words could not be fetched (${(e as Error).message ?? e}). The chart is written without them.`);
+        return undefined;
+    }
+}
+
+type LyricsPick = vscode.QuickPickItem & { song?: LyricsSong; act?: 'search' | 'file' | 'without' };
+
+/**
+ * The songs LRCLIB has, to choose from (Orecchiante's request 28): by the recording's title and artist first,
+ * then by any words the person searches with, as often as they like. Every song is listed whatever its length,
+ * the difference from the recording shown; songs LRCLIB has no words for are left out. The songs come from the
+ * same service the person agreed to at the first question. `replacing`: words fetched already lie beside the
+ * recording (Choose Another…) — Without Lyrics takes them away. False only when the person stopped the conversion.
+ */
+async function chooseLyrics(reader: OrecchianteLocation, v: OrecchianteVersion, recording: string,
+    output: vscode.OutputChannel, why: string, replacing = false): Promise<boolean> {
+    const name = path.basename(recording);
+    let query: string | undefined;
+    let list: LyricsList | undefined;
+    for (;;) {
+        const done = await askLRCLIB(reader, v, lyricsListArgs(recording, query),
+            query ? `searching LRCLIB for “${query}”` : `listing the songs LRCLIB has for ${name}`, output);
         if (done === undefined) {
             return true;
         }
-        const outcome = lyricsOutcome(done.code, done.stderr);
-        if (outcome.kind === 'found') {
-            // Said, not asked: the entry shows a cover version taken by mistake (the .lrc can then be deleted
-            // and the recording converted again).
-            void vscode.window.showInformationMessage(`Lily#: words from LRCLIB${outcome.entry ? `: ${outcome.entry}` : ''} — saved beside the recording as ${path.basename(lrc)}.`);
+        const got = done.code === 0 ? parseLyricsList(done.stdout) : undefined;
+        if (!got) {
+            sayNoLyrics(lyricsOutcome(done.code === 0 ? 2 : done.code, done.stderr), output);
             return true;
         }
-        if (outcome.kind === 'unreached') {
-            void vscode.window.showWarningMessage(`Lily#: LRCLIB could not be reached${outcome.reason ? ` (${outcome.reason})` : ''}. The chart is written without lyrics.`);
+        list = got;
+        const songs = list.songs.filter(s => s.words);
+        const looked = lyricsSearchStart(list);
+        const items: LyricsPick[] = [
+            ...songs.map(song => ({ ...lyricsSongItem(song, list?.seconds), song })),
+            { label: '', kind: vscode.QuickPickItemKind.Separator },
+            { label: '$(search) Search with Other Words…', description: 'title, artist or album — not the words of the song', act: 'search' },
+            { label: '$(file) Choose a File…', description: '.lrc or .txt', act: 'file' },
+            { label: '$(close) Without Lyrics', act: 'without' },
+        ];
+        for (;;) {
+            const picked = await vscode.window.showQuickPick(items, {
+                title: `Lily#: the words of ${name} — ${query === undefined ? why : `searched for “${query}”`} (Esc stops the conversion)`,
+                placeHolder: songs.length === 0
+                    ? `LRCLIB has no songs with words for “${looked}” — search with other words`
+                    : `${songs.length} song${songs.length === 1 ? '' : 's'} LRCLIB has for “${looked}”, those as long as the recording first`,
+                matchOnDescription: true, ignoreFocusOut: true,
+            });
+            if (picked === undefined) {
+                return false;
+            }
+            if (picked.act === 'without') {
+                if (replacing) {
+                    fs.rmSync(lyricsPathFor(recording), { force: true });
+                    output.appendLine(`removed ${lyricsPathFor(recording)} (without lyrics)`);
+                }
+                return true;
+            }
+            if (picked.act === 'file') {
+                await copyLyrics(recording, output);
+                return true;
+            }
+            if (picked.act === 'search') {
+                const words = await vscode.window.showInputBox({
+                    title: 'Lily#: search LRCLIB with other words',
+                    prompt: 'Words of the title, the artist or the album (LRCLIB does not search the words of songs). Esc goes back to the list.',
+                    value: looked, ignoreFocusOut: true,
+                });
+                if (words === undefined || words.trim() === '') {
+                    continue;
+                }
+                query = words.trim();
+                break;
+            }
+            const song = picked.song!;
+            const wrote = await askLRCLIB(reader, v, lyricsIdArgs(recording, song.id), `fetching the words of ${song.title} from LRCLIB`, output);
+            if (wrote === undefined) {
+                return true;
+            }
+            const outcome = lyricsOutcome(wrote.code, wrote.stderr);
+            if (outcome.kind === 'found') {
+                void vscode.window.showInformationMessage(`Lily#: words from LRCLIB${outcome.entry ? `: ${outcome.entry}` : ''} — saved beside the recording as ${path.basename(lyricsPathFor(recording))}.`);
+                return true;
+            }
+            if (outcome.kind === 'notFound') {
+                void vscode.window.showWarningMessage(`Lily#: ${outcome.reason || 'LRCLIB has no words for that song'} — choose another.`);
+                continue;
+            }
+            sayNoLyrics(outcome, output);
             return true;
         }
-        if (outcome.kind === 'failed') {
-            void vscode.window.showWarningMessage(`Lily#: the words could not be fetched${outcome.reason ? `: ${outcome.reason}` : '.'} The chart is written without lyrics.`, 'Show Output')
-                .then(choice => { if (choice === 'Show Output') { output.show(true); } });
-            return true;
-        }
-        const correct = 'Correct Title and Artist…';
-        const again = await vscode.window.showWarningMessage(
-            `${outcome.reason || 'LRCLIB has no lyrics for this song'}. Correct the title and artist and look again, choose a file of the words, or convert without lyrics?`,
-            { modal: true }, correct, file, without);
-        if (again === undefined) {
-            return false;
-        }
-        if (again === without) {
-            return true;
-        }
-        if (again === file) {
-            await copyLyrics(recording, output);
-            return true;
-        }
-        const was = lookedFor(done.stderr);
-        const t = await vscode.window.showInputBox({ title: 'Lily#: the song\'s title, as LRCLIB knows it', value: title ?? was.title ?? '', ignoreFocusOut: true });
-        if (t === undefined) {
-            return true;
-        }
-        const a = await vscode.window.showInputBox({ title: 'Lily#: the artist (the one who sings this recording)', value: artist ?? was.artist ?? '', ignoreFocusOut: true });
-        if (a === undefined) {
-            return true;
-        }
-        title = t;
-        artist = a;
     }
 }
 

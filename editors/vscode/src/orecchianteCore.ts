@@ -108,10 +108,86 @@ export function parseOrecchianteVersion(stdout: string): OrecchianteVersion | un
 // `orecchiante lyrics <recording>` (0.16.0) asks LRCLIB (lrclib.net) for the words by the title, artist and
 // length in the recording's tags and writes `<name>.lrc` beside the recording; the conversion (0.17.0) reads
 // that file and puts the words under the sung line. Lily# asks before anything leaves the computer.
+// When none are found by the tags, the songs LRCLIB has near them are listed to choose from, and other words
+// can be searched (`--list [--query]`, `--id`; 0.18.0, Orecchiante's request 28).
 
-/** Whether the reader can fetch the words (`"lyrics"` in its `commands`, 0.16.0 and later). */
+/** Whether the reader can fetch the words and list them to choose from (`"lyrics-choose"` in its `commands`). */
 export function canFetchLyrics(v: OrecchianteVersion): boolean {
-    return v.commands?.includes('lyrics') ?? false;
+    return v.commands?.includes('lyrics-choose') ?? false;
+}
+
+/** The call that lists the songs LRCLIB has: by the recording's title and artist, or by `query` alone. */
+export function lyricsListArgs(recording: string, query?: string): string[] {
+    const q = query?.trim();
+    return q ? ['lyrics', recording, '--list', '--query', q] : ['lyrics', recording, '--list'];
+}
+
+/** The call that writes the song chosen from the list (over words already there: the person chose). */
+export function lyricsIdArgs(recording: string, id: number): string[] {
+    return ['lyrics', recording, '--id', String(id), '--force'];
+}
+
+/** A song of the list. */
+export interface LyricsSong {
+    readonly id: number;
+    readonly title: string;
+    readonly artist?: string;
+    readonly album?: string;
+    readonly seconds?: number;
+    readonly timed: boolean;
+    readonly words: boolean;
+}
+
+/** What `--list` answered: the names looked for, the recording's length, the songs (best first). */
+export interface LyricsList {
+    readonly title?: string;
+    readonly artist?: string;
+    readonly query?: string;
+    readonly seconds?: number;
+    readonly songs: LyricsSong[];
+}
+
+/** Reads `--list`'s JSON; undefined when it is not that. A song without an id is left out. */
+export function parseLyricsList(stdout: string): LyricsList | undefined {
+    let o: Record<string, unknown>;
+    try {
+        o = JSON.parse(stdout.trim()) as Record<string, unknown>;
+    } catch {
+        return undefined;
+    }
+    if (!o || typeof o !== 'object' || !Array.isArray(o.songs)) { return undefined; }
+    const str = (x: unknown) => typeof x === 'string' && x.trim() !== '' ? x : undefined;
+    const num = (x: unknown) => typeof x === 'number' && Number.isFinite(x) ? x : undefined;
+    const songs = (o.songs as Record<string, unknown>[]).filter(s => s && typeof s === 'object' && typeof s.id === 'number')
+        .map(s => ({
+            id: s.id as number, title: str(s.title) ?? `LRCLIB ${s.id}`, artist: str(s.artist), album: str(s.album),
+            seconds: num(s.seconds), timed: s.timed === true, words: s.words !== false,
+        }));
+    return { title: str(o.title), artist: str(o.artist), query: str(o.query), seconds: num(o.seconds), songs };
+}
+
+function clock(seconds: number): string {
+    const s = Math.round(seconds);
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+/** How a song reads in the list: "title — artist", and "album · 3:28 (1 s shorter than the recording) · timed"
+ *  — the length against the recording's, so a radio edit, a live take or a cover shows itself. */
+export function lyricsSongItem(song: LyricsSong, recordingSeconds?: number): { label: string; description: string } {
+    const parts: string[] = [];
+    if (song.album) { parts.push(song.album); }
+    if (song.seconds !== undefined) {
+        const d = recordingSeconds === undefined ? undefined : Math.round(song.seconds - recordingSeconds);
+        parts.push(clock(song.seconds) + (d === undefined ? '' : d === 0 ? ' (as long as the recording)'
+            : ` (${Math.abs(d)} s ${d < 0 ? 'shorter' : 'longer'} than the recording)`));
+    }
+    parts.push(song.timed ? 'timed' : 'words without times');
+    return { label: song.artist ? `${song.title} — ${song.artist}` : song.title, description: parts.join(' · ') };
+}
+
+/** The words a search starts from: the last search, else the title and artist looked for. */
+export function lyricsSearchStart(list: LyricsList | undefined): string {
+    return list?.query ?? [list?.title, list?.artist].filter(s => s).join(' ');
 }
 
 /** The words the conversion reads: `<name>.lrc` beside the recording. */
@@ -121,12 +197,9 @@ export function lyricsPathFor(recording: string): string {
     return (dot > slash ? recording.slice(0, dot) : recording) + '.lrc';
 }
 
-/** The call that fetches the words; `--title`/`--artist` only when the person corrected them. */
-export function lyricsArgs(recording: string, title?: string, artist?: string): string[] {
-    const args = ['lyrics', recording];
-    if (title && title.trim() !== '') { args.push('--title', title.trim()); }
-    if (artist && artist.trim() !== '') { args.push('--artist', artist.trim()); }
-    return args;
+/** The call that fetches the words by the recording's tags (or its file name). */
+export function lyricsArgs(recording: string): string[] {
+    return ['lyrics', recording];
 }
 
 /** The question before the words are fetched: what is sent, and where, and which words go under the
@@ -138,16 +211,8 @@ export function lyricsQuestion(recordingName: string): string {
         + 'For now the words are put under the notes only when they are Japanese or English.';
 }
 
-/** The title and artist the reader looked for, from its first line on stderr
- *  (`<title>[ by <artist>][ (<album>)], m:ss`) — to offer them for correcting. */
-export function lookedFor(stderr: string): { title?: string; artist?: string } {
-    const first = stderr.split(/\r?\n/).map(l => l.trim()).find(l => l !== '');
-    const m = first ? /^(.*?)(?: by (.*?))?(?: \(.*\))?, \d+:\d\d$/.exec(first) : null;
-    return m ? { title: m[1] || undefined, artist: m[2] || undefined } : {};
-}
-
 /** What the fetch came to, by its exit code: 0 the words are there (with the entry it found, to be shown,
- *  so a cover version taken by mistake is noticed); 1 none found (offer to correct the title and artist);
+ *  so a cover version taken by mistake is noticed); 1 none found (or, by `--id`, that song has none: the list);
  *  3 LRCLIB not reached; anything else an error. `reason` is the reader's last line without `orecchiante: `. */
 export function lyricsOutcome(code: number | null, stderr: string):
     { kind: 'found'; entry?: string } | { kind: 'notFound' | 'unreached' | 'failed'; reason: string } {

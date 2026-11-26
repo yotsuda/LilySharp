@@ -20,7 +20,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
     ORECCHIANTE_INPUTS, chartForConversion, orecchianteArgs, orecchianteFailure, judgeOrecchiante, locateOrecchiante, parseOrecchianteVersion,
-    besideChart, replaceQuestion, canFetchLyrics, lookedFor, lyricsArgs, lyricsOutcome, lyricsPathFor, lyricsQuestion,
+    besideChart, replaceQuestion, canFetchLyrics, lyricsArgs, lyricsIdArgs, lyricsListArgs, lyricsOutcome, lyricsPathFor, lyricsQuestion,
+    lyricsSearchStart, lyricsSongItem, parseLyricsList,
 } from '../src/orecchianteCore';
 import { newScoreStarts } from '../src/menuContextCore';
 
@@ -44,15 +45,17 @@ describe('Orecchiante, the recording reader', () => {
         assert.equal(parseOrecchianteVersion('{"version":2}'), undefined);
     });
 
-    it('fetches the words only with a reader that has the lyrics command, into <name>.lrc beside the recording', () => {
-        assert.equal(canFetchLyrics({ version: '0.16.0', protocol: 1, commands: ['read', 'lyrics'] }), true);
-        assert.equal(canFetchLyrics({ version: '0.15.0', protocol: 1, commands: ['read'] }), false);
+    it('fetches the words only with a reader that can list them to choose from, into <name>.lrc beside the recording', () => {
+        assert.equal(canFetchLyrics({ version: '0.18.0', protocol: 1, commands: ['read', 'lyrics', 'lyrics-choose'] }), true);
+        assert.equal(canFetchLyrics({ version: '0.17.0', protocol: 1, commands: ['read', 'lyrics'] }), false);
         assert.equal(canFetchLyrics({ version: '0.2.0', protocol: 1 }), false);
         assert.equal(lyricsPathFor('C:\\m\\今宵の月のように.mp3'), 'C:\\m\\今宵の月のように.lrc');
         assert.equal(lyricsPathFor('C:\\m.d\\song'), 'C:\\m.d\\song.lrc');
         assert.deepEqual(lyricsArgs('C:\\m\\a.mp3'), ['lyrics', 'C:\\m\\a.mp3']);
-        assert.deepEqual(lyricsArgs('C:\\m\\a.mp3', ' Title ', ''), ['lyrics', 'C:\\m\\a.mp3', '--title', 'Title']);
-        assert.deepEqual(lyricsArgs('C:\\m\\a.mp3', 'T', 'A'), ['lyrics', 'C:\\m\\a.mp3', '--title', 'T', '--artist', 'A']);
+        assert.deepEqual(lyricsListArgs('C:\\m\\a.mp3'), ['lyrics', 'C:\\m\\a.mp3', '--list']);
+        assert.deepEqual(lyricsListArgs('C:\\m\\a.mp3', '  '), ['lyrics', 'C:\\m\\a.mp3', '--list']);
+        assert.deepEqual(lyricsListArgs('C:\\m\\a.mp3', ' american band grand funk '), ['lyrics', 'C:\\m\\a.mp3', '--list', '--query', 'american band grand funk']);
+        assert.deepEqual(lyricsIdArgs('C:\\m\\a.mp3', 17618460), ['lyrics', 'C:\\m\\a.mp3', '--id', '17618460', '--force']);
         assert.match(lyricsQuestion('a.mp3'), /title, artist and length .* lrclib\.net/);
         assert.match(lyricsQuestion('a.mp3'), /only when they are Japanese or English\.$/);   // Orecchiante's request 27
     });
@@ -66,9 +69,33 @@ describe('Orecchiante, the recording reader', () => {
             { kind: 'notFound', reason: 'LRCLIB has no lyrics for x within 2 s of 3:00 (--artist may find them)' });
         assert.deepEqual(lyricsOutcome(3, 'orecchiante: lrclib.net did not answer'), { kind: 'unreached', reason: 'lrclib.net did not answer' });
         assert.deepEqual(lyricsOutcome(2, ''), { kind: 'failed', reason: '' });
-        assert.deepEqual(lookedFor(found), { title: '今宵の月のように', artist: 'エレファントカシマシ' });
-        assert.deepEqual(lookedFor('今宵の月のように, 4:42\n'), { title: '今宵の月のように', artist: undefined });
-        assert.deepEqual(lookedFor(''), {});
+    });
+
+    // Orecchiante's request 28: the songs LRCLIB has, to choose from, and a search by other words.
+    it('reads the list of songs and shows each with its length against the recording', () => {
+        const list = parseLyricsList('{"title": "wab", "artist": null, "query": null, "seconds": 209, "songs": ['
+            + '{"id": 17618460, "title": "We\'re An American Band", "artist": "Grand Funk", "album": "We\'re An American Band PT-SHM", "seconds": 208.1, "timed": true, "words": true},'
+            + '{"id": 5, "title": "Live", "artist": null, "album": null, "seconds": 240, "timed": false, "words": true},'
+            + '{"id": 6, "title": "Instrumental", "seconds": 209, "timed": false, "words": false},'
+            + '{"title": "no id"}]}\n');
+        assert.ok(list);
+        assert.deepEqual([list.title, list.artist, list.query, list.seconds], ['wab', undefined, undefined, 209]);
+        assert.deepEqual(list.songs.map(s => [s.id, s.words]), [[17618460, true], [5, true], [6, false]]);
+        assert.deepEqual(lyricsSongItem(list.songs[0], 209), {
+            label: 'We\'re An American Band — Grand Funk',
+            description: 'We\'re An American Band PT-SHM · 3:28 (1 s shorter than the recording) · timed' });
+        assert.deepEqual(lyricsSongItem(list.songs[1], 209), { label: 'Live', description: '4:00 (31 s longer than the recording) · words without times' });
+        assert.equal(lyricsSongItem(list.songs[2], 209).description, '3:29 (as long as the recording) · words without times');
+        assert.equal(lyricsSongItem(list.songs[2]).description, '3:29 · words without times');
+        assert.equal(parseLyricsList('not json'), undefined);
+        assert.equal(parseLyricsList('{"title": "x"}'), undefined);
+    });
+
+    it('starts a search from the last one, else from the title and artist looked for', () => {
+        assert.equal(lyricsSearchStart({ title: 'wab', songs: [] }), 'wab');
+        assert.equal(lyricsSearchStart({ title: '今宵の月のように', artist: 'エレファントカシマシ', songs: [] }), '今宵の月のように エレファントカシマシ');
+        assert.equal(lyricsSearchStart({ title: 'wab', query: 'grand funk', songs: [] }), 'grand funk');
+        assert.equal(lyricsSearchStart(undefined), '');
     });
 
     it('is judged as Calamo is: a newer protocol asks to update Lily#, an older one or an old version offers its update', () => {

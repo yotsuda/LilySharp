@@ -571,7 +571,7 @@
               "Before a recording is converted without words beside it (`<name>.lrc`), ask whether to fetch them from LRCLIB (lrclib.net): the song's title, artist and length are sent, only when you choose to.",
               "Never ask and never fetch: a `<name>.lrc` you put beside the recording is still read."
             ],
-            "markdownDescription": "Whether **Convert Recording to Lily# (.lys)…** offers to fetch the song's words from LRCLIB before it converts. The chart then has the words under the sung line (Orecchiante 0.17.0 and later; Japanese words for now)."
+            "markdownDescription": "Whether **Convert Recording to Lily# (.lys)…** offers to fetch the song's words from LRCLIB before it converts. The chart then has the words under the sung line (Orecchiante 0.18.0 and later; Japanese and English words for now)."
           }
         }
       },
