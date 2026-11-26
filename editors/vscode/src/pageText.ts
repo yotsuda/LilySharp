@@ -45,10 +45,10 @@ export function inPageText(doc: vscode.TextDocument, line: number): boolean {
     return textBodyAt(bodiesOf(doc), line) !== undefined;
 }
 
-/** `lilysharp.typingAids.enabled` switches these off with the music's (rule 31). */
+/** `lilysharp.editing.typingAids` switches these off with the music's (rule 31). */
 let aidsEnabled = true;
 const readAidsEnabled = () =>
-    vscode.workspace.getConfiguration('lilysharp').get<boolean>('typingAids.enabled', true);
+    vscode.workspace.getConfiguration('lilysharp').get<boolean>('editing.typingAids', true);
 
 /** The last selection made inside a page text, for a character that replaces it: a change
  * event says how much went, never what (as smartTyping's rule 34 keeps one for the music). */
@@ -69,7 +69,7 @@ export function registerPageText(context: vscode.ExtensionContext, log: (msg: st
 
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration(e => {
-            if (e.affectsConfiguration('lilysharp.typingAids.enabled')) { aidsEnabled = readAidsEnabled(); }
+            if (e.affectsConfiguration('lilysharp.editing.typingAids')) { aidsEnabled = readAidsEnabled(); }
         }),
         vscode.workspace.onDidCloseTextDocument(doc => cache.delete(doc.uri.toString())),
         vscode.window.onDidChangeTextEditorSelection(e => {

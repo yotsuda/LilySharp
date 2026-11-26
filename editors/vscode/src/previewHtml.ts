@@ -57,7 +57,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         })();
         // The SoundFont synth's files (docs/playback-design.md): the worklet processor
         // and the sound font ('' = none, the page then plays its oscillator patches); and
-        // the MIDI output port's name ('' = the synth here), lilysharp.playback.midiOutput.
+        // the MIDI output port's name ('' = the synth here), lilysharp.playback.MIDIOutput.
         window.lysSynthConfig = { processor: '${synth.processor}', soundFont: '${synth.soundFont}', stretch: '${synth.stretch}', midiOutput: ${JSON.stringify(midiOutput)} };
     </script>
     <script nonce="${nonce}" src="${synth.script}"></script>
@@ -2494,7 +2494,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             if (sf) { sf.setSoundFont(uri || ''); }
         }
         // MIDI out (docs/playback-design.md §6): the name of the port the sounds go to —
-        // lilysharp.playback.midiOutput — or '' for the synth here. The page still decides WHAT
+        // lilysharp.playback.MIDIOutput — or '' for the synth here. The page still decides WHAT
         // plays (the note list, the offset, an audition's pitches); the server is the port
         // and answers with the wall-clock time of the playback's zero, which the highlight
         // follows (Date.now() is the same clock). A changed setting stops what plays.

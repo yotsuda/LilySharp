@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Check on save (LilySharp-Omr proposal B5): when `lilysharp.omr.verifyOnSave` is on and a
+// Check on save (LilySharp-Omr proposal B5): when `lilysharp.scans.verifyOnSave` is on and a
 // saved .lys has an OMR reader's side file beside it, the reader engraves the .lys again and
 // compares it with the scanned pages (`calamo verify`, omrCore.verifyArguments), writing the side
 // file's todos anew. Nothing else is needed here: the scan view reloads a side file written
@@ -44,7 +44,7 @@ export function registerVerifyOnSave(context: vscode.ExtensionContext, deps: Omr
 
     context.subscriptions.push(vscode.workspace.onDidSaveTextDocument(async doc => {
         if (doc.uri.scheme !== 'file' || !/\.lys$/i.test(doc.uri.fsPath)
-            || !vscode.workspace.getConfiguration('lilysharp').get<boolean>('omr.verifyOnSave', false)
+            || !vscode.workspace.getConfiguration('lilysharp').get<boolean>('scans.verifyOnSave', false)
             || !fs.existsSync(sideFileOf(doc.uri.fsPath))) {
             return;
         }

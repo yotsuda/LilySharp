@@ -42,10 +42,10 @@ export function useMidiOutHost(deps: MidiOutDeps): void {
     server = () => { const client = deps.getClient(); return client && deps.isReady() ? client : undefined; };
 }
 
-/** `lilysharp.playback.midiOutput`: the name of the MIDI output port the sounds go to, or ''
+/** `lilysharp.playback.MIDIOutput`: the name of the MIDI output port the sounds go to, or ''
  *  for the preview's own synth. */
 export function midiOutputSetting(): string {
-    return vscode.workspace.getConfiguration('lilysharp').get<string>('playback.midiOutput', '').trim();
+    return vscode.workspace.getConfiguration('lilysharp').get<string>('playback.MIDIOutput', '').trim();
 }
 
 /** The lilysharp/midiOut requests go one after another: the server dispatches requests
@@ -78,7 +78,7 @@ export function reportMidiOutError(port: string, error: string): void {
 
 /** The picker behind `Lily#: Choose MIDI Output…` and the setting's link: the preview's
  *  own synth (empties the setting), or one of the machine's MIDI output ports as the server
- *  lists them now. Written to the user settings as `lilysharp.playback.midiOutput`. */
+ *  lists them now. Written to the user settings as `lilysharp.playback.MIDIOutput`. */
 export async function chooseMidiOutput(): Promise<void> {
     const current = midiOutputSetting();
     type Pick = vscode.QuickPickItem & { name: string };
@@ -110,7 +110,7 @@ export async function chooseMidiOutput(): Promise<void> {
         placeHolder: 'Each part keeps its channel and sends its General MIDI program; the drums are on channel 10',
     });
     if (!picked || picked.name === current) { return; }
-    await vscode.workspace.getConfiguration('lilysharp').update('playback.midiOutput', picked.name, vscode.ConfigurationTarget.Global);
+    await vscode.workspace.getConfiguration('lilysharp').update('playback.MIDIOutput', picked.name, vscode.ConfigurationTarget.Global);
     midiOutErrorsTold.delete(picked.name);
     vscode.window.setStatusBarMessage(
         picked.name ? `Lily#: the preview plays through ${picked.name}` : 'Lily#: the preview plays its own synth', 5000);

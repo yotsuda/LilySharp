@@ -4766,7 +4766,7 @@ public sealed partial class LilySharpLanguageServer
     {
         var items = new System.Collections.Generic.List<CompletionItem>();
 
-        // lilysharp.completion.flatSpelling = "contracted": the Dutch contractions es/as
+        // lilysharp.editing.flatSpelling = "contracted": the Dutch contractions es/as
         // for E-flat and A-flat, wherever a note chord is inserted (the pitch rows below
         // apply the same mapping to their own single note).
         static string Contract(string noteChord, bool contracted)
@@ -4796,7 +4796,7 @@ public sealed partial class LilySharpLanguageServer
             int alt = LilySharp.Core.Music.KeySpelling.Alteration(
                 LilySharp.Core.Music.KeySpelling.StepOf(letter), keySharps);
             string spelled = LilySharp.Core.Music.KeySpelling.SpellLetter(letter, keySharps);
-            // lilysharp.completion.flatSpelling = "contracted": suggest the Dutch
+            // lilysharp.editing.flatSpelling = "contracted": suggest the Dutch
             // contractions es/as instead of ees/aes. Only E-flat and A-flat have a
             // contraction; bes/des/ges/ces/fes have none and are left as-is.
             if (contracted)

@@ -636,8 +636,8 @@ export function activate(context: vscode.ExtensionContext) {
             if (e.affectsConfiguration('lilysharp')) { lilysharpSettings = undefined; }
         }),
         vscode.workspace.onDidChangeConfiguration(e => {
-            const fonts = e.affectsConfiguration('lilysharp.fontPaths');
-            if ((!fonts && !e.affectsConfiguration('lilysharp.completion.flatSpelling')) || !client || !clientReady) {
+            const fonts = e.affectsConfiguration('lilysharp.fonts.folders');
+            if ((!fonts && !e.affectsConfiguration('lilysharp.editing.flatSpelling')) || !client || !clientReady) {
                 return;
             }
             // The whole settings object every time: the server reads each key it finds.
@@ -688,7 +688,7 @@ export function activate(context: vscode.ExtensionContext) {
         const p = path.join(context.extensionPath, 'server', process.platform === 'win32' ? 'lysc.exe' : 'lysc');
         return fs.existsSync(p) ? p : undefined;
     };
-    // Check on save against the scan (B5, lilysharp.omr.verifyOnSave).
+    // Check on save against the scan (B5, lilysharp.scans.verifyOnSave).
     registerVerifyOnSave(context, { output: outputChannel, lysc: bundledLysc });
     const omrImportDeps: OmrImportDeps = {
         output: outputChannel,
@@ -746,7 +746,7 @@ export function activate(context: vscode.ExtensionContext) {
                     });
                 }
             }
-            if (e.affectsConfiguration('lilysharp.playback.midiOutput')) {
+            if (e.affectsConfiguration('lilysharp.playback.MIDIOutput')) {
                 // The port's name goes to every preview (each decides where its next sound
                 // goes); the server's playback, if one is on, stops, and the port it held is
                 // closed when the setting is emptied.
@@ -779,7 +779,7 @@ export function activate(context: vscode.ExtensionContext) {
         // request 2026-10-11). The choice is written to the user settings; the open
         // previews pick it up through onDidChangeConfiguration.
         vscode.commands.registerCommand('lilysharp.chooseSoundFont', () => chooseSoundFont(context)),
-        // `lilysharp.playback.midiOutput` through a picker of the machine's MIDI output ports
+        // `lilysharp.playback.MIDIOutput` through a picker of the machine's MIDI output ports
         // (the server lists them); the open previews pick it up through onDidChangeConfiguration.
         vscode.commands.registerCommand('lilysharp.chooseMidiOutput', () => chooseMidiOutput()),
         // The Cantoria extension installed or removed: the engine is looked for again on the next notes.
@@ -1256,7 +1256,7 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     // A .lys coming to the front: the follower turns to it, and opening one with no follower
-    // open opens a preview beside it (previewOnEditorShown; lilysharp.preview.openOnOpen).
+    // open opens a preview beside it (previewOnEditorShown; lilysharp.preview.openWithScore).
     // Registered AFTER the orphan adoption above: a just-saved untitled score must take its
     // own preview with it before this decides the file has none.
     const shownDocs = new Set<string>();
@@ -1273,7 +1273,7 @@ export function activate(context: vscode.ExtensionContext) {
             inDiff: !!tab && tab.input instanceof vscode.TabInputTextDiff,
             hasOwnPreview: previewPanels.has(uri),
             hasFollower: followerPanel !== undefined,
-            openOnOpen: vscode.workspace.getConfiguration('lilysharp').get<boolean>('preview.openOnOpen', true),
+            openOnOpen: vscode.workspace.getConfiguration('lilysharp').get<boolean>('preview.openWithScore', true),
             firstShow,
             dismissed: dismissedPreviews.has(uri),
             followerLocked,
@@ -2487,10 +2487,10 @@ function getPreviewTheme(): 'auto' | 'light' | 'dark' {
 function serverSettings(config: vscode.WorkspaceConfiguration) {
     return {
         completion: {
-            flatSpelling: config.get<string>('completion.flatSpelling', 'full')
+            flatSpelling: config.get<string>('editing.flatSpelling', 'full')
         },
         fonts: {
-            paths: config.get<string[]>('fontPaths', [])
+            paths: config.get<string[]>('fonts.folders', [])
         }
     };
 }

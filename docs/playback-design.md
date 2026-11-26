@@ -215,7 +215,7 @@ Now:
 
 Closing the preview whose Play the output is sounding stops it (`midiPlaybackPanel`, owner's request 2026-11-02): the server plays on a thread of its own, and a closed page takes nothing with it. Closing another preview leaves it playing, and a hidden preview goes on.
 
-`lilysharp.playback.midiOutput` names a MIDI output port of the machine (empty: the preview's own
+`lilysharp.playback.MIDIOutput` names a MIDI output port of the machine (empty: the preview's own
 synth, §1–§5 unchanged); **Lily#: Choose MIDI Output…** lists what the machine has, and the
 setting's description links to it. Windows then plays through the Microsoft GS Wavetable Synth
 with no setup, and a virtual port — loopMIDI on Windows, an IAC bus on a Mac, the ALSA

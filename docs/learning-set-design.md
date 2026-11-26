@@ -134,7 +134,7 @@ index の「03 Speed」は見出しだけ。
 Grammar 抜粋が `octave absolute`・P11・P12・P13・P14＝manual は 1251 行・重複と §6.4 のナビ）。加えて:
 
 **A. 今の製品と食い違う記述**（直す＝小さい・確実）
-- A1 index「Install」: 見出し「two steps」の下に 3 段・段 3「開けば楽譜が横に開く」は**2026-10-12 から正しい**（lilysharp.preview.openOnOpen・既定 on・
+- A1 index「Install」: 見出し「two steps」の下に 3 段・段 3「開けば楽譜が横に開く」は**2026-10-12 から正しい**（lilysharp.preview.openWithScore・既定 on・
   プレビューは前面の .lys に追従しロックできる）。同梱フォントに SMuFL 3 書体（Bravura・Petaluma・Leland）が無い。
   Licence 枠も同じ（OFL の書体を足す・TeX Gyre は「既定で」本文）。
 - A2 `grammar#drums` は `voice { } { }` だけ＝**レッスン 10 と書き方が違う**。`drums { }`・行の `up`/`down`・定番パターン

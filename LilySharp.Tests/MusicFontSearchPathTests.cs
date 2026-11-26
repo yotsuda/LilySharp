@@ -25,7 +25,7 @@ namespace LilySharp.Tests;
 
 /// <summary>
 /// A score names its music font only; the MACHINE says where fonts are (owner's decision
-/// 2026-10-09): the editor's <c>lilysharp.fontPaths</c> (<see cref="MusicFonts.SetSearchDirectories"/>)
+/// 2026-10-09): the editor's <c>lilysharp.fonts.folders</c> (<see cref="MusicFonts.SetSearchDirectories"/>)
 /// and the environment's <c>LILYSHARP_FONT_PATH</c> are searched after the bundle and before the
 /// SMuFL locations. The fixture is the bundled Bravura under another name, "Testura", which no
 /// standard location holds.

@@ -118,7 +118,7 @@
 //    reversing the 2026-08-11 one that left `c12` on the page as a 128th in the
 //    making. ⇒ A 128th is written by typing '8' onto a `12` already there
 //    (`c12|` + '8' → `c128`), by pasting `128`, or with the aids off
-//    (`lilysharp.typingAids.enabled`); it cannot be typed digit by digit.
+//    (`lilysharp.editing.typingAids`); it cannot be typed digit by digit.
 // 18. ANYWHERE ELSE on the note it turns on whether the digit IS a duration.
 //    1, 2, 4 and 8 are, so they start a FRESH one: `c1.|` + '2' is `c2.`.
 //    3 and 6 are not — nothing sounds for six — so they EXTEND when that makes a
@@ -203,7 +203,7 @@
 //    carets they are typed as pressed. A NON-EMPTY selection is ordinary typing
 //    — the key replaces the selection, as everywhere in VS Code — but for the
 //    three keys that surround it (rule 34).
-// 31. `lilysharp.typingAids.enabled: false` turns ALL of the above off: every
+// 31. `lilysharp.editing.typingAids: false` turns ALL of the above off: every
 //    key is typed as pressed. (The Ctrl+Shift+Up/Down step commands are
 //    commands, not typing, and are not affected.)
 // 32. A SPACE typed right after the note that FILLS its bar writes the bar line

@@ -388,7 +388,7 @@ The score spellings here (`lyrics NAME sings PART`) were replaced on 2026-11-10:
   engine has the voice already; after `PREPARE_IDLE_MS` = 1.5 s of rest when the text was
   edited — typing restarts the clock, so the engine never works under the keystrokes and sings
   each phrase at most once per pause; and not before Play with
-  `lilysharp.playback.singerPrepare` = `onPlay` (for the CPU's DiffSinger, where every pause
+  `lilysharp.playback.prepareSinging` = `onPlay` (for the CPU's DiffSinger, where every pause
   would cost seconds; the default is `afterEdit`). A voice of an older text still being sung is
   let go of as soon as a newer text is queued (owner's decision 2026-11-10): the engine finishes
   the phrase it is on, keeps what it sang, and goes on; a Play over the text already being sung
@@ -417,7 +417,7 @@ The score spellings here (`lyrics NAME sings PART`) were replaced on 2026-11-10:
   lyrics; `.voice-badge[hidden] { display: none }` as the other panels have, and the state
   attribute is removed when there is nothing to say. Nets: `test/singerCore.test.ts` (the queue, the mode),
   `test/playbackCore.test.ts` (the badge's `waiting`).
-- **MIDI out** (`lilysharp.playback.midiOutput` set): the port plays the instruments, the
+- **MIDI out** (`lilysharp.playback.MIDIOutput` set): the port plays the instruments, the
   voice plays here, started from the server's wall-clock zero (`midiStarted`'s `t0Ms`). The
   alignment is the round trip's jitter, some tens of milliseconds; acceptable for a preview,
   noted here.

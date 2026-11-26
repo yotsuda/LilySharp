@@ -816,7 +816,7 @@ Markdown has no Enter rule: VS Code's text editor does not continue a list
 (`markdown-basics/language-configuration.json` has no `onEnterRules`; the
 `markdown.editor.smartEnter` of markdown-language-features is its separate custom
 editor's). So both aids below are Lily#'s (`editors/vscode/src/pageTextCore.ts`, tested
-under node; `pageText.ts` carries them out), off with `lilysharp.typingAids.enabled`:
+under node; `pageText.ts` carries them out), off with `lilysharp.editing.typingAids`:
 
 - **Enter in a list.** On an item with words, the caret in or after them: the next line
   begins with the item's indentation and the next marker (the same bullet; the next

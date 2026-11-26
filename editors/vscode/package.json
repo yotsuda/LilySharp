@@ -414,10 +414,11 @@
     },
     "configuration": [
       {
+        "id": "lilysharp.preview",
         "title": "Preview",
         "order": 1,
         "properties": {
-          "lilysharp.preview.openOnOpen": {
+          "lilysharp.preview.openWithScore": {
             "default": true,
             "markdownDescription": "Open a preview beside a `.lys` file when it is opened (not on a tab switch, nor in a diff). An open preview follows the active `.lys` file whatever this says; lock it from its title bar to keep it on one file.",
             "type": "boolean"
@@ -445,31 +446,31 @@
         }
       },
       {
+        "id": "lilysharp.playback",
         "title": "Playback",
         "order": 2,
         "properties": {
-          "lilysharp.audition.enabled": {
-            "type": "boolean",
-            "default": true,
-            "description": "Sound notes as you edit: the note the caret lands on, a note as you type it, and what the step keys (Ctrl+Shift+Up / Down, Ctrl+Shift+PageUp / PageDown) step a note or a chord shape to. Plays through the open preview, so nothing sounds while no preview is open. Play Note at Cursor (Alt+P) and Play Current Measure (Alt+M) are not affected."
-          },
-          "lilysharp.export.videoEncoder": {
-            "type": "string",
-            "default": "",
-            "scope": "machine-overridable",
-            "markdownDescription": "The `ffmpeg` program **Export as MP4** encodes the video with (Lily# does not bundle one). Empty: `ffmpeg` found on your `PATH`. Install it from [ffmpeg.org](https://ffmpeg.org/download.html) — on Windows `winget install Gyan.FFmpeg`, on a Mac `brew install ffmpeg`, on Linux your package manager — or name the program's full path here."
-          },
           "lilysharp.playback.soundFont": {
             "type": "string",
             "default": "",
             "scope": "machine-overridable",
-            "markdownDescription": "**Not used while `#lilysharp.playback.midiOutput#` names a port** — the notes go to that port instead (this sound font plays only when the port cannot be opened).\n\nThe sound font the preview plays with (the Play button, Alt+P / Alt+M and the auditions): a path to an `.sf2`, `.sf3` or `.dls` file on this machine (also the **Lily#: Choose Sound Font…** command). Empty: the font of the *Lily# Sound Font* extension (installed with Lily#), else the General MIDI bank your computer already has — Windows' `gm.dls`, macOS's DLS bank — or, where there is none, simple oscillator tones. Each part plays the instrument its `midiInstrument` or preset names, as the exported MIDI does. Takes effect in open previews.\n\n**Export as WAV** and **Export as MP3** play the score through this font, as Play sounds it (`.sf2`, `.sf3` and `.dls` alike); only where the preview has no font do they ask for one.\n\n**Shosa** and **Bamen** play their songs with this font too: it is the one sound font setting of the three.\n\n**[Choose a file…](command:lilysharp.chooseSoundFont)**"
+            "markdownDescription": "**Not used while `#lilysharp.playback.MIDIOutput#` names a port** — the notes go to that port instead (this sound font plays only when the port cannot be opened).\n\nThe sound font the preview plays with (the Play button, Alt+P / Alt+M and the auditions): a path to an `.sf2`, `.sf3` or `.dls` file on this machine (also the **Lily#: Choose Sound Font…** command). Empty: the font of the *Lily# Sound Font* extension (installed with Lily#), else the General MIDI bank your computer already has — Windows' `gm.dls`, macOS's DLS bank — or, where there is none, simple oscillator tones. Each part plays the instrument its `midiInstrument` or preset names, as the exported MIDI does. Takes effect in open previews.\n\n**Export as WAV** and **Export as MP3** play the score through this font, as Play sounds it (`.sf2`, `.sf3` and `.dls` alike); only where the preview has no font do they ask for one.\n\n**Shosa** and **Bamen** play their songs with this font too: it is the one sound font setting of the three.\n\n**[Choose a file…](command:lilysharp.chooseSoundFont)**"
           },
-          "lilysharp.playback.midiOutput": {
+          "lilysharp.playback.MIDIOutput": {
             "type": "string",
             "default": "",
             "scope": "machine-overridable",
             "markdownDescription": "A MIDI output port of this machine to play through instead of the preview's own synth — the Play button, Alt+P / Alt+M and the auditions all go there — named as the **Lily#: Choose MIDI Output…** command lists it. **While a port is named, `#lilysharp.playback.soundFont#` is not used**; the port's own instruments sound (if the port cannot be opened, the preview plays with its sound font and says so). Empty: the preview's sound font. On Windows *Microsoft GS Wavetable Synth* plays with no setup; a virtual port (loopMIDI on Windows, an IAC bus on a Mac) carries the notes into a DAW or a VST host, where your own instruments are. Each part keeps its channel and sends its General MIDI program (its `midiInstrument` or preset), as the exported MIDI does; the drums are on channel 10. Takes effect on the next sound.\n\n**[Choose a port…](command:lilysharp.chooseMidiOutput)**"
+          },
+          "lilysharp.playback.audition": {
+            "type": "boolean",
+            "default": true,
+            "description": "Sound notes as you edit: the note the caret lands on, a note as you type it, and what the step keys (Ctrl+Shift+Up / Down, Ctrl+Shift+PageUp / PageDown) step a note or a chord shape to. Plays through the open preview, so nothing sounds while no preview is open. Play Note at Cursor (Alt+P) and Play Current Measure (Alt+M) are not affected."
+          },
+          "lilysharp.playback.highlightSource": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "While the preview plays, light the text of the notes sounding now in the editor — each note, chord, drum stroke and chord symbol as it is heard, in every part at once. The notes are those of the text as it was when Play was pressed: after an edit nothing more is lit until the next Play."
           },
           "lilysharp.playback.singer": {
             "type": "string",
@@ -477,12 +478,7 @@
             "scope": "machine-overridable",
             "markdownDescription": "**Usually left empty.** The preview sings the lyrics through the **Cantoria Singing Voice** extension (`yotsuda.cantoria`, a separate Apache-2.0 project that drives your own installation of NEUTRINO — Lily# bundles neither): install it, point it at NEUTRINO (**Cantoria: Choose NEUTRINO Folder…**) and pick a voice there (**Cantoria: Choose Voice…**). Play then sings every part whose words have a voice asked for (a `singer`, or a voice as its `instrument`), in time with the other parts; the voice is rendered when the preview fetches the notes and kept, so a Play of the same music is not sung again. The Japanese voices need hiragana or katakana on every syllable; other syllables are said in the status bar and the part plays its instrument. Without the extension the lyrics are not sung.\n\nFor developers: the path of a `cantoria` program to run instead of the extension. Takes effect on the next Play."
           },
-          "lilysharp.playback.highlightSource": {
-            "type": "boolean",
-            "default": true,
-            "markdownDescription": "While the preview plays, light the text of the notes sounding now in the editor — each note, chord, drum stroke and chord symbol as it is heard, in every part at once. The notes are those of the text as it was when Play was pressed: after an edit nothing more is lit until the next Play."
-          },
-          "lilysharp.playback.singerPrepare": {
+          "lilysharp.playback.prepareSinging": {
             "type": "string",
             "enum": ["afterEdit", "onPlay"],
             "default": "afterEdit",
@@ -495,15 +491,29 @@
         }
       },
       {
-        "title": "Editing",
+        "id": "lilysharp.export",
+        "title": "Export",
         "order": 3,
         "properties": {
-          "lilysharp.typingAids.enabled": {
+          "lilysharp.export.videoEncoder": {
+            "type": "string",
+            "default": "",
+            "scope": "machine-overridable",
+            "markdownDescription": "The `ffmpeg` program **Export as MP4** encodes the video with (Lily# does not bundle one). Empty: `ffmpeg` found on your `PATH`. Install it from [ffmpeg.org](https://ffmpeg.org/download.html) — on Windows `winget install Gyan.FFmpeg`, on a Mac `brew install ffmpeg`, on Linux your package manager — or name the program's full path here."
+          }
+        }
+      },
+      {
+        "id": "lilysharp.editing",
+        "title": "Editing",
+        "order": 4,
+        "properties": {
+          "lilysharp.editing.typingAids": {
             "type": "boolean",
             "default": true,
             "markdownDescription": "Typing aids in `.lys` music: an octave mark, a duration digit, a dot, a string number (`\\`) or an annotation (`@`) typed anywhere on a note moves into its slot on that note; a digit always leaves a valid duration (`c1` + `2` → `c2`, `c4` + `6` → `c64`; 5, 7, 9 and 0 leave the note unchanged); `<` `>` `(` `)` `[` `]` `~` keep chords, slurs, beams and ties paired and on their notes. In a page's text (a ```md fence): Enter on a list item begins the next one and on an empty item ends the list, and `*`, `_` or a backtick typed over a selection surrounds it. Off: every key is typed exactly as pressed. Ctrl+Shift+Up / Ctrl+Shift+Down are not affected."
           },
-          "lilysharp.completion.flatSpelling": {
+          "lilysharp.editing.flatSpelling": {
             "type": "string",
             "enum": [
               "full",
@@ -519,8 +529,9 @@
         }
       },
       {
+        "id": "lilysharp.ai",
         "title": "AI",
-        "order": 4,
+        "order": 5,
         "properties": {
           "lilysharp.ai.editModel": {
             "type": "string",
@@ -540,10 +551,11 @@
         }
       },
       {
-        "title": "Scans, Recordings and Fonts",
-        "order": 5,
+        "id": "lilysharp.recordings",
+        "title": "Recordings",
+        "order": 6,
         "properties": {
-          "lilysharp.orecchiante.fetchLyrics": {
+          "lilysharp.recordings.fetchLyrics": {
             "type": "string",
             "enum": ["ask", "never"],
             "default": "ask",
@@ -552,13 +564,27 @@
               "Never ask and never fetch: a `<name>.lrc` you put beside the recording is still read."
             ],
             "markdownDescription": "Whether **Convert Recording to Lily# (.lys)…** offers to fetch the song's words from LRCLIB before it converts. The chart then has the words under the sung line (Orecchiante 0.17.0 and later; Japanese words for now)."
-          },
-          "lilysharp.omr.verifyOnSave": {
+          }
+        }
+      },
+      {
+        "id": "lilysharp.scans",
+        "title": "Scans",
+        "order": 7,
+        "properties": {
+          "lilysharp.scans.verifyOnSave": {
             "type": "boolean",
             "default": false,
             "markdownDescription": "When a `.lys` read from a scan (its `x.omr.json` beside it) is saved, have the OMR reader engrave it again and compare it with the scanned pages, bar by bar; the scan view and the `@todo` quick fixes then show what still differs. Takes a few seconds; needs a reader that has `omr verify`."
-          },
-          "lilysharp.fontPaths": {
+          }
+        }
+      },
+      {
+        "id": "lilysharp.fonts",
+        "title": "Music Fonts",
+        "order": 8,
+        "properties": {
+          "lilysharp.fonts.folders": {
             "type": "array",
             "items": {
               "type": "string"
@@ -1800,7 +1826,7 @@
       {
         "command": "lilysharp.textEnter",
         "key": "enter",
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && !editorHasSelection && !editorHasMultipleSelections && editorLangId == lilysharp && lilysharp.inTextList && config.lilysharp.typingAids.enabled"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && !editorHasSelection && !editorHasMultipleSelections && editorLangId == lilysharp && lilysharp.inTextList && config.lilysharp.editing.typingAids"
       },
       {
         "command": "lilysharp.smartType",
@@ -1808,7 +1834,7 @@
         "args": {
           "text": "'"
         },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.editing.typingAids"
       },
       {
         "command": "lilysharp.smartType",
@@ -1816,7 +1842,7 @@
         "args": {
           "text": ","
         },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.editing.typingAids"
       },
       {
         "command": "lilysharp.smartType",
@@ -1824,7 +1850,7 @@
         "args": {
           "text": "."
         },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.editing.typingAids"
       },
       {
         "command": "lilysharp.smartType",
@@ -1832,7 +1858,7 @@
         "args": {
           "text": "\\"
         },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.editing.typingAids"
       },
       {
         "command": "lilysharp.smartType",
@@ -1840,7 +1866,7 @@
         "args": {
           "text": "0"
         },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.editing.typingAids"
       },
       {
         "command": "lilysharp.smartType",
@@ -1848,7 +1874,7 @@
         "args": {
           "text": "1"
         },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.editing.typingAids"
       },
       {
         "command": "lilysharp.smartType",
@@ -1856,7 +1882,7 @@
         "args": {
           "text": "2"
         },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.editing.typingAids"
       },
       {
         "command": "lilysharp.smartType",
@@ -1864,7 +1890,7 @@
         "args": {
           "text": "3"
         },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.editing.typingAids"
       },
       {
         "command": "lilysharp.smartType",
@@ -1872,7 +1898,7 @@
         "args": {
           "text": "4"
         },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.editing.typingAids"
       },
       {
         "command": "lilysharp.smartType",
@@ -1880,7 +1906,7 @@
         "args": {
           "text": "5"
         },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.editing.typingAids"
       },
       {
         "command": "lilysharp.smartType",
@@ -1888,7 +1914,7 @@
         "args": {
           "text": "6"
         },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.editing.typingAids"
       },
       {
         "command": "lilysharp.smartType",
@@ -1896,7 +1922,7 @@
         "args": {
           "text": "7"
         },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.editing.typingAids"
       },
       {
         "command": "lilysharp.smartType",
@@ -1904,7 +1930,7 @@
         "args": {
           "text": "8"
         },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.editing.typingAids"
       },
       {
         "command": "lilysharp.smartType",
@@ -1912,7 +1938,7 @@
         "args": {
           "text": "9"
         },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.editing.typingAids"
       }
     ]
   },

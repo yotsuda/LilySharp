@@ -2166,7 +2166,7 @@ score sketch { fonts { music "Petaluma" }  staff melody }   // one score in anot
 - ⚠️ `music` takes **quoted names only**. `step`, `size`, `as` and a style on it are errors:
   a glyph's size is its grob's (`layout { NoteHead.scale 1.2 }`).
 - Another SMuFL font is found by NAME — a score never names a file — in the folders of the
-  VS Code setting `lilysharp.fontPaths`, then `LILYSHARP_FONT_PATH`, the SMuFL metadata
+  VS Code setting `lilysharp.fonts.folders`, then `LILYSHARP_FONT_PATH`, the SMuFL metadata
   location and the system font folders. A name found nowhere warns (LYS8019) and the next
   name, or Emmentaler, is used.
 - Under a music font, chord symbols use the font's own ♭ ♯ △ ° ø + glyphs, and under

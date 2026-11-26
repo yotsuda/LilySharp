@@ -258,7 +258,7 @@ describe('the embedded language', () => {
         assert.equal(enter.length, 1);
         assert.equal(enter[0].command, 'lilysharp.textEnter');
         for (const guard of [/editorLangId == lilysharp/, /lilysharp\.inTextList/, /!suggestWidgetVisible/,
-            /!editorReadonly/, /!editorHasSelection/, /config\.lilysharp\.typingAids\.enabled/]) {
+            /!editorReadonly/, /!editorHasSelection/, /config\.lilysharp\.editing\.typingAids/]) {
             assert.match(enter[0].when, guard);
         }
     });

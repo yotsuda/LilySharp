@@ -683,8 +683,8 @@ describe('the singer settings', () => {
         assert.equal(settings['lilysharp.playback.singerReplacesPart'], undefined);
         assert.equal(settings['lilysharp.playback.singerVoice'], undefined);
         // When an edited voice is prepared (owner's decision 2026-11-08): after the text rests, or at Play.
-        assert.deepEqual(settings['lilysharp.playback.singerPrepare'].enum, ['afterEdit', 'onPlay']);
-        assert.equal(settings['lilysharp.playback.singerPrepare'].default, 'afterEdit');
+        assert.deepEqual(settings['lilysharp.playback.prepareSinging'].enum, ['afterEdit', 'onPlay']);
+        assert.equal(settings['lilysharp.playback.prepareSinging'].default, 'afterEdit');
         assert.equal(commands.find(c => c.command === 'lilysharp.chooseSingingVoice'), undefined);
     });
 });

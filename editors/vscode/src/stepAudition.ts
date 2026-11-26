@@ -88,9 +88,9 @@ interface AuditionAtResponse {
     Apart?: boolean;
 }
 
-/** lilysharp.audition.enabled: gates the three automatic auditions and the step's. */
+/** lilysharp.playback.audition: gates the three automatic auditions and the step's. */
 function auditionEnabled(): boolean {
-    return vscode.workspace.getConfiguration('lilysharp').get<boolean>('audition.enabled', true);
+    return vscode.workspace.getConfiguration('lilysharp').get<boolean>('playback.audition', true);
 }
 
 /** lilysharp.chordShapes.includeStretch (owner's decision 2026-09-28): an @chord also

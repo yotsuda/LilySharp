@@ -387,7 +387,7 @@ export interface ShownEditor {
     hasOwnPreview: boolean;
     /** The follower — the one preview that is not locked — is open. */
     hasFollower: boolean;
-    /** lilysharp.preview.openOnOpen. */
+    /** lilysharp.preview.openWithScore. */
     openOnOpen: boolean;
     /** It has not been in front since it was opened (a tab switch back to it is not an opening). */
     firstShow: boolean;

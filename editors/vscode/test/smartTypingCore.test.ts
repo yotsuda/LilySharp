@@ -372,20 +372,20 @@ describe('the typingAids.enabled setting (rule 31)', () => {
     const root = path.join(__dirname, '..', '..');
     const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
     it('is declared, on by default', () => {
-        const setting = Object.assign({}, ...pkg.contributes.configuration.map((c: { properties: object }) => c.properties))['lilysharp.typingAids.enabled'];
+        const setting = Object.assign({}, ...pkg.contributes.configuration.map((c: { properties: object }) => c.properties))['lilysharp.editing.typingAids'];
         assert.equal(setting?.type, 'boolean');
         assert.equal(setting?.default, true);
     });
     it('holds off every intercepted key', () => {
         const bindings = pkg.contributes.keybindings.filter((b: { command: string }) => b.command === 'lilysharp.smartType');
         assert.equal(bindings.length, 14);
-        for (const b of bindings) { assert.match(b.when, /config\.lilysharp\.typingAids\.enabled/); }
+        for (const b of bindings) { assert.match(b.when, /config\.lilysharp\.editing\.typingAids/); }
     });
     it('holds off the change-event route and the command', () => {
         const source = fs.readFileSync(path.join(root, 'src', 'smartTyping.ts'), 'utf8');
         assert.match(source, /if \(applyingFix \|\| !aidsEnabled\) \{ return; \}/);
         assert.match(source, /\|\| !aidsEnabled\s*\n/);
-        assert.match(source, /affectsConfiguration\('lilysharp\.typingAids\.enabled'\)/);
+        assert.match(source, /affectsConfiguration\('lilysharp\.editing\.typingAids'\)/);
     });
 });
 

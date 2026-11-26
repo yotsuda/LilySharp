@@ -29,7 +29,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// The resolution order is "試して無ければ次" — no spelling rule guesses where a file is; every
 /// place looked is returned, so a failure can name them all. A font found once is kept.
 /// <para>
-/// ⑴ The bundle. ⑵ The user's own folders (2026-10-09): the editor's <c>lilysharp.fontPaths</c>
+/// ⑴ The bundle. ⑵ The user's own folders (2026-10-09): the editor's <c>lilysharp.fonts.folders</c>
 /// (<see cref="SetSearchDirectories"/>) and the environment's <c>LILYSHARP_FONT_PATH</c> — a list in the
 /// platform's path separator (<c>;</c> on Windows, <c>:</c> elsewhere), the one spelling every OS reads.
 /// A score names its font only (owner's decision: a path in a book breaks when the book or the
@@ -89,7 +89,7 @@ public static class MusicFonts
     private static volatile string[] _searchDirectories = [];
 
     /// <summary>
-    /// The folders an editor names (VS Code's <c>lilysharp.fontPaths</c>), searched before
+    /// The folders an editor names (VS Code's <c>lilysharp.fonts.folders</c>), searched before
     /// <see cref="FontPathVariable"/>'s. Replacing them forgets every name already resolved, so
     /// the next layout looks again. True when the list changed.
     /// </summary>

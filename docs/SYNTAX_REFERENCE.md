@@ -1362,7 +1362,7 @@ fonts {
 
 Bundled: Emmentaler, Bravura, Petaluma, Leland (the last three are SMuFL fonts; the
 name is compared without regard to case). Another SMuFL font is found by its name — a score
-never names a file — in, in order: the folders of the VS Code setting `lilysharp.fontPaths`, the
+never names a file — in, in order: the folders of the VS Code setting `lilysharp.fonts.folders`, the
 folders of the environment variable `LILYSHARP_FONT_PATH` (separated by `;` on Windows, `:`
 elsewhere; read by `lysc` too), where the SMuFL specification says its metadata lives, and
 the system font folders. In a folder the font's `<name>_metadata.json` and `.otf` stand

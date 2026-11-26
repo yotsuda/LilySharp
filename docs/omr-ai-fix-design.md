@@ -24,7 +24,7 @@ OMR（`LilySharp-Omr`）が読んだ `.lys` の怪しい小節を、**ユーザ�
 | scan view | `omrScan.ts`／`omrScanCore.ts`（Webview・印の枠・*Marks below* のスライダー） | 「表示中の印」＝対象の既定。頭のバーにボタンを足す |
 | モデル | `modelClient.ts`（`vscode.lm`・`ModelUse`・`autoPick`・「Lily#: Select AI Model」） | `ModelUse` に `'omrFix'` を足す |
 | 検証と描画 | LSP `lilysharp/checkCandidate`・`lilysharp/renderText`（AI 変換が使う） | 門と確認パネルの絵 |
-| 照合 | `calamo verify`（OMR 側・保存時の照合 `lilysharp.omr.verifyOnSave`・`omrVerify.ts`） | 小節単位の照合ができれば 3 つ目の門 |
+| 照合 | `calamo verify`（OMR 側・保存時の照合 `lilysharp.scans.verifyOnSave`・`omrVerify.ts`） | 小節単位の照合ができれば 3 つ目の門 |
 | 確認パネル | `aiTransform.ts` の candidate panel（Accept／Iterate／Reject・version／range guard の apply） | 一覧に広げる |
 
 ## 2. UI

@@ -67,7 +67,7 @@ public sealed partial class LilySharpLanguageServer
     private readonly Dictionary<Uri, CancellationTokenSource> _pendingDiagnostics = [];
     private readonly object _diagnosticsGate = new();
 
-    // Editor setting (lilysharp.completion.flatSpelling): when true the completer
+    // Editor setting (lilysharp.editing.flatSpelling): when true the completer
     // suggests the contracted Dutch flats es/as instead of ees/aes. Compilation
     // accepts both regardless; this only changes suggestions. Seeded from the
     // client's initializationOptions at start and kept live via
@@ -89,7 +89,7 @@ public sealed partial class LilySharpLanguageServer
         settings?["completion"]?["flatSpelling"]?.ToString() == "contracted";
 
     /// <summary>
-    /// Applies <c>lilysharp.fontPaths</c> — <c>{ fonts: { paths: ["…", …] } }</c> in the pushed
+    /// Applies <c>lilysharp.fonts.folders</c> — <c>{ fonts: { paths: ["…", …] } }</c> in the pushed
     /// settings — as the music fonts' extra search folders (<c>MusicFonts.SetSearchDirectories</c>);
     /// settings without the key leave them as they are. The book names a font only; the folders
     /// say where this machine keeps it (2026-10-09).

@@ -23,7 +23,7 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// The <c>lilysharp.completion.flatSpelling</c> setting only changes how the flat
+/// The <c>lilysharp.editing.flatSpelling</c> setting only changes how the flat
 /// scale-note completions are SPELLED — E-flat and A-flat as ees/aes (full) or
 /// es/as (contracted). Both compile regardless; this just picks the suggestion.
 /// </summary>

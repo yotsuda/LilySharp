@@ -1166,7 +1166,7 @@ export class EngineWatch {
 
 /** When an edited voice is prepared: as the text rests (`afterEdit`, the default), or only when
  *  Play is pressed (`onPlay`: for a slow engine — the CPU's DiffSinger — where every pause would
- *  cost seconds of rendering; that Play plays the instruments). The setting `lilysharp.playback.singerPrepare`. */
+ *  cost seconds of rendering; that Play plays the instruments). The setting `lilysharp.playback.prepareSinging`. */
 export type PrepareMode = 'afterEdit' | 'onPlay';
 export function prepareModeOf(setting: unknown): PrepareMode {
     return setting === 'onPlay' ? 'onPlay' : 'afterEdit';

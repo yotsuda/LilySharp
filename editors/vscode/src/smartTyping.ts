@@ -22,14 +22,14 @@ import {
 } from './smartTypingCore';
 import { inPageText } from './pageText';
 
-// `lilysharp.typingAids.enabled` (rule 31): false turns every aid off. Read
+// `lilysharp.editing.typingAids` (rule 31): false turns every aid off. Read
 // once and kept current, so a keystroke pays for no configuration lookup. The
 // key bindings carry the same setting in their `when` clause, so while it is
 // off the keys are not even intercepted; this flag covers the change-event
 // route and a binding that fired anyway.
 let aidsEnabled = true;
 const readAidsEnabled = () =>
-    vscode.workspace.getConfiguration('lilysharp').get<boolean>('typingAids.enabled', true);
+    vscode.workspace.getConfiguration('lilysharp').get<boolean>('editing.typingAids', true);
 
 /** Tells the typist why a keystroke changed nothing (rule 18b). */
 function showHint(hint: string | undefined) {
@@ -151,7 +151,7 @@ export function registerSmartTyping(
     aidsEnabled = readAidsEnabled();
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration(e => {
-            if (e.affectsConfiguration('lilysharp.typingAids.enabled')) { aidsEnabled = readAidsEnabled(); }
+            if (e.affectsConfiguration('lilysharp.editing.typingAids')) { aidsEnabled = readAidsEnabled(); }
         }),
         vscode.workspace.onDidOpenTextDocument(doc => {
             if (doc.languageId === 'lilysharp') { cacheWindow(doc, 0); }

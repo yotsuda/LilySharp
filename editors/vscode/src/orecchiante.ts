@@ -198,7 +198,7 @@ async function prepareLyrics(reader: OrecchianteLocation, v: OrecchianteVersion,
         output.appendLine(`words beside the recording: ${lrc}`);
         return true;
     }
-    const setting = vscode.workspace.getConfiguration('lilysharp.orecchiante');
+    const setting = vscode.workspace.getConfiguration('lilysharp.recordings');
     if (!canFetchLyrics(v) || setting.get<string>('fetchLyrics', 'ask') === 'never') {
         return true;
     }
@@ -211,7 +211,7 @@ async function prepareLyrics(reader: OrecchianteLocation, v: OrecchianteVersion,
     }
     if (answer === never) {
         await setting.update('fetchLyrics', 'never', vscode.ConfigurationTarget.Global);
-        void vscode.window.showInformationMessage('Lily#: the words will not be offered again (the setting Lily# › Orecchiante: Fetch Lyrics brings the question back).');
+        void vscode.window.showInformationMessage('Lily#: the words will not be offered again (the setting Recordings › Fetch Lyrics brings the question back).');
         return true;
     }
     if (answer === without) {

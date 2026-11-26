@@ -445,7 +445,7 @@ async function auditionVoice(uri: string, id: string, clock: StageClock, languag
     voiceSampleWanted = key;
     const songAtStart = voiceRenderer?.singing ? 'being sung' : 'not being sung';
     const say = (end: string) => outputChannel.appendLine(`singer: hear ${id}: ${clock}${end} (the song was ${songAtStart} at the start)`);
-    if (!vscode.workspace.getConfiguration('lilysharp').get<boolean>('audition.enabled', true)) { say(', auditions are off'); return; }
+    if (!vscode.workspace.getConfiguration('lilysharp').get<boolean>('playback.audition', true)) { say(', auditions are off'); return; }
     if (!previewPanels.get(uri)) { say(', no preview is open'); return; }
     const onDisk = fs.existsSync(voiceSampleFile(key));
     // A sample with the line's settings takes the place of the ones of that voice still waiting:
@@ -732,9 +732,9 @@ export function deactivateSinging(): void {
     voiceRenderer = undefined;
 }
 
-/** `lilysharp.playback.singerPrepare`: when a voice whose text changed goes to the engine. */
+/** `lilysharp.playback.prepareSinging`: when a voice whose text changed goes to the engine. */
 function prepareModeSetting(): PrepareMode {
-    return prepareModeOf(settings().get<string>('playback.singerPrepare'));
+    return prepareModeOf(settings().get<string>('playback.prepareSinging'));
 }
 
 /** What each preview's practice menu last listed of the voices (voiceMenuKey). */
@@ -956,7 +956,7 @@ const clockNow = () => new Date().toTimeString().slice(0, 8);
  * after a Play, a speed change or a turn to another document, or when the engine already has
  * the voice; after PREPARE_IDLE_MS of rest when the text was edited (typing restarts the clock,
  * and the engine never works under the keystrokes); not at all, until Play, with
- * `lilysharp.playback.singerPrepare` at onPlay. Nothing is asked when the server cannot answer
+ * `lilysharp.playback.prepareSinging` at onPlay. Nothing is asked when the server cannot answer
  * (the text has an error: the voices the page has stay as they are, the placeholder of a turn is
  * settled), and everything is dropped when there is no engine.
  */
