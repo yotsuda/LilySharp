@@ -680,7 +680,7 @@ async function setUpVoices(guide: VoiceGuide): Promise<void> {
  *  (CANTORIA_EXTENSION_ID, activated here; activating it starts no process), let go when the
  *  extensions change and on deactivate. Undefined when it is not installed: the lyrics are not
  *  sung and nothing is said. A developer's build of the program is Cantoria's own setting,
- *  `cantoria.program`: the setting `lilysharp.playback.singer` that ran a program here, past the
+ *  `cantoria.developer.program`: the setting `lilysharp.playback.singer` that ran a program here, past the
  *  extension and its settings, doubled it and is gone (owner's decision 2026-11-26). */
 let voiceRenderer: VoiceRenderer | undefined;
 export async function renderer(): Promise<VoiceRenderer | undefined> {

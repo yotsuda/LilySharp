@@ -619,9 +619,9 @@
             "description": "Download one engine as the page on the right says, then tell Cantoria where it is. One is enough. An installed VOICEVOX, and OpenUtau's voices, are found for you.\n[Find Engines on This Computer](command:cantoria.findEngines)\n[Choose DiffSinger Voices Folder](command:cantoria.chooseVoicesFolder)\n[Choose NEUTRINO Folder](command:cantoria.chooseNeutrinoFolder)\n[Choose VOICEVOX Folder](command:cantoria.chooseVoicevoxFolder)",
             "media": { "markdown": "walkthrough/engines.md" },
             "completionEvents": [
-              "onSettingChanged:cantoria.voicesFolder",
-              "onSettingChanged:cantoria.neutrinoFolder",
-              "onSettingChanged:cantoria.voicevoxFolder"
+              "onSettingChanged:cantoria.diffsinger.voicesFolder",
+              "onSettingChanged:cantoria.neutrino.installFolder",
+              "onSettingChanged:cantoria.voicevox.installFolder"
             ]
           },
           {

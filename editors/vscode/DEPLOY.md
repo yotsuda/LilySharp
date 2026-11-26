@@ -25,7 +25,7 @@ editors/vscode/
 
 The extension resolves the LSP server in this order:
 
-1. **User-configured path** (`lilysharp.serverPath` in VS Code settings)
+1. **User-configured path** (`lilysharp.developer.languageServer` in VS Code settings)
 2. **Bundled server** (`<extension>/server/lilysharp-lsp.exe`)
 3. **PATH** (fallback to `lilysharp-lsp` command)
 
@@ -82,7 +82,7 @@ dotnet build LilySharp.Lsp
 # Reload VS Code
 ```
 
-Note: This requires `lilysharp.serverPath` to point to Debug build.
+Note: This requires `lilysharp.developer.languageServer` to point to Debug build.
 
 ## Publishing to Marketplace
 
@@ -182,7 +182,7 @@ is in `./server`; they are for local experiments, not for the Marketplace.
 ### Avoid Hardcoded Paths
 
 **Never commit hardcoded local paths** in:
-- `.vscode/settings.json` - Use empty `serverPath` or remove it
+- `.vscode/settings.json` - Use empty `lilysharp.developer.languageServer` or remove it
 - `.vscode/launch.json` - Use `${workspaceFolder}` variables
 - `samples/.vscode/` - Should not exist
 

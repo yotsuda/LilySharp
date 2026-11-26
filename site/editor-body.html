@@ -433,7 +433,7 @@
   <p>All cursors step in one undo step. The shapes walked are the playable ones — at least
   three strings, chord tones only, the root lowest, within four frets and four fingers;
   <b>stretch shapes</b> (fretted frets five apart) are left out unless
-  <code>"lilysharp.chordShapes.includeStretch": true</code>. Hover a chord to see what it
+  <code>"lilysharp.editing.stretchChordShapes": true</code>. Hover a chord to see what it
   draws, or what Down would write. In a score whose layout says <code>chordDiagrams all</code> a
   name already draws its usual shape, so there Down writes the <i>next</i> one. What a diagram
   is and which instrument it is drawn for: <a href="chords.html">Chords and chord
@@ -575,10 +575,10 @@
   Score Template</i> goes back to the built-in one.</p>
   <p>A few tuning values are not in the Settings screen but still work written in
   <code>settings.json</code>: <code>lilysharp.preview.autoRefresh</code> / <code>refreshDelay</code>
-  (<code>true</code> / 100 ms), <code>lilysharp.chordShapes.includeStretch</code>,
+  (<code>true</code> / 100 ms), <code>lilysharp.editing.stretchChordShapes</code>,
   <code>lilysharp.import.relativeOctave</code>, <code>lilysharp.ai.omrFixImages</code> /
   <code>omrFixVerify</code> / <code>omrFixBatch</code>, and, for a server you build yourself,
-  <code>lilysharp.serverPath</code> / <code>trace.server</code>.</p>
+  <code>lilysharp.developer.languageServer</code> / <code>trace.server</code>.</p>
 </section>
 
 <section id="ai">

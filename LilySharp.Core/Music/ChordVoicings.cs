@@ -67,7 +67,7 @@ namespace LilySharp.Core.Music;
 /// highest − lowest = 4 — is hard to play, so by default it is not offered. The NORMAL rule
 /// (V5 at 3) is what the compiler's fallback reads first and what the editor steps through; the
 /// STRETCH-INCLUSIVE rule (V5 at 4, the owner's prototype) is the editor's when
-/// <c>lilysharp.chordShapes.includeStretch</c> is on, and the fallback's only when the normal
+/// <c>lilysharp.editing.stretchChordShapes</c> is on, and the fallback's only when the normal
 /// rule finds nothing (<see cref="Fallback(IReadOnlyList{int}, ChordStructure)"/>). Each rule's
 /// bases are MAXIMAL WITHIN ITS OWN valid set: a base of the normal rule can be a muted copy
 /// of a stretch shape, so the normal bases are not the stretch-inclusive bases filtered.

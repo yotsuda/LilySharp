@@ -1542,7 +1542,7 @@ public class StepParams
     public TextDocumentIdentifier TextDocument { get; set; } = null!;
     public StepSelection[] Selections { get; set; } = System.Array.Empty<StepSelection>();
     public int Direction { get; set; }
-    /// <summary>lilysharp.chordShapes.includeStretch (owner's decision 2026-09-28): an
+    /// <summary>lilysharp.editing.stretchChordShapes (owner's decision 2026-09-28): an
     /// <c>@chord</c> also steps through stretch shapes (fretted frets five apart). Optional;
     /// absent means false.</summary>
     public bool IncludeStretch { get; set; }
@@ -1611,7 +1611,7 @@ public class AuditionAtParams
 {
     public TextDocumentIdentifier TextDocument { get; set; } = null!;
     public int Offset { get; set; }
-    /// <summary>lilysharp.chordShapes.includeStretch, as <see cref="StepParams.IncludeStretch"/>.
+    /// <summary>lilysharp.editing.stretchChordShapes, as <see cref="StepParams.IncludeStretch"/>.
     /// Optional; absent means false.</summary>
     public bool IncludeStretch { get; set; }
 }

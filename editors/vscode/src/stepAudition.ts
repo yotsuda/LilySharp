@@ -93,12 +93,12 @@ function auditionEnabled(): boolean {
     return vscode.workspace.getConfiguration('lilysharp').get<boolean>('playback.audition', true);
 }
 
-/** lilysharp.chordShapes.includeStretch (owner's decision 2026-09-28): an @chord also
+/** lilysharp.editing.stretchChordShapes (owner's decision 2026-09-28): an @chord also
  * steps through stretch shapes (fretted frets five apart). Sent with every step and
  * audition request (IncludeStretch; the server reads a missing one as false). Not in the
  * Settings UI since 2026-10-25 — settings.json only. */
 function includeStretch(): boolean {
-    return vscode.workspace.getConfiguration('lilysharp').get<boolean>('chordShapes.includeStretch', false);
+    return vscode.workspace.getConfiguration('lilysharp').get<boolean>('editing.stretchChordShapes', false);
 }
 
 export function registerStepAudition(context: vscode.ExtensionContext, deps: StepAuditionDeps) {

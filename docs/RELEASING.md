@@ -133,7 +133,7 @@ cd editors\vscode
 generated scores grown from bars the owner reports as misread
 (`LilySharp-Omr/docs/repro/lilysharp-requests-2026-10-29-seed-from-fixed-bars.md`). Lily#'s
 part is the Bar fixes panel's **Report Misread to OMR…** (`omrSeedCore.ts`): its code is in the
-extension, but it shows only when `lilysharp.omr.seedFolder` is written in settings.json by
+extension, but it shows only when `lilysharp.scans.seedFolder` is written in settings.json by
 hand. That setting and the report are never contributed in `package.json` (`omrSeed.test.ts`
 checks), never in the CHANGELOG or the README, and no seed, scan or reported bar is in the VSIX
 or the site. Before tagging, list a built VSIX (`dist\*.vsix` is a zip) and look for `seed`
@@ -141,7 +141,7 @@ beyond `omrSeedCore`.
 
 ⚠️ **Orecchiante's seed tooling is the same** (Orecchiante's request 23, 2026-11-23,
 `docs/orecchiante-report-design.md`): **Report to Orecchiante…** (`orecchianteSeedCore.ts`,
-`orecchianteSeed.ts`) is code actions that show only when `lilysharp.orecchiante.seedFolder` is
+`orecchianteSeed.ts`) is code actions that show only when `lilysharp.recordings.seedFolder` is
 written by hand. The setting and the commands are not in `package.json` (`orecchianteSeed.test.ts`
 checks), not in the CHANGELOG or the README; the VSIX carries the code alone.
 

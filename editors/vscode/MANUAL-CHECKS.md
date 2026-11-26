@@ -14,7 +14,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [x] 拡張を組み直して入れる（eeditors/vscode/DEPLOY.mde Local Testing の手順。enpm run vscode:prepublishe → eservere と eout\extension.jse を
       e%USERPROFILE%\.vscode\extensions\yotsuda.lilysharp-*e へ）。VS Code を **Reload Window**。
 - [x] 出力チャネル「Lily#」に eLanguage server version: …e の行が出て、その番号が組み直した elysc --versione と同じ（eFailed to get server versione が出ない）。
-- [x] 設定の既定: elilysharp.editing.typingAidse 入・elilysharp.playback.auditione 入・elilysharp.chordShapes.includeStretche 切・
+- [x] 設定の既定: elilysharp.editing.typingAidse 入・elilysharp.playback.auditione 入・elilysharp.editing.stretchChordShapese 切・
       elilysharp.preview.refreshDelaye 100・elilysharp.preview.highlightTodose 入・elilysharp.scans.verifyOnSavee 切。
 - 題材は esite/videos/SHOTLIST.mde の 4 行の本（clips 1〜5 用）と、そこに載っている各 clip の本。
 
@@ -74,7 +74,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [x] **コード図の形**（clip 8 の手順）: ec'1@chord(Cm7)e の eCm7e の上で ↑ → e@chord(Cm7 x35343)e、図が出て鳴る、
       ステータスバーに eCm7: shape 1 of …e。↑ を続けると形と図が変わる。↓ で戻り、最初の形の上でさらに ↓ → 形が消えて図も消える。
 - [x] **開放弦の輪**: 図の開放弦（形の e0e）は **塗らない輪**（○）、弾かない弦（exe）は ×、押さえる弦は黒丸。echord(C x32010)e で確かめる。
-- [x] elilysharp.chordShapes.includeStretche を入にして ↑ を続けると、切のときには出なかった広い形が候補に増える。
+- [x] elilysharp.editing.stretchChordShapese を入にして ↑ を続けると、切のときには出なかった広い形が候補に増える。
 - [x] elayout { chordDiagrams all }e の本では、形を書いていないコード名にも既定の図が出る。その上で ↓ → 図が消える。
 - [x] 形がコード名と合わない（e@chord(C x35343)e）と LYS1039 の警告。
 
@@ -357,7 +357,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 ### 3.7 歌わせる（第1124〜1127・`docs/singing-design.md`。実機は未確認＝node から本物の `cantoria serve` を駆動した所まで。第1127 で Cantoria は拡張 `yotsuda.cantoria` になり、Lily# はその API を呼ぶ）
 
 - [x] **Cantoria 拡張を入れる**（オーナー確認 2026-11-08: `tools\deploy-extension.ps1` で入れ、Choose NEUTRINO Folder… → Check Setup が ready）: `C:\MyProj\cantoria\artifacts\extension\cantoria-win32-x64-0.1.0.vsix`（`tools\pack-extension.ps1` の出力）を「Install from VSIX…」で。パレット **Cantoria: Choose NEUTRINO Folder…** → `C:\Tools\neutrino\windows（調声支援ツール）.v3.2.6.ex\NEUTRINO 調声支援ツール` を選ぶ → **Cantoria: Check Setup** が「Cantoria is ready: MERROW through NEUTRINO at …」。**Cantoria: Choose Voice…** に `MERROW` が並ぶ。Lily# の設定 `lilysharp.playback.singer` は**空のまま**（開発者がパスを入れる逃げ道）。
-- [ ] Lily# の出力チャネルに `singer: the Cantoria extension 0.2.0, voice neutrino/MERROW`（第1133: 声は `engine/name` で名乗る）が、Cantoria の出力チャネル「Cantoria」に `engine: … serve …`・`engine ready (neutrino): MERROW` が出る。**Cantoria: Choose Voice…** の一覧は `neutrino/MERROW`（説明に `Merrow · ja`）で、選ぶと設定 `cantoria.defaultFemaleVoice` に `neutrino/MERROW` が入る。Check Setup の文も `neutrino/MERROW through NEUTRINO at …`。設定に裸の `MERROW` と書いても同じに動く。`cantoria.defaultFemaleVoice` に `foo/MERROW` と書く → Check Setup が `no engine named foo in foo/MERROW (there is: neutrino)`・Lily# は楽器で鳴る。
+- [ ] Lily# の出力チャネルに `singer: the Cantoria extension 0.2.0, voice neutrino/MERROW`（第1133: 声は `engine/name` で名乗る）が、Cantoria の出力チャネル「Cantoria」に `engine: … serve …`・`engine ready (neutrino): MERROW` が出る。**Cantoria: Choose Voice…** の一覧は `neutrino/MERROW`（説明に `Merrow · ja`）で、選ぶと設定 `cantoria.general.defaultFemaleVoice` に `neutrino/MERROW` が入る。Check Setup の文も `neutrino/MERROW through NEUTRINO at …`。設定に裸の `MERROW` と書いても同じに動く。`cantoria.general.defaultFemaleVoice` に `foo/MERROW` と書く → Check Setup が `no engine named foo in foo/MERROW (there is: neutrino)`・Lily# は楽器で鳴る。
 - [x] （オーナー確認 2026-11-08「ばっちり声と音源が同期して鳴っている」。細目の ⏹・クリック・押し直しは未）`雪やこんこ.lys` を開いてプレビュー → 出力チャネル「Lily# Extension」に `singer: the Cantoria extension 0.1.0` と `singer: melody sung (4.0 s at speed 1)`（初回は数十秒かかることがある・その間 status bar に `Lily#: singing melody…`）。▶ → **メロディは歌声だけ**（楽器は鳴らない＝オーナー決定 2026-11-08 夕「1 パート 1 音」。声が描けるまでの ▶ は代役の Choir Aahs）・他のパートは楽器・追従の点灯はメロディにも付く。⏹ で声も止まる。音符をクリック → そこから歌う。▶ を押し直す → 頭から。
 - [ ] practice の速度を 80% に → 直後の ▶ は楽器（声は速度ごとに描き直す）、出力チャネルに `sung (5.0 s at speed 0.8)` が出た後の ▶ は 80% の声。count-in On → 数えた後から声。
 - [ ] 漢字の歌詞の本 → status bar に `Lily#: melody: 1 syllable(s) are not kana…` が 1 回・楽器で鳴る。歌詞のない本 → 何も起きない。
@@ -450,12 +450,12 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] **Cantoria のインストール案内**（第1205・オーナー依頼）: Cantoria を無効にして `singer ` の補完、または `singer` のある楽譜を再生 → 通知と Install Cantoria が 1 回だけ出る。歌詞だけの楽譜では出ない。公開後はボタンで入り、公開前は拡張の検索画面が開く。
 - [ ] **clef の並び**（第1204・オーナー依頼）: `part` の `clef treble` で Ctrl+Shift+Up → `treble^8`、さらに Up は止まる、Down で `treble`、`treble_8`。`clef ` の補完は先頭が `treble^8` で、`treble` が選ばれた状態で開く。
 - [ ] **`singer` を選んだ後**（第1203・オーナー報告）: `score { lyrics verse ` で Ctrl+Space → 候補は `singer` 1 つ（`singer male` は無い）→ 選ぶと `singer ` まで入り、`female`・`male`・声の一覧が開く。`part` の中でも同じ。
-- [ ] **#listVoices**（第1202・オーナー依頼）: Copilot のチャットで「neutrino の男声の名前を教えて」→ ツールが呼ばれ、名前が返る。作曲を頼むと、実在する声の名前で `singer` を書く。VOICEVOX は `cantoria.voicevoxFolder` が設定済みなら起動して一覧に入る。
+- [ ] **#listVoices**（第1202・オーナー依頼）: Copilot のチャットで「neutrino の男声の名前を教えて」→ ツールが呼ばれ、名前が返る。作曲を頼むと、実在する声の名前で `singer` を書く。VOICEVOX は `cantoria.voicevox.installFolder` が設定済みなら起動して一覧に入る。
 - [ ] **言語に合った試聴**（第1200・オーナー報告）: `language english` の歌詞で `singer "diffsinger/TIGER"` の閉じた引用符の直後、引用符の中、`singer` の語の上をクリック → どれも Hello, how are you?（第1201 で変更）。日本語の歌詞では こんにちわ。
 - [ ] **DiffSinger の話者**（第1199・オーナー依頼）: `singer "` の補完に `diffsinger/TIGER/tiger_disco` など 6 つが増える（詳細に Disco など）。選ぶと声の調子が変わって聞こえる。英語の歌詞でも出る。
 - [ ] **複数の声で 1 パート**（第1197・オーナー依頼）: `singer "neutrino/MERROW","diffsinger/TIGER"` → ▶ で 2 人が重なって歌い、一方だけが鳴らない・ずれて聞こえないこと（第1198 でカンマに変更）。`,` を打つと声の一覧が開き、選ぶと `,"…"` と入る。カーソルを前の名前に置いて Ctrl+Shift+Up/Down すると前の 1 人だけが替わる。`singer` を選択すると全員で こんにちわ。
 - [ ] **`singer ` の直後の補完**（第1196・オーナー報告）: `lyrics verse sings melody singer ` と空白まで打つ → `female`・`male`・声の一覧が開く → 声を選ぶと `singer "…"` と入り発声する、`male` を選ぶと `male ""` と入り男声と性別不明の声が開く。`singer male ` では `sings` などの続きと声の両方が出る。
-- [ ] **VOICEVOX の自動起動**（第1195・オーナー依頼）: VOICEVOX を閉じたまま `cantoria.voicevoxFolder` を設定 → `singer "` の補完で少し待って声が出る、再生で歌う。Cantoria の出力に `voicevox: ready`。VS Code を閉じると `run.exe` が消える。先に VOICEVOX を開いていれば起動せず、VS Code を閉じても VOICEVOX は残る。歌詞のない .lys を開いただけなら起動しない。
+- [ ] **VOICEVOX の自動起動**（第1195・オーナー依頼）: VOICEVOX を閉じたまま `cantoria.voicevox.installFolder` を設定 → `singer "` の補完で少し待って声が出る、再生で歌う。Cantoria の出力に `voicevox: ready`。VS Code を閉じると `run.exe` が消える。先に VOICEVOX を開いていれば起動せず、VS Code を閉じても VOICEVOX は残る。歌詞のない .lys を開いただけなら起動しない。
 - [ ] **VOICEVOX**（第1193・オーナー依頼）: VOICEVOX を起動 → `singer "` の補完に `voicevox/ずんだもん-ノーマル` などが出る → 選ぶと こんにちわ を発声 → ▶ で歌う。音の始まりが楽譜と揃う（最初の子音が切れない）。伸ばす音（`_`）と 2 モーラの歌詞（`こん`）が歌える。VOICEVOX を閉じて再生するとマイクが赤になり、ホバーで「not answering」と出る。
 - [ ] **楽譜が置いた歌詞を歌う**（第1192・オーナー報告「かえるのうた」）: 同じパートに歌詞を 2 つ書き、`score` の行に後の方を `singer` 付きで置く → ▶ で後の方の歌詞がその声で歌われる。英語で辞書に無い語（`frog`）はつづりからの発音で歌われ、Cantoria の出力にその語が出る。
 - [ ] **赤いマイクのホバー**（第1191・オーナー依頼）: 声の生成を失敗させる（`singer "diffsinger/TIGER"` のまま `language korean` にする等）→ マイクが赤 → ホバーした瞬間にエラーの文が出る（パート名と engine の文）。ホバーしたまま赤くなっても出る。離すと消える。青や灰のマイクは従来どおり 0.5 秒待ってから出る。

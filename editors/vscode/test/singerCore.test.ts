@@ -674,9 +674,9 @@ describe('the singer settings', () => {
     const settings = Object.assign({}, ...manifest.contributes.configuration.map((c: { properties: object }) => c.properties));
     const commands = manifest.contributes.commands as { command: string; title: string }[];
 
-    it('name no program: the Cantoria extension sings, and a developer\'s build is its cantoria.program', () => {
+    it('name no program: the Cantoria extension sings, and a developer\'s build is its cantoria.developer.program', () => {
         // lilysharp.playback.singer ran a program here, past the extension and its settings (its voices
-        // folder, NEUTRINO's, the GPU); it doubled cantoria.program and is gone (owner's decision 2026-11-26).
+        // folder, NEUTRINO's, the GPU); it doubled cantoria.developer.program and is gone (owner's decision 2026-11-26).
         assert.equal(settings['lilysharp.playback.singer'], undefined);
         // The voice doubles the part's instrument (owner's decision 2026-11-08): no mute setting, no voice setting.
         assert.equal(settings['lilysharp.playback.singerReplacesPart'], undefined);

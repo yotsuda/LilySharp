@@ -290,7 +290,7 @@ public static partial class NoteStepper
     /// (<c>Start == End</c>) steps what it is on; a selection steps every note and member
     /// whose pitch starts inside it. <paramref name="expand"/> turns the stepped text into the
     /// tree that SOUNDS (the server's <c>using</c> expansion); null parses it as it stands.
-    /// <paramref name="includeStretch"/> (<c>lilysharp.chordShapes.includeStretch</c>) lets an
+    /// <paramref name="includeStretch"/> (<c>lilysharp.editing.stretchChordShapes</c>) lets an
     /// <c>@chord</c> step through stretch shapes too (<see cref="ShapeOrder"/>).
     /// <paramref name="semitone"/> steps notes and members to the next tone of the key instead
     /// of by an octave mark (<see cref="SemitoneEdits"/>); a voicing steps its shape either way,
@@ -1434,7 +1434,7 @@ public static partial class NoteStepper
     /// the compiler's fallback), then Lily#'s maximal shapes in their order
     /// (<see cref="Music.ChordVoicings"/>) — the normal rule's, or with
     /// <paramref name="includeStretch"/> the stretch-inclusive rule's (owner's decision
-    /// 2026-09-28, <c>lilysharp.chordShapes.includeStretch</c>) — each once, on
+    /// 2026-09-28, <c>lilysharp.editing.stretchChordShapes</c>) — each once, on
     /// <see cref="StepTuning"/>. <paramref name="site"/> is an <c>@chord</c> or a row entry.
     /// </summary>
     /// <remarks>

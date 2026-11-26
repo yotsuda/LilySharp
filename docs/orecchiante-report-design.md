@@ -6,7 +6,7 @@ Orecchiante の依頼 23（`C:\MyProj\Orecchiante\docs\repro\lilysharp-requests-
 
 ## 1. 誰に出すか
 
-- **オーナーだけ**。`settings.json` に手で `lilysharp.orecchiante.seedFolder` を書いたときだけ出る。
+- **オーナーだけ**。`settings.json` に手で `lilysharp.recordings.seedFolder` を書いたときだけ出る。
   設定もコマンドも `package.json` に載せない（`orecchianteSeed.test.ts` が見る・`RELEASING.md` の注）。
 - 隣のファイル（`<stem>.orecchiante.json`）があり、その小節が `section` を持つ `.lys` だけ。
 

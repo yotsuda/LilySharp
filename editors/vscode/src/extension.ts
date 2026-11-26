@@ -1123,7 +1123,7 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     // Report to Orecchiante (orecchianteSeed.ts, Orecchiante's request 23): the owner's alone — its
-    // code actions show only with lilysharp.orecchiante.seedFolder written by hand.
+    // code actions show only with lilysharp.recordings.seedFolder written by hand.
     registerOrecchianteReport(context, () => client, outputChannel);
 
     // The Explorer's batch export: right-click one or more .lys → the format

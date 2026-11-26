@@ -3835,7 +3835,7 @@ standard tuning C has 38 (`x32010` first), Cm7 33, D 36. With stretch shapes (V5
 max − min ≤ 4) there are more — C 57, Cm7 52, D 64 — and the maximal shapes are those of that
 wider rule (G7's `35340x` is maximal without stretch, but grows into `353407` with it). The
 editor steps through the order without stretch shapes unless the VS Code setting
-`lilysharp.chordShapes.includeStretch` is on; a written stretch shape steps to the next
+`lilysharp.editing.stretchChordShapes` is on; a written stretch shape steps to the next
 (previous) shape by where it would sort. The order is the editor's, NOT the language's: no
 source names a shape by its place in it, so it may be improved without moving any book's
 diagram.

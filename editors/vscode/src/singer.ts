@@ -16,7 +16,7 @@
 
 // The singing engine behind the preview's voice (docs/singing-design.md §5): the Cantoria
 // extension's API — it carries the program and holds the voices and the engines' folders; a
-// developer's build of the program is its setting cantoria.program. It gives a WAV per voice,
+// developer's build of the program is its setting cantoria.developer.program. It gives a WAV per voice,
 // kept by the key of its score so a phrase is sung once. No vscode here: the extension lookup,
 // the status bar and the previews are singing.ts's.
 

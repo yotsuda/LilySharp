@@ -146,7 +146,7 @@ The score spellings here (`lyrics NAME sings PART`) were replaced on 2026-11-10:
   the gender, with a sentence when that was not asked for), and the resolved voice is the cache
   key's. The gender (`SungVoice.Gender`, owner's decision session 1187) is what the singer's word
   says, else the part's preset, else its clef. The two default voices are the settings
-  `cantoria.defaultFemaleVoice` and `cantoria.defaultMaleVoice`. Between the quotes the
+  `cantoria.general.defaultFemaleVoice` and `cantoria.general.defaultMaleVoice`. Between the quotes the
   editor asks the server for the words' language (`lilysharp/singerSlot`) and offers the voices
   that sing it (`singerChoices`); a voice not saying what it sings is
   left out. `lysc wav --singer` sings a written `engine/name` and takes a role as the default. The editor shows the
@@ -281,7 +281,7 @@ The score spellings here (`lyrics NAME sings PART`) were replaced on 2026-11-10:
 - **The engine is the Cantoria extension** (`yotsuda.cantoria`, owner's decision 2026-11-08,
   session 1127 — the shape the OMR reader took: a separate extension that carries the program,
   holds its own settings, and is called through its API). It holds the voice
-  (`cantoria.defaultVoice`) and NEUTRINO's folder (`cantoria.neutrinoFolder`), with pickers and a
+  (`cantoria.defaultVoice`) and NEUTRINO's folder (`cantoria.neutrino.installFolder`), with pickers and a
   **Check Setup**; its `activate` returns `{ version, apiVersion: 1, status(), sing(score),
   release() }` (its README, "For extension authors"; `singerCore.cantoriaApiOf` checks the
   shape). Lily# finds it with `vscode.extensions.getExtension`, activates it (no process
@@ -292,7 +292,7 @@ The score spellings here (`lyrics NAME sings PART`) were replaced on 2026-11-10:
   named a `cantoria` program to run as one resident `cantoria serve` per extension host
   (`SingerProcess`, JSON lines on stdin/stdout; the protocol is Cantoria's `docs/design.md` §4.1),
   past the extension and so past its settings (the voices folder, NEUTRINO's, the GPU): set by
-  mistake, the voices went missing. It doubled Cantoria's own `cantoria.program` — the extension
+  mistake, the voices went missing. It doubled Cantoria's own `cantoria.developer.program` — the extension
   running a developer's build with its settings — and went away with `SingerProcess`. The one
   `VoiceBackend` behind the `VoiceRenderer` is the extension's (`CantoriaExtensionBackend`), whose cache key takes the backend's
   voice name (`voiceName()`: the extension's setting now), so a changed
@@ -509,7 +509,7 @@ The score spellings here (`lyrics NAME sings PART`) were replaced on 2026-11-10:
    Cantoria repository's `editors/vscode`, packed by its `tools/pack-extension.ps1`), and
    Lily#'s `singerVoice` setting and **Choose Singing Voice…** went away — the voice is
    Cantoria's; `lilysharp.playback.singer` stayed as the developer's override (until 2026-11-26,
-   when it went away: Cantoria's `cantoria.program` does the same with the extension's settings).
+   when it went away: Cantoria's `cantoria.developer.program` does the same with the extension's settings).
 4. **Export mixing** — done 2026-11-08 (session 1131, §5 "Export"; nets `test/voiceMix.test.ts`).
    **A span's voice stopping at the span's end, the voice in a loop, and the count-in's lead** —
    done 2026-11-08 (session 1132: `voiceCues`, `playSpanWindow.pieces`, `loopRounds`; nets in

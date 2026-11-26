@@ -101,7 +101,7 @@ describe('the singing walkthrough', () => {
     it('checks a step off by what the step does', () => {
         const events = (id: string) => steps.find(s => s.id === id)!.completionEvents;
         assert.deepEqual(events('cantoria'), ['extensionInstalled:yotsuda.cantoria']);
-        assert.deepEqual(events('engine'), ['onSettingChanged:cantoria.voicesFolder', 'onSettingChanged:cantoria.neutrinoFolder', 'onSettingChanged:cantoria.voicevoxFolder']);
+        assert.deepEqual(events('engine'), ['onSettingChanged:cantoria.diffsinger.voicesFolder', 'onSettingChanged:cantoria.neutrino.installFolder', 'onSettingChanged:cantoria.voicevox.installFolder']);
         assert.deepEqual(events('check'), ['onCommand:cantoria.checkSetup']);
         assert.deepEqual(events('first-song'), ['onCommand:lilysharp.openFirstSong', 'onCommand:lilysharp.openFirstSongWhole', 'onCommand:lilysharp.openFirstSongShort']);
         for (const step of steps) {

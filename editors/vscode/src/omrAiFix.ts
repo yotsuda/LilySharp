@@ -1856,7 +1856,7 @@ function rowHtml(run: FixRun, r: FixRow, pageUris: ReadonlyMap<number, { uri: st
           + ` title="Write this bar into the .lys now (Ctrl+Z undoes it) — without a bar of its own (the AI's or your edit), its @todo is removed and the notes stay">${parts.accept.word}</button>`
           + `<button class="row-discard" data-i="${r.index}" title="Take this bar off the panel, writing nothing">Discard</button>`
         : '';
-    // The owner's alone (omrSeedCore: shown only with lilysharp.omr.seedFolder written by hand),
+    // The owner's alone (omrSeedCore: shown only with lilysharp.scans.seedFolder written by hand),
     // apart from Accept so that an Accept is never a report.
     const report = can && seedFolder()
         ? `<button class="row-report" data-i="${r.index}" title="${r.reported ? REPORT_AGAIN_TITLE : 'Keep this bar, its scan and the .lys as a seed for OMR\'s training scores — the reader got it wrong'}">${r.reported ? REPORT_AGAIN : 'Report Misread to OMR…'}</button>`

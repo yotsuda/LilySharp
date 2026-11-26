@@ -17,7 +17,7 @@
 // "Report to Orecchiante…" (Orecchiante's request 23, the owner's wish 2026-11-23;
 // orecchianteSeedCore.ts, docs/orecchiante-report-design.md): code actions (Ctrl+.) on a bass, kit
 // or chords row's bar, and on a drum phrase, of a chart with its file beside it — offered only
-// while `lilysharp.orecchiante.seedFolder` is written in settings.json by hand. Nothing in
+// while `lilysharp.recordings.seedFolder` is written in settings.json by hand. Nothing in
 // package.json: the commands are registered here and reached through the code actions alone.
 
 import * as vscode from 'vscode';

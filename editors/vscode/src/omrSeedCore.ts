@@ -17,7 +17,7 @@
 // "Report Misread to OMR" (owner's request 2026-10-29): a bar the owner says the reader got wrong,
 // kept in a folder for OMR to grow training scores from (LilySharp-Omr
 // docs/repro/lilysharp-requests-2026-10-29-seed-from-fixed-bars.md). The owner's alone: the row's
-// button shows only when `lilysharp.omr.seedFolder` is written in settings.json by hand — the
+// button shows only when `lilysharp.scans.seedFolder` is written in settings.json by hand — the
 // setting is not contributed, so no one else sees it (docs/RELEASING.md: the seed tooling never
 // ships). An Accept is never a report: the owner tries the panel's buttons freely, and only a bar
 // reported on purpose becomes a seed. OMR never trains on the scan and the bar themselves — they
@@ -30,7 +30,7 @@
 // where it came from.
 
 /** The setting under `lilysharp` that names the seed folder; not in package.json on purpose. */
-export const SEED_FOLDER_SETTING = 'omr.seedFolder';
+export const SEED_FOLDER_SETTING = 'scans.seedFolder';
 
 /** The bar reported, as the panel knows it. */
 export interface SeedBar {

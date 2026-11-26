@@ -18,7 +18,7 @@
 // docs/orecchiante-report-design.md): bars of a chart the owner has put right — or heard and found
 // right — kept in a folder for Orecchiante to make answers from (its tools/seeds.py). The twin of
 // Calamo's "Report Misread to OMR" (omrSeedCore.ts), and the owner's alone in the same way: the
-// code actions show only when `lilysharp.orecchiante.seedFolder` is written in settings.json by
+// code actions show only when `lilysharp.recordings.seedFolder` is written in settings.json by
 // hand — the setting is not contributed, so no one else sees it.
 //
 // What is reported is a bass, kit or chords row's bar ('bar'), every bar of that row in its section
@@ -31,7 +31,7 @@
 // No vscode here: the extension and the tests share it.
 
 /** The setting under `lilysharp` that names the seed folder; not in package.json on purpose. */
-export const ORECCHIANTE_SEED_FOLDER_SETTING = 'orecchiante.seedFolder';
+export const ORECCHIANTE_SEED_FOLDER_SETTING = 'recordings.seedFolder';
 
 /** One voice of a section and its bars, as lilysharp/voiceBars answers: the voice as a message
  *  names it (`part 'bass'`, `chords 'prog'`) and each bar's text span (start -1: not its own). */

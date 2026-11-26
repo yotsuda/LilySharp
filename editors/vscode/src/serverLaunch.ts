@@ -46,7 +46,7 @@ export function resolveServerLaunch(context: vscode.ExtensionContext, config: vs
     outputChannel: vscode.OutputChannel): ServerLaunch | undefined {
     // A server built by hand: settings.json only, not in the Settings UI since 2026-10-25
     // (as `lilysharp.trace.server`, which the language client reads by itself).
-    let serverPath = config.get<string>('serverPath');
+    let serverPath = config.get<string>('developer.languageServer');
 
     outputChannel.appendLine(`Config serverPath: "${serverPath}"`);
 

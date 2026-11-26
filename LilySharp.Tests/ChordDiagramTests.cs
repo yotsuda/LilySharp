@@ -1304,7 +1304,7 @@ public class ChordDiagramTests
     /// <summary>
     /// The first tuning's line also says where the shape stands in the editor's order, with
     /// both counts — a hover carries no setting (owner's decision 2026-09-28,
-    /// <c>lilysharp.chordShapes.includeStretch</c>); a stretch shape counts in the wider order.
+    /// <c>lilysharp.editing.stretchChordShapes</c>); a stretch shape counts in the wider order.
     /// </summary>
     [Fact]
     public void Hover_SaysWhereTheShapeStands_WithAndWithoutStretch()

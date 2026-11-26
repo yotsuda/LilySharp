@@ -208,7 +208,7 @@ public sealed partial class LilySharpLanguageServer
     /// The line of the tuning the step walks (<see cref="NoteStepper.StepTuning"/>) also says
     /// where the shape stands — "shape 3 of 21 (34 with stretch)", the normal count and the
     /// stretch-inclusive one, since a hover carries no setting (owner's decision 2026-09-28,
-    /// lilysharp.chordShapes.includeStretch). A frets-10-and-up shape spells in the compact
+    /// lilysharp.editing.stretchChordShapes). A frets-10-and-up shape spells in the compact
     /// form, a '-' on each side of each two-digit fret (<c>8-10-10-988</c>; a written full-dash
     /// <c>8-x-x-8-8-11</c> shows as <c>8xx88-11</c>).
     /// </remarks>
