@@ -37,6 +37,15 @@ describe('the settings under their headings', () => {
         }
     });
 
+    // Without an order the Settings editor lists a heading's settings by key (settingsTree.ts
+    // sortSettings), which put Sound Font last under Playback; with one, they show as written here.
+    it('orders each heading\'s settings as they are written', () => {
+        for (const section of sections) {
+            const orders = Object.values(section.properties).map((p: { order?: number }) => p.order);
+            assert.deepEqual(orders, orders.map((_, i) => i + 1), section.title);
+        }
+    });
+
     it('keeps the key other extensions read', () => {
         const keys = sections.flatMap(s => Object.keys(s.properties));
         // Shosa and Bamen play their songs with this font.
