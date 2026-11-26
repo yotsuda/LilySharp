@@ -54,6 +54,7 @@ describe('Orecchiante, the recording reader', () => {
         assert.deepEqual(lyricsArgs('C:\\m\\a.mp3', ' Title ', ''), ['lyrics', 'C:\\m\\a.mp3', '--title', 'Title']);
         assert.deepEqual(lyricsArgs('C:\\m\\a.mp3', 'T', 'A'), ['lyrics', 'C:\\m\\a.mp3', '--title', 'T', '--artist', 'A']);
         assert.match(lyricsQuestion('a.mp3'), /title, artist and length .* lrclib\.net/);
+        assert.match(lyricsQuestion('a.mp3'), /only when they are Japanese or English\.$/);   // Orecchiante's request 27
     });
 
     it('reads what the fetch came to by its exit code, with the entry found or the reason', () => {

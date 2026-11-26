@@ -129,12 +129,13 @@ export function lyricsArgs(recording: string, title?: string, artist?: string): 
     return args;
 }
 
-/** The question before the words are fetched: what is sent, and where. */
+/** The question before the words are fetched: what is sent, and where, and which words go under the
+ *  notes (Japanese and English, Orecchiante 0.18.0; its request 27). */
 export function lyricsQuestion(recordingName: string): string {
     return `Fetch the words of ${recordingName} from LRCLIB, so the chart has lyrics under the sung line? `
         + 'This sends the song\'s title, artist and length (from the recording\'s tags, or its file name) to lrclib.net, '
         + 'a free lyrics database; the recording itself does not leave this computer. '
-        + 'For now the words are put under the notes only when they are Japanese.';
+        + 'For now the words are put under the notes only when they are Japanese or English.';
 }
 
 /** The title and artist the reader looked for, from its first line on stderr
