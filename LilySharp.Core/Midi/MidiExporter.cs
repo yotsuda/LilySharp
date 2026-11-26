@@ -4149,6 +4149,17 @@ public sealed class MidiExporter
         _currentTick += durationTicks;
     }
 
+    /// <summary>A drum note in parentheses is a GHOST NOTE — the snare's soft stroke between
+    /// the beats — and is struck softly (owner's decision 2026-11-26, docs/drum-steps-design.md
+    /// §2: <c>sn16@parenthesize</c> and a steps chart's <c>g</c> play the same). A pitched note
+    /// in parentheses is an editor's note and plays as written.</summary>
+    private static bool IsGhost(DrumNoteSyntax drum)
+        => drum.Articulations.Any(a => a is ArticulationSyntax { Name: "parenthesize" });
+
+    /// <summary>A ghost note's velocity: two fifths of the stroke it would have been (an mf
+    /// stroke's 90 or so becomes 36), never silent.</summary>
+    private static int GhostVelocity(int velocity) => Math.Max(1, velocity * 2 / 5);
+
     /// <summary>Drum note → GM percussion: channel 10 (0-based 9), pitch =
     /// the drum's GM key, duration/velocity semantics as pitched notes.
     /// Timbre 9 selects the preview's noise-based drum patch.</summary>
@@ -4176,6 +4187,8 @@ public sealed class MidiExporter
         }
 
         (velocity, durationPercent) = ApplyRunMarks(drum, velocity, durationPercent);
+        if (IsGhost(drum))
+            velocity = GhostVelocity(velocity);
         int actualDuration = Math.Max(1, durationTicks * durationPercent / 100);
         NoteHold(drum, durationTicks, durationPercent);
         track.Notes.Add(new MidiNote(9, info.GmKey, velocity, _currentTick, actualDuration,
@@ -4708,7 +4721,8 @@ public sealed class MidiExporter
         foreach (var drum in chord.DrumNames)
         {
             var dinfo = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
-            track.Notes.Add(new MidiNote(9, dinfo.GmKey, velocity, startTick, soundTicks, chord.SourceStart,
+            int memberVelocity = IsGhost(drum) ? GhostVelocity(velocity) : velocity;
+            track.Notes.Add(new MidiNote(9, dinfo.GmKey, memberVelocity, startTick, soundTicks, chord.SourceStart,
                 SourceOrdinal: chordOrdinal, Timbre: 9, Part: _currentPart, Accent: velocity - _velocity, Sforzando: _struckBy));
             drumHits.Add(track.Notes.Count - 1);
             resolved.Add((dinfo.GmKey, 0, true, false));

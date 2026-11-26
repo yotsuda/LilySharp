@@ -84,6 +84,15 @@
 - **門**: site の例 4 冊（`chord-all`／`chord-capo`／`chord-list`／`chord-table`）を新綴りに書き換え、**旧 exe × 旧 .lys と新 exe × 新 .lys の svg／ly／mid／xml が data-pos 以外バイト一致**（Lab `sessions/p1036/gate/`）。網: `ChordDiagramTests`（旧綴り 7 形の LYS1061・quick fix 5 形＋score 内・`capo` 単体・`chordShapes` 単体・2 行目・「Capo N」の行の条件・`chordTuning`）ほか。文書: GRAMMAR（§2.2 CapoDecl／ChordShapesDecl・§2.6）・GRAMMAR_FOR_LLM・SYNTAX_REFERENCE・site（chords／manual／build-preview／build-examples）・README・MANUAL-CHECKS §2.2 に `[ ]` 4 項・HANDOFF §2 K0／K2／K5。
 - ⚠️ **罠**: ⑴ pwsh の var1 で書いたテストの期待文字列は hover の区切り（空白＋**NBSP**）を落とす＝`" "` で書く。⑵ C# の raw string literal（`"""`）の改行はソースの CRLF＝`.Replace("capo 3\n", "")` は当たらない。⑶ `Session-Check -Start` のあとに `Remove-LinesFromFile` でファイルを変えると Edit ツールは「modified since read」で止まる＝読み直す。⑷ layout の鍵を足すと赤くなる網は第1035 の 2 本に加え `LayoutBlockTests.TheVocabularyIsPublished`・`EditorColouringTests.TheLayoutBlock_…` の key/word 表。
 
+## §1.0 から移した閉じた段落（2026-11-26・第1399 に移した）← §1 の 20,000 字の門を超えたので出した
+
+- **`@todo` の memo の置き場＝第899〜900・第910 で閉じた**（規則は `docs/todo-memo-design.md`・残りは同 §4 と MANUAL-CHECKS §2.1 の実機確認。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
+- **v0.17.1 は出した（2026-11-20・tag `a8ebc8ca0`・Marketplace 8/8・GitHub Release が Latest）**。
+  - 0.17.0（tag `fd15ce3b9`）は止めたが、止める前に Marketplace の win32-x64 にだけ出た。そのため版を 0.17.1 に上げた。
+  - 教訓（linux-armhf の `ECONNRESET` も）は `RELEASING.md` §6・§7。push とタグはオーナー。
+- **T7 の残り＝双子と段割れが違う score 16 は全部分類が付いた**（F9 の族 13＝tab の数字の大きさ・計器 3・製品 1 は閉じた。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
+- **双子の計器の残り（第881）＝分類済み**（本の側 8・ABC は LP の癖・LP 落ち 3＝本の側・全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
+
 ## §1.0 から移した閉じた段落（2026-11-18・第1294 に移した）← §1 の 20,000 字の門を超えたので出した
 
 - **section の外のコード行（`chords X { C | G7 | }`・`Semantics.FlatChordRows`）の残り＝第1120〜1121 で全部閉じた**: ⑴ 小節ごとの拍子は `SectionMeterPlan.MeterOfBar` の 1 か所から（ページの格子・MIDI・XML・`.ly` の 4 読み手・§1.1 第1120）／⑶ form の無い `.ly` は宣言順に section を歩く（同）／⑵ **音楽より長い行の余りの小節は全部出す（オーナー決定 2026-11-07・第1121）**＝score の拍子・home の調の小節として、ページは譜表を空の小節で延ばし（`ExtendStavesToTheRows`・拍子が違えば戻しを描く）、XML は小節を足し（`EmitFlatRowsPastTheMusic`）、MIDI は home に戻して鳴らし、`.ly` は `\time` の戻しを書く（§1.1 第1121）。残る注: section の中の inline の `repeat` と flat の行（`Canonical` は演奏長・ページは 1 回印刷）は未実測・本 0。
@@ -276,6 +285,15 @@
 
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
+
+## 以下は第1396セッションの経緯
+
+### 1.1 第1396セッション（2026-11-26・YT-DELL2）
+
+base `0e0851126`。開始時 full 18445 / 0 / skip 2 / 18447。
+- `acfcd35fe`: Note_collision でずらした装飾音の列も鎖を共有する。`SharedGraceChain` はずれで降りず、鎖は共有の列の間で組み（各連なりの間隔からずれを外す・`GraceColumnLayout.Shifts`）、`RunOnSharedChain` が各列を自分のずれだけ右に置く。wish の左の符頭の右端は paper column で測る（`GraceIdeal` にずれを足す・LP `left_head_end`）。v10・v11 は LP と一致（Lab `p1396/m`・直す前は v10 の b' が 1.435 右、v11 の本音符が 0.309 左でずらした a' に重なる）。網 +2・毒 5 本中 4 本で赤（R2 は観測者なしのまま）。掃き 0 / 1289。
+- 残した: タブの装飾音の数字の中心（第1393）。leftovers 第1396。
+- 次: タブの装飾音の数字の中心。
 
 ## 以下は第1395セッションの経緯
 

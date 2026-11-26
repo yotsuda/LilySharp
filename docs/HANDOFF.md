@@ -99,6 +99,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **★ Report to Orecchiante（Orecchiante の依頼 23・オーナーの希望 2026-11-23・第1372）＝実装済み**（`docs/orecchiante-report-design.md`）。残りは Orecchiante の確認とオーナーの実機（設定は手書き）。
 - **★ 録音の変換で歌詞を取る（Orecchiante の依頼 25・オーナーの指示 2026-11-26）＝実装済み**（`orecchiante.ts` `prepareLyrics`）: 隣に `<名前>.lrc` があれば訊かない／`commands` に `lyrics` がある reader なら、送るもの（曲名・アーティスト・長さ）と送り先（lrclib.net）を示して訊く＝Fetch Lyrics／Choose a File…（`.lrc`・`.txt` を隣に写す）／Without Lyrics／Never Ask（設定 `lilysharp.recordings.fetchLyrics`）。Esc は変換をやめる。終了コード 0＝見つけた項目を知らせる・1＝曲名とアーティストを直して取り直す／ファイル／歌詞なし・3 とそれ以外＝歌詞なしで続ける。残りはオーナーの実機（`MANUAL-CHECKS`「録音の変換で歌詞を取る」・Orecchiante 0.17.0 の公開待ち）と Orecchiante の done。
 - **★ Shosa の導線の第 2〜4 段（オーナー決定 2026-11-26）＝実装済み**: Write a Song…（`docs/song-over-chords-design.md`）・From a Song to a Dance（`song-to-dance-design.md`）・Arrange an Accompaniment…＝Accept で録音は `"silent"`（`accompaniment-design.md`）。残りはオーナーの実機と Shosa 側の `"silent"`。
+- **★ ドラムの `steps { }`（Orecchiante の依頼 24・第1399）＝実装済み**（`docs/drum-steps-design.md`）。残りは同 §3 と Orecchiante の done・オーナーの実機。
 - **★ Cantoria の依頼 1（音節の音素 `병[/pp.y.eo.NG/]`）・2（歌う `bend`・お試し）＝第1375 で実装済み**（`singing-design.md` §3）。残りは Cantoria の done とオーナーの耳（`MANUAL-CHECKS` 第1375）。
 - **★ コード行の中に書けるもの（オーナー決定 2026-11-16・第1285）**: `time`・`tempo`・`%`・`key` は済み（§1.1）。**残り＝コードに付ける印 `@rit`／`@accel`／`@rall`（`…@!rit`）・`@fermata`・`@text("…")`**（今は `@todo` だけ）。強弱は見送り。
 - **★ 録音を聴きながら直す（Dettato #4・オーナーの希望 2026-11-15）＝`docs/recording-design.md`**: S1〜S4 と §1 7（楽譜と録音を同時に）・§7（書き出しに録音・第1286）は済み（§1.1 第1284〜第1286）。**次は S5**（帯・`Mark Bar Line Here`・ドラッグ・`byHand`）→ S6（CHANGELOG・Dettato への返事）。§8 の録音のパート（Dettato #16）は第1288 で実装・実測済み・使っている間のメモリは今のまま（オーナー決定 2026-11-17）＝残りは耳の確認（`MANUAL-CHECKS`「録音のパート」）。耳の確認は `MANUAL-CHECKS` §3.9（オーナー）。
@@ -124,15 +125,9 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **GitHub Pages の OMR デモ動画の撮影＝ユーザーのタスク（第961）**: `site/videos/SHOTLIST.md` の 16・17。置き場は `site/scan-body.html` の `figure.demo-video[data-pending]`（置いたら `data-pending` を外す）。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」。
 - **学習セットと Pages＝`docs/HANDOFF-LEARNING.md`**（レッスン 12 本・Pages の段 1〜4 は全部済＝判断待ちは無い・細かい残りはそこ。第910 が「段 1／3 済・判断待ち」の古い記述を直した）。
 - **プレビューの音源＝第901 で SoundFont シンセ（`docs/playback-design.md`）**: 音源は同梱しない（2026-10-12 決定・既定は OS の GM バンク）。LSP からの MIDI 出力は第911（Windows は網で実走・**mac／Linux は未実走＝MANUAL-CHECKS §3.5**）。`lysc wav` は第916・エディタの Export に第1030 で接続（C44 未確認）。`midiChannel` は要るときに。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」。
-- **`@todo` の memo の置き場＝第899〜900・第910 で閉じた**（規則は `docs/todo-memo-design.md`・残りは同 §4 と MANUAL-CHECKS §2.1 の実機確認。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
 - **VS Code の手動確認＝第909 で 107 / 107 済**（手順と期待は `editors/vscode/MANUAL-CHECKS.md`・次の版で足した項目は `[ ]` から。ステップのキーは Ctrl+Shift+↑↓＝調の次の音・Ctrl+Shift+PgUp/PgDn＝オクターブ。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
-- **v0.17.1 は出した（2026-11-20・tag `a8ebc8ca0`・Marketplace 8/8・GitHub Release が Latest）**。
-  - 0.17.0（tag `fd15ce3b9`）は止めたが、止める前に Marketplace の win32-x64 にだけ出た。そのため版を 0.17.1 に上げた。
-  - 教訓（linux-armhf の `ECONNRESET` も）は `RELEASING.md` §6・§7。push とタグはオーナー。
-  - OMR の床 `OMR_MIN_VERSION` 0.4.0。手動確認の `[ ]` は MANUAL-CHECKS §3.6・§3.5 末尾。CHANGELOG は両方の `## Unreleased` に書き release 時に版番号へ（`RELEASING.md` §3）。Lab の本の警告は直さない（ユーザー決定 2026-10-17）。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」。
+- OMR の床 `OMR_MIN_VERSION` 0.4.0。手動確認の `[ ]` は MANUAL-CHECKS §3.6・§3.5 末尾。CHANGELOG は両方の `## Unreleased` に書き release 時に版番号へ（`RELEASING.md` §3）。Lab の本の警告は直さない（ユーザー決定 2026-10-17）。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」。
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
-- **T7 の残り＝双子と段割れが違う score 16 は全部分類が付いた**（F9 の族 13＝tab の数字の大きさ・計器 3・製品 1 は閉じた。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
-- **双子の計器の残り（第881）＝分類済み**（本の側 8・ABC は LP の癖・LP 落ち 3＝本の側・全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
 - **U9 ユーザー報告 `space.lys` の小節頭の余白＝保留（ユーザー判断「一旦この件は忘れて」・第477）**。4 通りすべてで再現せず LP とも同比率（Lab `sessions/p477/`）。⚠️ **毒は今後も同じフォルダで回してよい**（ユーザー決定）＝毒の最中のビルドはユーザー側で避ける
 - ⏸ **perf の島（⒭⁸・⒮*・⒩⁴・⒨・⒯ …）は第615 で区切り＝一時停止（ユーザー判断・忠実度が先）**。本文と掃き終わった島（第434〜第456）の教訓は `HANDOFF-ARCHIVE.md`「§1.0 から移した perf の島」（第660）・閉じた島の一覧は第654 が畳んだ（各便の §1＝ARCHIVE・RULES §5.4 末尾）
 - ★★ **U10 ユーザーのコーパスに*効いていない弦番号*が 473 件（39 冊）**（第486・LYS5003・Lab `sessions/p486/lys5003-corpus.txt`）: 書いた `\N` の弦では弾けない音＝Lily# は黙って別の弦に描く（LP も同じ）。**ユーザー決定「放置」（第523）＝本は直さない・描画は今までと同じ**
@@ -158,21 +153,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1399セッション（2026-11-26・YT-DELL2）
+
+base `8851af697`。開始時 full 18447 / 1 / skip 2 / 18450（§1 の見出し待ち）。終了時 18474 / 1 / 2 / 18477（不安定な `ScoreVideoShapeTests`・単独 3/3 緑）。
+- Orecchiante の依頼 24＝ドラムの `steps { hh "x.x. x.x." … }`（オーナー決定 2026-11-26「入れて」・ゴーストは (b)）。設計 `docs/drum-steps-design.md`。パーサーが文字列を `drums { }` の字句に置き換える（`SyntaxToken.Spelled`・`StepsPattern`）＝描画・MIDI・書き出しは無変更。**承認から変えた 1 つ**: 拍は書いたもの（既定 4 分・`steps 4.`）で拍子からは取らない（設計 §2 の 1）。ゴースト＝ドラムの `@parenthesize` は強さ 2/5（`MidiExporter.IsGhost`）。LYS0048／LYS0049。網 `DrumStepsTests` 27・毒 4 本すべて赤。
+- 残した: 設計 §3・オーナーの実機。
+
+## 以下は第1397セッションの経緯
+
 ### 1.1 第1397セッション（2026-11-26・YT-DELL2）
 
 base `701cdeb60`。開始時 full 18447 / 1 / skip 2 / 18450（赤 1 は `IncludeFilesTests` の不安定な網＝単独で 3/3 緑）。終了時 full 18448 / 0 / skip 2 / 18450。
 - `491567514`: 第 3 段＝ウォークスルーと「次は踊り」。`6895373bd`: 第 4 段＝伴奏はチャット・既定の 3 楽器・録音は `"silent"`（小節は時計のまま・オーナー決定）。npm 1356 / 0・実機 E2E（Lab `p1397/vscode-e2e`・`instrument piano` はプリセットに無いと分かりガイドを直した）。
 - 残した: オーナーの実機。Shosa の `"silent"` の対応（Shosa の HANDOFF）。Install Shosa は公開まで検索で止まる。
 - 次: leftovers（タブの装飾音の数字の中心）。
-
-## 以下は第1396セッションの経緯
-
-### 1.1 第1396セッション（2026-11-26・YT-DELL2）
-
-base `0e0851126`。開始時 full 18445 / 0 / skip 2 / 18447。
-- `acfcd35fe`: Note_collision でずらした装飾音の列も鎖を共有する。`SharedGraceChain` はずれで降りず、鎖は共有の列の間で組み（各連なりの間隔からずれを外す・`GraceColumnLayout.Shifts`）、`RunOnSharedChain` が各列を自分のずれだけ右に置く。wish の左の符頭の右端は paper column で測る（`GraceIdeal` にずれを足す・LP `left_head_end`）。v10・v11 は LP と一致（Lab `p1396/m`・直す前は v10 の b' が 1.435 右、v11 の本音符が 0.309 左でずらした a' に重なる）。網 +2・毒 5 本中 4 本で赤（R2 は観測者なしのまま）。掃き 0 / 1289。
-- 残した: タブの装飾音の数字の中心（第1393）。leftovers 第1396。
-- 次: タブの装飾音の数字の中心。
 
 ## 2. 開いている作業
 

@@ -4748,6 +4748,8 @@ public sealed partial class LilySharpLanguageServer
             // A drum chart: lines (phrases or { … }) played together, the hands' merged on
             // stems up and the feet's on stems down (Parser.Drums, owner's design 2026-10-11).
             items.Add(new CompletionItem { Label = "drums", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "drums { $0 }", Detail = "Drum chart", Documentation = "drums { hats  back  kick } - each line a phrase or { … }; hands drawn stems up, feet (bd, bda, hhp) stems down; up/down before a line moves it", SortText = "3drums" });
+            // The same chart written as steps (Parser.Steps, docs/drum-steps-design.md).
+            items.Add(new CompletionItem { Label = "steps", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "steps {\n\thh \"${1:x.x. x.x. x.x. x.x.}\"\n\tsn \"${2:.... x... .... x...}\"\n\tbd \"${3:x... ..x. x... ....}\"\n}", Detail = "Drum chart as steps", Documentation = "steps { hh \"x.x. x.x.\" … } - a row a drum, a step a character (. x X g o f), a beat a run of steps between spaces (4 = sixteenths, 3 = triplet), | between bars; steps 4. { } for a dotted beat (6/8)", SortText = "3steps" });
         }
         return new CompletionList { IsIncomplete = false, Items = [.. items] };
     }

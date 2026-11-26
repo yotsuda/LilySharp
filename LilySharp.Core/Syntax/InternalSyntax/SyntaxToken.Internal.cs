@@ -59,6 +59,32 @@ internal class SyntaxToken : GreenNode
     /// <summary>Whether this token stands for one the writer left out (<see cref="LeftOut"/>).</summary>
     public bool IsLeftOut => _leftOut;
 
+    private readonly string? _source;
+
+    private SyntaxToken(SyntaxKind kind, string spelling, string source, GreenNode? leadingTrivia, GreenNode? trailingTrivia)
+        : base(kind, ComputeFullWidth(source, leadingTrivia, trailingTrivia))
+    {
+        _text = spelling;
+        _source = source;
+        _leadingTrivia = leadingTrivia;
+        _trailingTrivia = trailingTrivia;
+    }
+
+    /// <summary>
+    /// A token WRITTEN DIFFERENTLY from how it reads: <paramref name="source"/> is what stands in
+    /// the file (its width, what <see cref="WriteTo"/> writes), <paramref name="spelling"/> is what
+    /// every reader sees as <see cref="Text"/>. A drum steps chart's <c>x</c> reads as the row's
+    /// drum <c>hh</c> (Parser.Steps): the tree carries the drum note the step stands for, at the
+    /// step's own place, so data-pos, diagnostics and the round trip stay the source's. An empty
+    /// <paramref name="source"/> is a <see cref="LeftOut"/> that may carry trivia.
+    /// </summary>
+    public static SyntaxToken Spelled(SyntaxKind kind, string spelling, string source,
+        GreenNode? leadingTrivia = null, GreenNode? trailingTrivia = null)
+        => new(kind, spelling, source, leadingTrivia, trailingTrivia);
+
+    /// <summary>Whether this token is written differently from how it reads (<see cref="Spelled"/>).</summary>
+    public bool IsSpelled => _source != null;
+
     private static int ComputeFullWidth(string text, GreenNode? leading, GreenNode? trailing)
     {
         return text.Length
@@ -78,6 +104,8 @@ internal class SyntaxToken : GreenNode
     {
         if (leading == _leadingTrivia && trailing == _trailingTrivia)
             return this;
+        if (_source != null)
+            return new SyntaxToken(Kind, _text, _source, leading, trailing);
         return new SyntaxToken(Kind, _text, leading, trailing);
     }
 
@@ -86,7 +114,7 @@ internal class SyntaxToken : GreenNode
         if (_leftOut)
             return;
         _leadingTrivia?.WriteTo(writer);
-        writer.Write(_text);
+        writer.Write(_source ?? _text);
         _trailingTrivia?.WriteTo(writer);
     }
 }

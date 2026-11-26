@@ -632,4 +632,15 @@ public enum SyntaxKind : ushort
     /// repetition, inside the bar (<c>{ c16 d e f } % % %</c>; owner's decision 2026-11-19,
     /// Calamo's request 27).</summary>
     BeatRepeat,
+
+    // === Drum steps (docs/drum-steps-design.md) ===
+    /// <summary>The drum naming a row of a steps chart, <c>steps { hh "x.x. x.x." }</c> —
+    /// lexed as an identifier and re-kinded by the parser, so no reader takes it for a note.</summary>
+    StepsRowName,
+    /// <summary>The beat a steps chart's groups each fill, <c>steps 4. { … }</c> (the number
+    /// and its dot), re-kinded by the parser.</summary>
+    StepsBeat,
+    /// <summary>The steps of a steps pattern that strike nothing: the <c>.</c> a hit or a rest
+    /// lasts over, kept as trivia of the note it lengthens (Parser.Steps).</summary>
+    StepsHoldTrivia,
 }

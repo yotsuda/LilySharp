@@ -1097,7 +1097,63 @@ then a set of **stock patterns**, each one bar of 4/4: `hats8` `hats16` `hats4` 
 `shuffle` (ride), `back` `halfTime` `ghost` `flam` (snare), `fourFloor` `kick8` `kickSync` (bass drum),
 `fillToms` `fillTriplet`. Accepting one writes its name and adds its `phrase NAME { … }` above
 the file's first part, so its notes are yours to read and change. A flam is written
-`acciaccatura { sn16 } sn4`, a ghost note `sn16@parenthesize`.
+`acciaccatura { sn16 } sn4`, a ghost note `sn16@parenthesize` — a drum note in parentheses is
+struck softly (two fifths of the stroke it would have been); a pitched note in parentheses
+plays as written.
+
+### Drum charts as steps: `steps { }`
+
+The same chart can be written the way a step sequencer shows it — a row a drum, a character a
+step:
+
+```
+part kit { clef percussion }
+phrase beat {
+  steps {
+    hh "x.x. x.x. x.x. x.o."
+    sn ".... x... ..g. x..f"
+    bd "x... ..x. x.x. ...."
+  }
+}
+section A { kit { beat | % | steps { hh "xxx xxx xxx xxx" bd "x.. x.. x.. x.." } | } }
+form { ~A }
+score { staff kit }
+```
+
+| Step | Means |
+|---|---|
+| `.` | nothing |
+| `x` | a hit |
+| `X` | a hit with an accent (`@accent`) |
+| `g` | a ghost note (`@parenthesize`, struck softly) |
+| `o` | the open hi-hat (`hho`) — on the `hh` row; elsewhere it warns (LYS0049) and plays as `x` |
+| `f` | a flam (`acciaccatura { sn16 } sn`) |
+
+A run of steps between spaces is **one beat**, and the spaces are required — four groups of
+four are the sixteenths of a 4/4 bar, read at a glance where sixteen characters in a row are
+easy to miscount. How many steps a beat has says how finely it splits: 1 is the whole beat, 2
+eighths, 4 sixteenths, 8 thirty-seconds, 3 an eighth triplet, 6 a sixteenth triplet. Beats
+may differ within a row (`"x.x. x.x. xxx x..."`) and rows may think in different grids
+(`bd "x. .x x. .."`). `|` inside the string parts the bars, and every row writes the same bars
+of the same beats.
+
+A beat is a quarter. Write the beat after `steps` when it is not: `steps 4. { … }` for 6/8 and
+12/8 (a dotted beat splits into 1, 3 or 6 — eighths are 3, with no triplet), `steps 8 { … }`
+for beats of an eighth (7/8 in any grouping, sixteenths in twos), `steps 2 { … }` for 2/2. The
+beat is the chart's own and not the meter's, so a phrase reads the same wherever it is played;
+a chart that does not fill its bar is measured as any music is.
+
+A hit lasts to the next hit of its beat or to the beat's end — drums do not ring on, so this
+is only how the page writes it — and the steps before a beat's first hit are a rest. A beat
+whose hits all sit on a coarser grid is written on it (`x..x..` is two eighths). Empty beats
+are rests; an empty bar is one rest, and an empty half of a four-beat bar a half rest.
+
+The chart is the `drums { }` chart of those lines, so it is drawn, played and exported exactly
+as that chart is — hands up, feet down, hits merged into chords. What cannot be read is LYS0048,
+and the message names the row, the bar, the beat and the step: `'y' is not a step (step 3 of
+beat 1 of bar 2 in the hh row)`, `beat 2 of bar 1 in the sn row has 5 steps`, `the bd row has
+2 bars and the hh row 1 bar`. Anything finer than steps (a nested tuplet, a hit held across a
+beat) is written in a `drums { }` line.
 
 ## Time Signature
 

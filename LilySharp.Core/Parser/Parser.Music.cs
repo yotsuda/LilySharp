@@ -409,6 +409,9 @@ internal sealed partial class Parser
             // `drums` and referenced bare.
             SyntaxKind.Identifier when Current.Text == DrumsWord && Peek().Kind == SyntaxKind.OpenBrace
                 => ParseDrumsBlock(),
+            // `steps { hh "x.x. x.x." … }` — a drum chart written as steps (Parser.Steps).
+            // Claimed only before a `{` or a beat, so a phrase may still be named `steps`.
+            SyntaxKind.Identifier when AtStepsStart() => ParseStepsBlock(),
 
             // Drum-kit vocabulary (bd, sn, hh, …) claims otherwise-invalid bare
             // identifiers; anything else keeps the deprecated-variable warning.

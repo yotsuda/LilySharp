@@ -308,6 +308,8 @@ score { staff kit }
 
 - A drum part is written as patterns. `drums { }` plays its lines together and draws them as a
   drummer reads them. Rest the mouse on a pattern's name to see its beat.
+- The same groove can be written as steps, one character a step and the beats between spaces:
+  `phrase groove { steps { hh "x.x. x.x. x.x. x.x." sn ".... x... .... x..." bd "x... ..x. x... ...." } }`.
 
 **Try:** after a pattern's name, press Ctrl+Space: the common patterns come first. **Lesson:** `lesson-10-drums`.
 

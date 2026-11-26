@@ -331,7 +331,10 @@ public sealed partial class LilySharpLanguageServer
                 SyntaxKind.PercentMark => 5,
 
                 // Numbers
-                SyntaxKind.IntegerLiteral => 2,
+                SyntaxKind.IntegerLiteral or SyntaxKind.StepsBeat => 2,
+
+                // A steps chart's row: the drum it strikes, painted as a note's name is.
+                SyntaxKind.StepsRowName => 6,
 
                 // Strings
                 SyntaxKind.StringLiteral => 3,

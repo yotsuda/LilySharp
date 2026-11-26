@@ -2153,6 +2153,46 @@ DrumLine       = [ 'up' | 'down' ] , ( PhraseRef | MusicBlock ) ;
    score { staff kit }
 *)
 
+### 5.3 Drum chart as steps
+
+StepsChart     = 'steps' , [ StepsBeat ] , '{' , StepsRow , { StepsRow } , '}' ;
+StepsBeat      = Integer , [ '.' ] ;          (* 1 2 4 8 16, dotted or not; 4 when none *)
+StepsRow       = DrumName , String ;
+(* 'steps' is a word only before '{' or a beat (a phrase may still be named steps). A drum
+   chart written as a step sequencer writes it (Orecchiante's request 24, owner's decision
+   2026-11-26, docs/drum-steps-design.md): each ROW is a drum and its pattern in quotes, one
+   character a step — '.' strikes nothing, 'x' strikes, 'X' with an accent, 'g' a ghost note
+   (parenthesized, struck softly), 'o' the open hi-hat (hh row; elsewhere a warning, LYS0049,
+   played as x), 'f' a flam. A run of steps between spaces is one BEAT and the spaces are
+   required; '|' parts the bars. A beat is the chart's StepsBeat long — a quarter unless
+   written, 'steps 4.' for 6/8 and 12/8, 'steps 8' for beats of an eighth (7/8 in any grouping),
+   'steps 2' for 2/2 — and its step count says how finely it splits: 1 2 4 8 evenly, 3 or 6 as
+   a triplet; a dotted beat splits into 1, 3 or 6 with no triplet. A hit lasts to the next hit
+   of its beat or to the beat's end; the steps before a beat's first hit are a rest; a beat
+   whose hits sit on a coarser grid is written on that grid (x..x.. is two eighths); empty
+   beats are rests, an empty bar one rest, an empty half of a four-beat bar a half rest.
+   The chart IS the DrumChart of those lines: the parser replaces each pattern by the drum
+   notes, rests, triplets and graces it stands for, each hit on its own character, so the
+   page, MIDI, MusicXML and LilyPond read it as they read 'drums { }'. The beat is the
+   chart's own, never the meter's, so a phrase reads the same wherever it is played; a chart
+   that does not fill its bar is measured as any music is. Every row writes the same bars
+   of the same beats. What cannot be read is LYS0048, naming the row, the bar, the beat and
+   the step. *)
+
+(* Example:
+   part kit { clef percussion }
+   phrase beat {
+     steps {
+       hh "x.x. x.x. x.x. x.o."
+       sn ".... x... ..g. x..f"
+       bd "x... ..x. x.x. ...."
+     }
+   }
+   section A { kit { beat | % | steps { hh "xxx xxx xxx xxx" bd "x.. x.. x.. x.." } | } }
+   form { ~A }
+   score { staff kit }
+*)
+
 ================================================================================
 ## 6. Structure Definition
 ================================================================================

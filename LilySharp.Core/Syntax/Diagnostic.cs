@@ -338,6 +338,14 @@ public static class DiagnosticCodes
     /// <c>transpose N</c>, which now moves the whole piece as <c>shift</c> did
     /// (<c>Semantics.FileTranspose</c>). The quick fix writes <c>transpose</c> for <c>shift</c>.</summary>
     public const string ShiftRetired = "LYS0047";
+    /// <summary>Parser error: a drum steps chart (<c>steps { hh "x.x. x.x." }</c>,
+    /// docs/drum-steps-design.md) that cannot be read — a step that is not one of
+    /// <c>. x X g o f</c>, a beat of a length no beat splits into, rows of different bars or
+    /// beats, a row that names no drum. The message names the row, the bar and the beat.</summary>
+    public const string StepsPattern = "LYS0048";
+    /// <summary>Parser warning: a step that means nothing on its row — <c>o</c> (open the
+    /// hi-hat) on a row that is not <c>hh</c>. It is played as <c>x</c>.</summary>
+    public const string StepsMeaningless = "LYS0049";
 
     /// <summary>Lexer error: an unexpected character was encountered.</summary>
     /// <remarks>

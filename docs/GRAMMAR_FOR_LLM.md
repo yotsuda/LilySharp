@@ -1301,6 +1301,16 @@ drummap { hh: position 6 notehead x }  // TOP LEVEL, optional: re-table a drum
   `acciaccatura { sn16 } sn4`. The editor offers stock one-bar patterns (`hats8 hats16 hats4
   hatsOpen shuffle back halfTime ghost flam fourFloor kick8 kickSync fillToms fillTriplet`) and
   writes their `phrase` declarations into the file; outside the editor, declare them yourself.
+- `steps { ROW "PATTERN" … }` — the same chart written as steps, usually the easiest way to
+  write a groove: `steps { hh "x.x. x.x. x.x. x.x." sn ".... x... .... x..." bd "x... ..x. x.x. ...." }`.
+  ROW is a drum name; one character a step: `.` nothing, `x` hit, `X` accent, `g` ghost
+  (soft, in parentheses), `o` open hi-hat (hh row only), `f` flam. A run of steps between
+  spaces is ONE BEAT (spaces required): 4 characters = sixteenths, 2 = eighths, 1 = a quarter,
+  3 = eighth triplet, 6 = sixteenth triplet, 8 = 32nds. `|` inside the string separates bars;
+  every row has the same bars and beats. A beat is a quarter; for 6/8 write `steps 4. { … }`
+  (3 characters = eighths), for 7/8 `steps 8 { … }`, for 2/2 `steps 2 { … }`. No need to count
+  durations: write the beats a bar has. Errors (LYS0048) name the row, bar, beat and step.
+  Use `drums { }` for anything finer (a nested tuplet, a 64th, a hit held across beats).
 - **Bar lines around a chart and before `%`.** A chart of one-bar phrases is one bar: write a
   bar line after EACH chart, `drums { hats back kick } | drums { hats back fill } | % |`. A `%`
   repeats what stands between the two bar lines before it, so two charts (or two phrases,
