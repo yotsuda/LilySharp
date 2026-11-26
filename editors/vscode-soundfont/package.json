@@ -2,7 +2,7 @@
   "name": "lilysharp-soundfont",
   "displayName": "Lily# Sound Font (MuseScore General)",
   "description": "The sound Lily# plays scores with: the MuseScore_General sound font (by S. Christian Collins and others, MIT license), unchanged. Not an official MuseScore distribution.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "yotsuda",
   "author": "Yoshifumi Tsuda",
   "license": "MIT",

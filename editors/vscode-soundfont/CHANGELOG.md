@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.1
 
 - Installing it installs Lily# Studio (`yotsuda.lilysharp`), which it needs: the sound font plays only through Lily#. Uninstalling Lily# Studio uninstalls it too.
 

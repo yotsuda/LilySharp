@@ -22,6 +22,11 @@ For whoever publishes it (the owner). Nothing here is in the package (`.vscodeig
    parent stays; removing the parent removes the member too. A dependency, tried beside it, refuses
    the member's removal ("… depends on this"). NOT tried, because it needs the Marketplace: that
    installing or updating Lily# there brings the member — look at that on the first release.
+   The other way round, **1.0.1 carries `"extensionDependencies": ["yotsuda.lilysharp"]`** (owner's
+   decision 2026-11-26: the font's downloads grew and Lily#'s did not, so installing the font must
+   install Lily#, without which it plays nothing). Lily# still installs without the font; removing
+   Lily# removes the font too, as the pack already did. NOT tried: that a user of 1.0.0 who updates
+   to 1.0.1 without Lily# gets Lily# installed — look at that after publishing.
 
 NOT tried either: a remote window (WSL, SSH, a container). The package says `"extensionKind":
 ["workspace"]` so that it is installed where Lily# runs and Lily# can read its folder; that is
