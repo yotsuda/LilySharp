@@ -37,10 +37,9 @@ describe('the settings under their headings', () => {
         }
     });
 
-    it('keeps the two keys other extensions read', () => {
+    it('keeps the key other extensions read', () => {
         const keys = sections.flatMap(s => Object.keys(s.properties));
-        // Shosa and Bamen play their songs with this font; Cantoria's deploy script warns about the singer.
+        // Shosa and Bamen play their songs with this font.
         assert.ok(keys.includes('lilysharp.playback.soundFont'));
-        assert.ok(keys.includes('lilysharp.playback.singer'));
     });
 });

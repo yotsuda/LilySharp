@@ -14,19 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// The singing engine behind the preview's voice (docs/singing-design.md §5), two ways: the
-// Cantoria extension's API (the usual way — it carries the program and holds the voice and
-// NEUTRINO's folder), or a `cantoria` program named in lilysharp.playback.singer, run here as
-// one resident `cantoria serve` spoken to in JSON lines (a developer's build). Both give a WAV
-// per voice, kept by the key of its score so a phrase is sung once. No vscode here: the
-// settings, the extension lookup, the status bar and the previews are singing.ts's.
+// The singing engine behind the preview's voice (docs/singing-design.md §5): the Cantoria
+// extension's API — it carries the program and holds the voices and the engines' folders; a
+// developer's build of the program is its setting cantoria.program. It gives a WAV per voice,
+// kept by the key of its score so a phrase is sung once. No vscode here: the extension lookup,
+// the status bar and the previews are singing.ts's.
 
-import * as cp from 'child_process';
 import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
-import * as readline from 'readline';
-import { CantoriaApi, CantoriaScore, SingParameter, SingProgress, SungVoiceDto, cantoriaScore, languageRefusal, parseServeLine, planAsked, serveCancelLine, serveRequestLine, sungKey, unsingableIn, voiceKey } from './singerCore';
+import { CantoriaApi, CantoriaScore, SingParameter, SingProgress, SungVoiceDto, cantoriaScore, languageRefusal, planAsked, sungKey, unsingableIn, voiceKey } from './singerCore';
 
 /** A voice the engine rendered: the WAV's path and its length. */
 /** `notes`: what the engine had to say of the score it sang (a setting the voice does not take). */
@@ -96,104 +91,13 @@ export class CantoriaExtensionBackend implements VoiceBackend {
     dispose(): void { /* the extension's engine is its own to keep */ }
 }
 
-/**
- * A program named in the setting, as the backend: started on the first render, spoken to on
- * stdin, answered on stdout one line a request, in order. A request is named by its key, and
- * the WAV by it too, so a repeat of a request writes the same file. An engine that dies fails
- * what it owed and starts again on the next render.
- */
-export class SingerProcess implements VoiceBackend {
-    private child: cp.ChildProcess | undefined;
-    private readonly pending = new Map<string, { resolve: (v: RenderedVoice) => void; reject: (e: Error) => void; onProgress?: (progress: SingProgress) => void }>();
-    private requests = 0;
-    readonly outDir: string;
-    readonly name: string;
-
-    constructor(readonly exe: string, private readonly log: (line: string) => void) {
-        this.outDir = path.join(os.tmpdir(), 'lilysharp-voice');
-        this.name = exe;
-    }
-
-    /** Whether the engine is running now. */
-    get running(): boolean { return this.child !== undefined; }
-
-    voiceName(singer?: string | null): Promise<string> { return Promise.resolve(singer?.includes('/') ? singer : 'default'); }
-
-    private start(): cp.ChildProcess {
-        fs.mkdirSync(this.outDir, { recursive: true });
-        const child = cp.spawn(this.exe, ['serve', '--out-dir', this.outDir], { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
-        this.child = child;
-        readline.createInterface({ input: child.stdout! }).on('line', line => this.answer(line));
-        readline.createInterface({ input: child.stderr! }).on('line', line => this.log(`singer: ${line}`));
-        child.on('error', e => this.gone(child, `the singer could not start (${this.exe}): ${e.message}`));
-        child.on('exit', (code, signal) => this.gone(child, `the singer exited (${signal ?? code})`));
-        return child;
-    }
-
-    private answer(line: string): void {
-        const answer = parseServeLine(line);
-        if (!answer) { this.log(`singer: ${line}`); return; }
-        if (answer.ready) { this.log(`singer ready: ${(answer.voices ?? []).join(', ') || 'no voice installed'}`); return; }
-        if (answer.progress) {
-            this.pending.get(answer.progress.id)?.onProgress?.({ toSing: answer.progress.toSing, sung: answer.progress.sung });
-            return;
-        }
-        const waiting = answer.id ? this.pending.get(answer.id) : undefined;
-        if (!waiting || !answer.id) { return; }
-        this.pending.delete(answer.id);
-        if (answer.error || !answer.wav) { waiting.reject(new Error(answer.error ?? 'the singer answered no WAV')); }
-        else { waiting.resolve({ wav: answer.wav, duration: answer.duration ?? 0 }); }
-    }
-
-    private gone(child: cp.ChildProcess, why: string): void {
-        if (this.child !== child) { return; }   // an earlier engine's exit, after a restart or dispose
-        this.child = undefined;
-        this.log(why);
-        for (const waiting of this.pending.values()) { waiting.reject(new Error(why)); }
-        this.pending.clear();
-    }
-
-    /** Sings `score` into `<outDir>/<key>.wav`; the answer when the engine has. Each request has
-     *  its own id: a render let go of and asked again is another request. */
-    sing(key: string, score: CantoriaScore, voice: string, signal?: AbortSignal, onProgress?: (progress: SingProgress) => void): Promise<RenderedVoice> {
-        const child = this.child ?? this.start();
-        const output = path.join(this.outDir, `${key}.wav`);
-        const id = `${key}.${++this.requests}`;
-        return new Promise<RenderedVoice>((resolve, reject) => {
-            this.pending.set(id, { resolve, reject, onProgress });
-            signal?.addEventListener('abort', () => {
-                if (!this.pending.delete(id)) { return; }
-                reject(new Error('cancelled'));
-                try { child.stdin!.write(serveCancelLine(id)); } catch { /* gone */ }
-            }, { once: true });
-            child.stdin!.write(serveRequestLine(id, score, output, voice === 'default' ? undefined : voice), e => {
-                if (e) { this.pending.delete(id); reject(e); }
-            });
-        });
-    }
-
-    /** Asks the engine to shut down (its own server with it) and lets go of it. */
-    dispose(): void {
-        const child = this.child;
-        if (!child) { return; }
-        this.gone(child, 'the singer was let go');
-        try {
-            child.stdin!.write('{"command":"shutdown"}\n');
-            child.stdin!.end();
-        } catch { /* already gone */ }
-        const timer = setTimeout(() => { try { child.kill(); } catch { /* gone */ } }, 3000);
-        child.on('exit', () => clearTimeout(timer));
-    }
-}
-
 /** How long an answer to "who would sing these voices" stands for the same voices: long enough
  *  for a run of edits, short enough that a voice installed meanwhile is found by the next Play. */
 export const PLAN_KEPT_MS = 20000;
 
 /**
  * The voices rendered so far, by key, and the backend that renders what is missing. One per
- * extension host, remade when the setting that names the engine, or the extensions installed,
- * change.
+ * extension host, remade when the extensions installed change.
  */
 export class VoiceRenderer {
     private readonly done = new Map<string, RenderedVoice>();

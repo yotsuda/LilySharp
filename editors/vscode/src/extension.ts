@@ -757,11 +757,6 @@ export function activate(context: vscode.ExtensionContext) {
                 midiPlaybackPanel = undefined;
                 void midiOutRequest('lilysharp/midiOut/stop', {});
             }
-            if (e.affectsConfiguration('lilysharp.playback.singer')) {
-                // Another engine: the previews forget what was rendered and the engine is let go
-                // (one starts again on the next notes).
-                disposeSinger();
-            }
             if (!e.affectsConfiguration('lilysharp.preview.theme')) {
                 return;
             }

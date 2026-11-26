@@ -288,13 +288,14 @@ The score spellings here (`lyrics NAME sings PART`) were replaced on 2026-11-10:
   starts), and asks `sing` per voice; the extension keeps one resident `cantoria serve` and
   the WAVs under its own storage. Installed or removed later, `extensions.onDidChange` makes
   Lily# look again. Without it the lyrics are not sung and nothing is said.
-- **Setting `lilysharp.playback.singer`** (machine-overridable) is usually empty. A path names
-  a `cantoria` program to run here instead — a developer's build — as **one resident
-  `cantoria serve`** per extension host (`singer.ts` `SingerProcess`: JSON lines on
-  stdin/stdout, `{ id, score, output }` in, `{ id, wav, duration }` or `{ id, error }` out,
-  the WAV under the OS temp folder; the protocol is Cantoria's `docs/design.md` §4.1). Both
-  ways are a `VoiceBackend` behind the `VoiceRenderer`, whose cache key takes the backend's
-  voice name (`voiceName()`: the extension's setting now, the program's default), so a changed
+- **No setting names a program here** (2026-11-26, the owner's decision). `lilysharp.playback.singer`
+  named a `cantoria` program to run as one resident `cantoria serve` per extension host
+  (`SingerProcess`, JSON lines on stdin/stdout; the protocol is Cantoria's `docs/design.md` §4.1),
+  past the extension and so past its settings (the voices folder, NEUTRINO's, the GPU): set by
+  mistake, the voices went missing. It doubled Cantoria's own `cantoria.program` — the extension
+  running a developer's build with its settings — and went away with `SingerProcess`. The one
+  `VoiceBackend` behind the `VoiceRenderer` is the extension's (`CantoriaExtensionBackend`), whose cache key takes the backend's
+  voice name (`voiceName()`: the extension's setting now), so a changed
   voice sings anew.
 - **The voice takes the instrument's place** (owner's decision 2026-11-08, later the same
   day: hearing both together, then "that is unnatural — one sound a part"; a `singerReplacesPart`
@@ -507,7 +508,8 @@ The score spellings here (`lyrics NAME sings PART`) were replaced on 2026-11-10:
    decision): the engine became the **Cantoria extension** (`yotsuda.cantoria`, in the
    Cantoria repository's `editors/vscode`, packed by its `tools/pack-extension.ps1`), and
    Lily#'s `singerVoice` setting and **Choose Singing Voice…** went away — the voice is
-   Cantoria's; `lilysharp.playback.singer` stayed as the developer's override.
+   Cantoria's; `lilysharp.playback.singer` stayed as the developer's override (until 2026-11-26,
+   when it went away: Cantoria's `cantoria.program` does the same with the extension's settings).
 4. **Export mixing** — done 2026-11-08 (session 1131, §5 "Export"; nets `test/voiceMix.test.ts`).
    **A span's voice stopping at the span's end, the voice in a loop, and the count-in's lead** —
    done 2026-11-08 (session 1132: `voiceCues`, `playSpanWindow.pieces`, `loopRounds`; nets in

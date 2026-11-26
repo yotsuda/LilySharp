@@ -674,11 +674,10 @@ describe('the singer settings', () => {
     const settings = Object.assign({}, ...manifest.contributes.configuration.map((c: { properties: object }) => c.properties));
     const commands = manifest.contributes.commands as { command: string; title: string }[];
 
-    it('name a program only for developers, empty by default (the Cantoria extension), and nothing else', () => {
-        assert.equal(settings['lilysharp.playback.singer'].type, 'string');
-        assert.equal(settings['lilysharp.playback.singer'].default, '');
-        assert.equal(settings['lilysharp.playback.singer'].scope, 'machine-overridable');
-        assert.match(settings['lilysharp.playback.singer'].markdownDescription, /yotsuda\.cantoria/);
+    it('name no program: the Cantoria extension sings, and a developer\'s build is its cantoria.program', () => {
+        // lilysharp.playback.singer ran a program here, past the extension and its settings (its voices
+        // folder, NEUTRINO's, the GPU); it doubled cantoria.program and is gone (owner's decision 2026-11-26).
+        assert.equal(settings['lilysharp.playback.singer'], undefined);
         // The voice doubles the part's instrument (owner's decision 2026-11-08): no mute setting, no voice setting.
         assert.equal(settings['lilysharp.playback.singerReplacesPart'], undefined);
         assert.equal(settings['lilysharp.playback.singerVoice'], undefined);
@@ -956,10 +955,10 @@ describe('the voice bar counts what is sung anew', () => {
         // …and the bar: the round's voices only, never drawn back.
         assert.match(ext, /voiceBarRound = window\.LysSynth\.voiceRound\(voiceBarRound, parts, true\);\s*voiceBarDrawn = Math\.max\(voiceBarDrawn, window\.LysSynth\.voiceBar\(parts\.filter\(p => voiceBarRound\.includes\(p\.part\)\), now, now - voiceBarFrom\)\);/);
         assert.match(ext, /voiceBarRound = window\.LysSynth\.voiceRound\(\[\], voiceBarParts\(\), false\);\s*voiceBarDrawn = 0;/);
-        // The backends pass the engine's word on: the extension's API, and the program's lines.
+        // The backend passes the engine's word on: the extension's API (the program run here, which
+        // read it from its lines, went away with lilysharp.playback.singer, 2026-11-26).
         const singer = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'singer.ts'), 'utf8');
         assert.match(singer, /await this\.api\.sing\(score, \{ voice, signal, onProgress \}\);/);
-        assert.match(singer, /if \(answer\.progress\) \{\s*this\.pending\.get\(answer\.progress\.id\)\?\.onProgress\?\.\(\{ toSing: answer\.progress\.toSing, sung: answer\.progress\.sung \}\);\s*return;/);
         const { parseServeLine } = require('../src/singerCore') as { parseServeLine: (line: string) => { id?: string; progress?: { id: string; toSing: number; sung: number } } | null };
         const line = parseServeLine('{"progress":{"id":"k.1","toSing":6,"sung":2}}');
         assert.deepEqual(line, { progress: { id: 'k.1', toSing: 6, sung: 2 } });

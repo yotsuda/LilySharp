@@ -27,7 +27,7 @@ import * as path from 'path';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import { CandidateSounds, CandidateVoice, CandidateVoices, candidateSilencedTrack, candidateSings } from './aiTransformCore';
 import { PracticeState, VOICE_LEAD_S, voiceEntries } from './webview/playbackCore';
-import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
+import { CantoriaExtensionBackend, VoiceRenderer } from './singer';
 import { SINGER_NAME, SINGER_LANGUAGE, onSingerGender, singValueChoices, singerGoesOnToSings, singerLineOf, singerSettingSlot, singMarkSlot, singersWritten, singParameterDetail, singProblems, SingSettingDto, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, EngineWatch, prepareAllowanceMs, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuKey, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger, unsingableGuide, unsingableReason } from './singerCore';
 import { CANTORIA_OUTDATED_CONTEXT, CantoriaVoice, cantoriaIsOutdated, firstSongFor, galleryQuery, hasNvidiaGpu, newestInGallery } from './singerCore';
 import { VoiceProblem, VoiceProblems, engineFailureProblem, engineSaid, failurePlace, noVocoderGuide, silentSyllableProblems, silentSyllablesNotice, singerFailureText, unsungSyllableNotice, unsungSyllableProblem, vocoderMissing, voiceOnWarp, voiceWho, wordsProblems } from './singerCore';
@@ -124,7 +124,7 @@ const singerCompletion: vscode.CompletionItemProvider = {
         const nameColumn = slot.Quoted ? open + 1 : range.start.character + 1;
         if (!api?.voices) {
             offerCantoria();
-            return vscode.extensions.getExtension(CANTORIA_EXTENSION_ID) || singerSetting() ? undefined : [noVoiceItem(document, range, noVoiceGuide(false))];
+            return vscode.extensions.getExtension(CANTORIA_EXTENSION_ID) ? undefined : [noVoiceItem(document, range, noVoiceGuide(false))];
         }
         const voices = await api.voices();
         // Words not named yet and written in several languages: every voice (docs/lyrics-singer-design.md §7).
@@ -676,42 +676,28 @@ async function setUpVoices(guide: VoiceGuide): Promise<void> {
     if (vscode.extensions.getExtension(CANTORIA_EXTENSION_ID)) { await showVoiceSetup(guide); } else { await installCantoria(); }
 }
 
-/** `lilysharp.playback.singer`: the path of a `cantoria` program to run here (a developer's
- *  build), or '' — the usual case — for the Cantoria extension when it is installed. */
-function singerSetting(): string {
-    return settings().get<string>('playback.singer', '').trim();
-}
-
-/** The one engine of this host, found on the first voice asked for — the setting's program,
- *  else the Cantoria extension (CANTORIA_EXTENSION_ID, activated here; activating it starts
- *  no process) — and let go when the setting or the extensions change, and on deactivate.
- *  Undefined when there is neither: the lyrics are not sung and nothing is said. */
+/** The one engine of this host, found on the first voice asked for: the Cantoria extension
+ *  (CANTORIA_EXTENSION_ID, activated here; activating it starts no process), let go when the
+ *  extensions change and on deactivate. Undefined when it is not installed: the lyrics are not
+ *  sung and nothing is said. A developer's build of the program is Cantoria's own setting,
+ *  `cantoria.program`: the setting `lilysharp.playback.singer` that ran a program here, past the
+ *  extension and its settings, doubled it and is gone (owner's decision 2026-11-26). */
 let voiceRenderer: VoiceRenderer | undefined;
-let voiceRendererFor: string | undefined;   // the setting the renderer was made for
 export async function renderer(): Promise<VoiceRenderer | undefined> {
-    const exe = singerSetting();
-    if (voiceRenderer && voiceRendererFor === exe) { return voiceRenderer; }
-    disposeSinger();
-    if (exe) {
-        voiceRenderer = new VoiceRenderer(new SingerProcess(exe, line => outputChannel.appendLine(line)));
+    if (voiceRenderer) { return voiceRenderer; }
+    const ext = vscode.extensions.getExtension(CANTORIA_EXTENSION_ID);
+    if (!ext) { return undefined; }
+    try {
+        const api = cantoriaApiOf(ext.isActive ? ext.exports : await ext.activate());
+        if (!api) { outputChannel.appendLine(`singer: ${CANTORIA_EXTENSION_ID} is installed but its API is not the shape Lily# reads`); return undefined; }
+        voiceRenderer = new VoiceRenderer(new CantoriaExtensionBackend(api, tellSingerNote));
         voiceRenderer.onSinging = singingStarted;
         voiceRenderer.onProgress = singingProgress;
-    } else {
-        const ext = vscode.extensions.getExtension(CANTORIA_EXTENSION_ID);
-        if (!ext) { return undefined; }
-        try {
-            const api = cantoriaApiOf(ext.isActive ? ext.exports : await ext.activate());
-            if (!api) { outputChannel.appendLine(`singer: ${CANTORIA_EXTENSION_ID} is installed but its API is not the shape Lily# reads`); return undefined; }
-            voiceRenderer = new VoiceRenderer(new CantoriaExtensionBackend(api, tellSingerNote));
-            voiceRenderer.onSinging = singingStarted;
-        voiceRenderer.onProgress = singingProgress;
-        } catch (e) {
-            outputChannel.appendLine(`singer: ${CANTORIA_EXTENSION_ID} did not activate: ${String(e)}`);
-            return undefined;
-        }
+    } catch (e) {
+        outputChannel.appendLine(`singer: ${CANTORIA_EXTENSION_ID} did not activate: ${String(e)}`);
+        return undefined;
     }
-    voiceRendererFor = exe;
-    // The extension's voice is named with it (`engine/name`); a program's is its own default.
+    // The extension's voice is named with it (`engine/name`).
     const voice = voiceRenderer.backend instanceof CantoriaExtensionBackend ? await voiceRenderer.backend.voiceName().catch(() => '') : '';
     outputChannel.appendLine(`singer: ${voiceRenderer.name}${voice ? `, voice ${voice}` : ''}`);
     return voiceRenderer;
@@ -719,7 +705,6 @@ export async function renderer(): Promise<VoiceRenderer | undefined> {
 export function disposeSinger(): void {
     voiceRenderer?.dispose();
     voiceRenderer = undefined;
-    voiceRendererFor = undefined;
     for (const panel of previewPanels.values()) {
         postedVoices.delete(panel);
         prepareQueue.cancel(`${panelId(panel)}/`);
