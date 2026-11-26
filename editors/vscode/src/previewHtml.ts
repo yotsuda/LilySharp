@@ -2046,7 +2046,8 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             }
             const instances = [];
             for (const bar of Array.from(byBar.keys()).sort((p, q) => p - q)) {
-                for (const c of byBar.get(bar).sort((p, q) => p.x - q.x)) instances.push(c.els);
+                // Each copy says the bar box it is in (copyOf picks a note's copy by its measure).
+                for (const c of byBar.get(bar).sort((p, q) => p.x - q.x)) { c.els.bar = bars[bar]; instances.push(c.els); }
             }
             if (loose.length > 0) {
                 if (instances.length > 0) instances[0].unshift.apply(instances[0], loose);
@@ -2083,50 +2084,59 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
          *  painted or not — the follow-along reads the notes about to sound by it (followAlong). */
         function elementsAt(entry) {
             const pos = typeof entry === 'object' ? entry.pos : entry;
-            const occ = typeof entry === 'object' ? entry.occ : -1;
             sourcePositions();
-            let matches = (posElements.get(pos) || []).slice();
-            if (occ >= 0 && matches.length > 1) {
-                const marks = matches.filter(el => el.hasAttribute('data-todo'));
-                const music = marks.length > 0 && marks.length < matches.length
-                    ? matches.filter(el => !el.hasAttribute('data-todo')) : matches;
-                const instances = clusterInstances(music);
-                const picked = instances[Math.min(occ, instances.length - 1)] || music;
-                matches = music !== matches && instances.length === 1 ? picked.concat(marks) : picked;
+            return copyOf((posElements.get(pos) || []).slice(), entry);
+        }
+        // The (data-pos, measure) of the notes playing → the printed copies (O) sounding in that bar,
+        // sorted: set by followAlong, for copyOf. Null while nothing plays.
+        var copiesInBar = null;
+        /** Of the elements of one data-pos, the copy an entry ({ pos, occ, m }) means; all of them for
+         *  a bare data-pos. Pick the occ-th printed INSTANCE — a chord's every head (plus dots and
+         *  accidentals) shares one data-pos, so slicing by raw element index lit a single head and left
+         *  the rest of the chord dark: they are clustered by geometry (clusterInstances).
+         *  An @todo mark's pieces (data-todo: its ring, and a memo that may stand bars away) share the
+         *  data-pos too but are no copy of the music: counted, a memo moved over another bar was "copy 0"
+         *  and lit alone, the chord name or head left dark (owner's report 2026-11-16). So the copies are
+         *  counted from the music alone; the mark lights with it where there is one copy only.
+         *  ⚠️ The note's MEASURE first (m, PlaybackNote.M = the bar box's data-m), the count only within
+         *  it (owner's report 2026-11-26: a drum phrase used in many bars, a hi-hat's dot pushed 7 staff
+         *  units right of its head by the other voices — two "copies" by geometry — so every later copy
+         *  was counted one too far, bar 68's hi-hat lit bar 52 and the view jumped there and back). The
+         *  count over the whole page is left for a note with no measure, or a bar its copies cannot be
+         *  told apart in. */
+        function copyOf(matches, entry) {
+            const occ = typeof entry === 'object' ? entry.occ : -1;
+            if (occ < 0 || matches.length <= 1) return matches;
+            const marks = matches.filter(el => el.hasAttribute('data-todo'));
+            const music = marks.length > 0 && marks.length < matches.length
+                ? matches.filter(el => !el.hasAttribute('data-todo')) : matches;
+            const instances = clusterInstances(music);
+            let picked = null;
+            const m = typeof entry.m === 'number' ? entry.m : -1;
+            if (m >= 0) {
+                const inBar = instances.filter(c => c.bar && Number(c.bar.getAttribute('data-m')) === m);
+                const sounding = copiesInBar ? copiesInBar.get(entry.pos + '|' + m) : null;
+                // The bar's one copy: every piece of it, however far its dot stands.
+                if (inBar.length > 0 && (!sounding || sounding.length <= 1)) picked = [].concat(...inBar);
+                // A phrase written twice in the bar: its copies in time order, where they can be told apart.
+                else if (sounding && inBar.length === sounding.length && sounding.indexOf(occ) >= 0) picked = inBar[sounding.indexOf(occ)];
             }
-            return matches;
+            if (!picked) picked = instances[Math.min(occ, instances.length - 1)] || music;
+            return music !== matches && instances.length === 1 ? picked.concat(marks) : picked;
         }
         function highlightPositions(positions) {
             const color = getHighlightColor();
             const painted = [];
             for (const entry of positions) {
                 const pos = typeof entry === 'object' ? entry.pos : entry;
-                const occ = typeof entry === 'object' ? entry.occ : -1;
                 // Every drawn element carrying this offset — as its data-pos OR as
                 // a data-alt member (a barline that several written bars collapse
                 // onto lights from any of their offsets) — from the index, which
                 // already leaves out the click targets and occluders that must
-                // never be recolored (see sourcePositions).
+                // never be recolored (see sourcePositions); of a phrase's, the copy
+                // sounding (copyOf).
                 sourcePositions();
-                let matches = (posElements.get(pos) || []).slice();
-                if (occ >= 0 && matches.length > 1) {
-                    // Pick the occ-th printed INSTANCE — a chord's every head
-                    // (plus dots/accidentals) shares one data-pos, so slicing
-                    // by raw element index lit a single head and left the
-                    // rest of the chord dark. Cluster by geometry instead.
-                    // An @todo mark's pieces (data-todo: its ring, and a memo that may
-                    // stand bars away) share the data-pos too but are no copy of the
-                    // music: counted, a memo moved over another bar was "copy 0" and lit
-                    // alone, the chord name or head left dark (owner's report 2026-11-16).
-                    // So the copies are counted from the music alone; the mark lights
-                    // with it where there is one copy only.
-                    const marks = matches.filter(el => el.hasAttribute('data-todo'));
-                    const music = marks.length > 0 && marks.length < matches.length
-                        ? matches.filter(el => !el.hasAttribute('data-todo')) : matches;
-                    const instances = clusterInstances(music);
-                    const picked = instances[Math.min(occ, instances.length - 1)] || music;
-                    matches = music !== matches && instances.length === 1 ? picked.concat(marks) : picked;
-                }
+                const matches = copyOf((posElements.get(pos) || []).slice(), entry);
                 painted.push.apply(painted, matches);
                 highlighted.push.apply(highlighted, matches);
                 // A boxed mark (section/rehearsal) is a <rect> with a <text> label on
@@ -3480,20 +3490,30 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             if (!relay) follow.start();
             followSystemDocTop = null; followSystemOffset = null; followTopTarget = null;   // a new Play finds its place anew
             followStaff = relay ? -1 : followStaffOfCaret();
+            // A note's printed measure (PlaybackNote.M) picks its copy of a phrase (copyOf), and the
+            // copies sounding in one bar are counted from the notes themselves.
+            const mOf = n => typeof n.M === 'number' ? n.M : -1;
+            copiesInBar = new Map();
+            if (!relay) for (const n of notes) {
+                if (mOf(n) < 0 || n.S < 0) continue;
+                const key = n.S + '|' + n.M, list = copiesInBar.get(key) || [];
+                if (list.indexOf(n.O || 0) < 0) { list.push(n.O || 0); list.sort((p, q) => p - q); }
+                copiesInBar.set(key, list);
+            }
             // The rests (E) are the editor's text's alone: lit there while they last, not on the score
             // (owner's request 2026-11-17).
             const onScore = notes.filter(n => !n.E && !n.Z);
             // …and a part turned off lights nothing of its own, but its notes light the bar while nothing
             // else sounds — the recording alone, every part off (owner's request 2026-11-17).
-            const quietCursor = relay ? null : new Cursor(notes.filter(n => n.Z && !n.E).map(n => ({ t: n.T - offset, d: n.D, s: n.S, o: n.O || 0 })));
-            const cursor = new Cursor(onScore.map(n => ({ t: n.T - offset, d: n.D, s: relay ? n.R : n.S, o: n.O || 0 })));
-            const restCursor = relay ? null : new Cursor(notes.filter(n => n.E).map(n => ({ t: n.T - offset, d: n.D, s: n.S, o: n.O || 0 })));
+            const quietCursor = relay ? null : new Cursor(notes.filter(n => n.Z && !n.E).map(n => ({ t: n.T - offset, d: n.D, s: n.S, o: n.O || 0, m: mOf(n) })));
+            const cursor = new Cursor(onScore.map(n => ({ t: n.T - offset, d: n.D, s: relay ? n.R : n.S, o: n.O || 0, m: relay ? -1 : mOf(n) })));
+            const restCursor = relay ? null : new Cursor(notes.filter(n => n.E).map(n => ({ t: n.T - offset, d: n.D, s: n.S, o: n.O || 0, m: mOf(n) })));
             // The notes about to sound, FOLLOW_LEAD seconds ahead (owner's request 2026-11-16: a
             // player must see the next line, or the notes cut off at the side, before they sound —
             // the view moved only once the next line's first note had sounded). The view is moved
             // for them and the notes sounding; the notes are lit when they sound.
             // (the parts turned off too: they still say where the music goes, for the view)
-            const ahead = relay ? null : new Cursor(notes.filter(n => !n.E).map(n => ({ t: n.T - offset, d: n.D, s: n.S, o: n.O || 0 })));
+            const ahead = relay ? null : new Cursor(notes.filter(n => !n.E).map(n => ({ t: n.T - offset, d: n.D, s: n.S, o: n.O || 0, m: mOf(n) })));
             let aheadEls = [], soundingEls = [];
             // How evenly the 50 ms tick came (owner's report 2026-10-25: one eighth note lit in
             // four — the tick a second apart, as a browser throttles a page it thinks hidden):

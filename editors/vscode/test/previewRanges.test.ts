@@ -298,8 +298,8 @@ describe('the preview\'s Range panel', () => {
     // copy of the music it was "copy 0" and lit alone, the chord name dark (owner's report
     // 2026-11-16: a chords row's marked names did not light while playing).
     it('lights a marked chord name while it sounds, its memo not counted as a copy', () => {
-        const at = html.indexOf('function highlightPositions(');
-        const body = html.slice(at, html.indexOf('\n        }', at) + '\n        }'.length);
+        const fn = (name: string) => { const at = html.indexOf('function ' + name + '('); return html.slice(at, html.indexOf('\n        }', at) + '\n        }'.length); };
+        const body = fn('highlightPositions') + '\nvar copiesInBar = null;\n' + fn('copyOf');
         const el = (name: string, bar: number, todo: boolean) => {
             const attrs: Record<string, string> = todo ? { 'data-todo': '' } : {};
             return {
@@ -328,6 +328,34 @@ describe('the preview\'s Range panel', () => {
         const twice = [el('C', 1, false), el('C', 5, false), el('memo', 0, true)];
         assert.deepEqual(run(twice, 1), ['C']);
         assert.deepEqual(run([el('G', 3, false), el('ring', 3, true)], 0), ['G', 'ring']);
+    });
+
+    // Owner's report 2026-11-26: a drum phrase in many bars, a hi-hat's dot pushed far right of its
+    // head — two "copies" by geometry in one bar — and every later copy was counted one too far:
+    // bar 68's hi-hat lit bar 52, and the view jumped there and back. The note's measure picks it.
+    it('lights a phrase note in its own measure, however its pieces are split', () => {
+        const fn = (name: string) => { const at = html.indexOf('function ' + name + '('); return html.slice(at, html.indexOf('\n        }', at) + '\n        }'.length); };
+        const head = (name: string, m: number) => ({ name, m, hasAttribute: () => false });
+        // Measures 7, 51 and 67 hold the phrase once each; in 7 its head and dot came out as two copies.
+        const els = [head('h7', 7), head('dot7', 7), head('h51', 51), head('h67', 67)];
+        const box = (m: number) => ({ getAttribute: (a: string) => a === 'data-m' ? String(m) : null });
+        const run = (entry: Record<string, number>, copies: Map<string, number[]> | null) => {
+            const context = vm.createContext({
+                copiesInBar: copies,
+                clusterInstances: (m: typeof els) => [[m[0]], [m[1]], [m[2]], [m[3]]].map(c => Object.assign(c, { bar: box(c[0].m) })),
+            });
+            new vm.Script(fn('copyOf')).runInContext(context);
+            context.entry = entry; context.els = els;
+            return (new vm.Script('copyOf(els, entry).map(e => e.name).join(",")').runInContext(context) as string);
+        };
+        // By the count alone the third copy was measure 51's (the second note's) — the jump.
+        assert.equal(run({ pos: 7, occ: 2 }, null), 'h51');
+        // By its measure: 67's; and measure 7's every piece.
+        assert.equal(run({ pos: 7, occ: 2, m: 67 }, new Map([['7|67', [2]]])), 'h67');
+        assert.equal(run({ pos: 7, occ: 0, m: 7 }, new Map([['7|7', [0]]])), 'h7,dot7');
+        // Written twice in one bar and told apart there: the copies in time order.
+        const twice = new Map([['7|7', [0, 1]]]);
+        assert.equal(run({ pos: 7, occ: 1, m: 7 }, twice), 'dot7');
     });
 
     // The recording beside a chart sounds with the score (owner's decision 2026-11-16,

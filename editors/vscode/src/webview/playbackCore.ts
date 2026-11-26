@@ -837,10 +837,11 @@ export class Lookahead {
     get handedOutUntil(): number { return this.next === 0 ? -1 : this.events[this.next - 1].t; }
 }
 
-/** A note the follow-along highlight can light: its source position and printed copy. */
-export interface SoundingNote { t: number; d: number; s: number; o: number }
+/** A note the follow-along highlight can light: its source position and printed copy, and the
+ *  printed measure it is in (PlaybackNote.M, the bar boxes' data-m; absent when not known). */
+export interface SoundingNote { t: number; d: number; s: number; o: number; m?: number }
 
-export interface Sounding { pos: number; occ: number; t: number; key: string }
+export interface Sounding { pos: number; occ: number; t: number; key: string; m: number }
 
 /**
  * The notes SOUNDING at a moment, newest onset first, one entry per printed note (a
@@ -871,7 +872,7 @@ export class SoundingCursor {
             const key = n.s + ':' + n.o;
             if (seen.has(key)) { continue; }
             seen.add(key);
-            sounding.push({ pos: n.s, occ: n.o, t: n.t, key });
+            sounding.push({ pos: n.s, occ: n.o, t: n.t, key, m: typeof n.m === 'number' ? n.m : -1 });
         }
         sounding.sort((a, b) => b.t - a.t);
         const keys = sounding.map(x => x.key).sort().join(',');
