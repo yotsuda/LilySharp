@@ -190,6 +190,33 @@ public class CliBatchTests : IDisposable
         }
     }
 
+    [Fact]
+    public void ABatchedBooksDeadTabHeads_StandInItsOwnMusicFont()
+    {
+        // The tab's dead-note head was centred by a width kept in a static, read from the music
+        // font of whichever render touched the renderer first: after a Bravura book, every later
+        // Emmentaler book's dead tab heads stood 0.05 off (CI 2026-11-27, test/dead-note
+        // 20.73 vs 20.78 — the test host had rendered a Bravura score first on ubuntu).
+        const string music = "part bl { clef bass octave 3 tuning bass }\n"
+            + "section A { c4 e@dead g e@dead | c8 c@dead g@dead c g@dead g c c@dead | }\nform { A }\nscore { staff bl  tab bl }\n";
+        string bravura = Path.Combine(_dir, "bravura.lys"), emmentaler = Path.Combine(_dir, "emmentaler.lys");
+        File.WriteAllText(bravura, "fonts { music \"Bravura\" }\n" + music);
+        File.WriteAllText(emmentaler, music);
+        string solo = Folder("solo");
+        foreach (string b in new[] { bravura, emmentaler })
+            Assert.Equal(0, Lysc("svg", "-n", "-d", solo, b).Exit);
+        // ★ POSITIVE CONTROL: the two fonts' heads differ on their own, so a leak would show.
+        Assert.NotEqual(File.ReadAllBytes(Out(solo, bravura, ".svg")), File.ReadAllBytes(Out(solo, emmentaler, ".svg")));
+
+        foreach (var order in new[] { new[] { bravura, emmentaler }, new[] { emmentaler, bravura } })
+        {
+            string folder = Folder("first-" + Path.GetFileNameWithoutExtension(order[0]));
+            Assert.Equal(0, Lysc("svg", "-n", "--batch", List([.. order.Select(b => $"{b}\t{folder}")])).Exit);
+            foreach (string b in order)
+                Assert.Equal(File.ReadAllBytes(Out(solo, b, ".svg")), File.ReadAllBytes(Out(folder, b, ".svg")));
+        }
+    }
+
     /// <summary>The PDF's embedded face names, without the per-document subset prefix.</summary>
     private static string Faces(string pdf)
     {

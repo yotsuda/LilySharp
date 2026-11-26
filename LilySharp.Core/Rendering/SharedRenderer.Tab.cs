@@ -768,9 +768,13 @@ internal static partial class SharedRenderer
     private const double TabHeadOffsetFactor = 3.0 / 5.0;
     private static readonly double TabDeadHeadScale =
         LilySharp.Core.Svg.Layout.EmmentalerDesignSize.Magstep(TabDeadHeadFontSizeStep);
-    private static readonly double TabDeadHeadWidth =
-        // The twenty's, named: a TabNoteHead is not a NoteHead, so NoteHead.scale (the font-less
-        // overload's StaffHeadFont) must not reach it — and a static would keep the first style.
+    // The twenty's, named: a TabNoteHead is not a NoteHead, so NoteHead.scale (the font-less
+    // overload's StaffHeadFont) must not reach it. Read each time, NOT a static: the head is drawn
+    // in the render's music font (MusicFont.Current, per thread), and a static took the font of
+    // whichever render touched this class first — after a Bravura score, every later Emmentaler
+    // dead tab head stood 0.05 off (CI 2026-11-27, test/dead-note: 20.73 vs 20.78; reproduced with
+    // `lysc svg --batch`, a Bravura book first).
+    private static double TabDeadHeadWidth =>
         LilySharp.Core.Svg.Layout.GlyphMetrics.GetNoteheadBBox(MusicFont.Current.DesignAt(0), 4).Width * TabDeadHeadScale;
 
     /// <summary>
@@ -859,7 +863,7 @@ internal static partial class SharedRenderer
 
     /// <summary>The tab's dead-note head's height — its box (TabDeadHeadWidth's remarks)
     /// at magstep(−2).</summary>
-    private static readonly double TabDeadHeadHeight =
+    private static double TabDeadHeadHeight =>
         LilySharp.Core.Svg.Layout.GlyphMetrics.GetNoteheadBBox(MusicFont.Current.DesignAt(0), 4).Height * TabDeadHeadScale;
 
     /// <summary>

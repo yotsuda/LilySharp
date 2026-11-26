@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- `[engraving]` **A dead note's head on a tab staff stands where it should after a score in another music font.** Once a score in a SMuFL font (Bravura, Leland…) had been engraved, the cross heads of dead notes on tab staves in every later score were centred by that font's head width, slightly off, until the editor was restarted.
 - `[preview]` **A bar played by a phrase's name is lit when the caret is on that name, and only then.** A bar written as the name of a phrase (`beatA |`, `riff |`) stayed lit in the preview wherever the caret was below the phrase: a drum part of such bars stayed lit as you moved through the file. A click on the bar goes to the name; a click on a note still goes into the phrase.
 
 - `[editor]` **`steps` in a drum part's completion list** writes a drum chart as steps — a row a drum, a character a step (`hh "x.x. x.x. x.x. x.x."`), and an unreadable step is underlined where it stands, with its row, bar and beat named. Ctrl+. on a drum chart rewrites it either way: **Convert to Drum Steps** writes a `drums { }` chart (phrase lines too) as steps — a row a drum, each beat as fine as its hits need, the beat the meter's — keeping every hit's drum, time and strength; **Convert to Drum Lines** writes steps back as the notes they stand for.
