@@ -1833,6 +1833,12 @@ public static class DiagnosticCodes
     /// others (a warning): a key in the music is that part's alone, where a <c>time</c> or a
     /// <c>tempo</c> is every part's, so the others stay in the old key and say nothing.</summary>
     public const string KeyChangeInSomeParts = "LYS2023";
+    /// <summary>Measure warning: a drum steps chart counting quarters in a compound meter —
+    /// <c>steps { hh "x.x. x.x. x.x." }</c> in 6/8 fills the bar with three quarters, each split
+    /// in two, where the meter's beat is a dotted quarter split in three. The chart's beat is its
+    /// own (docs/drum-steps-design.md §2), so the bar's length cannot tell; the message says to
+    /// write <c>steps 4. { }</c>.</summary>
+    public const string StepsBeatOffMeter = "LYS2024";
 
     /// <summary>Warning: a key whose signature has more than seven sharps or flats — <c>key des
     /// minor</c> is eight flats, B double-flat in the signature — named with the enharmonic key that

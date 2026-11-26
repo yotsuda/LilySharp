@@ -161,6 +161,61 @@ public class DrumStepsTests
         Assert.Contains(problems, p => p.Severity == DiagnosticSeverity.Error && p.Message.Contains(message, StringComparison.Ordinal));
     }
 
+    private static List<Diagnostic> Validate(string text)
+        => [.. Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(text))];
+
+    [Theory]
+    // A bar of the wrong length is said in the chart's terms — written in the bar or in a phrase
+    // it plays — and where the meter's beat is of the other kind, the beat to write.
+    [InlineData("""steps { hh "x.x. x.x. x.x. x.x." } | steps { hh "x.x. x.x. x.x." } |""", "", "LYS2001",
+                "the steps chart has 3 beats of a quarter, and this bar holds 4")]
+    [InlineData("""steps { hh "x.x. x.x. x.x. x.x." } | steps { hh "x.x. x.x. x.x. x.x. x.x." } |""", "", "LYS2002",
+                "the steps chart has 5 beats of a quarter, and this bar holds 4")]
+    [InlineData("""steps { hh "x.x. x.x. x.x. x.x." } | steps 4. { hh "xxx xxx" } |""", "", "LYS2001",
+                "a 4/4 bar's beat is not dotted — write steps { … }")]
+    [InlineData("""steps 4. { hh "xxx xxx xxx xxx" } | steps { hh "x.x. x.x. x.x. x.x." } |""", "time 12/8", "LYS2001",
+                "the steps chart has 4 beats of a quarter, and this bar holds 6; in 12/8 write steps 4. { … }")]
+    public void ABarOfTheWrongLength_IsSaidInBeats(string music, string time, string code, string message)
+    {
+        var d = Assert.Single(Validate(Book(music, time)), d => d.Code == code);
+        Assert.Contains(message, d.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AChartInAPhrase_IsSaidInBeatsWhereItPlays()
+    {
+        var d = Assert.Single(Validate("""
+            part kit { clef percussion }
+            phrase short { steps { hh "x.x. x.x. x.x." } }
+            section A { kit { steps { hh "x.x. x.x. x.x. x.x." } | short | } }
+            form { ~A }
+            score { staff kit }
+            """), d => d.Code == "LYS2001");
+        Assert.Contains("the steps chart has 3 beats of a quarter, and this bar holds 4", d.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void QuartersFillingACompoundBar_Warn_Once()
+    {
+        // Three quarters fill a 6/8 bar, so no length is wrong — the beat is.
+        var found = Validate(Book("""steps { hh "x.x. x.x. x.x." } | steps { hh "x.x. x.x. x.x." } | steps 4. { hh "xxx xxx" } |""", "time 6/8"))
+            .Where(d => d.Code == "LYS2024").ToList();
+        Assert.Equal(2, found.Count);
+        Assert.All(found, d => Assert.Contains("write steps 4. { … }", d.Message, StringComparison.Ordinal));
+        // A chart that says its beat is not second-guessed; nor is a simple meter.
+        Assert.DoesNotContain(Validate(Book("""steps 8 { hh "x. x. x. x. x. x." } |""", "time 6/8")), d => d.Code == "LYS2024");
+        Assert.DoesNotContain(Validate(Book("""steps { hh "x.x. x.x. x.x." } |""", "time 3/4")), d => d.Code == "LYS2024");
+        // A phrase's chart played in many bars is spoken of once.
+        Assert.Single(Validate("""
+            time 6/8
+            part kit { clef percussion }
+            phrase beat { steps { hh "x.x. x.x. x.x." } }
+            section A { kit { beat | beat | % | } }
+            form { ~A }
+            score { staff kit }
+            """), d => d.Code == "LYS2024");
+    }
+
     [Fact]
     public void TheOpenHiHatOnAnotherRow_Warns_AndPlaysAsAHit()
     {

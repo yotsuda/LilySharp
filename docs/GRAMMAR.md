@@ -2175,7 +2175,8 @@ StepsRow       = DrumName , String ;
    notes, rests, triplets and graces it stands for, each hit on its own character, so the
    page, MIDI, MusicXML and LilyPond read it as they read 'drums { }'. The beat is the
    chart's own, never the meter's, so a phrase reads the same wherever it is played; a chart
-   that does not fill its bar is measured as any music is. Every row writes the same bars
+   that does not fill its bar is measured as any music is, the warning saying its beats against
+   the bar's, and one counting quarters in a compound meter warns (LYS2024). Every row writes the same bars
    of the same beats. What cannot be read is LYS0048, naming the row, the bar, the beat and
    the step. *)
 

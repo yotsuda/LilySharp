@@ -1309,7 +1309,8 @@ drummap { hh: position 6 notehead x }  // TOP LEVEL, optional: re-table a drum
   3 = eighth triplet, 6 = sixteenth triplet, 8 = 32nds. `|` inside the string separates bars;
   every row has the same bars and beats. A beat is a quarter; for 6/8 write `steps 4. { … }`
   (3 characters = eighths), for 7/8 `steps 8 { … }`, for 2/2 `steps 2 { … }`. No need to count
-  durations: write the beats a bar has. Errors (LYS0048) name the row, bar, beat and step.
+  durations: write the beats a bar has. Errors (LYS0048) name the row, bar, beat and step; a bar
+  of the wrong length says its beats against the bar's; quarters in 6/8 warn (LYS2024).
   Use `drums { }` for anything finer (a nested tuplet, a 64th, a hit held across beats).
 - **Bar lines around a chart and before `%`.** A chart of one-bar phrases is one bar: write a
   bar line after EACH chart, `drums { hats back kick } | drums { hats back fill } | % |`. A `%`

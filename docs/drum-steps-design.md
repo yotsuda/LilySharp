@@ -44,8 +44,11 @@ steps [拍] { 太鼓 "パターン"  太鼓 "パターン" … }
 ## 3. 入れなかったもの・残り
 
 - 依頼 §4 の `drums { }` ⇄ `steps { }` の変換（エディタ）は後回し（なくても Orecchiante の作業は止まらない）。
-- 小節の長さが拍子と合わないときの文は、今の小節の検査の文のまま（「Measure duration 3/4 is less than time
-  signature 4/4」）。`steps` 専用の「拍が 3 つ（4/4 は 4 つ）」は、検査が拍子を知る所（collector）に足すことになる＝未。
+- ~~拍子と合わない小節の専用の文~~＝第1400 で入れた: 短い・長い小節の警告（LYS2001／LYS2002・最初の小節の弱起の
+  勧め）の後ろに「the steps chart has 3 beats of a quarter, and this bar holds 4」を足す（小節に書いた表も、小節が
+  鳴らす phrase の中の表も・`MeasureValidator.StepsNote`）。6/8・12/8 で 4 分を数える表は長さが合ってしまう
+  （4 分 3 つ＝6/8）ので、警告 LYS2024 で `steps 4.` を勧める（拍を書いた表には言わない）。付点の拍を単純拍子に
+  書いた表には `steps { }` を勧める。
 - 拍をまたいで伸ばす音（`x... ....` を 2 分にする）は書けない。要るなら `drums { }`。
 - 網: `LilySharp.Tests/DrumStepsTests.cs`（同じ `drums { }` の LilyPond と MIDI に一致・往復と位置・増分の解析・
   エラーの文・ゴーストの強さ）。

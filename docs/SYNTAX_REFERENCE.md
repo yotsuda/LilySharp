@@ -1140,8 +1140,11 @@ of the same beats.
 A beat is a quarter. Write the beat after `steps` when it is not: `steps 4. { … }` for 6/8 and
 12/8 (a dotted beat splits into 1, 3 or 6 — eighths are 3, with no triplet), `steps 8 { … }`
 for beats of an eighth (7/8 in any grouping, sixteenths in twos), `steps 2 { … }` for 2/2. The
-beat is the chart's own and not the meter's, so a phrase reads the same wherever it is played;
-a chart that does not fill its bar is measured as any music is.
+beat is the chart's own and not the meter's, so a phrase reads the same wherever it is played.
+A chart that does not fill its bar is measured as any music is, and the warning says it in beats
+(`the steps chart has 3 beats of a quarter, and this bar holds 4`); a chart counting quarters in
+6/8 or 12/8, where three quarters may fill the bar, warns that the meter's beat is a dotted
+quarter (LYS2024).
 
 A hit lasts to the next hit of its beat or to the beat's end — drums do not ring on, so this
 is only how the page writes it — and the steps before a beat's first hit are a rest. A beat

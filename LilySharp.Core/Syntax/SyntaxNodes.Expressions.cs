@@ -249,6 +249,34 @@ public sealed class ParallelExpressionSyntax : SyntaxNode
     /// page merges by limb, not voices of their own.</summary>
     public bool IsDrums => Green.GetSlot(0)?.Kind == SyntaxKind.DrumsOpener;
 
+    /// <summary>True for a drum chart written as steps, <c>steps { hh "x.x." … }</c>
+    /// (Parser.Steps) — a <see cref="IsDrums"/> chart opened by the word <c>steps</c>.</summary>
+    public bool IsSteps => IsDrums && Green.GetSlot(0)?.Text == "steps";
+
+    /// <summary>A steps chart's beat as written after <c>steps</c> (<c>steps 4.</c> → 4,
+    /// dotted), or null when none is written and a beat is a quarter.</summary>
+    public (int Denominator, bool Dotted)? StepsBeat
+    {
+        get
+        {
+            if (!IsSteps)
+                return null;
+            int? denominator = null;
+            bool dotted = false;
+            for (int i = 1; i < SlotCount - 1; i++)
+            {
+                var slot = Green.GetSlot(i);
+                if (slot?.Kind != SyntaxKind.StepsBeat)
+                    break;
+                if (slot.Text == ".")
+                    dotted = true;
+                else if (int.TryParse(slot.Text, out int d))
+                    denominator = d;
+            }
+            return denominator is int n && n is 1 or 2 or 4 or 8 or 16 ? (n, dotted) : null;
+        }
+    }
+
     /// <summary>
     /// A chart's lines, each with the side its <c>up</c>/<c>down</c> word puts it on (true =
     /// down), or null where none is written and each kit piece takes its own (hands up, feet

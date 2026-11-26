@@ -838,6 +838,9 @@ internal sealed class MeasureValidator : ISemanticValidator
                 }
             }
 
+            if (duration == expected && duration != Fraction.Zero)
+                CheckStepsBeat(measure);
+
             if (!_bars.SenzaMisura && duration != expected && duration != Fraction.Zero)
             {
                 if (duration < expected)
@@ -1153,9 +1156,10 @@ internal sealed class MeasureValidator : ISemanticValidator
         {
             var span = Reported(measure, leadInSpan);
             _diagnostics.Warning(span, DiagnosticCodes.MeasureIncomplete,
-                partialLength != null
+                (partialLength != null
                     ? $"Pickup measure duration {duration} is less than the declared partial {expected}"
-                    : $"Measure duration {duration} is less than time signature {MeterText}");
+                    : $"Measure duration {duration} is less than time signature {MeterText}")
+                + StepsNote(measure, duration, expected));
         }
         else if (isBarePickup)
         {
@@ -1174,7 +1178,7 @@ internal sealed class MeasureValidator : ISemanticValidator
             _diagnostics.Warning(span, DiagnosticCodes.PickupWithoutPartial,
                 $"first measure is shorter than the meter ({duration} of {MeterText}); " +
                 $"if this is a pickup, declare it {where} so its length is checked and " +
-                "bar numbering starts after it");
+                "bar numbering starts after it" + StepsNote(measure, duration, expected));
         }
         // else: completesOpeningPickup — exempt, no diagnostic.
     }
@@ -1301,7 +1305,82 @@ internal sealed class MeasureValidator : ISemanticValidator
             (partialLength != null
                 ? $"Pickup measure duration {duration} exceeds the declared partial {expected}"
                 : $"Measure duration {duration} exceeds time signature {MeterText}")
-            + ": the music past the bar line is not drawn or played");
+            + ": the music past the bar line is not drawn or played" + StepsNote(measure, duration, expected));
+    }
+
+    /// <summary>The drum steps chart a bar is (docs/drum-steps-design.md): one written in it,
+    /// or the one a phrase it plays holds. Null for any other bar.</summary>
+    private ParallelExpressionSyntax? StepsChartOf(IEnumerable<SyntaxNode> items, int depth = 0)
+    {
+        foreach (var item in items)
+        {
+            if (item is ParallelExpressionSyntax { IsSteps: true } chart)
+                return chart;
+            // A chart's bar is counted on its first row (a span plays its first voice), so the
+            // items are that row's notes: the chart is the one they stand in (a row's note sits
+            // in the row's block, or in a triplet or a grace inside it).
+            int climb = 0;
+            for (var up = item.Parent; up != null && climb < 5; up = up.Parent, climb++)
+                if (up is ParallelExpressionSyntax outer)
+                {
+                    if (outer.IsSteps)
+                        return outer;
+                    break;
+                }
+            if (depth < 4 && item is VariableReferenceSyntax reference
+                && _phraseBodies.TryGetValue(reference.Name.Text, out var body) && body is MusicBlockSyntax block
+                && StepsChartOf(block.Items, depth + 1) is { } inPhrase)
+                return inPhrase;
+        }
+        return null;
+    }
+
+    /// <summary>A steps chart's beat as a length, and its name.</summary>
+    private static (Fraction Length, string Name) StepsBeatOf(ParallelExpressionSyntax chart)
+    {
+        var (d, dotted) = chart.StepsBeat ?? (4, false);
+        var length = new Fraction(dotted ? 3 : 1, dotted ? d * 2 : d);
+        string value = d switch { 1 => "whole note", 2 => "half", 4 => "quarter", 8 => "eighth", _ => "sixteenth" };
+        return (length, (dotted ? "a dotted " : d == 8 ? "an " : "a ") + value);
+    }
+
+    /// <summary>A compound meter: its beat is a dotted note split in three (6/8, 9/8, 12/8, 6/4).</summary>
+    private bool MeterIsCompound => _bars.Meter.Beats % 3 == 0 && _bars.Meter.Beats > 3 && _bars.Meter.BeatType >= 4;
+
+    /// <summary>What a short or long bar is in a steps chart's terms — its beats against the
+    /// bar's (owner's decision 2026-11-26, Orecchiante's request 24 §3: "拍が 3 つ（4/4 は 4 つ）"),
+    /// and the beat to write where the meter is compound and the chart counts quarters. Empty
+    /// for any other bar.</summary>
+    private string StepsNote(MeasureContent measure, Fraction duration, Fraction expected)
+    {
+        if (StepsChartOf(measure.Items) is not { } chart)
+            return "";
+        var (beat, name) = StepsBeatOf(chart);
+        var beats = duration / beat;
+        var holds = expected / beat;
+        string note = beats.Denominator == 1 && holds.Denominator == 1
+            ? $" — the steps chart has {Count(beats.Numerator)} of {name}, and this bar holds {holds.Numerator}"
+            : $" — the steps chart's beats are each {name}, and this bar is not a whole number of them";
+        if (chart.StepsBeat == null && MeterIsCompound)
+            note += $"; in {MeterText} write steps 4. {{ … }} for beats of a dotted quarter";
+        else if (chart.StepsBeat is { Dotted: true } && !MeterIsCompound)
+            note += $"; a {MeterText} bar's beat is not dotted — write "
+                + (_bars.Meter.BeatType == 4 ? "steps { … }" : $"steps {_bars.Meter.BeatType} {{ … }}");
+        return note;
+
+        static string Count(int n) => n == 1 ? "1 beat" : $"{n} beats";
+    }
+
+    /// <summary>A bar a steps chart fills exactly, counting quarters in a compound meter: three
+    /// quarters fill a 6/8 bar, so its length says nothing, and the steps are split as quarters
+    /// where the meter's beat is a dotted one (LYS2024).</summary>
+    private void CheckStepsBeat(MeasureContent measure)
+    {
+        if (!MeterIsCompound || StepsChartOf(measure.Items) is not { } chart || chart.StepsBeat != null)
+            return;
+        _diagnostics.Warning(chart.OpenAngle.Span, DiagnosticCodes.StepsBeatOffMeter,
+            $"this steps chart counts quarters (a beat a run of steps), and a {MeterText} bar's beat is a dotted quarter: "
+            + $"write steps 4. {{ … }} — then three steps are the eighths of a beat, six its sixteenths");
     }
 
     /// <summary>The first <c>time</c> written after music in the bar with no bar line between —
