@@ -96,6 +96,9 @@ public class GraceSpacingTests
     [InlineData("part rh { clef treble }\npart lh { clef bass }\nsection A {\n  rh { e''2 f''2 | g''1 | }\n  lh { c,2 grace { e16 } d2 | g,1 | }\n}\nform { A }\nscore { staff rh  staff lh }\n", 5.559)]
     // s5: the run in the upper of two voices on one staff — 5.559; Lily# was 5.459.
     [InlineData("part rh { clef treble }\nsection A {\n  rh { voice { e''2 grace { g''16 } f''2 } { c'2 d'2 } | g''1 | }\n}\nform { A }\nscore { staff rh }\n", 5.559)]
+    // s17 (Lab sessions/p1393/m): `grace { a''8 }` over `grace { f8 e16 d16 }` — the bass run starts
+    // first, so the approach is the bass's wish alone: the main notes 8.654 after the first; Lily# was 8.554.
+    [InlineData("part rh { clef treble }\npart lh { clef bass }\nsection A {\n  rh { e''2 grace { a''8 } f''2 | g''1 | }\n  lh { c,2 grace { f8 e16 d16 } d2 | g,1 | }\n}\nform { A }\nscore { staff rh  staff lh }\n", 8.654)]
     public void AGraceRunInOneStaff_IsSpacedByThatStaffsWishAlone(string body, double mainFromFirst)
     {
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse("octave absolute\ntime 4/4\npaper { raggedRight }\n" + body);
@@ -104,6 +107,42 @@ public class GraceSpacingTests
         var layout = new LayoutEngine(new LayoutOptions()).Layout(multi);
         var bar = layout.Systems.SelectMany(s => s.Measures).Single(m => m.MeasureIndex == 0);
         Assert.Equal(mainFromFirst, bar.GetXForTiming(Fraction.Half) - bar.GetXForTiming(Fraction.Zero), 2);
+    }
+
+    /// <summary>Grace runs at one moment in two staves stand in SHARED columns: each column where
+    /// the chain merged from both staves' wishes puts the column of its grace moment.
+    /// MEASURED 2.26.0 (Lab sessions/p1393/m s6, s8, s9).</summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:336-393 musical_column_spacing.
+    /// LILYPOND-REF: lily/spring.cc:103-129 merge_springs — the average ideal, floored at the largest minimum + 0.3.
+    /// </remarks>
+    [Theory]
+    // s6: g''16 over f16 — both 1.938 before the main notes (the treble's wish); Lily# stood the bass 1.814.
+    [InlineData("rh { e''2 grace { g''16 } f''2 | g''1 | }\n  lh { c,2 grace { f16 } d2 | g,1 | }", "1.94", "1.94")]
+    // s9: the bass grace sharpened — its sharp is no part of the column's spacing: both 1.938.
+    [InlineData("rh { e''2 grace { g''16 } f''2 | g''1 | }\n  lh { c,2 grace { fis16 } d2 | g,1 | }", "1.94", "1.94")]
+    // s8: an eighth over two sixteenths — the eighth stands at the first sixteenth's column; Lily# hung it 1.938 before.
+    [InlineData("rh { e''2 grace { g''8 } f''2 | g''1 | }\n  lh { c,2 grace { f16 e16 } d2 | g,1 | }", "2.84", "2.84 1.42")]
+    // s11: eighths over an eighth and two sixteenths — the shared columns' shortest step (a sixteenth)
+    // prices the treble's eighth too: 2.198 apart in both staves; Lily# stood the treble's 1.418 apart.
+    [InlineData("rh { e''2 grace { g''8 a''8 } f''2 | g''1 | }\n  lh { c,2 grace { f8 e16 d16 } d2 | g,1 | }", "5.03 2.84", "5.03 2.84 1.42")]
+    // s15: the treble's main note stems up — still one column, 1.938; Lily# stood the bass 1.814.
+    [InlineData("rh { e'2 grace { g'16 } f'2 | g'1 | }\n  lh { c,2 grace { f16 } d2 | g,1 | }", "1.94", "1.94")]
+    public void GraceRunsAtOneMomentInTwoStaves_StandInSharedColumns(string music, string treble, string bass)
+    {
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(
+            "octave absolute\ntime 4/4\npaper { raggedRight }\npart rh { clef treble }\npart lh { clef bass }\nsection A {\n  "
+            + music + "\n}\nform { A }\nscore { staff rh  staff lh }\n");
+        var multi = new LilySharp.Core.Svg.Collector.MeasureCollector()
+            .CollectMultiStaff(tree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree)!);
+        var layout = new LayoutEngine(new LayoutOptions()).Layout(multi);
+        var bar = layout.Systems.SelectMany(s => s.Measures).Single(m => m.MeasureIndex == 0);
+        double main = bar.X + bar.GetXForTiming(Fraction.Half);
+        string BeforeMain(int staff) => string.Join(" ", layout.GraceColumnXs
+            .Where(kv => kv.Key.StaffIndex == staff && kv.Key.MeasureIndex == 0)
+            .Select(kv => main - kv.Value).OrderByDescending(d => d)
+            .Select(d => d.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)));
+        Assert.Equal((treble, bass), (BeforeMain(0), BeforeMain(1)));
     }
 
     /// <summary>

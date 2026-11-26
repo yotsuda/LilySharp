@@ -1460,6 +1460,9 @@ internal static partial class SpacingRules
     /// </remarks>
     internal static GraceColumnLayout LeadingGraceRun(ItemColumn items)
     {
+        // Runs in several staves at this moment stand in shared columns (SharedGraceChain).
+        if (SharedGraceChain(items) is { } shared)
+            return shared;
         var widest = new GraceColumnLayout(ImmutableArray<double>.Empty, 0);
         for (int i = 0; i < items.Count; i++)
         {

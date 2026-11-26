@@ -1138,7 +1138,9 @@ internal static class LineStartColumn
     private static SpacingRules.GraceColumnLayout? OpeningGraceRun(
         Model.MultiStaffScore score, int startMeasureIndex)
     {
-        SpacingRules.GraceColumnLayout? widest = null;
+        // Every item there that leads with a run, in every staff and voice: their runs stand in
+        // the columns they share (SpacingRules.SharedGraceChain), else the widest stands for all.
+        List<Model.MusicItem>? leading = null;
         foreach (var (_, staff, _) in score.EnumerateStaves())
         {
             if (staff.IsTextRow)
@@ -1147,15 +1149,11 @@ internal static class LineStartColumn
             {
                 if (FirstMusicalItem(voice, startMeasureIndex) is not { } item)
                     continue;
-                var grace = SpacingRules.GraceNotesOf(item);
-                if (grace.IsDefaultOrEmpty)
-                    continue;
-                var run = SpacingRules.GraceColumns(grace, item);
-                if (widest is not { } w || run.Span > w.Span)
-                    widest = run;
+                if (!SpacingRules.GraceNotesOf(item).IsDefaultOrEmpty)
+                    (leading ??= new()).Add(item);
             }
         }
-        return widest;
+        return leading is null ? null : SpacingRules.LeadingGraceRun(new ItemColumn(leading));
     }
 
     private static Model.MusicItem? FirstMusicalItem(Model.Voice voice, int measureIndex)

@@ -421,6 +421,18 @@ internal static partial class SpacingRules
         return correction * 0.5;
     }
 
+    /// <summary>The grace time a column's leading run takes before it — the moment its first
+    /// grace column stands at, counted back from the main note; zero with no run.</summary>
+    private static Fraction GraceRunLength(MusicItem item)
+    {
+        var run = GraceNotesOf(item);
+        var length = Fraction.Zero;
+        if (!run.IsDefaultOrEmpty)
+            foreach (var c in run)
+                length += c.Length;
+        return length;
+    }
+
     /// <summary>
     /// Merges the per-voice stem-direction spacing wishes for the column pair
     /// (<paramref name="tLeft"/> → <paramref name="tRight"/>) into a single spring.
@@ -450,6 +462,11 @@ internal static partial class SpacingRules
     /// `c,2 d2` puts the grace and the f'' where the treble staff alone does (3.421 / 5.359),
     /// and the run in the bass staff where the bass alone does (3.621 / 5.559). Lily# averaged
     /// the other staff's c,→d wish in: 0.176 wide, and 0.100 narrow.
+    /// The first grace column is the EARLIEST run's (the runs share their columns,
+    /// <see cref="SharedGraceChain"/>): a voice whose run starts later wishes into a later
+    /// column. MEASURED (Lab sessions/p1393/m s17): `grace { a''8 }` over `grace { f8 e16 d16 }`
+    /// stands the bass f 3.621 after c, — the bass's wish alone; Lily# averaged the treble's
+    /// e''→a'' wish in, 3.520.
     /// </para>
     /// </remarks>
     internal static Spring MergeVoiceStemWishes(
@@ -459,9 +476,17 @@ internal static partial class SpacingRules
     {
         var wishes = RentWishes(); // given back once MergeSprings has read it (see RentWishes)
         // Whether some voice's right column leads with a grace run (the doc's ⚠️).
+        // …and the first grace column is the earliest run's: a run that starts later stands its
+        // first column further right, so its voice's wish ends there, not at the pair's column.
         bool graceRight = false;
-        for (int v = 0; v < voices.Count && !graceRight; v++)
-            graceRight = WishColumnAt(voices[v], tRight) is { } r && !GraceNotesOf(r).IsDefaultOrEmpty;
+        var earliest = Fraction.Zero;
+        for (int v = 0; v < voices.Count; v++)
+            if (WishColumnAt(voices[v], tRight) is { } r && GraceRunLength(r) is var len && len > Fraction.Zero)
+            {
+                graceRight = true;
+                if (len > earliest)
+                    earliest = len;
+            }
         // Indexed, not foreach, here and in MergeVoiceStemWishesToBarline: `voices` is an
         // interface, so foreach would box an enumerator on every spring (RULES §5.3).
         for (int v = 0; v < voices.Count; v++)
@@ -471,7 +496,7 @@ internal static partial class SpacingRules
             var right = WishColumnAt(voice, tRight);
             if (left is null || right is null)
                 continue;
-            if (graceRight && GraceNotesOf(right).IsDefaultOrEmpty)
+            if (graceRight && GraceRunLength(right) != earliest)
                 continue;
             // A voice whose two columns are two contexts (a cue region's edge) has no wish
             // spanning them, so it makes no correction either (VoicePairCrossesContexts).

@@ -95,6 +95,18 @@ internal sealed record MeasureLayout
     public ImmutableDictionary<Fraction, double>? GraceRunToMain { get; init; }
 
     /// <summary>
+    /// For a moment where grace runs stand in several staves (or voices), keyed by the moment of
+    /// their main notes: the ONE column chain they share, at force 0 — every run there is placed
+    /// on it by its grace moments (<see cref="SpacingRules.SharedGraceChain"/>,
+    /// <see cref="GraceNoteEngraver.PlacedColumns"/>). Null when the measure has none.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:336-393 musical_column_spacing — a grace column is a
+    ///   paper column of the whole system, one spring to the next from every staff's wishes.
+    /// </remarks>
+    public ImmutableDictionary<Fraction, SpacingRules.GraceColumnLayout>? SharedGraceRuns { get; init; }
+
+    /// <summary>
     /// Creates a MeasureLayout with item-based positioning (for single-staff scores).
     /// </summary>
     public MeasureLayout(int measureIndex, double x, double width, ImmutableArray<ItemLayout> items)
@@ -123,7 +135,7 @@ internal sealed record MeasureLayout
     /// per-system memo hands back when it serves a system found under other numbers
     /// (<see cref="SystemLayoutCache"/>).</summary>
     public MeasureLayout WithMeasureIndex(int measureIndex)
-        => new(measureIndex, X, Width, Items, Columns) { ChangeColumnHangs = ChangeColumnHangs, GraceRunToMain = GraceRunToMain };
+        => new(measureIndex, X, Width, Items, Columns) { ChangeColumnHangs = ChangeColumnHangs, GraceRunToMain = GraceRunToMain, SharedGraceRuns = SharedGraceRuns };
 
     /// <summary>
     /// Gets the X coordinate for a given timing within this measure.

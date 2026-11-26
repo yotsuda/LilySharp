@@ -306,15 +306,26 @@ internal static class GraceNoteEngraver
         ImmutableArray<GraceColumnInfo> columns, MusicItem? mainItem, Measure measure, int mainItemIndex,
         MeasureLayout measureLayout)
     {
-        // At the system's force: a justified line stretches the run's own springs too.
-        var placed = SpacingRules.StretchGraceColumns(
-            SpacingRules.GraceColumns(columns, mainItem), measureLayout.SpringForce);
-        if (measureLayout.GraceRunToMain is not { } toMain)
-            return placed;
+        if (measureLayout.GraceRunToMain is null && measureLayout.SharedGraceRuns is null)
+            return Stretched(SpacingRules.GraceColumns(columns, mainItem));
         var timing = Fraction.Zero;
         for (int k = 0; k < mainItemIndex && k < measure.Items.Length; k++)
             timing += measure.Items[k].Duration;
-        return toMain.TryGetValue(timing, out var distance) ? placed with { ToMain = distance } : placed;
+        // Runs of several staves at this moment stand on their one shared chain, each column
+        // where the chain's column at its grace moment stands (SpacingRules.SharedGraceChain);
+        // the chain is stretched first, so a run that skips a column grows by both its springs.
+        var placed = measureLayout.SharedGraceRuns is { } shared
+                     && shared.TryGetValue(timing, out var chain)
+                     && SpacingRules.RunOnSharedChain(Stretched(chain) with { Moments = chain.Moments }, columns) is { } onChain
+            ? onChain
+            : Stretched(SpacingRules.GraceColumns(columns, mainItem));
+        return measureLayout.GraceRunToMain is { } toMain && toMain.TryGetValue(timing, out var distance)
+            ? placed with { ToMain = distance }
+            : placed;
+
+        // At the system's force: a justified line stretches the run's own springs too.
+        SpacingRules.GraceColumnLayout Stretched(SpacingRules.GraceColumnLayout run)
+            => SpacingRules.StretchGraceColumns(run, measureLayout.SpringForce);
     }
 
     /// <summary>

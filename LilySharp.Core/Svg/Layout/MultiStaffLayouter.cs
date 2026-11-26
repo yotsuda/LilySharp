@@ -2427,12 +2427,56 @@ internal sealed class MultiStaffLayouter
                 SpringForce = force,
                 ChangeColumnHangs = changeHangs,
                 GraceRunToMain = graceToMain,
+                SharedGraceRuns = SharedGraceRunsOf(measureAllMeasures[i], measureTimings[i]),
             };
             layouts.Add(measureLayout);
             currentX += measureLayout.Width;
         }
 
         return layouts.ToImmutable();
+    }
+
+    /// <summary>
+    /// The measure's shared grace chains (<see cref="MeasureLayout.SharedGraceRuns"/>): at each
+    /// moment where two or more items of the measure's staves and voices lead with a grace run,
+    /// the one chain their columns share. Null when there is no such moment, which is nearly
+    /// every measure.
+    /// </summary>
+    /// <remarks>
+    /// The same chain the moment's spring into the run is built from
+    /// (<see cref="SpacingRules.LeadingGraceRun"/> over the same items), so the drawn runs and
+    /// the solved main column agree.
+    /// </remarks>
+    private static ImmutableDictionary<Fraction, SpacingRules.GraceColumnLayout>? SharedGraceRunsOf(
+        List<Measure> allMeasures, List<Fraction> allTimings)
+    {
+        Dictionary<Fraction, List<MusicItem>>? leading = null;
+        foreach (var m in allMeasures)
+        {
+            var t = Fraction.Zero;
+            foreach (var item in m.Items)
+            {
+                if (!item.GraceTime && !SpacingRules.GraceNotesOf(item).IsDefaultOrEmpty)
+                {
+                    leading ??= new();
+                    if (!leading.TryGetValue(t, out var list))
+                        leading[t] = list = new List<MusicItem>();
+                    list.Add(item);
+                }
+                t += item.Duration;
+            }
+        }
+        if (leading == null)
+            return null;
+        ImmutableDictionary<Fraction, SpacingRules.GraceColumnLayout>.Builder? shared = null;
+        foreach (var (timing, items) in leading)
+        {
+            if (items.Count < 2 || !allTimings.Contains(timing))
+                continue;
+            if (SpacingRules.SharedGraceChain(new ItemColumn(items)) is { } chain)
+                (shared ??= ImmutableDictionary.CreateBuilder<Fraction, SpacingRules.GraceColumnLayout>())[timing] = chain;
+        }
+        return shared?.ToImmutable();
     }
 
     /// <summary>

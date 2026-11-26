@@ -102,10 +102,19 @@ internal static partial class SpacingRules
     /// gives under compression: its ROD and its inverse compress strength. Default for a
     /// run that stays rigid.
     /// </para>
+    /// <para>
+    /// <c>Wishes</c>, one per gap, is the Note_spacing wish the gap was floored from — its ideal
+    /// and its minimum before <c>merge_springs</c>' headroom — so runs of several staves at one
+    /// moment can be merged as LilyPond merges them (<see cref="SharedGraceChain"/>); NaN for a
+    /// gap that is no plain wish (a spacer's, a breathing sign's). <c>Moments</c> is each column's
+    /// grace time before the main note. Both default outside <see cref="GraceColumns"/>.
+    /// </para>
     /// </remarks>
     internal readonly record struct GraceColumnLayout(
         ImmutableArray<double> Offsets, double ToMain,
-        ImmutableArray<(double Rod, double InverseCompress)> Gaps = default)
+        ImmutableArray<(double Rod, double InverseCompress)> Gaps = default,
+        ImmutableArray<(double Ideal, double Min, double Base)> Wishes = default,
+        ImmutableArray<Fraction> Moments = default)
     {
         /// <summary>The natural length of gap <paramref name="k"/>.</summary>
         public double Gap(int k) => k + 1 < Offsets.Length ? Offsets[k + 1] - Offsets[k] : ToMain;
@@ -178,6 +187,7 @@ internal static partial class SpacingRules
         var gapLengths = new double[notes.Length];
         var rods = new double[notes.Length];
         var compresses = new double[notes.Length];
+        var wishes = new (double Ideal, double Min, double Base)[notes.Length];
         for (int i = 0; i < notes.Length; i++)
         {
             bool beamed = i < beamedPrefix;
@@ -241,6 +251,7 @@ internal static partial class SpacingRules
             if (!notes[i].Companions.IsDefaultOrEmpty && !notes[i].IsRest)
                 ideal = AveragedWithCompanions(ideal, notes[i], next, nextBeamed, mainItem, dtMin, gp);
             double gap = Math.Max(GraceColumnGapOfIdeal(ideal, minDistance), dotRod);
+            wishes[i] = (ideal, minDistance, CreateGraceSpring(notes[i].Length, gp, dtMin).IdealDistance);
             rod = Math.Max(rod, dotRod);
             // A slur from this column to the next (or out to the main note) rods the two
             // columns the Slur's minimum-length apart — the rule SlurPairRod states for the
@@ -293,6 +304,7 @@ internal static partial class SpacingRules
             {
                 gap = CreateGraceSpring(notes[i].Length, gp, dtMin).IdealDistance;
                 rod = 0.0;
+                wishes[i] = (double.NaN, double.NaN, double.NaN);
             }
             // A breathing sign between this column and the next (session 936) stands in a column
             // of its own there: the gap is the two springs in series, grace → sign and sign →
@@ -310,6 +322,7 @@ internal static partial class SpacingRules
                 // so a compressed line could close the run without end and its beam quanted NaN.
                 rod = Math.Max(breath.IntoRod, breath.Into.MinDistance) + Math.Max(breath.OutRod, breath.Out.MinDistance);
                 inverseCompress = breath.Into.InverseCompressStrength + breath.Out.InverseCompressStrength;
+                wishes[i] = (double.NaN, double.NaN, double.NaN);
             }
             gapLengths[i] = gap;
             rods[i] = rod;
@@ -325,6 +338,10 @@ internal static partial class SpacingRules
         // the beam quanter, the published column X's, the reservation) draws the shifted column.
         var offsets = ImmutableArray.CreateBuilder<double>(notes.Length);
         var gaps = ImmutableArray.CreateBuilder<(double Rod, double InverseCompress)>(notes.Length);
+        var moments = new Fraction[notes.Length];
+        var tail = Fraction.Zero;
+        for (int i = notes.Length - 1; i >= 0; i--)
+            moments[i] = tail += notes[i].Length;
         double x = 0, toMain = 0;
         double firstShift = notes[0].CollisionShift;
         for (int i = 0; i < notes.Length; i++)
@@ -333,7 +350,163 @@ internal static partial class SpacingRules
             gaps.Add((Math.Min(rods[i], gapLengths[i]), compresses[i]));
             if (i + 1 < notes.Length) x += gapLengths[i]; else toMain = gapLengths[i] - notes[i].CollisionShift;
         }
-        return new GraceColumnLayout(offsets.ToImmutable(), toMain, gaps.MoveToImmutable());
+        return new GraceColumnLayout(offsets.ToImmutable(), toMain, gaps.MoveToImmutable(),
+            ImmutableArray.Create(wishes), ImmutableArray.Create(moments));
+    }
+
+    /// <summary>
+    /// The ONE column chain of the grace runs that stand at one moment in several staves — the
+    /// grace columns are paper columns, shared by every staff, so a column at a grace moment
+    /// holds every run's column at that moment, and each pair of neighbouring columns is one
+    /// spring merged from the wishes of the runs that have a column at both ends. Null when
+    /// fewer than two runs stand here, or when a pair is one this does not merge (no run spans
+    /// it, a gap that is no plain wish, a run whose columns a voice collision shifts) — the
+    /// widest run then stands for all, as before.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:336-393 musical_column_spacing — every wish whose
+    ///   right item is in the pair's right column, merged by merge_springs.
+    /// LILYPOND-REF: lily/spring.cc:103-129 merge_springs — the average ideal, the largest
+    ///   minimum, the ideal floored at that minimum + 0.3.
+    /// LILYPOND-REF: lily/spacing-basic.cc:163-180 note_spacing, the grace branch, and
+    ///   scm/output-lib.scm:1403-1422 grace-spacing::calc-shortest-duration — the base spring
+    ///   every wish over a pair is built on (note-spacing.cc:77) comes from the moment's ONE
+    ///   GraceSpacing (a Score-level grob), whose shortest is the shortest step between its
+    ///   columns, whichever staff they come from; so each run's wish is re-based on that spring.
+    /// A gap a run widened past its own wish (a dot's rod, a slur's minimum length, a chord
+    /// name) keeps that floor: a rod over the pair holds whatever the spring says.
+    /// MEASURED (2.26.0, Lab sessions/p1393/m): <c>grace { g''16 }</c> over <c>grace { f16 }</c>
+    ///   stand in one column 1.938 before the main notes — the treble's wish, 1.814 the bass's
+    ///   alone (s6); an eighth grace over two sixteenths stands at the first sixteenth's column
+    ///   (s8); <c>grace { g''8 a''8 }</c> over <c>grace { f8 e16 d16 }</c> stands its eighths
+    ///   2.198 apart in both staves — the sixteenth the shortest of the shared columns (s11),
+    ///   where the treble's own run is 1.418.
+    /// </remarks>
+    internal static GraceColumnLayout? SharedGraceChain(in ItemColumn items)
+    {
+        List<GraceColumnLayout>? runs = null;
+        for (int i = 0; i < items.Count; i++)
+        {
+            var grace = GraceNotesOf(items[i]);
+            if (grace.IsDefaultOrEmpty)
+                continue;
+            foreach (var c in grace)
+                if (c.CollisionShift != 0)
+                    return null;
+            (runs ??= new()).Add(GraceColumns(grace, items[i]));
+        }
+        if (runs is null || runs.Count < 2)
+            return null;
+
+        // The columns: every run's moments, earliest (longest tail) first.
+        var union = new SortedSet<Fraction>(Comparer<Fraction>.Create((a, b) => b.CompareTo(a)));
+        foreach (var r in runs)
+            foreach (var mo in r.Moments)
+                union.Add(mo);
+        var columns = union.ToArray();
+        int n = columns.Length;
+        // The one GraceSpacing of the moment: its shortest is the shortest step between ANY two
+        // of the shared columns, so every staff's wish over a pair stands on the same base spring.
+        var gp = GraceSpacingParameters.Default;
+        var steps = new Fraction[n];
+        double shortest = double.MaxValue;
+        for (int u = 0; u < n; u++)
+        {
+            steps[u] = u + 1 < n ? columns[u] - columns[u + 1] : columns[u];
+            if (steps[u].ToDouble() > 0)
+                shortest = Math.Min(shortest, steps[u].ToDouble());
+        }
+        if (shortest == double.MaxValue)
+            return null;
+        var gapLengths = new double[n];
+        var rods = new double[n];
+        var compresses = new double[n];
+        var wishes = new (double Ideal, double Min, double Base)[n];
+        for (int u = 0; u < n; u++)
+        {
+            Fraction? right = u + 1 < n ? columns[u + 1] : null;
+            double sharedBase = CreateGraceSpring(steps[u], gp, shortest).IdealDistance;
+            double idealSum = 0, min = double.NegativeInfinity, floor = double.NegativeInfinity;
+            double rod = double.NegativeInfinity;
+            int count = 0;
+            foreach (var r in runs)
+            {
+                int k = r.Moments.IndexOf(columns[u]);
+                if (k < 0)
+                    continue;
+                Fraction? theirRight = k + 1 < r.Moments.Length ? r.Moments[k + 1] : null;
+                if (theirRight != right)
+                    continue;   // its wish reaches a later column, not this pair's
+                var (ideal, wishMin, ownBase) = r.Wishes[k];
+                if (double.IsNaN(ideal))
+                    return null;
+                double gap = r.Gap(k);
+                // The wish as its run priced it, on the run's own base spring; re-based.
+                idealSum += ideal - ownBase + sharedBase;
+                min = Math.Max(min, wishMin);
+                if (gap > GraceColumnGapOfIdeal(ideal, wishMin) + 1e-9)
+                    floor = Math.Max(floor, gap);
+                rod = Math.Max(rod, r.Gaps[k].Rod);
+                count++;
+            }
+            if (count == 0)
+                return null;
+            wishes[u] = (idealSum / count, min, sharedBase);
+            gapLengths[u] = Math.Max(GraceColumnGapOfIdeal(idealSum / count, min), floor);
+            rods[u] = rod;
+            // LILYPOND-REF: lily/spring.cc:204-210 set_default_compress_strength — the base spring's ideal - min.
+            compresses[u] = Math.Max(0.0, sharedBase - gp.SpacingIncrement);
+        }
+        var offsets = ImmutableArray.CreateBuilder<double>(n);
+        var gaps = ImmutableArray.CreateBuilder<(double Rod, double InverseCompress)>(n);
+        double x = 0;
+        for (int u = 0; u < n; u++)
+        {
+            offsets.Add(x);
+            gaps.Add((Math.Min(rods[u], gapLengths[u]), compresses[u]));
+            if (u + 1 < n) x += gapLengths[u];
+        }
+        return new GraceColumnLayout(offsets.MoveToImmutable(), gapLengths[n - 1], gaps.MoveToImmutable(),
+            ImmutableArray.Create(wishes), ImmutableArray.Create(columns));
+    }
+
+    /// <summary>
+    /// One run's own columns read off the shared chain of its moment
+    /// (<see cref="SharedGraceChain"/>): each column where the chain's column at its grace moment
+    /// stands, offsets from the run's first. Null when a column of the run is not in the chain.
+    /// </summary>
+    internal static GraceColumnLayout? RunOnSharedChain(GraceColumnLayout shared, ImmutableArray<GraceColumnInfo> run)
+    {
+        if (run.IsDefaultOrEmpty || shared.Moments.IsDefaultOrEmpty || shared.Offsets.Length != shared.Moments.Length)
+            return null;
+        var at = new int[run.Length];
+        var tail = Fraction.Zero;
+        for (int k = run.Length - 1; k >= 0; k--)
+        {
+            tail += run[k].Length;
+            at[k] = shared.Moments.IndexOf(tail);
+            if (at[k] < 0)
+                return null;
+        }
+        double first = shared.Offsets[at[0]];
+        var offsets = ImmutableArray.CreateBuilder<double>(run.Length);
+        var gaps = ImmutableArray.CreateBuilder<(double Rod, double InverseCompress)>(run.Length);
+        for (int k = 0; k < run.Length; k++)
+        {
+            offsets.Add(shared.Offsets[at[k]] - first);
+            int end = k + 1 < run.Length ? at[k + 1] : shared.Offsets.Length;
+            double rod = 0, compress = 0;
+            for (int j = at[k]; j < end; j++)
+                if (!shared.Gaps.IsDefaultOrEmpty)
+                {
+                    rod += shared.Gaps[j].Rod;
+                    compress += shared.Gaps[j].InverseCompress;
+                }
+            gaps.Add((rod, compress));
+        }
+        double toMain = shared.Span - shared.Offsets[at[^1]];
+        return new GraceColumnLayout(offsets.MoveToImmutable(), toMain,
+            shared.Gaps.IsDefaultOrEmpty ? default : gaps.MoveToImmutable());
     }
 
     /// <summary>

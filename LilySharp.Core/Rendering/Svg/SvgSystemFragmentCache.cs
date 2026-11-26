@@ -943,6 +943,18 @@ internal sealed class SvgSystemFragmentCache
                     hc.Add(kv.Value);
                 }
             }
+            if (m.SharedGraceRuns != null)
+            {
+                // Where runs of several staves at one moment stand (GraceNoteEngraver.PlacedColumns).
+                hc.Add(m.SharedGraceRuns.Count);
+                foreach (var kv in m.SharedGraceRuns.OrderBy(kv => kv.Key))
+                {
+                    hc.Add(kv.Key);
+                    hc.Add(kv.Value.ToMain);
+                    foreach (var o in kv.Value.Offsets)
+                        hc.Add(o);
+                }
+            }
         }
         if (!system.StaffGroups.IsDefaultOrEmpty)
         {
