@@ -16,6 +16,7 @@
 
 using System.Linq;
 using LilySharp.Core.Editing;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Syntax;
 using Xunit;
 
@@ -244,5 +245,60 @@ public class PartWriterTests
         Assert.Contains("c'1 | voice { a'1 | b'1 | } { f'1 | g'1 | } d'1 |", Unix(passage.Text));
         var cut = PartWriter.Apply(twoVoices, [new PartWriter.Write("pn", "A", "a'1 |", "2")], []);
         Assert.Contains(cut.Problems, p => p.Contains("two-voice passage") && p.Contains("bars 2-3"));
+    }
+
+    /// <summary>A sung part added over a band in one call (Write a Song over These Chords,
+    /// 2026-11-26): it stands first — under the chords row, above the band — names its words, its
+    /// words go with its notes in each section it sings, and a singer line sings them. MEASURED
+    /// before: the words were refused ("a part with no music in A yet"), the staff went under the
+    /// tab with no words row, and nothing could write the singer line.</summary>
+    [Fact]
+    public void ASungPartOverABand_StandsFirst_WithItsWordsAndItsSinger()
+    {
+        const string band = """
+            tempo 4 = 120
+            part bass { instrument bass }
+            section A {
+              chords prog { C | G | }
+              bass { c,2 c, | g,,2 g,, | }
+            }
+            section B {
+              chords prog { F | C | }
+              bass { f,,1 | c,1 | }
+            }
+            form { A B }
+            score {
+              chords prog
+              tab bass
+            }
+            score small { chords prog  tab bass }
+            """;
+        var result = PartWriter.Apply(band,
+            [new PartWriter.Write("vocal", "A", "e'4 e' g'2 | d'2. r4 |", null, "ほ し の | よ |"), new PartWriter.Write("vocal", "B", "R | R |")],
+            [new PartWriter.NewPart("vocal", "Vocal", null, "instrument alto\nlyrics words", First: true, Singer: "female")]);
+        Assert.Empty(result.Problems);
+        string text = Unix(result.Text);
+        Assert.Contains("tempo 4 = 120\npart vocal \"Vocal\" {\n  instrument alto\n  lyrics words\n}\nsinger female sings on vocal\npart bass", text);
+        Assert.Contains("  chords prog { C | G | }\n  vocal { e'4 e' g'2 | d'2. r4 | }\n  lyrics words { ほ し の | よ | }\n  bass {", text);
+        Assert.Contains("  chords prog { F | C | }\n  vocal { R | R | }\n  bass {", text);
+        Assert.Contains("score {\n  chords prog\n  staff vocal\n  lyrics words\n  tab bass\n}", text);
+        Assert.Contains("score small { chords prog  staff vocal  lyrics words  tab bass }", text);
+        Assert.Contains("vocal, A: its words (`lyrics words`) written.", result.Done);
+        Assert.Contains("vocal: a new part, first, sung, with a staff in 2 scores.", result.Done);
+        Assert.False(SyntaxTree.Parse(result.Text!).HasErrors, text);
+        Assert.DoesNotContain(SemanticValidation.Run(SyntaxTree.Parse(result.Text!)), d => d.Severity == DiagnosticSeverity.Error);
+
+        // The default voice: the line with no head.
+        var plain = PartWriter.Apply(band, [new PartWriter.Write("vocal", "A", "c'1 | c'1 |", null, "あ | い |")],
+            [new PartWriter.NewPart("vocal", Body: "lyrics words", Singer: "")]);
+        Assert.Contains("\nsinger sings on vocal\n", Unix(plain.Text));
+        // …and one placed after the band, its words under its staff there too.
+        Assert.Contains("score small { chords prog  tab bass  staff vocal  lyrics words }", Unix(plain.Text));
+
+        // A singer with no words named, and first with after, are said.
+        Assert.Contains(PartWriter.Apply(band, [new PartWriter.Write("vocal", "A", "c'1 | c'1 |")],
+            [new PartWriter.NewPart("vocal", Body: "instrument alto", Singer: "female")]).Problems, p => p.Contains("names no words to sing"));
+        Assert.Contains(PartWriter.Apply(band, [new PartWriter.Write("vocal", "A", "c'1 | c'1 |")],
+            [new PartWriter.NewPart("vocal", After: "bass", First: true)]).Problems, p => p.Contains("to stand first and after `bass`"));
     }
 }

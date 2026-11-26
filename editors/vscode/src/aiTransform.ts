@@ -49,6 +49,7 @@ import {
 } from './aiTransformCore';
 import { CANTORIA_EXTENSION_ID, cantoriaApiOf, leftToTheInstrument, voiceListText } from './singerCore';
 import { withTodoMark } from './omrAiFixCore';
+import { namesChords, songGuide, songPartName, songRequest, songWordsName } from './songOverChordsCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 import { PLAIN_TONES_JS } from './plainTones';
@@ -210,6 +211,7 @@ export function registerAiTransform(context: vscode.ExtensionContext, deps: AiTr
         // with AI…" and "Compose with AI in Chat…", were hard to tell apart; the chat's, where the
         // model is picked and its thinking seen, stays).
         vscode.commands.registerCommand('lilysharp.composeWithAiInChat', () => runComposeInChat(deps)),
+        vscode.commands.registerCommand('lilysharp.writeSongOverChords', (uri?: vscode.Uri) => runWriteSongOverChords(uri)),
     );
     registerProposeScoreTool(context, deps);
     context.subscriptions.push({
@@ -291,7 +293,7 @@ interface WritePartInput {
     /** Music for a part in a section: all of it, or `bars` of it; `lyrics` its words there. */
     write?: { part?: string; section?: string; bars?: string; music?: string; lyrics?: string }[];
     /** Parts the score does not have yet; their music stands in `write`. */
-    newParts?: { part?: string; title?: string; short?: string; body?: string; after?: string }[];
+    newParts?: { part?: string; title?: string; short?: string; body?: string; after?: string; first?: boolean; singer?: string }[];
     /** A sentence or two to the musician about the change. */
     note?: string;
 }
@@ -331,7 +333,8 @@ async function writePart(deps: AiTransformDeps, input: WritePartInput | undefine
         placed = await client.sendRequest('lilysharp/writePart', {
             Text: await chatAbsolute(deps, standing) ?? standing,
             Write: writes.map(w => ({ Part: w?.part, Section: w?.section, Bars: w?.bars, Music: w?.music, Lyrics: w?.lyrics })),
-            NewParts: fresh.map(p => ({ Part: p?.part, Title: p?.title, Short: p?.short, Body: p?.body, After: p?.after })),
+            NewParts: fresh.map(p => ({ Part: p?.part, Title: p?.title, Short: p?.short, Body: p?.body, After: p?.after,
+                First: p?.first === true, Singer: typeof p?.singer === 'string' ? p.singer : undefined })),
         });
     } catch (e) {
         return `Nothing shown: the Lily# language server did not answer (${e instanceof Error ? e.message : String(e)}).`;
@@ -480,6 +483,7 @@ function registerProposeScoreTool(context: vscode.ExtensionContext, deps: AiTran
     context.subscriptions.push(lm.registerTool<ReadGuideInput>('lilysharp_readGuide', {
         prepareInvocation: options => ({
             invocationMessage: options.input?.topic === 'composing' ? 'Reading the Lily# composing guide…'
+                : options.input?.topic === 'song' ? 'Reading how to write a song over a score…'
                 : options.input?.topic === 'learn' ? 'Reading how to teach Lily#…' : 'Reading the Lily# grammar…',
         }),
         invoke: async options => new vscode.LanguageModelToolResult([
@@ -551,13 +555,19 @@ async function readGuide(deps: AiTransformDeps, input: ReadGuideInput | undefine
         return pages.length === 1 ? body
             : `${body}\n\n[Part ${part} of ${pages.length} of the ${name}. `
                 + (part < pages.length
-                    ? `Read part ${part + 1} next: lilysharp_readGuide, topic "${topic === 'start' || topic === 'composing' ? 'composing' : topic === 'learn' ? 'learn' : 'grammar'}", part ${part + 1} — every part before you ${topic === 'learn' ? 'teach' : topic === 'composing' || topic === 'start' ? 'write' : 'write a new piece; to change a score that is there, the parts its contents (part 1) name for what you write'}.]`
+                    ? `Read part ${part + 1} next: lilysharp_readGuide, topic "${topic === 'start' || topic === 'composing' ? 'composing' : topic === 'learn' ? 'learn' : topic === 'song' ? 'song' : 'grammar'}", part ${part + 1} — every part before you ${topic === 'learn' ? 'teach' : topic === 'composing' || topic === 'start' || topic === 'song' ? 'write' : 'write a new piece; to change a score that is there, the parts its contents (part 1) name for what you write'}.]`
                     : 'The end.]');
     };
     // Owner's request 2026-11-02: asked how to write Lily#, the chat had a 100 KB grammar and a guide to composing.
     if (topic === 'learn') {
         const teaching = built('LEARN_FOR_LLM.md');
         return teaching ? paged('teaching path', guidePages(teaching, GUIDE_PAGE_BYTES)) : 'The teaching path is not in this build: read topic "grammar".';
+    }
+    // A song over a score's chords (Write a Song over These Chords…, 2026-11-26): its steps and the
+    // composing guide's word on a song with words — not how a NEW piece begins, which would have
+    // the chat write one.
+    if (topic === 'song') {
+        return paged('song guide', guidePages(songGuide(built('lilysharp-compose.instructions.md') ?? await loadComposeGuide(deps)), GUIDE_PAGE_BYTES));
     }
     if (topic !== 'composing' && topic !== 'start') {
         const pages = guidePages(built('lilysharp.instructions.md') ?? await loadGrammar(deps), GUIDE_PAGE_BYTES, GUIDE_PAGE_BYTES - GUIDE_CONTENTS_BYTES);
@@ -3804,4 +3814,46 @@ function getNonce(): string {
         text += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return text;
+}
+
+/**
+ * "Lily#: Write a Song over These Chords…" (docs/song-over-chords-design.md; the second step of
+ * the way from a song to a dance, decided with the owner 2026-11-26): a sung part added to the
+ * score that is there — the chords a recording was read into, or a written band — by Copilot's
+ * chat, which reads the song guide (topic "song") and writes the part with lilysharp_writePart.
+ * The musician hears it in the candidate panel and accepts it; the recording plays under it.
+ */
+async function runWriteSongOverChords(uri?: vscode.Uri): Promise<void> {
+    const target = uri ?? vscode.window.activeTextEditor?.document.uri;
+    if (!target || !/\.lys$/i.test(target.path)) {
+        void vscode.window.showErrorMessage('Lily#: Write a Song over These Chords works on a .lys score — open one, or right-click it.');
+        return;
+    }
+    // Open in the editor, where the chat's tools read it as it stands and the proposal is shown beside it.
+    const doc = await vscode.workspace.openTextDocument(target);
+    await vscode.window.showTextDocument(doc, { preview: false });
+    const text = doc.getText();
+    const chords = namesChords(text);
+    const request = await vscode.window.showInputBox({
+        title: 'Lily# — Write a Song over These Chords',
+        prompt: (chords ? '' : 'This score names no chords: the AI reads the harmony its parts play. ')
+            + 'What song should the AI write? Its language, what it is about, the voice — or leave it empty and the AI chooses. '
+            + 'Copilot\'s chat adds the sung part to this score; pick a strong model in its model menu.',
+        placeHolder: 'e.g. a Japanese song about a summer road trip, a woman\'s voice, the chorus bright',
+        ignoreFocusOut: true,
+    });
+    if (request === undefined) {
+        return;
+    }
+    const file = doc.uri.scheme === 'file' ? doc.uri.fsPath : doc.uri.toString();
+    const query = songRequest(file, songPartName(text), songWordsName(text), request, chords);
+    try {
+        await vscode.commands.executeCommand('workbench.action.chat.open', { query, mode: 'agent' });
+    } catch {
+        try {
+            await vscode.commands.executeCommand('workbench.action.chat.open', query);
+        } catch (err) {
+            void vscode.window.showErrorMessage(`Lily#: Copilot's chat could not be opened (${err}). Is GitHub Copilot Chat installed and signed in?`);
+        }
+    }
 }

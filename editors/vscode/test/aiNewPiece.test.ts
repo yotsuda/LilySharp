@@ -511,7 +511,7 @@ describe('the composing guide', () => {
         assert.match(here, /'Asked how to write Lily# or \.lys, or to be taught it, read that tool with topic "learn" and teach from it\.',/);
         assert.match(build, /'\*\*Teaching Lily#\*\*: asked how to write it, or to be taught it, read the `lilysharp_readGuide` tool, topic `learn`, and teach from that path\.',/);
         assert.match(build, /fs\.copyFileSync\(path\.resolve\(__dirname, '\.\.', '\.\.', 'docs', 'LEARN_FOR_LLM\.md'\), path\.join\(outDir, 'LEARN_FOR_LLM\.md'\)\);/);
-        assert.match(pkg, /"enum": \["grammar", "composing", "start", "learn"\]/);
+        assert.match(pkg, /"enum": \["grammar", "composing", "start", "learn", "song"\]/);
         assert.match(pkg, /topic \\"learn\\" gives the path for teaching Lily#/);
         const guided = transform.slice(transform.indexOf('async function readGuide('), transform.indexOf('function newPieceHeader('));
         assert.match(guided, /if \(topic === 'learn'\) \{\s*const teaching = built\('LEARN_FOR_LLM\.md'\);\s*return teaching \? paged\('teaching path', guidePages\(teaching, GUIDE_PAGE_BYTES\)\)/);

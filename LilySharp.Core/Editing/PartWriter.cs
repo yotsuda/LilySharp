@@ -66,7 +66,15 @@ public static class PartWriter
     /// <param name="Short">The short name printed from the second system on, or null.</param>
     /// <param name="Body">The lines of its block, as the grammar writes them (<c>instrument violin</c>), or null.</param>
     /// <param name="After">The part it stands after, in the file and in the scores; null for last.</param>
-    public sealed record NewPart(string Part, string? Title = null, string? Short = null, string? Body = null, string? After = null);
+    /// <param name="First">True: it stands before every other part, in the file and in the scores — a
+    /// voice over a band (Write a Song over These Chords, 2026-11-26). Not with <paramref name="After"/>.</param>
+    /// <param name="Singer">The head of the line that sings its words — <c>female</c>,
+    /// <c>"neutrino/MERROW"</c>, empty for this machine's default voice — written at the top level
+    /// as <c>singer HEAD sings on PART</c>; null for none. The part names its words in
+    /// <paramref name="Body"/> (<c>lyrics words</c>), and with a singer a score that shows the part
+    /// prints them under its staff.</param>
+    public sealed record NewPart(string Part, string? Title = null, string? Short = null, string? Body = null, string? After = null,
+        bool First = false, string? Singer = null);
 
     /// <summary>The score with every write placed (<see cref="Text"/>, null when a problem kept
     /// it from being made), what kept it, and what was written where.</summary>
@@ -109,6 +117,12 @@ public static class PartWriter
                 problems.Add($"The score has a part `{name}` already: write its music with `write`, or give the new part another name.");
             else if (part.After is { Length: > 0 } after && !parts.ContainsKey(after.Trim()))
                 problems.Add($"`{name}` is to stand after `{after}`, and the score has no such part: its parts are {Names(parts.Keys)}.");
+            else if (part.First && part.After is { Length: > 0 } both)
+                problems.Add($"`{name}` is to stand first and after `{both}`: give one of them.");
+            else if (part.Singer != null && TrackOf(part.Body) == null)
+                problems.Add($"`{name}` has a singer, and its body names no words to sing: add `lyrics words` to it (a name for its words), and give them in `write`'s `lyrics`.");
+            else if (part.Singer != null && part.Singer.Contains('\n'))
+                problems.Add($"`{name}`'s singer is the head of one line (`female`, `\"neutrino/MERROW\"`): '{part.Singer}' is several.");
             else
                 added[name] = part with { Part = name, After = part.After?.Trim() is { Length: > 0 } a ? a : null };
         }
@@ -184,19 +198,35 @@ public static class PartWriter
             else if (topSections.TryGetValue(sectionName, out var section) && Braces(section) is var (_, sectionClose)
                 && (!parts.TryGetValue(partName, out var itsPart) || !itsPart.ChildNodes().OfType<SectionDeclarationSyntax>().Any()))
             {
-                // A block of its own in the section: after the part it follows there, else last.
-                string? after = added.TryGetValue(partName, out var fresh) ? fresh.After : null;
+                // A block of its own in the section: after the part it follows there, else last —
+                // or before the section's first part, for a part that stands first.
+                added.TryGetValue(partName, out var fresh);
+                string? after = fresh?.After;
                 var blocks = section.ChildNodes().Where(c => c is PartBlockSyntax or LyricsBlockSyntax).ToList();
                 int at = blocks.FindLastIndex(b => b is PartBlockSyntax p && p.Name == after);
                 // …past the lyrics rows that follow that part.
                 while (at >= 0 && at + 1 < blocks.Count && blocks[at + 1] is LyricsBlockSyntax)
                     at++;
-                var anchor = at >= 0 ? blocks[at] : blocks.LastOrDefault();
+                var before = fresh?.First == true ? blocks.FirstOrDefault(b => b is PartBlockSyntax) : null;
+                var anchor = before ?? (at >= 0 ? blocks[at] : blocks.LastOrDefault());
                 string indent = anchor != null ? IndentOf(source, anchor.Span.Start) : IndentOf(source, section.Span.Start) + "  ";
-                int insertAt = anchor?.Span.End ?? sectionClose;
-                string block = nl + indent + partName + " {" + Body(music, indent, nl) + "}";
-                edits.Add((insertAt, 0, anchor != null ? block : block + nl + IndentOf(source, section.Span.Start), where));
+                string block = partName + " {" + Body(music, indent, nl) + "}";
+                // A new part's words go with its notes, the block being written here.
+                string? track = fresh != null ? TrackOf(fresh.Body) : null;
+                bool wordsHere = track != null && !string.IsNullOrWhiteSpace(write.Lyrics);
+                if (wordsHere)
+                    block += nl + indent + "lyrics " + track + " {" + Body(write.Lyrics!.Trim(), indent, nl) + "}";
+                if (before != null)
+                    edits.Add((before.Span.Start, 0, block + nl + indent, where));
+                else
+                    edits.Add((anchor?.Span.End ?? sectionClose, 0,
+                        anchor != null ? nl + indent + block : nl + indent + block + nl + IndentOf(source, section.Span.Start), where));
                 done.Add($"{where}: written{times}.");
+                if (wordsHere)
+                {
+                    done.Add($"{where}: its words (`lyrics {track}`) written.");
+                    continue;
+                }
             }
             else if (parts.TryGetValue(partName, out var owner) && Braces(owner) is var (_, ownerClose))
             {
@@ -214,7 +244,8 @@ public static class PartWriter
             }
 
             if (!string.IsNullOrWhiteSpace(write.Lyrics))
-                WriteLyrics(source, root, parts, topSections, partName, sectionName, write.Lyrics, where, nl, edits, problems, done);
+                WriteLyrics(source, root, parts, topSections, partName, sectionName, write.Lyrics, where, nl, edits, problems, done,
+                    added.TryGetValue(partName, out var newOne) ? TrackOf(newOne.Body) : null);
         }
 
         // ---- the new parts' text
@@ -234,7 +265,13 @@ public static class PartWriter
                 foreach (var (sectionName, music) in own)
                     text.Append("  section ").Append(sectionName).Append(" {").Append(Body(music, "  ", nl)).Append('}').Append(nl);
             text.Append('}');
-            if (after != null)
+            string? track = TrackOf(part.Body);
+            if (part.Singer != null)
+                text.Append(nl).Append("singer ").Append(part.Singer.Trim() is { Length: > 0 } head ? head + " " : "").Append("sings on ").Append(part.Part);
+            var firstPart = part.First ? root.DescendantNodes<PartDeclarationSyntax>().FirstOrDefault() : null;
+            if (firstPart != null)
+                edits.Add((firstPart.Span.Start, 0, text + nl, part.Part));
+            else if (after != null)
                 edits.Add((after.Span.End, 0, nl + text, part.Part));
             else
             {
@@ -249,18 +286,34 @@ public static class PartWriter
             {
                 var rows = score.ChildNodes().Where(c => c is not SyntaxTokenNode).ToList();
                 static bool Shows(SyntaxNode row, string name) => row is not LyricsRowRenderSyntax and not ChordRowRenderSyntax && RowNames(row).Contains(name);
-                int at = part.After != null ? rows.FindLastIndex(r => Shows(r, part.After))
-                    : rows.FindLastIndex(r => r is StaffRenderSyntax or TabRenderSyntax or GrandStaffRenderSyntax or CondensedStaffRenderSyntax or CombinedStaffRenderSyntax);
+                static bool IsStaff(SyntaxNode r) => r is StaffRenderSyntax or TabRenderSyntax or GrandStaffRenderSyntax or CondensedStaffRenderSyntax or CombinedStaffRenderSyntax;
+                // On its own line where the row it goes by stands on one, else beside it; its words under it.
+                bool OwnLine(SyntaxNode row) => source.LastIndexOf('\n', System.Math.Max(0, row.Span.Start - 1)) + 1 + IndentOf(source, row.Span.Start).Length == row.Span.Start;
+                // A sung part prints its words; the harmony writer places a written-out singer's rows itself.
+                string Rows(string sep) => "staff " + part.Part + (track != null && part.Singer != null ? sep + "lyrics " + track : "");
+                if (part.First)
+                {
+                    // Before the first staff: a chords row above it stays above, as a lead sheet has it.
+                    var first = rows.FirstOrDefault(IsStaff);
+                    if (first == null)
+                        continue;
+                    string indent = IndentOf(source, first.Span.Start);
+                    edits.Add((first.Span.Start, 0, OwnLine(first) ? Rows(nl + indent) + nl + indent : Rows("  ") + "  ", part.Part));
+                    placed++;
+                    continue;
+                }
+                int at = part.After != null ? rows.FindLastIndex(r => Shows(r, part.After)) : rows.FindLastIndex(IsStaff);
                 if (at < 0)
                     continue;
                 while (at + 1 < rows.Count && rows[at + 1] is LyricsRowRenderSyntax)
                     at++;
                 var anchor = rows[at];
-                bool ownLine = source.LastIndexOf('\n', System.Math.Max(0, anchor.Span.Start - 1)) + 1 + IndentOf(source, anchor.Span.Start).Length == anchor.Span.Start;
-                edits.Add((anchor.Span.End, 0, ownLine ? nl + IndentOf(source, anchor.Span.Start) + "staff " + part.Part : "  staff " + part.Part, part.Part));
+                string anchorIndent = IndentOf(source, anchor.Span.Start);
+                edits.Add((anchor.Span.End, 0, OwnLine(anchor) ? nl + anchorIndent + Rows(nl + anchorIndent) : "  " + Rows("  "), part.Part));
                 placed++;
             }
-            done.Add($"{part.Part}: a new part" + (part.After != null ? $", after {part.After}" : "")
+            done.Add($"{part.Part}: a new part" + (part.First ? ", first" : part.After != null ? $", after {part.After}" : "")
+                + (part.Singer != null ? ", sung" : "")
                 + (placed > 0 ? $", with a staff in {placed} score{(placed == 1 ? "" : "s")}." : ", in no score yet: place it with `staff " + part.Part + "` in a score."));
             if (!writes.Any(w => w.Part?.Trim() == part.Part))
                 problems.Add($"{part.Part}: a new part with no music. Give its music in `write`, a section at a time (a section left out is silent).");
@@ -296,15 +349,21 @@ public static class PartWriter
 
     private static string Names(IEnumerable<string> names) => string.Join(", ", names);
 
+    private static readonly Regex LyricsLine = new(@"^\s*lyrics\s+([A-Za-z_][A-Za-z0-9_]*)\s*$", RegexOptions.Compiled | RegexOptions.Multiline);
+
+    // The words a new part's body names (`lyrics words`), the first of them; null for none.
+    private static string? TrackOf(string? body)
+        => body != null && LyricsLine.Match(body.Replace("\r", "")) is { Success: true } m ? m.Groups[1].Value : null;
+
     // The words of the part's lyrics row in a section, replaced or written after its block.
     private static void WriteLyrics(string source, SyntaxNode root, Dictionary<string, PartDeclarationSyntax> parts,
         Dictionary<string, SectionDeclarationSyntax> topSections, string partName, string sectionName, string lyrics, string where,
-        string nl, List<(int, int, string, string)> edits, List<string> problems, List<string> done)
+        string nl, List<(int, int, string, string)> edits, List<string> problems, List<string> done, string? newTrack)
     {
         string? track = parts.TryGetValue(partName, out var part)
             ? part.ChildNodes().FirstOrDefault(c => c.Kind == SyntaxKind.PartLyricsDeclaration)?.ChildNodes().OfType<SyntaxTokenNode>()
                 .FirstOrDefault(t => t.Kind == SyntaxKind.Identifier)?.Text
-            : null;
+            : newTrack;
         if (track == null)
         {
             problems.Add($"{where}: `lyrics` is given, and `{partName}` names no lyrics row (`lyrics NAME` in its part block). Write the words with lilysharp_proposeScore's `edits`.");

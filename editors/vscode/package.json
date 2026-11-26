@@ -150,7 +150,9 @@
               "title": { "type": "string", "description": "The name printed at its staff, as \"Strings\"." },
               "short": { "type": "string", "description": "The short name printed from the second system on, as \"Str.\"." },
               "body": { "type": "string", "description": "The lines of its part block, a line each, as the score's other parts have them: `instrument violin` (an instrument's name sets its clef, range and sound), or `clef treble` and `midiInstrument \"string ensemble 1\"`." },
-              "after": { "type": "string", "description": "The part it stands after, in the file and in the scores. Leave it out to stand last." }
+              "after": { "type": "string", "description": "The part it stands after, in the file and in the scores. Leave it out to stand last." },
+              "first": { "type": "boolean", "description": "true: it stands before every other part, in the file and in the scores (under a chords row) — a voice over a band. Not with `after`." },
+              "singer": { "type": "string", "description": "A sung part's singer: `female` or `male` (this machine's default voice), or a voice lilysharp_listVoices gave, in quotes (`\"neutrino/MERROW\"`); empty for the default voice. Written as `singer … sings on PART`; the part's body names its words (`lyrics words`), and its staff prints them. Leave it out for a part that only plays." }
             }, "required": ["part"] } },
             "note": { "type": "string", "description": "One or two sentences to the musician about the change, in their language." }
           },
@@ -247,7 +249,7 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "topic": { "type": "string", "enum": ["grammar", "composing", "start", "learn"], "description": "\"grammar\": how Lily# is written. \"composing\": how to compose a new piece, with the composing guide. \"start\": how a new piece begins, and its starting point, alone. \"learn\": how to teach Lily# to someone asking how to write it, in order." },
+            "topic": { "type": "string", "enum": ["grammar", "composing", "start", "learn", "song"], "description": "\"grammar\": how Lily# is written. \"composing\": how to compose a new piece, with the composing guide. \"start\": how a new piece begins, and its starting point, alone. \"learn\": how to teach Lily# to someone asking how to write it, in order. \"song\": how to write a song — a sung part, its words and its singer — over a score that is there (its chords, a recording read into it)." },
             "part": { "type": "integer", "minimum": 1, "description": "Which part, from 1 (the default). A guide comes in parts; each says which part to read next." }
           },
           "required": ["topic"]
@@ -837,6 +839,12 @@
         "title": "Compose with AI…"
       },
       {
+        "command": "lilysharp.writeSongOverChords",
+        "category": "Lily#",
+        "icon": "$(comment-discussion)",
+        "title": "Write a Song over These Chords…"
+      },
+      {
         "command": "lilysharp.previewAiTransform",
         "category": "Lily#",
         "icon": "$(sparkle)",
@@ -1126,6 +1134,10 @@
         },
         {
           "command": "lilysharp.convertNotesToChord",
+          "when": "editorLangId == lilysharp"
+        },
+        {
+          "command": "lilysharp.writeSongOverChords",
           "when": "editorLangId == lilysharp"
         },
         {
@@ -1504,6 +1516,18 @@
           "submenu": "lilysharp.export",
           "when": "resourceExtname == .lys",
           "group": "7_modification"
+        },
+        {
+          "command": "lilysharp.writeSongOverChords",
+          "when": "resourceExtname == .lys",
+          "group": "7_modification"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "lilysharp.writeSongOverChords",
+          "when": "resourceExtname == .lys",
+          "group": "7_lilysharp"
         }
       ],
       "editor/context": [
@@ -1536,6 +1560,11 @@
           "command": "lilysharp.askAiInChat",
           "when": "resourceLangId == lilysharp",
           "group": "2_lilysharp@1"
+        },
+        {
+          "command": "lilysharp.writeSongOverChords",
+          "when": "resourceLangId == lilysharp",
+          "group": "2_lilysharp@2"
         },
         {
           "command": "lilysharp.sameBarInPart",

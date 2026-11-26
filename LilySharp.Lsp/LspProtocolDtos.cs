@@ -1198,6 +1198,10 @@ public class WritePartNew
     public string? Short { get; set; }
     public string? Body { get; set; }
     public string? After { get; set; }
+    /// <summary>True: it stands before every other part.</summary>
+    public bool First { get; set; }
+    /// <summary>The head of the line that sings its words; null for none.</summary>
+    public string? Singer { get; set; }
 }
 
 /// <summary>Response for lilysharp/writePart: the score with all of it placed, or what kept it.</summary>

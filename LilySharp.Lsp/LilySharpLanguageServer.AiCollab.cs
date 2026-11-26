@@ -118,7 +118,7 @@ public sealed partial class LilySharpLanguageServer
         {
             var result = LilySharp.Core.Editing.PartWriter.Apply(@params.Text ?? "",
                 [.. (@params.Write ?? []).Select(w => new LilySharp.Core.Editing.PartWriter.Write(w.Part ?? "", w.Section ?? "", w.Music ?? "", w.Bars, w.Lyrics))],
-                [.. (@params.NewParts ?? []).Select(p => new LilySharp.Core.Editing.PartWriter.NewPart(p.Part ?? "", p.Title, p.Short, p.Body, p.After))]);
+                [.. (@params.NewParts ?? []).Select(p => new LilySharp.Core.Editing.PartWriter.NewPart(p.Part ?? "", p.Title, p.Short, p.Body, p.After, p.First, p.Singer))]);
             return new WritePartResponse { Text = result.Text, Problems = [.. result.Problems], Done = [.. result.Done] };
         }, token);
 
