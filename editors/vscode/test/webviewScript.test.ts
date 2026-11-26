@@ -589,7 +589,7 @@ describe('the preview keeps what sounds in view, every part together', () => {
             getBoundingClientRect: () => rect(0, 600, 0, 800),
             scrollBy: (o: { top: number; left: number }) => scrolls.push(o),
         };
-        const keep = pageFunction('keepSoundingInView', { mainContent, barBoxOf: () => null, extentOf: pageFunction('extentOf', {}), followStaff: -1 }) as (els: unknown[], ahead?: unknown[]) => void;
+        const keep = pageFunction('keepSoundingInView', { mainContent, barBoxOf: () => null, systemElOf: () => null, extentOf: pageFunction('extentOf', {}), followStaff: -1 }) as (els: unknown[], ahead?: unknown[]) => void;
         const notes = (...rs: ReturnType<typeof rect>[]) => rs.map(r => ({ getBoundingClientRect: () => r }));
         return { keep, notes, scrolls };
     };
@@ -606,7 +606,7 @@ describe('the preview keeps what sounds in view, every part together', () => {
             scrollTo: (o: { top: number; left: number }) => { moves.push(o); systemTop -= o.top - view.scrollTop; view.scrollTop = o.top; },
         };
         const context: Record<string, unknown> = { mainContent, barBoxOf: () => rect(systemTop, systemTop + 3000, 0, 800),
-            followSystemDocTop: null, followSystemOffset: null, followTopTarget: null, extentOf: pageFunction('extentOf', {}), followStaff: -1 };
+            followSystemDocTop: null, followSystemOffset: null, followTopTarget: null, extentOf: pageFunction('extentOf', {}), followStaff: -1, systemElOf: () => null };
         const keep = pageFunction('keepSoundingInView', context) as (els: unknown[]) => void;
         const at = (top: number) => [{ getBoundingClientRect: () => rect(top, top + 10) }];
         keep(at(40));                       // the first: the view stands in it, 200 below its top — stays
@@ -649,7 +649,7 @@ describe('the preview keeps what sounds in view, every part together', () => {
         // Two staves: the followed one (the second) from 700 to 740 — below the view.
         const band = { top: 700, bottom: 740, lo: 650, hi: 800 };
         const keep = pageFunction('keepSoundingInView', {
-            mainContent, barBoxOf: () => null, extentOf: pageFunction('extentOf', {}), followStaff: 1,
+            mainContent, barBoxOf: () => null, systemElOf: () => null, extentOf: pageFunction('extentOf', {}), followStaff: 1,
             onFollowedStaff: (els: { getBoundingClientRect: () => ReturnType<typeof rect> }[]) => (els || []).filter(e => { const b = e.getBoundingClientRect(); const cy = (b.top + b.bottom) / 2; return cy >= band.lo && cy <= band.hi; }),
         }) as (els: unknown[], ahead?: unknown[]) => void;
         const notes = (...rs: ReturnType<typeof rect>[]) => rs.map(r => ({ getBoundingClientRect: () => r }));
@@ -677,7 +677,7 @@ describe('the preview keeps what sounds in view, every part together', () => {
             const at = (top: number, bottom: number) => ({ getBoundingClientRect: () => rect(top - view.scrollTop, bottom - view.scrollTop) });
             const keep = pageFunction('keepSoundingInView', {
                 mainContent, barBoxOf: () => withBox ? client(300, 820) : null,
-                systemBoxOf: () => withBox ? client(240, 830) : null,
+                systemBoxOf: () => withBox ? client(240, 830) : null, systemElOf: () => null,
                 followSystemDocTop: null, followSystemOffset: null, followTopTarget: null, extentOf: pageFunction('extentOf', {}), followStaff: -1,
             }) as (els: unknown[], ahead?: unknown[]) => void;
             // The voice high over the staff, then low in it, note after note; the drums at the bottom.
@@ -694,6 +694,37 @@ describe('the preview keeps what sounds in view, every part together', () => {
         assert.ok(shook.length >= 6 && shook.some(d => d > 0) && shook.some(d => d < 0), 'by the notes alone it went up and down: ' + shook.join(', '));
         // By the drawn system: its top to the margin, once.
         assert.deepEqual(run(true), [240 - 30]);
+    });
+    // Owner's request 2026-11-26: when the notes sounding come to a page's first line, that line goes
+    // to the top of the view — once — and stays there while it plays.
+    it('turns the page: a page\'s first line to the top of the view when its notes sound', () => {
+        const view = { scrollTop: 700, scrollLeft: 0 };
+        const moves: number[] = [];
+        const mainContent = {
+            getBoundingClientRect: () => rect(0, 600, 0, 800),
+            get scrollTop() { return view.scrollTop; }, get scrollLeft() { return view.scrollLeft; },
+            scrollTo: (o: { top: number }) => { moves.push(o.top); view.scrollTop = o.top; },
+            scrollBy: (o: { top: number }) => { moves.push(view.scrollTop + o.top); view.scrollTop += o.top; },
+        };
+        // In the page: the last line of page 1 at 800..900, page 2's first line at 1000..1200, its second 1220..1420.
+        const client = (top: number, bottom: number) => rect(top - view.scrollTop, bottom - view.scrollTop);
+        const lastOf1 = { name: 'p1-last', getBoundingClientRect: () => client(800, 900) };
+        const firstOf2 = { name: 'p2-first', getBoundingClientRect: () => client(1000, 1200) };
+        const note = (line: { name: string }, top: number) => ({ line, getBoundingClientRect: () => client(top, top + 10) });
+        const context: Record<string, unknown> = {
+            mainContent, barBoxOf: () => null, extentOf: pageFunction('extentOf', {}), followStaff: -1,
+            followSystemDocTop: null, followSystemOffset: null, followTopTarget: null, pageTopSystem: null, PAGE_TOP_GAP: 4,
+            systemElOf: (els: { line: unknown }[]) => (els && els[0] ? els[0].line : null),
+            pageFirstSystem: () => firstOf2,
+        };
+        const keep = pageFunction('keepSoundingInView', context) as (els: unknown[], ahead?: unknown[]) => void;
+        keep([note(lastOf1, 850)], [note(firstOf2, 1100)]);          // page 1's last line, page 2's in view: no move
+        assert.deepEqual(moves, []);
+        keep([note(firstOf2, 1100)], [note(firstOf2, 1150)]);        // page 2's first line sounds: to the top
+        assert.deepEqual(moves, [1000 - 4]);
+        keep([note(firstOf2, 1120)], [note(firstOf2, 1180)]);        // still it: held (the notes rule would centre it)
+        keep([note(firstOf2, 1150)], [note(firstOf2, 1240)]);
+        assert.deepEqual(moves, [1000 - 4]);
     });
     it('leaves alone what is all in view', () => {
 

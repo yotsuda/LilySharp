@@ -1889,6 +1889,27 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             const system = el.closest ? el.closest('g.system') : null;
             return system ? system.getBoundingClientRect() : barBoxOf(el);
         }
+        /** The system (g.system) the first of some elements that is in one is drawn in — or, drawn in
+         *  the page's overlay group (a hi-hat's head again), whose bar box it stands in; null for none. */
+        function systemElOf(els) {
+            for (const el of els || []) {
+                const own = el.closest ? el.closest('g.system') : null;
+                if (own) return own;
+                const box = barBoxElOf(el);
+                const viaBox = box ? box.closest('g.system') : null;
+                if (viaBox) return viaBox;
+            }
+            return null;
+        }
+        /** The first line (system) of the page a system is on; null on a page drawn without g.page. */
+        function pageFirstSystem(system) {
+            const page = system.closest('g.page');
+            return page ? page.querySelector('g.system') : null;
+        }
+        // The first line of a page the view was turned to while it plays (keepSoundingInView), and how
+        // far below the view's top it stands then (px).
+        var pageTopSystem = null;
+        const PAGE_TOP_GAP = 4;
         // The bar playing, as its measure index (the header's "Bar 12 / 118", showBarInfo): litBar while
         // a bar is lit, lastLitBar the one lit when the playing stopped (a pause shows it still).
         var litBar = -1, lastLitBar = -1;
@@ -3488,7 +3509,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             const relay = notes.some(n => n.R !== undefined);
             relaying = relay;
             if (!relay) follow.start();
-            followSystemDocTop = null; followSystemOffset = null; followTopTarget = null;   // a new Play finds its place anew
+            followSystemDocTop = null; followSystemOffset = null; followTopTarget = null; pageTopSystem = null;   // a new Play finds its place anew
             followStaff = relay ? -1 : followStaffOfCaret();
             // A note's printed measure (PlaybackNote.M) picks its copy of a phrase (copyOf), and the
             // copies sounding in one bar are counted from the notes themselves.
@@ -3647,6 +3668,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             // must not send the view back to the system it is leaving (MEASURED 2026-11-16: 5471 →
             // 6343 → 5383 when the part's notes to come were none and its sounding ones led).
             const leading = (ahead && ahead[0]) || (current && current[0]);
+            const sounding = current || [];   // every part's: the line a page turns at (below)
             if (followStaff >= 0) { current = onFollowedStaff(current); ahead = onFollowedStaff(ahead); }
             const cur = extentOf(current), next = extentOf(ahead);
             if (!cur && !next) return;
@@ -3683,6 +3705,36 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 const anchor = next && (!cur || next.left < cur.left) ? next.left : (cur || next).left;
                 dx = anchor - (m.left + margin);
                 if (Math.abs(dx) < 1) dx = 0;
+            }
+            // A page turned (owner's request 2026-11-26): when the notes sounding come to the first line
+            // of a page, that line goes to the top of the view — once, as a player turns the page — and
+            // the view keeps it there while it plays (the rules below would centre it again). The next
+            // line goes on by them.
+            // (A line is told by every part's notes: the part followed resting there keeps it.)
+            const line = systemElOf(sounding);
+            const firstLine = line && pageFirstSystem(line) === line ? line : null;
+            if (line && !firstLine) pageTopSystem = null;
+            if (firstLine) {
+                if (pageTopSystem !== firstLine) {
+                    pageTopSystem = firstLine;
+                    const dy = firstLine.getBoundingClientRect().top - (m.top + PAGE_TOP_GAP);
+                    // A system taller than the view keeps this place in it (followSystemOffset, below).
+                    const box = barBoxOf(sounding.find(el => el.closest && el.closest('g.system') === firstLine) || sounding[0]);
+                    followTopTarget = Math.abs(dy) > 1 ? mainContent.scrollTop + dy : null;
+                    if (box) { followSystemDocTop = box.top + mainContent.scrollTop; followSystemOffset = m.top - (box.top - dy); }
+                    if (Math.abs(dy) > 1 || dx !== 0) mainContent.scrollTo({ top: mainContent.scrollTop + dy, left: mainContent.scrollLeft + dx, behavior: Math.abs(dy) > 1 ? 'smooth' : 'auto' });
+                    return;
+                }
+                // Held while the notes to come are in view; when they are below it, the rules below.
+                const next = extentOf(ahead);
+                if (!next || next.bottom <= m.bottom - margin / 2) {
+                    if (dx !== 0) {
+                        // Sideways without cutting short the turn still moving down.
+                        const moving = followTopTarget !== null && Math.abs(mainContent.scrollTop - followTopTarget) > 2;
+                        mainContent.scrollTo({ top: moving ? followTopTarget : mainContent.scrollTop, left: mainContent.scrollLeft + dx, behavior: moving ? 'smooth' : 'auto' });
+                    }
+                    return;
+                }
             }
             const system = leading ? barBoxOf(leading) : null;
             if (system && system.height > m.height - 2 * margin) {

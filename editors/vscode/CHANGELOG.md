@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- `[preview]` **Following the music turns the page.** When the notes playing come to the first line of a page, that line goes to the top of the preview, and the view stays there while it plays.
+
 - `[preview]` **A phrase used in many bars lights the copy in the bar that plays.** The follow-along picked a phrase's copy by counting its copies across the page, and a note drawn in two pieces far apart (a drum note whose dot the other voices push away) counted twice: a later bar's notes lit an earlier bar's, and the view jumped there and back. It now picks the copy in the note's own measure.
 
 - `[preview]` **Following the music no longer shakes the view up and down.** When a line fits the view, the preview now moves by the whole line (with its chord names, words and the notes high over or low under the staves) rather than by the notes sounding: a voice that leaps from note to note, over bass and drums, used to move it up and down at every note.
