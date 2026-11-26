@@ -156,21 +156,21 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1395セッション（2026-11-26・YT-DELL2）
+
+base `787d4220a`。開始時 full 18444 / 0 / skip 2 / 18446。
+- `0b814574e`: 同じ譜表の別の声部の装飾音（companion）の wish は、右の列がこの対の右の列と同じときだけ平均に入れる（`SpacingRules.AveragedWithCompanions`・LP の found_matching_column）。v9 は LP と一致（下の声部の 16 分の間 1.673→1.418・本音符 0.255 左へ）。網 +1・毒 2 本中 1 本で赤（R2＝自分は本音符で終わり companion は続く側、は観測者なし）。掃き 0 / 1289。
+- 残した: v10（1 段・`b'8` の下で `a'16 g'16`＝音が近く横にずらす形）は直す前から大きく違う（LP は b' と a' が同じ列・a' が 0.918 右、Lily# は b' が 1.435 右・本音符 0.200 左）＝`StampGraceCompanions` の注記の既知の限界。タブの装飾音の数字の中心（第1393）。leftovers 第1395。
+- 次: v10 か、タブの装飾音の数字の中心。
+
+## 以下は第1394セッションの経緯
+
 ### 1.1 第1394セッション（2026-11-26・YT-DELL2）
 
 base `0ba33e7ec`。開始時 full 18438 / 0 / skip 2 / 18440。
 - leftovers 第1393 の s12 は間隔ではなく連桁: LP の `Grace_auto_beam_engraver` は主の時刻の最初の timestep（楽譜全体の）でしか連桁を始めない＝他の譜表・声部より後から始まる連なりは旗。`89382361c`: `GraceColumnInfo.StartsAfterGraceGroup`（`MeasureCollector.StampLateGraceRuns`）→`BeamedPrefix` 0。あわせて鎖の対に wish が無いときは素の基準ばね（最小 0）、spacer の列は wish に加えない、`LeadingGraceOpensOnSpacer` は一番早い連なりを見る。s12・s14・v1・v5・v6・v7 は LP と一致（Lab `p1394/m`）。網 +7・毒 5 本で赤。掃き 0 / 1289。
 - 残した: v9（1 段 2 声部・後から始まる下の声部）は連桁は一致・16 分の間が 1.673（LP 1.418）で本音符も 0.255 右（直す前から）。タブの装飾音の数字の中心（第1393）。leftovers 第1394。
 - 次: v9 の間隔か、タブの装飾音の数字の中心。
-
-## 以下は第1393セッションの経緯
-
-### 1.1 第1393セッション（2026-11-26・YT-DELL2）
-
-base `529302e83`。開始時 full 18432 / 0 / skip 2 / 18434。
-- `92c1130a3`: 同じ瞬間の装飾音は全譜表で 1 つの列の鎖（LP の装飾音の列は系統全体の列）。隣り合う 2 列のばねは両端に列を持つ連なりの wish の `merge_springs`。wish の基準ばねはその瞬間の GraceSpacing 1 つ（最短は全譜表の列の刻み）。`SpacingRules.SharedGraceChain` が作り、`LeadingGraceRun`・`OpeningGraceRun`・置き方（`MeasureLayout.SharedGraceRuns`→`GraceNoteEngraver.PlacedColumns`）が読む。近づきの wish は最初の列から始まる連なりの声部だけ（`MergeVoiceStemWishes`）。s6〜s11・s15・s17 は LP と一致（直す前は s6 の下の装飾音が 0.124 右、s8 の 8 分が 16 分の列に立たない、s17 の近づきが 0.100 狭い）。網 +6・毒 6 本中 5 本で赤（P4＝ばねが一番広い連なりのまま、は観測者なし）。掃き 1 / 1289（ベースタブ `9 to 5` の五線＋タブの装飾音）。
-- 残した: s12（片方の連なりが他方の列をまたぐ形・LP は 16 分の間が 1.938 に開く・理由未特定）、s14（spacer で始まる連なりは鎖を作らず従来どおり）、タブの装飾音の数字は列の原点が中心（LP は装飾音の符頭の中心＝0.466 右）。leftovers 第1393。
-- 次: leftovers 第1393 の s12 か、タブの装飾音の数字の中心。
 
 ## 2. 開いている作業
 
