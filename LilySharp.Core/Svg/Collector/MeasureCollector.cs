@@ -8753,7 +8753,8 @@ public sealed partial class MeasureCollector
     ///   a lower voice's grace points down by the voice props (no probe). A moment shared by
     ///   THREE voices is paired and not shifted either. A companion's run that goes on past this
     ///   voice's last column (an eighth over two sixteenths) stands its later column between
-    ///   this run's last and the main note; the chain here does not know it.
+    ///   this run's last and the main note; the runs' one chain (SpacingRules.SharedGraceChain,
+    ///   session 1393, shifts since session 1396) places it there.
     /// </remarks>
     private ImmutableArray<Voice> StampGraceCompanions(ImmutableArray<Voice> voices, int staffIndex)
     {

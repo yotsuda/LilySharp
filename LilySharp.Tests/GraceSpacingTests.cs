@@ -106,6 +106,10 @@ public class GraceSpacingTests
     // `grace { g''8 a''8 }` — the upper a''8's wish reaches the main note, not e', so it is no part of
     // the f' → e' spring: the main notes 8.654 after the first; Lily# averaged it in, 8.909.
     [InlineData("part rh { clef treble }\nsection A {\n  rh { voice { e''2 grace { g''8 a''8 } f''2 } { c'2 grace { f'16 e'16 } d'2 } | g''1 | }\n}\nform { A }\nscore { staff rh }\n", 8.654)]
+    // p1396 v11: `grace { e''16 b'16 }` over `grace { c'16 a'16 }` — a' shifted 0.918 by Note_collision
+    // ends that much further right in its paper column, so its wish into the main notes is 0.918 longer:
+    // the main notes 6.675 after the first; Lily# measured the head in its own column, 6.366.
+    [InlineData("part rh { clef treble }\nsection A {\n  rh { voice { e''2 grace { e''16 b'16 } f''2 } { c'2 grace { c'16 a'16 } d'2 } | g''1 | }\n}\nform { A }\nscore { staff rh }\n", 6.675)]
     public void AGraceRunInOneStaff_IsSpacedByThatStaffsWishAlone(string body, double mainFromFirst)
     {
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse("octave absolute\ntime 4/4\npaper { raggedRight }\n" + body);
@@ -157,6 +161,36 @@ public class GraceSpacingTests
             .Select(kv => main - kv.Value).OrderByDescending(d => d)
             .Select(d => d.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)));
         Assert.Equal((treble, bass), (BeforeMain(0), BeforeMain(1)));
+    }
+
+    /// <summary>Two voices' grace columns a second apart stand in ONE shared column, the lower voice's
+    /// shifted right by Note_collision, and the chain between the shared columns is measured off the
+    /// shifted heads. MEASURED 2.26.0 (Lab sessions/p1395/m v10): `grace { b'8 }` over
+    /// `grace { a'16 g'16 }` — b' 3.573 before the main notes, a' 2.655 (0.918 right of b'), g' 1.237;
+    /// Lily# hung each voice off its own main note (b' 1.938, a' 2.655).</summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-collision.cc:424-468 calc_positioning_done — the shift within the paper column.
+    /// </remarks>
+    [Fact]
+    public void ShiftedGraceColumnsOfTwoVoices_ShareTheirPaperColumn()
+    {
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(
+            "octave absolute\ntime 4/4\npaper { raggedRight }\npart rh { clef treble }\nsection A {\n  rh { voice { e''2 grace { b'8 } f''2 } { c'2 grace { a'16 g'16 } d'2 } | g''1 | }\n}\nform { A }\nscore { staff rh }\n");
+        var multi = new LilySharp.Core.Svg.Collector.MeasureCollector()
+            .CollectMultiStaff(tree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree)!);
+        var layout = new LayoutEngine(new LayoutOptions()).Layout(multi);
+        var bar = layout.Systems.SelectMany(s => s.Measures).Single(m => m.MeasureIndex == 0);
+        double main = bar.X + bar.GetXForTiming(Fraction.Half);
+        double[] BeforeMain(int voice) => layout.GraceColumnXs
+            .Where(kv => kv.Key.VoiceIndex == voice && kv.Key.MeasureIndex == 0)
+            .Select(kv => main - kv.Value).OrderByDescending(d => d).ToArray();
+        var upper = BeforeMain(0);
+        var lower = BeforeMain(1);
+        Assert.Single(upper);
+        Assert.Equal(2, lower.Length);
+        Assert.True(Math.Abs(upper[0] - 3.573) < 0.005, $"b' {upper[0]:F3}");
+        Assert.True(Math.Abs(lower[0] - 2.655) < 0.005, $"a' {lower[0]:F3}");
+        Assert.True(Math.Abs(lower[1] - 1.237) < 0.005, $"g' {lower[1]:F3}");
     }
 
     /// <summary>A grace run that starts after another run of the same moment — in another staff or

@@ -114,8 +114,14 @@ internal static partial class SpacingRules
         ImmutableArray<double> Offsets, double ToMain,
         ImmutableArray<(double Rod, double InverseCompress)> Gaps = default,
         ImmutableArray<(double Ideal, double Min, double Base)> Wishes = default,
-        ImmutableArray<Fraction> Moments = default)
+        ImmutableArray<Fraction> Moments = default,
+        ImmutableArray<double> Shifts = default)
     {
+        /// <summary>Column <paramref name="k"/>'s Note_collision shift right of its shared column
+        /// (<see cref="GraceColumnInfo.CollisionShift"/>), already folded into the offsets; 0 when
+        /// not recorded.</summary>
+        public double Shift(int k) => Shifts.IsDefaultOrEmpty || k >= Shifts.Length ? 0.0 : Shifts[k];
+
         /// <summary>The natural length of gap <paramref name="k"/>.</summary>
         public double Gap(int k) => k + 1 < Offsets.Length ? Offsets[k + 1] - Offsets[k] : ToMain;
 
@@ -351,7 +357,8 @@ internal static partial class SpacingRules
             if (i + 1 < notes.Length) x += gapLengths[i]; else toMain = gapLengths[i] - notes[i].CollisionShift;
         }
         return new GraceColumnLayout(offsets.ToImmutable(), toMain, gaps.MoveToImmutable(),
-            ImmutableArray.Create(wishes), ImmutableArray.Create(moments));
+            ImmutableArray.Create(wishes), ImmutableArray.Create(moments),
+            notes.Select(c => c.CollisionShift).ToImmutableArray());
     }
 
     /// <summary>
@@ -391,9 +398,6 @@ internal static partial class SpacingRules
             var grace = GraceNotesOf(items[i]);
             if (grace.IsDefaultOrEmpty)
                 continue;
-            foreach (var c in grace)
-                if (c.CollisionShift != 0)
-                    return null;
             (runs ??= new()).Add(GraceColumns(grace, items[i]));
             (runColumns ??= new()).Add(grace);
         }
@@ -450,7 +454,9 @@ internal static partial class SpacingRules
                 var (ideal, wishMin, ownBase) = r.Wishes[k];
                 if (double.IsNaN(ideal) || next != k + 1)
                     return null;
-                double gap = r.Gap(k);
+                // The gap between the SHARED columns: the run's offsets carry each column's
+                // Note_collision shift (GraceColumns folds it in), which comes off again here.
+                double gap = r.Gap(k) + r.Shift(k) - (k + 1 < r.Offsets.Length ? r.Shift(k + 1) : 0.0);
                 // The wish as its run priced it, on the run's own base spring; re-based.
                 idealSum += ideal - ownBase + sharedBase;
                 min = Math.Max(min, wishMin);
@@ -511,12 +517,14 @@ internal static partial class SpacingRules
             if (at[k] < 0)
                 return null;
         }
-        double first = shared.Offsets[at[0]];
+        double first = shared.Offsets[at[0]] + run[0].CollisionShift;   // the run's x is its first column as drawn
         var offsets = ImmutableArray.CreateBuilder<double>(run.Length);
         var gaps = ImmutableArray.CreateBuilder<(double Rod, double InverseCompress)>(run.Length);
         for (int k = 0; k < run.Length; k++)
         {
-            offsets.Add(shared.Offsets[at[k]] - first);
+            // …and each column drawn its own shift right of the shared column.
+            // LILYPOND-REF: lily/note-collision.cc:424-468 calc_positioning_done — the shift within the paper column.
+            offsets.Add(shared.Offsets[at[k]] + run[k].CollisionShift - first);
             int end = k + 1 < run.Length ? at[k + 1] : shared.Offsets.Length;
             double rod = 0, compress = 0;
             for (int j = at[k]; j < end; j++)
@@ -527,7 +535,7 @@ internal static partial class SpacingRules
                 }
             gaps.Add((rod, compress));
         }
-        double toMain = shared.Span - shared.Offsets[at[^1]];
+        double toMain = shared.Span - shared.Offsets[at[^1]] - run[^1].CollisionShift;
         return new GraceColumnLayout(offsets.MoveToImmutable(), toMain,
             shared.Gaps.IsDefaultOrEmpty ? default : gaps.MoveToImmutable());
     }
@@ -1017,7 +1025,13 @@ internal static partial class SpacingRules
         // LILYPOND-REF: lily/note-spacing.cc:111-113 stem_dir_correction — added, then floored at 0.
         // A tab-only grace's head is its fret digit (GraceColumnInfo.TabDigitHalfWidth: drawn
         // centred on the column, so its right edge is that half width).
-        double headEnd = left.TabDigitHalfWidth > 0 ? left.TabDigitHalfWidth : GraceHeadEnd(left);
+        // …measured in the PAPER column: a head Note_collision shifted right ends that much further right.
+        // LILYPOND-REF: lily/note-spacing.cc:47-70 Note_spacing::get_spacing — left_head_end = g->extent (col, X_AXIS)[RIGHT], col the paper column.
+        // MEASURED (2.26.0, Lab
+        // sessions/p1396/m v11): `grace { e''16 b'16 }` over `grace { c'16 a'16 }` — a' shifted
+        // 0.918, and the last columns stand 1.857 before the main notes = the average of b''s
+        // 1.398 and a''s 1.28 − 0.8 + 1.836; Lily# measured a''s head in its own column, 1.548.
+        double headEnd = left.TabDigitHalfWidth > 0 ? left.TabDigitHalfWidth : GraceHeadEnd(left) + left.CollisionShift;
         return Math.Max(0.0,
             baseSpring.IdealDistance - gp.SpacingIncrement + headEnd + stemCorrection);
     }
