@@ -18,6 +18,7 @@ Orecchiante の依頼 23（`C:\MyProj\Orecchiante\docs\repro\lilysharp-requests-
 |---|---|
 | section の中の `bass`・`kit`・和音の行の小節 | `Report Bar k of A (bass) to Orecchiante…` と `Report Section A (bass) as Checked to Orecchiante…` |
 | 1 行の `phrase` の定義で、ドラムの型（`phrase beatA { drums { hatsA backA kickA } }`）が使うもの | `Report Phrase hatsA to Orecchiante…` |
+| 1 行の `steps` の型（`phrase beatA { steps { hh "x... x..." … } }`・`steps 4. { … }`）そのもの（Orecchiante 0.18.0・依頼 26） | `Report Phrase beatA to Orecchiante…` |
 
 - `Section … as Checked`: その section のその行の小節を、直したものも直していないものも全部「正解」として 1 つのフォルダに入れる（依頼の「あると速いもの」）。
 - `Phrase`: 型を直した報告。その型を使う kit の小節（型の名前の小節と、その後の `%`）を全部並べる。どれが本当に型どおりかはオーナーが聴いて決める＝小節や section の報告とは別の種類（`kind`）。
@@ -47,15 +48,15 @@ Orecchiante の依頼 23（`C:\MyProj\Orecchiante\docs\repro\lilysharp-requests-
 | `kind` | `bar`・`section`・`phrase` |
 | `part` | `bass`・`kit`・`chords` |
 | `section` | bar・section の報告の section（phrase は null） |
-| `phrase` | phrase の報告: `{ name, body, grooves }`（今の中身と、それを使う型） |
+| `phrase` | phrase の報告: `{ name, body, grooves }`（今の中身と、それを使う型。`steps` の型は `body` が `steps { … }` の全文で `grooves` は `[自分]`） |
 | `linedUp` | 報告した section の小節の数が隣のファイルと同じ |
-| `items` | 小節ごとに `{ section, barOfSection, bars, bar, groove?, lines?, barWhenRead }`。`bar` は `.lys` の今の文字（小節線を除く）。kit の小節が型（`beatA`・その後の `%`）なら `groove` とその phrase の中身 `lines` |
+| `items` | 小節ごとに `{ section, barOfSection, bars, bar, groove?, lines?, barWhenRead }`。`bar` は `.lys` の今の文字（小節線を除く）。kit の小節が型（`beatA`・その後の `%`）なら `groove` とその phrase の中身 `lines`。`steps` の型なら `lines` は太鼓ごとの行 `{ "hh": "x... …", "sn": …, "bd": … }`＝隣のファイルの `drums` と同じ形（同じ太鼓の 2 行目は `"hh 2"`）。小節にじかに書いた `steps { … }` は型ではない＝`bar` の文字だけ |
 | `note` | 一言 |
 | `lysWas`・`lysCopy`・`sideFileWas`・`sideFileCopy` | 元の場所（読み直さない）と写しの名前 |
 | `recording` | 隣のファイルの `audio` を、その場所から解いたパス（写さない） |
 
 ## 5. 制限
 
-- phrase は Orecchiante が書く 1 行の形だけを読む（`phrase X { … }` が 1 行）。
+- phrase は Orecchiante が書く 1 行の形だけを読む（`phrase X { … }` が 1 行）。`steps` の型は、中身が `太鼓 "行"` の並びだけのもの（`orecchianteSeedCore.ts` `stepsOf`）。型かどうかは形で決め、kit の小節から呼ばれているかは見ない（呼ばれていない型の Report Phrase は「nothing to report」）。
 - section の外の和音の行（section の無い譜）は出さない（Orecchiante は bass・kit を書く譜を section で書く）。
 - 実機の網: Lab `sessions/p1372/vscode-e2e`（Orecchiante 0.14.0 が書いた `x186.lys` で 16 項目・設定なしで 0 件）。

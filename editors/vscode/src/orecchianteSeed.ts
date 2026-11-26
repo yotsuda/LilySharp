@@ -26,7 +26,7 @@ import * as path from 'path';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import { recordingPathFor, resolveAudio } from './recordingCore';
 import {
-    ORECCHIANTE_SEED_FOLDER_SETTING, SeedKind, SeedPart, SideBar, VoiceBars, caretBar, caretPhrase, grooveOf, itemsOf,
+    ORECCHIANTE_SEED_FOLDER_SETTING, SeedKind, SeedPart, SideBar, VoiceBars, caretBar, caretPhrase, groovesPlaying, itemsOf,
     orecchianteSeedDirName, orecchianteSeedOf, phraseItems, phrasesOf, seedPartOf, sideBarsOf, sideSectionLength,
 } from './orecchianteSeedCore';
 
@@ -133,7 +133,7 @@ async function report(client: LanguageClient | undefined, output: vscode.OutputC
         items = phraseItems(text, kits, name, side.bars);
         const sections = [...new Set(items.map(i => i.section))];
         linedUp = sections.every(s => kits.filter(v => v.section === s).every(v => v.bars.length === sideSectionLength(side.bars, s)));
-        phraseInfo = { name, body: phrases.get(name) ?? '', grooves: [...phrases.keys()].filter(g => grooveOf(phrases, g)?.includes(name)) };
+        phraseInfo = { name, body: phrases.get(name) ?? '', grooves: groovesPlaying(phrases, name) };
         label = `phrase ${name} (${items.length} kit bar${items.length === 1 ? '' : 's'} play it)`;
     } else {
         const at = caretBar(voices, target.offset);

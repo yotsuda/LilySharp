@@ -20,7 +20,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
     ORECCHIANTE_SEED_FOLDER_SETTING, SideBar, VoiceBars, caretBar, caretPhrase, itemsOf, orecchianteSeedDirName,
-    orecchianteSeedOf, phraseItems, playedOf, seedPartOf, sideBarsOf, sideSectionLength,
+    orecchianteSeedOf, grooveLines, groovesPlaying, phraseItems, phrasesOf, playedOf, seedPartOf, sideBarsOf,
+    sideSectionLength, stepsOf,
 } from '../src/orecchianteSeedCore';
 
 // Report to Orecchiante (Orecchiante's request 23, 2026-11-23): the owner's alone, as Calamo's is.
@@ -102,6 +103,53 @@ describe('Report to Orecchiante', () => {
         assert.equal(caretPhrase(text, text.indexOf('hh8')), 'hatsA');
         assert.equal(caretPhrase(text, text.indexOf('drums {')), undefined);   // a groove, not a phrase of one
         assert.deepEqual(phraseItems(text, [kit], 'kickA', side).map(i => i.barOfSection), [1, 2]);
+    });
+
+    // Orecchiante 0.18.0 (its request 26): a groove is one line of steps, and a bar not near one is steps in place.
+    describe('a groove written as steps', () => {
+        const st = [
+            'phrase beatA { steps { hh "x... x... x... x..." sn ".... x... .... x..." bd "x.x. ..x. x.x. ..x." } }',
+            'phrase beatB { steps 4. { hh "x..x.. x..x.." hh "...... ..o..." } }   // six to a beat',
+            'phrase hh { steps { bd "x... ...." } }',
+            'phrase odd { steps { hh x... } }',
+            'section A {',
+            '  kit { beatA | % | steps { bd "x... x... x... x..." } | beatB | hh | }',
+            '}',
+        ].join('\n');
+        const at = (s: string, from = 0) => { const i = st.indexOf(s, st.indexOf('kit {') + from); return { start: i, end: i + s.length }; };
+        const inPlace = 'steps { bd "x... x... x... x..." }';
+        const stKit: VoiceBars = {
+            section: 'A', voice: "part 'kit'",
+            bars: [at('beatA'), at('%'), at(inPlace), at('beatB'), at('hh |')].map((b, i) => i === 4 ? { start: b.start, end: b.start + 2 } : b),
+        };
+        const stSide: SideBar[] = sideBarsOf({ bars: [1, 2, 3, 4, 5].map(k => ({ bar: k, section: 'A', barOfSection: k, drums: { hh: 'x... x... x... x...' } })) });
+        const beatA = { hh: 'x... x... x... x...', sn: '.... x... .... x...', bd: 'x.x. ..x. x.x. ..x.' };
+
+        it('reads its lines as the file beside has them, a drum written twice kept, and nothing else as one', () => {
+            const ph = phrasesOf(st);
+            assert.deepEqual(stepsOf(ph, 'beatA'), beatA);
+            assert.deepEqual(stepsOf(ph, 'beatB'), { hh: 'x..x.. x..x..', 'hh 2': '...... ..o...' });
+            assert.equal(stepsOf(ph, 'odd'), undefined);   // a line with no string
+            assert.equal(grooveLines(ph, 'beatC'), undefined);
+            assert.deepEqual(groovesPlaying(ph, 'beatA'), ['beatA']);
+        });
+
+        it('gives a kit bar of it, or of % after it, the groove and its lines; a bar of steps in place none', () => {
+            const items = itemsOf(st, stKit, 'kit', stSide);
+            assert.deepEqual(items.map(i => [i.bar, i.groove]), [
+                ['beatA', 'beatA'], ['%', 'beatA'], [inPlace, undefined], ['beatB', 'beatB'], ['hh', 'hh'],
+            ]);
+            assert.deepEqual(items[1].lines, beatA);
+            assert.equal(items[2].lines, undefined);
+            assert.deepEqual(items[4].lines, { bd: 'x... ....' });   // a groove named as a drum is still the groove
+        });
+
+        it('offers its line for Report Phrase, with the kit bars that play it', () => {
+            assert.equal(caretPhrase(st, st.indexOf('sn "')), 'beatA');
+            assert.equal(caretPhrase(st, st.indexOf('odd')), undefined);
+            assert.deepEqual(phraseItems(st, [stKit], 'beatA', stSide).map(i => i.barOfSection), [1, 2]);
+            assert.deepEqual(phraseItems(st, [stKit], 'hh', stSide).map(i => i.barOfSection), [5]);
+        });
     });
 
     it('names the folder and writes the record', () => {

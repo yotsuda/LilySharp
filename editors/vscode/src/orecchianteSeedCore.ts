@@ -106,6 +106,37 @@ export function grooveOf(phrases: ReadonlyMap<string, string>, name: string): st
     return names.length > 0 && names.every(n => phrases.has(n)) ? names : undefined;
 }
 
+/** A drum groove written as steps (`phrase beatA { steps { hh "x... x..." sn ".... x..." } }`,
+ *  `steps 4. { … }`; Orecchiante 0.18.0, its request 26): drum → its line, as the file beside's
+ *  `drums` has them; else undefined. A drum written twice keeps both (`hh`, `hh 2`). */
+export function stepsOf(phrases: ReadonlyMap<string, string>, name: string): Record<string, string> | undefined {
+    const body = phrases.get(name);
+    const m = body ? /^steps(?:\s+[0-9.]+)?\s*\{(.*)\}$/s.exec(body) : null;
+    if (!m) { return undefined; }
+    const lines: Record<string, string> = {};
+    const rest = m[1].replace(/([\p{L}_][\p{L}\p{N}_]*)\s*"([^"]*)"/gu, (_, drum: string, line: string) => {
+        let key = drum;
+        for (let n = 2; key in lines; n++) { key = `${drum} ${n}`; }
+        lines[key] = line;
+        return ' ';
+    });
+    return rest.trim() === '' && Object.keys(lines).length > 0 ? lines : undefined;
+}
+
+/** What a kit bar of groove `name` plays: the bodies of a `drums { }` groove's phrases, or a
+ *  steps groove's lines; undefined when `name` is not a groove. */
+export function grooveLines(phrases: ReadonlyMap<string, string>, name: string): Record<string, string> | undefined {
+    const names = grooveOf(phrases, name);
+    return names ? Object.fromEntries(names.map(n => [n, phrases.get(n)!])) : stepsOf(phrases, name);
+}
+
+/** The grooves that play phrase `name`: the `drums { }` grooves naming it, or itself when it is a
+ *  steps groove (its own lines are what it plays). */
+export function groovesPlaying(phrases: ReadonlyMap<string, string>, name: string): string[] {
+    const by = [...phrases.keys()].filter(g => grooveOf(phrases, g)?.includes(name));
+    return stepsOf(phrases, name) ? [name, ...by] : by;
+}
+
 /** One bar reported. */
 export interface SeedItem {
     readonly section: string;
@@ -132,15 +163,15 @@ export function itemsOf(text: string, voice: VoiceBars, part: SeedPart, side: re
         const k = i + 1;
         const bar = span.start >= 0 && span.end >= span.start ? text.slice(span.start, span.end).trim() : null;
         if (part === 'kit') {
-            groove = bar === '%' ? groove : bar !== null && grooveOf(phrases, bar) ? bar : undefined;
+            groove = bar === '%' ? groove : bar !== null && grooveLines(phrases, bar) ? bar : undefined;
         }
         if (!pick(k)) { return; }
         const played = playedOf(side, voice.section, k);
         const first = side.find(b => b.bar === played[0]);
-        const names = groove ? grooveOf(phrases, groove) : undefined;
+        const lines = groove ? grooveLines(phrases, groove) : undefined;
         items.push({
             section: voice.section, barOfSection: k, bars: played, bar,
-            ...(groove && names ? { groove, lines: Object.fromEntries(names.map(n => [n, phrases.get(n)!])) } : {}),
+            ...(groove && lines ? { groove, lines } : {}),
             barWhenRead: readOf(first, part),
         });
     });
@@ -156,7 +187,7 @@ export function caretBar(voices: readonly VoiceBars[], offset: number): { voice:
     return undefined;
 }
 
-/** The phrase whose one-line definition the caret is on, when a groove plays it. */
+/** The phrase whose one-line definition the caret is on, when a groove plays it or it is a steps groove. */
 export function caretPhrase(text: string, offset: number): string | undefined {
     const lineStart = text.lastIndexOf('\n', offset - 1) + 1;
     const lineEnd = text.indexOf('\n', offset);
@@ -164,12 +195,13 @@ export function caretPhrase(text: string, offset: number): string | undefined {
     const m = /^[ \t]*phrase[ \t]+([\p{L}_][\p{L}\p{N}_]*)[ \t]*\{/u.exec(line);
     if (!m) { return undefined; }
     const phrases = phrasesOf(text);
-    return [...phrases.keys()].some(g => grooveOf(phrases, g)?.includes(m[1])) ? m[1] : undefined;
+    return groovesPlaying(phrases, m[1]).length > 0 ? m[1] : undefined;
 }
 
-/** The kit bars that play a phrase through a groove (`beatA`, or `%` after it). */
+/** The kit bars that play a phrase through a groove (`beatA`, or `%` after it), or as the steps groove itself. */
 export function phraseItems(text: string, kits: readonly VoiceBars[], phrase: string, side: readonly SideBar[]): SeedItem[] {
-    return kits.flatMap(v => itemsOf(text, v, 'kit', side).filter(it => it.lines && phrase in it.lines));
+    const grooves = new Set(groovesPlaying(phrasesOf(text), phrase));
+    return kits.flatMap(v => itemsOf(text, v, 'kit', side).filter(it => it.groove !== undefined && grooves.has(it.groove)));
 }
 
 export type SeedKind = 'bar' | 'section' | 'phrase';
