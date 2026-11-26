@@ -97,7 +97,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **★ A-B リピート（オーナー決定 2026-11-17・第1286）＝`docs/ab-repeat-design.md`**: §3 の 1〜4 は済み（第1286）。**2026-11-19 オーナー決定: Loop グループ・A-B ボタンと番号欄・8 本の帯（§3 の 5）・右クリックの Play from Here／A Here／B Here は撤去、Repeat はヘッダへ**（同 §0）。残りは実機（`MANUAL-CHECKS`「Repeat はヘッダ」＝オーナー）と、release 時の site・README の書き直し。
 - **★ Join Bars in Pairs（Orecchiante の依頼 21・オーナー決定 2026-11-21・第1342）＝実装済み**（`docs/join-bars-design.md`）。依頼 22（同じ和音 1 つずつの組は `C`）は第1346 `f81f8cd28`。残りは実機（`MANUAL-CHECKS`「Join Bars in Pairs」＝Ctrl+Z で 2 つのファイルが戻る・録音と小節の頭がそろう）と Orecchiante の確認。
 - **★ Report to Orecchiante（Orecchiante の依頼 23・オーナーの希望 2026-11-23・第1372）＝実装済み**（`docs/orecchiante-report-design.md`）。残りは Orecchiante の確認とオーナーの実機（設定は手書き）。
-- **★ Write a Song over These Chords…（Shosa の導線の第 2 段・オーナー決定 2026-11-26「同じ `.lys` に歌のパートを足す」・伴奏は元の録音）＝実装済み**（`docs/song-over-chords-design.md`）。残りはオーナーの実機（`MANUAL-CHECKS`）。第 3 段（Walkthrough）・第 4 段（Arrange an Accompaniment…）は未着手。
+- **★ Write a Song over These Chords…（Shosa の導線の第 2 段・オーナー決定 2026-11-26「同じ `.lys` に歌のパートを足す」・伴奏は元の録音）＝実装済み**（`docs/song-over-chords-design.md`）。残りはオーナーの実機（`MANUAL-CHECKS`）。第 3 段は第1397 で実装（`docs/song-to-dance-design.md`・残りは実機）。第 4 段（Arrange an Accompaniment…）は未着手。
 - **★ Cantoria の依頼 1（音節の音素 `병[/pp.y.eo.NG/]`）・2（歌う `bend`・お試し）＝第1375 で実装済み**（`singing-design.md` §3）。残りは Cantoria の done とオーナーの耳（`MANUAL-CHECKS` 第1375）。
 - **★ コード行の中に書けるもの（オーナー決定 2026-11-16・第1285）**: `time`・`tempo`・`%`・`key` は済み（§1.1）。**残り＝コードに付ける印 `@rit`／`@accel`／`@rall`（`…@!rit`）・`@fermata`・`@text("…")`**（今は `@todo` だけ）。強弱は見送り。
 - **★ 録音を聴きながら直す（Dettato #4・オーナーの希望 2026-11-15）＝`docs/recording-design.md`**: S1〜S4 と §1 7（楽譜と録音を同時に）・§7（書き出しに録音・第1286）は済み（§1.1 第1284〜第1286）。**次は S5**（帯・`Mark Bar Line Here`・ドラッグ・`byHand`）→ S6（CHANGELOG・Dettato への返事）。§8 の録音のパート（Dettato #16）は第1288 で実装・実測済み・使っている間のメモリは今のまま（オーナー決定 2026-11-17）＝残りは耳の確認（`MANUAL-CHECKS`「録音のパート」）。耳の確認は `MANUAL-CHECKS` §3.9（オーナー）。
@@ -157,21 +157,21 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1397セッション（2026-11-26・YT-DELL2）
+
+base `701cdeb60`。開始時 full 18447 / 1 / skip 2 / 18450（赤 1 は `IncludeFilesTests` の不安定な網＝単独で 3/3 緑）。終了時 full 18448 / 0 / skip 2 / 18450。
+- `491567514`: Shosa の導線の第 3 段（オーナー指示）＝`docs/song-to-dance-design.md`。ウォークスルー（**From a Song to a Dance (Steps)**）。曲に歌い手の行が入る Accept で「次は踊り」。npm 1349 / 0・実機 E2E 3 項目（Lab `p1397/vscode-e2e`）。
+- 残した: オーナーの実機。Shosa は Marketplace 未公開＝Install Shosa は検索で止まる。
+- 次: 第 4 段（Arrange an Accompaniment…）はオーナーに設計を訊いてから。それ以外は leftovers（タブの装飾音の数字の中心）。
+
+## 以下は第1396セッションの経緯
+
 ### 1.1 第1396セッション（2026-11-26・YT-DELL2）
 
 base `0e0851126`。開始時 full 18445 / 0 / skip 2 / 18447。
 - `acfcd35fe`: Note_collision でずらした装飾音の列も鎖を共有する。`SharedGraceChain` はずれで降りず、鎖は共有の列の間で組み（各連なりの間隔からずれを外す・`GraceColumnLayout.Shifts`）、`RunOnSharedChain` が各列を自分のずれだけ右に置く。wish の左の符頭の右端は paper column で測る（`GraceIdeal` にずれを足す・LP `left_head_end`）。v10・v11 は LP と一致（Lab `p1396/m`・直す前は v10 の b' が 1.435 右、v11 の本音符が 0.309 左でずらした a' に重なる）。網 +2・毒 5 本中 4 本で赤（R2 は観測者なしのまま）。掃き 0 / 1289。
 - 残した: タブの装飾音の数字の中心（第1393）。leftovers 第1396。
 - 次: タブの装飾音の数字の中心。
-
-## 以下は第1395セッションの経緯
-
-### 1.1 第1395セッション（2026-11-26・YT-DELL2）
-
-base `787d4220a`。開始時 full 18444 / 0 / skip 2 / 18446。
-- `0b814574e`: 同じ譜表の別の声部の装飾音（companion）の wish は、右の列がこの対の右の列と同じときだけ平均に入れる（`SpacingRules.AveragedWithCompanions`・LP の found_matching_column）。v9 は LP と一致（下の声部の 16 分の間 1.673→1.418・本音符 0.255 左へ）。網 +1・毒 2 本中 1 本で赤（R2＝自分は本音符で終わり companion は続く側、は観測者なし）。掃き 0 / 1289。
-- 残した: v10（1 段・`b'8` の下で `a'16 g'16`＝音が近く横にずらす形）は直す前から大きく違う（LP は b' と a' が同じ列・a' が 0.918 右、Lily# は b' が 1.435 右・本音符 0.200 左）＝`StampGraceCompanions` の注記の既知の限界。タブの装飾音の数字の中心（第1393）。leftovers 第1395。
-- 次: v10 か、タブの装飾音の数字の中心。
 
 ## 2. 開いている作業
 
