@@ -25,6 +25,7 @@ import {
 } from 'vscode-languageclient/node';
 import { registerAiTransform, showCandidateSounding, tellCandidateAudioBlocked } from './aiTransform';
 import { registerAiComplete } from './aiComplete';
+import { registerSongToDance } from './songToDance';
 import { findCopilotLogFrom, pickAiModel, rememberRefusalsIn } from './modelClient';
 import { registerSmartTyping } from './smartTyping';
 import { registerPageText } from './pageText';
@@ -998,6 +999,8 @@ export function activate(context: vscode.ExtensionContext) {
         lysc: bundledLysc,
     };
     registerAiTransform(context, aiDeps);
+    // From a song to a dance (docs/song-to-dance-design.md): the walkthrough and its commands.
+    registerSongToDance(context);
     // Second mode: validated ghost-text "next measure" completion (opt-in).
     registerAiComplete(context, aiDeps);
     // Third: the bars an OMR reader marked, rewritten on request and reviewed beside the scan

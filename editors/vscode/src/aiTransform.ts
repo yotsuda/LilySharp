@@ -50,6 +50,8 @@ import {
 import { CANTORIA_EXTENSION_ID, cantoriaApiOf, leftToTheInstrument, voiceListText } from './singerCore';
 import { withTodoMark } from './omrAiFixCore';
 import { namesChords, songGuide, songPartName, songRequest, songWordsName } from './songOverChordsCore';
+import { offerDanceNext } from './songToDance';
+import { gaveASong } from './songToDanceCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 import { PLAIN_TONES_JS } from './plainTones';
@@ -1321,6 +1323,11 @@ async function proposeScore(deps: AiTransformDeps, given: ProposeScoreInput, tok
                 // Not saved: Accept puts it in the editor, the musician saving when they want to
                 // (owner's request 2026-10-29); the chat reads it there with lilysharp_readScore.
                 deps.log('AI proposal (chat): accepted.');
+                // The score got its song (Write a Song over These Chords…, or a new piece with
+                // words): the next step of the way to a dance is said (docs/song-to-dance-design.md).
+                if (gaveASong(current, text)) {
+                    void offerDanceNext(currentUri(uri));
+                }
                 return 'Accepted: the musician accepted the proposal, and it is in the editor, not saved yet — '
                     + `${path.basename(currentUri(uri).fsPath)} (call the file by that name; it may have been renamed). Read it `
                     + 'with lilysharp_readScore, not from the disk.'
@@ -3824,8 +3831,20 @@ function getNonce(): string {
  * The musician hears it in the candidate panel and accepts it; the recording plays under it.
  */
 async function runWriteSongOverChords(uri?: vscode.Uri): Promise<void> {
-    const target = uri ?? vscode.window.activeTextEditor?.document.uri;
-    if (!target || !/\.lys$/i.test(target.path)) {
+    const editing = vscode.window.activeTextEditor?.document.uri;
+    let target = uri instanceof vscode.Uri ? uri : editing && /\.lys$/i.test(editing.path) ? editing : undefined;
+    if (!target) {
+        // From the palette or the walkthrough with no score open: the score is picked.
+        const picked = await vscode.window.showOpenDialog({
+            title: 'Lily# — Write a Song over These Chords: the score', canSelectMany: false,
+            filters: { 'Lily# score': ['lys'] }, openLabel: 'Write a Song over It',
+        });
+        if (!picked || picked.length === 0) {
+            return;
+        }
+        target = picked[0];
+    }
+    if (!/\.lys$/i.test(target.path)) {
         void vscode.window.showErrorMessage('Lily#: Write a Song over These Chords works on a .lys score — open one, or right-click it.');
         return;
     }

@@ -609,6 +609,42 @@
             "completionEvents": [ "onCommand:lilysharp.openFirstSong", "onCommand:lilysharp.openFirstSongWhole", "onCommand:lilysharp.openFirstSongShort" ]
           }
         ]
+      },
+      {
+        "id": "songToDance",
+        "title": "From a song to a dance",
+        "description": "A song written in Lily#, sung by a voice and danced by a character with Shosa, then a video of it.",
+        "when": "lilysharp.danceGuide",
+        "steps": [
+          {
+            "id": "song",
+            "title": "Write a song",
+            "description": "A score with words and a singer line. Have the AI compose one, or give a song to a score you have: one read from a recording keeps its bars and chords, and the recording plays under the song.\n[Compose with AI…](command:lilysharp.composeWithAiInChat)\n[Write a Song over These Chords…](command:lilysharp.writeSongOverChords)",
+            "media": { "markdown": "walkthrough/song-to-dance.md" },
+            "completionEvents": [ "onCommand:lilysharp.composeWithAiInChat", "onCommand:lilysharp.writeSongOverChords" ]
+          },
+          {
+            "id": "voice",
+            "title": "Have a voice sing it",
+            "description": "The words are sung by a voice on this computer. Its steps are a walkthrough of their own; once a voice is ready, the preview's Play sings the song.\n[Set Up a Singing Voice](command:lilysharp.setUpSingingVoice)",
+            "media": { "markdown": "walkthrough/song-to-dance.md" },
+            "completionEvents": [ "onCommand:lilysharp.setUpSingingVoice", "onCommand:cantoria.checkSetup" ]
+          },
+          {
+            "id": "dance",
+            "title": "Put a dance on it",
+            "description": "Shosa, a free extension, dances a score: its Add a Dance… asks for a character for each singing part and what kind of dance, and Copilot's chat writes the dance beside the score.\n[Add a Dance…](command:lilysharp.danceWithShosa)\n[Install Shosa](command:lilysharp.installShosa)",
+            "media": { "markdown": "walkthrough/song-to-dance.md" },
+            "completionEvents": [ "onCommand:shosa.addDance" ]
+          },
+          {
+            "id": "video",
+            "title": "Make a video",
+            "description": "In the dance's preview, press Play to watch it. Pick 16:9, or 9:16 for Shorts, in the preview's header, then export the video with the song's sound.\n[Export MP4 Video…](command:shosa.exportVideo)",
+            "media": { "markdown": "walkthrough/song-to-dance.md" },
+            "completionEvents": [ "onCommand:shosa.exportVideo" ]
+          }
+        ]
       }
     ],
     "commands": [
@@ -760,6 +796,21 @@
         "command": "lilysharp.setUpSingingVoice",
         "category": "Lily#",
         "title": "Set Up a Singing Voice"
+      },
+      {
+        "command": "lilysharp.songToDance",
+        "category": "Lily#",
+        "title": "From a Song to a Dance (Steps)"
+      },
+      {
+        "command": "lilysharp.danceWithShosa",
+        "category": "Lily#",
+        "title": "Add a Dance with Shosa…"
+      },
+      {
+        "command": "lilysharp.installShosa",
+        "category": "Lily#",
+        "title": "Install Shosa"
       },
       {
         "command": "lilysharp.writeSingerPart",
