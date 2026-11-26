@@ -453,7 +453,7 @@
             "default": true,
             "description": "Sound notes as you edit: the note the caret lands on, a note as you type it, and what the step keys (Ctrl+Shift+Up / Down, Ctrl+Shift+PageUp / PageDown) step a note or a chord shape to. Plays through the open preview, so nothing sounds while no preview is open. Play Note at Cursor (Alt+P) and Play Current Measure (Alt+M) are not affected."
           },
-          "lilysharp.export.ffmpegPath": {
+          "lilysharp.export.videoEncoder": {
             "type": "string",
             "default": "",
             "scope": "machine-overridable",

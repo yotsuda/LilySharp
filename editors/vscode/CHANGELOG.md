@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- `[export]` **The setting for the ffmpeg that Export as MP4 runs is `lilysharp.export.videoEncoder`** (was `lilysharp.export.ffmpegPath`), shown as **Video Encoder**: the Settings editor makes a label from the key and showed "Ffmpeg Path". Its description names ffmpeg. A program set under the old name is to be set again.
+
 - `[recording]` **Convert Recording to Lily# (.lys)… can fetch the song's words.** With Orecchiante 0.16.0 or later, a recording with no words beside it (`<name>.lrc`) first asks whether to fetch them from LRCLIB (lrclib.net). Only the song's title, artist and length are sent, and only when you choose to. When nothing is found you can correct the title and artist, choose a file of your own (`.lrc`, or a `.txt` with one line per line), or convert without words. The chart then has the words under the sung line (Orecchiante 0.17.0; Japanese words for now). **Never Ask**, or the setting `lilysharp.orecchiante.fetchLyrics`, stops the question.
 
 - `[preview]` **Following the music turns the page.** When the notes playing come to the first line of a page, that line goes to the top of the preview, and the view stays there while it plays.

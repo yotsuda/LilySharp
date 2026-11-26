@@ -18,7 +18,7 @@
 // as they sound, with the preview's sound). The server draws the pictures and lists them for
 // ffmpeg's concat demuxer (LilySharp.Core.Export.ScoreVideo); the editor renders the sound as a
 // WAV (audioRender.ts) and has ffmpeg join the two. Lily# bundles no ffmpeg: it is the user's,
-// on the PATH or named in lilysharp.export.ffmpegPath.
+// on the PATH or named in lilysharp.export.videoEncoder (shown as "Video Encoder": a label VS Code makes from the key cannot spell ffmpeg, 2026-11-26).
 
 /** The video's frame rate: the pictures' (ScoreVideoOptions.Fps). */
 export const VIDEO_FPS = 30;
@@ -59,5 +59,5 @@ export function videoArgs(frames: string, wav: string, output: string, lead: num
 export function ffmpegMissing(program: string): string {
     return `Lily#: Export as MP4 needs ffmpeg, and "${program}" could not be run. `
         + 'Install it (Windows: winget install Gyan.FFmpeg; Mac: brew install ffmpeg; Linux: your package manager) '
-        + 'or set lilysharp.export.ffmpegPath to the program.';
+        + 'or set lilysharp.export.videoEncoder to the program.';
 }

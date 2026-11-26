@@ -531,17 +531,17 @@ export function drawFramesFor(source: { textDocument?: { uri: string }; path?: s
     };
 }
 
-/** The ffmpeg an MP4 export runs (lilysharp.export.ffmpegPath, else `ffmpeg` on the PATH), once
+/** The ffmpeg an MP4 export runs (lilysharp.export.videoEncoder, else `ffmpeg` on the PATH), once
  *  it is known to run; else the writer is told how to get it, and undefined. Asked before the
  *  server draws anything. */
 export async function videoFfmpeg(): Promise<string | undefined> {
-    const program = ffmpegProgram(vscode.workspace.getConfiguration('lilysharp').get<string>('export.ffmpegPath', ''));
+    const program = ffmpegProgram(vscode.workspace.getConfiguration('lilysharp').get<string>('export.videoEncoder', ''));
     if (await ffmpegRuns(program)) {
         return program;
     }
     const open = 'Open Setting';
     if (await vscode.window.showErrorMessage(ffmpegMissing(program), open) === open) {
-        await vscode.commands.executeCommand('workbench.action.openSettings', 'lilysharp.export.ffmpegPath');
+        await vscode.commands.executeCommand('workbench.action.openSettings', 'lilysharp.export.videoEncoder');
     }
     return undefined;
 }

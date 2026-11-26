@@ -49,6 +49,6 @@ describe('the MP4 export\'s ffmpeg', () => {
     it('says where to get ffmpeg and how to name it when it does not run', () => {
         const message = ffmpegMissing('ffmpeg');
         assert.match(message, /winget install Gyan\.FFmpeg/);
-        assert.match(message, /lilysharp\.export\.ffmpegPath/);
+        assert.match(message, /lilysharp\.export\.videoEncoder/);
     });
 });
