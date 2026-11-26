@@ -99,7 +99,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **★ Report to Orecchiante（Orecchiante の依頼 23・オーナーの希望 2026-11-23・第1372）＝実装済み**（`docs/orecchiante-report-design.md`）。残りは Orecchiante の確認とオーナーの実機（設定は手書き）。
 - **★ 録音の変換で歌詞を取る（Orecchiante の依頼 25・オーナーの指示 2026-11-26）＝実装済み**（`orecchiante.ts` `prepareLyrics`）: 隣に `<名前>.lrc` があれば訊かない／`commands` に `lyrics` がある reader なら、送るもの（曲名・アーティスト・長さ）と送り先（lrclib.net）を示して訊く＝Fetch Lyrics／Choose a File…（`.lrc`・`.txt` を隣に写す）／Without Lyrics／Never Ask（設定 `lilysharp.recordings.fetchLyrics`）。Esc は変換をやめる。終了コード 0＝見つけた項目を知らせる・1＝曲名とアーティストを直して取り直す／ファイル／歌詞なし・3 とそれ以外＝歌詞なしで続ける。残りはオーナーの実機（`MANUAL-CHECKS`「録音の変換で歌詞を取る」・Orecchiante 0.17.0 の公開待ち）と Orecchiante の done。
 - **★ Shosa の導線の第 2〜4 段（オーナー決定 2026-11-26）＝実装済み**: Write a Song…（`docs/song-over-chords-design.md`）・From a Song to a Dance（`song-to-dance-design.md`）・Arrange an Accompaniment…＝Accept で録音は `"silent"`（`accompaniment-design.md`）。残りはオーナーの実機と Shosa 側の `"silent"`。
-- **★ ドラムの `steps { }`（Orecchiante の依頼 24・第1399）＝実装済み**（`docs/drum-steps-design.md`）。残りは同 §3 と Orecchiante の done・オーナーの実機。
+- **★ ドラムの `steps { }`（Orecchiante の依頼 24・第1399）＝実装済み**（`docs/drum-steps-design.md`・第1400 で §3 の 2 つも）。残りは Orecchiante の done・オーナーの実機（`MANUAL-CHECKS`「ドラムの `steps { }`」）。
 - **★ Cantoria の依頼 1（音節の音素 `병[/pp.y.eo.NG/]`）・2（歌う `bend`・お試し）＝第1375 で実装済み**（`singing-design.md` §3）。残りは Cantoria の done とオーナーの耳（`MANUAL-CHECKS` 第1375）。
 - **★ コード行の中に書けるもの（オーナー決定 2026-11-16・第1285）**: `time`・`tempo`・`%`・`key` は済み（§1.1）。**残り＝コードに付ける印 `@rit`／`@accel`／`@rall`（`…@!rit`）・`@fermata`・`@text("…")`**（今は `@todo` だけ）。強弱は見送り。
 - **★ 録音を聴きながら直す（Dettato #4・オーナーの希望 2026-11-15）＝`docs/recording-design.md`**: S1〜S4 と §1 7（楽譜と録音を同時に）・§7（書き出しに録音・第1286）は済み（§1.1 第1284〜第1286）。**次は S5**（帯・`Mark Bar Line Here`・ドラッグ・`byHand`）→ S6（CHANGELOG・Dettato への返事）。§8 の録音のパート（Dettato #16）は第1288 で実装・実測済み・使っている間のメモリは今のまま（オーナー決定 2026-11-17）＝残りは耳の確認（`MANUAL-CHECKS`「録音のパート」）。耳の確認は `MANUAL-CHECKS` §3.9（オーナー）。
@@ -153,20 +153,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1400セッション（2026-11-26・YT-DELL2）
+
+base `01c16af92`。開始時 full 18475 / 0 / skip 2 / 18477。終了時 18496 / 1 / 2 / 18499（赤は ARCHIVE に書いた Lab の SHA＝消して緑）。第1398 は §1 なし＝ARCHIVE に見出しで記した。
+- `776c93ef1`: `steps` の小節の長さの警告は拍で言う（LYS2001／LYS2002 の後ろ・phrase の中の表も）。6/8・12/8 で 4 分を数える表は LYS2024（長さが合ってしまうので）。
+- `639cc26e7`: Ctrl+. の「Convert to Drum Steps／Lines」（`DrumStepsConverter`・鳴るものは保つ・書けない表には出さない）。網 +22・毒 9 本すべて赤（素通りした 1 本の仕組みは要らないと分かり外した）。
+- 次: leftovers（タブの装飾音の数字の中心）。
+
+## 以下は第1399セッションの経緯
+
 ### 1.1 第1399セッション（2026-11-26・YT-DELL2）
 
 base `8851af697`。開始時 full 18447 / 1 / skip 2 / 18450（§1 の見出し待ち）。終了時 18474 / 1 / 2 / 18477（不安定な `ScoreVideoShapeTests`・単独 3/3 緑）。
 - Orecchiante の依頼 24＝ドラムの `steps { hh "x.x. x.x." … }`（オーナー決定 2026-11-26「入れて」・ゴーストは (b)）。設計 `docs/drum-steps-design.md`。パーサーが文字列を `drums { }` の字句に置き換える（`SyntaxToken.Spelled`・`StepsPattern`）＝描画・MIDI・書き出しは無変更。**承認から変えた 1 つ**: 拍は書いたもの（既定 4 分・`steps 4.`）で拍子からは取らない（設計 §2 の 1）。ゴースト＝ドラムの `@parenthesize` は強さ 2/5（`MidiExporter.IsGhost`）。LYS0048／LYS0049。網 `DrumStepsTests` 27・毒 4 本すべて赤。
 - 残した: 設計 §3・オーナーの実機。
-
-## 以下は第1397セッションの経緯
-
-### 1.1 第1397セッション（2026-11-26・YT-DELL2）
-
-base `701cdeb60`。開始時 full 18447 / 1 / skip 2 / 18450（赤 1 は `IncludeFilesTests` の不安定な網＝単独で 3/3 緑）。終了時 full 18448 / 0 / skip 2 / 18450。
-- `491567514`: 第 3 段＝ウォークスルーと「次は踊り」。`6895373bd`: 第 4 段＝伴奏はチャット・既定の 3 楽器・録音は `"silent"`（小節は時計のまま・オーナー決定）。npm 1356 / 0・実機 E2E（Lab `p1397/vscode-e2e`・`instrument piano` はプリセットに無いと分かりガイドを直した）。
-- 残した: オーナーの実機。Shosa の `"silent"` の対応（Shosa の HANDOFF）。Install Shosa は公開まで検索で止まる。
-- 次: leftovers（タブの装飾音の数字の中心）。
 
 ## 2. 開いている作業
 
