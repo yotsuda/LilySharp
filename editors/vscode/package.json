@@ -568,8 +568,8 @@
         "properties": {
           "lilysharp.scans.verifyOnSave": {
             "type": "boolean",
-            "default": false,
-            "markdownDescription": "When a `.lys` read from a scan (its `x.omr.json` beside it) is saved, have the OMR reader engrave it again and compare it with the scanned pages, bar by bar; the scan view and the `@todo` quick fixes then show what still differs. Takes a few seconds; needs a reader that has `omr verify`."
+            "default": true,
+            "markdownDescription": "When a `.lys` read from a scan (its `x.omr.json` beside it) is saved, have the OMR reader engrave it again and compare it with the scanned pages, bar by bar; the scan view and the `@todo` quick fixes then show what still differs. Takes a few seconds, and a save while it runs starts it again. Only a save you make (Ctrl+S, the menu, Save All) checks: an auto save (`files.autoSave`) does not. Needs a reader that has `verify`; a score not read from a scan is never checked."
           }
         }
       },

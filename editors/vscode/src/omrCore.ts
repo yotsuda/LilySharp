@@ -176,6 +176,16 @@ export function canVerify(v: OmrVersion): boolean {
     return Array.isArray(v.commands) && v.commands.includes('verify');
 }
 
+/** Whether a save checks the file against the scan (`lilysharp.scans.verifyOnSave`): a save the
+ *  writer made — Ctrl+S, the menu, Save All — and not one VS Code makes itself (`files.autoSave`
+ *  after a delay, or on leaving the editor), which comes at every pause in the typing and would
+ *  start a check of seconds that the next pause throws away (owner's decision 2026-11-26, when
+ *  checking on save came on by default). `reason` is the TextDocumentSaveReason the save was
+ *  announced with (1 Manual, 2 AfterDelay, 3 FocusOut); a save not announced counts as the writer's. */
+export function checksOnSave(reason: number | undefined): boolean {
+    return reason === undefined || reason === 1;
+}
+
 /** Whether the reader's `verify` takes a candidate text and reports bars (the AI fix's third
  *  gate asks it only then; docs/omr-ai-fix-design.md §3.2 ③). */
 export function canVerifyBars(v: OmrVersion): boolean {

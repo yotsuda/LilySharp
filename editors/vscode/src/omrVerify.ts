@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Check on save (LilySharp-Omr proposal B5): when `lilysharp.scans.verifyOnSave` is on and a
-// saved .lys has an OMR reader's side file beside it, the reader engraves the .lys again and
+// Check on save (LilySharp-Omr proposal B5): when `lilysharp.scans.verifyOnSave` is on (the default
+// since 2026-11-26) and a .lys the writer saved — not an auto save — has an OMR reader's side file beside it, the reader engraves the .lys again and
 // compares it with the scanned pages (`calamo verify`, omrCore.verifyArguments), writing the side
 // file's todos anew. Nothing else is needed here: the scan view reloads a side file written
 // again, and the candidates' quick fixes read it on every request. The .lys is never touched.
@@ -25,7 +25,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { execFile } from 'child_process';
 import {
-    OmrVersion, canVerify, clockOf, exitMeaning, launchOf, parseVersion, runOmr, verifyArguments,
+    OmrVersion, canVerify, checksOnSave, clockOf, exitMeaning, launchOf, parseVersion, runOmr, verifyArguments,
 } from './omrCore';
 import { findOmr } from './omrReader';
 import { sideFileOf } from './omrScanCore';
@@ -41,10 +41,15 @@ export function registerVerifyOnSave(context: vscode.ExtensionContext, deps: Omr
     const running = new Map<string, AbortController>();
     const versions = new Map<string, Promise<OmrVersion | undefined>>();
     let saidNoVerify = false;
+    // Why each file is being saved, as announced just before (omrCore.checksOnSave): auto saves are not checked.
+    const reasons = new Map<string, vscode.TextDocumentSaveReason>();
+    context.subscriptions.push(vscode.workspace.onWillSaveTextDocument(e => { reasons.set(e.document.uri.toString(), e.reason); }));
 
     context.subscriptions.push(vscode.workspace.onDidSaveTextDocument(async doc => {
-        if (doc.uri.scheme !== 'file' || !/\.lys$/i.test(doc.uri.fsPath)
-            || !vscode.workspace.getConfiguration('lilysharp').get<boolean>('scans.verifyOnSave', false)
+        const reason = reasons.get(doc.uri.toString());
+        reasons.delete(doc.uri.toString());
+        if (doc.uri.scheme !== 'file' || !/\.lys$/i.test(doc.uri.fsPath) || !checksOnSave(reason)
+            || !vscode.workspace.getConfiguration('lilysharp').get<boolean>('scans.verifyOnSave', true)
             || !fs.existsSync(sideFileOf(doc.uri.fsPath))) {
             return;
         }

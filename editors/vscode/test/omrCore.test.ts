@@ -25,7 +25,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import {
     OMR_EXTENSION_ID, OMR_INPUT_EXTENSIONS, OMR_MIN_VERSION, OMR_PATH_VARIABLE, ReadProgress, clockOf, exitMeaning, launchOf, locateOmr, omrRid,
-    parseEvent, parseVersion, canVerify, canVerifyBars, readArguments, readerIsOld, readerOfExports, runOmr, speaksProtocol, verifyArguments,
+    parseEvent, parseVersion, canVerify, canVerifyBars, checksOnSave, readArguments, readerIsOld, readerOfExports, runOmr, speaksProtocol, verifyArguments,
 } from '../src/omrCore';
 
 describe('the core is editor-free', () => {
@@ -220,6 +220,22 @@ describe('checking an edited score against the scan (B5)', () => {
         assert.equal(canVerify({ version: '0.3.0', protocol: 1, commands: ['read', 'verify'] }), true);
         assert.equal(canVerify({ version: '0.3.0', protocol: 1, commands: ['read'] }), false);
         assert.equal(canVerify({ version: '0.2.0', protocol: 1 }), false);   // today's reader
+    });
+
+    // On by default since 2026-11-26 (owner's decision), so a save VS Code makes itself is not checked:
+    // with files.autoSave after a delay it comes at every pause, and each check takes seconds.
+    it('checks a save the writer made, on by default, and not an auto save', () => {
+        assert.equal(checksOnSave(1), true);           // Manual: Ctrl+S, the menu, Save All
+        assert.equal(checksOnSave(2), false);          // AfterDelay
+        assert.equal(checksOnSave(3), false);          // FocusOut
+        assert.equal(checksOnSave(undefined), true);   // a save not announced
+        const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
+        const setting = Object.assign({}, ...manifest.contributes.configuration.map((c: { properties: object }) => c.properties))['lilysharp.scans.verifyOnSave'];
+        assert.equal(setting.default, true);
+        const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'omrVerify.ts'), 'utf8');
+        assert.match(source, /onWillSaveTextDocument\(e => \{ reasons\.set\(e\.document\.uri\.toString\(\), e\.reason\); \}\)/);
+        assert.match(source, /!checksOnSave\(reason\)/);
+        assert.match(source, /get<boolean>\('scans\.verifyOnSave', true\)/);
     });
 
     it('compares a candidate text for some bars without writing, when the reader has verify-bars (the AI fix\'s gate ③)', () => {
