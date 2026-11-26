@@ -34,7 +34,7 @@ import { registerStepAudition } from './stepAudition';
 import { registerCaretInfo } from './caretInfo';
 import { registerExportBatch } from './exportBatch';
 import { OmrImportDeps, importFromImage } from './omrImport';
-import { DecodeResult, attachRecording, followCopies, followRenames, keepRecordingSettings, sendNoRecording, sendRecording, useRecordingSettingsStore } from './recording';
+import { DecodeResult, attachRecording, followCopies, followRenames, keepRecordingSettings, sendNoRecording, sendRecording, setRecordingSilent, useRecordingSettingsStore } from './recording';
 import { TimedNote, soundingOf, soundingPartsOf, soundingWait, startSecondsAt } from './playbackStart';
 import { convertRecording, findOrecchiante, registerOrecchianteContext } from './orecchiante';
 import { registerOrecchianteReport } from './orecchianteSeed';
@@ -1743,6 +1743,14 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
             if (message.type === 'recordingSettings') {
                 if (typeof message.chart === 'string' && typeof message.name === 'string') {
                     keepRecordingSettings(message.chart, message.name, message.settings);
+                }
+                return;
+            }
+            // A silent recording turned on in the mixer: its file forgets "silent" (docs/accompaniment-design.md).
+            if (message.type === 'recordingSilent') {
+                if (typeof message.chart === 'string') {
+                    const chart = vscode.Uri.parse(message.chart);
+                    if (chart.scheme === 'file') { void setRecordingSilent(chart.fsPath, message.silent === true); }
                 }
                 return;
             }

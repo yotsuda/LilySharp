@@ -47,6 +47,10 @@ export interface Recording {
      *  docs/recording-design.md §8): in the order written, as many as written, each found as
      *  `audio` is (resolveAudio). Absent when the file has none. */
     parts?: RecordingPart[];
+    /** The recording is not heard: its bars still time the score, its sound is left out of the
+     *  preview, the export and the stems (`"silent": true`; docs/accompaniment-design.md — set when an
+     *  accompaniment arranged over it is accepted, cleared when the musician turns it back on). */
+    silent?: boolean;
     /** The file as parsed: items this reader does not know are written back as they were. */
     raw: Record<string, unknown>;
 }
@@ -398,6 +402,7 @@ export function parseRecording(text: string): Recording | { error: string } {
         bars,
         pickup: !!first && first.pickup !== undefined,
         ...(parts ? { parts } : {}),
+        ...(o.silent === true ? { silent: true } : {}),
         raw: o,
     };
 }
@@ -414,6 +419,11 @@ export function serializeRecording(rec: Recording): string {
     const out: Record<string, unknown> = { ...rec.raw, orecchiante: RECORDING_FORMAT, audio: rec.audio };
     if (rec.duration !== undefined) {
         out.duration = rec.duration;
+    }
+    if (rec.silent) {
+        out.silent = true;
+    } else {
+        delete out.silent;
     }
     const rawBars = Array.isArray(rec.raw.bars) ? rec.raw.bars as Record<string, unknown>[] : [];
     out.bars = rec.bars.map((b, i) => {

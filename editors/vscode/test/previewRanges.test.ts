@@ -377,11 +377,11 @@ describe('the preview\'s Range panel', () => {
         // The recording is the mixer's own group (docs/transport-mixer-design.md §1 1-2): its head holds its
         // on/off, its solo and its fader — no longer a line among the score's parts.
         assert.doesNotMatch(html, /toggle\('Recording', /);
-        assert.match(html, /<div class="mgroup" id="mixRecGroup" data-fold="rec" hidden>\s*<div class="mhead"><button type="button" class="mfold mtitle" aria-expanded="true">Recording<\/button><button type="button" id="recOnBtn"[^>]*><span id="recName"><\/span><\/button><button type="button" id="recAllBtn"[^>]*>All<\/button><input type="range" id="recLevelSlider"/);
+        assert.match(html, /<div class="mgroup" id="mixRecGroup" data-fold="rec" hidden>\s*<div class="mhead"><button type="button" class="mfold mtitle" aria-expanded="true">Recording<\/button><button type="button" id="recOnBtn"[^>]*><span id="recName"><\/span><span id="recSilentNote" class="rec-silent" hidden> \(silent\)<\/span><\/button><button type="button" id="recAllBtn"[^>]*>All<\/button><input type="range" id="recLevelSlider"/);
         // Each group's head has two buttons (owner's request 2026-11-18): its on/off, which keeps the
         // lines' own on/off, and All.
         assert.match(html, /<button type="button" id="scoreOnBtn"[^>]*>Play<\/button><button type="button" id="scoreAllBtn"[^>]*>All<\/button><input type="range" id="scoreLevelSlider"/);
-        assert.match(html, /function flipRecording\(\) \{\s*(\/\/[^\n]*\s*)*recOn = !recOn;\s*renderRecParts\(\);/);
+        assert.match(html, /function flipRecording\(\) \{\s*(\/\/[^\n]*\s*)*recOn = !recOn;\s*(\/\/[^\n]*\s*)*(if \(recOn && recSilent\) \{[\s\S]*?\}\);\s*\}\s*)?renderRecParts\(\);/);
         assert.match(html, /const on = !recPartsOff\.includes\(name\);/);
         // Each group's own solo (owner's decision 2026-11-20): a score line soloed leaves the recording sounding.
         assert.match(html, /function recLevel\(\) \{ return levelIn\(recLevels, 'Recording'\); \}/);

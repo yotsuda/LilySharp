@@ -621,6 +621,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         .practice-panel .parts .voice-badge { right: -4px; bottom: -4px; }
         /* The recording's panel (docs/recording-design.md): its file name and what it is doing. */
         .practice-panel .rec-name { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .practice-panel .rec-silent { font-style: italic; opacity: 0.8; }
         .practice-panel .rec-status { font-size: 11px; opacity: .8; padding-top: 4px; max-width: 300px; }
         .practice-panel .rec-status:empty { display: none; }
         .practice-panel input[type="range"]:disabled { opacity: .4; }
@@ -716,7 +717,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             </div>
         </div>
         <div class="mgroup" id="mixRecGroup" data-fold="rec" hidden>
-            <div class="mhead"><button type="button" class="mfold mtitle" aria-expanded="true">Recording</button><button type="button" id="recOnBtn" class="toggle rec-name" aria-pressed="false"><span id="recName"></span></button><button type="button" id="recAllBtn" class="toggle mall" aria-pressed="true" title="Every part of the recording on — or every one off" hidden>All</button><input type="range" id="recLevelSlider" class="fader" min="0" max="200" step="1" value="100"><span id="recLevelValue" class="flevel"></span></div>
+            <div class="mhead"><button type="button" class="mfold mtitle" aria-expanded="true">Recording</button><button type="button" id="recOnBtn" class="toggle rec-name" aria-pressed="false"><span id="recName"></span><span id="recSilentNote" class="rec-silent" hidden> (silent)</span></button><button type="button" id="recAllBtn" class="toggle mall" aria-pressed="true" title="Every part of the recording on — or every one off" hidden>All</button><input type="range" id="recLevelSlider" class="fader" min="0" max="200" step="1" value="100"><span id="recLevelValue" class="flevel"></span></div>
             <div class="mbody">
                 <div id="recPartsRow" hidden><span id="recPartsRows" class="parts rec-part-rows"></span></div>
             </div>
@@ -4665,7 +4666,9 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             // The recording's: its file's name is its on/off; All only when it has parts.
             document.getElementById('recOnBtn').setAttribute('aria-pressed', String(!!recOn));
             document.getElementById('recOnBtn').title = recOn ? 'The recording sounds with the score — press to silence it, each part\\'s own on or off kept'
+                : recSilent ? 'The recording is silent: the score\\'s own accompaniment plays, on the recording\\'s bars. Press to hear the recording too'
                 : 'Press to sound the recording with the score: the parts of it turned on';
+            document.getElementById('recSilentNote').hidden = !recSilent;
             const recParts = (recording && recording.parts) || [];
             const recAll = document.getElementById('recAllBtn');
             recAll.hidden = recParts.length === 0;
@@ -4769,13 +4772,16 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             // export of the score with the recording's vocals soloed and its button out had no recording,
             // owner's report 2026-11-20)
             const along = recordingAlong() && !recording.error;
+            // (silent: its bars time the exports and the voices, its sound is not mixed in — recTimesOnly)
+            const timesOnly = !along && recTimesOnly();
             const e = eff();    // (the exports sound as the mixer does: the solo, the group's fader)
             vscode.postMessage({ type: 'practiceState', practice: {
                 speed: practice.speed, muted: e.muted.slice(), click: practice.click, countIn: practice.countIn,
                 extraOn: e.extraOn.slice(), voicesOff: e.voicesOff.slice(), voicesOn: e.voicesOn.slice(),
                 instrumentsOn: e.instrumentsOn.slice(),
                 levels: Object.assign({}, e.levels), voiceLevels: Object.assign({}, e.voiceLevels),
-                recording: along ? { bars: recording.bars.map(b => ({ start: b.start, end: b.end })), sound: recSound(), level: recLevel() } : null } });
+                recording: along || timesOnly ? { bars: recording.bars.map(b => ({ start: b.start, end: b.end })), sound: recSound(), level: along ? recLevel() : 0,
+                    ...(timesOnly ? { silent: true } : {}) } : null } });
         }
         /** The recording rendered whole for an export (recordingPlayer.render), sent back in pieces
          *  of ten seconds (a song's two channels are tens of megabytes). */
@@ -5137,6 +5143,10 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         var recording = null;      // { chart, name, bars, pickup, ready, error }
         var recPlayer = null;
         var recOn = false;
+        // The recording silent (its file's "silent": an accompaniment arranged over it was accepted —
+        // docs/accompaniment-design.md): not heard, its bars still time the score. Its button
+        // turns it on again, and the file forgets "silent".
+        var recSilent = false;
         var recLevels = {};        // the fader, as the parts' are: { Recording: 0..2 } while not 100%
         // The recording's parts (Orecchiante's parts, docs/recording-design.md §8): the ones turned off,
         // and the faders not at 100% — the page's own, as the score's parts are (not kept).
@@ -5305,8 +5315,12 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         /** The score's bars on the recording's (LysSynth.timeWarp), or null: the recording off or
          *  not loaded, or the two not lined up. */
         function warpNow() {
-            if (!recordingAlong() || !window.LysSynth.timeWarp) return null;
+            if (!(recordingAlong() || recTimesOnly()) || !window.LysSynth.timeWarp) return null;
             return window.LysSynth.timeWarp(rawBeats, rawBarEnd, recording);
+        }
+        /** The recording silent, its bars timing the score all the same (recSilent): not heard. */
+        function recTimesOnly() {
+            return !!(recSilent && recording && !recording.error && recording.bars.length > 0 && !recordingAlong());
         }
         /** Why the recording plays alone (warpNow null while it is on), in words. */
         function recAloneReason() {
@@ -5349,6 +5363,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 const had = !!recording;
                 recording = null;
                 recOn = false;
+                recSilent = false;
                 recAllOn = false;
                 document.getElementById('mixRecGroup').hidden = true;   // (the mixer's recording group: §1 1)
                 placeFadersReset();
@@ -5370,6 +5385,9 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             // A chart just made from this recording starts with it on: Play sounds it (owner's
             // request 2026-11-16; the extension says so once, recording.ts justConverted).
             if (m.turnOn) recOn = true;
+            // Silent, as its file says (an accompaniment over it accepted): off, its bars still the clock.
+            recSilent = !!m.silent;
+            if (recSilent) recOn = false;
             document.getElementById('mixRecGroup').hidden = false;
             placeFadersReset();
             if (fresh && lastPartsMessage) renderParts(lastPartsMessage);
@@ -5452,6 +5470,11 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         function flipRecording() {
             // (its parts' own on/off as they are: owner's request 2026-11-18)
             recOn = !recOn;
+            // Silent until now: heard again, and its file forgets "silent" (recording.ts).
+            if (recOn && recSilent) {
+                recSilent = false;
+                if (recording) vscode.postMessage({ type: 'recordingSilent', chart: recording.chart, silent: false });
+            }
             renderRecParts();
             if (recOn && recording && !recording.ready) {
                 recStatus(recording.error || 'The recording is still loading — it sounds from the next Play once it is ready');

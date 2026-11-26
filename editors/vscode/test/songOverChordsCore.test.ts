@@ -87,7 +87,7 @@ describe('Write a Song over These Chords', () => {
     it('is a command on a .lys, and the tools take what it asks for', () => {
         const pkg = read('package.json');
         assert.match(pkg, /"command": "lilysharp\.writeSongOverChords",\s*"category": "Lily#",\s*"icon": "\$\(comment-discussion\)",\s*"title": "Write a Song over These Chords…"/);
-        assert.match(pkg, /"enum": \["grammar", "composing", "start", "learn", "song"\]/);
+        assert.match(pkg, /"enum": \["grammar", "composing", "start", "learn", "song", "accompaniment"\]/);
         assert.match(pkg, /"first": \{ "type": "boolean"/);
         assert.match(pkg, /"singer": \{ "type": "string"/);
         const transform = read('src', 'aiTransform.ts');

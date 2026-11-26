@@ -546,6 +546,9 @@ export interface RecordingAlong {
     bars: readonly { start: number; end: number }[];
     sound: { octave: number; tuning?: number; chart?: number };     // (recordingCore's RecordingSettings)
     level: number;
+    /** The recording silent (its file's "silent", docs/accompaniment-design.md): its bars time the
+     *  score and the voices, its sound is not mixed in. */
+    silent?: boolean;
 }
 
 /**

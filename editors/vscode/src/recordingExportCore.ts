@@ -53,5 +53,6 @@ export function recordedExportPlan(notes: readonly PlaybackNote[], parts: readon
     const tempo = practice.speed;
     const speed = recordingPlan(rec.sound, tempo).rate;
     const plan = exportPlan(warpNotes(notes, warp), parts, warpBeats(beats, warp), { ...practice, speed }, extra);
-    return { ...plan, recording: { tempo, sound: rec.sound, level: rec.level } };
+    // Silent (docs/accompaniment-design.md): on the recording's seconds, the recording not mixed in.
+    return { ...plan, recording: rec.silent ? null : { tempo, sound: rec.sound, level: rec.level } };
 }

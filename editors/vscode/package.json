@@ -249,7 +249,7 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "topic": { "type": "string", "enum": ["grammar", "composing", "start", "learn", "song"], "description": "\"grammar\": how Lily# is written. \"composing\": how to compose a new piece, with the composing guide. \"start\": how a new piece begins, and its starting point, alone. \"learn\": how to teach Lily# to someone asking how to write it, in order. \"song\": how to write a song — a sung part, its words and its singer — over a score that is there (its chords, a recording read into it)." },
+            "topic": { "type": "string", "enum": ["grammar", "composing", "start", "learn", "song", "accompaniment"], "description": "\"grammar\": how Lily# is written. \"composing\": how to compose a new piece, with the composing guide. \"start\": how a new piece begins, and its starting point, alone. \"learn\": how to teach Lily# to someone asking how to write it, in order. \"song\": how to write a song — a sung part, its words and its singer — over a score that is there (its chords, a recording read into it). \"accompaniment\": how to arrange accompanying parts — a band, a piano — over the chords of a score that is there." },
             "part": { "type": "integer", "minimum": 1, "description": "Which part, from 1 (the default). A guide comes in parts; each says which part to read next." }
           },
           "required": ["topic"]
@@ -619,7 +619,7 @@
           {
             "id": "song",
             "title": "Write a song",
-            "description": "A score with words and a singer line. Have the AI compose one, or give a song to a score you have: one read from a recording keeps its bars and chords, and the recording plays under the song.\n[Compose with AI…](command:lilysharp.composeWithAiInChat)\n[Write a Song over These Chords…](command:lilysharp.writeSongOverChords)",
+            "description": "A score with words and a singer line. Have the AI compose one, or give a song to a score you have: one read from a recording keeps its bars and chords, and the recording plays under the song — or, with an accompaniment arranged from its chords, the recording goes silent and the score's own band plays.\n[Compose with AI…](command:lilysharp.composeWithAiInChat)\n[Write a Song over These Chords…](command:lilysharp.writeSongOverChords)\n[Arrange an Accompaniment…](command:lilysharp.arrangeAccompaniment)",
             "media": { "markdown": "walkthrough/song-to-dance.md" },
             "completionEvents": [ "onCommand:lilysharp.composeWithAiInChat", "onCommand:lilysharp.writeSongOverChords" ]
           },
@@ -894,6 +894,12 @@
         "category": "Lily#",
         "icon": "$(comment-discussion)",
         "title": "Write a Song over These Chords…"
+      },
+      {
+        "command": "lilysharp.arrangeAccompaniment",
+        "category": "Lily#",
+        "icon": "$(comment-discussion)",
+        "title": "Arrange an Accompaniment…"
       },
       {
         "command": "lilysharp.previewAiTransform",
@@ -1189,6 +1195,10 @@
         },
         {
           "command": "lilysharp.writeSongOverChords",
+          "when": "editorLangId == lilysharp"
+        },
+        {
+          "command": "lilysharp.arrangeAccompaniment",
           "when": "editorLangId == lilysharp"
         },
         {
@@ -1572,11 +1582,21 @@
           "command": "lilysharp.writeSongOverChords",
           "when": "resourceExtname == .lys",
           "group": "7_modification"
+        },
+        {
+          "command": "lilysharp.arrangeAccompaniment",
+          "when": "resourceExtname == .lys",
+          "group": "7_modification"
         }
       ],
       "editor/title/context": [
         {
           "command": "lilysharp.writeSongOverChords",
+          "when": "resourceExtname == .lys",
+          "group": "7_lilysharp"
+        },
+        {
+          "command": "lilysharp.arrangeAccompaniment",
           "when": "resourceExtname == .lys",
           "group": "7_lilysharp"
         }
@@ -1616,6 +1636,11 @@
           "command": "lilysharp.writeSongOverChords",
           "when": "resourceLangId == lilysharp",
           "group": "2_lilysharp@2"
+        },
+        {
+          "command": "lilysharp.arrangeAccompaniment",
+          "when": "resourceLangId == lilysharp",
+          "group": "2_lilysharp@3"
         },
         {
           "command": "lilysharp.sameBarInPart",

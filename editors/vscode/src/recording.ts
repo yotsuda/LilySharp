@@ -235,7 +235,7 @@ export async function sendRecording(panel: vscode.WebviewPanel, chart: vscode.Ur
     }
     const shown = path.basename(audio!.fsPath);
     const base = { name: shown, bars: rec.bars, pickup: rec.pickup, settings: recordingSettingsFor(chart.toString(), shown) ?? null,
-        parts: shownPartOrder(parts.map(p => p.name)) };
+        parts: shownPartOrder(parts.map(p => p.name)), ...(rec.silent ? { silent: true } : {}) };
     if (!audio || !audioKey) {
         // Moved, renamed outside VS Code, or on a drive not here: say where it was looked for, and
         // let it be found again (Orecchiante's request 6).
@@ -371,6 +371,22 @@ function offerLocate(chart: vscode.Uri, lookedFor: string, key: string): void {
             await vscode.workspace.fs.writeFile(file, Buffer.from(serializeRecording(rec), 'utf8'));
             locateAsked.delete(key);
         });
+}
+
+/**
+ * Makes the recording beside `chart` silent, or heard again (docs/accompaniment-design.md): its file's
+ * `"silent"`, the rest as it was. Silent, its bars still time the score; the preview hears of it
+ * through the file's watcher. False when the chart has no file beside it that can be read.
+ */
+export async function setRecordingSilent(chart: string, silent: boolean): Promise<boolean> {
+    const file = vscode.Uri.file(recordingPathFor(chart));
+    const text = await readText(file);
+    const rec = text !== undefined ? parseRecording(text) : undefined;
+    if (!rec || 'error' in rec) { return false; }
+    if (!!rec.silent === silent) { return true; }
+    rec.silent = silent;
+    await vscode.workspace.fs.writeFile(file, Buffer.from(serializeRecording(rec), 'utf8'));
+    return true;
 }
 
 /** Forgets what was sent to a preview, so the next update sends the recording again. */

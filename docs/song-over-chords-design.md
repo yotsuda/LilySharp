@@ -51,4 +51,4 @@ The score rows for words are written only when the part has a singer: the harmon
 - The owner's check in a real VS Code (`editors/vscode/MANUAL-CHECKS.md`, "Write a Song over These Chords").
 - Step 3 (Lily#): the walkthrough, and showing the next step (dance it with Shosa): done 2026-11-26,
   `docs/song-to-dance-design.md`.
-- Step 4 (Lily#): Arrange an Accompaniment….
+- Step 4 (Lily#): Arrange an Accompaniment…: done 2026-11-26, `docs/accompaniment-design.md`.

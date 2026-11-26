@@ -71,6 +71,7 @@ interface Stem {
   - m4a は、Lily# が Windows で復号して置いた WAV を返す。
   - Shosa は `recording`（元の録音）か `recordingPart`（分けたパート）のどちらかを鳴らす。
     Lily# のプレビューと同じ規則にするなら、パートが全部オンで 100% のときは元の録音、そうでなければパートの和（recording-design.md §8）。
+  - 隣のファイルが `"silent": true`（伴奏を Accept した曲・accompaniment-design.md）なら、この 2 つは出さない。`timeline` は `'recording'` のまま（part と voice は録音の秒の上）で、`notes` に理由を書く（2026-11-26）。
 - **時刻**: 録音を使うときは、part と voice を録音の小節の秒へ移して描く（`timeWarp`、依頼 4 と同じ）。
   小節の数が合わない、小節を打っていない録音は、`timeline: 'score'` にして録音を外し、`notes` に理由を書く。
 - **置き場所と寿命**: part と voice は内容の鍵（notes・SoundFont・声・warp）で保存場所に置き、同じ鍵なら描き直さない。

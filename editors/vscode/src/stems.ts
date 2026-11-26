@@ -148,7 +148,12 @@ async function renderStems(deps: StemsDeps, lys: vscode.Uri, options: StemsOptio
     const fontStamp = (() => { try { const s = fs.statSync(soundFont); return `${soundFont}|${s.mtimeMs}|${s.size}`; } catch { return soundFont; } })();
     const parts = notesByPart(sung.Notes, sung.Parts);
     const voices = sung.Voices ?? [];
-    const total = parts.length + voices.length + (warp && recording ? 1 + recording.parts.length : 0);
+    // Silent (its file's "silent", docs/accompaniment-design.md): the stems on its seconds, it not among them.
+    const heard = !!(warp && recording && !recording.silent);
+    if (warp && recording?.silent) {
+        notes.push(`${recording.name} is silent (the score's own accompaniment plays): the stems are on its seconds, without it`);
+    }
+    const total = parts.length + voices.length + (heard && recording ? 1 + recording.parts.length : 0);
     let done = 0;
     const stems: Stem[] = [];
     const made = (stem: Stem) => { stems.push(stem); options.onProgress?.({ stem: stem.name, done: ++done, total }); };
@@ -170,7 +175,7 @@ async function renderStems(deps: StemsDeps, lys: vscode.Uri, options: StemsOptio
         const why = (await renderer()) ? 'no voice could be sung for it (the output channel says why)' : 'no singing engine is installed (Cantoria)';
         for (const name of unsung) { notes.push(`${name}: ${why} — its instrument plays it`); }
     }
-    if (warp && recording) {
+    if (heard && recording) {
         made({ kind: 'recording', name: recording.name, file: recording.file, at: 0 });
         for (const p of recording.parts) { made({ kind: 'recordingPart', name: p.name, file: p.file, at: 0 }); }
     }
@@ -182,7 +187,7 @@ async function renderStems(deps: StemsDeps, lys: vscode.Uri, options: StemsOptio
 /** The recording beside the chart as the stems hand it out: its file (an m4a as the WAV the server
  *  decoded, on Windows), its parts' files, and its bars; undefined with none, a reason in `notes`
  *  when it cannot be used. */
-async function recordingOf(lys: vscode.Uri, deps: StemsDeps, notes: string[]): Promise<{ name: string; file: string; bars: { start: number; end: number }[]; parts: { name: string; file: string }[] } | undefined> {
+async function recordingOf(lys: vscode.Uri, deps: StemsDeps, notes: string[]): Promise<{ name: string; file: string; bars: { start: number; end: number }[]; parts: { name: string; file: string }[]; silent: boolean } | undefined> {
     const beside = recordingPathFor(lys.fsPath);
     let text: string;
     try { text = fs.readFileSync(beside, 'utf8'); } catch { return undefined; }
@@ -207,5 +212,5 @@ async function recordingOf(lys: vscode.Uri, deps: StemsDeps, notes: string[]): P
         if (audioReader(p.file, false) !== 'webview') { notes.push(`the recording's part ${p.name}: ${path.basename(f)} is not a wav, mp3, flac or ogg`); continue; }
         parts.push({ name: p.name, file: f });
     }
-    return { name, file, bars: rec.bars.map(b => ({ start: b.start, end: b.end })), parts };
+    return { name, file, bars: rec.bars.map(b => ({ start: b.start, end: b.end })), parts, silent: rec.silent === true };
 }

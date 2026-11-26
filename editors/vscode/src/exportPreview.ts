@@ -306,8 +306,11 @@ export async function exportPreview(
             const revealAction = 'Reveal in Explorer';
             const practised = soundFont ? practiceSummary(practice) : '';
             const through = soundFont ? ` (played through ${path.basename(soundFont)}${practised ? ', ' + practised : ''})` : '';
+            // A silent recording (docs/accompaniment-design.md) is said: on its bars, not in the file.
+            const silent = soundFont && practice?.recording?.silent
+                ? ' The recording is silent, so it is not in the file: turn it on in the preview\'s mixer to have it in.' : '';
             const choice = await vscode.window.showInformationMessage(
-                `Exported to ${response.OutputPath}${through}`, openAction, revealAction);
+                `Exported to ${response.OutputPath}${through}.${silent}`, openAction, revealAction);
             if (choice === openAction) {
                 if (fs.existsSync(target.fsPath)) {
                     openInDefaultApp(target.fsPath);
@@ -335,7 +338,7 @@ export function practisedJobs(jobs: readonly AudioJob[], practice: PracticeState
         // With the recording the page sounds with the score: the notes on its seconds, and how it
         // plays (docs/recording-design.md §7); recordJobs renders it once the voices are in.
         const plan = recordedExportPlan(job.Notes, job.Parts ?? null, job.Beats ?? null, job.BarEnd, practice, job.Extra ?? null);
-        if (practice?.recording && !plan.recording) {
+        if (practice?.recording && !practice.recording.silent && !plan.recording) {
             outputChannel.appendLine(`recording: export: its bars do not line up with ${path.basename(job.OutputPath)}'s; written without it`
                 + ` (the score ends at ${job.BarEnd ?? '?'} s, ${job.Beats?.length ?? 0} beats; the recording places ${practice.recording.bars.length} bars)`);
         }

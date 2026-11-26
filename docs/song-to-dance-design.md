@@ -51,4 +51,4 @@ and **Show the Steps**.
   the walkthrough's look, and the message after a song is accepted in the chat.
 - Shosa is not yet in the Marketplace (0.3.0 is its first release), so Install Shosa ends in the
   Extensions view's search until it is.
-- Step 4 (Lily#): Arrange an Accompaniment….
+- Step 4 (Lily#): Arrange an Accompaniment…: done 2026-11-26, `docs/accompaniment-design.md`.

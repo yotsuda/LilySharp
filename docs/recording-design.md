@@ -142,6 +142,7 @@ Transcribe!（Seventh String）と同じ体験を Lily# のプレビューで（
 - ⚠️ **描画は復号したバッファ自身のレートで**: Signalsmith は入力を自分のコンテキストのレートの標本として読む＝48 kHz の録音を 44.1 kHz の OfflineAudioContext で描くと ×1.125 が ×1.034 になった（実物の VS Code で実測・Lab `p1286/e2e`）。書き出しが `mixInStereo` で再標本化する。
 - **MP4 の映像の長さ**: concat の最後の 1 枚の長さを `-r` だけでは落としていた（曲で 0.47 s、録音が曲の後まで鳴ると 1.6 s 映像が先に終わる）＝`videoArgs` は `[0:v]fps=30` を通す。
 - **確かめ方**: 網は `recordingExportCore.test.ts`（時刻・Count-in・テンポ・小節なし）と `mixInStereo`／`fileSeconds`。実物の VS Code（CDP・簡易ダイアログ `files.simpleDialog.enable` を操作・Lab `p1286/e2e`）で WAV／MP3／MP4 を書き、録音のクリックが楽譜の小節頭（0.89／2.67／4.89／6.67／8.89 s＝秒 ÷1.125）に来ること・MP4 の映像と音が 12.4 s で揃うことを測った。⚠️ その計器は拡張の写し（`server` に自己完結の LSP を publish）で回す＝リポジトリの `editors/vscode/server` に自己完結版があると `lilysharp.serverPath` より優先される。
+- **（2026-11-26・オーナー決定）録音を音なしに**（`"silent": true`・`docs/accompaniment-design.md`）: 伴奏を Accept した曲は、録音を鳴らさずに小節だけを時計に使う（`recSilent`・`recTimesOnly`）。書き出しは録音の秒の上で録音を混ぜず、歌声も録音の小節で歌う。ミキサーの Recording の行は `(silent)` と出て、押すと鳴り、隣のファイルが `"silent"` を忘れる。
 - 残る穴: ~~歌い手の声は録音の揺れについて行かない（§5 の ⑴ と同じ）~~（2026-11-20 に埋めた・上）。プレビューを閉じた状態の Explorer の書き出しには録音は入らない（録音の状態はプレビューが持つ）。
 
 同じ報告の ⑴ は閉じた: `ScoreVideo.HeadsByNote` が `notehead` に加えて `chordName` の箱も拾う（コード行の音の `S`／`O` はコード名の位置）。網 `ScoreVideoLightTests`。

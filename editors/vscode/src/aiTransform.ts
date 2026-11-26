@@ -51,6 +51,9 @@ import { CANTORIA_EXTENSION_ID, cantoriaApiOf, leftToTheInstrument, voiceListTex
 import { withTodoMark } from './omrAiFixCore';
 import { namesChords, songGuide, songPartName, songRequest, songWordsName } from './songOverChordsCore';
 import { offerDanceNext } from './songToDance';
+import { PLAY_RECORDING_TOO, accompanimentGuide, accompanimentRequest, addedParts, declaredParts, silencedMessage } from './accompanimentCore';
+import { setRecordingSilent } from './recording';
+import { recordingPathFor } from './recordingCore';
 import { gaveASong } from './songToDanceCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
@@ -214,6 +217,7 @@ export function registerAiTransform(context: vscode.ExtensionContext, deps: AiTr
         // model is picked and its thinking seen, stays).
         vscode.commands.registerCommand('lilysharp.composeWithAiInChat', () => runComposeInChat(deps)),
         vscode.commands.registerCommand('lilysharp.writeSongOverChords', (uri?: vscode.Uri) => runWriteSongOverChords(uri)),
+        vscode.commands.registerCommand('lilysharp.arrangeAccompaniment', (uri?: vscode.Uri) => runArrangeAccompaniment(uri)),
     );
     registerProposeScoreTool(context, deps);
     context.subscriptions.push({
@@ -486,6 +490,7 @@ function registerProposeScoreTool(context: vscode.ExtensionContext, deps: AiTran
         prepareInvocation: options => ({
             invocationMessage: options.input?.topic === 'composing' ? 'Reading the Lily# composing guide…'
                 : options.input?.topic === 'song' ? 'Reading how to write a song over a score…'
+                : options.input?.topic === 'accompaniment' ? 'Reading how to arrange an accompaniment over a score…'
                 : options.input?.topic === 'learn' ? 'Reading how to teach Lily#…' : 'Reading the Lily# grammar…',
         }),
         invoke: async options => new vscode.LanguageModelToolResult([
@@ -557,7 +562,7 @@ async function readGuide(deps: AiTransformDeps, input: ReadGuideInput | undefine
         return pages.length === 1 ? body
             : `${body}\n\n[Part ${part} of ${pages.length} of the ${name}. `
                 + (part < pages.length
-                    ? `Read part ${part + 1} next: lilysharp_readGuide, topic "${topic === 'start' || topic === 'composing' ? 'composing' : topic === 'learn' ? 'learn' : topic === 'song' ? 'song' : 'grammar'}", part ${part + 1} — every part before you ${topic === 'learn' ? 'teach' : topic === 'composing' || topic === 'start' || topic === 'song' ? 'write' : 'write a new piece; to change a score that is there, the parts its contents (part 1) name for what you write'}.]`
+                    ? `Read part ${part + 1} next: lilysharp_readGuide, topic "${topic === 'start' || topic === 'composing' ? 'composing' : topic === 'learn' ? 'learn' : topic === 'song' || topic === 'accompaniment' ? topic : 'grammar'}", part ${part + 1} — every part before you ${topic === 'learn' ? 'teach' : topic === 'composing' || topic === 'start' || topic === 'song' || topic === 'accompaniment' ? 'write' : 'write a new piece; to change a score that is there, the parts its contents (part 1) name for what you write'}.]`
                     : 'The end.]');
     };
     // Owner's request 2026-11-02: asked how to write Lily#, the chat had a 100 KB grammar and a guide to composing.
@@ -570,6 +575,11 @@ async function readGuide(deps: AiTransformDeps, input: ReadGuideInput | undefine
     // the chat write one.
     if (topic === 'song') {
         return paged('song guide', guidePages(songGuide(built('lilysharp-compose.instructions.md') ?? await loadComposeGuide(deps)), GUIDE_PAGE_BYTES));
+    }
+    // An accompaniment over a score's chords (Arrange an Accompaniment…, docs/accompaniment-design.md):
+    // its steps and the composing guide's word on a band and a style, as the song's.
+    if (topic === 'accompaniment') {
+        return paged('accompaniment guide', guidePages(accompanimentGuide(built('lilysharp-compose.instructions.md') ?? await loadComposeGuide(deps)), GUIDE_PAGE_BYTES));
     }
     if (topic !== 'composing' && topic !== 'start') {
         const pages = guidePages(built('lilysharp.instructions.md') ?? await loadGrammar(deps), GUIDE_PAGE_BYTES, GUIDE_PAGE_BYTES - GUIDE_CONTENTS_BYTES);
@@ -1327,6 +1337,13 @@ async function proposeScore(deps: AiTransformDeps, given: ProposeScoreInput, tok
                 // words): the next step of the way to a dance is said (docs/song-to-dance-design.md).
                 if (gaveASong(current, text)) {
                     void offerDanceNext(currentUri(uri));
+                }
+                // An accompaniment arranged for this score (Arrange an Accompaniment…) and accepted:
+                // the recording under it goes silent, its bars still the clock (docs/accompaniment-design.md).
+                const arrangedFor = arrangingKey(currentUri(uri));
+                if (arranging.has(arrangedFor) && addedParts(current, text).length > 0) {
+                    arranging.delete(arrangedFor);
+                    void silenceRecordingUnder(currentUri(uri));
                 }
                 return 'Accepted: the musician accepted the proposal, and it is in the editor, not saved yet — '
                     + `${path.basename(currentUri(uri).fsPath)} (call the file by that name; it may have been renamed). Read it `
@@ -3823,6 +3840,92 @@ function getNonce(): string {
     return text;
 }
 
+/** The score a command over a score's chords works on: the one right-clicked, else the .lys in the
+ *  editor, else one picked (from the palette or the walkthrough with no score open). Undefined when
+ *  none is picked, or what was given is no .lys (said). */
+async function scoreToWorkOn(uri: vscode.Uri | undefined, command: string, openLabel: string): Promise<vscode.Uri | undefined> {
+    const editing = vscode.window.activeTextEditor?.document.uri;
+    let target = uri instanceof vscode.Uri ? uri : editing && /\.lys$/i.test(editing.path) ? editing : undefined;
+    if (!target) {
+        const picked = await vscode.window.showOpenDialog({
+            title: `Lily# — ${command}: the score`, canSelectMany: false,
+            filters: { 'Lily# score': ['lys'] }, openLabel,
+        });
+        if (!picked || picked.length === 0) {
+            return undefined;
+        }
+        target = picked[0];
+    }
+    if (!/\.lys$/i.test(target.path)) {
+        void vscode.window.showErrorMessage(`Lily#: ${command} works on a .lys score — open one, or right-click it.`);
+        return undefined;
+    }
+    return target;
+}
+
+/** The scores an accompaniment was asked for (Arrange an Accompaniment…), by arrangingKey, until a
+ *  proposal adding parts to one is accepted: its recording then goes silent. */
+const arranging = new Set<string>();
+const arrangingKey = (uri: vscode.Uri) => uri.scheme === 'file' ? path.resolve(uri.fsPath).toLowerCase() : uri.toString();
+
+/**
+ * "Lily#: Arrange an Accompaniment…" (docs/accompaniment-design.md; the fourth step of the way from a
+ * song to a dance, decided with the owner 2026-11-26): accompanying parts — a band, unless the
+ * musician names others — written from the score's chords by Copilot's chat, which reads the
+ * accompaniment guide (topic "accompaniment") and writes them with lilysharp_writePart. Accepted,
+ * the recording the score was read from goes silent, its bars still timing the music.
+ */
+async function runArrangeAccompaniment(uri?: vscode.Uri): Promise<void> {
+    const target = await scoreToWorkOn(uri, 'Arrange an Accompaniment', 'Arrange an Accompaniment for It');
+    if (!target) {
+        return;
+    }
+    const doc = await vscode.workspace.openTextDocument(target);
+    await vscode.window.showTextDocument(doc, { preview: false });
+    const text = doc.getText();
+    const chords = namesChords(text);
+    const recording = doc.uri.scheme === 'file' && fs.existsSync(recordingPathFor(doc.uri.fsPath));
+    const request = await vscode.window.showInputBox({
+        title: 'Lily# — Arrange an Accompaniment',
+        prompt: (chords ? '' : 'This score names no chords: the AI reads the harmony its parts play. ')
+            + 'What should play? The instruments and the style — or leave it empty for a band (piano, bass, drums) in the song\'s style. '
+            + (recording ? 'Accepted, it plays in place of the recording. ' : '')
+            + 'Copilot\'s chat adds the parts to this score; pick a strong model in its model menu.',
+        placeHolder: 'e.g. an acoustic guitar and a soft piano, a ballad / a funk band with a clavinet',
+        ignoreFocusOut: true,
+    });
+    if (request === undefined) {
+        return;
+    }
+    const file = doc.uri.scheme === 'file' ? doc.uri.fsPath : doc.uri.toString();
+    arranging.add(arrangingKey(doc.uri));
+    const query = accompanimentRequest(file, declaredParts(text), request, chords, recording);
+    try {
+        await vscode.commands.executeCommand('workbench.action.chat.open', { query, mode: 'agent' });
+    } catch {
+        try {
+            await vscode.commands.executeCommand('workbench.action.chat.open', query);
+        } catch (err) {
+            void vscode.window.showErrorMessage(`Lily#: Copilot's chat could not be opened (${err}). Is GitHub Copilot Chat installed and signed in?`);
+        }
+    }
+}
+
+/** After an accepted arrangement: the recording beside the score goes silent, and it is said, with
+ *  the way to hear it again (docs/accompaniment-design.md). Nothing when the score has none. */
+async function silenceRecordingUnder(uri: vscode.Uri): Promise<void> {
+    if (uri.scheme !== 'file' || !fs.existsSync(recordingPathFor(uri.fsPath))) {
+        return;
+    }
+    if (!await setRecordingSilent(uri.fsPath, true)) {
+        return;
+    }
+    const chosen = await vscode.window.showInformationMessage(silencedMessage(path.basename(uri.fsPath)), PLAY_RECORDING_TOO);
+    if (chosen === PLAY_RECORDING_TOO) {
+        await setRecordingSilent(uri.fsPath, false);
+    }
+}
+
 /**
  * "Lily#: Write a Song over These Chords…" (docs/song-over-chords-design.md; the second step of
  * the way from a song to a dance, decided with the owner 2026-11-26): a sung part added to the
@@ -3831,21 +3934,8 @@ function getNonce(): string {
  * The musician hears it in the candidate panel and accepts it; the recording plays under it.
  */
 async function runWriteSongOverChords(uri?: vscode.Uri): Promise<void> {
-    const editing = vscode.window.activeTextEditor?.document.uri;
-    let target = uri instanceof vscode.Uri ? uri : editing && /\.lys$/i.test(editing.path) ? editing : undefined;
+    const target = await scoreToWorkOn(uri, 'Write a Song over These Chords', 'Write a Song over It');
     if (!target) {
-        // From the palette or the walkthrough with no score open: the score is picked.
-        const picked = await vscode.window.showOpenDialog({
-            title: 'Lily# — Write a Song over These Chords: the score', canSelectMany: false,
-            filters: { 'Lily# score': ['lys'] }, openLabel: 'Write a Song over It',
-        });
-        if (!picked || picked.length === 0) {
-            return;
-        }
-        target = picked[0];
-    }
-    if (!/\.lys$/i.test(target.path)) {
-        void vscode.window.showErrorMessage('Lily#: Write a Song over These Chords works on a .lys score — open one, or right-click it.');
         return;
     }
     // Open in the editor, where the chat's tools read it as it stands and the proposal is shown beside it.
