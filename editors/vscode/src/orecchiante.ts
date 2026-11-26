@@ -27,6 +27,7 @@ import * as path from 'path';
 import {
     ORECCHIANTE_EXTENSION_ID, OrecchianteLocation, OrecchianteVersion, chartForConversion, orecchianteArgs, orecchianteFailure, judgeOrecchiante,
     besideChart, locateOrecchiante, parseOrecchianteVersion, replaceQuestion,
+    canFetchLyrics, lookedFor, lyricsArgs, lyricsOutcome, lyricsPathFor, lyricsQuestion,
 } from './orecchianteCore';
 import { parseRecording, recordingPathFor } from './recordingCore';
 import { markJustConverted } from './recording';
@@ -161,6 +162,125 @@ function versionAtLeast(version: string | undefined, major: number, minor: numbe
     return a !== major ? a > major : b !== minor ? b > minor : c >= patch;
 }
 
+/** Puts words the person chose (an `.lrc`, or a `.txt` a line a line) beside the recording as `<name>.lrc`,
+ *  where the conversion reads them. False when it could not be written. */
+async function copyLyrics(recording: string, output: vscode.OutputChannel): Promise<boolean> {
+    const picked = await vscode.window.showOpenDialog({
+        title: `Lily#: the words of ${path.basename(recording)}`, openLabel: 'Use These Words', canSelectMany: false,
+        defaultUri: vscode.Uri.file(path.dirname(recording)),
+        filters: { 'Lyrics': ['lrc', 'txt'] },
+    });
+    if (!picked || picked.length === 0) {
+        return false;
+    }
+    const lrc = lyricsPathFor(recording);
+    try {
+        await fs.promises.copyFile(picked[0].fsPath, lrc);
+        output.appendLine(`copied ${picked[0].fsPath} → ${lrc} (the conversion reads the words beside the recording)`);
+        return true;
+    } catch (e) {
+        void vscode.window.showWarningMessage(`Lily#: the words could not be put beside the recording (${lrc}): ${(e as Error).message ?? e}. The chart is written without them.`);
+        return false;
+    }
+}
+
+/**
+ * Before a conversion, the words of the song (Orecchiante's request 25, 2026-11-26): words already beside
+ * the recording (`<name>.lrc`) are read by the conversion itself, unasked; otherwise, with a reader that can
+ * fetch them, the person is asked first — nothing is sent unless they choose to — and may correct the title
+ * and artist when none are found, or choose a file of their own. False only when the person cancelled the
+ * conversion.
+ */
+async function prepareLyrics(reader: OrecchianteLocation, v: OrecchianteVersion, recording: string,
+    output: vscode.OutputChannel): Promise<boolean> {
+    const lrc = lyricsPathFor(recording);
+    if (fs.existsSync(lrc)) {
+        output.appendLine(`words beside the recording: ${lrc}`);
+        return true;
+    }
+    const setting = vscode.workspace.getConfiguration('lilysharp.orecchiante');
+    if (!canFetchLyrics(v) || setting.get<string>('fetchLyrics', 'ask') === 'never') {
+        return true;
+    }
+    const name = path.basename(recording);
+    const fetch = 'Fetch Lyrics', file = 'Choose a File…', without = 'Without Lyrics', never = 'Never Ask';
+    const answer = await vscode.window.showInformationMessage(
+        lyricsQuestion(name), { modal: true }, fetch, file, without, never);
+    if (answer === undefined) {
+        return false;
+    }
+    if (answer === never) {
+        await setting.update('fetchLyrics', 'never', vscode.ConfigurationTarget.Global);
+        void vscode.window.showInformationMessage('Lily#: the words will not be offered again (the setting Lily# › Orecchiante: Fetch Lyrics brings the question back).');
+        return true;
+    }
+    if (answer === without) {
+        return true;
+    }
+    if (answer === file) {
+        await copyLyrics(recording, output);
+        return true;
+    }
+    let title: string | undefined, artist: string | undefined;
+    for (;;) {
+        const args = lyricsArgs(recording, title, artist);
+        output.appendLine(`Orecchiante ${v.version}: orecchiante ${args.join(' ')}`);
+        let done: { code: number | null; stderr: string } | undefined;
+        try {
+            done = await vscode.window.withProgress(
+                { location: vscode.ProgressLocation.Notification, title: `Lily#: fetching the words of ${name} from LRCLIB`, cancellable: true },
+                (progress, token) => run(reader.path, args, output, progress, token));
+        } catch (e) {
+            void vscode.window.showWarningMessage(`Lily#: the words could not be fetched (${(e as Error).message ?? e}). The chart is written without them.`);
+            return true;
+        }
+        if (done === undefined) {
+            return true;
+        }
+        const outcome = lyricsOutcome(done.code, done.stderr);
+        if (outcome.kind === 'found') {
+            // Said, not asked: the entry shows a cover version taken by mistake (the .lrc can then be deleted
+            // and the recording converted again).
+            void vscode.window.showInformationMessage(`Lily#: words from LRCLIB${outcome.entry ? `: ${outcome.entry}` : ''} — saved beside the recording as ${path.basename(lrc)}.`);
+            return true;
+        }
+        if (outcome.kind === 'unreached') {
+            void vscode.window.showWarningMessage(`Lily#: LRCLIB could not be reached${outcome.reason ? ` (${outcome.reason})` : ''}. The chart is written without lyrics.`);
+            return true;
+        }
+        if (outcome.kind === 'failed') {
+            void vscode.window.showWarningMessage(`Lily#: the words could not be fetched${outcome.reason ? `: ${outcome.reason}` : '.'} The chart is written without lyrics.`, 'Show Output')
+                .then(choice => { if (choice === 'Show Output') { output.show(true); } });
+            return true;
+        }
+        const correct = 'Correct Title and Artist…';
+        const again = await vscode.window.showWarningMessage(
+            `${outcome.reason || 'LRCLIB has no lyrics for this song'}. Correct the title and artist and look again, choose a file of the words, or convert without lyrics?`,
+            { modal: true }, correct, file, without);
+        if (again === undefined) {
+            return false;
+        }
+        if (again === without) {
+            return true;
+        }
+        if (again === file) {
+            await copyLyrics(recording, output);
+            return true;
+        }
+        const was = lookedFor(done.stderr);
+        const t = await vscode.window.showInputBox({ title: 'Lily#: the song\'s title, as LRCLIB knows it', value: title ?? was.title ?? '', ignoreFocusOut: true });
+        if (t === undefined) {
+            return true;
+        }
+        const a = await vscode.window.showInputBox({ title: 'Lily#: the artist (the one who sings this recording)', value: artist ?? was.artist ?? '', ignoreFocusOut: true });
+        if (a === undefined) {
+            return true;
+        }
+        title = t;
+        artist = a;
+    }
+}
+
 /**
  * Converts a recording (right-clicked, or chosen) into a chart and opens it. The steps and the
  * words follow "Convert Image/PDF to Lily# (.lys)…" (omrImport.ts importFromImage): the reader
@@ -249,6 +369,9 @@ export async function convertRecording(context: vscode.ExtensionContext, uri: vs
         } else {
             return;
         }
+    }
+    if (!await prepareLyrics(reader, v, recording, output)) {
+        return;
     }
     const name = path.basename(recording);
     void noteOrecchiantePreview(context);

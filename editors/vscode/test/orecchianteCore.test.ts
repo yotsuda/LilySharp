@@ -20,7 +20,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
     ORECCHIANTE_INPUTS, chartForConversion, orecchianteArgs, orecchianteFailure, judgeOrecchiante, locateOrecchiante, parseOrecchianteVersion,
-    besideChart, replaceQuestion,
+    besideChart, replaceQuestion, canFetchLyrics, lookedFor, lyricsArgs, lyricsOutcome, lyricsPathFor, lyricsQuestion,
 } from '../src/orecchianteCore';
 import { newScoreStarts } from '../src/menuContextCore';
 
@@ -38,10 +38,36 @@ describe('Orecchiante, the recording reader', () => {
 
     it('reads its --version --json', () => {
         assert.deepEqual(parseOrecchianteVersion('{"version":"0.2.1","protocol":1,"commands":["read"],"inputs":["WAV","mp3"]}\n'),
-            { version: '0.2.1', protocol: 1, inputs: ['wav', 'mp3'] });
-        assert.deepEqual(parseOrecchianteVersion('{"version":"0.2.0","protocol":1}'), { version: '0.2.0', protocol: 1, inputs: undefined });
+            { version: '0.2.1', protocol: 1, inputs: ['wav', 'mp3'], commands: ['read'] });
+        assert.deepEqual(parseOrecchianteVersion('{"version":"0.2.0","protocol":1}'), { version: '0.2.0', protocol: 1, inputs: undefined, commands: undefined });
         assert.equal(parseOrecchianteVersion('0.2.0'), undefined);
         assert.equal(parseOrecchianteVersion('{"version":2}'), undefined);
+    });
+
+    it('fetches the words only with a reader that has the lyrics command, into <name>.lrc beside the recording', () => {
+        assert.equal(canFetchLyrics({ version: '0.16.0', protocol: 1, commands: ['read', 'lyrics'] }), true);
+        assert.equal(canFetchLyrics({ version: '0.15.0', protocol: 1, commands: ['read'] }), false);
+        assert.equal(canFetchLyrics({ version: '0.2.0', protocol: 1 }), false);
+        assert.equal(lyricsPathFor('C:\\m\\今宵の月のように.mp3'), 'C:\\m\\今宵の月のように.lrc');
+        assert.equal(lyricsPathFor('C:\\m.d\\song'), 'C:\\m.d\\song.lrc');
+        assert.deepEqual(lyricsArgs('C:\\m\\a.mp3'), ['lyrics', 'C:\\m\\a.mp3']);
+        assert.deepEqual(lyricsArgs('C:\\m\\a.mp3', ' Title ', ''), ['lyrics', 'C:\\m\\a.mp3', '--title', 'Title']);
+        assert.deepEqual(lyricsArgs('C:\\m\\a.mp3', 'T', 'A'), ['lyrics', 'C:\\m\\a.mp3', '--title', 'T', '--artist', 'A']);
+        assert.match(lyricsQuestion('a.mp3'), /title, artist and length .* lrclib\.net/);
+    });
+
+    it('reads what the fetch came to by its exit code, with the entry found or the reason', () => {
+        const found = '今宵の月のように by エレファントカシマシ (明日に向かって走れ), 4:42\n'
+            + '  今宵の月のように by エレファントカシマシ (明日に向かって走れ-月夜の歌-), 282 s, lines with their times (LRCLIB 10699791)\n';
+        assert.deepEqual(lyricsOutcome(0, found), {
+            kind: 'found', entry: '今宵の月のように by エレファントカシマシ (明日に向かって走れ-月夜の歌-), 282 s, lines with their times (LRCLIB 10699791)' });
+        assert.deepEqual(lyricsOutcome(1, 'x, 3:00\norecchiante: LRCLIB has no lyrics for x within 2 s of 3:00 (--artist may find them)\n'),
+            { kind: 'notFound', reason: 'LRCLIB has no lyrics for x within 2 s of 3:00 (--artist may find them)' });
+        assert.deepEqual(lyricsOutcome(3, 'orecchiante: lrclib.net did not answer'), { kind: 'unreached', reason: 'lrclib.net did not answer' });
+        assert.deepEqual(lyricsOutcome(2, ''), { kind: 'failed', reason: '' });
+        assert.deepEqual(lookedFor(found), { title: '今宵の月のように', artist: 'エレファントカシマシ' });
+        assert.deepEqual(lookedFor('今宵の月のように, 4:42\n'), { title: '今宵の月のように', artist: undefined });
+        assert.deepEqual(lookedFor(''), {});
     });
 
     it('is judged as Calamo is: a newer protocol asks to update Lily#, an older one or an old version offers its update', () => {

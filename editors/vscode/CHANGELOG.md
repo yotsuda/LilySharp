@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- `[recording]` **Convert Recording to Lily# (.lys)… can fetch the song's words.** With Orecchiante 0.16.0 or later, a recording with no words beside it (`<name>.lrc`) first asks whether to fetch them from LRCLIB (lrclib.net). Only the song's title, artist and length are sent, and only when you choose to. When nothing is found you can correct the title and artist, choose a file of your own (`.lrc`, or a `.txt` with one line per line), or convert without words. The chart then has the words under the sung line (Orecchiante 0.17.0; Japanese words for now). **Never Ask**, or the setting `lilysharp.orecchiante.fetchLyrics`, stops the question.
+
 - `[preview]` **Following the music turns the page.** When the notes playing come to the first line of a page, that line goes to the top of the preview, and the view stays there while it plays.
 
 - `[preview]` **A phrase used in many bars lights the copy in the bar that plays.** The follow-along picked a phrase's copy by counting its copies across the page, and a note drawn in two pieces far apart (a drum note whose dot the other voices push away) counted twice: a later bar's notes lit an earlier bar's, and the view jumped there and back. It now picks the copy in the note's own measure.

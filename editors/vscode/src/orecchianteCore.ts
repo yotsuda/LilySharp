@@ -87,8 +87,8 @@ function compareVersions(a: string, b: string): number {
     return 0;
 }
 
-/** What `orecchiante --version --json` answered: `{"version":"0.2.0","protocol":1,"inputs":[…]}`. */
-export interface OrecchianteVersion { version: string; protocol: number; inputs?: string[] }
+/** What `orecchiante --version --json` answered: `{"version":"0.2.0","protocol":1,"commands":["read"],"inputs":[…]}`. */
+export interface OrecchianteVersion { version: string; protocol: number; inputs?: string[]; commands?: string[] }
 
 export function parseOrecchianteVersion(stdout: string): OrecchianteVersion | undefined {
     try {
@@ -96,12 +96,67 @@ export function parseOrecchianteVersion(stdout: string): OrecchianteVersion | un
         if (typeof o?.version !== 'string' || typeof o?.protocol !== 'number') {
             return undefined;
         }
-        const inputs = Array.isArray(o.inputs) && o.inputs.every((x: unknown) => typeof x === 'string')
-            ? (o.inputs as string[]).map(x => x.toLowerCase()) : undefined;
-        return { version: o.version, protocol: o.protocol, inputs };
+        const strings = (a: unknown) => Array.isArray(a) && a.every((x: unknown) => typeof x === 'string')
+            ? (a as string[]).map(x => x.toLowerCase()) : undefined;
+        return { version: o.version, protocol: o.protocol, inputs: strings(o.inputs), commands: strings(o.commands) };
     } catch {
         return undefined;
     }
+}
+
+// ── The words of the song (Orecchiante's request 25, 2026-11-26) ──────────────────────────────
+// `orecchiante lyrics <recording>` (0.16.0) asks LRCLIB (lrclib.net) for the words by the title, artist and
+// length in the recording's tags and writes `<name>.lrc` beside the recording; the conversion (0.17.0) reads
+// that file and puts the words under the sung line. Lily# asks before anything leaves the computer.
+
+/** Whether the reader can fetch the words (`"lyrics"` in its `commands`, 0.16.0 and later). */
+export function canFetchLyrics(v: OrecchianteVersion): boolean {
+    return v.commands?.includes('lyrics') ?? false;
+}
+
+/** The words the conversion reads: `<name>.lrc` beside the recording. */
+export function lyricsPathFor(recording: string): string {
+    const slash = Math.max(recording.lastIndexOf('/'), recording.lastIndexOf('\\'));
+    const dot = recording.lastIndexOf('.');
+    return (dot > slash ? recording.slice(0, dot) : recording) + '.lrc';
+}
+
+/** The call that fetches the words; `--title`/`--artist` only when the person corrected them. */
+export function lyricsArgs(recording: string, title?: string, artist?: string): string[] {
+    const args = ['lyrics', recording];
+    if (title && title.trim() !== '') { args.push('--title', title.trim()); }
+    if (artist && artist.trim() !== '') { args.push('--artist', artist.trim()); }
+    return args;
+}
+
+/** The question before the words are fetched: what is sent, and where. */
+export function lyricsQuestion(recordingName: string): string {
+    return `Fetch the words of ${recordingName} from LRCLIB, so the chart has lyrics under the sung line? `
+        + 'This sends the song\'s title, artist and length (from the recording\'s tags, or its file name) to lrclib.net, '
+        + 'a free lyrics database; the recording itself does not leave this computer. '
+        + 'For now the words are put under the notes only when they are Japanese.';
+}
+
+/** The title and artist the reader looked for, from its first line on stderr
+ *  (`<title>[ by <artist>][ (<album>)], m:ss`) — to offer them for correcting. */
+export function lookedFor(stderr: string): { title?: string; artist?: string } {
+    const first = stderr.split(/\r?\n/).map(l => l.trim()).find(l => l !== '');
+    const m = first ? /^(.*?)(?: by (.*?))?(?: \(.*\))?, \d+:\d\d$/.exec(first) : null;
+    return m ? { title: m[1] || undefined, artist: m[2] || undefined } : {};
+}
+
+/** What the fetch came to, by its exit code: 0 the words are there (with the entry it found, to be shown,
+ *  so a cover version taken by mistake is noticed); 1 none found (offer to correct the title and artist);
+ *  3 LRCLIB not reached; anything else an error. `reason` is the reader's last line without `orecchiante: `. */
+export function lyricsOutcome(code: number | null, stderr: string):
+    { kind: 'found'; entry?: string } | { kind: 'notFound' | 'unreached' | 'failed'; reason: string } {
+    const lines = stderr.split(/\r?\n/).map(l => l.trim()).filter(l => l !== '');
+    if (code === 0) {
+        const entry = lines.find(l => /\(LRCLIB \d+\)$/.test(l));
+        return { kind: 'found', entry };
+    }
+    const reason = lines.length > 0 ? lines[lines.length - 1].replace(/^orecchiante:\s*/, '') : '';
+    return { kind: code === 1 ? 'notFound' : code === 3 ? 'unreached' : 'failed', reason };
 }
 
 /** What to do with the reader's answer — as Calamo's is judged (omrImport.ts): a protocol newer
