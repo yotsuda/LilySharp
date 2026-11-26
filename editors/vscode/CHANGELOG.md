@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- `[preview]` **Following the music no longer shakes the view up and down.** When a line fits the view, the preview now moves by the whole line (with its chord names, words and the notes high over or low under the staves) rather than by the notes sounding: a voice that leaps from note to note, over bass and drums, used to move it up and down at every note.
+
 - `[editor]` **Arrange an Accompaniment… writes a score's own band from its chords.** Right-click a `.lys` — one read from a recording, say — and name the instruments and the style, or leave it to a band (piano, bass, drums). Copilot's chat writes the parts into the same file, keeping the parts it has, and shows them beside the score to play and accept. Accepted, the recording under the score goes **silent**: its bars still time the score and the voices, but it is not heard, nor in the exports and stems. The mixer's Recording button says *(silent)* and turns it on again; the export's message says when it was left out. The recording's file keeps this as `"silent": true`.
 
 - `[editor]` **From a song to a dance: the steps, and the next one said.** **Lily#: From a Song to a Dance (Steps)** opens a walkthrough of four steps — write a song (Compose with AI…, or Write a Song over These Chords…), have a voice sing it, put a dance on it with Shosa's *Add a Dance…*, and export the dance as a video — each with its buttons; Shosa is offered where it is not installed. When you accept a chat's change that gives a score its first `singer` line, Lily# says that the next step is a dance, with *Add a Dance…* (or *Install Shosa*) and *Show the Steps*. Write a Song over These Chords… run with no score open now asks for one.

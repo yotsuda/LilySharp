@@ -659,6 +659,42 @@ describe('the preview keeps what sounds in view, every part together', () => {
         assert.equal(scrolls.length, 1);
         assert.equal(scrolls[0].top, (710 + 720) / 2 - 300);       // its notes alone decide
     });
+    // Owner's report 2026-11-26: an Orecchiante chart (voice, bass, drums) shook up and down while it
+    // played — the voice leaps a tenth from note to note, so the notes' extent changed height with every
+    // note, near the view's own. A system that fits goes by its box: the view moves once, for the line.
+    it('does not shake for a voice that leaps, in a system that fits the view', () => {
+        const run = (withBox: boolean) => {
+            const view = { scrollTop: 0, scrollLeft: 0 };
+            const moves: number[] = [];
+            const mainContent = {
+                getBoundingClientRect: () => rect(0, 600, 0, 800),
+                get scrollTop() { return view.scrollTop; }, get scrollLeft() { return view.scrollLeft; },
+                scrollBy: (o: { top: number }) => { moves.push(o.top); view.scrollTop += o.top; },
+            };
+            // The page: the staves (bar box) from 300 to 820; drawn, with the voice's ledger notes over
+            // them, the system from 240 to 830 (590 of a 600 view — more than it holds within its margins).
+            const client = (top: number, bottom: number) => rect(top - view.scrollTop, bottom - view.scrollTop, 0, 800);
+            const at = (top: number, bottom: number) => ({ getBoundingClientRect: () => rect(top - view.scrollTop, bottom - view.scrollTop) });
+            const keep = pageFunction('keepSoundingInView', {
+                mainContent, barBoxOf: () => withBox ? client(300, 820) : null,
+                systemBoxOf: () => withBox ? client(240, 830) : null,
+                followSystemDocTop: null, followSystemOffset: null, followTopTarget: null, extentOf: pageFunction('extentOf', {}), followStaff: -1,
+            }) as (els: unknown[], ahead?: unknown[]) => void;
+            // The voice high over the staff, then low in it, note after note; the drums at the bottom.
+            // With the notes to come the parts are now too tall for the view (the top to the margin),
+            // now not (centred): two places 67 px apart, in turn.
+            for (let i = 0; i < 12; i++) {
+                const voice = i % 2 === 0 ? at(250, 260) : at(360, 370);
+                const next = i % 2 === 0 ? at(360, 370) : at(250, 260);
+                keep([voice, at(800, 815)], [next, at(800, 815)]);
+            }
+            return moves;
+        };
+        const shook = run(false);
+        assert.ok(shook.length >= 6 && shook.some(d => d > 0) && shook.some(d => d < 0), 'by the notes alone it went up and down: ' + shook.join(', '));
+        // By the drawn system: its top to the margin, once.
+        assert.deepEqual(run(true), [240 - 30]);
+    });
     it('leaves alone what is all in view', () => {
 
         const { keep, notes, scrolls } = follow();

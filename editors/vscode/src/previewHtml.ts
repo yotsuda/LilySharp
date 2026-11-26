@@ -1883,6 +1883,12 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             }
             return box;
         }
+        /** The client rect of the system an element is drawn in (g.system: its staves and all that stands
+         *  over and under them — ledger notes, chord names, words), or its bar box outside one; null without either. */
+        function systemBoxOf(el) {
+            const system = el.closest ? el.closest('g.system') : null;
+            return system ? system.getBoundingClientRect() : barBoxOf(el);
+        }
         // The bar playing, as its measure index (the header's "Bar 12 / 118", showBarInfo): litBar while
         // a bar is lit, lastLitBar the one lit when the playing stopped (a pause shows it still).
         var litBar = -1, lastLitBar = -1;
@@ -3690,6 +3696,29 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 return;
             }
             followSystemDocTop = null;
+            // Staves that fit the view: up and down go by the DRAWN system's box (systemBoxOf: with the
+            // ledger notes, chord names and words over and under the staves), never the notes' (owner's
+            // report 2026-11-26: an Orecchiante chart whose voice leaps a tenth from note to note — a'' to
+            // e', fis'' to b — over bass and drums; with the notes to come the parts were now too tall for
+            // the view, their top put at the margin, now not, centred — the view went up and down note
+            // after note). The system's box is the same all through it, so the view moves only when the
+            // line changes. Together with the system sounding when both fit, else the one to come. It moves
+            // once the box is half the margin off its place.
+            const drawn = system ? systemBoxOf(leading) : null;
+            const curDrawn = drawn && current && current[0] ? systemBoxOf(current[0]) : null;
+            if (drawn) {
+                const span = curDrawn ? { top: Math.min(curDrawn.top, drawn.top), bottom: Math.max(curDrawn.bottom, drawn.bottom) } : drawn;
+                const room = m.height - 2 * margin;
+                const box = span.bottom - span.top <= room ? span : drawn;
+                const fits = box.bottom - box.top <= room;
+                // Centred when it fits; else its top at the margin (what stands over the staves first).
+                const off = fits ? box.top < m.top + margin / 2 || box.bottom > m.bottom - margin / 2
+                    : Math.abs(box.top - (m.top + margin)) > margin / 2;
+                const dy = !off ? 0 : fits ? (box.top + box.bottom) / 2 - (m.top + m.bottom) / 2 : box.top - (m.top + margin);
+                if (dy === 0 && dx === 0) return;
+                mainContent.scrollBy({ top: dy, left: dx, behavior: dy !== 0 ? 'smooth' : 'auto' });
+                return;
+            }
             const down = pick('top', 'bottom', m.height);
             const dy = shift(down.top, down.bottom, m.top, m.bottom);
             if (dy === 0 && dx === 0) return;
