@@ -156,21 +156,21 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1396セッション（2026-11-26・YT-DELL2）
+
+base `0e0851126`。開始時 full 18445 / 0 / skip 2 / 18447。
+- `acfcd35fe`: Note_collision でずらした装飾音の列も鎖を共有する。`SharedGraceChain` はずれで降りず、鎖は共有の列の間で組み（各連なりの間隔からずれを外す・`GraceColumnLayout.Shifts`）、`RunOnSharedChain` が各列を自分のずれだけ右に置く。wish の左の符頭の右端は paper column で測る（`GraceIdeal` にずれを足す・LP `left_head_end`）。v10・v11 は LP と一致（Lab `p1396/m`・直す前は v10 の b' が 1.435 右、v11 の本音符が 0.309 左でずらした a' に重なる）。網 +2・毒 5 本中 4 本で赤（R2 は観測者なしのまま）。掃き 0 / 1289。
+- 残した: タブの装飾音の数字の中心（第1393）。leftovers 第1396。
+- 次: タブの装飾音の数字の中心。
+
+## 以下は第1395セッションの経緯
+
 ### 1.1 第1395セッション（2026-11-26・YT-DELL2）
 
 base `787d4220a`。開始時 full 18444 / 0 / skip 2 / 18446。
 - `0b814574e`: 同じ譜表の別の声部の装飾音（companion）の wish は、右の列がこの対の右の列と同じときだけ平均に入れる（`SpacingRules.AveragedWithCompanions`・LP の found_matching_column）。v9 は LP と一致（下の声部の 16 分の間 1.673→1.418・本音符 0.255 左へ）。網 +1・毒 2 本中 1 本で赤（R2＝自分は本音符で終わり companion は続く側、は観測者なし）。掃き 0 / 1289。
 - 残した: v10（1 段・`b'8` の下で `a'16 g'16`＝音が近く横にずらす形）は直す前から大きく違う（LP は b' と a' が同じ列・a' が 0.918 右、Lily# は b' が 1.435 右・本音符 0.200 左）＝`StampGraceCompanions` の注記の既知の限界。タブの装飾音の数字の中心（第1393）。leftovers 第1395。
 - 次: v10 か、タブの装飾音の数字の中心。
-
-## 以下は第1394セッションの経緯
-
-### 1.1 第1394セッション（2026-11-26・YT-DELL2）
-
-base `0ba33e7ec`。開始時 full 18438 / 0 / skip 2 / 18440。
-- leftovers 第1393 の s12 は間隔ではなく連桁: LP の `Grace_auto_beam_engraver` は主の時刻の最初の timestep（楽譜全体の）でしか連桁を始めない＝他の譜表・声部より後から始まる連なりは旗。`89382361c`: `GraceColumnInfo.StartsAfterGraceGroup`（`MeasureCollector.StampLateGraceRuns`）→`BeamedPrefix` 0。あわせて鎖の対に wish が無いときは素の基準ばね（最小 0）、spacer の列は wish に加えない、`LeadingGraceOpensOnSpacer` は一番早い連なりを見る。s12・s14・v1・v5・v6・v7 は LP と一致（Lab `p1394/m`）。網 +7・毒 5 本で赤。掃き 0 / 1289。
-- 残した: v9（1 段 2 声部・後から始まる下の声部）は連桁は一致・16 分の間が 1.673（LP 1.418）で本音符も 0.255 右（直す前から）。タブの装飾音の数字の中心（第1393）。leftovers 第1394。
-- 次: v9 の間隔か、タブの装飾音の数字の中心。
 
 ## 2. 開いている作業
 

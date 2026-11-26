@@ -277,6 +277,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1394セッションの経緯
+
+### 1.1 第1394セッション（2026-11-26・YT-DELL2）
+
+base `0ba33e7ec`。開始時 full 18438 / 0 / skip 2 / 18440。
+- leftovers 第1393 の s12 は間隔ではなく連桁: LP の `Grace_auto_beam_engraver` は主の時刻の最初の timestep（楽譜全体の）でしか連桁を始めない＝他の譜表・声部より後から始まる連なりは旗。`89382361c`: `GraceColumnInfo.StartsAfterGraceGroup`（`MeasureCollector.StampLateGraceRuns`）→`BeamedPrefix` 0。あわせて鎖の対に wish が無いときは素の基準ばね（最小 0）、spacer の列は wish に加えない、`LeadingGraceOpensOnSpacer` は一番早い連なりを見る。s12・s14・v1・v5・v6・v7 は LP と一致（Lab `p1394/m`）。網 +7・毒 5 本で赤。掃き 0 / 1289。
+- 残した: v9（1 段 2 声部・後から始まる下の声部）は連桁は一致・16 分の間が 1.673（LP 1.418）で本音符も 0.255 右（直す前から）。タブの装飾音の数字の中心（第1393）。leftovers 第1394。
+- 次: v9 の間隔か、タブの装飾音の数字の中心。
+
 ## 以下は第1393セッションの経緯
 
 ### 1.1 第1393セッション（2026-11-26・YT-DELL2）
