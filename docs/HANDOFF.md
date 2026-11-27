@@ -50,7 +50,7 @@ tools\Session-Check.ps1 -End pNNN -DiffBase <開始時 HEAD>   # 終了の機械
   ＝要るなら取り直す。コード内コメントや ARCHIVE の `scratch/` 表記は書き換えない。
 - ★★★ **開始時に `C:\MyProj\Calamo\docs\repro\REQUESTS.md` の `open` を見る＝open があればそれに優先的に着手する**（ユーザー指示 2026-10-23・第961）。OMR 側（楽譜画像 → `.lys`）からの依頼の 1 枚で、状態は両側で書き換える（直したら `fixed <commit>`・直さないなら `won't`・聞くなら `question`。長い返事は Lab の `sessions/pNNN/` に置いて行から指す）。
 - ★ **Orecchiante（録音 → `.lys` のコード譜・旧名 Dettato、2026-11-20 改名）も同じ使い方の 1 枚**: `C:\MyProj\Orecchiante\docs\repro\REQUESTS.md`。拡張 `yotsuda.orecchiante`（床 0.11.0）・隣のファイル `<stem>.orecchiante.json`。以下の「Dettato」は旧名。Calamo の依頼との優先順はオーナーに聞く。
-- ★ **`C:\MyProj\Shosa\docs\repro\REQUESTS.md` も同じ使い方の 1 枚**（2026-11-20〜・Shosa は Lily# の曲に合わせて踊る言語）。依頼 1〜5 は閉じた（1・4・5 は Shosa が `done`、2 は取り下げ、3 は `fixed`。§1.1 第1339）。6（`timeline` の `sung`）は第1341 で `fixed`・第1346 で Shosa の木で通した（`shosa ir` が偽の lysc の IR とバイト一致）＝Shosa の done 待ち。Shosa との約束は 2 つあり、形を変えるときはそれぞれの網も直す。
+- ★ **`C:\MyProj\Shosa\docs\repro\REQUESTS.md` も同じ使い方の 1 枚**（2026-11-20〜・Shosa は Lily# の曲に合わせて踊る言語）。依頼 1〜5 は閉じた（1・4・5 は Shosa が `done`、2 は取り下げ、3 は `fixed`。§1.1 第1339）。6（`timeline` の `sung`）は第1341 で `fixed`・第1346 で Shosa の木で通した（`shosa ir` が偽の lysc の IR とバイト一致）＝Shosa の done 待ち。8（`sung` の 4 つ目の `true`＝単語が続く）は `aeed53aa3` で `fixed`＝同じく done 待ち。Shosa との約束は 2 つあり、形を変えるときはそれぞれの網も直す。
   - `lysc timeline`／`notes` の JSON: `SongReading.Protocol` と `CliSongReadingTests`。
   - 拡張の exports の stems API（`stemsVersion: 1`）: `docs/stems-api-design.md` と `stemsCore.test.ts`。
 - ★ **`C:\MyProj\Cantoria\docs\repro\REQUESTS.md` も同じ使い方の 1 枚**（2026-11-22〜・Cantoria は Lily# の歌い手のエンジン）。依頼 1（音節の `phonemes`）・2（`bend`）は第1375 で `fixed`＝Cantoria の done 待ち。他の 1 枚との優先順はオーナー決定（第1375）で「Cantoria を leftovers より先に」。
