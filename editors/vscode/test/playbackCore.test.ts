@@ -23,6 +23,7 @@ import {
     fromOffset, playBarsWindow, exportNotes, practiceSummary, PracticeState, voiceCues, voiceBadge, soundStart, withVoiceLead,
     levelOf, velocityAt,
 } from '../src/webview/playbackCore';
+import { instrumentsOnly, withTrackSounds } from '../src/webview/playbackCore';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { extensionSource } from './extensionSource';
@@ -773,5 +774,52 @@ describe('the A-B repeat\'s bars', () => {
         assert.equal(w.notes.length, 32);
         assert.deepEqual([4, 5, 6, 7].map(m => w.notes.filter(n => n.M === m).length), [8, 8, 8, 8]);
         assert.equal(w.length, 8);
+    });
+});
+
+// An edit while it plays (owner's decision 2026-11-27): only instruments changed — retuned, nothing
+// struck again; nothing that sounds changed — nothing done; anything else — played on from here.
+describe('An edit heard while it plays', () => {
+    const piano = (t: number, n: number, extra: Partial<PlaybackNote> = {}) => note(t, 0.5, 60 + t, { N: n, G: 0, I: 0, C: n, ...extra });
+    const before = [piano(0, 0), piano(0, 1, { G: 32, I: 4 }), piano(1, 0), piano(1, 1, { G: 32, I: 4 })];
+
+    it('sees a midiInstrument changed — the positions moved by the longer word — as instruments alone', () => {
+        // (the edit made the text 6 characters longer before every note: S and O moved)
+        const after = before.map(n => ({ ...n, S: n.S + 6, ...(n.N === 0 ? { G: 40, I: 5 } : {}) }));
+        const sounds = instrumentsOnly(before, after);
+        assert.ok(sounds);
+        assert.deepEqual([...sounds], [[0, { G: 40, I: 5 }]]);
+        assert.deepEqual(withTrackSounds(before, sounds).map(n => [n.N, n.G, n.I]), [[0, 40, 5], [1, 32, 4], [0, 40, 5], [1, 32, 4]]);
+    });
+
+    it('sees nothing that sounds changed (a comment written) as an empty answer', () => {
+        assert.equal(instrumentsOnly(before, before.map(n => ({ ...n, S: n.S + 12, O: 3 })))?.size, 0);
+    });
+
+    it('plays on from here for anything else: a pitch, a time, a strength, a channel, a note more or less', () => {
+        const changed = (f: (n: PlaybackNote) => PlaybackNote) => instrumentsOnly(before, before.map((n, i) => i === 2 ? f(n) : n));
+        assert.equal(changed(n => ({ ...n, P: n.P + 1 })), null);
+        assert.equal(changed(n => ({ ...n, T: n.T + 0.25 })), null);
+        assert.equal(changed(n => ({ ...n, V: 40 })), null);
+        assert.equal(changed(n => ({ ...n, C: 5, G: 40 })), null);    // (the server put the new sound on another channel)
+        assert.equal(instrumentsOnly(before, before.slice(1)), null);
+    });
+
+    it('plays on from here when a track sounds two instruments after the edit (an instrument change in the music)', () => {
+        const after = before.map((n, i) => i === 2 ? { ...n, G: 72, I: 7 } : n);   // (track 0: piano, then a clarinet)
+        assert.equal(instrumentsOnly(before, after), null);
+    });
+
+    it('retunes in the player, and the page plays on from here otherwise', () => {
+        const synth = readFileSync(join(__dirname, '..', '..', 'src', 'webview', 'previewSynth.ts'), 'utf8');
+        const retune = /retune\(sounds: ReadonlyMap<number, TrackSound>\): void \{([^]*?)\n {4}\}/.exec(synth)?.[1] ?? '';
+        assert.match(retune, /look\.take\(this\.look\.handedOutUntil\)/);       // (on from what the synth has)
+        assert.match(retune, /this\.synth\.programChange\(c, g, at\)/);         // (each channel its sound now)
+        assert.doesNotMatch(retune, /stopAll|noteOff|noteOn/);                  // (nothing cut, nothing struck)
+        const page = extensionSource();
+        const live = /function liveRefresh\(message\) \{([^]*?)\n {8}\}/.exec(page)?.[1] ?? '';
+        assert.match(live, /sfPlayer\.retune\(sounds\)/);
+        assert.match(live, /resumeHere\(\);\s*$/);
+        assert.match(page, /if \(playClock && playingNow\(\) && !midiPlaying && !relaying\) \{\s*pendingLiveRefresh = true;\s*requestPlay\(\);/);
     });
 });

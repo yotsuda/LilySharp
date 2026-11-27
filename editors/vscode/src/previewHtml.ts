@@ -2885,8 +2885,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         // voice was not heard until Play was pressed again (measured 2026-11-19 in a real VS Code:
         // a four-bar loop, the voice ready in its first round, no voice in the rounds after). The
         // round sounding plays to its end and the next begins with the voice - the loop laid out
-        // again there, as a loop takes an edit (refreshLoop, whose switch this one gives way to: it
-        // starts with the voice too). Not on the MIDI output, as joinVoice.
+        // again there. Not on the MIDI output, as joinVoice.
         function joinLoop(key) {
             if (playClock === null || !playingNotes || midiPlaying || !loopOn || !loopList || lastSpan === undefined || !(loopRound > 0)) { return; }
             if (!soundingVoices().includes(key) || loopSwitchTimer) { return; }
@@ -4024,11 +4023,11 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             setPlayUi(true); // immediate feedback while the request runs
             pendingStartBar = abOn ? -1 : Math.max(0, abFrom);
             pendingSpan = abOn ? { ab: [abFrom, abTo] } : null;
-            pendingLoopRefresh = false;     // (this Play's notes are its own, not a loop's next round)
+            pendingLiveRefresh = false;     // (this Play's notes are its own, not an edit's while it played)
             requestPlay();
         });
         document.getElementById('stopBtn').addEventListener('click', () => {
-            pendingLoopRefresh = false;     // (a loop's next round with the new text: off with it)
+            pendingLiveRefresh = false;     // (the edit's notes asked for while it played: off with it)
             loopList = null;
             paused = null;
             stopPlayback();
@@ -4060,7 +4059,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             if (playClock && playingNotes) {
                 const p = { notes: playingNotes, at: Math.max(0, playOffset + playClock()), origin: playOrigin,
                     countFix: countInFix, loop: loopList, entry: loopEntry, seconds: playbackScoreSeconds() };
-                pendingLoopRefresh = false;
+                pendingLiveRefresh = false;
                 stopPlayback();
                 paused = p;
                 setPlayUi(false);
@@ -4600,40 +4599,33 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 playedBeats().map(b => ({ T: b.T / speed, A: b.A })));
         }
         let countInFix = 0;         // the played list's clock minus the score's, while a count-in plays
-        // ---- The loop goes on with the text as it is now (owner's request 2026-11-17: a bar looped
-        // while it is written by ear — the next round sounds the edit). The score changed while a
-        // loop went round: the new notes were asked for (pendingLoopRefresh), and when they come
-        // the round sounding plays to its end and the next starts with them. The rounds are laid
-        // out ahead (looped), so the switch is a new list started at the round's end; one that
-        // comes too late for it waits for the end of the next.
-        var pendingLoopRefresh = false, loopSwitchTimer = null;
-        function refreshLoop(message) {
-            if (!playingNow() || !playClock || !loopList || lastSpan === undefined) return;
-            const oldRound = loopRound, oldStart = spanStart, oldPieces = spanPieces;
-            // (a loop's list is round after round from its 0 — a count-in first in each when there is one)
-            const oldPeriod = loopRound + loopGap, lt = Math.max(0, playOffset + playClock());
+        // ---- An edit while it plays is heard at once (owner's decision 2026-11-27; until then the
+        // playback sounded the text it started with, and a loop took the edit at its next round —
+        // 2026-11-17). The score changed while it played: the new notes were asked for
+        // (pendingLiveRefresh), and when they come —
+        //  - only instruments changed (a midiInstrument rewritten — instrumentsOnly): the player keeps
+        //    going, each changed track takes its new sound now, nothing is struck again;
+        //  - nothing that sounds changed (a comment): it goes on as it is;
+        //  - anything else: it plays on from where it is with the new notes (resumeHere — the same
+        //    as a flag moved while it plays), in the whole score, A to B, or round and round.
+        // (loopSwitchTimer: a voice that lands while a loop goes round joins at the round's end — joinLoop.)
+        var pendingLiveRefresh = false, loopSwitchTimer = null;
+        function liveRefresh(message) {
+            if (!playingNow() || !playClock || relaying) return;
+            const before = rawNotes;
             rawNotes = message.notes; rawParts = message.parts || null; rawBeats = message.beats || null; rawBarEnd = message.barEnd || null; rawExtra = message.extra || null; rawSung = message.sung || null; rawPlayed = message.played || null;
-            playbackNotes = practiced(rawNotes);
-            const list = spanOf(playbackNotes, lastSpan, false);
-            const newRound = loopRound, newStart = spanStart, newPieces = spanPieces;
-            // (the round sounding keeps its own until the switch: the position shown reads them)
-            loopRound = oldRound; spanStart = oldStart; spanPieces = oldPieces;
-            if (!list.length) return;
-            let remain = oldRound > 0 ? oldPeriod - (lt % oldPeriod) : 0;
-            if (remain < 0.25) remain += oldPeriod;
-            if (loopSwitchTimer) clearTimeout(loopSwitchTimer);
-            const gen = playGeneration;
-            // A new list starts 0.15 s after it is handed over (startPlayback): handed over so
-            // much before the round's end.
-            loopSwitchTimer = setTimeout(() => {
-                loopSwitchTimer = null;
-                if (gen !== playGeneration || !playingNow()) return;
-                loopRound = newRound; spanStart = newStart; spanPieces = newPieces;
-                const rounds = looped(list);
-                voicePlan = loopVoicePlan();
-                startPlayback(rounds, 0, false, false, loopGap, spanStart);
-                loopList = list;
-            }, Math.max(0, (remain - 0.15) * 1000));
+            const sounds = before && window.LysSynth && window.LysSynth.instrumentsOnly ? window.LysSynth.instrumentsOnly(before, rawNotes) : null;
+            if (sounds && (sounds.size === 0 || (sfPlayer && sfPlayer.retune))) {
+                playbackNotes = practiced(rawNotes);
+                if (sounds.size > 0) {
+                    sfPlayer.retune(sounds);
+                    // (what plays next — the loop's next rounds, a pause's resume — with the new sounds too)
+                    if (playingNotes) playingNotes = window.LysSynth.withTrackSounds(playingNotes, sounds);
+                    if (loopList) loopList = window.LysSynth.withTrackSounds(loopList, sounds);
+                }
+                return;
+            }
+            resumeHere();
         }
         // Where a playback that ran to its end goes: round again while looping, else it stops.
         function playEnded() {
@@ -6089,10 +6081,11 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                         // it still fits (joinVoice, voiceFitsPlay).
                         playbackNotes = null;
                         playEdited = true;
-                        // Going round a loop: the next round sounds the new text (owner's request
-                        // 2026-11-17 — a bar looped while it is written by ear; refreshLoop).
-                        if (loopOn && loopList && lastSpan !== undefined && playClock && playingNow()) {
-                            pendingLoopRefresh = true;
+                        // Playing: the new text is heard at once (owner's decision 2026-11-27 —
+                        // liveRefresh: an instrument retuned, anything else played on from here).
+                        // Not on the MIDI output (the server plays it), nor a candidate's playback.
+                        if (playClock && playingNow() && !midiPlaying && !relaying) {
+                            pendingLiveRefresh = true;
                             requestPlay();
                         }
                         collectPages();
@@ -6340,22 +6333,22 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                     // Whether the text as it is now can be played: the last answer says (the Play
                     // button's edge, while what sounds is the last version that could — markUnreadable).
                     markUnreadable(!!(message.error || !message.notes));
-                    if (pendingLoopRefresh && !message.error && message.notes) {
-                        pendingLoopRefresh = false;
-                        refreshLoop(message);
+                    if (pendingLiveRefresh && !message.error && message.notes) {
+                        pendingLiveRefresh = false;
+                        liveRefresh(message);
                         break;
                     }
-                    // A loop's next round asked for text that does not play yet — a part being
-                    // typed, "bass {" with its brace not closed: the loop goes on as it was and the
-                    // next edit asks again. MEASURED before (owner's report 2026-11-17, Lab
+                    // An edit while it plays asked for text that does not play yet — a part being
+                    // typed, "bass {" with its brace not closed: it goes on as it was and the next
+                    // edit asks again. MEASURED before (owner's report 2026-11-17, Lab
                     // sessions/p1290/e2e/cdp-loopadd2.mjs): the answer's error took the page out of
                     // playing (setPlayUi(false)) while the old rounds still sounded, so no later edit
                     // reached the loop — the part, written out, was never added — and Stop was greyed.
-                    if (pendingLoopRefresh) {
-                        pendingLoopRefresh = false;
+                    if (pendingLiveRefresh) {
+                        pendingLiveRefresh = false;
                         if (playingNow()) break;
                     }
-                    pendingLoopRefresh = false;
+                    pendingLiveRefresh = false;
                     // Text that cannot be read (a note being typed: "d,8\" before its 3) plays as it
                     // last could be read — a Play, an audition alike — rather than refusing (owner's
                     // decision 2026-11-17: what can be read last goes on; stopping at every unreadable

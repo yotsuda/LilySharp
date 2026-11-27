@@ -28,7 +28,8 @@
 import { WorkletSynthesizer } from 'spessasynth_lib';
 import {
     BEND_CENTRE, DRUM_CHANNEL, Lookahead, MidiEvent, PlaybackNote, SoundingCursor,
-    channelsOf, countIn, endOf, fromOffset, loopNotes, loopPlace, loopRounds, playBarsWindow, playSpan, playSpanWindow, practiceNotes, programOf, toEvents,
+    channelsOf, countIn, endOf, fromOffset, instrumentsOnly, loopNotes, loopPlace, loopRounds, playBarsWindow, playSpan, playSpanWindow, practiceNotes, programOf, toEvents,
+    TrackSound, withTrackSounds,
     nextVoiceEntry, soundStart, strikeKey, strikeKeys, voiceBadge, voiceBar, voiceEntryEarly, voiceRound, voiceBarShown, voiceCues, voiceProgress, voiceRowProgress, voiceStillSinging, withVoiceLead,
 } from './playbackCore';
 import { RecordingPlayer } from './recordingPlayer';
@@ -73,8 +74,9 @@ async function addProcessor(ctx: AudioContext, url: string): Promise<void> {
 export class Player {
     /** Seconds into the piece at which the last note ends. */
     readonly end: number;
-    private readonly look: Lookahead;
+    private look: Lookahead;
     private readonly channels: number[];
+    private notes: readonly PlaybackNote[];
     private timer: ReturnType<typeof setInterval> | null;
     private scheduledUntil = 0;   // audio time of the last event handed out
     private readonly silent = new Set<string>();   // the strikes left out from now on (silence)
@@ -82,12 +84,29 @@ export class Player {
     /** The audio time the piece's `offset` sounds at — the page's highlight clock. */
     constructor(private readonly synth: WorkletSynthesizer, private readonly ctx: AudioContext,
                 notes: readonly PlaybackNote[], private readonly offset: number, readonly t0: number) {
+        this.notes = notes;
         const events = toEvents(notes, offset);
         this.look = new Lookahead(events);
         this.channels = channelsOf(events);
         this.end = endOf(notes, offset);
         this.timer = setInterval(() => this.pump(), PUMP_MS);
         this.pump();
+    }
+
+    /** The same notes with other instruments for some tracks (instrumentsOnly; owner's request
+     *  2026-11-27): the events from here on are the new sounds', and each channel takes its sound
+     *  now — the notes ringing ring on, nothing is struck again, the clock does not move. */
+    retune(sounds: ReadonlyMap<number, TrackSound>): void {
+        if (sounds.size === 0) { return; }
+        this.notes = withTrackSounds(this.notes, sounds);
+        const look = new Lookahead(toEvents(this.notes, this.offset));
+        // (on from what is already with the synth: what was handed out is taken again here, unsent)
+        const now = new Map<number, number>();
+        for (const e of look.take(this.look.handedOutUntil)) { if (e.kind === 'program') { now.set(e.c, e.g); } }
+        this.look = look;
+        const at = { time: this.ctx.currentTime };
+        for (const [c, g] of now) { this.synth.programChange(c, g, at); }
+        if (!this.timer && !look.done) { this.timer = setInterval(() => this.pump(), PUMP_MS); }
     }
 
     private pump(): void {
@@ -340,6 +359,8 @@ const api = {
     },
     SoundingCursor,
     programOf,
+    instrumentsOnly,
+    withTrackSounds,
     playSpan,
     practiceNotes,
     loopNotes,

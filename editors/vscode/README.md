@@ -38,7 +38,7 @@ same number. See the [changelog](https://github.com/yotsuda/LilySharp/blob/maste
   notes playing light as they sound. Hold `Alt+P` to hear the note under the caret; `Alt+M`
   plays its bar.
 - **The practice menu** (the metronome beside ⏹): the **tempo** on a slider, 50–150%; the **metronome**, a click on every beat, the bar's first louder; the **count-in**, one
-  bar of clicks before the music comes in; and **each part on or off** — sing yours against the others. A change while playing goes on from the same place.
+  bar of clicks before the music comes in; and **each part on or off** — sing yours against the others. A change while playing goes on from the same place — and so does an edit of the score itself, heard at once (a `midiInstrument` rewritten changes the sound without a restart).
 
 (The sound — a SoundFont, or your own MIDI instruments — is under [Sound](#sound) below.)
 

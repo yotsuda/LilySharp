@@ -264,6 +264,50 @@ export function toEvents(notes: readonly PlaybackNote[], offset = 0): MidiEvent[
 /** A time to the microsecond (toEvents). */
 const micro = (t: number) => Math.round(t * 1e6) / 1e6;
 
+/** A track's sound: its General MIDI program and timbre family (programOf's two). */
+export interface TrackSound { G?: number; I?: number }
+
+/**
+ * Whether `after` — the notes of the text as edited while it plays — sounds as `before` but for the
+ * instruments (owner's request 2026-11-27: a `midiInstrument` changed while it plays is heard at
+ * once, nothing struck again). The same notes in the same order, at the same times, pitches,
+ * strengths and channels, of the same tracks; only a note's program and timbre (G, I) may differ —
+ * and the source positions (S, O, Q), which any edit that changes the text's length moves. Then each
+ * track whose sound changed, with its one new sound: a track that sounds two instruments after the
+ * edit (`instrument piccolo` in the music) is played again from where it is, not retuned, and so is
+ * any other change (null). An empty map: nothing that sounds changed.
+ */
+export function instrumentsOnly(before: readonly PlaybackNote[], after: readonly PlaybackNote[]): Map<number, TrackSound> | null {
+    if (before.length !== after.length) { return null; }
+    const sound = (n: PlaybackNote) => `${n.G ?? ''}/${n.I ?? ''}`;
+    const rest = (n: PlaybackNote) => {
+        const { G, I, S, O, Q, ...others } = n;
+        void G; void I; void S; void O; void Q;
+        return JSON.stringify(others);
+    };
+    const changed = new Map<number, TrackSound>();
+    const soundOf = new Map<number, string>();
+    for (let i = 0; i < after.length; i++) {
+        const b = before[i], a = after[i];
+        if (rest(b) !== rest(a)) { return null; }
+        if (a.N === undefined) {
+            if (sound(a) !== sound(b)) { return null; }
+            continue;
+        }
+        // (each track one sound after the edit, or it cannot be retuned as one)
+        const was = soundOf.get(a.N);
+        if (was !== undefined && was !== sound(a)) { return null; }
+        soundOf.set(a.N, sound(a));
+        if (sound(a) !== sound(b)) { changed.set(a.N, { G: a.G, I: a.I }); }
+    }
+    return changed;
+}
+
+/** `notes` with each listed track's sound put in (instrumentsOnly's answer). */
+export function withTrackSounds(notes: readonly PlaybackNote[], sounds: ReadonlyMap<number, TrackSound>): PlaybackNote[] {
+    return notes.map(n => n.N !== undefined && sounds.has(n.N) ? { ...n, G: sounds.get(n.N)!.G, I: sounds.get(n.N)!.I } : n);
+}
+
 /** When the last note from `offset` on ends, in seconds from the piece's start. */
 export function endOf(notes: readonly PlaybackNote[], offset = 0): number {
     let end = offset;
