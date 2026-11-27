@@ -100,7 +100,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **★ 録音の変換で歌詞（Orecchiante の依頼 25・27・28）＝実装済み**（`chooseLyrics`）。残りは 28 の Orecchiante の確かめとオーナーの実機（`MANUAL-CHECKS`）。
 - **★ Shosa の導線の第 2〜4 段（オーナー決定 2026-11-26）＝実装済み**: Write a Song…（`docs/song-over-chords-design.md`）・From a Song to a Dance（`song-to-dance-design.md`）・Arrange an Accompaniment…＝Accept で録音は `"silent"`（`accompaniment-design.md`）。残りはオーナーの実機と Shosa 側の `"silent"`。
 - **★ ドラムの `steps { }`（Orecchiante の依頼 24・第1399）＝実装済み**（`docs/drum-steps-design.md`・第1400 で §3 の 2 つも）。Orecchiante は done（`639cc26e7` の lysc で 3 曲）。残りはオーナーの実機（`MANUAL-CHECKS`「ドラムの `steps { }`」）。
-- **★ 0.18.0（オーナー決定 2026-11-27）**: 版は `5d1cf5080`、後のコミットも 0.18.0 の節に。残り: push（ユーザー）→ CI → 試し版 VSIX（`publish-marketplace.ps1`、`-Publish` なし）→ オーナーがタグ（最新に）。
+- **★ 0.18.0（オーナー決定 2026-11-27）**: 版は `5d1cf5080`、後のコミットも 0.18.0 の節に。試し版 VSIX は 11-27 に済み。残り: CHANGELOG 1 行の push（ユーザー）→ CI → オーナーがタグ（最新に）。
 - **★ 2026-11-27 の実装（残りはオーナーの実機・`MANUAL-CHECKS`）**: 再生中の書き換えがすぐ聞こえる（`transport-mixer-design.md` §15）／ミキサーの行の順（§14）・Reset All・アイコン／サウンドフォントを替えても止まらず声も戻る（Shosa の依頼 7）・ガイド（site `editor.html#soundfonts`）／phrase の名前の小節が光り続けた（`MeasureBuilder.CallSite`）。
 - **★ Cantoria の依頼 1（音節の音素 `병[/pp.y.eo.NG/]`）・2（歌う `bend`・お試し）＝第1375 で実装済み**（`singing-design.md` §3）。残りは Cantoria の done とオーナーの耳（`MANUAL-CHECKS` 第1375）。
 - **★ コード行の中に書けるもの（オーナー決定 2026-11-16・第1285）**: `time`・`tempo`・`%`・`key` は済み（§1.1）。**残り＝コードに付ける印 `@rit`／`@accel`／`@rall`（`…@!rit`）・`@fermata`・`@text("…")`**（今は `@todo` だけ）。強弱は見送り。
