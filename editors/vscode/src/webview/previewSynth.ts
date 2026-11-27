@@ -177,7 +177,8 @@ export class PreviewSynth {
         // waited on each other for ever — the log stopped at "the worklet answered",
         // no font was ever fetched, and every Play fell back to the oscillator patches.
         this.init = this.start(processorUrl);
-        void this.init.then(() => this.setSoundFont(soundFontUrl));
+        // Asked now, so a font asked after it — while the worklet starts — wins (setSoundFont).
+        void this.setSoundFont(soundFontUrl);
     }
 
     get ready(): boolean { return this.state === 'ready' && this.synth !== null; }
@@ -227,16 +228,22 @@ export class PreviewSynth {
     }
 
     /** Loads (or replaces) the sound font; an empty URL unloads it, and the page falls
-     *  back to its oscillator patches. */
+     *  back to its oscillator patches. The latest asked wins, counted when it is ASKED, not
+     *  when the worklet is ready: a page reloaded for a new font (its resource roots changed)
+     *  starts with the font its HTML was written with, and the extension's message for the
+     *  new one comes while the worklet starts. Counted after the wait, the page's own old font
+     *  came second and won; the webview then refused it (HTTP 401: its folder is no longer a
+     *  root) and nothing was loaded — the preview fell silent (owner's report 2026-11-27,
+     *  MuseScore 4's MS Basic.sf3 set as the sound font). */
     async setSoundFont(url: string): Promise<void> {
+        const serial = ++this.bankSerial;
         await this.init;   // never rejects: start() reports its own failure
-        if (!this.synth) { return; }
+        if (!this.synth || serial !== this.bankSerial) { return; }   // (another font asked meanwhile)
         if (!url) {
             this.settle('none', 'no sound font');
             return;
         }
         this.settle('loading', 'fetching ' + url);
-        const serial = ++this.bankSerial;
         try {
             const started = Date.now();
             const response = await fetch(url);
