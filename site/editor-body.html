@@ -220,20 +220,18 @@
     in the score, and a selection highlights every note in it. Click a note, a tie, a slur, a
     clef or a key signature in the preview to jump to the text that wrote it, or a bar beside
     its notes to put the caret in that bar.</li>
-    <li><b>Bars can be selected on the score.</b> <kbd>Shift</kbd>+click a bar or a note to
-    extend the selection from the last place clicked, <kbd>Shift</kbd>+drag across bars, or
-    right-click <i>Select This Bar</i>; the bars are lit pale blue, and <kbd>Esc</kbd> or
-    <i>Clear Selection</i> clears them. ▶ then plays them and the AI takes them as its hint. A
-    plain drag scrolls the sheet, and <kbd>Ctrl</kbd>+wheel zooms it.</li>
+    <li><b>Bars can be selected for the AI.</b> Right-click <i>Select This Bar</i>: the bar is
+    lit pale blue and the AI takes it as its hint; <kbd>Esc</kbd> or <i>Clear Selection</i>
+    clears it. A plain drag scrolls the sheet, and <kbd>Ctrl</kbd>+wheel zooms it.</li>
     <li><b>The header</b> holds, from the left: the picker for which <code>score</code> the
     preview shows, Export, ✨ <a href="#ai">Ask AI</a>, <a href="#range">Range</a>, ▶ and ⏹,
     the <a href="#practice">practice menu</a>, how long the score plays (<i>3:42</i>), and the
     pages. On a narrow pane its groups wrap onto the next row rather than squeeze.</li>
     <li><b>It plays.</b> ▶ plays the score the preview shows — that score's parts, under its
-    form — or the bars selected on it, each note lit as it sounds, with each part's own General
-    MIDI sound. Right-click a note or a bar for <i>Play from Here</i> (from that note, or from
-    the bar's first), and anywhere for <i>Stop Playback</i>, <i>Fit Width</i> and <i>Reset
-    Zoom</i>. More in <a href="#practice">Playback and practice</a>.</li>
+    form — from the <b>A flag</b>, each note lit as it sounds, with each part's own General MIDI
+    sound. Click a bar (or a note) to move the A flag there. Right-click for <i>This Section as
+    A-B</i>, <i>Stop Playback</i>, <i>Fit Width</i> and <i>Reset Zoom</i>. More in
+    <a href="#practice">Playback and practice</a>.</li>
     <li><b>Its pages stand apart</b> as sheets of paper, and an exported PDF has pages of the
     paper's real size.</li>
     <li><b>Its sound</b> is a SoundFont synthesizer. Out of the box it plays the General MIDI
@@ -264,23 +262,29 @@
 
 <section id="practice">
   <h2>Playback and practice</h2>
-  <p><b>▶ plays the score</b>, or, with bars selected on the score, <b>those bars</b> — every
-  part sounding there, from where the bars first play, the notes lit as they sound. Hold
-  <kbd>Alt+P</kbd> to hear the note under the caret; <kbd>Alt+M</kbd> plays its bar. Beside ⏹
-  stands how long the whole score plays, repeats and tempo changes included, kept up to date
-  as you edit.</p>
-  <p>The <b>practice menu</b> drops down from the metronome button beside ⏹:</p>
+  <p><b>▶ plays from the A flag</b>, which always stands on the score (at the start until you
+  move it): every part sounding there, the notes lit as they sound. ⏸ pauses and goes on from
+  the same place; ⏹ stops and goes back to A; ⏮ moves A to the start. With the preview
+  focused, <kbd>Space</kbd> plays and pauses.</p>
+  <ul>
+    <li><b>Click a bar</b> (or a note) to move the A flag there.</li>
+    <li><b><kbd>Shift</kbd>+click a bar</b> to put the B flag at its end: ▶ then plays from A to
+    B. <kbd>Shift</kbd>+click B's own bar again to take B away. Drag a flag to move it.</li>
+    <li><b>Repeat</b>, beside ⏹, plays A to B — or the whole score — round and round.</li>
+  </ul>
+  <p>Hold <kbd>Alt+P</kbd> to hear the note under the caret; <kbd>Alt+M</kbd> plays its bar.
+  Beside ⏹ stands how long the whole score plays, repeats and tempo changes included, kept up
+  to date as you edit.</p>
+  <p>The <b>practice and mixer panel</b> drops down from the mixer button (three faders):</p>
   <table class="g">
-    <tr><th>In the menu</th><th>Does</th></tr>
-    <tr><td><b>Tempo</b></td><td>a slider from 50% to 150% of the written tempo; the button then reads <i>80%</i>, and <i>Reset</i> puts it back</td></tr>
-    <tr><td><b>Loop</b></td><td>plays the selected bars — or the whole score — round and round, through the music as written once (the score's own repeats inside it are not taken)</td></tr>
-    <tr><td><b>Metronome</b></td><td>a wood block on every beat of the meter, the first of the bar louder; a pickup keeps the accents on the bar lines</td></tr>
-    <tr><td><b>Count-in</b></td><td>one bar of clicks before the music comes in, in the meter where it starts: a pickup sounds over the count's last beats, and a start inside a bar comes in on its own beat — “1, 2”, and in on 3</td></tr>
-    <tr><td><b>Parts</b></td><td>a toggle for each part — a chord row is one too — to silence it: sing or play yours against the others</td></tr>
+    <tr><th>In the panel</th><th>Does</th></tr>
+    <tr><td><b>Tempo</b></td><td>a slider for the speed against the written tempo (a double-click puts it back to 100%), with <b>Metronome</b> — a wood block on every beat, the first of the bar louder — and <b>Count-in</b>: one bar of clicks before the music comes in, and before each round when Repeat is on</td></tr>
+    <tr><td><b>Score</b></td><td>a line for each part of the file and each voice that sings: press its name to silence it, <b>S</b> to hear only the lines soloed, its fader from 0 to 200%, and <kbd>Shift</kbd>+click a name to keep that line alone. <b>Play</b> turns the whole group off and on, <b>All</b> sounds every part whatever you chose, and <b>As scored</b> goes back to the parts the score plays. The lines stand in one order whichever score is shown: what is sung first, then guitars, keyboards, the other parts (chords rows first), bass and drums — the order of a separated recording</td></tr>
+    <tr><td><b>Recording</b></td><td>with a <a href="recording.html">recording</a> beside the score: its button turns it on and off, with its fader and the faders of its separated parts (vocals, guitar, piano, other, bass, drums), and <b>Octave</b> to shift it</td></tr>
   </table>
-  <p>The button stays pressed in while anything differs from the score as written, and a
-  change made while it plays goes on from the same place. <i>Play from Here</i> on the
-  right-click menu plays once from the note or bar, loop or not.</p>
+  <p><b>Faders 100%</b> puts every fader back. The mixer button stays pressed in while
+  anything differs from the score as written, and a change made while it plays goes on from
+  the same place.</p>
 </section>
 
 <section id="range">
