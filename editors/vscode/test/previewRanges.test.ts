@@ -384,11 +384,20 @@ describe('the preview\'s Range panel', () => {
         assert.match(glue, /postMessage\(\{ type: 'recording', chart: doc\.toString\(\), none: true \}\)/);
         const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
         assert.match(ext, /if \(document\.uri\.scheme === 'file'\) \{\s*void sendRecording\(panel, document\.uri, [^\n]*\n\s*\} else \{\s*sendNoRecording\(panel, document\.uri\);\s*\}/);
-        // Faders 100% stands at the right of the Octave row — beside As scored with no recording — and
-        // the panel has no foot line for it (owner's request 2026-11-19).
-        assert.match(html, /const row = document\.querySelector\(recording \? '#recOctRow \.tempo' : '#partsReset'\)\.closest\('\.tempo'\);\s*row\.appendChild\(document\.getElementById\('fadersReset'\)\);/);
-        assert.match(html, /getElementById\('mixRecGroup'\)\.hidden = false;\s*placeFadersReset\(\);/);
-        assert.match(html, /getElementById\('mixRecGroup'\)\.hidden = true;[^\n]*\s*placeFadersReset\(\);/);
+        // Reset All (Faders 100% until 2026-11-27) stands at the right of the Octave row — beside As
+        // scored with no recording — and the panel has no foot line for it (owner's request 2026-11-19).
+        assert.match(html, /const row = document\.querySelector\(recording \? '#recOctRow \.tempo' : '#partsReset'\)\.closest\('\.tempo'\);\s*row\.appendChild\(document\.getElementById\('resetAll'\)\);/);
+        assert.match(html, /getElementById\('mixRecGroup'\)\.hidden = false;\s*placeResetAll\(\);/);
+        assert.match(html, /getElementById\('mixRecGroup'\)\.hidden = true;[^\n]*\s*placeResetAll\(\);/);
+        // …and it resets the whole panel (owner's request 2026-11-27), all but the recording's on/off.
+        const reset = /getElementById\('resetAll'\)\.addEventListener\('click', \(\) => \{([^]*?)\n {8}\}\);/.exec(html)?.[1] ?? '';
+        for (const part of ['practice.speed = 1', 'practice.click = false', 'practice.countIn = false', 'scoreAll = false',
+            'practice.muted = []', 'solo.clear()', 'scoreLevel = 1', 'recPartsOff = []', 'recSettings.octave = 0', 'practiceChanged(oldSpeed)']) {
+            assert.ok(reset.includes(part), part);
+        }
+        assert.doesNotMatch(reset, /recOn = /);
+        assert.match(html, />Reset All<\/button>/);
+        assert.doesNotMatch(html, /fadersReset|Faders 100%<\/button>/);
         assert.doesNotMatch(html, /mfoot/);
         assert.doesNotMatch(html, /\.play\(sec, recSettings,|recPlayer\.update\(recSettings\)|recordingPlan\(recSettings/);
         assert.match(html, /case 'chartTranspose': \{\s*const n = Number\(message\.semitones\) \|\| 0;\s*if \(n !== chartShift\) \{ chartShift = n; recApply\(\); \}/);

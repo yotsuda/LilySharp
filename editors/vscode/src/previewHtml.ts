@@ -613,8 +613,8 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         .mixer-panel .mhead.mtempo { margin-bottom: 0; flex-wrap: wrap; row-gap: 4px; }
         .mixer-panel .mhead.mtempo .fader { width: auto; flex: 1 1 70px; min-width: 70px; }
         .mixer-panel .mhead.mtempo > button.toggle { flex: 0 0 auto; white-space: nowrap; }
-        /* Faders 100%: at the right of the row it stands in (placeFadersReset). */
-        .mixer-panel #fadersReset { margin-left: auto; white-space: nowrap; }
+        /* Reset All: at the right of the row it stands in (placeResetAll). */
+        .mixer-panel #resetAll { margin-left: auto; white-space: nowrap; }
         /* As long as the tempo's slider (owner's request 2026-11-09, session 1159: longer, the 200% end further right). */
         .practice-panel .parts input.fader { width: 160px; flex: 0 0 auto; margin: 0; accent-color: #0078d7; cursor: pointer; }
         .practice-panel .parts .flevel { width: 2.8em; flex: 0 0 auto; text-align: right; font-size: 11px; opacity: 0.8; font-variant-numeric: tabular-nums; }
@@ -721,7 +721,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             <div class="mhead"><button type="button" class="mfold mtitle" aria-expanded="true">Score</button><button type="button" id="scoreOnBtn" class="toggle" aria-pressed="true" title="The score sounds: the parts turned on below — press to silence it, each part's own on or off kept">Play</button><button type="button" id="scoreAllBtn" class="toggle mall" aria-pressed="true" title="Every part of the score on, as the score has them — or every one off">All</button><input type="range" id="scoreLevelSlider" class="fader" min="0" max="200" step="1" value="100" aria-label="Score volume"><span id="scoreLevelValue" class="flevel"></span></div>
             <div class="mbody">
                 <span id="partsList" class="parts"></span>
-                <div class="prow presets"><span class="plbl"></span><span class="tempo"><button type="button" id="partsReset" title="The parts the selected score plays">As scored</button><button type="button" id="fadersReset" title="Every fader to 100%: the score's and the recording's">Faders 100%</button></span></div>
+                <div class="prow presets"><span class="plbl"></span><span class="tempo"><button type="button" id="partsReset" title="The parts the selected score plays">As scored</button><button type="button" id="resetAll" title="Everything in this panel as it starts: the tempo, Metronome and Count-in, the parts as scored, no solo, every fader at 100%, the recording's parts and octave (its own on/off stays)">Reset All</button></span></div>
             </div>
         </div>
         <div class="mgroup" id="mixRecGroup" data-fold="rec" hidden>
@@ -4796,7 +4796,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             const v = levels[name];
             return typeof v === 'number' ? Math.min(FADER_MAX, Math.max(0, v)) : 1;
         }
-        // What each line of the Parts list shows, refreshed after a reset (partsReset / fadersReset).
+        // What each line of the Parts list shows, refreshed after a reset (partsReset / resetAll).
         let partRefreshers = [];
         // The document and score the page shows (updateContent's scoreKey), and the one the Parts
         // list was built for: the list is asked again when they differ while the menu is open
@@ -4869,8 +4869,12 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             countInBtn.setAttribute('aria-pressed', String(practice.countIn));
             // The two resets under the parts (owner's request 2026-11-09): live while there is something to put back.
             document.getElementById('partsReset').disabled = scoreOn && !scoreAll && practice.muted.length === 0 && practice.extraOn.length === 0 && practice.voicesOff.length === 0 && practice.voicesOn.length === 0 && practice.instrumentsOn.length === 0;
-            document.getElementById('fadersReset').disabled = Object.keys(practice.levels).length === 0 && Object.keys(practice.voiceLevels).length === 0
-                && Object.keys(recLevels || {}).length === 0 && Object.keys(recPartLevels || {}).length === 0 && scoreLevel === 1;
+            // Reset All: live while anything in the panel differs from how it starts.
+            document.getElementById('resetAll').disabled = document.getElementById('partsReset').disabled
+                && practice.speed === 1 && !practice.click && !practice.countIn && (!solo || solo.size === 0)
+                && Object.keys(practice.levels).length === 0 && Object.keys(practice.voiceLevels).length === 0
+                && Object.keys(recLevels || {}).length === 0 && Object.keys(recPartLevels || {}).length === 0 && scoreLevel === 1
+                && !recAllOn && (recPartsOff || []).length === 0 && !(recording && recSettings.octave !== 0);
             postPracticeState();
         }
         // The exports play as the menu does, the loop aside (owner's request 2026-11-07): the
@@ -5290,12 +5294,12 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             }
             return recPlayer;
         }
-        /** Faders 100% stands at the right of the recording's Octave row, where there is room (owner's
-         *  request 2026-11-19: it had a line of its own at the panel's foot) — and, with no recording
-         *  (its group hidden), beside As scored. */
-        function placeFadersReset() {
+        /** Reset All stands at the right of the recording's Octave row, where there is room (owner's
+         *  request 2026-11-19, as Faders 100%: it had a line of its own at the panel's foot) — and, with
+         *  no recording (its group hidden), beside As scored. */
+        function placeResetAll() {
             const row = document.querySelector(recording ? '#recOctRow .tempo' : '#partsReset').closest('.tempo');
-            row.appendChild(document.getElementById('fadersReset'));
+            row.appendChild(document.getElementById('resetAll'));
         }
         function recStatus(text) {
             document.getElementById('recStatus').textContent = text || '';
@@ -5484,7 +5488,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 recSilent = false;
                 recAllOn = false;
                 document.getElementById('mixRecGroup').hidden = true;   // (the mixer's recording group: §1 1)
-                placeFadersReset();
+                placeResetAll();
                 if (had && lastPartsMessage) renderParts(lastPartsMessage);
                 return;
             }
@@ -5507,7 +5511,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             recSilent = !!m.silent;
             if (recSilent) recOn = false;
             document.getElementById('mixRecGroup').hidden = false;
-            placeFadersReset();
+            placeResetAll();
             if (fresh && lastPartsMessage) renderParts(lastPartsMessage);
             document.getElementById('recName').textContent = recording.name;
             document.getElementById('recName').title = recording.name;
@@ -5730,18 +5734,33 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             showMixerHead();
             practiceChanged(practice.speed);
         });
-        // Every fader back to 100% — the objects stay (the lines hold them), their entries go.
-        document.getElementById('fadersReset').addEventListener('click', () => {
+        // Reset All (owner's request 2026-11-27; it was Faders 100%): the panel as it starts — the tempo
+        // at 100%, no Metronome or Count-in, the score's group as scored, no solo, every fader at 100%,
+        // the recording's parts all on and its octave as recorded. The recording's own on/off stays (a
+        // page starts with it off: turned off here, someone listening to it would lose it), and so do
+        // Repeat and the A-B flags, which are the header's and the page's, not this panel's.
+        // (The fader objects stay — the lines hold them — their entries go.)
+        document.getElementById('resetAll').addEventListener('click', () => {
+            const oldSpeed = practice.speed;
+            practice.speed = 1;
+            practice.click = false;
+            practice.countIn = false;
+            scoreOn = true;
+            scoreAll = false;
+            practice.muted = []; practice.extraOn = []; practice.voicesOff = []; practice.voicesOn = []; practice.instrumentsOn = [];
+            solo.clear();
             for (const k of Object.keys(practice.levels)) delete practice.levels[k];
             for (const k of Object.keys(practice.voiceLevels)) delete practice.voiceLevels[k];
-            delete recLevels.Recording;     // (the recording's too: §1 7)
-            for (const k of Object.keys(recPartLevels)) delete recPartLevels[k];   // (and its parts': §8)
-            scoreLevel = 1;                 // (and the score group's: §5)
-            for (const refresh of partRefreshers) refresh();
-            renderRecParts();
-            if (recPlayer) recPlayer.setPartLevels(recPartMix());
-            showRecording();
-            practiceChanged(practice.speed);
+            delete recLevels.Recording;     // (the recording's fader: §1 7)
+            for (const k of Object.keys(recPartLevels)) delete recPartLevels[k];   // (its parts': §8)
+            scoreLevel = 1;                 // (the score group's: §5)
+            recAllOn = false;
+            recPartsOff = [];
+            if (recording && recSettings.octave !== 0) { recSettings.octave = 0; recChanged(); }   // (kept per recording, as the − + keep it)
+            refreshMixer();
+            if (recPlayer) { recPlayer.setLevel(recLevel()); recPlayer.setPartLevels(recPartMix()); }
+            recReplayIfSwitched();
+            practiceChanged(oldSpeed);
         });
         clickBtn.addEventListener('click', () => {
             practice.click = !practice.click;
