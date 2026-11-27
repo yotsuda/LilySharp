@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## 0.18.0
 
+- `[editor]` **Find More Sound Fonts…** at the foot of *Lily#: Choose Sound Font…* opens a guide on the Lily# site: free fonts to download, from near the default to clearly different (GeneralUser GS, Timbres of Heaven…), with their sizes and licences, and how to set one up.
 - `[preview]` **A sound font set while a preview is open is the one it plays, and the score and its voices stay.** Setting `lilysharp.playback.soundFont` (MuseScore 4's *MS Basic.sf3*, say) left an open preview on "Loading preview…", or silent, and its sung voices gone until the preview was closed: the page, reloaded for the new font, was not drawn again, was sent no voices, and loaded the font it had before instead, which it was no longer allowed to read.
 - `[preview]` **Play works again when the preview's audio stops answering.** A preview whose audio stayed asleep played nothing while the notes lit, and only reopening the preview cured it; Play now starts the audio afresh, and says so while it is blocked.
 - `[editor]` **`key none`, `time none` and `key custom` are coloured as keywords**, as `key c major` is.

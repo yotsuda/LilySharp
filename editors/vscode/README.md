@@ -191,7 +191,10 @@ Linux); `"lilysharp.playback.soundFont"` names an `.sf2`, `.sf3` or `.dls` of yo
 (MuseScore General)** extension with it, and with that installed the default is its
 MuseScore_General instead of the computer's bank — a fuller sound, and the same on every system.
 It is a separate extension so that it is downloaded once, not with every update; remove it if you
-do not want it, and Lily# plays the computer's bank. While no font is loaded the
+do not want it, and Lily# plays the computer's bank. For other free fonts to download — from near
+the default to clearly different — and how to set one up, see
+[Sound fonts](https://yotsuda.github.io/LilySharp/editor.html#soundfonts) on the Lily# site
+(**Choose Sound Font… → Find More Sound Fonts…** opens it). While no font is loaded the
 preview plays plain oscillator tones instead. The sound is allowed to start only once you have
 clicked or typed in the preview itself (the browser's autoplay rule); the status bar says so
 when a strike comes first.

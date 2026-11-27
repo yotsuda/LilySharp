@@ -111,6 +111,9 @@ function osSoundFonts(): { label: string; path: string }[] {
 /** Where the sound fonts used before are kept: this computer's, so globalState rather than the
  *  settings (a path must not travel with Settings Sync). soundFontHistoryCore.ts says why. */
 const SOUND_FONT_HISTORY_KEY = 'lilysharp.soundFontHistory';
+/** The site's sound font guide (site/editor-body.html, "Sound fonts"): fonts to download, nearest
+ *  to the default first, and how to set one up. Choose Sound Font…'s last item opens it. */
+export const SOUND_FONT_GUIDE = 'https://yotsuda.github.io/LilySharp/editor.html#soundfonts';
 /** Windows' and (by default) macOS's file names ignore case. */
 const PATHS_IGNORE_CASE = process.platform === 'win32' || process.platform === 'darwin';
 
@@ -180,14 +183,15 @@ export async function wavSoundFont(context: vscode.ExtensionContext): Promise<st
  *  for what plays (defaultSoundFont — the OS's bank, or a local build's own font, with the OS's
  *  bank then listed by its name), the fonts used before whose files are there now
  *  (each with a button that takes it off the list), or a file of the user's (a dialog filtered
- *  to .sf2 / .sf3 / .dls), written to the user settings as `lilysharp.playback.soundFont`.
+ *  to .sf2 / .sf3 / .dls), written to the user settings as `lilysharp.playback.soundFont` — or the
+ *  site's guide to fonts worth downloading (SOUND_FONT_GUIDE, the last item).
  *  The files are looked for when the picker opens, not at start-up: only the picker needs the
  *  answer, and a drive plugged in since then counts (owner's request 2026-10-12). */
 export async function chooseSoundFont(context: vscode.ExtensionContext): Promise<void> {
     const config = vscode.workspace.getConfiguration('lilysharp');
     const current = config.get<string>('playback.soundFont', '').trim();
     await rememberSoundFont(context, current);   // a font set before the list existed
-    type Pick = vscode.QuickPickItem & { action: 'default' | 'browse' | 'path'; path?: string };
+    type Pick = vscode.QuickPickItem & { action: 'default' | 'browse' | 'path' | 'more'; path?: string };
     const def = defaultSoundFont(context.extensionUri);
     const os = osSoundFonts()[0];
     const playsDefault = !current || !fs.existsSync(current) || (!!def && samePath(current, def.path, PATHS_IGNORE_CASE));
@@ -209,7 +213,8 @@ export async function chooseSoundFont(context: vscode.ExtensionContext): Promise
             .map<Pick>(f => ({
                 label: path.basename(f), description: isCurrent(f) ? '(current)' : '',
                 detail: f, action: 'path', path: f, buttons: [forget] })),
-        { label: 'Browse for a file…', detail: 'An .sf2, .sf3 or .dls file on this machine — see "Sound fonts" on the Lily# site for three free ones', action: 'browse' },
+        { label: 'Browse for a file…', detail: 'An .sf2, .sf3 or .dls file on this machine', action: 'browse' },
+        { label: 'Find More Sound Fonts…', detail: 'Free ones to download, from near the default to clearly different, and how to set one up (the Lily# site)', action: 'more' },
     ];
     const qp = vscode.window.createQuickPick<Pick>();
     qp.title = 'Lily#: the sound font the preview plays with';
@@ -228,6 +233,11 @@ export async function chooseSoundFont(context: vscode.ExtensionContext): Promise
     });
     qp.dispose();
     if (!picked) { return; }
+    if (picked.action === 'more') {
+        // The guide (owner's request 2026-11-27): which fonts to download, and how to set one up.
+        await vscode.env.openExternal(vscode.Uri.parse(SOUND_FONT_GUIDE));
+        return;
+    }
     let value: string | undefined;
     if (picked.action === 'default') {
         value = '';
