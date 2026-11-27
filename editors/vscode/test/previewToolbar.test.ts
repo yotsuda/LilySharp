@@ -42,6 +42,17 @@ test('the mixer button draws three faders', () => {
     assert.doesNotMatch(svg, /<path/);
 });
 
+// The skip buttons drawn as the icons beside them, centred, not as text glyphs that stood small and
+// below the middle (owner's request 2026-11-27).
+test('rewind and the first and last page are icons, centred in a button as tall as the icons\'', () => {
+    for (const id of ['rewindBtn', 'firstPageBtn', 'lastPageBtn']) {
+        assert.match(button(id), /class="skip"[^>]*aria-label="[^"]+"/, id);
+        assert.match(button(id), /<svg viewBox="0 0 16 16" fill="currentColor"/, id);
+        assert.doesNotMatch(button(id), /⏮|⏭/, id);
+    }
+    assert.match(source, /\.toolbar button\.skip \{\s*display: inline-flex; align-items: center; justify-content: center;\s*height: 28px;/);
+});
+
 test('it keeps the tempo it plays at, and looks pressed while its menu is open', () => {
     assert.match(button('practiceBtn'), /<span id="practiceSpeed"><\/span>/);
     assert.match(source, /button\.practice\[aria-expanded="true"\] \{\s*background: #d6e6f8/);

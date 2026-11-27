@@ -423,6 +423,14 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             height: 28px; width: 42px; padding: 0; line-height: 1;
         }
         .toolbar button.icon svg { display: block; width: 15px; height: 15px; }
+        /* The skip buttons (⏮ rewind, first and last page) drawn as the icons beside them are, not
+           as text glyphs, which stood small and below the middle (owner's request 2026-11-27); the
+           button keeps a text button's width. */
+        .toolbar button.skip {
+            display: inline-flex; align-items: center; justify-content: center;
+            height: 28px; padding: 0 11px; line-height: 1;
+        }
+        .toolbar button.skip svg { display: block; width: 15px; height: 15px; }
         /* The voice badge: a small microphone over the bottom-right corner of ▶ — no border, no
            background, not a button. Grey and pulsing while the engine sings, blue when every voice
            is ready, the error colour when one will not be sung. */
@@ -672,7 +680,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
              instruments are notes too"): a status over the Play it speaks of, drawn as what sings.
              A click still opens the practice menu, where each voice has its own toggle and sign. -->
         <!-- Rewind (owner's request 2026-11-17): the A flag back to the top. -->
-        <button id="rewindBtn" type="button" title="The A flag back to the top (playing: plays from there)">⏮</button>
+        <button id="rewindBtn" class="skip" type="button" aria-label="Rewind" title="The A flag back to the top (playing: plays from there)"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="1.6" y="3" width="1.8" height="10" rx=".5"/><path d="M8.8 3.2v9.6L3.8 8z"/><path d="M14.4 3.2v9.6L9.4 8z"/></svg></button>
         <span class="play-wrap">
         <button id="playBtn" type="button" title="Play from the A flag (Space while stopped)">▶</button>
         <span id="voiceBadge" class="voice-badge" role="status" hidden aria-label="Voice"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="1.2" width="4" height="7.6" rx="2"/><path d="M3.6 7.4a4.4 4.4 0 0 0 8.8 0"/><path d="M8 11.8v2.6M5.6 14.4h4.8"/></svg></span>
@@ -689,12 +697,12 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         </span>
         <span class="sep"></span>
         <span class="group">
-        <button id="firstPageBtn" type="button" title="First page">⏮</button>
+        <button id="firstPageBtn" class="skip" type="button" aria-label="First page" title="First page"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="1.6" y="3" width="1.8" height="10" rx=".5"/><path d="M8.8 3.2v9.6L3.8 8z"/><path d="M14.4 3.2v9.6L9.4 8z"/></svg></button>
         <!-- No min/max: the spinner is inverted in script (down = next page), so
              the native step must be free to go past either end (see pageInput). -->
         <input id="pageInput" type="number" value="1" title="Page" style="width: calc(1ch + 22px)">
         <span id="pageCount">/ 1</span>
-        <button id="lastPageBtn" type="button" title="Last page">⏭</button>
+        <button id="lastPageBtn" class="skip" type="button" aria-label="Last page" title="Last page"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M1.6 3.2v9.6L6.6 8z"/><path d="M7.2 3.2v9.6L12.2 8z"/><rect x="12.6" y="3" width="1.8" height="10" rx=".5"/></svg></button>
         </span>
     </div>
     <div id="errorBanner" class="error-banner" role="alert"></div>
