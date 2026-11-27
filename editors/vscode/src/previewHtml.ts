@@ -4685,6 +4685,21 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         // The panel's button pressed while anything in it is not as it was (§6): the practice's or the mixer's.
         var practiceOn = false, mixerChanged = false;
         function paintPracticeBtn() { document.getElementById('practiceBtn').setAttribute('aria-pressed', String(practiceOn || mixerChanged)); }
+        /** Reset All live while anything in the panel differs from how it starts — the recording on
+         *  among them, as the mixer button's own 'changed' counts it. One place, painted from both
+         *  ways the panel is drawn again (showPractice, showMixerHead) and after the octave (recChanged):
+         *  painted from showPractice alone, a change of the recording's left it greyed (owner's report
+         *  2026-11-27: "pressing it resets nothing"). Guarded: it can run while the page starts. */
+        function paintResetAll() {
+            const btn = document.getElementById('resetAll');
+            const parts = document.getElementById('partsReset');
+            if (!btn || !parts || typeof solo === 'undefined' || !solo) return;
+            btn.disabled = parts.disabled
+                && practice.speed === 1 && !practice.click && !practice.countIn && solo.size === 0
+                && Object.keys(practice.levels).length === 0 && Object.keys(practice.voiceLevels).length === 0
+                && Object.keys(recLevels || {}).length === 0 && Object.keys(recPartLevels || {}).length === 0 && scoreLevel === 1
+                && !recOn && !recAllOn && (recPartsOff || []).length === 0 && !(recording && recSettings.octave !== 0);
+        }
         // The solo is each group's own (owner's decision 2026-11-20): a line soloed in the score
         // silences the score's other lines only — the recording sounds as its own group says — and
         // one soloed in the recording its other parts only. (Until then a solo in either group
@@ -4789,6 +4804,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 || Object.keys(practice.levels).length > 0 || Object.keys(practice.voiceLevels).length > 0 || recOn;
             mixerChanged = changed;
             paintPracticeBtn();
+            paintResetAll();
         }
         // A fader runs 0 to 200% (owner's request 2026-11-09, session 1157): levelIn clamps to that.
         const FADER_MAX = 2;
@@ -4869,12 +4885,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             countInBtn.setAttribute('aria-pressed', String(practice.countIn));
             // The two resets under the parts (owner's request 2026-11-09): live while there is something to put back.
             document.getElementById('partsReset').disabled = scoreOn && !scoreAll && practice.muted.length === 0 && practice.extraOn.length === 0 && practice.voicesOff.length === 0 && practice.voicesOn.length === 0 && practice.instrumentsOn.length === 0;
-            // Reset All: live while anything in the panel differs from how it starts.
-            document.getElementById('resetAll').disabled = document.getElementById('partsReset').disabled
-                && practice.speed === 1 && !practice.click && !practice.countIn && (!solo || solo.size === 0)
-                && Object.keys(practice.levels).length === 0 && Object.keys(practice.voiceLevels).length === 0
-                && Object.keys(recLevels || {}).length === 0 && Object.keys(recPartLevels || {}).length === 0 && scoreLevel === 1
-                && !recAllOn && (recPartsOff || []).length === 0 && !(recording && recSettings.octave !== 0);
+            paintResetAll();
             postPracticeState();
         }
         // The exports play as the menu does, the loop aside (owner's request 2026-11-07): the
@@ -5420,6 +5431,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             // Kept for this recording, for the next time it is opened (recording.ts).
             if (recording) vscode.postMessage({ type: 'recordingSettings', chart: recording.chart, name: recording.name, settings: recSettings });
             recApply();
+            paintResetAll();
         }
         /** The sound follows the panel's settings and the chart's transpose as they are now. */
         function recApply() {
@@ -5736,12 +5748,15 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         });
         // Reset All (owner's request 2026-11-27; it was Faders 100%): the panel as it starts — the tempo
         // at 100%, no Metronome or Count-in, the score's group as scored, no solo, every fader at 100%,
-        // the recording's parts all on and its octave as recorded. The recording's own on/off stays (a
-        // page starts with it off: turned off here, someone listening to it would lose it), and so do
-        // Repeat and the A-B flags, which are the header's and the page's, not this panel's.
+        // the recording off (a page starts with it off, and the mixer button counts it on as a change —
+        // owner's report the same day: kept on, the button stayed pressed and "the recording was not
+        // put back"), its parts all on and its octave as recorded. Repeat and the A-B flags stay: they
+        // are the header's and the page's, not this panel's.
         // (The fader objects stay — the lines hold them — their entries go.)
         document.getElementById('resetAll').addEventListener('click', () => {
             const oldSpeed = practice.speed;
+            const recWasOn = recOn;
+            recOn = false;
             practice.speed = 1;
             practice.click = false;
             practice.countIn = false;
@@ -5759,6 +5774,12 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             if (recording && recSettings.octave !== 0) { recSettings.octave = 0; recChanged(); }   // (kept per recording, as the − + keep it)
             refreshMixer();
             if (recPlayer) { recPlayer.setLevel(recLevel()); recPlayer.setPartLevels(recPartMix()); }
+            // The recording playing alone, now off: it stops, as its own button stops it (flipRecording).
+            if (recWasOn && !playClock && recPlayer && recPlayer.playing) {
+                recPlayer.stop();
+                setPlayUi(false);
+                return;
+            }
             recReplayIfSwitched();
             practiceChanged(oldSpeed);
         });

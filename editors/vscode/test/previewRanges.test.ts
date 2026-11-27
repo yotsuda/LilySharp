@@ -389,13 +389,21 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /const row = document\.querySelector\(recording \? '#recOctRow \.tempo' : '#partsReset'\)\.closest\('\.tempo'\);\s*row\.appendChild\(document\.getElementById\('resetAll'\)\);/);
         assert.match(html, /getElementById\('mixRecGroup'\)\.hidden = false;\s*placeResetAll\(\);/);
         assert.match(html, /getElementById\('mixRecGroup'\)\.hidden = true;[^\n]*\s*placeResetAll\(\);/);
-        // …and it resets the whole panel (owner's request 2026-11-27), all but the recording's on/off.
+        // …and it resets the whole panel, the recording off too (owner's request and report 2026-11-27:
+        // kept on, the mixer button — which counts it on as a change — stayed pressed).
         const reset = /getElementById\('resetAll'\)\.addEventListener\('click', \(\) => \{([^]*?)\n {8}\}\);/.exec(html)?.[1] ?? '';
         for (const part of ['practice.speed = 1', 'practice.click = false', 'practice.countIn = false', 'scoreAll = false',
-            'practice.muted = []', 'solo.clear()', 'scoreLevel = 1', 'recPartsOff = []', 'recSettings.octave = 0', 'practiceChanged(oldSpeed)']) {
+            'practice.muted = []', 'solo.clear()', 'scoreLevel = 1', 'recOn = false', 'recPartsOff = []', 'recSettings.octave = 0', 'practiceChanged(oldSpeed)']) {
             assert.ok(reset.includes(part), part);
         }
-        assert.doesNotMatch(reset, /recOn = /);
+        assert.match(html, /\|\| Object\.keys\(practice\.voiceLevels\)\.length > 0 \|\| recOn;/);   // (what the mixer button counts)
+        // Live while anything differs — the recording on among them — painted from both ways the panel
+        // is drawn and after the octave: from showPractice alone, a change of the recording's left it greyed.
+        const paint = /function paintResetAll\(\) \{([^]*?)\n {8}\}/.exec(html)?.[1] ?? '';
+        assert.match(paint, /&& !recOn && !recAllOn/);
+        assert.match(html, /mixerChanged = changed;\s*paintPracticeBtn\(\);\s*paintResetAll\(\);/);
+        assert.match(html, /recApply\(\);\s*paintResetAll\(\);/);
+        assert.match(html, /paintResetAll\(\);\s*postPracticeState\(\);/);
         assert.match(html, />Reset All<\/button>/);
         assert.doesNotMatch(html, /fadersReset|Faders 100%<\/button>/);
         assert.doesNotMatch(html, /mfoot/);
