@@ -34,6 +34,14 @@ test('the metronome button is an icon button as the Range button is, with no arr
     assert.doesNotMatch(source, /svg\.caret/);
 });
 
+// The panel is a mixer first (owner's request 2026-11-27): its button draws three faders — three
+// tracks, each with its knob at its own height — not the metronome it drew before.
+test('the mixer button draws three faders', () => {
+    const svg = /<svg[^]*?<\/svg>/.exec(button('practiceBtn'))?.[0] ?? '';
+    assert.equal((svg.match(/<rect /g) ?? []).length, 6);
+    assert.doesNotMatch(svg, /<path/);
+});
+
 test('it keeps the tempo it plays at, and looks pressed while its menu is open', () => {
     assert.match(button('practiceBtn'), /<span id="practiceSpeed"><\/span>/);
     assert.match(source, /button\.practice\[aria-expanded="true"\] \{\s*background: #d6e6f8/);
