@@ -68,6 +68,11 @@ import { resolveServerLaunch } from './serverLaunch';
 import { leftToTheInstrument, SungVoiceDto, sungKey, voiceMenuLabels, voiceMenuKey, voiceMenuTitleOf } from './singerCore';
 import { MixerVoice, mixerRanks } from './mixerOrderCore';
 
+/** Each preview's last mixer list (its tracks and voices) and the order last sent: the order is
+ *  read again from the text at every refresh, with no server call, and sent only when it moved
+ *  (owner's report 2026-11-27: `chords prog {}` typed above the parts left the mixer as it was). */
+const mixerOrders = new WeakMap<vscode.WebviewPanel, { parts: string[]; voices: MixerVoice[]; sent: string }>();
+
 let client: LanguageClient;
 let clientReady = false;
 let clientReadyPromise: Promise<void>;
@@ -1828,6 +1833,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     // mixerOrderCore.ts), not the score's staff order.
                     const text = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri)?.getText() ?? '';
                     const ranks = mixerRanks(text, [...parts, ...extra], voiceParts);
+                    mixerOrders.set(panel, { parts: [...parts, ...extra], voices: voiceParts, sent: JSON.stringify(ranks) });
                     panel.webview.postMessage({ type: 'partsData', parts, extra, voices, voicesInScore, voiceLabels, voiceTitles, sungOnly,
                         partRanks: ranks.parts, voiceRanks: ranks.voices });
                 } catch {
@@ -1848,6 +1854,18 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     // (the score's parts that sound, from the same answer: soundingCache)
                     const parts = await soundingCache?.parts;
                     if (parts) { panel.webview.postMessage({ type: 'soundingParts', parts }); }
+                    // The mixer's order, read again from the text (about a millisecond, no server
+                    // call): sent only when it moved.
+                    const order = mixerOrders.get(panel);
+                    const text = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri)?.getText();
+                    if (order && text !== undefined) {
+                        const ranks = mixerRanks(text, order.parts, order.voices);
+                        const sent = JSON.stringify(ranks);
+                        if (sent !== order.sent) {
+                            order.sent = sent;
+                            panel.webview.postMessage({ type: 'mixerRanks', partRanks: ranks.parts, voiceRanks: ranks.voices });
+                        }
+                    }
                 } catch {
                     panel.webview.postMessage({ type: 'lengthData', seconds: null });
                 }

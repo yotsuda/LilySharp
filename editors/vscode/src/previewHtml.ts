@@ -5056,12 +5056,12 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             // pressed, both then sounding (session 1165: the part's button is the instrument's,
             // the voice is the note's, each on its own).
             const sungOnly = new Set(message.sungOnly || []);
-            // The lines in the order the .lys first names them (owner's request 2026-11-27,
-            // mixerOrderCore.ts): the score's parts and the voices it sings together, then the lines
-            // not in this score. A line the file does not name keeps its place after the others.
+            // One order for every line, whichever score is shown (owner's decisions 2026-11-27,
+            // mixerOrderCore.ts): a song and its voice first, then by family, and within one the
+            // order the .lys first names them. The lines not in this score stand among the others.
             const partRanks = message.partRanks || {}, voiceRanks = message.voiceRanks || {};
-            const scoreLines = [], otherLines = [];
-            const drawInFileOrder = (lines) => lines.map((l, i) => ({ l, i }))
+            const mixerLines = [], scoreLines = mixerLines, otherLines = mixerLines;
+            const drawInMixerOrder = (lines) => lines.map((l, i) => ({ l, i }))
                 .sort((a, b) => ((a.l.rank ?? Infinity) - (b.l.rank ?? Infinity)) || (a.i - b.i))
                 .forEach(x => x.l.draw());
             for (const name of parts) scoreLines.push({ rank: partRanks[name], draw: () => {
@@ -5109,8 +5109,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                     () => { practice.extraOn = practice.extraOn.includes(name) ? without(practice.extraOn, name) : practice.extraOn.concat([name]); },
                     'extra', '', practice.levels, name, 'part:' + name) });
             }
-            drawInFileOrder(scoreLines);
-            drawInFileOrder(otherLines);
+            drawInMixerOrder(mixerLines);
             // (the recording has its own group in the mixer: its on/off, solo and fader, its parts — §1 1)
             renderVoiceBadge();     // the voices' signs on their fresh toggles
             showMixerHead();        // (the group's All, now that its lines are known)
@@ -6166,6 +6165,15 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                     askStoppedPosition();   // (a new render: the caret's time may have moved)
                     break;
                 }
+                case 'mixerRanks':
+                    // The mixer's order moved with an edit (mixerOrderCore.ts; the extension sends it
+                    // only then): the list drawn again from its last answer, nothing asked.
+                    if (lastPartsMessage) {
+                        lastPartsMessage.partRanks = message.partRanks || {};
+                        lastPartsMessage.voiceRanks = message.voiceRanks || {};
+                        if (!practicePanel.hidden) renderParts(lastPartsMessage);
+                    }
+                    break;
                 case 'soundingParts': {
                     // The parts that sound now, read off the length's export (no export of its own):
                     // the menu, open, asks for its list again when one is not on it — a part given
