@@ -697,7 +697,7 @@ describe('the preview keeps what sounds in view, every part together', () => {
     });
     // Owner's request 2026-11-26: when the notes sounding come to a page's first line, that line goes
     // to the top of the view — once — and stays there while it plays.
-    it('turns the page: a page\'s first line to the top of the view when its notes sound', () => {
+    it('turns the page: the page\'s top to the top of the view when its first line\'s notes sound', () => {
         const view = { scrollTop: 700, scrollLeft: 0 };
         const moves: number[] = [];
         const mainContent = {
@@ -706,25 +706,33 @@ describe('the preview keeps what sounds in view, every part together', () => {
             scrollTo: (o: { top: number }) => { moves.push(o.top); view.scrollTop = o.top; },
             scrollBy: (o: { top: number }) => { moves.push(view.scrollTop + o.top); view.scrollTop += o.top; },
         };
-        // In the page: the last line of page 1 at 800..900, page 2's first line at 1000..1200, its second 1220..1420.
+        // In the page: the last line of page 1 at 800..900, page 2's top at 970 (where the page buttons put
+        // it), its first line at 1000..1200 under the page's head, its second 1220..1420.
         const client = (top: number, bottom: number) => rect(top - view.scrollTop, bottom - view.scrollTop);
         const lastOf1 = { name: 'p1-last', getBoundingClientRect: () => client(800, 900) };
-        const firstOf2 = { name: 'p2-first', getBoundingClientRect: () => client(1000, 1200) };
+        let firstOf2 = { name: 'p2-first', getBoundingClientRect: () => client(1000, 1200) };
         const note = (line: { name: string }, top: number) => ({ line, getBoundingClientRect: () => client(top, top + 10) });
         const context: Record<string, unknown> = {
             mainContent, barBoxOf: () => null, extentOf: pageFunction('extentOf', {}), followStaff: -1,
-            followSystemDocTop: null, followSystemOffset: null, followTopTarget: null, pageTopSystem: null, PAGE_TOP_GAP: 4,
+            followSystemDocTop: null, followSystemOffset: null, followTopTarget: null, pageTopSystem: null,
             systemElOf: (els: { line: unknown }[]) => (els && els[0] ? els[0].line : null),
             pageFirstSystem: () => firstOf2,
+            pageIndexOf: (line: { name: string }) => (line.name.startsWith('p2') ? 1 : 0),
+            pageScrollTop: (i: number) => (i === 1 ? 970 : 0),
         };
         const keep = pageFunction('keepSoundingInView', context) as (els: unknown[], ahead?: unknown[]) => void;
         keep([note(lastOf1, 850)], [note(firstOf2, 1100)]);          // page 1's last line, page 2's in view: no move
         assert.deepEqual(moves, []);
-        keep([note(firstOf2, 1100)], [note(firstOf2, 1150)]);        // page 2's first line sounds: to the top
-        assert.deepEqual(moves, [1000 - 4]);
+        keep([note(firstOf2, 1100)], [note(firstOf2, 1150)]);        // page 2's first line sounds: its page's top to the top
+        assert.deepEqual(moves, [970]);
         keep([note(firstOf2, 1120)], [note(firstOf2, 1180)]);        // still it: held (the notes rule would centre it)
         keep([note(firstOf2, 1150)], [note(firstOf2, 1240)]);
-        assert.deepEqual(moves, [1000 - 4]);
+        assert.deepEqual(moves, [970]);
+        // An edit while it plays draws the picture again: the same line, a new element — the page is not turned again.
+        firstOf2 = { name: 'p2-first-redrawn', getBoundingClientRect: () => client(1000, 1200) };
+        view.scrollTop = 980;                                        // (the reader moved a little meanwhile)
+        keep([note(firstOf2, 1160)], [note(firstOf2, 1190)]);
+        assert.deepEqual(moves, [970]);
     });
     it('leaves alone what is all in view', () => {
 

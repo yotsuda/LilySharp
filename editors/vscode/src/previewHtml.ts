@@ -932,9 +932,13 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             }
         }
 
-        function gotoPage(i) {
+        /** Where the view stands with page i at its top (the page buttons, a page turned while it plays). */
+        function pageScrollTop(i) {
             i = Math.max(0, Math.min(pages.length - 1, i));
-            mainContent.scrollTop = i === 0 ? 0 : pages[i].top * pxPerSpace * scale + 20;
+            return i === 0 ? 0 : pages[i].top * pxPerSpace * scale + 20;
+        }
+        function gotoPage(i) {
+            mainContent.scrollTop = pageScrollTop(i);
             updatePageInfo();
         }
 
@@ -1914,10 +1918,13 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             const page = system.closest('g.page');
             return page ? page.querySelector('g.system') : null;
         }
-        // The first line of a page the view was turned to while it plays (keepSoundingInView), and how
-        // far below the view's top it stands then (px).
+        /** The page (its index in pages) a system is drawn on; 0 on a picture drawn without g.page. */
+        function pageIndexOf(system) {
+            const page = system.closest('g.page');
+            return page && page.parentNode ? Array.prototype.indexOf.call(page.parentNode.querySelectorAll(':scope > g.page'), page) : 0;
+        }
+        // The page the view was turned to while it plays (keepSoundingInView), by its index.
         var pageTopSystem = null;
-        const PAGE_TOP_GAP = 4;
         // The bar playing, as its measure index (the header's "Bar 12 / 118", showBarInfo): litBar while
         // a bar is lit, lastLitBar the one lit when the playing stopped (a pause shows it still).
         var litBar = -1, lastLitBar = -1;
@@ -3723,17 +3730,22 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                 if (Math.abs(dx) < 1) dx = 0;
             }
             // A page turned (owner's request 2026-11-26): when the notes sounding come to the first line
-            // of a page, that line goes to the top of the view — once, as a player turns the page — and
-            // the view keeps it there while it plays (the rules below would centre it again). The next
-            // line goes on by them.
+            // of a page, the PAGE's top goes to the top of the view, where the page buttons put it
+            // (pageScrollTop) — once, as a player turns the page — and the view keeps it there while it
+            // plays (the rules below would centre it again). The next line goes on by them. (It put the
+            // first line's top there, under the page's head: owner's report 2026-11-27.)
+            // The page is told by its number: an edit while it plays draws the picture again, every
+            // line a new element, and the page told by its first line's element was turned again — the
+            // view went away and back (owner's report 2026-11-27, playing a page's first line).
             // (A line is told by every part's notes: the part followed resting there keeps it.)
             const line = systemElOf(sounding);
             const firstLine = line && pageFirstSystem(line) === line ? line : null;
             if (line && !firstLine) pageTopSystem = null;
             if (firstLine) {
-                if (pageTopSystem !== firstLine) {
-                    pageTopSystem = firstLine;
-                    const dy = firstLine.getBoundingClientRect().top - (m.top + PAGE_TOP_GAP);
+                const page = pageIndexOf(firstLine);
+                if (pageTopSystem !== page) {
+                    pageTopSystem = page;
+                    const dy = pageScrollTop(page) - mainContent.scrollTop;
                     // A system taller than the view keeps this place in it (followSystemOffset, below).
                     const box = barBoxOf(sounding.find(el => el.closest && el.closest('g.system') === firstLine) || sounding[0]);
                     followTopTarget = Math.abs(dy) > 1 ? mainContent.scrollTop + dy : null;
