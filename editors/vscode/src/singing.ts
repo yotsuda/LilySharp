@@ -784,6 +784,17 @@ export function forgetVoices(panel: vscode.WebviewPanel): void {
     voiceTurned.delete(panel);
     prepareQueue.cancel(`${panelId(panel)}/`);
 }
+/** A preview's page loaded again — VS Code reloads it when its options change, as a new sound
+ *  font's folder does: it holds no voice now, whatever was sent to the page before. They are sent
+ *  again, at once (the engine keeps what it sang), and the microphone comes back (Shosa's request 7,
+ *  2026-11-27: after the sound font was changed the voices stayed silent, the microphone gone, until
+ *  the preview was closed — postedVoices still said the page had them). The document and score are
+ *  the same: nothing else is forgotten. */
+export function pageReloaded(panel: vscode.WebviewPanel): void {
+    postedVoices.delete(panel);
+    toldNoEngine.delete(panel);
+    voiceTurned.add(panel);
+}
 /** What was said once per preview (a warning of the server's, a voice that was not sung). */
 const singerTold = new WeakMap<vscode.WebviewPanel, Set<string>>();
 /** What the engine said of a singer line's settings, shown once a session each: a setting written

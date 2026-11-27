@@ -55,7 +55,7 @@ import { TodoMark, parseStarts, todoDeletions } from './todoResolveCore';
 import { renderAudioFiles } from './audioRender';
 import { PracticeState, practiceSummary } from './webview/playbackCore';
 import { writeVideos } from './videoExport';
-import { registerSinging, deactivateSinging, installCantoria, upgradeCantoria, checkCantoriaUpgrade, firstSongFile, hearSinger, stepSingerAt, renderer, disposeSinger, menuVoices, missingVoices, followVoices, forgetVoices, prepareVoices, candidateVoices } from './singing';
+import { registerSinging, deactivateSinging, installCantoria, upgradeCantoria, checkCantoriaUpgrade, firstSongFile, hearSinger, stepSingerAt, renderer, disposeSinger, menuVoices, missingVoices, followVoices, forgetVoices, pageReloaded, prepareVoices, candidateVoices } from './singing';
 import { useSoundFontLog, rememberSoundFont, wavSoundFont, chooseSoundFont, previewResourceRoots, synthUrls } from './soundFont';
 import { useMidiOutHost, midiOutputSetting, midiOutRequest, reportMidiOutError, chooseMidiOutput } from './midiOut';
 import { useExportHost, openInDefaultApp, exportPreview, practisedJobs, recordingRendered, recordJobs, singJobs, drawFramesFor, videoFfmpeg } from './exportPreview';
@@ -1668,8 +1668,13 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 // the panel's creation.
                 if (reloaded) {
                     panel.webview.postMessage({ type: 'setSoundFont', uri: synthUrls(panel.webview, context.extensionUri).soundFont });
+                    // …and its voices, which the page lost (Shosa's request 7).
+                    pageReloaded(panel);
                     const doc = await previewDocument(uri);
-                    if (doc) { updatePreviewContent(doc, panel, context); }
+                    if (doc) {
+                        updatePreviewContent(doc, panel, context);
+                        void prepareVoices(panel, uri, 'edit');
+                    }
                 }
                 return;
             }

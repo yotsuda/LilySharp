@@ -49,4 +49,10 @@ test('a preview page that loads again is drawn again and told the sound font; a 
     const reload = /if \(reloaded\) \{([^]*?)\n {16}\}/.exec(ready)?.[1] ?? '';
     assert.match(reload, /type: 'setSoundFont'/);
     assert.match(reload, /updatePreviewContent\(doc, panel, context\)/);
+    // Shosa's request 7: the voices too — forgotten as sent, then asked for again.
+    assert.ok(reload.indexOf('pageReloaded(panel)') >= 0 && reload.indexOf('pageReloaded(panel)') < reload.indexOf('prepareVoices(panel, uri'));
+    const singing = readFileSync(join(__dirname, '..', '..', 'src', 'singing.ts'), 'utf8');
+    const reloaded = /export function pageReloaded\(panel: vscode\.WebviewPanel\): void \{([^]*?)\n\}/.exec(singing)?.[1] ?? '';
+    assert.match(reloaded, /postedVoices\.delete\(panel\)/);
+    assert.match(reloaded, /voiceTurned\.add\(panel\)/);
 });
