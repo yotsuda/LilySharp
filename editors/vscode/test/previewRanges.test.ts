@@ -396,13 +396,16 @@ describe('the preview\'s Range panel', () => {
             'practice.muted = []', 'solo.clear()', 'scoreLevel = 1', 'recOn = false', 'recPartsOff = []', 'recSettings.octave = 0', 'practiceChanged(oldSpeed)']) {
             assert.ok(reset.includes(part), part);
         }
-        assert.match(html, /\|\| Object\.keys\(practice\.voiceLevels\)\.length > 0 \|\| recOn;/);   // (what the mixer button counts)
+        assert.match(html, /\|\| Object\.keys\(practice\.voiceLevels\)\.length > 0 \|\| recOn\s*\|\|/);   // (what the mixer button counts)
         // Live while anything differs — the recording on among them — painted from both ways the panel
         // is drawn and after the octave: from showPractice alone, a change of the recording's left it greyed.
         const paint = /function paintResetAll\(\) \{([^]*?)\n {8}\}/.exec(html)?.[1] ?? '';
         assert.match(paint, /&& !recOn && !recAllOn/);
         assert.match(html, /mixerChanged = changed;\s*paintPracticeBtn\(\);\s*paintResetAll\(\);/);
-        assert.match(html, /recApply\(\);\s*paintResetAll\(\);/);
+        assert.match(html, /recApply\(\);\s*showMixerHead\(\);/);
+        // The mixer button counts the recording's octave, fader, its parts' faders and on/off as changes
+        // (owner's report 2026-11-27: Octave +1, the panel closed, the button looked unchanged).
+        assert.match(html, /\|\| !!\(recording && recSettings\.octave !== 0\) \|\| Object\.keys\(recLevels \|\| \{\}\)\.length > 0\s*\|\| Object\.keys\(recPartLevels \|\| \{\}\)\.length > 0 \|\| \(recPartsOff \|\| \[\]\)\.length > 0;/);
         assert.match(html, /paintResetAll\(\);\s*postPracticeState\(\);/);
         assert.match(html, />Reset All<\/button>/);
         assert.doesNotMatch(html, /fadersReset|Faders 100%<\/button>/);

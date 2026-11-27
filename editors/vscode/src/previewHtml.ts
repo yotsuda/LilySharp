@@ -4799,9 +4799,13 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             recAll.setAttribute('aria-pressed', String(recAllOn));
             recAll.title = recAllOn ? 'Every part of the recording sounds — press to hear only the parts turned on below again'
                 : 'Press to hear every part of the recording; the parts turned on below are kept for when it is let go';
+            // (the recording's octave, fader, its parts' faders and on/off count too — owner's report
+            // 2026-11-27: Octave +1, the panel closed, and the button looked as if nothing were changed)
             const changed = solo.size > 0 || scoreLevel !== 1 || !scoreOn || scoreAll || recAllOn || practice.muted.length > 0 || practice.voicesOff.length > 0
                 || practice.extraOn.length > 0 || practice.voicesOn.length > 0 || practice.instrumentsOn.length > 0
-                || Object.keys(practice.levels).length > 0 || Object.keys(practice.voiceLevels).length > 0 || recOn;
+                || Object.keys(practice.levels).length > 0 || Object.keys(practice.voiceLevels).length > 0 || recOn
+                || !!(recording && recSettings.octave !== 0) || Object.keys(recLevels || {}).length > 0
+                || Object.keys(recPartLevels || {}).length > 0 || (recPartsOff || []).length > 0;
             mixerChanged = changed;
             paintPracticeBtn();
             paintResetAll();
@@ -5431,7 +5435,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             // Kept for this recording, for the next time it is opened (recording.ts).
             if (recording) vscode.postMessage({ type: 'recordingSettings', chart: recording.chart, name: recording.name, settings: recSettings });
             recApply();
-            paintResetAll();
+            showMixerHead();    // (the mixer button and Reset All: the octave is a change of the panel's)
         }
         /** The sound follows the panel's settings and the chart's transpose as they are now. */
         function recApply() {
