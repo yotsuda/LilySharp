@@ -126,6 +126,6 @@ Recording のグループから **Speed and pitch の折りたたみを無くし
 
 歌（歌うパート、その声のスライダーはすぐ下）・ギター類・鍵盤・other・ベース・ドラムと打楽器
 
-同じ組の中は .lys が最初に書いた順（宣言 `part x { … }`・`chords x {}`、宣言の無いパートは section の中の最初のブロック `x { … }`。コメントと文字列の中は数えない）。声は、そのパートの後にその `singer` の行の順。楽器は `instrument` の名前、無ければ `midiInstrument` の音の名前、`clef percussion`、パートの名前（vocal・guitar・piano・keys・bass・drums…）で読む（`mixerOrderCore.ts` `familyOfWord`）。**other＝5 つのどれでもないもの**（和音の行・木管・金管・弦・読めないパート）を、.lys の順だけで並べる＝**中の扱いは検討中**（オーナー「Other に相当するパートについては、どのようにすべきか検討しないといけない」）。
+同じ組の中は .lys が最初に書いた順（宣言 `part x { … }`・`chords x {}`、宣言の無いパートは section の中の最初のブロック `x { … }`。コメントと文字列の中は数えない）。声は、そのパートの後にその `singer` の行の順。楽器は `instrument` の名前、無ければ `midiInstrument` の音の名前、`clef percussion`、パートの名前（vocal・guitar・piano・keys・bass・drums…）で読む（`mixerOrderCore.ts` `familyOfWord`）。**other＝5 つのどれでもないもの**: 先頭に和音の行（伴奏の骨組みで、どのパートからも読まれる）、その後に木管・金管・弦・読めないパートを .lys の順だけで（オーナー決定 2026-11-27・3 案から「和音の行を other の先頭に、残りは .lys の順」）。
 
 仕組み: `mixerRanks` が順位を出し、拡張が `partsData` に `partRanks`・`voiceRanks` を添え、ページの `renderParts` が並べる。打鍵での並べ替え: 再生の長さを読み直すたび（`requestLength`）に拡張が文字から順位を出し直し（大きな .lys で約 1.5 ms・サーバーには訊かない）、変わったときだけ `mixerRanks` を送る＝ページは最後の一覧を描き直す。

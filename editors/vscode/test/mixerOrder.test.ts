@@ -52,6 +52,12 @@ describe('The mixer lists the parts in one order', () => {
             ['vocal', 'voice:vocal', 'gtr', 'keys', 'prog (chords)', 'sax', 'bass', 'kit']);
     });
 
+    it('puts the chords rows at the head of "other", the rest of it in the file\'s order', () => {
+        const text = 'part str { instrument violin }\npart sax { instrument alto-sax }\nchords prog {}\nchords alt {}\npart thing { }\n';
+        assert.deepEqual(drawn(text, ['thing', 'sax', 'str', 'alt (chords)', 'prog (chords)']),
+            ['prog (chords)', 'alt (chords)', 'str', 'sax', 'thing']);
+    });
+
     it('keeps the file\'s order within a group, and the same order whichever score lists the parts', () => {
         const text = 'part v2 { instrument violin }\npart va { instrument viola }\npart v1 { instrument violin }\n'
             + 'part fl { instrument flute }\npart pno { instrument piano-right }\n';

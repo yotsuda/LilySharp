@@ -24,7 +24,8 @@
 //
 // and within a group, the order the .lys first names the parts (a declaration `part x { … }` or
 // `chords x {}`; a part with none by its first block in a section, `x { … }`). "Other" is every part
-// that is none of the five — a chords row, winds, brass, strings, a part not recognised — in that
+// that is none of the five: its chords rows first (the accompaniment's frame, which every part reads;
+// owner's decision 2026-11-27), then winds, brass, strings and parts not recognised, in that
 // first-named order alone. The staves of a score keep the order its writer gave them: only the
 // mixer is ordered here.
 //
@@ -43,9 +44,10 @@ function groupOf(f: MixerFamily): number {
         case MixerFamily.Song: return 0;
         case MixerFamily.Guitars: return 1;
         case MixerFamily.Keyboards: return 2;
-        case MixerFamily.Bass: return 4;
-        case MixerFamily.Drums: return 5;
-        default: return 3;      // other: chords, winds, brass, strings, not recognised
+        case MixerFamily.Chords: return 3;      // other's head: the accompaniment's frame (owner's decision 2026-11-27)
+        case MixerFamily.Bass: return 5;
+        case MixerFamily.Drums: return 6;
+        default: return 4;      // the rest of other: winds, brass, strings, not recognised
     }
 }
 
