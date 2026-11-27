@@ -66,6 +66,7 @@ import { registerEditCommands } from './editCommands';
 import { registerMenuContexts } from './menuContext';
 import { resolveServerLaunch } from './serverLaunch';
 import { leftToTheInstrument, SungVoiceDto, sungKey, voiceMenuLabels, voiceMenuKey, voiceMenuTitleOf } from './singerCore';
+import { MixerVoice, mixerRanks } from './mixerOrderCore';
 
 let client: LanguageClient;
 let clientReady = false;
@@ -1811,6 +1812,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     // Every singable lyrics of the file (session 1163), and which of them the
                     // score shown sings itself — the others are off until the menu turns them on.
                     let voices: string[] = [], voicesInScore: string[] = [], voiceLabels: Record<string, string> = {}, voiceTitles: Record<string, string> = {};
+                    let voiceParts: MixerVoice[] = [];
                     if (await renderer()) {
                         const sung = await client.sendRequest<{ Voices?: SungVoiceDto[] | null }>(
                             'lilysharp/sung', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null, allLyrics: true });
@@ -1820,8 +1822,14 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                         voiceLabels = voiceMenuLabels(singable);
                         voiceTitles = Object.fromEntries(singable.map(v => [sungKey(v), voiceMenuTitleOf(v, voiceLabels[sungKey(v)])]));
                         menuVoices.set(panel, voiceMenuKey(singable));
+                        voiceParts = singable.map(v => ({ key: sungKey(v), part: v.Part, singerStart: v.SingerStart }));
                     }
-                    panel.webview.postMessage({ type: 'partsData', parts, extra, voices, voicesInScore, voiceLabels, voiceTitles, sungOnly });
+                    // The lines in the order the .lys first names them (owner's request 2026-11-27;
+                    // mixerOrderCore.ts), not the score's staff order.
+                    const text = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri)?.getText() ?? '';
+                    const ranks = mixerRanks(text, [...parts, ...extra], voiceParts);
+                    panel.webview.postMessage({ type: 'partsData', parts, extra, voices, voicesInScore, voiceLabels, voiceTitles, sungOnly,
+                        partRanks: ranks.parts, voiceRanks: ranks.voices });
                 } catch {
                     panel.webview.postMessage({ type: 'partsData', parts: [], extra: [], voices: [] });
                 }

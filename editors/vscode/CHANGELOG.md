@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- `[preview]` **The mixer lists the score's parts in the order the file names them.** Each part, chords row and voice stands where the `.lys` first writes it — a part by its `part … { }` line (one with none by its first block in a section), a voice by its `singer` line — with its fader beside it, not in the order the score stacks its staves.
 - `[engraving]` **A dead note's head on a tab staff stands where it should after a score in another music font.** Once a score in a SMuFL font (Bravura, Leland…) had been engraved, the cross heads of dead notes on tab staves in every later score were centred by that font's head width, slightly off, until the editor was restarted.
 - `[preview]` **A bar played by a phrase's name is lit when the caret is on that name, and only then.** A bar written as the name of a phrase (`beatA |`, `riff |`) stayed lit in the preview wherever the caret was below the phrase: a drum part of such bars stayed lit as you moved through the file. A click on the bar goes to the name; a click on a note still goes into the phrase.
 

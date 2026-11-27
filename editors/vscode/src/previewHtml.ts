@@ -5056,7 +5056,15 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             // pressed, both then sounding (session 1165: the part's button is the instrument's,
             // the voice is the note's, each on its own).
             const sungOnly = new Set(message.sungOnly || []);
-            for (const name of parts) {
+            // The lines in the order the .lys first names them (owner's request 2026-11-27,
+            // mixerOrderCore.ts): the score's parts and the voices it sings together, then the lines
+            // not in this score. A line the file does not name keeps its place after the others.
+            const partRanks = message.partRanks || {}, voiceRanks = message.voiceRanks || {};
+            const scoreLines = [], otherLines = [];
+            const drawInFileOrder = (lines) => lines.map((l, i) => ({ l, i }))
+                .sort((a, b) => ((a.l.rank ?? Infinity) - (b.l.rank ?? Infinity)) || (a.i - b.i))
+                .forEach(x => x.l.draw());
+            for (const name of parts) scoreLines.push({ rank: partRanks[name], draw: () => {
                 if (sungOnly.has(name)) {
                     toggle(name, 'Sung by its voice - press for its instrument too', () => practice.instrumentsOn.includes(name),
                         // (A mute left by another score, where this part is played, would keep it silent: it goes.)
@@ -5067,7 +5075,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                         () => { practice.muted = practice.muted.includes(name) ? without(practice.muted, name) : practice.muted.concat([name]); },
                         '', '', practice.levels, name, 'part:' + name, true);
                 }
-            }
+            } });
             // The sung lyrics, one a part with a voice, beside the parts (owner's request
             // 2026-11-08; docs/singing-design.md §5): on, the part is sung; off, its instrument
             // plays in the voice's place. Every singable lyrics of the file is listed (owner's
@@ -5084,23 +5092,25 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             const voiceTitle = name => voiceTitles[name] || voiceLabel(name);
             for (const name of voices) {
                 if (!inScore.has(name)) continue;
-                toggle(voiceLabel(name), voiceTitle(name), () => !practice.voicesOff.includes(name),
+                scoreLines.push({ rank: voiceRanks[name], draw: () => toggle(voiceLabel(name), voiceTitle(name), () => !practice.voicesOff.includes(name),
                     () => { practice.voicesOff = practice.voicesOff.includes(name) ? without(practice.voicesOff, name) : practice.voicesOff.concat([name]); },
-                    'voice', name, practice.voiceLevels, name, 'voice:' + name, true);
+                    'voice', name, practice.voiceLevels, name, 'voice:' + name, true) });
             }
             for (const name of voices) {
                 if (inScore.has(name)) continue;
-                toggle(voiceLabel(name), voiceTitle(name) + ' (not in this score)', () => practice.voicesOn.includes(name),
+                otherLines.push({ rank: voiceRanks[name], draw: () => toggle(voiceLabel(name), voiceTitle(name) + ' (not in this score)', () => practice.voicesOn.includes(name),
                     () => { practice.voicesOn = practice.voicesOn.includes(name) ? without(practice.voicesOn, name) : practice.voicesOn.concat([name]); },
-                    'voice extra', name, practice.voiceLevels, name, 'voice:' + name);
+                    'voice extra', name, practice.voiceLevels, name, 'voice:' + name) });
             }
             // The file's other parts, which this score does not sound: off until pressed (owner's
             // request 2026-11-08).
             for (const name of extra) {
-                toggle(name, 'Not in this score — silent unless pressed', () => practice.extraOn.includes(name),
+                otherLines.push({ rank: partRanks[name], draw: () => toggle(name, 'Not in this score — silent unless pressed', () => practice.extraOn.includes(name),
                     () => { practice.extraOn = practice.extraOn.includes(name) ? without(practice.extraOn, name) : practice.extraOn.concat([name]); },
-                    'extra', '', practice.levels, name, 'part:' + name);
+                    'extra', '', practice.levels, name, 'part:' + name) });
             }
+            drawInFileOrder(scoreLines);
+            drawInFileOrder(otherLines);
             // (the recording has its own group in the mixer: its on/off, solo and fader, its parts — §1 1)
             renderVoiceBadge();     // the voices' signs on their fresh toggles
             showMixerHead();        // (the group's All, now that its lines are known)
