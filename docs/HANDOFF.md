@@ -97,11 +97,11 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **★ A-B リピート（オーナー決定 2026-11-17・第1286）＝`docs/ab-repeat-design.md`**: §3 の 1〜4 は済み（第1286）。**2026-11-19 オーナー決定: Loop グループ・A-B ボタンと番号欄・8 本の帯（§3 の 5）・右クリックの Play from Here／A Here／B Here は撤去、Repeat はヘッダへ**（同 §0）。残りは実機（`MANUAL-CHECKS`「Repeat はヘッダ」＝オーナー）と、release 時の site・README の書き直し。
 - **★ Join Bars in Pairs（Orecchiante の依頼 21・オーナー決定 2026-11-21・第1342）＝実装済み**（`docs/join-bars-design.md`）。依頼 22（同じ和音 1 つずつの組は `C`）は第1346 `f81f8cd28`。残りは実機（`MANUAL-CHECKS`「Join Bars in Pairs」＝Ctrl+Z で 2 つのファイルが戻る・録音と小節の頭がそろう）と Orecchiante の確認。
 - **★ Report to Orecchiante（Orecchiante の依頼 23・オーナーの希望 2026-11-23・第1372）＝実装済み**（`docs/orecchiante-report-design.md`）。残りは Orecchiante の確認とオーナーの実機（設定は手書き）。
-- **★ 録音の変換で歌詞（Orecchiante の依頼 25・27・28）＝実装済み**（`orecchiante.ts` `chooseLyrics`）。25・27 は done。残りは 28 の Orecchiante の確かめとオーナーの実機（`MANUAL-CHECKS`「録音の変換で歌詞を取る」）。
+- **★ 録音の変換で歌詞（Orecchiante の依頼 25・27・28）＝実装済み**（`chooseLyrics`）。残りは 28 の Orecchiante の確かめとオーナーの実機（`MANUAL-CHECKS`）。
 - **★ Shosa の導線の第 2〜4 段（オーナー決定 2026-11-26）＝実装済み**: Write a Song…（`docs/song-over-chords-design.md`）・From a Song to a Dance（`song-to-dance-design.md`）・Arrange an Accompaniment…＝Accept で録音は `"silent"`（`accompaniment-design.md`）。残りはオーナーの実機と Shosa 側の `"silent"`。
 - **★ ドラムの `steps { }`（Orecchiante の依頼 24・第1399）＝実装済み**（`docs/drum-steps-design.md`・第1400 で §3 の 2 つも）。Orecchiante は done（`639cc26e7` の lysc で 3 曲）。残りはオーナーの実機（`MANUAL-CHECKS`「ドラムの `steps { }`」）。
-- **★ Report to Orecchiante を `steps` の型でも（依頼 26）＝done**（`015ea2e0e`。Orecchiante の記録の `2909225e2` は作り直す前の同じ中身）。
-- **★ phrase を名前で呼ぶ小節がプレビューで光り続けた（オーナーの報告 2026-11-27）＝直した**（`MeasureBuilder.CallSite`・網 `BarStaffBoxTests`）。残りはオーナーの実機。
+- **★ 0.18.0（オーナー決定 2026-11-27）**: 版は `5d1cf5080`、後のコミットも 0.18.0 の節に。残り: push（ユーザー）→ CI → 試し版 VSIX（`publish-marketplace.ps1`、`-Publish` なし）→ オーナーがタグ（最新に）。
+- **★ 2026-11-27 の実装（残りはオーナーの実機・`MANUAL-CHECKS`）**: 再生中の書き換えがすぐ聞こえる（`transport-mixer-design.md` §15）／ミキサーの行の順（§14）・Reset All・アイコン／サウンドフォントを替えても止まらず声も戻る（Shosa の依頼 7）・ガイド（site `editor.html#soundfonts`）／phrase の名前の小節が光り続けた（`MeasureBuilder.CallSite`）。
 - **★ Cantoria の依頼 1（音節の音素 `병[/pp.y.eo.NG/]`）・2（歌う `bend`・お試し）＝第1375 で実装済み**（`singing-design.md` §3）。残りは Cantoria の done とオーナーの耳（`MANUAL-CHECKS` 第1375）。
 - **★ コード行の中に書けるもの（オーナー決定 2026-11-16・第1285）**: `time`・`tempo`・`%`・`key` は済み（§1.1）。**残り＝コードに付ける印 `@rit`／`@accel`／`@rall`（`…@!rit`）・`@fermata`・`@text("…")`**（今は `@todo` だけ）。強弱は見送り。
 - **★ 録音を聴きながら直す（Dettato #4・オーナーの希望 2026-11-15）＝`docs/recording-design.md`**: S1〜S4 と §1 7（楽譜と録音を同時に）・§7（書き出しに録音・第1286）は済み（§1.1 第1284〜第1286）。**次は S5**（帯・`Mark Bar Line Here`・ドラッグ・`byHand`）→ S6（CHANGELOG・Dettato への返事）。§8 の録音のパート（Dettato #16）は第1288 で実装・実測済み・使っている間のメモリは今のまま（オーナー決定 2026-11-17）＝残りは耳の確認（`MANUAL-CHECKS`「録音のパート」）。耳の確認は `MANUAL-CHECKS` §3.9（オーナー）。
