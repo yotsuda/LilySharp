@@ -38,3 +38,15 @@ test('the latest sound font asked wins, counted when it is asked, not when the w
     assert.match(src, /this\.init = this\.start\(processorUrl\);\s*\/\/[^\n]*\n\s*void this\.setSoundFont\(soundFontUrl\);/);
     assert.doesNotMatch(src, /this\.init\.then\(\(\) => this\.setSoundFont/);
 });
+
+// The same day: after the setting changed, the preview stayed on "Loading preview..." — VS Code
+// reloads a page whose options change (the new font's folder), and nothing drew the reloaded one.
+test('a preview page that loads again is drawn again and told the sound font; a first load is not', () => {
+    const src = readFileSync(join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const ready = /if \(message\.type === 'webviewReady'\) \{([^]*?)\n {12}\}/.exec(src)?.[1] ?? '';
+    // (read before pageLoaded marks the page as loaded)
+    assert.ok(ready.indexOf('pageHasLoaded') >= 0 && ready.indexOf('pageHasLoaded') < ready.indexOf('.pageLoaded()'));
+    const reload = /if \(reloaded\) \{([^]*?)\n {16}\}/.exec(ready)?.[1] ?? '';
+    assert.match(reload, /type: 'setSoundFont'/);
+    assert.match(reload, /updatePreviewContent\(doc, panel, context\)/);
+});

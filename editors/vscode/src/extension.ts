@@ -1655,9 +1655,22 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 // A (re)loaded webview is blank — drop the dedup memory so the next render
                 // always re-posts, even if the SVG matches what a previous instance showed,
                 // and the page version, so the next answer carries every page.
+                const reloaded = sessionOf(panel).pageHasLoaded;
                 sessionOf(panel).pageLoaded();
                 postedToPage.delete(panel);
                 if (scanDeps) { previewReady(uri, scanDeps); }
+                // A page that loaded before and loads again — VS Code reloads it when its options
+                // change, as a new sound font's folder does — is drawn again and told the sound
+                // font now: nothing else would draw it (owner's report 2026-11-27: "Loading
+                // preview..." for good after the setting changed), and the font message posted
+                // with the options came while it loaded, when VS Code drops a message, so the
+                // page would load the font its HTML was written with. A first load is drawn by
+                // the panel's creation.
+                if (reloaded) {
+                    panel.webview.postMessage({ type: 'setSoundFont', uri: synthUrls(panel.webview, context.extensionUri).soundFont });
+                    const doc = await previewDocument(uri);
+                    if (doc) { updatePreviewContent(doc, panel, context); }
+                }
                 return;
             }
             if (message.type === 'requestFull') {
