@@ -64,7 +64,7 @@ describe('the preview\'s Range panel', () => {
         // Repeat is the header's button, after Stop (owner's decision 2026-11-19): the practice
         // panel's Loop group — the A-B button, its bar numbers, the eight kept ranges — is gone, A-B
         // being set on the page (a click A, a Shift+click B, B's own bar line again: off).
-        assert.match(html, /<button id="stopBtn"[^>]*>[^<]*<\/button>\s*(<!--[^>]*-->\s*)?<button id="loopBtn" class="toggle icon" type="button" aria-pressed="false" aria-label="Repeat"/);
+        assert.match(html, /<button id="stopBtn"[^>]*>(?:(?!<button)[^])*?<\/button>\s*(<!--[^>]*-->\s*)?<button id="loopBtn" class="toggle icon" type="button" aria-pressed="false" aria-label="Repeat"/);
         assert.doesNotMatch(html, /data-fold="loop"|id="abBtn"|id="abStrips"|id="abFromNum"|abSlots|selectedBarsSpan|abFirstPlace/);
         assert.match(html, /loopBtn\.setAttribute\('aria-pressed', String\(loopOn\)\);/);
         assert.doesNotMatch(html, /loopBtn\.textContent/);

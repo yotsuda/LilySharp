@@ -423,14 +423,14 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             height: 28px; width: 42px; padding: 0; line-height: 1;
         }
         .toolbar button.icon svg { display: block; width: 15px; height: 15px; }
-        /* The skip buttons (⏮ rewind, first and last page) drawn as the icons beside them are, not
-           as text glyphs, which stood small and below the middle (owner's request 2026-11-27); the
-           button keeps a text button's width. */
-        .toolbar button.skip {
+        /* Rewind, Play, Stop and the first and last page drawn as the icons beside them are, not as
+           text glyphs (⏮ ▶ ⏹ ⏭), which stood small, off the middle, and two pixels lower than the
+           icon buttons (owner's requests 2026-11-27); the button keeps a text button's width. */
+        .toolbar button.drawn {
             display: inline-flex; align-items: center; justify-content: center;
             height: 28px; padding: 0 11px; line-height: 1;
         }
-        .toolbar button.skip svg { display: block; width: 15px; height: 15px; }
+        .toolbar button.drawn svg { display: block; width: 15px; height: 15px; }
         /* The voice badge: a small microphone over the bottom-right corner of ▶ — no border, no
            background, not a button. Grey and pulsing while the engine sings, blue when every voice
            is ready, the error colour when one will not be sung. */
@@ -680,15 +680,15 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
              instruments are notes too"): a status over the Play it speaks of, drawn as what sings.
              A click still opens the practice menu, where each voice has its own toggle and sign. -->
         <!-- Rewind (owner's request 2026-11-17): the A flag back to the top. -->
-        <button id="rewindBtn" class="skip" type="button" aria-label="Rewind" title="The A flag back to the top (playing: plays from there)"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="1.6" y="3" width="1.8" height="10" rx=".5"/><path d="M8.8 3.2v9.6L3.8 8z"/><path d="M14.4 3.2v9.6L9.4 8z"/></svg></button>
+        <button id="rewindBtn" class="drawn" type="button" aria-label="Rewind" title="The A flag back to the top (playing: plays from there)"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="1.6" y="3" width="1.8" height="10" rx=".5"/><path d="M8.8 3.2v9.6L3.8 8z"/><path d="M14.4 3.2v9.6L9.4 8z"/></svg></button>
         <span class="play-wrap">
-        <button id="playBtn" type="button" title="Play from the A flag (Space while stopped)">▶</button>
+        <button id="playBtn" class="drawn" type="button" aria-label="Play" title="Play from the A flag (Space while stopped)"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4.4 2.6c0-.5.5-.8.9-.5l8.2 5.4c.4.3.4.8 0 1.1l-8.2 5.4c-.4.3-.9 0-.9-.5z"/></svg></button>
         <span id="voiceBadge" class="voice-badge" role="status" hidden aria-label="Voice"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="1.2" width="4" height="7.6" rx="2"/><path d="M3.6 7.4a4.4 4.4 0 0 0 8.8 0"/><path d="M8 11.8v2.6M5.6 14.4h4.8"/></svg></span>
         <span id="voiceBar" class="voice-bar" hidden aria-hidden="true"><span></span></span>
         </span>
         <!-- Pause (docs/transport-mixer-design.md §1 3): where it plays, held; pressed again, on from there. -->
         <button id="pauseBtn" class="toggle icon" type="button" aria-pressed="false" title="Pause — pressed again, go on from there (Space)" aria-label="Pause" disabled><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="3" y="2.5" width="3.6" height="11" rx=".6"/><rect x="9.4" y="2.5" width="3.6" height="11" rx=".6"/></svg></button>
-        <button id="stopBtn" type="button" title="Stop, back to the A flag" disabled>⏹</button>
+        <button id="stopBtn" class="drawn" type="button" aria-label="Stop" title="Stop, back to the A flag" disabled><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx=".9"/></svg></button>
         <!-- Repeat (owner's decision 2026-11-19: here, the practice panel's Loop group gone). -->
         <button id="loopBtn" class="toggle icon" type="button" aria-pressed="false" aria-label="Repeat" title="Repeat: play round and round — the bars A to B when A-B is on, else the whole score as it plays"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.8 7.2V6.4a2.2 2.2 0 0 1 2.2-2.2h7.6"/><path d="M10.4 2l2.2 2.2-2.2 2.2"/><path d="M13.2 8.8v.8a2.2 2.2 0 0 1-2.2 2.2H3.4"/><path d="M5.6 14l-2.2-2.2 2.2-2.2"/></svg></button>
         <button id="practiceBtn" class="toggle icon practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" aria-label="Practice and mixer" title="Practice and mixer: tempo, the parts, the recording"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="1.9" y="1.5" width="1.2" height="13" rx=".6"/><rect x="7.4" y="1.5" width="1.2" height="13" rx=".6"/><rect x="12.9" y="1.5" width="1.2" height="13" rx=".6"/><rect x=".7" y="8.6" width="3.6" height="2.6" rx=".8"/><rect x="6.2" y="3.4" width="3.6" height="2.6" rx=".8"/><rect x="11.7" y="6.6" width="3.6" height="2.6" rx=".8"/></svg><span id="practiceSpeed"></span></button>
@@ -697,12 +697,12 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         </span>
         <span class="sep"></span>
         <span class="group">
-        <button id="firstPageBtn" class="skip" type="button" aria-label="First page" title="First page"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="1.6" y="3" width="1.8" height="10" rx=".5"/><path d="M8.8 3.2v9.6L3.8 8z"/><path d="M14.4 3.2v9.6L9.4 8z"/></svg></button>
+        <button id="firstPageBtn" class="drawn" type="button" aria-label="First page" title="First page"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="1.6" y="3" width="1.8" height="10" rx=".5"/><path d="M8.8 3.2v9.6L3.8 8z"/><path d="M14.4 3.2v9.6L9.4 8z"/></svg></button>
         <!-- No min/max: the spinner is inverted in script (down = next page), so
              the native step must be free to go past either end (see pageInput). -->
         <input id="pageInput" type="number" value="1" title="Page" style="width: calc(1ch + 22px)">
         <span id="pageCount">/ 1</span>
-        <button id="lastPageBtn" class="skip" type="button" aria-label="Last page" title="Last page"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M1.6 3.2v9.6L6.6 8z"/><path d="M7.2 3.2v9.6L12.2 8z"/><rect x="12.6" y="3" width="1.8" height="10" rx=".5"/></svg></button>
+        <button id="lastPageBtn" class="drawn" type="button" aria-label="Last page" title="Last page"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M1.6 3.2v9.6L6.6 8z"/><path d="M7.2 3.2v9.6L12.2 8z"/><rect x="12.6" y="3" width="1.8" height="10" rx=".5"/></svg></button>
         </span>
     </div>
     <div id="errorBanner" class="error-banner" role="alert"></div>
