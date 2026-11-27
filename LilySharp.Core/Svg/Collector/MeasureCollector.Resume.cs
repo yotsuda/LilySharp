@@ -173,19 +173,22 @@ public sealed partial class MeasureCollector
         };
     }
 
+    /// <summary>A bar's written place moved across the edit (a phrase bar's reference, which can stand
+    /// after the window while the bar's body stands before it); a place inside the edit aborts the resume.</summary>
+    private static int WrittenAcross(int written, in CollectTailShifter.Window window)
+        => window.TryShift(written, out int moved) ? moved
+            : throw new CollectResumeAbortException("collect resume: a bar's written place stands in the edit");
+
+    /// <summary>The bar with its written place moved across the edit; the same instance when it does not move.</summary>
+    private static Measure WrittenAcross(Measure m, in CollectTailShifter.Window window)
+        => WrittenAcross(m.WrittenStart, window) is var moved && moved != m.WrittenStart ? m with { WrittenStart = moved } : m;
+
     /// <summary>
     /// Fast-forwards the walk to <paramref name="plan"/>'s checkpoint: restores the
     /// collector's value state, adopts the recorded prefix (measures, walk-local
     /// lists, cumulative side-table slices), and clears the pending plan so
     /// everything after the checkpoint runs live.
     /// </summary>
-    private static int WrittenAcross(int written, in CollectTailShifter.Window window)
-        => window.TryShift(written, out int moved) ? moved
-            : throw new CollectResumeAbortException("collect resume: a bar's written place stands in the edit");
-
-    private static Measure WrittenAcross(Measure m, in CollectTailShifter.Window window)
-        => WrittenAcross(m.WrittenStart, window) is var moved && moved != m.WrittenStart ? m with { WrittenStart = moved } : m;
-
     private void RestoreWalkCheckpoint(VoiceResumePlan plan, MeasureBuilder builder)
     {
         var ck = plan.Checkpoint!; // only a prefix-armed plan reaches the restore
