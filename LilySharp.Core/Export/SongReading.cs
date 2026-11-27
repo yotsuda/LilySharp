@@ -72,8 +72,9 @@ public sealed class SongTimeline
 /// One voice as it is sung: the part whose notes it sings (<c>singer … on PART</c>; for a singer
 /// the score prints on a staff of her own, the part her line names), the singer's own name
 /// (<c>singer alice …</c>) or null, and its syllables in the order they are sung, each
-/// [beat it starts at, beats the voice sounds it, the text as the voice is handed it]. A syllable
-/// held over several notes (a melisma, <c>__</c>) lasts until its last note ends; a rest ends it.
+/// [beat it starts at, beats the voice sounds it, the text as the voice is handed it], and a fourth
+/// element <c>true</c> when the next syllable is of the same word (<c>Lit- tle</c>; Shosa's request 8).
+/// A syllable held over several notes (a melisma, <c>__</c>) lasts until its last note ends; a rest ends it.
 /// </summary>
 public sealed record SongSung(string Part, string? Singer, List<object[]> Syllables);
 
@@ -282,17 +283,22 @@ public sealed class SongReading
             var syllables = new List<object[]>();
             double start = 0, end = 0;
             string? text = null;
+            bool word = false;
             void Close()
             {
-                if (text != null)
-                    syllables.Add([Math.Round(BeatAt(start), 4), Math.Round(BeatAt(end) - BeatAt(start), 4), text]);
+                if (text == null)
+                    return;
+                double at = Math.Round(BeatAt(start), 4), beats = Math.Round(BeatAt(end) - BeatAt(start), 4);
+                // A syllable the next one goes on the word of (`Lit- tle`) says so in a fourth
+                // element (Shosa's request 8): the text stays as sung, without the hyphen.
+                syllables.Add(word ? [at, beats, text, true] : [at, beats, text]);
             }
             foreach (var note in voice.Notes)
             {
                 if (note.Lyric != null && !note.Melisma)
                 {
                     Close();
-                    (text, start) = (note.Lyric, note.Start);
+                    (text, start, word) = (note.Lyric, note.Start, note.Hyphen);
                 }
                 else if (text == null)
                 {

@@ -178,6 +178,30 @@ public sealed class CliSongReadingTests : IDisposable
     }
 
     [Fact]
+    public void Sung_ASyllableTheNextGoesOnTheWordOf_SaysSoInAFourthElement()
+    {
+        // Shosa's request 8: `Lit- tle` and `sun -- shine` are one word each, and say so on the
+        // syllable before the break; a melisma after the hyphen keeps it. The text keeps no hyphen,
+        // and a syllable that ends its word has three elements, as before.
+        string song = Write("words.lys", """
+            tempo 120
+            part melody { clef treble  instrument soprano }
+            section A {
+              melody { c'4 d e f | g a( b) c'' | }
+              lyrics verse { night in Lit- tle | sun -- shine __ on | }
+            }
+            singer alice sings verse on melody
+            form { A }
+            score { staff melody  lyrics verse on melody }
+
+            """);
+        using var json = JsonDocument.Parse(Lysc("timeline", song).Out);
+        Assert.Equal(
+            """[{"part":"melody","singer":"alice","syllables":[[0,1,"night"],[1,1,"in"],[2,1,"Lit",true],[3,1,"tle"],[4,1,"sun",true],[5,2,"shine"],[7,1,"on"]]}]""",
+            Readable(json.RootElement.GetProperty("sung")));
+    }
+
+    [Fact]
     public void Sung_IsEmpty_WhereNothingIsSung()
     {
         // A singer line and no score: no staff has words under it, and the preview sings nothing.

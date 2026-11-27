@@ -658,7 +658,10 @@ singer the score prints on a staff of her own — and `singer` her name (`singer
 Each syllable is `[beat, beats, text]` in the order sung: `beats` is how long the voice sounds it — a
 syllable held over several notes (a slur, `__`, `_`) lasts to the end of its last note, a rest ends
 it, and an `@breath` takes its room out of it. `text` is what the voice is handed: the reading of a
-`漢[かん]` (かん), the syllable as written in any other language. Two singers on one part are two voices.
+`漢[かん]` (かん), the syllable as written in any other language. A syllable the next one goes on the
+word of — a hyphen after it in the words, `Lit- tle` or `sun -- shine` — has a fourth element `true`
+(`[2, 1, "Lit", true]`), and its text keeps no hyphen; a syllable that ends its word has three.
+Two singers on one part are two voices.
 
 The piece ends at its last bar line, though a fermata or a held note sounds past it, and a closing
 rest stops short of it.
