@@ -111,7 +111,7 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /function playEnded\(\) \{\s*const list = loopOn \? loopList : null;/);
         // An edit's refresh while it plays answered with an error (a part half typed) leaves it going
         // and the page playing (owner's report 2026-11-17, for a loop): the next edit asks again.
-        assert.match(html, /if \(pendingLiveRefresh\) \{\s*pendingLiveRefresh = false;\s*if \(playingNow\(\)\) break;\s*\}/);
+        assert.match(html, /if \(pendingLiveRefresh\) \{\s*pendingLiveRefresh = false;\s*followHeld = false;\s*if \(playingNow\(\)\) break;\s*\}/);
         // Text that cannot be read plays as it last could be (owner's decision 2026-11-17), a Play
         // or an audition alike, and Play's edge says so while it sounds.
         assert.match(html, /if \(\(message\.error \|\| !message\.notes\) && rawNotes\) \{\s*message\.notes = rawNotes;/);

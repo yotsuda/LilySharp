@@ -3510,14 +3510,22 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         ${FOLLOW_SCROLL_JS}
         const follow = installFollowScroll(mainContent, document.getElementById('followBtn'));
         follow.onResume = (els) => { if (els.length > 0) follow.auto(() => keepSoundingInView(els)); };
-        function followAlong(notes, offset, elapsed) {
+        // keepPlace: the same playback, its notes at new places in the text (an edit while it plays that
+        // changed no time — liveRefresh): the cursors are built again from them, and the view keeps its
+        // place, its page turned and the staff it follows (a new Play finds its place anew).
+        function followAlong(notes, offset, elapsed, keepPlace) {
             const Cursor = window.LysSynth ? window.LysSynth.SoundingCursor : null;
             if (!Cursor) { return; }
             const relay = notes.some(n => n.R !== undefined);
             relaying = relay;
-            if (!relay) follow.start();
-            followSystemDocTop = null; followSystemOffset = null; followTopTarget = null; pageTopSystem = null;   // a new Play finds its place anew
-            followStaff = relay ? -1 : followStaffOfCaret();
+            followHeld = false;   // (the notes in hand are the text's now)
+            if (keepPlace) {
+                if (playheadTimer) { clearInterval(playheadTimer); playheadTimer = null; }
+            } else {
+                if (!relay) follow.start();
+                followSystemDocTop = null; followSystemOffset = null; followTopTarget = null; pageTopSystem = null;   // a new Play finds its place anew
+                followStaff = relay ? -1 : followStaffOfCaret();
+            }
             // A note's printed measure (PlaybackNote.M) picks its copy of a phrase (copyOf), and the
             // copies sounding in one bar are counted from the notes themselves.
             const mOf = n => typeof n.M === 'number' ? n.M : -1;
@@ -3550,6 +3558,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
             // Run by the page's own timer and by the host's followTick, whichever comes: a
             // throttled timer leaves it to the host's (see the host's followTicker).
             const tick = () => {
+                if (followHeld && performance.now() < followHeld) return;     // (the edit's notes on their way: liveRefresh)
                 const now = performance.now();
                 if (now - tickWatch.last < 25 && tickWatch.ticks > 0) return;
                 tickWatch.longest = Math.max(tickWatch.longest, now - tickWatch.last);
@@ -4610,19 +4619,42 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
         //    as a flag moved while it plays), in the whole score, A to B, or round and round.
         // (loopSwitchTimer: a voice that lands while a loop goes round joins at the round's end — joinLoop.)
         var pendingLiveRefresh = false, loopSwitchTimer = null;
+        // The follow-along held while the edit's notes are on their way: the new picture is up, its
+        // notes at the edit's new places, while what plays still says the old ones — looked up there,
+        // the lights and the view went elsewhere for a moment and came back (owner's report 2026-11-27).
+        // Let go when the notes come (liveRefresh: placed anew, or played on from here) or do not —
+        // and by itself 2 s on, should no answer come this way (a newer request took its place).
+        // false, or the time (performance.now) until which it is held.
+        var followHeld = false;
         function liveRefresh(message) {
+            followHeld = false;
             if (!playingNow() || !playClock || relaying) return;
             const before = rawNotes;
             rawNotes = message.notes; rawParts = message.parts || null; rawBeats = message.beats || null; rawBarEnd = message.barEnd || null; rawExtra = message.extra || null; rawSung = message.sung || null; rawPlayed = message.played || null;
             const sounds = before && window.LysSynth && window.LysSynth.instrumentsOnly ? window.LysSynth.instrumentsOnly(before, rawNotes) : null;
             if (sounds && (sounds.size === 0 || (sfPlayer && sfPlayer.retune))) {
                 playbackNotes = practiced(rawNotes);
-                if (sounds.size > 0) {
-                    sfPlayer.retune(sounds);
-                    // (what plays next — the loop's next rounds, a pause's resume — with the new sounds too)
-                    if (playingNotes) playingNotes = window.LysSynth.withTrackSounds(playingNotes, sounds);
-                    if (loopList) loopList = window.LysSynth.withTrackSounds(loopList, sounds);
+                if (sounds.size > 0) sfPlayer.retune(sounds);
+                // The notes at the places the edit moved them to (the same notes in the same order:
+                // instrumentsOnly) — what plays, the loop's next rounds, and the follow-along, its place
+                // kept. Left at the old places, the follow-along looked the notes up where they had been
+                // and the view jumped away and back (owner's report 2026-11-27: a midiInstrument
+                // rewritten above every note).
+                const moved = new Map();
+                for (let i = 0; i < before.length; i++) {
+                    const b = before[i], a = rawNotes[i];
+                    if (b.S !== a.S && b.S >= 0) moved.set(b.S, a.S);
+                    if (typeof b.Q === 'number' && b.Q !== a.Q) moved.set(b.Q, a.Q);
                 }
+                const renew = (list) => {
+                    const placed = moved.size === 0 ? list : list.map(n => ({ ...n,
+                        S: moved.has(n.S) ? moved.get(n.S) : n.S,
+                        ...(typeof n.Q === 'number' && moved.has(n.Q) ? { Q: moved.get(n.Q) } : {}) }));
+                    return sounds.size > 0 ? window.LysSynth.withTrackSounds(placed, sounds) : placed;
+                };
+                if (playingNotes) playingNotes = renew(playingNotes);
+                if (loopList) loopList = renew(loopList);
+                if (moved.size > 0 && playingNotes) followAlong(playingNotes, playOffset, playClock, true);
                 return;
             }
             resumeHere();
@@ -6086,6 +6118,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                         // Not on the MIDI output (the server plays it), nor a candidate's playback.
                         if (playClock && playingNow() && !midiPlaying && !relaying) {
                             pendingLiveRefresh = true;
+                            followHeld = performance.now() + 2000;
                             requestPlay();
                         }
                         collectPages();
@@ -6346,6 +6379,7 @@ export function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource:
                     // reached the loop — the part, written out, was never added — and Stop was greyed.
                     if (pendingLiveRefresh) {
                         pendingLiveRefresh = false;
+                        followHeld = false;
                         if (playingNow()) break;
                     }
                     pendingLiveRefresh = false;

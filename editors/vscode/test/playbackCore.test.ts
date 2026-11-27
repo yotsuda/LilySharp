@@ -820,6 +820,21 @@ describe('An edit heard while it plays', () => {
         const live = /function liveRefresh\(message\) \{([^]*?)\n {8}\}/.exec(page)?.[1] ?? '';
         assert.match(live, /sfPlayer\.retune\(sounds\)/);
         assert.match(live, /resumeHere\(\);\s*$/);
-        assert.match(page, /if \(playClock && playingNow\(\) && !midiPlaying && !relaying\) \{\s*pendingLiveRefresh = true;\s*requestPlay\(\);/);
+        assert.match(page, /if \(playClock && playingNow\(\) && !midiPlaying && !relaying\) \{\s*pendingLiveRefresh = true;\s*followHeld = performance\.now\(\) \+ 2000;\s*requestPlay\(\);/);
+    });
+
+    // Owner's report the same day: a midiInstrument rewritten (above every note) and the view jumped
+    // away and back — the follow-along looked the notes up at their old places.
+    it('moves what plays to the edit\'s new places and follows it there, its place kept, held while the notes come', () => {
+        const page = extensionSource();
+        const live = /function liveRefresh\(message\) \{([^]*?)\n {8}\}/.exec(page)?.[1] ?? '';
+        assert.match(live, /^\s*followHeld = false;/);
+        assert.match(live, /moved\.set\(b\.S, a\.S\)/);
+        assert.match(live, /if \(playingNotes\) playingNotes = renew\(playingNotes\);\s*if \(loopList\) loopList = renew\(loopList\);/);
+        assert.match(live, /followAlong\(playingNotes, playOffset, playClock, true\)/);
+        const follow = /function followAlong\(notes, offset, elapsed, keepPlace\) \{([^]*?)\n {8}\}/.exec(page)?.[1] ?? '';
+        // (keeping its place: the old tick stopped, nothing of the view's state reset)
+        assert.match(follow, /if \(keepPlace\) \{\s*if \(playheadTimer\) \{ clearInterval\(playheadTimer\); playheadTimer = null; \}\s*\} else \{\s*if \(!relay\) follow\.start\(\);\s*followSystemDocTop = null;/);
+        assert.match(follow, /const tick = \(\) => \{\s*if \(followHeld && performance\.now\(\) < followHeld\) return;/);
     });
 });
